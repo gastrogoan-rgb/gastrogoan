@@ -96,8 +96,17 @@ function autoAssignRepartidor(order){
 
 // Pedidos de reparto propio "vivos" ahora mismo (aún sin entregar), para el
 // contador del botón de la barra de herramientas.
+/* Un pedido para dentro de X horas no cuenta como "activo" todavía: mismo
+   margen que usa acceptOnlineOrder/marcharPedidosProgramadosQueYaTocan, para
+   que las tres partes (marchar, cocina, reparto) se muevan juntas. */
+function esPedidoProgramadoLejano(order){
+  if(!order || !order.date || !order.time) return false;
+  const horaPedida = new Date(order.date + 'T' + order.time);
+  if(isNaN(horaPedida)) return false;
+  return (horaPedida.getTime() - Date.now()) > 60 * 60 * 1000;
+}
 function getActiveRepartosOrders(){
-  return DB.tpvOrders.filter(o => esRepartoPropio(o) && o.status !== 'pagada' && o.status !== 'pendiente-online' && o.entregaEstado !== 'entregado');
+  return DB.tpvOrders.filter(o => esRepartoPropio(o) && o.status !== 'pagada' && o.status !== 'pendiente-online' && o.entregaEstado !== 'entregado' && !esPedidoProgramadoLejano(o));
 }
 // Pedidos de reparto propio entregados HOY, para el histórico del panel de
 // control — así el dueño puede revisar a final del día quién repartió qué,
@@ -1243,6 +1252,20 @@ async function acceptOnlineOrder(orderId, auto){
 
     order.status = 'abierta';
     const ahora = new Date().toISOString();
+    /* ⚠️ UN PEDIDO PROGRAMADO PARA MÁS ADELANTE NO SE MARCHA HOY.
+
+       "Aceptar" solo confirma que el negocio lo ha visto y lo va a preparar —
+       hasta ahora eso marchaba TODAS las líneas a cocina y asignaba
+       repartidor en el acto, aunque el pedido fuera para dentro de dos
+       semanas: Cocina lo enseñaba como si hubiera que cocinarlo ya, y el
+       reparto automático le cargaba un pedido a un repartidor de un turno
+       que ni siquiera ha llegado. Con más de un margen de aviso de
+       diferencia entre ahora y la hora pedida, se acepta pero se deja
+       pendiente de marchar — igual que un pedido normal que aún no se ha
+       enviado a cocina. */
+    const margenAntesDeMarchar = 60 * 60 * 1000; // 1 hora, igual que Cocina/Reparto
+    const horaPedida = (order.date && order.time) ? new Date(order.date + 'T' + order.time) : null;
+    const esParaMasAdelante = horaPedida && !isNaN(horaPedida) && (horaPedida.getTime() - Date.now()) > margenAntesDeMarchar;
     (order.items||[]).forEach(l => {
       const dish = findActiveDishByName(l.name);
       l.priceMismatch = false;
@@ -1253,7 +1276,7 @@ async function acceptOnlineOrder(orderId, auto){
         if(dish.disponible === false) l.unavailableNow = true;
         if(typeof dish.precio === 'number' && Math.abs(dish.precio - l.price) > 0.001) l.priceMismatch = true;
       }
-      if(!l.estado){
+      if(!l.estado && !esParaMasAdelante){
         l.estado = 'cocina';
         delete l.recogidoAt;
         l.enviadoAt = ahora;
@@ -1263,7 +1286,7 @@ async function acceptOnlineOrder(orderId, auto){
       }
     });
     order.cerrada = false;
-    if(esRepartoPropio(order)) autoAssignRepartidor(order);
+    if(esRepartoPropio(order) && !esParaMasAdelante) autoAssignRepartidor(order);
     saveDB();
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
     if(!auto){ renderTPV(); showToast(anyMismatch ? t('msg.orderAcceptedWithMismatch') : t('msg.orderAccepted')); }
@@ -2740,7 +2763,10 @@ function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
 
-  const allOrders = DB.tpvOrders.filter(o => o.status !== 'pagada');
+  /* Red de seguridad, además de que acceptOnlineOrder ya no marcha las líneas
+     de un pedido programado: un pedido para dentro de dos semanas no puede
+     verse en Cocina hoy, sea cual sea el estado de sus líneas. */
+  const allOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && !esPedidoProgramadoLejano(o));
 
   // Sello de "ha llegado a la pantalla de Cocina", para que Sala tenga una
   // confirmación visible (ver badge en renderTableOrderModal) en vez de
@@ -2986,6 +3012,40 @@ function decrementMenuStock(order, linea, qty){
   m.stock = Math.max(0, m.stock - qty);
   if(m.stock === 0) m.disponible = false;
 }
+/* Marcha a cocina los pedidos programados que ya han llegado a su hora, y
+   asigna reparto a los que le toca. Se llama desde un ciclo de fondo
+   (js/app.js) — sin esto, un pedido aceptado para "dentro de dos semanas"
+   se quedaría pendiente para siempre, porque acceptOnlineOrder solo lo dejó
+   marcado como aceptado, sin marchar, a propósito. */
+function marcharPedidosProgramadosQueYaTocan(){
+  const margenAntesDeMarchar = 60 * 60 * 1000;
+  const ahora = new Date().toISOString();
+  let huboAlguno = false;
+  DB.tpvOrders.forEach(order => {
+    if(order.status !== 'abierta') return;
+    if(!order.date || !order.time) return;
+    const horaPedida = new Date(order.date + 'T' + order.time);
+    if(isNaN(horaPedida) || (horaPedida.getTime() - Date.now()) > margenAntesDeMarchar) return;
+    let algunaLinea = false;
+    (order.items||[]).forEach(l => {
+      if(l.estado) return;   // ya marchada, o no es un plato (bebida sin cocina)
+      const dish = findActiveDishByName(l.name);
+      l.estado = 'cocina';
+      delete l.recogidoAt;
+      l.enviadoAt = ahora;
+      l.marchada = l.qty;
+      if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
+      decrementMenuStock(order, l, l.qty); decrementMenuOptionStock(l, l.qty);
+      algunaLinea = true;
+    });
+    if(algunaLinea){
+      huboAlguno = true;
+      if(esRepartoPropio(order)) autoAssignRepartidor(order);
+    }
+  });
+  if(huboAlguno) saveDB();
+}
+
 // Tipo de IVA repercutido real de una línea de comanda, buscando en el
 // menú/plato/receta que la originó — se guarda (se "estampa") en cada línea
 // de la venta en el momento de cobrar, para que quede fijo en el histórico

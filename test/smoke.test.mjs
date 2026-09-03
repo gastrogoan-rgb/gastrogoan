@@ -217,6 +217,33 @@ function lineaDeOpcion(){
   return {lineId: 'l1', menuId: 7, grupoId: 20, opcionId: 30, menuInstanceId: 'i1', qty: 1};
 }
 
+/* --- Pedidos programados para más adelante: no hoy, no ahora --- */
+
+function fechaEnHoras(h){
+  const d = new Date(Date.now() + h * 3600000);
+  return {date: d.toISOString().slice(0,10), time: d.toISOString().slice(11,16)};
+}
+
+test('esPedidoProgramadoLejano: un pedido para dentro de dos semanas SÍ lo es', () => {
+  /* El bug real: se aceptaba un pedido a domicilio para dentro de dos
+     semanas y aparecía YA en Cocina y en Control de repartos, con un
+     repartidor asignado en el acto. */
+  const sandbox = loadTpv({});
+  const lejos = fechaEnHoras(24 * 14);
+  assert.equal(sandbox.esPedidoProgramadoLejano({date: lejos.date, time: lejos.time}), true);
+});
+
+test('esPedidoProgramadoLejano: uno para dentro de 20 minutos NO lo es', () => {
+  const sandbox = loadTpv({});
+  const pronto = fechaEnHoras(0.33);
+  assert.equal(sandbox.esPedidoProgramadoLejano({date: pronto.date, time: pronto.time}), false);
+});
+
+test('esPedidoProgramadoLejano: sin fecha/hora (mesa normal) no cuenta como lejano', () => {
+  const sandbox = loadTpv({});
+  assert.equal(sandbox.esPedidoProgramadoLejano({}), false);
+});
+
 test('Se agota la MERLUZA, no el menú entero', () => {
   const DB = dbConOpcionesDeMenu(2);
   const sandbox = loadTpv(DB);

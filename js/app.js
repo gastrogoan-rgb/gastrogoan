@@ -8745,7 +8745,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   updateAutoActiveCarta();
   updateAutoActiveMenu();
-  setInterval(() => { updateAutoActiveCarta(); updateAutoActiveMenu(); purgePaidOrders(); }, 60000);
+  setInterval(() => {
+    updateAutoActiveCarta(); updateAutoActiveMenu(); purgePaidOrders();
+    if(typeof marcharPedidosProgramadosQueYaTocan === 'function') marcharPedidosProgramadosQueYaTocan();
+  }, 60000);
 
   setTimeout(() => {
     const splash = document.getElementById('app-splash');
