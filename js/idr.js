@@ -1589,6 +1589,15 @@ function idrCrearElaboracionDelPlato(elab){
     if(!receta.steps && Array.isArray(elab.pasos)) receta.steps = elab.pasos.join('\n');
   } else {
     DB.recipes.push(receta);
+    /* ⚠️ El único otro sitio que crea recetas (saveRecipe, el botón Guardar
+       del Escandallo) siempre engancha su ficha técnica — es justo lo que
+       evita el paso que "se podía olvidar". El I+D creaba la receta
+       directamente y se saltaba ese enganche: el plato salía en Fichas
+       Técnicas con la insignia ámbar "Sin ficha técnica" en vez de la verde
+       de cualquier plato creado a mano, y no se podía imprimir/duplicar su
+       ficha ni anotarle un alérgeno a mano hasta que alguien entraba y la
+       guardaba manualmente una vez. */
+    if(typeof ensureFichaForRecipe === 'function') ensureFichaForRecipe(receta.id);
   }
 
   const conStock = elab.stock !== false;
@@ -1735,6 +1744,15 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
       presentation: String(j.descripcion || receta.presentation || '')});
   } else {
     DB.recipes.push(receta);
+    /* ⚠️ El único otro sitio que crea recetas (saveRecipe, el botón Guardar
+       del Escandallo) siempre engancha su ficha técnica — es justo lo que
+       evita el paso que "se podía olvidar". El I+D creaba la receta
+       directamente y se saltaba ese enganche: el plato salía en Fichas
+       Técnicas con la insignia ámbar "Sin ficha técnica" en vez de la verde
+       de cualquier plato creado a mano, y no se podía imprimir/duplicar su
+       ficha ni anotarle un alérgeno a mano hasta que alguien entraba y la
+       guardaba manualmente una vez. */
+    if(typeof ensureFichaForRecipe === 'function') ensureFichaForRecipe(receta.id);
   }
 
   /* El precio de venta.
@@ -1918,6 +1936,15 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
       presentation: String(j.descripcion || receta.presentation || '')});
   } else {
     DB.recipes.push(receta);
+    /* ⚠️ El único otro sitio que crea recetas (saveRecipe, el botón Guardar
+       del Escandallo) siempre engancha su ficha técnica — es justo lo que
+       evita el paso que "se podía olvidar". El I+D creaba la receta
+       directamente y se saltaba ese enganche: el plato salía en Fichas
+       Técnicas con la insignia ámbar "Sin ficha técnica" en vez de la verde
+       de cualquier plato creado a mano, y no se podía imprimir/duplicar su
+       ficha ni anotarle un alérgeno a mano hasta que alguien entraba y la
+       guardaba manualmente una vez. */
+    if(typeof ensureFichaForRecipe === 'function') ensureFichaForRecipe(receta.id);
   }
   // Sin esto la elaboración existe como ficha pero no aparece en el stock de
   // elaboraciones, que es donde el equipo la busca y la produce.
@@ -2249,6 +2276,7 @@ Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud"). Si
       // medio que fijó el negocio; el escandallo dirá si sale o no.
       if(e.pvp && c.tipo === 'carta'){ receta.price = e.pvp; receta.priceBase = e.pvp; }
       DB.recipes.push(receta);
+      if(typeof ensureFichaForRecipe === 'function') ensureFichaForRecipe(receta.id);
       creados.push(receta);
       platosSec.push({id: genId(), recipeId: receta.id, nombre: receta.name,
         precio: receta.price, precioBase: receta.priceBase, ivaPct: receta.ivaPct,
@@ -2513,6 +2541,7 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
         steps: '', presentation: String(pl.descripcion || ''),
       };
       DB.recipes.push(receta);
+      if(typeof ensureFichaForRecipe === 'function') ensureFichaForRecipe(receta.id);
       creados.push(receta);
       platosSec.push({id: genId(), recipeId: receta.id, nombre: receta.name, precio: 0, precioBase: 0, ivaPct: receta.ivaPct, disponible: true, modificadores: []});
     });

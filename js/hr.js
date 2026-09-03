@@ -3087,6 +3087,11 @@ function reallyDeleteEmployee(id, pin){
   // Limpia referencias sueltas en otros módulos para que no quede un id
   // fantasma apuntando a un empleado que ya no existe.
   (DB.tpvOrders||[]).forEach(o => { if(o.camareroId===id) o.camareroId = null; });
+  // Igual en las ventas YA CERRADAS: si no, una venta histórica se queda con
+  // el id de un empleado que ya no existe — sin efecto visible hoy, pero un
+  // informe futuro que recorra DB.sales directamente encontraría un dato
+  // huérfano en vez de "sin asignar".
+  (DB.sales||[]).forEach(s => { if(s.camareroId===id) s.camareroId = null; });
   (DB.limpieza && DB.limpieza.tareas||[]).forEach(t => { if(t.responsableId===id) t.responsableId = null; });
   if(DB.limpieza){
     Object.keys(DB.limpieza).forEach(key => {

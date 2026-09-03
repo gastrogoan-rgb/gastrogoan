@@ -71,6 +71,7 @@ lanzar; node test/puesta.mjs               > "$SALIDA/puesta.txt"     2>&1 & P37
 lanzar; node test/categorias.mjs           > "$SALIDA/categorias.txt" 2>&1 & P38=$!
 lanzar; node test/reglas.mjs               > "$SALIDA/reglas.txt" 2>&1 & P39=$!
 lanzar; node test/fallos.mjs               > "$SALIDA/fallos.txt" 2>&1 & P40=$!
+lanzar; node test/idr-ficha.mjs            > "$SALIDA/idrficha.txt" 2>&1 & P41=$!
 
 echo "→ 40 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -123,5 +124,6 @@ espera $P37 "la puesta a punto del negocio"            "$SALIDA/puesta.txt"    "
 espera $P38 "renombrar y borrar carpetas"              "$SALIDA/categorias.txt" "los [0-9]+ casos pasaron"
 espera $P39 "las reglas de Firebase, coherentes"        "$SALIDA/reglas.txt"     "los [0-9]+ casos pasaron"
 espera $P40 "informar de un fallo desde la app"        "$SALIDA/fallos.txt"     "los [0-9]+ casos pasaron"
+espera $P41 "el I+D engancha su ficha técnica"          "$SALIDA/idrficha.txt"   "casos pasaron"
 
 exit $FALLOS
