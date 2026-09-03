@@ -1048,6 +1048,14 @@ async function addSucursal(parentSlotId){
   parentSlotId = parentSlotId || ACTIVE_SLOT;
   const slots = getBusinessSlots();
   const parentSlot = slots.find(s => s.id === parentSlotId);
+  // Defensa en profundidad, por si algún día se llama desde otro sitio que
+  // no haya filtrado ya por cuenta (ver pickParentForSucursal): un negocio
+  // de OTRA cuenta no se puede clonar.
+  const me = typeof currentOwnerId === 'function' ? currentOwnerId() : null;
+  if(parentSlot && me && parentSlot.ownerId && parentSlot.ownerId !== me){
+    showToast(t('msg.cannotBranchOtherAccount'));
+    return;
+  }
   const parentName = parentSlot?.name || t('gate.branchDefaultName');
   const sucursalesExistentes = slots.filter(s => s.parentId === parentSlotId).length;
   const nombreSugerido = t('gate.branchSuggestedName').replace('${parent}', parentName).replace('${n}', sucursalesExistentes + 2);
@@ -1564,7 +1572,16 @@ function filterBusinessSlots(query){
 
 /* "Abrir sucursal": pide al usuario que elija el negocio padre */
 function pickParentForSucursal(){
-  const allSlots = getBusinessSlots();
+  /* ⚠️ SOLO los negocios de ESTA cuenta, nunca todos los del aparato.
+     Usaba getBusinessSlots() (TODOS los negocios del dispositivo, de
+     cualquier dueño) para elegir de dónde clonar. En un aparato con dos
+     cuentas —dos negocios de un mismo comercial, o una demo compartida—
+     bastaba con que hubiera un solo negocio raíz en TODO el aparato (aunque
+     fuera de OTRA cuenta) para que "Abrir sucursal" clonara su carta,
+     recetas, precios y proveedores dentro del negocio nuevo SIN avisar ni
+     preguntar. Con más de un negocio raíz, el selector directamente
+     enseñaba los negocios de la otra cuenta para elegir. */
+  const allSlots = slotsOfCurrentOwner();
   // Candidatos: negocios raíz (independientes o ya con sucursales)
   const roots = allSlots.filter(s => !s.parentId);
   if(roots.length === 0){ showToast(t('msg.noBranchBase')); return; }
@@ -4565,6 +4582,23 @@ async function syncOwnerBusinessList(){
 // que poder reintentarlo después, y si se cambia de negocio hay que buscar
 // el suyo y no darlo por hecho.
 let tenantLookupIntentado = null;
+// Reintento propio para ESTE paso (buscar dónde vive la nube), distinto del
+// que reintenta la conexión una vez ya se sabe: reintentarConexionNube da
+// por hecho que cloudConfig ya es válido y llama a startCloudSync
+// directamente, así que no vale aquí — reusarla habría intentado sincronizar
+// con una nube que todavía no se ha encontrado.
+let reintentoLookupTimer = null;
+let reintentoLookupIntento = 0;
+function reintentarLookupDeNube(tenantId){
+  if(reintentoLookupTimer) return;
+  reintentoLookupIntento++;
+  const espera = Math.min(300000, 5000 * Math.pow(2, reintentoLookupIntento - 1));
+  reintentoLookupTimer = setTimeout(() => {
+    reintentoLookupTimer = null;
+    tenantLookupIntentado = null;
+    initCloud();
+  }, espera);
+}
 function initCloud(){
   cloudConfig = getCloudConfig();
   if(!cloudConfig){
@@ -4573,13 +4607,22 @@ function initCloud(){
       tenantLookupIntentado = tId;
       lookupTenantFirebaseConfig(tId).then(cfg => {
         if(!cfg || !cfg.apiKey || !cfg.databaseURL){
-          tenantLookupIntentado = null; // negocio recién creado, o sin cobertura: se podrá reintentar
+          /* ⚠️ Antes se quedaba aquí para siempre. Se ponía tenantLookupIntentado
+             a null "para poder reintentarse", pero nada volvía a llamar a
+             initCloud() solo — hacía falta recargar la página a mano. Es
+             justo el caso normal de un móvil: el primer intento cae sin
+             cobertura, y el dueño se queda en local silencioso sin saber
+             que hay un botón para arreglarlo. Mismo patrón de espera
+             creciente que reintentarConexionNube. */
+          tenantLookupIntentado = null;
+          reintentarLookupDeNube(tId);
           return;
         }
+        reintentoLookupIntento = 0;
         DB.business.ownFirebase = {apiKey: cfg.apiKey, databaseURL: cfg.databaseURL};
         saveDB();
         initCloud();
-      }).catch(() => { tenantLookupIntentado = null; });
+      }).catch(() => { tenantLookupIntentado = null; reintentarLookupDeNube(tId); });
     }
     updateSyncBadge('local');
     return;
@@ -4732,6 +4775,54 @@ function avisarSiCobroDuplicado(ventas){
       if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
     });
   }catch(e){ console.error('Error detectando cobro duplicado', e); }
+}
+
+/* ⚠️ EL NÚMERO DE FACTURA NO ESTÁ PROTEGIDO ENTRE DOS APARATOS.
+
+   `printInvoice` (js/tpv.js) lee `DB.business.facturaCounter`, le suma 1 y
+   lo guarda, todo en local — sin ninguna transacción de Firebase, a
+   diferencia de `acquireCashClosureLock`, que sí la usa para este mismo
+   tipo de problema. Con dos camareros pidiendo factura casi a la vez desde
+   dos tablets antes de sincronizar entre sí, los dos pueden leer el mismo
+   número de partida y emitir dos facturas DISTINTAS con el MISMO número
+   — y ese número entra en el informe de facturación, no solo en el ticket.
+
+   Arreglarlo de raíz (una transacción de Firebase por cada factura) obliga
+   a tener nube conectada para poder facturar, y esta app es offline-first a
+   propósito: un negocio sin cobertura en ese instante se quedaría sin poder
+   emitir ni una factura. Ese cambio de diseño no se toma en solitario.
+
+   Mientras tanto, esto SÍ se puede hacer sin ese coste: detectar la
+   colisión en cuanto las dos ventas se sincronizan (mismo mecanismo que
+   avisarSiCobroDuplicado) y avisar para que se corrija a mano — que es
+   infrecuente (hace falta pedir factura, no solo cobrar, casi a la vez) y
+   así no queda sin descubrir. */
+const facturasDuplicadasAvisadas = new Set();
+function avisarSiFacturaDuplicada(ventas){
+  try{
+    if(!Array.isArray(ventas) || !DB.auditLog) return;
+    const porNumero = new Map();
+    ventas.forEach(v => {
+      if(!v || !v.facturaNum || v.status === 'anulada') return;
+      if(!porNumero.has(v.facturaNum)) porNumero.set(v.facturaNum, []);
+      porNumero.get(v.facturaNum).push(v);
+    });
+    porNumero.forEach((lista, facturaNum) => {
+      if(lista.length < 2 || facturasDuplicadasAvisadas.has(facturaNum)) return;
+      // Dos ventas con el mismo id (la misma, fusionada en dos aparatos) no
+      // es una colisión de verdad — solo importa si son ventas DISTINTAS.
+      if(new Set(lista.map(v => v.id)).size < 2) return;
+      facturasDuplicadasAvisadas.add(facturaNum);
+      DB.auditLog.unshift({
+        id: genId(), ts: new Date().toISOString(),
+        actor: (typeof currentActorName === 'function' ? currentActorName() : ''),
+        action: 'factura_duplicada',
+        summary: t('msg.duplicateInvoiceDetected').replace('${num}', facturaNum),
+        severity: 'critical'
+      });
+      if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
+    });
+  }catch(e){ console.error('Error detectando factura duplicada', e); }
 }
 
 /* Une las líneas de una misma comanda tomadas en dos dispositivos.
@@ -4898,7 +4989,7 @@ function applyRemoteBlock(key, remoteValue){
       ingredient: mergeStockField((DB[key]||{}).ingredient, (merged||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
     };
   }
-  if(key === 'sales' && Array.isArray(merged)) avisarSiCobroDuplicado(merged);
+  if(key === 'sales' && Array.isArray(merged)){ avisarSiCobroDuplicado(merged); avisarSiFacturaDuplicada(merged); }
   // Dos camareros en la MISMA mesa: uno toma las bebidas en la barra y otro
   // la comida en el salón. Como tpvOrders se fusiona por id de comanda, la
   // comanda entera de la nube sustituía a la local y las líneas del otro

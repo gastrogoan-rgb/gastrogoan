@@ -781,5 +781,16 @@ await testAsync('FIX H12: las comandas borradas no resucitan', async () => {
     'sin lápida, la mesa juntada reaparece en cuanto sincroniza el otro aparato');
 });
 
+await testAsync('FIX H13: el móvil nuevo del dueño reintenta solo si no encuentra su nube a la primera', async () => {
+  /* Antes, si el primer intento de encontrar dónde vive la nube del negocio
+     fallaba (sin cobertura, lo normal al abrir un móvil), la app se quedaba
+     en local para siempre: `tenantLookupIntentado` se ponía a null "para
+     poder reintentarse", pero nada volvía a llamar a initCloud() solo. Había
+     que recargar la página a mano, sin ningún aviso de que hiciera falta. */
+  const sandbox = loadCore();
+  assert.equal(typeof sandbox.reintentarLookupDeNube, 'function',
+    'falta el reintento propio del paso de buscar la nube (no vale reutilizar reintentarConexionNube: esa da por hecho que ya hay configuración válida)');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

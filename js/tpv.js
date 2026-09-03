@@ -4569,7 +4569,11 @@ function applyDeliveryCommission(order, sale){
   // sale.total completo (comanda + envío), sobrestimando la comisión real
   // en negocios con ese tipo de acuerdo.
   const comisionSobreEnvio = plat.comisionSobreEnvio !== false;
-  const baseComision = comisionSobreEnvio ? sale.total : Math.max(0, sale.total - (order.costeEnvio || 0));
+  // La propina NUNCA cuenta para la comisión de la plataforma: es dinero
+  // para el repartidor o el negocio, no facturación sobre la que Glovo/Uber
+  // Eats cobre su porcentaje. sale.total la incluye (ver computeFinalTotal),
+  // así que hay que restarla igual que ya se resta el envío.
+  const baseComision = Math.max(0, sale.total - sale.propina - (comisionSobreEnvio ? 0 : (order.costeEnvio || 0)));
   const comision = baseComision * (comisionPct/100) * (1 + ivaPct/100);
   sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct, comisionSobreEnvio};
   sale.comisionPlataforma = Math.round(comision * 100) / 100;

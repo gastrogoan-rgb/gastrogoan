@@ -33,14 +33,15 @@ function getCashClosurePeriod(){
 }
 
 function getSalesForClosure(){
-  const {desde, hasta, lastClosure} = getCashClosurePeriod();
+  /* Por marca de cierre (sale.cierreId), no por ventana de tiempo — ver el
+     porqué en performCashClosure, justo donde se pone la marca. Una venta de
+     hoy sin cierre asignado entra siempre, sin importar su hora exacta: así
+     una que llega tarde por sincronización no se pierde entre dos cierres. */
   const today = todayStr();
   return DB.sales.filter(s => {
     if(s.status === 'anulada') return false;
     if(s.date !== today) return false;
-    if(!s.createdAt) return !lastClosure;
-    const dt = new Date(s.createdAt);
-    return dt > desde && dt <= hasta;
+    return !s.cierreId;
   });
 }
 
@@ -388,6 +389,17 @@ async function performCashClosure(){
     createdAt: new Date().toISOString()
   };
   DB.cashClosures.push(closure);
+  /* ⚠️ Se marca CADA venta incluida con el cierre al que pertenece.
+     Antes el filtro era solo una ventana de tiempo (createdAt entre "desde"
+     y "hasta"), y eso perdía ventas de verdad: una venta cobrada offline a
+     las 14:00 pero sincronizada a las 15:10, con un cierre hecho a las
+     15:00, no entraba en ESE cierre (no existía aún en local/remoto) ni en
+     el SIGUIENTE (su hora, 14:00, ya no es "posterior" al nuevo "desde",
+     15:00) — se perdía de todos los arqueos para siempre, aunque sí contara
+     en la facturación del mes. Marcando por id en vez de por ventana, una
+     venta que llega tarde simplemente entra en el PRÓXIMO cierre que se
+     haga, sin más condición que no tener cierre asignado todavía. */
+  sales.forEach(s => { s.cierreId = closure.id; });
   // Sigue viviendo en su propio Historial de Arqueos (con el detalle
   // completo) — esto es solo para que también salga en el registro
   // general. En rojo si hay descuadre de verdad (no solo unos céntimos de

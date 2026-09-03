@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '03/09/2026 23:33';
+const GG_BUILD = '03/09/2026 23:44';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -3972,6 +3972,14 @@ async function addSucursal(parentSlotId){
   parentSlotId = parentSlotId || ACTIVE_SLOT;
   const slots = getBusinessSlots();
   const parentSlot = slots.find(s => s.id === parentSlotId);
+  // Defensa en profundidad, por si algún día se llama desde otro sitio que
+  // no haya filtrado ya por cuenta (ver pickParentForSucursal): un negocio
+  // de OTRA cuenta no se puede clonar.
+  const me = typeof currentOwnerId === 'function' ? currentOwnerId() : null;
+  if(parentSlot && me && parentSlot.ownerId && parentSlot.ownerId !== me){
+    showToast(t('msg.cannotBranchOtherAccount'));
+    return;
+  }
   const parentName = parentSlot?.name || t('gate.branchDefaultName');
   const sucursalesExistentes = slots.filter(s => s.parentId === parentSlotId).length;
   const nombreSugerido = t('gate.branchSuggestedName').replace('${parent}', parentName).replace('${n}', sucursalesExistentes + 2);
@@ -4488,7 +4496,16 @@ function filterBusinessSlots(query){
 
 /* "Abrir sucursal": pide al usuario que elija el negocio padre */
 function pickParentForSucursal(){
-  const allSlots = getBusinessSlots();
+  /* ⚠️ SOLO los negocios de ESTA cuenta, nunca todos los del aparato.
+     Usaba getBusinessSlots() (TODOS los negocios del dispositivo, de
+     cualquier dueño) para elegir de dónde clonar. En un aparato con dos
+     cuentas —dos negocios de un mismo comercial, o una demo compartida—
+     bastaba con que hubiera un solo negocio raíz en TODO el aparato (aunque
+     fuera de OTRA cuenta) para que "Abrir sucursal" clonara su carta,
+     recetas, precios y proveedores dentro del negocio nuevo SIN avisar ni
+     preguntar. Con más de un negocio raíz, el selector directamente
+     enseñaba los negocios de la otra cuenta para elegir. */
+  const allSlots = slotsOfCurrentOwner();
   // Candidatos: negocios raíz (independientes o ya con sucursales)
   const roots = allSlots.filter(s => !s.parentId);
   if(roots.length === 0){ showToast(t('msg.noBranchBase')); return; }
@@ -7489,6 +7506,23 @@ async function syncOwnerBusinessList(){
 // que poder reintentarlo después, y si se cambia de negocio hay que buscar
 // el suyo y no darlo por hecho.
 let tenantLookupIntentado = null;
+// Reintento propio para ESTE paso (buscar dónde vive la nube), distinto del
+// que reintenta la conexión una vez ya se sabe: reintentarConexionNube da
+// por hecho que cloudConfig ya es válido y llama a startCloudSync
+// directamente, así que no vale aquí — reusarla habría intentado sincronizar
+// con una nube que todavía no se ha encontrado.
+let reintentoLookupTimer = null;
+let reintentoLookupIntento = 0;
+function reintentarLookupDeNube(tenantId){
+  if(reintentoLookupTimer) return;
+  reintentoLookupIntento++;
+  const espera = Math.min(300000, 5000 * Math.pow(2, reintentoLookupIntento - 1));
+  reintentoLookupTimer = setTimeout(() => {
+    reintentoLookupTimer = null;
+    tenantLookupIntentado = null;
+    initCloud();
+  }, espera);
+}
 function initCloud(){
   cloudConfig = getCloudConfig();
   if(!cloudConfig){
@@ -7497,13 +7531,22 @@ function initCloud(){
       tenantLookupIntentado = tId;
       lookupTenantFirebaseConfig(tId).then(cfg => {
         if(!cfg || !cfg.apiKey || !cfg.databaseURL){
-          tenantLookupIntentado = null; // negocio recién creado, o sin cobertura: se podrá reintentar
+          /* ⚠️ Antes se quedaba aquí para siempre. Se ponía tenantLookupIntentado
+             a null "para poder reintentarse", pero nada volvía a llamar a
+             initCloud() solo — hacía falta recargar la página a mano. Es
+             justo el caso normal de un móvil: el primer intento cae sin
+             cobertura, y el dueño se queda en local silencioso sin saber
+             que hay un botón para arreglarlo. Mismo patrón de espera
+             creciente que reintentarConexionNube. */
+          tenantLookupIntentado = null;
+          reintentarLookupDeNube(tId);
           return;
         }
+        reintentoLookupIntento = 0;
         DB.business.ownFirebase = {apiKey: cfg.apiKey, databaseURL: cfg.databaseURL};
         saveDB();
         initCloud();
-      }).catch(() => { tenantLookupIntentado = null; });
+      }).catch(() => { tenantLookupIntentado = null; reintentarLookupDeNube(tId); });
     }
     updateSyncBadge('local');
     return;
@@ -7656,6 +7699,54 @@ function avisarSiCobroDuplicado(ventas){
       if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
     });
   }catch(e){ console.error('Error detectando cobro duplicado', e); }
+}
+
+/* ⚠️ EL NÚMERO DE FACTURA NO ESTÁ PROTEGIDO ENTRE DOS APARATOS.
+
+   `printInvoice` (js/tpv.js) lee `DB.business.facturaCounter`, le suma 1 y
+   lo guarda, todo en local — sin ninguna transacción de Firebase, a
+   diferencia de `acquireCashClosureLock`, que sí la usa para este mismo
+   tipo de problema. Con dos camareros pidiendo factura casi a la vez desde
+   dos tablets antes de sincronizar entre sí, los dos pueden leer el mismo
+   número de partida y emitir dos facturas DISTINTAS con el MISMO número
+   — y ese número entra en el informe de facturación, no solo en el ticket.
+
+   Arreglarlo de raíz (una transacción de Firebase por cada factura) obliga
+   a tener nube conectada para poder facturar, y esta app es offline-first a
+   propósito: un negocio sin cobertura en ese instante se quedaría sin poder
+   emitir ni una factura. Ese cambio de diseño no se toma en solitario.
+
+   Mientras tanto, esto SÍ se puede hacer sin ese coste: detectar la
+   colisión en cuanto las dos ventas se sincronizan (mismo mecanismo que
+   avisarSiCobroDuplicado) y avisar para que se corrija a mano — que es
+   infrecuente (hace falta pedir factura, no solo cobrar, casi a la vez) y
+   así no queda sin descubrir. */
+const facturasDuplicadasAvisadas = new Set();
+function avisarSiFacturaDuplicada(ventas){
+  try{
+    if(!Array.isArray(ventas) || !DB.auditLog) return;
+    const porNumero = new Map();
+    ventas.forEach(v => {
+      if(!v || !v.facturaNum || v.status === 'anulada') return;
+      if(!porNumero.has(v.facturaNum)) porNumero.set(v.facturaNum, []);
+      porNumero.get(v.facturaNum).push(v);
+    });
+    porNumero.forEach((lista, facturaNum) => {
+      if(lista.length < 2 || facturasDuplicadasAvisadas.has(facturaNum)) return;
+      // Dos ventas con el mismo id (la misma, fusionada en dos aparatos) no
+      // es una colisión de verdad — solo importa si son ventas DISTINTAS.
+      if(new Set(lista.map(v => v.id)).size < 2) return;
+      facturasDuplicadasAvisadas.add(facturaNum);
+      DB.auditLog.unshift({
+        id: genId(), ts: new Date().toISOString(),
+        actor: (typeof currentActorName === 'function' ? currentActorName() : ''),
+        action: 'factura_duplicada',
+        summary: t('msg.duplicateInvoiceDetected').replace('${num}', facturaNum),
+        severity: 'critical'
+      });
+      if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
+    });
+  }catch(e){ console.error('Error detectando factura duplicada', e); }
 }
 
 /* Une las líneas de una misma comanda tomadas en dos dispositivos.
@@ -7822,7 +7913,7 @@ function applyRemoteBlock(key, remoteValue){
       ingredient: mergeStockField((DB[key]||{}).ingredient, (merged||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
     };
   }
-  if(key === 'sales' && Array.isArray(merged)) avisarSiCobroDuplicado(merged);
+  if(key === 'sales' && Array.isArray(merged)){ avisarSiCobroDuplicado(merged); avisarSiFacturaDuplicada(merged); }
   // Dos camareros en la MISMA mesa: uno toma las bebidas en la barra y otro
   // la comida en el salón. Como tpvOrders se fusiona por id de comanda, la
   // comanda entera de la nube sustituía a la local y las líneas del otro
@@ -10885,7 +10976,7 @@ const I18N = {
     'label.newItemsFromClient': 'Nuevos platos pedidos por el cliente', 'label.timeOpen': 'Tiempo que lleva abierta la mesa',
     'btn.addToOrder': 'Añadir al pedido', 'empty.orderEmpty': 'Comanda vacía',
     'title.sendDishToKitchen': 'Marchar este plato a cocina',
-    'btn.sendFullTicket': 'Marchar vale', 'btn.charge': 'Cobrar', 'btn.closeOrderPaidOnline': 'Cerrar pedido (ya pagado)', 'label.selectFromMenu': 'Selecciona platos de la carta',
+    'btn.sendFullTicket': 'Marchar vale', 'btn.charge': 'Cobrar', 'btn.closeOrderPaidOnline': 'Cerrar pedido (ya pagado)', 'msg.cannotBranchOtherAccount': 'Ese negocio es de otra cuenta: no se puede abrir una sucursal a partir de él.', 'label.selectFromMenu': 'Selecciona platos de la carta',
     'label.order': 'Comanda', 'tab.activeOrders': 'Activas', 'tab.closedOrders': 'Cerradas',
     'btn.markDishOut': 'Marcar agotado', 'title.markDishOut': 'Marcar plato agotado', 'title.markDishOutSala': 'Marcar bebida agotada',
     'label.markDishOutHelp': 'Marca aquí un plato o bebida que se acabe a media comanda — deja de poder pedirse al momento, sin tener que entrar en Oferta Gastronómica.',
@@ -11252,7 +11343,7 @@ const I18N = {
     'title.dishAnalysis': 'Análisis de Platos',
     'msg.pinIncorrect': 'PIN incorrecto',
     'msg.recordNoLongerExists': 'Esto ya no existe — puede que se haya borrado desde otro dispositivo. Se ha actualizado la vista.',
-    'msg.duplicateChargeDetected': '⚠️ Se han registrado ${n} cobros del MISMO pedido (${total} en total). Suele pasar cuando dos personas cobran la misma mesa a la vez desde dispositivos distintos. Revisa y anula el que sobre: si no, la facturación y el IVA salen inflados.',
+    'msg.duplicateChargeDetected': '⚠️ Se han registrado ${n} cobros del MISMO pedido (${total} en total). Suele pasar cuando dos personas cobran la misma mesa a la vez desde dispositivos distintos. Revisa y anula el que sobre: si no, la facturación y el IVA salen inflados.', 'msg.duplicateInvoiceDetected': '⚠️ El número de factura ${num} se ha emitido dos veces, para ventas distintas. Suele pasar al pedir factura casi a la vez desde dos dispositivos antes de sincronizar. Revisa las dos facturas y corrige la numeración a mano.',
     'msg.concurrentEditOverwritten': '⚠️ ${count} cambio(s) tuyos se han sobrescrito porque otro dispositivo editó lo mismo casi a la vez. Revisa que todo esté como esperabas.',
     'msg.multipleCartasHint': 'Hay varias cartas activas a esta hora. Elige cuál usar para esta comanda:',
     'msg.noDishesAvailableForOrder': 'No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.',
@@ -13056,7 +13147,7 @@ const I18N = {
     'label.newItemsFromClient': 'Nous plats demanats pel client', 'label.timeOpen': 'Temps que porta oberta la taula',
     'btn.addToOrder': 'Afegir a la comanda', 'empty.orderEmpty': 'Comanda buida',
     'title.sendDishToKitchen': 'Marxar aquest plat a cuina',
-    'btn.sendFullTicket': 'Marxar val complet', 'btn.charge': 'Cobrar', 'btn.closeOrderPaidOnline': 'Tancar comanda (ja pagada)', 'label.selectFromMenu': 'Selecciona plats de la carta',
+    'btn.sendFullTicket': 'Marxar val complet', 'btn.charge': 'Cobrar', 'btn.closeOrderPaidOnline': 'Tancar comanda (ja pagada)', 'msg.cannotBranchOtherAccount': 'Aquest negoci és d\'un altre compte: no es pot obrir una sucursal a partir d\'ell.', 'label.selectFromMenu': 'Selecciona plats de la carta',
     'label.order': 'Comanda', 'tab.activeOrders': 'Actives', 'tab.closedOrders': 'Tancades',
     'btn.markDishOut': 'Marcar esgotat', 'title.markDishOut': 'Marcar plat esgotat', 'title.markDishOutSala': 'Marcar beguda esgotada',
     'label.markDishOutHelp': 'Marca aquí un plat o beguda que s\'acabi a mitja comanda — deixa de poder-se demanar a l\'instant, sense haver d\'entrar a Oferta Gastronòmica.',
@@ -13424,7 +13515,7 @@ const I18N = {
     'title.dishAnalysis': 'Anàlisi de Plats',
     'msg.pinIncorrect': 'PIN incorrecte',
     'msg.recordNoLongerExists': "Això ja no existeix — potser s'ha esborrat des d'un altre dispositiu. S'ha actualitzat la vista.",
-    'msg.duplicateChargeDetected': '⚠️ S\'han registrat ${n} cobraments del MATEIX comanda (${total} en total). Sol passar quan dues persones cobren la mateixa taula alhora des de dispositius diferents. Revisa i anul·la el que sobri: si no, la facturació i l\'IVA surten inflats.',
+    'msg.duplicateChargeDetected': '⚠️ S\'han registrat ${n} cobraments del MATEIX comanda (${total} en total). Sol passar quan dues persones cobren la mateixa taula alhora des de dispositius diferents. Revisa i anul·la el que sobri: si no, la facturació i l\'IVA surten inflats.', 'msg.duplicateInvoiceDetected': '⚠️ El número de factura ${num} s\'ha emès dues vegades, per a vendes diferents. Sol passar en demanar factura gairebé alhora des de dos dispositius abans de sincronitzar. Revisa les dues factures i corregeix la numeració a mà.',
     'msg.concurrentEditOverwritten': "⚠️ ${count} canvi(s) teus s'han sobreescrit perquè un altre dispositiu ha editat el mateix gairebé alhora. Revisa que tot estigui com esperaves.",
     'msg.multipleCartasHint': "Hi ha diverses cartes actives a aquesta hora. Tria quina fer servir per a aquesta comanda:",
     'msg.noDishesAvailableForOrder': "No hi ha plats disponibles. Selecciona almenys una carta activa a TPV amb plats disponibles.",
@@ -15227,7 +15318,7 @@ const I18N = {
     'label.newItemsFromClient': 'New dishes ordered by the customer', 'label.timeOpen': 'Time the table has been open',
     'btn.addToOrder': 'Add to order', 'empty.orderEmpty': 'Empty order',
     'title.sendDishToKitchen': 'Send this dish to the kitchen',
-    'btn.sendFullTicket': 'Send full ticket', 'btn.charge': 'Charge', 'btn.closeOrderPaidOnline': 'Close order (already paid)', 'label.selectFromMenu': 'Select dishes from the menu',
+    'btn.sendFullTicket': 'Send full ticket', 'btn.charge': 'Charge', 'btn.closeOrderPaidOnline': 'Close order (already paid)', 'msg.cannotBranchOtherAccount': 'That business belongs to another account: you cannot open a branch from it.', 'label.selectFromMenu': 'Select dishes from the menu',
     'label.order': 'Order', 'tab.activeOrders': 'Active', 'tab.closedOrders': 'Closed',
     'btn.markDishOut': 'Mark as out', 'title.markDishOut': 'Mark dish as out of stock', 'title.markDishOutSala': 'Mark drink as out of stock',
     'label.markDishOutHelp': 'Mark a dish or drink here as soon as it runs out mid-service — it stops being orderable immediately, no need to go into Menu Offering.',
@@ -15595,7 +15686,7 @@ const I18N = {
     'title.dishAnalysis': 'Dish Analysis',
     'msg.pinIncorrect': 'Incorrect PIN',
     'msg.recordNoLongerExists': "This no longer exists — it may have been deleted from another device. The view has been refreshed.",
-    'msg.duplicateChargeDetected': '⚠️ ${n} charges were recorded for the SAME order (${total} in total). This usually happens when two people charge the same table at once from different devices. Review and void the extra one, or your revenue and VAT will be overstated.',
+    'msg.duplicateChargeDetected': '⚠️ ${n} charges were recorded for the SAME order (${total} in total). This usually happens when two people charge the same table at once from different devices. Review and void the extra one, or your revenue and VAT will be overstated.', 'msg.duplicateInvoiceDetected': '⚠️ Invoice number ${num} was issued twice, for two different sales. This usually happens when an invoice is requested from two devices almost at once before they sync. Review both invoices and fix the numbering by hand.',
     'msg.concurrentEditOverwritten': "⚠️ ${count} of your change(s) were overwritten because another device edited the same thing almost at once. Check everything is as you expected.",
     'msg.multipleCartasHint': "Several menus are active right now. Choose which one to use for this order:",
     'msg.noDishesAvailableForOrder': "No dishes available. Select at least one active menu in POS with available dishes.",
@@ -29110,7 +29201,11 @@ function applyDeliveryCommission(order, sale){
   // sale.total completo (comanda + envío), sobrestimando la comisión real
   // en negocios con ese tipo de acuerdo.
   const comisionSobreEnvio = plat.comisionSobreEnvio !== false;
-  const baseComision = comisionSobreEnvio ? sale.total : Math.max(0, sale.total - (order.costeEnvio || 0));
+  // La propina NUNCA cuenta para la comisión de la plataforma: es dinero
+  // para el repartidor o el negocio, no facturación sobre la que Glovo/Uber
+  // Eats cobre su porcentaje. sale.total la incluye (ver computeFinalTotal),
+  // así que hay que restarla igual que ya se resta el envío.
+  const baseComision = Math.max(0, sale.total - sale.propina - (comisionSobreEnvio ? 0 : (order.costeEnvio || 0)));
   const comision = baseComision * (comisionPct/100) * (1 + ivaPct/100);
   sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct, comisionSobreEnvio};
   sale.comisionPlataforma = Math.round(comision * 100) / 100;
@@ -29887,14 +29982,15 @@ function getCashClosurePeriod(){
 }
 
 function getSalesForClosure(){
-  const {desde, hasta, lastClosure} = getCashClosurePeriod();
+  /* Por marca de cierre (sale.cierreId), no por ventana de tiempo — ver el
+     porqué en performCashClosure, justo donde se pone la marca. Una venta de
+     hoy sin cierre asignado entra siempre, sin importar su hora exacta: así
+     una que llega tarde por sincronización no se pierde entre dos cierres. */
   const today = todayStr();
   return DB.sales.filter(s => {
     if(s.status === 'anulada') return false;
     if(s.date !== today) return false;
-    if(!s.createdAt) return !lastClosure;
-    const dt = new Date(s.createdAt);
-    return dt > desde && dt <= hasta;
+    return !s.cierreId;
   });
 }
 
@@ -30242,6 +30338,17 @@ async function performCashClosure(){
     createdAt: new Date().toISOString()
   };
   DB.cashClosures.push(closure);
+  /* ⚠️ Se marca CADA venta incluida con el cierre al que pertenece.
+     Antes el filtro era solo una ventana de tiempo (createdAt entre "desde"
+     y "hasta"), y eso perdía ventas de verdad: una venta cobrada offline a
+     las 14:00 pero sincronizada a las 15:10, con un cierre hecho a las
+     15:00, no entraba en ESE cierre (no existía aún en local/remoto) ni en
+     el SIGUIENTE (su hora, 14:00, ya no es "posterior" al nuevo "desde",
+     15:00) — se perdía de todos los arqueos para siempre, aunque sí contara
+     en la facturación del mes. Marcando por id en vez de por ventana, una
+     venta que llega tarde simplemente entra en el PRÓXIMO cierre que se
+     haga, sin más condición que no tener cierre asignado todavía. */
+  sales.forEach(s => { s.cierreId = closure.id; });
   // Sigue viviendo en su propio Historial de Arqueos (con el detalle
   // completo) — esto es solo para que también salga en el registro
   // general. En rojo si hay descuadre de verdad (no solo unos céntimos de

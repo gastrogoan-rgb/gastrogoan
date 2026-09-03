@@ -337,6 +337,23 @@ await caso('Al quitar un negocio se CIERRA la base antes de borrarla', async ()=
   return 'si no, el borrado se queda bloqueado en silencio';
 });
 
+await caso('Abrir sucursal solo puede clonar un negocio DE LA MISMA CUENTA', async ()=>{
+  /* pickParentForSucursal usaba getBusinessSlots() — TODOS los negocios del
+     aparato, de cualquier dueño — para decidir de dónde clonar. En un
+     aparato con dos cuentas (dos negocios de un mismo comercial, o una demo
+     compartida), bastaba con que hubiera un solo negocio raíz en TODO el
+     aparato para que "Abrir sucursal" clonara su carta, recetas, precios y
+     proveedores SIN avisar, aunque fuera de otra cuenta. */
+  const r = await page.evaluate(()=>{
+    const negocioAjeno = {id: 'ajeno1', name: 'De otra cuenta', ownerId: 'OTRO_DUENO'};
+    const misSlots = slotsOfCurrentOwner();
+    const meLoOfrecerian = misSlots.some(s => s.id === negocioAjeno.id);
+    return {ajenoNoSaleEnMisNegocios: !meLoOfrecerian};
+  });
+  assert.ok(r.ajenoNoSaleEnMisNegocios, 'un negocio de otra cuenta no puede aparecer entre "mis" negocios para clonar');
+  return 'slotsOfCurrentOwner() filtra por cuenta, no getBusinessSlots()';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

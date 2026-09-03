@@ -22,6 +22,14 @@ function loadTpv(DB) {
   return sandbox;
 }
 
+const opsSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'operations.js'), 'utf8');
+function loadOps(DB){
+  const sandbox = { DB, t: (k) => k, window: undefined, console, saveDB: () => {}, todayStr: () => '2026-09-04' };
+  vm.createContext(sandbox);
+  vm.runInContext(opsSource, sandbox, { filename: 'js/operations.js' });
+  return sandbox;
+}
+
 const recipesSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'recipes.js'), 'utf8');
 function loadRecipes(DB) {
   const sandbox = {
@@ -242,6 +250,53 @@ test('esPedidoProgramadoLejano: uno para dentro de 20 minutos NO lo es', () => {
 test('esPedidoProgramadoLejano: sin fecha/hora (mesa normal) no cuenta como lejano', () => {
   const sandbox = loadTpv({});
   assert.equal(sandbox.esPedidoProgramadoLejano({}), false);
+});
+
+/* --- Una venta que llega tarde no se pierde entre dos cierres de caja --- */
+
+test('getSalesForClosure: una venta ya asignada a un cierre no vuelve a salir', () => {
+  const DB = {business: {}, sales: [
+    {id: 1, date: '2026-09-04', status: 'pagada', total: 10, cierreId: 'c1'},
+    {id: 2, date: '2026-09-04', status: 'pagada', total: 20},   // sin cierre: pendiente
+  ]};
+  const sandbox = loadOps(DB);
+  const pendientes = sandbox.getSalesForClosure();
+  assert.equal(pendientes.length, 1);
+  assert.equal(pendientes[0].id, 2);
+});
+
+test('getSalesForClosure: una venta sincronizada TARDE entra en el próximo cierre, no se pierde', () => {
+  /* El fallo real: con una ventana de tiempo, una venta cobrada offline a
+     las 14:00 pero sincronizada a las 15:10, con un cierre hecho a las
+     15:00, no entraba en ESE cierre (no existía aún) ni en el SIGUIENTE (su
+     hora ya no es "posterior" al nuevo desde) — se perdía para siempre. */
+  const DB = {business: {}, sales: [
+    {id: 3, date: '2026-09-04', status: 'pagada', total: 45, createdAt: '2026-09-04T14:00:00.000Z'},
+  ]};
+  const sandbox = loadOps(DB);
+  const pendientes = sandbox.getSalesForClosure();
+  assert.equal(pendientes.length, 1, 'entra en el próximo cierre sin importar su hora exacta');
+  assert.equal(pendientes[0].id, 3);
+});
+
+test('getSalesForClosure: una venta anulada nunca entra', () => {
+  const DB = {business: {}, sales: [{id: 4, date: '2026-09-04', status: 'anulada', total: 10}]};
+  const sandbox = loadOps(DB);
+  assert.equal(sandbox.getSalesForClosure().length, 0);
+});
+
+/* --- La propina no cuenta para la comisión de la plataforma --- */
+
+test('applyDeliveryCommission NO cobra comisión sobre la propina', () => {
+  /* La comisión de Glovo/Uber Eats es sobre la comanda, nunca sobre la
+     propina — es dinero del repartidor o del negocio, no facturación suya. */
+  const DB = {business: {deliveryPlatforms: [{id: 9, nombre: 'Glovo', comisionPct: 20, ivaPct: 21, comisionSobreEnvio: true}]}};
+  const sandbox = loadTpv(DB);
+  const order = {tipo: 'delivery', plataformaId: 9, costeEnvio: 0};
+  const sale = {total: 22, propina: 2};   // 20€ de comida + 2€ propina
+  sandbox.applyDeliveryCommission(order, sale);
+  // 20% + 21% IVA sobre 20€ (sin la propina) = 4.84€
+  assert.equal(sale.comisionPlataforma, 4.84);
 });
 
 /* --- Un pedido online: estático de verdad --- */
