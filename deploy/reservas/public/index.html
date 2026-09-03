@@ -358,6 +358,7 @@ const I18N = {
     'resManage.notFound.title':'No encontramos esa reserva','resManage.notFound.msg':'El enlace puede haber caducado.',
     'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la pestaña de reservas.',
     'resManage.completed.title':'Ya has llegado','resManage.completed.msg':'Esta reserva ya se ha registrado como atendida, así que no se puede editar ni cancelar desde aquí. Si necesitas algo, habla directamente con el restaurante.',
+    'track.backToMenu':'Volver a la carta',
     'track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
     'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
     'track.rejected.title':'Pedido no aceptado','track.rejected.msg':'El restaurante no ha podido aceptar este pedido.',
@@ -434,6 +435,7 @@ const I18N = {
     'resManage.notFound.title':'We can\'t find that reservation','resManage.notFound.msg':'The link may have expired.',
     'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use the reservation tab.',
     'resManage.completed.title':'You\'ve already arrived','resManage.completed.msg':'This reservation is already marked as seated, so it can\'t be edited or cancelled from here. If you need anything, please contact the restaurant directly.',
+    'track.backToMenu':'Back to menu',
     'track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
     'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
     'track.rejected.title':'Order not accepted','track.rejected.msg':'The restaurant couldn\'t accept this order.',
@@ -510,6 +512,7 @@ const I18N = {
     'resManage.notFound.title':'No trobem aquesta reserva','resManage.notFound.msg':'L\'enllaç pot haver caducat.',
     'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la pestanya de reserves.',
     'resManage.completed.title':'Ja has arribat','resManage.completed.msg':'Aquesta reserva ja s\'ha registrat com atesa, així que no es pot editar ni cancel·lar des d\'aquí. Si necessites res, parla directament amb el restaurant.',
+    'track.backToMenu':'Tornar a la carta',
     'track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
     'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
     'track.rejected.title':'Comanda no acceptada','track.rejected.msg':'El restaurant no ha pogut acceptar aquesta comanda.',
@@ -2889,11 +2892,27 @@ function sendRequest(req, successMsg){
    el cliente puede volver a este enlace en cualquier momento y ver en qué
    punto va su pedido sin tener que llamar a preguntar. */
 const TRACK_STEPS = ['pendiente','aceptado','preparando','listo','entregado'];
+/* ⚠️ SIN ESTO, LAS PANTALLAS DE SEGUIMIENTO ERAN UN CALLEJÓN SIN SALIDA.
+
+   "Seguir mi pedido" y "Gestionar mi reserva" navegan a una URL nueva
+   (?track=... / ?res=...), y ninguna de sus pantallas —cargando, no
+   encontrado, seguimiento, cancelada, completada— tenía ni un botón para
+   volver. Un cliente que pulsaba el enlace no podía volver a la carta salvo
+   cerrando la pestaña o borrando la URL a mano. Mismo patrón que los
+   callejones sin salida de la app de gestión, aquí se nos había escapado
+   por completo. */
+function urlVolverALaCarta(){
+  return location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
+}
+function botonVolverALaCarta(){
+  return `<a class="btn" style="margin-top:16px;text-decoration:none;display:inline-block" href="${escapeHtml(urlVolverALaCarta())}">${t('track.backToMenu')}</a>`;
+}
+
 function renderOrderTrackingView(){
   const app = document.getElementById('app');
   if(trackListenerAttached) return;
   trackListenerAttached = true;
-  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('track.loading')}</div>`;
+  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('track.loading')}<div style="margin-top:14px">${botonVolverALaCarta()}</div></div>`;
   db.ref('gastrogoan/public/' + publicId + '/orderStatus/' + trackToken).on('value', snap => {
     renderTrackStatus(snap.val());
   }, () => {
@@ -2908,6 +2927,7 @@ function renderTrackStatus(data){
         <div class="icon">🔎</div>
         <h2>${t('track.notFound.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('track.notFound.msg')}</p>
+        ${botonVolverALaCarta()}
       </div>`;
     return;
   }
@@ -2919,6 +2939,7 @@ function renderTrackStatus(data){
         <div class="icon">⚠️</div>
         <h2>${t('track.rejected.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('track.rejected.msg')}${phone ? ' ' + t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`) : ''}</p>
+        ${botonVolverALaCarta()}
       </div>`;
     return;
   }
@@ -2942,6 +2963,7 @@ function renderTrackStatus(data){
           </div>
         `).join('')}
       </div>
+      ${botonVolverALaCarta()}
     </div>
   `;
 }
@@ -2959,7 +2981,7 @@ function renderReservationManageView(){
   const app = document.getElementById('app');
   if(resListenerAttached) return;
   resListenerAttached = true;
-  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('resManage.loading')}</div>`;
+  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('resManage.loading')}<div style="margin-top:14px">${botonVolverALaCarta()}</div></div>`;
   db.ref('gastrogoan/public/' + publicId + '/reservationStatus/' + resToken).on('value', snap => {
     renderReservationStatus(snap.val());
   }, () => {
@@ -2975,6 +2997,7 @@ function renderReservationStatus(data){
         <div class="icon">🔎</div>
         <h2>${t('resManage.notFound.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('resManage.notFound.msg')}</p>
+        ${botonVolverALaCarta()}
       </div>`;
     return;
   }
@@ -2986,6 +3009,7 @@ function renderReservationStatus(data){
         <div style="font-size:40px">🚫</div>
         <h2 style="margin-top:10px">${t('resManage.cancelled.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('resManage.cancelled.msg')}</p>
+        ${botonVolverALaCarta()}
       </div>`;
     return;
   }
@@ -2998,6 +3022,7 @@ function renderReservationStatus(data){
         <div style="font-size:40px">✅</div>
         <h2 style="margin-top:10px">${t('resManage.completed.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('resManage.completed.msg')}</p>
+        ${botonVolverALaCarta()}
       </div>`;
     return;
   }
@@ -3038,6 +3063,7 @@ function renderReservationStatus(data){
           <button class="btn" style="flex:1;color:var(--red);border-color:var(--red)" id="res-cancel-btn" onclick="cancelMyReservation()">${t('resManage.cancelBtn')}</button>
         </div>
       `}
+      ${resEditing ? '' : botonVolverALaCarta()}
     </div>
   `;
   if(resEditing){

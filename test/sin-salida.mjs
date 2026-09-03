@@ -220,6 +220,35 @@ await caso('Una licencia desactivada NO deja al cliente encerrado', async ()=>{
   return 'canjear, volver al login y quitar el negocio';
 });
 
+await caso('La web PÚBLICA: seguir un pedido o gestionar una reserva tiene salida', async ()=>{
+  /* "Seguir mi pedido" y "Gestionar mi reserva" navegan a una URL nueva
+     (?track=.../?res=...) y NINGUNA de sus pantallas tenía un botón de
+     vuelta a la carta: ni cargando, ni "no encontrado", ni el seguimiento
+     normal, ni una reserva cancelada/completada. Un cliente que pulsaba el
+     enlace se quedaba sin forma de volver salvo cerrar la pestaña.
+     Página aparte y aislada: es otro archivo (reservagastrogoan.html), no
+     comparte estado con la app de gestión que usa el resto de este fichero. */
+  const pub = await browser.newPage();
+  const errsPub = [];
+  pub.on('pageerror', e => errsPub.push(e.message));
+  await pub.goto('http://localhost:8950/reservagastrogoan.html', {waitUntil:'domcontentloaded'});
+  // Se llama a la función de render directamente: publicId real exige negocio
+  // dado de alta en Firebase, y lo único que importa aquí es la PANTALLA, no
+  // el dato. renderTrackStatus(null) es justo el caso "no encontrado".
+  const r = await pub.evaluate(() => {
+    publicId = 'ABCD1234';
+    renderTrackStatus(null);
+    const enlaces = [...document.querySelectorAll('#app a, #app button')]
+      .filter(el => el.getClientRects().length);
+    return {hayVolver: enlaces.some(el => /volver|back|tornar/i.test(el.textContent || ''))};
+  });
+  assert.ok(r.hayVolver, 'la pantalla de seguimiento (pedido no encontrado) no tiene forma de volver a la carta');
+  const reales2 = errsPub.filter(e => !/Failed to fetch|NetworkError/i.test(e));
+  assert.deepEqual(reales2, [], reales2.join(' | '));
+  await pub.close();
+  return 'hay botón de volver a la carta';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
