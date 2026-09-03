@@ -201,6 +201,52 @@ test('decrementMenuStock no toca los menús sin límite (lo normal)', () => {
   assert.equal(DB.menus[0].disponible, true);
 });
 
+/* Las raciones de CADA PLATO del menú. Es donde está el límite real de una
+   cocina: se compran 8 merluzas, no 20 menús. Al acabarse la merluza el menú
+   se sigue vendiendo con las demás opciones. */
+function dbConOpcionesDeMenu(stockMerluza){
+  return {business: {}, cartas: [], menus: [{
+    id: 7, disponible: true,
+    grupos: [{id: 20, nombre: 'Segundo', opciones: [
+      {id: 30, nombre: 'Merluza', stock: stockMerluza, disponible: true},
+      {id: 31, nombre: 'Pollo', disponible: true},
+    ]}],
+  }]};
+}
+function lineaDeOpcion(){
+  return {lineId: 'l1', menuId: 7, grupoId: 20, opcionId: 30, menuInstanceId: 'i1', qty: 1};
+}
+
+test('Se agota la MERLUZA, no el menú entero', () => {
+  const DB = dbConOpcionesDeMenu(2);
+  const sandbox = loadTpv(DB);
+  const linea = lineaDeOpcion();
+  sandbox.decrementMenuOptionStock(linea, 2);
+  const merluza = DB.menus[0].grupos[0].opciones[0];
+  assert.equal(merluza.stock, 0);
+  assert.equal(merluza.disponible, false, 'la opción agotada deja de ofrecerse');
+  assert.equal(DB.menus[0].disponible, true, 'pero el menú se sigue vendiendo con las demás opciones');
+  assert.equal(DB.menus[0].grupos[0].opciones[1].disponible, true, 'y el pollo no se toca');
+});
+
+test('Al anular se devuelve la ración de la opción y vuelve a ofrecerse', () => {
+  const DB = dbConOpcionesDeMenu(0);
+  DB.menus[0].grupos[0].opciones[0].disponible = false;
+  const sandbox = loadTpv(DB);
+  sandbox.restockForVoidedItems([lineaDeOpcion()], {includeIngredients: false});
+  const merluza = DB.menus[0].grupos[0].opciones[0];
+  assert.equal(merluza.stock, 1);
+  assert.equal(merluza.disponible, true, 'al devolver una ración, vuelve a estar disponible');
+});
+
+test('Una opción sin límite de raciones no se toca (lo normal)', () => {
+  const DB = dbConOpcionesDeMenu(null);
+  const sandbox = loadTpv(DB);
+  sandbox.decrementMenuOptionStock(lineaDeOpcion(), 3);
+  assert.equal(DB.menus[0].grupos[0].opciones[0].stock, null);
+  assert.equal(DB.menus[0].grupos[0].opciones[0].disponible, true);
+});
+
 test('Al anular, un menú de tres platos devuelve UNA ración, no tres', () => {
   const DB = makeDbWithMenu(19);
   const sandbox = loadTpv(DB);

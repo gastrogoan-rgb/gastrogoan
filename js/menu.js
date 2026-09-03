@@ -729,6 +729,33 @@ function confirmNewCartaSection(){
    El nombre del plato en la CARTA es suyo, aunque venga de una receta: en la
    carta puede llamarse "Nuestro steak tartar" y en el escandallo "Steak
    tartar". Renombrar aquí no toca la receta. */
+/* Disponible y raciones de CADA PLATO del menú, que es donde está el límite
+   real de una cocina: se compran 8 merluzas, no 20 menús. Al agotarse una
+   opción, el TPV y la web pública dejan de ofrecerla y el menú se sigue
+   vendiendo con las demás — que es exactamente lo que pasa en un servicio. */
+function toggleMenuOpcionDisponible(grupoId, opcionId){
+  const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
+  if(!o) return;
+  o.disponible = o.disponible===false ? true : false;
+  renderMenuGrupos();
+}
+async function setMenuOpcionStock(grupoId, opcionId){
+  const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
+  if(!o) return;
+  const current = o.stock!=null ? String(o.stock) : '';
+  const val = await promptText(t('msg.setStockPrompt'), current, {allowEmpty:true});
+  if(val === null) return;
+  const trimmed = val.trim();
+  if(trimmed === ''){ delete o.stock; renderMenuGrupos(); return; }
+  const n = parseInt(trimmed);
+  if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
+  o.stock = n;
+  o.disponible = n > 0;
+  renderMenuGrupos();
+}
+
 async function renameMenuGrupo(grupoId){
   if(!isOwnerSession() && !editUnlocked) return;
   const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
@@ -1276,6 +1303,8 @@ function renderMenuGrupos(){
           <span style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameOption')}" onclick="renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
           ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
           <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
+          <button class="btn btn-sm ${o.disponible===false?'btn-danger':''}" onclick="toggleMenuOpcionDisponible(${g.id},${o.id})">${o.disponible===false?t('common.unavailable'):t('common.available')}</button>
+          <button class="btn btn-sm ${o.stock!=null && o.stock<=0?'btn-danger':''}" style="${o.stock!=null && o.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setMenuOpcionStock(${g.id},${o.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${o.stock!=null ? t('label.portionsLeft').replace('${n}', o.stock) : t('btn.limitPortions')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
         </div>
       `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : t('empty.groupOptions')}</div>`}
