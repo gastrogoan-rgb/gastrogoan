@@ -3107,6 +3107,12 @@ const ARRAYS_CON_LAPIDA = new Set([
      turnoSwapRequests y vacationRequests del empleado eliminado — sin
      lápida, resucitaban al sincronizar un dispositivo que aún los tenía. */
   'fichajes', 'turnoSwapRequests', 'vacationRequests',
+  /* sales y cashClosures SÍ se borran de verdad: archiveOldData (js/app.js,
+     "Mi Negocio" → archivar datos antiguos) hace un filter() real tras
+     descargar el JSON. Sin lápida, archivar en un dispositivo mientras otro
+     lleva tiempo sin sincronizar resucitaba ventas y cierres de caja ya
+     archivados al reconectar — ingresos duplicados y cuadre de caja mal. */
+  'sales', 'cashClosures',
   /* La papelera (DB.trash) también se borra de verdad: al restaurar un
      elemento (restoreTrashItem) y al purgar por caducidad (moveToTrash).
      Sin lápida, una entrada ya restaurada podía resucitar al sincronizar

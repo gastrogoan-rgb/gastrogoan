@@ -5618,6 +5618,20 @@ function confirmRestoreBackup(){
     showToast(t('gate.removeBusinessNameMismatch'));
     return;
   }
+  // El backup restaurado trae SU mapa de lápidas (DB.borrados), de la fecha
+  // en que se descargó. Sustituirlo sin más borraba de la memoria cualquier
+  // cosa eliminada DESPUÉS de esa fecha: al volver a sincronizar con la
+  // nube, mergeArraysById la resucitaba (sin lápida no hay quien la pare) y
+  // el borrado reaparecía en toda la flota de dispositivos del negocio. Se
+  // fusionan las dos listas de lápidas, quedándose con la fecha más nueva
+  // de cada clave, para no perder ninguna.
+  const lapidasActuales = (DB && DB.borrados) || {};
+  const lapidasBackup = parsed.borrados || {};
+  const lapidasFusionadas = {...lapidasBackup};
+  Object.keys(lapidasActuales).forEach(clave => {
+    if(!lapidasFusionadas[clave] || lapidasActuales[clave] > lapidasFusionadas[clave]) lapidasFusionadas[clave] = lapidasActuales[clave];
+  });
+  parsed.borrados = lapidasFusionadas;
   idbSet(DB_KEY, parsed).then(() => {
     delete window._pendingRestoreBackup;
     delete window._pendingRestoreBackupExpectedName;

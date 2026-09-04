@@ -86,6 +86,21 @@ caso('Los menús combo de la web pública guardan el nombre crudo, no traducido,
   assert.ok(/nombre:\s*`\$\{g\.nombre\}: \$\{o\.nombre\}`/.test(m[0]), 'debe guardar g.nombre/o.nombre crudos');
 });
 
+caso('sales y cashClosures tienen lápida (se archivan de verdad con borrado real)', () => {
+  const m = core.match(/const ARRAYS_CON_LAPIDA = new Set\(\[[\s\S]*?\]\);/);
+  assert.ok(m, 'no se encontró ARRAYS_CON_LAPIDA');
+  ['sales', 'cashClosures'].forEach(k => {
+    assert.ok(m[0].includes(`'${k}'`), `${k} no está en ARRAYS_CON_LAPIDA — archivar datos antiguos podía resucitar ventas/cierres al sincronizar`);
+  });
+});
+
+caso('Restaurar un backup fusiona las lápidas en vez de sustituirlas (no resucita borrados posteriores al backup)', () => {
+  const m = app.match(/function confirmRestoreBackup\(\)[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró confirmRestoreBackup');
+  assert.ok(m[0].includes('lapidasFusionadas') && m[0].includes('parsed.borrados = lapidasFusionadas'),
+    'confirmRestoreBackup sustituye DB.borrados con el del backup sin fusionar — resucita cualquier borrado posterior a la fecha del backup al volver a sincronizar');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
