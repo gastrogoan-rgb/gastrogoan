@@ -102,12 +102,16 @@ caso('La sonda del espejo escribe donde las reglas la dejan', () => {
      fallaba incluso con las reglas nuevas bien puestas y ningún negocio se
      mudaba nunca — de ahí que la plataforma compartida aguantara el peso de
      todos y el techo fueran ~67 negocios. */
-  assert.ok(!core.includes("base.child('aforoHold/_prueba').remove()"),
+  assert.ok(!core.includes("base.child('aforoHold/' + sondaId).remove()"),
     'la sonda vuelve a borrar el nodo PADRE: las reglas lo rechazan siempre');
-  assert.ok(core.includes("base.child('aforoHold/_prueba/_prueba').remove()"),
+  assert.ok(core.includes("base.child('aforoHold/' + sondaId + '/_prueba').remove()"),
     'la sonda tiene que borrar el hijo, que es lo que las reglas permiten');
-  assert.ok(core.includes("orderStatus/_prueba').set({status:"),
+  assert.ok(core.includes("orderStatus/' + sondaId).set({status:"),
     'el orderStatus de prueba tiene que llevar los campos que exige el validador');
+  // La ruta es por dispositivo (getOrCreateDeviceId), no un "_prueba" fijo:
+  // dos aparatos del mismo negocio arrancando a la vez no se pisan la sonda.
+  assert.ok(core.includes("const sondaId = '_prueba_' + getOrCreateDeviceId();"),
+    'la sonda debe usar una ruta por dispositivo, no una fija compartida');
   return 'borra el hijo, no el padre';
 });
 

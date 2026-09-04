@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '04/09/2026 10:55';
+const GG_BUILD = '04/09/2026 11:04';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6587,12 +6587,17 @@ async function comprobarEspejoEnNubePropia(){
        nunca a su propia nube. De ahí que la plataforma compartida siguiera
        aguantando el peso de todos, que es el techo de ~67 negocios. */
     const base = app.database().ref('gastrogoan/public/' + publicId);
-    await base.child('aforoHold/_prueba/_prueba').set(0);
-    await base.child('aforoHold/_prueba/_prueba').remove();
+    // Sufijo por dispositivo, no un "_prueba" fijo: si dos aparatos del mismo
+    // negocio arrancan a la vez, cada uno escribe/borra su propio nodo en vez
+    // de pisar la sonda del otro (que hacía fallar la comprobación de uno de
+    // los dos esa vez, sin motivo real — el negocio sí tenía las reglas bien).
+    const sondaId = '_prueba_' + getOrCreateDeviceId();
+    await base.child('aforoHold/' + sondaId + '/_prueba').set(0);
+    await base.child('aforoHold/' + sondaId + '/_prueba').remove();
     // Y con los campos que el `.validate` de orderStatus espera, no un {ts}
     // inventado: si no, la sonda vuelve a fallar en cuanto ese validate exista.
-    await base.child('orderStatus/_prueba').set({status: '_prueba', updatedAt: Date.now()});
-    await base.child('orderStatus/_prueba').remove();
+    await base.child('orderStatus/' + sondaId).set({status: '_prueba', updatedAt: Date.now()});
+    await base.child('orderStatus/' + sondaId).remove();
     espejoEnNubePropia = true;
     publishPublicLookup(publicId, cfg);
     /* Y APARTE, los cambios de reglas más recientes, que viven en otro nodo
@@ -6613,7 +6618,8 @@ async function comprobarEspejoEnNubePropia(){
          usarlo aquí haría fallar la sonda siempre y todos los negocios verían
          el aviso de "reglas antiguas". Lo que se comprueba de verdad es que se
          pueda RECLAMAR y BORRAR una solicitud, que es el cambio reciente. */
-      const sonda = base.child('requests/_sonda');
+      const sondaReqId = '_sonda_' + sondaId;
+      const sonda = base.child('requests/' + sondaReqId);
       await sonda.set({type: 'reserva', createdAt: Date.now(), _sonda: true});
       await sonda.child('_claimedAt').set(Date.now());
       await sonda.remove();
@@ -6623,7 +6629,7 @@ async function comprobarEspejoEnNubePropia(){
       reglasAntiguas = true;
       // Si quedó a medias, se intenta limpiar; si tampoco deja, no pasa nada:
       // el oyente la ignora por el `_sonda`.
-      try{ await base.child('requests/_sonda').remove(); }catch(e3){}
+      try{ await base.child('requests/_sonda_' + sondaId).remove(); }catch(e3){}
     }
     return true;
   }catch(e){
@@ -8139,6 +8145,15 @@ function mergeRemoteIntoLocal(val){
   let changedLocally = false;
   let needsReupload = false;
   const newSnapshot = {};
+  // Las lápidas de la nube tienen que estar puestas ANTES de limpiar
+  // ARRAYS_CON_LAPIDA, no cuando le toque el turno a la clave 'borrados' en
+  // Object.keys() (que puede caer después de recipes/employees/etc.): si no,
+  // los primeros arrays de esta misma carga se limpiaban con las lápidas
+  // VIEJAS, sin las que acababan de llegar de la nube, y algo borrado en otro
+  // dispositivo podía resucitar un instante en la carga inicial completa
+  // (applyRemoteBlock, para los listeners incrementales, no tiene este
+  // problema porque solo procesa un bloque cada vez).
+  if(merged.borrados !== undefined) DB.borrados = mergeLapidas(DB.borrados, merged.borrados);
   Object.keys(merged).forEach(key => {
     // `lastSyncedSnapshot` vive solo en memoria: en cada recarga de página
     // empieza en null, así que sin esto TODA clave se trataba como "sin

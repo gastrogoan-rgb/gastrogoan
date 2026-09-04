@@ -120,6 +120,21 @@ caso('La pantalla y el ticket de cocina avisan de los alérgenos del propio plat
     'el ticket impreso de cocina no incluye los alérgenos del plato, solo order.tableAllergens');
 });
 
+caso('La carga inicial completa (mergeRemoteIntoLocal) aplica las lápidas de la nube antes de limpiar los demás arrays', () => {
+  const m = core.match(/function mergeRemoteIntoLocal\(val\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró mergeRemoteIntoLocal');
+  const antesDelBucle = m[0].slice(0, m[0].indexOf('Object.keys(merged).forEach'));
+  assert.ok(/DB\.borrados\s*=\s*mergeLapidas\(DB\.borrados,\s*merged\.borrados\)/.test(antesDelBucle),
+    'las lápidas remotas se aplican dentro del bucle (según le toque el turno a la clave "borrados"), no antes — un array procesado antes se limpia con lápidas desactualizadas');
+});
+
+caso('La sonda de comprobarEspejoEnNubePropia usa una ruta por dispositivo, no una fija compartida', () => {
+  const m = core.match(/async function comprobarEspejoEnNubePropia\(\)\{[\s\S]*?\n\}\n/);
+  assert.ok(m, 'no se encontró comprobarEspejoEnNubePropia');
+  assert.ok(m[0].includes('getOrCreateDeviceId()'),
+    'la sonda sigue usando una ruta fija (_prueba/_sonda) — dos dispositivos del mismo negocio arrancando a la vez se pisan la sonda');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
