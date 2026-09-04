@@ -135,6 +135,14 @@ caso('La sonda de comprobarEspejoEnNubePropia usa una ruta por dispositivo, no u
     'la sonda sigue usando una ruta fija (_prueba/_sonda) — dos dispositivos del mismo negocio arrancando a la vez se pisan la sonda');
 });
 
+caso('Al tomar comanda hay un botón de información (i) junto a cada plato y opción de menú, con sus alérgenos', () => {
+  assert.ok(tpv.includes('function openDishInfoModal'), 'no se encontró openDishInfoModal en tpv.js');
+  assert.ok(tpv.includes("openDishInfoModal(${p.recipeId||'null'}"), 'el selector de platos de la carta (renderCartaSelectorInline) no tiene el botón de información');
+  assert.ok(tpv.includes("openDishInfoModal(${o.recipeId||'null'}"), 'la selección de opciones de un menú (openMenuConfigModal) no tiene el botón de información');
+  const fn = tpv.match(/function renderDishInfoModalHtml\([\s\S]*?\n\}/);
+  assert.ok(fn && fn[0].includes('allergensForRecipe'), 'renderDishInfoModalHtml no usa allergensForRecipe para el resumen de alérgenos');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

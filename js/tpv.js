@@ -1740,6 +1740,7 @@ function openMenuConfigModal(orderId, menuId){
             <label style="display:flex;align-items:center;gap:8px;${o.disponible===false?'opacity:.5;cursor:not-allowed':'cursor:pointer'}">
               <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===primeraLibre?'checked':''} ${o.disponible===false?'disabled':''} style="width:auto" onchange="toggleMenuExtras(${g.id})">
               ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}${o.disponible===false ? ` <span class="badge badge-red" style="font-size:9px"><i class="ti ti-flame-off"></i> ${t('common.unavailable')}</span>` : ''}
+              <i class="ti ti-info-circle" style="color:var(--muted);cursor:pointer" title="${t('label.dishInfo')}" onclick="event.preventDefault();event.stopPropagation();openDishInfoModal(${o.recipeId||'null'}, '${escapeJsAttr(tItem(o))}', '', 'openMenuConfigModal(${orderId}, ${menuId})')"></i>
             </label>
             ${(o.modificadores||[]).length ? `<div class="menu-extras-${g.id}-${o.id}" style="margin-left:28px;display:${i===0?'block':'none'}">
               ${o.modificadores.map(mod => `
@@ -2163,6 +2164,64 @@ function renderTableOrderModal(orderId){
 function esPedidoSoloLectura(order){
   return !!(order && (order.origenOnline || order.clientRef));
 }
+// Antes, para saber si un plato llevaba lácteos o gluten, quien tomaba
+// comanda tenía que ir a mirar la Ficha Técnica en otra pantalla (o
+// preguntar en cocina) — en plena sala, con el cliente delante, eso no pasa.
+// El botón de información (i) junto a cada plato/opción de menú abre esto
+// mismo sin salir de la comanda: sus ingredientes (bajando a las
+// elaboraciones base que use) con los que llevan alérgeno en negrita y
+// destacados, más el resumen de alérgenos arriba del todo.
+function openDishInfoModal(recipeId, nombre, allergensManualStr, volverJs){
+  openModal(renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs));
+}
+function dishInfoIngredientLinesHtml(recipe, visited){
+  visited = visited || new Set();
+  if(!recipe || visited.has(recipe.id)) return '';
+  visited.add(recipe.id);
+  return (recipe.ingredients||[]).map(line => {
+    if(line.type === 'base'){
+      const base = getRecipe(line.baseRecipeId);
+      if(!base) return '';
+      const inner = dishInfoIngredientLinesHtml(base, visited);
+      return `<div style="margin:6px 0 2px;font-size:12px;font-weight:600;color:var(--muted)">${escapeHtml(base.name)}</div>${inner}`;
+    }
+    const ing = getIngredient(line.ingredientId);
+    if(!ing) return '';
+    const alergenos = ing.allergens || [];
+    const tiene = alergenos.length > 0;
+    return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:13px;${tiene?'font-weight:700':''}">
+      <span>${escapeHtml(ing.name)}</span>
+      ${tiene ? `<span style="color:var(--red,#c0392b)">${alergenos.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+function renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs){
+  const recipe = recipeId ? getRecipe(recipeId) : null;
+  // El nombre que se pasó ya es el que se ve en la comanda (el del plato de
+  // Carta, con su propia traducción vía tItem) — recipe.name es el nombre
+  // interno del Escandallo, sin i18n propio, y puede no coincidir si el
+  // plato se renombró en Carta después de vincular la receta.
+  const titulo = nombre || (recipe && recipe.name) || '';
+  const allergensManual = (allergensManualStr||'').split('|').filter(Boolean);
+  const allergens = recipe ? allergensForRecipe(recipe) : allergensManual;
+  const cerrar = volverJs || 'closeModal()';
+  return `
+    <div class="modal-header">
+      <h3><i class="ti ti-info-circle"></i> ${escapeHtml(titulo)}</h3>
+      <button class="modal-close" onclick="${escapeHtml(cerrar)}">&times;</button>
+    </div>
+    ${allergens.length ? `<div style="border:2px solid var(--red,#c0392b);border-radius:8px;padding:8px 10px;margin-bottom:12px">
+      <div style="font-weight:700;color:var(--red,#c0392b);font-size:13px"><i class="ti ti-alert-triangle"></i> ${t('label.allergensPresent')}</div>
+      <div style="font-size:13px;margin-top:2px">${allergens.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>
+    </div>` : `<div class="empty" style="padding:10px;margin-bottom:8px">${t('label.noAllergensDetected')}</div>`}
+    ${recipe ? `<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px">${t('label.ingredients')}</div>
+      <div>${dishInfoIngredientLinesHtml(recipe)}</div>` : ''}
+    <div class="modal-footer">
+      <button class="btn btn-primary" style="width:100%" onclick="${escapeHtml(cerrar)}">${t('common.close')}</button>
+    </div>
+  `;
+}
+
 function renderCartaSelectorInline(order, carta){
   const secciones = (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false));
   if(!secciones.length) return `<div class="empty" style="padding:10px">${t('empty.noDishesInCarta')}</div>`;
@@ -2176,7 +2235,10 @@ function renderCartaSelectorInline(order, carta){
       <button class="btn btn-sm" style="margin-bottom:10px" onclick="tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})"><i class="ti ti-arrow-left"></i> ${t('common.sections')}</button>
       <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(seccionAbierta))}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${platos.map(p => `<button class="btn btn-sm" style="font-size:12px" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
+        ${platos.map(p => `<span style="display:inline-flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+          <button class="btn btn-sm" style="font-size:12px;border:none;border-radius:0" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>
+          <button class="btn btn-sm btn-icon" style="border:none;border-left:1px solid var(--border);border-radius:0;color:var(--muted)" title="${t('label.dishInfo')}" onclick="event.stopPropagation();openDishInfoModal(${p.recipeId||'null'}, '${escapeJsAttr(tItem(p))}', '${escapeJsAttr((p.allergensManual||[]).join('|'))}', 'renderTableOrderModal(${order.id})')"><i class="ti ti-info-circle"></i></button>
+        </span>`).join('')}
       </div>
     `;
   }
