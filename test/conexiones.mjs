@@ -78,6 +78,14 @@ caso('Quitar "es repartidor" o borrar al repartidor libera sus pedidos de repart
   assert.ok(hr.includes('liberarPedidosDeRepartidor(id)'), 'saveEmployee/reallyDeleteEmployee no llaman a liberarPedidosDeRepartidor');
 });
 
+caso('Los menús combo de la web pública guardan el nombre crudo, no traducido, en el pedido', () => {
+  const m = publica.match(/function confirmAddMenuFromModal\(\)[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró confirmAddMenuFromModal');
+  assert.ok(!/nombre:\s*`\$\{trItem\(g\)\}/.test(m[0]),
+    'la selección de un menú combo usa trItem() para el nombre que se guarda — se traduce un dato que debería quedar neutro (ver i18n)');
+  assert.ok(/nombre:\s*`\$\{g\.nombre\}: \$\{o\.nombre\}`/.test(m[0]), 'debe guardar g.nombre/o.nombre crudos');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
