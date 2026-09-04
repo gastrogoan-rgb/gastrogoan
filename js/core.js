@@ -3102,6 +3102,17 @@ const ARRAYS_CON_LAPIDA = new Set([
      proveedor. Sin lápida, un dispositivo desincronizado que sincroniza tarde
      resucitaba la reserva/turno/promo/pedido ya borrado en los demás. */
   'reservations', 'promos', 'turnos', 'purchaseOrders',
+  /* Mismo fallo, encontrado en la ronda 2 de la auditoría (mismo día):
+     reallyDeleteEmployee (js/hr.js) borra de verdad fichajes,
+     turnoSwapRequests y vacationRequests del empleado eliminado — sin
+     lápida, resucitaban al sincronizar un dispositivo que aún los tenía. */
+  'fichajes', 'turnoSwapRequests', 'vacationRequests',
+  /* La papelera (DB.trash) también se borra de verdad: al restaurar un
+     elemento (restoreTrashItem) y al purgar por caducidad (moveToTrash).
+     Sin lápida, una entrada ya restaurada podía resucitar al sincronizar
+     un dispositivo que aún la tenía, y una segunda restauración duplicaba
+     el empleado/cliente/receta/ingrediente/reserva/pedido restaurado. */
+  'trash',
 ]);
 const LAPIDA_DIAS = 60;
 

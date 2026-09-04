@@ -64,6 +64,14 @@ caso('reservations, promos, turnos y purchaseOrders tienen lápida (se borran de
   });
 });
 
+caso('fichajes, turnoSwapRequests, vacationRequests y trash tienen lápida (borrado real de reallyDeleteEmployee/restoreTrashItem)', () => {
+  const m = core.match(/const ARRAYS_CON_LAPIDA = new Set\(\[[\s\S]*?\]\);/);
+  assert.ok(m, 'no se encontró ARRAYS_CON_LAPIDA');
+  ['fichajes', 'turnoSwapRequests', 'vacationRequests', 'trash'].forEach(k => {
+    assert.ok(m[0].includes(`'${k}'`), `${k} no está en ARRAYS_CON_LAPIDA — riesgo de resurrección/duplicado al sincronizar un dispositivo desactualizado`);
+  });
+});
+
 console.log('\n' + '═'.repeat(64));
-console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 7 casos pasaron`);
+console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
