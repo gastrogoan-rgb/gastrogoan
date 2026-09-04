@@ -12,6 +12,7 @@ const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = fs.readFileSync(path.join(raiz, 'js/core.js'), 'utf8');
 const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
 const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
+const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
 
 let fallos = 0;
@@ -70,6 +71,11 @@ caso('fichajes, turnoSwapRequests, vacationRequests y trash tienen lápida (borr
   ['fichajes', 'turnoSwapRequests', 'vacationRequests', 'trash'].forEach(k => {
     assert.ok(m[0].includes(`'${k}'`), `${k} no está en ARRAYS_CON_LAPIDA — riesgo de resurrección/duplicado al sincronizar un dispositivo desactualizado`);
   });
+});
+
+caso('Quitar "es repartidor" o borrar al repartidor libera sus pedidos de reparto en curso', () => {
+  assert.ok(tpv.includes('function liberarPedidosDeRepartidor'), 'no se encontró liberarPedidosDeRepartidor en tpv.js');
+  assert.ok(hr.includes('liberarPedidosDeRepartidor(id)'), 'saveEmployee/reallyDeleteEmployee no llaman a liberarPedidosDeRepartidor');
 });
 
 console.log('\n' + '═'.repeat(64));

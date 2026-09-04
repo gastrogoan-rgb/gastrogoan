@@ -94,6 +94,19 @@ function autoAssignRepartidor(order){
   }
 }
 
+// Si un empleado deja de repartir (se le quita la casilla o se le borra),
+// sus pedidos de reparto propio todavía sin entregar quedaban "en camino"
+// apuntando a alguien que ya no reparte, sin ningún aviso — llamado desde
+// saveEmployee y reallyDeleteEmployee (js/hr.js).
+function liberarPedidosDeRepartidor(employeeId){
+  (DB.tpvOrders||[]).forEach(o => {
+    if(o.repartidorId !== employeeId || o.entregaEstado === 'entregado') return;
+    o.repartidorId = null;
+    o.entregaAsignadoAt = null;
+    autoAssignRepartidor(o);
+  });
+}
+
 // Pedidos de reparto propio "vivos" ahora mismo (aún sin entregar), para el
 // contador del botón de la barra de herramientas.
 /* Un pedido para dentro de X horas no cuenta como "activo" todavía: mismo

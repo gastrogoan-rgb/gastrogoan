@@ -3047,8 +3047,13 @@ function saveEmployee(id){
     const emp = DB.employees.find(e => e.id===id);
     if(!emp) return;
     // El área no se pregunta: se conserva la del empleado (o la actual si no tenía).
+    const eraRepartidor = emp.esRepartidor;
     Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: emp.area||currentArea()});
     if(empActiveEl) emp.active = empActiveEl.checked;
+    // Si deja de repartir con pedidos ya asignados, esos pedidos se quedaban
+    // "en camino" apuntando a alguien que ya no reparte — autoAssignRepartidor
+    // solo se dispara al crear el pedido, nunca al cambiar la plantilla.
+    if(eraRepartidor && !esRepartidor) liberarPedidosDeRepartidor(id);
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
     DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:hashPin('1234', codigoNegocioParaPin()), pinChanged:false, active:true, fechaAlta: todayStr()});
@@ -3082,6 +3087,7 @@ function reallyDeleteEmployee(id, pin){
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);
+  liberarPedidosDeRepartidor(id);
   delete DB.shifts[id];
   delete DB.workDistribution[id];
   // Limpia referencias sueltas en otros módulos para que no quede un id
