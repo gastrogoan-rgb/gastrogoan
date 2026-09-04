@@ -95,6 +95,19 @@ function getAllDishAllergens(){
     if((r.area||'cocina') !== area) return;
     anotar(r.name, [...recipeAllergens(r)]);
   });
+  // Los menús/combos (Menú del día, etc.) referencian recetas reales por
+  // recipeId pero tienen su propia lista de nombres — sin este bloque, un
+  // plato con alérgeno metido dentro de un menú no salía aquí aunque su
+  // ficha sí lo tuviera marcado.
+  (DB.menus||[]).forEach(m => {
+    if((m.area||'cocina') !== area) return;
+    (m.grupos||[]).forEach(g => (g.opciones||[]).forEach(o => {
+      if(!o.recipeId) return;
+      const r = getRecipe(o.recipeId);
+      if(!r) return;
+      anotar(o.nombre || r.name, [...recipeAllergens(r)]);
+    }));
+  });
   return [...porNombre.values()].sort((a,b) => a.name.localeCompare(b.name));
 }
 function renderLimpiezaAlergenos(){

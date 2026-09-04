@@ -3095,6 +3095,13 @@ const ARRAYS_CON_LAPIDA = new Set([
      veces, o queda una mesa fantasma ocupada toda la noche. Y un pedido
      online rechazado volvía a la pantalla de Cocina y se preparaba. */
   'tpvOrders',
+  /* Mismo fallo que tpvOrders, encontrado en la auditoría de conexiones del
+     4/09: reservations, promos y turnos SÍ se borran de verdad (deleteReservation,
+     deletePromo, borrado de turno en Horarios), no solo se anulan como decía
+     este comentario — y purchaseOrders se borra al eliminar un pedido a
+     proveedor. Sin lápida, un dispositivo desincronizado que sincroniza tarde
+     resucitaba la reserva/turno/promo/pedido ya borrado en los demás. */
+  'reservations', 'promos', 'turnos', 'purchaseOrders',
 ]);
 const LAPIDA_DIAS = 60;
 
@@ -4267,16 +4274,39 @@ function syncReservationStatusForPublic(reservation){
 // engordar el payload con entradas vacías.
 function getPublicAllergensForSync(){
   const out = {};
+  // Lo que marca el cocinero A MANO en la ficha técnica (sésamo del pan,
+  // traza avisada por el proveedor...) no viene de ningún ingrediente, así
+  // que recipeComputedAllergens(recipe) sola no lo ve. getFichaAllergens
+  // suma lo automático del escandallo con lo manual de la ficha vinculada
+  // — es la misma fuente que ya usa APPCC interno (getAllDishAllergens).
+  const allergensForRecipe = recipe => {
+    if(!recipe) return [];
+    const ficha = (DB.fichas||[]).find(f => f.recipeId === recipe.id);
+    return ficha ? getFichaAllergens(ficha) : recipeComputedAllergens(recipe);
+  };
   (DB.cartas||[]).forEach(c => {
     (c.secciones||[]).forEach(sec => {
       (sec.platos||[]).forEach(p => {
         if(!p.recipeId) return;
         const recipe = getRecipe(p.recipeId);
         if(!recipe) return;
-        const allergens = recipeComputedAllergens(recipe);
+        const allergens = allergensForRecipe(recipe);
         if(allergens.length) out[p.id] = allergens;
       });
     });
+  });
+  // Los menús/combos referencian recetas reales por recipeId igual que la
+  // carta suelta, pero se guardaban aparte y quedaban fuera del sync — un
+  // plato con alérgeno metido en un "Menú del día" no avisaba en la web
+  // pública. Se clave por el id de la OPCIÓN, igual que un plato de carta.
+  (DB.menus||[]).forEach(m => {
+    (m.grupos||[]).forEach(g => (g.opciones||[]).forEach(o => {
+      if(!o.recipeId) return;
+      const recipe = getRecipe(o.recipeId);
+      if(!recipe) return;
+      const allergens = allergensForRecipe(recipe);
+      if(allergens.length) out[o.id] = allergens;
+    }));
   });
   return out;
 }
@@ -4316,6 +4346,7 @@ const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   'cartaAuto', 'tiposServicio',
   'requireDeposit', 'depositAmount', 'depositType', 'depositInstructions',
   'leadTimeMin', 'leadTimeMinReservas', 'leadTimeMinPedidos',
+  'pedidosOnlineActivos',
 ];
 function negocioParaElEspejoPublico(){
   const b = DB.business || {};

@@ -72,8 +72,9 @@ lanzar; node test/categorias.mjs           > "$SALIDA/categorias.txt" 2>&1 & P38
 lanzar; node test/reglas.mjs               > "$SALIDA/reglas.txt" 2>&1 & P39=$!
 lanzar; node test/fallos.mjs               > "$SALIDA/fallos.txt" 2>&1 & P40=$!
 lanzar; node test/idr-ficha.mjs            > "$SALIDA/idrficha.txt" 2>&1 & P41=$!
+lanzar; node test/conexiones.mjs           > "$SALIDA/conexiones.txt" 2>&1 & P42=$!
 
-echo "→ 40 pruebas, de $TANDA en $TANDA…"
+echo "→ 41 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   # ⚠️ El patrón NO puede llevar el número de casos a pelo ("los 10 casos
@@ -125,5 +126,6 @@ espera $P38 "renombrar y borrar carpetas"              "$SALIDA/categorias.txt" 
 espera $P39 "las reglas de Firebase, coherentes"        "$SALIDA/reglas.txt"     "los [0-9]+ casos pasaron"
 espera $P40 "informar de un fallo desde la app"        "$SALIDA/fallos.txt"     "los [0-9]+ casos pasaron"
 espera $P41 "el I+D engancha su ficha técnica"          "$SALIDA/idrficha.txt"   "casos pasaron"
+espera $P42 "conexiones: alérgenos, menús, fidelidad, lápidas" "$SALIDA/conexiones.txt" "casos pasaron"
 
 exit $FALLOS

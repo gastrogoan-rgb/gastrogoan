@@ -3575,6 +3575,13 @@ function reallyCancelSale(saleId, pin){
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
   restockForVoidedItems(sale.items);
+  // registerClientVisit sumó 1 punto al cobrar (tope 10): sin esto, anular
+  // una venta dejaba al cliente con un punto de fidelidad de una venta que
+  // ya no existe, igual de silencioso que el stock sin revertir.
+  if(sale.clientId){
+    const c = DB.clients.find(x => x.id === sale.clientId);
+    if(c) c.points = Math.max(0, (c.points||0) - 1);
+  }
   sale.status = 'anulada';
   sale.anuladaAt = new Date().toISOString();
   const loggedEmployeeId = loggedInEmployeeId();
