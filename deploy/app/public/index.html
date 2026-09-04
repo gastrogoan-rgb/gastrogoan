@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '04/09/2026 10:29';
+const GG_BUILD = '04/09/2026 10:55';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6026,6 +6026,23 @@ const ARRAYS_CON_LAPIDA = new Set([
      proveedor. Sin lápida, un dispositivo desincronizado que sincroniza tarde
      resucitaba la reserva/turno/promo/pedido ya borrado en los demás. */
   'reservations', 'promos', 'turnos', 'purchaseOrders',
+  /* Mismo fallo, encontrado en la ronda 2 de la auditoría (mismo día):
+     reallyDeleteEmployee (js/hr.js) borra de verdad fichajes,
+     turnoSwapRequests y vacationRequests del empleado eliminado — sin
+     lápida, resucitaban al sincronizar un dispositivo que aún los tenía. */
+  'fichajes', 'turnoSwapRequests', 'vacationRequests',
+  /* sales y cashClosures SÍ se borran de verdad: archiveOldData (js/app.js,
+     "Mi Negocio" → archivar datos antiguos) hace un filter() real tras
+     descargar el JSON. Sin lápida, archivar en un dispositivo mientras otro
+     lleva tiempo sin sincronizar resucitaba ventas y cierres de caja ya
+     archivados al reconectar — ingresos duplicados y cuadre de caja mal. */
+  'sales', 'cashClosures',
+  /* La papelera (DB.trash) también se borra de verdad: al restaurar un
+     elemento (restoreTrashItem) y al purgar por caducidad (moveToTrash).
+     Sin lápida, una entrada ya restaurada podía resucitar al sincronizar
+     un dispositivo que aún la tenía, y una segunda restauración duplicaba
+     el empleado/cliente/receta/ingrediente/reserva/pedido restaurado. */
+  'trash',
 ]);
 const LAPIDA_DIAS = 60;
 
@@ -7196,22 +7213,44 @@ function syncReservationStatusForPublic(reservation){
 // subir DB.recipes entera solo por esto — llevaría escandallos y costes
 // internos). Solo se incluyen platos con al menos un alérgeno, para no
 // engordar el payload con entradas vacías.
+// Lo que marca el cocinero A MANO en la ficha técnica (sésamo del pan,
+// traza avisada por el proveedor...) no viene de ningún ingrediente, así
+// que recipeComputedAllergens(recipe) sola no lo ve. getFichaAllergens
+// suma lo automático del escandallo con lo manual de la ficha vinculada
+// — es la misma fuente que ya usa APPCC interno (getAllDishAllergens).
+// Global (no solo del sync público) para que el TPV/comanda de cocina
+// pueda mostrar el mismo aviso que ya se ve en Limpieza y en la web
+// pública — antes no existía ningún camino hasta la cocina.
+function allergensForRecipe(recipe){
+  if(!recipe) return [];
+  const ficha = (DB.fichas||[]).find(f => f.recipeId === recipe.id);
+  return ficha ? getFichaAllergens(ficha) : recipeComputedAllergens(recipe);
+}
+// Alérgenos de una línea de pedido/comanda, viniendo de un plato con
+// escandallo (recipeId) o de un plato manual sin receta (platoId, marcado
+// a mano en openPlatoAllergensModal, js/menu.js).
+function lineAllergens(line){
+  if(!line) return [];
+  if(line.recipeId){ const r = getRecipe(line.recipeId); if(r) return allergensForRecipe(r); }
+  if(line.platoId != null && typeof findCartaPlatoById === 'function'){
+    const p = findCartaPlatoById(line.platoId);
+    if(p && !p.recipeId) return p.allergensManual || [];
+  }
+  return [];
+}
 function getPublicAllergensForSync(){
   const out = {};
-  // Lo que marca el cocinero A MANO en la ficha técnica (sésamo del pan,
-  // traza avisada por el proveedor...) no viene de ningún ingrediente, así
-  // que recipeComputedAllergens(recipe) sola no lo ve. getFichaAllergens
-  // suma lo automático del escandallo con lo manual de la ficha vinculada
-  // — es la misma fuente que ya usa APPCC interno (getAllDishAllergens).
-  const allergensForRecipe = recipe => {
-    if(!recipe) return [];
-    const ficha = (DB.fichas||[]).find(f => f.recipeId === recipe.id);
-    return ficha ? getFichaAllergens(ficha) : recipeComputedAllergens(recipe);
-  };
   (DB.cartas||[]).forEach(c => {
     (c.secciones||[]).forEach(sec => {
       (sec.platos||[]).forEach(p => {
-        if(!p.recipeId) return;
+        if(!p.recipeId){
+          // Plato manual sin escandallo (típicamente una bebida): lo único
+          // que puede haber son los alérgenos marcados a mano en el propio
+          // plato (openPlatoAllergensModal, js/menu.js) — sin esto se
+          // quedaban sin ninguna vía de aviso en la web pública.
+          if((p.allergensManual||[]).length) out[p.id] = p.allergensManual;
+          return;
+        }
         const recipe = getRecipe(p.recipeId);
         if(!recipe) return;
         const allergens = allergensForRecipe(recipe);
@@ -23647,6 +23686,7 @@ function renderCartaSecciones(){
           <span class="carta-plato-name" style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameDish')}" onclick="renameCartaPlato(${sec.id},${p.id})">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
           <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
+          ${!p.recipeId ? `<button class="btn btn-sm ${(p.allergensManual||[]).length?'btn-danger':''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${(p.allergensManual||[]).length ? ` (${p.allergensManual.length})` : ''}</button>` : ''}
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
           <button class="btn btn-sm ${p.stock!=null && p.stock<=0?'btn-danger':''}" style="${p.stock!=null && p.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setCartaPlatoStock(${sec.id},${p.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${p.stock!=null ? t('label.portionsLeft').replace('${n}', p.stock) : t('btn.limitPortions')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
@@ -24084,6 +24124,43 @@ async function removePlatoMod(secId, platoId, modId){
   const p = sec.platos.find(x=>x.id===platoId);
   p.modificadores = (p.modificadores||[]).filter(m=>m.id!==modId);
   openModal(renderPlatoModsModalHtml(secId, platoId));
+}
+
+/* ============== Alérgenos de un plato SIN receta vinculada ==============
+   Un plato manual de Carta (recipeId:null — típicamente una bebida) no
+   tiene ningún escandallo del que deducir alérgenos: sin esto, no había
+   forma de avisar de gluten/frutos de cáscara/sulfitos aunque el hostelero
+   lo supiera, ni en el aviso interno APPCC ni en la web pública. Se
+   guardan a mano en el propio plato, igual que ya se hace en la ficha
+   técnica (f.allergens) para casos sin escandallo. */
+function openPlatoAllergensModal(secId, platoId){
+  openModal(renderPlatoAllergensModalHtml(secId, platoId));
+}
+function renderPlatoAllergensModalHtml(secId, platoId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  const selected = p.allergensManual || [];
+  return `
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${t('label.allergens')} "${escapeHtml(tItem(p))}"</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('msg.dishAllergensOverviewDesc')}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+      ${ALLERGENS.map(a => `<button class="badge ${selected.includes(a)?'badge-red':''}" style="cursor:pointer;border:1px solid var(--border)" onclick="togglePlatoAllergen(${secId},${platoId},'${a}')">${escapeHtml(allergenLabel(a))}</button>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `;
+}
+function togglePlatoAllergen(secId, platoId, a){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  if(!p.allergensManual) p.allergensManual = [];
+  const i = p.allergensManual.indexOf(a);
+  if(i>=0) p.allergensManual.splice(i,1); else p.allergensManual.push(a);
+  openModal(renderPlatoAllergensModalHtml(secId, platoId));
 }
 
 // Antes se listaban TODOS los platos/bebidas del escandallo de golpe, sin
@@ -24755,6 +24832,19 @@ function autoAssignRepartidor(order){
     if(typeof playNewRequestAlert === 'function') playNewRequestAlert();
     showToast(t('msg.newDeliveryAssignedToYou').replace('${name}', order.clienteNombre||'?'));
   }
+}
+
+// Si un empleado deja de repartir (se le quita la casilla o se le borra),
+// sus pedidos de reparto propio todavía sin entregar quedaban "en camino"
+// apuntando a alguien que ya no reparte, sin ningún aviso — llamado desde
+// saveEmployee y reallyDeleteEmployee (js/hr.js).
+function liberarPedidosDeRepartidor(employeeId){
+  (DB.tpvOrders||[]).forEach(o => {
+    if(o.repartidorId !== employeeId || o.entregaEstado === 'entregado') return;
+    o.repartidorId = null;
+    o.entregaAsignadoAt = null;
+    autoAssignRepartidor(o);
+  });
 }
 
 // Pedidos de reparto propio "vivos" ahora mismo (aún sin entregar), para el
@@ -26632,6 +26722,13 @@ function orderAllergyWarningHtml(order){
     if(c && c.allergies) texts.push(c.allergies);
   }
   if(order.tableAllergens) texts.push(order.tableAllergens);
+  // Lo que ya se sabe del propio plato (escandallo/ficha, o marcado a mano
+  // en un plato sin receta) — antes esta pantalla solo repetía lo que el
+  // camarero hubiera escrito a mano sobre la mesa, ignorando por completo
+  // lo que la ficha técnica del plato ya tenía marcado.
+  const dishAllergenSet = new Set();
+  (order.items||[]).forEach(l => lineAllergens(l).forEach(a => dishAllergenSet.add(allergenLabel(a))));
+  if(dishAllergenSet.size) texts.push(Array.from(dishAllergenSet).join(', '));
   if(!texts.length) return '';
   return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:#fff;background:var(--red,#c0392b);border-radius:6px;padding:6px 8px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
 }
@@ -27179,7 +27276,7 @@ function marcharComanda(orderId, tanda, isMenu){
   (order.items||[]).forEach(l => {
     if((tanda === undefined || (l.tanda||'') === (tanda||'')) && (isMenu === undefined || !!l.menuId === isMenu) && l.qty > (l.marchada||0)){
       const qtyFired = l.qty - (l.marchada||0);
-      fired.push({qty: qtyFired, name: l.name, notas: l.notas, bebida: l.bebida});
+      fired.push({qty: qtyFired, name: l.name, notas: l.notas, bebida: l.bebida, platoId: l.platoId, recipeId: l.recipeId});
       l.estado = 'cocina';
       delete l.recogidoAt;
       l.enviadoAt = ahora;
@@ -27194,6 +27291,21 @@ function marcharComanda(orderId, tanda, isMenu){
   printMarchadasIfEnabled(order, fired);
   renderTableOrderModal(order.id);
   showToast(t('msg.orderSentToKitchen'));
+}
+
+// Antes el vale de cocina solo avisaba de lo que el camarero había escrito a
+// MANO sobre la mesa (order.tableAllergens) — el alérgeno YA marcado en la
+// ficha técnica o el escandallo del plato (o en un plato manual sin receta,
+// ver openPlatoAllergensModal) nunca llegaba a cocina, ni en pantalla ni en
+// el ticket impreso. Se combinan ambas fuentes: lo estructurado del plato
+// SIEMPRE, más lo escrito a mano si lo hay.
+function comandaAllergensText(order, lineas){
+  const set = new Set();
+  (lineas||[]).forEach(l => lineAllergens(l).forEach(a => set.add(allergenLabel(a))));
+  const partes = [];
+  if(set.size) partes.push(Array.from(set).join(', '));
+  if(order && order.tableAllergens) partes.push(order.tableAllergens);
+  return partes.join(' · ') || null;
 }
 
 // Si hay algún perfil de impresora de comandas activo, imprime un vale por cada
@@ -27212,7 +27324,7 @@ function printMarchadasIfEnabled(order, firedLines){
   const titulo = table ? table.name : togoOrderLabel(order);
   printers.forEach(p => {
     const lineas = firedLines.filter(l => l.qty > 0 && (p.contenido==='todo' || (p.contenido==='comida' ? !l.bebida : l.bebida)));
-    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket, order.tableAllergens, p.id);
+    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket, comandaAllergensText(order, lineas), p.id);
   });
 }
 
@@ -35121,8 +35233,13 @@ function saveEmployee(id){
     const emp = DB.employees.find(e => e.id===id);
     if(!emp) return;
     // El área no se pregunta: se conserva la del empleado (o la actual si no tenía).
+    const eraRepartidor = emp.esRepartidor;
     Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: emp.area||currentArea()});
     if(empActiveEl) emp.active = empActiveEl.checked;
+    // Si deja de repartir con pedidos ya asignados, esos pedidos se quedaban
+    // "en camino" apuntando a alguien que ya no reparte — autoAssignRepartidor
+    // solo se dispara al crear el pedido, nunca al cambiar la plantilla.
+    if(eraRepartidor && !esRepartidor) liberarPedidosDeRepartidor(id);
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
     DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:hashPin('1234', codigoNegocioParaPin()), pinChanged:false, active:true, fechaAlta: todayStr()});
@@ -35156,6 +35273,7 @@ function reallyDeleteEmployee(id, pin){
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);
+  liberarPedidosDeRepartidor(id);
   delete DB.shifts[id];
   delete DB.workDistribution[id];
   // Limpia referencias sueltas en otros módulos para que no quede un id
@@ -39445,6 +39563,16 @@ function getAllDishAllergens(){
       const r = getRecipe(o.recipeId);
       if(!r) return;
       anotar(o.nombre || r.name, [...recipeAllergens(r)]);
+    }));
+  });
+  // Un plato manual de Carta sin recipeId (típicamente una bebida) no tiene
+  // escandallo del que deducir nada: sus alérgenos, si los tiene, son
+  // SIEMPRE los marcados a mano (p.allergensManual, ver openPlatoAllergensModal).
+  (DB.cartas||[]).forEach(c => {
+    if((c.area||'cocina') !== area) return;
+    (c.secciones||[]).forEach(sec => (sec.platos||[]).forEach(p => {
+      if(p.recipeId || !(p.allergensManual||[]).length) return;
+      anotar(p.nombre, p.allergensManual);
     }));
   });
   return [...porNombre.values()].sort((a,b) => a.name.localeCompare(b.name));
@@ -44957,6 +45085,20 @@ function confirmRestoreBackup(){
     showToast(t('gate.removeBusinessNameMismatch'));
     return;
   }
+  // El backup restaurado trae SU mapa de lápidas (DB.borrados), de la fecha
+  // en que se descargó. Sustituirlo sin más borraba de la memoria cualquier
+  // cosa eliminada DESPUÉS de esa fecha: al volver a sincronizar con la
+  // nube, mergeArraysById la resucitaba (sin lápida no hay quien la pare) y
+  // el borrado reaparecía en toda la flota de dispositivos del negocio. Se
+  // fusionan las dos listas de lápidas, quedándose con la fecha más nueva
+  // de cada clave, para no perder ninguna.
+  const lapidasActuales = (DB && DB.borrados) || {};
+  const lapidasBackup = parsed.borrados || {};
+  const lapidasFusionadas = {...lapidasBackup};
+  Object.keys(lapidasActuales).forEach(clave => {
+    if(!lapidasFusionadas[clave] || lapidasActuales[clave] > lapidasFusionadas[clave]) lapidasFusionadas[clave] = lapidasActuales[clave];
+  });
+  parsed.borrados = lapidasFusionadas;
   idbSet(DB_KEY, parsed).then(() => {
     delete window._pendingRestoreBackup;
     delete window._pendingRestoreBackupExpectedName;

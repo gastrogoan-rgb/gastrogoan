@@ -108,6 +108,16 @@ function getAllDishAllergens(){
       anotar(o.nombre || r.name, [...recipeAllergens(r)]);
     }));
   });
+  // Un plato manual de Carta sin recipeId (típicamente una bebida) no tiene
+  // escandallo del que deducir nada: sus alérgenos, si los tiene, son
+  // SIEMPRE los marcados a mano (p.allergensManual, ver openPlatoAllergensModal).
+  (DB.cartas||[]).forEach(c => {
+    if((c.area||'cocina') !== area) return;
+    (c.secciones||[]).forEach(sec => (sec.platos||[]).forEach(p => {
+      if(p.recipeId || !(p.allergensManual||[]).length) return;
+      anotar(p.nombre, p.allergensManual);
+    }));
+  });
   return [...porNombre.values()].sort((a,b) => a.name.localeCompare(b.name));
 }
 function renderLimpiezaAlergenos(){

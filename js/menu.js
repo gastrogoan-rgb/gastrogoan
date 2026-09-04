@@ -522,6 +522,7 @@ function renderCartaSecciones(){
           <span class="carta-plato-name" style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameDish')}" onclick="renameCartaPlato(${sec.id},${p.id})">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
           <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
+          ${!p.recipeId ? `<button class="btn btn-sm ${(p.allergensManual||[]).length?'btn-danger':''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${(p.allergensManual||[]).length ? ` (${p.allergensManual.length})` : ''}</button>` : ''}
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
           <button class="btn btn-sm ${p.stock!=null && p.stock<=0?'btn-danger':''}" style="${p.stock!=null && p.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setCartaPlatoStock(${sec.id},${p.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${p.stock!=null ? t('label.portionsLeft').replace('${n}', p.stock) : t('btn.limitPortions')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
@@ -959,6 +960,43 @@ async function removePlatoMod(secId, platoId, modId){
   const p = sec.platos.find(x=>x.id===platoId);
   p.modificadores = (p.modificadores||[]).filter(m=>m.id!==modId);
   openModal(renderPlatoModsModalHtml(secId, platoId));
+}
+
+/* ============== Alérgenos de un plato SIN receta vinculada ==============
+   Un plato manual de Carta (recipeId:null — típicamente una bebida) no
+   tiene ningún escandallo del que deducir alérgenos: sin esto, no había
+   forma de avisar de gluten/frutos de cáscara/sulfitos aunque el hostelero
+   lo supiera, ni en el aviso interno APPCC ni en la web pública. Se
+   guardan a mano en el propio plato, igual que ya se hace en la ficha
+   técnica (f.allergens) para casos sin escandallo. */
+function openPlatoAllergensModal(secId, platoId){
+  openModal(renderPlatoAllergensModalHtml(secId, platoId));
+}
+function renderPlatoAllergensModalHtml(secId, platoId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  const selected = p.allergensManual || [];
+  return `
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${t('label.allergens')} "${escapeHtml(tItem(p))}"</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('msg.dishAllergensOverviewDesc')}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+      ${ALLERGENS.map(a => `<button class="badge ${selected.includes(a)?'badge-red':''}" style="cursor:pointer;border:1px solid var(--border)" onclick="togglePlatoAllergen(${secId},${platoId},'${a}')">${escapeHtml(allergenLabel(a))}</button>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `;
+}
+function togglePlatoAllergen(secId, platoId, a){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  if(!p.allergensManual) p.allergensManual = [];
+  const i = p.allergensManual.indexOf(a);
+  if(i>=0) p.allergensManual.splice(i,1); else p.allergensManual.push(a);
+  openModal(renderPlatoAllergensModalHtml(secId, platoId));
 }
 
 // Antes se listaban TODOS los platos/bebidas del escandallo de golpe, sin

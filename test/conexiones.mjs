@@ -13,6 +13,7 @@ const core = fs.readFileSync(path.join(raiz, 'js/core.js'), 'utf8');
 const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
 const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
 const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
+const menu = fs.readFileSync(path.join(raiz, 'js/menu.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
 
 let fallos = 0;
@@ -22,8 +23,8 @@ function caso(nombre, fn){
 }
 
 caso('Alérgenos marcados a mano en la ficha llegan a la web pública (no solo los del escandallo)', () => {
-  const m = core.match(/function getPublicAllergensForSync\(\)[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró getPublicAllergensForSync');
+  const m = core.match(/function allergensForRecipe\(recipe\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró allergensForRecipe (usado por getPublicAllergensForSync)');
   assert.ok(m[0].includes('getFichaAllergens'), 'debe usar getFichaAllergens (suma lo manual de la ficha), no solo recipeComputedAllergens');
 });
 
@@ -99,6 +100,24 @@ caso('Restaurar un backup fusiona las lápidas en vez de sustituirlas (no resuci
   assert.ok(m, 'no se encontró confirmRestoreBackup');
   assert.ok(m[0].includes('lapidasFusionadas') && m[0].includes('parsed.borrados = lapidasFusionadas'),
     'confirmRestoreBackup sustituye DB.borrados con el del backup sin fusionar — resucita cualquier borrado posterior a la fecha del backup al volver a sincronizar');
+});
+
+caso('Un plato de Carta sin escandallo (recipeId null) puede marcarse alérgenos a mano y llegan a APPCC y a la web pública', () => {
+  assert.ok(core.includes('function lineAllergens'), 'no se encontró lineAllergens en core.js');
+  assert.ok(menu.includes('function openPlatoAllergensModal') && menu.includes('allergensManual'),
+    'no se encontró la UI de alérgenos manuales para platos sin receta en menu.js');
+  const appFn = app.match(/function getAllDishAllergens\(\)[\s\S]*?\n\}/);
+  assert.ok(appFn && appFn[0].includes('allergensManual'), 'getAllDishAllergens no considera p.allergensManual');
+  const coreFn = core.match(/function getPublicAllergensForSync\(\)[\s\S]*?\n\}/);
+  assert.ok(coreFn && coreFn[0].includes('allergensManual'), 'getPublicAllergensForSync no considera p.allergensManual');
+});
+
+caso('La pantalla y el ticket de cocina avisan de los alérgenos del propio plato, no solo de lo escrito a mano en la mesa', () => {
+  const warn = tpv.match(/function orderAllergyWarningHtml\(order\)\{[\s\S]*?\n\}/);
+  assert.ok(warn, 'no se encontró orderAllergyWarningHtml');
+  assert.ok(warn[0].includes('lineAllergens'), 'orderAllergyWarningHtml (pantalla de cocina) no consulta lineAllergens — solo repite lo escrito a mano por el camarero');
+  assert.ok(tpv.includes('function comandaAllergensText') && tpv.includes('comandaAllergensText(order, lineas)'),
+    'el ticket impreso de cocina no incluye los alérgenos del plato, solo order.tableAllergens');
 });
 
 console.log('\n' + '═'.repeat(64));

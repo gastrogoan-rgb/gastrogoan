@@ -4289,22 +4289,44 @@ function syncReservationStatusForPublic(reservation){
 // subir DB.recipes entera solo por esto — llevaría escandallos y costes
 // internos). Solo se incluyen platos con al menos un alérgeno, para no
 // engordar el payload con entradas vacías.
+// Lo que marca el cocinero A MANO en la ficha técnica (sésamo del pan,
+// traza avisada por el proveedor...) no viene de ningún ingrediente, así
+// que recipeComputedAllergens(recipe) sola no lo ve. getFichaAllergens
+// suma lo automático del escandallo con lo manual de la ficha vinculada
+// — es la misma fuente que ya usa APPCC interno (getAllDishAllergens).
+// Global (no solo del sync público) para que el TPV/comanda de cocina
+// pueda mostrar el mismo aviso que ya se ve en Limpieza y en la web
+// pública — antes no existía ningún camino hasta la cocina.
+function allergensForRecipe(recipe){
+  if(!recipe) return [];
+  const ficha = (DB.fichas||[]).find(f => f.recipeId === recipe.id);
+  return ficha ? getFichaAllergens(ficha) : recipeComputedAllergens(recipe);
+}
+// Alérgenos de una línea de pedido/comanda, viniendo de un plato con
+// escandallo (recipeId) o de un plato manual sin receta (platoId, marcado
+// a mano en openPlatoAllergensModal, js/menu.js).
+function lineAllergens(line){
+  if(!line) return [];
+  if(line.recipeId){ const r = getRecipe(line.recipeId); if(r) return allergensForRecipe(r); }
+  if(line.platoId != null && typeof findCartaPlatoById === 'function'){
+    const p = findCartaPlatoById(line.platoId);
+    if(p && !p.recipeId) return p.allergensManual || [];
+  }
+  return [];
+}
 function getPublicAllergensForSync(){
   const out = {};
-  // Lo que marca el cocinero A MANO en la ficha técnica (sésamo del pan,
-  // traza avisada por el proveedor...) no viene de ningún ingrediente, así
-  // que recipeComputedAllergens(recipe) sola no lo ve. getFichaAllergens
-  // suma lo automático del escandallo con lo manual de la ficha vinculada
-  // — es la misma fuente que ya usa APPCC interno (getAllDishAllergens).
-  const allergensForRecipe = recipe => {
-    if(!recipe) return [];
-    const ficha = (DB.fichas||[]).find(f => f.recipeId === recipe.id);
-    return ficha ? getFichaAllergens(ficha) : recipeComputedAllergens(recipe);
-  };
   (DB.cartas||[]).forEach(c => {
     (c.secciones||[]).forEach(sec => {
       (sec.platos||[]).forEach(p => {
-        if(!p.recipeId) return;
+        if(!p.recipeId){
+          // Plato manual sin escandallo (típicamente una bebida): lo único
+          // que puede haber son los alérgenos marcados a mano en el propio
+          // plato (openPlatoAllergensModal, js/menu.js) — sin esto se
+          // quedaban sin ninguna vía de aviso en la web pública.
+          if((p.allergensManual||[]).length) out[p.id] = p.allergensManual;
+          return;
+        }
         const recipe = getRecipe(p.recipeId);
         if(!recipe) return;
         const allergens = allergensForRecipe(recipe);

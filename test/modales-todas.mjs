@@ -95,6 +95,7 @@ const NECESITAN_ESTADO = new Set([
   'showClosureWarningsModal','openOverbookedChoiceModal','openConfirmRestoreBackupModal',
   'openOwnCourierModal','openDeliveryPlatformModal','openClientMessageModal',
   'openSplitPartPayment','openCartaSectionIconModal','openPlatoModsModal','openMenuOpcionModsModal',
+  'openPlatoAllergensModal','togglePlatoAllergen',
 ]);
 
 for(const mod of MODALES){

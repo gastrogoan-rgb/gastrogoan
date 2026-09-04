@@ -1982,6 +1982,13 @@ function orderAllergyWarningHtml(order){
     if(c && c.allergies) texts.push(c.allergies);
   }
   if(order.tableAllergens) texts.push(order.tableAllergens);
+  // Lo que ya se sabe del propio plato (escandallo/ficha, o marcado a mano
+  // en un plato sin receta) — antes esta pantalla solo repetía lo que el
+  // camarero hubiera escrito a mano sobre la mesa, ignorando por completo
+  // lo que la ficha técnica del plato ya tenía marcado.
+  const dishAllergenSet = new Set();
+  (order.items||[]).forEach(l => lineAllergens(l).forEach(a => dishAllergenSet.add(allergenLabel(a))));
+  if(dishAllergenSet.size) texts.push(Array.from(dishAllergenSet).join(', '));
   if(!texts.length) return '';
   return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:#fff;background:var(--red,#c0392b);border-radius:6px;padding:6px 8px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
 }
@@ -2529,7 +2536,7 @@ function marcharComanda(orderId, tanda, isMenu){
   (order.items||[]).forEach(l => {
     if((tanda === undefined || (l.tanda||'') === (tanda||'')) && (isMenu === undefined || !!l.menuId === isMenu) && l.qty > (l.marchada||0)){
       const qtyFired = l.qty - (l.marchada||0);
-      fired.push({qty: qtyFired, name: l.name, notas: l.notas, bebida: l.bebida});
+      fired.push({qty: qtyFired, name: l.name, notas: l.notas, bebida: l.bebida, platoId: l.platoId, recipeId: l.recipeId});
       l.estado = 'cocina';
       delete l.recogidoAt;
       l.enviadoAt = ahora;
@@ -2544,6 +2551,21 @@ function marcharComanda(orderId, tanda, isMenu){
   printMarchadasIfEnabled(order, fired);
   renderTableOrderModal(order.id);
   showToast(t('msg.orderSentToKitchen'));
+}
+
+// Antes el vale de cocina solo avisaba de lo que el camarero había escrito a
+// MANO sobre la mesa (order.tableAllergens) — el alérgeno YA marcado en la
+// ficha técnica o el escandallo del plato (o en un plato manual sin receta,
+// ver openPlatoAllergensModal) nunca llegaba a cocina, ni en pantalla ni en
+// el ticket impreso. Se combinan ambas fuentes: lo estructurado del plato
+// SIEMPRE, más lo escrito a mano si lo hay.
+function comandaAllergensText(order, lineas){
+  const set = new Set();
+  (lineas||[]).forEach(l => lineAllergens(l).forEach(a => set.add(allergenLabel(a))));
+  const partes = [];
+  if(set.size) partes.push(Array.from(set).join(', '));
+  if(order && order.tableAllergens) partes.push(order.tableAllergens);
+  return partes.join(' · ') || null;
 }
 
 // Si hay algún perfil de impresora de comandas activo, imprime un vale por cada
@@ -2562,7 +2584,7 @@ function printMarchadasIfEnabled(order, firedLines){
   const titulo = table ? table.name : togoOrderLabel(order);
   printers.forEach(p => {
     const lineas = firedLines.filter(l => l.qty > 0 && (p.contenido==='todo' || (p.contenido==='comida' ? !l.bebida : l.bebida)));
-    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket, order.tableAllergens, p.id);
+    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket, comandaAllergensText(order, lineas), p.id);
   });
 }
 

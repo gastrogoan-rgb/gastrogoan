@@ -2344,7 +2344,11 @@ function confirmAddMenuFromModal(){
     const o = (g.opciones||[]).find(x=>x.id===selId) || (g.opciones||[]).find(x=>x.disponible!==false);
     if(!o) return null;
     extra += o.suplemento||0;
-    return { nombre: `${trItem(g)}: ${trItem(o)}`, precio: o.suplemento||0 };
+    // Nombre crudo, sin traducir: esto viaja a DB.tpvOrders y se queda ahí
+    // para siempre (comanda, historial de ventas) — trItem() es solo para
+    // pintar el modal, no para lo que se guarda (ver principio de i18n:
+    // "un dato guardado no se traduce; se traduce al mostrarlo").
+    return { nombre: `${g.nombre}: ${o.nombre}`, precio: o.suplemento||0 };
   }).filter(Boolean);
   const finalPrice = (m.precio||0) + extra;
   const key = 'menu:' + m.id + ':' + selections.map(s=>s.nombre).join('|');
