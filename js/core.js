@@ -6486,7 +6486,11 @@ function openCloudWizard(){
 // Categorías de Mega Lista/Stock: distintas según el área, para que Sala
 // vea categorías de bar (Cervezas, Licores...) en vez de las de cocina
 // (Carnes, Pescados...). "Otros" es común a ambas.
-const CATEGORIES_COCINA = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
+// 'Bebidas' se quitó de aquí a propósito (5/09): en cocina no se stockean
+// bebidas, eso es tarea de Sala, que ya tiene su propio catálogo mucho más
+// detallado (vinos, cervezas, licores...) — tenerlo también aquí duplicaba
+// sin sentido y encima con items genéricos.
+const CATEGORIES_COCINA = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Condimentos y Especias','Congelados','Otros'];
 const CATEGORIES_SALA = ['Cervezas','Vinos y Cavas','Licores y Destilados','Refrescos y Mixers','Café e Infusiones','Hielo y Guarniciones','Otros'];
 // Igual que allergenLabel()/businessTypeLabel(): el valor guardado de las
 // categorías predefinidas es siempre el nombre en español (clave estable
@@ -6695,6 +6699,31 @@ const dbReadyPromise = loadDB().then(d => {
 // negocios seguían ahí, pero sin dueño puesto, y el filtro no los enseñaba.
 try{ migrateSlotOwners(); }catch(e){ console.error('No se pudieron adjudicar los negocios al dueño', e); }
 
+// El catálogo base de Mega Lista siembra ingredientes con categorías finas
+// ('Panes y Bollería', 'Legumbres', 'Arroces'...) que NO están en las listas
+// predefinidas (CATEGORIES_COCINA/SALA, esas sí traducidas y con orden fijo)
+// ni se registraban nunca en DB.ingredientCategories (las categorías que el
+// propio negocio "crea"). Resultado: al editar uno de esos ingredientes, el
+// <select> de categoría no encontraba ninguna opción con ese valor, el
+// navegador preseleccionaba la primera de la lista (Carnes, al ser la
+// primera predefinida) y guardar sin tocar nada le cambiaba la categoría en
+// silencio. Cualquier categoría que un ingrediente YA tenga puesta —venga
+// del catálogo sembrado, de una versión anterior o de donde sea— tiene que
+// estar siempre seleccionable.
+function registrarCategoriasDeIngredientesEnUso(data){
+  const yaEsta = new Set(data.ingredientCategories || []);
+  let cambio = false;
+  (data.ingredients || []).forEach(i => {
+    if(!i.category) return;
+    const predefinidas = i.area === 'sala' ? CATEGORIES_SALA : CATEGORIES_COCINA;
+    if(predefinidas.includes(i.category) || yaEsta.has(i.category)) return;
+    yaEsta.add(i.category);
+    if(!data.ingredientCategories) data.ingredientCategories = [];
+    data.ingredientCategories.push(i.category);
+    cambio = true;
+  });
+  return cambio;
+}
 async function loadDB(){
   try{
     let data = await idbGet(DB_KEY);
@@ -6726,6 +6755,7 @@ async function loadDB(){
         fresh.stock = {...seedCocina.stock, ...seedSala.stock};
         fresh.categoryIcons.ingredient = {...seedCocina.categoryIcons, ...seedSala.categoryIcons};
       }
+      registrarCategoriasDeIngredientesEnUso(fresh);
       return fresh;
     }
     const merged = Object.assign(defaultData(), data);
@@ -6736,6 +6766,7 @@ async function loadDB(){
     }
     delete merged.business.protectedModules;
     (merged.ingredients||[]).forEach(i => { if(!i.area) i.area = 'cocina'; });
+    registrarCategoriasDeIngredientesEnUso(merged);
     (merged.recipes||[]).forEach(r => { if(!r.area) r.area = 'cocina'; });
     (merged.providers||[]).forEach(p => { if(!p.area) p.area = 'cocina'; });
     (merged.elaboraciones||[]).forEach(e => { if(!e.area) e.area = 'cocina'; });

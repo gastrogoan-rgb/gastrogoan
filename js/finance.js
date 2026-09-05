@@ -924,11 +924,6 @@ const BASE_INGREDIENTS_CATALOG = {
     ['Marisco congelado (surtido)','kg',['Crustáceos','Moluscos']], ['Masa de hojaldre congelada','kg',['Gluten','Lácteos']],
     ['Helado (tarrina)','kg',['Lácteos']],
   ]},
-  'Bebidas': {icon:'🥤', items:[
-    ['Agua mineral','L',[]], ['Refresco de cola','L',[]], ['Refresco de naranja','L',[]], ['Zumo de naranja','L',[]],
-    ['Café en grano','kg',[]], ['Té / infusiones','kg',[]], ['Cerveza','L',['Gluten']], ['Vino tinto','L',['Sulfitos']],
-    ['Vino blanco','L',['Sulfitos']],
-  ]},
 };
 
 // Igual que BASE_INGREDIENTS_CATALOG pero para el área de Sala (barra):
