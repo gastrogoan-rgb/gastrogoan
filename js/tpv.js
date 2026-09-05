@@ -1302,6 +1302,13 @@ async function acceptOnlineOrder(orderId, auto){
     if(esRepartoPropio(order) && !esParaMasAdelante) autoAssignRepartidor(order);
     saveDB();
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
+    // Reservas tenía email de confirmación desde hace tiempo; pedidos solo
+    // tenía el de cancelación — el cliente aceptaba un pedido para llevar o
+    // a domicilio y nunca recibía nada que dijera "sí, lo estamos
+    // preparando", ni un enlace para seguir el estado si cerraba la
+    // pestaña. Mismo criterio que una reserva: se avisa tanto si se aceptó
+    // sola (auto) como a mano.
+    if(typeof sendOrderConfirmationEmail === 'function') sendOrderConfirmationEmail(order).catch(()=>{});
     if(!auto){ renderTPV(); showToast(anyMismatch ? t('msg.orderAcceptedWithMismatch') : t('msg.orderAccepted')); }
     return true;
   }

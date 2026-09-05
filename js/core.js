@@ -6133,6 +6133,11 @@ const EMAILJS_TEMPLATE_BODIES = {
     ca: `Hola {{client_name}},\n\nLa teva reserva a {{business_name}} ha estat modificada. Aquestes són les dades actualitzades:\nData: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}\n\nSi vols tornar a canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}`,
     en: `Hi {{client_name}},\n\nYour reservation at {{business_name}} has been changed. Here are the updated details:\nDate: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}\n\nTo change the time again or cancel, do it here: {{manage_link}}`,
   },
+  order: {
+    es: `Hola {{client_name}},\n\nTu pedido en {{business_name}} ({{type}}) ha sido aceptado y lo estamos preparando.\nFecha: {{date}}  Hora: {{time}}\n\nSigue el estado de tu pedido aquí: {{track_link}}`,
+    ca: `Hola {{client_name}},\n\nLa teva comanda a {{business_name}} ({{type}}) ha estat acceptada i l'estem preparant.\nData: {{date}}  Hora: {{time}}\n\nSegueix l'estat de la teva comanda aquí: {{track_link}}`,
+    en: `Hi {{client_name}},\n\nYour order at {{business_name}} ({{type}}) has been accepted and we're preparing it.\nDate: {{date}}  Time: {{time}}\n\nFollow your order status here: {{track_link}}`,
+  },
   cancel: {
     es: `Hola {{client_name}},\n\nTu reserva en {{business_name}} ha sido cancelada.`,
     ca: `Hola {{client_name}},\n\nLa teva reserva a {{business_name}} ha estat cancel·lada.`,
@@ -6246,6 +6251,38 @@ Date: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}
 To change the time again or cancel, do it here: {{manage_link}}</div>
         <button class="btn btn-sm" onclick="copyEmailJsTemplate('modify')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
         Save it and copy its <code>template_xxxxxxx</code> code under "Settings": it's your <strong>modification Template ID</strong> (different from the other two).`}},
+  {title:{es:'Crea la plantilla de "Pedido aceptado"', ca:'Crea la plantilla de "Comanda acceptada"', en:'Create the "Order accepted" template'},
+   body:{
+     es:`Esta es para PEDIDOS para llevar o a domicilio (no reservas): avisa al cliente de que has aceptado su pedido y lo estás preparando, con un enlace para seguir el estado.<br><br>
+        Repite lo mismo: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, y en el cuerpo:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+Tu pedido en {{business_name}} ({{type}}) ha sido aceptado y lo estamos preparando.
+Fecha: {{date}}  Hora: {{time}}
+
+Sigue el estado de tu pedido aquí: {{track_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('order')" type="button"><i class="ti ti-copy"></i> Copiar texto</button><br><br>
+        Guarda y copia su código <code>template_xxxxxxx</code> en "Settings": es tu <strong>Template ID de pedido aceptado</strong>.`,
+     ca:`Aquesta és per a COMANDES per emportar o a domicili (no reserves): avisa el client que has acceptat la seva comanda i que l'estàs preparant, amb un enllaç per seguir l'estat.<br><br>
+        Repeteix el mateix: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, i al cos:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+La teva comanda a {{business_name}} ({{type}}) ha estat acceptada i l'estem preparant.
+Data: {{date}}  Hora: {{time}}
+
+Segueix l'estat de la teva comanda aquí: {{track_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('order')" type="button"><i class="ti ti-copy"></i> Copiar text</button><br><br>
+        Desa i copia el seu codi <code>template_xxxxxxx</code> a "Settings": és el teu <strong>Template ID de comanda acceptada</strong>.`,
+     en:`This one is for takeaway/delivery ORDERS (not reservations): it tells the customer you accepted their order and are preparing it, with a link to follow the status.<br><br>
+        Repeat the same thing: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, and in the body:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
+
+Your order at {{business_name}} ({{type}}) has been accepted and we're preparing it.
+Date: {{date}}  Time: {{time}}
+
+Follow your order status here: {{track_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('order')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
+        Save it and copy its <code>template_xxxxxxx</code> code under "Settings": it's your <strong>order-accepted Template ID</strong>.`}},
   {title:{es:'Crea la plantilla de "Reserva cancelada"', ca:'Crea la plantilla de "Reserva cancel·lada"', en:'Create the "Reservation cancelled" template'},
    body:{
      es:`Repite lo mismo: <strong>"Create New Template"</strong> otra vez, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, y en el cuerpo algo como:<br><br>
@@ -6279,12 +6316,12 @@ Your reservation at {{business_name}} has been cancelled.</div>
         <span style="color:var(--muted)">Careful: it's NOT the "Private Key" shown right next to it — you don't need that one here.</span>`}},
   {title:{es:'Pégalo todo aquí y prueba', ca:'Enganxa-ho tot aquí i prova-ho', en:'Paste it all here and test it'},
    body:{
-     es:`Cierra esta guía, marca <strong>"Activar"</strong> más abajo y pega los 5 códigos, cada uno en su campo. Guarda y pulsa los tres botones de prueba (<strong>confirmación, modificación y cancelación</strong>) con tu propio email, para comprobar que los tres llegan bien.<br><br>
-        <span style="color:var(--muted)">Si te llegan los tres emails de prueba con los datos rellenados, ya está todo funcionando: cada cliente que reserve, modifique o cancele recibirá el suyo automáticamente.</span>`,
-     ca:`Tanca aquesta guia, marca <strong>"Activar"</strong> més avall i enganxa els 5 codis, cadascun al seu camp. Desa i prem els tres botons de prova (<strong>confirmació, modificació i cancel·lació</strong>) amb el teu propi email, per comprovar que els tres arriben bé.<br><br>
-        <span style="color:var(--muted)">Si et arriben els tres emails de prova amb les dades emplenades, ja tot funciona: cada client que reservi, modifiqui o cancel·li rebrà el seu automàticament.</span>`,
-     en:`Close this guide, check <strong>"Enable"</strong> below and paste the 5 codes, each in its field. Save and click all three test buttons (<strong>confirmation, modification and cancellation</strong>) with your own email, to check all three arrive fine.<br><br>
-        <span style="color:var(--muted)">If all three test emails arrive with the details filled in, everything is working: every customer who books, changes or cancels will get theirs automatically.</span>`}},
+     es:`Cierra esta guía, marca <strong>"Activar"</strong> más abajo y pega los 6 códigos, cada uno en su campo. Guarda y pulsa los cuatro botones de prueba (<strong>confirmación, modificación, pedido aceptado y cancelación</strong>) con tu propio email, para comprobar que los cuatro llegan bien.<br><br>
+        <span style="color:var(--muted)">Si te llegan los cuatro emails de prueba con los datos rellenados, ya está todo funcionando: cada cliente que reserve, modifique, pida o cancele recibirá el suyo automáticamente.</span>`,
+     ca:`Tanca aquesta guia, marca <strong>"Activar"</strong> més avall i enganxa els 6 codis, cadascun al seu camp. Desa i prem els quatre botons de prova (<strong>confirmació, modificació, comanda acceptada i cancel·lació</strong>) amb el teu propi email, per comprovar que els quatre arriben bé.<br><br>
+        <span style="color:var(--muted)">Si et arriben els quatre emails de prova amb les dades emplenades, ja tot funciona: cada client que reservi, modifiqui, demani o cancel·li rebrà el seu automàticament.</span>`,
+     en:`Close this guide, check <strong>"Enable"</strong> below and paste the 6 codes, each in its field. Save and click all four test buttons (<strong>confirmation, modification, order accepted and cancellation</strong>) with your own email, to check all four arrive fine.<br><br>
+        <span style="color:var(--muted)">If all four test emails arrive with the details filled in, everything is working: every customer who books, changes, orders or cancels will get theirs automatically.</span>`}},
 ];
 function showEmailJsGuideModal(){
   const step = (n, title, body) => `
@@ -6331,6 +6368,11 @@ function renderEmailConfirmCard(){
         <small style="color:var(--muted)">${t('mn.emailConfirm.modifyTemplateHint')}</small>
       </div>
       <div class="field">
+        <label>Template ID (${t('mn.emailConfirm.orderLabel')})</label>
+        <input type="text" id="ec-order-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.orderTemplateId||'')}" style="font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.emailConfirm.orderTemplateHint')}</small>
+      </div>
+      <div class="field">
         <label>Template ID (${t('mn.emailConfirm.cancelLabel')})</label>
         <input type="text" id="ec-cancel-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.cancelTemplateId||'')}" style="font-family:monospace">
         <small style="color:var(--muted)">${t('mn.emailConfirm.cancelTemplateHint')}</small>
@@ -6343,6 +6385,7 @@ function renderEmailConfirmCard(){
         <button class="btn btn-primary" onclick="saveEmailConfirmConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="testEmailConfirmConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendTest')}</button>
         <button class="btn btn-sm" onclick="testEmailModifyConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendModifyTest')}</button>
+        <button class="btn btn-sm" onclick="testEmailOrderConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendOrderTest')}</button>
         <button class="btn btn-sm" onclick="testEmailCancelConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendCancelTest')}</button>
       </div>
       <div id="ec-test-status" style="font-size:12.5px;color:var(--muted);margin-top:8px"></div>
@@ -6356,6 +6399,7 @@ function readEmailConfirmFormConfig(){
     serviceId: document.getElementById('ec-service').value.trim(),
     templateId: document.getElementById('ec-template').value.trim(),
     modifyTemplateId: document.getElementById('ec-modify-template').value.trim(),
+    orderTemplateId: document.getElementById('ec-order-template').value.trim(),
     cancelTemplateId: document.getElementById('ec-cancel-template').value.trim(),
     publicKey: document.getElementById('ec-pubkey').value.trim()
   };
@@ -6399,6 +6443,24 @@ async function testEmailModifyConfig(){
       clientName: t('mn.emailConfirm.testClientName'), clientEmail: testTo,
       date: todayStr(), time: '21:30', people: 2, tableName: t('mn.emailConfirm.testTableName'),
       publicToken: 'prueba'
+    }, cfg);
+    statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
+  }catch(e){
+    statusEl.innerHTML = `<span style="color:var(--red)"><i class="ti ti-x"></i> ${t('mn.emailConfirm.testFailed')}: ${escapeHtml(e.message||'')}</span>`;
+  }
+}
+async function testEmailOrderConfig(){
+  const statusEl = document.getElementById('ec-test-status');
+  const cfg = readEmailConfirmFormConfig();
+  if(!cfg.serviceId || !cfg.orderTemplateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFieldsOrder')); return; }
+  const testTo = await promptText(t('mn.emailConfirm.testPrompt'), '');
+  if(!testTo) return;
+  statusEl.textContent = t('mn.emailConfirm.sending');
+  try{
+    await sendOrderConfirmationEmail({
+      clienteNombre: t('mn.emailConfirm.testClientName'), clienteEmail: testTo,
+      date: todayStr(), time: '20:30', tipo: 'takeaway',
+      clientRef: 'prueba'
     }, cfg);
     statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
   }catch(e){
@@ -6508,6 +6570,43 @@ function sendOrderCancellationEmail(order){
     date: (order && order.date) || '',
     time: (order && order.time) || '',
     people: ''
+  });
+}
+
+// Enlace de seguimiento del pedido (?track=token) — lo que ya usa la propia
+// web pública para la pantalla "Seguimiento de pedido" (renderOrderTrackingView,
+// reservagastrogoan.html), aquí reutilizado para dárselo al cliente por email.
+// Viene vacío si el pedido no tiene clientRef (p.ej. uno creado a mano desde
+// el panel, sin origen en la web pública).
+function getOrderTrackingLink(order){
+  if(!order || !order.clientRef) return '';
+  const base = getPublicClientLink();
+  if(!base) return '';
+  return base + '&track=' + encodeURIComponent(order.clientRef);
+}
+
+// Dispara el email de confirmación de un pedido para llevar/domicilio — el
+// mismo hueco que ya se cerró para reservas (sendReservationConfirmationEmail):
+// antes de esto, aceptar un pedido online no le decía nada al cliente ("sí,
+// lo estamos preparando") ni le daba forma de volver a ver el estado si
+// cerraba la pestaña de la web pública. Se llama tanto si el pedido se aceptó
+// solo como si lo aceptó el personal a mano — mismo criterio que reservas.
+function sendOrderConfirmationEmail(order, overrideCfg){
+  const cfg = overrideCfg || (DB.business && DB.business.emailConfirm);
+  if(!cfg || (!overrideCfg && !cfg.enabled)) return Promise.resolve();
+  if(!cfg.serviceId || !cfg.orderTemplateId || !cfg.publicKey) return Promise.resolve();
+  if(!order || !order.clienteEmail) return Promise.resolve();
+  return loadEmailjsSdk().then(emailjs => {
+    const params = {
+      to_email: order.clienteEmail,
+      client_name: order.clienteNombre || '',
+      business_name: (DB.business && DB.business.name) || '',
+      type: order.tipo === 'delivery' ? t('mn.emailConfirm.type.delivery') : t('mn.emailConfirm.type.takeaway'),
+      date: order.date || '',
+      time: order.time || '',
+      track_link: getOrderTrackingLink(order)
+    };
+    return emailjs.send(cfg.serviceId, cfg.orderTemplateId, params, {publicKey: cfg.publicKey});
   });
 }
 
@@ -6779,7 +6878,7 @@ function defaultData(){
       // el propio navegador del negocio, sin backend propio). Cada negocio
       // crea su propia cuenta gratuita y pega aquí sus 3 datos — igual que
       // con ownFirebase, no es una cuenta compartida de GastroGoan.
-      emailConfirm: {enabled: false, serviceId: '', templateId: '', modifyTemplateId: '', cancelTemplateId: '', publicKey: ''},
+      emailConfirm: {enabled: false, serviceId: '', templateId: '', modifyTemplateId: '', orderTemplateId: '', cancelTemplateId: '', publicKey: ''},
       ticket: {
         pie: '',
         mostrarDireccion: true,

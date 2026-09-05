@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = fs.readFileSync(path.join(raiz, 'js/core.js'), 'utf8');
 const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
+const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
 
 let fallos = 0;
 function caso(nombre, fn){
@@ -66,25 +67,45 @@ caso('La guía de EmailJS usa los nombres reales de los botones actuales (no los
   assert.ok(m[0].includes('API Keys'), 'sigue diciendo que la Public Key está en "Account" a secas (está en "Account" → "API Keys")');
 });
 
-caso('Los botones de copiar plantilla de la guía llaman a copyEmailJsTemplate, para las TRES plantillas', () => {
+caso('Los botones de copiar plantilla de la guía llaman a copyEmailJsTemplate, para las CUATRO plantillas', () => {
   assert.ok(core.includes('function copyEmailJsTemplate'), 'no se encontró copyEmailJsTemplate');
   assert.ok(core.includes("onclick=\"copyEmailJsTemplate('confirm')\""), 'la plantilla de confirmación no tiene botón de copiar');
   assert.ok(core.includes("onclick=\"copyEmailJsTemplate('modify')\""), 'la plantilla de modificación no tiene botón de copiar');
+  assert.ok(core.includes("onclick=\"copyEmailJsTemplate('order')\""), 'la plantilla de pedido aceptado no tiene botón de copiar');
   assert.ok(core.includes("onclick=\"copyEmailJsTemplate('cancel')\""), 'la plantilla de cancelación no tiene botón de copiar');
 });
 
-caso('La tarjeta de Mi Negocio pide y prueba las TRES plantillas (confirmación, modificación, cancelación)', () => {
+caso('La tarjeta de Mi Negocio pide y prueba las CUATRO plantillas (confirmación, modificación, pedido aceptado, cancelación)', () => {
   const m = core.match(/function renderEmailConfirmCard\(\)\{[\s\S]*?\n\}/);
   assert.ok(m, 'no se encontró renderEmailConfirmCard');
-  ['ec-template', 'ec-modify-template', 'ec-cancel-template', 'ec-pubkey'].forEach(id => {
+  ['ec-template', 'ec-modify-template', 'ec-order-template', 'ec-cancel-template', 'ec-pubkey'].forEach(id => {
     assert.ok(m[0].includes(`id="${id}"`), `falta el campo ${id} en la tarjeta de configuración`);
   });
   assert.ok(m[0].includes('testEmailModifyConfig()'), 'falta el botón para probar la plantilla de modificación');
+  assert.ok(m[0].includes('testEmailOrderConfig()'), 'falta el botón para probar la plantilla de pedido aceptado');
 });
 
-caso('El manual de Ayuda menciona las TRES plantillas y el enlace para modificar/cancelar', () => {
-  assert.ok(app.includes('manage_link'), 'el manual de Ayuda no menciona {{manage_link}} — un negocio que lo siguiera al pie de la letra nunca daría a sus clientes forma de cancelar/modificar desde el email');
-  assert.ok(/segunda plantilla/.test(app) && /tercera plantilla/.test(app), 'el manual de Ayuda no explica que hacen falta TRES plantillas (confirmación, modificación y cancelación)');
+caso('Aceptar un pedido online (para llevar/domicilio) envía un email de confirmación con enlace de seguimiento', () => {
+  assert.ok(tpv.includes('function acceptOnlineOrder'), 'no se encontró acceptOnlineOrder en tpv.js');
+  const m = tpv.match(/async function acceptOnlineOrder\(orderId, auto\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se pudo aislar el cuerpo de acceptOnlineOrder');
+  assert.ok(m[0].includes('sendOrderConfirmationEmail'),
+    'aceptar un pedido para llevar/domicilio no envía ningún email — el cliente no sabe si se está preparando ni tiene enlace para seguir el estado');
+});
+
+caso('sendOrderConfirmationEmail usa su propia plantilla y el enlace de seguimiento del pedido', () => {
+  const m = core.match(/function sendOrderConfirmationEmail\(order, overrideCfg\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró sendOrderConfirmationEmail');
+  assert.ok(m[0].includes('cfg.orderTemplateId') && m[0].includes('emailjs.send(cfg.serviceId, cfg.orderTemplateId'),
+    'no usa un Template ID propio para el pedido aceptado');
+  assert.ok(m[0].includes('getOrderTrackingLink(order)'), 'no incluye el enlace de seguimiento del pedido (track_link)');
+});
+
+caso('El manual de Ayuda menciona las CUATRO plantillas y los enlaces de gestión/seguimiento', () => {
+  assert.ok(app.includes('manage_link'), 'el manual de Ayuda no menciona {{manage_link}} — un negocio que lo siguiera al pie de la letra nunca daría a sus clientes forma de cancelar/modificar una reserva desde el email');
+  assert.ok(app.includes('track_link'), 'el manual de Ayuda no menciona {{track_link}} — un negocio que lo siguiera al pie de la letra nunca daría a sus clientes forma de seguir el estado de un pedido desde el email');
+  assert.ok(/segunda plantilla/.test(app) && /tercera plantilla/.test(app) && /cuarta vez/.test(app),
+    'el manual de Ayuda no explica que hacen falta CUATRO plantillas (confirmación, modificación, pedido aceptado y cancelación)');
 });
 
 console.log('\n' + '═'.repeat(64));

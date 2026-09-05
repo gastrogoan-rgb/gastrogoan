@@ -1350,7 +1350,7 @@ td.wrap{white-space:normal}
      3 botones — en vez de un input estrujado y siempre cortado, el texto va
      en su propia línea a ancho completo y los botones debajo. */
   .protocolo-step-row{flex-direction:column;align-items:stretch !important}
-  .protocolo-step-row input{min-width:0 !important}
+  .protocolo-step-row input,.protocolo-step-row textarea{min-width:0 !important}
   .protocolo-step-row>div:last-child{margin-left:0 !important;justify-content:flex-end}
 
   /* Header — dos filas fijas y centradas, siempre (no solo "si no caben").
@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '05/09/2026 10:54';
+const GG_BUILD = '05/09/2026 12:15';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6926,6 +6926,18 @@ function initPublicRequestsListener(){
           target.status = (matchedTableId != null && !(target.depositRequired && !target.depositConfirmed)) ? 'confirmada' : 'pendiente';
           syncReservationStatusForPublic(target);
           logAudit('edit', t('audit.reservationModifiedByClient').replace('${name}', target.clientName||'?'));
+          // Antes esto no avisaba nunca: el cliente cambiaba la hora desde
+          // "Gestionar mi reserva" y se quedaba sin saber si le habían dado
+          // mesa a la nueva hora o no. Plantilla propia de "modificada" (no
+          // la de confirmación: recibir otra vez "tu reserva está
+          // confirmada" al cambiar solo la hora confunde) — mismo criterio
+          // que al crear una reserva nueva (más arriba en esta función):
+          // solo se manda si queda 'confirmada'; si queda 'pendiente' no se
+          // manda nada, igual que una reserva nueva sin mesa tampoco lo hace.
+          if(target.status === 'confirmada' && typeof sendReservationModificationEmail === 'function'){
+            const confirmedTable = DB.tables.find(t => t.id === target.tableId);
+            sendReservationModificationEmail({...target, tableName: confirmedTable ? confirmedTable.name : ''}).catch(()=>{});
+          }
         }
       }else if(req.type === 'nps_response'){
         // req llega de la web pública, sin autenticar de verdad más allá de
@@ -9030,10 +9042,52 @@ function loadEmailjsSdk(){
   return emailjsSdkPromise;
 }
 
+// Mismo texto que se enseña en la guía (abajo), en texto plano y por idioma,
+// para poder copiarlo con un botón en vez de seleccionarlo a mano dentro del
+// recuadro — el editor de EmailJS (Code Editor) espera texto tal cual, sin
+// las etiquetas HTML del <div> que lo envuelve en la guía.
+const EMAILJS_TEMPLATE_BODIES = {
+  confirm: {
+    es: `Hola {{client_name}},\n\nTu reserva en {{business_name}} está confirmada:\nFecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}\n\nSi quieres cambiar la hora o cancelar, hazlo aquí: {{manage_link}}`,
+    ca: `Hola {{client_name}},\n\nLa teva reserva a {{business_name}} està confirmada:\nData: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}\n\nSi vols canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}`,
+    en: `Hi {{client_name}},\n\nYour reservation at {{business_name}} is confirmed:\nDate: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}\n\nTo change the time or cancel, do it here: {{manage_link}}`,
+  },
+  modify: {
+    es: `Hola {{client_name}},\n\nTu reserva en {{business_name}} ha sido modificada. Estos son los datos actualizados:\nFecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}\n\nSi quieres volver a cambiar la hora o cancelar, hazlo aquí: {{manage_link}}`,
+    ca: `Hola {{client_name}},\n\nLa teva reserva a {{business_name}} ha estat modificada. Aquestes són les dades actualitzades:\nData: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}\n\nSi vols tornar a canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}`,
+    en: `Hi {{client_name}},\n\nYour reservation at {{business_name}} has been changed. Here are the updated details:\nDate: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}\n\nTo change the time again or cancel, do it here: {{manage_link}}`,
+  },
+  order: {
+    es: `Hola {{client_name}},\n\nTu pedido en {{business_name}} ({{type}}) ha sido aceptado y lo estamos preparando.\nFecha: {{date}}  Hora: {{time}}\n\nSigue el estado de tu pedido aquí: {{track_link}}`,
+    ca: `Hola {{client_name}},\n\nLa teva comanda a {{business_name}} ({{type}}) ha estat acceptada i l'estem preparant.\nData: {{date}}  Hora: {{time}}\n\nSegueix l'estat de la teva comanda aquí: {{track_link}}`,
+    en: `Hi {{client_name}},\n\nYour order at {{business_name}} ({{type}}) has been accepted and we're preparing it.\nDate: {{date}}  Time: {{time}}\n\nFollow your order status here: {{track_link}}`,
+  },
+  cancel: {
+    es: `Hola {{client_name}},\n\nTu reserva en {{business_name}} ha sido cancelada.`,
+    ca: `Hola {{client_name}},\n\nLa teva reserva a {{business_name}} ha estat cancel·lada.`,
+    en: `Hi {{client_name}},\n\nYour reservation at {{business_name}} has been cancelled.`,
+  },
+};
+function copyEmailJsTemplate(kind){
+  const dict = EMAILJS_TEMPLATE_BODIES[kind];
+  const text = (dict && (dict[getLang()] || dict.es)) || '';
+  navigator.clipboard.writeText(text).then(() => showToast(t('msg.textCopied'))).catch(() => {
+    alertModal(t('msg.copyFailed'));
+  });
+}
+
 /* Guía paso a paso para configurar EmailJS, pensada para alguien sin
    ningún conocimiento técnico: se abre en un modal desde la tarjeta de
    "Confirmación, cancelación y cambios de reserva por email" en Mi Negocio.
-   Mismo patrón visual que FIREBASE_GATE_STEPS (círculo numerado + texto). */
+   Mismo patrón visual que FIREBASE_GATE_STEPS (círculo numerado + texto).
+   Verificada línea a línea contra el flujo real de emailjs.com (5/09/2026):
+   el botón para añadir un servicio es "Add New Service" (no "Add New Email
+   Service"), hace falta entrar en "Code Editor" para pegar texto con
+   {{llaves}} en una plantilla, el Template ID vive en la pestaña "Settings"
+   de la propia plantilla, y la Public Key está bajo Account → "API Keys"
+   (no directamente en "Account") — todo esto había cambiado desde que se
+   escribió la guía la primera vez y hacía que el paso a paso no coincidiera
+   con lo que el hostelero veía en pantalla. */
 const EMAILJS_GUIDE_STEPS = [
   {title:{es:'Crea tu cuenta gratis en EmailJS', ca:'Crea el teu compte gratuït a EmailJS', en:'Create your free EmailJS account'},
    body:{
@@ -9045,68 +9099,153 @@ const EMAILJS_GUIDE_STEPS = [
         <span style="color:var(--muted)">It's free up to 200 emails a month, plenty for a normal restaurant.</span>`}},
   {title:{es:'Conecta tu email', ca:'Connecta el teu email', en:'Connect your email'},
    body:{
-     es:`En el menú de la izquierda, entra en <strong>"Email Services"</strong> y pulsa <strong>"Add New Email Service"</strong>. Elige tu proveedor (Gmail, Outlook…) y sigue los pasos para darle permiso.<br><br>
-        Al terminar verás un código como <code>service_xxxxxxx</code>. <strong>Cópialo</strong>: es tu <strong>Service ID</strong>.`,
-     ca:`Al menú de l'esquerra, entra a <strong>"Email Services"</strong> i prem <strong>"Add New Email Service"</strong>. Tria el teu proveïdor (Gmail, Outlook…) i segueix els passos per donar-li permís.<br><br>
-        En acabar veuràs un codi com <code>service_xxxxxxx</code>. <strong>Copia'l</strong>: és el teu <strong>Service ID</strong>.`,
-     en:`In the left menu, open <strong>"Email Services"</strong> and click <strong>"Add New Email Service"</strong>. Choose your provider (Gmail, Outlook…) and follow the steps to grant access.<br><br>
-        When it's done you'll see a code like <code>service_xxxxxxx</code>. <strong>Copy it</strong>: it's your <strong>Service ID</strong>.`}},
+     es:`En el menú de la izquierda, entra en <strong>"Email Services"</strong> y pulsa <strong>"Add New Service"</strong>.<br><br>
+        Elige tu proveedor (por ejemplo <strong>Gmail</strong>), pulsa <strong>"Connect Account"</strong> e inicia sesión con la cuenta desde la que quieres que salgan los emails. Para terminar, pulsa <strong>"Add Service"</strong>.<br><br>
+        Verás un código como <code>service_xxxxxxx</code> en la lista: <strong>cópialo</strong>, es tu <strong>Service ID</strong>.`,
+     ca:`Al menú de l'esquerra, entra a <strong>"Email Services"</strong> i prem <strong>"Add New Service"</strong>.<br><br>
+        Tria el teu proveïdor (per exemple <strong>Gmail</strong>), prem <strong>"Connect Account"</strong> i inicia sessió amb el compte des del qual vols que surtin els emails. Per acabar, prem <strong>"Add Service"</strong>.<br><br>
+        Veuràs un codi com <code>service_xxxxxxx</code> a la llista: <strong>copia'l</strong>, és el teu <strong>Service ID</strong>.`,
+     en:`In the left menu, open <strong>"Email Services"</strong> and click <strong>"Add New Service"</strong>.<br><br>
+        Choose your provider (e.g. <strong>Gmail</strong>), click <strong>"Connect Account"</strong> and sign in with the account you want the emails to come from. To finish, click <strong>"Add Service"</strong>.<br><br>
+        You'll see a code like <code>service_xxxxxxx</code> in the list: <strong>copy it</strong>, it's your <strong>Service ID</strong>.`}},
   {title:{es:'Crea la plantilla de "Reserva confirmada"', ca:'Crea la plantilla de "Reserva confirmada"', en:'Create the "Reservation confirmed" template'},
    body:{
-     es:`Ve a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. En "To Email" escribe <code>{{to_email}}</code>. En el asunto y el cuerpo, pega esto (no borres las palabras entre llaves, la app las rellena sola):<br><br>
+     es:`Ve a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. En el campo <strong>"To Email"</strong> escribe <code>{{to_email}}</code>.<br><br>
+        El asunto y el cuerpo se abren en un editor visual: pulsa <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong> para poder escribir el texto tal cual, con las llaves incluidas (en el editor visual normal no se pueden pegar bien).<br><br>
+        Pega esto en el cuerpo (no borres las palabras entre llaves, la app las rellena sola):<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
 
 Tu reserva en {{business_name}} está confirmada:
 Fecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}
 
 Si quieres cambiar la hora o cancelar, hazlo aquí: {{manage_link}}</div>
-        Guarda y copia el código <code>template_xxxxxxx</code> que aparece: es tu <strong>Template ID de confirmación</strong>.`,
-     ca:`Vés a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. A "To Email" escriu <code>{{to_email}}</code>. A l'assumpte i al cos, enganxa això (no esborris les paraules entre claus, l'app les omple sola):<br><br>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('confirm')" type="button"><i class="ti ti-copy"></i> Copiar texto</button><br><br>
+        Guarda y abre la pestaña <strong>"Settings"</strong> de esta misma plantilla: ahí está el código <code>template_xxxxxxx</code>, es tu <strong>Template ID de confirmación</strong>.`,
+     ca:`Vés a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. Al camp <strong>"To Email"</strong> escriu <code>{{to_email}}</code>.<br><br>
+        L'assumpte i el cos s'obren en un editor visual: prem <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong> per poder escriure el text tal qual, amb les claus incloses (a l'editor visual normal no es poden enganxar bé).<br><br>
+        Enganxa això al cos (no esborris les paraules entre claus, l'app les omple sola):<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
 
 La teva reserva a {{business_name}} està confirmada:
 Data: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}
 
 Si vols canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}</div>
-        Desa i copia el codi <code>template_xxxxxxx</code> que apareix: és el teu <strong>Template ID de confirmació</strong>.`,
-     en:`Go to <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. In "To Email" type <code>{{to_email}}</code>. In the subject and body, paste this (don't remove the words in curly braces, the app fills them in automatically):<br><br>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('confirm')" type="button"><i class="ti ti-copy"></i> Copiar text</button><br><br>
+        Desa i obre la pestanya <strong>"Settings"</strong> d'aquesta mateixa plantilla: allà hi ha el codi <code>template_xxxxxxx</code>, és el teu <strong>Template ID de confirmació</strong>.`,
+     en:`Go to <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. In the <strong>"To Email"</strong> field type <code>{{to_email}}</code>.<br><br>
+        The subject and body open in a visual editor: click <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong> so you can type the text as-is, curly braces included (the normal visual editor won't let you paste them properly).<br><br>
+        Paste this into the body (don't remove the words in curly braces, the app fills them in automatically):<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
 
 Your reservation at {{business_name}} is confirmed:
 Date: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}
 
 To change the time or cancel, do it here: {{manage_link}}</div>
-        Save it and copy the <code>template_xxxxxxx</code> code shown: it's your <strong>confirmation Template ID</strong>.`}},
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('confirm')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
+        Save it and open that template's <strong>"Settings"</strong> tab: that's where the <code>template_xxxxxxx</code> code is, it's your <strong>confirmation Template ID</strong>.`}},
+  {title:{es:'Crea la plantilla de "Reserva modificada"', ca:'Crea la plantilla de "Reserva modificada"', en:'Create the "Reservation changed" template'},
+   body:{
+     es:`Hace falta una TERCERA plantilla, distinta de la de confirmación: si el cliente cambia la hora de una reserva ya confirmada y le llega otra vez "tu reserva está confirmada", se confunde — necesita un aviso que diga que ha CAMBIADO.<br><br>
+        Repite lo mismo: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, y en el cuerpo:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+Tu reserva en {{business_name}} ha sido modificada. Estos son los datos actualizados:
+Fecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}
+
+Si quieres volver a cambiar la hora o cancelar, hazlo aquí: {{manage_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('modify')" type="button"><i class="ti ti-copy"></i> Copiar texto</button><br><br>
+        Guarda y copia su código <code>template_xxxxxxx</code> en "Settings": es tu <strong>Template ID de modificación</strong> (distinto de los otros dos).`,
+     ca:`Cal una TERCERA plantilla, diferent de la de confirmació: si el client canvia l'hora d'una reserva ja confirmada i li arriba un altre cop "la teva reserva està confirmada", es confon — necessita un avís que digui que ha CANVIAT.<br><br>
+        Repeteix el mateix: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, i al cos:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+La teva reserva a {{business_name}} ha estat modificada. Aquestes són les dades actualitzades:
+Data: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}
+
+Si vols tornar a canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('modify')" type="button"><i class="ti ti-copy"></i> Copiar text</button><br><br>
+        Desa i copia el seu codi <code>template_xxxxxxx</code> a "Settings": és el teu <strong>Template ID de modificació</strong> (diferent dels altres dos).`,
+     en:`You need a THIRD template, different from the confirmation one: if the customer changes the time of an already-confirmed reservation and gets "your reservation is confirmed" again, it's confusing — they need something that says it CHANGED.<br><br>
+        Repeat the same thing: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, and in the body:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
+
+Your reservation at {{business_name}} has been changed. Here are the updated details:
+Date: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}
+
+To change the time again or cancel, do it here: {{manage_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('modify')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
+        Save it and copy its <code>template_xxxxxxx</code> code under "Settings": it's your <strong>modification Template ID</strong> (different from the other two).`}},
+  {title:{es:'Crea la plantilla de "Pedido aceptado"', ca:'Crea la plantilla de "Comanda acceptada"', en:'Create the "Order accepted" template'},
+   body:{
+     es:`Esta es para PEDIDOS para llevar o a domicilio (no reservas): avisa al cliente de que has aceptado su pedido y lo estás preparando, con un enlace para seguir el estado.<br><br>
+        Repite lo mismo: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, y en el cuerpo:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+Tu pedido en {{business_name}} ({{type}}) ha sido aceptado y lo estamos preparando.
+Fecha: {{date}}  Hora: {{time}}
+
+Sigue el estado de tu pedido aquí: {{track_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('order')" type="button"><i class="ti ti-copy"></i> Copiar texto</button><br><br>
+        Guarda y copia su código <code>template_xxxxxxx</code> en "Settings": es tu <strong>Template ID de pedido aceptado</strong>.`,
+     ca:`Aquesta és per a COMANDES per emportar o a domicili (no reserves): avisa el client que has acceptat la seva comanda i que l'estàs preparant, amb un enllaç per seguir l'estat.<br><br>
+        Repeteix el mateix: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, i al cos:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+La teva comanda a {{business_name}} ({{type}}) ha estat acceptada i l'estem preparant.
+Data: {{date}}  Hora: {{time}}
+
+Segueix l'estat de la teva comanda aquí: {{track_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('order')" type="button"><i class="ti ti-copy"></i> Copiar text</button><br><br>
+        Desa i copia el seu codi <code>template_xxxxxxx</code> a "Settings": és el teu <strong>Template ID de comanda acceptada</strong>.`,
+     en:`This one is for takeaway/delivery ORDERS (not reservations): it tells the customer you accepted their order and are preparing it, with a link to follow the status.<br><br>
+        Repeat the same thing: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, and in the body:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
+
+Your order at {{business_name}} ({{type}}) has been accepted and we're preparing it.
+Date: {{date}}  Time: {{time}}
+
+Follow your order status here: {{track_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('order')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
+        Save it and copy its <code>template_xxxxxxx</code> code under "Settings": it's your <strong>order-accepted Template ID</strong>.`}},
   {title:{es:'Crea la plantilla de "Reserva cancelada"', ca:'Crea la plantilla de "Reserva cancel·lada"', en:'Create the "Reservation cancelled" template'},
    body:{
-     es:`Repite lo mismo: <strong>"Create New Template"</strong> otra vez, "To Email" = <code>{{to_email}}</code>, y en el cuerpo algo como:<br><br>
+     es:`Repite lo mismo: <strong>"Create New Template"</strong> otra vez, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, y en el cuerpo algo como:<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
 
 Tu reserva en {{business_name}} ha sido cancelada.</div>
-        Guarda y copia su código <code>template_xxxxxxx</code>: es tu <strong>Template ID de cancelación</strong> (distinto del de confirmación).`,
-     ca:`Repeteix el mateix: <strong>"Create New Template"</strong> una altra vegada, "To Email" = <code>{{to_email}}</code>, i al cos alguna cosa com:<br><br>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('cancel')" type="button"><i class="ti ti-copy"></i> Copiar texto</button><br><br>
+        Guarda y mira su código <code>template_xxxxxxx</code> en "Settings": es tu <strong>Template ID de cancelación</strong> (distinto del de confirmación).`,
+     ca:`Repeteix el mateix: <strong>"Create New Template"</strong> una altra vegada, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, i al cos alguna cosa com:<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
 
 La teva reserva a {{business_name}} ha estat cancel·lada.</div>
-        Desa i copia el seu codi <code>template_xxxxxxx</code>: és el teu <strong>Template ID de cancel·lació</strong> (diferent del de confirmació).`,
-     en:`Repeat the same thing: <strong>"Create New Template"</strong> again, "To Email" = <code>{{to_email}}</code>, and in the body something like:<br><br>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('cancel')" type="button"><i class="ti ti-copy"></i> Copiar text</button><br><br>
+        Desa i mira el seu codi <code>template_xxxxxxx</code> a "Settings": és el teu <strong>Template ID de cancel·lació</strong> (diferent del de confirmació).`,
+     en:`Repeat the same thing: <strong>"Create New Template"</strong> again, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, and in the body something like:<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
 
 Your reservation at {{business_name}} has been cancelled.</div>
-        Save it and copy its <code>template_xxxxxxx</code> code: it's your <strong>cancellation Template ID</strong> (different from the confirmation one).`}},
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('cancel')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
+        Save it and check its <code>template_xxxxxxx</code> code under "Settings": it's your <strong>cancellation Template ID</strong> (different from the confirmation one).`}},
   {title:{es:'Copia tu "Public Key"', ca:'Copia la teva "Public Key"', en:'Copy your "Public Key"'},
    body:{
-     es:`Pulsa tu icono (arriba a la derecha) → <strong>"Account"</strong>. Ahí verás un código como <code>AbCdEfGhIjK123</code>. Cópialo: es tu <strong>Public Key</strong>.`,
-     ca:`Prem la teva icona (a dalt a la dreta) → <strong>"Account"</strong>. Allà veuràs un codi com <code>AbCdEfGhIjK123</code>. Copia'l: és la teva <strong>Public Key</strong>.`,
-     en:`Click your icon (top right) → <strong>"Account"</strong>. You'll see a code like <code>AbCdEfGhIjK123</code>. Copy it: it's your <strong>Public Key</strong>.`}},
+     es:`Pulsa tu icono o tu nombre (arriba a la derecha) → <strong>"Account"</strong>. Abre el apartado <strong>"API Keys"</strong> (a veces aparece dentro de "General" en vez de en su propia pestaña).<br><br>
+        Ahí verás un código como <code>AbCdEfGhIjK123</code> junto a "Public Key". <strong>Cópialo</strong>: es tu <strong>Public Key</strong>.<br><br>
+        <span style="color:var(--muted)">Ojo: NO es el "Private Key" que aparece justo al lado — ese no hace falta aquí.</span>`,
+     ca:`Prem la teva icona o el teu nom (a dalt a la dreta) → <strong>"Account"</strong>. Obre l'apartat <strong>"API Keys"</strong> (de vegades apareix dins de "General" en comptes de a la seva pròpia pestanya).<br><br>
+        Allà veuràs un codi com <code>AbCdEfGhIjK123</code> al costat de "Public Key". <strong>Copia'l</strong>: és la teva <strong>Public Key</strong>.<br><br>
+        <span style="color:var(--muted)">Compte: NO és el "Private Key" que apareix just al costat — aquest no cal aquí.</span>`,
+     en:`Click your icon or your name (top right) → <strong>"Account"</strong>. Open the <strong>"API Keys"</strong> section (it sometimes appears inside "General" instead of its own tab).<br><br>
+        You'll see a code like <code>AbCdEfGhIjK123</code> next to "Public Key". <strong>Copy it</strong>: it's your <strong>Public Key</strong>.<br><br>
+        <span style="color:var(--muted)">Careful: it's NOT the "Private Key" shown right next to it — you don't need that one here.</span>`}},
   {title:{es:'Pégalo todo aquí y prueba', ca:'Enganxa-ho tot aquí i prova-ho', en:'Paste it all here and test it'},
    body:{
-     es:`Cierra esta guía, marca <strong>"Activar"</strong> más abajo y pega los 4 códigos, cada uno en su campo. Guarda y pulsa <strong>"Enviar prueba"</strong> (hay uno para confirmación y otro para cancelación) con tu propio email, para comprobar que llega bien.<br><br>
-        <span style="color:var(--muted)">Si te llega el email de prueba con los datos rellenados, ya está todo funcionando: cada cliente que reserve recibirá el suyo automáticamente.</span>`,
-     ca:`Tanca aquesta guia, marca <strong>"Activar"</strong> més avall i enganxa els 4 codis, cadascun al seu camp. Desa i prem <strong>"Enviar prova"</strong> (n'hi ha un per a confirmació i un altre per a cancel·lació) amb el teu propi email, per comprovar que arriba bé.<br><br>
-        <span style="color:var(--muted)">Si et arriba l'email de prova amb les dades emplenades, ja tot funciona: cada client que reservi rebrà el seu automàticament.</span>`,
-     en:`Close this guide, check <strong>"Enable"</strong> below and paste the 4 codes, each in its field. Save and click <strong>"Send test"</strong> (there's one for confirmation and one for cancellation) with your own email, to check it arrives fine.<br><br>
-        <span style="color:var(--muted)">If the test email arrives with the details filled in, everything is working: every customer who books will get theirs automatically.</span>`}},
+     es:`Cierra esta guía, marca <strong>"Activar"</strong> más abajo y pega los 6 códigos, cada uno en su campo. Guarda y pulsa los cuatro botones de prueba (<strong>confirmación, modificación, pedido aceptado y cancelación</strong>) con tu propio email, para comprobar que los cuatro llegan bien.<br><br>
+        <span style="color:var(--muted)">Si te llegan los cuatro emails de prueba con los datos rellenados, ya está todo funcionando: cada cliente que reserve, modifique, pida o cancele recibirá el suyo automáticamente.</span>`,
+     ca:`Tanca aquesta guia, marca <strong>"Activar"</strong> més avall i enganxa els 6 codis, cadascun al seu camp. Desa i prem els quatre botons de prova (<strong>confirmació, modificació, comanda acceptada i cancel·lació</strong>) amb el teu propi email, per comprovar que els quatre arriben bé.<br><br>
+        <span style="color:var(--muted)">Si et arriben els quatre emails de prova amb les dades emplenades, ja tot funciona: cada client que reservi, modifiqui, demani o cancel·li rebrà el seu automàticament.</span>`,
+     en:`Close this guide, check <strong>"Enable"</strong> below and paste the 6 codes, each in its field. Save and click all four test buttons (<strong>confirmation, modification, order accepted and cancellation</strong>) with your own email, to check all four arrive fine.<br><br>
+        <span style="color:var(--muted)">If all four test emails arrive with the details filled in, everything is working: every customer who books, changes, orders or cancels will get theirs automatically.</span>`}},
 ];
 function showEmailJsGuideModal(){
   const step = (n, title, body) => `
@@ -9148,6 +9287,16 @@ function renderEmailConfirmCard(){
         <small style="color:var(--muted)">${t('mn.emailConfirm.templateHint')}</small>
       </div>
       <div class="field">
+        <label>Template ID (${t('mn.emailConfirm.modifyLabel')})</label>
+        <input type="text" id="ec-modify-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.modifyTemplateId||'')}" style="font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.emailConfirm.modifyTemplateHint')}</small>
+      </div>
+      <div class="field">
+        <label>Template ID (${t('mn.emailConfirm.orderLabel')})</label>
+        <input type="text" id="ec-order-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.orderTemplateId||'')}" style="font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.emailConfirm.orderTemplateHint')}</small>
+      </div>
+      <div class="field">
         <label>Template ID (${t('mn.emailConfirm.cancelLabel')})</label>
         <input type="text" id="ec-cancel-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.cancelTemplateId||'')}" style="font-family:monospace">
         <small style="color:var(--muted)">${t('mn.emailConfirm.cancelTemplateHint')}</small>
@@ -9159,6 +9308,8 @@ function renderEmailConfirmCard(){
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="saveEmailConfirmConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="testEmailConfirmConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendTest')}</button>
+        <button class="btn btn-sm" onclick="testEmailModifyConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendModifyTest')}</button>
+        <button class="btn btn-sm" onclick="testEmailOrderConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendOrderTest')}</button>
         <button class="btn btn-sm" onclick="testEmailCancelConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendCancelTest')}</button>
       </div>
       <div id="ec-test-status" style="font-size:12.5px;color:var(--muted);margin-top:8px"></div>
@@ -9171,6 +9322,8 @@ function readEmailConfirmFormConfig(){
     enabled: document.getElementById('ec-enabled').checked,
     serviceId: document.getElementById('ec-service').value.trim(),
     templateId: document.getElementById('ec-template').value.trim(),
+    modifyTemplateId: document.getElementById('ec-modify-template').value.trim(),
+    orderTemplateId: document.getElementById('ec-order-template').value.trim(),
     cancelTemplateId: document.getElementById('ec-cancel-template').value.trim(),
     publicKey: document.getElementById('ec-pubkey').value.trim()
   };
@@ -9178,7 +9331,7 @@ function readEmailConfirmFormConfig(){
 function saveEmailConfirmConfig(){
   DB.business.emailConfirm = readEmailConfirmFormConfig();
   saveDB();
-  showToast(t('msg.payConfigSaved'));
+  showToast(t('msg.emailConfirmConfigSaved'));
 }
 
 async function testEmailConfirmConfig(){
@@ -9196,6 +9349,42 @@ async function testEmailConfirmConfig(){
       // enlace {{manage_link}} en la plantilla real — no apunta a ninguna
       // reserva de verdad.
       publicToken: 'prueba'
+    }, cfg);
+    statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
+  }catch(e){
+    statusEl.innerHTML = `<span style="color:var(--red)"><i class="ti ti-x"></i> ${t('mn.emailConfirm.testFailed')}: ${escapeHtml(e.message||'')}</span>`;
+  }
+}
+async function testEmailModifyConfig(){
+  const statusEl = document.getElementById('ec-test-status');
+  const cfg = readEmailConfirmFormConfig();
+  if(!cfg.serviceId || !cfg.modifyTemplateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFieldsModify')); return; }
+  const testTo = await promptText(t('mn.emailConfirm.testPrompt'), '');
+  if(!testTo) return;
+  statusEl.textContent = t('mn.emailConfirm.sending');
+  try{
+    await sendReservationModificationEmail({
+      clientName: t('mn.emailConfirm.testClientName'), clientEmail: testTo,
+      date: todayStr(), time: '21:30', people: 2, tableName: t('mn.emailConfirm.testTableName'),
+      publicToken: 'prueba'
+    }, cfg);
+    statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
+  }catch(e){
+    statusEl.innerHTML = `<span style="color:var(--red)"><i class="ti ti-x"></i> ${t('mn.emailConfirm.testFailed')}: ${escapeHtml(e.message||'')}</span>`;
+  }
+}
+async function testEmailOrderConfig(){
+  const statusEl = document.getElementById('ec-test-status');
+  const cfg = readEmailConfirmFormConfig();
+  if(!cfg.serviceId || !cfg.orderTemplateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFieldsOrder')); return; }
+  const testTo = await promptText(t('mn.emailConfirm.testPrompt'), '');
+  if(!testTo) return;
+  statusEl.textContent = t('mn.emailConfirm.sending');
+  try{
+    await sendOrderConfirmationEmail({
+      clienteNombre: t('mn.emailConfirm.testClientName'), clienteEmail: testTo,
+      date: todayStr(), time: '20:30', tipo: 'takeaway',
+      clientRef: 'prueba'
     }, cfg);
     statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
   }catch(e){
@@ -9250,6 +9439,32 @@ function sendReservationConfirmationEmail(reservation, overrideCfg){
   });
 }
 
+// Mismo mecanismo, pero para avisar de que una reserva YA CONFIRMADA se ha
+// MODIFICADO (el propio cliente le cambió fecha/hora/comensales desde
+// "Gestionar mi reserva"). Plantilla propia (modifyTemplateId) en vez de
+// reutilizar la de confirmación: recibir un "tu reserva está confirmada" al
+// cambiar solo la hora confunde — el cliente ya sabía que estaba confirmada,
+// lo que necesita saber es que el cambio se aplicó.
+function sendReservationModificationEmail(reservation, overrideCfg){
+  const cfg = overrideCfg || (DB.business && DB.business.emailConfirm);
+  if(!cfg || (!overrideCfg && !cfg.enabled)) return Promise.resolve();
+  if(!cfg.serviceId || !cfg.modifyTemplateId || !cfg.publicKey) return Promise.resolve();
+  if(!reservation || !reservation.clientEmail) return Promise.resolve();
+  return loadEmailjsSdk().then(emailjs => {
+    const params = {
+      to_email: reservation.clientEmail,
+      client_name: reservation.clientName || '',
+      business_name: (DB.business && DB.business.name) || '',
+      date: reservation.date || '',
+      time: reservation.time || '',
+      people: reservation.people || '',
+      table_name: reservation.tableName || '',
+      manage_link: getReservationManageLink(reservation)
+    };
+    return emailjs.send(cfg.serviceId, cfg.modifyTemplateId, params, {publicKey: cfg.publicKey});
+  });
+}
+
 // Mismo mecanismo que sendReservationConfirmationEmail, pero para avisar de
 // una CANCELACIÓN — de una reserva o de un pedido para llevar/delivery, con
 // una única plantilla compartida (cancelTemplateId) para no pedirle al
@@ -9279,6 +9494,43 @@ function sendOrderCancellationEmail(order){
     date: (order && order.date) || '',
     time: (order && order.time) || '',
     people: ''
+  });
+}
+
+// Enlace de seguimiento del pedido (?track=token) — lo que ya usa la propia
+// web pública para la pantalla "Seguimiento de pedido" (renderOrderTrackingView,
+// reservagastrogoan.html), aquí reutilizado para dárselo al cliente por email.
+// Viene vacío si el pedido no tiene clientRef (p.ej. uno creado a mano desde
+// el panel, sin origen en la web pública).
+function getOrderTrackingLink(order){
+  if(!order || !order.clientRef) return '';
+  const base = getPublicClientLink();
+  if(!base) return '';
+  return base + '&track=' + encodeURIComponent(order.clientRef);
+}
+
+// Dispara el email de confirmación de un pedido para llevar/domicilio — el
+// mismo hueco que ya se cerró para reservas (sendReservationConfirmationEmail):
+// antes de esto, aceptar un pedido online no le decía nada al cliente ("sí,
+// lo estamos preparando") ni le daba forma de volver a ver el estado si
+// cerraba la pestaña de la web pública. Se llama tanto si el pedido se aceptó
+// solo como si lo aceptó el personal a mano — mismo criterio que reservas.
+function sendOrderConfirmationEmail(order, overrideCfg){
+  const cfg = overrideCfg || (DB.business && DB.business.emailConfirm);
+  if(!cfg || (!overrideCfg && !cfg.enabled)) return Promise.resolve();
+  if(!cfg.serviceId || !cfg.orderTemplateId || !cfg.publicKey) return Promise.resolve();
+  if(!order || !order.clienteEmail) return Promise.resolve();
+  return loadEmailjsSdk().then(emailjs => {
+    const params = {
+      to_email: order.clienteEmail,
+      client_name: order.clienteNombre || '',
+      business_name: (DB.business && DB.business.name) || '',
+      type: order.tipo === 'delivery' ? t('mn.emailConfirm.type.delivery') : t('mn.emailConfirm.type.takeaway'),
+      date: order.date || '',
+      time: order.time || '',
+      track_link: getOrderTrackingLink(order)
+    };
+    return emailjs.send(cfg.serviceId, cfg.orderTemplateId, params, {publicKey: cfg.publicKey});
   });
 }
 
@@ -9410,7 +9662,11 @@ function openCloudWizard(){
 // Categorías de Mega Lista/Stock: distintas según el área, para que Sala
 // vea categorías de bar (Cervezas, Licores...) en vez de las de cocina
 // (Carnes, Pescados...). "Otros" es común a ambas.
-const CATEGORIES_COCINA = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
+// 'Bebidas' se quitó de aquí a propósito (5/09): en cocina no se stockean
+// bebidas, eso es tarea de Sala, que ya tiene su propio catálogo mucho más
+// detallado (vinos, cervezas, licores...) — tenerlo también aquí duplicaba
+// sin sentido y encima con items genéricos.
+const CATEGORIES_COCINA = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Condimentos y Especias','Congelados','Otros'];
 const CATEGORIES_SALA = ['Cervezas','Vinos y Cavas','Licores y Destilados','Refrescos y Mixers','Café e Infusiones','Hielo y Guarniciones','Otros'];
 // Igual que allergenLabel()/businessTypeLabel(): el valor guardado de las
 // categorías predefinidas es siempre el nombre en español (clave estable
@@ -9546,7 +9802,7 @@ function defaultData(){
       // el propio navegador del negocio, sin backend propio). Cada negocio
       // crea su propia cuenta gratuita y pega aquí sus 3 datos — igual que
       // con ownFirebase, no es una cuenta compartida de GastroGoan.
-      emailConfirm: {enabled: false, serviceId: '', templateId: '', cancelTemplateId: '', publicKey: ''},
+      emailConfirm: {enabled: false, serviceId: '', templateId: '', modifyTemplateId: '', orderTemplateId: '', cancelTemplateId: '', publicKey: ''},
       ticket: {
         pie: '',
         mostrarDireccion: true,
@@ -9619,6 +9875,31 @@ const dbReadyPromise = loadDB().then(d => {
 // negocios seguían ahí, pero sin dueño puesto, y el filtro no los enseñaba.
 try{ migrateSlotOwners(); }catch(e){ console.error('No se pudieron adjudicar los negocios al dueño', e); }
 
+// El catálogo base de Mega Lista siembra ingredientes con categorías finas
+// ('Panes y Bollería', 'Legumbres', 'Arroces'...) que NO están en las listas
+// predefinidas (CATEGORIES_COCINA/SALA, esas sí traducidas y con orden fijo)
+// ni se registraban nunca en DB.ingredientCategories (las categorías que el
+// propio negocio "crea"). Resultado: al editar uno de esos ingredientes, el
+// <select> de categoría no encontraba ninguna opción con ese valor, el
+// navegador preseleccionaba la primera de la lista (Carnes, al ser la
+// primera predefinida) y guardar sin tocar nada le cambiaba la categoría en
+// silencio. Cualquier categoría que un ingrediente YA tenga puesta —venga
+// del catálogo sembrado, de una versión anterior o de donde sea— tiene que
+// estar siempre seleccionable.
+function registrarCategoriasDeIngredientesEnUso(data){
+  const yaEsta = new Set(data.ingredientCategories || []);
+  let cambio = false;
+  (data.ingredients || []).forEach(i => {
+    if(!i.category) return;
+    const predefinidas = i.area === 'sala' ? CATEGORIES_SALA : CATEGORIES_COCINA;
+    if(predefinidas.includes(i.category) || yaEsta.has(i.category)) return;
+    yaEsta.add(i.category);
+    if(!data.ingredientCategories) data.ingredientCategories = [];
+    data.ingredientCategories.push(i.category);
+    cambio = true;
+  });
+  return cambio;
+}
 async function loadDB(){
   try{
     let data = await idbGet(DB_KEY);
@@ -9650,6 +9931,7 @@ async function loadDB(){
         fresh.stock = {...seedCocina.stock, ...seedSala.stock};
         fresh.categoryIcons.ingredient = {...seedCocina.categoryIcons, ...seedSala.categoryIcons};
       }
+      registrarCategoriasDeIngredientesEnUso(fresh);
       return fresh;
     }
     const merged = Object.assign(defaultData(), data);
@@ -9660,6 +9942,7 @@ async function loadDB(){
     }
     delete merged.business.protectedModules;
     (merged.ingredients||[]).forEach(i => { if(!i.area) i.area = 'cocina'; });
+    registrarCategoriasDeIngredientesEnUso(merged);
     (merged.recipes||[]).forEach(r => { if(!r.area) r.area = 'cocina'; });
     (merged.providers||[]).forEach(p => { if(!p.area) p.area = 'cocina'; });
     (merged.elaboraciones||[]).forEach(e => { if(!e.area) e.area = 'cocina'; });
@@ -11294,7 +11577,7 @@ const I18N = {
     'li.afterHandlingWaste': 'Tras manipular residuos', 'li.afterTouchingFaceHair': 'Después de tocar la cara o el cabello',
     'li.afterUsingRestroom': 'Tras usar los aseos', 'li.rawToCookedProduct': 'Al cambiar de producto crudo a cocinado',
     'li.afterEatingSmoking': 'Después de comer o fumar', 'title.minimumDuration': 'Duración mínima',
-    'label.20seconds': '20 segundos', 'msg.happyBirthdayEquivalent': 'Equivale a cantar "Cumpleaños feliz" dos veces',
+    'label.20seconds': '20 segundos',
     'common.reset': 'Restablecer', 'title.openingProtocol': 'Protocolo de Apertura', 'title.closingProtocol': 'Protocolo de Cierre',
     'btn.addEquipment': 'Añadir equipo', 'label.lastMaintenance': 'Último mantenimiento', 'label.next': 'Próximo',
     'status.ok': 'OK', 'status.pendingM': 'Pendiente', 'status.urgent': 'Urgente',
@@ -11447,7 +11730,7 @@ const I18N = {
     'msg.licenseActivated': 'Licencia activada',
     'msg.invalidLicense': 'Clave no válida. Comprueba que la copiaste entera, con los guiones, tal y como te la envió tu vendedor.',
     'msg.cloudConnected': 'Nube conectada', 'msg.cloudOffline': 'Sin conexión', 'msg.cloudError': 'Error de nube',
-    'msg.rulesCopied': 'Reglas copiadas',
+    'msg.rulesCopied': 'Reglas copiadas', 'msg.textCopied': 'Texto copiado',
     'msg.savedOk': 'Guardado', 'msg.saveError': 'Error al guardar',
     'msg.deleteConfirm': '¿Eliminar?',
     'msg.confirmDeleteIngredient': '¿Eliminar este ingrediente? Se eliminará también de recetas y stock.',
@@ -11593,6 +11876,7 @@ const I18N = {
     'msg.fillMerchantCode': 'Indica el código de comercio (FUC) y el terminal',
     'msg.fillSecretKey': 'Indica la clave secreta',
     'msg.payConfigSaved': 'Configuración de pago guardada',
+    'msg.emailConfirmConfigSaved': 'Configuración de email de reservas guardada',
     'msg.payConfigError': 'No se pudo guardar (revisa tu conexión)',
     'msg.linkCopied': 'Enlace copiado', 'msg.summaryCopied': 'Resumen copiado al portapapeles',
     'mn.verifactu.title': 'VeriFactu (facturación certificada)',
@@ -11763,7 +12047,7 @@ const I18N = {
     'msg.pinNotDefault': 'Elige un PIN distinto al de por defecto (1234)',
     'msg.alreadyClockedIn': 'Ya tienes una entrada sin cerrar',
     'msg.noClockedIn': 'No hay ninguna entrada abierta',
-    'msg.writeAreaTask': 'Escribe un área o tarea',
+    'msg.writeAreaTask': 'Escribe un área o tarea', 'msg.chooseOneOffDate': 'Elige el día de esta limpieza puntual',
     'msg.writeEquipName': 'Escribe un nombre para el equipo',
     'msg.techSheetNotFound': 'No se encontró la ficha técnica de este plato',
     'msg.clientSaved': 'Cliente guardado',
@@ -11922,9 +12206,9 @@ const I18N = {
     'mn.externalConn.email': 'Confirmación de reservas por email (EmailJS)',
     'mn.externalConn.connected': 'Conectado', 'mn.externalConn.notConnected': 'Sin conectar',
     'common.connect': 'Conectar',
-    'mn.emailConfirm.title': 'Confirmación, cancelación y cambios de reserva por email',
-    'mn.emailConfirm.desc': 'En cuanto una reserva quede confirmada (sola, o cuando le asignes mesa a mano), el cliente recibe un email automático avisándole, con un enlace para cambiar la hora o cancelar sin tener que llamarte. Se envía desde tu propia cuenta gratuita de EmailJS (emailjs.com) — no hace falta backend ni coste para volúmenes normales de un solo restaurante. Recomendado: sin esto, el cliente no sabe si su reserva quedó confirmada ni tiene forma de gestionarla, y te llegan más llamadas y más "no shows".',
-    'mn.emailConfirm.guideBtn': '¿Cómo lo configuro? Guía paso a paso', 'mn.emailConfirm.guideTitle': 'Cómo configurar los emails de reserva', 'mn.emailConfirm.guideIntro': 'No hace falta saber programar. Son 6 pasos de copiar y pegar, 15-20 minutos.', 'mn.emailConfirm.guideDone': 'Entendido, voy a configurarlo',
+    'mn.emailConfirm.title': 'Confirmación, cambios y cancelación de reservas y pedidos por email',
+    'mn.emailConfirm.desc': 'En cuanto una reserva quede confirmada o aceptes un pedido para llevar/domicilio (solo, o a mano), el cliente recibe un email automático avisándole, con un enlace para cambiar la hora, cancelar o seguir el estado sin tener que llamarte. Se envía desde tu propia cuenta gratuita de EmailJS (emailjs.com) — no hace falta backend ni coste para volúmenes normales de un solo restaurante. Recomendado: sin esto, el cliente no sabe si su reserva o pedido se aceptó ni tiene forma de gestionarlo, y te llegan más llamadas y más "no shows".',
+    'mn.emailConfirm.guideBtn': '¿Cómo lo configuro? Guía paso a paso', 'mn.emailConfirm.guideTitle': 'Cómo configurar los emails de reservas y pedidos', 'mn.emailConfirm.guideIntro': 'No hace falta saber programar. Son 8 pasos de copiar y pegar, 15-20 minutos.', 'mn.emailConfirm.guideDone': 'Entendido, voy a configurarlo',
     'mn.emailConfirm.enable': 'Activar confirmación automática por email',
     'mn.emailConfirm.templateHint': 'La plantilla debe usar estas variables: {{to_email}}, {{client_name}}, {{business_name}}, {{date}}, {{time}}, {{people}}, {{table_name}}. Añade también {{manage_link}} y un texto tipo "Si quieres modificar o cancelar tu reserva, hazlo aquí: {{manage_link}}" para que el cliente pueda cancelarla sin llamar.',
     'mn.emailConfirm.sendTest': 'Enviar email de prueba',
@@ -11932,8 +12216,12 @@ const I18N = {
     'mn.emailConfirm.testPrompt': '¿A qué email mandamos la prueba?',
     'mn.emailConfirm.sending': 'Enviando...', 'mn.emailConfirm.testSent': 'Email de prueba enviado correctamente.',
     'mn.emailConfirm.testFailed': 'No se pudo enviar', 'mn.emailConfirm.testClientName': 'Cliente de prueba', 'mn.emailConfirm.testTableName': 'Mesa de prueba',
-    'mn.emailConfirm.confirmationLabel': 'confirmación', 'mn.emailConfirm.cancelLabel': 'cancelación',
+    'mn.emailConfirm.confirmationLabel': 'confirmación', 'mn.emailConfirm.modifyLabel': 'modificación', 'mn.emailConfirm.orderLabel': 'pedido aceptado', 'mn.emailConfirm.cancelLabel': 'cancelación',
+    'mn.emailConfirm.modifyTemplateHint': 'Plantilla para avisar al cliente de que su reserva YA CONFIRMADA ha cambiado de fecha/hora (él mismo la modificó desde "Gestionar mi reserva"). Puedes duplicar la de confirmación y ajustar el texto (por ejemplo "Tu reserva ha sido modificada" en vez de "está confirmada"). Mismas variables, incluido {{manage_link}}.',
+    'mn.emailConfirm.orderTemplateHint': 'Plantilla para avisar al cliente de que has aceptado su pedido para llevar o a domicilio y lo estás preparando. Usa {{type}} (recogida/domicilio) y {{track_link}}, el enlace para seguir el estado del pedido.',
     'mn.emailConfirm.cancelTemplateHint': 'Plantilla para avisar al cliente de que su reserva o pedido ha sido cancelado. Puedes duplicar la de confirmación y cambiar el texto. Usa la variable {{type}} para el tipo (reserva/pedido).',
+    'mn.emailConfirm.sendModifyTest': 'Probar modificación', 'mn.emailConfirm.fillAllFieldsModify': 'Rellena Service ID, Template ID (modificación) y Public Key antes de probar.',
+    'mn.emailConfirm.sendOrderTest': 'Probar pedido aceptado', 'mn.emailConfirm.fillAllFieldsOrder': 'Rellena Service ID, Template ID (pedido aceptado) y Public Key antes de probar.',
     'mn.emailConfirm.sendCancelTest': 'Probar cancelación', 'mn.emailConfirm.fillAllFieldsCancel': 'Rellena Service ID, Template ID (cancelación) y Public Key antes de probar.',
     'mn.emailConfirm.type.reserva': 'reserva', 'mn.emailConfirm.type.takeaway': 'pedido para llevar', 'mn.emailConfirm.type.delivery': 'pedido a domicilio',
     'title.cancelOrder': 'Cancelar pedido', 'btn.cancelOrder': 'Cancelar pedido',
@@ -12496,6 +12784,8 @@ const I18N = {
     'limpieza.areaPhSala': 'Ej. Grifos de cerveza, Cafetera, Cristalería...', 'limpieza.areaPhCocina': 'Ej. Campana extractora, Cámara frigorífica...',
     'limpieza.cleaningProduct': 'Producto limpiador (opcional)', 'limpieza.productPh': 'Ej. Desengrasante',
     'limpieza.dayOfMonth': 'Día del mes',
+    'limpieza.recurrence': 'Repetición', 'limpieza.recurrenceMonthly': 'Cada mes', 'limpieza.recurrenceOnce': 'Solo un día concreto',
+    'limpieza.oneOffDate': 'Fecha',
     'label.oneDish': '1 plato', 'label.nDishes': '${n} platos', 'label.oneDrink': '1 bebida', 'label.nDrinks': '${n} bebidas',
     'dist.dishesInCharge': 'Platos a su cargo', 'dist.tasksThisWeek': 'Tareas de esta semana',
     'label.noRole': 'Sin rol', 'dist.oneDish': '1 plato', 'dist.nDishes': '${n} platos',
@@ -13465,7 +13755,7 @@ const I18N = {
     'li.afterHandlingWaste': 'Després de manipular residus', 'li.afterTouchingFaceHair': 'Després de tocar la cara o els cabells',
     'li.afterUsingRestroom': 'Després d\'utilitzar els lavabos', 'li.rawToCookedProduct': 'En canviar de producte cru a cuinat',
     'li.afterEatingSmoking': 'Després de menjar o fumar', 'title.minimumDuration': 'Durada mínima',
-    'label.20seconds': '20 segons', 'msg.happyBirthdayEquivalent': 'Equival a cantar "Per molts anys" dues vegades',
+    'label.20seconds': '20 segons',
     'common.reset': 'Restablir', 'title.openingProtocol': 'Protocol d\'Obertura', 'title.closingProtocol': 'Protocol de Tancament',
     'btn.addEquipment': 'Afegir equip', 'label.lastMaintenance': 'Últim manteniment', 'label.next': 'Proper',
     'status.ok': 'OK', 'status.pendingM': 'Pendent', 'status.urgent': 'Urgent',
@@ -13619,7 +13909,7 @@ const I18N = {
     'msg.licenseActivated': 'Llicència activada',
     'msg.invalidLicense': 'Clau no vàlida. Comprova que la vas copiar sencera, amb els guions, tal com te la va enviar el teu venedor.',
     'msg.cloudConnected': 'Núvol connectat', 'msg.cloudOffline': 'Sense connexió', 'msg.cloudError': 'Error de núvol',
-    'msg.rulesCopied': 'Regles copiades',
+    'msg.rulesCopied': 'Regles copiades', 'msg.textCopied': 'Text copiat',
     'msg.savedOk': 'Desat', 'msg.saveError': 'Error en desar',
     'msg.deleteConfirm': 'Eliminar?',
     'msg.confirmDeleteIngredient': 'Eliminar aquest ingredient? S\'eliminarà també de receptes i estoc.',
@@ -13761,6 +14051,7 @@ const I18N = {
     'msg.fillMerchantCode': 'Indica el codi de comerç (FUC) i el terminal',
     'msg.fillSecretKey': 'Indica la clau secreta',
     'msg.payConfigSaved': 'Configuració de pagament desada',
+    'msg.emailConfirmConfigSaved': 'Configuració d\'email de reserves desada',
     'msg.payConfigError': 'No s\'ha pogut desar (revisa la connexió)',
     'msg.linkCopied': 'Enllaç copiat', 'msg.summaryCopied': 'Resum copiat al porta-retalls',
     'mn.verifactu.title': 'VeriFactu (facturació certificada)',
@@ -13931,7 +14222,7 @@ const I18N = {
     'msg.pinNotDefault': 'Tria un PIN diferent al de per defecte (1234)',
     'msg.alreadyClockedIn': 'Ja tens una entrada sense tancar',
     'msg.noClockedIn': 'No hi ha cap entrada oberta',
-    'msg.writeAreaTask': 'Escriu una àrea o tasca',
+    'msg.writeAreaTask': 'Escriu una àrea o tasca', 'msg.chooseOneOffDate': 'Tria el dia d\'aquesta neteja puntual',
     'msg.writeEquipName': 'Escriu un nom per a l\'equip',
     'msg.techSheetNotFound': 'No s\'ha trobat la fitxa tècnica d\'aquest plat',
     'msg.clientSaved': 'Client desat',
@@ -14090,9 +14381,9 @@ const I18N = {
     'mn.externalConn.email': 'Confirmació de reserves per email (EmailJS)',
     'mn.externalConn.connected': 'Connectat', 'mn.externalConn.notConnected': 'Sense connectar',
     'common.connect': 'Connectar',
-    'mn.emailConfirm.title': 'Confirmació, cancel·lació i canvis de reserva per email',
-    'mn.emailConfirm.desc': 'En quant una reserva quedi confirmada (sola, o quan li assignis taula a mà), el client rep un email automàtic avisant-lo, amb un enllaç per canviar l\'hora o cancel·lar sense haver-te de trucar. S\'envia des del teu propi compte gratuït d\'EmailJS (emailjs.com) — no cal backend ni cost per a volums normals d\'un sol restaurant. Recomanat: sense això, el client no sap si la seva reserva ha quedat confirmada ni té manera de gestionar-la, i et truquen més i tens més "no shows".',
-    'mn.emailConfirm.guideBtn': 'Com ho configuro? Guia pas a pas', 'mn.emailConfirm.guideTitle': 'Com configurar els emails de reserva', 'mn.emailConfirm.guideIntro': 'No cal saber programar. Són 6 passos de copiar i enganxar, 15-20 minuts.', 'mn.emailConfirm.guideDone': 'Entès, ho configuro',
+    'mn.emailConfirm.title': 'Confirmació, canvis i cancel·lació de reserves i comandes per email',
+    'mn.emailConfirm.desc': 'En quant una reserva quedi confirmada o acceptis una comanda per emportar/domicili (sola, o a mà), el client rep un email automàtic avisant-lo, amb un enllaç per canviar l\'hora, cancel·lar o seguir l\'estat sense haver-te de trucar. S\'envia des del teu propi compte gratuït d\'EmailJS (emailjs.com) — no cal backend ni cost per a volums normals d\'un sol restaurant. Recomanat: sense això, el client no sap si la seva reserva o comanda s\'ha acceptat ni té manera de gestionar-la, i et truquen més i tens més "no shows".',
+    'mn.emailConfirm.guideBtn': 'Com ho configuro? Guia pas a pas', 'mn.emailConfirm.guideTitle': 'Com configurar els emails de reserves i comandes', 'mn.emailConfirm.guideIntro': 'No cal saber programar. Són 8 passos de copiar i enganxar, 15-20 minuts.', 'mn.emailConfirm.guideDone': 'Entès, ho configuro',
     'mn.emailConfirm.enable': 'Activar confirmació automàtica per email',
     'mn.emailConfirm.templateHint': 'La plantilla ha d\'usar aquestes variables: {{to_email}}, {{client_name}}, {{business_name}}, {{date}}, {{time}}, {{people}}, {{table_name}}. Afegeix també {{manage_link}} i un text tipus "Si vols modificar o cancel·lar la teva reserva, fes-ho aquí: {{manage_link}}" perquè el client la pugui cancel·lar sense trucar.',
     'mn.emailConfirm.sendTest': 'Enviar email de prova',
@@ -14100,8 +14391,12 @@ const I18N = {
     'mn.emailConfirm.testPrompt': 'A quin email enviem la prova?',
     'mn.emailConfirm.sending': 'Enviant...', 'mn.emailConfirm.testSent': 'Email de prova enviat correctament.',
     'mn.emailConfirm.testFailed': 'No s\'ha pogut enviar', 'mn.emailConfirm.testClientName': 'Client de prova', 'mn.emailConfirm.testTableName': 'Taula de prova',
-    'mn.emailConfirm.confirmationLabel': 'confirmació', 'mn.emailConfirm.cancelLabel': 'cancel·lació',
+    'mn.emailConfirm.confirmationLabel': 'confirmació', 'mn.emailConfirm.modifyLabel': 'modificació', 'mn.emailConfirm.orderLabel': 'comanda acceptada', 'mn.emailConfirm.cancelLabel': 'cancel·lació',
+    'mn.emailConfirm.modifyTemplateHint': 'Plantilla per avisar el client que la seva reserva JA CONFIRMADA ha canviat de data/hora (ell mateix la va modificar des de "Gestionar la meva reserva"). Pots duplicar la de confirmació i ajustar el text (per exemple "La teva reserva ha estat modificada" en lloc de "està confirmada"). Mateixes variables, inclòs {{manage_link}}.',
+    'mn.emailConfirm.orderTemplateHint': 'Plantilla per avisar el client que has acceptat la seva comanda per emportar o a domicili i que l\'estàs preparant. Usa {{type}} (recollida/domicili) i {{track_link}}, l\'enllaç per seguir l\'estat de la comanda.',
     'mn.emailConfirm.cancelTemplateHint': 'Plantilla per avisar el client que la seva reserva o comanda ha estat cancel·lada. Pots duplicar la de confirmació i canviar el text. Usa la variable {{type}} per al tipus (reserva/comanda).',
+    'mn.emailConfirm.sendModifyTest': 'Provar modificació', 'mn.emailConfirm.fillAllFieldsModify': 'Omple Service ID, Template ID (modificació) i Public Key abans de provar.',
+    'mn.emailConfirm.sendOrderTest': 'Provar comanda acceptada', 'mn.emailConfirm.fillAllFieldsOrder': 'Omple Service ID, Template ID (comanda acceptada) i Public Key abans de provar.',
     'mn.emailConfirm.sendCancelTest': 'Provar cancel·lació', 'mn.emailConfirm.fillAllFieldsCancel': 'Omple Service ID, Template ID (cancel·lació) i Public Key abans de provar.',
     'mn.emailConfirm.type.reserva': 'reserva', 'mn.emailConfirm.type.takeaway': 'comanda per emportar', 'mn.emailConfirm.type.delivery': 'comanda a domicili',
     'title.cancelOrder': 'Cancel·lar comanda', 'btn.cancelOrder': 'Cancel·lar comanda',
@@ -14664,6 +14959,8 @@ const I18N = {
     'limpieza.areaPhSala': 'Ex. Aixetes de cervesa, Cafetera, Cristalleria...', 'limpieza.areaPhCocina': 'Ex. Campana extractora, Cambra frigorífica...',
     'limpieza.cleaningProduct': 'Producte netejador (opcional)', 'limpieza.productPh': 'Ex. Desengreixant',
     'limpieza.dayOfMonth': 'Dia del mes',
+    'limpieza.recurrence': 'Repetició', 'limpieza.recurrenceMonthly': 'Cada mes', 'limpieza.recurrenceOnce': 'Només un dia concret',
+    'limpieza.oneOffDate': 'Data',
     'label.oneDish': '1 plat', 'label.nDishes': '${n} plats', 'label.oneDrink': '1 beguda', 'label.nDrinks': '${n} begudes',
     'dist.dishesInCharge': 'Plats a càrrec seu', 'dist.tasksThisWeek': 'Tasques d\'aquesta setmana',
     'label.noRole': 'Sense rol', 'dist.oneDish': '1 plat', 'dist.nDishes': '${n} plats',
@@ -15636,7 +15933,7 @@ const I18N = {
     'li.afterHandlingWaste': 'After handling waste', 'li.afterTouchingFaceHair': 'After touching your face or hair',
     'li.afterUsingRestroom': 'After using the restroom', 'li.rawToCookedProduct': 'When switching from raw to cooked product',
     'li.afterEatingSmoking': 'After eating or smoking', 'title.minimumDuration': 'Minimum duration',
-    'label.20seconds': '20 seconds', 'msg.happyBirthdayEquivalent': 'Equivalent to singing "Happy Birthday" twice',
+    'label.20seconds': '20 seconds',
     'common.reset': 'Reset', 'title.openingProtocol': 'Opening Protocol', 'title.closingProtocol': 'Closing Protocol',
     'btn.addEquipment': 'Add equipment', 'label.lastMaintenance': 'Last maintenance', 'label.next': 'Next',
     'status.ok': 'OK', 'status.pendingM': 'Pending', 'status.urgent': 'Urgent',
@@ -15790,7 +16087,7 @@ const I18N = {
     'msg.licenseActivated': 'License activated',
     'msg.invalidLicense': 'Invalid key. Check you copied the whole key, with the dashes, exactly as your seller sent it.',
     'msg.cloudConnected': 'Cloud connected', 'msg.cloudOffline': 'Offline', 'msg.cloudError': 'Cloud error',
-    'msg.rulesCopied': 'Rules copied',
+    'msg.rulesCopied': 'Rules copied', 'msg.textCopied': 'Text copied',
     'msg.savedOk': 'Saved', 'msg.saveError': 'Error saving',
     'msg.deleteConfirm': 'Delete?',
     'msg.confirmDeleteIngredient': 'Delete this ingredient? It will also be removed from recipes and stock.',
@@ -15933,6 +16230,7 @@ const I18N = {
     'msg.fillMerchantCode': 'Enter the merchant code (FUC) and terminal',
     'msg.fillSecretKey': 'Enter the secret key',
     'msg.payConfigSaved': 'Payment settings saved',
+    'msg.emailConfirmConfigSaved': 'Reservation email settings saved',
     'msg.payConfigError': 'Could not save (check your connection)',
     'msg.linkCopied': 'Link copied', 'msg.summaryCopied': 'Summary copied to clipboard',
     'mn.verifactu.title': 'VeriFactu (certified invoicing)',
@@ -16103,7 +16401,7 @@ const I18N = {
     'msg.pinNotDefault': 'Choose a PIN different from the default (1234)',
     'msg.alreadyClockedIn': 'You already have an open clock-in',
     'msg.noClockedIn': 'There is no open clock-in',
-    'msg.writeAreaTask': 'Write an area or task',
+    'msg.writeAreaTask': 'Write an area or task', 'msg.chooseOneOffDate': 'Choose the day for this one-off cleaning',
     'msg.writeEquipName': 'Write a name for the equipment',
     'msg.techSheetNotFound': 'Technical sheet not found for this dish',
     'msg.clientSaved': 'Customer saved',
@@ -16262,9 +16560,9 @@ const I18N = {
     'mn.externalConn.email': 'Reservation confirmation by email (EmailJS)',
     'mn.externalConn.connected': 'Connected', 'mn.externalConn.notConnected': 'Not connected',
     'common.connect': 'Connect',
-    'mn.emailConfirm.title': 'Reservation confirmation, cancellation and changes by email',
-    'mn.emailConfirm.desc': 'As soon as a reservation is confirmed (automatically, or when you assign a table by hand), the customer gets an automatic email letting them know, with a link to change the time or cancel without having to call you. Sent from your own free EmailJS account (emailjs.com) — no backend needed, no cost for a single restaurant\'s normal volume. Recommended: without this, customers can\'t tell if their reservation was confirmed or manage it themselves, which means more phone calls and more no-shows for you.',
-    'mn.emailConfirm.guideBtn': 'How do I set this up? Step-by-step guide', 'mn.emailConfirm.guideTitle': 'How to set up reservation emails', 'mn.emailConfirm.guideIntro': 'No coding needed. 6 copy-and-paste steps, 15-20 minutes.', 'mn.emailConfirm.guideDone': 'Got it, I\'ll set it up',
+    'mn.emailConfirm.title': 'Reservation and order confirmation, changes and cancellation by email',
+    'mn.emailConfirm.desc': 'As soon as a reservation is confirmed or you accept a takeaway/delivery order (automatically, or by hand), the customer gets an automatic email letting them know, with a link to change the time, cancel or follow the order status without having to call you. Sent from your own free EmailJS account (emailjs.com) — no backend needed, no cost for a single restaurant\'s normal volume. Recommended: without this, customers can\'t tell if their reservation or order was accepted or manage it themselves, which means more phone calls and more no-shows for you.',
+    'mn.emailConfirm.guideBtn': 'How do I set this up? Step-by-step guide', 'mn.emailConfirm.guideTitle': 'How to set up reservation and order emails', 'mn.emailConfirm.guideIntro': 'No coding needed. 8 copy-and-paste steps, 15-20 minutes.', 'mn.emailConfirm.guideDone': 'Got it, I\'ll set it up',
     'mn.emailConfirm.enable': 'Enable automatic email confirmation',
     'mn.emailConfirm.templateHint': 'The template must use these variables: {{to_email}}, {{client_name}}, {{business_name}}, {{date}}, {{time}}, {{people}}, {{table_name}}. Also add {{manage_link}} with text like "Want to change or cancel your reservation? Do it here: {{manage_link}}" so the customer can cancel without calling.',
     'mn.emailConfirm.sendTest': 'Send test email',
@@ -16272,8 +16570,12 @@ const I18N = {
     'mn.emailConfirm.testPrompt': 'Which email should we send the test to?',
     'mn.emailConfirm.sending': 'Sending...', 'mn.emailConfirm.testSent': 'Test email sent successfully.',
     'mn.emailConfirm.testFailed': 'Could not send', 'mn.emailConfirm.testClientName': 'Test client', 'mn.emailConfirm.testTableName': 'Test table',
-    'mn.emailConfirm.confirmationLabel': 'confirmation', 'mn.emailConfirm.cancelLabel': 'cancellation',
+    'mn.emailConfirm.confirmationLabel': 'confirmation', 'mn.emailConfirm.modifyLabel': 'modification', 'mn.emailConfirm.orderLabel': 'order accepted', 'mn.emailConfirm.cancelLabel': 'cancellation',
+    'mn.emailConfirm.modifyTemplateHint': 'Template to let the customer know their ALREADY CONFIRMED reservation changed date/time (they modified it themselves from "Manage my reservation"). You can duplicate the confirmation one and tweak the wording (e.g. "Your reservation has been changed" instead of "is confirmed"). Same variables, including {{manage_link}}.',
+    'mn.emailConfirm.orderTemplateHint': 'Template to let the customer know you accepted their takeaway or delivery order and are preparing it. Use {{type}} (pickup/delivery) and {{track_link}}, the link to follow the order status.',
     'mn.emailConfirm.cancelTemplateHint': 'Template to let the customer know their reservation or order was cancelled. You can duplicate the confirmation one and change the wording. Use the {{type}} variable for the kind (reservation/order).',
+    'mn.emailConfirm.sendModifyTest': 'Test modification', 'mn.emailConfirm.fillAllFieldsModify': 'Fill in Service ID, Template ID (modification) and Public Key before testing.',
+    'mn.emailConfirm.sendOrderTest': 'Test order accepted', 'mn.emailConfirm.fillAllFieldsOrder': 'Fill in Service ID, Template ID (order accepted) and Public Key before testing.',
     'mn.emailConfirm.sendCancelTest': 'Test cancellation', 'mn.emailConfirm.fillAllFieldsCancel': 'Fill in Service ID, Template ID (cancellation) and Public Key before testing.',
     'mn.emailConfirm.type.reserva': 'reservation', 'mn.emailConfirm.type.takeaway': 'takeaway order', 'mn.emailConfirm.type.delivery': 'delivery order',
     'title.cancelOrder': 'Cancel order', 'btn.cancelOrder': 'Cancel order',
@@ -16836,6 +17138,8 @@ const I18N = {
     'limpieza.areaPhSala': 'E.g. Beer taps, Coffee machine, Glassware...', 'limpieza.areaPhCocina': 'E.g. Extractor hood, Cold room...',
     'limpieza.cleaningProduct': 'Cleaning product (optional)', 'limpieza.productPh': 'E.g. Degreaser',
     'limpieza.dayOfMonth': 'Day of month',
+    'limpieza.recurrence': 'Recurrence', 'limpieza.recurrenceMonthly': 'Every month', 'limpieza.recurrenceOnce': 'Just one specific day',
+    'limpieza.oneOffDate': 'Date',
     'label.oneDish': '1 dish', 'label.nDishes': '${n} dishes', 'label.oneDrink': '1 drink', 'label.nDrinks': '${n} drinks',
     'dist.dishesInCharge': 'Dishes in charge of', 'dist.tasksThisWeek': 'Tasks this week',
     'label.noRole': 'No role', 'dist.oneDish': '1 dish', 'dist.nDishes': '${n} dishes',
@@ -20149,11 +20453,6 @@ const BASE_INGREDIENTS_CATALOG = {
     ['Patata prefrita congelada','kg',[]], ['Verdura congelada (mix)','kg',[]], ['Pescado congelado (surtido)','kg',['Pescado']],
     ['Marisco congelado (surtido)','kg',['Crustáceos','Moluscos']], ['Masa de hojaldre congelada','kg',['Gluten','Lácteos']],
     ['Helado (tarrina)','kg',['Lácteos']],
-  ]},
-  'Bebidas': {icon:'🥤', items:[
-    ['Agua mineral','L',[]], ['Refresco de cola','L',[]], ['Refresco de naranja','L',[]], ['Zumo de naranja','L',[]],
-    ['Café en grano','kg',[]], ['Té / infusiones','kg',[]], ['Cerveza','L',['Gluten']], ['Vino tinto','L',['Sulfitos']],
-    ['Vino blanco','L',['Sulfitos']],
   ]},
 };
 
@@ -26057,6 +26356,13 @@ async function acceptOnlineOrder(orderId, auto){
     if(esRepartoPropio(order) && !esParaMasAdelante) autoAssignRepartidor(order);
     saveDB();
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
+    // Reservas tenía email de confirmación desde hace tiempo; pedidos solo
+    // tenía el de cancelación — el cliente aceptaba un pedido para llevar o
+    // a domicilio y nunca recibía nada que dijera "sí, lo estamos
+    // preparando", ni un enlace para seguir el estado si cerraba la
+    // pestaña. Mismo criterio que una reserva: se avisa tanto si se aceptó
+    // sola (auto) como a mano.
+    if(typeof sendOrderConfirmationEmail === 'function') sendOrderConfirmationEmail(order).catch(()=>{});
     if(!auto){ renderTPV(); showToast(anyMismatch ? t('msg.orderAcceptedWithMismatch') : t('msg.orderAccepted')); }
     return true;
   }
@@ -39823,9 +40129,9 @@ function renderLimpiezaManos(){
       <div class="card">
         <h3 style="justify-content:space-between"><span><i class="ti ti-droplet"></i> ${t('title.handWashingProtocol')}</span><button class="btn btn-sm" onclick="printManosProtocolo()"><i class="ti ti-printer"></i></button></h3>
         ${pasos.map((p,i) => `
-          <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap">
             <div class="step-num">${i+1}</div>
-            <input type="text" value="${escapeHtml(p)}" style="flex:1;min-width:140px" onchange="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>
+            <textarea style="flex:1;min-width:140px;resize:vertical" oninput="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>${escapeHtml(p)}</textarea>
             <div class="owner-strict" style="display:flex;gap:2px;margin-left:auto">
               ${reorderButtons(`moveManosPaso(${i},-1)`, `moveManosPaso(${i},1)`, i===0, i===pasos.length-1)}
               <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
@@ -39850,7 +40156,6 @@ function renderLimpiezaManos(){
         <div class="card">
           <h3><i class="ti ti-check"></i> ${t('title.minimumDuration')}</h3>
           <p style="font-size:28px;font-weight:800;color:var(--brand-orange);margin:0">${t('label.20seconds')}</p>
-          <p style="font-size:13px;color:var(--muted);margin-top:4px">${t('msg.happyBirthdayEquivalent')}</p>
         </div>
       </div>
     </div>
@@ -40010,12 +40315,20 @@ async function deleteLimpiezaTarea(id){
   renderLimpiezaTab();
 }
 
-// Checklist del mes para una fecha concreta: las tareas mensuales se
-// definen por "día del mes" (t.diaMes, 1-31), no por fecha exacta, así que
-// se repiten todos los meses — el checkKey de si se hizo o no sí es por mes
-// concreto (monthKey), en DB.limpieza.checksMes.
-function limpiezaTareasParaDia(day){
-  return DB.limpieza.tareas.filter(t => t.tipo === 'mensual' && (t.zona||'cocina')===currentArea() && parseInt(t.diaMes)===day);
+// Checklist del mes para una fecha concreta. Dos tipos de tarea conviven:
+// las mensuales se definen por "día del mes" (t.diaMes, 1-31) y se repiten
+// todos los meses; las puntuales (5/09, a petición del dueño: antes solo se
+// podían crear tareas que se repitieran cada mes, sin forma de anotar una
+// limpieza de un día suelto) llevan una fecha exacta (t.fecha) y no vuelven
+// a aparecer. El checkKey de si se hizo o no sí es siempre por mes concreto
+// (monthKey), en DB.limpieza.checksMes, para las dos.
+function limpiezaTareasParaDia(date){
+  const day = date.getDate();
+  const fecha = dateStr(date);
+  return DB.limpieza.tareas.filter(t => (t.zona||'cocina')===currentArea() && (
+    (t.tipo === 'mensual' && parseInt(t.diaMes)===day) ||
+    (t.tipo === 'puntual' && t.fecha === fecha)
+  ));
 }
 function limpiezaMonthKeyFor(date){
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
@@ -40044,6 +40357,7 @@ function limpiezaTareaRowHtml(tarea, checks, monthKey){
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:${canToggle?'pointer':'not-allowed'}" onclick="event.stopPropagation()" title="${doneTitle}">
         <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${tarea.id},this.checked)">
         <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(tarea.area)}</span>
+        ${tarea.tipo==='puntual' ? `<span class="badge" style="font-size:9.5px;padding:1px 5px" title="${t('limpieza.recurrenceOnce')}"><i class="ti ti-calendar-event"></i></span>` : ''}
       </label>
       ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:22px;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
     </div>
@@ -40089,7 +40403,7 @@ function renderLimpiezaMes(){
     let cells = '';
     for(let i=0; i<startOffset; i++) cells += `<div></div>`;
     for(let day=1; day<=daysInMonth; day++){
-      const count = limpiezaTareasParaDia(day).length;
+      const count = limpiezaTareasParaDia(new Date(year, month, day)).length;
       const isToday = day===today.getDate() && month===today.getMonth() && year===today.getFullYear();
       const ds = dateStr(new Date(year, month, day));
       cells += `
@@ -40111,7 +40425,7 @@ function renderLimpiezaMes(){
     const days = Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d; });
     label = `${dateStr(days[0])} — ${dateStr(days[6])}`;
     bodyHtml = `<div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">${days.map(d => {
-      const tareasDelDia = limpiezaTareasParaDia(d.getDate());
+      const tareasDelDia = limpiezaTareasParaDia(d);
       const monthKey = limpiezaMonthKeyFor(d);
       const checks = limpiezaChecksFor(monthKey);
       const isToday = dateStr(d) === todayStr();
@@ -40123,17 +40437,16 @@ function renderLimpiezaMes(){
       `;
     }).join('')}</div>`;
   } else {
-    const day = limpiezaCalDate.getDate();
     const monthKey = limpiezaMonthKeyFor(limpiezaCalDate);
     const checks = limpiezaChecksFor(monthKey);
-    const tareasDelDia = limpiezaTareasParaDia(day);
+    const tareasDelDia = limpiezaTareasParaDia(limpiezaCalDate);
     label = dateStr(limpiezaCalDate);
     bodyHtml = tareasDelDia.length
       ? `<div class="card" style="max-width:480px;margin:0 auto">${tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey)).join('')}</div>`
       : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`;
   }
 
-  const tareasMesTotal = DB.limpieza.tareas.filter(t => t.tipo === 'mensual' && (t.zona||'cocina')===currentArea()).length;
+  const tareasMesTotal = DB.limpieza.tareas.filter(t => (t.zona||'cocina')===currentArea() && (t.tipo === 'mensual' || t.tipo === 'puntual')).length;
   box.innerHTML = `
     <div class="toolbar">
       <div class="left">${modeBtns}</div>
@@ -40194,6 +40507,11 @@ function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
 function openLimpiezaTareaMesModal(id){
   const tarea = id ? DB.limpieza.tareas.find(x=>x.id===id) : null;
   const empOptions = DB.employees.filter(e=>(e.area||'cocina')===currentArea()).map(e=>`<option value="${e.id}"${tarea&&tarea.responsableId===e.id?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  const esPuntual = tarea ? tarea.tipo === 'puntual' : false;
+  // Fecha por defecto para una tarea puntual nueva: el día que se estaba
+  // viendo en el calendario (si se pulsó "+ Tarea" desde la vista de día),
+  // o si no hoy — nunca en blanco.
+  const fechaDefault = tarea && tarea.fecha ? tarea.fecha : (limpiezaCalDate ? dateStr(limpiezaCalDate) : todayStr());
   openModal(`
     <div class="modal-header">
       <h3>${tarea?t('common.edit'):t('common.newF')} ${t('limpieza.monthlyTask')}</h3>
@@ -40207,10 +40525,21 @@ function openLimpiezaTareaMesModal(id){
       <label>${t('limpieza.cleaningProduct')}</label>
       <input type="text" id="new-limpieza-producto" value="${tarea?escapeHtml(tarea.producto||''):''}" placeholder="${t('limpieza.productPh')}">
     </div>
+    <div class="field">
+      <label>${t('limpieza.recurrence')}</label>
+      <select id="new-limpieza-tipo" onchange="toggleLimpiezaTareaTipoFields(this.value)">
+        <option value="mensual" ${!esPuntual?'selected':''}>${t('limpieza.recurrenceMonthly')}</option>
+        <option value="puntual" ${esPuntual?'selected':''}>${t('limpieza.recurrenceOnce')}</option>
+      </select>
+    </div>
     <div class="field-row">
-      <div class="field">
+      <div class="field" id="limpieza-diames-wrap" style="${esPuntual?'display:none':''}">
         <label>${t('limpieza.dayOfMonth')}</label>
-        <input type="number" id="new-limpieza-diames" min="1" max="31" value="${tarea?tarea.diaMes:1}">
+        <input type="number" id="new-limpieza-diames" min="1" max="31" value="${tarea&&tarea.diaMes?tarea.diaMes:1}">
+      </div>
+      <div class="field" id="limpieza-fecha-wrap" style="${esPuntual?'':'display:none'}">
+        <label>${t('limpieza.oneOffDate')}</label>
+        <input type="date" id="new-limpieza-fecha" value="${escapeHtml(fechaDefault)}">
       </div>
       <div class="field">
         <label>${t('label.responsible')}</label>
@@ -40228,22 +40557,36 @@ function openLimpiezaTareaMesModal(id){
   `);
   setTimeout(()=>document.getElementById('new-limpieza-area')?.focus(), 50);
 }
+function toggleLimpiezaTareaTipoFields(tipo){
+  document.getElementById('limpieza-diames-wrap').style.display = tipo==='puntual' ? 'none' : '';
+  document.getElementById('limpieza-fecha-wrap').style.display = tipo==='puntual' ? '' : 'none';
+}
 function confirmLimpiezaTareaMes(id){
   const area = document.getElementById('new-limpieza-area').value;
   if(!area || !area.trim()){ showToast(t('msg.writeAreaTask')); return; }
   const producto = document.getElementById('new-limpieza-producto').value || '';
-  let dia = parseInt(document.getElementById('new-limpieza-diames').value) || 1;
-  dia = Math.min(31, Math.max(1, dia));
+  const tipo = document.getElementById('new-limpieza-tipo').value === 'puntual' ? 'puntual' : 'mensual';
+  let dia = null, fecha = null;
+  if(tipo === 'puntual'){
+    fecha = document.getElementById('new-limpieza-fecha').value;
+    if(!fecha){ showToast(t('msg.chooseOneOffDate')); return; }
+  } else {
+    dia = parseInt(document.getElementById('new-limpieza-diames').value) || 1;
+    dia = Math.min(31, Math.max(1, dia));
+  }
   const responsableVal = document.getElementById('new-limpieza-responsable').value;
   const responsableId = responsableVal ? parseInt(responsableVal) : null;
   if(id){
     const tarea = DB.limpieza.tareas.find(x=>x.id===id);
-    Object.assign(tarea, {area: area.trim(), producto: producto.trim(), diaMes: dia, responsableId});
+    // Al cambiar de tipo se suelta el campo del tipo anterior (una tarea
+    // puntual no debe arrastrar un diaMes viejo que la resucitaría cada mes
+    // si algún día se le vuelve a cambiar el tipo, y viceversa).
+    Object.assign(tarea, {area: area.trim(), producto: producto.trim(), tipo, diaMes: dia, fecha, responsableId});
   } else {
     // Ojo: "area" aquí es el campo de texto libre ("Campana extractora"...);
     // el área de negocio (cocina/sala) se guarda aparte como zona, para poder
     // filtrar sin chocar con ese nombre de campo ya existente.
-    DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim(), tipo:'mensual', diaMes: dia, responsableId, zona: currentArea()});
+    DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim(), tipo, diaMes: dia, fecha, responsableId, zona: currentArea()});
   }
   saveDB();
   closeModal();
@@ -40952,7 +41295,9 @@ function renderDistDetail(){
 
     // Limpieza mensual: la tarea "toca" ese día si el día del mes coincide
     // con la fecha real de esta semana.
-    const tareasLimpiezaDia = DB.limpieza.tareas.filter(lt => lt.tipo==='mensual' && lt.responsableId===emp.id && lt.diaMes===date.getDate() && (lt.zona||'cocina')===(emp.area||'cocina'));
+    const tareasLimpiezaDia = DB.limpieza.tareas.filter(lt => lt.responsableId===emp.id && (lt.zona||'cocina')===(emp.area||'cocina') && (
+      (lt.tipo==='mensual' && lt.diaMes===date.getDate()) || (lt.tipo==='puntual' && lt.fecha===dateStr(date))
+    ));
     const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
     const checksMes = DB.limpieza.checksMes[monthKey] || {};
     const limpiezaHtml = tareasLimpiezaDia.map(lt => {
@@ -47329,13 +47674,16 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip"><i class="ti ti-bulb"></i>Revisa "Solicitudes online pendientes" varias veces al día, especialmente antes de cada servicio, por si ha quedado alguna reserva grande esperando mesa.</div>
 
     <h4>Que el cliente se entere: confirmación por email</h4>
-    <p>Para que el cliente sepa con seguridad si su reserva está confirmada (y no se quede con la duda), puedes activar el envío automático de un email en cuanto se confirme —tanto si fue sola como si la confirmaste tú a mano—. Se configura en <strong>Mi Negocio → Confirmación de reservas por email</strong>, con una cuenta gratuita tuya de <strong>EmailJS</strong> (no hace falta programar nada):</p>
+    <p>Para que el cliente sepa con seguridad si su reserva o pedido está aceptado (y no se quede con la duda), puedes activar el envío automático de un email en cuanto se confirme una reserva, se modifique, se cancele, o se acepte un pedido para llevar/domicilio —tanto si fue solo como si lo hiciste tú a mano—. Los emails de confirmación llevan un enlace para que el propio cliente pueda cambiar la hora, cancelar o seguir el estado sin llamarte. Se configura en <strong>Mi Negocio → Confirmación de reservas y pedidos por email</strong>, con una cuenta gratuita tuya de <strong>EmailJS</strong> (no hace falta programar nada). Aquí va el resumen; dentro de esa tarjeta hay un botón <strong>"¿Cómo lo configuro? Guía paso a paso"</strong> con el detalle completo:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Entra en <strong>emailjs.com</strong> y crea una cuenta gratis.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">En <strong>"Email Services" → "Add New Email Service"</strong>, elige Gmail (o el correo que uses) y conéctalo con <strong>"Connect Account"</strong> — un solo clic, inicias sesión con Google y ya está. Copia el <strong>Service ID</strong> que te da.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">En <strong>"Email Templates"</strong>, coge una plantilla ya hecha de la galería (busca alguna de confirmación/reserva) en vez de crearla desde cero, y solo ajusta el texto a tu gusto. Usa estas variables tal cual: <code>{{to_email}}</code>, <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code>. Copia el <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">En <strong>"Account" → "General"</strong>, copia tu <strong>Public Key</strong>.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">Pega los 3 códigos en <strong>Mi Negocio → Confirmación de reservas por email</strong>, activa el interruptor y pulsa <strong>"Enviar email de prueba"</strong> para comprobar que llega.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Es totalmente gratis hasta 200 emails al mes — de sobra para las reservas de un solo restaurante.</div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">En <strong>"Email Services" → "Add New Service"</strong>, elige Gmail (o el correo que uses), pulsa <strong>"Connect Account"</strong> e inicia sesión con Google, y para terminar <strong>"Add Service"</strong>. Copia el <strong>Service ID</strong> que aparece en la lista.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">En <strong>"Email Templates" → "Create New Template"</strong>, crea la plantilla de <strong>confirmación de reserva</strong>: en "To Email" pon <code>{{to_email}}</code>, entra en <strong>"Edit Content" → "Code Editor"</strong> y escribe el mensaje con estas variables tal cual: <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code> y <code>{{manage_link}}</code> (este último es el enlace para cambiar la hora o cancelar — sin él en el texto, el cliente no lo recibe). Guarda y copia el <strong>Template ID</strong> de la pestaña "Settings".</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Repite el paso anterior para crear una <strong>segunda plantilla</strong>, la de <strong>modificación de reserva</strong> (mismas variables): avisa al cliente de que su reserva YA confirmada ha cambiado de fecha/hora, con un texto tipo "Tu reserva ha sido modificada" en vez de "está confirmada" — si reutilizas la de confirmación aquí, el cliente se confunde al recibir dos veces "confirmada". Copia su <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Repite otra vez para crear una <strong>tercera plantilla</strong>, la de <strong>pedido aceptado</strong> — para PEDIDOS para llevar/domicilio, no reservas. Usa <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{type}}</code> (recogida/domicilio), <code>{{date}}</code>, <code>{{time}}</code> y <code>{{track_link}}</code> (el enlace para seguir el estado del pedido). Copia su <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Repite una cuarta vez para crear la plantilla de <strong>cancelación</strong>, compartida entre reservas y pedidos (mismas variables, sin <code>{{manage_link}}</code> ni <code>{{track_link}}</code>). Copia también su <strong>Template ID</strong> — las cuatro son distintas entre sí.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">En <strong>"Account" → "API Keys"</strong>, copia tu <strong>Public Key</strong> (no el "Private Key" de al lado).</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Pega los 6 códigos en <strong>Mi Negocio → Confirmación de reservas y pedidos por email</strong>, activa el interruptor y guarda. Pulsa los cuatro botones de prueba (<strong>"Enviar email de prueba"</strong>, <strong>"Probar modificación"</strong>, <strong>"Probar pedido aceptado"</strong> y <strong>"Probar cancelación"</strong>) con tu propio email para comprobar que los cuatro llegan.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Es totalmente gratis hasta 200 emails al mes — de sobra para un solo restaurante.</div>
 
     <h4>En el Panel de Control</h4>
     <p>Las reservas de <strong>hoy y de mañana</strong> aparecen automáticamente en el Panel de Control, para que al abrir la app por la mañana ya sepas cuántos comensales esperas y puedas avisar a cocina y sala con tiempo.</p>
@@ -47375,13 +47723,16 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip"><i class="ti ti-bulb"></i>Revisa "Sol·licituds en línia pendents" diverses vegades al dia, especialment abans de cada servei, per si ha quedat alguna reserva gran esperant taula.</div>
 
     <h4>Que el client s'assabenti: confirmació per email</h4>
-    <p>Perquè el client sàpiga amb seguretat si la seva reserva està confirmada (i no es quedi amb el dubte), pots activar l'enviament automàtic d'un email en quant es confirmi —tant si va ser sola com si la vas confirmar tu a mà—. Es configura a <strong>El Meu Negoci → Confirmació de reserves per email</strong>, amb un compte gratuït teu d'<strong>EmailJS</strong> (no cal programar res):</p>
+    <p>Perquè el client sàpiga amb seguretat si la seva reserva o comanda està acceptada (i no es quedi amb el dubte), pots activar l'enviament automàtic d'un email en confirmar-se una reserva, en modificar-la, en cancel·lar-se, o en acceptar una comanda per emportar/domicili —tant si va ser sol com si ho vas fer tu a mà—. Els emails de confirmació porten un enllaç perquè el mateix client pugui canviar l'hora, cancel·lar o seguir l'estat sense trucar-te. Es configura a <strong>El Meu Negoci → Confirmació de reserves i comandes per email</strong>, amb un compte gratuït teu d'<strong>EmailJS</strong> (no cal programar res). Aquí va el resum; dins d'aquesta targeta hi ha un botó <strong>"Com ho configuro? Guia pas a pas"</strong> amb el detall complet:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Entra a <strong>emailjs.com</strong> i crea un compte gratis.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">A <strong>"Email Services" → "Add New Email Service"</strong>, tria Gmail (o el correu que facis servir) i connecta'l amb <strong>"Connect Account"</strong> — un sol clic, inicies sessió amb Google i ja està. Copia el <strong>Service ID</strong> que et dona.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">A <strong>"Email Templates"</strong>, agafa una plantilla ja feta de la galeria (busca'n alguna de confirmació/reserva) en lloc de crear-la des de zero, i només ajusta el text al teu gust. Usa aquestes variables tal qual: <code>{{to_email}}</code>, <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code>. Copia el <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">A <strong>"Account" → "General"</strong>, copia la teva <strong>Public Key</strong>.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">Enganxa els 3 codis a <strong>El Meu Negoci → Confirmació de reserves per email</strong>, activa l'interruptor i prem <strong>"Enviar email de prova"</strong> per comprovar que arriba.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>És totalment gratis fins a 200 emails al mes — de sobres per a les reserves d'un sol restaurant.</div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">A <strong>"Email Services" → "Add New Service"</strong>, tria Gmail (o el correu que facis servir), prem <strong>"Connect Account"</strong> i inicia sessió amb Google, i per acabar <strong>"Add Service"</strong>. Copia el <strong>Service ID</strong> que apareix a la llista.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">A <strong>"Email Templates" → "Create New Template"</strong>, crea la plantilla de <strong>confirmació de reserva</strong>: a "To Email" posa <code>{{to_email}}</code>, entra a <strong>"Edit Content" → "Code Editor"</strong> i escriu el missatge amb aquestes variables tal qual: <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code> i <code>{{manage_link}}</code> (aquest últim és l'enllaç per canviar l'hora o cancel·lar — sense ell al text, el client no el rep). Desa i copia el <strong>Template ID</strong> de la pestanya "Settings".</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Repeteix el pas anterior per crear una <strong>segona plantilla</strong>, la de <strong>modificació de reserva</strong> (mateixes variables): avisa el client que la seva reserva JA confirmada ha canviat de data/hora, amb un text tipus "La teva reserva ha estat modificada" en lloc de "està confirmada" — si reutilitzes la de confirmació aquí, el client es confon en rebre dues vegades "confirmada". Copia el seu <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Repeteix una altra vegada per crear una <strong>tercera plantilla</strong>, la de <strong>comanda acceptada</strong> — per a COMANDES per emportar/domicili, no reserves. Usa <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{type}}</code> (recollida/domicili), <code>{{date}}</code>, <code>{{time}}</code> i <code>{{track_link}}</code> (l'enllaç per seguir l'estat de la comanda). Copia el seu <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Repeteix una quarta vegada per crear la plantilla de <strong>cancel·lació</strong>, compartida entre reserves i comandes (mateixes variables, sense <code>{{manage_link}}</code> ni <code>{{track_link}}</code>). Copia també el seu <strong>Template ID</strong> — les quatre són diferents entre si.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">A <strong>"Account" → "API Keys"</strong>, copia la teva <strong>Public Key</strong> (no el "Private Key" del costat).</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Enganxa els 6 codis a <strong>El Meu Negoci → Confirmació de reserves i comandes per email</strong>, activa l'interruptor i desa. Prem els quatre botons de prova (<strong>"Enviar email de prova"</strong>, <strong>"Provar modificació"</strong>, <strong>"Provar comanda acceptada"</strong> i <strong>"Provar cancel·lació"</strong>) amb el teu propi email per comprovar que arriben tots quatre.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>És totalment gratis fins a 200 emails al mes — de sobres per a un sol restaurant.</div>
 
     <h4>Al Panell de Control</h4>
     <p>Les reserves d'<strong>avui i de demà</strong> apareixen automàticament al Panell de Control, perquè en obrir l'app al matí ja sàpigues quants comensals esperes i puguis avisar cuina i sala amb temps.</p>
@@ -47421,13 +47772,16 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip"><i class="ti ti-bulb"></i>Check "Pending online requests" a few times a day, especially before each service, in case a large reservation is left waiting for a table.</div>
 
     <h4>Letting the customer know: email confirmation</h4>
-    <p>So the customer knows for sure whether their reservation is confirmed (instead of being left wondering), you can turn on an automatic email as soon as it's confirmed — whether that happened on its own or you confirmed it by hand. Set it up in <strong>My Business → Reservation confirmation by email</strong>, with your own free <strong>EmailJS</strong> account (no coding needed):</p>
+    <p>So the customer knows for sure whether their reservation or order is accepted (instead of being left wondering), you can turn on an automatic email when a reservation is confirmed, modified, cancelled, or when you accept a takeaway/delivery order — whether that happened on its own or you did it by hand. The confirmation emails carry a link so the customer can change the time, cancel, or follow the order status without calling you. Set it up in <strong>My Business → Reservation and order confirmation by email</strong>, with your own free <strong>EmailJS</strong> account (no coding needed). Here's the summary; inside that card there's a <strong>"How do I set this up? Step-by-step guide"</strong> button with the full detail:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>emailjs.com</strong> and create a free account.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Under <strong>"Email Services" → "Add New Email Service"</strong>, pick Gmail (or whichever email you use) and connect it with <strong>"Connect Account"</strong> — one click, sign in with Google, done. Copy the <strong>Service ID</strong> it gives you.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">Under <strong>"Email Templates"</strong>, pick a ready-made template from the gallery (look for a booking/confirmation one) instead of building one from scratch, and just tweak the wording. Use these variables as-is: <code>{{to_email}}</code>, <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code>. Copy the <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">Under <strong>"Account" → "General"</strong>, copy your <strong>Public Key</strong>.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">Paste the 3 codes into <strong>My Business → Reservation confirmation by email</strong>, turn the switch on, and press <strong>"Send test email"</strong> to check it arrives.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>It's completely free up to 200 emails a month — plenty for a single restaurant's reservations.</div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Under <strong>"Email Services" → "Add New Service"</strong>, pick Gmail (or whichever email you use), click <strong>"Connect Account"</strong> and sign in with Google, then <strong>"Add Service"</strong> to finish. Copy the <strong>Service ID</strong> shown in the list.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Under <strong>"Email Templates" → "Create New Template"</strong>, build the <strong>reservation confirmation</strong> template: set "To Email" to <code>{{to_email}}</code>, open <strong>"Edit Content" → "Code Editor"</strong> and write the message with these variables as-is: <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code> and <code>{{manage_link}}</code> (this last one is the link to change the time or cancel — without it in the text, the customer won't get it). Save it and copy the <strong>Template ID</strong> from the "Settings" tab.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Repeat the previous step to create a <strong>second template</strong>, the <strong>reservation modification</strong> one (same variables): it tells the customer their ALREADY confirmed reservation changed date/time, with wording like "Your reservation has been changed" instead of "is confirmed" — reusing the confirmation one here confuses the customer, who'd get "confirmed" twice. Copy its <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Repeat once more to create a <strong>third template</strong>, the <strong>order accepted</strong> one — for takeaway/delivery ORDERS, not reservations. Use <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{type}}</code> (pickup/delivery), <code>{{date}}</code>, <code>{{time}}</code> and <code>{{track_link}}</code> (the link to follow the order status). Copy its <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Repeat a fourth time to create the <strong>cancellation</strong> template, shared between reservations and orders (same variables, without <code>{{manage_link}}</code> or <code>{{track_link}}</code>). Copy its <strong>Template ID</strong> too — all four are different from each other.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">Under <strong>"Account" → "API Keys"</strong>, copy your <strong>Public Key</strong> (not the "Private Key" next to it).</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Paste the 6 codes into <strong>My Business → Reservation and order confirmation by email</strong>, turn the switch on, and save. Click all four test buttons (<strong>"Send test email"</strong>, <strong>"Test modification"</strong>, <strong>"Test order accepted"</strong> and <strong>"Test cancellation"</strong>) with your own email to check all four arrive.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>It's completely free up to 200 emails a month — plenty for a single restaurant.</div>
 
     <h4>On the Dashboard</h4>
     <p><strong>Today's and tomorrow's</strong> reservations show up automatically on the Dashboard, so when you open the app in the morning you already know how many guests to expect and can give the kitchen and floor advance notice.</p>

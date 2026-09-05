@@ -1456,7 +1456,15 @@ function applyLeadTime(dateInputId, timeInputId, hintBoxId, kind){
   if(!timeInput.min || minTime > timeInput.min) timeInput.min = minTime;
   if(timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
 
-  const hint = `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.antelacion').replace('%s', minTime).replace('%d', leadTimeMin)}</p>`;
+  // El aviso tiene que decir la hora mínima REAL, ya acotada por el horario
+  // del negocio (timeInput.min sale de updateTimeInputRange, que corre
+  // antes y pone la apertura del primer turno) — antes mostraba siempre
+  // "ahora + antelación" a secas: si esa hora caía antes de que abriera hoy
+  // (o en el hueco entre turnos de un horario partido), el aviso decía
+  // "puedes elegir a las 11:03" con el negocio cerrado hasta las 13:00,
+  // contradiciendo el propio horario que se acaba de mostrar encima.
+  const minTimeReal = timeInput.min || minTime;
+  const hint = `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.antelacion').replace('%s', minTimeReal).replace('%d', leadTimeMin)}</p>`;
   hintBox.innerHTML = (hintBox.innerHTML || '') + hint;
 }
 
