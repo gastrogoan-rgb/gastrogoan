@@ -143,6 +143,28 @@ caso('printTicket no imprime hasta que carga el QR externo (Google/VeriFactu) �
     'printTicket no usa el mismo patrón que printComandaTicket (esperar a window.onload antes de imprimir)');
 });
 
+caso('El tutorial de Netlify solo se enseña fuera de *.gastrogoan.com (autoalojado), y se despliega junto a index.html', () => {
+  // Reportado: el enlace "tutorial-netlify.html" dentro de Mi Negocio
+  // llevaba de vuelta a la propia app. Causa doble: (1) el archivo nunca se
+  // copiaba a dist/ ni a deploy/app/public/, así que en app.gastrogoan.com
+  // daba 404 y el comodín de la SPA devolvía la app; (2) ese aviso es del
+  // modelo antiguo de autoalojamiento (el Kit descargable) y no pinta nada
+  // en la app alojada por GastroGoan, donde no hay nada que subir a ningún
+  // sitio.
+  assert.ok(core.includes('function esKitAutoAlojado'), 'no se encontró esKitAutoAlojado en core.js');
+  const m = core.match(/function renderOnlineCard\(\)\{[\s\S]*?\n\}\n/);
+  assert.ok(m, 'no se encontró renderOnlineCard');
+  assert.ok(/esKitAutoAlojado\(\)\s*\?\s*`\s*<details/.test(m[0]),
+    'el aviso de alojamiento (con el enlace a tutorial-netlify.html) sigue mostrándose siempre, no solo cuando la app está autoalojada');
+
+  const build = fs.readFileSync(path.join(raiz, 'build.sh'), 'utf8');
+  assert.ok(build.includes('cp tutorial-netlify.html dist/tutorial-netlify.html'),
+    'build.sh no copia tutorial-netlify.html a dist/ — en cualquier sitio autoalojado que sí lo enseñe, el enlace seguiría dando 404');
+  const deployScript = fs.readFileSync(path.join(raiz, 'deploy/actualizar.sh'), 'utf8');
+  assert.ok(deployScript.includes('tutorial-netlify.html'),
+    'deploy/actualizar.sh no copia tutorial-netlify.html junto al resto de index.html');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

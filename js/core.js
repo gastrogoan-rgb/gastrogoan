@@ -5599,6 +5599,16 @@ async function savePublicSlug(){
   renderMiNegocio();
 }
 
+// El Kit descargable (el negocio sube sus dos archivos a su propia cuenta de
+// Netlify o donde sea) SÍ necesita este aviso y su tutorial. Pero desde que
+// GastroGoan aloja la app en un dominio propio (app.gastrogoan.com) no hay
+// nada que el negocio tenga que subir a ningún sitio — mostrárselo ahí era
+// puro ruido, y encima el enlace apuntaba a un archivo (tutorial-netlify.html)
+// que nunca se despliega junto al resto de la app: al pulsarlo, el propio
+// hosting devolvía la app de vuelta en vez de un 404 claro.
+function esKitAutoAlojado(){
+  return !/(^|\.)gastrogoan\.com$/.test(location.hostname);
+}
 function renderOnlineCard(){
   const b = DB.business || {};
   if(!getTenantId()){
@@ -5628,6 +5638,7 @@ function renderOnlineCard(){
       <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
       <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.shareDesc')}${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' '+t('mn.online.andOrder') : ''}${t('mn.online.shareDescEnd')}</p>
       ${activeCartaLine}
+      ${esKitAutoAlojado() ? `
       <details style="margin-bottom:12px">
         <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.hostingSummary')}</summary>
         <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
@@ -5636,7 +5647,7 @@ function renderOnlineCard(){
           ${t('mn.online.hostingP3')}<br><br>
           <i class="ti ti-book"></i> <strong>${t('mn.online.hostingTutorialLabel')}</strong> ${t('mn.online.hostingTutorialText')} <a href="tutorial-netlify.html" target="_blank" rel="noopener"><strong>tutorial-netlify.html</strong></a> ${t('mn.online.hostingTutorialSuffix')}
         </div>
-      </details>
+      </details>` : ''}
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
         <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:140px;height:140px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
         <div style="flex:1;min-width:180px">

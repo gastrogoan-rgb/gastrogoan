@@ -73,6 +73,12 @@ cp fonts/*.woff2 dist/fonts/
 # Copy the offline app-shell service worker (must sit at the site root next to index.html)
 cp sw.js dist/sw.js
 
+# Tutorial de autoalojamiento (Netlify): solo lo enseña la app cuando NO se
+# abre desde *.gastrogoan.com (ver esKitAutoAlojado, js/core.js), pero tiene
+# que estar disponible junto a index.html en cualquier otro sitio donde se
+# despliegue — si no, el enlace de dentro de la app da un 404 disfrazado.
+cp tutorial-netlify.html dist/tutorial-netlify.html
+
 # Copy Netlify redirect rules (URL corta para el sitio de reservas: ver _redirects)
 cp _redirects dist/_redirects
 
