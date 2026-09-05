@@ -30,6 +30,7 @@ const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
 const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
 const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8');
+const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
 
 let fallos = 0;
 function caso(nombre, fn){
@@ -194,6 +195,19 @@ caso('"Platos más vendidos" del Panel de Control agrupa por receta, no por el t
     'dishKey no agrupa por recipeId cuando existe — puede seguir separando el mismo plato por una diferencia de texto en el nombre');
   assert.ok((m[0].match(/dishKey\(it\)/g)||[]).length >= 2,
     'productTotals y/o marginTotals no usan dishKey — alguno de los dos sigue agrupando por el nombre a secas');
+});
+
+caso('"Análisis de Platos" arranca en "Últimos 30 días", la misma ventana que "Análisis de ventas" del Panel de Control', () => {
+  // El dueño veía cifras distintas entre los dos paneles con solo abrir la
+  // pantalla: "Análisis de ventas" mira siempre los últimos 30 días,
+  // "Análisis de Platos" arrancaba en "Este mes" (del día 1 a hoy) — dos
+  // ventanas de tiempo distintas mirando la MISMA tabla de ventas. Ahora
+  // los dos arrancan con la misma ventana móvil de 30 días.
+  assert.ok(hr.includes("let platosPeriod = '30dias'"), 'el periodo por defecto de Análisis de Platos ya no es "últimos 30 días"');
+  const m = hr.match(/function getPlatosRange\(\)\{[\s\S]*?\n  \}/);
+  assert.ok(m, 'no se encontró getPlatosRange');
+  assert.ok(m[0].includes("platosPeriod === '30dias'") && m[0].includes('29*86400000'),
+    'getPlatosRange no calcula "30dias" con la misma ventana de 29 días atrás + hoy que usa renderDashboard (js/finance.js)');
 });
 
 console.log('\n' + '═'.repeat(64));

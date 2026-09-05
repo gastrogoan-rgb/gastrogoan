@@ -35,7 +35,12 @@ const GE = (function(){
   // compras de ese mismo mes/año en Variables.
   let gvYear = new Date().getFullYear();
   let distPctLoaded = false;
-  let platosPeriod = 'mes', platosFrom = '', platosTo = '';
+  // Por defecto coincide con la misma ventana móvil que usa "Análisis de
+  // ventas" en el Panel de Control (últimos 30 días) — antes arrancaba en
+  // "Este mes" (del día 1 al de hoy), así que dos paneles mirando la MISMA
+  // base de ventas mostraban totales distintos con solo abrir la pantalla,
+  // sin que nadie hubiera tocado ningún filtro.
+  let platosPeriod = '30dias', platosFrom = '', platosTo = '';
   let gvSearch = '';
   // Función, no una constante congelada al cargar la página: si se quedara
   // fija en el año de carga, un negocio que mantiene la app abierta sin
@@ -1506,6 +1511,10 @@ const GE = (function(){
     const d = new Date();
     if(platosPeriod === 'hoy') return {start: today, end: today};
     if(platosPeriod === 'semana') return {start: dateStr(new Date(d.getTime() - 6*86400000)), end: today};
+    // Misma ventana que renderDashboard (js/finance.js): 29 días atrás + hoy
+    // = 30 días exactos, para que "Análisis de ventas" y "Análisis de
+    // Platos" miren de verdad el mismo tramo de ventas por defecto.
+    if(platosPeriod === '30dias') return {start: dateStr(new Date(d.getTime() - 29*86400000)), end: today};
     if(platosPeriod === 'año') return {start: `${d.getFullYear()}-01-01`, end: today};
     if(platosPeriod === 'todo') return {start: '0000-01-01', end: '9999-12-31'};
     return {start: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`, end: today}; // mes
@@ -1550,7 +1559,7 @@ const GE = (function(){
   }
 
   function renderPlatosPeriodSel(){
-    const periods = [{k:'hoy',l:t('common.today')},{k:'semana',l:t('hr.platos.last7Days')},{k:'mes',l:t('hr.platos.thisMonth')},{k:'año',l:t('hr.platos.thisYear')},{k:'todo',l:t('hr.platos.allTime')}];
+    const periods = [{k:'hoy',l:t('common.today')},{k:'semana',l:t('hr.platos.last7Days')},{k:'30dias',l:t('hr.platos.last30Days')},{k:'mes',l:t('hr.platos.thisMonth')},{k:'año',l:t('hr.platos.thisYear')},{k:'todo',l:t('hr.platos.allTime')}];
     document.getElementById('platos-period-sel').innerHTML = periods.map(p=>`
       <div class="month-pill${platosPeriod===p.k?' active':''}" onclick="GE.setPlatosPeriod('${p.k}')">${p.l}</div>
     `).join('') + `

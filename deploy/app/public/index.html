@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '05/09/2026 13:04';
+const GG_BUILD = '05/09/2026 13:15';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -12492,7 +12492,7 @@ const I18N = {
     'hr.platos.dish': 'Plato',
     'hr.platos.dishesSold': 'Platos vendidos (uds.)',
     'hr.platos.dishesWithCosting': 'Platos con escandallo',
-    'hr.platos.last7Days': 'Últimos 7 días',
+    'hr.platos.last7Days': 'Últimos 7 días', 'hr.platos.last30Days': 'Últimos 30 días',
     'hr.platos.linkRecipesHint': 'Vincula los platos vendidos a recetas del Escandallo para ver su rentabilidad.',
     'hr.platos.noCategory': 'Sin categoría',
     'hr.platos.noCosting': 'Sin escandallo',
@@ -14669,7 +14669,7 @@ const I18N = {
     'hr.platos.dish': 'Plat',
     'hr.platos.dishesSold': 'Plats venuts (uts.)',
     'hr.platos.dishesWithCosting': 'Plats amb escandall',
-    'hr.platos.last7Days': 'Últims 7 dies',
+    'hr.platos.last7Days': 'Últims 7 dies', 'hr.platos.last30Days': 'Últims 30 dies',
     'hr.platos.linkRecipesHint': 'Vincula els plats venuts a receptes de l\'Escandall per veure\'n la rendibilitat.',
     'hr.platos.noCategory': 'Sense categoria',
     'hr.platos.noCosting': 'Sense escandall',
@@ -16850,7 +16850,7 @@ const I18N = {
     'hr.platos.dish': 'Dish',
     'hr.platos.dishesSold': 'Dishes sold (units)',
     'hr.platos.dishesWithCosting': 'Dishes with costing',
-    'hr.platos.last7Days': 'Last 7 days',
+    'hr.platos.last7Days': 'Last 7 days', 'hr.platos.last30Days': 'Last 30 days',
     'hr.platos.linkRecipesHint': 'Link sold dishes to recipes in the Costing module to see their profitability.',
     'hr.platos.noCategory': 'No category',
     'hr.platos.noCosting': 'No costing',
@@ -32647,7 +32647,12 @@ const GE = (function(){
   // compras de ese mismo mes/año en Variables.
   let gvYear = new Date().getFullYear();
   let distPctLoaded = false;
-  let platosPeriod = 'mes', platosFrom = '', platosTo = '';
+  // Por defecto coincide con la misma ventana móvil que usa "Análisis de
+  // ventas" en el Panel de Control (últimos 30 días) — antes arrancaba en
+  // "Este mes" (del día 1 al de hoy), así que dos paneles mirando la MISMA
+  // base de ventas mostraban totales distintos con solo abrir la pantalla,
+  // sin que nadie hubiera tocado ningún filtro.
+  let platosPeriod = '30dias', platosFrom = '', platosTo = '';
   let gvSearch = '';
   // Función, no una constante congelada al cargar la página: si se quedara
   // fija en el año de carga, un negocio que mantiene la app abierta sin
@@ -34118,6 +34123,10 @@ const GE = (function(){
     const d = new Date();
     if(platosPeriod === 'hoy') return {start: today, end: today};
     if(platosPeriod === 'semana') return {start: dateStr(new Date(d.getTime() - 6*86400000)), end: today};
+    // Misma ventana que renderDashboard (js/finance.js): 29 días atrás + hoy
+    // = 30 días exactos, para que "Análisis de ventas" y "Análisis de
+    // Platos" miren de verdad el mismo tramo de ventas por defecto.
+    if(platosPeriod === '30dias') return {start: dateStr(new Date(d.getTime() - 29*86400000)), end: today};
     if(platosPeriod === 'año') return {start: `${d.getFullYear()}-01-01`, end: today};
     if(platosPeriod === 'todo') return {start: '0000-01-01', end: '9999-12-31'};
     return {start: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`, end: today}; // mes
@@ -34162,7 +34171,7 @@ const GE = (function(){
   }
 
   function renderPlatosPeriodSel(){
-    const periods = [{k:'hoy',l:t('common.today')},{k:'semana',l:t('hr.platos.last7Days')},{k:'mes',l:t('hr.platos.thisMonth')},{k:'año',l:t('hr.platos.thisYear')},{k:'todo',l:t('hr.platos.allTime')}];
+    const periods = [{k:'hoy',l:t('common.today')},{k:'semana',l:t('hr.platos.last7Days')},{k:'30dias',l:t('hr.platos.last30Days')},{k:'mes',l:t('hr.platos.thisMonth')},{k:'año',l:t('hr.platos.thisYear')},{k:'todo',l:t('hr.platos.allTime')}];
     document.getElementById('platos-period-sel').innerHTML = periods.map(p=>`
       <div class="month-pill${platosPeriod===p.k?' active':''}" onclick="GE.setPlatosPeriod('${p.k}')">${p.l}</div>
     `).join('') + `
