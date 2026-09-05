@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '05/09/2026 14:17';
+const GG_BUILD = '06/09/2026 01:37';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -33578,8 +33578,23 @@ const GE = (function(){
     const end = todayStr();
     const sales = activeSales().filter(s=>s.date>=start && s.date<=end);
     if(!sales.length){ showToast(t('hr.pe.noRecentSalesData')); return; }
-    const total = sales.reduce((s,x)=>s+parseFloat(x.total||0),0);
-    const avgTicket = total/sales.length;
+    // El ticket medio del Punto de Equilibrio se compara contra un food cost
+    // objetivo definido SIN IVA (mismo criterio que en el resto de la app:
+    // renderVariables usa tvNeto/facNeta). Si aquí se metiera el ticket CON
+    // IVA (sale.total), el margen de contribución salía inflado y el punto
+    // de equilibrio necesario, infravalorado — un negocio por debajo del
+    // equilibrio real podía ver el semáforo en verde.
+    const fallbackRate = ivaVentasPct();
+    const totalNeto = sales.reduce((s,x)=>{
+      const descPct = parseFloat(x.descuentoPct)||0;
+      const netoVenta = (x.items||[]).reduce((sl,line)=>{
+        const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
+        const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : fallbackRate;
+        return sl + grossLine/(1+rate/100);
+      }, 0);
+      return s + netoVenta;
+    }, 0);
+    const avgTicket = totalNeto/sales.length;
     document.getElementById('pe-ticket').value = avgTicket.toFixed(2);
     document.getElementById('pe-cubiertos').value = sales.length;
     calcPE();
@@ -47305,7 +47320,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">3</div><div class="st">Elige un <strong>color identificativo</strong>. Ese color se usará en todo el calendario de turnos para reconocer a esa persona de un vistazo, sin tener que leer el nombre cada vez.</div></div>
     <div class="manual-step"><div class="sn">4</div><div class="st">Rellena <strong>teléfono</strong> y <strong>email</strong> si los tienes. Aparecerán como enlaces directos para llamar/escribir por WhatsApp o enviar un correo sin tener que copiar el número.</div></div>
     <p><strong>El área (Cocina o Sala) ya no se pregunta:</strong> el empleado se asigna automáticamente al área desde la que lo creas. Si entras a Personal desde <strong>Cocina</strong>, ves y das de alta personal de cocina; desde <strong>Sala</strong>, personal de sala. Lo mismo aplica en Distribución del trabajo, Fichar y los turnos.</p>
-    <p>Si el empleado es de <strong>Sala</strong>, puedes marcar la casilla <strong>"Es repartidor"</strong>: así entra en el reparto automático de pedidos a domicilio (reparto propio) cuando esté de turno — la app le asigna solo los pedidos según su horario y su carga actual, sin que nadie tenga que elegirlo a mano cada vez.</p>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Si el empleado es de <strong>Sala</strong>, puedes marcar la casilla <strong>"Es repartidor"</strong>: así entra en el reparto automático de pedidos a domicilio (reparto propio) cuando esté de turno — la app le asigna solo los pedidos según su horario y su carga actual, sin que nadie tenga que elegirlo a mano cada vez.</div></div>
     <div class="manual-step"><div class="sn">6</div><div class="st">Define un <strong>PIN de 4 dígitos</strong> para que el empleado pueda fichar y, si tu plan lo permite, acceder a su propia vista de la app. El PIN por defecto es "1234"; pídele que lo cambie la primera vez que lo use.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>No repitas el mismo PIN para dos empleados distintos: el PIN identifica a la persona en Fichar, en el Chat interno y en cualquier acción que quede registrada a su nombre.</div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Ese mismo PIN (junto con su nombre y el código de negocio) es lo que el empleado usa para entrar en la app desde "Acceso Empleados" en la pantalla inicial — no hace falta que nadie lo "dé de alta" antes en ese dispositivo en concreto. Si el empleado deja el negocio temporalmente, desmarca su casilla <strong>Activo</strong> (pierde el acceso sin borrar su ficha ni su histórico de horas); si se va definitivamente, elimina su ficha directamente.</div>
@@ -47332,7 +47347,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">3</div><div class="st">Tria un <strong>color identificatiu</strong>. Aquest color es farà servir a tot el calendari de torns per reconèixer aquesta persona d'un cop d'ull, sense haver de llegir el nom cada vegada.</div></div>
     <div class="manual-step"><div class="sn">4</div><div class="st">Emplena <strong>telèfon</strong> i <strong>email</strong> si els tens. Apareixeran com a enllaços directes per trucar/escriure per WhatsApp o enviar un correu sense haver de copiar el número.</div></div>
     <p><strong>L'àrea (Cuina o Sala) ja no es pregunta:</strong> l'empleat s'assigna automàticament a l'àrea des de la qual el crees. Si entres a Personal des de <strong>Cuina</strong>, veus i dones d'alta personal de cuina; des de <strong>Sala</strong>, personal de sala. El mateix aplica a Distribució del treball, Fitxar i els torns.</p>
-    <p>Si l'empleat és de <strong>Sala</strong>, pots marcar la casella <strong>"És repartidor"</strong>: així entra en el repartiment automàtic de comandes a domicili (repartiment propi) quan estigui de torn — l'app li assigna soles les comandes segons el seu horari i la seva càrrega actual, sense que ningú l'hagi de triar a mà cada vegada.</p>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Si l'empleat és de <strong>Sala</strong>, pots marcar la casella <strong>"És repartidor"</strong>: així entra en el repartiment automàtic de comandes a domicili (repartiment propi) quan estigui de torn — l'app li assigna soles les comandes segons el seu horari i la seva càrrega actual, sense que ningú l'hagi de triar a mà cada vegada.</div></div>
     <div class="manual-step"><div class="sn">6</div><div class="st">Defineix un <strong>PIN de 4 dígits</strong> perquè l'empleat pugui fitxar i, si el teu pla ho permet, accedir a la seva pròpia vista de l'app. El PIN per defecte és "1234"; demana-li que el canviï la primera vegada que el faci servir.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>No repeteixis el mateix PIN per a dos empleats diferents: el PIN identifica la persona a Fitxar, al Xat intern i en qualsevol acció que quedi registrada al seu nom.</div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Aquest mateix PIN (junt amb el seu nom i el codi de negoci) és el que l'empleat fa servir per entrar a l'app des d'"Accés Empleats" a la pantalla inicial — no cal que ningú el "doni d'alta" abans en aquest dispositiu en concret. Si l'empleat deixa el negoci temporalment, desmarca la seva casella <strong>Actiu</strong> (perd l'accés sense esborrar la fitxa ni l'historial d'hores); si marxa definitivament, elimina la fitxa directament.</div>
@@ -47359,7 +47374,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">3</div><div class="st">Choose an <strong>identifying colour</strong>. This colour is used throughout the shift calendar to recognise that person at a glance, without reading the name every time.</div></div>
     <div class="manual-step"><div class="sn">4</div><div class="st">Fill in <strong>phone</strong> and <strong>email</strong> if you have them. They'll appear as direct links to call/message on WhatsApp or send an email without copying the number.</div></div>
     <p><strong>The area (Kitchen or Floor) is no longer asked:</strong> the employee is automatically assigned to the area you create them from. If you open Staff from <strong>Kitchen</strong>, you see and register kitchen staff; from <strong>Floor</strong>, floor staff. The same applies to Work Distribution, Clock-in and shifts.</p>
-    <p>If the employee is <strong>Floor</strong> staff, you can check <strong>"Is a delivery rider"</strong>: this makes them eligible for automatic assignment of delivery orders (own delivery) while on shift — the app assigns them orders on its own based on their schedule and current workload, with nobody needing to pick a name each time.</p>
+    <div class="manual-step"><div class="sn">5</div><div class="st">If the employee is <strong>Floor</strong> staff, you can check <strong>"Is a delivery rider"</strong>: this makes them eligible for automatic assignment of delivery orders (own delivery) while on shift — the app assigns them orders on its own based on their schedule and current workload, with nobody needing to pick a name each time.</div></div>
     <div class="manual-step"><div class="sn">6</div><div class="st">Set a <strong>4-digit PIN</strong> so the employee can clock in and, if your plan allows it, access their own view of the app. The default PIN is "1234"; ask them to change it the first time they use it.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Don't reuse the same PIN for two different employees: the PIN identifies the person in Clock-in, in the internal Chat and in any action logged under their name.</div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>That same PIN (together with their name and the business code) is what the employee uses to sign into the app from "Staff Access" on the landing screen — no one needs to "register" it on that specific device beforehand. If the employee leaves temporarily, uncheck their <strong>Active</strong> checkbox (they lose access without deleting their record or hours history); if they leave for good, delete their record directly.</div>
@@ -47390,6 +47405,7 @@ const MANUAL_CHAPTERS = [
     <h4>Vista maestro-detalle</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">A la izquierda verás la lista de tu equipo de Sala (los empleados que diste de alta en Horario del Personal). Haz clic en uno para abrir su calendario de tareas a la derecha.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Todo lo que edites se guarda asociado a ese empleado, así que puedes ir pasando de uno a otro para repartir el trabajo de todo el equipo.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Si entras como propietario, accedes directo a la ficha de cualquiera. Si un empleado con edición abre la de un compañero, la app le pide su PIN (o el PIN de negocio) antes de mostrarla — solo su propia ficha se abre sin pedir nada.</div>
 
     <h4>Tareas de la semana</h4>
     <p>Aquí ves, día por día, todo lo que tiene asignado esa persona — y viene de tres sitios distintos, unificado en un solo calendario:</p>
@@ -47406,6 +47422,7 @@ const MANUAL_CHAPTERS = [
     <h4>Vista maestro-detalle</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">A la izquierda verás la lista de tu equipo (los empleados que diste de alta en Horario del Personal). Haz clic en uno para abrir su ficha de trabajo a la derecha.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Todo lo que edites se guarda asociado a ese empleado, así que puedes ir pasando de uno a otro para repartir el trabajo de todo el equipo.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Si entras como propietario, accedes directo a la ficha de cualquiera. Si un empleado con edición abre la de un compañero, la app le pide su PIN (o el PIN de negocio) antes de mostrarla — solo su propia ficha se abre sin pedir nada.</div>
 
     <h4>Platos a su cargo</h4>
     <p>Aquí defines qué platos prepara habitualmente ese empleado.</p>
@@ -47430,6 +47447,7 @@ const MANUAL_CHAPTERS = [
     <h4>Vista mestre-detall</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">A l'esquerra veuràs la llista del teu equip de Sala (els empleats que vas donar d'alta a Horari del Personal). Fes clic en un per obrir el seu calendari de tasques a la dreta.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Tot el que editis es desa associat a aquell empleat, així que pots anar passant d'un a l'altre per repartir la feina de tot l'equip.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Si entres com a propietari, accedeixes directe a la fitxa de qualsevol. Si un empleat amb edició obre la d'un company, l'app li demana el seu PIN (o el PIN de negoci) abans de mostrar-la — només la seva pròpia fitxa s'obre sense demanar res.</div>
 
     <h4>Tasques de la setmana</h4>
     <p>Aquí veus, dia per dia, tot el que té assignat aquella persona — i ve de tres llocs diferents, unificat en un sol calendari:</p>
@@ -47446,6 +47464,7 @@ const MANUAL_CHAPTERS = [
     <h4>Vista mestre-detall</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">A l'esquerra veuràs la llista del teu equip (els empleats que vas donar d'alta a Horari del Personal). Fes clic en un per obrir la seva fitxa de treball a la dreta.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Tot el que editis es desa associat a aquell empleat, així que pots anar passant d'un a l'altre per repartir la feina de tot l'equip.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Si entres com a propietari, accedeixes directe a la fitxa de qualsevol. Si un empleat amb edició obre la d'un company, l'app li demana el seu PIN (o el PIN de negoci) abans de mostrar-la — només la seva pròpia fitxa s'obre sense demanar res.</div>
 
     <h4>Plats a càrrec seu</h4>
     <p>Aquí defineixes quins plats prepara habitualment aquell empleat.</p>
@@ -47470,6 +47489,7 @@ const MANUAL_CHAPTERS = [
     <h4>Master-detail view</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">On the left you'll see your Floor team list (the employees you registered in Staff Schedule). Click one to open their task calendar on the right.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Everything you edit is saved against that employee, so you can move from one to another to distribute work across the whole team.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Signed in as the owner, you go straight into anyone's record. If an employee with edit access opens a colleague's, the app asks for that person's PIN (or the business PIN) before showing it — only their own record opens with no prompt.</div>
 
     <h4>This week's tasks</h4>
     <p>Here you see, day by day, everything assigned to that person — pulled from three different sources, unified into a single calendar:</p>
@@ -47486,6 +47506,7 @@ const MANUAL_CHAPTERS = [
     <h4>Master-detail view</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">On the left you'll see your team list (the employees you registered in Staff Schedule). Click one to open their work record on the right.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Everything you edit is saved against that employee, so you can move from one to another to distribute work across the whole team.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Signed in as the owner, you go straight into anyone's record. If an employee with edit access opens a colleague's, the app asks for that person's PIN (or the business PIN) before showing it — only their own record opens with no prompt.</div>
 
     <h4>Dishes in charge</h4>
     <p>Here you define which dishes that employee usually prepares.</p>
@@ -47511,119 +47532,137 @@ const MANUAL_CHAPTERS = [
     content:{es:`<h3>Qué es y para qué sirve</h3>
     <p>Todo restaurante está obligado por ley a tener un sistema de <strong>APPCC</strong> (Análisis de Peligros y Puntos de Control Crítico) y a poder demostrar, con registros fechados, que se cumple. Este módulo te da las 7 hojas de registro más habituales que pide Sanidad (Protocolo de apertura/cierre, Manos, Limpieza mensual, Temperaturas, Alérgenos, Plagas y Mantenimiento), ya organizadas y listas para rellenar desde el móvil o la tablet de cocina, sin papeles que se manchan o se pierden. La pestaña de Limpieza mensual tiene vistas de día, semana y mes para ver el detalle de cada tarea con sitio de sobra. Si te visita un inspector, aquí tienes el historial completo.</p>
 
-    <h4>1. Manos — registro de lavado de manos</h4>
+    <h4>1. Protocolo — apertura y cierre</h4>
+    <p>Checklist de pasos fijos que hay que repasar cada vez que abres o cierras el local (encender/apagar cámaras, revisar extractores, sacar basura, cerrar gas...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Edita la lista de pasos de apertura y de cierre una vez, a tu medida (los puedes cambiar cuando quieras).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Cada día, pulsa "Registrar hoy" en Apertura y en Cierre cuando los hayas repasado. Queda guardado con fecha y quién lo hizo.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">El historial de cumplimiento te permite ver de un vistazo qué días se hizo y cuáles no.</div></div>
+
+    <h4>2. Manos — registro de lavado de manos</h4>
     <p>Cada vez que un empleado se lava las manos en momentos críticos (al empezar turno, tras tocar alimentos crudos, tras ir al baño, tras tocar dinero o basura), registra la hora y la persona.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa "+ Registrar" en la pestaña Manos.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Selecciona el empleado y, si quieres, el motivo (cambio de tarea, después del baño...).</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">Queda guardado con fecha y hora automáticas.</div></div>
 
-    <h4>2. Limpieza — calendario por zona y frecuencia</h4>
+    <h4>3. Limpieza — calendario por zona y frecuencia</h4>
     <p>Define las zonas de tu local (cocina, cámaras, baños, sala, almacén...) y la frecuencia de limpieza de cada una (diaria, semanal, mensual).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Crea cada zona/tarea con su frecuencia.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Cuando se realiza la limpieza, márcala como hecha: queda registrada la fecha y quién la hizo.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">Si una tarea lleva varios días sin marcarse y ya toca, destaca visualmente para que no se te olvide.</div></div>
 
-    <h4>3. Temperaturas — control de cámaras y equipos de frío</h4>
+    <h4>4. Temperaturas — control de cámaras y equipos de frío</h4>
     <p>Registra periódicamente la temperatura de cada cámara, congelador o vitrina.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Da de alta cada equipo de frío con un nombre (ej. "Cámara pescado", "Congelador 1").</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Cada día (o varias veces al día), anota la temperatura leída en el termómetro del equipo.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si una temperatura sale fuera de rango (cámaras normalmente entre 0-4ºC, congeladores a -18ºC o menos), anótalo igualmente y registra la acción correctiva (se avisó al técnico, se trasladó el género...). Esa traza es justo lo que pide una inspección.</div>
 
-    <h4>4. Alérgenos — control de alérgenos</h4>
+    <h4>5. Alérgenos — control de alérgenos</h4>
     <p>Registra qué alérgenos contiene cada plato o materia prima y mantén actualizada esa información, especialmente si cambias proveedores o recetas.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Revisa periódicamente que la lista de alérgenos de tus platos sigue siendo correcta (sobre todo tras cambios de receta o de marca de un ingrediente).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Si trabajas con Fichas Técnicas, puedes apoyarte en los ingredientes ahí indicados para no olvidar ninguno.</div></div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>La información de alérgenos debe estar disponible para el cliente que la pida (en carta, cartel o verbalmente). Tenla siempre actualizada, no solo registrada.</div>
 
-    <h4>5. Plagas — control de plagas</h4>
+    <h4>6. Plagas — control de plagas</h4>
     <p>Registra las visitas de tu empresa de control de plagas, los tratamientos realizados y cualquier incidencia detectada (presencia de insectos, roedores...).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Cada vez que venga el técnico de plagas, registra la fecha, lo que se hizo y, si te entrega un certificado, guárdalo como referencia.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Si detectas tú mismo algún indicio entre visitas, regístralo también: ayuda a justificar visitas extra si fuera necesario.</div></div>
 
-    <h4>6. Mantenimiento — incidencias y revisiones de equipos</h4>
+    <h4>7. Mantenimiento — incidencias y revisiones de equipos</h4>
     <p>Registra averías, reparaciones y revisiones periódicas de tus equipos (hornos, cámaras, lavavajillas, extractores...).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Cuando detectes una avería, regístrala aquí: equipo afectado, descripción del problema y fecha.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Cuando se repare o revise, marca la incidencia como resuelta y anota qué se hizo. Así tienes el historial completo de cada equipo, útil para decidir si conviene repararlo otra vez o sustituirlo.</div></div>
 
-    <div class="manual-tip"><i class="ti ti-bulb"></i>La rutina ganadora es: dedica 5 minutos al abrir y 5 minutos al cerrar para repasar estas 6 pestañas y registrar lo que toque. En un mes tendrás un historial completo, sin esfuerzo añadido en tu día a día.</div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>La rutina ganadora es: dedica 5 minutos al abrir y 5 minutos al cerrar para repasar estas 7 pestañas y registrar lo que toque. En un mes tendrás un historial completo, sin esfuerzo añadido en tu día a día.</div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Mantener estos registros al día no es opcional: es un requisito legal y lo primero que se revisa en una inspección sanitaria. Un registro vacío o desactualizado puede acarrear sanciones aunque tu cocina esté impecable.</div>`,
     ca:`<h3>Què és i per a què serveix</h3>
     <p>Tot restaurant està obligat per llei a tenir un sistema d'<strong>APPCC</strong> (Anàlisi de Perills i Punts de Control Crític) i a poder demostrar, amb registres datats, que es compleix. Aquest mòdul et dona els 7 fulls de registre més habituals que demana Sanitat (Protocol d'obertura/tancament, Mans, Neteja mensual, Temperatures, Al·lèrgens, Plagues i Manteniment), ja organitzats i a punt per emplenar des del mòbil o la tauleta de cuina, sense papers que es taquen o es perden. La pestanya de Neteja mensual té vistes de dia, setmana i mes per veure el detall de cada tasca amb prou espai. Si et visita un inspector, aquí tens l'historial complet.</p>
 
-    <h4>1. Mans — registre de rentat de mans</h4>
+    <h4>1. Protocol — obertura i tancament</h4>
+    <p>Checklist de passos fixos que cal repassar cada vegada que obres o tanques el local (encendre/apagar cambres, revisar extractors, treure les escombraries, tancar el gas...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Edita la llista de passos d'obertura i de tancament una vegada, a la teva mida (els pots canviar quan vulguis).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Cada dia, prem "Registrar avui" a Obertura i a Tancament quan els hagis repassat. Queda desat amb data i qui ho va fer.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">L'historial de compliment et permet veure d'un cop d'ull quins dies es va fer i quins no.</div></div>
+
+    <h4>2. Mans — registre de rentat de mans</h4>
     <p>Cada vegada que un empleat es renta les mans en moments crítics (en començar el torn, després de tocar aliments crus, després d'anar al lavabo, després de tocar diners o escombraries), registra l'hora i la persona.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Prem "+ Registrar" a la pestanya Mans.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Selecciona l'empleat i, si vols, el motiu (canvi de tasca, després del lavabo...).</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">Queda desat amb data i hora automàtiques.</div></div>
 
-    <h4>2. Neteja — calendari per zona i freqüència</h4>
+    <h4>3. Neteja — calendari per zona i freqüència</h4>
     <p>Defineix les zones del teu local (cuina, cambres, lavabos, sala, magatzem...) i la freqüència de neteja de cadascuna (diària, setmanal, mensual).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Crea cada zona/tasca amb la seva freqüència.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Quan es fa la neteja, marca-la com a feta: queda registrada la data i qui la va fer.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">Si una tasca porta diversos dies sense marcar-se i ja toca, es destaca visualment perquè no se t'oblidi.</div></div>
 
-    <h4>3. Temperatures — control de cambres i equips de fred</h4>
+    <h4>4. Temperatures — control de cambres i equips de fred</h4>
     <p>Registra periòdicament la temperatura de cada cambra, congelador o vitrina.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Dona d'alta cada equip de fred amb un nom (ex. "Cambra peix", "Congelador 1").</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Cada dia (o diverses vegades al dia), anota la temperatura llegida al termòmetre de l'equip.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si una temperatura surt fora de rang (cambres normalment entre 0-4ºC, congeladors a -18ºC o menys), anota-ho igualment i registra l'acció correctiva (es va avisar el tècnic, es va traslladar el gènere...). Aquesta traça és justament el que demana una inspecció.</div>
 
-    <h4>4. Al·lergens — control d'al·lergens</h4>
+    <h4>5. Al·lergens — control d'al·lergens</h4>
     <p>Registra quins al·lergens conté cada plat o matèria primera i mantén actualitzada aquesta informació, especialment si canvies proveïdors o receptes.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Revisa periòdicament que la llista d'al·lergens dels teus plats continua sent correcta (sobretot després de canvis de recepta o de marca d'un ingredient).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Si treballes amb Fitxes Tècniques, pots recolzar-te en els ingredients allà indicats per no oblidar-ne cap.</div></div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>La informació d'al·lergens ha d'estar disponible per al client que la demani (a la carta, en un cartell o verbalment). Tingues-la sempre actualitzada, no només registrada.</div>
 
-    <h4>5. Plagues — control de plagues</h4>
+    <h4>6. Plagues — control de plagues</h4>
     <p>Registra les visites de la teva empresa de control de plagues, els tractaments fets i qualsevol incidència detectada (presència d'insectes, rosegadors...).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Cada vegada que vingui el tècnic de plagues, registra la data, el que es va fer i, si et lliura un certificat, guarda'l com a referència.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Si tu mateix detectes algun indici entre visites, registra-ho també: ajuda a justificar visites extra si calgués.</div></div>
 
-    <h4>6. Manteniment — incidències i revisions d'equips</h4>
+    <h4>7. Manteniment — incidències i revisions d'equips</h4>
     <p>Registra avaries, reparacions i revisions periòdiques dels teus equips (forns, cambres, rentavaixelles, extractors...).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Quan detectis una avaria, registra-la aquí: equip afectat, descripció del problema i data.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Quan es repari o revisi, marca la incidència com a resolta i anota què es va fer. Així tens l'historial complet de cada equip, útil per decidir si convé reparar-lo una altra vegada o substituir-lo.</div></div>
 
-    <div class="manual-tip"><i class="ti ti-bulb"></i>La rutina guanyadora és: dedica 5 minuts en obrir i 5 minuts en tancar per repassar aquestes 6 pestanyes i registrar el que toqui. En un mes tindràs un historial complet, sense esforç afegit en el teu dia a dia.</div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>La rutina guanyadora és: dedica 5 minuts en obrir i 5 minuts en tancar per repassar aquestes 7 pestanyes i registrar el que toqui. En un mes tindràs un historial complet, sense esforç afegit en el teu dia a dia.</div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Mantenir aquests registres al dia no és opcional: és un requisit legal i el primer que es revisa en una inspecció sanitària. Un registre buit o desactualitzat pot comportar sancions encara que la teva cuina estigui impecable.</div>`,
     en:`<h3>What it is and what it's for</h3>
     <p>Every restaurant is legally required to have a <strong>HACCP</strong> system (Hazard Analysis and Critical Control Points) and to be able to prove, with dated records, that it's being followed. This module gives you the 7 record sheets Health Authorities most commonly ask for (Opening/closing protocol, Hand hygiene, Monthly cleaning, Temperatures, Allergens, Pests and Maintenance), already organised and ready to fill in from the kitchen phone or tablet, with no paper that gets dirty or lost. The Monthly cleaning tab has day, week and month views to see each task's detail with plenty of room. If an inspector visits, you have the full history right here.</p>
 
-    <h4>1. Hands — hand-washing log</h4>
+    <h4>1. Protocol — opening and closing</h4>
+    <p>A checklist of fixed steps to go through every time you open or close the premises (turning cold-storage on/off, checking extractor hoods, taking out the rubbish, shutting off the gas...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Edit the opening and closing step lists once, to fit your business (you can change them any time).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Every day, press "Log today" under Opening and under Closing once you've gone through them. It's saved with a date and who did it.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">The compliance history lets you see at a glance which days were done and which weren't.</div></div>
+
+    <h4>2. Hands — hand-washing log</h4>
     <p>Every time an employee washes their hands at critical moments (starting a shift, after handling raw food, after using the toilet, after handling money or rubbish), log the time and the person.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Press "+ Log" in the Hands tab.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Select the employee and, if you like, the reason (task change, after the toilet...).</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">It's saved with an automatic date and time.</div></div>
 
-    <h4>2. Cleaning — schedule by zone and frequency</h4>
+    <h4>3. Cleaning — schedule by zone and frequency</h4>
     <p>Define your premises' zones (kitchen, walk-ins, toilets, dining room, storeroom...) and how often each one needs cleaning (daily, weekly, monthly).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Create each zone/task with its frequency.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">When cleaning is carried out, mark it as done: the date and who did it are logged.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">If a task has gone several days unmarked and it's due, it's visually highlighted so you don't forget.</div></div>
 
-    <h4>3. Temperatures — cold-storage equipment control</h4>
+    <h4>4. Temperatures — cold-storage equipment control</h4>
     <p>Periodically log the temperature of each fridge, freezer or display cabinet.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Register each cold-storage unit with a name (e.g. "Fish fridge", "Freezer 1").</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Every day (or several times a day), note the temperature read off the unit's thermometer.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>If a temperature is out of range (fridges are usually 0-4ºC, freezers -18ºC or below), log it anyway and record the corrective action (technician called, stock moved...). That trace is exactly what an inspection asks for.</div>
 
-    <h4>4. Allergens — allergen control</h4>
+    <h4>5. Allergens — allergen control</h4>
     <p>Log which allergens each dish or raw ingredient contains and keep that information up to date, especially if you change suppliers or recipes.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Periodically check that your dishes' allergen list is still correct (especially after recipe changes or a change of ingredient brand).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">If you work with Technical Sheets, you can rely on the ingredients listed there so you don't miss any.</div></div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Allergen information must be available to any customer who asks for it (on the menu, on a sign, or verbally). Keep it up to date, not just logged.</div>
 
-    <h4>5. Pests — pest control</h4>
+    <h4>6. Pests — pest control</h4>
     <p>Log your pest-control company's visits, the treatments carried out and any incident detected (presence of insects, rodents...).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Every time the pest technician comes, log the date, what was done and, if they give you a certificate, keep it as a reference.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">If you notice any sign yourself between visits, log it too: it helps justify extra visits if needed.</div></div>
 
-    <h4>6. Maintenance — equipment incidents and check-ups</h4>
+    <h4>7. Maintenance — equipment incidents and check-ups</h4>
     <p>Log breakdowns, repairs and periodic check-ups of your equipment (ovens, walk-ins, dishwashers, extractor hoods...).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">When you spot a breakdown, log it here: affected equipment, description of the problem and date.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Once it's repaired or checked, mark the incident as resolved and note what was done. That way you have the full history for each piece of equipment, useful for deciding whether it's worth repairing again or replacing.</div></div>
 
-    <div class="manual-tip"><i class="ti ti-bulb"></i>The winning routine is: spend 5 minutes on opening and 5 minutes on closing to go through these 6 tabs and log whatever's due. In a month you'll have a full history, with no extra effort added to your day.</div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>The winning routine is: spend 5 minutes on opening and 5 minutes on closing to go through these 7 tabs and log whatever's due. In a month you'll have a full history, with no extra effort added to your day.</div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Keeping these records up to date isn't optional: it's a legal requirement and the first thing checked during a health inspection. An empty or outdated record can lead to penalties even if your kitchen is spotless.</div>`},
   },
   {
@@ -47793,7 +47832,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">4</div><div class="st">Afegeix notes si cal (al·lèrgies, celebració, cadira per a nadó, taula al costat de la finestra...).</div></div>
     <div class="manual-step"><div class="sn">5</div><div class="st">Desa. La reserva apareixerà a la vista Dia corresponent.</div></div>
     <p>Les taules que pots assignar són les que tinguis configurades a <strong>El Meu Negoci → Operativa</strong> (amb el nom/número que els hagis posat). Una mateixa taula <strong>no es pot reservar dues vegades amb menys d'1 hora i mitja de diferència</strong>: per exemple, si està reservada a les 13:30, torna a aparèixer com a disponible a partir de les 15:00. El desplegable només mostra les taules lliures per a aquella hora.</p>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Quan un client amb reserva s'asseu i obres la seva taula al TPV, la seva reserva es marca automàticament com a "arribada" i desapareix de la llista de reserves del dia per no destorbar la vista.</div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Quan un client amb reserva s'asseu i obres la seva taula al TPV, la seva reserva es marca automàticament com a "arribada": continua visible a la llista de reserves del dia, amb l'avís "Ha arribat".</div>
 
     <h4>Aforament per torn</h4>
     <p>Si a El Meu Negoci vas configurar l'<strong>Aforament (places per torn)</strong>, la vista del dia mostra per a cada torn quantes persones hi ha reservades enfront del màxim:</p>
@@ -47842,7 +47881,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">4</div><div class="st">Add notes if needed (allergies, celebration, high chair, table by the window...).</div></div>
     <div class="manual-step"><div class="sn">5</div><div class="st">Save. The reservation will appear in the corresponding Day view.</div></div>
     <p>The tables you can assign are the ones set up in <strong>My Business → Operations</strong> (with whatever name/number you gave them). The same table <strong>can't be booked twice less than 1.5 hours apart</strong>: for example, if it's booked at 1:30pm, it becomes available again from 3:00pm. The dropdown only shows tables free at that time.</p>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>When a customer with a reservation sits down and you open their table in the POS, their reservation is automatically marked as "arrived" and disappears from the day's reservation list so it doesn't clutter the view.</div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>When a customer with a reservation sits down and you open their table in the POS, their reservation is automatically marked as "arrived": it stays visible in the day's reservation list, with the "Arrived" flag.</div>
 
     <h4>Capacity per time slot</h4>
     <p>If you set up <strong>Capacity (seats per slot)</strong> in My Business, the day view shows, for each slot, how many people are booked against the maximum:</p>

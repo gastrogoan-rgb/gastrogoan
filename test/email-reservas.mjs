@@ -210,6 +210,21 @@ caso('"Análisis de Platos" arranca en "Últimos 30 días", la misma ventana que
     'getPlatosRange no calcula "30dias" con la misma ventana de 29 días atrás + hoy que usa renderDashboard (js/finance.js)');
 });
 
+caso('Punto de Equilibrio: "Usar datos reales" siembra el ticket medio SIN IVA, no el bruto', () => {
+  // El food cost objetivo del Punto de Equilibrio se compara siempre contra
+  // ingresos SIN IVA (mismo criterio que renderVariables: tvNeto/facNeta).
+  // peUseRealData rellenaba el ticket medio con sale.total (CON IVA):
+  // el margen de contribución salía inflado y el punto de equilibrio
+  // necesario, infravalorado en más de un 10% con IVA del 21% — un negocio
+  // por debajo del equilibrio real podía ver el semáforo en verde.
+  const m = hr.match(/function peUseRealData\(\)\{[\s\S]*?\n  \}/);
+  assert.ok(m, 'no se encontró peUseRealData');
+  assert.ok(!/const total = sales\.reduce\(\(s,x\)=>s\+parseFloat\(x\.total\|\|0\)\)/.test(m[0]),
+    'sigue sumando x.total (bruto) directamente para el ticket medio');
+  assert.ok(m[0].includes('rate/100') && m[0].includes('avgTicket = totalNeto/sales.length'),
+    'peUseRealData no calcula el ticket medio quitando el IVA de cada línea');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

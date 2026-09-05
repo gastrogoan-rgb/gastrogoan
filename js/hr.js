@@ -952,8 +952,23 @@ const GE = (function(){
     const end = todayStr();
     const sales = activeSales().filter(s=>s.date>=start && s.date<=end);
     if(!sales.length){ showToast(t('hr.pe.noRecentSalesData')); return; }
-    const total = sales.reduce((s,x)=>s+parseFloat(x.total||0),0);
-    const avgTicket = total/sales.length;
+    // El ticket medio del Punto de Equilibrio se compara contra un food cost
+    // objetivo definido SIN IVA (mismo criterio que en el resto de la app:
+    // renderVariables usa tvNeto/facNeta). Si aquí se metiera el ticket CON
+    // IVA (sale.total), el margen de contribución salía inflado y el punto
+    // de equilibrio necesario, infravalorado — un negocio por debajo del
+    // equilibrio real podía ver el semáforo en verde.
+    const fallbackRate = ivaVentasPct();
+    const totalNeto = sales.reduce((s,x)=>{
+      const descPct = parseFloat(x.descuentoPct)||0;
+      const netoVenta = (x.items||[]).reduce((sl,line)=>{
+        const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
+        const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : fallbackRate;
+        return sl + grossLine/(1+rate/100);
+      }, 0);
+      return s + netoVenta;
+    }, 0);
+    const avgTicket = totalNeto/sales.length;
     document.getElementById('pe-ticket').value = avgTicket.toFixed(2);
     document.getElementById('pe-cubiertos').value = sales.length;
     calcPE();
