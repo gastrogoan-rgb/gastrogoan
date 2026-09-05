@@ -4002,6 +4002,17 @@ function initPublicRequestsListener(){
           target.status = (matchedTableId != null && !(target.depositRequired && !target.depositConfirmed)) ? 'confirmada' : 'pendiente';
           syncReservationStatusForPublic(target);
           logAudit('edit', t('audit.reservationModifiedByClient').replace('${name}', target.clientName||'?'));
+          // Antes esto no avisaba nunca: el cliente cambiaba la hora desde
+          // "Gestionar mi reserva" y se quedaba sin saber si le habían dado
+          // mesa a la nueva hora o no — mismo criterio que al crear una
+          // reserva nueva (más arriba en esta función): se manda el email de
+          // confirmación (con la fecha/hora ya actualizadas) solo si queda
+          // 'confirmada'; si queda 'pendiente' no se manda nada, igual que
+          // una reserva nueva sin mesa tampoco lo hace.
+          if(target.status === 'confirmada' && typeof sendReservationConfirmationEmail === 'function'){
+            const confirmedTable = DB.tables.find(t => t.id === target.tableId);
+            sendReservationConfirmationEmail({...target, tableName: confirmedTable ? confirmedTable.name : ''}).catch(()=>{});
+          }
         }
       }else if(req.type === 'nps_response'){
         // req llega de la web pública, sin autenticar de verdad más allá de
@@ -6254,7 +6265,7 @@ function readEmailConfirmFormConfig(){
 function saveEmailConfirmConfig(){
   DB.business.emailConfirm = readEmailConfirmFormConfig();
   saveDB();
-  showToast(t('msg.payConfigSaved'));
+  showToast(t('msg.emailConfirmConfigSaved'));
 }
 
 async function testEmailConfirmConfig(){
