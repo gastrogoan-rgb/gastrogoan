@@ -502,14 +502,32 @@ function renderDashboard(){
     document.getElementById('dashboard-trend-resultado').innerHTML = emptyMsg;
   }
 
+  // ⚠️ "Más vendidos" tiene que ordenar por UNIDADES, no por dinero
+  // facturado: antes sumaba price*qty y ordenaba por ese importe, así que
+  // un plato vendido UNA vez a 50€ salía por delante de uno vendido 100
+  // veces a 2€ — el segundo es, para cualquiera que lea "más vendido", el
+  // que de verdad lo es. Se guardan las dos cifras (unidades y dinero) para
+  // poder mostrar ambas sin tener que recalcular nada.
+  // ⚠️ Agrupar por el TEXTO del nombre (it.name) hacía que el mismo plato
+  // apareciera DOS VECES en el ranking — "Salmón" y "Salmon" — en cuanto
+  // alguna venta lo tenía escrito de forma distinta (con/sin acento, un
+  // renombrado del plato, una línea suelta sin receta vinculada...). El
+  // "Análisis de Platos" (Gestión Económica → Ventas, platosStats() en
+  // js/hr.js) ya agrupa por recipeId cuando existe, y solo cae al nombre si
+  // de verdad no hay receta detrás — con el mismo dato de partida, este
+  // panel podía dar un ranking distinto solo por este motivo. Mismo
+  // criterio aquí para que los dos coincidan.
+  const dishKey = it => it.recipeId ? ('r'+it.recipeId) : ('m'+(it.name||''));
   const productTotals = {};
   salesLast30.forEach(s=>{
     (s.items||[]).forEach(it=>{
-      const key = it.name || '—';
-      productTotals[key] = (productTotals[key]||0) + (it.price||0) * (it.qty||1);
+      const key = dishKey(it);
+      if(!productTotals[key]) productTotals[key] = {name: it.name || '—', units:0, revenue:0};
+      productTotals[key].units += (it.qty||1);
+      productTotals[key].revenue += (it.price||0) * (it.qty||1);
     });
   });
-  const topProducts = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topProducts = Object.values(productTotals).sort((a,b)=>b.units-a.units).slice(0,5);
 
   // Margen bruto real por plato (últimos 30 días) — coste estampado en el
   // momento de cada venta (costoUnitarioDeLinea), no el coste actual de la
@@ -518,18 +536,18 @@ function renderDashboard(){
   const marginTotals = {};
   salesLast30.forEach(s=>{
     (s.items||[]).forEach(it=>{
-      const key = it.name || '—';
+      const key = dishKey(it);
       const qty = it.qty || 1;
       const unitCost = it.recipeId ? costoUnitarioDeLinea(it) : 0;
       const margin = ((it.price||0) - unitCost) * qty;
-      if(!marginTotals[key]) marginTotals[key] = {margin:0, hasCost: !!it.recipeId};
+      if(!marginTotals[key]) marginTotals[key] = {name: it.name || '—', margin:0, hasCost: !!it.recipeId};
       marginTotals[key].margin += margin;
       if(it.recipeId) marginTotals[key].hasCost = true;
     });
   });
-  const topMargins = Object.entries(marginTotals)
-    .filter(([,v])=>v.hasCost)
-    .sort((a,b)=>b[1].margin-a[1].margin)
+  const topMargins = Object.values(marginTotals)
+    .filter(v=>v.hasCost)
+    .sort((a,b)=>b.margin-a.margin)
     .slice(0,5);
 
   const hourTotals = new Array(24).fill(0);
@@ -551,13 +569,13 @@ function renderDashboard(){
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topSellingDishes')}</h4>
         ${topProducts.length ? `<div class="table-wrap"><table><tbody>
-          ${topProducts.map(([name,total]) => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600">${fmtMoney(total)}</td></tr>`).join('')}
+          ${topProducts.map(v => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(v.name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(v.name)}</td><td style="text-align:right;font-weight:600;white-space:nowrap">${v.units} ${t('dash.unitsAbbr')}</td><td style="text-align:right;color:var(--muted);white-space:nowrap">${fmtMoney(v.revenue)}</td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty">${t('dash.noSalesRegistered')}</div>`}
       </div>
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topGrossMargin')}</h4>
         ${topMargins.length ? `<div class="table-wrap"><table><tbody>
-          ${topMargins.map(([name,v]) => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
+          ${topMargins.map(v => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(v.name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(v.name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty">${t('dash.noCostDataEnough')}</div>`}
       </div>
       <div>

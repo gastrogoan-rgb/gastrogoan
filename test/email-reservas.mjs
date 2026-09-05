@@ -29,6 +29,7 @@ const core = fs.readFileSync(path.join(raiz, 'js/core.js'), 'utf8');
 const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
 const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
+const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8');
 
 let fallos = 0;
 function caso(nombre, fn){
@@ -163,6 +164,36 @@ caso('El tutorial de Netlify solo se enseña fuera de *.gastrogoan.com (autoaloj
   const deployScript = fs.readFileSync(path.join(raiz, 'deploy/actualizar.sh'), 'utf8');
   assert.ok(deployScript.includes('tutorial-netlify.html'),
     'deploy/actualizar.sh no copia tutorial-netlify.html junto al resto de index.html');
+});
+
+caso('"Platos más vendidos" del Panel de Control ordena por UNIDADES, no por dinero facturado', () => {
+  // Reportado: "análisis de ventas" y "análisis de platos" (la misma
+  // pantalla, Panel de Control) parecían dar información distinta. Causa:
+  // la tabla "Platos más vendidos" sumaba price*qty (dinero) y ordenaba por
+  // ESO — un plato vendido UNA vez a 50€ salía por delante de uno vendido
+  // 100 veces a 2€, que es justo el que cualquiera llamaría "más vendido".
+  // Encima la tabla solo mostraba el importe, nunca las unidades, así que
+  // no había forma de comprobarlo a simple vista.
+  const m = finance.match(/const productTotals = \{\};[\s\S]*?const topProducts = Object\.values\(productTotals\)[^;]*;/);
+  assert.ok(m, 'no se encontró el cálculo de productTotals/topProducts en finance.js');
+  assert.ok(m[0].includes('.units += (it.qty||1)') && m[0].includes('b.units-a.units'),
+    'topProducts sigue sin sumar/ordenar por unidades (it.qty) — puede seguir ordenando por dinero facturado');
+});
+
+caso('"Platos más vendidos" del Panel de Control agrupa por receta, no por el texto del nombre (evita el "Salmón"/"Salmon" duplicado)', () => {
+  // El dueño vio el mismo plato salir DOS VECES en el ranking del Panel de
+  // Control ("Salmón" y "Salmon"). Causa: se agrupaba por it.name a secas;
+  // en cuanto una venta antigua o un renombrado del plato guardó el nombre
+  // de otra forma, se contaba como un plato distinto. "Análisis de Platos"
+  // (platosStats, js/hr.js) ya agrupaba por recipeId con el nombre como
+  // fallback — mismo criterio aquí para que los dos paneles coincidan sobre
+  // los mismos datos.
+  const m = finance.match(/const dishKey = it => [^;]*;[\s\S]*?const topMargins = Object\.values\(marginTotals\)[\s\S]*?;/);
+  assert.ok(m, 'no se encontró dishKey/productTotals/marginTotals en finance.js');
+  assert.ok(m[0].includes("it.recipeId ? ('r'+it.recipeId) : ('m'+(it.name||''))"),
+    'dishKey no agrupa por recipeId cuando existe — puede seguir separando el mismo plato por una diferencia de texto en el nombre');
+  assert.ok((m[0].match(/dishKey\(it\)/g)||[]).length >= 2,
+    'productTotals y/o marginTotals no usan dishKey — alguno de los dos sigue agrupando por el nombre a secas');
 });
 
 console.log('\n' + '═'.repeat(64));
