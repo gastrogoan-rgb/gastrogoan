@@ -40,6 +40,19 @@ const DATOS_SEMBRADOS = [
   'Campana','Desengrasante','Cámara 1','Horno','Técnicos S.L.','Alquiler','Cuota autónomos',
   'Seguros sociales','Compra semanal','Horno nuevo','Jefa de cocina','Camarero','Efectivo',
   'ALQUILER','SS AUTÓNOMOS','SS EMPRESA','MATERIA PRIMA','Prov','Solomillo','ENVIADO','600111222',
+  // Mismo caso que el catálogo de ingredientes: el checklist de lavado de
+  // manos (Limpieza→Manos) se siembra en el idioma del negocio la PRIMERA
+  // vez que se abre esa pantalla (limpiezaManosPasos, js/app.js) y se queda
+  // fijo desde entonces, aunque luego se cambie el idioma de la app — es
+  // dato editable, no interfaz. Esta prueba reutiliza el mismo negocio de
+  // ejemplo (mismo código de licencia) en las tres vueltas, así que ve
+  // siempre el texto de la primera siembra (castellano). Antes no se veía
+  // porque el paso vivía en un <input value="..."> (atributo, no nodo de
+  // texto); al pasar a <textarea> para que el texto largo no se cortara
+  // (5/09/2026) quedó visible para este escáner.
+  'Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)',
+  'Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua',
+  'Seca con papel de un solo uso','Cierra el grifo con el papel',
 ];
 
 // Palabras que se escriben igual en los tres idiomas. No son un fallo:

@@ -4004,14 +4004,15 @@ function initPublicRequestsListener(){
           logAudit('edit', t('audit.reservationModifiedByClient').replace('${name}', target.clientName||'?'));
           // Antes esto no avisaba nunca: el cliente cambiaba la hora desde
           // "Gestionar mi reserva" y se quedaba sin saber si le habían dado
-          // mesa a la nueva hora o no — mismo criterio que al crear una
-          // reserva nueva (más arriba en esta función): se manda el email de
-          // confirmación (con la fecha/hora ya actualizadas) solo si queda
-          // 'confirmada'; si queda 'pendiente' no se manda nada, igual que
-          // una reserva nueva sin mesa tampoco lo hace.
-          if(target.status === 'confirmada' && typeof sendReservationConfirmationEmail === 'function'){
+          // mesa a la nueva hora o no. Plantilla propia de "modificada" (no
+          // la de confirmación: recibir otra vez "tu reserva está
+          // confirmada" al cambiar solo la hora confunde) — mismo criterio
+          // que al crear una reserva nueva (más arriba en esta función):
+          // solo se manda si queda 'confirmada'; si queda 'pendiente' no se
+          // manda nada, igual que una reserva nueva sin mesa tampoco lo hace.
+          if(target.status === 'confirmada' && typeof sendReservationModificationEmail === 'function'){
             const confirmedTable = DB.tables.find(t => t.id === target.tableId);
-            sendReservationConfirmationEmail({...target, tableName: confirmedTable ? confirmedTable.name : ''}).catch(()=>{});
+            sendReservationModificationEmail({...target, tableName: confirmedTable ? confirmedTable.name : ''}).catch(()=>{});
           }
         }
       }else if(req.type === 'nps_response'){
@@ -6117,10 +6118,47 @@ function loadEmailjsSdk(){
   return emailjsSdkPromise;
 }
 
+// Mismo texto que se enseña en la guía (abajo), en texto plano y por idioma,
+// para poder copiarlo con un botón en vez de seleccionarlo a mano dentro del
+// recuadro — el editor de EmailJS (Code Editor) espera texto tal cual, sin
+// las etiquetas HTML del <div> que lo envuelve en la guía.
+const EMAILJS_TEMPLATE_BODIES = {
+  confirm: {
+    es: `Hola {{client_name}},\n\nTu reserva en {{business_name}} está confirmada:\nFecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}\n\nSi quieres cambiar la hora o cancelar, hazlo aquí: {{manage_link}}`,
+    ca: `Hola {{client_name}},\n\nLa teva reserva a {{business_name}} està confirmada:\nData: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}\n\nSi vols canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}`,
+    en: `Hi {{client_name}},\n\nYour reservation at {{business_name}} is confirmed:\nDate: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}\n\nTo change the time or cancel, do it here: {{manage_link}}`,
+  },
+  modify: {
+    es: `Hola {{client_name}},\n\nTu reserva en {{business_name}} ha sido modificada. Estos son los datos actualizados:\nFecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}\n\nSi quieres volver a cambiar la hora o cancelar, hazlo aquí: {{manage_link}}`,
+    ca: `Hola {{client_name}},\n\nLa teva reserva a {{business_name}} ha estat modificada. Aquestes són les dades actualitzades:\nData: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}\n\nSi vols tornar a canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}`,
+    en: `Hi {{client_name}},\n\nYour reservation at {{business_name}} has been changed. Here are the updated details:\nDate: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}\n\nTo change the time again or cancel, do it here: {{manage_link}}`,
+  },
+  cancel: {
+    es: `Hola {{client_name}},\n\nTu reserva en {{business_name}} ha sido cancelada.`,
+    ca: `Hola {{client_name}},\n\nLa teva reserva a {{business_name}} ha estat cancel·lada.`,
+    en: `Hi {{client_name}},\n\nYour reservation at {{business_name}} has been cancelled.`,
+  },
+};
+function copyEmailJsTemplate(kind){
+  const dict = EMAILJS_TEMPLATE_BODIES[kind];
+  const text = (dict && (dict[getLang()] || dict.es)) || '';
+  navigator.clipboard.writeText(text).then(() => showToast(t('msg.textCopied'))).catch(() => {
+    alertModal(t('msg.copyFailed'));
+  });
+}
+
 /* Guía paso a paso para configurar EmailJS, pensada para alguien sin
    ningún conocimiento técnico: se abre en un modal desde la tarjeta de
    "Confirmación, cancelación y cambios de reserva por email" en Mi Negocio.
-   Mismo patrón visual que FIREBASE_GATE_STEPS (círculo numerado + texto). */
+   Mismo patrón visual que FIREBASE_GATE_STEPS (círculo numerado + texto).
+   Verificada línea a línea contra el flujo real de emailjs.com (5/09/2026):
+   el botón para añadir un servicio es "Add New Service" (no "Add New Email
+   Service"), hace falta entrar en "Code Editor" para pegar texto con
+   {{llaves}} en una plantilla, el Template ID vive en la pestaña "Settings"
+   de la propia plantilla, y la Public Key está bajo Account → "API Keys"
+   (no directamente en "Account") — todo esto había cambiado desde que se
+   escribió la guía la primera vez y hacía que el paso a paso no coincidiera
+   con lo que el hostelero veía en pantalla. */
 const EMAILJS_GUIDE_STEPS = [
   {title:{es:'Crea tu cuenta gratis en EmailJS', ca:'Crea el teu compte gratuït a EmailJS', en:'Create your free EmailJS account'},
    body:{
@@ -6132,68 +6170,121 @@ const EMAILJS_GUIDE_STEPS = [
         <span style="color:var(--muted)">It's free up to 200 emails a month, plenty for a normal restaurant.</span>`}},
   {title:{es:'Conecta tu email', ca:'Connecta el teu email', en:'Connect your email'},
    body:{
-     es:`En el menú de la izquierda, entra en <strong>"Email Services"</strong> y pulsa <strong>"Add New Email Service"</strong>. Elige tu proveedor (Gmail, Outlook…) y sigue los pasos para darle permiso.<br><br>
-        Al terminar verás un código como <code>service_xxxxxxx</code>. <strong>Cópialo</strong>: es tu <strong>Service ID</strong>.`,
-     ca:`Al menú de l'esquerra, entra a <strong>"Email Services"</strong> i prem <strong>"Add New Email Service"</strong>. Tria el teu proveïdor (Gmail, Outlook…) i segueix els passos per donar-li permís.<br><br>
-        En acabar veuràs un codi com <code>service_xxxxxxx</code>. <strong>Copia'l</strong>: és el teu <strong>Service ID</strong>.`,
-     en:`In the left menu, open <strong>"Email Services"</strong> and click <strong>"Add New Email Service"</strong>. Choose your provider (Gmail, Outlook…) and follow the steps to grant access.<br><br>
-        When it's done you'll see a code like <code>service_xxxxxxx</code>. <strong>Copy it</strong>: it's your <strong>Service ID</strong>.`}},
+     es:`En el menú de la izquierda, entra en <strong>"Email Services"</strong> y pulsa <strong>"Add New Service"</strong>.<br><br>
+        Elige tu proveedor (por ejemplo <strong>Gmail</strong>), pulsa <strong>"Connect Account"</strong> e inicia sesión con la cuenta desde la que quieres que salgan los emails. Para terminar, pulsa <strong>"Add Service"</strong>.<br><br>
+        Verás un código como <code>service_xxxxxxx</code> en la lista: <strong>cópialo</strong>, es tu <strong>Service ID</strong>.`,
+     ca:`Al menú de l'esquerra, entra a <strong>"Email Services"</strong> i prem <strong>"Add New Service"</strong>.<br><br>
+        Tria el teu proveïdor (per exemple <strong>Gmail</strong>), prem <strong>"Connect Account"</strong> i inicia sessió amb el compte des del qual vols que surtin els emails. Per acabar, prem <strong>"Add Service"</strong>.<br><br>
+        Veuràs un codi com <code>service_xxxxxxx</code> a la llista: <strong>copia'l</strong>, és el teu <strong>Service ID</strong>.`,
+     en:`In the left menu, open <strong>"Email Services"</strong> and click <strong>"Add New Service"</strong>.<br><br>
+        Choose your provider (e.g. <strong>Gmail</strong>), click <strong>"Connect Account"</strong> and sign in with the account you want the emails to come from. To finish, click <strong>"Add Service"</strong>.<br><br>
+        You'll see a code like <code>service_xxxxxxx</code> in the list: <strong>copy it</strong>, it's your <strong>Service ID</strong>.`}},
   {title:{es:'Crea la plantilla de "Reserva confirmada"', ca:'Crea la plantilla de "Reserva confirmada"', en:'Create the "Reservation confirmed" template'},
    body:{
-     es:`Ve a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. En "To Email" escribe <code>{{to_email}}</code>. En el asunto y el cuerpo, pega esto (no borres las palabras entre llaves, la app las rellena sola):<br><br>
+     es:`Ve a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. En el campo <strong>"To Email"</strong> escribe <code>{{to_email}}</code>.<br><br>
+        El asunto y el cuerpo se abren en un editor visual: pulsa <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong> para poder escribir el texto tal cual, con las llaves incluidas (en el editor visual normal no se pueden pegar bien).<br><br>
+        Pega esto en el cuerpo (no borres las palabras entre llaves, la app las rellena sola):<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
 
 Tu reserva en {{business_name}} está confirmada:
 Fecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}
 
 Si quieres cambiar la hora o cancelar, hazlo aquí: {{manage_link}}</div>
-        Guarda y copia el código <code>template_xxxxxxx</code> que aparece: es tu <strong>Template ID de confirmación</strong>.`,
-     ca:`Vés a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. A "To Email" escriu <code>{{to_email}}</code>. A l'assumpte i al cos, enganxa això (no esborris les paraules entre claus, l'app les omple sola):<br><br>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('confirm')" type="button"><i class="ti ti-copy"></i> Copiar texto</button><br><br>
+        Guarda y abre la pestaña <strong>"Settings"</strong> de esta misma plantilla: ahí está el código <code>template_xxxxxxx</code>, es tu <strong>Template ID de confirmación</strong>.`,
+     ca:`Vés a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. Al camp <strong>"To Email"</strong> escriu <code>{{to_email}}</code>.<br><br>
+        L'assumpte i el cos s'obren en un editor visual: prem <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong> per poder escriure el text tal qual, amb les claus incloses (a l'editor visual normal no es poden enganxar bé).<br><br>
+        Enganxa això al cos (no esborris les paraules entre claus, l'app les omple sola):<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
 
 La teva reserva a {{business_name}} està confirmada:
 Data: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}
 
 Si vols canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}</div>
-        Desa i copia el codi <code>template_xxxxxxx</code> que apareix: és el teu <strong>Template ID de confirmació</strong>.`,
-     en:`Go to <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. In "To Email" type <code>{{to_email}}</code>. In the subject and body, paste this (don't remove the words in curly braces, the app fills them in automatically):<br><br>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('confirm')" type="button"><i class="ti ti-copy"></i> Copiar text</button><br><br>
+        Desa i obre la pestanya <strong>"Settings"</strong> d'aquesta mateixa plantilla: allà hi ha el codi <code>template_xxxxxxx</code>, és el teu <strong>Template ID de confirmació</strong>.`,
+     en:`Go to <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. In the <strong>"To Email"</strong> field type <code>{{to_email}}</code>.<br><br>
+        The subject and body open in a visual editor: click <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong> so you can type the text as-is, curly braces included (the normal visual editor won't let you paste them properly).<br><br>
+        Paste this into the body (don't remove the words in curly braces, the app fills them in automatically):<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
 
 Your reservation at {{business_name}} is confirmed:
 Date: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}
 
 To change the time or cancel, do it here: {{manage_link}}</div>
-        Save it and copy the <code>template_xxxxxxx</code> code shown: it's your <strong>confirmation Template ID</strong>.`}},
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('confirm')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
+        Save it and open that template's <strong>"Settings"</strong> tab: that's where the <code>template_xxxxxxx</code> code is, it's your <strong>confirmation Template ID</strong>.`}},
+  {title:{es:'Crea la plantilla de "Reserva modificada"', ca:'Crea la plantilla de "Reserva modificada"', en:'Create the "Reservation changed" template'},
+   body:{
+     es:`Hace falta una TERCERA plantilla, distinta de la de confirmación: si el cliente cambia la hora de una reserva ya confirmada y le llega otra vez "tu reserva está confirmada", se confunde — necesita un aviso que diga que ha CAMBIADO.<br><br>
+        Repite lo mismo: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, y en el cuerpo:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+Tu reserva en {{business_name}} ha sido modificada. Estos son los datos actualizados:
+Fecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}
+
+Si quieres volver a cambiar la hora o cancelar, hazlo aquí: {{manage_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('modify')" type="button"><i class="ti ti-copy"></i> Copiar texto</button><br><br>
+        Guarda y copia su código <code>template_xxxxxxx</code> en "Settings": es tu <strong>Template ID de modificación</strong> (distinto de los otros dos).`,
+     ca:`Cal una TERCERA plantilla, diferent de la de confirmació: si el client canvia l'hora d'una reserva ja confirmada i li arriba un altre cop "la teva reserva està confirmada", es confon — necessita un avís que digui que ha CANVIAT.<br><br>
+        Repeteix el mateix: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, i al cos:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+La teva reserva a {{business_name}} ha estat modificada. Aquestes són les dades actualitzades:
+Data: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}
+
+Si vols tornar a canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('modify')" type="button"><i class="ti ti-copy"></i> Copiar text</button><br><br>
+        Desa i copia el seu codi <code>template_xxxxxxx</code> a "Settings": és el teu <strong>Template ID de modificació</strong> (diferent dels altres dos).`,
+     en:`You need a THIRD template, different from the confirmation one: if the customer changes the time of an already-confirmed reservation and gets "your reservation is confirmed" again, it's confusing — they need something that says it CHANGED.<br><br>
+        Repeat the same thing: <strong>"Create New Template"</strong>, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, and in the body:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
+
+Your reservation at {{business_name}} has been changed. Here are the updated details:
+Date: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}
+
+To change the time again or cancel, do it here: {{manage_link}}</div>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('modify')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
+        Save it and copy its <code>template_xxxxxxx</code> code under "Settings": it's your <strong>modification Template ID</strong> (different from the other two).`}},
   {title:{es:'Crea la plantilla de "Reserva cancelada"', ca:'Crea la plantilla de "Reserva cancel·lada"', en:'Create the "Reservation cancelled" template'},
    body:{
-     es:`Repite lo mismo: <strong>"Create New Template"</strong> otra vez, "To Email" = <code>{{to_email}}</code>, y en el cuerpo algo como:<br><br>
+     es:`Repite lo mismo: <strong>"Create New Template"</strong> otra vez, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, y en el cuerpo algo como:<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
 
 Tu reserva en {{business_name}} ha sido cancelada.</div>
-        Guarda y copia su código <code>template_xxxxxxx</code>: es tu <strong>Template ID de cancelación</strong> (distinto del de confirmación).`,
-     ca:`Repeteix el mateix: <strong>"Create New Template"</strong> una altra vegada, "To Email" = <code>{{to_email}}</code>, i al cos alguna cosa com:<br><br>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('cancel')" type="button"><i class="ti ti-copy"></i> Copiar texto</button><br><br>
+        Guarda y mira su código <code>template_xxxxxxx</code> en "Settings": es tu <strong>Template ID de cancelación</strong> (distinto del de confirmación).`,
+     ca:`Repeteix el mateix: <strong>"Create New Template"</strong> una altra vegada, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, i al cos alguna cosa com:<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
 
 La teva reserva a {{business_name}} ha estat cancel·lada.</div>
-        Desa i copia el seu codi <code>template_xxxxxxx</code>: és el teu <strong>Template ID de cancel·lació</strong> (diferent del de confirmació).`,
-     en:`Repeat the same thing: <strong>"Create New Template"</strong> again, "To Email" = <code>{{to_email}}</code>, and in the body something like:<br><br>
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('cancel')" type="button"><i class="ti ti-copy"></i> Copiar text</button><br><br>
+        Desa i mira el seu codi <code>template_xxxxxxx</code> a "Settings": és el teu <strong>Template ID de cancel·lació</strong> (diferent del de confirmació).`,
+     en:`Repeat the same thing: <strong>"Create New Template"</strong> again, <strong>"To Email"</strong> = <code>{{to_email}}</code>, <strong>"Edit Content"</strong> → <strong>"Code Editor"</strong>, and in the body something like:<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
 
 Your reservation at {{business_name}} has been cancelled.</div>
-        Save it and copy its <code>template_xxxxxxx</code> code: it's your <strong>cancellation Template ID</strong> (different from the confirmation one).`}},
+        <button class="btn btn-sm" onclick="copyEmailJsTemplate('cancel')" type="button"><i class="ti ti-copy"></i> Copy text</button><br><br>
+        Save it and check its <code>template_xxxxxxx</code> code under "Settings": it's your <strong>cancellation Template ID</strong> (different from the confirmation one).`}},
   {title:{es:'Copia tu "Public Key"', ca:'Copia la teva "Public Key"', en:'Copy your "Public Key"'},
    body:{
-     es:`Pulsa tu icono (arriba a la derecha) → <strong>"Account"</strong>. Ahí verás un código como <code>AbCdEfGhIjK123</code>. Cópialo: es tu <strong>Public Key</strong>.`,
-     ca:`Prem la teva icona (a dalt a la dreta) → <strong>"Account"</strong>. Allà veuràs un codi com <code>AbCdEfGhIjK123</code>. Copia'l: és la teva <strong>Public Key</strong>.`,
-     en:`Click your icon (top right) → <strong>"Account"</strong>. You'll see a code like <code>AbCdEfGhIjK123</code>. Copy it: it's your <strong>Public Key</strong>.`}},
+     es:`Pulsa tu icono o tu nombre (arriba a la derecha) → <strong>"Account"</strong>. Abre el apartado <strong>"API Keys"</strong> (a veces aparece dentro de "General" en vez de en su propia pestaña).<br><br>
+        Ahí verás un código como <code>AbCdEfGhIjK123</code> junto a "Public Key". <strong>Cópialo</strong>: es tu <strong>Public Key</strong>.<br><br>
+        <span style="color:var(--muted)">Ojo: NO es el "Private Key" que aparece justo al lado — ese no hace falta aquí.</span>`,
+     ca:`Prem la teva icona o el teu nom (a dalt a la dreta) → <strong>"Account"</strong>. Obre l'apartat <strong>"API Keys"</strong> (de vegades apareix dins de "General" en comptes de a la seva pròpia pestanya).<br><br>
+        Allà veuràs un codi com <code>AbCdEfGhIjK123</code> al costat de "Public Key". <strong>Copia'l</strong>: és la teva <strong>Public Key</strong>.<br><br>
+        <span style="color:var(--muted)">Compte: NO és el "Private Key" que apareix just al costat — aquest no cal aquí.</span>`,
+     en:`Click your icon or your name (top right) → <strong>"Account"</strong>. Open the <strong>"API Keys"</strong> section (it sometimes appears inside "General" instead of its own tab).<br><br>
+        You'll see a code like <code>AbCdEfGhIjK123</code> next to "Public Key". <strong>Copy it</strong>: it's your <strong>Public Key</strong>.<br><br>
+        <span style="color:var(--muted)">Careful: it's NOT the "Private Key" shown right next to it — you don't need that one here.</span>`}},
   {title:{es:'Pégalo todo aquí y prueba', ca:'Enganxa-ho tot aquí i prova-ho', en:'Paste it all here and test it'},
    body:{
-     es:`Cierra esta guía, marca <strong>"Activar"</strong> más abajo y pega los 4 códigos, cada uno en su campo. Guarda y pulsa <strong>"Enviar prueba"</strong> (hay uno para confirmación y otro para cancelación) con tu propio email, para comprobar que llega bien.<br><br>
-        <span style="color:var(--muted)">Si te llega el email de prueba con los datos rellenados, ya está todo funcionando: cada cliente que reserve recibirá el suyo automáticamente.</span>`,
-     ca:`Tanca aquesta guia, marca <strong>"Activar"</strong> més avall i enganxa els 4 codis, cadascun al seu camp. Desa i prem <strong>"Enviar prova"</strong> (n'hi ha un per a confirmació i un altre per a cancel·lació) amb el teu propi email, per comprovar que arriba bé.<br><br>
-        <span style="color:var(--muted)">Si et arriba l'email de prova amb les dades emplenades, ja tot funciona: cada client que reservi rebrà el seu automàticament.</span>`,
-     en:`Close this guide, check <strong>"Enable"</strong> below and paste the 4 codes, each in its field. Save and click <strong>"Send test"</strong> (there's one for confirmation and one for cancellation) with your own email, to check it arrives fine.<br><br>
-        <span style="color:var(--muted)">If the test email arrives with the details filled in, everything is working: every customer who books will get theirs automatically.</span>`}},
+     es:`Cierra esta guía, marca <strong>"Activar"</strong> más abajo y pega los 5 códigos, cada uno en su campo. Guarda y pulsa los tres botones de prueba (<strong>confirmación, modificación y cancelación</strong>) con tu propio email, para comprobar que los tres llegan bien.<br><br>
+        <span style="color:var(--muted)">Si te llegan los tres emails de prueba con los datos rellenados, ya está todo funcionando: cada cliente que reserve, modifique o cancele recibirá el suyo automáticamente.</span>`,
+     ca:`Tanca aquesta guia, marca <strong>"Activar"</strong> més avall i enganxa els 5 codis, cadascun al seu camp. Desa i prem els tres botons de prova (<strong>confirmació, modificació i cancel·lació</strong>) amb el teu propi email, per comprovar que els tres arriben bé.<br><br>
+        <span style="color:var(--muted)">Si et arriben els tres emails de prova amb les dades emplenades, ja tot funciona: cada client que reservi, modifiqui o cancel·li rebrà el seu automàticament.</span>`,
+     en:`Close this guide, check <strong>"Enable"</strong> below and paste the 5 codes, each in its field. Save and click all three test buttons (<strong>confirmation, modification and cancellation</strong>) with your own email, to check all three arrive fine.<br><br>
+        <span style="color:var(--muted)">If all three test emails arrive with the details filled in, everything is working: every customer who books, changes or cancels will get theirs automatically.</span>`}},
 ];
 function showEmailJsGuideModal(){
   const step = (n, title, body) => `
@@ -6235,6 +6326,11 @@ function renderEmailConfirmCard(){
         <small style="color:var(--muted)">${t('mn.emailConfirm.templateHint')}</small>
       </div>
       <div class="field">
+        <label>Template ID (${t('mn.emailConfirm.modifyLabel')})</label>
+        <input type="text" id="ec-modify-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.modifyTemplateId||'')}" style="font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.emailConfirm.modifyTemplateHint')}</small>
+      </div>
+      <div class="field">
         <label>Template ID (${t('mn.emailConfirm.cancelLabel')})</label>
         <input type="text" id="ec-cancel-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.cancelTemplateId||'')}" style="font-family:monospace">
         <small style="color:var(--muted)">${t('mn.emailConfirm.cancelTemplateHint')}</small>
@@ -6246,6 +6342,7 @@ function renderEmailConfirmCard(){
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="saveEmailConfirmConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="testEmailConfirmConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendTest')}</button>
+        <button class="btn btn-sm" onclick="testEmailModifyConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendModifyTest')}</button>
         <button class="btn btn-sm" onclick="testEmailCancelConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendCancelTest')}</button>
       </div>
       <div id="ec-test-status" style="font-size:12.5px;color:var(--muted);margin-top:8px"></div>
@@ -6258,6 +6355,7 @@ function readEmailConfirmFormConfig(){
     enabled: document.getElementById('ec-enabled').checked,
     serviceId: document.getElementById('ec-service').value.trim(),
     templateId: document.getElementById('ec-template').value.trim(),
+    modifyTemplateId: document.getElementById('ec-modify-template').value.trim(),
     cancelTemplateId: document.getElementById('ec-cancel-template').value.trim(),
     publicKey: document.getElementById('ec-pubkey').value.trim()
   };
@@ -6282,6 +6380,24 @@ async function testEmailConfirmConfig(){
       // Token de mentira solo para que la prueba muestre cómo queda el
       // enlace {{manage_link}} en la plantilla real — no apunta a ninguna
       // reserva de verdad.
+      publicToken: 'prueba'
+    }, cfg);
+    statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
+  }catch(e){
+    statusEl.innerHTML = `<span style="color:var(--red)"><i class="ti ti-x"></i> ${t('mn.emailConfirm.testFailed')}: ${escapeHtml(e.message||'')}</span>`;
+  }
+}
+async function testEmailModifyConfig(){
+  const statusEl = document.getElementById('ec-test-status');
+  const cfg = readEmailConfirmFormConfig();
+  if(!cfg.serviceId || !cfg.modifyTemplateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFieldsModify')); return; }
+  const testTo = await promptText(t('mn.emailConfirm.testPrompt'), '');
+  if(!testTo) return;
+  statusEl.textContent = t('mn.emailConfirm.sending');
+  try{
+    await sendReservationModificationEmail({
+      clientName: t('mn.emailConfirm.testClientName'), clientEmail: testTo,
+      date: todayStr(), time: '21:30', people: 2, tableName: t('mn.emailConfirm.testTableName'),
       publicToken: 'prueba'
     }, cfg);
     statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
@@ -6334,6 +6450,32 @@ function sendReservationConfirmationEmail(reservation, overrideCfg){
       manage_link: getReservationManageLink(reservation)
     };
     return emailjs.send(cfg.serviceId, cfg.templateId, params, {publicKey: cfg.publicKey});
+  });
+}
+
+// Mismo mecanismo, pero para avisar de que una reserva YA CONFIRMADA se ha
+// MODIFICADO (el propio cliente le cambió fecha/hora/comensales desde
+// "Gestionar mi reserva"). Plantilla propia (modifyTemplateId) en vez de
+// reutilizar la de confirmación: recibir un "tu reserva está confirmada" al
+// cambiar solo la hora confunde — el cliente ya sabía que estaba confirmada,
+// lo que necesita saber es que el cambio se aplicó.
+function sendReservationModificationEmail(reservation, overrideCfg){
+  const cfg = overrideCfg || (DB.business && DB.business.emailConfirm);
+  if(!cfg || (!overrideCfg && !cfg.enabled)) return Promise.resolve();
+  if(!cfg.serviceId || !cfg.modifyTemplateId || !cfg.publicKey) return Promise.resolve();
+  if(!reservation || !reservation.clientEmail) return Promise.resolve();
+  return loadEmailjsSdk().then(emailjs => {
+    const params = {
+      to_email: reservation.clientEmail,
+      client_name: reservation.clientName || '',
+      business_name: (DB.business && DB.business.name) || '',
+      date: reservation.date || '',
+      time: reservation.time || '',
+      people: reservation.people || '',
+      table_name: reservation.tableName || '',
+      manage_link: getReservationManageLink(reservation)
+    };
+    return emailjs.send(cfg.serviceId, cfg.modifyTemplateId, params, {publicKey: cfg.publicKey});
   });
 }
 
@@ -6637,7 +6779,7 @@ function defaultData(){
       // el propio navegador del negocio, sin backend propio). Cada negocio
       // crea su propia cuenta gratuita y pega aquí sus 3 datos — igual que
       // con ownFirebase, no es una cuenta compartida de GastroGoan.
-      emailConfirm: {enabled: false, serviceId: '', templateId: '', cancelTemplateId: '', publicKey: ''},
+      emailConfirm: {enabled: false, serviceId: '', templateId: '', modifyTemplateId: '', cancelTemplateId: '', publicKey: ''},
       ticket: {
         pie: '',
         mostrarDireccion: true,
