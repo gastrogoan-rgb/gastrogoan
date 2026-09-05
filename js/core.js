@@ -3018,6 +3018,51 @@ function mergeStockField(localStock, remoteStock, lastSyncedStockJson){
   return merged;
 }
 
+// mergeArraysById fusiona `cartas` por el id del documento ENTERO: si dos
+// dispositivos venden del mismo plato con raciones limitadas casi a la vez
+// (el sábado con 5 camareros), el que sincroniza segundo pisa la carta
+// completa del primero, incluido `secciones[].platos[].stock` — el
+// descuento de stock de uno de los dos desaparece sin aviso y la app sigue
+// ofreciendo raciones que ya no quedan (sobreventa silenciosa). No es el
+// mismo problema que DB.stock (mapa plano de ingredientes): aquí el campo
+// que hay que fusionar campo a campo está varios niveles dentro de un array
+// con id, así que hace falta su propio recorrido en vez de mergeStockField.
+function mergeCartaStock(localCartas, mergedCartas, lastSyncedCartasJson){
+  if(!Array.isArray(localCartas) || !Array.isArray(mergedCartas)) return mergedCartas;
+  let baseline = [];
+  if(lastSyncedCartasJson){ try{ baseline = JSON.parse(lastSyncedCartasJson) || []; }catch(e){ baseline = []; } }
+  const baselinePlatos = new Map();
+  baseline.forEach(c => (c && c.secciones || []).forEach(sec => (sec && sec.platos || []).forEach(p => {
+    if(p && p.id != null) baselinePlatos.set(p.id, p);
+  })));
+  const localPlatos = new Map();
+  localCartas.forEach(c => (c && c.secciones || []).forEach(sec => (sec && sec.platos || []).forEach(p => {
+    if(p && p.id != null) localPlatos.set(p.id, p);
+  })));
+  mergedCartas.forEach(c => (c && c.secciones || []).forEach(sec => (sec && sec.platos || []).forEach(p => {
+    if(!p || p.id == null || p.stock == null) return;
+    const local = localPlatos.get(p.id);
+    if(!local || local.stock == null) return;
+    const base = baselinePlatos.get(p.id);
+    const baseStock = base && base.stock != null ? base.stock : local.stock;
+    // Suma de las DOS rebajas desde el último punto en común, no "gana el
+    // último que llegue": si el hueco sin sincronizar es "de 5 a 3" en un
+    // dispositivo (vendió 2) y "de 5 a 2" en el otro (vendió 3), lo correcto
+    // son 0 raciones restantes (5-2-3), no 2 ni 3.
+    const deltaLocal = baseStock - local.stock;
+    const deltaRemote = baseStock - p.stock;
+    p.stock = Math.max(0, baseStock - deltaLocal - deltaRemote);
+    if(p.stock === 0) p.disponible = false;
+    else if(local.disponible === false || p.disponible === false){
+      // Si cualquiera de los dos lo había marcado no disponible por otro
+      // motivo (no queda género aunque el contador no llegara a 0), se
+      // respeta — nunca se reactiva solo porque el otro lado no lo sabía.
+      p.disponible = false;
+    }
+  })));
+  return mergedCartas;
+}
+
 // Mismo problema que mergeStockField pero para objetos que llevan arrays
 // CON id dentro (DB.ge.variables/capex/fijos/fijosLog/cierres, DB.limpieza.
 // tareas/temperaturas/alergenos/plagas/mantenimiento): al no ser arrays de
@@ -4996,6 +5041,9 @@ function applyRemoteBlock(key, remoteValue){
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
+    if(key === 'cartas'){
+      merged = mergeCartaStock(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+    }
   }
   /* Y lo que se borró, fuera otra vez. La fusión se queda con TODO lo de los
      dos lados, así que vuelve a meter lo que el otro aparato aún tenía. */
@@ -5255,6 +5303,9 @@ function mergeRemoteIntoLocal(val){
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
       value = mergeArraysById(DB[key], value);
+      if(key === 'cartas'){
+        value = mergeCartaStock(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+      }
     }
     if(key === 'borrados') value = mergeLapidas(DB.borrados, value);
     // Lo mismo que en applyRemoteBlock: lo borrado no vuelve por la puerta de

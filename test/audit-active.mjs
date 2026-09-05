@@ -549,6 +549,33 @@ await testAsync('Los avisos push de un dispositivo no borran los de los demás',
   console.log('   → cada aparato conserva la suya, y gana la más reciente de cada uno');
 });
 
+await testAsync('Dos camareros vendiendo el mismo plato con raciones limitadas no se pisan el stock', async () => {
+  // Sábado con 5 camareros: dos dispositivos venden del mismo plato con
+  // stock limitado casi a la vez. mergeArraysById fusiona `cartas` por el id
+  // del DOCUMENTO entero, así que sin mergeCartaStock el que sincroniza
+  // segundo pisaba la carta completa del primero — el descuento de stock de
+  // uno de los dos desaparecía en silencio (sobreventa).
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  const cartaBase = [{id:1, secciones:[{platos:[{id:100, name:'Solomillo', stock:5, disponible:true}]}]}];
+  // Los dos dispositivos partían de la misma carta ya sincronizada.
+  sandbox.__setLastSyncedSnapshot({cartas: sandbox.canonicalStringify(cartaBase)});
+  // Este dispositivo (A) ya vendió 2 raciones: stock local = 3.
+  sandbox.__setDB({cartas: [{id:1, secciones:[{platos:[{id:100, name:'Solomillo', stock:3, disponible:true}]}]}]});
+  // Y llega de la nube lo que subió el otro dispositivo (B), que vendió 3 sin haber visto aún la venta de A: stock = 2.
+  sandbox.applyRemoteBlock('cartas', [{id:1, secciones:[{platos:[{id:100, name:'Solomillo', stock:2, disponible:true}]}]}]);
+  const plato = sandbox.__getDB().cartas[0].secciones[0].platos[0];
+  // Partiendo de 5: A vendió 2 (queda en 3), B vendió 3 (queda en 2). La
+  // fusión correcta suma las DOS rebajas desde el punto en común: 5-2-3=0.
+  assert.equal(plato.stock, 0, 'el stock fusionado debe sumar las rebajas de los dos dispositivos (5-2-3=0), no quedarse con la del que sincronizó último');
+  assert.equal(plato.disponible, false, 'con stock a 0 el plato debe quedar marcado como no disponible');
+  console.log('   → el descuento de stock de los dos dispositivos se conserva, ninguno de los dos se pierde');
+});
+
 await testAsync('FIX H4: el indicador de nube ya NO se queda clavado en "Guardando…"', async () => {
   /* Lo vio el dueño en dos capturas: la cabecera con "Guardando…" fijo.
      scheduleCloudSync pone ese estado en CADA saveDB, aunque el guardado no
