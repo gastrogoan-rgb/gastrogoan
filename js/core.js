@@ -4401,7 +4401,7 @@ const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   'tipo', 'anyo', 'web', 'ig', 'fb', 'gmaps', 'tiktok',
   'horario', 'aforo', 'mesasInterior', 'mesasTerraza',
   'cartaAuto', 'tiposServicio',
-  'requireDeposit', 'depositAmount', 'depositType', 'depositInstructions',
+  'requireDeposit', 'depositAmount', 'depositType', 'depositMinPeople', 'depositInstructions',
   'leadTimeMin', 'leadTimeMinReservas', 'leadTimeMinPedidos',
   'pedidosOnlineActivos',
 ];
@@ -6867,7 +6867,7 @@ function defaultData(){
       cartaAuto: true,
       tiposServicio: {mesa:true, takeaway:true, delivery:true},
       ownFirebase: null, // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
-      requireDeposit: false, depositAmount: '', depositType: 'fixed', depositInstructions: '',
+      requireDeposit: false, depositAmount: '', depositType: 'fixed', depositMinPeople: 0, depositInstructions: '',
       lastBackupAt: null, // fecha de la última copia de seguridad descargada, para el aviso de "hace tiempo que no descargas una copia"
       // Configuración de envío a un proveedor certificado VeriFactu (cada
       // negocio contrata y paga su propia cuenta con ese proveedor; GastroGoan

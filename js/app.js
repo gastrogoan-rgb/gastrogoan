@@ -5220,6 +5220,11 @@ function renderMiNegocio(){
         </div>
       </div>
       <div class="field">
+        <label>${t('mn.ops.depositMinPeople')}</label>
+        <input type="number" id="mn-deposit-minpeople" min="0" step="1" value="${escapeHtml(b.depositMinPeople||0)}" placeholder="0" onchange="saveBusiness(true)">
+        <small style="color:var(--muted)">${t('mn.ops.depositMinPeopleDesc')}</small>
+      </div>
+      <div class="field">
         <label>${t('mn.ops.depositInstructions')}</label>
         <textarea id="mn-deposit-instructions" rows="2" placeholder="${t('mn.ops.depositInstructionsPh')}" onchange="saveBusiness(true)">${escapeHtml(b.depositInstructions||'')}</textarea>
         <small style="color:var(--muted)">${t('mn.ops.depositInstructionsDesc')}</small>
@@ -5907,6 +5912,7 @@ async function saveBusiness(silent){
   if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked && redsysIsConfigured;
   if(el('mn-deposit-amount')) DB.business.depositAmount = Math.max(0, parseFloat(el('mn-deposit-amount').value) || 0) || '';
   if(el('mn-deposit-type')) DB.business.depositType = el('mn-deposit-type').value;
+  if(el('mn-deposit-minpeople')) DB.business.depositMinPeople = Math.max(0, parseInt(el('mn-deposit-minpeople').value) || 0);
   if(el('mn-deposit-instructions')) DB.business.depositInstructions = el('mn-deposit-instructions').value.trim();
   if(el('mn-ig')) DB.business.ig = el('mn-ig').value.trim();
   if(el('mn-fb')) DB.business.fb = el('mn-fb').value.trim();

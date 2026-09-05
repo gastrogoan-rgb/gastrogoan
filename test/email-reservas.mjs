@@ -28,6 +28,7 @@ const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = fs.readFileSync(path.join(raiz, 'js/core.js'), 'utf8');
 const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
 const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
+const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
 
 let fallos = 0;
 function caso(nombre, fn){
@@ -120,6 +121,17 @@ caso('El aviso de antelación vs. horario solo mira la antelación de PEDIDOS, n
   assert.ok(m, 'no se encontró la llamada a leadTimeVsHorarioWarning justo antes de saveDB() en la función de guardado de Mi Negocio');
   assert.ok(m[0].includes('leadTimeMinPedidos') && !m[0].includes('leadTimeMinReservas') && !m[0].includes('Math.max'),
     'sigue comparando con la antelación de reservas (o con el máximo de las dos) — el aviso volverá a saltar siempre con una antelación de reservas de varios días');
+});
+
+caso('La señal de reserva se puede pedir solo a partir de un número de personas (0 = siempre)', () => {
+  assert.ok(publica.includes('function depositAppliesForPeople'), 'no se encontró depositAppliesForPeople en reservagastrogoan.html');
+  const m = publica.match(/function depositAppliesForPeople\(people\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se pudo aislar el cuerpo de depositAppliesForPeople');
+  assert.ok(m[0].includes('depositMinPeople'), 'no lee el umbral de personas (depositMinPeople)');
+  assert.ok(publica.includes('depositAppliesForPeople(people)') && !publica.includes('!!(DB.business||{}).requireDeposit && redsysConfigured'),
+    'submitReserva sigue exigiendo la señal a TODAS las reservas sin mirar el umbral de personas');
+  assert.ok(publica.includes("oninput=\"updateDepositNoticeUi()\""),
+    'el aviso de señal y el texto del botón no se actualizan al cambiar el número de personas, sin recargar la página');
 });
 
 console.log('\n' + '═'.repeat(64));
