@@ -134,6 +134,15 @@ caso('La señal de reserva se puede pedir solo a partir de un número de persona
     'el aviso de señal y el texto del botón no se actualizan al cambiar el número de personas, sin recargar la página');
 });
 
+caso('printTicket no imprime hasta que carga el QR externo (Google/VeriFactu) — salía en blanco', () => {
+  const m = tpv.match(/function printTicket\(sale, opts=\{\}\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró printTicket');
+  assert.ok(!/win\.print\(\);\s*\n\}/.test(m[0]),
+    'printTicket sigue llamando a win.print() justo después de escribir el HTML, antes de que cargue el QR (api.qrserver.com), en vez de esperar a window.onload');
+  assert.ok(m[0].includes('window.onload=function(){window.print();}'),
+    'printTicket no usa el mismo patrón que printComandaTicket (esperar a window.onload antes de imprimir)');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

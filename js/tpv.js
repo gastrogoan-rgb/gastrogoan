@@ -5362,11 +5362,19 @@ function printTicket(sale, opts={}){
   const html = buildTicketHtml(sale, opts);
   const win = window.open('', '_blank', 'width=360,height=600');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  // ⚠️ El QR de reseña de Google (y el de VeriFactu) se generan pidiendo la
+  // imagen a api.qrserver.com — una URL EXTERNA, no un data: URI como el
+  // logo. Llamar a win.print() justo aquí, nada más escribir el HTML,
+  // disparaba la impresión antes de que esa imagen hubiera terminado de
+  // descargarse — salía en blanco o rota. Igual que ya hace
+  // printComandaTicket: se deja que sea la propia ventana la que imprima,
+  // en su window.onload, que sí espera a que todas las imágenes carguen.
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title>
     <style>@page{margin:6mm} body{margin:0;padding:14px 0}</style>
-    </head><body>${html}</body></html>`);
+    </head><body>${html}
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
   win.document.close();
-  win.print();
 }
 
 // Asigna un número de factura secuencial (solo la primera vez) e imprime
