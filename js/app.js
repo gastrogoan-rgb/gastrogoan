@@ -289,9 +289,9 @@ function renderLimpiezaManos(){
       <div class="card">
         <h3 style="justify-content:space-between"><span><i class="ti ti-droplet"></i> ${t('title.handWashingProtocol')}</span><button class="btn btn-sm" onclick="printManosProtocolo()"><i class="ti ti-printer"></i></button></h3>
         ${pasos.map((p,i) => `
-          <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap">
             <div class="step-num">${i+1}</div>
-            <input type="text" value="${escapeHtml(p)}" style="flex:1;min-width:140px" onchange="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>
+            <textarea style="flex:1;min-width:140px;resize:vertical" oninput="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>${escapeHtml(p)}</textarea>
             <div class="owner-strict" style="display:flex;gap:2px;margin-left:auto">
               ${reorderButtons(`moveManosPaso(${i},-1)`, `moveManosPaso(${i},1)`, i===0, i===pasos.length-1)}
               <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
@@ -316,7 +316,6 @@ function renderLimpiezaManos(){
         <div class="card">
           <h3><i class="ti ti-check"></i> ${t('title.minimumDuration')}</h3>
           <p style="font-size:28px;font-weight:800;color:var(--brand-orange);margin:0">${t('label.20seconds')}</p>
-          <p style="font-size:13px;color:var(--muted);margin-top:4px">${t('msg.happyBirthdayEquivalent')}</p>
         </div>
       </div>
     </div>
@@ -476,12 +475,20 @@ async function deleteLimpiezaTarea(id){
   renderLimpiezaTab();
 }
 
-// Checklist del mes para una fecha concreta: las tareas mensuales se
-// definen por "día del mes" (t.diaMes, 1-31), no por fecha exacta, así que
-// se repiten todos los meses — el checkKey de si se hizo o no sí es por mes
-// concreto (monthKey), en DB.limpieza.checksMes.
-function limpiezaTareasParaDia(day){
-  return DB.limpieza.tareas.filter(t => t.tipo === 'mensual' && (t.zona||'cocina')===currentArea() && parseInt(t.diaMes)===day);
+// Checklist del mes para una fecha concreta. Dos tipos de tarea conviven:
+// las mensuales se definen por "día del mes" (t.diaMes, 1-31) y se repiten
+// todos los meses; las puntuales (5/09, a petición del dueño: antes solo se
+// podían crear tareas que se repitieran cada mes, sin forma de anotar una
+// limpieza de un día suelto) llevan una fecha exacta (t.fecha) y no vuelven
+// a aparecer. El checkKey de si se hizo o no sí es siempre por mes concreto
+// (monthKey), en DB.limpieza.checksMes, para las dos.
+function limpiezaTareasParaDia(date){
+  const day = date.getDate();
+  const fecha = dateStr(date);
+  return DB.limpieza.tareas.filter(t => (t.zona||'cocina')===currentArea() && (
+    (t.tipo === 'mensual' && parseInt(t.diaMes)===day) ||
+    (t.tipo === 'puntual' && t.fecha === fecha)
+  ));
 }
 function limpiezaMonthKeyFor(date){
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
@@ -510,6 +517,7 @@ function limpiezaTareaRowHtml(tarea, checks, monthKey){
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:${canToggle?'pointer':'not-allowed'}" onclick="event.stopPropagation()" title="${doneTitle}">
         <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${tarea.id},this.checked)">
         <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(tarea.area)}</span>
+        ${tarea.tipo==='puntual' ? `<span class="badge" style="font-size:9.5px;padding:1px 5px" title="${t('limpieza.recurrenceOnce')}"><i class="ti ti-calendar-event"></i></span>` : ''}
       </label>
       ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:22px;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
     </div>
@@ -555,7 +563,7 @@ function renderLimpiezaMes(){
     let cells = '';
     for(let i=0; i<startOffset; i++) cells += `<div></div>`;
     for(let day=1; day<=daysInMonth; day++){
-      const count = limpiezaTareasParaDia(day).length;
+      const count = limpiezaTareasParaDia(new Date(year, month, day)).length;
       const isToday = day===today.getDate() && month===today.getMonth() && year===today.getFullYear();
       const ds = dateStr(new Date(year, month, day));
       cells += `
@@ -577,7 +585,7 @@ function renderLimpiezaMes(){
     const days = Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d; });
     label = `${dateStr(days[0])} — ${dateStr(days[6])}`;
     bodyHtml = `<div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">${days.map(d => {
-      const tareasDelDia = limpiezaTareasParaDia(d.getDate());
+      const tareasDelDia = limpiezaTareasParaDia(d);
       const monthKey = limpiezaMonthKeyFor(d);
       const checks = limpiezaChecksFor(monthKey);
       const isToday = dateStr(d) === todayStr();
@@ -589,17 +597,16 @@ function renderLimpiezaMes(){
       `;
     }).join('')}</div>`;
   } else {
-    const day = limpiezaCalDate.getDate();
     const monthKey = limpiezaMonthKeyFor(limpiezaCalDate);
     const checks = limpiezaChecksFor(monthKey);
-    const tareasDelDia = limpiezaTareasParaDia(day);
+    const tareasDelDia = limpiezaTareasParaDia(limpiezaCalDate);
     label = dateStr(limpiezaCalDate);
     bodyHtml = tareasDelDia.length
       ? `<div class="card" style="max-width:480px;margin:0 auto">${tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey)).join('')}</div>`
       : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`;
   }
 
-  const tareasMesTotal = DB.limpieza.tareas.filter(t => t.tipo === 'mensual' && (t.zona||'cocina')===currentArea()).length;
+  const tareasMesTotal = DB.limpieza.tareas.filter(t => (t.zona||'cocina')===currentArea() && (t.tipo === 'mensual' || t.tipo === 'puntual')).length;
   box.innerHTML = `
     <div class="toolbar">
       <div class="left">${modeBtns}</div>
@@ -660,6 +667,11 @@ function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
 function openLimpiezaTareaMesModal(id){
   const tarea = id ? DB.limpieza.tareas.find(x=>x.id===id) : null;
   const empOptions = DB.employees.filter(e=>(e.area||'cocina')===currentArea()).map(e=>`<option value="${e.id}"${tarea&&tarea.responsableId===e.id?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  const esPuntual = tarea ? tarea.tipo === 'puntual' : false;
+  // Fecha por defecto para una tarea puntual nueva: el día que se estaba
+  // viendo en el calendario (si se pulsó "+ Tarea" desde la vista de día),
+  // o si no hoy — nunca en blanco.
+  const fechaDefault = tarea && tarea.fecha ? tarea.fecha : (limpiezaCalDate ? dateStr(limpiezaCalDate) : todayStr());
   openModal(`
     <div class="modal-header">
       <h3>${tarea?t('common.edit'):t('common.newF')} ${t('limpieza.monthlyTask')}</h3>
@@ -673,10 +685,21 @@ function openLimpiezaTareaMesModal(id){
       <label>${t('limpieza.cleaningProduct')}</label>
       <input type="text" id="new-limpieza-producto" value="${tarea?escapeHtml(tarea.producto||''):''}" placeholder="${t('limpieza.productPh')}">
     </div>
+    <div class="field">
+      <label>${t('limpieza.recurrence')}</label>
+      <select id="new-limpieza-tipo" onchange="toggleLimpiezaTareaTipoFields(this.value)">
+        <option value="mensual" ${!esPuntual?'selected':''}>${t('limpieza.recurrenceMonthly')}</option>
+        <option value="puntual" ${esPuntual?'selected':''}>${t('limpieza.recurrenceOnce')}</option>
+      </select>
+    </div>
     <div class="field-row">
-      <div class="field">
+      <div class="field" id="limpieza-diames-wrap" style="${esPuntual?'display:none':''}">
         <label>${t('limpieza.dayOfMonth')}</label>
-        <input type="number" id="new-limpieza-diames" min="1" max="31" value="${tarea?tarea.diaMes:1}">
+        <input type="number" id="new-limpieza-diames" min="1" max="31" value="${tarea&&tarea.diaMes?tarea.diaMes:1}">
+      </div>
+      <div class="field" id="limpieza-fecha-wrap" style="${esPuntual?'':'display:none'}">
+        <label>${t('limpieza.oneOffDate')}</label>
+        <input type="date" id="new-limpieza-fecha" value="${escapeHtml(fechaDefault)}">
       </div>
       <div class="field">
         <label>${t('label.responsible')}</label>
@@ -694,22 +717,36 @@ function openLimpiezaTareaMesModal(id){
   `);
   setTimeout(()=>document.getElementById('new-limpieza-area')?.focus(), 50);
 }
+function toggleLimpiezaTareaTipoFields(tipo){
+  document.getElementById('limpieza-diames-wrap').style.display = tipo==='puntual' ? 'none' : '';
+  document.getElementById('limpieza-fecha-wrap').style.display = tipo==='puntual' ? '' : 'none';
+}
 function confirmLimpiezaTareaMes(id){
   const area = document.getElementById('new-limpieza-area').value;
   if(!area || !area.trim()){ showToast(t('msg.writeAreaTask')); return; }
   const producto = document.getElementById('new-limpieza-producto').value || '';
-  let dia = parseInt(document.getElementById('new-limpieza-diames').value) || 1;
-  dia = Math.min(31, Math.max(1, dia));
+  const tipo = document.getElementById('new-limpieza-tipo').value === 'puntual' ? 'puntual' : 'mensual';
+  let dia = null, fecha = null;
+  if(tipo === 'puntual'){
+    fecha = document.getElementById('new-limpieza-fecha').value;
+    if(!fecha){ showToast(t('msg.chooseOneOffDate')); return; }
+  } else {
+    dia = parseInt(document.getElementById('new-limpieza-diames').value) || 1;
+    dia = Math.min(31, Math.max(1, dia));
+  }
   const responsableVal = document.getElementById('new-limpieza-responsable').value;
   const responsableId = responsableVal ? parseInt(responsableVal) : null;
   if(id){
     const tarea = DB.limpieza.tareas.find(x=>x.id===id);
-    Object.assign(tarea, {area: area.trim(), producto: producto.trim(), diaMes: dia, responsableId});
+    // Al cambiar de tipo se suelta el campo del tipo anterior (una tarea
+    // puntual no debe arrastrar un diaMes viejo que la resucitaría cada mes
+    // si algún día se le vuelve a cambiar el tipo, y viceversa).
+    Object.assign(tarea, {area: area.trim(), producto: producto.trim(), tipo, diaMes: dia, fecha, responsableId});
   } else {
     // Ojo: "area" aquí es el campo de texto libre ("Campana extractora"...);
     // el área de negocio (cocina/sala) se guarda aparte como zona, para poder
     // filtrar sin chocar con ese nombre de campo ya existente.
-    DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim(), tipo:'mensual', diaMes: dia, responsableId, zona: currentArea()});
+    DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim(), tipo, diaMes: dia, fecha, responsableId, zona: currentArea()});
   }
   saveDB();
   closeModal();
@@ -1418,7 +1455,9 @@ function renderDistDetail(){
 
     // Limpieza mensual: la tarea "toca" ese día si el día del mes coincide
     // con la fecha real de esta semana.
-    const tareasLimpiezaDia = DB.limpieza.tareas.filter(lt => lt.tipo==='mensual' && lt.responsableId===emp.id && lt.diaMes===date.getDate() && (lt.zona||'cocina')===(emp.area||'cocina'));
+    const tareasLimpiezaDia = DB.limpieza.tareas.filter(lt => lt.responsableId===emp.id && (lt.zona||'cocina')===(emp.area||'cocina') && (
+      (lt.tipo==='mensual' && lt.diaMes===date.getDate()) || (lt.tipo==='puntual' && lt.fecha===dateStr(date))
+    ));
     const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
     const checksMes = DB.limpieza.checksMes[monthKey] || {};
     const limpiezaHtml = tareasLimpiezaDia.map(lt => {

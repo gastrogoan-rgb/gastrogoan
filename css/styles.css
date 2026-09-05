@@ -1331,7 +1331,7 @@ td.wrap{white-space:normal}
      3 botones — en vez de un input estrujado y siempre cortado, el texto va
      en su propia línea a ancho completo y los botones debajo. */
   .protocolo-step-row{flex-direction:column;align-items:stretch !important}
-  .protocolo-step-row input{min-width:0 !important}
+  .protocolo-step-row input,.protocolo-step-row textarea{min-width:0 !important}
   .protocolo-step-row>div:last-child{margin-left:0 !important;justify-content:flex-end}
 
   /* Header — dos filas fijas y centradas, siempre (no solo "si no caben").

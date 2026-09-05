@@ -74,8 +74,9 @@ lanzar; node test/fallos.mjs               > "$SALIDA/fallos.txt" 2>&1 & P40=$!
 lanzar; node test/idr-ficha.mjs            > "$SALIDA/idrficha.txt" 2>&1 & P41=$!
 lanzar; node test/conexiones.mjs           > "$SALIDA/conexiones.txt" 2>&1 & P42=$!
 lanzar; node test/categorias-ingrediente-seed.mjs > "$SALIDA/catingseed.txt" 2>&1 & P43=$!
+lanzar; node test/limpieza-ux.mjs           > "$SALIDA/limpiezaux.txt" 2>&1 & P44=$!
 
-echo "→ 42 pruebas, de $TANDA en $TANDA…"
+echo "→ 43 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   # ⚠️ El patrón NO puede llevar el número de casos a pelo ("los 10 casos
@@ -129,5 +130,6 @@ espera $P40 "informar de un fallo desde la app"        "$SALIDA/fallos.txt"     
 espera $P41 "el I+D engancha su ficha técnica"          "$SALIDA/idrficha.txt"   "casos pasaron"
 espera $P42 "conexiones: alérgenos, menús, fidelidad, lápidas" "$SALIDA/conexiones.txt" "casos pasaron"
 espera $P43 "categorías de Mega Lista, seleccionables al editar"  "$SALIDA/catingseed.txt" "casos pasaron"
+espera $P44 "limpieza: lavado de manos y limpieza puntual"  "$SALIDA/limpiezaux.txt" "casos pasaron"
 
 exit $FALLOS
