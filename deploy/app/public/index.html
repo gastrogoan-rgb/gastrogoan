@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '05/09/2026 12:30';
+const GG_BUILD = '05/09/2026 13:04';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -8523,6 +8523,16 @@ async function savePublicSlug(){
   renderMiNegocio();
 }
 
+// El Kit descargable (el negocio sube sus dos archivos a su propia cuenta de
+// Netlify o donde sea) SÍ necesita este aviso y su tutorial. Pero desde que
+// GastroGoan aloja la app en un dominio propio (app.gastrogoan.com) no hay
+// nada que el negocio tenga que subir a ningún sitio — mostrárselo ahí era
+// puro ruido, y encima el enlace apuntaba a un archivo (tutorial-netlify.html)
+// que nunca se despliega junto al resto de la app: al pulsarlo, el propio
+// hosting devolvía la app de vuelta en vez de un 404 claro.
+function esKitAutoAlojado(){
+  return !/(^|\.)gastrogoan\.com$/.test(location.hostname);
+}
 function renderOnlineCard(){
   const b = DB.business || {};
   if(!getTenantId()){
@@ -8552,6 +8562,7 @@ function renderOnlineCard(){
       <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
       <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.shareDesc')}${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' '+t('mn.online.andOrder') : ''}${t('mn.online.shareDescEnd')}</p>
       ${activeCartaLine}
+      ${esKitAutoAlojado() ? `
       <details style="margin-bottom:12px">
         <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.hostingSummary')}</summary>
         <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
@@ -8560,7 +8571,7 @@ function renderOnlineCard(){
           ${t('mn.online.hostingP3')}<br><br>
           <i class="ti ti-book"></i> <strong>${t('mn.online.hostingTutorialLabel')}</strong> ${t('mn.online.hostingTutorialText')} <a href="tutorial-netlify.html" target="_blank" rel="noopener"><strong>tutorial-netlify.html</strong></a> ${t('mn.online.hostingTutorialSuffix')}
         </div>
-      </details>
+      </details>` : ''}
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
         <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:140px;height:140px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
         <div style="flex:1;min-width:180px">
@@ -12623,7 +12634,7 @@ const I18N = {
     'dash.avgFoodCost': '% Food Cost medio:',
     'dash.staffCostPct': '% Coste personal:', 'dash.primeCost': 'Prime cost:',
     'dash.foodCostTarget': '(objetivo ${n}%)',
-    'dash.topSellingDishes': 'Platos más vendidos',
+    'dash.topSellingDishes': 'Platos más vendidos', 'dash.unitsAbbr': 'uds.',
     'dash.topGrossMargin': 'Mayor margen bruto',
     'dash.salesByHour': 'Ventas por hora del día',
     'dash.avgTicket': 'Ticket medio',
@@ -14800,7 +14811,7 @@ const I18N = {
     'dash.avgFoodCost': '% Food Cost mitjà:',
     'dash.staffCostPct': '% Cost de personal:', 'dash.primeCost': 'Prime cost:',
     'dash.foodCostTarget': '(objectiu ${n}%)',
-    'dash.topSellingDishes': 'Plats més venuts',
+    'dash.topSellingDishes': 'Plats més venuts', 'dash.unitsAbbr': 'uts.',
     'dash.topGrossMargin': 'Major marge brut',
     'dash.salesByHour': 'Vendes per hora del dia',
     'dash.avgTicket': 'Tiquet mitjà',
@@ -16981,7 +16992,7 @@ const I18N = {
     'dash.avgFoodCost': 'Avg. Food Cost %:',
     'dash.staffCostPct': 'Staff cost %:', 'dash.primeCost': 'Prime cost:',
     'dash.foodCostTarget': '(target ${n}%)',
-    'dash.topSellingDishes': 'Top selling dishes',
+    'dash.topSellingDishes': 'Top selling dishes', 'dash.unitsAbbr': 'units',
     'dash.topGrossMargin': 'Highest gross margin',
     'dash.salesByHour': 'Sales by hour of day',
     'dash.avgTicket': 'Average ticket',
@@ -20038,14 +20049,32 @@ function renderDashboard(){
     document.getElementById('dashboard-trend-resultado').innerHTML = emptyMsg;
   }
 
+  // ⚠️ "Más vendidos" tiene que ordenar por UNIDADES, no por dinero
+  // facturado: antes sumaba price*qty y ordenaba por ese importe, así que
+  // un plato vendido UNA vez a 50€ salía por delante de uno vendido 100
+  // veces a 2€ — el segundo es, para cualquiera que lea "más vendido", el
+  // que de verdad lo es. Se guardan las dos cifras (unidades y dinero) para
+  // poder mostrar ambas sin tener que recalcular nada.
+  // ⚠️ Agrupar por el TEXTO del nombre (it.name) hacía que el mismo plato
+  // apareciera DOS VECES en el ranking — "Salmón" y "Salmon" — en cuanto
+  // alguna venta lo tenía escrito de forma distinta (con/sin acento, un
+  // renombrado del plato, una línea suelta sin receta vinculada...). El
+  // "Análisis de Platos" (Gestión Económica → Ventas, platosStats() en
+  // js/hr.js) ya agrupa por recipeId cuando existe, y solo cae al nombre si
+  // de verdad no hay receta detrás — con el mismo dato de partida, este
+  // panel podía dar un ranking distinto solo por este motivo. Mismo
+  // criterio aquí para que los dos coincidan.
+  const dishKey = it => it.recipeId ? ('r'+it.recipeId) : ('m'+(it.name||''));
   const productTotals = {};
   salesLast30.forEach(s=>{
     (s.items||[]).forEach(it=>{
-      const key = it.name || '—';
-      productTotals[key] = (productTotals[key]||0) + (it.price||0) * (it.qty||1);
+      const key = dishKey(it);
+      if(!productTotals[key]) productTotals[key] = {name: it.name || '—', units:0, revenue:0};
+      productTotals[key].units += (it.qty||1);
+      productTotals[key].revenue += (it.price||0) * (it.qty||1);
     });
   });
-  const topProducts = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topProducts = Object.values(productTotals).sort((a,b)=>b.units-a.units).slice(0,5);
 
   // Margen bruto real por plato (últimos 30 días) — coste estampado en el
   // momento de cada venta (costoUnitarioDeLinea), no el coste actual de la
@@ -20054,18 +20083,18 @@ function renderDashboard(){
   const marginTotals = {};
   salesLast30.forEach(s=>{
     (s.items||[]).forEach(it=>{
-      const key = it.name || '—';
+      const key = dishKey(it);
       const qty = it.qty || 1;
       const unitCost = it.recipeId ? costoUnitarioDeLinea(it) : 0;
       const margin = ((it.price||0) - unitCost) * qty;
-      if(!marginTotals[key]) marginTotals[key] = {margin:0, hasCost: !!it.recipeId};
+      if(!marginTotals[key]) marginTotals[key] = {name: it.name || '—', margin:0, hasCost: !!it.recipeId};
       marginTotals[key].margin += margin;
       if(it.recipeId) marginTotals[key].hasCost = true;
     });
   });
-  const topMargins = Object.entries(marginTotals)
-    .filter(([,v])=>v.hasCost)
-    .sort((a,b)=>b[1].margin-a[1].margin)
+  const topMargins = Object.values(marginTotals)
+    .filter(v=>v.hasCost)
+    .sort((a,b)=>b.margin-a.margin)
     .slice(0,5);
 
   const hourTotals = new Array(24).fill(0);
@@ -20087,13 +20116,13 @@ function renderDashboard(){
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topSellingDishes')}</h4>
         ${topProducts.length ? `<div class="table-wrap"><table><tbody>
-          ${topProducts.map(([name,total]) => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600">${fmtMoney(total)}</td></tr>`).join('')}
+          ${topProducts.map(v => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(v.name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(v.name)}</td><td style="text-align:right;font-weight:600;white-space:nowrap">${v.units} ${t('dash.unitsAbbr')}</td><td style="text-align:right;color:var(--muted);white-space:nowrap">${fmtMoney(v.revenue)}</td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty">${t('dash.noSalesRegistered')}</div>`}
       </div>
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topGrossMargin')}</h4>
         ${topMargins.length ? `<div class="table-wrap"><table><tbody>
-          ${topMargins.map(([name,v]) => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
+          ${topMargins.map(v => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(v.name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(v.name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty">${t('dash.noCostDataEnough')}</div>`}
       </div>
       <div>
@@ -30422,11 +30451,19 @@ function printTicket(sale, opts={}){
   const html = buildTicketHtml(sale, opts);
   const win = window.open('', '_blank', 'width=360,height=600');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  // ⚠️ El QR de reseña de Google (y el de VeriFactu) se generan pidiendo la
+  // imagen a api.qrserver.com — una URL EXTERNA, no un data: URI como el
+  // logo. Llamar a win.print() justo aquí, nada más escribir el HTML,
+  // disparaba la impresión antes de que esa imagen hubiera terminado de
+  // descargarse — salía en blanco o rota. Igual que ya hace
+  // printComandaTicket: se deja que sea la propia ventana la que imprima,
+  // en su window.onload, que sí espera a que todas las imágenes carguen.
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title>
     <style>@page{margin:6mm} body{margin:0;padding:14px 0}</style>
-    </head><body>${html}</body></html>`);
+    </head><body>${html}
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
   win.document.close();
-  win.print();
 }
 
 // Asigna un número de factura secuencial (solo la primera vez) e imprime

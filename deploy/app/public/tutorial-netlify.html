@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GastroGoan · Tutorial: Sube tu app a internet (Netlify)</title>
+<style>
+:root{
+  --brand-orange:#DF7039; --brand-yellow:#FFFF00; --brand-cream:#F6EDD5; --brand-black:#000000;
+  --net:#00AD9F; --muted:#777; --border:#E2DBC8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--brand-cream);min-height:100vh;display:flex;flex-direction:column;color:#222}
+header{background:var(--brand-black);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:10px}
+header .logo{width:34px;height:34px;border-radius:9px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:18px}
+header h1{font-size:17px}
+header h1 span{color:rgba(255,255,0,.85);font-weight:400;font-size:13px;margin-left:8px}
+main{flex:1;max-width:900px;margin:0 auto;width:100%;padding:20px 22px 40px;display:flex;flex-direction:column;gap:16px}
+.intro{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px 20px;font-size:14.5px;line-height:1.6}
+.intro h2{font-size:20px;margin-bottom:8px;color:var(--brand-orange)}
+.intro .pill{display:inline-block;background:var(--brand-cream);border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:12.5px;font-weight:700;margin-top:6px}
+.step{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;gap:16px;align-items:flex-start}
+.step .n{min-width:40px;height:40px;border-radius:50%;background:var(--brand-orange);color:#fff;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step .body{flex:1}
+.step h3{font-size:17px;margin-bottom:8px;color:#222}
+.step p{font-size:14.5px;line-height:1.6;margin-bottom:8px}
+.step ul{margin:6px 0 8px 18px}
+.step li{font-size:14px;line-height:1.6;margin-bottom:4px}
+.step strong{color:var(--brand-orange)}
+.step code{background:var(--brand-cream);padding:2px 7px;border-radius:5px;font-size:13px;font-family:'Courier New',monospace}
+.note{background:#FFF8E6;border-left:5px solid var(--brand-yellow);border-radius:8px;padding:11px 14px;font-size:13.5px;line-height:1.55;margin-top:8px}
+.warn{background:#FDEEE8;border-left:5px solid var(--brand-orange);border-radius:8px;padding:11px 14px;font-size:13.5px;line-height:1.55;margin-top:8px}
+.final{background:var(--net);color:#fff;border-radius:14px;padding:28px;text-align:center}
+.final .big{font-size:48px;margin-bottom:6px}
+.final h2{margin-bottom:8px}
+.final p{font-size:14.5px;line-height:1.6;max-width:620px;margin:0 auto 6px;opacity:.95}
+.tag{display:inline-block;background:var(--net);color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:2px 9px;margin-bottom:6px}
+a{color:var(--brand-orange);font-weight:700}
+footer{text-align:center;font-size:12.5px;color:var(--muted);padding:16px}
+@media (max-width:560px){ .step{flex-direction:column;gap:10px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🍽</div>
+  <h1>GastroGoan <span>Tutorial · Sube tu app a internet con Netlify (gratis, 5 min)</span></h1>
+</header>
+<main>
+
+  <div class="intro">
+    <span class="tag">¿PARA QUÉ ES ESTO?</span>
+    <h2>Para que funcionen las reservas y pedidos online por QR</h2>
+    <p>La app de gestión funciona abriéndola directamente en tu navegador. Pero para que tus clientes puedan <strong>reservar mesa y pedir online escaneando un QR</strong>, los dos archivos de GastroGoan tienen que estar <strong>subidos a internet, juntos, con una dirección (URL) pública</strong>. Netlify hace eso gratis y sin complicaciones.</p>
+    <span class="pill">⏱️ 5 minutos · 💶 Gratis · 🔁 Solo se hace una vez</span>
+    <div class="note">📂 <strong>Antes de empezar</strong>, ten en una carpeta los <strong>dos archivos</strong> de GastroGoan, juntos:
+      <ul style="margin:6px 0 0 18px">
+        <li><code>index.html</code> — la app de gestión</li>
+        <li><code>reservagastrogoan.html</code> — la página que ven tus clientes (⚠️ no cambies este nombre)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">1</div>
+    <div class="body">
+      <h3>Crea una cuenta gratis en Netlify</h3>
+      <p>Entra en <a href="https://www.netlify.com" target="_blank" rel="noopener">www.netlify.com</a> y pulsa <strong>"Sign up"</strong> (Registrarse). Puedes registrarte con tu cuenta de Google o con un email y contraseña. Es gratis y no pide tarjeta.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">2</div>
+    <div class="body">
+      <h3>Prepara la carpeta con los dos archivos</h3>
+      <p>En tu ordenador, crea una carpeta (por ejemplo <code>mi-restaurante</code>) y mete dentro <strong>exactamente esos dos archivos</strong>: <code>index.html</code> y <code>reservagastrogoan.html</code>.</p>
+      <div class="warn">⚠️ Los dos tienen que estar <strong>en la misma carpeta</strong> y <strong>reservagastrogoan.html no se puede renombrar</strong>: la app construye el enlace del QR a partir de ese nombre y de esa carpeta.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">3</div>
+    <div class="body">
+      <h3>Arrastra la carpeta a Netlify</h3>
+      <p>Una vez dentro de Netlify, ve a la sección <strong>"Sites"</strong> (Sitios) y busca el recuadro que pone algo como <strong>"Drag and drop your site output folder here"</strong> (Arrastra aquí la carpeta de tu sitio). También puedes ir a la pestaña <strong>"Deploys"</strong> → <strong>"Deploy manually"</strong>.</p>
+      <p>Coge tu carpeta <code>mi-restaurante</code> y <strong>arrástrala con el ratón</strong> hasta ese recuadro. Suéltala ahí.</p>
+      <div class="note">📱 Desde el móvil también se puede, pero es mucho más cómodo hacerlo una vez desde un ordenador.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">4</div>
+    <div class="body">
+      <h3>Netlify te da tu dirección pública</h3>
+      <p>En unos segundos, Netlify publica tu sitio y te da una dirección tipo:</p>
+      <p><code>https://nombre-aleatorio-12345.netlify.app</code></p>
+      <p>Si quieres, puedes cambiar ese nombre por uno más bonito en <strong>"Site settings" → "Change site name"</strong> (por ejemplo <code>https://casa-pepe.netlify.app</code>).</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">5</div>
+    <div class="body">
+      <h3>Abre SIEMPRE la app desde esa dirección</h3>
+      <p>Para gestionar la app, en lugar de abrir el archivo desde tu ordenador, entra a:</p>
+      <p><code>https://tu-sitio.netlify.app</code></p>
+      <p>Al llamarse <code>index.html</code>, la app se abre directamente sin escribir nada más. Desde ahí, ve a <strong>Mi Negocio → "📱 Reservas y pedidos online"</strong>: verás que el <strong>QR y el enlace ya funcionan de verdad</strong> y llevan a tus clientes a la página de reservas/pedidos.</p>
+      <div class="warn">⚠️ Si abres la app haciendo doble clic en el archivo de tu ordenador, el QR apuntará a "ningún sitio". Tiene que abrirse <strong>desde la dirección de Netlify</strong> para que el enlace sea público.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">6</div>
+    <div class="body">
+      <h3>Cuando actualices la app, vuelve a subirla</h3>
+      <p>Si en el futuro recibes una versión nueva de <code>index.html</code>, simplemente sustituye el archivo en tu carpeta y <strong>vuelve a arrastrarla a Netlify</strong> (a la pestaña "Deploys"). La dirección pública se mantiene; solo se actualiza el contenido.</p>
+    </div>
+  </div>
+
+  <div class="final">
+    <div class="big">🎉</div>
+    <h2>¡Listo! Tus reservas y pedidos online ya funcionan</h2>
+    <p>Descarga el QR desde <strong>Mi Negocio → Reservas y pedidos online</strong>, imprímelo y colócalo en tus mesas, escaparate o redes. Tus clientes podrán reservar y pedir desde su móvil sin instalar nada.</p>
+    <p style="margin-top:10px">👉 ¿Aún no has conectado la nube (Firebase)? Hazlo con el tutorial <strong>tutorial-nube.html</strong>: es lo que sincroniza tus dispositivos y activa las reservas/pedidos online.</p>
+  </div>
+
+</main>
+<footer>GastroGoan · Kit de Gestión Hostelera</footer>
+</body>
+</html>
