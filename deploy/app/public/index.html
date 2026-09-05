@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '05/09/2026 12:15';
+const GG_BUILD = '05/09/2026 12:22';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -12914,7 +12914,7 @@ const I18N = {
     'mn.aforo.warningExceeded': 'Tienes ${seats} plazas repartidas en tus mesas, más que el aforo configurado (${aforo}). Revisa el aforo o el número de mesas.',
     'mn.aforo.warningLow': 'Tus mesas suman solo ${seats} plazas, muy por debajo del aforo configurado (${aforo}). Si tienes más mesas físicas, añade sus plazas para que las reservas sean más precisas.',
     'mn.aforo.warningNoSeats': 'Tienes mesas creadas pero ninguna tiene plazas indicadas, y el aforo está en ${aforo}. Añade las plazas de cada mesa para poder comparar con el aforo.',
-    'mn.leadtime.warning': 'El tiempo mínimo de antelación (${lead} min) es mayor que el horario de apertura de ${day}, que solo dura ${window} min. Revisa el horario o reduce el tiempo de antelación.',
+    'mn.leadtime.warning': 'La antelación mínima de PEDIDOS (${lead} min) es mayor que el horario de apertura de ${day}, que solo dura ${window} min. Revisa el horario o reduce la antelación de pedidos.',
     'mn.redsys.disable': 'Desactivar cobro con tarjeta', 'mn.redsys.confirmDisable': '¿Seguro que quieres desactivar el cobro con tarjeta (Redsys)? Tus clientes ya no podrán pagar online con tarjeta hasta que lo configures de nuevo.',
     'mn.redsys.disabled': 'Cobro con tarjeta desactivado.', 'mn.redsys.disableError': 'No se ha podido avisar al servidor, pero se han borrado los datos de este dispositivo. Si sigue apareciendo activo en otro dispositivo, vuelve a guardar la configuración y pulsa desactivar de nuevo.',
     'mn.online.activeCartaLabel': 'Carta activa para pedidos online: ', 'mn.online.noActiveCarta': 'Ninguna carta activa ahora mismo: tus clientes no podrán pedir hasta que actives una carta en el TPV.',
@@ -15091,7 +15091,7 @@ const I18N = {
     'mn.aforo.warningExceeded': 'Tens ${seats} places repartides a les teves taules, més que l\'aforament configurat (${aforo}). Revisa l\'aforament o el nombre de taules.',
     'mn.aforo.warningLow': 'Les teves taules sumen només ${seats} places, molt per sota de l\'aforament configurat (${aforo}). Si tens més taules físiques, afegeix les seves places perquè les reserves siguin més precises.',
     'mn.aforo.warningNoSeats': 'Tens taules creades però cap té places indicades, i l\'aforament és de ${aforo}. Afegeix les places de cada taula per poder-ho comparar amb l\'aforament.',
-    'mn.leadtime.warning': 'El temps mínim d\'antelació (${lead} min) és més gran que l\'horari d\'obertura de ${day}, que només dura ${window} min. Revisa l\'horari o redueix el temps d\'antelació.',
+    'mn.leadtime.warning': 'L\'antelació mínima de COMANDES (${lead} min) és més gran que l\'horari d\'obertura de ${day}, que només dura ${window} min. Revisa l\'horari o redueix l\'antelació de comandes.',
     'mn.redsys.disable': 'Desactivar cobrament amb targeta', 'mn.redsys.confirmDisable': 'Segur que vols desactivar el cobrament amb targeta (Redsys)? Els teus clients ja no podran pagar en línia amb targeta fins que ho tornis a configurar.',
     'mn.redsys.disabled': 'Cobrament amb targeta desactivat.', 'mn.redsys.disableError': 'No s\'ha pogut avisar el servidor, però s\'han esborrat les dades d\'aquest dispositiu. Si segueix apareixent actiu en un altre dispositiu, torna a desar la configuració i prem desactivar de nou.',
     'mn.online.activeCartaLabel': 'Carta activa per a comandes en línia: ', 'mn.online.noActiveCarta': 'Cap carta activa ara mateix: els teus clients no podran demanar fins que activis una carta al TPV.',
@@ -17270,7 +17270,7 @@ const I18N = {
     'mn.aforo.warningExceeded': 'You have ${seats} seats across your tables, more than the configured capacity (${aforo}). Check the capacity or the number of tables.',
     'mn.aforo.warningLow': 'Your tables add up to only ${seats} seats, well below the configured capacity (${aforo}). If you have more physical tables, add their seats so reservations are more accurate.',
     'mn.aforo.warningNoSeats': 'You have tables set up but none has seats indicated, and capacity is set to ${aforo}. Add the seats for each table so it can be compared with capacity.',
-    'mn.leadtime.warning': 'The minimum lead time (${lead} min) is longer than the opening window on ${day}, which only lasts ${window} min. Check the schedule or reduce the lead time.',
+    'mn.leadtime.warning': 'The minimum ORDER lead time (${lead} min) is longer than the opening window on ${day}, which only lasts ${window} min. Check the schedule or reduce the order lead time.',
     'mn.redsys.disable': 'Disable card payment', 'mn.redsys.confirmDisable': 'Are you sure you want to disable card payment (Redsys)? Your customers will no longer be able to pay online by card until you set it up again.',
     'mn.redsys.disabled': 'Card payment disabled.', 'mn.redsys.disableError': 'The server could not be notified, but the data on this device has been cleared. If it still shows as active on another device, save the configuration again and press disable once more.',
     'mn.online.activeCartaLabel': 'Active menu for online ordering: ', 'mn.online.noActiveCarta': 'No menu is active right now: your customers won\'t be able to order until you activate a menu in the POS.',
@@ -45780,9 +45780,16 @@ async function saveBusiness(silent){
     }
   }
   DB.business.horario = horarioRechazado ? (DB.business.horario||newHorario) : newHorario;
-  // Se avisa con el mayor de los dos (reservas/pedidos): si ese ya encaja en
-  // el horario, el otro (siempre menor o igual) también encaja.
-  const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, Math.max(DB.business.leadTimeMinReservas||0, DB.business.leadTimeMinPedidos||0));
+  // Solo tiene sentido comparar la antelación de PEDIDOS contra el horario
+  // de un día: un pedido se prepara el mismo día que se hace, así que si el
+  // negocio abre menos tiempo que la antelación exigida, ese pedido nunca
+  // llegaría a tiempo. La antelación de RESERVAS es otra cosa por completo
+  // — "reservar con 2 días de antelación" (2880 min) no tiene relación
+  // alguna con cuánto dura el turno de un día suelto, así que compararla
+  // contra un solo horario disparaba este aviso SIEMPRE que se guardara
+  // cualquier cosa en Mi Negocio, aunque la antelación de reservas fuera
+  // perfectamente razonable.
+  const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, DB.business.leadTimeMinPedidos||0);
   saveDB();
   // El selector de negocios mostraba siempre "Mi negocio", el nombre de
   // relleno con el que nace el hueco: nadie sincronizaba el nombre real con
@@ -45813,10 +45820,13 @@ async function saveBusiness(silent){
   else if(!silent) showToast(t('msg.businessSaved'));
 }
 
-// Compara el tiempo mínimo de antelación (lead time) con la duración del
-// horario de apertura de cada día abierto: si algún día el negocio abre
-// menos tiempo del que exige la antelación configurada, el pedido nunca
-// podría prepararse a tiempo ese día, así que avisamos (sin bloquear).
+// Compara el tiempo mínimo de antelación de PEDIDOS (lead time) con la
+// duración del horario de apertura de cada día abierto: si algún día el
+// negocio abre menos tiempo del que exige esa antelación, el pedido nunca
+// podría prepararse a tiempo ese día, así que avisamos (sin bloquear). Ojo:
+// esto NO aplica a la antelación de RESERVAS, que se mide en días/horas
+// hacia el futuro y no tiene ninguna relación con la duración de un turno
+// concreto (llamarlo con esa antelación disparaba este aviso siempre).
 function leadTimeVsHorarioWarning(horario, leadTimeMin){
   if(!leadTimeMin || !Array.isArray(horario)) return null;
   const toMin = s => { if(!s) return null; const p = s.split(':'); return parseInt(p[0])*60 + parseInt(p[1]||0); };

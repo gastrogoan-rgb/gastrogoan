@@ -5940,9 +5940,16 @@ async function saveBusiness(silent){
     }
   }
   DB.business.horario = horarioRechazado ? (DB.business.horario||newHorario) : newHorario;
-  // Se avisa con el mayor de los dos (reservas/pedidos): si ese ya encaja en
-  // el horario, el otro (siempre menor o igual) también encaja.
-  const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, Math.max(DB.business.leadTimeMinReservas||0, DB.business.leadTimeMinPedidos||0));
+  // Solo tiene sentido comparar la antelación de PEDIDOS contra el horario
+  // de un día: un pedido se prepara el mismo día que se hace, así que si el
+  // negocio abre menos tiempo que la antelación exigida, ese pedido nunca
+  // llegaría a tiempo. La antelación de RESERVAS es otra cosa por completo
+  // — "reservar con 2 días de antelación" (2880 min) no tiene relación
+  // alguna con cuánto dura el turno de un día suelto, así que compararla
+  // contra un solo horario disparaba este aviso SIEMPRE que se guardara
+  // cualquier cosa en Mi Negocio, aunque la antelación de reservas fuera
+  // perfectamente razonable.
+  const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, DB.business.leadTimeMinPedidos||0);
   saveDB();
   // El selector de negocios mostraba siempre "Mi negocio", el nombre de
   // relleno con el que nace el hueco: nadie sincronizaba el nombre real con
@@ -5973,10 +5980,13 @@ async function saveBusiness(silent){
   else if(!silent) showToast(t('msg.businessSaved'));
 }
 
-// Compara el tiempo mínimo de antelación (lead time) con la duración del
-// horario de apertura de cada día abierto: si algún día el negocio abre
-// menos tiempo del que exige la antelación configurada, el pedido nunca
-// podría prepararse a tiempo ese día, así que avisamos (sin bloquear).
+// Compara el tiempo mínimo de antelación de PEDIDOS (lead time) con la
+// duración del horario de apertura de cada día abierto: si algún día el
+// negocio abre menos tiempo del que exige esa antelación, el pedido nunca
+// podría prepararse a tiempo ese día, así que avisamos (sin bloquear). Ojo:
+// esto NO aplica a la antelación de RESERVAS, que se mide en días/horas
+// hacia el futuro y no tiene ninguna relación con la duración de un turno
+// concreto (llamarlo con esa antelación disparaba este aviso siempre).
 function leadTimeVsHorarioWarning(horario, leadTimeMin){
   if(!leadTimeMin || !Array.isArray(horario)) return null;
   const toMin = s => { if(!s) return null; const p = s.split(':'); return parseInt(p[0])*60 + parseInt(p[1]||0); };

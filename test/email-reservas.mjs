@@ -108,6 +108,20 @@ caso('El manual de Ayuda menciona las CUATRO plantillas y los enlaces de gestió
     'el manual de Ayuda no explica que hacen falta CUATRO plantillas (confirmación, modificación, pedido aceptado y cancelación)');
 });
 
+caso('El aviso de antelación vs. horario solo mira la antelación de PEDIDOS, no la de reservas', () => {
+  // 5/09/2026: el dueño reportó que el aviso "la antelación es mayor que el
+  // horario de Martes" salía SIEMPRE que guardaba cualquier cosa en Mi
+  // Negocio. Causa: se comparaba Math.max(antelación reservas, antelación
+  // pedidos) contra el horario de un solo día — pero la antelación de
+  // reservas se mide en DÍAS (2 días = 2880 min es una política normal) y
+  // no tiene relación con cuánto dura un turno suelto; solo la de PEDIDOS
+  // (que se cumple el mismo día) tiene sentido compararla así.
+  const m = app.match(/DB\.business\.horario, [^)]*\);\s*\n\s*saveDB\(\);/);
+  assert.ok(m, 'no se encontró la llamada a leadTimeVsHorarioWarning justo antes de saveDB() en la función de guardado de Mi Negocio');
+  assert.ok(m[0].includes('leadTimeMinPedidos') && !m[0].includes('leadTimeMinReservas') && !m[0].includes('Math.max'),
+    'sigue comparando con la antelación de reservas (o con el máximo de las dos) — el aviso volverá a saltar siempre con una antelación de reservas de varios días');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
