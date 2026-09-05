@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '05/09/2026 13:15';
+const GG_BUILD = '05/09/2026 14:17';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11188,7 +11188,7 @@ const I18N = {
     'tour.s4.title': 'Abrir una mesa: reserva o cliente de paso',
     'tour.s4.desc': 'Al pulsar una mesa libre, te preguntamos si el cliente es "de paso" (indicas el número de comensales) o "tiene reserva" (eliges la reserva del día y se rellenan automáticamente el cliente, el número de personas y se marca la reserva como llegada). Si la reserva no tenía mesa asignada, se asigna esta automáticamente.',
     'tour.s5.title': 'Añadir platos a la comanda',
-    'tour.s5.desc': 'Dentro de la comanda verás tu carta organizada por secciones. Toca un plato para añadirlo; si lo añades varias veces se suma la cantidad. Usa los botones + y − para ajustar unidades, y la papelera para eliminar una línea.',
+    'tour.s5.desc': 'Dentro de la comanda verás tu carta organizada por secciones. Toca un plato para añadirlo; si lo añades varias veces se suma la cantidad. Usa los botones + y − para ajustar unidades, y la papelera para eliminar una línea. El icono (i) junto a cada plato muestra sus ingredientes con los alérgenos destacados, sin salir de la comanda.',
     'tour.s6.title': 'Extras y notas por plato',
     'tour.s6.desc': 'Si un plato tiene extras configurados (ej. "Extra queso"), al añadirlo se abre una ventana donde marcas los extras deseados y escribes una nota libre (ej. "sin cebolla"). Después puedes editar la nota de cualquier línea con el icono de nota.',
     'tour.s7.title': 'Tandas y "Marchar a cocina"',
@@ -11210,7 +11210,7 @@ const I18N = {
     'tour.s15.title': 'Menús (combos)',
     'tour.s15.desc': 'Crea menús de precio fijo (ej. "Menú del día") agrupando platos en grupos de opciones, como "Primero a elegir entre 3" o "Postre incluido". El cliente elige una opción de cada grupo y se cobra el precio único del menú.',
     'tour.s16.title': 'Reservas: crear y consultar',
-    'tour.s16.desc': 'En Reservas puedes ver el día, la semana o el mes. Para crear una reserva, indica fecha, hora, número de personas y elige un cliente de tu base de datos (o crea uno nuevo desde ahí mismo). Añade notas como alergias o peticiones especiales.',
+    'tour.s16.desc': 'En Reservas puedes ver el día, la semana o el mes. Para crear una reserva, indica fecha, hora, número de personas y elige un cliente de tu base de datos (o crea uno nuevo desde ahí mismo). Añade notas como alergias o peticiones especiales. Desde Mi Negocio puedes pedir señal con tarjeta para confirmar, a partir de un número de comensales que tú eliges (o siempre, si lo dejas en cero).',
     'tour.s17.title': 'Aforo, mesas y llegadas',
     'tour.s17.desc': 'Desde la vista de día puedes asignar una mesa a cada reserva con antelación. La columna "Llegada" te permite marcar manualmente quién ha llegado (y confirmar en qué mesa se ha sentado), aunque normalmente esto se marca solo al abrir su mesa en el TPV. Si un turno está lleno, puedes poner la reserva en lista de espera en vez de forzarla; y una reserva confirmada se puede cancelar sin perder su rastro.',
     'tour.s18.title': 'Clientes',
@@ -11222,7 +11222,7 @@ const I18N = {
     'tour.s21.title': 'Stock y Pedidos a proveedores',
     'tour.s21.desc': 'Controla el inventario de tu almacén, define niveles mínimos de stock y genera pedidos a proveedores cuando un ingrediente esté por debajo de ese mínimo. Así evitas quedarte sin producto en pleno servicio.',
     'tour.s22.title': 'Horarios, distribución del trabajo y limpieza',
-    'tour.s22.desc': 'Organiza los turnos y horarios de tu equipo, reparte tareas del día a día y gestiona los checklists de limpieza para asegurarte de que todo queda en orden tras cada turno.',
+    'tour.s22.desc': 'Organiza los turnos y el calendario semanal de tu equipo: quién trabaja cada día, vacaciones, cambios de turno entre compañeros... Todo desde aquí.',
     'tour.s23.title': 'Promoción',
     'tour.s23.desc': 'Desde aquí puedes preparar contenido y campañas para promocionar tu negocio, y también crear promociones con efecto real: un descuento que se aplica solo en el TPV al pedir un plato/bebida concreto, opcionalmente repitiéndose cada semana sin tener que crearla de nuevo cada vez.',
     'tour.s24.title': 'Panel de Control',
@@ -11230,7 +11230,7 @@ const I18N = {
     'tour.s25.title': 'Gestión Económica',
     'tour.s25.desc': 'Aquí registras gastos e ingresos, y la app calcula tu cuenta de resultados y tu punto de equilibrio (cuánto necesitas vender para cubrir costes). Es tu herramienta para tomar decisiones económicas con datos reales.',
     'tour.s26.title': 'Mi Negocio: datos y acceso',
-    'tour.s26.desc': 'Configura el nombre, dirección y datos fiscales de tu negocio, así como el PIN de Gestión (el único que da acceso a esta zona económica). Es distinto del "modo edición" de Cocina/Sala, que puedes delegar a un empleado concreto desde su ficha en Personal. Mantén estos datos actualizados: aparecen en tickets y documentos.',
+    'tour.s26.desc': 'Configura el nombre, dirección y datos fiscales de tu negocio. Gestión Económica es exclusiva del propietario — a diferencia del "modo edición" de Cocina/Sala, no hay ningún PIN que se pueda delegar a un empleado. Mantén estos datos actualizados: aparecen en tickets y documentos.',
     'tour.s27.title': 'Mi Negocio: nube, idioma y configuración',
     'tour.s27.desc': 'Aquí gestionas la conexión a tu nube (copia de seguridad automática), el idioma de la app, el archivado de datos antiguos, la facturación electrónica VeriFactu (marcada como "Vista previa" hasta que sea obligatoria) y toda la configuración de tu negocio: horarios, tipos de servicio, QR de mesas y mucho más.',
     'tour.s28.title': 'Tu equipo: Horario del Personal',
@@ -11250,7 +11250,7 @@ const I18N = {
     'tour.s44.title': 'Distribución del Trabajo',
     'tour.s44.desc': 'Una cosa es saber CUÁNDO trabaja cada empleado (eso es Horario del Personal) y otra muy distinta es saber QUÉ tiene que hacer durante ese turno. Aquí repartes tareas concretas día a día entre tu equipo.',
     'tour.s45.title': 'Plan de Limpieza (APPCC)',
-    'tour.s45.desc': 'Checklists de limpieza e higiene para cumplir con el protocolo APPCC y dejar constancia de que cada tarea se ha hecho de verdad, turno tras turno.',
+    'tour.s45.desc': 'Checklists de limpieza e higiene para cumplir con el protocolo APPCC y dejar constancia de que cada tarea se ha hecho de verdad, turno tras turno. Las tareas mensuales pueden repetirse cada mes o ser puntuales, para un día concreto que no hace falta volver a repetir.',
     'tour.s46.title': 'Sala también tiene sus propias herramientas',
     'tour.s46.desc': 'Además de TPV, Reservas, Clientes y Promoción (que vamos a ver ahora), Sala comparte contigo las mismas herramientas que ya has visto en Cocina — Carta, Mega Lista, Escandallo, Stock, Horarios, Distribución y Limpieza — pero aplicadas a bebidas y a tu equipo de sala. Funcionan exactamente igual a como ya las has visto, así que no vamos a repasarlas otra vez.',
     'tour.s38.title': 'El logo siempre te lleva a Inicio',
@@ -11262,7 +11262,7 @@ const I18N = {
     'tour.s41.title': 'Cerrar sesión',
     'tour.s41.desc': 'Cierra la sesión actual (tuya o de un empleado) y vuelve a la pantalla de acceso. Cada persona debería cerrar su sesión al terminar su turno, sobre todo en un dispositivo compartido.',
     'tour.s29.title': 'Chat interno: comunícate con tu equipo',
-    'tour.s29.desc': 'Este botón abre el Chat interno, con canales de General, Cocina y Sala. Cada empleado elige su nombre (con su PIN) antes de escribir, y el dueño/a puede identificarse como "Jefe/a" introduciendo el PIN de Gestión. Ideal para avisos rápidos sin grupos de WhatsApp externos.',
+    'tour.s29.desc': 'Este botón abre el Chat interno, con canales de General, Cocina y Sala. Identifica automáticamente a quien escribe según su sesión (el empleado que ha fichado, o el propietario) — nadie tiene que elegir su nombre a mano. Ideal para avisos rápidos sin grupos de WhatsApp externos.',
     'tour.s30.title': 'Centro de ayuda: resuelve dudas al instante',
     'tour.s30.desc': 'Este botón abre el Centro de ayuda, con un asistente que responde preguntas frecuentes sobre cómo usar cada parte de la app. Si te atascas en algo durante el día a día, es el camino más rápido para encontrar la respuesta.',
     'tour.s31.title': 'Tu manual siempre a mano',
@@ -13368,7 +13368,7 @@ const I18N = {
     'tour.s4.title': 'Obrir una taula: reserva o client de pas',
     'tour.s4.desc': 'En polsar una taula lliure, et preguntem si el client és "de pas" (indiques el nombre de comensals) o "té reserva" (tries la reserva del dia i s\'omplen automàticament el client, el nombre de persones i es marca la reserva com a arribada). Si la reserva no tenia taula assignada, s\'assigna aquesta automàticament.',
     'tour.s5.title': 'Afegir plats a la comanda',
-    'tour.s5.desc': 'Dins de la comanda veuràs la teva carta organitzada per seccions. Toca un plat per afegir-lo; si l\'afegeixes diverses vegades se suma la quantitat. Usa els botons + i − per ajustar unitats, i la paperera per eliminar una línia.',
+    'tour.s5.desc': 'Dins de la comanda veuràs la teva carta organitzada per seccions. Toca un plat per afegir-lo; si l\'afegeixes diverses vegades se suma la quantitat. Usa els botons + i − per ajustar unitats, i la paperera per eliminar una línia. La icona (i) al costat de cada plat mostra els seus ingredients amb els al·lèrgens destacats, sense sortir de la comanda.',
     'tour.s6.title': 'Extres i notes per plat',
     'tour.s6.desc': 'Si un plat té extres configurats (ex. "Extra formatge"), en afegir-lo s\'obre una finestra on marques els extres desitjats i escrius una nota lliure (ex. "sense ceba"). Després pots editar la nota de qualsevol línia amb la icona de nota.',
     'tour.s7.title': 'Torns i "Enviar a cuina"',
@@ -13390,7 +13390,7 @@ const I18N = {
     'tour.s15.title': 'Menús (combos)',
     'tour.s15.desc': 'Crea menús de preu fix (ex. "Menú del dia") agrupant plats en grups d\'opcions, com "Primer a triar entre 3" o "Postre inclòs". El client tria una opció de cada grup i es cobra el preu únic del menú.',
     'tour.s16.title': 'Reserves: crear i consultar',
-    'tour.s16.desc': 'A Reserves pots veure el dia, la setmana o el mes. Per crear una reserva, indica data, hora, nombre de persones i tria un client de la teva base de dades (o crea\'n un nou des d\'allà mateix). Afegeix notes com al·lèrgies o peticions especials.',
+    'tour.s16.desc': 'A Reserves pots veure el dia, la setmana o el mes. Per crear una reserva, indica data, hora, nombre de persones i tria un client de la teva base de dades (o crea\'n un nou des d\'allà mateix). Afegeix notes com al·lèrgies o peticions especials. Des d\'El Meu Negoci pots demanar senyal amb targeta per confirmar, a partir d\'un nombre de comensals que tu tries (o sempre, si ho deixes a zero).',
     'tour.s17.title': 'Aforament, taules i arribades',
     'tour.s17.desc': 'Des de la vista de dia pots assignar una taula a cada reserva amb antelació. La columna "Arribada" et permet marcar manualment qui ha arribat (i confirmar a quina taula s\'ha assegut), encara que normalment això es marca sol en obrir la seva taula al TPV. Si un torn està ple, pots posar la reserva en llista d\'espera en comptes de forçar-la; i una reserva confirmada es pot cancel·lar sense perdre el seu rastre.',
     'tour.s18.title': 'Clients',
@@ -13402,7 +13402,7 @@ const I18N = {
     'tour.s21.title': 'Estoc i Comandes a proveïdors',
     'tour.s21.desc': 'Controla l\'inventari del teu magatzem, defineix nivells mínims d\'estoc i genera comandes a proveïdors quan un ingredient estigui per sota d\'aquest mínim. Així evites quedar-te sense producte en ple servei.',
     'tour.s22.title': 'Horaris, distribució de la feina i neteja',
-    'tour.s22.desc': 'Organitza els torns i horaris del teu equip, reparteix tasques del dia a dia i gestiona els checklists de neteja per assegurar-te que tot queda en ordre després de cada torn.',
+    'tour.s22.desc': 'Organitza els torns i el calendari setmanal del teu equip: qui treballa cada dia, vacances, canvis de torn entre companys... Tot des d\'aquí.',
     'tour.s23.title': 'Promoció',
     'tour.s23.desc': 'Des d\'aquí pots preparar contingut i campanyes per promocionar el teu negoci, i també crear promocions amb efecte real: un descompte que s\'aplica sol al TPV en demanar un plat/beguda concret, opcionalment repetint-se cada setmana sense haver de crear-la de nou cada vegada.',
     'tour.s24.title': 'Tauler de Control',
@@ -13410,7 +13410,7 @@ const I18N = {
     'tour.s25.title': 'Gestió Econòmica',
     'tour.s25.desc': 'Aquí registres despeses i ingressos, i l\'app calcula el teu compte de resultats i el teu punt d\'equilibri (quant necessites vendre per cobrir costos). És la teva eina per prendre decisions econòmiques amb dades reals.',
     'tour.s26.title': 'El Meu Negoci: dades i accés',
-    'tour.s26.desc': 'Configura el nom, l\'adreça i les dades fiscals del teu negoci, així com el PIN de Gestió (l\'únic que dona accés a aquesta zona econòmica). És diferent del "mode edició" de Cuina/Sala, que pots delegar a un empleat concret des de la seva fitxa a Personal. Mantén aquestes dades actualitzades: apareixen en tiquets i documents.',
+    'tour.s26.desc': 'Configura el nom, l\'adreça i les dades fiscals del teu negoci. Gestió Econòmica és exclusiva del propietari — a diferència del "mode edició" de Cuina/Sala, no hi ha cap PIN que es pugui delegar a un empleat. Mantén aquestes dades actualitzades: apareixen en tiquets i documents.',
     'tour.s27.title': 'El Meu Negoci: núvol, idioma i aquest tour',
     'tour.s27.desc': 'Aquí gestiones la connexió al teu núvol (còpia de seguretat automàtica), l\'idioma de l\'app, l\'arxivat de dades antigues, la facturació electrònica VeriFactu (marcada com a "Vista prèvia" fins que sigui obligatòria) i tota la configuració del teu negoci. I recorda: sempre pots tornar a veure aquest tour guiat prement "Veure tour de l\'app".',
     'tour.s28.title': 'El teu equip: Horari del Personal',
@@ -13430,7 +13430,7 @@ const I18N = {
     'tour.s44.title': 'Distribució de la Feina',
     'tour.s44.desc': 'Una cosa és saber QUAN treballa cada empleat (això és Horari del Personal) i una altra molt diferent és saber QUÈ ha de fer durant aquell torn. Aquí reparteixes tasques concretes dia a dia entre el teu equip.',
     'tour.s45.title': 'Pla de Neteja (APPCC)',
-    'tour.s45.desc': 'Checklists de neteja i higiene per complir el protocol APPCC i deixar constància que cada tasca s\'ha fet de veritat, torn rere torn.',
+    'tour.s45.desc': 'Checklists de neteja i higiene per complir el protocol APPCC i deixar constància que cada tasca s\'ha fet de veritat, torn rere torn. Les tasques mensuals poden repetir-se cada mes o ser puntuals, per a un dia concret que no cal tornar a repetir.',
     'tour.s46.title': 'Sala també té les seves pròpies eines',
     'tour.s46.desc': 'A més de TPV, Reserves, Clients i Promoció (que veurem ara), Sala comparteix amb tu les mateixes eines que ja has vist a Cuina — Carta, Mega Llista, Escandall, Estoc, Horaris, Distribució i Neteja — però aplicades a begudes i al teu equip de sala. Funcionen exactament igual a com ja les has vist, així que no les repassarem una altra vegada.',
     'tour.s38.title': 'El logo sempre et porta a Inici',
@@ -13442,7 +13442,7 @@ const I18N = {
     'tour.s41.title': 'Tancar sessió',
     'tour.s41.desc': 'Tanca la sessió actual (la teva o la d\'un empleat) i torna a la pantalla d\'accés. Cada persona hauria de tancar la seva sessió en acabar el seu torn, sobretot en un dispositiu compartit.',
     'tour.s29.title': 'Xat intern: comunica\'t amb el teu equip',
-    'tour.s29.desc': 'Aquest botó obre el Xat intern, amb canals de General, Cuina i Sala. Cada empleat tria el seu nom (amb el seu PIN) abans d\'escriure, i el propietari/a pot identificar-se com "Cap" introduint el PIN de Gestió. Ideal per a avisos ràpids sense grups de WhatsApp externs.',
+    'tour.s29.desc': 'Aquest botó obre el Xat intern, amb canals de General, Cuina i Sala. Identifica automàticament qui escriu segons la seva sessió (l\'empleat que ha fitxat, o el propietari) — ningú ha de triar el seu nom a mà. Ideal per a avisos ràpids sense grups de WhatsApp externs.',
     'tour.s30.title': 'Centre d\'ajuda: resol dubtes a l\'instant',
     'tour.s30.desc': 'Aquest botó obre el Centre d\'ajuda, amb un assistent que respon preguntes freqüents sobre com fer servir cada part de l\'app. Si et quedes encallat en alguna cosa durant el dia a dia, és el camí més ràpid per trobar la resposta.',
     'tour.s31.title': 'El teu manual sempre a mà',
@@ -15548,7 +15548,7 @@ const I18N = {
     'tour.s4.title': 'Opening a table: reservation or walk-in',
     'tour.s4.desc': 'When you tap a free table, we ask whether the customer is a "walk-in" (you enter the number of guests) or "has a reservation" (you pick today\'s reservation and the customer, party size are filled in automatically and the reservation is marked as arrived). If the reservation had no table assigned, this one is assigned automatically.',
     'tour.s5.title': 'Adding dishes to the order',
-    'tour.s5.desc': 'Inside the order you\'ll see your menu organized by sections. Tap a dish to add it; adding it again increases the quantity. Use the + and − buttons to adjust units, and the trash icon to remove a line.',
+    'tour.s5.desc': 'Inside the order you\'ll see your menu organized by sections. Tap a dish to add it; adding it again increases the quantity. Use the + and − buttons to adjust units, and the trash icon to remove a line. The (i) icon next to each dish shows its ingredients with allergens highlighted, without leaving the order.',
     'tour.s6.title': 'Extras and notes per dish',
     'tour.s6.desc': 'If a dish has extras configured (e.g. "Extra cheese"), adding it opens a window where you check the desired extras and write a free note (e.g. "no onion"). You can later edit the note of any line using the note icon.',
     'tour.s7.title': 'Courses and "Send to kitchen"',
@@ -15570,7 +15570,7 @@ const I18N = {
     'tour.s15.title': 'Combo menus',
     'tour.s15.desc': 'Create fixed-price combo menus (e.g. "Daily menu") by grouping dishes into option groups, such as "Starter — choose 1 of 3" or "Dessert included". The customer picks one option from each group and is charged the menu\'s single price.',
     'tour.s16.title': 'Reservations: creating and viewing',
-    'tour.s16.desc': 'In Reservations you can view by day, week or month. To create a reservation, enter the date, time, party size and pick a customer from your database (or create a new one right there). Add notes such as allergies or special requests.',
+    'tour.s16.desc': 'In Reservations you can view by day, week or month. To create a reservation, enter the date, time, party size and pick a customer from your database (or create a new one right there). Add notes such as allergies or special requests. From My Business you can require a card deposit to confirm, starting from a party size you choose (or always, if left at zero).',
     'tour.s17.title': 'Capacity, tables and arrivals',
     'tour.s17.desc': 'From the day view you can assign a table to each reservation in advance. The "Arrived" column lets you manually mark who has arrived (and confirm which table they sat at), although this is usually marked automatically when opening their table in the POS. If a shift is full, you can put the reservation on the waitlist instead of forcing it; and a confirmed reservation can be cancelled without losing its record.',
     'tour.s18.title': 'Customers',
@@ -15582,7 +15582,7 @@ const I18N = {
     'tour.s21.title': 'Stock and Purchase Orders',
     'tour.s21.desc': 'Track your storeroom inventory, set minimum stock levels and generate purchase orders to suppliers when an ingredient drops below that minimum. This helps you avoid running out of product mid-service.',
     'tour.s22.title': 'Schedules, work distribution and cleaning',
-    'tour.s22.desc': 'Organize your team\'s shifts and schedules, distribute day-to-day tasks and manage cleaning checklists to make sure everything is in order after each shift.',
+    'tour.s22.desc': 'Organize your team\'s shifts and weekly schedule: who works which day, vacation, shift swaps between colleagues... all from here.',
     'tour.s23.title': 'Promotion',
     'tour.s23.desc': 'From here you can prepare content and campaigns to promote your business, and also create promotions with a real effect: a discount that\'s applied automatically at the till when ordering a specific dish/drink, optionally repeating every week without having to recreate it each time.',
     'tour.s24.title': 'Dashboard',
@@ -15590,7 +15590,7 @@ const I18N = {
     'tour.s25.title': 'Financial Management',
     'tour.s25.desc': 'Here you record expenses and income, and the app calculates your profit and loss statement and your break-even point (how much you need to sell to cover costs). It\'s your tool for making economic decisions based on real data.',
     'tour.s26.title': 'My Business: details and access',
-    'tour.s26.desc': 'Configure your business name, address and tax details, as well as the Management PIN (the only one that grants access to this economic area). It\'s different from the Kitchen/Floor "edit mode", which you can delegate to a specific employee from their record in Staff. Keep this data up to date since it appears on receipts and documents.',
+    'tour.s26.desc': 'Configure your business name, address and tax details. Management is exclusive to the owner — unlike the Kitchen/Floor "edit mode", no PIN can be delegated to an employee here. Keep this data up to date since it appears on receipts and documents.',
     'tour.s27.title': 'My Business: cloud, language and this tour',
     'tour.s27.desc': 'Here you manage your cloud connection (automatic backup), the app\'s language, the archiving of old data, VeriFactu electronic invoicing (shown as "Preview" until it becomes mandatory), and all of your business\'s configuration. And remember: you can always replay this guided tour by pressing "View app tour".',
     'tour.s28.title': 'Your team: Staff Schedule',
@@ -15610,7 +15610,7 @@ const I18N = {
     'tour.s44.title': 'Work Distribution',
     'tour.s44.desc': 'Knowing WHEN each employee works is one thing (that\'s Staff Schedule) — knowing WHAT they need to do during that shift is a different thing entirely. Here you hand out concrete tasks day by day across your team.',
     'tour.s45.title': 'Cleaning Plan (HACCP)',
-    'tour.s45.desc': 'Cleaning and hygiene checklists to comply with the HACCP protocol and keep a record that each task was actually done, shift after shift.',
+    'tour.s45.desc': 'Cleaning and hygiene checklists to comply with the HACCP protocol and keep a record that each task was actually done, shift after shift. Monthly tasks can repeat every month or be one-off, for a specific day with no need to repeat it.',
     'tour.s46.title': 'Floor has its own tools too',
     'tour.s46.desc': 'Besides POS, Reservations, Customers and Promotion (which we\'ll see next), Floor shares with you the same tools you\'ve already seen in Kitchen — Menu, Master List, Costing, Stock, Schedule, Work Distribution and Cleaning — but applied to drinks and your floor team. They work exactly the same as you\'ve already seen, so we won\'t go through them again.',
     'tour.s38.title': 'The logo always takes you Home',
@@ -15622,7 +15622,7 @@ const I18N = {
     'tour.s41.title': 'Sign out',
     'tour.s41.desc': 'Closes the current session (yours or an employee\'s) and returns to the access screen. Everyone should sign out at the end of their shift, especially on a shared device.',
     'tour.s29.title': 'Internal chat: talk to your team',
-    'tour.s29.desc': 'This button opens the internal Chat, with General, Kitchen and Dining Room channels. Each employee picks their name (with their PIN) before writing, and the owner can identify as "Boss" by entering the Management PIN. Perfect for quick notices without external WhatsApp groups.',
+    'tour.s29.desc': 'This button opens the internal Chat, with General, Kitchen and Dining Room channels. It identifies whoever writes automatically from their session (the employee who clocked in, or the owner) — nobody has to pick their name by hand. Perfect for quick notices without external WhatsApp groups.',
     'tour.s30.title': 'Help center: get answers instantly',
     'tour.s30.desc': 'This button opens the Help center, with an assistant that answers frequent questions about how to use each part of the app. If you get stuck on something during your day-to-day, it\'s the fastest way to find the answer.',
     'tour.s31.title': 'Your manual, always at hand',
@@ -20086,7 +20086,13 @@ function renderDashboard(){
       const key = dishKey(it);
       const qty = it.qty || 1;
       const unitCost = it.recipeId ? costoUnitarioDeLinea(it) : 0;
-      const margin = ((it.price||0) - unitCost) * qty;
+      // it.price es el precio de venta CON IVA (viene de r.price en Carta); el
+      // coste de la receta es siempre neto, así que hay que quitarle el IVA a
+      // la línea antes de restar — si no, el margen sale inflado y varía según
+      // el tipo de IVA del plato en vez de reflejar solo coste vs venta real.
+      const rate = it.ivaPct != null ? parseFloat(it.ivaPct) : ((DB.business.ticket && DB.business.ticket.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10);
+      const unitPriceBase = (it.price||0) / (1 + rate/100);
+      const margin = (unitPriceBase - unitCost) * qty;
       if(!marginTotals[key]) marginTotals[key] = {name: it.name || '—', margin:0, hasCost: !!it.recipeId};
       marginTotals[key].margin += margin;
       if(it.recipeId) marginTotals[key].hasCost = true;
@@ -21489,7 +21495,14 @@ function updateElaboracionQty(id, value){
 function recipeFoodCostPct(r){
   if(!r.price) return Infinity;
   const cost = recipeCost(r);
-  return (cost / r.price) * 100;
+  // El food cost se mide sobre la venta SIN IVA (lo que de verdad ingresa el
+  // negocio): usar el precio bruto infla el margen y esconde food cost real,
+  // más cuanto más alto sea el IVA. Recetas antiguas sin priceBase/ivaPct
+  // guardados no pueden derivar el neto exacto: se usa el precio bruto como
+  // única opción posible, igual que antes de este arreglo.
+  const priceBase = r.priceBase!=null ? r.priceBase : (r.ivaPct!=null ? r.price/(1+r.ivaPct/100) : r.price);
+  if(!priceBase) return Infinity;
+  return (cost / priceBase) * 100;
 }
 // Coste de una elaboración base (caldo, sofrito, masa...) por unidad de su rendimiento.
 // `visited` evita bucles infinitos si una base se referencia a sí misma (directa o
@@ -21877,7 +21890,8 @@ function renderEscandalloFull(r){
     const breakdown = recipeCostBreakdown(r);
     const cost = breakdown.total;
     const pct = recipeFoodCostPct(r);
-    const margin = (r.price||0) - cost;
+    const priceBaseForMargin = r.priceBase!=null ? r.priceBase : (r.ivaPct!=null ? r.price/(1+r.ivaPct/100) : (r.price||0));
+    const margin = priceBaseForMargin - cost;
     const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
     const pctClass = r.isBase ? 'gray' : !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
     const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? t('label.noSalePrice') : `${pct.toFixed(1)}% FC`;
@@ -33426,7 +33440,11 @@ const GE = (function(){
     // real de entonces (geTotalFijosNetoForMonth), no el de hoy.
     const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span style="font-size:10.5px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
     const rows = [
-      {lbl:t('hr.cdr.revenue'), vals:getMeses().map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true, yoyFn:i=>facturacionMes(i,cdrYear-1)},
+      // Ingresos = facturación neta + IVA repercutido (no facturacionMes, que
+      // suma v.total e incluye la propina): así la fila de abajo, "IVA
+      // repercutido", resta exactamente lo que hace falta para llegar a
+      // "Facturación neta" — si no, con propina en el mes la resta no cuadraba.
+      {lbl:t('hr.cdr.revenue'), vals:getMeses().map((_,i)=>facturacionNetaMes(i,cdrYear)+ivaVentasMes(i,cdrYear)), auto:true, bold:true, yoyFn:i=>facturacionNetaMes(i,cdrYear-1)+ivaVentasMes(i,cdrYear-1)},
       {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), vals:getMeses().map((_,i)=>-ivaVentasMes(i,cdrYear)), auto:true},
       {lbl:t('hr.cdr.netRevenue'), vals:getMeses().map((_,i)=>facturacionNetaMes(i,cdrYear)), auto:true, highlight:true, bold:true},
       {lbl:t('hr.lbl.variableExpensesNoVat'), vals:getMeses().map((_,i)=>-totalVariablesNetoMes(i,cdrYear)), auto:true},
@@ -33831,7 +33849,9 @@ const GE = (function(){
     const resAntesImp = m => resultadoAntesImpMes(m, cdrYear);
 
     const conceptos = [
-      {lbl:t('hr.cdr.revenue'), fn:m=>facturacionMes(m,cdrYear), bold:true},
+      // Mismo criterio que en la Cuenta de Resultados anual: neta+IVA, no
+      // facturacionMes (que incluye la propina y rompe la resta de la fila de abajo).
+      {lbl:t('hr.cdr.revenue'), fn:m=>facturacionNetaMes(m,cdrYear)+ivaVentasMes(m,cdrYear), bold:true},
       {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), fn:m=>ivaVentasMes(m,cdrYear), auto:true},
       {lbl:t('hr.res.netSales'), fn:m=>facturacionNetaMes(m,cdrYear), highlight:true, bold:true},
       {lbl:t('hr.res.costOfSales'), fn:m=>totalVariablesNetoMes(m,cdrYear)},
@@ -46869,8 +46889,8 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">7</div><div class="st">El sistema calcula automáticamente la <strong>cantidad bruta</strong> (lo que realmente debes comprar/sacar de almacén) y el <strong>coste</strong> de esa línea, multiplicando la cantidad bruta por el precio unitario de la Mega Lista.</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st">Repite para todos los ingredientes del plato. El <strong>coste total</strong> de la receta es la suma de todas las líneas, y el <strong>coste por ración</strong> es ese total dividido entre los comensales indicados.</div></div>
     <h4>La fórmula de la merma, explicada con un ejemplo</h4>
-    <p>La relación es: <strong>cantidad bruta = cantidad neta × (1 + merma%)</strong>.</p>
-    <p>Ejemplo: tu receta necesita <strong>100&nbsp;g netos</strong> de lomo de merluza ya limpio para el plato. Si al limpiar la merluza entera pierdes un 20% (espinas, piel, recortes), necesitas comprar/usar <strong>100 × (1 + 0,20) = 120&nbsp;g brutos</strong> de merluza para obtener esos 100&nbsp;g netos. El escandallo calculará el coste de la receta usando esos 120&nbsp;g al precio por gramo de la Mega Lista — no los 100&nbsp;g, porque esos 20&nbsp;g de merma también los has pagado.</p>
+    <p>La relación es: <strong>cantidad bruta = cantidad neta ÷ (1 − merma%)</strong>.</p>
+    <p>Ejemplo: tu receta necesita <strong>100&nbsp;g netos</strong> de lomo de merluza ya limpio para el plato. Si al limpiar la merluza entera pierdes un 20% (espinas, piel, recortes), necesitas comprar/usar <strong>100 ÷ (1 − 0,20) = 125&nbsp;g brutos</strong> de merluza para obtener esos 100&nbsp;g netos. El escandallo calculará el coste de la receta usando esos 125&nbsp;g al precio por gramo de la Mega Lista — no los 100&nbsp;g, porque esos 25&nbsp;g de merma también los has pagado.</p>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si dejas la merma a 0% en productos que sí tienen desperdicio (pescados con piel/espina, verduras sin pelar, carnes con grasa o hueso), tu coste real estará infravalorado y el food cost que verás será más bajo que el real. Revisa la merma de cada ingrediente con cuidado, especialmente en pescados y carnes.</div>
     <h4>Consumibles: el "extra" que no se mide plato a plato</h4>
     <p>El campo <strong>Consumibles (%)</strong> añade un porcentaje sobre el coste de la receta para cubrir ingredientes que serían imposibles o muy tediosos de medir línea a línea: el chorrito de aceite para saltear, la sal, las especias, el agua, el gas o la electricidad del horno, el papel de horno, etc. Un valor habitual está entre el <strong>5% y el 8%</strong> del coste de la receta, aunque puede variar según el tipo de plato (un plato muy elaborado con muchas cocciones puede justificar un % algo mayor).</p>
@@ -46907,8 +46927,8 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">7</div><div class="st">El sistema calcula automàticament la <strong>quantitat bruta</strong> (el que realment has de comprar/treure del magatzem) i el <strong>cost</strong> d'aquesta línia, multiplicant la quantitat bruta pel preu unitari de la Mega Llista.</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st">Repeteix per a tots els ingredients del plat. El <strong>cost total</strong> de la recepta és la suma de totes les línies, i el <strong>cost per ració</strong> és aquest total dividit entre els comensals indicats.</div></div>
     <h4>La fórmula de la merma, explicada amb un exemple</h4>
-    <p>La relació és: <strong>quantitat bruta = quantitat neta × (1 + merma%)</strong>.</p>
-    <p>Exemple: la teva recepta necessita <strong>100&nbsp;g nets</strong> de llom de lluç ja net per al plat. Si en netejar el lluç sencer perds un 20% (espines, pell, retalls), necessites comprar/fer servir <strong>100 × (1 + 0,20) = 120&nbsp;g bruts</strong> de lluç per obtenir aquests 100&nbsp;g nets. L'escandall calcularà el cost de la recepta fent servir aquests 120&nbsp;g al preu per gram de la Mega Llista — no els 100&nbsp;g, perquè aquells 20&nbsp;g de merma també els has pagat.</p>
+    <p>La relació és: <strong>quantitat bruta = quantitat neta ÷ (1 − merma%)</strong>.</p>
+    <p>Exemple: la teva recepta necessita <strong>100&nbsp;g nets</strong> de llom de lluç ja net per al plat. Si en netejar el lluç sencer perds un 20% (espines, pell, retalls), necessites comprar/fer servir <strong>100 ÷ (1 − 0,20) = 125&nbsp;g bruts</strong> de lluç per obtenir aquests 100&nbsp;g nets. L'escandall calcularà el cost de la recepta fent servir aquests 125&nbsp;g al preu per gram de la Mega Llista — no els 100&nbsp;g, perquè aquells 25&nbsp;g de merma també els has pagat.</p>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si deixes la merma a 0% en productes que sí que tenen rebuig (peixos amb pell/espina, verdures sense pelar, carns amb greix o os), el teu cost real estarà infravalorat i el food cost que veuràs serà més baix que el real. Revisa la merma de cada ingredient amb cura, especialment en peixos i carns.</div>
     <h4>Consumibles: l'"extra" que no es mesura plat a plat</h4>
     <p>El camp <strong>Consumibles (%)</strong> afegeix un percentatge sobre el cost de la recepta per cobrir ingredients que serien impossibles o molt feixucs de mesurar línia a línia: el rajolí d'oli per saltejar, la sal, les espècies, l'aigua, el gas o l'electricitat del forn, el paper de forn, etc. Un valor habitual és entre el <strong>5% i el 8%</strong> del cost de la recepta, tot i que pot variar segons el tipus de plat (un plat molt elaborat amb moltes coccions pot justificar un % una mica més gran).</p>
@@ -46945,8 +46965,8 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">7</div><div class="st">The system automatically calculates the <strong>gross quantity</strong> (what you actually need to buy/pull from storage) and the <strong>cost</strong> of that line, by multiplying the gross quantity by the Master List's unit price.</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st">Repeat for every ingredient in the dish. The recipe's <strong>total cost</strong> is the sum of all lines, and the <strong>cost per serving</strong> is that total divided by the number of servings entered.</div></div>
     <h4>The waste formula, explained with an example</h4>
-    <p>The relationship is: <strong>gross quantity = net quantity × (1 + waste%)</strong>.</p>
-    <p>Example: your recipe needs <strong>100&nbsp;g net</strong> of already-cleaned hake loin for the dish. If cleaning the whole hake loses 20% (bones, skin, trimmings), you need to buy/use <strong>100 × (1 + 0.20) = 120&nbsp;g gross</strong> of hake to get those 100&nbsp;g net. Costing will calculate the recipe's cost using those 120&nbsp;g at the Master List's price per gram — not the 100&nbsp;g, because you also paid for that 20&nbsp;g of waste.</p>
+    <p>The relationship is: <strong>gross quantity = net quantity ÷ (1 − waste%)</strong>.</p>
+    <p>Example: your recipe needs <strong>100&nbsp;g net</strong> of already-cleaned hake loin for the dish. If cleaning the whole hake loses 20% (bones, skin, trimmings), you need to buy/use <strong>100 ÷ (1 − 0.20) = 125&nbsp;g gross</strong> of hake to get those 100&nbsp;g net. Costing will calculate the recipe's cost using those 125&nbsp;g at the Master List's price per gram — not the 100&nbsp;g, because you also paid for that 25&nbsp;g of waste.</p>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>If you leave waste at 0% for products that do have waste (fish with skin/bones, unpeeled vegetables, meat with fat or bone), your real cost will be understated and the food cost you see will be lower than the real one. Check each ingredient's waste carefully, especially for fish and meat.</div>
     <h4>Consumables: the "extra" that isn't measured dish by dish</h4>
     <p>The <strong>Consumables (%)</strong> field adds a percentage on top of the recipe cost to cover ingredients that would be impossible or too tedious to measure line by line: the splash of oil for sautéing, salt, spices, water, oven gas or electricity, baking paper, etc. A typical value is between <strong>5% and 8%</strong> of the recipe's cost, though it can vary by dish type (a very elaborate dish with many cooking steps may justify a slightly higher %).</p>
@@ -48523,7 +48543,7 @@ const MANUAL_CHAPTERS = [
     content:{es:`<h3>Tu web pública para clientes</h3>
     <p>GastroGoan genera automáticamente una página web (y un código QR) donde tus clientes pueden reservar mesa o hacer pedidos para recoger/delivery, sin que tengas que programar nada.</p>
     <h4>Activar la nube</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Ve a <strong>Mi Negocio</strong> y activa tu licencia de GastroGoan (te conecta a la nube compartida).</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Ve a <strong>Mi Negocio</strong> y activa tu licencia de GastroGoan, configurando tu propia nube gratuita (te conecta a TU nube, no a una compartida con otros negocios).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Una vez activada, en <strong>Mi Negocio</strong> aparece tu <strong>enlace público</strong> y un <strong>código QR</strong>. Compártelos con tus clientes (en mesas, carta, redes sociales...).</div></div>
     <h4>Para que aparezca la carta en pedidos online</h4>
     <ul>
@@ -48556,7 +48576,7 @@ const MANUAL_CHAPTERS = [
     ca:`<h3>La teva web pública per a clients</h3>
     <p>GastroGoan genera automàticament una pàgina web (i un codi QR) on els teus clients poden reservar taula o fer comandes per recollir/delivery, sense que hagis de programar res.</p>
     <h4>Activar el núvol</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Vés a <strong>El Meu Negoci</strong> i activa la teva llicència de GastroGoan (et connecta al núvol compartit).</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Vés a <strong>El Meu Negoci</strong> i activa la teva llicència de GastroGoan, configurant el teu propi núvol gratuït (et connecta al TEU núvol, no a un de compartit amb altres negocis).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Un cop activada, a <strong>El Meu Negoci</strong> apareix el teu <strong>enllaç públic</strong> i un <strong>codi QR</strong>. Comparteix-los amb els teus clients (a les taules, a la carta, a les xarxes socials...).</div></div>
     <h4>Perquè aparegui la carta a les comandes en línia</h4>
     <ul>
@@ -48589,7 +48609,7 @@ const MANUAL_CHAPTERS = [
     en:`<h3>Your public website for customers</h3>
     <p>GastroGoan automatically generates a website (and a QR code) where your customers can book a table or place pickup/delivery orders, with nothing for you to build.</p>
     <h4>Activating the cloud</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>My Business</strong> and activate your GastroGoan licence (it connects you to the shared cloud).</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>My Business</strong> and activate your GastroGoan licence by setting up your own free cloud (it connects you to YOUR cloud, not one shared with other businesses).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Once activated, your <strong>public link</strong> and a <strong>QR code</strong> appear in <strong>My Business</strong>. Share them with your customers (on tables, on the menu, on social media...).</div></div>
     <h4>Getting the menu to show up in online orders</h4>
     <ul>

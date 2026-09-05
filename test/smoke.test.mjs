@@ -481,5 +481,32 @@ test('confirmDeleteRecipe limpia las líneas baseRecipeId que quedarían huérfa
   assert.equal(salsa.ingredients[0].ingredientId, 99, 'la otra línea (un ingrediente normal) no debe tocarse');
 });
 
+// --- recipeFoodCostPct: el food cost se mide sobre la venta SIN IVA (B7) ---
+
+test('recipeFoodCostPct usa el precio SIN IVA (priceBase), no el precio con IVA', () => {
+  const DB = {
+    ingredients: [{id: 1, price: 3}], // 3€/kg o unidad, según receta
+    recipes: [],
+  };
+  const sandbox = loadRecipes(DB);
+  sandbox.getIngredient = id => DB.ingredients.find(i => i.id === id);
+  // Receta con coste de ingredientes = 3€, precio de venta 21% IVA: base 10€, con IVA 12,10€.
+  const r = {price: 12.10, priceBase: 10, ivaPct: 21, ingredients: [{type:'ingredient', ingredientId: 1, qty: 1, merma: 0}]};
+  const pct = sandbox.recipeFoodCostPct(r);
+  assert.equal(Math.round(pct * 10) / 10, 30, 'food cost = coste/precio SIN IVA = 3/10 = 30%, no 3/12.10 ≈ 24.8%');
+});
+
+test('recipeFoodCostPct deriva el precio sin IVA de ivaPct si falta priceBase (recetas antiguas)', () => {
+  const DB = {
+    ingredients: [{id: 1, price: 3}],
+    recipes: [],
+  };
+  const sandbox = loadRecipes(DB);
+  sandbox.getIngredient = id => DB.ingredients.find(i => i.id === id);
+  const r = {price: 12.10, ivaPct: 21, ingredients: [{type:'ingredient', ingredientId: 1, qty: 1, merma: 0}]};
+  const pct = sandbox.recipeFoodCostPct(r);
+  assert.equal(Math.round(pct * 10) / 10, 30, 'sin priceBase guardado, debe derivar el neto con ivaPct: 12.10/1.21=10');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todo OK' : `❌ ${failures} test(s) fallaron`}`);
 process.exit(failures === 0 ? 0 : 1);

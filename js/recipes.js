@@ -5,7 +5,14 @@
 function recipeFoodCostPct(r){
   if(!r.price) return Infinity;
   const cost = recipeCost(r);
-  return (cost / r.price) * 100;
+  // El food cost se mide sobre la venta SIN IVA (lo que de verdad ingresa el
+  // negocio): usar el precio bruto infla el margen y esconde food cost real,
+  // más cuanto más alto sea el IVA. Recetas antiguas sin priceBase/ivaPct
+  // guardados no pueden derivar el neto exacto: se usa el precio bruto como
+  // única opción posible, igual que antes de este arreglo.
+  const priceBase = r.priceBase!=null ? r.priceBase : (r.ivaPct!=null ? r.price/(1+r.ivaPct/100) : r.price);
+  if(!priceBase) return Infinity;
+  return (cost / priceBase) * 100;
 }
 // Coste de una elaboración base (caldo, sofrito, masa...) por unidad de su rendimiento.
 // `visited` evita bucles infinitos si una base se referencia a sí misma (directa o
@@ -393,7 +400,8 @@ function renderEscandalloFull(r){
     const breakdown = recipeCostBreakdown(r);
     const cost = breakdown.total;
     const pct = recipeFoodCostPct(r);
-    const margin = (r.price||0) - cost;
+    const priceBaseForMargin = r.priceBase!=null ? r.priceBase : (r.ivaPct!=null ? r.price/(1+r.ivaPct/100) : (r.price||0));
+    const margin = priceBaseForMargin - cost;
     const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
     const pctClass = r.isBase ? 'gray' : !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
     const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? t('label.noSalePrice') : `${pct.toFixed(1)}% FC`;

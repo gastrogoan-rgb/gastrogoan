@@ -6977,8 +6977,8 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">7</div><div class="st">El sistema calcula automáticamente la <strong>cantidad bruta</strong> (lo que realmente debes comprar/sacar de almacén) y el <strong>coste</strong> de esa línea, multiplicando la cantidad bruta por el precio unitario de la Mega Lista.</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st">Repite para todos los ingredientes del plato. El <strong>coste total</strong> de la receta es la suma de todas las líneas, y el <strong>coste por ración</strong> es ese total dividido entre los comensales indicados.</div></div>
     <h4>La fórmula de la merma, explicada con un ejemplo</h4>
-    <p>La relación es: <strong>cantidad bruta = cantidad neta × (1 + merma%)</strong>.</p>
-    <p>Ejemplo: tu receta necesita <strong>100&nbsp;g netos</strong> de lomo de merluza ya limpio para el plato. Si al limpiar la merluza entera pierdes un 20% (espinas, piel, recortes), necesitas comprar/usar <strong>100 × (1 + 0,20) = 120&nbsp;g brutos</strong> de merluza para obtener esos 100&nbsp;g netos. El escandallo calculará el coste de la receta usando esos 120&nbsp;g al precio por gramo de la Mega Lista — no los 100&nbsp;g, porque esos 20&nbsp;g de merma también los has pagado.</p>
+    <p>La relación es: <strong>cantidad bruta = cantidad neta ÷ (1 − merma%)</strong>.</p>
+    <p>Ejemplo: tu receta necesita <strong>100&nbsp;g netos</strong> de lomo de merluza ya limpio para el plato. Si al limpiar la merluza entera pierdes un 20% (espinas, piel, recortes), necesitas comprar/usar <strong>100 ÷ (1 − 0,20) = 125&nbsp;g brutos</strong> de merluza para obtener esos 100&nbsp;g netos. El escandallo calculará el coste de la receta usando esos 125&nbsp;g al precio por gramo de la Mega Lista — no los 100&nbsp;g, porque esos 25&nbsp;g de merma también los has pagado.</p>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si dejas la merma a 0% en productos que sí tienen desperdicio (pescados con piel/espina, verduras sin pelar, carnes con grasa o hueso), tu coste real estará infravalorado y el food cost que verás será más bajo que el real. Revisa la merma de cada ingrediente con cuidado, especialmente en pescados y carnes.</div>
     <h4>Consumibles: el "extra" que no se mide plato a plato</h4>
     <p>El campo <strong>Consumibles (%)</strong> añade un porcentaje sobre el coste de la receta para cubrir ingredientes que serían imposibles o muy tediosos de medir línea a línea: el chorrito de aceite para saltear, la sal, las especias, el agua, el gas o la electricidad del horno, el papel de horno, etc. Un valor habitual está entre el <strong>5% y el 8%</strong> del coste de la receta, aunque puede variar según el tipo de plato (un plato muy elaborado con muchas cocciones puede justificar un % algo mayor).</p>
@@ -7015,8 +7015,8 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">7</div><div class="st">El sistema calcula automàticament la <strong>quantitat bruta</strong> (el que realment has de comprar/treure del magatzem) i el <strong>cost</strong> d'aquesta línia, multiplicant la quantitat bruta pel preu unitari de la Mega Llista.</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st">Repeteix per a tots els ingredients del plat. El <strong>cost total</strong> de la recepta és la suma de totes les línies, i el <strong>cost per ració</strong> és aquest total dividit entre els comensals indicats.</div></div>
     <h4>La fórmula de la merma, explicada amb un exemple</h4>
-    <p>La relació és: <strong>quantitat bruta = quantitat neta × (1 + merma%)</strong>.</p>
-    <p>Exemple: la teva recepta necessita <strong>100&nbsp;g nets</strong> de llom de lluç ja net per al plat. Si en netejar el lluç sencer perds un 20% (espines, pell, retalls), necessites comprar/fer servir <strong>100 × (1 + 0,20) = 120&nbsp;g bruts</strong> de lluç per obtenir aquests 100&nbsp;g nets. L'escandall calcularà el cost de la recepta fent servir aquests 120&nbsp;g al preu per gram de la Mega Llista — no els 100&nbsp;g, perquè aquells 20&nbsp;g de merma també els has pagat.</p>
+    <p>La relació és: <strong>quantitat bruta = quantitat neta ÷ (1 − merma%)</strong>.</p>
+    <p>Exemple: la teva recepta necessita <strong>100&nbsp;g nets</strong> de llom de lluç ja net per al plat. Si en netejar el lluç sencer perds un 20% (espines, pell, retalls), necessites comprar/fer servir <strong>100 ÷ (1 − 0,20) = 125&nbsp;g bruts</strong> de lluç per obtenir aquests 100&nbsp;g nets. L'escandall calcularà el cost de la recepta fent servir aquests 125&nbsp;g al preu per gram de la Mega Llista — no els 100&nbsp;g, perquè aquells 25&nbsp;g de merma també els has pagat.</p>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si deixes la merma a 0% en productes que sí que tenen rebuig (peixos amb pell/espina, verdures sense pelar, carns amb greix o os), el teu cost real estarà infravalorat i el food cost que veuràs serà més baix que el real. Revisa la merma de cada ingredient amb cura, especialment en peixos i carns.</div>
     <h4>Consumibles: l'"extra" que no es mesura plat a plat</h4>
     <p>El camp <strong>Consumibles (%)</strong> afegeix un percentatge sobre el cost de la recepta per cobrir ingredients que serien impossibles o molt feixucs de mesurar línia a línia: el rajolí d'oli per saltejar, la sal, les espècies, l'aigua, el gas o l'electricitat del forn, el paper de forn, etc. Un valor habitual és entre el <strong>5% i el 8%</strong> del cost de la recepta, tot i que pot variar segons el tipus de plat (un plat molt elaborat amb moltes coccions pot justificar un % una mica més gran).</p>
@@ -7053,8 +7053,8 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">7</div><div class="st">The system automatically calculates the <strong>gross quantity</strong> (what you actually need to buy/pull from storage) and the <strong>cost</strong> of that line, by multiplying the gross quantity by the Master List's unit price.</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st">Repeat for every ingredient in the dish. The recipe's <strong>total cost</strong> is the sum of all lines, and the <strong>cost per serving</strong> is that total divided by the number of servings entered.</div></div>
     <h4>The waste formula, explained with an example</h4>
-    <p>The relationship is: <strong>gross quantity = net quantity × (1 + waste%)</strong>.</p>
-    <p>Example: your recipe needs <strong>100&nbsp;g net</strong> of already-cleaned hake loin for the dish. If cleaning the whole hake loses 20% (bones, skin, trimmings), you need to buy/use <strong>100 × (1 + 0.20) = 120&nbsp;g gross</strong> of hake to get those 100&nbsp;g net. Costing will calculate the recipe's cost using those 120&nbsp;g at the Master List's price per gram — not the 100&nbsp;g, because you also paid for that 20&nbsp;g of waste.</p>
+    <p>The relationship is: <strong>gross quantity = net quantity ÷ (1 − waste%)</strong>.</p>
+    <p>Example: your recipe needs <strong>100&nbsp;g net</strong> of already-cleaned hake loin for the dish. If cleaning the whole hake loses 20% (bones, skin, trimmings), you need to buy/use <strong>100 ÷ (1 − 0.20) = 125&nbsp;g gross</strong> of hake to get those 100&nbsp;g net. Costing will calculate the recipe's cost using those 125&nbsp;g at the Master List's price per gram — not the 100&nbsp;g, because you also paid for that 25&nbsp;g of waste.</p>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>If you leave waste at 0% for products that do have waste (fish with skin/bones, unpeeled vegetables, meat with fat or bone), your real cost will be understated and the food cost you see will be lower than the real one. Check each ingredient's waste carefully, especially for fish and meat.</div>
     <h4>Consumables: the "extra" that isn't measured dish by dish</h4>
     <p>The <strong>Consumables (%)</strong> field adds a percentage on top of the recipe cost to cover ingredients that would be impossible or too tedious to measure line by line: the splash of oil for sautéing, salt, spices, water, oven gas or electricity, baking paper, etc. A typical value is between <strong>5% and 8%</strong> of the recipe's cost, though it can vary by dish type (a very elaborate dish with many cooking steps may justify a slightly higher %).</p>
@@ -8631,7 +8631,7 @@ const MANUAL_CHAPTERS = [
     content:{es:`<h3>Tu web pública para clientes</h3>
     <p>GastroGoan genera automáticamente una página web (y un código QR) donde tus clientes pueden reservar mesa o hacer pedidos para recoger/delivery, sin que tengas que programar nada.</p>
     <h4>Activar la nube</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Ve a <strong>Mi Negocio</strong> y activa tu licencia de GastroGoan (te conecta a la nube compartida).</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Ve a <strong>Mi Negocio</strong> y activa tu licencia de GastroGoan, configurando tu propia nube gratuita (te conecta a TU nube, no a una compartida con otros negocios).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Una vez activada, en <strong>Mi Negocio</strong> aparece tu <strong>enlace público</strong> y un <strong>código QR</strong>. Compártelos con tus clientes (en mesas, carta, redes sociales...).</div></div>
     <h4>Para que aparezca la carta en pedidos online</h4>
     <ul>
@@ -8664,7 +8664,7 @@ const MANUAL_CHAPTERS = [
     ca:`<h3>La teva web pública per a clients</h3>
     <p>GastroGoan genera automàticament una pàgina web (i un codi QR) on els teus clients poden reservar taula o fer comandes per recollir/delivery, sense que hagis de programar res.</p>
     <h4>Activar el núvol</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Vés a <strong>El Meu Negoci</strong> i activa la teva llicència de GastroGoan (et connecta al núvol compartit).</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Vés a <strong>El Meu Negoci</strong> i activa la teva llicència de GastroGoan, configurant el teu propi núvol gratuït (et connecta al TEU núvol, no a un de compartit amb altres negocis).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Un cop activada, a <strong>El Meu Negoci</strong> apareix el teu <strong>enllaç públic</strong> i un <strong>codi QR</strong>. Comparteix-los amb els teus clients (a les taules, a la carta, a les xarxes socials...).</div></div>
     <h4>Perquè aparegui la carta a les comandes en línia</h4>
     <ul>
@@ -8697,7 +8697,7 @@ const MANUAL_CHAPTERS = [
     en:`<h3>Your public website for customers</h3>
     <p>GastroGoan automatically generates a website (and a QR code) where your customers can book a table or place pickup/delivery orders, with nothing for you to build.</p>
     <h4>Activating the cloud</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>My Business</strong> and activate your GastroGoan licence (it connects you to the shared cloud).</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>My Business</strong> and activate your GastroGoan licence by setting up your own free cloud (it connects you to YOUR cloud, not one shared with other businesses).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Once activated, your <strong>public link</strong> and a <strong>QR code</strong> appear in <strong>My Business</strong>. Share them with your customers (on tables, on the menu, on social media...).</div></div>
     <h4>Getting the menu to show up in online orders</h4>
     <ul>

@@ -814,7 +814,11 @@ const GE = (function(){
     // real de entonces (geTotalFijosNetoForMonth), no el de hoy.
     const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span style="font-size:10.5px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
     const rows = [
-      {lbl:t('hr.cdr.revenue'), vals:getMeses().map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true, yoyFn:i=>facturacionMes(i,cdrYear-1)},
+      // Ingresos = facturación neta + IVA repercutido (no facturacionMes, que
+      // suma v.total e incluye la propina): así la fila de abajo, "IVA
+      // repercutido", resta exactamente lo que hace falta para llegar a
+      // "Facturación neta" — si no, con propina en el mes la resta no cuadraba.
+      {lbl:t('hr.cdr.revenue'), vals:getMeses().map((_,i)=>facturacionNetaMes(i,cdrYear)+ivaVentasMes(i,cdrYear)), auto:true, bold:true, yoyFn:i=>facturacionNetaMes(i,cdrYear-1)+ivaVentasMes(i,cdrYear-1)},
       {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), vals:getMeses().map((_,i)=>-ivaVentasMes(i,cdrYear)), auto:true},
       {lbl:t('hr.cdr.netRevenue'), vals:getMeses().map((_,i)=>facturacionNetaMes(i,cdrYear)), auto:true, highlight:true, bold:true},
       {lbl:t('hr.lbl.variableExpensesNoVat'), vals:getMeses().map((_,i)=>-totalVariablesNetoMes(i,cdrYear)), auto:true},
@@ -1219,7 +1223,9 @@ const GE = (function(){
     const resAntesImp = m => resultadoAntesImpMes(m, cdrYear);
 
     const conceptos = [
-      {lbl:t('hr.cdr.revenue'), fn:m=>facturacionMes(m,cdrYear), bold:true},
+      // Mismo criterio que en la Cuenta de Resultados anual: neta+IVA, no
+      // facturacionMes (que incluye la propina y rompe la resta de la fila de abajo).
+      {lbl:t('hr.cdr.revenue'), fn:m=>facturacionNetaMes(m,cdrYear)+ivaVentasMes(m,cdrYear), bold:true},
       {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), fn:m=>ivaVentasMes(m,cdrYear), auto:true},
       {lbl:t('hr.res.netSales'), fn:m=>facturacionNetaMes(m,cdrYear), highlight:true, bold:true},
       {lbl:t('hr.res.costOfSales'), fn:m=>totalVariablesNetoMes(m,cdrYear)},

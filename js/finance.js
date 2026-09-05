@@ -539,7 +539,13 @@ function renderDashboard(){
       const key = dishKey(it);
       const qty = it.qty || 1;
       const unitCost = it.recipeId ? costoUnitarioDeLinea(it) : 0;
-      const margin = ((it.price||0) - unitCost) * qty;
+      // it.price es el precio de venta CON IVA (viene de r.price en Carta); el
+      // coste de la receta es siempre neto, así que hay que quitarle el IVA a
+      // la línea antes de restar — si no, el margen sale inflado y varía según
+      // el tipo de IVA del plato en vez de reflejar solo coste vs venta real.
+      const rate = it.ivaPct != null ? parseFloat(it.ivaPct) : ((DB.business.ticket && DB.business.ticket.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10);
+      const unitPriceBase = (it.price||0) / (1 + rate/100);
+      const margin = (unitPriceBase - unitCost) * qty;
       if(!marginTotals[key]) marginTotals[key] = {name: it.name || '—', margin:0, hasCost: !!it.recipeId};
       marginTotals[key].margin += margin;
       if(it.recipeId) marginTotals[key].hasCost = true;
