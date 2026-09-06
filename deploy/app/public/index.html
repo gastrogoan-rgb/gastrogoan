@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '06/09/2026 19:40';
+const GG_BUILD = '06/09/2026 20:15';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -7636,6 +7636,15 @@ const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   'requireDeposit', 'depositAmount', 'depositType', 'depositMinPeople', 'depositInstructions',
   'leadTimeMin', 'leadTimeMinReservas', 'leadTimeMinPedidos',
   'pedidosOnlineActivos',
+  // ⚠️ Sin esto, la web pública nunca veía la zona de reparto (cpList/
+  // radiusKm) ni el coste de envío: `p = (DB.business||{}).pedidos || {}`
+  // en reservagastrogoan.html siempre caía en el objeto vacío, así que
+  // CUALQUIER código postal se aceptaba (sin avisar de nada) y el envío a
+  // domicilio salía siempre gratis, aunque el negocio tuviera configurado
+  // lo contrario. No hay nada secreto dentro de `pedidos` (mínimos, tiempos
+  // de preparación, formas de pago aceptadas, tarifa de envío...), así que
+  // no hay motivo para dejarlo fuera de la lista.
+  'pedidos',
 ];
 function negocioParaElEspejoPublico(){
   const b = DB.business || {};

@@ -488,6 +488,13 @@ caso('Un pago de Redsys confirmado con un importe distinto del pedido se avisa, 
   assert.equal(apariciones, 3, 'falta la traducción del aviso de importe no coincidente en alguno de los tres idiomas');
 });
 
+caso('La web pública recibe la zona de reparto y el coste de envío del negocio (hallazgo real, probado con un pedido de verdad)', () => {
+  const m = core.match(/const CAMPOS_PUBLICOS_DEL_NEGOCIO = \[[\s\S]*?\];/);
+  assert.ok(m, 'no se encontró CAMPOS_PUBLICOS_DEL_NEGOCIO');
+  assert.ok(m[0].includes("'pedidos'"),
+    'sin "pedidos" en la lista blanca del espejo público, reservagastrogoan.html siempre ve `p = {}`: acepta CUALQUIER código postal sin avisar y nunca cobra el envío a domicilio, aunque el negocio los tenga configurados. Se detectó pidiendo de verdad con un CP fuera de la zona configurada.');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

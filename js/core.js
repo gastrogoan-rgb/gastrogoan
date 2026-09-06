@@ -4712,6 +4712,15 @@ const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   'requireDeposit', 'depositAmount', 'depositType', 'depositMinPeople', 'depositInstructions',
   'leadTimeMin', 'leadTimeMinReservas', 'leadTimeMinPedidos',
   'pedidosOnlineActivos',
+  // ⚠️ Sin esto, la web pública nunca veía la zona de reparto (cpList/
+  // radiusKm) ni el coste de envío: `p = (DB.business||{}).pedidos || {}`
+  // en reservagastrogoan.html siempre caía en el objeto vacío, así que
+  // CUALQUIER código postal se aceptaba (sin avisar de nada) y el envío a
+  // domicilio salía siempre gratis, aunque el negocio tuviera configurado
+  // lo contrario. No hay nada secreto dentro de `pedidos` (mínimos, tiempos
+  // de preparación, formas de pago aceptadas, tarifa de envío...), así que
+  // no hay motivo para dejarlo fuera de la lista.
+  'pedidos',
 ];
 function negocioParaElEspejoPublico(){
   const b = DB.business || {};
