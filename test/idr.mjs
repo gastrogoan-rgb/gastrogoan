@@ -2335,6 +2335,22 @@ await caso('El menú se cuesta ENTERO, no pase a pase', async ()=>{
   return 'la suma por comensal, que es lo que decide';
 });
 
+await caso('El mismo plato repetido en el conjunto avisa de que no es coherente', async ()=>{
+  const r = await page.evaluate(()=>{
+    const carta = {tipo:'carta', encargo:{pvp:0, foodCost:0}};
+    const receta = nombre => ({name: nombre, ingredients:[], consumiblesPct:0, price:0, steps:'', presentation:''});
+    const repetido = idrRevisarConjunto(carta, [receta('Ensalada de temporada'), receta('Croquetas de jamón'), receta('ENSALADA DE TEMPORADA')]);
+    const sinRepetir = idrRevisarConjunto(carta, [receta('Ensalada de temporada'), receta('Croquetas de jamón'), receta('Tarta de queso')]);
+    return {
+      repetido: repetido.some(a => /ensalada de temporada/i.test(a) && /repetido/.test(a)),
+      sinRepetir: sinRepetir.length,
+    };
+  });
+  assert.ok(r.repetido, 'dos platos con el mismo nombre (salvo mayúsculas/acentos/espacios) deben avisarse como repetidos: ' + JSON.stringify(r));
+  assert.equal(r.sinRepetir, 0, 'tres platos distintos no deben avisar de nada');
+  return 'sin acentos ni mayúsculas que cuelen el mismo plato como si fueran dos distintos';
+});
+
 /* ─── Un plato es un MONTAJE de elaboraciones, no una lista plana ─── */
 const PLATO_CON_ELABS = JSON.stringify({
   nombre:'Salmón con vinagreta de cítricos', descripcion:'x', comensales:1,

@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '06/09/2026 19:29';
+const GG_BUILD = '06/09/2026 19:40';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11347,6 +11347,7 @@ const I18N = {
     'idr.check.menuCost': 'El menú entero sale a ${coste} de materia prima por comensal: un ${pct}% sobre el precio, y tu objetivo es el ${obj}%.',
     'idr.check.menuCostLow': 'El menú entero sale a ${coste} por comensal, solo un ${pct}% del precio, con un objetivo del ${obj}%. Para lo que cobras, los pases se han quedado cortos.',
     'idr.check.fewDishes': 'Han salido ${n} platos y habías pedido ${pedidos}.',
+    'idr.check.duplicateDish': '"${nombre}" sale repetido en el conjunto.',
     'idr.check.equipment': 'Usa "${tecnica}" y tu equipamiento no lo permite.',
     'idr.check.gluten': 'Lleva gluten y tu negocio exige tener siempre opción sin gluten.',
     'idr.check.vegetarian': 'Lleva producto animal y aquí se pedía opción vegetariana.',
@@ -13531,6 +13532,7 @@ const I18N = {
     'idr.check.menuCost': 'El menú sencer surt a ${coste} de matèria primera per comensal: un ${pct}% sobre el preu, i el teu objectiu és el ${obj}%.',
     'idr.check.menuCostLow': 'El menú sencer surt a ${coste} per comensal, només un ${pct}% del preu, amb un objectiu del ${obj}%. Per al que cobres, els passis s\'han quedat curts.',
     'idr.check.fewDishes': 'Han sortit ${n} plats i n\'havies demanat ${pedidos}.',
+    'idr.check.duplicateDish': '"${nombre}" surt repetit en el conjunt.',
     'idr.check.equipment': 'Fa servir "${tecnica}" i el teu equipament no ho permet.',
     'idr.check.gluten': 'Porta gluten i el teu negoci exigeix tenir sempre opció sense gluten.',
     'idr.check.vegetarian': 'Porta producte animal i aquí es demanava opció vegetariana.',
@@ -15715,6 +15717,7 @@ const I18N = {
     'idr.check.menuCost': 'The whole menu comes to ${coste} of raw material per cover: ${pct}% of the price, against your ${obj}% target.',
     'idr.check.menuCostLow': 'The whole menu comes to ${coste} per cover, only ${pct}% of the price, against a ${obj}% target. For what you charge, the courses fall short.',
     'idr.check.fewDishes': '${n} dishes came out and you asked for ${pedidos}.',
+    'idr.check.duplicateDish': '"${nombre}" appears twice in the set.',
     'idr.check.equipment': 'It uses "${tecnica}" and your equipment does not allow it.',
     'idr.check.gluten': 'It contains gluten and your business always requires a gluten-free option.',
     'idr.check.vegetarian': 'It contains animal produce and a vegetarian option was required here.',
@@ -39897,6 +39900,19 @@ function idrObjetivoFoodCost(c){
    una carta, plato a plato contra su precio medio. */
 function idrRevisarConjunto(c, recetas){
   const avisos = [];
+  // Coherencia del conjunto: el mismo plato no puede salir dos veces en el
+  // mismo menú o carta. No hay guion de pasos que lo impida al crearlo (cada
+  // pase se le pide al modelo por separado), así que es fácil que "Ensalada
+  // de temporada" aparezca de entrante y de acompañamiento sin que nadie se
+  // dé cuenta hasta imprimir la carta. Esto no depende del encargo (precio,
+  // food cost): se comprueba siempre, aunque el encargo esté sin rellenar.
+  const vistos = new Map();
+  recetas.forEach(r => {
+    const clave = idrNormalizar(r.name);
+    if(!clave) return;
+    if(vistos.has(clave)) avisos.push(t('idr.check.duplicateDish').replace('${nombre}', r.name));
+    else vistos.set(clave, true);
+  });
   const e = idrEncargo(c);
   const objetivo = idrObjetivoFoodCost(c);
   if(!(e.pvp > 0) || !isFinite(objetivo) || objetivo <= 0) return avisos;

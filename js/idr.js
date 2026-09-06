@@ -2883,6 +2883,19 @@ function idrObjetivoFoodCost(c){
    una carta, plato a plato contra su precio medio. */
 function idrRevisarConjunto(c, recetas){
   const avisos = [];
+  // Coherencia del conjunto: el mismo plato no puede salir dos veces en el
+  // mismo menú o carta. No hay guion de pasos que lo impida al crearlo (cada
+  // pase se le pide al modelo por separado), así que es fácil que "Ensalada
+  // de temporada" aparezca de entrante y de acompañamiento sin que nadie se
+  // dé cuenta hasta imprimir la carta. Esto no depende del encargo (precio,
+  // food cost): se comprueba siempre, aunque el encargo esté sin rellenar.
+  const vistos = new Map();
+  recetas.forEach(r => {
+    const clave = idrNormalizar(r.name);
+    if(!clave) return;
+    if(vistos.has(clave)) avisos.push(t('idr.check.duplicateDish').replace('${nombre}', r.name));
+    else vistos.set(clave, true);
+  });
   const e = idrEncargo(c);
   const objetivo = idrObjetivoFoodCost(c);
   if(!(e.pvp > 0) || !isFinite(objetivo) || objetivo <= 0) return avisos;
