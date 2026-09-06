@@ -1293,6 +1293,30 @@ await caso('Las cantidades se pasan a la unidad en que el negocio compra', async
   return 'g→kg, ml→L y los casos raros';
 });
 
+await caso('Una unidad que no se pudo convertir (oz, cucharadas...) avisa en vez de colarse en silencio', async ()=>{
+  // Hallazgo de una auditoría externa: idrConvertirCantidad deja el número
+  // TAL CUAL cuando las unidades son de familias distintas o desconocidas
+  // (a propósito: mejor un número corregible que un factor inventado), pero
+  // antes nadie se enteraba de que eso había pasado — un "3 oz" podía acabar
+  // guardado como si fueran 3 g sin ningún aviso. Ahora idrCasarLinea deja
+  // constancia en el mismo array `faltan` que ya se usa para ingredientes
+  // pendientes de vincular.
+  const r = await page.evaluate(()=>{
+    DB.ingredients.push({id:9001, name:'Queso de cabra IDRTEST', unit:'kg', price:12, area:'cocina'});
+    const faltan = [];
+    const linea = idrCasarLinea({nombre:'Queso de cabra IDRTEST', cantidad:3, unidad:'oz'}, faltan);
+    const faltanOk = [];
+    const lineaOk = idrCasarLinea({nombre:'Queso de cabra IDRTEST', cantidad:120, unidad:'g'}, faltanOk);
+    return {linea, faltan, lineaOk, faltanOk};
+  });
+  assert.ok(r.linea, 'debe seguir casando la línea (mejor un número corregible que perder el ingrediente)');
+  assert.equal(r.linea.qty, 3, 'sin poder convertir, el número se deja tal cual');
+  assert.equal(r.faltan.length, 1, 'debe avisar de que esa cantidad no se pudo convertir');
+  assert.ok(r.faltan[0].includes('oz') && r.faltan[0].includes('no se pudo convertir'), 'el aviso no explica cuál fue el problema: ' + r.faltan[0]);
+  assert.equal(r.faltanOk.length, 0, 'una conversión que SÍ funciona (g→kg) no debe generar ningún aviso');
+  return 'avisa de la unidad no convertida, y calla cuando la conversión es correcta';
+});
+
 await caso('Sin el ADN mínimo no se puede empezar nada', async ()=>{
   const r = await page.evaluate(()=>{
     const antes = JSON.parse(JSON.stringify(idrAdn()));

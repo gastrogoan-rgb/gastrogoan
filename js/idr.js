@@ -1523,17 +1523,40 @@ function idrBuscarIngrediente(nombre){
    coste se encadena solo, igual que si la hubiera puesto un cocinero a mano.
    Lo que no case con nada vuelve como null y se marca como pendiente de dar
    de alta — nunca se inventa un ingrediente ni se descuenta del coste. */
-function idrCasarLinea(ing){
+// true si son la misma unidad, o de la misma familia (peso/volumen/unidades)
+// y por tanto convertibles. Unidades que el modelo escribe de vez en cuando
+// pese a las instrucciones (oz, cucharadas, tazas, pizca...) no están en
+// IDR_A_BASE/IDR_FAMILIA: idrConvertirCantidad las deja "tal cual" a
+// propósito (mejor un número que el cocinero pueda corregir que un factor
+// inventado) — pero eso significa que, SIN AVISO, un "3 oz" puede acabar
+// guardado como 3 g o 3 kg, según le toque a esa línea, descuadrando el
+// coste del plato en silencio. Este chequeo es lo que permite avisar.
+function idrUnidadesConvertibles(unidadModelo, unidadIngrediente){
+  const de = idrNormalizaUnidad(unidadModelo);
+  const a  = idrNormalizaUnidad(unidadIngrediente);
+  if(!de || !a || de === a) return true;
+  return !!(IDR_FAMILIA[de] && IDR_FAMILIA[a] && IDR_FAMILIA[de] === IDR_FAMILIA[a]);
+}
+// `avisos` (opcional): mismo array `faltan` que ya usan las llamadas — se le
+// añade una nota cuando la cantidad quedó SIN convertir, para que se vea
+// junto al resto de pendientes antes de dar el plato por bueno.
+function idrCasarLinea(ing, avisos){
   if(!ing || !ing.nombre) return null;
+  const avisarSiNoConvertible = unidadDestino => {
+    if(avisos && ing.unidad && !idrUnidadesConvertibles(ing.unidad, unidadDestino)){
+      avisos.push(`${ing.nombre}: "${ing.cantidad||''} ${ing.unidad||''}" no se pudo convertir a ${unidadDestino} — revisa esta cantidad, puede no ser correcta`);
+    }
+  };
   const base = idrBuscarElaboracion(ing.nombre);
   if(base){
-    const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, base.baseUnit || 'L'));
-    if(qty > 0) return {type:'base', baseRecipeId: base.id, qty, merma: 0};
+    const destino = base.baseUnit || 'L';
+    const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, destino));
+    if(qty > 0){ avisarSiNoConvertible(destino); return {type:'base', baseRecipeId: base.id, qty, merma: 0}; }
   }
   const real = idrBuscarIngrediente(ing.nombre);
   if(real){
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit));
-    if(qty > 0) return {type:'ingredient', ingredientId: real.id, qty, merma: 0};
+    if(qty > 0){ avisarSiNoConvertible(real.unit); return {type:'ingredient', ingredientId: real.id, qty, merma: 0}; }
   }
   return null;
 }
@@ -1568,7 +1591,7 @@ function idrCrearElaboracionDelPlato(elab){
   const lineas = [];
   const faltan = [];
   (Array.isArray(elab.ingredientes) ? elab.ingredientes : []).forEach(ing => {
-    const linea = idrCasarLinea(ing);
+    const linea = idrCasarLinea(ing, faltan);
     if(linea) lineas.push(linea);
     else faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
   });
@@ -1677,7 +1700,7 @@ function idrMontarLineasDePlato(j){
     else faltan.push(`${hecha.receta.name} (falta cuánto lleva por ración)`);
   });
   (Array.isArray(j.ingredientes) ? j.ingredientes : []).forEach(ing => {
-    const linea = idrCasarLinea(ing);
+    const linea = idrCasarLinea(ing, faltan);
     if(linea) lineas.push(linea);
     else if(ing && ing.nombre) faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
   });
@@ -1918,7 +1941,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   const lineas = [];
   const faltan = [];
   j.ingredientes.forEach(ing => {
-    const linea = idrCasarLinea(ing);
+    const linea = idrCasarLinea(ing, faltan);
     if(linea) lineas.push(linea);
     else faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
   });
@@ -2263,7 +2286,7 @@ Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud"). Si
       if(!pl || !pl.nombre) return;
       const lineas = [];
       (pl.ingredientes||[]).forEach(ing => {
-        const linea = idrCasarLinea(ing);
+        const linea = idrCasarLinea(ing, faltan);
         if(linea) lineas.push(linea);
         else if(ing.nombre) faltan.push(`${ing.nombre} — ${pl.nombre}`);
       });
