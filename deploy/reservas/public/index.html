@@ -351,6 +351,8 @@ const I18N = {
     'hint.antelacion':'Para hoy, lo antes que puedes elegir es a las %s (antelación mínima de %d min).',
     'success.otra':'Hacer otra solicitud', 'success.otraPedido':'Hacer otro pedido', 'success.otraReserva':'Hacer otra reserva', 'success.callToChange':'¿Necesitas cambiar o cancelar? Llama al %s.',
     'success.trackOrder':'Seguir mi pedido', 'success.manageReservation':'Gestionar mi reserva',
+    'success.shareLink':'Guardar/enviarme este enlace', 'success.linkCopied':'Enlace copiado', 'success.copyManually':'Copia este enlace para guardarlo:',
+    'success.shareTextPedido':'Aquí puedes seguir tu pedido y cancelarlo si hace falta.', 'success.shareTextReserva':'Aquí puedes gestionar tu reserva: cambiarla o cancelarla.',
     'resManage.loading':'Cargando tu reserva...','resManage.title':'Tu reserva','resManage.date':'Fecha y hora','resManage.people':'Personas',
     'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendiente de confirmar',
     'resManage.cancelBtn':'Cancelar mi reserva','resManage.cancelSending':'Cancelando...','resManage.confirmCancel':'¿Seguro que quieres cancelar esta reserva?',
@@ -428,6 +430,8 @@ const I18N = {
     'hint.antelacion':'For today, the earliest you can choose is %s (minimum lead time %d min).',
     'success.otra':'Make another request', 'success.otraPedido':'Place another order', 'success.otraReserva':'Make another reservation', 'success.callToChange':'Need to change or cancel? Call %s.',
     'success.trackOrder':'Track my order', 'success.manageReservation':'Manage my reservation',
+    'success.shareLink':'Save/send myself this link', 'success.linkCopied':'Link copied', 'success.copyManually':'Copy this link to save it:',
+    'success.shareTextPedido':'Here you can track your order and cancel it if needed.', 'success.shareTextReserva':'Here you can manage your reservation: change or cancel it.',
     'resManage.loading':'Loading your reservation...','resManage.title':'Your reservation','resManage.date':'Date and time','resManage.people':'People',
     'resManage.status.confirmada':'Confirmed','resManage.status.pendiente':'Pending confirmation',
     'resManage.cancelBtn':'Cancel my reservation','resManage.cancelSending':'Cancelling...','resManage.confirmCancel':'Are you sure you want to cancel this reservation?',
@@ -505,6 +509,8 @@ const I18N = {
     'hint.antelacion':'Per avui, el més aviat que pots triar és a les %s (antelació mínima de %d min).',
     'success.otra':'Fer una altra sol·licitud', 'success.otraPedido':'Fer una altra comanda', 'success.otraReserva':'Fer una altra reserva', 'success.callToChange':'Necessites canviar o cancel·lar? Truca al %s.',
     'success.trackOrder':'Seguir la meva comanda', 'success.manageReservation':'Gestionar la meva reserva',
+    'success.shareLink':'Guardar/enviar-me aquest enllaç', 'success.linkCopied':'Enllaç copiat', 'success.copyManually':'Copia aquest enllaç per guardar-lo:',
+    'success.shareTextPedido':'Aquí pots seguir la teva comanda i cancel·lar-la si cal.', 'success.shareTextReserva':'Aquí pots gestionar la teva reserva: canviar-la o cancel·lar-la.',
     'resManage.loading':'Carregant la teva reserva...','resManage.title':'La teva reserva','resManage.date':'Data i hora','resManage.people':'Persones',
     'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendent de confirmar',
     'resManage.cancelBtn':'Cancel·lar la meva reserva','resManage.cancelSending':'Cancel·lant...','resManage.confirmCancel':'Segur que vols cancel·lar aquesta reserva?',
@@ -2939,6 +2945,38 @@ function submitMesaOrder(){
   sendRequest(req, t('order.ok.mesa'));
 }
 
+// El enlace de seguimiento/gestión es la confirmación real (no el email,
+// que es opcional y puede no estar configurado): si el cliente cierra esta
+// pantalla sin guardarlo, lo pierde. En vez de montar un canal nuevo
+// (WhatsApp/SMS cobran por mensaje y exigen backend por el token — no
+// encajan aquí), se le deja mandárselo él mismo por donde quiera con el
+// panel nativo de compartir del móvil (WhatsApp, SMS, notas... aparecen
+// solos, sin integrar nada). En escritorio, sin panel nativo, se copia al
+// portapapeles.
+function shareTrackUrl(url, isReserva, btnEl){
+  const shareData = {
+    title: (DB.business && DB.business.name) || '',
+    text: t(isReserva ? 'success.shareTextReserva' : 'success.shareTextPedido'),
+    url
+  };
+  if(navigator.share){
+    navigator.share(shareData).catch(()=>{});
+    return;
+  }
+  const avisarCopiado = () => {
+    if(!btnEl) return;
+    if(btnEl.dataset.originalText === undefined) btnEl.dataset.originalText = btnEl.textContent;
+    btnEl.textContent = '✅ ' + t('success.linkCopied');
+    clearTimeout(btnEl._shareResetT);
+    btnEl._shareResetT = setTimeout(()=>{ btnEl.textContent = btnEl.dataset.originalText; }, 2500);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(avisarCopiado).catch(()=> prompt(t('success.copyManually'), url));
+  } else {
+    prompt(t('success.copyManually'), url);
+  }
+}
+
 /* ============ ENVÍO ============ */
 function sendRequest(req, successMsg){
   db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
@@ -2957,7 +2995,8 @@ function sendRequest(req, successMsg){
         <div class="icon">✅</div>
         <h2>${escapeHtml(successMsg)}</h2>
         ${phone ? `<p style="font-size:13px;color:var(--muted);margin-top:8px">${t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`)}</p>` : ''}
-        ${trackUrl ? `<a class="btn btn-primary" style="margin-top:16px;text-decoration:none" href="${escapeHtml(trackUrl)}">${t(req.type === 'reserva' ? 'success.manageReservation' : 'success.trackOrder')}</a>` : ''}
+        ${trackUrl ? `<a class="btn btn-primary" style="margin-top:16px;text-decoration:none" href="${escapeHtml(trackUrl)}">${t(req.type === 'reserva' ? 'success.manageReservation' : 'success.trackOrder')}</a>
+        <button class="btn" type="button" style="margin-top:8px" onclick="shareTrackUrl('${escapeHtml(trackUrl).replace(/'/g,"\\'")}', ${req.type === 'reserva'}, this)">🔗 ${t('success.shareLink')}</button>` : ''}
         <button class="btn" style="margin-top:${trackUrl?'8':'16'}px" onclick="location.reload()">${t(req.type === 'reserva' ? 'success.otraReserva' : 'success.otraPedido')}</button>
       </div>
     `;

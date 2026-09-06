@@ -530,6 +530,15 @@ caso('Mi Negocio avisa también si hay reservas de mesa online sin email configu
     'el aviso debe explicar por qué y llevar directo a la tarjeta de email, igual que ya hace el de Redsys');
 });
 
+caso('El cliente puede guardarse/enviarse el enlace de seguimiento sin depender del email', () => {
+  const m = publica.match(/function shareTrackUrl\(url, isReserva, btnEl\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró shareTrackUrl');
+  assert.ok(m[0].includes('navigator.share'), 'debe usar el panel nativo de compartir cuando está disponible (móvil: ahí aparece WhatsApp solo, sin integrar nada)');
+  assert.ok(m[0].includes('navigator.clipboard') && m[0].includes('prompt('), 'en escritorio (sin panel nativo) debe poder copiarse, con un último recurso manual si el portapapeles falla');
+  assert.ok(publica.includes("onclick=\"shareTrackUrl(") && publica.includes("t('success.shareLink')"),
+    'el botón de compartir no está enganchado a la pantalla de éxito del pedido/reserva');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
