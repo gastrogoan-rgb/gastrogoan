@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '06/09/2026 16:52';
+const GG_BUILD = '06/09/2026 17:02';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6057,6 +6057,79 @@ function mergeElaboracionesStock(localElabs, mergedElabs, lastSyncedElabsJson){
   return mergedElabs;
 }
 
+// Mismo problema que mergeCartaStock, pero para el cupo diario de una
+// promoción (DB.promos[].usedDates = {"2026-09-06": 3, ...}): registerPromoUse
+// (js/app.js) incrementa el contador del día directamente dentro del
+// documento de la promoción, que mergeArraysById fusiona entero. Dos
+// camareros aplicando la misma promo casi a la vez podían perder uno de los
+// dos usos al sincronizar, permitiendo saltarse el cupo máximo diario sin
+// que nadie lo notara. Hallazgo de una auditoría externa.
+function mergePromosUsedDates(localPromos, mergedPromos, lastSyncedPromosJson){
+  if(!Array.isArray(localPromos) || !Array.isArray(mergedPromos)) return mergedPromos;
+  let baseline = [];
+  if(lastSyncedPromosJson){ try{ baseline = JSON.parse(lastSyncedPromosJson) || []; }catch(e){ baseline = []; } }
+  const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
+  const baselineMap = porId(baseline);
+  const localMap = porId(localPromos);
+  mergedPromos.forEach(p => {
+    if(!p || p.id == null) return;
+    const local = localMap.get(p.id);
+    if(!local) return;
+    const base = baselineMap.get(p.id);
+    const baseUD = (base && base.usedDates) || {};
+    const localUD = local.usedDates || {};
+    const remoteUD = p.usedDates || {};
+    const dias = new Set([...Object.keys(baseUD), ...Object.keys(localUD), ...Object.keys(remoteUD)]);
+    const fusion = {};
+    dias.forEach(d => {
+      const b = baseUD[d] || 0;
+      // Suma de los DOS usos añadidos desde el último punto en común, no
+      // "gana el último que llegue" — igual que con el stock de cartas/menús.
+      const deltaLocal = (localUD[d]||0) - b;
+      const deltaRemote = (remoteUD[d]||0) - b;
+      const v = b + deltaLocal + deltaRemote;
+      if(v > 0) fusion[d] = v;
+    });
+    p.usedDates = fusion;
+  });
+  return mergedPromos;
+}
+
+// Mismo problema que mergeElaboracionesStock, para los dos contadores de
+// DB.clients (points: fidelidad, noShows: reservas no presentadas).
+// registerClientVisit y markReservationNoShow (js/app.js) los incrementan
+// directamente dentro del documento del cliente, que mergeArraysById fusiona
+// entero. Confirmar la llegada de un cliente en dos dispositivos casi a la
+// vez (p.ej. dos reservas suyas el mismo día) podía perder uno de los dos
+// puntos o avisos al sincronizar. Hallazgo de una auditoría externa.
+function mergeClientCounters(localClients, mergedClients, lastSyncedClientsJson){
+  if(!Array.isArray(localClients) || !Array.isArray(mergedClients)) return mergedClients;
+  let baseline = [];
+  if(lastSyncedClientsJson){ try{ baseline = JSON.parse(lastSyncedClientsJson) || []; }catch(e){ baseline = []; } }
+  const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
+  const baselineMap = porId(baseline);
+  const localMap = porId(localClients);
+  ['points', 'noShows'].forEach(campo => {
+    mergedClients.forEach(c => {
+      if(!c || c.id == null || c[campo] == null) return;
+      const local = localMap.get(c.id);
+      if(!local || local[campo] == null) return;
+      const base = baselineMap.get(c.id);
+      const baseVal = (base && base[campo] != null) ? base[campo] : local[campo];
+      const deltaLocal = local[campo] - baseVal;
+      const deltaRemote = c[campo] - baseVal;
+      let v = Math.max(0, baseVal + deltaLocal + deltaRemote);
+      // `points` tiene un tope de 10 (registerClientVisit): si los dos lados
+      // llegaron al tope por separado desde el mismo punto de partida, sumar
+      // los dos deltas se pasaría de 10. El tope real lo sigue poniendo
+      // registerClientVisit; aquí solo se respeta al fusionar.
+      if(campo === 'points') v = Math.min(v, 10);
+      c[campo] = v;
+    });
+  });
+  return mergedClients;
+}
+
 // Mismo problema que mergeStockField pero para objetos que llevan arrays
 // CON id dentro (DB.ge.variables/capex/fijos/fijosLog/cierres, DB.limpieza.
 // tareas/temperaturas/alergenos/plagas/mantenimiento): al no ser arrays de
@@ -8092,6 +8165,12 @@ function applyRemoteBlock(key, remoteValue){
     if(key === 'elaboraciones'){
       merged = mergeElaboracionesStock(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
+    if(key === 'promos'){
+      merged = mergePromosUsedDates(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+    }
+    if(key === 'clients'){
+      merged = mergeClientCounters(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+    }
   }
   /* Y lo que se borró, fuera otra vez. La fusión se queda con TODO lo de los
      dos lados, así que vuelve a meter lo que el otro aparato aún tenía. */
@@ -8360,6 +8439,12 @@ function mergeRemoteIntoLocal(val){
       }
       if(key === 'elaboraciones'){
         value = mergeElaboracionesStock(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+      }
+      if(key === 'promos'){
+        value = mergePromosUsedDates(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+      }
+      if(key === 'clients'){
+        value = mergeClientCounters(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }
       // Mismo fallo que en applyRemoteBlock (dos camareros en la misma mesa):
       // esta es la carga inicial completa desde la nube, así que si alguien

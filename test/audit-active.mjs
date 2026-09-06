@@ -549,6 +549,61 @@ await testAsync('Los avisos push de un dispositivo no borran los de los demás',
   console.log('   → cada aparato conserva la suya, y gana la más reciente de cada uno');
 });
 
+await testAsync('El cupo diario de una promoción suma los usos de los dos dispositivos, no se queda con el del que sincroniza último (hallazgo de Codex)', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  const hoy = '2026-09-06';
+  const promoBase = [{id:1, titulo:'2x1 postres', maxUses:10, usedDates:{[hoy]: 2}}];
+  sandbox.__setLastSyncedSnapshot({promos: sandbox.canonicalStringify(promoBase)});
+  // Dispositivo A: la aplicó 1 vez más hoy (3).
+  sandbox.__setDB({promos: [{id:1, titulo:'2x1 postres', maxUses:10, usedDates:{[hoy]: 3}}]});
+  // Llega de la nube lo del dispositivo B: la aplicó 2 veces más sin ver aún el uso de A (4).
+  sandbox.applyRemoteBlock('promos', [{id:1, titulo:'2x1 postres', maxUses:10, usedDates:{[hoy]: 4}}]);
+  const promo = sandbox.__getDB().promos[0];
+  // Partiendo de 2: A sumó 1 (3), B sumó 2 (4). Total real: 2+1+2=5, no 3 ni 4.
+  assert.equal(promo.usedDates[hoy], 5, 'el cupo usado hoy debe sumar los usos de los dos dispositivos (2+1+2=5)');
+  console.log('   → los usos de los dos dispositivos se conservan, no se pierde ninguno');
+});
+
+await testAsync('Los puntos de fidelidad y los avisos de no-presentado de un cliente no se pisan al sincronizar (hallazgo de Codex)', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  const clienteBase = [{id:1, name:'Ana', points:5, noShows:1}];
+  sandbox.__setLastSyncedSnapshot({clients: sandbox.canonicalStringify(clienteBase)});
+  // Dispositivo A: le sumó 1 punto (6).
+  sandbox.__setDB({clients: [{id:1, name:'Ana', points:6, noShows:1}]});
+  // Llega de la nube lo del dispositivo B: le sumó 1 punto y un no-presentado, sin ver aún el de A.
+  sandbox.applyRemoteBlock('clients', [{id:1, name:'Ana', points:6, noShows:2}]);
+  const cliente = sandbox.__getDB().clients[0];
+  // Puntos: 5+1+1=7. No-presentados: 1+0+1=2 (solo B lo tocó).
+  assert.equal(cliente.points, 7, 'los puntos de fidelidad deben sumar los dos incrementos (5+1+1=7)');
+  assert.equal(cliente.noShows, 2, 'el aviso de no-presentado añadido por el otro dispositivo no debe perderse');
+  console.log('   → ni el punto de fidelidad ni el aviso de no-presentado se pierden');
+});
+
+await testAsync('Los puntos de fidelidad respetan el tope de 10 aunque los dos dispositivos lo alcanzaran por separado', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  const clienteBase = [{id:1, name:'Bea', points:9, noShows:0}];
+  sandbox.__setLastSyncedSnapshot({clients: sandbox.canonicalStringify(clienteBase)});
+  sandbox.__setDB({clients: [{id:1, name:'Bea', points:10, noShows:0}]});
+  sandbox.applyRemoteBlock('clients', [{id:1, name:'Bea', points:10, noShows:0}]);
+  const cliente = sandbox.__getDB().clients[0];
+  assert.equal(cliente.points, 10, 'sumar los dos incrementos que llegaron al mismo tope no debe superar el máximo de 10');
+});
+
 await testAsync('Lo mismo pero con ELABORACIONES BASE: el stock de un caldo/almíbar no se pisa al sincronizar (hallazgo de Codex)', async () => {
   // Mismo bug que el de Carta/Menús: decrementElaboracionStock (js/tpv.js)
   // muta elab.qty directamente dentro del documento que mergeArraysById
