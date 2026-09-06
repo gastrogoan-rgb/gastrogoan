@@ -1485,6 +1485,39 @@ await caso('El rendimiento de una base se saca de lo hablado', async ()=>{
   return 'lo dicho, lo rectificado y el caso en que nadie lo dijo';
 });
 
+await caso('El rendimiento no se confunde con la cantidad de un ingrediente mencionado en el mismo mensaje (hallazgo de Codex)', async ()=>{
+  // Antes se cogía el PRIMER número con unidad de todo el mensaje, sin más —
+  // "lleva 500g de tomate y al final rinde 2L" habría cogido los 500g como
+  // si fuera el rendimiento. Ahora, cuando un mensaje trae varios números,
+  // se prefiere el que esté cerca de una palabra de rendimiento de verdad.
+  const r = await page.evaluate(()=>{
+    const c = idrNuevaCreacion('base');
+    c.mensajes = [{r:'yo', t:'Lleva 500g de tomate frito y al final rinde 2 L de salsa'}];
+    return idrRendimientoDeLaConversacion(c);
+  });
+  assert.deepEqual(r, {qty:2, unit:'L'}, 'debe coger los 2 L (junto a "rinde"), no los 500g del ingrediente');
+});
+
+await caso('Una coincidencia de ingrediente ambigua avisa en vez de enlazar en silencio (hallazgo de Codex)', async ()=>{
+  const r = await page.evaluate(()=>{
+    // "Pimiento IDRTEST" es prefijo contiguo de las dos, así que la
+    // coincidencia por contención SÍ encuentra ambas — es el caso real que
+    // reportó la auditoría (dos ingredientes del negocio encajan con lo que
+    // dijo el modelo, y antes se elegía el primero del array sin avisar).
+    DB.ingredients.push({id:9101, name:'Pimiento IDRTEST rojo', unit:'kg', price:3, area:'cocina'});
+    DB.ingredients.push({id:9102, name:'Pimiento IDRTEST verde', unit:'kg', price:3, area:'cocina'});
+    const faltanAmbiguo = [];
+    const lineaAmbigua = idrCasarLinea({nombre:'Pimiento IDRTEST', cantidad:100, unidad:'g'}, faltanAmbiguo);
+    const faltanClaro = [];
+    const lineaClara = idrCasarLinea({nombre:'Pimiento IDRTEST rojo', cantidad:100, unidad:'g'}, faltanClaro);
+    return {lineaAmbigua, faltanAmbiguo, lineaClara, faltanClaro};
+  });
+  assert.ok(r.lineaAmbigua, 'debe seguir enlazando (mejor una coincidencia corregible que perder la línea)');
+  assert.equal(r.faltanAmbiguo.length, 1, 'una coincidencia ambigua (dos pimientos posibles) debe avisar');
+  assert.ok(r.faltanAmbiguo[0].includes('varios ingredientes'), 'el aviso no explica que hay varias coincidencias posibles: ' + r.faltanAmbiguo[0]);
+  assert.equal(r.faltanClaro.length, 0, 'una coincidencia EXACTA no debe avisar de nada');
+});
+
 await caso('Un plato puede montarse sobre SUS elaboraciones, con el coste encadenado', async ()=>{
   await fingir(JSON.stringify({
     nombre:'Ternera con su jugo', descripcion:'x', pasos:['Marcar','Napar'],
@@ -2256,6 +2289,19 @@ await caso('Un food cost ridículamente bajo también se avisa', async ()=>{
   assert.equal(r.justo, 0, 'un 27,5% está bien: ningún aviso de food cost');
   assert.equal(r.caro, 1, 'y el exceso sigue avisando');
   return 'avisa por arriba y por abajo, y calla cuando está bien';
+});
+
+await caso('Un coste de 0€ con ingredientes sin vincular avisa de coste incompleto, no de food cost perfecto (hallazgo de Codex)', async ()=>{
+  const r = await page.evaluate(()=>{
+    const c = {encargo:{foodCost: 30}};
+    // ingredientId inventado (999999): no existe, así que recipeCost() lo
+    // ignora y el coste total sale a 0 — como si ningún ingrediente se
+    // hubiera casado con uno real del negocio.
+    const sinVincular = {ingredients:[{type:'ingredient', ingredientId:999999, qty:100, merma:0}], consumiblesPct:0, price:16, steps:'', presentation:''};
+    return idrValidarPlato(sinVincular, {creacion: c});
+  });
+  assert.ok(r.some(a => /pendiente/i.test(a) || /vincular/i.test(a)), 'un coste de 0€ con ingredientes en la receta debe avisar de que el coste está incompleto: ' + JSON.stringify(r));
+  assert.ok(!r.some(a => /muy por debajo/.test(a)), 'no debe colarse además como si fuera un food cost genuinamente bajo');
 });
 
 await caso('El menú se cuesta ENTERO, no pase a pase', async ()=>{

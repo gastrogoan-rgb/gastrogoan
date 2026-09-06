@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '06/09/2026 17:25';
+const GG_BUILD = '06/09/2026 19:14';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -4609,6 +4609,14 @@ async function idbSet(key, value){
    ============================================================ */
 let cloudRef = null;
 let socketConnected = false; // último valor conocido de .info/connected — ver flushCloudSync
+// Cada reconexión (reintentarConexionNube) pone cloudRef a null y vuelve a
+// llamar a startCloudSync, que volvía a enganchar OTRO listener de
+// '.info/connected' sin soltar el anterior — ninguno se desengancha nunca.
+// Con una red inestable que reconecta varias veces en el turno, se acumulan
+// callbacks que disparan updateSyncBadge() cada uno por su cuenta. Este flag
+// hace que el listener se enganche UNA sola vez de verdad, sea cual sea el
+// número de reconexiones. Hallazgo de una auditoría externa.
+let infoConnectedListenerAttached = false;
 let cloudConfig = null;
 let platformAuthPromise = null;
 // Proyecto Firebase compartido de la plataforma GastroGoan, usado SOLO para
@@ -7234,8 +7242,20 @@ function initPublicRequestsListener(){
           // si se sumara a order.propina, se le volvería a cobrar al resto
           // de la mesa al cerrar cuenta.
           if(typeof req.propina === 'number' && req.propina > 0){
-            if(req.pagarAhora) order.propinaPagadaOnline = (order.propinaPagadaOnline||0) + req.propina;
-            else order.propina = (order.propina||0) + req.propina;
+            // ⚠️ Igual que las líneas (pagoOnlinePendiente), la propina de un
+            // autopedido pagado online NO cuenta como cobrada hasta que llegue
+            // pago_confirmado del banco — antes se sumaba a propinaPagadaOnline
+            // en cuanto llegaba la solicitud, aunque la firma con el Worker
+            // pudiera fallar después o el cliente cancelara el pago en Redsys:
+            // esos euros aparecían como ya cobrados en el desglose de la mesa
+            // sin que hubiera entrado nada de verdad. Hallazgo de una
+            // auditoría externa. Se guarda en una lista pendiente por
+            // referencia de pago, igual que pagoRef en las líneas, y solo se
+            // suma a propinaPagadaOnline cuando el pago_confirmado la reclama.
+            if(req.pagarAhora){
+              if(!Array.isArray(order.propinasPendientes)) order.propinasPendientes = [];
+              order.propinasPendientes.push({ref: req.clientRef, importe: req.propina});
+            } else order.propina = (order.propina||0) + req.propina;
           }
         }else{
           const matchedClientMesa = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
@@ -7244,7 +7264,8 @@ function initPublicRequestsListener(){
             clienteNombre: req.clienteNombre || '', status:'abierta', items, tandas:[], createdAt: new Date().toISOString(),
             clientRef: req.clientRef || null, clientId: matchedClientMesa ? matchedClientMesa.id : null,
             propina: (!req.pagarAhora && typeof req.propina === 'number') ? req.propina : 0,
-            propinaPagadaOnline: (req.pagarAhora && typeof req.propina === 'number') ? req.propina : 0
+            propinaPagadaOnline: 0,
+            propinasPendientes: (req.pagarAhora && typeof req.propina === 'number' && req.propina > 0) ? [{ref: req.clientRef, importe: req.propina}] : []
           });
         }
       }else if(req.type === 'pedido'){
@@ -7369,6 +7390,17 @@ function initPublicRequestsListener(){
               l.pagadoOnline = true;
             }
           });
+          // La propina de ese mismo autopedido (ver arriba, propinasPendientes):
+          // solo se suma a propinaPagadaOnline AHORA que el banco confirmó de
+          // verdad ese pago concreto, nunca antes.
+          if(Array.isArray(o.propinasPendientes) && o.propinasPendientes.length){
+            const pendiente = o.propinasPendientes.find(p => p.ref === req.orderRef);
+            if(pendiente){
+              pagoConfirmadoMatched = true;
+              o.propinaPagadaOnline = (o.propinaPagadaOnline||0) + pendiente.importe;
+              o.propinasPendientes = o.propinasPendientes.filter(p => p !== pendiente);
+            }
+          }
         });
         // Ninguno de los tres casos de arriba encontró a qué aplicar este
         // pago: lo más probable es que el pedido se rechazara/cancelara (y
@@ -8701,6 +8733,8 @@ function startCloudSync(tenantId){
       recordSyncError(err);
       reintentarConexionNube(tenantId);
     });
+    if(!infoConnectedListenerAttached){
+    infoConnectedListenerAttached = true;
     firebase.database().ref('.info/connected').on('value', s => {
       socketConnected = !!s.val();
       /* ⚠️ Esto NO puede borrar un error real. El socket se establece ANTES de
@@ -8720,6 +8754,7 @@ function startCloudSync(tenantId){
       if(lastSyncErrorCode){ updateSyncBadge('error'); return; }
       updateSyncBadge(socketConnected ? 'online' : 'offline');
     });
+    }
   }catch(e){
     /* `cloudRef` ya está asignado arriba, antes del `once` y del listener de
        conexión: si algo lanza a partir de ahí, el dispositivo se quedaba con
@@ -10415,10 +10450,21 @@ function schedulePublicMirrorSync(){
 // cerrar la pestaña/dispositivo. Ahora el snapshot solo se actualiza tras
 // la confirmación real, y un fallo programa un reintento automático.
 let cloudSyncRetryTimer = null;
-const CLOUD_SYNC_RETRY_MS = 15000; // reintenta cada 15s mientras haya cambios sin confirmar
+const CLOUD_SYNC_RETRY_MS = 15000; // primer reintento, luego crece (ver scheduleCloudSyncRetry)
+// ⚠️ Antes se reintentaba SIEMPRE cada 15s en punto, sin importar el motivo
+// del fallo: unas reglas de Firebase mal puestas (permiso denegado de forma
+// permanente, no un corte de red pasajero) machacaban la nube del negocio
+// cada 15s sin parar hasta que alguien arreglara las reglas a mano — podían
+// ser horas o días. Ahora crece de forma exponencial igual que ya hacía
+// reintentarConexionNube (5s, 10s, 20s… hasta un tope de 5 min), y se
+// resetea a 0 en cuanto una subida termina bien. Hallazgo de una auditoría
+// externa.
+let cloudSyncRetryAttempt = 0;
 function scheduleCloudSyncRetry(){
   clearTimeout(cloudSyncRetryTimer);
-  cloudSyncRetryTimer = setTimeout(flushCloudSync, CLOUD_SYNC_RETRY_MS);
+  cloudSyncRetryAttempt++;
+  const espera = Math.min(300000, CLOUD_SYNC_RETRY_MS * Math.pow(2, cloudSyncRetryAttempt - 1));
+  cloudSyncRetryTimer = setTimeout(flushCloudSync, espera);
 }
 /* ⚠️ El indicador se quedaba clavado en "Guardando…" para siempre.
    scheduleCloudSync lo pone en ese estado en CADA saveDB, aunque el guardado
@@ -10476,6 +10522,7 @@ function flushCloudSync(){
   };
   try{
     cloudRef.update(sinIndefinidos(updates)).then(() => {
+      cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
       keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio
@@ -11276,6 +11323,7 @@ const I18N = {
     'idr.autoFixed': 'El asistente corrigió su propuesta tras comprobarla con tus datos.',
     'idr.check.foodCost': 'El food cost sale al ${pct}% y tu objetivo es el ${obj}%.',
     'idr.check.foodCostLow': 'El food cost sale solo al ${pct}%, muy por debajo de tu objetivo del ${obj}%. Repasa la ración: o se ha quedado corta, o falta algo en la receta, o ese precio no lo sostiene el plato.',
+    'idr.check.costIncomplete': 'El coste sale a 0€ porque ningún ingrediente de esta receta se ha podido vincular todavía a uno real del negocio — revisa la lista de "pendientes de vincular" antes de fiarte de ningún food cost de este plato.',
     'idr.check.menuCost': 'El menú entero sale a ${coste} de materia prima por comensal: un ${pct}% sobre el precio, y tu objetivo es el ${obj}%.',
     'idr.check.menuCostLow': 'El menú entero sale a ${coste} por comensal, solo un ${pct}% del precio, con un objetivo del ${obj}%. Para lo que cobras, los pases se han quedado cortos.',
     'idr.check.fewDishes': 'Han salido ${n} platos y habías pedido ${pedidos}.',
@@ -13457,6 +13505,7 @@ const I18N = {
     'idr.autoFixed': 'L\'assistent va corregir la seva proposta després de comprovar-la amb les teves dades.',
     'idr.check.foodCost': 'El food cost surt al ${pct}% i el teu objectiu és el ${obj}%.',
     'idr.check.foodCostLow': 'El food cost surt només al ${pct}%, molt per sota del teu objectiu del ${obj}%. Repassa la ració: o s\'ha quedat curta, o falta alguna cosa a la recepta, o aquest preu el plat no el sosté.',
+    'idr.check.costIncomplete': 'El cost surt a 0€ perquè cap ingredient d\'aquesta recepta s\'ha pogut vincular encara a un ingredient real del negoci — revisa la llista de "pendents de vincular" abans de fiar-te de cap food cost d\'aquest plat.',
     'idr.check.menuCost': 'El menú sencer surt a ${coste} de matèria primera per comensal: un ${pct}% sobre el preu, i el teu objectiu és el ${obj}%.',
     'idr.check.menuCostLow': 'El menú sencer surt a ${coste} per comensal, només un ${pct}% del preu, amb un objectiu del ${obj}%. Per al que cobres, els passis s\'han quedat curts.',
     'idr.check.fewDishes': 'Han sortit ${n} plats i n\'havies demanat ${pedidos}.',
@@ -15638,6 +15687,7 @@ const I18N = {
     'idr.autoFixed': 'The assistant corrected its proposal after it was checked against your data.',
     'idr.check.foodCost': 'Food cost comes to ${pct}% and your target is ${obj}%.',
     'idr.check.foodCostLow': 'Food cost comes to just ${pct}%, well below your ${obj}% target. Check the portion: either it is too small, something is missing from the recipe, or the dish does not justify that price.',
+    'idr.check.costIncomplete': 'The cost comes to €0 because none of this recipe\'s ingredients have been linked to a real one in the business yet — check the "pending to link" list before trusting any food cost for this dish.',
     'idr.check.menuCost': 'The whole menu comes to ${coste} of raw material per cover: ${pct}% of the price, against your ${obj}% target.',
     'idr.check.menuCostLow': 'The whole menu comes to ${coste} per cover, only ${pct}% of the price, against a ${obj}% target. For what you charge, the courses fall short.',
     'idr.check.fewDishes': '${n} dishes came out and you asked for ${pedidos}.',
@@ -27260,8 +27310,22 @@ function confirmAddMenuToOrder(orderId, menuId){
     const baseAmount = i===0 ? m.precio : 0;
     const linePrice = baseAmount + s.suplemento + modExtra;
     const isBebida = !!(grupo && grupo.bebida);
+    // ⚠️ Hace falta comprobar también menuInstanceId: sin esto, DOS instancias
+    // de menú distintas (dos "Menú del día" separados) que eligieran la MISMA
+    // opción en el mismo grupo (p.ej. las dos "Ensalada" de primero) se
+    // fundían en una sola línea con qty:2 y el menuInstanceId de la primera —
+    // la segunda instancia se quedaba sin ninguna línea con su propio id para
+    // ese grupo. decrementMenuStock (que descuenta UNA ración de menú por
+    // primera línea de cada instancia) contaba entonces mal: la línea
+    // fusionada descontaba de más (su qty, no 1) y la instancia que se quedó
+    // sin línea propia para ese grupo igualmente descontaba por sus OTRAS
+    // líneas — 3 raciones de menú en vez de 2. Hallazgo de una auditoría
+    // externa. Aquí `menuInstanceId` es siempre el de ESTA llamada (se genera
+    // una vez por instancia, más arriba), así que solo se fusiona con una
+    // línea que ya sea de la MISMA instancia — nunca con la de otra.
     const existing = order.items.find(l =>
       l.menuId === m.id && l.name === lineName && (l.tanda||'') === (s.grupoNombre||'') &&
+      l.menuInstanceId === menuInstanceId &&
       !l.estado && (l.marchada||0) === 0
     );
     let line;
@@ -29686,7 +29750,15 @@ function generateEqualSplit(orderId){
   // también al dividir cuenta — si no, cada comensal pagaría sobre el precio
   // lleno y el descuento desaparecería sin dejar rastro en lo cobrado.
   const descuentoPct = order.descuentoPct || 0;
-  const total = roundMoney(orderTotal(order) * (1 - descuentoPct/100)) + (order.propina || 0);
+  // ⚠️ Falta sumar propinaPagadaOnline: applyOnlinePrepaidToSplit() (justo
+  // abajo) SÍ resta ese importe de lo ya pagado (vía orderAmountPaidOnline),
+  // pero si aquí no se suma primero al total a repartir, esa propina online
+  // desaparece de la cuenta — el ejemplo real: 100€ de comida, 30€ pagados
+  // online, 5€ de propina online y 10€ de propina en caja: se cobraban 75€
+  // más en vez de los 80€ que de verdad faltan (115€ de venta final − 35€ ya
+  // pagados online). Mismo criterio que computeFinalTotal. Hallazgo de una
+  // auditoría externa.
+  const total = roundMoney(orderTotal(order) * (1 - descuentoPct/100)) + (order.propina || 0) + (order.propinaPagadaOnline || 0);
   order.splitMode = 'equal';
   order.splitPayments = makeEqualParts(total, n).map((amount,i) => ({
     id: i+1, label: t('label.personN').replace('${n}', i+1), amount, paid:false, metodoPago:null
@@ -29812,7 +29884,12 @@ function generateItemsSplit(orderId){
   // mesa se aplica a partes iguales sobre cada comensal (no tiene sentido
   // repartirlo por plato), y la propina se reparte también a partes iguales.
   const descuentoPct = order.descuentoPct || 0;
-  const propina = order.propina || 0;
+  // Mismo motivo que en generateEqualSplit: sin sumar propinaPagadaOnline
+  // aquí, applyOnlinePrepaidToSplit (al final de esta función) resta ese
+  // importe de un total que nunca lo incluyó, y la propina ya pagada por
+  // móvil desaparece de la cuenta en vez de descontarse de lo que queda por
+  // cobrar. Hallazgo de una auditoría externa.
+  const propina = (order.propina || 0) + (order.propinaPagadaOnline || 0);
   const propinaCents = Math.round(propina * 100);
   const propinaBaseCents = Math.floor(propinaCents / n);
   const propinaRestoCents = propinaCents - propinaBaseCents * n;
@@ -38417,15 +38494,32 @@ function idrConvertirCantidad(cantidad, unidadModelo, unidadIngrediente){
   return Math.round(v * 10000) / 10000;
 }
 
-function idrBuscarIngrediente(nombre){
+// `avisos` (opcional, mismo array `faltan` que ya usan las llamadas): si la
+// coincidencia por contención es AMBIGUA (más de un ingrediente del negocio
+// encaja), antes se cogía el primero que apareciera en el array sin más —
+// orden arbitrario, así que "pimiento" con "Pimiento rojo" y "Pimiento
+// verde" dados de alta podía enlazar al color equivocado en silencio.
+// Se sigue enlazando (mejor una coincidencia corregible que perder la línea
+// entera, igual que con las unidades) pero ahora se avisa de la ambigüedad
+// para que el cocinero lo revise. La coincidencia EXACTA nunca es ambigua
+// (no hay dos ingredientes con el mismo nombre), así que ese camino no
+// cambia. Hallazgo de una auditoría externa.
+function idrBuscarIngrediente(nombre, avisos){
   const n = (nombre||'').trim().toLowerCase();
   if(!n) return null;
   const ings = (DB.ingredients||[]).filter(i => (i.area||'cocina') === 'cocina');
-  let hit = ings.find(i => (i.name||'').trim().toLowerCase() === n);
-  if(hit) return hit;
-  hit = ings.find(i => n.includes((i.name||'').trim().toLowerCase()) && (i.name||'').trim().length > 3);
-  if(hit) return hit;
-  return ings.find(i => (i.name||'').trim().toLowerCase().includes(n) && n.length > 3) || null;
+  const exacto = ings.find(i => (i.name||'').trim().toLowerCase() === n);
+  if(exacto) return exacto;
+  const avisarSiAmbiguo = (candidatos) => {
+    if(avisos && candidatos.length > 1){
+      avisos.push(`${nombre}: coincide con varios ingredientes del negocio (${candidatos.slice(0,4).map(i=>i.name).join(', ')}) — se usó "${candidatos[0].name}", revisa si es el correcto`);
+    }
+  };
+  const porContencionDentro = ings.filter(i => n.includes((i.name||'').trim().toLowerCase()) && (i.name||'').trim().length > 3);
+  if(porContencionDentro.length){ avisarSiAmbiguo(porContencionDentro); return porContencionDentro[0]; }
+  const porContencionFuera = ings.filter(i => (i.name||'').trim().toLowerCase().includes(n) && n.length > 3);
+  if(porContencionFuera.length){ avisarSiAmbiguo(porContencionFuera); return porContencionFuera[0]; }
+  return null;
 }
 
 /* Convierte una línea propuesta por el asistente en una línea de escandallo
@@ -38464,7 +38558,7 @@ function idrCasarLinea(ing, avisos){
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, destino));
     if(qty > 0){ avisarSiNoConvertible(destino); return {type:'base', baseRecipeId: base.id, qty, merma: 0}; }
   }
-  const real = idrBuscarIngrediente(ing.nombre);
+  const real = idrBuscarIngrediente(ing.nombre, avisos);
   if(real){
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit));
     if(qty > 0){ avisarSiNoConvertible(real.unit); return {type:'ingredient', ingredientId: real.id, qty, merma: 0}; }
@@ -38803,10 +38897,21 @@ function idrRendimientoDeLaConversacion(c){
   const mios = idrMensajes(c).filter(m => m.r === 'yo').map(m => m.t).reverse();
   const suyos = idrMensajes(c).filter(m => m.r === 'ia').map(m => m.t).reverse();
   const viejos = (c.pasos||[]).map(p => p && p.elegido).filter(Boolean).reverse();
-  const rx = /([0-9]+(?:[.,][0-9]+)?)\s*(l|litros?|ml|cl|dl|kg|kilos?|g|gr|gramos?|ud|uds|unidades?)\b/i;
+  const rx = /([0-9]+(?:[.,][0-9]+)?)\s*(l|litros?|ml|cl|dl|kg|kilos?|g|gr|gramos?|ud|uds|unidades?)\b/gi;
+  // Palabras que de verdad hablan de rendimiento, no de una cantidad de un
+  // ingrediente suelto dentro del mismo mensaje ("lleva 500g de tomate y
+  // rinde 2L"). Solo se usan para DESEMPATAR cuando un mismo mensaje trae
+  // más de un número con unidad — si solo hay uno (el caso normal, y el que
+  // cubren todas las pruebas existentes), se coge ese, igual que siempre.
+  // Hallazgo de una auditoría externa.
+  const KW = /rind[ea]n?|sal(?:e|en|ga|gan)|rendimiento/i;
   for(const texto of mios.concat(viejos, suyos)){
-    const m = String(texto).match(rx);
-    if(m) return idrLeerRendimiento(m[0]);
+    const s = String(texto);
+    const matches = [...s.matchAll(rx)];
+    if(!matches.length) continue;
+    if(matches.length === 1) return idrLeerRendimiento(matches[0][0]);
+    const cerca = matches.find(m => KW.test(s.slice(Math.max(0, m.index-25), m.index)));
+    return idrLeerRendimiento((cerca || matches[0])[0]);
   }
   return {qty: 1, unit: 'L'};
 }
@@ -39465,7 +39570,7 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
       if(!pl || !pl.nombre) return;
       const lineas = [];
       (pl.ingredientes||[]).forEach(ing => {
-        const real = idrBuscarIngrediente(ing.nombre);
+        const real = idrBuscarIngrediente(ing.nombre, faltan);
         const qty = Math.max(0, parseFloat(ing.cantidad) || 0);
         if(real && qty > 0) lineas.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
         else if(ing.nombre) faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''} — ${pl.nombre}`);
@@ -39793,7 +39898,15 @@ function idrValidarPlato(receta, opciones){
   const objetivo = idrObjetivoFoodCost(o.creacion || idrCreacion(idrCreacionActiva));
   const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
   const pvp = parseFloat(receta.price) || 0;
-  if(isFinite(objetivo) && objetivo > 0 && pvp > 0){
+  // ⚠️ Un coste EXACTAMENTE 0 con ingredientes en la receta no es un food
+  // cost buenísimo: es que ninguno de sus ingredientes se casó con uno real
+  // del negocio (todos acabaron en `faltan`, sin vincular). Antes esto
+  // pasaba como un food cost del 0% sin ningún aviso propio de esta
+  // comprobación — el `pct > 0` de la rama de abajo lo dejaba pasar de
+  // largo a propósito. Hallazgo de una auditoría externa.
+  if(coste === 0 && (receta.ingredients||[]).length > 0){
+    problemas.push(t('idr.check.costIncomplete'));
+  } else if(isFinite(objetivo) && objetivo > 0 && pvp > 0){
     const pct = (coste / pvp) * 100;
     if(pct > objetivo + 2) problemas.push(t('idr.check.foodCost').replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
     /* Y también MUY por debajo. Un plato al 5% cuando el objetivo es el 30%

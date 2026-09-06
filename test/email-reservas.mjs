@@ -427,6 +427,48 @@ caso('El cuaderno de I+D se fusiona igual en la carga inicial completa que en la
     'falta fusionar las creaciones de IDR por id y por conversación, no solo por documento completo');
 });
 
+caso('La propina de un autopedido de mesa pagado online no cuenta como cobrada hasta que el banco confirma (hallazgo de Codex)', () => {
+  assert.ok(core.includes('order.propinasPendientes.push({ref: req.clientRef, importe: req.propina})'),
+    'la propina de un autopedido pagado online sigue sumándose a propinaPagadaOnline en cuanto llega la solicitud, antes de que el banco confirme nada');
+  const m = core.match(/if\(Array\.isArray\(o\.propinasPendientes\) && o\.propinasPendientes\.length\)\{[\s\S]*?\n\s*\}/);
+  assert.ok(m, 'no se encontró el reclamo de propinas pendientes en pago_confirmado');
+  assert.ok(m[0].includes('o.propinaPagadaOnline = (o.propinaPagadaOnline||0) + pendiente.importe'),
+    'pago_confirmado no mueve la propina pendiente a propinaPagadaOnline al confirmarse el pago');
+});
+
+caso('El listener de conexión de la nube no se duplica en cada reconexión (hallazgo de Codex)', () => {
+  assert.ok(core.includes('let infoConnectedListenerAttached = false;'), 'no se encontró el flag de listener único');
+  const m = core.match(/if\(!infoConnectedListenerAttached\)\{[\s\S]*?'\.info\/connected'\)\.on\('value'/);
+  assert.ok(m, 'el listener de .info/connected ya no está protegido por el flag');
+});
+
+caso('Los reintentos de subida a la nube crecen con backoff exponencial, no cada 15s fijos (hallazgo de Codex)', () => {
+  const m = core.match(/function scheduleCloudSyncRetry\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró scheduleCloudSyncRetry');
+  assert.ok(m[0].includes('cloudSyncRetryAttempt++') && m[0].includes('Math.pow(2, cloudSyncRetryAttempt - 1)'),
+    'los reintentos de subida siguen siendo cada 15s fijos, sin backoff — machacan la nube sin parar si el permiso está denegado de forma permanente');
+  assert.ok(core.includes('cloudSyncRetryAttempt = 0; // subida buena'),
+    'el contador de reintentos no se resetea tras una subida buena');
+});
+
+caso('Dividir cuenta a partes iguales o por artículos incluye la propina ya pagada online, no solo la de caja (hallazgo de Codex)', () => {
+  const m = tpv.match(/function generateEqualSplit\(orderId\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró generateEqualSplit');
+  assert.ok(m[0].includes("(order.propina || 0) + (order.propinaPagadaOnline || 0)"),
+    'generateEqualSplit no suma propinaPagadaOnline al total a repartir — esa propina desaparece de la cuenta al dividir');
+  const m2 = tpv.match(/function generateItemsSplit\(orderId\)\{[\s\S]*?\n\}/);
+  assert.ok(m2, 'no se encontró generateItemsSplit');
+  assert.ok(m2[0].includes("const propina = (order.propina || 0) + (order.propinaPagadaOnline || 0)"),
+    'generateItemsSplit no suma propinaPagadaOnline al total a repartir');
+});
+
+caso('Dos instancias de menú distintas no comparten línea aunque elijan la misma opción (hallazgo de Codex)', () => {
+  const m = tpv.match(/const existing = order\.items\.find\(l =>[\s\S]*?\);/);
+  assert.ok(m, 'no se encontró la búsqueda de línea existente al añadir un menú');
+  assert.ok(m[0].includes('l.menuInstanceId === menuInstanceId'),
+    'la fusión de líneas de menú no comprueba menuInstanceId — dos instancias distintas con la misma opción se funden en una sola línea, descuadrando el stock de menús al marchar');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

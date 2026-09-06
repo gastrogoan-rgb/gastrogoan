@@ -1685,6 +1685,14 @@ async function idbSet(key, value){
    ============================================================ */
 let cloudRef = null;
 let socketConnected = false; // último valor conocido de .info/connected — ver flushCloudSync
+// Cada reconexión (reintentarConexionNube) pone cloudRef a null y vuelve a
+// llamar a startCloudSync, que volvía a enganchar OTRO listener de
+// '.info/connected' sin soltar el anterior — ninguno se desengancha nunca.
+// Con una red inestable que reconecta varias veces en el turno, se acumulan
+// callbacks que disparan updateSyncBadge() cada uno por su cuenta. Este flag
+// hace que el listener se enganche UNA sola vez de verdad, sea cual sea el
+// número de reconexiones. Hallazgo de una auditoría externa.
+let infoConnectedListenerAttached = false;
 let cloudConfig = null;
 let platformAuthPromise = null;
 // Proyecto Firebase compartido de la plataforma GastroGoan, usado SOLO para
@@ -4310,8 +4318,20 @@ function initPublicRequestsListener(){
           // si se sumara a order.propina, se le volvería a cobrar al resto
           // de la mesa al cerrar cuenta.
           if(typeof req.propina === 'number' && req.propina > 0){
-            if(req.pagarAhora) order.propinaPagadaOnline = (order.propinaPagadaOnline||0) + req.propina;
-            else order.propina = (order.propina||0) + req.propina;
+            // ⚠️ Igual que las líneas (pagoOnlinePendiente), la propina de un
+            // autopedido pagado online NO cuenta como cobrada hasta que llegue
+            // pago_confirmado del banco — antes se sumaba a propinaPagadaOnline
+            // en cuanto llegaba la solicitud, aunque la firma con el Worker
+            // pudiera fallar después o el cliente cancelara el pago en Redsys:
+            // esos euros aparecían como ya cobrados en el desglose de la mesa
+            // sin que hubiera entrado nada de verdad. Hallazgo de una
+            // auditoría externa. Se guarda en una lista pendiente por
+            // referencia de pago, igual que pagoRef en las líneas, y solo se
+            // suma a propinaPagadaOnline cuando el pago_confirmado la reclama.
+            if(req.pagarAhora){
+              if(!Array.isArray(order.propinasPendientes)) order.propinasPendientes = [];
+              order.propinasPendientes.push({ref: req.clientRef, importe: req.propina});
+            } else order.propina = (order.propina||0) + req.propina;
           }
         }else{
           const matchedClientMesa = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
@@ -4320,7 +4340,8 @@ function initPublicRequestsListener(){
             clienteNombre: req.clienteNombre || '', status:'abierta', items, tandas:[], createdAt: new Date().toISOString(),
             clientRef: req.clientRef || null, clientId: matchedClientMesa ? matchedClientMesa.id : null,
             propina: (!req.pagarAhora && typeof req.propina === 'number') ? req.propina : 0,
-            propinaPagadaOnline: (req.pagarAhora && typeof req.propina === 'number') ? req.propina : 0
+            propinaPagadaOnline: 0,
+            propinasPendientes: (req.pagarAhora && typeof req.propina === 'number' && req.propina > 0) ? [{ref: req.clientRef, importe: req.propina}] : []
           });
         }
       }else if(req.type === 'pedido'){
@@ -4445,6 +4466,17 @@ function initPublicRequestsListener(){
               l.pagadoOnline = true;
             }
           });
+          // La propina de ese mismo autopedido (ver arriba, propinasPendientes):
+          // solo se suma a propinaPagadaOnline AHORA que el banco confirmó de
+          // verdad ese pago concreto, nunca antes.
+          if(Array.isArray(o.propinasPendientes) && o.propinasPendientes.length){
+            const pendiente = o.propinasPendientes.find(p => p.ref === req.orderRef);
+            if(pendiente){
+              pagoConfirmadoMatched = true;
+              o.propinaPagadaOnline = (o.propinaPagadaOnline||0) + pendiente.importe;
+              o.propinasPendientes = o.propinasPendientes.filter(p => p !== pendiente);
+            }
+          }
         });
         // Ninguno de los tres casos de arriba encontró a qué aplicar este
         // pago: lo más probable es que el pedido se rechazara/cancelara (y
@@ -5777,6 +5809,8 @@ function startCloudSync(tenantId){
       recordSyncError(err);
       reintentarConexionNube(tenantId);
     });
+    if(!infoConnectedListenerAttached){
+    infoConnectedListenerAttached = true;
     firebase.database().ref('.info/connected').on('value', s => {
       socketConnected = !!s.val();
       /* ⚠️ Esto NO puede borrar un error real. El socket se establece ANTES de
@@ -5796,6 +5830,7 @@ function startCloudSync(tenantId){
       if(lastSyncErrorCode){ updateSyncBadge('error'); return; }
       updateSyncBadge(socketConnected ? 'online' : 'offline');
     });
+    }
   }catch(e){
     /* `cloudRef` ya está asignado arriba, antes del `once` y del listener de
        conexión: si algo lanza a partir de ahí, el dispositivo se quedaba con
@@ -7491,10 +7526,21 @@ function schedulePublicMirrorSync(){
 // cerrar la pestaña/dispositivo. Ahora el snapshot solo se actualiza tras
 // la confirmación real, y un fallo programa un reintento automático.
 let cloudSyncRetryTimer = null;
-const CLOUD_SYNC_RETRY_MS = 15000; // reintenta cada 15s mientras haya cambios sin confirmar
+const CLOUD_SYNC_RETRY_MS = 15000; // primer reintento, luego crece (ver scheduleCloudSyncRetry)
+// ⚠️ Antes se reintentaba SIEMPRE cada 15s en punto, sin importar el motivo
+// del fallo: unas reglas de Firebase mal puestas (permiso denegado de forma
+// permanente, no un corte de red pasajero) machacaban la nube del negocio
+// cada 15s sin parar hasta que alguien arreglara las reglas a mano — podían
+// ser horas o días. Ahora crece de forma exponencial igual que ya hacía
+// reintentarConexionNube (5s, 10s, 20s… hasta un tope de 5 min), y se
+// resetea a 0 en cuanto una subida termina bien. Hallazgo de una auditoría
+// externa.
+let cloudSyncRetryAttempt = 0;
 function scheduleCloudSyncRetry(){
   clearTimeout(cloudSyncRetryTimer);
-  cloudSyncRetryTimer = setTimeout(flushCloudSync, CLOUD_SYNC_RETRY_MS);
+  cloudSyncRetryAttempt++;
+  const espera = Math.min(300000, CLOUD_SYNC_RETRY_MS * Math.pow(2, cloudSyncRetryAttempt - 1));
+  cloudSyncRetryTimer = setTimeout(flushCloudSync, espera);
 }
 /* ⚠️ El indicador se quedaba clavado en "Guardando…" para siempre.
    scheduleCloudSync lo pone en ese estado en CADA saveDB, aunque el guardado
@@ -7552,6 +7598,7 @@ function flushCloudSync(){
   };
   try{
     cloudRef.update(sinIndefinidos(updates)).then(() => {
+      cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
       keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio

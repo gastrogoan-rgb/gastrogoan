@@ -1506,15 +1506,32 @@ function idrConvertirCantidad(cantidad, unidadModelo, unidadIngrediente){
   return Math.round(v * 10000) / 10000;
 }
 
-function idrBuscarIngrediente(nombre){
+// `avisos` (opcional, mismo array `faltan` que ya usan las llamadas): si la
+// coincidencia por contención es AMBIGUA (más de un ingrediente del negocio
+// encaja), antes se cogía el primero que apareciera en el array sin más —
+// orden arbitrario, así que "pimiento" con "Pimiento rojo" y "Pimiento
+// verde" dados de alta podía enlazar al color equivocado en silencio.
+// Se sigue enlazando (mejor una coincidencia corregible que perder la línea
+// entera, igual que con las unidades) pero ahora se avisa de la ambigüedad
+// para que el cocinero lo revise. La coincidencia EXACTA nunca es ambigua
+// (no hay dos ingredientes con el mismo nombre), así que ese camino no
+// cambia. Hallazgo de una auditoría externa.
+function idrBuscarIngrediente(nombre, avisos){
   const n = (nombre||'').trim().toLowerCase();
   if(!n) return null;
   const ings = (DB.ingredients||[]).filter(i => (i.area||'cocina') === 'cocina');
-  let hit = ings.find(i => (i.name||'').trim().toLowerCase() === n);
-  if(hit) return hit;
-  hit = ings.find(i => n.includes((i.name||'').trim().toLowerCase()) && (i.name||'').trim().length > 3);
-  if(hit) return hit;
-  return ings.find(i => (i.name||'').trim().toLowerCase().includes(n) && n.length > 3) || null;
+  const exacto = ings.find(i => (i.name||'').trim().toLowerCase() === n);
+  if(exacto) return exacto;
+  const avisarSiAmbiguo = (candidatos) => {
+    if(avisos && candidatos.length > 1){
+      avisos.push(`${nombre}: coincide con varios ingredientes del negocio (${candidatos.slice(0,4).map(i=>i.name).join(', ')}) — se usó "${candidatos[0].name}", revisa si es el correcto`);
+    }
+  };
+  const porContencionDentro = ings.filter(i => n.includes((i.name||'').trim().toLowerCase()) && (i.name||'').trim().length > 3);
+  if(porContencionDentro.length){ avisarSiAmbiguo(porContencionDentro); return porContencionDentro[0]; }
+  const porContencionFuera = ings.filter(i => (i.name||'').trim().toLowerCase().includes(n) && n.length > 3);
+  if(porContencionFuera.length){ avisarSiAmbiguo(porContencionFuera); return porContencionFuera[0]; }
+  return null;
 }
 
 /* Convierte una línea propuesta por el asistente en una línea de escandallo
@@ -1553,7 +1570,7 @@ function idrCasarLinea(ing, avisos){
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, destino));
     if(qty > 0){ avisarSiNoConvertible(destino); return {type:'base', baseRecipeId: base.id, qty, merma: 0}; }
   }
-  const real = idrBuscarIngrediente(ing.nombre);
+  const real = idrBuscarIngrediente(ing.nombre, avisos);
   if(real){
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit));
     if(qty > 0){ avisarSiNoConvertible(real.unit); return {type:'ingredient', ingredientId: real.id, qty, merma: 0}; }
@@ -1892,10 +1909,21 @@ function idrRendimientoDeLaConversacion(c){
   const mios = idrMensajes(c).filter(m => m.r === 'yo').map(m => m.t).reverse();
   const suyos = idrMensajes(c).filter(m => m.r === 'ia').map(m => m.t).reverse();
   const viejos = (c.pasos||[]).map(p => p && p.elegido).filter(Boolean).reverse();
-  const rx = /([0-9]+(?:[.,][0-9]+)?)\s*(l|litros?|ml|cl|dl|kg|kilos?|g|gr|gramos?|ud|uds|unidades?)\b/i;
+  const rx = /([0-9]+(?:[.,][0-9]+)?)\s*(l|litros?|ml|cl|dl|kg|kilos?|g|gr|gramos?|ud|uds|unidades?)\b/gi;
+  // Palabras que de verdad hablan de rendimiento, no de una cantidad de un
+  // ingrediente suelto dentro del mismo mensaje ("lleva 500g de tomate y
+  // rinde 2L"). Solo se usan para DESEMPATAR cuando un mismo mensaje trae
+  // más de un número con unidad — si solo hay uno (el caso normal, y el que
+  // cubren todas las pruebas existentes), se coge ese, igual que siempre.
+  // Hallazgo de una auditoría externa.
+  const KW = /rind[ea]n?|sal(?:e|en|ga|gan)|rendimiento/i;
   for(const texto of mios.concat(viejos, suyos)){
-    const m = String(texto).match(rx);
-    if(m) return idrLeerRendimiento(m[0]);
+    const s = String(texto);
+    const matches = [...s.matchAll(rx)];
+    if(!matches.length) continue;
+    if(matches.length === 1) return idrLeerRendimiento(matches[0][0]);
+    const cerca = matches.find(m => KW.test(s.slice(Math.max(0, m.index-25), m.index)));
+    return idrLeerRendimiento((cerca || matches[0])[0]);
   }
   return {qty: 1, unit: 'L'};
 }
@@ -2554,7 +2582,7 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
       if(!pl || !pl.nombre) return;
       const lineas = [];
       (pl.ingredientes||[]).forEach(ing => {
-        const real = idrBuscarIngrediente(ing.nombre);
+        const real = idrBuscarIngrediente(ing.nombre, faltan);
         const qty = Math.max(0, parseFloat(ing.cantidad) || 0);
         if(real && qty > 0) lineas.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
         else if(ing.nombre) faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''} — ${pl.nombre}`);
@@ -2882,7 +2910,15 @@ function idrValidarPlato(receta, opciones){
   const objetivo = idrObjetivoFoodCost(o.creacion || idrCreacion(idrCreacionActiva));
   const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
   const pvp = parseFloat(receta.price) || 0;
-  if(isFinite(objetivo) && objetivo > 0 && pvp > 0){
+  // ⚠️ Un coste EXACTAMENTE 0 con ingredientes en la receta no es un food
+  // cost buenísimo: es que ninguno de sus ingredientes se casó con uno real
+  // del negocio (todos acabaron en `faltan`, sin vincular). Antes esto
+  // pasaba como un food cost del 0% sin ningún aviso propio de esta
+  // comprobación — el `pct > 0` de la rama de abajo lo dejaba pasar de
+  // largo a propósito. Hallazgo de una auditoría externa.
+  if(coste === 0 && (receta.ingredients||[]).length > 0){
+    problemas.push(t('idr.check.costIncomplete'));
+  } else if(isFinite(objetivo) && objetivo > 0 && pvp > 0){
     const pct = (coste / pvp) * 100;
     if(pct > objetivo + 2) problemas.push(t('idr.check.foodCost').replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
     /* Y también MUY por debajo. Un plato al 5% cuando el objetivo es el 30%

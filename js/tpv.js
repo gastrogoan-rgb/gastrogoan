@@ -1828,8 +1828,22 @@ function confirmAddMenuToOrder(orderId, menuId){
     const baseAmount = i===0 ? m.precio : 0;
     const linePrice = baseAmount + s.suplemento + modExtra;
     const isBebida = !!(grupo && grupo.bebida);
+    // ⚠️ Hace falta comprobar también menuInstanceId: sin esto, DOS instancias
+    // de menú distintas (dos "Menú del día" separados) que eligieran la MISMA
+    // opción en el mismo grupo (p.ej. las dos "Ensalada" de primero) se
+    // fundían en una sola línea con qty:2 y el menuInstanceId de la primera —
+    // la segunda instancia se quedaba sin ninguna línea con su propio id para
+    // ese grupo. decrementMenuStock (que descuenta UNA ración de menú por
+    // primera línea de cada instancia) contaba entonces mal: la línea
+    // fusionada descontaba de más (su qty, no 1) y la instancia que se quedó
+    // sin línea propia para ese grupo igualmente descontaba por sus OTRAS
+    // líneas — 3 raciones de menú en vez de 2. Hallazgo de una auditoría
+    // externa. Aquí `menuInstanceId` es siempre el de ESTA llamada (se genera
+    // una vez por instancia, más arriba), así que solo se fusiona con una
+    // línea que ya sea de la MISMA instancia — nunca con la de otra.
     const existing = order.items.find(l =>
       l.menuId === m.id && l.name === lineName && (l.tanda||'') === (s.grupoNombre||'') &&
+      l.menuInstanceId === menuInstanceId &&
       !l.estado && (l.marchada||0) === 0
     );
     let line;
@@ -4254,7 +4268,15 @@ function generateEqualSplit(orderId){
   // también al dividir cuenta — si no, cada comensal pagaría sobre el precio
   // lleno y el descuento desaparecería sin dejar rastro en lo cobrado.
   const descuentoPct = order.descuentoPct || 0;
-  const total = roundMoney(orderTotal(order) * (1 - descuentoPct/100)) + (order.propina || 0);
+  // ⚠️ Falta sumar propinaPagadaOnline: applyOnlinePrepaidToSplit() (justo
+  // abajo) SÍ resta ese importe de lo ya pagado (vía orderAmountPaidOnline),
+  // pero si aquí no se suma primero al total a repartir, esa propina online
+  // desaparece de la cuenta — el ejemplo real: 100€ de comida, 30€ pagados
+  // online, 5€ de propina online y 10€ de propina en caja: se cobraban 75€
+  // más en vez de los 80€ que de verdad faltan (115€ de venta final − 35€ ya
+  // pagados online). Mismo criterio que computeFinalTotal. Hallazgo de una
+  // auditoría externa.
+  const total = roundMoney(orderTotal(order) * (1 - descuentoPct/100)) + (order.propina || 0) + (order.propinaPagadaOnline || 0);
   order.splitMode = 'equal';
   order.splitPayments = makeEqualParts(total, n).map((amount,i) => ({
     id: i+1, label: t('label.personN').replace('${n}', i+1), amount, paid:false, metodoPago:null
@@ -4380,7 +4402,12 @@ function generateItemsSplit(orderId){
   // mesa se aplica a partes iguales sobre cada comensal (no tiene sentido
   // repartirlo por plato), y la propina se reparte también a partes iguales.
   const descuentoPct = order.descuentoPct || 0;
-  const propina = order.propina || 0;
+  // Mismo motivo que en generateEqualSplit: sin sumar propinaPagadaOnline
+  // aquí, applyOnlinePrepaidToSplit (al final de esta función) resta ese
+  // importe de un total que nunca lo incluyó, y la propina ya pagada por
+  // móvil desaparece de la cuenta en vez de descontarse de lo que queda por
+  // cobrar. Hallazgo de una auditoría externa.
+  const propina = (order.propina || 0) + (order.propinaPagadaOnline || 0);
   const propinaCents = Math.round(propina * 100);
   const propinaBaseCents = Math.floor(propinaCents / n);
   const propinaRestoCents = propinaCents - propinaBaseCents * n;
