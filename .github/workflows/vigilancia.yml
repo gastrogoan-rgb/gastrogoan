@@ -77,11 +77,20 @@ jobs:
           # conexión y no gasta cuota apreciable. Es la misma llamada que hace
           # la web pública de reservas de cada cliente, así que si esto
           # responde, a ellos también les responde.
+          #
+          # ⚠️ Ojo: la regla ".read":true está puesta en el HIJO ($slug), no
+          # en el padre (publicSlugs) — a propósito, para que nadie pueda
+          # listar todos los slugs dados de alta. Preguntar por el nodo padre
+          # (publicSlugs.json, como se hacía antes) siempre da 401 aunque la
+          # plataforma esté perfectamente sana: no es lo mismo que preguntar
+          # que "no responde". Por eso se pregunta por un slug concreto
+          # (inventado, no hace falta que exista ningún negocio real con él)
+          # igual que hace la web pública de reservas de verdad.
           BASE=https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app
-          echo "→ $BASE/gastrogoan/publicSlugs.json?shallow=true"
+          echo "→ $BASE/gastrogoan/publicSlugs/__vigilancia-dominio__.json"
           codigo=$(curl -sS -o /tmp/plat.json -w '%{http_code}' \
                     --max-time 45 --retry 3 --retry-delay 10 \
-                    "$BASE/gastrogoan/publicSlugs.json?shallow=true")
+                    "$BASE/gastrogoan/publicSlugs/__vigilancia-dominio__.json")
           echo "   HTTP $codigo · $(wc -c < /tmp/plat.json) bytes"
           # 401/403 = las reglas de lectura abierta se han despublicado (y
           # entonces cada visitante abriría una conexión con el SDK: caída en
