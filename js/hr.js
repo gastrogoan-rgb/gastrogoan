@@ -1551,7 +1551,9 @@ const GE = (function(){
     // ACTUAL de la receta y multiplicarlo por el total de unidades del
     // periodo — así el margen de un mes pasado no cambia solo porque hoy
     // haya subido el precio de un ingrediente.
+    const fallbackIvaPct = ivaVentasPct();
     sales.forEach(sale => {
+      const descPct = parseFloat(sale.descuentoPct)||0;
       (sale.items||[]).forEach(line => {
         const key = line.recipeId ? ('r'+line.recipeId) : ('m'+(line.name||''));
         if(!map[key]){
@@ -1561,18 +1563,29 @@ const GE = (function(){
             recipeId: line.recipeId || null,
             category: recipe ? (recipe.category||t('hr.platos.noCategory')) : t('hr.platos.noCosting'),
             hasCost: !!recipe,
-            units: 0, revenue: 0, costTotal: 0
+            units: 0, revenue: 0, revenueNeto: 0, costTotal: 0
           };
         }
+        // El descuento de la venta (sale.descuentoPct) se aplica proporcional
+        // a cada línea, igual que en ventasIvaGroups — si no, un plato
+        // vendido siempre con descuento aparecía facturando más de lo que
+        // de verdad entró en caja.
+        const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : fallbackIvaPct;
+        const lineRevenue = (line.price||0) * (line.qty||0) * (1 - descPct/100);
         map[key].units += (line.qty||0);
-        map[key].revenue += (line.price||0) * (line.qty||0);
+        map[key].revenue += lineRevenue;
+        // El margen se calcula sobre la venta SIN IVA (mismo criterio que
+        // recipeFoodCostPct y el "Top margen bruto" del Dashboard): el coste
+        // de la receta es siempre neto, así que restarlo del precio CON IVA
+        // infla el margen — más cuanto más alto sea el IVA del plato.
+        map[key].revenueNeto += lineRevenue / (1 + rate/100);
         if(map[key].hasCost) map[key].costTotal += costoUnitarioDeLinea(line) * (line.qty||0);
       });
     });
     const items = Object.values(map).map(it => {
       const cost = it.hasCost ? it.costTotal : null;
-      const margin = cost!=null ? it.revenue - cost : null;
-      const marginPct = (cost!=null && it.revenue>0) ? (margin/it.revenue*100) : null;
+      const margin = cost!=null ? it.revenueNeto - cost : null;
+      const marginPct = (cost!=null && it.revenueNeto>0) ? (margin/it.revenueNeto*100) : null;
       const unitCost = (cost!=null && it.units>0) ? cost/it.units : null;
       return {...it, cost, margin, marginPct, unitCost};
     });

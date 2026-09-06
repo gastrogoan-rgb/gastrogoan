@@ -3165,6 +3165,16 @@ const ARRAYS_CON_LAPIDA = new Set([
      el empleado/cliente/receta/ingrediente/reserva/pedido restaurado. */
   'trash',
 ]);
+// Mismo fallo que ARRAYS_CON_LAPIDA, pero para arrays que no cuelgan
+// directamente de DB sino de un objeto anidado (DB.ge.fijos/variables/capex):
+// eliminarGastoFijo/eliminarVariable/eliminarCapex SÍ borran de verdad
+// (js/hr.js), y mergeNestedArraysByKey fusiona esos arrays por id igual que
+// mergeArraysById — sin lápida, un gasto fijo, una compra o una inversión
+// borrados aquí resucitaban al sincronizar un dispositivo que aún los tenía,
+// volviendo a mover el IVA, el margen y el Resultado sin que nadie lo viera
+// borrarse dos veces. fijosLog y cierres se quedan fuera: son historial que
+// solo crece (push), nunca se borra un elemento suelto de ahí.
+const NESTED_ARRAYS_CON_LAPIDA = {ge: ['fijos', 'variables', 'capex']};
 const LAPIDA_DIAS = 60;
 
 // La clave con la que se reconoce un elemento: su id si lo tiene, su nombre
@@ -3220,6 +3230,30 @@ function anotarLapidas(){
       }
     });
   });
+  // Igual que arriba, pero para los arrays anidados (DB.ge.fijos/variables/
+  // capex): la clave del mapa lleva el punto ('ge.fijos') para no chocar con
+  // ninguna clave de nivel superior, que nunca lo llevan.
+  Object.keys(NESTED_ARRAYS_CON_LAPIDA).forEach(parent => {
+    if(!DB[parent] || typeof DB[parent] !== 'object') return;
+    let antesPadre;
+    if(lastSyncedSnapshot[parent]){
+      try{ antesPadre = JSON.parse(lastSyncedSnapshot[parent]); }catch(e){ antesPadre = null; }
+    }
+    NESTED_ARRAYS_CON_LAPIDA[parent].forEach(nestedKey => {
+      const key = parent + '.' + nestedKey;
+      if(!Array.isArray(DB[parent][nestedKey])) return;
+      const ahora = new Set(DB[parent][nestedKey].map(claveDeElemento).filter(c => c != null));
+      ahora.forEach(c => { if(mapa[key + ':' + c] != null){ delete mapa[key + ':' + c]; cambio = true; } });
+      if(!antesPadre || !Array.isArray(antesPadre[nestedKey])) return;
+      antesPadre[nestedKey].forEach(x => {
+        const c = claveDeElemento(x);
+        if(c != null && !ahora.has(c) && mapa[key + ':' + c] == null){
+          mapa[key + ':' + c] = Date.now();
+          cambio = true;
+        }
+      });
+    });
+  });
   // Las caducadas se van solas, para que el mapa no crezca sin fin.
   const limite = Date.now() - LAPIDA_DIAS * 86400000;
   Object.keys(mapa).forEach(k => { if(!(mapa[k] > limite)){ delete mapa[k]; cambio = true; } });
@@ -3234,6 +3268,20 @@ function anotarLapidas(){
 function quitarResucitados(key, arr){
   if(!ARRAYS_CON_LAPIDA.has(key) || !Array.isArray(arr)) return arr;
   return arr.filter(x => !hayLapida(key, claveDeElemento(x)));
+}
+
+// Mismo criterio que quitarResucitados, para los arrays anidados dentro de
+// un objeto como DB.ge (ver NESTED_ARRAYS_CON_LAPIDA). Se aplica sobre el
+// objeto YA fusionado por mergeNestedArraysByKey, mutándolo in-place.
+function quitarResucitadosNested(parentKey, obj){
+  const nestedKeys = NESTED_ARRAYS_CON_LAPIDA[parentKey];
+  if(!nestedKeys || !obj || typeof obj !== 'object') return obj;
+  nestedKeys.forEach(nestedKey => {
+    if(!Array.isArray(obj[nestedKey])) return;
+    const key = parentKey + '.' + nestedKey;
+    obj[nestedKey] = obj[nestedKey].filter(x => !hayLapida(key, claveDeElemento(x)));
+  });
+  return obj;
 }
 
 /* Las lápidas de los dos aparatos se SUMAN: un borrado hecho allí vale aquí
@@ -5065,6 +5113,7 @@ function applyRemoteBlock(key, remoteValue){
   }
   if(key === 'ge' && DB[key] && typeof merged === 'object'){
     merged = mergeNestedArraysByKey(DB[key], merged, ['fijos','variables','capex','fijosLog','cierres']);
+    merged = quitarResucitadosNested('ge', merged);
   }
   if(key === 'limpieza' && DB[key] && typeof merged === 'object'){
     merged = mergeNestedArraysByKey(DB[key], merged, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);
@@ -5306,6 +5355,21 @@ function mergeRemoteIntoLocal(val){
       if(key === 'cartas'){
         value = mergeCartaStock(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }
+      // Mismo fallo que en applyRemoteBlock (dos camareros en la misma mesa):
+      // esta es la carga inicial completa desde la nube, así que si alguien
+      // abre la app justo cuando otro dispositivo también tenía líneas sin
+      // subir de la MISMA comanda, hacía falta esta misma fusión de líneas
+      // aquí también — antes solo estaba en el listener incremental.
+      if(key === 'tpvOrders'){
+        const localesPorId = new Map();
+        DB[key].forEach(o => { if(o && o.id != null) localesPorId.set(o.id, o); });
+        value = value.map(o => {
+          if(!o || o.id == null) return o;
+          const local = localesPorId.get(o.id);
+          if(!local || local === o) return o;
+          return mergeOrderLines(local, o);
+        });
+      }
     }
     if(key === 'borrados') value = mergeLapidas(DB.borrados, value);
     // Lo mismo que en applyRemoteBlock: lo borrado no vuelve por la puerta de
@@ -5316,6 +5380,7 @@ function mergeRemoteIntoLocal(val){
     }
     if(key === 'ge' && DB[key] && typeof value === 'object'){
       value = mergeNestedArraysByKey(DB[key], value, ['fijos','variables','capex','fijosLog','cierres']);
+      value = quitarResucitadosNested('ge', value);
     }
     if(key === 'limpieza' && DB[key] && typeof value === 'object'){
       value = mergeNestedArraysByKey(DB[key], value, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);

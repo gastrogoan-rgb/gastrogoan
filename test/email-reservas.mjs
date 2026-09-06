@@ -225,6 +225,23 @@ caso('Punto de Equilibrio: "Usar datos reales" siembra el ticket medio SIN IVA, 
     'peUseRealData no calcula el ticket medio quitando el IVA de cada línea');
 });
 
+caso('Análisis de Platos: el margen por plato se calcula SIN IVA y con el descuento de la venta aplicado (hallazgo de Codex)', () => {
+  // Mismo bug que ya se corrigió en recipeFoodCostPct y en el "Top margen
+  // bruto" del Dashboard: platosStats calculaba el margen restando el coste
+  // (siempre neto) del importe CON IVA de la línea, y encima sin aplicar el
+  // descuento de la venta — un plato con IVA alto y vendido con descuento
+  // podía aparecer rentable cuando su margen real era mucho menor, o incluso
+  // negativo.
+  const m = hr.match(/function platosStats\(\)\{[\s\S]*?\n  \}/);
+  assert.ok(m, 'no se encontró platosStats');
+  assert.ok(m[0].includes('descPct') && m[0].includes('1 - descPct/100'),
+    'platosStats no aplica el descuento de la venta a la línea del plato');
+  assert.ok(m[0].includes('revenueNeto') && m[0].includes('lineRevenue / (1 + rate/100)'),
+    'platosStats no calcula un ingreso SIN IVA por línea');
+  assert.ok(/margin = cost!=null \? it\.revenueNeto - cost/.test(m[0]),
+    'el margen sigue restando el coste del ingreso CON IVA, no del ingreso neto');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

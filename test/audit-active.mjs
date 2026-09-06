@@ -576,6 +576,59 @@ await testAsync('Dos camareros vendiendo el mismo plato con raciones limitadas n
   console.log('   → el descuento de stock de los dos dispositivos se conserva, ninguno de los dos se pierde');
 });
 
+await testAsync('La CARGA INICIAL completa desde la nube también fusiona las líneas de una comanda compartida (hallazgo de Codex)', async () => {
+  // mergeOrderLines ya evitaba que dos camareros en la misma mesa se pisaran
+  // las líneas, pero SOLO en el listener incremental (applyRemoteBlock). La
+  // carga inicial completa (mergeRemoteIntoLocal, la que corre al abrir la
+  // app y traer toda la nube de golpe) no tenía ese mismo tratamiento: si al
+  // abrir la app llegaba de golpe una comanda que la nube ya tenía distinta,
+  // mergeArraysById se quedaba con la de la nube ENTERA y la línea tomada en
+  // este dispositivo (sin subir todavía) desaparecía sin dejar rastro.
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  sandbox.hideActivationGate = () => {};
+  sandbox.isStoredLicenseValid = () => false;
+  // Este dispositivo tomó una línea de PLATO_DEL_MOVIL, sin subir todavía.
+  sandbox.__setDB({tpvOrders: [{id: 500, mesa: 7, items: [{lineId: 'movil-1', name: 'PLATO_DEL_MOVIL', qty: 1}]}]});
+  // La nube ya tiene la MISMA comanda con la línea que tomó la tablet.
+  sandbox.mergeRemoteIntoLocal({tpvOrders: [{id: 500, mesa: 7, items: [{lineId: 'tablet-1', name: 'PLATO_DE_LA_TABLET', qty: 1}]}]});
+  const orden = sandbox.__getDB().tpvOrders.find(o => o.id === 500);
+  const nombres = Array.from(orden.items||[], l => l.name).sort();
+  assert.deepEqual(nombres, ['PLATO_DEL_MOVIL', 'PLATO_DE_LA_TABLET'],
+    'la carga inicial debe fusionar las líneas de las dos comandas, no quedarse solo con la de la nube');
+  console.log('   → la carga inicial ya no pierde la línea tomada en este dispositivo');
+});
+
+await testAsync('Un gasto fijo/variable/CAPEX borrado no resucita al sincronizar (hallazgo de Codex)', async () => {
+  // eliminarGastoFijo/eliminarVariable/eliminarCapex (js/hr.js) SÍ borran de
+  // verdad de DB.ge.fijos/variables/capex, pero esos arrays cuelgan de un
+  // objeto anidado, no de DB directamente: ARRAYS_CON_LAPIDA (que evita que
+  // un borrado "resucite" al sincronizar un dispositivo desactualizado) solo
+  // cubría arrays de nivel superior. Sin lápida aquí, un gasto fijo borrado
+  // en este dispositivo volvía en cuanto sincronizaba otro que aún lo tenía
+  // — y ese gasto fantasma vuelve a restar del Resultado, IVA y margen.
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  const geBase = {fijos: [{id: 1, nombre: 'Alquiler', importe: 900}], variables: [], capex: []};
+  sandbox.__setLastSyncedSnapshot({ge: sandbox.canonicalStringify(geBase)});
+  // Aquí se borró el alquiler: la lápida se anota al preparar la subida.
+  sandbox.__setDB({ge: {fijos: [], variables: [], capex: []}});
+  sandbox.anotarLapidas();
+  // Y llega de la nube el gasto todavía SIN borrar (un dispositivo que aún no se había enterado).
+  sandbox.applyRemoteBlock('ge', {fijos: [{id: 1, nombre: 'Alquiler', importe: 900}], variables: [], capex: []});
+  const fijos = sandbox.__getDB().ge.fijos;
+  assert.equal(fijos.length, 0, 'el gasto fijo borrado no debe resucitar solo porque otro dispositivo desactualizado todavía lo tuviera');
+  console.log('   → el gasto fijo borrado se queda borrado, no vuelve a restar del Resultado');
+});
+
 await testAsync('FIX H4: el indicador de nube ya NO se queda clavado en "Guardando…"', async () => {
   /* Lo vio el dueño en dos capturas: la cabecera con "Guardando…" fijo.
      scheduleCloudSync pone ese estado en CADA saveDB, aunque el guardado no
