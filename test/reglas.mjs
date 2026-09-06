@@ -30,6 +30,7 @@ const desde = core.indexOf(marca);
 const hasta = core.indexOf('`;', desde);
 const incrustadas = core.slice(desde + marca.length, hasta);
 const negocio = leer('reglas/reglas-de-cada-negocio.json');
+const database = leer('database.rules.propuesta.json');
 const plataforma = leer('reglas/reglas-de-la-plataforma.json');
 
 caso('Las tres son JSON válido', () => {
@@ -155,6 +156,27 @@ caso('Se distingue "reglas viejas de verdad" de "una versión por detrás"', () 
   return 'dos avisos distintos';
 });
 
+caso('publicLookup no se puede secuestrar: solo el dueño del negocio (o el admin) puede REEMPLAZAR un puntero ya existente', () => {
+  /* Hallazgo de una auditoría externa: la regla solo comprobaba auth != null,
+     sin ninguna comprobación de propiedad. publicId no es secreto (va en el
+     QR y en el enlace público a propósito), así que cualquier sesión
+     autenticada — incluida una anónima, que es justo como se autentica la
+     web pública de reservas — podía reescribir el publicLookup de OTRO
+     negocio ya dado de alta, redirigiendo su espejo público a un proyecto de
+     Firebase ajeno: reservas y pedidos de ese negocio empezarían a llegar a
+     un tercero sin que nadie lo notara. Mismo patrón de protección que ya
+     tenía publicSlugs: se puede CREAR (primera escritura) o volver a
+     escribir el MISMO valor (reintento sin efecto), pero no reemplazar un
+     puntero ya existente por otro distinto salvo el admin. */
+  [database, plataforma].forEach(reglas => {
+    const m = reglas.match(/"publicLookup":\s*\{[\s\S]*?"\.write":\s*"([^"]*)"/);
+    assert.ok(m, 'no se encontró la regla de escritura de publicLookup');
+    assert.ok(m[1].includes("!data.exists()") && m[1].includes("auth.token.email === 'gastrogoan@gmail.com'"),
+      'publicLookup se puede sobrescribir sin comprobar que sea el mismo valor o el admin');
+  });
+  return 'creación y reintento sí, secuestro no';
+});
+
 console.log('\n' + '═'.repeat(64));
-console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 11 casos pasaron`);
+console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 12 casos pasaron`);
 process.exit(fallos ? 1 : 0);

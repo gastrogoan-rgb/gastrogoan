@@ -1398,6 +1398,18 @@ function reservePedidoSlotAtomic(dateStr, slot, max, baseline){
     return held + 1;
   });
 }
+// Hallazgo de una auditoría externa: la franja se reservaba aquí, pero si
+// una comprobación POSTERIOR (zona de reparto fuera de cobertura) rechazaba
+// el pedido, el hold se quedaba ocupado sin ningún pedido real detrás — el
+// negocio limpia estos holds en cada sincronización de su propio panel
+// (limpiarHolds, js/core.js), así que no queda bloqueado para siempre, pero
+// sí puede tapar un hueco real durante el resto del servicio si el negocio
+// no vuelve a sincronizar hasta el día siguiente. Se libera explícitamente
+// en el momento del fallo en vez de esperar a que otro dispositivo lo limpie.
+function releasePedidoSlot(dateStr, slot){
+  const ref = db.ref('gastrogoan/public/' + publicId + '/pedidosHold/' + dateStr + '/' + slot);
+  ref.transaction(current => Math.max(0, (current || 0) - 1)).catch(()=>{});
+}
 
 function formatTurnos(turnos){
   return turnos.map(t => `${t.abre}–${t.cierra}`).join(' y ');
@@ -2629,6 +2641,7 @@ async function submitOrder(){
   }
 
   const maxPorFranja = p.maxPorFranja || 0;
+  let pedidoSlotReservado = null;
   if(maxPorFranja > 0){
     const slot = roundToPedidoSlot(time);
     const baseline = ((DB.pedidosResumen||{})[date]||{})[slot] || 0;
@@ -2642,12 +2655,17 @@ async function submitOrder(){
       setBtnLoading('o-submit', false);
       return;
     }
+    pedidoSlotReservado = {date, slot};
   }
 
   let pendienteVerificarZona = false;
   if(zoneRestricted){
     const zoneCheck = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
     if(!zoneCheck.ok){
+      // Si ya se había reservado franja y el pedido no sigue adelante, hay
+      // que liberarla: si no, ese hueco se queda ocupado sin ningún pedido
+      // real detrás (ver releasePedidoSlot).
+      if(pedidoSlotReservado) releasePedidoSlot(pedidoSlotReservado.date, pedidoSlotReservado.slot);
       showInlineError(t('error.zona'));
       submittingRequest = false;
       setBtnLoading('o-submit', false);
@@ -2674,6 +2692,7 @@ async function submitOrder(){
       const pagaConEl = document.getElementById('o-paga-con');
       pagaCon = pagaConEl ? parseFloat(pagaConEl.value) : NaN;
       if(isNaN(pagaCon) || pagaCon < total){
+        if(pedidoSlotReservado) releasePedidoSlot(pedidoSlotReservado.date, pedidoSlotReservado.slot);
         showInlineError(t('error.pagaCon').replace('%s', fmtMoney(total)));
         submittingRequest = false;
         setBtnLoading('o-submit', false);

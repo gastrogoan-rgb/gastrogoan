@@ -13,7 +13,7 @@
       "$publicId": {
         "//": "Guía mínima: en qué proyecto de Firebase está el espejo público de este negocio. Se lee SIN autenticar y por REST a propósito: una petición HTTP no abre socket, así que no gasta ninguna de las 100 conexiones simultáneas del plan gratuito. No expone nada: apiKey y databaseURL no son secretos (viajan en el JS de cualquier web con Firebase); lo que protege los datos son las reglas del proyecto del negocio.",
         ".read": true,
-        ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+        ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (data.child('apiKey').val() === newData.child('apiKey').val() && data.child('databaseURL').val() === newData.child('databaseURL').val()) || auth.token.email === 'gastrogoan@gmail.com')",
         ".validate": "newData.hasChildren(['apiKey','databaseURL'])"
       }
     },

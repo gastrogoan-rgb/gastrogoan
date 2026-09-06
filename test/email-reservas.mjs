@@ -256,6 +256,23 @@ caso('La venta de liquidación de una plataforma recibe cierreId, no se duplica 
     'la venta de liquidación de plataforma no recibe cierreId — se duplicará en el próximo cierre');
 });
 
+caso('Un pedido online que reserva franja y luego se rechaza (zona fuera de cobertura, cambio insuficiente) libera esa franja (hallazgo de Codex)', () => {
+  // reservePedidoSlotAtomic ocupaba la franja ANTES de las comprobaciones de
+  // zona de reparto y de cambio suficiente. Si cualquiera de las dos
+  // rechazaba el pedido, la función salía con un `return` sin liberar la
+  // franja — un hueco real quedaba "lleno" para el resto del servicio sin
+  // ningún pedido detrás, hasta que el negocio volviera a sincronizar.
+  assert.ok(publica.includes('function releasePedidoSlot('), 'no se encontró releasePedidoSlot');
+  const m = publica.match(/if\(zoneRestricted\)\{[\s\S]*?\n  \}/);
+  assert.ok(m, 'no se encontró el bloque de comprobación de zona');
+  assert.ok(m[0].includes('releasePedidoSlot(pedidoSlotReservado.date, pedidoSlotReservado.slot)'),
+    'el fallo de zona de reparto no libera la franja ya reservada');
+  const m2 = publica.match(/if\(isNaN\(pagaCon\) \|\| pagaCon < total\)\{[\s\S]*?\n\s*\}/);
+  assert.ok(m2, 'no se encontró la validación de "paga con"');
+  assert.ok(m2[0].includes('releasePedidoSlot(pedidoSlotReservado.date, pedidoSlotReservado.slot)'),
+    'el fallo de cambio insuficiente no libera la franja ya reservada');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
