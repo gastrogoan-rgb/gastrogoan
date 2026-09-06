@@ -512,6 +512,15 @@ caso('Mi Negocio avisa si ya hay Take Away/Delivery activo sin email configurado
     'un negocio que ya tenía takeaway/delivery activo ANTES de exigir el email (todos los que ya vendían) no ve ningún aviso de que sus clientes no reciben confirmación');
 });
 
+caso('El código postal avisa al momento si entra o no en la zona de reparto, sin esperar a enviar el pedido', () => {
+  const m = publica.match(/function checkCpLive\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró checkCpLive');
+  assert.ok(m[0].includes("cpList.includes(cp)"), 'no comprueba el código postal contra cpList al momento');
+  assert.ok(m[0].includes("t('cp.fueraDeZona').replace('${lista}', cpList.join(', '))"),
+    'si el código postal no entra, debe decir qué códigos SÍ se aceptan, no solo que este no vale');
+  assert.ok(publica.includes('oninput="checkCpLive()"'), 'el campo de código postal no dispara la comprobación al escribir');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
