@@ -33,6 +33,7 @@ const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8');
 const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
 const operations = fs.readFileSync(path.join(raiz, 'js/operations.js'), 'utf8');
 const idr = fs.readFileSync(path.join(raiz, 'js/idr.js'), 'utf8');
+const i18n = fs.readFileSync(path.join(raiz, 'js/i18n.js'), 'utf8');
 
 let fallos = 0;
 function caso(nombre, fn){
@@ -467,6 +468,24 @@ caso('Dos instancias de menú distintas no comparten línea aunque elijan la mis
   assert.ok(m, 'no se encontró la búsqueda de línea existente al añadir un menú');
   assert.ok(m[0].includes('l.menuInstanceId === menuInstanceId'),
     'la fusión de líneas de menú no comprueba menuInstanceId — dos instancias distintas con la misma opción se funden en una sola línea, descuadrando el stock de menús al marchar');
+});
+
+caso('Un pago de Redsys confirmado con un importe distinto del pedido se avisa, sin bloquear el cobro (hallazgo de Codex)', () => {
+  const m = core.match(/const importeEsperado = roundMoney\([\s\S]*?\n(?:\s{10}order\.pagado = true;)/);
+  assert.ok(m, 'no se encontró la comprobación de importe de Redsys en el manejador de pago_confirmado');
+  const bloque = m[0];
+  assert.ok(bloque.includes('orderTotal(order)'),
+    'el importe esperado no se calcula a partir de orderTotal(order) — el TPV virtual manda el importe y nadie comprueba que cuadre con lo que de verdad cuesta el pedido');
+  assert.ok(bloque.includes('Math.abs(importeConfirmado - importeEsperado) > 0.02'),
+    'falta el margen de tolerancia al comparar el importe confirmado con el esperado');
+  assert.ok(bloque.includes('DB.paymentAmountMismatches'),
+    'los desajustes de importe no quedan anotados en ningún sitio para poder revisarlos luego');
+  assert.ok(bloque.includes("notifyDesktop(t('notif.paymentMismatchTitle')"),
+    'un desajuste de importe no avisa al hostelero');
+  assert.ok(bloque.trim().endsWith('order.pagado = true;'),
+    'la comprobación de importe bloquea (o se salta) el marcado de pagado — tiene que ser un aviso, no un bloqueo: el origen real del problema es el Worker externo de Redsys, que no valida el importe contra el pedido y no se puede arreglar desde este repositorio');
+  const apariciones = (i18n.match(/'notif\.paymentMismatchTitle'/g) || []).length;
+  assert.equal(apariciones, 3, 'falta la traducción del aviso de importe no coincidente en alguno de los tres idiomas');
 });
 
 console.log('\n' + '═'.repeat(64));

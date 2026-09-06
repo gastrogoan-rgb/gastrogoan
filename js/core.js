@@ -4414,6 +4414,26 @@ function initPublicRequestsListener(){
         const order = DB.tpvOrders.find(o => o.clientRef && o.clientRef === req.orderRef);
         if(order){
           pagoConfirmadoMatched = true;
+          // ⚠️ Red de seguridad, no la solución de fondo: el importe que se
+          // firma con el Worker de Redsys lo decide el navegador del
+          // cliente ANTES de mandar el pedido (reservagastrogoan.html), sin
+          // que el Worker vuelva a calcularlo a partir de las líneas reales
+          // — eso solo se puede arreglar en el propio Worker, que no vive en
+          // este repositorio. Lo que sí se puede hacer aquí: si lo que el
+          // banco confirmó no cuadra con lo que este pedido cuesta de
+          // verdad, no se marca como "todo en orden" en silencio — se avisa
+          // para que el negocio lo revise, aunque se siga aceptando el
+          // pedido (mejor un aviso que dejar comida sin cobrar sin que nadie
+          // se entere, y mejor no bloquear a un cliente legítimo por un
+          // redondeo que esta comprobación no supiera calcular bien).
+          // Hallazgo de una auditoría externa.
+          const importeEsperado = roundMoney(orderTotal(order) * (1 - (order.descuentoPct||0)/100) + (order.propina||0));
+          const importeConfirmado = parseFloat(req.amount) || 0;
+          if(Math.abs(importeConfirmado - importeEsperado) > 0.02){
+            if(!DB.paymentAmountMismatches) DB.paymentAmountMismatches = [];
+            DB.paymentAmountMismatches.push({id: genId(), orderId: order.id, orderRef: req.orderRef, importeEsperado, importeConfirmado, detectedAt: new Date().toISOString()});
+            if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.paymentMismatchTitle'), t('notif.paymentMismatchBody').replace('${esperado}', fmtMoney(importeEsperado)).replace('${confirmado}', fmtMoney(importeConfirmado)));
+          }
           order.pagado = true;
           order.pagoImporte = req.amount;
           order.pagoFecha = req.createdAt;
