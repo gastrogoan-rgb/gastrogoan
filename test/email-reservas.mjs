@@ -32,6 +32,7 @@ const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8
 const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8');
 const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
 const operations = fs.readFileSync(path.join(raiz, 'js/operations.js'), 'utf8');
+const idr = fs.readFileSync(path.join(raiz, 'js/idr.js'), 'utf8');
 
 let fallos = 0;
 function caso(nombre, fn){
@@ -271,6 +272,21 @@ caso('Un pedido online que reserva franja y luego se rechaza (zona fuera de cobe
   assert.ok(m2, 'no se encontró la validación de "paga con"');
   assert.ok(m2[0].includes('releasePedidoSlot(pedidoSlotReservado.date, pedidoSlotReservado.slot)'),
     'el fallo de cambio insuficiente no libera la franja ya reservada');
+});
+
+caso('La clave y la cuota del I+D son por SLOT, no solo por dispositivo (hallazgo de Codex)', () => {
+  // Un dueño con varios negocios en la misma tablet (o una tablet que pasa
+  // de un negocio a otro) compartía sin querer la clave del proveedor de IA
+  // y la cuota de 500 llamadas/día, porque las dos vivían en una clave FIJA
+  // de localStorage ('gastrogoan_idr_key'/'gastrogoan_idr_gasto'), igual
+  // para cualquier slot activo. Ahora incorporan ACTIVE_SLOT, mismo
+  // criterio que slotLicenseKey (js/core.js).
+  assert.ok(idr.includes("function idrKeyLS()") && idr.includes("ACTIVE_SLOT === 'default' ? 'gastrogoan_idr_key' : 'gastrogoan_idr_key_' + ACTIVE_SLOT"),
+    'la clave de IA no está aislada por slot');
+  assert.ok(idr.includes("function idrGastoLS()") && idr.includes("ACTIVE_SLOT === 'default' ? 'gastrogoan_idr_gasto' : 'gastrogoan_idr_gasto_' + ACTIVE_SLOT"),
+    'la cuota diaria de IA no está aislada por slot');
+  assert.ok(!/\bIDR_KEY_LS\b/.test(idr) && !/\bIDR_GASTO_LS\b/.test(idr),
+    'queda algún uso de la clave fija sin aislar por slot');
 });
 
 console.log('\n' + '═'.repeat(64));

@@ -16,8 +16,13 @@
      La IA es el ayudante, no el soporte.
    ============================================================ */
 
-const IDR_KEY_LS = 'gastrogoan_idr_key';        // {proveedor, clave, modelo}
-const IDR_GASTO_LS = 'gastrogoan_idr_gasto';    // {dia, llamadas}
+// Por SLOT, no solo por dispositivo: un dueño con varios negocios en la
+// misma tablet (o una tablet que pasa de un negocio a otro al venderla o
+// prestarla) compartía sin querer la clave y la cuota de IA de un negocio
+// con el siguiente, porque las dos vivían en una única clave fija de
+// localStorage. Mismo criterio que slotLicenseKey (js/core.js).
+function idrKeyLS(){ return ACTIVE_SLOT === 'default' ? 'gastrogoan_idr_key' : 'gastrogoan_idr_key_' + ACTIVE_SLOT; }
+function idrGastoLS(){ return ACTIVE_SLOT === 'default' ? 'gastrogoan_idr_gasto' : 'gastrogoan_idr_gasto_' + ACTIVE_SLOT; }
 // Tope duro de llamadas por día y dispositivo. El consumo lo paga el dueño
 // de la clave, así que nada puede engancharse gastando su cuota sin que se
 // vea. No es el límite de verdad -ese lo pone su proveedor-, es un freno
@@ -87,7 +92,7 @@ const IDR_PROVEEDORES = {
 
 function idrConfig(){
   try{
-    const raw = localStorage.getItem(IDR_KEY_LS);
+    const raw = localStorage.getItem(idrKeyLS());
     if(!raw) return null;
     const c = JSON.parse(raw);
     return (c && c.clave && IDR_PROVEEDORES[c.proveedor]) ? c : null;
@@ -96,12 +101,12 @@ function idrConfig(){
 function idrGuardarConfig(proveedor, clave, modelo){
   const def = IDR_PROVEEDORES[proveedor];
   if(!def) return false;
-  localStorage.setItem(IDR_KEY_LS, JSON.stringify({
+  localStorage.setItem(idrKeyLS(), JSON.stringify({
     proveedor, clave: (clave||'').trim(), modelo: (modelo||'').trim() || def.modeloPorDefecto,
   }));
   return true;
 }
-function idrBorrarConfig(){ localStorage.removeItem(IDR_KEY_LS); }
+function idrBorrarConfig(){ localStorage.removeItem(idrKeyLS()); }
 function idrHayIA(){ return !!idrConfig(); }
 
 /* ── Tope de gasto ──
@@ -111,13 +116,13 @@ function idrHayIA(){ return !!idrConfig(); }
 function idrGastoHoy(){
   const hoy = new Date().toISOString().slice(0,10);
   try{
-    const g = JSON.parse(localStorage.getItem(IDR_GASTO_LS) || '{}');
+    const g = JSON.parse(localStorage.getItem(idrGastoLS()) || '{}');
     return (g && g.dia === hoy) ? (g.llamadas||0) : 0;
   }catch(e){ return 0; }
 }
 function idrApuntarLlamada(){
   const hoy = new Date().toISOString().slice(0,10);
-  localStorage.setItem(IDR_GASTO_LS, JSON.stringify({dia: hoy, llamadas: idrGastoHoy() + 1}));
+  localStorage.setItem(idrGastoLS(), JSON.stringify({dia: hoy, llamadas: idrGastoHoy() + 1}));
 }
 function idrQuedanLlamadas(){ return Math.max(0, IDR_TOPE_DIA - idrGastoHoy()); }
 
