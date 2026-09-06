@@ -539,6 +539,28 @@ caso('El cliente puede guardarse/enviarse el enlace de seguimiento sin depender 
     'el botón de compartir no está enganchado a la pantalla de éxito del pedido/reserva');
 });
 
+caso('Una mesa nunca es más pequeña que el grupo que reserva (se quitó el margen por abajo)', () => {
+  assert.ok(!/plazas \|\| 0\) \+ RESERVATION_TABLE_MARGIN >=/.test(core), 'js/core.js todavía deja emparejar una mesa más pequeña que el grupo (margen por abajo)');
+  assert.ok(!/tb\.plazas \+ RESERVATION_TABLE_MARGIN >= people/.test(publica), 'reservagastrogoan.html todavía deja emparejar una mesa más pequeña que el grupo (margen por abajo)');
+  assert.ok(/tb\.plazas && tb\.plazas >= people/.test(publica), 'getBestFitTable ya no exige que la mesa sea igual o más grande que el grupo');
+  const apariciones = (core.match(/const AUTO_CONFIRM_MARGIN = 2;/g) || []).length;
+  assert.equal(apariciones, 2, 'el margen superior (mesa demasiado grande para autoconfirmar sola) debe estar en los dos sitios: crear reserva y auto-editarla');
+});
+
+caso('Una mesa muy sobredimensionada no autoconfirma la reserva sola (queda pendiente para el personal)', () => {
+  const m1 = core.match(/if\(tabla && \(tabla\.plazas \|\| 0\) - \(req\.people \|\| 1\) > AUTO_CONFIRM_MARGIN\) mesaSobredimensionada = true;/);
+  assert.ok(m1, 'crear una reserva nueva no comprueba si la mesa asignada es demasiado grande para autoconfirmarse sola');
+  assert.ok(core.includes('!exigeConfirmacionManual) ? \'confirmada\' : \'pendiente\''), 'el estado de la reserva no tiene en cuenta si hace falta confirmación manual');
+});
+
+caso('El negocio puede exigir confirmar a mano las reservas a partir de X comensales', () => {
+  assert.ok(core.includes('DB.business.reservaConfirmManualDesde'), 'no se lee el umbral de confirmación manual configurado por el negocio');
+  const m = app.match(/function toggleReservaConfirmManual\(checked\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró toggleReservaConfirmManual');
+  assert.ok(app.includes("id=\"mn-require-manual-confirm\"") && app.includes("t('mn.ops.requireManualConfirm')"),
+    'falta la casilla en Mi Negocio para activar la confirmación manual de reservas grandes');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

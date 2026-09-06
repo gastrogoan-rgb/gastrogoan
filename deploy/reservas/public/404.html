@@ -1304,10 +1304,14 @@ function reserveAforoAtomic(dateStr, turnoIdx, people, aforo, baseline){
     return held + people;
   });
 }
-// Margen de tolerancia: una mesa admite hasta 1 persona más de su capacidad
-// configurada (mesa de 2 acepta grupos de 3, de 4 acepta grupos de 5) — así
-// no se rechazan reservas que en la práctica caben perfectamente.
-const RESERVATION_TABLE_MARGIN = 1;
+// Antes había un margen que dejaba emparejar una mesa MÁS PEQUEÑA que el
+// grupo (mesa de 4 aceptando un grupo de 5) — decisión del dueño: una mesa
+// nunca puede ser más pequeña que el grupo que se sienta en ella, así que
+// esto se quitó. El único margen que queda es por ARRIBA, y no decide si
+// cabe o no (eso ahora es estricto): decide si la reserva se autoconfirma
+// sola o si el personal la revisa a mano por no querer bloquear en
+// automático una mesa grande para un grupo pequeño (ver AUTO_CONFIRM_MARGIN
+// en js/core.js, que es quien de verdad decide el estado de la reserva).
 
 // Cuánto tiempo ocupa una reserva la mesa antes de poder volver a
 // reservarse — configurable en Mi Negocio (mn-reserva-duracion), 90 min por
@@ -1353,7 +1357,7 @@ function tableFreeForSlots(dateStr, tableId, slots){
 // configurada — una sin plazas no se puede juzgar.
 function getBestFitTable(dateStr, time, people, slots){
   const candidates = (DB.tables || [])
-    .filter(tb => tb.plazas && tb.plazas + RESERVATION_TABLE_MARGIN >= people && tableFreeForSlots(dateStr, tb.id, slots))
+    .filter(tb => tb.plazas && tb.plazas >= people && tableFreeForSlots(dateStr, tb.id, slots))
     .sort((a, b) => a.plazas - b.plazas);
   return candidates[0] || null;
 }
@@ -1807,7 +1811,7 @@ function submitReserva(){
   // puede que el negocio sea capaz de juntar varias mesas, pero eso ya no
   // lo puede decidir la web sola — queda pendiente de que lo revisen a mano,
   // en vez de rechazar sin más una reserva que quizás sí se pueda hacer.
-  const needsManualReview = hasConfiguredTables && people > maxCapacity + RESERVATION_TABLE_MARGIN;
+  const needsManualReview = hasConfiguredTables && people > maxCapacity;
 
   if(hasConfiguredTables && !needsManualReview){
     slots = slotsForReservation(time, getReservaDuracionMin());

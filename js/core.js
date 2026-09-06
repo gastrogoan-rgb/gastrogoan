@@ -4138,16 +4138,25 @@ function initPublicRequestsListener(){
         // caso en el que la web no puede comprobar nada), se cae al mismo
         // reparto automático de siempre — que con cero mesas nunca encuentra
         // ninguna, así que queda 'pendiente' para que el personal la revise.
-        const RESERVATION_TABLE_MARGIN = 1;
+        // Una mesa NUNCA puede ser más pequeña que el grupo (decisión del
+        // dueño: se quitó el margen que antes lo permitía). El único margen
+        // que queda es por ARRIBA (AUTO_CONFIRM_MARGIN): cuánto de más
+        // grande puede ser la mesa asignada para que la reserva se
+        // autoconfirme sola, sin bloquear en automático una mesa grande
+        // para un grupo pequeño una noche que puede llenarse — si se pasa,
+        // la mesa igualmente se reserva (no se pierde el hueco), pero la
+        // reserva queda 'pendiente' para que el personal la confirme a mano.
+        const AUTO_CONFIRM_MARGIN = 2;
+        // No se confía en el tableId que trae la solicitud (lo eligió el
+        // navegador del cliente): aquí se revalida contra la lista de mesas
+        // que SÍ cumplen el ajuste estricto, igual que si se buscara de cero.
+        const candidatas = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
+          .filter(tb => (tb.plazas || 0) >= (req.people || 1));
         let confirmedTableId = null;
-        if(req.tableId != null){
-          const stillFree = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
-            .some(tb => tb.id === req.tableId);
-          if(stillFree) confirmedTableId = req.tableId;
+        if(req.tableId != null && candidatas.some(tb => tb.id === req.tableId)){
+          confirmedTableId = req.tableId;
         } else {
-          const autoTable = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
-            .filter(tb => (tb.plazas || 0) + RESERVATION_TABLE_MARGIN >= (req.people || 1))
-            .sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
+          const autoTable = candidatas.slice().sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
           confirmedTableId = autoTable ? autoTable.id : null;
         }
         // El aforo del turno ya se comprobó de forma atómica al enviar la
@@ -4162,6 +4171,17 @@ function initPublicRequestsListener(){
             if(yaReservado + (req.people || 0) > aforo) confirmedTableId = null;
           }
         }
+        let mesaSobredimensionada = false;
+        if(confirmedTableId != null){
+          const tabla = DB.tables.find(tb => tb.id === confirmedTableId);
+          if(tabla && (tabla.plazas || 0) - (req.people || 1) > AUTO_CONFIRM_MARGIN) mesaSobredimensionada = true;
+        }
+        // El negocio puede exigir que a partir de X comensales la confirme
+        // siempre el personal a mano (grupos grandes suelen necesitar
+        // organizarse aparte, aunque técnicamente quepan en una mesa).
+        const confirmManualDesde = parseInt(DB.business.reservaConfirmManualDesde) || 0;
+        const exigeConfirmacionManual = mesaSobredimensionada ||
+          (confirmManualDesde > 0 && (req.people || 0) >= confirmManualDesde);
         const newReservation = {
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
           clientName: req.clientName || '', clientPhone: req.clientPhone || '', clientEmail: req.clientEmail || '',
@@ -4170,7 +4190,7 @@ function initPublicRequestsListener(){
           // se queda "pendiente" hasta que llegue el evento pago_confirmado real del
           // banco (más abajo en esta función). Si no, un cliente que abandona el pago
           // a mitad se quedaría con la mesa/aforo bloqueados como si hubiera pagado.
-          tableId: confirmedTableId, notes: req.notes || '', status: (confirmedTableId && !req.depositRequired) ? 'confirmada' : 'pendiente',
+          tableId: confirmedTableId, notes: req.notes || '', status: (confirmedTableId && !req.depositRequired && !exigeConfirmacionManual) ? 'confirmada' : 'pendiente',
           referral: req.referral || '',
           depositRequired: req.depositRequired || false, depositAmount: req.depositAmount || '', depositConfirmed: false,
           origen: 'publico', createdAt: new Date().toISOString(),
@@ -4224,14 +4244,17 @@ function initPublicRequestsListener(){
         // el personal la revise a mano, igual que una reserva nueva sin mesa.
         const target = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.token);
         if(target && target.status !== 'cancelada' && target.status !== 'completada'){
-          const RESERVATION_TABLE_MARGIN = 1;
+          const AUTO_CONFIRM_MARGIN = 2;
           const newDate = req.date || target.date, newTime = req.time || target.time, newPeople = req.people || target.people || 1;
           const available = getAvailableTablesForReservation(newDate, newTime, target.id, newPeople) || [];
-          let matchedTableId = available.some(tb => tb.id === target.tableId) ? target.tableId : null;
+          // Igual que al crear: una mesa nunca puede ser más pequeña que el
+          // nuevo número de comensales, ni siquiera la que ya tenía asignada
+          // (si el cliente sube de 2 a 6 personas manteniendo la mesa, esa
+          // mesa de 2 ya no vale y hay que rebuscar una que sí quepa).
+          const candidatas = available.filter(tb => (tb.plazas || 0) >= newPeople);
+          let matchedTableId = candidatas.some(tb => tb.id === target.tableId) ? target.tableId : null;
           if(matchedTableId == null){
-            const autoTable = available
-              .filter(tb => (tb.plazas || 0) + RESERVATION_TABLE_MARGIN >= newPeople)
-              .sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
+            const autoTable = candidatas.slice().sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
             matchedTableId = autoTable ? autoTable.id : null;
           }
           if(matchedTableId != null){
@@ -4242,6 +4265,14 @@ function initPublicRequestsListener(){
               if(yaReservado + newPeople > aforo) matchedTableId = null;
             }
           }
+          let mesaSobredimensionada = false;
+          if(matchedTableId != null){
+            const tabla = DB.tables.find(tb => tb.id === matchedTableId);
+            if(tabla && (tabla.plazas || 0) - newPeople > AUTO_CONFIRM_MARGIN) mesaSobredimensionada = true;
+          }
+          const confirmManualDesde = parseInt(DB.business.reservaConfirmManualDesde) || 0;
+          const exigeConfirmacionManual = mesaSobredimensionada ||
+            (confirmManualDesde > 0 && newPeople >= confirmManualDesde);
           target.date = newDate; target.time = newTime; target.people = newPeople;
           target.tableId = matchedTableId;
           // Igual que al crear la reserva nueva (más arriba en esta misma
@@ -4249,7 +4280,7 @@ function initPublicRequestsListener(){
           // autoconfirma solo por tener mesa/aforo disponible — si no, un
           // cliente que no llegó a pagar podía "confirmar" su reserva sin
           // más que tocar Modificar y cambiar la hora un minuto.
-          target.status = (matchedTableId != null && !(target.depositRequired && !target.depositConfirmed)) ? 'confirmada' : 'pendiente';
+          target.status = (matchedTableId != null && !(target.depositRequired && !target.depositConfirmed) && !exigeConfirmacionManual) ? 'confirmada' : 'pendiente';
           syncReservationStatusForPublic(target);
           logAudit('edit', t('audit.reservationModifiedByClient').replace('${name}', target.clientName||'?'));
           // Antes esto no avisaba nunca: el cliente cambiaba la hora desde

@@ -5203,6 +5203,18 @@ function renderMiNegocio(){
         </div>
       </div>
       <div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="mn-require-manual-confirm" style="width:auto" ${(b.reservaConfirmManualDesde > 0)?'checked':''} onchange="toggleReservaConfirmManual(this.checked)">
+          ${t('mn.ops.requireManualConfirm')}
+        </label>
+        <small style="color:var(--muted)">${t('mn.ops.requireManualConfirmDesc')}</small>
+        ${(b.reservaConfirmManualDesde > 0) ? `
+        <div class="field" style="margin-top:8px;max-width:160px">
+          <label>${t('mn.ops.requireManualConfirmFrom')}</label>
+          <input type="number" id="mn-require-manual-confirm-from" min="1" step="1" value="${escapeHtml(b.reservaConfirmManualDesde)}" onchange="saveBusiness(true)">
+        </div>` : ''}
+      </div>
+      <div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:6px">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:${redsysIsConfigured?'pointer':'default'}">
           <input type="checkbox" id="mn-require-deposit" style="width:auto" ${(b.requireDeposit && redsysIsConfigured)?'checked':''} ${redsysIsConfigured?'':'disabled'} onchange="saveBusiness(true);renderMiNegocio()">
           ${t('mn.ops.requireDeposit')}
@@ -5894,6 +5906,16 @@ async function logoutAccessSession(){
   showAccessSelectScreen();
 }
 
+// Marca/desmarca la exigencia de confirmar a mano las reservas grandes.
+// El valor de verdad es reservaConfirmManualDesde (0/undefined = desactivado,
+// un número = a partir de cuántos comensales exige confirmación manual) —
+// la casilla es solo la forma de activarlo con un valor por defecto razonable.
+function toggleReservaConfirmManual(checked){
+  DB.business.reservaConfirmManualDesde = checked ? (DB.business.reservaConfirmManualDesde > 0 ? DB.business.reservaConfirmManualDesde : 8) : 0;
+  saveBusiness(true);
+  renderMiNegocio();
+}
+
 // Activa/desactiva un tipo de servicio (mesa/takeaway/delivery) y lo guarda al
 // instante. Debe quedar siempre al menos un servicio activo.
 function toggleTipoServicio(tipo, checked){
@@ -5975,6 +5997,7 @@ async function saveBusiness(silent){
     if(!DB.business.pedidos) DB.business.pedidos = {};
     DB.business.pedidos.leadTimeMin = DB.business.leadTimeMinPedidos;
   }
+  if(el('mn-require-manual-confirm-from')) DB.business.reservaConfirmManualDesde = Math.max(1, parseInt(el('mn-require-manual-confirm-from').value) || 1);
   if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked && redsysIsConfigured;
   if(el('mn-deposit-amount')) DB.business.depositAmount = Math.max(0, parseFloat(el('mn-deposit-amount').value) || 0) || '';
   if(el('mn-deposit-type')) DB.business.depositType = el('mn-deposit-type').value;
