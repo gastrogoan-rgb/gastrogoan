@@ -6136,9 +6136,17 @@ function renderPedidosConfigCard(){
   if(b.tiposServicio?.takeaway === false && b.tiposServicio?.delivery === false) return '';
   const p = b.pedidos || {};
   const deliveryEnabled = b.tiposServicio?.delivery !== false;
+  const takeawayEnabled = b.tiposServicio?.takeaway !== false;
+  // Take Away/Delivery ya estaban activos (por defecto lo están desde que se
+  // crea el negocio) desde antes de exigir el email en el interruptor de
+  // arriba — este aviso es para ESE caso, el negocio que ya está recibiendo
+  // pedidos online sin que el cliente reciba jamás una confirmación si
+  // cierra la pestaña de seguimiento.
+  const necesitaEmailAviso = (deliveryEnabled || takeawayEnabled) && !emailConfirmIsConfigured();
   return `
     <div class="card">
       <h3><i class="ti ti-clock-hour-4"></i> ${t('mn.pedidos.title')}</h3>
+      ${necesitaEmailAviso ? `<div class="card" style="border:2px solid var(--red);background:var(--red-l);margin-bottom:10px;padding:10px 14px;display:flex;align-items:center;gap:8px"><i class="ti ti-mail-exclamation" style="font-size:20px;color:var(--red);flex-shrink:0"></i><span style="font-size:13.5px">${t('mn.pedidos.emailMissingWarning')}</span></div>` : ''}
       <p style="font-size:13px;color:var(--muted);margin-bottom:6px"><i class="ti ti-info-circle"></i> ${t('mn.pedidos.leadTimeInfo')}</p>
       <div class="field-row">
         <div class="field">
@@ -6337,13 +6345,17 @@ function updateDepositCheckboxAvailability(){
 // negocio): nube propia (Firebase, obligatoria para trabajar en equipo),
 // cobro con tarjeta online (Redsys, opcional) y confirmación de reservas
 // por email (EmailJS, opcional). Antes cada una vivía en su rincón de Mi
+function emailConfirmIsConfigured(){
+  return !!(DB.business && DB.business.emailConfirm && DB.business.emailConfirm.enabled);
+}
+
 // Negocio sin que quedara claro que son la misma "familia" de configuración
 // externa — este resumen las agrupa y dice de un vistazo cuáles están
 // conectadas.
 function renderExternalConnectionsCard(){
   const fbConnected = !!(DB.business && DB.business.ownFirebase);
   const redsysConnected = !!redsysIsConfigured;
-  const emailConnected = !!(DB.business && DB.business.emailConfirm && DB.business.emailConfirm.enabled);
+  const emailConnected = emailConfirmIsConfigured();
   const row = (icon, label, connected, onclick, withBorder) => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;${withBorder ? 'border-bottom:1px solid var(--border)' : ''}">
       <i class="ti ${icon}" style="font-size:18px;color:var(--muted);flex-shrink:0"></i>

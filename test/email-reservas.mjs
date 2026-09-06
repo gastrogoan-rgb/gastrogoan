@@ -495,6 +495,23 @@ caso('La web pública recibe la zona de reparto y el coste de envío del negocio
     'sin "pedidos" en la lista blanca del espejo público, reservagastrogoan.html siempre ve `p = {}`: acepta CUALQUIER código postal sin avisar y nunca cobra el envío a domicilio, aunque el negocio los tenga configurados. Se detectó pidiendo de verdad con un CP fuera de la zona configurada.');
 });
 
+caso('No se puede activar Take Away/Delivery sin el email de confirmación configurado', () => {
+  const m = app.match(/function toggleTipoServicio\(tipo, checked\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró toggleTipoServicio');
+  assert.ok(/checked && \(tipo === 'takeaway' \|\| tipo === 'delivery'\) && !emailConfirmIsConfigured\(\)/.test(m[0]),
+    'activar takeaway o delivery no comprueba que el email de confirmación esté configurado — el cliente que pide para llevar/a domicilio no recibe ningún aviso si cierra la pestaña de seguimiento');
+  assert.ok(/showToast\(t\('msg\.needEmailForOnlineOrders'\)\)/.test(m[0]),
+    'el bloqueo debe avisar de por qué, no fallar en silencio (mesa sí puede activarse sin email: solo takeaway/delivery lo necesitan)');
+  assert.ok(!/checked && \(tipo === 'mesa'/.test(m[0]), 'el servicio de mesa no debería exigir email (se sirve en persona)');
+});
+
+caso('Mi Negocio avisa si ya hay Take Away/Delivery activo sin email configurado (no es solo al activarlo)', () => {
+  const m = core.match(/function renderPedidosConfigCard\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró renderPedidosConfigCard');
+  assert.ok(m[0].includes('emailConfirmIsConfigured()') && m[0].includes("t('mn.pedidos.emailMissingWarning')"),
+    'un negocio que ya tenía takeaway/delivery activo ANTES de exigir el email (todos los que ya vendían) no ve ningún aviso de que sus clientes no reciben confirmación');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

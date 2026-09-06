@@ -5896,6 +5896,19 @@ async function logoutAccessSession(){
 // Activa/desactiva un tipo de servicio (mesa/takeaway/delivery) y lo guarda al
 // instante. Debe quedar siempre al menos un servicio activo.
 function toggleTipoServicio(tipo, checked){
+  // Take Away y Delivery se piden desde la web pública, sin nadie del
+  // negocio delante: la única confirmación que recibe el cliente si cierra
+  // la pestaña es el email (EmailJS). Sin email configurado, el pedido se
+  // acepta o rechaza igual, pero el cliente no se entera de nada salvo que
+  // se quede mirando el enlace de seguimiento en vivo. Encenderlo sin avisar
+  // de esto es la misma trampa que "un permiso que se niega en silencio":
+  // aquí en cambio el que calla no es un permiso, es un aviso al cliente.
+  if(checked && (tipo === 'takeaway' || tipo === 'delivery') && !emailConfirmIsConfigured()){
+    showToast(t('msg.needEmailForOnlineOrders'));
+    const el = document.getElementById('mn-serv-'+tipo);
+    if(el) el.checked = false;
+    return;
+  }
   const actual = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
   const nuevo = {
     mesa: actual.mesa !== false,
