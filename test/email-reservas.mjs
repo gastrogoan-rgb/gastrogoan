@@ -289,6 +289,75 @@ caso('La clave y la cuota del I+D son por SLOT, no solo por dispositivo (hallazg
     'queda algún uso de la clave fija sin aislar por slot');
 });
 
+caso('downloadJSON devuelve la promesa de guardarArchivo (hallazgo de Codex sobre js/app.js)', () => {
+  // Sin el `return`, quien hace `await downloadJSON(...)` (el archivado, que
+  // BORRA después) recibía `undefined` al instante en vez del rechazo real
+  // de una hoja de compartir cancelada en iPad.
+  const m = app.match(/function downloadJSON\(obj, filename\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró downloadJSON');
+  assert.ok(m[0].includes('return guardarArchivo('), 'downloadJSON no devuelve la promesa de guardarArchivo');
+});
+
+caso('downloadFullBackup solo marca la copia como hecha si downloadJSON no falla/cancela', () => {
+  const m = app.match(/async function downloadFullBackup\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró downloadFullBackup (¿sigue sin ser async?)');
+  assert.ok(m[0].includes('try{') && m[0].includes('await downloadJSON') && m[0].includes('catch(e){'),
+    'downloadFullBackup no espera ni comprueba el resultado de downloadJSON');
+  const idxCatchClose = m[0].indexOf("}catch(e){\n    showToast(t('msg.backupFailedNoDelete'), 6000);\n    return;\n  }");
+  const idxAssignLastBackupAt = m[0].indexOf('DB.business.lastBackupAt = ');
+  assert.ok(idxCatchClose !== -1 && idxAssignLastBackupAt > idxCatchClose, 'DB.business.lastBackupAt se asigna antes de comprobar si la descarga funcionó');
+});
+
+caso('El archivado borra por los IDs exportados, no re-filtrando DB por fecha (evita borrar lo que llegó después de exportar)', () => {
+  const m = app.match(/async function archiveOldData\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró archiveOldData');
+  assert.ok(m[0].includes('const salesIds = new Set(sales.map(s => s.id))'), 'no se capturan los IDs de ventas exportados');
+  assert.ok(m[0].includes('DB.sales = DB.sales.filter(s => !salesIds.has(s.id))'),
+    'el borrado de ventas sigue re-aplicando el filtro de fecha en vez de borrar por ID exportado');
+  assert.ok(m[0].includes('DB.reservations = DB.reservations.filter(r => !reservationIds.has(r.id))'), 'igual para reservas');
+  assert.ok(m[0].includes('DB.cashClosures = DB.cashClosures.filter(c => !cashClosureIds.has(c.id))'), 'igual para cierres de caja');
+});
+
+caso('Borrar una mesa vuelve a comprobar la comanda justo antes de borrarla (no la versión de antes del confirmModal)', () => {
+  // Dos dispositivos: uno añade un plato a la mesa mientras el otro confirma
+  // borrarla. Sin re-consultar, se borraba la comanda YA ACTUAL (con el
+  // plato nuevo) usando una referencia capturada antes de esperar.
+  const m = app.match(/async function deleteTableFromConfig\(id\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró deleteTableFromConfig');
+  assert.ok(m[0].includes('const ordenActual = DB.tpvOrders.find(o => o.id === order.id)'),
+    'no se vuelve a consultar la comanda actual justo antes de borrarla');
+});
+
+caso('"Guardar todo" no pisa los tipos de servicio leyéndolos otra vez del DOM (evita revertir un cambio sincronizado)', () => {
+  const m = app.match(/async function saveBusiness\(silent\)\{[\s\S]*?\n\}\n\n\/\/ Compara/);
+  assert.ok(m, 'no se encontró saveBusiness completo');
+  assert.ok(!m[0].includes("el('mn-serv-mesa').checked"),
+    'saveBusiness sigue leyendo los checkboxes de tipos de servicio del DOM: puede revertir un cambio remoto reciente');
+});
+
+caso('El horario NO se puede guardar en silencio cuando el propio horario es lo que acaba de cambiar', () => {
+  // saveBusiness(true) (silente) se salta la confirmación de horario
+  // inválido a propósito para no interrumpir por campos ajenos — pero eso
+  // incluía los propios campos de horario, que nunca llegaban a bloquear
+  // nada por mucho que el cierre quedara antes que la apertura.
+  assert.ok(!/id="\$\{prefix\}-ini"[^>]*onchange="saveBusiness\(true\)"/.test(app) && !app.includes('${prefix}-ini" class="mn-horario-time" value="${escapeHtml(tramo.ini||\'\')}" style="padding:3px 5px;font-size:12.5px;width:auto;min-height:auto" onchange="saveBusiness(true)"'),
+    'el campo de hora de inicio del horario sigue guardando en silencio');
+  const m = app.match(/function toggleHorarioDia\(i\)\{[\s\S]*?\n\}/);
+  assert.ok(m && !m[0].includes('saveBusiness(true)') && m[0].includes('saveBusiness()'),
+    'toggleHorarioDia sigue guardando el horario en silencio');
+  const m2 = app.match(/function toggleHorarioModo\(i\)\{[\s\S]*?\n\}/);
+  assert.ok(m2 && !m2[0].includes('saveBusiness(true)') && m2[0].includes('saveBusiness()'),
+    'toggleHorarioModo sigue guardando el horario en silencio');
+});
+
+caso('El IVA general del ticket rechaza valores negativos o mayores de 100 (evita una división por cero en el desglose fiscal)', () => {
+  const m = app.match(/function saveTicketConfig\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró saveTicketConfig');
+  assert.ok(m[0].includes('isFinite(ivaPct)') && m[0].includes('ivaPct < 0') && m[0].includes('ivaPct > 100'),
+    'saveTicketConfig no valida el rango del IVA antes de guardarlo');
+  assert.ok(m[0].includes('return;'), 'saveTicketConfig no rechaza el guardado con un IVA inválido');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

@@ -4802,9 +4802,9 @@ function renderTramoFields(prefix, tramo, label){
   return `
     <div class="mn-tramo-row" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:nowrap">
       <span style="font-size:11.5px;color:var(--muted);min-width:44px">${label}</span>
-      <input type="time" id="${prefix}-ini" class="mn-horario-time" value="${escapeHtml(tramo.ini||'')}" style="padding:3px 5px;font-size:12.5px;width:auto;min-height:auto" onchange="saveBusiness(true)">
+      <input type="time" id="${prefix}-ini" class="mn-horario-time" value="${escapeHtml(tramo.ini||'')}" style="padding:3px 5px;font-size:12.5px;width:auto;min-height:auto" onchange="saveBusiness()">
       <span style="color:var(--muted);font-size:12px">${t('common.to')}</span>
-      <input type="time" id="${prefix}-fin" class="mn-horario-time" value="${escapeHtml(finDisplay)}" style="padding:3px 5px;font-size:12.5px;width:auto;min-height:auto" onchange="saveBusiness(true)">
+      <input type="time" id="${prefix}-fin" class="mn-horario-time" value="${escapeHtml(finDisplay)}" style="padding:3px 5px;font-size:12.5px;width:auto;min-height:auto" onchange="saveBusiness()">
     </div>
   `;
 }
@@ -4848,14 +4848,18 @@ function toggleHorarioDia(i){
   const open = document.getElementById(`mn-hor-${i}-abierto`).checked;
   document.getElementById(`mn-hor-${i}-turnos`).style.display = open ? 'block' : 'none';
   document.getElementById(`mn-hor-${i}-modo`).style.display = open ? 'inline-block' : 'none';
-  saveBusiness(true);
+  // Sin silenciar: es el propio horario el que acaba de cambiar, así que la
+  // validación (cierre antes que apertura, etc.) tiene que poder bloquear el
+  // guardado aquí — silenciarlo era lo que dejaba pasar horarios inválidos
+  // sin preguntar nunca. Hallazgo de una auditoría externa.
+  saveBusiness();
 }
 
 function toggleHorarioModo(i){
   const seguido = document.getElementById(`mn-hor-${i}-modo`).value === 'seguido';
   document.getElementById(`mn-hor-${i}-seguido-box`).style.display = seguido ? 'block' : 'none';
   document.getElementById(`mn-hor-${i}-turnos-box`).style.display = seguido ? 'none' : 'block';
-  saveBusiness(true);
+  saveBusiness();
 }
 
 // Un <input type="time"> nunca puede llevar el valor "24:00" (el navegador
@@ -5443,6 +5447,17 @@ async function deleteTableFromConfig(id){
   }
   if(!(await confirmModal(t('msg.confirmDeleteTable')))) return;
   if(order){
+    // ⚠️ Se vuelve a consultar la comanda AQUÍ, justo antes de borrar, en vez
+    // de fiarse de la referencia capturada antes del confirmModal: mientras
+    // se esperaba la confirmación, otro dispositivo pudo añadirle platos a
+    // esa misma mesa (dos camareros a la vez). Sin esto, se borraba por el
+    // id la versión YA ACTUAL de la comanda (con esos platos nuevos),
+    // perdiéndolos sin aviso. Hallazgo de una auditoría externa.
+    const ordenActual = DB.tpvOrders.find(o => o.id === order.id);
+    if(ordenActual && ordenActual.items && ordenActual.items.length){
+      showToast(t('msg.tableHasOpenOrderItems'));
+      return;
+    }
     // Comanda vacía (mesa abierta por error, sin platos): se puede liberar sin más.
     // Se borra DESPUÉS de confirmar — si se cancelaba antes de este cambio, la
     // comanda vacía ya se había borrado igualmente, dejando la mesa "libre"
@@ -5546,7 +5561,12 @@ function downloadCSV(rows, filename){
 }
 
 function downloadJSON(obj, filename){
-  guardarArchivo(new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'}), filename);
+  // ⚠️ Sin este `return`, la promesa de guardarArchivo() se tiraba: quien
+  // hiciera `await downloadJSON(...)` (el archivado, que BORRA después)
+  // recibía `undefined` al instante, nunca el rechazo de una hoja de
+  // compartir cancelada en iPad — el `catch` que protege el borrado no
+  // llegaba a dispararse nunca. Hallazgo de una auditoría externa.
+  return guardarArchivo(new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'}), filename);
 }
 
 /* Guardar un archivo, también en iPhone y iPad.
@@ -5596,8 +5616,17 @@ function guardarArchivo(blob, filename){
   return Promise.resolve();
 }
 
-function downloadFullBackup(){
-  downloadJSON(DB, `gastrogoan-backup-${todayStr()}.json`);
+async function downloadFullBackup(){
+  // Antes se marcaba lastBackupAt aunque se cancelara la hoja de compartir
+  // (en iPad) o fallara el guardado: el aviso de "hace tiempo que no hay
+  // copia" se callaba creyendo que sí la había. Hallazgo de una auditoría
+  // externa, mismo origen que el de downloadJSON.
+  try{
+    await downloadJSON(DB, `gastrogoan-backup-${todayStr()}.json`);
+  }catch(e){
+    showToast(t('msg.backupFailedNoDelete'), 6000);
+    return;
+  }
   if(!DB.business) DB.business = {};
   DB.business.lastBackupAt = new Date().toISOString();
   saveDB();
@@ -5756,6 +5785,17 @@ async function archiveOldData(){
      porque por el camino de la descarga normal el navegador no informa de
      nada y no hay forma de saberlo. Antes se borraba sin comprobar ninguna de
      las dos cosas. */
+  // Los IDs de lo exportado se capturan AQUÍ, antes de las dos esperas
+  // (confirmModal, downloadJSON) que vienen a continuación — durante esas
+  // esperas puede llegar por sincronización una venta/reserva/cierre más
+  // antiguo que "before" que otro dispositivo aún no había subido. Si al
+  // borrar se volviera a aplicar el mismo filtro de fecha sobre DB en vez de
+  // borrar por estos IDs concretos, ese registro recién llegado (que nunca
+  // salió en el archivo descargado) se borraría igual. Hallazgo de una
+  // auditoría externa.
+  const salesIds = new Set(sales.map(s => s.id));
+  const reservationIds = new Set(reservations.map(r => r.id));
+  const cashClosureIds = new Set(cashClosures.map(c => c.id));
   try{
     await downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
   }catch(e){
@@ -5766,9 +5806,9 @@ async function archiveOldData(){
     showToast(t('msg.backupFailedNoDelete'), 6000);
     return;
   }
-  DB.sales = DB.sales.filter(s => !(s.date && s.date < before));
-  DB.reservations = DB.reservations.filter(r => !(r.date && r.date < before && (r.status==='completada'||r.status==='cancelada')));
-  DB.cashClosures = DB.cashClosures.filter(c => !(c.fecha && c.fecha < before));
+  DB.sales = DB.sales.filter(s => !salesIds.has(s.id));
+  DB.reservations = DB.reservations.filter(r => !reservationIds.has(r.id));
+  DB.cashClosures = DB.cashClosures.filter(c => !cashClosureIds.has(c.id));
   saveDB();
   checkArchiveReminder();
   checkBackupReminder();
@@ -5918,13 +5958,15 @@ async function saveBusiness(silent){
   if(el('mn-fb')) DB.business.fb = el('mn-fb').value.trim();
   if(el('mn-gmaps')) DB.business.gmaps = el('mn-gmaps').value.trim();
   if(el('mn-tiktok')) DB.business.tiktok = el('mn-tiktok').value.trim();
-  if(el('mn-serv-mesa') && el('mn-serv-takeaway') && el('mn-serv-delivery')) {
-    DB.business.tiposServicio = {
-      mesa: el('mn-serv-mesa').checked,
-      takeaway: el('mn-serv-takeaway').checked,
-      delivery: el('mn-serv-delivery').checked,
-    };
-  }
+  // ⚠️ Los tipos de servicio NO se leen aquí del DOM a propósito: cada
+  // checkbox ya se guarda al instante con toggleTipoServicio() en cuanto se
+  // toca. Leerlos otra vez aquí era redundante y, además, la causa de un bug
+  // real: renderMiNegocio() conserva lo que hay en el DOM al repintar (para
+  // no perder un cambio sin guardar), así que si otro dispositivo desactivaba
+  // un servicio por sincronización mientras esta pantalla seguía con el
+  // checkbox antiguo marcado, "Guardar todo" (disparado por cualquier otro
+  // campo, p.ej. el teléfono) volvía a activar ese servicio sin que nadie lo
+  // pidiera. Hallazgo de una auditoría externa.
   const newHorario = readHorarioFromForm();
   const horarioWarnings = validateHorario(newHorario);
   // Antes esto se guardaba igual aunque el horario no tuviera sentido (p.ej.
@@ -6626,6 +6668,18 @@ function saveCashDrawerSetting(enabled){
 }
 
 function saveTicketConfig(){
+  // ⚠️ `parseFloat(...) || 0` solo descarta NaN, no un negativo ni uno por
+  // encima de 100 — los atributos HTML min/max del campo no bloquean este
+  // botón, así que un -100 guardado tal cual quedaba como ivaPct real. El
+  // desglose fiscal que usa este IVA general (líneas sin tipo propio) hace
+  // bruto / (1 + tipo/100): con -100 eso es una división por cero.
+  // Hallazgo de una auditoría externa.
+  const ivaPct = parseFloat(document.getElementById('tk-iva').value);
+  if(!isFinite(ivaPct) || ivaPct < 0 || ivaPct > 100){
+    showToast(t('msg.invalidTicketIva'));
+    document.getElementById('tk-iva').focus();
+    return;
+  }
   DB.business.ticket = {
     pie: document.getElementById('tk-pie').value.trim(),
     mostrarDireccion: document.getElementById('tk-direccion').checked,
@@ -6633,7 +6687,7 @@ function saveTicketConfig(){
     mostrarWeb: document.getElementById('tk-web').checked,
     mostrarNif: document.getElementById('tk-nif').checked,
     mostrarResenaQr: document.getElementById('tk-review-qr').checked,
-    ivaPct: parseFloat(document.getElementById('tk-iva').value) || 0
+    ivaPct
   };
   saveDB();
   renderMiNegocio();
