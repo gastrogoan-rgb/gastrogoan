@@ -521,6 +521,15 @@ caso('El código postal avisa al momento si entra o no en la zona de reparto, si
   assert.ok(publica.includes('oninput="checkCpLive()"'), 'el campo de código postal no dispara la comprobación al escribir');
 });
 
+caso('Mi Negocio avisa también si hay reservas de mesa online sin email configurado', () => {
+  const m = app.match(/<div class="card mn-grid-full">\s*<h3><i class="ti ti-layout-grid"><\/i> \$\{t\('mn\.ops\.title'\)\}<\/h3>[\s\S]*?<div class="field">\s*<label>\$\{t\('mn\.ops\.capacity'\)\}<\/label>/);
+  assert.ok(m, 'no se encontró la tarjeta de Operativa (mn.ops.title)');
+  assert.ok(m[0].includes('tiposServicio.mesa && !emailConfirmIsConfigured()'),
+    'la tarjeta de Operativa (donde viven aforo, duración y antelación de reservas) no avisa de que las reservas de mesa online necesitan el email de confirmación');
+  assert.ok(m[0].includes("t('mn.ops.emailMissingWarning')") && m[0].includes("scrollToMnCard('mn-card-email')"),
+    'el aviso debe explicar por qué y llevar directo a la tarjeta de email, igual que ya hace el de Redsys');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

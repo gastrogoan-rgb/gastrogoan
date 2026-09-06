@@ -5179,6 +5179,7 @@ function renderMiNegocio(){
 
     <div class="card mn-grid-full">
       <h3><i class="ti ti-layout-grid"></i> ${t('mn.ops.title')}</h3>
+      ${(tiposServicio.mesa && !emailConfirmIsConfigured()) ? `<div class="card" style="border:2px solid var(--red);background:var(--red-l);margin-bottom:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><i class="ti ti-mail-exclamation" style="font-size:20px;color:var(--red);flex-shrink:0"></i><span style="font-size:13.5px;flex:1;min-width:200px">${t('mn.ops.emailMissingWarning')}</span><button class="btn btn-sm" onclick="scrollToMnCard('mn-card-email')" type="button"><i class="ti ti-mail"></i> ${t('mn.ops.goToEmail')}</button></div>` : ''}
       <div class="field">
         <label>${t('mn.ops.capacity')}</label>
         <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40" onchange="saveBusiness(true)">

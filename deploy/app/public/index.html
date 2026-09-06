@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '06/09/2026 20:35';
+const GG_BUILD = '06/09/2026 20:44';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -12536,6 +12536,8 @@ const I18N = {
     'mn.ops.requireDeposit': 'Pedir señal para confirmar reservas', 'mn.ops.requireDepositDesc': 'Al reservar desde la web pública, el cliente pagará la señal con tarjeta ahí mismo, antes de que la reserva quede confirmada',
     'mn.ops.requireDepositNeedsRedsys': 'Para activar esto hace falta primero conectar el TPV virtual (cobro con tarjeta online) más abajo: la señal se cobra a través de él.',
     'mn.ops.goToRedsys': 'Ir a configurar el TPV virtual',
+    'mn.ops.emailMissingWarning': 'Tienes reservas online activas sin el email de confirmación configurado: si el cliente cierra la pestaña de gestión de su reserva, no se entera de si fue confirmada, modificada o cancelada.',
+    'mn.ops.goToEmail': 'Ir a configurar el email',
     'mn.ops.depositAmount': 'Importe de la señal (€)', 'mn.ops.depositType': 'Tipo de importe',
     'mn.ops.depositFixed': 'Importe fijo por reserva', 'mn.ops.depositPerPerson': 'Por persona',
     'mn.ops.depositMinPeople': 'Pedir señal a partir de (personas)',
@@ -14719,6 +14721,8 @@ const I18N = {
     'mn.ops.requireDeposit': 'Demanar senyal per confirmar reserves', 'mn.ops.requireDepositDesc': 'En reservar des de la web pública, el client pagarà la senyal amb targeta allà mateix, abans que la reserva quedi confirmada',
     'mn.ops.requireDepositNeedsRedsys': 'Per activar això cal connectar primer el TPV virtual (cobrament amb targeta en línia) més avall: la senyal es cobra a través d\'ell.',
     'mn.ops.goToRedsys': 'Anar a configurar el TPV virtual',
+    'mn.ops.emailMissingWarning': 'Tens reserves online actives sense l\'email de confirmació configurat: si el client tanca la pestanya de gestió de la seva reserva, no s\'assabenta de si va ser confirmada, modificada o cancel·lada.',
+    'mn.ops.goToEmail': 'Anar a configurar l\'email',
     'mn.ops.depositAmount': 'Import de la senyal (€)', 'mn.ops.depositType': 'Tipus d\'import',
     'mn.ops.depositFixed': 'Import fix per reserva', 'mn.ops.depositPerPerson': 'Per persona',
     'mn.ops.depositMinPeople': 'Demanar senyal a partir de (persones)',
@@ -16906,6 +16910,8 @@ const I18N = {
     'mn.ops.requireDeposit': 'Require a deposit to confirm reservations', 'mn.ops.requireDepositDesc': 'When booking from the public site, the customer will pay the deposit by card right there, before the reservation is confirmed',
     'mn.ops.requireDepositNeedsRedsys': 'To turn this on you need to connect online card payment (virtual POS) below first: the deposit is charged through it.',
     'mn.ops.goToRedsys': 'Go set up online card payment',
+    'mn.ops.emailMissingWarning': 'You have online reservations enabled without the confirmation email set up: if the customer closes the reservation management tab, they never find out whether it was confirmed, changed or cancelled.',
+    'mn.ops.goToEmail': 'Go set up email',
     'mn.ops.depositAmount': 'Deposit amount (€)', 'mn.ops.depositType': 'Amount type',
     'mn.ops.depositFixed': 'Fixed amount per booking', 'mn.ops.depositPerPerson': 'Per person',
     'mn.ops.depositMinPeople': 'Ask for deposit from (people)',
@@ -45662,6 +45668,7 @@ function renderMiNegocio(){
 
     <div class="card mn-grid-full">
       <h3><i class="ti ti-layout-grid"></i> ${t('mn.ops.title')}</h3>
+      ${(tiposServicio.mesa && !emailConfirmIsConfigured()) ? `<div class="card" style="border:2px solid var(--red);background:var(--red-l);margin-bottom:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><i class="ti ti-mail-exclamation" style="font-size:20px;color:var(--red);flex-shrink:0"></i><span style="font-size:13.5px;flex:1;min-width:200px">${t('mn.ops.emailMissingWarning')}</span><button class="btn btn-sm" onclick="scrollToMnCard('mn-card-email')" type="button"><i class="ti ti-mail"></i> ${t('mn.ops.goToEmail')}</button></div>` : ''}
       <div class="field">
         <label>${t('mn.ops.capacity')}</label>
         <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40" onchange="saveBusiness(true)">
