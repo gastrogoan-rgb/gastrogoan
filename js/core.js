@@ -3106,6 +3106,33 @@ function mergeMenuStock(localMenus, mergedMenus, lastSyncedMenusJson){
   return mergedMenus;
 }
 
+// Mismo problema y misma solución que mergeCartaStock/mergeMenuStock, para
+// `elaboraciones` (el stock de las bases producidas en tanda: un caldo, un
+// almíbar...). decrementElaboracionStock/reponer (js/tpv.js) mutan `elab.qty`
+// directamente dentro del documento que mergeArraysById fusiona por id
+// entero: dos cocinas consumiendo la misma base casi a la vez perdían el
+// descuento de una de las dos al sincronizar. Hallazgo de una auditoría
+// externa, mismo patrón exacto que ya se había cerrado para cartas y menús.
+function mergeElaboracionesStock(localElabs, mergedElabs, lastSyncedElabsJson){
+  if(!Array.isArray(localElabs) || !Array.isArray(mergedElabs)) return mergedElabs;
+  let baseline = [];
+  if(lastSyncedElabsJson){ try{ baseline = JSON.parse(lastSyncedElabsJson) || []; }catch(e){ baseline = []; } }
+  const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
+  const baselineMap = porId(baseline);
+  const localMap = porId(localElabs);
+  mergedElabs.forEach(e => {
+    if(!e || e.id == null || e.qty == null) return;
+    const local = localMap.get(e.id);
+    if(!local || local.qty == null) return;
+    const base = baselineMap.get(e.id);
+    const baseQty = base && base.qty != null ? base.qty : local.qty;
+    const deltaLocal = baseQty - local.qty;
+    const deltaRemote = baseQty - e.qty;
+    e.qty = Math.max(0, baseQty - deltaLocal - deltaRemote);
+  });
+  return mergedElabs;
+}
+
 // Mismo problema que mergeStockField pero para objetos que llevan arrays
 // CON id dentro (DB.ge.variables/capex/fijos/fijosLog/cierres, DB.limpieza.
 // tareas/temperaturas/alergenos/plagas/mantenimiento): al no ser arrays de
@@ -5138,6 +5165,9 @@ function applyRemoteBlock(key, remoteValue){
     if(key === 'menus'){
       merged = mergeMenuStock(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
+    if(key === 'elaboraciones'){
+      merged = mergeElaboracionesStock(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+    }
   }
   /* Y lo que se borró, fuera otra vez. La fusión se queda con TODO lo de los
      dos lados, así que vuelve a meter lo que el otro aparato aún tenía. */
@@ -5403,6 +5433,9 @@ function mergeRemoteIntoLocal(val){
       }
       if(key === 'menus'){
         value = mergeMenuStock(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+      }
+      if(key === 'elaboraciones'){
+        value = mergeElaboracionesStock(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }
       // Mismo fallo que en applyRemoteBlock (dos camareros en la misma mesa):
       // esta es la carga inicial completa desde la nube, así que si alguien

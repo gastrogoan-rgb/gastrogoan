@@ -5363,7 +5363,19 @@ async function deleteZonaCompleta(zona){
     return;
   }
   if(!(await confirmModal(t('msg.confirmDeleteZone').replace('${name}', zonaLabel(zona)).replace('${count}', tables.length)))) return;
-  clearDanglingTableRefs(tables.map(tb => tb.id));
+  // ⚠️ Se vuelve a consultar la zona AQUÍ, justo antes de borrar, en vez de
+  // usar la lista capturada antes del confirmModal: durante esa espera pudo
+  // llegar por sincronización una mesa nueva en esta misma zona (o una
+  // comanda abierta en una mesa que ya existía). Sin esto, esa mesa nueva se
+  // borraba igual (nunca se mostró ni se confirmó) y clearDanglingTableRefs
+  // no la incluía, dejando una reserva apuntando a una mesa ya eliminada.
+  // Hallazgo de una auditoría externa.
+  const tablesNow = DB.tables.filter(tb => tb.zona === zona);
+  if(tablesNow.some(tb => getOpenOrderForTable(tb.id))){
+    showToast(t('msg.cannotDeleteZoneOpenOrders'));
+    return;
+  }
+  clearDanglingTableRefs(tablesNow.map(tb => tb.id));
   DB.tables = DB.tables.filter(tb => tb.zona !== zona);
   if(Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = DB.business.zonaOrder.filter(z => z !== zona);
   saveDB();

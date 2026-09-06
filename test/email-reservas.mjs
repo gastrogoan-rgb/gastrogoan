@@ -358,6 +358,21 @@ caso('El IVA general del ticket rechaza valores negativos o mayores de 100 (evit
   assert.ok(m[0].includes('return;'), 'saveTicketConfig no rechaza el guardado con un IVA inválido');
 });
 
+caso('Borrar una zona completa vuelve a comprobar sus mesas justo antes de borrarlas (mismo patrón que la mesa suelta)', () => {
+  // Mismo hallazgo que deleteTableFromConfig, encontrado en una segunda
+  // pasada de la auditoría buscando el mismo patrón: la lista de mesas se
+  // capturaba antes del confirmModal, y al borrar se volvía a filtrar DB.tables
+  // por zona en vez de por los IDs concretos ya comprobados — una mesa nueva
+  // llegada por sincronización durante la espera se borraba sin haberse
+  // mostrado ni comprobado, y una reserva podía quedar apuntando a ella.
+  const m = app.match(/async function deleteZonaCompleta\(zona\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró deleteZonaCompleta');
+  assert.ok(m[0].includes('const tablesNow = DB.tables.filter(tb => tb.zona === zona)'),
+    'no se vuelve a consultar las mesas de la zona justo antes de borrar');
+  assert.ok(m[0].includes('clearDanglingTableRefs(tablesNow.map(tb => tb.id))'),
+    'la limpieza de referencias sigue usando la lista capturada antes de confirmar, no la actual');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

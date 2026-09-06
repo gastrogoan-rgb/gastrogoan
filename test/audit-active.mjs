@@ -549,6 +549,29 @@ await testAsync('Los avisos push de un dispositivo no borran los de los demás',
   console.log('   → cada aparato conserva la suya, y gana la más reciente de cada uno');
 });
 
+await testAsync('Lo mismo pero con ELABORACIONES BASE: el stock de un caldo/almíbar no se pisa al sincronizar (hallazgo de Codex)', async () => {
+  // Mismo bug que el de Carta/Menús: decrementElaboracionStock (js/tpv.js)
+  // muta elab.qty directamente dentro del documento que mergeArraysById
+  // fusiona entero. Dos cocinas consumiendo la misma base casi a la vez
+  // perdían el descuento de una de las dos al sincronizar.
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  const elabBase = [{id:1, recipeId:1, name:'Fondo oscuro', unit:'L', qty:10, min:2}];
+  sandbox.__setLastSyncedSnapshot({elaboraciones: sandbox.canonicalStringify(elabBase)});
+  // Dispositivo A: consumió 3 L (queda en 7).
+  sandbox.__setDB({elaboraciones: [{id:1, recipeId:1, name:'Fondo oscuro', unit:'L', qty:7, min:2}]});
+  // Llega de la nube lo del dispositivo B: consumió 4 L sin ver aún el consumo de A (queda en 6).
+  sandbox.applyRemoteBlock('elaboraciones', [{id:1, recipeId:1, name:'Fondo oscuro', unit:'L', qty:6, min:2}]);
+  const elab = sandbox.__getDB().elaboraciones[0];
+  // 10-3-4=3, no 6 ni 7.
+  assert.equal(elab.qty, 3, 'el stock de la elaboración base debe sumar los dos consumos (10-3-4=3), no quedarse con el del que sincronizó último');
+  console.log('   → el consumo de las dos cocinas se conserva, ninguno de los dos se pierde');
+});
+
 await testAsync('Dos camareros vendiendo el mismo plato con raciones limitadas no se pisan el stock', async () => {
   // Sábado con 5 camareros: dos dispositivos venden del mismo plato con
   // stock limitado casi a la vez. mergeArraysById fusiona `cartas` por el id
