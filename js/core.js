@@ -3063,6 +3063,49 @@ function mergeCartaStock(localCartas, mergedCartas, lastSyncedCartasJson){
   return mergedCartas;
 }
 
+// Mismo problema y misma solución que mergeCartaStock, pero para `menus`:
+// un menú tiene su propio stock ("hoy solo hay 20 menús del día") Y cada
+// opción de cada grupo tiene el suyo ("quedan 8 merluzas") — decrementMenuStock
+// y decrementMenuOptionStock (js/tpv.js) los mutan directamente dentro del
+// documento del menú, que mergeArraysById fusiona por id ENTERO. Sin esto,
+// dos camareros vendiendo menús o agotando la misma opción casi a la vez
+// perdían el descuento de uno de los dos al sincronizar, igual que pasaba
+// con los platos de Carta antes de mergeCartaStock.
+function mergeMenuStock(localMenus, mergedMenus, lastSyncedMenusJson){
+  if(!Array.isArray(localMenus) || !Array.isArray(mergedMenus)) return mergedMenus;
+  let baseline = [];
+  if(lastSyncedMenusJson){ try{ baseline = JSON.parse(lastSyncedMenusJson) || []; }catch(e){ baseline = []; } }
+  const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
+  const baselineMenus = porId(baseline);
+  const localMenusMap = porId(localMenus);
+  // Fusiona un contador (stock+disponible) por delta desde el último punto en
+  // común, exactamente igual que mergeCartaStock — mismo razonamiento, se
+  // reutiliza en vez de duplicarlo para el menú y para cada opción.
+  const fusionarContador = (obj, local, base) => {
+    if(!obj || obj.stock == null || !local || local.stock == null) return;
+    const baseStock = base && base.stock != null ? base.stock : local.stock;
+    const deltaLocal = baseStock - local.stock;
+    const deltaRemote = baseStock - obj.stock;
+    obj.stock = Math.max(0, baseStock - deltaLocal - deltaRemote);
+    if(obj.stock === 0) obj.disponible = false;
+    else if(local.disponible === false || obj.disponible === false) obj.disponible = false;
+  };
+  mergedMenus.forEach(m => {
+    if(!m || m.id == null) return;
+    const local = localMenusMap.get(m.id);
+    if(!local) return;
+    const base = baselineMenus.get(m.id);
+    fusionarContador(m, local, base);
+    const baseOpciones = porId((base && base.grupos || []).flatMap(g => g.opciones||[]));
+    const localOpciones = porId((local.grupos || []).flatMap(g => g.opciones||[]));
+    (m.grupos||[]).forEach(g => (g.opciones||[]).forEach(o => {
+      if(!o || o.id == null) return;
+      fusionarContador(o, localOpciones.get(o.id), baseOpciones.get(o.id));
+    }));
+  });
+  return mergedMenus;
+}
+
 // Mismo problema que mergeStockField pero para objetos que llevan arrays
 // CON id dentro (DB.ge.variables/capex/fijos/fijosLog/cierres, DB.limpieza.
 // tareas/temperaturas/alergenos/plagas/mantenimiento): al no ser arrays de
@@ -5092,6 +5135,9 @@ function applyRemoteBlock(key, remoteValue){
     if(key === 'cartas'){
       merged = mergeCartaStock(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
+    if(key === 'menus'){
+      merged = mergeMenuStock(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+    }
   }
   /* Y lo que se borró, fuera otra vez. La fusión se queda con TODO lo de los
      dos lados, así que vuelve a meter lo que el otro aparato aún tenía. */
@@ -5354,6 +5400,9 @@ function mergeRemoteIntoLocal(val){
       value = mergeArraysById(DB[key], value);
       if(key === 'cartas'){
         value = mergeCartaStock(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+      }
+      if(key === 'menus'){
+        value = mergeMenuStock(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }
       // Mismo fallo que en applyRemoteBlock (dos camareros en la misma mesa):
       // esta es la carga inicial completa desde la nube, así que si alguien

@@ -369,11 +369,13 @@ async function performCashClosure(){
   const responsableNombre = getChatAuthorName(authorId);
 
   const platformSales = [];
+  const platformSaleObjs = [];
   (DB.business.deliveryPlatforms||[]).forEach(p => {
     const input = document.getElementById(`closure-platform-${p.id}`);
     const amount = input ? (parseFloat(input.value) || 0) : 0;
     if(amount > 0){
       const sale = registerPlatformSettlementSale(p, amount, hasta);
+      platformSaleObjs.push(sale);
       platformSales.push({platformId: p.id, nombre: p.nombre, total: sale.total, comision: sale.comisionPlataforma});
     }
   });
@@ -400,6 +402,11 @@ async function performCashClosure(){
      venta que llega tarde simplemente entra en el PRÓXIMO cierre que se
      haga, sin más condición que no tener cierre asignado todavía. */
   sales.forEach(s => { s.cierreId = closure.id; });
+  // Sin esto, la venta agregada de cada liquidación de plataforma (arriba)
+  // se creaba DESPUÉS de capturar `sales` para este cierre, así que nunca
+  // recibía cierreId — getSalesForClosure() la volvía a coger entera en el
+  // SIGUIENTE cierre del día, duplicando el importe de la liquidación.
+  platformSaleObjs.forEach(s => { s.cierreId = closure.id; });
   // Sigue viviendo en su propio Historial de Arqueos (con el detalle
   // completo) — esto es solo para que también salga en el registro
   // general. En rojo si hay descuadre de verdad (no solo unos céntimos de

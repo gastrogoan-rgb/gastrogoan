@@ -576,6 +576,29 @@ await testAsync('Dos camareros vendiendo el mismo plato con raciones limitadas n
   console.log('   → el descuento de stock de los dos dispositivos se conserva, ninguno de los dos se pierde');
 });
 
+await testAsync('Lo mismo pero con MENÚS: el stock del menú y el de cada opción no se pisan al sincronizar (hallazgo de Codex)', async () => {
+  // Mismo bug que el de Carta, sin arreglar para `menus`: decrementMenuStock
+  // y decrementMenuOptionStock (js/tpv.js) mutan el stock del menú y de sus
+  // opciones dentro del mismo documento que mergeArraysById fusiona entero.
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  const menuBase = [{id:1, stock:20, disponible:true, grupos:[{id:1, opciones:[{id:10, name:'Merluza', stock:8, disponible:true}]}]}];
+  sandbox.__setLastSyncedSnapshot({menus: sandbox.canonicalStringify(menuBase)});
+  // Dispositivo A: vendió 3 menús (17) y 2 merluzas (6).
+  sandbox.__setDB({menus: [{id:1, stock:17, disponible:true, grupos:[{id:1, opciones:[{id:10, name:'Merluza', stock:6, disponible:true}]}]}]});
+  // Llega de la nube lo del dispositivo B: vendió 5 menús (15) y 3 merluzas (5), sin ver aún la venta de A.
+  sandbox.applyRemoteBlock('menus', [{id:1, stock:15, disponible:true, grupos:[{id:1, opciones:[{id:10, name:'Merluza', stock:5, disponible:true}]}]}]);
+  const menu = sandbox.__getDB().menus[0];
+  // Menú: 20-3-5=12. Merluza: 8-2-3=3.
+  assert.equal(menu.stock, 12, 'el stock del menú debe sumar las rebajas de los dos dispositivos (20-3-5=12)');
+  assert.equal(menu.grupos[0].opciones[0].stock, 3, 'el stock de la opción (merluza) debe sumar las rebajas de los dos dispositivos (8-2-3=3)');
+  console.log('   → el stock del menú y el de sus opciones se fusionan por delta, ninguna venta se pierde');
+});
+
 await testAsync('La CARGA INICIAL completa desde la nube también fusiona las líneas de una comanda compartida (hallazgo de Codex)', async () => {
   // mergeOrderLines ya evitaba que dos camareros en la misma mesa se pisaran
   // las líneas, pero SOLO en el listener incremental (applyRemoteBlock). La

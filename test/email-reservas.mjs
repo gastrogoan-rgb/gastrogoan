@@ -31,6 +31,7 @@ const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
 const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8');
 const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
+const operations = fs.readFileSync(path.join(raiz, 'js/operations.js'), 'utf8');
 
 let fallos = 0;
 function caso(nombre, fn){
@@ -240,6 +241,19 @@ caso('Análisis de Platos: el margen por plato se calcula SIN IVA y con el descu
     'platosStats no calcula un ingreso SIN IVA por línea');
   assert.ok(/margin = cost!=null \? it\.revenueNeto - cost/.test(m[0]),
     'el margen sigue restando el coste del ingreso CON IVA, no del ingreso neto');
+});
+
+caso('La venta de liquidación de una plataforma recibe cierreId, no se duplica en el siguiente cierre (hallazgo de Codex)', () => {
+  // registerPlatformSettlementSale se llamaba ANTES de que existiera
+  // closure.id, así que la venta agregada de Glovo/Uber Eats/etc. nunca
+  // recibía cierreId — getSalesForClosure() la volvía a coger entera en el
+  // SIGUIENTE cierre de caja del mismo día, duplicando su importe.
+  const m = operations.match(/async function performCashClosure\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró performCashClosure');
+  assert.ok(m[0].includes('platformSaleObjs.push(sale)'),
+    'no se guarda la referencia a la venta de liquidación creada');
+  assert.ok(m[0].includes('platformSaleObjs.forEach(s => { s.cierreId = closure.id; })'),
+    'la venta de liquidación de plataforma no recibe cierreId — se duplicará en el próximo cierre');
 });
 
 console.log('\n' + '═'.repeat(64));
