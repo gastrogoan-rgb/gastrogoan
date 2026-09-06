@@ -373,6 +373,60 @@ caso('Borrar una zona completa vuelve a comprobar sus mesas justo antes de borra
     'la limpieza de referencias sigue usando la lista capturada antes de confirmar, no la actual');
 });
 
+caso('Desactivar el TPV virtual no borra la configuración local si el Worker rechaza la petición (hallazgo de Codex sobre conexiones externas)', () => {
+  const m = core.match(/async function disableRedsysConfig\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró disableRedsysConfig');
+  assert.ok(m[0].includes('if(!res.ok) throw new Error'),
+    'disableRedsysConfig no comprueba res.ok — puede mostrarse como desactivado aunque el Worker haya fallado');
+  assert.ok(m[0].includes("['rs-fuc','rs-terminal','rs-clave'].forEach"),
+    'no se encontró el bloque de limpieza de campos locales');
+  const idxThrow = m[0].indexOf('throw new Error');
+  const idxLimpieza = m[0].indexOf("['rs-fuc'");
+  assert.ok(idxThrow !== -1 && idxLimpieza > idxThrow, 'la limpieza de campos locales sigue ocurriendo antes de comprobar si el Worker confirmó la desactivación');
+});
+
+caso('El email de confirmación de reserva no sale si la reserva sigue pendiente de señal (hallazgo de Codex)', () => {
+  // Antes se enviaba con solo tener mesa asignada, aunque el status siguiera
+  // 'pendiente' por exigir señal — el cliente recibía "reserva confirmada"
+  // aunque hubiera abandonado el pago de la señal a mitad.
+  const m = core.match(/if\(req\.type === 'reserva'\)\{[\s\S]*?notifyNewRequest = true;\n\s*\}else if\(req\.type === 'reserva_cancelar'\)/);
+  assert.ok(m, 'no se encontró el bloque de alta de reserva pública');
+  assert.ok(m[0].includes("newReservation.status === 'confirmada' && typeof sendReservationConfirmationEmail"),
+    'el email de confirmación se envía sin comprobar que la reserva esté realmente confirmada');
+  assert.ok(!m[0].includes("if(confirmedTableId && typeof sendReservationConfirmationEmail"),
+    'sigue quedando la condición vieja (solo mesa asignada, sin comprobar el status)');
+});
+
+caso('El email de confirmación SÍ sale cuando la señal se confirma más tarde (para no dejar esas reservas sin ningún aviso)', () => {
+  const m = core.match(/const reservationPaid = \(DB\.reservations\|\|\[\]\)\.find[\s\S]*?logAudit\('edit', t\('audit\.depositConfirmed'\)/);
+  assert.ok(m, 'no se encontró el bloque de confirmación de depósito de reserva');
+  assert.ok(m[0].includes('const pasaAConfirmada =') && m[0].includes('sendReservationConfirmationEmail({...reservationPaid'),
+    'la confirmación del depósito no dispara el email de confirmación que se difirió al crear la reserva');
+});
+
+caso('El guardado local se espera ANTES de borrar la solicitud pública de Firebase (evita perder un pedido/reserva si el dispositivo se cierra en ese hueco)', () => {
+  const m = core.match(/reqRef\.child\('_claimedAt'\)\.transaction[\s\S]*?\}\)\.catch\(e => console\.error\('Error reclamando solicitud pública', e\)\);/);
+  assert.ok(m, 'no se encontró el manejador de reclamación de solicitudes públicas');
+  assert.ok(m[0].includes('.then(async claimResult') , 'el manejador ya no es async: no puede esperar el guardado');
+  assert.ok(m[0].includes('await saveDB();'), 'el guardado local no se espera antes de borrar la solicitud de la nube');
+  const idxAwait = m[0].indexOf('await saveDB();');
+  const idxRemove = m[0].indexOf('reqRef.remove();');
+  assert.ok(idxAwait !== -1 && idxRemove > idxAwait, 'reqRef.remove() sigue pudiendo ejecutarse antes de que el guardado local termine');
+});
+
+caso('El cuaderno de I+D se fusiona igual en la carga inicial completa que en la sincronización en caliente (hallazgo de Codex)', () => {
+  // mergeRemoteIntoLocal (arranque) le faltaba el mismo tratamiento que
+  // applyRemoteBlock (listener incremental) ya tenía: sin él, abrir la app
+  // sustituía el cuaderno de IA entero por el de la nube, perdiendo una
+  // prueba local sin subir o una respuesta que llegara a mitad de conversación.
+  const m = core.match(/function mergeRemoteIntoLocal\(val\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró mergeRemoteIntoLocal');
+  assert.ok(m[0].includes("if(key === 'idr' && DB[key] && typeof value === 'object')"),
+    'a la carga inicial completa le sigue faltando el tratamiento especial de idr');
+  assert.ok(m[0].includes("mergeNestedArraysByKey(DB[key], value, ['creaciones','carpetas'])") && m[0].includes('fusionarCreacionIdr(local, c)'),
+    'falta fusionar las creaciones de IDR por id y por conversación, no solo por documento completo');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);

@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '06/09/2026 17:02';
+const GG_BUILD = '06/09/2026 17:25';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -7034,7 +7034,7 @@ function initPublicRequestsListener(){
       // Firebase) para que solo el primer dispositivo en procesarla gane —
       // los demás no hacen nada con ese evento, y es el ganador quien borra
       // la request al terminar.
-      reqRef.child('_claimedAt').transaction(current => current === null ? Date.now() : undefined).then(claimResult => {
+      reqRef.child('_claimedAt').transaction(current => current === null ? Date.now() : undefined).then(async claimResult => {
       if(!claimResult.committed) return; // otro dispositivo ya se está encargando de esta solicitud
       let notifyNewRequest = false;
       if(req.type === 'reserva'){
@@ -7103,7 +7103,13 @@ function initPublicRequestsListener(){
         };
         DB.reservations.push(newReservation);
         if(newReservation.publicToken) syncReservationStatusForPublic(newReservation);
-        if(confirmedTableId && typeof sendReservationConfirmationEmail === 'function'){
+        // ⚠️ Se comprueba el status de verdad, no solo que haya mesa: si la
+        // reserva exige señal, tiene mesa asignada pero se queda 'pendiente'
+        // (ver arriba) hasta que llegue pago_confirmado — enviar aquí un
+        // email de "reserva confirmada" le decía al cliente que ya estaba
+        // todo listo aunque hubiera abandonado el pago a mitad. Hallazgo de
+        // una auditoría externa.
+        if(newReservation.status === 'confirmada' && typeof sendReservationConfirmationEmail === 'function'){
           const confirmedTable = DB.tables.find(t => t.id === confirmedTableId);
           sendReservationConfirmationEmail({...newReservation, tableName: confirmedTable ? confirmedTable.name : ''}).catch(()=>{});
         }
@@ -7339,7 +7345,15 @@ function initPublicRequestsListener(){
           reservationPaid.depositSalePending = req.amount;
           // Ahora sí que el pago está confirmado por el banco: si se había quedado
           // "pendiente" solo por exigir señal (ya tenía mesa asignada), se confirma.
-          if(reservationPaid.status === 'pendiente' && reservationPaid.tableId) reservationPaid.status = 'confirmada';
+          const pasaAConfirmada = reservationPaid.status === 'pendiente' && reservationPaid.tableId;
+          if(pasaAConfirmada) reservationPaid.status = 'confirmada';
+          // El email de confirmación no se manda al crear la reserva cuando
+          // exige señal (se queda 'pendiente' hasta este momento) — se manda
+          // AQUÍ, ahora que el banco ha confirmado de verdad el pago.
+          if(pasaAConfirmada && typeof sendReservationConfirmationEmail === 'function'){
+            const confirmedTable = DB.tables.find(t => t.id === reservationPaid.tableId);
+            sendReservationConfirmationEmail({...reservationPaid, tableName: confirmedTable ? confirmedTable.name : ''}).catch(()=>{});
+          }
           syncReservationStatusForPublic(reservationPaid);
           logAudit('edit', t('audit.depositConfirmed').replace('${name}', reservationPaid.clientName||'?'));
         }
@@ -7369,7 +7383,13 @@ function initPublicRequestsListener(){
           if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(req.amount||0)));
         }
       }
-      saveDB();
+      // ⚠️ Se espera a que el guardado local termine ANTES de borrar la
+      // solicitud de Firebase: si no, un cierre del dispositivo justo en ese
+      // hueco (guardado local todavía en curso, solicitud ya borrada de la
+      // nube) podía dejar el pedido/reserva sin ningún rastro recuperable —
+      // ni local (si el guardado no llegó a completarse) ni remoto (ya
+      // borrado). Hallazgo de una auditoría externa.
+      await saveDB();
       refreshAfterRemoteChange();
       if(notifyNewRequest) playNewRequestAlert();
       reqRef.remove();
@@ -8476,6 +8496,22 @@ function mergeRemoteIntoLocal(val){
     if(key === 'limpieza' && DB[key] && typeof value === 'object'){
       value = mergeNestedArraysByKey(DB[key], value, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);
     }
+    // Mismo tratamiento que en applyRemoteBlock: sin esto, la carga inicial
+    // completa (al abrir la app) sustituía el cuaderno de I+D entero por el
+    // de la nube, perdiendo una prueba lanzada en este dispositivo que aún
+    // no se había subido, y una respuesta que llegara mientras el cocinero
+    // seguía hablando con el asistente desaparecía del hilo. Hallazgo de una
+    // auditoría externa: faltaba solo aquí, en el arranque.
+    if(key === 'idr' && DB[key] && typeof value === 'object'){
+      value = mergeNestedArraysByKey(DB[key], value, ['creaciones','carpetas']);
+      if(Array.isArray(value.creaciones) && Array.isArray(DB[key].creaciones)){
+        const locales = new Map(DB[key].creaciones.map(c => [c && c.id, c]));
+        value.creaciones = value.creaciones.map(c => {
+          const local = c && locales.get(c.id);
+          return local ? fusionarCreacionIdr(local, c) : c;
+        });
+      }
+    }
     if(FLAT_MAP_FIELDS.has(key) && DB[key] && typeof value === 'object'){
       value = mergeStockField(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
@@ -9283,14 +9319,21 @@ async function saveRedsysConfig(){
 // y el estado en pantalla para que quede claro que ya no está configurado.
 async function disableRedsysConfig(){
   if(!(await confirmModal(t('mn.redsys.confirmDisable')))) return;
+  // ⚠️ No se comprobaba res.ok: si el Worker respondía con un error (o
+  // directamente no respondía), la app limpiaba igualmente la configuración
+  // local y se mostraba como "desactivado" — el negocio creía haber cortado
+  // los pagos con tarjeta mientras el Worker seguía con la configuración
+  // antigua intacta. Hallazgo de una auditoría externa.
   try{
-    await fetch(`${REDSYS_WORKER_URL}/config`, {
+    const res = await fetch(`${REDSYS_WORKER_URL}/config`, {
       method: 'POST',
       headers: {'content-type':'application/json'},
       body: JSON.stringify({ tenantId: getTenantId(), fuc:'', terminal:'', claveSecreta:'', ambiente:'test', disabled:true })
     });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
   }catch(e){
     showToast(t('mn.redsys.disableError'));
+    return;
   }
   ['rs-fuc','rs-terminal','rs-clave'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const realEl = document.getElementById('rs-real'); if(realEl) realEl.checked = false;
