@@ -140,6 +140,20 @@ caso('La sonda comprueba también los cambios de reglas MÁS RECIENTES', () => {
   return 'reclamar y borrar una solicitud';
 });
 
+caso('La sonda también comprueba "Accede a tu reserva" (reservationLookup)', () => {
+  // Este nodo se añadió DESPUÉS de aforoHold/orderStatus/requests, en sus
+  // propias reglas — sin probarlo aparte, un negocio al que SOLO le
+  // faltara este permiso se quedaba con reglasAntiguas=false (todo lo
+  // demás sí pasaba) y nunca veía ningún aviso, aunque "Accede a tu
+  // reserva" no encontrara nunca nada para él.
+  const m = core.match(/async function comprobarEspejoEnNubePropia\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró comprobarEspejoEnNubePropia');
+  assert.ok(m[0].includes("base.child('reservationLookup/"),
+    'la sonda no prueba el permiso de reservationLookup');
+  assert.ok(m[0].includes(".set(true)") && /reservationLookup[\s\S]*?\.remove\(\)/.test(m[0]),
+    'la sonda no limpia lo que escribe en reservationLookup');
+});
+
 caso('La solicitud de prueba nunca se procesa como una de verdad', () => {
   // Si no, entraría en el oyente como un pago_confirmado real.
   assert.ok(core.includes('if(req._sonda) return;'),

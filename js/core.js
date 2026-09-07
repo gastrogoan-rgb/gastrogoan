@@ -3969,6 +3969,13 @@ async function comprobarEspejoEnNubePropia(){
       await sonda.set({type: 'reserva', createdAt: Date.now(), _sonda: true});
       await sonda.child('_claimedAt').set(Date.now());
       await sonda.remove();
+      // reservationLookup ("Accede a tu reserva"): nodo añadido más tarde
+      // que los de arriba, en sus propias reglas — sin probarlo aparte, un
+      // negocio al que SOLO le faltara este permiso se quedaba con
+      // reglasAntiguas=false (todo lo demás sí pasaba) y nunca veía ningún
+      // aviso de que le faltaba, aunque la búsqueda de reserva no funcionara.
+      await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').set(true);
+      await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').remove();
       reglasAntiguas = false;
     }catch(e2){
       console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
@@ -3976,6 +3983,7 @@ async function comprobarEspejoEnNubePropia(){
       // Si quedó a medias, se intenta limpiar; si tampoco deja, no pasa nada:
       // el oyente la ignora por el `_sonda`.
       try{ await base.child('requests/_sonda_' + sondaId).remove(); }catch(e3){}
+      try{ await base.child('reservationLookup/_sonda_' + sondaId).remove(); }catch(e4){}
     }
     return true;
   }catch(e){

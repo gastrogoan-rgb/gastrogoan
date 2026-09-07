@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '07/09/2026 19:32';
+const GG_BUILD = '07/09/2026 19:58';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6893,6 +6893,13 @@ async function comprobarEspejoEnNubePropia(){
       await sonda.set({type: 'reserva', createdAt: Date.now(), _sonda: true});
       await sonda.child('_claimedAt').set(Date.now());
       await sonda.remove();
+      // reservationLookup ("Accede a tu reserva"): nodo añadido más tarde
+      // que los de arriba, en sus propias reglas — sin probarlo aparte, un
+      // negocio al que SOLO le faltara este permiso se quedaba con
+      // reglasAntiguas=false (todo lo demás sí pasaba) y nunca veía ningún
+      // aviso de que le faltaba, aunque la búsqueda de reserva no funcionara.
+      await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').set(true);
+      await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').remove();
       reglasAntiguas = false;
     }catch(e2){
       console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
@@ -6900,6 +6907,7 @@ async function comprobarEspejoEnNubePropia(){
       // Si quedó a medias, se intenta limpiar; si tampoco deja, no pasa nada:
       // el oyente la ignora por el `_sonda`.
       try{ await base.child('requests/_sonda_' + sondaId).remove(); }catch(e3){}
+      try{ await base.child('reservationLookup/_sonda_' + sondaId).remove(); }catch(e4){}
     }
     return true;
   }catch(e){
