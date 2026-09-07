@@ -1,12 +1,20 @@
-// El generador de licencias: emitir está probado desde hace tiempo; lo que
+// El panel de administración: emitir está probado desde hace tiempo; lo que
 // faltaba —y es lo que se añade aquí— es poder DESHACER una venta.
 //
 // Sin esto, una devolución, un impago o un error al vender no tenían arreglo:
 // el código quedaba emitido para siempre y el cliente dentro. A 5.000
 // licencias eso deja de ser un detalle.
 //
-// ⚠️ Borrar del registro y anular la licencia son cosas DISTINTAS, y
-// confundirlas es lo peligroso: lo primero solo limpia tu lista de ventas.
+// ⚠️ Borrar del registro y quitar el acceso a la licencia son cosas
+// DISTINTAS, y confundirlas es lo peligroso: lo primero solo limpia tu
+// lista de ventas.
+//
+// Reescrita cuando el generador plano se rehízo como panel de
+// administración completo (carpetas por cliente, calendario de cobros):
+// las funciones cambiaron de nombre y de firma (antes operaban sobre el
+// ÍNDICE de la lista, ahora sobre el id estable de cada venta, o
+// directamente sobre el usuario), pero el comportamiento que hay que
+// garantizar es el mismo.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -24,6 +32,9 @@ await page.goto('http://localhost:8950/generador-licencias.html',{waitUntil:'dom
 await new Promise(r=>setTimeout(r,1200));
 
 // Firebase de mentira: apunta todo lo que se toca, sin salir a la red.
+// El panel nuevo llama a getApp().database() directamente (ya no pasa por
+// getPlatformFirebaseApp, que era del generador viejo), así que lo que hay
+// que sustituir aquí es getApp.
 const fingirPlataforma = () => page.evaluate(()=>{
   window.__ops = [];
   const ref = (ruta) => ({
@@ -32,7 +43,11 @@ const fingirPlataforma = () => page.evaluate(()=>{
     remove: async () => { window.__ops.push(['remove', ruta]); },
     once: async () => ({val: () => null}),
   });
-  window.getPlatformFirebaseApp = async () => ({
+  // adminUser es un `let` de nivel superior del propio script de la página,
+  // no una propiedad de window: hay que asignarlo por su nombre, tal cual,
+  // para que las funciones que lo leen (delSale, updateSaleEntry...) lo vean.
+  adminUser = {email: 'gastrogoan@gmail.com'};
+  window.getApp = () => ({
     auth: () => ({currentUser: {email: 'gastrogoan@gmail.com'}}),
     database: () => ({ref}),
   });
@@ -41,12 +56,12 @@ const fingirPlataforma = () => page.evaluate(()=>{
   window.alert = (m) => { window.__ultimoAviso = m; };
 });
 
-await caso('Anular un código lo mata en los TRES sitios', async ()=>{
+await caso('Quitar el acceso a un código lo mata en los TRES sitios', async ()=>{
   await fingirPlataforma();
   const r = await page.evaluate(async ()=>{
     sales = [{id:'v1', date:'2026-09-01', name:'Casa Paco', kind:'negocio', value:'ABCD1234', owner:'casapaco', pin:''}];
-    saveSales(); renderLog();
-    await anularCodigo(0);
+    saveSales(); renderFolders();
+    await quitarAcceso('v1');
     return {ops: window.__ops.map(o => o[0] + ' ' + o[1]), entrada: sales[0], aviso: window.__ultimoAviso};
   });
   const rutas = r.ops.join(' | ');
@@ -61,32 +76,33 @@ await caso('Anular un código lo mata en los TRES sitios', async ()=>{
   return 'revokedCodes + issuedCodes + codeClaims';
 });
 
-await caso('Se puede deshacer: reactivar un código anulado', async ()=>{
+await caso('Se puede deshacer: restablecer una licencia con el acceso quitado', async ()=>{
   await fingirPlataforma();
   const r = await page.evaluate(async ()=>{
     sales = [{id:'v1', date:'2026-09-01', name:'Casa Paco', kind:'negocio', value:'ABCD1234', owner:'casapaco', anulada:'2026-09-01', motivo:'error'}];
-    saveSales(); renderLog();
-    await reactivarCodigo(0);
+    saveSales(); renderFolders();
+    await restablecerLicencia('v1');
     return {ops: window.__ops.map(o => o[0] + ' ' + o[1]), entrada: sales[0]};
   });
   const rutas = r.ops.join(' | ');
   assert.ok(/set gastrogoan\/issuedCodes\/ABCD1234/.test(rutas), 'vuelve a los emitidos: ' + rutas);
   assert.ok(/remove gastrogoan\/revokedCodes\/ABCD1234/.test(rutas), 'y se quita el bloqueo: ' + rutas);
   assert.ok(!r.entrada.anulada, 'y deja de figurar como anulada');
-  return 'anular el código equivocado tiene arreglo';
+  assert.ok(r.entrada.proximoPago, 'y se le da un próximo cobro nuevo, para que vuelva a aparecer en el calendario');
+  return 'quitar el acceso por error tiene arreglo';
 });
 
-await caso('Borrar del registro NO anula la licencia, y lo avisa', async ()=>{
+await caso('Borrar del registro NO quita el acceso a la licencia, y lo avisa', async ()=>{
   await fingirPlataforma();
   const r = await page.evaluate(async ()=>{
     let textoConfirm = '';
     window.confirm = (m) => { textoConfirm = m; return true; };
     sales = [{id:'v1', date:'2026-09-01', name:'Casa Paco', kind:'negocio', value:'ABCD1234', owner:'casapaco'}];
-    saveSales(); renderLog();
-    await delSale(0);
+    saveSales(); renderFolders();
+    await delSale('v1');
     return {ops: window.__ops.map(o => o[0] + ' ' + o[1]), textoConfirm, quedan: sales.length};
   });
-  assert.ok(/NO anula/i.test(r.textoConfirm), 'el aviso debe dejar claro que NO anula: ' + r.textoConfirm);
+  assert.ok(/NO revoca ni restablece/i.test(r.textoConfirm), 'el aviso debe dejar claro que NO toca la licencia: ' + r.textoConfirm);
   assert.equal(r.quedan, 0, 'sí quita la anotación');
   const rutas = r.ops.join(' | ');
   assert.ok(!/issuedCodes|revokedCodes|codeClaims/.test(rutas),
@@ -99,8 +115,8 @@ await caso('Borrar una cuenta libera el nombre y quita el acceso', async ()=>{
   await fingirPlataforma();
   const r = await page.evaluate(async ()=>{
     sales = [{id:'v2', date:'2026-09-01', name:'Casa Paco', kind:'cuenta', value:'casapaco', owner:'casapaco', pin:'A1B2C3'}];
-    saveSales(); renderLog();
-    await borrarCuenta(0);
+    saveSales(); renderFolders();
+    await borrarCuenta('casapaco');
     const esperado = ggOwnerAuthKey('casapaco', 'A1B2C3');
     return {ops: window.__ops.map(o => o[0] + ' ' + o[1]), esperado, entrada: sales[0]};
   });
@@ -119,15 +135,40 @@ await caso('Sin el PIN, avisa de que solo puede liberar el nombre', async ()=>{
     const avisos = [];
     window.alert = (m) => avisos.push(m);
     sales = [{id:'v3', date:'2026-09-01', name:'Sin pin', kind:'cuenta', value:'sinpin', owner:'sinpin', pin:''}];
-    saveSales(); renderLog();
-    await borrarCuenta(0);
+    saveSales(); renderFolders();
+    await borrarCuenta('sinpin');
     return {ops: window.__ops.map(o => o[0] + ' ' + o[1]), avisos};
   });
-  assert.ok(r.avisos.some(a => /sin él no se puede borrar/i.test(a)),
+  assert.ok(r.avisos.some(a => /sin el pin guardado no se ha podido borrar el acceso/i.test(a)),
     'tiene que explicar por qué: la cuenta vive en una ruta que se calcula con el PIN');
   assert.ok(!/ownerAuth/.test(r.ops.join(' | ')), 'y no inventarse una ruta');
   assert.ok(/remove gastrogoan\/ownerNames\/sinpin/.test(r.ops.join(' | ')), 'pero sí liberar el nombre');
   return 'dice la verdad de lo que puede y no puede hacer';
+});
+
+await caso('Un código atrasado que se marca cobrado avanza su próximo vencimiento un año', async ()=>{
+  await fingirPlataforma();
+  const r = await page.evaluate(async ()=>{
+    sales = [{id:'v4', date:'2024-09-01', name:'Casa Paco', kind:'negocio', value:'ABCD1234', owner:'casapaco', proximoPago:'2025-09-01'}];
+    saveSales();
+    const l = findSale('v4');
+    await updateSaleEntry(l, {proximoPago: addYearsStr(l.proximoPago, 1)});
+    return sales[0].proximoPago;
+  });
+  assert.equal(r, '2026-09-01', 'debe avanzar exactamente un año desde el vencimiento anterior, no desde hoy');
+  return 'el próximo cobro avanza sin desfases de zona horaria';
+});
+
+await caso('El generador NO deja crear una licencia sin saber de qué cliente es', async ()=>{
+  const fs = await import('node:fs');
+  const html = fs.readFileSync('generador-licencias.html','utf8');
+  const cabecera = html.slice(html.indexOf('<header>'), html.indexOf('</header>'));
+  assert.ok(!/[Nn]ueva licencia/.test(cabecera),
+    'la cabecera no puede tener un botón de "nueva licencia" junto al de agregar usuario: ' + cabecera);
+  assert.ok(/agregar usuario/i.test(cabecera), 'pero sí el de agregar usuario');
+  assert.ok(/folder-body[\s\S]*?openNuevaLicencia/.test(html),
+    'el botón de nueva licencia debe estar SOLO dentro de la carpeta de un cliente concreto');
+  return 'nueva licencia solo desde dentro de la carpeta de su cliente';
 });
 
 await caso('La app comprueba los códigos anulados contra la plataforma', async ()=>{
