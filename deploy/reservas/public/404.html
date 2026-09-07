@@ -316,6 +316,8 @@ const I18N = {
     'reserva.title':'Reservar mesa','nombre':'Nombre *','telefono':'Teléfono *','fecha':'Fecha *','hora':'Hora *','personas':'Número de personas *',
     'lookup.link':'¿Ya reservaste? Accede a tu reserva','lookup.title':'Accede a tu reserva','lookup.desc':'Escribe los mismos datos con los que reservaste. Los tres tienen que coincidir exactamente.',
     'lookup.submit':'Buscar','lookup.needAll':'Rellena los tres datos.','lookup.notFound':'No encontramos ninguna reserva con esos datos. Revisa que estén escritos igual que al reservar, o llama al restaurante.',
+    'cal.dia':'Día','cal.semana':'Semana','cal.mes':'Mes','cal.cerrado':'Cerrado este día','cal.sinHuecos':'No quedan horas disponibles hoy',
+    'cal.leyendaLibre':'Hay sitio','cal.leyendaLleno':'Completo',
     'notas':'Notas (alergias, peticiones especiales...)','notas.placeholder':'Opcional','reserva.submit':'Enviar solicitud de reserva','reserva.submitWithDeposit':'Pagar señal y reservar',
     'referral.label':'¿Cómo nos conociste? (opcional)','referral.placeholder':'Elige una opción',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -397,6 +399,8 @@ const I18N = {
     'reserva.title':'Book a table','nombre':'Name *','telefono':'Phone *','fecha':'Date *','hora':'Time *','personas':'Number of people *',
     'lookup.link':'Already booked? Access your reservation','lookup.title':'Access your reservation','lookup.desc':'Enter the same details you used to book. All three must match exactly.',
     'lookup.submit':'Search','lookup.needAll':'Fill in all three fields.','lookup.notFound':'We couldn\'t find any reservation with those details. Check they match what you used to book, or call the restaurant.',
+    'cal.dia':'Day','cal.semana':'Week','cal.mes':'Month','cal.cerrado':'Closed this day','cal.sinHuecos':'No times left today',
+    'cal.leyendaLibre':'Available','cal.leyendaLleno':'Full',
     'notas':'Notes (allergies, special requests...)','notas.placeholder':'Optional','reserva.submit':'Send booking request','reserva.submitWithDeposit':'Pay deposit and book',
     'referral.label':'How did you hear about us? (optional)','referral.placeholder':'Choose an option',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -478,6 +482,8 @@ const I18N = {
     'reserva.title':'Reservar taula','nombre':'Nom *','telefono':'Telèfon *','fecha':'Data *','hora':'Hora *','personas':'Nombre de persones *',
     'lookup.link':'Ja vas reservar? Accedeix a la teva reserva','lookup.title':'Accedeix a la teva reserva','lookup.desc':'Escriu les mateixes dades amb què vas reservar. Els tres han de coincidir exactament.',
     'lookup.submit':'Cercar','lookup.needAll':'Omple les tres dades.','lookup.notFound':'No hem trobat cap reserva amb aquestes dades. Revisa que estiguin escrites igual que al reservar, o truca al restaurant.',
+    'cal.dia':'Dia','cal.semana':'Setmana','cal.mes':'Mes','cal.cerrado':'Tancat aquest dia','cal.sinHuecos':'No queden hores disponibles avui',
+    'cal.leyendaLibre':'Hi ha lloc','cal.leyendaLleno':'Complet',
     'notas':'Notes (al·lèrgies, peticions especials...)','notas.placeholder':'Opcional','reserva.submit':'Enviar sol·licitud de reserva','reserva.submitWithDeposit':'Pagar senyal i reservar',
     'referral.label':'Com ens has conegut? (opcional)','referral.placeholder':'Tria una opció',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -1698,6 +1704,215 @@ async function submitReservaLookup(){
   setBtnLoading('lk-submit', false);
 }
 
+/* ============ CALENDARIO INTERACTIVO DE DISPONIBILIDAD ============
+   Antes había que rellenar fecha y hora a ciegas y enterarte de si había
+   sitio solo al enviar el formulario entero. Ahora se ve de un vistazo,
+   por día/semana/mes, y en verde/rojo según los comensales que ya se
+   hayan puesto arriba — la misma comprobación que hace submitReserva al
+   enviar, solo que aquí se repite muchas veces (una por franja) para
+   pintar el calendario, así que se separa en checkSlotFree() para no
+   duplicar la lógica de mesas/aforo en dos sitios que puedan desincronizarse. */
+let calView = 'dia'; // 'dia' | 'semana' | 'mes'
+let calDate = null;  // fecha (YYYY-MM-DD) que se está mirando ahora mismo
+let calSelectedTime = null;
+
+function currentPeopleValue(){
+  return Math.min(50, Math.max(1, parseInt(document.getElementById('r-people')?.value) || 1));
+}
+
+// Huecos de 30 en 30 min dentro de los turnos configurados ese día. Si el
+// negocio no tiene horario configurado (getTurnosForDate devuelve null),
+// no hay ninguna franja que ofrecer aquí — ese caso ya se trata aparte en
+// computeDayStatus como "sin restricción" (cualquier hora vale).
+function slotsDelDia(dateStr){
+  const turnos = getTurnosForDate(dateStr);
+  if(!turnos || !turnos.length) return [];
+  const out = [];
+  turnos.forEach(t => {
+    const [ih, im] = t.abre.split(':').map(Number);
+    const [fh, fm] = t.cierra.split(':').map(Number);
+    let cur = ih * 60 + im;
+    const fin = fh * 60 + fm;
+    while(cur <= fin){
+      out.push(String(Math.floor(cur/60)).padStart(2,'0') + ':' + String(cur%60).padStart(2,'0'));
+      cur += 30;
+    }
+  });
+  return out;
+}
+// Hora mínima reservable HOY según la antelación configurada — mismo
+// cálculo que applyLeadTime, pero sin depender de un &lt;input&gt; del DOM.
+function reservaMinTimeHoy(){
+  const leadTimeMin = getLeadTimeMin('reserva');
+  if(!leadTimeMin) return null;
+  const now = new Date(Date.now() + leadTimeMin * 60000);
+  return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+}
+// Misma comprobación que hace submitReserva al enviar de verdad (mesas +
+// aforo), extraída aparte para poder repetirla franja a franja al pintar
+// el calendario sin que las dos copias puedan desincronizarse con el
+// tiempo. Un grupo más grande que la mesa más grande (needsManualReview)
+// se pinta como disponible: la app ya deja pasar esos casos para que el
+// negocio los revise a mano, en vez de rechazarlos sin más.
+function checkSlotFree(dateStr, time, people){
+  const hasConfiguredTables = (DB.tables||[]).some(tb => tb.plazas);
+  const maxCapacity = getMaxTableCapacity();
+  const needsManualReview = hasConfiguredTables && people > maxCapacity;
+  if(hasConfiguredTables && !needsManualReview){
+    const slots = slotsForReservation(time, getReservaDuracionMin());
+    if(!getBestFitTable(dateStr, time, people, slots)) return false;
+  }
+  const aforoInfo = getAforoInfo(dateStr, time);
+  if(aforoInfo && people > aforoInfo.disponible) return false;
+  return true;
+}
+// Estado de un día entero para pintar semana/mes de un vistazo:
+// 'cerrado' | 'lleno' | 'libre'. Un día sin horario configurado se pinta
+// como 'libre' (la app no restringe nada en ese caso, igual que hoy).
+function computeDayStatus(dateStr, people){
+  if(dateStr < todayStr()) return 'pasado';
+  const turnos = getTurnosForDate(dateStr);
+  if(turnos === null) return 'libre';
+  if(!turnos.length) return 'cerrado';
+  const minHoy = dateStr === todayStr() ? reservaMinTimeHoy() : null;
+  const slots = slotsDelDia(dateStr).filter(s => !minHoy || s >= minHoy);
+  if(!slots.length) return 'cerrado';
+  const hayLibre = slots.some(s => checkSlotFree(dateStr, s, people));
+  return hayLibre ? 'libre' : 'lleno';
+}
+function addDaysStr(dateStr, n){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0,10);
+}
+function addMonthsStr(dateStr, n){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setMonth(d.getMonth() + n);
+  return d.toISOString().slice(0,10);
+}
+function calSetView(view){ calView = view; renderReservaCalendar(); }
+function calNav(dias){
+  calDate = addDaysStr(calDate, dias);
+  renderReservaCalendar();
+}
+function calGoToDay(dateStr){
+  calDate = dateStr;
+  calView = 'dia';
+  renderReservaCalendar();
+}
+function calPickSlot(dateStr, time){
+  calSelectedTime = time;
+  document.getElementById('r-date').value = dateStr;
+  document.getElementById('r-time').value = time;
+  renderReservaCalendar();
+}
+const CAL_DOT = {libre:'#4A5D4E', lleno:'#8A4A3B', cerrado:'#C8C2B4', pasado:'#E8E4D9'};
+function renderReservaCalendar(){
+  const box = document.getElementById('r-cal');
+  if(!box) return;
+  const people = currentPeopleValue();
+  if(document.getElementById('r-date').value && document.getElementById('r-date').value !== calDate) calSelectedTime = null;
+  const tabs = `
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      ${['dia','semana','mes'].map(v => `<button type="button" class="btn btn-sm" style="flex:1;${calView===v?'background:var(--ink);color:#fff':''}" onclick="calSetView('${v}')">${t('cal.'+v)}</button>`).join('')}
+    </div>`;
+  let body = '';
+  if(calView === 'dia'){
+    const status = computeDayStatus(calDate, people);
+    const minHoy = calDate === todayStr() ? reservaMinTimeHoy() : null;
+    const slots = slotsDelDia(calDate).filter(s => !minHoy || s >= minHoy);
+    body = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <button type="button" class="btn btn-sm" ${calDate<=todayStr()?'disabled':''} onclick="calNav(-1)">‹</button>
+        <strong style="font-size:13.5px">${escapeHtml(fechaLegible(calDate))}</strong>
+        <button type="button" class="btn btn-sm" onclick="calNav(1)">›</button>
+      </div>
+      ${status === 'cerrado' ? `<p style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0">${t('cal.cerrado')}</p>` :
+        !slots.length ? `<p style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0">${t('cal.sinHuecos')}</p>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px">
+        ${slots.map(s => {
+          const libre = checkSlotFree(calDate, s, people);
+          const selected = calSelectedTime === s;
+          return `<button type="button" class="btn btn-sm" ${libre?'':'disabled'} style="min-height:40px;${selected?'background:var(--olive);color:#fff;border-color:var(--olive)':(libre?'':'opacity:.4;text-decoration:line-through')}" onclick="calPickSlot('${calDate}','${s}')">${s}</button>`;
+        }).join('')}
+      </div>`}
+    `;
+  } else if(calView === 'semana'){
+    const jsDay = new Date(calDate + 'T00:00:00').getDay();
+    const monday = addDaysStr(calDate, -((jsDay + 6) % 7));
+    const dias = Array.from({length:7}, (_, i) => addDaysStr(monday, i));
+    body = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <button type="button" class="btn btn-sm" ${addDaysStr(monday,-7)<todayStr() && monday<=todayStr() ?'disabled':''} onclick="calNav(-7)">‹</button>
+        <strong style="font-size:12.5px">${escapeHtml(fechaLegibleCorta(monday))} – ${escapeHtml(fechaLegibleCorta(dias[6]))}</strong>
+        <button type="button" class="btn btn-sm" onclick="calNav(7)">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+        ${dias.map(d => {
+          const status = computeDayStatus(d, people);
+          const numDia = new Date(d+'T00:00:00').getDate();
+          return `<button type="button" class="btn btn-sm" style="flex-direction:column;min-height:52px;padding:4px 2px;${d===todayStr()?'border-color:var(--ink)':''}" ${status==='pasado'?'disabled':''} onclick="calGoToDay('${d}')">
+            <span style="font-size:9.5px;color:var(--muted)">${getDiasSemana()[(new Date(d+'T00:00:00').getDay()+6)%7].slice(0,3)}</span>
+            <span style="font-size:13px;font-weight:700">${numDia}</span>
+            <span style="width:7px;height:7px;border-radius:50%;background:${CAL_DOT[status]};margin-top:2px"></span>
+          </button>`;
+        }).join('')}
+      </div>
+    `;
+  } else { // mes
+    const first = calDate.slice(0,8) + '01';
+    const jsDay = new Date(first + 'T00:00:00').getDay();
+    const startGrid = addDaysStr(first, -((jsDay + 6) % 7));
+    const mesActual = calDate.slice(0,7);
+    const celdas = Array.from({length:42}, (_, i) => addDaysStr(startGrid, i));
+    body = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <button type="button" class="btn btn-sm" onclick="calDate=addMonthsStr(calDate,-1);renderReservaCalendar()">‹</button>
+        <strong style="font-size:13.5px">${escapeHtml(nombreMes(calDate))}</strong>
+        <button type="button" class="btn btn-sm" onclick="calDate=addMonthsStr(calDate,1);renderReservaCalendar()">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:9.5px;color:var(--muted);text-align:center;margin-bottom:2px">
+        ${getDiasSemana().map(d => `<div>${d.slice(0,1)}</div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">
+        ${celdas.map(d => {
+          const fueraDeMes = d.slice(0,7) !== mesActual;
+          const status = computeDayStatus(d, people);
+          const numDia = new Date(d+'T00:00:00').getDate();
+          return `<button type="button" class="btn btn-sm" style="min-height:36px;padding:2px;flex-direction:column;opacity:${fueraDeMes?'.3':'1'};${d===todayStr()?'border-color:var(--ink)':''}" ${status==='pasado'?'disabled':''} onclick="calGoToDay('${d}')">
+            <span style="font-size:11.5px">${numDia}</span>
+            <span style="width:6px;height:6px;border-radius:50%;background:${CAL_DOT[status]}"></span>
+          </button>`;
+        }).join('')}
+      </div>
+    `;
+  }
+  box.innerHTML = tabs + body + `
+    <div style="display:flex;gap:12px;margin-top:10px;font-size:11px;color:var(--muted)">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CAL_DOT.libre};margin-right:4px"></span>${t('cal.leyendaLibre')}</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CAL_DOT.lleno};margin-right:4px"></span>${t('cal.leyendaLleno')}</span>
+    </div>
+  `;
+}
+function fechaLegible(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  return getDiasSemana()[(d.getDay()+6)%7] + ' ' + d.getDate() + ' ' + nombreMes(dateStr).split(' ')[0];
+}
+function fechaLegibleCorta(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.getDate() + '/' + (d.getMonth()+1);
+}
+const MESES_I18N = {
+  es: ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],
+  ca: ['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],
+  en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+};
+function nombreMes(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  const nombres = MESES_I18N[currentLang] || MESES_I18N.es;
+  return nombres[d.getMonth()] + ' ' + d.getFullYear();
+}
+
 function renderReservaForm(){
   const box = document.getElementById('tab-content');
   box.innerHTML = `
@@ -1717,20 +1932,15 @@ function renderReservaForm(){
         <input type="email" id="r-email" placeholder="${t('email.reserva.placeholder')}" required>
         <small style="color:var(--muted)">${t('email.reserva.hint')}</small>
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label>${t('fecha')}</label>
-          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('r-date','r-time','r-hour-hint'); applyLeadTime('r-date','r-time','r-hour-hint','reserva')">
-        </div>
-        <div class="field">
-          <label>${t('hora')}</label>
-          <input type="time" id="r-time" value="20:00">
-        </div>
-      </div>
-      <div id="r-hour-hint"></div>
       <div class="field">
         <label>${t('personas')}</label>
-        <input type="number" id="r-people" value="2" min="1" max="50" oninput="updateDepositNoticeUi()">
+        <input type="number" id="r-people" value="2" min="1" max="50" oninput="updateDepositNoticeUi();renderReservaCalendar()">
+      </div>
+      <div class="field">
+        <label>${t('fecha')} / ${t('hora')}</label>
+        <div id="r-cal"></div>
+        <input type="hidden" id="r-date" value="">
+        <input type="hidden" id="r-time" value="">
       </div>
       <div class="field">
         <label>${t('notas')}</label>
@@ -1757,8 +1967,9 @@ function renderReservaForm(){
       <button class="btn btn-primary" id="r-submit" onclick="submitReserva()"></button>
     </div>
   `;
-  updateTimeInputRange('r-date','r-time','r-hour-hint');
-  applyLeadTime('r-date','r-time','r-hour-hint','reserva');
+  calView = 'dia';
+  calDate = todayStr();
+  renderReservaCalendar();
   updateDepositNoticeUi();
 }
 

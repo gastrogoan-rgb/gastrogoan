@@ -135,7 +135,7 @@ caso('La señal de reserva se puede pedir solo a partir de un número de persona
   assert.ok(m[0].includes('depositMinPeople'), 'no lee el umbral de personas (depositMinPeople)');
   assert.ok(publica.includes('depositAppliesForPeople(people)') && !publica.includes('!!(DB.business||{}).requireDeposit && redsysConfigured'),
     'submitReserva sigue exigiendo la señal a TODAS las reservas sin mirar el umbral de personas');
-  assert.ok(publica.includes("oninput=\"updateDepositNoticeUi()\""),
+  assert.ok(/oninput="[^"]*updateDepositNoticeUi\(\)/.test(publica),
     'el aviso de señal y el texto del botón no se actualizan al cambiar el número de personas, sin recargar la página');
 });
 
