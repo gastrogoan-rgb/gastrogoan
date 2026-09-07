@@ -1,24 +1,15 @@
-// 5/09/2026, "Confirmación de reservas por email" (Mi Negocio):
-// - Al guardar la configuración salía el mensaje de "Configuración de pago
-//   guardada" (copiado de Redsys, no del email).
-// - Modificar una reserva desde "Gestionar mi reserva" en la web pública no
-//   avisaba nunca al cliente, ni de que quedó confirmada a la nueva hora ni
-//   de nada — solo existían los avisos de alta y de cancelación.
-// - La guía paso a paso (y el resumen del manual de Ayuda) ya no coincidían
-//   con la web real de EmailJS: el botón de conectar un email ya no se llama
-//   "Add New Email Service" sino "Add New Service"; hace falta entrar en
-//   "Code Editor" para poder pegar texto con {{llaves}} en una plantilla; y
-//   la Public Key vive en "Account" → "API Keys", no en "Account" a secas.
-//   El manual de Ayuda además solo hablaba de UNA plantilla y nunca mencionaba
-//   {{manage_link}} — un negocio que lo siguiera al pie de la letra nunca
-//   dejaba a sus clientes cancelar o cambiar la hora desde el email.
+// Pruebas estáticas (leen el código fuente con regex, no lo ejecutan) sobre
+// reservas, pedidos y varios hallazgos sueltos a lo largo del proyecto —
+// nombre del archivo heredado de cuando empezó siendo solo sobre el email de
+// confirmación de reservas (7/09/2026: se quitó EmailJS de toda la app,
+// sustituido por el seguimiento en vivo + "accede a tu reserva" + aviso por
+// WhatsApp/email nativo al cancelar/editar; ver más abajo).
 //
-// Prueba ESTÁTICA a propósito: el flujo de modificación corre dentro del
-// listener de Firebase (initPublicRequestsListener), que solo se puede
-// probar de verdad contra el emulador oficial (test/emulador/) — coste alto
-// para un cambio que sigue al pie de la letra el mismo patrón ya usado (y
-// verificado en producción) para una reserva nueva, 20 líneas más arriba en
-// la misma función.
+// Muchas de estas pruebas son ESTÁTICAS a propósito: el flujo real corre
+// dentro del listener de Firebase (initPublicRequestsListener), que solo se
+// puede probar de verdad contra el emulador oficial (test/emulador/) — coste
+// alto para cambios que siguen al pie de la letra un patrón ya usado y
+// verificado en producción.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -41,78 +32,14 @@ function caso(nombre, fn){
   catch(e){ fallos++; console.error(`❌ ${nombre}\n   ${e.message}`); }
 }
 
-caso('Guardar la config de email de reservas no dice "pago guardado"', () => {
-  const m = core.match(/function saveEmailConfirmConfig\(\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró saveEmailConfirmConfig');
-  assert.ok(!m[0].includes('msg.payConfigSaved'), 'sigue mostrando el mensaje de Redsys al guardar el email de reservas');
-  assert.ok(m[0].includes('msg.emailConfirmConfigSaved'), 'no usa un mensaje propio de confirmación');
-});
 
-caso('Modificar una reserva desde la web pública avisa al cliente con su PROPIA plantilla, no la de confirmación', () => {
-  const bloque = core.match(/\}else if\(req\.type === 'reserva_modificar'\)\{[\s\S]*?\n      \}else if\(req\.type === 'nps_response'\)/);
-  assert.ok(bloque, 'no se encontró el manejador de reserva_modificar');
-  assert.ok(bloque[0].includes('sendReservationModificationEmail'),
-    'reserva_modificar no envía ningún email (o reutiliza el de confirmación) — el cliente cambia la hora y no se entera, o recibe un "confirmada" confuso al cambiar solo la hora');
-  assert.ok(!bloque[0].includes('sendReservationConfirmationEmail'),
-    'reserva_modificar reutiliza el email de CONFIRMACIÓN — un cliente que solo cambia la hora de una reserva ya confirmada no debe recibir otra vez "tu reserva está confirmada"');
-});
 
-caso('sendReservationModificationEmail usa su propia plantilla (modifyTemplateId), no la de confirmación', () => {
-  const m = core.match(/function sendReservationModificationEmail\(reservation, overrideCfg\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró sendReservationModificationEmail');
-  assert.ok(m[0].includes('cfg.modifyTemplateId') && m[0].includes('emailjs.send(cfg.serviceId, cfg.modifyTemplateId'),
-    'no usa un Template ID propio para la modificación');
-});
 
-caso('La guía de EmailJS usa los nombres reales de los botones actuales (no los antiguos)', () => {
-  const m = core.match(/const EMAILJS_GUIDE_STEPS = \[[\s\S]*?\n\];/);
-  assert.ok(m, 'no se encontró EMAILJS_GUIDE_STEPS');
-  assert.ok(m[0].includes('Add New Service'), 'sigue diciendo "Add New Email Service" (el botón real es "Add New Service")');
-  assert.ok(!m[0].includes('Add New Email Service'), 'todavía queda el nombre de botón antiguo');
-  assert.ok(m[0].includes('Code Editor'), 'no explica que hay que entrar en "Code Editor" para pegar las {{variables}}');
-  assert.ok(m[0].includes('API Keys'), 'sigue diciendo que la Public Key está en "Account" a secas (está en "Account" → "API Keys")');
-});
 
-caso('Los botones de copiar plantilla de la guía llaman a copyEmailJsTemplate, para las CUATRO plantillas', () => {
-  assert.ok(core.includes('function copyEmailJsTemplate'), 'no se encontró copyEmailJsTemplate');
-  assert.ok(core.includes("onclick=\"copyEmailJsTemplate('confirm')\""), 'la plantilla de confirmación no tiene botón de copiar');
-  assert.ok(core.includes("onclick=\"copyEmailJsTemplate('modify')\""), 'la plantilla de modificación no tiene botón de copiar');
-  assert.ok(core.includes("onclick=\"copyEmailJsTemplate('order')\""), 'la plantilla de pedido aceptado no tiene botón de copiar');
-  assert.ok(core.includes("onclick=\"copyEmailJsTemplate('cancel')\""), 'la plantilla de cancelación no tiene botón de copiar');
-});
 
-caso('La tarjeta de Mi Negocio pide y prueba las CUATRO plantillas (confirmación, modificación, pedido aceptado, cancelación)', () => {
-  const m = core.match(/function renderEmailConfirmCard\(\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró renderEmailConfirmCard');
-  ['ec-template', 'ec-modify-template', 'ec-order-template', 'ec-cancel-template', 'ec-pubkey'].forEach(id => {
-    assert.ok(m[0].includes(`id="${id}"`), `falta el campo ${id} en la tarjeta de configuración`);
-  });
-  assert.ok(m[0].includes('testEmailModifyConfig()'), 'falta el botón para probar la plantilla de modificación');
-  assert.ok(m[0].includes('testEmailOrderConfig()'), 'falta el botón para probar la plantilla de pedido aceptado');
-});
 
-caso('Aceptar un pedido online (para llevar/domicilio) envía un email de confirmación con enlace de seguimiento', () => {
-  assert.ok(tpv.includes('function acceptOnlineOrder'), 'no se encontró acceptOnlineOrder en tpv.js');
-  const m = tpv.match(/async function acceptOnlineOrder\(orderId, auto\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se pudo aislar el cuerpo de acceptOnlineOrder');
-  assert.ok(m[0].includes('sendOrderConfirmationEmail'),
-    'aceptar un pedido para llevar/domicilio no envía ningún email — el cliente no sabe si se está preparando ni tiene enlace para seguir el estado');
-});
 
-caso('sendOrderConfirmationEmail usa su propia plantilla y el enlace de seguimiento del pedido', () => {
-  const m = core.match(/function sendOrderConfirmationEmail\(order, overrideCfg\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró sendOrderConfirmationEmail');
-  assert.ok(m[0].includes('cfg.orderTemplateId') && m[0].includes('emailjs.send(cfg.serviceId, cfg.orderTemplateId'),
-    'no usa un Template ID propio para el pedido aceptado');
-  assert.ok(m[0].includes('getOrderTrackingLink(order)'), 'no incluye el enlace de seguimiento del pedido (track_link)');
-});
 
-caso('El manual de Ayuda menciona las CUATRO plantillas y los enlaces de gestión/seguimiento', () => {
-  assert.ok(app.includes('manage_link'), 'el manual de Ayuda no menciona {{manage_link}} — un negocio que lo siguiera al pie de la letra nunca daría a sus clientes forma de cancelar/modificar una reserva desde el email');
-  assert.ok(app.includes('track_link'), 'el manual de Ayuda no menciona {{track_link}} — un negocio que lo siguiera al pie de la letra nunca daría a sus clientes forma de seguir el estado de un pedido desde el email');
-  assert.ok(/segunda plantilla/.test(app) && /tercera plantilla/.test(app) && /cuarta vez/.test(app),
-    'el manual de Ayuda no explica que hacen falta CUATRO plantillas (confirmación, modificación, pedido aceptado y cancelación)');
-});
 
 caso('El aviso de antelación vs. horario solo mira la antelación de PEDIDOS, no la de reservas', () => {
   // 5/09/2026: el dueño reportó que el aviso "la antelación es mayor que el
@@ -386,24 +313,7 @@ caso('Desactivar el TPV virtual no borra la configuración local si el Worker re
   assert.ok(idxThrow !== -1 && idxLimpieza > idxThrow, 'la limpieza de campos locales sigue ocurriendo antes de comprobar si el Worker confirmó la desactivación');
 });
 
-caso('El email de confirmación de reserva no sale si la reserva sigue pendiente de señal (hallazgo de Codex)', () => {
-  // Antes se enviaba con solo tener mesa asignada, aunque el status siguiera
-  // 'pendiente' por exigir señal — el cliente recibía "reserva confirmada"
-  // aunque hubiera abandonado el pago de la señal a mitad.
-  const m = core.match(/if\(req\.type === 'reserva'\)\{[\s\S]*?notifyNewRequest = true;\n\s*\}else if\(req\.type === 'reserva_cancelar'\)/);
-  assert.ok(m, 'no se encontró el bloque de alta de reserva pública');
-  assert.ok(m[0].includes("newReservation.status === 'confirmada' && typeof sendReservationConfirmationEmail"),
-    'el email de confirmación se envía sin comprobar que la reserva esté realmente confirmada');
-  assert.ok(!m[0].includes("if(confirmedTableId && typeof sendReservationConfirmationEmail"),
-    'sigue quedando la condición vieja (solo mesa asignada, sin comprobar el status)');
-});
 
-caso('El email de confirmación SÍ sale cuando la señal se confirma más tarde (para no dejar esas reservas sin ningún aviso)', () => {
-  const m = core.match(/const reservationPaid = \(DB\.reservations\|\|\[\]\)\.find[\s\S]*?logAudit\('edit', t\('audit\.depositConfirmed'\)/);
-  assert.ok(m, 'no se encontró el bloque de confirmación de depósito de reserva');
-  assert.ok(m[0].includes('const pasaAConfirmada =') && m[0].includes('sendReservationConfirmationEmail({...reservationPaid'),
-    'la confirmación del depósito no dispara el email de confirmación que se difirió al crear la reserva');
-});
 
 caso('El guardado local se espera ANTES de borrar la solicitud pública de Firebase (evita perder un pedido/reserva si el dispositivo se cierra en ese hueco)', () => {
   const m = core.match(/reqRef\.child\('_claimedAt'\)\.transaction[\s\S]*?\}\)\.catch\(e => console\.error\('Error reclamando solicitud pública', e\)\);/);
@@ -495,22 +405,7 @@ caso('La web pública recibe la zona de reparto y el coste de envío del negocio
     'sin "pedidos" en la lista blanca del espejo público, reservagastrogoan.html siempre ve `p = {}`: acepta CUALQUIER código postal sin avisar y nunca cobra el envío a domicilio, aunque el negocio los tenga configurados. Se detectó pidiendo de verdad con un CP fuera de la zona configurada.');
 });
 
-caso('No se puede activar Take Away/Delivery sin el email de confirmación configurado', () => {
-  const m = app.match(/function toggleTipoServicio\(tipo, checked\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró toggleTipoServicio');
-  assert.ok(/checked && \(tipo === 'takeaway' \|\| tipo === 'delivery'\) && !emailConfirmIsConfigured\(\)/.test(m[0]),
-    'activar takeaway o delivery no comprueba que el email de confirmación esté configurado — el cliente que pide para llevar/a domicilio no recibe ningún aviso si cierra la pestaña de seguimiento');
-  assert.ok(/showToast\(t\('msg\.needEmailForOnlineOrders'\)\)/.test(m[0]),
-    'el bloqueo debe avisar de por qué, no fallar en silencio (mesa sí puede activarse sin email: solo takeaway/delivery lo necesitan)');
-  assert.ok(!/checked && \(tipo === 'mesa'/.test(m[0]), 'el servicio de mesa no debería exigir email (se sirve en persona)');
-});
 
-caso('Mi Negocio avisa si ya hay Take Away/Delivery activo sin email configurado (no es solo al activarlo)', () => {
-  const m = core.match(/function renderPedidosConfigCard\(\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró renderPedidosConfigCard');
-  assert.ok(m[0].includes('emailConfirmIsConfigured()') && m[0].includes("t('mn.pedidos.emailMissingWarning')"),
-    'un negocio que ya tenía takeaway/delivery activo ANTES de exigir el email (todos los que ya vendían) no ve ningún aviso de que sus clientes no reciben confirmación');
-});
 
 caso('El código postal avisa al momento si entra o no en la zona de reparto, sin esperar a enviar el pedido', () => {
   const m = publica.match(/function checkCpLive\(\)\{[\s\S]*?\n\}/);
@@ -521,14 +416,6 @@ caso('El código postal avisa al momento si entra o no en la zona de reparto, si
   assert.ok(publica.includes('oninput="checkCpLive()"'), 'el campo de código postal no dispara la comprobación al escribir');
 });
 
-caso('Mi Negocio avisa también si hay reservas de mesa online sin email configurado', () => {
-  const m = app.match(/<div class="card mn-grid-full">\s*<h3><i class="ti ti-layout-grid"><\/i> \$\{t\('mn\.ops\.title'\)\}<\/h3>[\s\S]*?<div class="field">\s*<label>\$\{t\('mn\.ops\.capacity'\)\}<\/label>/);
-  assert.ok(m, 'no se encontró la tarjeta de Operativa (mn.ops.title)');
-  assert.ok(m[0].includes('tiposServicio.mesa && !emailConfirmIsConfigured()'),
-    'la tarjeta de Operativa (donde viven aforo, duración y antelación de reservas) no avisa de que las reservas de mesa online necesitan el email de confirmación');
-  assert.ok(m[0].includes("t('mn.ops.emailMissingWarning')") && m[0].includes("scrollToMnCard('mn-card-email')"),
-    'el aviso debe explicar por qué y llevar directo a la tarjeta de email, igual que ya hace el de Redsys');
-});
 
 caso('El cliente puede guardarse/enviarse el enlace de seguimiento sin depender del email', () => {
   const m = publica.match(/function shareTrackUrl\(url, isReserva, btnEl\)\{[\s\S]*?\n\}/);

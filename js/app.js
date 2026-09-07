@@ -2919,27 +2919,11 @@ async function setReservationStatus(id, status){
   // cuando se cobra la venta (tpv.js). Sumarlo también al confirmar duplicaba
   // el punto por una sola visita, y dejaba un punto "fantasma" si el cliente
   // acababa siendo un no-show.
-  const wasConfirmed = r.status === 'confirmada';
-  const wasCancelled = r.status === 'cancelada';
   r.status = status;
   saveDB();
   if(r.publicToken && typeof syncReservationStatusForPublic === 'function') syncReservationStatusForPublic(r);
   renderReservas();
   showToast(status==='confirmada' ? t('msg.reservationConfirmed') : status==='cancelada' ? t('msg.reservationCancelled') : t('msg.reservationRejected'));
-  // El aviso al cliente solo tiene sentido la primera vez que pasa a
-  // confirmada (p.ej. cuando el personal por fin le asigna mesa a una que se
-  // había quedado pendiente) — no en cada guardado posterior de una reserva
-  // que ya estaba confirmada.
-  if(status === 'confirmada' && !wasConfirmed && typeof sendReservationConfirmationEmail === 'function'){
-    const table = r.tableId ? DB.tables.find(t=>t.id===r.tableId) : null;
-    sendReservationConfirmationEmail({...r, tableName: table ? table.name : ''}).catch(()=>{});
-  }
-  // Igual con la cancelación: solo se avisa la primera vez que pasa a
-  // 'cancelada' (cubre tanto cancelar una ya confirmada como rechazar una
-  // que estaba pendiente — para el cliente es la misma noticia).
-  if(status === 'cancelada' && !wasCancelled && typeof sendReservationCancellationEmail === 'function'){
-    sendReservationCancellationEmail(r).catch(()=>{});
-  }
 }
 
 function goToReservasDia(date){
@@ -3655,10 +3639,7 @@ function sendReservationReminderEmail(id){
 // fecha/hora) — mismo patrón que el recordatorio de arriba (WhatsApp/email
 // vía enlaces nativos, sin ninguna API de pago ni backend), pero con su
 // propio texto y sin tocar reminderSentAt (es un aviso distinto, no un
-// recordatorio de que se acerca la reserva). El email automático
-// (sendReservationCancellationEmail) ya existe y sigue mandándose solo si
-// está configurado — esto es la red de seguridad para cuando no lo está, o
-// para cuando el negocio prefiere avisar por WhatsApp.
+// recordatorio de que se acerca la reserva).
 function openReservationNotifyChangeModal(id, tipo){
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
@@ -5251,7 +5232,6 @@ function renderMiNegocio(){
 
     <div class="card mn-grid-full">
       <h3><i class="ti ti-layout-grid"></i> ${t('mn.ops.title')}</h3>
-      ${(tiposServicio.mesa && !emailConfirmIsConfigured()) ? `<div class="card" style="border:2px solid var(--red);background:var(--red-l);margin-bottom:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><i class="ti ti-mail-exclamation" style="font-size:20px;color:var(--red);flex-shrink:0"></i><span style="font-size:13.5px;flex:1;min-width:200px">${t('mn.ops.emailMissingWarning')}</span><button class="btn btn-sm" onclick="scrollToMnCard('mn-card-email')" type="button"><i class="ti ti-mail"></i> ${t('mn.ops.goToEmail')}</button></div>` : ''}
       <div class="field">
         <label>${t('mn.ops.capacity')}</label>
         <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40" onchange="saveBusiness(true)">
@@ -5356,8 +5336,6 @@ function renderMiNegocio(){
     ${renderDeliveryPlatformsCard()}
 
     ${renderRedsysCard()}
-
-    ${renderEmailConfirmCard()}
 
     ${renderVerifactuConfigCard()}
 
@@ -5991,19 +5969,6 @@ function toggleReservaConfirmManual(checked){
 // Activa/desactiva un tipo de servicio (mesa/takeaway/delivery) y lo guarda al
 // instante. Debe quedar siempre al menos un servicio activo.
 function toggleTipoServicio(tipo, checked){
-  // Take Away y Delivery se piden desde la web pública, sin nadie del
-  // negocio delante: la única confirmación que recibe el cliente si cierra
-  // la pestaña es el email (EmailJS). Sin email configurado, el pedido se
-  // acepta o rechaza igual, pero el cliente no se entera de nada salvo que
-  // se quede mirando el enlace de seguimiento en vivo. Encenderlo sin avisar
-  // de esto es la misma trampa que "un permiso que se niega en silencio":
-  // aquí en cambio el que calla no es un permiso, es un aviso al cliente.
-  if(checked && (tipo === 'takeaway' || tipo === 'delivery') && !emailConfirmIsConfigured()){
-    showToast(t('msg.needEmailForOnlineOrders'));
-    const el = document.getElementById('mn-serv-'+tipo);
-    if(el) el.checked = false;
-    return;
-  }
   const actual = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
   const nuevo = {
     mesa: actual.mesa !== false,
@@ -8048,21 +8013,13 @@ const MANUAL_CHAPTERS = [
     <p>Las reservas que un cliente hace desde tu página web pública se confirman <strong>solas</strong>: la app le asigna mesa automáticamente si hay una libre con plazas suficientes para esa hora, sin que tengas que hacer nada. Solo si ningún hueco encaja bien (por ejemplo un grupo grande y solo quedan mesas pequeñas sueltas), la reserva se queda en <strong>"Solicitudes online pendientes"</strong> esperando a que le asignes mesa tú a mano — ahí ya no hace falta revisar nada más, todo lo demás (aforo, horario) ya se comprobó al recibirla.</p>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Revisa "Solicitudes online pendientes" varias veces al día, especialmente antes de cada servicio, por si ha quedado alguna reserva grande esperando mesa.</div>
 
-    <h4>Que el cliente se entere: confirmación por email</h4>
-    <p>Para que el cliente sepa con seguridad si su reserva o pedido está aceptado (y no se quede con la duda), puedes activar el envío automático de un email en cuanto se confirme una reserva, se modifique, se cancele, o se acepte un pedido para llevar/domicilio —tanto si fue solo como si lo hiciste tú a mano—. Los emails de confirmación llevan un enlace para que el propio cliente pueda cambiar la hora, cancelar o seguir el estado sin llamarte. Se configura en <strong>Mi Negocio → Confirmación de reservas y pedidos por email</strong>, con una cuenta gratuita tuya de <strong>EmailJS</strong> (no hace falta programar nada). Aquí va el resumen; dentro de esa tarjeta hay un botón <strong>"¿Cómo lo configuro? Guía paso a paso"</strong> con el detalle completo:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Entra en <strong>emailjs.com</strong> y crea una cuenta gratis.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">En <strong>"Email Services" → "Add New Service"</strong>, elige Gmail (o el correo que uses), pulsa <strong>"Connect Account"</strong> e inicia sesión con Google, y para terminar <strong>"Add Service"</strong>. Copia el <strong>Service ID</strong> que aparece en la lista.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">En <strong>"Email Templates" → "Create New Template"</strong>, crea la plantilla de <strong>confirmación de reserva</strong>: en "To Email" pon <code>{{to_email}}</code>, entra en <strong>"Edit Content" → "Code Editor"</strong> y escribe el mensaje con estas variables tal cual: <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code> y <code>{{manage_link}}</code> (este último es el enlace para cambiar la hora o cancelar — sin él en el texto, el cliente no lo recibe). Guarda y copia el <strong>Template ID</strong> de la pestaña "Settings".</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">Repite el paso anterior para crear una <strong>segunda plantilla</strong>, la de <strong>modificación de reserva</strong> (mismas variables): avisa al cliente de que su reserva YA confirmada ha cambiado de fecha/hora, con un texto tipo "Tu reserva ha sido modificada" en vez de "está confirmada" — si reutilizas la de confirmación aquí, el cliente se confunde al recibir dos veces "confirmada". Copia su <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">Repite otra vez para crear una <strong>tercera plantilla</strong>, la de <strong>pedido aceptado</strong> — para PEDIDOS para llevar/domicilio, no reservas. Usa <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{type}}</code> (recogida/domicilio), <code>{{date}}</code>, <code>{{time}}</code> y <code>{{track_link}}</code> (el enlace para seguir el estado del pedido). Copia su <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">Repite una cuarta vez para crear la plantilla de <strong>cancelación</strong>, compartida entre reservas y pedidos (mismas variables, sin <code>{{manage_link}}</code> ni <code>{{track_link}}</code>). Copia también su <strong>Template ID</strong> — las cuatro son distintas entre sí.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">En <strong>"Account" → "API Keys"</strong>, copia tu <strong>Public Key</strong> (no el "Private Key" de al lado).</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">Pega los 6 códigos en <strong>Mi Negocio → Confirmación de reservas y pedidos por email</strong>, activa el interruptor y guarda. Pulsa los cuatro botones de prueba (<strong>"Enviar email de prueba"</strong>, <strong>"Probar modificación"</strong>, <strong>"Probar pedido aceptado"</strong> y <strong>"Probar cancelación"</strong>) con tu propio email para comprobar que los cuatro llegan.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Es totalmente gratis hasta 200 emails al mes — de sobra para un solo restaurante.</div>
+    <h4>Que el cliente se entere: seguimiento en vivo y aviso al cancelar</h4>
+    <p>Al reservar o pedir desde tu web pública, el cliente entra directamente en una pantalla con el estado en vivo de su reserva o pedido (con un número de referencia corto para decírtelo por teléfono), un botón para <strong>guardarse el enlace</strong> (se lo puede mandar él mismo por WhatsApp, notas, donde quiera) y, en reservas, botones para <strong>editar la hora o cancelar</strong> sin llamarte. Si perdió el enlace, puede recuperarlo desde <strong>"¿Ya reservaste? Accede a tu reserva"</strong> con su nombre, email y teléfono.</p>
+    <p>Si tú <strong>cancelas o cambias la fecha/hora</strong> de una reserva desde aquí, la app te ofrece al momento un aviso listo para mandar por <strong>WhatsApp o email</strong> (con el texto ya escrito) — un solo clic, sin necesidad de configurar nada de antemano.</p>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Los pedidos para llevar/domicilio no se autogestionan desde el enlace (no se pueden cancelar ni editar ahí): si el cliente necesita cambiar algo, ahí mismo se le muestra tu teléfono y tu email para que te escriba.</div>
 
     <h4>En el Panel de Control</h4>
-    <p>Las reservas de <strong>hoy y de mañana</strong> aparecen automáticamente en el Panel de Control, para que al abrir la app por la mañana ya sepas cuántos comensales esperas y puedas avisar a cocina y sala con tiempo.</p>
-    <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si cancelas o cambias una reserva ya confirmada, recuerda avisar al cliente por teléfono o WhatsApp: cancelar no le envía ningún mensaje automático (el email automático solo se manda al confirmarla).</div>`,
+    <p>Las reservas de <strong>hoy y de mañana</strong> aparecen automáticamente en el Panel de Control, para que al abrir la app por la mañana ya sepas cuántos comensales esperas y puedas avisar a cocina y sala con tiempo.</p>`,
     ca:`<h3>Què és i per a què serveix</h3>
     <p>Aquest mòdul és el teu llibre de reserves digital. Et permet veure i gestionar totes les reserves del teu negoci en tres vistes (Dia, Setmana, Mes), controlar l'aforament de cada torn i atendre automàticament les reserves que els teus clients facin des de la teva web pública (mòdul Reserves i Comandes en Línia).</p>
 
@@ -8097,21 +8054,13 @@ const MANUAL_CHAPTERS = [
     <p>Les reserves que un client fa des de la teva pàgina web pública es confirmen <strong>soles</strong>: l'app li assigna taula automàticament si n'hi ha una lliure amb places suficients per a aquella hora, sense que hagis de fer res. Només si cap taula encaixa bé (per exemple un grup gran i només queden taules petites soltes), la reserva es queda a <strong>"Sol·licituds en línia pendents"</strong> esperant que li assignis taula tu a mà — aquí ja no cal revisar res més, la resta (aforament, horari) ja s'ha comprovat en rebre-la.</p>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Revisa "Sol·licituds en línia pendents" diverses vegades al dia, especialment abans de cada servei, per si ha quedat alguna reserva gran esperant taula.</div>
 
-    <h4>Que el client s'assabenti: confirmació per email</h4>
-    <p>Perquè el client sàpiga amb seguretat si la seva reserva o comanda està acceptada (i no es quedi amb el dubte), pots activar l'enviament automàtic d'un email en confirmar-se una reserva, en modificar-la, en cancel·lar-se, o en acceptar una comanda per emportar/domicili —tant si va ser sol com si ho vas fer tu a mà—. Els emails de confirmació porten un enllaç perquè el mateix client pugui canviar l'hora, cancel·lar o seguir l'estat sense trucar-te. Es configura a <strong>El Meu Negoci → Confirmació de reserves i comandes per email</strong>, amb un compte gratuït teu d'<strong>EmailJS</strong> (no cal programar res). Aquí va el resum; dins d'aquesta targeta hi ha un botó <strong>"Com ho configuro? Guia pas a pas"</strong> amb el detall complet:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Entra a <strong>emailjs.com</strong> i crea un compte gratis.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">A <strong>"Email Services" → "Add New Service"</strong>, tria Gmail (o el correu que facis servir), prem <strong>"Connect Account"</strong> i inicia sessió amb Google, i per acabar <strong>"Add Service"</strong>. Copia el <strong>Service ID</strong> que apareix a la llista.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">A <strong>"Email Templates" → "Create New Template"</strong>, crea la plantilla de <strong>confirmació de reserva</strong>: a "To Email" posa <code>{{to_email}}</code>, entra a <strong>"Edit Content" → "Code Editor"</strong> i escriu el missatge amb aquestes variables tal qual: <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code> i <code>{{manage_link}}</code> (aquest últim és l'enllaç per canviar l'hora o cancel·lar — sense ell al text, el client no el rep). Desa i copia el <strong>Template ID</strong> de la pestanya "Settings".</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">Repeteix el pas anterior per crear una <strong>segona plantilla</strong>, la de <strong>modificació de reserva</strong> (mateixes variables): avisa el client que la seva reserva JA confirmada ha canviat de data/hora, amb un text tipus "La teva reserva ha estat modificada" en lloc de "està confirmada" — si reutilitzes la de confirmació aquí, el client es confon en rebre dues vegades "confirmada". Copia el seu <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">Repeteix una altra vegada per crear una <strong>tercera plantilla</strong>, la de <strong>comanda acceptada</strong> — per a COMANDES per emportar/domicili, no reserves. Usa <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{type}}</code> (recollida/domicili), <code>{{date}}</code>, <code>{{time}}</code> i <code>{{track_link}}</code> (l'enllaç per seguir l'estat de la comanda). Copia el seu <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">Repeteix una quarta vegada per crear la plantilla de <strong>cancel·lació</strong>, compartida entre reserves i comandes (mateixes variables, sense <code>{{manage_link}}</code> ni <code>{{track_link}}</code>). Copia també el seu <strong>Template ID</strong> — les quatre són diferents entre si.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">A <strong>"Account" → "API Keys"</strong>, copia la teva <strong>Public Key</strong> (no el "Private Key" del costat).</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">Enganxa els 6 codis a <strong>El Meu Negoci → Confirmació de reserves i comandes per email</strong>, activa l'interruptor i desa. Prem els quatre botons de prova (<strong>"Enviar email de prova"</strong>, <strong>"Provar modificació"</strong>, <strong>"Provar comanda acceptada"</strong> i <strong>"Provar cancel·lació"</strong>) amb el teu propi email per comprovar que arriben tots quatre.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>És totalment gratis fins a 200 emails al mes — de sobres per a un sol restaurant.</div>
+    <h4>Que el client s'assabenti: seguiment en viu i avís en cancel·lar</h4>
+    <p>En reservar o demanar des de la teva web pública, el client entra directament en una pantalla amb l'estat en viu de la seva reserva o comanda (amb un número de referència curt per dir-te'l per telèfon), un botó per <strong>desar-se l'enllaç</strong> (se'l pot enviar ell mateix per WhatsApp, notes, on vulgui) i, en reserves, botons per <strong>editar l'hora o cancel·lar</strong> sense trucar-te. Si va perdre l'enllaç, el pot recuperar des de <strong>"Ja vas reservar? Accedeix a la teva reserva"</strong> amb el seu nom, email i telèfon.</p>
+    <p>Si tu <strong>cancel·les o canvies la data/hora</strong> d'una reserva des d'aquí, l'app t'ofereix a l'instant un avís llest per enviar per <strong>WhatsApp o email</strong> (amb el text ja escrit) — un sol clic, sense necessitat de configurar res per endavant.</p>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Les comandes per emportar/domicili no s'autogestionen des de l'enllaç (no es poden cancel·lar ni editar allà): si el client necessita canviar alguna cosa, allà mateix se li mostra el teu telèfon i el teu email perquè t'escrigui.</div>
 
     <h4>Al Panell de Control</h4>
-    <p>Les reserves d'<strong>avui i de demà</strong> apareixen automàticament al Panell de Control, perquè en obrir l'app al matí ja sàpigues quants comensals esperes i puguis avisar cuina i sala amb temps.</p>
-    <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si cancel·les o canvies una reserva ja confirmada, recorda avisar el client per telèfon o WhatsApp: cancel·lar no li envia cap missatge automàtic (l'email automàtic només s'envia en confirmar-la).</div>`,
+    <p>Les reserves d'<strong>avui i de demà</strong> apareixen automàticament al Panell de Control, perquè en obrir l'app al matí ja sàpigues quants comensals esperes i puguis avisar cuina i sala amb temps.</p>`,
     en:`<h3>What it is and what it's for</h3>
     <p>This module is your digital reservation book. It lets you view and manage every reservation for your business in three views (Day, Week, Month), control each time slot's capacity, and automatically handle reservations your customers make from your public website (Reservations and Online Ordering module).</p>
 
@@ -8146,21 +8095,13 @@ const MANUAL_CHAPTERS = [
     <p>Reservations a customer makes from your public website confirm <strong>themselves</strong>: the app assigns a table automatically if there's a free one with enough seats for that time, with nothing for you to do. Only if no table fits well (say, a large group when only small separate tables are left) does the reservation stay in <strong>"Pending online requests"</strong> waiting for you to assign a table by hand — at that point there's nothing else to check, everything else (capacity, opening hours) was already validated when it came in.</p>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Check "Pending online requests" a few times a day, especially before each service, in case a large reservation is left waiting for a table.</div>
 
-    <h4>Letting the customer know: email confirmation</h4>
-    <p>So the customer knows for sure whether their reservation or order is accepted (instead of being left wondering), you can turn on an automatic email when a reservation is confirmed, modified, cancelled, or when you accept a takeaway/delivery order — whether that happened on its own or you did it by hand. The confirmation emails carry a link so the customer can change the time, cancel, or follow the order status without calling you. Set it up in <strong>My Business → Reservation and order confirmation by email</strong>, with your own free <strong>EmailJS</strong> account (no coding needed). Here's the summary; inside that card there's a <strong>"How do I set this up? Step-by-step guide"</strong> button with the full detail:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>emailjs.com</strong> and create a free account.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Under <strong>"Email Services" → "Add New Service"</strong>, pick Gmail (or whichever email you use), click <strong>"Connect Account"</strong> and sign in with Google, then <strong>"Add Service"</strong> to finish. Copy the <strong>Service ID</strong> shown in the list.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">Under <strong>"Email Templates" → "Create New Template"</strong>, build the <strong>reservation confirmation</strong> template: set "To Email" to <code>{{to_email}}</code>, open <strong>"Edit Content" → "Code Editor"</strong> and write the message with these variables as-is: <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code> and <code>{{manage_link}}</code> (this last one is the link to change the time or cancel — without it in the text, the customer won't get it). Save it and copy the <strong>Template ID</strong> from the "Settings" tab.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">Repeat the previous step to create a <strong>second template</strong>, the <strong>reservation modification</strong> one (same variables): it tells the customer their ALREADY confirmed reservation changed date/time, with wording like "Your reservation has been changed" instead of "is confirmed" — reusing the confirmation one here confuses the customer, who'd get "confirmed" twice. Copy its <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">Repeat once more to create a <strong>third template</strong>, the <strong>order accepted</strong> one — for takeaway/delivery ORDERS, not reservations. Use <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{type}}</code> (pickup/delivery), <code>{{date}}</code>, <code>{{time}}</code> and <code>{{track_link}}</code> (the link to follow the order status). Copy its <strong>Template ID</strong>.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">Repeat a fourth time to create the <strong>cancellation</strong> template, shared between reservations and orders (same variables, without <code>{{manage_link}}</code> or <code>{{track_link}}</code>). Copy its <strong>Template ID</strong> too — all four are different from each other.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">Under <strong>"Account" → "API Keys"</strong>, copy your <strong>Public Key</strong> (not the "Private Key" next to it).</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">Paste the 6 codes into <strong>My Business → Reservation and order confirmation by email</strong>, turn the switch on, and save. Click all four test buttons (<strong>"Send test email"</strong>, <strong>"Test modification"</strong>, <strong>"Test order accepted"</strong> and <strong>"Test cancellation"</strong>) with your own email to check all four arrive.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>It's completely free up to 200 emails a month — plenty for a single restaurant.</div>
+    <h4>Letting the customer know: live tracking and a notify-on-cancel prompt</h4>
+    <p>When a customer books or orders from your public site, they land straight on a live status screen (with a short reference number to give you over the phone), a button to <strong>save the link</strong> (they can send it to themselves via WhatsApp, notes, whatever they like), and, for reservations, buttons to <strong>change the time or cancel</strong> without calling you. If they lose the link, they can find it again from <strong>"Already booked? Access your reservation"</strong> with their name, email and phone.</p>
+    <p>If you <strong>cancel or change the date/time</strong> of a reservation from here, the app immediately offers a ready-to-send notice by <strong>WhatsApp or email</strong> (text already written) — one click, no setup needed beforehand.</p>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Takeaway/delivery orders aren't self-managed from the link (no cancel/edit there): if the customer needs to change something, your phone and email are shown right there so they can reach you.</div>
 
     <h4>On the Dashboard</h4>
-    <p><strong>Today's and tomorrow's</strong> reservations show up automatically on the Dashboard, so when you open the app in the morning you already know how many guests to expect and can give the kitchen and floor advance notice.</p>
-    <div class="manual-warning"><i class="ti ti-alert-triangle"></i>If you cancel or change an already-confirmed reservation, remember to notify the customer by phone or WhatsApp: cancelling doesn't send them any automatic message (the automatic email is only sent when confirming).</div>`},
+    <p><strong>Today's and tomorrow's</strong> reservations show up automatically on the Dashboard, so when you open the app in the morning you already know how many guests to expect and can give the kitchen and floor advance notice.</p>`},
   },
   {
     title:{es:'<i class="ti ti-device-desktop"></i> TPV', ca:'<i class="ti ti-device-desktop"></i> TPV', en:'<i class="ti ti-device-desktop"></i> POS'},
