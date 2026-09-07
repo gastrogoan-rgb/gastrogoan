@@ -3,160 +3,161 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GastroGoan · Generador de licencias (PRIVADO)</title>
+<title>GastroGoan · Panel de administración (PRIVADO)</title>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <style>
-:root{ --brand-orange:#DF7039; --brand-cream:#F6EDD5; --border:#E2DBC8; --muted:#777; }
+:root{ --ink:#1C1A17; --brand-orange:#DF7039; --brand-cream:#F6EDD5; --border:#E2DBC8; --muted:#777;
+       --green:#1F8A4C; --green-l:#EDF1EC; --red:#C0392B; --red-l:#F5EBE7; --amber:#B8860B; }
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--brand-cream);min-height:100vh;padding:24px}
-.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-header{background:#000;color:#fff;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:12px}
-header .logo{width:40px;height:40px;border-radius:10px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:20px}
-header h1{font-size:17px}
-header h1 span{display:block;font-size:11.5px;font-weight:400;color:#FFD60A;margin-top:2px}
-.card{background:#fff;border-radius:14px;padding:22px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
-.card h2{font-size:15px;margin-bottom:12px}
-label{font-size:12.5px;font-weight:700;display:block;margin-bottom:6px}
-input,select{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-size:14px;font-family:inherit;background:#fff}
-.key-out{background:var(--brand-cream);border:2px dashed var(--brand-orange);border-radius:10px;padding:16px;font-family:monospace;font-size:17px;font-weight:700;text-align:center;letter-spacing:1px;word-break:break-all;margin-top:14px}
-.btns{display:flex;gap:8px;margin-top:12px}
-button,.wa,#email{flex:1;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none}
-.gen{width:100%;background:var(--brand-orange);color:#fff;margin-top:14px;font-size:15px}
-.copy{background:#fff;color:#444;border:1.5px solid var(--border)}
-.wa{background:#25D366;color:#fff;display:block}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--brand-cream);min-height:100vh}
+.wrap{max-width:920px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+header{background:#000;color:#fff;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header .logo{width:40px;height:40px;border-radius:10px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+header h1{font-size:16px;flex:1;min-width:180px}
+header h1 span{display:block;font-size:11px;font-weight:400;color:#FFD60A;margin-top:2px}
+header .hd-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:none;border-radius:9px;padding:11px 14px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit;
+     min-height:44px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn-primary{background:var(--brand-orange);color:#fff}
+.btn-dark{background:var(--ink);color:#fff}
+.btn-light{background:#fff;color:#333;border:1.5px solid var(--border)}
+.btn-wa{background:#25D366;color:#fff}
+.btn-rojo{background:none;border:1.5px solid #E5B4AC;color:var(--red)}
+.btn-sm{min-height:36px;padding:6px 10px;font-size:12px}
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.tabs{display:flex;gap:8px;background:#fff;border-radius:12px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.tab{flex:1;text-align:center;padding:10px;border-radius:8px;font-weight:700;font-size:13.5px;cursor:pointer;color:var(--muted)}
+.tab.active{background:var(--ink);color:#fff}
+label{font-size:12px;font-weight:700;display:block;margin-bottom:5px;color:#333}
+input,select{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:11px;font-size:14px;font-family:inherit;background:#fff;min-height:44px}
+.muted{color:var(--muted);font-size:12.5px;line-height:1.5}
+.warn{background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.5}
+.hidden{display:none!important}
+
+/* Panel de login: gate real, nada del panel se pinta antes de tener sesión */
+#login-gate{max-width:420px;margin:60px auto}
+#login-gate .card{display:flex;flex-direction:column;gap:12px}
+
+/* Carpetas de cliente */
+.folder{border:1.5px solid var(--border);border-radius:14px;background:#fff;overflow:hidden}
+.folder-head{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap}
+.folder-ico{font-size:20px;flex:none}
+.folder-user{font-weight:700;font-size:15px}
+.folder-sub{font-size:12px;color:var(--muted)}
+.folder-pastilla{font-size:11px;padding:3px 9px;border-radius:99px;background:var(--brand-cream);color:#5a4a2e;white-space:nowrap}
+.folder-arrow{margin-left:auto;font-size:13px;color:var(--muted);flex:none}
+.folder-body{border-top:1.5px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.fila-dato{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;background:var(--brand-cream);border-radius:10px;padding:10px 12px}
+.dato-et{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.dato-val{font-family:monospace;font-weight:700;font-size:14px}
+.contacto-edit{display:flex;gap:8px;flex-wrap:wrap}
+.contacto-edit input{flex:1;min-width:160px}
+
+/* Licencias dentro de la carpeta */
+.lic{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.lic.revocada{background:var(--red-l);border-color:#E5B4AC}
+.lic-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lic-code{font-family:monospace;font-weight:700;font-size:15px;letter-spacing:.5px}
+.badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px}
+.badge-activa{background:var(--green-l);color:var(--green)}
+.badge-revocada{background:var(--red-l);color:var(--red);border:1px solid #E5B4AC}
+.lic-fechas{font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.lic-btns{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Modal genérico */
+.modal-fondo{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{background:#fff;border-radius:14px;padding:22px;max-width:420px;width:100%;display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow:auto}
+.modal h3{font-size:16px}
+.key-out{background:var(--brand-cream);border:2px dashed var(--brand-orange);border-radius:10px;padding:14px;font-family:monospace;font-size:15px;font-weight:700;text-align:center;line-height:1.6}
+
+/* Calendario de cobros */
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.cal-mes{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;background:#fff}
+.cal-mes h4{font-size:13.5px;margin-bottom:8px;text-transform:capitalize}
+.cal-lic{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer}
+.cal-lic:last-child{border-bottom:none}
+.cal-lic:hover{color:var(--brand-orange)}
+.cal-vacio{color:var(--muted);font-size:12px}
+
+/* Historial de ventas (flat, opcional) */
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
 th{color:var(--muted);font-size:11px;text-transform:uppercase}
 td.key{font-family:monospace;font-size:11px}
-.muted{color:var(--muted);font-size:12px;line-height:1.5}
-.warn{background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5}
-.del{background:none;border:none;color:#C0392B;cursor:pointer;font-size:12px;padding:2px 6px;flex:none}
-
-/* Registro de ventas agrupado por cuenta. La tabla plana anterior ponía en
-   la misma columna ("Dato") el usuario de una cuenta y el código de un
-   negocio, y repetía el usuario en la de al lado: era imposible ver de un
-   vistazo con qué entra el cliente y con qué añade el local. */
-.cuenta{border:1.5px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden}
-.cuenta-cab{background:var(--brand-cream);padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
-.cuenta-nom{font-weight:700;font-size:14px;flex:1;min-width:180px}
-.cred{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center}
-.cred-et{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-.cred-val{font-family:monospace;font-weight:700;font-size:14px}
-.locales{padding:4px 14px 12px}
-.local{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
-.local:last-child{border-bottom:none}
-.local-cod{font-family:monospace;font-weight:700;font-size:14px}
-.local-nom{flex:1;min-width:120px;font-size:13px}
-.pastilla{font-size:11px;padding:2px 8px;border-radius:99px;background:#EEE;color:#555;white-space:nowrap}
-.acc{border:1.5px solid var(--border);background:#fff;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;
-     cursor:pointer;flex:none;font-family:inherit;color:#444}
-.acc-rojo{border-color:#E5B4AC;color:#C0392B}
-.anulada{opacity:.5}
-.anulada .local-cod{text-decoration:line-through}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="logo">🔑</div>
-    <h1>Generador de licencias GastroGoan<span>ARCHIVO PRIVADO — no lo envíes NUNCA a ningún cliente</span><span style="display:block;margin-top:4px;font-weight:400;opacity:.75">Versión 02/09/2026 23:17</span></h1>
-  </header>
 
+<div id="login-gate" class="wrap">
   <div class="card">
-    <button class="copy" style="width:100%" onclick="ensureAdminLogin()">🔐 Iniciar sesión de administrador (necesario para que la licencia sea válida de verdad)</button>
-    <p id="admin-login-status" class="muted" style="margin-top:8px">Sin sesión de administrador todavía — los códigos que generes no se podrán activar en la app hasta iniciarla.</p>
-  </div>
-
-  <div class="card">
-    <h2>1 · Cuenta de propietario (usuario + PIN)</h2>
-    <p class="muted" style="margin-bottom:12px">Se crea <strong>una sola vez por cliente</strong>, con el nombre de usuario que haya pedido al pagar. Con ella entra en la app desde cualquier dispositivo; los negocios se le añaden después con los códigos del paso 2.</p>
-    <label>Nombre de usuario que ha pedido el cliente</label>
-    <input id="owner-name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')genOwner()" oninput="document.getElementById('owner-check-status').innerHTML=''">
-    <label style="margin-top:12px">Qué contestó al pagar en Stripe</label>
-    <select id="stripe-answer" onchange="document.getElementById('owner-check-status').innerHTML=''">
-      <option value="">— No lo sé / no contestó —</option>
-      <option value="nuevo">Dijo que es su PRIMERA licencia</option>
-      <option value="existente">Dijo que YA tiene cuenta</option>
-    </select>
-    <div class="btns">
-      <button class="copy" onclick="checkOwnerName()">🔎 ¿Qué le tengo que dar?</button>
-    </div>
-    <p id="owner-check-status" class="muted" style="margin-top:8px"></p>
-    <button class="gen" id="owner-btn" onclick="genOwner()">Crear cuenta de propietario</button>
-    <p id="owner-status" class="muted" style="margin-top:8px"></p>
-    <div id="owner-out" style="display:none">
-      <div class="key-out" id="owner-key"></div>
-      <div class="btns">
-        <button class="copy" onclick="copyBox('owner-key')">📋 Copiar</button>
-        <a class="wa" id="owner-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
-        <a class="copy" id="owner-email" style="background:#fff;color:#444;border:1.5px solid var(--border);text-decoration:none">✉️ Email</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>2 · Código de negocio</h2>
-    <p class="muted" style="margin-bottom:12px">Uno por cada local que compre. El cliente lo canjea desde dentro de la app, en la pantalla de negocios. <strong>Ya no lleva contraseña</strong>: el código es lo único que hace falta.</p>
-    <label>Nombre del restaurante (solo para tu registro de ventas, no se guarda en la app)</label>
-    <input id="name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')gen()">
-    <label style="margin-top:12px">Usuario de la cuenta a la que va (opcional, solo para tu registro)</label>
-    <input id="code-owner" type="text" placeholder="Ej: casapaco" onkeydown="if(event.key==='Enter')gen()">
-    <button class="gen" id="gen-btn" onclick="gen()">Generar código de negocio</button>
-    <p id="uniqueness-status" class="muted" style="margin-top:8px"></p>
-    <div id="out" style="display:none">
-      <div class="key-out" id="key"></div>
-      <div class="btns">
-        <button class="copy" onclick="copyBox('key')">📋 Copiar</button>
-        <a class="wa" id="wa" target="_blank" rel="noopener">📱 WhatsApp</a>
-        <a class="copy" id="email" style="background:#fff;color:#444;border:1.5px solid var(--border);text-decoration:none">✉️ Email</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>3 · Restablecer el PIN de un cliente</h2>
-    <p class="muted" style="margin-bottom:12px">Solo si ha perdido el PIN <strong>y</strong> ya no le queda ningún dispositivo dentro. Si aún tiene alguno donde entrara alguna vez, no hace falta esto: que escriba <code>GGGG</code> en el campo del PIN y elija uno nuevo él mismo.</p>
-    <label>Usuario del cliente</label>
-    <input id="reset-user" type="text" placeholder="Ej: casapaco" onkeydown="if(event.key==='Enter')resetOwnerPin()">
-    <button class="gen" id="reset-btn" onclick="resetOwnerPin()">Darle un PIN nuevo</button>
-    <p id="reset-status" class="muted" style="margin-top:8px"></p>
-    <div id="reset-out" style="display:none">
-      <div class="key-out" id="reset-key"></div>
-      <div class="btns">
-        <button class="copy" onclick="copyBox('reset-key')">📋 Copiar</button>
-        <a class="wa" id="reset-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
-        <a class="copy" id="reset-email" style="background:#fff;color:#444;border:1.5px solid var(--border);text-decoration:none">✉️ Email</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>4 · Registro de ventas <span class="muted" id="count"></span></h2>
-    <p class="muted" style="margin-bottom:4px">Cada cuenta y cada código generado se apuntan aquí automáticamente. Con la sesión de administrador iniciada (botón de arriba), se sincroniza también con tus otros dispositivos.</p>
-    <p class="muted" style="margin-bottom:12px"><strong>Un cliente = una cuenta</strong> (con la que entra en la app) <strong>+ un código por cada local</strong> que te compre. Aquí van agrupados así.</p>
-    <div id="log"></div>
-    <p class="muted" id="empty">Aún no has generado nada.</p>
-    <div class="btns" id="export-row" style="display:none">
-      <button class="copy" onclick="exportCSV()">⬇ Descargar registro (CSV)</button>
-    </div>
-  </div>
-
-  <div class="warn">
-    ⚠️ <strong>Guarda este archivo a buen recaudo</strong> (y una copia de seguridad). Quien lo tenga puede generar códigos válidos. El registro de ventas se guarda en este navegador y, con la sesión de administrador iniciada, también en la nube de la plataforma — así que si pierdes o rompes el dispositivo, no lo pierdes: solo tienes que abrir este archivo en otro sitio e iniciar sesión de administrador para recuperarlo entero.
+    <h1 style="font-size:18px;margin-bottom:6px">🔑 Panel de administración GastroGoan</h1>
+    <p class="muted" style="margin-bottom:14px">Archivo privado. Inicia sesión con tu email y contraseña de administrador (Firebase Authentication).</p>
+    <label>Email</label>
+    <input id="login-email" type="email" placeholder="gastrogoan@gmail.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    <label style="margin-top:10px">Contraseña</label>
+    <input id="login-pass" type="password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="doLogin()">Entrar</button>
+    <p id="login-status" class="muted" style="margin-top:6px"></p>
   </div>
 </div>
 
-<script>
-/* Debe ser IDÉNTICO al de la app (js/core.js: ggLicHash, ggOwnerUser,
-   _ggOwnerSecret, ggOwnerDerive, ggOwnerAuthKey) — si cambias algo aquí,
-   cámbialo también allí.
+<div id="panel" class="wrap hidden">
+  <header>
+    <div class="logo">🔑</div>
+    <h1>Panel de administración GastroGoan<span>ARCHIVO PRIVADO — no lo envíes NUNCA a ningún cliente</span></h1>
+    <div class="hd-btns">
+      <button class="btn btn-light" onclick="openAgregarUsuario()">＋ Agregar usuario</button>
+      <button class="btn btn-light" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
 
-   Ya no se genera contraseña de negocio: desde el modelo de cuentas de
-   propietario, el código de negocio se canjea solo (ver el paso 2), y quien
-   demuestra ser el dueño es la cuenta usuario+PIN, no un par código+
-   contraseña que además se podía recalcular con solo leer este archivo. */
+  <div class="tabs">
+    <div class="tab active" id="tab-clientes" onclick="setTab('clientes')">👥 Clientes</div>
+    <div class="tab" id="tab-calendario" onclick="setTab('calendario')">📅 Calendario de cobros</div>
+    <div class="tab" id="tab-historial" onclick="setTab('historial')">🧾 Historial</div>
+  </div>
+
+  <div id="view-clientes">
+    <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input id="buscador" placeholder="Buscar cliente por usuario o nombre..." style="flex:1;min-width:200px" oninput="renderFolders()">
+      <span class="muted" id="resumen-clientes"></span>
+    </div>
+    <div id="folders" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
+    <p id="folders-vacio" class="muted hidden" style="margin-top:10px">Aún no hay ningún cliente. Usa "Agregar usuario" arriba.</p>
+  </div>
+
+  <div id="view-calendario" class="hidden">
+    <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <button class="btn btn-sm btn-light" onclick="calYear--;renderCalendario()">←</button>
+      <strong id="cal-year-lbl" style="flex:1;text-align:center"></strong>
+      <button class="btn btn-sm btn-light" onclick="calYear++;renderCalendario()">→</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <div id="view-historial" class="hidden card">
+    <h2 style="font-size:15px;margin-bottom:10px">Historial de ventas <span class="muted" id="hist-count"></span></h2>
+    <div style="overflow-x:auto">
+      <table id="hist-table"><thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Dato</th><th>Cuenta</th><th>Estado</th></tr></thead><tbody id="hist-body"></tbody></table>
+    </div>
+    <button class="btn btn-light" style="margin-top:12px" onclick="exportCSV()">⬇ Descargar CSV</button>
+  </div>
+
+  <div class="warn">
+    ⚠️ <strong>Guarda este archivo a buen recaudo.</strong> Quien tenga sesión de administrador puede generar y anular licencias. Todo lo que ves aquí vive en <code>gastrogoan/adminSalesLog</code>, protegido por las reglas de Firebase para tu email de admin.
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+/* ============================================================
+   IDÉNTICO a js/core.js: ggLicHash, ggOwnerUser, _ggOwnerSecret,
+   ggOwnerDerive, ggOwnerAuthKey, ggOwnerId. Si cambias algo aquí,
+   cámbialo también allí.
+   ============================================================ */
 function ggLicHash(str){
   let h = 0x811c9dc5 >>> 0;
   for(let i = 0; i < str.length; i++){
@@ -166,10 +167,6 @@ function ggLicHash(str){
   return h >>> 0;
 }
 const GG_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin I, O, 0, 1: ilegibles al dictarlos
-// Math.random() es predecible: quien observe unos cuantos códigos emitidos
-// podría llegar a adivinar los siguientes. Los códigos y los PIN son la
-// única barrera de pago, así que se sacan del generador criptográfico del
-// navegador.
 function ggRandomChars(n){
   const rnd = new Uint32Array(n);
   crypto.getRandomValues(rnd);
@@ -178,35 +175,13 @@ function ggRandomChars(n){
   return out;
 }
 function generateBizCode(){ return ggRandomChars(8); }
-// Id estable por entrada del registro de ventas, para poder fusionarlo
-// entre dispositivos (ver syncSalesWithCloud) sin duplicar ni depender del
-// índice del array, que cambia según el orden en que llegue cada uno.
 function genUuid(){
   if(crypto.randomUUID) return crypto.randomUUID();
   return ggRandomChars(10) + Date.now().toString(36);
 }
-
-/* ============================================================
-   CUENTAS DE PROPIETARIO — usuario + PIN
-   Debe ser IDÉNTICO al de la app (js/core.js, mismo bloque) — si cambias
-   algo aquí, cámbialo también allí.
-
-   El PIN NO se guarda en ningún sitio, ni siquiera hasheado: lo que se
-   guarda en Firebase es un nodo cuya RUTA se deriva de usuario+PIN
-   (ggOwnerAuthKey). Comprobar el acceso es leer esa ruta y ver si existe.
-   Así, aunque el nodo sea legible por cualquiera que sepa la ruta, quien
-   no conozca el PIN no puede ni construirla — y como la lectura está
-   permitida solo a nivel de $authKey (nunca del padre), tampoco se puede
-   listar el conjunto para ir probando. Adivinar a ciegas obliga a lanzar
-   una petición de red por intento contra un espacio de 32^6 ≈ mil
-   millones: inviable.
-   ============================================================ */
-// "Casa Paco", "casa paco" y "CASA PACÓ" tienen que ser el mismo usuario:
-// si no, un cliente que escriba su nombre con una mayúscula distinta a la
-// del día que lo compró se queda fuera sin entender por qué.
 function ggOwnerUser(raw){
   return String(raw || '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita acentos: pacó → paco
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 }
@@ -214,8 +189,6 @@ function _ggOwnerSecret(){
   const c = [117,117,197,125,133,124,115,128,197,64,62,64,68,197,121,69];
   return c.map(x => String.fromCharCode(x - 14)).join('');
 }
-// Misma construcción que ggBizTenantId (encadenar el hash y sacar grupos de
-// 4 caracteres), ya probada en producción para los tenantId.
 function ggOwnerDerive(input, groups){
   const out = [];
   let h = ggLicHash(input);
@@ -233,10 +206,6 @@ function ggOwnerAuthKey(user, pin){
   if(!u || !p) return null;
   return ggOwnerDerive(u + '·' + p + _ggOwnerSecret() + '·auth', 6);
 }
-// Identificador ESTABLE del dueño, derivado solo del usuario: no cambia ni
-// al cambiar el PIN. La app lo usa para saber de quién es cada código
-// (codeClaims). Aquí no se usa, pero se mantiene para que este bloque siga
-// siendo idéntico al de js/core.js.
 function ggOwnerId(user){
   const u = ggOwnerUser(user);
   if(!u) return null;
@@ -244,43 +213,20 @@ function ggOwnerId(user){
 }
 function generateOwnerPin(){ return ggRandomChars(6); }
 
+// Nunca usar toISOString para aritmética de fechas de calendario (desfase de
+// un día en cualquier huso por delante de UTC). Aquí no hace ni falta un
+// objeto Date: son solo tres números en una cadena yyyy-mm-dd.
+function pad2(n){ return String(n).padStart(2,'0'); }
+function todayStr(){ const d = new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function addYearsStr(dateStr, n){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  return (y+n)+'-'+pad2(m)+'-'+pad2(d);
+}
+
 /* ============================================================
-   UNICIDAD REAL DE CÓDIGOS + LISTA BLANCA DE LICENCIAS — proyecto
-   Firebase COMPARTIDO de la plataforma (el mismo que ya usa la app para
-   la web pública de reservas/pedidos), en la ruta
-   gastrogoan/issuedCodes/{code}. Debe ser el MISMO PLATFORM_FIREBASE_CONFIG
-   que en js/core.js — si cambia allí, cámbialo también aquí.
-
-   Desde la auditoría del 10/08/2026 esta lista ya NO es solo para evitar
-   códigos repetidos: la app (js/core.js, activateBusinessLicense) exige
-   que el código exista aquí para poder activarse, así que ya no basta con
-   recalcular código+contraseña a mano para activar una copia sin pagar
-   (hallazgo B1 de AUDITORIA_PRELANZAMIENTO.md). Por eso las reglas de
-   seguridad de este nodo tienen que ser MÁS estrictas que antes: lectura
-   abierta (la necesita cualquier instalación de la app para poder
-   activarse), pero escritura restringida a un único usuario administrador
-   con email/contraseña — NUNCA a cualquier sesión anónima (si se dejara
-   "auth != null" sin más, cualquiera podría auto-emitirse un código
-   válido sin pasar por este generador ni pagar nada). Reglas exactas a
-   pegar en la consola de Firebase (Realtime Database → Reglas) del
-   proyecto plataforma-gastrogoan:
-
-     "issuedCodes": {
-       "$code": {
-         ".read": true,
-         ".write": "auth != null && auth.token.email === 'TU-EMAIL-ADMIN@ejemplo.com' && !data.exists()"
-       }
-     }
-
-   Sustituye 'TU-EMAIL-ADMIN@ejemplo.com' por el email real que crees en
-   Firebase Authentication (Authentication → Users → Add user, con
-   contraseña) — ese es el único usuario que puede generar licencias desde
-   este archivo. Sin sesión iniciada con ese usuario, el generador sigue
-   funcionando igual que antes -código aleatorio sin comprobar
-   duplicados-, con un aviso visible de que no se pudo verificar/escribir.
-   Nunca bloquea la generación de códigos en sí, solo la hace más segura
-   cuando puede.
-*/
+   PLATAFORMA COMPARTIDA (proyecto plataforma-gastrogoan). MISMO
+   PLATFORM_FIREBASE_CONFIG que en js/core.js.
+   ============================================================ */
 const PLATFORM_FIREBASE_CONFIG = {
   apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
   authDomain: "plataforma-gastrogoan.firebaseapp.com",
@@ -290,639 +236,545 @@ const PLATFORM_FIREBASE_CONFIG = {
   messagingSenderId: "894218847556",
   appId: "1:894218847556:web:2fa1f699489790bb5f8311"
 };
-// A diferencia del resto de la app (que se autentica de forma anónima),
-// este generador necesita iniciar sesión como el usuario administrador
-// concreto que las reglas de Firebase autorizan a escribir en
-// issuedCodes/ — ver el bloque de comentario de arriba. Sin esa sesión,
-// sigue funcionando igual que siempre (código aleatorio sin comprobar
-// duplicados), solo que sin el registro real de "código emitido de
-// verdad" que ahora exige la app para poder activarse.
-let platformAuthPromise = null;
-function getPlatformFirebaseApp(){
-  if(typeof firebase === 'undefined') return Promise.resolve(null);
+function getApp(){
+  try{ return firebase.app('platform'); }
+  catch(e){ return firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
+}
+let adminUser = null; // {email}, solo si hay sesión REAL de admin (no anónima)
+
+/* Login OBLIGATORIO a la entrada: nada del panel se pinta sin sesión real de
+   administrador. A diferencia del generador viejo, aquí no hay ningún modo
+   "sin sesión, código sin verificar": o hay sesión, o no hay panel. */
+async function doLogin(){
+  const statusEl = document.getElementById('login-status');
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if(!email || !pass){ statusEl.textContent = 'Escribe email y contraseña.'; return; }
+  statusEl.textContent = 'Entrando...';
   try{
-    let app;
-    try{ app = firebase.app('platform'); }
-    catch(e){ app = firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
-    if(!platformAuthPromise){
-      platformAuthPromise = app.auth().currentUser
-        ? Promise.resolve(app)
-        : Promise.resolve(null); // sin sesión de admin todavía: ver ensureAdminLogin()
-    }
-    return platformAuthPromise;
+    const app = getApp();
+    await app.auth().signInWithEmailAndPassword(email, pass);
+    onLoggedIn(app.auth().currentUser);
   }catch(e){
-    console.error('Error iniciando la plataforma', e);
-    return Promise.resolve(null);
+    console.error(e);
+    statusEl.textContent = '⚠️ No se pudo entrar (' + (e.message || e.code || 'error') + ').';
   }
 }
-// Pide email+contraseña del administrador (el usuario de Firebase Auth
-// creado a mano en la consola, ver comentario de arriba) e inicia sesión
-// con él. Se llama una vez al cargar la página, antes de poder generar
-// ninguna licencia — sin esto, claimUniqueBizCode() solo puede comprobar
-// duplicados (lectura, abierta a cualquiera) pero nunca escribir el
-// registro real de "código emitido".
-async function ensureAdminLogin(){
-  const statusEl = document.getElementById('admin-login-status');
-  try{
-    let app;
-    try{ app = firebase.app('platform'); }
-    catch(e){ app = firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
-    // OJO: currentUser puede existir ya por una sesión ANÓNIMA (la que usa
-    // claimUniqueBizCode() para comprobar duplicados, .read: true para
-    // cualquiera). Eso NO es una sesión de admin — hay que comprobar que
-    // tiene email, que es lo único que distingue un login real del tuyo.
-    if(app.auth().currentUser && app.auth().currentUser.email){
-      platformAuthPromise = Promise.resolve(app);
-      if(statusEl) statusEl.textContent = '✅ Sesión de administrador iniciada (' + app.auth().currentUser.email + ').';
-      await syncSalesWithCloud();
-      return;
-    }
-    if(app.auth().currentUser && !app.auth().currentUser.email){
-      await app.auth().signOut(); // cierra la sesión anónima para poder iniciar la de admin
-    }
-    const email = prompt('Email de administrador (Firebase Authentication → Users):');
-    if(!email) return;
-    const password = prompt('Contraseña de ese usuario:');
-    if(!password) return;
-    await app.auth().signInWithEmailAndPassword(email, password);
-    platformAuthPromise = Promise.resolve(app);
-    if(statusEl) statusEl.textContent = '✅ Sesión de administrador iniciada.';
-    await syncSalesWithCloud();
-  }catch(e){
-    console.error('Error iniciando sesión de administrador', e);
-    if(statusEl) statusEl.textContent = '⚠️ No se pudo iniciar sesión de administrador (' + (e.message||e.code||'error') + '). Los códigos se generarán sin registrar en la plataforma.';
-  }
+function doLogout(){
+  getApp().auth().signOut();
+  adminUser = null;
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('login-gate').classList.remove('hidden');
+  document.getElementById('login-status').textContent = '';
 }
-// Reclama un código como "ya emitido" de forma atómica (transaction: solo
-// se compromete si el nodo estaba vacío) y, si choca con uno ya existente,
-// prueba con otro — en la práctica nunca pasará de la primera vuelta, dado
-// el tamaño del espacio de códigos (32^8 ≈ 1,1 billones), pero así queda
-// matemáticamente garantizado que nunca se repite uno ya emitido.
+async function onLoggedIn(user){
+  adminUser = user;
+  document.getElementById('login-gate').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+  await syncSalesWithCloud();
+  renderFolders();
+  renderCalendario();
+  renderHistorial();
+}
+// Al cargar, comprueba si ya había sesión de admin persistida por Firebase
+// (no anónima: sesiones anónimas nunca las crea este panel). Envuelto en
+// try/catch: si el SDK no llegó a cargar (red bloqueada, prueba local), el
+// resto del panel debe poder seguir cargándose igual, solo sin auto-login.
+try{
+  if(typeof firebase !== 'undefined') getApp().auth().onAuthStateChanged(user => {
+    if(user && user.email) onLoggedIn(user);
+  });
+}catch(e){ console.error('No se pudo comprobar la sesión persistida', e); }
+
+/* ============================================================
+   CÓDIGOS DE NEGOCIO Y CUENTAS DE PROPIETARIO — misma lógica que el
+   generador anterior (transacciones atómicas contra issuedCodes /
+   ownerNames / ownerAuth).
+   ============================================================ */
 const MAX_UNIQUENESS_ATTEMPTS = 5;
 async function claimUniqueBizCode(){
-  const statusEl = document.getElementById('uniqueness-status');
-  const app = await getPlatformFirebaseApp();
-  if(!app){
-    statusEl.textContent = '⚠️ Sin conexión con la plataforma: código generado sin comprobar duplicados online.';
-    return generateBizCode();
-  }
   for(let attempt = 1; attempt <= MAX_UNIQUENESS_ATTEMPTS; attempt++){
     const code = generateBizCode();
-    statusEl.textContent = `Comprobando unicidad del código... (intento ${attempt})`;
-    try{
-      const ref = app.database().ref('gastrogoan/issuedCodes/' + code);
-      const result = await ref.transaction(current => current === null ? {issuedAt: Date.now()} : undefined);
-      if(result.committed){
-        statusEl.textContent = '✅ Código verificado como único contra el registro de la plataforma.';
-        return code;
-      }
-      // No debería pasar casi nunca (colisión real) — se reintenta con otro código.
-    }catch(e){
-      console.error('Error comprobando unicidad', e);
-      statusEl.textContent = '⚠️ No se pudo verificar contra la plataforma (revisa las reglas de seguridad): código generado sin comprobar duplicados online.';
-      return generateBizCode();
-    }
+    const ref = getApp().database().ref('gastrogoan/issuedCodes/' + code);
+    const result = await ref.transaction(current => current === null ? {issuedAt: Date.now()} : undefined);
+    if(result.committed) return code;
   }
-  statusEl.textContent = '⚠️ No se pudo confirmar unicidad tras varios intentos: código generado sin comprobar duplicados online.';
-  return generateBizCode();
+  throw new Error('No se pudo confirmar unicidad tras varios intentos.');
 }
-
-/* Reserva el nombre de usuario y crea la cuenta del propietario.
-   Dos escrituras atómicas, en este orden y no al revés:
-     1. gastrogoan/ownerNames/{usuario} — reserva el NOMBRE. Es la que
-        detecta que dos clientes han pedido el mismo, y por eso va primero:
-        si falla, no se ha creado nada y se puede probar con otra variante.
-     2. gastrogoan/ownerAuth/{authKey}  — la cuenta en sí, en una ruta que
-        solo se puede construir sabiendo el PIN (ver ggOwnerAuthKey).
-   El nombre queda reservado aunque el PIN se regenere después, así que
-   nunca puede haber dos clientes distintos con el mismo usuario. */
 const MAX_OWNER_NAME_ATTEMPTS = 20;
 async function claimOwnerAccount(rawName){
-  const statusEl = document.getElementById('owner-status');
   const base = ggOwnerUser(rawName);
   if(!base) return {error: 'Ese nombre no deja ninguna letra ni número utilizable. Prueba con otro.'};
-  const app = await getPlatformFirebaseApp();
-  if(!app) return {error: 'Sin sesión de administrador: inicia sesión arriba antes de crear la cuenta, o el cliente no podrá entrar.'};
-
   for(let attempt = 0; attempt < MAX_OWNER_NAME_ATTEMPTS; attempt++){
-    // casapaco, casapaco2, casapaco3... — la colisión se resuelve aquí, no
-    // en la cara del cliente cuando intente entrar.
     const user = attempt === 0 ? base : base + (attempt + 1);
-    statusEl.textContent = `Reservando el nombre "${user}"...`;
     let claimed;
     try{
-      const ref = app.database().ref('gastrogoan/ownerNames/' + user);
+      const ref = getApp().database().ref('gastrogoan/ownerNames/' + user);
       const result = await ref.transaction(current => current === null ? {createdAt: Date.now()} : undefined);
       claimed = result.committed;
     }catch(e){
-      console.error('Error reservando el nombre de usuario', e);
-      return {error: 'No se pudo reservar el nombre (revisa las reglas de Firebase y la sesión de administrador): ' + (e.message || e.code || 'error')};
+      return {error: 'No se pudo reservar el nombre: ' + (e.message || e.code || 'error')};
     }
-    if(!claimed) continue; // ese nombre ya es de otro cliente: prueba la siguiente variante
-
+    if(!claimed) continue;
     const pin = generateOwnerPin();
     try{
-      await app.database().ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, pin)).set({
-        user, createdAt: Date.now()
-      });
+      await getApp().database().ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, pin)).set({ user, createdAt: Date.now() });
     }catch(e){
-      console.error('Error creando la cuenta de propietario', e);
       return {error: 'El nombre quedó reservado pero no se pudo crear la cuenta: ' + (e.message || e.code || 'error')};
     }
     return {user, pin, renamed: user !== base};
   }
   return {error: 'Demasiados nombres parecidos ya en uso. Pídele al cliente otro nombre distinto.'};
 }
-
-/* ¿Este cliente ya tiene cuenta? Evita el error de cobrarle una cuenta
-   nueva a quien solo quería otro local -o al revés, darle un código suelto
-   a alguien que todavía no tiene dónde canjearlo-. Mira la reserva de
-   nombres, que es la fuente de verdad; el registro de ventas local solo
-   sirve de apoyo si cambiaste de ordenador. */
-/* Cruza lo que el cliente contestó al pagar con lo que de verdad hay en la
-   plataforma, y dice qué generar. Las dos fuentes por separado engañan: la
-   respuesta de Stripe identifica a la PERSONA pero se puede equivocar al
-   escribir su usuario, y ownerNames dice si ese NOMBRE existe pero no si es
-   de esta misma persona (dos clientes distintos pueden querer llamarse
-   "casapaco"). Los casos en que no cuadran son justo los que hay que parar
-   a mirar, y son los que antes se colaban. */
-async function checkOwnerName(){
-  const el = document.getElementById('owner-check-status');
-  const user = ggOwnerUser(document.getElementById('owner-name').value);
-  const dijo = document.getElementById('stripe-answer').value;
-  if(!user){ el.textContent = 'Escribe primero el nombre.'; return; }
-  el.textContent = `Consultando "${user}"...`;
-  const app = await getPlatformFirebaseApp();
-  if(!app){ el.textContent = '⚠️ Sin sesión de administrador: inicia sesión arriba para poder consultarlo.'; return; }
-  let existe;
-  try{
-    existe = (await app.database().ref('gastrogoan/ownerNames/' + user).once('value')).exists();
-  }catch(e){
-    console.error('Error consultando el nombre', e);
-    el.textContent = '⚠️ No se pudo consultar (' + (e.message || e.code || 'error') + ').';
-    return;
-  }
-  const veredicto = (color, txt) => { el.innerHTML = `<span style="color:${color}">${txt}</span>`; };
-  const VERDE = '#1F8A4C', AMBAR = '#B8860B', ROJO = '#C0392B';
-
-  if(dijo === 'existente' && existe)
-    return veredicto(VERDE, `✅ <strong>Genera SOLO un código</strong> (paso 2). Ya tiene cuenta ("${user}") y dice que repite: todo cuadra.`);
-
-  if(dijo === 'nuevo' && !existe)
-    return veredicto(VERDE, `✅ <strong>Créale la cuenta (paso 1) Y un código (paso 2).</strong> Es cliente nuevo y "${user}" está libre.`);
-
-  if(dijo === 'existente' && !existe)
-    return veredicto(ROJO, `🛑 <strong>No generes nada todavía.</strong> Dice que ya tiene cuenta, pero "${user}" no existe. Seguramente lo escribió distinto de como lo compró. Pregúntale su usuario exacto: si le mandas solo un código, no tendrá dónde canjearlo.`);
-
-  if(dijo === 'nuevo' && existe)
-    return veredicto(AMBAR, `⚠️ <strong>Créale la cuenta igual (paso 1) + un código.</strong> Dice que es nuevo pero "${user}" ya lo cogió otro cliente. No pasa nada: al crearla se le asignará una variante libre ("${user}2"). <strong>Avísale de cuál es su usuario exacto</strong>, o no podrá entrar.`);
-
-  // Sin respuesta de Stripe: solo se puede informar, no decidir por él.
-  return existe
-    ? veredicto(AMBAR, `⚠️ "${user}" ya tiene cuenta. Si tu comprador ES esa misma persona, genera solo un código. Si es otro que casualmente quiere el mismo nombre, créale la cuenta y se le asignará una variante.`)
-    : veredicto(AMBAR, `"${user}" está libre, así que no es un cliente que repita con ese nombre. Si es su primera licencia: cuenta + código.`);
+async function resetOwnerPinFor(user){
+  const pin = generateOwnerPin();
+  await getApp().database().ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, pin)).set({ user, createdAt: Date.now() });
+  return pin;
 }
 
-/* Último recurso: el cliente perdió el PIN Y ya no le queda ningún
-   dispositivo dentro (si le queda alguno, GGGG lo resuelve él solo y sin
-   molestarte). Le crea la cuenta otra vez en la ruta de un PIN nuevo,
-   manteniendo su MISMO usuario.
-
-   No se pierde nada, y esto es exactamente para lo que ggOwnerId se deriva
-   solo del usuario: la reserva de cada código va a nombre del dueño, no de
-   su PIN, así que con el PIN nuevo puede volver a canjear sus códigos de
-   siempre (los tienes en el registro de ventas) y recupera sus negocios con
-   todos sus datos, que nunca salieron de su propia nube.
-
-   ⚠️ La ruta antigua no se puede borrar: para dar con ella haría falta el
-   PIN viejo, que es justo lo que se ha perdido. Queda ahí huérfana, así que
-   si alguien llegara a tener el PIN antiguo seguiría entrando. Para un PIN
-   olvidado da igual; si lo que sospechas es que se lo han robado, emite una
-   cuenta con OTRO usuario y revoca los códigos viejos. */
-async function resetOwnerPin(){
-  const btn = document.getElementById('reset-btn');
-  const el = document.getElementById('reset-status');
-  const user = ggOwnerUser(document.getElementById('reset-user').value);
-  if(!user){ el.textContent = 'Escribe el usuario del cliente.'; return; }
-  btn.disabled = true;
-  el.textContent = 'Comprobando...';
-  const app = await getPlatformFirebaseApp();
-  if(!app){ el.textContent = '⚠️ Sin sesión de administrador: inicia sesión arriba.'; btn.disabled = false; return; }
-  try{
-    // Que exista de verdad: si no, lo que toca es crear una cuenta normal
-    // (paso 1), no "restablecer" la de alguien que nunca compró.
-    const existe = (await app.database().ref('gastrogoan/ownerNames/' + user).once('value')).exists();
-    if(!existe){
-      el.textContent = `⚠️ "${user}" no tiene ninguna cuenta. Si es un cliente nuevo, créala en el paso 1; si no, comprueba cómo se escribe su usuario exacto.`;
-      btn.disabled = false;
-      return;
-    }
-    const pin = generateOwnerPin();
-    await app.database().ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, pin)).set({ user, createdAt: Date.now() });
-    el.textContent = '✅ PIN nuevo listo. Reenvíale también sus códigos de negocio (los tienes abajo en el registro): tendrá que canjearlos otra vez para recuperar sus locales.';
-    document.getElementById('reset-key').innerHTML = `Usuario: ${user}<br>PIN nuevo: ${pin}`;
-    document.getElementById('reset-out').style.display = 'block';
-    const codigos = sales.filter(v => v.kind === 'negocio' && v.owner === user).map(v => v.value);
-    const msg = 'Tu nuevo PIN de GastroGoan 🍽\n\nUsuario: ' + user + '\nPIN: ' + pin +
-      '\n\nEntra con estos datos y vuelve a canjear tus códigos de negocio desde la pantalla de negocios. Tus datos siguen intactos.' +
-      (codigos.length ? '\n\nTus códigos: ' + codigos.join(', ') : '');
-    document.getElementById('reset-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
-    document.getElementById('reset-email').href = 'mailto:?subject=' + encodeURIComponent('Tu nuevo PIN de GastroGoan') + '&body=' + encodeURIComponent(msg);
-    await pushSaleEntry({ date: new Date().toISOString().slice(0,10), name: '(PIN restablecido)', kind: 'cuenta', value: user, pin, owner: user });
-  }catch(e){
-    console.error('Error restableciendo el PIN', e);
-    el.textContent = '⚠️ No se pudo restablecer (' + (e.message || e.code || 'error') + ').';
-  }
-  btn.disabled = false;
-}
-
+/* ============================================================
+   REGISTRO DE VENTAS (gastrogoan/adminSalesLog) — sigue siendo la única
+   fuente de verdad de este panel: cada entrada 'cuenta' lleva ahora también
+   el contacto (email/teléfono) del propietario; cada entrada 'negocio' lleva
+   la fecha de alta y el próximo cobro (proximoPago), para el calendario.
+   ============================================================ */
 const LOG_KEY = 'gg_biz_sales_v3';
 let sales = [];
 try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
 function saveSales(){ localStorage.setItem(LOG_KEY, JSON.stringify(sales)); }
-// El registro cambió de forma (antes {code, password}; ahora {kind, value,
-// pin}, que cubre tanto cuentas como negocios). Se convierte lo que hubiera
-// en el formato viejo para no perder el histórico de ventas anteriores.
-if(!sales.length){
-  try{
-    const old = JSON.parse(localStorage.getItem('gg_biz_sales_v2')) || [];
-    if(old.length){
-      sales = old.map(s => ({ date: s.date, name: s.name, kind: 'negocio', value: s.code, pin: '' }));
-      saveSales();
-    }
-  }catch(e){}
-}
-// Entradas de antes de que existiera la sincronización (o creadas sin
-// conexión) no tienen id: se les asigna uno aquí para que la próxima
-// sincronización las pueda subir a la nube igual que las nuevas.
 if(sales.some(s => !s.id)){ sales.forEach(s => { if(!s.id) s.id = genUuid(); }); saveSales(); }
 
-/* ============================================================
-   SINCRONIZAR EL REGISTRO DE VENTAS ENTRE TUS DISPOSITIVOS
-   Antes vivía solo en el localStorage de cada navegador: si perdías o
-   rompías el dispositivo, se perdía también el registro (el propio aviso
-   de abajo lo decía). Ahora, con la sesión de administrador iniciada
-   (la misma que ya hace falta para emitir códigos "de verdad"), cada
-   entrada se guarda TAMBIÉN en gastrogoan/adminSalesLog — un nodo privado
-   de la plataforma, protegido en las reglas de Firebase para que solo tu
-   email de admin (gastrogoan@gmail.com) pueda leerlo o escribirlo. El
-   localStorage de cada dispositivo sigue siendo la copia de trabajo (y el
-   respaldo si abres el generador sin conexión); la nube es la copia que
-   sobrevive aunque pierdas el dispositivo.
-   ============================================================ */
 async function pushSaleEntry(entry){
   entry.id = entry.id || genUuid();
   sales.unshift(entry);
   saveSales();
-  renderLog();
-  const app = await getPlatformFirebaseApp();
-  if(app && app.auth().currentUser && app.auth().currentUser.email){
+  if(adminUser){
     try{
-      await app.database().ref('gastrogoan/adminSalesLog/' + entry.id).set({
-        date: entry.date, name: entry.name, kind: entry.kind, value: entry.value,
-        pin: entry.pin || '', owner: entry.owner || ''
-      });
+      await getApp().database().ref('gastrogoan/adminSalesLog/' + entry.id).set(entry);
     }catch(e){ console.error('Error guardando la venta en la nube', e); }
   }
 }
-// Trae lo que haya en la nube y no tengas en este dispositivo, y sube lo
-// que tengas aquí y todavía no esté en la nube (por ejemplo, ventas hechas
-// offline, o de antes de tener esta función). Se llama al iniciar sesión
-// de administrador — nunca sin ella, porque las reglas de Firebase no
-// dejan leer/escribir ese nodo sin el email de admin.
+async function updateSaleEntry(entry, patch){
+  Object.assign(entry, patch);
+  saveSales();
+  if(adminUser && entry.id){
+    try{ await getApp().database().ref('gastrogoan/adminSalesLog/' + entry.id).update(patch); }
+    catch(e){ console.error('Error actualizando la venta en la nube', e); }
+  }
+}
 async function syncSalesWithCloud(){
-  const app = await getPlatformFirebaseApp();
-  if(!app || !app.auth().currentUser || !app.auth().currentUser.email) return;
-  const statusEl = document.getElementById('admin-login-status');
+  if(!adminUser) return;
   try{
-    const snap = await app.database().ref('gastrogoan/adminSalesLog').once('value');
+    const snap = await getApp().database().ref('gastrogoan/adminSalesLog').once('value');
     const remote = snap.val() || {};
     const localIds = new Set(sales.map(s => s.id));
-    let addedFromCloud = 0;
     Object.keys(remote).forEach(id => {
-      if(!localIds.has(id)){ sales.push({...remote[id], id}); addedFromCloud++; }
+      if(!localIds.has(id)) sales.push({...remote[id], id});
     });
     const remoteIds = new Set(Object.keys(remote));
     const updates = {};
-    sales.forEach(s => {
-      if(!remoteIds.has(s.id)) updates[s.id] = { date:s.date, name:s.name, kind:s.kind, value:s.value, pin:s.pin||'', owner:s.owner||'' };
-    });
-    if(Object.keys(updates).length) await app.database().ref('gastrogoan/adminSalesLog').update(updates);
+    sales.forEach(s => { if(!remoteIds.has(s.id)) updates[s.id] = s; });
+    if(Object.keys(updates).length) await getApp().database().ref('gastrogoan/adminSalesLog').update(updates);
     sales.sort((a,b) => (b.date||'').localeCompare(a.date||''));
     saveSales();
-    renderLog();
-    if(statusEl) statusEl.textContent += ` · Registro de ventas sincronizado (${addedFromCloud} traídas de la nube, ${Object.keys(updates).length} subidas).`;
-  }catch(e){
-    console.error('Error sincronizando el registro de ventas', e);
-    if(statusEl) statusEl.textContent += ' · ⚠️ No se pudo sincronizar el registro de ventas con la nube.';
-  }
+  }catch(e){ console.error('Error sincronizando el registro de ventas', e); }
 }
 
-async function genOwner(){
-  const btn = document.getElementById('owner-btn');
-  btn.disabled = true;
-  const statusEl = document.getElementById('owner-status');
-  statusEl.textContent = 'Creando la cuenta...';
-  const raw = document.getElementById('owner-name').value.trim();
-  const res = await claimOwnerAccount(raw);
-  if(res.error){
-    statusEl.textContent = '⚠️ ' + res.error;
-    btn.disabled = false;
+/* ============================================================
+   PESTAÑAS
+   ============================================================ */
+function setTab(t){
+  ['clientes','calendario','historial'].forEach(x => {
+    document.getElementById('tab-'+x).classList.toggle('active', x===t);
+    document.getElementById('view-'+x).classList.toggle('hidden', x!==t);
+  });
+  if(t==='calendario') renderCalendario();
+  if(t==='historial') renderHistorial();
+}
+
+/* ============================================================
+   AGRUPACIÓN: una tarjeta por cuenta de propietario, con sus locales dentro.
+   ============================================================ */
+let openFolders = new Set();
+function agrupar(){
+  const conIdx = sales.map((s,i) => ({...s, i}));
+  const cuentas = conIdx.filter(s => s.kind === 'cuenta' && !s.anulada);
+  const locales = conIdx.filter(s => s.kind === 'negocio');
+  const grupos = [];
+  cuentas.forEach(c => {
+    if(grupos.some(g => g.user === c.value)) return; // PIN restablecido: una sola tarjeta, la última
+    const mismas = cuentas.filter(x => x.value === c.value).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    grupos.push({ user: c.value, ultima: mismas[0], locales: locales.filter(l => l.owner === c.value) });
+  });
+  const usuarios = new Set(cuentas.map(c => c.value));
+  const huerfanos = locales.filter(l => !usuarios.has(l.owner));
+  if(huerfanos.length) grupos.push({ user: null, ultima: null, locales: huerfanos });
+  return grupos;
+}
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function renderFolders(){
+  const q = ggOwnerUser(document.getElementById('buscador').value) || document.getElementById('buscador').value.toLowerCase().trim();
+  let grupos = agrupar();
+  if(q){
+    grupos = grupos.filter(g => (g.user||'').includes(q) ||
+      g.locales.some(l => (l.name||'').toLowerCase().includes(q) || (l.value||'').toLowerCase().includes(q)));
+  }
+  document.getElementById('folders-vacio').classList.toggle('hidden', agrupar().length > 0);
+  document.getElementById('resumen-clientes').textContent = `${agrupar().length} cliente(s) · ${sales.filter(s=>s.kind==='negocio' && !s.anulada).length} licencia(s) activa(s)`;
+
+  document.getElementById('folders').innerHTML = grupos.map(g => {
+    const key = g.user || '(sin-cuenta)';
+    const abierta = openFolders.has(key);
+    const nActivas = g.locales.filter(l => !l.anulada).length;
+    const nombreExtra = g.ultima && g.ultima.name && g.ultima.name !== g.user ? esc(g.ultima.name) : '';
+    const titulo = g.user ? esc(g.user) : '⚠️ Locales sin cuenta en el registro';
+    return `<div class="folder">
+      <div class="folder-head" onclick="toggleFolder('${esc(key)}')">
+        <span class="folder-ico">📁</span>
+        <div>
+          <div class="folder-user">${titulo} ${nombreExtra ? `<span class="folder-sub">(${nombreExtra})</span>` : ''}</div>
+          <div class="folder-sub">${g.locales.length} licencia(s), ${nActivas} activa(s)</div>
+        </div>
+        <span class="folder-pastilla">PIN: ${g.ultima ? esc(g.ultima.pin || '—') : '—'}</span>
+        <span class="folder-arrow">${abierta ? '▲' : '▼'}</span>
+      </div>
+      ${abierta ? renderFolderBody(g) : ''}
+    </div>`;
+  }).join('');
+}
+function toggleFolder(key){
+  if(openFolders.has(key)) openFolders.delete(key); else openFolders.add(key);
+  renderFolders();
+}
+function renderFolderBody(g){
+  const email = g.ultima ? esc(g.ultima.email || '') : '';
+  const phone = g.ultima ? esc(g.ultima.phone || '') : '';
+  const licsHtml = g.locales.length ? g.locales.map(l => renderLicRow(l)).join('') :
+    `<p class="muted">Todavía no le has vendido ningún local.</p>`;
+  return `<div class="folder-body">
+    ${g.user ? `
+    <div class="fila-dato">
+      <span class="dato-et">Usuario</span><span class="dato-val">${esc(g.user)}</span>
+      <span class="dato-et">PIN</span><span class="dato-val">${g.ultima ? esc(g.ultima.pin || '—') : '—'}</span>
+      <button class="btn btn-sm btn-light" onclick="copiar('Usuario: ${esc(g.user)}  ·  PIN: ${g.ultima ? esc(g.ultima.pin||'') : ''}')">Copiar</button>
+      <button class="btn btn-sm btn-light" onclick="hacerResetPin('${esc(g.user)}')">🔁 Nuevo PIN</button>
+      <button class="btn btn-sm btn-rojo" onclick="borrarCuenta('${esc(g.user)}')">Borrar cuenta</button>
+    </div>
+    <div class="fila-dato contacto-edit">
+      <span class="dato-et" style="flex:0 0 100%">Ficha de cliente (para el botón Cobrar)</span>
+      <input placeholder="Email" id="email-${esc(g.user)}" value="${email}">
+      <input placeholder="Teléfono (WhatsApp)" id="phone-${esc(g.user)}" value="${phone}">
+      <button class="btn btn-sm btn-light" onclick="guardarContacto('${esc(g.user)}')">Guardar</button>
+    </div>
+    <button class="btn btn-light" onclick="openNuevaLicencia('${esc(g.user)}')">＋ Nueva licencia para este cliente</button>
+    ` : ''}
+    <div style="display:flex;flex-direction:column;gap:10px" id="lics-${esc(g.user||'huerfanos')}">${licsHtml}</div>
+  </div>`;
+}
+function renderLicRow(l){
+  const revocada = !!l.anulada;
+  const proximoPago = l.proximoPago || (l.date ? addYearsStr(l.date, 1) : '—');
+  return `<div class="lic${revocada ? ' revocada' : ''}" id="lic-${esc(l.id)}">
+    <div class="lic-top">
+      <span class="lic-code">${esc(l.value)}</span>
+      <span class="badge ${revocada ? 'badge-revocada' : 'badge-activa'}">${revocada ? 'Acceso revocado' : 'Activa'}</span>
+      ${l.name ? `<span class="muted">${esc(l.name)}</span>` : ''}
+    </div>
+    <div class="lic-fechas">
+      <span>Alta: <strong>${esc(l.date || '—')}</strong></span>
+      ${!revocada ? `<span>Próximo cobro: <strong>${esc(proximoPago)}</strong></span>` : ''}
+      ${revocada && l.motivo ? `<span>Motivo: ${esc(l.motivo)}</span>` : ''}
+    </div>
+    <div class="lic-btns">
+      ${!revocada ? `
+        <button class="btn btn-sm btn-wa" onclick="cobrarLicencia('${esc(l.id)}')">💬 Cobrar</button>
+        <button class="btn btn-sm btn-light" onclick="marcarCobrado('${esc(l.id)}')">✓ Marcar cobrado (+1 año)</button>
+        <button class="btn btn-sm btn-rojo" onclick="quitarAcceso('${esc(l.id)}')">Quitar acceso</button>
+      ` : `
+        <button class="btn btn-sm btn-primary" onclick="restablecerLicencia('${esc(l.id)}')">Restablecer la licencia</button>
+      `}
+      <button class="btn btn-sm btn-light" onclick="delSale('${esc(l.id)}')">Quitar del registro</button>
+    </div>
+  </div>`;
+}
+function findSale(id){ return sales.find(s => s.id === id); }
+function copiar(txt){ navigator.clipboard.writeText(txt).then(() => alert('Copiado: ' + txt)); }
+
+/* ============================================================
+   COBRAR — abre WhatsApp o email con el contacto guardado en la ficha
+   (entrada 'cuenta' del propietario), no en el negocio distribuido.
+   ============================================================ */
+function cobrarLicencia(licId){
+  const l = findSale(licId);
+  if(!l) return;
+  const cuenta = sales.find(s => s.kind==='cuenta' && s.value===l.owner);
+  const email = cuenta && cuenta.email;
+  const phone = cuenta && cuenta.phone;
+  if(!email && !phone){
+    alert('No hay email ni teléfono guardado para "' + (l.owner||'este cliente') + '". Rellénalo en la ficha del cliente, dentro de su carpeta.');
     return;
   }
-  statusEl.textContent = res.renamed
-    ? `⚠️ "${ggOwnerUser(raw)}" ya estaba cogido por otro cliente. Se ha creado como "${res.user}" — avísale de que ese es su usuario exacto.`
-    : '✅ Cuenta creada y nombre reservado en la plataforma.';
-  document.getElementById('owner-key').innerHTML = `Usuario: ${res.user}<br>PIN: ${res.pin}`;
-  document.getElementById('owner-out').style.display = 'block';
-  const msg = 'Tu cuenta de GastroGoan 🍽\n\nUsuario: ' + res.user + '\nPIN: ' + res.pin + '\n\nAbre la app, pulsa "Acceso Propietarios" y entra con estos dos datos. Dentro verás la pantalla de negocios: pulsa "Canjear negocio" e introduce el código que te he enviado aparte.\n\nEl PIN lo puedes cambiar en cualquier momento desde la app.';
-  document.getElementById('owner-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
-  document.getElementById('owner-email').href = 'mailto:?subject=' + encodeURIComponent('Tu cuenta de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  await pushSaleEntry({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin, owner: res.user });
-  btn.disabled = false;
+  const proximoPago = l.proximoPago || (l.date ? addYearsStr(l.date, 1) : '');
+  const msg = `Hola${l.name ? ' de ' + l.name : ''} 👋 Te escribimos de GastroGoan para la renovación anual de tu licencia (código ${l.value}).\n\nImporte: 100 €/año.\n${proximoPago ? 'Vencimiento: ' + proximoPago + '\n' : ''}\n¿Nos confirmas el pago cuando puedas? Gracias 🙏`;
+  showCobrarModal(msg, email, phone);
+}
+function showCobrarModal(msg, email, phone){
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal">
+      <h3>💬 Enviar cobro</h3>
+      <textarea readonly style="width:100%;min-height:120px;border:1.5px solid var(--border);border-radius:9px;padding:10px;font-family:inherit;font-size:13px">${esc(msg)}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${phone ? `<a class="btn btn-wa" style="flex:1" target="_blank" rel="noopener" href="https://wa.me/${esc(phone.replace(/[^0-9]/g,''))}?text=${encodeURIComponent(msg)}">📱 WhatsApp</a>` : ''}
+        ${email ? `<a class="btn btn-light" style="flex:1" href="mailto:${esc(email)}?subject=${encodeURIComponent('Renovación de tu licencia GastroGoan')}&body=${encodeURIComponent(msg)}">✉️ Email</a>` : ''}
+      </div>
+      <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
+    </div>
+  </div>`;
+}
+function cerrarModal(){ document.getElementById('modal-root').innerHTML = ''; }
+
+async function marcarCobrado(licId){
+  const l = findSale(licId);
+  if(!l) return;
+  const base = l.proximoPago || addYearsStr(l.date || todayStr(), 1);
+  const nuevo = addYearsStr(base, 1);
+  if(!confirm(`¿Marcar cobrado? El próximo vencimiento pasará a ${nuevo}.`)) return;
+  await updateSaleEntry(l, {proximoPago: nuevo});
+  renderFolders(); renderCalendario();
 }
 
-async function gen(){
-  const genBtn = document.getElementById('gen-btn');
-  genBtn.disabled = true;
-  document.getElementById('uniqueness-status').textContent = 'Generando...';
-  const raw = document.getElementById('name').value.trim();
-  const code = await claimUniqueBizCode();
-  document.getElementById('key').innerHTML = `Código de negocio: ${code}`;
-  document.getElementById('out').style.display = 'block';
-  const msg = 'Tu código de negocio de GastroGoan 🍽\n\nCódigo: ' + code + '\n\nEntra en la app con tu usuario y PIN, y en la pantalla de negocios pulsa "Canjear negocio" para introducirlo.\n\nGuarda el código: lo necesitarás también para dar de alta a tus empleados desde "Acceso Empleados".';
-  document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
-  document.getElementById('email').href = 'mailto:?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  if(!sales.some(s => s.value === code)){
-    const paraUsuario = ggOwnerUser(document.getElementById('code-owner').value);
-    await pushSaleEntry({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'negocio', value: code, pin: '', owner: paraUsuario });
-  }
-  genBtn.disabled = false;
-}
-
-function copyBox(id){
-  navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => alert('Copiado'));
-}
-
-/* ⚠️ BORRAR DEL REGISTRO NO ES ANULAR LA LICENCIA.
-   Son dos cosas distintas y conviene no confundirlas nunca:
-   - Borrar del registro: quita la anotación de tu lista de ventas. El código
-     sigue funcionando y el cliente sigue dentro. Sirve para limpiar una
-     prueba o un apunte duplicado.
-   - Anular: mata el código de verdad. Deja de poder canjearse y, si ya está
-     en uso, la app de ese cliente se bloquea. */
-async function delSale(i){
-  if(!confirm('¿Quitar esta entrada de tu registro de ventas?\n\nOJO: esto NO anula la licencia. El código sigue siendo válido y el cliente sigue teniendo acceso.')) return;
-  const entry = sales[i];
-  sales.splice(i, 1);
-  saveSales();
-  renderLog();
-  if(entry && entry.id){
-    const app = await getPlatformFirebaseApp();
-    if(app && app.auth().currentUser && app.auth().currentUser.email){
-      try{ await app.database().ref('gastrogoan/adminSalesLog/' + entry.id).remove(); }
-      catch(e){ console.error('Error borrando la venta de la nube', e); }
-    }
-  }
-}
-
-/* ── Anular un código de negocio ──
-   Tres cosas, y las tres hacen falta:
-   1. `issuedCodes`  — sin esto el código no se reconoce y no se puede canjear.
-   2. `codeClaims`   — libera la reserva, para que el código no quede "cogido"
-                       por un dueño que ya no lo tiene.
-   3. `revokedCodes` — es lo que bloquea a quien YA lo tenga canjeado: la app
-                       lo consulta al arrancar y enseña la pantalla de licencia
-                       revocada.
-   Con solo la 1 y la 2, un cliente que ya está dentro seguiría trabajando
-   indefinidamente, porque su licencia vive en su dispositivo. */
-async function anularCodigo(i, id){
-  const entry = ventaDeBoton(i, id, 'negocio');
-  if(!entry) return;
-  const code = entry.value;
-  if(!confirm('¿ANULAR el código ' + code + '?\n\nDejará de poder canjearse y, si ya está en uso, la app de ese cliente quedará bloqueada la próxima vez que se abra con internet.\n\nEsto no se puede deshacer desde aquí.')) return;
+/* ============================================================
+   QUITAR / RESTABLECER ACCESO (antes "anular"/"reactivar")
+   ============================================================ */
+async function quitarAcceso(licId){
+  const l = findSale(licId);
+  if(!l) return;
+  const code = l.value;
+  if(!confirm('¿Quitar el acceso al código ' + code + '?\n\nDejará de poder canjearse y, si ya está en uso, la app de ese cliente quedará bloqueada la próxima vez que se abra con internet.')) return;
   const motivo = prompt('Motivo (opcional, para tu registro):', '') || '';
-  const app = await getPlatformFirebaseApp();
-  if(!app || !app.auth().currentUser || !app.auth().currentUser.email){
-    alert('Tienes que iniciar sesión como administrador para anular una licencia.');
-    return;
-  }
-  const db = app.database();
+  const db = getApp().database();
   try{
     await db.ref('gastrogoan/revokedCodes/' + code).set({at: Date.now(), motivo});
     await db.ref('gastrogoan/issuedCodes/' + code).remove();
     await db.ref('gastrogoan/codeClaims/' + code).remove();
-    entry.anulada = new Date().toISOString().slice(0,10);
-    entry.motivo = motivo;
-    saveSales();
-    if(entry.id) await db.ref('gastrogoan/adminSalesLog/' + entry.id).update({anulada: entry.anulada, motivo});
-    renderLog();
-    alert('Código anulado.\n\nSi el cliente ya lo tenía canjeado, su app se bloqueará la próxima vez que se abra con internet.');
-  }catch(e){
-    console.error(e);
-    alert('No se ha podido anular: ' + (e && e.message));
-  }
+    await updateSaleEntry(l, {anulada: todayStr(), motivo});
+    renderFolders(); renderCalendario(); renderHistorial();
+  }catch(e){ console.error(e); alert('No se ha podido quitar el acceso: ' + (e && e.message)); }
 }
-
-/* Deshace la anulación. Existe porque el error humano existe: anular el
-   código equivocado a las once de la noche y no poder arreglarlo hasta que
-   alguien toque la base de datos a mano sería mucho peor que este botón.
-   Devuelve el código a la lista de emitidos y quita el bloqueo. */
-async function reactivarCodigo(i){
-  const entry = sales[i];
-  if(!entry || entry.kind !== 'negocio') return;
-  const code = entry.value;
-  if(!confirm('¿Reactivar el código ' + code + '?\n\nVolverá a poder canjearse y se quitará el bloqueo de la app del cliente.')) return;
-  const app = await getPlatformFirebaseApp();
-  if(!app || !app.auth().currentUser || !app.auth().currentUser.email){
-    alert('Tienes que iniciar sesión como administrador.');
-    return;
-  }
-  const db = app.database();
+async function restablecerLicencia(licId){
+  const l = findSale(licId);
+  if(!l) return;
+  const code = l.value;
+  if(!confirm('¿Restablecer la licencia ' + code + '?\n\nVolverá a poder canjearse y se quitará el bloqueo de la app del cliente.')) return;
+  const db = getApp().database();
   try{
     await db.ref('gastrogoan/issuedCodes/' + code).set({at: Date.now(), reactivado: true});
     await db.ref('gastrogoan/revokedCodes/' + code).remove();
-    delete entry.anulada; delete entry.motivo;
-    saveSales();
-    if(entry.id) await db.ref('gastrogoan/adminSalesLog/' + entry.id).update({anulada: null, motivo: null});
-    renderLog();
-    alert('Código reactivado.');
-  }catch(e){
-    console.error(e);
-    alert('No se ha podido reactivar: ' + (e && e.message));
-  }
+    await updateSaleEntry(l, {anulada: null, motivo: null, proximoPago: addYearsStr(todayStr(), 1)});
+    renderFolders(); renderCalendario(); renderHistorial();
+  }catch(e){ console.error(e); alert('No se ha podido restablecer: ' + (e && e.message)); }
 }
-
-/* ── Borrar una cuenta de propietario ──
-   La cuenta vive en una ruta derivada de usuario+PIN, así que para borrarla
-   hace falta el PIN — y por eso solo se puede desde aquí, donde el registro
-   de ventas lo guarda. Se libera también el nombre, para que ese usuario
-   pueda volver a venderse.
-   ⚠️ Los NEGOCIOS de esa cuenta no se tocan: son licencias aparte y se anulan
-   una a una. Borrar la cuenta solo quita la forma de entrar. */
-/* ⚠️ Los botones apuntan a la POSICIÓN en la lista, y la lista se reordena:
-   al entrar como administrador se fusiona con la nube y se vuelve a ordenar
-   por fecha. Si eso pasa después de pintar, la posición del botón apunta a
-   otra venta distinta, el `kind` no cuadra y la función se iba con un `return`
-   a secas: se pulsaba "Borrar cuenta" y NO PASABA NADA, sin ningún aviso.
-   El dueño lo contó como "al dar a anular o borrar no hace nada".
-   Se resuelve buscando por el identificador de la venta, que sí es estable, y
-   dejando la posición solo como respaldo para las ventas antiguas que no lo
-   tengan. */
-function ventaDeBoton(i, id, tipo){
-  let entry = null;
-  if(id) entry = sales.find(s => s.id === id) || null;
-  if(!entry) entry = sales[i] || null;
-  if(!entry){
-    alert('No encuentro esa venta en el registro. Recarga la página y vuelve a intentarlo.');
-    return null;
+async function delSale(id){
+  if(!confirm('¿Quitar esta entrada de tu registro?\n\nOJO: esto NO revoca ni restablece nada, solo la anotación.')) return;
+  const idx = sales.findIndex(s => s.id === id);
+  if(idx === -1) return;
+  sales.splice(idx, 1);
+  saveSales();
+  if(adminUser){
+    try{ await getApp().database().ref('gastrogoan/adminSalesLog/' + id).remove(); }catch(e){ console.error(e); }
   }
-  if(tipo && entry.kind !== tipo){
-    alert('La lista ha cambiado desde que se pintó esta pantalla y ese botón ya no apunta a lo que decía.\n\nRecarga la página y vuelve a intentarlo.');
-    return null;
-  }
-  return entry;
+  renderFolders(); renderCalendario(); renderHistorial();
 }
-
-async function borrarCuenta(i, id){
-  const entry = ventaDeBoton(i, id, 'cuenta');
-  if(!entry) return;
-  const user = entry.owner || entry.value;
-  if(!entry.pin){
-    alert('No tengo el PIN de esta cuenta en el registro, y sin él no se puede borrar: la cuenta vive en una ruta que se calcula con usuario+PIN.\n\nSe puede liberar el nombre igualmente, pero la cuenta seguiría existiendo.');
-  }
-  if(!confirm('¿Borrar la cuenta "' + user + '"?\n\nEsa persona dejará de poder entrar. Sus negocios NO se anulan: si quieres cortarlos también, anula cada código por separado.')) return;
-  const app = await getPlatformFirebaseApp();
-  if(!app || !app.auth().currentUser || !app.auth().currentUser.email){
-    alert('Tienes que iniciar sesión como administrador.');
-    return;
-  }
-  const db = app.database();
+async function borrarCuenta(user){
+  const cuenta = sales.find(s => s.kind === 'cuenta' && s.value === user);
+  if(!confirm('¿Borrar la cuenta "' + user + '"?\n\nEsa persona dejará de poder entrar. Sus negocios NO se anulan.')) return;
+  const db = getApp().database();
   try{
-    if(entry.pin){
-      const authKey = ggOwnerAuthKey(user, entry.pin);
-      await db.ref('gastrogoan/ownerAuth/' + authKey).remove();
+    if(cuenta && cuenta.pin){
+      await db.ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, cuenta.pin)).remove();
     }
     await db.ref('gastrogoan/ownerNames/' + user).remove();
-    entry.anulada = new Date().toISOString().slice(0,10);
-    saveSales();
-    if(entry.id) await db.ref('gastrogoan/adminSalesLog/' + entry.id).update({anulada: entry.anulada});
-    renderLog();
-    alert('Cuenta borrada y nombre liberado.' + (entry.pin ? '' : '\n\nOJO: sin el PIN no se ha podido borrar el acceso, solo el nombre.'));
-  }catch(e){
-    console.error(e);
-    alert('No se ha podido borrar: ' + (e && e.message));
-  }
+    if(cuenta) await updateSaleEntry(cuenta, {anulada: todayStr()});
+    renderFolders();
+    alert('Cuenta borrada y nombre liberado.' + (cuenta && cuenta.pin ? '' : '\n\nOJO: sin el PIN guardado no se ha podido borrar el acceso, solo el nombre.'));
+  }catch(e){ console.error(e); alert('No se ha podido borrar: ' + (e && e.message)); }
+}
+async function hacerResetPin(user){
+  if(!confirm('¿Darle un PIN nuevo a "' + user + '"? El anterior deja de servir en dispositivos nuevos (los que ya entraron siguen con GGGG).')) return;
+  try{
+    const pin = await resetOwnerPinFor(user);
+    await pushSaleEntry({ id: genUuid(), date: todayStr(), name: '(PIN restablecido)', kind: 'cuenta', value: user, pin, owner: user });
+    renderFolders();
+    const cuenta = sales.find(s => s.kind==='cuenta' && s.value===user);
+    const msg = 'Tu nuevo PIN de GastroGoan 🍽\n\nUsuario: ' + user + '\nPIN: ' + pin + '\n\nEntra con estos datos.';
+    showCobrarModal(msg, cuenta && cuenta.email, cuenta && cuenta.phone);
+  }catch(e){ console.error(e); alert('No se pudo generar el PIN nuevo: ' + (e && e.message)); }
+}
+async function guardarContacto(user){
+  const email = document.getElementById('email-'+user).value.trim();
+  const phone = document.getElementById('phone-'+user).value.trim();
+  const cuenta = sales.find(s => s.kind === 'cuenta' && s.value === user);
+  if(!cuenta) return;
+  await updateSaleEntry(cuenta, {email, phone});
+  alert('Ficha de contacto guardada.');
 }
 
-const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c =>
-  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-function copiar(txt){
-  navigator.clipboard.writeText(txt).then(() => alert('Copiado: ' + txt));
-}
-
-/* El registro se pinta AGRUPADO POR CUENTA, no como una lista plana.
-   Antes había una columna "Dato" que contenía el usuario en las filas de
-   cuenta y el código en las de negocio, y otra columna "Cuenta" que repetía
-   el usuario: mirando una venta no se sabía qué se le manda al cliente para
-   ENTRAR y qué para AÑADIR el local. Ahora cada cuenta es una tarjeta con
-   sus credenciales arriba y sus locales colgando debajo. */
-function renderLog(){
-  const has = sales.length > 0;
-  document.getElementById('empty').style.display = has ? 'none' : 'block';
-  document.getElementById('export-row').style.display = has ? 'flex' : 'none';
-
-  // Cada entrada guarda su posición original: los botones siguen operando
-  // sobre sales[i], así que agrupar no puede perder el índice.
-  const conIdx = sales.map((s, i) => ({...s, i}));
-  const cuentas = conIdx.filter(s => s.kind === 'cuenta');
-  const locales = conIdx.filter(s => s.kind !== 'cuenta');
-
-  const nCuentas = new Set(cuentas.map(c => c.value)).size;
-  const nLocales = locales.length;
-  document.getElementById('count').textContent = has
-    ? `· ${nCuentas} cuenta${nCuentas === 1 ? '' : 's'} · ${nLocales} local${nLocales === 1 ? '' : 'es'}`
-    : '';
-
-  // Un local cuyo dueño no está en el registro (venta antigua, o apuntada a
-  // mano) no puede desaparecer de la vista: se agrupa aparte y se avisa.
-  const usuarios = new Set(cuentas.map(c => c.value));
-  const grupos = [];
-  cuentas.forEach(c => {
-    if(grupos.some(g => g.user === c.value)) return;   // PIN restablecido: una sola tarjeta
-    grupos.push({user: c.value, cuentas: cuentas.filter(x => x.value === c.value),
-                 locales: locales.filter(l => l.owner === c.value)});
-  });
-  const huerfanos = locales.filter(l => !usuarios.has(l.owner));
-  if(huerfanos.length) grupos.push({user: null, cuentas: [], locales: huerfanos});
-
-  document.getElementById('log').innerHTML = grupos.map(g => {
-    // Si se le ha restablecido el PIN, el que vale es el último emitido.
-    const ultima = g.cuentas[0];
-    /* ⚠️ La tarjeta tiene que ENSEÑAR que la cuenta está borrada. Antes no lo
-       hacía en ninguna parte: se borraba de verdad en Firebase y en pantalla
-       seguía igual —mismo usuario, mismo PIN, mismo botón de borrar—, así que
-       el dueño lo contó como "le doy a borrar cuenta pero no borra nada".
-       El borrado funcionaba; lo que faltaba era decirlo. */
-    const cuentaBorrada = !!(ultima && ultima.anulada);
-    const titulo = g.user
-      ? `👤 ${esc(g.user)}`
-      : '⚠️ Locales sin cuenta en este registro';
-    const nombreCliente = ultima && ultima.name && ultima.name !== g.user
-      ? `<span class="pastilla">${esc(ultima.name)}</span>` : '';
-
-    const credenciales = g.user ? `
-      <div class="cred${cuentaBorrada ? ' anulada' : ''}">
-        <span class="cred-et">Para ENTRAR en la app</span>
-        <span class="cred-val">${esc(g.user)}</span>
-        ${cuentaBorrada ? `
-        <span class="cred-et">Estado</span>
-        <span class="cred-val" style="color:#8A4A3B">Cuenta borrada el ${esc(ultima.anulada)}</span>
-        <button class="acc" title="Quita la anotación de tu lista. La cuenta ya está borrada." onclick="delSale(${ultima.i})">Quitar del registro</button>
-        ` : `
-        <span class="cred-et">PIN</span>
-        <span class="cred-val">${esc(ultima && ultima.pin || '—')}</span>
-        <button class="acc" onclick="copiar('Usuario: ${esc(g.user)}  ·  PIN: ${esc(ultima && ultima.pin || '')}')">Copiar</button>
-        ${ultima ? `<button class="acc acc-rojo" title="Borra la cuenta y libera el nombre. El cliente deja de poder entrar." onclick="borrarCuenta(${ultima.i}, '${esc(ultima.id || '')}')">Borrar cuenta</button>` : ''}
-        ${g.cuentas.length > 1 ? `<span class="pastilla">PIN restablecido ${g.cuentas.length - 1} vez/veces — vale el de arriba</span>` : ''}
-        `}
-      </div>` : '';
-
-    const filas = g.locales.length ? g.locales.map(l => {
-      const anulada = !!l.anulada;
-      return `<div class="local${anulada ? ' anulada' : ''}">
-        <span class="local-cod">${esc(l.value)}</span>
-        <span class="local-nom">${esc(l.name)}${anulada
-          ? ` <span style="color:#8A4A3B">· anulada ${esc(l.anulada)}${l.motivo ? ' (' + esc(l.motivo) + ')' : ''}</span>` : ''}</span>
-        <span class="pastilla">${esc(l.date)}</span>
-        ${anulada
-          ? `<button class="acc" onclick="reactivarCodigo(${l.i})">Reactivar</button>`
-          : `<button class="acc acc-rojo" title="El código deja de funcionar y la app de ese cliente se bloquea" onclick="anularCodigo(${l.i}, '${esc(l.id || '')}')">Anular licencia</button>`}
-        <button class="acc" title="Solo quita la anotación de tu lista. NO anula la licencia." onclick="delSale(${l.i})">Quitar del registro</button>
-      </div>`;
-    }).join('') : `<div class="local"><span class="muted">Todavía no le has vendido ningún local.</span></div>`;
-
-    return `<div class="cuenta">
-      <div class="cuenta-cab"><span class="cuenta-nom">${titulo}</span>${nombreCliente}</div>
-      ${credenciales}
-      <div class="locales">
-        <div class="cred-et" style="padding:8px 0 2px">Códigos de local — cada uno se canjea dentro de la app (uno por local)</div>
-        ${filas}
+/* ============================================================
+   MODAL: AGREGAR USUARIO (solo cuenta, sin licencia — a propósito, para no
+   confundir a qué cliente pertenece luego cada código)
+   ============================================================ */
+function openAgregarUsuario(){
+  document.getElementById('modal-root').innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal">
+      <h3>＋ Agregar usuario</h3>
+      <p class="muted">Crea solo la cuenta (usuario + PIN). Las licencias de negocio se añaden después, desde dentro de la carpeta del cliente.</p>
+      <label>Nombre de usuario que ha pedido el cliente</label>
+      <input id="nu-name" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')checkNuevoUsuario()">
+      <label style="margin-top:6px">Email (opcional, para el botón Cobrar)</label>
+      <input id="nu-email" type="email" placeholder="cliente@email.com">
+      <label style="margin-top:6px">Teléfono / WhatsApp (opcional)</label>
+      <input id="nu-phone" placeholder="+34...">
+      <p id="nu-check" class="muted"></p>
+      <button class="btn btn-light" onclick="checkNuevoUsuario()">🔎 ¿Ese nombre ya existe?</button>
+      <button class="btn btn-primary" id="nu-btn" onclick="crearNuevoUsuario()">Crear cuenta</button>
+      <div id="nu-out" class="hidden">
+        <div class="key-out" id="nu-key"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <a class="btn btn-wa" style="flex:1" id="nu-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
+          <a class="btn btn-light" style="flex:1" id="nu-mail">✉️ Email</a>
+        </div>
       </div>
+      <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
+    </div>
+  </div>`;
+}
+async function checkNuevoUsuario(){
+  const el = document.getElementById('nu-check');
+  const user = ggOwnerUser(document.getElementById('nu-name').value);
+  if(!user){ el.textContent = 'Escribe primero el nombre.'; return; }
+  el.textContent = 'Consultando...';
+  try{
+    const existe = (await getApp().database().ref('gastrogoan/ownerNames/' + user).once('value')).exists();
+    el.innerHTML = existe
+      ? `<span style="color:var(--amber)">⚠️ "${esc(user)}" ya existe. Si creas otro, se le asignará "${esc(user)}2".</span>`
+      : `<span style="color:var(--green)">✅ "${esc(user)}" está libre.</span>`;
+  }catch(e){ el.textContent = 'No se pudo consultar.'; }
+}
+async function crearNuevoUsuario(){
+  const btn = document.getElementById('nu-btn');
+  btn.disabled = true;
+  const raw = document.getElementById('nu-name').value.trim();
+  const email = document.getElementById('nu-email').value.trim();
+  const phone = document.getElementById('nu-phone').value.trim();
+  const res = await claimOwnerAccount(raw);
+  if(res.error){ alert(res.error); btn.disabled = false; return; }
+  document.getElementById('nu-key').innerHTML = `Usuario: ${esc(res.user)}<br>PIN: ${esc(res.pin)}`;
+  document.getElementById('nu-out').classList.remove('hidden');
+  const msg = 'Tu cuenta de GastroGoan 🍽\n\nUsuario: ' + res.user + '\nPIN: ' + res.pin + '\n\nAbre la app, pulsa "Acceso Propietarios" y entra con estos dos datos. Dentro verás la pantalla de negocios: pulsa "Canjear negocio" e introduce el código que te enviaré aparte.';
+  document.getElementById('nu-wa').href = 'https://wa.me/' + (phone ? phone.replace(/[^0-9]/g,'') : '') + '?text=' + encodeURIComponent(msg);
+  document.getElementById('nu-mail').href = 'mailto:' + (email||'') + '?subject=' + encodeURIComponent('Tu cuenta de GastroGoan') + '&body=' + encodeURIComponent(msg);
+  await pushSaleEntry({ id: genUuid(), date: todayStr(), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin, owner: res.user, email, phone });
+  renderFolders();
+  btn.disabled = false;
+}
+
+/* ============================================================
+   MODAL: NUEVA LICENCIA (solo desde dentro de la carpeta de un cliente)
+   ============================================================ */
+function openNuevaLicencia(user){
+  document.getElementById('modal-root').innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal">
+      <h3>＋ Nueva licencia para ${esc(user)}</h3>
+      <label>Nombre del restaurante (solo para tu registro)</label>
+      <input id="nl-name" placeholder="Ej: Casa Paco - Sucursal 2" onkeydown="if(event.key==='Enter')crearNuevaLicencia('${esc(user)}')">
+      <button class="btn btn-primary" id="nl-btn" onclick="crearNuevaLicencia('${esc(user)}')" style="margin-top:8px">Generar código</button>
+      <div id="nl-out" class="hidden">
+        <div class="key-out" id="nl-key"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <a class="btn btn-wa" style="flex:1" id="nl-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
+          <a class="btn btn-light" style="flex:1" id="nl-mail">✉️ Email</a>
+        </div>
+      </div>
+      <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
+    </div>
+  </div>`;
+}
+async function crearNuevaLicencia(user){
+  const btn = document.getElementById('nl-btn');
+  btn.disabled = true;
+  const raw = document.getElementById('nl-name').value.trim();
+  let code;
+  try{ code = await claimUniqueBizCode(); }
+  catch(e){ alert('No se pudo generar el código: ' + e.message); btn.disabled = false; return; }
+  const fecha = todayStr();
+  document.getElementById('nl-key').innerHTML = `Código de negocio: ${esc(code)}`;
+  document.getElementById('nl-out').classList.remove('hidden');
+  const msg = 'Tu código de negocio de GastroGoan 🍽\n\nCódigo: ' + code + '\n\nEntra en la app con tu usuario y PIN, y en la pantalla de negocios pulsa "Canjear negocio" para introducirlo.';
+  const cuenta = sales.find(s => s.kind==='cuenta' && s.value===user);
+  document.getElementById('nl-wa').href = 'https://wa.me/' + (cuenta && cuenta.phone ? cuenta.phone.replace(/[^0-9]/g,'') : '') + '?text=' + encodeURIComponent(msg);
+  document.getElementById('nl-mail').href = 'mailto:' + (cuenta && cuenta.email || '') + '?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
+  await pushSaleEntry({ id: genUuid(), date: fecha, name: raw || '(sin nombre)', kind: 'negocio', value: code, owner: user, proximoPago: addYearsStr(fecha, 1) });
+  openFolders.add(user);
+  renderFolders(); renderCalendario();
+  btn.disabled = false;
+}
+
+/* ============================================================
+   CALENDARIO ANUAL DE COBROS
+   ============================================================ */
+let calYear = new Date().getFullYear();
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function renderCalendario(){
+  document.getElementById('cal-year-lbl').textContent = calYear;
+  const activas = sales.filter(s => s.kind === 'negocio' && !s.anulada);
+  const porMes = Array.from({length:12}, () => []);
+  activas.forEach(l => {
+    const prox = l.proximoPago || (l.date ? addYearsStr(l.date, 1) : null);
+    if(!prox) return;
+    const [y, m] = prox.split('-').map(Number);
+    if(y === calYear) porMes[m-1].push({...l, proximoPago: prox});
+  });
+  document.getElementById('cal-grid').innerHTML = MESES.map((nombre, i) => {
+    const lics = porMes[i].sort((a,b) => a.proximoPago.localeCompare(b.proximoPago));
+    return `<div class="cal-mes">
+      <h4>${nombre}</h4>
+      ${lics.length ? lics.map(l => `<div class="cal-lic" onclick="irACobro('${esc(l.owner)}','${esc(l.id)}')">
+          <span>${esc(l.value)} · ${esc(l.name||'')}</span><span>${esc(l.proximoPago.slice(8,10))}</span>
+        </div>`).join('') : `<div class="cal-vacio">Sin cobros</div>`}
     </div>`;
   }).join('');
 }
+function irACobro(user, licId){
+  setTab('clientes');
+  if(user) openFolders.add(user);
+  renderFolders();
+  setTimeout(() => {
+    const el = document.getElementById('lic-' + licId);
+    if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline = '2px solid var(--brand-orange)'; setTimeout(()=>el.style.outline='', 2000); }
+  }, 50);
+}
 
+/* ============================================================
+   HISTORIAL (opcional, plano y cronológico)
+   ============================================================ */
+function renderHistorial(){
+  document.getElementById('hist-count').textContent = `· ${sales.length} entradas`;
+  document.getElementById('hist-body').innerHTML = sales.map(s => `<tr>
+    <td>${esc(s.date)}</td><td>${esc(s.name)}</td><td>${esc(s.kind)}</td>
+    <td class="key">${esc(s.value)}</td><td>${esc(s.owner||'')}</td>
+    <td>${s.anulada ? 'Revocada ' + esc(s.anulada) : 'Activa'}</td>
+  </tr>`).join('');
+}
 function exportCSV(){
-  const csv = 'Fecha;Cliente;Tipo;Dato;Cuenta;PIN;Anulada;Motivo\n' + sales.map(s => `${s.date};${s.name};${s.kind};${s.value};${s.owner || ''};${s.pin || ''};${s.anulada || ''};${s.motivo || ''}`).join('\n');
+  const csv = 'Fecha;Cliente;Tipo;Dato;Cuenta;Estado\n' + sales.map(s => `${s.date};${s.name};${s.kind};${s.value};${s.owner||''};${s.anulada ? 'Revocada '+s.anulada : 'Activa'}`).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = 'ventas-gastrogoan.csv';
   a.click();
 }
-
-renderLog();
 </script>
 </body>
 </html>
