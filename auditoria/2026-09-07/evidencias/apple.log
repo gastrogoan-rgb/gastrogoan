@@ -1,0 +1,10 @@
+✅ Ninguna fecha se construye con espacio en vez de "T"  → todas con formato ISO
+✅ No se usa nada que Safari no tenga sin comprobarlo antes  → las APIs que iOS no tiene van comprobadas
+✅ Guardar un archivo tiene camino propio para iOS  → una sola puerta, y en iOS pasa por Compartir
+✅ iPhone: ningún campo con letra de menos de 16 px (si no, Safari hace zoom)  → 10 pantallas, ningún campo por debajo de 16 px
+✅ iPad: ningún campo con letra de menos de 16 px (si no, Safari hace zoom)  → 10 pantallas, ningún campo por debajo de 16 px
+✅ Ninguna altura fija a 100vh sin respaldo (la barra de Safari se mueve)  → todas las alturas de pantalla llevan su 100dvh
+✅ La app avisa si el navegador no la deja guardar nada  → las escrituras van protegidas
+
+════════════════════════════════════════════════════════════════
+✅ los 7 casos pasaron

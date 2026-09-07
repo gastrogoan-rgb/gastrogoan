@@ -1,0 +1,574 @@
+✅ Ningún botón de "solo propietario" se ve en una sesión de empleado  → ninguna acción de propietario visible para un empleado
+✅ Un empleado SIN permiso de edición no ve los botones de editar  → sin permiso de edición no se ve ningún botón de editar
+✅ Un empleado CON permiso de edición sí los ve — si no, el permiso no sirve de nada  → cocina 13 acciones · sala 4
+✅ Gestión Económica no se abre desde una sesión de empleado  → las 4 vistas de Gestión, cerradas en los 5 modos de empleado
+✅ Los módulos de coste no se abren sin permiso de edición  → los 4 módulos de coste, cerrados sin permiso de edición
+✅ Guardar un empleado desde una sesión que no puede AVISA, no calla  → avisa: "Las fichas del personal (alta, datos y PIN) las llev"
+✅ Un empleado no puede cambiar la ficha de un compañero ni llamando a la función  → la ficha del compañero queda intacta
+✅ Un empleado solo entra en su área  → cocina no entra en sala y sala no entra en cocina
+✅ El repartidor ve el control de repartos, y el resto de sala también  → mismo TPV para los dos
+✅ Ningún error de JavaScript en ninguno de los seis modos  → consola limpia
+CANCELAR FICHA cocina Audit cocina
+FICHA Y SAL cocina {
+  e: {
+    id: 1788818409162566,
+    name: 'Audit cocina',
+    rol: '',
+    color: '#df7039',
+    phone: '600444555',
+    email: 'audit@example.test',
+    canUnlockEdit: false,
+    esRepartidor: false,
+    area: 'cocina',
+    pin: 'H2:7s0v7l',
+    pinChanged: true,
+    active: true,
+    fechaAlta: '2026-09-07'
+  },
+  code: 'PERMIS01',
+  conNegocio: true,
+  conPropietario: false
+}
+CANCELAR FICHA sala Audit sala
+FICHA Y SAL sala {
+  e: {
+    id: 1788818409995997,
+    name: 'Audit sala',
+    rol: '',
+    color: '#df7039',
+    phone: '600444555',
+    email: 'audit@example.test',
+    canUnlockEdit: false,
+    esRepartidor: true,
+    area: 'sala',
+    pin: 'H2:166bd41',
+    pinChanged: true,
+    active: true,
+    fechaAlta: '2026-09-07'
+  },
+  code: 'PERMIS01',
+  conNegocio: true,
+  conPropietario: false
+}
+OPERATIVA propietario {
+  personal: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    'Historial de Personal\n' +
+    'Asignar turnos por periodo\n' +
+    'Añadir Empleado\n' +
+    'Cocinero Raso\n' +
+    'x\n' +
+    ' Ver ficha del empleado\n' +
+    'Jefe de Cocina\n' +
+    'x\n' +
+    ' Ver ficha del empleado\n' +
+    'Audit cocina\n' +
+    'Sin rol · 0 día(s) en el equipo\n' +
+    ' Ver ficha del empleado',
+  semana: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    '7 sept – 13 sept 2026\n' +
+    'Hoy\n' +
+    'Imprimir horario\n' +
+    'Nuevo Turno\n' +
+    'M = MAÑANA\n' +
+    'T = TARDE\n' +
+    'P = PARTIDO\n' +
+    'D = DESCANSO\n' +
+    'V = VACACIONES\n' +
+    'B = BAJA\n' +
+    'C = OTRO\n' +
+    'EMPLEADO\tLUN\n' +
+    '7/9\tMAR\n' +
+    '8/9\tMIÉ\n' +
+    '9/9\tJUE\n' +
+    '10/9\tVIE\n' +
+    '11/9\tSÁB\n' +
+    '12/9\tDOM\n' +
+    '13/9\tTOTAL H.\n' +
+    '\n' +
+    'Cocinero Raso\n' +
+    'x\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—\n' +
+    '\n' +
+    'Jefe de Cocina\n' +
+    'x\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—\n' +
+    '\n' +
+    'Audit cocina\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—',
+  canEdit: true,
+  turnoCreado: {
+    id: 1788818410666721,
+    employeeId: 1788818396112082,
+    fecha: '2026-10-22',
+    tipo: 'M',
+    entrada: '10:00',
+    salida: '17:00',
+    entrada2: '',
+    salida2: '',
+    notas: 'audit turno'
+  },
+  turnoEditado: {
+    id: 1788818410666721,
+    employeeId: 1788818396112082,
+    fecha: '2026-10-22',
+    tipo: 'M',
+    entrada: '10:00',
+    salida: '17:00',
+    entrada2: '',
+    salida2: '',
+    notas: 'audit turno'
+  },
+  fichaje: {
+    id: 1788818410672316,
+    employeeId: 1788818396112082,
+    fecha: '2026-09-07',
+    entrada: '2026-09-07T22:00:10.672Z',
+    salida: '2026-09-07T22:00:10.673Z',
+    entradaAuthMethod: 'self',
+    salidaAuthMethod: 'self'
+  }
+}
+OPERATIVA cocina {
+  personal: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    'Aquí ves solo tu ficha: los datos de contacto y el PIN de tus compañeros son cosa del propietario. Para organizar los turnos del equipo, usa las pestañas Día y Semana.\n' +
+    'Cocinero Raso\n' +
+    'x\n' +
+    ' Haz clic para fichar',
+  semana: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    '7 sept – 13 sept 2026\n' +
+    'Hoy\n' +
+    'Imprimir horario\n' +
+    'M = MAÑANA\n' +
+    'T = TARDE\n' +
+    'P = PARTIDO\n' +
+    'D = DESCANSO\n' +
+    'V = VACACIONES\n' +
+    'B = BAJA\n' +
+    'C = OTRO\n' +
+    'EMPLEADO\tLUN\n' +
+    '7/9\tMAR\n' +
+    '8/9\tMIÉ\n' +
+    '9/9\tJUE\n' +
+    '10/9\tVIE\n' +
+    '11/9\tSÁB\n' +
+    '12/9\tDOM\n' +
+    '13/9\tTOTAL H.\n' +
+    '\n' +
+    'Cocinero Raso\n' +
+    'x\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—\n' +
+    '\n' +
+    'Jefe de Cocina\n' +
+    'x\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—\n' +
+    '\n' +
+    'Audit cocina\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—',
+  canEdit: false,
+  fichaje: {
+    id: 1788818411061254,
+    employeeId: 1788818396112082,
+    fecha: '2026-09-07',
+    entrada: '2026-09-07T22:00:11.061Z',
+    salida: '2026-09-07T22:00:11.062Z',
+    entradaAuthMethod: 'self',
+    salidaAuthMethod: 'self'
+  }
+}
+OPERATIVA cocinaEdicion {
+  personal: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    'Aquí ves solo tu ficha: los datos de contacto y el PIN de tus compañeros son cosa del propietario. Para organizar los turnos del equipo, usa las pestañas Día y Semana.\n' +
+    'Jefe de Cocina\n' +
+    'x\n' +
+    ' Haz clic para fichar',
+  semana: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    '7 sept – 13 sept 2026\n' +
+    'Hoy\n' +
+    'Imprimir horario\n' +
+    'Nuevo Turno\n' +
+    'M = MAÑANA\n' +
+    'T = TARDE\n' +
+    'P = PARTIDO\n' +
+    'D = DESCANSO\n' +
+    'V = VACACIONES\n' +
+    'B = BAJA\n' +
+    'C = OTRO\n' +
+    'EMPLEADO\tLUN\n' +
+    '7/9\tMAR\n' +
+    '8/9\tMIÉ\n' +
+    '9/9\tJUE\n' +
+    '10/9\tVIE\n' +
+    '11/9\tSÁB\n' +
+    '12/9\tDOM\n' +
+    '13/9\tTOTAL H.\n' +
+    '\n' +
+    'Cocinero Raso\n' +
+    'x\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—\n' +
+    '\n' +
+    'Jefe de Cocina\n' +
+    'x\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—\n' +
+    '\n' +
+    'Audit cocina\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—',
+  canEdit: true,
+  turnoCreado: {
+    id: 1788818411457100,
+    employeeId: 1788818396112732,
+    fecha: '2026-10-22',
+    tipo: 'M',
+    entrada: '10:00',
+    salida: '17:00',
+    entrada2: '',
+    salida2: '',
+    notas: 'audit turno'
+  },
+  turnoEditado: {
+    id: 1788818411457100,
+    employeeId: 1788818396112732,
+    fecha: '2026-10-22',
+    tipo: 'M',
+    entrada: '10:00',
+    salida: '17:00',
+    entrada2: '',
+    salida2: '',
+    notas: 'audit turno'
+  },
+  fichaje: {
+    id: 1788818411468052,
+    employeeId: 1788818396112732,
+    fecha: '2026-09-07',
+    entrada: '2026-09-07T22:00:11.468Z',
+    salida: '2026-09-07T22:00:11.469Z',
+    entradaAuthMethod: 'self',
+    salidaAuthMethod: 'self'
+  }
+}
+OPERATIVA sala {
+  personal: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    'Aquí ves solo tu ficha: los datos de contacto y el PIN de tus compañeros son cosa del propietario. Para organizar los turnos del equipo, usa las pestañas Día y Semana.\n' +
+    'Camarero Raso\n' +
+    'x\n' +
+    'Ventas: 0,00 €\n' +
+    'Ticket medio: 0,00 €\n' +
+    ' Haz clic para fichar',
+  semana: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    '7 sept – 13 sept 2026\n' +
+    'Hoy\n' +
+    'Imprimir horario\n' +
+    'M = MAÑANA\n' +
+    'T = TARDE\n' +
+    'P = PARTIDO\n' +
+    'D = DESCANSO\n' +
+    'V = VACACIONES\n' +
+    'B = BAJA\n' +
+    'C = OTRO\n' +
+    'EMPLEADO\tLUN\n' +
+    '7/9\tMAR\n' +
+    '8/9\tMIÉ\n' +
+    '9/9\tJUE\n' +
+    '10/9\tVIE\n' +
+    '11/9\tSÁB\n' +
+    '12/9\tDOM\n' +
+    '13/9\tTOTAL H.\n' +
+    '\n' +
+    'Camarero Raso\n' +
+    'x\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—\n' +
+    '\n' +
+    'Jefe de Sala\n' +
+    'x\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—\n' +
+    '\n' +
+    'Repartidor\n' +
+    'x\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—\n' +
+    '\n' +
+    'Audit sala\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—',
+  canEdit: false,
+  fichaje: {
+    id: 1788818411858475,
+    employeeId: 1788818396112925,
+    fecha: '2026-09-07',
+    entrada: '2026-09-07T22:00:11.858Z',
+    salida: '2026-09-07T22:00:11.859Z',
+    entradaAuthMethod: 'self',
+    salidaAuthMethod: 'self'
+  }
+}
+OPERATIVA salaEdicion {
+  personal: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    'Aquí ves solo tu ficha: los datos de contacto y el PIN de tus compañeros son cosa del propietario. Para organizar los turnos del equipo, usa las pestañas Día y Semana.\n' +
+    'Jefe de Sala\n' +
+    'x\n' +
+    'Ventas: 0,00 €\n' +
+    'Ticket medio: 0,00 €\n' +
+    ' Haz clic para fichar',
+  semana: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    '7 sept – 13 sept 2026\n' +
+    'Hoy\n' +
+    'Imprimir horario\n' +
+    'Nuevo Turno\n' +
+    'M = MAÑANA\n' +
+    'T = TARDE\n' +
+    'P = PARTIDO\n' +
+    'D = DESCANSO\n' +
+    'V = VACACIONES\n' +
+    'B = BAJA\n' +
+    'C = OTRO\n' +
+    'EMPLEADO\tLUN\n' +
+    '7/9\tMAR\n' +
+    '8/9\tMIÉ\n' +
+    '9/9\tJUE\n' +
+    '10/9\tVIE\n' +
+    '11/9\tSÁB\n' +
+    '12/9\tDOM\n' +
+    '13/9\tTOTAL H.\n' +
+    '\n' +
+    'Camarero Raso\n' +
+    'x\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—\n' +
+    '\n' +
+    'Jefe de Sala\n' +
+    'x\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—\n' +
+    '\n' +
+    'Repartidor\n' +
+    'x\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—\n' +
+    '\n' +
+    'Audit sala\n' +
+    '\t+\t+\t+\t+\t+\t+\t+\t—',
+  canEdit: true,
+  turnoCreado: {
+    id: 1788818412243884,
+    employeeId: 1788818396112522,
+    fecha: '2026-10-22',
+    tipo: 'M',
+    entrada: '10:00',
+    salida: '17:00',
+    entrada2: '',
+    salida2: '',
+    notas: 'audit turno'
+  },
+  turnoEditado: {
+    id: 1788818412243884,
+    employeeId: 1788818396112522,
+    fecha: '2026-10-22',
+    tipo: 'M',
+    entrada: '10:00',
+    salida: '17:00',
+    entrada2: '',
+    salida2: '',
+    notas: 'audit turno'
+  },
+  fichaje: {
+    id: 1788818412251533,
+    employeeId: 1788818396112522,
+    fecha: '2026-09-07',
+    entrada: '2026-09-07T22:00:12.251Z',
+    salida: '2026-09-07T22:00:12.252Z',
+    entradaAuthMethod: 'self',
+    salidaAuthMethod: 'self'
+  }
+}
+OPERATIVA salaRepartidor {
+  personal: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    'Aquí ves solo tu ficha: los datos de contacto y el PIN de tus compañeros son cosa del propietario. Para organizar los turnos del equipo, usa las pestañas Día y Semana.\n' +
+    'Repartidor\n' +
+    'x\n' +
+    'Ventas: 0,00 €\n' +
+    'Ticket medio: 0,00 €\n' +
+    ' Haz clic para fichar',
+  semana: 'Volver\n' +
+    'Horario del Personal\n' +
+    'Turnos del personal\n' +
+    ' Personal\n' +
+    ' Día\n' +
+    ' Semana\n' +
+    ' Mes\n' +
+    '7 sept – 13 sept 2026\n' +
+    'Hoy\n' +
+    'Imprimir horario\n' +
+    'M = MAÑANA\n' +
+    'T = TARDE\n' +
+    'P = PARTIDO\n' +
+    'D = DESCANSO\n' +
+    'V = VACACIONES\n' +
+    'B = BAJA\n' +
+    'C = OTRO\n' +
+    'EMPLEADO\tLUN\n' +
+    '7/9\tMAR\n' +
+    '8/9\tMIÉ\n' +
+    '9/9\tJUE\n' +
+    '10/9\tVIE\n' +
+    '11/9\tSÁB\n' +
+    '12/9\tDOM\n' +
+    '13/9\tTOTAL H.\n' +
+    '\n' +
+    'Camarero Raso\n' +
+    'x\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—\n' +
+    '\n' +
+    'Jefe de Sala\n' +
+    'x\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—\n' +
+    '\n' +
+    'Repartidor\n' +
+    'x\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—\n' +
+    '\n' +
+    'Audit sala\n' +
+    '\t—\t—\t—\t—\t—\t—\t—\t—',
+  canEdit: false,
+  fichaje: {
+    id: 1788818412639868,
+    employeeId: 1788818396112286,
+    fecha: '2026-09-07',
+    entrada: '2026-09-07T22:00:12.639Z',
+    salida: '2026-09-07T22:00:12.641Z',
+    entradaAuthMethod: 'self',
+    salidaAuthMethod: 'self'
+  }
+}
+PERSISTENCIA EMPLEADOS {
+  empleados: [
+    {
+      id: 1788818409162566,
+      name: 'Audit cocina',
+      rol: '',
+      color: '#df7039',
+      phone: '600444555',
+      email: 'audit@example.test',
+      canUnlockEdit: false,
+      esRepartidor: false,
+      area: 'cocina',
+      pin: 'H2:7s0v7l',
+      pinChanged: true,
+      active: true,
+      fechaAlta: '2026-09-07'
+    },
+    {
+      id: 1788818409995997,
+      name: 'Audit sala',
+      rol: '',
+      color: '#df7039',
+      phone: '600444555',
+      email: 'audit@example.test',
+      canUnlockEdit: false,
+      esRepartidor: true,
+      area: 'sala',
+      pin: 'H2:166bd41',
+      pinChanged: true,
+      active: true,
+      fechaAlta: '2026-09-07'
+    }
+  ],
+  turnos: [
+    {
+      id: 1788818410666721,
+      employeeId: 1788818396112082,
+      fecha: '2026-10-22',
+      tipo: 'M',
+      entrada: '10:00',
+      salida: '17:00',
+      entrada2: '',
+      salida2: '',
+      notas: 'audit turno'
+    },
+    {
+      id: 1788818411457100,
+      employeeId: 1788818396112732,
+      fecha: '2026-10-22',
+      tipo: 'M',
+      entrada: '10:00',
+      salida: '17:00',
+      entrada2: '',
+      salida2: '',
+      notas: 'audit turno'
+    },
+    {
+      id: 1788818412243884,
+      employeeId: 1788818396112522,
+      fecha: '2026-10-22',
+      tipo: 'M',
+      entrada: '10:00',
+      salida: '17:00',
+      entrada2: '',
+      salida2: '',
+      notas: 'audit turno'
+    }
+  ],
+  fichajes: 6
+}
+
+════════════════════════════════════════════════════════════════
+✅ los 10 casos pasaron

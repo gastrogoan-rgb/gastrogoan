@@ -1,0 +1,197 @@
+RESERVA 14:00 {
+  requests: [
+    {
+      type: 'reserva',
+      clientName: 'Cliente audit',
+      clientPhone: '600123456',
+      clientEmail: 'a@example.test',
+      date: '2026-10-20',
+      time: '14:00',
+      people: 2,
+      notes: '',
+      referral: '',
+      depositRequired: false,
+      depositAmount: '',
+      createdAt: '2026-09-07T22:05:04.330Z',
+      resToken: 'rmtrsgxxnlpwrem06ul',
+      tableId: 1
+    }
+  ],
+  store: {
+    'gastrogoan/public/AUDIT/mesaHold/2026-10-20/1': { '14:00': true, '14:30': true, '15:00': true }
+  },
+  success: '✅\n' +
+    'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible. Te enviaremos la confirmación a tu email en cuanto quede lista.\n' +
+    'Gestionar mi reserva Hacer otra reserva'
+}
+RESERVA SOLAPADA 14:15 {
+  requests: [
+    {
+      type: 'reserva',
+      clientName: 'Cliente audit',
+      clientPhone: '600123456',
+      clientEmail: 'a@example.test',
+      date: '2026-10-20',
+      time: '14:00',
+      people: 2,
+      notes: '',
+      referral: '',
+      depositRequired: false,
+      depositAmount: '',
+      createdAt: '2026-09-07T22:05:04.330Z',
+      resToken: 'rmtrsgxxnlpwrem06ul',
+      tableId: 1
+    },
+    {
+      type: 'reserva',
+      clientName: 'Otro cliente',
+      clientPhone: '600123457',
+      clientEmail: 'b@example.test',
+      date: '2026-10-20',
+      time: '14:15',
+      people: 2,
+      notes: '',
+      referral: '',
+      depositRequired: false,
+      depositAmount: '',
+      createdAt: '2026-09-07T22:05:04.683Z',
+      resToken: 'rmtrsgy7f3cpftqs682q',
+      tableId: 1
+    }
+  ],
+  store: {
+    'gastrogoan/public/AUDIT/mesaHold/2026-10-20/1': {
+      '14:00': true,
+      '14:30': true,
+      '15:00': true,
+      '14:15': true,
+      '14:45': true,
+      '15:15': true
+    }
+  },
+  success: '✅\n' +
+    'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible. Te enviaremos la confirmación a tu email en cuanto quede lista.\n' +
+    'Gestionar mi reserva Hacer otra reserva'
+}
+DELIVERY EFECTIVO INSUFICIENTE {
+  store: { 'gastrogoan/public/AUDIT/pedidosHold/2026-10-20/20:00': 1 },
+  requests: [],
+  body: 'tal\n' +
+    '10,00 €\n' +
+    '\n' +
+    '🕐 Tu pedido debería estar listo para el reparto en unos 15 min (más el tiempo de trayecto).\n' +
+    '\n' +
+    '¿AÑADIR PROPINA?\n' +
+    'Sin propina\n' +
+    '5%\n' +
+    '10%\n' +
+    '15%\n' +
+    'Otro\n' +
+    'NOMBRE *\n' +
+    'TELÉFONO *\n' +
+    'EMAIL (OPCIONAL)\n' +
+    ' Solo lo usamos para avisarte por aquí si el negocio tuviera que cancelar tu pedido.\n' +
+    'FECHA *\n' +
+    'HORA *\n' +
+    '\n' +
+    'Horario el lunes: 10:00–23:00.\n' +
+    '\n' +
+    'DIRECCIÓN DE ENTREGA *\n' +
+    'CÓDIGO POSTAL *\n' +
+    'NOTAS (ALERGIAS, OBSERVACIONES...)\n' +
+    'FORMA DE PAGO\n' +
+    'EFECTIVO\n' +
+    'TARJETA (AL RECIBIR)\n' +
+    '¿CON QUÉ BILLETE VAS A PAGAR?\n' +
+    ' Para que llevemos el cambio justo.\n' +
+    'Acepto que mis datos se usen para gestionar mi reserva/pedido. Ver más\n' +
+    'Enviar pedido\n' +
+    '⚠️ Indica un importe igual o superior al total (10,00 €).\n' +
+    '×'
+}
+DELIVERY EFECTIVO CORREGIDO {
+  store: { 'gastrogoan/public/AUDIT/pedidosHold/2026-10-20/20:00': 1 },
+  requests: [],
+  body: ' en unos 15 min (más el tiempo de trayecto).\n' +
+    '\n' +
+    '¿AÑADIR PROPINA?\n' +
+    'Sin propina\n' +
+    '5%\n' +
+    '10%\n' +
+    '15%\n' +
+    'Otro\n' +
+    'NOMBRE *\n' +
+    'TELÉFONO *\n' +
+    'EMAIL (OPCIONAL)\n' +
+    ' Solo lo usamos para avisarte por aquí si el negocio tuviera que cancelar tu pedido.\n' +
+    'FECHA *\n' +
+    'HORA *\n' +
+    '\n' +
+    'Horario el lunes: 10:00–23:00.\n' +
+    '\n' +
+    'DIRECCIÓN DE ENTREGA *\n' +
+    'CÓDIGO POSTAL *\n' +
+    'NOTAS (ALERGIAS, OBSERVACIONES...)\n' +
+    'FORMA DE PAGO\n' +
+    'EFECTIVO\n' +
+    'TARJETA (AL RECIBIR)\n' +
+    '¿CON QUÉ BILLETE VAS A PAGAR?\n' +
+    ' Para que llevemos el cambio justo.\n' +
+    'Acepto que mis datos se usen para gestionar mi reserva/pedido. Ver más\n' +
+    'Enviar pedido\n' +
+    '⚠️ Lo sentimos, ya no admitimos más pedidos para esa franja horaria. Por favor elige otra hora o llama al restaurante.\n' +
+    '×'
+}
+DELIVERY ERROR TRANSACCION { submittingRequest: true, disabled: true, text: 'Enviando...' } [ 'Uncaught (in promise) Error: NETWORK_TEST' ]
+TAKEAWAY FECHA PASADA {
+  requests: [
+    {
+      type: 'pedido',
+      tipo: 'takeaway',
+      clienteNombre: 'Cliente audit',
+      clienteTelefono: '600123456',
+      clienteEmail: '',
+      clienteDireccion: '',
+      codigoPostal: '',
+      notas: '',
+      date: '2020-01-01',
+      time: '20:00',
+      costeEnvio: 0,
+      propina: 0,
+      items: [Array],
+      createdAt: '2026-09-07T22:05:06.037Z',
+      clientRef: 'rmtrsgz91w4h315pml9',
+      metodoPagoLocal: 'efectivo',
+      total: 10
+    }
+  ],
+  success: '✅\n' +
+    'Pedido enviado. El restaurante lo confirmará en breve.\n' +
+    'Seguir mi pedido Hacer otro pedido'
+}
+CARGA ESPEJO MESAS {
+  recibido: { '2026-10-20': { '1': [Object] } },
+  mesaOfrecida: { id: 1, name: 'Mesa 1', plazas: 4 }
+}
+ANTELACION ENTRE TURNOS {
+  min: '17:30',
+  hint: 'Horario el lunes: 13:00–16:00 y 20:00–23:00.\n' +
+    '\n' +
+    'Para hoy, lo antes que puedes elegir es a las 17:30 (antelación mínima de 30 min).',
+  allowed: false
+}
+GENERADOR SIN CONEXION {
+  key: 'Código de negocio: CNTGPP6G',
+  status: '⚠️ Sin conexión con la plataforma: código generado sin comprobar duplicados online.',
+  sales: [
+    {
+      date: '2026-09-07',
+      name: 'Venta sin conexión',
+      kind: 'negocio',
+      value: 'CNTGPP6G',
+      pin: '',
+      owner: '',
+      id: '68970239-60aa-4ae9-aeac-8c0869b7febf'
+    }
+  ]
+}

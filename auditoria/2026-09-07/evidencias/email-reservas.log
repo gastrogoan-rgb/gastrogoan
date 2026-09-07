@@ -1,0 +1,20 @@
+✅ Guardar la config de email de reservas no dice "pago guardado"
+✅ Modificar una reserva desde la web pública avisa al cliente con su PROPIA plantilla, no la de confirmación
+✅ sendReservationModificationEmail usa su propia plantilla (modifyTemplateId), no la de confirmación
+✅ La guía de EmailJS usa los nombres reales de los botones actuales (no los antiguos)
+✅ Los botones de copiar plantilla de la guía llaman a copyEmailJsTemplate, para las CUATRO plantillas
+✅ La tarjeta de Mi Negocio pide y prueba las CUATRO plantillas (confirmación, modificación, pedido aceptado, cancelación)
+✅ Aceptar un pedido online (para llevar/domicilio) envía un email de confirmación con enlace de seguimiento
+✅ sendOrderConfirmationEmail usa su propia plantilla y el enlace de seguimiento del pedido
+✅ El manual de Ayuda menciona las CUATRO plantillas y los enlaces de gestión/seguimiento
+✅ El aviso de antelación vs. horario solo mira la antelación de PEDIDOS, no la de reservas
+✅ La señal de reserva se puede pedir solo a partir de un número de personas (0 = siempre)
+✅ printTicket no imprime hasta que carga el QR externo (Google/VeriFactu) — salía en blanco
+✅ El tutorial de Netlify solo se enseña fuera de *.gastrogoan.com (autoalojado), y se despliega junto a index.html
+✅ "Platos más vendidos" del Panel de Control ordena por UNIDADES, no por dinero facturado
+✅ "Platos más vendidos" del Panel de Control agrupa por receta, no por el texto del nombre (evita el "Salmón"/"Salmon" duplicado)
+✅ "Análisis de Platos" arranca en "Últimos 30 días", la misma ventana que "Análisis de ventas" del Panel de Control
+✅ Punto de Equilibrio: "Usar datos reales" siembra el ticket medio SIN IVA, no el bruto
+
+════════════════════════════════════════════════════════════════
+✅ casos pasaron

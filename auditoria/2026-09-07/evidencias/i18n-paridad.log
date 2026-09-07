@@ -1,0 +1,11 @@
+✅ Los tres diccionarios existen y tienen contenido  → es: 3278 · ca: 3278 · en: 3278
+✅ Ninguna clave falta en catalán ni en inglés  → 3278 claves presentes en los tres
+✅ No hay claves de más en catalán o inglés (restos de renombrados)  → ningún resto
+✅ Ninguna clave está repetida dentro del mismo idioma  → sin duplicados
+✅ Los huecos ${...} coinciden entre idiomas  → los sustitutos cuadran en los tres idiomas
+✅ Ninguna traducción está vacía  → todas con texto
+✅ Las listas traducidas tienen el mismo número de elementos  → 10 listas cuadradas
+✅ Todas las claves que usa el código existen en el diccionario  → 2665 claves usadas, todas traducidas
+
+════════════════════════════════════════════════════════════════
+✅ los 8 casos pasaron

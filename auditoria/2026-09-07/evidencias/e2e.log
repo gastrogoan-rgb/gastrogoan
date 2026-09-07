@@ -1,0 +1,144 @@
+EMISION auditpropietario 8KED9ZPT
+ANTES LOGIN {
+  user: 'auditpropietario',
+  pinLen: 6,
+  active: `<input type="password" id="acc-owner-pin" autocomplete="current-password" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmOwnerAccess()">`,
+  top: '<p class="access-card-lead">Primera vez en este dispositivo: entra con el usuario y el PIN que recibiste al comprar.</p>'
+}
+LOGIN DEBUG {
+  user: 'auditpropietario',
+  pinLen: 6,
+  err: '',
+  authNodes: [ 'UGRVGM789FF43XCPKWVPBESV' ]
+}
+LOGIN {
+  login: 'auditpropietario',
+  session: { type: 'owner' },
+  selector: '',
+  any: false
+}
+CANJE {
+  license: { code: '8KED9ZPT', tenantId: '7PGXA9CRZ4HLPTVH3SZV' },
+  slots: [
+    {
+      id: 'default',
+      name: 'Mi negocio',
+      code: '8KED9ZPT',
+      ownerId: 'KZKX3QNS7RSK7ZRTF3PA'
+    }
+  ]
+}
+RECEPCION takeaway {
+  orders: [
+    {
+      id: 1788818635318287,
+      tipo: 'takeaway',
+      status: 'abierta',
+      clientRef: 'rmtrsfgg4ehxpccgt0e8'
+    }
+  ],
+  reservations: [],
+  store: {
+    gastrogoan: {
+      ownerNames: [Object],
+      ownerAuth: [Object],
+      adminSalesLog: [Object],
+      issuedCodes: [Object],
+      codeClaims: [Object],
+      public: [Object]
+    }
+  }
+}
+SEGUIMIENTO takeaway Tu pedido
+📥
+Recibido
+✓
+✅
+Aceptado por el restaurante
+✓
+👨‍🍳
+En preparación
+AHORA
+🍽️
+Listo
+🎉
+Entregado / recogido
+Volver a la carta
+RECEPCION delivery {
+  orders: [
+    {
+      id: 1788818635318287,
+      tipo: 'takeaway',
+      status: 'abierta',
+      clientRef: 'rmtrsfgg4ehxpccgt0e8'
+    },
+    {
+      id: 1788818636330315,
+      tipo: 'delivery',
+      status: 'abierta',
+      clientRef: 'rmtrsfh89zzwa81ps1up'
+    }
+  ],
+  reservations: [],
+  store: {
+    gastrogoan: {
+      ownerNames: [Object],
+      ownerAuth: [Object],
+      adminSalesLog: [Object],
+      issuedCodes: [Object],
+      codeClaims: [Object],
+      public: [Object]
+    }
+  }
+}
+SEGUIMIENTO delivery Tu pedido
+📥
+Recibido
+✓
+✅
+Aceptado por el restaurante
+✓
+👨‍🍳
+En preparación
+AHORA
+🍽️
+Listo
+🎉
+Entregado / recogido
+Volver a la carta
+RECEPCION reserva {
+  orders: [
+    {
+      id: 1788818635318287,
+      tipo: 'takeaway',
+      status: 'abierta',
+      clientRef: 'rmtrsfgg4ehxpccgt0e8'
+    },
+    {
+      id: 1788818636330315,
+      tipo: 'delivery',
+      status: 'abierta',
+      clientRef: 'rmtrsfh89zzwa81ps1up'
+    }
+  ],
+  reservations: [ { id: 1788818637268477, status: 'confirmada', tableId: 1 } ],
+  store: {
+    gastrogoan: {
+      ownerNames: [Object],
+      ownerAuth: [Object],
+      adminSalesLog: [Object],
+      issuedCodes: [Object],
+      codeClaims: [Object],
+      public: [Object]
+    }
+  }
+}
+SEGUIMIENTO reserva Tu reserva
+Confirmada
+Fecha y hora
+2026-09-07 · 22:30
+Personas
+2
+Cambiar fecha u hora
+Cancelar mi reserva
+Volver a la carta

@@ -1,0 +1,4 @@
+objetos 1021
+faltan []
+en=es >15 letras [{'file': 'js/app.js', 'line': 7260, 'missing': [], 'vals': {'es': '<i class="ti ti-box"></i> Stock', 'ca': '<i class="ti ti-box"></i> Estoc', 'en': '<i class="ti ti-box"></i> Stock'}}, {'file': 'js/idr.js', 'line': 65, 'missing': [], 'vals': {'es': 'Anthropic (Claude)', 'ca': 'Anthropic (Claude)', 'en': 'Anthropic (Claude)'}}]
+en español sospechoso []

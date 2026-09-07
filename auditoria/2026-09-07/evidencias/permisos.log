@@ -1,0 +1,13 @@
+✅ Ningún botón de "solo propietario" se ve en una sesión de empleado  → ninguna acción de propietario visible para un empleado
+✅ Un empleado SIN permiso de edición no ve los botones de editar  → sin permiso de edición no se ve ningún botón de editar
+✅ Un empleado CON permiso de edición sí los ve — si no, el permiso no sirve de nada  → cocina 13 acciones · sala 4
+✅ Gestión Económica no se abre desde una sesión de empleado  → las 4 vistas de Gestión, cerradas en los 5 modos de empleado
+✅ Los módulos de coste no se abren sin permiso de edición  → los 4 módulos de coste, cerrados sin permiso de edición
+✅ Guardar un empleado desde una sesión que no puede AVISA, no calla  → avisa: "Las fichas del personal (alta, datos y PIN) las llev"
+✅ Un empleado no puede cambiar la ficha de un compañero ni llamando a la función  → la ficha del compañero queda intacta
+✅ Un empleado solo entra en su área  → cocina no entra en sala y sala no entra en cocina
+✅ El repartidor ve el control de repartos, y el resto de sala también  → mismo TPV para los dos
+✅ Ningún error de JavaScript en ninguno de los seis modos  → consola limpia
+
+════════════════════════════════════════════════════════════════
+✅ los 10 casos pasaron

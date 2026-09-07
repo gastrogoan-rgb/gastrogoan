@@ -1,0 +1,62 @@
+
+✅ 1. De ingrediente a factura
+     ingrediente a 24 €/kg
+     escandallo: coste 5.74 € · food cost 28.7%
+     plato publicado en la carta
+     comanda: 1 línea(s), 2 unidad(es)
+     cobrado: base 40.00 € + IVA 10% = 44,00 €
+     Gestión Económica: facturación neta del mes 40.00 €
+
+✅ 2. Descuento, propina y arqueo
+     3 ventas: 3 tickets, 191.00 € en total
+     por método: efectivo 136.00 € · tarjeta 55.00 €
+     el arqueo cuadra: descuento restado y propina incluida
+
+✅ 3. Raciones limitadas se agotan solas
+     plato con 3 raciones disponibles
+     sirvo 2 → quedan 1
+     sirvo 1 más → quedan 0, disponible: false
+     al agotarse se marca no disponible y nunca baja de 0
+
+✅ 4. Dividir la cuenta entre 4
+     mesa con 100 € (4 × 25 €)
+     repartida en 4: 25.00 + 25.00 + 25.00 + 25.00 = 100.00 €
+     caso feo (100 € entre 3): 33.33 + 33.33 + 33.34 = 100.00 €
+
+✅ 5. Pedido recibido a medias
+     stock antes: solomillo 1000 · merluza 500 · aceite 2
+     pedido: 2000 g solomillo ✓ · 1000 g merluza ✓ · 5 l aceite ✗ (no llegó)
+     stock después: solomillo 3000 · merluza 1500 · aceite 2
+     lo que no llegó no suma stock
+
+✅ 6. Fichajes y horas del mes
+     3 jornadas: 8h + 6h30 + 4h
+     la app suma: 18h 30m
+     las horas del mes cuadran
+
+✅ 7. Anular devuelve el stock
+     stock inicial: 1000 g de solomillo
+     anulo 2 raciones → el stock queda en 1400 g
+     lo anulado vuelve al stock, ingrediente a ingrediente
+
+✅ 8. El aforo se controla
+     aforo 40 · reservas confirmadas: 12 + 10 + 6 = 28 · una cancelada de 20
+     la app dice: 28 reservados, 12 libres de 40
+     las canceladas no ocupan, y las libres cuadran
+
+✅ 9. Coste de envío y umbral de gratis
+     recogida en local (20 €) → 0.00 €
+     delivery por debajo del umbral (20 €) → 3.50 €
+     delivery justo en el umbral (30 €) → 0.00 €
+     delivery por encima (45 €) → 0.00 €
+     delivery un céntimo por debajo (29,99 €) → 3.50 €
+     el umbral cuenta desde el importe exacto, ni antes ni después
+
+✅ 10. Menú con grupos y suplementos
+     menú a 16,50 € · solomillo +4,50 € · tarta +1,50 €
+     elección cara: 16,50 + 6,00 = 22.50 €
+     elección sin suplementos: 16.50 €
+     el menú suma sus suplementos y nada más
+
+════════════════════════════════════════════════════════════════
+✅ los 10 recorridos completos pasaron

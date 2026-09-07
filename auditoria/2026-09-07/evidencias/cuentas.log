@@ -1,0 +1,20 @@
+✅ Un negocio canjeado por una cuenta no aparece en la otra  → A ve el suyo, B no ve nada
+✅ Entrar con otra cuenta no te mete dentro del negocio abierto  → se queda en el selector
+✅ Y no puede cerrar el selector para colarse en el negocio ajeno  → sin salida al negocio ajeno
+✅ Los datos de cada negocio viven en cajones distintos  → gastrogoan_db_bA ≠ gastrogoan_db_bB
+✅ Una cuenta NUEVA no hereda los negocios sin dueño del aparato  → los antiguos se quedan con su dueño
+✅ Nadie hereda nada si el aparato no sabe de quién eran  → el huérfano no se regala
+✅ Salir de la cuenta no deja el negocio anterior a la vista  → sesión cerrada y pantalla de acceso
+✅ El acceso de empleado no abre la puerta a otros negocios  → el empleado entra por su puerta
+✅ Canjear con el negocio de otro abierto abre un hueco propio  → el negocio ajeno queda intacto
+✅ Cada negocio apunta a su nube, nunca a la del otro  → CBZQKBSP8W4HDSQDATCJ ≠ JSC3H3RR687G8QDJJG7C
+✅ RECARGA REAL: al volver a la app, la otra cuenta sigue sin ver nada  → dos recargas completas y sigue aislado
+✅ Desde el selector, con negocios, también se puede cerrar sesión  → "Salir y entrar con otra cuenta"
+✅ El selector: un solo botón de salir, el nombre entero y sin códigos  → una salida, nombre de 157px y sin códigos
+✅ Un negocio nuevo NO puede heredar la nube de otro  → el hueco se vacía antes de activar
+✅ Al quitar un negocio se CIERRA la base antes de borrarla  → si no, el borrado se queda bloqueado en silencio
+✅ Abrir sucursal solo puede clonar un negocio DE LA MISMA CUENTA  → slotsOfCurrentOwner() filtra por cuenta, no getBusinessSlots()
+✅ Ningún error de JavaScript en todo el recorrido  → consola limpia
+
+════════════════════════════════════════════════════════════════
+✅ los 17 casos pasaron

@@ -1,0 +1,11 @@
+✅ Sin proveedores, el ingrediente no se puede crear a ciegas  → avisa y ofrece crear el proveedor
+✅ Crear un proveedor desde su formulario  → guardado
+✅ Crear un ingrediente desde su formulario  → precio unitario 0.025 €/g calculado solo
+✅ Crear un empleado desde su formulario  → Segunda de cocina, área cocina, PIN cifrado
+✅ Crear un cliente desde su formulario  → teléfono 600123456
+✅ Todo lo creado sobrevive a cerrar y volver a abrir  → los tres siguen ahí
+✅ Un formulario sin nombre NO crea nada  → rechazado, como debe
+✅ Un precio negativo NO se acepta  → rechazado, como debe
+
+════════════════════════════════════════════════════════════════
+✅ los 8 casos pasaron
