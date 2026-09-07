@@ -1873,7 +1873,18 @@ function renderReservaCalendar(){
         ${slots.map(s => {
           const libre = checkSlotFree(calDate, s, people);
           const selected = calSelectedTime === s;
-          return `<button type="button" class="btn btn-sm" ${libre?'':'disabled'} style="min-height:40px;${selected?'background:var(--olive);color:#fff;border-color:var(--olive)':(libre?'':'opacity:.4;text-decoration:line-through')}" onclick="calPickSlot('${calDate}','${s}')">${s}</button>`;
+          // El color de "elegido" NO puede ser --olive: es el color de marca
+          // del negocio (personalizable), así que en un negocio con marca
+          // naranja/roja se confundía visualmente con "no disponible". El
+          // negro de aquí es el mismo que ya usan las pestañas Día/Semana/Mes
+          // para "esto es lo activo" — no depende de ninguna marca y nunca
+          // se puede confundir con el verde/rojo de disponibilidad.
+          const estilo = selected
+            ? 'background:var(--ink);color:#fff;border-color:var(--ink)'
+            : libre
+              ? 'background:var(--green-l);border-color:var(--green);color:var(--ink)'
+              : 'background:var(--red-l);border-color:var(--red);color:var(--red);text-decoration:line-through';
+          return `<button type="button" class="btn btn-sm" ${libre?'':'disabled'} style="min-height:40px;${estilo}" onclick="calPickSlot('${calDate}','${s}')">${s}</button>`;
         }).join('')}
       </div>`}
     `;

@@ -130,6 +130,58 @@ await caso('Elegir un hueco en la vista de día rellena los campos ocultos de fe
   assert.ok(date, 'el campo oculto de fecha no se actualizó al elegir un hueco');
 });
 
+await caso('Los huecos se ven en verde/rojo según disponibilidad, y el elegido NUNCA usa el color de marca del negocio', async () => {
+  // Hallazgo real: el hueco "elegido" usaba var(--olive), que es el color
+  // de MARCA del negocio (personalizable) — en un negocio con marca
+  // naranja/roja, el hueco elegido se confundía visualmente con "no
+  // disponible" (rojo). Se prueba con una marca naranja a propósito.
+  const r = await page.evaluate(() => {
+    document.documentElement.style.setProperty('--olive', '#E85D3C'); // naranja
+    DB.tables = [{id:1, name:'Mesa 1', plazas:6}];
+    DB.mesasOcupadas = {};
+    calSelectedTime = null;
+    renderReservaCalendar();
+    let botones = [...document.querySelectorAll('#r-cal button')].filter(b => /^\d\d:\d\d$/.test(b.textContent.trim()));
+    const libreAntes = getComputedStyle(botones[0]).backgroundColor;
+    const textoElegido = botones[0].textContent.trim();
+    botones[0].click();
+    botones = [...document.querySelectorAll('#r-cal button')].filter(b => /^\d\d:\d\d$/.test(b.textContent.trim()));
+    const elegido = botones.find(b => b.textContent.trim() === textoElegido);
+    return {
+      libreAntes,
+      colorElegido: getComputedStyle(elegido).backgroundColor,
+      ink: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(),
+      greenL: getComputedStyle(document.documentElement).getPropertyValue('--green-l').trim(),
+    };
+  });
+  // rgb(237, 241, 236) === #EDF1EC (--green-l)
+  assert.equal(r.libreAntes, 'rgb(237, 241, 236)', `un hueco disponible debe pintarse en verde claro (--green-l), salió ${r.libreAntes}`);
+  // rgb(28, 26, 23) === #1C1A17 (--ink)
+  assert.equal(r.colorElegido, 'rgb(28, 26, 23)', `el hueco elegido debe usar --ink (negro), NUNCA el color de marca del negocio — salió ${r.colorElegido}`);
+});
+
+await caso('Un hueco ocupado se ve en rojo, tachado y deshabilitado', async () => {
+  const r = await page.evaluate(() => {
+    DB.tables = [{id:1, name:'Mesa 1', plazas:2}];
+    const fecha = calDate;
+    DB.mesasOcupadas = {};
+    DB.mesasOcupadas[fecha] = {1: {}};
+    slotsDelDia(fecha).forEach(s => DB.mesasOcupadas[fecha][1][s] = true);
+    calSelectedTime = null;
+    renderReservaCalendar();
+    const boton = [...document.querySelectorAll('#r-cal button')].find(b => /^\d\d:\d\d$/.test(b.textContent.trim()));
+    return {
+      color: getComputedStyle(boton).backgroundColor,
+      deshabilitado: boton.disabled,
+      tachado: getComputedStyle(boton).textDecorationLine.includes('line-through'),
+    };
+  });
+  // rgb(245, 235, 231) === #F5EBE7 (--red-l)
+  assert.equal(r.color, 'rgb(245, 235, 231)', `un hueco ocupado debe pintarse en rojo claro (--red-l), salió ${r.color}`);
+  assert.ok(r.deshabilitado, 'un hueco ocupado no debe poder pulsarse');
+  assert.ok(r.tachado, 'un hueco ocupado debe verse tachado, no solo por el color (accesibilidad)');
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', () => {
   assert.deepEqual(erroresJs, [], 'errores: ' + erroresJs.join(' | '));
 });
