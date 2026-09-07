@@ -350,7 +350,7 @@ function renderLimpiezaProtocolo(){
     const logEntries = [...log].reverse().slice(0, 5);
     return `
     <div class="card">
-      <h3 style="justify-content:space-between"><span><i class="ti ti-${icon}"></i> ${title}</span><button class="btn btn-sm" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button></h3>
+      <h3 style="justify-content:space-between"><span><i class="ti ti-${icon}"></i> ${title}</span><button class="btn btn-sm btn-icon" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button></h3>
       ${pasos.map((p,i) => `
         <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
           <div class="step-num">${i+1}</div>
@@ -1894,8 +1894,8 @@ function renderClientes(){
         ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
         ${!c.phone && !c.email ? '—' : ''}
       </td>
-      <td data-label="${t('label.visits30d')}"><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas30d}</span></button></td>
-      <td data-label="${t('label.visitsYear')}"><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitasYear}</span></button></td>
+      <td data-label="${t('label.visits30d')}"><button class="btn btn-sm" style="background:none;border:none;padding:0;min-width:44px;min-height:44px" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas30d}</span></button></td>
+      <td data-label="${t('label.visitsYear')}"><button class="btn btn-sm" style="background:none;border:none;padding:0;min-width:44px;min-height:44px" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitasYear}</span></button></td>
       <td data-label="${t('label.lastVisit')}">${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
       <td data-label="${t('label.avgTicket')}">${fmtMoney(stats.ticketMedio)}</td>
       <td data-label="${t('label.total30d')}">${fmtMoney(stats.total30d)}</td>

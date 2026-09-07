@@ -3717,12 +3717,17 @@ function getMesasOcupadasForSync(){
     if(isNaN(h) || isNaN(m)) return;
     if(!ocupadas[r.date]) ocupadas[r.date] = {};
     if(!ocupadas[r.date][r.tableId]) ocupadas[r.date][r.tableId] = {};
-    let cur = h * 60 + m;
-    const end = cur + duracionMin;
+    const start = h * 60 + m;
+    const end = start + duracionMin;
+    // Misma corrección que slotsForReservation() en reservagastrogoan.html:
+    // encajar el inicio en la rejilla fija de 15 min (no la hora exacta de
+    // la reserva) para que dos reservas solapadas siempre compartan alguna
+    // franja marcada como ocupada.
+    let cur = start - (start % 15);
     while(cur < end){
       const slot = String(Math.floor(cur / 60)).padStart(2, '0') + ':' + String(cur % 60).padStart(2, '0');
       ocupadas[r.date][r.tableId][slot] = true;
-      cur += 30;
+      cur += 15;
     }
   });
   return ocupadas;

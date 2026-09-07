@@ -2285,8 +2285,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
             <option value="" data-i18n="filter.allCategories">Todas las categorías</option>
           </select>
           <div class="view-toggle">
-            <button class="btn btn-sm" id="fichas-view-grid" onclick="setFichasView('grid')"><i class="ti ti-layout-grid"></i></button>
-            <button class="btn btn-sm" id="fichas-view-list" onclick="setFichasView('list')"><i class="ti ti-list"></i></button>
+            <button class="btn btn-sm btn-icon" id="fichas-view-grid" onclick="setFichasView('grid')"><i class="ti ti-layout-grid"></i></button>
+            <button class="btn btn-sm btn-icon" id="fichas-view-list" onclick="setFichasView('list')"><i class="ti ti-list"></i></button>
           </div>
           <button class="btn btn-sm" onclick="renderFichas()"><i class="ti ti-refresh"></i> <span data-i18n="common.update">Actualizar</span></button>
         </div>
@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '07/09/2026 20:38';
+const GG_BUILD = '08/09/2026 00:36';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6641,12 +6641,17 @@ function getMesasOcupadasForSync(){
     if(isNaN(h) || isNaN(m)) return;
     if(!ocupadas[r.date]) ocupadas[r.date] = {};
     if(!ocupadas[r.date][r.tableId]) ocupadas[r.date][r.tableId] = {};
-    let cur = h * 60 + m;
-    const end = cur + duracionMin;
+    const start = h * 60 + m;
+    const end = start + duracionMin;
+    // Misma corrección que slotsForReservation() en reservagastrogoan.html:
+    // encajar el inicio en la rejilla fija de 15 min (no la hora exacta de
+    // la reserva) para que dos reservas solapadas siempre compartan alguna
+    // franja marcada como ocupada.
+    let cur = start - (start % 15);
     while(cur < end){
       const slot = String(Math.floor(cur / 60)).padStart(2, '0') + ':' + String(cur % 60).padStart(2, '0');
       ocupadas[r.date][r.tableId][slot] = true;
-      cur += 30;
+      cur += 15;
     }
   });
   return ocupadas;
@@ -40307,7 +40312,7 @@ function renderLimpiezaProtocolo(){
     const logEntries = [...log].reverse().slice(0, 5);
     return `
     <div class="card">
-      <h3 style="justify-content:space-between"><span><i class="ti ti-${icon}"></i> ${title}</span><button class="btn btn-sm" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button></h3>
+      <h3 style="justify-content:space-between"><span><i class="ti ti-${icon}"></i> ${title}</span><button class="btn btn-sm btn-icon" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button></h3>
       ${pasos.map((p,i) => `
         <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
           <div class="step-num">${i+1}</div>
@@ -41851,8 +41856,8 @@ function renderClientes(){
         ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
         ${!c.phone && !c.email ? '—' : ''}
       </td>
-      <td data-label="${t('label.visits30d')}"><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas30d}</span></button></td>
-      <td data-label="${t('label.visitsYear')}"><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitasYear}</span></button></td>
+      <td data-label="${t('label.visits30d')}"><button class="btn btn-sm" style="background:none;border:none;padding:0;min-width:44px;min-height:44px" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas30d}</span></button></td>
+      <td data-label="${t('label.visitsYear')}"><button class="btn btn-sm" style="background:none;border:none;padding:0;min-width:44px;min-height:44px" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitasYear}</span></button></td>
       <td data-label="${t('label.lastVisit')}">${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
       <td data-label="${t('label.avgTicket')}">${fmtMoney(stats.ticketMedio)}</td>
       <td data-label="${t('label.total30d')}">${fmtMoney(stats.total30d)}</td>

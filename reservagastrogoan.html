@@ -1383,12 +1383,20 @@ function getReservaDuracionMin(){
 // el panel interno.
 function slotsForReservation(time, durationMin){
   const [h, m] = time.split(':').map(Number);
-  let cur = h * 60 + m;
-  const end = cur + durationMin;
+  const start = h * 60 + m;
+  const end = start + durationMin;
+  // Hallazgo real de auditoría: al arrancar la rejilla desde la hora EXACTA
+  // de cada reserva (14:00 → 14:00/14:30/15:00; 14:15 → 14:15/14:45/15:15),
+  // dos reservas que se solapan de verdad no comparten ninguna franja y el
+  // candado atómico de la mesa no detecta el choque. Al encajar el inicio
+  // en la misma rejilla fija de 15 min que usa el calendario (nunca la hora
+  // exacta que haya escrito el cliente), cualquier solape real de al menos
+  // 15 minutos comparte siempre al menos una franja.
+  let cur = start - (start % 15);
   const slots = [];
   while(cur < end){
     slots.push(String(Math.floor(cur / 60)).padStart(2, '0') + ':' + String(cur % 60).padStart(2, '0'));
-    cur += 30;
+    cur += 15;
   }
   return slots;
 }
@@ -1508,6 +1516,19 @@ function updateTimeInputRange(dateInputId, timeInputId, hintBoxId){
     timeInput.removeAttribute('max');
   }
 }
+// Primer turno que empieza EN O DESPUÉS de minTime (hoy con antelación
+// mínima) — o, si ya estamos dentro de un turno, ese mismo turno. Hallazgo
+// real de auditoría: applyLeadTime() solo miraba el primer turno del día y
+// el último cierre, así que con un horario partido (13-16 y 20-23) y
+// "ahora + antelación" cayendo en el descanso (17:30), sugería esa hora
+// como mínima aunque el negocio estuviera cerrado — el envío final sí lo
+// rechazaba, pero el aviso llevaba al cliente a un hueco que no existe.
+function primerTurnoDesde(turnos, minTime){
+  for(const tn of turnos){
+    if(minTime <= tn.cierra) return tn.abre > minTime ? tn.abre : minTime;
+  }
+  return null; // no queda ningún turno hoy a partir de esa hora
+}
 
 /* ============ TIEMPO DE ANTELACIÓN / ZONA DE REPARTO ============ */
 // Si el pedido/reserva es para hoy, no se puede elegir una hora anterior a
@@ -1530,18 +1551,26 @@ function applyLeadTime(dateInputId, timeInputId, hintBoxId, kind){
   if(!leadTimeMin || date !== todayStr()) return;
 
   const now = new Date(Date.now() + leadTimeMin * 60000);
-  const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  let minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+  // Antes solo se comparaba contra timeInput.min (apertura del PRIMER turno
+  // / último cierre, puestos por updateTimeInputRange) — con un horario
+  // partido, "ahora + antelación" podía caer en el descanso entre turnos y
+  // el aviso ofrecía esa hora igualmente, aunque el negocio estuviera
+  // cerrado hasta el turno siguiente. Aquí se salta ese hueco de verdad.
+  const turnos = getTurnosForDate(date);
+  if(turnos && turnos.length){
+    const siguiente = primerTurnoDesde(turnos, minTime);
+    minTime = siguiente || turnos[turnos.length - 1].cierra; // sin más turnos hoy: no queda hora válida
+  }
 
   if(!timeInput.min || minTime > timeInput.min) timeInput.min = minTime;
   if(timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
 
   // El aviso tiene que decir la hora mínima REAL, ya acotada por el horario
-  // del negocio (timeInput.min sale de updateTimeInputRange, que corre
-  // antes y pone la apertura del primer turno) — antes mostraba siempre
-  // "ahora + antelación" a secas: si esa hora caía antes de que abriera hoy
-  // (o en el hueco entre turnos de un horario partido), el aviso decía
-  // "puedes elegir a las 11:03" con el negocio cerrado hasta las 13:00,
-  // contradiciendo el propio horario que se acaba de mostrar encima.
+  // del negocio y por el próximo turno (ver arriba) — antes mostraba
+  // siempre "ahora + antelación" a secas, contradiciendo el horario que se
+  // acaba de mostrar encima.
   const minTimeReal = timeInput.min || minTime;
   const hint = `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.antelacion').replace('%s', minTimeReal).replace('%d', leadTimeMin)}</p>`;
   hintBox.innerHTML = (hintBox.innerHTML || '') + hint;
@@ -2975,6 +3004,16 @@ async function submitOrder(){
     setBtnLoading('o-submit', false);
     return;
   }
+  // Igual que en la reserva: el "min" del <input type=date> es solo una
+  // pista del navegador, editable a mano o con el reloj del dispositivo
+  // cambiado — se revalida aquí que no sea una fecha ya pasada.
+  if(date < todayStr()){
+    markFieldInvalid('o-date');
+    showInlineError(t('error.campos'));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+    return;
+  }
   if(clienteEmail && !isValidEmail(clienteEmail)){
     markFieldInvalid('o-email');
     showInlineError(t('error.email.invalido'));
@@ -3045,7 +3084,21 @@ async function submitOrder(){
     // Comprobación final ATÓMICA justo antes de enviar, igual que con el
     // aforo de reservas: cierra la ventana de carrera entre dos pedidos
     // casi simultáneos para la misma franja.
-    const result = await reservePedidoSlotAtomic(date, slot, maxPorFranja, baseline);
+    // Hallazgo real de auditoría: sin este try/catch, un rechazo de verdad
+    // de Firebase (permisos, sin red a mitad de la transacción) no vuelve
+    // como result.committed:false — lanza una excepción que aquí escapaba
+    // sin capturar, dejando submittingRequest en true y el botón clavado en
+    // "Enviando…" para siempre, sin aviso, hasta recargar la página.
+    let result;
+    try{
+      result = await reservePedidoSlotAtomic(date, slot, maxPorFranja, baseline);
+    }catch(e){
+      console.error('Error reservando la franja del pedido', e);
+      showInlineError(t('error.envio'));
+      submittingRequest = false;
+      setBtnLoading('o-submit', false);
+      return;
+    }
     if(!result.committed){
       showInlineError(t('error.pedidos.completo'));
       submittingRequest = false;
