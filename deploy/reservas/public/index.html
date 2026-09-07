@@ -83,6 +83,12 @@
   .btn-primary{background:var(--ink);color:#fff;}
   .btn-primary:hover:not(:disabled){background:var(--olive);border-color:var(--olive);}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
+  /* No existía en este archivo: el calendario de reservas la usaba dando por
+     hecho que sí (como en el resto de la app), así que sus botones salían
+     con el tamaño COMPLETO de .btn (50px de alto, 14px de relleno) — de ahí
+     que el selector Día/Semana/Mes y las flechas de mes salieran gigantes.
+     44px de alto mínimo por el objetivo táctil, no menos. */
+  .btn-sm{min-height:44px;padding:8px 10px;font-size:12.5px;}
   #inline-alert{
     position:fixed;left:16px;right:16px;bottom:16px;z-index:999;
     background:var(--red-l);color:var(--red);border:1px solid var(--red);
@@ -1735,6 +1741,12 @@ function currentPeopleValue(){
 // negocio no tiene horario configurado (getTurnosForDate devuelve null),
 // no hay ninguna franja que ofrecer aquí — ese caso ya se trata aparte en
 // computeDayStatus como "sin restricción" (cualquier hora vale).
+// Huecos de 15 en 15 min. El último posible se queda a un margen de 30 min
+// ANTES del cierre (no en el cierre mismo): una reserva necesita algo de
+// tiempo para servirse, y "reservar mesa a la hora exacta de cerrar" no
+// tiene sentido para ningún restaurante — antes se ofrecía hueco hasta el
+// propio minuto de cierre.
+const RESERVA_MARGEN_CIERRE_MIN = 30;
 function slotsDelDia(dateStr){
   const turnos = getTurnosForDate(dateStr);
   if(!turnos || !turnos.length) return [];
@@ -1743,10 +1755,10 @@ function slotsDelDia(dateStr){
     const [ih, im] = t.abre.split(':').map(Number);
     const [fh, fm] = t.cierra.split(':').map(Number);
     let cur = ih * 60 + im;
-    const fin = fh * 60 + fm;
+    const fin = (fh * 60 + fm) - RESERVA_MARGEN_CIERRE_MIN;
     while(cur <= fin){
       out.push(String(Math.floor(cur/60)).padStart(2,'0') + ':' + String(cur%60).padStart(2,'0'));
-      cur += 30;
+      cur += 15;
     }
   });
   return out;
@@ -1791,15 +1803,23 @@ function computeDayStatus(dateStr, people){
   const hayLibre = slots.some(s => checkSlotFree(dateStr, s, people));
   return hayLibre ? 'libre' : 'lleno';
 }
+// ⚠️ NUNCA toISOString() aquí: convierte a UTC, y en cualquier huso por
+// delante de UTC (España incluida, todo el año) la medianoche local cae en
+// el día UTC ANTERIOR — "31 de agosto + 0 días" devolvía "30 de agosto".
+// Eso desplazaba TODO un día: la cuadrícula del mes salía descuadrada
+// (el 7 de septiembre aparecía en la columna del miércoles en vez de la
+// del lunes) y las flechas de ir adelante/atrás parecían fallar a ratos,
+// porque el desplazamiento cambiaba según la hora del día. Mismo criterio
+// que ya usa todayStr(): año/mes/día en LOCAL, nunca ISO/UTC.
 function addDaysStr(dateStr, n){
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0,10);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function addMonthsStr(dateStr, n){
   const d = new Date(dateStr + 'T00:00:00');
   d.setMonth(d.getMonth() + n);
-  return d.toISOString().slice(0,10);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function calSetView(view){ calView = view; renderReservaCalendar(); }
 function calNav(dias){
@@ -1833,10 +1853,10 @@ function renderReservaCalendar(){
     const minHoy = calDate === todayStr() ? reservaMinTimeHoy() : null;
     const slots = slotsDelDia(calDate).filter(s => !minHoy || s >= minHoy);
     body = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <button type="button" class="btn btn-sm" ${calDate<=todayStr()?'disabled':''} onclick="calNav(-1)">‹</button>
-        <strong style="font-size:13.5px">${escapeHtml(fechaLegible(calDate))}</strong>
-        <button type="button" class="btn btn-sm" onclick="calNav(1)">›</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <button type="button" class="btn btn-sm" style="flex:0 0 44px;width:44px;padding:8px" ${calDate<=todayStr()?'disabled':''} onclick="calNav(-1)">‹</button>
+        <strong style="font-size:13.5px;flex:1;text-align:center">${escapeHtml(fechaLegible(calDate))}</strong>
+        <button type="button" class="btn btn-sm" style="flex:0 0 44px;width:44px;padding:8px" onclick="calNav(1)">›</button>
       </div>
       ${status === 'cerrado' ? `<p style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0">${t('cal.cerrado')}</p>` :
         !slots.length ? `<p style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0">${t('cal.sinHuecos')}</p>` : `
@@ -1853,10 +1873,10 @@ function renderReservaCalendar(){
     const monday = addDaysStr(calDate, -((jsDay + 6) % 7));
     const dias = Array.from({length:7}, (_, i) => addDaysStr(monday, i));
     body = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <button type="button" class="btn btn-sm" ${addDaysStr(monday,-7)<todayStr() && monday<=todayStr() ?'disabled':''} onclick="calNav(-7)">‹</button>
-        <strong style="font-size:12.5px">${escapeHtml(fechaLegibleCorta(monday))} – ${escapeHtml(fechaLegibleCorta(dias[6]))}</strong>
-        <button type="button" class="btn btn-sm" onclick="calNav(7)">›</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <button type="button" class="btn btn-sm" style="flex:0 0 44px;width:44px;padding:8px" ${addDaysStr(monday,-7)<todayStr() && monday<=todayStr() ?'disabled':''} onclick="calNav(-7)">‹</button>
+        <strong style="font-size:12.5px;flex:1;text-align:center">${escapeHtml(fechaLegibleCorta(monday))} – ${escapeHtml(fechaLegibleCorta(dias[6]))}</strong>
+        <button type="button" class="btn btn-sm" style="flex:0 0 44px;width:44px;padding:8px" onclick="calNav(7)">›</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
         ${dias.map(d => {
@@ -1877,10 +1897,10 @@ function renderReservaCalendar(){
     const mesActual = calDate.slice(0,7);
     const celdas = Array.from({length:42}, (_, i) => addDaysStr(startGrid, i));
     body = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <button type="button" class="btn btn-sm" onclick="calDate=addMonthsStr(calDate,-1);renderReservaCalendar()">‹</button>
-        <strong style="font-size:13.5px">${escapeHtml(nombreMes(calDate))}</strong>
-        <button type="button" class="btn btn-sm" onclick="calDate=addMonthsStr(calDate,1);renderReservaCalendar()">›</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <button type="button" class="btn btn-sm" style="flex:0 0 44px;width:44px;padding:8px" onclick="calDate=addMonthsStr(calDate,-1);renderReservaCalendar()">‹</button>
+        <strong style="font-size:13.5px;flex:1;text-align:center">${escapeHtml(nombreMes(calDate))}</strong>
+        <button type="button" class="btn btn-sm" style="flex:0 0 44px;width:44px;padding:8px" onclick="calDate=addMonthsStr(calDate,1);renderReservaCalendar()">›</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:9.5px;color:var(--muted);text-align:center;margin-bottom:2px">
         ${getDiasSemana().map(d => `<div>${d.slice(0,1)}</div>`).join('')}

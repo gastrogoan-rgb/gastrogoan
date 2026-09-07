@@ -35,11 +35,51 @@ await page.evaluate(() => {
   renderApp();
 });
 
-await caso('El calendario pinta la vista de día con huecos de media hora', async () => {
+await caso('El calendario pinta la vista de día con huecos de 15 en 15 minutos', async () => {
   const len = await page.evaluate(() => document.getElementById('r-cal')?.innerHTML.length || 0);
   assert.ok(len > 500, 'la vista de día no pintó nada dentro de #r-cal');
   const numSlots = await page.evaluate(() => document.querySelectorAll('#r-cal button:not([disabled])').length);
-  assert.ok(numSlots >= 10, `se esperaban varios huecos de 30 min entre 13:00 y 23:00, salieron ${numSlots}`);
+  assert.ok(numSlots >= 20, `con paso de 15 min entre 13:00 y 23:00 se esperaban muchos huecos, salieron ${numSlots}`);
+});
+
+await caso('El último hueco queda 30 min ANTES del cierre, nunca a la hora exacta de cerrar ni después', async () => {
+  const slots = await page.evaluate(() => slotsDelDia('2026-09-10'));
+  assert.ok(slots.length, 'no se generó ningún hueco');
+  assert.equal(slots[slots.length - 1], '22:30', `con cierre a las 23:00, el último hueco debe ser 22:30 (margen de 30 min) — salió ${slots[slots.length-1]}`);
+  assert.ok(!slots.includes('23:00'), 'no debe ofrecerse un hueco justo a la hora de cerrar');
+  assert.ok(!slots.some(s => s > '23:00'), 'no debe ofrecerse ningún hueco después del cierre');
+});
+
+await caso('Los huecos van de 15 en 15 minutos, no de 30 (se puede reservar a las 14:15)', async () => {
+  const slots = await page.evaluate(() => slotsDelDia('2026-09-10'));
+  assert.ok(slots.includes('14:15'), 'las 14:15 deben ser un hueco válido con pasos de 15 minutos');
+  assert.ok(slots.includes('14:45'), 'las 14:45 también');
+});
+
+await caso('addDaysStr no desfasa un día por la zona horaria (nunca toISOString)', async () => {
+  const r = await page.evaluate(() => ({
+    mismoDia: addDaysStr('2026-08-31', 0),
+    masUno: addDaysStr('2026-08-31', 1),
+    codigoFuente: typeof addDaysStr,
+  }));
+  assert.equal(r.mismoDia, '2026-08-31', `sumar 0 días debe devolver la misma fecha — dio ${r.mismoDia} (síntoma clásico de usar toISOString con un huso por delante de UTC, como España)`);
+  assert.equal(r.masUno, '2026-09-01');
+});
+
+await caso('El 7 de septiembre de 2026 (lunes real) cae en la columna de lunes en la vista de mes', async () => {
+  const textos = await page.evaluate(() => {
+    calDate = '2026-09-07';
+    calView = 'mes';
+    renderReservaCalendar();
+    const grids = [...document.querySelectorAll('#r-cal > div[style*="grid-template-columns:repeat(7,1fr)"]')];
+    const celdasGrid = grids[1];
+    return [...celdasGrid.querySelectorAll('button')].map(b => b.textContent.trim());
+  });
+  // El 7 debe caer en la MISMA columna (índice % 7) que el 31 anterior y el
+  // 14/21/28 siguientes — todos lunes reales de este calendario concreto.
+  const idx7 = textos.indexOf('7');
+  assert.ok(idx7 !== -1, 'no se encontró el día 7 en la rejilla');
+  assert.equal(idx7 % 7, 0, `el 7 de septiembre de 2026 es LUNES de verdad y debe caer en la primera columna (L) — salió en la columna ${idx7 % 7}`);
 });
 
 await caso('Cambiar a semana y a mes no revienta nada', async () => {
@@ -57,7 +97,10 @@ await caso('Una mesa ocupada TODO el día marca ese día como lleno para ese gru
     DB.tables = [{id:1, name:'Mesa 1', plazas:4}];
     const fecha = '2026-09-10';
     DB.mesasOcupadas[fecha] = {1: {}};
-    ['13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00','22:30','23:00'].forEach(s => DB.mesasOcupadas[fecha][1][s] = true);
+    // Todas las franjas de 15 en 15 min entre apertura y cierre (con margen),
+    // generadas con la misma función que usa el propio calendario — así este
+    // test no se queda desfasado si el paso o el margen vuelven a cambiar.
+    slotsDelDia(fecha).forEach(s => DB.mesasOcupadas[fecha][1][s] = true);
     const lleno = computeDayStatus(fecha, 2);
     DB.mesasOcupadas[fecha][1] = {};
     const libre = computeDayStatus(fecha, 2);
