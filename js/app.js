@@ -2869,6 +2869,7 @@ async function cancelReservation(id){
   if(!r0 || r0.status === 'completada') return;
   if(!(await confirmModal(t('msg.confirmCancelReservation')))) return;
   setReservationStatus(id, 'cancelada');
+  openReservationNotifyChangeModal(id, 'cancelada');
 }
 
 async function setReservationStatus(id, status){
@@ -3483,18 +3484,27 @@ function confirmReservationAsWaitlist(){
 function finalizeSaveReservation(data){
   const {id, clientId, clientName, date, time, people, tableId, notes, status} = data;
   const existing = id ? DB.reservations.find(x=>x.id===id) : null;
+  // Se compara ANTES de sobrescribir: es lo que decide si hay algo que
+  // avisarle al cliente (cambiar fecha/hora es la noticia; tocar solo la
+  // mesa o las notas internas no le afecta a él para nada).
+  const cambioFechaHora = existing && (existing.date !== date || existing.time !== time);
   if(existing){
     Object.assign(existing, {clientId, clientName, date, time, people, tableId, notes, status});
   }else{
     DB.reservations.push({id: genId(), clientId, clientName, date, time, people, tableId, notes, status});
   }
   saveDB();
+  // Igual que syncReservationStatusForPublic ya hace desde setReservationStatus:
+  // sin esto, editar la fecha/hora a mano no llegaba nunca al enlace público
+  // de gestión, que se quedaba enseñando los datos viejos para siempre.
+  if(existing && existing.publicToken && typeof syncReservationStatusForPublic === 'function') syncReservationStatusForPublic(existing);
   closeModal();
   renderReservas();
   // Aviso no bloqueante (no se impide guardar, el personal puede necesitar
   // registrar reservas de fechas pasadas para el historial) si la fecha
   // elegida es anterior a hoy.
   showToast(status === 'lista_espera' ? t('msg.reservationWaitlisted') : date < todayStr() ? t('msg.reservationSavedPastDate') : t('msg.reservationSaved'));
+  if(cambioFechaHora) openReservationNotifyChangeModal(id, 'editada');
 }
 
 // Marca (o desmarca) la llegada de una reserva, actualizando su estado a la
@@ -3639,6 +3649,68 @@ function sendReservationReminderEmail(id){
   r.reminderSentAt = new Date().toISOString();
   saveDB();
   renderReservasRemindersDue();
+}
+
+// Avisar al cliente de un cambio hecho por el NEGOCIO (cancelar o editar
+// fecha/hora) — mismo patrón que el recordatorio de arriba (WhatsApp/email
+// vía enlaces nativos, sin ninguna API de pago ni backend), pero con su
+// propio texto y sin tocar reminderSentAt (es un aviso distinto, no un
+// recordatorio de que se acerca la reserva). El email automático
+// (sendReservationCancellationEmail) ya existe y sigue mandándose solo si
+// está configurado — esto es la red de seguridad para cuando no lo está, o
+// para cuando el negocio prefiere avisar por WhatsApp.
+function openReservationNotifyChangeModal(id, tipo){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  const name = client ? client.name : (r.clientName || '');
+  const phone = (client && client.phone) || r.clientPhone || '';
+  const email = (client && client.email) || r.clientEmail || '';
+  if(!phone && !email) return; // nada que ofrecer: ni teléfono ni email guardados
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const peopleLabel = r.people===1 ? t('label.oneReservationPerson') : t('label.nReservationPeople').replace('${n}', r.people);
+  const claveMsg = tipo === 'cancelada' ? 'msg.reservationCancelledNotify' : 'msg.reservationEditedNotify';
+  const msg = t(claveMsg).replace('${name}', name).replace('${biz}', bizName).replace('${date}', r.date).replace('${time}', r.time).replace('${people}', peopleLabel);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-message-circle"></i> ${t('title.notifyReservationChange')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted)">${t('msg.notifyReservationHint')}</p>
+    <div class="field">
+      <textarea id="reservation-notify-text" rows="4">${escapeHtml(msg)}</textarea>
+    </div>
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendReservationNotifyWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendReservationNotifyEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function sendReservationNotifyWhatsapp(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  const phone = (client && client.phone) || r.clientPhone;
+  if(!phone){ showToast(t('msg.noPhone')); return; }
+  const tel = phone.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('reservation-notify-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+  closeModal();
+}
+function sendReservationNotifyEmail(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  const email = (client && client.email) || r.clientEmail;
+  if(!email){ showToast(t('msg.noEmail')); return; }
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const subject = encodeURIComponent(t('msg.reservationChangeSubject').replace('${biz}', bizName));
+  const body = encodeURIComponent(document.getElementById('reservation-notify-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(email)+'?subject='+subject+'&body='+body;
+  closeModal();
 }
 
 // Recordatorios "automáticos" de reserva: no hay backend para enviarlos solos

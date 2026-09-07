@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '07/09/2026 18:50';
+const GG_BUILD = '07/09/2026 19:05';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -13360,6 +13360,10 @@ const I18N = {
     'limpieza.defaultAperturaSala': ['Encender luces y música ambiente','Comprobar temperatura de neveras y grifos de cerveza','Preparar hielo, guarniciones y cristalería','Revisar stock de bebidas en barra','Limpiar barra y mesas','Verificar que los baños están limpios y equipados'],
     'limpieza.defaultCierreSala': ['Limpiar y desinfectar la barra y mesas','Lavar y guardar la cristalería','Vaciar posos de cafetera/molinillo y limpiar grifos de cerveza','Verificar que todo el equipamiento está apagado','Cerrar neveras y comprobar temperaturas','Activar alarma y cerrar con llave'],
     'msg.reservationReminderSubject': 'Recordatorio de tu reserva en ${biz}',
+    'msg.reservationCancelledNotify': 'Hola ${name}, te escribimos de ${biz} para avisarte de que tu reserva del ${date} a las ${time} para ${people} ha sido cancelada. Si tienes alguna duda, contáctanos.',
+    'msg.reservationEditedNotify': 'Hola ${name}, te escribimos de ${biz} para avisarte de que tu reserva ha cambiado: ahora es el ${date} a las ${time} para ${people}. Si no te viene bien, contáctanos.',
+    'msg.reservationChangeSubject': 'Cambios en tu reserva en ${biz}', 'title.notifyReservationChange': 'Avisar al cliente',
+    'msg.notifyReservationHint': 'La reserva ya se ha guardado. Si quieres, avisa al cliente por WhatsApp o email antes de cerrar esto.',
     'help.contact.subject': 'Soporte GastroGoan', 'help.contact.bodyIntro': 'Hola,\n\nTengo una duda sobre GastroGoan',
     'help.contact.businessSuffix': '(negocio: ${name})',
     'msg.supplierOrderSubject': 'Pedido ${supplier} — ${date}',
@@ -15547,6 +15551,10 @@ const I18N = {
     'limpieza.defaultAperturaSala': ['Encendre llums i música ambient','Comprovar temperatura de neveres i aixetes de cervesa','Preparar gel, guarnicions i cristalleria','Revisar estoc de begudes a la barra','Netejar barra i taules','Verificar que els lavabos estan nets i equipats'],
     'limpieza.defaultCierreSala': ['Netejar i desinfectar la barra i taules','Rentar i desar la cristalleria','Buidar pòsits de cafetera/molinet i netejar aixetes de cervesa','Verificar que tot l\'equipament està apagat','Tancar neveres i comprovar temperatures','Activar alarma i tancar amb clau'],
     'msg.reservationReminderSubject': 'Recordatori de la teva reserva a ${biz}',
+    'msg.reservationCancelledNotify': 'Hola ${name}, t\'escrivim de ${biz} per avisar-te que la teva reserva del ${date} a les ${time} per a ${people} ha estat cancel·lada. Si tens cap dubte, contacta amb nosaltres.',
+    'msg.reservationEditedNotify': 'Hola ${name}, t\'escrivim de ${biz} per avisar-te que la teva reserva ha canviat: ara és el ${date} a les ${time} per a ${people}. Si no et va bé, contacta amb nosaltres.',
+    'msg.reservationChangeSubject': 'Canvis a la teva reserva a ${biz}', 'title.notifyReservationChange': 'Avisar el client',
+    'msg.notifyReservationHint': 'La reserva ja s\'ha desat. Si vols, avisa el client per WhatsApp o email abans de tancar això.',
     'help.contact.subject': 'Suport GastroGoan', 'help.contact.bodyIntro': 'Hola,\n\nTinc un dubte sobre GastroGoan',
     'help.contact.businessSuffix': '(negoci: ${name})',
     'msg.supplierOrderSubject': 'Comanda ${supplier} — ${date}',
@@ -17738,6 +17746,10 @@ const I18N = {
     'limpieza.defaultAperturaSala': ['Turn on lights and ambient music','Check fridge and beer tap temperature','Prepare ice, garnishes and glassware','Check bar drink stock','Clean the bar and tables','Check that restrooms are clean and stocked'],
     'limpieza.defaultCierreSala': ['Clean and disinfect the bar and tables','Wash and put away glassware','Empty coffee machine/grinder grounds and clean beer taps','Check that all equipment is switched off','Close fridges and check temperatures','Set the alarm and lock up'],
     'msg.reservationReminderSubject': 'Reminder of your reservation at ${biz}',
+    'msg.reservationCancelledNotify': 'Hi ${name}, this is ${biz} letting you know your reservation on ${date} at ${time} for ${people} has been cancelled. If you have any questions, get in touch.',
+    'msg.reservationEditedNotify': 'Hi ${name}, this is ${biz} letting you know your reservation has changed: it\'s now on ${date} at ${time} for ${people}. If that doesn\'t work for you, get in touch.',
+    'msg.reservationChangeSubject': 'Changes to your reservation at ${biz}', 'title.notifyReservationChange': 'Notify the customer',
+    'msg.notifyReservationHint': 'The reservation has already been saved. If you\'d like, notify the customer by WhatsApp or email before closing this.',
     'help.contact.subject': 'GastroGoan Support', 'help.contact.bodyIntro': 'Hi,\n\nI have a question about GastroGoan',
     'help.contact.businessSuffix': '(business: ${name})',
     'msg.supplierOrderSubject': 'Order ${supplier} — ${date}',
@@ -43438,6 +43450,7 @@ async function cancelReservation(id){
   if(!r0 || r0.status === 'completada') return;
   if(!(await confirmModal(t('msg.confirmCancelReservation')))) return;
   setReservationStatus(id, 'cancelada');
+  openReservationNotifyChangeModal(id, 'cancelada');
 }
 
 async function setReservationStatus(id, status){
@@ -44052,18 +44065,27 @@ function confirmReservationAsWaitlist(){
 function finalizeSaveReservation(data){
   const {id, clientId, clientName, date, time, people, tableId, notes, status} = data;
   const existing = id ? DB.reservations.find(x=>x.id===id) : null;
+  // Se compara ANTES de sobrescribir: es lo que decide si hay algo que
+  // avisarle al cliente (cambiar fecha/hora es la noticia; tocar solo la
+  // mesa o las notas internas no le afecta a él para nada).
+  const cambioFechaHora = existing && (existing.date !== date || existing.time !== time);
   if(existing){
     Object.assign(existing, {clientId, clientName, date, time, people, tableId, notes, status});
   }else{
     DB.reservations.push({id: genId(), clientId, clientName, date, time, people, tableId, notes, status});
   }
   saveDB();
+  // Igual que syncReservationStatusForPublic ya hace desde setReservationStatus:
+  // sin esto, editar la fecha/hora a mano no llegaba nunca al enlace público
+  // de gestión, que se quedaba enseñando los datos viejos para siempre.
+  if(existing && existing.publicToken && typeof syncReservationStatusForPublic === 'function') syncReservationStatusForPublic(existing);
   closeModal();
   renderReservas();
   // Aviso no bloqueante (no se impide guardar, el personal puede necesitar
   // registrar reservas de fechas pasadas para el historial) si la fecha
   // elegida es anterior a hoy.
   showToast(status === 'lista_espera' ? t('msg.reservationWaitlisted') : date < todayStr() ? t('msg.reservationSavedPastDate') : t('msg.reservationSaved'));
+  if(cambioFechaHora) openReservationNotifyChangeModal(id, 'editada');
 }
 
 // Marca (o desmarca) la llegada de una reserva, actualizando su estado a la
@@ -44208,6 +44230,68 @@ function sendReservationReminderEmail(id){
   r.reminderSentAt = new Date().toISOString();
   saveDB();
   renderReservasRemindersDue();
+}
+
+// Avisar al cliente de un cambio hecho por el NEGOCIO (cancelar o editar
+// fecha/hora) — mismo patrón que el recordatorio de arriba (WhatsApp/email
+// vía enlaces nativos, sin ninguna API de pago ni backend), pero con su
+// propio texto y sin tocar reminderSentAt (es un aviso distinto, no un
+// recordatorio de que se acerca la reserva). El email automático
+// (sendReservationCancellationEmail) ya existe y sigue mandándose solo si
+// está configurado — esto es la red de seguridad para cuando no lo está, o
+// para cuando el negocio prefiere avisar por WhatsApp.
+function openReservationNotifyChangeModal(id, tipo){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  const name = client ? client.name : (r.clientName || '');
+  const phone = (client && client.phone) || r.clientPhone || '';
+  const email = (client && client.email) || r.clientEmail || '';
+  if(!phone && !email) return; // nada que ofrecer: ni teléfono ni email guardados
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const peopleLabel = r.people===1 ? t('label.oneReservationPerson') : t('label.nReservationPeople').replace('${n}', r.people);
+  const claveMsg = tipo === 'cancelada' ? 'msg.reservationCancelledNotify' : 'msg.reservationEditedNotify';
+  const msg = t(claveMsg).replace('${name}', name).replace('${biz}', bizName).replace('${date}', r.date).replace('${time}', r.time).replace('${people}', peopleLabel);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-message-circle"></i> ${t('title.notifyReservationChange')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted)">${t('msg.notifyReservationHint')}</p>
+    <div class="field">
+      <textarea id="reservation-notify-text" rows="4">${escapeHtml(msg)}</textarea>
+    </div>
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendReservationNotifyWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendReservationNotifyEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function sendReservationNotifyWhatsapp(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  const phone = (client && client.phone) || r.clientPhone;
+  if(!phone){ showToast(t('msg.noPhone')); return; }
+  const tel = phone.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('reservation-notify-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+  closeModal();
+}
+function sendReservationNotifyEmail(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  const email = (client && client.email) || r.clientEmail;
+  if(!email){ showToast(t('msg.noEmail')); return; }
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const subject = encodeURIComponent(t('msg.reservationChangeSubject').replace('${biz}', bizName));
+  const body = encodeURIComponent(document.getElementById('reservation-notify-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(email)+'?subject='+subject+'&body='+body;
+  closeModal();
 }
 
 // Recordatorios "automáticos" de reserva: no hay backend para enviarlos solos
