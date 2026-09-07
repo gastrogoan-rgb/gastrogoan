@@ -1134,6 +1134,14 @@ async function addSucursal(parentSlotId){
   // lo hubiera visto — si no, nunca se le ofrecería configurar su propio
   // Redsys.
   snap.business.extConnPromptSeen = false;
+  // Hallazgo real de auditoría: al clonar `src.business` entero, el nombre
+  // del padre viajaba con él. El `nombre` que acaba de escribir el usuario
+  // solo se guardaba en la entrada del selector (`slots.push`), nunca en
+  // `business.name` — que es lo que se ve de verdad en cabecera y lo que
+  // se sincroniza a la nube. Cabecera y selector mostraban el nombre del
+  // padre en la sucursal recién creada, aunque el usuario hubiera escrito
+  // otro distinto.
+  snap.business.name = nombre;
 
   const newId = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 

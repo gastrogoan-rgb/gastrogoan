@@ -1316,7 +1316,6 @@ function rejectOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
-    if(typeof sendOrderCancellationEmail === 'function') sendOrderCancellationEmail(order).catch(()=>{});
     // Se avisa ANTES de mover a la papelera/borrar: una vez borrado ya no
     // queda order.clientRef al que asociar el aviso.
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
@@ -1333,12 +1332,12 @@ function rejectOnlineOrder(orderId){
 // de aceptar), esto cancela un pedido para llevar/delivery que YA está
 // aceptado y en marcha (p.ej. se ha quedado sin un ingrediente a mitad de
 // servicio). Igual que rechazar, pide PIN por ser una acción sensible que
-// borra el pedido, y avisa al cliente por email si dejó su dirección.
+// borra el pedido. El cliente se entera por su enlace de seguimiento
+// (syncOrderStatusForPublic, abajo) — ya no hay ningún email automático.
 function cancelAcceptedOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   requestBusinessPinAction(t('title.cancelOrder'), t('msg.confirmCancelOrder'), () => {
-    if(typeof sendOrderCancellationEmail === 'function') sendOrderCancellationEmail(order).catch(()=>{});
     /* El stock ya se había descontado al aceptar el pedido (líneas ya
        "marchadas" arriba) — al cancelarlo hay que devolverlo, si no el
        contador de raciones queda corto para siempre.
