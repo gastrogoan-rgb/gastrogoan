@@ -1029,6 +1029,15 @@ function loadBusinessInfo(){
       menus: val.menus || [],
       activeMenuIds: val.activeMenuIds || [],
       reservasResumen: val.reservasResumen || {},
+      // ⚠️ El negocio SÍ manda esto (syncPublicMirror, js/core.js) pero aquí
+      // nunca se copiaba a DB — así que getOccupiedSlotsForTable() siempre
+      // veía un objeto vacío y CUALQUIER mesa parecía libre a cualquier
+      // hora, por muy reservada que estuviera de verdad. getBestFitTable()
+      // (usado tanto al enviar la reserva como por el calendario) nunca
+      // detectaba el choque por sí solo — lo único que de verdad lo evitaba
+      // era la transacción atómica de mesaHold al enviar, ya en el último
+      // paso, sin que el cliente lo viera venir antes en el calendario.
+      mesasOcupadas: val.mesasOcupadas || {},
       // Antes faltaba "pedidosResumen" aquí: el límite de pedidos por franja
       // (submitOrder → reservePedidoSlotAtomic) siempre veía un baseline de 0
       // aunque ya hubiera pedidos aceptados en esa franja, así que en la
