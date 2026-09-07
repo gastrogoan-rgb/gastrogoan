@@ -77,8 +77,9 @@ lanzar; node test/categorias-ingrediente-seed.mjs > "$SALIDA/catingseed.txt" 2>&
 lanzar; node test/limpieza-ux.mjs           > "$SALIDA/limpiezaux.txt" 2>&1 & P44=$!
 lanzar; node test/email-reservas.mjs        > "$SALIDA/emailreservas.txt" 2>&1 & P45=$!
 lanzar; node test/calendario-reservas.mjs   > "$SALIDA/calendario.txt" 2>&1 & P46=$!
+lanzar; node test/confirmacion-pedido-reserva.mjs > "$SALIDA/confirmacion.txt" 2>&1 & P47=$!
 
-echo "→ 45 pruebas, de $TANDA en $TANDA…"
+echo "→ 46 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   # ⚠️ El patrón NO puede llevar el número de casos a pelo ("los 10 casos
@@ -135,5 +136,6 @@ espera $P43 "categorías de Mega Lista, seleccionables al editar"  "$SALIDA/cati
 espera $P44 "limpieza: lavado de manos y limpieza puntual"  "$SALIDA/limpiezaux.txt" "casos pasaron"
 espera $P45 "email de reservas: mensaje y aviso al modificar"  "$SALIDA/emailreservas.txt" "casos pasaron"
 espera $P46 "calendario interactivo de reservas"  "$SALIDA/calendario.txt" "casos pasaron"
+espera $P47 "página de confirmación unificada"  "$SALIDA/confirmacion.txt" "casos pasaron"
 
 exit $FALLOS

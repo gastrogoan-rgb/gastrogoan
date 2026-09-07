@@ -4638,8 +4638,12 @@ function syncOrderStatusForPublic(order, forcedStatus){
   const status = forcedStatus || computePublicOrderStatus(order);
   getPublicMirrorApp().then(app => {
     if(!app) return;
+    // `tipo` (takeaway/delivery) viaja aquí para que la página de
+    // seguimiento pueda matizar el texto ("listo para recoger" frente a
+    // "en reparto") — antes no se publicaba y esa pantalla no tenía forma
+    // de saber cuál de los dos era.
     app.database().ref('gastrogoan/public/' + publicId + '/orderStatus/' + order.clientRef).set({
-      status, updatedAt: new Date().toISOString()
+      status, tipo: order.tipo || '', updatedAt: new Date().toISOString()
     }).catch(()=>{});
   }).catch(()=>{});
 }
@@ -4775,7 +4779,7 @@ function getActivePromosForSync(){
    `DB.business` se publicaría sola sin que nadie se diera cuenta — que es
    exactamente cómo llegaron aquí las cinco de arriba. */
 const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
-  'name', 'address', 'phone', 'description', 'logo', 'brandColor',
+  'name', 'address', 'phone', 'email', 'description', 'logo', 'brandColor',
   'tipo', 'anyo', 'web', 'ig', 'fb', 'gmaps', 'tiktok',
   'horario', 'aforo', 'mesasInterior', 'mesasTerraza',
   'cartaAuto', 'tiposServicio',

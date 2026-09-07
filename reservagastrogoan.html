@@ -305,6 +305,14 @@ function reservaLookupKey(nombre, email, telefono){
   return ggLicHash(n + '·' + e + '·' + t + '·gastrogoan·reserva·lookup·v1').toString(36).padStart(7, '0');
 }
 
+// Número/código corto para que el cliente lo diga por teléfono, en vez del
+// token largo que va en la URL (ese sí que hace falta entero para poder
+// editar/cancelar, pero no se puede dictar cómodamente). Determinista: sale
+// del mismo token siempre, no hace falta guardarlo aparte en ningún sitio.
+function shortCode(token){
+  return ggLicHash(String(token||'') + '·gastrogoan·shortcode·v1').toString(36).toUpperCase().padStart(6,'0').slice(0,6);
+}
+
 /* ============ IDIOMA DE LA CARTA ============ */
 const LANGS = {es:'ES', en:'EN', ca:'CA'};
 let currentLang = localStorage.getItem('gastrogoan_lang') || 'es';
@@ -387,7 +395,8 @@ const I18N = {
     'track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
     'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
     'track.rejected.title':'Pedido no aceptado','track.rejected.msg':'El restaurante no ha podido aceptar este pedido.',
-    'track.step.pendiente':'Recibido','track.step.aceptado':'Aceptado por el restaurante','track.step.preparando':'En preparación','track.step.listo':'Listo','track.step.entregado':'Entregado / recogido',
+    'track.step.pendiente':'Recibido','track.step.aceptado':'Aceptado por el restaurante','track.step.preparando':'En preparación','track.step.listo.takeaway':'Listo para recoger','track.step.listo.delivery':'Listo, en reparto','track.step.entregado.takeaway':'Recogido','track.step.entregado.delivery':'Entregado',
+    'track.orderNumber':'Nº','track.contactTitle':'¿Necesitas anular o cambiar tu pedido?','track.saveLinkHint':'Guarda este enlace: lo necesitarás para ver el estado de tu pedido.',
     'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
     'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Tu pedido se ha pagado correctamente. El restaurante lo confirmará en breve.','pago.ok.btn':'Volver al inicio',
     'pago.ko.title':'Pago no completado','pago.ko.msg':'El pago no se ha procesado. Si lo deseas, puedes volver a intentarlo.','pago.ko.btn':'Volver',
@@ -470,7 +479,8 @@ const I18N = {
     'track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
     'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
     'track.rejected.title':'Order not accepted','track.rejected.msg':'The restaurant couldn\'t accept this order.',
-    'track.step.pendiente':'Received','track.step.aceptado':'Accepted by the restaurant','track.step.preparando':'Being prepared','track.step.listo':'Ready','track.step.entregado':'Delivered / picked up',
+    'track.step.pendiente':'Received','track.step.aceptado':'Accepted by the restaurant','track.step.preparando':'Being prepared','track.step.listo.takeaway':'Ready for pickup','track.step.listo.delivery':'Ready, on its way','track.step.entregado.takeaway':'Picked up','track.step.entregado.delivery':'Delivered',
+    'track.orderNumber':'No.','track.contactTitle':'Need to cancel or change your order?','track.saveLinkHint':'Save this link: you\'ll need it to check your order status.',
     'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
     'pago.ok.title':'Payment successful!','pago.ok.msg':'Your order has been paid. The restaurant will confirm shortly.','pago.ok.btn':'Back to home',
     'pago.ko.title':'Payment not completed','pago.ko.msg':'The payment was not processed. You can try again if you wish.','pago.ko.btn':'Go back',
@@ -553,7 +563,8 @@ const I18N = {
     'track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
     'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
     'track.rejected.title':'Comanda no acceptada','track.rejected.msg':'El restaurant no ha pogut acceptar aquesta comanda.',
-    'track.step.pendiente':'Rebuda','track.step.aceptado':'Acceptada pel restaurant','track.step.preparando':'En preparació','track.step.listo':'Llesta','track.step.entregado':'Lliurada / recollida',
+    'track.step.pendiente':'Rebuda','track.step.aceptado':'Acceptada pel restaurant','track.step.preparando':'En preparació','track.step.listo.takeaway':'Llesta per recollir','track.step.listo.delivery':'Llesta, en repartiment','track.step.entregado.takeaway':'Recollida','track.step.entregado.delivery':'Lliurada',
+    'track.orderNumber':'Núm.','track.contactTitle':'Necessites anul·lar o canviar la teva comanda?','track.saveLinkHint':'Guarda aquest enllaç: el necessitaràs per veure l\'estat de la teva comanda.',
     'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
     'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'La comanda s\'ha pagat correctament. El restaurant la confirmarà aviat.','pago.ok.btn':'Tornar a l\'inici',
     'pago.ko.title':'Pagament no completat','pago.ko.msg':'El pagament no s\'ha processat. Si ho desitges, pots tornar-ho a intentar.','pago.ko.btn':'Tornar',
@@ -3296,24 +3307,34 @@ function shareTrackUrl(url, isReserva, btnEl){
 /* ============ ENVÍO ============ */
 function sendRequest(req, successMsg){
   db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
+    // En vez de una pantalla de éxito de un solo uso con un botón para IR a
+    // ver el estado, se entra DIRECTAMENTE en la vista en vivo (seguimiento
+    // de pedido / gestión de reserva) — es la misma pantalla a la que
+    // volvería el cliente si guarda el enlace, así que más vale enseñársela
+    // ya la primera vez que hacerle pasar por un paso intermedio que luego
+    // desaparece para siempre.
+    if(req.type === 'pedido' && req.clientRef){
+      trackToken = req.clientRef;
+      trackListenerAttached = false;
+      renderOrderTrackingView();
+      return;
+    }
+    if(req.type === 'reserva' && req.resToken){
+      resToken = req.resToken;
+      resListenerAttached = false;
+      renderReservationManageView();
+      return;
+    }
+    // Sin token (autopedido de mesa: se fusiona con la comanda abierta, no
+    // tiene seguimiento propio) — se mantiene la pantalla genérica de
+    // siempre.
     const phone = (DB.business||{}).phone;
-    // Pedidos: enlace de seguimiento en vivo (ver renderOrderTrackingView).
-    // Reservas: enlace para poder cancelarla más adelante sin llamar (ver
-    // renderReservationManageView) — los dos usan el mismo patrón de token,
-    // cada uno en su propia ruta (orderStatus / reservationStatus).
-    const trackUrl = (req.type === 'pedido' && req.clientRef)
-      ? location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + '&track=' + encodeURIComponent(req.clientRef)
-      : (req.type === 'reserva' && req.resToken)
-      ? location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + '&res=' + encodeURIComponent(req.resToken)
-      : null;
     document.getElementById('app').innerHTML = `
       <div class="success">
         <div class="icon">✅</div>
         <h2>${escapeHtml(successMsg)}</h2>
         ${phone ? `<p style="font-size:13px;color:var(--muted);margin-top:8px">${t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`)}</p>` : ''}
-        ${trackUrl ? `<a class="btn btn-primary" style="margin-top:16px;text-decoration:none" href="${escapeHtml(trackUrl)}">${t(req.type === 'reserva' ? 'success.manageReservation' : 'success.trackOrder')}</a>
-        <button class="btn" type="button" style="margin-top:8px" onclick="shareTrackUrl('${escapeHtml(trackUrl).replace(/'/g,"\\'")}', ${req.type === 'reserva'}, this)">🔗 ${t('success.shareLink')}</button>` : ''}
-        <button class="btn" style="margin-top:${trackUrl?'8':'16'}px" onclick="location.reload()">${t(req.type === 'reserva' ? 'success.otraReserva' : 'success.otraPedido')}</button>
+        <button class="btn" style="margin-top:16px" onclick="location.reload()">${t(req.type === 'reserva' ? 'success.otraReserva' : 'success.otraPedido')}</button>
       </div>
     `;
   }).catch(e => {
@@ -3357,6 +3378,34 @@ function renderOrderTrackingView(){
     renderTrackStatus(null);
   });
 }
+// Contacto para anular/cambiar un pedido: NUNCA se autogestiona desde aquí
+// (a diferencia de una reserva) — a propósito, ver la conversación que
+// decidió este alcance. Solo se ofrece teléfono/email para que el cliente
+// hable con el negocio.
+function contactoParaCambiosHtml(){
+  const b = DB.business || {};
+  const phone = b.phone;
+  const email = b.email || '';
+  if(!phone && !email) return '';
+  return `
+    <div class="card" style="margin-top:12px;padding:12px 14px">
+      <div style="font-size:12.5px;font-weight:700;margin-bottom:4px">${t('track.contactTitle')}</div>
+      ${phone ? `<div style="font-size:13px"><a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">📞 ${escapeHtml(phone)}</a></div>` : ''}
+      ${email ? `<div style="font-size:13px;margin-top:2px"><a href="mailto:${escapeHtml(email)}" style="color:var(--ink);font-weight:600">✉️ ${escapeHtml(email)}</a></div>` : ''}
+    </div>`;
+}
+// Bloque "guarda este enlace" — el mismo mensaje y botón tanto si se acaba
+// de crear el pedido/reserva como si el cliente vuelve más tarde a mirarlo;
+// antes solo existía en la pantalla de éxito de un solo uso (sendRequest),
+// así que al saltar directo aquí (ver sendRequest) se perdía del todo.
+function guardaEnlaceHtml(token, esReserva){
+  const url = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + (esReserva ? '&res=' : '&track=') + encodeURIComponent(token);
+  return `
+    <div class="card" style="margin-top:12px;padding:12px 14px;border:2px dashed var(--border)">
+      <div style="font-size:12.5px;color:var(--muted)">${t('track.saveLinkHint')}</div>
+      <button class="btn" type="button" style="margin-top:8px;width:100%" onclick="shareTrackUrl('${escapeHtml(url).replace(/'/g,"\\'")}', ${!!esReserva}, this)">🔗 ${t('success.shareLink')}</button>
+    </div>`;
+}
 function renderTrackStatus(data){
   const app = document.getElementById('app');
   if(!data){
@@ -3370,28 +3419,32 @@ function renderTrackStatus(data){
     return;
   }
   const status = data.status || 'pendiente';
+  const codigo = shortCode(trackToken);
   if(status === 'rechazado'){
     const phone = (DB.business||{}).phone;
     app.innerHTML = `
       <div class="error-box">
         <div class="icon">⚠️</div>
         <h2>${t('track.rejected.title')}</h2>
+        <p style="font-size:11px;color:var(--muted);letter-spacing:.04em">${t('track.orderNumber')} ${codigo}</p>
         <p style="font-size:13px;color:var(--muted)">${t('track.rejected.msg')}${phone ? ' ' + t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`) : ''}</p>
         ${botonVolverALaCarta()}
       </div>`;
     return;
   }
   const idx = Math.max(0, TRACK_STEPS.indexOf(status));
+  const esDelivery = data.tipo === 'delivery';
   const steps = [
     {key:'pendiente', icon:'📥', label:t('track.step.pendiente')},
     {key:'aceptado', icon:'✅', label:t('track.step.aceptado')},
     {key:'preparando', icon:'👨‍🍳', label:t('track.step.preparando')},
-    {key:'listo', icon:'🍽️', label:t('track.step.listo')},
-    {key:'entregado', icon:'🎉', label:t('track.step.entregado')},
+    {key:'listo', icon: esDelivery ? '🛵' : '🍽️', label: t(esDelivery ? 'track.step.listo.delivery' : 'track.step.listo.takeaway')},
+    {key:'entregado', icon:'🎉', label: t(esDelivery ? 'track.step.entregado.delivery' : 'track.step.entregado.takeaway')},
   ];
   app.innerHTML = `
     <div class="card fade-in-play">
       <h2>${t('track.title')}</h2>
+      <p style="font-size:11px;color:var(--muted);letter-spacing:.04em;margin-top:-6px">${t('track.orderNumber')} ${codigo}</p>
       <div style="margin-top:14px">
         ${steps.map((s,i) => `
           <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);${i<=idx?'':'opacity:.35'}">
@@ -3403,6 +3456,8 @@ function renderTrackStatus(data){
       </div>
       ${botonVolverALaCarta()}
     </div>
+    ${contactoParaCambiosHtml()}
+    ${guardaEnlaceHtml(trackToken, false)}
   `;
 }
 
@@ -3469,6 +3524,7 @@ function renderReservationStatus(data){
   app.innerHTML = `
     <div class="card fade-in-play">
       <h2>${t('resManage.title')}</h2>
+      <p style="font-size:11px;color:var(--muted);letter-spacing:.04em;margin-top:-6px">${t('track.orderNumber')} ${shortCode(resToken)}</p>
       <div style="margin-top:6px;font-size:13px;font-weight:700;color:${statusClass}">${statusLabel}</div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.date')}</span><strong>${escapeHtml(data.date||'')} · ${escapeHtml(data.time||'')}</strong></div>
@@ -3503,6 +3559,7 @@ function renderReservationStatus(data){
       `}
       ${resEditing ? '' : botonVolverALaCarta()}
     </div>
+    ${resEditing ? '' : guardaEnlaceHtml(resToken, true)}
   `;
   if(resEditing){
     updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint');
