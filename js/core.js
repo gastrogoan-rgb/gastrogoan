@@ -1831,6 +1831,24 @@ function ggLicHash(str){
   return h >>> 0;
 }
 
+// "Accede a tu reserva" (recuperar el enlace perdido): el cliente escribe
+// nombre, email y teléfono, y se busca contra un índice derivado de esos
+// TRES datos combinados — nunca por uno solo. Buscar solo por teléfono (o
+// solo por email) dejaría a cualquiera "probar" datos ajenos hasta acertar
+// uno y ver la reserva de otra persona; con los tres a la vez hace falta
+// saber de verdad quién es ese cliente. Mismo patrón que ggOwnerAuthKey.
+function reservaLookupNormalize(nombre, email, telefono){
+  const n = String(nombre||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const e = String(email||'').trim().toLowerCase();
+  const t = String(telefono||'').replace(/[^\d]/g,'');
+  return {n, e, t};
+}
+function reservaLookupKey(nombre, email, telefono){
+  const {n, e, t} = reservaLookupNormalize(nombre, email, telefono);
+  if(!n || !e || !t) return null;
+  return ggLicHash(n + '·' + e + '·' + t + '·gastrogoan·reserva·lookup·v1').toString(36).padStart(7, '0');
+}
+
 function _ggLicSecret(){
   const c = [117,117,197,117,125,111,124,197,64,62,64,68,197,121,69];
   return c.map(x => String.fromCharCode(x - 14)).join('');
@@ -2399,6 +2417,15 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+            }
+          },
+          "reservationLookup": {
+            "$lookupKey": {
+              ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              "$token": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isBoolean() && newData.val() === true"
+              }
             }
           }
         }
@@ -4635,6 +4662,18 @@ function syncReservationStatusForPublic(reservation){
       status: reservation.status, date: reservation.date, time: reservation.time, people: reservation.people,
       updatedAt: new Date().toISOString()
     }).catch(()=>{});
+    // Índice de "accede a tu reserva": se reescribe en cada sync (no solo al
+    // crearla) porque el cliente puede cambiar su nombre/email/teléfono al
+    // editarla, y el índice tiene que seguir apuntando con los datos actuales,
+    // no con los de cuando reservó. set() (no update): si el token ya estaba
+    // bajo una clave vieja, esta escritura no la limpia sola — un cliente que
+    // reserva, cancela y edita el email antes de que nadie lo procese podría
+    // dejar el token también localizable por sus datos viejos, pero nunca deja
+    // de ser SU reserva, así que no es una fuga de datos ajenos.
+    const lookupKey = reservaLookupKey(reservation.clientName, reservation.clientEmail, reservation.clientPhone);
+    if(lookupKey){
+      app.database().ref('gastrogoan/public/' + publicId + '/reservationLookup/' + lookupKey + '/' + reservation.publicToken).set(true).catch(()=>{});
+    }
   }).catch(()=>{});
 }
 

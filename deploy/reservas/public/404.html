@@ -286,6 +286,25 @@ function escapeJsAttr(str){
   return escapeHtml(String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
 }
 
+// Copia exacta de la de js/core.js (archivo aparte, sin acceso a ese código)
+// — tiene que dar la MISMA clave para los mismos datos, o "Accede a tu
+// reserva" nunca encontraría nada.
+function ggLicHash(str){
+  let h = 0x811c9dc5 >>> 0;
+  for(let i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+function reservaLookupKey(nombre, email, telefono){
+  const n = String(nombre||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const e = String(email||'').trim().toLowerCase();
+  const t = String(telefono||'').replace(/[^\d]/g,'');
+  if(!n || !e || !t) return null;
+  return ggLicHash(n + '·' + e + '·' + t + '·gastrogoan·reserva·lookup·v1').toString(36).padStart(7, '0');
+}
+
 /* ============ IDIOMA DE LA CARTA ============ */
 const LANGS = {es:'ES', en:'EN', ca:'CA'};
 let currentLang = localStorage.getItem('gastrogoan_lang') || 'es';
@@ -295,6 +314,8 @@ const I18N = {
   es: {
     'tab.mesa':'📱 Pedir en mesa','tab.mesa.qr':'📱 Tu pedido','tab.reserva':'🍽️ Reservar mesa','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Reservar mesa','nombre':'Nombre *','telefono':'Teléfono *','fecha':'Fecha *','hora':'Hora *','personas':'Número de personas *',
+    'lookup.link':'¿Ya reservaste? Accede a tu reserva','lookup.title':'Accede a tu reserva','lookup.desc':'Escribe los mismos datos con los que reservaste. Los tres tienen que coincidir exactamente.',
+    'lookup.submit':'Buscar','lookup.needAll':'Rellena los tres datos.','lookup.notFound':'No encontramos ninguna reserva con esos datos. Revisa que estén escritos igual que al reservar, o llama al restaurante.',
     'notas':'Notas (alergias, peticiones especiales...)','notas.placeholder':'Opcional','reserva.submit':'Enviar solicitud de reserva','reserva.submitWithDeposit':'Pagar señal y reservar',
     'referral.label':'¿Cómo nos conociste? (opcional)','referral.placeholder':'Elige una opción',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -374,6 +395,8 @@ const I18N = {
   en: {
     'tab.mesa':'📱 Order at table','tab.mesa.qr':'📱 Your order','tab.reserva':'🍽️ Book a table','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Book a table','nombre':'Name *','telefono':'Phone *','fecha':'Date *','hora':'Time *','personas':'Number of people *',
+    'lookup.link':'Already booked? Access your reservation','lookup.title':'Access your reservation','lookup.desc':'Enter the same details you used to book. All three must match exactly.',
+    'lookup.submit':'Search','lookup.needAll':'Fill in all three fields.','lookup.notFound':'We couldn\'t find any reservation with those details. Check they match what you used to book, or call the restaurant.',
     'notas':'Notes (allergies, special requests...)','notas.placeholder':'Optional','reserva.submit':'Send booking request','reserva.submitWithDeposit':'Pay deposit and book',
     'referral.label':'How did you hear about us? (optional)','referral.placeholder':'Choose an option',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -453,6 +476,8 @@ const I18N = {
   ca: {
     'tab.mesa':'📱 Demanar a taula','tab.mesa.qr':'📱 La teva comanda','tab.reserva':'🍽️ Reservar taula','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Reservar taula','nombre':'Nom *','telefono':'Telèfon *','fecha':'Data *','hora':'Hora *','personas':'Nombre de persones *',
+    'lookup.link':'Ja vas reservar? Accedeix a la teva reserva','lookup.title':'Accedeix a la teva reserva','lookup.desc':'Escriu les mateixes dades amb què vas reservar. Els tres han de coincidir exactament.',
+    'lookup.submit':'Cercar','lookup.needAll':'Omple les tres dades.','lookup.notFound':'No hem trobat cap reserva amb aquestes dades. Revisa que estiguin escrites igual que al reservar, o truca al restaurant.',
     'notas':'Notes (al·lèrgies, peticions especials...)','notas.placeholder':'Opcional','reserva.submit':'Enviar sol·licitud de reserva','reserva.submitWithDeposit':'Pagar senyal i reservar',
     'referral.label':'Com ens has conegut? (opcional)','referral.placeholder':'Tria una opció',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -1598,11 +1623,87 @@ function submitNps(){
   sendRequest(req, t('nps.thanks'));
 }
 
+// "Accede a tu reserva": para el cliente que perdió el enlace de
+// seguimiento. Busca por los TRES datos combinados (nombre+email+teléfono,
+// ver reservaLookupKey) — nunca por uno solo, para que no se pueda "probar"
+// datos ajenos hasta acertar y ver la reserva de otra persona.
+function showReservaLookup(){
+  const box = document.getElementById('tab-content');
+  box.innerHTML = `
+    <div class="card fade-in-play">
+      <h2>${t('lookup.title')}</h2>
+      <p style="font-size:13px;color:var(--muted)">${t('lookup.desc')}</p>
+      <div class="field">
+        <label>${t('nombre')}</label>
+        <input type="text" id="lk-name">
+      </div>
+      <div class="field">
+        <label>${t('telefono')}</label>
+        <input type="tel" id="lk-phone" placeholder="600 000 000">
+      </div>
+      <div class="field">
+        <label>${t('email.reserva.label')}</label>
+        <input type="email" id="lk-email">
+      </div>
+      <div id="lk-result"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn" onclick="renderReservaForm()">${t('common.close')}</button>
+        <button class="btn btn-primary" style="flex:1" id="lk-submit" onclick="submitReservaLookup()">${t('lookup.submit')}</button>
+      </div>
+    </div>
+  `;
+}
+async function submitReservaLookup(){
+  const nombre = document.getElementById('lk-name').value.trim();
+  const phone = document.getElementById('lk-phone').value.trim();
+  const email = document.getElementById('lk-email').value.trim();
+  const resultBox = document.getElementById('lk-result');
+  if(!nombre || !phone || !email){
+    resultBox.innerHTML = `<p style="color:var(--red);font-size:13px;margin-top:10px">${t('lookup.needAll')}</p>`;
+    return;
+  }
+  const key = reservaLookupKey(nombre, email, phone);
+  if(!key){
+    resultBox.innerHTML = `<p style="color:var(--muted);font-size:13px;margin-top:10px">${t('lookup.notFound')}</p>`;
+    return;
+  }
+  setBtnLoading('lk-submit', true);
+  resultBox.innerHTML = '';
+  try{
+    const snap = await db.ref('gastrogoan/public/' + publicId + '/reservationLookup/' + key).once('value');
+    const tokens = Object.keys(snap.val() || {});
+    let validas = [];
+    if(tokens.length){
+      const statuses = await Promise.all(tokens.map(tok =>
+        db.ref('gastrogoan/public/' + publicId + '/reservationStatus/' + tok).once('value').then(s => ({token: tok, data: s.val()}))
+      ));
+      validas = statuses.filter(s => s.data);
+    }
+    if(!validas.length){
+      resultBox.innerHTML = `<p style="color:var(--muted);font-size:13px;margin-top:10px">${t('lookup.notFound')}</p>`;
+    } else {
+      validas.sort((a,b) => String(b.data.date||'')+String(b.data.time||'') > String(a.data.date||'')+String(a.data.time||'') ? 1 : -1);
+      resultBox.innerHTML = `<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">${validas.map(v => `
+        <a href="${escapeHtml(location.href.split('?')[0])}?neg=${encodeURIComponent(publicId)}&res=${encodeURIComponent(v.token)}" style="display:block;text-decoration:none;color:inherit">
+          <div class="card" style="padding:12px 14px">
+            <strong>${escapeHtml(v.data.date||'')} · ${escapeHtml(v.data.time||'')}</strong>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:2px">${t('resManage.people')} ${escapeHtml(v.data.people||'')}</div>
+          </div>
+        </a>
+      `).join('')}</div>`;
+    }
+  }catch(e){
+    resultBox.innerHTML = `<p style="color:var(--red);font-size:13px;margin-top:10px">${t('error.envio')}</p>`;
+  }
+  setBtnLoading('lk-submit', false);
+}
+
 function renderReservaForm(){
   const box = document.getElementById('tab-content');
   box.innerHTML = `
     <div class="card">
       <h2>${t('reserva.title')}</h2>
+      <p style="margin:-4px 0 0"><a href="javascript:void(0)" onclick="showReservaLookup()" style="display:inline-flex;align-items:center;min-height:44px;font-size:13px;color:var(--olive);font-weight:600">${t('lookup.link')}</a></p>
       <div class="field">
         <label>${t('nombre')}</label>
         <input type="text" id="r-name">

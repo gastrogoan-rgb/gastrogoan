@@ -561,6 +561,53 @@ caso('El negocio puede exigir confirmar a mano las reservas a partir de X comens
     'falta la casilla en Mi Negocio para activar la confirmación manual de reservas grandes');
 });
 
+caso('Accede a tu reserva: la clave de búsqueda da el mismo resultado en la app y en la web pública, y exige los tres datos', () => {
+  const mCore = core.match(/function reservaLookupKey\(nombre, email, telefono\)\{[\s\S]*?\n\}/);
+  const mPub = publica.match(/function reservaLookupKey\(nombre, email, telefono\)\{[\s\S]*?\n\}/);
+  assert.ok(mCore, 'no se encontró reservaLookupKey en js/core.js');
+  assert.ok(mPub, 'no se encontró reservaLookupKey en reservagastrogoan.html');
+  assert.ok(mCore[0].includes('return null;') && mPub[0].includes('return null;'),
+    'la clave debe exigir los TRES datos (nombre, email, teléfono) a la vez, nunca uno solo');
+  // Las dos copias del hash (ggLicHash) y el mismo texto de sal ('·gastrogoan·reserva·lookup·v1')
+  // tienen que coincidir letra a letra — si no, un mismo cliente calcularía
+  // claves DISTINTAS en la app y en la web pública, y la búsqueda nunca
+  // encontraría nada aunque los datos estén bien escritos.
+  const salCore = core.match(/'·gastrogoan·reserva·lookup·v1'/);
+  const salPub = publica.match(/'·gastrogoan·reserva·lookup·v1'/);
+  assert.ok(salCore && salPub, 'falta la sal de la clave en alguno de los dos ficheros');
+  const hashCore = core.match(/function ggLicHash\(str\)\{[\s\S]*?\n\}/);
+  const hashPub = publica.match(/function ggLicHash\(str\)\{[\s\S]*?\n\}/);
+  assert.ok(hashCore && hashPub, 'falta ggLicHash en alguno de los dos ficheros');
+  assert.equal(hashCore[0], hashPub[0], 'ggLicHash debe ser idéntica letra a letra en los dos ficheros');
+
+  // Prueba funcional de verdad, no solo textual: se ejecutan las dos
+  // versiones con los mismos datos (escritos de forma distinta a propósito
+  // — mayúsculas, acentos, espacios) y tienen que dar la MISMA clave.
+  const normCore = core.match(/function reservaLookupNormalize\(nombre, email, telefono\)\{[\s\S]*?\n\}/);
+  const bodyCore = 'function ggLicHash(str){' + hashCore[0].split('{').slice(1).join('{') +
+    (normCore ? normCore[0] : '') + mCore[0] +
+    "\nreturn reservaLookupKey('María Pérez', 'Maria.Perez@Gmail.com ', '600 111 222');";
+  const bodyPub = hashPub[0] + mPub[0] +
+    "\nreturn reservaLookupKey('maria perez', 'maria.perez@gmail.com', '600111222');";
+  const claveCore = new Function(bodyCore)();
+  const clavePub = new Function(bodyPub)();
+  assert.ok(claveCore, 'la versión de js/core.js no devolvió ninguna clave con datos válidos');
+  assert.equal(claveCore, clavePub, 'con los mismos datos (escritos de forma distinta), las dos versiones deben dar la misma clave de búsqueda');
+});
+
+caso('Cada sincronización de una reserva actualiza también su índice de búsqueda', () => {
+  const m = core.match(/function syncReservationStatusForPublic\(reservation\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró syncReservationStatusForPublic');
+  assert.ok(m[0].includes('reservaLookupKey(reservation.clientName, reservation.clientEmail, reservation.clientPhone)'),
+    'syncReservationStatusForPublic no actualiza el índice de "accede a tu reserva" — si el cliente cambia su nombre/email/teléfono al editar, la búsqueda con los datos nuevos no encontraría nada');
+  assert.ok(m[0].includes('reservationLookup/'), 'no se escribe en el nodo reservationLookup');
+});
+
+caso('Las reglas de Firebase (plantilla del negocio) dan acceso al nuevo nodo reservationLookup', () => {
+  const reglas = fs.readFileSync(path.join(raiz, 'reglas/reglas-de-cada-negocio.json'), 'utf8');
+  assert.ok(reglas.includes('reservationLookup'), 'falta la regla de reservationLookup en la plantilla que copian los negocios — sin ella, ni se puede escribir el índice ni buscarlo');
+});
+
 console.log('\n' + '═'.repeat(64));
 console.log(fallos ? `❌ ${fallos} fallaron` : `✅ casos pasaron`);
 process.exit(fallos ? 1 : 0);
