@@ -3121,6 +3121,16 @@ function mergeCartaStock(localCartas, mergedCartas, lastSyncedCartasJson){
    cambió desde ese punto (edición concurrente real en otro dispositivo),
    se deja como estaba: gana la nube, que sigue siendo la elección más
    segura ante un conflicto genuino. */
+// Arrays donde ya se ha confirmado y probado el mismo hueco que en cartas/
+// menús (ver comentario de arriba): objetos con campos editables sueltos
+// que "gana la nube" podía deshacer con solo recargar dentro de la ventana
+// de CLOUD_SYNC_DELAY. `employees`/`turnos`/`fichajes` son el siguiente
+// grupo confirmado (auditoría nocturna del 8/09, test/carrera-sync-
+// employees.mjs); el resto de MERGEABLE_ARRAYS queda fuera a propósito
+// -algunos con semántica de dinero (sales, cashClosures, tpvOrders) merecen
+// decidirse con más calma antes de tocarlos, no por mecánica sino por
+// criterio de negocio ante un conflicto real-.
+const PREFER_LOCAL_ARRAYS = new Set(['cartas', 'menus', 'employees', 'turnos', 'fichajes']);
 function preferLocalWhenRemoteStale(local, merged, baselineJson){
   if(!Array.isArray(local) || !Array.isArray(merged)) return merged;
   let baseline = [];
@@ -5417,7 +5427,7 @@ function applyRemoteBlock(key, remoteValue){
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
-    if(key === 'cartas' || key === 'menus'){
+    if(PREFER_LOCAL_ARRAYS.has(key)){
       merged = preferLocalWhenRemoteStale(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
     if(key === 'cartas'){
@@ -5695,7 +5705,7 @@ function mergeRemoteIntoLocal(val){
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
       value = mergeArraysById(DB[key], value);
-      if(key === 'cartas' || key === 'menus'){
+      if(PREFER_LOCAL_ARRAYS.has(key)){
         value = preferLocalWhenRemoteStale(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }
       if(key === 'cartas'){
