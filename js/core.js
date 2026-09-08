@@ -3147,6 +3147,12 @@ function preferLocalWhenRemoteStale(local, merged, baselineJson){
   });
 }
 
+// Un Map por id, para buscar rápido dentro de un array de objetos con id.
+// Estaba duplicada idéntica en mergeMenuStock, mergeElaboracionesStock,
+// mergePromosUsedDates y mergeClientCounters (hallazgo de auditoría,
+// 8/09) — sacada aquí una sola vez, sin cambiar ningún comportamiento.
+const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
+
 // Mismo problema y misma solución que mergeCartaStock, pero para `menus`:
 // un menú tiene su propio stock ("hoy solo hay 20 menús del día") Y cada
 // opción de cada grupo tiene el suyo ("quedan 8 merluzas") — decrementMenuStock
@@ -3159,7 +3165,6 @@ function mergeMenuStock(localMenus, mergedMenus, lastSyncedMenusJson){
   if(!Array.isArray(localMenus) || !Array.isArray(mergedMenus)) return mergedMenus;
   let baseline = [];
   if(lastSyncedMenusJson){ try{ baseline = JSON.parse(lastSyncedMenusJson) || []; }catch(e){ baseline = []; } }
-  const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
   const baselineMenus = porId(baseline);
   const localMenusMap = porId(localMenus);
   // Fusiona un contador (stock+disponible) por delta desde el último punto en
@@ -3201,7 +3206,6 @@ function mergeElaboracionesStock(localElabs, mergedElabs, lastSyncedElabsJson){
   if(!Array.isArray(localElabs) || !Array.isArray(mergedElabs)) return mergedElabs;
   let baseline = [];
   if(lastSyncedElabsJson){ try{ baseline = JSON.parse(lastSyncedElabsJson) || []; }catch(e){ baseline = []; } }
-  const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
   const baselineMap = porId(baseline);
   const localMap = porId(localElabs);
   mergedElabs.forEach(e => {
@@ -3228,7 +3232,6 @@ function mergePromosUsedDates(localPromos, mergedPromos, lastSyncedPromosJson){
   if(!Array.isArray(localPromos) || !Array.isArray(mergedPromos)) return mergedPromos;
   let baseline = [];
   if(lastSyncedPromosJson){ try{ baseline = JSON.parse(lastSyncedPromosJson) || []; }catch(e){ baseline = []; } }
-  const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
   const baselineMap = porId(baseline);
   const localMap = porId(localPromos);
   mergedPromos.forEach(p => {
@@ -3266,7 +3269,6 @@ function mergeClientCounters(localClients, mergedClients, lastSyncedClientsJson)
   if(!Array.isArray(localClients) || !Array.isArray(mergedClients)) return mergedClients;
   let baseline = [];
   if(lastSyncedClientsJson){ try{ baseline = JSON.parse(lastSyncedClientsJson) || []; }catch(e){ baseline = []; } }
-  const porId = arr => { const m = new Map(); arr.forEach(x => { if(x && x.id != null) m.set(x.id, x); }); return m; };
   const baselineMap = porId(baseline);
   const localMap = porId(localClients);
   ['points', 'noShows'].forEach(campo => {
