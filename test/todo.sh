@@ -77,6 +77,7 @@ lanzar; node test/categorias-ingrediente-seed.mjs > "$SALIDA/catingseed.txt" 2>&
 lanzar; node test/limpieza-ux.mjs           > "$SALIDA/limpiezaux.txt" 2>&1 & P44=$!
 lanzar; node test/email-reservas.mjs        > "$SALIDA/emailreservas.txt" 2>&1 & P45=$!
 lanzar; node test/calendario-reservas.mjs   > "$SALIDA/calendario.txt" 2>&1 & P46=$!
+lanzar; node test/carrera-sync-carta.mjs    > "$SALIDA/carrerasync.txt" 2>&1 & P49=$!
 lanzar; node test/confirmacion-pedido-reserva.mjs > "$SALIDA/confirmacion.txt" 2>&1 & P47=$!
 lanzar; node test/aviso-cambio-reserva.mjs  > "$SALIDA/avisocambio.txt" 2>&1 & P48=$!
 
@@ -139,5 +140,6 @@ espera $P45 "email de reservas: mensaje y aviso al modificar"  "$SALIDA/emailres
 espera $P46 "calendario interactivo de reservas"  "$SALIDA/calendario.txt" "casos pasaron"
 espera $P47 "página de confirmación unificada"  "$SALIDA/confirmacion.txt" "casos pasaron"
 espera $P48 "avisar al cliente al cancelar/editar una reserva"  "$SALIDA/avisocambio.txt" "casos pasaron"
+espera $P49 "la nube en retraso no deshace ediciones de carta/menú"  "$SALIDA/carrerasync.txt" "casos pasaron"
 
 exit $FALLOS

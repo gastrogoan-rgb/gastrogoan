@@ -3105,6 +3105,42 @@ function mergeCartaStock(localCartas, mergedCartas, lastSyncedCartasJson){
   return mergedCartas;
 }
 
+/* Hallazgo real de auditoría (P3-V02): mergeArraysById() hace "gana la
+   nube entera" cuando el mismo id existe en los dos lados. Eso es correcto
+   si de verdad hay una edición concurrente en dos dispositivos, pero no
+   cuando la nube simplemente TODAVÍA no se ha enterado del cambio local
+   -recargar dentro de la ventana de CLOUD_SYNC_DELAY (0,8 s), antes de que
+   la subida termine-. En ese caso "gana la nube" deshace en silencio
+   cualquier edición reciente de una carta o un menú (borrar un extra,
+   cambiar un precio, renombrar una sección...), no solo el stock -que ya
+   tenía su propio parche aparte, mergeCartaStock/mergeMenuStock-.
+   Se detecta comparando con el último punto en común (lastSyncedSnapshot):
+   si la nube sigue IDÉNTICA a como estaba entonces, pero lo local YA
+   cambió desde entonces, el cambio local es el más reciente de verdad -la
+   nube solo va con retraso-, así que gana lo local. Si la nube TAMBIÉN
+   cambió desde ese punto (edición concurrente real en otro dispositivo),
+   se deja como estaba: gana la nube, que sigue siendo la elección más
+   segura ante un conflicto genuino. */
+function preferLocalWhenRemoteStale(local, merged, baselineJson){
+  if(!Array.isArray(local) || !Array.isArray(merged)) return merged;
+  let baseline = [];
+  if(baselineJson){ try{ baseline = JSON.parse(baselineJson) || []; }catch(e){ baseline = []; } }
+  const baseMap = new Map(baseline.filter(x => x && x.id != null).map(x => [x.id, x]));
+  const localMap = new Map(local.filter(x => x && x.id != null).map(x => [x.id, x]));
+  return merged.map(item => {
+    if(!item || item.id == null) return item;
+    const loc = localMap.get(item.id);
+    if(!loc) return item;
+    const remoteStr = canonicalStringify(item);
+    const localStr = canonicalStringify(loc);
+    if(localStr === remoteStr) return item; // ya coinciden, no hay nada que decidir
+    const base = baseMap.get(item.id);
+    const baseStr = base ? canonicalStringify(base) : null;
+    if(baseStr !== null && remoteStr === baseStr && localStr !== baseStr) return loc;
+    return item;
+  });
+}
+
 // Mismo problema y misma solución que mergeCartaStock, pero para `menus`:
 // un menú tiene su propio stock ("hoy solo hay 20 menús del día") Y cada
 // opción de cada grupo tiene el suyo ("quedan 8 merluzas") — decrementMenuStock
@@ -5381,6 +5417,9 @@ function applyRemoteBlock(key, remoteValue){
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
+    if(key === 'cartas' || key === 'menus'){
+      merged = preferLocalWhenRemoteStale(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+    }
     if(key === 'cartas'){
       merged = mergeCartaStock(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
@@ -5656,6 +5695,9 @@ function mergeRemoteIntoLocal(val){
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
       value = mergeArraysById(DB[key], value);
+      if(key === 'cartas' || key === 'menus'){
+        value = preferLocalWhenRemoteStale(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+      }
       if(key === 'cartas'){
         value = mergeCartaStock(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }
