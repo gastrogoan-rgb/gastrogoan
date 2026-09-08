@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '08/09/2026 02:26';
+const GG_BUILD = '08/09/2026 10:34';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6045,6 +6045,12 @@ function mergeCartaStock(localCartas, mergedCartas, lastSyncedCartasJson){
    cambió desde ese punto (edición concurrente real en otro dispositivo),
    se deja como estaba: gana la nube, que sigue siendo la elección más
    segura ante un conflicto genuino. */
+// PREFER_LOCAL_ARRAYS se define justo después de MERGEABLE_ARRAYS, más
+// abajo en este mismo fichero (no aquí: en tiempo de carga del script,
+// referenciar MERGEABLE_ARRAYS antes de su propio `const` revienta con
+// "Cannot access before initialization" — un `const` no se iza como una
+// función, y esto no es un fallo que enseñe node -c, solo se ve al
+// ejecutar). Ver el comentario completo junto a su declaración real.
 function preferLocalWhenRemoteStale(local, merged, baselineJson){
   if(!Array.isArray(local) || !Array.isArray(merged)) return merged;
   let baseline = [];
@@ -6457,6 +6463,26 @@ const MERGEABLE_ARRAYS = new Set([
   // fusionar y la entrada del otro dispositivo desaparecía sin aviso.
   'auditLog','moodCheckins','turnoSwapRequests','trash'
 ]);
+
+// Se aplica a TODO MERGEABLE_ARRAYS: el hueco (mergeArraysById hace "gana la
+// nube entera" cuando el mismo id existe en los dos lados, aunque la nube
+// simplemente vaya con retraso) es el mismo en cualquier array fusionado por
+// id, no una peculiaridad de cartas/menús. Se verificó explícitamente que
+// no estorba a ningún parche posterior que ya exista para una clave
+// concreta -todos ellos (mergeCartaStock, mergeMenuStock,
+// mergeElaboracionesStock, mergePromosUsedDates, mergeClientCounters)
+// recalculan sus contadores por DELTA desde el mismo lastSyncedSnapshot,
+// así que da igual qué objeto haya "ganado" antes: el resultado del delta
+// es el mismo. El caso más delicado es `tpvOrders` -con su propia fusión de
+// líneas y sus protecciones contra cobro doble/plato reaparecido
+// (mergeOrderLines, más abajo)-: preferLocalWhenRemoteStale corre ANTES de
+// esa función, así que solo puede sustituir el objeto por el LOCAL cuando la
+// nube sigue igual que en el último punto en común (nada que fusionar de
+// verdad); en cuanto hay una diferencia real de la nube desde ese punto,
+// no interviene y mergeOrderLines actúa exactamente igual que siempre.
+// Probado a fondo contra los dos bugs históricos de tpvOrders en
+// test/carrera-sync-dinero.mjs antes de activar esto.
+const PREFER_LOCAL_ARRAYS = MERGEABLE_ARRAYS;
 
 // Objetos de nivel superior que son mapas planos {clave: valor} sin id ni
 // array dentro (mismo problema que DB.stock, fusionable con mergeStockField
@@ -8341,7 +8367,7 @@ function applyRemoteBlock(key, remoteValue){
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
-    if(key === 'cartas' || key === 'menus'){
+    if(PREFER_LOCAL_ARRAYS.has(key)){
       merged = preferLocalWhenRemoteStale(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
     if(key === 'cartas'){
@@ -8619,7 +8645,7 @@ function mergeRemoteIntoLocal(val){
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
       value = mergeArraysById(DB[key], value);
-      if(key === 'cartas' || key === 'menus'){
+      if(PREFER_LOCAL_ARRAYS.has(key)){
         value = preferLocalWhenRemoteStale(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }
       if(key === 'cartas'){
@@ -38124,16 +38150,31 @@ function idrCasarLinea(ing, avisos){
       avisos.push(`${ing.nombre}: "${ing.cantidad||''} ${ing.unidad||''}" no se pudo convertir a ${unidadDestino} — revisa esta cantidad, puede no ser correcta`);
     }
   };
+  // Si el ingrediente SÍ está en el negocio pero la cantidad que propuso el
+  // modelo es negativa, cero, o de una unidad tan incompatible que se queda
+  // en 0 al convertirla (p.ej. "3 litros" de algo que se compra por
+  // unidades), la línea vuelve null igual que si el ingrediente no
+  // existiera — y el `faltan` de fuera lo apunta con el mismo mensaje
+  // genérico de "por dar de alta". Un cocinero que lee eso da de alta el
+  // ingrediente OTRA VEZ (duplicado, con su propio precio) en vez de darse
+  // cuenta de que ya lo tenía y solo hay que corregir la cantidad a mano.
+  const avisarCantidadInvalida = nombreReal => {
+    if(avisos) avisos.push(`${ing.nombre}: ya está en tu lista (como "${nombreReal}"), pero la cantidad "${ing.cantidad||''} ${ing.unidad||''}" no es válida — corrígela a mano en la línea, no hace falta darlo de alta otra vez`);
+  };
   const base = idrBuscarElaboracion(ing.nombre);
   if(base){
     const destino = base.baseUnit || 'L';
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, destino));
     if(qty > 0){ avisarSiNoConvertible(destino); return {type:'base', baseRecipeId: base.id, qty, merma: 0}; }
+    avisarCantidadInvalida(base.name);
+    return null;
   }
   const real = idrBuscarIngrediente(ing.nombre, avisos);
   if(real){
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit));
     if(qty > 0){ avisarSiNoConvertible(real.unit); return {type:'ingredient', ingredientId: real.id, qty, merma: 0}; }
+    avisarCantidadInvalida(real.name);
+    return null;
   }
   return null;
 }

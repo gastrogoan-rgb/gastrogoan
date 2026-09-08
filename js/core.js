@@ -3121,16 +3121,12 @@ function mergeCartaStock(localCartas, mergedCartas, lastSyncedCartasJson){
    cambió desde ese punto (edición concurrente real en otro dispositivo),
    se deja como estaba: gana la nube, que sigue siendo la elección más
    segura ante un conflicto genuino. */
-// Arrays donde ya se ha confirmado y probado el mismo hueco que en cartas/
-// menús (ver comentario de arriba): objetos con campos editables sueltos
-// que "gana la nube" podía deshacer con solo recargar dentro de la ventana
-// de CLOUD_SYNC_DELAY. `employees`/`turnos`/`fichajes` son el siguiente
-// grupo confirmado (auditoría nocturna del 8/09, test/carrera-sync-
-// employees.mjs); el resto de MERGEABLE_ARRAYS queda fuera a propósito
-// -algunos con semántica de dinero (sales, cashClosures, tpvOrders) merecen
-// decidirse con más calma antes de tocarlos, no por mecánica sino por
-// criterio de negocio ante un conflicto real-.
-const PREFER_LOCAL_ARRAYS = new Set(['cartas', 'menus', 'employees', 'turnos', 'fichajes']);
+// PREFER_LOCAL_ARRAYS se define justo después de MERGEABLE_ARRAYS, más
+// abajo en este mismo fichero (no aquí: en tiempo de carga del script,
+// referenciar MERGEABLE_ARRAYS antes de su propio `const` revienta con
+// "Cannot access before initialization" — un `const` no se iza como una
+// función, y esto no es un fallo que enseñe node -c, solo se ve al
+// ejecutar). Ver el comentario completo junto a su declaración real.
 function preferLocalWhenRemoteStale(local, merged, baselineJson){
   if(!Array.isArray(local) || !Array.isArray(merged)) return merged;
   let baseline = [];
@@ -3543,6 +3539,26 @@ const MERGEABLE_ARRAYS = new Set([
   // fusionar y la entrada del otro dispositivo desaparecía sin aviso.
   'auditLog','moodCheckins','turnoSwapRequests','trash'
 ]);
+
+// Se aplica a TODO MERGEABLE_ARRAYS: el hueco (mergeArraysById hace "gana la
+// nube entera" cuando el mismo id existe en los dos lados, aunque la nube
+// simplemente vaya con retraso) es el mismo en cualquier array fusionado por
+// id, no una peculiaridad de cartas/menús. Se verificó explícitamente que
+// no estorba a ningún parche posterior que ya exista para una clave
+// concreta -todos ellos (mergeCartaStock, mergeMenuStock,
+// mergeElaboracionesStock, mergePromosUsedDates, mergeClientCounters)
+// recalculan sus contadores por DELTA desde el mismo lastSyncedSnapshot,
+// así que da igual qué objeto haya "ganado" antes: el resultado del delta
+// es el mismo. El caso más delicado es `tpvOrders` -con su propia fusión de
+// líneas y sus protecciones contra cobro doble/plato reaparecido
+// (mergeOrderLines, más abajo)-: preferLocalWhenRemoteStale corre ANTES de
+// esa función, así que solo puede sustituir el objeto por el LOCAL cuando la
+// nube sigue igual que en el último punto en común (nada que fusionar de
+// verdad); en cuanto hay una diferencia real de la nube desde ese punto,
+// no interviene y mergeOrderLines actúa exactamente igual que siempre.
+// Probado a fondo contra los dos bugs históricos de tpvOrders en
+// test/carrera-sync-dinero.mjs antes de activar esto.
+const PREFER_LOCAL_ARRAYS = MERGEABLE_ARRAYS;
 
 // Objetos de nivel superior que son mapas planos {clave: valor} sin id ni
 // array dentro (mismo problema que DB.stock, fusionable con mergeStockField
