@@ -211,3 +211,22 @@ No se ha tocado `js/core.js`, `reservagastrogoan.html`, `generador-licencias.htm
 de producto que preparar más allá de dejar constancia de este hallazgo — se deja a decisión
 del dueño si aplicar ya el fix sugerido (`employees`, `turnos`, `fichajes` en
 `preferLocalWhenRemoteStale`) o esperar a un criterio único para los 24 arrays.
+
+---
+
+## Actualización — misma noche, tras revisar este informe
+
+Se decidió aplicar ya el fix sugerido arriba (el más seguro y de mayor impacto), no esperar:
+`employees`, `turnos` y `fichajes` añadidos a un nuevo conjunto `PREFER_LOCAL_ARRAYS` que usa
+`preferLocalWhenRemoteStale` en los dos puntos de fusión (listener incremental y carga inicial
+completa). Nueva prueba dedicada `test/carrera-sync-employees.mjs` (4 casos: teléfono de
+empleado, hora de fichaje, día de turno, y que un conflicto real entre dos dispositivos sigue
+ganando la nube), añadida a `test/todo.sh`. Batería completa de 50 pruebas corrida entera:
+único fallo, "la demo" (dato preexistente y sin relación con este cambio, confirmado con
+`git stash` antes de tocar nada). Publicado en `claude/beautiful-dijkstra-58bru6` (commit
+`1ac7710`), **no en `main`** — queda para que el dueño lo revise por la mañana antes de
+mezclarlo y publicarlo.
+
+`sales`, `tpvOrders`, `cashClosures`, `bankReconciliations` y el resto de `MERGEABLE_ARRAYS`
+siguen sin este parche, a propósito: tienen semántica de dinero y merecen un criterio de
+conflicto decidido con calma, no aplicado por mecánica de "es el mismo tipo de bug".
