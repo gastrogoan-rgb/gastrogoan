@@ -1317,6 +1317,41 @@ await caso('Una unidad que no se pudo convertir (oz, cucharadas...) avisa en vez
   return 'avisa de la unidad no convertida, y calla cuando la conversión es correcta';
 });
 
+await caso('Cantidad negativa o cero en un ingrediente YA existente no se confunde con "hay que darlo de alta"', async ()=>{
+  // Hallazgo de esta auditoría (2026-09-08, ronda final): cuando el
+  // ingrediente SÍ existe pero la cantidad que propuso el modelo es
+  // negativa o cero, idrCasarLinea devolvía null exactamente igual que si
+  // el ingrediente no existiera — y el aviso de fuera decía "por dar de
+  // alta". El cocinero lo daba de alta OTRA VEZ (duplicado, con su propio
+  // precio) en vez de darse cuenta de que ya lo tenía y solo había que
+  // corregir la cantidad a mano. (La unidad simplemente incompatible pero
+  // con número positivo, p.ej. "3 litros" de algo por unidades, es un caso
+  // distinto que ya cubre el aviso de "no se pudo convertir" — arriba.)
+  const r = await page.evaluate(()=>{
+    DB.ingredients.push({id:9002, name:'Sal IDRTEST', unit:'ud', price:1, area:'cocina'});
+    const faltanNegativa = [];
+    const lineaNegativa = idrCasarLinea({nombre:'Sal IDRTEST', cantidad:-5, unidad:'g'}, faltanNegativa);
+    const faltanCero = [];
+    const lineaCero = idrCasarLinea({nombre:'Sal IDRTEST', cantidad:0, unidad:'ud'}, faltanCero);
+    const faltanInventado = [];
+    const lineaInventado = idrCasarLinea({nombre:'Ingrediente Que No Existe IDRTEST', cantidad:100, unidad:'g'}, faltanInventado);
+    return {lineaNegativa, faltanNegativa, lineaCero, faltanCero, lineaInventado, faltanInventado};
+  });
+  assert.equal(r.lineaNegativa, null, 'una cantidad negativa no debe crear una línea de escandallo con qty negativa');
+  assert.equal(r.lineaCero, null, 'una cantidad cero tampoco crea línea');
+  assert.equal(r.faltanNegativa.length, 1, 'debe avisar, no callar');
+  assert.ok(r.faltanNegativa[0].includes('ya está en tu lista') && r.faltanNegativa[0].includes('Sal IDRTEST'),
+    'el aviso de cantidad negativa debe decir que el ingrediente YA EXISTE, no sonar a "falta por dar de alta": ' + r.faltanNegativa[0]);
+  assert.ok(r.faltanCero[0].includes('ya está en tu lista'),
+    'igual para cantidad cero: ' + r.faltanCero[0]);
+  // Un ingrediente que de verdad NO existe sigue sin ese aviso especial —
+  // idrCasarLinea no llega ni a intentar avisarlo porque nunca entra en el
+  // bloque "if(real)".
+  assert.equal(r.lineaInventado, null);
+  assert.equal(r.faltanInventado.length, 0, 'idrCasarLinea no añade nada por sí sola cuando el ingrediente no existe — ese aviso genérico lo pone quien la llama');
+  return 'distingue "cantidad inválida en un ingrediente que ya tienes" de "ingrediente que no tienes"';
+});
+
 await caso('Sin el ADN mínimo no se puede empezar nada', async ()=>{
   const r = await page.evaluate(()=>{
     const antes = JSON.parse(JSON.stringify(idrAdn()));

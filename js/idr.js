@@ -1564,16 +1564,31 @@ function idrCasarLinea(ing, avisos){
       avisos.push(`${ing.nombre}: "${ing.cantidad||''} ${ing.unidad||''}" no se pudo convertir a ${unidadDestino} — revisa esta cantidad, puede no ser correcta`);
     }
   };
+  // Si el ingrediente SÍ está en el negocio pero la cantidad que propuso el
+  // modelo es negativa, cero, o de una unidad tan incompatible que se queda
+  // en 0 al convertirla (p.ej. "3 litros" de algo que se compra por
+  // unidades), la línea vuelve null igual que si el ingrediente no
+  // existiera — y el `faltan` de fuera lo apunta con el mismo mensaje
+  // genérico de "por dar de alta". Un cocinero que lee eso da de alta el
+  // ingrediente OTRA VEZ (duplicado, con su propio precio) en vez de darse
+  // cuenta de que ya lo tenía y solo hay que corregir la cantidad a mano.
+  const avisarCantidadInvalida = nombreReal => {
+    if(avisos) avisos.push(`${ing.nombre}: ya está en tu lista (como "${nombreReal}"), pero la cantidad "${ing.cantidad||''} ${ing.unidad||''}" no es válida — corrígela a mano en la línea, no hace falta darlo de alta otra vez`);
+  };
   const base = idrBuscarElaboracion(ing.nombre);
   if(base){
     const destino = base.baseUnit || 'L';
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, destino));
     if(qty > 0){ avisarSiNoConvertible(destino); return {type:'base', baseRecipeId: base.id, qty, merma: 0}; }
+    avisarCantidadInvalida(base.name);
+    return null;
   }
   const real = idrBuscarIngrediente(ing.nombre, avisos);
   if(real){
     const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit));
     if(qty > 0){ avisarSiNoConvertible(real.unit); return {type:'ingredient', ingredientId: real.id, qty, merma: 0}; }
+    avisarCantidadInvalida(real.name);
+    return null;
   }
   return null;
 }
