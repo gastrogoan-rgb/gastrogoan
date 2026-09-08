@@ -230,3 +230,160 @@ mezclarlo y publicarlo.
 `sales`, `tpvOrders`, `cashClosures`, `bankReconciliations` y el resto de `MERGEABLE_ARRAYS`
 siguen sin este parche, a propósito: tienen semántica de dinero y merecen un criterio de
 conflicto decidido con calma, no aplicado por mecánica de "es el mismo tipo de bug".
+
+---
+
+## Ronda final de la noche — los tres huecos que quedaban marcados como "no cubierto"
+
+Esta pasada ataca exactamente los tres puntos que la sección anterior dejaba pendientes:
+Gestión Económica/Mi Negocio llamados directamente desde consola en sesión de empleado, la
+carrera real de `ownerNames` con dos altas simultáneas, y tres ataques al módulo de I+D
+(respuesta vacía, tope de 500 consultas, unidades incoherentes). Los dos primeros no
+encontraron defecto — se verificaron con pruebas dinámicas de verdad (Puppeteer contra una
+sesión de empleado real, y el emulador oficial de Firebase con las reglas reales de la
+plataforma), no solo por lectura. El tercero encontró un hallazgo real, pequeño y ya
+corregido con prueba.
+
+### 1. Gestión Económica / Mi Negocio desde consola, en sesión de empleado real — sin hallazgo
+
+Se montó una sesión de empleado de cocina de verdad (sin `canUnlockEdit`), con
+`getAccessSession()` devolviendo `{type:'employee', ...}` de verdad (no simulado a medias), y
+desde ahí, con `page.evaluate()`, se llamó DIRECTAMENTE:
+
+- `renderView('economia')` y `renderView('minegocio')`: los dos deniegan con el toast
+  `"Gestión es solo para el propietario del negocio."` y el contenido de `#minegocio-content`
+  queda vacío (`innerHTML.length === 0`) — no se pinta ni un dato, ni el código de negocio ni
+  el PIN. Confirmado por `js/ui.js:1867` (`renderView`) y `js/ui.js:1697`
+  (`isGestionLocked`).
+- `GE.saveGF()` (guardar un gasto fijo) llamado a pelo, saltándose `navigate()` y `GE.init()`
+  por completo: no cambia `DB.gastosFijos` (comprobado comparando el array antes/después,
+  `changed:false`). Esto es porque **cada método de `GE` está envuelto individualmente** con
+  el mismo guard (`js/hr.js:2069-2076`) — comentario explícito en el código de que se hizo así
+  a propósito por este mismo motivo, así que no hay ningún método de Gestión Económica
+  alcanzable sin pasar por `isGestionLocked()`.
+- `changeOwnerPin()` (cambiar el PIN de negocio, en Mi Negocio): esta función NO tiene un
+  guard de `isGestionLocked()` propio, a diferencia de `GE.*` — se investigó a fondo porque
+  parecía un hueco real. Pero está protegida por otro camino: pasa por
+  `requestBusinessPinAction()`, que para una sesión que no es de propietario (`isOwnerSession()`
+  mira la clase CSS `owner-session` del body, ausente en sesión de empleado) exige el **PIN
+  real del negocio** antes de ejecutar nada. Se probó exactamente esto: llamada desde consola
+  creando los `<input>` a mano (algo que un empleado con devtools sí podría hacer), con un PIN
+  incorrecto (`0000` contra el real `9999`) → `DB.business.pin` no cambia; con el PIN correcto
+  → si cambia. Es decir, un empleado sin devtools no puede tocarlo (no hay botón), y un
+  empleado CON devtools tampoco puede sin conocer el PIN real del negocio — el mismo patrón de
+  protección "de verdad, no solo de interfaz" que usan las funciones `really*` según el
+  comentario de `js/tpv.js:1409-1414`. **No es un hallazgo**: es una protección por secreto en
+  vez de por rol, pero protección real al fin y al cabo, verificada dinámicamente y no solo
+  leída.
+- Prueba usada (temporal, borrada al terminar): sesión de empleado real vía el mismo patrón de
+  `test/permisos.mjs` (`resumeEmployeeSession()` + `navigate('folder')`, no un `reload` con
+  `localStorage` a medio pintar, que da un falso `getAccessSession()===null`).
+
+### 2. Carrera real de `ownerNames` — sin hallazgo, confirmado con el emulador oficial
+
+Se levantó un segundo emulador de Firebase (Realtime Database + Auth, puerto propio para no
+chocar con `test/emulador/`) cargado con las reglas REALES de la plataforma
+(`reglas/reglas-de-la-plataforma.json`, que exige `auth.token.email === 'gastrogoan@gmail.com'`
+para escribir en `ownerNames`). Se copió literalmente la lógica de `claimOwnerAccount()`
+(mismo bucle, mismo `MAX_OWNER_NAME_ATTEMPTS`, misma transacción atómica de Firebase) y se
+lanzaron dos instancias de la app (dos `firebase.initializeApp` con nombre distinto, cada una
+con su propio `auth()`, autenticadas de verdad contra el emulador) llamando a
+`claimOwnerAccount('Casa Paco')` **con `Promise.all`, no en serie**:
+
+```
+dispositivo 1 → {"user":"casapaco"}
+dispositivo 2 → {"user":"casapaco2"}
+```
+
+Nunca coinciden. Repetido con 5 dispositivos a la vez sobre el mismo nombre ("Bar Nuevo"): 5
+nombres distintos (`barnuevo`, `barnuevo2`..`barnuevo5`), sin colisión, y el nodo final de
+`gastrogoan/ownerNames` con exactamente 7 entradas (las 2 + las 5), ninguna duplicada ni
+perdida. La transacción atómica de Firebase serializa la carrera de verdad: el segundo (o
+tercero, cuarto...) dispositivo ve `current !== null`, la transacción no se compromete, y el
+bucle de `claimOwnerAccount` reintenta con el siguiente número — exactamente como describe
+`CLAUDE.md`. **Descartado como riesgo**: no hay forma de que dos altas simultáneas se queden
+con el mismo usuario.
+
+Script y emulador usados solo para esta comprobación, no dejados en el repo (se pararon y se
+borró el directorio de trabajo al terminar).
+
+### 3. I+D: respuesta vacía, tope de 500, unidades incoherentes — un hallazgo real, corregido
+
+Las tres comprobaciones se hicieron en vivo, con Puppeteer contra `dist/index.html`,
+mockeando `window.fetch` para simular al proveedor de IA (sin gastar ninguna clave real):
+
+- **Respuesta vacía persistente**: con `fetch` devolviendo siempre un candidato sin texto
+  (`finishReason:'MAX_TOKENS'`), `llmChat()` reintenta exactamente UNA vez con el triple de
+  margen (2 llamadas al proveedor observadas, no más) y si sigue vacía devuelve
+  `{ok:false, motivo:'vacia'}`. Un turno completo de `idrEnviar()` en ese escenario NO se
+  queda "Pensando..." para siempre: `idrPensando` termina en `false` y el hilo recibe un
+  mensaje de error legible (`"El asistente se ha quedado sin espacio para contestar..."`) — la
+  garantía que documenta `CLAUDE.md` ("un turno no puede terminar sin respuesta en el hilo")
+  se sigue cumpliendo, verificado dinámicamente, no solo leído. **Descartado.**
+- **Tope de 500 consultas/día**: forzando `gastrogoan_idr_gasto` a `{llamadas:500}` del día de
+  hoy, `idrQuedanLlamadas()` da `0`, `llmChat()` devuelve `{motivo:'tope'}` SIN llegar a llamar
+  a `fetch`, y un turno completo en ese estado escribe en el hilo y en un toast el mensaje
+  claro `"Has llegado al máximo de consultas de hoy en este dispositivo"` — ni fallo
+  silencioso ni error de JavaScript en consola (comprobado con `page.on('pageerror')`, vacío
+  en todo el recorrido). **Descartado.**
+- **Unidades incoherentes en `idrConvertirCantidad`** — aquí SÍ apareció un hallazgo real:
+  con un número negativo (`-5`) o cero, la función los deja pasar tal cual (no los clampa,
+  solo filtra `NaN`/`Infinity`/texto con `isFinite`). Sus dos únicos usos dentro de
+  `idrCasarLinea` (`js/idr.js:1570` y `1575`, antes de este fix) sí envuelven la llamada en
+  `Math.max(0, ...)`, así que **nunca se crea una línea de escandallo con cantidad negativa o
+  coste absurdo** — hasta ahí, ningún problema de los que pedía el encargo (nada cuelga, nada
+  da negativo/infinito/NaN sin más). Pero el efecto colateral silencioso era otro: cuando el
+  ingrediente SÍ estaba dado de alta en el negocio y la cantidad calculada quedaba en 0 (por
+  ser negativa, cero, o por una unidad tan incompatible que la conversión no daba nada
+  usable), `idrCasarLinea` devolvía `null` **exactamente igual que si el ingrediente no
+  existiera**, y el aviso genérico que pone quien la llama (`idrCrearElaboracionDelPlato`,
+  `idrMontarLineasDePlato`, etc.) decía "Ingredientes que no tienes todavía — falta por dar de
+  alta". Un cocinero leyendo eso da de alta el ingrediente OTRA VEZ, duplicado, con su propio
+  precio nuevo, en vez de darse cuenta de que ya lo tenía y solo había que corregir la cantidad
+  a mano en la línea. Reproducido con Puppeteer contra el bundle real antes de tocar nada:
+  ```
+  idrCasarLinea({nombre:'Sal Test', cantidad:-5, unidad:'litros'}, avisos)
+  → {linea: null, avisos: []}   // ← nada explica que "Sal Test" ya existía
+  ```
+  **Corregido** (`js/idr.js`, función `idrCasarLinea`): cuando el ingrediente o la elaboración
+  SÍ se encuentran pero la cantidad convertida es `<=0`, se añade un aviso específico —
+  *"ya está en tu lista (como "...")，pero la cantidad "..." no es válida — corrígela a mano en
+  la línea, no hace falta darlo de alta otra vez"* — antes de devolver `null`. El
+  comportamiento de fondo no cambia (la línea sigue sin crearse, el food cost del plato sigue
+  siendo el mismo), solo cambia el mensaje: ahora dirige al cocinero a corregir la cantidad en
+  vez de crear un duplicado. Prueba nueva en `test/idr.mjs` ("Cantidad negativa o cero en un
+  ingrediente YA existente no se confunde con 'hay que darlo de alta'"), añadida a la
+  batería — los 91 casos de `test/idr.mjs` pasan, y `bash test/todo.sh` completo (50 pruebas)
+  pasa entero tras el cambio.
+
+### Límites honestos de esta última ronda
+
+- El punto 1 (Gestión Económica/Mi Negocio) se probó con los caminos de entrada más obvios
+  desde consola (`renderView`, `GE.*`, `changeOwnerPin`). No se recorrió cada función expuesta
+  de Mi Negocio una por una (regenerar código de negocio, exportar datos, borrar el negocio,
+  etc.) — el patrón de protección (PIN real, o guard por método) es consistente en las que se
+  miraron, pero no se afirma que sea universal sin excepción en las decenas de funciones de
+  ese módulo.
+- El punto 2 (carrera de `ownerNames`) se probó con hasta 5 dispositivos simultáneos; no se
+  probó con nombres que llevan emojis, tildes raras o cadenas vacías compitiendo a la vez (eso
+  sigue siendo, como decía la ronda anterior, un hueco sin forzar).
+- El punto 3 (I+D) atacó las tres cosas que pedía el encargo con `fetch` mockeado, no con un
+  proveedor de IA real — sigue siendo cierto lo que dice el `ANALISIS_GENERAL.md`: nadie ha
+  probado el módulo con Gemini o Claude contestando de verdad. El hallazgo corregido es de
+  mensaje/UX (qué le dice la app al cocinero), no de cálculo: en ningún momento se generó un
+  coste negativo, infinito o `NaN` en una ficha real.
+- No se ha repetido en esta ronda ningún ataque ya cubierto por rondas anteriores del mismo
+  día ni por las auditorías del 7/09.
+
+### Archivos tocados en esta ronda
+
+- `js/idr.js` — fix en `idrCasarLinea` (mensaje correcto para cantidad inválida en ingrediente
+  ya existente).
+- `test/idr.mjs` — prueba nueva de regresión para ese fix, dentro de la batería de 91 casos.
+- `dist/` regenerado con `bash build.sh` (no comiteado, per `.gitignore`).
+- `auditoria/2026-09-08/informe-nocturno.md` — esta sección.
+
+No se ha tocado `generador-licencias.html`, `reservagastrogoan.html`, ni ningún otro fichero
+de `js/`. `bash test/todo.sh` completo (50 pruebas) corrido entero tras el cambio: verde.
+Publicado en `claude/beautiful-dijkstra-58bru6`, **no en `main`** — para que el dueño lo revise
+por la mañana antes de mezclarlo y publicarlo, igual que el resto de esta noche.
