@@ -140,6 +140,93 @@ await caso('El modal de horario fijo pinta los 7 días de la semana con sus sele
   await page.evaluate(() => closeModal());
 });
 
+await caso('Solo 2 pestañas en Horarios (Personal y Calendario), con Día/Semana/Mes como interruptor dentro de Calendario', async () => {
+  const r = await page.evaluate(() => {
+    setHorariosTab('personal');
+    const tabsPersonal = [...document.querySelectorAll('#horarios-content .ge-tab-row .ge-tab')].map(b => b.textContent.trim());
+    setHorariosTab('calendario');
+    const toggle = [...document.querySelectorAll('#horarios-content .view-toggle button')].map(b => b.textContent.trim());
+    return {tabsPersonal, toggle};
+  });
+  assert.equal(r.tabsPersonal.length, 2, 'deben ser solo 2 pestañas arriba: ' + JSON.stringify(r.tabsPersonal));
+  assert.equal(r.toggle.length, 3, 'Día/Semana/Mes deben ser el interruptor dentro de Calendario: ' + JSON.stringify(r.toggle));
+});
+
+await caso('La tarjeta del empleado abre un menú con las 3 formas de tener turnos', async () => {
+  const r = await page.evaluate(() => {
+    openEmployeeScheduleChooser(1);
+    const texto = document.body.innerText;
+    return {tieneFijo: texto.includes('Horario fijo'), tienePeriodo: texto.includes('Asignar turnos por periodo'), tieneNinguno: texto.includes('Sin turnos asignados')};
+  });
+  assert.ok(r.tieneFijo && r.tienePeriodo && r.tieneNinguno, 'deben verse las 3 opciones: ' + JSON.stringify(r));
+  await page.evaluate(() => closeModal());
+});
+
+await caso('Editar por la UI real un turno del patrón y elegir "Solo este día" lo desengancha, sin tocar el patrón', async () => {
+  const r = await page.evaluate(() => {
+    const patronM = {tipo:'M', entrada:'09:00', salida:'17:00', entrada2:'', salida2:''};
+    DB.horariosFijos = [{id: genId(), employeeId: 1, activo: true, patron: Array(7).fill(0).map(()=>({...patronM})), generadoHasta: addDaysStr(todayStr(), -1)}];
+    generarTurnosFijos();
+    const objetivo = DB.turnos.find(t => t.employeeId===1 && t.origen==='fijo');
+    openTurnoModal(objetivo.id);
+    const hayAviso = document.body.innerText.includes('sigue el horario fijo');
+    const hayDosBotones = document.body.innerText.includes('Solo este día') && document.body.innerText.includes('Para siempre');
+    document.getElementById('turno-salida').value = '14:00'; // sale antes, solo hoy
+    // El botón "Solo este día" llama a saveTurno(id, 'dia')
+    [...document.querySelectorAll('.modal-footer button')].find(b => b.textContent.trim()==='Solo este día').click();
+    const tras = DB.turnos.find(t => t.id===objetivo.id);
+    const patronSigueIgual = DB.horariosFijos[0].patron[((new Date(objetivo.fecha+'T00:00:00').getDay()+6)%7)].salida === '17:00';
+    return {hayAviso, hayDosBotones, salida: tras.salida, origen: tras.origen, patronSigueIgual};
+  });
+  assert.ok(r.hayAviso, 'debe avisar de que ese turno sigue el horario fijo');
+  assert.ok(r.hayDosBotones, 'deben verse los dos botones de alcance');
+  assert.equal(r.salida, '14:00', 'el cambio de ese día debe guardarse: ' + JSON.stringify(r));
+  assert.equal(r.origen, undefined, 'el día debe soltarse del patrón');
+  assert.ok(r.patronSigueIgual, 'el patrón general NO debe cambiar con "solo este día"');
+});
+
+await caso('Editar por la UI real y elegir "Para siempre" cambia el patrón y los mismos días de la semana futuros, no los demás', async () => {
+  const r = await page.evaluate(() => {
+    DB.turnos = DB.turnos.filter(t => t.employeeId!==1);
+    DB.horariosFijos = [];
+    const patronM = {tipo:'M', entrada:'09:00', salida:'17:00', entrada2:'', salida2:''};
+    DB.horariosFijos = [{id: genId(), employeeId: 1, activo: true, patron: Array(7).fill(0).map(()=>({...patronM})), generadoHasta: addDaysStr(todayStr(), -1)}];
+    generarTurnosFijos();
+    const futuros = DB.turnos.filter(t => t.employeeId===1 && t.origen==='fijo' && t.fecha>=todayStr()).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    const objetivo = futuros[0];
+    const diaSemanaObjetivo = (new Date(objetivo.fecha+'T00:00:00').getDay()+6)%7;
+    // Un turno de OTRO día de la semana, para comprobar que no se toca.
+    const otroDia = futuros.find(t => ((new Date(t.fecha+'T00:00:00').getDay()+6)%7) !== diaSemanaObjetivo);
+    openTurnoModal(objetivo.id);
+    document.getElementById('turno-salida').value = '22:00'; // sale más tarde, para siempre
+    [...document.querySelectorAll('.modal-footer button')].find(b => b.textContent.trim()==='Para siempre').click();
+    const objetivoTras = DB.turnos.find(t => t.id===objetivo.id);
+    const otroTras = DB.turnos.find(t => t.id===otroDia.id);
+    const patronTras = DB.horariosFijos[0].patron[diaSemanaObjetivo];
+    return {
+      objetivoSalida: objetivoTras.salida, objetivoOrigen: objetivoTras.origen,
+      otroSalida: otroTras.salida, patronSalida: patronTras.salida,
+    };
+  });
+  assert.equal(r.objetivoSalida, '22:00', 'el día editado debe reflejar el cambio: ' + JSON.stringify(r));
+  assert.equal(r.objetivoOrigen, 'fijo', 'sigue siendo automático (parte del patrón actualizado), no se desengancha');
+  assert.equal(r.otroSalida, '17:00', 'un día de OTRO día de la semana no debe tocarse: ' + JSON.stringify(r));
+  assert.equal(r.patronSalida, '22:00', 'el patrón general debe quedar actualizado para ese día de la semana');
+});
+
+await caso('Un turno sin patrón fijo activo solo muestra el botón normal de Guardar (sin elegir alcance)', async () => {
+  const r = await page.evaluate(() => {
+    DB.horariosFijos = [];
+    const suelto = DB.turnos.find(t => t.employeeId===1);
+    openTurnoModal(suelto.id);
+    const texto = document.body.innerText;
+    return {tieneAviso: texto.includes('sigue el horario fijo'), tieneGuardar: [...document.querySelectorAll('.modal-footer button')].some(b => b.textContent.trim()==='Guardar')};
+  });
+  assert.ok(!r.tieneAviso, 'sin patrón activo no debe avisar de nada: ' + JSON.stringify(r));
+  assert.ok(r.tieneGuardar, 'debe verse el botón normal "Guardar"');
+  await page.evaluate(() => closeModal());
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', () => {
   assert.deepEqual(erroresJs, [], 'errores: ' + erroresJs.join(' | '));
 });

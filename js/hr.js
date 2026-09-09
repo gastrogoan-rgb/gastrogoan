@@ -2221,30 +2221,48 @@ function renderHorarios(){
   box.innerHTML = `
     <nav class="ge-tab-row">
       <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> ${t('label.staff')}</button>
-      <button class="ge-tab ${horariosTab==='dia'?'active':''}" onclick="setHorariosTab('dia')"><i class="ti ti-calendar-event"></i> ${t('common.day')}</button>
-      <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> ${t('common.week')}</button>
-      <button class="ge-tab ${horariosTab==='mes'?'active':''}" onclick="setHorariosTab('mes')"><i class="ti ti-calendar-month"></i> ${t('common.month')}</button>
+      <button class="ge-tab ${horariosTab==='calendario'?'active':''}" onclick="setHorariosTab('calendario')"><i class="ti ti-calendar"></i> ${t('label.calendar')}</button>
     </nav>
     <div id="horarios-tab-content"></div>
   `;
   renderHorariosTab();
 }
-function setHorariosTab(t){ horariosTab = t; renderHorarios(); }
+function setHorariosTab(tab){ horariosTab = tab; renderHorarios(); }
 function renderHorariosTab(){
   if(horariosTab === 'personal') renderHorariosPersonal();
-  else if(horariosTab === 'dia') renderHorariosDia();
-  else if(horariosTab === 'mes') renderHorariosMes();
+  else renderHorariosCalendario();
+}
+
+// El calendario de Horarios es un único subtab (Día/Semana/Mes), con el
+// mismo interruptor tri-estado que ya usa el calendario de reservas de la
+// web pública — mismo patrón visual, no se inventa uno nuevo.
+let horariosCalView = 'dia';
+function setHorariosCalView(v){ horariosCalView = v; renderHorariosCalendario(); }
+function renderHorariosCalendario(){
+  const box = document.getElementById('horarios-tab-content');
+  if(!box) return;
+  box.innerHTML = `
+    <div class="view-toggle" style="margin-bottom:12px">
+      <button class="btn ${horariosCalView==='dia'?'active':''}" onclick="setHorariosCalView('dia')">${t('common.day')}</button>
+      <button class="btn ${horariosCalView==='semana'?'active':''}" onclick="setHorariosCalView('semana')">${t('common.week')}</button>
+      <button class="btn ${horariosCalView==='mes'?'active':''}" onclick="setHorariosCalView('mes')">${t('common.month')}</button>
+    </div>
+    <div id="horarios-cal-body"></div>
+  `;
+  if(horariosCalView==='dia') renderHorariosDia();
+  else if(horariosCalView==='mes') renderHorariosMes();
   else renderHorariosSemana();
 }
 
 function goToHorariosDia(date){
   horariosDate = date;
-  horariosTab = 'dia';
+  horariosTab = 'calendario';
+  horariosCalView = 'dia';
   renderHorarios();
 }
 
 function renderHorariosDia(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const emps = areaEmployees();
@@ -2316,7 +2334,7 @@ function renderHorariosDia(){
 }
 
 function renderHorariosMes(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const today = new Date();
@@ -2363,7 +2381,7 @@ function renderHorariosMes(){
 }
 
 function renderHorariosSemana(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const emps = areaEmployees();
@@ -2470,12 +2488,17 @@ function openTurnoModal(id, employeeId, fecha){
   const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===state.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
   const noHorario = ['D','V','B'].includes(state.tipo);
   const isPartido = state.tipo === 'P';
+  // Este turno concreto sigue el patrón de un horario fijo activo: al
+  // guardarlo hay que preguntar si el cambio es solo para hoy o para
+  // siempre (todos los ${diaSemana} desde esta fecha) — ver saveTurno.
+  const puedeElegirAlcance = turno && turno.origen === 'fijo' && !!horarioFijoDe(turno.employeeId);
 
   openModal(`
     <div class="modal-header">
       <h3>${state.id ? t('common.edit') : t('common.new')} ${t('hr2.shift')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    ${puedeElegirAlcance ? `<div class="manual-warning" style="margin-bottom:10px"><i class="ti ti-repeat"></i> ${t('hr2.followsFixedSchedule')}</div>` : ''}
     <div class="field-row">
       <div class="field">
         <label>${t('hr2.employee')}</label>
@@ -2524,7 +2547,10 @@ function openTurnoModal(id, employeeId, fecha){
     <div class="modal-footer">
       ${state.id ? `<button class="owner-only btn btn-danger" onclick="deleteTurno(${state.id})">${t("common.delete")}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">${t("common.save")}</button>
+      ${puedeElegirAlcance ? `
+        <button class="btn" onclick="saveTurno(${state.id}, 'dia')">${t('btn.onlyThisDay')}</button>
+        <button class="btn btn-primary" onclick="saveTurno(${state.id}, 'siempre')">${t('btn.forever')}</button>
+      ` : `<button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">${t("common.save")}</button>`}
     </div>
   `);
 }
@@ -2538,7 +2564,27 @@ function turnoTipoChanged(){
   document.getElementById('turno-descanso-msg').style.display = noHorario ? 'block' : 'none';
 }
 
-async function saveTurno(id){
+// "Para siempre": el hostelero cambió el horario de UN día concreto que
+// seguía el patrón fijo y eligió que valga para todos los ${diaSemana}
+// futuros, no solo hoy. Actualiza el propio patrón (el hueco de ESE día de
+// la semana) y, con él, todos los turnos futuros —incluida esta fecha— que
+// SIGAN siendo automáticos para ese mismo día de la semana. Un día que el
+// hostelero ya hubiera tocado a mano en otro momento (aunque fuera el mismo
+// día de la semana) no lleva origen:'fijo' y por tanto no se toca aquí:
+// sigue siendo suyo, como siempre.
+function aplicarCambioPermanentePatron(employeeId, desdeFecha, data){
+  const hf = horarioFijoDe(employeeId);
+  if(!hf) return;
+  const diaSemana = (new Date(desdeFecha+'T00:00:00').getDay() + 6) % 7;
+  hf.patron[diaSemana] = {tipo:data.tipo, entrada:data.entrada, salida:data.salida, entrada2:data.entrada2, salida2:data.salida2};
+  (DB.turnos||[]).forEach(x => {
+    if(x.employeeId!==employeeId || x.origen!=='fijo' || x.fecha < desdeFecha) return;
+    if(((new Date(x.fecha+'T00:00:00').getDay() + 6) % 7) !== diaSemana) return;
+    Object.assign(x, {tipo:data.tipo, entrada:data.entrada, salida:data.salida, entrada2:data.entrada2, salida2:data.salida2});
+  });
+}
+
+async function saveTurno(id, alcance){
   if(!isOwnerSession() && !editUnlocked) return;
   const tipo = document.getElementById('turno-tipo').value;
   const noHorario = ['D','V','B'].includes(tipo);
@@ -2579,11 +2625,18 @@ async function saveTurno(id){
   // auditoría debe decir "editado", no "creado".
   const wasNew = !turno;
   if(turno){
-    // Editar a mano un turno que había puesto el horario fijo lo "suelta"
-    // del patrón para siempre: ni una regeneración futura ni un cambio del
-    // patrón general de este empleado vuelven a tocar este día concreto.
-    delete turno.origen;
-    Object.assign(turno, data);
+    if(alcance === 'siempre' && turno.origen === 'fijo'){
+      // Para siempre: actualiza el patrón y todos los ${diaSemana} futuros
+      // que sigan siendo automáticos. Este turno se queda origen:'fijo'
+      // (lo actualiza el propio bucle de arriba, por ser >= desdeFecha).
+      aplicarCambioPermanentePatron(data.employeeId, data.fecha, data);
+    } else {
+      // Solo este día (o no había patrón que elegir): se suelta del
+      // horario fijo para siempre — ni una regeneración futura ni un
+      // cambio del patrón general de este empleado vuelven a tocarlo.
+      delete turno.origen;
+      Object.assign(turno, data);
+    }
   } else {
     turno = {id: genId(), ...data};
     DB.turnos.push(turno);
@@ -2854,6 +2907,7 @@ function renderHorariosPersonal(){
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
           <button class="owner-strict btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
+          <button class="owner-strict btn btn-sm btn-icon" title="${t('title.employeeSchedule')}" onclick="openEmployeeScheduleChooser(${e.id})"><i class="ti ti-calendar"></i></button>
           <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -2932,6 +2986,37 @@ function horarioFijoTipoChanged(i){
 // El patrón por defecto de un empleado nuevo se deja TODO en descanso: no
 // se inventa un horario -de lunes a viernes, por ejemplo- que quizás no
 // tenga nada que ver con lo que de verdad trabaja.
+// Punto de entrada único, desde la propia tarjeta del empleado, a las tres
+// formas de tener turnos: horario fijo para siempre, asignado por un
+// periodo concreto, o sin nada asignado (se pone a mano en el Calendario
+// cuando haga falta — no hace falta elegir nada para eso, solo cerrar).
+function openEmployeeScheduleChooser(employeeId){
+  const emp = DB.employees.find(e => e.id===employeeId);
+  if(!emp) return;
+  const hf = horarioFijoDe(employeeId);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-calendar"></i> ${escapeHtml(emp.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="muted" style="margin-bottom:14px">${hf ? t('msg.employeeHasFixedSchedule') : t('msg.employeeNoFixedSchedule')}</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();openHorarioFijoModal(${employeeId})">
+        <i class="ti ti-repeat" style="font-size:20px"></i>
+        <span><strong>${t('title.fixedSchedule')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserFixedDesc')}</span></span>
+      </button>
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();openBulkTurnoModal(${employeeId})">
+        <i class="ti ti-calendar-plus" style="font-size:20px"></i>
+        <span><strong>${t('title.assignShiftsByPeriod')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserPeriodDesc')}</span></span>
+      </button>
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();setHorariosTab('calendario')">
+        <i class="ti ti-calendar-event" style="font-size:20px"></i>
+        <span><strong>${t('hr2.chooserNoneTitle')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserNoneDesc')}</span></span>
+      </button>
+    </div>
+  `);
+}
+
 function horarioFijoPatronVacio(){
   return Array.from({length:7}, () => ({tipo:'D', entrada:'', salida:'', entrada2:'', salida2:''}));
 }
