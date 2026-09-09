@@ -3082,7 +3082,7 @@ function renderComandasCocina(){
           ${closedBadge}
         </div>
         ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
-        ${lines.map(({line}) => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
+        ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
       </div>
     `;}).join('')}</div>`;
     return;
@@ -3121,35 +3121,56 @@ function renderComandasCocina(){
     const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
     const mins = minutesSince(new Date(minMs).toISOString());
 
+    // Botón compacto: más pequeño que el btn-sm normal, pero sin tocar
+    // min-height (lo sigue fijando la clase, 44px en tablet) — el objetivo
+    // táctil no se toca, solo se recorta el relleno que sobraba.
+    const compactBtnStyle = 'flex:none;padding:5px 10px;font-size:12px;';
+    const groupButtonHtml = g => {
+      const hasCocina = g.lines.some(({line}) => line.estado === 'cocina');
+      const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
+      // "Listo" (cocina ha terminado) y "Entregado" (sala ya lo ha recogido
+      // del pase) son cosas distintas para quien cocina: si al terminar un
+      // plato ve directamente "Entregado" sin que nadie de sala lo haya
+      // tocado, no sabe si de verdad ha llegado a la mesa o si sigue
+      // esperando en el pase. Por eso aquí se distingue con recogidoAt,
+      // igual que ya hace Sala en su propia pantalla (renderTandaGroupCard).
+      const allReady = g.lines.every(({line}) => line.estado === 'entregado');
+      const allPicked = allReady && g.lines.every(({line}) => line.recogidoAt);
+      if(allPicked) return `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
+      if(allReady) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</button>`;
+      if(hasCocina) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
+      if(hasPreparando) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
+      return '';
+    };
+    // El caso normal (sin tandas nombradas) es UN solo grupo sin nombre: su
+    // botón de "Preparar todo" subía a una fila propia entera, dejando un
+    // hueco vacío a su izquierda donde no había ninguna tanda que mostrar.
+    // Se sube a la misma fila que el título del pedido — pedido del dueño,
+    // 9/09. Con varias tandas de verdad (con nombre) cada una conserva su
+    // propia fila con su botón, porque ahí sí hace falta distinguirlas.
+    const soloUnGrupoSinNombre = groups.length === 1 && !groups[0].tanda;
     return `
     <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
-        <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
-        ${urgencyBadge(mins)}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${soloUnGrupoSinNombre ? groupButtonHtml(groups[0]) : ''}
+          ${urgencyBadge(mins)}
+        </div>
       </div>
       ${orderAllergyWarningHtml(order)}
       ${groups.map(g => {
-        const hasCocina = g.lines.some(({line}) => line.estado === 'cocina');
-        const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
-        // "Listo" (cocina ha terminado) y "Entregado" (sala ya lo ha recogido
-        // del pase) son cosas distintas para quien cocina: si al terminar un
-        // plato ve directamente "Entregado" sin que nadie de sala lo haya
-        // tocado, no sabe si de verdad ha llegado a la mesa o si sigue
-        // esperando en el pase. Por eso aquí se distingue con recogidoAt,
-        // igual que ya hace Sala en su propia pantalla (renderTandaGroupCard).
-        const allReady = g.lines.every(({line}) => line.estado === 'entregado');
-        const allPicked = allReady && g.lines.every(({line}) => line.recogidoAt);
-        let groupBtn = '';
-        if(allPicked) groupBtn = `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
-        else if(allReady) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</button>`;
-        else if(hasCocina) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
-        else if(hasPreparando) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
+        const esElGrupoYaMostrado = soloUnGrupoSinNombre && g === groups[0];
+        const groupBtn = esElGrupoYaMostrado ? '' : groupButtonHtml(g);
         return `
-        <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="margin-bottom:6px;${esElGrupoYaMostrado ? '' : 'padding-top:6px;border-top:1px solid var(--border)'}">
+          ${esElGrupoYaMostrado ? '' : `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap">
             ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
             ${groupBtn}
-          </div>
+          </div>`}
           ${g.lines.map(({line, idx}) => {
             // En cocina importa distinguir de un vistazo un plato suelto de la
             // carta de uno que forma parte de un menú cerrado: el del menú
@@ -3170,10 +3191,10 @@ function renderComandasCocina(){
                 ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
               ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
-              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
-              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
+              : line.estado==='cocina' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
+              : line.estado==='preparando' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
               : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-              : `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
+              : `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
             </div>
           `;}).join('')}
         </div>
