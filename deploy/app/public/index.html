@@ -2925,7 +2925,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '09/09/2026 12:45';
+const GG_BUILD = '09/09/2026 13:01';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -12274,7 +12274,11 @@ const I18N = {
     'mn.externalConn.connected': 'Conectado', 'mn.externalConn.notConnected': 'Sin conectar',
     'common.connect': 'Conectar',
     'title.cancelOrder': 'Cancelar pedido', 'btn.cancelOrder': 'Cancelar pedido',
-    'msg.confirmCancelOrder': '¿Cancelar este pedido? Se avisará al cliente por email si dejó su dirección.',
+    'msg.confirmCancelOrder': '¿Cancelar este pedido? El cliente no recibe ningún aviso automático — si dejó teléfono o email, podrás avisarle a mano después.',
+    'msg.orderCancelledNotify': 'Hola ${name}, te escribimos de ${biz} para avisarte de que tu pedido ha sido cancelado. Si tienes alguna duda, contáctanos.',
+    'msg.orderRejectedNotify': 'Hola ${name}, te escribimos de ${biz} para avisarte de que no hemos podido aceptar tu pedido. Si tienes alguna duda, contáctanos.',
+    'msg.orderChangeSubject': 'Tu pedido en ${biz}', 'title.notifyOrderChange': 'Avisar al cliente',
+    'msg.notifyOrderHint': 'El pedido ya se ha cancelado. Si quieres, avisa al cliente por WhatsApp o email antes de cerrar esto.',
     'msg.orderCancelled': 'Pedido cancelado', 'audit.cancelledOnlineOrder': 'Canceló el pedido online de ${name}', 'audit.reservationCancelledByClient': 'El cliente ${name} canceló su propia reserva desde la web', 'audit.reservationModifiedByClient': 'El cliente ${name} modificó su propia reserva desde la web', 'audit.depositConfirmed': 'Señal de reserva de ${name} pagada y confirmada automáticamente', 'audit.reservationDepositNeedsRefund': 'Canceló la reserva de ${name}, que tenía una señal de ${amount} ya cobrada — pendiente de devolver', 'msg.reservationDepositNeedsRefund': 'Esta reserva tenía una señal de ${amount} ya cobrada. Recuerda devolverla al cliente.',
     'mn.redsys.title': 'Pago online con tarjeta (TPV virtual)',
     'mn.redsys.desc': 'Permite que tus clientes paguen con tarjeta al hacer un pedido online (take away/delivery). El cobro se realiza a través del TPV virtual de tu propio banco (Redsys): el dinero llega directamente a tu cuenta, sin intermediarios.',
@@ -14468,7 +14472,11 @@ const I18N = {
     'mn.externalConn.connected': 'Connectat', 'mn.externalConn.notConnected': 'Sense connectar',
     'common.connect': 'Connectar',
     'title.cancelOrder': 'Cancel·lar comanda', 'btn.cancelOrder': 'Cancel·lar comanda',
-    'msg.confirmCancelOrder': 'Vols cancel·lar aquesta comanda? S\'avisarà el client per email si va deixar la seva adreça.',
+    'msg.confirmCancelOrder': 'Vols cancel·lar aquesta comanda? El client no rep cap avís automàtic — si va deixar telèfon o email, podràs avisar-lo a mà després.',
+    'msg.orderCancelledNotify': 'Hola ${name}, t\'escrivim de ${biz} per avisar-te que la teva comanda ha estat cancel·lada. Si tens cap dubte, contacta amb nosaltres.',
+    'msg.orderRejectedNotify': 'Hola ${name}, t\'escrivim de ${biz} per avisar-te que no hem pogut acceptar la teva comanda. Si tens cap dubte, contacta amb nosaltres.',
+    'msg.orderChangeSubject': 'La teva comanda a ${biz}', 'title.notifyOrderChange': 'Avisar el client',
+    'msg.notifyOrderHint': 'La comanda ja s\'ha cancel·lat. Si vols, avisa el client per WhatsApp o email abans de tancar això.',
     'msg.orderCancelled': 'Comanda cancel·lada', 'audit.cancelledOnlineOrder': 'Ha cancel·lat la comanda online de ${name}', 'audit.reservationCancelledByClient': 'El client ${name} ha cancel·lat la seva pròpia reserva des de la web', 'audit.reservationModifiedByClient': 'El client ${name} ha modificat la seva pròpia reserva des de la web', 'audit.depositConfirmed': 'Senyal de reserva de ${name} pagada i confirmada automàticament', 'audit.reservationDepositNeedsRefund': 'Ha cancel·lat la reserva de ${name}, que tenia una senyal de ${amount} ja cobrada — pendent de tornar', 'msg.reservationDepositNeedsRefund': 'Aquesta reserva tenia una senyal de ${amount} ja cobrada. Recorda tornar-la al client.',
     'mn.redsys.title': 'Pagament en línia amb targeta (TPV virtual)',
     'mn.redsys.desc': 'Permet que els teus clients paguin amb targeta en fer una comanda en línia (per emportar/delivery). El cobrament es fa a través del TPV virtual del teu propi banc (Redsys): els diners arriben directament al teu compte, sense intermediaris.',
@@ -16666,7 +16674,11 @@ const I18N = {
     'mn.externalConn.connected': 'Connected', 'mn.externalConn.notConnected': 'Not connected',
     'common.connect': 'Connect',
     'title.cancelOrder': 'Cancel order', 'btn.cancelOrder': 'Cancel order',
-    'msg.confirmCancelOrder': 'Cancel this order? The customer will be notified by email if they left their address.',
+    'msg.confirmCancelOrder': 'Cancel this order? The customer doesn\'t get any automatic notice — if they left a phone or email, you\'ll be able to notify them by hand afterwards.',
+    'msg.orderCancelledNotify': 'Hi ${name}, this is ${biz} letting you know your order has been cancelled. If you have any questions, get in touch.',
+    'msg.orderRejectedNotify': 'Hi ${name}, this is ${biz} letting you know we couldn\'t accept your order. If you have any questions, get in touch.',
+    'msg.orderChangeSubject': 'Your order at ${biz}', 'title.notifyOrderChange': 'Notify the customer',
+    'msg.notifyOrderHint': 'The order has already been cancelled. If you\'d like, notify the customer by WhatsApp or email before closing this.',
     'msg.orderCancelled': 'Order cancelled', 'audit.cancelledOnlineOrder': 'Cancelled the online order for ${name}', 'audit.reservationCancelledByClient': 'Customer ${name} cancelled their own reservation from the website', 'audit.reservationModifiedByClient': 'Customer ${name} modified their own reservation from the website', 'audit.depositConfirmed': 'Reservation deposit for ${name} paid and confirmed automatically', 'audit.reservationDepositNeedsRefund': 'Cancelled ${name}\'s reservation, which had a deposit of ${amount} already charged — pending refund', 'msg.reservationDepositNeedsRefund': 'This reservation had a deposit of ${amount} already charged. Remember to refund it to the customer.',
     'mn.redsys.title': 'Online card payment (virtual POS)',
     'mn.redsys.desc': 'Let your customers pay by card when placing an online order (takeaway/delivery). Payment goes through your own bank\'s virtual POS (Redsys): the money goes directly to your account, with no intermediaries.',
@@ -26502,6 +26514,10 @@ function rejectOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
+    // Datos del cliente guardados ANTES de mover a la papelera/borrar: una
+    // vez borrado el pedido ya no hay de dónde sacarlos para el aviso manual
+    // de abajo.
+    const {clienteNombre, clienteTelefono, clienteEmail} = order;
     // Se avisa ANTES de mover a la papelera/borrar: una vez borrado ya no
     // queda order.clientRef al que asociar el aviso.
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
@@ -26511,6 +26527,7 @@ function rejectOnlineOrder(orderId){
     saveDB();
     renderTPV();
     showToast(t('msg.orderRejected'));
+    openOrderNotifyModal(clienteNombre, clienteTelefono, clienteEmail, 'rechazado');
   });
 }
 
@@ -26518,8 +26535,10 @@ function rejectOnlineOrder(orderId){
 // de aceptar), esto cancela un pedido para llevar/delivery que YA está
 // aceptado y en marcha (p.ej. se ha quedado sin un ingrediente a mitad de
 // servicio). Igual que rechazar, pide PIN por ser una acción sensible que
-// borra el pedido. El cliente se entera por su enlace de seguimiento
-// (syncOrderStatusForPublic, abajo) — ya no hay ningún email automático.
+// borra el pedido. El cliente NO recibe ningún aviso automático (su enlace
+// de seguimiento cambia, pero nadie le avisa de que lo mire) — por eso, si
+// dejó teléfono o email, se ofrece avisarle a mano con un clic, igual que
+// ya se hace al cancelar o editar una reserva.
 function cancelAcceptedOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -26534,6 +26553,7 @@ function cancelAcceptedOnlineOrder(orderId){
        hamburguesas SUBÍA el stock de pan, carne y queso por encima de lo que
        había antes. Es el mismo criterio que ya se aplica en confirmVoidLine. */
     restockForVoidedItems(order.items, {includeIngredients: false});
+    const {clienteNombre, clienteTelefono, clienteEmail} = order;
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
@@ -26542,7 +26562,56 @@ function cancelAcceptedOnlineOrder(orderId){
     closeModal();
     renderTPV();
     showToast(t('msg.orderCancelled'));
+    openOrderNotifyModal(clienteNombre, clienteTelefono, clienteEmail, 'cancelado');
   });
+}
+
+// Aviso manual al cancelar/rechazar un pedido para llevar/domicilio — mismo
+// patrón que openReservationNotifyChangeModal (js/app.js): no hay backend
+// para avisar solo, así que se deja el mensaje ya escrito y un botón por
+// WhatsApp y otro por email, listos para un clic. Si no dejó ni teléfono ni
+// email no hay nada que ofrecer y no se abre nada.
+let orderNotifyState = null;
+function openOrderNotifyModal(nombre, telefono, email, tipo){
+  if(!telefono && !email) return;
+  orderNotifyState = {telefono, email};
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const claveMsg = tipo === 'cancelado' ? 'msg.orderCancelledNotify' : 'msg.orderRejectedNotify';
+  const msg = t(claveMsg).replace('${name}', nombre||'').replace('${biz}', bizName);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-message-circle"></i> ${t('title.notifyOrderChange')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted)">${t('msg.notifyOrderHint')}</p>
+    <div class="field">
+      <textarea id="order-notify-text" rows="4">${escapeHtml(msg)}</textarea>
+    </div>
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendOrderNotifyEmail()" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function sendOrderNotifyWhatsapp(){
+  const telefono = orderNotifyState && orderNotifyState.telefono;
+  if(!telefono){ showToast(t('msg.noPhone')); return; }
+  const tel = telefono.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('order-notify-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+  closeModal();
+}
+function sendOrderNotifyEmail(){
+  const email = orderNotifyState && orderNotifyState.email;
+  if(!email){ showToast(t('msg.noEmail')); return; }
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const subject = encodeURIComponent(t('msg.orderChangeSubject').replace('${biz}', bizName));
+  const body = encodeURIComponent(document.getElementById('order-notify-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(email)+'?subject='+subject+'&body='+body;
+  closeModal();
 }
 
 // Pide el PIN del negocio antes de ejecutar una acción sensible (rechazar un
@@ -35689,7 +35758,13 @@ function renderTeamPulseHtml(){
       </div>`);
   }
   const wk = currentWeekKey();
-  const moodThisWeek = (DB.moodCheckins||[]).filter(c => c.weekKey===wk);
+  // Solo los check-ins de esta área: cocina y sala son equipos distintos,
+  // y mezclar su ánimo en una sola media no dice nada útil de ninguno de
+  // los dos — antes se veía la del negocio entero en las dos pestañas.
+  const moodThisWeek = (DB.moodCheckins||[]).filter(c => c.weekKey===wk).filter(c => {
+    const emp = DB.employees.find(e => e.id===c.employeeId);
+    return (emp && (emp.area||'cocina')) === currentArea();
+  });
   if(moodThisWeek.length){
     const avg = moodThisWeek.reduce((s,c)=>s+c.value,0) / moodThisWeek.length;
     const faces = ['😞','🙁','😐','🙂','😄'];
@@ -35922,9 +35997,13 @@ function horarioFijoPatronVacio(){
   return Array.from({length:7}, () => ({tipo:'D', entrada:'', salida:'', entrada2:'', salida2:''}));
 }
 function openHorarioFijoModal(employeeId){
-  if(!DB.employees.length){ showToast(t('msg.addEmployeesFirst')); return; }
-  const empId = employeeId || DB.employees[0].id;
-  const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===empId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  // Solo empleados de ESTA área: cocina y sala son equipos separados, y un
+  // desplegable que mezcla los dos deja asignar sin querer un horario fijo
+  // de sala a alguien de cocina (o al revés) con un solo clic.
+  const emps = areaEmployees();
+  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
+  const empId = employeeId || emps[0].id;
+  const empOptions = emps.map(e => `<option value="${e.id}"${e.id===empId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const hf = horarioFijoDe(empId);
   const patron = hf ? hf.patron : horarioFijoPatronVacio();
 
@@ -36003,8 +36082,10 @@ async function quitarHorarioFijo(employeeId){
 }
 
 function openBulkTurnoModal(employeeId){
-  if(!DB.employees.length){ showToast(t('msg.addEmployeesFirst')); return; }
-  const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===(employeeId||DB.employees[0].id)?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  // Igual que en openHorarioFijoModal: solo empleados de esta área.
+  const emps = areaEmployees();
+  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
+  const empOptions = emps.map(e => `<option value="${e.id}"${e.id===(employeeId||emps[0].id)?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const today = new Date();
   const end = new Date(today); end.setDate(today.getDate()+6);
 
@@ -37059,10 +37140,19 @@ function openNewPinModal(employeeId, action){
   `);
 }
 
-// ¿Coincide pinPlain con el PIN ya guardado (hasheado o en claro) de otro empleado?
+// ¿Coincide pinPlain con el PIN ya guardado (hasheado o en claro) de otro
+// empleado de SU MISMA ÁREA? No hace falta mirar la otra área: el acceso
+// siempre se identifica por nombre + PIN (nunca solo por PIN), así que dos
+// personas de cocina y sala con el mismo PIN no crean ninguna ambigüedad
+// real — y cocina y sala son equipos separados, así que tampoco tiene
+// sentido que a alguien de cocina le bloqueen un PIN por chocar con uno de
+// sala que ni conoce.
 function employeePinCollides(pinPlain, excludeId){
+  const self = DB.employees.find(x => x.id===excludeId);
+  const area = self ? (self.area||'cocina') : null;
   return DB.employees.some(e => {
     if(e.id === excludeId || !e.pinChanged) return false;
+    if(area && (e.area||'cocina') !== area) return false;
     const stored = e.pin || '1234';
     return pinMatchesHash(pinPlain, stored);
   });

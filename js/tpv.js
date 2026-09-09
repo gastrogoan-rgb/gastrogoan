@@ -1316,6 +1316,10 @@ function rejectOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
+    // Datos del cliente guardados ANTES de mover a la papelera/borrar: una
+    // vez borrado el pedido ya no hay de dónde sacarlos para el aviso manual
+    // de abajo.
+    const {clienteNombre, clienteTelefono, clienteEmail} = order;
     // Se avisa ANTES de mover a la papelera/borrar: una vez borrado ya no
     // queda order.clientRef al que asociar el aviso.
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
@@ -1325,6 +1329,7 @@ function rejectOnlineOrder(orderId){
     saveDB();
     renderTPV();
     showToast(t('msg.orderRejected'));
+    openOrderNotifyModal(clienteNombre, clienteTelefono, clienteEmail, 'rechazado');
   });
 }
 
@@ -1332,8 +1337,10 @@ function rejectOnlineOrder(orderId){
 // de aceptar), esto cancela un pedido para llevar/delivery que YA está
 // aceptado y en marcha (p.ej. se ha quedado sin un ingrediente a mitad de
 // servicio). Igual que rechazar, pide PIN por ser una acción sensible que
-// borra el pedido. El cliente se entera por su enlace de seguimiento
-// (syncOrderStatusForPublic, abajo) — ya no hay ningún email automático.
+// borra el pedido. El cliente NO recibe ningún aviso automático (su enlace
+// de seguimiento cambia, pero nadie le avisa de que lo mire) — por eso, si
+// dejó teléfono o email, se ofrece avisarle a mano con un clic, igual que
+// ya se hace al cancelar o editar una reserva.
 function cancelAcceptedOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -1348,6 +1355,7 @@ function cancelAcceptedOnlineOrder(orderId){
        hamburguesas SUBÍA el stock de pan, carne y queso por encima de lo que
        había antes. Es el mismo criterio que ya se aplica en confirmVoidLine. */
     restockForVoidedItems(order.items, {includeIngredients: false});
+    const {clienteNombre, clienteTelefono, clienteEmail} = order;
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
@@ -1356,7 +1364,56 @@ function cancelAcceptedOnlineOrder(orderId){
     closeModal();
     renderTPV();
     showToast(t('msg.orderCancelled'));
+    openOrderNotifyModal(clienteNombre, clienteTelefono, clienteEmail, 'cancelado');
   });
+}
+
+// Aviso manual al cancelar/rechazar un pedido para llevar/domicilio — mismo
+// patrón que openReservationNotifyChangeModal (js/app.js): no hay backend
+// para avisar solo, así que se deja el mensaje ya escrito y un botón por
+// WhatsApp y otro por email, listos para un clic. Si no dejó ni teléfono ni
+// email no hay nada que ofrecer y no se abre nada.
+let orderNotifyState = null;
+function openOrderNotifyModal(nombre, telefono, email, tipo){
+  if(!telefono && !email) return;
+  orderNotifyState = {telefono, email};
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const claveMsg = tipo === 'cancelado' ? 'msg.orderCancelledNotify' : 'msg.orderRejectedNotify';
+  const msg = t(claveMsg).replace('${name}', nombre||'').replace('${biz}', bizName);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-message-circle"></i> ${t('title.notifyOrderChange')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted)">${t('msg.notifyOrderHint')}</p>
+    <div class="field">
+      <textarea id="order-notify-text" rows="4">${escapeHtml(msg)}</textarea>
+    </div>
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendOrderNotifyEmail()" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function sendOrderNotifyWhatsapp(){
+  const telefono = orderNotifyState && orderNotifyState.telefono;
+  if(!telefono){ showToast(t('msg.noPhone')); return; }
+  const tel = telefono.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('order-notify-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+  closeModal();
+}
+function sendOrderNotifyEmail(){
+  const email = orderNotifyState && orderNotifyState.email;
+  if(!email){ showToast(t('msg.noEmail')); return; }
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const subject = encodeURIComponent(t('msg.orderChangeSubject').replace('${biz}', bizName));
+  const body = encodeURIComponent(document.getElementById('order-notify-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(email)+'?subject='+subject+'&body='+body;
+  closeModal();
 }
 
 // Pide el PIN del negocio antes de ejecutar una acción sensible (rechazar un

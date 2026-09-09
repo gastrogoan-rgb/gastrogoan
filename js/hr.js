@@ -2783,7 +2783,13 @@ function renderTeamPulseHtml(){
       </div>`);
   }
   const wk = currentWeekKey();
-  const moodThisWeek = (DB.moodCheckins||[]).filter(c => c.weekKey===wk);
+  // Solo los check-ins de esta área: cocina y sala son equipos distintos,
+  // y mezclar su ánimo en una sola media no dice nada útil de ninguno de
+  // los dos — antes se veía la del negocio entero en las dos pestañas.
+  const moodThisWeek = (DB.moodCheckins||[]).filter(c => c.weekKey===wk).filter(c => {
+    const emp = DB.employees.find(e => e.id===c.employeeId);
+    return (emp && (emp.area||'cocina')) === currentArea();
+  });
   if(moodThisWeek.length){
     const avg = moodThisWeek.reduce((s,c)=>s+c.value,0) / moodThisWeek.length;
     const faces = ['😞','🙁','😐','🙂','😄'];
@@ -3016,9 +3022,13 @@ function horarioFijoPatronVacio(){
   return Array.from({length:7}, () => ({tipo:'D', entrada:'', salida:'', entrada2:'', salida2:''}));
 }
 function openHorarioFijoModal(employeeId){
-  if(!DB.employees.length){ showToast(t('msg.addEmployeesFirst')); return; }
-  const empId = employeeId || DB.employees[0].id;
-  const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===empId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  // Solo empleados de ESTA área: cocina y sala son equipos separados, y un
+  // desplegable que mezcla los dos deja asignar sin querer un horario fijo
+  // de sala a alguien de cocina (o al revés) con un solo clic.
+  const emps = areaEmployees();
+  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
+  const empId = employeeId || emps[0].id;
+  const empOptions = emps.map(e => `<option value="${e.id}"${e.id===empId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const hf = horarioFijoDe(empId);
   const patron = hf ? hf.patron : horarioFijoPatronVacio();
 
@@ -3097,8 +3107,10 @@ async function quitarHorarioFijo(employeeId){
 }
 
 function openBulkTurnoModal(employeeId){
-  if(!DB.employees.length){ showToast(t('msg.addEmployeesFirst')); return; }
-  const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===(employeeId||DB.employees[0].id)?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  // Igual que en openHorarioFijoModal: solo empleados de esta área.
+  const emps = areaEmployees();
+  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
+  const empOptions = emps.map(e => `<option value="${e.id}"${e.id===(employeeId||emps[0].id)?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const today = new Date();
   const end = new Date(today); end.setDate(today.getDate()+6);
 
@@ -4153,10 +4165,19 @@ function openNewPinModal(employeeId, action){
   `);
 }
 
-// ¿Coincide pinPlain con el PIN ya guardado (hasheado o en claro) de otro empleado?
+// ¿Coincide pinPlain con el PIN ya guardado (hasheado o en claro) de otro
+// empleado de SU MISMA ÁREA? No hace falta mirar la otra área: el acceso
+// siempre se identifica por nombre + PIN (nunca solo por PIN), así que dos
+// personas de cocina y sala con el mismo PIN no crean ninguna ambigüedad
+// real — y cocina y sala son equipos separados, así que tampoco tiene
+// sentido que a alguien de cocina le bloqueen un PIN por chocar con uno de
+// sala que ni conoce.
 function employeePinCollides(pinPlain, excludeId){
+  const self = DB.employees.find(x => x.id===excludeId);
+  const area = self ? (self.area||'cocina') : null;
   return DB.employees.some(e => {
     if(e.id === excludeId || !e.pinChanged) return false;
+    if(area && (e.area||'cocina') !== area) return false;
     const stored = e.pin || '1234';
     return pinMatchesHash(pinPlain, stored);
   });

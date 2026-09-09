@@ -84,6 +84,8 @@ lanzar; node test/horario-fijo.mjs           > "$SALIDA/horariofijo.txt" 2>&1 & 
 lanzar; node test/confirmacion-pedido-reserva.mjs > "$SALIDA/confirmacion.txt" 2>&1 & P47=$!
 lanzar; node test/aviso-cambio-reserva.mjs  > "$SALIDA/avisocambio.txt" 2>&1 & P48=$!
 lanzar; node test/pedido-solicitud.mjs      > "$SALIDA/pedidosolicitud.txt" 2>&1 & P53=$!
+lanzar; node test/aviso-cancelar-pedido.mjs > "$SALIDA/avisocancelarpedido.txt" 2>&1 & P54=$!
+lanzar; node test/separacion-areas-personal.mjs > "$SALIDA/separacionareas.txt" 2>&1 & P55=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -149,5 +151,7 @@ espera $P50 "la nube en retraso no deshace ediciones de empleados/turnos/fichaje
 espera $P51 "dinero: cobro doble y plato reaparecido siguen protegidos"  "$SALIDA/carrerasyncdinero.txt" "casos pasaron"
 espera $P52 "horario fijo: patrón semanal que se repite, sin pisar ediciones manuales"  "$SALIDA/horariofijo.txt" "casos pasaron"
 espera $P53 "pedir lo que falta: I+D oculto sin edición, solicitud de pedido sin proveedor"  "$SALIDA/pedidosolicitud.txt" "casos pasaron"
+espera $P54 "avisar al cliente al cancelar/rechazar un pedido, sin prometer un email que no existe"  "$SALIDA/avisocancelarpedido.txt" "casos pasaron"
+espera $P55 "cocina y sala no se mezclan: clima, turnos por desplegable, PIN"  "$SALIDA/separacionareas.txt" "casos pasaron"
 
 exit $FALLOS
