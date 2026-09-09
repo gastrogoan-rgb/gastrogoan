@@ -152,6 +152,6 @@ espera $P51 "dinero: cobro doble y plato reaparecido siguen protegidos"  "$SALID
 espera $P52 "horario fijo: patrón semanal que se repite, sin pisar ediciones manuales"  "$SALIDA/horariofijo.txt" "casos pasaron"
 espera $P53 "pedir lo que falta: I+D oculto sin edición, solicitud de pedido sin proveedor"  "$SALIDA/pedidosolicitud.txt" "casos pasaron"
 espera $P54 "avisar al cliente al cancelar/rechazar un pedido, sin prometer un email que no existe"  "$SALIDA/avisocancelarpedido.txt" "casos pasaron"
-espera $P55 "cocina y sala no se mezclan: clima, turnos por desplegable, PIN"  "$SALIDA/separacionareas.txt" "casos pasaron"
+espera $P55 "cocina y sala no se mezclan (clima, turnos por desplegable) y el PIN se puede repetir"  "$SALIDA/separacionareas.txt" "casos pasaron"
 
 exit $FALLOS

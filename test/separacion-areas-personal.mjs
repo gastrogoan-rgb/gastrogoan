@@ -1,12 +1,13 @@
-// Cocina y sala no se mezclan (9/09): el dueño encontró tres huecos donde
+// Cocina y sala no se mezclan (9/09): el dueño encontró dos huecos donde
 // sí se mezclaban.
 //   1. El clima del equipo ("Clima del equipo esta semana") promediaba TODOS
 //      los check-ins de la semana, de las dos áreas juntas.
 //   2. Los desplegables de "Horario fijo" y "Asignar turnos por periodo"
 //      listaban TODOS los empleados del negocio, cocina y sala mezclados.
-//   3. Cambiar el PIN de un empleado lo rechazaba si chocaba con el PIN de
-//      OTRO empleado aunque fuera de la otra área — sin sentido, porque el
-//      acceso siempre se identifica por nombre+PIN, nunca solo por PIN.
+// El propio dueño descartó un tercer cambio que se había hecho de más:
+// impedir un PIN repetido entre empleados. Lo pidió sin más — "que puedan
+// repetir PIN, es elección de cada uno" — así que aquí se comprueba
+// justamente que SÍ se puede repetir, sin ningún aviso ni bloqueo.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -91,27 +92,47 @@ await caso('El desplegable de "Asignar turnos por periodo" en Sala solo lista em
   await page.evaluate(()=> closeModal());
 });
 
-await caso('Cambiar el PIN de un empleado de cocina al mismo PIN que uno de sala YA NO lo bloquea', async () => {
-  // Elena (sala) ya tiene un PIN propio puesto; Manolo (cocina) intenta el mismo.
+await caso('Dos empleados de la MISMA área pueden poner el mismo PIN sin ningún aviso ni bloqueo', async () => {
+  // Elena (sala) ya tiene un PIN propio; ahora Paco, un segundo cocinero,
+  // pone ese MISMO PIN a propósito (por la UI real, no llamando funciones).
   await page.evaluate((id)=>{
     const e = DB.employees.find(x=>x.id===id);
     e.pin = hashPin('9999', 'SEPAREA1');
     e.pinChanged = true;
     saveDB();
   }, IDS.camareroId);
-  const colisiona = await page.evaluate((id)=> employeePinCollides('9999', id), IDS.cocineroId);
-  assert.ok(!colisiona, 'un PIN usado en sala no debe bloquear a alguien de cocina, son áreas separadas');
-});
-
-await caso('Pero SÍ sigue bloqueado si el choque es dentro de la MISMA área', async () => {
-  const otroCocinero = await page.evaluate(()=>{
-    const e = {id: genId(), name:'Paco', rol:'Cocinero', area:'cocina', active:true, pin: hashPin('7777', 'SEPAREA1'), pinChanged:true};
+  const pacoId = await page.evaluate(()=>{
+    const e = {id: genId(), name:'Paco', rol:'Cocinero', area:'cocina', active:true, pin: hashPin('1234', 'SEPAREA1'), pinChanged:false};
     DB.employees.push(e);
     saveDB();
     return e.id;
   });
-  const colisiona = await page.evaluate((id)=> employeePinCollides('7777', id), IDS.cocineroId);
-  assert.ok(colisiona, 'entre dos de la MISMA área el choque de PIN sigue bloqueado');
+  const r = await page.evaluate((id)=>{
+    openNewPinModal(id, 'entrada');
+    document.getElementById('new-pin-1').value = '9999';
+    document.getElementById('new-pin-2').value = '9999';
+    confirmNewPin(id, 'entrada');
+    const e = DB.employees.find(x=>x.id===id);
+    return {pinChanged: e.pinChanged, coincideConElena: e.pin === hashPin('9999', 'SEPAREA1')};
+  }, pacoId);
+  assert.ok(r.pinChanged && r.coincideConElena, 'debe guardar el PIN repetido sin problema: ' + JSON.stringify(r));
+});
+
+await caso('Desde la tarjeta de Personal, el icono de Distribución del Trabajo lleva directo a la página de ESE empleado', async () => {
+  const r = await page.evaluate((id)=>{
+    currentFolder = 'cocina';
+    navigate('horarios');
+    setHorariosTab('personal');
+    const box = document.getElementById('horarios-tab-content');
+    const btn = [...box.querySelectorAll('.actions-cell button')].find(b => b.title && b.title.includes('Distribución'));
+    btn.click();
+    return {
+      vistaActiva: document.getElementById('view-distribucion').classList.contains('active'),
+      empleadoAbierto: distCurrentEmployeeId === id,
+    };
+  }, IDS.cocineroId);
+  assert.ok(r.vistaActiva, 'debe navegar a la vista de Distribución del Trabajo');
+  assert.ok(r.empleadoAbierto, 'debe abrir directamente la página de ESE empleado, sin pasar por la lista');
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {

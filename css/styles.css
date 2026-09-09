@@ -203,11 +203,12 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
-/* 320px se quedaba corto: con mensaje/whatsapp/email/editar/calendario/borrar
-   (6 iconos de 44px, el mínimo táctil) la papelera se salía sola a una
-   segunda línea, descolocada. 340px es lo mínimo que los deja a todos en
-   la misma fila incluso en la vista más apretada (tablet, <=1024px). */
-.grid-personal{grid-template-columns:repeat(auto-fill,minmax(280px,340px))}
+/* 320px se quedaba corto: con mensaje/distribución/whatsapp/email/editar/
+   calendario/borrar (7 iconos de 44px, el mínimo táctil) la papelera se
+   salía sola a una segunda línea, descolocada. 370px es lo mínimo que los
+   deja a todos en la misma fila incluso en la vista más apretada (tablet,
+   <=1024px). */
+.grid-personal{grid-template-columns:repeat(auto-fill,minmax(320px,400px))}
 /* Módulos de una carpeta (Cocina/Sala/Gestión): columnas fijas y centradas,
    para que con un número de módulos no divisible entre columnas la última
    fila quede repartida en el centro en vez de estirarse o colgar suelta. */

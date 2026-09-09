@@ -222,11 +222,12 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
-/* 320px se quedaba corto: con mensaje/whatsapp/email/editar/calendario/borrar
-   (6 iconos de 44px, el mínimo táctil) la papelera se salía sola a una
-   segunda línea, descolocada. 340px es lo mínimo que los deja a todos en
-   la misma fila incluso en la vista más apretada (tablet, <=1024px). */
-.grid-personal{grid-template-columns:repeat(auto-fill,minmax(280px,340px))}
+/* 320px se quedaba corto: con mensaje/distribución/whatsapp/email/editar/
+   calendario/borrar (7 iconos de 44px, el mínimo táctil) la papelera se
+   salía sola a una segunda línea, descolocada. 370px es lo mínimo que los
+   deja a todos en la misma fila incluso en la vista más apretada (tablet,
+   <=1024px). */
+.grid-personal{grid-template-columns:repeat(auto-fill,minmax(320px,400px))}
 /* Módulos de una carpeta (Cocina/Sala/Gestión): columnas fijas y centradas,
    para que con un número de módulos no divisible entre columnas la última
    fila quede repartida en el centro en vez de estirarse o colgar suelta. */
@@ -2925,7 +2926,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '09/09/2026 13:01';
+const GG_BUILD = '09/09/2026 13:08';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11186,6 +11187,7 @@ const I18N = {
     'module.cocina.pedidos.name': 'Pedidos', 'module.cocina.pedidos.desc': 'Compras a proveedores',
     'module.cocina.horarios.name': 'Personal', 'module.cocina.horarios.desc': 'Turnos del equipo',
     'module.cocina.distribucion.name': 'Distribución del Trabajo', 'module.cocina.distribucion.desc': 'Tareas por empleado y turno',
+    'title.workDistribution': 'Distribución del Trabajo',
     'module.cocina.limpieza.name': 'APPCC e Higiene', 'module.cocina.limpieza.desc': 'APPCC e higiene alimentaria',
     'module.sala.tpv.name': 'TPV', 'module.sala.tpv.desc': 'Comandas, mesas y tickets',
     'module.sala.reservas.name': 'Reservas', 'module.sala.reservas.desc': 'Reservas vinculadas a mesas',
@@ -11821,7 +11823,7 @@ const I18N = {
     'msg.confirmDeleteEmployee': '¿Eliminar este empleado?', 'title.deleteEmployee': 'Eliminar empleado', 'msg.employeeDeleted': 'Empleado eliminado',
     'title.switchBusiness': 'Cambiar de negocio',
     'msg.confirmSwitchBusiness': 'Introduce el PIN de este negocio para ver y cambiar a otros negocios configurados en este dispositivo.',
-    'title.resetPin': 'Restablecer PIN de fichaje', 'msg.pinAlreadyUsed': 'Ese PIN ya lo usa otro empleado, elige otro.',
+    'title.resetPin': 'Restablecer PIN de fichaje',
     'ph.searchEmployee': 'Buscar personal...', 'btn.printSchedule': 'Imprimir horario', 'ph.searchManual': 'Buscar en el manual...',
     'ph.searchOrder': 'Buscar pedido...',
     'th.detail': 'Detalle',
@@ -13387,6 +13389,7 @@ const I18N = {
     'module.cocina.pedidos.name': 'Comandes', 'module.cocina.pedidos.desc': 'Compres a proveïdors',
     'module.cocina.horarios.name': 'Personal', 'module.cocina.horarios.desc': 'Torns de l\'equip',
     'module.cocina.distribucion.name': 'Distribució de la Feina', 'module.cocina.distribucion.desc': 'Tasques per empleat i torn',
+    'title.workDistribution': 'Distribució de la Feina',
     'module.cocina.limpieza.name': 'APPCC i Higiene', 'module.cocina.limpieza.desc': 'APPCC i higiene alimentària',
     'module.sala.tpv.name': 'TPV', 'module.sala.tpv.desc': 'Comandes, taules i tiquets',
     'module.sala.reservas.name': 'Reserves', 'module.sala.reservas.desc': 'Reserves vinculades a taules',
@@ -14023,7 +14026,7 @@ const I18N = {
     'msg.confirmDeleteEmployee': 'Eliminar aquest empleat?', 'title.deleteEmployee': 'Eliminar empleat', 'msg.employeeDeleted': 'Empleat eliminat',
     'title.switchBusiness': 'Canviar de negoci',
     'msg.confirmSwitchBusiness': 'Introdueix el PIN d\'aquest negoci per veure i canviar a altres negocis configurats en aquest dispositiu.',
-    'title.resetPin': 'Restablir PIN de fitxatge', 'msg.pinAlreadyUsed': 'Aquest PIN ja l\'utilitza un altre empleat, tria\'n un altre.',
+    'title.resetPin': 'Restablir PIN de fitxatge',
     'ph.searchEmployee': 'Cercar personal...', 'btn.printSchedule': 'Imprimir horari', 'ph.searchManual': 'Cercar al manual...',
     'ph.searchOrder': 'Cercar comanda...',
     'th.detail': 'Detall',
@@ -15588,6 +15591,7 @@ const I18N = {
     'module.cocina.pedidos.name': 'Orders', 'module.cocina.pedidos.desc': 'Purchases from suppliers',
     'module.cocina.horarios.name': 'Staff', 'module.cocina.horarios.desc': 'Team shifts',
     'module.cocina.distribucion.name': 'Work Distribution', 'module.cocina.distribucion.desc': 'Tasks by employee and shift',
+    'title.workDistribution': 'Work Distribution',
     'module.cocina.limpieza.name': 'HACCP & Hygiene', 'module.cocina.limpieza.desc': 'HACCP and food hygiene',
     'module.sala.tpv.name': 'POS', 'module.sala.tpv.desc': 'Orders, tables and tickets',
     'module.sala.reservas.name': 'Reservations', 'module.sala.reservas.desc': 'Reservations linked to tables',
@@ -16224,7 +16228,7 @@ const I18N = {
     'msg.confirmDeleteEmployee': 'Delete this employee?', 'title.deleteEmployee': 'Delete employee', 'msg.employeeDeleted': 'Employee deleted',
     'title.switchBusiness': 'Switch business',
     'msg.confirmSwitchBusiness': 'Enter this business\'s PIN to see and switch to other businesses set up on this device.',
-    'title.resetPin': 'Reset clock-in PIN', 'msg.pinAlreadyUsed': 'That PIN is already used by another employee, choose a different one.',
+    'title.resetPin': 'Reset clock-in PIN',
     'ph.searchEmployee': 'Search staff...', 'btn.printSchedule': 'Print schedule', 'ph.searchManual': 'Search the manual...',
     'ph.searchOrder': 'Search order...',
     'th.detail': 'Detail',
@@ -35879,6 +35883,7 @@ function renderHorariosPersonal(){
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
           <button class="btn btn-sm btn-icon" title="${t('btn.messages')}" onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
+          <button class="btn btn-sm btn-icon" title="${t('title.workDistribution')}" onclick="navigate('distribucion');openDistEmployee(${e.id})"><i class="ti ti-clipboard-list"></i></button>
           ${isOwnerSession ? `
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
@@ -37140,24 +37145,6 @@ function openNewPinModal(employeeId, action){
   `);
 }
 
-// ¿Coincide pinPlain con el PIN ya guardado (hasheado o en claro) de otro
-// empleado de SU MISMA ÁREA? No hace falta mirar la otra área: el acceso
-// siempre se identifica por nombre + PIN (nunca solo por PIN), así que dos
-// personas de cocina y sala con el mismo PIN no crean ninguna ambigüedad
-// real — y cocina y sala son equipos separados, así que tampoco tiene
-// sentido que a alguien de cocina le bloqueen un PIN por chocar con uno de
-// sala que ni conoce.
-function employeePinCollides(pinPlain, excludeId){
-  const self = DB.employees.find(x => x.id===excludeId);
-  const area = self ? (self.area||'cocina') : null;
-  return DB.employees.some(e => {
-    if(e.id === excludeId || !e.pinChanged) return false;
-    if(area && (e.area||'cocina') !== area) return false;
-    const stored = e.pin || '1234';
-    return pinMatchesHash(pinPlain, stored);
-  });
-}
-
 function confirmNewPin(employeeId, action){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
@@ -37166,7 +37153,6 @@ function confirmNewPin(employeeId, action){
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
-  if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
   e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
@@ -37209,7 +37195,6 @@ function confirmFirstPinChange(employeeId){
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
-  if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
   e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
