@@ -1,8 +1,9 @@
-// "Un paso atrás" en Comandas de Cocina (9/09): un toque de más avanzando
-// el estado de un plato (esperando -> preparación -> listo -> recogido) no
-// tenía ninguna forma de deshacerse. Ahora cada plato con estado tiene un
-// botón de flecha atrás que retrocede un paso, incluyendo deshacer el
-// "recogido".
+// "Deshacer" en Comandas de Cocina (9/09): un toque de más avanzando el
+// estado de un plato (esperando -> preparación -> listo -> recogido) no
+// tenía ninguna forma de deshacerse. En vez de una flecha en cada plato
+// (que el dueño consideró innecesario a ese nivel de detalle), un único
+// botón "Deshacer" en la barra deshace el ÚLTIMO movimiento, sea de un
+// plato suelto o de una tanda entera marcada de golpe.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -28,7 +29,11 @@ const orderId = await page.evaluate(()=>{
   const orderId = genId();
   DB.tpvOrders.push({
     id: orderId, tipo:'mesa', tableId:null, status:'abierta', cerrada:false, area:'cocina',
-    items:[{name:'Tortilla', qty:1, estado:'cocina', bebida:false, tanda:''}],
+    items:[
+      {name:'Tortilla', qty:1, estado:'cocina', bebida:false, tanda:'Uno'},
+      {name:'Croquetas', qty:1, estado:'cocina', bebida:false, tanda:'Uno'},
+      {name:'Bistec', qty:1, estado:'cocina', bebida:false, tanda:'Dos'},
+    ],
   });
   saveDB();
   navigate('comandascocina');
@@ -41,64 +46,62 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('El botón de "un paso atrás" existe junto al estado del plato', async () => {
-  const existe = await page.evaluate(()=> !!document.querySelector('[title="Un paso atrás"]'));
-  assert.ok(existe, 'debe verse el botón de retroceder');
+await caso('El botón general "Deshacer" existe en la barra de Comandas de Cocina', async () => {
+  const existe = await page.evaluate(()=> !!document.getElementById('comandascocina-content').innerText.includes('Deshacer'));
+  assert.ok(existe, 'debe verse el botón "Deshacer" en la barra');
 });
 
-await caso('Avanzar dos pasos y luego retroceder uno deja el plato en el paso intermedio, no en el primero', async () => {
-  const r = await page.evaluate((id)=>{
-    cycleLineEstado(id, 0); // cocina -> preparando
-    cycleLineEstado(id, 0); // preparando -> entregado
-    const btn = document.querySelector('[title="Un paso atrás"]');
-    btn.click();
-    return DB.tpvOrders.find(o=>o.id===id).items[0].estado;
-  }, orderId);
-  assert.equal(r, 'preparando', 'debe quedar en "preparando", no volver directo a "cocina": ' + r);
+await caso('Deshacer sin haber hecho nada no rompe (pila vacía)', async () => {
+  const stackLen = await page.evaluate(()=>{
+    kitchenUndoStack = [];
+    undoLastKitchenAction();
+    return kitchenUndoStack.length;
+  });
+  assert.equal(stackLen, 0, 'la pila debe seguir vacía, sin lanzar ningún error');
 });
 
-await caso('Retroceder otra vez lo deja en el primer estado ("cocina"), sin quitarle el estado del todo', async () => {
+await caso('Avanzar un plato y "Deshacer" lo devuelve exactamente a como estaba (mismo estado, sin fecha)', async () => {
   const r = await page.evaluate((id)=>{
-    const btn = document.querySelector('[title="Un paso atrás"]');
-    btn.click();
-    return DB.tpvOrders.find(o=>o.id===id).items[0].estado;
-  }, orderId);
-  assert.equal(r, 'cocina', 'debe quedar en "cocina": ' + r);
-});
-
-await caso('Marcar como recogido y retroceder deshace SOLO el recogido, vuelve a "listo para recoger"', async () => {
-  const r = await page.evaluate((id)=>{
-    cycleLineEstado(id, 0); // cocina -> preparando
-    cycleLineEstado(id, 0); // preparando -> entregado
-    cycleLineEstado(id, 0); // entregado -> recogido (recogidoAt): con un solo plato, esto CIERRA la comanda y sale de "Activas"
-    const antes = DB.tpvOrders.find(o=>o.id===id).items[0];
-    const antesRecogido = !!antes.recogidoAt;
-    setComandasCocinaTab('cerradas'); // el botón de retroceder solo sigue visible aquí, ya cerrada
-    const btn = document.querySelector('[title="Un paso atrás"]');
-    btn.click();
-    setComandasCocinaTab('activas'); // al retroceder se reabre, vuelve a Activas
+    cycleLineEstado(id, 0); // Tortilla: cocina -> preparando
+    const antes = {...DB.tpvOrders.find(o=>o.id===id).items[0]};
+    undoLastKitchenAction();
     const despues = DB.tpvOrders.find(o=>o.id===id).items[0];
-    return {antesRecogido, estadoDespues: despues.estado, recogidoDespues: !!despues.recogidoAt};
+    return {antes, estadoDespues: despues.estado, preparandoAtDespues: despues.preparandoAt};
   }, orderId);
-  assert.ok(r.antesRecogido, 'debe haber quedado marcado como recogido antes de retroceder');
-  assert.equal(r.estadoDespues, 'entregado', 'el estado debe seguir siendo "entregado": ' + JSON.stringify(r));
-  assert.ok(!r.recogidoDespues, 'debe deshacerse el recogido: ' + JSON.stringify(r));
+  assert.equal(r.antes.estado, 'preparando', 'antes de deshacer debía estar en preparando: ' + JSON.stringify(r));
+  assert.equal(r.estadoDespues, 'cocina', 'deshacer debe volver a "cocina": ' + JSON.stringify(r));
+  assert.equal(r.preparandoAtDespues, undefined, 'no debe quedar preparandoAt colgando: ' + JSON.stringify(r));
 });
 
-await caso('Una vez cerrada, "Cerradas" también deja retroceder — y eso reabre la comanda', async () => {
+await caso('Marcar como recogido (cierra la comanda) y "Deshacer" lo reabre y quita el recogido', async () => {
   const r = await page.evaluate((id)=>{
-    cycleLineEstado(id, 0); // recogido otra vez -> cierra la comanda, sale de "Activas"
+    cycleLineEstado(id, 0); // cocina -> preparando
+    cycleLineEstado(id, 0); // preparando -> entregado
+    cycleLineEstado(id, 1); // Croquetas también a preparando, para que la comanda no se cierre entera al recoger la Tortilla
+    cycleLineEstado(id, 0); // entregado -> recogido
     const cerradaAntes = DB.tpvOrders.find(o=>o.id===id).cerrada;
-    setComandasCocinaTab('cerradas');
-    const btnEnCerradas = !!document.querySelector('[title="Un paso atrás"]');
-    document.querySelector('[title="Un paso atrás"]')?.click();
-    setComandasCocinaTab('activas');
-    const orderDespues = DB.tpvOrders.find(o=>o.id===id);
-    return {cerradaAntes, btnEnCerradas, cerradaDespues: orderDespues.cerrada};
+    undoLastKitchenAction(); // deshace SOLO el último movimiento (el recogido de la Tortilla)
+    const item0 = DB.tpvOrders.find(o=>o.id===id).items[0];
+    return {cerradaAntes, estado: item0.estado, recogidoAt: item0.recogidoAt};
   }, orderId);
-  assert.ok(r.cerradaAntes, 'debe haberse cerrado al completar el último paso: ' + JSON.stringify(r));
-  assert.ok(r.btnEnCerradas, 'el botón de retroceder debe verse también en la pestaña Cerradas: ' + JSON.stringify(r));
-  assert.ok(!r.cerradaDespues, 'debe reabrirse al retroceder: ' + JSON.stringify(r));
+  assert.equal(r.estado, 'entregado', 'debe seguir "entregado" tras deshacer solo el recogido: ' + JSON.stringify(r));
+  assert.equal(r.recogidoAt, undefined, 'debe quitarse el recogido: ' + JSON.stringify(r));
+});
+
+await caso('Marcar una tanda entera con el botón de grupo y "Deshacer" revierte los DOS platos a la vez', async () => {
+  const r = await page.evaluate((id)=>{
+    // La Tortilla (idx 0) sigue en "entregado" del caso anterior; las
+    // Croquetas (idx 1) están en "preparando". Agrupamos su avance con
+    // cycleGroupEstado sobre la tanda "Uno" y comprobamos que un solo
+    // "Deshacer" recupera el estado de ambas.
+    const antes = DB.tpvOrders.find(o=>o.id===id).items.map(i=>({estado:i.estado, recogidoAt:i.recogidoAt}));
+    cycleGroupEstado(id, 'Uno');
+    const stackLen = kitchenUndoStack.length;
+    undoLastKitchenAction();
+    const despues = DB.tpvOrders.find(o=>o.id===id).items.map(i=>({estado:i.estado, recogidoAt:i.recogidoAt}));
+    return {antes, despues, stackLen};
+  }, orderId);
+  assert.deepEqual(r.despues.slice(0,2), r.antes.slice(0,2), 'las dos líneas de la tanda deben volver exactamente a como estaban: ' + JSON.stringify(r));
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {

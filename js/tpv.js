@@ -2746,6 +2746,7 @@ function setLineEstado(orderId, idx, estado){
   if(!order) return;
   const line = (order.items||[])[idx];
   if(!line) return;
+  pushKitchenUndo(orderId, [idx]);
   line.estado = estado;
   if(estado === 'preparando') line.preparandoAt = new Date().toISOString();
   if(estado === 'entregado') line.entregadoAt = new Date().toISOString();
@@ -2817,28 +2818,48 @@ function cycleLineEstado(orderId, idx){
   else if(line.estado === 'entregado' && !line.recogidoAt) markLineRecogida(orderId, idx);
 }
 
-// Un toque de más (o cambio de opinión: "todavía no está listo") no tenía
-// ninguna forma de deshacerse sin liarla — pedido del dueño, 9/09. Va un
-// paso hacia atrás en el mismo ciclo que cycleLineEstado, incluyendo
-// deshacer el "recogido" (vuelve a "listo para recoger").
-function revertLineEstado(orderId, idx){
+// "Deshacer" a nivel general (pedido del dueño, 9/09): un toque de más en
+// cocina no tenía ninguna forma de arreglarse sin liarla más. No hace falta
+// una flecha en cada plato — basta un único botón que deshaga el ÚLTIMO
+// movimiento, sea de un plato suelto o de una tanda entera marcada de
+// golpe. Guarda solo el estado de ANTES de cada acción (no todo el pedido),
+// y solo en memoria: no hace falta que sobreviva a un recargo de página,
+// es para el "uy, me he equivocado" de hace 5 segundos.
+let kitchenUndoStack = [];
+function pushKitchenUndo(orderId, idxs){
   const order = DB.tpvOrders.find(o => o.id === orderId);
-  const line = order && order.items[idx];
-  if(!line || !line.estado) return;
-  if(line.recogidoAt){ delete line.recogidoAt; }
-  else if(line.estado === 'entregado'){ line.estado = 'preparando'; delete line.entregadoAt; }
-  else if(line.estado === 'preparando'){ line.estado = 'cocina'; delete line.preparandoAt; }
-  else return; // ya está en el primer paso ("cocina"), no hay nada más atrás
+  if(!order) return;
+  const changes = idxs.map(idx => {
+    const l = order.items[idx] || {};
+    return {idx, estado: l.estado, preparandoAt: l.preparandoAt, entregadoAt: l.entregadoAt, recogidoAt: l.recogidoAt};
+  });
+  kitchenUndoStack.push({orderId, changes});
+  if(kitchenUndoStack.length > 10) kitchenUndoStack.shift();
+}
+function undoLastKitchenAction(){
+  const last = kitchenUndoStack.pop();
+  if(!last){ showToast(t('kitchen.nothingToUndo')); return; }
+  const order = DB.tpvOrders.find(o => o.id === last.orderId);
+  if(!order) return;
+  last.changes.forEach(prev => {
+    const l = order.items[prev.idx];
+    if(!l) return;
+    ['estado','preparandoAt','entregadoAt','recogidoAt'].forEach(field => {
+      if(prev[field] === undefined) delete l[field];
+      else l[field] = prev[field];
+    });
+  });
   checkComandaCierre(order);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   if((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
+  showToast(t('kitchen.undoneOk'));
   withScrollPreserved(() => {
     const active = document.querySelector('.view.active');
     if(active && active.id === 'view-comandascocina') renderComandasCocina();
     else if(active && active.id === 'view-tpv') renderTPV();
     const overlay = document.getElementById('modal-overlay');
-    if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+    if(overlay && overlay.classList.contains('active')) renderTableOrderModal(last.orderId);
   });
 }
 
@@ -2846,6 +2867,7 @@ function markLineRecogida(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
   if(!line || line.recogidoAt) return;
+  pushKitchenUndo(orderId, [idx]);
   line.recogidoAt = new Date().toISOString();
   if(typeof checkComandaCierre === 'function') checkComandaCierre(order);
   saveDB();
@@ -2863,6 +2885,14 @@ function markLineRecogida(orderId, idx){
 function cycleGroupEstado(orderId, tanda){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
+  const idxsAfectados = [];
+  (order.items||[]).forEach((line, idx) => {
+    if((line.tanda||'') === tanda){
+      if(line.estado === 'cocina' || line.estado === 'preparando' || (line.estado === 'entregado' && !line.recogidoAt)) idxsAfectados.push(idx);
+    }
+  });
+  if(!idxsAfectados.length) return;
+  pushKitchenUndo(orderId, idxsAfectados);
   let changed = false;
   (order.items||[]).forEach(line => {
     if((line.tanda||'') === tanda){
@@ -3012,7 +3042,8 @@ function renderComandasCocina(){
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
-      <button class="btn btn-sm" style="margin-left:auto" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
+      <button class="btn btn-sm" style="margin-left:auto" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
+      <button class="btn btn-sm" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
     </div>
   `;
 
@@ -3022,8 +3053,8 @@ function renderComandasCocina(){
     const closed = allOrders
       .filter(o => o.cerrada)
       .map(order => {
-        const lines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.estado && !line.bebida);
-        const maxMs = Math.max(0, ...lines.map(({line}) => line.entregadoAt ? new Date(line.entregadoAt).getTime() : 0));
+        const lines = (order.items||[]).filter(l => l.estado && !l.bebida);
+        const maxMs = Math.max(0, ...lines.map(l => l.entregadoAt ? new Date(l.entregadoAt).getTime() : 0));
         return {order, lines, maxMs};
       })
       .filter(({lines, maxMs}) => lines.length && maxMs >= todayMs)
@@ -3040,7 +3071,7 @@ function renderComandasCocina(){
       // lista histórica no debe decir "Entregado" si sala todavía no ha
       // confirmado que se lo ha llevado — si no, cocina ve "Entregado" y
       // asume que ya está en la mesa cuando puede seguir esperando en el pase.
-      const allPicked = lines.every(({line}) => line.recogidoAt);
+      const allPicked = lines.every(l => l.recogidoAt);
       const closedBadge = allPicked
         ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
         : `<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</span>`;
@@ -3051,12 +3082,7 @@ function renderComandasCocina(){
           ${closedBadge}
         </div>
         ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
-        ${lines.map(({line, idx}) => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;gap:8px">
-            <strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-            <button class="btn btn-sm btn-icon" title="${t('kitchen.stepBack')}" onclick="revertLineEstado(${order.id}, ${idx})"><i class="ti ti-arrow-back-up"></i></button>
-          </div>
-        `).join('')}
+        ${lines.map(({line}) => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
       </div>
     `;}).join('')}</div>`;
     return;
@@ -3144,13 +3170,10 @@ function renderComandasCocina(){
                 ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
               ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
-              : `<span style="display:flex;align-items:center;gap:4px;flex:none">
-                  <button class="btn btn-sm btn-icon" title="${t('kitchen.stepBack')}" onclick="event.stopPropagation();revertLineEstado(${order.id}, ${idx})"><i class="ti ti-arrow-back-up"></i></button>
-                  ${line.estado==='cocina' ? `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
-                  : line.estado==='preparando' ? `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
-                  : line.recogidoAt ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-                  : `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
-                </span>`}
+              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
+              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
+              : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
+              : `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
             </div>
           `;}).join('')}
         </div>
