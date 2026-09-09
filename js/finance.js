@@ -1546,7 +1546,7 @@ function renderStock(){
           </span>
           <span class="stock-row-field">
             <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':ok?'color:var(--green);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
-            <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':ok?'var(--green)':'var(--border)'};border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
+            <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':ok?'var(--green)':'var(--border)'};border-radius:6px;font-size:13px"
               onchange="${isElab ? `updateElaboracionQty(${row.id}, this.value)` : `updateStockQty(${row.id}, this.value)`}">
             <span style="font-size:12.5px;color:var(--muted)">${escapeHtml(row.unit)}</span>
           </span>
@@ -1809,8 +1809,11 @@ function openStockLogModal(){
 // Cantidad "Actual" editable directamente en la propia fila, sin pasar por
 // un modal — antes hacía falta abrir un modal aparte solo para escribir un
 // número. Sigue quedando registrado en el Historial igual que antes.
+// A diferencia de updateStockMin (el mínimo es una decisión de gestión),
+// contar y corregir la cantidad REAL es tarea del día a día de cualquier
+// empleado — cualquiera con acceso a Stock puede tocar esto, tenga o no
+// permiso de edición.
 function updateStockQty(ingredientId, value){
-  if(!isOwnerSession() && !editUnlocked) return;
   const s = getStockEntry(ingredientId);
   const num = parseFloat(value);
   if(isNaN(num) || num < 0) return;
@@ -1926,8 +1929,9 @@ function updateElaboracionMin(id, value){
   withScrollPreserved(() => renderStock());
 }
 
+// Mismo criterio que updateStockQty: contar la cantidad real es tarea de
+// cualquier empleado, no solo de quien tiene permiso de editar.
 function updateElaboracionQty(id, value){
-  if(!isOwnerSession() && !editUnlocked) return;
   const e = getElaboracion(id); if(!e) return;
   const num = parseFloat(value);
   if(isNaN(num) || num < 0) return;
