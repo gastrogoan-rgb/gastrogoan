@@ -3658,8 +3658,6 @@ function openEmployeeFicharModal(employeeId){
   // negocio en vez del suyo propio SÍ se sigue pudiendo: es un atajo
   // distinto y deliberado para "se me olvidó mi PIN", no este caso.)
   const asOwner = personalFicharAuthMethod === 'owner_session';
-  const unreadMsgs = directChatUnreadCount(e.id, asOwner);
-  const msgBtn = `<button class="btn btn-sm ${unreadMsgs?'btn-primary':''}" onclick="openEmployeeDirectChat(${e.id}, ${asOwner})"><i class="ti ti-message"></i> ${t('btn.messages')}${unreadMsgs?` <span class="badge badge-red" style="margin-left:2px">${unreadMsgs}</span>`:''}</button>`;
   openModal(`
     <div class="modal-header">
       <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
@@ -3684,7 +3682,6 @@ function openEmployeeFicharModal(employeeId){
         <button class="btn btn-sm" onclick="openTurnoSwapRequestModal(${e.id})"><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</button>
         <button class="btn btn-sm" onclick="openVacationRequestModal(${e.id})"><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</button>
         `}
-        ${msgBtn}
       </div>
       ${asOwner ? '' : renderIncomingSwapRequestsHtml(e.id)}
       ${asOwner ? '' : renderMyVacationRequestsHtml(e.id)}
@@ -3855,7 +3852,10 @@ function renderMyVacationRequestsHtml(employeeId){
     <div class="card" style="margin-top:12px;text-align:left">
       <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-beach"></i> ${t('vacation.myRequestsTitle')}</h4>
       ${summaryHtml}
-      ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px">${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></div>`).join('')}
+      ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span>${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></span>
+        ${r.status==='pending' ? `<button class="btn btn-sm btn-icon" title="${t('vacation.cancelRequest')}" onclick="cancelVacationRequest(${r.id}, ${employeeId})"><i class="ti ti-x"></i></button>` : ''}
+      </div>`).join('')}
     </div>`;
 }
 function openVacationRequestModal(employeeId){
@@ -3896,6 +3896,18 @@ function submitVacationRequest(employeeId){
   DB.vacationRequests.push({id: genId(), employeeId, fromDate, toDate, notes, status:'pending', createdAt: new Date().toISOString()});
   saveDB();
   showToast(t('swap.requestSent'));
+  openEmployeeFicharModal(employeeId);
+}
+// Retirar una solicitud propia todavía pendiente — antes se quedaba fija
+// en la lista sin ninguna forma de sacarla si el empleado cambiaba de idea
+// o se equivocó de fechas. Solo tiene sentido en pendiente: una ya
+// aprobada tiene turnos "V" reales generados (eso lo deshace el propietario).
+function cancelVacationRequest(requestId, employeeId){
+  const r = (DB.vacationRequests||[]).find(x=>x.id===requestId);
+  if(!r || r.status!=='pending') return;
+  DB.vacationRequests = DB.vacationRequests.filter(x=>x.id!==requestId);
+  saveDB();
+  showToast(t('vacation.cancelledOk'));
   openEmployeeFicharModal(employeeId);
 }
 function ownerRespondVacationRequest(requestId, approve){
