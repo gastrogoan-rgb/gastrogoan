@@ -96,6 +96,12 @@ const NECESITAN_ESTADO = new Set([
   'openOwnCourierModal','openDeliveryPlatformModal','openClientMessageModal',
   'openSplitPartPayment','openCartaSectionIconModal','openPlatoModsModal','openMenuOpcionModsModal',
   'openPlatoAllergensModal','togglePlatoAllergen',
+  // Editar un extra/modificador ya creado (9/09): necesitan cartaEdit/menuEdit
+  // en curso (el negocio editando SU carta o SU menú) y, para guardar, los
+  // campos del propio modal de extras ya abierto — mismo caso que
+  // openPlatoModsModal/openMenuOpcionModsModal, arriba.
+  'startEditPlatoMod','cancelEditPlatoMod','saveEditPlatoMod',
+  'addMenuOpcionMod','startEditMenuOpcionMod','cancelEditMenuOpcionMod','saveEditMenuOpcionMod',
 ]);
 
 for(const mod of MODALES){
