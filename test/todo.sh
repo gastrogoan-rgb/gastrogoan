@@ -91,6 +91,7 @@ lanzar; node test/cocina-paso-atras.mjs > "$SALIDA/cocinapasoatras.txt" 2>&1 & P
 lanzar; node test/menu-header-comanda.mjs > "$SALIDA/menuheader.txt" 2>&1 & P58=$!
 lanzar; node test/editar-modificadores.mjs > "$SALIDA/editarmods.txt" 2>&1 & P59=$!
 lanzar; node test/menu-carta-header-cocina.mjs > "$SALIDA/menucartacocina.txt" 2>&1 & P60=$!
+lanzar; node test/sala-cabecera-mesa.mjs > "$SALIDA/salacabecera.txt" 2>&1 & P61=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -163,5 +164,6 @@ espera $P57 "cocina: un paso atrás en el estado de un plato, incluso ya cerrada
 espera $P58 "el nombre del menú sale una vez por tanda, no repetido en cada plato"  "$SALIDA/menuheader.txt" "casos pasaron"
 espera $P59 "editar un modificador/extra ya creado (Carta y Menú)"  "$SALIDA/editarmods.txt" "casos pasaron"
 espera $P60 "en Comandas Cocina, menú/carta se dice una vez por tanda, no por plato"  "$SALIDA/menucartacocina.txt" "casos pasaron"
+espera $P61 "Sala: Cambiar de mesa sube al principio de la cabecera"  "$SALIDA/salacabecera.txt" "casos pasaron"
 
 exit $FALLOS

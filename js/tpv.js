@@ -2184,16 +2184,16 @@ function renderTableOrderModal(orderId){
   openModal(`
     <div id="table-order-modal-marker" data-order-id="${order.id}" style="display:none"></div>
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
+      ${order.tableId ? `<button class="btn btn-sm" style="flex:none" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i> ${t('title.transferTable')}</button>` : ''}
       <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</h3>
       ${order.tableId && !order.items.length ? `<button class="btn btn-sm btn-danger" onclick="releaseEmptyTable(${order.id})" title="${t('btn.releaseTable')}"><i class="ti ti-door-exit"></i> ${t('btn.releaseTable')}</button>` : ''}
-      ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       ${(!order.tableId && (order.tipo==='delivery'||order.tipo==='takeaway') && order.status!=='pagada') ? `<button class="btn btn-sm btn-danger" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${t('title.cancelOrder')}"><i class="ti ti-x"></i> ${t('btn.cancelOrder')}</button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     ${renderOrderClientNotesHtml(order)}
     ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
     <!-- Pestañas de cartas/menús -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:6px">
       ${soloConsulta ? '' : cartaTabs + menuTabs}
     </div>
     <!-- Interruptor Carta/Comanda — solo se ve en móvil (ver
@@ -2340,7 +2340,7 @@ function renderMenuSelectorInline(order, menu){
 // Tarjeta de un grupo (tanda) dentro de una sección (carta o menú) — misma
 // tarjeta que antes, ahora factorizada para poder usarla dos veces (una por
 // sección) sin duplicar el HTML de cada línea.
-function renderTandaGroupCard(order, g, isMenu){
+function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
   const pendingCount = orderPendingKitchenLines(order, g.tanda, isMenu).reduce((s,l)=>s+l.qty, 0);
   const allInGroup = g.items;
   const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
@@ -2389,15 +2389,15 @@ function renderTandaGroupCard(order, g, isMenu){
   const nombreMenuUnico = nombresMenuEnGrupo.length === 1 ? nombresMenuEnGrupo[0] : null;
 
   return `
-  <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
+  <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
-        ${nombreMenuUnico ? `<span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(nombreMenuUnico)}</span>` : ''}
+        <strong style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
+        ${(nombreMenuUnico && !ocultarNombreMenuEnCabecera) ? `<span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(nombreMenuUnico)}</span>` : ''}
       </div>
       <div style="display:flex;gap:4px;align-items:center">
         ${statusBadge}
-        ${pendingCount && !esPedidoSoloLectura(order) ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11.5px;padding:6px 10px" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
+        ${pendingCount && !esPedidoSoloLectura(order) ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
       </div>
     </div>
     ${allInGroup.map(({line, idx}) => {
@@ -2427,7 +2427,7 @@ function renderTandaGroupCard(order, g, isMenu){
       const menu = line.menuId ? (DB.menus||[]).find(m => m.id === line.menuId) : null;
       const menuBadge = (menu && !nombreMenuUnico) ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
       return `
-      <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);${menu?'border-left:3px solid var(--blue,#4E5A63);padding-left:6px':''}">
+      <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px">
         <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber" style="font-size:9px" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
         <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
         ${esPedidoSoloLectura(order) ? '' : `
@@ -2482,9 +2482,20 @@ function renderOrderComandaPanel(order){
     if(showSectionTitles) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:2px 0 6px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.section.carta')}</div>`;
     html += cartaGroups.map(g => renderTandaGroupCard(order, g, false)).join('');
   }
+  // Mismo criterio que ya se aplicó en Comandas Cocina (9/09): si la mesa
+  // tiene MÁS de un menú a la vez (raro, pero pasa con grupos grandes), no
+  // basta con un único epígrafe genérico "MENÚ" — cada menú va en su
+  // propio bloque, con su propio nombre, para que sus platos no se vean
+  // mezclados con los de otro menú distinto bajo la misma etiqueta.
   if(menuGroups.length){
-    if(showSectionTitles) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:10px 0 6px"><i class="ti ti-list-details"></i> ${t('tpv.section.menu')}</div>`;
-    html += menuGroups.map(g => renderTandaGroupCard(order, g, true)).join('');
+    const menuIdsEnOrden = [...new Set(menuItems.map(({line}) => line.menuId))];
+    menuIdsEnOrden.forEach(menuId => {
+      const menu = (DB.menus||[]).find(m => m.id === menuId);
+      const itemsDeEsteMenu = menuItems.filter(({line}) => line.menuId === menuId);
+      const gruposDeEsteMenu = sortBebidaFirst(groupOrderItemsByTanda(order, itemsDeEsteMenu));
+      html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:10px 0 6px;display:flex;align-items:center;gap:6px"><i class="ti ti-list-details"></i> ${escapeHtml(menu ? tItem(menu) : t('tpv.section.menu'))}</div>`;
+      html += gruposDeEsteMenu.map(g => renderTandaGroupCard(order, g, true, true)).join('');
+    });
   }
   return html;
 }

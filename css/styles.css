@@ -649,7 +649,15 @@ td.wrap{white-space:normal}
    pedidos, se ve de golpe en vez de un cuadro diminuto con scroll propio. */
 .tpv-order-cols{display:flex;gap:12px;flex-wrap:wrap;min-height:400px;max-height:calc(96vh - 170px);max-height:calc(96dvh - 170px)}
 .tpv-order-col{flex:1 1 280px;min-width:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px}
-.tpv-order-col-comanda{background:var(--brand-cream)}
+/* La comanda suele llevar más contenido que el selector de carta/menú (que
+   con pocas secciones deja mucho blanco al lado) — le damos más ancho en
+   vez de repartir 50/50. */
+.tpv-order-col-selector{flex:1 1 280px}
+.tpv-order-col-comanda{flex:1.6 1 340px}
+/* Antes llevaba fondo crema propio: junto con las cajas con borde de cada
+   tanda (ya quitadas, ver renderTandaGroupCard) hacía que la comanda de
+   Sala se viera muy distinta a la de Cocina. Sin tinte propio, hereda el
+   fondo neutro de .tpv-order-col y se parece al diseño de Cocina. */
 /* En tablet/PC, carta y comanda van lado a lado (ver arriba). En móvil no
    caben las dos a la vez sin quedar diminutas — antes se apilaban en dos
    cajas con scroll propio cada una (38vh/52vh), y aun así costaba ver algo
