@@ -1274,8 +1274,9 @@ function renderDistList(){
       <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openDistEmployee(${emp.id})">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-          <strong>${escapeHtml(emp.name)}</strong>
+          <strong style="flex:1">${escapeHtml(emp.name)}</strong>
           ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : ''}
+          <button class="btn btn-sm btn-icon" title="${t('label.viewEmployeeFile')}" onclick="event.stopPropagation();openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i></button>
         </div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||t('label.noRole'))}</div>
         <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--brand-orange)':'var(--muted)'}">
@@ -1510,7 +1511,10 @@ function renderDistDetail(){
         <strong>${escapeHtml(emp.name)}</strong>
         <span style="font-size:12px;color:var(--muted)">${escapeHtml(emp.rol||'')}</span>
       </div>
-      <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-default" onclick="openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i> ${t('label.viewEmployeeFile')}</button>
+        <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+      </div>
     </div>
 
     <div class="grid ${isSala?'':'grid-2'}" style="${isSala?'max-width:280px':''}">
