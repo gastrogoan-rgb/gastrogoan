@@ -87,6 +87,8 @@ lanzar; node test/pedido-solicitud.mjs      > "$SALIDA/pedidosolicitud.txt" 2>&1
 lanzar; node test/aviso-cancelar-pedido.mjs > "$SALIDA/avisocancelarpedido.txt" 2>&1 & P54=$!
 lanzar; node test/separacion-areas-personal.mjs > "$SALIDA/separacionareas.txt" 2>&1 & P55=$!
 lanzar; node test/stock-empleados.mjs > "$SALIDA/stockempleados.txt" 2>&1 & P56=$!
+lanzar; node test/cocina-paso-atras.mjs > "$SALIDA/cocinapasoatras.txt" 2>&1 & P57=$!
+lanzar; node test/menu-header-comanda.mjs > "$SALIDA/menuheader.txt" 2>&1 & P58=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -155,5 +157,7 @@ espera $P53 "pedir lo que falta: I+D oculto sin edición, solicitud de pedido si
 espera $P54 "avisar al cliente al cancelar/rechazar un pedido, sin prometer un email que no existe"  "$SALIDA/avisocancelarpedido.txt" "casos pasaron"
 espera $P55 "cocina y sala no se mezclan (clima, turnos por desplegable) y el PIN se puede repetir"  "$SALIDA/separacionareas.txt" "casos pasaron"
 espera $P56 "stock en modo empleado: cantidad actual editable, mínimo y valor bloqueados"  "$SALIDA/stockempleados.txt" "casos pasaron"
+espera $P57 "cocina: un paso atrás en el estado de un plato, incluso ya cerrada la comanda"  "$SALIDA/cocinapasoatras.txt" "casos pasaron"
+espera $P58 "el nombre del menú sale una vez por tanda, no repetido en cada plato"  "$SALIDA/menuheader.txt" "casos pasaron"
 
 exit $FALLOS
