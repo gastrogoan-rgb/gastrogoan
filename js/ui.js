@@ -111,7 +111,7 @@ const TOUR_STEPS = [
   {icon:'ti-logout', titleKey:'tour.s41.title', descKey:'tour.s41.desc', target:'#logout-btn', phase:'ayuda'},
   {icon:'ti-messages', titleKey:'tour.s29.title', descKey:'tour.s29.desc', target:'#chat-fab', phase:'ayuda'},
   {icon:'ti-help-hexagon', titleKey:'tour.s30.title', descKey:'tour.s30.desc', target:'#help-fab', phase:'ayuda'},
-  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.manual-nav', phase:'ayuda'},
+  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.mn-indice', phase:'ayuda'},
 
   // ---- Cierre ----
   {icon:'ti-rocket', titleKey:'tour.s33.title', descKey:'tour.s33.desc', phase:'ayuda', finale:true},
@@ -484,9 +484,9 @@ const HELP_FAQS = [
       ca:['extra','extra formatge','modificador','modificadors','afegir extra','extra al plat'],
       en:['extra','extra cheese','modifier','modifiers','add extra','extra on a dish']},
     answers:{
-      es:'Si un plato tiene extras configurados (ej. "Extra queso"), al añadirlo se abre una ventana donde marcas los extras que quieras y se suman a su precio. Para configurar extras nuevos en un plato, entra en <strong>Carta</strong>, abre el plato y pulsa el botón <strong>"Extras"</strong>.',
-      ca:'Si un plat té extres configurats (ex. "Extra formatge"), en afegir-lo s\'obre una finestra on marques els extres que vulguis i se sumen al seu preu. Per configurar extres nous en un plat, entra a <strong>Carta</strong>, obre el plat i prem el botó <strong>"Extres"</strong>.',
-      en:'If a dish has extras configured (e.g. "Extra cheese"), adding it opens a window where you check the extras you want and they\'re added to its price. To configure new extras on a dish, go to <strong>Menu</strong>, open the dish and tap the <strong>"Extras"</strong> button.' } },
+      es:'Si un plato tiene extras configurados (ej. "Extra queso"), al añadirlo se abre una ventana donde marcas los extras que quieras y se suman a su precio. Para configurar extras nuevos en un plato, entra en <strong>Carta</strong>, abre el plato y pulsa el botón <strong>"Extras"</strong> — desde ahí también puedes editar el nombre o el precio de uno ya creado, no solo añadir o borrar.',
+      ca:'Si un plat té extres configurats (ex. "Extra formatge"), en afegir-lo s\'obre una finestra on marques els extres que vulguis i se sumen al seu preu. Per configurar extres nous en un plat, entra a <strong>Carta</strong>, obre el plat i prem el botó <strong>"Extres"</strong> — des d\'allà també pots editar el nom o el preu d\'un ja creat, no només afegir-lo o esborrar-lo.',
+      en:'If a dish has extras configured (e.g. "Extra cheese"), adding it opens a window where you check the extras you want and they\'re added to its price. To configure new extras on a dish, go to <strong>Menu</strong>, open the dish and tap the <strong>"Extras"</strong> button — from there you can also edit the name or price of one you already created, not just add or delete it.' } },
   { keywords:{es:['nota','notas','sin cebolla','comentario del plato','comentarios'],
       ca:['nota','notes','sense ceba','comentari del plat','comentaris'],
       en:['note','notes','no onion','dish comment','comments']},
@@ -512,9 +512,9 @@ const HELP_FAQS = [
       ca:['comandes cuina','pantalla cuina','en preparacio','llest per servir','veure comandes'],
       en:['kitchen orders','kitchen screen','preparing','ready to serve','view orders']},
     answers:{
-      es:'En <strong>Comandas Cocina</strong> se ven en tiempo real todos los platos marchados desde sala, agrupados por mesa y tanda. Cocina puede marcar cada plato como <strong>"En preparación"</strong> y <strong>"Listo"</strong>, y sala lo verá al instante para servirlo.',
-      ca:'A <strong>Comandes Cuina</strong> es veuen en temps real tots els plats enviats des de sala, agrupats per taula i torn. Cuina pot marcar cada plat com <strong>"En preparació"</strong> i <strong>"Llest"</strong>, i sala ho veurà a l\'instant per servir-lo.',
-      en:'On the <strong>Kitchen Orders</strong> screen you see in real time all dishes sent from the dining room, grouped by table and course. The kitchen can mark each dish as <strong>"Preparing"</strong> and <strong>"Ready"</strong>, and the dining room will see it instantly to serve it.' } },
+      es:'En <strong>Comandas Cocina</strong> se ven en tiempo real todos los platos marchados desde sala. Dentro de cada mesa o pedido, se agrupan en bloques: primero todo lo pedido de Carta (con el nombre de cada carta), y luego cada Menú aparte, con su propia cabecera. Cocina puede marcar cada plato o cada bloque entero como <strong>"En preparación"</strong> y <strong>"Listo"</strong>, y sala lo verá al instante para servirlo. Si alguien se equivoca de toque, el botón general <strong>"Deshacer"</strong> revierte el último movimiento (de un plato o de un bloque entero), incluso si la comanda ya está cerrada.',
+      ca:'A <strong>Comandes Cuina</strong> es veuen en temps real tots els plats enviats des de sala. Dins de cada taula o comanda, s\'agrupen en blocs: primer tot el demanat de Carta (amb el nom de cada carta), i després cada Menú a part, amb la seva pròpia capçalera. Cuina pot marcar cada plat o cada bloc sencer com <strong>"En preparació"</strong> i <strong>"Llest"</strong>, i sala ho veurà a l\'instant per servir-lo. Si algú s\'equivoca de toc, el botó general <strong>"Desfer"</strong> reverteix l\'últim moviment (d\'un plat o d\'un bloc sencer), fins i tot si la comanda ja està tancada.',
+      en:'On the <strong>Kitchen Orders</strong> screen you see in real time all dishes sent from the dining room. Within each table or order, dishes are grouped into blocks: first everything ordered from the à la carte menu (with each menu\'s name), then each combo menu separately, with its own header. The kitchen can mark each dish, or a whole block at once, as <strong>"Preparing"</strong> and <strong>"Ready"</strong>, and the dining room will see it instantly to serve it. If a tap was a mistake, the general <strong>"Undo"</strong> button reverts the last move (a single dish or a whole block), even after the order has already been closed.' } },
   { keywords:{es:['cobrar','cobro','dividir cuenta','metodo de pago','cerrar comanda','cerrar mesa','pagar'],
       ca:['cobrar','cobrament','dividir compte','metode de pagament','tancar comanda','tancar taula','pagar'],
       en:['charge','checkout','split the bill','payment method','close order','close table','pay']},
@@ -568,9 +568,9 @@ const HELP_FAQS = [
       ca:['configurar extra','extres a la carta','preu extra','afegir extra al plat','doble carn'],
       en:['configure extra','extras in menu','extra price','add extra to dish','double meat']},
     answers:{
-      es:'Para configurar extras de un plato, ve a <strong>Carta</strong>, abre ese plato y pulsa el botón <strong>"Extras"</strong>. Ahí puedes añadir opciones con nombre y precio (ej. "Extra queso" +1€, "Doble carne" +2€).',
-      ca:'Per configurar extres d\'un plat, vés a <strong>Carta</strong>, obre aquest plat i prem el botó <strong>"Extres"</strong>. Allà pots afegir opcions amb nom i preu (ex. "Extra formatge" +1€, "Doble carn" +2€).',
-      en:'To configure extras for a dish, go to <strong>Menu</strong>, open that dish and tap the <strong>"Extras"</strong> button. There you can add options with a name and price (e.g. "Extra cheese" +1€, "Double meat" +2€).' } },
+      es:'Para configurar extras de un plato, ve a <strong>Carta</strong>, abre ese plato y pulsa el botón <strong>"Extras"</strong>. Ahí puedes añadir opciones con nombre y precio (ej. "Extra queso" +1€, "Doble carne" +2€), y también editar o borrar las que ya tenías.',
+      ca:'Per configurar extres d\'un plat, vés a <strong>Carta</strong>, obre aquest plat i prem el botó <strong>"Extres"</strong>. Allà pots afegir opcions amb nom i preu (ex. "Extra formatge" +1€, "Doble carn" +2€), i també editar o esborrar les que ja tenies.',
+      en:'To configure extras for a dish, go to <strong>Menu</strong>, open that dish and tap the <strong>"Extras"</strong> button. There you can add options with a name and price (e.g. "Extra cheese" +1€, "Double meat" +2€), and also edit or delete the ones you already have.' } },
   { keywords:{es:['importar plato','importar del escandallo','escandallo a carta','traer plato del escandallo'],
       ca:['importar plat','importar de l\'escandall','escandall a carta','portar plat de l\'escandall'],
       en:['import dish','import from costing','costing to menu','bring dish from costing']},

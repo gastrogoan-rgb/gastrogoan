@@ -1,7 +1,8 @@
-// Manual de uso (9/09): hay dos listas de capítulos, la fila de arriba
-// (.mn-indice) y la columna lateral (.manual-nav). El dueño pidió que SOLO
-// la de arriba quede fija al hacer scroll; la lateral debe seguir
-// desplazándose con el texto, como siempre.
+// Manual de uso: antes había DOS listas de capítulos (la fila de arriba y
+// una columna lateral, .manual-nav) — repetir lo mismo dos veces no
+// aportaba nada. El dueño pidió (9/09) quitar la columna lateral y dejar
+// solo la fila de arriba, fija al hacer scroll para no perderla al leer un
+// capítulo largo.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -35,27 +36,37 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('Al hacer scroll, el índice de arriba se queda fijo y la lista lateral se desplaza con el texto', async () => {
-  const r = await page.evaluate(()=>{
-    document.getElementById('content').scrollTop = 600;
-    const antes = {indice: document.querySelector('.mn-indice').getBoundingClientRect().top, nav: document.querySelector('.manual-nav').getBoundingClientRect().top};
-    document.getElementById('content').scrollTop = 900;
-    const despues = {indice: document.querySelector('.mn-indice').getBoundingClientRect().top, nav: document.querySelector('.manual-nav').getBoundingClientRect().top};
-    return {antes, despues};
-  });
-  // Una vez "pegado" arriba (tras el primer scroll), seguir bajando no debe
-  // moverlo más — es justo lo que hace sticky y lo que NO hacía antes.
-  assert.equal(r.antes.indice, r.despues.indice, 'el índice de arriba, ya pegado, no debe moverse con más scroll: ' + JSON.stringify(r));
-  assert.ok(r.despues.nav < r.antes.nav - 100, 'la lista lateral SÍ debe desplazarse hacia arriba con el scroll: ' + JSON.stringify(r));
+await caso('Ya no existe la columna lateral (.manual-nav): solo queda el índice de arriba', async () => {
+  const r = await page.evaluate(()=>({
+    tieneNavLateral: !!document.querySelector('.manual-nav'),
+    tieneIndiceArriba: !!document.querySelector('.mn-indice'),
+    opciones: document.querySelectorAll('.mn-indice-chip').length,
+  }));
+  assert.ok(!r.tieneNavLateral, 'la columna lateral debe haber desaparecido: ' + JSON.stringify(r));
+  assert.ok(r.tieneIndiceArriba, 'debe seguir habiendo un índice arriba: ' + JSON.stringify(r));
+  assert.ok(r.opciones > 5, 'el índice de arriba debe listar los capítulos (ahora es la única navegación): ' + JSON.stringify(r));
 });
 
-await caso('El índice de arriba lleva position:sticky; la lista lateral no', async () => {
-  const r = await page.evaluate(()=>({
-    indice: getComputedStyle(document.querySelector('.mn-indice')).position,
-    nav: getComputedStyle(document.querySelector('.manual-nav')).position,
-  }));
-  assert.equal(r.indice, 'sticky', 'el índice de arriba debe ser sticky: ' + JSON.stringify(r));
-  assert.notEqual(r.nav, 'sticky', 'la lista lateral no debe ser sticky: ' + JSON.stringify(r));
+await caso('El índice de arriba se queda fijo (sticky) al hacer scroll', async () => {
+  const r = await page.evaluate(()=>{
+    document.getElementById('content').scrollTop = 600;
+    const antes = document.querySelector('.mn-indice').getBoundingClientRect().top;
+    document.getElementById('content').scrollTop = 900;
+    const despues = document.querySelector('.mn-indice').getBoundingClientRect().top;
+    return {antes, despues, position: getComputedStyle(document.querySelector('.mn-indice')).position};
+  });
+  assert.equal(r.position, 'sticky', 'debe llevar position:sticky: ' + JSON.stringify(r));
+  assert.equal(r.antes, r.despues, 'una vez pegado arriba, seguir bajando no debe moverlo más: ' + JSON.stringify(r));
+});
+
+await caso('El índice de arriba se mantiene aunque el resultado de una búsqueda tenga pocos capítulos', async () => {
+  const r = await page.evaluate(()=>{
+    setManualSearch('reservas');
+    const opciones = document.querySelectorAll('.mn-indice-chip').length;
+    setManualSearch('');
+    return opciones;
+  });
+  assert.ok(r >= 1, 'con pocos resultados el índice no debe desaparecer, es la única navegación: ' + JSON.stringify(r));
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {

@@ -46,7 +46,7 @@ a{color:var(--text)}a:hover{color:var(--olive)}
    diseño, gruesa y gris genérica). Sin esto en Firefox: no pasa nada, se
    queda con la del sistema, no rompe nada. */
 .content::-webkit-scrollbar,.modal::-webkit-scrollbar,.tpv-order-col::-webkit-scrollbar,
-.ge-grid::-webkit-scrollbar,.table-wrap::-webkit-scrollbar,.manual-nav::-webkit-scrollbar{
+.ge-grid::-webkit-scrollbar,.table-wrap::-webkit-scrollbar{
   width:8px;height:8px;
 }
 .content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track,.tpv-order-col::-webkit-scrollbar-track,
@@ -731,10 +731,8 @@ td.wrap{white-space:normal}
    Negocio no hace falta porque allí son saltos dentro de la misma página. */
 .mn-indice-chip.activo{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)}
 @media (max-width:1024px){ .mn-indice-chip{min-height:44px} }
-/* En el Manual hay DOS listas de capítulos: esta de arriba y la columna
-   lateral (.manual-nav) a la izquierda. El dueño pidió (9/09) que solo la
-   de arriba se quede fija al hacer scroll — la lateral se desplaza con el
-   texto, como siempre. */
+/* Único índice del Manual (9/09: se quitó la columna lateral duplicada,
+   .manual-nav) — fijo arriba para no perderlo al leer un capítulo largo. */
 #view-manual .mn-indice{position:sticky;top:0;z-index:10}
 /* Destello al aterrizar: en una pantalla tan larga, saltar sin más deja
    dudando si se ha movido algo. */
@@ -985,11 +983,10 @@ td.wrap{white-space:normal}
 .mn-grid .card{max-width:none;margin:0;min-width:0}
 .mn-grid .mn-grid-full{grid-column:1/-1}
 
-.manual-wrap{display:grid;grid-template-columns:240px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
-.manual-nav{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--bg)}
-.manual-chapter{padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
-.manual-chapter.active{color:var(--teal-d);border-left-color:var(--teal);background:var(--teal-l);font-weight:700}
-.manual-chapter:hover:not(.active){color:var(--text);background:var(--border)}
+/* Antes había dos listas de capítulos (esta columna lateral y la fila de
+   arriba, .mn-indice) — el dueño pidió (9/09) dejar solo una. .manual-wrap
+   ya no es una rejilla de dos columnas, solo el marco de la página. */
+.manual-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
 .manual-detail{padding:20px}
 .manual-detail h3{font-size:16px;font-weight:700;margin:0 0 12px;color:var(--text)}
 .manual-detail h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px}
@@ -1009,7 +1006,6 @@ td.wrap{white-space:normal}
 .manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px;display:block;overflow-x:auto}
 .manual-detail table th,.manual-detail table td{border:1px solid var(--border);padding:6px 10px;text-align:left}
 .manual-detail table th{background:var(--bg);font-weight:700}
-@media (max-width:720px){.manual-wrap{grid-template-columns:1fr}.manual-nav{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border)}.manual-chapter{border-left:none;border-bottom:3px solid transparent}.manual-chapter.active{border-left:none;border-bottom-color:var(--teal)}}
 
 .ge-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
 .ge-sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--brand-cream);border-bottom:1px solid var(--border);border-left:4px solid var(--teal)}
@@ -1322,12 +1318,6 @@ td.wrap{white-space:normal}
 
   /* Gates — ensure scrollable on smaller tablets */
   [id$="-gate"]{overflow:auto;-webkit-overflow-scrolling:touch}
-}
-
-/* Manual sidebar — 2 columnas solo en tablet (721-800px); por debajo de 720px
-   la regla de @media(max-width:720px) ya colapsa .manual-wrap a 1 columna. */
-@media (max-width: 800px) and (min-width: 721px){
-  .manual-wrap{grid-template-columns:180px 1fr}
 }
 
 @media (max-width: 600px){
