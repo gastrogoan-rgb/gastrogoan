@@ -2904,6 +2904,7 @@ function renderHorariosPersonal(){
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
           <button class="btn btn-sm btn-icon" title="${t('btn.messages')}" onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
+          <button class="btn btn-sm btn-icon" title="${t('title.workDistribution')}" onclick="navigate('distribucion');openDistEmployee(${e.id})"><i class="ti ti-clipboard-list"></i></button>
           ${isOwnerSession ? `
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
@@ -4165,24 +4166,6 @@ function openNewPinModal(employeeId, action){
   `);
 }
 
-// ¿Coincide pinPlain con el PIN ya guardado (hasheado o en claro) de otro
-// empleado de SU MISMA ÁREA? No hace falta mirar la otra área: el acceso
-// siempre se identifica por nombre + PIN (nunca solo por PIN), así que dos
-// personas de cocina y sala con el mismo PIN no crean ninguna ambigüedad
-// real — y cocina y sala son equipos separados, así que tampoco tiene
-// sentido que a alguien de cocina le bloqueen un PIN por chocar con uno de
-// sala que ni conoce.
-function employeePinCollides(pinPlain, excludeId){
-  const self = DB.employees.find(x => x.id===excludeId);
-  const area = self ? (self.area||'cocina') : null;
-  return DB.employees.some(e => {
-    if(e.id === excludeId || !e.pinChanged) return false;
-    if(area && (e.area||'cocina') !== area) return false;
-    const stored = e.pin || '1234';
-    return pinMatchesHash(pinPlain, stored);
-  });
-}
-
 function confirmNewPin(employeeId, action){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
@@ -4191,7 +4174,6 @@ function confirmNewPin(employeeId, action){
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
-  if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
   e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
@@ -4234,7 +4216,6 @@ function confirmFirstPinChange(employeeId){
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
-  if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
   e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
