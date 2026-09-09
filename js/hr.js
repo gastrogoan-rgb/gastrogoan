@@ -2306,10 +2306,7 @@ function renderHorariosDia(){
             <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
           </span>
         </td>
-        <td colspan="4"><span style="color:var(--muted)">${t('label.noShiftAssigned')}</span></td>
-        <td class="actions-cell">
-          <button class="owner-only btn btn-sm" onclick="openTurnoModal(null, ${emp.id}, '${date}')"><i class="ti ti-plus"></i> ${t('btn.assign')}</button>
-        </td>
+        <td colspan="5"><span style="color:var(--muted)">${t('label.noShiftAssigned')}</span></td>
       </tr>
     `;
   }).join('');
@@ -2370,7 +2367,6 @@ function renderHorariosMes(){
         <button class="btn btn-sm" onclick="horariosMonthOffset++;renderHorarios()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
-      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
@@ -2404,13 +2400,10 @@ function renderHorariosSemana(){
         if(hh > 0) totalH += hh;
         return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px;text-align:center;${editUnlocked?'cursor:pointer':''}" ${editUnlocked?`onclick="openTurnoModal(${turno.id})"`:''}>${turno.tipo}${turno.tipo!=='D'?`<br><span style="font-size:10.5px;font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
       }
-      // El "+" para asignar turno solo tiene sentido (y solo se ve) si de
-      // verdad se puede usar — antes se mostraba igual a un empleado sin
-      // permiso de editar, con pinta de botón clicable que en realidad no
-      // hacía nada al tocarlo.
-      if(editUnlocked){
-        return `<td style="text-align:center;padding:2px"><span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted);font-size:16px" onclick="openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
-      }
+      // El calendario es solo VISTA: asignar un turno nuevo se hace desde el
+      // botón de calendario de la ficha del empleado (horario fijo o por
+      // periodo), nunca desde una casilla vacía aquí — solo se puede tocar
+      // un turno que ya existe.
       return `<td style="text-align:center;padding:2px;color:var(--muted)">—</td>`;
     }).join('');
     return `<tr>
@@ -2766,8 +2759,10 @@ function renderTeamPulseHtml(){
         <h4 style="margin-bottom:6px"><i class="ti ti-beach"></i> ${t('vacation.ownerPendingTitle')}</h4>
         ${pendingVacations.map(r => {
           const emp = DB.employees.find(e=>e.id===r.employeeId);
+          const summary = vacationAllowanceSummary(r.employeeId);
           return `<div style="font-size:12.5px;margin-bottom:6px">
             ${t('vacation.ownerPendingLine').replace('${name}', escapeHtml(emp?emp.name:'?')).replace('${from}', escapeHtml(r.fromDate)).replace('${to}', escapeHtml(r.toDate))}
+            ${summary ? ` <span style="color:var(--muted)">${t('vacation.ownerPendingRemaining').replace('${remaining}', summary.remaining).replace('${total}', summary.total)}</span>` : ''}
             ${r.notes ? `<div style="color:var(--muted)">${escapeHtml(r.notes)}</div>` : ''}
             <div style="display:flex;gap:6px;margin-top:4px">
               <button class="btn btn-sm btn-primary" onclick="ownerRespondVacationRequest(${r.id}, true)">${t('common.accept')}</button>
@@ -2902,8 +2897,7 @@ function renderHorariosPersonal(){
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
-          ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
-          ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
+          <button class="btn btn-sm btn-icon" title="${t('btn.messages')}" onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
           <button class="owner-strict btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
           <button class="owner-strict btn btn-sm btn-icon" title="${t('title.employeeSchedule')}" onclick="openEmployeeScheduleChooser(${e.id})"><i class="ti ti-calendar"></i></button>
           <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
@@ -2927,10 +2921,6 @@ function renderHorariosPersonal(){
       </div>
     </div>
     ` : ''}
-    ${myEmployeeId != null ? `
-    <div class="manual-warning" style="margin-bottom:12px">
-      <i class="ti ti-info-circle"></i> ${t('hr.personal.employeeScopeNote')}
-    </div>` : ''}
     ${emps.length ? listHtml : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
   `;
 }
@@ -3302,6 +3292,11 @@ function openEmployeeModal(id){
       </div>
     </div>
     <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">${t('msg.forCommentsOrDocs')}</p>
+    <div class="field owner-strict">
+      <label>${t('label.vacationDaysPerYear')}</label>
+      <input type="number" id="emp-vacation-days" min="0" step="1" value="${e.vacationDaysPerYear!=null?e.vacationDaysPerYear:22}">
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('msg.vacationDaysPerYearHelp')}</p>
+    </div>
     ${id ? `
     <label class="owner-strict" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
       <input type="checkbox" id="emp-active" ${e.active!==false?'checked':''} style="width:auto">
@@ -3376,12 +3371,14 @@ function saveEmployee(id){
   const empActiveEl = document.getElementById('emp-active');
   const esRepartidorEl = document.getElementById('emp-es-repartidor');
   const esRepartidor = esRepartidorEl ? esRepartidorEl.checked : false;
+  const vacDaysEl = document.getElementById('emp-vacation-days');
+  const vacationDaysPerYear = vacDaysEl && vacDaysEl.value!=='' ? Math.max(0, parseInt(vacDaysEl.value,10)||0) : null;
   if(id){
     const emp = DB.employees.find(e => e.id===id);
     if(!emp) return;
     // El área no se pregunta: se conserva la del empleado (o la actual si no tenía).
     const eraRepartidor = emp.esRepartidor;
-    Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: emp.area||currentArea()});
+    Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, esRepartidor, vacationDaysPerYear, area: emp.area||currentArea()});
     if(empActiveEl) emp.active = empActiveEl.checked;
     // Si deja de repartir con pedidos ya asignados, esos pedidos se quedaban
     // "en camino" apuntando a alguien que ya no reparte — autoAssignRepartidor
@@ -3389,7 +3386,7 @@ function saveEmployee(id){
     if(eraRepartidor && !esRepartidor) liberarPedidosDeRepartidor(id);
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
-    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:hashPin('1234', codigoNegocioParaPin()), pinChanged:false, active:true, fechaAlta: todayStr()});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, vacationDaysPerYear, area: currentArea(), pin:hashPin('1234', codigoNegocioParaPin()), pinChanged:false, active:true, fechaAlta: todayStr()});
     logAudit('create', t('audit.createdEmployee').replace('${name}', name));
   }
   saveDB();
@@ -3816,24 +3813,57 @@ function ownerApproveTurnoSwap(requestId, approve){
 // vez de reasignar, se crean turnos nuevos que "ocupan" ese hueco en el
 // cuadrante para que quede reflejado sin tener que rellenarlo a mano día
 // a día.
+// Cuenta días NATURALES entre dos fechas (ambas incluidas), igual que se
+// generan los turnos "V" al aprobar — no días laborables, para que cuadre
+// con lo que de verdad ocupa el cuadrante.
+function vacationDaysBetween(fromDate, toDate){
+  return Math.round((new Date(toDate+'T00:00:00') - new Date(fromDate+'T00:00:00')) / 86400000) + 1;
+}
+// Días ya comprometidos este año: aprobados (ya gastados de verdad) +
+// pendientes (todavía puede rechazarse, pero mientras está pendiente ya
+// "reserva" el hueco para que no le aprueben dos rangos que se pasan del
+// total sin darse cuenta). Recorta cada solicitud al año en curso.
+function vacationDaysCommitted(employeeId, year, statuses){
+  const yFrom = year+'-01-01', yTo = year+'-12-31';
+  return (DB.vacationRequests||[]).filter(r => r.employeeId===employeeId && statuses.includes(r.status)).reduce((sum, r) => {
+    const from = r.fromDate < yFrom ? yFrom : r.fromDate;
+    const to = r.toDate > yTo ? yTo : r.toDate;
+    if(to < from) return sum;
+    return sum + vacationDaysBetween(from, to);
+  }, 0);
+}
+function vacationAllowanceSummary(employeeId){
+  const emp = DB.employees.find(e => e.id===employeeId);
+  if(!emp || emp.vacationDaysPerYear==null) return null;
+  const year = todayStr().slice(0,4);
+  const used = vacationDaysCommitted(employeeId, year, ['approved']);
+  const pending = vacationDaysCommitted(employeeId, year, ['pending']);
+  const total = emp.vacationDaysPerYear;
+  return {total, used, pending, remaining: Math.max(0, total - used - pending)};
+}
 function renderMyVacationRequestsHtml(employeeId){
   const mine = (DB.vacationRequests||[]).filter(r => r.employeeId===employeeId).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  if(!mine.length) return '';
+  const summary = vacationAllowanceSummary(employeeId);
+  const summaryHtml = summary ? `<div style="font-size:12.5px;margin-bottom:6px">${t('vacation.remainingLine').replace('${remaining}', summary.remaining).replace('${total}', summary.total).replace('${used}', summary.used)}</div>` : '';
+  if(!mine.length && !summaryHtml) return '';
   const statusLabel = s => s==='pending' ? t('vacation.statusPending') : s==='approved' ? t('vacation.statusApproved') : t('vacation.statusRejected');
   return `
     <div class="card" style="margin-top:12px;text-align:left">
       <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-beach"></i> ${t('vacation.myRequestsTitle')}</h4>
+      ${summaryHtml}
       ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px">${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></div>`).join('')}
     </div>`;
 }
 function openVacationRequestModal(employeeId){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
+  const summary = vacationAllowanceSummary(employeeId);
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</h3>
       <button class="modal-close" onclick="openEmployeeFicharModal(${employeeId})">&times;</button>
     </div>
+    <p style="font-size:13px;color:var(--muted);margin:-4px 0 12px">${summary ? t('vacation.remainingLine').replace('${remaining}', summary.remaining).replace('${total}', summary.total).replace('${used}', summary.used) : t('vacation.noAllowanceSet')}</p>
     <div class="field-row">
       <div class="field"><label>${t('vacation.fromLabel')}</label><input type="date" id="vac-from" min="${todayStr()}" value="${todayStr()}"></div>
       <div class="field"><label>${t('vacation.toLabel')}</label><input type="date" id="vac-to" min="${todayStr()}" value="${todayStr()}"></div>
@@ -3850,6 +3880,14 @@ function submitVacationRequest(employeeId){
   const toDate = document.getElementById('vac-to').value;
   const notes = document.getElementById('vac-notes').value.trim();
   if(!fromDate || !toDate || toDate < fromDate){ showToast(t('vacation.badRange')); return; }
+  const summary = vacationAllowanceSummary(employeeId);
+  if(summary){
+    const requested = vacationDaysBetween(fromDate, toDate);
+    if(requested > summary.remaining){
+      showToast(t('vacation.notEnoughDays').replace('${requested}', requested).replace('${remaining}', summary.remaining), 5000);
+      return;
+    }
+  }
   if(!DB.vacationRequests) DB.vacationRequests = [];
   DB.vacationRequests.push({id: genId(), employeeId, fromDate, toDate, notes, status:'pending', createdAt: new Date().toISOString()});
   saveDB();
