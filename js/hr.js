@@ -2898,6 +2898,10 @@ function renderHorariosPersonal(){
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
           <button class="btn btn-sm btn-icon" title="${t('btn.messages')}" onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
+          ${isOwnerSession ? `
+          ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
+          ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
+          ` : ''}
           <button class="owner-strict btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
           <button class="owner-strict btn btn-sm btn-icon" title="${t('title.employeeSchedule')}" onclick="openEmployeeScheduleChooser(${e.id})"><i class="ti ti-calendar"></i></button>
           <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
@@ -3294,7 +3298,7 @@ function openEmployeeModal(id){
     <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">${t('msg.forCommentsOrDocs')}</p>
     <div class="field owner-strict">
       <label>${t('label.vacationDaysPerYear')}</label>
-      <input type="number" id="emp-vacation-days" min="0" step="1" value="${e.vacationDaysPerYear!=null?e.vacationDaysPerYear:22}">
+      <input type="number" id="emp-vacation-days" min="0" step="1" placeholder="${t('ph.notSet')}" value="${e.vacationDaysPerYear!=null?e.vacationDaysPerYear:''}">
       <p style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('msg.vacationDaysPerYearHelp')}</p>
     </div>
     ${id ? `
