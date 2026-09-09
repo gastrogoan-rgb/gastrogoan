@@ -2925,7 +2925,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '09/09/2026 12:36';
+const GG_BUILD = '09/09/2026 12:45';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -31602,7 +31602,15 @@ function updatePedidosTabsUI(){
   const s = document.getElementById('pedidos-tab-solicitar');
   const h = document.getElementById('pedidos-tab-historial');
   if(c) c.classList.toggle('btn-primary', pedidosTab === 'crear');
-  if(s) s.classList.toggle('btn-primary', pedidosTab === 'solicitar');
+  if(s){
+    // "Pedir lo que falta" es para quien NO puede hacer un pedido real
+    // (sin permiso de editar): al dueño o al gerente no les aporta nada,
+    // ellos ya tienen "Realizar Pedido" — mostrárselo era ruido, y además
+    // era donde se veían las propias solicitudes que le llegan a ÉL, que
+    // ahora se ven directamente encima de "Realizar Pedido".
+    s.style.display = editUnlocked ? 'none' : '';
+    s.classList.toggle('btn-primary', pedidosTab === 'solicitar');
+  }
   if(h) h.classList.toggle('btn-primary', pedidosTab === 'historial');
 }
 
@@ -31610,9 +31618,12 @@ function renderPedidos(){
   // Sin permiso de editar, "Realizar Pedido" no está disponible (el botón
   // ni siquiera se ve) — si por cualquier motivo quedó seleccionada esa
   // pestaña de una sesión anterior, se cae al historial en vez de dejar
-  // ver el formulario de creación igualmente. "Pedir lo que falta" (la
-  // solicitud, no el pedido real) sí es de cualquiera, así que esa no se toca.
+  // ver el formulario de creación igualmente.
   if(pedidosTab === 'crear' && !editUnlocked) pedidosTab = 'historial';
+  // Al revés: "solicitar" es solo de quien no puede editar — si el dueño o
+  // el gerente se quedaron en esa pestaña de una sesión de empleado
+  // anterior (mismo dispositivo, compartido), se cae a "Realizar Pedido".
+  if(pedidosTab === 'solicitar' && editUnlocked) pedidosTab = 'crear';
   updatePedidosTabsUI();
   const o = pedidoDetailId && getPurchaseOrder(pedidoDetailId);
   if(o && (o.area||'cocina') === currentArea()){
@@ -31666,8 +31677,6 @@ function renderPedidoList(){
   const counts = {BORRADOR:0, ENVIADO:0, RECIBIDO:0};
   allOrders.forEach(o => { if(counts[o.estado] !== undefined) counts[o.estado]++; });
 
-  const pendientesHtml = renderPedidoSolicitudesPendientesHtml();
-
   const kpiHtml = `
     <div class="grid grid-4" style="margin-bottom:14px">
       <div class="kpi"><div class="label">${t('label.drafts')}</div><div class="value">${counts.BORRADOR}</div></div>
@@ -31678,7 +31687,7 @@ function renderPedidoList(){
   `;
 
   if(!allOrders.length){
-    box.innerHTML = pendientesHtml + kpiHtml + `<div class="empty"><i class="ti ti-shopping-cart"></i>${t('empty.noOrders')}</div>`;
+    box.innerHTML = kpiHtml + `<div class="empty"><i class="ti ti-shopping-cart"></i>${t('empty.noOrders')}</div>`;
     return;
   }
 
@@ -31710,7 +31719,7 @@ function renderPedidoList(){
     </div>
   `;
 
-  box.innerHTML = pendientesHtml + kpiHtml + filterHtml + `<div id="pedido-results"></div>`;
+  box.innerHTML = kpiHtml + filterHtml + `<div id="pedido-results"></div>`;
   renderPedidoResultsList();
 }
 
@@ -31742,11 +31751,15 @@ function renderPedidoSolicitudesPendientesHtml(){
       }).join('')}
     </div>`;
 }
+// Se borra de verdad, no se marca "atendida" y se deja ahí: al empleado le
+// quedaba fija en "Tus solicitudes" para siempre aunque ya estuviera hecha,
+// sin ninguna forma de quitarla. Una vez atendida ya cumplió su función
+// (avisar), así que no hace falta guardar el historial.
 function markPedidoSolicitudAtendida(id){
   if(!editUnlocked) return;
   const s = (DB.pedidoSolicitudes||[]).find(x=>x.id===id);
   if(!s) return;
-  s.status = 'atendida';
+  DB.pedidoSolicitudes = DB.pedidoSolicitudes.filter(x=>x.id!==id);
   saveDB();
   showToast(t('pedido.requestHandledOk'));
   renderPedidos();
@@ -32584,6 +32597,7 @@ function renderPedidoCrear(){
   const box = document.getElementById('pedidos-list');
   const {dateVal, html} = orderFormBodyHtml();
   box.innerHTML = `
+    ${renderPedidoSolicitudesPendientesHtml()}
     <div class="card">
       <h3><i class="ti ti-shopping-cart-plus"></i> ${t('title.makeOrder')}</h3>
       ${html}
