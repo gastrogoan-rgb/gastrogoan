@@ -227,6 +227,41 @@ await caso('Un turno sin patrón fijo activo solo muestra el botón normal de Gu
   await page.evaluate(() => closeModal());
 });
 
+await caso('El horario fijo solo ofrece Mañana/Tarde/Partido/Otro/Descanso — nunca Vacaciones ni Baja', async () => {
+  const r = await page.evaluate(() => {
+    openHorarioFijoModal(1);
+    const opciones = [...document.querySelectorAll('#hf-tipo-0 option')].map(o => o.value);
+    return opciones;
+  });
+  assert.deepEqual(r, ['M','T','P','C','D'], 'las opciones del horario fijo no son las esperadas: ' + JSON.stringify(r));
+  await page.evaluate(() => closeModal());
+});
+
+await caso('Personal ya no tiene los botones sueltos de "por periodo" ni "horario fijo" (ahora van por empleado)', async () => {
+  const r = await page.evaluate(() => {
+    setHorariosTab('personal');
+    const texto = document.getElementById('horarios-tab-content').innerText;
+    return {tienePeriodo: texto.includes('Asignar turnos por periodo'), tieneFijo: texto.includes('Horario fijo')};
+  });
+  assert.ok(!r.tienePeriodo && !r.tieneFijo, 'esos dos botones ya no deben verse sueltos en Personal: ' + JSON.stringify(r));
+});
+
+await caso('Día y Semana ya no tienen el botón "Nuevo turno" (redundante con el + de cada fila); Mes sí lo conserva', async () => {
+  const r = await page.evaluate(() => {
+    setHorariosTab('calendario');
+    setHorariosCalView('dia');
+    const dia = document.getElementById('horarios-cal-body').textContent.includes('Nuevo Turno');
+    setHorariosCalView('semana');
+    const semana = document.getElementById('horarios-cal-body').textContent.includes('Nuevo Turno');
+    setHorariosCalView('mes');
+    const mes = document.getElementById('horarios-cal-body').textContent.includes('Nuevo Turno');
+    return {dia, semana, mes};
+  });
+  assert.ok(!r.dia, 'Día no debe tener "Nuevo turno": ' + JSON.stringify(r));
+  assert.ok(!r.semana, 'Semana no debe tener "Nuevo turno": ' + JSON.stringify(r));
+  assert.ok(r.mes, 'Mes SÍ debe conservarlo (no tiene otra forma de añadir): ' + JSON.stringify(r));
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', () => {
   assert.deepEqual(erroresJs, [], 'errores: ' + erroresJs.join(' | '));
 });

@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '09/09/2026 11:31';
+const GG_BUILD = '09/09/2026 11:54';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -35012,7 +35012,6 @@ function renderHorariosDia(){
       <div class="left">
         <input type="date" id="horarios-filter-date" value="${date}" onchange="horariosDate=this.value;renderHorarios()">
       </div>
-      <button class="owner-only btn btn-primary" onclick="openTurnoModal(null, null, '${date}')"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
@@ -35129,7 +35128,6 @@ function renderHorariosSemana(){
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="printWeeklySchedule()"><i class="ti ti-printer"></i> ${t('btn.printSchedule')}</button>
-        <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -35618,8 +35616,6 @@ function renderHorariosPersonal(){
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="owner-strict btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
-        ${allEmps.length ? `<button class="owner-strict btn" onclick="openBulkTurnoModal()"><i class="ti ti-calendar-plus"></i> ${t('title.assignShiftsByPeriod')}</button>` : ''}
-        ${allEmps.length ? `<button class="owner-strict btn" onclick="openHorarioFijoModal()"><i class="ti ti-repeat"></i> ${t('title.fixedSchedule')}</button>` : ''}
         <button class="owner-strict btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
@@ -35632,9 +35628,14 @@ function renderHorariosPersonal(){
   `;
 }
 
+// El horario fijo es un patrón que se repite CADA SEMANA para siempre —
+// Vacaciones y Baja no tienen sentido ahí (nadie está de vacaciones todos
+// los lunes, para siempre): esos dos se siguen poniendo como excepción de
+// un día concreto, no como parte del patrón general.
+const HORARIO_FIJO_TIPOS = ['M','T','P','C','D'];
 function horarioFijoDiaRowHtml(i, dia){
-  const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===dia.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
-  const noHorario = ['D','V','B'].includes(dia.tipo);
+  const tipoOptions = HORARIO_FIJO_TIPOS.map(k => `<option value="${k}"${k===dia.tipo?' selected':''}>${k} - ${SHIFT_TYPES[k].label}</option>`).join('');
+  const noHorario = dia.tipo === 'D';
   const isPartido = dia.tipo === 'P';
   return `
     <div class="field-row" style="align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px">
@@ -35670,7 +35671,7 @@ function horarioFijoDiaRowHtml(i, dia){
 }
 function horarioFijoTipoChanged(i){
   const tipo = document.getElementById(`hf-tipo-${i}`).value;
-  const noHorario = ['D','V','B'].includes(tipo);
+  const noHorario = tipo === 'D';
   const isPartido = tipo === 'P';
   document.getElementById(`hf-horas-${i}`).style.display = noHorario ? 'none' : 'flex';
   document.getElementById(`hf-partido-${i}`).style.display = isPartido ? 'flex' : 'none';
