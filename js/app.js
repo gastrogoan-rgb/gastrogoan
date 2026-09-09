@@ -1230,6 +1230,16 @@ function renderDistribucion(){
     return;
   }
 
+  // Un empleado que entra por Acceso Empleados no tiene equipo que mirar:
+  // ir a "Distribución del Trabajo" es siempre para ver SU PROPIA ficha, así
+  // que se abre directa, sin pasar antes por una lista de una sola tarjeta.
+  // El propietario, en cambio, sí ve primero el equipo entero.
+  const myEmployeeId = loggedInEmployeeId();
+  if(myEmployeeId != null && !distCurrentEmployeeId){
+    const mine = DB.employees.find(e=>e.id===myEmployeeId);
+    if(mine && (mine.area||'cocina')===currentArea()) distCurrentEmployeeId = myEmployeeId;
+  }
+
   if(distCurrentEmployeeId && DB.employees.find(e=>e.id===distCurrentEmployeeId) && (DB.employees.find(e=>e.id===distCurrentEmployeeId).area||'cocina')===currentArea()){
     renderDistDetail();
   } else {
@@ -1503,9 +1513,16 @@ function renderDistDetail(){
     `;
   }).join('');
 
+  // El empleado que entra por Acceso Empleados ve SOLO su propia ficha (la
+  // lista ya viene filtrada a él en renderDistList): no tiene ningún equipo
+  // al que volver, así que aquí no lleva botón de volver. El propietario, en
+  // cambio, entra desde la lista de todo el equipo y tiene que poder
+  // volver a ella para mirar la ficha de otro compañero sin recargar nada.
+  const myEmployeeId = loggedInEmployeeId();
   box.innerHTML = `
     <div class="toolbar">
       <div class="left">
+        ${myEmployeeId == null ? `<button class="btn btn-sm btn-icon" onclick="backToDistList()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>` : ''}
         <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block"></span>
         <strong>${escapeHtml(emp.name)}</strong>
         <span style="font-size:12px;color:var(--muted)">${escapeHtml(emp.rol||'')}</span>

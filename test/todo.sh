@@ -93,6 +93,8 @@ lanzar; node test/editar-modificadores.mjs > "$SALIDA/editarmods.txt" 2>&1 & P59
 lanzar; node test/menu-carta-header-cocina.mjs > "$SALIDA/menucartacocina.txt" 2>&1 & P60=$!
 lanzar; node test/sala-cabecera-mesa.mjs > "$SALIDA/salacabecera.txt" 2>&1 & P61=$!
 lanzar; node test/codigo-negocio-recordado.mjs > "$SALIDA/codigorecordado.txt" 2>&1 & P62=$!
+lanzar; node test/distribucion-volver-equipo.mjs > "$SALIDA/distvolver.txt" 2>&1 & P63=$!
+lanzar; node test/manual-indice-fijo.mjs > "$SALIDA/manualindice.txt" 2>&1 & P64=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -167,5 +169,7 @@ espera $P59 "editar un modificador/extra ya creado (Carta y Menú)"  "$SALIDA/ed
 espera $P60 "en Comandas Cocina, menú/carta se dice una vez por tanda, no por plato"  "$SALIDA/menucartacocina.txt" "casos pasaron"
 espera $P61 "Sala: Cambiar de mesa sube al principio de la cabecera"  "$SALIDA/salacabecera.txt" "casos pasaron"
 espera $P62 "código de negocio recordado en el desplegable, sin autoseleccionar" "$SALIDA/codigorecordado.txt" "casos pasaron"
+espera $P63 "Distribución del Trabajo: empleado directo a su ficha, dueño puede volver al equipo" "$SALIDA/distvolver.txt" "casos pasaron"
+espera $P64 "Manual: solo el índice de arriba queda fijo al hacer scroll" "$SALIDA/manualindice.txt" "casos pasaron"
 
 exit $FALLOS
