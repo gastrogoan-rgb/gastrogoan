@@ -246,20 +246,22 @@ await caso('Personal ya no tiene los botones sueltos de "por periodo" ni "horari
   assert.ok(!r.tienePeriodo && !r.tieneFijo, 'esos dos botones ya no deben verse sueltos en Personal: ' + JSON.stringify(r));
 });
 
-await caso('Día y Semana ya no tienen el botón "Nuevo turno" (redundante con el + de cada fila); Mes sí lo conserva', async () => {
+await caso('Calendario es solo vista: ninguna vista (Día/Semana/Mes) tiene forma de crear un turno nuevo', async () => {
   const r = await page.evaluate(() => {
     setHorariosTab('calendario');
     setHorariosCalView('dia');
-    const dia = document.getElementById('horarios-cal-body').textContent.includes('Nuevo Turno');
+    const diaTexto = document.getElementById('horarios-cal-body').textContent;
+    const dia = diaTexto.includes('Nuevo Turno') || diaTexto.includes('Asignar');
     setHorariosCalView('semana');
     const semana = document.getElementById('horarios-cal-body').textContent.includes('Nuevo Turno');
+    const semanaTieneMas = !!document.querySelector('#horarios-cal-body td[onclick^="openTurnoModal(null"]');
     setHorariosCalView('mes');
     const mes = document.getElementById('horarios-cal-body').textContent.includes('Nuevo Turno');
-    return {dia, semana, mes};
+    return {dia, semana, semanaTieneMas, mes};
   });
-  assert.ok(!r.dia, 'Día no debe tener "Nuevo turno": ' + JSON.stringify(r));
-  assert.ok(!r.semana, 'Semana no debe tener "Nuevo turno": ' + JSON.stringify(r));
-  assert.ok(r.mes, 'Mes SÍ debe conservarlo (no tiene otra forma de añadir): ' + JSON.stringify(r));
+  assert.ok(!r.dia, 'Día no debe tener forma de crear un turno nuevo: ' + JSON.stringify(r));
+  assert.ok(!r.semana && !r.semanaTieneMas, 'Semana no debe tener el "+" de crear turno: ' + JSON.stringify(r));
+  assert.ok(!r.mes, 'Mes tampoco debe tener "Nuevo turno": la creación va solo por el botón de calendario del empleado: ' + JSON.stringify(r));
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', () => {
