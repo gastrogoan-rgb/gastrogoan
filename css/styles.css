@@ -731,6 +731,11 @@ td.wrap{white-space:normal}
    Negocio no hace falta porque allí son saltos dentro de la misma página. */
 .mn-indice-chip.activo{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)}
 @media (max-width:1024px){ .mn-indice-chip{min-height:44px} }
+/* En el Manual hay DOS listas de capítulos: esta de arriba y la columna
+   lateral (.manual-nav) a la izquierda. El dueño pidió (9/09) que solo la
+   de arriba se quede fija al hacer scroll — la lateral se desplaza con el
+   texto, como siempre. */
+#view-manual .mn-indice{position:sticky;top:0;z-index:10}
 /* Destello al aterrizar: en una pantalla tan larga, saltar sin más deja
    dudando si se ha movido algo. */
 .mn-ap-resaltado{animation:mn-destello 1.4s ease}
