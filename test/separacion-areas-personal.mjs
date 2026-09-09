@@ -135,6 +135,21 @@ await caso('Desde la tarjeta de Personal, el icono de Distribución del Trabajo 
   assert.ok(r.empleadoAbierto, 'debe abrir directamente la página de ESE empleado, sin pasar por la lista');
 });
 
+await caso('La página del empleado en Distribución ya no tiene el botón "Equipo" (solo se llega a un empleado en concreto)', async () => {
+  const tieneEquipo = await page.evaluate(()=> [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Equipo'));
+  assert.ok(!tieneEquipo, 'no debe quedar ningún botón "Equipo" en la página de detalle');
+});
+
+await caso('"Rango/platos a su cargo" y "Tareas de esta semana" quedan uno al lado del otro, no apilados', async () => {
+  const r = await page.evaluate(()=>{
+    const kpis = [...document.querySelectorAll('.kpi')];
+    const tops = kpis.map(k => k.getBoundingClientRect().top);
+    return {n: kpis.length, mismaFila: tops.length===2 && Math.abs(tops[0]-tops[1]) < 2};
+  });
+  assert.equal(r.n, 2, 'deben ser las 2 tarjetas KPI esperadas: ' + JSON.stringify(r));
+  assert.ok(r.mismaFila, 'deben estar en la misma fila, no una debajo de la otra: ' + JSON.stringify(r));
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {
   assert.deepEqual(erroresJs, [], 'errores: ' + erroresJs.join(' | '));
 });
