@@ -1,8 +1,11 @@
-// El nombre del menú se dice una vez en la cabecera de cada tanda, no en
-// cada plato (9/09): un menú de 3 platos repetía "Menú: Menú del día"
-// debajo de cada uno. Ahora sale una sola vez, arriba, junto al nombre de
-// la tanda — y si dos menús distintos comparten la misma tanda (raro pero
-// posible), cada línea sigue con su propio badge para no perder de cuál es.
+// Sala (renderOrderComandaPanel/renderTandaGroupCard): el nombre del menú
+// se dice una vez, en la cabecera de SU BLOQUE, no en cada tanda ni en cada
+// plato (9/09, con el mismo criterio que ya se aplicó en Comandas Cocina).
+// Un menú de 3 platos en 3 tandas (Primero/Segundos/Postres) ya no repite
+// "Menú: X" ni por plato ni por tanda: sale una vez, arriba del bloque
+// entero. Y si hay dos menús distintos, cada uno tiene su PROPIO bloque —
+// ya no hace falta un badge por línea para distinguirlos, porque nunca
+// comparten grupo.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -33,7 +36,7 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('Un menú de 3 platos en 3 tandas distintas dice su nombre UNA vez por tanda, no repetido por plato', async () => {
+await caso('Un menú de 3 platos en 3 tandas distintas dice su nombre UNA vez para todo el bloque, no por tanda ni por plato', async () => {
   const r = await page.evaluate(()=>{
     const menuId = genId();
     DB.menus.push({id: menuId, nombre:'Menú del día', precio:15, ivaPct:10, secciones:[]});
@@ -48,16 +51,18 @@ await caso('Un menú de 3 platos en 3 tandas distintas dice su nombre UNA vez po
     const html = renderOrderComandaPanel(order);
     document.body.insertAdjacentHTML('beforeend', `<div id="test-panel">${html}</div>`);
     const box = document.getElementById('test-panel');
-    const headerBadges = [...box.querySelectorAll('.badge.badge-blue')].filter(b => b.textContent.includes('Menú del día'));
+    const veces = box.innerHTML.split('Menú del día').length - 1;
     const notasVisibles = [...box.querySelectorAll('div')].filter(d => (d.textContent||'').trim() === 'Menú: Menú del día');
+    const llevaLosTres = ['Ensalada','Bistec con patatas','Flan'].every(n => box.textContent.includes(n));
     box.remove();
-    return {numHeaderBadges: headerBadges.length, notasVisiblesCount: notasVisibles.length};
+    return {veces, notasVisiblesCount: notasVisibles.length, llevaLosTres};
   });
-  assert.equal(r.numHeaderBadges, 3, 'debe salir un badge de "Menú del día" por cada una de las 3 tandas: ' + JSON.stringify(r));
+  assert.equal(r.veces, 1, 'debe salir "Menú del día" UNA vez para todo el bloque (cabecera), ni por tanda ni por plato: ' + JSON.stringify(r));
   assert.equal(r.notasVisiblesCount, 0, 'la nota autogenerada no debe repetirse debajo de cada plato: ' + JSON.stringify(r));
+  assert.ok(r.llevaLosTres, 'los 3 platos deben seguir viéndose, agrupados dentro del bloque: ' + JSON.stringify(r));
 });
 
-await caso('Dos menús distintos en la MISMA tanda siguen mostrando cada uno su propio badge por línea', async () => {
+await caso('Dos menús distintos con la misma tanda tienen cada uno su propio bloque, sin mezclarse', async () => {
   const r = await page.evaluate(()=>{
     const menuA = genId(), menuB = genId();
     DB.menus.push({id: menuA, nombre:'Menú A', precio:12, ivaPct:10, secciones:[]});
@@ -72,11 +77,16 @@ await caso('Dos menús distintos en la MISMA tanda siguen mostrando cada uno su 
     const html = renderOrderComandaPanel(order);
     document.body.insertAdjacentHTML('beforeend', `<div id="test-panel2">${html}</div>`);
     const box = document.getElementById('test-panel2');
-    const lineBadges = [...box.querySelectorAll('.comanda-item-row .badge.badge-blue')].map(b => b.textContent.trim());
+    const posA = box.innerHTML.indexOf('Menú A');
+    const posB = box.innerHTML.indexOf('Menú B');
+    const posSopa = box.innerHTML.indexOf('Sopa');
+    const posGazpacho = box.innerHTML.indexOf('Gazpacho');
     box.remove();
-    return lineBadges;
+    // La Sopa (Menú A) debe quedar dentro del rango del bloque de Menú A
+    // (entre la cabecera "Menú A" y la de "Menú B"), y el Gazpacho después.
+    return {ordenCorrecto: posA < posSopa && posSopa < posB && posB < posGazpacho};
   });
-  assert.ok(r.some(t => t.includes('Menú A')) && r.some(t => t.includes('Menú B')), 'cada línea debe seguir distinguiendo de qué menú es cuando se mezclan dos: ' + JSON.stringify(r));
+  assert.ok(r.ordenCorrecto, 'cada menú debe quedar en su propio bloque, sin intercalar los platos del otro: ' + JSON.stringify(r));
 });
 
 await caso('Una nota manual escrita por el camarero SÍ se sigue mostrando, aunque venga de un menú', async () => {
