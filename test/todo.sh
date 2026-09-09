@@ -80,6 +80,7 @@ lanzar; node test/calendario-reservas.mjs   > "$SALIDA/calendario.txt" 2>&1 & P4
 lanzar; node test/carrera-sync-carta.mjs    > "$SALIDA/carrerasync.txt" 2>&1 & P49=$!
 lanzar; node test/carrera-sync-employees.mjs > "$SALIDA/carrerasyncemp.txt" 2>&1 & P50=$!
 lanzar; node test/carrera-sync-dinero.mjs    > "$SALIDA/carrerasyncdinero.txt" 2>&1 & P51=$!
+lanzar; node test/horario-fijo.mjs           > "$SALIDA/horariofijo.txt" 2>&1 & P52=$!
 lanzar; node test/confirmacion-pedido-reserva.mjs > "$SALIDA/confirmacion.txt" 2>&1 & P47=$!
 lanzar; node test/aviso-cambio-reserva.mjs  > "$SALIDA/avisocambio.txt" 2>&1 & P48=$!
 
@@ -145,5 +146,6 @@ espera $P48 "avisar al cliente al cancelar/editar una reserva"  "$SALIDA/avisoca
 espera $P49 "la nube en retraso no deshace ediciones de carta/menú"  "$SALIDA/carrerasync.txt" "casos pasaron"
 espera $P50 "la nube en retraso no deshace ediciones de empleados/turnos/fichajes"  "$SALIDA/carrerasyncemp.txt" "casos pasaron"
 espera $P51 "dinero: cobro doble y plato reaparecido siguen protegidos"  "$SALIDA/carrerasyncdinero.txt" "casos pasaron"
+espera $P52 "horario fijo: patrón semanal que se repite, sin pisar ediciones manuales"  "$SALIDA/horariofijo.txt" "casos pasaron"
 
 exit $FALLOS

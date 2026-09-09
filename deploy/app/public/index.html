@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '08/09/2026 11:00';
+const GG_BUILD = '09/09/2026 11:06';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6305,6 +6305,11 @@ const ARRAYS_CON_LAPIDA = new Set([
      turnoSwapRequests y vacationRequests del empleado eliminado — sin
      lápida, resucitaban al sincronizar un dispositivo que aún los tenía. */
   'fichajes', 'turnoSwapRequests', 'vacationRequests',
+  /* Igual para horariosFijos: reallyDeleteEmployee lo borra de verdad al
+     eliminar un empleado, y quitarSchedule también borra el patrón entero
+     al desactivar el horario fijo — sin lápida, resucitaría al sincronizar
+     un dispositivo que todavía lo tuviera. */
+  'horariosFijos',
   /* sales y cashClosures SÍ se borran de verdad: archiveOldData (js/app.js,
      "Mi Negocio" → archivar datos antiguos) hace un filter() real tras
      descargar el JSON. Sin lápida, archivar en un dispositivo mientras otro
@@ -6454,7 +6459,7 @@ function mergeLapidas(local, remoto){
 const MERGEABLE_ARRAYS = new Set([
   'ingredients','recipes','fichas','menuItems','cartas','menus',
   'purchaseOrders','providers','tables','tpvOrders','sales',
-  'cashClosures','employees','turnos','fichajes','promos',
+  'cashClosures','employees','turnos','fichajes','promos','horariosFijos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
   'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations',
@@ -9776,7 +9781,8 @@ function defaultData(){
     cashClosures: [], // {id, fecha, desde, hasta, totales:{Efectivo,Tarjeta,Otro}, total, ticketCount, fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, createdAt}
     employees: [],       // {id, name, rol, color, pin, pinChanged}
     shifts: {},          // { employeeId: ['','','','','','',''] }
-    turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas}
+    turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas, origen:'fijo'|undefined}
+    horariosFijos: [],   // {id, employeeId, patron:[7x {tipo,entrada,salida,entrada2,salida2}|null] (lun..dom), generadoHasta:'YYYY-MM-DD', activo}
     workDistribution: {}, // { employeeId: { platos:[name,...], produccion:{0:[task,...],...,6:[...]} } }
     fichajes: [],        // {id, employeeId, fecha, entrada, salida} — control horario real (entrada/salida)
     promos: [],          // {id, fecha (YYYY-MM-DD), titulo, descripcion} — calendario de promoción/marketing
@@ -11534,6 +11540,11 @@ const I18N = {
     'label.scheduleForEachDay': 'Horario de cada día del periodo', 'label.notesAppliedToAllDays': 'Notas (opcional, se aplica a todos los días)',
     'ph.notesForAllShifts': 'Notas para todos estos turnos...', 'msg.existingShiftReplaced': 'Si ya había un turno asignado ese día a este empleado, se sustituirá.',
     'msg.confirmOverwriteShift': '${name} ya tiene un turno (${tipo}) el ${date}. ¿Sustituirlo por este?',
+    'title.fixedSchedule': 'Horario fijo', 'btn.removeFixedSchedule': 'Quitar horario fijo',
+    'hr2.fixedScheduleExplain': 'Define lo que hace este empleado cada día de la semana: la app generará sola sus turnos por delante, cada semana, para siempre. Si un día concreto necesitas cambiar algo, edítalo como siempre — ese día queda aparte y el patrón general no se toca.',
+    'msg.fixedScheduleSaved': 'Horario fijo guardado. Se aplicará desde hoy en adelante.',
+    'msg.confirmRemoveFixedSchedule': '¿Quitar el horario fijo? Los turnos ya generados no se borran, pero no se crearán más automáticamente.',
+    'msg.fixedScheduleRemoved': 'Horario fijo quitado.',
     'common.apply': 'Aplicar', 'label.validPeriod': 'Selecciona un periodo válido.', 'label.holiday': 'Festivo',
     'label.splitShift2Legs': 'Turno partido (2 tramos)',
     'title.editEmployee': 'Editar Empleado', 'title.newEmployee': 'Nuevo Empleado', 'ph.employeeName': 'Nombre del empleado',
@@ -11796,6 +11807,7 @@ const I18N = {
     'th.detail': 'Detalle',
     'personalLog.shiftCreated': 'Turno creado: ${detail}', 'personalLog.shiftEdited': 'Turno editado: ${detail}',
     'personalLog.shiftDeleted': 'Turno eliminado: ${detail}', 'personalLog.pinReset': 'PIN de fichaje restablecido: ${name}',
+    'personalLog.fixedScheduleSet': 'Horario fijo definido: ${name}', 'personalLog.fixedScheduleRemoved': 'Horario fijo quitado: ${name}',
     'personalLog.clockedByOther': '${name}: ${action} registrado con ${via}, no con su propio PIN', 'label.businessPin': 'el PIN del negocio',
     'title.personalLog': 'Historial de Personal', 'empty.noPersonalLog': 'No hay cambios registrados.',
     'msg.confirmDeleteTask': '¿Eliminar esta tarea?',
@@ -12015,6 +12027,7 @@ const I18N = {
     'audit.ownerLoggedIn': 'Ha entrado como propietario', 'audit.employeeLoggedIn': 'Ha entrado como empleado: ${name} (${area})', 'audit.loggedOut': '${name} ha cerrado sesión',
     'audit.voidedDish': 'Anuló "${dish}" (${table})', 'audit.cashClosed': 'Cerró caja: ${total} (diferencia ${diff})',
     'audit.personal.shiftCreated': 'Creó un turno', 'audit.personal.shiftEdited': 'Editó un turno', 'audit.personal.shiftDeleted': 'Borró un turno',
+    'audit.personal.fixedScheduleSet': 'Definió un horario fijo', 'audit.personal.fixedScheduleRemoved': 'Quitó un horario fijo',
     'audit.personal.pinReset': 'Reseteó el PIN de', 'audit.personal.clockedByOther': 'Fichó por',
     'audit.discountApplied': 'Aplicó un descuento del ${pct}% (${amount})', 'audit.discountReverted': 'Quitó el descuento del ${pct}%',
     'audit.dishMarkedOut': 'Marcó "${name}" como agotado', 'audit.dishMarkedAvailable': 'Reactivó "${name}"',
@@ -13703,6 +13716,11 @@ const I18N = {
     'label.scheduleForEachDay': 'Horari de cada dia del període', 'label.notesAppliedToAllDays': 'Notes (opcional, s\'aplica a tots els dies)',
     'ph.notesForAllShifts': 'Notes per a tots aquests torns...', 'msg.existingShiftReplaced': 'Si ja hi havia un torn assignat aquell dia a aquest empleat, se substituirà.',
     'msg.confirmOverwriteShift': '${name} ja té un torn (${tipo}) el ${date}. Vols substituir-lo per aquest?',
+    'title.fixedSchedule': 'Horari fix', 'btn.removeFixedSchedule': 'Treure horari fix',
+    'hr2.fixedScheduleExplain': 'Defineix què fa aquest empleat cada dia de la setmana: l\'app generarà sola els seus torns per endavant, cada setmana, per sempre. Si un dia concret necessites canviar alguna cosa, edita\'l com sempre — aquell dia queda a part i el patró general no es toca.',
+    'msg.fixedScheduleSaved': 'Horari fix desat. S\'aplicarà des d\'avui en endavant.',
+    'msg.confirmRemoveFixedSchedule': 'Vols treure l\'horari fix? Els torns ja generats no s\'esborren, però no se\'n crearan més automàticament.',
+    'msg.fixedScheduleRemoved': 'Horari fix tret.',
     'common.apply': 'Aplicar', 'label.validPeriod': 'Selecciona un període vàlid.', 'label.holiday': 'Festiu',
     'label.splitShift2Legs': 'Torn partit (2 trams)',
     'title.editEmployee': 'Editar Empleat', 'title.newEmployee': 'Nou Empleat', 'ph.employeeName': 'Nom de l\'empleat',
@@ -13966,6 +13984,7 @@ const I18N = {
     'th.detail': 'Detall',
     'personalLog.shiftCreated': 'Torn creat: ${detail}', 'personalLog.shiftEdited': 'Torn editat: ${detail}',
     'personalLog.shiftDeleted': 'Torn eliminat: ${detail}', 'personalLog.pinReset': 'PIN de fitxatge restablert: ${name}',
+    'personalLog.fixedScheduleSet': 'Horari fix definit: ${name}', 'personalLog.fixedScheduleRemoved': 'Horari fix tret: ${name}',
     'personalLog.clockedByOther': '${name}: ${action} registrat amb ${via}, no amb el seu propi PIN', 'label.businessPin': 'el PIN del negoci',
     'title.personalLog': 'Historial de Personal', 'empty.noPersonalLog': 'No hi ha canvis registrats.',
     'msg.confirmDeleteTask': 'Eliminar aquesta tasca?',
@@ -14181,6 +14200,7 @@ const I18N = {
     'audit.ownerLoggedIn': 'Ha entrat com a propietari', 'audit.employeeLoggedIn': 'Ha entrat com a empleat: ${name} (${area})', 'audit.loggedOut': '${name} ha tancat sessió',
     'audit.voidedDish': 'Va anul·lar "${dish}" (${table})', 'audit.cashClosed': 'Va tancar caixa: ${total} (diferència ${diff})',
     'audit.personal.shiftCreated': 'Va crear un torn', 'audit.personal.shiftEdited': 'Va editar un torn', 'audit.personal.shiftDeleted': 'Va esborrar un torn',
+    'audit.personal.fixedScheduleSet': 'Va definir un horari fix', 'audit.personal.fixedScheduleRemoved': 'Va treure un horari fix',
     'audit.personal.pinReset': 'Va resetejar el PIN de', 'audit.personal.clockedByOther': 'Va fitxar per',
     'audit.discountApplied': 'Va aplicar un descompte del ${pct}% (${amount})', 'audit.discountReverted': 'Va treure el descompte del ${pct}%',
     'audit.dishMarkedOut': 'Va marcar "${name}" com a exhaurit', 'audit.dishMarkedAvailable': 'Va reactivar "${name}"',
@@ -15872,6 +15892,11 @@ const I18N = {
     'label.scheduleForEachDay': 'Schedule for each day of the period', 'label.notesAppliedToAllDays': 'Notes (optional, applies to all days)',
     'ph.notesForAllShifts': 'Notes for all these shifts...', 'msg.existingShiftReplaced': 'If a shift was already assigned to this employee that day, it will be replaced.',
     'msg.confirmOverwriteShift': '${name} already has a shift (${tipo}) on ${date}. Replace it with this one?',
+    'title.fixedSchedule': 'Fixed schedule', 'btn.removeFixedSchedule': 'Remove fixed schedule',
+    'hr2.fixedScheduleExplain': 'Define what this employee does each day of the week: the app will generate their shifts ahead of time on its own, every week, forever. If you need to change something on a specific day, edit it as usual — that day is set apart and the general pattern stays untouched.',
+    'msg.fixedScheduleSaved': 'Fixed schedule saved. It will apply from today onward.',
+    'msg.confirmRemoveFixedSchedule': 'Remove the fixed schedule? Shifts already generated won\'t be deleted, but no more will be created automatically.',
+    'msg.fixedScheduleRemoved': 'Fixed schedule removed.',
     'common.apply': 'Apply', 'label.validPeriod': 'Select a valid period.', 'label.holiday': 'Holiday',
     'label.splitShift2Legs': 'Split shift (2 segments)',
     'title.editEmployee': 'Edit Employee', 'title.newEmployee': 'New Employee', 'ph.employeeName': 'Employee name',
@@ -16135,6 +16160,7 @@ const I18N = {
     'th.detail': 'Detail',
     'personalLog.shiftCreated': 'Shift created: ${detail}', 'personalLog.shiftEdited': 'Shift edited: ${detail}',
     'personalLog.shiftDeleted': 'Shift deleted: ${detail}', 'personalLog.pinReset': 'Clock-in PIN reset: ${name}',
+    'personalLog.fixedScheduleSet': 'Fixed schedule set: ${name}', 'personalLog.fixedScheduleRemoved': 'Fixed schedule removed: ${name}',
     'personalLog.clockedByOther': '${name}: ${action} logged with ${via}, not their own PIN', 'label.businessPin': 'the business PIN',
     'title.personalLog': 'Staff history', 'empty.noPersonalLog': 'No changes recorded.',
     'msg.confirmDeleteTask': 'Delete this task?',
@@ -16351,6 +16377,7 @@ const I18N = {
     'audit.ownerLoggedIn': 'Logged in as owner', 'audit.employeeLoggedIn': 'Logged in as employee: ${name} (${area})', 'audit.loggedOut': '${name} logged out',
     'audit.voidedDish': 'Voided "${dish}" (${table})', 'audit.cashClosed': 'Closed register: ${total} (difference ${diff})',
     'audit.personal.shiftCreated': 'Created a shift', 'audit.personal.shiftEdited': 'Edited a shift', 'audit.personal.shiftDeleted': 'Deleted a shift',
+    'audit.personal.fixedScheduleSet': 'Set a fixed schedule', 'audit.personal.fixedScheduleRemoved': 'Removed a fixed schedule',
     'audit.personal.pinReset': 'Reset the PIN of', 'audit.personal.clockedByOther': 'Clocked in/out for',
     'audit.discountApplied': 'Applied a ${pct}% discount (${amount})', 'audit.discountReverted': 'Removed the ${pct}% discount',
     'audit.dishMarkedOut': 'Marked "${name}" as sold out', 'audit.dishMarkedAvailable': 'Reactivated "${name}"',
@@ -34747,6 +34774,15 @@ function dateStr(d){
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
+// Nunca con toISOString (desfase de un día en cualquier huso por delante de
+// UTC, como España) — se construye la fecha con sus componentes locales y
+// se avanza con setDate, que respeta el calendario local de verdad.
+function addDaysStr(fechaStr, dias){
+  const [y,m,d] = fechaStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + dias);
+  return dateStr(dt);
+}
 function hoursBetween(t1, t2){
   if(!t1 || !t2) return 0;
   const [h1,m1] = t1.split(':').map(Number), [h2,m2] = t2.split(':').map(Number);
@@ -34789,7 +34825,64 @@ function isEmployeeOnShiftNow(employeeId){
   return false;
 }
 
+/* ============================================================
+   HORARIO FIJO — patrón semanal que se repite indefinidamente
+   El hostelero define UNA vez qué hace cada empleado cada día de la semana
+   (lun..dom) y la app va generando sola, por delante, los turnos reales en
+   DB.turnos — que es lo único que leen las vistas Día/Semana/Mes, el
+   reparto automático (isEmployeeOnShiftNow) y la hoja imprimible: no hace
+   falta tocar ninguna de ellas, el patrón solo "rellena" turnos normales.
+
+   Un turno generado así lleva origen:'fijo'. En cuanto el hostelero lo
+   edita a mano (saveTurno) o lo borra, deja de llevar esa marca — el día
+   queda "suelto" del patrón para siempre y ni una regeneración futura ni un
+   cambio del patrón general vuelven a tocarlo. Es la pieza clave para que
+   "puedo tocar un día concreto sin romper el patrón" sea cierto de verdad. */
+const HORIZONTE_HORARIO_FIJO_DIAS = 28; // 4 semanas por delante, siempre
+
+function horarioFijoDe(employeeId){
+  return (DB.horariosFijos||[]).find(h => h.employeeId===employeeId && h.activo!==false) || null;
+}
+
+// Genera (si hace falta) los turnos que faltan por delante para TODOS los
+// empleados con horario fijo activo. Se llama cada vez que se abre
+// Horarios — barato si no hay nada que generar (generadoHasta ya cubre la
+// ventana) y así el patrón "para siempre" se mantiene solo, sin depender de
+// que nadie recuerde tocar nada cada 4 semanas.
+function generarTurnosFijos(){
+  if(!DB.horariosFijos || !DB.horariosFijos.length) return;
+  const hoy = todayStr();
+  const limite = addDaysStr(hoy, HORIZONTE_HORARIO_FIJO_DIAS);
+  let cambiado = false;
+  DB.horariosFijos.forEach(hf => {
+    if(hf.activo===false) return;
+    if(!DB.employees.some(e => e.id===hf.employeeId)) return; // empleado borrado, por si acaso
+    let cursor = hf.generadoHasta && hf.generadoHasta >= hoy ? addDaysStr(hf.generadoHasta, 1) : hoy;
+    while(cursor <= limite){
+      const diaSemana = (new Date(cursor+'T00:00:00').getDay() + 6) % 7; // 0=lunes .. 6=domingo
+      const patronDia = hf.patron[diaSemana];
+      // Ya hay un turno ese día para este empleado (a mano, o de otro
+      // origen): nunca se pisa — ver comentario del bloque de arriba.
+      const yaExiste = (DB.turnos||[]).some(x => x.employeeId===hf.employeeId && x.fecha===cursor);
+      if(patronDia && patronDia.tipo && !yaExiste){
+        DB.turnos.push({
+          id: genId(), employeeId: hf.employeeId, fecha: cursor,
+          tipo: patronDia.tipo,
+          entrada: patronDia.entrada||'', salida: patronDia.salida||'',
+          entrada2: patronDia.entrada2||'', salida2: patronDia.salida2||'',
+          notas: '', origen: 'fijo'
+        });
+        cambiado = true;
+      }
+      cursor = addDaysStr(cursor, 1);
+    }
+    if(hf.generadoHasta !== limite){ hf.generadoHasta = limite; cambiado = true; }
+  });
+  if(cambiado) saveDB();
+}
+
 function renderHorarios(){
+  generarTurnosFijos();
   const box = document.getElementById('horarios-content');
   box.innerHTML = `
     <nav class="ge-tab-row">
@@ -35152,6 +35245,10 @@ async function saveTurno(id){
   // auditoría debe decir "editado", no "creado".
   const wasNew = !turno;
   if(turno){
+    // Editar a mano un turno que había puesto el horario fijo lo "suelta"
+    // del patrón para siempre: ni una regeneración futura ni un cambio del
+    // patrón general de este empleado vuelven a tocar este día concreto.
+    delete turno.origen;
     Object.assign(turno, data);
   } else {
     turno = {id: genId(), ...data};
@@ -35198,7 +35295,7 @@ function logPersonalEvent(type, params){
   // que también salga en el registro general. "Resetear PIN" es la única
   // de estas cuatro que de verdad duele si la hace quien no debe.
   const p = params || {};
-  const typeLabel = {shiftCreated:t('audit.personal.shiftCreated'), shiftEdited:t('audit.personal.shiftEdited'), shiftDeleted:t('audit.personal.shiftDeleted'), pinReset:t('audit.personal.pinReset'), clockedByOther:t('audit.personal.clockedByOther')}[type] || type;
+  const typeLabel = {shiftCreated:t('audit.personal.shiftCreated'), shiftEdited:t('audit.personal.shiftEdited'), shiftDeleted:t('audit.personal.shiftDeleted'), pinReset:t('audit.personal.pinReset'), clockedByOther:t('audit.personal.clockedByOther'), fixedScheduleSet:t('audit.personal.fixedScheduleSet'), fixedScheduleRemoved:t('audit.personal.fixedScheduleRemoved')}[type] || type;
   logAudit('personal', `${typeLabel}: ${p.name||'?'}`, type==='pinReset' ? 'critical' : 'normal');
 }
 
@@ -35215,6 +35312,8 @@ function formatPersonalLogEntry(e){
     case 'shiftDeleted': return t('personalLog.shiftDeleted').replace('${detail}', shiftDetail);
     case 'pinReset': return t('personalLog.pinReset').replace('${name}', p.name);
     case 'clockedByOther': return t('personalLog.clockedByOther').replace('${name}', p.name).replace('${action}', p.action==='entrada'?t('hr2.clockIn'):t('hr2.clockOut')).replace('${via}', p.via==='owner_session'?t('common.owner'):t('label.businessPin'));
+    case 'fixedScheduleSet': return t('personalLog.fixedScheduleSet').replace('${name}', p.name);
+    case 'fixedScheduleRemoved': return t('personalLog.fixedScheduleRemoved').replace('${name}', p.name);
     default: return '';
   }
 }
@@ -35439,6 +35538,7 @@ function renderHorariosPersonal(){
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="owner-strict btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
         ${allEmps.length ? `<button class="owner-strict btn" onclick="openBulkTurnoModal()"><i class="ti ti-calendar-plus"></i> ${t('title.assignShiftsByPeriod')}</button>` : ''}
+        ${allEmps.length ? `<button class="owner-strict btn" onclick="openHorarioFijoModal()"><i class="ti ti-repeat"></i> ${t('title.fixedSchedule')}</button>` : ''}
         <button class="owner-strict btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
@@ -35449,6 +35549,137 @@ function renderHorariosPersonal(){
     </div>` : ''}
     ${emps.length ? listHtml : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
   `;
+}
+
+function horarioFijoDiaRowHtml(i, dia){
+  const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===dia.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
+  const noHorario = ['D','V','B'].includes(dia.tipo);
+  const isPartido = dia.tipo === 'P';
+  return `
+    <div class="field-row" style="align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px">
+      <div class="field" style="flex:0 0 90px">
+        <label>${t('common.day')}</label>
+        <div style="font-weight:700;padding:11px 0">${WEEK_DAYS[i]}</div>
+      </div>
+      <div class="field" style="flex:1;min-width:140px">
+        <label>${t('hr2.shiftType')}</label>
+        <select id="hf-tipo-${i}" onchange="horarioFijoTipoChanged(${i})">${tipoOptions}</select>
+      </div>
+      <div class="field" id="hf-horas-${i}" style="display:${noHorario?'none':'flex'};gap:8px;flex:2;min-width:220px">
+        <div style="flex:1">
+          <label>${t('hr2.clockIn')}</label>
+          <input type="time" id="hf-entrada-${i}" value="${dia.entrada||'09:00'}">
+        </div>
+        <div style="flex:1">
+          <label>${t('hr2.clockOut')}</label>
+          <input type="time" id="hf-salida-${i}" value="${dia.salida||'17:00'}">
+        </div>
+        <div id="hf-partido-${i}" style="display:${isPartido?'flex':'none'};gap:8px;flex:2">
+          <div style="flex:1">
+            <label>${t('hr2.entryAfternoon')}</label>
+            <input type="time" id="hf-entrada2-${i}" value="${dia.entrada2||'16:00'}">
+          </div>
+          <div style="flex:1">
+            <label>${t('hr2.exitAfternoon')}</label>
+            <input type="time" id="hf-salida2-${i}" value="${dia.salida2||'23:00'}">
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+function horarioFijoTipoChanged(i){
+  const tipo = document.getElementById(`hf-tipo-${i}`).value;
+  const noHorario = ['D','V','B'].includes(tipo);
+  const isPartido = tipo === 'P';
+  document.getElementById(`hf-horas-${i}`).style.display = noHorario ? 'none' : 'flex';
+  document.getElementById(`hf-partido-${i}`).style.display = isPartido ? 'flex' : 'none';
+}
+
+// El patrón por defecto de un empleado nuevo se deja TODO en descanso: no
+// se inventa un horario -de lunes a viernes, por ejemplo- que quizás no
+// tenga nada que ver con lo que de verdad trabaja.
+function horarioFijoPatronVacio(){
+  return Array.from({length:7}, () => ({tipo:'D', entrada:'', salida:'', entrada2:'', salida2:''}));
+}
+function openHorarioFijoModal(employeeId){
+  if(!DB.employees.length){ showToast(t('msg.addEmployeesFirst')); return; }
+  const empId = employeeId || DB.employees[0].id;
+  const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===empId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  const hf = horarioFijoDe(empId);
+  const patron = hf ? hf.patron : horarioFijoPatronVacio();
+
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-repeat"></i> ${t('title.fixedSchedule')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="muted" style="margin-bottom:12px">${t('hr2.fixedScheduleExplain')}</p>
+    <div class="field">
+      <label>${t('th.employee')}</label>
+      <select id="hf-employee" onchange="openHorarioFijoModal(parseInt(this.value))">${empOptions}</select>
+    </div>
+    <div id="hf-dias" style="margin-top:12px">
+      ${patron.map((dia,i) => horarioFijoDiaRowHtml(i, dia)).join('')}
+    </div>
+    <div class="modal-footer">
+      ${hf ? `<button class="btn btn-danger" onclick="quitarHorarioFijo(${empId})">${t('btn.removeFixedSchedule')}</button>` : ''}
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+      <button class="btn btn-primary" onclick="saveHorarioFijo(${empId})">${t("common.save")}</button>
+    </div>
+  `);
+}
+
+async function saveHorarioFijo(employeeId){
+  if(!isOwnerSession() && !editUnlocked) return;
+  const patron = Array.from({length:7}, (_,i) => {
+    const tipo = document.getElementById(`hf-tipo-${i}`).value;
+    const noHorario = ['D','V','B'].includes(tipo);
+    const isPartido = tipo === 'P';
+    return {
+      tipo,
+      entrada: noHorario ? '' : document.getElementById(`hf-entrada-${i}`).value,
+      salida: noHorario ? '' : document.getElementById(`hf-salida-${i}`).value,
+      entrada2: isPartido ? document.getElementById(`hf-entrada2-${i}`).value : '',
+      salida2: isPartido ? document.getElementById(`hf-salida2-${i}`).value : '',
+    };
+  });
+  if(!DB.horariosFijos) DB.horariosFijos = [];
+  let hf = DB.horariosFijos.find(h => h.employeeId===employeeId);
+  // El patrón cambia "desde hoy hacia delante, para siempre" — nunca toca
+  // el pasado. Se borran únicamente los turnos FUTUROS que todavía llevaban
+  // la marca del horario fijo (origen:'fijo'): un día que el hostelero ya
+  // había tocado a mano se queda exactamente como estaba, ver saveTurno.
+  const hoy = todayStr();
+  DB.turnos = (DB.turnos||[]).filter(x => !(x.employeeId===employeeId && x.fecha>=hoy && x.origen==='fijo'));
+  if(hf){
+    hf.patron = patron;
+    hf.activo = true;
+    hf.generadoHasta = addDaysStr(hoy, -1); // fuerza a regenerar desde hoy con el patrón nuevo
+  } else {
+    hf = {id: genId(), employeeId, patron, activo: true, generadoHasta: addDaysStr(hoy, -1)};
+    DB.horariosFijos.push(hf);
+  }
+  generarTurnosFijos();
+  const emp = DB.employees.find(e=>e.id===employeeId);
+  logPersonalEvent('fixedScheduleSet', {name: emp?emp.name:'?'});
+  closeModal();
+  renderHorariosTab();
+  showToast(t('msg.fixedScheduleSaved'));
+}
+
+async function quitarHorarioFijo(employeeId){
+  if(!isOwnerSession() && !editUnlocked) return;
+  if(!(await confirmModal(t('msg.confirmRemoveFixedSchedule')))) return;
+  DB.horariosFijos = (DB.horariosFijos||[]).filter(h => h.employeeId!==employeeId);
+  // Los turnos futuros ya generados se quedan tal cual (no se borran solos):
+  // quitar el horario fijo detiene la generación de MÁS turnos por delante,
+  // no borra lo que ya estaba puesto.
+  const emp = DB.employees.find(e=>e.id===employeeId);
+  logPersonalEvent('fixedScheduleRemoved', {name: emp?emp.name:'?'});
+  saveDB();
+  closeModal();
+  renderHorariosTab();
+  showToast(t('msg.fixedScheduleRemoved'));
 }
 
 function openBulkTurnoModal(employeeId){
@@ -35595,7 +35826,7 @@ function applyBulkTurno(){
       };
     }
     const existing = DB.turnos.find(x => x.employeeId===employeeId && x.fecha===ds);
-    if(existing) Object.assign(existing, data);
+    if(existing){ delete existing.origen; Object.assign(existing, data); } // suelta el día del horario fijo, ver saveTurno
     else DB.turnos.push({id: genId(), employeeId, fecha: ds, ...data});
     count++;
   });
@@ -35769,6 +36000,7 @@ function reallyDeleteEmployee(id, pin){
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);
+  DB.horariosFijos = (DB.horariosFijos||[]).filter(h => h.employeeId!==id);
   liberarPedidosDeRepartidor(id);
   delete DB.shifts[id];
   delete DB.workDistribution[id];

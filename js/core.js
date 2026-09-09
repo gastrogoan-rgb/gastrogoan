@@ -3381,6 +3381,11 @@ const ARRAYS_CON_LAPIDA = new Set([
      turnoSwapRequests y vacationRequests del empleado eliminado — sin
      lápida, resucitaban al sincronizar un dispositivo que aún los tenía. */
   'fichajes', 'turnoSwapRequests', 'vacationRequests',
+  /* Igual para horariosFijos: reallyDeleteEmployee lo borra de verdad al
+     eliminar un empleado, y quitarSchedule también borra el patrón entero
+     al desactivar el horario fijo — sin lápida, resucitaría al sincronizar
+     un dispositivo que todavía lo tuviera. */
+  'horariosFijos',
   /* sales y cashClosures SÍ se borran de verdad: archiveOldData (js/app.js,
      "Mi Negocio" → archivar datos antiguos) hace un filter() real tras
      descargar el JSON. Sin lápida, archivar en un dispositivo mientras otro
@@ -3530,7 +3535,7 @@ function mergeLapidas(local, remoto){
 const MERGEABLE_ARRAYS = new Set([
   'ingredients','recipes','fichas','menuItems','cartas','menus',
   'purchaseOrders','providers','tables','tpvOrders','sales',
-  'cashClosures','employees','turnos','fichajes','promos',
+  'cashClosures','employees','turnos','fichajes','promos','horariosFijos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
   'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations',
@@ -6852,7 +6857,8 @@ function defaultData(){
     cashClosures: [], // {id, fecha, desde, hasta, totales:{Efectivo,Tarjeta,Otro}, total, ticketCount, fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, createdAt}
     employees: [],       // {id, name, rol, color, pin, pinChanged}
     shifts: {},          // { employeeId: ['','','','','','',''] }
-    turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas}
+    turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas, origen:'fijo'|undefined}
+    horariosFijos: [],   // {id, employeeId, patron:[7x {tipo,entrada,salida,entrada2,salida2}|null] (lun..dom), generadoHasta:'YYYY-MM-DD', activo}
     workDistribution: {}, // { employeeId: { platos:[name,...], produccion:{0:[task,...],...,6:[...]} } }
     fichajes: [],        // {id, employeeId, fecha, entrada, salida} — control horario real (entrada/salida)
     promos: [],          // {id, fecha (YYYY-MM-DD), titulo, descripcion} — calendario de promoción/marketing
