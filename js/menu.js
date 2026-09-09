@@ -903,7 +903,14 @@ function confirmAddCartaPlato(secId){
 }
 
 /* ============== Modificadores / extras de plato ============== */
+// Antes solo se podía añadir o borrar: un extra mal escrito o con el
+// precio cambiado (el proveedor sube el queso, por ejemplo) obligaba a
+// borrarlo y crearlo de nuevo, perdiendo su sitio en la lista. El mismo
+// par de campos de abajo hace de "nuevo" o de "editar" según si hay un
+// modificador seleccionado (platoModEditId) — pedido del dueño, 9/09.
+let platoModEditId = null;
 function openPlatoModsModal(secId, platoId){
+  platoModEditId = null;
   openModal(renderPlatoModsModalHtml(secId, platoId));
   setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
 }
@@ -912,6 +919,7 @@ function renderPlatoModsModalHtml(secId, platoId){
   const p = sec.platos.find(x=>x.id===platoId);
   const mods = p.modificadores || [];
   const isBebidas = currentArea()==='sala';
+  const editing = platoModEditId != null ? mods.find(m=>m.id===platoModEditId) : null;
   return `
     <div class="modal-header">
       <h3><i class="ti ti-adjustments"></i> ${t('title.extras')} "${escapeHtml(tItem(p))}"</h3>
@@ -923,42 +931,69 @@ function renderPlatoModsModalHtml(secId, platoId){
         <div class="ge-item">
           <span style="flex:1">${escapeHtml(tItem(m))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
+          <button class="btn btn-sm btn-icon" onclick="startEditPlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removePlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
     <div class="field">
       <label>${t('label.extraName')}</label>
-      <input type="text" id="new-mod-nombre" placeholder="${t('ph.extraNameExample')}">
+      <input type="text" id="new-mod-nombre" placeholder="${t('ph.extraNameExample')}" value="${editing?escapeHtml(editing.nombre):''}">
     </div>
     <div class="field">
       <label>${t('label.extraPrice')}</label>
-      <input type="number" id="new-mod-precio" step="0.01" min="0" value="0">
+      <input type="number" id="new-mod-precio" step="0.01" min="0" value="${editing?editing.precio:0}">
     </div>
     <div class="modal-footer">
+      ${editing ? `<button class="btn" onclick="cancelEditPlatoMod(${secId},${platoId})">${t('common.cancel')}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
-      <button class="btn btn-primary" onclick="addPlatoMod(${secId},${platoId})"><i class="ti ti-plus"></i> ${t('btn.addExtra')}</button>
+      <button class="btn btn-primary" onclick="${editing?`saveEditPlatoMod(${secId},${platoId})`:`addPlatoMod(${secId},${platoId})`}"><i class="ti ${editing?'ti-check':'ti-plus'}"></i> ${editing?t('common.save'):t('btn.addExtra')}</button>
     </div>
   `;
 }
-function addPlatoMod(secId, platoId){
+function readModFormOrToast(){
   const nombre = (document.getElementById('new-mod-nombre').value||'').trim();
-  if(!nombre){ showToast(t('msg.extraNameRequired')); return; }
+  if(!nombre){ showToast(t('msg.extraNameRequired')); return null; }
   const precioStr = document.getElementById('new-mod-precio').value;
   const precio = parseFloat((precioStr||'0').replace(',','.')) || 0;
-  if(precio < 0){ showToast(t('msg.invalidPrice')); return; }
+  if(precio < 0){ showToast(t('msg.invalidPrice')); return null; }
+  return {nombre, precio};
+}
+function addPlatoMod(secId, platoId){
+  const data = readModFormOrToast();
+  if(!data) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   if(!p.modificadores) p.modificadores = [];
-  p.modificadores.push({id: genId(), nombre, precio});
+  p.modificadores.push({id: genId(), ...data});
   openModal(renderPlatoModsModalHtml(secId, platoId));
   setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
+}
+function startEditPlatoMod(secId, platoId, modId){
+  platoModEditId = modId;
+  openModal(renderPlatoModsModalHtml(secId, platoId));
+  setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
+}
+function cancelEditPlatoMod(secId, platoId){
+  platoModEditId = null;
+  openModal(renderPlatoModsModalHtml(secId, platoId));
+}
+function saveEditPlatoMod(secId, platoId){
+  const data = readModFormOrToast();
+  if(!data) return;
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  const m = (p.modificadores||[]).find(x=>x.id===platoModEditId);
+  if(m) Object.assign(m, data);
+  platoModEditId = null;
+  openModal(renderPlatoModsModalHtml(secId, platoId));
 }
 async function removePlatoMod(secId, platoId, modId){
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   p.modificadores = (p.modificadores||[]).filter(m=>m.id!==modId);
+  if(platoModEditId===modId) platoModEditId = null;
   openModal(renderPlatoModsModalHtml(secId, platoId));
 }
 
@@ -1522,14 +1557,25 @@ async function removeMenuOpcion(grupoId, opcionId){
   renderMenuGrupos();
 }
 
+// Mismo criterio que en Carta (openPlatoModsModal): editar un extra ya
+// creado en vez de tener que borrarlo y volver a escribirlo entero.
+let menuOpcionModEditId = null;
 function openMenuOpcionModsModal(grupoId, opcionId){
+  menuOpcionModEditId = null;
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   if(!g) return;
   const o = g.opciones.find(x=>x.id===opcionId);
   if(!o) return;
   if(!o.modificadores) o.modificadores = [];
-  const mods = o.modificadores;
-  openModal(`
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
+  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+}
+function renderMenuOpcionModsModalHtml(grupoId, opcionId){
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g.opciones.find(x=>x.id===opcionId);
+  const mods = o.modificadores || [];
+  const editing = menuOpcionModEditId != null ? mods.find(m=>m.id===menuOpcionModEditId) : null;
+  return `
     <div class="modal-header">
       <h3><i class="ti ti-adjustments"></i> ${t('title.extras')} "${escapeHtml(o.nombre)}"</h3>
       <button class="modal-close" onclick="closeModal();renderMenuGrupos()">&times;</button>
@@ -1540,20 +1586,21 @@ function openMenuOpcionModsModal(grupoId, opcionId){
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(m.nombre)}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
+          <button class="btn btn-sm btn-icon" onclick="startEditMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
     <div class="field-row" style="margin-top:10px">
-      <input type="text" id="new-menu-mod-nombre" placeholder="${t('label.extraName')}" style="flex:1">
-      <input type="number" id="new-menu-mod-precio" placeholder="${t('common.price')}" step="0.01" min="0" style="width:90px">
+      <input type="text" id="new-menu-mod-nombre" placeholder="${t('label.extraName')}" style="flex:1" value="${editing?escapeHtml(editing.nombre):''}">
+      <input type="number" id="new-menu-mod-precio" placeholder="${t('common.price')}" step="0.01" min="0" style="width:90px" value="${editing?editing.precio:''}">
     </div>
     <div class="modal-footer">
+      ${editing ? `<button class="btn" onclick="cancelEditMenuOpcionMod(${grupoId},${opcionId})">${t('common.cancel')}</button>` : ''}
       <button class="btn" onclick="closeModal();renderMenuGrupos()">${t('common.close')}</button>
-      <button class="btn btn-primary" onclick="addMenuOpcionMod(${grupoId},${opcionId})"><i class="ti ti-plus"></i> ${t('btn.addExtra')}</button>
+      <button class="btn btn-primary" onclick="${editing?`saveEditMenuOpcionMod(${grupoId},${opcionId})`:`addMenuOpcionMod(${grupoId},${opcionId})`}"><i class="ti ${editing?'ti-check':'ti-plus'}"></i> ${editing?t('common.save'):t('btn.addExtra')}</button>
     </div>
-  `);
-  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+  `;
 }
 
 function addMenuOpcionMod(grupoId, opcionId){
@@ -1564,7 +1611,28 @@ function addMenuOpcionMod(grupoId, opcionId){
   const o = g.opciones.find(x=>x.id===opcionId);
   if(!o.modificadores) o.modificadores = [];
   o.modificadores.push({id: genId(), nombre, precio});
-  openMenuOpcionModsModal(grupoId, opcionId);
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
+  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+}
+function startEditMenuOpcionMod(grupoId, opcionId, modId){
+  menuOpcionModEditId = modId;
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
+  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+}
+function cancelEditMenuOpcionMod(grupoId, opcionId){
+  menuOpcionModEditId = null;
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
+}
+function saveEditMenuOpcionMod(grupoId, opcionId){
+  const nombre = document.getElementById('new-menu-mod-nombre').value.trim();
+  if(!nombre){ showToast(t('msg.extraNameRequired')); return; }
+  const precio = parseFloat(document.getElementById('new-menu-mod-precio').value) || 0;
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g.opciones.find(x=>x.id===opcionId);
+  const m = (o.modificadores||[]).find(x=>x.id===menuOpcionModEditId);
+  if(m) Object.assign(m, {nombre, precio});
+  menuOpcionModEditId = null;
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
 }
 
 async function removeMenuOpcionMod(grupoId, opcionId, modId){
@@ -1572,6 +1640,7 @@ async function removeMenuOpcionMod(grupoId, opcionId, modId){
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   const o = g.opciones.find(x=>x.id===opcionId);
   o.modificadores = (o.modificadores||[]).filter(m=>m.id!==modId);
-  openMenuOpcionModsModal(grupoId, opcionId);
+  if(menuOpcionModEditId===modId) menuOpcionModEditId = null;
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
 }
 

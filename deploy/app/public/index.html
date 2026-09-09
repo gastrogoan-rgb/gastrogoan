@@ -2926,7 +2926,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '10/09/2026 00:13';
+const GG_BUILD = '10/09/2026 00:28';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -13081,7 +13081,7 @@ const I18N = {
     'label.whoPays': 'Quién paga', 'label.amount': 'Importe', 'btn.finalizeCharge': 'Finalizar cobro',
     'time.now': 'ahora', 'time.minsAgo': 'hace ${n} min',
     'empty.noClosedOrders': 'No hay comandas cerradas todavía.',
-    'kitchen.fromMenu': 'MENÚ',
+    'kitchen.fromMenu': 'MENÚ', 'kitchen.fromCarta': 'CARTA',
     'kitchen.allDelivered': 'Todo entregado', 'kitchen.prepareAll': 'Preparar todo', 'kitchen.deliverAll': 'Entregar todo',
     'kitchen.notFired': 'Sin marchar',
     'label.reservationShort': 'Reserva', 'title.changeWaiter': 'Cambiar camarero/a', 'label.assignWaiter': 'Asignar camarero/a',
@@ -15284,7 +15284,7 @@ const I18N = {
     'label.whoPays': 'Qui paga', 'label.amount': 'Import', 'btn.finalizeCharge': 'Finalitzar cobrament',
     'time.now': 'ara', 'time.minsAgo': 'fa ${n} min',
     'empty.noClosedOrders': 'Encara no hi ha comandes tancades.',
-    'kitchen.fromMenu': 'MENÚ',
+    'kitchen.fromMenu': 'MENÚ', 'kitchen.fromCarta': 'CARTA',
     'kitchen.allDelivered': 'Tot lliurat', 'kitchen.prepareAll': 'Preparar tot', 'kitchen.deliverAll': 'Lliurar tot',
     'kitchen.notFired': 'Sense enviar',
     'label.reservationShort': 'Reserva', 'title.changeWaiter': 'Canviar cambrer/a', 'label.assignWaiter': 'Assignar cambrer/a',
@@ -17488,7 +17488,7 @@ const I18N = {
     'label.whoPays': 'Who pays', 'label.amount': 'Amount', 'btn.finalizeCharge': 'Finalize charge',
     'time.now': 'now', 'time.minsAgo': '${n} min ago',
     'empty.noClosedOrders': 'No closed orders yet.',
-    'kitchen.fromMenu': 'SET MENU',
+    'kitchen.fromMenu': 'SET MENU', 'kitchen.fromCarta': 'A LA CARTE',
     'kitchen.allDelivered': 'All delivered', 'kitchen.prepareAll': 'Prepare all', 'kitchen.deliverAll': 'Deliver all',
     'kitchen.notFired': 'Not fired',
     'label.reservationShort': 'Reservation', 'title.changeWaiter': 'Change waiter', 'label.assignWaiter': 'Assign waiter',
@@ -24536,7 +24536,14 @@ function confirmAddCartaPlato(secId){
 }
 
 /* ============== Modificadores / extras de plato ============== */
+// Antes solo se podía añadir o borrar: un extra mal escrito o con el
+// precio cambiado (el proveedor sube el queso, por ejemplo) obligaba a
+// borrarlo y crearlo de nuevo, perdiendo su sitio en la lista. El mismo
+// par de campos de abajo hace de "nuevo" o de "editar" según si hay un
+// modificador seleccionado (platoModEditId) — pedido del dueño, 9/09.
+let platoModEditId = null;
 function openPlatoModsModal(secId, platoId){
+  platoModEditId = null;
   openModal(renderPlatoModsModalHtml(secId, platoId));
   setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
 }
@@ -24545,6 +24552,7 @@ function renderPlatoModsModalHtml(secId, platoId){
   const p = sec.platos.find(x=>x.id===platoId);
   const mods = p.modificadores || [];
   const isBebidas = currentArea()==='sala';
+  const editing = platoModEditId != null ? mods.find(m=>m.id===platoModEditId) : null;
   return `
     <div class="modal-header">
       <h3><i class="ti ti-adjustments"></i> ${t('title.extras')} "${escapeHtml(tItem(p))}"</h3>
@@ -24556,42 +24564,69 @@ function renderPlatoModsModalHtml(secId, platoId){
         <div class="ge-item">
           <span style="flex:1">${escapeHtml(tItem(m))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
+          <button class="btn btn-sm btn-icon" onclick="startEditPlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removePlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
     <div class="field">
       <label>${t('label.extraName')}</label>
-      <input type="text" id="new-mod-nombre" placeholder="${t('ph.extraNameExample')}">
+      <input type="text" id="new-mod-nombre" placeholder="${t('ph.extraNameExample')}" value="${editing?escapeHtml(editing.nombre):''}">
     </div>
     <div class="field">
       <label>${t('label.extraPrice')}</label>
-      <input type="number" id="new-mod-precio" step="0.01" min="0" value="0">
+      <input type="number" id="new-mod-precio" step="0.01" min="0" value="${editing?editing.precio:0}">
     </div>
     <div class="modal-footer">
+      ${editing ? `<button class="btn" onclick="cancelEditPlatoMod(${secId},${platoId})">${t('common.cancel')}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
-      <button class="btn btn-primary" onclick="addPlatoMod(${secId},${platoId})"><i class="ti ti-plus"></i> ${t('btn.addExtra')}</button>
+      <button class="btn btn-primary" onclick="${editing?`saveEditPlatoMod(${secId},${platoId})`:`addPlatoMod(${secId},${platoId})`}"><i class="ti ${editing?'ti-check':'ti-plus'}"></i> ${editing?t('common.save'):t('btn.addExtra')}</button>
     </div>
   `;
 }
-function addPlatoMod(secId, platoId){
+function readModFormOrToast(){
   const nombre = (document.getElementById('new-mod-nombre').value||'').trim();
-  if(!nombre){ showToast(t('msg.extraNameRequired')); return; }
+  if(!nombre){ showToast(t('msg.extraNameRequired')); return null; }
   const precioStr = document.getElementById('new-mod-precio').value;
   const precio = parseFloat((precioStr||'0').replace(',','.')) || 0;
-  if(precio < 0){ showToast(t('msg.invalidPrice')); return; }
+  if(precio < 0){ showToast(t('msg.invalidPrice')); return null; }
+  return {nombre, precio};
+}
+function addPlatoMod(secId, platoId){
+  const data = readModFormOrToast();
+  if(!data) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   if(!p.modificadores) p.modificadores = [];
-  p.modificadores.push({id: genId(), nombre, precio});
+  p.modificadores.push({id: genId(), ...data});
   openModal(renderPlatoModsModalHtml(secId, platoId));
   setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
+}
+function startEditPlatoMod(secId, platoId, modId){
+  platoModEditId = modId;
+  openModal(renderPlatoModsModalHtml(secId, platoId));
+  setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
+}
+function cancelEditPlatoMod(secId, platoId){
+  platoModEditId = null;
+  openModal(renderPlatoModsModalHtml(secId, platoId));
+}
+function saveEditPlatoMod(secId, platoId){
+  const data = readModFormOrToast();
+  if(!data) return;
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  const m = (p.modificadores||[]).find(x=>x.id===platoModEditId);
+  if(m) Object.assign(m, data);
+  platoModEditId = null;
+  openModal(renderPlatoModsModalHtml(secId, platoId));
 }
 async function removePlatoMod(secId, platoId, modId){
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   p.modificadores = (p.modificadores||[]).filter(m=>m.id!==modId);
+  if(platoModEditId===modId) platoModEditId = null;
   openModal(renderPlatoModsModalHtml(secId, platoId));
 }
 
@@ -25155,14 +25190,25 @@ async function removeMenuOpcion(grupoId, opcionId){
   renderMenuGrupos();
 }
 
+// Mismo criterio que en Carta (openPlatoModsModal): editar un extra ya
+// creado en vez de tener que borrarlo y volver a escribirlo entero.
+let menuOpcionModEditId = null;
 function openMenuOpcionModsModal(grupoId, opcionId){
+  menuOpcionModEditId = null;
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   if(!g) return;
   const o = g.opciones.find(x=>x.id===opcionId);
   if(!o) return;
   if(!o.modificadores) o.modificadores = [];
-  const mods = o.modificadores;
-  openModal(`
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
+  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+}
+function renderMenuOpcionModsModalHtml(grupoId, opcionId){
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g.opciones.find(x=>x.id===opcionId);
+  const mods = o.modificadores || [];
+  const editing = menuOpcionModEditId != null ? mods.find(m=>m.id===menuOpcionModEditId) : null;
+  return `
     <div class="modal-header">
       <h3><i class="ti ti-adjustments"></i> ${t('title.extras')} "${escapeHtml(o.nombre)}"</h3>
       <button class="modal-close" onclick="closeModal();renderMenuGrupos()">&times;</button>
@@ -25173,20 +25219,21 @@ function openMenuOpcionModsModal(grupoId, opcionId){
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(m.nombre)}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
+          <button class="btn btn-sm btn-icon" onclick="startEditMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
     <div class="field-row" style="margin-top:10px">
-      <input type="text" id="new-menu-mod-nombre" placeholder="${t('label.extraName')}" style="flex:1">
-      <input type="number" id="new-menu-mod-precio" placeholder="${t('common.price')}" step="0.01" min="0" style="width:90px">
+      <input type="text" id="new-menu-mod-nombre" placeholder="${t('label.extraName')}" style="flex:1" value="${editing?escapeHtml(editing.nombre):''}">
+      <input type="number" id="new-menu-mod-precio" placeholder="${t('common.price')}" step="0.01" min="0" style="width:90px" value="${editing?editing.precio:''}">
     </div>
     <div class="modal-footer">
+      ${editing ? `<button class="btn" onclick="cancelEditMenuOpcionMod(${grupoId},${opcionId})">${t('common.cancel')}</button>` : ''}
       <button class="btn" onclick="closeModal();renderMenuGrupos()">${t('common.close')}</button>
-      <button class="btn btn-primary" onclick="addMenuOpcionMod(${grupoId},${opcionId})"><i class="ti ti-plus"></i> ${t('btn.addExtra')}</button>
+      <button class="btn btn-primary" onclick="${editing?`saveEditMenuOpcionMod(${grupoId},${opcionId})`:`addMenuOpcionMod(${grupoId},${opcionId})`}"><i class="ti ${editing?'ti-check':'ti-plus'}"></i> ${editing?t('common.save'):t('btn.addExtra')}</button>
     </div>
-  `);
-  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+  `;
 }
 
 function addMenuOpcionMod(grupoId, opcionId){
@@ -25197,7 +25244,28 @@ function addMenuOpcionMod(grupoId, opcionId){
   const o = g.opciones.find(x=>x.id===opcionId);
   if(!o.modificadores) o.modificadores = [];
   o.modificadores.push({id: genId(), nombre, precio});
-  openMenuOpcionModsModal(grupoId, opcionId);
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
+  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+}
+function startEditMenuOpcionMod(grupoId, opcionId, modId){
+  menuOpcionModEditId = modId;
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
+  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+}
+function cancelEditMenuOpcionMod(grupoId, opcionId){
+  menuOpcionModEditId = null;
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
+}
+function saveEditMenuOpcionMod(grupoId, opcionId){
+  const nombre = document.getElementById('new-menu-mod-nombre').value.trim();
+  if(!nombre){ showToast(t('msg.extraNameRequired')); return; }
+  const precio = parseFloat(document.getElementById('new-menu-mod-precio').value) || 0;
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g.opciones.find(x=>x.id===opcionId);
+  const m = (o.modificadores||[]).find(x=>x.id===menuOpcionModEditId);
+  if(m) Object.assign(m, {nombre, precio});
+  menuOpcionModEditId = null;
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
 }
 
 async function removeMenuOpcionMod(grupoId, opcionId, modId){
@@ -25205,7 +25273,8 @@ async function removeMenuOpcionMod(grupoId, opcionId, modId){
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   const o = g.opciones.find(x=>x.id===opcionId);
   o.modificadores = (o.modificadores||[]).filter(m=>m.id!==modId);
-  openMenuOpcionModsModal(grupoId, opcionId);
+  if(menuOpcionModEditId===modId) menuOpcionModEditId = null;
+  openModal(renderMenuOpcionModsModalHtml(grupoId, opcionId));
 }
 /* ============================================================
    TPV — Comandas, mesas y tickets
@@ -28247,6 +28316,20 @@ function renderMarkDishOutModal(){
   `, {xl:true});
 }
 
+// De qué carta viene un plato de línea suelta (no de menú) — un plato de
+// carta se guarda en la línea solo con su platoId (el id dentro de la
+// sección de ESA carta), sin más referencia. Se busca en todas las cartas
+// del área porque los ids de plato son únicos en todo el negocio.
+function findCartaNombreForPlatoId(platoId){
+  if(platoId == null) return null;
+  for(const c of (DB.cartas||[])){
+    for(const s of (c.secciones||[])){
+      if((s.platos||[]).some(p => p.id === platoId)) return c.nombre;
+    }
+  }
+  return null;
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -28400,6 +28483,19 @@ function renderComandasCocina(){
       ${groups.map(g => {
         const esElGrupoYaMostrado = soloUnGrupoSinNombre && g === groups[0];
         const groupBtn = esElGrupoYaMostrado ? '' : groupButtonHtml(g);
+        // Igual que en Sala (renderTandaGroupCard): si TODA la tanda es del
+        // mismo menú (o toda de la misma carta), se dice una vez en la
+        // cabecera del grupo en vez de repetir la etiqueta debajo de cada
+        // plato — pedido del dueño, 9/09, tras verlo repetido 3 veces en un
+        // menú de 3 platos. Si se mezclan varios menús/cartas en la misma
+        // tanda (raro, pero posible), cada línea conserva su propia etiqueta.
+        const nombresMenuEnGrupo = [...new Set(g.lines.filter(({line}) => line.menuId).map(({line}) => {
+          const m = (DB.menus||[]).find(x => x.id === line.menuId);
+          return m ? m.nombre : null;
+        }).filter(Boolean))];
+        const nombreMenuUnico = nombresMenuEnGrupo.length === 1 ? nombresMenuEnGrupo[0] : null;
+        const nombresCartaEnGrupo = [...new Set(g.lines.filter(({line}) => !line.menuId).map(({line}) => findCartaNombreForPlatoId(line.platoId)).filter(Boolean))];
+        const nombreCartaUnico = nombresCartaEnGrupo.length === 1 ? nombresCartaEnGrupo[0] : null;
         return `
         <div style="margin-bottom:6px;${esElGrupoYaMostrado ? '' : 'padding-top:6px;border-top:1px solid var(--border)'}">
           ${esElGrupoYaMostrado ? '' : `
@@ -28407,6 +28503,11 @@ function renderComandasCocina(){
             ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
             ${groupBtn}
           </div>`}
+          ${nombreMenuUnico || nombreCartaUnico ? `
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+            ${nombreMenuUnico ? `<span class="badge badge-purple" style="font-size:10.5px">${t('kitchen.fromMenu')}: ${escapeHtml(nombreMenuUnico)}</span>` : ''}
+            ${nombreCartaUnico ? `<span class="badge badge-blue" style="font-size:10.5px">${t('kitchen.fromCarta')}: ${escapeHtml(nombreCartaUnico)}</span>` : ''}
+          </div>` : ''}
           ${g.lines.map(({line, idx}) => {
             // En cocina importa distinguir de un vistazo un plato suelto de la
             // carta de uno que forma parte de un menú cerrado: el del menú
@@ -28414,16 +28515,21 @@ function renderComandasCocina(){
             // esté listo. El menú ya viaja en la línea (line.menuId), así que
             // se marca con una etiqueta bien visible en vez de dejarlo
             // escondido dentro de la nota en gris, donde se pasa por alto.
-            const menuNombre = line.menuId ? ((DB.menus||[]).find(m => m.id === line.menuId)||{}).nombre : null;
+            // Si ya se dijo una vez en la cabecera del grupo (arriba), no se
+            // repite por línea.
+            const menuNombre = (!nombreMenuUnico && line.menuId) ? ((DB.menus||[]).find(m => m.id === line.menuId)||{}).nombre : null;
+            const cartaNombre = (!nombreCartaUnico && !line.menuId) ? findCartaNombreForPlatoId(line.platoId) : null;
             // La nota de una línea de menú es autogenerada ("Menú: X"): si ya
-            // se enseña la etiqueta, repetirla debajo sobra. Una nota escrita
-            // a mano por el camarero sí se sigue mostrando.
-            const notaEsAutoMenu = menuNombre && line.notas === `Menú: ${menuNombre}`;
+            // se enseña la etiqueta (en la línea o en la cabecera del grupo),
+            // repetirla debajo sobra. Una nota escrita a mano por el
+            // camarero sí se sigue mostrando.
+            const notaEsAutoMenu = (menuNombre || nombreMenuUnico) && line.notas === `Menú: ${menuNombre || nombreMenuUnico}`;
             return `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
               <div style="flex:1;min-width:0;overflow-wrap:anywhere">
                 <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
                 ${menuNombre ? `<span class="badge badge-purple" style="margin-left:6px;font-size:10.5px">${t('kitchen.fromMenu')}: ${escapeHtml(menuNombre)}</span>` : ''}
+                ${cartaNombre ? `<span class="badge badge-blue" style="margin-left:6px;font-size:10.5px">${t('kitchen.fromCarta')}: ${escapeHtml(cartaNombre)}</span>` : ''}
                 ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
               ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`

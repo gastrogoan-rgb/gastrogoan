@@ -3038,6 +3038,20 @@ function renderMarkDishOutModal(){
   `, {xl:true});
 }
 
+// De qué carta viene un plato de línea suelta (no de menú) — un plato de
+// carta se guarda en la línea solo con su platoId (el id dentro de la
+// sección de ESA carta), sin más referencia. Se busca en todas las cartas
+// del área porque los ids de plato son únicos en todo el negocio.
+function findCartaNombreForPlatoId(platoId){
+  if(platoId == null) return null;
+  for(const c of (DB.cartas||[])){
+    for(const s of (c.secciones||[])){
+      if((s.platos||[]).some(p => p.id === platoId)) return c.nombre;
+    }
+  }
+  return null;
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -3191,6 +3205,19 @@ function renderComandasCocina(){
       ${groups.map(g => {
         const esElGrupoYaMostrado = soloUnGrupoSinNombre && g === groups[0];
         const groupBtn = esElGrupoYaMostrado ? '' : groupButtonHtml(g);
+        // Igual que en Sala (renderTandaGroupCard): si TODA la tanda es del
+        // mismo menú (o toda de la misma carta), se dice una vez en la
+        // cabecera del grupo en vez de repetir la etiqueta debajo de cada
+        // plato — pedido del dueño, 9/09, tras verlo repetido 3 veces en un
+        // menú de 3 platos. Si se mezclan varios menús/cartas en la misma
+        // tanda (raro, pero posible), cada línea conserva su propia etiqueta.
+        const nombresMenuEnGrupo = [...new Set(g.lines.filter(({line}) => line.menuId).map(({line}) => {
+          const m = (DB.menus||[]).find(x => x.id === line.menuId);
+          return m ? m.nombre : null;
+        }).filter(Boolean))];
+        const nombreMenuUnico = nombresMenuEnGrupo.length === 1 ? nombresMenuEnGrupo[0] : null;
+        const nombresCartaEnGrupo = [...new Set(g.lines.filter(({line}) => !line.menuId).map(({line}) => findCartaNombreForPlatoId(line.platoId)).filter(Boolean))];
+        const nombreCartaUnico = nombresCartaEnGrupo.length === 1 ? nombresCartaEnGrupo[0] : null;
         return `
         <div style="margin-bottom:6px;${esElGrupoYaMostrado ? '' : 'padding-top:6px;border-top:1px solid var(--border)'}">
           ${esElGrupoYaMostrado ? '' : `
@@ -3198,6 +3225,11 @@ function renderComandasCocina(){
             ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
             ${groupBtn}
           </div>`}
+          ${nombreMenuUnico || nombreCartaUnico ? `
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+            ${nombreMenuUnico ? `<span class="badge badge-purple" style="font-size:10.5px">${t('kitchen.fromMenu')}: ${escapeHtml(nombreMenuUnico)}</span>` : ''}
+            ${nombreCartaUnico ? `<span class="badge badge-blue" style="font-size:10.5px">${t('kitchen.fromCarta')}: ${escapeHtml(nombreCartaUnico)}</span>` : ''}
+          </div>` : ''}
           ${g.lines.map(({line, idx}) => {
             // En cocina importa distinguir de un vistazo un plato suelto de la
             // carta de uno que forma parte de un menú cerrado: el del menú
@@ -3205,16 +3237,21 @@ function renderComandasCocina(){
             // esté listo. El menú ya viaja en la línea (line.menuId), así que
             // se marca con una etiqueta bien visible en vez de dejarlo
             // escondido dentro de la nota en gris, donde se pasa por alto.
-            const menuNombre = line.menuId ? ((DB.menus||[]).find(m => m.id === line.menuId)||{}).nombre : null;
+            // Si ya se dijo una vez en la cabecera del grupo (arriba), no se
+            // repite por línea.
+            const menuNombre = (!nombreMenuUnico && line.menuId) ? ((DB.menus||[]).find(m => m.id === line.menuId)||{}).nombre : null;
+            const cartaNombre = (!nombreCartaUnico && !line.menuId) ? findCartaNombreForPlatoId(line.platoId) : null;
             // La nota de una línea de menú es autogenerada ("Menú: X"): si ya
-            // se enseña la etiqueta, repetirla debajo sobra. Una nota escrita
-            // a mano por el camarero sí se sigue mostrando.
-            const notaEsAutoMenu = menuNombre && line.notas === `Menú: ${menuNombre}`;
+            // se enseña la etiqueta (en la línea o en la cabecera del grupo),
+            // repetirla debajo sobra. Una nota escrita a mano por el
+            // camarero sí se sigue mostrando.
+            const notaEsAutoMenu = (menuNombre || nombreMenuUnico) && line.notas === `Menú: ${menuNombre || nombreMenuUnico}`;
             return `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
               <div style="flex:1;min-width:0;overflow-wrap:anywhere">
                 <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
                 ${menuNombre ? `<span class="badge badge-purple" style="margin-left:6px;font-size:10.5px">${t('kitchen.fromMenu')}: ${escapeHtml(menuNombre)}</span>` : ''}
+                ${cartaNombre ? `<span class="badge badge-blue" style="margin-left:6px;font-size:10.5px">${t('kitchen.fromCarta')}: ${escapeHtml(cartaNombre)}</span>` : ''}
                 ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
               ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
