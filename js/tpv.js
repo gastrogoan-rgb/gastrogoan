@@ -3149,12 +3149,6 @@ function renderComandasCocina(){
   }
 
   box.innerHTML = tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines}) => {
-    const tandaOrder = [...new Set(allLines.map(({line}) => line.tanda || ''))];
-    const groups = tandaOrder.map(t => ({
-      tanda: t,
-      lines: allLines.filter(({line}) => (line.tanda||'') === t)
-    })).filter(g => g.lines.length);
-
     const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
     const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
     const mins = minutesSince(new Date(minMs).toISOString());
@@ -3183,13 +3177,83 @@ function renderComandasCocina(){
       if(hasPreparando) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
       return '';
     };
-    // El caso normal (sin tandas nombradas) es UN solo grupo sin nombre: su
-    // botón de "Preparar todo" subía a una fila propia entera, dejando un
-    // hueco vacío a su izquierda donde no había ninguna tanda que mostrar.
-    // Se sube a la misma fila que el título del pedido — pedido del dueño,
-    // 9/09. Con varias tandas de verdad (con nombre) cada una conserva su
-    // propia fila con su botón, porque ahí sí hace falta distinguirlas.
-    const soloUnGrupoSinNombre = groups.length === 1 && !groups[0].tanda;
+    const renderLineaHtml = (bloque) => ({line, idx}) => {
+      // La nota es autogenerada al añadir el plato desde un menú ("Menú:
+      // X"): si el nombre ya se dice una vez en la cabecera del bloque,
+      // repetirla aquí sobra. Una nota escrita a mano por el camarero
+      // (cualquier otro texto) se sigue mostrando siempre.
+      const notaEsAutoDelBloque = bloque.tipo === 'menu' && bloque.nombre && line.notas === `Menú: ${bloque.nombre}`;
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
+        <div style="flex:1;min-width:0;overflow-wrap:anywhere">
+          <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+          ${line.notas && !notaEsAutoDelBloque ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
+        </div>
+        ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
+        : line.estado==='cocina' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
+        : line.estado==='preparando' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
+        : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
+        : `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
+      </div>
+    `;
+    };
+    // Dentro de un bloque (una carta o un menú) las líneas se siguen
+    // dividiendo por tanda (Primero/Segundos/Postres) si las hay, cada una
+    // con su propio botón de "Preparar todo" — el bloque solo agrupa DE
+    // QUÉ viene cada cosa, no sustituye a la tanda.
+    const renderBloqueLineas = (bloque, ocultarCabeceraDelUnicoGrupo) => {
+      const lineasBloque = bloque.lineas;
+      const tandaOrder = [...new Set(lineasBloque.map(({line}) => line.tanda || ''))];
+      const grupos = tandaOrder.map(tt => ({
+        tanda: tt,
+        lines: lineasBloque.filter(({line}) => (line.tanda||'') === tt)
+      })).filter(g => g.lines.length);
+      const soloUnGrupoSinNombre = grupos.length === 1 && !grupos[0].tanda;
+      return grupos.map(g => {
+        const esElGrupoYaMostrado = soloUnGrupoSinNombre && g === grupos[0] && ocultarCabeceraDelUnicoGrupo;
+        return `
+        <div style="margin-bottom:6px;${esElGrupoYaMostrado ? '' : 'padding-top:6px;border-top:1px solid var(--border)'}">
+          ${esElGrupoYaMostrado ? '' : `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+            ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
+            ${groupButtonHtml(g)}
+          </div>`}
+          ${g.lines.map(renderLineaHtml(bloque)).join('')}
+        </div>`;
+      }).join('');
+    };
+    // Lo que pedía el dueño (9/09, tercera vuelta): no basta con no repetir
+    // el nombre — hay que agrupar TODO lo de cada carta o menú junto, en
+    // bloques bien separados: primero la carta (con todas sus opciones),
+    // luego cada menú (con todas las suyas), en vez de mezclarlo todo por
+    // tandas sueltas donde el nombre podía acabar en cualquier sitio.
+    const bloques = [];
+    allLines.forEach(item => {
+      const { line } = item;
+      let key, tipo, nombre;
+      if(line.menuId){
+        tipo = 'menu';
+        const m = (DB.menus||[]).find(x => x.id === line.menuId);
+        nombre = m ? m.nombre : null;
+        key = 'menu:' + line.menuId;
+      }else{
+        tipo = 'carta';
+        nombre = findCartaNombreForPlatoId(line.platoId);
+        key = 'carta:' + (nombre || '');
+      }
+      let bloque = bloques.find(b => b.key === key);
+      if(!bloque){ bloque = {key, tipo, nombre, lineas: []}; bloques.push(bloque); }
+      bloque.lineas.push(item);
+    });
+    // Orden pedido: primero la(s) carta(s), después cada menú por separado.
+    bloques.sort((a,b) => (a.tipo==='carta'?0:1) - (b.tipo==='carta'?0:1));
+    // Si solo hay UN bloque sin nombre que decir (p.ej. todo suelto de una
+    // carta que no se pudo identificar) y ese bloque tiene una sola tanda
+    // sin nombre, el botón de "Preparar todo" sube junto al título del
+    // pedido — mismo criterio de siempre para no dejar una fila vacía.
+    const unBloqueUnaTandaSinNombre = bloques.length === 1 && !bloques[0].nombre
+      && [...new Set(bloques[0].lineas.map(({line}) => line.tanda || ''))].length === 1
+      && !bloques[0].lineas[0].line.tanda;
     return `
     <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
@@ -3197,72 +3261,20 @@ function renderComandasCocina(){
           <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
         </div>
         <div style="display:flex;align-items:center;gap:6px">
-          ${soloUnGrupoSinNombre ? groupButtonHtml(groups[0]) : ''}
+          ${unBloqueUnaTandaSinNombre ? groupButtonHtml({tanda:'', lines: bloques[0].lineas}) : ''}
           ${urgencyBadge(mins)}
         </div>
       </div>
       ${orderAllergyWarningHtml(order)}
-      ${groups.map(g => {
-        const esElGrupoYaMostrado = soloUnGrupoSinNombre && g === groups[0];
-        const groupBtn = esElGrupoYaMostrado ? '' : groupButtonHtml(g);
-        // Igual que en Sala (renderTandaGroupCard): si TODA la tanda es del
-        // mismo menú (o toda de la misma carta), se dice una vez en la
-        // cabecera del grupo en vez de repetir la etiqueta debajo de cada
-        // plato — pedido del dueño, 9/09, tras verlo repetido 3 veces en un
-        // menú de 3 platos. Si se mezclan varios menús/cartas en la misma
-        // tanda (raro, pero posible), cada línea conserva su propia etiqueta.
-        const nombresMenuEnGrupo = [...new Set(g.lines.filter(({line}) => line.menuId).map(({line}) => {
-          const m = (DB.menus||[]).find(x => x.id === line.menuId);
-          return m ? m.nombre : null;
-        }).filter(Boolean))];
-        const nombreMenuUnico = nombresMenuEnGrupo.length === 1 ? nombresMenuEnGrupo[0] : null;
-        const nombresCartaEnGrupo = [...new Set(g.lines.filter(({line}) => !line.menuId).map(({line}) => findCartaNombreForPlatoId(line.platoId)).filter(Boolean))];
-        const nombreCartaUnico = nombresCartaEnGrupo.length === 1 ? nombresCartaEnGrupo[0] : null;
-        return `
-        <div style="margin-bottom:6px;${esElGrupoYaMostrado ? '' : 'padding-top:6px;border-top:1px solid var(--border)'}">
-          ${esElGrupoYaMostrado ? '' : `
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-            ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
-            ${groupBtn}
-          </div>`}
-          ${nombreMenuUnico || nombreCartaUnico ? `
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
-            ${nombreMenuUnico ? `<span class="badge badge-purple" style="font-size:10.5px">${t('kitchen.fromMenu')}: ${escapeHtml(nombreMenuUnico)}</span>` : ''}
-            ${nombreCartaUnico ? `<span class="badge badge-blue" style="font-size:10.5px">${t('kitchen.fromCarta')}: ${escapeHtml(nombreCartaUnico)}</span>` : ''}
+      ${bloques.map((bloque, i) => `
+        <div style="${i>0 ? 'margin-top:10px;padding-top:10px;border-top:2px solid var(--border)' : ''}">
+          ${bloque.nombre ? `<div style="font-weight:700;font-size:12.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+            <i class="ti ${bloque.tipo==='menu'?'ti-list-details':'ti-tools-kitchen-2'}" style="color:${bloque.tipo==='menu'?'var(--purple,#7C3AED)':'var(--blue,#4E5A63)'}"></i>
+            ${escapeHtml(bloque.nombre)}
           </div>` : ''}
-          ${g.lines.map(({line, idx}) => {
-            // En cocina importa distinguir de un vistazo un plato suelto de la
-            // carta de uno que forma parte de un menú cerrado: el del menú
-            // tiene que salir coordinado con el resto de su menú, no en cuanto
-            // esté listo. El menú ya viaja en la línea (line.menuId), así que
-            // se marca con una etiqueta bien visible en vez de dejarlo
-            // escondido dentro de la nota en gris, donde se pasa por alto.
-            // Si ya se dijo una vez en la cabecera del grupo (arriba), no se
-            // repite por línea.
-            const menuNombre = (!nombreMenuUnico && line.menuId) ? ((DB.menus||[]).find(m => m.id === line.menuId)||{}).nombre : null;
-            const cartaNombre = (!nombreCartaUnico && !line.menuId) ? findCartaNombreForPlatoId(line.platoId) : null;
-            // La nota de una línea de menú es autogenerada ("Menú: X"): si ya
-            // se enseña la etiqueta (en la línea o en la cabecera del grupo),
-            // repetirla debajo sobra. Una nota escrita a mano por el
-            // camarero sí se sigue mostrando.
-            const notaEsAutoMenu = (menuNombre || nombreMenuUnico) && line.notas === `Menú: ${menuNombre || nombreMenuUnico}`;
-            return `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
-              <div style="flex:1;min-width:0;overflow-wrap:anywhere">
-                <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-                ${menuNombre ? `<span class="badge badge-purple" style="margin-left:6px;font-size:10.5px">${t('kitchen.fromMenu')}: ${escapeHtml(menuNombre)}</span>` : ''}
-                ${cartaNombre ? `<span class="badge badge-blue" style="margin-left:6px;font-size:10.5px">${t('kitchen.fromCarta')}: ${escapeHtml(cartaNombre)}</span>` : ''}
-                ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
-              </div>
-              ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
-              : line.estado==='cocina' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
-              : line.estado==='preparando' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
-              : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-              : `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
-            </div>
-          `;}).join('')}
+          ${renderBloqueLineas(bloque, unBloqueUnaTandaSinNombre && i===0)}
         </div>
-      `;}).join('')}
+      `).join('')}
     </div>
     `;
   }).join('')}</div>`;
