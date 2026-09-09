@@ -1568,7 +1568,7 @@ const FOLDERS = {
 // coste/margen que no le corresponden. El propietario y quien SÍ tiene
 // permiso de editar (canUnlockEdit) los siguen viendo todos.
 const HIDDEN_MODULES_WHEN_LOCKED = {
-  cocina: ['carta', 'proveedores', 'megalista', 'escandallo'],
+  cocina: ['carta', 'proveedores', 'megalista', 'escandallo', 'idr'],
   sala: ['carta', 'proveedores', 'megalista', 'escandallo']
 };
 const MODULE_FOLDER = {};
