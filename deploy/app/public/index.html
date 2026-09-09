@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '09/09/2026 11:06';
+const GG_BUILD = '09/09/2026 11:31';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11545,6 +11545,13 @@ const I18N = {
     'msg.fixedScheduleSaved': 'Horario fijo guardado. Se aplicará desde hoy en adelante.',
     'msg.confirmRemoveFixedSchedule': '¿Quitar el horario fijo? Los turnos ya generados no se borran, pero no se crearán más automáticamente.',
     'msg.fixedScheduleRemoved': 'Horario fijo quitado.',
+    'label.calendar': 'Calendario', 'title.employeeSchedule': 'Turnos de este empleado',
+    'hr2.followsFixedSchedule': 'Este turno sigue el horario fijo del empleado.',
+    'btn.onlyThisDay': 'Solo este día', 'btn.forever': 'Para siempre',
+    'hr2.chooserFixedDesc': 'Un patrón semanal que se repite solo, para siempre.',
+    'hr2.chooserPeriodDesc': 'Asigna los turnos de unas fechas concretas, sin que se repitan.',
+    'hr2.chooserNoneTitle': 'Sin turnos asignados',
+    'hr2.chooserNoneDesc': 'No hace falta elegir nada ahora: añádelos a mano en el Calendario cuando lo necesites.',
     'common.apply': 'Aplicar', 'label.validPeriod': 'Selecciona un periodo válido.', 'label.holiday': 'Festivo',
     'label.splitShift2Legs': 'Turno partido (2 tramos)',
     'title.editEmployee': 'Editar Empleado', 'title.newEmployee': 'Nuevo Empleado', 'ph.employeeName': 'Nombre del empleado',
@@ -11592,6 +11599,8 @@ const I18N = {
     'label.canUnlockEditMode': 'Puede entrar en modo edición de ${area} con su PIN',
     'msg.canUnlockEditModeDesc': 'Si se activa, esta persona podrá desbloquear el modo edición de su zona usando su propio PIN. La Gestión seguirá exigiendo siempre el PIN del negocio.',
     'label.clockInPin': 'PIN de fichaje', 'msg.employeeSetOwnPin': 'El empleado ya configuró su PIN personal.',
+    'msg.employeeHasFixedSchedule': 'Tiene un horario fijo configurado: se repite cada semana. Puedes revisarlo o cambiarlo aquí.',
+    'msg.employeeNoFixedSchedule': 'No tiene horario fijo. Puedes configurar uno aquí, o seguir añadiendo sus turnos a mano en Horarios.',
     'msg.defaultPinExplainer': 'PIN por defecto (1234) — el empleado deberá cambiarlo al fichar por primera vez.',
     'btn.resetPinTo1234': 'Restablecer PIN a 1234',
     'title.createYourPin': 'Crea tu PIN personal', 'msg.firstClockIn': 'Es tu primer fichaje, ${name}. Por seguridad, crea un PIN personal de 4 dígitos antes de continuar.',
@@ -13721,6 +13730,13 @@ const I18N = {
     'msg.fixedScheduleSaved': 'Horari fix desat. S\'aplicarà des d\'avui en endavant.',
     'msg.confirmRemoveFixedSchedule': 'Vols treure l\'horari fix? Els torns ja generats no s\'esborren, però no se\'n crearan més automàticament.',
     'msg.fixedScheduleRemoved': 'Horari fix tret.',
+    'label.calendar': 'Calendari', 'title.employeeSchedule': 'Torns d\'aquest empleat',
+    'hr2.followsFixedSchedule': 'Aquest torn segueix l\'horari fix de l\'empleat.',
+    'btn.onlyThisDay': 'Només aquest dia', 'btn.forever': 'Per sempre',
+    'hr2.chooserFixedDesc': 'Un patró setmanal que es repeteix sol, per sempre.',
+    'hr2.chooserPeriodDesc': 'Assigna els torns d\'unes dates concretes, sense que es repeteixin.',
+    'hr2.chooserNoneTitle': 'Sense torns assignats',
+    'hr2.chooserNoneDesc': 'No cal triar res ara: afegeix-los a mà al Calendari quan ho necessitis.',
     'common.apply': 'Aplicar', 'label.validPeriod': 'Selecciona un període vàlid.', 'label.holiday': 'Festiu',
     'label.splitShift2Legs': 'Torn partit (2 trams)',
     'title.editEmployee': 'Editar Empleat', 'title.newEmployee': 'Nou Empleat', 'ph.employeeName': 'Nom de l\'empleat',
@@ -13768,6 +13784,8 @@ const I18N = {
     'label.canUnlockEditMode': 'Pot entrar en mode edició de ${area} amb el seu PIN',
     'msg.canUnlockEditModeDesc': 'Si s\'activa, aquesta persona podrà desbloquejar el mode edició de la seva zona amb el seu propi PIN. La Gestió seguirà exigint sempre el PIN del negoci.',
     'label.clockInPin': 'PIN de fitxatge', 'msg.employeeSetOwnPin': 'L\'empleat ja ha configurat el seu PIN personal.',
+    'msg.employeeHasFixedSchedule': 'Té un horari fix configurat: es repeteix cada setmana. Pots revisar-lo o canviar-lo aquí.',
+    'msg.employeeNoFixedSchedule': 'No té horari fix. Pots configurar-ne un aquí, o seguir afegint els seus torns a mà a Horaris.',
     'msg.defaultPinExplainer': 'PIN per defecte (1234) — l\'empleat l\'haurà de canviar en fitxar per primera vegada.',
     'btn.resetPinTo1234': 'Restablir PIN a 1234',
     'title.createYourPin': 'Crea el teu PIN personal', 'msg.firstClockIn': 'És el teu primer fitxatge, ${name}. Per seguretat, crea un PIN personal de 4 dígits abans de continuar.',
@@ -15897,6 +15915,13 @@ const I18N = {
     'msg.fixedScheduleSaved': 'Fixed schedule saved. It will apply from today onward.',
     'msg.confirmRemoveFixedSchedule': 'Remove the fixed schedule? Shifts already generated won\'t be deleted, but no more will be created automatically.',
     'msg.fixedScheduleRemoved': 'Fixed schedule removed.',
+    'label.calendar': 'Calendar', 'title.employeeSchedule': 'This employee\'s shifts',
+    'hr2.followsFixedSchedule': 'This shift follows the employee\'s fixed schedule.',
+    'btn.onlyThisDay': 'Only this day', 'btn.forever': 'Forever',
+    'hr2.chooserFixedDesc': 'A weekly pattern that repeats on its own, forever.',
+    'hr2.chooserPeriodDesc': 'Assign shifts for specific dates, without repeating.',
+    'hr2.chooserNoneTitle': 'No shifts assigned',
+    'hr2.chooserNoneDesc': 'No need to choose anything now: add them by hand in Calendar whenever you need to.',
     'common.apply': 'Apply', 'label.validPeriod': 'Select a valid period.', 'label.holiday': 'Holiday',
     'label.splitShift2Legs': 'Split shift (2 segments)',
     'title.editEmployee': 'Edit Employee', 'title.newEmployee': 'New Employee', 'ph.employeeName': 'Employee name',
@@ -15944,6 +15969,8 @@ const I18N = {
     'label.canUnlockEditMode': 'Can unlock ${area} edit mode with their PIN',
     'msg.canUnlockEditModeDesc': 'If enabled, this person can unlock edit mode for their area using their own PIN. Gestión will always require the business PIN.',
     'label.clockInPin': 'Clock-in PIN', 'msg.employeeSetOwnPin': 'The employee has already set their own PIN.',
+    'msg.employeeHasFixedSchedule': 'Has a fixed schedule set: it repeats every week. You can review or change it here.',
+    'msg.employeeNoFixedSchedule': 'No fixed schedule set. You can set one up here, or keep adding their shifts by hand in Schedules.',
     'msg.defaultPinExplainer': 'Default PIN (1234) — the employee will need to change it the first time they clock in.',
     'btn.resetPinTo1234': 'Reset PIN to 1234',
     'title.createYourPin': 'Create your personal PIN', 'msg.firstClockIn': 'This is your first clock-in, ${name}. For security, create a personal 4-digit PIN before continuing.',
@@ -34887,30 +34914,48 @@ function renderHorarios(){
   box.innerHTML = `
     <nav class="ge-tab-row">
       <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> ${t('label.staff')}</button>
-      <button class="ge-tab ${horariosTab==='dia'?'active':''}" onclick="setHorariosTab('dia')"><i class="ti ti-calendar-event"></i> ${t('common.day')}</button>
-      <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> ${t('common.week')}</button>
-      <button class="ge-tab ${horariosTab==='mes'?'active':''}" onclick="setHorariosTab('mes')"><i class="ti ti-calendar-month"></i> ${t('common.month')}</button>
+      <button class="ge-tab ${horariosTab==='calendario'?'active':''}" onclick="setHorariosTab('calendario')"><i class="ti ti-calendar"></i> ${t('label.calendar')}</button>
     </nav>
     <div id="horarios-tab-content"></div>
   `;
   renderHorariosTab();
 }
-function setHorariosTab(t){ horariosTab = t; renderHorarios(); }
+function setHorariosTab(tab){ horariosTab = tab; renderHorarios(); }
 function renderHorariosTab(){
   if(horariosTab === 'personal') renderHorariosPersonal();
-  else if(horariosTab === 'dia') renderHorariosDia();
-  else if(horariosTab === 'mes') renderHorariosMes();
+  else renderHorariosCalendario();
+}
+
+// El calendario de Horarios es un único subtab (Día/Semana/Mes), con el
+// mismo interruptor tri-estado que ya usa el calendario de reservas de la
+// web pública — mismo patrón visual, no se inventa uno nuevo.
+let horariosCalView = 'dia';
+function setHorariosCalView(v){ horariosCalView = v; renderHorariosCalendario(); }
+function renderHorariosCalendario(){
+  const box = document.getElementById('horarios-tab-content');
+  if(!box) return;
+  box.innerHTML = `
+    <div class="view-toggle" style="margin-bottom:12px">
+      <button class="btn ${horariosCalView==='dia'?'active':''}" onclick="setHorariosCalView('dia')">${t('common.day')}</button>
+      <button class="btn ${horariosCalView==='semana'?'active':''}" onclick="setHorariosCalView('semana')">${t('common.week')}</button>
+      <button class="btn ${horariosCalView==='mes'?'active':''}" onclick="setHorariosCalView('mes')">${t('common.month')}</button>
+    </div>
+    <div id="horarios-cal-body"></div>
+  `;
+  if(horariosCalView==='dia') renderHorariosDia();
+  else if(horariosCalView==='mes') renderHorariosMes();
   else renderHorariosSemana();
 }
 
 function goToHorariosDia(date){
   horariosDate = date;
-  horariosTab = 'dia';
+  horariosTab = 'calendario';
+  horariosCalView = 'dia';
   renderHorarios();
 }
 
 function renderHorariosDia(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const emps = areaEmployees();
@@ -34982,7 +35027,7 @@ function renderHorariosDia(){
 }
 
 function renderHorariosMes(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const today = new Date();
@@ -35029,7 +35074,7 @@ function renderHorariosMes(){
 }
 
 function renderHorariosSemana(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const emps = areaEmployees();
@@ -35136,12 +35181,17 @@ function openTurnoModal(id, employeeId, fecha){
   const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===state.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
   const noHorario = ['D','V','B'].includes(state.tipo);
   const isPartido = state.tipo === 'P';
+  // Este turno concreto sigue el patrón de un horario fijo activo: al
+  // guardarlo hay que preguntar si el cambio es solo para hoy o para
+  // siempre (todos los ${diaSemana} desde esta fecha) — ver saveTurno.
+  const puedeElegirAlcance = turno && turno.origen === 'fijo' && !!horarioFijoDe(turno.employeeId);
 
   openModal(`
     <div class="modal-header">
       <h3>${state.id ? t('common.edit') : t('common.new')} ${t('hr2.shift')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    ${puedeElegirAlcance ? `<div class="manual-warning" style="margin-bottom:10px"><i class="ti ti-repeat"></i> ${t('hr2.followsFixedSchedule')}</div>` : ''}
     <div class="field-row">
       <div class="field">
         <label>${t('hr2.employee')}</label>
@@ -35190,7 +35240,10 @@ function openTurnoModal(id, employeeId, fecha){
     <div class="modal-footer">
       ${state.id ? `<button class="owner-only btn btn-danger" onclick="deleteTurno(${state.id})">${t("common.delete")}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">${t("common.save")}</button>
+      ${puedeElegirAlcance ? `
+        <button class="btn" onclick="saveTurno(${state.id}, 'dia')">${t('btn.onlyThisDay')}</button>
+        <button class="btn btn-primary" onclick="saveTurno(${state.id}, 'siempre')">${t('btn.forever')}</button>
+      ` : `<button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">${t("common.save")}</button>`}
     </div>
   `);
 }
@@ -35204,7 +35257,27 @@ function turnoTipoChanged(){
   document.getElementById('turno-descanso-msg').style.display = noHorario ? 'block' : 'none';
 }
 
-async function saveTurno(id){
+// "Para siempre": el hostelero cambió el horario de UN día concreto que
+// seguía el patrón fijo y eligió que valga para todos los ${diaSemana}
+// futuros, no solo hoy. Actualiza el propio patrón (el hueco de ESE día de
+// la semana) y, con él, todos los turnos futuros —incluida esta fecha— que
+// SIGAN siendo automáticos para ese mismo día de la semana. Un día que el
+// hostelero ya hubiera tocado a mano en otro momento (aunque fuera el mismo
+// día de la semana) no lleva origen:'fijo' y por tanto no se toca aquí:
+// sigue siendo suyo, como siempre.
+function aplicarCambioPermanentePatron(employeeId, desdeFecha, data){
+  const hf = horarioFijoDe(employeeId);
+  if(!hf) return;
+  const diaSemana = (new Date(desdeFecha+'T00:00:00').getDay() + 6) % 7;
+  hf.patron[diaSemana] = {tipo:data.tipo, entrada:data.entrada, salida:data.salida, entrada2:data.entrada2, salida2:data.salida2};
+  (DB.turnos||[]).forEach(x => {
+    if(x.employeeId!==employeeId || x.origen!=='fijo' || x.fecha < desdeFecha) return;
+    if(((new Date(x.fecha+'T00:00:00').getDay() + 6) % 7) !== diaSemana) return;
+    Object.assign(x, {tipo:data.tipo, entrada:data.entrada, salida:data.salida, entrada2:data.entrada2, salida2:data.salida2});
+  });
+}
+
+async function saveTurno(id, alcance){
   if(!isOwnerSession() && !editUnlocked) return;
   const tipo = document.getElementById('turno-tipo').value;
   const noHorario = ['D','V','B'].includes(tipo);
@@ -35245,11 +35318,18 @@ async function saveTurno(id){
   // auditoría debe decir "editado", no "creado".
   const wasNew = !turno;
   if(turno){
-    // Editar a mano un turno que había puesto el horario fijo lo "suelta"
-    // del patrón para siempre: ni una regeneración futura ni un cambio del
-    // patrón general de este empleado vuelven a tocar este día concreto.
-    delete turno.origen;
-    Object.assign(turno, data);
+    if(alcance === 'siempre' && turno.origen === 'fijo'){
+      // Para siempre: actualiza el patrón y todos los ${diaSemana} futuros
+      // que sigan siendo automáticos. Este turno se queda origen:'fijo'
+      // (lo actualiza el propio bucle de arriba, por ser >= desdeFecha).
+      aplicarCambioPermanentePatron(data.employeeId, data.fecha, data);
+    } else {
+      // Solo este día (o no había patrón que elegir): se suelta del
+      // horario fijo para siempre — ni una regeneración futura ni un
+      // cambio del patrón general de este empleado vuelven a tocarlo.
+      delete turno.origen;
+      Object.assign(turno, data);
+    }
   } else {
     turno = {id: genId(), ...data};
     DB.turnos.push(turno);
@@ -35520,6 +35600,7 @@ function renderHorariosPersonal(){
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
           <button class="owner-strict btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
+          <button class="owner-strict btn btn-sm btn-icon" title="${t('title.employeeSchedule')}" onclick="openEmployeeScheduleChooser(${e.id})"><i class="ti ti-calendar"></i></button>
           <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -35598,6 +35679,37 @@ function horarioFijoTipoChanged(i){
 // El patrón por defecto de un empleado nuevo se deja TODO en descanso: no
 // se inventa un horario -de lunes a viernes, por ejemplo- que quizás no
 // tenga nada que ver con lo que de verdad trabaja.
+// Punto de entrada único, desde la propia tarjeta del empleado, a las tres
+// formas de tener turnos: horario fijo para siempre, asignado por un
+// periodo concreto, o sin nada asignado (se pone a mano en el Calendario
+// cuando haga falta — no hace falta elegir nada para eso, solo cerrar).
+function openEmployeeScheduleChooser(employeeId){
+  const emp = DB.employees.find(e => e.id===employeeId);
+  if(!emp) return;
+  const hf = horarioFijoDe(employeeId);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-calendar"></i> ${escapeHtml(emp.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="muted" style="margin-bottom:14px">${hf ? t('msg.employeeHasFixedSchedule') : t('msg.employeeNoFixedSchedule')}</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();openHorarioFijoModal(${employeeId})">
+        <i class="ti ti-repeat" style="font-size:20px"></i>
+        <span><strong>${t('title.fixedSchedule')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserFixedDesc')}</span></span>
+      </button>
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();openBulkTurnoModal(${employeeId})">
+        <i class="ti ti-calendar-plus" style="font-size:20px"></i>
+        <span><strong>${t('title.assignShiftsByPeriod')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserPeriodDesc')}</span></span>
+      </button>
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();setHorariosTab('calendario')">
+        <i class="ti ti-calendar-event" style="font-size:20px"></i>
+        <span><strong>${t('hr2.chooserNoneTitle')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserNoneDesc')}</span></span>
+      </button>
+    </div>
+  `);
+}
+
 function horarioFijoPatronVacio(){
   return Array.from({length:7}, () => ({tipo:'D', entrada:'', salida:'', entrada2:'', salida2:''}));
 }
