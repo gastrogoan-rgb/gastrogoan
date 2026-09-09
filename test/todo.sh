@@ -83,6 +83,7 @@ lanzar; node test/carrera-sync-dinero.mjs    > "$SALIDA/carrerasyncdinero.txt" 2
 lanzar; node test/horario-fijo.mjs           > "$SALIDA/horariofijo.txt" 2>&1 & P52=$!
 lanzar; node test/confirmacion-pedido-reserva.mjs > "$SALIDA/confirmacion.txt" 2>&1 & P47=$!
 lanzar; node test/aviso-cambio-reserva.mjs  > "$SALIDA/avisocambio.txt" 2>&1 & P48=$!
+lanzar; node test/pedido-solicitud.mjs      > "$SALIDA/pedidosolicitud.txt" 2>&1 & P53=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -147,5 +148,6 @@ espera $P49 "la nube en retraso no deshace ediciones de carta/menú"  "$SALIDA/c
 espera $P50 "la nube en retraso no deshace ediciones de empleados/turnos/fichajes"  "$SALIDA/carrerasyncemp.txt" "casos pasaron"
 espera $P51 "dinero: cobro doble y plato reaparecido siguen protegidos"  "$SALIDA/carrerasyncdinero.txt" "casos pasaron"
 espera $P52 "horario fijo: patrón semanal que se repite, sin pisar ediciones manuales"  "$SALIDA/horariofijo.txt" "casos pasaron"
+espera $P53 "pedir lo que falta: I+D oculto sin edición, solicitud de pedido sin proveedor"  "$SALIDA/pedidosolicitud.txt" "casos pasaron"
 
 exit $FALLOS

@@ -3380,7 +3380,7 @@ const ARRAYS_CON_LAPIDA = new Set([
      reallyDeleteEmployee (js/hr.js) borra de verdad fichajes,
      turnoSwapRequests y vacationRequests del empleado eliminado — sin
      lápida, resucitaban al sincronizar un dispositivo que aún los tenía. */
-  'fichajes', 'turnoSwapRequests', 'vacationRequests',
+  'fichajes', 'turnoSwapRequests', 'vacationRequests', 'pedidoSolicitudes',
   /* Igual para horariosFijos: reallyDeleteEmployee lo borra de verdad al
      eliminar un empleado, y quitarSchedule también borra el patrón entero
      al desactivar el horario fijo — sin lápida, resucitaría al sincronizar
@@ -3538,7 +3538,7 @@ const MERGEABLE_ARRAYS = new Set([
   'cashClosures','employees','turnos','fichajes','promos','horariosFijos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations',
+  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations','pedidoSolicitudes',
   // Arrays con id que se quedaban fuera: dos dispositivos que añaden cada uno
   // una entrada distinta (una anulación aquí, un check-in de ánimo allá, una
   // solicitud de cambio de turno acullá) casi a la vez y en ese hueco sin
@@ -6888,6 +6888,7 @@ function defaultData(){
     bankReconciliations: [], // {id, fechaDesde, fechaHasta, expected, bankAmount, difference, notes, createdAt} — conciliación bancaria manual (tarjeta cobrada vs. extracto real)
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
     turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
+    pedidoSolicitudes: [], // {id, employeeId, area, items:[{name,unit,cantidad}], notas, status:'pending'|'atendida', createdAt} — "lo que falta" que pide un empleado sin permiso de editar, para que el dueño/gerente haga el pedido real
     business: {
       name:'', address:'', phone:'', email:'', description:'',
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',

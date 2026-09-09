@@ -3448,6 +3448,7 @@ function reallyDeleteEmployee(id, pin){
   // reasignarían un turno real a un employeeId que ya no existe.
   DB.turnoSwapRequests = (DB.turnoSwapRequests||[]).filter(r => r.employeeId!==id && r.toEmployeeId!==id);
   DB.vacationRequests = (DB.vacationRequests||[]).filter(r => r.employeeId!==id);
+  DB.pedidoSolicitudes = (DB.pedidoSolicitudes||[]).filter(r => r.employeeId!==id);
   saveDB();
   closeModal();
   const active = document.querySelector('.view.active');
