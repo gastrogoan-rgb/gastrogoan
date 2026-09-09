@@ -94,6 +94,16 @@ await caso('Un empleado sin permiso de editar no ve "Realizar Pedido" pero sí "
   assert.ok(r.solicitarVisible, '"Pedir lo que falta" sí debe verse');
 });
 
+await caso('El dueño no ve "Pedir lo que falta" (esa pestaña es solo de quien no puede hacer un pedido real)', async () => {
+  await entrarComoDueno();
+  const r = await page.evaluate(()=>{
+    navigate('pedidos');
+    const solicitar = document.getElementById('pedidos-tab-solicitar');
+    return solicitar && solicitar.getBoundingClientRect().width > 0;
+  });
+  assert.ok(!r, '"Pedir lo que falta" no debe verse en sesión de propietario');
+});
+
 await caso('El empleado busca un artículo, lo añade con cantidad y envía la solicitud', async () => {
   await entrarComoEmpleadoRaso();
   await page.evaluate(()=>{ navigate('pedidos'); setPedidosTab('solicitar'); });
@@ -117,21 +127,29 @@ await caso('El empleado busca un artículo, lo añade con cantidad y envía la s
   assert.equal(s.notas, 'Urge para mañana');
 });
 
-await caso('El dueño ve la solicitud pendiente en el historial y puede marcarla atendida', async () => {
+await caso('El dueño ve la solicitud pendiente ENCIMA de "Realizar Pedido" (no en el historial) y puede marcarla atendida', async () => {
   await entrarComoDueno();
-  await page.evaluate(()=>{ navigate('pedidos'); setPedidosTab('historial'); });
+  await page.evaluate(()=>{ navigate('pedidos'); setPedidosTab('crear'); });
   await new Promise(r=>setTimeout(r,150));
   const antes = await page.evaluate(()=> document.getElementById('pedidos-list').innerText.includes('Harina de trigo'));
-  assert.ok(antes, 'el dueño debe ver el contenido de la solicitud pendiente');
+  assert.ok(antes, 'el dueño debe ver el contenido de la solicitud pendiente encima de "Realizar Pedido"');
   await page.evaluate(()=>{
     const btn = [...document.querySelectorAll('#pedidos-list button')].find(b => b.textContent.includes('Marcar atendida'));
     btn.click();
   });
   await new Promise(r=>setTimeout(r,150));
-  const estado = await page.evaluate(()=> DB.pedidoSolicitudes[0].status);
-  assert.equal(estado, 'atendida');
-  const yaNoSale = await page.evaluate(()=> !document.getElementById('pedidos-list').innerText.includes('Solicitudes de'));
-  assert.ok(yaNoSale, 'una vez atendida no debe seguir apareciendo como pendiente');
+  // Se borra de verdad, no se queda marcada "atendida" pero visible para
+  // siempre: eso era justo lo que se quejaba el dueño de ver en Empleados.
+  const quedan = await page.evaluate(()=> DB.pedidoSolicitudes.length);
+  assert.equal(quedan, 0, 'una vez atendida debe desaparecer del todo, no quedarse marcada');
+});
+
+await caso('Al empleado tampoco le queda la solicitud atendida en "Tus solicitudes"', async () => {
+  await entrarComoEmpleadoRaso();
+  await page.evaluate(()=>{ navigate('pedidos'); setPedidosTab('solicitar'); });
+  await new Promise(r=>setTimeout(r,150));
+  const sale = await page.evaluate(()=> document.getElementById('pedidos-list').innerText.includes('Harina de trigo'));
+  assert.ok(!sale, 'la solicitud ya atendida no debe seguir apareciendo en el propio historial del empleado');
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {
