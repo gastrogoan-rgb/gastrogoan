@@ -1506,7 +1506,6 @@ function renderDistDetail(){
   box.innerHTML = `
     <div class="toolbar">
       <div class="left">
-        <button class="btn btn-sm btn-default" onclick="backToDistList()"><i class="ti ti-arrow-left"></i> ${t('label.team')}</button>
         <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block"></span>
         <strong>${escapeHtml(emp.name)}</strong>
         <span style="font-size:12px;color:var(--muted)">${escapeHtml(emp.rol||'')}</span>
@@ -1517,7 +1516,7 @@ function renderDistDetail(){
       </div>
     </div>
 
-    <div class="grid ${isSala?'':'grid-2'}" style="${isSala?'max-width:280px':''}">
+    <div class="grid grid-2">
       <div class="kpi"><div class="label">${isSala ? t('dist.zonesInCharge') : t('dist.dishesInCharge')}</div><div class="value">${isSala ? d.rangos.length : d.platos.length}</div></div>
       <div class="kpi"><div class="label">${t('dist.tasksThisWeek')}</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
     </div>
