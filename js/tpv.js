@@ -3121,10 +3121,13 @@ function renderComandasCocina(){
     const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
     const mins = minutesSince(new Date(minMs).toISOString());
 
-    // Botón compacto: más pequeño que el btn-sm normal, pero sin tocar
-    // min-height (lo sigue fijando la clase, 44px en tablet) — el objetivo
-    // táctil no se toca, solo se recorta el relleno que sobraba.
-    const compactBtnStyle = 'flex:none;padding:5px 10px;font-size:12px;';
+    // Botón compacto, pedido del dueño (9/09) para que tengan el mismo
+    // tamaño que "Sin marchar": mismo estilo que ya usa Sala para su propio
+    // resumen de tanda (renderTandaGroupCard) — min-height:auto en vez del
+    // mínimo táctil de 44px de .btn-sm. Se acepta la excepción aquí porque
+    // ya era el criterio aceptado en Sala para este mismo tipo de botón; en
+    // el resto de la app el mínimo de 44px se mantiene intacto.
+    const compactBtnStyle = 'flex:none;padding:4px 8px;font-size:11px;min-height:auto;';
     const groupButtonHtml = g => {
       const hasCocina = g.lines.some(({line}) => line.estado === 'cocina');
       const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
