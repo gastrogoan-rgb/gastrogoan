@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '09/09/2026 12:09';
+const GG_BUILD = '09/09/2026 12:19';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11510,6 +11510,7 @@ const I18N = {
     'vacation.noAllowanceSet': 'Este empleado no tiene definidos días de vacaciones al año. Configúralo en su ficha para poder controlar cuántos le quedan.',
     'vacation.notEnoughDays': 'Esas fechas son ${requested} días y solo le quedan ${remaining}.',
     'vacation.ownerPendingRemaining': '(le quedan ${remaining} de ${total})',
+    'vacation.cancelRequest': 'Retirar solicitud', 'vacation.cancelledOk': 'Solicitud de vacaciones retirada',
     'audit.vacationApproved': 'Aprobó las vacaciones de ${name}', 'audit.vacationRejected': 'Rechazó las vacaciones de ${name}',
     'btn.sendToKitchen': 'Marchar a cocina', 'btn.addDish': 'Añadir plato',
     'btn.newSection': 'Nueva Sección',
@@ -13699,6 +13700,7 @@ const I18N = {
     'vacation.noAllowanceSet': 'Aquest empleat no té definits dies de vacances a l\'any. Configura-ho a la seva fitxa per poder controlar quants li queden.',
     'vacation.notEnoughDays': 'Aquestes dates són ${requested} dies i només li queden ${remaining}.',
     'vacation.ownerPendingRemaining': '(li queden ${remaining} de ${total})',
+    'vacation.cancelRequest': 'Retirar sol·licitud', 'vacation.cancelledOk': 'Sol·licitud de vacances retirada',
     'audit.vacationApproved': 'Va aprovar les vacances de ${name}', 'audit.vacationRejected': 'Va rebutjar les vacances de ${name}',
     'btn.sendToKitchen': 'Enviar a cuina', 'btn.addDish': 'Afegir plat',
     'btn.newSection': 'Nova Secció',
@@ -15888,6 +15890,7 @@ const I18N = {
     'vacation.noAllowanceSet': 'This employee has no yearly vacation days set. Configure it in their file to track how many they have left.',
     'vacation.notEnoughDays': 'Those dates are ${requested} days and only ${remaining} are left.',
     'vacation.ownerPendingRemaining': '(${remaining} of ${total} left)',
+    'vacation.cancelRequest': 'Withdraw request', 'vacation.cancelledOk': 'Time-off request withdrawn',
     'audit.vacationApproved': 'Approved ${name}\'s time off', 'audit.vacationRejected': 'Rejected ${name}\'s time off',
     'btn.sendToKitchen': 'Send to kitchen', 'btn.addDish': 'Add dish',
     'btn.newSection': 'New Section',
@@ -36363,8 +36366,6 @@ function openEmployeeFicharModal(employeeId){
   // negocio en vez del suyo propio SÍ se sigue pudiendo: es un atajo
   // distinto y deliberado para "se me olvidó mi PIN", no este caso.)
   const asOwner = personalFicharAuthMethod === 'owner_session';
-  const unreadMsgs = directChatUnreadCount(e.id, asOwner);
-  const msgBtn = `<button class="btn btn-sm ${unreadMsgs?'btn-primary':''}" onclick="openEmployeeDirectChat(${e.id}, ${asOwner})"><i class="ti ti-message"></i> ${t('btn.messages')}${unreadMsgs?` <span class="badge badge-red" style="margin-left:2px">${unreadMsgs}</span>`:''}</button>`;
   openModal(`
     <div class="modal-header">
       <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
@@ -36389,7 +36390,6 @@ function openEmployeeFicharModal(employeeId){
         <button class="btn btn-sm" onclick="openTurnoSwapRequestModal(${e.id})"><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</button>
         <button class="btn btn-sm" onclick="openVacationRequestModal(${e.id})"><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</button>
         `}
-        ${msgBtn}
       </div>
       ${asOwner ? '' : renderIncomingSwapRequestsHtml(e.id)}
       ${asOwner ? '' : renderMyVacationRequestsHtml(e.id)}
@@ -36560,7 +36560,10 @@ function renderMyVacationRequestsHtml(employeeId){
     <div class="card" style="margin-top:12px;text-align:left">
       <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-beach"></i> ${t('vacation.myRequestsTitle')}</h4>
       ${summaryHtml}
-      ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px">${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></div>`).join('')}
+      ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span>${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></span>
+        ${r.status==='pending' ? `<button class="btn btn-sm btn-icon" title="${t('vacation.cancelRequest')}" onclick="cancelVacationRequest(${r.id}, ${employeeId})"><i class="ti ti-x"></i></button>` : ''}
+      </div>`).join('')}
     </div>`;
 }
 function openVacationRequestModal(employeeId){
@@ -36601,6 +36604,18 @@ function submitVacationRequest(employeeId){
   DB.vacationRequests.push({id: genId(), employeeId, fromDate, toDate, notes, status:'pending', createdAt: new Date().toISOString()});
   saveDB();
   showToast(t('swap.requestSent'));
+  openEmployeeFicharModal(employeeId);
+}
+// Retirar una solicitud propia todavía pendiente — antes se quedaba fija
+// en la lista sin ninguna forma de sacarla si el empleado cambiaba de idea
+// o se equivocó de fechas. Solo tiene sentido en pendiente: una ya
+// aprobada tiene turnos "V" reales generados (eso lo deshace el propietario).
+function cancelVacationRequest(requestId, employeeId){
+  const r = (DB.vacationRequests||[]).find(x=>x.id===requestId);
+  if(!r || r.status!=='pending') return;
+  DB.vacationRequests = DB.vacationRequests.filter(x=>x.id!==requestId);
+  saveDB();
+  showToast(t('vacation.cancelledOk'));
   openEmployeeFicharModal(employeeId);
 }
 function ownerRespondVacationRequest(requestId, approve){
