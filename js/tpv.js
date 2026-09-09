@@ -2817,6 +2817,31 @@ function cycleLineEstado(orderId, idx){
   else if(line.estado === 'entregado' && !line.recogidoAt) markLineRecogida(orderId, idx);
 }
 
+// Un toque de más (o cambio de opinión: "todavía no está listo") no tenía
+// ninguna forma de deshacerse sin liarla — pedido del dueño, 9/09. Va un
+// paso hacia atrás en el mismo ciclo que cycleLineEstado, incluyendo
+// deshacer el "recogido" (vuelve a "listo para recoger").
+function revertLineEstado(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!line || !line.estado) return;
+  if(line.recogidoAt){ delete line.recogidoAt; }
+  else if(line.estado === 'entregado'){ line.estado = 'preparando'; delete line.entregadoAt; }
+  else if(line.estado === 'preparando'){ line.estado = 'cocina'; delete line.preparandoAt; }
+  else return; // ya está en el primer paso ("cocina"), no hay nada más atrás
+  checkComandaCierre(order);
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  if((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
+  withScrollPreserved(() => {
+    const active = document.querySelector('.view.active');
+    if(active && active.id === 'view-comandascocina') renderComandasCocina();
+    else if(active && active.id === 'view-tpv') renderTPV();
+    const overlay = document.getElementById('modal-overlay');
+    if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+  });
+}
+
 function markLineRecogida(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
@@ -2997,8 +3022,8 @@ function renderComandasCocina(){
     const closed = allOrders
       .filter(o => o.cerrada)
       .map(order => {
-        const lines = (order.items||[]).filter(l => l.estado && !l.bebida);
-        const maxMs = Math.max(0, ...lines.map(l => l.entregadoAt ? new Date(l.entregadoAt).getTime() : 0));
+        const lines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.estado && !line.bebida);
+        const maxMs = Math.max(0, ...lines.map(({line}) => line.entregadoAt ? new Date(line.entregadoAt).getTime() : 0));
         return {order, lines, maxMs};
       })
       .filter(({lines, maxMs}) => lines.length && maxMs >= todayMs)
@@ -3015,7 +3040,7 @@ function renderComandasCocina(){
       // lista histórica no debe decir "Entregado" si sala todavía no ha
       // confirmado que se lo ha llevado — si no, cocina ve "Entregado" y
       // asume que ya está en la mesa cuando puede seguir esperando en el pase.
-      const allPicked = lines.every(l => l.recogidoAt);
+      const allPicked = lines.every(({line}) => line.recogidoAt);
       const closedBadge = allPicked
         ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
         : `<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</span>`;
@@ -3026,7 +3051,12 @@ function renderComandasCocina(){
           ${closedBadge}
         </div>
         ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
-        ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
+        ${lines.map(({line, idx}) => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;gap:8px">
+            <strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+            <button class="btn btn-sm btn-icon" title="${t('kitchen.stepBack')}" onclick="revertLineEstado(${order.id}, ${idx})"><i class="ti ti-arrow-back-up"></i></button>
+          </div>
+        `).join('')}
       </div>
     `;}).join('')}</div>`;
     return;
@@ -3114,10 +3144,13 @@ function renderComandasCocina(){
                 ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
               ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
-              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
-              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
-              : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-              : `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
+              : `<span style="display:flex;align-items:center;gap:4px;flex:none">
+                  <button class="btn btn-sm btn-icon" title="${t('kitchen.stepBack')}" onclick="event.stopPropagation();revertLineEstado(${order.id}, ${idx})"><i class="ti ti-arrow-back-up"></i></button>
+                  ${line.estado==='cocina' ? `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
+                  : line.estado==='preparando' ? `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
+                  : line.recogidoAt ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
+                  : `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
+                </span>`}
             </div>
           `;}).join('')}
         </div>
