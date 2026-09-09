@@ -2377,10 +2377,24 @@ function renderTandaGroupCard(order, g, isMenu){
     else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
 
+  // Si TODA la tanda es del mismo menú, se dice una vez en la cabecera del
+  // grupo en vez de repetir "Menú: X" debajo de cada plato (con un menú de
+  // 3 platos salía tres veces la misma etiqueta). Con platos de más de un
+  // menú mezclados en la misma tanda (raro, pero posible) se deja la
+  // etiqueta por línea, porque ahí sí hace falta distinguir de cuál es cada uno.
+  const nombresMenuEnGrupo = isMenu ? [...new Set(g.items.map(({line}) => {
+    const m = line.menuId ? (DB.menus||[]).find(x => x.id === line.menuId) : null;
+    return m ? tItem(m) : null;
+  }).filter(Boolean))] : [];
+  const nombreMenuUnico = nombresMenuEnGrupo.length === 1 ? nombresMenuEnGrupo[0] : null;
+
   return `
   <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">
-      <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
+        ${nombreMenuUnico ? `<span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(nombreMenuUnico)}</span>` : ''}
+      </div>
       <div style="display:flex;gap:4px;align-items:center">
         ${statusBadge}
         ${pendingCount && !esPedidoSoloLectura(order) ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11.5px;padding:6px 10px" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
@@ -2405,11 +2419,13 @@ function renderTandaGroupCard(order, g, isMenu){
         else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px"><i class="ti ti-clock"></i></span>';
       }
       // Distinción visual clara entre lo que viene de un menú (combo de
-      // varios platos a precio cerrado) y lo que es carta suelta — además
-      // de la sección propia, cada línea sigue llevando su badge con el
-      // nombre del menú concreto (útil si hay más de un menú en la mesa).
+      // varios platos a precio cerrado) y lo que es carta suelta. Si toda la
+      // tanda es del mismo menú ya se dice una vez en la cabecera del grupo
+      // (nombreMenuUnico, arriba) — repetirlo en cada línea sobraba. Con más
+      // de un menú mezclado en la misma tanda, cada línea sigue llevando su
+      // propio badge para no perder de cuál es cada plato.
       const menu = line.menuId ? (DB.menus||[]).find(m => m.id === line.menuId) : null;
-      const menuBadge = menu ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
+      const menuBadge = (menu && !nombreMenuUnico) ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
       return `
       <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);${menu?'border-left:3px solid var(--blue,#4E5A63);padding-left:6px':''}">
         <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber" style="font-size:9px" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
@@ -2422,7 +2438,15 @@ function renderTandaGroupCard(order, g, isMenu){
         ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
         `}
       </div>
-      ${line.notas ? `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+      ${(() => {
+        // La nota "Menú: X" se autogenera al añadir el plato desde un menú
+        // (ver línea ~1907) — si ya se dice en la cabecera del grupo
+        // (nombreMenuUnico) es la misma frase repetida, no una nota real
+        // escrita por el camarero. Una nota manual sigue mostrándose siempre.
+        const esNotaAutoDeMenu = menu && line.notas === `Menú: ${tItem(menu)}`;
+        if(!line.notas || (esNotaAutoDeMenu && nombreMenuUnico)) return '';
+        return `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>`;
+      })()}
     `;}).join('')}
   </div>
   `;
