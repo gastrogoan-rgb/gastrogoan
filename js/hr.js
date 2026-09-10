@@ -1639,11 +1639,21 @@ const GE = (function(){
   }
   function setMonthTe(m){ activeMonth=m; renderTesoreria(); }
   function setTeYear(delta){ teYear += delta; renderTesoreria(); }
+  // Bug real encontrado (10/09, reportado desde móvil): esto colgaba de
+  // oninput (cada pulsación) y RE-ESCRIBÍA el valor del propio campo que se
+  // estaba tecleando, a mitad de escribir — en un teclado numérico de
+  // móvil, que el campo se autocorrija mientras compones el número le
+  // hace perder el cursor y el foco de forma errática (se veía como un
+  // salto brusco a otra pestaña). Ahora cuelga de onchange (se dispara solo
+  // al terminar de editar el campo — perder el foco o "Hecho" en el
+  // teclado), y ya NUNCA reescribe el valor del campo que se acaba de
+  // tocar, solo reparte lo que sobra entre los otros cuatro.
   function adjustDistPct(changedId){
     const ids = ['te-pct-per','te-pct-gf','te-pct-mp','te-pct-og','te-pct-ben'];
     const els = {}; ids.forEach(id=>els[id]=document.getElementById(id));
     const vals = {}; ids.forEach(id=>vals[id]=Math.max(0,Math.min(100,parseFloat(els[id].value)||0)));
     const changedVal = vals[changedId];
+    els[changedId].value = Math.round(changedVal*10)/10;
     const otherIds = ids.filter(id=>id!==changedId);
     const othersSum = otherIds.reduce((s,id)=>s+vals[id],0);
     const remaining = 100 - changedVal;
@@ -1653,7 +1663,7 @@ const GE = (function(){
       otherIds.forEach(id=>vals[id]=Math.max(0, remaining*vals[id]/othersSum));
     }
     vals[changedId]=changedVal;
-    ids.forEach(id=>els[id].value = Math.round(vals[id]*10)/10);
+    otherIds.forEach(id=>els[id].value = Math.round(vals[id]*10)/10);
     config().distPct = {per:vals['te-pct-per'], gf:vals['te-pct-gf'], mp:vals['te-pct-mp'], og:vals['te-pct-og'], ben:vals['te-pct-ben']};
     distPctLoaded = true;
     saveDB();

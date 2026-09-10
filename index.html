@@ -588,17 +588,17 @@
           <button class="btn btn-sm" id="te-close-month-btn" style="margin-left:10px" onclick="GE.toggleCierreTe()"></button>
           <button class="btn btn-sm" style="margin-left:4px" onclick="openBankReconciliationModal()"><i class="ti ti-building-bank"></i> <span data-i18n="reconcile.btn">Conciliación bancaria</span></button>
         </div>
-        <div class="month-sel" id="te-months"></div>
+        <div class="month-sel month-sel-centered" id="te-months"></div>
         <div class="te-kpis" id="te-kpis"></div>
         <div id="te-forecast"></div>
         <div class="ge-section" id="te-upcoming" style="display:none"></div>
         <div class="dist-config">
           <span style="font-weight:600;font-size:13px;margin-right:4px"><i class="ti ti-settings"></i> <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></span>
-          <div class="dist-field"><span data-i18n="label.staff">Personal</span> <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-per')">%</div>
-          <div class="dist-field"><span data-i18n="label.gFixed">G.Fijos</span> <input type="number" id="te-pct-gf" value="20" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-gf')">%</div>
-          <div class="dist-field"><span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span> <input type="number" id="te-pct-mp" value="35" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-mp')">%</div>
-          <div class="dist-field"><span data-i18n="label.other">Otros</span> <input type="number" id="te-pct-og" value="5" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-og')">%</div>
-          <div class="dist-field"><span data-i18n="label.profit">Beneficio</span> <input type="number" id="te-pct-ben" value="10" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-ben')">%</div>
+          <div class="dist-field"><span data-i18n="label.staff">Personal</span> <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-per')">%</div>
+          <div class="dist-field"><span data-i18n="label.gFixed">G.Fijos</span> <input type="number" id="te-pct-gf" value="20" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-gf')">%</div>
+          <div class="dist-field"><span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span> <input type="number" id="te-pct-mp" value="35" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-mp')">%</div>
+          <div class="dist-field"><span data-i18n="label.other">Otros</span> <input type="number" id="te-pct-og" value="5" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-og')">%</div>
+          <div class="dist-field"><span data-i18n="label.profit">Beneficio</span> <input type="number" id="te-pct-ben" value="10" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-ben')">%</div>
         </div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4><span data-i18n="ge.treasuryDistribution">Distribución de tesorería</span> <span class="ge-auto">AUTO</span></h4></div>
