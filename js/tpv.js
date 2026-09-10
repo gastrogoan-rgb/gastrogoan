@@ -5506,6 +5506,7 @@ function buildTicketText(sale, opts={}){
 function buildTicketHtml(sale, opts={}){
   const b = DB.business || {};
   const tc = b.ticket || {};
+  const accent = b.brandColor || '#B8804B';
   const logoHtml = b.logo ? `<img src="${b.logo}" alt="" style="max-height:48px;max-width:200px;display:block;margin:0 auto 8px">` : '';
   const metaLines = [];
   if(tc.mostrarDireccion !== false && b.address) metaLines.push(escapeHtml(b.address));
@@ -5564,7 +5565,7 @@ function buildTicketHtml(sale, opts={}){
   return `
     <div style="width:300px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111">
       ${logoHtml}
-      <div style="text-align:center;font-weight:700;font-size:16px">${escapeHtml(b.name || 'GastroGoan')}</div>
+      <div style="text-align:center;font-weight:700;font-size:16px;color:${accent}">${escapeHtml(b.name || 'GastroGoan')}</div>
       ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#B8860B;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
       ${metaLines.length ? `<div style="text-align:center;font-size:11px;color:#666;line-height:1.5;margin-top:2px">${metaLines.join('<br>')}</div>` : ''}
       ${opts.factura ? `<div style="text-align:center;font-size:12px;font-weight:700;margin-top:8px">${t('ticket.invoiceNumber')} ${escapeHtml(sale.facturaNum||'')}</div>` : ''}
@@ -5586,7 +5587,7 @@ function buildTicketHtml(sale, opts={}){
       </table>
       <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
       ${summaryHtml}
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px;margin-top:8px;padding-top:8px;border-top:2px solid #111">
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px;margin-top:8px;padding-top:8px;border-top:2px solid ${accent}">
         <span>${t('common.total')}</span><span>${fmtMoney(sale.total)}</span>
       </div>
       <div style="margin-top:8px">${paymentHtml}</div>

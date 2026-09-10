@@ -1,44 +1,87 @@
 // Ventana de impresión con un diseño consistente compartido por todos los
 // informes "de oficina" de la app (cierre de caja, pedidos a proveedor,
-// protocolos de limpieza, distribución del trabajo...) — antes cada
-// función montaba su propio HTML suelto, casi siempre texto monoespaciado
-// sin tabla ni cabecera, con un aspecto distinto en cada sitio. Un mismo
-// bloque de estilos para todos da un aspecto consistente y más cuidado sin
-// tener que repetirlo función por función.
+// protocolos de limpieza, distribución del trabajo, fichas técnicas,
+// escandallo, alérgenos, horarios, creaciones de I+D...). Antes era un
+// volcado de Arial sin marca ni cuidado — el dueño lo pidió a nivel de la
+// hoja de vale regalo (ver printGiftVoucher): logo/color del propio
+// negocio, tipografía cuidada y una cabecera con presencia, para que lo
+// que se entrega a un proveedor, un empleado o una inspección tenga un
+// aspecto profesional, no de borrador.
 function printReportWindow(title, bodyHtml, opts={}){
-  const win = window.open('', '_blank', opts.winSize || 'width=680,height=760');
+  const win = window.open('', '_blank', opts.winSize || 'width=760,height=860');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  const accent = (DB.business && DB.business.brandColor) || '#B8804B';
+  const fechaGen = new Date().toLocaleString(localeActual(), {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  // Es un documento INTERNO del propio negocio (para un proveedor, un
+  // empleado o una inspección) — no lleva nada de marca GastroGoan, el
+  // papel es del negocio, no nuestro. Membrete sobrio de nombre + fecha
+  // arriba, como una carta de verdad, en vez de una cabecera con avatar y
+  // franja de color a modo de "plantilla de SaaS".
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
     <style>
-      body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:28px;max-width:720px;margin:0 auto;font-size:13px;line-height:1.45}
-      h1{font-size:19px;margin:0 0 2px;font-weight:700}
-      .pr-subtitle{font-size:12px;color:#666;margin-bottom:4px}
-      .pr-meta{font-size:12px;color:#555;margin:2px 0}
-      h2{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:#444;border-bottom:1px solid #ddd;padding-bottom:4px;margin:22px 0 8px}
-      table{width:100%;border-collapse:collapse;margin-bottom:6px}
-      th,td{padding:5px 6px;text-align:left;font-size:12.5px;vertical-align:top}
-      th{background:#f5f5f3;font-weight:600;border-bottom:1px solid #ddd;text-transform:uppercase;font-size:10.5px;color:#666;letter-spacing:.3px}
-      td{border-bottom:1px solid #eee}
-      .pr-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-      .pr-total-row td{font-weight:700;border-top:2px solid #111;border-bottom:none;padding-top:8px}
-      .pr-note{font-size:12px;color:#666;font-style:italic;margin-top:4px}
-      .pr-empty{font-size:12px;color:#999;font-style:italic;padding:6px 0}
-      .pr-divider{border-top:1px dashed #bbb;margin:14px 0}
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+      *{box-sizing:border-box}
+      body{font-family:'Inter',Arial,Helvetica,sans-serif;color:#232019;margin:0;padding:0;font-size:13px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .pr-page{max-width:720px;margin:0 auto;padding:26px 6px 30px}
+      .pr-letterhead{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;color:#8a857c;text-transform:uppercase;letter-spacing:1.1px;margin-bottom:22px}
+      .pr-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:6px;padding-bottom:14px;border-bottom:2px solid ${accent}}
+      .pr-logo{max-height:38px;max-width:130px;object-fit:contain;flex:none}
+      h1{font-size:23px;margin:0 0 3px;font-weight:800;letter-spacing:-.3px;color:#161412}
+      .pr-subtitle{font-size:12.5px;color:#6b6660;margin-top:2px}
+      .pr-meta{font-size:12px;color:#57534d}
+      h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.7px;color:${accent};font-weight:700;margin:26px 0 9px;padding-bottom:5px;border-bottom:1px solid #eae7e1}
+      h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#161412}
+      .pr-page p{margin:0 0 10px}
+      .pr-page ul{margin:0 0 12px 18px}
+      .pr-page ul li{margin-bottom:5px}
+      table{width:100%;border-collapse:collapse;margin-bottom:8px}
+      th,td{padding:7px 4px;text-align:left;font-size:12.5px;vertical-align:top}
+      th{font-weight:700;border-bottom:1.5px solid #ddd9d2;text-transform:uppercase;font-size:10px;color:#8a857c;letter-spacing:.4px}
+      td{border-bottom:1px solid #f0eee9}
+      .pr-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500}
+      .pr-total-row td{font-weight:800;border-top:2px solid #1c1a17;border-bottom:none;padding-top:10px;font-size:14.5px}
+      .pr-note{font-size:12px;color:#7a756d;font-style:italic;margin-top:6px}
+      .pr-empty{font-size:12px;color:#a19c93;font-style:italic;padding:8px 0}
+      .pr-divider{border-top:1px dashed #d8d4cc;margin:16px 0}
       ul.pr-steps{padding-left:20px;margin:0}
-      ul.pr-steps li{margin-bottom:6px}
-      @media print{body{padding:10mm}}
+      ul.pr-steps li{margin-bottom:7px}
+      .manual-step{display:flex;gap:10px;margin-bottom:8px}
+      .manual-step .sn{flex:none;width:22px;height:22px;border-radius:50%;background:${accent};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+      .manual-step .st{font-size:12.5px;line-height:1.5}
+      .manual-tip,.manual-warning{background:#faf6ee;border-left:3px solid ${accent};border-radius:0 6px 6px 0;padding:9px 13px;margin:12px 0;font-size:12px}
+      .manual-detail h4{font-size:13px;color:#57534d;text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px}
+      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #eae7e1;font-size:10px;color:#b3ada2}
+      @media print{
+        .pr-page{padding:0 4mm 10mm}
+        @page{margin:15mm 14mm}
+      }
     </style>
-    </head><body>${bodyHtml}</body></html>`);
+    </head><body>
+      <div class="pr-page">
+        ${bodyHtml}
+        <div class="pr-footer">${escapeHtml(fechaGen)}</div>
+      </div>
+    </body></html>`);
   win.document.close();
   win.print();
 }
-// Cabecera común (nombre del negocio + título del informe + subtítulo
+// Cabecera común (membrete del negocio + título del informe + subtítulo
 // opcional) para reutilizar en todos los printX() que usan printReportWindow.
+// El logo es el que ya sube el negocio en Mi Negocio → Identidad; si no
+// tiene, se omite sin más — nada de avatar ni inicial de relleno, que un
+// membrete real no lleva eso cuando no hay logo, solo el nombre.
 function printReportHeaderHtml(title, subtitle){
+  const biz = DB.business || {};
+  const bizName = biz.name || '';
   return `
-    <div class="pr-meta" style="font-size:11.5px;color:#888;text-transform:uppercase;letter-spacing:.5px">${escapeHtml((DB.business&&DB.business.name)||'GastroGoan')}</div>
-    <h1>${escapeHtml(title)}</h1>
-    ${subtitle ? `<div class="pr-subtitle">${subtitle}</div>` : ''}
+    ${bizName ? `<div class="pr-letterhead"><span>${escapeHtml(bizName)}</span></div>` : ''}
+    <div class="pr-header">
+      <div style="min-width:0">
+        <h1>${escapeHtml(title)}</h1>
+        ${subtitle ? `<div class="pr-subtitle">${subtitle}</div>` : ''}
+      </div>
+      ${biz.logo ? `<img class="pr-logo" src="${biz.logo}">` : ''}
+    </div>
   `;
 }
 
