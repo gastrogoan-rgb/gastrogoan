@@ -129,9 +129,23 @@ const GE = (function(){
   // Última barrera antes de pintar Gestión Económica, por si se llega
   // aquí saltándose navigate()/renderView() (p.ej. GE.init() a mano desde
   // la consola de un dispositivo de empleado).
+  //
+  // Fallo real encontrado (10/09): cuando llega una sincronización de la
+  // nube mientras se está en Gestión Económica, el código que refresca la
+  // pantalla activa (ver core.js) vuelve a llamar a renderView('economia')
+  // → GE.init() — y esto forzaba SIEMPRE tab('ventas'), sea cual sea la
+  // pestaña en la que se estuviera (Tesorería, Punto de Equilibrio...). Se
+  // vivía como "estoy tecleando y de repente salto a Ventas", justo cuando
+  // llegaba un guardado en la nube (que puede coincidir con estar
+  // escribiendo, porque guardar dispara la subida). El resto de módulos
+  // con sub-pestañas (p.ej. Limpieza) sí recuerdan cuál estaba activa al
+  // volver a renderizarse — GE ahora hace lo mismo: si ya hay una pestaña
+  // pintada, se vuelve a pintar ESA, no la de por defecto.
   function init(){
     if(isGestionLocked('economia')){ denyGestionAccess(); return; }
-    tab('ventas');
+    const activo = document.querySelector('#view-economia .ge-tab-panel.active');
+    const nombreActivo = activo ? activo.id.replace('ge-','') : null;
+    tab(TABS.includes(nombreActivo) ? nombreActivo : 'ventas');
   }
   function tab(name){
     document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===name));
