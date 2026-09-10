@@ -17,7 +17,7 @@ const PESTANAS = [
   ['carta','sala',      ['carta','menus'],                                                                t=>`setOfertaTab('${t}')`],
   ['horarios','sala',   ['personal','dia','semana','mes'],                                                t=>`setHorariosTab('${t}')`],
   ['limpieza','sala',   ['protocolo','manos','mes','temperaturas','alergenos','plagas','mantenimiento'],  t=>`setLimpiezaTab('${t}')`],
-  ['economia','gestion',['ventas','fijos','variables','cdr','resultado','tesoreria','pe','capex'],        t=>`GE.tab('${t}')`],
+  ['economia','gestion',['ventas','fijos','variables','cdr','tesoreria','pe','capex'],        t=>`GE.tab('${t}')`],
 ];
 const TAMANOS = [{n:'MÓVIL',w:390,h:844},{n:'ESCRITORIO',w:1440,h:900}];
 

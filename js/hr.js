@@ -774,7 +774,7 @@ const GE = (function(){
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realCostNoVat')}</div><div class="val">${fmtMoney(tvNeto)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupported')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.netRevenue')} <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>foodCostObjPct()?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${foodCostObjPct().toFixed(1)}% <button class="btn btn-sm btn-icon" style="min-height:auto;padding:1px 4px;vertical-align:middle" onclick="GE.editFoodCostObj()" title="${t('common.edit')}"><i class="ti ti-edit" style="font-size:11px"></i></button></div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>foodCostObjPct()?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${foodCostObjPct().toFixed(1)}% <button class="btn btn-sm btn-icon" style="vertical-align:middle" onclick="GE.editFoodCostObj()" title="${t('common.edit')}"><i class="ti ti-edit"></i></button></div></div>`;
     const allItems = variablesMes(mes,gvYear);
     const chartEl = document.getElementById('gv-cat-chart');
     if(chartEl){
@@ -2049,11 +2049,12 @@ const GE = (function(){
     });
     if(!capexMes.length) rows.push([t('hr.csv.noInvestments')]);
     rows.push(['','',t('common.total'), sumCapexBase, '', sumCapexIva, sumCapexTotal, '']);
+    rows.push([t('hr.csv.capexResultNote')]);
     rows.push([]);
 
     // Desglose por tipo de IVA real (21/10/4/0%) de los gastos del mes, necesario para
     // el Modelo 303/347 en vez de un único importe de IVA soportado sin detalle.
-    rows.push([t('hr.csv.vatBreakdownTitle')]);
+    rows.push([t('hr.csv.vatBreakdownTitle') + (isHistoricalMonth ? ` (${t('hr.csv.fijosHistRateNote')})` : '')]);
     rows.push([t('hr.csv.vatRatePct'), t('hr.csv.baseEur'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
     const ivaGroups = {};
     function addToVatGroup(pct, base, ivaAmt){
@@ -2066,15 +2067,42 @@ const GE = (function(){
       const pct = ivaDeGastoVariable(v);
       addToVatGroup(pct, base, base*pct/100);
     });
-    fijos().forEach(g => {
-      const base = gfMonthlyImporte(g);
-      const pct = g.iva!=null ? parseFloat(g.iva) : 0;
-      addToVatGroup(pct, base, base*pct/100);
-    });
+    // Los gastos fijos no guardan un histórico por concepto (solo el total
+    // agregado, en fijosLog), así que para un mes PASADO no se puede repartir
+    // su IVA por tipo real con la configuración de hoy — antes esta tabla
+    // usaba fijos() (la lista ACTUAL) también para meses históricos, y el
+    // 21%/10%/etc. que salía aquí no era el que tocaba, aunque el total del
+    // resumen (sumFijosIvaHist) sí fuera el correcto: dos cifras del mismo
+    // informe que no cuadraban entre sí. Para un mes histórico se usa en su
+    // lugar el tipo medio real de ESE mes (histórico base/IVA), sin
+    // pretender un desglose por tipo que ya no se puede reconstruir.
+    if(isHistoricalMonth){
+      if(sumFijosBaseHist > 0){
+        const pctMedio = Math.round((sumFijosIvaHist/sumFijosBaseHist)*10000)/100;
+        addToVatGroup(pctMedio, sumFijosBaseHist, sumFijosIvaHist);
+      }
+    } else {
+      fijos().forEach(g => {
+        const base = gfMonthlyImporte(g);
+        const pct = g.iva!=null ? parseFloat(g.iva) : 0;
+        addToVatGroup(pct, base, base*pct/100);
+      });
+    }
     capexMes.forEach(c => {
       const imp = parseFloat(c.importe||0);
       const pct = parseFloat(c.iva||0);
       addToVatGroup(pct, imp, imp*pct/100);
+    });
+    // El IVA que cobra la plataforma de delivery sobre su propia comisión
+    // también es soportado y deducible (ver comisionPlataformaNeta e
+    // ivaSoportadoComisionesMes más arriba) — faltaba aquí, y sin él "IVA a
+    // liquidar" salía más alto de lo que de verdad toca declarar en el 303.
+    ventas.forEach(v => {
+      const bruto = parseFloat(v.comisionPlataforma||0);
+      if(!bruto) return;
+      const pct = (v.plataforma && v.plataforma.ivaPct!=null) ? parseFloat(v.plataforma.ivaPct) : 0;
+      const neto = bruto / (1 + pct/100);
+      addToVatGroup(pct, neto, bruto-neto);
     });
     Object.keys(ivaGroups).map(Number).sort((a,b)=>b-a).forEach(pct => {
       const g = ivaGroups[pct];
@@ -2096,8 +2124,20 @@ const GE = (function(){
     rows.push([]);
 
     const comisiones = comisionesMes(mes, año);
-    const resultado = sumBase - sumVarBase - sumFijosBaseHist - comisiones - capexCuotaMes(mes, año);
-    const totalIvaSoportado = sumVarIva + sumFijosIvaHist + sumCapexIva;
+    // Ojo: del resultado solo se descuenta la CUOTA mensual de las inversiones
+    // financiadas (capexCuotaMes) — igual que en Cuenta de Resultados y
+    // Tesorería —, nunca el importe total de la compra (sumCapexBase, que es
+    // lo que sale en la tabla de detalle de arriba). Una compra al contado no
+    // se resta del resultado del mes: es un activo que se capitaliza, no un
+    // gasto de explotación. Antes el resumen mostraba sumCapexBase junto al
+    // resultado, y las dos cifras no cuadraban entre sí para el gestor.
+    const capexCuota = capexCuotaMes(mes, año);
+    const resultado = sumBase - sumVarBase - sumFijosBaseHist - comisiones - capexCuota;
+    // Incluye el IVA soportado en la comisión de las plataformas de delivery,
+    // como en ivaLiquidarMes — si no, "IVA a liquidar" no cuadraría con lo
+    // que muestra Cuenta de Resultados para el mismo mes.
+    const comisionesIva = ivaSoportadoComisionesMes(mes, año);
+    const totalIvaSoportado = sumVarIva + sumFijosIvaHist + sumCapexIva + comisionesIva;
     rows.push([t('hr.csv.monthSummary')]);
     rows.push([t('hr.lbl.concept'), t('hr.lbl.amountEur')]);
     // "Total con IVA" tiene que cuadrar exactamente con base+IVA de las dos
@@ -2113,7 +2153,8 @@ const GE = (function(){
     rows.push([t('hr.lbl.deliveryCommissions'), comisiones]);
     rows.push([t('hr.csv.variableExpensesBase'), sumVarBase]);
     rows.push([t('hr.csv.fixedExpensesBase'), sumFijosBaseHist]);
-    rows.push([t('hr.csv.capexBase'), sumCapexBase]);
+    rows.push([t('hr.csv.capexQuota'), capexCuota]);
+    if(Math.abs(sumCapexBase - capexCuota) > 0.01) rows.push([t('hr.csv.capexBaseInfo'), sumCapexBase]);
     rows.push([t('hr.csv.totalVatSupported'), totalIvaSoportado]);
     rows.push([t('hr.csv.vatToSettleShort'), sumIva - totalIvaSoportado]);
     rows.push([t('hr.csv.monthResult'), resultado]);

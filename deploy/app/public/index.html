@@ -2926,7 +2926,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '10/09/2026 13:19';
+const GG_BUILD = '11/09/2026 00:52';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6278,6 +6278,33 @@ function mergeNestedArraysByKey(localObj, remoteObj, arrayKeys){
   return merged;
 }
 
+// DB.ge.cierres (meses cerrados en Gestión Económica) y DB.ge.fijosLog (histórico
+// de gastos fijos, snapshotGeFijosNeto) son arrays SIN `id`: cierres son strings
+// sueltos ("2026-09") y fijosLog son objetos {fecha, totalNeto, ...}. Pasarlos
+// por mergeArraysById (como fijos/variables/capex) los hacía caer en su rama
+// "sin id → manda la nube entera": un mes recién cerrado en este dispositivo
+// (o reabierto, cierres().splice) que aún no había subido desaparecía sin
+// aviso en cuanto llegaba una sincronización, dejando el mes editable otra vez
+// aunque el informe ya se hubiera enviado al gestor como "cerrado". Se
+// fusionan aparte: cierres como una lista de nombres (mergeListaDeNombres, con
+// detección de borrado via la foto de lo último sincronizado) y fijosLog por
+// unión (nunca se borra un elemento suelto de ahí, solo se añade).
+function mergeGeCierres(localGe, remoteGe, lastSyncedGeJson){
+  if(!Array.isArray(localGe) || !Array.isArray(remoteGe)) return remoteGe;
+  let lastCierres;
+  if(lastSyncedGeJson){
+    try{ const prev = JSON.parse(lastSyncedGeJson); lastCierres = Array.isArray(prev && prev.cierres) ? JSON.stringify(prev.cierres) : null; }catch(e){}
+  }
+  return mergeListaDeNombres(localGe, remoteGe, lastCierres);
+}
+function mergeFijosLog(local, remote){
+  if(!Array.isArray(local) || !Array.isArray(remote)) return remote;
+  const porFecha = new Map();
+  remote.forEach(e => { if(e && e.fecha) porFecha.set(e.fecha, e); });
+  local.forEach(e => { if(e && e.fecha && !porFecha.has(e.fecha)) porFecha.set(e.fecha, e); });
+  return [...porFecha.values()].sort((a,b) => a.fecha.localeCompare(b.fecha));
+}
+
 /* Las dos listas cuyos elementos NO tienen id: son nombres, y se fusionan
    por el nombre (ver mergeListaDeNombres). Van aparte de MERGEABLE_ARRAYS
    porque ahí acabarían en `return remote` y un borrado local se desharía. */
@@ -6358,8 +6385,13 @@ const ARRAYS_CON_LAPIDA = new Set([
 // mergeArraysById — sin lápida, un gasto fijo, una compra o una inversión
 // borrados aquí resucitaban al sincronizar un dispositivo que aún los tenía,
 // volviendo a mover el IVA, el margen y el Resultado sin que nadie lo viera
-// borrarse dos veces. fijosLog y cierres se quedan fuera: son historial que
-// solo crece (push), nunca se borra un elemento suelto de ahí.
+// borrarse dos veces. fijosLog se queda fuera: es historial que solo crece
+// (push), nunca se borra un elemento suelto de ahí, y se fusiona por unión
+// en mergeFijosLog. cierres SÍ se borra de verdad (toggleCierreTe reabre un
+// mes con cierres().splice) pero no lleva `id` — no encaja en lápidas por id,
+// se fusiona aparte con mergeGeCierres (mismo mecanismo que
+// mergeListaDeNombres: detecta el borrado con la foto de lo último
+// sincronizado, en vez de perder el cierre entero como antes).
 const NESTED_ARRAYS_CON_LAPIDA = {ge: ['fijos', 'variables', 'capex']};
 const LAPIDA_DIAS = 60;
 
@@ -8440,7 +8472,13 @@ function applyRemoteBlock(key, remoteValue){
     merged = mergeStockField(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   }
   if(key === 'ge' && DB[key] && typeof merged === 'object'){
-    merged = mergeNestedArraysByKey(DB[key], merged, ['fijos','variables','capex','fijosLog','cierres']);
+    merged = mergeNestedArraysByKey(DB[key], merged, ['fijos','variables','capex']);
+    if(Array.isArray(DB[key].cierres) && Array.isArray(merged.cierres)){
+      merged.cierres = mergeGeCierres(DB[key].cierres, merged.cierres, lastSyncedSnapshot && lastSyncedSnapshot.ge);
+    }
+    if(Array.isArray(DB[key].fijosLog) && Array.isArray(merged.fijosLog)){
+      merged.fijosLog = mergeFijosLog(DB[key].fijosLog, merged.fijosLog);
+    }
     merged = quitarResucitadosNested('ge', merged);
   }
   if(key === 'limpieza' && DB[key] && typeof merged === 'object'){
@@ -8722,7 +8760,13 @@ function mergeRemoteIntoLocal(val){
       value = mergeStockField(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
     if(key === 'ge' && DB[key] && typeof value === 'object'){
-      value = mergeNestedArraysByKey(DB[key], value, ['fijos','variables','capex','fijosLog','cierres']);
+      value = mergeNestedArraysByKey(DB[key], value, ['fijos','variables','capex']);
+      if(Array.isArray(DB[key].cierres) && Array.isArray(value.cierres)){
+        value.cierres = mergeGeCierres(DB[key].cierres, value.cierres, lastSyncedSnapshot && lastSyncedSnapshot.ge);
+      }
+      if(Array.isArray(DB[key].fijosLog) && Array.isArray(value.fijosLog)){
+        value.fijosLog = mergeFijosLog(DB[key].fijosLog, value.fijosLog);
+      }
       value = quitarResucitadosNested('ge', value);
     }
     if(key === 'limpieza' && DB[key] && typeof value === 'object'){
@@ -12029,6 +12073,7 @@ const I18N = {
     'void.reason.kitchenError': 'Error en cocina', 'void.reason.outOfStock': 'Producto agotado', 'void.reason.other': 'Otro',
     'msg.voidRegistered': 'Anulación registrada', 'title.voidLog': 'Anulaciones', 'label.quantity': 'Cantidad',
     'title.cancelSale': 'Anular venta', 'msg.confirmCancelSale': 'Se anulará esta venta ya cobrada: se restituirá el stock descontado y quedará registrada como anulada (no se borra, por trazabilidad). Introduce el PIN del negocio para confirmar.',
+    'msg.cannotCancelClosedMonth': 'No se puede anular: el mes de esta venta ya está cerrado en Gestión Económica. Reábrelo en Tesorería si de verdad necesitas anularla.',
     'label.wholeSaleVoided': 'Venta completa anulada (${amount})', 'msg.saleVoidedAfterCharge': 'Venta anulada tras el cobro', 'msg.saleVoided': 'Venta anulada y stock restituido',
     'empty.noVoidsRegistered': 'No hay anulaciones registradas.',
     'btn.stockLog': 'Historial', 'title.stockLog': 'Historial de ajustes de stock', 'empty.noStockLog': 'No hay ajustes de stock registrados.',
@@ -12425,6 +12470,9 @@ const I18N = {
     'hr.csv.baseEur': 'Base (€)',
     'hr.csv.business': 'Negocio',
     'hr.csv.capexBase': 'Inversiones CAPEX (base)',
+    'hr.csv.capexQuota': 'Cuota CAPEX financiado del mes (deducida del resultado)',
+    'hr.csv.capexBaseInfo': 'Inversión CAPEX comprada este mes (informativo, no deducida del resultado)',
+    'hr.csv.capexResultNote': 'Solo la cuota mensual de inversiones financiadas se descuenta del resultado del mes; una compra al contado se capitaliza como activo, no como gasto del mes.',
     'hr.csv.capexMonth': 'INVERSIONES (CAPEX) DEL MES',
     'hr.csv.client': 'Cliente',
     'hr.csv.fixedExpensesBase': 'Gastos fijos (base sin IVA)',
@@ -12436,6 +12484,7 @@ const I18N = {
     'hr.csv.monthSummary': 'RESUMEN DEL MES',
     'hr.csv.monthlyFixedExpenses': 'GASTOS FIJOS MENSUALES (recurrentes)',
     'hr.csv.currentConfigNote': 'desglose con la configuración actual, el resumen final usa el histórico real de ese mes',
+    'hr.csv.fijosHistRateNote': 'gastos fijos a tipo medio real del mes, no desglosado por tipo — no se guarda histórico por concepto',
     'hr.csv.noFixedExpenses': 'Sin gastos fijos registrados.',
     'hr.csv.noInvestments': 'Sin inversiones registradas este mes.',
     'hr.csv.noSalesThisMonth': 'Sin ventas registradas este mes.',
@@ -12700,7 +12749,7 @@ const I18N = {
     'dash.expensesLast7Days': 'Gastos últimos 7 días',
     'dash.expensesCurrentMonth': 'Gastos mes en curso',
     'dash.revenueMonth': 'Facturación (mes)',
-    'dash.result': 'Resultado',
+    'dash.result': 'Resultado (antes de impuestos)',
     'dash.marginOnSales': 'Margen sobre ventas:',
     'dash.avgFoodCost': '% Food Cost medio:',
     'dash.staffCostPct': '% Coste personal:', 'dash.primeCost': 'Prime cost:',
@@ -14239,6 +14288,7 @@ const I18N = {
     'void.reason.kitchenError': 'Error a cuina', 'void.reason.outOfStock': 'Producte esgotat', 'void.reason.other': 'Altre',
     'msg.voidRegistered': 'Anul·lació registrada', 'title.voidLog': 'Anul·lacions', 'label.quantity': 'Quantitat',
     'title.cancelSale': 'Anul·lar venda', 'msg.confirmCancelSale': "S'anul·larà aquesta venda ja cobrada: es restituirà l'estoc descomptat i quedarà registrada com a anul·lada (no s'esborra, per traçabilitat). Introdueix el PIN del negoci per confirmar.",
+    'msg.cannotCancelClosedMonth': 'No es pot anul·lar: el mes d\'aquesta venda ja està tancat a Gestió Econòmica. Reobre\'l a Tresoreria si de veritat cal anul·lar-la.',
     'label.wholeSaleVoided': 'Venda completa anul·lada (${amount})', 'msg.saleVoidedAfterCharge': 'Venda anul·lada després del cobrament', 'msg.saleVoided': "Venda anul·lada i estoc restituït",
     'empty.noVoidsRegistered': 'No hi ha anul·lacions registrades.',
     'btn.stockLog': 'Historial', 'title.stockLog': 'Historial d\'ajustos d\'estoc', 'empty.noStockLog': 'No hi ha ajustos d\'estoc registrats.',
@@ -14635,6 +14685,9 @@ const I18N = {
     'hr.csv.baseEur': 'Base (€)',
     'hr.csv.business': 'Negoci',
     'hr.csv.capexBase': 'Inversions CAPEX (base)',
+    'hr.csv.capexQuota': 'Quota CAPEX finançat del mes (deduïda del resultat)',
+    'hr.csv.capexBaseInfo': 'Inversió CAPEX comprada aquest mes (informatiu, no deduïda del resultat)',
+    'hr.csv.capexResultNote': 'Només la quota mensual d\'inversions finançades es descompta del resultat del mes; una compra al comptat es capitalitza com a actiu, no com a despesa del mes.',
     'hr.csv.capexMonth': 'INVERSIONS (CAPEX) DEL MES',
     'hr.csv.client': 'Client',
     'hr.csv.fixedExpensesBase': 'Despeses fixes (base sense IVA)',
@@ -14646,6 +14699,7 @@ const I18N = {
     'hr.csv.monthSummary': 'RESUM DEL MES',
     'hr.csv.monthlyFixedExpenses': 'DESPESES FIXES MENSUALS (recurrents)',
     'hr.csv.currentConfigNote': 'desglossament amb la configuració actual, el resum final usa l\'històric real d\'aquell mes',
+    'hr.csv.fijosHistRateNote': 'despeses fixes al tipus mitjà real del mes, no desglossat per tipus — no es guarda històric per concepte',
     'hr.csv.noFixedExpenses': 'Sense despeses fixes registrades.',
     'hr.csv.noInvestments': 'Sense inversions registrades aquest mes.',
     'hr.csv.noSalesThisMonth': 'Sense vendes registrades aquest mes.',
@@ -14910,7 +14964,7 @@ const I18N = {
     'dash.expensesLast7Days': 'Despeses últims 7 dies',
     'dash.expensesCurrentMonth': 'Despeses mes en curs',
     'dash.revenueMonth': 'Facturació (mes)',
-    'dash.result': 'Resultat',
+    'dash.result': 'Resultat (abans d\'impostos)',
     'dash.marginOnSales': 'Marge sobre vendes:',
     'dash.avgFoodCost': '% Food Cost mitjà:',
     'dash.staffCostPct': '% Cost de personal:', 'dash.primeCost': 'Prime cost:',
@@ -16453,6 +16507,7 @@ const I18N = {
     'void.reason.kitchenError': 'Kitchen error', 'void.reason.outOfStock': 'Out of stock', 'void.reason.other': 'Other',
     'msg.voidRegistered': 'Void registered', 'title.voidLog': 'Voids', 'label.quantity': 'Quantity',
     'title.cancelSale': 'Void sale', 'msg.confirmCancelSale': 'This already-charged sale will be voided: the discounted stock will be restored and it will be recorded as voided (not deleted, for traceability). Enter the business PIN to confirm.',
+    'msg.cannotCancelClosedMonth': 'Cannot void: this sale\'s month is already closed in Gestión Económica. Reopen it in Tesorería if you really need to void it.',
     'label.wholeSaleVoided': 'Whole sale voided (${amount})', 'msg.saleVoidedAfterCharge': 'Sale voided after charging', 'msg.saleVoided': 'Sale voided and stock restored',
     'empty.noVoidsRegistered': 'No voids registered.',
     'btn.stockLog': 'History', 'title.stockLog': 'Stock adjustment history', 'empty.noStockLog': 'No stock adjustments recorded.',
@@ -16849,6 +16904,9 @@ const I18N = {
     'hr.csv.baseEur': 'Base (€)',
     'hr.csv.business': 'Business',
     'hr.csv.capexBase': 'CAPEX investments (base)',
+    'hr.csv.capexQuota': 'Financed CAPEX instalment this month (deducted from result)',
+    'hr.csv.capexBaseInfo': 'CAPEX investment purchased this month (informational, not deducted from result)',
+    'hr.csv.capexResultNote': 'Only the monthly instalment of financed investments is deducted from the month result; a cash purchase is capitalised as an asset, not expensed this month.',
     'hr.csv.capexMonth': 'MONTHLY INVESTMENTS (CAPEX)',
     'hr.csv.client': 'Client',
     'hr.csv.fixedExpensesBase': 'Fixed expenses (base excl. VAT)',
@@ -16860,6 +16918,7 @@ const I18N = {
     'hr.csv.monthSummary': 'MONTH SUMMARY',
     'hr.csv.monthlyFixedExpenses': 'MONTHLY FIXED EXPENSES (recurring)',
     'hr.csv.currentConfigNote': 'breakdown uses the current configuration, the final summary uses that month\'s real historical total',
+    'hr.csv.fijosHistRateNote': 'fixed expenses at that month\'s real average rate, not broken down by rate — no per-concept history is kept',
     'hr.csv.noFixedExpenses': 'No fixed expenses recorded.',
     'hr.csv.noInvestments': 'No investments recorded this month.',
     'hr.csv.noSalesThisMonth': 'No sales recorded this month.',
@@ -17124,7 +17183,7 @@ const I18N = {
     'dash.expensesLast7Days': 'Expenses last 7 days',
     'dash.expensesCurrentMonth': 'Expenses current month',
     'dash.revenueMonth': 'Revenue (month)',
-    'dash.result': 'Result',
+    'dash.result': 'Result (before tax)',
     'dash.marginOnSales': 'Margin on sales:',
     'dash.avgFoodCost': 'Avg. Food Cost %:',
     'dash.staffCostPct': 'Staff cost %:', 'dash.primeCost': 'Prime cost:',
@@ -19808,6 +19867,18 @@ function geFijosLogValueForMonth(year, month, field){
   const sorted = [...log].sort((a,b) => a.fecha.localeCompare(b.fecha));
   const upTo = sorted.filter(e => e.fecha <= endOfMonth);
   return upTo.length ? upTo[upTo.length-1][field] : sorted[0][field];
+}
+// Equivalente global de isDateClosed (privada del closure GE, js/hr.js) para
+// que otros módulos (TPV) puedan respetar el cierre de mes de Gestión
+// Económica sin poder llamar a la función real. Sin esto, anular una venta
+// de un mes ya cerrado y enviado al gestor cambiaba la facturación/IVA de
+// ese mes sin ningún aviso ni rastro de que el "cierre" dejó de significar
+// nada.
+function geIsDateClosed(fechaStr){
+  if(!fechaStr || !DB.ge) return false;
+  const [y,m] = fechaStr.split('-').map(Number);
+  const key = `${y}-${String(m).padStart(2,'0')}`;
+  return (DB.ge.cierres||[]).includes(key);
 }
 function geTotalFijosNetoForMonth(year, month){
   const v = geFijosLogValueForMonth(year, month, 'totalNeto');
@@ -29207,6 +29278,10 @@ function confirmVoidLine(){
 function requestCancelSale(saleId){
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
+  if(typeof geIsDateClosed === 'function' && geIsDateClosed(sale.date)){
+    showToast(t('msg.cannotCancelClosedMonth'));
+    return;
+  }
   requestBusinessPinAction(t('title.cancelSale'), t('msg.confirmCancelSale'), (pin) => reallyCancelSale(saleId, pin));
 }
 /* La marca `menuStockYaDevuelto` es de USAR Y TIRAR dentro de este recorrido:
@@ -34114,7 +34189,7 @@ const GE = (function(){
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realCostNoVat')}</div><div class="val">${fmtMoney(tvNeto)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupported')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.netRevenue')} <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>foodCostObjPct()?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${foodCostObjPct().toFixed(1)}% <button class="btn btn-sm btn-icon" style="min-height:auto;padding:1px 4px;vertical-align:middle" onclick="GE.editFoodCostObj()" title="${t('common.edit')}"><i class="ti ti-edit" style="font-size:11px"></i></button></div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>foodCostObjPct()?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${foodCostObjPct().toFixed(1)}% <button class="btn btn-sm btn-icon" style="vertical-align:middle" onclick="GE.editFoodCostObj()" title="${t('common.edit')}"><i class="ti ti-edit"></i></button></div></div>`;
     const allItems = variablesMes(mes,gvYear);
     const chartEl = document.getElementById('gv-cat-chart');
     if(chartEl){
@@ -35389,11 +35464,12 @@ const GE = (function(){
     });
     if(!capexMes.length) rows.push([t('hr.csv.noInvestments')]);
     rows.push(['','',t('common.total'), sumCapexBase, '', sumCapexIva, sumCapexTotal, '']);
+    rows.push([t('hr.csv.capexResultNote')]);
     rows.push([]);
 
     // Desglose por tipo de IVA real (21/10/4/0%) de los gastos del mes, necesario para
     // el Modelo 303/347 en vez de un único importe de IVA soportado sin detalle.
-    rows.push([t('hr.csv.vatBreakdownTitle')]);
+    rows.push([t('hr.csv.vatBreakdownTitle') + (isHistoricalMonth ? ` (${t('hr.csv.fijosHistRateNote')})` : '')]);
     rows.push([t('hr.csv.vatRatePct'), t('hr.csv.baseEur'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
     const ivaGroups = {};
     function addToVatGroup(pct, base, ivaAmt){
@@ -35406,15 +35482,42 @@ const GE = (function(){
       const pct = ivaDeGastoVariable(v);
       addToVatGroup(pct, base, base*pct/100);
     });
-    fijos().forEach(g => {
-      const base = gfMonthlyImporte(g);
-      const pct = g.iva!=null ? parseFloat(g.iva) : 0;
-      addToVatGroup(pct, base, base*pct/100);
-    });
+    // Los gastos fijos no guardan un histórico por concepto (solo el total
+    // agregado, en fijosLog), así que para un mes PASADO no se puede repartir
+    // su IVA por tipo real con la configuración de hoy — antes esta tabla
+    // usaba fijos() (la lista ACTUAL) también para meses históricos, y el
+    // 21%/10%/etc. que salía aquí no era el que tocaba, aunque el total del
+    // resumen (sumFijosIvaHist) sí fuera el correcto: dos cifras del mismo
+    // informe que no cuadraban entre sí. Para un mes histórico se usa en su
+    // lugar el tipo medio real de ESE mes (histórico base/IVA), sin
+    // pretender un desglose por tipo que ya no se puede reconstruir.
+    if(isHistoricalMonth){
+      if(sumFijosBaseHist > 0){
+        const pctMedio = Math.round((sumFijosIvaHist/sumFijosBaseHist)*10000)/100;
+        addToVatGroup(pctMedio, sumFijosBaseHist, sumFijosIvaHist);
+      }
+    } else {
+      fijos().forEach(g => {
+        const base = gfMonthlyImporte(g);
+        const pct = g.iva!=null ? parseFloat(g.iva) : 0;
+        addToVatGroup(pct, base, base*pct/100);
+      });
+    }
     capexMes.forEach(c => {
       const imp = parseFloat(c.importe||0);
       const pct = parseFloat(c.iva||0);
       addToVatGroup(pct, imp, imp*pct/100);
+    });
+    // El IVA que cobra la plataforma de delivery sobre su propia comisión
+    // también es soportado y deducible (ver comisionPlataformaNeta e
+    // ivaSoportadoComisionesMes más arriba) — faltaba aquí, y sin él "IVA a
+    // liquidar" salía más alto de lo que de verdad toca declarar en el 303.
+    ventas.forEach(v => {
+      const bruto = parseFloat(v.comisionPlataforma||0);
+      if(!bruto) return;
+      const pct = (v.plataforma && v.plataforma.ivaPct!=null) ? parseFloat(v.plataforma.ivaPct) : 0;
+      const neto = bruto / (1 + pct/100);
+      addToVatGroup(pct, neto, bruto-neto);
     });
     Object.keys(ivaGroups).map(Number).sort((a,b)=>b-a).forEach(pct => {
       const g = ivaGroups[pct];
@@ -35436,8 +35539,20 @@ const GE = (function(){
     rows.push([]);
 
     const comisiones = comisionesMes(mes, año);
-    const resultado = sumBase - sumVarBase - sumFijosBaseHist - comisiones - capexCuotaMes(mes, año);
-    const totalIvaSoportado = sumVarIva + sumFijosIvaHist + sumCapexIva;
+    // Ojo: del resultado solo se descuenta la CUOTA mensual de las inversiones
+    // financiadas (capexCuotaMes) — igual que en Cuenta de Resultados y
+    // Tesorería —, nunca el importe total de la compra (sumCapexBase, que es
+    // lo que sale en la tabla de detalle de arriba). Una compra al contado no
+    // se resta del resultado del mes: es un activo que se capitaliza, no un
+    // gasto de explotación. Antes el resumen mostraba sumCapexBase junto al
+    // resultado, y las dos cifras no cuadraban entre sí para el gestor.
+    const capexCuota = capexCuotaMes(mes, año);
+    const resultado = sumBase - sumVarBase - sumFijosBaseHist - comisiones - capexCuota;
+    // Incluye el IVA soportado en la comisión de las plataformas de delivery,
+    // como en ivaLiquidarMes — si no, "IVA a liquidar" no cuadraría con lo
+    // que muestra Cuenta de Resultados para el mismo mes.
+    const comisionesIva = ivaSoportadoComisionesMes(mes, año);
+    const totalIvaSoportado = sumVarIva + sumFijosIvaHist + sumCapexIva + comisionesIva;
     rows.push([t('hr.csv.monthSummary')]);
     rows.push([t('hr.lbl.concept'), t('hr.lbl.amountEur')]);
     // "Total con IVA" tiene que cuadrar exactamente con base+IVA de las dos
@@ -35453,7 +35568,8 @@ const GE = (function(){
     rows.push([t('hr.lbl.deliveryCommissions'), comisiones]);
     rows.push([t('hr.csv.variableExpensesBase'), sumVarBase]);
     rows.push([t('hr.csv.fixedExpensesBase'), sumFijosBaseHist]);
-    rows.push([t('hr.csv.capexBase'), sumCapexBase]);
+    rows.push([t('hr.csv.capexQuota'), capexCuota]);
+    if(Math.abs(sumCapexBase - capexCuota) > 0.01) rows.push([t('hr.csv.capexBaseInfo'), sumCapexBase]);
     rows.push([t('hr.csv.totalVatSupported'), totalIvaSoportado]);
     rows.push([t('hr.csv.vatToSettleShort'), sumIva - totalIvaSoportado]);
     rows.push([t('hr.csv.monthResult'), resultado]);

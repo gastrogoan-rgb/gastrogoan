@@ -104,6 +104,7 @@ lanzar; node test/ge-cdr-afinado.mjs > "$SALIDA/gecdrafinado.txt" 2>&1 & P70=$!
 lanzar; node test/ge-tesoreria-fixes.mjs > "$SALIDA/getefixes.txt" 2>&1 & P71=$!
 lanzar; node test/ge-tesoreria-revision.mjs > "$SALIDA/geterevision.txt" 2>&1 & P72=$!
 lanzar; node test/ge-tab-persiste-sync.mjs > "$SALIDA/getabsync.txt" 2>&1 & P73=$!
+lanzar; node test/ge-export-gestor-global.mjs > "$SALIDA/geexportglobal.txt" 2>&1 & P74=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -189,5 +190,6 @@ espera $P70 "GE CDR: IVA real por compra, facturación con IVA arriba, tooltips"
 espera $P71 "GE Tesorería: meses centrados, fix reparto en móvil, cierre mes, conciliación" "$SALIDA/getefixes.txt" "casos pasaron"
 espera $P72 "GE Tesorería: reparto en una línea, sin gráfico duplicado, semáforo verificado" "$SALIDA/geterevision.txt" "casos pasaron"
 espera $P73 "GE: una sincronización de nube ya no resetea la pestaña activa a Ventas" "$SALIDA/getabsync.txt" "casos pasaron"
+espera $P74 "GE global: informe al gestor cuadrado, cierre de mes respetado en TPV, fusión de cierres/fijosLog" "$SALIDA/geexportglobal.txt" "casos pasaron"
 
 exit $FALLOS

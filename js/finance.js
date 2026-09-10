@@ -65,6 +65,18 @@ function geFijosLogValueForMonth(year, month, field){
   const upTo = sorted.filter(e => e.fecha <= endOfMonth);
   return upTo.length ? upTo[upTo.length-1][field] : sorted[0][field];
 }
+// Equivalente global de isDateClosed (privada del closure GE, js/hr.js) para
+// que otros módulos (TPV) puedan respetar el cierre de mes de Gestión
+// Económica sin poder llamar a la función real. Sin esto, anular una venta
+// de un mes ya cerrado y enviado al gestor cambiaba la facturación/IVA de
+// ese mes sin ningún aviso ni rastro de que el "cierre" dejó de significar
+// nada.
+function geIsDateClosed(fechaStr){
+  if(!fechaStr || !DB.ge) return false;
+  const [y,m] = fechaStr.split('-').map(Number);
+  const key = `${y}-${String(m).padStart(2,'0')}`;
+  return (DB.ge.cierres||[]).includes(key);
+}
 function geTotalFijosNetoForMonth(year, month){
   const v = geFijosLogValueForMonth(year, month, 'totalNeto');
   return v==null ? geTotalFijosNeto() : v;
