@@ -63,6 +63,10 @@ await caso('El total del día y del mes excluyen la propina, que se muestra apar
 });
 
 await caso('El desglose por tipo de servicio da cifras reales por Mesa/Take Away/Delivery, sin propina', async () => {
+  // Los .ge-kpi de este desglose se pintan con animateKpiNumbers() (~600ms
+  // contando desde 0 hasta el valor final) — leer el DOM justo tras
+  // renderizar pilla una cifra intermedia, no un fallo real de la app.
+  await new Promise(r=>setTimeout(r,700));
   const r = await page.evaluate(()=>{
     const box = document.getElementById('ventas-por-tipo');
     return box.textContent;

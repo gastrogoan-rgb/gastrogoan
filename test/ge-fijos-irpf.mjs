@@ -65,14 +65,39 @@ await caso('El cálculo automático de nómina separa IRPF y SS trabajador, y ca
   assert.ok(Math.abs(num(r.total) - 2331.85) < 0.01, 'coste total empresa mal calculado: ' + JSON.stringify(r));
 });
 
-await caso('Al guardar, el IRPF retenido del mes aparece como KPI aparte en Gastos Fijos', async () => {
+await caso('Con auto-cálculo activo, la periodicidad de pago queda bloqueada en Mensual', async () => {
+  // Fallo real encontrado en la revisión (10/09): el sueldo neto del
+  // auto-cálculo se pide siempre MENSUAL, pero la periodicidad de pago
+  // (Mensual/Trimestral/Anual...) era un campo aparte, editable a la vez.
+  // Si alguien la ponía en "Trimestral", gfMonthlyImporte() volvía a
+  // dividir el coste YA mensual entre 3, descuadrando el coste real.
   const r = await page.evaluate(()=>{
-    GE.saveGV ? null : null; // no-op, evita confusión con GV
+    const sel = document.getElementById('gf-f-periodo');
+    return {disabled: sel.disabled, valor: sel.value};
+  });
+  assert.equal(r.disabled, true, 'la periodicidad debe quedar deshabilitada con auto-cálculo activo: ' + JSON.stringify(r));
+  assert.equal(r.valor, '1', 'y fijada en Mensual: ' + JSON.stringify(r));
+});
+
+await caso('Guardar con auto-cálculo fuerza periodicidadMeses=1 aunque se manipule el select', async () => {
+  const r = await page.evaluate(()=>{
+    // Simula manipular el select deshabilitado directamente (o una ficha
+    // vieja con otra periodicidad guardada) para comprobar que saveGF()
+    // igualmente fuerza mensual cuando autoCalc está activo.
+    document.getElementById('gf-f-periodo').disabled = false;
+    document.getElementById('gf-f-periodo').value = '3';
     document.getElementById('gf-f-dia').value = '25';
     GE.saveGF();
-    const box = document.getElementById('gf-kpis').textContent;
-    return box;
+    return DB.ge.fijos.find(g=>g.nombre==='JUAN PÉREZ').periodicidadMeses;
   });
+  assert.equal(r, 1, 'periodicidadMeses debe quedar en 1 (mensual) pese a manipular el select: ' + JSON.stringify(r));
+});
+
+await caso('Tras guardar, el IRPF retenido del mes aparece como KPI aparte en Gastos Fijos', async () => {
+  // La ficha ya se guardó en el caso anterior (con periodicidadMeses
+  // forzado a 1) — aquí solo se comprueba que el KPI de la lista refleja
+  // ese IRPF real.
+  const r = await page.evaluate(()=>document.getElementById('gf-kpis').textContent);
   assert.ok(r.toLowerCase().includes('irpf retenido'), 'debe verse el KPI "IRPF retenido": ' + r);
   assert.ok(r.includes('267,01'), 'el importe del KPI debe ser el IRPF real retenido este mes: ' + r);
 });

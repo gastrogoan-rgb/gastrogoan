@@ -1,6 +1,15 @@
 /* ============================================================
    DASHBOARD
    ============================================================ */
+// Mismo objetivo unificado que usa Gestión Económica (ver foodCostObjPct en
+// js/hr.js, misma fórmula duplicada aquí porque el Dashboard no tiene acceso
+// al closure de GE): si ya hay un reparto configurado en Tesorería, manda su
+// "% Gastos Variables"; si no, el objetivo de food cost (o 35% por defecto).
+function geFoodCostObjPct(){
+  const dp = DB.ge.config.distPct;
+  if(dp && dp.mp != null) return dp.mp;
+  return DB.ge.config.foodCostObj != null ? DB.ge.config.foodCostObj : 35;
+}
 // g.importe (vía gfMonthlyImporte) es la base mensual sin IVA — el IVA se
 // añade encima para el total, nunca se extrae de un total que ya lo llevara.
 function geTotalFijosNeto(){
@@ -16,6 +25,13 @@ function geTotalFijos(){
 function geTotalPersonalNeto(){
   return (DB.ge.fijos||[]).filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyImporte(g),0);
 }
+// IRPF retenido a los empleados este mes (autocálculo de nómina), a
+// ingresar en Hacienda vía Modelo 111 — no es un coste extra del negocio
+// (ya va dentro del bruto), solo dinero que el negocio retiene y adelanta
+// por el empleado.
+function geTotalIrpfMensual(){
+  return (DB.ge.fijos||[]).filter(g=>g.categoria==='PERSONAL' && g.autoCalc).reduce((s,g)=>s+(parseFloat(g.irpfMensual)||0),0);
+}
 // Registra un punto en el histórico de gastos fijos (uno por día como
 // máximo: si ya se tocó algo hoy, se sobrescribe con el valor final del
 // día en vez de acumular varias entradas). Se llama tras cada alta/edición/
@@ -29,9 +45,10 @@ function snapshotGeFijosNeto(){
   const totalGross = geTotalFijos();
   const personalNeto = geTotalPersonalNeto();
   const gfNeto = totalNeto - personalNeto;
+  const irpfMensual = geTotalIrpfMensual();
   const existing = DB.ge.fijosLog.find(e => e.fecha === today);
-  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; }
-  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto});
+  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; existing.irpfMensual = irpfMensual; }
+  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto, irpfMensual});
 }
 // Valor del histórico de gastos fijos "vigente" a fecha de un mes concreto:
 // el último punto anterior o igual al último día de ese mes. Si no hay
@@ -74,6 +91,14 @@ function geTotalPersonalNetoForMonth(year, month){
 function geTotalGFNetoForMonth(year, month){
   const v = geFijosLogValueForMonth(year, month, 'gfNeto');
   return v==null ? (geTotalFijosNeto() - geTotalPersonalNeto()) : v;
+}
+// IRPF retenido de un mes concreto, a partir del histórico — mismo criterio
+// que el resto de geXxxForMonth: no mezclar la nómina de HOY con la de un
+// mes pasado (y el mismo fallback a la configuración actual si aún no hay
+// histórico para esa fecha).
+function geIrpfMensualForMonth(year, month){
+  const v = geFijosLogValueForMonth(year, month, 'irpfMensual');
+  return v==null ? geTotalIrpfMensual() : v;
 }
 // True si TODO el año consultado es anterior al primer punto del histórico
 // (es decir, no tenemos ningún dato real de cómo eran los gastos fijos en
@@ -463,7 +488,7 @@ function renderDashboard(){
     </div>
     <div style="margin-top:8px;font-size:13px;color:var(--muted)">
       ${t('dash.marginOnSales')} <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacionNeta>0?margenPct.toFixed(1)+'%':'—'}</strong>
-      &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${hasFoodCost?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', DB.ge.config.foodCostObj||35)}
+      &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>geFoodCostObjPct()?'var(--red)':'var(--green)'}">${hasFoodCost?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', geFoodCostObjPct().toFixed(1))}
       &nbsp;·&nbsp; ${t('dash.staffCostPct')} <strong style="color:${staffCostPct>30?'var(--red)':'var(--green)'}">${facturacionNeta>0&&personalCost>0?staffCostPct.toFixed(1)+'%':'—'}</strong>
       ${facturacionNeta>0 && personalCost>0 && hasFoodCost ? `&nbsp;·&nbsp; ${t('dash.primeCost')} <strong style="color:${primeCostPct>65?'var(--red)':'var(--green)'}">${primeCostPct.toFixed(1)}%</strong>` : ''}
     </div>
@@ -605,7 +630,7 @@ function renderDashboard(){
   const tick = parseFloat(cfg.ticketMedio) || 0;
   const cub = parseFloat(cfg.cubiertosActuales) || 0;
   const dias = parseFloat(cfg.diasApertura) || 0;
-  const fc = parseFloat(cfg.foodCostObj) || 35;
+  const fc = geFoodCostObjPct();
   let breakevenHtml;
   if(!tick || !dias){
     breakevenHtml = `<div class="empty">${t('dash.configureBreakeven')}</div>`;

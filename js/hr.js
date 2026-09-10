@@ -55,6 +55,44 @@ const GE = (function(){
   function variables(){ return ge().variables; }
   function capex(){ return ge().capex; }
   function config(){ return ge().config; }
+  // El "% Gastos Variables" que se reparte en Tesorería (config().distPct.mp)
+  // y el "objetivo de food cost" (config().foodCostObj) eran dos números
+  // separados para la MISMA idea: todo lo que entra en fabricar el plato o
+  // la bebida (materia prima, bebidas, packaging, limpieza, comisiones, mano
+  // de obra extra) es food cost, según el propio dueño — la cifra real que
+  // se compara contra el objetivo (totalVariablesNetoMes) ya sumaba todo eso
+  // en los dos sitios, pero el objetivo con el que se comparaba no era el
+  // mismo en cada pantalla. Ahora hay un único objetivo: si ya se configuró
+  // un reparto en Tesorería, manda ese "mp"; si no, el de food cost (o 35%
+  // por defecto), y editarlo desde cualquiera de los dos sitios actualiza
+  // ambos a la vez.
+  function foodCostObjPct(){
+    const dp = config().distPct;
+    if(dp && dp.mp != null) return dp.mp;
+    return config().foodCostObj != null ? config().foodCostObj : 35;
+  }
+  // Fija el objetivo desde CUALQUIER pantalla (Gastos Variables, Punto de
+  // Equilibrio) manteniendo sincronizado el reparto de Tesorería: si ya
+  // existía un reparto (Personal/Fijos/Variables/Otros/Beneficio sumando
+  // 100%), reajusta los otros cuatro proporcionalmente para que la suma
+  // siga siendo 100 — mismo criterio que adjustDistPct(), pero operando
+  // sobre la configuración directamente, no sobre inputs de un formulario
+  // que puede no estar en pantalla.
+  function setFoodCostObjPct(n){
+    const val = Math.max(0, Math.min(100, n));
+    config().foodCostObj = val;
+    // Mismos valores por defecto que ya llevan los campos de Tesorería en el
+    // HTML (30/20/35/5/10) — si el negocio nunca tocó ese reparto, se crea
+    // aquí con esa base para que quede sincronizado desde la primera vez.
+    const dp = config().distPct || {per:30, gf:20, mp:35, og:5, ben:10};
+    const otherKeys = ['per','gf','og','ben'];
+    const othersSum = otherKeys.reduce((s,k)=>s+(parseFloat(dp[k])||0),0);
+    const remaining = 100 - val;
+    if(othersSum<=0){ otherKeys.forEach(k=>dp[k]=remaining/otherKeys.length); }
+    else{ otherKeys.forEach(k=>dp[k]=Math.max(0, remaining*(parseFloat(dp[k])||0)/othersSum)); }
+    dp.mp = val;
+    config().distPct = dp;
+  }
   function cierres(){ if(!ge().cierres) ge().cierres = []; return ge().cierres; }
   function mesKey(year, month){ return `${year}-${String(month+1).padStart(2,'0')}`; }
   function isMonthClosed(year, month){ return cierres().includes(mesKey(year, month)); }
@@ -449,9 +487,10 @@ const GE = (function(){
       </div>
       <div class="field">
         <label>${t('hr.gf.payPeriodicity')}</label>
-        <select id="gf-f-periodo">
-          ${GF_PERIODOS.map(p=>`<option value="${p.v}" ${(parseInt(g.periodicidadMeses)||1)===p.v?'selected':''}>${p.lbl}</option>`).join('')}
+        <select id="gf-f-periodo" ${autoCalc?'disabled':''}>
+          ${GF_PERIODOS.map(p=>`<option value="${p.v}" ${(autoCalc?1:(parseInt(g.periodicidadMeses)||1))===p.v?'selected':''}>${p.lbl}</option>`).join('')}
         </select>
+        ${autoCalc?`<small style="color:var(--muted)">${t('hr.gf.autoCalcMonthlyHint')}</small>`:''}
       </div>
       ${g.categoria!=='PERSONAL' ? `<div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gf-f-iva', g.iva)}</div>` : ''}
       <div class="field">
@@ -472,6 +511,13 @@ const GE = (function(){
     document.getElementById('gf-autocalc-fields').style.display = on ? 'block' : 'none';
     const importeInput = document.getElementById('gf-f-importe');
     importeInput.readOnly = on;
+    // El sueldo neto que se pide arriba es SIEMPRE mensual ("Sueldo neto
+    // MENSUAL") — si además se pudiera fijar una periodicidad de pago
+    // distinta (p.ej. trimestral), gfMonthlyImporte() volvería a dividir
+    // ese total ya mensual entre 3, descuadrando el coste real. Con
+    // auto-cálculo activo, la periodicidad queda fija en Mensual.
+    const periodoSel = document.getElementById('gf-f-periodo');
+    if(periodoSel){ periodoSel.disabled = on; if(on) periodoSel.value = '1'; }
     if(on) recalcGFAuto();
   }
   // Sueldo bruto = neto / (1 - (IRPF% + SS trabajador%)); SS empresa = bruto
@@ -503,17 +549,21 @@ const GE = (function(){
     const catVal = document.getElementById('gf-f-cat').value;
     const ivaEl = document.getElementById('gf-f-iva');
     if(catVal!=='PERSONAL' && ivaEl && ivaEl.value===''){ showToast(t('msg.chooseIvaForExpense')); return; }
+    const autocalcEl = document.getElementById('gf-f-autocalc');
+    const isAutoCalc = !!(autocalcEl && autocalcEl.checked);
     const data = {
       nombre:nombre.toUpperCase(), importe, diaPago:parseInt(document.getElementById('gf-f-dia').value)||null,
       categoria: catVal,
-      periodicidadMeses: parseInt(document.getElementById('gf-f-periodo').value)||1,
+      // El sueldo neto del auto-cálculo es siempre MENSUAL — con otra
+      // periodicidad, gfMonthlyImporte() lo dividiría otra vez entre los
+      // meses del periodo, descuadrando el coste real.
+      periodicidadMeses: isAutoCalc ? 1 : (parseInt(document.getElementById('gf-f-periodo').value)||1),
       notas: document.getElementById('gf-f-notas').value.trim(),
       iva: ivaEl ? parseFloat(ivaEl.value) : 0
     };
     const empIdVal = document.getElementById('gf-f-empid').value;
     if(empIdVal !== '') data.employeeId = parseInt(empIdVal);
-    const autocalcEl = document.getElementById('gf-f-autocalc');
-    if(autocalcEl && autocalcEl.checked){
+    if(isAutoCalc){
       const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
       const irpfPct = parseFloat(document.getElementById('gf-f-irpfpct').value) || 0;
       const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
@@ -706,7 +756,7 @@ const GE = (function(){
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realCostNoVat')}</div><div class="val">${fmtMoney(tvNeto)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupported')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.netRevenue')} <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>(config().foodCostObj||35)?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${config().foodCostObj||35}%</div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>foodCostObjPct()?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${foodCostObjPct().toFixed(1)}% <button class="btn btn-sm btn-icon" style="min-height:auto;padding:1px 4px;vertical-align:middle" onclick="GE.editFoodCostObj()" title="${t('common.edit')}"><i class="ti ti-edit" style="font-size:11px"></i></button></div></div>`;
     const allItems = variablesMes(mes,gvYear);
     const chartEl = document.getElementById('gv-cat-chart');
     if(chartEl){
@@ -760,6 +810,22 @@ const GE = (function(){
     document.getElementById('gv-total-lbl').textContent = `${t('hr.lbl.totalVariables')} ${getMeses()[mes].toUpperCase()}`;
     document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ ${t('common.vat')} ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</span>`;
     renderGastoHormiga();
+  }
+  // El objetivo de food cost también se edita desde Punto de Equilibrio, y
+  // el mismo número alimenta el "% Gastos Variables" de Tesorería — antes se
+  // podía cambiar en un sitio y quedaba desactualizado en los demás; ahora
+  // los tres leen y escriben el mismo valor (ver foodCostObjPct/
+  // setFoodCostObjPct arriba).
+  async function editFoodCostObj(){
+    const actual = foodCostObjPct();
+    const val = await promptText(t('hr.gv.editFoodCostObjPrompt'), String(actual));
+    if(val === null) return;
+    const n = parseFloat(val);
+    if(isNaN(n) || n<=0 || n>100){ showToast(t('msg.enterAmount')); return; }
+    setFoodCostObjPct(n);
+    saveDB();
+    renderVariables();
+    showToast(t('msg.expenseSaved'));
   }
 
   // "Gasto hormiga": proveedores con muchos cargos pequeños y recurrentes a
@@ -967,7 +1033,7 @@ const GE = (function(){
     document.getElementById('pe-ticket').value = config().ticketMedio || '';
     document.getElementById('pe-cubiertos').value = config().cubiertosActuales || '';
     document.getElementById('pe-dias').value = config().diasApertura || '';
-    document.getElementById('pe-fc').value = config().foodCostObj || 35;
+    document.getElementById('pe-fc').value = foodCostObjPct();
     const sel = document.getElementById('pe-scenario-sel');
     if(sel){
       const scenarios = peScenarios();
@@ -989,7 +1055,8 @@ const GE = (function(){
     const cub = parseFloat(document.getElementById('pe-cubiertos').value) || 0;
     const dias = parseFloat(document.getElementById('pe-dias').value) || 0;
     const fc = parseFloat(document.getElementById('pe-fc').value) || 35;
-    Object.assign(config(), {ticketMedio:tick, cubiertosActuales:cub, diasApertura:dias, foodCostObj:fc});
+    Object.assign(config(), {ticketMedio:tick, cubiertosActuales:cub, diasApertura:dias});
+    setFoodCostObjPct(fc);
     saveDB();
     if(!tick || !dias){
       resetPEOutputs();
@@ -1455,6 +1522,12 @@ const GE = (function(){
     const qIdx = Math.floor(activeMonth/3);
     const qMesesLbls = getMeses().slice(qIdx*3, qIdx*3+3);
     const qLabel = `T${qIdx+1} (${qMesesLbls[0]}-${qMesesLbls[2]})`;
+    // Igual que el IVA (Modelo 303), el IRPF retenido a los empleados se
+    // declara e ingresa trimestralmente (Modelo 111) — se acumulan los
+    // meses del trimestre en curso hasta el visto, con el histórico de
+    // gastos fijos (no la nómina de HOY para un mes pasado).
+    let irpfReserva = 0;
+    for(let m=qIdx*3; m<=activeMonth; m++) irpfReserva += geIrpfMensualForMonth(teYear, m);
 
     const rows = [
       {lbl:t('hr.lbl.personalNoVat'), pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
@@ -1462,18 +1535,19 @@ const GE = (function(){
       {lbl:t('hr.lbl.variableExpenses'), pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
       {lbl:t('hr.te.otherExpenses'), pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
       {lbl:t('hr.te.profitSavings'), pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
-      {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, obj:null, real:ivaReserva, color:'var(--amber)', isIva:true},
+      {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, obj:null, real:ivaReserva, color:'var(--amber-dark)', isReserve:true, icon:'ti-pig-money'},
+      ...(irpfReserva>0.001 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, obj:null, real:irpfReserva, color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
     ];
 
     document.getElementById('te-rows').innerHTML = rows.map(r=>{
-      if(r.isIva){
+      if(r.isReserve){
         return `<div class="te-row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:6px">
           <span style="font-size:14px;font-weight:600">${r.lbl}</span>
           <span></span>
           <span></span>
-          <span style="text-align:right;font-family:monospace;font-weight:700;color:var(--amber-dark)">${fmtMoney(r.real)}</span>
+          <span style="text-align:right;font-family:monospace;font-weight:700;color:${r.color}">${fmtMoney(r.real)}</span>
           <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${t('hr.te.setAsideQuarterly')}</span>
-          <span style="text-align:center;font-size:16px"><i class="ti ti-pig-money"></i></span>
+          <span style="text-align:center;font-size:16px"><i class="ti ${r.icon}"></i></span>
         </div>`;
       }
       const diff = r.real - r.obj;
@@ -1510,8 +1584,12 @@ const GE = (function(){
   }
 
   // Previsión de tesorería a 30/60/90 días: parte del resultado medio de
-  // los últimos 3 meses ya cerrados (no el actual, que va a medias) y lo
-  // proyecta hacia delante día a día. Es una estimación basada en tu propio
+  // los últimos 3 meses naturales anteriores (no el actual, que va a medias)
+  // y lo proyecta hacia delante día a día. Usa el resultado NETO, después de
+  // impuestos (resultadoMes) — no el de antes de impuestos: ese dinero de
+  // Hacienda no es tesorería disponible de verdad, y antes se sobreestimaba
+  // la previsión usándolo (además no cuadraba con el gráfico de justo
+  // arriba, que si usa el neto). Es una estimación basada en tu propio
   // histórico reciente, no una promesa — por eso se marca como tal.
   function renderTreasuryForecast(){
     const box = document.getElementById('te-forecast');
@@ -1524,7 +1602,7 @@ const GE = (function(){
       if(m < 0){ m = 11; y -= 1; }
       lastMonths.push({m, y});
     }
-    const results = lastMonths.map(({m,y}) => resultadoAntesImpMes(m,y));
+    const results = lastMonths.map(({m,y}) => resultadoMes(m,y));
     const hasHistory = results.some(r => r !== 0);
     if(!hasHistory){ box.innerHTML = ''; return; }
     const avgMonthly = results.reduce((a,b)=>a+b,0) / results.length;
@@ -2145,7 +2223,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

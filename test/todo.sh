@@ -97,6 +97,8 @@ lanzar; node test/distribucion-volver-equipo.mjs > "$SALIDA/distvolver.txt" 2>&1
 lanzar; node test/manual-indice-fijo.mjs > "$SALIDA/manualindice.txt" 2>&1 & P64=$!
 lanzar; node test/ge-ventas-propinas-tipo.mjs > "$SALIDA/geventastipo.txt" 2>&1 & P65=$!
 lanzar; node test/ge-fijos-irpf.mjs > "$SALIDA/gefijosirpf.txt" 2>&1 & P66=$!
+lanzar; node test/ge-tesoreria-irpf.mjs > "$SALIDA/geteirpf.txt" 2>&1 & P67=$!
+lanzar; node test/ge-variables.mjs > "$SALIDA/gevariables.txt" 2>&1 & P68=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -175,5 +177,7 @@ espera $P63 "Distribución del Trabajo: empleado directo a su ficha, dueño pued
 espera $P64 "Manual: solo el índice de arriba queda fijo al hacer scroll" "$SALIDA/manualindice.txt" "casos pasaron"
 espera $P65 "GE Ventas: sin propina en el total, desglose real por tipo de servicio" "$SALIDA/geventastipo.txt" "casos pasaron"
 espera $P66 "GE Gastos Fijos: IRPF separado y visible, Personal sin mención a IVA" "$SALIDA/gefijosirpf.txt" "casos pasaron"
+espera $P67 "GE Tesorería: IRPF retenido trimestral y previsión con resultado neto" "$SALIDA/geteirpf.txt" "casos pasaron"
+espera $P68 "GE Gastos Variables: meses centrados, food cost editable, pedidos↔gasto verificado" "$SALIDA/gevariables.txt" "casos pasaron"
 
 exit $FALLOS
