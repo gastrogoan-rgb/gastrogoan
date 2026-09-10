@@ -95,6 +95,7 @@ lanzar; node test/sala-cabecera-mesa.mjs > "$SALIDA/salacabecera.txt" 2>&1 & P61
 lanzar; node test/codigo-negocio-recordado.mjs > "$SALIDA/codigorecordado.txt" 2>&1 & P62=$!
 lanzar; node test/distribucion-volver-equipo.mjs > "$SALIDA/distvolver.txt" 2>&1 & P63=$!
 lanzar; node test/manual-indice-fijo.mjs > "$SALIDA/manualindice.txt" 2>&1 & P64=$!
+lanzar; node test/ge-ventas-propinas-tipo.mjs > "$SALIDA/geventastipo.txt" 2>&1 & P65=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -171,5 +172,6 @@ espera $P61 "Sala: Cambiar de mesa sube al principio de la cabecera"  "$SALIDA/s
 espera $P62 "código de negocio recordado en el desplegable, sin autoseleccionar" "$SALIDA/codigorecordado.txt" "casos pasaron"
 espera $P63 "Distribución del Trabajo: empleado directo a su ficha, dueño puede volver al equipo" "$SALIDA/distvolver.txt" "casos pasaron"
 espera $P64 "Manual: solo el índice de arriba queda fijo al hacer scroll" "$SALIDA/manualindice.txt" "casos pasaron"
+espera $P65 "GE Ventas: sin propina en el total, desglose real por tipo de servicio" "$SALIDA/geventastipo.txt" "casos pasaron"
 
 exit $FALLOS

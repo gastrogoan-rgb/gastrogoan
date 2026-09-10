@@ -548,6 +548,32 @@ const GE = (function(){
   function ventasSalesForDay(dateStr){
     return activeSales().filter(v => v.date===dateStr && (!ventasTipoFiltro || (v.tipo||'mesa')===ventasTipoFiltro));
   }
+  // La propina ya viaja SUMADA dentro de sale.total (ver finalizeCharge/
+  // finalizeSplitOrder) porque de cara al ticket y al cobro es dinero que
+  // entra igual en caja — pero para "Ventas" no es facturación del negocio,
+  // es del personal. Se resta aquí para que el total de esta pestaña sea la
+  // venta real del negocio, y se muestra aparte solo como referencia.
+  function ventaSinPropina(sale){ return (parseFloat(sale.total)||0) - (parseFloat(sale.propina)||0); }
+  // Qué tipos de servicio tiene activado el negocio (Mi Negocio → Tipos de
+  // servicio) — no tiene sentido mostrar un filtro o un desglose de
+  // "Delivery" a un negocio que nunca ha tenido esa opción activada.
+  function tiposServicioActivos(){
+    const ts = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
+    return ['mesa','takeaway','delivery'].filter(k => ts[k] !== false);
+  }
+  // Desglose REAL por tipo de servicio del mes entero — independiente del
+  // filtro de la tabla de abajo (ventasTipoFiltro), que solo afecta a qué
+  // días se listan. Antes lo único que había para distinguir mesa/take
+  // away/delivery era ese filtro (uno a la vez, sin verlos juntos).
+  function ventasPorTipoMes(mes, año){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    const totales = {mesa:0, takeaway:0, delivery:0};
+    activeSales().filter(v => (v.date||'').startsWith(mesStr)).forEach(v => {
+      const tipo = v.tipo || 'mesa';
+      if(tipo in totales) totales[tipo] += ventaSinPropina(v);
+    });
+    return totales;
+  }
   // Señales de reserva cobradas ese mes — aparte de la facturación oficial
   // a propósito (ver pago_confirmado, js/core.js): todavía no se sabe qué
   // va a pedirse en la mesa ni con qué IVA, así que no se mete como venta
@@ -567,39 +593,74 @@ const GE = (function(){
     document.getElementById('ventas-year').textContent = ventasYear;
     document.getElementById('ventas-months').innerHTML = getMeses().map((m,i)=>`
       <div class="month-pill${i===ventasMonth?' active':''}" onclick="GE.setVentasMonth(${i})">${m}</div>`).join('');
-    const tipos = [
-      {v:'', lbl:t('common.all')},
-      {v:'mesa', lbl:t('ge.ventas.tipo.mesa')},
-      {v:'takeaway', lbl:t('ge.ventas.tipo.takeaway')},
-      {v:'delivery', lbl:t('ge.ventas.tipo.delivery')}
-    ];
-    document.getElementById('ventas-tipo-filter').innerHTML = tipos.map(x=>`
-      <button class="btn btn-sm ${ventasTipoFiltro===x.v?'btn-primary':''}" onclick="GE.setVentasTipoFiltro('${x.v}')">${x.lbl}</button>`).join('');
+    // Solo se ofrece filtrar por los tipos de servicio que el negocio tiene
+    // activados de verdad (Mi Negocio → Tipos de servicio) — antes salían
+    // los tres fijos aunque el negocio no hiciera, por ejemplo, delivery.
+    // Con un solo tipo activo no hace falta ni el filtro: no hay nada entre
+    // lo que elegir.
+    const tiposActivos = tiposServicioActivos();
+    const tipoFilterBox = document.getElementById('ventas-tipo-filter');
+    if(tiposActivos.length < 2){
+      tipoFilterBox.innerHTML = '';
+      ventasTipoFiltro = '';
+    } else {
+      const tipos = [{v:'', lbl:t('common.all')}, ...tiposActivos.map(v => ({v, lbl:t('ge.ventas.tipo.'+v)}))];
+      tipoFilterBox.innerHTML = tipos.map(x=>`
+        <button class="btn btn-sm ${ventasTipoFiltro===x.v?'btn-primary':''}" onclick="GE.setVentasTipoFiltro('${x.v}')">${x.lbl}</button>`).join('');
+    }
 
     const depositosMes = ventasDepositosForMonth(ventasMonth, ventasYear);
     document.getElementById('ventas-depositos-note').innerHTML = depositosMes > 0.001 ? `
       <p style="font-size:12px;color:var(--muted);margin:8px 0 0"><i class="ti ti-cash-banknote"></i> ${t('ge.ventas.depositsNote').replace('${amount}', fmtMoney(depositosMes))}</p>
     ` : '';
 
+    // -- Desglose REAL por tipo de servicio (mes entero, ignora el filtro
+    // de la tabla de abajo) — solo se pinta si el negocio tiene más de un
+    // tipo activado; con uno solo, el desglose sería igual al total. --
+    const tipoBox = document.getElementById('ventas-por-tipo');
+    if(tipoBox){
+      if(tiposActivos.length < 2){
+        tipoBox.innerHTML = '';
+      } else {
+        const porTipo = ventasPorTipoMes(ventasMonth, ventasYear);
+        tipoBox.innerHTML = `
+          <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('ge.ventas.byType')}</h4>
+          <div class="ge-kpi-grid" style="margin-bottom:14px">
+            ${tiposActivos.map(k => `<div class="ge-kpi"><div class="lbl">${t('ge.ventas.tipo.'+k)}</div><div class="val">${fmtMoney(porTipo[k])}</div></div>`).join('')}
+          </div>`;
+      }
+    }
+
     // -- Histórico por día del mes seleccionado, con total al final --
+    // La propina viaja sumada en sale.total (así se cobra en caja) pero NO
+    // es facturación del negocio — normalmente es para el personal. Se
+    // resta del total de esta pestaña y se muestra aparte, solo a título
+    // informativo, para no inflar las ventas reales del negocio.
     document.getElementById('ventas-dia-title').textContent = `${t('ge.ventas.byDay')} — ${getMeses()[ventasMonth]} ${ventasYear}`;
     const nDias = daysInMonth(ventasYear, ventasMonth);
     let diaRows = '';
-    let totalMes = 0, ticketsMes = 0;
+    let totalMes = 0, ticketsMes = 0, propinaMes = 0;
     for(let d=1; d<=nDias; d++){
       const dateStr = `${ventasYear}-${String(ventasMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const salesDia = ventasSalesForDay(dateStr);
       if(!salesDia.length) continue;
-      const totalDia = salesDia.reduce((s,v)=>s+parseFloat(v.total||0),0);
+      const totalDia = salesDia.reduce((s,v)=>s+ventaSinPropina(v),0);
+      const propinaDia = salesDia.reduce((s,v)=>s+(parseFloat(v.propina)||0),0);
       const ticketsDia = salesDia.length;
-      totalMes += totalDia; ticketsMes += ticketsDia;
-      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}</td></tr>`;
+      totalMes += totalDia; ticketsMes += ticketsDia; propinaMes += propinaDia;
+      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}${propinaDia>0.001?`<div style="font-size:10.5px;font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaDia)}</div>`:''}</td></tr>`;
     }
     document.getElementById('ventas-dia-table').innerHTML = diaRows ? `
       <thead><tr><th>${t('hr.lbl.day')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
       <tbody>${diaRows}</tbody>
-      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}</td></tr></tfoot>
+      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}${propinaMes>0.001?`<div style="font-size:10.5px;font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaMes)}</div>`:''}</td></tr></tfoot>
       ` : `<tbody><tr><td colspan="4"><div class="empty">${t('ge.ventas.emptyMonth')}</div></td></tr></tbody>`;
+    const notaPropinas = document.getElementById('ventas-propinas-note');
+    if(notaPropinas){
+      notaPropinas.innerHTML = propinaMes > 0.001
+        ? `<p style="font-size:12px;color:var(--muted);margin:8px 0 0"><i class="ti ti-hand-heart"></i> ${t('ge.ventas.tips')} ${getMeses()[ventasMonth]}: <strong>${fmtMoney(propinaMes)}</strong> — ${t('ge.ventas.tipsHint')}</p>`
+        : '';
+    }
   }
 
   /* -- GASTOS VARIABLES -- */

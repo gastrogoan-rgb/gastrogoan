@@ -1055,6 +1055,11 @@ td.wrap{white-space:normal}
 @media (max-width:1024px){.month-pill{min-height:44px;padding:6px 14px}}
 .month-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)}
 .month-sel{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+/* Ventas/Variables/Tesorería llevan el año arriba ya centrado (flechas +
+   número) — los doce meses debajo se quedaban pegados a la izquierda, sin
+   relación visual con el año que tienen encima. Centrados quedan "debajo"
+   del año de verdad, no como una fila suelta aparte. */
+.month-sel-centered{justify-content:center}
 .ge-link-note{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--teal-d);background:var(--teal-l);padding:4px 10px;border-radius:6px;margin-bottom:4px}
 
 .vis-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
