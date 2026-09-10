@@ -482,7 +482,6 @@
         <button class="ge-tab" onclick="GE.tab('fijos')"><i class="ti ti-receipt"></i> <span data-i18n="hr.lbl.fixedExpenses">Gastos Fijos</span></button>
         <button class="ge-tab" onclick="GE.tab('variables')"><i class="ti ti-shopping-cart"></i> <span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span></button>
         <button class="ge-tab" onclick="GE.tab('cdr')"><i class="ti ti-report-analytics"></i> <span data-i18n="tab.incomeStatement">Cuenta de Resultados</span></button>
-        <button class="ge-tab" onclick="GE.tab('resultado')"><i class="ti ti-trending-up"></i> <span data-i18n="common.result">Resultado</span></button>
         <button class="ge-tab" onclick="GE.tab('tesoreria')"><i class="ti ti-building-bank"></i> <span data-i18n="tab.treasury">Tesorería</span></button>
         <button class="ge-tab" onclick="GE.tab('pe')"><i class="ti ti-scale"></i> <span data-i18n="title.breakEven">Punto de Equilibrio</span></button>
         <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> <span data-i18n="tab.capex">CAPEX</span></button>
@@ -561,33 +560,24 @@
           <span style="font-size:16px;font-weight:700" id="cdr-year"></span>
           <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(1)"><i class="ti ti-chevron-right"></i></button>
         </div>
+        <div style="display:flex;justify-content:center;gap:6px;margin-bottom:14px">
+          <button class="btn btn-sm" id="cdr-gran-mes" onclick="GE.setCDRGranularidad('mes')"><span data-i18n="ge.granularity.monthly">Mensual</span></button>
+          <button class="btn btn-sm" id="cdr-gran-trimestre" onclick="GE.setCDRGranularidad('trimestre')"><span data-i18n="ge.granularity.quarterly">Trimestral</span></button>
+        </div>
         <div class="vis-section" style="margin-bottom:14px">
           <h4><span data-i18n="ge.monthlyResultChart">Resultado mensual</span> <span class="ge-auto">AUTO</span></h4>
           <div id="cdr-chart" class="bar-chart"></div>
-        </div>
-        <div style="margin-bottom:14px">
-          <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.linkedBillingNote">Facturación vinculada al TPV · Gastos vinculados a Gastos Fijos y Variables</span></span>
-        </div>
-        <div class="ge-grid"><table id="cdr-table"></table></div>
-      </div>
-
-      <!-- RESULTADO -->
-      <div id="ge-resultado" class="ge-tab-panel">
-        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px">
-          <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(-1)"><i class="ti ti-chevron-left"></i></button>
-          <span style="font-size:16px;font-weight:700" id="res-year"></span>
-          <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(1)"><i class="ti ti-chevron-right"></i></button>
-        </div>
-        <div style="margin-bottom:14px">
-          <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.linkedResultNote">Calculado automáticamente de Cuenta de Resultados + CAPEX</span></span>
         </div>
         <div class="dist-config" style="margin-bottom:14px">
           <div class="dist-field"><span data-i18n="label.profitTax">Impuesto sobre beneficios (IRPF/IS)</span> <input type="number" id="res-pct-impuesto" value="25" min="0" max="100" step="0.5" oninput="GE.setPctImpuesto()">%</div>
           <div class="dist-field"><span data-i18n="label.vatOnPurchases">IVA soportado en compras (deducible)</span> <input type="number" id="res-pct-iva-compras" value="10" min="0" max="21" step="0.5" oninput="GE.setPctIvaCompras()">%</div>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-info-circle"></i> <span data-i18n="ge.netResultExplanation">El "Resultado Neto" ya descuenta el IVA de tus ventas (configurado en Ajustes &gt; Facturación, % IVA en tickets), resta el coste de tus compras sin el IVA que pagas a proveedores (deducible) y descuenta el impuesto sobre beneficios: es lo que realmente te llevas. En la "Cuenta de Resultados" verás además el "IVA a liquidar con Hacienda (modelo 303)", que es la diferencia entre el IVA cobrado en ventas y el IVA pagado en compras e inversiones.</span></p>
-        <div id="res-comparison"></div>
-        <div class="ge-grid"><table id="res-table"></table></div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-info-circle"></i> <span data-i18n="ge.netResultExplanation">El "Resultado Neto" ya descuenta el IVA de tus ventas (configurado en Ajustes &gt; Facturación, % IVA en tickets), resta el coste de tus compras sin el IVA que pagas a proveedores (deducible) y descuenta el impuesto sobre beneficios: es lo que realmente te llevas. Debajo verás también el "IVA a liquidar con Hacienda (modelo 303)" y el "IRPF a ingresar (modelo 111)", que no son gasto del negocio, son dinero ya retenido que hay que declarar cada trimestre.</span></p>
+        <div style="margin-bottom:14px">
+          <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.linkedBillingNote">Facturación vinculada al TPV · Gastos vinculados a Gastos Fijos y Variables</span></span>
+        </div>
+        <div id="cdr-comparison"></div>
+        <div class="ge-grid"><table id="cdr-table"></table></div>
       </div>
 
       <!-- TESORERÍA -->

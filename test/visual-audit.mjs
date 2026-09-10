@@ -47,7 +47,6 @@ const VIEWS = [
   { name: 'economia_fijos', fn: "navigate('economia')" },
   { name: 'economia_variables', fn: "GE.tab('variables')" },
   { name: 'economia_cdr', fn: "GE.tab('cdr')" },
-  { name: 'economia_resultado', fn: "GE.tab('resultado')" },
   { name: 'economia_tesoreria', fn: "GE.tab('tesoreria')" },
   { name: 'economia_pe', fn: "GE.tab('pe')" },
   { name: 'economia_capex', fn: "GE.tab('capex')" },
