@@ -288,7 +288,8 @@ function renderEmployeeAccessFormHtml(){
       </div>
       <div class="field">
         <label>${t('access.businessCode')}</label>
-        <input type="text" id="acc-emp-code" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
+        <input type="text" id="acc-emp-code" list="acc-emp-code-list" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
+        <datalist id="acc-emp-code-list">${getRecentBusinessCodes().map(c => `<option value="${escapeHtml(c)}">`).join('')}</datalist>
       </div>
       <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="confirmEmployeeAccess()">${t('common.unlock')}</button>
     </div>
@@ -481,6 +482,25 @@ function pinDeNegocioCoincide(pin, storedPin){
   const bp = (storedPin === undefined) ? (DB.business && DB.business.pin) : storedPin;
   return pinDeEmpleadoCoincide(pin, bp, codigoNegocioParaPin());
 }
+// Los códigos de negocio (8 caracteres al azar) no hay quien se los
+// aprenda de memoria, y el empleado tiene que teclearlo cada vez que entra
+// en un dispositivo que no guardó su sesión. Se recuerdan aquí, en ESTE
+// dispositivo (no es un dato del negocio, no se sincroniza), para que el
+// desplegable nativo del campo (<datalist>) se lo proponga — pero sin
+// rellenarlo solo ni preseleccionar ninguno: el empleado sigue teniendo que
+// abrirlo y elegir, así no se cuela sin querer en el negocio de al lado.
+const RECENT_BUSINESS_CODES_LS = 'gastrogoan_recent_emp_codes';
+function getRecentBusinessCodes(){
+  try{ return JSON.parse(localStorage.getItem(RECENT_BUSINESS_CODES_LS) || '[]'); }
+  catch(e){ return []; }
+}
+function rememberBusinessCode(code){
+  if(!code) return;
+  let list = getRecentBusinessCodes().filter(c => c !== code);
+  list.unshift(code);
+  list = list.slice(0, 6);
+  try{ localStorage.setItem(RECENT_BUSINESS_CODES_LS, JSON.stringify(list)); }catch(e){}
+}
 function findEmployeeMatch(employees, name, pin, licenseCode){
   return (employees||[]).find(e => {
     if(e.active === false) return false;
@@ -565,6 +585,7 @@ async function confirmEmployeeAccess(){
     }
     const match = findEmployeeMatch(slotData.employees, name, pin, localSlot.code);
     if(!match){ showToast(t('access.badCredentials')); return; }
+    rememberBusinessCode(code);
     setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
     if(localSlot.id !== ACTIVE_SLOT){
       switchToBusiness(localSlot.id); // recarga la app ya con la sesión guardada
@@ -588,6 +609,7 @@ async function confirmEmployeeAccess(){
   if(!remoteData){ showToast(t('access.badCredentials')); return; }
   const match = findEmployeeMatch(remoteData.employees, name, pin, code);
   if(!match){ showToast(t('access.badCredentials')); return; }
+  rememberBusinessCode(code);
   let newSlotId;
   try{ newSlotId = await registerRemoteBusinessLocally(tenantId, code, remoteData); }
   catch(e){ console.error('Error registrando el negocio en este dispositivo', e); showToast(t('access.connectFailed')); return; }
@@ -3380,7 +3402,12 @@ const ARRAYS_CON_LAPIDA = new Set([
      reallyDeleteEmployee (js/hr.js) borra de verdad fichajes,
      turnoSwapRequests y vacationRequests del empleado eliminado — sin
      lápida, resucitaban al sincronizar un dispositivo que aún los tenía. */
-  'fichajes', 'turnoSwapRequests', 'vacationRequests',
+  'fichajes', 'turnoSwapRequests', 'vacationRequests', 'pedidoSolicitudes',
+  /* Igual para horariosFijos: reallyDeleteEmployee lo borra de verdad al
+     eliminar un empleado, y quitarSchedule también borra el patrón entero
+     al desactivar el horario fijo — sin lápida, resucitaría al sincronizar
+     un dispositivo que todavía lo tuviera. */
+  'horariosFijos',
   /* sales y cashClosures SÍ se borran de verdad: archiveOldData (js/app.js,
      "Mi Negocio" → archivar datos antiguos) hace un filter() real tras
      descargar el JSON. Sin lápida, archivar en un dispositivo mientras otro
@@ -3530,10 +3557,10 @@ function mergeLapidas(local, remoto){
 const MERGEABLE_ARRAYS = new Set([
   'ingredients','recipes','fichas','menuItems','cartas','menus',
   'purchaseOrders','providers','tables','tpvOrders','sales',
-  'cashClosures','employees','turnos','fichajes','promos',
+  'cashClosures','employees','turnos','fichajes','promos','horariosFijos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations',
+  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations','pedidoSolicitudes',
   // Arrays con id que se quedaban fuera: dos dispositivos que añaden cada uno
   // una entrada distinta (una anulación aquí, un check-in de ánimo allá, una
   // solicitud de cambio de turno acullá) casi a la vez y en ese hueco sin
@@ -6852,7 +6879,8 @@ function defaultData(){
     cashClosures: [], // {id, fecha, desde, hasta, totales:{Efectivo,Tarjeta,Otro}, total, ticketCount, fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, createdAt}
     employees: [],       // {id, name, rol, color, pin, pinChanged}
     shifts: {},          // { employeeId: ['','','','','','',''] }
-    turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas}
+    turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas, origen:'fijo'|undefined}
+    horariosFijos: [],   // {id, employeeId, patron:[7x {tipo,entrada,salida,entrada2,salida2}|null] (lun..dom), generadoHasta:'YYYY-MM-DD', activo}
     workDistribution: {}, // { employeeId: { platos:[name,...], produccion:{0:[task,...],...,6:[...]} } }
     fichajes: [],        // {id, employeeId, fecha, entrada, salida} — control horario real (entrada/salida)
     promos: [],          // {id, fecha (YYYY-MM-DD), titulo, descripcion} — calendario de promoción/marketing
@@ -6882,6 +6910,7 @@ function defaultData(){
     bankReconciliations: [], // {id, fechaDesde, fechaHasta, expected, bankAmount, difference, notes, createdAt} — conciliación bancaria manual (tarjeta cobrada vs. extracto real)
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
     turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
+    pedidoSolicitudes: [], // {id, employeeId, area, items:[{name,unit,cantidad}], notas, status:'pending'|'atendida', createdAt} — "lo que falta" que pide un empleado sin permiso de editar, para que el dueño/gerente haga el pedido real
     business: {
       name:'', address:'', phone:'', email:'', description:'',
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',

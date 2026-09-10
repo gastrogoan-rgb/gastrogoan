@@ -1316,6 +1316,10 @@ function rejectOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
+    // Datos del cliente guardados ANTES de mover a la papelera/borrar: una
+    // vez borrado el pedido ya no hay de dónde sacarlos para el aviso manual
+    // de abajo.
+    const {clienteNombre, clienteTelefono, clienteEmail} = order;
     // Se avisa ANTES de mover a la papelera/borrar: una vez borrado ya no
     // queda order.clientRef al que asociar el aviso.
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
@@ -1325,6 +1329,7 @@ function rejectOnlineOrder(orderId){
     saveDB();
     renderTPV();
     showToast(t('msg.orderRejected'));
+    openOrderNotifyModal(clienteNombre, clienteTelefono, clienteEmail, 'rechazado');
   });
 }
 
@@ -1332,8 +1337,10 @@ function rejectOnlineOrder(orderId){
 // de aceptar), esto cancela un pedido para llevar/delivery que YA está
 // aceptado y en marcha (p.ej. se ha quedado sin un ingrediente a mitad de
 // servicio). Igual que rechazar, pide PIN por ser una acción sensible que
-// borra el pedido. El cliente se entera por su enlace de seguimiento
-// (syncOrderStatusForPublic, abajo) — ya no hay ningún email automático.
+// borra el pedido. El cliente NO recibe ningún aviso automático (su enlace
+// de seguimiento cambia, pero nadie le avisa de que lo mire) — por eso, si
+// dejó teléfono o email, se ofrece avisarle a mano con un clic, igual que
+// ya se hace al cancelar o editar una reserva.
 function cancelAcceptedOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -1348,6 +1355,7 @@ function cancelAcceptedOnlineOrder(orderId){
        hamburguesas SUBÍA el stock de pan, carne y queso por encima de lo que
        había antes. Es el mismo criterio que ya se aplica en confirmVoidLine. */
     restockForVoidedItems(order.items, {includeIngredients: false});
+    const {clienteNombre, clienteTelefono, clienteEmail} = order;
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
@@ -1356,7 +1364,56 @@ function cancelAcceptedOnlineOrder(orderId){
     closeModal();
     renderTPV();
     showToast(t('msg.orderCancelled'));
+    openOrderNotifyModal(clienteNombre, clienteTelefono, clienteEmail, 'cancelado');
   });
+}
+
+// Aviso manual al cancelar/rechazar un pedido para llevar/domicilio — mismo
+// patrón que openReservationNotifyChangeModal (js/app.js): no hay backend
+// para avisar solo, así que se deja el mensaje ya escrito y un botón por
+// WhatsApp y otro por email, listos para un clic. Si no dejó ni teléfono ni
+// email no hay nada que ofrecer y no se abre nada.
+let orderNotifyState = null;
+function openOrderNotifyModal(nombre, telefono, email, tipo){
+  if(!telefono && !email) return;
+  orderNotifyState = {telefono, email};
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const claveMsg = tipo === 'cancelado' ? 'msg.orderCancelledNotify' : 'msg.orderRejectedNotify';
+  const msg = t(claveMsg).replace('${name}', nombre||'').replace('${biz}', bizName);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-message-circle"></i> ${t('title.notifyOrderChange')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted)">${t('msg.notifyOrderHint')}</p>
+    <div class="field">
+      <textarea id="order-notify-text" rows="4">${escapeHtml(msg)}</textarea>
+    </div>
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendOrderNotifyEmail()" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function sendOrderNotifyWhatsapp(){
+  const telefono = orderNotifyState && orderNotifyState.telefono;
+  if(!telefono){ showToast(t('msg.noPhone')); return; }
+  const tel = telefono.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('order-notify-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+  closeModal();
+}
+function sendOrderNotifyEmail(){
+  const email = orderNotifyState && orderNotifyState.email;
+  if(!email){ showToast(t('msg.noEmail')); return; }
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const subject = encodeURIComponent(t('msg.orderChangeSubject').replace('${biz}', bizName));
+  const body = encodeURIComponent(document.getElementById('order-notify-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(email)+'?subject='+subject+'&body='+body;
+  closeModal();
 }
 
 // Pide el PIN del negocio antes de ejecutar una acción sensible (rechazar un
@@ -2127,16 +2184,16 @@ function renderTableOrderModal(orderId){
   openModal(`
     <div id="table-order-modal-marker" data-order-id="${order.id}" style="display:none"></div>
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
+      ${order.tableId ? `<button class="btn btn-sm" style="flex:none" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i> ${t('title.transferTable')}</button>` : ''}
       <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</h3>
       ${order.tableId && !order.items.length ? `<button class="btn btn-sm btn-danger" onclick="releaseEmptyTable(${order.id})" title="${t('btn.releaseTable')}"><i class="ti ti-door-exit"></i> ${t('btn.releaseTable')}</button>` : ''}
-      ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       ${(!order.tableId && (order.tipo==='delivery'||order.tipo==='takeaway') && order.status!=='pagada') ? `<button class="btn btn-sm btn-danger" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${t('title.cancelOrder')}"><i class="ti ti-x"></i> ${t('btn.cancelOrder')}</button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     ${renderOrderClientNotesHtml(order)}
     ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
     <!-- Pestañas de cartas/menús -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:6px">
       ${soloConsulta ? '' : cartaTabs + menuTabs}
     </div>
     <!-- Interruptor Carta/Comanda — solo se ve en móvil (ver
@@ -2283,7 +2340,7 @@ function renderMenuSelectorInline(order, menu){
 // Tarjeta de un grupo (tanda) dentro de una sección (carta o menú) — misma
 // tarjeta que antes, ahora factorizada para poder usarla dos veces (una por
 // sección) sin duplicar el HTML de cada línea.
-function renderTandaGroupCard(order, g, isMenu){
+function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
   const pendingCount = orderPendingKitchenLines(order, g.tanda, isMenu).reduce((s,l)=>s+l.qty, 0);
   const allInGroup = g.items;
   const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
@@ -2320,13 +2377,27 @@ function renderTandaGroupCard(order, g, isMenu){
     else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
 
+  // Si TODA la tanda es del mismo menú, se dice una vez en la cabecera del
+  // grupo en vez de repetir "Menú: X" debajo de cada plato (con un menú de
+  // 3 platos salía tres veces la misma etiqueta). Con platos de más de un
+  // menú mezclados en la misma tanda (raro, pero posible) se deja la
+  // etiqueta por línea, porque ahí sí hace falta distinguir de cuál es cada uno.
+  const nombresMenuEnGrupo = isMenu ? [...new Set(g.items.map(({line}) => {
+    const m = line.menuId ? (DB.menus||[]).find(x => x.id === line.menuId) : null;
+    return m ? tItem(m) : null;
+  }).filter(Boolean))] : [];
+  const nombreMenuUnico = nombresMenuEnGrupo.length === 1 ? nombresMenuEnGrupo[0] : null;
+
   return `
-  <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">
-      <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
+  <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <strong style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
+        ${(nombreMenuUnico && !ocultarNombreMenuEnCabecera) ? `<span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(nombreMenuUnico)}</span>` : ''}
+      </div>
       <div style="display:flex;gap:4px;align-items:center">
         ${statusBadge}
-        ${pendingCount && !esPedidoSoloLectura(order) ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11.5px;padding:6px 10px" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
+        ${pendingCount && !esPedidoSoloLectura(order) ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
       </div>
     </div>
     ${allInGroup.map(({line, idx}) => {
@@ -2348,13 +2419,15 @@ function renderTandaGroupCard(order, g, isMenu){
         else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px"><i class="ti ti-clock"></i></span>';
       }
       // Distinción visual clara entre lo que viene de un menú (combo de
-      // varios platos a precio cerrado) y lo que es carta suelta — además
-      // de la sección propia, cada línea sigue llevando su badge con el
-      // nombre del menú concreto (útil si hay más de un menú en la mesa).
+      // varios platos a precio cerrado) y lo que es carta suelta. Si toda la
+      // tanda es del mismo menú ya se dice una vez en la cabecera del grupo
+      // (nombreMenuUnico, arriba) — repetirlo en cada línea sobraba. Con más
+      // de un menú mezclado en la misma tanda, cada línea sigue llevando su
+      // propio badge para no perder de cuál es cada plato.
       const menu = line.menuId ? (DB.menus||[]).find(m => m.id === line.menuId) : null;
-      const menuBadge = menu ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
+      const menuBadge = (menu && !nombreMenuUnico) ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
       return `
-      <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);${menu?'border-left:3px solid var(--blue,#4E5A63);padding-left:6px':''}">
+      <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px">
         <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber" style="font-size:9px" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
         <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
         ${esPedidoSoloLectura(order) ? '' : `
@@ -2365,7 +2438,15 @@ function renderTandaGroupCard(order, g, isMenu){
         ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
         `}
       </div>
-      ${line.notas ? `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+      ${(() => {
+        // La nota "Menú: X" se autogenera al añadir el plato desde un menú
+        // (ver línea ~1907) — si ya se dice en la cabecera del grupo
+        // (nombreMenuUnico) es la misma frase repetida, no una nota real
+        // escrita por el camarero. Una nota manual sigue mostrándose siempre.
+        const esNotaAutoDeMenu = menu && line.notas === `Menú: ${tItem(menu)}`;
+        if(!line.notas || (esNotaAutoDeMenu && nombreMenuUnico)) return '';
+        return `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>`;
+      })()}
     `;}).join('')}
   </div>
   `;
@@ -2401,9 +2482,20 @@ function renderOrderComandaPanel(order){
     if(showSectionTitles) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:2px 0 6px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.section.carta')}</div>`;
     html += cartaGroups.map(g => renderTandaGroupCard(order, g, false)).join('');
   }
+  // Mismo criterio que ya se aplicó en Comandas Cocina (9/09): si la mesa
+  // tiene MÁS de un menú a la vez (raro, pero pasa con grupos grandes), no
+  // basta con un único epígrafe genérico "MENÚ" — cada menú va en su
+  // propio bloque, con su propio nombre, para que sus platos no se vean
+  // mezclados con los de otro menú distinto bajo la misma etiqueta.
   if(menuGroups.length){
-    if(showSectionTitles) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:10px 0 6px"><i class="ti ti-list-details"></i> ${t('tpv.section.menu')}</div>`;
-    html += menuGroups.map(g => renderTandaGroupCard(order, g, true)).join('');
+    const menuIdsEnOrden = [...new Set(menuItems.map(({line}) => line.menuId))];
+    menuIdsEnOrden.forEach(menuId => {
+      const menu = (DB.menus||[]).find(m => m.id === menuId);
+      const itemsDeEsteMenu = menuItems.filter(({line}) => line.menuId === menuId);
+      const gruposDeEsteMenu = sortBebidaFirst(groupOrderItemsByTanda(order, itemsDeEsteMenu));
+      html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:10px 0 6px;display:flex;align-items:center;gap:6px"><i class="ti ti-list-details"></i> ${escapeHtml(menu ? tItem(menu) : t('tpv.section.menu'))}</div>`;
+      html += gruposDeEsteMenu.map(g => renderTandaGroupCard(order, g, true, true)).join('');
+    });
   }
   return html;
 }
@@ -2689,6 +2781,7 @@ function setLineEstado(orderId, idx, estado){
   if(!order) return;
   const line = (order.items||[])[idx];
   if(!line) return;
+  pushKitchenUndo(orderId, [idx]);
   line.estado = estado;
   if(estado === 'preparando') line.preparandoAt = new Date().toISOString();
   if(estado === 'entregado') line.entregadoAt = new Date().toISOString();
@@ -2760,10 +2853,56 @@ function cycleLineEstado(orderId, idx){
   else if(line.estado === 'entregado' && !line.recogidoAt) markLineRecogida(orderId, idx);
 }
 
+// "Deshacer" a nivel general (pedido del dueño, 9/09): un toque de más en
+// cocina no tenía ninguna forma de arreglarse sin liarla más. No hace falta
+// una flecha en cada plato — basta un único botón que deshaga el ÚLTIMO
+// movimiento, sea de un plato suelto o de una tanda entera marcada de
+// golpe. Guarda solo el estado de ANTES de cada acción (no todo el pedido),
+// y solo en memoria: no hace falta que sobreviva a un recargo de página,
+// es para el "uy, me he equivocado" de hace 5 segundos.
+let kitchenUndoStack = [];
+function pushKitchenUndo(orderId, idxs){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const changes = idxs.map(idx => {
+    const l = order.items[idx] || {};
+    return {idx, estado: l.estado, preparandoAt: l.preparandoAt, entregadoAt: l.entregadoAt, recogidoAt: l.recogidoAt};
+  });
+  kitchenUndoStack.push({orderId, changes});
+  if(kitchenUndoStack.length > 10) kitchenUndoStack.shift();
+}
+function undoLastKitchenAction(){
+  const last = kitchenUndoStack.pop();
+  if(!last){ showToast(t('kitchen.nothingToUndo')); return; }
+  const order = DB.tpvOrders.find(o => o.id === last.orderId);
+  if(!order) return;
+  last.changes.forEach(prev => {
+    const l = order.items[prev.idx];
+    if(!l) return;
+    ['estado','preparandoAt','entregadoAt','recogidoAt'].forEach(field => {
+      if(prev[field] === undefined) delete l[field];
+      else l[field] = prev[field];
+    });
+  });
+  checkComandaCierre(order);
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  if((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
+  showToast(t('kitchen.undoneOk'));
+  withScrollPreserved(() => {
+    const active = document.querySelector('.view.active');
+    if(active && active.id === 'view-comandascocina') renderComandasCocina();
+    else if(active && active.id === 'view-tpv') renderTPV();
+    const overlay = document.getElementById('modal-overlay');
+    if(overlay && overlay.classList.contains('active')) renderTableOrderModal(last.orderId);
+  });
+}
+
 function markLineRecogida(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
   if(!line || line.recogidoAt) return;
+  pushKitchenUndo(orderId, [idx]);
   line.recogidoAt = new Date().toISOString();
   if(typeof checkComandaCierre === 'function') checkComandaCierre(order);
   saveDB();
@@ -2781,6 +2920,14 @@ function markLineRecogida(orderId, idx){
 function cycleGroupEstado(orderId, tanda){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
+  const idxsAfectados = [];
+  (order.items||[]).forEach((line, idx) => {
+    if((line.tanda||'') === tanda){
+      if(line.estado === 'cocina' || line.estado === 'preparando' || (line.estado === 'entregado' && !line.recogidoAt)) idxsAfectados.push(idx);
+    }
+  });
+  if(!idxsAfectados.length) return;
+  pushKitchenUndo(orderId, idxsAfectados);
   let changed = false;
   (order.items||[]).forEach(line => {
     if((line.tanda||'') === tanda){
@@ -2902,6 +3049,20 @@ function renderMarkDishOutModal(){
   `, {xl:true});
 }
 
+// De qué carta viene un plato de línea suelta (no de menú) — un plato de
+// carta se guarda en la línea solo con su platoId (el id dentro de la
+// sección de ESA carta), sin más referencia. Se busca en todas las cartas
+// del área porque los ids de plato son únicos en todo el negocio.
+function findCartaNombreForPlatoId(platoId){
+  if(platoId == null) return null;
+  for(const c of (DB.cartas||[])){
+    for(const s of (c.secciones||[])){
+      if((s.platos||[]).some(p => p.id === platoId)) return c.nombre;
+    }
+  }
+  return null;
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -2930,7 +3091,8 @@ function renderComandasCocina(){
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
-      <button class="btn btn-sm" style="margin-left:auto" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
+      <button class="btn btn-sm" style="margin-left:auto" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
+      <button class="btn btn-sm" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
     </div>
   `;
 
@@ -2998,73 +3160,132 @@ function renderComandasCocina(){
   }
 
   box.innerHTML = tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines}) => {
-    const tandaOrder = [...new Set(allLines.map(({line}) => line.tanda || ''))];
-    const groups = tandaOrder.map(t => ({
-      tanda: t,
-      lines: allLines.filter(({line}) => (line.tanda||'') === t)
-    })).filter(g => g.lines.length);
-
     const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
     const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
     const mins = minutesSince(new Date(minMs).toISOString());
 
-    return `
-    <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
-        <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
-        ${urgencyBadge(mins)}
+    // Botón compacto, pedido del dueño (9/09) para que tengan el mismo
+    // tamaño que "Sin marchar": mismo estilo que ya usa Sala para su propio
+    // resumen de tanda (renderTandaGroupCard) — min-height:auto en vez del
+    // mínimo táctil de 44px de .btn-sm. Se acepta la excepción aquí porque
+    // ya era el criterio aceptado en Sala para este mismo tipo de botón; en
+    // el resto de la app el mínimo de 44px se mantiene intacto.
+    const compactBtnStyle = 'flex:none;padding:4px 8px;font-size:11px;min-height:auto;';
+    const groupButtonHtml = g => {
+      const hasCocina = g.lines.some(({line}) => line.estado === 'cocina');
+      const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
+      // "Listo" (cocina ha terminado) y "Entregado" (sala ya lo ha recogido
+      // del pase) son cosas distintas para quien cocina: si al terminar un
+      // plato ve directamente "Entregado" sin que nadie de sala lo haya
+      // tocado, no sabe si de verdad ha llegado a la mesa o si sigue
+      // esperando en el pase. Por eso aquí se distingue con recogidoAt,
+      // igual que ya hace Sala en su propia pantalla (renderTandaGroupCard).
+      const allReady = g.lines.every(({line}) => line.estado === 'entregado');
+      const allPicked = allReady && g.lines.every(({line}) => line.recogidoAt);
+      if(allPicked) return `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
+      if(allReady) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</button>`;
+      if(hasCocina) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
+      if(hasPreparando) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
+      return '';
+    };
+    const renderLineaHtml = (bloque) => ({line, idx}) => {
+      // La nota es autogenerada al añadir el plato desde un menú ("Menú:
+      // X"): si el nombre ya se dice una vez en la cabecera del bloque,
+      // repetirla aquí sobra. Una nota escrita a mano por el camarero
+      // (cualquier otro texto) se sigue mostrando siempre.
+      const notaEsAutoDelBloque = bloque.tipo === 'menu' && bloque.nombre && line.notas === `Menú: ${bloque.nombre}`;
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
+        <div style="flex:1;min-width:0;overflow-wrap:anywhere">
+          <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+          ${line.notas && !notaEsAutoDelBloque ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
+        </div>
+        ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
+        : line.estado==='cocina' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
+        : line.estado==='preparando' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
+        : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
+        : `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
       </div>
-      ${orderAllergyWarningHtml(order)}
-      ${groups.map(g => {
-        const hasCocina = g.lines.some(({line}) => line.estado === 'cocina');
-        const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
-        // "Listo" (cocina ha terminado) y "Entregado" (sala ya lo ha recogido
-        // del pase) son cosas distintas para quien cocina: si al terminar un
-        // plato ve directamente "Entregado" sin que nadie de sala lo haya
-        // tocado, no sabe si de verdad ha llegado a la mesa o si sigue
-        // esperando en el pase. Por eso aquí se distingue con recogidoAt,
-        // igual que ya hace Sala en su propia pantalla (renderTandaGroupCard).
-        const allReady = g.lines.every(({line}) => line.estado === 'entregado');
-        const allPicked = allReady && g.lines.every(({line}) => line.recogidoAt);
-        let groupBtn = '';
-        if(allPicked) groupBtn = `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
-        else if(allReady) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</button>`;
-        else if(hasCocina) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
-        else if(hasPreparando) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
+    `;
+    };
+    // Dentro de un bloque (una carta o un menú) las líneas se siguen
+    // dividiendo por tanda (Primero/Segundos/Postres) si las hay, cada una
+    // con su propio botón de "Preparar todo" — el bloque solo agrupa DE
+    // QUÉ viene cada cosa, no sustituye a la tanda.
+    const renderBloqueLineas = (bloque, ocultarCabeceraDelUnicoGrupo) => {
+      const lineasBloque = bloque.lineas;
+      const tandaOrder = [...new Set(lineasBloque.map(({line}) => line.tanda || ''))];
+      const grupos = tandaOrder.map(tt => ({
+        tanda: tt,
+        lines: lineasBloque.filter(({line}) => (line.tanda||'') === tt)
+      })).filter(g => g.lines.length);
+      const soloUnGrupoSinNombre = grupos.length === 1 && !grupos[0].tanda;
+      return grupos.map(g => {
+        const esElGrupoYaMostrado = soloUnGrupoSinNombre && g === grupos[0] && ocultarCabeceraDelUnicoGrupo;
         return `
-        <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="margin-bottom:6px;${esElGrupoYaMostrado ? '' : 'padding-top:6px;border-top:1px solid var(--border)'}">
+          ${esElGrupoYaMostrado ? '' : `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap">
             ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
-            ${groupBtn}
-          </div>
-          ${g.lines.map(({line, idx}) => {
-            // En cocina importa distinguir de un vistazo un plato suelto de la
-            // carta de uno que forma parte de un menú cerrado: el del menú
-            // tiene que salir coordinado con el resto de su menú, no en cuanto
-            // esté listo. El menú ya viaja en la línea (line.menuId), así que
-            // se marca con una etiqueta bien visible en vez de dejarlo
-            // escondido dentro de la nota en gris, donde se pasa por alto.
-            const menuNombre = line.menuId ? ((DB.menus||[]).find(m => m.id === line.menuId)||{}).nombre : null;
-            // La nota de una línea de menú es autogenerada ("Menú: X"): si ya
-            // se enseña la etiqueta, repetirla debajo sobra. Una nota escrita
-            // a mano por el camarero sí se sigue mostrando.
-            const notaEsAutoMenu = menuNombre && line.notas === `Menú: ${menuNombre}`;
-            return `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
-              <div style="flex:1;min-width:0;overflow-wrap:anywhere">
-                <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-                ${menuNombre ? `<span class="badge badge-purple" style="margin-left:6px;font-size:10.5px">${t('kitchen.fromMenu')}: ${escapeHtml(menuNombre)}</span>` : ''}
-                ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
-              </div>
-              ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
-              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
-              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
-              : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-              : `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
-            </div>
-          `;}).join('')}
+            ${groupButtonHtml(g)}
+          </div>`}
+          ${g.lines.map(renderLineaHtml(bloque)).join('')}
+        </div>`;
+      }).join('');
+    };
+    // Lo que pedía el dueño (9/09, tercera vuelta): no basta con no repetir
+    // el nombre — hay que agrupar TODO lo de cada carta o menú junto, en
+    // bloques bien separados: primero la carta (con todas sus opciones),
+    // luego cada menú (con todas las suyas), en vez de mezclarlo todo por
+    // tandas sueltas donde el nombre podía acabar en cualquier sitio.
+    const bloques = [];
+    allLines.forEach(item => {
+      const { line } = item;
+      let key, tipo, nombre;
+      if(line.menuId){
+        tipo = 'menu';
+        const m = (DB.menus||[]).find(x => x.id === line.menuId);
+        nombre = m ? m.nombre : null;
+        key = 'menu:' + line.menuId;
+      }else{
+        tipo = 'carta';
+        nombre = findCartaNombreForPlatoId(line.platoId);
+        key = 'carta:' + (nombre || '');
+      }
+      let bloque = bloques.find(b => b.key === key);
+      if(!bloque){ bloque = {key, tipo, nombre, lineas: []}; bloques.push(bloque); }
+      bloque.lineas.push(item);
+    });
+    // Orden pedido: primero la(s) carta(s), después cada menú por separado.
+    bloques.sort((a,b) => (a.tipo==='carta'?0:1) - (b.tipo==='carta'?0:1));
+    // Si solo hay UN bloque sin nombre que decir (p.ej. todo suelto de una
+    // carta que no se pudo identificar) y ese bloque tiene una sola tanda
+    // sin nombre, el botón de "Preparar todo" sube junto al título del
+    // pedido — mismo criterio de siempre para no dejar una fila vacía.
+    const unBloqueUnaTandaSinNombre = bloques.length === 1 && !bloques[0].nombre
+      && [...new Set(bloques[0].lineas.map(({line}) => line.tanda || ''))].length === 1
+      && !bloques[0].lineas[0].line.tanda;
+    return `
+    <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
         </div>
-      `;}).join('')}
+        <div style="display:flex;align-items:center;gap:6px">
+          ${unBloqueUnaTandaSinNombre ? groupButtonHtml({tanda:'', lines: bloques[0].lineas}) : ''}
+          ${urgencyBadge(mins)}
+        </div>
+      </div>
+      ${orderAllergyWarningHtml(order)}
+      ${bloques.map((bloque, i) => `
+        <div style="${i>0 ? 'margin-top:10px;padding-top:10px;border-top:2px solid var(--border)' : ''}">
+          ${bloque.nombre ? `<div style="font-weight:700;font-size:12.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+            <i class="ti ${bloque.tipo==='menu'?'ti-list-details':'ti-tools-kitchen-2'}" style="color:${bloque.tipo==='menu'?'var(--purple,#7C3AED)':'var(--blue,#4E5A63)'}"></i>
+            ${escapeHtml(bloque.nombre)}
+          </div>` : ''}
+          ${renderBloqueLineas(bloque, unBloqueUnaTandaSinNombre && i===0)}
+        </div>
+      `).join('')}
     </div>
     `;
   }).join('')}</div>`;
@@ -5285,6 +5506,7 @@ function buildTicketText(sale, opts={}){
 function buildTicketHtml(sale, opts={}){
   const b = DB.business || {};
   const tc = b.ticket || {};
+  const accent = b.brandColor || '#B8804B';
   const logoHtml = b.logo ? `<img src="${b.logo}" alt="" style="max-height:48px;max-width:200px;display:block;margin:0 auto 8px">` : '';
   const metaLines = [];
   if(tc.mostrarDireccion !== false && b.address) metaLines.push(escapeHtml(b.address));
@@ -5343,7 +5565,7 @@ function buildTicketHtml(sale, opts={}){
   return `
     <div style="width:300px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111">
       ${logoHtml}
-      <div style="text-align:center;font-weight:700;font-size:16px">${escapeHtml(b.name || 'GastroGoan')}</div>
+      <div style="text-align:center;font-weight:700;font-size:16px;color:${accent}">${escapeHtml(b.name || 'GastroGoan')}</div>
       ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#B8860B;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
       ${metaLines.length ? `<div style="text-align:center;font-size:11px;color:#666;line-height:1.5;margin-top:2px">${metaLines.join('<br>')}</div>` : ''}
       ${opts.factura ? `<div style="text-align:center;font-size:12px;font-weight:700;margin-top:8px">${t('ticket.invoiceNumber')} ${escapeHtml(sale.facturaNum||'')}</div>` : ''}
@@ -5365,7 +5587,7 @@ function buildTicketHtml(sale, opts={}){
       </table>
       <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
       ${summaryHtml}
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px;margin-top:8px;padding-top:8px;border-top:2px solid #111">
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px;margin-top:8px;padding-top:8px;border-top:2px solid ${accent}">
         <span>${t('common.total')}</span><span>${fmtMoney(sale.total)}</span>
       </div>
       <div style="margin-top:8px">${paymentHtml}</div>

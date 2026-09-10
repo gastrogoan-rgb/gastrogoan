@@ -55,6 +55,44 @@ const GE = (function(){
   function variables(){ return ge().variables; }
   function capex(){ return ge().capex; }
   function config(){ return ge().config; }
+  // El "% Gastos Variables" que se reparte en Tesorería (config().distPct.mp)
+  // y el "objetivo de food cost" (config().foodCostObj) eran dos números
+  // separados para la MISMA idea: todo lo que entra en fabricar el plato o
+  // la bebida (materia prima, bebidas, packaging, limpieza, comisiones, mano
+  // de obra extra) es food cost, según el propio dueño — la cifra real que
+  // se compara contra el objetivo (totalVariablesNetoMes) ya sumaba todo eso
+  // en los dos sitios, pero el objetivo con el que se comparaba no era el
+  // mismo en cada pantalla. Ahora hay un único objetivo: si ya se configuró
+  // un reparto en Tesorería, manda ese "mp"; si no, el de food cost (o 35%
+  // por defecto), y editarlo desde cualquiera de los dos sitios actualiza
+  // ambos a la vez.
+  function foodCostObjPct(){
+    const dp = config().distPct;
+    if(dp && dp.mp != null) return dp.mp;
+    return config().foodCostObj != null ? config().foodCostObj : 35;
+  }
+  // Fija el objetivo desde CUALQUIER pantalla (Gastos Variables, Punto de
+  // Equilibrio) manteniendo sincronizado el reparto de Tesorería: si ya
+  // existía un reparto (Personal/Fijos/Variables/Otros/Beneficio sumando
+  // 100%), reajusta los otros cuatro proporcionalmente para que la suma
+  // siga siendo 100 — mismo criterio que adjustDistPct(), pero operando
+  // sobre la configuración directamente, no sobre inputs de un formulario
+  // que puede no estar en pantalla.
+  function setFoodCostObjPct(n){
+    const val = Math.max(0, Math.min(100, n));
+    config().foodCostObj = val;
+    // Mismos valores por defecto que ya llevan los campos de Tesorería en el
+    // HTML (30/20/35/5/10) — si el negocio nunca tocó ese reparto, se crea
+    // aquí con esa base para que quede sincronizado desde la primera vez.
+    const dp = config().distPct || {per:30, gf:20, mp:35, og:5, ben:10};
+    const otherKeys = ['per','gf','og','ben'];
+    const othersSum = otherKeys.reduce((s,k)=>s+(parseFloat(dp[k])||0),0);
+    const remaining = 100 - val;
+    if(othersSum<=0){ otherKeys.forEach(k=>dp[k]=remaining/otherKeys.length); }
+    else{ otherKeys.forEach(k=>dp[k]=Math.max(0, remaining*(parseFloat(dp[k])||0)/othersSum)); }
+    dp.mp = val;
+    config().distPct = dp;
+  }
   function cierres(){ if(!ge().cierres) ge().cierres = []; return ge().cierres; }
   function mesKey(year, month){ return `${year}-${String(month+1).padStart(2,'0')}`; }
   function isMonthClosed(year, month){ return cierres().includes(mesKey(year, month)); }
@@ -294,11 +332,17 @@ const GE = (function(){
     const generales = fijos().filter(g=>g.categoria==='FIJOS');
     const tpN = totalPersonalNeto(), tgN = totalGFNeto(), totN = tpN+tgN;
     const ivFijos = totalFijos() - totalFijosNeto();
+    // El IRPF retenido a los empleados ya va DENTRO del bruto (y por tanto
+    // dentro de tpN/totN) — no se suma aparte a ningún total, es solo una
+    // cifra informativa para saber cuánto hay que ingresar en el Modelo 111.
+    const irpfMes = personal.filter(g=>g.autoCalc).reduce((s,g)=>s+(parseFloat(g.irpfMensual)||0),0);
     document.getElementById('gf-kpis').innerHTML = `
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.personalNoVat')}</div><div class="val">${fmtMoney(tpN)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.fixedNoVat')}</div><div class="val">${fmtMoney(tgN)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupportedFixed')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivFijos)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realMonthlyCost')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realMonthlyCost')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>
+      ${irpfMes>0.001 ? `<div class="ge-kpi" title="${escapeHtml(t('hr.gf.irpfWithheldHint'))}"><div class="lbl">${t('hr.gf.irpfWithheld')}</div><div class="val" style="color:var(--amber-dark)">${fmtMoney(irpfMes)}</div></div>` : ''}`;
+    document.getElementById('gf-cost-hint').textContent = t('hr.lbl.realMonthlyCostHint');
     renderGFList('gf-personal', personal);
     // Se descarta por employeeId cuando la línea de gasto ya está enlazada a
     // una ficha (el caso normal desde que existe este enlace); las líneas
@@ -367,7 +411,7 @@ const GE = (function(){
         const next = gfNextDueDate(g, today.getFullYear(), today.getMonth());
         if(next) detalles.push(`<span class="badge badge-blue" style="font-size:10.5px">${t('hr.gf.nextDue').replace('${date}', next.date)}</span>`);
       }
-      if(g.autoCalc) detalles.push(t('hr.gf.autoCalcSummary').replace('${neto}', fmtMoney(parseFloat(g.sueldoNeto||0))).replace('${bruto}', fmtMoney(g.sueldoBruto||0)).replace('${ss}', fmtMoney(g.ssEmpresa||0)));
+      if(g.autoCalc) detalles.push(t('hr.gf.autoCalcSummary').replace('${neto}', fmtMoney(parseFloat(g.sueldoNeto||0))).replace('${bruto}', fmtMoney(g.sueldoBruto||0)).replace('${ss}', fmtMoney(g.ssEmpresa||0)).replace('${irpf}', fmtMoney(g.irpfMensual||0)));
       return `
       <div class="ge-item" style="flex-wrap:wrap">
         <span style="flex:1;font-size:14px;font-weight:500;min-width:140px">${escapeHtml(g.nombre)}</span>
@@ -400,6 +444,14 @@ const GE = (function(){
   function openGFModal(title, g){
     const sugerencias = (g.categoria==='PERSONAL'?GF_PERSONAL:GF_FIJOS).map(s=>`<option value="${escapeHtml(gfConceptLabel(s))}">`).join('');
     const autoCalc = !!g.autoCalc;
+    // Antes había un único "% Retenciones (IRPF + SS trabajador)" mezclado —
+    // servía para calcular el bruto, pero no dejaba ver cuánto de eso era
+    // IRPF (lo que hay que declarar en el Modelo 111) frente a Seguridad
+    // Social del trabajador. Una ficha antigua que solo tenga el combinado
+    // (g.retPct) se reparte con un valor típico de IRPF (15%) y el resto a
+    // SS trabajador, para no cambiarle el bruto ya calculado a nadie.
+    const irpfPctVal = g.irpfPct != null ? g.irpfPct : (g.retPct != null ? Math.min(15, g.retPct) : 15);
+    const ssTrabPctVal = g.ssTrabPct != null ? g.ssTrabPct : (g.retPct != null ? Math.max(0, g.retPct - 15) : 6.35);
     openModal(`
       <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="field">
@@ -415,27 +467,30 @@ const GE = (function(){
       <div id="gf-autocalc-fields" style="display:${autoCalc?'block':'none'}">
         <div class="field-row">
           <div class="field"><label>${t('hr.gf.netMonthlySalary')}</label><input type="number" id="gf-f-neto" min="0" step="0.01" value="${g.sueldoNeto||''}" oninput="GE.recalcGFAuto()"></div>
-          <div class="field"><label>${t('hr.gf.retentionsPct')}</label><input type="number" id="gf-f-retpct" min="0" max="99" step="0.1" value="${g.retPct!=null?g.retPct:15}" oninput="GE.recalcGFAuto()"></div>
+          <div class="field"><label>${t('hr.gf.irpfPct')}</label><input type="number" id="gf-f-irpfpct" min="0" max="99" step="0.1" value="${irpfPctVal}" oninput="GE.recalcGFAuto()"></div>
         </div>
         <div class="field-row">
+          <div class="field"><label>${t('hr.gf.ssTrabPct')}</label><input type="number" id="gf-f-sstrabpct" min="0" max="99" step="0.1" value="${ssTrabPctVal}" oninput="GE.recalcGFAuto()"></div>
           <div class="field"><label>${t('hr.gf.companySsPct')}</label><input type="number" id="gf-f-sspct" min="0" max="100" step="0.1" value="${g.ssPct!=null?g.ssPct:30}" oninput="GE.recalcGFAuto()"></div>
         </div>
         <div class="ge-kpi-grid" style="margin-bottom:10px">
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.grossSalary')}</div><div class="val" id="gf-auto-bruto">0,00 €</div></div>
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.companySs')}</div><div class="val" id="gf-auto-ss">0,00 €</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.gf.irpfWithheld')}</div><div class="val" id="gf-auto-irpf" style="color:var(--amber-dark)">0,00 €</div></div>
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.totalCompanyCost')}</div><div class="val" id="gf-auto-total" style="color:var(--teal)">0,00 €</div></div>
         </div>
       </div>
       ` : ''}
       <div class="field-row">
-        <div class="field"><label>${t('hr.lbl.amountNoVat')} ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
+        <div class="field"><label>${g.categoria==='PERSONAL'?t('hr.lbl.amountEur'):t('hr.lbl.amountNoVat')} ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
         <div class="field"><label>${t('hr.gf.payDayLabel')}</label><input type="number" id="gf-f-dia" min="1" max="31" placeholder="25" value="${g.diaPago||''}"></div>
       </div>
       <div class="field">
         <label>${t('hr.gf.payPeriodicity')}</label>
-        <select id="gf-f-periodo">
-          ${GF_PERIODOS.map(p=>`<option value="${p.v}" ${(parseInt(g.periodicidadMeses)||1)===p.v?'selected':''}>${p.lbl}</option>`).join('')}
+        <select id="gf-f-periodo" ${autoCalc?'disabled':''}>
+          ${GF_PERIODOS.map(p=>`<option value="${p.v}" ${(autoCalc?1:(parseInt(g.periodicidadMeses)||1))===p.v?'selected':''}>${p.lbl}</option>`).join('')}
         </select>
+        ${autoCalc?`<small style="color:var(--muted)">${t('hr.gf.autoCalcMonthlyHint')}</small>`:''}
       </div>
       ${g.categoria!=='PERSONAL' ? `<div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gf-f-iva', g.iva)}</div>` : ''}
       <div class="field">
@@ -456,18 +511,33 @@ const GE = (function(){
     document.getElementById('gf-autocalc-fields').style.display = on ? 'block' : 'none';
     const importeInput = document.getElementById('gf-f-importe');
     importeInput.readOnly = on;
+    // El sueldo neto que se pide arriba es SIEMPRE mensual ("Sueldo neto
+    // MENSUAL") — si además se pudiera fijar una periodicidad de pago
+    // distinta (p.ej. trimestral), gfMonthlyImporte() volvería a dividir
+    // ese total ya mensual entre 3, descuadrando el coste real. Con
+    // auto-cálculo activo, la periodicidad queda fija en Mensual.
+    const periodoSel = document.getElementById('gf-f-periodo');
+    if(periodoSel){ periodoSel.disabled = on; if(on) periodoSel.value = '1'; }
     if(on) recalcGFAuto();
   }
-  // Sueldo bruto = neto / (1 - retenciones%); SS empresa = bruto * ss%; coste total = bruto + SS empresa.
+  // Sueldo bruto = neto / (1 - (IRPF% + SS trabajador%)); SS empresa = bruto
+  // * ss%; coste total EMPRESA = bruto + SS empresa (el IRPF y la SS del
+  // trabajador ya van descontados DENTRO del bruto, no son coste aparte:
+  // es dinero del propio sueldo del empleado que la empresa retiene y
+  // paga por él, no un gasto extra del negocio).
   function recalcGFAuto(){
     const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
-    const retPct = parseFloat(document.getElementById('gf-f-retpct').value) || 0;
+    const irpfPct = parseFloat(document.getElementById('gf-f-irpfpct').value) || 0;
+    const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
     const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
+    const retPct = irpfPct + ssTrabPct;
     const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
     const ssEmpresa = bruto * ssPct/100;
+    const irpfMensual = bruto * irpfPct/100;
     const total = bruto + ssEmpresa;
     document.getElementById('gf-auto-bruto').textContent = fmtMoney(bruto);
     document.getElementById('gf-auto-ss').textContent = fmtMoney(ssEmpresa);
+    document.getElementById('gf-auto-irpf').textContent = fmtMoney(irpfMensual);
     document.getElementById('gf-auto-total').textContent = fmtMoney(total);
     document.getElementById('gf-f-importe').value = total.toFixed(2);
   }
@@ -479,30 +549,38 @@ const GE = (function(){
     const catVal = document.getElementById('gf-f-cat').value;
     const ivaEl = document.getElementById('gf-f-iva');
     if(catVal!=='PERSONAL' && ivaEl && ivaEl.value===''){ showToast(t('msg.chooseIvaForExpense')); return; }
+    const autocalcEl = document.getElementById('gf-f-autocalc');
+    const isAutoCalc = !!(autocalcEl && autocalcEl.checked);
     const data = {
       nombre:nombre.toUpperCase(), importe, diaPago:parseInt(document.getElementById('gf-f-dia').value)||null,
       categoria: catVal,
-      periodicidadMeses: parseInt(document.getElementById('gf-f-periodo').value)||1,
+      // El sueldo neto del auto-cálculo es siempre MENSUAL — con otra
+      // periodicidad, gfMonthlyImporte() lo dividiría otra vez entre los
+      // meses del periodo, descuadrando el coste real.
+      periodicidadMeses: isAutoCalc ? 1 : (parseInt(document.getElementById('gf-f-periodo').value)||1),
       notas: document.getElementById('gf-f-notas').value.trim(),
       iva: ivaEl ? parseFloat(ivaEl.value) : 0
     };
     const empIdVal = document.getElementById('gf-f-empid').value;
     if(empIdVal !== '') data.employeeId = parseInt(empIdVal);
-    const autocalcEl = document.getElementById('gf-f-autocalc');
-    if(autocalcEl && autocalcEl.checked){
+    if(isAutoCalc){
       const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
-      const retPct = parseFloat(document.getElementById('gf-f-retpct').value) || 0;
+      const irpfPct = parseFloat(document.getElementById('gf-f-irpfpct').value) || 0;
+      const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
       const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
+      const retPct = irpfPct + ssTrabPct;
       const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
       data.autoCalc = true;
       data.sueldoNeto = neto;
-      data.retPct = retPct;
+      data.irpfPct = irpfPct;
+      data.ssTrabPct = ssTrabPct;
       data.ssPct = ssPct;
       data.sueldoBruto = bruto;
       data.ssEmpresa = bruto * ssPct/100;
+      data.irpfMensual = bruto * irpfPct/100;
     }else{
       data.autoCalc = false;
-      delete data.sueldoNeto; delete data.retPct; delete data.ssPct; delete data.sueldoBruto; delete data.ssEmpresa;
+      delete data.sueldoNeto; delete data.irpfPct; delete data.ssTrabPct; delete data.retPct; delete data.ssPct; delete data.sueldoBruto; delete data.ssEmpresa; delete data.irpfMensual;
     }
     if(editingGF){
       const existing = fijos().find(x=>x.id===editingGF);
@@ -548,6 +626,32 @@ const GE = (function(){
   function ventasSalesForDay(dateStr){
     return activeSales().filter(v => v.date===dateStr && (!ventasTipoFiltro || (v.tipo||'mesa')===ventasTipoFiltro));
   }
+  // La propina ya viaja SUMADA dentro de sale.total (ver finalizeCharge/
+  // finalizeSplitOrder) porque de cara al ticket y al cobro es dinero que
+  // entra igual en caja — pero para "Ventas" no es facturación del negocio,
+  // es del personal. Se resta aquí para que el total de esta pestaña sea la
+  // venta real del negocio, y se muestra aparte solo como referencia.
+  function ventaSinPropina(sale){ return (parseFloat(sale.total)||0) - (parseFloat(sale.propina)||0); }
+  // Qué tipos de servicio tiene activado el negocio (Mi Negocio → Tipos de
+  // servicio) — no tiene sentido mostrar un filtro o un desglose de
+  // "Delivery" a un negocio que nunca ha tenido esa opción activada.
+  function tiposServicioActivos(){
+    const ts = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
+    return ['mesa','takeaway','delivery'].filter(k => ts[k] !== false);
+  }
+  // Desglose REAL por tipo de servicio del mes entero — independiente del
+  // filtro de la tabla de abajo (ventasTipoFiltro), que solo afecta a qué
+  // días se listan. Antes lo único que había para distinguir mesa/take
+  // away/delivery era ese filtro (uno a la vez, sin verlos juntos).
+  function ventasPorTipoMes(mes, año){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    const totales = {mesa:0, takeaway:0, delivery:0};
+    activeSales().filter(v => (v.date||'').startsWith(mesStr)).forEach(v => {
+      const tipo = v.tipo || 'mesa';
+      if(tipo in totales) totales[tipo] += ventaSinPropina(v);
+    });
+    return totales;
+  }
   // Señales de reserva cobradas ese mes — aparte de la facturación oficial
   // a propósito (ver pago_confirmado, js/core.js): todavía no se sabe qué
   // va a pedirse en la mesa ni con qué IVA, así que no se mete como venta
@@ -567,39 +671,74 @@ const GE = (function(){
     document.getElementById('ventas-year').textContent = ventasYear;
     document.getElementById('ventas-months').innerHTML = getMeses().map((m,i)=>`
       <div class="month-pill${i===ventasMonth?' active':''}" onclick="GE.setVentasMonth(${i})">${m}</div>`).join('');
-    const tipos = [
-      {v:'', lbl:t('common.all')},
-      {v:'mesa', lbl:t('ge.ventas.tipo.mesa')},
-      {v:'takeaway', lbl:t('ge.ventas.tipo.takeaway')},
-      {v:'delivery', lbl:t('ge.ventas.tipo.delivery')}
-    ];
-    document.getElementById('ventas-tipo-filter').innerHTML = tipos.map(x=>`
-      <button class="btn btn-sm ${ventasTipoFiltro===x.v?'btn-primary':''}" onclick="GE.setVentasTipoFiltro('${x.v}')">${x.lbl}</button>`).join('');
+    // Solo se ofrece filtrar por los tipos de servicio que el negocio tiene
+    // activados de verdad (Mi Negocio → Tipos de servicio) — antes salían
+    // los tres fijos aunque el negocio no hiciera, por ejemplo, delivery.
+    // Con un solo tipo activo no hace falta ni el filtro: no hay nada entre
+    // lo que elegir.
+    const tiposActivos = tiposServicioActivos();
+    const tipoFilterBox = document.getElementById('ventas-tipo-filter');
+    if(tiposActivos.length < 2){
+      tipoFilterBox.innerHTML = '';
+      ventasTipoFiltro = '';
+    } else {
+      const tipos = [{v:'', lbl:t('common.all')}, ...tiposActivos.map(v => ({v, lbl:t('ge.ventas.tipo.'+v)}))];
+      tipoFilterBox.innerHTML = tipos.map(x=>`
+        <button class="btn btn-sm ${ventasTipoFiltro===x.v?'btn-primary':''}" onclick="GE.setVentasTipoFiltro('${x.v}')">${x.lbl}</button>`).join('');
+    }
 
     const depositosMes = ventasDepositosForMonth(ventasMonth, ventasYear);
     document.getElementById('ventas-depositos-note').innerHTML = depositosMes > 0.001 ? `
       <p style="font-size:12px;color:var(--muted);margin:8px 0 0"><i class="ti ti-cash-banknote"></i> ${t('ge.ventas.depositsNote').replace('${amount}', fmtMoney(depositosMes))}</p>
     ` : '';
 
+    // -- Desglose REAL por tipo de servicio (mes entero, ignora el filtro
+    // de la tabla de abajo) — solo se pinta si el negocio tiene más de un
+    // tipo activado; con uno solo, el desglose sería igual al total. --
+    const tipoBox = document.getElementById('ventas-por-tipo');
+    if(tipoBox){
+      if(tiposActivos.length < 2){
+        tipoBox.innerHTML = '';
+      } else {
+        const porTipo = ventasPorTipoMes(ventasMonth, ventasYear);
+        tipoBox.innerHTML = `
+          <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('ge.ventas.byType')}</h4>
+          <div class="ge-kpi-grid" style="margin-bottom:14px">
+            ${tiposActivos.map(k => `<div class="ge-kpi"><div class="lbl">${t('ge.ventas.tipo.'+k)}</div><div class="val">${fmtMoney(porTipo[k])}</div></div>`).join('')}
+          </div>`;
+      }
+    }
+
     // -- Histórico por día del mes seleccionado, con total al final --
+    // La propina viaja sumada en sale.total (así se cobra en caja) pero NO
+    // es facturación del negocio — normalmente es para el personal. Se
+    // resta del total de esta pestaña y se muestra aparte, solo a título
+    // informativo, para no inflar las ventas reales del negocio.
     document.getElementById('ventas-dia-title').textContent = `${t('ge.ventas.byDay')} — ${getMeses()[ventasMonth]} ${ventasYear}`;
     const nDias = daysInMonth(ventasYear, ventasMonth);
     let diaRows = '';
-    let totalMes = 0, ticketsMes = 0;
+    let totalMes = 0, ticketsMes = 0, propinaMes = 0;
     for(let d=1; d<=nDias; d++){
       const dateStr = `${ventasYear}-${String(ventasMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const salesDia = ventasSalesForDay(dateStr);
       if(!salesDia.length) continue;
-      const totalDia = salesDia.reduce((s,v)=>s+parseFloat(v.total||0),0);
+      const totalDia = salesDia.reduce((s,v)=>s+ventaSinPropina(v),0);
+      const propinaDia = salesDia.reduce((s,v)=>s+(parseFloat(v.propina)||0),0);
       const ticketsDia = salesDia.length;
-      totalMes += totalDia; ticketsMes += ticketsDia;
-      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}</td></tr>`;
+      totalMes += totalDia; ticketsMes += ticketsDia; propinaMes += propinaDia;
+      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}${propinaDia>0.001?`<div style="font-size:10.5px;font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaDia)}</div>`:''}</td></tr>`;
     }
     document.getElementById('ventas-dia-table').innerHTML = diaRows ? `
       <thead><tr><th>${t('hr.lbl.day')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
       <tbody>${diaRows}</tbody>
-      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}</td></tr></tfoot>
+      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}${propinaMes>0.001?`<div style="font-size:10.5px;font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaMes)}</div>`:''}</td></tr></tfoot>
       ` : `<tbody><tr><td colspan="4"><div class="empty">${t('ge.ventas.emptyMonth')}</div></td></tr></tbody>`;
+    const notaPropinas = document.getElementById('ventas-propinas-note');
+    if(notaPropinas){
+      notaPropinas.innerHTML = propinaMes > 0.001
+        ? `<p style="font-size:12px;color:var(--muted);margin:8px 0 0"><i class="ti ti-hand-heart"></i> ${t('ge.ventas.tips')} ${getMeses()[ventasMonth]}: <strong>${fmtMoney(propinaMes)}</strong> — ${t('ge.ventas.tipsHint')}</p>`
+        : '';
+    }
   }
 
   /* -- GASTOS VARIABLES -- */
@@ -617,7 +756,7 @@ const GE = (function(){
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realCostNoVat')}</div><div class="val">${fmtMoney(tvNeto)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupported')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.netRevenue')} <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>(config().foodCostObj||35)?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${config().foodCostObj||35}%</div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>foodCostObjPct()?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${foodCostObjPct().toFixed(1)}% <button class="btn btn-sm btn-icon" style="min-height:auto;padding:1px 4px;vertical-align:middle" onclick="GE.editFoodCostObj()" title="${t('common.edit')}"><i class="ti ti-edit" style="font-size:11px"></i></button></div></div>`;
     const allItems = variablesMes(mes,gvYear);
     const chartEl = document.getElementById('gv-cat-chart');
     if(chartEl){
@@ -671,6 +810,22 @@ const GE = (function(){
     document.getElementById('gv-total-lbl').textContent = `${t('hr.lbl.totalVariables')} ${getMeses()[mes].toUpperCase()}`;
     document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ ${t('common.vat')} ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</span>`;
     renderGastoHormiga();
+  }
+  // El objetivo de food cost también se edita desde Punto de Equilibrio, y
+  // el mismo número alimenta el "% Gastos Variables" de Tesorería — antes se
+  // podía cambiar en un sitio y quedaba desactualizado en los demás; ahora
+  // los tres leen y escriben el mismo valor (ver foodCostObjPct/
+  // setFoodCostObjPct arriba).
+  async function editFoodCostObj(){
+    const actual = foodCostObjPct();
+    const val = await promptText(t('hr.gv.editFoodCostObjPrompt'), String(actual));
+    if(val === null) return;
+    const n = parseFloat(val);
+    if(isNaN(n) || n<=0 || n>100){ showToast(t('msg.enterAmount')); return; }
+    setFoodCostObjPct(n);
+    saveDB();
+    renderVariables();
+    showToast(t('msg.expenseSaved'));
   }
 
   // "Gasto hormiga": proveedores con muchos cargos pequeños y recurrentes a
@@ -878,7 +1033,7 @@ const GE = (function(){
     document.getElementById('pe-ticket').value = config().ticketMedio || '';
     document.getElementById('pe-cubiertos').value = config().cubiertosActuales || '';
     document.getElementById('pe-dias').value = config().diasApertura || '';
-    document.getElementById('pe-fc').value = config().foodCostObj || 35;
+    document.getElementById('pe-fc').value = foodCostObjPct();
     const sel = document.getElementById('pe-scenario-sel');
     if(sel){
       const scenarios = peScenarios();
@@ -900,7 +1055,8 @@ const GE = (function(){
     const cub = parseFloat(document.getElementById('pe-cubiertos').value) || 0;
     const dias = parseFloat(document.getElementById('pe-dias').value) || 0;
     const fc = parseFloat(document.getElementById('pe-fc').value) || 35;
-    Object.assign(config(), {ticketMedio:tick, cubiertosActuales:cub, diasApertura:dias, foodCostObj:fc});
+    Object.assign(config(), {ticketMedio:tick, cubiertosActuales:cub, diasApertura:dias});
+    setFoodCostObjPct(fc);
     saveDB();
     if(!tick || !dias){
       resetPEOutputs();
@@ -1366,6 +1522,12 @@ const GE = (function(){
     const qIdx = Math.floor(activeMonth/3);
     const qMesesLbls = getMeses().slice(qIdx*3, qIdx*3+3);
     const qLabel = `T${qIdx+1} (${qMesesLbls[0]}-${qMesesLbls[2]})`;
+    // Igual que el IVA (Modelo 303), el IRPF retenido a los empleados se
+    // declara e ingresa trimestralmente (Modelo 111) — se acumulan los
+    // meses del trimestre en curso hasta el visto, con el histórico de
+    // gastos fijos (no la nómina de HOY para un mes pasado).
+    let irpfReserva = 0;
+    for(let m=qIdx*3; m<=activeMonth; m++) irpfReserva += geIrpfMensualForMonth(teYear, m);
 
     const rows = [
       {lbl:t('hr.lbl.personalNoVat'), pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
@@ -1373,18 +1535,19 @@ const GE = (function(){
       {lbl:t('hr.lbl.variableExpenses'), pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
       {lbl:t('hr.te.otherExpenses'), pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
       {lbl:t('hr.te.profitSavings'), pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
-      {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, obj:null, real:ivaReserva, color:'var(--amber)', isIva:true},
+      {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, obj:null, real:ivaReserva, color:'var(--amber-dark)', isReserve:true, icon:'ti-pig-money'},
+      ...(irpfReserva>0.001 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, obj:null, real:irpfReserva, color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
     ];
 
     document.getElementById('te-rows').innerHTML = rows.map(r=>{
-      if(r.isIva){
+      if(r.isReserve){
         return `<div class="te-row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:6px">
           <span style="font-size:14px;font-weight:600">${r.lbl}</span>
           <span></span>
           <span></span>
-          <span style="text-align:right;font-family:monospace;font-weight:700;color:var(--amber-dark)">${fmtMoney(r.real)}</span>
+          <span style="text-align:right;font-family:monospace;font-weight:700;color:${r.color}">${fmtMoney(r.real)}</span>
           <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${t('hr.te.setAsideQuarterly')}</span>
-          <span style="text-align:center;font-size:16px"><i class="ti ti-pig-money"></i></span>
+          <span style="text-align:center;font-size:16px"><i class="ti ${r.icon}"></i></span>
         </div>`;
       }
       const diff = r.real - r.obj;
@@ -1421,8 +1584,12 @@ const GE = (function(){
   }
 
   // Previsión de tesorería a 30/60/90 días: parte del resultado medio de
-  // los últimos 3 meses ya cerrados (no el actual, que va a medias) y lo
-  // proyecta hacia delante día a día. Es una estimación basada en tu propio
+  // los últimos 3 meses naturales anteriores (no el actual, que va a medias)
+  // y lo proyecta hacia delante día a día. Usa el resultado NETO, después de
+  // impuestos (resultadoMes) — no el de antes de impuestos: ese dinero de
+  // Hacienda no es tesorería disponible de verdad, y antes se sobreestimaba
+  // la previsión usándolo (además no cuadraba con el gráfico de justo
+  // arriba, que si usa el neto). Es una estimación basada en tu propio
   // histórico reciente, no una promesa — por eso se marca como tal.
   function renderTreasuryForecast(){
     const box = document.getElementById('te-forecast');
@@ -1435,7 +1602,7 @@ const GE = (function(){
       if(m < 0){ m = 11; y -= 1; }
       lastMonths.push({m, y});
     }
-    const results = lastMonths.map(({m,y}) => resultadoAntesImpMes(m,y));
+    const results = lastMonths.map(({m,y}) => resultadoMes(m,y));
     const hasHistory = results.some(r => r !== 0);
     if(!hasHistory){ box.innerHTML = ''; return; }
     const avgMonthly = results.reduce((a,b)=>a+b,0) / results.length;
@@ -2056,7 +2223,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
@@ -2108,6 +2275,15 @@ function dateStr(d){
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
+// Nunca con toISOString (desfase de un día en cualquier huso por delante de
+// UTC, como España) — se construye la fecha con sus componentes locales y
+// se avanza con setDate, que respeta el calendario local de verdad.
+function addDaysStr(fechaStr, dias){
+  const [y,m,d] = fechaStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + dias);
+  return dateStr(dt);
+}
 function hoursBetween(t1, t2){
   if(!t1 || !t2) return 0;
   const [h1,m1] = t1.split(':').map(Number), [h2,m2] = t2.split(':').map(Number);
@@ -2150,35 +2326,110 @@ function isEmployeeOnShiftNow(employeeId){
   return false;
 }
 
+/* ============================================================
+   HORARIO FIJO — patrón semanal que se repite indefinidamente
+   El hostelero define UNA vez qué hace cada empleado cada día de la semana
+   (lun..dom) y la app va generando sola, por delante, los turnos reales en
+   DB.turnos — que es lo único que leen las vistas Día/Semana/Mes, el
+   reparto automático (isEmployeeOnShiftNow) y la hoja imprimible: no hace
+   falta tocar ninguna de ellas, el patrón solo "rellena" turnos normales.
+
+   Un turno generado así lleva origen:'fijo'. En cuanto el hostelero lo
+   edita a mano (saveTurno) o lo borra, deja de llevar esa marca — el día
+   queda "suelto" del patrón para siempre y ni una regeneración futura ni un
+   cambio del patrón general vuelven a tocarlo. Es la pieza clave para que
+   "puedo tocar un día concreto sin romper el patrón" sea cierto de verdad. */
+const HORIZONTE_HORARIO_FIJO_DIAS = 28; // 4 semanas por delante, siempre
+
+function horarioFijoDe(employeeId){
+  return (DB.horariosFijos||[]).find(h => h.employeeId===employeeId && h.activo!==false) || null;
+}
+
+// Genera (si hace falta) los turnos que faltan por delante para TODOS los
+// empleados con horario fijo activo. Se llama cada vez que se abre
+// Horarios — barato si no hay nada que generar (generadoHasta ya cubre la
+// ventana) y así el patrón "para siempre" se mantiene solo, sin depender de
+// que nadie recuerde tocar nada cada 4 semanas.
+function generarTurnosFijos(){
+  if(!DB.horariosFijos || !DB.horariosFijos.length) return;
+  const hoy = todayStr();
+  const limite = addDaysStr(hoy, HORIZONTE_HORARIO_FIJO_DIAS);
+  let cambiado = false;
+  DB.horariosFijos.forEach(hf => {
+    if(hf.activo===false) return;
+    if(!DB.employees.some(e => e.id===hf.employeeId)) return; // empleado borrado, por si acaso
+    let cursor = hf.generadoHasta && hf.generadoHasta >= hoy ? addDaysStr(hf.generadoHasta, 1) : hoy;
+    while(cursor <= limite){
+      const diaSemana = (new Date(cursor+'T00:00:00').getDay() + 6) % 7; // 0=lunes .. 6=domingo
+      const patronDia = hf.patron[diaSemana];
+      // Ya hay un turno ese día para este empleado (a mano, o de otro
+      // origen): nunca se pisa — ver comentario del bloque de arriba.
+      const yaExiste = (DB.turnos||[]).some(x => x.employeeId===hf.employeeId && x.fecha===cursor);
+      if(patronDia && patronDia.tipo && !yaExiste){
+        DB.turnos.push({
+          id: genId(), employeeId: hf.employeeId, fecha: cursor,
+          tipo: patronDia.tipo,
+          entrada: patronDia.entrada||'', salida: patronDia.salida||'',
+          entrada2: patronDia.entrada2||'', salida2: patronDia.salida2||'',
+          notas: '', origen: 'fijo'
+        });
+        cambiado = true;
+      }
+      cursor = addDaysStr(cursor, 1);
+    }
+    if(hf.generadoHasta !== limite){ hf.generadoHasta = limite; cambiado = true; }
+  });
+  if(cambiado) saveDB();
+}
+
 function renderHorarios(){
+  generarTurnosFijos();
   const box = document.getElementById('horarios-content');
   box.innerHTML = `
     <nav class="ge-tab-row">
       <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> ${t('label.staff')}</button>
-      <button class="ge-tab ${horariosTab==='dia'?'active':''}" onclick="setHorariosTab('dia')"><i class="ti ti-calendar-event"></i> ${t('common.day')}</button>
-      <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> ${t('common.week')}</button>
-      <button class="ge-tab ${horariosTab==='mes'?'active':''}" onclick="setHorariosTab('mes')"><i class="ti ti-calendar-month"></i> ${t('common.month')}</button>
+      <button class="ge-tab ${horariosTab==='calendario'?'active':''}" onclick="setHorariosTab('calendario')"><i class="ti ti-calendar"></i> ${t('label.calendar')}</button>
     </nav>
     <div id="horarios-tab-content"></div>
   `;
   renderHorariosTab();
 }
-function setHorariosTab(t){ horariosTab = t; renderHorarios(); }
+function setHorariosTab(tab){ horariosTab = tab; renderHorarios(); }
 function renderHorariosTab(){
   if(horariosTab === 'personal') renderHorariosPersonal();
-  else if(horariosTab === 'dia') renderHorariosDia();
-  else if(horariosTab === 'mes') renderHorariosMes();
+  else renderHorariosCalendario();
+}
+
+// El calendario de Horarios es un único subtab (Día/Semana/Mes), con el
+// mismo interruptor tri-estado que ya usa el calendario de reservas de la
+// web pública — mismo patrón visual, no se inventa uno nuevo.
+let horariosCalView = 'dia';
+function setHorariosCalView(v){ horariosCalView = v; renderHorariosCalendario(); }
+function renderHorariosCalendario(){
+  const box = document.getElementById('horarios-tab-content');
+  if(!box) return;
+  box.innerHTML = `
+    <div class="view-toggle" style="margin-bottom:12px">
+      <button class="btn ${horariosCalView==='dia'?'active':''}" onclick="setHorariosCalView('dia')">${t('common.day')}</button>
+      <button class="btn ${horariosCalView==='semana'?'active':''}" onclick="setHorariosCalView('semana')">${t('common.week')}</button>
+      <button class="btn ${horariosCalView==='mes'?'active':''}" onclick="setHorariosCalView('mes')">${t('common.month')}</button>
+    </div>
+    <div id="horarios-cal-body"></div>
+  `;
+  if(horariosCalView==='dia') renderHorariosDia();
+  else if(horariosCalView==='mes') renderHorariosMes();
   else renderHorariosSemana();
 }
 
 function goToHorariosDia(date){
   horariosDate = date;
-  horariosTab = 'dia';
+  horariosTab = 'calendario';
+  horariosCalView = 'dia';
   renderHorarios();
 }
 
 function renderHorariosDia(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const emps = areaEmployees();
@@ -2222,10 +2473,7 @@ function renderHorariosDia(){
             <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
           </span>
         </td>
-        <td colspan="4"><span style="color:var(--muted)">${t('label.noShiftAssigned')}</span></td>
-        <td class="actions-cell">
-          <button class="owner-only btn btn-sm" onclick="openTurnoModal(null, ${emp.id}, '${date}')"><i class="ti ti-plus"></i> ${t('btn.assign')}</button>
-        </td>
+        <td colspan="5"><span style="color:var(--muted)">${t('label.noShiftAssigned')}</span></td>
       </tr>
     `;
   }).join('');
@@ -2235,7 +2483,6 @@ function renderHorariosDia(){
       <div class="left">
         <input type="date" id="horarios-filter-date" value="${date}" onchange="horariosDate=this.value;renderHorarios()">
       </div>
-      <button class="owner-only btn btn-primary" onclick="openTurnoModal(null, null, '${date}')"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
@@ -2250,7 +2497,7 @@ function renderHorariosDia(){
 }
 
 function renderHorariosMes(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const today = new Date();
@@ -2287,7 +2534,6 @@ function renderHorariosMes(){
         <button class="btn btn-sm" onclick="horariosMonthOffset++;renderHorarios()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
-      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
@@ -2297,7 +2543,7 @@ function renderHorariosMes(){
 }
 
 function renderHorariosSemana(){
-  const box = document.getElementById('horarios-tab-content');
+  const box = document.getElementById('horarios-cal-body');
   if(!box) return;
 
   const emps = areaEmployees();
@@ -2321,13 +2567,10 @@ function renderHorariosSemana(){
         if(hh > 0) totalH += hh;
         return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px;text-align:center;${editUnlocked?'cursor:pointer':''}" ${editUnlocked?`onclick="openTurnoModal(${turno.id})"`:''}>${turno.tipo}${turno.tipo!=='D'?`<br><span style="font-size:10.5px;font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
       }
-      // El "+" para asignar turno solo tiene sentido (y solo se ve) si de
-      // verdad se puede usar — antes se mostraba igual a un empleado sin
-      // permiso de editar, con pinta de botón clicable que en realidad no
-      // hacía nada al tocarlo.
-      if(editUnlocked){
-        return `<td style="text-align:center;padding:2px"><span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted);font-size:16px" onclick="openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
-      }
+      // El calendario es solo VISTA: asignar un turno nuevo se hace desde el
+      // botón de calendario de la ficha del empleado (horario fijo o por
+      // periodo), nunca desde una casilla vacía aquí — solo se puede tocar
+      // un turno que ya existe.
       return `<td style="text-align:center;padding:2px;color:var(--muted)">—</td>`;
     }).join('');
     return `<tr>
@@ -2352,7 +2595,6 @@ function renderHorariosSemana(){
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="printWeeklySchedule()"><i class="ti ti-printer"></i> ${t('btn.printSchedule')}</button>
-        <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -2404,12 +2646,17 @@ function openTurnoModal(id, employeeId, fecha){
   const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===state.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
   const noHorario = ['D','V','B'].includes(state.tipo);
   const isPartido = state.tipo === 'P';
+  // Este turno concreto sigue el patrón de un horario fijo activo: al
+  // guardarlo hay que preguntar si el cambio es solo para hoy o para
+  // siempre (todos los ${diaSemana} desde esta fecha) — ver saveTurno.
+  const puedeElegirAlcance = turno && turno.origen === 'fijo' && !!horarioFijoDe(turno.employeeId);
 
   openModal(`
     <div class="modal-header">
       <h3>${state.id ? t('common.edit') : t('common.new')} ${t('hr2.shift')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    ${puedeElegirAlcance ? `<div class="manual-warning" style="margin-bottom:10px"><i class="ti ti-repeat"></i> ${t('hr2.followsFixedSchedule')}</div>` : ''}
     <div class="field-row">
       <div class="field">
         <label>${t('hr2.employee')}</label>
@@ -2458,7 +2705,10 @@ function openTurnoModal(id, employeeId, fecha){
     <div class="modal-footer">
       ${state.id ? `<button class="owner-only btn btn-danger" onclick="deleteTurno(${state.id})">${t("common.delete")}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">${t("common.save")}</button>
+      ${puedeElegirAlcance ? `
+        <button class="btn" onclick="saveTurno(${state.id}, 'dia')">${t('btn.onlyThisDay')}</button>
+        <button class="btn btn-primary" onclick="saveTurno(${state.id}, 'siempre')">${t('btn.forever')}</button>
+      ` : `<button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">${t("common.save")}</button>`}
     </div>
   `);
 }
@@ -2472,7 +2722,27 @@ function turnoTipoChanged(){
   document.getElementById('turno-descanso-msg').style.display = noHorario ? 'block' : 'none';
 }
 
-async function saveTurno(id){
+// "Para siempre": el hostelero cambió el horario de UN día concreto que
+// seguía el patrón fijo y eligió que valga para todos los ${diaSemana}
+// futuros, no solo hoy. Actualiza el propio patrón (el hueco de ESE día de
+// la semana) y, con él, todos los turnos futuros —incluida esta fecha— que
+// SIGAN siendo automáticos para ese mismo día de la semana. Un día que el
+// hostelero ya hubiera tocado a mano en otro momento (aunque fuera el mismo
+// día de la semana) no lleva origen:'fijo' y por tanto no se toca aquí:
+// sigue siendo suyo, como siempre.
+function aplicarCambioPermanentePatron(employeeId, desdeFecha, data){
+  const hf = horarioFijoDe(employeeId);
+  if(!hf) return;
+  const diaSemana = (new Date(desdeFecha+'T00:00:00').getDay() + 6) % 7;
+  hf.patron[diaSemana] = {tipo:data.tipo, entrada:data.entrada, salida:data.salida, entrada2:data.entrada2, salida2:data.salida2};
+  (DB.turnos||[]).forEach(x => {
+    if(x.employeeId!==employeeId || x.origen!=='fijo' || x.fecha < desdeFecha) return;
+    if(((new Date(x.fecha+'T00:00:00').getDay() + 6) % 7) !== diaSemana) return;
+    Object.assign(x, {tipo:data.tipo, entrada:data.entrada, salida:data.salida, entrada2:data.entrada2, salida2:data.salida2});
+  });
+}
+
+async function saveTurno(id, alcance){
   if(!isOwnerSession() && !editUnlocked) return;
   const tipo = document.getElementById('turno-tipo').value;
   const noHorario = ['D','V','B'].includes(tipo);
@@ -2513,7 +2783,18 @@ async function saveTurno(id){
   // auditoría debe decir "editado", no "creado".
   const wasNew = !turno;
   if(turno){
-    Object.assign(turno, data);
+    if(alcance === 'siempre' && turno.origen === 'fijo'){
+      // Para siempre: actualiza el patrón y todos los ${diaSemana} futuros
+      // que sigan siendo automáticos. Este turno se queda origen:'fijo'
+      // (lo actualiza el propio bucle de arriba, por ser >= desdeFecha).
+      aplicarCambioPermanentePatron(data.employeeId, data.fecha, data);
+    } else {
+      // Solo este día (o no había patrón que elegir): se suelta del
+      // horario fijo para siempre — ni una regeneración futura ni un
+      // cambio del patrón general de este empleado vuelven a tocarlo.
+      delete turno.origen;
+      Object.assign(turno, data);
+    }
   } else {
     turno = {id: genId(), ...data};
     DB.turnos.push(turno);
@@ -2559,7 +2840,7 @@ function logPersonalEvent(type, params){
   // que también salga en el registro general. "Resetear PIN" es la única
   // de estas cuatro que de verdad duele si la hace quien no debe.
   const p = params || {};
-  const typeLabel = {shiftCreated:t('audit.personal.shiftCreated'), shiftEdited:t('audit.personal.shiftEdited'), shiftDeleted:t('audit.personal.shiftDeleted'), pinReset:t('audit.personal.pinReset'), clockedByOther:t('audit.personal.clockedByOther')}[type] || type;
+  const typeLabel = {shiftCreated:t('audit.personal.shiftCreated'), shiftEdited:t('audit.personal.shiftEdited'), shiftDeleted:t('audit.personal.shiftDeleted'), pinReset:t('audit.personal.pinReset'), clockedByOther:t('audit.personal.clockedByOther'), fixedScheduleSet:t('audit.personal.fixedScheduleSet'), fixedScheduleRemoved:t('audit.personal.fixedScheduleRemoved')}[type] || type;
   logAudit('personal', `${typeLabel}: ${p.name||'?'}`, type==='pinReset' ? 'critical' : 'normal');
 }
 
@@ -2576,6 +2857,8 @@ function formatPersonalLogEntry(e){
     case 'shiftDeleted': return t('personalLog.shiftDeleted').replace('${detail}', shiftDetail);
     case 'pinReset': return t('personalLog.pinReset').replace('${name}', p.name);
     case 'clockedByOther': return t('personalLog.clockedByOther').replace('${name}', p.name).replace('${action}', p.action==='entrada'?t('hr2.clockIn'):t('hr2.clockOut')).replace('${via}', p.via==='owner_session'?t('common.owner'):t('label.businessPin'));
+    case 'fixedScheduleSet': return t('personalLog.fixedScheduleSet').replace('${name}', p.name);
+    case 'fixedScheduleRemoved': return t('personalLog.fixedScheduleRemoved').replace('${name}', p.name);
     default: return '';
   }
 }
@@ -2643,8 +2926,10 @@ function renderTeamPulseHtml(){
         <h4 style="margin-bottom:6px"><i class="ti ti-beach"></i> ${t('vacation.ownerPendingTitle')}</h4>
         ${pendingVacations.map(r => {
           const emp = DB.employees.find(e=>e.id===r.employeeId);
+          const summary = vacationAllowanceSummary(r.employeeId);
           return `<div style="font-size:12.5px;margin-bottom:6px">
             ${t('vacation.ownerPendingLine').replace('${name}', escapeHtml(emp?emp.name:'?')).replace('${from}', escapeHtml(r.fromDate)).replace('${to}', escapeHtml(r.toDate))}
+            ${summary ? ` <span style="color:var(--muted)">${t('vacation.ownerPendingRemaining').replace('${remaining}', summary.remaining).replace('${total}', summary.total)}</span>` : ''}
             ${r.notes ? `<div style="color:var(--muted)">${escapeHtml(r.notes)}</div>` : ''}
             <div style="display:flex;gap:6px;margin-top:4px">
               <button class="btn btn-sm btn-primary" onclick="ownerRespondVacationRequest(${r.id}, true)">${t('common.accept')}</button>
@@ -2665,7 +2950,13 @@ function renderTeamPulseHtml(){
       </div>`);
   }
   const wk = currentWeekKey();
-  const moodThisWeek = (DB.moodCheckins||[]).filter(c => c.weekKey===wk);
+  // Solo los check-ins de esta área: cocina y sala son equipos distintos,
+  // y mezclar su ánimo en una sola media no dice nada útil de ninguno de
+  // los dos — antes se veía la del negocio entero en las dos pestañas.
+  const moodThisWeek = (DB.moodCheckins||[]).filter(c => c.weekKey===wk).filter(c => {
+    const emp = DB.employees.find(e => e.id===c.employeeId);
+    return (emp && (emp.area||'cocina')) === currentArea();
+  });
   if(moodThisWeek.length){
     const avg = moodThisWeek.reduce((s,c)=>s+c.value,0) / moodThisWeek.length;
     const faces = ['😞','🙁','😐','🙂','😄'];
@@ -2779,9 +3070,14 @@ function renderHorariosPersonal(){
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
+          <button class="btn btn-sm btn-icon" title="${t('btn.messages')}" onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
+          <button class="btn btn-sm btn-icon" title="${t('title.workDistribution')}" onclick="navigate('distribucion');openDistEmployee(${e.id})"><i class="ti ti-clipboard-list"></i></button>
+          ${isOwnerSession ? `
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
+          ` : ''}
           <button class="owner-strict btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
+          <button class="owner-strict btn btn-sm btn-icon" title="${t('title.employeeSchedule')}" onclick="openEmployeeScheduleChooser(${e.id})"><i class="ti ti-calendar"></i></button>
           <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -2799,22 +3095,190 @@ function renderHorariosPersonal(){
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="owner-strict btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
-        ${allEmps.length ? `<button class="owner-strict btn" onclick="openBulkTurnoModal()"><i class="ti ti-calendar-plus"></i> ${t('title.assignShiftsByPeriod')}</button>` : ''}
         <button class="owner-strict btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
     ` : ''}
-    ${myEmployeeId != null ? `
-    <div class="manual-warning" style="margin-bottom:12px">
-      <i class="ti ti-info-circle"></i> ${t('hr.personal.employeeScopeNote')}
-    </div>` : ''}
     ${emps.length ? listHtml : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
   `;
 }
 
+// El horario fijo es un patrón que se repite CADA SEMANA para siempre —
+// Vacaciones y Baja no tienen sentido ahí (nadie está de vacaciones todos
+// los lunes, para siempre): esos dos se siguen poniendo como excepción de
+// un día concreto, no como parte del patrón general.
+const HORARIO_FIJO_TIPOS = ['M','T','P','C','D'];
+function horarioFijoDiaRowHtml(i, dia){
+  const tipoOptions = HORARIO_FIJO_TIPOS.map(k => `<option value="${k}"${k===dia.tipo?' selected':''}>${k} - ${SHIFT_TYPES[k].label}</option>`).join('');
+  const noHorario = dia.tipo === 'D';
+  const isPartido = dia.tipo === 'P';
+  return `
+    <div class="field-row" style="align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px">
+      <div class="field" style="flex:0 0 90px">
+        <label>${t('common.day')}</label>
+        <div style="font-weight:700;padding:11px 0">${WEEK_DAYS[i]}</div>
+      </div>
+      <div class="field" style="flex:1;min-width:140px">
+        <label>${t('hr2.shiftType')}</label>
+        <select id="hf-tipo-${i}" onchange="horarioFijoTipoChanged(${i})">${tipoOptions}</select>
+      </div>
+      <div class="field" id="hf-horas-${i}" style="display:${noHorario?'none':'flex'};gap:8px;flex:2;min-width:220px">
+        <div style="flex:1">
+          <label>${t('hr2.clockIn')}</label>
+          <input type="time" id="hf-entrada-${i}" value="${dia.entrada||'09:00'}">
+        </div>
+        <div style="flex:1">
+          <label>${t('hr2.clockOut')}</label>
+          <input type="time" id="hf-salida-${i}" value="${dia.salida||'17:00'}">
+        </div>
+        <div id="hf-partido-${i}" style="display:${isPartido?'flex':'none'};gap:8px;flex:2">
+          <div style="flex:1">
+            <label>${t('hr2.entryAfternoon')}</label>
+            <input type="time" id="hf-entrada2-${i}" value="${dia.entrada2||'16:00'}">
+          </div>
+          <div style="flex:1">
+            <label>${t('hr2.exitAfternoon')}</label>
+            <input type="time" id="hf-salida2-${i}" value="${dia.salida2||'23:00'}">
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+function horarioFijoTipoChanged(i){
+  const tipo = document.getElementById(`hf-tipo-${i}`).value;
+  const noHorario = tipo === 'D';
+  const isPartido = tipo === 'P';
+  document.getElementById(`hf-horas-${i}`).style.display = noHorario ? 'none' : 'flex';
+  document.getElementById(`hf-partido-${i}`).style.display = isPartido ? 'flex' : 'none';
+}
+
+// El patrón por defecto de un empleado nuevo se deja TODO en descanso: no
+// se inventa un horario -de lunes a viernes, por ejemplo- que quizás no
+// tenga nada que ver con lo que de verdad trabaja.
+// Punto de entrada único, desde la propia tarjeta del empleado, a las tres
+// formas de tener turnos: horario fijo para siempre, asignado por un
+// periodo concreto, o sin nada asignado (se pone a mano en el Calendario
+// cuando haga falta — no hace falta elegir nada para eso, solo cerrar).
+function openEmployeeScheduleChooser(employeeId){
+  const emp = DB.employees.find(e => e.id===employeeId);
+  if(!emp) return;
+  const hf = horarioFijoDe(employeeId);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-calendar"></i> ${escapeHtml(emp.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="muted" style="margin-bottom:14px">${hf ? t('msg.employeeHasFixedSchedule') : t('msg.employeeNoFixedSchedule')}</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();openHorarioFijoModal(${employeeId})">
+        <i class="ti ti-repeat" style="font-size:20px"></i>
+        <span><strong>${t('title.fixedSchedule')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserFixedDesc')}</span></span>
+      </button>
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();openBulkTurnoModal(${employeeId})">
+        <i class="ti ti-calendar-plus" style="font-size:20px"></i>
+        <span><strong>${t('title.assignShiftsByPeriod')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserPeriodDesc')}</span></span>
+      </button>
+      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();setHorariosTab('calendario')">
+        <i class="ti ti-calendar-event" style="font-size:20px"></i>
+        <span><strong>${t('hr2.chooserNoneTitle')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserNoneDesc')}</span></span>
+      </button>
+    </div>
+  `);
+}
+
+function horarioFijoPatronVacio(){
+  return Array.from({length:7}, () => ({tipo:'D', entrada:'', salida:'', entrada2:'', salida2:''}));
+}
+function openHorarioFijoModal(employeeId){
+  // Solo empleados de ESTA área: cocina y sala son equipos separados, y un
+  // desplegable que mezcla los dos deja asignar sin querer un horario fijo
+  // de sala a alguien de cocina (o al revés) con un solo clic.
+  const emps = areaEmployees();
+  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
+  const empId = employeeId || emps[0].id;
+  const empOptions = emps.map(e => `<option value="${e.id}"${e.id===empId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  const hf = horarioFijoDe(empId);
+  const patron = hf ? hf.patron : horarioFijoPatronVacio();
+
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-repeat"></i> ${t('title.fixedSchedule')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="muted" style="margin-bottom:12px">${t('hr2.fixedScheduleExplain')}</p>
+    <div class="field">
+      <label>${t('th.employee')}</label>
+      <select id="hf-employee" onchange="openHorarioFijoModal(parseInt(this.value))">${empOptions}</select>
+    </div>
+    <div id="hf-dias" style="margin-top:12px">
+      ${patron.map((dia,i) => horarioFijoDiaRowHtml(i, dia)).join('')}
+    </div>
+    <div class="modal-footer">
+      ${hf ? `<button class="btn btn-danger" onclick="quitarHorarioFijo(${empId})">${t('btn.removeFixedSchedule')}</button>` : ''}
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+      <button class="btn btn-primary" onclick="saveHorarioFijo(${empId})">${t("common.save")}</button>
+    </div>
+  `);
+}
+
+async function saveHorarioFijo(employeeId){
+  if(!isOwnerSession() && !editUnlocked) return;
+  const patron = Array.from({length:7}, (_,i) => {
+    const tipo = document.getElementById(`hf-tipo-${i}`).value;
+    const noHorario = ['D','V','B'].includes(tipo);
+    const isPartido = tipo === 'P';
+    return {
+      tipo,
+      entrada: noHorario ? '' : document.getElementById(`hf-entrada-${i}`).value,
+      salida: noHorario ? '' : document.getElementById(`hf-salida-${i}`).value,
+      entrada2: isPartido ? document.getElementById(`hf-entrada2-${i}`).value : '',
+      salida2: isPartido ? document.getElementById(`hf-salida2-${i}`).value : '',
+    };
+  });
+  if(!DB.horariosFijos) DB.horariosFijos = [];
+  let hf = DB.horariosFijos.find(h => h.employeeId===employeeId);
+  // El patrón cambia "desde hoy hacia delante, para siempre" — nunca toca
+  // el pasado. Se borran únicamente los turnos FUTUROS que todavía llevaban
+  // la marca del horario fijo (origen:'fijo'): un día que el hostelero ya
+  // había tocado a mano se queda exactamente como estaba, ver saveTurno.
+  const hoy = todayStr();
+  DB.turnos = (DB.turnos||[]).filter(x => !(x.employeeId===employeeId && x.fecha>=hoy && x.origen==='fijo'));
+  if(hf){
+    hf.patron = patron;
+    hf.activo = true;
+    hf.generadoHasta = addDaysStr(hoy, -1); // fuerza a regenerar desde hoy con el patrón nuevo
+  } else {
+    hf = {id: genId(), employeeId, patron, activo: true, generadoHasta: addDaysStr(hoy, -1)};
+    DB.horariosFijos.push(hf);
+  }
+  generarTurnosFijos();
+  const emp = DB.employees.find(e=>e.id===employeeId);
+  logPersonalEvent('fixedScheduleSet', {name: emp?emp.name:'?'});
+  closeModal();
+  renderHorariosTab();
+  showToast(t('msg.fixedScheduleSaved'));
+}
+
+async function quitarHorarioFijo(employeeId){
+  if(!isOwnerSession() && !editUnlocked) return;
+  if(!(await confirmModal(t('msg.confirmRemoveFixedSchedule')))) return;
+  DB.horariosFijos = (DB.horariosFijos||[]).filter(h => h.employeeId!==employeeId);
+  // Los turnos futuros ya generados se quedan tal cual (no se borran solos):
+  // quitar el horario fijo detiene la generación de MÁS turnos por delante,
+  // no borra lo que ya estaba puesto.
+  const emp = DB.employees.find(e=>e.id===employeeId);
+  logPersonalEvent('fixedScheduleRemoved', {name: emp?emp.name:'?'});
+  saveDB();
+  closeModal();
+  renderHorariosTab();
+  showToast(t('msg.fixedScheduleRemoved'));
+}
+
 function openBulkTurnoModal(employeeId){
-  if(!DB.employees.length){ showToast(t('msg.addEmployeesFirst')); return; }
-  const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===(employeeId||DB.employees[0].id)?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  // Igual que en openHorarioFijoModal: solo empleados de esta área.
+  const emps = areaEmployees();
+  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
+  const empOptions = emps.map(e => `<option value="${e.id}"${e.id===(employeeId||emps[0].id)?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const today = new Date();
   const end = new Date(today); end.setDate(today.getDate()+6);
 
@@ -2956,7 +3420,7 @@ function applyBulkTurno(){
       };
     }
     const existing = DB.turnos.find(x => x.employeeId===employeeId && x.fecha===ds);
-    if(existing) Object.assign(existing, data);
+    if(existing){ delete existing.origen; Object.assign(existing, data); } // suelta el día del horario fijo, ver saveTurno
     else DB.turnos.push({id: genId(), employeeId, fecha: ds, ...data});
     count++;
   });
@@ -3012,6 +3476,11 @@ function openEmployeeModal(id){
       </div>
     </div>
     <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">${t('msg.forCommentsOrDocs')}</p>
+    <div class="field owner-strict">
+      <label>${t('label.vacationDaysPerYear')}</label>
+      <input type="number" id="emp-vacation-days" min="0" step="1" placeholder="${t('ph.notSet')}" value="${e.vacationDaysPerYear!=null?e.vacationDaysPerYear:''}">
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('msg.vacationDaysPerYearHelp')}</p>
+    </div>
     ${id ? `
     <label class="owner-strict" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
       <input type="checkbox" id="emp-active" ${e.active!==false?'checked':''} style="width:auto">
@@ -3086,12 +3555,14 @@ function saveEmployee(id){
   const empActiveEl = document.getElementById('emp-active');
   const esRepartidorEl = document.getElementById('emp-es-repartidor');
   const esRepartidor = esRepartidorEl ? esRepartidorEl.checked : false;
+  const vacDaysEl = document.getElementById('emp-vacation-days');
+  const vacationDaysPerYear = vacDaysEl && vacDaysEl.value!=='' ? Math.max(0, parseInt(vacDaysEl.value,10)||0) : null;
   if(id){
     const emp = DB.employees.find(e => e.id===id);
     if(!emp) return;
     // El área no se pregunta: se conserva la del empleado (o la actual si no tenía).
     const eraRepartidor = emp.esRepartidor;
-    Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: emp.area||currentArea()});
+    Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, esRepartidor, vacationDaysPerYear, area: emp.area||currentArea()});
     if(empActiveEl) emp.active = empActiveEl.checked;
     // Si deja de repartir con pedidos ya asignados, esos pedidos se quedaban
     // "en camino" apuntando a alguien que ya no reparte — autoAssignRepartidor
@@ -3099,7 +3570,7 @@ function saveEmployee(id){
     if(eraRepartidor && !esRepartidor) liberarPedidosDeRepartidor(id);
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
-    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:hashPin('1234', codigoNegocioParaPin()), pinChanged:false, active:true, fechaAlta: todayStr()});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, vacationDaysPerYear, area: currentArea(), pin:hashPin('1234', codigoNegocioParaPin()), pinChanged:false, active:true, fechaAlta: todayStr()});
     logAudit('create', t('audit.createdEmployee').replace('${name}', name));
   }
   saveDB();
@@ -3130,6 +3601,7 @@ function reallyDeleteEmployee(id, pin){
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);
+  DB.horariosFijos = (DB.horariosFijos||[]).filter(h => h.employeeId!==id);
   liberarPedidosDeRepartidor(id);
   delete DB.shifts[id];
   delete DB.workDistribution[id];
@@ -3156,6 +3628,7 @@ function reallyDeleteEmployee(id, pin){
   // reasignarían un turno real a un employeeId que ya no existe.
   DB.turnoSwapRequests = (DB.turnoSwapRequests||[]).filter(r => r.employeeId!==id && r.toEmployeeId!==id);
   DB.vacationRequests = (DB.vacationRequests||[]).filter(r => r.employeeId!==id);
+  DB.pedidoSolicitudes = (DB.pedidoSolicitudes||[]).filter(r => r.employeeId!==id);
   saveDB();
   closeModal();
   const active = document.querySelector('.view.active');
@@ -3366,8 +3839,6 @@ function openEmployeeFicharModal(employeeId){
   // negocio en vez del suyo propio SÍ se sigue pudiendo: es un atajo
   // distinto y deliberado para "se me olvidó mi PIN", no este caso.)
   const asOwner = personalFicharAuthMethod === 'owner_session';
-  const unreadMsgs = directChatUnreadCount(e.id, asOwner);
-  const msgBtn = `<button class="btn btn-sm ${unreadMsgs?'btn-primary':''}" onclick="openEmployeeDirectChat(${e.id}, ${asOwner})"><i class="ti ti-message"></i> ${t('btn.messages')}${unreadMsgs?` <span class="badge badge-red" style="margin-left:2px">${unreadMsgs}</span>`:''}</button>`;
   openModal(`
     <div class="modal-header">
       <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
@@ -3392,7 +3863,6 @@ function openEmployeeFicharModal(employeeId){
         <button class="btn btn-sm" onclick="openTurnoSwapRequestModal(${e.id})"><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</button>
         <button class="btn btn-sm" onclick="openVacationRequestModal(${e.id})"><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</button>
         `}
-        ${msgBtn}
       </div>
       ${asOwner ? '' : renderIncomingSwapRequestsHtml(e.id)}
       ${asOwner ? '' : renderMyVacationRequestsHtml(e.id)}
@@ -3525,24 +3995,60 @@ function ownerApproveTurnoSwap(requestId, approve){
 // vez de reasignar, se crean turnos nuevos que "ocupan" ese hueco en el
 // cuadrante para que quede reflejado sin tener que rellenarlo a mano día
 // a día.
+// Cuenta días NATURALES entre dos fechas (ambas incluidas), igual que se
+// generan los turnos "V" al aprobar — no días laborables, para que cuadre
+// con lo que de verdad ocupa el cuadrante.
+function vacationDaysBetween(fromDate, toDate){
+  return Math.round((new Date(toDate+'T00:00:00') - new Date(fromDate+'T00:00:00')) / 86400000) + 1;
+}
+// Días ya comprometidos este año: aprobados (ya gastados de verdad) +
+// pendientes (todavía puede rechazarse, pero mientras está pendiente ya
+// "reserva" el hueco para que no le aprueben dos rangos que se pasan del
+// total sin darse cuenta). Recorta cada solicitud al año en curso.
+function vacationDaysCommitted(employeeId, year, statuses){
+  const yFrom = year+'-01-01', yTo = year+'-12-31';
+  return (DB.vacationRequests||[]).filter(r => r.employeeId===employeeId && statuses.includes(r.status)).reduce((sum, r) => {
+    const from = r.fromDate < yFrom ? yFrom : r.fromDate;
+    const to = r.toDate > yTo ? yTo : r.toDate;
+    if(to < from) return sum;
+    return sum + vacationDaysBetween(from, to);
+  }, 0);
+}
+function vacationAllowanceSummary(employeeId){
+  const emp = DB.employees.find(e => e.id===employeeId);
+  if(!emp || emp.vacationDaysPerYear==null) return null;
+  const year = todayStr().slice(0,4);
+  const used = vacationDaysCommitted(employeeId, year, ['approved']);
+  const pending = vacationDaysCommitted(employeeId, year, ['pending']);
+  const total = emp.vacationDaysPerYear;
+  return {total, used, pending, remaining: Math.max(0, total - used - pending)};
+}
 function renderMyVacationRequestsHtml(employeeId){
   const mine = (DB.vacationRequests||[]).filter(r => r.employeeId===employeeId).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  if(!mine.length) return '';
+  const summary = vacationAllowanceSummary(employeeId);
+  const summaryHtml = summary ? `<div style="font-size:12.5px;margin-bottom:6px">${t('vacation.remainingLine').replace('${remaining}', summary.remaining).replace('${total}', summary.total).replace('${used}', summary.used)}</div>` : '';
+  if(!mine.length && !summaryHtml) return '';
   const statusLabel = s => s==='pending' ? t('vacation.statusPending') : s==='approved' ? t('vacation.statusApproved') : t('vacation.statusRejected');
   return `
     <div class="card" style="margin-top:12px;text-align:left">
       <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-beach"></i> ${t('vacation.myRequestsTitle')}</h4>
-      ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px">${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></div>`).join('')}
+      ${summaryHtml}
+      ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span>${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></span>
+        ${r.status==='pending' ? `<button class="btn btn-sm btn-icon" title="${t('vacation.cancelRequest')}" onclick="cancelVacationRequest(${r.id}, ${employeeId})"><i class="ti ti-x"></i></button>` : ''}
+      </div>`).join('')}
     </div>`;
 }
 function openVacationRequestModal(employeeId){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
+  const summary = vacationAllowanceSummary(employeeId);
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</h3>
       <button class="modal-close" onclick="openEmployeeFicharModal(${employeeId})">&times;</button>
     </div>
+    <p style="font-size:13px;color:var(--muted);margin:-4px 0 12px">${summary ? t('vacation.remainingLine').replace('${remaining}', summary.remaining).replace('${total}', summary.total).replace('${used}', summary.used) : t('vacation.noAllowanceSet')}</p>
     <div class="field-row">
       <div class="field"><label>${t('vacation.fromLabel')}</label><input type="date" id="vac-from" min="${todayStr()}" value="${todayStr()}"></div>
       <div class="field"><label>${t('vacation.toLabel')}</label><input type="date" id="vac-to" min="${todayStr()}" value="${todayStr()}"></div>
@@ -3559,10 +4065,30 @@ function submitVacationRequest(employeeId){
   const toDate = document.getElementById('vac-to').value;
   const notes = document.getElementById('vac-notes').value.trim();
   if(!fromDate || !toDate || toDate < fromDate){ showToast(t('vacation.badRange')); return; }
+  const summary = vacationAllowanceSummary(employeeId);
+  if(summary){
+    const requested = vacationDaysBetween(fromDate, toDate);
+    if(requested > summary.remaining){
+      showToast(t('vacation.notEnoughDays').replace('${requested}', requested).replace('${remaining}', summary.remaining), 5000);
+      return;
+    }
+  }
   if(!DB.vacationRequests) DB.vacationRequests = [];
   DB.vacationRequests.push({id: genId(), employeeId, fromDate, toDate, notes, status:'pending', createdAt: new Date().toISOString()});
   saveDB();
   showToast(t('swap.requestSent'));
+  openEmployeeFicharModal(employeeId);
+}
+// Retirar una solicitud propia todavía pendiente — antes se quedaba fija
+// en la lista sin ninguna forma de sacarla si el empleado cambiaba de idea
+// o se equivocó de fechas. Solo tiene sentido en pendiente: una ya
+// aprobada tiene turnos "V" reales generados (eso lo deshace el propietario).
+function cancelVacationRequest(requestId, employeeId){
+  const r = (DB.vacationRequests||[]).find(x=>x.id===requestId);
+  if(!r || r.status!=='pending') return;
+  DB.vacationRequests = DB.vacationRequests.filter(x=>x.id!==requestId);
+  saveDB();
+  showToast(t('vacation.cancelledOk'));
   openEmployeeFicharModal(employeeId);
 }
 function ownerRespondVacationRequest(requestId, approve){
@@ -3807,15 +4333,6 @@ function openNewPinModal(employeeId, action){
   `);
 }
 
-// ¿Coincide pinPlain con el PIN ya guardado (hasheado o en claro) de otro empleado?
-function employeePinCollides(pinPlain, excludeId){
-  return DB.employees.some(e => {
-    if(e.id === excludeId || !e.pinChanged) return false;
-    const stored = e.pin || '1234';
-    return pinMatchesHash(pinPlain, stored);
-  });
-}
-
 function confirmNewPin(employeeId, action){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
@@ -3824,7 +4341,6 @@ function confirmNewPin(employeeId, action){
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
-  if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
   e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
@@ -3867,7 +4383,6 @@ function confirmFirstPinChange(employeeId){
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
-  if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
   e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();

@@ -953,12 +953,23 @@ function setPedidosTab(tab){
   pedidosTab = tab;
   pedidoDetailId = null;
   if(tab === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; }
+  if(tab === 'solicitar'){ solicitudLines = []; solicitudSearch = ''; }
   renderPedidos();
 }
 function updatePedidosTabsUI(){
   const c = document.getElementById('pedidos-tab-crear');
+  const s = document.getElementById('pedidos-tab-solicitar');
   const h = document.getElementById('pedidos-tab-historial');
   if(c) c.classList.toggle('btn-primary', pedidosTab === 'crear');
+  if(s){
+    // "Pedir lo que falta" es para quien NO puede hacer un pedido real
+    // (sin permiso de editar): al dueño o al gerente no les aporta nada,
+    // ellos ya tienen "Realizar Pedido" — mostrárselo era ruido, y además
+    // era donde se veían las propias solicitudes que le llegan a ÉL, que
+    // ahora se ven directamente encima de "Realizar Pedido".
+    s.style.display = editUnlocked ? 'none' : '';
+    s.classList.toggle('btn-primary', pedidosTab === 'solicitar');
+  }
   if(h) h.classList.toggle('btn-primary', pedidosTab === 'historial');
 }
 
@@ -968,6 +979,10 @@ function renderPedidos(){
   // pestaña de una sesión anterior, se cae al historial en vez de dejar
   // ver el formulario de creación igualmente.
   if(pedidosTab === 'crear' && !editUnlocked) pedidosTab = 'historial';
+  // Al revés: "solicitar" es solo de quien no puede editar — si el dueño o
+  // el gerente se quedaron en esa pestaña de una sesión de empleado
+  // anterior (mismo dispositivo, compartido), se cae a "Realizar Pedido".
+  if(pedidosTab === 'solicitar' && editUnlocked) pedidosTab = 'crear';
   updatePedidosTabsUI();
   const o = pedidoDetailId && getPurchaseOrder(pedidoDetailId);
   if(o && (o.area||'cocina') === currentArea()){
@@ -975,10 +990,18 @@ function renderPedidos(){
   }else{
     pedidoDetailId = null;
     if(pedidosTab === 'crear') renderPedidoCrear();
+    else if(pedidosTab === 'solicitar') renderPedidoSolicitar();
     else renderPedidoList();
   }
 }
 
+// Solicitudes de "lo que falta" hechas por cualquier empleado (sin permiso
+// de editar no puede ni ver proveedores ni precios, así que no tiene
+// sentido dejarle "Realizar Pedido" de verdad) — quedan pendientes de que
+// el dueño o quien tenga permiso de editar (canUnlockEdit, el gerente de
+// cocina/sala) las revise y haga el pedido real con ellas.
+let solicitudLines = [];
+let solicitudSearch = '';
 let pedidoHistorialSupplierFilter = '';
 let pedidoHistorialDateFrom = '';
 let pedidoHistorialDateTo = '';
@@ -1057,6 +1080,153 @@ function renderPedidoList(){
 
   box.innerHTML = kpiHtml + filterHtml + `<div id="pedido-results"></div>`;
   renderPedidoResultsList();
+}
+
+// Solicitudes de "lo que falta" pendientes de revisar — solo las ve quien
+// puede de verdad hacer algo con ellas (el dueño o el gerente con permiso
+// de editar): a un empleado normal enseñarle las de sus compañeros no le
+// sirve de nada y es información que no le corresponde.
+function renderPedidoSolicitudesPendientesHtml(){
+  if(!editUnlocked) return '';
+  const pendientes = (DB.pedidoSolicitudes||[]).filter(s => s.status==='pending' && (s.area||'cocina')===currentArea());
+  if(!pendientes.length) return '';
+  return `
+    <div class="card" style="margin-bottom:14px;border:1px solid var(--amber)">
+      <h4 style="margin-bottom:8px"><i class="ti ti-clipboard-list"></i> ${t('pedido.pendingRequestsTitle')}</h4>
+      ${pendientes.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).map(s => {
+        const emp = DB.employees.find(e=>e.id===s.employeeId);
+        return `
+        <div style="font-size:13px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+            <strong>${escapeHtml(emp?emp.name:'?')}</strong>
+            <span style="color:var(--muted);font-size:12px">${fmtDateTime(new Date(s.createdAt))}</span>
+          </div>
+          <ul style="margin:6px 0 6px 18px;padding:0">
+            ${(s.items||[]).map(i => `<li>${escapeHtml(i.name)}${i.cantidad?` — <strong>${i.cantidad}</strong> ${escapeHtml(i.unit||'')}`:''}</li>`).join('')}
+          </ul>
+          ${s.notas ? `<div style="color:var(--muted);margin-bottom:6px">${escapeHtml(s.notas)}</div>` : ''}
+          <button class="btn btn-sm" onclick="markPedidoSolicitudAtendida(${s.id})"><i class="ti ti-check"></i> ${t('pedido.markHandled')}</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+// Se borra de verdad, no se marca "atendida" y se deja ahí: al empleado le
+// quedaba fija en "Tus solicitudes" para siempre aunque ya estuviera hecha,
+// sin ninguna forma de quitarla. Una vez atendida ya cumplió su función
+// (avisar), así que no hace falta guardar el historial.
+function markPedidoSolicitudAtendida(id){
+  if(!editUnlocked) return;
+  const s = (DB.pedidoSolicitudes||[]).find(x=>x.id===id);
+  if(!s) return;
+  DB.pedidoSolicitudes = DB.pedidoSolicitudes.filter(x=>x.id!==id);
+  saveDB();
+  showToast(t('pedido.requestHandledOk'));
+  renderPedidos();
+}
+
+/* ---- "Pedir lo que falta": lo puede usar cualquiera, incluso sin permiso
+   de editar — no es un pedido real (no toca proveedores ni precios), solo
+   una lista de lo que hace falta para que el dueño o el gerente hagan el
+   pedido de verdad. ---- */
+function renderPedidoSolicitar(){
+  const box = document.getElementById('pedidos-list');
+  // El buscador solo repinta su propia lista de resultados (#solicitud-
+  // matches), nunca el cuadro entero — igual que en Proveedores/Stock/Mega
+  // Lista/Escandallo/Fichas: si no, se pierde el foco al escribir letra a
+  // letra.
+  box.innerHTML = `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">${t('pedido.requestDesc')}</p>
+    <div class="field">
+      <label>${t('pedido.searchToAdd')}</label>
+      <input type="text" class="search-input" id="solicitud-search-input" value="${escapeHtml(solicitudSearch)}" placeholder="${t('ph.searchArticle')}" oninput="updateSolicitudSearch(this.value)">
+    </div>
+    <div id="solicitud-matches"></div>
+    <div id="solicitud-cart"></div>
+    <div class="field">
+      <label>${t('pedido.notesLabel')}</label>
+      <textarea id="solicitud-notas" rows="2" placeholder="${t('ph.solicitudNotes')}"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="submitPedidoSolicitud()"><i class="ti ti-send"></i> ${t('pedido.sendRequestBtn')}</button>
+    <div id="solicitud-mine"></div>
+  `;
+  renderSolicitudMatches();
+  renderSolicitudCart();
+  renderSolicitudMine();
+}
+function renderSolicitudMatches(){
+  const box = document.getElementById('solicitud-matches');
+  if(!box) return;
+  const area = currentArea();
+  const search = solicitudSearch.toLowerCase();
+  const matches = search ? DB.ingredients.filter(i => (i.area||'cocina')===area && i.activo!==false && i.name.toLowerCase().includes(search) && !solicitudLines.some(l=>l.ingredientId===i.id)).slice(0,12) : [];
+  box.innerHTML = matches.length ? `<div class="card" style="margin-bottom:12px">${matches.map(i => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span>${escapeHtml(i.name)}</span>
+        <button class="btn btn-sm" onclick="addSolicitudLine(${i.id})"><i class="ti ti-plus"></i> ${t('common.add')}</button>
+      </div>`).join('')}</div>` : '';
+}
+function renderSolicitudCart(){
+  const box = document.getElementById('solicitud-cart');
+  if(!box) return;
+  box.innerHTML = solicitudLines.length ? `<div class="card" style="margin-bottom:12px">
+      ${solicitudLines.map((l,idx) => `
+        <div class="list-row" style="padding:6px 0">
+          <div class="list-row-name"><span>${escapeHtml(l.name)}</span></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" min="0" step="0.01" value="${l.cantidad}" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateSolicitudQty(${idx}, this.value)">
+            <span style="font-size:12px;color:var(--muted)">${escapeHtml(l.unit||'')}</span>
+            <button class="btn btn-sm btn-icon btn-danger" onclick="removeSolicitudLine(${idx})"><i class="ti ti-x"></i></button>
+          </div>
+        </div>`).join('')}
+    </div>` : `<div class="empty" style="padding:20px"><i class="ti ti-clipboard-list"></i>${t('pedido.noItemsYet')}</div>`;
+}
+function renderSolicitudMine(){
+  const box = document.getElementById('solicitud-mine');
+  if(!box) return;
+  const area = currentArea();
+  const misSolicitudes = (DB.pedidoSolicitudes||[]).filter(s => (s.area||'cocina')===area && s.employeeId===loggedInEmployeeId()).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  box.innerHTML = misSolicitudes.length ? `
+    <div class="card" style="margin-top:16px">
+      <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-history"></i> ${t('pedido.myRequestsTitle')}</h4>
+      ${misSolicitudes.slice(0,5).map(s => `<div style="font-size:12.5px;margin-bottom:4px">${fmtDateTime(new Date(s.createdAt))} — ${(s.items||[]).length} ${t('noun.products')} — <strong>${s.status==='pending'?t('vacation.statusPending'):t('pedido.statusHandled')}</strong></div>`).join('')}
+    </div>` : '';
+}
+function updateSolicitudSearch(val){
+  solicitudSearch = val;
+  renderSolicitudMatches();
+}
+function addSolicitudLine(ingredientId){
+  const ing = getIngredient(ingredientId);
+  if(!ing) return;
+  solicitudLines.push({ingredientId, name: ing.name, unit: ing.unit, cantidad: 1});
+  solicitudSearch = '';
+  const inp = document.getElementById('solicitud-search-input');
+  if(inp) inp.value = '';
+  renderSolicitudMatches();
+  renderSolicitudCart();
+}
+function updateSolicitudQty(idx, val){
+  const line = solicitudLines[idx];
+  if(!line) return;
+  line.cantidad = Math.max(0, parseFloat(val)||0);
+}
+function removeSolicitudLine(idx){
+  solicitudLines.splice(idx, 1);
+  renderSolicitudCart();
+}
+function submitPedidoSolicitud(){
+  const notas = (document.getElementById('solicitud-notas')||{}).value || '';
+  const items = solicitudLines.filter(l => l.cantidad > 0).map(l => ({name:l.name, unit:l.unit, cantidad:l.cantidad}));
+  if(!items.length && !notas.trim()){ showToast(t('pedido.emptyRequest')); return; }
+  if(!DB.pedidoSolicitudes) DB.pedidoSolicitudes = [];
+  const session = getAccessSession();
+  const employeeId = session && session.type==='employee' ? session.employeeId : null;
+  DB.pedidoSolicitudes.push({id: genId(), employeeId, area: currentArea(), items, notas: notas.trim(), status:'pending', createdAt: new Date().toISOString()});
+  saveDB();
+  solicitudLines = [];
+  solicitudSearch = '';
+  showToast(t('pedido.requestSentOk'));
+  renderPedidos();
 }
 
 function renderPedidoResultsList(){
@@ -1786,6 +1956,7 @@ function renderPedidoCrear(){
   const box = document.getElementById('pedidos-list');
   const {dateVal, html} = orderFormBodyHtml();
   box.innerHTML = `
+    ${renderPedidoSolicitudesPendientesHtml()}
     <div class="card">
       <h3><i class="ti ti-shopping-cart-plus"></i> ${t('title.makeOrder')}</h3>
       ${html}

@@ -1230,6 +1230,16 @@ function renderDistribucion(){
     return;
   }
 
+  // Un empleado que entra por Acceso Empleados no tiene equipo que mirar:
+  // ir a "Distribución del Trabajo" es siempre para ver SU PROPIA ficha, así
+  // que se abre directa, sin pasar antes por una lista de una sola tarjeta.
+  // El propietario, en cambio, sí ve primero el equipo entero.
+  const myEmployeeId = loggedInEmployeeId();
+  if(myEmployeeId != null && !distCurrentEmployeeId){
+    const mine = DB.employees.find(e=>e.id===myEmployeeId);
+    if(mine && (mine.area||'cocina')===currentArea()) distCurrentEmployeeId = myEmployeeId;
+  }
+
   if(distCurrentEmployeeId && DB.employees.find(e=>e.id===distCurrentEmployeeId) && (DB.employees.find(e=>e.id===distCurrentEmployeeId).area||'cocina')===currentArea()){
     renderDistDetail();
   } else {
@@ -1274,8 +1284,9 @@ function renderDistList(){
       <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openDistEmployee(${emp.id})">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-          <strong>${escapeHtml(emp.name)}</strong>
+          <strong style="flex:1">${escapeHtml(emp.name)}</strong>
           ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : ''}
+          <button class="btn btn-sm btn-icon" title="${t('label.viewEmployeeFile')}" onclick="event.stopPropagation();openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i></button>
         </div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||t('label.noRole'))}</div>
         <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--brand-orange)':'var(--muted)'}">
@@ -1502,18 +1513,27 @@ function renderDistDetail(){
     `;
   }).join('');
 
+  // El empleado que entra por Acceso Empleados ve SOLO su propia ficha (la
+  // lista ya viene filtrada a él en renderDistList): no tiene ningún equipo
+  // al que volver, así que aquí no lleva botón de volver. El propietario, en
+  // cambio, entra desde la lista de todo el equipo y tiene que poder
+  // volver a ella para mirar la ficha de otro compañero sin recargar nada.
+  const myEmployeeId = loggedInEmployeeId();
   box.innerHTML = `
     <div class="toolbar">
       <div class="left">
-        <button class="btn btn-sm btn-default" onclick="backToDistList()"><i class="ti ti-arrow-left"></i> ${t('label.team')}</button>
+        ${myEmployeeId == null ? `<button class="btn btn-sm btn-icon" onclick="backToDistList()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>` : ''}
         <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block"></span>
         <strong>${escapeHtml(emp.name)}</strong>
         <span style="font-size:12px;color:var(--muted)">${escapeHtml(emp.rol||'')}</span>
       </div>
-      <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-default" onclick="openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i> ${t('label.viewEmployeeFile')}</button>
+        <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+      </div>
     </div>
 
-    <div class="grid ${isSala?'':'grid-2'}" style="${isSala?'max-width:280px':''}">
+    <div class="grid grid-2">
       <div class="kpi"><div class="label">${isSala ? t('dist.zonesInCharge') : t('dist.dishesInCharge')}</div><div class="value">${isSala ? d.rangos.length : d.platos.length}</div></div>
       <div class="kpi"><div class="label">${t('dist.tasksThisWeek')}</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
     </div>
@@ -6833,7 +6853,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Carta</strong> (en Cocina y Sala) — Crea una o varias cartas importando los platos o bebidas directamente del Escandallo (ya con su precio de venta de ese momento — si luego cambias el precio en el Escandallo, recuerda pulsar "Actualizar precio" en la Carta para que se refleje ahí también), organízalos por secciones (Entrantes, Principales, Postres... o Cervezas, Cócteles, Vinos...) y marca cuáles están disponibles. Puedes programar distintas cartas según el horario (comidas, cenas, fin de semana, carta de bebidas...).</div></div>
     <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Stock y Pedidos</strong> (en Cocina y Sala) — Define el stock mínimo de cada ingrediente o elaboración. A partir de aquí, el sistema descuenta stock automáticamente con cada venta del TPV y lo repone automáticamente cuando marcas un pedido a proveedor como "Recibido".</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Personal y Plan de Limpieza</strong> (en Cocina y Sala) — Da de alta a tu equipo, organiza turnos y reparte tareas. Configura el plan de limpieza APPCC para cumplir con la normativa de higiene alimentaria.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>TPV</strong> (en Sala) — Aquí es donde tu equipo trabaja cada turno: abrir mesas (cliente de paso o con reserva), tomar la comanda con las pestañas de cartas (bebidas primero), marchar por grupos o con "Marchar vale", seguir el estado del servicio y cobrar cuando todo está servido. Cada venta queda registrada y alimenta el resto del sistema sin pasos adicionales. (Ver el detalle en la sección "🆕 Novedades" de arriba.)</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>TPV</strong> (en Sala) — Aquí es donde tu equipo trabaja cada turno: abrir mesas (cliente de paso o con reserva), tomar la comanda con las pestañas de cartas (bebidas primero), marchar por grupos o con "Marchar vale", seguir el estado del servicio y cobrar cuando todo está servido. Cada venta queda registrada y alimenta el resto del sistema sin pasos adicionales. (Ver el detalle en el capítulo "TPV" de este manual.)</div></div>
     <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Gestión Económica</strong> (en Gestión) — Añade tus gastos fijos (nóminas, alquiler, suministros...) una sola vez. A partir de ahí, la Cuenta de Resultados, el Punto de Equilibrio y la Tesorería se calculan solos combinando estos gastos con las ventas reales del TPV.</div></div>
     <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Panel de Control</strong> (en Gestión) — Tu pantalla de control diario. Una vez que los módulos anteriores están en marcha, aquí verás en segundos cómo va el negocio: ventas, resultado, alertas y próximas reservas.</div></div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>No hace falta completar el 100% de cada módulo antes de pasar al siguiente. Puedes empezar con lo básico (ingredientes y recetas más vendidas, por ejemplo) e ir ampliando poco a poco mientras ya usas el TPV en el día a día.</div>
@@ -6849,7 +6869,7 @@ const MANUAL_CHAPTERS = [
     <h4>Cómo entra cada persona a la app</h4>
     <p>Al abrir la app aparece siempre la misma pantalla inicial, con dos accesos:</p>
     <ul>
-      <li><strong>Acceso Empleados</strong> — el trabajador escribe su nombre, su PIN (4 dígitos) y el <strong>código de negocio</strong> (se lo da el propietario). Entra directamente a su área de trabajo (Cocina o Sala, según lo configurado en su ficha de Personal), sin más preguntas. Funciona incluso en un dispositivo que nunca se usó antes para ese negocio: no hace falta que el propietario "presente" el dispositivo primero.</li>
+      <li><strong>Acceso Empleados</strong> — el trabajador escribe su nombre, su PIN (4 dígitos) y el <strong>código de negocio</strong> (se lo da el propietario). Entra directamente a su área de trabajo (Cocina o Sala, según lo configurado en su ficha de Personal), sin más preguntas. Funciona incluso en un dispositivo que nunca se usó antes para ese negocio: no hace falta que el propietario "presente" el dispositivo primero. El campo del código recuerda los últimos que se han usado en ese dispositivo y te los ofrece en un desplegable, aunque no rellena ni preselecciona ninguno por ti.</li>
       <li><strong>Acceso Propietarios</strong> — es una <strong>cuenta</strong> (usuario + PIN), separada del negocio en sí. La primera vez la creas tú; en cualquier otro dispositivo, entras con ese mismo usuario y PIN. Dentro de tu cuenta vas canjeando un <strong>código de negocio</strong> por cada local que compres — así aparecen solos en el selector de negocios en cualquier dispositivo donde inicies sesión.</li>
     </ul>
     <p>Un empleado que entra por su acceso solo ve su área de trabajo (Cocina o Sala) y nunca ve el selector de negocios ni el botón "Negocios" de la cabecera — solo tiene un botón de "Cerrar sesión". El botón "Negocios" queda reservado a quien entró como propietario.</p>
@@ -6881,7 +6901,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Carta</strong> (a Cuina i Sala) — Crea una o diverses cartes important els plats o begudes directament de l'Escandall (ja amb el seu preu de venda d'aquell moment — si més tard canvies el preu a l'Escandall, recorda prémer "Actualitzar preu" a la Carta perquè es reflecteixi també allà), organitza'ls per seccions (Entrants, Principals, Postres... o Cerveses, Còctels, Vins...) i marca quins estan disponibles. Pots programar diferents cartes segons l'horari (dinars, sopars, cap de setmana, carta de begudes...).</div></div>
     <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Estoc i Comandes</strong> (a Cuina i Sala) — Defineix l'estoc mínim de cada ingredient o elaboració. A partir d'aquí, el sistema descompta estoc automàticament amb cada venda del TPV i el reposa automàticament quan marques una comanda a proveïdor com "Rebuda".</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Personal i Pla de Neteja</strong> (a Cuina i Sala) — Dona d'alta el teu equip, organitza torns i reparteix tasques. Configura el pla de neteja APPCC per complir amb la normativa d'higiene alimentària.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>TPV</strong> (a Sala) — Aquí és on el teu equip treballa cada torn: obrir taules (client de pas o amb reserva), prendre la comanda amb les pestanyes de cartes (begudes primer), marxar per grups o amb "Marxar val", seguir l'estat del servei i cobrar quan tot està servit. Cada venda queda registrada i alimenta la resta del sistema sense passos addicionals. (Vegeu el detall a la secció "🆕 Novetats" de dalt.)</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>TPV</strong> (a Sala) — Aquí és on el teu equip treballa cada torn: obrir taules (client de pas o amb reserva), prendre la comanda amb les pestanyes de cartes (begudes primer), marxar per grups o amb "Marxar val", seguir l'estat del servei i cobrar quan tot està servit. Cada venda queda registrada i alimenta la resta del sistema sense passos addicionals. (Vegeu el detall al capítol "TPV" d'aquest manual.)</div></div>
     <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Gestió Econòmica</strong> (a Gestió) — Afegeix les teves despeses fixes (nòmines, lloguer, subministraments...) una sola vegada. A partir d'aquí, el Compte de Resultats, el Punt d'Equilibri i la Tresoreria es calculen sols combinant aquestes despeses amb les vendes reals del TPV.</div></div>
     <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Panell de Control</strong> (a Gestió) — La teva pantalla de control diari. Un cop els mòduls anteriors estan en marxa, aquí veuràs en segons com va el negoci: vendes, resultat, alertes i properes reserves.</div></div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>No cal completar el 100% de cada mòdul abans de passar al següent. Pots començar amb el bàsic (ingredients i receptes més venudes, per exemple) i anar ampliant a poc a poc mentre ja fas servir el TPV en el dia a dia.</div>
@@ -6897,7 +6917,7 @@ const MANUAL_CHAPTERS = [
     <h4>Com hi entra cada persona</h4>
     <p>En obrir l'app apareix sempre la mateixa pantalla inicial, amb dos accessos:</p>
     <ul>
-      <li><strong>Accés Empleats</strong> — el treballador escriu el seu nom, el seu PIN (4 dígits) i el <strong>codi de negoci</strong> (l'hi dona el propietari). Entra directament a la seva àrea de treball (Cuina o Sala, segons la seva fitxa de Personal), sense més preguntes. Funciona fins i tot en un dispositiu que mai s'havia fet servir per a aquest negoci: no cal que el propietari "presenti" el dispositiu abans.</li>
+      <li><strong>Accés Empleats</strong> — el treballador escriu el seu nom, el seu PIN (4 dígits) i el <strong>codi de negoci</strong> (l'hi dona el propietari). Entra directament a la seva àrea de treball (Cuina o Sala, segons la seva fitxa de Personal), sense més preguntes. Funciona fins i tot en un dispositiu que mai s'havia fet servir per a aquest negoci: no cal que el propietari "presenti" el dispositiu abans. El camp del codi recorda els últims que s'han fet servir en aquell dispositiu i te'ls ofereix en un desplegable, encara que no n'emplena ni preselecciona cap per tu.</li>
       <li><strong>Accés Propietaris</strong> — és un <strong>compte</strong> (usuari + PIN), separat del negoci en si. La primera vegada el crees tu; en qualsevol altre dispositiu, entres amb aquest mateix usuari i PIN. Dins del teu compte vas bescanviant un <strong>codi de negoci</strong> per cada local que compris — així apareixen sols al selector de negocis en qualsevol dispositiu on iniciïs sessió.</li>
     </ul>
     <p>Un empleat que hi entra pel seu accés només veu la seva àrea de treball (Cuina o Sala) i mai veu el selector de negocis ni el botó "Negocis" de la capçalera — només té un botó de "Tancar sessió". El botó "Negocis" queda reservat a qui hi ha entrat com a propietari.</p>
@@ -6929,7 +6949,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Menu</strong> (in Kitchen and Floor) — Create one or more menus by importing dishes or drinks straight from Costing (already carrying the selling price at that moment — if you later change the price in Costing, remember to press "Update price" in the Menu so it's reflected there too), organise them into sections (Starters, Mains, Desserts... or Beers, Cocktails, Wines...) and mark which ones are available. You can schedule different menus by time slot (lunch, dinner, weekend, drinks menu...).</div></div>
     <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Stock and Orders</strong> (in Kitchen and Floor) — Set the minimum stock for each ingredient or preparation. From here, the system automatically deducts stock with every POS sale and replenishes it automatically when you mark a supplier order as "Received".</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Staff and Cleaning Plan</strong> (in Kitchen and Floor) — Register your team, organise shifts and assign tasks. Set up the HACCP cleaning plan to comply with food-hygiene regulations.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>POS</strong> (in Floor) — This is where your team works every shift: opening tables (walk-in or with a reservation), taking the order using the menu tabs (drinks first), firing by course or with "Fire ticket", tracking service status and charging once everything has been served. Every sale is logged and feeds the rest of the system with no extra steps. (See the details in the "🆕 What's new" section above.)</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>POS</strong> (in Floor) — This is where your team works every shift: opening tables (walk-in or with a reservation), taking the order using the menu tabs (drinks first), firing by course or with "Fire ticket", tracking service status and charging once everything has been served. Every sale is logged and feeds the rest of the system with no extra steps. (See the details in the "POS" chapter of this manual.)</div></div>
     <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Financial Management</strong> (in Management) — Add your fixed costs (payroll, rent, utilities...) just once. From there, the Profit & Loss statement, the Break-even Point and Cash Flow are calculated automatically by combining these costs with real POS sales.</div></div>
     <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Dashboard</strong> (in Management) — Your daily control screen. Once the modules above are up and running, here you'll see in seconds how the business is doing: sales, results, alerts and upcoming reservations.</div></div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>You don't need to fully complete every module before moving to the next. You can start with the basics (ingredients and best-selling recipes, for example) and expand little by little while already using the POS day to day.</div>
@@ -6945,7 +6965,7 @@ const MANUAL_CHAPTERS = [
     <h4>How each person signs in</h4>
     <p>When you open the app, the same landing screen always shows, offering two entry points:</p>
     <ul>
-      <li><strong>Staff Access</strong> — the employee types their name, their PIN (4 digits) and the <strong>business code</strong> (given by the owner). They go straight into their work area (Kitchen or Floor, as set on their Staff record) with no further questions. This works even on a device that has never been used for that business before — the owner doesn't need to "introduce" the device first.</li>
+      <li><strong>Staff Access</strong> — the employee types their name, their PIN (4 digits) and the <strong>business code</strong> (given by the owner). They go straight into their work area (Kitchen or Floor, as set on their Staff record) with no further questions. This works even on a device that has never been used for that business before — the owner doesn't need to "introduce" the device first. The code field remembers the last codes used on that device and offers them in a dropdown, though it never fills in or pre-selects one for you.</li>
       <li><strong>Owner Access</strong> — is an <strong>account</strong> (username + PIN), separate from any one business. You create it the first time; on any other device, you sign in with that same username and PIN. Inside your account you redeem a <strong>business code</strong> for each location you buy — so they show up on their own in the business selector on any device you sign into.</li>
     </ul>
     <p>An employee who signs in through Staff Access only sees their work area (Kitchen or Floor) and never sees the business selector or the "Businesses" header button — they only have a "Log out" button. The "Businesses" button is reserved for whoever signed in as owner.</p>
@@ -7616,9 +7636,9 @@ const MANUAL_CHAPTERS = [
     <p>Una cosa es saber <strong>cuándo</strong> trabaja cada empleado (eso lo controla Horario del Personal) y otra muy distinta es saber <strong>qué tiene que hacer exactamente</strong> durante ese turno. En Sala este módulo es el <strong>calendario de tareas</strong> de cada persona: no habla de "platos a su cargo" (eso es cosa de Cocina), sino de todo lo que tiene que hacer día a día en barra/sala.</p>
 
     <h4>Vista maestro-detalle</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">A la izquierda verás la lista de tu equipo de Sala (los empleados que diste de alta en Horario del Personal). Haz clic en uno para abrir su calendario de tareas a la derecha.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Todo lo que edites se guarda asociado a ese empleado, así que puedes ir pasando de uno a otro para repartir el trabajo de todo el equipo.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Si entras como propietario, accedes directo a la ficha de cualquiera. Si un empleado con edición abre la de un compañero, la app le pide su PIN (o el PIN de negocio) antes de mostrarla — solo su propia ficha se abre sin pedir nada.</div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Como propietario, primero ves la lista de todo tu equipo de Sala (los empleados que diste de alta en Horario del Personal). Haz clic en uno para abrir su calendario de tareas.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Todo lo que edites se guarda asociado a ese empleado, así que puedes ir pasando de uno a otro para repartir el trabajo de todo el equipo — con el botón "Volver a la lista" desde su ficha.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Un empleado que entra por Acceso Empleados va directo a SU PROPIO calendario, sin pasar por ninguna lista — no ve el de sus compañeros. Si abre el de un compañero desde otro sitio de la app, se le pide su PIN (o el PIN de negocio) antes de mostrarlo.</div>
 
     <h4>Tareas de la semana</h4>
     <p>Aquí ves, día por día, todo lo que tiene asignado esa persona — y viene de tres sitios distintos, unificado en un solo calendario:</p>
@@ -7633,9 +7653,9 @@ const MANUAL_CHAPTERS = [
     <p>Una cosa es saber <strong>cuándo</strong> trabaja cada empleado (eso lo controla Horario del Personal) y otra muy distinta es saber <strong>qué tiene que hacer exactamente</strong> durante ese turno. Este módulo resuelve el segundo problema: te permite repartir responsabilidades concretas — qué platos prepara cada cocinero, qué tareas de limpieza o mise en place le tocan cada día — y dejarlo todo por escrito para que no haya confusiones ni "yo pensaba que eso lo hacías tú".</p>
 
     <h4>Vista maestro-detalle</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">A la izquierda verás la lista de tu equipo (los empleados que diste de alta en Horario del Personal). Haz clic en uno para abrir su ficha de trabajo a la derecha.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Todo lo que edites se guarda asociado a ese empleado, así que puedes ir pasando de uno a otro para repartir el trabajo de todo el equipo.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Si entras como propietario, accedes directo a la ficha de cualquiera. Si un empleado con edición abre la de un compañero, la app le pide su PIN (o el PIN de negocio) antes de mostrarla — solo su propia ficha se abre sin pedir nada.</div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Como propietario, primero ves la lista de todo tu equipo (los empleados que diste de alta en Horario del Personal). Haz clic en uno para abrir su ficha de trabajo.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Todo lo que edites se guarda asociado a ese empleado, así que puedes ir pasando de uno a otro para repartir el trabajo de todo el equipo — con el botón "Volver a la lista" desde su ficha.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Un empleado que entra por Acceso Empleados va directo a SU PROPIA ficha, sin pasar por ninguna lista — no ve la de sus compañeros. Si abre la de un compañero desde otro sitio de la app, se le pide su PIN (o el PIN de negocio) antes de mostrarla.</div>
 
     <h4>Platos a su cargo</h4>
     <p>Aquí defines qué platos prepara habitualmente ese empleado.</p>
@@ -7658,9 +7678,9 @@ const MANUAL_CHAPTERS = [
     <p>Una cosa és saber <strong>quan</strong> treballa cada empleat (això ho controla Horari del Personal) i una altra molt diferent és saber <strong>què ha de fer exactament</strong> durant aquell torn. A Sala aquest mòdul és el <strong>calendari de tasques</strong> de cada persona: no parla de "plats a càrrec seu" (això és cosa de Cuina), sinó de tot el que ha de fer dia a dia a la barra/sala.</p>
 
     <h4>Vista mestre-detall</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">A l'esquerra veuràs la llista del teu equip de Sala (els empleats que vas donar d'alta a Horari del Personal). Fes clic en un per obrir el seu calendari de tasques a la dreta.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Tot el que editis es desa associat a aquell empleat, així que pots anar passant d'un a l'altre per repartir la feina de tot l'equip.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Si entres com a propietari, accedeixes directe a la fitxa de qualsevol. Si un empleat amb edició obre la d'un company, l'app li demana el seu PIN (o el PIN de negoci) abans de mostrar-la — només la seva pròpia fitxa s'obre sense demanar res.</div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Com a propietari, primer veus la llista de tot el teu equip de Sala (els empleats que vas donar d'alta a Horari del Personal). Fes clic en un per obrir el seu calendari de tasques.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Tot el que editis es desa associat a aquell empleat, així que pots anar passant d'un a l'altre per repartir la feina de tot l'equip — amb el botó "Tornar a la llista" des de la seva fitxa.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Un empleat que entra per Accés Empleats va directe al SEU PROPI calendari, sense passar per cap llista — no veu el dels companys. Si obre el d'un company des d'un altre lloc de l'app, se li demana el seu PIN (o el PIN de negoci) abans de mostrar-lo.</div>
 
     <h4>Tasques de la setmana</h4>
     <p>Aquí veus, dia per dia, tot el que té assignat aquella persona — i ve de tres llocs diferents, unificat en un sol calendari:</p>
@@ -7675,9 +7695,9 @@ const MANUAL_CHAPTERS = [
     <p>Una cosa és saber <strong>quan</strong> treballa cada empleat (això ho controla Horari del Personal) i una altra molt diferent és saber <strong>què ha de fer exactament</strong> durant aquell torn. Aquest mòdul resol el segon problema: et permet repartir responsabilitats concretes — quins plats prepara cada cuiner, quines tasques de neteja o mise en place li toquen cada dia — i deixar-ho tot per escrit perquè no hi hagi confusions ni "jo pensava que allò ho feies tu".</p>
 
     <h4>Vista mestre-detall</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">A l'esquerra veuràs la llista del teu equip (els empleats que vas donar d'alta a Horari del Personal). Fes clic en un per obrir la seva fitxa de treball a la dreta.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Tot el que editis es desa associat a aquell empleat, així que pots anar passant d'un a l'altre per repartir la feina de tot l'equip.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Si entres com a propietari, accedeixes directe a la fitxa de qualsevol. Si un empleat amb edició obre la d'un company, l'app li demana el seu PIN (o el PIN de negoci) abans de mostrar-la — només la seva pròpia fitxa s'obre sense demanar res.</div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Com a propietari, primer veus la llista de tot el teu equip (els empleats que vas donar d'alta a Horari del Personal). Fes clic en un per obrir la seva fitxa de treball.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Tot el que editis es desa associat a aquell empleat, així que pots anar passant d'un a l'altre per repartir la feina de tot l'equip — amb el botó "Tornar a la llista" des de la seva fitxa.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Un empleat que entra per Accés Empleats va directe a la SEVA PRÒPIA fitxa, sense passar per cap llista — no veu la dels companys. Si obre la d'un company des d'un altre lloc de l'app, se li demana el seu PIN (o el PIN de negoci) abans de mostrar-la.</div>
 
     <h4>Plats a càrrec seu</h4>
     <p>Aquí defineixes quins plats prepara habitualment aquell empleat.</p>
@@ -7700,9 +7720,9 @@ const MANUAL_CHAPTERS = [
     <p>Knowing <strong>when</strong> each employee works is one thing (that's handled by Staff Schedule) and knowing <strong>exactly what they need to do</strong> during that shift is quite another. On the Floor side, this module is each person's <strong>task calendar</strong>: it doesn't talk about "dishes in charge" (that's a Kitchen thing), but about everything they need to do day to day at the bar/floor.</p>
 
     <h4>Master-detail view</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">On the left you'll see your Floor team list (the employees you registered in Staff Schedule). Click one to open their task calendar on the right.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Everything you edit is saved against that employee, so you can move from one to another to distribute work across the whole team.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Signed in as the owner, you go straight into anyone's record. If an employee with edit access opens a colleague's, the app asks for that person's PIN (or the business PIN) before showing it — only their own record opens with no prompt.</div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">As the owner, you first see the list of your whole Floor team (the employees you registered in Staff Schedule). Click one to open their task calendar.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Everything you edit is saved against that employee, so you can move from one to another to distribute work across the whole team — use the "Back to list" button from their record.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>An employee signing in through Staff Access goes straight to THEIR OWN calendar, skipping any list — they never see their colleagues'. If they open a colleague's from elsewhere in the app, they're asked for that person's PIN (or the business PIN) first.</div>
 
     <h4>This week's tasks</h4>
     <p>Here you see, day by day, everything assigned to that person — pulled from three different sources, unified into a single calendar:</p>
@@ -7717,9 +7737,9 @@ const MANUAL_CHAPTERS = [
     <p>Knowing <strong>when</strong> each employee works is one thing (that's handled by Staff Schedule) and knowing <strong>exactly what they need to do</strong> during that shift is quite another. This module solves the second problem: it lets you assign concrete responsibilities — which dishes each cook prepares, which cleaning or mise en place tasks fall to them each day — and put it all in writing so there's no confusion or "I thought you were doing that".</p>
 
     <h4>Master-detail view</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">On the left you'll see your team list (the employees you registered in Staff Schedule). Click one to open their work record on the right.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Everything you edit is saved against that employee, so you can move from one to another to distribute work across the whole team.</div></div>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Signed in as the owner, you go straight into anyone's record. If an employee with edit access opens a colleague's, the app asks for that person's PIN (or the business PIN) before showing it — only their own record opens with no prompt.</div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">As the owner, you first see the list of your whole team (the employees you registered in Staff Schedule). Click one to open their work record.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Everything you edit is saved against that employee, so you can move from one to another to distribute work across the whole team — use the "Back to list" button from their record.</div></div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>An employee signing in through Staff Access goes straight to THEIR OWN record, skipping any list — they never see their colleagues'. If they open a colleague's from elsewhere in the app, they're asked for that person's PIN (or the business PIN) first.</div>
 
     <h4>Dishes in charge</h4>
     <p>Here you define which dishes that employee usually prepares.</p>
@@ -8116,6 +8136,8 @@ const MANUAL_CHAPTERS = [
       <li>A la <strong>izquierda</strong> eliges los platos: ves todas las secciones (Entrantes, Principales...) con sus platos a la vista. Al pulsar un plato se suma a la comanda.</li>
       <li>A la <strong>derecha</strong> se va formando la <strong>comanda en vivo</strong>, en el mismo orden en que eliges los platos (arriba lo primero que se come, abajo lo último). De cada plato ves el nombre, la cantidad, puedes ponerle <strong>notas</strong> o quitarlo.</li>
     </ul>
+    <h4>La comanda dentro de "Ver mesa"</h4>
+    <p>Al abrir una mesa, el primer botón de la cabecera del modal es siempre <strong>"Cambiar de mesa"</strong> (por si te has equivocado o el cliente prefiere sentarse en otra). La comanda se muestra con el mismo estilo plano que la pantalla de Cocina, agrupada en <strong>bloques</strong>: primero todo lo pedido de Carta (con el nombre de cada carta), y luego cada Menú aparte, con su propia cabecera — así de un vistazo se ve qué es carta suelta y qué viene de un menú de precio fijo.</p>
     <h4>Marchar y seguimiento del servicio</h4>
     <ul>
       <li>Cada grupo de platos (sección) tiene su botón <strong>Marchar</strong>, y muestra su estado, sincronizado con la pantalla de Cocina: <strong>⏳ Marchado → 🔥 En preparación → 🍽️ Listo para recoger → ✅ Recogido</strong>. Cuando en Cocina marcan un plato como listo/recogido, en Sala se actualiza solo.</li>
@@ -8123,6 +8145,8 @@ const MANUAL_CHAPTERS = [
       <li>Cuando <strong>todos los platos están servidos</strong>, aparece abajo el botón <strong>Cobrar</strong>, que abre el desglose de pago, genera el ticket, registra la venta y libera la mesa.</li>
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Puedes elegir en <strong>Mi Negocio → Comandas de cocina y sala</strong> si las comandas se ven en la <strong>pantalla de Cocina/Sala</strong> o se <strong>imprimen en un vale</strong> al marchar (un vale de cocina con la comida y otro de sala/barra con las bebidas).</div>
+    <h4>Comandas Cocina</h4>
+    <p>La pantalla de Cocina agrupa los platos marchados en los mismos bloques (Carta primero, luego cada Menú por separado). Cada plato o cada bloque entero se avanza de estado con un toque, y arriba tienes un botón general <strong>"Deshacer"</strong> que revierte el último movimiento — de un plato suelto o de un bloque marcado de golpe — por si alguien se equivoca de toque. Funciona incluso con la comanda ya cerrada.</p>
     <h4>Para llevar / Delivery</h4>
     <p>Estos pedidos <strong>no se crean a mano desde el TPV</strong>: llegan siempre desde la web pública de pedidos online del negocio (ver capítulo "Reservas y Pedidos Online"), donde el propio cliente elige <strong>Para recoger</strong> o <strong>A domicilio</strong> y rellena sus datos. Si su teléfono coincide con un cliente ya dado de alta, el pedido queda vinculado a su ficha automáticamente (suma puntos de fidelidad y aparece en su historial).</p>
     <ul>
@@ -8156,6 +8180,8 @@ const MANUAL_CHAPTERS = [
       <li>A l'<strong>esquerra</strong> tries els plats: veus totes les seccions (Entrants, Principals...) amb els seus plats a la vista. En prémer un plat se suma a la comanda.</li>
       <li>A la <strong>dreta</strong> es va formant la <strong>comanda en viu</strong>, en el mateix ordre en què tries els plats (a dalt el primer que es menja, a baix l'últim). De cada plat veus el nom, la quantitat, hi pots posar <strong>notes</strong> o treure'l.</li>
     </ul>
+    <h4>La comanda dins de "Veure taula"</h4>
+    <p>En obrir una taula, el primer botó de la capçalera del modal és sempre <strong>"Canviar de taula"</strong> (per si t'has equivocat o el client prefereix seure en una altra). La comanda es mostra amb el mateix estil pla que la pantalla de Cuina, agrupada en <strong>blocs</strong>: primer tot el demanat de Carta (amb el nom de cada carta), i després cada Menú a part, amb la seva pròpia capçalera — així d'un cop d'ull es veu què és carta solta i què ve d'un menú de preu fix.</p>
     <h4>Marxar i seguiment del servei</h4>
     <ul>
       <li>Cada grup de plats (secció) té el seu botó <strong>Marxar</strong>, i mostra el seu estat, sincronitzat amb la pantalla de Cuina: <strong>⏳ Marxat → 🔥 En preparació → 🍽️ Llest per recollir → ✅ Recollit</strong>. Quan a Cuina marquen un plat com a llest/recollit, a Sala s'actualitza sol.</li>
@@ -8163,6 +8189,8 @@ const MANUAL_CHAPTERS = [
       <li>Quan <strong>tots els plats estan servits</strong>, apareix a baix el botó <strong>Cobrar</strong>, que obre el desglossament de pagament, genera el tiquet, registra la venda i allibera la taula.</li>
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Pots triar a <strong>El Meu Negoci → Comandes de cuina i sala</strong> si les comandes es veuen a la <strong>pantalla de Cuina/Sala</strong> o s'<strong>imprimeixen en un val</strong> en marxar (un val de cuina amb el menjar i un altre de sala/barra amb les begudes).</div>
+    <h4>Comandes Cuina</h4>
+    <p>La pantalla de Cuina agrupa els plats marxats en els mateixos blocs (Carta primer, després cada Menú per separat). Cada plat o cada bloc sencer s'avança d'estat amb un toc, i a dalt tens un botó general <strong>"Desfer"</strong> que reverteix l'últim moviment — d'un plat solt o d'un bloc marcat de cop — per si algú s'equivoca de toc. Funciona fins i tot amb la comanda ja tancada.</p>
     <h4>Per emportar / Delivery</h4>
     <p>Aquestes comandes <strong>no es creen a mà des del TPV</strong>: arriben sempre des de la web pública de comandes en línia del negoci (vegeu el capítol "Reserves i Comandes en línia"), on el mateix client tria <strong>Per recollir</strong> o <strong>A domicili</strong> i emplena les seves dades. Si el seu telèfon coincideix amb un client ja donat d'alta, la comanda queda vinculada a la seva fitxa automàticament (suma punts de fidelitat i apareix al seu historial).</p>
     <ul>
@@ -8196,6 +8224,8 @@ const MANUAL_CHAPTERS = [
       <li>On the <strong>left</strong> you pick the dishes: you see every section (Starters, Mains...) with its dishes visible. Tapping a dish adds it to the order.</li>
       <li>On the <strong>right</strong>, the <strong>live order</strong> builds up, in the same order you pick the dishes (top = eaten first, bottom = eaten last). For each dish you see the name, the quantity, and you can add <strong>notes</strong> or remove it.</li>
     </ul>
+    <h4>The order inside "View table"</h4>
+    <p>When you open a table, the first button in the modal's header is always <strong>"Change table"</strong> (in case you tapped the wrong one, or the customer prefers to sit elsewhere). The order is shown with the same flat style as the Kitchen screen, grouped into <strong>blocks</strong>: first everything ordered from the à la carte menu (with each menu's name), then each combo menu separately, with its own header — so at a glance you can tell what's loose à la carte and what comes from a fixed-price combo.</p>
     <h4>Firing and tracking service</h4>
     <ul>
       <li>Each group of dishes (section) has its own <strong>Fire</strong> button, and shows its status, synced with the Kitchen screen: <strong>⏳ Fired → 🔥 Being prepared → 🍽️ Ready to collect → ✅ Collected</strong>. When Kitchen marks a dish as ready/collected, Floor updates on its own.</li>
@@ -8203,6 +8233,8 @@ const MANUAL_CHAPTERS = [
       <li>Once <strong>every dish has been served</strong>, the <strong>Charge</strong> button appears at the bottom, opening the payment breakdown, generating the receipt, logging the sale and freeing the table.</li>
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i>In <strong>My Business → Kitchen and floor tickets</strong> you can choose whether orders are shown on the <strong>Kitchen/Floor screen</strong> or <strong>printed on a ticket</strong> when fired (a kitchen ticket with the food and a separate floor/bar ticket with the drinks).</div>
+    <h4>Kitchen Orders</h4>
+    <p>The Kitchen screen groups fired dishes into the same blocks (à la carte first, then each combo menu separately). Each dish, or a whole block at once, moves forward a status with a tap, and at the top there's a general <strong>"Undo"</strong> button that reverts the last move — a single dish or a whole block fired at once — in case of a mistaken tap. It works even after the order has already been closed.</p>
     <h4>Take away / Delivery</h4>
     <p>These orders <strong>aren't created by hand from the POS</strong>: they always come from the business's public online ordering page (see the "Online Reservations and Orders" chapter), where the customer themselves picks <strong>Pickup</strong> or <strong>Delivery</strong> and fills in their details. If their phone matches a client already on file, the order gets linked to their record automatically (earns loyalty points and shows up in their history).</p>
     <ul>
@@ -8902,25 +8934,21 @@ function manualChapterMatches(ch, q){
   return plain.includes(q);
 }
 function renderManual(){
-  const nav = document.getElementById('manual-nav');
   const detail = document.getElementById('manual-detail');
   const q = manualSearch.trim().toLowerCase();
   const matches = MANUAL_CHAPTERS.map((ch,i) => ({ch,i})).filter(({ch}) => manualChapterMatches(ch, q));
-  nav.innerHTML = matches.length ? matches.map(({ch,i}) => `
-    <div class="manual-chapter${i===manualChapter?' active':''}" onclick="goManualChapter(${i})">${manualChapterTitle(ch)}</div>
-  `).join('') : `<div class="empty" style="padding:14px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
-  detail.innerHTML = matches.length ? manualChapterText(MANUAL_CHAPTERS[manualChapter]) : '';
+  detail.innerHTML = matches.length ? manualChapterText(MANUAL_CHAPTERS[manualChapter]) : `<div class="empty" style="padding:14px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
   renderManualIndice(matches);
 }
-// Índice arriba, igual que en Mi Negocio: la lista de capítulos vive en una
-// columna lateral que en móvil queda por encima del texto y hay que
-// desplazarse para volver a ella. Una fila de accesos directos arriba
-// resuelve lo mismo sin tocar la columna.
+// Antes había DOS listas de capítulos: esta fila de arriba y una columna
+// lateral (.manual-nav). Repetir la misma lista dos veces no aportaba nada
+// y el dueño pidió (9/09) dejar solo esta — ahora es la ÚNICA navegación
+// del manual, así que se muestra siempre, tenga los capítulos que tenga.
 function renderManualIndice(matches){
   const cont = document.getElementById('view-manual');
   if(!cont) return;
   cont.querySelector('.mn-indice')?.remove();
-  if(!matches || matches.length < 5) return;   // con pocos capítulos sobra
+  if(!matches || !matches.length) return;
   const wrap = cont.querySelector('.manual-wrap');
   if(!wrap) return;
   const nav = document.createElement('div');
@@ -8939,22 +8967,8 @@ function goManualChapter(i){
 function printManualChapter(){
   const ch = MANUAL_CHAPTERS[manualChapter];
   const title = manualChapterTitle(ch).replace(/<[^>]+>/g,'');
-  const win = window.open('', '_blank', 'width=800,height=1000');
-  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${title}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:20mm 18mm;max-width:180mm;margin:0 auto}
-  .pr-brand{font-size:11.5px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
-  h2{font-size:17pt;margin:0 0 16px}h4{font-size:12.5pt;color:#555;margin-top:16px}
-  .manual-step{display:flex;gap:10px;margin-bottom:8px}.sn{flex:none;width:22px;height:22px;border-radius:50%;background:#DF7039;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-  .manual-tip,.manual-warning{background:#F5F0E3;border-left:3px solid #DF7039;border-radius:6px;padding:8px 12px;margin:10px 0;font-size:10.5pt}
-  @media print{body{padding:10mm}}</style></head><body>
-  <div class="pr-brand">${escapeHtml((DB.business&&DB.business.name)||'GastroGoan')}</div>
-  <h2>${title}</h2>
-  ${manualChapterText(ch)}
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  win.print();
+  const body = printReportHeaderHtml(title) + manualChapterText(ch);
+  printReportWindow(title, body, {winSize:'width=800,height=1000'});
 }
 
 /* ============================================================

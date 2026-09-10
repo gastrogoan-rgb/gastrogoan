@@ -1,44 +1,87 @@
 // Ventana de impresión con un diseño consistente compartido por todos los
 // informes "de oficina" de la app (cierre de caja, pedidos a proveedor,
-// protocolos de limpieza, distribución del trabajo...) — antes cada
-// función montaba su propio HTML suelto, casi siempre texto monoespaciado
-// sin tabla ni cabecera, con un aspecto distinto en cada sitio. Un mismo
-// bloque de estilos para todos da un aspecto consistente y más cuidado sin
-// tener que repetirlo función por función.
+// protocolos de limpieza, distribución del trabajo, fichas técnicas,
+// escandallo, alérgenos, horarios, creaciones de I+D...). Antes era un
+// volcado de Arial sin marca ni cuidado — el dueño lo pidió a nivel de la
+// hoja de vale regalo (ver printGiftVoucher): logo/color del propio
+// negocio, tipografía cuidada y una cabecera con presencia, para que lo
+// que se entrega a un proveedor, un empleado o una inspección tenga un
+// aspecto profesional, no de borrador.
 function printReportWindow(title, bodyHtml, opts={}){
-  const win = window.open('', '_blank', opts.winSize || 'width=680,height=760');
+  const win = window.open('', '_blank', opts.winSize || 'width=760,height=860');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  const accent = (DB.business && DB.business.brandColor) || '#B8804B';
+  const fechaGen = new Date().toLocaleString(localeActual(), {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  // Es un documento INTERNO del propio negocio (para un proveedor, un
+  // empleado o una inspección) — no lleva nada de marca GastroGoan, el
+  // papel es del negocio, no nuestro. Membrete sobrio de nombre + fecha
+  // arriba, como una carta de verdad, en vez de una cabecera con avatar y
+  // franja de color a modo de "plantilla de SaaS".
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
     <style>
-      body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:28px;max-width:720px;margin:0 auto;font-size:13px;line-height:1.45}
-      h1{font-size:19px;margin:0 0 2px;font-weight:700}
-      .pr-subtitle{font-size:12px;color:#666;margin-bottom:4px}
-      .pr-meta{font-size:12px;color:#555;margin:2px 0}
-      h2{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:#444;border-bottom:1px solid #ddd;padding-bottom:4px;margin:22px 0 8px}
-      table{width:100%;border-collapse:collapse;margin-bottom:6px}
-      th,td{padding:5px 6px;text-align:left;font-size:12.5px;vertical-align:top}
-      th{background:#f5f5f3;font-weight:600;border-bottom:1px solid #ddd;text-transform:uppercase;font-size:10.5px;color:#666;letter-spacing:.3px}
-      td{border-bottom:1px solid #eee}
-      .pr-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-      .pr-total-row td{font-weight:700;border-top:2px solid #111;border-bottom:none;padding-top:8px}
-      .pr-note{font-size:12px;color:#666;font-style:italic;margin-top:4px}
-      .pr-empty{font-size:12px;color:#999;font-style:italic;padding:6px 0}
-      .pr-divider{border-top:1px dashed #bbb;margin:14px 0}
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+      *{box-sizing:border-box}
+      body{font-family:'Inter',Arial,Helvetica,sans-serif;color:#232019;margin:0;padding:0;font-size:13px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .pr-page{max-width:720px;margin:0 auto;padding:26px 6px 30px}
+      .pr-letterhead{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;color:#8a857c;text-transform:uppercase;letter-spacing:1.1px;margin-bottom:22px}
+      .pr-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:6px;padding-bottom:14px;border-bottom:2px solid ${accent}}
+      .pr-logo{max-height:38px;max-width:130px;object-fit:contain;flex:none}
+      h1{font-size:23px;margin:0 0 3px;font-weight:800;letter-spacing:-.3px;color:#161412}
+      .pr-subtitle{font-size:12.5px;color:#6b6660;margin-top:2px}
+      .pr-meta{font-size:12px;color:#57534d}
+      h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.7px;color:${accent};font-weight:700;margin:26px 0 9px;padding-bottom:5px;border-bottom:1px solid #eae7e1}
+      h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#161412}
+      .pr-page p{margin:0 0 10px}
+      .pr-page ul{margin:0 0 12px 18px}
+      .pr-page ul li{margin-bottom:5px}
+      table{width:100%;border-collapse:collapse;margin-bottom:8px}
+      th,td{padding:7px 4px;text-align:left;font-size:12.5px;vertical-align:top}
+      th{font-weight:700;border-bottom:1.5px solid #ddd9d2;text-transform:uppercase;font-size:10px;color:#8a857c;letter-spacing:.4px}
+      td{border-bottom:1px solid #f0eee9}
+      .pr-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500}
+      .pr-total-row td{font-weight:800;border-top:2px solid #1c1a17;border-bottom:none;padding-top:10px;font-size:14.5px}
+      .pr-note{font-size:12px;color:#7a756d;font-style:italic;margin-top:6px}
+      .pr-empty{font-size:12px;color:#a19c93;font-style:italic;padding:8px 0}
+      .pr-divider{border-top:1px dashed #d8d4cc;margin:16px 0}
       ul.pr-steps{padding-left:20px;margin:0}
-      ul.pr-steps li{margin-bottom:6px}
-      @media print{body{padding:10mm}}
+      ul.pr-steps li{margin-bottom:7px}
+      .manual-step{display:flex;gap:10px;margin-bottom:8px}
+      .manual-step .sn{flex:none;width:22px;height:22px;border-radius:50%;background:${accent};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+      .manual-step .st{font-size:12.5px;line-height:1.5}
+      .manual-tip,.manual-warning{background:#faf6ee;border-left:3px solid ${accent};border-radius:0 6px 6px 0;padding:9px 13px;margin:12px 0;font-size:12px}
+      .manual-detail h4{font-size:13px;color:#57534d;text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px}
+      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #eae7e1;font-size:10px;color:#b3ada2}
+      @media print{
+        .pr-page{padding:0 4mm 10mm}
+        @page{margin:15mm 14mm}
+      }
     </style>
-    </head><body>${bodyHtml}</body></html>`);
+    </head><body>
+      <div class="pr-page">
+        ${bodyHtml}
+        <div class="pr-footer">${escapeHtml(fechaGen)}</div>
+      </div>
+    </body></html>`);
   win.document.close();
   win.print();
 }
-// Cabecera común (nombre del negocio + título del informe + subtítulo
+// Cabecera común (membrete del negocio + título del informe + subtítulo
 // opcional) para reutilizar en todos los printX() que usan printReportWindow.
+// El logo es el que ya sube el negocio en Mi Negocio → Identidad; si no
+// tiene, se omite sin más — nada de avatar ni inicial de relleno, que un
+// membrete real no lleva eso cuando no hay logo, solo el nombre.
 function printReportHeaderHtml(title, subtitle){
+  const biz = DB.business || {};
+  const bizName = biz.name || '';
   return `
-    <div class="pr-meta" style="font-size:11.5px;color:#888;text-transform:uppercase;letter-spacing:.5px">${escapeHtml((DB.business&&DB.business.name)||'GastroGoan')}</div>
-    <h1>${escapeHtml(title)}</h1>
-    ${subtitle ? `<div class="pr-subtitle">${subtitle}</div>` : ''}
+    ${bizName ? `<div class="pr-letterhead"><span>${escapeHtml(bizName)}</span></div>` : ''}
+    <div class="pr-header">
+      <div style="min-width:0">
+        <h1>${escapeHtml(title)}</h1>
+        ${subtitle ? `<div class="pr-subtitle">${subtitle}</div>` : ''}
+      </div>
+      ${biz.logo ? `<img class="pr-logo" src="${biz.logo}">` : ''}
+    </div>
   `;
 }
 
@@ -111,7 +154,7 @@ const TOUR_STEPS = [
   {icon:'ti-logout', titleKey:'tour.s41.title', descKey:'tour.s41.desc', target:'#logout-btn', phase:'ayuda'},
   {icon:'ti-messages', titleKey:'tour.s29.title', descKey:'tour.s29.desc', target:'#chat-fab', phase:'ayuda'},
   {icon:'ti-help-hexagon', titleKey:'tour.s30.title', descKey:'tour.s30.desc', target:'#help-fab', phase:'ayuda'},
-  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.manual-nav', phase:'ayuda'},
+  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.mn-indice', phase:'ayuda'},
 
   // ---- Cierre ----
   {icon:'ti-rocket', titleKey:'tour.s33.title', descKey:'tour.s33.desc', phase:'ayuda', finale:true},
@@ -484,9 +527,9 @@ const HELP_FAQS = [
       ca:['extra','extra formatge','modificador','modificadors','afegir extra','extra al plat'],
       en:['extra','extra cheese','modifier','modifiers','add extra','extra on a dish']},
     answers:{
-      es:'Si un plato tiene extras configurados (ej. "Extra queso"), al añadirlo se abre una ventana donde marcas los extras que quieras y se suman a su precio. Para configurar extras nuevos en un plato, entra en <strong>Carta</strong>, abre el plato y pulsa el botón <strong>"Extras"</strong>.',
-      ca:'Si un plat té extres configurats (ex. "Extra formatge"), en afegir-lo s\'obre una finestra on marques els extres que vulguis i se sumen al seu preu. Per configurar extres nous en un plat, entra a <strong>Carta</strong>, obre el plat i prem el botó <strong>"Extres"</strong>.',
-      en:'If a dish has extras configured (e.g. "Extra cheese"), adding it opens a window where you check the extras you want and they\'re added to its price. To configure new extras on a dish, go to <strong>Menu</strong>, open the dish and tap the <strong>"Extras"</strong> button.' } },
+      es:'Si un plato tiene extras configurados (ej. "Extra queso"), al añadirlo se abre una ventana donde marcas los extras que quieras y se suman a su precio. Para configurar extras nuevos en un plato, entra en <strong>Carta</strong>, abre el plato y pulsa el botón <strong>"Extras"</strong> — desde ahí también puedes editar el nombre o el precio de uno ya creado, no solo añadir o borrar.',
+      ca:'Si un plat té extres configurats (ex. "Extra formatge"), en afegir-lo s\'obre una finestra on marques els extres que vulguis i se sumen al seu preu. Per configurar extres nous en un plat, entra a <strong>Carta</strong>, obre el plat i prem el botó <strong>"Extres"</strong> — des d\'allà també pots editar el nom o el preu d\'un ja creat, no només afegir-lo o esborrar-lo.',
+      en:'If a dish has extras configured (e.g. "Extra cheese"), adding it opens a window where you check the extras you want and they\'re added to its price. To configure new extras on a dish, go to <strong>Menu</strong>, open the dish and tap the <strong>"Extras"</strong> button — from there you can also edit the name or price of one you already created, not just add or delete it.' } },
   { keywords:{es:['nota','notas','sin cebolla','comentario del plato','comentarios'],
       ca:['nota','notes','sense ceba','comentari del plat','comentaris'],
       en:['note','notes','no onion','dish comment','comments']},
@@ -512,9 +555,9 @@ const HELP_FAQS = [
       ca:['comandes cuina','pantalla cuina','en preparacio','llest per servir','veure comandes'],
       en:['kitchen orders','kitchen screen','preparing','ready to serve','view orders']},
     answers:{
-      es:'En <strong>Comandas Cocina</strong> se ven en tiempo real todos los platos marchados desde sala, agrupados por mesa y tanda. Cocina puede marcar cada plato como <strong>"En preparación"</strong> y <strong>"Listo"</strong>, y sala lo verá al instante para servirlo.',
-      ca:'A <strong>Comandes Cuina</strong> es veuen en temps real tots els plats enviats des de sala, agrupats per taula i torn. Cuina pot marcar cada plat com <strong>"En preparació"</strong> i <strong>"Llest"</strong>, i sala ho veurà a l\'instant per servir-lo.',
-      en:'On the <strong>Kitchen Orders</strong> screen you see in real time all dishes sent from the dining room, grouped by table and course. The kitchen can mark each dish as <strong>"Preparing"</strong> and <strong>"Ready"</strong>, and the dining room will see it instantly to serve it.' } },
+      es:'En <strong>Comandas Cocina</strong> se ven en tiempo real todos los platos marchados desde sala. Dentro de cada mesa o pedido, se agrupan en bloques: primero todo lo pedido de Carta (con el nombre de cada carta), y luego cada Menú aparte, con su propia cabecera. Cocina puede marcar cada plato o cada bloque entero como <strong>"En preparación"</strong> y <strong>"Listo"</strong>, y sala lo verá al instante para servirlo. Si alguien se equivoca de toque, el botón general <strong>"Deshacer"</strong> revierte el último movimiento (de un plato o de un bloque entero), incluso si la comanda ya está cerrada.',
+      ca:'A <strong>Comandes Cuina</strong> es veuen en temps real tots els plats enviats des de sala. Dins de cada taula o comanda, s\'agrupen en blocs: primer tot el demanat de Carta (amb el nom de cada carta), i després cada Menú a part, amb la seva pròpia capçalera. Cuina pot marcar cada plat o cada bloc sencer com <strong>"En preparació"</strong> i <strong>"Llest"</strong>, i sala ho veurà a l\'instant per servir-lo. Si algú s\'equivoca de toc, el botó general <strong>"Desfer"</strong> reverteix l\'últim moviment (d\'un plat o d\'un bloc sencer), fins i tot si la comanda ja està tancada.',
+      en:'On the <strong>Kitchen Orders</strong> screen you see in real time all dishes sent from the dining room. Within each table or order, dishes are grouped into blocks: first everything ordered from the à la carte menu (with each menu\'s name), then each combo menu separately, with its own header. The kitchen can mark each dish, or a whole block at once, as <strong>"Preparing"</strong> and <strong>"Ready"</strong>, and the dining room will see it instantly to serve it. If a tap was a mistake, the general <strong>"Undo"</strong> button reverts the last move (a single dish or a whole block), even after the order has already been closed.' } },
   { keywords:{es:['cobrar','cobro','dividir cuenta','metodo de pago','cerrar comanda','cerrar mesa','pagar'],
       ca:['cobrar','cobrament','dividir compte','metode de pagament','tancar comanda','tancar taula','pagar'],
       en:['charge','checkout','split the bill','payment method','close order','close table','pay']},
@@ -568,9 +611,9 @@ const HELP_FAQS = [
       ca:['configurar extra','extres a la carta','preu extra','afegir extra al plat','doble carn'],
       en:['configure extra','extras in menu','extra price','add extra to dish','double meat']},
     answers:{
-      es:'Para configurar extras de un plato, ve a <strong>Carta</strong>, abre ese plato y pulsa el botón <strong>"Extras"</strong>. Ahí puedes añadir opciones con nombre y precio (ej. "Extra queso" +1€, "Doble carne" +2€).',
-      ca:'Per configurar extres d\'un plat, vés a <strong>Carta</strong>, obre aquest plat i prem el botó <strong>"Extres"</strong>. Allà pots afegir opcions amb nom i preu (ex. "Extra formatge" +1€, "Doble carn" +2€).',
-      en:'To configure extras for a dish, go to <strong>Menu</strong>, open that dish and tap the <strong>"Extras"</strong> button. There you can add options with a name and price (e.g. "Extra cheese" +1€, "Double meat" +2€).' } },
+      es:'Para configurar extras de un plato, ve a <strong>Carta</strong>, abre ese plato y pulsa el botón <strong>"Extras"</strong>. Ahí puedes añadir opciones con nombre y precio (ej. "Extra queso" +1€, "Doble carne" +2€), y también editar o borrar las que ya tenías.',
+      ca:'Per configurar extres d\'un plat, vés a <strong>Carta</strong>, obre aquest plat i prem el botó <strong>"Extres"</strong>. Allà pots afegir opcions amb nom i preu (ex. "Extra formatge" +1€, "Doble carn" +2€), i també editar o esborrar les que ja tenies.',
+      en:'To configure extras for a dish, go to <strong>Menu</strong>, open that dish and tap the <strong>"Extras"</strong> button. There you can add options with a name and price (e.g. "Extra cheese" +1€, "Double meat" +2€), and also edit or delete the ones you already have.' } },
   { keywords:{es:['importar plato','importar del escandallo','escandallo a carta','traer plato del escandallo'],
       ca:['importar plat','importar de l\'escandall','escandall a carta','portar plat de l\'escandall'],
       en:['import dish','import from costing','costing to menu','bring dish from costing']},
@@ -1568,7 +1611,7 @@ const FOLDERS = {
 // coste/margen que no le corresponden. El propietario y quien SÍ tiene
 // permiso de editar (canUnlockEdit) los siguen viendo todos.
 const HIDDEN_MODULES_WHEN_LOCKED = {
-  cocina: ['carta', 'proveedores', 'megalista', 'escandallo'],
+  cocina: ['carta', 'proveedores', 'megalista', 'escandallo', 'idr'],
   sala: ['carta', 'proveedores', 'megalista', 'escandallo']
 };
 const MODULE_FOLDER = {};

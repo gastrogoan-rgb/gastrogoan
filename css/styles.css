@@ -46,7 +46,7 @@ a{color:var(--text)}a:hover{color:var(--olive)}
    diseño, gruesa y gris genérica). Sin esto en Firefox: no pasa nada, se
    queda con la del sistema, no rompe nada. */
 .content::-webkit-scrollbar,.modal::-webkit-scrollbar,.tpv-order-col::-webkit-scrollbar,
-.ge-grid::-webkit-scrollbar,.table-wrap::-webkit-scrollbar,.manual-nav::-webkit-scrollbar{
+.ge-grid::-webkit-scrollbar,.table-wrap::-webkit-scrollbar{
   width:8px;height:8px;
 }
 .content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track,.tpv-order-col::-webkit-scrollbar-track,
@@ -203,7 +203,12 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
-.grid-personal{grid-template-columns:repeat(auto-fill,minmax(260px,320px))}
+/* 320px se quedaba corto: con mensaje/distribución/whatsapp/email/editar/
+   calendario/borrar (7 iconos de 44px, el mínimo táctil) la papelera se
+   salía sola a una segunda línea, descolocada. 370px es lo mínimo que los
+   deja a todos en la misma fila incluso en la vista más apretada (tablet,
+   <=1024px). */
+.grid-personal{grid-template-columns:repeat(auto-fill,minmax(320px,400px))}
 /* Módulos de una carpeta (Cocina/Sala/Gestión): columnas fijas y centradas,
    para que con un número de módulos no divisible entre columnas la última
    fila quede repartida en el centro en vez de estirarse o colgar suelta. */
@@ -644,7 +649,15 @@ td.wrap{white-space:normal}
    pedidos, se ve de golpe en vez de un cuadro diminuto con scroll propio. */
 .tpv-order-cols{display:flex;gap:12px;flex-wrap:wrap;min-height:400px;max-height:calc(96vh - 170px);max-height:calc(96dvh - 170px)}
 .tpv-order-col{flex:1 1 280px;min-width:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px}
-.tpv-order-col-comanda{background:var(--brand-cream)}
+/* La comanda suele llevar más contenido que el selector de carta/menú (que
+   con pocas secciones deja mucho blanco al lado) — le damos más ancho en
+   vez de repartir 50/50. */
+.tpv-order-col-selector{flex:1 1 280px}
+.tpv-order-col-comanda{flex:1.6 1 340px}
+/* Antes llevaba fondo crema propio: junto con las cajas con borde de cada
+   tanda (ya quitadas, ver renderTandaGroupCard) hacía que la comanda de
+   Sala se viera muy distinta a la de Cocina. Sin tinte propio, hereda el
+   fondo neutro de .tpv-order-col y se parece al diseño de Cocina. */
 /* En tablet/PC, carta y comanda van lado a lado (ver arriba). En móvil no
    caben las dos a la vez sin quedar diminutas — antes se apilaban en dos
    cajas con scroll propio cada una (38vh/52vh), y aun así costaba ver algo
@@ -718,6 +731,9 @@ td.wrap{white-space:normal}
    Negocio no hace falta porque allí son saltos dentro de la misma página. */
 .mn-indice-chip.activo{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)}
 @media (max-width:1024px){ .mn-indice-chip{min-height:44px} }
+/* Único índice del Manual (9/09: se quitó la columna lateral duplicada,
+   .manual-nav) — fijo arriba para no perderlo al leer un capítulo largo. */
+#view-manual .mn-indice{position:sticky;top:0;z-index:10}
 /* Destello al aterrizar: en una pantalla tan larga, saltar sin más deja
    dudando si se ha movido algo. */
 .mn-ap-resaltado{animation:mn-destello 1.4s ease}
@@ -967,11 +983,10 @@ td.wrap{white-space:normal}
 .mn-grid .card{max-width:none;margin:0;min-width:0}
 .mn-grid .mn-grid-full{grid-column:1/-1}
 
-.manual-wrap{display:grid;grid-template-columns:240px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
-.manual-nav{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--bg)}
-.manual-chapter{padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
-.manual-chapter.active{color:var(--teal-d);border-left-color:var(--teal);background:var(--teal-l);font-weight:700}
-.manual-chapter:hover:not(.active){color:var(--text);background:var(--border)}
+/* Antes había dos listas de capítulos (esta columna lateral y la fila de
+   arriba, .mn-indice) — el dueño pidió (9/09) dejar solo una. .manual-wrap
+   ya no es una rejilla de dos columnas, solo el marco de la página. */
+.manual-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
 .manual-detail{padding:20px}
 .manual-detail h3{font-size:16px;font-weight:700;margin:0 0 12px;color:var(--text)}
 .manual-detail h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px}
@@ -991,7 +1006,6 @@ td.wrap{white-space:normal}
 .manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px;display:block;overflow-x:auto}
 .manual-detail table th,.manual-detail table td{border:1px solid var(--border);padding:6px 10px;text-align:left}
 .manual-detail table th{background:var(--bg);font-weight:700}
-@media (max-width:720px){.manual-wrap{grid-template-columns:1fr}.manual-nav{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border)}.manual-chapter{border-left:none;border-bottom:3px solid transparent}.manual-chapter.active{border-left:none;border-bottom-color:var(--teal)}}
 
 .ge-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
 .ge-sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--brand-cream);border-bottom:1px solid var(--border);border-left:4px solid var(--teal)}
@@ -1041,6 +1055,11 @@ td.wrap{white-space:normal}
 @media (max-width:1024px){.month-pill{min-height:44px;padding:6px 14px}}
 .month-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)}
 .month-sel{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+/* Ventas/Variables/Tesorería llevan el año arriba ya centrado (flechas +
+   número) — los doce meses debajo se quedaban pegados a la izquierda, sin
+   relación visual con el año que tienen encima. Centrados quedan "debajo"
+   del año de verdad, no como una fila suelta aparte. */
+.month-sel-centered{justify-content:center}
 .ge-link-note{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--teal-d);background:var(--teal-l);padding:4px 10px;border-radius:6px;margin-bottom:4px}
 
 .vis-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
@@ -1304,12 +1323,6 @@ td.wrap{white-space:normal}
 
   /* Gates — ensure scrollable on smaller tablets */
   [id$="-gate"]{overflow:auto;-webkit-overflow-scrolling:touch}
-}
-
-/* Manual sidebar — 2 columnas solo en tablet (721-800px); por debajo de 720px
-   la regla de @media(max-width:720px) ya colapsa .manual-wrap a 1 columna. */
-@media (max-width: 800px) and (min-width: 721px){
-  .manual-wrap{grid-template-columns:180px 1fr}
 }
 
 @media (max-width: 600px){

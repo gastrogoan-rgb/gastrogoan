@@ -80,8 +80,25 @@ lanzar; node test/calendario-reservas.mjs   > "$SALIDA/calendario.txt" 2>&1 & P4
 lanzar; node test/carrera-sync-carta.mjs    > "$SALIDA/carrerasync.txt" 2>&1 & P49=$!
 lanzar; node test/carrera-sync-employees.mjs > "$SALIDA/carrerasyncemp.txt" 2>&1 & P50=$!
 lanzar; node test/carrera-sync-dinero.mjs    > "$SALIDA/carrerasyncdinero.txt" 2>&1 & P51=$!
+lanzar; node test/horario-fijo.mjs           > "$SALIDA/horariofijo.txt" 2>&1 & P52=$!
 lanzar; node test/confirmacion-pedido-reserva.mjs > "$SALIDA/confirmacion.txt" 2>&1 & P47=$!
 lanzar; node test/aviso-cambio-reserva.mjs  > "$SALIDA/avisocambio.txt" 2>&1 & P48=$!
+lanzar; node test/pedido-solicitud.mjs      > "$SALIDA/pedidosolicitud.txt" 2>&1 & P53=$!
+lanzar; node test/aviso-cancelar-pedido.mjs > "$SALIDA/avisocancelarpedido.txt" 2>&1 & P54=$!
+lanzar; node test/separacion-areas-personal.mjs > "$SALIDA/separacionareas.txt" 2>&1 & P55=$!
+lanzar; node test/stock-empleados.mjs > "$SALIDA/stockempleados.txt" 2>&1 & P56=$!
+lanzar; node test/cocina-paso-atras.mjs > "$SALIDA/cocinapasoatras.txt" 2>&1 & P57=$!
+lanzar; node test/menu-header-comanda.mjs > "$SALIDA/menuheader.txt" 2>&1 & P58=$!
+lanzar; node test/editar-modificadores.mjs > "$SALIDA/editarmods.txt" 2>&1 & P59=$!
+lanzar; node test/menu-carta-header-cocina.mjs > "$SALIDA/menucartacocina.txt" 2>&1 & P60=$!
+lanzar; node test/sala-cabecera-mesa.mjs > "$SALIDA/salacabecera.txt" 2>&1 & P61=$!
+lanzar; node test/codigo-negocio-recordado.mjs > "$SALIDA/codigorecordado.txt" 2>&1 & P62=$!
+lanzar; node test/distribucion-volver-equipo.mjs > "$SALIDA/distvolver.txt" 2>&1 & P63=$!
+lanzar; node test/manual-indice-fijo.mjs > "$SALIDA/manualindice.txt" 2>&1 & P64=$!
+lanzar; node test/ge-ventas-propinas-tipo.mjs > "$SALIDA/geventastipo.txt" 2>&1 & P65=$!
+lanzar; node test/ge-fijos-irpf.mjs > "$SALIDA/gefijosirpf.txt" 2>&1 & P66=$!
+lanzar; node test/ge-tesoreria-irpf.mjs > "$SALIDA/geteirpf.txt" 2>&1 & P67=$!
+lanzar; node test/ge-variables.mjs > "$SALIDA/gevariables.txt" 2>&1 & P68=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -145,5 +162,22 @@ espera $P48 "avisar al cliente al cancelar/editar una reserva"  "$SALIDA/avisoca
 espera $P49 "la nube en retraso no deshace ediciones de carta/menú"  "$SALIDA/carrerasync.txt" "casos pasaron"
 espera $P50 "la nube en retraso no deshace ediciones de empleados/turnos/fichajes"  "$SALIDA/carrerasyncemp.txt" "casos pasaron"
 espera $P51 "dinero: cobro doble y plato reaparecido siguen protegidos"  "$SALIDA/carrerasyncdinero.txt" "casos pasaron"
+espera $P52 "horario fijo: patrón semanal que se repite, sin pisar ediciones manuales"  "$SALIDA/horariofijo.txt" "casos pasaron"
+espera $P53 "pedir lo que falta: I+D oculto sin edición, solicitud de pedido sin proveedor"  "$SALIDA/pedidosolicitud.txt" "casos pasaron"
+espera $P54 "avisar al cliente al cancelar/rechazar un pedido, sin prometer un email que no existe"  "$SALIDA/avisocancelarpedido.txt" "casos pasaron"
+espera $P55 "cocina y sala no se mezclan (clima, turnos por desplegable) y el PIN se puede repetir"  "$SALIDA/separacionareas.txt" "casos pasaron"
+espera $P56 "stock en modo empleado: cantidad actual editable, mínimo y valor bloqueados"  "$SALIDA/stockempleados.txt" "casos pasaron"
+espera $P57 "cocina: un paso atrás en el estado de un plato, incluso ya cerrada la comanda"  "$SALIDA/cocinapasoatras.txt" "casos pasaron"
+espera $P58 "el nombre del menú sale una vez por tanda, no repetido en cada plato"  "$SALIDA/menuheader.txt" "casos pasaron"
+espera $P59 "editar un modificador/extra ya creado (Carta y Menú)"  "$SALIDA/editarmods.txt" "casos pasaron"
+espera $P60 "en Comandas Cocina, menú/carta se dice una vez por tanda, no por plato"  "$SALIDA/menucartacocina.txt" "casos pasaron"
+espera $P61 "Sala: Cambiar de mesa sube al principio de la cabecera"  "$SALIDA/salacabecera.txt" "casos pasaron"
+espera $P62 "código de negocio recordado en el desplegable, sin autoseleccionar" "$SALIDA/codigorecordado.txt" "casos pasaron"
+espera $P63 "Distribución del Trabajo: empleado directo a su ficha, dueño puede volver al equipo" "$SALIDA/distvolver.txt" "casos pasaron"
+espera $P64 "Manual: solo el índice de arriba queda fijo al hacer scroll" "$SALIDA/manualindice.txt" "casos pasaron"
+espera $P65 "GE Ventas: sin propina en el total, desglose real por tipo de servicio" "$SALIDA/geventastipo.txt" "casos pasaron"
+espera $P66 "GE Gastos Fijos: IRPF separado y visible, Personal sin mención a IVA" "$SALIDA/gefijosirpf.txt" "casos pasaron"
+espera $P67 "GE Tesorería: IRPF retenido trimestral y previsión con resultado neto" "$SALIDA/geteirpf.txt" "casos pasaron"
+espera $P68 "GE Gastos Variables: meses centrados, food cost editable, pedidos↔gasto verificado" "$SALIDA/gevariables.txt" "casos pasaron"
 
 exit $FALLOS
