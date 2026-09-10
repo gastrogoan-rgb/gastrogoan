@@ -3348,6 +3348,33 @@ function mergeNestedArraysByKey(localObj, remoteObj, arrayKeys){
   return merged;
 }
 
+// DB.ge.cierres (meses cerrados en Gestión Económica) y DB.ge.fijosLog (histórico
+// de gastos fijos, snapshotGeFijosNeto) son arrays SIN `id`: cierres son strings
+// sueltos ("2026-09") y fijosLog son objetos {fecha, totalNeto, ...}. Pasarlos
+// por mergeArraysById (como fijos/variables/capex) los hacía caer en su rama
+// "sin id → manda la nube entera": un mes recién cerrado en este dispositivo
+// (o reabierto, cierres().splice) que aún no había subido desaparecía sin
+// aviso en cuanto llegaba una sincronización, dejando el mes editable otra vez
+// aunque el informe ya se hubiera enviado al gestor como "cerrado". Se
+// fusionan aparte: cierres como una lista de nombres (mergeListaDeNombres, con
+// detección de borrado via la foto de lo último sincronizado) y fijosLog por
+// unión (nunca se borra un elemento suelto de ahí, solo se añade).
+function mergeGeCierres(localGe, remoteGe, lastSyncedGeJson){
+  if(!Array.isArray(localGe) || !Array.isArray(remoteGe)) return remoteGe;
+  let lastCierres;
+  if(lastSyncedGeJson){
+    try{ const prev = JSON.parse(lastSyncedGeJson); lastCierres = Array.isArray(prev && prev.cierres) ? JSON.stringify(prev.cierres) : null; }catch(e){}
+  }
+  return mergeListaDeNombres(localGe, remoteGe, lastCierres);
+}
+function mergeFijosLog(local, remote){
+  if(!Array.isArray(local) || !Array.isArray(remote)) return remote;
+  const porFecha = new Map();
+  remote.forEach(e => { if(e && e.fecha) porFecha.set(e.fecha, e); });
+  local.forEach(e => { if(e && e.fecha && !porFecha.has(e.fecha)) porFecha.set(e.fecha, e); });
+  return [...porFecha.values()].sort((a,b) => a.fecha.localeCompare(b.fecha));
+}
+
 /* Las dos listas cuyos elementos NO tienen id: son nombres, y se fusionan
    por el nombre (ver mergeListaDeNombres). Van aparte de MERGEABLE_ARRAYS
    porque ahí acabarían en `return remote` y un borrado local se desharía. */
@@ -3428,8 +3455,13 @@ const ARRAYS_CON_LAPIDA = new Set([
 // mergeArraysById — sin lápida, un gasto fijo, una compra o una inversión
 // borrados aquí resucitaban al sincronizar un dispositivo que aún los tenía,
 // volviendo a mover el IVA, el margen y el Resultado sin que nadie lo viera
-// borrarse dos veces. fijosLog y cierres se quedan fuera: son historial que
-// solo crece (push), nunca se borra un elemento suelto de ahí.
+// borrarse dos veces. fijosLog se queda fuera: es historial que solo crece
+// (push), nunca se borra un elemento suelto de ahí, y se fusiona por unión
+// en mergeFijosLog. cierres SÍ se borra de verdad (toggleCierreTe reabre un
+// mes con cierres().splice) pero no lleva `id` — no encaja en lápidas por id,
+// se fusiona aparte con mergeGeCierres (mismo mecanismo que
+// mergeListaDeNombres: detecta el borrado con la foto de lo último
+// sincronizado, en vez de perder el cierre entero como antes).
 const NESTED_ARRAYS_CON_LAPIDA = {ge: ['fijos', 'variables', 'capex']};
 const LAPIDA_DIAS = 60;
 
@@ -5510,7 +5542,13 @@ function applyRemoteBlock(key, remoteValue){
     merged = mergeStockField(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   }
   if(key === 'ge' && DB[key] && typeof merged === 'object'){
-    merged = mergeNestedArraysByKey(DB[key], merged, ['fijos','variables','capex','fijosLog','cierres']);
+    merged = mergeNestedArraysByKey(DB[key], merged, ['fijos','variables','capex']);
+    if(Array.isArray(DB[key].cierres) && Array.isArray(merged.cierres)){
+      merged.cierres = mergeGeCierres(DB[key].cierres, merged.cierres, lastSyncedSnapshot && lastSyncedSnapshot.ge);
+    }
+    if(Array.isArray(DB[key].fijosLog) && Array.isArray(merged.fijosLog)){
+      merged.fijosLog = mergeFijosLog(DB[key].fijosLog, merged.fijosLog);
+    }
     merged = quitarResucitadosNested('ge', merged);
   }
   if(key === 'limpieza' && DB[key] && typeof merged === 'object'){
@@ -5792,7 +5830,13 @@ function mergeRemoteIntoLocal(val){
       value = mergeStockField(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
     if(key === 'ge' && DB[key] && typeof value === 'object'){
-      value = mergeNestedArraysByKey(DB[key], value, ['fijos','variables','capex','fijosLog','cierres']);
+      value = mergeNestedArraysByKey(DB[key], value, ['fijos','variables','capex']);
+      if(Array.isArray(DB[key].cierres) && Array.isArray(value.cierres)){
+        value.cierres = mergeGeCierres(DB[key].cierres, value.cierres, lastSyncedSnapshot && lastSyncedSnapshot.ge);
+      }
+      if(Array.isArray(DB[key].fijosLog) && Array.isArray(value.fijosLog)){
+        value.fijosLog = mergeFijosLog(DB[key].fijosLog, value.fijosLog);
+      }
       value = quitarResucitadosNested('ge', value);
     }
     if(key === 'limpieza' && DB[key] && typeof value === 'object'){

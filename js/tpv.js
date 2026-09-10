@@ -3809,6 +3809,10 @@ function confirmVoidLine(){
 function requestCancelSale(saleId){
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
+  if(typeof geIsDateClosed === 'function' && geIsDateClosed(sale.date)){
+    showToast(t('msg.cannotCancelClosedMonth'));
+    return;
+  }
   requestBusinessPinAction(t('title.cancelSale'), t('msg.confirmCancelSale'), (pin) => reallyCancelSale(saleId, pin));
 }
 /* La marca `menuStockYaDevuelto` es de USAR Y TIRAR dentro de este recorrido:

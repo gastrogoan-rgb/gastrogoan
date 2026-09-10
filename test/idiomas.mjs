@@ -18,7 +18,7 @@ const VISTAS = [
 ];
 // Las pestañas donde más texto largo hay
 const PESTANAS = {
-  economia: ['ventas','fijos','variables','cdr','resultado','tesoreria','pe','capex'].map(t=>[`GE.tab('${t}')`,t]),
+  economia: ['ventas','fijos','variables','cdr','tesoreria','pe','capex'].map(t=>[`GE.tab('${t}')`,t]),
   limpieza: ['protocolo','manos','temperaturas','alergenos','plagas','mantenimiento'].map(t=>[`setLimpiezaTab('${t}')`,t]),
   horarios: ['personal','semana','mes'].map(t=>[`setHorariosTab('${t}')`,t]),
 };
