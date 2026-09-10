@@ -100,6 +100,7 @@ lanzar; node test/ge-fijos-irpf.mjs > "$SALIDA/gefijosirpf.txt" 2>&1 & P66=$!
 lanzar; node test/ge-tesoreria-irpf.mjs > "$SALIDA/geteirpf.txt" 2>&1 & P67=$!
 lanzar; node test/ge-variables.mjs > "$SALIDA/gevariables.txt" 2>&1 & P68=$!
 lanzar; node test/ge-cdr-unificado.mjs > "$SALIDA/gecdrunif.txt" 2>&1 & P69=$!
+lanzar; node test/ge-cdr-afinado.mjs > "$SALIDA/gecdrafinado.txt" 2>&1 & P70=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -181,5 +182,6 @@ espera $P66 "GE Gastos Fijos: IRPF separado y visible, Personal sin mención a I
 espera $P67 "GE Tesorería: IRPF retenido trimestral y previsión con resultado neto" "$SALIDA/geteirpf.txt" "casos pasaron"
 espera $P68 "GE Gastos Variables: meses centrados, food cost editable, pedidos↔gasto verificado" "$SALIDA/gevariables.txt" "casos pasaron"
 espera $P69 "GE Cuenta de Resultados unificada: Mensual/Trimestral, sin filas faltantes, columna fija" "$SALIDA/gecdrunif.txt" "casos pasaron"
+espera $P70 "GE CDR: IVA real por compra, facturación con IVA arriba, tooltips" "$SALIDA/gecdrafinado.txt" "casos pasaron"
 
 exit $FALLOS

@@ -1766,7 +1766,7 @@ function openPendingInvoicesModal(){
           <tr>
             <td style="color:${v.fechaPago<today?'var(--red)':''}">${escapeHtml(v.fechaPago)}${v.fechaPago<today?` <span class="badge badge-red" style="font-size:9px">${t('invoices.overdue')}</span>`:''}</td>
             <td>${escapeHtml(v.proveedor||'—')}</td>
-            <td>${fmtMoney((parseFloat(v.importe)||0) * (1 + (v.iva!=null?parseFloat(v.iva):(DB.ge?.config?.ivaComprasPct!=null?parseFloat(DB.ge.config.ivaComprasPct):10))/100))}</td>
+            <td>${fmtMoney((parseFloat(v.importe)||0) * (1 + (parseFloat(v.iva)||0)/100))}</td>
             <td><button class="btn btn-sm" onclick="markInvoicePaid(${v.id})">${t('invoices.markPaid')}</button></td>
           </tr>`).join('')}</tbody>
       </table>
