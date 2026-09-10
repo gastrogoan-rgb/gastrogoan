@@ -103,7 +103,14 @@ await caso('Cambiar el patrón general actualiza los días futuros SIN tocar el 
     hf.generadoHasta = addDaysStr(hoy, -1);
     generarTurnosFijos();
     const diaEditado = DB.turnos.find(t => t.id===diaEditadoId);
-    const nuevoAutomatico = DB.turnos.find(t => t.employeeId===1 && t.origen==='fijo' && t.fecha > hoy);
+    // OJO: "el primero que se encuentre" es frágil con la fecha real del
+    // día en que corra la prueba — si el día editado a mano (el de mañana)
+    // cae en viernes, el siguiente turno automático es un sábado de
+    // descanso ('D'), no un día laborable ('T'), y la prueba fallaría sin
+    // que hubiera ningún fallo real de la app. Se busca explícitamente un
+    // día automático entre semana (L-V, índices 0-4 del patrón).
+    const nuevoAutomatico = DB.turnos.find(t => t.employeeId===1 && t.origen==='fijo' && t.fecha > hoy
+      && ((new Date(t.fecha+'T00:00:00').getDay()+6)%7) < 5);
     return {
       diaEditadoSigueIgual: diaEditado && diaEditado.salida === '15:00' && diaEditado.origen === undefined,
       nuevoTipo: nuevoAutomatico ? nuevoAutomatico.tipo : null,
