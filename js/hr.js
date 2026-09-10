@@ -209,10 +209,15 @@ const GE = (function(){
   function ivaVentasMes(mes, año=currentYear()){
     return Object.values(ventasIvaGroups(mes,año).groups).reduce((s,g)=>s+g.iva, 0);
   }
-  // % de IVA incluido en lo que pagas a tus proveedores (compras de Gastos Variables), configurable, por defecto 10%
-  function ivaComprasPct(){
-    return config().ivaComprasPct!=null ? parseFloat(config().ivaComprasPct) : 10;
-  }
+  // Antes había un "% IVA soportado en compras" fijo, configurable a mano,
+  // que se aplicaba a cualquier compra sin IVA propio asignado — pero no
+  // todas las compras llevan el mismo IVA (10% en materia prima, 21% en
+  // packaging...), así que un único % adivinaba mal. Se quita: cada línea
+  // usa SIEMPRE su propio IVA real (elegido al darla de alta, obligatorio
+  // desde hace tiempo — ver saveGV); si una línea antigua no lo tiene, se
+  // trata como 0% en vez de adivinar, para no inventar un dato que no
+  // existe (mejor "no lo sé" que un número falso).
+  function ivaDeGastoVariable(v){ return parseFloat(v.iva)||0; }
   // v.importe es la base sin IVA (como Ingredientes/Escandallo/Carta/Fijos):
   // el IVA se añade encima, nunca se extrae de un total que ya lo llevara.
   function totalVariablesNetoMes(mes, año=currentYear()){
@@ -220,7 +225,7 @@ const GE = (function(){
   }
   function totalVariablesMes(mes, año=currentYear()){
     return variablesMes(mes,año).reduce((s,v) => {
-      const pct = v.iva != null ? parseFloat(v.iva) : ivaComprasPct();
+      const pct = ivaDeGastoVariable(v);
       return s + (parseFloat(v.importe)||0) * (1 + pct/100);
     }, 0);
   }
@@ -780,7 +785,7 @@ const GE = (function(){
         autoItems.forEach(v=>{ (byProv[v.proveedor||'—'] = byProv[v.proveedor||'—']||[]).push(v); });
         const autoHtml = Object.entries(byProv).map(([prov,vs])=>{
           const totalBase = vs.reduce((s,v)=>s+parseFloat(v.importe||0),0);
-          const totalIva = vs.reduce((s,v)=>{ const p=v.iva!=null?parseFloat(v.iva):ivaComprasPct(); return s+parseFloat(v.importe||0)*p/100; },0);
+          const totalIva = vs.reduce((s,v)=>s+parseFloat(v.importe||0)*ivaDeGastoVariable(v)/100,0);
           const total = totalBase + totalIva;
           const ids = vs.map(v=>v.id).join(',');
           return `<div class="ge-item" style="flex-wrap:wrap">
@@ -792,7 +797,7 @@ const GE = (function(){
         }).join('');
         const manualHtml = manualItems.map(v=>{
           const base = parseFloat(v.importe||0);
-          const pct = v.iva!=null ? parseFloat(v.iva) : ivaComprasPct();
+          const pct = ivaDeGastoVariable(v);
           const ivaAmt = base * pct/100;
           const total = base + ivaAmt;
           return `<div class="ge-item" style="flex-wrap:wrap">
@@ -974,8 +979,6 @@ const GE = (function(){
     });
     const pctImpEl = document.getElementById('res-pct-impuesto');
     if(pctImpEl) pctImpEl.value = config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25;
-    const pctIvaComprasEl = document.getElementById('res-pct-iva-compras');
-    if(pctIvaComprasEl) pctIvaComprasEl.value = ivaComprasPct();
     const ivaPct = ivaVentasPct();
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     // El aviso solo tiene sentido si TODO el año consultado es anterior al
@@ -1027,6 +1030,12 @@ const GE = (function(){
           yoyHtml = `<br><span style="font-size:10.5px;color:${color}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% ${t('hr.cdr.yoyLabel')}</span>`;
         }
       }
+      // Al pasar el cursor por una columna de trimestre o del año, se ve el
+      // desglose de lo que la compone (los 3 meses del trimestre, o los 4
+      // trimestres del año) — en modo Trimestral no hay otra forma de ver
+      // los meses sueltos sin cambiar a Mensual.
+      const qTitle = qi => [0,1,2].map(mi => `${getMeses()[qi*3+mi]}: ${fmtMoney(r.vals[qi*3+mi])}`).join(' · ');
+      const yearTitle = quarters.map((ql,qi) => `${ql}: ${fmtMoney(q[qi])}`).join(' · ');
       html += `<tr class="${cls}"><td>${r.lbl}${r.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
       if(r.ivaRow){
         if(isMes) r.vals.forEach(v=>{
@@ -1034,22 +1043,22 @@ const GE = (function(){
           const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):'');
           html += `<td class="${c}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`;
         });
-        q.forEach(v=>{ const c = v>0?'neg':(v<0?'pos':''); const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):''); html += `<td style="background:rgba(0,0,0,.05)" class="${c}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`; });
+        q.forEach((v,qi)=>{ const c = v>0?'neg':(v<0?'pos':''); const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):''); html += `<td style="background:rgba(0,0,0,.05)" class="${c}" title="${escapeHtml(qTitle(qi))}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`; });
         const c = total>0?'neg':(total<0?'pos':''); const suf = total>0?' '+t('hr.lbl.toPay'):(total<0?' '+t('hr.lbl.inYourFavor'):'');
-        html += `<td style="background:rgba(0,0,0,.1)" class="${c}">${total!==0?fmtMoney(Math.abs(total))+suf:'—'}</td></tr>`;
+        html += `<td style="background:rgba(0,0,0,.1)" class="${c}" title="${escapeHtml(yearTitle)}">${total!==0?fmtMoney(Math.abs(total))+suf:'—'}</td></tr>`;
       } else if(r.irpfRow){
         if(isMes) r.vals.forEach(v=>{ html += `<td class="${v>0?'neg':''}">${v!==0?fmtMoney(v):'—'}</td>`; });
-        q.forEach(v=>{ html += `<td style="background:rgba(0,0,0,.05)" class="${v>0?'neg':''}">${v!==0?fmtMoney(v):'—'}</td>`; });
-        html += `<td style="background:rgba(0,0,0,.1)" class="${total>0?'neg':''}">${total!==0?fmtMoney(total):'—'}</td></tr>`;
+        q.forEach((v,qi)=>{ html += `<td style="background:rgba(0,0,0,.05)" class="${v>0?'neg':''}" title="${escapeHtml(qTitle(qi))}">${v!==0?fmtMoney(v):'—'}</td>`; });
+        html += `<td style="background:rgba(0,0,0,.1)" class="${total>0?'neg':''}" title="${escapeHtml(yearTitle)}">${total!==0?fmtMoney(total):'—'}</td></tr>`;
       } else {
         if(isMes) r.vals.forEach(v=>{
           const c = r.isResult ? (v>=0?'pos':'neg') : '';
           const sign = r.isResult && v<0 ? '-' : '';
           html += `<td class="${c}">${v!==0?sign+fmtMoney(Math.abs(v)):'—'}</td>`;
         });
-        q.forEach(v=>{ const c = r.isResult ? (v>=0?'pos':'neg') : ''; html += `<td style="background:rgba(0,0,0,.05)" class="${c}">${v!==0?(r.isResult&&v<0?'-':'')+fmtMoney(Math.abs(v)):'—'}</td>`; });
+        q.forEach((v,qi)=>{ const c = r.isResult ? (v>=0?'pos':'neg') : ''; html += `<td style="background:rgba(0,0,0,.05)" class="${c}" title="${escapeHtml(qTitle(qi))}">${v!==0?(r.isResult&&v<0?'-':'')+fmtMoney(Math.abs(v)):'—'}</td>`; });
         const c = r.isResult ? (total>=0?'pos':'neg') : '';
-        html += `<td style="background:rgba(0,0,0,.1)" class="${c}">${total!==0?(r.isResult&&total<0?'-':'')+fmtMoney(Math.abs(total)):'—'}${yoyHtml}</td></tr>`;
+        html += `<td style="background:rgba(0,0,0,.1)" class="${c}" title="${escapeHtml(yearTitle)}">${total!==0?(r.isResult&&total<0?'-':'')+fmtMoney(Math.abs(total)):'—'}${yoyHtml}</td></tr>`;
       }
     });
     html += '</tbody>';
@@ -1415,9 +1424,12 @@ const GE = (function(){
     const now = new Date();
     const curM = now.getMonth(), curY = now.getFullYear();
     const prevM = curM===0?11:curM-1, prevMY = curM===0?curY-1:curY;
-    const revCur = facturacionNetaMes(curM, curY);
-    const revPrev = facturacionNetaMes(prevM, prevMY);
-    const revYoy = facturacionNetaMes(curM, curY-1);
+    // Con IVA incluido (lo que de verdad ha entrado en caja) — la
+    // facturación NETA ya se ve un poco más abajo, en la propia tabla. Un
+    // dueño reconoce antes el total cobrado que la base sin IVA.
+    const revCur = facturacionNetaMes(curM, curY) + ivaVentasMes(curM, curY);
+    const revPrev = facturacionNetaMes(prevM, prevMY) + ivaVentasMes(prevM, prevMY);
+    const revYoy = facturacionNetaMes(curM, curY-1) + ivaVentasMes(curM, curY-1);
     const resCur = resultadoAntesImpMes(curM, curY);
     const resPrev = resultadoAntesImpMes(prevM, prevMY);
     const resYoy = resultadoAntesImpMes(curM, curY-1);
@@ -1649,11 +1661,6 @@ const GE = (function(){
   }
   function setPctImpuesto(){
     config().pctImpuestoBeneficio = parseFloat(document.getElementById('res-pct-impuesto').value) || 0;
-    saveDB();
-    renderCDR();
-  }
-  function setPctIvaCompras(){
-    config().ivaComprasPct = parseFloat(document.getElementById('res-pct-iva-compras').value) || 0;
     saveDB();
     renderCDR();
   }
@@ -1997,7 +2004,7 @@ const GE = (function(){
     const variablesDelMes = variablesMes(mes, año).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
     variablesDelMes.forEach(v => {
       const base = parseFloat(v.importe||0);
-      const pct = v.iva!=null ? parseFloat(v.iva) : ivaComprasPct();
+      const pct = ivaDeGastoVariable(v);
       const ivaAmt = base * pct/100;
       const total = base + ivaAmt;
       sumVar += total; sumVarBase += base; sumVarIva += ivaAmt;
@@ -2035,7 +2042,7 @@ const GE = (function(){
     }
     variablesDelMes.forEach(v => {
       const base = parseFloat(v.importe||0);
-      const pct = v.iva!=null ? parseFloat(v.iva) : ivaComprasPct();
+      const pct = ivaDeGastoVariable(v);
       addToVatGroup(pct, base, base*pct/100);
     });
     fijos().forEach(g => {
@@ -2204,7 +2211,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
