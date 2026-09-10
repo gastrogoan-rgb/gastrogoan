@@ -2602,13 +2602,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
         <div class="te-kpis" id="te-kpis"></div>
         <div id="te-forecast"></div>
         <div class="ge-section" id="te-upcoming" style="display:none"></div>
-        <div class="dist-config">
-          <span style="font-weight:600;font-size:13px;margin-right:4px"><i class="ti ti-settings"></i> <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></span>
-          <div class="dist-field"><span data-i18n="label.staff">Personal</span> <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-per')">%</div>
-          <div class="dist-field"><span data-i18n="label.gFixed">G.Fijos</span> <input type="number" id="te-pct-gf" value="20" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-gf')">%</div>
-          <div class="dist-field"><span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span> <input type="number" id="te-pct-mp" value="35" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-mp')">%</div>
-          <div class="dist-field"><span data-i18n="label.other">Otros</span> <input type="number" id="te-pct-og" value="5" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-og')">%</div>
-          <div class="dist-field"><span data-i18n="label.profit">Beneficio</span> <input type="number" id="te-pct-ben" value="10" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-ben')">%</div>
+        <div class="dist-config" style="flex-direction:column;align-items:stretch">
+          <div style="font-weight:600;font-size:13px;margin-bottom:10px"><i class="ti ti-settings"></i> <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px 18px">
+            <div class="dist-field"><span data-i18n="label.staff">Personal</span> <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-per')">%</div>
+            <div class="dist-field"><span data-i18n="label.gFixed">G.Fijos</span> <input type="number" id="te-pct-gf" value="20" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-gf')">%</div>
+            <div class="dist-field"><span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span> <input type="number" id="te-pct-mp" value="35" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-mp')">%</div>
+            <div class="dist-field"><span data-i18n="label.other">Otros</span> <input type="number" id="te-pct-og" value="5" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-og')">%</div>
+            <div class="dist-field"><span data-i18n="label.profit">Beneficio</span> <input type="number" id="te-pct-ben" value="10" min="0" max="100" step="0.5" onchange="GE.adjustDistPct('te-pct-ben')">%</div>
+          </div>
         </div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4><span data-i18n="ge.treasuryDistribution">Distribución de tesorería</span> <span class="ge-auto">AUTO</span></h4></div>
@@ -2617,10 +2619,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
             <span style="text-align:right" data-i18n="label.real">Real</span><span style="text-align:right" data-i18n="label.diff">Dif.</span><span style="text-align:center" data-i18n="hr.lbl.status">Estado</span>
           </div>
           <div id="te-rows"></div>
-        </div>
-        <div class="vis-section">
-          <h4><span data-i18n="ge.annualMonthlyResult">Resultado mensual anual</span> <span class="ge-auto">AUTO</span></h4>
-          <div id="te-annual-chart" class="bar-chart"></div>
         </div>
       </div>
 
@@ -2928,7 +2926,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '10/09/2026 13:00';
+const GG_BUILD = '10/09/2026 13:06';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -34913,7 +34911,6 @@ const GE = (function(){
       <div class="te-bar-wrap"><div class="te-bar-fill" style="width:${Math.min(barPct,100)}%;background:${barColor}"></div></div>`;
     }).join('');
 
-    document.getElementById('te-annual-chart').innerHTML = barChartHTML(getMeses().map((m,i)=>({lbl:m, v:resultadoMes(i, teYear)})));
     renderTesoreriaUpcoming();
     renderTreasuryForecast();
   }
@@ -34923,9 +34920,8 @@ const GE = (function(){
   // y lo proyecta hacia delante día a día. Usa el resultado NETO, después de
   // impuestos (resultadoMes) — no el de antes de impuestos: ese dinero de
   // Hacienda no es tesorería disponible de verdad, y antes se sobreestimaba
-  // la previsión usándolo (además no cuadraba con el gráfico de justo
-  // arriba, que si usa el neto). Es una estimación basada en tu propio
-  // histórico reciente, no una promesa — por eso se marca como tal.
+  // la previsión usándolo. Es una estimación basada en tu propio histórico
+  // reciente, no una promesa — por eso se marca como tal.
   function renderTreasuryForecast(){
     const box = document.getElementById('te-forecast');
     if(!box) return;

@@ -1571,7 +1571,6 @@ const GE = (function(){
       <div class="te-bar-wrap"><div class="te-bar-fill" style="width:${Math.min(barPct,100)}%;background:${barColor}"></div></div>`;
     }).join('');
 
-    document.getElementById('te-annual-chart').innerHTML = barChartHTML(getMeses().map((m,i)=>({lbl:m, v:resultadoMes(i, teYear)})));
     renderTesoreriaUpcoming();
     renderTreasuryForecast();
   }
@@ -1581,9 +1580,8 @@ const GE = (function(){
   // y lo proyecta hacia delante día a día. Usa el resultado NETO, después de
   // impuestos (resultadoMes) — no el de antes de impuestos: ese dinero de
   // Hacienda no es tesorería disponible de verdad, y antes se sobreestimaba
-  // la previsión usándolo (además no cuadraba con el gráfico de justo
-  // arriba, que si usa el neto). Es una estimación basada en tu propio
-  // histórico reciente, no una promesa — por eso se marca como tal.
+  // la previsión usándolo. Es una estimación basada en tu propio histórico
+  // reciente, no una promesa — por eso se marca como tal.
   function renderTreasuryForecast(){
     const box = document.getElementById('te-forecast');
     if(!box) return;
