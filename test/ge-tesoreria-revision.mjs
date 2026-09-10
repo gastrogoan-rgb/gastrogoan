@@ -72,20 +72,22 @@ await caso('Ya no existe el gráfico "Resultado mensual anual" (duplicaba el de 
   assert.equal(r, false, 'el gráfico duplicado no debe existir: ' + r);
 });
 
-await caso('Gastar de más en Personal (por encima del objetivo) se marca en ROJO con cruz', async () => {
+await caso('Criterio único (10/09, segunda corrección): alcanzar/superar el objetivo es SIEMPRE verde, no llegar es SIEMPRE rojo — sin distinguir gasto de beneficio', async () => {
   const r = await page.evaluate(()=>{
     const fila = [...document.querySelectorAll('#te-rows .te-row')].find(row => row.textContent.includes('Personal'));
     return {texto: fila.textContent, htmlEstado: fila.querySelector('span:last-child')?.innerHTML || ''};
   });
-  assert.ok(r.htmlEstado.includes('ti-x'), 'Personal (6.000€ real vs 3.000€ objetivo) debe mostrar la cruz roja: ' + JSON.stringify(r));
+  // Personal: 6.000€ real frente a 3.000€ objetivo → SUPERA el objetivo → verde.
+  assert.ok(r.htmlEstado.includes('ti-check'), 'Personal (6.000€ real, supera el objetivo de 3.000€) debe mostrar el tick verde: ' + JSON.stringify(r));
 });
 
-await caso('Gastar de menos en Gastos Fijos (por debajo del objetivo) se marca en VERDE con tick', async () => {
+await caso('Gastos Fijos por debajo del objetivo (no lo alcanza) se marca en ROJO con cruz', async () => {
   const r = await page.evaluate(()=>{
     const fila = [...document.querySelectorAll('#te-rows .te-row')].find(row => row.textContent.includes('Gastos Fijos'));
     return {texto: fila.textContent, htmlEstado: fila.querySelector('span:last-child')?.innerHTML || ''};
   });
-  assert.ok(r.htmlEstado.includes('ti-check'), 'Gastos Fijos (500€ real vs 2.000€ objetivo) debe mostrar el tick verde: ' + JSON.stringify(r));
+  // Gastos Fijos: 500€ real frente a 2.000€ objetivo → NO llega al objetivo → rojo.
+  assert.ok(r.htmlEstado.includes('ti-x'), 'Gastos Fijos (500€ real, no llega al objetivo de 2.000€) debe mostrar la cruz roja: ' + JSON.stringify(r));
 });
 
 await caso('Las filas de Reserva IVA e IRPF retenido siguen presentes', async () => {

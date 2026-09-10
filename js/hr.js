@@ -1546,20 +1546,19 @@ const GE = (function(){
       const diff = r.real - r.obj;
       const absDiff = Math.abs(diff);
       const pctDev = r.obj ? Math.abs(diff)/r.obj : 0;
-      // Para el Beneficio, gastar/ganar por encima del objetivo es bueno (diff>=0).
-      // Para las filas de gasto (Personal, Fijos, Variables, Otros), es al revés:
-      // superar el objetivo de gasto es MALO, así que se invierte el criterio.
-      const isGood = r.isBen ? diff >= 0 : diff <= 0;
+      // Criterio único para todas las filas (pedido expresamente así): lo
+      // que importa es si se ha alcanzado o superado el objetivo, no si la
+      // fila es de gasto o de beneficio — real >= objetivo es siempre
+      // verde, por debajo es siempre rojo.
+      const isGood = diff >= 0;
       const estado = !r.real ? '—' : (pctDev < 0.1 ? '<i class="ti ti-check" style="color:var(--green)"></i>' : isGood ? '<i class="ti ti-check" style="color:var(--green)"></i>' : pctDev < 0.2 ? '<i class="ti ti-alert-triangle" style="color:var(--amber-dark)"></i>' : '<i class="ti ti-x" style="color:var(--red)"></i>');
       const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
       const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
       const diffText = r.real ? `${diffSign}${fmtMoney(absDiff)}` : '—';
       const barPct = r.obj>0 ? Math.min(r.real/r.obj*100, 150) : 0;
-      // Igual que en isGood: para el Beneficio, más del objetivo es mejor
-      // (barra verde al superarlo); para las filas de gasto es al revés.
-      const barColor = r.isBen
-        ? (barPct<90?'var(--red)':barPct>=100?'var(--green)':'var(--amber)')
-        : (barPct>110?'var(--red)':barPct>90?'var(--green)':'var(--amber)');
+      // Mismo criterio único que isGood: alcanzar o superar el objetivo es
+      // verde, por debajo es rojo, para todas las filas.
+      const barColor = barPct<90?'var(--red)':barPct>=100?'var(--green)':'var(--amber)';
       return `<div class="te-row">
         <span style="font-size:14px;font-weight:600">${r.lbl}</span>
         <span style="text-align:right;font-weight:600;color:${r.color}">${(r.pct*100).toFixed(0)}%</span>
