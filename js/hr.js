@@ -4,7 +4,7 @@
    ============================================================ */
 const GE = (function(){
   function getMeses(){ return t('months.short'); }
-  const TABS = ['ventas','fijos','variables','cdr','resultado','tesoreria','pe','capex'];
+  const TABS = ['ventas','fijos','variables','cdr','tesoreria','pe','capex'];
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','CUOTA AUTÓNOMOS (RETA)','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
@@ -144,7 +144,6 @@ const GE = (function(){
     if(name==='cdr') renderCDR();
     if(name==='pe') renderPE();
     if(name==='capex') renderCapex();
-    if(name==='resultado') renderResultado();
     if(name==='tesoreria') renderTesoreria();
     if(typeof scrollContentToTop==='function') scrollContentToTop();
     requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
@@ -955,12 +954,28 @@ const GE = (function(){
   }
 
   /* -- CUENTA DE RESULTADOS -- */
-  function setCDRYear(delta){ cdrYear += delta; renderCDR(); renderResultado(); }
+  // Antes eran dos pestañas separadas (Cuenta de Resultados y Resultado)
+  // con las mismas cifras pero a distinta resolución temporal (mes a mes
+  // vs. trimestre a trimestre) — y encima con filas que no coincidían entre
+  // una y otra (Margen Bruto/EBITDA solo en una, IVA a liquidar solo en la
+  // otra). Fusionadas en una sola tabla con un interruptor de resolución,
+  // todas las filas de las dos juntas.
+  let cdrGranularidad = 'trimestre';
+  function setCDRGranularidad(g){ cdrGranularidad = g; renderCDR(); }
+  function setCDRYear(delta){ cdrYear += delta; renderCDR(); }
   function syncYearLabels(){
-    ['cdr-year','res-year'].forEach(id=>{ const el = document.getElementById(id); if(el) el.textContent = cdrYear; });
+    const el = document.getElementById('cdr-year'); if(el) el.textContent = cdrYear;
   }
   function renderCDR(){
     syncYearLabels();
+    ['cdr-gran-mes','cdr-gran-trimestre'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.classList.toggle('btn-primary', id==='cdr-gran-'+cdrGranularidad);
+    });
+    const pctImpEl = document.getElementById('res-pct-impuesto');
+    if(pctImpEl) pctImpEl.value = config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25;
+    const pctIvaComprasEl = document.getElementById('res-pct-iva-compras');
+    if(pctIvaComprasEl) pctIvaComprasEl.value = ivaComprasPct();
     const ivaPct = ivaVentasPct();
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     // El aviso solo tiene sentido si TODO el año consultado es anterior al
@@ -968,6 +983,11 @@ const GE = (function(){
     // de esas fechas). Si hay histórico, cada mes ya usa su propio valor
     // real de entonces (geTotalFijosNetoForMonth), no el de hoy.
     const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span style="font-size:10.5px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
+    // Una sola tabla, con TODAS las filas de las dos vistas que había antes
+    // (algunas solo estaban en una: Margen Bruto/EBITDA solo en "Resultado",
+    // IVA a liquidar solo en "Cuenta de Resultados") — nunca más un desglose
+    // distinto según en qué pestaña se mirase. Todo en valores CON SIGNO
+    // (gasto = negativo) para que sumar trimestre/año sea una simple resta.
     const rows = [
       // Ingresos = facturación neta + IVA repercutido (no facturacionMes, que
       // suma v.total e incluye la propina): así la fila de abajo, "IVA
@@ -977,16 +997,23 @@ const GE = (function(){
       {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), vals:getMeses().map((_,i)=>-ivaVentasMes(i,cdrYear)), auto:true},
       {lbl:t('hr.cdr.netRevenue'), vals:getMeses().map((_,i)=>facturacionNetaMes(i,cdrYear)), auto:true, highlight:true, bold:true},
       {lbl:t('hr.lbl.variableExpensesNoVat'), vals:getMeses().map((_,i)=>-totalVariablesNetoMes(i,cdrYear)), auto:true},
-      {lbl:t('hr.lbl.fixedNoVat')+fijosNote, vals:getMeses().map((_,i)=>-geTotalFijosNetoForMonth(cdrYear,i)), auto:true},
+      {lbl:t('hr.res.grossMargin'), vals:getMeses().map((_,i)=>facturacionNetaMes(i,cdrYear)-totalVariablesNetoMes(i,cdrYear)), highlight:true, bold:true},
       {lbl:t('hr.lbl.deliveryCommissions'), vals:getMeses().map((_,i)=>-comisionesMes(i,cdrYear)), auto:true},
+      {lbl:t('hr.lbl.fixedNoVat')+fijosNote, vals:getMeses().map((_,i)=>-geTotalFijosNetoForMonth(cdrYear,i)), auto:true},
+      {lbl:t('hr.res.operatingEbitda'), vals:getMeses().map((_,i)=>facturacionNetaMes(i,cdrYear)-totalVariablesNetoMes(i,cdrYear)-geTotalFijosNetoForMonth(cdrYear,i)-comisionesMes(i,cdrYear)), highlight:true, bold:true},
       {lbl:t('hr.lbl.financedInvestmentInstallments'), vals:getMeses().map((_,i)=>-capexCuotaMes(i,cdrYear)), auto:true},
       {lbl:t('hr.cdr.resultBeforeTax'), vals:getMeses().map((_,i)=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true},
       {lbl:`${t('hr.cdr.profitTax')} (${(pctImp*100).toFixed(0)}%)`, vals:getMeses().map((_,i)=>{ const r=resultadoAntesImpMes(i,cdrYear); return r>0?-(r*pctImp):0; }), auto:true},
       {lbl:t('hr.cdr.netResult'), vals:getMeses().map((_,i)=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true, yoyFn:i=>resultadoMes(i,cdrYear-1)},
       {lbl:t('hr.cdr.vatToSettle'), vals:getMeses().map((_,i)=>ivaLiquidarMes(i,cdrYear)), auto:true, ivaRow:true},
+      // El IRPF retenido a los empleados, a diferencia del IVA, no tiene
+      // "a favor": siempre es dinero ya retenido pendiente de ingresar, así
+      // que no lleva el mismo pos/neg que la fila de IVA.
+      {lbl:t('hr.cdr.irpfToDeposit'), vals:getMeses().map((_,i)=>geIrpfMensualForMonth(cdrYear,i)), auto:true, irpfRow:true},
     ];
     const quarters = ['T1','T2','T3','T4'];
-    let html = `<thead><tr><th>${t('hr.lbl.concept')}</th>${getMeses().map(m=>`<th>${m}</th>`).join('')}${quarters.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}<th style="background:var(--dark);color:#fff">${t('hr.lbl.yearAbbrev')}</th></tr></thead><tbody>`;
+    const isMes = cdrGranularidad === 'mes';
+    let html = `<thead><tr><th>${t('hr.lbl.concept')}</th>${isMes?getMeses().map(m=>`<th>${m}</th>`).join(''):''}${quarters.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}<th style="background:var(--dark);color:#fff">${t('hr.lbl.yearAbbrev')}</th></tr></thead><tbody>`;
     rows.forEach(r=>{
       const total = r.vals.reduce((s,v)=>s+v,0);
       const q = [0,1,2,3].map(qi=>r.vals.slice(qi*3,qi*3+3).reduce((s,v)=>s+v,0));
@@ -1002,7 +1029,7 @@ const GE = (function(){
       }
       html += `<tr class="${cls}"><td>${r.lbl}${r.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
       if(r.ivaRow){
-        r.vals.forEach(v=>{
+        if(isMes) r.vals.forEach(v=>{
           const c = v>0?'neg':(v<0?'pos':'');
           const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):'');
           html += `<td class="${c}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`;
@@ -1010,19 +1037,25 @@ const GE = (function(){
         q.forEach(v=>{ const c = v>0?'neg':(v<0?'pos':''); const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):''); html += `<td style="background:rgba(0,0,0,.05)" class="${c}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`; });
         const c = total>0?'neg':(total<0?'pos':''); const suf = total>0?' '+t('hr.lbl.toPay'):(total<0?' '+t('hr.lbl.inYourFavor'):'');
         html += `<td style="background:rgba(0,0,0,.1)" class="${c}">${total!==0?fmtMoney(Math.abs(total))+suf:'—'}</td></tr>`;
+      } else if(r.irpfRow){
+        if(isMes) r.vals.forEach(v=>{ html += `<td class="${v>0?'neg':''}">${v!==0?fmtMoney(v):'—'}</td>`; });
+        q.forEach(v=>{ html += `<td style="background:rgba(0,0,0,.05)" class="${v>0?'neg':''}">${v!==0?fmtMoney(v):'—'}</td>`; });
+        html += `<td style="background:rgba(0,0,0,.1)" class="${total>0?'neg':''}">${total!==0?fmtMoney(total):'—'}</td></tr>`;
       } else {
-        r.vals.forEach(v=>{
+        if(isMes) r.vals.forEach(v=>{
           const c = r.isResult ? (v>=0?'pos':'neg') : '';
           const sign = r.isResult && v<0 ? '-' : '';
           html += `<td class="${c}">${v!==0?sign+fmtMoney(Math.abs(v)):'—'}</td>`;
         });
-        q.forEach(v=>{ html += `<td style="background:rgba(0,0,0,.05)">${v!==0?(r.isResult&&v<0?'-':'')+fmtMoney(Math.abs(v)):'—'}</td>`; });
-        html += `<td style="background:rgba(0,0,0,.1)">${total!==0?(r.isResult&&total<0?'-':'')+fmtMoney(Math.abs(total)):'—'}${yoyHtml}</td></tr>`;
+        q.forEach(v=>{ const c = r.isResult ? (v>=0?'pos':'neg') : ''; html += `<td style="background:rgba(0,0,0,.05)" class="${c}">${v!==0?(r.isResult&&v<0?'-':'')+fmtMoney(Math.abs(v)):'—'}</td>`; });
+        const c = r.isResult ? (total>=0?'pos':'neg') : '';
+        html += `<td style="background:rgba(0,0,0,.1)" class="${c}">${total!==0?(r.isResult&&total<0?'-':'')+fmtMoney(Math.abs(total)):'—'}${yoyHtml}</td></tr>`;
       }
     });
     html += '</tbody>';
     document.getElementById('cdr-table').innerHTML = html;
     document.getElementById('cdr-chart').innerHTML = barChartHTML(getMeses().map((m,i)=>({lbl:m, v:resultadoMes(i,cdrYear)})));
+    renderMonthComparison();
   }
 
   /* -- PUNTO DE EQUILIBRIO -- */
@@ -1373,63 +1406,11 @@ const GE = (function(){
     renderCapex();
   }
 
-  /* -- RESULTADO TRIMESTRAL/ANUAL -- */
-  function renderResultado(){
-    syncYearLabels();
-    const pctImpEl = document.getElementById('res-pct-impuesto');
-    if(pctImpEl) pctImpEl.value = config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25;
-    const pctIvaComprasEl = document.getElementById('res-pct-iva-compras');
-    if(pctIvaComprasEl) pctIvaComprasEl.value = ivaComprasPct();
-    const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
-
-    const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span style="font-size:10.5px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
-    const qLabels = [`T1 (${getMeses()[0]}-${getMeses()[2]})`, `T2 (${getMeses()[3]}-${getMeses()[5]})`, `T3 (${getMeses()[6]}-${getMeses()[8]})`, `T4 (${getMeses()[9]}-${getMeses()[11]})`, t('hr.lbl.totalYear')];
-    const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
-    function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
-    const ivaPct = ivaVentasPct();
-    // Resultado antes de impuestos en criterio de caja (cuotas reales de inversión
-    // financiada). Coincide con resultadoAntesImpMes para que todas las vistas
-    // (Resultado, Cuenta de Resultados, Panel, Tesorería) muestren el mismo número
-    // sin doble cómputo (antes restaba además la amortización CAPEX).
-    const resAntesImp = m => resultadoAntesImpMes(m, cdrYear);
-
-    const conceptos = [
-      // Mismo criterio que en la Cuenta de Resultados anual: neta+IVA, no
-      // facturacionMes (que incluye la propina y rompe la resta de la fila de abajo).
-      {lbl:t('hr.cdr.revenue'), fn:m=>facturacionNetaMes(m,cdrYear)+ivaVentasMes(m,cdrYear), bold:true},
-      {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), fn:m=>ivaVentasMes(m,cdrYear), auto:true},
-      {lbl:t('hr.res.netSales'), fn:m=>facturacionNetaMes(m,cdrYear), highlight:true, bold:true},
-      {lbl:t('hr.res.costOfSales'), fn:m=>totalVariablesNetoMes(m,cdrYear)},
-      {lbl:t('hr.res.grossMargin'), fn:m=>facturacionNetaMes(m,cdrYear)-totalVariablesNetoMes(m,cdrYear), highlight:true, bold:true},
-      {lbl:t('hr.lbl.deliveryCommissions'), fn:m=>comisionesMes(m,cdrYear), auto:true},
-      {lbl:t('hr.res.operatingExpenses')+fijosNote, fn:m=>geTotalFijosNetoForMonth(cdrYear,m)},
-      {lbl:t('hr.res.operatingEbitda'), fn:m=>facturacionNetaMes(m,cdrYear)-totalVariablesNetoMes(m,cdrYear)-geTotalFijosNetoForMonth(cdrYear,m)-comisionesMes(m,cdrYear), highlight:true, bold:true},
-      {lbl:t('hr.lbl.financedInvestmentInstallments'), fn:m=>capexCuotaMes(m,cdrYear), auto:true},
-      {lbl:t('hr.cdr.resultBeforeTax'), fn:resAntesImp, isResult:true, bold:true},
-      {lbl:`${t('hr.cdr.profitTax')} (${(pctImp*100).toFixed(0)}%)`, fn:m=>{ const r=resAntesImp(m); return r>0?r*pctImp:0; }, auto:true},
-      {lbl:t('hr.cdr.netResult'), fn:m=>{ const r=resAntesImp(m); return r>0?r*(1-pctImp):r; }, isResult:true, bold:true},
-    ];
-    let html = `<thead><tr><th style="text-align:left">${t('hr.lbl.concept')}</th>${qLabels.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}</tr></thead><tbody>`;
-    conceptos.forEach(c=>{
-      html += `<tr class="${c.isResult?'total':c.highlight?'highlight':''}"><td>${c.lbl}${c.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
-      qMonths.forEach(months=>{
-        const v = qVal(months, c.fn);
-        const cls = v<0 ? 'neg' : (c.isResult ? 'pos' : '');
-        const sign = v<0 ? '-' : '';
-        html += `<td class="${cls}">${sign+fmtMoney(Math.abs(v))}</td>`;
-      });
-      html += '</tr>';
-    });
-    html += '</tbody>';
-    document.getElementById('res-table').innerHTML = html;
-    renderMonthComparison();
-  }
-
   // Compara el mes en curso (año actual) con el mes anterior y con el mismo
   // mes del año pasado — de un vistazo, sin tener que leer la tabla entera
   // de trimestres para hacer la resta mentalmente.
   function renderMonthComparison(){
-    const box = document.getElementById('res-comparison');
+    const box = document.getElementById('cdr-comparison');
     if(!box) return;
     const now = new Date();
     const curM = now.getMonth(), curY = now.getFullYear();
@@ -1669,12 +1650,12 @@ const GE = (function(){
   function setPctImpuesto(){
     config().pctImpuestoBeneficio = parseFloat(document.getElementById('res-pct-impuesto').value) || 0;
     saveDB();
-    renderResultado();
+    renderCDR();
   }
   function setPctIvaCompras(){
     config().ivaComprasPct = parseFloat(document.getElementById('res-pct-iva-compras').value) || 0;
     saveDB();
-    renderResultado();
+    renderCDR();
   }
 
   function barChartHTML(data){
@@ -2223,7 +2204,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

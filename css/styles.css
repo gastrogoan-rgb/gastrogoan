@@ -1046,6 +1046,11 @@ td.wrap{white-space:normal}
 .ge-grid td.neg{color:var(--red)}
 .ge-grid tr.total td.pos{color:var(--green)}
 .ge-grid tr.total td.neg{color:#ff8a8a}
+/* Cuenta de Resultados: con 12 meses + 4 trimestres + año, la tabla es
+   ancha y hay que desplazarla — sin el concepto fijo, al llegar a las
+   columnas de la derecha no se sabe ya qué fila se está mirando. Solo aquí
+   (no en el resto de tablas de .ge-grid, que caben sin scroll horizontal). */
+#cdr-table th:first-child,#cdr-table td:first-child{position:sticky;left:0;z-index:2}
 
 /* Los selectores de periodo ("Hoy", "Últimos 7 días") y los doce meses de
    Gestión Económica van en fila y pegados: a 31 px de alto se falla el
