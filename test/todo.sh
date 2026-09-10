@@ -96,6 +96,7 @@ lanzar; node test/codigo-negocio-recordado.mjs > "$SALIDA/codigorecordado.txt" 2
 lanzar; node test/distribucion-volver-equipo.mjs > "$SALIDA/distvolver.txt" 2>&1 & P63=$!
 lanzar; node test/manual-indice-fijo.mjs > "$SALIDA/manualindice.txt" 2>&1 & P64=$!
 lanzar; node test/ge-ventas-propinas-tipo.mjs > "$SALIDA/geventastipo.txt" 2>&1 & P65=$!
+lanzar; node test/ge-fijos-irpf.mjs > "$SALIDA/gefijosirpf.txt" 2>&1 & P66=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -173,5 +174,6 @@ espera $P62 "código de negocio recordado en el desplegable, sin autoseleccionar
 espera $P63 "Distribución del Trabajo: empleado directo a su ficha, dueño puede volver al equipo" "$SALIDA/distvolver.txt" "casos pasaron"
 espera $P64 "Manual: solo el índice de arriba queda fijo al hacer scroll" "$SALIDA/manualindice.txt" "casos pasaron"
 espera $P65 "GE Ventas: sin propina en el total, desglose real por tipo de servicio" "$SALIDA/geventastipo.txt" "casos pasaron"
+espera $P66 "GE Gastos Fijos: IRPF separado y visible, Personal sin mención a IVA" "$SALIDA/gefijosirpf.txt" "casos pasaron"
 
 exit $FALLOS

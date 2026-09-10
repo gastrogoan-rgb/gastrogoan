@@ -294,11 +294,17 @@ const GE = (function(){
     const generales = fijos().filter(g=>g.categoria==='FIJOS');
     const tpN = totalPersonalNeto(), tgN = totalGFNeto(), totN = tpN+tgN;
     const ivFijos = totalFijos() - totalFijosNeto();
+    // El IRPF retenido a los empleados ya va DENTRO del bruto (y por tanto
+    // dentro de tpN/totN) — no se suma aparte a ningún total, es solo una
+    // cifra informativa para saber cuánto hay que ingresar en el Modelo 111.
+    const irpfMes = personal.filter(g=>g.autoCalc).reduce((s,g)=>s+(parseFloat(g.irpfMensual)||0),0);
     document.getElementById('gf-kpis').innerHTML = `
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.personalNoVat')}</div><div class="val">${fmtMoney(tpN)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.fixedNoVat')}</div><div class="val">${fmtMoney(tgN)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupportedFixed')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivFijos)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realMonthlyCost')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realMonthlyCost')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>
+      ${irpfMes>0.001 ? `<div class="ge-kpi" title="${escapeHtml(t('hr.gf.irpfWithheldHint'))}"><div class="lbl">${t('hr.gf.irpfWithheld')}</div><div class="val" style="color:var(--amber-dark)">${fmtMoney(irpfMes)}</div></div>` : ''}`;
+    document.getElementById('gf-cost-hint').textContent = t('hr.lbl.realMonthlyCostHint');
     renderGFList('gf-personal', personal);
     // Se descarta por employeeId cuando la línea de gasto ya está enlazada a
     // una ficha (el caso normal desde que existe este enlace); las líneas
@@ -367,7 +373,7 @@ const GE = (function(){
         const next = gfNextDueDate(g, today.getFullYear(), today.getMonth());
         if(next) detalles.push(`<span class="badge badge-blue" style="font-size:10.5px">${t('hr.gf.nextDue').replace('${date}', next.date)}</span>`);
       }
-      if(g.autoCalc) detalles.push(t('hr.gf.autoCalcSummary').replace('${neto}', fmtMoney(parseFloat(g.sueldoNeto||0))).replace('${bruto}', fmtMoney(g.sueldoBruto||0)).replace('${ss}', fmtMoney(g.ssEmpresa||0)));
+      if(g.autoCalc) detalles.push(t('hr.gf.autoCalcSummary').replace('${neto}', fmtMoney(parseFloat(g.sueldoNeto||0))).replace('${bruto}', fmtMoney(g.sueldoBruto||0)).replace('${ss}', fmtMoney(g.ssEmpresa||0)).replace('${irpf}', fmtMoney(g.irpfMensual||0)));
       return `
       <div class="ge-item" style="flex-wrap:wrap">
         <span style="flex:1;font-size:14px;font-weight:500;min-width:140px">${escapeHtml(g.nombre)}</span>
@@ -400,6 +406,14 @@ const GE = (function(){
   function openGFModal(title, g){
     const sugerencias = (g.categoria==='PERSONAL'?GF_PERSONAL:GF_FIJOS).map(s=>`<option value="${escapeHtml(gfConceptLabel(s))}">`).join('');
     const autoCalc = !!g.autoCalc;
+    // Antes había un único "% Retenciones (IRPF + SS trabajador)" mezclado —
+    // servía para calcular el bruto, pero no dejaba ver cuánto de eso era
+    // IRPF (lo que hay que declarar en el Modelo 111) frente a Seguridad
+    // Social del trabajador. Una ficha antigua que solo tenga el combinado
+    // (g.retPct) se reparte con un valor típico de IRPF (15%) y el resto a
+    // SS trabajador, para no cambiarle el bruto ya calculado a nadie.
+    const irpfPctVal = g.irpfPct != null ? g.irpfPct : (g.retPct != null ? Math.min(15, g.retPct) : 15);
+    const ssTrabPctVal = g.ssTrabPct != null ? g.ssTrabPct : (g.retPct != null ? Math.max(0, g.retPct - 15) : 6.35);
     openModal(`
       <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="field">
@@ -415,20 +429,22 @@ const GE = (function(){
       <div id="gf-autocalc-fields" style="display:${autoCalc?'block':'none'}">
         <div class="field-row">
           <div class="field"><label>${t('hr.gf.netMonthlySalary')}</label><input type="number" id="gf-f-neto" min="0" step="0.01" value="${g.sueldoNeto||''}" oninput="GE.recalcGFAuto()"></div>
-          <div class="field"><label>${t('hr.gf.retentionsPct')}</label><input type="number" id="gf-f-retpct" min="0" max="99" step="0.1" value="${g.retPct!=null?g.retPct:15}" oninput="GE.recalcGFAuto()"></div>
+          <div class="field"><label>${t('hr.gf.irpfPct')}</label><input type="number" id="gf-f-irpfpct" min="0" max="99" step="0.1" value="${irpfPctVal}" oninput="GE.recalcGFAuto()"></div>
         </div>
         <div class="field-row">
+          <div class="field"><label>${t('hr.gf.ssTrabPct')}</label><input type="number" id="gf-f-sstrabpct" min="0" max="99" step="0.1" value="${ssTrabPctVal}" oninput="GE.recalcGFAuto()"></div>
           <div class="field"><label>${t('hr.gf.companySsPct')}</label><input type="number" id="gf-f-sspct" min="0" max="100" step="0.1" value="${g.ssPct!=null?g.ssPct:30}" oninput="GE.recalcGFAuto()"></div>
         </div>
         <div class="ge-kpi-grid" style="margin-bottom:10px">
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.grossSalary')}</div><div class="val" id="gf-auto-bruto">0,00 €</div></div>
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.companySs')}</div><div class="val" id="gf-auto-ss">0,00 €</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.gf.irpfWithheld')}</div><div class="val" id="gf-auto-irpf" style="color:var(--amber-dark)">0,00 €</div></div>
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.totalCompanyCost')}</div><div class="val" id="gf-auto-total" style="color:var(--teal)">0,00 €</div></div>
         </div>
       </div>
       ` : ''}
       <div class="field-row">
-        <div class="field"><label>${t('hr.lbl.amountNoVat')} ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
+        <div class="field"><label>${g.categoria==='PERSONAL'?t('hr.lbl.amountEur'):t('hr.lbl.amountNoVat')} ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
         <div class="field"><label>${t('hr.gf.payDayLabel')}</label><input type="number" id="gf-f-dia" min="1" max="31" placeholder="25" value="${g.diaPago||''}"></div>
       </div>
       <div class="field">
@@ -458,16 +474,24 @@ const GE = (function(){
     importeInput.readOnly = on;
     if(on) recalcGFAuto();
   }
-  // Sueldo bruto = neto / (1 - retenciones%); SS empresa = bruto * ss%; coste total = bruto + SS empresa.
+  // Sueldo bruto = neto / (1 - (IRPF% + SS trabajador%)); SS empresa = bruto
+  // * ss%; coste total EMPRESA = bruto + SS empresa (el IRPF y la SS del
+  // trabajador ya van descontados DENTRO del bruto, no son coste aparte:
+  // es dinero del propio sueldo del empleado que la empresa retiene y
+  // paga por él, no un gasto extra del negocio).
   function recalcGFAuto(){
     const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
-    const retPct = parseFloat(document.getElementById('gf-f-retpct').value) || 0;
+    const irpfPct = parseFloat(document.getElementById('gf-f-irpfpct').value) || 0;
+    const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
     const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
+    const retPct = irpfPct + ssTrabPct;
     const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
     const ssEmpresa = bruto * ssPct/100;
+    const irpfMensual = bruto * irpfPct/100;
     const total = bruto + ssEmpresa;
     document.getElementById('gf-auto-bruto').textContent = fmtMoney(bruto);
     document.getElementById('gf-auto-ss').textContent = fmtMoney(ssEmpresa);
+    document.getElementById('gf-auto-irpf').textContent = fmtMoney(irpfMensual);
     document.getElementById('gf-auto-total').textContent = fmtMoney(total);
     document.getElementById('gf-f-importe').value = total.toFixed(2);
   }
@@ -491,18 +515,22 @@ const GE = (function(){
     const autocalcEl = document.getElementById('gf-f-autocalc');
     if(autocalcEl && autocalcEl.checked){
       const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
-      const retPct = parseFloat(document.getElementById('gf-f-retpct').value) || 0;
+      const irpfPct = parseFloat(document.getElementById('gf-f-irpfpct').value) || 0;
+      const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
       const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
+      const retPct = irpfPct + ssTrabPct;
       const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
       data.autoCalc = true;
       data.sueldoNeto = neto;
-      data.retPct = retPct;
+      data.irpfPct = irpfPct;
+      data.ssTrabPct = ssTrabPct;
       data.ssPct = ssPct;
       data.sueldoBruto = bruto;
       data.ssEmpresa = bruto * ssPct/100;
+      data.irpfMensual = bruto * irpfPct/100;
     }else{
       data.autoCalc = false;
-      delete data.sueldoNeto; delete data.retPct; delete data.ssPct; delete data.sueldoBruto; delete data.ssEmpresa;
+      delete data.sueldoNeto; delete data.irpfPct; delete data.ssTrabPct; delete data.retPct; delete data.ssPct; delete data.sueldoBruto; delete data.ssEmpresa; delete data.irpfMensual;
     }
     if(editingGF){
       const existing = fijos().find(x=>x.id===editingGF);
