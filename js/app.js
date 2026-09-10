@@ -8967,22 +8967,8 @@ function goManualChapter(i){
 function printManualChapter(){
   const ch = MANUAL_CHAPTERS[manualChapter];
   const title = manualChapterTitle(ch).replace(/<[^>]+>/g,'');
-  const win = window.open('', '_blank', 'width=800,height=1000');
-  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${title}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:20mm 18mm;max-width:180mm;margin:0 auto}
-  .pr-brand{font-size:11.5px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
-  h2{font-size:17pt;margin:0 0 16px}h4{font-size:12.5pt;color:#555;margin-top:16px}
-  .manual-step{display:flex;gap:10px;margin-bottom:8px}.sn{flex:none;width:22px;height:22px;border-radius:50%;background:#DF7039;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-  .manual-tip,.manual-warning{background:#F5F0E3;border-left:3px solid #DF7039;border-radius:6px;padding:8px 12px;margin:10px 0;font-size:10.5pt}
-  @media print{body{padding:10mm}}</style></head><body>
-  <div class="pr-brand">${escapeHtml((DB.business&&DB.business.name)||'GastroGoan')}</div>
-  <h2>${title}</h2>
-  ${manualChapterText(ch)}
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  win.print();
+  const body = printReportHeaderHtml(title) + manualChapterText(ch);
+  printReportWindow(title, body, {winSize:'width=800,height=1000'});
 }
 
 /* ============================================================
