@@ -3523,14 +3523,14 @@ function autoSendFirstCourse(order, line, tanda){
   order.cerrada = false;
 }
 
-// PVP Delivery (js/recipes.js, ficha del plato): precio propio para pedidos
-// a domicilio hechos con el reparto del propio negocio (order.tipo==='delivery'),
-// para compensar que no se cobra el servicio de mesa — decisión del negocio,
-// no automática. Si no se ha configurado (precioDelivery vacío = "igual que
-// sala") se usa el precio normal, igual que siempre. No aplica a "para
-// llevar" (recoger en el local): ese sigue siendo el precio de sala.
+// Suplemento delivery (js/recipes.js, ficha del plato): importe fijo que se
+// SUMA al precio de sala en pedidos a domicilio hechos con el reparto del
+// propio negocio (order.tipo==='delivery'), para compensar que no se cobra
+// el servicio de mesa — decisión del negocio, no automática. Sin suplemento
+// configurado se cobra igual que en sala. No aplica a "para llevar" (recoger
+// en el local): ese sigue siendo el precio de sala sin más.
 function platoPriceForOrder(p, order){
-  if(order && order.tipo === 'delivery' && p.precioDelivery != null) return p.precioDelivery;
+  if(order && order.tipo === 'delivery' && p.deliverySupplement) return roundMoney(p.precio + p.deliverySupplement);
   return p.precio;
 }
 function addOrderItem(orderId, secId, platoId){
