@@ -95,7 +95,11 @@ await caso('Cambiar a semana y a mes no revienta nada', async () => {
 await caso('Una mesa ocupada TODO el día marca ese día como lleno para ese grupo', async () => {
   const r = await page.evaluate(() => {
     DB.tables = [{id:1, name:'Mesa 1', plazas:4}];
-    const fecha = '2026-09-10';
+    // Un día en el futuro relativo a "hoy", no una fecha fija: una fecha
+    // fija envejece en cuanto pasa el día y computeDayStatus empieza a
+    // devolver (correctamente) 'pasado' en vez de 'lleno'/'libre' — no es
+    // un fallo de la app, es la prueba quedándose atrás.
+    const fecha = addDaysStr(todayStr(), 1);
     DB.mesasOcupadas[fecha] = {1: {}};
     // Todas las franjas de 15 en 15 min entre apertura y cierre (con margen),
     // generadas con la misma función que usa el propio calendario — así este
@@ -111,7 +115,7 @@ await caso('Una mesa ocupada TODO el día marca ese día como lleno para ese gru
 });
 
 await caso('Un grupo más grande que cualquier mesa se deja como reservable (revisión manual), no bloqueado', async () => {
-  const estado = await page.evaluate(() => computeDayStatus('2026-09-11', 20));
+  const estado = await page.evaluate(() => computeDayStatus(addDaysStr(todayStr(), 2), 20));
   assert.equal(estado, 'libre', 'un grupo que no cabe en ninguna mesa individual debe poder reservar igualmente (el negocio lo revisa a mano), no debe salir "lleno"');
 });
 
