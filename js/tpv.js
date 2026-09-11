@@ -2306,7 +2306,7 @@ function renderCartaSelectorInline(order, carta){
       <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(seccionAbierta))}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${platos.map(p => `<span style="display:inline-flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-          <button class="btn btn-sm" style="font-size:12px;border:none;border-radius:0" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>
+          <button class="btn btn-sm" style="font-size:12px;border:none;border-radius:0" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(platoPriceForOrder(p, order))}</strong></button>
           <button class="btn btn-sm btn-icon" style="border:none;border-left:1px solid var(--border);border-radius:0;color:var(--muted)" title="${t('label.dishInfo')}" onclick="event.stopPropagation();openDishInfoModal(${p.recipeId||'null'}, '${escapeJsAttr(tItem(p))}', '${escapeJsAttr((p.allergensManual||[]).join('|'))}', 'renderTableOrderModal(${order.id})')"><i class="ti ti-info-circle"></i></button>
         </span>`).join('')}
       </div>
@@ -3523,6 +3523,16 @@ function autoSendFirstCourse(order, line, tanda){
   order.cerrada = false;
 }
 
+// PVP Delivery (js/recipes.js, ficha del plato): precio propio para pedidos
+// a domicilio hechos con el reparto del propio negocio (order.tipo==='delivery'),
+// para compensar que no se cobra el servicio de mesa — decisión del negocio,
+// no automática. Si no se ha configurado (precioDelivery vacío = "igual que
+// sala") se usa el precio normal, igual que siempre. No aplica a "para
+// llevar" (recoger en el local): ese sigue siendo el precio de sala.
+function platoPriceForOrder(p, order){
+  if(order && order.tipo === 'delivery' && p.precioDelivery != null) return p.precioDelivery;
+  return p.precio;
+}
 function addOrderItem(orderId, secId, platoId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const p = findCartaPlato(secId, platoId);
@@ -3550,7 +3560,7 @@ function addOrderItem(orderId, secId, platoId){
        un solo undefined, así que una comanda así dejaba al negocio sin
        sincronizar. El saneado de core.js ya lo cubre; esto lo arregla también
        en el origen, para que el dato local sea correcto. */
-    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId ?? null, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
+    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId ?? null, name: tItem(p), price: platoPriceForOrder(p, order), qty:1, tanda, notas:''};
     if(isSeccionBebida(secId)) line.bebida = true;
     applyActivePromoToLine(line);
     order.items.push(line);
@@ -3566,12 +3576,13 @@ function addOrderItem(orderId, secId, platoId){
 
 /* ============== Extras y notas al añadir un plato a la comanda ============== */
 function openAddItemModal(orderId, secId, platoId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
   const p = findCartaPlato(secId, platoId);
   if(!p) return;
   const mods = p.modificadores || [];
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(tItem(p))} · ${fmtMoney(p.precio)}</h3>
+      <h3><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(tItem(p))} · ${fmtMoney(platoPriceForOrder(p, order))}</h3>
       <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
     </div>
     ${mods.length ? `
@@ -3628,7 +3639,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   } else {
     line = {
       lineId: genId(),
-      platoId: p.id, recipeId: p.recipeId ?? null, name, price: p.precio + extra, qty:1, tanda,
+      platoId: p.id, recipeId: p.recipeId ?? null, name, price: platoPriceForOrder(p, order) + extra, qty:1, tanda,
       notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
     };
     if(isSeccionBebida(secId)) line.bebida = true;
