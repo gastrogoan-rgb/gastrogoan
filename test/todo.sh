@@ -192,6 +192,6 @@ espera $P71 "GE Tesorería: meses centrados, fix reparto en móvil, cierre mes, 
 espera $P72 "GE Tesorería: reparto en una línea, sin gráfico duplicado, semáforo verificado" "$SALIDA/geterevision.txt" "casos pasaron"
 espera $P73 "GE: una sincronización de nube ya no resetea la pestaña activa a Ventas" "$SALIDA/getabsync.txt" "casos pasaron"
 espera $P74 "GE global: informe al gestor cuadrado, cierre de mes respetado en TPV, fusión de cierres/fijosLog" "$SALIDA/geexportglobal.txt" "casos pasaron"
-espera $P75 "PVP Delivery: se cobra en pedidos a domicilio del propio negocio (TPV y web pública), no en para llevar" "$SALIDA/escpvpdelivery.txt" "casos pasaron"
+espera $P75 "Suplemento delivery: se suma en pedidos a domicilio del propio negocio (TPV y web pública), no en para llevar" "$SALIDA/escpvpdelivery.txt" "casos pasaron"
 
 exit $FALLOS

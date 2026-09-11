@@ -438,12 +438,13 @@ function renderEscandalloFull(r){
         </div>
         ${r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.consumablesInline')}: ${r.consumiblesPct}%</div>` : ''}
         ${!r.isBase ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t('msg.escandalloForOnePersonShort')}</div>` : ''}
-        ${!r.isBase && r.priceDelivery!=null ? (() => {
-          const deliveryBase = r.ivaPct!=null ? r.priceDelivery/(1+r.ivaPct/100) : r.priceDelivery;
+        ${!r.isBase && r.deliverySupplement ? (() => {
+          const deliveryPrice = (r.price||0) + r.deliverySupplement;
+          const deliveryBase = r.ivaPct!=null ? deliveryPrice/(1+r.ivaPct/100) : deliveryPrice;
           const deliveryPct = deliveryBase>0 ? (cost/deliveryBase*100) : null;
           return `<div class="card" style="background:var(--bg-2,#F7F6F2);margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <strong style="font-size:13px"><i class="ti ti-moped"></i> ${t('label.priceDelivery')}</strong>
-            <span>${fmtMoney(r.priceDelivery)}</span>
+            <span>${fmtMoney(deliveryPrice)} <span style="color:var(--muted)">(+${fmtMoney(r.deliverySupplement)})</span></span>
             ${deliveryPct!=null ? `<span class="badge badge-${deliveryPct>35?'red':deliveryPct>28?'amber':'green'}">${deliveryPct.toFixed(1)}% FC</span>` : ''}
           </div>`;
         })() : ''}
@@ -506,7 +507,9 @@ function renderRecipeModal(id, r){
         <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${r.isBase ? (isSala ? t('ph.elaborationNameSala') : t('ph.elaborationName')) : (isSala ? t('ph.drinkName') : t('ph.dishName'))}">
       </div>
     </div>
-    ${r.isBase ? '' : `
+    ${r.isBase ? '' : (() => {
+      const hasDelivery = !(DB.business && DB.business.tiposServicio && DB.business.tiposServicio.delivery === false);
+      return `
     <div class="field-row">
       <div class="field">
         <label>${t('label.priceBaseNoVat')}</label>
@@ -519,18 +522,20 @@ function renderRecipeModal(id, r){
           ${[21,10,4,0].map(pct => `<option value="${pct}" ${r.ivaPct===pct?'selected':''}>${pct}%</option>`).join('')}
         </select>
       </div>
+      ${hasDelivery ? `
+      <div class="field">
+        <label>${t('label.deliverySupplement')}</label>
+        <input type="number" id="recipe-delivery-supplement" value="${r.deliverySupplement!=null?r.deliverySupplement:''}" step="0.01" min="0" placeholder="0,00" oninput="updateRecipeFinalPriceDisplay()">
+      </div>
+      ` : ''}
     </div>
     <div class="field" style="margin-top:-8px">
       <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="recipe-price-final-display">${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}</strong></span>
+      ${hasDelivery ? ` · ${t('label.priceDelivery')}: <strong id="recipe-price-delivery-final-display">${fmtMoney((r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0)) + (r.deliverySupplement||0))}</strong>` : ''}
     </div>
-    ${(DB.business && DB.business.tiposServicio && DB.business.tiposServicio.delivery === false) ? '' : `
-    <div class="field">
-      <label>${t('label.priceDelivery')}</label>
-      <input type="number" id="recipe-price-delivery" value="${r.priceDelivery!=null?r.priceDelivery:''}" step="0.01" min="0" placeholder="${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}">
-      <small style="color:var(--muted)">${t('label.priceDeliveryHint')}</small>
-    </div>
-    `}
-    `}
+    ${hasDelivery ? `<div class="field" style="margin-top:-6px"><small style="color:var(--muted)">${t('label.deliverySupplementHint')}</small></div>` : ''}
+    `;
+    })()}
     <div class="field-row">
       ${r.isBase ? '' : `
       <div class="field">
@@ -750,6 +755,16 @@ function updateRecipeFinalPriceDisplay(){
   display.textContent = fmtMoney(base * (1 + iva/100));
   ivaEl.style.borderColor = ivaEl.value === '' ? 'var(--red)' : '';
   ivaEl.style.color = ivaEl.value === '' ? 'var(--red)' : '';
+  // El PVP Delivery es el precio de sala (con IVA) + un suplemento fijo,
+  // igual que un extra/modificador (importe ya con IVA, sin desglose
+  // propio): no cambia de tipo de IVA, solo se le suma un importe al
+  // resultado final — se recalcula aquí al vuelo mientras se escribe.
+  const supplementEl = document.getElementById('recipe-delivery-supplement');
+  const deliveryDisplay = document.getElementById('recipe-price-delivery-final-display');
+  if(supplementEl && deliveryDisplay){
+    const supplement = parseFloat(supplementEl.value) || 0;
+    deliveryDisplay.textContent = fmtMoney(base * (1 + iva/100) + supplement);
+  }
 }
 function currentRecipeFormState(id){
   const nameEl = document.getElementById('recipe-name');
@@ -794,19 +809,21 @@ async function saveRecipe(id){
   // Una elaboración base no se vende directamente (no tiene precio de venta
   // ni IVA repercutido propios) — lo que interesa de ella es su coste total
   // y el coste por unidad de rendimiento, no un precio de venta.
-  let priceBase = 0, ivaPct = null, price = 0, priceDelivery = null;
+  let priceBase = 0, ivaPct = null, price = 0, deliverySupplement = null;
   if(!isBase){
     priceBase = Math.max(0, parseFloat(document.getElementById('recipe-price-base').value) || 0);
     const ivaRaw = document.getElementById('recipe-iva').value;
     if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
     ivaPct = parseFloat(ivaRaw);
     price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
-    // null = usa el mismo precio que en sala (comportamiento por defecto,
-    // el campo puede dejarse en blanco a propósito).
-    const priceDeliveryEl = document.getElementById('recipe-price-delivery');
-    if(priceDeliveryEl){
-      const raw = parseFloat(priceDeliveryEl.value);
-      priceDelivery = (isFinite(raw) && raw > 0) ? Math.round(raw*100)/100 : null;
+    // Suplemento delivery: un importe fijo (ya con IVA, como un extra/
+    // modificador) que se SUMA al precio de sala en pedidos a domicilio del
+    // propio negocio — no un precio independiente que mantener sincronizado.
+    // null/0 = sin suplemento, se cobra igual que en sala.
+    const supplementEl = document.getElementById('recipe-delivery-supplement');
+    if(supplementEl){
+      const raw = parseFloat(supplementEl.value);
+      deliverySupplement = (isFinite(raw) && raw > 0) ? Math.round(raw*100)/100 : null;
     }
   }
   const consumiblesPct = Math.min(99, Math.max(0, parseFloat(document.getElementById('recipe-consumibles').value) || 0));
@@ -845,10 +862,10 @@ async function saveRecipe(id){
     // checkbox está deshabilitado al editar uno existente) — así una
     // elaboración nunca puede acabar puesta a la venta como plato, ni
     // viceversa.
-    Object.assign(r, {name, price, priceBase, priceDelivery, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
+    Object.assign(r, {name, price, priceBase, deliverySupplement, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
   }else{
     recipeId = genId();
-    DB.recipes.push({id: recipeId, name, price, priceBase, priceDelivery, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
+    DB.recipes.push({id: recipeId, name, price, priceBase, deliverySupplement, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
   }
   syncElaboracionForRecipe(recipeId, isBase, name, baseUnit);
   ensureFichaForRecipe(recipeId);

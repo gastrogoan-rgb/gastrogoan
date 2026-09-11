@@ -2412,13 +2412,13 @@ function buildMenuHtml(cartas){
   lastMenuCartas = cartas;
   return `<div id="menu-folders">${menuOpenSection ? '' : buildMenusHtml()}${buildMenuHtmlInner(cartas)}</div>`;
 }
-// PVP Delivery (Escandallo): precio propio para pedidos a domicilio con el
-// reparto del propio negocio, para compensar no cobrar el servicio de mesa.
-// Solo aplica a la pestaña "Delivery" — "Para llevar" sigue con el precio de
-// sala, y si no se configuró (precioDelivery vacío) también se usa el de
-// sala, igual que siempre.
+// Suplemento delivery (Escandallo): importe fijo que se suma al precio de
+// sala para pedidos a domicilio con el reparto del propio negocio, para
+// compensar no cobrar el servicio de mesa. Solo aplica a la pestaña
+// "Delivery" — "Para llevar" sigue con el precio de sala, y sin suplemento
+// configurado también se usa el de sala, igual que siempre.
 function publicPlatoPrice(p){
-  if(currentTab === 'delivery' && p.precioDelivery != null) return p.precioDelivery;
+  if(currentTab === 'delivery' && p.deliverySupplement) return Math.round((p.precio + p.deliverySupplement) * 100) / 100;
   return p.precio;
 }
 function renderMenuDishesHtml(sec){

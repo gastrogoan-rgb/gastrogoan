@@ -1,16 +1,11 @@
-// PVP Delivery (11/09, rediseño): tras la primera versión (precio SUGERIDO
-// por plataforma externa, solo de referencia, ver la sesión anterior), el
-// dueño pidió algo realmente APLICADO: cada plato puede tener un precio
-// propio para domicilio con el reparto del propio negocio, que se cobra de
-// verdad al pedir por esa vía — tanto desde el TPV como desde la web pública
-// de pedidos. Se descarta el precio "sugerido por plataforma" (Glovo/Uber
-// Eats no reciben pedidos itemizados de esta app, así que no había forma
-// real de aplicarlo) a cambio de este, que sí se puede cobrar de verdad.
-//
-// Regla: el PVP Delivery se cobra SOLO en pedidos de tipo 'delivery' (reparto
-// propio). "Para llevar" (recoger en el local) sigue con el precio de sala,
-// porque no tiene el sobrecoste que justifica subirlo. Sin PVP Delivery
-// configurado, se usa el precio de sala en ambos casos, como siempre.
+// Suplemento delivery (11/09, segundo rediseño): tras probar un precio
+// independiente por plataforma (solo referencia) y luego un PVP Delivery
+// completo (precio propio, sin IVA, recalculado), el dueño pidió algo más
+// simple: una casilla de suplemento (ej. +2€, con IVA incluido, como un
+// extra/modificador) que se SUMA al precio de sala cuando el pedido es a
+// domicilio con el reparto del propio negocio. Se aplica de verdad en el
+// TPV y en la web pública de pedidos — no en "para llevar", que sigue con
+// el precio de sala porque no tiene el sobrecoste que lo justifica.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -35,7 +30,7 @@ async function caso(nombre, fn){
     localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()}));
     localStorage.setItem('gastrogoan_owner_pass_prompted','1');
     localStorage.setItem('gastrogoan_backup_reminder_day', new Date().toISOString().slice(0,10));
-  }, 'ESCPVPD1');
+  }, 'ESCSUPD1');
   await page.reload({waitUntil:'domcontentloaded'});
   await new Promise(r=>setTimeout(r,2200));
   await page.evaluate(()=>{
@@ -43,86 +38,92 @@ async function caso(nombre, fn){
     Object.assign(DB.business, {netlifySetupDone:true, extConnPromptSeen:true, tourSeen:true, categoryIconHintSeen:true});
     DB.business.ownFirebase = {apiKey:'fake', databaseURL:'https://fake-default-rtdb.firebaseio.com'};
     DB.business.tiposServicio = {mesa:true, takeaway:true, delivery:true};
-    DB.recipes = [{id: genId(), name:'Hamburguesa', area:'cocina', isBase:false, price:10, priceBase:10/1.10, priceDelivery:13, ivaPct:10, comensales:1, consumiblesPct:0, ingredients:[]}];
+    DB.recipes = [{id: genId(), name:'Hamburguesa', area:'cocina', isBase:false, price:10, priceBase:10/1.10, deliverySupplement:2, ivaPct:10, comensales:1, consumiblesPct:0, ingredients:[]}];
     saveDB();
   });
 
-  await caso('El campo PVP Delivery aparece en la ficha del plato y se guarda al editar', async () => {
+  await caso('El campo "Suplemento delivery" aparece en la ficha del plato, con el valor guardado precargado', async () => {
     const r = await page.evaluate(()=>{
-      const recipe = DB.recipes[0];
-      openRecipeModal(recipe.id);
-      const before = document.getElementById('recipe-price-delivery')?.value;
-      document.getElementById('recipe-price-delivery').value = '14.50';
-      document.getElementById('recipe-price-base').value = String(recipe.priceBase);
-      document.getElementById('recipe-iva').value = String(recipe.ivaPct);
-      saveRecipe(recipe.id);
-      return {before, saved: DB.recipes[0].priceDelivery};
+      openRecipeModal(DB.recipes[0].id);
+      return document.getElementById('recipe-delivery-supplement')?.value;
     });
-    assert.equal(r.before, '13', 'el campo debía venir precargado con el valor guardado (13€): ' + JSON.stringify(r));
-    assert.equal(r.saved, 14.5, 'el nuevo valor editado debe persistir: ' + JSON.stringify(r));
+    assert.equal(r, '2', 'debía venir precargado con el suplemento guardado (2€): ' + r);
   });
 
-  await caso('Dejar el campo vacío borra el PVP Delivery (vuelve a "igual que sala")', async () => {
+  await caso('Editar el suplemento lo guarda tal cual (importe fijo, no se recalcula con el IVA)', async () => {
     const r = await page.evaluate(()=>{
       const recipe = DB.recipes[0];
       openRecipeModal(recipe.id);
-      document.getElementById('recipe-price-delivery').value = '';
+      document.getElementById('recipe-delivery-supplement').value = '2.50';
       document.getElementById('recipe-price-base').value = String(recipe.priceBase);
       document.getElementById('recipe-iva').value = String(recipe.ivaPct);
       saveRecipe(recipe.id);
-      return DB.recipes[0].priceDelivery;
+      return DB.recipes[0].deliverySupplement;
     });
-    assert.equal(r, null, 'vacío debe guardarse como null (usa el precio de sala): ' + r);
+    assert.equal(r, 2.5, 'el nuevo suplemento editado debe persistir tal cual: ' + r);
+  });
+
+  await caso('Dejar el campo vacío quita el suplemento (vuelve a "sin suplemento")', async () => {
+    const r = await page.evaluate(()=>{
+      const recipe = DB.recipes[0];
+      openRecipeModal(recipe.id);
+      document.getElementById('recipe-delivery-supplement').value = '';
+      document.getElementById('recipe-price-base').value = String(recipe.priceBase);
+      document.getElementById('recipe-iva').value = String(recipe.ivaPct);
+      saveRecipe(recipe.id);
+      return DB.recipes[0].deliverySupplement;
+    });
+    assert.equal(r, null, 'vacío debe guardarse como null (sin suplemento): ' + r);
     // Se deja configurado de nuevo para el resto de casos.
-    await page.evaluate(()=>{ DB.recipes[0].priceDelivery = 14.5; saveDB(); });
+    await page.evaluate(()=>{ DB.recipes[0].deliverySupplement = 2.5; saveDB(); });
   });
 
-  await caso('platoPriceForOrder: pedido delivery cobra el PVP Delivery, para llevar y mesa cobran el de sala', async () => {
+  await caso('platoPriceForOrder: delivery SUMA el suplemento al precio de sala; para llevar y mesa cobran solo el de sala', async () => {
     const r = await page.evaluate(()=>{
-      const p = {precio: 10, precioDelivery: 14.5};
+      const p = {precio: 10, deliverySupplement: 2.5};
       return {
         delivery: platoPriceForOrder(p, {tipo:'delivery'}),
         takeaway: platoPriceForOrder(p, {tipo:'takeaway'}),
         mesa: platoPriceForOrder(p, {tipo:'mesa'}),
-        sinConfigurar: platoPriceForOrder({precio:10, precioDelivery:null}, {tipo:'delivery'}),
+        sinConfigurar: platoPriceForOrder({precio:10, deliverySupplement:null}, {tipo:'delivery'}),
       };
     });
-    assert.equal(r.delivery, 14.5, 'delivery debe cobrar el PVP Delivery: ' + JSON.stringify(r));
-    assert.equal(r.takeaway, 10, 'para llevar debe cobrar el precio de sala, no el de delivery: ' + JSON.stringify(r));
-    assert.equal(r.mesa, 10, 'mesa debe cobrar el precio de sala: ' + JSON.stringify(r));
-    assert.equal(r.sinConfigurar, 10, 'sin PVP Delivery configurado, debe caer al precio de sala: ' + JSON.stringify(r));
+    assert.equal(r.delivery, 12.5, 'delivery debe cobrar precio de sala + suplemento (10+2,5): ' + JSON.stringify(r));
+    assert.equal(r.takeaway, 10, 'para llevar debe cobrar solo el precio de sala: ' + JSON.stringify(r));
+    assert.equal(r.mesa, 10, 'mesa debe cobrar solo el precio de sala: ' + JSON.stringify(r));
+    assert.equal(r.sinConfigurar, 10, 'sin suplemento configurado, debe cobrar solo el precio de sala: ' + JSON.stringify(r));
   });
 
-  await caso('Un plato de carta vinculado al Escandallo sincroniza el PVP Delivery al abrir la Carta en el editor', async () => {
+  await caso('Un plato de carta vinculado al Escandallo sincroniza el suplemento al abrir la Carta en el editor', async () => {
     const r = await page.evaluate(()=>{
       const recipe = DB.recipes[0];
       if(!DB.cartas.length) DB.cartas.push({id: genId(), nombre:'Carta', horario: Array.from({length:7},()=>({activo:true})), secciones:[{id: genId(), nombre:'Platos', platos:[]}]});
       const carta = DB.cartas[0];
       const sec = carta.secciones[0];
-      sec.platos.push({id: genId(), recipeId: recipe.id, nombre: recipe.name, precio: recipe.price, precioBase: recipe.priceBase, precioDelivery: null, ivaPct: recipe.ivaPct, disponible:true});
+      sec.platos.push({id: genId(), recipeId: recipe.id, nombre: recipe.name, precio: recipe.price, precioBase: recipe.priceBase, deliverySupplement: null, ivaPct: recipe.ivaPct, disponible:true});
       DB.activeCartaIds = [carta.id];
       navigate('carta');
       openCarta(carta.id); // clona a cartaEdit y sincroniza precios desde el Escandallo
-      return cartaEdit.secciones[0].platos[0].precioDelivery;
+      return cartaEdit.secciones[0].platos[0].deliverySupplement;
     });
-    assert.equal(r, 14.5, 'al abrir la Carta en el editor, el precio delivery de la receta debe copiarse al plato: ' + r);
+    assert.equal(r, 2.5, 'al abrir la Carta en el editor, el suplemento de la receta debe copiarse al plato: ' + r);
   });
 
-  await caso('En el TPV, una comanda de delivery cobra el PVP Delivery al añadir el plato', async () => {
+  await caso('En el TPV, una comanda de delivery cobra precio de sala + suplemento al añadir el plato', async () => {
     const r = await page.evaluate(()=>{
       const carta = DB.cartas[0];
       const sec = carta.secciones[0];
       const plato = sec.platos[0];
-      plato.precioDelivery = 14.5; // ya sincronizado por openCarta() en el caso anterior; se fija aquí a mano porque ese sync escribe en cartaEdit, no en DB.cartas directamente (solo se vuelca al guardar la carta desde el editor)
+      plato.deliverySupplement = 2.5; // ya sincronizado por openCarta() en el caso anterior; se fija aquí a mano porque ese sync escribe en cartaEdit, no en DB.cartas directamente (solo se vuelca al guardar la carta desde el editor)
       const order = {id: genId(), tipo:'delivery', pax:1, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
       DB.tpvOrders.push(order);
       addOrderItem(order.id, sec.id, plato.id);
       return order.items[0].price;
     });
-    assert.equal(r, 14.5, 'la línea de la comanda de delivery debe cobrar el PVP Delivery: ' + r);
+    assert.equal(r, 12.5, 'la línea de la comanda de delivery debe cobrar precio de sala + suplemento: ' + r);
   });
 
-  await caso('En el TPV, una comanda para llevar cobra el precio de sala, no el de delivery', async () => {
+  await caso('En el TPV, una comanda para llevar cobra solo el precio de sala, sin el suplemento', async () => {
     const r = await page.evaluate(()=>{
       const carta = DB.cartas[0];
       const sec = carta.secciones[0];
@@ -132,7 +133,7 @@ async function caso(nombre, fn){
       addOrderItem(order.id, sec.id, plato.id);
       return order.items[0].price;
     });
-    assert.equal(r, 10, 'la línea de para llevar debe cobrar el precio de sala: ' + r);
+    assert.equal(r, 10, 'la línea de para llevar debe cobrar el precio de sala, sin el suplemento: ' + r);
   });
 
   await caso('Ningún error de JavaScript en todo el recorrido (app principal)', async () => {
@@ -161,12 +162,12 @@ async function caso(nombre, fn){
       tiposServicio:{mesa:true, takeaway:true, delivery:true},
     };
     DB.cartas = [{id: 1, nombre:'Carta', horario: Array.from({length:7},()=>({activo:true})), secciones:[{id:1, nombre:'Platos', platos:[
-      {id: 1, recipeId:1, nombre:'Hamburguesa', precio:10, precioDelivery:14.5, ivaPct:10, disponible:true}
+      {id: 1, recipeId:1, nombre:'Hamburguesa', precio:10, deliverySupplement:2.5, ivaPct:10, disponible:true}
     ]}]}];
     DB.activeCartaIds = [1];
   });
 
-  await caso('publicPlatoPrice: en la pestaña Delivery se usa el PVP Delivery, en Para Llevar el de sala', async () => {
+  await caso('publicPlatoPrice: en la pestaña Delivery se suma el suplemento, en Para Llevar solo el precio de sala', async () => {
     const r = await page.evaluate(()=>{
       const p = DB.cartas[0].secciones[0].platos[0];
       currentTab = 'delivery';
@@ -175,8 +176,8 @@ async function caso(nombre, fn){
       const takeaway = publicPlatoPrice(p);
       return {delivery, takeaway};
     });
-    assert.equal(r.delivery, 14.5, 'pestaña Delivery debe usar el PVP Delivery: ' + JSON.stringify(r));
-    assert.equal(r.takeaway, 10, 'pestaña Para Llevar debe usar el precio de sala: ' + JSON.stringify(r));
+    assert.equal(r.delivery, 12.5, 'pestaña Delivery debe sumar el suplemento (10+2,5): ' + JSON.stringify(r));
+    assert.equal(r.takeaway, 10, 'pestaña Para Llevar debe usar solo el precio de sala: ' + JSON.stringify(r));
   });
 
   await caso('El precio mostrado en la carta pública cambia según la pestaña activa', async () => {
@@ -187,18 +188,18 @@ async function caso(nombre, fn){
       const htmlTakeaway = renderMenuDishesHtml(DB.cartas[0].secciones[0]);
       return {htmlDelivery, htmlTakeaway};
     });
-    assert.ok(r.htmlDelivery.includes('14,50'), 'la carta en Delivery debe mostrar 14,50€: ' + r.htmlDelivery.slice(0,300));
-    assert.ok(r.htmlTakeaway.includes('10,00') && !r.htmlTakeaway.includes('14,50'), 'la carta en Para Llevar debe mostrar 10,00€, no 14,50€: ' + r.htmlTakeaway.slice(0,300));
+    assert.ok(r.htmlDelivery.includes('12,50'), 'la carta en Delivery debe mostrar 12,50€: ' + r.htmlDelivery.slice(0,300));
+    assert.ok(r.htmlTakeaway.includes('10,00') && !r.htmlTakeaway.includes('12,50'), 'la carta en Para Llevar debe mostrar 10,00€, no 12,50€: ' + r.htmlTakeaway.slice(0,300));
   });
 
-  await caso('Añadir al carrito en Delivery guarda el precio de delivery en la línea', async () => {
+  await caso('Añadir al carrito en Delivery guarda el precio con el suplemento en la línea', async () => {
     const r = await page.evaluate(()=>{
       currentTab = 'delivery';
       cart = [];
       changeCartQty(1, '1', 1, 'Hamburguesa', publicPlatoPrice(DB.cartas[0].secciones[0].platos[0]));
       return cart[0]?.price;
     });
-    assert.equal(r, 14.5, 'la línea del carrito en delivery debe llevar el precio de delivery: ' + r);
+    assert.equal(r, 12.5, 'la línea del carrito en delivery debe llevar el precio con el suplemento sumado: ' + r);
   });
 
   await caso('Ningún error de JavaScript en todo el recorrido (web pública)', async () => {

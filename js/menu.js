@@ -505,11 +505,11 @@ function renderCartaSecciones(){
           p.precioBase = linkedRecipe.priceBase;
           p.ivaPct = linkedRecipe.ivaPct;
         }
-        // Mismo mecanismo que el precio de sala, para el PVP Delivery: si el
-        // Escandallo lo cambia (o lo borra, volviendo a "igual que sala"),
-        // la Carta lo refleja aquí sin que haga falta re-importar el plato.
-        if(linkedRecipe && (linkedRecipe.priceDelivery||null) !== (p.precioDelivery||null)){
-          p.precioDelivery = linkedRecipe.priceDelivery||null;
+        // Mismo mecanismo que el precio de sala, para el suplemento delivery:
+        // si el Escandallo lo cambia (o lo quita), la Carta lo refleja aquí
+        // sin que haga falta re-importar el plato.
+        if(linkedRecipe && (linkedRecipe.deliverySupplement||null) !== (p.deliverySupplement||null)){
+          p.deliverySupplement = linkedRecipe.deliverySupplement||null;
         }
         // Semáforo de rentabilidad: mismos umbrales que en Escandallo (food
         // cost sobre el precio de venta), para ver de un vistazo, sin salir
@@ -1115,7 +1115,7 @@ function confirmImportEsc(secId){
   checked.forEach(rid => {
     const r = getRecipe(rid);
     if(!r) return;
-    sec.platos.push({id: genId(), recipeId: r.id, nombre: r.name, precio: r.price||0, precioBase: r.priceBase, precioDelivery: r.priceDelivery||null, ivaPct: r.ivaPct, disponible:true});
+    sec.platos.push({id: genId(), recipeId: r.id, nombre: r.name, precio: r.price||0, precioBase: r.priceBase, deliverySupplement: r.deliverySupplement||null, ivaPct: r.ivaPct, disponible:true});
   });
   importEscChecked = new Set();
   closeModal();
