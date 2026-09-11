@@ -106,6 +106,8 @@ lanzar; node test/ge-tesoreria-revision.mjs > "$SALIDA/geterevision.txt" 2>&1 & 
 lanzar; node test/ge-tab-persiste-sync.mjs > "$SALIDA/getabsync.txt" 2>&1 & P73=$!
 lanzar; node test/ge-export-gestor-global.mjs > "$SALIDA/geexportglobal.txt" 2>&1 & P74=$!
 lanzar; node test/escandallo-pvp-delivery.mjs > "$SALIDA/escpvpdelivery.txt" 2>&1 & P75=$!
+lanzar; node test/tabs-scroll-fade.mjs > "$SALIDA/tabsscrollfade.txt" 2>&1 & P76=$!
+lanzar; node test/auditoria-general-11-09.mjs > "$SALIDA/auditoriageneral.txt" 2>&1 & P77=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -193,5 +195,7 @@ espera $P72 "GE Tesorería: reparto en una línea, sin gráfico duplicado, semá
 espera $P73 "GE: una sincronización de nube ya no resetea la pestaña activa a Ventas" "$SALIDA/getabsync.txt" "casos pasaron"
 espera $P74 "GE global: informe al gestor cuadrado, cierre de mes respetado en TPV, fusión de cierres/fijosLog" "$SALIDA/geexportglobal.txt" "casos pasaron"
 espera $P75 "Suplemento delivery: se suma en pedidos a domicilio del propio negocio (TPV y web pública), no en para llevar" "$SALIDA/escpvpdelivery.txt" "casos pasaron"
+espera $P76 "Aviso de scroll en tiras de pestañas (GE, Limpieza, Mi Negocio) en móvil" "$SALIDA/tabsscrollfade.txt" "casos pasaron"
+espera $P77 "Auditoría general: fechas de proveedor/archivado y renombrar sin permiso avisan" "$SALIDA/auditoriageneral.txt" "casos pasaron"
 
 exit $FALLOS

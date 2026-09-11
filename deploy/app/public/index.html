@@ -717,7 +717,7 @@ td.wrap{white-space:normal}
    datos" obliga a recorrerla entera. */
 .mn-indice{
   display:flex;flex-wrap:wrap;gap:6px;align-items:center;
-  padding:10px 12px;margin-bottom:14px;
+  padding:10px 12px;margin-bottom:14px;position:relative;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
 }
 /* En móvil, envolver los 14 accesos ocupaba casi una pantalla entera: el
@@ -977,7 +977,20 @@ td.wrap{white-space:normal}
 
 /* ===== Gestión Económica ===== */
 .ge-auto{background:var(--teal-l);color:var(--teal-d);font-size:11px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
-.ge-tab-row{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;gap:0}
+.ge-tab-row{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;gap:0;position:relative}
+/* Aviso de que la fila de pestañas sigue hacia la derecha/izquierda (móvil,
+   cuando no caben todas): una sombra HACIA DENTRO, no un degradado con un
+   color de fondo que copiar — el fondo detrás de estas filas cambia según
+   la pantalla (blanco, #FAF8F4, #F1EFE9...) y una sombra no necesita
+   acertarlo. Ver updateTabRowFade (js/ui.js). */
+.ge-tab-row.has-scroll-right::after, .mn-indice.has-scroll-right::after{
+  content:'';position:absolute;top:0;right:0;bottom:0;width:22px;
+  box-shadow:inset -12px 0 8px -8px rgba(0,0,0,.28);pointer-events:none;
+}
+.ge-tab-row.has-scroll-left::before, .mn-indice.has-scroll-left::before{
+  content:'';position:absolute;top:0;left:0;bottom:0;width:22px;
+  box-shadow:inset 12px 0 8px -8px rgba(0,0,0,.28);pointer-events:none;
+}
 .ge-tab{padding:9px 18px;font-size:13px;font-weight:500;color:var(--muted);border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;background:none;white-space:nowrap;font-family:inherit;user-select:none;transition:color .12s ease,border-color .12s ease}
 .ge-tab.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:700}
 .ge-tab:hover:not(.active){color:var(--text)}
@@ -2926,7 +2939,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '11/09/2026 11:58';
+const GG_BUILD = '11/09/2026 12:17';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -12416,6 +12429,7 @@ const I18N = {
     'msg.renameGroupPrompt': 'Nuevo nombre del grupo:',
     'msg.renameOptionPrompt': 'Nuevo nombre de la opción:',
     'msg.nameCannotBeEmpty': 'El nombre no puede quedarse vacío.',
+    'msg.needEditUnlockToRename': 'Para renombrar necesitas desbloquear la edición (pide el PIN al propietario).',
     'gate.testCloudNow': 'Probar mi nube ahora',
     'gate.copyRules': 'Copiar las reglas nuevas',
     'gate.oldRulesBodyMenor': 'Tu nube funciona y tus reservas llegan bien, pero te faltan dos cambios recientes: los cobros con tarjeta se rechazarían al confirmarse, y el histórico de reservas —con nombres y teléfonos— crecería sin fin porque no se pueden borrar las ya procesadas. Copia las reglas nuevas y pégalas en Firebase → Realtime Database → Reglas → Publicar. No pierdes ningún dato: las reglas son solo permisos. Después vuelve aquí y pulsa "Probar mi nube ahora".',
@@ -14637,6 +14651,7 @@ const I18N = {
     'msg.renameGroupPrompt': 'Nou nom del grup:',
     'msg.renameOptionPrompt': 'Nou nom de l\'opció:',
     'msg.nameCannotBeEmpty': 'El nom no pot quedar-se buit.',
+    'msg.needEditUnlockToRename': 'Per canviar el nom cal desbloquejar l\'edició (demana el PIN al propietari).',
     'gate.testCloudNow': 'Provar el meu núvol ara',
     'gate.copyRules': 'Copiar les regles noves',
     'gate.oldRulesBodyMenor': 'El teu núvol funciona i les teves reserves arriben bé, però et falten dos canvis recents: els cobraments amb targeta es rebutjarien en confirmar-se, i l\'històric de reserves —amb noms i telèfons— creixeria sense fi perquè no es poden esborrar les ja processades. Copia les regles noves i enganxa-les a Firebase → Realtime Database → Regles → Publicar. No perds cap dada: les regles són només permisos. Després torna aquí i prem "Provar el meu núvol ara".',
@@ -16862,6 +16877,7 @@ const I18N = {
     'msg.renameGroupPrompt': 'New group name:',
     'msg.renameOptionPrompt': 'New option name:',
     'msg.nameCannotBeEmpty': 'The name cannot be left empty.',
+    'msg.needEditUnlockToRename': 'To rename you need to unlock editing (ask the owner for the PIN).',
     'gate.testCloudNow': 'Test my cloud now',
     'gate.copyRules': 'Copy the new rules',
     'gate.oldRulesBodyMenor': 'Your cloud works and your bookings arrive fine, but two recent changes are missing: card payments would be rejected on confirmation, and your booking history — with names and phone numbers — would grow without end because processed ones cannot be deleted. Copy the new rules and paste them into Firebase → Realtime Database → Rules → Publish. You lose no data: rules are only permissions. Then come back here and press "Test my cloud now".',
@@ -19633,7 +19649,32 @@ function scrollActiveTabIntoView(rowEl){
   if(!rowEl) return;
   const active = rowEl.querySelector('.ge-tab.active');
   if(active) active.scrollIntoView({block:'nearest', inline:'nearest', behavior:'smooth'});
+  updateTabRowFade(rowEl);
 }
+// Mismo problema, uno más sutil: hasta que no se toca sin querer, nada
+// avisa de que "CAPEX", "Punto de equilibrio" o cualquier chip de Mi
+// Negocio se han quedado fuera de la pantalla en móvil — la fila cabía
+// entera en escritorio y el corte solo se ve en un tamaño concreto, así que
+// no saltaba a la vista revisando en escritorio. Un desvanecido en el borde
+// (sin necesitar acertar el color de fondo exacto de cada pantalla, que
+// varía: blanco, #FAF8F4, #F1EFE9... por eso es una sombra hacia dentro, no
+// un degradado con un color de fondo que copiar) avisa de que hay más.
+function updateTabRowFade(el){
+  if(!el) return;
+  const scrollable = el.scrollWidth > el.clientWidth + 1;
+  el.classList.toggle('has-scroll-right', scrollable && el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  el.classList.toggle('has-scroll-left', el.scrollLeft > 1);
+}
+// Delegado en document (los `scroll` no burbujean) para no tener que
+// engancharse a cada fila una por una — y como se repintan por innerHTML en
+// cada cambio de pestaña, un listener puesto a mano se perdería cada vez.
+document.addEventListener('scroll', e => {
+  const el = e.target;
+  if(el && el.classList && (el.classList.contains('ge-tab-row') || el.classList.contains('mn-indice'))) updateTabRowFade(el);
+}, true);
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.ge-tab-row, .mn-indice').forEach(updateTabRowFade);
+});
 
 function navigate(view){
   if(view === 'home'){
@@ -24368,7 +24409,7 @@ function renderCartaSecciones(){
           <h4 style="margin:0">${escapeHtml(tItem(sec))}</h4>
         </div>
         <div class="actions-cell">
-          <button class="btn btn-sm btn-icon" title="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
+          <button class="owner-only btn btn-sm btn-icon" title="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
           <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
@@ -24646,7 +24687,7 @@ async function setMenuOpcionStock(grupoId, opcionId){
 }
 
 async function renameMenuGrupo(grupoId){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needEditUnlockToRename')); return; }
   const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
   if(!g) return;
   const nuevo = await promptText(t('msg.renameGroupPrompt'), g.nombre);
@@ -24657,7 +24698,7 @@ async function renameMenuGrupo(grupoId){
   renderMenuGrupos();
 }
 async function renameMenuOpcion(grupoId, opcionId){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needEditUnlockToRename')); return; }
   const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
   const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
   if(!o) return;
@@ -24670,7 +24711,7 @@ async function renameMenuOpcion(grupoId, opcionId){
 }
 
 async function renameCartaSeccion(secId){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needEditUnlockToRename')); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   if(!sec) return;
   const nuevo = await promptText(t('msg.renameSectionPrompt'), tItem(sec));
@@ -24681,7 +24722,7 @@ async function renameCartaSeccion(secId){
   renderCartaSecciones();
 }
 async function renameCartaPlato(secId, platoId){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needEditUnlockToRename')); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec && sec.platos.find(x=>x.id===platoId);
   if(!p) return;
@@ -25251,7 +25292,7 @@ function renderMenuGrupos(){
         </div>
         <div class="actions-cell">
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> ${t('label.bebidaGroup')}</label>
-          <button class="btn btn-sm btn-icon" title="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
+          <button class="owner-only btn btn-sm btn-icon" title="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> ${t('btn.newOption')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
         </div>
@@ -33288,14 +33329,21 @@ function validateOrderDate(input, silent){
   if(hint) hint.textContent = `${t('label.deliveryDaysOf')} ${orderModalSupplier}: ${diasEntrega.map(weekDayLabelFromStored).join(', ')}`;
 }
 
-function nextValidDeliveryDate(dateStr, diasEntrega){
-  const d = new Date(dateStr + 'T00:00:00');
+// El parámetro se llamaba `dateStr` y tapaba la función global dateStr()
+// (js/hr.js) — por eso se usaba toISOString() aquí, que en España (UTC
+// por delante) convierte la medianoche LOCAL a UTC y devuelve el día
+// ANTERIOR al que de verdad tocaba. validateOrderDate() reescribe el campo
+// de fecha del pedido con este resultado: para un proveedor que reparte los
+// martes, un pedido puesto en miércoles se "corregía" al lunes en vez de al
+// martes — un día en el que tampoco reparte, justo lo que se quería evitar.
+function nextValidDeliveryDate(fechaStr, diasEntrega){
+  const d = new Date(fechaStr + 'T00:00:00');
   for(let i=0;i<8;i++){
     const weekDayName = WEEK_DAYS[(d.getDay() + 6) % 7];
-    if(diasEntrega.includes(weekDayName)) return d.toISOString().slice(0,10);
+    if(diasEntrega.includes(weekDayName)) return dateStr(d);
     d.setDate(d.getDate()+1);
   }
-  return dateStr;
+  return fechaStr;
 }
 
 function selectOrderSupplier(supplier){
@@ -46527,6 +46575,7 @@ function renderMiNegocioIndice(){
   nav.innerHTML = `<span class="mn-indice-lbl">${escapeHtml(t('mn.indexLabel'))}</span>` +
     apartados.map(a => `<button type="button" class="mn-indice-chip" onclick="irAApartadoMiNegocio('${a.id}')">${escapeHtml(a.titulo)}</button>`).join('');
   cont.insertBefore(nav, cont.firstChild);
+  updateTabRowFade(nav);
 }
 function irAApartadoMiNegocio(id){
   const el = document.getElementById(id);
@@ -47073,7 +47122,10 @@ function renderDataMaintenanceCard(){
 function dataMaintenanceCutoff(){
   const d = new Date();
   d.setFullYear(d.getFullYear() - 1);
-  return d.toISOString().slice(0,10);
+  // Nunca con toISOString (desfase de un día en cualquier huso por delante
+  // de UTC, como España, sobre todo a primera hora de la mañana) — ver
+  // dateStr() en js/hr.js.
+  return dateStr(d);
 }
 
 /* ============================================================

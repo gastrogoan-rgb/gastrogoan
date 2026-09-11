@@ -698,7 +698,7 @@ td.wrap{white-space:normal}
    datos" obliga a recorrerla entera. */
 .mn-indice{
   display:flex;flex-wrap:wrap;gap:6px;align-items:center;
-  padding:10px 12px;margin-bottom:14px;
+  padding:10px 12px;margin-bottom:14px;position:relative;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
 }
 /* En móvil, envolver los 14 accesos ocupaba casi una pantalla entera: el
@@ -958,7 +958,20 @@ td.wrap{white-space:normal}
 
 /* ===== Gestión Económica ===== */
 .ge-auto{background:var(--teal-l);color:var(--teal-d);font-size:11px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
-.ge-tab-row{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;gap:0}
+.ge-tab-row{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;gap:0;position:relative}
+/* Aviso de que la fila de pestañas sigue hacia la derecha/izquierda (móvil,
+   cuando no caben todas): una sombra HACIA DENTRO, no un degradado con un
+   color de fondo que copiar — el fondo detrás de estas filas cambia según
+   la pantalla (blanco, #FAF8F4, #F1EFE9...) y una sombra no necesita
+   acertarlo. Ver updateTabRowFade (js/ui.js). */
+.ge-tab-row.has-scroll-right::after, .mn-indice.has-scroll-right::after{
+  content:'';position:absolute;top:0;right:0;bottom:0;width:22px;
+  box-shadow:inset -12px 0 8px -8px rgba(0,0,0,.28);pointer-events:none;
+}
+.ge-tab-row.has-scroll-left::before, .mn-indice.has-scroll-left::before{
+  content:'';position:absolute;top:0;left:0;bottom:0;width:22px;
+  box-shadow:inset 12px 0 8px -8px rgba(0,0,0,.28);pointer-events:none;
+}
 .ge-tab{padding:9px 18px;font-size:13px;font-weight:500;color:var(--muted);border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;background:none;white-space:nowrap;font-family:inherit;user-select:none;transition:color .12s ease,border-color .12s ease}
 .ge-tab.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:700}
 .ge-tab:hover:not(.active){color:var(--text)}

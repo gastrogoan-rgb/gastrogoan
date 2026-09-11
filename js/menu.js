@@ -486,7 +486,7 @@ function renderCartaSecciones(){
           <h4 style="margin:0">${escapeHtml(tItem(sec))}</h4>
         </div>
         <div class="actions-cell">
-          <button class="btn btn-sm btn-icon" title="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
+          <button class="owner-only btn btn-sm btn-icon" title="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
           <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
@@ -764,7 +764,7 @@ async function setMenuOpcionStock(grupoId, opcionId){
 }
 
 async function renameMenuGrupo(grupoId){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needEditUnlockToRename')); return; }
   const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
   if(!g) return;
   const nuevo = await promptText(t('msg.renameGroupPrompt'), g.nombre);
@@ -775,7 +775,7 @@ async function renameMenuGrupo(grupoId){
   renderMenuGrupos();
 }
 async function renameMenuOpcion(grupoId, opcionId){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needEditUnlockToRename')); return; }
   const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
   const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
   if(!o) return;
@@ -788,7 +788,7 @@ async function renameMenuOpcion(grupoId, opcionId){
 }
 
 async function renameCartaSeccion(secId){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needEditUnlockToRename')); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   if(!sec) return;
   const nuevo = await promptText(t('msg.renameSectionPrompt'), tItem(sec));
@@ -799,7 +799,7 @@ async function renameCartaSeccion(secId){
   renderCartaSecciones();
 }
 async function renameCartaPlato(secId, platoId){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needEditUnlockToRename')); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec && sec.platos.find(x=>x.id===platoId);
   if(!p) return;
@@ -1369,7 +1369,7 @@ function renderMenuGrupos(){
         </div>
         <div class="actions-cell">
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> ${t('label.bebidaGroup')}</label>
-          <button class="btn btn-sm btn-icon" title="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
+          <button class="owner-only btn btn-sm btn-icon" title="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> ${t('btn.newOption')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
         </div>

@@ -1850,7 +1850,32 @@ function scrollActiveTabIntoView(rowEl){
   if(!rowEl) return;
   const active = rowEl.querySelector('.ge-tab.active');
   if(active) active.scrollIntoView({block:'nearest', inline:'nearest', behavior:'smooth'});
+  updateTabRowFade(rowEl);
 }
+// Mismo problema, uno más sutil: hasta que no se toca sin querer, nada
+// avisa de que "CAPEX", "Punto de equilibrio" o cualquier chip de Mi
+// Negocio se han quedado fuera de la pantalla en móvil — la fila cabía
+// entera en escritorio y el corte solo se ve en un tamaño concreto, así que
+// no saltaba a la vista revisando en escritorio. Un desvanecido en el borde
+// (sin necesitar acertar el color de fondo exacto de cada pantalla, que
+// varía: blanco, #FAF8F4, #F1EFE9... por eso es una sombra hacia dentro, no
+// un degradado con un color de fondo que copiar) avisa de que hay más.
+function updateTabRowFade(el){
+  if(!el) return;
+  const scrollable = el.scrollWidth > el.clientWidth + 1;
+  el.classList.toggle('has-scroll-right', scrollable && el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  el.classList.toggle('has-scroll-left', el.scrollLeft > 1);
+}
+// Delegado en document (los `scroll` no burbujean) para no tener que
+// engancharse a cada fila una por una — y como se repintan por innerHTML en
+// cada cambio de pestaña, un listener puesto a mano se perdería cada vez.
+document.addEventListener('scroll', e => {
+  const el = e.target;
+  if(el && el.classList && (el.classList.contains('ge-tab-row') || el.classList.contains('mn-indice'))) updateTabRowFade(el);
+}, true);
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.ge-tab-row, .mn-indice').forEach(updateTabRowFade);
+});
 
 function navigate(view){
   if(view === 'home'){

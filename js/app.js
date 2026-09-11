@@ -5066,6 +5066,7 @@ function renderMiNegocioIndice(){
   nav.innerHTML = `<span class="mn-indice-lbl">${escapeHtml(t('mn.indexLabel'))}</span>` +
     apartados.map(a => `<button type="button" class="mn-indice-chip" onclick="irAApartadoMiNegocio('${a.id}')">${escapeHtml(a.titulo)}</button>`).join('');
   cont.insertBefore(nav, cont.firstChild);
+  updateTabRowFade(nav);
 }
 function irAApartadoMiNegocio(id){
   const el = document.getElementById(id);
@@ -5612,7 +5613,10 @@ function renderDataMaintenanceCard(){
 function dataMaintenanceCutoff(){
   const d = new Date();
   d.setFullYear(d.getFullYear() - 1);
-  return d.toISOString().slice(0,10);
+  // Nunca con toISOString (desfase de un día en cualquier huso por delante
+  // de UTC, como España, sobre todo a primera hora de la mañana) — ver
+  // dateStr() en js/hr.js.
+  return dateStr(d);
 }
 
 /* ============================================================
