@@ -2926,7 +2926,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '11/09/2026 10:36';
+const GG_BUILD = '11/09/2026 11:44';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11606,6 +11606,7 @@ const I18N = {
     'label.dishName': 'Nombre del plato', 'label.drinkName': 'Nombre de la bebida', 'label.elaborationName': 'Nombre de la elaboración',
     'label.priceBaseNoVat': 'Precio base (sin IVA)', 'label.ivaTypeRepercutido': 'Tipo de IVA (repercutido)',
     'label.finalPriceWithVat': 'Precio final (IVA incluido)', 'msg.chooseIvaForDish': 'Elige el tipo de IVA de este plato',
+    'label.priceDelivery': 'PVP Delivery (IVA incluido)', 'label.priceDeliveryHint': 'Precio a domicilio con vuestro propio reparto. Vacío = mismo precio que en sala. Sirve para compensar que no se cobra por el servicio de mesa.',
     'label.diners': 'Comensales', 'label.servings': 'Raciones/Dosis', 'label.consumables': 'Consumibles (%)',
     'label.purchasePrice': 'Precio de la compra (€)', 'label.stockQty': 'Nueva cantidad en stock',
     'label.yield': 'Rendimiento (cantidad que produce esta receta)',
@@ -13828,6 +13829,7 @@ const I18N = {
     'label.dishName': 'Nom del plat', 'label.drinkName': 'Nom de la beguda', 'label.elaborationName': 'Nom de l\'elaboració',
     'label.priceBaseNoVat': 'Preu base (sense IVA)', 'label.ivaTypeRepercutido': 'Tipus d\'IVA (repercutit)',
     'label.finalPriceWithVat': 'Preu final (IVA inclòs)', 'msg.chooseIvaForDish': 'Tria el tipus d\'IVA d\'aquest plat',
+    'label.priceDelivery': 'PVP Delivery (IVA inclòs)', 'label.priceDeliveryHint': 'Preu a domicili amb el vostre propi repartiment. Buit = mateix preu que a sala. Serveix per compensar que no es cobra pel servei de taula.',
     'label.diners': 'Comensals', 'label.servings': 'Racions/Dosis', 'label.consumables': 'Consumibles (%)',
     'label.purchasePrice': 'Preu de la compra (€)', 'label.stockQty': 'Nova quantitat en estoc',
     'label.yield': 'Rendiment (quantitat que produeix aquesta recepta)',
@@ -16050,6 +16052,7 @@ const I18N = {
     'label.dishName': 'Dish name', 'label.drinkName': 'Drink name', 'label.elaborationName': 'Elaboration name',
     'label.priceBaseNoVat': 'Base price (no VAT)', 'label.ivaTypeRepercutido': 'VAT type (output)',
     'label.finalPriceWithVat': 'Final price (VAT included)', 'msg.chooseIvaForDish': 'Choose the VAT type for this dish',
+    'label.priceDelivery': 'Delivery price (VAT included)', 'label.priceDeliveryHint': 'Price for your own delivery service. Empty = same price as in-house. Compensates for not charging for table service.',
     'label.diners': 'Diners', 'label.servings': 'Servings/Doses', 'label.consumables': 'Consumables (%)',
     'label.purchasePrice': 'Purchase price (€)', 'label.stockQty': 'New stock quantity',
     'label.yield': 'Yield (quantity this recipe produces)',
@@ -21801,25 +21804,6 @@ function updateElaboracionQty(id, value){
 /* ============================================================
    ESCANDALLO — Cálculo automático de costes de platos
    ============================================================ */
-// Cuánto se lleva de verdad una plataforma de delivery (Glovo, Uber Eats...)
-// de CADA venta: su comisión, más el IVA que ella misma factura sobre esa
-// comisión (ver applyDeliveryCommission, js/tpv.js — la comisión real
-// descontada es comisionPct% del precio × (1+ivaPct/100), no solo comisionPct%).
-function platformShrinkFactor(plat){
-  const comisionPct = parseFloat(plat && plat.comisionPct) || 0;
-  const ivaPct = parseFloat(plat && plat.ivaPct) || 0;
-  return Math.min(0.99, (comisionPct/100) * (1 + ivaPct/100));
-}
-// Precio (con IVA, el que ve el cliente) que hay que poner en esa plataforma
-// para que, después de su comisión, quede en el negocio lo mismo que con el
-// precio normal de sala/carta — sin esto, un plato vendido a través de
-// Glovo/Uber Eats se sirve con el mismo margen escandallado pero cobrando
-// bastante menos de lo que de verdad cuesta ese canal.
-function platformAdjustedPrice(price, plat){
-  const factor = platformShrinkFactor(plat);
-  if(factor <= 0) return price;
-  return roundMoney(price / (1 - factor));
-}
 function recipeFoodCostPct(r){
   if(!r.price) return Infinity;
   const cost = recipeCost(r);
@@ -22214,83 +22198,6 @@ function renderEscandalloLineLabel(line){
 }
 
 
-// r.deliveryPrices = {platformId: precio} — precio de ESTE plato en cada
-// plataforma de delivery configurada (js/app.js, Mi Negocio → Plataformas de
-// delivery). No lo usa el TPV para nada: las ventas que llegan por la propia
-// app de Glovo/Uber Eats no pasan por esta carta ni por este precio (se
-// registran agregadas al cerrar caja, ver registerPlatformSettlementSale en
-// js/operations.js) — el precio configurado en la plataforma lo teclea el
-// hostelero directamente en el panel de esa plataforma. Esto es la
-// referencia para saber qué precio teclear ahí sin perder margen; por eso
-// se guarda editable (puede que quieran redondear a 14,90 en vez de 14,87,
-// o cobrar menos en un plato-gancho a propósito) y no solo se calcula al vuelo.
-function renderDeliveryPricesBox(r){
-  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
-  if(!platforms.length || !r.price) return '';
-  const rows = platforms.map(p => {
-    const saved = r.deliveryPrices && r.deliveryPrices[p.id];
-    const suggested = platformAdjustedPrice(r.price, p);
-    const value = saved!=null ? saved : suggested;
-    const isSuggested = saved == null;
-    return `<tr>
-      <td>${escapeHtml(p.nombre)}</td>
-      <td style="color:var(--muted)">${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%</td>
-      <td><strong>${fmtMoney(value)}</strong>${isSuggested?` <span class="badge badge-gray" style="font-size:10px">${t('escandallo.suggestedPrice')}</span>`:''}</td>
-    </tr>`;
-  }).join('');
-  return `
-    <div class="card" style="background:var(--bg-2,#F7F6F2);margin-bottom:12px;padding:12px 14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
-        <strong style="font-size:13px"><i class="ti ti-moped"></i> ${t('escandallo.platformPricesTitle')}</strong>
-        <button class="owner-only btn btn-sm" onclick="openDeliveryPricesModal(${r.id})"><i class="ti ti-edit"></i> ${t('common.edit')}</button>
-      </div>
-      <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('escandallo.platformPricesHint')}</p>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>${t('mn.delivery.platform')}</th><th>${t('escandallo.platformCommissionCol')}</th><th>${t('escandallo.platformPriceCol')}</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-function openDeliveryPricesModal(id){
-  if(!isOwnerSession() && !editUnlocked) return;
-  const r = getRecipe(id);
-  if(!r) return;
-  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
-  openModal(`
-    <div class="modal-header"><h3><i class="ti ti-moped"></i> ${t('escandallo.platformPricesTitle')} — ${escapeHtml(r.name)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <p style="font-size:13px;color:var(--muted)">${t('escandallo.platformPricesModalHint')}</p>
-    ${platforms.map(p => {
-      const saved = r.deliveryPrices && r.deliveryPrices[p.id];
-      const suggested = platformAdjustedPrice(r.price, p);
-      return `<div class="field">
-        <label>${escapeHtml(p.nombre)} <span style="color:var(--muted);font-weight:400">(${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%)</span></label>
-        <input type="number" id="dp-price-${p.id}" min="0" step="0.01" value="${(saved!=null?saved:suggested).toFixed(2)}">
-        <small style="color:var(--muted)">${t('escandallo.suggestedPriceHint')}: ${fmtMoney(suggested)}</small>
-      </div>`;
-    }).join('')}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="saveDeliveryPrices(${r.id})"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
-    </div>
-  `);
-}
-function saveDeliveryPrices(id){
-  const r = getRecipe(id);
-  if(!r) return;
-  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
-  r.deliveryPrices = r.deliveryPrices || {};
-  platforms.forEach(p => {
-    const val = parseFloat(document.getElementById(`dp-price-${p.id}`).value);
-    if(isFinite(val) && val >= 0) r.deliveryPrices[p.id] = roundMoney(val);
-  });
-  saveDB();
-  closeModal();
-  showToast(t('msg.savedOk'));
-  renderEscandallo();
-}
 function renderEscandalloFull(r){
     const breakdown = recipeCostBreakdown(r);
     const cost = breakdown.total;
@@ -22333,7 +22240,15 @@ function renderEscandalloFull(r){
         </div>
         ${r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.consumablesInline')}: ${r.consumiblesPct}%</div>` : ''}
         ${!r.isBase ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t('msg.escandalloForOnePersonShort')}</div>` : ''}
-        ${!r.isBase ? renderDeliveryPricesBox(r) : ''}
+        ${!r.isBase && r.priceDelivery!=null ? (() => {
+          const deliveryBase = r.ivaPct!=null ? r.priceDelivery/(1+r.ivaPct/100) : r.priceDelivery;
+          const deliveryPct = deliveryBase>0 ? (cost/deliveryBase*100) : null;
+          return `<div class="card" style="background:var(--bg-2,#F7F6F2);margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <strong style="font-size:13px"><i class="ti ti-moped"></i> ${t('label.priceDelivery')}</strong>
+            <span>${fmtMoney(r.priceDelivery)}</span>
+            ${deliveryPct!=null ? `<span class="badge badge-${deliveryPct>35?'red':deliveryPct>28?'amber':'green'}">${deliveryPct.toFixed(1)}% FC</span>` : ''}
+          </div>`;
+        })() : ''}
         <div class="table-wrap">
           <table>
             <thead><tr><th>${t('label.ingredient')}</th><th>${t('common.qty')}</th><th>${t('th.merma')}</th><th>${t('common.cost')}</th><th>${t('hr.platos.pctOfTotal')}</th></tr></thead>
@@ -22410,6 +22325,13 @@ function renderRecipeModal(id, r){
     <div class="field" style="margin-top:-8px">
       <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="recipe-price-final-display">${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}</strong></span>
     </div>
+    ${(DB.business && DB.business.tiposServicio && DB.business.tiposServicio.delivery === false) ? '' : `
+    <div class="field">
+      <label>${t('label.priceDelivery')}</label>
+      <input type="number" id="recipe-price-delivery" value="${r.priceDelivery!=null?r.priceDelivery:''}" step="0.01" min="0" placeholder="${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}">
+      <small style="color:var(--muted)">${t('label.priceDeliveryHint')}</small>
+    </div>
+    `}
     `}
     <div class="field-row">
       ${r.isBase ? '' : `
@@ -22674,13 +22596,20 @@ async function saveRecipe(id){
   // Una elaboración base no se vende directamente (no tiene precio de venta
   // ni IVA repercutido propios) — lo que interesa de ella es su coste total
   // y el coste por unidad de rendimiento, no un precio de venta.
-  let priceBase = 0, ivaPct = null, price = 0;
+  let priceBase = 0, ivaPct = null, price = 0, priceDelivery = null;
   if(!isBase){
     priceBase = Math.max(0, parseFloat(document.getElementById('recipe-price-base').value) || 0);
     const ivaRaw = document.getElementById('recipe-iva').value;
     if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
     ivaPct = parseFloat(ivaRaw);
     price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
+    // null = usa el mismo precio que en sala (comportamiento por defecto,
+    // el campo puede dejarse en blanco a propósito).
+    const priceDeliveryEl = document.getElementById('recipe-price-delivery');
+    if(priceDeliveryEl){
+      const raw = parseFloat(priceDeliveryEl.value);
+      priceDelivery = (isFinite(raw) && raw > 0) ? Math.round(raw*100)/100 : null;
+    }
   }
   const consumiblesPct = Math.min(99, Math.max(0, parseFloat(document.getElementById('recipe-consumibles').value) || 0));
   const categoryEl = document.getElementById('recipe-category');
@@ -22718,10 +22647,10 @@ async function saveRecipe(id){
     // checkbox está deshabilitado al editar uno existente) — así una
     // elaboración nunca puede acabar puesta a la venta como plato, ni
     // viceversa.
-    Object.assign(r, {name, price, priceBase, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
+    Object.assign(r, {name, price, priceBase, priceDelivery, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
   }else{
     recipeId = genId();
-    DB.recipes.push({id: recipeId, name, price, priceBase, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
+    DB.recipes.push({id: recipeId, name, price, priceBase, priceDelivery, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
   }
   syncElaboracionForRecipe(recipeId, isBase, name, baseUnit);
   ensureFichaForRecipe(recipeId);
@@ -24438,6 +24367,12 @@ function renderCartaSecciones(){
           p.precioBase = linkedRecipe.priceBase;
           p.ivaPct = linkedRecipe.ivaPct;
         }
+        // Mismo mecanismo que el precio de sala, para el PVP Delivery: si el
+        // Escandallo lo cambia (o lo borra, volviendo a "igual que sala"),
+        // la Carta lo refleja aquí sin que haga falta re-importar el plato.
+        if(linkedRecipe && (linkedRecipe.priceDelivery||null) !== (p.precioDelivery||null)){
+          p.precioDelivery = linkedRecipe.priceDelivery||null;
+        }
         // Semáforo de rentabilidad: mismos umbrales que en Escandallo (food
         // cost sobre el precio de venta), para ver de un vistazo, sin salir
         // de la Carta, qué platos tienen buen margen y cuáles lo están
@@ -25042,7 +24977,7 @@ function confirmImportEsc(secId){
   checked.forEach(rid => {
     const r = getRecipe(rid);
     if(!r) return;
-    sec.platos.push({id: genId(), recipeId: r.id, nombre: r.name, precio: r.price||0, precioBase: r.priceBase, ivaPct: r.ivaPct, disponible:true});
+    sec.platos.push({id: genId(), recipeId: r.id, nombre: r.name, precio: r.price||0, precioBase: r.priceBase, precioDelivery: r.priceDelivery||null, ivaPct: r.ivaPct, disponible:true});
   });
   importEscChecked = new Set();
   closeModal();
@@ -27884,7 +27819,7 @@ function renderCartaSelectorInline(order, carta){
       <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(seccionAbierta))}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${platos.map(p => `<span style="display:inline-flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-          <button class="btn btn-sm" style="font-size:12px;border:none;border-radius:0" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>
+          <button class="btn btn-sm" style="font-size:12px;border:none;border-radius:0" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(platoPriceForOrder(p, order))}</strong></button>
           <button class="btn btn-sm btn-icon" style="border:none;border-left:1px solid var(--border);border-radius:0;color:var(--muted)" title="${t('label.dishInfo')}" onclick="event.stopPropagation();openDishInfoModal(${p.recipeId||'null'}, '${escapeJsAttr(tItem(p))}', '${escapeJsAttr((p.allergensManual||[]).join('|'))}', 'renderTableOrderModal(${order.id})')"><i class="ti ti-info-circle"></i></button>
         </span>`).join('')}
       </div>
@@ -29101,6 +29036,16 @@ function autoSendFirstCourse(order, line, tanda){
   order.cerrada = false;
 }
 
+// PVP Delivery (js/recipes.js, ficha del plato): precio propio para pedidos
+// a domicilio hechos con el reparto del propio negocio (order.tipo==='delivery'),
+// para compensar que no se cobra el servicio de mesa — decisión del negocio,
+// no automática. Si no se ha configurado (precioDelivery vacío = "igual que
+// sala") se usa el precio normal, igual que siempre. No aplica a "para
+// llevar" (recoger en el local): ese sigue siendo el precio de sala.
+function platoPriceForOrder(p, order){
+  if(order && order.tipo === 'delivery' && p.precioDelivery != null) return p.precioDelivery;
+  return p.precio;
+}
 function addOrderItem(orderId, secId, platoId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const p = findCartaPlato(secId, platoId);
@@ -29128,7 +29073,7 @@ function addOrderItem(orderId, secId, platoId){
        un solo undefined, así que una comanda así dejaba al negocio sin
        sincronizar. El saneado de core.js ya lo cubre; esto lo arregla también
        en el origen, para que el dato local sea correcto. */
-    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId ?? null, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
+    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId ?? null, name: tItem(p), price: platoPriceForOrder(p, order), qty:1, tanda, notas:''};
     if(isSeccionBebida(secId)) line.bebida = true;
     applyActivePromoToLine(line);
     order.items.push(line);
@@ -29144,12 +29089,13 @@ function addOrderItem(orderId, secId, platoId){
 
 /* ============== Extras y notas al añadir un plato a la comanda ============== */
 function openAddItemModal(orderId, secId, platoId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
   const p = findCartaPlato(secId, platoId);
   if(!p) return;
   const mods = p.modificadores || [];
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(tItem(p))} · ${fmtMoney(p.precio)}</h3>
+      <h3><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(tItem(p))} · ${fmtMoney(platoPriceForOrder(p, order))}</h3>
       <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
     </div>
     ${mods.length ? `
@@ -29206,7 +29152,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   } else {
     line = {
       lineId: genId(),
-      platoId: p.id, recipeId: p.recipeId ?? null, name, price: p.precio + extra, qty:1, tanda,
+      platoId: p.id, recipeId: p.recipeId ?? null, name, price: platoPriceForOrder(p, order) + extra, qty:1, tanda,
       notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
     };
     if(isSeccionBebida(secId)) line.bebida = true;

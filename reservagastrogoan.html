@@ -2412,10 +2412,20 @@ function buildMenuHtml(cartas){
   lastMenuCartas = cartas;
   return `<div id="menu-folders">${menuOpenSection ? '' : buildMenusHtml()}${buildMenuHtmlInner(cartas)}</div>`;
 }
+// PVP Delivery (Escandallo): precio propio para pedidos a domicilio con el
+// reparto del propio negocio, para compensar no cobrar el servicio de mesa.
+// Solo aplica a la pestaña "Delivery" — "Para llevar" sigue con el precio de
+// sala, y si no se configuró (precioDelivery vacío) también se usa el de
+// sala, igual que siempre.
+function publicPlatoPrice(p){
+  if(currentTab === 'delivery' && p.precioDelivery != null) return p.precioDelivery;
+  return p.precio;
+}
 function renderMenuDishesHtml(sec){
   return sec.platos.filter(p=>p.disponible!==false).map(p => {
     const promo = getActivePromoForPlatoPublic(p.id);
-    const finalPrice = promo ? promoDiscountedPrice(p.precio, promo) : p.precio;
+    const basePrice = publicPlatoPrice(p);
+    const finalPrice = promo ? promoDiscountedPrice(basePrice, promo) : basePrice;
     const hasMods = (p.modificadores||[]).length > 0;
     // Cuántas unidades de este plato hay YA en el carrito, sumando TODAS
     // sus variantes de extras (la línea sin extras + cada combinación
@@ -2426,7 +2436,7 @@ function renderMenuDishesHtml(sec){
     <div class="menu-item">
       <div>
         <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);border-radius:0;padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
-        <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}${hasMods ? ` <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
+        <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(basePrice)}</span>${fmtMoney(finalPrice)}` : fmtMoney(basePrice)}${hasMods ? ` <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
         ${dishAllergensHtml(p.id)}
       </div>
       ${hasMods ? `
@@ -2725,7 +2735,7 @@ function openModifierModal(platoId){
   if(!found) return;
   const { plato } = found;
   const promo = getActivePromoForPlatoPublic(platoId);
-  const basePrice = promo ? promoDiscountedPrice(plato.precio, promo) : plato.precio;
+  const basePrice = promo ? promoDiscountedPrice(publicPlatoPrice(plato), promo) : publicPlatoPrice(plato);
   modModalContext = { platoId, basePrice };
   ensureModalChrome();
   document.getElementById('modal-box').innerHTML = `

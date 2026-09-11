@@ -2,25 +2,6 @@
 /* ============================================================
    ESCANDALLO — Cálculo automático de costes de platos
    ============================================================ */
-// Cuánto se lleva de verdad una plataforma de delivery (Glovo, Uber Eats...)
-// de CADA venta: su comisión, más el IVA que ella misma factura sobre esa
-// comisión (ver applyDeliveryCommission, js/tpv.js — la comisión real
-// descontada es comisionPct% del precio × (1+ivaPct/100), no solo comisionPct%).
-function platformShrinkFactor(plat){
-  const comisionPct = parseFloat(plat && plat.comisionPct) || 0;
-  const ivaPct = parseFloat(plat && plat.ivaPct) || 0;
-  return Math.min(0.99, (comisionPct/100) * (1 + ivaPct/100));
-}
-// Precio (con IVA, el que ve el cliente) que hay que poner en esa plataforma
-// para que, después de su comisión, quede en el negocio lo mismo que con el
-// precio normal de sala/carta — sin esto, un plato vendido a través de
-// Glovo/Uber Eats se sirve con el mismo margen escandallado pero cobrando
-// bastante menos de lo que de verdad cuesta ese canal.
-function platformAdjustedPrice(price, plat){
-  const factor = platformShrinkFactor(plat);
-  if(factor <= 0) return price;
-  return roundMoney(price / (1 - factor));
-}
 function recipeFoodCostPct(r){
   if(!r.price) return Infinity;
   const cost = recipeCost(r);
@@ -415,83 +396,6 @@ function renderEscandalloLineLabel(line){
 }
 
 
-// r.deliveryPrices = {platformId: precio} — precio de ESTE plato en cada
-// plataforma de delivery configurada (js/app.js, Mi Negocio → Plataformas de
-// delivery). No lo usa el TPV para nada: las ventas que llegan por la propia
-// app de Glovo/Uber Eats no pasan por esta carta ni por este precio (se
-// registran agregadas al cerrar caja, ver registerPlatformSettlementSale en
-// js/operations.js) — el precio configurado en la plataforma lo teclea el
-// hostelero directamente en el panel de esa plataforma. Esto es la
-// referencia para saber qué precio teclear ahí sin perder margen; por eso
-// se guarda editable (puede que quieran redondear a 14,90 en vez de 14,87,
-// o cobrar menos en un plato-gancho a propósito) y no solo se calcula al vuelo.
-function renderDeliveryPricesBox(r){
-  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
-  if(!platforms.length || !r.price) return '';
-  const rows = platforms.map(p => {
-    const saved = r.deliveryPrices && r.deliveryPrices[p.id];
-    const suggested = platformAdjustedPrice(r.price, p);
-    const value = saved!=null ? saved : suggested;
-    const isSuggested = saved == null;
-    return `<tr>
-      <td>${escapeHtml(p.nombre)}</td>
-      <td style="color:var(--muted)">${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%</td>
-      <td><strong>${fmtMoney(value)}</strong>${isSuggested?` <span class="badge badge-gray" style="font-size:10px">${t('escandallo.suggestedPrice')}</span>`:''}</td>
-    </tr>`;
-  }).join('');
-  return `
-    <div class="card" style="background:var(--bg-2,#F7F6F2);margin-bottom:12px;padding:12px 14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
-        <strong style="font-size:13px"><i class="ti ti-moped"></i> ${t('escandallo.platformPricesTitle')}</strong>
-        <button class="owner-only btn btn-sm" onclick="openDeliveryPricesModal(${r.id})"><i class="ti ti-edit"></i> ${t('common.edit')}</button>
-      </div>
-      <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('escandallo.platformPricesHint')}</p>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>${t('mn.delivery.platform')}</th><th>${t('escandallo.platformCommissionCol')}</th><th>${t('escandallo.platformPriceCol')}</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-function openDeliveryPricesModal(id){
-  if(!isOwnerSession() && !editUnlocked) return;
-  const r = getRecipe(id);
-  if(!r) return;
-  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
-  openModal(`
-    <div class="modal-header"><h3><i class="ti ti-moped"></i> ${t('escandallo.platformPricesTitle')} — ${escapeHtml(r.name)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <p style="font-size:13px;color:var(--muted)">${t('escandallo.platformPricesModalHint')}</p>
-    ${platforms.map(p => {
-      const saved = r.deliveryPrices && r.deliveryPrices[p.id];
-      const suggested = platformAdjustedPrice(r.price, p);
-      return `<div class="field">
-        <label>${escapeHtml(p.nombre)} <span style="color:var(--muted);font-weight:400">(${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%)</span></label>
-        <input type="number" id="dp-price-${p.id}" min="0" step="0.01" value="${(saved!=null?saved:suggested).toFixed(2)}">
-        <small style="color:var(--muted)">${t('escandallo.suggestedPriceHint')}: ${fmtMoney(suggested)}</small>
-      </div>`;
-    }).join('')}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="saveDeliveryPrices(${r.id})"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
-    </div>
-  `);
-}
-function saveDeliveryPrices(id){
-  const r = getRecipe(id);
-  if(!r) return;
-  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
-  r.deliveryPrices = r.deliveryPrices || {};
-  platforms.forEach(p => {
-    const val = parseFloat(document.getElementById(`dp-price-${p.id}`).value);
-    if(isFinite(val) && val >= 0) r.deliveryPrices[p.id] = roundMoney(val);
-  });
-  saveDB();
-  closeModal();
-  showToast(t('msg.savedOk'));
-  renderEscandallo();
-}
 function renderEscandalloFull(r){
     const breakdown = recipeCostBreakdown(r);
     const cost = breakdown.total;
@@ -534,7 +438,15 @@ function renderEscandalloFull(r){
         </div>
         ${r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.consumablesInline')}: ${r.consumiblesPct}%</div>` : ''}
         ${!r.isBase ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t('msg.escandalloForOnePersonShort')}</div>` : ''}
-        ${!r.isBase ? renderDeliveryPricesBox(r) : ''}
+        ${!r.isBase && r.priceDelivery!=null ? (() => {
+          const deliveryBase = r.ivaPct!=null ? r.priceDelivery/(1+r.ivaPct/100) : r.priceDelivery;
+          const deliveryPct = deliveryBase>0 ? (cost/deliveryBase*100) : null;
+          return `<div class="card" style="background:var(--bg-2,#F7F6F2);margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <strong style="font-size:13px"><i class="ti ti-moped"></i> ${t('label.priceDelivery')}</strong>
+            <span>${fmtMoney(r.priceDelivery)}</span>
+            ${deliveryPct!=null ? `<span class="badge badge-${deliveryPct>35?'red':deliveryPct>28?'amber':'green'}">${deliveryPct.toFixed(1)}% FC</span>` : ''}
+          </div>`;
+        })() : ''}
         <div class="table-wrap">
           <table>
             <thead><tr><th>${t('label.ingredient')}</th><th>${t('common.qty')}</th><th>${t('th.merma')}</th><th>${t('common.cost')}</th><th>${t('hr.platos.pctOfTotal')}</th></tr></thead>
@@ -611,6 +523,13 @@ function renderRecipeModal(id, r){
     <div class="field" style="margin-top:-8px">
       <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="recipe-price-final-display">${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}</strong></span>
     </div>
+    ${(DB.business && DB.business.tiposServicio && DB.business.tiposServicio.delivery === false) ? '' : `
+    <div class="field">
+      <label>${t('label.priceDelivery')}</label>
+      <input type="number" id="recipe-price-delivery" value="${r.priceDelivery!=null?r.priceDelivery:''}" step="0.01" min="0" placeholder="${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}">
+      <small style="color:var(--muted)">${t('label.priceDeliveryHint')}</small>
+    </div>
+    `}
     `}
     <div class="field-row">
       ${r.isBase ? '' : `
@@ -875,13 +794,20 @@ async function saveRecipe(id){
   // Una elaboración base no se vende directamente (no tiene precio de venta
   // ni IVA repercutido propios) — lo que interesa de ella es su coste total
   // y el coste por unidad de rendimiento, no un precio de venta.
-  let priceBase = 0, ivaPct = null, price = 0;
+  let priceBase = 0, ivaPct = null, price = 0, priceDelivery = null;
   if(!isBase){
     priceBase = Math.max(0, parseFloat(document.getElementById('recipe-price-base').value) || 0);
     const ivaRaw = document.getElementById('recipe-iva').value;
     if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
     ivaPct = parseFloat(ivaRaw);
     price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
+    // null = usa el mismo precio que en sala (comportamiento por defecto,
+    // el campo puede dejarse en blanco a propósito).
+    const priceDeliveryEl = document.getElementById('recipe-price-delivery');
+    if(priceDeliveryEl){
+      const raw = parseFloat(priceDeliveryEl.value);
+      priceDelivery = (isFinite(raw) && raw > 0) ? Math.round(raw*100)/100 : null;
+    }
   }
   const consumiblesPct = Math.min(99, Math.max(0, parseFloat(document.getElementById('recipe-consumibles').value) || 0));
   const categoryEl = document.getElementById('recipe-category');
@@ -919,10 +845,10 @@ async function saveRecipe(id){
     // checkbox está deshabilitado al editar uno existente) — así una
     // elaboración nunca puede acabar puesta a la venta como plato, ni
     // viceversa.
-    Object.assign(r, {name, price, priceBase, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
+    Object.assign(r, {name, price, priceBase, priceDelivery, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
   }else{
     recipeId = genId();
-    DB.recipes.push({id: recipeId, name, price, priceBase, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
+    DB.recipes.push({id: recipeId, name, price, priceBase, priceDelivery, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
   }
   syncElaboracionForRecipe(recipeId, isBase, name, baseUnit);
   ensureFichaForRecipe(recipeId);
