@@ -2063,14 +2063,21 @@ function validateOrderDate(input, silent){
   if(hint) hint.textContent = `${t('label.deliveryDaysOf')} ${orderModalSupplier}: ${diasEntrega.map(weekDayLabelFromStored).join(', ')}`;
 }
 
-function nextValidDeliveryDate(dateStr, diasEntrega){
-  const d = new Date(dateStr + 'T00:00:00');
+// El parámetro se llamaba `dateStr` y tapaba la función global dateStr()
+// (js/hr.js) — por eso se usaba toISOString() aquí, que en España (UTC
+// por delante) convierte la medianoche LOCAL a UTC y devuelve el día
+// ANTERIOR al que de verdad tocaba. validateOrderDate() reescribe el campo
+// de fecha del pedido con este resultado: para un proveedor que reparte los
+// martes, un pedido puesto en miércoles se "corregía" al lunes en vez de al
+// martes — un día en el que tampoco reparte, justo lo que se quería evitar.
+function nextValidDeliveryDate(fechaStr, diasEntrega){
+  const d = new Date(fechaStr + 'T00:00:00');
   for(let i=0;i<8;i++){
     const weekDayName = WEEK_DAYS[(d.getDay() + 6) % 7];
-    if(diasEntrega.includes(weekDayName)) return d.toISOString().slice(0,10);
+    if(diasEntrega.includes(weekDayName)) return dateStr(d);
     d.setDate(d.getDate()+1);
   }
-  return dateStr;
+  return fechaStr;
 }
 
 function selectOrderSupplier(supplier){
