@@ -116,13 +116,16 @@ await caso('Panel: los picos de venta se ven hora a hora, no en franjas de cuatr
     const ths = [...document.querySelectorAll('#dashboard-sales-heatmap th')].map(x=>x.innerText.trim()).filter(Boolean);
     return {cabeceras: ths};
   });
+  // La etiqueta va en el formato del idioma activo ("21" en español, "9 PM"
+  // en inglés), así que se comprueba que las dos horas están por separado,
+  // no el texto exacto.
   const cab = r.cabeceras.map(h => h.toLowerCase());
-  assert.ok(cab.some(h => /^21h$/.test(h)) && cab.some(h => /^22h$/.test(h)),
-    'deben verse las horas sueltas (21h y 22h por separado), no un "20-24h": ' + JSON.stringify(r.cabeceras));
-  assert.ok(!cab.some(h => /\d+-\d+h/.test(h)), 'ya no debe haber franjas de varias horas: ' + JSON.stringify(r.cabeceras));
+  assert.ok(cab.some(h => /\b21\b/.test(h)) && cab.some(h => /\b22\b/.test(h)),
+    'deben verse las 21 y las 22 por separado, no un "20-24h": ' + JSON.stringify(r.cabeceras));
+  assert.ok(!cab.some(h => /\d+\s*-\s*\d+/.test(h)), 'ya no debe haber franjas de varias horas: ' + JSON.stringify(r.cabeceras));
 });
 
-await caso('Compras: una compra que viene de un pedido recibido no se puede editar ni borrar', async () => {
+await caso('Compras: ningún gasto se edita ni se borra — la salida es anularlo', async () => {
   const r = await page.evaluate(async ()=>{
     const hoy = new Date(), y = hoy.getFullYear(), m = hoy.getMonth();
     DB.ge = DB.ge || {};
@@ -138,24 +141,23 @@ await caso('Compras: una compra que viene de un pedido recibido no se puede edit
     const lista = document.getElementById('gv-list').innerHTML;
     let aviso = null;
     const origToast = window.showToast; window.showToast = msg => { aviso = msg; };
-    GE.deleteGV(7001);        // borrar la de pedido recibido
-    const trasBorrar = DB.ge.variables.some(v => v.id === 7001);
-    GE.editGV(7001);          // editarla
+    GE.editGV(7001);          // intentar editarla
     const modalAbierto = !!document.getElementById('gv-importe');
     window.showToast = origToast;
     return {
       hayCandado: lista.includes('ti-lock'),
-      botonBorrarEnRecibida: /deleteGVGroup/.test(lista),
-      sigueExistiendo: trasBorrar, avisó: !!aviso, modalAbierto,
-      manualSeEditaYBorra: /editGV\(7002\)/.test(lista) && /deleteGV\(7002\)/.test(lista),
+      hayBorrado: typeof GE.deleteGV !== 'undefined' || typeof GE.deleteGVGroup !== 'undefined',
+      sigueExistiendo: DB.ge.variables.some(v => v.id === 7001),
+      avisó: !!aviso, modalAbierto,
+      seAnula: /anularGVGroup/.test(lista) && /anularGV\(7002\)/.test(lista),
     };
   });
-  assert.equal(r.botonBorrarEnRecibida, false, 'la compra recibida ya no debe tener botón de borrar: ' + JSON.stringify(r));
-  assert.ok(r.hayCandado, 'debe verse el candado que explica por qué no se toca: ' + JSON.stringify(r));
-  assert.ok(r.sigueExistiendo, 'ni llamando a la función desde fuera debe borrarse: ' + JSON.stringify(r));
+  assert.equal(r.hayBorrado, false, 'ya no debe existir ninguna función de borrado de gastos: ' + JSON.stringify(r));
+  assert.ok(r.hayCandado, 'debe verse el candado que explica por qué no se edita: ' + JSON.stringify(r));
+  assert.ok(r.sigueExistiendo, 'el gasto sigue en los libros: ' + JSON.stringify(r));
   assert.ok(r.avisó, 'y debe avisar del motivo, no fallar en silencio: ' + JSON.stringify(r));
-  assert.equal(r.modalAbierto, false, 'tampoco debe abrirse el modal de edición: ' + JSON.stringify(r));
-  assert.ok(r.manualSeEditaYBorra, 'una compra metida a mano SÍ se sigue pudiendo editar y borrar: ' + JSON.stringify(r));
+  assert.equal(r.modalAbierto, false, 'no debe abrirse el modal de edición: ' + JSON.stringify(r));
+  assert.ok(r.seAnula, 'la salida es anular, tanto el pedido entero como el gasto suelto: ' + JSON.stringify(r));
 });
 
 await caso('Ventas: el desglose por tipo de servicio termina con el total', async () => {
