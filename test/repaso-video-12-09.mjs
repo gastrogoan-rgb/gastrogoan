@@ -120,6 +120,71 @@ await caso('Comandas Cocina: cada ticket se distingue del de al lado', async () 
   assert.equal(r.cabeceras, 3, 'cada ticket lleva su cabecera con fondo: ' + JSON.stringify(r));
 });
 
+await caso('Historial de Pedidos: entra por el mes en curso, con selector de año y mes', async () => {
+  const r = await page.evaluate(async ()=>{
+    const hoy = todayStr();
+    const otroMes = (Number(hoy.slice(0,4))-1) + hoy.slice(4,7) + '-05';
+    DB.suppliers = [{id: 1, name:'Prov A', area:'cocina'}];
+    DB.ingredients = [{id: 1, name:'Panko', unit:'kg', price: 3, supplier:'Prov A', supplierId: 1, area:'cocina'}];
+    DB.purchaseOrders = [
+      {id: 11, supplier:'Prov A', date: hoy, estado:'RECIBIDO', items:[{ingredientId:1, cantidad:2, cantidadRecibida:2}], area:'cocina'},
+      {id: 12, supplier:'Prov A', date: otroMes, estado:'RECIBIDO', items:[{ingredientId:1, cantidad:5, cantidadRecibida:5}], area:'cocina'},
+      {id: 13, supplier:'Prov A', date: otroMes, estado:'ENVIADO', items:[{ingredientId:1, cantidad:1, cantidadRecibida:null}], area:'cocina'},
+    ];
+    saveDB();
+    navigate('pedidos'); pedidosTab = 'historial'; renderPedidos();
+    await new Promise(r=>setTimeout(r,500));
+    const fechas = () => [...document.querySelectorAll('#pedido-results .card h3')].map(h=>h.innerText.replace(/\s+/g,' '));
+    const inicial = fechas();
+    const pills = document.querySelectorAll('#pedidos-list .month-pill').length;
+    // Y se puede viajar al año anterior con la flecha del selector.
+    setPedidoHistorialYear(-1);
+    await new Promise(r=>setTimeout(r,400));
+    const anioAnterior = fechas();
+    setPedidoHistorialYear(1);
+    return {inicial, pills, anioAnterior, guardados: DB.purchaseOrders.length};
+  });
+  assert.equal(r.pills, 12, 'los doce meses, como en Gestión Económica: ' + JSON.stringify(r));
+  // Del mes en curso solo el recibido de hoy; el recibido del año pasado, fuera.
+  assert.ok(r.inicial.some(x=>/RECIBIDO/.test(x)), 'el recibido de este mes se ve: ' + JSON.stringify(r.inicial));
+  assert.ok(!r.inicial.some(x=>/-05 /.test(x) && /RECIBIDO/.test(x)), 'un recibido de otro mes no: ' + JSON.stringify(r.inicial));
+  // Pero un pedido ENVIADO sin recibir es trabajo pendiente: se ve siempre.
+  assert.ok(r.inicial.some(x=>/ENVIADO/.test(x)), 'lo pendiente no desaparece al cambiar de mes: ' + JSON.stringify(r.inicial));
+  assert.ok(r.anioAnterior.some(x=>/RECIBIDO/.test(x)), 'el año anterior sigue accesible: ' + JSON.stringify(r.anioAnterior));
+  assert.equal(r.guardados, 3, 'no se ha borrado nada, solo se enseña un mes cada vez');
+});
+
+await caso('Un pedido recibido no se puede borrar, ni desde la consola', async () => {
+  const r = await page.evaluate(async ()=>{
+    navigate('pedidos'); pedidosTab = 'historial'; renderPedidos();
+    await new Promise(r=>setTimeout(r,400));
+    const papelerasLista = document.querySelectorAll('#pedido-results .btn-danger').length;
+    openPedido(11);
+    await new Promise(r=>setTimeout(r,400));
+    const botones = [...document.querySelectorAll('.actions-cell button')].map(b=>b.innerText.trim());
+    // La segunda barrera: llamarla a mano no puede borrarlo tampoco.
+    reallyDeleteOrder(11);
+    await new Promise(r=>setTimeout(r,200));
+    backToPedidoList();
+    return {papelerasLista, botones, sigue: DB.purchaseOrders.some(o=>o.id===11)};
+  });
+  assert.equal(r.papelerasLista, 0, 'ninguna papelera en el historial: ' + JSON.stringify(r));
+  assert.ok(!r.botones.some(b=>/Eliminar|Borrar|Delete/i.test(b)), 'el detalle de un recibido no ofrece borrar: ' + JSON.stringify(r.botones));
+  // La salida buena sí tiene que estar.
+  assert.ok(r.botones.some(b=>/Deshacer recepci/i.test(b)), 'pero sí "Deshacer recepción": ' + JSON.stringify(r.botones));
+  assert.ok(r.sigue, 'reallyDeleteOrder no puede borrar una compra recibida');
+});
+
+await caso('Archivar datos antiguos se lleva también los pedidos recibidos', async () => {
+  const r = await page.evaluate(async ()=>{
+    navigate('minegocio');
+    await new Promise(r=>setTimeout(r,800));
+    const el = document.getElementById('mn-archive-before');
+    return {previo: el ? el.parentElement.parentElement.innerText : '(sin tarjeta)'};
+  });
+  assert.ok(/pedido/i.test(r.previo), 'la vista previa debe contar los pedidos: ' + r.previo.slice(0,240));
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {
   assert.deepEqual(erroresJs, [], 'errores: ' + erroresJs.join(' | '));
 });

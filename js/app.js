@@ -5608,6 +5608,7 @@ function renderDataMaintenanceCard(){
   const ventasAntiguas = DB.sales.filter(s => s.date && s.date < dataMaintenanceCutoff()).length;
   const reservasAntiguas = DB.reservations.filter(r => r.date && r.date < dataMaintenanceCutoff() && (r.status==='completada'||r.status==='cancelada')).length;
   const cierresAntiguos = DB.cashClosures.filter(c => c.fecha && c.fecha < dataMaintenanceCutoff()).length;
+  const pedidosAntiguos = DB.purchaseOrders.filter(o => o.date && o.date < dataMaintenanceCutoff() && o.estado === 'RECIBIDO').length;
   return `
     <div class="card">
       <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
@@ -5633,7 +5634,7 @@ function renderDataMaintenanceCard(){
         <label>${t('mn.data.archiveBefore')}</label>
         <input type="date" id="mn-archive-before" value="${dataMaintenanceCutoff()}">
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.data.archivePreview').replace('${sales}', ventasAntiguas).replace('${reservations}', reservasAntiguas).replace('${closures}', cierresAntiguos)}</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.data.archivePreview').replace('${sales}', ventasAntiguas).replace('${reservations}', reservasAntiguas).replace('${closures}', cierresAntiguos).replace('${orders}', pedidosAntiguos)}</p>
       <button class="btn btn-sm btn-danger" onclick="archiveOldData()"><i class="ti ti-archive"></i> ${t('mn.data.archiveAndDownload')}</button>
     </div>
   `;
@@ -5905,9 +5906,15 @@ async function archiveOldData(){
   const sales = DB.sales.filter(s => s.date && s.date < before);
   const reservations = DB.reservations.filter(r => r.date && r.date < before && (r.status==='completada'||r.status==='cancelada'));
   const cashClosures = DB.cashClosures.filter(c => c.fecha && c.fecha < before);
-  const total = sales.length + reservations.length + cashClosures.length;
+  /* Los pedidos a proveedor se quedaron fuera de esta herramienta desde
+     siempre, y son justo lo que más se acumula: tres pedidos al día son mil
+     al año, y el bloque entero viaja en cada subida a la nube. Solo los
+     RECIBIDOS: un borrador o un pedido enviado y no recibido sigue siendo
+     trabajo pendiente, por viejo que sea. */
+  const purchaseOrders = DB.purchaseOrders.filter(o => o.date && o.date < before && o.estado === 'RECIBIDO');
+  const total = sales.length + reservations.length + cashClosures.length + purchaseOrders.length;
   if(total === 0){ showToast(t('msg.noDataToArchive')); return; }
-  if(!(await confirmModal(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before)))) return;
+  if(!(await confirmModal(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${orders}', purchaseOrders.length).replace('${date}', before)))) return;
   /* ⚠️ Aquí se BORRA el histórico, así que la copia tiene que estar guardada
      de verdad. Dos redes: se espera a que el guardado resuelva (en Apple,
      cancelar la hoja de compartir ahora sí se nota), y además se PREGUNTA,
@@ -5925,8 +5932,9 @@ async function archiveOldData(){
   const salesIds = new Set(sales.map(s => s.id));
   const reservationIds = new Set(reservations.map(r => r.id));
   const cashClosureIds = new Set(cashClosures.map(c => c.id));
+  const purchaseOrderIds = new Set(purchaseOrders.map(o => o.id));
   try{
-    await downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
+    await downloadJSON({ before, sales, reservations, cashClosures, purchaseOrders }, `gastrogoan-archivo-hasta-${before}.json`);
   }catch(e){
     showToast(t('msg.backupFailedNoDelete'), 6000);
     return;
@@ -5938,6 +5946,7 @@ async function archiveOldData(){
   DB.sales = DB.sales.filter(s => !salesIds.has(s.id));
   DB.reservations = DB.reservations.filter(r => !reservationIds.has(r.id));
   DB.cashClosures = DB.cashClosures.filter(c => !cashClosureIds.has(c.id));
+  DB.purchaseOrders = DB.purchaseOrders.filter(o => !purchaseOrderIds.has(o.id));
   saveDB();
   checkArchiveReminder();
   checkBackupReminder();
