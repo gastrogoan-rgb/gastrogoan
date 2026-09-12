@@ -1,108 +1,99 @@
-/* Los rótulos y los cartones del vídeo, dibujados con Chromium.
+/* Los rótulos, la portada y el cierre del vídeo de demo.
  *
- * El ffmpeg que trae el proyecto viene SIN drawtext (sin libfreetype), así que
- * no puede escribir texto. Lejos de ser un problema, sale ganando: dibujando
- * los rótulos en una página se usan la tipografía y los colores REALES de la
- * app —Schibsted Grotesk, el verde de la cabecera, el naranja de marca— en vez
- * de una fuente del sistema que no se parece a nada. El vídeo acaba pareciendo
- * de la misma casa que el producto.
- *
- * Devuelve PNG con transparencia; ffmpeg solo tiene que superponerlos.
+ * Se dibujan con Chromium y la tipografía de verdad de la app (los .woff2 de
+ * fonts/), no con el drawtext de ffmpeg: ffmpeg no sabe leer woff2 y con una
+ * fuente del sistema el vídeo deja de parecer de GastroGoan y parece de
+ * cualquiera. Cada rótulo sale como PNG con transparencia y luego se
+ * superpone sobre el metraje.
  */
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
-import path from 'node:path';
 
-const W = 1920, H = 1080;
+export const ANCHO = 1600, ALTO = 900;
 
-// La tipografía va incrustada en base64: Chromium no carga fuentes de disco
-// por file:// de forma fiable, y sin ella el rótulo saldría en Times.
-function fuenteIncrustada(fichero, peso){
-  const b64 = fs.readFileSync(path.join('fonts', fichero)).toString('base64');
-  return `@font-face{font-family:'GG';font-weight:${peso};font-style:normal;
-    src:url(data:font/woff2;base64,${b64}) format('woff2')}`;
-}
-
-const CSS_BASE = `
-  ${fuenteIncrustada('schibsted-grotesk-400-normal.woff2', 400)}
-  ${fuenteIncrustada('schibsted-grotesk-600-normal.woff2', 600)}
-  ${fuenteIncrustada('schibsted-grotesk-700-normal.woff2', 700)}
+const CSS = `
+  @font-face{font-family:'Schibsted Grotesk';src:url('/fonts/schibsted-grotesk-700-normal.woff2') format('woff2');font-weight:700}
+  @font-face{font-family:'Schibsted Grotesk';src:url('/fonts/schibsted-grotesk-500-normal.woff2') format('woff2');font-weight:500}
+  @font-face{font-family:'IBM Plex Mono';src:url('/fonts/ibm-plex-mono-500-normal.woff2') format('woff2');font-weight:500}
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:${W}px;height:${H}px;background:transparent;
-    font-family:'GG',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  html,body{width:${ANCHO}px;height:${ALTO}px;background:transparent;
+    font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#1C1A17}
+  .wrap{width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:52px}
+  /* Banda inferior: fondo sólido del negro de la app. Sobre una captura con
+     tablas y números, un rótulo translúcido no se lee. */
+  .rotulo{background:#1C1A17;color:#fff;font-size:34px;font-weight:700;
+    padding:16px 30px;letter-spacing:-.4px;line-height:1.15;max-width:1180px;text-align:center;
+    box-shadow:0 10px 40px rgba(0,0,0,.35)}
+  .rotulo b{color:#9DBBA4}
+
+  /* Portada y cierre: a pantalla completa, sin transparencia. */
+  .card{width:100%;height:100%;background:#1C1A17;color:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;text-align:center}
+  .card .kicker{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:19px;
+    letter-spacing:4px;text-transform:uppercase;color:#9DBBA4}
+  .card h1{font-size:82px;font-weight:700;letter-spacing:-2.5px;line-height:1.02}
+  .card h2{font-size:40px;font-weight:500;letter-spacing:-.8px;color:#EDEAE3;line-height:1.25;max-width:1150px}
+  .card .precio{font-size:120px;font-weight:700;letter-spacing:-4px;line-height:1}
+  .card .precio small{font-size:38px;font-weight:500;letter-spacing:-1px;color:#EDEAE3}
+  .card .linea{width:92px;height:5px;background:#9DBBA4}
+  .card .url{font-family:'IBM Plex Mono',monospace;font-size:34px;letter-spacing:2px;color:#fff;
+    border:2px solid #4A5D4E;padding:14px 34px}
+  .card .pie{font-size:23px;color:#B9B4AC;font-weight:500}
+  .lista{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;max-width:1240px}
+  .lista span{font-size:22px;font-weight:500;border:1.5px solid #4A5D4E;color:#EDEAE3;padding:9px 20px}
 `;
 
-const FONDO = '#16150F', CREMA = '#FAF8F4', NARANJA = '#DF7039', VERDE = '#8FA68E';
+const pagina = cuerpo => `<!doctype html><meta charset="utf-8"><style>${CSS}</style>${cuerpo}`;
 
-export async function dibujarRotulos(destino){
-  fs.mkdirSync(destino, {recursive: true});
+export const PORTADA = pagina(`<div class="card">
+  <div class="kicker">Kit de gestión hostelera</div>
+  <h1>Todo tu restaurante<br>en una sola app</h1>
+  <div class="linea"></div>
+  <h2>Escandallo, TPV, reservas, personal, APPCC y contabilidad.<br>Sin instalar nada.</h2>
+</div>`);
+
+export const CIERRE = pagina(`<div class="card">
+  <div class="kicker">Sin cuotas · Sin comisiones · Sin sorpresas</div>
+  <div class="precio">100 €<small> / año</small></div>
+  <h2>Un restaurante entero, por lo que cuesta una cena.</h2>
+  <div class="lista">
+    <span>Tus datos son tuyos</span><span>Funciona sin internet</span>
+    <span>Tu web de reservas incluida</span><span>Hasta 3 idiomas</span>
+  </div>
+  <div class="url">gastrogoan.com</div>
+  <div class="pie">Pruébalo hoy en tu propio negocio</div>
+</div>`);
+
+export const rotulo = texto => pagina(`<div class="wrap"><div class="rotulo">${texto}</div></div>`);
+
+/* Dibuja una lista de {archivo, html} en PNG. Con `transparente`, el PNG
+   guarda el canal alfa: es lo que permite que el rótulo flote sobre el vídeo
+   sin una caja gris alrededor. */
+export async function dibujar(piezas, {base = 'http://localhost:8950'} = {}){
   const browser = await puppeteer.launch({
-    executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-    args:['--no-sandbox','--force-device-scale-factor=1'], headless:true});
+    executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+    args: ['--no-sandbox', '--hide-scrollbars', '--force-device-scale-factor=1'],
+    headless: true,
+    defaultViewport: {width: ANCHO, height: ALTO},
+  });
   const page = await browser.newPage();
-  await page.setViewport({width:W, height:H, deviceScaleFactor:1});
-
-  const pintar = async (html, fichero, transparente = true) => {
-    await page.setContent(`<style>${CSS_BASE}</style>${html}`, {waitUntil:'load'});
+  for(const {archivo, html, transparente} of piezas){
+    await page.goto(base + '/dist/index.html', {waitUntil: 'domcontentloaded'});  // para que /fonts resuelva
+    await page.setContent(html, {waitUntil: 'domcontentloaded'});
     await page.evaluate(() => document.fonts.ready);
-    await new Promise(r => setTimeout(r, 120));
-    await page.screenshot({path: path.join(destino, fichero), omitBackground: transparente});
-  };
+    await new Promise(r => setTimeout(r, 250));
+    await page.screenshot({path: archivo, omitBackground: !!transparente});
+  }
+  await browser.close();
+  return piezas.map(p => p.archivo);
+}
 
-  /* El rótulo de cada trozo. Va en una banda de abajo con degradado: sobre el
-     blanco de la app un texto claro no se leería, y una banda opaca taparía
-     demasiado. El degradado oscurece solo lo justo. */
-  const bandaHtml = texto => `
-    <div style="position:absolute;left:0;right:0;bottom:0;height:230px;
-      background:linear-gradient(to top,rgba(22,21,15,.96) 0%,rgba(22,21,15,.90) 45%,rgba(22,21,15,0) 100%);
-      display:flex;align-items:flex-end;justify-content:center;padding-bottom:44px">
-      <p style="color:${CREMA};font-size:44px;font-weight:600;letter-spacing:-.01em;
-        text-align:center;max-width:1500px;line-height:1.25">${texto}</p>
-    </div>`;
-
-  return {
-    async banda(texto, fichero){ await pintar(bandaHtml(texto), fichero); return fichero; },
-
-    async portada(fichero){
-      await pintar(`
-        <div style="width:${W}px;height:${H}px;background:${FONDO};
-          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px">
-          <div style="border:2px solid rgba(250,248,244,.28);border-radius:10px;
-            padding:11px 26px;color:${VERDE};font-size:22px;font-weight:600;
-            letter-spacing:.22em;text-transform:uppercase">Kit de gestión gastronómico</div>
-          <h1 style="color:${CREMA};font-size:132px;font-weight:700;letter-spacing:-.035em">GastroGoan</h1>
-          <p style="color:rgba(250,248,244,.72);font-size:46px;font-weight:400">
-            Todo tu restaurante, en una sola app</p>
-        </div>`, fichero, false);
-      return fichero;
-    },
-
-    /* El cierre. Es lo único que se queda en la cabeza del que lo ve, así que
-       no dice "gracias por su atención": dice el problema, lo que resuelve, y
-       dónde se compra. */
-    async cierre(fichero){
-      await pintar(`
-        <div style="width:${W}px;height:${H}px;background:${FONDO};
-          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0">
-          <h2 style="color:${CREMA};font-size:74px;font-weight:700;letter-spacing:-.03em;
-            text-align:center;line-height:1.15;margin-bottom:34px">
-            Deja de llevar tu restaurante<br>a ojo</h2>
-          <p style="color:rgba(250,248,244,.78);font-size:40px;font-weight:400;
-            text-align:center;line-height:1.5;max-width:1250px">
-            Escandallo, TPV, reservas, personal y los papeles de sanidad.<br>
-            En una sola app — y los datos son tuyos.</p>
-          <div style="display:flex;gap:14px;margin:48px 0 54px;flex-wrap:wrap;justify-content:center">
-            ${['Sin cuotas mensuales','Funciona sin internet','Se paga una vez']
-              .map(x => `<span style="border:1.5px solid ${NARANJA};color:${NARANJA};
-                border-radius:99px;padding:13px 28px;font-size:30px;font-weight:600">${x}</span>`).join('')}
-          </div>
-          <div style="background:${CREMA};color:${FONDO};border-radius:16px;
-            padding:26px 62px;font-size:56px;font-weight:700;letter-spacing:-.02em">
-            gastrogoan.com</div>
-        </div>`, fichero, false);
-      return fichero;
-    },
-
-    async cerrar(){ await browser.close(); },
-  };
+if(import.meta.url === `file://${process.argv[1]}`){
+  fs.mkdirSync('/tmp/rotulos', {recursive: true});
+  await dibujar([
+    {archivo:'/tmp/rotulos/portada.png', html: PORTADA},
+    {archivo:'/tmp/rotulos/cierre.png', html: CIERRE},
+    {archivo:'/tmp/rotulos/ejemplo.png', html: rotulo('¿Sabes lo que te cuesta <b>cada plato</b>?'), transparente:true},
+  ]);
+  console.log('PNG en /tmp/rotulos');
 }
