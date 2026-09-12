@@ -1130,7 +1130,7 @@ function renderTpvPendingOnline(){
           <div style="font-weight:700;font-size:18px;margin-bottom:8px">${fmtMoney(orderTotal(o))}</div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-sm btn-primary" style="flex:1" onclick="acceptOnlineOrder(${o.id})"><i class="ti ti-check"></i> ${t('common.accept')}</button>
-            <button class="btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineOrder(${o.id})"><i class="ti ti-x"></i> ${t('common.reject')}</button>
+            <button class="owner-only btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineOrder(${o.id})"><i class="ti ti-x"></i> ${t('common.reject')}</button>
           </div>
         </div>
       `).join('')}
@@ -1313,13 +1313,15 @@ async function acceptOnlineOrder(orderId, auto){
 }
 
 function rejectOnlineOrder(orderId){
+  if(!puedeCancelar()) return;
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
     // Datos del cliente guardados ANTES de mover a la papelera/borrar: una
     // vez borrado el pedido ya no hay de dónde sacarlos para el aviso manual
     // de abajo.
-    const {clienteNombre, clienteTelefono, clienteEmail} = order;
+    const clienteNombre = order.clienteNombre;
+    const {telefono: clienteTelefono, email: clienteEmail} = contactoParaAvisoDePedido(order);
     // Se avisa ANTES de mover a la papelera/borrar: una vez borrado ya no
     // queda order.clientRef al que asociar el aviso.
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
@@ -1342,6 +1344,7 @@ function rejectOnlineOrder(orderId){
 // dejó teléfono o email, se ofrece avisarle a mano con un clic, igual que
 // ya se hace al cancelar o editar una reserva.
 function cancelAcceptedOnlineOrder(orderId){
+  if(!puedeCancelar()) return;
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   requestBusinessPinAction(t('title.cancelOrder'), t('msg.confirmCancelOrder'), () => {
@@ -1355,7 +1358,8 @@ function cancelAcceptedOnlineOrder(orderId){
        hamburguesas SUBÍA el stock de pan, carne y queso por encima de lo que
        había antes. Es el mismo criterio que ya se aplica en confirmVoidLine. */
     restockForVoidedItems(order.items, {includeIngredients: false});
-    const {clienteNombre, clienteTelefono, clienteEmail} = order;
+    const clienteNombre = order.clienteNombre;
+    const {telefono: clienteTelefono, email: clienteEmail} = contactoParaAvisoDePedido(order);
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
@@ -1374,8 +1378,28 @@ function cancelAcceptedOnlineOrder(orderId){
 // WhatsApp y otro por email, listos para un clic. Si no dejó ni teléfono ni
 // email no hay nada que ofrecer y no se abre nada.
 let orderNotifyState = null;
+/* El teléfono y el email del pedido son los que escribió el cliente en la web.
+   Pero un pedido puede venir de una ficha de cliente ya existente (o haberse
+   creado desde el TPV) y no traerlos encima: entonces no se abría nada y el
+   hostelero cancelaba sin ver ningún mensaje que enviar — que es justo lo que
+   contó el dueño el 12/09. Antes de rendirse se mira su ficha de cliente. */
+function contactoParaAvisoDePedido(order){
+  let telefono = order.clienteTelefono || '';
+  let email = order.clienteEmail || '';
+  if(telefono && email) return {telefono, email};
+  const ficha = order.clientId
+    ? (DB.clients||[]).find(c => c.id === order.clientId)
+    : (order.clienteNombre ? (DB.clients||[]).find(c => (c.name||'').toLowerCase() === order.clienteNombre.toLowerCase()) : null);
+  if(ficha){
+    telefono = telefono || ficha.phone || '';
+    email = email || ficha.email || '';
+  }
+  return {telefono, email};
+}
 function openOrderNotifyModal(nombre, telefono, email, tipo){
-  if(!telefono && !email) return;
+  // Sin ningún contacto no hay nada que ofrecer, pero callarse se lee como
+  // que la app se ha tragado el aviso: se dice por qué no hay mensaje.
+  if(!telefono && !email){ showToast(t('msg.orderNoContactToNotify'), 5000); return; }
   orderNotifyState = {telefono, email};
   const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
   const claveMsg = tipo === 'cancelado' ? 'msg.orderCancelledNotify' : 'msg.orderRejectedNotify';
@@ -1414,6 +1438,28 @@ function sendOrderNotifyEmail(){
   const body = encodeURIComponent(document.getElementById('order-notify-text').value);
   window.location.href = 'mailto:'+encodeURIComponent(email)+'?subject='+subject+'&body='+body;
   closeModal();
+}
+
+/* ¿Puede esta sesión CANCELAR algo? (12/09)
+   Cancelar una reserva, rechazar o cancelar un pedido online, anular una
+   venta o quitar a alguien de la lista de espera son todas la misma clase de
+   acción: deshacen algo que el negocio ya había dado por bueno, y casi
+   siempre delante del cliente. El criterio del dueño es único para todas:
+   **solo el propietario o un empleado con permiso de editar**.
+
+   No basta con el PIN de negocio que ya pedían algunas: el PIN lo puede
+   llegar a saber cualquiera del equipo, y varias de estas ni siquiera lo
+   pedían (cancelar una reserva confirmada era un confirm() y ya). Tampoco
+   basta con esconder el botón: esto se comprueba DENTRO de cada función,
+   así que llamarla desde la consola tampoco sirve.
+
+   Y avisa: el botón lleva .owner-only y no debería verse sin permiso, pero
+   si por lo que sea se llega aquí, un `return` mudo se lee como una app
+   rota (ver saveEmployee en CLAUDE.md). */
+function puedeCancelar(){
+  if(editUnlocked) return true;
+  showToast(t('msg.cancelNeedsEditPermission'), 6000);
+  return false;
 }
 
 // Pide el PIN del negocio antes de ejecutar una acción sensible (rechazar un
@@ -2187,7 +2233,7 @@ function renderTableOrderModal(orderId){
       ${order.tableId ? `<button class="btn btn-sm" style="flex:none" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i> ${t('title.transferTable')}</button>` : ''}
       <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</h3>
       ${order.tableId && !order.items.length ? `<button class="btn btn-sm btn-danger" onclick="releaseEmptyTable(${order.id})" title="${t('btn.releaseTable')}"><i class="ti ti-door-exit"></i> ${t('btn.releaseTable')}</button>` : ''}
-      ${(!order.tableId && (order.tipo==='delivery'||order.tipo==='takeaway') && order.status!=='pagada') ? `<button class="btn btn-sm btn-danger" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${t('title.cancelOrder')}"><i class="ti ti-x"></i> ${t('btn.cancelOrder')}</button>` : ''}
+      ${(!order.tableId && (order.tipo==='delivery'||order.tipo==='takeaway') && order.status!=='pagada') ? `<button class="owner-only btn btn-sm btn-danger" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${t('title.cancelOrder')}"><i class="ti ti-x"></i> ${t('btn.cancelOrder')}</button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     ${renderOrderClientNotesHtml(order)}
@@ -2530,7 +2576,7 @@ function openWaitlistModal(){
             <div style="display:flex;gap:6px">
               ${w.phone ? `<a class="btn btn-sm btn-icon" href="tel:${escapeHtml(w.phone)}" title="${t('waitlist.callHint')}"><i class="ti ti-phone"></i></a>` : ''}
               <button class="btn btn-sm btn-primary" onclick="openSeatWaitlistTableModal(${w.id})" title="${t('waitlist.seatHint')}"><i class="ti ti-armchair"></i></button>
-              <button class="btn btn-sm btn-danger" onclick="cancelWaitlistEntry(${w.id})" title="${t('waitlist.cancelHint')}"><i class="ti ti-x"></i></button>
+              <button class="owner-only btn btn-sm btn-danger" onclick="cancelWaitlistEntry(${w.id})" title="${t('waitlist.cancelHint')}"><i class="ti ti-x"></i></button>
             </div>
           </div>
         </div>
@@ -2622,6 +2668,7 @@ async function confirmSeatWaitlistAtTable(waitlistId, tableId){
   showToast(t('waitlist.seatedOk').replace('${name}', w.name));
 }
 function cancelWaitlistEntry(id){
+  if(!puedeCancelar()) return;
   const w = (DB.waitlist||[]).find(x => x.id === id);
   if(!w) return;
   w.status = 'cancelada';
@@ -3822,6 +3869,7 @@ function confirmVoidLine(){
 // DB.voidLog en vez de borrar el ticket, para no perder el rastro contable.
 // Pide siempre el PIN del negocio: es la acción más delicada de TPV.
 function requestCancelSale(saleId){
+  if(!puedeCancelar()) return;
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
   if(typeof geIsDateClosed === 'function' && geIsDateClosed(sale.date)){
@@ -5690,7 +5738,7 @@ function openTicketDeliveryModal(saleId){
       <button class="btn" onclick="printInvoice(${saleId})"><i class="ti ti-file-invoice"></i> ${t('ticket.invoiceBtn')}</button>
       <button class="btn btn-primary" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printTicket(s);})()"><i class="ti ti-printer"></i> ${t('ticket.printTicket')}</button>
       ${thermalPrintingSupported() ? `<button class="btn" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printToThermalPrinter(buildTicketText(s));})()" title="${t('thermal.hint')}"><i class="ti ti-device-usb"></i> ${t('thermal.printBtn')}</button>` : ''}
-      <button class="btn btn-danger" onclick="requestCancelSale(${saleId})" title="${t('title.cancelSale')}"><i class="ti ti-receipt-refund"></i> ${t('ticket.cancelSaleBtn')}</button>
+      <button class="owner-only btn btn-danger" onclick="requestCancelSale(${saleId})" title="${t('title.cancelSale')}"><i class="ti ti-receipt-refund"></i> ${t('ticket.cancelSaleBtn')}</button>
     </div>
   `);
 }
