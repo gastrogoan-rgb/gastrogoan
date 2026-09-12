@@ -3125,13 +3125,15 @@ function renderComandasCocina(){
         ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
         : `<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</span>`;
       return `
-      <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+      <div class="card kds-ticket" style="overflow-y:auto;display:flex;flex-direction:column">
+        <div class="kds-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
           <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
           ${closedBadge}
         </div>
-        ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
-        ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
+        <div class="kds-body">
+          ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
+          ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
+        </div>
       </div>
     `;}).join('')}</div>`;
     return;
@@ -3266,8 +3268,8 @@ function renderComandasCocina(){
       && [...new Set(bloques[0].lineas.map(({line}) => line.tanda || ''))].length === 1
       && !bloques[0].lineas[0].line.tanda;
     return `
-    <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+    <div class="card kds-ticket" style="overflow-y:auto;display:flex;flex-direction:column">
+      <div class="kds-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px;min-width:0">
           <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
         </div>
@@ -3276,6 +3278,7 @@ function renderComandasCocina(){
           ${urgencyBadge(mins)}
         </div>
       </div>
+      <div class="kds-body">
       ${orderAllergyWarningHtml(order)}
       ${bloques.map((bloque, i) => `
         <div style="${i>0 ? 'margin-top:10px;padding-top:10px;border-top:2px solid var(--border)' : ''}">
@@ -3286,6 +3289,7 @@ function renderComandasCocina(){
           ${renderBloqueLineas(bloque, unBloqueUnaTandaSinNombre && i===0)}
         </div>
       `).join('')}
+      </div>
     </div>
     `;
   }).join('')}</div>`;

@@ -200,6 +200,14 @@ body:not(.owner-session) .owner-strict{display:none !important}
    navegador decide cuántas caben, y en móvil queda 1 sola. */
 .grid-kds{display:block;columns:280px;column-gap:14px}
 .grid-kds>*{break-inside:avoid;-webkit-column-break-inside:avoid;margin-bottom:14px}
+/* Comandas de Cocina: con la pantalla llena de tickets, un borde de 1 px del
+   mismo gris que todo lo demás no separaba un pedido del siguiente — se leía
+   como una lista continua y había que buscar dónde acababa uno (lo vio el
+   dueño el 12/09 grabando la demo). Cada comanda es un papel: borde marcado,
+   cabecera con fondo propio y una sombra que la levanta del fondo. */
+.kds-ticket{border:2px solid var(--text);box-shadow:0 3px 0 rgba(28,26,23,.10);padding:0;overflow:hidden}
+.kds-ticket>.kds-head{background:var(--brand-cream);border-bottom:2px solid var(--text);padding:10px 14px;margin:0}
+.kds-ticket>.kds-body{padding:12px 14px}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}

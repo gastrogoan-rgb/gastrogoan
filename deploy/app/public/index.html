@@ -219,6 +219,14 @@ body:not(.owner-session) .owner-strict{display:none !important}
    navegador decide cuántas caben, y en móvil queda 1 sola. */
 .grid-kds{display:block;columns:280px;column-gap:14px}
 .grid-kds>*{break-inside:avoid;-webkit-column-break-inside:avoid;margin-bottom:14px}
+/* Comandas de Cocina: con la pantalla llena de tickets, un borde de 1 px del
+   mismo gris que todo lo demás no separaba un pedido del siguiente — se leía
+   como una lista continua y había que buscar dónde acababa uno (lo vio el
+   dueño el 12/09 grabando la demo). Cada comanda es un papel: borde marcado,
+   cabecera con fondo propio y una sombra que la levanta del fondo. */
+.kds-ticket{border:2px solid var(--text);box-shadow:0 3px 0 rgba(28,26,23,.10);padding:0;overflow:hidden}
+.kds-ticket>.kds-head{background:var(--brand-cream);border-bottom:2px solid var(--text);padding:10px 14px;margin:0}
+.kds-ticket>.kds-body{padding:12px 14px}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
@@ -2957,7 +2965,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '12/09/2026 12:10';
+const GG_BUILD = '12/09/2026 13:19';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -13222,6 +13230,7 @@ const I18N = {
     'label.drinksTh': 'Bebidas',
     'hr2.checkedIn': 'Fichado', 'hr2.oneShift': '1 turno', 'hr2.nShifts': '${n} turnos',
     'hr2.plannedHours': 'Horas previstas', 'empty.noLogEntries': 'Sin registros todavía.',
+    'limpieza.log.showAll': 'Ver los ${n} registros', 'limpieza.log.showLast': 'Ver solo los ${n} últimos', 'limpieza.log.hiddenCount': '${n} registros anteriores ocultos',
     'msg.editModeRequiredForLog': 'Activa el modo edición para añadir un nuevo registro.',
     'dist.dishesInChargeTitle': 'Platos a su cargo', 'dist.selectDish': '— Selecciona plato —',
     'dist.noFichasYet': 'Todavía no hay ninguna ficha técnica creada — crea una desde Fichas Técnicas para poder asignarla aquí.', 'dist.weekTasksTitle': 'Tareas de la semana',
@@ -15456,6 +15465,7 @@ const I18N = {
     'label.drinksTh': 'Begudes',
     'hr2.checkedIn': 'Fitxat', 'hr2.oneShift': '1 torn', 'hr2.nShifts': '${n} torns',
     'hr2.plannedHours': 'Hores previstes', 'empty.noLogEntries': 'Sense registres encara.',
+    'limpieza.log.showAll': 'Veure els ${n} registres', 'limpieza.log.showLast': 'Veure només els ${n} últims', 'limpieza.log.hiddenCount': '${n} registres anteriors amagats',
     'msg.editModeRequiredForLog': 'Activa el mode edició per afegir un nou registre.',
     'dist.dishesInChargeTitle': 'Plats a càrrec seu', 'dist.selectDish': '— Selecciona plat —',
     'dist.noFichasYet': 'Encara no hi ha cap fitxa tècnica creada — crea\'n una des de Fitxes Tècniques per poder assignar-la aquí.', 'dist.weekTasksTitle': 'Tasques de la setmana',
@@ -17691,6 +17701,7 @@ const I18N = {
     'label.drinksTh': 'Drinks',
     'hr2.checkedIn': 'Checked in', 'hr2.oneShift': '1 shift', 'hr2.nShifts': '${n} shifts',
     'hr2.plannedHours': 'Planned hours', 'empty.noLogEntries': 'No entries yet.',
+    'limpieza.log.showAll': 'Show all ${n} entries', 'limpieza.log.showLast': 'Show only the last ${n}', 'limpieza.log.hiddenCount': '${n} earlier entries hidden',
     'msg.editModeRequiredForLog': 'Turn on edit mode to add a new record.',
     'dist.dishesInChargeTitle': 'Dishes in charge', 'dist.selectDish': '— Select dish —',
     'dist.noFichasYet': 'No technical sheets created yet — create one from Technical Sheets to assign it here.', 'dist.weekTasksTitle': 'Tasks for the week',
@@ -28763,13 +28774,15 @@ function renderComandasCocina(){
         ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
         : `<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</span>`;
       return `
-      <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+      <div class="card kds-ticket" style="overflow-y:auto;display:flex;flex-direction:column">
+        <div class="kds-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
           <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
           ${closedBadge}
         </div>
-        ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
-        ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
+        <div class="kds-body">
+          ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
+          ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
+        </div>
       </div>
     `;}).join('')}</div>`;
     return;
@@ -28904,8 +28917,8 @@ function renderComandasCocina(){
       && [...new Set(bloques[0].lineas.map(({line}) => line.tanda || ''))].length === 1
       && !bloques[0].lineas[0].line.tanda;
     return `
-    <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+    <div class="card kds-ticket" style="overflow-y:auto;display:flex;flex-direction:column">
+      <div class="kds-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px;min-width:0">
           <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
         </div>
@@ -28914,6 +28927,7 @@ function renderComandasCocina(){
           ${urgencyBadge(mins)}
         </div>
       </div>
+      <div class="kds-body">
       ${orderAllergyWarningHtml(order)}
       ${bloques.map((bloque, i) => `
         <div style="${i>0 ? 'margin-top:10px;padding-top:10px;border-top:2px solid var(--border)' : ''}">
@@ -28924,6 +28938,7 @@ function renderComandasCocina(){
           ${renderBloqueLineas(bloque, unBloqueUnaTandaSinNombre && i===0)}
         </div>
       `).join('')}
+      </div>
     </div>
     `;
   }).join('')}</div>`;
@@ -33236,6 +33251,10 @@ function orderItemsRowsHtml(){
       <div class="list-row">
         <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
         <span style="font-size:14px;font-weight:600;color:var(--muted)">${t('label.stock')}: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · ${t('label.minAbbrev')} ${fmtNum(s.min)}</span>
+        <!-- Al pedir, lo que decide la cantidad no es solo cuánto queda: es
+             a cuánto sale. Sin el precio delante había que salirse a Mega
+             Lista a mirarlo artículo por artículo (lo vio el dueño el 12/09). -->
+        <span style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap">${fmtMoney(ing.price||0)}/${escapeHtml(ing.unit)}</span>
         <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="${t('common.qty')}" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
         <span style="font-size:12px;color:var(--muted)">${escapeHtml(ing.unit)}</span>
       </div>
@@ -42431,7 +42450,18 @@ function renderLimpiezaLog(key){
     return `<div class="field" style="margin-bottom:0"><label>${cfg.labels[i]}</label>${input}</div>`;
   }).join('');
 
-  const rows = entries.length ? [...entries].slice().reverse().map(e => `
+  /* Un registro de temperaturas se escribe varias veces al día: en un mes
+     son cientos de filas y encontrar la de ayer obligaba a bajar media
+     pantalla. Se enseñan los DIEZ últimos, que es lo que se mira a diario,
+     con un botón para ver el resto — nunca se borra nada solo: un registro
+     APPCC hay que poder enseñarlo en una inspección, y borrarlo sigue
+     exigiendo el PIN de negocio y quedando auditado. */
+  const LOG_VISIBLES = 10;
+  const todos = [...entries].slice().reverse();
+  const visibles = limpiezaLogVerTodo[key] ? todos : todos.slice(0, LOG_VISIBLES);
+  const ocultos = todos.length - visibles.length;
+
+  const rows = visibles.length ? visibles.map(e => `
     <tr>${cfg.fields.map(f => {
       if(f === 'estado'){
         if(e[f]==='OK') return `<td style="font-weight:700;color:var(--green)"><i class="ti ti-check"></i> OK</td>`;
@@ -42467,7 +42497,22 @@ function renderLimpiezaLog(key){
         <tbody>${rows}</tbody>
       </table>
     </div>
+    ${(ocultos > 0 || limpiezaLogVerTodo[key]) ? `
+    <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="toggleLimpiezaLogVerTodo('${key}')">
+        <i class="ti ti-${limpiezaLogVerTodo[key]?'chevron-up':'history'}"></i>
+        ${limpiezaLogVerTodo[key] ? t('limpieza.log.showLast').replace('${n}', LOG_VISIBLES) : t('limpieza.log.showAll').replace('${n}', todos.length)}
+      </button>
+      ${!limpiezaLogVerTodo[key] ? `<span style="font-size:12px;color:var(--muted)">${t('limpieza.log.hiddenCount').replace('${n}', ocultos)}</span>` : ''}
+    </div>` : ''}
   `;
+}
+// Qué registros se ven enteros y cuáles solo los diez últimos. Es de la
+// pantalla, no del negocio: no se guarda ni se sincroniza.
+let limpiezaLogVerTodo = {};
+function toggleLimpiezaLogVerTodo(key){
+  limpiezaLogVerTodo[key] = !limpiezaLogVerTodo[key];
+  renderLimpiezaLog(key);
 }
 async function addLimpiezaLogEntry(key){
   if(!editUnlocked && key !== 'temperaturas') return;
@@ -46218,9 +46263,13 @@ function renderPromoClientes(){
     return `
     <div class="card">
       <h3 style="font-size:14px;justify-content:space-between;gap:6px"><span>${escapeHtml(c.name)}</span>${badge}</h3>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn btn-sm" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
-        <button class="btn btn-sm" style="flex:1" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+      <!-- flex-wrap + min-width:0: sin ellos los dos botones sumaban 195 px
+           dentro de una tarjeta de 180 px y el de Email se salía por la
+           derecha de la tarjeta (lo vio el dueño el 12/09). Un botón no se
+           encoge por debajo de su contenido si no se le dice. -->
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="flex:1 1 120px;min-width:0;background:#188842;color:#fff;border-color:#188842" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn btn-sm" style="flex:1 1 90px;min-width:0" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
       </div>
       <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?t('promo.clients.alreadyRegisteredToday'):t('promo.clients.registerAsAction')}</button>
     </div>

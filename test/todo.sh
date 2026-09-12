@@ -110,6 +110,7 @@ lanzar; node test/tabs-scroll-fade.mjs > "$SALIDA/tabsscrollfade.txt" 2>&1 & P76
 lanzar; node test/auditoria-general-11-09.mjs > "$SALIDA/auditoriageneral.txt" 2>&1 & P77=$!
 lanzar; node test/revision-12-09.mjs > "$SALIDA/revision1209.txt" 2>&1 & P78=$!
 lanzar; node test/inmutabilidad-registros.mjs > "$SALIDA/inmutable.txt" 2>&1 & P79=$!
+lanzar; node test/repaso-video-12-09.mjs > "$SALIDA/repasovideo.txt" 2>&1 & P80=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -201,5 +202,6 @@ espera $P76 "Aviso de scroll en tiras de pestañas (GE, Limpieza, Mi Negocio) en
 espera $P77 "Auditoría general: fechas de proveedor/archivado y renombrar sin permiso avisan" "$SALIDA/auditoriageneral.txt" "casos pasaron"
 espera $P78 "Repaso 12/09: Mi Negocio sin huecos, ventas por mes, compras recibidas fijas, semáforo y resultado neto" "$SALIDA/revision1209.txt" "casos pasaron"
 espera $P79 "Nada registrado se modifica: gastos y ventas solo se anulan, con motivo y PIN" "$SALIDA/inmutable.txt" "casos pasaron"
+espera $P80 "Repaso del vídeo 12/09: precio al pedir, 10 registros APPCC, tickets separados, propina Otro" "$SALIDA/repasovideo.txt" "casos pasaron"
 
 exit $FALLOS

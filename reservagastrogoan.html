@@ -2886,6 +2886,18 @@ function setTip(pct){
   cartTipCustom = 0;
   renderCartSummary();
 }
+/* "Otro" hacía focus() sobre el campo del importe... que solo se pinta
+   CUANDO ya está elegido "Otro". Así que el botón no hacía absolutamente
+   nada: el cliente lo pulsaba, no pasaba nada y se iba sin dejar propina
+   (lo vio el dueño el 12/09). Primero se marca la opción, y el foco se
+   pone después, ya con el campo en pantalla. */
+function activarPropinaOtra(){
+  cartTipPct = 'custom';
+  cartTipCustom = 0;
+  renderCartSummary();
+  const el = document.getElementById('tip-custom-input');
+  if(el) el.focus();
+}
 function setTipCustom(val){
   cartTipPct = 'custom';
   cartTipCustom = Math.max(0, parseFloat(val) || 0);
@@ -2898,7 +2910,7 @@ function tipSelectorHtml(){
       <label>${t('cart.tip.label')}</label>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${opts.map(pct => `<button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct===pct?'background:var(--ink);color:#fff':''}" onclick="setTip(${pct})">${pct===0?t('cart.tip.none'):pct+'%'}</button>`).join('')}
-        <button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct==='custom'?'background:var(--ink);color:#fff':''}" onclick="document.getElementById('tip-custom-input').focus()">${t('cart.tip.other')}</button>
+        <button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct==='custom'?'background:var(--ink);color:#fff':''}" onclick="activarPropinaOtra()">${t('cart.tip.other')}</button>
       </div>
       ${cartTipPct==='custom' ? `<input type="number" id="tip-custom-input" min="0" step="0.5" value="${cartTipCustom||''}" placeholder="${t('cart.tip.otherPlaceholder')}" style="margin-top:8px" oninput="setTipCustom(this.value)">` : ''}
     </div>

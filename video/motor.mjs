@@ -20,7 +20,7 @@ import fs from 'node:fs';
 
 export const ANCHO = 1600, ALTO = 900, FPS = 25;
 
-export async function grabar({guion, salida, titulo}){
+export async function grabar({guion, salida, titulo, origen, sembrar, listo}){
   const browser = await puppeteer.launch({
     executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
     args: ['--no-sandbox', `--window-size=${ANCHO},${ALTO}`, '--hide-scrollbars',
@@ -31,8 +31,20 @@ export async function grabar({guion, salida, titulo}){
   const page = await browser.newPage();
   const errores = [];
   page.on('pageerror', e => errores.push(e.message));
-  await page.goto('http://localhost:8950/dist/kit-gastrogoan-DEMO.html', {waitUntil:'domcontentloaded'});
+  /* Por defecto se graba sobre la demo generada; `origen` permite grabar
+     sobre otra copia (p.ej. la app con los datos de GG Burger cargados) y
+     `sembrar` es el código que deja esa copia lista antes de empezar. */
+  await page.goto(origen || 'http://localhost:8950/dist/kit-gastrogoan-DEMO.html', {waitUntil:'domcontentloaded'});
   await new Promise(r => setTimeout(r, 4000));
+  if(sembrar){
+    await page.evaluate(sembrar);
+    await page.reload({waitUntil:'domcontentloaded'});
+    await new Promise(r => setTimeout(r, 4500));
+  }
+  if(listo){
+    await page.evaluate(listo);
+    await new Promise(r => setTimeout(r, 1200));
+  }
 
   await preparar(page);
 
@@ -57,7 +69,7 @@ export async function grabar({guion, salida, titulo}){
      primera versión se comió cuatro pestañas y el aviso se perdió en medio
      del registro. Se acumulan y se cantan al final, con el vídeo delante. */
   const perdidos = [];
-  const api = crearApi(page, fotograma, perdidos);
+  const api = crearApi(page, fotograma, perdidos, listo || null);
   console.log(`Grabando «${titulo}» — ${guion.length} escenas…`);
   for(const [i, escena] of guion.entries()){
     // Si algo se ha llevado por delante el rótulo o el cursor (una recarga,
@@ -177,7 +189,7 @@ function inyectar(){
 }
 
 // ── Las piezas con las que se escribe un guion ────────────────────────────
-function crearApi(page, fotograma, perdidos){
+function crearApi(page, fotograma, perdidos, listoGuardado){
   let cx = ANCHO/2, cy = ALTO/2;   // dónde está el cursor ahora mismo
   const suave = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
 
@@ -268,16 +280,31 @@ function crearApi(page, fotograma, perdidos){
          está el negocio. En una grabación eso sería tocar producción, así que
          se corta la red de Firebase y se le dan los datos a mano — igual que
          hacen las pruebas de la web pública. */
-      if(sinRed){
+      /* Solo UNA vez. Registrarlo de nuevo en un segundo abrir() deja dos
+         oyentes sobre la misma petición y el segundo revienta con "Request
+         is already handled!" — cortaba la grabación justo en el cierre, tras
+         ochenta y siete segundos ya capturados. */
+      if(sinRed && !api.__redCortada){
+        api.__redCortada = true;
         await page.setRequestInterception(true);
-        page.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver/.test(r.url())
-          ? r.abort() : r.continue());
+        page.on('request', r => {
+          if(r.isInterceptResolutionHandled()) return;
+          if(/firebase|firebaseio|gstatic|googleapis|qrserver/.test(r.url())) r.abort();
+          else r.continue();
+        });
       }
       await page.goto(url, {waitUntil: 'domcontentloaded'});
       await new Promise(r => setTimeout(r, 2600));
       if(antes){ await page.evaluate(j => { try{ (new Function(j))(); }catch(e){ console.error(e); } }, antes); }
       await new Promise(r => setTimeout(r, 900));
       await preparar(page);
+      /* Cada cambio de página recarga el documento y se lleva por delante lo
+         que dejó `listo` (el indicador de nube forzado en verde, sobre todo).
+         Sin esto, el cierre del vídeo salía con "Error de nube" EN ROJO. */
+      if(listoGuardado && /dist\/index\.html|kit-gastrogoan/.test(url)){
+        try{ await page.evaluate(listoGuardado); }catch(e){}
+        await new Promise(r => setTimeout(r, 800));
+      }
       cx = ANCHO/2; cy = ALTO/2;
     },
 
