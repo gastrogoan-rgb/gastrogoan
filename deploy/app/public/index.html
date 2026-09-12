@@ -2965,7 +2965,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '12/09/2026 13:19';
+const GG_BUILD = '12/09/2026 13:37';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11923,7 +11923,7 @@ const I18N = {
     'msg.confirmDeleteSupplier': '¿Eliminar este proveedor?',
     'msg.cannotDeleteSupplierLinked': 'No se puede eliminar: tiene ${count} ingrediente(s) vinculado(s). Cámbialos de proveedor primero.',
     'msg.confirmDeleteOrder': '¿Eliminar este pedido?',
-    'title.deleteOrder': 'Eliminar pedido recibido', 'msg.confirmDeleteReceivedOrder': 'Este pedido ya fue recibido: al eliminarlo se revertirá el stock que sumó y el gasto que registró en Gestión Económica. Esta acción no se puede deshacer.',
+    'msg.receivedOrderLocked': 'Un pedido ya recibido no se borra: es la compra que justifica el gasto y el stock que entró. Si lo marcaste recibido por error, usa "Deshacer recepción" dentro del pedido.',
     'msg.orderDeleted': 'Pedido eliminado', 'btn.duplicateOrder': 'Duplicar pedido', 'msg.orderDuplicated': 'Pedido duplicado como nuevo borrador',
     'label.dateFrom': 'Desde', 'label.dateTo': 'Hasta',
     'msg.confirmDeleteShift': '¿Eliminar este turno?',
@@ -12314,7 +12314,7 @@ const I18N = {
     'msg.restoreTypeToConfirm': 'Para confirmar, escribe el nombre exacto del negocio actual: ${name}',
     'mn.data.neverBackedUp': 'Nunca has descargado una copia de seguridad', 'mn.data.lastBackup': 'Última copia: hace ${n} días',
     'mn.data.archiveDesc': 'Reduce el tamaño de tus datos archivando ventas, reservas y cierres antiguos (descarga primero una copia)',
-    'mn.data.archiveBefore': 'Archivar anterior a', 'mn.data.archivePreview': 'Se archivarán ${sales} ventas, ${reservations} reservas y ${closures} cierres',
+    'mn.data.archiveBefore': 'Archivar anterior a', 'mn.data.archivePreview': 'Se archivarán ${sales} ventas, ${reservations} reservas, ${closures} cierres y ${orders} pedidos recibidos',
     'mn.data.archiveAndDownload': 'Archivar y descargar',
     'msg.confirmArchiveData': 'Se archivarán ${sales} ventas, ${reservations} reservas y ${closures} cierres anteriores a ${date}. Se descargará una copia de seguridad antes. ¿Continuar?',
     'msg.imageTooLarge': 'La imagen es demasiado grande. Elige una de menos de 2MB.',
@@ -13117,7 +13117,7 @@ const I18N = {
     'mn.ops.seatsHintSingle': 'Se han dejado sin indicar porque las mesas de esta zona no tienen todas el mismo número de plazas. Indícalas a mano si quieres.',
     'msg.pinSameAsOld': 'Ese es tu PIN actual: no se ha cambiado nada.', 'msg.pinTooWeak': 'Aviso: ese PIN es muy fácil de adivinar (0000, 1234...). Se ha guardado igualmente, pero te recomendamos uno menos obvio.',
     'msg.backupFailedNoDelete': 'No se ha podido descargar la copia de seguridad, así que no se ha borrado nada. Inténtalo de nuevo.',
-    'msg.confirmArchiveDataStrong': 'Se descargará primero una copia de seguridad con ${sales} ventas, ${reservations} reservas y ${closures} cierres anteriores a ${date}. Cuando la descarga termine, esos datos se BORRARÁN de la app (no podrás deshacerlo). ¿Continuar?',
+    'msg.confirmArchiveDataStrong': 'Se descargará primero una copia de seguridad con ${sales} ventas, ${reservations} reservas, ${closures} cierres y ${orders} pedidos recibidos anteriores a ${date}. Cuando la descarga termine, esos datos se BORRARÁN de la app (no podrás deshacerlo). ¿Continuar?',
     'mn.couriers.testWhatsapp': 'Probar WhatsApp',
     'mn.delivery.exampleLabel': 'Ejemplo con un pedido de 20,00 €: recibirías netos ',
     'mn.serviceTypes.warnTakeawayOnlyNoToggle': 'Este tipo de negocio suele ser solo para llevar/delivery, pero tienes desactivados para llevar y delivery. ¿Seguro que es correcto?',
@@ -13229,7 +13229,9 @@ const I18N = {
     'msg.nDrinksImported': '${n} bebidas importadas', 'msg.nDishesImported': '${n} platos importados',
     'label.drinksTh': 'Bebidas',
     'hr2.checkedIn': 'Fichado', 'hr2.oneShift': '1 turno', 'hr2.nShifts': '${n} turnos',
-    'hr2.plannedHours': 'Horas previstas', 'empty.noLogEntries': 'Sin registros todavía.',
+    'hr2.plannedHours': 'Horas previstas',
+    'pedido.matchesOtherMonths': '${n} pedidos coinciden en otros meses. Cambia de mes arriba para verlos.',
+    'pedido.matchesOtherMonthsOne': 'Hay 1 pedido que coincide en otro mes. Cambia de mes arriba para verlo.', 'empty.noLogEntries': 'Sin registros todavía.',
     'limpieza.log.showAll': 'Ver los ${n} registros', 'limpieza.log.showLast': 'Ver solo los ${n} últimos', 'limpieza.log.hiddenCount': '${n} registros anteriores ocultos',
     'msg.editModeRequiredForLog': 'Activa el modo edición para añadir un nuevo registro.',
     'dist.dishesInChargeTitle': 'Platos a su cargo', 'dist.selectDish': '— Selecciona plato —',
@@ -14159,7 +14161,7 @@ const I18N = {
     'msg.confirmDeleteSupplier': 'Eliminar aquest proveïdor?',
     'msg.cannotDeleteSupplierLinked': 'No es pot eliminar: té ${count} ingredient(s) vinculat(s). Canvia\'ls de proveïdor primer.',
     'msg.confirmDeleteOrder': 'Eliminar aquesta comanda?',
-    'title.deleteOrder': 'Eliminar comanda rebuda', 'msg.confirmDeleteReceivedOrder': 'Aquesta comanda ja s\'ha rebut: en eliminar-la es revertirà l\'estoc que va sumar i la despesa que va registrar a Gestió Econòmica. Aquesta acció no es pot desfer.',
+    'msg.receivedOrderLocked': 'Una comanda ja rebuda no s\'esborra: és la compra que justifica la despesa i l\'estoc que va entrar. Si l\'has marcat rebuda per error, fes servir "Desfer recepció" dins de la comanda.',
     'msg.orderDeleted': 'Comanda eliminada', 'btn.duplicateOrder': 'Duplicar comanda', 'msg.orderDuplicated': 'Comanda duplicada com a nou esborrany',
     'label.dateFrom': 'Des de', 'label.dateTo': 'Fins a',
     'msg.confirmDeleteShift': 'Eliminar aquest torn?',
@@ -14546,7 +14548,7 @@ const I18N = {
     'msg.restoreTypeToConfirm': 'Per confirmar, escriu el nom exacte del negoci actual: ${name}',
     'mn.data.neverBackedUp': 'Mai has descarregat una còpia de seguretat', 'mn.data.lastBackup': 'Última còpia: fa ${n} dies',
     'mn.data.archiveDesc': 'Redueix la mida de les teves dades arxivant vendes, reserves i tancaments antics (descarrega primer una còpia)',
-    'mn.data.archiveBefore': 'Arxivar anterior a', 'mn.data.archivePreview': 'S\'arxivaran ${sales} vendes, ${reservations} reserves i ${closures} tancaments',
+    'mn.data.archiveBefore': 'Arxivar anterior a', 'mn.data.archivePreview': 'S\'arxivaran ${sales} vendes, ${reservations} reserves, ${closures} tancaments i ${orders} comandes rebudes',
     'mn.data.archiveAndDownload': 'Arxivar i descarregar',
     'msg.confirmArchiveData': 'S\'arxivaran ${sales} vendes, ${reservations} reserves i ${closures} tancaments anteriors a ${date}. Es descarregarà una còpia de seguretat abans. Continuar?',
     'msg.imageTooLarge': 'La imatge és massa gran. Tria\'n una de menys de 2MB.',
@@ -15351,7 +15353,7 @@ const I18N = {
     'mn.ops.seatsHintSingle': 'S\'han deixat sense indicar perquè les taules d\'aquesta zona no tenen totes el mateix nombre de places. Indica-les a mà si vols.',
     'msg.pinSameAsOld': 'Aquest és el teu PIN actual: no s\'ha canviat res.', 'msg.pinTooWeak': 'Avís: aquest PIN és molt fàcil d\'endevinar (0000, 1234...). S\'ha desat igualment, però et recomanem un menys obvi.',
     'msg.backupFailedNoDelete': 'No s\'ha pogut descarregar la còpia de seguretat, així que no s\'ha esborrat res. Torna-ho a provar.',
-    'msg.confirmArchiveDataStrong': 'Es descarregarà primer una còpia de seguretat amb ${sales} vendes, ${reservations} reserves i ${closures} tancaments anteriors a ${date}. Quan la descàrrega acabi, aquestes dades s\'ESBORRARAN de l\'app (no ho podràs desfer). Continuar?',
+    'msg.confirmArchiveDataStrong': 'Es descarregarà primer una còpia de seguretat amb ${sales} vendes, ${reservations} reserves, ${closures} tancaments i ${orders} comandes rebudes anteriors a ${date}. Quan la descàrrega acabi, aquestes dades s\'ESBORRARAN de l\'app (no ho podràs desfer). Continuar?',
     'mn.couriers.testWhatsapp': 'Provar WhatsApp',
     'mn.delivery.exampleLabel': 'Exemple amb una comanda de 20,00 €: rebries nets ',
     'mn.serviceTypes.warnTakeawayOnlyNoToggle': 'Aquest tipus de negoci sol ser només per emportar/delivery, però tens desactivats per emportar i delivery. Segur que és correcte?',
@@ -15464,7 +15466,9 @@ const I18N = {
     'msg.nDrinksImported': '${n} begudes importades', 'msg.nDishesImported': '${n} plats importats',
     'label.drinksTh': 'Begudes',
     'hr2.checkedIn': 'Fitxat', 'hr2.oneShift': '1 torn', 'hr2.nShifts': '${n} torns',
-    'hr2.plannedHours': 'Hores previstes', 'empty.noLogEntries': 'Sense registres encara.',
+    'hr2.plannedHours': 'Hores previstes',
+    'pedido.matchesOtherMonths': '${n} comandes coincideixen en altres mesos. Canvia de mes a dalt per veure-les.',
+    'pedido.matchesOtherMonthsOne': 'Hi ha 1 comanda que coincideix en un altre mes. Canvia de mes a dalt per veure-la.', 'empty.noLogEntries': 'Sense registres encara.',
     'limpieza.log.showAll': 'Veure els ${n} registres', 'limpieza.log.showLast': 'Veure només els ${n} últims', 'limpieza.log.hiddenCount': '${n} registres anteriors amagats',
     'msg.editModeRequiredForLog': 'Activa el mode edició per afegir un nou registre.',
     'dist.dishesInChargeTitle': 'Plats a càrrec seu', 'dist.selectDish': '— Selecciona plat —',
@@ -16394,7 +16398,7 @@ const I18N = {
     'msg.confirmDeleteSupplier': 'Delete this supplier?',
     'msg.cannotDeleteSupplierLinked': 'Cannot delete: it has ${count} linked ingredient(s). Change their supplier first.',
     'msg.confirmDeleteOrder': 'Delete this order?',
-    'title.deleteOrder': 'Delete received order', 'msg.confirmDeleteReceivedOrder': 'This order was already received: deleting it will reverse the stock it added and the expense it registered in Financial Management. This action cannot be undone.',
+    'msg.receivedOrderLocked': 'A received order is never deleted: it is the purchase that backs up the expense and the stock that came in. If you marked it received by mistake, use "Undo reception" inside the order.',
     'msg.orderDeleted': 'Order deleted', 'btn.duplicateOrder': 'Duplicate order', 'msg.orderDuplicated': 'Order duplicated as a new draft',
     'label.dateFrom': 'From', 'label.dateTo': 'To',
     'msg.confirmDeleteShift': 'Delete this shift?',
@@ -16782,7 +16786,7 @@ const I18N = {
     'msg.restoreTypeToConfirm': 'To confirm, type the exact current business name: ${name}',
     'mn.data.neverBackedUp': 'You\'ve never downloaded a backup', 'mn.data.lastBackup': 'Last backup: ${n} days ago',
     'mn.data.archiveDesc': 'Reduce your data size by archiving old sales, reservations and closures (a copy is downloaded first)',
-    'mn.data.archiveBefore': 'Archive before', 'mn.data.archivePreview': 'This will archive ${sales} sales, ${reservations} reservations and ${closures} closures',
+    'mn.data.archiveBefore': 'Archive before', 'mn.data.archivePreview': 'This will archive ${sales} sales, ${reservations} reservations, ${closures} closures and ${orders} received orders',
     'mn.data.archiveAndDownload': 'Archive and download',
     'msg.confirmArchiveData': 'This will archive ${sales} sales, ${reservations} reservations and ${closures} closures before ${date}. A backup will be downloaded first. Continue?',
     'msg.imageTooLarge': 'The image is too large. Choose one under 2MB.',
@@ -17587,7 +17591,7 @@ const I18N = {
     'mn.ops.seatsHintSingle': 'Left blank because the tables in this zone don\'t all have the same number of seats. Fill it in by hand if you want.',
     'msg.pinSameAsOld': 'That\'s your current PIN: nothing was changed.', 'msg.pinTooWeak': 'Heads up: that PIN is very easy to guess (0000, 1234...). It has been saved anyway, but we recommend a less obvious one.',
     'msg.backupFailedNoDelete': 'The backup could not be downloaded, so nothing was deleted. Please try again.',
-    'msg.confirmArchiveDataStrong': 'A backup will be downloaded first with ${sales} sales, ${reservations} reservations and ${closures} closures older than ${date}. Once the download finishes, that data will be DELETED from the app (this cannot be undone). Continue?',
+    'msg.confirmArchiveDataStrong': 'A backup will be downloaded first with ${sales} sales, ${reservations} reservations, ${closures} closures and ${orders} received orders older than ${date}. Once the download finishes, that data will be DELETED from the app (this cannot be undone). Continue?',
     'mn.couriers.testWhatsapp': 'Test WhatsApp',
     'mn.delivery.exampleLabel': 'Example with a 20.00 € order: you would net ',
     'mn.serviceTypes.warnTakeawayOnlyNoToggle': 'This business type is usually takeaway/delivery-only, but you have both takeaway and delivery turned off. Are you sure that\'s correct?',
@@ -17700,7 +17704,9 @@ const I18N = {
     'msg.nDrinksImported': '${n} drinks imported', 'msg.nDishesImported': '${n} dishes imported',
     'label.drinksTh': 'Drinks',
     'hr2.checkedIn': 'Checked in', 'hr2.oneShift': '1 shift', 'hr2.nShifts': '${n} shifts',
-    'hr2.plannedHours': 'Planned hours', 'empty.noLogEntries': 'No entries yet.',
+    'hr2.plannedHours': 'Planned hours',
+    'pedido.matchesOtherMonths': '${n} orders match in other months. Switch month above to see them.',
+    'pedido.matchesOtherMonthsOne': '1 order matches in another month. Switch month above to see it.', 'empty.noLogEntries': 'No entries yet.',
     'limpieza.log.showAll': 'Show all ${n} entries', 'limpieza.log.showLast': 'Show only the last ${n}', 'limpieza.log.hiddenCount': '${n} earlier entries hidden',
     'msg.editModeRequiredForLog': 'Turn on edit mode to add a new record.',
     'dist.dishesInChargeTitle': 'Dishes in charge', 'dist.selectDish': '— Select dish —',
@@ -32348,16 +32354,30 @@ function renderPedidos(){
 let solicitudLines = [];
 let solicitudSearch = '';
 let pedidoHistorialSupplierFilter = '';
-let pedidoHistorialDateFrom = '';
-let pedidoHistorialDateTo = '';
 let pedidoHistorialSearch = '';
 function setPedidoHistorialSupplierFilter(val){
   pedidoHistorialSupplierFilter = val;
   renderPedidoList();
 }
-function setPedidoHistorialDateFilter(field, val){
-  if(field === 'from') pedidoHistorialDateFrom = val; else pedidoHistorialDateTo = val;
+/* El historial pintaba TODOS los pedidos que ha habido nunca: con tres
+   pedidos al día son mil tarjetas al año, y a los tres años la pantalla
+   tarda en abrirse. Ahora se entra por el mes en curso, con el mismo
+   selector de año y meses que Gestión Económica — no se borra nada, solo
+   se enseña un mes cada vez (decisión del dueño, 12/09). */
+let pedidoHistorialYear = new Date().getFullYear();
+let pedidoHistorialMonth = new Date().getMonth();
+function setPedidoHistorialYear(delta){
+  pedidoHistorialYear += delta;
   renderPedidoList();
+}
+function setPedidoHistorialMonth(i){
+  pedidoHistorialMonth = i;
+  renderPedidoList();
+}
+// Mes que se está mirando, como 'AAAA-MM' — los pedidos guardan la fecha
+// en ese mismo formato, así que basta con startsWith.
+function pedidoHistorialMesStr(){
+  return `${pedidoHistorialYear}-${String(pedidoHistorialMonth+1).padStart(2,'0')}`;
 }
 // Como en el resto de listados (Proveedores, Stock, Mega Lista, Escandallo,
 // Fichas), solo se repinta la lista de tarjetas de resultados, nunca el
@@ -32401,7 +32421,16 @@ function renderPedidoList(){
   // forma del fallo de Distribución del Trabajo: un dato suelto corrupto
   // que revienta al recorrer la lista. Se ordena a prueba de huecos.
   const suppliers = [...new Set(allOrders.map(o => o.supplier).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
+  // t('months.short'), no getMeses(): esa vive dentro del cierre de GE.
+  const mesesHtml = t('months.short').map((m,i)=>`
+    <div class="month-pill${i===pedidoHistorialMonth?' active':''}" onclick="setPedidoHistorialMonth(${i})">${m}</div>`).join('');
   const filterHtml = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
+      <button class="btn btn-sm btn-icon" onclick="setPedidoHistorialYear(-1)"><i class="ti ti-chevron-left"></i></button>
+      <span style="font-size:16px;font-weight:700">${pedidoHistorialYear}</span>
+      <button class="btn btn-sm btn-icon" onclick="setPedidoHistorialYear(1)"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <div class="month-sel month-sel-centered" style="margin-bottom:12px">${mesesHtml}</div>
     <div class="field-row filter-compact" style="margin-bottom:12px">
       <div class="field" style="max-width:220px">
         <input type="text" class="search-input" value="${escapeHtml(pedidoHistorialSearch)}" placeholder="${t('ph.searchOrder')}" oninput="setPedidoHistorialSearch(this.value)">
@@ -32411,14 +32440,6 @@ function renderPedidoList(){
           <option value="">${t('label.allSuppliers')}</option>
           ${suppliers.map(s => `<option value="${escapeHtml(s)}" ${pedidoHistorialSupplierFilter===s?'selected':''}>${escapeHtml(s)}</option>`).join('')}
         </select>
-      </div>
-      <div class="field" style="max-width:160px">
-        <label>${t('label.dateFrom')}</label>
-        <input type="date" value="${pedidoHistorialDateFrom}" onchange="setPedidoHistorialDateFilter('from', this.value)">
-      </div>
-      <div class="field" style="max-width:160px">
-        <label>${t('label.dateTo')}</label>
-        <input type="date" value="${pedidoHistorialDateTo}" onchange="setPedidoHistorialDateFilter('to', this.value)">
       </div>
     </div>
   `;
@@ -32578,19 +32599,33 @@ function renderPedidoResultsList(){
   const box = document.getElementById('pedido-results');
   if(!box) return;
   const allOrders = DB.purchaseOrders.filter(o => (o.area||'cocina') === currentArea());
-  const orders = allOrders.filter(o =>
+  const mes = pedidoHistorialMesStr();
+  /* Un pedido en BORRADOR o ENVIADO no es historial: es trabajo a medias, y
+     el que se envió el 30 y llega el 2 no puede desaparecer de la pantalla
+     al cambiar de mes. Por eso el mes solo filtra los RECIBIDOS; lo que
+     sigue pendiente se ve siempre, se pidiera cuando se pidiera. */
+  const delMes = o => o.estado !== 'RECIBIDO' || String(o.date||'').startsWith(mes);
+  const coincide = o =>
     (!pedidoHistorialSupplierFilter || o.supplier === pedidoHistorialSupplierFilter) &&
-    (!pedidoHistorialDateFrom || o.date >= pedidoHistorialDateFrom) &&
-    (!pedidoHistorialDateTo || o.date <= pedidoHistorialDateTo) &&
-    pedidoMatchesSearch(o, pedidoHistorialSearch)
-  );
+    pedidoMatchesSearch(o, pedidoHistorialSearch);
+  const orders = allOrders.filter(o => delMes(o) && coincide(o));
+  /* Buscar algo que está en otro mes no puede devolver "sin resultados" a
+     secas: se dice cuántos hay fuera del mes que se está mirando. Solo
+     cuando se está buscando o filtrando de verdad — si no, el aviso saldría
+     siempre (hay pedidos de otros meses casi por definición) y se acabaría
+     leyendo como parte del decorado. */
+  const buscando = !!pedidoHistorialSearch || !!pedidoHistorialSupplierFilter;
+  const fuera = buscando ? allOrders.filter(o => !delMes(o) && coincide(o)).length : 0;
+  const avisoFuera = fuera
+    ? `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t(fuera===1 ? 'pedido.matchesOtherMonthsOne' : 'pedido.matchesOtherMonths').replace('${n}', fuera)}</div>`
+    : '';
   if(!orders.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
+    box.innerHTML = avisoFuera + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
 
   const totalFiltrado = orders.reduce((sum,o) => sum + pedidoTotalConIva(o), 0);
-  const totalHtml = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--teal)">${fmtMoney(totalFiltrado)}</strong></div>`;
+  const totalHtml = avisoFuera + `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--teal)">${fmtMoney(totalFiltrado)}</strong></div>`;
 
   const sorted = orders.slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
   box.innerHTML = totalHtml + sorted.map(o => {
@@ -32605,7 +32640,11 @@ function renderPedidoResultsList(){
           <span style="min-width:0;overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
           <span style="display:flex;align-items:center;gap:6px;flex:none">
             <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
-            ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteOrder(${o.id})" title="${t('title.deleteOrder')}"><i class="ti ti-trash"></i></button>` : ''}
+<!-- Un pedido RECIBIDO ya no se borra: sumó stock y generó un gasto real,
+                 y es el papel que justifica esa compra ante el gestor o una
+                 inspección. Si la recepción se marcó por error, la salida es
+                 "Deshacer recepción" dentro del pedido, que revierte stock y
+                 gasto dejando constancia (decisión del dueño, 12/09). -->
           </span>
         </h3>
         <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')} · <strong>${fmtMoney(pedidoTotalConIva(o))}</strong>${o.estado==='RECIBIDO' && o.recibidoPor ? ` · ${t('label.receivedBy')}: ${escapeHtml(o.recibidoPor)}` : ''}</div>
@@ -32827,7 +32866,7 @@ function renderPedidoDetail(){
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         <button class="owner-only btn" onclick="duplicateOrder(${o.id})"><i class="ti ti-copy"></i> ${t('btn.duplicateOrder')}</button>
-        <button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
+        ${o.estado!=='RECIBIDO' ? `<button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>` : ''}
       </div>
     </div>
   `;
@@ -33532,36 +33571,25 @@ async function sendNewPedido(method){
 async function deleteOrder(id){
   const o = getPurchaseOrder(id);
   if(!o) return;
+  /* Un pedido RECIBIDO es una compra registrada: sumó stock, generó un gasto
+     variable con su IVA y es lo que justifica ese gasto ante el gestor. No
+     se borra nunca — ni con el PIN, como se hacía antes. Si la recepción se
+     marcó por error, la salida es "Deshacer recepción" (revertPedidoRecepcion),
+     que deshace stock y gasto dejando rastro en vez de hacer desaparecer el
+     documento. Mismo criterio que ventas y gastos (decisión del dueño, 12/09). */
   if(o.estado === 'RECIBIDO'){
-    // Ya sumó stock y registró un gasto real: borrar sin más dejaría stock
-    // fantasma y un gasto huérfano, así que pide el PIN y revierte ambos.
-    requestBusinessPinAction(t('title.deleteOrder'), t('msg.confirmDeleteReceivedOrder'), (pin) => reallyDeleteOrder(id, pin));
+    showToast(t('msg.receivedOrderLocked'), 6000);
     return;
   }
   if(!(await confirmModal(t('msg.confirmDeleteOrder')))) return;
   reallyDeleteOrder(id);
 }
-function reallyDeleteOrder(id, pin){
+function reallyDeleteOrder(id){
   const o = getPurchaseOrder(id);
   if(!o) return;
-  if(o.estado === 'RECIBIDO'){
-    // Solo un pedido ya RECIBIDO (que ya sumó stock y generó un gasto real)
-    // exige el PIN — igual que en requestBusinessPinAction más arriba. Se
-    // vuelve a comprobar aquí para que no baste con llamar esta función
-    // directamente desde la consola sin conocer el PIN del negocio.
-    if(!accionSensibleAutorizada(pin)) return;
-    (o.items||[]).forEach(line => {
-      const ing = getIngredient(line.ingredientId);
-      if(!ing) return;
-      const recibida = line.cantidadRecibida||0;
-      const s = getStockEntry(line.ingredientId);
-      const before = s.qty||0;
-      s.qty = Math.max(0, before - recibida);
-      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty, 'purchase');
-    });
-    DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== id);
-    renderStock();
-  }
+  // Segunda barrera: ni llamándola a mano desde la consola. Una compra
+  // recibida solo se deshace con revertPedidoRecepcion() — ver deleteOrder.
+  if(o.estado === 'RECIBIDO') return;
   DB.purchaseOrders = DB.purchaseOrders.filter(o => o.id !== id);
   if(pedidoDetailId === id) pedidoDetailId = null;
   saveDB();
@@ -47282,6 +47310,7 @@ function renderDataMaintenanceCard(){
   const ventasAntiguas = DB.sales.filter(s => s.date && s.date < dataMaintenanceCutoff()).length;
   const reservasAntiguas = DB.reservations.filter(r => r.date && r.date < dataMaintenanceCutoff() && (r.status==='completada'||r.status==='cancelada')).length;
   const cierresAntiguos = DB.cashClosures.filter(c => c.fecha && c.fecha < dataMaintenanceCutoff()).length;
+  const pedidosAntiguos = DB.purchaseOrders.filter(o => o.date && o.date < dataMaintenanceCutoff() && o.estado === 'RECIBIDO').length;
   return `
     <div class="card">
       <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
@@ -47307,7 +47336,7 @@ function renderDataMaintenanceCard(){
         <label>${t('mn.data.archiveBefore')}</label>
         <input type="date" id="mn-archive-before" value="${dataMaintenanceCutoff()}">
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.data.archivePreview').replace('${sales}', ventasAntiguas).replace('${reservations}', reservasAntiguas).replace('${closures}', cierresAntiguos)}</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.data.archivePreview').replace('${sales}', ventasAntiguas).replace('${reservations}', reservasAntiguas).replace('${closures}', cierresAntiguos).replace('${orders}', pedidosAntiguos)}</p>
       <button class="btn btn-sm btn-danger" onclick="archiveOldData()"><i class="ti ti-archive"></i> ${t('mn.data.archiveAndDownload')}</button>
     </div>
   `;
@@ -47579,9 +47608,15 @@ async function archiveOldData(){
   const sales = DB.sales.filter(s => s.date && s.date < before);
   const reservations = DB.reservations.filter(r => r.date && r.date < before && (r.status==='completada'||r.status==='cancelada'));
   const cashClosures = DB.cashClosures.filter(c => c.fecha && c.fecha < before);
-  const total = sales.length + reservations.length + cashClosures.length;
+  /* Los pedidos a proveedor se quedaron fuera de esta herramienta desde
+     siempre, y son justo lo que más se acumula: tres pedidos al día son mil
+     al año, y el bloque entero viaja en cada subida a la nube. Solo los
+     RECIBIDOS: un borrador o un pedido enviado y no recibido sigue siendo
+     trabajo pendiente, por viejo que sea. */
+  const purchaseOrders = DB.purchaseOrders.filter(o => o.date && o.date < before && o.estado === 'RECIBIDO');
+  const total = sales.length + reservations.length + cashClosures.length + purchaseOrders.length;
   if(total === 0){ showToast(t('msg.noDataToArchive')); return; }
-  if(!(await confirmModal(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before)))) return;
+  if(!(await confirmModal(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${orders}', purchaseOrders.length).replace('${date}', before)))) return;
   /* ⚠️ Aquí se BORRA el histórico, así que la copia tiene que estar guardada
      de verdad. Dos redes: se espera a que el guardado resuelva (en Apple,
      cancelar la hoja de compartir ahora sí se nota), y además se PREGUNTA,
@@ -47599,8 +47634,9 @@ async function archiveOldData(){
   const salesIds = new Set(sales.map(s => s.id));
   const reservationIds = new Set(reservations.map(r => r.id));
   const cashClosureIds = new Set(cashClosures.map(c => c.id));
+  const purchaseOrderIds = new Set(purchaseOrders.map(o => o.id));
   try{
-    await downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
+    await downloadJSON({ before, sales, reservations, cashClosures, purchaseOrders }, `gastrogoan-archivo-hasta-${before}.json`);
   }catch(e){
     showToast(t('msg.backupFailedNoDelete'), 6000);
     return;
@@ -47612,6 +47648,7 @@ async function archiveOldData(){
   DB.sales = DB.sales.filter(s => !salesIds.has(s.id));
   DB.reservations = DB.reservations.filter(r => !reservationIds.has(r.id));
   DB.cashClosures = DB.cashClosures.filter(c => !cashClosureIds.has(c.id));
+  DB.purchaseOrders = DB.purchaseOrders.filter(o => !purchaseOrderIds.has(o.id));
   saveDB();
   checkArchiveReminder();
   checkBackupReminder();

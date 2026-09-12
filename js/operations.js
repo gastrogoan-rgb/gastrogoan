@@ -1003,16 +1003,30 @@ function renderPedidos(){
 let solicitudLines = [];
 let solicitudSearch = '';
 let pedidoHistorialSupplierFilter = '';
-let pedidoHistorialDateFrom = '';
-let pedidoHistorialDateTo = '';
 let pedidoHistorialSearch = '';
 function setPedidoHistorialSupplierFilter(val){
   pedidoHistorialSupplierFilter = val;
   renderPedidoList();
 }
-function setPedidoHistorialDateFilter(field, val){
-  if(field === 'from') pedidoHistorialDateFrom = val; else pedidoHistorialDateTo = val;
+/* El historial pintaba TODOS los pedidos que ha habido nunca: con tres
+   pedidos al día son mil tarjetas al año, y a los tres años la pantalla
+   tarda en abrirse. Ahora se entra por el mes en curso, con el mismo
+   selector de año y meses que Gestión Económica — no se borra nada, solo
+   se enseña un mes cada vez (decisión del dueño, 12/09). */
+let pedidoHistorialYear = new Date().getFullYear();
+let pedidoHistorialMonth = new Date().getMonth();
+function setPedidoHistorialYear(delta){
+  pedidoHistorialYear += delta;
   renderPedidoList();
+}
+function setPedidoHistorialMonth(i){
+  pedidoHistorialMonth = i;
+  renderPedidoList();
+}
+// Mes que se está mirando, como 'AAAA-MM' — los pedidos guardan la fecha
+// en ese mismo formato, así que basta con startsWith.
+function pedidoHistorialMesStr(){
+  return `${pedidoHistorialYear}-${String(pedidoHistorialMonth+1).padStart(2,'0')}`;
 }
 // Como en el resto de listados (Proveedores, Stock, Mega Lista, Escandallo,
 // Fichas), solo se repinta la lista de tarjetas de resultados, nunca el
@@ -1056,7 +1070,16 @@ function renderPedidoList(){
   // forma del fallo de Distribución del Trabajo: un dato suelto corrupto
   // que revienta al recorrer la lista. Se ordena a prueba de huecos.
   const suppliers = [...new Set(allOrders.map(o => o.supplier).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
+  // t('months.short'), no getMeses(): esa vive dentro del cierre de GE.
+  const mesesHtml = t('months.short').map((m,i)=>`
+    <div class="month-pill${i===pedidoHistorialMonth?' active':''}" onclick="setPedidoHistorialMonth(${i})">${m}</div>`).join('');
   const filterHtml = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
+      <button class="btn btn-sm btn-icon" onclick="setPedidoHistorialYear(-1)"><i class="ti ti-chevron-left"></i></button>
+      <span style="font-size:16px;font-weight:700">${pedidoHistorialYear}</span>
+      <button class="btn btn-sm btn-icon" onclick="setPedidoHistorialYear(1)"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <div class="month-sel month-sel-centered" style="margin-bottom:12px">${mesesHtml}</div>
     <div class="field-row filter-compact" style="margin-bottom:12px">
       <div class="field" style="max-width:220px">
         <input type="text" class="search-input" value="${escapeHtml(pedidoHistorialSearch)}" placeholder="${t('ph.searchOrder')}" oninput="setPedidoHistorialSearch(this.value)">
@@ -1066,14 +1089,6 @@ function renderPedidoList(){
           <option value="">${t('label.allSuppliers')}</option>
           ${suppliers.map(s => `<option value="${escapeHtml(s)}" ${pedidoHistorialSupplierFilter===s?'selected':''}>${escapeHtml(s)}</option>`).join('')}
         </select>
-      </div>
-      <div class="field" style="max-width:160px">
-        <label>${t('label.dateFrom')}</label>
-        <input type="date" value="${pedidoHistorialDateFrom}" onchange="setPedidoHistorialDateFilter('from', this.value)">
-      </div>
-      <div class="field" style="max-width:160px">
-        <label>${t('label.dateTo')}</label>
-        <input type="date" value="${pedidoHistorialDateTo}" onchange="setPedidoHistorialDateFilter('to', this.value)">
       </div>
     </div>
   `;
@@ -1233,19 +1248,33 @@ function renderPedidoResultsList(){
   const box = document.getElementById('pedido-results');
   if(!box) return;
   const allOrders = DB.purchaseOrders.filter(o => (o.area||'cocina') === currentArea());
-  const orders = allOrders.filter(o =>
+  const mes = pedidoHistorialMesStr();
+  /* Un pedido en BORRADOR o ENVIADO no es historial: es trabajo a medias, y
+     el que se envió el 30 y llega el 2 no puede desaparecer de la pantalla
+     al cambiar de mes. Por eso el mes solo filtra los RECIBIDOS; lo que
+     sigue pendiente se ve siempre, se pidiera cuando se pidiera. */
+  const delMes = o => o.estado !== 'RECIBIDO' || String(o.date||'').startsWith(mes);
+  const coincide = o =>
     (!pedidoHistorialSupplierFilter || o.supplier === pedidoHistorialSupplierFilter) &&
-    (!pedidoHistorialDateFrom || o.date >= pedidoHistorialDateFrom) &&
-    (!pedidoHistorialDateTo || o.date <= pedidoHistorialDateTo) &&
-    pedidoMatchesSearch(o, pedidoHistorialSearch)
-  );
+    pedidoMatchesSearch(o, pedidoHistorialSearch);
+  const orders = allOrders.filter(o => delMes(o) && coincide(o));
+  /* Buscar algo que está en otro mes no puede devolver "sin resultados" a
+     secas: se dice cuántos hay fuera del mes que se está mirando. Solo
+     cuando se está buscando o filtrando de verdad — si no, el aviso saldría
+     siempre (hay pedidos de otros meses casi por definición) y se acabaría
+     leyendo como parte del decorado. */
+  const buscando = !!pedidoHistorialSearch || !!pedidoHistorialSupplierFilter;
+  const fuera = buscando ? allOrders.filter(o => !delMes(o) && coincide(o)).length : 0;
+  const avisoFuera = fuera
+    ? `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t(fuera===1 ? 'pedido.matchesOtherMonthsOne' : 'pedido.matchesOtherMonths').replace('${n}', fuera)}</div>`
+    : '';
   if(!orders.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
+    box.innerHTML = avisoFuera + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
 
   const totalFiltrado = orders.reduce((sum,o) => sum + pedidoTotalConIva(o), 0);
-  const totalHtml = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--teal)">${fmtMoney(totalFiltrado)}</strong></div>`;
+  const totalHtml = avisoFuera + `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--teal)">${fmtMoney(totalFiltrado)}</strong></div>`;
 
   const sorted = orders.slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
   box.innerHTML = totalHtml + sorted.map(o => {
@@ -1260,7 +1289,11 @@ function renderPedidoResultsList(){
           <span style="min-width:0;overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
           <span style="display:flex;align-items:center;gap:6px;flex:none">
             <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
-            ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteOrder(${o.id})" title="${t('title.deleteOrder')}"><i class="ti ti-trash"></i></button>` : ''}
+<!-- Un pedido RECIBIDO ya no se borra: sumó stock y generó un gasto real,
+                 y es el papel que justifica esa compra ante el gestor o una
+                 inspección. Si la recepción se marcó por error, la salida es
+                 "Deshacer recepción" dentro del pedido, que revierte stock y
+                 gasto dejando constancia (decisión del dueño, 12/09). -->
           </span>
         </h3>
         <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')} · <strong>${fmtMoney(pedidoTotalConIva(o))}</strong>${o.estado==='RECIBIDO' && o.recibidoPor ? ` · ${t('label.receivedBy')}: ${escapeHtml(o.recibidoPor)}` : ''}</div>
@@ -1482,7 +1515,7 @@ function renderPedidoDetail(){
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         <button class="owner-only btn" onclick="duplicateOrder(${o.id})"><i class="ti ti-copy"></i> ${t('btn.duplicateOrder')}</button>
-        <button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
+        ${o.estado!=='RECIBIDO' ? `<button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>` : ''}
       </div>
     </div>
   `;
@@ -2187,36 +2220,25 @@ async function sendNewPedido(method){
 async function deleteOrder(id){
   const o = getPurchaseOrder(id);
   if(!o) return;
+  /* Un pedido RECIBIDO es una compra registrada: sumó stock, generó un gasto
+     variable con su IVA y es lo que justifica ese gasto ante el gestor. No
+     se borra nunca — ni con el PIN, como se hacía antes. Si la recepción se
+     marcó por error, la salida es "Deshacer recepción" (revertPedidoRecepcion),
+     que deshace stock y gasto dejando rastro en vez de hacer desaparecer el
+     documento. Mismo criterio que ventas y gastos (decisión del dueño, 12/09). */
   if(o.estado === 'RECIBIDO'){
-    // Ya sumó stock y registró un gasto real: borrar sin más dejaría stock
-    // fantasma y un gasto huérfano, así que pide el PIN y revierte ambos.
-    requestBusinessPinAction(t('title.deleteOrder'), t('msg.confirmDeleteReceivedOrder'), (pin) => reallyDeleteOrder(id, pin));
+    showToast(t('msg.receivedOrderLocked'), 6000);
     return;
   }
   if(!(await confirmModal(t('msg.confirmDeleteOrder')))) return;
   reallyDeleteOrder(id);
 }
-function reallyDeleteOrder(id, pin){
+function reallyDeleteOrder(id){
   const o = getPurchaseOrder(id);
   if(!o) return;
-  if(o.estado === 'RECIBIDO'){
-    // Solo un pedido ya RECIBIDO (que ya sumó stock y generó un gasto real)
-    // exige el PIN — igual que en requestBusinessPinAction más arriba. Se
-    // vuelve a comprobar aquí para que no baste con llamar esta función
-    // directamente desde la consola sin conocer el PIN del negocio.
-    if(!accionSensibleAutorizada(pin)) return;
-    (o.items||[]).forEach(line => {
-      const ing = getIngredient(line.ingredientId);
-      if(!ing) return;
-      const recibida = line.cantidadRecibida||0;
-      const s = getStockEntry(line.ingredientId);
-      const before = s.qty||0;
-      s.qty = Math.max(0, before - recibida);
-      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty, 'purchase');
-    });
-    DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== id);
-    renderStock();
-  }
+  // Segunda barrera: ni llamándola a mano desde la consola. Una compra
+  // recibida solo se deshace con revertPedidoRecepcion() — ver deleteOrder.
+  if(o.estado === 'RECIBIDO') return;
   DB.purchaseOrders = DB.purchaseOrders.filter(o => o.id !== id);
   if(pedidoDetailId === id) pedidoDetailId = null;
   saveDB();
