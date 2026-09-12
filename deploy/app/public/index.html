@@ -2957,7 +2957,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '12/09/2026 11:55';
+const GG_BUILD = '12/09/2026 12:10';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -13154,7 +13154,14 @@ const I18N = {
     'hr.te.upcomingLumpTitle': 'Próximos pagos grandes este mes',
     'hr.te.upcomingLumpNote': 'Gastos fijos periódicos (no mensuales) cuyo pago cae este mes: no están en el "Resultado Neto" mensual porque ya se reparten a lo largo del año, pero son una salida de caja real ahora.',
     'hr.te.setAsideQuarterly': 'Apartar antes del cierre del trimestre',
-    'hr.gv.receivedLocked': 'Esta compra viene de un pedido ya recibido: no se puede editar ni borrar. Si hay un error, corrígelo en el pedido al proveedor.',
+    'hr.gv.receivedLocked': 'Esta compra viene de un pedido ya recibido: no se puede editar ni borrar. Si está mal, anúlala y vuelve a registrarla.',
+    'hr.gv.recordLocked': 'Un gasto ya registrado no se modifica. Si está mal, anúlalo (queda constancia del motivo) y registra el correcto.',
+    'hr.gv.voidTitle': 'Anular gasto',
+    'hr.gv.voidConfirm': 'El gasto quedará anulado: deja de contar en los totales, pero se conserva en los libros con el motivo y la fecha. No se puede deshacer. Introduce el PIN del negocio para confirmar.',
+    'hr.gv.voidReasonPrompt': '¿Por qué anulas este gasto? (queda registrado)',
+    'hr.gv.voidReasonRequired': 'Escribe el motivo de la anulación.',
+    'hr.gv.voidedBadge': 'Anulado',
+    'hr.gv.voided': 'Gasto anulado',
     'hr.te.irpfNotConfigured': 'Actívalo en Gastos Fijos, en la nómina, con el cálculo automático',
     'hr.pe.useRealDataBtn': 'Usar datos del último mes',
     'hr.pe.noRecentSalesData': 'No hay ventas registradas en los últimos 30 días para calcular datos reales',
@@ -15380,7 +15387,14 @@ const I18N = {
     'hr.te.upcomingLumpTitle': 'Propers pagaments grans aquest mes',
     'hr.te.upcomingLumpNote': 'Despeses fixes periòdiques (no mensuals) el pagament de les quals cau aquest mes: no són al "Resultat Net" mensual perquè ja es reparteixen al llarg de l\'any, però són una sortida de caixa real ara.',
     'hr.te.setAsideQuarterly': 'Reservar abans del tancament del trimestre',
-    'hr.gv.receivedLocked': 'Aquesta compra ve d\'una comanda ja rebuda: no es pot editar ni esborrar. Si hi ha un error, corregeix-ho a la comanda al proveïdor.',
+    'hr.gv.receivedLocked': 'Aquesta compra ve d\'una comanda ja rebuda: no es pot editar ni esborrar. Si està malament, anul·la-la i torna-la a registrar.',
+    'hr.gv.recordLocked': 'Una despesa ja registrada no es modifica. Si està malament, anul·la-la (queda constància del motiu) i registra la correcta.',
+    'hr.gv.voidTitle': 'Anul·lar despesa',
+    'hr.gv.voidConfirm': 'La despesa quedarà anul·lada: deixa de comptar als totals, però es conserva als llibres amb el motiu i la data. No es pot desfer. Introdueix el PIN del negoci per confirmar.',
+    'hr.gv.voidReasonPrompt': 'Per què anul·les aquesta despesa? (queda registrat)',
+    'hr.gv.voidReasonRequired': 'Escriu el motiu de l\'anul·lació.',
+    'hr.gv.voidedBadge': 'Anul·lada',
+    'hr.gv.voided': 'Despesa anul·lada',
     'hr.te.irpfNotConfigured': 'Activa\'l a Despeses Fixes, a la nòmina, amb el càlcul automàtic',
     'hr.pe.useRealDataBtn': 'Usar dades de l\'últim mes',
     'hr.pe.noRecentSalesData': 'No hi ha vendes registrades els últims 30 dies per calcular dades reals',
@@ -17608,7 +17622,14 @@ const I18N = {
     'hr.te.upcomingLumpTitle': 'Upcoming large payments this month',
     'hr.te.upcomingLumpNote': 'Periodic fixed expenses (not monthly) whose payment falls this month: they aren\'t in the monthly "Net Result" because they\'re already smoothed across the year, but they are a real cash outflow now.',
     'hr.te.setAsideQuarterly': 'Set aside before quarter close',
-    'hr.gv.receivedLocked': 'This purchase comes from an order already received: it cannot be edited or deleted. If there is a mistake, fix it in the supplier order.',
+    'hr.gv.receivedLocked': 'This purchase comes from an order already received: it cannot be edited or deleted. If it is wrong, void it and record it again.',
+    'hr.gv.recordLocked': 'A recorded expense is never modified. If it is wrong, void it (the reason is kept on record) and enter the correct one.',
+    'hr.gv.voidTitle': 'Void expense',
+    'hr.gv.voidConfirm': 'The expense will be voided: it stops counting towards totals but stays in the books with its reason and date. This cannot be undone. Enter the business PIN to confirm.',
+    'hr.gv.voidReasonPrompt': 'Why are you voiding this expense? (it is recorded)',
+    'hr.gv.voidReasonRequired': 'Write the reason for voiding it.',
+    'hr.gv.voidedBadge': 'Voided',
+    'hr.gv.voided': 'Expense voided',
     'hr.te.irpfNotConfigured': 'Turn it on in Fixed Expenses, on the payroll line, with automatic calculation',
     'hr.pe.useRealDataBtn': 'Use last month\'s data',
     'hr.pe.noRecentSalesData': 'No sales recorded in the last 30 days to calculate real data',
@@ -20017,7 +20038,12 @@ function gfMonthlyImporte(g){
 // el IVA se AÑADE encima para el total con IVA, nunca se extrae de un total
 // que ya lo llevara incluido.
 function geTotalVariablesNetoMes(year, month){
-  return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+  return gastosVariablesActivos().filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+}
+// Gastos anulados (ver anularGV/hr.js): igual que las ventas anuladas, se
+// conservan en los libros con su motivo pero no cuentan en ninguna cifra.
+function gastosVariablesActivos(){
+  return (DB.ge.variables||[]).filter(v => !v.anulado);
 }
 // Ventas anuladas (ver requestCancelSale/tpv.js) se excluyen de todas las
 // cifras de facturación: siguen en DB.sales por trazabilidad, pero no son
@@ -20042,7 +20068,7 @@ function daysInMonth(year, month){
 // Gastos variables (compras) registrados con fecha concreta dentro del rango
 // (sin IVA) — v.importe ya es la base, no hace falta extraer nada.
 function geVariablesTotalForRange(startDate, endDate){
-  return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+  return gastosVariablesActivos().filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>s+parseFloat(v.importe||0),0);
 }
 // Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana" (sin IVA).
 // Usa el histórico de gastos fijos vigente en CADA día (no la configuración de HOY, que
@@ -20228,7 +20254,7 @@ function renderDashboard(){
   // Facturas de proveedor (generadas automáticamente al recibir un pedido)
   // con fecha de pago ya vencida y todavía sin marcar como pagadas — para
   // no acumular sorpresas de tesorería por puro despiste.
-  const overdueInvoicesCount = (DB.ge.variables||[]).filter(v => v.fechaPago && !v.pagada && v.fechaPago < todayDate).length;
+  const overdueInvoicesCount = gastosVariablesActivos().filter(v => v.fechaPago && !v.pagada && v.fechaPago < todayDate).length;
   // Repartos propios en curso (aún sin entregar) — antes solo se veían
   // entrando a TPV → Para Llevar/Delivery → Control de repartos; con esto
   // se sabe de un vistazo si hay entregas activas sin salir de Gestión.
@@ -20589,7 +20615,11 @@ function renderSalesHeatmap(){
   const horasConVenta = [];
   for(let h = 0; h < 24; h++){ if(porHora.some(fila => fila[h] > 0)) horasConVenta.push(h); }
   const horas = horasConVenta.length ? horasConVenta : [12,13,14,20,21,22];
-  const bands = horas.map(h => ({lbl: h + 'h', hora: h}));
+  /* La hora, en el formato del idioma activo (localeActual, js/i18n.js): un
+     "21h" escrito a mano se lee raro en inglés, donde toca "9 PM". Misma
+     norma que el resto de fechas y horas de la app. */
+  const etiquetaHora = h => new Date(2000, 0, 1, h).toLocaleTimeString(localeActual(), {hour:'numeric'});
+  const bands = horas.map(h => ({lbl: etiquetaHora(h), hora: h}));
   const grid = porHora.map(fila => horas.map(h => fila[h]));
   const maxVal = Math.max(...grid.flat(), 1);
   el.innerHTML = `
@@ -21658,7 +21688,7 @@ function dismissUnmatchedPayment(id){
 function openPendingInvoicesModal(){
   const today = todayStr();
   const in7 = dateStr(new Date(Date.now() + 7*86400000));
-  const pending = (DB.ge.variables||[])
+  const pending = gastosVariablesActivos()
     .filter(v => v.fechaPago && !v.pagada && v.fechaPago <= in7)
     .sort((a,b) => a.fechaPago.localeCompare(b.fechaPago));
   openModal(`
@@ -33625,6 +33655,13 @@ const GE = (function(){
   function ge(){ return DB.ge; }
   function fijos(){ return ge().fijos; }
   function variables(){ return ge().variables; }
+  /* Mismo principio que las ventas: un gasto registrado NO se edita ni se
+     borra — se anula, y la anulación queda a la vista con su motivo. Sin
+     esto, cualquiera podía retocar una compra ya contabilizada y descuadrar
+     un mes, quizá ya declarado, sin dejar rastro de quién ni por qué.
+     Lo que se conserva sigue en ge().variables; lo que cuenta para los
+     cálculos es esto. */
+  function variablesActivos(){ return variables().filter(v => !v.anulado); }
   function capex(){ return ge().capex; }
   function config(){ return ge().config; }
   // El "% Gastos Variables" que se reparte en Tesorería (config().distPct.mp)
@@ -33748,7 +33785,7 @@ const GE = (function(){
   function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyGross(g),0); }
   function totalGFNeto(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
   function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyGross(g),0); }
-  function variablesMes(mes, año=currentYear()){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
+  function variablesMes(mes, año=currentYear()){ return variablesActivos().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
   function facturacionMes(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return activeSales().filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
@@ -34369,6 +34406,10 @@ const GE = (function(){
       empty.style.display='none';
       const bycat = {};
       items.forEach(v=>{ (bycat[v.categoria] = bycat[v.categoria]||[]).push(v); });
+      // Los anulados del mes se cuelan en su categoría para verse tachados:
+      // items viene ya filtrado de anulados (son los que suman).
+      variables().filter(v => v.anulado && parseInt(v.mes)===mes && parseInt(v.año)===gvYear)
+        .forEach(v=>{ (bycat[v.categoria] = bycat[v.categoria]||[]).push(v); });
       list.innerHTML = Object.entries(bycat).map(([cat,its])=>{
         const autoItems = its.filter(v=>v.auto);
         const manualItems = its.filter(v=>!v.auto);
@@ -34383,7 +34424,8 @@ const GE = (function(){
             <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10.5px;font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
             <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
             <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
-            <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 6px"><i class="ti ti-lock"></i></span>
+            <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 4px"><i class="ti ti-lock"></i></span>
+            <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGVGroup('${ids}')"><i class="ti ti-ban"></i></button>
           </div>`;
         }).join('');
         const manualHtml = manualItems.map(v=>{
@@ -34391,13 +34433,23 @@ const GE = (function(){
           const pct = ivaDeGastoVariable(v);
           const ivaAmt = base * pct/100;
           const total = base + ivaAmt;
+          // Un gasto anulado no desaparece: se queda tachado y con su
+          // motivo, para que en los libros se vea que hubo una corrección
+          // y por qué. Lo que no hace es contar en ningún total.
+          if(v.anulado){
+            return `<div class="ge-item" style="flex-wrap:wrap;opacity:.6">
+            <span style="flex:1;font-size:14px;min-width:140px;text-decoration:line-through">${escapeHtml(v.proveedor||'—')}</span>
+            <span class="badge badge-red" style="font-size:10.5px"><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>
+            <span style="font-size:11.5px;color:var(--muted);flex:1;min-width:120px">${escapeHtml(v.anuladoMotivo||'')}</span>
+            <span style="font-family:monospace;text-decoration:line-through;color:var(--muted)">${fmtMoney(total)}</span>
+          </div>`;
+          }
           return `<div class="ge-item" style="flex-wrap:wrap">
           <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(v.proveedor||'—')}</span>
           <span style="font-size:12px;color:var(--muted);margin-right:4px">${escapeHtml(v.fecha||'')}</span>
           <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})</span>
           <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
-          <button class="btn btn-sm btn-icon" onclick="GE.editGV(${v.id})"><i class="ti ti-edit"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
+          <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGV(${v.id})"><i class="ti ti-ban"></i></button>
         </div>`; }).join('');
         return `<div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(variableCategoryLabel(cat))}</div>${autoHtml}${manualHtml}`;
       }).join('');
@@ -34459,12 +34511,10 @@ const GE = (function(){
   }
   function editGV(id){
     const v = variables().find(x=>x.id===id); if(!v) return;
-    // Igual que el borrado: una compra nacida de un pedido recibido no se
-    // retoca desde aquí. Se corrige en el pedido a proveedor, que es donde
-    // está el dato de verdad.
-    if(v.auto){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
-    editingGV = id;
-    openGVModal(v);
+    // Un gasto ya registrado no se modifica NUNCA, venga de un pedido o
+    // esté metido a mano: se anula y se vuelve a meter bien. Así queda
+    // constancia de que hubo una corrección y de por qué.
+    showToast(t('hr.gv.recordLocked'), 6000);
   }
   function openGVModal(v){
     const provs = proveedores();
@@ -34536,29 +34586,57 @@ const GE = (function(){
     renderVariables();
     showToast(t('msg.purchaseSaved'));
   }
-  async function deleteGV(id){
-    const v = variables().find(x=>x.id===id);
-    if(v && v.auto){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
-    if(v && isDateClosed(v.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
-    if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
-    ge().variables = variables().filter(v=>v.id!==id);
-    saveDB();
-    renderVariables();
+  /* Anular un pedido recibido entero: son varias líneas de la misma entrega
+     agrupadas por proveedor, así que se anulan juntas o no tiene sentido. */
+  async function anularGVGroup(idsStr){
+    const ids = idsStr.split(',').map(x=>parseInt(x));
+    const afectados = variables().filter(v => ids.includes(v.id) && !v.anulado);
+    if(!afectados.length) return;
+    if(afectados.some(v => isDateClosed(v.fecha))){ showToast(t('hr.te.monthClosedError')); return; }
+    const motivo = await promptText(t('hr.gv.voidReasonPrompt'), '');
+    if(motivo === null) return;
+    if(!motivo.trim()){ showToast(t('hr.gv.voidReasonRequired')); return; }
+    requestBusinessPinAction(t('hr.gv.voidTitle'), t('hr.gv.voidConfirm'), (pin) => {
+      if(!accionSensibleAutorizada(pin)) return;
+      const ahora = new Date().toISOString();
+      let total = 0;
+      variables().forEach(v => {
+        if(!ids.includes(v.id) || v.anulado) return;
+        v.anulado = true; v.anuladoAt = ahora; v.anuladoMotivo = motivo.trim();
+        total += parseFloat(v.importe)||0;
+      });
+      saveDB();
+      if(typeof logAudit === 'function') logAudit('gasto_anulado', `${afectados[0].proveedor||''} ${fmtMoney(total)} — ${motivo.trim()}`);
+      renderVariables();
+      showToast(t('hr.gv.voided'));
+    });
   }
-  async function deleteGVGroup(idsStr){
-    const ids = idsStr.split(',').map(s=>parseInt(s));
-    /* Una compra que viene de un pedido ACEPTADO como recibido es un hecho
-       contable: la mercancía entró y el proveedor la va a facturar. Borrarla
-       descuadraría el food cost y el IVA soportado de un mes que ya se
-       declaró, así que no se puede — ni desde el botón (ya no existe) ni
-       desde la consola. Para corregir un error hay que hacerlo donde se
-       originó: en el pedido a proveedor. */
-    if(variables().some(v=>ids.includes(v.id) && v.auto)){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
-    if(variables().some(v=>ids.includes(v.id) && isDateClosed(v.fecha))){ showToast(t('hr.te.monthClosedError')); return; }
-    if(!(await confirmModal(t('msg.confirmDeletePurchases')))) return;
-    ge().variables = variables().filter(v=>!ids.includes(v.id));
-    saveDB();
-    renderVariables();
+
+  /* Anular, no borrar. El gasto se queda en los libros marcado como
+     anulado, con la fecha y el motivo, y deja de contar en los cálculos —
+     igual que una venta anulada (reallyCancelSale, js/tpv.js). Pide el PIN
+     del negocio porque es la única forma de tocar una cifra ya
+     contabilizada, y se comprueba también aquí y no solo en el modal: si
+     no, bastaba la consola del navegador para saltárselo. */
+  async function anularGV(id){
+    const v = variables().find(x=>x.id===id);
+    if(!v || v.anulado) return;
+    if(isDateClosed(v.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
+    const motivo = await promptText(t('hr.gv.voidReasonPrompt'), '');
+    if(motivo === null) return;
+    if(!motivo.trim()){ showToast(t('hr.gv.voidReasonRequired')); return; }
+    requestBusinessPinAction(t('hr.gv.voidTitle'), t('hr.gv.voidConfirm'), (pin) => {
+      if(!accionSensibleAutorizada(pin)) return;
+      const gasto = variables().find(x=>x.id===id);
+      if(!gasto || gasto.anulado) return;
+      gasto.anulado = true;
+      gasto.anuladoAt = new Date().toISOString();
+      gasto.anuladoMotivo = motivo.trim();
+      saveDB();
+      if(typeof logAudit === 'function') logAudit('gasto_anulado', `${gasto.proveedor||''} ${fmtMoney(parseFloat(gasto.importe)||0)} — ${motivo.trim()}`);
+      renderVariables();
+      showToast(t('hr.gv.voided'));
+    });
   }
 
   /* -- CUENTA DE RESULTADOS -- */
@@ -35879,7 +35957,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

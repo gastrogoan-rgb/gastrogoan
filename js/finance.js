@@ -131,7 +131,12 @@ function gfMonthlyImporte(g){
 // el IVA se AÑADE encima para el total con IVA, nunca se extrae de un total
 // que ya lo llevara incluido.
 function geTotalVariablesNetoMes(year, month){
-  return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+  return gastosVariablesActivos().filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+}
+// Gastos anulados (ver anularGV/hr.js): igual que las ventas anuladas, se
+// conservan en los libros con su motivo pero no cuentan en ninguna cifra.
+function gastosVariablesActivos(){
+  return (DB.ge.variables||[]).filter(v => !v.anulado);
 }
 // Ventas anuladas (ver requestCancelSale/tpv.js) se excluyen de todas las
 // cifras de facturación: siguen en DB.sales por trazabilidad, pero no son
@@ -156,7 +161,7 @@ function daysInMonth(year, month){
 // Gastos variables (compras) registrados con fecha concreta dentro del rango
 // (sin IVA) — v.importe ya es la base, no hace falta extraer nada.
 function geVariablesTotalForRange(startDate, endDate){
-  return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+  return gastosVariablesActivos().filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>s+parseFloat(v.importe||0),0);
 }
 // Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana" (sin IVA).
 // Usa el histórico de gastos fijos vigente en CADA día (no la configuración de HOY, que
@@ -342,7 +347,7 @@ function renderDashboard(){
   // Facturas de proveedor (generadas automáticamente al recibir un pedido)
   // con fecha de pago ya vencida y todavía sin marcar como pagadas — para
   // no acumular sorpresas de tesorería por puro despiste.
-  const overdueInvoicesCount = (DB.ge.variables||[]).filter(v => v.fechaPago && !v.pagada && v.fechaPago < todayDate).length;
+  const overdueInvoicesCount = gastosVariablesActivos().filter(v => v.fechaPago && !v.pagada && v.fechaPago < todayDate).length;
   // Repartos propios en curso (aún sin entregar) — antes solo se veían
   // entrando a TPV → Para Llevar/Delivery → Control de repartos; con esto
   // se sabe de un vistazo si hay entregas activas sin salir de Gestión.
@@ -703,7 +708,11 @@ function renderSalesHeatmap(){
   const horasConVenta = [];
   for(let h = 0; h < 24; h++){ if(porHora.some(fila => fila[h] > 0)) horasConVenta.push(h); }
   const horas = horasConVenta.length ? horasConVenta : [12,13,14,20,21,22];
-  const bands = horas.map(h => ({lbl: h + 'h', hora: h}));
+  /* La hora, en el formato del idioma activo (localeActual, js/i18n.js): un
+     "21h" escrito a mano se lee raro en inglés, donde toca "9 PM". Misma
+     norma que el resto de fechas y horas de la app. */
+  const etiquetaHora = h => new Date(2000, 0, 1, h).toLocaleTimeString(localeActual(), {hour:'numeric'});
+  const bands = horas.map(h => ({lbl: etiquetaHora(h), hora: h}));
   const grid = porHora.map(fila => horas.map(h => fila[h]));
   const maxVal = Math.max(...grid.flat(), 1);
   el.innerHTML = `
@@ -1772,7 +1781,7 @@ function dismissUnmatchedPayment(id){
 function openPendingInvoicesModal(){
   const today = todayStr();
   const in7 = dateStr(new Date(Date.now() + 7*86400000));
-  const pending = (DB.ge.variables||[])
+  const pending = gastosVariablesActivos()
     .filter(v => v.fechaPago && !v.pagada && v.fechaPago <= in7)
     .sort((a,b) => a.fechaPago.localeCompare(b.fechaPago));
   openModal(`

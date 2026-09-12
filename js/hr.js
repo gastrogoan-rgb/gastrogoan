@@ -53,6 +53,13 @@ const GE = (function(){
   function ge(){ return DB.ge; }
   function fijos(){ return ge().fijos; }
   function variables(){ return ge().variables; }
+  /* Mismo principio que las ventas: un gasto registrado NO se edita ni se
+     borra — se anula, y la anulación queda a la vista con su motivo. Sin
+     esto, cualquiera podía retocar una compra ya contabilizada y descuadrar
+     un mes, quizá ya declarado, sin dejar rastro de quién ni por qué.
+     Lo que se conserva sigue en ge().variables; lo que cuenta para los
+     cálculos es esto. */
+  function variablesActivos(){ return variables().filter(v => !v.anulado); }
   function capex(){ return ge().capex; }
   function config(){ return ge().config; }
   // El "% Gastos Variables" que se reparte en Tesorería (config().distPct.mp)
@@ -176,7 +183,7 @@ const GE = (function(){
   function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyGross(g),0); }
   function totalGFNeto(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
   function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyGross(g),0); }
-  function variablesMes(mes, año=currentYear()){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
+  function variablesMes(mes, año=currentYear()){ return variablesActivos().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
   function facturacionMes(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return activeSales().filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
@@ -797,6 +804,10 @@ const GE = (function(){
       empty.style.display='none';
       const bycat = {};
       items.forEach(v=>{ (bycat[v.categoria] = bycat[v.categoria]||[]).push(v); });
+      // Los anulados del mes se cuelan en su categoría para verse tachados:
+      // items viene ya filtrado de anulados (son los que suman).
+      variables().filter(v => v.anulado && parseInt(v.mes)===mes && parseInt(v.año)===gvYear)
+        .forEach(v=>{ (bycat[v.categoria] = bycat[v.categoria]||[]).push(v); });
       list.innerHTML = Object.entries(bycat).map(([cat,its])=>{
         const autoItems = its.filter(v=>v.auto);
         const manualItems = its.filter(v=>!v.auto);
@@ -811,7 +822,8 @@ const GE = (function(){
             <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10.5px;font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
             <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
             <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
-            <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 6px"><i class="ti ti-lock"></i></span>
+            <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 4px"><i class="ti ti-lock"></i></span>
+            <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGVGroup('${ids}')"><i class="ti ti-ban"></i></button>
           </div>`;
         }).join('');
         const manualHtml = manualItems.map(v=>{
@@ -819,13 +831,23 @@ const GE = (function(){
           const pct = ivaDeGastoVariable(v);
           const ivaAmt = base * pct/100;
           const total = base + ivaAmt;
+          // Un gasto anulado no desaparece: se queda tachado y con su
+          // motivo, para que en los libros se vea que hubo una corrección
+          // y por qué. Lo que no hace es contar en ningún total.
+          if(v.anulado){
+            return `<div class="ge-item" style="flex-wrap:wrap;opacity:.6">
+            <span style="flex:1;font-size:14px;min-width:140px;text-decoration:line-through">${escapeHtml(v.proveedor||'—')}</span>
+            <span class="badge badge-red" style="font-size:10.5px"><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>
+            <span style="font-size:11.5px;color:var(--muted);flex:1;min-width:120px">${escapeHtml(v.anuladoMotivo||'')}</span>
+            <span style="font-family:monospace;text-decoration:line-through;color:var(--muted)">${fmtMoney(total)}</span>
+          </div>`;
+          }
           return `<div class="ge-item" style="flex-wrap:wrap">
           <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(v.proveedor||'—')}</span>
           <span style="font-size:12px;color:var(--muted);margin-right:4px">${escapeHtml(v.fecha||'')}</span>
           <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})</span>
           <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
-          <button class="btn btn-sm btn-icon" onclick="GE.editGV(${v.id})"><i class="ti ti-edit"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
+          <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGV(${v.id})"><i class="ti ti-ban"></i></button>
         </div>`; }).join('');
         return `<div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(variableCategoryLabel(cat))}</div>${autoHtml}${manualHtml}`;
       }).join('');
@@ -887,12 +909,10 @@ const GE = (function(){
   }
   function editGV(id){
     const v = variables().find(x=>x.id===id); if(!v) return;
-    // Igual que el borrado: una compra nacida de un pedido recibido no se
-    // retoca desde aquí. Se corrige en el pedido a proveedor, que es donde
-    // está el dato de verdad.
-    if(v.auto){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
-    editingGV = id;
-    openGVModal(v);
+    // Un gasto ya registrado no se modifica NUNCA, venga de un pedido o
+    // esté metido a mano: se anula y se vuelve a meter bien. Así queda
+    // constancia de que hubo una corrección y de por qué.
+    showToast(t('hr.gv.recordLocked'), 6000);
   }
   function openGVModal(v){
     const provs = proveedores();
@@ -964,29 +984,57 @@ const GE = (function(){
     renderVariables();
     showToast(t('msg.purchaseSaved'));
   }
-  async function deleteGV(id){
-    const v = variables().find(x=>x.id===id);
-    if(v && v.auto){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
-    if(v && isDateClosed(v.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
-    if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
-    ge().variables = variables().filter(v=>v.id!==id);
-    saveDB();
-    renderVariables();
+  /* Anular un pedido recibido entero: son varias líneas de la misma entrega
+     agrupadas por proveedor, así que se anulan juntas o no tiene sentido. */
+  async function anularGVGroup(idsStr){
+    const ids = idsStr.split(',').map(x=>parseInt(x));
+    const afectados = variables().filter(v => ids.includes(v.id) && !v.anulado);
+    if(!afectados.length) return;
+    if(afectados.some(v => isDateClosed(v.fecha))){ showToast(t('hr.te.monthClosedError')); return; }
+    const motivo = await promptText(t('hr.gv.voidReasonPrompt'), '');
+    if(motivo === null) return;
+    if(!motivo.trim()){ showToast(t('hr.gv.voidReasonRequired')); return; }
+    requestBusinessPinAction(t('hr.gv.voidTitle'), t('hr.gv.voidConfirm'), (pin) => {
+      if(!accionSensibleAutorizada(pin)) return;
+      const ahora = new Date().toISOString();
+      let total = 0;
+      variables().forEach(v => {
+        if(!ids.includes(v.id) || v.anulado) return;
+        v.anulado = true; v.anuladoAt = ahora; v.anuladoMotivo = motivo.trim();
+        total += parseFloat(v.importe)||0;
+      });
+      saveDB();
+      if(typeof logAudit === 'function') logAudit('gasto_anulado', `${afectados[0].proveedor||''} ${fmtMoney(total)} — ${motivo.trim()}`);
+      renderVariables();
+      showToast(t('hr.gv.voided'));
+    });
   }
-  async function deleteGVGroup(idsStr){
-    const ids = idsStr.split(',').map(s=>parseInt(s));
-    /* Una compra que viene de un pedido ACEPTADO como recibido es un hecho
-       contable: la mercancía entró y el proveedor la va a facturar. Borrarla
-       descuadraría el food cost y el IVA soportado de un mes que ya se
-       declaró, así que no se puede — ni desde el botón (ya no existe) ni
-       desde la consola. Para corregir un error hay que hacerlo donde se
-       originó: en el pedido a proveedor. */
-    if(variables().some(v=>ids.includes(v.id) && v.auto)){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
-    if(variables().some(v=>ids.includes(v.id) && isDateClosed(v.fecha))){ showToast(t('hr.te.monthClosedError')); return; }
-    if(!(await confirmModal(t('msg.confirmDeletePurchases')))) return;
-    ge().variables = variables().filter(v=>!ids.includes(v.id));
-    saveDB();
-    renderVariables();
+
+  /* Anular, no borrar. El gasto se queda en los libros marcado como
+     anulado, con la fecha y el motivo, y deja de contar en los cálculos —
+     igual que una venta anulada (reallyCancelSale, js/tpv.js). Pide el PIN
+     del negocio porque es la única forma de tocar una cifra ya
+     contabilizada, y se comprueba también aquí y no solo en el modal: si
+     no, bastaba la consola del navegador para saltárselo. */
+  async function anularGV(id){
+    const v = variables().find(x=>x.id===id);
+    if(!v || v.anulado) return;
+    if(isDateClosed(v.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
+    const motivo = await promptText(t('hr.gv.voidReasonPrompt'), '');
+    if(motivo === null) return;
+    if(!motivo.trim()){ showToast(t('hr.gv.voidReasonRequired')); return; }
+    requestBusinessPinAction(t('hr.gv.voidTitle'), t('hr.gv.voidConfirm'), (pin) => {
+      if(!accionSensibleAutorizada(pin)) return;
+      const gasto = variables().find(x=>x.id===id);
+      if(!gasto || gasto.anulado) return;
+      gasto.anulado = true;
+      gasto.anuladoAt = new Date().toISOString();
+      gasto.anuladoMotivo = motivo.trim();
+      saveDB();
+      if(typeof logAudit === 'function') logAudit('gasto_anulado', `${gasto.proveedor||''} ${fmtMoney(parseFloat(gasto.importe)||0)} — ${motivo.trim()}`);
+      renderVariables();
+      showToast(t('hr.gv.voided'));
+    });
   }
 
   /* -- CUENTA DE RESULTADOS -- */
@@ -2307,7 +2355,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
