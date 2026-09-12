@@ -878,7 +878,7 @@ function renderLimpiezaMantenimiento(){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('label.equipment')}</th><th>${t('label.lastMaintenance')}</th><th>${t('label.next')}</th><th>${t('label.responsible')}</th><th>${t('label.status')}</th><th>${t('th.notes')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('label.equipment')}</th><th style="width:1%;white-space:nowrap">${t('label.lastMaintenance')}</th><th style="width:1%;white-space:nowrap">${t('label.next')}</th><th style="min-width:235px">${t('label.responsible')}</th><th style="width:1%;white-space:nowrap">${t('label.status')}</th><th style="min-width:260px">${t('th.notes')}</th><th style="width:1%"></th></tr></thead>
         <tbody>${equipos.length ? equipos.map(e => {
           const due = limpiezaMantenimientoDueStatus(e);
           return `
@@ -890,11 +890,11 @@ function renderLimpiezaMantenimiento(){
               ${due==='overdue' ? `<span class="badge badge-red" style="margin-left:4px;white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : ''}
               ${due==='soon' ? `<span class="badge badge-amber" style="margin-left:4px;white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
             </td>
-            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${editUnlocked?'':'disabled'}></td>
+            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100%;min-width:150px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${editUnlocked?'':'disabled'}></td>
             <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)" ${editUnlocked?'':'disabled'}>
               ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,key])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(key)}</option>`).join('')}
             </select></td>
-            <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${editUnlocked?'':'disabled'}></td>
+            <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100%;min-width:210px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${editUnlocked?'':'disabled'}></td>
             <td><button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
           </tr>
         `;}).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noEquipmentRegistered')}</div></td></tr>`}</tbody>

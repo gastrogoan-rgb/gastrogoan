@@ -5,10 +5,10 @@
 //   el de arriba de Cuenta de Resultados (misma fórmula), sin aportar nada
 //   propio de Tesorería, y encima con su propio año seleccionado aparte
 //   que podía desincronizarse del de Cuenta de Resultados.
-// - Se confirma con datos realistas y proporcionales que el semáforo
-//   (tick verde / cruz roja) es correcto en ambas direcciones: gastar de
-//   más en una fila de gasto es malo (rojo); superar el objetivo de
-//   Beneficio es bueno (verde).
+// - El semáforo es DIRECCIONAL (criterio del 12/09, tras probarlo con
+//   datos reales): en una fila de gasto, pasarse del objetivo es malo
+//   (cruz roja) y quedarse por debajo es bueno (tick verde); en Beneficio,
+//   al revés. Sin franja ámbar intermedia.
 // - Las filas de Reserva IVA e IRPF siguen presentes.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
@@ -72,22 +72,24 @@ await caso('Ya no existe el gráfico "Resultado mensual anual" (duplicaba el de 
   assert.equal(r, false, 'el gráfico duplicado no debe existir: ' + r);
 });
 
-await caso('Criterio único (10/09, segunda corrección): alcanzar/superar el objetivo es SIEMPRE verde, no llegar es SIEMPRE rojo — sin distinguir gasto de beneficio', async () => {
+await caso('Un GASTO por encima de su objetivo sale en ROJO con cruz (criterio del 12/09)', async () => {
   const r = await page.evaluate(()=>{
     const fila = [...document.querySelectorAll('#te-rows .te-row')].find(row => row.textContent.includes('Personal'));
     return {texto: fila.textContent, htmlEstado: fila.querySelector('span:last-child')?.innerHTML || ''};
   });
-  // Personal: 6.000€ real frente a 3.000€ objetivo → SUPERA el objetivo → verde.
-  assert.ok(r.htmlEstado.includes('ti-check'), 'Personal (6.000€ real, supera el objetivo de 3.000€) debe mostrar el tick verde: ' + JSON.stringify(r));
+  // Personal: 6.000€ real frente a 3.000€ de objetivo → se ha gastado el
+  // doble de lo presupuestado, así que es una mala noticia: cruz roja.
+  assert.ok(r.htmlEstado.includes('ti-x'), 'Personal (6.000€ gastados contra un objetivo de 3.000€) debe mostrar la cruz roja: ' + JSON.stringify(r));
 });
 
-await caso('Gastos Fijos por debajo del objetivo (no lo alcanza) se marca en ROJO con cruz', async () => {
+await caso('Un GASTO por debajo de su objetivo sale en VERDE con tick', async () => {
   const r = await page.evaluate(()=>{
     const fila = [...document.querySelectorAll('#te-rows .te-row')].find(row => row.textContent.includes('Gastos Fijos'));
     return {texto: fila.textContent, htmlEstado: fila.querySelector('span:last-child')?.innerHTML || ''};
   });
-  // Gastos Fijos: 500€ real frente a 2.000€ objetivo → NO llega al objetivo → rojo.
-  assert.ok(r.htmlEstado.includes('ti-x'), 'Gastos Fijos (500€ real, no llega al objetivo de 2.000€) debe mostrar la cruz roja: ' + JSON.stringify(r));
+  // Gastos Fijos: 500€ real frente a 2.000€ de objetivo → se ha gastado
+  // MENOS de lo presupuestado, que es bueno: tick verde.
+  assert.ok(r.htmlEstado.includes('ti-check'), 'Gastos Fijos (500€ gastados contra un objetivo de 2.000€) debe mostrar el tick verde: ' + JSON.stringify(r));
 });
 
 await caso('Las filas de Reserva IVA e IRPF retenido siguen presentes', async () => {

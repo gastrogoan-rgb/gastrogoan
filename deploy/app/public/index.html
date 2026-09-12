@@ -1019,11 +1019,19 @@ td.wrap{white-space:normal}
    verdad (horario semanal, plano de mesas, web pública con QR) ocupan las
    columnas enteras con .mn-grid-full. align-items:start evita que una
    tarjeta alta estire a su vecina de la misma fila. */
-.mn-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
-@media (min-width:900px){.mn-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (min-width:1440px){.mn-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.mn-grid .card{max-width:none;margin:0;min-width:0}
-.mn-grid .mn-grid-full{grid-column:1/-1}
+/* Mampostería, no rejilla. Con grid, las filas se alinean entre sí: una
+   tarjeta larguísima (Pago online con tarjeta, con todos sus campos)
+   empujaba el inicio de la fila siguiente y dejaba MIL PÍXELES de blanco
+   debajo de su vecina corta — justo encima de VeriFactu y Mantenimiento de
+   datos, que es donde lo vio el dueño. Con columnas, cada tarjeta empieza
+   donde acaba la anterior de SU columna y no queda hueco.
+   column-span:all conserva las tarjetas anchas de verdad (horario semanal,
+   plano de mesas) ocupando todo el ancho, como hacía .mn-grid-full. */
+.mn-grid{display:block;column-gap:16px}
+@media (min-width:900px){.mn-grid{column-count:2}}
+@media (min-width:1440px){.mn-grid{column-count:3}}
+.mn-grid .card{max-width:none;margin:0 0 16px;min-width:0;break-inside:avoid;-webkit-column-break-inside:avoid}
+.mn-grid .mn-grid-full{column-span:all}
 
 /* Antes había dos listas de capítulos (esta columna lateral y la fila de
    arriba, .mn-indice) — el dueño pidió (9/09) dejar solo una. .manual-wrap
@@ -2179,12 +2187,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
       </div>
 
       <div class="card" style="margin-top:16px">
-        <h3 data-i18n="title.salesAnalysis"><i class="ti ti-chart-pie"></i> Análisis de ventas (últimos 30 días)</h3>
+        <h3 data-i18n="title.salesAnalysis"><i class="ti ti-chart-pie"></i> Análisis de ventas (este mes)</h3>
         <div id="dashboard-sales-analysis"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
-        <h3 data-i18n="title.salesHeatmap"><i class="ti ti-calendar-stats"></i> Picos de venta (día × hora, últimas 8 semanas)</h3>
+        <h3 data-i18n="title.salesHeatmap"><i class="ti ti-calendar-stats"></i> Picos de venta (día y hora, últimas 8 semanas)</h3>
         <p style="font-size:12px;color:var(--muted);margin:0 0 10px" data-i18n="dash.heatmapHint">Cuanto más oscura la celda, más se vende en ese día y esa franja horaria. Útil para planificar personal y compras.</p>
         <div id="dashboard-sales-heatmap"></div>
       </div>
@@ -2949,7 +2957,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '12/09/2026 11:26';
+const GG_BUILD = '12/09/2026 11:55';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11556,7 +11564,7 @@ const I18N = {
     'label.allergiesPrefs': 'Alergias / preferencias', 'ph.additionalNotes': 'Notas adicionales...',
     'label.rewardHistory': 'Historial de premios entregados',
     'common.month': 'Mes', 'common.year': 'Año', 'common.total': 'Total',
-    'hr.compare.revenueLabel': 'Facturación de ${month} (con IVA)', 'hr.compare.resultLabel': 'Resultado de ${month}',
+    'hr.compare.revenueLabel': 'Facturación de ${month} (con IVA)', 'hr.compare.resultLabel': 'Resultado neto de ${month}',
     'hr.compare.vsPrevMonth': 'vs mes anterior:', 'hr.compare.vsLastYear': 'vs mismo mes año pasado:',
     'common.subtotal': 'Subtotal', 'common.discount': 'Descuento',
     'common.all': 'Todos', 'common.none': 'Ninguno',
@@ -11860,7 +11868,7 @@ const I18N = {
     'title.expenseComparison': 'Comparación de gastos del año',
     'title.monthlyPL': 'Resultado del mes (P&L)',
     'title.monthlyResultComparison': 'Comparación del resultado mensual del año',
-    'title.salesAnalysis': 'Análisis de ventas (últimos 30 días)',
+    'title.salesAnalysis': 'Análisis de ventas (este mes)',
     'title.breakEven': 'Punto de equilibrio',
     'title.dishAnalysis': 'Análisis de Platos',
     'msg.pinIncorrect': 'PIN incorrecto',
@@ -13146,6 +13154,8 @@ const I18N = {
     'hr.te.upcomingLumpTitle': 'Próximos pagos grandes este mes',
     'hr.te.upcomingLumpNote': 'Gastos fijos periódicos (no mensuales) cuyo pago cae este mes: no están en el "Resultado Neto" mensual porque ya se reparten a lo largo del año, pero son una salida de caja real ahora.',
     'hr.te.setAsideQuarterly': 'Apartar antes del cierre del trimestre',
+    'hr.gv.receivedLocked': 'Esta compra viene de un pedido ya recibido: no se puede editar ni borrar. Si hay un error, corrígelo en el pedido al proveedor.',
+    'hr.te.irpfNotConfigured': 'Actívalo en Gastos Fijos, en la nómina, con el cálculo automático',
     'hr.pe.useRealDataBtn': 'Usar datos del último mes',
     'hr.pe.noRecentSalesData': 'No hay ventas registradas en los últimos 30 días para calcular datos reales',
     'hr.pe.realDataApplied': 'Ticket medio y cubiertos rellenados con datos reales de los últimos 30 días. Puedes ajustarlos si quieres.',
@@ -13219,8 +13229,8 @@ const I18N = {
     'dash.menuEngPromote': 'Promocionar', 'dash.menuEngPromoteHint': 'Deja buen margen pero se vende poco: promociónalo o destácalo en la carta.',
     'dash.menuEngDrop': 'Candidato a quitar', 'dash.menuEngDropHint': 'Se vende poco y deja poco margen: valora quitarlo de la carta.',
     'dash.menuEngClassification': 'Clasificación',
-    'title.salesHeatmap': 'Picos de venta (día × hora, últimas 8 semanas)',
-    'dash.heatmapHint': 'Cuanto más oscura la celda, más se vende en ese día y esa franja horaria. Útil para planificar personal y compras.',
+    'title.salesHeatmap': 'Picos de venta (día y hora, últimas 8 semanas)',
+    'dash.heatmapHint': 'Cuanto más oscura la celda, más se vende ese día a esa hora. Útil para planificar personal y compras.',
     'title.remindersDueTomorrow': 'Recordatorios pendientes de mañana',
     'filter.newClients': 'Nuevos (primera visita <30 días)', 'filter.atRiskClients': 'En riesgo de fuga',
     'label.newClientHint': 'Su primera visita registrada fue hace menos de 30 días.',
@@ -13781,7 +13791,7 @@ const I18N = {
     'label.allergiesPrefs': 'Al·lèrgies / preferències', 'ph.additionalNotes': 'Notes addicionals...',
     'label.rewardHistory': 'Historial de premis lliurats',
     'common.month': 'Mes', 'common.year': 'Any', 'common.total': 'Total',
-    'hr.compare.revenueLabel': 'Facturació de ${month} (amb IVA)', 'hr.compare.resultLabel': 'Resultat de ${month}',
+    'hr.compare.revenueLabel': 'Facturació de ${month} (amb IVA)', 'hr.compare.resultLabel': 'Resultat net de ${month}',
     'hr.compare.vsPrevMonth': 'vs mes anterior:', 'hr.compare.vsLastYear': 'vs mateix mes any passat:',
     'common.subtotal': 'Subtotal', 'common.discount': 'Descompte',
     'common.all': 'Tots', 'common.none': 'Cap',
@@ -14086,7 +14096,7 @@ const I18N = {
     'title.expenseComparison': 'Comparació de despeses de l\'any',
     'title.monthlyPL': 'Resultat del mes (P&L)',
     'title.monthlyResultComparison': 'Comparació del resultat mensual de l\'any',
-    'title.salesAnalysis': 'Anàlisi de vendes (últims 30 dies)',
+    'title.salesAnalysis': 'Anàlisi de vendes (aquest mes)',
     'title.breakEven': 'Punt d\'equilibri',
     'title.dishAnalysis': 'Anàlisi de Plats',
     'msg.pinIncorrect': 'PIN incorrecte',
@@ -15370,6 +15380,8 @@ const I18N = {
     'hr.te.upcomingLumpTitle': 'Propers pagaments grans aquest mes',
     'hr.te.upcomingLumpNote': 'Despeses fixes periòdiques (no mensuals) el pagament de les quals cau aquest mes: no són al "Resultat Net" mensual perquè ja es reparteixen al llarg de l\'any, però són una sortida de caixa real ara.',
     'hr.te.setAsideQuarterly': 'Reservar abans del tancament del trimestre',
+    'hr.gv.receivedLocked': 'Aquesta compra ve d\'una comanda ja rebuda: no es pot editar ni esborrar. Si hi ha un error, corregeix-ho a la comanda al proveïdor.',
+    'hr.te.irpfNotConfigured': 'Activa\'l a Despeses Fixes, a la nòmina, amb el càlcul automàtic',
     'hr.pe.useRealDataBtn': 'Usar dades de l\'últim mes',
     'hr.pe.noRecentSalesData': 'No hi ha vendes registrades els últims 30 dies per calcular dades reals',
     'hr.pe.realDataApplied': 'Tiquet mitjà i comensals emplenats amb dades reals dels últims 30 dies. Pots ajustar-los si vols.',
@@ -15444,8 +15456,8 @@ const I18N = {
     'dash.menuEngPromote': 'Promocionar', 'dash.menuEngPromoteHint': 'Deixa bon marge però es ven poc: promociona\'l o destaca\'l a la carta.',
     'dash.menuEngDrop': 'Candidat a treure', 'dash.menuEngDropHint': 'Es ven poc i deixa poc marge: valora treure\'l de la carta.',
     'dash.menuEngClassification': 'Classificació',
-    'title.salesHeatmap': 'Pics de venda (dia × hora, últimes 8 setmanes)',
-    'dash.heatmapHint': 'Com més fosca la cel·la, més es ven aquell dia i aquella franja horària. Útil per planificar personal i compres.',
+    'title.salesHeatmap': 'Pics de venda (dia i hora, últimes 8 setmanes)',
+    'dash.heatmapHint': 'Com més fosca la cel·la, més es ven aquell dia a aquella hora. Útil per planificar personal i compres.',
     'title.remindersDueTomorrow': 'Recordatoris pendents de demà',
     'filter.newClients': 'Nous (primera visita <30 dies)', 'filter.atRiskClients': 'En risc de fuga',
     'label.newClientHint': 'La seva primera visita registrada va ser fa menys de 30 dies.',
@@ -16006,7 +16018,7 @@ const I18N = {
     'label.allergiesPrefs': 'Allergies / preferences', 'ph.additionalNotes': 'Additional notes...',
     'label.rewardHistory': 'History of rewards given',
     'common.month': 'Month', 'common.year': 'Year', 'common.total': 'Total',
-    'hr.compare.revenueLabel': '${month} revenue (incl. VAT)', 'hr.compare.resultLabel': '${month} result',
+    'hr.compare.revenueLabel': '${month} revenue (incl. VAT)', 'hr.compare.resultLabel': '${month} net result',
     'hr.compare.vsPrevMonth': 'vs previous month:', 'hr.compare.vsLastYear': 'vs same month last year:',
     'common.subtotal': 'Subtotal', 'common.discount': 'Discount',
     'common.all': 'All', 'common.none': 'None',
@@ -16311,7 +16323,7 @@ const I18N = {
     'title.expenseComparison': 'Yearly expense comparison',
     'title.monthlyPL': 'Monthly result (P&L)',
     'title.monthlyResultComparison': 'Monthly result comparison for the year',
-    'title.salesAnalysis': 'Sales analysis (last 30 days)',
+    'title.salesAnalysis': 'Sales analysis (this month)',
     'title.breakEven': 'Break-even point',
     'title.dishAnalysis': 'Dish Analysis',
     'msg.pinIncorrect': 'Incorrect PIN',
@@ -17596,6 +17608,8 @@ const I18N = {
     'hr.te.upcomingLumpTitle': 'Upcoming large payments this month',
     'hr.te.upcomingLumpNote': 'Periodic fixed expenses (not monthly) whose payment falls this month: they aren\'t in the monthly "Net Result" because they\'re already smoothed across the year, but they are a real cash outflow now.',
     'hr.te.setAsideQuarterly': 'Set aside before quarter close',
+    'hr.gv.receivedLocked': 'This purchase comes from an order already received: it cannot be edited or deleted. If there is a mistake, fix it in the supplier order.',
+    'hr.te.irpfNotConfigured': 'Turn it on in Fixed Expenses, on the payroll line, with automatic calculation',
     'hr.pe.useRealDataBtn': 'Use last month\'s data',
     'hr.pe.noRecentSalesData': 'No sales recorded in the last 30 days to calculate real data',
     'hr.pe.realDataApplied': 'Average ticket and covers filled in with real data from the last 30 days. You can still adjust them.',
@@ -17670,8 +17684,8 @@ const I18N = {
     'dash.menuEngPromote': 'Promote', 'dash.menuEngPromoteHint': 'Leaves a good margin but sells little: promote it or feature it on the menu.',
     'dash.menuEngDrop': 'Consider dropping', 'dash.menuEngDropHint': 'Sells little and leaves little margin: consider dropping it from the menu.',
     'dash.menuEngClassification': 'Classification',
-    'title.salesHeatmap': 'Sales peaks (day × hour, last 8 weeks)',
-    'dash.heatmapHint': 'The darker the cell, the more it sells on that day and time slot. Useful for planning staff and purchasing.',
+    'title.salesHeatmap': 'Sales peaks (day and hour, last 8 weeks)',
+    'dash.heatmapHint': 'The darker the cell, the more it sells on that day at that hour. Useful for planning staff and purchasing.',
     'title.remindersDueTomorrow': 'Reminders due tomorrow',
     'filter.newClients': 'New (first visit <30 days)', 'filter.atRiskClients': 'At risk of churn',
     'label.newClientHint': 'Their first recorded visit was less than 30 days ago.',
@@ -20151,18 +20165,22 @@ function renderDashboard(){
 
   const hasAnySales = DB.sales.length > 0;
 
-  // Sales analysis (last 30 days): avg ticket, top products, sales by hour
-  const last30Start = dateStr(new Date(today.getTime() - 29*86400000));
-  const salesLast30 = activeSales().filter(s=>s.date>=last30Start && s.date<=todayDate);
-  const totalLast30 = salesLast30.reduce((s,x)=>s+x.total,0);
-  const avgTicket = salesLast30.length ? totalLast30 / salesLast30.length : 0;
+  /* Análisis de ventas: MES NATURAL, no una ventana móvil de 30 días.
+     Con los últimos 30 días este panel daba cifras que no cuadraban con
+     ninguna otra pantalla de la app —Gestión Económica, Cuenta de
+     Resultados y el resto van todas por mes natural—, así que el mismo
+     negocio enseñaba dos facturaciones distintas según dónde mirara el
+     hostelero. */
+  const salesMes = activeSales().filter(s=>s.date>=monthStart && s.date<=todayDate);
+  const totalMes = salesMes.reduce((s,x)=>s+x.total,0);
+  const avgTicket = salesMes.length ? totalMes / salesMes.length : 0;
 
-  // % Food Cost medio ponderado por unidades vendidas en los últimos 30 días,
+  // % Food Cost medio ponderado por unidades vendidas en el mes,
   // para que un plato sin ventas no distorsione el indicador frente al objetivo.
-  const recipeUnits30 = {};
-  salesLast30.forEach(s=>{
+  const recipeUnitsMes = {};
+  salesMes.forEach(s=>{
     (s.items||[]).forEach(it=>{
-      if(it.recipeId) recipeUnits30[it.recipeId] = (recipeUnits30[it.recipeId]||0) + (it.qty||1);
+      if(it.recipeId) recipeUnitsMes[it.recipeId] = (recipeUnitsMes[it.recipeId]||0) + (it.qty||1);
     });
   });
   let avgFoodCost = 0;
@@ -20174,7 +20192,7 @@ function renderDashboard(){
   // como si el food cost fuera literalmente 0% (dato saludable falso) en vez
   // de "—" (sin datos suficientes). foodCostCalculable distingue ambos casos.
   const weightedFc = DB.recipes
-    .map(r => ({pct: recipeFoodCostPct(r), units: recipeUnits30[r.id]||0}))
+    .map(r => ({pct: recipeFoodCostPct(r), units: recipeUnitsMes[r.id]||0}))
     .filter(e => isFinite(e.pct) && e.units>0);
   const weightedFcUnits = weightedFc.reduce((s,e)=>s+e.units,0);
   let foodCostCalculable = false;
@@ -20428,7 +20446,7 @@ function renderDashboard(){
   // criterio aquí para que los dos coincidan.
   const dishKey = it => it.recipeId ? ('r'+it.recipeId) : ('m'+(it.name||''));
   const productTotals = {};
-  salesLast30.forEach(s=>{
+  salesMes.forEach(s=>{
     (s.items||[]).forEach(it=>{
       const key = dishKey(it);
       if(!productTotals[key]) productTotals[key] = {name: it.name || '—', units:0, revenue:0};
@@ -20438,12 +20456,12 @@ function renderDashboard(){
   });
   const topProducts = Object.values(productTotals).sort((a,b)=>b.units-a.units).slice(0,5);
 
-  // Margen bruto real por plato (últimos 30 días) — coste estampado en el
+  // Margen bruto real por plato (mes en curso) — coste estampado en el
   // momento de cada venta (costoUnitarioDeLinea), no el coste actual de la
   // receta: si no, un cambio de precio de un ingrediente HOY movería el
   // margen "real" de ventas de hace semanas cada vez que se abre el panel.
   const marginTotals = {};
-  salesLast30.forEach(s=>{
+  salesMes.forEach(s=>{
     (s.items||[]).forEach(it=>{
       const key = dishKey(it);
       const qty = it.qty || 1;
@@ -20466,7 +20484,7 @@ function renderDashboard(){
     .slice(0,5);
 
   const hourTotals = new Array(24).fill(0);
-  salesLast30.forEach(s=>{
+  salesMes.forEach(s=>{
     if(s.createdAt){
       const h = new Date(s.createdAt).getHours();
       hourTotals[h] += s.total;
@@ -20477,8 +20495,8 @@ function renderDashboard(){
   document.getElementById('dashboard-sales-analysis').innerHTML = `
     <div class="grid grid-3" style="margin-bottom:14px">
       <div class="kpi"><div class="label"><i class="ti ti-receipt"></i> ${t('dash.avgTicket')}</div><div class="value">${fmtMoney(avgTicket)}</div></div>
-      <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> ${t('dash.numSales')}</div><div class="value">${salesLast30.length}</div></div>
-      <div class="kpi"><div class="label"><i class="ti ti-cash"></i> ${t('dash.periodTotal')}</div><div class="value">${fmtMoney(totalLast30)}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> ${t('dash.numSales')}</div><div class="value">${salesMes.length}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-cash"></i> ${t('dash.periodTotal')}</div><div class="value">${fmtMoney(totalMes)}</div></div>
     </div>
     <div class="grid grid-3">
       <div>
@@ -20554,32 +20572,38 @@ function renderSalesHeatmap(){
   const sales = activeSales().filter(s => s.date >= start && s.date <= end && s.createdAt);
   if(!sales.length){ el.innerHTML = `<div class="empty">${t('dash.noSalesYet')}</div>`; return; }
 
-  const bands = [
-    {lbl:'8-12h', from:8, to:12}, {lbl:'12-16h', from:12, to:16},
-    {lbl:'16-20h', from:16, to:20}, {lbl:'20-24h', from:20, to:24},
-  ];
+  /* HORA A HORA, no en franjas de cuatro horas. Con las franjas se veía que
+     el negocio vende "de 20 a 24", que es justo lo que el hostelero ya sabe:
+     para decidir a qué hora entra un camarero más hace falta saber si el
+     golpe es a las 21 o a las 23. Solo se pintan las horas en las que ese
+     negocio vende de verdad (de la primera a la última con ventas), para no
+     arrastrar veinticuatro columnas de las cuales la mitad están siempre
+     vacías. */
   const dayLabels = t('days.short');
-  const grid = dayLabels.map(()=>bands.map(()=>0));
+  const porHora = dayLabels.map(()=>new Array(24).fill(0));
   sales.forEach(s => {
     const d = new Date(s.createdAt);
     const dow = (d.getDay()+6)%7; // 0=lunes ... 6=domingo
-    const hour = d.getHours();
-    const bandIdx = bands.findIndex(b => hour>=b.from && hour<b.to);
-    if(bandIdx>=0) grid[dow][bandIdx] += s.total;
+    porHora[dow][d.getHours()] += s.total;
   });
+  const horasConVenta = [];
+  for(let h = 0; h < 24; h++){ if(porHora.some(fila => fila[h] > 0)) horasConVenta.push(h); }
+  const horas = horasConVenta.length ? horasConVenta : [12,13,14,20,21,22];
+  const bands = horas.map(h => ({lbl: h + 'h', hora: h}));
+  const grid = porHora.map(fila => horas.map(h => fila[h]));
   const maxVal = Math.max(...grid.flat(), 1);
   el.innerHTML = `
     <div style="overflow-x:auto">
-      <table style="border-collapse:collapse;width:100%;min-width:420px">
+      <table style="border-collapse:collapse;width:100%;min-width:${Math.max(420, 90 + bands.length*54)}px">
         <thead><tr><th></th>${bands.map(b=>`<th style="font-size:11px;color:var(--muted);font-weight:600;padding:4px">${b.lbl}</th>`).join('')}</tr></thead>
         <tbody>
           ${dayLabels.map((dl,di) => `
             <tr>
               <td style="font-size:11px;color:var(--muted);font-weight:600;padding:4px;white-space:nowrap">${dl}</td>
-              ${grid[di].map(v => {
+              ${grid[di].map((v,hi) => {
                 const intensity = v/maxVal;
                 const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
-                return `<td style="padding:4px"><div title="${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtMoney(v):''}</div></td>`;
+                return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
               }).join('')}
             </tr>
           `).join('')}
@@ -34267,10 +34291,15 @@ const GE = (function(){
         tipoBox.innerHTML = '';
       } else {
         const porTipo = ventasPorTipoMes(ventasMonth, ventasYear);
+        // Con el total al final: sin él había que sumar mesa + take away +
+        // delivery a mano para saber cuánto se ha facturado en el mes, que
+        // es justo la cifra que se busca al mirar este desglose.
+        const totalTipos = tiposActivos.reduce((acc,k)=>acc+(porTipo[k]||0), 0);
         tipoBox.innerHTML = `
           <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('ge.ventas.byType')}</h4>
           <div class="ge-kpi-grid" style="margin-bottom:14px">
             ${tiposActivos.map(k => `<div class="ge-kpi"><div class="lbl">${t('ge.ventas.tipo.'+k)}</div><div class="val">${fmtMoney(porTipo[k])}</div></div>`).join('')}
+            <div class="ge-kpi" style="border-color:var(--teal)"><div class="lbl" style="color:var(--teal)">${t('common.total')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totalTipos)}</div></div>
           </div>`;
       }
     }
@@ -34354,7 +34383,7 @@ const GE = (function(){
             <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10.5px;font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
             <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
             <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGVGroup('${ids}')"><i class="ti ti-trash"></i></button>
+            <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 6px"><i class="ti ti-lock"></i></span>
           </div>`;
         }).join('');
         const manualHtml = manualItems.map(v=>{
@@ -34430,6 +34459,10 @@ const GE = (function(){
   }
   function editGV(id){
     const v = variables().find(x=>x.id===id); if(!v) return;
+    // Igual que el borrado: una compra nacida de un pedido recibido no se
+    // retoca desde aquí. Se corrige en el pedido a proveedor, que es donde
+    // está el dato de verdad.
+    if(v.auto){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
     editingGV = id;
     openGVModal(v);
   }
@@ -34505,6 +34538,7 @@ const GE = (function(){
   }
   async function deleteGV(id){
     const v = variables().find(x=>x.id===id);
+    if(v && v.auto){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
     if(v && isDateClosed(v.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
     if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
     ge().variables = variables().filter(v=>v.id!==id);
@@ -34513,6 +34547,13 @@ const GE = (function(){
   }
   async function deleteGVGroup(idsStr){
     const ids = idsStr.split(',').map(s=>parseInt(s));
+    /* Una compra que viene de un pedido ACEPTADO como recibido es un hecho
+       contable: la mercancía entró y el proveedor la va a facturar. Borrarla
+       descuadraría el food cost y el IVA soportado de un mes que ya se
+       declaró, así que no se puede — ni desde el botón (ya no existe) ni
+       desde la consola. Para corregir un error hay que hacerlo donde se
+       originó: en el pedido a proveedor. */
+    if(variables().some(v=>ids.includes(v.id) && v.auto)){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
     if(variables().some(v=>ids.includes(v.id) && isDateClosed(v.fecha))){ showToast(t('hr.te.monthClosedError')); return; }
     if(!(await confirmModal(t('msg.confirmDeletePurchases')))) return;
     ge().variables = variables().filter(v=>!ids.includes(v.id));
@@ -34992,9 +35033,14 @@ const GE = (function(){
     const revCur = facturacionNetaMes(curM, curY) + ivaVentasMes(curM, curY);
     const revPrev = facturacionNetaMes(prevM, prevMY) + ivaVentasMes(prevM, prevMY);
     const revYoy = facturacionNetaMes(curM, curY-1) + ivaVentasMes(curM, curY-1);
-    const resCur = resultadoAntesImpMes(curM, curY);
-    const resPrev = resultadoAntesImpMes(prevM, prevMY);
-    const resYoy = resultadoAntesImpMes(curM, curY-1);
+    /* Resultado NETO, el de después de impuestos: es lo que el hostelero se
+       lleva de verdad. Antes esta tarjeta daba el resultado ANTES de
+       impuestos, así que el número grande de la cabecera era más alto que
+       el "Resultado Neto" de la tabla de justo debajo — la misma pantalla
+       enseñaba dos resultados distintos del mismo mes. */
+    const resCur = resultadoMes(curM, curY);
+    const resPrev = resultadoMes(prevM, prevMY);
+    const resYoy = resultadoMes(curM, curY-1);
     function pctDelta(cur, ref){
       if(!ref) return null;
       return ((cur-ref)/Math.abs(ref))*100;
@@ -35091,7 +35137,14 @@ const GE = (function(){
       {lbl:t('hr.te.otherExpenses'), pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
       {lbl:t('hr.te.profitSavings'), pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
       {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, obj:null, real:ivaReserva, color:'var(--amber-dark)', isReserve:true, icon:'ti-pig-money'},
-      ...(irpfReserva>0.001 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, obj:null, real:irpfReserva, color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
+      /* La reserva de IRPF solo aparecía si había importe, así que un negocio
+         con nóminas pero sin el cálculo automático activado no la veía por
+         ningún lado y no tenía forma de saber que existe. Ahora se muestra
+         siempre que haya gasto de personal, y cuando está a cero dice dónde
+         se activa en vez de desaparecer en silencio. */
+      ...(realPer > 0 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, obj:null, real:irpfReserva,
+        color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax',
+        hint: irpfReserva>0.001 ? null : t('hr.te.irpfNotConfigured')}] : []),
     ];
 
     document.getElementById('te-rows').innerHTML = rows.map(r=>{
@@ -35101,26 +35154,31 @@ const GE = (function(){
           <span></span>
           <span></span>
           <span style="text-align:right;font-family:monospace;font-weight:700;color:${r.color}">${fmtMoney(r.real)}</span>
-          <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${t('hr.te.setAsideQuarterly')}</span>
+          <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${r.hint || t('hr.te.setAsideQuarterly')}</span>
           <span style="text-align:center;font-size:16px"><i class="ti ${r.icon}"></i></span>
         </div>`;
       }
       const diff = r.real - r.obj;
       const absDiff = Math.abs(diff);
-      const pctDev = r.obj ? Math.abs(diff)/r.obj : 0;
-      // Criterio único para todas las filas (pedido expresamente así): lo
-      // que importa es si se ha alcanzado o superado el objetivo, no si la
-      // fila es de gasto o de beneficio — real >= objetivo es siempre
-      // verde, por debajo es siempre rojo.
-      const isGood = diff >= 0;
-      const estado = !r.real ? '—' : (pctDev < 0.1 ? '<i class="ti ti-check" style="color:var(--green)"></i>' : isGood ? '<i class="ti ti-check" style="color:var(--green)"></i>' : pctDev < 0.2 ? '<i class="ti ti-alert-triangle" style="color:var(--amber-dark)"></i>' : '<i class="ti ti-x" style="color:var(--red)"></i>');
+      /* El semáforo va por el SENTIDO de cada fila, no por si se alcanza el
+         objetivo a secas: en una fila de GASTO, pasarse del objetivo es
+         malo (si el food cost objetivo es el 30% y el real sale al 40%, eso
+         es cruz roja por mucho que "supere" la cifra), y quedarse por
+         debajo es bueno. En Beneficio es justo al revés. Sin franja ámbar
+         intermedia: o está dentro del objetivo o no, que es lo que el
+         hostelero necesita ver de un vistazo. */
+      const isGood = r.isBen ? diff >= 0 : diff <= 0;
+      const estado = !r.real ? '—'
+        : isGood ? '<i class="ti ti-check" style="color:var(--green)"></i>'
+                 : '<i class="ti ti-x" style="color:var(--red)"></i>';
       const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
       const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
       const diffText = r.real ? `${diffSign}${fmtMoney(absDiff)}` : '—';
       const barPct = r.obj>0 ? Math.min(r.real/r.obj*100, 150) : 0;
-      // Mismo criterio único que isGood: alcanzar o superar el objetivo es
-      // verde, por debajo es rojo, para todas las filas.
-      const barColor = barPct<90?'var(--red)':barPct>=100?'var(--green)':'var(--amber)';
+      // La barra sigue el mismo criterio que el tick: en gastos, pasar del
+      // 100% del objetivo la pone en rojo; en beneficio, lo que la pone en
+      // rojo es quedarse corto.
+      const barColor = isGood ? 'var(--green)' : 'var(--red)';
       return `<div class="te-row">
         <span style="font-size:14px;font-weight:600">${r.lbl}</span>
         <span style="text-align:right;font-weight:600;color:${r.color}">${(r.pct*100).toFixed(0)}%</span>
@@ -42397,7 +42455,7 @@ function renderLimpiezaMantenimiento(){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('label.equipment')}</th><th>${t('label.lastMaintenance')}</th><th>${t('label.next')}</th><th>${t('label.responsible')}</th><th>${t('label.status')}</th><th>${t('th.notes')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('label.equipment')}</th><th style="width:1%;white-space:nowrap">${t('label.lastMaintenance')}</th><th style="width:1%;white-space:nowrap">${t('label.next')}</th><th style="min-width:235px">${t('label.responsible')}</th><th style="width:1%;white-space:nowrap">${t('label.status')}</th><th style="min-width:260px">${t('th.notes')}</th><th style="width:1%"></th></tr></thead>
         <tbody>${equipos.length ? equipos.map(e => {
           const due = limpiezaMantenimientoDueStatus(e);
           return `
@@ -42409,11 +42467,11 @@ function renderLimpiezaMantenimiento(){
               ${due==='overdue' ? `<span class="badge badge-red" style="margin-left:4px;white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : ''}
               ${due==='soon' ? `<span class="badge badge-amber" style="margin-left:4px;white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
             </td>
-            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${editUnlocked?'':'disabled'}></td>
+            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100%;min-width:150px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${editUnlocked?'':'disabled'}></td>
             <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)" ${editUnlocked?'':'disabled'}>
               ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,key])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(key)}</option>`).join('')}
             </select></td>
-            <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${editUnlocked?'':'disabled'}></td>
+            <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100%;min-width:210px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${editUnlocked?'':'disabled'}></td>
             <td><button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
           </tr>
         `;}).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noEquipmentRegistered')}</div></td></tr>`}</tbody>
