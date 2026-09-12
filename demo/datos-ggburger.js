@@ -116,26 +116,26 @@ window.GG_DEMO_DATOS = (function(){
   const salsaGG = receta('Salsa GG de la casa', [
     ['Mayonesa',1.2], ['Kétchup',0.35], ['Pepinillos agridulces',0.18],
     ['Mostaza de Dijon',0.06], ['Mezcla de especias burger',0.02], ['Vinagre de manzana',0.03],
-  ], {isBase:true, baseYield:2, baseUnit:'L', consumiblesPct:0,
+  ], {isBase:true, baseYield:2, baseUnit:'L', consumiblesPct:0, category:'Salsas',
       steps:'Picar el pepinillo muy fino y escurrirlo bien.\nMezclar la mayonesa con el kétchup y la mostaza.\nAñadir el pepinillo, las especias y el vinagre.\nReposar 12 h en cámara antes de usar.',
       presentation:'La salsa de la casa. Va en casi todas las hamburguesas.'});
 
   const cebollaCaram = receta('Cebolla caramelizada', [
     ['Cebolla',3], ['Azúcar moreno',0.12], ['Mantequilla',0.08], ['Vinagre de manzana',0.06], ['Sal',0.01],
-  ], {isBase:true, baseYield:1.4, baseUnit:'kg', consumiblesPct:0,
+  ], {isBase:true, baseYield:1.4, baseUnit:'kg', consumiblesPct:0, category:'Bases de cocina',
       steps:'Juliana fina de cebolla.\nPochar a fuego muy suave con la mantequilla, 45 min.\nAñadir el azúcar y dejar caramelizar.\nDesglasar con el vinagre y reducir.',
       presentation:'Cebolla pochada muy despacio, hasta que se deshace.'});
 
   const baconConfitado = receta('Bacon confitado a la barbacoa', [
     ['Bacon en lonchas',1.5], ['Salsa barbacoa',0.2], ['Azúcar moreno',0.08],
-  ], {isBase:true, baseYield:1, baseUnit:'kg', consumiblesPct:0,
+  ], {isBase:true, baseYield:1, baseUnit:'kg', consumiblesPct:0, category:'Bases de cocina',
       steps:'Bacon en bandeja, pincelado con la barbacoa y el azúcar.\nHorno a 160 °C, 25 min, girando a mitad.\nEnfriar sobre rejilla para que quede crujiente.',
       presentation:'Crujiente, con el dulce justo.'});
 
   const pulledPork = receta('Pulled pork', [
     ['Paletilla de cerdo',4], ['Salsa barbacoa',0.5], ['Mezcla de especias burger',0.06],
     ['Cebolla',0.4], ['Azúcar moreno',0.06],
-  ], {isBase:true, baseYield:2.4, baseUnit:'kg', consumiblesPct:0,
+  ], {isBase:true, baseYield:2.4, baseUnit:'kg', consumiblesPct:0, category:'Bases de cocina',
       steps:'Masajear la paletilla con las especias y reposar 12 h.\nHorno a 130 °C, 8 h, tapado con su jugo.\nDeshilachar en caliente y mezclar con la barbacoa.',
       presentation:'Ocho horas de horno. Se deshace solo.'});
 
@@ -351,7 +351,7 @@ window.GG_DEMO_DATOS = (function(){
     },
     ingredients, stock,
     ingredientCategories: [],
-    recipeCategories: ['Para picar','Hamburguesas','Postres','Bebidas','Cócteles'],
+    recipeCategories: ['Para picar','Hamburguesas','Postres','Bebidas','Cócteles','Salsas','Bases de cocina'],
     recipes,
     elaboraciones: bases.map(b => ({id: nid(), recipeId: b.id, name: b.name,
       unit: b.baseUnit, qty: b.baseUnit==='L' ? 3 : 2.2, min: b.baseUnit==='L' ? 1.5 : 1, area:'cocina'})),
