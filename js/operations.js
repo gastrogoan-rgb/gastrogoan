@@ -1906,6 +1906,10 @@ function orderItemsRowsHtml(){
       <div class="list-row">
         <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
         <span style="font-size:14px;font-weight:600;color:var(--muted)">${t('label.stock')}: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · ${t('label.minAbbrev')} ${fmtNum(s.min)}</span>
+        <!-- Al pedir, lo que decide la cantidad no es solo cuánto queda: es
+             a cuánto sale. Sin el precio delante había que salirse a Mega
+             Lista a mirarlo artículo por artículo (lo vio el dueño el 12/09). -->
+        <span style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap">${fmtMoney(ing.price||0)}/${escapeHtml(ing.unit)}</span>
         <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="${t('common.qty')}" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
         <span style="font-size:12px;color:var(--muted)">${escapeHtml(ing.unit)}</span>
       </div>

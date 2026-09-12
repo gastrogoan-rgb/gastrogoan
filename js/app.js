@@ -776,7 +776,18 @@ function renderLimpiezaLog(key){
     return `<div class="field" style="margin-bottom:0"><label>${cfg.labels[i]}</label>${input}</div>`;
   }).join('');
 
-  const rows = entries.length ? [...entries].slice().reverse().map(e => `
+  /* Un registro de temperaturas se escribe varias veces al día: en un mes
+     son cientos de filas y encontrar la de ayer obligaba a bajar media
+     pantalla. Se enseñan los DIEZ últimos, que es lo que se mira a diario,
+     con un botón para ver el resto — nunca se borra nada solo: un registro
+     APPCC hay que poder enseñarlo en una inspección, y borrarlo sigue
+     exigiendo el PIN de negocio y quedando auditado. */
+  const LOG_VISIBLES = 10;
+  const todos = [...entries].slice().reverse();
+  const visibles = limpiezaLogVerTodo[key] ? todos : todos.slice(0, LOG_VISIBLES);
+  const ocultos = todos.length - visibles.length;
+
+  const rows = visibles.length ? visibles.map(e => `
     <tr>${cfg.fields.map(f => {
       if(f === 'estado'){
         if(e[f]==='OK') return `<td style="font-weight:700;color:var(--green)"><i class="ti ti-check"></i> OK</td>`;
@@ -812,7 +823,22 @@ function renderLimpiezaLog(key){
         <tbody>${rows}</tbody>
       </table>
     </div>
+    ${(ocultos > 0 || limpiezaLogVerTodo[key]) ? `
+    <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="toggleLimpiezaLogVerTodo('${key}')">
+        <i class="ti ti-${limpiezaLogVerTodo[key]?'chevron-up':'history'}"></i>
+        ${limpiezaLogVerTodo[key] ? t('limpieza.log.showLast').replace('${n}', LOG_VISIBLES) : t('limpieza.log.showAll').replace('${n}', todos.length)}
+      </button>
+      ${!limpiezaLogVerTodo[key] ? `<span style="font-size:12px;color:var(--muted)">${t('limpieza.log.hiddenCount').replace('${n}', ocultos)}</span>` : ''}
+    </div>` : ''}
   `;
+}
+// Qué registros se ven enteros y cuáles solo los diez últimos. Es de la
+// pantalla, no del negocio: no se guarda ni se sincroniza.
+let limpiezaLogVerTodo = {};
+function toggleLimpiezaLogVerTodo(key){
+  limpiezaLogVerTodo[key] = !limpiezaLogVerTodo[key];
+  renderLimpiezaLog(key);
 }
 async function addLimpiezaLogEntry(key){
   if(!editUnlocked && key !== 'temperaturas') return;
@@ -4563,9 +4589,13 @@ function renderPromoClientes(){
     return `
     <div class="card">
       <h3 style="font-size:14px;justify-content:space-between;gap:6px"><span>${escapeHtml(c.name)}</span>${badge}</h3>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn btn-sm" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
-        <button class="btn btn-sm" style="flex:1" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+      <!-- flex-wrap + min-width:0: sin ellos los dos botones sumaban 195 px
+           dentro de una tarjeta de 180 px y el de Email se salía por la
+           derecha de la tarjeta (lo vio el dueño el 12/09). Un botón no se
+           encoge por debajo de su contenido si no se le dice. -->
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="flex:1 1 120px;min-width:0;background:#188842;color:#fff;border-color:#188842" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn btn-sm" style="flex:1 1 90px;min-width:0" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
       </div>
       <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?t('promo.clients.alreadyRegisteredToday'):t('promo.clients.registerAsAction')}</button>
     </div>
