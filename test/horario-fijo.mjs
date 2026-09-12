@@ -171,6 +171,13 @@ await caso('La tarjeta del empleado abre un menú con las 3 formas de tener turn
 
 await caso('Editar por la UI real un turno del patrón y elegir "Solo este día" lo desengancha, sin tocar el patrón', async () => {
   const r = await page.evaluate(() => {
+    // Se limpia lo que hayan dejado los casos anteriores: sin esto, el
+    // "primer turno fijo del empleado 1" podía ser uno de otro caso (un
+    // Descanso, por ejemplo, donde la app borra la hora de salida a
+    // propósito) y el caso fallaba por arrastrar estado, no por un fallo
+    // real. El caso siguiente ya lo hacía; a este le faltaba.
+    DB.turnos = DB.turnos.filter(t => t.employeeId!==1);
+    DB.horariosFijos = [];
     const patronM = {tipo:'M', entrada:'09:00', salida:'17:00', entrada2:'', salida2:''};
     DB.horariosFijos = [{id: genId(), employeeId: 1, activo: true, patron: Array(7).fill(0).map(()=>({...patronM})), generadoHasta: addDaysStr(todayStr(), -1)}];
     generarTurnosFijos();

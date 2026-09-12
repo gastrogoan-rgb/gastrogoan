@@ -733,7 +733,17 @@ td.wrap{white-space:normal}
 @media (max-width:1024px){ .mn-indice-chip{min-height:44px} }
 /* Único índice del Manual (9/09: se quitó la columna lateral duplicada,
    .manual-nav) — fijo arriba para no perderlo al leer un capítulo largo. */
+/* El índice del manual se queda fijo arriba mientras se lee un capítulo.
+   El ::before no es adorno: .content tiene 22 px de padding por encima del
+   punto donde el sticky se pega, y por esa franja se veía PASAR el texto
+   del capítulo entre la cabecera de la app y la barra — daba la sensación
+   de que la barra se movía con el texto en vez de estar fija. La banda tapa
+   ese hueco con el fondo de la página. */
 #view-manual .mn-indice{position:sticky;top:0;z-index:10}
+#view-manual .mn-indice::before{
+  content:'';position:absolute;left:0;right:0;bottom:100%;height:24px;
+  background:var(--bg);pointer-events:none;
+}
 /* Destello al aterrizar: en una pantalla tan larga, saltar sin más deja
    dudando si se ha movido algo. */
 .mn-ap-resaltado{animation:mn-destello 1.4s ease}

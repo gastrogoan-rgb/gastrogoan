@@ -69,6 +69,27 @@ await caso('El índice de arriba se mantiene aunque el resultado de una búsqued
   assert.ok(r >= 1, 'con pocos resultados el índice no debe desaparecer, es la única navegación: ' + JSON.stringify(r));
 });
 
+await caso('Entre la cabecera de la app y el índice fijo no se cuela el texto del capítulo', async () => {
+  const r = await page.evaluate(()=>{
+    const cont = document.querySelector('.content');
+    cont.scrollTop = 700;
+    const idx = document.querySelector('#view-manual .mn-indice');
+    const banda = getComputedStyle(idx, '::before');
+    return {
+      altoBanda: parseFloat(banda.height) || 0,
+      fondoBanda: banda.backgroundColor,
+      paddingContenedor: parseFloat(getComputedStyle(cont).paddingTop) || 0,
+    };
+  });
+  // El contenedor tiene padding por encima del punto donde el sticky se
+  // pega: por esa franja se veía PASAR el texto del capítulo, y parecía que
+  // la barra se movía con él. La banda tiene que taparla entera.
+  assert.ok(r.altoBanda >= r.paddingContenedor,
+    `la banda (${r.altoBanda}px) debe tapar el padding del contenedor (${r.paddingContenedor}px): ` + JSON.stringify(r));
+  assert.ok(!/transparent|rgba\(0, 0, 0, 0\)/.test(r.fondoBanda),
+    'la banda debe tener fondo sólido, si no el texto se sigue viendo: ' + r.fondoBanda);
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {
   assert.deepEqual(erroresJs, [], 'errores: ' + erroresJs.join(' | '));
 });
