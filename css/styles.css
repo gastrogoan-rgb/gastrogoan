@@ -290,7 +290,12 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .mesa-card{padding:16px 10px 12px;margin-bottom:0;font-size:11px;border-radius:14px;border-top-width:4px;border-top-style:solid;display:flex;flex-direction:column;align-items:center;min-height:150px;justify-content:center}
 .mesa-card.mesa-free{background:var(--surface);border:1px dashed var(--border);border-top:4px dashed var(--border)}
 .mesa-card.mesa-free:hover{border-color:var(--brand-orange)}
-.mesa-card.mesa-occupied{background:var(--surface);border:1px solid var(--border)}
+/* Una mesa abierta se leía casi igual que una libre: mismo borde fino y del
+   mismo gris. Con el plano lleno cuesta ver de un vistazo cuáles están
+   ocupadas (lo pidió el dueño el 12/09, señalando el recuadro marcado que ya
+   tenía la mesa fría). Borde de 2 px en el negro de la app; el canto de
+   arriba se queda en 4 px con el color de la fase del servicio. */
+.mesa-card.mesa-occupied{background:var(--surface);border:2px solid var(--text);border-top-width:4px}
 /* Acento de color según la fase de servicio: recién sentados (naranja de
    marca), en cocina (ámbar), preparando (teal), listos para cobrar (verde) —
    así se distingue de un vistazo una mesa recién abierta de una atascada,

@@ -2865,7 +2865,7 @@ function renderReservasPendingOnline(){
           })()}
           <div style="display:flex;gap:8px;margin-top:10px">
             <button class="btn btn-sm btn-primary" style="flex:1" onclick="setReservationStatus(${r.id}, 'confirmada')"><i class="ti ti-check"></i> ${t('common.confirm')}</button>
-            <button class="btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineReservation(${r.id})"><i class="ti ti-x"></i> ${t('common.reject')}</button>
+            <button class="owner-only btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineReservation(${r.id})"><i class="ti ti-x"></i> ${t('common.reject')}</button>
           </div>
         </div>
       `).join('')}
@@ -2899,6 +2899,7 @@ function confirmReservationDeposit(id){
 }
 
 function rejectOnlineReservation(id){
+  if(!puedeCancelar()) return;
   requestBusinessPinAction(t('title.rejectReservation'), t('msg.confirmRejectReservation'), () => {
     setReservationStatus(id, 'cancelada');
   });
@@ -2911,6 +2912,7 @@ function rejectOnlineReservation(id){
 // que sí distinguen 'cancelada' de "nunca existió"). Borrar sigue existiendo
 // para corregir un duplicado o un error real al crearla.
 async function cancelReservation(id){
+  if(!puedeCancelar()) return;
   const r0 = DB.reservations.find(x=>x.id===id);
   if(!r0 || r0.status === 'completada') return;
   if(!(await confirmModal(t('msg.confirmCancelReservation')))) return;
@@ -3023,7 +3025,7 @@ function renderReservasDia(){
                 <div class="reserva-card-actions">
                   ${r.status==='lista_espera' ? `<button class="btn btn-sm btn-primary" onclick="setReservationStatus(${r.id}, 'confirmada')" title="${t('btn.confirmAnyway')}"><i class="ti ti-check"></i> ${t('common.confirm')}</button>` : ''}
                   ${r.status==='confirmada' && (client?.phone || client?.email || r.clientPhone) ? `<button class="btn btn-sm btn-icon" onclick="openReservationReminderModal(${r.id})" title="${t('btn.sendReminder')}"><i class="ti ti-bell"></i></button>` : ''}
-                  ${(r.status==='confirmada' || r.status==='pendiente' || r.status==='lista_espera') ? `<button class="btn btn-sm btn-icon btn-danger" onclick="cancelReservation(${r.id})" title="${t('btn.cancelReservation')}"><i class="ti ti-calendar-x"></i></button>` : ''}
+                  ${(r.status==='confirmada' || r.status==='pendiente' || r.status==='lista_espera') ? `<button class="owner-only btn btn-sm btn-icon btn-danger" onclick="cancelReservation(${r.id})" title="${t('btn.cancelReservation')}"><i class="ti ti-calendar-x"></i></button>` : ''}
                   <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
                 </div>
               </div>
@@ -3613,6 +3615,7 @@ function confirmReservaArrival(id){
 // histórico/notas — a diferencia de borrar un cliente, que sí pasa por PIN
 // + papelera. Ahora todas las reservas usan el mismo nivel de protección.
 function deleteReservation(id){
+  if(!puedeCancelar()) return;
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
   requestBusinessPinAction(t('title.deleteReservation'), t('msg.confirmDeleteReservation'), () => {
