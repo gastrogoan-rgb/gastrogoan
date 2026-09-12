@@ -1000,11 +1000,19 @@ td.wrap{white-space:normal}
    verdad (horario semanal, plano de mesas, web pública con QR) ocupan las
    columnas enteras con .mn-grid-full. align-items:start evita que una
    tarjeta alta estire a su vecina de la misma fila. */
-.mn-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
-@media (min-width:900px){.mn-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (min-width:1440px){.mn-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.mn-grid .card{max-width:none;margin:0;min-width:0}
-.mn-grid .mn-grid-full{grid-column:1/-1}
+/* Mampostería, no rejilla. Con grid, las filas se alinean entre sí: una
+   tarjeta larguísima (Pago online con tarjeta, con todos sus campos)
+   empujaba el inicio de la fila siguiente y dejaba MIL PÍXELES de blanco
+   debajo de su vecina corta — justo encima de VeriFactu y Mantenimiento de
+   datos, que es donde lo vio el dueño. Con columnas, cada tarjeta empieza
+   donde acaba la anterior de SU columna y no queda hueco.
+   column-span:all conserva las tarjetas anchas de verdad (horario semanal,
+   plano de mesas) ocupando todo el ancho, como hacía .mn-grid-full. */
+.mn-grid{display:block;column-gap:16px}
+@media (min-width:900px){.mn-grid{column-count:2}}
+@media (min-width:1440px){.mn-grid{column-count:3}}
+.mn-grid .card{max-width:none;margin:0 0 16px;min-width:0;break-inside:avoid;-webkit-column-break-inside:avoid}
+.mn-grid .mn-grid-full{column-span:all}
 
 /* Antes había dos listas de capítulos (esta columna lateral y la fila de
    arriba, .mn-indice) — el dueño pidió (9/09) dejar solo una. .manual-wrap

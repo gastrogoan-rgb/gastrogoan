@@ -279,18 +279,22 @@ function renderDashboard(){
 
   const hasAnySales = DB.sales.length > 0;
 
-  // Sales analysis (last 30 days): avg ticket, top products, sales by hour
-  const last30Start = dateStr(new Date(today.getTime() - 29*86400000));
-  const salesLast30 = activeSales().filter(s=>s.date>=last30Start && s.date<=todayDate);
-  const totalLast30 = salesLast30.reduce((s,x)=>s+x.total,0);
-  const avgTicket = salesLast30.length ? totalLast30 / salesLast30.length : 0;
+  /* Análisis de ventas: MES NATURAL, no una ventana móvil de 30 días.
+     Con los últimos 30 días este panel daba cifras que no cuadraban con
+     ninguna otra pantalla de la app —Gestión Económica, Cuenta de
+     Resultados y el resto van todas por mes natural—, así que el mismo
+     negocio enseñaba dos facturaciones distintas según dónde mirara el
+     hostelero. */
+  const salesMes = activeSales().filter(s=>s.date>=monthStart && s.date<=todayDate);
+  const totalMes = salesMes.reduce((s,x)=>s+x.total,0);
+  const avgTicket = salesMes.length ? totalMes / salesMes.length : 0;
 
-  // % Food Cost medio ponderado por unidades vendidas en los últimos 30 días,
+  // % Food Cost medio ponderado por unidades vendidas en el mes,
   // para que un plato sin ventas no distorsione el indicador frente al objetivo.
-  const recipeUnits30 = {};
-  salesLast30.forEach(s=>{
+  const recipeUnitsMes = {};
+  salesMes.forEach(s=>{
     (s.items||[]).forEach(it=>{
-      if(it.recipeId) recipeUnits30[it.recipeId] = (recipeUnits30[it.recipeId]||0) + (it.qty||1);
+      if(it.recipeId) recipeUnitsMes[it.recipeId] = (recipeUnitsMes[it.recipeId]||0) + (it.qty||1);
     });
   });
   let avgFoodCost = 0;
@@ -302,7 +306,7 @@ function renderDashboard(){
   // como si el food cost fuera literalmente 0% (dato saludable falso) en vez
   // de "—" (sin datos suficientes). foodCostCalculable distingue ambos casos.
   const weightedFc = DB.recipes
-    .map(r => ({pct: recipeFoodCostPct(r), units: recipeUnits30[r.id]||0}))
+    .map(r => ({pct: recipeFoodCostPct(r), units: recipeUnitsMes[r.id]||0}))
     .filter(e => isFinite(e.pct) && e.units>0);
   const weightedFcUnits = weightedFc.reduce((s,e)=>s+e.units,0);
   let foodCostCalculable = false;
@@ -556,7 +560,7 @@ function renderDashboard(){
   // criterio aquí para que los dos coincidan.
   const dishKey = it => it.recipeId ? ('r'+it.recipeId) : ('m'+(it.name||''));
   const productTotals = {};
-  salesLast30.forEach(s=>{
+  salesMes.forEach(s=>{
     (s.items||[]).forEach(it=>{
       const key = dishKey(it);
       if(!productTotals[key]) productTotals[key] = {name: it.name || '—', units:0, revenue:0};
@@ -566,12 +570,12 @@ function renderDashboard(){
   });
   const topProducts = Object.values(productTotals).sort((a,b)=>b.units-a.units).slice(0,5);
 
-  // Margen bruto real por plato (últimos 30 días) — coste estampado en el
+  // Margen bruto real por plato (mes en curso) — coste estampado en el
   // momento de cada venta (costoUnitarioDeLinea), no el coste actual de la
   // receta: si no, un cambio de precio de un ingrediente HOY movería el
   // margen "real" de ventas de hace semanas cada vez que se abre el panel.
   const marginTotals = {};
-  salesLast30.forEach(s=>{
+  salesMes.forEach(s=>{
     (s.items||[]).forEach(it=>{
       const key = dishKey(it);
       const qty = it.qty || 1;
@@ -594,7 +598,7 @@ function renderDashboard(){
     .slice(0,5);
 
   const hourTotals = new Array(24).fill(0);
-  salesLast30.forEach(s=>{
+  salesMes.forEach(s=>{
     if(s.createdAt){
       const h = new Date(s.createdAt).getHours();
       hourTotals[h] += s.total;
@@ -605,8 +609,8 @@ function renderDashboard(){
   document.getElementById('dashboard-sales-analysis').innerHTML = `
     <div class="grid grid-3" style="margin-bottom:14px">
       <div class="kpi"><div class="label"><i class="ti ti-receipt"></i> ${t('dash.avgTicket')}</div><div class="value">${fmtMoney(avgTicket)}</div></div>
-      <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> ${t('dash.numSales')}</div><div class="value">${salesLast30.length}</div></div>
-      <div class="kpi"><div class="label"><i class="ti ti-cash"></i> ${t('dash.periodTotal')}</div><div class="value">${fmtMoney(totalLast30)}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> ${t('dash.numSales')}</div><div class="value">${salesMes.length}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-cash"></i> ${t('dash.periodTotal')}</div><div class="value">${fmtMoney(totalMes)}</div></div>
     </div>
     <div class="grid grid-3">
       <div>
@@ -682,32 +686,38 @@ function renderSalesHeatmap(){
   const sales = activeSales().filter(s => s.date >= start && s.date <= end && s.createdAt);
   if(!sales.length){ el.innerHTML = `<div class="empty">${t('dash.noSalesYet')}</div>`; return; }
 
-  const bands = [
-    {lbl:'8-12h', from:8, to:12}, {lbl:'12-16h', from:12, to:16},
-    {lbl:'16-20h', from:16, to:20}, {lbl:'20-24h', from:20, to:24},
-  ];
+  /* HORA A HORA, no en franjas de cuatro horas. Con las franjas se veía que
+     el negocio vende "de 20 a 24", que es justo lo que el hostelero ya sabe:
+     para decidir a qué hora entra un camarero más hace falta saber si el
+     golpe es a las 21 o a las 23. Solo se pintan las horas en las que ese
+     negocio vende de verdad (de la primera a la última con ventas), para no
+     arrastrar veinticuatro columnas de las cuales la mitad están siempre
+     vacías. */
   const dayLabels = t('days.short');
-  const grid = dayLabels.map(()=>bands.map(()=>0));
+  const porHora = dayLabels.map(()=>new Array(24).fill(0));
   sales.forEach(s => {
     const d = new Date(s.createdAt);
     const dow = (d.getDay()+6)%7; // 0=lunes ... 6=domingo
-    const hour = d.getHours();
-    const bandIdx = bands.findIndex(b => hour>=b.from && hour<b.to);
-    if(bandIdx>=0) grid[dow][bandIdx] += s.total;
+    porHora[dow][d.getHours()] += s.total;
   });
+  const horasConVenta = [];
+  for(let h = 0; h < 24; h++){ if(porHora.some(fila => fila[h] > 0)) horasConVenta.push(h); }
+  const horas = horasConVenta.length ? horasConVenta : [12,13,14,20,21,22];
+  const bands = horas.map(h => ({lbl: h + 'h', hora: h}));
+  const grid = porHora.map(fila => horas.map(h => fila[h]));
   const maxVal = Math.max(...grid.flat(), 1);
   el.innerHTML = `
     <div style="overflow-x:auto">
-      <table style="border-collapse:collapse;width:100%;min-width:420px">
+      <table style="border-collapse:collapse;width:100%;min-width:${Math.max(420, 90 + bands.length*54)}px">
         <thead><tr><th></th>${bands.map(b=>`<th style="font-size:11px;color:var(--muted);font-weight:600;padding:4px">${b.lbl}</th>`).join('')}</tr></thead>
         <tbody>
           ${dayLabels.map((dl,di) => `
             <tr>
               <td style="font-size:11px;color:var(--muted);font-weight:600;padding:4px;white-space:nowrap">${dl}</td>
-              ${grid[di].map(v => {
+              ${grid[di].map((v,hi) => {
                 const intensity = v/maxVal;
                 const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
-                return `<td style="padding:4px"><div title="${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtMoney(v):''}</div></td>`;
+                return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
               }).join('')}
             </tr>
           `).join('')}

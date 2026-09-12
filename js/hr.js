@@ -719,10 +719,15 @@ const GE = (function(){
         tipoBox.innerHTML = '';
       } else {
         const porTipo = ventasPorTipoMes(ventasMonth, ventasYear);
+        // Con el total al final: sin él había que sumar mesa + take away +
+        // delivery a mano para saber cuánto se ha facturado en el mes, que
+        // es justo la cifra que se busca al mirar este desglose.
+        const totalTipos = tiposActivos.reduce((acc,k)=>acc+(porTipo[k]||0), 0);
         tipoBox.innerHTML = `
           <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('ge.ventas.byType')}</h4>
           <div class="ge-kpi-grid" style="margin-bottom:14px">
             ${tiposActivos.map(k => `<div class="ge-kpi"><div class="lbl">${t('ge.ventas.tipo.'+k)}</div><div class="val">${fmtMoney(porTipo[k])}</div></div>`).join('')}
+            <div class="ge-kpi" style="border-color:var(--teal)"><div class="lbl" style="color:var(--teal)">${t('common.total')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totalTipos)}</div></div>
           </div>`;
       }
     }
@@ -806,7 +811,7 @@ const GE = (function(){
             <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10.5px;font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
             <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
             <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGVGroup('${ids}')"><i class="ti ti-trash"></i></button>
+            <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 6px"><i class="ti ti-lock"></i></span>
           </div>`;
         }).join('');
         const manualHtml = manualItems.map(v=>{
@@ -882,6 +887,10 @@ const GE = (function(){
   }
   function editGV(id){
     const v = variables().find(x=>x.id===id); if(!v) return;
+    // Igual que el borrado: una compra nacida de un pedido recibido no se
+    // retoca desde aquí. Se corrige en el pedido a proveedor, que es donde
+    // está el dato de verdad.
+    if(v.auto){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
     editingGV = id;
     openGVModal(v);
   }
@@ -957,6 +966,7 @@ const GE = (function(){
   }
   async function deleteGV(id){
     const v = variables().find(x=>x.id===id);
+    if(v && v.auto){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
     if(v && isDateClosed(v.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
     if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
     ge().variables = variables().filter(v=>v.id!==id);
@@ -965,6 +975,13 @@ const GE = (function(){
   }
   async function deleteGVGroup(idsStr){
     const ids = idsStr.split(',').map(s=>parseInt(s));
+    /* Una compra que viene de un pedido ACEPTADO como recibido es un hecho
+       contable: la mercancía entró y el proveedor la va a facturar. Borrarla
+       descuadraría el food cost y el IVA soportado de un mes que ya se
+       declaró, así que no se puede — ni desde el botón (ya no existe) ni
+       desde la consola. Para corregir un error hay que hacerlo donde se
+       originó: en el pedido a proveedor. */
+    if(variables().some(v=>ids.includes(v.id) && v.auto)){ showToast(t('hr.gv.receivedLocked'), 5000); return; }
     if(variables().some(v=>ids.includes(v.id) && isDateClosed(v.fecha))){ showToast(t('hr.te.monthClosedError')); return; }
     if(!(await confirmModal(t('msg.confirmDeletePurchases')))) return;
     ge().variables = variables().filter(v=>!ids.includes(v.id));
@@ -1444,9 +1461,14 @@ const GE = (function(){
     const revCur = facturacionNetaMes(curM, curY) + ivaVentasMes(curM, curY);
     const revPrev = facturacionNetaMes(prevM, prevMY) + ivaVentasMes(prevM, prevMY);
     const revYoy = facturacionNetaMes(curM, curY-1) + ivaVentasMes(curM, curY-1);
-    const resCur = resultadoAntesImpMes(curM, curY);
-    const resPrev = resultadoAntesImpMes(prevM, prevMY);
-    const resYoy = resultadoAntesImpMes(curM, curY-1);
+    /* Resultado NETO, el de después de impuestos: es lo que el hostelero se
+       lleva de verdad. Antes esta tarjeta daba el resultado ANTES de
+       impuestos, así que el número grande de la cabecera era más alto que
+       el "Resultado Neto" de la tabla de justo debajo — la misma pantalla
+       enseñaba dos resultados distintos del mismo mes. */
+    const resCur = resultadoMes(curM, curY);
+    const resPrev = resultadoMes(prevM, prevMY);
+    const resYoy = resultadoMes(curM, curY-1);
     function pctDelta(cur, ref){
       if(!ref) return null;
       return ((cur-ref)/Math.abs(ref))*100;
@@ -1543,7 +1565,14 @@ const GE = (function(){
       {lbl:t('hr.te.otherExpenses'), pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
       {lbl:t('hr.te.profitSavings'), pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
       {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, obj:null, real:ivaReserva, color:'var(--amber-dark)', isReserve:true, icon:'ti-pig-money'},
-      ...(irpfReserva>0.001 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, obj:null, real:irpfReserva, color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
+      /* La reserva de IRPF solo aparecía si había importe, así que un negocio
+         con nóminas pero sin el cálculo automático activado no la veía por
+         ningún lado y no tenía forma de saber que existe. Ahora se muestra
+         siempre que haya gasto de personal, y cuando está a cero dice dónde
+         se activa en vez de desaparecer en silencio. */
+      ...(realPer > 0 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, obj:null, real:irpfReserva,
+        color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax',
+        hint: irpfReserva>0.001 ? null : t('hr.te.irpfNotConfigured')}] : []),
     ];
 
     document.getElementById('te-rows').innerHTML = rows.map(r=>{
@@ -1553,26 +1582,31 @@ const GE = (function(){
           <span></span>
           <span></span>
           <span style="text-align:right;font-family:monospace;font-weight:700;color:${r.color}">${fmtMoney(r.real)}</span>
-          <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${t('hr.te.setAsideQuarterly')}</span>
+          <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${r.hint || t('hr.te.setAsideQuarterly')}</span>
           <span style="text-align:center;font-size:16px"><i class="ti ${r.icon}"></i></span>
         </div>`;
       }
       const diff = r.real - r.obj;
       const absDiff = Math.abs(diff);
-      const pctDev = r.obj ? Math.abs(diff)/r.obj : 0;
-      // Criterio único para todas las filas (pedido expresamente así): lo
-      // que importa es si se ha alcanzado o superado el objetivo, no si la
-      // fila es de gasto o de beneficio — real >= objetivo es siempre
-      // verde, por debajo es siempre rojo.
-      const isGood = diff >= 0;
-      const estado = !r.real ? '—' : (pctDev < 0.1 ? '<i class="ti ti-check" style="color:var(--green)"></i>' : isGood ? '<i class="ti ti-check" style="color:var(--green)"></i>' : pctDev < 0.2 ? '<i class="ti ti-alert-triangle" style="color:var(--amber-dark)"></i>' : '<i class="ti ti-x" style="color:var(--red)"></i>');
+      /* El semáforo va por el SENTIDO de cada fila, no por si se alcanza el
+         objetivo a secas: en una fila de GASTO, pasarse del objetivo es
+         malo (si el food cost objetivo es el 30% y el real sale al 40%, eso
+         es cruz roja por mucho que "supere" la cifra), y quedarse por
+         debajo es bueno. En Beneficio es justo al revés. Sin franja ámbar
+         intermedia: o está dentro del objetivo o no, que es lo que el
+         hostelero necesita ver de un vistazo. */
+      const isGood = r.isBen ? diff >= 0 : diff <= 0;
+      const estado = !r.real ? '—'
+        : isGood ? '<i class="ti ti-check" style="color:var(--green)"></i>'
+                 : '<i class="ti ti-x" style="color:var(--red)"></i>';
       const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
       const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
       const diffText = r.real ? `${diffSign}${fmtMoney(absDiff)}` : '—';
       const barPct = r.obj>0 ? Math.min(r.real/r.obj*100, 150) : 0;
-      // Mismo criterio único que isGood: alcanzar o superar el objetivo es
-      // verde, por debajo es rojo, para todas las filas.
-      const barColor = barPct<90?'var(--red)':barPct>=100?'var(--green)':'var(--amber)';
+      // La barra sigue el mismo criterio que el tick: en gastos, pasar del
+      // 100% del objetivo la pone en rojo; en beneficio, lo que la pone en
+      // rojo es quedarse corto.
+      const barColor = isGood ? 'var(--green)' : 'var(--red)';
       return `<div class="te-row">
         <span style="font-size:14px;font-weight:600">${r.lbl}</span>
         <span style="text-align:right;font-weight:600;color:${r.color}">${(r.pct*100).toFixed(0)}%</span>
