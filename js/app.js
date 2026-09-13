@@ -1981,9 +1981,13 @@ function renderClientes(){
       const expanded = clientExpandedIds.has(c.id);
       return `
       <div class="card client-card ${expanded?'expanded':''}">
+        <!-- El resumen plegado es lo que se ve de un vistazo con la lista
+             entera delante: nombre y puntos, nada más. La etiqueta de
+             segmento ("Nuevo"/"En riesgo") se fue al detalle: pegada al
+             contador competía con él y, justo cuando tocaba dar un premio,
+             lo que hay que leer es 10/10, no una etiqueta (13/09). -->
         <div class="client-card-summary" onclick="toggleClientExpand(${c.id})">
           <span class="client-card-name">${escapeHtml(c.name)}</span>
-          ${segmentBadge}
           <span class="badge ${loyaltyCls}">${points}/10</span>
           <i class="ti ti-chevron-down client-card-chevron"></i>
         </div>
@@ -1997,7 +2001,7 @@ function renderClientes(){
           </div>
           <div class="client-card-detail-row"><span>${t('label.visits30d')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitas30d}</span></button></div>
           <div class="client-card-detail-row"><span>${t('label.visitsYear')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitasYear}</span></button></div>
-          <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong></div>
+          <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong>${segmentBadge ? ` ${segmentBadge}` : ''}</div>
           <div class="client-card-detail-row"><span>${t('label.avgTicket')}</span><strong>${fmtMoney(stats.ticketMedio)}</strong></div>
           <div class="client-card-detail-row"><span>${t('label.total30d')}</span><strong>${fmtMoney(stats.total30d)}</strong></div>
           <div class="client-card-detail-row"><span>${t('label.totalYear')}</span><strong>${fmtMoney(stats.totalYear)}</strong></div>

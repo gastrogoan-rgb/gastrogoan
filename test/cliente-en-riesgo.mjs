@@ -115,6 +115,25 @@ await caso('Y la lista de Clientes no enseña la etiqueta a quien no toca', asyn
   assert.ok(!r.hayEtiquetaEnHabitual, 'el cliente que vino ayer no lleva etiqueta de riesgo');
 });
 
+await caso('En el móvil, la tarjeta plegada enseña solo nombre y puntos', async () => {
+  const r = await page.evaluate(async ()=>{
+    // La vista de tarjetas es la de móvil; se pinta siempre, así que se
+    // puede mirar su contenido sin cambiar el tamaño de pantalla (que
+    // recargaría la página y borraría la semilla — ver CLAUDE.md).
+    const tarjeta = [...document.querySelectorAll('#clientes-cards .client-card')]
+      .find(x => /Quincenal Perdido/.test(x.innerText));
+    if(!tarjeta) return {sinTarjeta:true};
+    const resumen = tarjeta.querySelector('.client-card-summary').innerText;
+    const detalle = tarjeta.querySelector('.client-card-detail').innerText;
+    return {resumen, detalle};
+  });
+  assert.ok(!r.sinTarjeta, 'tiene que existir la tarjeta de móvil');
+  assert.ok(/\/10/.test(r.resumen), 'el resumen lleva el contador sobre diez: ' + JSON.stringify(r.resumen));
+  assert.ok(!/riesgo/i.test(r.resumen), 'y NADA más que estorbe: ' + JSON.stringify(r.resumen));
+  // Pero la etiqueta no se pierde: baja al detalle, junto a la última visita.
+  assert.ok(/riesgo/i.test(r.detalle), 'la etiqueta sigue estando al desplegar: ' + JSON.stringify(r.detalle.slice(0,200)));
+});
+
 await caso('Dar un premio no cambia si está en riesgo o no', async () => {
   const r = await page.evaluate(async ()=>{
     const antes = clientSalesStats(DB.clients.find(c=>c.name==='Habitual Diario')).atRisk;
