@@ -20,7 +20,10 @@ import path from 'node:path';
 import { dibujar, rotulo, PORTADA, CIERRE_1, CIERRE_2, ANCHO, ALTO } from './rotulos.mjs';
 
 const FPS = 25;
-const VELOCIDAD = 2.6;        // ritmo del recorrido
+/* Velocidad del recorrido. A 1 va al ritmo al que lo grabó el dueño (unos
+   7 minutos), que es como lo quiere para entregarlo como demo. Subirlo a
+   2,6 da la versión corta de 3 minutos. */
+const VELOCIDAD = 1;
 const FUNDIDO = 0.45;         // transición entre trozos
 const FONDO = '0x1C1A17';
 const BARRA_SISTEMA = 82;     // barra de Android, solo si el trozo viene crudo
@@ -34,6 +37,21 @@ const SALIDA = 'dist/gastrogoan-demo.mp4';
 /* El material, en orden, con lo que cuenta cada tramo. Los segundos son del
    ORIGINAL (antes de acelerar): así se pueden ajustar mirando el archivo que
    mandó el dueño, sin tener que recalcular nada. */
+/* ── LO QUE NO PUEDE SALIR ────────────────────────────────────────────
+   Al entrar, el dueño teclea su PIN: el campo va mostrando el último
+   dígito antes de taparlo con un punto, y el teclado de la tablet resalta
+   la tecla pulsada. O sea, el PIN se puede leer fotograma a fotograma.
+   Se emborronan las dos zonas —el campo y el teclado entero— durante todo
+   ese tramo. Coordenadas del vídeo ORIGINAL (1920×1080), antes de escalar. */
+const PIXELAR = {
+  'parte1.mp4': [
+    {desde: 8.0, hasta: 14.5, zonas: [
+      [595, 265, 740, 120],    // el campo del PIN
+      [0, 495, 1920, 585],     // el teclado, con la tecla que se ilumina
+    ]},
+  ],
+};
+
 const PARTES = [
   {
     archivo: '/tmp/parte1.mp4',
@@ -146,10 +164,35 @@ for(const [i, parte] of PARTES.entries()){
     `setpts=PTS/${VELOCIDAD}`, `fps=${FPS}`, 'format=yuv420p',
   ].join(',');
 
+  /* El emborronado va ANTES de recortar y escalar: así las coordenadas son
+     las del vídeo tal y como salió de la tablet y se pueden medir sobre un
+     fotograma suelto, sin recalcular nada. */
+  let fuente = parte.archivo;
+  const zonas = PIXELAR[nombre];
+  if(zonas && zonas.length){
+    const filtros = [];
+    let cadena = '[0:v]';
+    let n = 0;
+    zonas.forEach(({desde, hasta, zonas: cajas}) => {
+      cajas.forEach(([x, y, w, h]) => {
+        const ent = `[b${n}]`, sal = `[p${n}]`;
+        filtros.push(`[0:v]crop=${w}:${h}:${x}:${y},boxblur=22:3${ent}`);
+        filtros.push(`${cadena}${ent}overlay=${x}:${y}:enable='between(t,${desde},${hasta})'${sal}`);
+        cadena = sal; n++;
+      });
+    });
+    const conBorron = `${TMP}/px${i}.mp4`;
+    await correr(['-y','-v','error','-i',parte.archivo,
+      '-filter_complex', filtros.join(';'), '-map', cadena, '-an',
+      '-c:v','libx264','-preset','veryfast','-crf','18', conBorron], `emborronar ${nombre}`);
+    fuente = conBorron;
+    console.log(`· ${nombre}: ${n} zona(s) emborronadas`);
+  }
+
   const trozos = [];
   for(const [j, [a, b]] of tramos.entries()){
     const sal = `${TMP}/t${i}_${j}.mp4`;
-    await correr(['-y','-v','error','-ss',String(a),'-to',String(b),'-i',parte.archivo,
+    await correr(['-y','-v','error','-ss',String(a),'-to',String(b),'-i',fuente,
       '-vf',vf,'-an','-c:v','libx264','-preset','veryfast','-crf','20',sal], `normalizar ${nombre}`);
     trozos.push(sal);
   }
