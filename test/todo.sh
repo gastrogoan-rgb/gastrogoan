@@ -115,6 +115,7 @@ lanzar; node test/cancelaciones-permiso.mjs > "$SALIDA/cancelperm.txt" 2>&1 & P8
 lanzar; node test/caos-cocina.mjs > "$SALIDA/caoscocina.txt" 2>&1 & P82=$!
 lanzar; node test/cdr-periodo.mjs > "$SALIDA/cdrperiodo.txt" 2>&1 & P83=$!
 lanzar; node test/cliente-en-riesgo.mjs > "$SALIDA/clienteriesgo.txt" 2>&1 & P84=$!
+lanzar; node test/movil.mjs > "$SALIDA/movil.txt" 2>&1 & P85=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -211,5 +212,6 @@ espera $P81 "Cancelar (reserva, pedido, venta, espera) es solo del dueño o de q
 espera $P82 "Modo caos en Cocina: lo pendiente en una lista, por orden de espera" "$SALIDA/caoscocina.txt" "casos pasaron"
 espera $P83 "Cuenta de Resultados: se elige año Y periodo (mes o trimestre)" "$SALIDA/cdrperiodo.txt" "casos pasaron"
 espera $P84 "Clientes: \"en riesgo\" solo para quien de verdad ha dejado de venir" "$SALIDA/clienteriesgo.txt" "casos pasaron"
+espera $P85 "La app en un móvil de verdad: 5 anchos (320-430), nada cortado ni apiñado" "$SALIDA/movil.txt" "se ve bien en los cinco anchos"
 
 exit $FALLOS

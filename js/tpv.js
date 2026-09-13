@@ -2413,14 +2413,14 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
     const hasCocina = bebidaInGroup.some(({line}) => line.estado === 'cocina');
     const hasPreparando = bebidaInGroup.some(({line}) => line.estado === 'preparando');
     const allServed = bebidaInGroup.every(({line}) => line.estado === 'entregado');
-    if(allServed) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
+    if(allServed) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
     else if(hasCocina) statusBadge = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
     else if(hasPreparando) statusBadge = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
   }else{
-    if(allPicked) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-    else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
-    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10.5px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
-    else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
+    if(allPicked) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
+    else if(listos.length) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
+    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue txt-xs" ><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
+    else if(allFired) statusBadge = `<span class="badge badge-amber txt-xs" ><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
 
   // Si TODA la tanda es del mismo menú, se dice una vez en la cabecera del
@@ -2491,7 +2491,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
         // escrita por el camarero. Una nota manual sigue mostrándose siempre.
         const esNotaAutoDeMenu = menu && line.notas === `Menú: ${tItem(menu)}`;
         if(!line.notas || (esNotaAutoDeMenu && nombreMenuUnico)) return '';
-        return `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>`;
+        return `<div class="txt-xs" style="color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>`;
       })()}
     `;}).join('')}
   </div>

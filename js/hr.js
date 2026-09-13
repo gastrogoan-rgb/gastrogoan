@@ -434,13 +434,13 @@ const GE = (function(){
         detalles.push(`${t('hr.gf.everyMonths').replace('${n}', periodoMeses)} · ${fmtMoney(parseFloat(g.importe||0))}${t('hr.gf.perPayment')}`);
         const today = new Date();
         const next = gfNextDueDate(g, today.getFullYear(), today.getMonth());
-        if(next) detalles.push(`<span class="badge badge-blue" style="font-size:10.5px">${t('hr.gf.nextDue').replace('${date}', next.date)}</span>`);
+        if(next) detalles.push(`<span class="badge badge-blue txt-xs" >${t('hr.gf.nextDue').replace('${date}', next.date)}</span>`);
       }
       if(g.autoCalc) detalles.push(t('hr.gf.autoCalcSummary').replace('${neto}', fmtMoney(parseFloat(g.sueldoNeto||0))).replace('${bruto}', fmtMoney(g.sueldoBruto||0)).replace('${ss}', fmtMoney(g.ssEmpresa||0)).replace('${irpf}', fmtMoney(g.irpfMensual||0)));
       return `
       <div class="ge-item" style="flex-wrap:wrap">
         <span style="flex:1;font-size:14px;font-weight:500;min-width:140px">${escapeHtml(g.nombre)}</span>
-        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(mensual)}${periodoMeses>1?'<span style="font-size:10.5px;color:var(--muted);font-weight:400">/mes</span>':''}</span>
+        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(mensual)}${periodoMeses>1?'<span class="txt-xs" style="color:var(--muted);font-weight:400">/mes</span>':''}</span>
         <button class="btn btn-sm btn-icon" onclick="GE.editGF(${g.id})"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGF(${g.id})"><i class="ti ti-trash"></i></button>
         ${detalles.length || g.notas ? `<div style="flex-basis:100%;font-size:11.5px;color:var(--muted)">${detalles.join(' · ')}${g.notas?`${detalles.length?' · ':''}<i class="ti ti-note"></i> ${escapeHtml(g.notas)}`:''}</div>` : ''}
@@ -756,12 +756,12 @@ const GE = (function(){
       const propinaDia = salesDia.reduce((s,v)=>s+(parseFloat(v.propina)||0),0);
       const ticketsDia = salesDia.length;
       totalMes += totalDia; ticketsMes += ticketsDia; propinaMes += propinaDia;
-      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}${propinaDia>0.001?`<div style="font-size:10.5px;font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaDia)}</div>`:''}</td></tr>`;
+      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}${propinaDia>0.001?`<div class="txt-xs" style="font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaDia)}</div>`:''}</td></tr>`;
     }
     document.getElementById('ventas-dia-table').innerHTML = diaRows ? `
       <thead><tr><th>${t('hr.lbl.day')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
       <tbody>${diaRows}</tbody>
-      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}${propinaMes>0.001?`<div style="font-size:10.5px;font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaMes)}</div>`:''}</td></tr></tfoot>
+      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}${propinaMes>0.001?`<div class="txt-xs" style="font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaMes)}</div>`:''}</td></tr></tfoot>
       ` : `<tbody><tr><td colspan="4"><div class="empty">${t('ge.ventas.emptyMonth')}</div></td></tr></tbody>`;
     const notaPropinas = document.getElementById('ventas-propinas-note');
     if(notaPropinas){
@@ -819,7 +819,7 @@ const GE = (function(){
           const total = totalBase + totalIva;
           const ids = vs.map(v=>v.id).join(',');
           return `<div class="ge-item" style="flex-wrap:wrap">
-            <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10.5px;font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
+            <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray txt-xs" style="font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
             <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
             <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
             <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 4px"><i class="ti ti-lock"></i></span>
@@ -837,7 +837,7 @@ const GE = (function(){
           if(v.anulado){
             return `<div class="ge-item" style="flex-wrap:wrap;opacity:.6">
             <span style="flex:1;font-size:14px;min-width:140px;text-decoration:line-through">${escapeHtml(v.proveedor||'—')}</span>
-            <span class="badge badge-red" style="font-size:10.5px"><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>
+            <span class="badge badge-red txt-xs" ><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>
             <span style="font-size:11.5px;color:var(--muted);flex:1;min-width:120px">${escapeHtml(v.anuladoMotivo||'')}</span>
             <span style="font-family:monospace;text-decoration:line-through;color:var(--muted)">${fmtMoney(total)}</span>
           </div>`;
@@ -1123,7 +1123,7 @@ const GE = (function(){
     // primer punto del histórico de gastos fijos (no hay ningún dato real
     // de esas fechas). Si hay histórico, cada mes ya usa su propio valor
     // real de entonces (geTotalFijosNetoForMonth), no el de hoy.
-    const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span style="font-size:10.5px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
+    const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span class="txt-xs" style="font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
     // Una sola tabla, con TODAS las filas de las dos vistas que había antes
     // (algunas solo estaban en una: Margen Bruto/EBITDA solo en "Resultado",
     // IVA a liquidar solo en "Cuenta de Resultados") — nunca más un desglose
@@ -1165,7 +1165,7 @@ const GE = (function(){
         if(prevTotal !== 0){
           const pct = (total-prevTotal)/Math.abs(prevTotal)*100;
           const color = pct>=0?'var(--green)':'var(--red)';
-          yoyHtml = `<br><span style="font-size:10.5px;color:${color}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% ${t('hr.cdr.yoyLabel')}</span>`;
+          yoyHtml = `<br><span class="txt-xs" style="color:${color}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% ${t('hr.cdr.yoyLabel')}</span>`;
         }
       }
       // Al pasar el cursor por una columna de trimestre o del año, se ve el
@@ -1273,7 +1273,7 @@ const GE = (function(){
       <div style="position:relative;height:28px;background:var(--border);border-radius:6px;overflow:visible">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pctAct}%;background:${ok?'var(--teal)':'var(--red)'};border-radius:6px;transition:width .4s"></div>
         <div style="position:absolute;left:${pctNec}%;top:-4px;height:36px;width:3px;background:var(--amber-dark);border-radius:2px"></div>
-        <div style="position:absolute;left:clamp(28px,${pctNec}%,calc(100% - 28px));top:34px;transform:translateX(-50%);font-size:10.5px;color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
+        <div class="txt-xs" style="position:absolute;left:clamp(28px,${pctNec}%,calc(100% - 28px));top:34px;transform:translateX(-50%);color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
       </div>
       <div style="margin-top:24px;font-size:13px;font-weight:600;color:${ok?'var(--green)':'var(--red)'}">
         ${ok?t('hr.pe.aboveBreakevenLong'):t('hr.pe.belowBreakevenLong')} · ${t('hr.pe.currentCovers').replace('${n}', cub)}
@@ -2761,7 +2761,7 @@ function renderHorariosSemana(){
   const dates = getWeekDates(horariosWeekOffset);
   const dateStrs = dates.map(dateStr);
   const label = `${dates[0].toLocaleDateString(localeActual(),{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString(localeActual(),{day:'numeric',month:'short',year:'numeric'})}`;
-  const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)}<br><span style="font-size:10.5px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
+  const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)}<br><span class="txt-xs" style="font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
 
   const rows = emps.map(emp => {
     let totalH = 0;
@@ -2771,7 +2771,7 @@ function renderHorariosSemana(){
         const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
         const hh = turnoHours(turno);
         if(hh > 0) totalH += hh;
-        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px;text-align:center;${editUnlocked?'cursor:pointer':''}" ${editUnlocked?`onclick="openTurnoModal(${turno.id})"`:''}>${turno.tipo}${turno.tipo!=='D'?`<br><span style="font-size:10.5px;font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
+        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px;text-align:center;${editUnlocked?'cursor:pointer':''}" ${editUnlocked?`onclick="openTurnoModal(${turno.id})"`:''}>${turno.tipo}${turno.tipo!=='D'?`<br><span class="txt-xs" style="font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
       }
       // El calendario es solo VISTA: asignar un turno nuevo se hace desde el
       // botón de calendario de la ficha del empleado (horario fijo o por

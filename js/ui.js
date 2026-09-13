@@ -1390,7 +1390,7 @@ function renderChatMessages(){
     <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}">
       <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
       ${escapeHtml(m.text)}
-      <button class="btn btn-sm" style="margin-top:4px;font-size:10px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
+      <button class="btn btn-sm txt-xs" style="margin-top:4px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
     </div>
   `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> ${t('msg.noMessagesInChannelYet').replace('${channel}', escapeHtml(chatChannelLabel(currentChatChannel)))}</div>`;
   box.scrollTop = box.scrollHeight;
