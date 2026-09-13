@@ -1045,8 +1045,56 @@ const GE = (function(){
   // otra). Fusionadas en una sola tabla con un interruptor de resolución,
   // todas las filas de las dos juntas.
   let cdrGranularidad = 'trimestre';
-  function setCDRGranularidad(g){ cdrGranularidad = g; renderCDR(); }
+  /* Qué periodo se está mirando DENTRO del año: el mes (0-11) en vista
+     mensual, el trimestre (0-3) en trimestral. Arranca en el de hoy.
+
+     Antes no existía: la tabla enseñaba el año entero y la cabecera de
+     comparación daba SIEMPRE el mes en curso del año en curso. Al retroceder
+     de año con las flechas, la tabla cambiaba a 2025 y la cabecera seguía
+     con los números de septiembre de 2026 — la misma pantalla, dos años
+     distintos a la vez (lo vio el dueño el 13/09). */
+  // Arranca en el periodo de HOY, contado en la resolución con la que se
+  // abre la pestaña: con cdrGranularidad = 'trimestre', septiembre no es el
+  // periodo 8 (no existe el trimestre 9), es el T3.
+  let cdrPeriodo = cdrGranularidad === 'trimestre'
+    ? Math.floor(new Date().getMonth()/3)
+    : new Date().getMonth();
+  function setCDRGranularidad(g){
+    if(g === cdrGranularidad) return;
+    /* Al cambiar de resolución, el periodo elegido se traduce: septiembre
+       pasa a ser T3. Al revés, un trimestre son tres meses y hay que elegir
+       uno: si es el trimestre de HOY (y el año de hoy), el mes en curso —
+       que es lo que espera cualquiera al pulsar "Mensual" nada más entrar.
+       Para cualquier otro trimestre, su primer mes. */
+    if(g === 'trimestre'){
+      cdrPeriodo = Math.floor(cdrPeriodo/3);
+    }else{
+      const hoy = new Date();
+      const esTrimestreDeHoy = cdrYear === hoy.getFullYear() && cdrPeriodo === Math.floor(hoy.getMonth()/3);
+      cdrPeriodo = esTrimestreDeHoy ? hoy.getMonth() : cdrPeriodo*3;
+    }
+    cdrGranularidad = g;
+    renderCDR();
+  }
+  function setCDRPeriodo(i){ cdrPeriodo = i; renderCDR(); }
   function setCDRYear(delta){ cdrYear += delta; renderCDR(); }
+  // Los meses que componen el periodo elegido. Es lo que hace que la
+  // cabecera funcione igual en mensual y en trimestral.
+  function cdrMesesDelPeriodo(){
+    if(cdrGranularidad === 'trimestre'){
+      const base = cdrPeriodo*3;
+      return [base, base+1, base+2];
+    }
+    return [cdrPeriodo];
+  }
+  function cdrEtiquetaPeriodo(){
+    return cdrGranularidad === 'trimestre' ? 'T'+(cdrPeriodo+1) : getMeses()[cdrPeriodo];
+  }
+  // El periodo ANTERIOR al elegido, saltando de año si hace falta.
+  function cdrPeriodoAnterior(){
+    const max = cdrGranularidad === 'trimestre' ? 4 : 12;
+    return cdrPeriodo === 0 ? {periodo: max-1, anyo: cdrYear-1} : {periodo: cdrPeriodo-1, anyo: cdrYear};
+  }
   function syncYearLabels(){
     const el = document.getElementById('cdr-year'); if(el) el.textContent = cdrYear;
   }
@@ -1056,6 +1104,17 @@ const GE = (function(){
       const el = document.getElementById(id);
       if(el) el.classList.toggle('btn-primary', id==='cdr-gran-'+cdrGranularidad);
     });
+    // La tira de periodos, con la misma pinta que la de Ventas o Tesorería:
+    // doce meses o cuatro trimestres, según la resolución elegida.
+    const tira = document.getElementById('cdr-periodos');
+    if(tira){
+      const etiquetas = cdrGranularidad === 'trimestre'
+        ? [0,1,2,3].map(i => 'T'+(i+1))
+        : getMeses();
+      if(cdrPeriodo >= etiquetas.length) cdrPeriodo = etiquetas.length-1;
+      tira.innerHTML = etiquetas.map((lbl,i)=>`
+        <div class="month-pill${i===cdrPeriodo?' active':''}" onclick="GE.setCDRPeriodo(${i})">${lbl}</div>`).join('');
+    }
     const pctImpEl = document.getElementById('res-pct-impuesto');
     if(pctImpEl) pctImpEl.value = config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25;
     const ivaPct = ivaVentasPct();
@@ -1494,29 +1553,40 @@ const GE = (function(){
     renderCapex();
   }
 
-  // Compara el mes en curso (año actual) con el mes anterior y con el mismo
-  // mes del año pasado — de un vistazo, sin tener que leer la tabla entera
-  // de trimestres para hacer la resta mentalmente.
+  /* Compara el periodo ELEGIDO (mes o trimestre, del año que se esté mirando)
+     con el anterior y con el mismo periodo del año pasado — de un vistazo,
+     sin tener que leer la tabla entera y hacer la resta mentalmente.
+
+     ⚠️ Todo esto usa cdrPeriodo y cdrYear, nunca la fecha de hoy: antes daba
+     siempre el mes en curso, así que al retroceder de año la tabla enseñaba
+     2025 y la cabecera seguía con los números de este septiembre. */
   function renderMonthComparison(){
     const box = document.getElementById('cdr-comparison');
     if(!box) return;
-    const now = new Date();
-    const curM = now.getMonth(), curY = now.getFullYear();
-    const prevM = curM===0?11:curM-1, prevMY = curM===0?curY-1:curY;
-    // Con IVA incluido (lo que de verdad ha entrado en caja) — la
-    // facturación NETA ya se ve un poco más abajo, en la propia tabla. Un
-    // dueño reconoce antes el total cobrado que la base sin IVA.
-    const revCur = facturacionNetaMes(curM, curY) + ivaVentasMes(curM, curY);
-    const revPrev = facturacionNetaMes(prevM, prevMY) + ivaVentasMes(prevM, prevMY);
-    const revYoy = facturacionNetaMes(curM, curY-1) + ivaVentasMes(curM, curY-1);
+    // Facturación CON IVA (lo que de verdad ha entrado en caja) — la neta ya
+    // sale en la tabla de abajo. Un dueño reconoce antes el total cobrado.
+    const facturacion = (meses, anyo) => meses.reduce((sum,m) => sum + facturacionNetaMes(m, anyo) + ivaVentasMes(m, anyo), 0);
     /* Resultado NETO, el de después de impuestos: es lo que el hostelero se
        lleva de verdad. Antes esta tarjeta daba el resultado ANTES de
        impuestos, así que el número grande de la cabecera era más alto que
        el "Resultado Neto" de la tabla de justo debajo — la misma pantalla
        enseñaba dos resultados distintos del mismo mes. */
-    const resCur = resultadoMes(curM, curY);
-    const resPrev = resultadoMes(prevM, prevMY);
-    const resYoy = resultadoMes(curM, curY-1);
+    const resultado = (meses, anyo) => meses.reduce((sum,m) => sum + resultadoMes(m, anyo), 0);
+
+    const meses = cdrMesesDelPeriodo();
+    const ant = cdrPeriodoAnterior();
+    const mesesAnt = (() => {
+      if(cdrGranularidad === 'trimestre'){ const b = ant.periodo*3; return [b, b+1, b+2]; }
+      return [ant.periodo];
+    })();
+
+    const revCur = facturacion(meses, cdrYear);
+    const revPrev = facturacion(mesesAnt, ant.anyo);
+    const revYoy = facturacion(meses, cdrYear-1);
+    const resCur = resultado(meses, cdrYear);
+    const resPrev = resultado(mesesAnt, ant.anyo);
+    const resYoy = resultado(meses, cdrYear-1);
+
     function pctDelta(cur, ref){
       if(!ref) return null;
       return ((cur-ref)/Math.abs(ref))*100;
@@ -1527,10 +1597,14 @@ const GE = (function(){
       const sign = delta>=0 ? '+' : '';
       return `<span class="badge ${cls}">${sign}${delta.toFixed(1)}%</span>`;
     }
+    // La etiqueta lleva el año: al mirar 2025 tiene que quedar claro que los
+    // números son de 2025, no de este mes.
+    const periodo = `${cdrEtiquetaPeriodo()} ${cdrYear}`;
+    const vsAnterior = cdrGranularidad === 'trimestre' ? t('hr.compare.vsPrevQuarter') : t('hr.compare.vsPrevMonth');
     box.innerHTML = `
       <div class="grid grid-2" style="margin-bottom:14px">
-        <div class="ge-kpi"><div class="lbl">${t('hr.compare.revenueLabel').replace('${month}', getMeses()[curM])}</div><div class="val">${fmtMoney(revCur)}</div><div class="sub">${t('hr.compare.vsPrevMonth')} ${badge(pctDelta(revCur, revPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(revCur, revYoy))}</div></div>
-        <div class="ge-kpi"><div class="lbl">${t('hr.compare.resultLabel').replace('${month}', getMeses()[curM])}</div><div class="val">${fmtMoney(resCur)}</div><div class="sub">${t('hr.compare.vsPrevMonth')} ${badge(pctDelta(resCur, resPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(resCur, resYoy))}</div></div>
+        <div class="ge-kpi"><div class="lbl">${t('hr.compare.revenueLabel').replace('${month}', periodo)}</div><div class="val">${fmtMoney(revCur)}</div><div class="sub">${vsAnterior} ${badge(pctDelta(revCur, revPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(revCur, revYoy))}</div></div>
+        <div class="ge-kpi"><div class="lbl">${t('hr.compare.resultLabel').replace('${month}', periodo)}</div><div class="val">${fmtMoney(resCur)}</div><div class="sub">${vsAnterior} ${badge(pctDelta(resCur, resPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(resCur, resYoy))}</div></div>
       </div>`;
   }
 
@@ -2355,7 +2429,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
