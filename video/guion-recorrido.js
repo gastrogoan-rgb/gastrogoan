@@ -27,9 +27,18 @@ const ver = (js, rotulo, {leer = 1.5, mirar = false, bajar = 0} = {}) => async a
 const pestana = (js, rotulo, {leer = 1.3} = {}) => async a => { await a.ir(js, {rotulo, tras: leer}); };
 
 export const GUION = [
-  // ---------- ENTRAR ----------
+  /* Se empieza por la pantalla de acceso, que es lo que ve el hostelero al
+     entrar por gastrogoan.com — el vídeo enlaza con la grabación real del
+     dueño abriendo la dirección en el navegador. Dura lo justo: el login
+     no vende, pero saltárselo del todo deja la sensación de que la app se
+     abre por arte de magia. */
   async a => {
-    await a.ir(`navigate('home');`, {rotulo: '', tras: .6});
+    await a.ir(`document.getElementById('access-select-screen')?.classList.remove('hide'); showAccessSelectScreen();`, {tras: .5});
+    await a.rotulo('Entras con tu cuenta. Nada que instalar');
+    await a.quieto(1.8);
+  },
+  async a => {
+    await a.ir(`hideAccessSelectScreen(); navigate('home');`, {rotulo: '', tras: .6});
     await a.rotulo('GG Burger · todo el restaurante en una sola app');
     await a.quieto(1.8);
   },

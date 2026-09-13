@@ -205,6 +205,33 @@ body:not(.owner-session) .owner-strict{display:none !important}
    como una lista continua y había que buscar dónde acababa uno (lo vio el
    dueño el 12/09 grabando la demo). Cada comanda es un papel: borde marcado,
    cabecera con fondo propio y una sombra que la levanta del fondo. */
+/* MODO CAOS DE COCINA: una sola lista, lo que más espera arriba.
+   Se lee de pie y a un metro de la pantalla, que es como se mira una
+   cocina en hora punta: el reloj en grande a la izquierda, el plato en
+   grande al lado, y la mesa en pequeño — es el dato de apoyo, no el
+   criterio. Lo que pasa de 15 minutos se marca en rojo y no hay que
+   buscarlo: ya está arriba del todo. */
+.caos-cabecera{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--text);color:#fff;padding:10px 16px;font-weight:800;font-size:15px;margin-bottom:10px}
+.caos-cabecera .caos-cuenta{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;opacity:.85}
+.caos-lista{display:flex;flex-direction:column;gap:8px}
+.caos-fila{display:flex;align-items:center;gap:14px;background:var(--surface);
+  border:2px solid var(--border);border-left:6px solid var(--muted);padding:12px 14px}
+.caos-fila .caos-reloj{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:30px;
+  line-height:1;min-width:74px;text-align:right;color:var(--muted);flex:none}
+.caos-fila .caos-plato{flex:1;min-width:0;overflow-wrap:anywhere}
+.caos-fila .caos-plato strong{font-size:20px;line-height:1.2;display:block}
+.caos-fila .caos-donde{font-size:12.5px;color:var(--muted);margin-top:2px}
+.caos-fila .caos-nota{font-size:13px;color:var(--brand-orange);font-weight:600;margin-top:4px}
+.caos-fila .caos-alergia{margin-top:6px}
+.caos-fila .caos-alergia .card{margin-bottom:0;padding:6px 10px;font-size:12px}
+.caos-urgente{border-color:var(--red);border-left-color:var(--red);background:var(--red-l)}
+.caos-urgente .caos-reloj{color:var(--red)}
+@media (max-width: 760px){
+  .caos-fila{gap:10px;padding:10px}
+  .caos-fila .caos-reloj{font-size:24px;min-width:56px}
+  .caos-fila .caos-plato strong{font-size:17px}
+}
 .kds-ticket{border:2px solid var(--text);box-shadow:0 3px 0 rgba(28,26,23,.10);padding:0;overflow:hidden}
 .kds-ticket>.kds-head{background:var(--brand-cream);border-bottom:2px solid var(--text);padding:10px 14px;margin:0}
 .kds-ticket>.kds-body{padding:12px 14px}
@@ -1044,8 +1071,15 @@ td.wrap{white-space:normal}
    más líneas. overflow-wrap:anywhere para el caso extremo de una palabra
    suelta más ancha que la columna entera. */
 .manual-step .st{font-size:13px;line-height:1.5;min-width:0;flex:1;overflow-wrap:anywhere}
-.manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d);display:flex;gap:8px;align-items:flex-start;overflow-wrap:anywhere}
-.manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#8A7440;display:flex;gap:8px;align-items:flex-start}
+/* ⚠️ display:block, NO flex. Con flex, cada hijo del aviso es un item
+   propio: el <strong>GGGG</strong> del manual se quedaba con 10 px de ancho
+   y salía partido en CUATRO renglones, una letra por línea. El icono va
+   flotado, que es lo que hace falta de verdad aquí. */
+.manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d);display:block;overflow-wrap:break-word}
+.manual-tip>i:first-child{float:left;margin-right:8px}
+/* Mismo caso que .manual-tip: block + icono flotado, no flex. */
+.manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#8A7440;display:block;overflow-wrap:break-word}
+.manual-warning>i:first-child{float:left;margin-right:8px}
 .manual-tip i,.manual-warning i{flex-shrink:0;margin-top:2px;font-size:15px}
 .manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px;display:block;overflow-x:auto}
 .manual-detail table th,.manual-detail table td{border:1px solid var(--border);padding:6px 10px;text-align:left}
@@ -2046,5 +2080,144 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   transition:opacity .12s ease,background .12s ease}
 .folder-act:hover{opacity:1;background:rgba(28,26,23,.07)}
 @media (pointer: coarse){
-  .folder-act{width:44px;height:44px;opacity:.65;margin-top:-8px;margin-right:-8px;margin-bottom:-8px}
+  /* 44 px para el dedo, pero SIN sobresalir por la derecha: con el margen
+     negativo, la tarjeta de la última columna se salía de la pantalla. */
+  .folder-act{width:44px;height:44px;opacity:.65;margin-top:-8px;margin-right:0;margin-bottom:-8px}
+}
+
+/* El pequeño de la app: una sola clase en vez de 36 tamaños a mano. */
+.txt-xs{font-size:10.5px}
+
+/* ════════════════════════════════════════════════════════════════════
+   LA APP EN UN MÓVIL (13/09)
+
+   "En mi móvil hay cosas que se ven feo, fuera de sitio, saltos de línea
+   apiñados." Se midió antes de tocar nada: la app entera, con un negocio
+   lleno, en los cinco anchos que existen de verdad (320, 360, 390, 412,
+   430). No eran trescientos fallos distintos; eran cuatro causas repetidas.
+
+   Por eso esto es UN bloque con reglas de base, y no una excepción metida
+   en cada pantalla: arreglar la causa arregla veinte pantallas a la vez, y
+   la pantalla que se escriba mañana nace bien sin que nadie se acuerde.
+
+   La regla de oro, que es lo que pidió el dueño: lo que tenga que ir en una
+   fila, que vaya en una fila; y lo que tenga que saltar, que salte bien.
+   Nada cortado, nada fuera de sitio.
+   ════════════════════════════════════════════════════════════════════ */
+@media (max-width: 760px){
+
+  /* ── 1. Nada por debajo de lo legible ──────────────────────────────
+     Badges, etiquetas de KPI y rótulos de gráfico estaban a 10,5 px, que
+     en una pantalla de 360 px se lee con esfuerzo — y son justo los datos
+     que se miran de reojo en mitad del servicio ("En cocina", "7/10",
+     "A 30 DÍAS"). El mínimo pasa a 11,5 px, con algo menos de espaciado
+     entre letras para que el texto no crezca de ancho al crecer de alto. */
+  /* Se suben TODAS las variantes pequeñas del badge de una vez. Antes había
+     cuatro reglas repartidas (8,5 px dentro de una mesa, 10 px en las
+     tarjetas compactas y en las filas de para-llevar): cada una se escribió
+     para ganar sitio en su pantalla y el resultado junto era una app con
+     letra de prospecto médico. */
+  .badge,.card-compact .badge,.togo-order-row .badge{font-size:11.5px;letter-spacing:.03em;padding:3px 8px}
+  .mesa-card .mesa-elapsed{font-size:11px}
+  /* .txt-xs es el tamaño pequeño de toda la app (fechas de apoyo, "/mes",
+     "← equilibrio", contadores dentro de un badge). Existe porque estaba
+     escrito A MANO 36 veces en el JS como style="font-size:10.5px", donde
+     ninguna regla de CSS lo alcanzaba — la trampa que ya avisa CLAUDE.md.
+     Ahora es una clase, y aquí sube de golpe para todas. */
+  .txt-xs{font-size:11.5px}
+  .ge-kpi .lbl,.kpi-mini .l{font-size:11.5px;letter-spacing:.2px}
+  .bar-lbl,.mesa-card .mesa-phase-row,.mesa-card .mesa-pax,
+  .mesa-card .mesa-waiter-chip,.mesa-card .mesa-elapsed{font-size:11.5px}
+  .mesa-card .badge{font-size:10.5px}   /* dentro de la mesa sí manda el sitio */
+
+  /* ── 2. Una palabra no se parte nunca ──────────────────────────────
+     El nombre de una carpeta de categoría se quedaba con 40 px de ancho y
+     "Hamburguesas" salía en TRES renglones. El problema no era el texto:
+     era que el icono y el botón de al lado se quedaban su ancho fijo y al
+     nombre le sobraba lo que quedase. Se le da suelo propio. */
+  /* Las carpetas de categoría (Mega Lista, Stock, Escandallo, Fichas) iban
+     a dos columnas de 166 px: descontando icono, lápiz de renombrar y
+     huecos, al nombre le quedaban 40 px y "Hamburguesas" salía en TRES
+     renglones. A partir de aquí, una sola columna: el nombre tiene sitio,
+     el lápiz no empuja a nadie fuera y la fila se lee de un vistazo. */
+  .grid-compact{grid-template-columns:1fr !important}
+  .folder-card-name{font-size:13px;-webkit-line-clamp:2}
+  /* Y si aun así no cabe, que corte con puntos suspensivos en vez de
+     partir la palabra por la mitad: cortada se lee peor que abreviada. */
+  .folder-card-name{overflow-wrap:normal;word-break:normal;text-overflow:ellipsis}
+
+  /* ── 3. Los números no se parten ───────────────────────────────────
+     "102.596,70 €" repartido en tres líneas no es una cifra, es un
+     jeroglífico. Cualquier importe, porcentaje o contador va de una pieza:
+     si no cabe, que scrollee la tabla que lo contiene (para eso está). */
+  .ge-grid td,.ge-grid th,.te-row .val,.kpi .value,.ge-kpi .val,
+  .kpi-mini .v,td[data-label]{font-variant-numeric:tabular-nums}
+  .ge-kpi .val,.kpi .value,.kpi-mini .v{white-space:nowrap}
+
+  /* ── 4. Lo que salta, que salte bien ───────────────────────────────
+     Filas de botones y de campos que se quedaban apretadas hasta partir el
+     texto de cada botón: a partir de aquí saltan de línea enteras, con
+     aire, en vez de espachurrarse. */
+  .toolbar,.actions-cell,.field-row,.promo-share-actions{flex-wrap:wrap;gap:8px}
+  .toolbar .btn,.actions-cell .btn{flex:0 1 auto}
+  /* Un botón nunca parte su texto: o cabe, o la fila salta. */
+  .btn{white-space:nowrap}
+  /* Salvo los que llevan una frase de verdad dentro (avisos, ayudas). */
+  .btn.btn-wrap{white-space:normal}
+
+  /* Nombres de archivo y direcciones: parten por el guion o el punto, que
+     es donde los parte cualquiera al leerlos, en vez de por la mitad de
+     una sílaba ("tutorial-netlify.html"). */
+  a strong,code,.mn-file{word-break:break-word;hyphens:none}
+
+  /* ── 4b. Las pestañas se ven TODAS, sin arrastrar ──────────────────
+     Gestión Económica tiene siete pestañas y Mi Negocio nueve. En una
+     pantalla de 360 px no caben en una fila, así que se arrastraban en
+     horizontal: se entraba en Cuenta de Resultados y la fila quedaba con
+     "os fijos" cortado a media palabra, y para llegar a CAPEX había que
+     adivinar que aquello se movía. En móvil pasan a varias filas: ocupan
+     un poco más de alto, pero se ven enteras y de un vistazo — que es de
+     lo que iba todo esto. */
+  .ge-tab-row,.mn-indice{flex-wrap:wrap;overflow-x:visible;gap:2px 0}
+  .ge-tab-row::after,.ge-tab-row::before,
+  .mn-indice::after,.mn-indice::before{display:none}   /* ya no hay que avisar de scroll */
+  .ge-tab{flex:1 1 auto;justify-content:center}
+
+  /* ── 4c. Los gráficos de barras caben enteros ──────────────────────
+     Doce meses en 360 px salen a 26 px por barra: entran. Se quedaban
+     cortados porque las columnas tenían un ancho mínimo pensado para
+     escritorio, y la última ("Sep") aparecía partida por la mitad. */
+  .bar-chart{display:flex;gap:2px}
+  .bar-chart .bar-col{min-width:0;flex:1 1 0}
+  .bar-lbl{overflow:hidden;text-overflow:ellipsis}
+
+  /* ── 4d. El Centro de ayuda, tocable con el dedo ───────────────────
+     Sus pestañas medían 35 px de alto y los botones de pregunta 28: por
+     debajo del mínimo de 44 que se exige en el resto de la app. Es una
+     pantalla a la que se llega justo cuando algo no se entiende, y fallar
+     el toque ahí es la gota que colma el vaso. */
+  .help-tab{padding:14px 6px;min-height:46px;font-size:13px}
+  .help-suggestion{padding:11px 14px;min-height:42px;font-size:12.5px;display:inline-flex;align-items:center}
+  /* Y el botón de enviar del chat de ayuda, que medía 38 px. */
+  .help-chat-input-row button,.chat-input-row button{width:44px;height:44px}
+
+  /* ── 5. Nada se sale de la pantalla ────────────────────────────────
+     Última red: cualquier cosa que se escape del ancho se queda dentro.
+     No sustituye a arreglar la causa, pero evita que un dato nuevo y más
+     largo de lo previsto rompa una pantalla en casa de un cliente. */
+  .view.active img,.view.active canvas{max-width:100%;height:auto}
+  .bar-chart{max-width:100%;overflow-x:auto}
+}
+
+/* Pantallas pequeñas de verdad (320-360 px): iPhone SE y los Android
+   baratos, que son muchos más de los que parece. Aquí lo que sobra no es
+   el tamaño de la letra, es el relleno. */
+@media (max-width: 400px){
+  .card{padding:10px 9px}
+  .ge-kpi{padding:10px 9px}
+  .folder-card-name{font-size:12.5px}
+  /* Los gráficos de barras con muchas columnas (el de platos del panel)
+     se salían por la derecha: se dejan scrollear en su propia caja. */
+  .bar-chart{overflow-x:auto;padding-bottom:4px}
+  .bar-col{min-width:34px}
 }

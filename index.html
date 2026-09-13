@@ -564,6 +564,9 @@
           <button class="btn btn-sm" id="cdr-gran-mes" onclick="GE.setCDRGranularidad('mes')"><span data-i18n="ge.granularity.monthly">Mensual</span></button>
           <button class="btn btn-sm" id="cdr-gran-trimestre" onclick="GE.setCDRGranularidad('trimestre')"><span data-i18n="ge.granularity.quarterly">Trimestral</span></button>
         </div>
+        <!-- Doce meses o cuatro trimestres, según la resolución elegida: es
+             lo que decide de qué periodo habla la cabecera de abajo. -->
+        <div class="month-sel month-sel-centered" id="cdr-periodos" style="margin-bottom:14px"></div>
         <div class="vis-section" style="margin-bottom:14px">
           <h4><span data-i18n="ge.monthlyResultChart">Resultado mensual</span> <span class="ge-auto">AUTO</span></h4>
           <div id="cdr-chart" class="bar-chart"></div>

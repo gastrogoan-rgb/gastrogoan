@@ -112,6 +112,10 @@ lanzar; node test/revision-12-09.mjs > "$SALIDA/revision1209.txt" 2>&1 & P78=$!
 lanzar; node test/inmutabilidad-registros.mjs > "$SALIDA/inmutable.txt" 2>&1 & P79=$!
 lanzar; node test/repaso-video-12-09.mjs > "$SALIDA/repasovideo.txt" 2>&1 & P80=$!
 lanzar; node test/cancelaciones-permiso.mjs > "$SALIDA/cancelperm.txt" 2>&1 & P81=$!
+lanzar; node test/caos-cocina.mjs > "$SALIDA/caoscocina.txt" 2>&1 & P82=$!
+lanzar; node test/cdr-periodo.mjs > "$SALIDA/cdrperiodo.txt" 2>&1 & P83=$!
+lanzar; node test/cliente-en-riesgo.mjs > "$SALIDA/clienteriesgo.txt" 2>&1 & P84=$!
+lanzar; node test/movil.mjs > "$SALIDA/movil.txt" 2>&1 & P85=$!
 
 echo "→ 47 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -205,5 +209,9 @@ espera $P78 "Repaso 12/09: Mi Negocio sin huecos, ventas por mes, compras recibi
 espera $P79 "Nada registrado se modifica: gastos y ventas solo se anulan, con motivo y PIN" "$SALIDA/inmutable.txt" "casos pasaron"
 espera $P80 "Repaso del vídeo 12/09: precio al pedir, 10 registros APPCC, tickets separados, propina Otro" "$SALIDA/repasovideo.txt" "casos pasaron"
 espera $P81 "Cancelar (reserva, pedido, venta, espera) es solo del dueño o de quien puede editar" "$SALIDA/cancelperm.txt" "casos pasaron"
+espera $P82 "Modo caos en Cocina: lo pendiente en una lista, por orden de espera" "$SALIDA/caoscocina.txt" "casos pasaron"
+espera $P83 "Cuenta de Resultados: se elige año Y periodo (mes o trimestre)" "$SALIDA/cdrperiodo.txt" "casos pasaron"
+espera $P84 "Clientes: \"en riesgo\" solo para quien de verdad ha dejado de venir" "$SALIDA/clienteriesgo.txt" "casos pasaron"
+espera $P85 "La app en un móvil de verdad: 5 anchos (320-430), nada cortado ni apiñado" "$SALIDA/movil.txt" "se ve bien en los cinco anchos"
 
 exit $FALLOS

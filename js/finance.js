@@ -636,7 +636,7 @@ function renderDashboard(){
           ${hourTotals.map((v,h) => `
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${h}:00 - ${fmtMoney(v)}">
               <div style="width:100%;background:var(--brand-orange);border-radius:2px 2px 0 0;height:${Math.max(2,(v/maxHour*100))}%"></div>
-              ${h%3===0?`<div style="font-size:10.5px;color:var(--muted);margin-top:2px">${h}h</div>`:''}
+              ${h%3===0?`<div class="txt-xs" style="color:var(--muted);margin-top:2px">${h}h</div>`:''}
             </div>
           `).join('')}
         </div>
@@ -726,7 +726,7 @@ function renderSalesHeatmap(){
               ${grid[di].map((v,hi) => {
                 const intensity = v/maxVal;
                 const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
-                return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
+                return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" class="txt-xs" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
               }).join('')}
             </tr>
           `).join('')}
@@ -1593,7 +1593,7 @@ function renderStock(){
        cumplir, y teñirlo todo de verde quitaría valor al verde de verdad. */
     return `
       <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':ok?'background:var(--green-l);border:1px solid var(--green);border-radius:8px':''}">
-        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10.5px">${t('label.costingSheet')}</span>` : ''}</div>
+        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray txt-xs" >${t('label.costingSheet')}</span>` : ''}</div>
         <div class="stock-row-values">
           <span class="stock-row-field">
             <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>

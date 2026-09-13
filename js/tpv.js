@@ -2413,14 +2413,14 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
     const hasCocina = bebidaInGroup.some(({line}) => line.estado === 'cocina');
     const hasPreparando = bebidaInGroup.some(({line}) => line.estado === 'preparando');
     const allServed = bebidaInGroup.every(({line}) => line.estado === 'entregado');
-    if(allServed) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
+    if(allServed) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
     else if(hasCocina) statusBadge = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
     else if(hasPreparando) statusBadge = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
   }else{
-    if(allPicked) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-    else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
-    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10.5px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
-    else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
+    if(allPicked) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
+    else if(listos.length) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
+    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue txt-xs" ><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
+    else if(allFired) statusBadge = `<span class="badge badge-amber txt-xs" ><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
 
   // Si TODA la tanda es del mismo menú, se dice una vez en la cabecera del
@@ -2491,7 +2491,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
         // escrita por el camarero. Una nota manual sigue mostrándose siempre.
         const esNotaAutoDeMenu = menu && line.notas === `Menú: ${tItem(menu)}`;
         if(!line.notas || (esNotaAutoDeMenu && nombreMenuUnico)) return '';
-        return `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>`;
+        return `<div class="txt-xs" style="color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>`;
       })()}
     `;}).join('')}
   </div>
@@ -3110,6 +3110,78 @@ function findCartaNombreForPlatoId(platoId){
   return null;
 }
 
+/* MODO CAOS EN COCINA (13/09, pedido del dueño)
+   ─────────────────────────────────────────────
+   El hermano del de Sala, y por la misma razón. En hora punta, los tickets
+   bien ordenados por pedido dejan de ayudar: el cocinero no necesita saber
+   de qué mesa es cada cosa, necesita saber QUÉ SACA AHORA. Con ocho tickets
+   en pantalla, eso obliga a comparar relojes a ojo mientras suena todo.
+
+   Aquí se tira la organización bonita y queda una sola lista con lo que está
+   PENDIENTE (nada entregado ni recogido), el que más lleva esperando arriba,
+   el tiempo en grande y un solo botón por plato. La mesa se dice, pero en
+   pequeño: es el dato de apoyo, no el criterio.
+
+   Es un modo de VER, no de trabajar distinto: los botones son los mismos
+   (cycleLineEstado), así que lo que se marca aquí vale igual en la vista
+   normal y en Sala. */
+let chaosCocina = false;
+function toggleChaosCocina(){
+  chaosCocina = !chaosCocina;
+  renderComandasCocina();
+  scrollContentToTop();
+}
+
+// Todo lo que cocina tiene pendiente, de todos los pedidos, en una sola
+// lista y por orden de espera. Se excluyen las bebidas (no son de cocina) y
+// lo que ya está entregado o recogido.
+function lineasPendientesCocina(allOrders){
+  const fuera = [];
+  allOrders.forEach(order => {
+    (order.items||[]).forEach((line, idx) => {
+      if(line.bebida) return;
+      if(!line.estado) return;                         // sin marchar: no es de cocina todavía
+      if(line.estado === 'entregado' || line.recogidoAt) return;
+      const enviado = line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now();
+      fuera.push({order, line, idx, enviado, mins: Math.max(0, Math.round((Date.now()-enviado)/60000))});
+    });
+  });
+  // El que más lleva esperando, primero. Es TODO el criterio de este modo.
+  fuera.sort((a,b) => a.enviado - b.enviado);
+  return fuera;
+}
+
+function renderChaosCocinaHtml(allOrders){
+  const pendientes = lineasPendientesCocina(allOrders);
+  if(!pendientes.length){
+    return `<div class="empty"><i class="ti ti-mood-smile"></i>${t('kitchen.chaos.empty')}</div>`;
+  }
+  const filas = pendientes.map(({order, line, idx, mins}) => {
+    const urgente = mins >= 15;
+    const aviso = orderAllergyWarningHtml(order);
+    const boton = line.estado === 'cocina'
+      ? `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);flex:none" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.startCooking')}</button>`
+      : `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);flex:none" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
+    return `
+      <div class="caos-fila${urgente ? ' caos-urgente' : ''}">
+        <div class="caos-reloj">${mins}'</div>
+        <div class="caos-plato">
+          <strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+          <div class="caos-donde">${escapeHtml(comandaOrderTitle(order))}${line.tanda ? ` · ${escapeHtml(line.tanda)}` : ''}</div>
+          ${line.notas ? `<div class="caos-nota"><i class="ti ti-message-2"></i> ${escapeHtml(line.notas)}</div>` : ''}
+          ${aviso ? `<div class="caos-alergia">${aviso}</div>` : ''}
+        </div>
+        ${boton}
+      </div>`;
+  }).join('');
+  return `
+    <div class="caos-cabecera">
+      <span><i class="ti ti-flame"></i> ${t('kitchen.chaos.title')}</span>
+      <span class="caos-cuenta">${pendientes.length} ${pendientes.length === 1 ? t('kitchen.chaos.dish') : t('kitchen.chaos.dishes')}</span>
+    </div>
+    <div class="caos-lista">${filas}</div>`;
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -3138,7 +3210,8 @@ function renderComandasCocina(){
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
-      <button class="btn btn-sm" style="margin-left:auto" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
+      <button class="btn btn-sm ${chaosCocina?'btn-danger':''}" style="margin-left:auto" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
+      <button class="btn btn-sm" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
       <button class="btn btn-sm" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
     </div>
   `;
@@ -3183,6 +3256,13 @@ function renderComandasCocina(){
         </div>
       </div>
     `;}).join('')}</div>`;
+    return;
+  }
+
+  /* El modo caos sustituye a los tickets, pero solo en "Activas": en el
+     histórico de cerradas no hay nada pendiente que ordenar por espera. */
+  if(chaosCocina){
+    box.innerHTML = tabsHtml + renderChaosCocinaHtml(allOrders);
     return;
   }
 

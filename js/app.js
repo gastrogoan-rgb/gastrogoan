@@ -1469,7 +1469,7 @@ function renderDistDetail(){
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        ${task.bySelf ? `<span class="badge" style="font-size:10.5px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
         <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
@@ -1484,8 +1484,8 @@ function renderDistDetail(){
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        <span class="badge badge-purple" style="font-size:10.5px" title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
-        ${task.bySelf ? `<span class="badge" style="font-size:10.5px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        <span class="badge badge-purple txt-xs"  title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
+        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
         <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
@@ -1504,7 +1504,7 @@ function renderDistDetail(){
       return `
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:${canToggle?'pointer':'not-allowed'}">
         <input type="checkbox" ${done?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${lt.id},this.checked)">
-        <span class="badge badge-blue" style="font-size:10.5px"><i class="ti ti-spray"></i> Limpieza</span>
+        <span class="badge badge-blue txt-xs" ><i class="ti ti-spray"></i> Limpieza</span>
         <span style="flex:1;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(lt.area)}${lt.producto?` <span style="color:var(--muted);font-size:12px">(${escapeHtml(lt.producto)})</span>`:''}</span>
       </label>
     `;}).join('');
@@ -1517,14 +1517,14 @@ function renderDistDetail(){
       return `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked,'${ds}')" title="${t('title.markAsDone')}">
-        <span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-speakerphone"></i> Promo</span>
+        <span class="badge badge-amber txt-xs" ><i class="ti ti-speakerphone"></i> Promo</span>
         <span style="flex:1;font-size:13px;cursor:pointer;${done?'text-decoration:line-through;color:var(--muted)':''}" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</span>
       </div>
     `;}).join('');
 
     return `
       <div style="padding:10px 0;border-bottom:1px solid var(--border);${isToday?'background:var(--brand-cream)':(dayHasPending?'background:var(--red-l)':'')}">
-        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green" style="font-size:10.5px">${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red" style="font-size:10.5px"><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green txt-xs" >${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red txt-xs" ><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
         ${promosHtml}
         ${limpiezaHtml}
         ${tareasHtml}
@@ -1804,13 +1804,30 @@ function computeClientStatsFromSales(matches){
   // "siempre viene poco" (inactivo normal) de uno que venía a menudo y de
   // repente ha dejado de venir mucho más tiempo del que solía tardar (en riesgo).
   let avgIntervalDays = null;
+  let spanDays = null;
   if(dates.length >= 3){
-    const spanDays = (new Date(lastDate) - new Date(firstDate)) / 86400000;
+    spanDays = (new Date(lastDate) - new Date(firstDate)) / 86400000;
     avgIntervalDays = spanDays / (dates.length - 1);
   }
   const isNew = firstDate!=null && recency!=null ? (Math.floor((new Date(todayStr()) - new Date(firstDate))/86400000) <= 30) : false;
-  const atRisk = avgIntervalDays!=null && recency!=null && recency > avgIntervalDays * 2;
-  return {visitas, visitas30d, visitasYear, ticketMedio, total, total30d, totalYear, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
+  /* "En riesgo" era `recency > avgIntervalDays * 2` a secas, y con un cliente
+     habitual eso no significa nada: uno que viene casi a diario tiene un
+     intervalo medio de 0,4 días, así que con UN día sin aparecer ya
+     superaba el doble y salía marcado. En el negocio del dueño había gente
+     con mil visitas y la última AYER etiquetada "en riesgo" (13/09).
+
+     Dos condiciones más, y las dos son de sentido común:
+     · hace falta histórico suficiente para saber su ritmo — con tres visitas
+       de un mismo fin de semana no se sabe nada de nadie;
+     · y tiene que haber pasado tiempo DE VERDAD. Avisar de que se pierde a
+       alguien que vino la semana pasada no lleva a ninguna acción, y un
+       aviso que no lleva a nada enseña a ignorar todos los demás. */
+  const HISTORIAL_MINIMO_DIAS = 30;   // desde su primera visita
+  const AUSENCIA_MINIMA_DIAS = 14;    // por debajo de esto, no es "en riesgo"
+  const atRisk = avgIntervalDays != null && recency != null
+    && spanDays >= HISTORIAL_MINIMO_DIAS
+    && recency > Math.max(avgIntervalDays * 2, AUSENCIA_MINIMA_DIAS);
+  return {visitas, visitas30d, visitasYear, ticketMedio, total, total30d, totalYear, lastDate, firstDate, recency, avgIntervalDays, spanDays, isNew, atRisk};
 }
 function clientSalesStats(c){
   return computeClientStatsFromSales(clientSales(c));
@@ -1964,9 +1981,13 @@ function renderClientes(){
       const expanded = clientExpandedIds.has(c.id);
       return `
       <div class="card client-card ${expanded?'expanded':''}">
+        <!-- El resumen plegado es lo que se ve de un vistazo con la lista
+             entera delante: nombre y puntos, nada más. La etiqueta de
+             segmento ("Nuevo"/"En riesgo") se fue al detalle: pegada al
+             contador competía con él y, justo cuando tocaba dar un premio,
+             lo que hay que leer es 10/10, no una etiqueta (13/09). -->
         <div class="client-card-summary" onclick="toggleClientExpand(${c.id})">
           <span class="client-card-name">${escapeHtml(c.name)}</span>
-          ${segmentBadge}
           <span class="badge ${loyaltyCls}">${points}/10</span>
           <i class="ti ti-chevron-down client-card-chevron"></i>
         </div>
@@ -1980,7 +2001,7 @@ function renderClientes(){
           </div>
           <div class="client-card-detail-row"><span>${t('label.visits30d')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitas30d}</span></button></div>
           <div class="client-card-detail-row"><span>${t('label.visitsYear')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitasYear}</span></button></div>
-          <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong></div>
+          <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong>${segmentBadge ? ` ${segmentBadge}` : ''}</div>
           <div class="client-card-detail-row"><span>${t('label.avgTicket')}</span><strong>${fmtMoney(stats.ticketMedio)}</strong></div>
           <div class="client-card-detail-row"><span>${t('label.total30d')}</span><strong>${fmtMoney(stats.total30d)}</strong></div>
           <div class="client-card-detail-row"><span>${t('label.totalYear')}</span><strong>${fmtMoney(stats.totalYear)}</strong></div>
@@ -3882,13 +3903,13 @@ function renderPromoDia(){
                 <input type="checkbox" ${done?'checked':''} onchange="togglePromoDone(${p.id},this.checked,'${date}')">
                 <span style="${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(p.titulo)}</span>
               </label>
-              ${p.recurrence==='weekly' ? `<span class="badge badge-blue" style="font-size:10.5px" title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
+              ${p.recurrence==='weekly' ? `<span class="badge badge-blue txt-xs"  title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
             ${p.menuItemName ? `<div style="font-size:12px;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
               <span class="badge badge-green"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} -${p.discountPct}%</span>
-              ${p.horaInicio && p.horaFin ? `<span class="badge" style="font-size:10.5px"><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
-              ${p.maxUses ? `<span class="badge" style="font-size:10.5px" title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
+              ${p.horaInicio && p.horaFin ? `<span class="badge txt-xs" ><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
+              ${p.maxUses ? `<span class="badge txt-xs"  title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
             </div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
             ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString(localeActual())))}</div>` : ''}
@@ -3932,7 +3953,7 @@ function renderPromoSemana(){
   const headerCells = dates.map((d,i) => {
     const ds = dateStr(d);
     const isToday = ds === todayStr();
-    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${weekDayShort(i)}<br><span style="font-size:10.5px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
+    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${weekDayShort(i)}<br><span class="txt-xs" style="font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
   }).join('');
 
   const bodyCells = dates.map(d => {
@@ -6492,7 +6513,7 @@ function renderVerifactuConfigCard(){
     <div class="card" style="position:relative;opacity:0.85">
       <h3 style="display:flex;align-items:center;gap:8px">
         <i class="ti ti-file-invoice"></i> ${t('mn.verifactu.title')}
-        <span class="badge" style="background:var(--muted,#888);color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;font-size:10.5px"><i class="ti ti-hourglass-low"></i> ${t('mn.verifactu.draftBadge')}</span>
+        <span class="badge txt-xs" style="background:var(--muted,#888);color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:0.5px"><i class="ti ti-hourglass-low"></i> ${t('mn.verifactu.draftBadge')}</span>
       </h3>
       <div style="background:var(--bg-soft,#f4f4f4);border:1px dashed var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px;color:var(--muted)">
         <p style="margin:0">${t('mn.verifactu.draftNotice')}</p>
