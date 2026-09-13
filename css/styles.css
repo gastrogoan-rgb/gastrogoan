@@ -205,6 +205,33 @@ body:not(.owner-session) .owner-strict{display:none !important}
    como una lista continua y había que buscar dónde acababa uno (lo vio el
    dueño el 12/09 grabando la demo). Cada comanda es un papel: borde marcado,
    cabecera con fondo propio y una sombra que la levanta del fondo. */
+/* MODO CAOS DE COCINA: una sola lista, lo que más espera arriba.
+   Se lee de pie y a un metro de la pantalla, que es como se mira una
+   cocina en hora punta: el reloj en grande a la izquierda, el plato en
+   grande al lado, y la mesa en pequeño — es el dato de apoyo, no el
+   criterio. Lo que pasa de 15 minutos se marca en rojo y no hay que
+   buscarlo: ya está arriba del todo. */
+.caos-cabecera{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--text);color:#fff;padding:10px 16px;font-weight:800;font-size:15px;margin-bottom:10px}
+.caos-cabecera .caos-cuenta{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;opacity:.85}
+.caos-lista{display:flex;flex-direction:column;gap:8px}
+.caos-fila{display:flex;align-items:center;gap:14px;background:var(--surface);
+  border:2px solid var(--border);border-left:6px solid var(--muted);padding:12px 14px}
+.caos-fila .caos-reloj{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:30px;
+  line-height:1;min-width:74px;text-align:right;color:var(--muted);flex:none}
+.caos-fila .caos-plato{flex:1;min-width:0;overflow-wrap:anywhere}
+.caos-fila .caos-plato strong{font-size:20px;line-height:1.2;display:block}
+.caos-fila .caos-donde{font-size:12.5px;color:var(--muted);margin-top:2px}
+.caos-fila .caos-nota{font-size:13px;color:var(--brand-orange);font-weight:600;margin-top:4px}
+.caos-fila .caos-alergia{margin-top:6px}
+.caos-fila .caos-alergia .card{margin-bottom:0;padding:6px 10px;font-size:12px}
+.caos-urgente{border-color:var(--red);border-left-color:var(--red);background:var(--red-l)}
+.caos-urgente .caos-reloj{color:var(--red)}
+@media (max-width: 760px){
+  .caos-fila{gap:10px;padding:10px}
+  .caos-fila .caos-reloj{font-size:24px;min-width:56px}
+  .caos-fila .caos-plato strong{font-size:17px}
+}
 .kds-ticket{border:2px solid var(--text);box-shadow:0 3px 0 rgba(28,26,23,.10);padding:0;overflow:hidden}
 .kds-ticket>.kds-head{background:var(--brand-cream);border-bottom:2px solid var(--text);padding:10px 14px;margin:0}
 .kds-ticket>.kds-body{padding:12px 14px}

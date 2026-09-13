@@ -3110,6 +3110,78 @@ function findCartaNombreForPlatoId(platoId){
   return null;
 }
 
+/* MODO CAOS EN COCINA (13/09, pedido del dueño)
+   ─────────────────────────────────────────────
+   El hermano del de Sala, y por la misma razón. En hora punta, los tickets
+   bien ordenados por pedido dejan de ayudar: el cocinero no necesita saber
+   de qué mesa es cada cosa, necesita saber QUÉ SACA AHORA. Con ocho tickets
+   en pantalla, eso obliga a comparar relojes a ojo mientras suena todo.
+
+   Aquí se tira la organización bonita y queda una sola lista con lo que está
+   PENDIENTE (nada entregado ni recogido), el que más lleva esperando arriba,
+   el tiempo en grande y un solo botón por plato. La mesa se dice, pero en
+   pequeño: es el dato de apoyo, no el criterio.
+
+   Es un modo de VER, no de trabajar distinto: los botones son los mismos
+   (cycleLineEstado), así que lo que se marca aquí vale igual en la vista
+   normal y en Sala. */
+let chaosCocina = false;
+function toggleChaosCocina(){
+  chaosCocina = !chaosCocina;
+  renderComandasCocina();
+  scrollContentToTop();
+}
+
+// Todo lo que cocina tiene pendiente, de todos los pedidos, en una sola
+// lista y por orden de espera. Se excluyen las bebidas (no son de cocina) y
+// lo que ya está entregado o recogido.
+function lineasPendientesCocina(allOrders){
+  const fuera = [];
+  allOrders.forEach(order => {
+    (order.items||[]).forEach((line, idx) => {
+      if(line.bebida) return;
+      if(!line.estado) return;                         // sin marchar: no es de cocina todavía
+      if(line.estado === 'entregado' || line.recogidoAt) return;
+      const enviado = line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now();
+      fuera.push({order, line, idx, enviado, mins: Math.max(0, Math.round((Date.now()-enviado)/60000))});
+    });
+  });
+  // El que más lleva esperando, primero. Es TODO el criterio de este modo.
+  fuera.sort((a,b) => a.enviado - b.enviado);
+  return fuera;
+}
+
+function renderChaosCocinaHtml(allOrders){
+  const pendientes = lineasPendientesCocina(allOrders);
+  if(!pendientes.length){
+    return `<div class="empty"><i class="ti ti-mood-smile"></i>${t('kitchen.chaos.empty')}</div>`;
+  }
+  const filas = pendientes.map(({order, line, idx, mins}) => {
+    const urgente = mins >= 15;
+    const aviso = orderAllergyWarningHtml(order);
+    const boton = line.estado === 'cocina'
+      ? `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);flex:none" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.startCooking')}</button>`
+      : `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);flex:none" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
+    return `
+      <div class="caos-fila${urgente ? ' caos-urgente' : ''}">
+        <div class="caos-reloj">${mins}'</div>
+        <div class="caos-plato">
+          <strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+          <div class="caos-donde">${escapeHtml(comandaOrderTitle(order))}${line.tanda ? ` · ${escapeHtml(line.tanda)}` : ''}</div>
+          ${line.notas ? `<div class="caos-nota"><i class="ti ti-message-2"></i> ${escapeHtml(line.notas)}</div>` : ''}
+          ${aviso ? `<div class="caos-alergia">${aviso}</div>` : ''}
+        </div>
+        ${boton}
+      </div>`;
+  }).join('');
+  return `
+    <div class="caos-cabecera">
+      <span><i class="ti ti-flame"></i> ${t('kitchen.chaos.title')}</span>
+      <span class="caos-cuenta">${pendientes.length} ${pendientes.length === 1 ? t('kitchen.chaos.dish') : t('kitchen.chaos.dishes')}</span>
+    </div>
+    <div class="caos-lista">${filas}</div>`;
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -3138,7 +3210,8 @@ function renderComandasCocina(){
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
-      <button class="btn btn-sm" style="margin-left:auto" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
+      <button class="btn btn-sm ${chaosCocina?'btn-danger':''}" style="margin-left:auto" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
+      <button class="btn btn-sm" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
       <button class="btn btn-sm" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
     </div>
   `;
@@ -3183,6 +3256,13 @@ function renderComandasCocina(){
         </div>
       </div>
     `;}).join('')}</div>`;
+    return;
+  }
+
+  /* El modo caos sustituye a los tickets, pero solo en "Activas": en el
+     histórico de cerradas no hay nada pendiente que ordenar por espera. */
+  if(chaosCocina){
+    box.innerHTML = tabsHtml + renderChaosCocinaHtml(allOrders);
     return;
   }
 
