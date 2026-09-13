@@ -124,5 +124,7 @@ echo
 node "$RAIZ/test/emulador/escenarios.mjs" || SALIDA=1
 echo
 node "$RAIZ/test/emulador/reservas-publico.mjs" || SALIDA=1
+echo
+node "$RAIZ/test/emulador/bucle-sync.mjs" || SALIDA=1
 rm -rf "$RAIZ/__sdk"
 exit $SALIDA
