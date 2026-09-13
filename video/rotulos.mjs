@@ -41,42 +41,58 @@ const CSS = `
   .card .pie{font-size:23px;color:#B9B4AC;font-weight:500}
   .lista{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;max-width:1240px}
   .lista span{font-size:22px;font-weight:500;border:1.5px solid #4A5D4E;color:#EDEAE3;padding:9px 20px}
+
+  /* La cuenta de la vieja: un concepto por línea y su precio a la derecha,
+     como una factura. Puestos en columna y alineados, los números hacen el
+     argumento solos — no hace falta decir que es caro. */
+  .cuenta{width:1080px;display:flex;flex-direction:column;gap:14px}
+  .cuenta .fila{display:flex;align-items:baseline;gap:16px;font-size:34px;font-weight:500;color:#EDEAE3}
+  .cuenta .fila .que{white-space:nowrap}
+  .cuenta .fila .puntos{flex:1;border-bottom:2px dotted #4A5D4E;transform:translateY(-8px)}
+  .cuenta .fila .cuanto{font-family:'IBM Plex Mono',monospace;font-weight:500;white-space:nowrap;color:#fff}
+  .cuenta .fila.apunte{font-size:29px;color:#B9B4AC}
+  .cuenta .fila.apunte .cuanto{color:#B9B4AC}
+  .cuenta .suma{display:flex;align-items:baseline;justify-content:flex-end;gap:18px;
+    border-top:3px solid #8A4A3B;margin-top:10px;padding-top:20px}
+  .cuenta .suma .et{font-size:28px;color:#B9B4AC;font-weight:500}
+  .cuenta .suma .tot{font-family:'IBM Plex Mono',monospace;font-size:64px;font-weight:700;color:#C98676}
 `;
 
 const pagina = cuerpo => `<!doctype html><meta charset="utf-8"><style>${CSS}</style>${cuerpo}`;
 
 export const PORTADA = pagina(`<div class="card">
-  <div class="kicker">Kit de gestión hostelera</div>
-  <h1>Todo tu restaurante<br>en una sola app</h1>
+  <div class="kicker">App GastroGoan</div>
+  <h1>Todo tu negocio,<br>en un solo lugar</h1>
   <div class="linea"></div>
-  <h2>Escandallo, TPV, reservas, personal, APPCC y contabilidad.<br>Sin instalar nada.</h2>
+  <h2>Cocina, sala y gestión. Sin instalar nada.</h2>
 </div>`);
 
-/* El cierre son TRES golpes seguidos, no una pantalla sola: el problema que
-   tiene delante, el precio, y qué hacer ahora. Una sola pantalla con todo
-   junto se lee como un anuncio; tres seguidas se leen como una conclusión. */
+/* El cierre son DOS golpes: la cuenta de lo que se paga hoy, repartido en
+   cuatro programas distintos, y el precio de tenerlo todo junto. Puestos
+   uno detrás de otro, la comparación la hace el que mira — que convence
+   mucho más que decírsela.
+
+   ⚠️ Las cifras van como "desde": son precios de mercado de herramientas
+   de hostelería, no una tarifa concreta de nadie. Decir "80 €/mes" a secas
+   sería inventarse la factura de un competidor. */
 export const CIERRE_1 = pagina(`<div class="card">
-  <div class="kicker">Lo de siempre</div>
-  <h1 style="font-size:62px">Un programa para la caja.<br>Otro para las reservas.<br>Otro para el personal.</h1>
-  <div class="linea"></div>
-  <h2>Y el escandallo, en una libreta.</h2>
-</div>`);
-
-export const CIERRE_2 = pagina(`<div class="card">
-  <div class="kicker">Todo eso, en una sola app</div>
-  <div class="precio">100 €<small> / año</small></div>
-  <h2>Sin cuota mensual. Sin comisiones por pedido. Sin permanencia.</h2>
-  <div class="lista">
-    <span>Tus datos son tuyos</span><span>Funciona sin internet</span>
-    <span>Tu web de reservas incluida</span><span>Castellano · Català · English</span>
+  <div class="kicker">Lo que se paga hoy</div>
+  <div class="cuenta">
+    <div class="fila"><span class="que">Un programa para la caja</span><span class="puntos"></span><span class="cuanto">desde 80 €/mes</span></div>
+    <div class="fila"><span class="que">Otro para las reservas</span><span class="puntos"></span><span class="cuanto">desde 60 €/mes</span></div>
+    <div class="fila"><span class="que">Otro para el personal</span><span class="puntos"></span><span class="cuanto">desde 40 €/mes</span></div>
+    <div class="fila"><span class="que">Otro para los pedidos a domicilio</span><span class="puntos"></span><span class="cuanto">hasta un 30% de cada pedido</span></div>
+    <div class="fila apunte"><span class="que">Y el escandallo, en una libreta</span><span class="puntos"></span><span class="cuanto">—</span></div>
+    <div class="suma"><span class="et">Más de</span><span class="tot">3.600 € al año</span></div>
   </div>
 </div>`);
 
-export const CIERRE_3 = pagina(`<div class="card">
-  <div class="kicker">Empieza hoy</div>
-  <h1 style="font-size:68px">Pídelo, y esta misma tarde<br>lo tienes funcionando</h1>
+export const CIERRE_2 = pagina(`<div class="card">
+  <div class="kicker">GastroGoan</div>
+  <h1>Todo en un solo lugar</h1>
+  <div class="precio">100 €<small> al año</small></div>
+  <h2>Sin cuota mensual. Sin comisiones por pedido. Sin permanencia.</h2>
   <div class="url" style="font-size:44px;padding:20px 46px;border-color:#9DBBA4">gastrogoan.com</div>
-  <div class="pie">Licencia por local · Alta en 10 minutos · Te acompañamos en el proceso</div>
 </div>`);
 
 export const rotulo = texto => pagina(`<div class="wrap"><div class="rotulo">${texto}</div></div>`);
@@ -109,7 +125,6 @@ if(import.meta.url === `file://${process.argv[1]}`){
     {archivo:'/tmp/rotulos/portada.png', html: PORTADA},
     {archivo:'/tmp/rotulos/cierre1.png', html: CIERRE_1},
     {archivo:'/tmp/rotulos/cierre2.png', html: CIERRE_2},
-    {archivo:'/tmp/rotulos/cierre3.png', html: CIERRE_3},
     {archivo:'/tmp/rotulos/ejemplo.png', html: rotulo('¿Sabes lo que te cuesta <b>cada plato</b>?'), transparente:true},
   ]);
   console.log('PNG en /tmp/rotulos');

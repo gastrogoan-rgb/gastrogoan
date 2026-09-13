@@ -252,6 +252,34 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
   las reglas de pantallas MÁS pequeñas encogían los botones aún más
   (34-36 px), y varios tamaños estaban escritos a mano en el HTML, donde
   ninguna regla de CSS los alcanza.
+- **En un móvil tiene que verse igual de bien que en un PC** (13/09). El
+  dueño lo dijo así: *"lo que deba estar en una misma fila que esté, y si
+  debe saltar que se vea bien; nada cortado ni fuera de lugar"*. Cinco
+  reglas, y las cinco salieron de fallos reales:
+  - **Se prueba en CINCO anchos: 320, 360, 390, 412 y 430.** El 360 es el
+    más común en Android y **no se probaba** — por ahí se coló todo. Lo mide
+    `test/movil.mjs`, con datos de un negocio lleno (con cuatro filas cabe
+    cualquier cosa) y también **con los modales abiertos**, que es donde se
+    escribe y lo que ninguna auditoría miraba.
+  - **Una palabra NUNCA se parte**, y N palabras no deberían necesitar más
+    de N renglones. "Hamburguesas" salía en tres líneas dentro de 40 px.
+  - **Nada de letra por debajo de 11 px.** Y los tamaños no se escriben a
+    mano: para eso está `.txt-xs`. Había 36 `style="font-size:10.5px"`
+    sueltos en el JS, donde ninguna regla de CSS los alcanzaba — la misma
+    trampa de los objetivos táctiles, dos líneas más arriba.
+  - **Las tiras de pestañas envuelven, no se arrastran.** Siete pestañas en
+    Gestión Económica no caben en 360 px: envolviendo se ven todas; con
+    scroll horizontal, la fila se queda cortada a media palabra y nadie
+    descubre que existe CAPEX.
+  - **Las reglas de móvil van TODAS juntas** al final de `css/styles.css`,
+    no como excepción metida en cada pantalla. Arreglar la causa arregla
+    veinte pantallas, y la pantalla que se escriba mañana nace bien.
+
+  ⚠️ Al medir líneas de texto, se cuentan con un `Range` sobre el nodo
+  (`getClientRects()` da un rectángulo por línea). Dividir la altura del
+  elemento entre su `line-height` cuenta el PADDING: un botón de 44 px
+  "tenía" tres líneas siempre, y la primera versión de la prueba dio
+  doscientos falsos positivos.
 - **Contraste mínimo del texto**: 4,5:1 (3:1 si es grande). `--muted` es el
   gris de TODO el texto secundario y aparece 150+ veces por pantalla: si se
   toca, comprobar contra los cuatro fondos de la app (blanco, `#FAF8F4`,
@@ -326,19 +354,28 @@ node test/sin-salida.mjs      # que ninguna pantalla del alta sea un callejón s
 node test/idr.mjs             # el módulo de I+D, 85 casos
 node test/permisos.mjs        # los 6 modos de sesión (empleado, edición, reparto)
 python3 -m http.server 8950 & node test/traducciones.mjs  # la app entera en es/ca/en, 41 pantallas
+python3 -m http.server 8950 & node test/movil.mjs          # 5 anchos de móvil (320-430), vistas Y modales
 python3 -m http.server 8950 & node test/visual-audit.mjs   # nada se desborda en 6 tamaños × 25 vistas
 python3 -m http.server 8950 & node test/click-audit.mjs    # pulsa los 274 botones visibles de las 31 pantallas
 node test/simulacion/correr.mjs  # el I+D entero con un negocio real (ver su README)
-bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (emulador oficial)
+bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (emulador oficial),
+                              #  incluido bucle-sync.mjs: que la app no se pase la vida subiendo
 bash build.sh                 # regenerar dist/
 ```
 
-O las 35 de una vez, en paralelo (son independientes; encadenarlas solo
+O las 85 de una vez, en paralelo (son independientes; encadenarlas solo
 servía para esperar):
 
 ```bash
 bash test/todo.sh
 ```
+
+⚠️ **Un solo fallo está aceptado a conciencia** y sale siempre: *"visual real
+en PC, tablet y movil"* avisa de los botones compactos de Comandas Cocina
+(91×25 px, por debajo del mínimo táctil). Los pidió así el dueño el 9/09
+para que no ocupen media pantalla en hora punta. Cualquier OTRO fallo es un
+fallo de verdad.
+
 Luego commit + `git push -u origin <rama>`. Borrar siempre los scripts de prueba temporales.
 
 ### Rama
@@ -347,19 +384,24 @@ Trabajo en `claude/beautiful-dijkstra-58bru6`. No abrir PR salvo petición expl�
 
 ### Publicar: un cambio no está hecho hasta que se VE en el dominio
 
-**Render publica desde `main`, no desde la rama de trabajo.** Un arreglo que se
-queda en la rama no llega al dueño: parece que no se ha hecho nada, y se pierde
-la tarde diagnosticando un bug ya corregido (pasó el 30/08).
+**Cloudflare Pages publica desde `main`, no desde la rama de trabajo.** Un
+arreglo que se queda en la rama no llega al dueño: parece que no se ha hecho
+nada, y se pierde la tarde diagnosticando un bug ya corregido (pasó el
+30/08, cuando el hosting todavía era Render).
 
 Por eso, cada vez que se toque el código, la tanda entera es:
 
 ```bash
 bash build.sh            # regenerar dist/
-bash deploy/actualizar.sh   # copiar dist/ dentro de deploy/  ← si no, Render publica lo viejo
+bash deploy/actualizar.sh   # copiar dist/ dentro de deploy/  ← si no, se publica lo viejo
 git commit && git push -u origin claude/beautiful-dijkstra-58bru6
-git checkout main && git merge --ff-only claude/beautiful-dijkstra-58bru6 && git push origin main
+git checkout main && git merge --no-ff claude/beautiful-dijkstra-58bru6 && git push origin main
 git checkout claude/beautiful-dijkstra-58bru6
 ```
+
+⚠️ `--ff-only` falla en cuanto `main` tiene un commit de fusión propio (o
+sea, casi siempre): usar `--no-ff`, que además deja en el historial de qué
+tanda salió cada cosa.
 
 Y decirle al dueño **qué sello de versión tiene que ver** (`GG_BUILD`, abajo en
 la app, en hora de Madrid). Si ve otro, no está mirando el cambio: no tiene
@@ -448,9 +490,12 @@ la raíz del bug de Distribución del Trabajo. Ver `test/emulador/README.md`.
 
 ---
 
-## Estado actual (31 ago 2026)
+## Estado actual (13 sep 2026)
 
-**Veredicto: PUBLICADO Y VENDIBLE.** Circuito completo verificado en producción (ver más abajo). Análisis completo en `ANALISIS_GENERAL.md` (8 bloques).
+**Veredicto: PUBLICADO Y VENDIBLE — y ahora también en un móvil.** Circuito
+completo verificado en producción (ver más abajo). Análisis completo en
+`ANALISIS_GENERAL.md` (8 bloques). Lo único que falta ya no es técnico: es
+vender la primera licencia a alguien que no sea el dueño.
 
 Verificado con pruebas reales, no solo revisión de código: concurrencia genuina en reservas (20 simultáneas contra aforo 10), volumen realista (500 clientes / 10.000 ventas), inyección XSS, responsive en 3 idiomas × 5 resoluciones × 18 módulos, y una auditoría ciega por una sesión de IA independiente (7,5/10 antes de corregir su hallazgo del hash débil).
 
@@ -533,33 +578,79 @@ cuentas), `test/sin-salida.mjs` (callejones sin salida del alta),
 - **La app entera en los tres idiomas** (`test/traducciones.mjs`, 41 pantallas
   × es/ca/en). Ver la sección de i18n en las convenciones.
 
+### Hecho el 12 y 13 de septiembre de 2026
+
+Dos días de fallos encontrados **por el dueño usando la app**, otra vez. El
+patrón se repite y conviene no olvidarlo: lo que rompe la app no lo
+encuentran las pruebas, lo encuentra alguien trabajando con ella.
+
+- **La app en un móvil de verdad.** Lo dijo sin rodeos: *"está muy dejada,
+  se ve feo, fuera de sitio, saltos de línea apiñados"*. Se midió antes de
+  tocar nada: **más de 500 hallazgos** en cinco anchos, que eran **cuatro
+  causas** repetidas (letra de 10,5 px escrita a mano, palabras partidas,
+  pestañas que había que arrastrar, gráficos cortados). Ahora cero, con
+  `test/movil.mjs` vigilando. Ver las reglas en las convenciones.
+- **Modo caos también en Cocina**: una sola lista con lo pendiente, el que
+  más lleva esperando arriba. El hermano del de Sala.
+- **Cuenta de Resultados: se elige año Y periodo** (mes o trimestre). Antes
+  la cabecera daba siempre el mes en curso: al retroceder de año, la tabla
+  enseñaba 2025 y la cabecera los números de este septiembre.
+- **"En riesgo" en Clientes ya no se lo lleva quien vino ayer.** Era
+  `dias_sin_venir > intervalo_medio * 2` sin ningún suelo: quien viene a
+  diario tiene un intervalo de 0,4 días, así que con UN día sin aparecer ya
+  pasaba del doble. Había clientes con MIL visitas marcados como perdidos.
+  Ahora exige además 30 días de histórico y 14 de ausencia. **Un aviso que
+  no lleva a ninguna acción enseña a ignorar todos los demás** — el mismo
+  criterio que ya valía para los avisos de equipamiento del I+D.
+- **Cancelar es del dueño, o de un empleado con permiso de editar.** Da
+  igual qué se cancele: reserva, pedido online, venta, lista de espera. Iban
+  cada una por su lado —unas pedían el PIN del negocio, cancelar una reserva
+  confirmada era un "¿seguro?" y ya— y el PIN **no es un permiso**: lo acaba
+  sabiendo cualquiera del equipo. Todas pasan por `puedeCancelar()`.
+- **Nada registrado se modifica**: los pedidos a proveedor recibidos ya no
+  se borran (solo "Deshacer recepción"), y el historial entra por el mes en
+  curso con selector de año y mes. Archivar datos antiguos se lleva también
+  los pedidos, que se quedaron fuera desde siempre.
+- **El vídeo de venta, hecho** (ver abajo, el punto 0 ya no está pendiente).
+
+### El vídeo de demo (13/09)
+
+Grabado por el dueño sobre el dominio real y montado aquí. `video/`:
+
+| Archivo | Para qué |
+|---|---|
+| `montar-demo-final.mjs` | El montaje entero: portada, recorrido y cierre |
+| `rotulos.mjs` | Rótulos y pantallas, dibujados con Chromium y la tipografía real |
+| `musica.mjs` | La música, sintetizada con código |
+
+- La grabación entera son **380 MB y no cabe de una pieza**: llega partida
+  en trozos y el montador los empalma.
+- `VELOCIDAD = 1` da la versión larga (7m16s, la que quiso entregar);
+  `2.6` da la corta de tres minutos.
+- **El PIN va emborronado.** No basta con el campo (que tapa los dígitos con
+  puntos): **el teclado de la tablet ilumina la tecla pulsada**, así que el
+  PIN se leía fotograma a fotograma. Se tapan las dos zonas.
+- **La música se sintetiza, no se descarga**: el vídeo es uso comercial y la
+  música "gratis" de internet casi nunca lo permite sin licencia.
+- ⚠️ Para comprobar dónde cae un rótulo, **fotogramas SUELTOS con `-ss`**.
+  El filtro `fps=1/N` de una hoja de contactos coge el del CENTRO del
+  intervalo, así que viene desplazada y parece que los rótulos van por
+  detrás del contenido. Ya costó dos vueltas.
+
 ### Pendiente
 
-0. **REGRABAR EL VÍDEO DE VENTA, con la nube en verde.** Lo pidió el dueño el
-   1/09 para el día siguiente. La grabación que hay (`video/montar-demo.mjs`
-   monta la de ese día) sirve a medias: a partir del minuto 4 la cabecera se
-   queda en **"Error de nube" en rojo**, el negocio `Pruebaapp` está casi
-   vacío —reservas, clientes, promoción y la economía con guiones— y el
-   escandallo, que es la herramienta estrella, sale dando **0,00 €**. Con eso
-   fuera solo queda 1m16s aprovechable.
-   Cómo hacerlo bien:
-   - Grabar sobre **`dist/kit-gastrogoan-DEMO.html`**: abre directo, sin login,
-     con un año de ventas, todas las pantallas llenas y la nube en verde.
-   - **Pantalla completa** (F11): quita la barra de Chrome y no hay que
-     recortar 85 px de arriba.
-   - **No entrar en Mi Negocio**: ahí se ven el código de negocio y el PIN.
-   - Empezar YA dentro de la app. El login no vende.
-   - Lo que más vende y falta en la toma actual: el escandallo con números de
-     verdad, el resultado del mes en verde, una reserva entrando sola.
-   - Luego: `node video/montar-demo.mjs <grabacion.mp4>` y ajustar `TROZOS`.
-     ⚠️ Los tiempos se sacan con `-ss` a un segundo exacto: el filtro `fps` de
-     ffmpeg coge el fotograma del CENTRO del intervalo, así que una hoja de
-     contactos hecha con `fps=1/5` viene desplazada 2,5 s y los cortes caen
-     donde no es.
+0. **Vender.** Es lo único que falta de verdad: la app está publicada, el
+   móvil arreglado, el vídeo hecho y los documentos listos. Objetivo
+   acordado: **15-20 licencias el primer mes a 100 €/año**, sin presupuesto
+   de publicidad. El paso que está bloqueado es la lista de prospección —
+   hace falta que el dueño diga la ZONA para sacar los negocios y montar el
+   guion de contacto.
 1. **Probar el I+D con un modelo de verdad.** Todo lo verificado son los
    circuitos: en la simulación el asistente lo escribía una IA haciendo de
    modelo, no el proveedor del cliente. Que Gemini conteste con ese criterio
-   está sin comprobar, y es lo que decide si el módulo vale.
+   está sin comprobar, y es lo que decide si el módulo vale. Hace falta una
+   clave de Google (gratuita) y media hora. Es la herramienta que más vende
+   y la que peor queda si falla delante de un cliente.
 2. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo
    antes de manejar pagos de forma continuada.
 3. iPhone/iPad: las trampas conocidas de Safari están cerradas y hay prueba
