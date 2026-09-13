@@ -52,16 +52,31 @@ export const PORTADA = pagina(`<div class="card">
   <h2>Escandallo, TPV, reservas, personal, APPCC y contabilidad.<br>Sin instalar nada.</h2>
 </div>`);
 
-export const CIERRE = pagina(`<div class="card">
-  <div class="kicker">Sin cuotas · Sin comisiones · Sin sorpresas</div>
+/* El cierre son TRES golpes seguidos, no una pantalla sola: el problema que
+   tiene delante, el precio, y qué hacer ahora. Una sola pantalla con todo
+   junto se lee como un anuncio; tres seguidas se leen como una conclusión. */
+export const CIERRE_1 = pagina(`<div class="card">
+  <div class="kicker">Lo de siempre</div>
+  <h1 style="font-size:62px">Un programa para la caja.<br>Otro para las reservas.<br>Otro para el personal.</h1>
+  <div class="linea"></div>
+  <h2>Y el escandallo, en una libreta.</h2>
+</div>`);
+
+export const CIERRE_2 = pagina(`<div class="card">
+  <div class="kicker">Todo eso, en una sola app</div>
   <div class="precio">100 €<small> / año</small></div>
-  <h2>Un restaurante entero, por lo que cuesta una cena.</h2>
+  <h2>Sin cuota mensual. Sin comisiones por pedido. Sin permanencia.</h2>
   <div class="lista">
     <span>Tus datos son tuyos</span><span>Funciona sin internet</span>
-    <span>Tu web de reservas incluida</span><span>Hasta 3 idiomas</span>
+    <span>Tu web de reservas incluida</span><span>Castellano · Català · English</span>
   </div>
-  <div class="url">gastrogoan.com</div>
-  <div class="pie">Pruébalo hoy en tu propio negocio</div>
+</div>`);
+
+export const CIERRE_3 = pagina(`<div class="card">
+  <div class="kicker">Empieza hoy</div>
+  <h1 style="font-size:68px">Pídelo, y esta misma tarde<br>lo tienes funcionando</h1>
+  <div class="url" style="font-size:44px;padding:20px 46px;border-color:#9DBBA4">gastrogoan.com</div>
+  <div class="pie">Licencia por local · Alta en 10 minutos · Te acompañamos en el proceso</div>
 </div>`);
 
 export const rotulo = texto => pagina(`<div class="wrap"><div class="rotulo">${texto}</div></div>`);
@@ -92,7 +107,9 @@ if(import.meta.url === `file://${process.argv[1]}`){
   fs.mkdirSync('/tmp/rotulos', {recursive: true});
   await dibujar([
     {archivo:'/tmp/rotulos/portada.png', html: PORTADA},
-    {archivo:'/tmp/rotulos/cierre.png', html: CIERRE},
+    {archivo:'/tmp/rotulos/cierre1.png', html: CIERRE_1},
+    {archivo:'/tmp/rotulos/cierre2.png', html: CIERRE_2},
+    {archivo:'/tmp/rotulos/cierre3.png', html: CIERRE_3},
     {archivo:'/tmp/rotulos/ejemplo.png', html: rotulo('¿Sabes lo que te cuesta <b>cada plato</b>?'), transparente:true},
   ]);
   console.log('PNG en /tmp/rotulos');

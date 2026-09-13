@@ -17,14 +17,16 @@ import { spawn } from 'node:child_process';
 import ffmpeg from 'ffmpeg-static';
 import fs from 'node:fs';
 import path from 'node:path';
-import { dibujar, rotulo, PORTADA, CIERRE, ANCHO, ALTO } from './rotulos.mjs';
+import { dibujar, rotulo, PORTADA, CIERRE_1, CIERRE_2, CIERRE_3, ANCHO, ALTO } from './rotulos.mjs';
 
 const FPS = 25;
 const VELOCIDAD = 2.6;        // ritmo del recorrido
 const FUNDIDO = 0.45;         // transición entre trozos
 const FONDO = '0x1C1A17';
 const BARRA_SISTEMA = 82;     // barra de Android, solo si el trozo viene crudo
-const DUR_PORTADA = 3.2, DUR_CIERRE = 6.0;
+const DUR_PORTADA = 3.2;
+// El cierre son tres pantallas seguidas (problema → precio → qué hacer).
+const CIERRES = [3.4, 4.2, 5.0];
 const SALIDA = 'dist/gastrogoan-demo.mp4';
 
 /* El material, en orden, con lo que cuenta cada tramo. Los segundos son del
@@ -36,23 +38,26 @@ const PARTES = [
     cortes: [],
     rotulos: [
       [1, 11, 'Se abre en el navegador. <b>Nada que instalar</b>'],
-      [13, 21, 'Tu cuenta, tu negocio, tu nube'],
-      [24, 33, 'Cocina, Sala y Gestión: <b>cada uno ve lo suyo</b>'],
-      [44, 54, 'Tu carta, con extras, menús y alérgenos'],
-      [66, 75, 'Todo lo que compras, <b>con su precio real</b>'],
-      [88, 99, '¿Sabes lo que te cuesta <b>cada plato</b>?'],
-      [112, 121, 'Proveedores y albaranes, conectados al coste'],
-      [131, 141, 'Ficha técnica de cada elaboración'],
+      [14, 22, 'Tu cuenta, tu negocio, <b>tu propia nube</b>'],
+      [22, 31, 'Cocina, Sala y Gestión: <b>cada uno ve lo suyo</b>'],
+      [42, 53, 'Tu carta, con extras, menús y alérgenos'],
+      [66, 76, 'Tus proveedores y sus días de reparto'],
+      [78, 89, 'Todo lo que compras, <b>con su precio real</b>'],
+      [91, 101, '¿Sabes lo que te cuesta <b>cada plato</b>?'],
+      [106, 117, 'Ficha técnica de cada elaboración'],
+      [124, 135, 'Pedidos a proveedor en dos toques'],
+      [143, 152, 'Stock que se descuenta <b>solo</b> al vender'],
     ],
   },
   {
     archivo: '/tmp/parte2.mp4',
     cortes: [],
     rotulos: [
-      [1, 10, 'Tu equipo: turnos, fichajes y documentos'],
-      [26, 36, '<b>APPCC al día</b>, sin papeles'],
-      [58, 68, 'El TPV: mesas, comandas y alérgenos en pantalla'],
-      [84, 94, 'La comanda sale sola hacia cocina'],
+      [2, 12, 'Tu equipo: turnos, fichajes y documentos'],
+      [28, 39, '<b>APPCC al día</b>, sin papeles'],
+      [60, 71, 'El TPV: mesas, comandas y alérgenos en pantalla'],
+      [76, 86, 'Extras y modificaciones, sin líos'],
+      [92, 103, 'La comanda sale sola <b>hacia cocina</b>'],
       [110, 120, 'Reservas, con el plano de tu sala'],
     ],
   },
@@ -60,19 +65,21 @@ const PARTES = [
     archivo: '/tmp/parte3.mp4',
     cortes: [],
     rotulos: [
-      [1, 10, 'Ficha de cliente y fidelización'],
-      [22, 32, 'Promoción: <b>qué hacer esta semana</b>'],
-      [46, 56, 'El panel: cómo va el negocio hoy'],
+      [1, 11, 'Ficha de cliente y fidelización'],
+      [15, 26, 'Promoción: <b>qué hacer esta semana</b>'],
+      [30, 40, 'Y a quién hace tiempo que no ves'],
+      [46, 57, 'El panel: cómo va el negocio hoy'],
     ],
   },
   {
     archivo: '/tmp/parte4.mp4',
     cortes: [],
     rotulos: [
-      [1, 11, 'Gestión Económica: <b>lo que de verdad ganas</b>'],
-      [24, 34, 'Tesorería: cuánto apartar para Hacienda'],
-      [38, 47, 'Tu punto de equilibrio, al día'],
-      [55, 65, 'Y <b>tu propia web</b> de reservas y pedidos'],
+      [1, 12, 'Gestión Económica: <b>lo que de verdad ganas</b>'],
+      [16, 26, 'Cuenta de resultados: <b>lo que te llevas</b>'],
+      [28, 38, 'Tesorería: <b>cuánto apartar para Hacienda</b>'],
+      [40, 50, 'Tus inversiones, con sus cuotas'],
+      [56, 66, 'Y <b>tu propia web</b> de reservas y pedidos'],
       [68, 77, 'Los pedidos entran en tu cocina. <b>Sin comisiones</b>'],
     ],
   },
@@ -101,7 +108,9 @@ fs.mkdirSync(TMP + '/rot', {recursive: true});
 // 1. Los rótulos, dibujados con la tipografía de la app.
 const piezas = [
   {archivo: `${TMP}/rot/portada.png`, html: PORTADA},
-  {archivo: `${TMP}/rot/cierre.png`, html: CIERRE},
+  {archivo: `${TMP}/rot/cierre1.png`, html: CIERRE_1},
+  {archivo: `${TMP}/rot/cierre2.png`, html: CIERRE_2},
+  {archivo: `${TMP}/rot/cierre3.png`, html: CIERRE_3},
 ];
 PARTES.forEach((parte, i) => parte.rotulos.forEach((r, j) => {
   piezas.push({archivo: `${TMP}/rot/r${i}_${j}.png`, html: rotulo(r[2]), transparente: true});
@@ -191,10 +200,13 @@ const clipDeImagen = async (png, seg, sal) => {
   return sal;
 };
 const portada = await clipDeImagen(`${TMP}/rot/portada.png`, DUR_PORTADA, `${TMP}/portada.mp4`);
-const cierre  = await clipDeImagen(`${TMP}/rot/cierre.png`,  DUR_CIERRE,  `${TMP}/cierre.mp4`);
+const cierres = [];
+for(const [i, seg] of CIERRES.entries()){
+  cierres.push(await clipDeImagen(`${TMP}/rot/cierre${i+1}.png`, seg, `${TMP}/cierre${i+1}.mp4`));
+}
 
 // 4. Todo encadenado con fundidos, de dos en dos (xfade solo admite dos).
-const secuencia = [portada, ...normalizados, cierre];
+const secuencia = [portada, ...normalizados, ...cierres];
 let actual = secuencia[0];
 for(let i = 1; i < secuencia.length; i++){
   const dA = await duracion(actual);
