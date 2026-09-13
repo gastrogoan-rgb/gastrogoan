@@ -17,16 +17,18 @@ import { spawn } from 'node:child_process';
 import ffmpeg from 'ffmpeg-static';
 import fs from 'node:fs';
 import path from 'node:path';
-import { dibujar, rotulo, PORTADA, CIERRE_1, CIERRE_2, CIERRE_3, ANCHO, ALTO } from './rotulos.mjs';
+import { dibujar, rotulo, PORTADA, CIERRE_1, CIERRE_2, ANCHO, ALTO } from './rotulos.mjs';
 
 const FPS = 25;
 const VELOCIDAD = 2.6;        // ritmo del recorrido
 const FUNDIDO = 0.45;         // transición entre trozos
 const FONDO = '0x1C1A17';
 const BARRA_SISTEMA = 82;     // barra de Android, solo si el trozo viene crudo
-const DUR_PORTADA = 3.2;
-// El cierre son tres pantallas seguidas (problema → precio → qué hacer).
-const CIERRES = [3.4, 4.2, 5.0];
+const DUR_PORTADA = 3.6;
+/* El cierre son DOS pantallas: la cuenta de lo que se paga hoy repartido en
+   cuatro programas, y el precio de tenerlo todo junto. La primera necesita
+   más tiempo — hay cinco líneas y una suma que leer. */
+const CIERRES = [6.5, 5.5];
 const SALIDA = 'dist/gastrogoan-demo.mp4';
 
 /* El material, en orden, con lo que cuenta cada tramo. Los segundos son del
@@ -110,7 +112,6 @@ const piezas = [
   {archivo: `${TMP}/rot/portada.png`, html: PORTADA},
   {archivo: `${TMP}/rot/cierre1.png`, html: CIERRE_1},
   {archivo: `${TMP}/rot/cierre2.png`, html: CIERRE_2},
-  {archivo: `${TMP}/rot/cierre3.png`, html: CIERRE_3},
 ];
 PARTES.forEach((parte, i) => parte.rotulos.forEach((r, j) => {
   piezas.push({archivo: `${TMP}/rot/r${i}_${j}.png`, html: rotulo(r[2]), transparente: true});
