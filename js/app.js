@@ -1804,13 +1804,30 @@ function computeClientStatsFromSales(matches){
   // "siempre viene poco" (inactivo normal) de uno que venía a menudo y de
   // repente ha dejado de venir mucho más tiempo del que solía tardar (en riesgo).
   let avgIntervalDays = null;
+  let spanDays = null;
   if(dates.length >= 3){
-    const spanDays = (new Date(lastDate) - new Date(firstDate)) / 86400000;
+    spanDays = (new Date(lastDate) - new Date(firstDate)) / 86400000;
     avgIntervalDays = spanDays / (dates.length - 1);
   }
   const isNew = firstDate!=null && recency!=null ? (Math.floor((new Date(todayStr()) - new Date(firstDate))/86400000) <= 30) : false;
-  const atRisk = avgIntervalDays!=null && recency!=null && recency > avgIntervalDays * 2;
-  return {visitas, visitas30d, visitasYear, ticketMedio, total, total30d, totalYear, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
+  /* "En riesgo" era `recency > avgIntervalDays * 2` a secas, y con un cliente
+     habitual eso no significa nada: uno que viene casi a diario tiene un
+     intervalo medio de 0,4 días, así que con UN día sin aparecer ya
+     superaba el doble y salía marcado. En el negocio del dueño había gente
+     con mil visitas y la última AYER etiquetada "en riesgo" (13/09).
+
+     Dos condiciones más, y las dos son de sentido común:
+     · hace falta histórico suficiente para saber su ritmo — con tres visitas
+       de un mismo fin de semana no se sabe nada de nadie;
+     · y tiene que haber pasado tiempo DE VERDAD. Avisar de que se pierde a
+       alguien que vino la semana pasada no lleva a ninguna acción, y un
+       aviso que no lleva a nada enseña a ignorar todos los demás. */
+  const HISTORIAL_MINIMO_DIAS = 30;   // desde su primera visita
+  const AUSENCIA_MINIMA_DIAS = 14;    // por debajo de esto, no es "en riesgo"
+  const atRisk = avgIntervalDays != null && recency != null
+    && spanDays >= HISTORIAL_MINIMO_DIAS
+    && recency > Math.max(avgIntervalDays * 2, AUSENCIA_MINIMA_DIAS);
+  return {visitas, visitas30d, visitasYear, ticketMedio, total, total30d, totalYear, lastDate, firstDate, recency, avgIntervalDays, spanDays, isNew, atRisk};
 }
 function clientSalesStats(c){
   return computeClientStatsFromSales(clientSales(c));
