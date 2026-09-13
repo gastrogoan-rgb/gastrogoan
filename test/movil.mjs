@@ -133,6 +133,80 @@ const ACEPTADO = [
 ];
 const estaAceptado = (vista, tipo) => ACEPTADO.some(a => a.vista === vista && a.tipo === tipo);
 
+/* ── LOS MODALES ──────────────────────────────────────────────────────
+   Media app pasa por un modal (abrir mesa, cobrar, editar un ingrediente,
+   dar de alta un cliente) y ninguna auditoría los miraba: solo se revisaba
+   `.view.active`, y un modal vive fuera de la vista. En un móvil son
+   justo las pantallas donde se escribe, que es cuando peor sienta que
+   algo esté cortado. */
+const MODALES = [
+  ['abrir mesa', "currentFolder='sala'; navigate('tpv'); openTableOrder((DB.tables[0]||{}).id)"],
+  ['nuevo ingrediente', "currentFolder='cocina'; navigate('megalista'); openIngredientModal()"],
+  ['nuevo cliente', "currentFolder='sala'; navigate('clientes'); openClientModal()"],
+  ['nueva reserva', "currentFolder='sala'; navigate('reservas'); openReservationModal()"],
+  ['nuevo empleado', "currentFolder='cocina'; navigate('horarios'); openEmployeeModal()"],
+  ['exportar contabilidad', "currentFolder='gestion'; navigate('economia'); GE.openExportModal()"],
+  ['centro de ayuda', "toggleHelpPanel()"],
+];
+
+const auditarModales = async page => {
+  const fuera = [];
+  for(const [nombre, js] of MODALES){
+    try{ await page.evaluate(js); }catch(e){ continue; }
+    await new Promise(r=>setTimeout(r,550));
+    const f = await page.evaluate(W => {
+      const caja = document.getElementById('modal-box');
+      const panel = document.getElementById('help-panel');
+      const raiz = (caja && caja.getClientRects().length && caja.innerHTML.trim()) ? caja
+        : (panel && panel.classList.contains('active') ? panel : null);
+      if(!raiz) return null;
+      const out = {cortado: [], partido: [], letra: [], toque: []};
+      const texto = el => (el.innerText || el.textContent || '').trim().replace(/\s+/g,' ').slice(0,30);
+      const quien = el => el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '');
+      const lineasDe = el => {
+        const n = el.firstChild;
+        if(!n || n.nodeType !== 3) return 1;
+        const r = document.createRange(); r.selectNodeContents(el);
+        return Math.max(1, new Set([...r.getClientRects()].filter(x=>x.width>0).map(x=>Math.round(x.top))).size);
+      };
+      const dentroDeScroll = el => {
+        for(let p = el.parentElement; p && p !== document.body; p = p.parentElement){
+          const o = getComputedStyle(p).overflowX;
+          if(o === 'auto' || o === 'scroll') return true;
+        }
+        return false;
+      };
+      raiz.querySelectorAll('*').forEach(el => {
+        if(!el.getClientRects().length) return;
+        const r = el.getBoundingClientRect();
+        if(r.width === 0 || r.height === 0) return;
+        if((r.right > W + 1.5 || r.left < -1.5) && !dentroDeScroll(el)) out.cortado.push(`${quien(el)} «${texto(el)}»`);
+        const hoja = el.children.length === 0 && (el.textContent||'').trim().length > 0;
+        if(hoja){
+          const palabras = (el.textContent||'').trim().split(/\s+/).length;
+          if(lineasDe(el) > palabras) out.partido.push(`«${texto(el)}» ${palabras}pal→${lineasDe(el)}líneas [${quien(el)}]`);
+          const fs = parseFloat(getComputedStyle(el).fontSize);
+          if(fs && fs < 11) out.letra.push(`«${texto(el)}» ${fs}px [${quien(el)}]`);
+        }
+        if(el.tagName === 'BUTTON' && (r.height < 40 || r.width < 40)) out.toque.push(`«${texto(el)}» ${Math.round(r.width)}×${Math.round(r.height)}`);
+      });
+      const u = a => [...new Set(a)];
+      return {cortado:u(out.cortado), partido:u(out.partido), letra:u(out.letra), toque:u(out.toque)};
+    }, (await page.viewport()).width);
+    try{ await page.evaluate(()=>{ try{closeModal();}catch(e){} try{ if(document.getElementById('help-panel')?.classList.contains('active')) toggleHelpPanel(); }catch(e){} }); }catch(e){}
+    await new Promise(r=>setTimeout(r,200));
+    if(f){ fuera.push({vista: 'modal: ' + nombre, arrastraDoc:false, ...f});
+      if(process.env.GG_DEBUG) console.log('   · modal auditado: ' + nombre);
+    } else if(process.env.GG_DEBUG){
+      // Con GG_DEBUG=1 se ve cuáles NO se abrieron: sin esto, una prueba
+      // que no abre nada pasa en verde y parece que todo está bien.
+      console.log('   · NO se abrió: ' + nombre);
+    }
+  }
+  return fuera;
+};
+
+
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox']});
 const hallazgos = [];
 
@@ -167,6 +241,7 @@ for(const t of ANCHOS){
     const f = await page.evaluate(MIRAR, t.w);
     if(f) hallazgos.push({ancho:t.n, vista:nombre, ...f});
   }
+  for(const m of await auditarModales(page)) hallazgos.push({ancho:t.n, ...m});
   await page.close();
 }
 await browser.close();

@@ -179,7 +179,12 @@
     display:inline-block;padding:6px 2px;min-height:32px;line-height:20px;
   }
 
-  .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;margin-bottom:6px}
+  /* 132 px por columna dejaban al nombre menos de 90 px descontando el
+     icono: en un móvil de 320 px, "Hamburguesas" salía partida en dos
+     renglones en la carta que ve el CLIENTE. Columnas algo más anchas y,
+     en pantallas pequeñas de verdad, una sola. */
+  .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:6px}
+  @media (max-width:360px){ .menu-folder-grid{grid-template-columns:1fr} }
   .menu-folder-card{
     display:flex;flex-direction:row;align-items:center;gap:8px;
     border:1px solid var(--border);background:var(--surface);padding:10px 12px;cursor:pointer;
@@ -188,7 +193,10 @@
   .menu-folder-card:hover{border-color:var(--ink)}
   .menu-folder-card:active{transform:translateY(1px)}
   .menu-folder-card .icon{font-size:20px;color:var(--olive);line-height:1;flex:none}
-  .menu-folder-card .name{font-weight:700;font-size:13px;color:var(--ink);line-height:1.2;min-width:0;overflow-wrap:anywhere}
+  /* Sin `overflow-wrap:anywhere`: partía "Hamburguesas" por la mitad de la
+     palabra. Si no cabe, mejor que la columna crezca (arriba) que leer
+     "Hamburgue-sas" en el menú de un restaurante. */
+  .menu-folder-card .name{font-weight:700;font-size:13px;color:var(--ink);line-height:1.2;min-width:0;overflow-wrap:break-word}
   .menu-back-btn{
     display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;
     font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;

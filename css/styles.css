@@ -2191,6 +2191,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .bar-chart .bar-col{min-width:0;flex:1 1 0}
   .bar-lbl{overflow:hidden;text-overflow:ellipsis}
 
+  /* ── 4d. El Centro de ayuda, tocable con el dedo ───────────────────
+     Sus pestañas medían 35 px de alto y los botones de pregunta 28: por
+     debajo del mínimo de 44 que se exige en el resto de la app. Es una
+     pantalla a la que se llega justo cuando algo no se entiende, y fallar
+     el toque ahí es la gota que colma el vaso. */
+  .help-tab{padding:14px 6px;min-height:46px;font-size:13px}
+  .help-suggestion{padding:11px 14px;min-height:42px;font-size:12.5px;display:inline-flex;align-items:center}
+  /* Y el botón de enviar del chat de ayuda, que medía 38 px. */
+  .help-chat-input-row button,.chat-input-row button{width:44px;height:44px}
+
   /* ── 5. Nada se sale de la pantalla ────────────────────────────────
      Última red: cualquier cosa que se escape del ancho se queda dentro.
      No sustituye a arreglar la causa, pero evita que un dato nuevo y más

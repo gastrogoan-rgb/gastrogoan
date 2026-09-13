@@ -224,6 +224,33 @@ body:not(.owner-session) .owner-strict{display:none !important}
    como una lista continua y había que buscar dónde acababa uno (lo vio el
    dueño el 12/09 grabando la demo). Cada comanda es un papel: borde marcado,
    cabecera con fondo propio y una sombra que la levanta del fondo. */
+/* MODO CAOS DE COCINA: una sola lista, lo que más espera arriba.
+   Se lee de pie y a un metro de la pantalla, que es como se mira una
+   cocina en hora punta: el reloj en grande a la izquierda, el plato en
+   grande al lado, y la mesa en pequeño — es el dato de apoyo, no el
+   criterio. Lo que pasa de 15 minutos se marca en rojo y no hay que
+   buscarlo: ya está arriba del todo. */
+.caos-cabecera{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--text);color:#fff;padding:10px 16px;font-weight:800;font-size:15px;margin-bottom:10px}
+.caos-cabecera .caos-cuenta{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;opacity:.85}
+.caos-lista{display:flex;flex-direction:column;gap:8px}
+.caos-fila{display:flex;align-items:center;gap:14px;background:var(--surface);
+  border:2px solid var(--border);border-left:6px solid var(--muted);padding:12px 14px}
+.caos-fila .caos-reloj{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:30px;
+  line-height:1;min-width:74px;text-align:right;color:var(--muted);flex:none}
+.caos-fila .caos-plato{flex:1;min-width:0;overflow-wrap:anywhere}
+.caos-fila .caos-plato strong{font-size:20px;line-height:1.2;display:block}
+.caos-fila .caos-donde{font-size:12.5px;color:var(--muted);margin-top:2px}
+.caos-fila .caos-nota{font-size:13px;color:var(--brand-orange);font-weight:600;margin-top:4px}
+.caos-fila .caos-alergia{margin-top:6px}
+.caos-fila .caos-alergia .card{margin-bottom:0;padding:6px 10px;font-size:12px}
+.caos-urgente{border-color:var(--red);border-left-color:var(--red);background:var(--red-l)}
+.caos-urgente .caos-reloj{color:var(--red)}
+@media (max-width: 760px){
+  .caos-fila{gap:10px;padding:10px}
+  .caos-fila .caos-reloj{font-size:24px;min-width:56px}
+  .caos-fila .caos-plato strong{font-size:17px}
+}
 .kds-ticket{border:2px solid var(--text);box-shadow:0 3px 0 rgba(28,26,23,.10);padding:0;overflow:hidden}
 .kds-ticket>.kds-head{background:var(--brand-cream);border-bottom:2px solid var(--text);padding:10px 14px;margin:0}
 .kds-ticket>.kds-body{padding:12px 14px}
@@ -1063,8 +1090,15 @@ td.wrap{white-space:normal}
    más líneas. overflow-wrap:anywhere para el caso extremo de una palabra
    suelta más ancha que la columna entera. */
 .manual-step .st{font-size:13px;line-height:1.5;min-width:0;flex:1;overflow-wrap:anywhere}
-.manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d);display:flex;gap:8px;align-items:flex-start;overflow-wrap:anywhere}
-.manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#8A7440;display:flex;gap:8px;align-items:flex-start}
+/* ⚠️ display:block, NO flex. Con flex, cada hijo del aviso es un item
+   propio: el <strong>GGGG</strong> del manual se quedaba con 10 px de ancho
+   y salía partido en CUATRO renglones, una letra por línea. El icono va
+   flotado, que es lo que hace falta de verdad aquí. */
+.manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d);display:block;overflow-wrap:break-word}
+.manual-tip>i:first-child{float:left;margin-right:8px}
+/* Mismo caso que .manual-tip: block + icono flotado, no flex. */
+.manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#8A7440;display:block;overflow-wrap:break-word}
+.manual-warning>i:first-child{float:left;margin-right:8px}
 .manual-tip i,.manual-warning i{flex-shrink:0;margin-top:2px;font-size:15px}
 .manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px;display:block;overflow-x:auto}
 .manual-detail table th,.manual-detail table td{border:1px solid var(--border);padding:6px 10px;text-align:left}
@@ -2065,7 +2099,146 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   transition:opacity .12s ease,background .12s ease}
 .folder-act:hover{opacity:1;background:rgba(28,26,23,.07)}
 @media (pointer: coarse){
-  .folder-act{width:44px;height:44px;opacity:.65;margin-top:-8px;margin-right:-8px;margin-bottom:-8px}
+  /* 44 px para el dedo, pero SIN sobresalir por la derecha: con el margen
+     negativo, la tarjeta de la última columna se salía de la pantalla. */
+  .folder-act{width:44px;height:44px;opacity:.65;margin-top:-8px;margin-right:0;margin-bottom:-8px}
+}
+
+/* El pequeño de la app: una sola clase en vez de 36 tamaños a mano. */
+.txt-xs{font-size:10.5px}
+
+/* ════════════════════════════════════════════════════════════════════
+   LA APP EN UN MÓVIL (13/09)
+
+   "En mi móvil hay cosas que se ven feo, fuera de sitio, saltos de línea
+   apiñados." Se midió antes de tocar nada: la app entera, con un negocio
+   lleno, en los cinco anchos que existen de verdad (320, 360, 390, 412,
+   430). No eran trescientos fallos distintos; eran cuatro causas repetidas.
+
+   Por eso esto es UN bloque con reglas de base, y no una excepción metida
+   en cada pantalla: arreglar la causa arregla veinte pantallas a la vez, y
+   la pantalla que se escriba mañana nace bien sin que nadie se acuerde.
+
+   La regla de oro, que es lo que pidió el dueño: lo que tenga que ir en una
+   fila, que vaya en una fila; y lo que tenga que saltar, que salte bien.
+   Nada cortado, nada fuera de sitio.
+   ════════════════════════════════════════════════════════════════════ */
+@media (max-width: 760px){
+
+  /* ── 1. Nada por debajo de lo legible ──────────────────────────────
+     Badges, etiquetas de KPI y rótulos de gráfico estaban a 10,5 px, que
+     en una pantalla de 360 px se lee con esfuerzo — y son justo los datos
+     que se miran de reojo en mitad del servicio ("En cocina", "7/10",
+     "A 30 DÍAS"). El mínimo pasa a 11,5 px, con algo menos de espaciado
+     entre letras para que el texto no crezca de ancho al crecer de alto. */
+  /* Se suben TODAS las variantes pequeñas del badge de una vez. Antes había
+     cuatro reglas repartidas (8,5 px dentro de una mesa, 10 px en las
+     tarjetas compactas y en las filas de para-llevar): cada una se escribió
+     para ganar sitio en su pantalla y el resultado junto era una app con
+     letra de prospecto médico. */
+  .badge,.card-compact .badge,.togo-order-row .badge{font-size:11.5px;letter-spacing:.03em;padding:3px 8px}
+  .mesa-card .mesa-elapsed{font-size:11px}
+  /* .txt-xs es el tamaño pequeño de toda la app (fechas de apoyo, "/mes",
+     "← equilibrio", contadores dentro de un badge). Existe porque estaba
+     escrito A MANO 36 veces en el JS como style="font-size:10.5px", donde
+     ninguna regla de CSS lo alcanzaba — la trampa que ya avisa CLAUDE.md.
+     Ahora es una clase, y aquí sube de golpe para todas. */
+  .txt-xs{font-size:11.5px}
+  .ge-kpi .lbl,.kpi-mini .l{font-size:11.5px;letter-spacing:.2px}
+  .bar-lbl,.mesa-card .mesa-phase-row,.mesa-card .mesa-pax,
+  .mesa-card .mesa-waiter-chip,.mesa-card .mesa-elapsed{font-size:11.5px}
+  .mesa-card .badge{font-size:10.5px}   /* dentro de la mesa sí manda el sitio */
+
+  /* ── 2. Una palabra no se parte nunca ──────────────────────────────
+     El nombre de una carpeta de categoría se quedaba con 40 px de ancho y
+     "Hamburguesas" salía en TRES renglones. El problema no era el texto:
+     era que el icono y el botón de al lado se quedaban su ancho fijo y al
+     nombre le sobraba lo que quedase. Se le da suelo propio. */
+  /* Las carpetas de categoría (Mega Lista, Stock, Escandallo, Fichas) iban
+     a dos columnas de 166 px: descontando icono, lápiz de renombrar y
+     huecos, al nombre le quedaban 40 px y "Hamburguesas" salía en TRES
+     renglones. A partir de aquí, una sola columna: el nombre tiene sitio,
+     el lápiz no empuja a nadie fuera y la fila se lee de un vistazo. */
+  .grid-compact{grid-template-columns:1fr !important}
+  .folder-card-name{font-size:13px;-webkit-line-clamp:2}
+  /* Y si aun así no cabe, que corte con puntos suspensivos en vez de
+     partir la palabra por la mitad: cortada se lee peor que abreviada. */
+  .folder-card-name{overflow-wrap:normal;word-break:normal;text-overflow:ellipsis}
+
+  /* ── 3. Los números no se parten ───────────────────────────────────
+     "102.596,70 €" repartido en tres líneas no es una cifra, es un
+     jeroglífico. Cualquier importe, porcentaje o contador va de una pieza:
+     si no cabe, que scrollee la tabla que lo contiene (para eso está). */
+  .ge-grid td,.ge-grid th,.te-row .val,.kpi .value,.ge-kpi .val,
+  .kpi-mini .v,td[data-label]{font-variant-numeric:tabular-nums}
+  .ge-kpi .val,.kpi .value,.kpi-mini .v{white-space:nowrap}
+
+  /* ── 4. Lo que salta, que salte bien ───────────────────────────────
+     Filas de botones y de campos que se quedaban apretadas hasta partir el
+     texto de cada botón: a partir de aquí saltan de línea enteras, con
+     aire, en vez de espachurrarse. */
+  .toolbar,.actions-cell,.field-row,.promo-share-actions{flex-wrap:wrap;gap:8px}
+  .toolbar .btn,.actions-cell .btn{flex:0 1 auto}
+  /* Un botón nunca parte su texto: o cabe, o la fila salta. */
+  .btn{white-space:nowrap}
+  /* Salvo los que llevan una frase de verdad dentro (avisos, ayudas). */
+  .btn.btn-wrap{white-space:normal}
+
+  /* Nombres de archivo y direcciones: parten por el guion o el punto, que
+     es donde los parte cualquiera al leerlos, en vez de por la mitad de
+     una sílaba ("tutorial-netlify.html"). */
+  a strong,code,.mn-file{word-break:break-word;hyphens:none}
+
+  /* ── 4b. Las pestañas se ven TODAS, sin arrastrar ──────────────────
+     Gestión Económica tiene siete pestañas y Mi Negocio nueve. En una
+     pantalla de 360 px no caben en una fila, así que se arrastraban en
+     horizontal: se entraba en Cuenta de Resultados y la fila quedaba con
+     "os fijos" cortado a media palabra, y para llegar a CAPEX había que
+     adivinar que aquello se movía. En móvil pasan a varias filas: ocupan
+     un poco más de alto, pero se ven enteras y de un vistazo — que es de
+     lo que iba todo esto. */
+  .ge-tab-row,.mn-indice{flex-wrap:wrap;overflow-x:visible;gap:2px 0}
+  .ge-tab-row::after,.ge-tab-row::before,
+  .mn-indice::after,.mn-indice::before{display:none}   /* ya no hay que avisar de scroll */
+  .ge-tab{flex:1 1 auto;justify-content:center}
+
+  /* ── 4c. Los gráficos de barras caben enteros ──────────────────────
+     Doce meses en 360 px salen a 26 px por barra: entran. Se quedaban
+     cortados porque las columnas tenían un ancho mínimo pensado para
+     escritorio, y la última ("Sep") aparecía partida por la mitad. */
+  .bar-chart{display:flex;gap:2px}
+  .bar-chart .bar-col{min-width:0;flex:1 1 0}
+  .bar-lbl{overflow:hidden;text-overflow:ellipsis}
+
+  /* ── 4d. El Centro de ayuda, tocable con el dedo ───────────────────
+     Sus pestañas medían 35 px de alto y los botones de pregunta 28: por
+     debajo del mínimo de 44 que se exige en el resto de la app. Es una
+     pantalla a la que se llega justo cuando algo no se entiende, y fallar
+     el toque ahí es la gota que colma el vaso. */
+  .help-tab{padding:14px 6px;min-height:46px;font-size:13px}
+  .help-suggestion{padding:11px 14px;min-height:42px;font-size:12.5px;display:inline-flex;align-items:center}
+  /* Y el botón de enviar del chat de ayuda, que medía 38 px. */
+  .help-chat-input-row button,.chat-input-row button{width:44px;height:44px}
+
+  /* ── 5. Nada se sale de la pantalla ────────────────────────────────
+     Última red: cualquier cosa que se escape del ancho se queda dentro.
+     No sustituye a arreglar la causa, pero evita que un dato nuevo y más
+     largo de lo previsto rompa una pantalla en casa de un cliente. */
+  .view.active img,.view.active canvas{max-width:100%;height:auto}
+  .bar-chart{max-width:100%;overflow-x:auto}
+}
+
+/* Pantallas pequeñas de verdad (320-360 px): iPhone SE y los Android
+   baratos, que son muchos más de los que parece. Aquí lo que sobra no es
+   el tamaño de la letra, es el relleno. */
+@media (max-width: 400px){
+  .card{padding:10px 9px}
+  .ge-kpi{padding:10px 9px}
+  .folder-card-name{font-size:12.5px}
+  /* Los gráficos de barras con muchas columnas (el de platos del panel)
+     se salían por la derecha: se dejan scrollear en su propia caja. */
+  .bar-chart{overflow-x:auto;padding-bottom:4px}
+  .bar-col{min-width:34px}
 }
 </style>
 </head>
@@ -2618,6 +2791,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
           <button class="btn btn-sm" id="cdr-gran-mes" onclick="GE.setCDRGranularidad('mes')"><span data-i18n="ge.granularity.monthly">Mensual</span></button>
           <button class="btn btn-sm" id="cdr-gran-trimestre" onclick="GE.setCDRGranularidad('trimestre')"><span data-i18n="ge.granularity.quarterly">Trimestral</span></button>
         </div>
+        <!-- Doce meses o cuatro trimestres, según la resolución elegida: es
+             lo que decide de qué periodo habla la cabecera de abajo. -->
+        <div class="month-sel month-sel-centered" id="cdr-periodos" style="margin-bottom:14px"></div>
         <div class="vis-section" style="margin-bottom:14px">
           <h4><span data-i18n="ge.monthlyResultChart">Resultado mensual</span> <span class="ge-auto">AUTO</span></h4>
           <div id="cdr-chart" class="bar-chart"></div>
@@ -2970,7 +3146,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '12/09/2026 22:31';
+const GG_BUILD = '13/09/2026 23:01';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -11578,7 +11754,7 @@ const I18N = {
     'label.rewardHistory': 'Historial de premios entregados',
     'common.month': 'Mes', 'common.year': 'Año', 'common.total': 'Total',
     'hr.compare.revenueLabel': 'Facturación de ${month} (con IVA)', 'hr.compare.resultLabel': 'Resultado neto de ${month}',
-    'hr.compare.vsPrevMonth': 'vs mes anterior:', 'hr.compare.vsLastYear': 'vs mismo mes año pasado:',
+    'hr.compare.vsPrevMonth': 'vs mes anterior:', 'hr.compare.vsPrevQuarter': 'vs trimestre anterior:', 'hr.compare.vsLastYear': 'vs mismo periodo año pasado:',
     'common.subtotal': 'Subtotal', 'common.discount': 'Descuento',
     'common.all': 'Todos', 'common.none': 'Ninguno',
     'common.chef': 'Jefe/a',
@@ -12483,6 +12659,7 @@ const I18N = {
     'kitchen.waiting': 'En espera', 'kitchen.preparing': 'En preparación', 'kitchen.delivered': 'Entregado',
     'kitchen.undo': 'Deshacer', 'kitchen.undoneOk': 'Deshecho', 'kitchen.nothingToUndo': 'No hay nada que deshacer',
     'kitchen.allReady': 'Todo listo', 'kitchen.markReady': 'Marcar listo',
+    'kitchen.startCooking': 'Empezar', 'kitchen.chaos.hint': 'Deja una sola lista con lo que está pendiente, lo que más tiempo lleva esperando arriba.', 'kitchen.chaos.title': 'Por orden de espera', 'kitchen.chaos.empty': 'Nada pendiente en cocina ahora mismo.', 'kitchen.chaos.dish': 'plato pendiente', 'kitchen.chaos.dishes': 'platos pendientes',
     'tpv.readyToPickup': 'Listo para recoger', 'tpv.fired': 'Marchado',
     'tpv.courseOptions': ['Bebidas','Entrantes','Primeros','Segundos','Terceros','Postres','Cafés y copas'],
     'ticket.invoiceNumber': 'FACTURA SIMPLIFICADA Nº', 'ticket.thanksVisit': '¡Gracias por su visita!',
@@ -13816,7 +13993,7 @@ const I18N = {
     'label.rewardHistory': 'Historial de premis lliurats',
     'common.month': 'Mes', 'common.year': 'Any', 'common.total': 'Total',
     'hr.compare.revenueLabel': 'Facturació de ${month} (amb IVA)', 'hr.compare.resultLabel': 'Resultat net de ${month}',
-    'hr.compare.vsPrevMonth': 'vs mes anterior:', 'hr.compare.vsLastYear': 'vs mateix mes any passat:',
+    'hr.compare.vsPrevMonth': 'vs mes anterior:', 'hr.compare.vsPrevQuarter': 'vs trimestre anterior:', 'hr.compare.vsLastYear': 'vs mateix període any passat:',
     'common.subtotal': 'Subtotal', 'common.discount': 'Descompte',
     'common.all': 'Tots', 'common.none': 'Cap',
     'common.chef': 'Cap',
@@ -14718,6 +14895,7 @@ const I18N = {
     'kitchen.waiting': 'En espera', 'kitchen.preparing': 'En preparació', 'kitchen.delivered': 'Lliurat',
     'kitchen.undo': 'Desfer', 'kitchen.undoneOk': 'Desfet', 'kitchen.nothingToUndo': 'No hi ha res per desfer',
     'kitchen.allReady': 'Tot llest', 'kitchen.markReady': 'Marcar llest',
+    'kitchen.startCooking': 'Començar', 'kitchen.chaos.hint': 'Deixa una sola llista amb el que està pendent, el que fa més temps que espera a dalt.', 'kitchen.chaos.title': 'Per ordre d\'espera', 'kitchen.chaos.empty': 'Res pendent a cuina ara mateix.', 'kitchen.chaos.dish': 'plat pendent', 'kitchen.chaos.dishes': 'plats pendents',
     'tpv.readyToPickup': 'Llest per recollir', 'tpv.fired': 'Marxat',
     'tpv.courseOptions': ['Begudes','Entrants','Primers','Segons','Tercers','Postres','Cafès i copes'],
     'ticket.invoiceNumber': 'FACTURA SIMPLIFICADA Núm.', 'ticket.thanksVisit': 'Gràcies per la teva visita!',
@@ -16054,7 +16232,7 @@ const I18N = {
     'label.rewardHistory': 'History of rewards given',
     'common.month': 'Month', 'common.year': 'Year', 'common.total': 'Total',
     'hr.compare.revenueLabel': '${month} revenue (incl. VAT)', 'hr.compare.resultLabel': '${month} net result',
-    'hr.compare.vsPrevMonth': 'vs previous month:', 'hr.compare.vsLastYear': 'vs same month last year:',
+    'hr.compare.vsPrevMonth': 'vs previous month:', 'hr.compare.vsPrevQuarter': 'vs previous quarter:', 'hr.compare.vsLastYear': 'vs same period last year:',
     'common.subtotal': 'Subtotal', 'common.discount': 'Discount',
     'common.all': 'All', 'common.none': 'None',
     'common.chef': 'Manager',
@@ -16957,6 +17135,7 @@ const I18N = {
     'kitchen.waiting': 'Waiting', 'kitchen.preparing': 'Preparing', 'kitchen.delivered': 'Delivered',
     'kitchen.undo': 'Undo', 'kitchen.undoneOk': 'Undone', 'kitchen.nothingToUndo': 'Nothing to undo',
     'kitchen.allReady': 'All ready', 'kitchen.markReady': 'Mark ready',
+    'kitchen.startCooking': 'Start', 'kitchen.chaos.hint': 'Leaves a single list of what is pending, the longest waiting first.', 'kitchen.chaos.title': 'By waiting order', 'kitchen.chaos.empty': 'Nothing pending in the kitchen right now.', 'kitchen.chaos.dish': 'dish pending', 'kitchen.chaos.dishes': 'dishes pending',
     'tpv.readyToPickup': 'Ready to pick up', 'tpv.fired': 'Fired',
     'tpv.courseOptions': ['Drinks','Starters','First courses','Main courses','Third courses','Desserts','Coffees & drinks'],
     'ticket.invoiceNumber': 'SIMPLIFIED INVOICE No.', 'ticket.thanksVisit': 'Thank you for your visit!',
@@ -19259,7 +19438,7 @@ function renderChatMessages(){
     <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}">
       <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
       ${escapeHtml(m.text)}
-      <button class="btn btn-sm" style="margin-top:4px;font-size:10px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
+      <button class="btn btn-sm txt-xs" style="margin-top:4px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
     </div>
   `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> ${t('msg.noMessagesInChannelYet').replace('${channel}', escapeHtml(chatChannelLabel(currentChatChannel)))}</div>`;
   box.scrollTop = box.scrollHeight;
@@ -20568,7 +20747,7 @@ function renderDashboard(){
           ${hourTotals.map((v,h) => `
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${h}:00 - ${fmtMoney(v)}">
               <div style="width:100%;background:var(--brand-orange);border-radius:2px 2px 0 0;height:${Math.max(2,(v/maxHour*100))}%"></div>
-              ${h%3===0?`<div style="font-size:10.5px;color:var(--muted);margin-top:2px">${h}h</div>`:''}
+              ${h%3===0?`<div class="txt-xs" style="color:var(--muted);margin-top:2px">${h}h</div>`:''}
             </div>
           `).join('')}
         </div>
@@ -20658,7 +20837,7 @@ function renderSalesHeatmap(){
               ${grid[di].map((v,hi) => {
                 const intensity = v/maxVal;
                 const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
-                return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
+                return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" class="txt-xs" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
               }).join('')}
             </tr>
           `).join('')}
@@ -21525,7 +21704,7 @@ function renderStock(){
        cumplir, y teñirlo todo de verde quitaría valor al verde de verdad. */
     return `
       <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':ok?'background:var(--green-l);border:1px solid var(--green);border-radius:8px':''}">
-        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10.5px">${t('label.costingSheet')}</span>` : ''}</div>
+        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray txt-xs" >${t('label.costingSheet')}</span>` : ''}</div>
         <div class="stock-row-values">
           <span class="stock-row-field">
             <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
@@ -28076,14 +28255,14 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
     const hasCocina = bebidaInGroup.some(({line}) => line.estado === 'cocina');
     const hasPreparando = bebidaInGroup.some(({line}) => line.estado === 'preparando');
     const allServed = bebidaInGroup.every(({line}) => line.estado === 'entregado');
-    if(allServed) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
+    if(allServed) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
     else if(hasCocina) statusBadge = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
     else if(hasPreparando) statusBadge = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
   }else{
-    if(allPicked) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-    else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
-    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10.5px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
-    else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
+    if(allPicked) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
+    else if(listos.length) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
+    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue txt-xs" ><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
+    else if(allFired) statusBadge = `<span class="badge badge-amber txt-xs" ><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
 
   // Si TODA la tanda es del mismo menú, se dice una vez en la cabecera del
@@ -28154,7 +28333,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
         // escrita por el camarero. Una nota manual sigue mostrándose siempre.
         const esNotaAutoDeMenu = menu && line.notas === `Menú: ${tItem(menu)}`;
         if(!line.notas || (esNotaAutoDeMenu && nombreMenuUnico)) return '';
-        return `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>`;
+        return `<div class="txt-xs" style="color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>`;
       })()}
     `;}).join('')}
   </div>
@@ -28773,6 +28952,78 @@ function findCartaNombreForPlatoId(platoId){
   return null;
 }
 
+/* MODO CAOS EN COCINA (13/09, pedido del dueño)
+   ─────────────────────────────────────────────
+   El hermano del de Sala, y por la misma razón. En hora punta, los tickets
+   bien ordenados por pedido dejan de ayudar: el cocinero no necesita saber
+   de qué mesa es cada cosa, necesita saber QUÉ SACA AHORA. Con ocho tickets
+   en pantalla, eso obliga a comparar relojes a ojo mientras suena todo.
+
+   Aquí se tira la organización bonita y queda una sola lista con lo que está
+   PENDIENTE (nada entregado ni recogido), el que más lleva esperando arriba,
+   el tiempo en grande y un solo botón por plato. La mesa se dice, pero en
+   pequeño: es el dato de apoyo, no el criterio.
+
+   Es un modo de VER, no de trabajar distinto: los botones son los mismos
+   (cycleLineEstado), así que lo que se marca aquí vale igual en la vista
+   normal y en Sala. */
+let chaosCocina = false;
+function toggleChaosCocina(){
+  chaosCocina = !chaosCocina;
+  renderComandasCocina();
+  scrollContentToTop();
+}
+
+// Todo lo que cocina tiene pendiente, de todos los pedidos, en una sola
+// lista y por orden de espera. Se excluyen las bebidas (no son de cocina) y
+// lo que ya está entregado o recogido.
+function lineasPendientesCocina(allOrders){
+  const fuera = [];
+  allOrders.forEach(order => {
+    (order.items||[]).forEach((line, idx) => {
+      if(line.bebida) return;
+      if(!line.estado) return;                         // sin marchar: no es de cocina todavía
+      if(line.estado === 'entregado' || line.recogidoAt) return;
+      const enviado = line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now();
+      fuera.push({order, line, idx, enviado, mins: Math.max(0, Math.round((Date.now()-enviado)/60000))});
+    });
+  });
+  // El que más lleva esperando, primero. Es TODO el criterio de este modo.
+  fuera.sort((a,b) => a.enviado - b.enviado);
+  return fuera;
+}
+
+function renderChaosCocinaHtml(allOrders){
+  const pendientes = lineasPendientesCocina(allOrders);
+  if(!pendientes.length){
+    return `<div class="empty"><i class="ti ti-mood-smile"></i>${t('kitchen.chaos.empty')}</div>`;
+  }
+  const filas = pendientes.map(({order, line, idx, mins}) => {
+    const urgente = mins >= 15;
+    const aviso = orderAllergyWarningHtml(order);
+    const boton = line.estado === 'cocina'
+      ? `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);flex:none" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.startCooking')}</button>`
+      : `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);flex:none" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
+    return `
+      <div class="caos-fila${urgente ? ' caos-urgente' : ''}">
+        <div class="caos-reloj">${mins}'</div>
+        <div class="caos-plato">
+          <strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+          <div class="caos-donde">${escapeHtml(comandaOrderTitle(order))}${line.tanda ? ` · ${escapeHtml(line.tanda)}` : ''}</div>
+          ${line.notas ? `<div class="caos-nota"><i class="ti ti-message-2"></i> ${escapeHtml(line.notas)}</div>` : ''}
+          ${aviso ? `<div class="caos-alergia">${aviso}</div>` : ''}
+        </div>
+        ${boton}
+      </div>`;
+  }).join('');
+  return `
+    <div class="caos-cabecera">
+      <span><i class="ti ti-flame"></i> ${t('kitchen.chaos.title')}</span>
+      <span class="caos-cuenta">${pendientes.length} ${pendientes.length === 1 ? t('kitchen.chaos.dish') : t('kitchen.chaos.dishes')}</span>
+    </div>
+    <div class="caos-lista">${filas}</div>`;
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -28801,7 +29052,8 @@ function renderComandasCocina(){
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
-      <button class="btn btn-sm" style="margin-left:auto" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
+      <button class="btn btn-sm ${chaosCocina?'btn-danger':''}" style="margin-left:auto" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
+      <button class="btn btn-sm" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
       <button class="btn btn-sm" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
     </div>
   `;
@@ -28846,6 +29098,13 @@ function renderComandasCocina(){
         </div>
       </div>
     `;}).join('')}</div>`;
+    return;
+  }
+
+  /* El modo caos sustituye a los tickets, pero solo en "Activas": en el
+     histórico de cerradas no hay nada pendiente que ordenar por espera. */
+  if(chaosCocina){
+    box.innerHTML = tabsHtml + renderChaosCocinaHtml(allOrders);
     return;
   }
 
@@ -34139,13 +34398,13 @@ const GE = (function(){
         detalles.push(`${t('hr.gf.everyMonths').replace('${n}', periodoMeses)} · ${fmtMoney(parseFloat(g.importe||0))}${t('hr.gf.perPayment')}`);
         const today = new Date();
         const next = gfNextDueDate(g, today.getFullYear(), today.getMonth());
-        if(next) detalles.push(`<span class="badge badge-blue" style="font-size:10.5px">${t('hr.gf.nextDue').replace('${date}', next.date)}</span>`);
+        if(next) detalles.push(`<span class="badge badge-blue txt-xs" >${t('hr.gf.nextDue').replace('${date}', next.date)}</span>`);
       }
       if(g.autoCalc) detalles.push(t('hr.gf.autoCalcSummary').replace('${neto}', fmtMoney(parseFloat(g.sueldoNeto||0))).replace('${bruto}', fmtMoney(g.sueldoBruto||0)).replace('${ss}', fmtMoney(g.ssEmpresa||0)).replace('${irpf}', fmtMoney(g.irpfMensual||0)));
       return `
       <div class="ge-item" style="flex-wrap:wrap">
         <span style="flex:1;font-size:14px;font-weight:500;min-width:140px">${escapeHtml(g.nombre)}</span>
-        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(mensual)}${periodoMeses>1?'<span style="font-size:10.5px;color:var(--muted);font-weight:400">/mes</span>':''}</span>
+        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(mensual)}${periodoMeses>1?'<span class="txt-xs" style="color:var(--muted);font-weight:400">/mes</span>':''}</span>
         <button class="btn btn-sm btn-icon" onclick="GE.editGF(${g.id})"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGF(${g.id})"><i class="ti ti-trash"></i></button>
         ${detalles.length || g.notas ? `<div style="flex-basis:100%;font-size:11.5px;color:var(--muted)">${detalles.join(' · ')}${g.notas?`${detalles.length?' · ':''}<i class="ti ti-note"></i> ${escapeHtml(g.notas)}`:''}</div>` : ''}
@@ -34461,12 +34720,12 @@ const GE = (function(){
       const propinaDia = salesDia.reduce((s,v)=>s+(parseFloat(v.propina)||0),0);
       const ticketsDia = salesDia.length;
       totalMes += totalDia; ticketsMes += ticketsDia; propinaMes += propinaDia;
-      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}${propinaDia>0.001?`<div style="font-size:10.5px;font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaDia)}</div>`:''}</td></tr>`;
+      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}${propinaDia>0.001?`<div class="txt-xs" style="font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaDia)}</div>`:''}</td></tr>`;
     }
     document.getElementById('ventas-dia-table').innerHTML = diaRows ? `
       <thead><tr><th>${t('hr.lbl.day')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
       <tbody>${diaRows}</tbody>
-      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}${propinaMes>0.001?`<div style="font-size:10.5px;font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaMes)}</div>`:''}</td></tr></tfoot>
+      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}${propinaMes>0.001?`<div class="txt-xs" style="font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaMes)}</div>`:''}</td></tr></tfoot>
       ` : `<tbody><tr><td colspan="4"><div class="empty">${t('ge.ventas.emptyMonth')}</div></td></tr></tbody>`;
     const notaPropinas = document.getElementById('ventas-propinas-note');
     if(notaPropinas){
@@ -34524,7 +34783,7 @@ const GE = (function(){
           const total = totalBase + totalIva;
           const ids = vs.map(v=>v.id).join(',');
           return `<div class="ge-item" style="flex-wrap:wrap">
-            <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10.5px;font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
+            <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray txt-xs" style="font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
             <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
             <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
             <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 4px"><i class="ti ti-lock"></i></span>
@@ -34542,7 +34801,7 @@ const GE = (function(){
           if(v.anulado){
             return `<div class="ge-item" style="flex-wrap:wrap;opacity:.6">
             <span style="flex:1;font-size:14px;min-width:140px;text-decoration:line-through">${escapeHtml(v.proveedor||'—')}</span>
-            <span class="badge badge-red" style="font-size:10.5px"><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>
+            <span class="badge badge-red txt-xs" ><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>
             <span style="font-size:11.5px;color:var(--muted);flex:1;min-width:120px">${escapeHtml(v.anuladoMotivo||'')}</span>
             <span style="font-family:monospace;text-decoration:line-through;color:var(--muted)">${fmtMoney(total)}</span>
           </div>`;
@@ -34750,8 +35009,56 @@ const GE = (function(){
   // otra). Fusionadas en una sola tabla con un interruptor de resolución,
   // todas las filas de las dos juntas.
   let cdrGranularidad = 'trimestre';
-  function setCDRGranularidad(g){ cdrGranularidad = g; renderCDR(); }
+  /* Qué periodo se está mirando DENTRO del año: el mes (0-11) en vista
+     mensual, el trimestre (0-3) en trimestral. Arranca en el de hoy.
+
+     Antes no existía: la tabla enseñaba el año entero y la cabecera de
+     comparación daba SIEMPRE el mes en curso del año en curso. Al retroceder
+     de año con las flechas, la tabla cambiaba a 2025 y la cabecera seguía
+     con los números de septiembre de 2026 — la misma pantalla, dos años
+     distintos a la vez (lo vio el dueño el 13/09). */
+  // Arranca en el periodo de HOY, contado en la resolución con la que se
+  // abre la pestaña: con cdrGranularidad = 'trimestre', septiembre no es el
+  // periodo 8 (no existe el trimestre 9), es el T3.
+  let cdrPeriodo = cdrGranularidad === 'trimestre'
+    ? Math.floor(new Date().getMonth()/3)
+    : new Date().getMonth();
+  function setCDRGranularidad(g){
+    if(g === cdrGranularidad) return;
+    /* Al cambiar de resolución, el periodo elegido se traduce: septiembre
+       pasa a ser T3. Al revés, un trimestre son tres meses y hay que elegir
+       uno: si es el trimestre de HOY (y el año de hoy), el mes en curso —
+       que es lo que espera cualquiera al pulsar "Mensual" nada más entrar.
+       Para cualquier otro trimestre, su primer mes. */
+    if(g === 'trimestre'){
+      cdrPeriodo = Math.floor(cdrPeriodo/3);
+    }else{
+      const hoy = new Date();
+      const esTrimestreDeHoy = cdrYear === hoy.getFullYear() && cdrPeriodo === Math.floor(hoy.getMonth()/3);
+      cdrPeriodo = esTrimestreDeHoy ? hoy.getMonth() : cdrPeriodo*3;
+    }
+    cdrGranularidad = g;
+    renderCDR();
+  }
+  function setCDRPeriodo(i){ cdrPeriodo = i; renderCDR(); }
   function setCDRYear(delta){ cdrYear += delta; renderCDR(); }
+  // Los meses que componen el periodo elegido. Es lo que hace que la
+  // cabecera funcione igual en mensual y en trimestral.
+  function cdrMesesDelPeriodo(){
+    if(cdrGranularidad === 'trimestre'){
+      const base = cdrPeriodo*3;
+      return [base, base+1, base+2];
+    }
+    return [cdrPeriodo];
+  }
+  function cdrEtiquetaPeriodo(){
+    return cdrGranularidad === 'trimestre' ? 'T'+(cdrPeriodo+1) : getMeses()[cdrPeriodo];
+  }
+  // El periodo ANTERIOR al elegido, saltando de año si hace falta.
+  function cdrPeriodoAnterior(){
+    const max = cdrGranularidad === 'trimestre' ? 4 : 12;
+    return cdrPeriodo === 0 ? {periodo: max-1, anyo: cdrYear-1} : {periodo: cdrPeriodo-1, anyo: cdrYear};
+  }
   function syncYearLabels(){
     const el = document.getElementById('cdr-year'); if(el) el.textContent = cdrYear;
   }
@@ -34761,6 +35068,17 @@ const GE = (function(){
       const el = document.getElementById(id);
       if(el) el.classList.toggle('btn-primary', id==='cdr-gran-'+cdrGranularidad);
     });
+    // La tira de periodos, con la misma pinta que la de Ventas o Tesorería:
+    // doce meses o cuatro trimestres, según la resolución elegida.
+    const tira = document.getElementById('cdr-periodos');
+    if(tira){
+      const etiquetas = cdrGranularidad === 'trimestre'
+        ? [0,1,2,3].map(i => 'T'+(i+1))
+        : getMeses();
+      if(cdrPeriodo >= etiquetas.length) cdrPeriodo = etiquetas.length-1;
+      tira.innerHTML = etiquetas.map((lbl,i)=>`
+        <div class="month-pill${i===cdrPeriodo?' active':''}" onclick="GE.setCDRPeriodo(${i})">${lbl}</div>`).join('');
+    }
     const pctImpEl = document.getElementById('res-pct-impuesto');
     if(pctImpEl) pctImpEl.value = config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25;
     const ivaPct = ivaVentasPct();
@@ -34769,7 +35087,7 @@ const GE = (function(){
     // primer punto del histórico de gastos fijos (no hay ningún dato real
     // de esas fechas). Si hay histórico, cada mes ya usa su propio valor
     // real de entonces (geTotalFijosNetoForMonth), no el de hoy.
-    const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span style="font-size:10.5px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
+    const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span class="txt-xs" style="font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
     // Una sola tabla, con TODAS las filas de las dos vistas que había antes
     // (algunas solo estaban en una: Margen Bruto/EBITDA solo en "Resultado",
     // IVA a liquidar solo en "Cuenta de Resultados") — nunca más un desglose
@@ -34811,7 +35129,7 @@ const GE = (function(){
         if(prevTotal !== 0){
           const pct = (total-prevTotal)/Math.abs(prevTotal)*100;
           const color = pct>=0?'var(--green)':'var(--red)';
-          yoyHtml = `<br><span style="font-size:10.5px;color:${color}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% ${t('hr.cdr.yoyLabel')}</span>`;
+          yoyHtml = `<br><span class="txt-xs" style="color:${color}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% ${t('hr.cdr.yoyLabel')}</span>`;
         }
       }
       // Al pasar el cursor por una columna de trimestre o del año, se ve el
@@ -34919,7 +35237,7 @@ const GE = (function(){
       <div style="position:relative;height:28px;background:var(--border);border-radius:6px;overflow:visible">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pctAct}%;background:${ok?'var(--teal)':'var(--red)'};border-radius:6px;transition:width .4s"></div>
         <div style="position:absolute;left:${pctNec}%;top:-4px;height:36px;width:3px;background:var(--amber-dark);border-radius:2px"></div>
-        <div style="position:absolute;left:clamp(28px,${pctNec}%,calc(100% - 28px));top:34px;transform:translateX(-50%);font-size:10.5px;color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
+        <div class="txt-xs" style="position:absolute;left:clamp(28px,${pctNec}%,calc(100% - 28px));top:34px;transform:translateX(-50%);color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
       </div>
       <div style="margin-top:24px;font-size:13px;font-weight:600;color:${ok?'var(--green)':'var(--red)'}">
         ${ok?t('hr.pe.aboveBreakevenLong'):t('hr.pe.belowBreakevenLong')} · ${t('hr.pe.currentCovers').replace('${n}', cub)}
@@ -35199,29 +35517,40 @@ const GE = (function(){
     renderCapex();
   }
 
-  // Compara el mes en curso (año actual) con el mes anterior y con el mismo
-  // mes del año pasado — de un vistazo, sin tener que leer la tabla entera
-  // de trimestres para hacer la resta mentalmente.
+  /* Compara el periodo ELEGIDO (mes o trimestre, del año que se esté mirando)
+     con el anterior y con el mismo periodo del año pasado — de un vistazo,
+     sin tener que leer la tabla entera y hacer la resta mentalmente.
+
+     ⚠️ Todo esto usa cdrPeriodo y cdrYear, nunca la fecha de hoy: antes daba
+     siempre el mes en curso, así que al retroceder de año la tabla enseñaba
+     2025 y la cabecera seguía con los números de este septiembre. */
   function renderMonthComparison(){
     const box = document.getElementById('cdr-comparison');
     if(!box) return;
-    const now = new Date();
-    const curM = now.getMonth(), curY = now.getFullYear();
-    const prevM = curM===0?11:curM-1, prevMY = curM===0?curY-1:curY;
-    // Con IVA incluido (lo que de verdad ha entrado en caja) — la
-    // facturación NETA ya se ve un poco más abajo, en la propia tabla. Un
-    // dueño reconoce antes el total cobrado que la base sin IVA.
-    const revCur = facturacionNetaMes(curM, curY) + ivaVentasMes(curM, curY);
-    const revPrev = facturacionNetaMes(prevM, prevMY) + ivaVentasMes(prevM, prevMY);
-    const revYoy = facturacionNetaMes(curM, curY-1) + ivaVentasMes(curM, curY-1);
+    // Facturación CON IVA (lo que de verdad ha entrado en caja) — la neta ya
+    // sale en la tabla de abajo. Un dueño reconoce antes el total cobrado.
+    const facturacion = (meses, anyo) => meses.reduce((sum,m) => sum + facturacionNetaMes(m, anyo) + ivaVentasMes(m, anyo), 0);
     /* Resultado NETO, el de después de impuestos: es lo que el hostelero se
        lleva de verdad. Antes esta tarjeta daba el resultado ANTES de
        impuestos, así que el número grande de la cabecera era más alto que
        el "Resultado Neto" de la tabla de justo debajo — la misma pantalla
        enseñaba dos resultados distintos del mismo mes. */
-    const resCur = resultadoMes(curM, curY);
-    const resPrev = resultadoMes(prevM, prevMY);
-    const resYoy = resultadoMes(curM, curY-1);
+    const resultado = (meses, anyo) => meses.reduce((sum,m) => sum + resultadoMes(m, anyo), 0);
+
+    const meses = cdrMesesDelPeriodo();
+    const ant = cdrPeriodoAnterior();
+    const mesesAnt = (() => {
+      if(cdrGranularidad === 'trimestre'){ const b = ant.periodo*3; return [b, b+1, b+2]; }
+      return [ant.periodo];
+    })();
+
+    const revCur = facturacion(meses, cdrYear);
+    const revPrev = facturacion(mesesAnt, ant.anyo);
+    const revYoy = facturacion(meses, cdrYear-1);
+    const resCur = resultado(meses, cdrYear);
+    const resPrev = resultado(mesesAnt, ant.anyo);
+    const resYoy = resultado(meses, cdrYear-1);
+
     function pctDelta(cur, ref){
       if(!ref) return null;
       return ((cur-ref)/Math.abs(ref))*100;
@@ -35232,10 +35561,14 @@ const GE = (function(){
       const sign = delta>=0 ? '+' : '';
       return `<span class="badge ${cls}">${sign}${delta.toFixed(1)}%</span>`;
     }
+    // La etiqueta lleva el año: al mirar 2025 tiene que quedar claro que los
+    // números son de 2025, no de este mes.
+    const periodo = `${cdrEtiquetaPeriodo()} ${cdrYear}`;
+    const vsAnterior = cdrGranularidad === 'trimestre' ? t('hr.compare.vsPrevQuarter') : t('hr.compare.vsPrevMonth');
     box.innerHTML = `
       <div class="grid grid-2" style="margin-bottom:14px">
-        <div class="ge-kpi"><div class="lbl">${t('hr.compare.revenueLabel').replace('${month}', getMeses()[curM])}</div><div class="val">${fmtMoney(revCur)}</div><div class="sub">${t('hr.compare.vsPrevMonth')} ${badge(pctDelta(revCur, revPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(revCur, revYoy))}</div></div>
-        <div class="ge-kpi"><div class="lbl">${t('hr.compare.resultLabel').replace('${month}', getMeses()[curM])}</div><div class="val">${fmtMoney(resCur)}</div><div class="sub">${t('hr.compare.vsPrevMonth')} ${badge(pctDelta(resCur, resPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(resCur, resYoy))}</div></div>
+        <div class="ge-kpi"><div class="lbl">${t('hr.compare.revenueLabel').replace('${month}', periodo)}</div><div class="val">${fmtMoney(revCur)}</div><div class="sub">${vsAnterior} ${badge(pctDelta(revCur, revPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(revCur, revYoy))}</div></div>
+        <div class="ge-kpi"><div class="lbl">${t('hr.compare.resultLabel').replace('${month}', periodo)}</div><div class="val">${fmtMoney(resCur)}</div><div class="sub">${vsAnterior} ${badge(pctDelta(resCur, resPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(resCur, resYoy))}</div></div>
       </div>`;
   }
 
@@ -36060,7 +36393,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
@@ -36392,7 +36725,7 @@ function renderHorariosSemana(){
   const dates = getWeekDates(horariosWeekOffset);
   const dateStrs = dates.map(dateStr);
   const label = `${dates[0].toLocaleDateString(localeActual(),{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString(localeActual(),{day:'numeric',month:'short',year:'numeric'})}`;
-  const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)}<br><span style="font-size:10.5px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
+  const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)}<br><span class="txt-xs" style="font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
 
   const rows = emps.map(emp => {
     let totalH = 0;
@@ -36402,7 +36735,7 @@ function renderHorariosSemana(){
         const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
         const hh = turnoHours(turno);
         if(hh > 0) totalH += hh;
-        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px;text-align:center;${editUnlocked?'cursor:pointer':''}" ${editUnlocked?`onclick="openTurnoModal(${turno.id})"`:''}>${turno.tipo}${turno.tipo!=='D'?`<br><span style="font-size:10.5px;font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
+        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px;text-align:center;${editUnlocked?'cursor:pointer':''}" ${editUnlocked?`onclick="openTurnoModal(${turno.id})"`:''}>${turno.tipo}${turno.tipo!=='D'?`<br><span class="txt-xs" style="font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
       }
       // El calendario es solo VISTA: asignar un turno nuevo se hace desde el
       // botón de calendario de la ficha del empleado (horario fijo o por
@@ -43227,7 +43560,7 @@ function renderDistDetail(){
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        ${task.bySelf ? `<span class="badge" style="font-size:10.5px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
         <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
@@ -43242,8 +43575,8 @@ function renderDistDetail(){
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        <span class="badge badge-purple" style="font-size:10.5px" title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
-        ${task.bySelf ? `<span class="badge" style="font-size:10.5px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        <span class="badge badge-purple txt-xs"  title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
+        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
         <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
@@ -43262,7 +43595,7 @@ function renderDistDetail(){
       return `
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:${canToggle?'pointer':'not-allowed'}">
         <input type="checkbox" ${done?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${lt.id},this.checked)">
-        <span class="badge badge-blue" style="font-size:10.5px"><i class="ti ti-spray"></i> Limpieza</span>
+        <span class="badge badge-blue txt-xs" ><i class="ti ti-spray"></i> Limpieza</span>
         <span style="flex:1;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(lt.area)}${lt.producto?` <span style="color:var(--muted);font-size:12px">(${escapeHtml(lt.producto)})</span>`:''}</span>
       </label>
     `;}).join('');
@@ -43275,14 +43608,14 @@ function renderDistDetail(){
       return `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked,'${ds}')" title="${t('title.markAsDone')}">
-        <span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-speakerphone"></i> Promo</span>
+        <span class="badge badge-amber txt-xs" ><i class="ti ti-speakerphone"></i> Promo</span>
         <span style="flex:1;font-size:13px;cursor:pointer;${done?'text-decoration:line-through;color:var(--muted)':''}" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</span>
       </div>
     `;}).join('');
 
     return `
       <div style="padding:10px 0;border-bottom:1px solid var(--border);${isToday?'background:var(--brand-cream)':(dayHasPending?'background:var(--red-l)':'')}">
-        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green" style="font-size:10.5px">${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red" style="font-size:10.5px"><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green txt-xs" >${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red txt-xs" ><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
         ${promosHtml}
         ${limpiezaHtml}
         ${tareasHtml}
@@ -43562,13 +43895,30 @@ function computeClientStatsFromSales(matches){
   // "siempre viene poco" (inactivo normal) de uno que venía a menudo y de
   // repente ha dejado de venir mucho más tiempo del que solía tardar (en riesgo).
   let avgIntervalDays = null;
+  let spanDays = null;
   if(dates.length >= 3){
-    const spanDays = (new Date(lastDate) - new Date(firstDate)) / 86400000;
+    spanDays = (new Date(lastDate) - new Date(firstDate)) / 86400000;
     avgIntervalDays = spanDays / (dates.length - 1);
   }
   const isNew = firstDate!=null && recency!=null ? (Math.floor((new Date(todayStr()) - new Date(firstDate))/86400000) <= 30) : false;
-  const atRisk = avgIntervalDays!=null && recency!=null && recency > avgIntervalDays * 2;
-  return {visitas, visitas30d, visitasYear, ticketMedio, total, total30d, totalYear, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
+  /* "En riesgo" era `recency > avgIntervalDays * 2` a secas, y con un cliente
+     habitual eso no significa nada: uno que viene casi a diario tiene un
+     intervalo medio de 0,4 días, así que con UN día sin aparecer ya
+     superaba el doble y salía marcado. En el negocio del dueño había gente
+     con mil visitas y la última AYER etiquetada "en riesgo" (13/09).
+
+     Dos condiciones más, y las dos son de sentido común:
+     · hace falta histórico suficiente para saber su ritmo — con tres visitas
+       de un mismo fin de semana no se sabe nada de nadie;
+     · y tiene que haber pasado tiempo DE VERDAD. Avisar de que se pierde a
+       alguien que vino la semana pasada no lleva a ninguna acción, y un
+       aviso que no lleva a nada enseña a ignorar todos los demás. */
+  const HISTORIAL_MINIMO_DIAS = 30;   // desde su primera visita
+  const AUSENCIA_MINIMA_DIAS = 14;    // por debajo de esto, no es "en riesgo"
+  const atRisk = avgIntervalDays != null && recency != null
+    && spanDays >= HISTORIAL_MINIMO_DIAS
+    && recency > Math.max(avgIntervalDays * 2, AUSENCIA_MINIMA_DIAS);
+  return {visitas, visitas30d, visitasYear, ticketMedio, total, total30d, totalYear, lastDate, firstDate, recency, avgIntervalDays, spanDays, isNew, atRisk};
 }
 function clientSalesStats(c){
   return computeClientStatsFromSales(clientSales(c));
@@ -43722,9 +44072,13 @@ function renderClientes(){
       const expanded = clientExpandedIds.has(c.id);
       return `
       <div class="card client-card ${expanded?'expanded':''}">
+        <!-- El resumen plegado es lo que se ve de un vistazo con la lista
+             entera delante: nombre y puntos, nada más. La etiqueta de
+             segmento ("Nuevo"/"En riesgo") se fue al detalle: pegada al
+             contador competía con él y, justo cuando tocaba dar un premio,
+             lo que hay que leer es 10/10, no una etiqueta (13/09). -->
         <div class="client-card-summary" onclick="toggleClientExpand(${c.id})">
           <span class="client-card-name">${escapeHtml(c.name)}</span>
-          ${segmentBadge}
           <span class="badge ${loyaltyCls}">${points}/10</span>
           <i class="ti ti-chevron-down client-card-chevron"></i>
         </div>
@@ -43738,7 +44092,7 @@ function renderClientes(){
           </div>
           <div class="client-card-detail-row"><span>${t('label.visits30d')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitas30d}</span></button></div>
           <div class="client-card-detail-row"><span>${t('label.visitsYear')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitasYear}</span></button></div>
-          <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong></div>
+          <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong>${segmentBadge ? ` ${segmentBadge}` : ''}</div>
           <div class="client-card-detail-row"><span>${t('label.avgTicket')}</span><strong>${fmtMoney(stats.ticketMedio)}</strong></div>
           <div class="client-card-detail-row"><span>${t('label.total30d')}</span><strong>${fmtMoney(stats.total30d)}</strong></div>
           <div class="client-card-detail-row"><span>${t('label.totalYear')}</span><strong>${fmtMoney(stats.totalYear)}</strong></div>
@@ -45640,13 +45994,13 @@ function renderPromoDia(){
                 <input type="checkbox" ${done?'checked':''} onchange="togglePromoDone(${p.id},this.checked,'${date}')">
                 <span style="${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(p.titulo)}</span>
               </label>
-              ${p.recurrence==='weekly' ? `<span class="badge badge-blue" style="font-size:10.5px" title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
+              ${p.recurrence==='weekly' ? `<span class="badge badge-blue txt-xs"  title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
             ${p.menuItemName ? `<div style="font-size:12px;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
               <span class="badge badge-green"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} -${p.discountPct}%</span>
-              ${p.horaInicio && p.horaFin ? `<span class="badge" style="font-size:10.5px"><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
-              ${p.maxUses ? `<span class="badge" style="font-size:10.5px" title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
+              ${p.horaInicio && p.horaFin ? `<span class="badge txt-xs" ><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
+              ${p.maxUses ? `<span class="badge txt-xs"  title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
             </div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
             ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString(localeActual())))}</div>` : ''}
@@ -45690,7 +46044,7 @@ function renderPromoSemana(){
   const headerCells = dates.map((d,i) => {
     const ds = dateStr(d);
     const isToday = ds === todayStr();
-    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${weekDayShort(i)}<br><span style="font-size:10.5px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
+    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${weekDayShort(i)}<br><span class="txt-xs" style="font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
   }).join('');
 
   const bodyCells = dates.map(d => {
@@ -48250,7 +48604,7 @@ function renderVerifactuConfigCard(){
     <div class="card" style="position:relative;opacity:0.85">
       <h3 style="display:flex;align-items:center;gap:8px">
         <i class="ti ti-file-invoice"></i> ${t('mn.verifactu.title')}
-        <span class="badge" style="background:var(--muted,#888);color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;font-size:10.5px"><i class="ti ti-hourglass-low"></i> ${t('mn.verifactu.draftBadge')}</span>
+        <span class="badge txt-xs" style="background:var(--muted,#888);color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:0.5px"><i class="ti ti-hourglass-low"></i> ${t('mn.verifactu.draftBadge')}</span>
       </h3>
       <div style="background:var(--bg-soft,#f4f4f4);border:1px dashed var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px;color:var(--muted)">
         <p style="margin:0">${t('mn.verifactu.draftNotice')}</p>
