@@ -695,8 +695,23 @@ function isValidEmail(v){
 // Identificador único para poder seguir el estado del pedido después de
 // enviarlo (ver trackOrderStatus) — antes solo se generaba dentro de
 // payWithCard, así que un pedido pagado en efectivo nunca tenía uno.
+/* El token es lo ÚNICO que protege el seguimiento de un pedido o una reserva:
+   quien lo adivine ve ese pedido y puede tocar su estado. Math.random() no
+   está pensado para eso y en algunos navegadores es predecible a partir de
+   dos valores seguidos. crypto.getRandomValues sí. Se mantiene el prefijo y
+   la marca de tiempo para que los tokens sigan ordenándose por fecha, y el
+   respaldo antiguo por si algún navegador viejo no trae crypto. */
 function genClientRef(){
-  return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const azar = (() => {
+    try{
+      const b = new Uint8Array(12);
+      crypto.getRandomValues(b);
+      return Array.from(b, n => n.toString(36).padStart(2, '0')).join('').slice(0, 16);
+    }catch{
+      return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    }
+  })();
+  return 'r' + Date.now().toString(36) + azar;
 }
 
 // Resalta un campo inválido tras un intento de envío fallido y hace scroll

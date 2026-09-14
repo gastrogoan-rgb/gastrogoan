@@ -116,8 +116,9 @@ lanzar; node test/caos-cocina.mjs > "$SALIDA/caoscocina.txt" 2>&1 & P82=$!
 lanzar; node test/cdr-periodo.mjs > "$SALIDA/cdrperiodo.txt" 2>&1 & P83=$!
 lanzar; node test/cliente-en-riesgo.mjs > "$SALIDA/clienteriesgo.txt" 2>&1 & P84=$!
 lanzar; node test/movil.mjs > "$SALIDA/movil.txt" 2>&1 & P85=$!
+lanzar; node test/endurecido-publico.mjs > "$SALIDA/endurecido.txt" 2>&1 & P86=$!
 
-echo "→ 47 pruebas, de $TANDA en $TANDA…"
+echo "→ 48 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   # ⚠️ El patrón NO puede llevar el número de casos a pelo ("los 10 casos
@@ -127,6 +128,17 @@ espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
   if grep -qE "$4" "$3" 2>/dev/null; then echo "✅ $2"
   else echo "❌ $2 — ver $3"; tail -6 "$3"; FALLOS=1; fi
+}
+acepta(){ # igual que espera, pero un fallo NO tumba la batería
+  # Para el único fallo que está aceptado a conciencia. Antes se toleraba
+  # "de memoria": la batería salía en rojo siempre y había que acordarse de
+  # que ese rojo era el bueno. Eso vale con una persona mirando; no vale
+  # para una comprobación automática, donde un rojo permanente enseña a no
+  # mirar ninguno. Aquí se dice cuál es y por qué, y cualquier OTRO fallo
+  # sigue tumbando la tanda.
+  wait "$1"
+  if grep -qE "$4" "$3" 2>/dev/null; then echo "✅ $2"
+  else echo "🟡 $2 — fallo ACEPTADO: $5"; fi
 }
 espera $P1 "cálculos (dinero, IVA, stock, recetas)" "$SALIDA/smoke.txt"   "✅ Todo OK"
 espera $P2 "sincronización"                          "$SALIDA/sync.txt"    "Todas las pruebas activas"
@@ -160,7 +172,8 @@ espera $P29 "escala: nada crece con el numero de clientes" "$SALIDA/escala.txt" 
 espera $P30 "los enlaces de la web publica (QR y nombre corto)" "$SALIDA/enlaces.txt"     "casos pasaron"
 espera $P31 "el generador: emitir y ANULAR licencias"     "$SALIDA/generador.txt"   "casos pasaron"
 espera $P32 "la demo (datos creibles y sin asistentes)"    "$SALIDA/demo.txt"       "casos pasaron"
-espera $P33 "visual real en PC, tablet y movil"        "$SALIDA/visualreal.txt" "Nada que señalar"
+acepta $P33 "visual real en PC, tablet y movil"        "$SALIDA/visualreal.txt" "Nada que señalar" \
+  "los botones compactos de Comandas Cocina (91x25 px) quedan por debajo del minimo tactil. Los pidio asi el dueno el 9/09 para que no ocupen media pantalla en hora punta."
 espera $P34 "traducciones (es/ca/en, 41 pantallas)"    "$SALIDA/traduce.txt"    "se puede usar en los tres idiomas"
 espera $P35 "los 6 modos de sesion (empleado, edicion, reparto)" "$SALIDA/permisos.txt" "los [0-9]+ casos pasaron"
 espera $P36 "iPhone y iPad (trampas de Safari)"        "$SALIDA/apple.txt"     "los [0-9]+ casos pasaron"

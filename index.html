@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<!-- El zoom se dejó bloqueado para que el TPV no se moviera con un pellizco
+     accidental en hora punta. El precio era demasiado alto: en una app llena
+     de cifras de dinero, quien ve poco no podía acercarlas. iOS ignora
+     user-scalable desde hace años, así que solo penalizaba a Android. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

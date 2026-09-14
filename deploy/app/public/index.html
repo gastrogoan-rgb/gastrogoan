@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<!-- El zoom se dejó bloqueado para que el TPV no se moviera con un pellizco
+     accidental en hora punta. El precio era demasiado alto: en una app llena
+     de cifras de dinero, quien ve poco no podía acercarlas. iOS ignora
+     user-scalable desde hace años, así que solo penalizaba a Android. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3146,7 +3150,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '13/09/2026 23:01';
+const GG_BUILD = '14/09/2026 11:38';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -5562,8 +5566,9 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$turnoIdx": {
+                "//": "El salto de +40 por escritura es lo que impide que alguien de fuera deje el aforo en 500 y cierre la agenda del negocio de un plumazo. La app solo suma los comensales de UNA reserva, asi que nunca se acerca a ese tope.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
             }
           },
@@ -5571,8 +5576,9 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$slot": {
+                "//": "Mismo tope que aforoHold: la app suma de uno en uno.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
             }
           },
@@ -5590,20 +5596,23 @@ const FIREBASE_RULES_JSON = `{
           "orderStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+              "//": "El token es lo unico que separa el pedido de un cliente del de otro, asi que se exige que sea largo: sin longitud minima valia 'a' y el seguimiento de cualquiera se podia adivinar probando. Aqui no habia NINGUN .validate: se podia escribir cualquier cosa en esta rama.",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
+              ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
             }
           },
           "reservationStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
+              ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
             }
           },
           "reservationLookup": {
             "$lookupKey": {
               ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
               "$token": {
-                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
                 ".validate": "newData.isBoolean() && newData.val() === true"
               }
             }
@@ -12245,7 +12254,7 @@ const I18N = {
     'mn.verifactu.pendingCount': '${n} ventas pendientes de confirmar con el proveedor (se reintentará automáticamente).',
     'msg.verifactuMissingFields': 'Selecciona un proveedor e introduce tu clave de API antes de activarlo.',
     'mn.verifactu.serie': 'Serie de este dispositivo', 'mn.verifactu.serieHint': 'Identifica a este aparato en concreto (p.ej. T1, T2, Barra...). Si usas GastroGoan en varios móviles/tablets a la vez, cada uno necesita una serie distinta para que nunca se repita un número de factura.',
-    'mn.verifactu.draftBadge': 'Próximamente', 'mn.verifactu.draftNotice': 'VeriFactu todavía no es obligatorio para tu negocio. GastroGoan ya está técnicamente preparado; cuando la normativa lo exija, podrás activarlo aquí mismo.',
+    'mn.verifactu.draftBadge': 'Próximamente', 'mn.verifactu.draftNotice': 'VeriFactu todavía no es obligatorio para tu negocio, y esta función está en desarrollo: aún no emite facturas verificables ni sirve para cumplir la normativa. Cuando esté homologada y lista, se activa aquí mismo y te avisamos.',
     'mn.verifactu.declarationsTitle': 'Declaraciones responsables', 'mn.verifactu.declarationsDesc': 'Acceso a la Declaración Responsable del fabricante del software y a la del proveedor de envío a VeriFactu, tal como exige la normativa.',
     'mn.verifactu.ownDeclaration': 'De GastroGoan (fabricante)', 'mn.verifactu.ownDeclarationPending': 'En trámite',
     'mn.verifactu.providerDeclaration': 'Del proveedor VeriFactu', 'mn.verifactu.providerDeclarationPending': 'Pendiente de añadir',
@@ -14481,7 +14490,7 @@ const I18N = {
     'mn.verifactu.pendingCount': '${n} vendes pendents de confirmar amb el proveïdor (es reintentarà automàticament).',
     'msg.verifactuMissingFields': 'Selecciona un proveïdor i introdueix la teva clau d\'API abans d\'activar-ho.',
     'mn.verifactu.serie': 'Sèrie d\'aquest dispositiu', 'mn.verifactu.serieHint': 'Identifica aquest aparell en concret (p.ex. T1, T2, Barra...). Si uses GastroGoan en diversos mòbils/tauletes alhora, cadascun necessita una sèrie diferent perquè mai es repeteixi un número de factura.',
-    'mn.verifactu.draftBadge': 'Properament', 'mn.verifactu.draftNotice': 'VeriFactu encara no és obligatori per al teu negoci. GastroGoan ja està tècnicament preparat; quan la normativa ho exigeixi, podràs activar-ho aquí mateix.',
+    'mn.verifactu.draftBadge': 'Properament', 'mn.verifactu.draftNotice': 'VeriFactu encara no és obligatori per al teu negoci, i aquesta funció està en desenvolupament: encara no emet factures verificables ni serveix per complir la normativa. Quan estigui homologada i llesta, s\'activa aquí mateix i t\'avisem.',
     'mn.verifactu.declarationsTitle': 'Declaracions responsables', 'mn.verifactu.declarationsDesc': 'Accés a la Declaració Responsable del fabricant del programari i a la del proveïdor d\'enviament a VeriFactu, tal com exigeix la normativa.',
     'mn.verifactu.ownDeclaration': 'De GastroGoan (fabricant)', 'mn.verifactu.ownDeclarationPending': 'En tràmit',
     'mn.verifactu.providerDeclaration': 'Del proveïdor VeriFactu', 'mn.verifactu.providerDeclarationPending': 'Pendent d\'afegir',
@@ -16721,7 +16730,7 @@ const I18N = {
     'mn.verifactu.pendingCount': '${n} sales pending confirmation from the provider (will retry automatically).',
     'msg.verifactuMissingFields': 'Select a provider and enter your API key before enabling it.',
     'mn.verifactu.serie': 'This device\'s series', 'mn.verifactu.serieHint': 'Identifies this specific device (e.g. T1, T2, Bar...). If you use GastroGoan on several phones/tablets at once, each one needs a different series so an invoice number is never repeated.',
-    'mn.verifactu.draftBadge': 'Coming soon', 'mn.verifactu.draftNotice': 'VeriFactu is not mandatory yet for your business. GastroGoan is already technically ready; you\'ll be able to activate it right here once the regulation requires it.',
+    'mn.verifactu.draftBadge': 'Coming soon', 'mn.verifactu.draftNotice': 'VeriFactu is not mandatory yet for your business, and this feature is still in development: it does not issue verifiable invoices yet and cannot be used to comply with the regulation. Once it is certified and ready, you\'ll activate it right here and we\'ll let you know.',
     'mn.verifactu.declarationsTitle': 'Compliance declarations', 'mn.verifactu.declarationsDesc': 'Access to the software manufacturer\'s Compliance Declaration and to the VeriFactu submission provider\'s, as required by the regulation.',
     'mn.verifactu.ownDeclaration': 'GastroGoan\'s (manufacturer)', 'mn.verifactu.ownDeclarationPending': 'In progress',
     'mn.verifactu.providerDeclaration': 'VeriFactu provider\'s', 'mn.verifactu.providerDeclarationPending': 'Pending',

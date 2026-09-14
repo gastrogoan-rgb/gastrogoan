@@ -2412,8 +2412,9 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$turnoIdx": {
+                "//": "El salto de +40 por escritura es lo que impide que alguien de fuera deje el aforo en 500 y cierre la agenda del negocio de un plumazo. La app solo suma los comensales de UNA reserva, asi que nunca se acerca a ese tope.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
             }
           },
@@ -2421,8 +2422,9 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$slot": {
+                "//": "Mismo tope que aforoHold: la app suma de uno en uno.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
             }
           },
@@ -2440,20 +2442,23 @@ const FIREBASE_RULES_JSON = `{
           "orderStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+              "//": "El token es lo unico que separa el pedido de un cliente del de otro, asi que se exige que sea largo: sin longitud minima valia 'a' y el seguimiento de cualquiera se podia adivinar probando. Aqui no habia NINGUN .validate: se podia escribir cualquier cosa en esta rama.",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
+              ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
             }
           },
           "reservationStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
+              ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
             }
           },
           "reservationLookup": {
             "$lookupKey": {
               ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
               "$token": {
-                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
                 ".validate": "newData.isBoolean() && newData.val() === true"
               }
             }
