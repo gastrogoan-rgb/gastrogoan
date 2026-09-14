@@ -15,7 +15,19 @@ mkdir -p dist
 echo "🔧 Construyendo index.html..."
 
 # Read CSS (icons + fuentes incrustadas + app styles)
-CSS_ICONS=$(cat css/tabler-icons.min.css)
+#
+# Los iconos se RECORTAN a los que la app usa de verdad. Tabler entero son
+# 5.147 iconos y aquí se usan unos 230, pero el peso no se notaba en las
+# pruebas: la fuente viaja como woff2 en base64, que ya viene comprimido, así
+# que gzip no lo tocaba y esos ~600 KB eran un tercio de TODO lo que se
+# descarga la primera vez que alguien abre la app. 800 KB → 53 KB.
+#
+# El juego completo (css/tabler-icons.min.css) sigue siendo la fuente de la
+# verdad y no se toca: el recorte se genera aquí, así que un icono nuevo
+# entra solo en la siguiente compilación.
+echo "✂️  Recortando la fuente de iconos..."
+python3 tools/recortar-iconos.py build/tabler-icons.subset.css
+CSS_ICONS=$(cat build/tabler-icons.subset.css)
 CSS_FONTS=$(cat css/fonts.css)
 CSS_APP=$(cat css/styles.css)
 

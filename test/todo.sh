@@ -117,8 +117,9 @@ lanzar; node test/cdr-periodo.mjs > "$SALIDA/cdrperiodo.txt" 2>&1 & P83=$!
 lanzar; node test/cliente-en-riesgo.mjs > "$SALIDA/clienteriesgo.txt" 2>&1 & P84=$!
 lanzar; node test/movil.mjs > "$SALIDA/movil.txt" 2>&1 & P85=$!
 lanzar; node test/endurecido-publico.mjs > "$SALIDA/endurecido.txt" 2>&1 & P86=$!
+lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 
-echo "→ 48 pruebas, de $TANDA en $TANDA…"
+echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   # ⚠️ El patrón NO puede llevar el número de casos a pelo ("los 10 casos
@@ -226,5 +227,8 @@ espera $P82 "Modo caos en Cocina: lo pendiente en una lista, por orden de espera
 espera $P83 "Cuenta de Resultados: se elige año Y periodo (mes o trimestre)" "$SALIDA/cdrperiodo.txt" "casos pasaron"
 espera $P84 "Clientes: \"en riesgo\" solo para quien de verdad ha dejado de venir" "$SALIDA/clienteriesgo.txt" "casos pasaron"
 espera $P85 "La app en un móvil de verdad: 5 anchos (320-430), nada cortado ni apiñado" "$SALIDA/movil.txt" "se ve bien en los cinco anchos"
+
+espera $P86 "Espejo público endurecido: holds sin saltos, tokens largos, zoom libre" "$SALIDA/endurecido.txt" "casos pasaron"
+espera $P87 "Iconos recortados: ninguno de los que usa la app se ha quedado fuera" "$SALIDA/iconos.txt" "casos pasaron"
 
 exit $FALLOS

@@ -363,7 +363,7 @@ bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (e
 bash build.sh                 # regenerar dist/
 ```
 
-O las 86 de una vez, en paralelo (son independientes; encadenarlas solo
+O las 87 de una vez, en paralelo (son independientes; encadenarlas solo
 servía para esperar):
 
 ```bash
@@ -382,7 +382,7 @@ solo si no hay ninguno.
 
 **Desde el 14/09 la batería corre sola en cada push y cada pull request**
 (`.github/workflows/pruebas.yml`). Antes `npm test` solo lanzaba el humo y
-las 86 se pedían a mano, así que una regresión podía llegar a `main` —y de
+las 87 se pedían a mano, así que una regresión podía llegar a `main` —y de
 ahí a Cloudflare— sin que nada la parase. Es gratis: Actions no tiene límite
 en repositorios públicos y no crece con las licencias vendidas.
 
@@ -698,7 +698,39 @@ Dos hallazgos **no se tocan**, y conviene no volver a replantearlos:
   Function + plan Blaze, o sea pagos recurrentes. Decisión tomada: no.
 
 Prueba nueva permanente: `test/endurecido-publico.mjs` (25 casos). La
-batería pasa de 85 a 86.
+batería pasa de 85 a 87.
+
+**La fuente de iconos, recortada (800 KB → 53 KB).** La misma auditoría dijo
+*"el HTML pesa 4,8 MB con caché de revalidación, partidlo en módulos"*. Las
+dos premisas eran falsas —el service worker es *cache-first* (sirve la copia
+guardada y solo pide `version.json`, 29 bytes) y Cloudflare comprime, así que
+por la red iban 1,8 MB, no 4,8— pero **la primera carga sí pesaba**, y la
+causa no era el fichero único (que ES el producto: dos HTML sueltos).
+
+Era `css/tabler-icons.min.css`: **5.147 iconos, de los que la app usa 264**.
+Y no se notaba en ninguna medida de compresión porque la fuente viaja como
+**woff2 en base64, que ya viene comprimido**: gzip no podía tocarlo, así que
+esos ~600 KB eran **un tercio de todo lo que se descarga la primera vez**.
+
+Ahora `build.sh` llama a `tools/recortar-iconos.py`. **Primera descarga real:
+1,8 MB → 1,3 MB**, sin partir el fichero ni tocar la arquitectura.
+
+⚠️ El juego completo (`css/tabler-icons.min.css`) **sigue siendo la fuente de
+la verdad y no se toca**: el recorte se genera en `build/` (ignorado por git,
+como `dist/`). Así un icono nuevo entra solo en la siguiente compilación, sin
+que nadie tenga que acordarse.
+
+⚠️ **Los iconos que se arman en tiempo de ejecución no los ve el rastreador**
+y van a mano en `DINAMICOS` (hoy: `sunrise`, `sunset`, `chevron-up`,
+`history`). Si se añade otro `ti-${...}`, hay que apuntarlo ahí. Lo vigilan
+`test/iconos.mjs` (8 casos) y una comprobación dentro del propio recortador:
+un icono perdido no falla, sale como un **cuadradito vacío** en una pantalla
+concreta, y solo lo ve quien abra esa pantalla.
+
+⚠️ **`todo.sh` tiene DOS listas**: la de `lanzar` y la de `espera`. Añadir
+solo la primera deja la prueba corriendo **sin que nadie mire su resultado** —
+pasó con P86 el 14/09 y no lo canta nada. Al añadir una prueba, comprobar que
+su nombre SALE en la tanda.
 
 ⚠️ **El repositorio es PÚBLICO y `generador-licencias.html` está dentro.**
 No se pueden emitir licencias sin la contraseña de Firebase del admin (las
