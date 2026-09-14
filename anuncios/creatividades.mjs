@@ -22,6 +22,7 @@
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
 import {TICKET_CSS, ticketHtml} from './ticket.mjs';
+import {PLATO_CSS, PLATO_HTML} from './plato.mjs';
 
 const SALIDA = 'anuncios/salida';
 const FORMATOS = [
@@ -287,12 +288,11 @@ const CIFRA = {
   firma: 'oscura',
 };
 
+const PLATO = {css: PLATO_CSS, html: PLATO_HTML, firma: null};
+
 const IDEAS = {
-  '1-ticket':  TICKET,
-  '2-comanda': COMANDA,
-  '3-pizarra': PIZARRA,
-  '4-cartel':  CARTEL,
-  '5-cifra':   CIFRA,
+  '1-ticket': TICKET,
+  '2-plato':  PLATO,
 };
 
 /* Las medidas, por formato. Story tiene 570 px más de alto, así que todo
@@ -318,7 +318,14 @@ const VARS = (f) => {
     --k-gap:${s ? 32 : 25}px;
     --n-pad:${s ? 84 : 70}px; --n-banda:${s ? 26 : 22}px; --n-fpeq:${s ? 27 : 24}px;
     --n-fgig:${s ? 300 : 250}px; --n-fsub:${s ? 76 : 66}px; --n-fchip:${s ? 25 : 22}px;
-    --n-gap:${s ? 34 : 26}px; --n-tach:${s ? 1180 : 800}px; --n-tachh:${s ? 0 : 0}px;`;
+    --n-gap:${s ? 34 : 26}px; --n-tach:${s ? 1180 : 800}px; --n-tachh:${s ? 0 : 0}px;
+    --pl-ojo:${s ? 118 : 86}px; --pl-fojo:${s ? 27 : 24}px;
+    --pl-top:${s ? 300 : 210}px; --pl-plato:${s ? 760 : 730}px; --pl-cub:${s ? 46 : 44}px;
+    --pl-tick:${s ? 400 : 386}px; --pl-tpad:${s ? '30px 26px' : '28px 24px'};
+    --pl-ft1:${s ? 19 : 18}px; --pl-ft2:${s ? 60 : 58}px; --pl-ft3:${s ? 17 : 16}px;
+    --pl-tgap:${s ? 16 : 14}px;
+    --pl-taza:${s ? 300 : 280}px; --pl-taza-r:${s ? -80 : -74}px; --pl-taza-b:${s ? 420 : 296}px;
+    --pl-pie:${s ? 150 : 104}px; --pl-fpie:${s ? 84 : 76}px; --pl-fmarca:${s ? 38 : 34}px;`;
 };
 
 /* El ruido, generado en el propio navegador. Es lo que quita el acabado
