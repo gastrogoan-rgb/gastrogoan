@@ -98,10 +98,13 @@ const CSS = `
     font-size:.34em;letter-spacing:0;color:#fff;white-space:nowrap;
     margin-left:-.04em}
 
-  .soft{font-family:'SG',sans-serif;margin-top:var(--gap2);
-    font-size:var(--fsoft);font-weight:500;color:#EFE9E1;letter-spacing:-.01em}
-  .soft b{font-weight:700;color:#fff}
-  .soft b span{color:${NARANJA}}
+  .precio{font-family:'SG',sans-serif;margin-top:var(--gap2);
+    font-size:var(--fsoft);font-weight:500;color:#C8C0B5;letter-spacing:-.01em}
+  .precio b{font-weight:700;color:#fff}
+  /* Quitar el miedo. Sin clientes todavía no hay reseñas que enseñar, y
+     esto hace el mismo trabajo: bajar la barrera de entrada. */
+  .tranquilo{font-family:'PM',monospace;margin-top:var(--gap3);
+    font-size:var(--ftranq);letter-spacing:.1em;color:#8E857A}
 
   .cta{font-family:'SG',sans-serif;margin-top:var(--gap);display:inline-flex;
     align-items:center;gap:var(--ctagap);background:${NARANJA};color:#fff;
@@ -124,8 +127,9 @@ const HTML = `
     <div class="cierre">
       <div class="ahorra">Ahorra</div>
       <div class="cifra"><u>+</u>2.500 €<i>al año</i></div>
-      <div class="soft">Software <b>Gastro<span>Goan</span></b></div>
-      <div class="cta">¡Descubre cómo!<u>&rarr;</u></div>
+      <div class="precio">Cuesta <b>100 € al año</b></div>
+      <div class="tranquilo">SIN CUOTAS · SIN PERMANENCIA · SIN INSTALAR NADA</div>
+      <div class="cta">Te lo enseño en 15 min<u>&rarr;</u></div>
     </div>
   </div>
   <div class="grano"></div>
@@ -144,8 +148,8 @@ const VARS = (f) => {
     --fh1:${s ? 148 : 130}px;
     --fahorra:${s ? 82 : 72}px; --fcifra:${s ? 176 : 152}px; --cgap:${s ? 18 : 14}px;
     --subr:${s ? 10 : 9}px; --subrp:${s ? 12 : 10}px;
-    --fsoft:${s ? 38 : 33}px;
-    --fcta:${s ? 36 : 32}px; --ctap:${s ? '26px 44px' : '22px 38px'};
+    --fsoft:${s ? 40 : 35}px; --ftranq:${s ? 20 : 18}px;
+    --fcta:${s ? 34 : 30}px; --ctap:${s ? '24px 40px' : '20px 34px'};
     --ctagap:${s ? 18 : 15}px;`;
 };
 
