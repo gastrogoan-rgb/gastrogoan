@@ -9,8 +9,8 @@
  * La foto (Pexels, licencia que permite publicidad) tiene tres franjas
  * naturales: techo oscuro arriba, la barra de pase iluminada en el medio, y
  * negro casi puro abajo. No se toca esa estructura — se APROVECHA: el
- * titular cae en el techo, el precio y el botón en el negro de abajo, y la
- * cocina se queda respirando en el centro.
+ * titular cae en el techo, la cifra y el botón en el negro, y la cocina se
+ * queda respirando en el centro.
  *
  * Es justo lo contrario de lo que hacíamos antes: en vez de oscurecer media
  * foto con un degradado para meter texto encima (que siempre se nota), se
@@ -19,75 +19,97 @@
  * ⚠️ En vertical (1080×1920) la foto encaja exacta: 3153×5606 es la misma
  * proporción. En 1080×1350 hay que recortar 570 px, y se recortan del
  * techo — no de abajo, porque abajo está el negro que necesitamos.
+ *
+ * La tipografía, y por qué son cuatro familias, en anuncios/tipografia.mjs.
  */
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
+import {FUENTES, RUIDO} from './tipografia.mjs';
 
 const SALIDA = 'anuncios/salida';
 const BASE = 'http://localhost:8950';
 const FOTO = '/anuncios/fotos/cocina-pase.jpg';
+const NARANJA = '#FF6B35';
 const FORMATOS = [
   {nombre: 'feed',  w: 1080, h: 1350},
   {nombre: 'story', w: 1080, h: 1920},
 ];
 
 const CSS = `
-  @font-face{font-family:'SG';src:url('/fonts/schibsted-grotesk-700-normal.woff2') format('woff2');font-weight:700}
-  @font-face{font-family:'SG';src:url('/fonts/schibsted-grotesk-500-normal.woff2') format('woff2');font-weight:500}
-  @font-face{font-family:'PM';src:url('/fonts/ibm-plex-mono-500-normal.woff2') format('woff2');font-weight:500}
+  ${FUENTES}
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:100%;height:100%;overflow:hidden;
-    font-family:'SG',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  html,body{width:100%;height:100%;overflow:hidden;-webkit-font-smoothing:antialiased}
 
   .escena{width:100%;height:100%;position:relative;overflow:hidden;background:#070605}
   .foto{position:absolute;inset:0;background-image:url('${FOTO}');
     background-size:cover;background-position:50% var(--foco);
     filter:contrast(1.06) saturate(1.06) brightness(1.12)}
-  /* Dos velos, cada uno con su trabajo: el de arriba asienta el titular
-     sobre el techo (que tiene dos tiras de luz que si no se comen la letra);
-     el de abajo funde la cocina con el negro donde va el precio. */
+  /* Cinco paradas de velo: asienta el titular sobre el techo (que tiene dos
+     tiras de luz), deja respirar la cocina en el centro, y funde el pase
+     con el negro donde va la cifra. */
   .velo{position:absolute;inset:0;background:
     linear-gradient(180deg, rgba(7,6,5,.93) 0%, rgba(7,6,5,.72) var(--v1),
-                    rgba(7,6,5,.12) var(--v2), rgba(7,6,5,.72) var(--v3),
-                    rgba(7,6,5,.97) 100%)}
+                    rgba(7,6,5,.12) var(--v2), rgba(7,6,5,.74) var(--v3),
+                    rgba(7,6,5,.98) 100%)}
 
   .cont{position:absolute;inset:0;z-index:5;padding:var(--pad);
     display:flex;flex-direction:column}
 
-  .marca{display:flex;align-items:center;gap:var(--mgap);
+  .marca{font-family:'SG',sans-serif;display:flex;align-items:center;gap:var(--mgap);
     font-size:var(--fmarca);font-weight:700;letter-spacing:-.02em;color:#fff}
-  .marca i{width:var(--punto);height:var(--punto);background:#FF6B35;
+  .marca i{width:var(--punto);height:var(--punto);background:${NARANJA};
     border-radius:50%;display:block;flex:none;
     box-shadow:0 0 var(--punto) rgba(255,107,53,.75)}
-  .marca b{font-weight:700}
-  .marca span{color:#FF6B35}
+  .marca span{color:${NARANJA}}
 
-  h1{margin-top:var(--gap);font-size:var(--fh1);font-weight:700;
-    letter-spacing:-.05em;line-height:.85;color:#fff;text-transform:uppercase;
-    text-shadow:0 4px 40px rgba(0,0,0,.9)}
-  h1 em{font-style:normal;color:#FF6B35;display:block}
+  /* LA PREGUNTA — Anton. text-indent negativo = puntuación colgada: el "¿"
+     sale de la caja y la "B" alinea a plomo con la marca y con la cifra.
+     Es el detalle que más se nota cuando falta, aunque nadie sepa nombrarlo. */
+  h1{font-family:'Anton',sans-serif;margin-top:var(--gap);
+    font-size:var(--fh1);line-height:.9;letter-spacing:.004em;
+    color:#fff;text-transform:uppercase;text-indent:-.055em;
+    text-shadow:0 4px 44px rgba(0,0,0,.92)}
+  h1 em{font-style:normal;color:${NARANJA};display:block;text-indent:0}
 
-  /* El bloque de abajo: es el que cierra la venta, así que va todo junto y
-     pegado, sin aire entre el número y el botón. */
   .cierre{margin-top:auto}
-  .ahorra{font-size:var(--fahorra);font-weight:700;letter-spacing:-.03em;
-    color:#fff;text-transform:uppercase;line-height:.9;
+
+  /* EL AHORRO — Archivo Black. Ancha y pesada: el esqueleto contrario al de
+     Anton. Ese salto es lo que crea dos zonas en vez de una masa uniforme. */
+  .ahorra{font-family:'ArchivoB',sans-serif;font-weight:800;
+    font-size:var(--fahorra);letter-spacing:-.02em;line-height:.9;
+    color:#fff;text-transform:uppercase;
     text-shadow:0 4px 40px rgba(0,0,0,.9)}
-  .cifra{margin-top:var(--gap3);font-size:var(--fcifra);font-weight:700;
-    letter-spacing:-.06em;line-height:.82;color:#FF6B35;
-    display:flex;align-items:baseline;gap:var(--gap3);
-    text-shadow:0 4px 50px rgba(0,0,0,.95)}
-  .cifra small{font-size:.3em;letter-spacing:-.02em;color:#fff;white-space:nowrap}
-  .soft{margin-top:var(--gapbaja);font-size:var(--fsoft);font-weight:500;
-    color:#fff;letter-spacing:-.01em}
-  .soft b{font-weight:700}
-  .soft b span{color:#FF6B35}
 
-  .cta{margin-top:var(--gap);display:inline-block;background:#FF6B35;color:#fff;
-    font-size:var(--fcta);font-weight:700;letter-spacing:.01em;
-    padding:var(--ctap);box-shadow:0 16px 44px rgba(255,107,53,.38)}
+  .cifra{margin-top:var(--gap3);display:flex;align-items:baseline;
+    gap:var(--cgap);font-family:'ArchivoB',sans-serif;font-weight:900;
+    font-size:var(--fcifra);letter-spacing:-.045em;line-height:.85;
+    color:${NARANJA};text-shadow:0 4px 50px rgba(0,0,0,.95)}
+  /* El "+" como en una tabla de resultados: menor cuerpo y colgado arriba,
+     no una letra más del mismo tamaño. */
+  .cifra u{text-decoration:none;font-size:.52em;align-self:flex-start;
+    margin-top:.12em;letter-spacing:-.02em}
+  /* "al año" en itálica con gracias. Es el único sitio donde aparece: un
+     golpe, no un recurso. Repetida dejaría de sorprender. */
+  .cifra i{font-family:'Instr',serif;font-style:italic;font-weight:400;
+    font-size:.34em;letter-spacing:0;color:#fff;white-space:nowrap;
+    margin-left:-.04em}
 
+  .regla{width:var(--reglaw);height:var(--reglah);background:${NARANJA};
+    margin-top:var(--gap2);opacity:.9}
 
+  .soft{font-family:'SG',sans-serif;margin-top:var(--gap2);
+    font-size:var(--fsoft);font-weight:500;color:#EFE9E1;letter-spacing:-.01em}
+  .soft b{font-weight:700;color:#fff}
+  .soft b span{color:${NARANJA}}
+
+  .cta{font-family:'SG',sans-serif;margin-top:var(--gap);display:inline-flex;
+    align-items:center;gap:var(--ctagap);background:${NARANJA};color:#fff;
+    font-size:var(--fcta);font-weight:700;letter-spacing:-.01em;
+    padding:var(--ctap);box-shadow:0 16px 44px rgba(255,107,53,.4)}
+  .cta u{text-decoration:none;font-family:'PM',monospace;font-weight:500}
+
+  /* El grano va por encima de la tipografía también: una letra de filo
+     perfecto sobre una foto con grano se lee como pegada, no como impresa. */
   .grano{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:.1;
     background-image:var(--ruido);background-size:180px 180px}
 `;
@@ -100,9 +122,10 @@ const HTML = `
     <h1>¿Bar o<br>restaurante<br><em>en Barcelona?</em></h1>
     <div class="cierre">
       <div class="ahorra">Ahorra</div>
-      <div class="cifra">+2.500 €<small>al año</small></div>
+      <div class="cifra"><u>+</u>2.500 €<i>al año</i></div>
+      <div class="regla"></div>
       <div class="soft">Software <b>Gastro<span>Goan</span></b></div>
-      <div class="cta">¡Descubre cómo!</div>
+      <div class="cta">¡Descubre cómo!<u>&rarr;</u></div>
     </div>
   </div>
   <div class="grano"></div>
@@ -111,29 +134,20 @@ const HTML = `
 const VARS = (f) => {
   const s = f.nombre === 'story';
   // En feed hay que recortar 570 px: se quitan del techo (foco al 62%), que
-  // es lo prescindible. Abajo no se toca, ahí va el precio.
+  // es lo prescindible. Abajo no se toca, ahí va la cifra.
   return `
     --foco:${s ? '50%' : '62%'};
     --v1:${s ? '24%' : '26%'}; --v2:${s ? '46%' : '48%'}; --v3:${s ? '68%' : '66%'};
-    --pad:${s ? 82 : 70}px; --gap:${s ? 34 : 26}px; --gap2:${s ? 20 : 15}px;
-    --gap3:${s ? 14 : 11}px;
+    --pad:${s ? 82 : 70}px; --gap:${s ? 34 : 26}px; --gap2:${s ? 26 : 20}px;
+    --gap3:${s ? 12 : 9}px;
     --fmarca:${s ? 40 : 36}px; --punto:${s ? 15 : 13}px; --mgap:${s ? 13 : 11}px;
-    --fh1:${s ? 128 : 112}px;
-    --fahorra:${s ? 78 : 68}px; --fcifra:${s ? 170 : 148}px;
-    --gapbaja:${s ? 52 : 40}px;
-    --fsoft:${s ? 40 : 35}px;
-    --fcta:${s ? 36 : 32}px; --ctap:${s ? '28px 46px' : '24px 40px'};
-`;
+    --fh1:${s ? 148 : 130}px;
+    --fahorra:${s ? 82 : 72}px; --fcifra:${s ? 176 : 152}px; --cgap:${s ? 18 : 14}px;
+    --reglaw:${s ? 200 : 170}px; --reglah:${s ? 8 : 7}px;
+    --fsoft:${s ? 38 : 33}px;
+    --fcta:${s ? 36 : 32}px; --ctap:${s ? '26px 44px' : '22px 38px'};
+    --ctagap:${s ? 18 : 15}px;`;
 };
-
-const RUIDO = `(() => {
-  const c=document.createElement('canvas');c.width=c.height=180;
-  const x=c.getContext('2d');const d=x.createImageData(180,180);
-  for(let i=0;i<d.data.length;i+=4){const v=118+(Math.random()*90-45);
-    d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255;}
-  x.putImageData(d,0,0);
-  document.documentElement.style.setProperty('--ruido','url('+c.toDataURL()+')');
-})()`;
 
 fs.mkdirSync(SALIDA, {recursive: true});
 const browser = await puppeteer.launch({
@@ -150,7 +164,7 @@ for(const f of FORMATOS){
     {waitUntil: 'networkidle0'});
   await page.evaluate(RUIDO);
   await page.evaluate(() => document.fonts.ready);
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 500));
   const archivo = `${SALIDA}/BCN-${f.nombre}.png`;
   await page.screenshot({path: archivo});
   console.log('✅ ' + archivo);
