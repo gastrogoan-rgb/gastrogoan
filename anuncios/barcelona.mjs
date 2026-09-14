@@ -70,14 +70,15 @@ const CSS = `
   /* El bloque de abajo: es el que cierra la venta, así que va todo junto y
      pegado, sin aire entre el número y el botón. */
   .cierre{margin-top:auto}
-  .ahorra{font-family:'PM',monospace;font-size:var(--fahorra);
-    letter-spacing:.24em;color:#E6DED2;text-transform:uppercase}
+  .ahorra{font-size:var(--fahorra);font-weight:700;letter-spacing:-.03em;
+    color:#fff;text-transform:uppercase;line-height:.9;
+    text-shadow:0 4px 40px rgba(0,0,0,.9)}
   .cifra{margin-top:var(--gap3);font-size:var(--fcifra);font-weight:700;
     letter-spacing:-.06em;line-height:.82;color:#FF6B35;
+    display:flex;align-items:baseline;gap:var(--gap3);
     text-shadow:0 4px 50px rgba(0,0,0,.95)}
-  .cifra small{font-size:.32em;letter-spacing:-.02em;color:#fff;
-    display:block;margin-top:.14em}
-  .soft{margin-top:var(--gap2);font-size:var(--fsoft);font-weight:500;
+  .cifra small{font-size:.3em;letter-spacing:-.02em;color:#fff;white-space:nowrap}
+  .soft{margin-top:var(--gapbaja);font-size:var(--fsoft);font-weight:500;
     color:#fff;letter-spacing:-.01em}
   .soft b{font-weight:700}
   .soft b span{color:#FF6B35}
@@ -86,11 +87,6 @@ const CSS = `
     font-size:var(--fcta);font-weight:700;letter-spacing:.01em;
     padding:var(--ctap);box-shadow:0 16px 44px rgba(255,107,53,.38)}
 
-  /* La letra pequeña. No es un trámite: "+2.500 €" es una promesa concreta
-     y hay que decir contra qué se compara. Meta retira anuncios con cifras
-     que no se sostienen, y además puesto así se lee MÁS creíble, no menos. */
-  .legal{margin-top:var(--gap3);font-family:'PM',monospace;
-    font-size:var(--flegal);line-height:1.4;color:#8E857A;max-width:var(--legalw)}
 
   .grano{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:.1;
     background-image:var(--ruido);background-size:180px 180px}
@@ -107,8 +103,6 @@ const HTML = `
       <div class="cifra">+2.500 €<small>al año</small></div>
       <div class="soft">Software <b>Gastro<span>Goan</span></b></div>
       <div class="cta">¡Descubre cómo!</div>
-      <div class="legal">Frente al coste anual de contratar por separado TPV,
-        reservas, gestión de personal y pedidos a domicilio.</div>
     </div>
   </div>
   <div class="grano"></div>
@@ -125,10 +119,11 @@ const VARS = (f) => {
     --gap3:${s ? 14 : 11}px;
     --fmarca:${s ? 40 : 36}px; --punto:${s ? 15 : 13}px; --mgap:${s ? 13 : 11}px;
     --fh1:${s ? 128 : 112}px;
-    --fahorra:${s ? 26 : 23}px; --fcifra:${s ? 190 : 166}px;
+    --fahorra:${s ? 78 : 68}px; --fcifra:${s ? 170 : 148}px;
+    --gapbaja:${s ? 52 : 40}px;
     --fsoft:${s ? 40 : 35}px;
     --fcta:${s ? 36 : 32}px; --ctap:${s ? '28px 46px' : '24px 40px'};
-    --flegal:${s ? 18 : 16}px; --legalw:${s ? 640 : 600}px;`;
+`;
 };
 
 const RUIDO = `(() => {
