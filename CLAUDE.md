@@ -363,18 +363,32 @@ bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (e
 bash build.sh                 # regenerar dist/
 ```
 
-O las 85 de una vez, en paralelo (son independientes; encadenarlas solo
+O las 86 de una vez, en paralelo (son independientes; encadenarlas solo
 servía para esperar):
 
 ```bash
 bash test/todo.sh
 ```
 
-⚠️ **Un solo fallo está aceptado a conciencia** y sale siempre: *"visual real
-en PC, tablet y movil"* avisa de los botones compactos de Comandas Cocina
-(91×25 px, por debajo del mínimo táctil). Los pidió así el dueño el 9/09
-para que no ocupen media pantalla en hora punta. Cualquier OTRO fallo es un
-fallo de verdad.
+⚠️ **Un solo fallo está aceptado a conciencia**: *"visual real en PC, tablet
+y movil"* avisa de los botones compactos de Comandas Cocina (91×25 px, por
+debajo del mínimo táctil). Los pidió así el dueño el 9/09 para que no ocupen
+media pantalla en hora punta. Desde el 14/09 **sale en amarillo (🟡) y NO
+tumba la batería**: se declara con `acepta` en vez de `espera`, diciendo por
+qué. Se toleraba de memoria, y eso vale con una persona mirando, pero no con
+una comprobación automática — un rojo permanente enseña a no mirar ninguno.
+Cualquier OTRO fallo sigue siendo un fallo de verdad, y `todo.sh` sale con 0
+solo si no hay ninguno.
+
+**Desde el 14/09 la batería corre sola en cada push y cada pull request**
+(`.github/workflows/pruebas.yml`). Antes `npm test` solo lanzaba el humo y
+las 86 se pedían a mano, así que una regresión podía llegar a `main` —y de
+ahí a Cloudflare— sin que nada la parase. Es gratis: Actions no tiene límite
+en repositorios públicos y no crece con las licencias vendidas.
+
+⚠️ Las 84 pruebas de navegador llevan la ruta de Chromium **escrita a mano**
+(`/opt/pw-browsers/chromium-1194/...`). El workflow **crea esa misma ruta**
+apuntando al Chromium de Playwright en vez de editar 84 ficheros.
 
 Luego commit + `git push -u origin <rama>`. Borrar siempre los scripts de prueba temporales.
 
@@ -636,6 +650,61 @@ Grabado por el dueño sobre el dominio real y montado aquí. `video/`:
   El filtro `fps=1/N` de una hoja de contactos coge el del CENTRO del
   intervalo, así que viene desplazada y parece que los rótulos van por
   detrás del contenido. Ya costó dos vueltas.
+
+### Hecho el 14 de septiembre de 2026 — auditoría externa
+
+Una IA independiente revisó el repositorio (que es **público**) y sacó cinco
+hallazgos. Tres eran reales y se han corregido; dos no lo eran tanto:
+
+- **El espejo público se podía bloquear desde fuera, y eso sí era grave.**
+  Con el `publicId` (va en el QR, es público a propósito) y una sesión
+  anónima, cualquiera podía escribir **500 en `aforoHold`** de cada turno de
+  cada día: el negocio aparece COMPLETO para siempre y no entra ni una
+  reserva. Ahora **una escritura no puede subir el contador más de 40**, que
+  sobra para la mesa más grande y es cortísimo para un ataque. La app solo
+  suma los comensales de UNA reserva, así que no la roza.
+- **`orderStatus` y `reservationStatus` no tenían NINGUNA validación** en
+  las reglas de cada negocio (sí en las de la plataforma): se escribía
+  cualquier cosa, con un token de un solo carácter. Ahora el token debe
+  medir 12+ y el cuerpo tiene que ser `{status, updatedAt}`. Esto **no lo
+  vio el auditor** y era peor que lo que sí señaló.
+- **El token salía de `Math.random()`**, predecible en algunos navegadores.
+  Ahora `crypto.getRandomValues`, con respaldo para navegadores viejos.
+- **Zoom desbloqueado** (`user-scalable=no` fuera). En una app llena de
+  cifras de dinero, quien ve poco no podía acercarlas; iOS lo ignora desde
+  hace años, así que solo penalizaba a Android.
+- **VeriFactu**: el texto decía *"ya está técnicamente preparado"*. No lo
+  está. Ahora dice que está en desarrollo y que **no sirve para cumplir**.
+  El auditor lo llamó "bloqueante legal": no lo es mientras no se venda como
+  funcional, pero la frase era una promesa que había que poder cumplir.
+
+⚠️ **Las reglas viven en TRES sitios y la prueba exige que sean idénticas**:
+`FIREBASE_RULES_JSON` (js/core.js, lo que copia el asistente del alta),
+`reglas/reglas-de-cada-negocio.json` y `reglas/reglas-de-la-plataforma.json`.
+Tocar una sola hace que `test/reglas.mjs` cante. Es a propósito: si se
+separan, un cliente nuevo pega unas reglas flojas y nadie se entera.
+
+⚠️ **Endurecer las reglas no basta con publicarlas aquí.** Cada negocio ya
+dado de alta tiene las VIEJAS en su propio proyecto de Firebase: hasta que
+su dueño no pegue las nuevas, sigue expuesto. El aviso de reglas
+desactualizadas ya existe en la app.
+
+Dos hallazgos **no se tocan**, y conviene no volver a replantearlos:
+- *"Una licencia conocida se puede reclamar antes que su comprador"*: cierto,
+  pero hay que **conocer** el código de 8 caracteres, `codeClaims` no se
+  puede listar, y tú puedes liberarlo desde el generador. Es Bajo, no Alto.
+- *"La licencia es credencial permanente del tenant"*: es la limitación ya
+  documentada en `ANALISIS_GENERAL.md` (bloque 8). Arreglarla pide Cloud
+  Function + plan Blaze, o sea pagos recurrentes. Decisión tomada: no.
+
+Prueba nueva permanente: `test/endurecido-publico.mjs` (25 casos). La
+batería pasa de 85 a 86.
+
+⚠️ **El repositorio es PÚBLICO y `generador-licencias.html` está dentro.**
+No se pueden emitir licencias sin la contraseña de Firebase del admin (las
+reglas solo dejan escribir a `gastrogoan@gmail.com`, y el `apiKey` no es un
+secreto), así que no hay puerta abierta — pero sí se regala el plano del
+modelo de licencias. Decisión del dueño pendiente.
 
 ### Pendiente
 

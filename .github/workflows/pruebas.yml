@@ -1,0 +1,68 @@
+# Las 85 pruebas, en cada push y en cada pull request.
+#
+# Por qué existe: la batería entera se lanzaba A MANO con `test/todo.sh`, y
+# `npm test` solo corría el humo. Eso significa que una regresión podía
+# llegar a `main` —y de ahí a Cloudflare, y de ahí al móvil de un
+# hostelero— sin que nada la parase. El dueño se enteraba usando la app,
+# que es exactamente el patrón que llevamos meses intentando romper.
+#
+# No cuesta nada: GitHub Actions es gratis e ilimitado en repositorios
+# públicos, y no crece con el número de licencias vendidas.
+#
+# ⚠️ Chromium: las pruebas visuales necesitan un navegador de verdad. Se
+# instala el que trae Playwright y se le pasa la ruta por la variable que
+# ya leen los .mjs, para no tener que tocar ninguna prueba.
+
+name: Pruebas
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# Un push nuevo sobre la misma rama cancela la tanda anterior: no tiene
+# sentido gastar diez minutos comprobando un commit que ya está superado.
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bateria:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+
+      # Las 84 pruebas llevan la ruta del navegador escrita a mano
+      # (/opt/pw-browsers/chromium-1194/...), que es donde vive en el
+      # contenedor de desarrollo. En vez de editar 84 ficheros —84 sitios
+      # donde equivocarse— se crea aquí esa misma ruta apuntando al
+      # Chromium que acaba de instalar Playwright.
+      - name: Instalar Chromium y colocarlo donde lo buscan las pruebas
+        run: |
+          npx playwright install --with-deps chromium
+          real=$(find "$HOME/.cache/ms-playwright" -name chrome -type f -path '*chrome-linux*' | head -1)
+          if [ -z "$real" ]; then echo "No se ha encontrado el Chromium de Playwright"; exit 1; fi
+          sudo mkdir -p /opt/pw-browsers/chromium-1194/chrome-linux
+          sudo ln -sf "$real" /opt/pw-browsers/chromium-1194/chrome-linux/chrome
+          /opt/pw-browsers/chromium-1194/chrome-linux/chrome --version
+
+      - name: Comprobar la sintaxis de todos los módulos
+        run: for f in js/*.js; do node -c "$f" || exit 1; done
+
+      - name: Regenerar dist/
+        run: bash build.sh
+
+      # La batería sirve el repositorio por HTTP: abrir los HTML como
+      # file:// comparte localStorage entre archivos y enseña datos de
+      # pruebas anteriores (ver CLAUDE.md).
+      - name: La batería entera
+        run: bash test/todo.sh

@@ -10,13 +10,14 @@
         }
       },
       "publicLookup": {
-        "$publicId": {
-          ".read": true,
-          ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (data.child('apiKey').val() === newData.child('apiKey').val() && data.child('databaseURL').val() === newData.child('databaseURL').val()) || auth.token.email === 'gastrogoan@gmail.com')",
-          ".validate": "newData.hasChildren(['apiKey','databaseURL'])"
-        }
-      },
-      "public": {
+      "$publicId": {
+        "//": "Guía mínima: en qué proyecto de Firebase está el espejo público de este negocio. Se lee SIN autenticar y por REST a propósito: una petición HTTP no abre socket, así que no gasta ninguna de las 100 conexiones simultáneas del plan gratuito. No expone nada: apiKey y databaseURL no son secretos (viajan en el JS de cualquier web con Firebase); lo que protege los datos son las reglas del proyecto del negocio.",
+        ".read": true,
+        ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (data.child('apiKey').val() === newData.child('apiKey').val() && data.child('databaseURL').val() === newData.child('databaseURL').val()) || auth.token.email === 'gastrogoan@gmail.com')",
+        ".validate": "newData.hasChildren(['apiKey','databaseURL'])"
+      }
+    },
+    "public": {
         "$publicId": {
           "info": {
             ".read": "auth != null",
@@ -37,8 +38,9 @@
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$turnoIdx": {
+                "//": "El tope de +40 por escritura es lo que impide que alguien de fuera ponga el aforo en 500 y cierre la agenda del negocio de una sola vez. La app solo suma los comensales de UNA reserva, asi que nunca se acerca.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
             }
           },
@@ -46,8 +48,9 @@
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$slot": {
+                "//": "Mismo tope que aforoHold: la app suma de uno en uno.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
             }
           },
@@ -65,26 +68,38 @@
           "orderStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              "//": "El token es lo unico que separa el pedido de un cliente del de otro: sin longitud minima valia 'a' como token y el seguimiento de cualquiera se podia adivinar probando.",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
               ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
             }
           },
           "reservationStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
               ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
+            }
+          },
+          "reservationLookup": {
+            "$lookupKey": {
+              ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              "$token": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
+                ".validate": "newData.isBoolean() && newData.val() === true"
+              }
             }
           }
         }
       },
       "publicSlugs": {
         "$slug": {
+          "//": "Lectura abierta: la resuelve la web publica de reservas por REST, sin abrir socket, para no gastar conexiones simultaneas del plan gratuito. Solo devuelve el publicId, que ya va en el QR y en el enlace que el negocio reparte.",
           ".read": true,
           ".write": "auth != null && $slug.length >= 2 && $slug.length <= 40 && (!data.exists() || data.val() === newData.val() || auth.token.email === 'gastrogoan@gmail.com')",
           ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 30"
         }
       },
+
       "tenantLookup": {
         "$tenantId": {
           ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
@@ -92,28 +107,35 @@
           ".validate": "newData.hasChildren(['apiKey', 'databaseURL']) && newData.child('apiKey').isString() && newData.child('databaseURL').isString() && newData.child('databaseURL').val().length <= 300"
         }
       },
+
       "issuedCodes": {
         "$code": {
+          "//": "El admin puede BORRAR un codigo (anular una licencia). Antes solo se podia crear (!data.exists()), asi que una venta era irreversible: ni una devolucion ni un error al vender tenian arreglo desde el generador.",
           ".read": "auth != null",
           ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && (!data.exists() || !newData.exists())"
         }
       },
       "revokedCodes": {
         "$code": {
+          "//": "Codigos anulados. Lo escribe SOLO el admin desde el generador; lo lee la app al arrancar (checkLicenseRevocation) para bloquear una licencia ya canjeada. La lectura es por codigo concreto: nadie puede listar la lista entera de anulados.",
           ".read": "auth != null && $code.length == 8",
           ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8"
         }
       },
+
       "ownerNames": {
         "$user": {
           ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
           ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $user.length <= 40"
         }
       },
+
       "ownerAuth": {
         "$authKey": {
           ".read": "auth != null && $authKey.length >= 16",
+
           ".write": "auth != null && $authKey.length >= 16 && (auth.token.email === 'gastrogoan@gmail.com' || !newData.exists() || (!data.exists() && newData.hasChild('user') && root.child('gastrogoan/ownerNames').child(newData.child('user').val()).exists()))",
+
           "businesses": {
             "$tenantId": {
               ".write": "auth != null && $authKey.length >= 16 && $tenantId.length >= 4 && $tenantId.length <= 60",
@@ -122,6 +144,7 @@
           }
         }
       },
+
       "codeClaims": {
         "$code": {
           ".read": "auth != null && $code.length == 8",
@@ -129,6 +152,7 @@
           ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 40"
         }
       },
+
       "adminSalesLog": {
         ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
         ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com'"

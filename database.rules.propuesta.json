@@ -38,8 +38,9 @@
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$turnoIdx": {
+                "//": "El tope de +40 por escritura es lo que impide que alguien de fuera ponga el aforo en 500 y cierre la agenda del negocio de una sola vez. La app solo suma los comensales de UNA reserva, asi que nunca se acerca.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
             }
           },
@@ -47,8 +48,9 @@
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$slot": {
+                "//": "Mismo tope que aforoHold: la app suma de uno en uno.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
             }
           },
@@ -66,14 +68,15 @@
           "orderStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              "//": "El token es lo unico que separa el pedido de un cliente del de otro: sin longitud minima valia 'a' como token y el seguimiento de cualquiera se podia adivinar probando.",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
               ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
             }
           },
           "reservationStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
               ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
             }
           },
@@ -81,7 +84,7 @@
             "$lookupKey": {
               ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
               "$token": {
-                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
                 ".validate": "newData.isBoolean() && newData.val() === true"
               }
             }
