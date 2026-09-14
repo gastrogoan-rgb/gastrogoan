@@ -70,6 +70,9 @@ const CSS = `
     color:#fff;text-transform:uppercase;text-indent:-.055em;
     text-shadow:0 4px 44px rgba(0,0,0,.92)}
   h1 em{font-style:normal;color:${NARANJA};display:block;text-indent:0}
+  /* La "o" en minúscula. Un detalle pequeño que hace mucho: rompe el bloque
+     de versalitas y le quita el tono de cartel de rebajas. */
+  h1 .min{text-transform:lowercase}
 
   .cierre{margin-top:auto}
 
@@ -77,7 +80,8 @@ const CSS = `
      Anton. Ese salto es lo que crea dos zonas en vez de una masa uniforme. */
   .ahorra{font-family:'ArchivoB',sans-serif;font-weight:800;
     font-size:var(--fahorra);letter-spacing:-.02em;line-height:.9;
-    color:#fff;text-transform:uppercase;
+    color:#fff;text-transform:uppercase;display:inline-block;
+    border-bottom:var(--subr) solid ${NARANJA};padding-bottom:var(--subrp);
     text-shadow:0 4px 40px rgba(0,0,0,.9)}
 
   .cifra{margin-top:var(--gap3);display:flex;align-items:baseline;
@@ -93,9 +97,6 @@ const CSS = `
   .cifra i{font-family:'Instr',serif;font-style:italic;font-weight:400;
     font-size:.34em;letter-spacing:0;color:#fff;white-space:nowrap;
     margin-left:-.04em}
-
-  .regla{width:var(--reglaw);height:var(--reglah);background:${NARANJA};
-    margin-top:var(--gap2);opacity:.9}
 
   .soft{font-family:'SG',sans-serif;margin-top:var(--gap2);
     font-size:var(--fsoft);font-weight:500;color:#EFE9E1;letter-spacing:-.01em}
@@ -119,11 +120,10 @@ const HTML = `
   <div class="foto"></div><div class="velo"></div>
   <div class="cont">
     <div class="marca"><i></i><b>Gastro<span>Goan</span></b></div>
-    <h1>¿Bar o<br>restaurante<br><em>en Barcelona?</em></h1>
+    <h1>¿Bar <span class="min">o</span><br>restaurante<br><em>en Barcelona?</em></h1>
     <div class="cierre">
       <div class="ahorra">Ahorra</div>
       <div class="cifra"><u>+</u>2.500 €<i>al año</i></div>
-      <div class="regla"></div>
       <div class="soft">Software <b>Gastro<span>Goan</span></b></div>
       <div class="cta">¡Descubre cómo!<u>&rarr;</u></div>
     </div>
@@ -143,7 +143,7 @@ const VARS = (f) => {
     --fmarca:${s ? 40 : 36}px; --punto:${s ? 15 : 13}px; --mgap:${s ? 13 : 11}px;
     --fh1:${s ? 148 : 130}px;
     --fahorra:${s ? 82 : 72}px; --fcifra:${s ? 176 : 152}px; --cgap:${s ? 18 : 14}px;
-    --reglaw:${s ? 200 : 170}px; --reglah:${s ? 8 : 7}px;
+    --subr:${s ? 10 : 9}px; --subrp:${s ? 12 : 10}px;
     --fsoft:${s ? 38 : 33}px;
     --fcta:${s ? 36 : 32}px; --ctap:${s ? '26px 44px' : '22px 38px'};
     --ctagap:${s ? 18 : 15}px;`;
