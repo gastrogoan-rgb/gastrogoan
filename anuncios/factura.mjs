@@ -131,11 +131,16 @@ const CSS = `
      cuerpo. Un total que se sale de la rejilla de su propia tabla es el
      fallo que hacía que esto pareciera dos diseños pegados. */
   .total{margin-top:var(--fgap);padding-top:var(--fgap);border-top:3px solid ${TINTA};
-    display:flex;align-items:baseline;gap:16px}
+    display:flex;align-items:baseline;gap:var(--tgap)}
   .total .q{font-family:'SG',sans-serif;font-size:var(--f-fila);font-weight:700;
     color:${TINTA}}
-  .total .mes{font-family:'SG',sans-serif;font-size:var(--f-mes);font-weight:500;
-    color:#7A7268;margin-left:auto}
+  /* El importe mensual se escribe como las cifras de arriba —misma
+     tipografía y mismo cuerpo—, no como texto menudo: es la mitad del
+     argumento (lo que paga cada mes) y estaba dicho en voz baja. */
+  .total .mes{margin-left:auto;font-family:'ArchivoB',sans-serif;font-weight:800;
+    font-size:var(--f-val);letter-spacing:-.03em;color:#6E675E;white-space:nowrap}
+  .total .mes em{font-style:normal;font-family:'SG',sans-serif;font-weight:500;
+    font-size:var(--f-uni);letter-spacing:0}
   .total .v{font-weight:900;font-size:var(--f-total);letter-spacing:-.045em}
 
   /* ── LA FRANJA ──────────────────────────────────────────────────────── */
@@ -146,16 +151,21 @@ const CSS = `
   .franja{position:relative;z-index:2;background:${NARANJA};padding:var(--cpad);
     display:flex;align-items:center;gap:16px;
     box-shadow:0 24px 60px rgba(255,107,53,.34)}
-  .franja .izq{display:flex;flex-direction:column;gap:.24em}
+    /* Nada de la franja parte en dos líneas: la columna fija del precio le
+     robaba anchura y "TU NUEVA CUENTA" caía en dos renglones. */
+  .franja .izq{display:flex;flex-direction:column;gap:.24em;white-space:nowrap}
+  /* Sobre naranja, un texto al 60 % de opacidad no se lee: el naranja es
+     claro y se come el gris. Va a tinta plena y con peso. */
   .franja .et{font-family:'SG',sans-serif;font-size:var(--f-ojo);font-weight:700;
-    letter-spacing:.16em;text-transform:uppercase;color:rgba(20,18,15,.6)}
+    letter-spacing:.16em;text-transform:uppercase;color:rgba(20,18,15,.85)}
   .franja .nom{font-family:'ArchivoB',sans-serif;font-weight:900;
-    font-size:var(--f-nom);letter-spacing:-.035em;line-height:1;color:${TINTA}}
-  .franja .sub{font-family:'SG',sans-serif;font-size:var(--f-mes);font-weight:500;
-    color:rgba(20,18,15,.78)}
+    font-size:var(--f-nom);letter-spacing:-.035em;line-height:1;color:${TINTA};
+    white-space:nowrap}
+  .franja .sub{font-family:'SG',sans-serif;font-size:var(--f-sub);font-weight:700;
+    color:${TINTA}}
   .franja .v{font-weight:900;font-size:var(--f-total);letter-spacing:-.045em;
     margin-left:auto}
-  .franja .u{color:rgba(20,18,15,.6)}
+  .franja .u{color:${TINTA};font-weight:700}
 
   /* ── EL CIERRE ──────────────────────────────────────────────────────── */
   /* Una sola línea, del mismo cuerpo que el titular y en el mismo margen:
@@ -186,7 +196,7 @@ const HTML = `
     </div>
     <div class="total">
       <span class="q">Total</span>
-      <span class="mes">${AL_MES} al mes</span>
+      <span class="mes">${AL_MES} <em>al mes</em></span>
       <span class="v">${AL_ANO}</span><span class="u">/año</span>
     </div>
   </div>
@@ -210,20 +220,20 @@ const HTML = `
 const VARS = (f) => {
   const s = f.nombre === 'story';
   return `
-    --pad:${s ? 74 : 62}px; --gap:${s ? 40 : 32}px; --gapc:${s ? 16 : 13}px;
+    --pad:${s ? 74 : 62}px; --gap:${s ? 56 : 38}px; --gapc:${s ? 22 : 15}px;
     --mgap:${s ? 12 : 10}px; --punto:${s ? 13 : 12}px;
-    --cpad:${s ? '42px 44px' : '34px 36px'}; --fgap:${s ? 26 : 21}px;
-    --colv:${s ? 306 : 298}px; --colu:${s ? 78 : 66}px;
+    --cpad:${s ? '64px 52px' : '46px 40px'}; --fgap:${s ? 46 : 31}px;
+    --colv:${s ? 348 : 298}px; --colu:${s ? 78 : 66}px; --tgap:${s ? 30 : 20}px;
     --f-uni:${s ? 24 : 20}px;
     --f-marca:${s ? 36 : 32}px;
-    --f-ojo:${s ? 23 : 20}px;
-    --f-h1:${s ? 88 : 74}px;
-    --f-fila:${s ? 31 : 29}px;
-    --f-val:${s ? 40 : 34}px;
-    --f-mes:${s ? 28 : 24}px;
-    --f-total:${s ? 78 : 66}px;
-    --f-nom:${s ? 46 : 39}px;
-    --f-cierre:${s ? 86 : 82}px;`;
+    --f-ojo:${s ? 34 : 26}px;
+    --f-h1:${s ? 82 : 62}px;
+    --f-fila:${s ? 35 : 29}px;
+    --f-val:${s ? 45 : 34}px;
+    --f-mes:${s ? 28 : 24}px; --f-sub:${s ? 29 : 26}px;
+    --f-total:${s ? 98 : 74}px;
+    --f-nom:${s ? 48 : 39}px;
+    --f-cierre:${s ? 96 : 82}px;`;
 };
 
 fs.mkdirSync(SALIDA, {recursive: true});
