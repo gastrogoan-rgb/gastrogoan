@@ -49,25 +49,11 @@ const CSS = `
      cartas y donde no hay nadie a quien tapar. A la izquierda se deja la
      foto limpia para que el camarero se vea entero. */
   .velo{position:absolute;inset:0;background:
-    linear-gradient(270deg, rgba(9,8,6,.94) 0%, rgba(9,8,6,.9) 34%,
-                    rgba(9,8,6,.6) 58%, rgba(9,8,6,.1) 82%, transparent 100%),
-    linear-gradient(0deg, rgba(9,8,6,.96) 0%, rgba(9,8,6,.6) 16%, transparent 34%)}
-
-  /* Un hueco en el velo, justo sobre la pantalla. El velo de la derecha es
-     lo que hace legible el titular, pero de paso apagaba el TPV — y la
-     pantalla es la PRUEBA del producto, no puede quedar a oscuras. Esto
-     vuelve a pintar la foto solo ahí, con el borde difuminado para que no
-     se vea el recorte. */
-  .rescate{position:absolute;inset:0;z-index:4;background-image:url('${FOTO}');
-    background-size:cover;background-position:var(--posx) var(--posy);
-    filter:contrast(1.05) brightness(1.06);
-    -webkit-mask-image:radial-gradient(ellipse var(--rw) var(--rh) at var(--rx) var(--ry),
-      #000 40%, rgba(0,0,0,.55) 66%, transparent 86%);
-    mask-image:radial-gradient(ellipse var(--rw) var(--rh) at var(--rx) var(--ry),
-      #000 40%, rgba(0,0,0,.55) 66%, transparent 86%)}
+    linear-gradient(0deg, rgba(9,8,6,.97) 0%, rgba(9,8,6,.92) 18%,
+                    rgba(9,8,6,.62) 34%, rgba(9,8,6,.18) 48%, transparent 62%)}
 
   .cont{position:absolute;inset:0;z-index:5;padding:var(--pad);
-    display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+    display:flex;flex-direction:column;justify-content:flex-end}
 
   .marca{font-family:'SG',sans-serif;display:flex;align-items:center;gap:var(--mgap);
     font-size:var(--fmarca);font-weight:700;letter-spacing:-.02em;color:#fff}
@@ -76,11 +62,14 @@ const CSS = `
     box-shadow:0 0 var(--punto) rgba(255,107,53,.75)}
   .marca span{color:${NARANJA}}
 
-  h1{font-family:'Anton',sans-serif;margin-top:var(--gap);
+  h1{font-family:'Anton',sans-serif;
     font-size:var(--fh1);line-height:.9;letter-spacing:.004em;
-    color:#fff;text-transform:uppercase;
+    color:#fff;text-transform:uppercase;text-indent:-.055em;
     text-shadow:0 4px 44px rgba(0,0,0,.95)}
-  h1 em{font-style:normal;color:${NARANJA}}
+  /* Los dos números, en los dos colores opuestos: lo que paga en blanco, lo
+     que podría pagar en naranja. La comparación se ve antes de leerla. */
+  h1 em{font-style:normal;color:#fff}
+  h1 b{color:${NARANJA};font-weight:400}
   /* "esto" en minúscula y en cursiva con gracias: es la palabra que SEÑALA
      la foto, así que se dice en otro tono de voz. */
   h1 .esto{font-family:'Instr',serif;font-style:italic;font-weight:400;
@@ -106,14 +95,9 @@ const CSS = `
 
 const HTML = `
 <div class="escena">
-  <div class="foto"></div><div class="velo"></div><div class="rescate"></div>
+  <div class="foto"></div><div class="velo"></div>
   <div class="cont">
-    <div class="marca"><i></i><b>Gastro<span>Goan</span></b></div>
-    <h1>¿Por qué pagas<br><em>+2.500 € al año</em><br>por <span class="esto">esto</span>?</h1>
-    <div class="cierre">
-      <div class="oferta">App GastroGoan<br><b>100 € al año</b></div>
-      <div class="cta">¡Descubre cómo!<u>&rarr;</u></div>
-    </div>
+    <h1>¿Por qué pagar<br><em>+2.500 € al año</em><br>pudiendo pagar <b>100 €</b>?</h1>
   </div>
   <div class="grano"></div>
 </div>`;
@@ -124,11 +108,9 @@ const VARS = (f) => {
   // de cartas a la derecha, que es donde cae el texto.
   return `
     --posx:${s ? '34%' : '38%'}; --posy:${s ? '46%' : '50%'};
-    --rx:${s ? '64%' : '67%'}; --ry:${s ? '49%' : '51%'};
-    --rw:${s ? 250 : 235}px; --rh:${s ? 210 : 195}px;
     --pad:${s ? 78 : 66}px; --gap:${s ? 30 : 23}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
-    --fh1:${s ? 118 : 100}px;
+    --fh1:${s ? 122 : 104}px;
     --foferta:${s ? 66 : 57}px;
     --fcta:${s ? 34 : 30}px; --ctap:${s ? '24px 40px' : '20px 34px'};
     --ctagap:${s ? 16 : 14}px;`;
