@@ -73,9 +73,13 @@ const CSS = `
      cartel de rebajas. */
   h1 .min{text-transform:lowercase}
 
+  /* Alineado a la DERECHA: sin text-indent, que es un recurso de la
+     alineación izquierda y aquí descuadraría la primera línea. */
+  .cierre{display:flex;flex-direction:column;align-items:flex-end;text-align:right;
+    align-self:flex-end}
   .pregunta{font-family:'Anton',sans-serif;
     font-size:var(--fpreg);line-height:.92;letter-spacing:.004em;
-    color:#fff;text-transform:uppercase;text-indent:-.05em;
+    color:#fff;text-transform:uppercase;
     text-shadow:0 4px 40px rgba(0,0,0,.95)}
   /* El tachón va dibujado, no con text-decoration: así se le puede dar
      grosor, color e inclinación — y una raya perfectamente recta sobre una
@@ -116,7 +120,7 @@ const HTML = `
       <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
       <h1>¿Bar <span class="min">o</span> restaurante<br><em>en Barcelona?</em></h1>
     </div>
-    <div>
+    <div class="cierre">
       <div class="pregunta">Deja de pagar<br><span class="tachado">+2.500 € al año</span></div>
       <div class="solo"><b>Software GastroGoan</b>100 €<u>/año</u></div>
       <div class="bolsillo"><b>2.400 €</b> que vuelven a tu bolsillo</div>
