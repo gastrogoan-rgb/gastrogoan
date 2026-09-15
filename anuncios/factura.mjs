@@ -103,7 +103,7 @@ const CSS = `
   .pila{position:relative;z-index:2;display:flex;flex-direction:column;
     gap:var(--gap);transform:rotate(-.55deg)}
 
-  .cuenta{position:relative;background:
+  .cuenta{position:relative;margin-top:var(--bajar);background:
     linear-gradient(168deg, #FFFEFC 0%, ${PAPEL} 42%, #F2EFE8 100%);
     padding:var(--cpad);
     box-shadow:0 2px 2px rgba(0,0,0,.22), 0 34px 80px rgba(0,0,0,.5)}
@@ -157,10 +157,6 @@ const CSS = `
     font-size:var(--f-uni);letter-spacing:0;color:#7A7268}
   .total .v{font-weight:900;font-size:var(--f-total);letter-spacing:-.045em;
     width:auto}
-  .tach{position:relative;display:inline-block}
-  .tach::after{content:'';position:absolute;left:-1%;right:-1%;top:46%;
-    height:var(--rayaT);background:${NARANJA};transform:rotate(-1.6deg);
-    box-shadow:0 2px 10px rgba(255,107,53,.45)}
 
   /* ── LA FRANJA ──────────────────────────────────────────────────────── */
   /* Mismo ancho que la factura, mismo padding lateral por dentro, y el
@@ -183,11 +179,13 @@ const CSS = `
     white-space:nowrap}
   .franja .sub{font-family:'SG',sans-serif;font-size:var(--f-sub);font-weight:700;
     color:${TINTA}}
+  .capsula{margin-left:auto;display:flex;align-items:baseline;gap:.2em;
+    background:${TINTA};color:${PAPEL};padding:var(--kpad);
+    border-radius:999px;box-shadow:0 10px 26px rgba(20,18,15,.34)}
   .franja .v{font-weight:900;font-size:var(--f-precio);letter-spacing:-.045em;
-    margin-left:auto;width:auto}
+    width:auto;color:${PAPEL}}
   .franja .u{font-family:'ArchivoB',sans-serif;font-weight:900;
-    font-size:var(--f-uano);letter-spacing:-.03em;color:${TINTA};
-    width:auto;align-self:center}
+    font-size:var(--f-uano);letter-spacing:-.03em;color:${NARANJA};width:auto}
 
   /* ── EL CIERRE ──────────────────────────────────────────────────────── */
   /* Una sola línea, del mismo cuerpo que el titular y en el mismo margen:
@@ -224,8 +222,8 @@ const HTML = `
     </div>
     <div class="total">
       <span class="q">Total</span>
-      <span class="mes"><span class="tach">${AL_MES}</span> <em>al mes</em></span>
-      <span class="v"><span class="tach">${AL_ANO}</span></span><span class="u">/año</span>
+      <span class="mes">${AL_MES} <em>al mes</em></span>
+      <span class="v">${AL_ANO}</span><span class="u">/año</span>
     </div>
   </div>
 
@@ -235,7 +233,7 @@ const HTML = `
       <div class="nom">GastroGoan App</div>
       <div class="sub">Todo esto y mucho más</div>
     </div>
-    <span class="v">100 €</span><span class="u">/año</span>
+    <span class="capsula"><span class="v">100 €</span><span class="u">/año</span></span>
   </div>
 
   </div>
@@ -258,9 +256,9 @@ const VARS = (f) => {
     --mgap:${s ? 12 : 10}px; --punto:${s ? 13 : 12}px;
     --cpad:${s ? '74px 54px' : '52px 42px'}; --fgap:${s ? 56 : 36}px;
     --colv:${s ? 262 : 208}px; --colu:${s ? 78 : 66}px; --tgap:${s ? 26 : 20}px;
-    --rayaT:${s ? 10 : 9}px;
+    --bajar:${s ? 34 : 26}px; --kpad:${s ? '16px 30px 20px' : '15px 28px 19px'};
     --f-marca:${s ? 36 : 32}px;
-    --f-ojo:${s ? 44 : 37}px;
+    --f-ojo:${s ? 43 : 41}px;
     --f-h1:${s ? 62 : 53}px;
     --f-fila:${s ? 36 : 29}px;
     --f-val:${s ? 44 : 35}px;
@@ -268,7 +266,7 @@ const VARS = (f) => {
     --f-mes:${s ? 28 : 24}px; --f-sub:${s ? 29 : 26}px;
     --f-total:${s ? 82 : 63}px;
     --f-nom:${s ? 48 : 40}px;
-    --f-precio:${s ? 84 : 82}px; --f-uano:${s ? 38 : 38}px;
+    --f-precio:${s ? 74 : 78}px; --f-uano:${s ? 33 : 35}px;
     --f-cierre:${s ? 92 : 84}px;`;
 };
 
