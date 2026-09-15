@@ -120,6 +120,9 @@ const CSS = `
     box-shadow:0 18px 50px rgba(255,107,53,.42)}
   .solo b{display:block;font-weight:400;font-size:.34em;letter-spacing:.05em;
     margin-bottom:.12em}
+  /* "/año" es la UNIDAD del precio, no otra palabra: va a menor cuerpo y
+     pegada al número, como en cualquier tarifa bien compuesta. */
+  .solo u{text-decoration:none;font-size:.46em;letter-spacing:-.01em;margin-left:.04em}
   /* "esto" en minúscula y en cursiva con gracias: es la palabra que SEÑALA
      la foto, así que se dice en otro tono de voz. */
   h1 .esto{font-family:'Instr',serif;font-style:italic;font-weight:400;
@@ -152,7 +155,7 @@ const HTML = `
     </div>
     <div class="cierre">
     <div class="pregunta">Deja de pagar<br><span class="tachado">+2.500 € al año</span></div>
-    <div class="solo"><b>Software GastroGoan</b>100 €</div>
+    <div class="solo"><b>Software GastroGoan</b>100 €<u>/año</u></div>
     <div class="bolsillo"><b>2.400 €</b> que vuelven a tu bolsillo</div>
     </div>
   </div>
