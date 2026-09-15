@@ -49,11 +49,11 @@ const CSS = `
      cartas y donde no hay nadie a quien tapar. A la izquierda se deja la
      foto limpia para que el camarero se vea entero. */
   .velo{position:absolute;inset:0;background:
-    linear-gradient(0deg, rgba(9,8,6,.97) 0%, rgba(9,8,6,.92) 18%,
-                    rgba(9,8,6,.62) 34%, rgba(9,8,6,.18) 48%, transparent 62%)}
+    linear-gradient(0deg, rgba(9,8,6,.97) 0%, rgba(9,8,6,.93) 24%,
+                    rgba(9,8,6,.7) 40%, rgba(9,8,6,.24) 55%, transparent 70%)}
 
   .cont{position:absolute;inset:0;z-index:5;padding:var(--pad);
-    display:flex;flex-direction:column;justify-content:flex-end}
+    display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start}
 
   .marca{font-family:'SG',sans-serif;display:flex;align-items:center;gap:var(--mgap);
     font-size:var(--fmarca);font-weight:700;letter-spacing:-.02em;color:#fff}
@@ -62,14 +62,41 @@ const CSS = `
     box-shadow:0 0 var(--punto) rgba(255,107,53,.75)}
   .marca span{color:${NARANJA}}
 
-  h1{font-family:'Anton',sans-serif;
-    font-size:var(--fh1);line-height:.9;letter-spacing:.004em;
-    color:#fff;text-transform:uppercase;text-indent:-.055em;
-    text-shadow:0 4px 44px rgba(0,0,0,.95)}
-  /* Los dos números, en los dos colores opuestos: lo que paga en blanco, lo
-     que podría pagar en naranja. La comparación se ve antes de leerla. */
-  h1 em{font-style:normal;color:#fff}
-  h1 b{color:${NARANJA};font-weight:400}
+  /* ── LA VENTAJA COMPETITIVA, EN TRES ESCALONES ────────────────────────
+     La versión anterior tenía las tres líneas al MISMO cuerpo y el naranja
+     reducido a dos palabras: el argumento se leía, pero no se veía. Aquí la
+     diferencia de precio se cuenta con el TAMAÑO, que es lo que el ojo pilla
+     antes que ninguna palabra.
+
+       1. La pregunta, mediana y en blanco.
+       2. El precio viejo, TACHADO en naranja.
+       3. El precio nuestro, en un tarjetón naranja macizo y enorme.
+
+     El tarjetón es lo que da el tono autoritario: un bloque de color sólido
+     se lee como un sello, como un veredicto, no como una frase más. Y de
+     paso devuelve el naranja a la imagen, que era lo que se había perdido. */
+  .pregunta{font-family:'Anton',sans-serif;
+    font-size:var(--fpreg);line-height:.92;letter-spacing:.004em;
+    color:#fff;text-transform:uppercase;text-indent:-.05em;
+    text-shadow:0 4px 40px rgba(0,0,0,.95)}
+  /* El tachón va dibujado, no con text-decoration: así se le puede dar
+     grosor, color e inclinación — y una raya perfectamente recta sobre una
+     cifra parece un error de imprenta, no una decisión. */
+  .pregunta .tachado{position:relative;white-space:nowrap}
+  .pregunta .tachado::after{content:'';position:absolute;
+    left:-2%;right:-2%;top:48%;height:var(--tach);
+    background:${NARANJA};transform:rotate(-1.8deg);
+    box-shadow:0 2px 14px rgba(255,107,53,.5)}
+
+  .pudiendo{font-family:'PM',monospace;margin-top:var(--gap2);
+    font-size:var(--fpud);letter-spacing:.24em;color:#D8D0C4;text-transform:uppercase}
+
+  .solo{display:inline-block;margin-top:var(--gap3);
+    font-family:'Anton',sans-serif;font-size:var(--fsolo);line-height:.98;
+    letter-spacing:.006em;text-transform:uppercase;
+    background:${NARANJA};color:#14120F;padding:var(--solop);
+    box-shadow:0 18px 50px rgba(255,107,53,.42)}
+  .solo b{font-weight:400;font-size:.62em;letter-spacing:.04em}
   /* "esto" en minúscula y en cursiva con gracias: es la palabra que SEÑALA
      la foto, así que se dice en otro tono de voz. */
   h1 .esto{font-family:'Instr',serif;font-style:italic;font-weight:400;
@@ -97,7 +124,9 @@ const HTML = `
 <div class="escena">
   <div class="foto"></div><div class="velo"></div>
   <div class="cont">
-    <h1>¿Por qué pagar<br><em>+2.500 € al año</em><br>pudiendo pagar <b>100 €</b>?</h1>
+    <div class="pregunta">¿Por qué pagar<br><span class="tachado">+2.500 € al año</span></div>
+    <div class="pudiendo">Pudiendo pagar</div>
+    <div class="solo"><b>solo</b> 100 € al año</div>
   </div>
   <div class="grano"></div>
 </div>`;
@@ -110,7 +139,10 @@ const VARS = (f) => {
     --posx:${s ? '34%' : '38%'}; --posy:${s ? '46%' : '50%'};
     --pad:${s ? 78 : 66}px; --gap:${s ? 30 : 23}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
-    --fh1:${s ? 122 : 104}px;
+    --fpreg:${s ? 112 : 96}px; --tach:${s ? 11 : 9}px;
+    --fpud:${s ? 26 : 23}px; --fsolo:${s ? 108 : 92}px;
+    --solop:${s ? '20px 34px 24px' : '17px 28px 20px'};
+    --gap2:${s ? 26 : 20}px; --gap3:${s ? 16 : 13}px;
     --foferta:${s ? 66 : 57}px;
     --fcta:${s ? 34 : 30}px; --ctap:${s ? '24px 40px' : '20px 34px'};
     --ctagap:${s ? 16 : 14}px;`;
