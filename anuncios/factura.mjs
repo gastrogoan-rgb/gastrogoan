@@ -164,8 +164,8 @@ const CSS = `
      compara las dos cifras sin moverse: es el argumento entero del anuncio
      y estaba desalineado. */
   .franja{position:relative;background:
-    linear-gradient(172deg, #FF7A46 0%, ${NARANJA} 55%, #F25C26 100%);padding:var(--cpad);
-    display:flex;align-items:center;gap:16px;
+    linear-gradient(172deg, #FF7A46 0%, ${NARANJA} 55%, #F25C26 100%);padding:var(--spad);
+    display:flex;align-items:center;gap:var(--sgap);
     box-shadow:0 24px 60px rgba(255,107,53,.34)}
     /* Nada de la franja parte en dos líneas: la columna fija del precio le
      robaba anchura y "TU NUEVA CUENTA" caía en dos renglones. */
@@ -254,20 +254,21 @@ const VARS = (f) => {
   return `
     --pad:${s ? 74 : 62}px; --gap:${s ? 54 : 36}px; --gapc:${s ? 20 : 15}px;
     --mgap:${s ? 12 : 10}px; --punto:${s ? 13 : 12}px;
-    --cpad:${s ? '66px 54px' : '52px 42px'}; --fgap:${s ? 52 : 36}px;
+    --cpad:${s ? '66px 54px' : '52px 42px'};
+    --spad:${s ? '150px 54px' : '52px 42px'}; --sgap:${s ? 40 : 24}px; --fgap:${s ? 52 : 36}px;
     --colv:${s ? 262 : 208}px; --colu:${s ? 78 : 66}px; --tgap:${s ? 26 : 20}px;
     --bajar:${s ? 34 : 26}px; --kpad:${s ? '16px 30px 20px' : '15px 28px 19px'};
     --f-marca:${s ? 36 : 32}px;
-    --f-ojo:${s ? 62 : 57}px; --f-et:${s ? 26 : 23}px;
+    --f-ojo:${s ? 62 : 57}px; --f-et:${s ? 29 : 23}px;
     --f-h1:${s ? 56 : 48}px;
     --f-fila:${s ? 36 : 29}px;
     --f-val:${s ? 44 : 35}px;
     --f-uni:${s ? 25 : 21}px;
-    --f-mes:${s ? 28 : 24}px; --f-sub:${s ? 29 : 26}px;
+    --f-mes:${s ? 28 : 24}px; --f-sub:${s ? 33 : 26}px;
     --f-total:${s ? 82 : 63}px;
-    --f-nom:${s ? 48 : 40}px;
+    --f-nom:${s ? 56 : 40}px;
     --f-precio:${s ? 74 : 78}px; --f-uano:${s ? 33 : 35}px;
-    --f-cierre:${s ? 90 : 84}px;`;
+    --f-cierre:${s ? 96 : 84}px;`;
 };
 
 fs.mkdirSync(SALIDA, {recursive: true});
