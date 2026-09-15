@@ -55,6 +55,7 @@ const CSS = `
 
   .cont{position:absolute;inset:0;z-index:5;padding:var(--pad);
     display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start}
+  .cierre{align-self:flex-end;text-align:right;display:flex;flex-direction:column;align-items:flex-end}
 
   .marca{font-family:'SG',sans-serif;display:flex;align-items:center;gap:var(--mgap);
     font-size:var(--fmarca);font-weight:700;letter-spacing:-.02em;color:#fff;
@@ -94,7 +95,7 @@ const CSS = `
      paso devuelve el naranja a la imagen, que era lo que se había perdido. */
   .pregunta{font-family:'Anton',sans-serif;
     font-size:var(--fpreg);line-height:.92;letter-spacing:.004em;
-    color:#fff;text-transform:uppercase;text-indent:-.05em;
+    color:#fff;text-transform:uppercase;
     text-shadow:0 4px 40px rgba(0,0,0,.95)}
   /* El tachón va dibujado, no con text-decoration: así se le puede dar
      grosor, color e inclinación — y una raya perfectamente recta sobre una
