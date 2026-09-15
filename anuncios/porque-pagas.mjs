@@ -51,7 +51,7 @@ const CSS = `
   .velo{position:absolute;inset:0;background:
     linear-gradient(0deg, rgba(9,8,6,.97) 0%, rgba(9,8,6,.93) 24%,
                     rgba(9,8,6,.7) 40%, rgba(9,8,6,.24) 55%, transparent 70%),
-    linear-gradient(180deg, rgba(9,8,6,.62) 0%, rgba(9,8,6,.22) 7%, transparent 14%)}
+    linear-gradient(180deg, rgba(9,8,6,.68) 0%, rgba(9,8,6,.34) 8%, transparent 18%)}
 
   .cont{position:absolute;inset:0;z-index:5;padding:var(--pad);
     display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start}
@@ -63,6 +63,10 @@ const CSS = `
     border-radius:50%;display:block;flex:none;
     box-shadow:0 0 var(--punto) rgba(255,107,53,.8)}
   .marca span{color:${NARANJA}}
+  .categoria{font-family:'PM',monospace;margin-top:var(--gap3);
+    margin-left:calc(var(--punto) + var(--mgap));
+    font-size:var(--fcat);letter-spacing:.2em;color:#E4DCD0;text-transform:uppercase;
+    text-shadow:0 2px 18px rgba(0,0,0,.95)}
 
   .marca{font-family:'SG',sans-serif;display:flex;align-items:center;gap:var(--mgap);
     font-size:var(--fmarca);font-weight:700;letter-spacing:-.02em;color:#fff}
@@ -70,6 +74,10 @@ const CSS = `
     border-radius:50%;display:block;flex:none;
     box-shadow:0 0 var(--punto) rgba(255,107,53,.75)}
   .marca span{color:${NARANJA}}
+  .categoria{font-family:'PM',monospace;margin-top:var(--gap3);
+    margin-left:calc(var(--punto) + var(--mgap));
+    font-size:var(--fcat);letter-spacing:.2em;color:#E4DCD0;text-transform:uppercase;
+    text-shadow:0 2px 18px rgba(0,0,0,.95)}
 
   /* ── LA VENTAJA COMPETITIVA, EN TRES ESCALONES ────────────────────────
      La versión anterior tenía las tres líneas al MISMO cuerpo y el naranja
@@ -135,11 +143,14 @@ const HTML = `
 <div class="escena">
   <div class="foto"></div><div class="velo"></div>
   <div class="cont">
-    <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
+    <div class="cabecera">
+      <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
+      <div class="categoria">Software gastronómico</div>
+    </div>
     <div class="cierre">
     <div class="pregunta">¿Por qué pagar<br><span class="tachado">+2.500 € al año</span></div>
     <div class="lista">en TPV, reservas, personal y costes</div>
-    <div class="solo"><b>Todo por solo</b>100 €</div>
+    <div class="solo"><b>Pudiendo pagar solo</b>100 €</div>
     </div>
   </div>
   <div class="grano"></div>
@@ -153,9 +164,11 @@ const VARS = (f) => {
     --posx:${s ? '34%' : '38%'}; --posy:${s ? '46%' : '50%'};
     --pad:${s ? 78 : 66}px; --gap:${s ? 30 : 23}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
+    --fcat:${s ? 22 : 19}px;
     --fpreg:${s ? 104 : 88}px; --tach:${s ? 10 : 9}px;
     --flista:${s ? 42 : 36}px; --fsolo:${s ? 130 : 112}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
+    --fcat:${s ? 22 : 19}px;
     --solop:${s ? '22px 34px 26px' : '18px 28px 22px'};
     --gap2:${s ? 26 : 20}px; --gap3:${s ? 16 : 13}px;
     --foferta:${s ? 66 : 57}px;
