@@ -105,11 +105,15 @@ const CSS = `
     background:${NARANJA};transform:rotate(-1.8deg);
     box-shadow:0 2px 14px rgba(255,107,53,.5)}
 
-  .lista{font-family:'ArchivoB',sans-serif;font-weight:800;margin-top:var(--gap2);
-    font-size:var(--flista);letter-spacing:-.02em;line-height:1.08;color:#F0EAE0;
+  /* El remate: lo que se ahorra, dicho como dinero que VUELVE, no como
+     descuento. Va pequeño y debajo del precio a propósito — es el premio,
+     no el titular, y puesto grande competiría con la cifra del tarjetón. */
+  .bolsillo{font-family:'ArchivoB',sans-serif;font-weight:800;margin-top:var(--gap2);
+    font-size:var(--fbols);letter-spacing:-.02em;color:#F0EAE0;
     text-shadow:0 3px 26px rgba(0,0,0,.95)}
+  .bolsillo b{color:${NARANJA};font-weight:900}
 
-  .solo{display:inline-block;margin-top:var(--gap3);
+  .solo{display:inline-block;margin-top:var(--gap2);
     font-family:'Anton',sans-serif;font-size:var(--fsolo);line-height:.98;
     letter-spacing:.006em;text-transform:uppercase;
     background:${NARANJA};color:#14120F;padding:var(--solop);
@@ -145,12 +149,11 @@ const HTML = `
   <div class="cont">
     <div class="cabecera">
       <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
-      <div class="categoria">Software gastronómico</div>
     </div>
     <div class="cierre">
-    <div class="pregunta">¿Por qué pagar<br><span class="tachado">+2.500 € al año</span></div>
-    <div class="lista">en TPV, reservas, personal y costes</div>
-    <div class="solo"><b>Pudiendo pagar solo</b>100 €</div>
+    <div class="pregunta">Deja de pagar<br><span class="tachado">+2.500 € al año</span></div>
+    <div class="solo"><b>Software GastroGoan</b>100 €</div>
+    <div class="bolsillo"><b>2.400 €</b> que vuelven a tu bolsillo</div>
     </div>
   </div>
   <div class="grano"></div>
@@ -166,7 +169,7 @@ const VARS = (f) => {
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
     --fcat:${s ? 22 : 19}px;
     --fpreg:${s ? 104 : 88}px; --tach:${s ? 10 : 9}px;
-    --flista:${s ? 42 : 36}px; --fsolo:${s ? 130 : 112}px;
+    --fbols:${s ? 38 : 33}px; --fsolo:${s ? 140 : 120}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
     --fcat:${s ? 22 : 19}px;
     --solop:${s ? '22px 34px 26px' : '18px 28px 22px'};
