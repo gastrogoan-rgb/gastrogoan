@@ -44,10 +44,10 @@ const CSS = `
   .escena{width:100%;height:100%;position:relative;overflow:hidden;background:#070605}
   .foto{position:absolute;inset:0;background-image:url('${FOTO}');
     background-size:cover;background-position:50% var(--foco);
-    filter:contrast(1.06) saturate(1.06) brightness(1.12)}
+    filter:contrast(1.04) saturate(1.1) brightness(1.42)}
   .velo{position:absolute;inset:0;background:
-    linear-gradient(180deg, rgba(7,6,5,.94) 0%, rgba(7,6,5,.74) var(--v1),
-                    rgba(7,6,5,.12) var(--v2), rgba(7,6,5,.8) var(--v3),
+    linear-gradient(180deg, rgba(7,6,5,.93) 0%, rgba(7,6,5,.66) var(--v1),
+                    rgba(7,6,5,.03) var(--v2), rgba(7,6,5,.72) var(--v3),
                     rgba(7,6,5,.98) 100%)}
 
   .cont{position:absolute;inset:0;z-index:5;padding:var(--pad);
@@ -114,7 +114,7 @@ const HTML = `
   <div class="cont">
     <div>
       <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
-      <h1>¿Bar <span class="min">o</span><br>restaurante<br><em>en Barcelona?</em></h1>
+      <h1>¿Bar <span class="min">o</span> restaurante<br><em>en Barcelona?</em></h1>
     </div>
     <div>
       <div class="pregunta">Deja de pagar<br><span class="tachado">+2.500 € al año</span></div>
@@ -130,13 +130,13 @@ const VARS = (f) => {
   // En feed hay que recortar 570 px: se quitan del techo (foco al 62%), que
   // es lo prescindible. Abajo no se toca, ahí va el precio.
   return `
-    --foco:${s ? '50%' : '62%'};
-    --v1:${s ? '22%' : '24%'}; --v2:${s ? '42%' : '44%'}; --v3:${s ? '62%' : '60%'};
+    --foco:${s ? '50%' : '45%'};
+    --v1:${s ? '20%' : '23%'}; --v2:${s ? '44%' : '47%'}; --v3:${s ? '70%' : '68%'};
     --pad:${s ? 78 : 66}px; --gap:${s ? 26 : 20}px; --gap2:${s ? 20 : 16}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
-    --fh1:${s ? 132 : 112}px;
-    --fpreg:${s ? 92 : 78}px; --tach:${s ? 9 : 8}px;
-    --fsolo:${s ? 124 : 106}px; --solop:${s ? '20px 32px 24px' : '17px 26px 20px'};
+    --fh1:${s ? 104 : 88}px;
+    --fpreg:${s ? 86 : 72}px; --tach:${s ? 9 : 8}px;
+    --fsolo:${s ? 120 : 102}px; --solop:${s ? '20px 32px 24px' : '17px 26px 20px'};
     --fbols:${s ? 36 : 31}px;`;
 };
 
