@@ -50,10 +50,19 @@ const CSS = `
      foto limpia para que el camarero se vea entero. */
   .velo{position:absolute;inset:0;background:
     linear-gradient(0deg, rgba(9,8,6,.97) 0%, rgba(9,8,6,.93) 24%,
-                    rgba(9,8,6,.7) 40%, rgba(9,8,6,.24) 55%, transparent 70%)}
+                    rgba(9,8,6,.7) 40%, rgba(9,8,6,.24) 55%, transparent 70%),
+    linear-gradient(180deg, rgba(9,8,6,.62) 0%, rgba(9,8,6,.22) 7%, transparent 14%)}
 
   .cont{position:absolute;inset:0;z-index:5;padding:var(--pad);
-    display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start}
+    display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start}
+
+  .marca{font-family:'SG',sans-serif;display:flex;align-items:center;gap:var(--mgap);
+    font-size:var(--fmarca);font-weight:700;letter-spacing:-.02em;color:#fff;
+    text-shadow:0 2px 20px rgba(0,0,0,.9)}
+  .marca i{width:var(--punto);height:var(--punto);background:${NARANJA};
+    border-radius:50%;display:block;flex:none;
+    box-shadow:0 0 var(--punto) rgba(255,107,53,.8)}
+  .marca span{color:${NARANJA}}
 
   .marca{font-family:'SG',sans-serif;display:flex;align-items:center;gap:var(--mgap);
     font-size:var(--fmarca);font-weight:700;letter-spacing:-.02em;color:#fff}
@@ -124,9 +133,12 @@ const HTML = `
 <div class="escena">
   <div class="foto"></div><div class="velo"></div>
   <div class="cont">
+    <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
+    <div class="cierre">
     <div class="pregunta">¿Por qué pagar<br><span class="tachado">+2.500 € al año</span></div>
     <div class="pudiendo">Pudiendo pagar</div>
-    <div class="solo"><b>solo</b> 100 € al año</div>
+    <div class="solo"><b>solo</b> 100 €</div>
+    </div>
   </div>
   <div class="grano"></div>
 </div>`;
@@ -140,7 +152,8 @@ const VARS = (f) => {
     --pad:${s ? 78 : 66}px; --gap:${s ? 30 : 23}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
     --fpreg:${s ? 112 : 96}px; --tach:${s ? 11 : 9}px;
-    --fpud:${s ? 26 : 23}px; --fsolo:${s ? 108 : 92}px;
+    --fpud:${s ? 26 : 23}px; --fsolo:${s ? 132 : 112}px;
+    --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
     --solop:${s ? '20px 34px 24px' : '17px 28px 20px'};
     --gap2:${s ? 26 : 20}px; --gap3:${s ? 16 : 13}px;
     --foferta:${s ? 66 : 57}px;
