@@ -60,29 +60,41 @@ const CSS = `
   html,body{width:100%;height:100%;overflow:hidden;-webkit-font-smoothing:antialiased}
 
   .escena{width:100%;height:100%;position:relative;overflow:hidden;
-    background:${CREMA};padding:var(--pad);
+    background:${CREMA};padding:var(--pad) 0;
     display:flex;flex-direction:column}
   /* Un punto de luz arriba a la izquierda: sin él, un fondo plano de un solo
      color se ve digital. Es el mismo truco que la luz de lámpara en las
      fotos, aplicado a una superficie de papel. */
   .escena::before{content:'';position:absolute;inset:0;
-    background:radial-gradient(80% 55% at 18% 6%, rgba(255,255,255,.9), transparent 70%)}
+    background:radial-gradient(80% 55% at 18% 6%, rgba(255,255,255,.92), transparent 70%)}
+  /* Las dos cajas llevaban flex:1 y se repartían el sobrante a partes
+     iguales: la de arriba ya está llena, así que TODO el aire caía debajo de
+     la franja y quedaba un agujero de 400 px. Ahora la de arriba mide lo que
+     ocupa y solo la de abajo estira. */
+  .caja{position:relative;z-index:2;padding:0 var(--pad);
+    display:flex;flex-direction:column;flex:none}
+  .caja.cierre{flex:1;justify-content:center}
 
-  .marca{position:relative;z-index:2;font-family:'SG',sans-serif;
-    display:flex;align-items:center;gap:var(--mgap);
+  .marca{font-family:'SG',sans-serif;display:flex;align-items:center;gap:var(--mgap);
     font-size:var(--fmarca);font-weight:700;letter-spacing:-.02em;color:${TINTA}}
   .marca i{width:var(--punto);height:var(--punto);background:${NARANJA};
     border-radius:50%;display:block;flex:none}
   .marca span{color:${NARANJA}}
 
-  h1{position:relative;z-index:2;margin-top:var(--gap);
+  /* El gancho local, arriba del todo: es lo primero que tiene que resolver
+     el anuncio — "esto va contigo". Va en monoespaciada espaciada, que es
+     como se rotula un encabezado de documento, no un titular. */
+  .ojo{margin-top:var(--gap);font-family:'PM',monospace;
+    font-size:var(--fojo);letter-spacing:.2em;text-transform:uppercase;
+    color:${TERRACOTA}}
+
+  h1{margin-top:var(--gap3);
     font-family:'ArchivoB',sans-serif;font-weight:900;
-    font-size:var(--fh1);line-height:.98;letter-spacing:-.035em;color:${TINTA}}
+    font-size:var(--fh1);line-height:1;letter-spacing:-.035em;color:${TINTA}}
 
   /* LA CUENTA. Ficha blanca sobre crema, con sombra mínima: tiene que
      parecer un papel encima de la mesa, no una tarjeta de una web. */
-  .cuenta{position:relative;z-index:2;margin-top:var(--gap);
-    background:#fff;padding:var(--cpad);
+  .cuenta{margin-top:var(--gap);background:#fff;padding:var(--cpad);
     box-shadow:0 2px 3px rgba(28,26,23,.05), 0 18px 44px rgba(28,26,23,.1)}
   .fila{display:flex;align-items:baseline;gap:14px;
     font-family:'SG',sans-serif;font-size:var(--ffila);font-weight:500;color:${TINTA};
@@ -94,42 +106,55 @@ const CSS = `
   .fila .p{flex:1;border-bottom:2px dotted #D6CFC3;transform:translateY(-.3em)}
   .fila .v{font-family:'PM',monospace;font-weight:500;white-space:nowrap;color:${TINTA}}
 
-  .suma{margin-top:var(--gap2);padding-top:var(--gap2);border-top:3px solid ${TINTA};
-    display:flex;align-items:baseline;justify-content:space-between;gap:16px;
-    font-family:'SG',sans-serif;font-size:var(--fsuma);font-weight:700;color:${TINTA}}
-  .suma .v{font-family:'PM',monospace;font-weight:500}
+  /* Los dos totales en UNA línea, como en una factura de verdad: el mes a la
+     izquierda y el año a la derecha, alineados por la base. Y el año al
+     doble de cuerpo y en terracota, porque 275 al mes suena asumible y
+     3.300 al año es el que duele. */
+  .totales{margin-top:var(--gap2);padding-top:var(--gap2);
+    border-top:3px solid ${TINTA};
+    display:flex;align-items:baseline;justify-content:space-between;gap:18px}
+  .totales .et{font-family:'SG',sans-serif;font-size:var(--fsuma);font-weight:700;
+    color:${TINTA};letter-spacing:-.02em}
+  .totales .mes{font-family:'PM',monospace;font-size:var(--fmes);color:#6E675E;
+    margin-left:auto}
+  .totales .ano{font-family:'ArchivoB',sans-serif;font-weight:900;
+    font-size:var(--fano);letter-spacing:-.045em;color:${TERRACOTA};white-space:nowrap}
+  .totales .ano u{text-decoration:none;font-size:.42em;letter-spacing:-.01em}
 
-  /* El golpe: el total ANUAL, en terracota. El mes suena asumible; el año es
-     el que duele, y por eso va aparte y al triple de cuerpo. */
-  .ano{margin-top:var(--gap3);display:flex;align-items:baseline;
-    justify-content:space-between;gap:16px}
-  .ano .et{font-family:'SG',sans-serif;font-size:var(--fsuma);font-weight:700;
-    color:${TERRACOTA}}
-  .ano .v{font-family:'ArchivoB',sans-serif;font-weight:900;
-    font-size:var(--fano);letter-spacing:-.045em;color:${TERRACOTA}}
+  /* LA FRANJA. Va a SANGRE, de borde a borde: rompe el margen de la página y
+     por eso se lee como un sello estampado encima de la cuenta y no como una
+     fila más de la tabla. Dentro lleva su propia retícula —etiqueta, nombre,
+     promesa y precio— separada por un filete, para que no sea un rectángulo
+     de color con texto suelto.
 
-  .flecha{position:relative;z-index:2;align-self:center;
-    font-family:'Anton',sans-serif;font-size:var(--fflecha);line-height:1;
-    color:${NARANJA};margin-top:var(--gap2)}
+     ⚠️ El sangrado NO se hace con márgenes negativos: la franja es hija
+     directa de .escena, que YA tiene el padding horizontal a cero (el margen
+     lo pone .caja por dentro). Un calc(-1 * --pad) la sacaba 64 px fuera de
+     la pantalla por cada lado y se comía el "/año" del precio. */
+  .franja{margin-top:var(--gap);
+    background:${NARANJA};padding:var(--spad);
+    display:flex;align-items:center;gap:var(--sgap);
+    box-shadow:0 16px 44px rgba(255,107,53,.3)}
+  .franja .izq{flex:1;color:${TINTA}}
+  .franja .et{font-family:'PM',monospace;font-size:var(--fset);
+    letter-spacing:.18em;text-transform:uppercase;opacity:.72}
+  .franja .nom{font-family:'ArchivoB',sans-serif;font-weight:900;
+    font-size:var(--fsnom);letter-spacing:-.03em;line-height:1;margin-top:.18em}
+  .franja .sub{font-family:'SG',sans-serif;font-size:var(--fssub);font-weight:500;
+    margin-top:.34em;opacity:.82}
+  .franja .barra{width:3px;align-self:stretch;background:rgba(28,26,23,.22)}
+  .franja .precio{font-family:'Anton',sans-serif;font-size:var(--fsolp);
+    line-height:.88;letter-spacing:.006em;color:${TINTA};white-space:nowrap}
+  .franja .precio u{text-decoration:none;font-size:.38em;margin-left:.03em}
 
-  /* LA SOLUCIÓN. Tarjetón naranja, el mismo recurso que en los otros dos
-     anuncios: un bloque de color macizo se lee como un veredicto. */
-  .sol{position:relative;z-index:2;margin-top:var(--gap2);background:${NARANJA};
-    padding:var(--spad);display:flex;align-items:flex-end;justify-content:space-between;
-    gap:20px;box-shadow:0 16px 44px rgba(255,107,53,.34)}
-  .sol .izq{color:${TINTA}}
-  .sol .t{font-family:'SG',sans-serif;font-size:var(--fsolt);font-weight:700;
-    letter-spacing:-.02em;line-height:1.1}
-  .sol .t b{display:block;font-family:'ArchivoB',sans-serif;font-weight:900;
-    font-size:1.24em;letter-spacing:-.03em}
-  .sol .precio{font-family:'Anton',sans-serif;font-size:var(--fsolp);
-    line-height:.9;letter-spacing:.006em;color:${TINTA};white-space:nowrap}
-  .sol .precio u{text-decoration:none;font-size:.4em;margin-left:.03em}
-
-  .bolsillo{position:relative;z-index:2;margin-top:auto;padding-top:var(--gap2);
-    font-family:'ArchivoB',sans-serif;font-weight:800;
-    font-size:var(--fbols);letter-spacing:-.02em;color:${TINTA};text-align:center}
-  .bolsillo b{color:${TERRACOTA};font-weight:900}
+  /* EL GOLPE. Es el cierre emocional del anuncio, así que es lo más grande
+     después del titular: la cifra sola, y debajo qué es. Puesta pequeña, el
+     anuncio termina en un dato; puesta así, termina en una promesa. */
+  .golpe{padding-top:var(--gap)}
+  .golpe .num{font-family:'Anton',sans-serif;font-size:var(--fgolpe);
+    line-height:.86;letter-spacing:.004em;color:${TERRACOTA}}
+  .golpe .txt{font-family:'ArchivoB',sans-serif;font-weight:900;
+    font-size:var(--fgtxt);letter-spacing:-.03em;color:${TINTA};margin-top:.1em}
 
   /* Grano también aquí: una superficie de color perfectamente limpia es lo
      que delata que algo está generado. */
@@ -139,36 +164,54 @@ const CSS = `
 
 const HTML = `
 <div class="escena">
-  <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
-  <h1>Lo que estás<br>pagando ahora</h1>
+  <div class="caja">
+    <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
+    <div class="ojo">Para bares y restaurantes de Barcelona</div>
+    <h1>Lo que estás pagando ahora</h1>
 
-  <div class="cuenta">
-    ${LINEAS.map(([q, v]) => `<div class="fila"><span class="q">${q}</span><span class="p"></span><span class="v">${v}</span></div>`).join('')}
-    <div class="suma"><span>Total al mes</span><span class="v">${AL_MES}</span></div>
-    <div class="ano"><span class="et">Al año</span><span class="v">${AL_ANO}</span></div>
+    <div class="cuenta">
+      ${LINEAS.map(([q, v]) => `<div class="fila"><span class="q">${q}</span><span class="p"></span><span class="v">${v}</span></div>`).join('')}
+      <div class="totales">
+        <span class="et">Total</span>
+        <span class="mes">${AL_MES}/mes</span>
+        <span class="ano">${AL_ANO}<u>/año</u></span>
+      </div>
+    </div>
   </div>
 
-  <div class="flecha">&darr;</div>
-  <div class="sol">
-    <div class="izq"><div class="t">Todo esto y mucho más<b>GastroGoan App</b></div></div>
+  <div class="franja">
+    <div class="izq">
+      <div class="et">Tu nueva cuenta</div>
+      <div class="nom">GastroGoan App</div>
+      <div class="sub">Todo esto y mucho más</div>
+    </div>
+    <div class="barra"></div>
     <div class="precio">100 €<u>/año</u></div>
   </div>
-  <div class="bolsillo"><b>${VUELVEN}</b> que vuelven a tu bolsillo</div>
+
+  <div class="caja cierre">
+    <div class="golpe">
+      <div class="num">${VUELVEN}</div>
+      <div class="txt">que vuelven a tu bolsillo</div>
+    </div>
+  </div>
   <div class="grano"></div>
 </div>`;
 
 const VARS = (f) => {
   const s = f.nombre === 'story';
   return `
-    --pad:${s ? 76 : 64}px; --gap:${s ? 28 : 22}px; --gap2:${s ? 22 : 17}px;
-    --gap3:${s ? 14 : 11}px;
+    --pad:${s ? 76 : 64}px; --gap:${s ? 28 : 22}px; --gap2:${s ? 22 : 18}px;
+    --gap3:${s ? 12 : 10}px;
     --fmarca:${s ? 36 : 32}px; --punto:${s ? 13 : 12}px; --mgap:${s ? 11 : 10}px;
-    --fh1:${s ? 108 : 92}px;
-    --cpad:${s ? '46px 42px' : '38px 34px'}; --ffila:${s ? 38 : 33}px;
-    --fpad:${s ? 20 : 17}px; --fsuma:${s ? 42 : 37}px; --fano:${s ? 98 : 86}px;
-    --spad:${s ? '34px 38px' : '28px 32px'}; --fsolt:${s ? 34 : 30}px;
-    --fsolp:${s ? 118 : 102}px; --fflecha:${s ? 70 : 60}px;
-    --fbols:${s ? 38 : 33}px;`;
+    --fojo:${s ? 24 : 21}px; --fh1:${s ? 74 : 62}px;
+    --cpad:${s ? '42px 38px' : '34px 32px'}; --ffila:${s ? 34 : 30}px;
+    --fpad:${s ? 18 : 15}px;
+    --fsuma:${s ? 36 : 31}px; --fmes:${s ? 30 : 26}px; --fano:${s ? 84 : 72}px;
+    --spad:${s ? '32px 76px' : '26px 64px'}; --sgap:${s ? 34 : 28}px;
+    --fset:${s ? 22 : 19}px; --fsnom:${s ? 46 : 40}px; --fssub:${s ? 28 : 25}px;
+    --fsolp:${s ? 104 : 90}px;
+    --fgolpe:${s ? 215 : 186}px; --fgtxt:${s ? 50 : 43}px;`;
 };
 
 fs.mkdirSync(SALIDA, {recursive: true});
