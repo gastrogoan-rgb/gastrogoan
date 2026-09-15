@@ -97,15 +97,17 @@ const CSS = `
     background:${NARANJA};transform:rotate(-1.8deg);
     box-shadow:0 2px 14px rgba(255,107,53,.5)}
 
-  .pudiendo{font-family:'PM',monospace;margin-top:var(--gap2);
-    font-size:var(--fpud);letter-spacing:.24em;color:#D8D0C4;text-transform:uppercase}
+  .lista{font-family:'ArchivoB',sans-serif;font-weight:800;margin-top:var(--gap2);
+    font-size:var(--flista);letter-spacing:-.02em;line-height:1.08;color:#F0EAE0;
+    text-shadow:0 3px 26px rgba(0,0,0,.95)}
 
   .solo{display:inline-block;margin-top:var(--gap3);
     font-family:'Anton',sans-serif;font-size:var(--fsolo);line-height:.98;
     letter-spacing:.006em;text-transform:uppercase;
     background:${NARANJA};color:#14120F;padding:var(--solop);
     box-shadow:0 18px 50px rgba(255,107,53,.42)}
-  .solo b{font-weight:400;font-size:.62em;letter-spacing:.04em}
+  .solo b{display:block;font-weight:400;font-size:.34em;letter-spacing:.05em;
+    margin-bottom:.12em}
   /* "esto" en minúscula y en cursiva con gracias: es la palabra que SEÑALA
      la foto, así que se dice en otro tono de voz. */
   h1 .esto{font-family:'Instr',serif;font-style:italic;font-weight:400;
@@ -136,8 +138,8 @@ const HTML = `
     <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
     <div class="cierre">
     <div class="pregunta">¿Por qué pagar<br><span class="tachado">+2.500 € al año</span></div>
-    <div class="pudiendo">Pudiendo pagar</div>
-    <div class="solo"><b>solo</b> 100 €</div>
+    <div class="lista">en TPV, reservas, personal y costes</div>
+    <div class="solo"><b>Todo por solo</b>100 €</div>
     </div>
   </div>
   <div class="grano"></div>
@@ -151,10 +153,10 @@ const VARS = (f) => {
     --posx:${s ? '34%' : '38%'}; --posy:${s ? '46%' : '50%'};
     --pad:${s ? 78 : 66}px; --gap:${s ? 30 : 23}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
-    --fpreg:${s ? 112 : 96}px; --tach:${s ? 11 : 9}px;
-    --fpud:${s ? 26 : 23}px; --fsolo:${s ? 132 : 112}px;
+    --fpreg:${s ? 104 : 88}px; --tach:${s ? 10 : 9}px;
+    --flista:${s ? 42 : 36}px; --fsolo:${s ? 130 : 112}px;
     --fmarca:${s ? 38 : 34}px; --punto:${s ? 14 : 12}px; --mgap:${s ? 12 : 10}px;
-    --solop:${s ? '20px 34px 24px' : '17px 28px 20px'};
+    --solop:${s ? '22px 34px 26px' : '18px 28px 22px'};
     --gap2:${s ? 26 : 20}px; --gap3:${s ? 16 : 13}px;
     --foferta:${s ? 66 : 57}px;
     --fcta:${s ? 34 : 30}px; --ctap:${s ? '24px 40px' : '20px 34px'};
