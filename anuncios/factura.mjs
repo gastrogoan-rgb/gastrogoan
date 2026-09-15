@@ -92,7 +92,7 @@ const CSS = `
   /* El gancho local. Va en Schibsted, no en monoespaciada: una quinta
      tipografía por una sola línea es exactamente el ruido que sobraba. */
   .ojo{font-family:'ArchivoB',sans-serif;font-size:var(--f-ojo);font-weight:900;
-    letter-spacing:-.01em;color:${NARANJA};white-space:nowrap}
+    letter-spacing:-.025em;line-height:.98;color:${NARANJA}}
   h1{font-family:'ArchivoB',sans-serif;font-weight:900;
     font-size:var(--f-h1);line-height:.98;letter-spacing:-.04em;color:${PAPEL}}
 
@@ -172,7 +172,7 @@ const CSS = `
   .franja .izq{display:flex;flex-direction:column;gap:.24em;white-space:nowrap}
   /* Sobre naranja, un texto al 60 % de opacidad no se lee: el naranja es
      claro y se come el gris. Va a tinta plena y con peso. */
-  .franja .et{font-family:'SG',sans-serif;font-size:var(--f-ojo);font-weight:700;
+  .franja .et{font-family:'SG',sans-serif;font-size:var(--f-et);font-weight:700;
     letter-spacing:.16em;text-transform:uppercase;color:rgba(20,18,15,.85)}
   .franja .nom{font-family:'ArchivoB',sans-serif;font-weight:900;
     font-size:var(--f-nom);letter-spacing:-.035em;line-height:1;color:${TINTA};
@@ -211,7 +211,7 @@ const HTML = `
 <div class="escena">
   <div class="cab">
     <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
-    <div class="ojo">Para bares y restaurantes de Barcelona</div>
+    <div class="ojo">Para bares y restaurantes<br>de Barcelona</div>
     <h1>Lo que estás pagando ahora</h1>
   </div>
 
@@ -252,14 +252,14 @@ const HTML = `
 const VARS = (f) => {
   const s = f.nombre === 'story';
   return `
-    --pad:${s ? 74 : 62}px; --gap:${s ? 58 : 36}px; --gapc:${s ? 20 : 15}px;
+    --pad:${s ? 74 : 62}px; --gap:${s ? 54 : 36}px; --gapc:${s ? 20 : 15}px;
     --mgap:${s ? 12 : 10}px; --punto:${s ? 13 : 12}px;
-    --cpad:${s ? '74px 54px' : '52px 42px'}; --fgap:${s ? 56 : 36}px;
+    --cpad:${s ? '66px 54px' : '52px 42px'}; --fgap:${s ? 52 : 36}px;
     --colv:${s ? 262 : 208}px; --colu:${s ? 78 : 66}px; --tgap:${s ? 26 : 20}px;
     --bajar:${s ? 34 : 26}px; --kpad:${s ? '16px 30px 20px' : '15px 28px 19px'};
     --f-marca:${s ? 36 : 32}px;
-    --f-ojo:${s ? 43 : 41}px;
-    --f-h1:${s ? 62 : 53}px;
+    --f-ojo:${s ? 62 : 57}px; --f-et:${s ? 26 : 23}px;
+    --f-h1:${s ? 56 : 48}px;
     --f-fila:${s ? 36 : 29}px;
     --f-val:${s ? 44 : 35}px;
     --f-uni:${s ? 25 : 21}px;
@@ -267,7 +267,7 @@ const VARS = (f) => {
     --f-total:${s ? 82 : 63}px;
     --f-nom:${s ? 48 : 40}px;
     --f-precio:${s ? 74 : 78}px; --f-uano:${s ? 33 : 35}px;
-    --f-cierre:${s ? 92 : 84}px;`;
+    --f-cierre:${s ? 90 : 84}px;`;
 };
 
 fs.mkdirSync(SALIDA, {recursive: true});
