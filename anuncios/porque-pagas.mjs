@@ -22,21 +22,27 @@ import {FUENTES, RUIDO} from './tipografia.mjs';
 
 const SALIDA = 'anuncios/salida';
 const BASE = 'http://localhost:8950';
-const FOTO = '/anuncios/fotos/tpv-limpio.jpg';
+// Dos fondos para comparar: la tablet de cafetería (fondo claro, hay que
+// fabricar el hueco del texto) y el camarero con las cartas colgadas, que
+// tiene MUCHO más contexto de hostelería — que era justo lo que fallaba.
+const FONDOS = [
+  {id: 'tablet',   foto: '/anuncios/fotos/tpv-limpio.jpg',       foco: ['30%','42%'], pos: '46%'},
+  {id: 'camarero', foto: '/anuncios/fotos/camarero-limpio.jpg',  foco: ['50%','50%'], pos: '62%'},
+];
 const NARANJA = '#FF6B35';
 const FORMATOS = [
   {nombre: 'feed',  w: 1080, h: 1350},
   {nombre: 'story', w: 1080, h: 1920},
 ];
 
-const CSS = `
+const CSS = (fondo) => `
   ${FUENTES}
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{width:100%;height:100%;overflow:hidden;-webkit-font-smoothing:antialiased}
 
   .escena{width:100%;height:100%;position:relative;overflow:hidden;background:#0B0A08}
-  .foto{position:absolute;inset:0;background-image:url('${FOTO}');
-    background-size:cover;background-position:46% var(--foco);
+  .foto{position:absolute;inset:0;background-image:var(--foto);
+    background-size:cover;background-position:var(--posx) var(--foco);
     filter:contrast(1.04) saturate(.96) brightness(.98)}
   /* Dos telones oscuros, arriba y abajo. Este fondo es CLARO (mostrador
      blanco), justo lo contrario que el de la cocina: allí la foto traía el
@@ -99,10 +105,11 @@ const HTML = `
   <div class="grano"></div>
 </div>`;
 
-const VARS = (f) => {
+const VARS = (f, fondo) => {
   const s = f.nombre === 'story';
   return `
-    --foco:${s ? '42%' : '30%'};
+    --foto:url('${fondo.foto}'); --posx:${fondo.pos};
+    --foco:${s ? fondo.foco[1] : fondo.foco[0]};
     --v1:${s ? '27%' : '30%'}; --v2:${s ? '52%' : '52%'}; --v3:${s ? '72%' : '70%'};
     --pad:${s ? 82 : 70}px; --gap:${s ? 32 : 24}px; --gap3:${s ? 16 : 13}px;
     --fmarca:${s ? 40 : 36}px; --punto:${s ? 15 : 13}px; --mgap:${s ? 13 : 11}px;
@@ -119,17 +126,19 @@ const browser = await puppeteer.launch({
   headless: true,
 });
 const page = await browser.newPage();
-for(const f of FORMATOS){
-  await page.setViewport({width: f.w, height: f.h});
-  await page.goto(`${BASE}/dist/index.html`, {waitUntil: 'domcontentloaded'});
-  await page.setContent(
-    `<!doctype html><meta charset="utf-8"><style>${CSS}.escena{${VARS(f)}}</style>${HTML}`,
-    {waitUntil: 'networkidle0'});
-  await page.evaluate(RUIDO);
-  await page.evaluate(() => document.fonts.ready);
-  await new Promise(r => setTimeout(r, 500));
-  const archivo = `${SALIDA}/PAGAS-${f.nombre}.png`;
-  await page.screenshot({path: archivo});
-  console.log('✅ ' + archivo);
+for(const fondo of FONDOS){
+  for(const f of FORMATOS){
+    await page.setViewport({width: f.w, height: f.h});
+    await page.goto(`${BASE}/dist/index.html`, {waitUntil: 'domcontentloaded'});
+    await page.setContent(
+      `<!doctype html><meta charset="utf-8"><style>${CSS(fondo)}.escena{${VARS(f, fondo)}}</style>${HTML}`,
+      {waitUntil: 'networkidle0'});
+    await page.evaluate(RUIDO);
+    await page.evaluate(() => document.fonts.ready);
+    await new Promise(r => setTimeout(r, 500));
+    const archivo = `${SALIDA}/PAGAS-${fondo.id}-${f.nombre}.png`;
+    await page.screenshot({path: archivo});
+    console.log('✅ ' + archivo);
+  }
 }
 await browser.close();

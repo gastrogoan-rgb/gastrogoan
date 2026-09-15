@@ -28,18 +28,26 @@ Shutterstock o sacada de una búsqueda de Google NO se puede usar en un
 anuncio de pago. Meta retira anuncios por eso y el autor puede reclamar.
 
 | `tpv-a.jpg` | Pexels · `pexels-rdne-4921264` | TPV de tablet en cafetería, 3684×5526 |
-| `tpv-limpio.jpg` | derivada de `tpv-a.jpg` | La misma, con la pantalla apagada |
+| `tpv-limpio.jpg` | derivada de `tpv-a.jpg` | La misma, con GastroGoan en pantalla |
+| `camarero.jpg` | Pexels · `pexels-spoton-pos-2160258094` | Camarero en el TPV con las cartas colgadas, 4000×3000 |
+| `camarero-limpio.jpg` | derivada de `camarero.jpg` | La misma, con GastroGoan en pantalla y sin la marca SpotOn |
 
-## `tpv-limpio.jpg`: por qué existe
+## Las versiones "limpias": por qué existen
 
-La foto original enseña el software de OTRA empresa ("Matcha Latte", precios
-en dólares, interfaz en inglés). Publicarla así es pagar por anunciar a un
-competidor, y Meta puede tumbar el anuncio por marca ajena.
+Las fotos de TPV que se encuentran enseñan SIEMPRE el software de otra
+empresa. Publicarlas tal cual es pagar por anunciar a un competidor, y Meta
+puede tumbar el anuncio por marca ajena.
 
-`anuncios/apagar-pantalla.py` apaga el cristal **respetando la mano**: la
-piel se separa por COLOR, no recortando la silueta a mano — que es donde un
-montaje siempre se delata. Se guardan las dos: la original porque es el
-material de partida, y la limpia porque es la que va al anuncio.
+`anuncios/pantalla-gastrogoan.py` sustituye la pantalla por la de GastroGoan
+en perspectiva, respetando la mano. Se guardan las dos versiones de cada
+foto: la original porque es el material de partida, y la limpia porque es la
+que va al anuncio.
+
+⚠️ Las fotos se guardan a **4000 px de ancho como mucho**. La del camarero
+venía a 10.889 px y son 4,6 MB para un anuncio de 1080: bajarla a 4000
+ahorra dos tercios del peso sin que se note nada. Si se vuelve a bajar una
+foto de Drive, reducirla ANTES de medir el cuadrilátero — las coordenadas
+van en píxeles de la foto y no sobreviven a un reescalado.
 
 Se descartaron otras dos fotos de TPV que subió el dueño (una horizontal con
 la tablet muy escorada, y otra donde la mano tapaba media pantalla). No se
