@@ -91,14 +91,28 @@ const CSS = `
   .marca span{color:${NARANJA}}
   /* El gancho local. Va en Schibsted, no en monoespaciada: una quinta
      tipografía por una sola línea es exactamente el ruido que sobraba. */
-  .ojo{font-family:'SG',sans-serif;font-size:var(--f-ojo);font-weight:700;
-    letter-spacing:.16em;text-transform:uppercase;color:${NARANJA}}
+  .ojo{font-family:'ArchivoB',sans-serif;font-size:var(--f-ojo);font-weight:900;
+    letter-spacing:-.01em;color:${NARANJA};white-space:nowrap}
   h1{font-family:'ArchivoB',sans-serif;font-weight:900;
     font-size:var(--f-h1);line-height:.98;letter-spacing:-.04em;color:${PAPEL}}
 
   /* ── LA FACTURA ─────────────────────────────────────────────────────── */
-  .cuenta{position:relative;z-index:2;background:${PAPEL};padding:var(--cpad);
-    box-shadow:0 30px 70px rgba(0,0,0,.45)}
+  /* La pila (factura + franja) va girada medio grado: un papel dejado sobre
+     la mesa nunca está a escuadra con el encuadre, y estar a escuadra es
+     precisamente lo que delata que algo lo ha compuesto una máquina. */
+  .pila{position:relative;z-index:2;display:flex;flex-direction:column;
+    gap:var(--gap);transform:rotate(-.55deg)}
+
+  .cuenta{position:relative;background:
+    linear-gradient(168deg, #FFFEFC 0%, ${PAPEL} 42%, #F2EFE8 100%);
+    padding:var(--cpad);
+    box-shadow:0 2px 2px rgba(0,0,0,.22), 0 34px 80px rgba(0,0,0,.5)}
+  /* El troquelado de abajo: es un ticket, y un ticket se corta. */
+  .cuenta::after{content:'';position:absolute;left:0;right:0;bottom:-11px;height:12px;
+    background:
+      linear-gradient(-45deg, transparent 0 8px, #F2EFE8 8px) 0 0/15px 100% repeat-x,
+      linear-gradient( 45deg, transparent 0 8px, #F2EFE8 8px) 0 0/15px 100% repeat-x;
+    transform:scaleY(-1)}
   /* Las filas se separan con gap, todas iguales, y los conceptos y los
      precios caen en DOS columnas fijas: los precios alineados a la derecha
      y a la misma anchura, que es lo que hace que una tabla se lea como una
@@ -137,18 +151,24 @@ const CSS = `
   /* El importe mensual se escribe como las cifras de arriba —misma
      tipografía y mismo cuerpo—, no como texto menudo: es la mitad del
      argumento (lo que paga cada mes) y estaba dicho en voz baja. */
-  .total .mes{margin-left:auto;font-family:'ArchivoB',sans-serif;font-weight:800;
-    font-size:var(--f-val);letter-spacing:-.03em;color:#6E675E;white-space:nowrap}
+  .total .mes{margin-left:auto;font-family:'ArchivoB',sans-serif;font-weight:900;
+    font-size:var(--f-total);letter-spacing:-.045em;color:${TINTA};white-space:nowrap}
   .total .mes em{font-style:normal;font-family:'SG',sans-serif;font-weight:500;
-    font-size:var(--f-uni);letter-spacing:0}
-  .total .v{font-weight:900;font-size:var(--f-total);letter-spacing:-.045em}
+    font-size:var(--f-uni);letter-spacing:0;color:#7A7268}
+  .total .v{font-weight:900;font-size:var(--f-total);letter-spacing:-.045em;
+    width:auto}
+  .tach{position:relative;display:inline-block}
+  .tach::after{content:'';position:absolute;left:-1%;right:-1%;top:46%;
+    height:var(--rayaT);background:${NARANJA};transform:rotate(-1.6deg);
+    box-shadow:0 2px 10px rgba(255,107,53,.45)}
 
   /* ── LA FRANJA ──────────────────────────────────────────────────────── */
   /* Mismo ancho que la factura, mismo padding lateral por dentro, y el
      precio en la MISMA columna de la derecha que los de arriba. Así el ojo
      compara las dos cifras sin moverse: es el argumento entero del anuncio
      y estaba desalineado. */
-  .franja{position:relative;z-index:2;background:${NARANJA};padding:var(--cpad);
+  .franja{position:relative;background:
+    linear-gradient(172deg, #FF7A46 0%, ${NARANJA} 55%, #F25C26 100%);padding:var(--cpad);
     display:flex;align-items:center;gap:16px;
     box-shadow:0 24px 60px rgba(255,107,53,.34)}
     /* Nada de la franja parte en dos líneas: la columna fija del precio le
@@ -163,9 +183,11 @@ const CSS = `
     white-space:nowrap}
   .franja .sub{font-family:'SG',sans-serif;font-size:var(--f-sub);font-weight:700;
     color:${TINTA}}
-  .franja .v{font-weight:900;font-size:var(--f-total);letter-spacing:-.045em;
-    margin-left:auto}
-  .franja .u{color:${TINTA};font-weight:700}
+  .franja .v{font-weight:900;font-size:var(--f-precio);letter-spacing:-.045em;
+    margin-left:auto;width:auto}
+  .franja .u{font-family:'ArchivoB',sans-serif;font-weight:900;
+    font-size:var(--f-uano);letter-spacing:-.03em;color:${TINTA};
+    width:auto;align-self:center}
 
   /* ── EL CIERRE ──────────────────────────────────────────────────────── */
   /* Una sola línea, del mismo cuerpo que el titular y en el mismo margen:
@@ -173,12 +195,17 @@ const CSS = `
      el único sitio donde el acento significa «esto es tuyo». */
   .cierre{position:relative;z-index:2;margin-top:auto;
     font-family:'ArchivoB',sans-serif;font-weight:900;
-    font-size:var(--f-cierre);line-height:.98;letter-spacing:-.04em;color:${PAPEL}}
+    font-size:var(--f-cierre);line-height:.98;letter-spacing:-.04em;color:${PAPEL};
+    text-align:center}
   .cierre b{color:${NARANJA};font-weight:900}
 
   /* Grano encima de todo: una superficie de color perfectamente limpia es lo
      que delata que algo está generado. */
-  .grano{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:.07;
+  .vineta{position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(118% 78% at 50% 42%, transparent 46%, rgba(0,0,0,.5) 100%)}
+  /* El grano va encima de TODO, papel incluido: un filo perfectamente limpio
+     sobre una superficie con grano canta a montaje. */
+  .grano{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:.1;
     background-image:var(--ruido);background-size:180px 180px}
 `;
 
@@ -186,18 +213,19 @@ const HTML = `
 <div class="escena">
   <div class="cab">
     <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
-    <div class="ojo">Bares y restaurantes de Barcelona</div>
-    <h1>Lo que estás<br>pagando ahora</h1>
+    <div class="ojo">Para bares y restaurantes de Barcelona</div>
+    <h1>Lo que estás pagando ahora</h1>
   </div>
 
+  <div class="pila">
   <div class="cuenta">
     <div class="filas">
       ${LINEAS.map(([q, v]) => `<div class="fila"><span class="q">${q}</span><span class="p"></span><span class="v">${v}</span><span class="u">/mes</span></div>`).join('')}
     </div>
     <div class="total">
       <span class="q">Total</span>
-      <span class="mes">${AL_MES} <em>al mes</em></span>
-      <span class="v">${AL_ANO}</span><span class="u">/año</span>
+      <span class="mes"><span class="tach">${AL_MES}</span> <em>al mes</em></span>
+      <span class="v"><span class="tach">${AL_ANO}</span></span><span class="u">/año</span>
     </div>
   </div>
 
@@ -210,6 +238,9 @@ const HTML = `
     <span class="v">100 €</span><span class="u">/año</span>
   </div>
 
+  </div>
+
+  <div class="vineta"></div>
   <div class="cierre"><b>${VUELVEN}</b> que vuelven<br>a tu bolsillo</div>
   <div class="grano"></div>
 </div>`;
@@ -217,23 +248,28 @@ const HTML = `
 /* LA ESCALA. Cinco cuerpos y ni uno más, cada uno con su trabajo:
    titular · cifra grande · fila · dato menor · etiqueta. --colv es la
    columna de precios, la misma para la factura y para la franja. */
+/* LA ESCALA. Cinco cuerpos y ni uno más, cada uno con su trabajo:
+   gancho · titular · cifra · fila · etiqueta. --colv es la columna de
+   precios, la misma para la factura y para la franja. */
 const VARS = (f) => {
   const s = f.nombre === 'story';
   return `
-    --pad:${s ? 74 : 62}px; --gap:${s ? 56 : 38}px; --gapc:${s ? 22 : 15}px;
+    --pad:${s ? 74 : 62}px; --gap:${s ? 58 : 36}px; --gapc:${s ? 20 : 15}px;
     --mgap:${s ? 12 : 10}px; --punto:${s ? 13 : 12}px;
-    --cpad:${s ? '64px 52px' : '46px 40px'}; --fgap:${s ? 46 : 31}px;
-    --colv:${s ? 348 : 298}px; --colu:${s ? 78 : 66}px; --tgap:${s ? 30 : 20}px;
-    --f-uni:${s ? 24 : 20}px;
+    --cpad:${s ? '74px 54px' : '52px 42px'}; --fgap:${s ? 56 : 36}px;
+    --colv:${s ? 262 : 208}px; --colu:${s ? 78 : 66}px; --tgap:${s ? 26 : 20}px;
+    --rayaT:${s ? 10 : 9}px;
     --f-marca:${s ? 36 : 32}px;
-    --f-ojo:${s ? 34 : 26}px;
-    --f-h1:${s ? 82 : 62}px;
-    --f-fila:${s ? 35 : 29}px;
-    --f-val:${s ? 45 : 34}px;
+    --f-ojo:${s ? 44 : 37}px;
+    --f-h1:${s ? 62 : 53}px;
+    --f-fila:${s ? 36 : 29}px;
+    --f-val:${s ? 44 : 35}px;
+    --f-uni:${s ? 25 : 21}px;
     --f-mes:${s ? 28 : 24}px; --f-sub:${s ? 29 : 26}px;
-    --f-total:${s ? 98 : 74}px;
-    --f-nom:${s ? 48 : 39}px;
-    --f-cierre:${s ? 96 : 82}px;`;
+    --f-total:${s ? 82 : 63}px;
+    --f-nom:${s ? 48 : 40}px;
+    --f-precio:${s ? 84 : 82}px; --f-uano:${s ? 38 : 38}px;
+    --f-cierre:${s ? 92 : 84}px;`;
 };
 
 fs.mkdirSync(SALIDA, {recursive: true});
