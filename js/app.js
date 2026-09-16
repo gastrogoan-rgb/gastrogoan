@@ -6564,7 +6564,7 @@ function renderVerifactuConfigCard(){
         <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('mn.verifactu.declarationsDesc')}</p>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;flex-wrap:wrap">
           <span style="min-width:170px">${t('mn.verifactu.ownDeclaration')}</span>
-          <a href="${DECLARACION_RESPONSABLE_URL}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:4px"><i class="ti ti-external-link"></i> ${t('common.view')}</a>
+          <a href="${DECLARACION_RESPONSABLE_URL}" target="_blank" rel="noopener" class="vf-declaracion-link" style="display:flex;align-items:center;gap:4px"><i class="ti ti-external-link"></i> ${t('common.view')}</a>
         </div>
         ${renderVerifactuDeclarationRow('providerDeclarationUrl', t('mn.verifactu.providerDeclaration'), t('mn.verifactu.providerDeclarationPending'))}
       </div>
@@ -6579,7 +6579,7 @@ function renderVerifactuDeclarationRow(field, label, pendingLabel){
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;flex-wrap:wrap">
       <span style="min-width:170px">${label}</span>
       ${url
-        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:4px"><i class="ti ti-external-link"></i> ${t('common.view')}</a>`
+        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="vf-declaracion-link" style="display:flex;align-items:center;gap:4px"><i class="ti ti-external-link"></i> ${t('common.view')}</a>`
         : `<span style="color:var(--muted)"><i class="ti ti-hourglass-empty"></i> ${pendingLabel}</span>`}
       <input type="text" id="vf-${field}" value="${escapeHtml(url)}" placeholder="https://..." style="flex:1;min-width:160px;font-size:12px;padding:3px 6px" onchange="setVerifactuDeclarationUrl('${field}', this.value)">
     </div>

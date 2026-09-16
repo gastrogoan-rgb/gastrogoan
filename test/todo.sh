@@ -30,6 +30,14 @@ echo "✅ sintaxis (todos los ficheros)"
 ( python3 -m http.server 8950 >/dev/null 2>&1 ) & PID_WEB=$!
 sleep 2
 
+# 2b. El fixture de datos de test/movil.mjs y video/grabar-recorrido.mjs
+# (dist/ggburger.json) no lo genera build.sh ni está versionado — hasta
+# el 16/09 vivía solo en el disco de este contenedor, así que un checkout
+# limpio (como el de GitHub Actions) nunca lo tenía y test/movil.mjs
+# reventaba con un 404 al pedirlo. Se genera aquí, ANTES de la batería
+# paralela, reutilizando la siembra real (ver demo/generar-ggburger-json.mjs).
+node demo/generar-ggburger-json.mjs || { echo "❌ no se pudo generar dist/ggburger.json"; exit 1; }
+
 # 3. Las cuatro grandes, a la vez
 lanzar; node test/smoke.test.mjs           > "$SALIDA/smoke.txt"   2>&1 & P1=$!
 lanzar; node test/audit-active.mjs         > "$SALIDA/sync.txt"    2>&1 & P2=$!
