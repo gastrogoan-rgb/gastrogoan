@@ -1427,7 +1427,7 @@ function renderBusinessSelectScreenHtml(){
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
-        <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
+        <button class="btn" style="flex:1;border:1px solid var(--ink);color:var(--ink)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
       <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
       <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
@@ -2331,14 +2331,14 @@ function showActivationGate(){
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
       <button onclick="${showBackBtn ? 'backToBusinessSelectorFromGate()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:8px;left:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:10px;min-height:44px"><i class="ti ti-arrow-left"></i> ${showBackBtn ? t('gate.businesses') : t('gate.exitSetup')}</button>
-      <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-tools-kitchen-2"></i></div>
+      <div style="width:54px;height:54px;border-radius:14px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-tools-kitchen-2"></i></div>
       <h2 style="margin-bottom:4px">GastroGoan</h2>
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
       <div style="text-align:left">
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px"><i class="ti ti-key"></i> ${t('access.businessCode')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span></label>
         <input id="license-code-input" type="text" maxlength="8" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase" onkeydown="if(event.key==='Enter')activateLicenseFromGate()">
         <div id="license-error" style="display:none;background:#F5EBE7;color:#8A4A3B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
-        <button id="license-activate-btn" onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
+        <button id="license-activate-btn" onclick="activateLicenseFromGate()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
       </div>
     </div>`;
   document.body.appendChild(g);
@@ -2621,11 +2621,11 @@ function renderExternalConnectionsPromptStep(){
         <p style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">${t('gate.extConn.stepLabel').replace('${n}', extConnPromptStep+1).replace('${total}', EXT_CONN_PROMPT_STEPS.length)}</p>
         <h2 style="margin-bottom:4px">${t(step.titleKey)}</h2>
       </div>
-      <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
+      <div style="background:#F5F0E3;border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
         <strong>${t('gate.extConn.optional')}</strong> ${t('gate.extConn.alwaysThere')}
       </div>
       ${step.renderCard()}
-      <button onclick="skipExternalConnectionsPromptStep()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:14px">
+      <button onclick="skipExternalConnectionsPromptStep()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:14px">
         ${isLast ? t('gate.extConn.finishBtn') : t('gate.extConn.nextBtn')}
       </button>
       <p style="text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px">${t('gate.extConn.skipHint')}</p>
@@ -2655,7 +2655,7 @@ function showFirebaseSetupGate(){
   g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px';
   const step = (n, title, body) => `
     <div style="display:flex;gap:12px;margin-bottom:16px">
-      <div style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">${n}</div>
+      <div style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">${n}</div>
       <div style="flex:1;min-width:0">
         <p style="font-weight:700;font-size:13.5px;margin-bottom:4px">${title}</p>
         <div style="font-size:13px;color:#444;line-height:1.6">${body}</div>
@@ -2671,7 +2671,7 @@ function showFirebaseSetupGate(){
 
   const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
   const intro = `
-      <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
+      <div style="background:#F5F0E3;border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
         ${t('gate.cloudIntro')}
       </div>
       <div style="background:var(--teal-l,#eef7f6);border-left:4px solid var(--teal,#2a8f88);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.6;margin-bottom:18px;text-align:left">
@@ -2710,7 +2710,7 @@ function showFirebaseSetupGate(){
     <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
       <button onclick="${showBackBtnFb ? 'hideFirebaseSetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:8px;left:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:10px;min-height:44px"><i class="ti ti-arrow-left"></i> ${showBackBtnFb ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="text-align:center">
-        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-cloud"></i></div>
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-cloud"></i></div>
         <h2 style="margin-bottom:4px">${t('gate.setupCloud')}</h2>
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${t('gate.cloudStepLabel')}</p>
       </div>
@@ -2760,11 +2760,11 @@ function showNetlifySetupGate(){
     <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
       <button onclick="${showBackBtnNt ? 'hideNetlifySetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:8px;left:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:10px;min-height:44px"><i class="ti ti-arrow-left"></i> ${showBackBtnNt ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="text-align:center">
-        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-world"></i></div>
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-world"></i></div>
         <h2 style="margin-bottom:4px">${t('gate.nt.title')}</h2>
       </div>
-      <div style="background:#F5EBE7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left"><i class="ti ti-alert-triangle"></i> ${t('gate.nt.notHostedBody')}</div>
-      <button onclick="confirmNetlifyDone()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:8px"><i class="ti ti-check"></i> ${t('gate.nt.doneBtn')}</button>
+      <div style="background:#F5EBE7;border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left"><i class="ti ti-alert-triangle"></i> ${t('gate.nt.notHostedBody')}</div>
+      <button onclick="confirmNetlifyDone()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:8px"><i class="ti ti-check"></i> ${t('gate.nt.doneBtn')}</button>
     </div>`;
   document.body.appendChild(g);
 }
@@ -6210,16 +6210,16 @@ function renderOnlineCard(){
   const b = DB.business || {};
   if(!getTenantId()){
     return `
-      <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
+      <div class="card mn-grid-full" style="border:2px solid var(--ink);background:var(--brand-cream)">
+        <h3 style="color:var(--ink)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.needLicense')}</p>
       </div>
     `;
   }
   if(!getCloudConfig()){
     return `
-      <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
+      <div class="card mn-grid-full" style="border:2px solid var(--ink);background:var(--brand-cream)">
+        <h3 style="color:var(--ink)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.needCloud')}</p>
       </div>
     `;
@@ -6229,16 +6229,16 @@ function renderOnlineCard(){
   const activeCartas = (typeof getActiveCartas === 'function') ? getActiveCartas() : [];
   const activeCartaLine = activeCartas.length
     ? `<p style="font-size:12.5px;margin-bottom:12px"><i class="ti ti-book-2"></i> ${t('mn.online.activeCartaLabel')}<strong>${activeCartas.map(c=>escapeHtml(tItem(c))).join(', ')}</strong></p>`
-    : `<p style="font-size:12.5px;margin-bottom:12px;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.noActiveCarta')}</p>`;
+    : `<p style="font-size:12.5px;margin-bottom:12px;color:var(--ink)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.noActiveCarta')}</p>`;
   return `
-    <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-      <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
+    <div class="card mn-grid-full" style="border:2px solid var(--ink);background:var(--brand-cream)">
+      <h3 style="color:var(--ink)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
       <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.shareDesc')}${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' '+t('mn.online.andOrder') : ''}${t('mn.online.shareDescEnd')}</p>
       ${activeCartaLine}
       ${esKitAutoAlojado() ? `
       <details style="margin-bottom:12px">
-        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.hostingSummary')}</summary>
-        <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--ink)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.hostingSummary')}</summary>
+        <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
           ${t('mn.online.hostingP1')}<br><br>
           ${t('mn.online.hostingP2')}<br><br>
           ${t('mn.online.hostingP3')}<br><br>
@@ -6280,16 +6280,16 @@ function renderTableQrCard(){
   if((DB.business?.tiposServicio?.mesa === false) || !DB.tables.length) return '';
   if(!getTenantId()){
     return `
-      <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
+      <div class="card" style="border:2px solid var(--ink);background:var(--brand-cream)">
+        <h3 style="color:var(--ink)"><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.tableQr.needLicense')}</p>
       </div>
     `;
   }
   if(!getCloudConfig()){
     return `
-      <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
+      <div class="card" style="border:2px solid var(--ink);background:var(--brand-cream)">
+        <h3 style="color:var(--ink)"><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.tableQr.needCloud')}</p>
       </div>
     `;
@@ -6408,7 +6408,7 @@ function renderPedidosConfigCard(){
           <input type="checkbox" id="mn-acepta-tpv-virtual" ${(p.aceptaTpvVirtual!==false && redsysIsConfigured)?'checked':''} ${redsysIsConfigured?'':'disabled'} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTpvVirtual')}
         </label>
         <small style="color:var(--muted)">${t('mn.pedidos.metodosLocalesDesc')}</small>
-        <small id="mn-acepta-tpv-virtual-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--brand-orange)'}">${redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint')}</small>
+        <small id="mn-acepta-tpv-virtual-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--ink)'}">${redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint')}</small>
       </div>
       ${deliveryEnabled ? `
       <div class="field-row">
@@ -6528,7 +6528,7 @@ function updateTpvVirtualCheckboxAvailability(){
   const p = (DB.business && DB.business.pedidos) || {};
   cb.checked = redsysIsConfigured && p.aceptaTpvVirtual !== false;
   if(hint){
-    hint.style.color = redsysIsConfigured ? 'var(--muted)' : 'var(--brand-orange)';
+    hint.style.color = redsysIsConfigured ? 'var(--muted)' : 'var(--ink)';
     hint.textContent = redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint');
   }
 }
@@ -6542,7 +6542,7 @@ function updateDepositCheckboxAvailability(){
   cb.disabled = !redsysIsConfigured;
   cb.checked = redsysIsConfigured && !!(DB.business && DB.business.requireDeposit);
   if(hint){
-    hint.style.color = redsysIsConfigured ? 'var(--muted)' : 'var(--brand-orange)';
+    hint.style.color = redsysIsConfigured ? 'var(--muted)' : 'var(--ink)';
     hint.textContent = redsysIsConfigured ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsRedsys');
   }
 }
@@ -6626,7 +6626,7 @@ async function loadRedsysCardStatus(){
     const data = await res.json();
     redsysIsConfigured = !!(data && data.configured);
     if(data && data.configured){
-      el.innerHTML = `<span style="color:var(--brand-orange);font-weight:600"><i class="ti ti-check"></i> ${t('mn.redsys.configured')}</span> · FUC ${escapeHtml(data.fuc)} · ${t('mn.redsys.terminal')} ${escapeHtml(data.terminal)} · ${t('mn.redsys.environment')} ${data.ambiente === 'real' ? t('mn.redsys.envReal') : t('mn.redsys.envTest')}`;
+      el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-check"></i> ${t('mn.redsys.configured')}</span> · FUC ${escapeHtml(data.fuc)} · ${t('mn.redsys.terminal')} ${escapeHtml(data.terminal)} · ${t('mn.redsys.environment')} ${data.ambiente === 'real' ? t('mn.redsys.envReal') : t('mn.redsys.envTest')}`;
       document.getElementById('rs-fuc').value = data.fuc || '';
       document.getElementById('rs-terminal').value = data.terminal || '';
       document.getElementById('rs-real').checked = data.ambiente === 'real';
@@ -6754,7 +6754,7 @@ function openCloudWizard(){
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
-      <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
+      <div style="background:#F5F0E3;border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
         ${t('gate.cloudIntro')}
       </div>
       <p style="font-size:13px;margin-bottom:10px">${t('gate.tenMinutesIntro')}</p>

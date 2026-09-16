@@ -315,7 +315,7 @@ function renderLimpiezaManos(){
         </div>
         <div class="card">
           <h3><i class="ti ti-check"></i> ${t('title.minimumDuration')}</h3>
-          <p style="font-size:28px;font-weight:800;color:var(--brand-orange);margin:0">${t('label.20seconds')}</p>
+          <p style="font-size:28px;font-weight:800;color:var(--ink);margin:0">${t('label.20seconds')}</p>
         </div>
       </div>
     </div>
@@ -567,7 +567,7 @@ function renderLimpiezaMes(){
       const isToday = day===today.getDate() && month===today.getMonth() && year===today.getFullYear();
       const ds = dateStr(new Date(year, month, day));
       cells += `
-        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToLimpiezaDia('${ds}')">
+        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--ink)':''}" onclick="goToLimpiezaDia('${ds}')">
           <div style="font-weight:700">${day}</div>
           ${count ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(count===1?t('limpieza.oneTask'):t('limpieza.nTasks').replace('${n}', count))}">${count}</span>` : ''}
         </div>
@@ -590,7 +590,7 @@ function renderLimpiezaMes(){
       const checks = limpiezaChecksFor(monthKey);
       const isToday = dateStr(d) === todayStr();
       return `
-        <div class="card" style="padding:8px;min-width:0;${isToday?'border-color:var(--brand-orange)':''}">
+        <div class="card" style="padding:8px;min-width:0;${isToday?'border-color:var(--ink)':''}">
           <div style="font-weight:700;margin-bottom:6px;text-align:center;font-size:12px">${t('days.short')[(d.getDay()+6)%7]} ${d.getDate()}</div>
           ${tareasDelDia.length ? tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey)).join('') : `<div style="font-size:11px;color:var(--muted);text-align:center">—</div>`}
         </div>
@@ -1315,7 +1315,7 @@ function renderDistList(){
           <button class="btn btn-sm btn-icon" title="${t('label.viewEmployeeFile')}" onclick="event.stopPropagation();openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i></button>
         </div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||t('label.noRole'))}</div>
-        <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--brand-orange)':'var(--muted)'}">
+        <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--ink)':'var(--muted)'}">
           ${isSala
             ? `<span><i class="ti ti-map-pin"></i> ${nRangos===1?t('dist.oneZone'):t('dist.nZones').replace('${n}', nRangos)}</span>`
             : `<span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos===1?t('dist.oneDish'):t('dist.nDishes').replace('${n}', nPlatos)}</span>`}
@@ -1423,7 +1423,7 @@ function renderDistDetail(){
         return `
         <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 8px;min-height:76px;border:2px solid ${broken?'var(--red)':'var(--border)'};border-radius:12px;cursor:pointer;text-align:center;background:${broken?'var(--red-l)':'var(--surface)'}" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${broken?t('dist.dishNoLongerExists'):t('title.viewTechSpec')}">
           <button class="owner-strict btn-danger" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;min-width:0;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:2px solid var(--surface);cursor:pointer" onclick="event.stopPropagation();removeDistPlato(${i})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>
-          <i class="ti ${broken?'ti-link-off':'ti-tools-kitchen-2'}" style="font-size:20px;color:${broken?'var(--red)':'var(--brand-orange)'}"></i>
+          <i class="ti ${broken?'ti-link-off':'ti-tools-kitchen-2'}" style="font-size:20px;color:${broken?'var(--red)':'var(--ink)'}"></i>
           <span style="font-size:12.5px;font-weight:600;line-height:1.2;${broken?'color:var(--red)':''}">${escapeHtml(pl)}</span>
         </div>
       `;}).join('') + `</div>`
@@ -1435,7 +1435,7 @@ function renderDistDetail(){
     ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">` + d.rangos.map((rg,i)=>`
         <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 8px;min-height:76px;border:2px solid var(--border);border-radius:12px;text-align:center;background:var(--surface)">
           <button class="owner-strict btn-danger" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;min-width:0;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:2px solid var(--surface);cursor:pointer" onclick="removeDistRango(${i})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>
-          <i class="ti ti-map-pin" style="font-size:20px;color:var(--brand-orange)"></i>
+          <i class="ti ti-map-pin" style="font-size:20px;color:var(--ink)"></i>
           <span style="font-size:12.5px;font-weight:600;line-height:1.2">${escapeHtml(rg)}</span>
         </div>
       `).join('') + `</div>`
@@ -1468,8 +1468,8 @@ function renderDistDetail(){
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
-        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--ink)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${canEditThis?'':'disabled'}>
+        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--ink);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
         <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
@@ -1483,9 +1483,9 @@ function renderDistDetail(){
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
-        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${canEditThis?'':'disabled'}>
+        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--ink)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${canEditThis?'':'disabled'}>
         <span class="badge badge-purple txt-xs"  title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
-        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--ink);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
         <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
@@ -1524,7 +1524,7 @@ function renderDistDetail(){
 
     return `
       <div style="padding:10px 0;border-bottom:1px solid var(--border);${isToday?'background:var(--brand-cream)':(dayHasPending?'background:var(--red-l)':'')}">
-        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green txt-xs" >${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red txt-xs" ><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green txt-xs" >${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red txt-xs" ><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
         ${promosHtml}
         ${limpiezaHtml}
         ${tareasHtml}
@@ -2550,7 +2550,7 @@ function openRewardModal(id){
     </div>
     <p style="font-size:13.5px;line-height:1.6">${t('reward.reached10pts').replace('${name}', `<strong>${escapeHtml(c.name)}</strong>`)}</p>
     ${suggestion ? `
-    <div style="background:var(--cream,#FBF3EA);border-left:3px solid var(--brand-orange);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;line-height:1.5">
+    <div style="background:var(--cream,#FBF3EA);border-left:3px solid var(--ink);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;line-height:1.5">
       <i class="ti ti-sparkles"></i> ${t('reward.suggestion').replace('${fav}', `<strong>${escapeHtml(fav)}</strong>`).replace('${suggestion}', `<strong>"${escapeHtml(suggestion)}"</strong>`)}
     </div>` : ''}
     <div class="field">
@@ -2858,7 +2858,7 @@ function renderReservasPendingOnline(){
     <h3 style="margin-top:0"><i class="ti ti-bell-ringing"></i> ${t('title.pendingOnlineRequests')}</h3>
     <div class="grid grid-3" style="margin-bottom:16px">
       ${pending.map(r => `
-        <div class="card" style="border:2px solid var(--brand-orange)">
+        <div class="card" style="border:2px solid var(--ink)">
           <h3 style="justify-content:space-between;font-size:14px">
             <span>${escapeHtml(r.clientName||'—')}</span>
             <span class="badge badge-amber">${t('badge.newF')}</span>
@@ -3092,7 +3092,7 @@ function renderReservasSemana(){
     const activeCount = items.filter(r => r.status !== 'cancelada' && r.status !== 'no_show').length;
     const isToday = ds === todayStr();
     return `
-      <div class="card" style="cursor:pointer;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToReservasDia('${ds}')">
+      <div class="card" style="cursor:pointer;${isToday?'border-color:var(--ink)':''}" onclick="goToReservasDia('${ds}')">
         <h3 style="justify-content:space-between;font-size:14px">
           <span>${weekDayFull(i)} ${d.getDate()}/${d.getMonth()+1}</span>
           ${activeCount ? `<span class="badge badge-blue">${activeCount}</span>` : ''}
@@ -3143,7 +3143,7 @@ function renderReservasMes(){
     const count = counts[ds] || 0;
     const isToday = ds === todayStr();
     cells += `
-      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToReservasDia('${ds}')">
+      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--ink)':''}" onclick="goToReservasDia('${ds}')">
         <div style="font-weight:700">${day}</div>
         ${count ? `<span class="badge badge-blue">${count}</span>` : ''}
       </div>
@@ -3911,7 +3911,7 @@ function renderPromoDia(){
               ${p.horaInicio && p.horaFin ? `<span class="badge txt-xs" ><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
               ${p.maxUses ? `<span class="badge txt-xs"  title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
             </div>` : ''}
-            ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
+            ${p.responsableId ? `<div style="font-size:12px;color:var(--ink);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
             ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString(localeActual())))}</div>` : ''}
             <div class="actions-cell owner-strict" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
@@ -3924,7 +3924,7 @@ function renderPromoDia(){
   const discountStats = promoDiscountTotalForDate(date);
   box.innerHTML = `
     ${discountStats.count ? `<div class="card" style="margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:8px">
-      <i class="ti ti-discount-2" style="color:var(--brand-orange)"></i>
+      <i class="ti ti-discount-2" style="color:var(--ink)"></i>
       <span style="font-size:13px">${t('promo.day.discountGranted').replace('${amount}', fmtMoney(discountStats.total)).replace('${count}', discountStats.count)}</span>
     </div>` : ''}
     <div class="toolbar">
@@ -3953,7 +3953,7 @@ function renderPromoSemana(){
   const headerCells = dates.map((d,i) => {
     const ds = dateStr(d);
     const isToday = ds === todayStr();
-    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${weekDayShort(i)}<br><span class="txt-xs" style="font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
+    return `<th ${isToday?'style="color:var(--ink)"':''}>${weekDayShort(i)}<br><span class="txt-xs" style="font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
   }).join('');
 
   const bodyCells = dates.map(d => {
@@ -3962,7 +3962,7 @@ function renderPromoSemana(){
     return `
       <td style="vertical-align:top;min-width:140px">
         ${items.map(p => `
-          <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--bg-2,#fdf1e7);color:var(--brand-orange);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${p.recurrence==='weekly'?'<i class="ti ti-repeat" style="font-size:11px"></i>':''}${escapeHtml(p.titulo)}</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--bg-2,#fdf1e7);color:var(--ink);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${p.recurrence==='weekly'?'<i class="ti ti-repeat" style="font-size:11px"></i>':''}${escapeHtml(p.titulo)}</div>
         `).join('')}
         <span class="owner-only" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openPromoModal(null, '${ds}')">+</span>
       </td>
@@ -4019,7 +4019,7 @@ function renderPromoMes(){
     const count = dayPromos[ds].length;
     const isToday = ds === todayStr();
     cells += `
-      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToPromoDia('${ds}')">
+      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--ink)':''}" onclick="goToPromoDia('${ds}')">
         <div style="font-weight:700">${day}</div>
         ${count ? `<span class="badge badge-blue">${count}</span>` : ''}
       </div>
@@ -4464,7 +4464,7 @@ function renderPromoIdeas(){
           return `
           <div class="card" style="cursor:pointer" onclick="openPromoIdeasCategory(${i})">
             <h3><i class="ti ${c.icon}"></i> ${escapeHtml(gl(c.cat))}</h3>
-            <div style="font-size:12px;color:var(--muted)">${t('promo.ideas.ideasCount').replace('${count}', c.ideas.length)}${used?` · <span style="color:var(--brand-orange)">${t('promo.ideas.usedCount').replace('${count}', used).replace('${s}', used!==1?'s':'')}</span>`:''}</div>
+            <div style="font-size:12px;color:var(--muted)">${t('promo.ideas.ideasCount').replace('${count}', c.ideas.length)}${used?` · <span style="color:var(--ink)">${t('promo.ideas.usedCount').replace('${count}', used).replace('${s}', used!==1?'s':'')}</span>`:''}</div>
           </div>
         `;}).join('')}
       </div>
@@ -4482,7 +4482,7 @@ function renderPromoIdeas(){
           <div class="card">
             <h3 style="font-size:14px">${escapeHtml(gl(idea.title))}</h3>
             <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${escapeHtml(gl(idea.description))}</div>
-            ${usage.length ? `<div style="font-size:11px;color:var(--brand-orange);margin-bottom:8px"><i class="ti ti-check"></i> ${t('promo.ideas.usedOn').replace('${date}', escapeHtml(usage[0].fecha)).replace('${extra}', extra)}</div>` : ''}
+            ${usage.length ? `<div style="font-size:11px;color:var(--ink);margin-bottom:8px"><i class="ti ti-check"></i> ${t('promo.ideas.usedOn').replace('${date}', escapeHtml(usage[0].fecha)).replace('${extra}', extra)}</div>` : ''}
             <button class="owner-only btn btn-sm btn-primary" style="width:100%" onclick="createPromoFromIdea(${promoIdeasCategory},${ideaIdx})"><i class="ti ti-plus"></i> ${t('promo.ideas.createAction')}</button>
           </div>
         `;}).join('')}
@@ -4572,7 +4572,7 @@ function renderReferralSummaryHtml(){
           <div style="display:flex;align-items:center;gap:8px">
             <span style="width:110px;font-size:12.5px;flex:none">${escapeHtml(label)}</span>
             <div style="flex:1;background:var(--brand-cream);height:10px;border-radius:6px;overflow:hidden">
-              <div style="width:${pct}%;background:var(--olive-l,var(--brand-orange));height:100%"></div>
+              <div style="width:${pct}%;background:var(--olive-l,var(--ink));height:100%"></div>
             </div>
             <span style="width:56px;text-align:right;font-size:12px;color:var(--muted);flex:none">${n} (${pct}%)</span>
           </div>`;
@@ -5151,8 +5151,8 @@ function renderMiNegocio(){
   };
   document.getElementById('minegocio-content').innerHTML = `
     <div class="mn-grid">
-    <div class="card" style="border:2px solid var(--teal);background:var(--teal-l, #eef7f6)">
-      <h3 style="color:var(--teal)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
+    <div class="card" style="border:2px solid var(--ink);background:var(--teal-l, #eef7f6)">
+      <h3 style="color:var(--ink)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
       <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
     </div>
@@ -5163,8 +5163,8 @@ function renderMiNegocio(){
          js/core.js) — un único sitio, en vez de repetirlo en cada Mi Negocio
          cuando el dueño tiene varios locales. Este PIN, en cambio, sí es
          propio de este negocio: confirma acciones delicadas del día a día. -->
-    <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-      <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> ${t('mn.ownerAccess.title')}</h3>
+    <div class="card" style="border:2px solid var(--ink);background:var(--brand-cream)">
+      <h3 style="color:var(--ink)"><i class="ti ti-lock"></i> ${t('mn.ownerAccess.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerAccess.desc')}</p>
       <div class="field-row">
         <div class="field">
@@ -5346,7 +5346,7 @@ function renderMiNegocio(){
           <input type="checkbox" id="mn-require-deposit" style="width:auto" ${(b.requireDeposit && redsysIsConfigured)?'checked':''} ${redsysIsConfigured?'':'disabled'} onchange="saveBusiness(true);renderMiNegocio()">
           ${t('mn.ops.requireDeposit')}
         </label>
-        <small id="mn-require-deposit-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--brand-orange)'}">${redsysIsConfigured ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsRedsys')}</small>
+        <small id="mn-require-deposit-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--ink)'}">${redsysIsConfigured ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsRedsys')}</small>
         ${!redsysIsConfigured ? `<button class="btn btn-sm" style="margin-top:6px" onclick="scrollToMnCard('mn-card-redsys')" type="button"><i class="ti ti-credit-card"></i> ${t('mn.ops.goToRedsys')}</button>` : ''}
       </div>
       ${(b.requireDeposit && redsysIsConfigured) ? `
@@ -5474,7 +5474,7 @@ function checkAforoWarning(){
       msg = t('mn.aforo.warningLow').replace('${seats}', seats).replace('${aforo}', aforo);
     }
   }
-  box.innerHTML = msg ? `<p style="font-size:12px;color:var(--brand-orange);margin-top:8px"><i class="ti ti-alert-triangle"></i> ${msg}</p>` : '';
+  box.innerHTML = msg ? `<p style="font-size:12px;color:var(--ink);margin-top:8px"><i class="ti ti-alert-triangle"></i> ${msg}</p>` : '';
 }
 
 // Renombra una zona/rango entera de una vez: se aplica a todas sus mesas y
@@ -6555,7 +6555,7 @@ function renderVerifactuConfigCard(){
         <input type="text" id="vf-serie" value="${escapeHtml(verifactuSerie())}" placeholder="T1" style="max-width:120px;font-family:monospace">
         <small style="color:var(--muted)">${t('mn.verifactu.serieHint')}</small>
       </div>
-      ${pendingSales.length ? `<p style="font-size:12.5px;color:var(--brand-orange);cursor:pointer" onclick="openVerifactuPendingModal()"><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingCount').replace('${n}', pendingSales.length)} <span style="text-decoration:underline">${t('common.viewDetail')}</span></p>` : ''}
+      ${pendingSales.length ? `<p style="font-size:12.5px;color:var(--ink);cursor:pointer" onclick="openVerifactuPendingModal()"><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingCount').replace('${n}', pendingSales.length)} <span style="text-decoration:underline">${t('common.viewDetail')}</span></p>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
         <button class="btn btn-primary" onclick="saveVerifactuConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
       </div>
@@ -6674,11 +6674,11 @@ function renderComandaPrintCard(){
         <p style="margin:0">${t('mn.comandas.howItWorks3')}</p>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-        <label class="ge-item" style="flex:1;min-width:200px;cursor:pointer;gap:10px;${modo==='pantalla'?'border-color:var(--brand-orange);background:var(--brand-cream)':''}">
+        <label class="ge-item" style="flex:1;min-width:200px;cursor:pointer;gap:10px;${modo==='pantalla'?'border-color:var(--ink);background:var(--brand-cream)':''}">
           <input type="radio" name="comanda-modo" value="pantalla" ${modo==='pantalla'?'checked':''} onchange="setComandaModo('pantalla')" style="width:18px;height:18px">
           <span><strong>${t('mn.comandas.modeScreen')}</strong><br><small style="color:var(--muted)">${t('mn.comandas.modeScreenDesc')}</small></span>
         </label>
-        <label class="ge-item" style="flex:1;min-width:200px;cursor:pointer;gap:10px;${modo==='impresion'?'border-color:var(--brand-orange);background:var(--brand-cream)':''}">
+        <label class="ge-item" style="flex:1;min-width:200px;cursor:pointer;gap:10px;${modo==='impresion'?'border-color:var(--ink);background:var(--brand-cream)':''}">
           <input type="radio" name="comanda-modo" value="impresion" ${modo==='impresion'?'checked':''} onchange="setComandaModo('impresion')" style="width:18px;height:18px">
           <span><strong>${t('mn.comandas.modePrint')}</strong><br><small style="color:var(--muted)">${t('mn.comandas.modePrintDesc')}</small></span>
         </label>
@@ -6706,7 +6706,7 @@ function renderComandaPrintCard(){
             <button class="btn btn-sm btn-icon btn-danger" onclick="deleteComandaPrinter('${p.id}')"><i class="ti ti-trash"></i></button>
             ${thermalPrintingSupported() ? `
             <div style="width:100%;display:flex;align-items:center;gap:8px;margin-top:2px;padding-top:6px;border-top:1px dashed var(--border)">
-              <i class="ti ti-bluetooth" style="color:${pairedName?'var(--brand-orange)':'var(--muted)'}"></i>
+              <i class="ti ti-bluetooth" style="color:${pairedName?'var(--ink)':'var(--muted)'}"></i>
               ${pairedName
                 ? `<span style="font-size:12px;color:var(--muted);flex:1"><strong>${escapeHtml(pairedName)}</strong> ${t('thermal.pairedHint')}</span>
                    <button class="btn btn-sm" onclick="connectThermalPrinter('${p.id}')">${t('thermal.reconnectBtn')}</button>

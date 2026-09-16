@@ -825,7 +825,7 @@ function renderIdrInterno(){
 
   const burbuja = (tipo, icono, titulo, desc) => `
     <div class="card" style="cursor:pointer;text-align:center;padding:22px 16px" onclick="idrEmpezar('${tipo}')">
-      <i class="ti ${icono}" style="font-size:34px;color:var(--brand-orange)"></i>
+      <i class="ti ${icono}" style="font-size:34px;color:var(--ink)"></i>
       <h3 style="justify-content:center;margin:10px 0 4px">${titulo}</h3>
       <p style="font-size:12.5px;color:var(--muted);margin:0">${desc}</p>
     </div>`;
@@ -841,13 +841,13 @@ function renderIdrInterno(){
     </div>
 
     ${!iaOk ? `
-      <div class="card" style="border-left:4px solid var(--brand-orange)">
+      <div class="card" style="border-left:4px solid var(--ink)">
         <h3><i class="ti ti-sparkles"></i> ${t('idr.noAssistantTitle')}</h3>
         <p style="font-size:13px;color:var(--muted)">${t('idr.noAssistantBody')}</p>
         <button class="btn btn-primary btn-sm" onclick="idrConfigModal()"><i class="ti ti-key"></i> ${t('idr.setUpAssistant')}</button>
       </div>` : ''}
 
-    <div class="card ${adnOk?'':'owner-only'}" style="${adnOk?'':'border-left:4px solid var(--brand-orange)'}">
+    <div class="card ${adnOk?'':'owner-only'}" style="${adnOk?'':'border-left:4px solid var(--ink)'}">
       <h3><i class="ti ti-dna"></i> ${t('idr.dna')}</h3>
       <p style="font-size:13px;color:var(--muted);margin:0 0 10px">
         ${adnOk ? escapeHtml(idrAdnResumen()) : t('idr.dnaEmpty')}
@@ -1230,7 +1230,7 @@ function renderIdrCreacion(box){
 
   const burbuja = (m) => m.r === 'yo'
     ? `<div style="display:flex;justify-content:flex-end;margin:8px 0">
-         <div style="max-width:80%;background:var(--brand-orange);color:#fff;padding:9px 12px;border-radius:14px 14px 3px 14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap">${escapeHtml(m.t)}</div>
+         <div style="max-width:80%;background:var(--ink);color:#fff;padding:9px 12px;border-radius:14px 14px 3px 14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap">${escapeHtml(m.t)}</div>
        </div>`
     : `<div style="display:flex;justify-content:flex-start;margin:8px 0">
          <div style="max-width:85%;background:#F1EFE9;padding:9px 12px;border-radius:14px 14px 14px 3px;font-size:13.5px;line-height:1.5;white-space:pre-wrap">${escapeHtml(m.t)}</div>
@@ -1250,7 +1250,7 @@ function renderIdrCreacion(box){
     ${hecho ? `
       <div class="card">
         <h3><i class="ti ti-flag-check"></i> ${t('idr.done')}</h3>
-        ${c.logica ? `<div class="card" style="border-left:4px solid var(--brand-orange)"><h3 style="font-size:14px"><i class="ti ti-bulb"></i> ${t('idr.setLogic')}</h3><p style="font-size:13px;margin:0;white-space:pre-wrap">${escapeHtml(c.logica)}</p></div>` : ''}
+        ${c.logica ? `<div class="card" style="border-left:4px solid var(--ink)"><h3 style="font-size:14px"><i class="ti ti-bulb"></i> ${t('idr.setLogic')}</h3><p style="font-size:13px;margin:0;white-space:pre-wrap">${escapeHtml(c.logica)}</p></div>` : ''}
         ${c.recipeId && getRecipe(c.recipeId) ? `<p style="font-size:13px">${escapeHtml(getRecipe(c.recipeId).name)} · <strong>${fmtMoney(recipeCost(getRecipe(c.recipeId)))}</strong></p>` : ''}
         ${(c.recipeIds||[]).length ? `<p style="font-size:13px">${t('idr.setDishes').replace('${n}', c.recipeIds.length)} · <strong>${fmtMoney((c.recipeIds||[]).reduce((s,rid)=>{const rr=getRecipe(rid);return s+(rr?recipeCost(rr):0);},0))}</strong></p>` : ''}
         ${(c.faltan||[]).length ? `<p style="font-size:12.5px;color:var(--muted)">${t('idr.missingIngredients')}: ${escapeHtml(c.faltan.join(' · '))}</p>` : ''}
@@ -1270,7 +1270,7 @@ function renderIdrCreacion(box){
       </div>` : ''}
 
     ${legado ? `
-      <div class="card" style="border-left:4px solid var(--brand-orange)">
+      <div class="card" style="border-left:4px solid var(--ink)">
         <h3><i class="ti ti-archive"></i> ${t('idr.legacyTitle')}</h3>
         <p style="font-size:13px;color:var(--muted)">${t('idr.legacyBody')}</p>
         ${!hecho ? `<button class="owner-only btn btn-primary" onclick="idrCrearConjunto(${c.id})"><i class="ti ti-plus"></i> ${c.tipo==='menu' ? t('idr.createMenu') : t('idr.createCarta')}</button>` : ''}
@@ -2450,7 +2450,7 @@ function idrConfigModal(){
       <input type="password" id="idr-clave" value="${escapeHtml(cfg.clave||'')}" placeholder="${t('idr.keyPh')}" autocomplete="off">
       <p style="font-size:12px;color:var(--muted);margin:6px 0 0" id="idr-ayuda">${t('idr.keyWhere')} <strong>${escapeHtml(IDR_PROVEEDORES[cfg.proveedor].ayuda)}</strong></p>
     </div>
-    <div class="card" style="border-left:4px solid var(--brand-orange);margin-top:10px">
+    <div class="card" style="border-left:4px solid var(--ink);margin-top:10px">
       <p style="font-size:12.5px;margin:0">${t('idr.keyWarning')}</p>
     </div>
     <div style="margin-top:12px">

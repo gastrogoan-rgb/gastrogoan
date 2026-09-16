@@ -231,11 +231,11 @@ function renderRepartosControlModalBody(){
       </h3>
       ${o.clienteDireccion ? `<div style="font-size:13px"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}</div>` : `<div style="font-size:12px;color:var(--muted)">${t('reparto.noAddress')}</div>`}
       ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
-      ${isRoute ? `<div style="font-size:11px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-route"></i> ${t('reparto.routeWith').replace('${n}', group.length)}</div>` : ''}
+      ${isRoute ? `<div style="font-size:11px;color:var(--ink);margin-top:4px"><i class="ti ti-route"></i> ${t('reparto.routeWith').replace('${n}', group.length)}</div>` : ''}
       ${o.repartoNotas ? `<div style="font-size:11px;color:var(--red);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(o.repartoNotas)}</div>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
         <span style="font-size:12px;color:var(--muted)"><i class="ti ti-user"></i> ${escapeHtml(repartidorNombre(o))}</span>
-        <strong style="color:var(--brand-orange)">${o.pagado ? t('label.paidOnline') : fmtMoney(orderTotal(o))}</strong>
+        <strong style="color:var(--ink)">${o.pagado ? t('label.paidOnline') : fmtMoney(orderTotal(o))}</strong>
       </div>
     </div>
   `;};
@@ -286,9 +286,9 @@ function renderRepartoControlCardHtml(order){
   const isRoute = routeGroup.length > 1;
   const mapsUrl = isRoute ? buildRouteMapsUrl(routeGroup) : (order.clienteDireccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.clienteDireccion + (order.clienteCodigoPostal ? ' ' + order.clienteCodigoPostal : ''))}` : null);
   return `
-    <div class="card" style="margin-bottom:10px;border:2px solid var(--brand-orange)">
+    <div class="card" style="margin-bottom:10px;border:2px solid var(--ink)">
       <h3 style="justify-content:space-between;font-size:14px"><span><i class="ti ti-moped"></i> ${t('reparto.title')}</span>${repartoStatusBadgeHtml(order)}</h3>
-      ${isRoute ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:2px"><i class="ti ti-route"></i> ${t('reparto.routeWith').replace('${n}', routeGroup.length)}</div>` : ''}
+      ${isRoute ? `<div style="font-size:12px;color:var(--ink);margin-top:2px"><i class="ti ti-route"></i> ${t('reparto.routeWith').replace('${n}', routeGroup.length)}</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:6px">
         <div style="flex:1;min-width:220px">
           ${order.clienteDireccion ? `
@@ -299,7 +299,7 @@ function renderRepartoControlCardHtml(order){
           <div style="font-size:14px;margin-top:8px">
             ${order.pagado
               ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>`
-              : `<strong style="color:var(--brand-orange)"><i class="ti ti-cash"></i> ${t('reparto.toCollect')}: ${fmtMoney(total)}</strong>`}
+              : `<strong style="color:var(--ink)"><i class="ti ti-cash"></i> ${t('reparto.toCollect')}: ${fmtMoney(total)}</strong>`}
           </div>
           ${!order.pagado && order.metodoPagoLocal === 'tarjeta' ? `
             <div style="font-size:13px;margin-top:6px"><span class="badge badge-blue"><i class="ti ti-credit-card"></i> ${t('reparto.paysCardOnArrival')}</span></div>
@@ -975,7 +975,7 @@ function renderTogoCalendarBody(){
       const n = togoOrdersForDate(ds).length;
       const isToday = ds === todayStr();
       cells += `
-        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
+        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--ink)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
           <div style="font-weight:700">${d}</div>
           ${n ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n))}">${n}</span>` : ''}
         </div>`;
@@ -992,7 +992,7 @@ function renderTogoCalendarBody(){
       const n = togoOrdersForDate(ds).length;
       const isToday = ds === todayStr();
       cells += `
-        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
+        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--ink)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
           <div style="font-weight:700">${t('days.short')[(d.getDay()+6)%7]} ${d.getDate()}</div>
           ${n ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n))}">${n}</span>` : ''}
         </div>`;
@@ -1108,7 +1108,7 @@ function renderTpvPendingOnline(){
   return `
     <div class="grid grid-4" style="margin-top:14px">
       ${pendingOnline.map(o => `
-        <div class="card" style="border:2px solid var(--brand-orange)">
+        <div class="card" style="border:2px solid var(--ink)">
           <h3 style="justify-content:space-between;font-size:14px">
             <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
             <span class="badge badge-amber">${t('badge.newF')}</span>
@@ -1118,7 +1118,7 @@ function renderTpvPendingOnline(){
             if(waitMin < 30) return '';
             return `<div style="font-size:12px;color:var(--red);margin-bottom:2px"><i class="ti ti-clock-exclamation"></i> ${t('label.waitingSince').replace('${min}', waitMin)}</div>`;
           })()}
-          ${o.pendienteVerificarZona ? `<div style="font-size:12px;color:var(--brand-orange);margin:2px 0"><i class="ti ti-alert-triangle"></i> ${t('label.zoneNotVerified')}</div>` : ''}
+          ${o.pendienteVerificarZona ? `<div style="font-size:12px;color:var(--ink);margin:2px 0"><i class="ti ti-alert-triangle"></i> ${t('label.zoneNotVerified')}</div>` : ''}
           ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
           ${o.clienteTelefono ? `<div style="font-size:12px;color:${o.phoneOdd?'var(--red)':'var(--muted)'}"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}${o.phoneOdd ? ` <i class="ti ti-alert-triangle" title="${t('msg.phoneLooksOdd')}"></i>` : ''}</div>` : ''}
           ${o.time ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}${o.date && o.date !== todayStr() ? ' (' + escapeHtml(o.date) + ')' : ''}</div>` : ''}
@@ -1841,14 +1841,14 @@ function openMenuConfigModal(orderId, menuId){
             return (g.opciones||[]).map((o,i) => `
             <label style="display:flex;align-items:center;gap:8px;${o.disponible===false?'opacity:.5;cursor:not-allowed':'cursor:pointer'}">
               <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===primeraLibre?'checked':''} ${o.disponible===false?'disabled':''} style="width:auto" onchange="toggleMenuExtras(${g.id})">
-              ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}${o.disponible===false ? ` <span class="badge badge-red" style="font-size:9px"><i class="ti ti-flame-off"></i> ${t('common.unavailable')}</span>` : ''}
+              ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--ink);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}${o.disponible===false ? ` <span class="badge badge-red" style="font-size:9px"><i class="ti ti-flame-off"></i> ${t('common.unavailable')}</span>` : ''}
               <i class="ti ti-info-circle" style="color:var(--muted);cursor:pointer" title="${t('label.dishInfo')}" onclick="event.preventDefault();event.stopPropagation();openDishInfoModal(${o.recipeId||'null'}, '${escapeJsAttr(tItem(o))}', '', 'openMenuConfigModal(${orderId}, ${menuId})')"></i>
             </label>
             ${(o.modificadores||[]).length ? `<div class="menu-extras-${g.id}-${o.id}" style="margin-left:28px;display:${i===0?'block':'none'}">
               ${o.modificadores.map(mod => `
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
                   <input type="checkbox" class="menu-mod-${g.id}" data-opcion="${o.id}" data-mod-id="${mod.id}" style="width:auto">
-                  ${escapeHtml(tItem(mod))}${mod.precio ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(mod.precio)}</span>` : ''}
+                  ${escapeHtml(tItem(mod))}${mod.precio ? ` <span style="color:var(--ink);font-weight:600">+${fmtMoney(mod.precio)}</span>` : ''}
                 </label>
               `).join('')}
             </div>` : ''}
@@ -2000,7 +2000,7 @@ function renderOrderMarcharButtons(order){
   if(!hasPending) return '';
 
   // "Marchar vale": marcha todas las bebidas + el primer grupo de comida pendiente
-  return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharValeCompleto(${order.id})"><i class="ti ti-chef-hat"></i> ${t('btn.sendFullTicket')}</button>`;
+  return `<button class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)" onclick="marcharValeCompleto(${order.id})"><i class="ti ti-chef-hat"></i> ${t('btn.sendFullTicket')}</button>`;
 }
 
 // Marcha automáticamente el primer grupo de comida con platos pendientes.
@@ -2082,8 +2082,8 @@ function renderOrderClientNotesHtml(order){
   // como cliente pero sí han avisado de una alergia al sentarse.
   if(order.tableAllergens) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${order.tableAllergens}`});
   if(!parts.length) return '';
-  return `<div class="card" style="border:2px solid var(--brand-orange);background:var(--amber-l);margin-bottom:10px;padding:8px 12px">
-    ${parts.map(p => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin-bottom:2px"><i class="ti ${p.icon}" style="margin-top:2px;color:var(--brand-orange);flex-shrink:0"></i><span>${escapeHtml(p.text)}</span></div>`).join('')}
+  return `<div class="card" style="border:2px solid var(--ink);background:var(--amber-l);margin-bottom:10px;padding:8px 12px">
+    ${parts.map(p => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin-bottom:2px"><i class="ti ${p.icon}" style="margin-top:2px;color:var(--ink);flex-shrink:0"></i><span>${escapeHtml(p.text)}</span></div>`).join('')}
   </div>`;
 }
 
@@ -2352,7 +2352,7 @@ function renderCartaSelectorInline(order, carta){
       <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(seccionAbierta))}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${platos.map(p => `<span style="display:inline-flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-          <button class="btn btn-sm" style="font-size:12px;border:none;border-radius:0" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(platoPriceForOrder(p, order))}</strong></button>
+          <button class="btn btn-sm" style="font-size:12px;border:none;border-radius:0" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--ink)">${fmtMoney(platoPriceForOrder(p, order))}</strong></button>
           <button class="btn btn-sm btn-icon" style="border:none;border-left:1px solid var(--border);border-radius:0;color:var(--muted)" title="${t('label.dishInfo')}" onclick="event.stopPropagation();openDishInfoModal(${p.recipeId||'null'}, '${escapeJsAttr(tItem(p))}', '${escapeJsAttr((p.allergensManual||[]).join('|'))}', 'renderTableOrderModal(${order.id})')"><i class="ti ti-info-circle"></i></button>
         </span>`).join('')}
       </div>
@@ -2378,7 +2378,7 @@ function renderCartaSelectorInline(order, carta){
 // Selector de menú (combo con grupos y opciones).
 function renderMenuSelectorInline(order, menu){
   return `
-    <div style="margin-bottom:8px"><strong>${escapeHtml(tItem(menu))}</strong> · <span style="color:var(--brand-orange);font-weight:700">${fmtMoney(menu.precio)}</span></div>
+    <div style="margin-bottom:8px"><strong>${escapeHtml(tItem(menu))}</strong> · <span style="color:var(--ink);font-weight:700">${fmtMoney(menu.precio)}</span></div>
     <button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${menu.id})"><i class="ti ti-plus"></i> ${t('btn.addToOrderNamed').replace('${name}', escapeHtml(tItem(menu)))}</button>
   `;
 }
@@ -2415,7 +2415,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
     const allServed = bebidaInGroup.every(({line}) => line.estado === 'entregado');
     if(allServed) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
     else if(hasCocina) statusBadge = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
-    else if(hasPreparando) statusBadge = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
+    else if(hasPreparando) statusBadge = `<button class="btn btn-sm" style="background:var(--ink);color:#fff;border-color:var(--ink);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
   }else{
     if(allPicked) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
     else if(listos.length) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
@@ -2438,12 +2438,12 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
   <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <strong style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
+        <strong style="font-size:11px;font-weight:700;color:var(--ink);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
         ${(nombreMenuUnico && !ocultarNombreMenuEnCabecera) ? `<span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(nombreMenuUnico)}</span>` : ''}
       </div>
       <div style="display:flex;gap:4px;align-items:center">
         ${statusBadge}
-        ${pendingCount && !esPedidoSoloLectura(order) ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
+        ${pendingCount && !esPedidoSoloLectura(order) ? `<button class="btn btn-sm" style="background:var(--ink);color:#fff;border-color:var(--ink);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
       </div>
     </div>
     ${allInGroup.map(({line, idx}) => {
@@ -2474,13 +2474,13 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
       const menuBadge = (menu && !nombreMenuUnico) ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
       return `
       <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px">
-        <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber" style="font-size:9px" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
-        <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
+        <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber" style="font-size:9px" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--ink)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
+        <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--ink);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
         ${esPedidoSoloLectura(order) ? '' : `
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="openLineNotesModal(${order.id}, ${idx})" title="${t('common.notes')}"><i class="ti ti-note"></i></button>
-        ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon comanda-qty-btn" style="color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
+        ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon comanda-qty-btn" style="color:var(--ink)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
         ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
         `}
       </div>
@@ -3314,7 +3314,7 @@ function renderComandasCocina(){
       if(allPicked) return `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
       if(allReady) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</button>`;
       if(hasCocina) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
-      if(hasPreparando) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
+      if(hasPreparando) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--ink);color:#fff;border-color:var(--ink)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
       return '';
     };
     const renderLineaHtml = (bloque) => ({line, idx}) => {
@@ -3331,7 +3331,7 @@ function renderComandasCocina(){
         </div>
         ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
         : line.estado==='cocina' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
-        : line.estado==='preparando' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
+        : line.estado==='preparando' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--ink);color:#fff;border-color:var(--ink)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
         : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
         : `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
       </div>
@@ -3355,7 +3355,7 @@ function renderComandasCocina(){
         <div style="margin-bottom:6px;${esElGrupoYaMostrado ? '' : 'padding-top:6px;border-top:1px solid var(--border)'}">
           ${esElGrupoYaMostrado ? '' : `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-            ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
+            ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--ink);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
             ${groupButtonHtml(g)}
           </div>`}
           ${g.lines.map(renderLineaHtml(bloque)).join('')}
@@ -3723,7 +3723,7 @@ function openAddItemModal(orderId, secId, platoId){
           ${mods.map(m => `
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
               <input type="checkbox" class="add-item-mod" value="${m.id}" style="width:auto">
-              ${escapeHtml(tItem(m))}${m.precio ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(m.precio)}</span>` : ''}
+              ${escapeHtml(tItem(m))}${m.precio ? ` <span style="color:var(--ink);font-weight:600">+${fmtMoney(m.precio)}</span>` : ''}
             </label>
           `).join('')}
         </div>
@@ -4318,7 +4318,7 @@ function renderFullPaymentTab(order, total){
     </div>
     ${amountPaidOnline > 0 ? `
     <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12.5px;margin-bottom:10px">
-      <i class="ti ti-credit-card" style="color:var(--brand-orange)"></i> ${t('label.paidOnlinePartial').replace('${amount}', fmtMoney(amountPaidOnline))}${payerNames.length ? ` (${payerNames.map(escapeHtml).join(', ')})` : ''}
+      <i class="ti ti-credit-card" style="color:var(--ink)"></i> ${t('label.paidOnlinePartial').replace('${amount}', fmtMoney(amountPaidOnline))}${payerNames.length ? ` (${payerNames.map(escapeHtml).join(', ')})` : ''}
     </div>` : ''}
     <div class="kpi" style="margin-bottom:12px">
       <div class="label">${amountPaidOnline > 0 ? t('label.remainingToCharge') : t('label.totalToCharge')}</div>
