@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Política de Privacidad — GastroGoan App</title>
+<!--
+  La política de privacidad, publicada en app.gastrogoan.com/legal/privacidad.html
+  y enlazada desde el campo correspondiente de Stripe (Configuración → Datos
+  públicos), que la muestra en la página de pago.
+
+  ⚠️ Lo que hace especial a este documento, y conviene no "simplificarlo"
+  después: distingue con claridad los DOS conjuntos de datos.
+
+    1. Los del NEGOCIO del cliente (sus ventas, sus empleados, sus clientes
+       finales) viven en el Firebase que el propio hostelero crea y paga.
+       GastroGoan no accede, no almacena y no puede recuperarlos: aquí no es
+       ni responsable ni encargado del tratamiento.
+    2. Los de la CUENTA de licencia (nombre, NIF, correo, facturación) sí son
+       responsabilidad de GastroGoan, y de esos va todo este documento.
+
+  Confundir los dos es lo que convertiría a GastroGoan en encargado del
+  tratamiento de miles de negocios, con todo lo que eso arrastra. La
+  arquitectura evita eso a propósito, y el texto tiene que reflejarlo.
+
+  Misma hoja de estilo que contrato-licencia.html a propósito: el que llega
+  desde el pago tiene que reconocer que los dos documentos son de la misma
+  casa.
+-->
+<style>
+  :root{
+    --ink:#1C1A17; --body:#3D3A34; --muted:#716C65;
+    --paper:#FFFFFF; --bg:#FAF8F4; --border:#E7E2D9; --olive:#4A5D4E;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--body);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .hoja{max-width:800px;margin:0 auto;background:var(--paper);
+    padding:56px 56px 72px;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+  @media (max-width:640px){ .hoja{padding:28px 20px 48px;border:0} }
+
+  .marca{display:flex;align-items:center;gap:9px;font-weight:700;color:var(--ink);
+    letter-spacing:-.02em;margin-bottom:28px}
+  .marca i{width:11px;height:11px;border-radius:50%;background:var(--olive);display:block}
+
+  h1{font-size:26px;line-height:1.25;letter-spacing:-.02em;color:var(--ink);margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+  .ver{color:var(--muted);font-size:13px;margin:0 0 32px;
+    padding-bottom:22px;border-bottom:2px solid var(--ink)}
+
+  h2{font-size:16px;color:var(--ink);margin:32px 0 10px;letter-spacing:-.01em}
+  p{margin:0 0 14px}
+  ul{margin:0 0 14px;padding-left:22px}
+  li{margin-bottom:7px}
+  strong{color:var(--ink)}
+  hr{border:0;border-top:1px solid var(--border);margin:34px 0}
+
+  .ojo{border-left:3px solid var(--olive);padding:2px 0 2px 16px;margin:0 0 16px}
+
+  /* Tabla de tratamientos. En movil se apila: una tabla de tres columnas a
+     390 px se lee fatal, y este documento se abre sobre todo desde el movil,
+     en mitad del pago. */
+  table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:15px}
+  th,td{text-align:left;vertical-align:top;padding:10px 12px 10px 0;
+    border-bottom:1px solid var(--border)}
+  th{color:var(--ink);font-size:13px;letter-spacing:.04em;text-transform:uppercase;
+    white-space:nowrap}
+  @media (max-width:640px){
+    table,thead,tbody,tr,th,td{display:block}
+    thead{display:none}
+    tr{border-bottom:1px solid var(--border);padding:12px 0}
+    th,td{border:0;padding:2px 0}
+    td::before{content:attr(data-et);display:block;color:var(--ink);
+      font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+  }
+
+  .firma{margin-top:44px;padding-top:22px;border-top:1px solid var(--border);
+    color:var(--muted);font-size:14px}
+</style>
+
+<div class="hoja">
+  <div class="marca"><i></i><span>GastroGoan App</span></div>
+
+  <h1>Política de Privacidad</h1>
+  <p class="sub">Cómo se tratan los datos personales</p>
+  <p class="ver">Versión 1.0 · 16 de septiembre de 2026</p>
+
+  <h2>Quién es el responsable</h2>
+  <p><strong>D. Marcos González</strong>, con NIF 47668150Y y domicilio
+  profesional en Plaza Marià Manent 13, 08720 Vilafranca del Penedès
+  (Barcelona).</p>
+  <p>Contacto para cualquier cuestión sobre privacidad:
+  <strong>gastrogoan@gmail.com</strong></p>
+
+  <hr>
+
+  <h2>Lo primero, porque cambia todo lo demás</h2>
+  <div class="ojo">
+    <p>GastroGoan App funciona <strong>íntegramente en el dispositivo del
+    cliente</strong>. Los datos de su negocio —ventas, empleados, clientes
+    finales, proveedores, recetas— <strong>no se alojan ni pasan por sistemas
+    de GastroGoan</strong>: se guardan en sus propios dispositivos y se
+    sincronizan contra el proyecto de Google Firebase que <strong>el propio
+    cliente crea y del que es titular</strong>.</p>
+    <p style="margin-bottom:0">Respecto de esos datos, <strong>el cliente es
+    el responsable del tratamiento y GastroGoan no es siquiera encargado</strong>:
+    no accede a ellos, no los almacena y no puede recuperarlos.</p>
+  </div>
+  <p>Esta política, por tanto, se refiere <strong>únicamente a los datos de la
+  cuenta de licencia y de la contratación</strong>, que son los únicos que
+  GastroGoan trata.</p>
+
+  <hr>
+
+  <h2>Qué datos se tratan, para qué y por qué</h2>
+
+  <table>
+    <thead>
+      <tr><th>Datos</th><th>Finalidad</th><th>Base jurídica</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-et="Datos">Nombre o razón social, NIF/CIF, dirección, correo
+          electrónico y teléfono</td>
+        <td data-et="Finalidad">Gestionar la licencia: emitirla, renovarla y
+          atender el soporte</td>
+        <td data-et="Base jurídica">Ejecución del contrato</td>
+      </tr>
+      <tr>
+        <td data-et="Datos">Datos de facturación e importes</td>
+        <td data-et="Finalidad">Emitir facturas y cumplir las obligaciones
+          fiscales y contables</td>
+        <td data-et="Base jurídica">Obligación legal</td>
+      </tr>
+      <tr>
+        <td data-et="Datos">Nombre de usuario e identificador del negocio</td>
+        <td data-et="Finalidad">Que la cuenta funcione y sus negocios
+          aparezcan al entrar desde cualquier dispositivo</td>
+        <td data-et="Base jurídica">Ejecución del contrato</td>
+      </tr>
+      <tr>
+        <td data-et="Datos">Correo electrónico y mensajes de soporte</td>
+        <td data-et="Finalidad">Responder a las consultas</td>
+        <td data-et="Base jurídica">Ejecución del contrato</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>No se elaboran perfiles ni se toman decisiones automatizadas</strong>
+  con efectos jurídicos sobre el cliente.</p>
+
+  <p><strong>El PIN de acceso no se almacena en ningún lugar</strong>, ni
+  siquiera cifrado. El sistema comprueba su validez sin necesidad de
+  conservarlo, de modo que no puede ser consultado ni recuperado por nadie,
+  tampoco por GastroGoan.</p>
+
+  <hr>
+
+  <h2>Quién más interviene</h2>
+  <p>Para poder prestar el servicio se recurre a los siguientes proveedores,
+  que actúan como encargados del tratamiento:</p>
+  <ul>
+    <li><strong>Stripe</strong> — procesamiento de los pagos. GastroGoan no
+      llega a ver ni a almacenar los datos completos de la tarjeta.</li>
+    <li><strong>Google (Firebase)</strong> — alojamiento de los datos mínimos
+      de la cuenta de licencia.</li>
+    <li><strong>Cloudflare</strong> — publicación de la aplicación y de estos
+      documentos.</li>
+  </ul>
+  <p>Alguno de ellos puede tratar datos <strong>fuera del Espacio Económico
+  Europeo</strong>. En tal caso, dichas transferencias se amparan en las
+  garantías previstas por la normativa europea de protección de datos, tales
+  como decisiones de adecuación o cláusulas contractuales tipo.</p>
+  <p>Al margen de lo anterior, <strong>los datos no se ceden a terceros</strong>,
+  salvo obligación legal.</p>
+
+  <hr>
+
+  <h2>Cuánto tiempo se conservan</h2>
+  <ul>
+    <li><strong>Datos de la cuenta:</strong> mientras la licencia siga activa
+      y el cliente no solicite su supresión.</li>
+    <li><strong>Datos de facturación:</strong> durante los plazos exigidos por
+      la normativa fiscal y mercantil.</li>
+    <li><strong>Mensajes de soporte:</strong> mientras resulten útiles para
+      atender el historial del cliente, y como máximo tres años.</li>
+  </ul>
+
+  <hr>
+
+  <h2>Qué derechos tiene el cliente</h2>
+  <p>Acceso, rectificación, supresión, oposición, limitación del tratamiento y
+  portabilidad. También puede retirar en cualquier momento el consentimiento
+  que hubiera prestado, sin que ello afecte a la licitud del tratamiento
+  anterior.</p>
+  <p>Para ejercerlos basta con escribir a <strong>gastrogoan@gmail.com</strong>,
+  indicando qué derecho se desea ejercer. Se responderá en el plazo legal de un
+  mes.</p>
+  <div class="ojo">
+    <p style="margin-bottom:0">Si considera que sus datos no se han tratado
+    correctamente, puede presentar una reclamación ante la <strong>Agencia
+    Española de Protección de Datos</strong> (www.aepd.es).</p>
+  </div>
+
+  <hr>
+
+  <h2>Cambios en esta política</h2>
+  <p>Si esta política se modifica, se publicará aquí una versión nueva con su
+  fecha. Los cambios relevantes se comunicarán por correo electrónico a los
+  clientes con licencia activa.</p>
+
+  <p class="firma">GastroGoan · NIF 47668150Y · gastrogoan@gmail.com<br>
+  Plaza Marià Manent 13, 08720 Vilafranca del Penedès (Barcelona)</p>
+</div>
+</html>
