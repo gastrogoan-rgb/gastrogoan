@@ -38,8 +38,20 @@ jobs:
         with:
           node-version: '20'
 
+      # build.sh llama a tools/recortar-iconos.py, que necesita fontTools
+      # para recortar css/tabler-icons.min.css a los 264 iconos que usa la
+      # app. Faltaba este paso desde que se añadió el recorte (14/09): sin
+      # él, build.sh reventaba en el primer paso de CADA ejecución, ANTES de
+      # llegar a correr una sola prueba — así que la batería nunca llegó a
+      # ejecutarse aquí ni una vez, aunque en local sí pasara.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
       - name: Instalar dependencias
-        run: npm install --no-audit --no-fund
+        run: |
+          npm install --no-audit --no-fund
+          pip install fonttools brotli
 
       # Las 84 pruebas llevan la ruta del navegador escrita a mano
       # (/opt/pw-browsers/chromium-1194/...), que es donde vive en el
