@@ -121,9 +121,9 @@ const HTML = `
       <h1>¿Bar <span class="min">o</span> restaurante<br><em>en Barcelona?</em></h1>
     </div>
     <div class="cierre">
-      <div class="pregunta">Deja de pagar<br><span class="tachado">+2.500 € al año</span></div>
+      <div class="pregunta">Deja de pagar<br><span class="tachado">3.300 € al año</span></div>
       <div class="solo"><b>Software GastroGoan</b>100 €<u>/año</u></div>
-      <div class="bolsillo"><b>2.400 €</b> que vuelven a tu bolsillo</div>
+      <div class="bolsillo"><b>3.200 €</b> que vuelven a tu bolsillo</div>
     </div>
   </div>
   <div class="grano"></div>

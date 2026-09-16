@@ -1,4 +1,4 @@
-/* "¿POR QUÉ PAGAS +2.500 € AL AÑO POR ESTO?" — segunda creatividad.
+/* "¿POR QUÉ PAGAS 3.300 € AL AÑO POR ESTO?" — segunda creatividad.
  *
  * El ángulo es el punto de dolor, no el producto: no le enseñas lo que
  * podría tener, le señalas lo que YA está pagando. El "por esto" funciona
@@ -19,7 +19,14 @@
  * ⚠️ La foto enseñaba el software de SpotOn y su marca en la impresora. Las
  * dos fuera — ver anuncios/pantalla-gastrogoan.py.
  *
- * ⚠️ El "+2.500 €" es el ahorro frente a contratar por separado TPV,
+ * ⚠️ Las tres creatividades dicen la MISMA cifra a propósito: 3.300 € al año
+ * y 3.200 € que vuelven. Es la única que cuadra si alguien la comprueba
+ * (275 €/mes × 12 = 3.300; menos los 100 de GastroGoan, vuelven 3.200), y
+ * la del anuncio de la factura, que la desglosa línea a línea. Tres piezas
+ * de la misma campaña con tres cifras distintas es lo que destruye una
+ * promesa de ahorro.
+ *
+ * ⚠️ Es el ahorro frente a contratar por separado TPV,
  * reservas, personal y domicilio. Si alguien pregunta, hay que poder
  * sostenerlo; el sitio para explicarlo es el texto del anuncio.
  */
@@ -155,9 +162,9 @@ const HTML = `
       <div class="marca"><i></i><b>Gastro<span>Goan</span> App</b></div>
     </div>
     <div class="cierre">
-    <div class="pregunta">Deja de pagar<br><span class="tachado">+2.500 € al año</span></div>
+    <div class="pregunta">Deja de pagar<br><span class="tachado">3.300 € al año</span></div>
     <div class="solo"><b>Software GastroGoan</b>100 €<u>/año</u></div>
-    <div class="bolsillo"><b>2.400 €</b> que vuelven a tu bolsillo</div>
+    <div class="bolsillo"><b>3.200 €</b> que vuelven a tu bolsillo</div>
     </div>
   </div>
   <div class="grano"></div>
