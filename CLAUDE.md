@@ -285,6 +285,34 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
   toca, comprobar contra los cuatro fondos de la app (blanco, `#FAF8F4`,
   `#F1EFE9`, `#F4F4F4`). Lo verifica `test/contraste.mjs`.
 
+### Un linter por fichero NO entiende esta app (probado el 16/09)
+
+Se probó **anti-slop** (reglas de Oxlint). **No se adopta, y no por pereza:**
+
+- **752 de sus 1.017 avisos eran falsos.** Dice que `localeActual`, `gl`,
+  `setLang`… "no se usan nunca". Y es normal: `build.sh` **concatena los once
+  ficheros** dentro de un solo HTML, así que cualquier función declarada en
+  `i18n.js` y usada en `app.js` le parece muerta. Un linter que mira fichero
+  a fichero se equivoca con esta arquitectura por definición.
+- **247 avisos eran la regla `no-runtime-typeof`**, que pide no usar `typeof`
+  y "parsear en la frontera de entrada". Es doctrina de código tipado; aquí,
+  con IndexedDB y JSON fusionado desde la nube, `typeof x === 'string'` es la
+  comprobación correcta y necesaria.
+- **Los 3 avisos de `<\/script>` son un ERROR del linter.** Pide quitar la
+  barra invertida de `<\/script>` dentro de las plantillas que generan las
+  ventanas de impresión. Si se quita, `</script>` **cierra el script de
+  fuera** y revienta la impresión. El aviso automático pedía romper la app.
+- **`oxlint` además no se puede instalar aquí**: arrastra `vite-plus →
+  vitest → webdriverio`, que exige `puppeteer-core <= 24.x`, y el repositorio
+  necesita la 25.x para las 84 pruebas de navegador.
+
+De las 1.017, **una sola era de verdad**: `[...DB.sales.filter(...)]` en
+`tpv.js` copiaba dos veces el mismo array. Corregida.
+
+⚠️ La moraleja no es "los linters no sirven": es que **aquí un aviso
+automático hay que comprobarlo antes de hacerle caso**, y arreglar 1.017 de
+golpe habría roto la impresión de tickets sin que ninguna prueba lo viera.
+
 ### El plugin de diseño MEJORA lo que hay, no lo cambia
 
 `.claude/settings.json` carga **ui-ux-pro-max** (paletas, tipografías,

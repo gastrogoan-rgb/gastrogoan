@@ -5173,7 +5173,9 @@ async function confirmMergeTable(orderId){
 /* ------------------ Ventas de hoy / reimprimir tique ------------------ */
 function openTodaySalesModal(){
   const today = todayStr();
-  const sales = [...DB.sales.filter(s => s.date === today)].reverse();
+  // Sin el spread: filter() YA devuelve un array nuevo, así que copiarlo otra
+  // vez para poder invertirlo era una copia de más. Con 10.000 ventas se nota.
+  const sales = DB.sales.filter(s => s.date === today).reverse();
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-receipt"></i> ${t('title.todaySales')}</h3>
