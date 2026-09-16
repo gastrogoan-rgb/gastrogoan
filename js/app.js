@@ -6562,7 +6562,10 @@ function renderVerifactuConfigCard(){
       <div style="border-top:1px solid var(--border);padding-top:12px">
         <h3 style="font-size:14px"><i class="ti ti-file-shield"></i> ${t('mn.verifactu.declarationsTitle')}</h3>
         <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('mn.verifactu.declarationsDesc')}</p>
-        ${renderVerifactuDeclarationRow('ownDeclarationUrl', t('mn.verifactu.ownDeclaration'), t('mn.verifactu.ownDeclarationPending'))}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;flex-wrap:wrap">
+          <span style="min-width:170px">${t('mn.verifactu.ownDeclaration')}</span>
+          <a href="${DECLARACION_RESPONSABLE_URL}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:4px"><i class="ti ti-external-link"></i> ${t('common.view')}</a>
+        </div>
         ${renderVerifactuDeclarationRow('providerDeclarationUrl', t('mn.verifactu.providerDeclaration'), t('mn.verifactu.providerDeclarationPending'))}
       </div>
       </div>
