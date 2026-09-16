@@ -4031,6 +4031,14 @@ let espejoEnNubePropia = null;   // null = sin comprobar · true/false = comprob
 // El negocio tiene las reglas de una versión anterior: todo funciona, pero sus
 // reservas siguen pasando por la nube compartida. Hay que decírselo.
 let reglasAntiguas = false;
+// La web pública (reservagastrogoan.html) anota aquí, en la propia nube del
+// negocio, cuando algún cliente se quedó sin poder cargar la carta durante
+// más de 8 segundos: puede ser un pico real de gente mirándola a la vez
+// (las 100 conexiones simultáneas del Firebase gratuito, agotadas) o solo
+// una red lenta puntual — no hay forma de distinguirlo desde fuera, así que
+// se avisa igual: es una señal de "mira si te conviene ampliar el plan",
+// nunca una alarma. null = sin comprobar todavía.
+let saturacionPublicaReciente = null;
 function getPublicMirrorApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
   if(espejoEnNubePropia === false){
@@ -4139,6 +4147,53 @@ async function comprobarEspejoEnNubePropia(){
     reglasAntiguas = true;
     return false;
   }
+}
+
+// Días que un evento de saturación cuenta como "reciente" para el aviso.
+// Ni un solo pico aislado hace saltar la alarma para siempre (caducaría
+// mostrando el aviso eternamente por una noche suelta hace seis meses), ni
+// tan corto que el dueño no llegue a verlo si no abre la app ese mismo día.
+const SATURACION_DIAS_RECIENTE = 14;
+
+/* Lee gastrogoan/public/{publicId}/saturationEvents de la NUBE DEL NEGOCIO
+   (nunca la plataforma compartida: esto es cosa de cada negocio, como el
+   resto del espejo público) y decide si hay algún evento de los últimos
+   SATURACION_DIAS_RECIENTE días que el dueño no haya visto ya.
+   Se guarda en DB.business.saturationSeenUntil (se SINCRONIZA, para que
+   "ya lo vi" valga en todos los dispositivos del negocio, no solo en el que
+   pulsó "Entendido" — mismo patrón que extConnPromptSeen). */
+async function comprobarSaturacionPublica(){
+  const publicId = (typeof getPublicId === 'function') ? getPublicId() : null;
+  if(!publicId) return;
+  try{
+    const app = await getPublicMirrorApp();
+    if(!app) return;
+    const snap = await app.database().ref('gastrogoan/public/' + publicId + '/saturationEvents')
+      .orderByChild('ts').limitToLast(1).once('value');
+    let ultimoTs = 0;
+    snap.forEach(child => { const v = child.val(); if(v && v.ts > ultimoTs) ultimoTs = v.ts; });
+    if(!ultimoTs) return;
+    const limiteReciente = Date.now() - SATURACION_DIAS_RECIENTE * 24 * 60 * 60 * 1000;
+    const yaVisto = (DB.business && DB.business.saturationSeenUntil) || 0;
+    saturacionPublicaReciente = (ultimoTs > limiteReciente && ultimoTs > yaVisto) ? ultimoTs : false;
+  }catch(e){
+    // Best-effort de verdad: si esto falla (reglas viejas, sin permiso para
+    // leer ese nodo todavía, lo que sea), simplemente no se avisa esta vez.
+    // No es motivo para molestar al dueño con un error técnico.
+    console.warn('No se pudo comprobar la saturación pública', e && e.message);
+  }
+}
+
+// Se llama al pulsar "Entendido" en el aviso del modal de nube. Marca TODO
+// lo visto hasta ahora mismo, sincronizado entre dispositivos.
+function descartarAvisoSaturacion(){
+  saturacionPublicaReciente = false;
+  DB.business.saturationSeenUntil = Date.now();
+  if(typeof saveDB === 'function') saveDB();
+  // Igual que probarNubeDesdeElModal(): solo se vuelve a abrir si el modal
+  // sigue en pantalla — si el dueño ya lo cerró, reabrirlo sería peor que no
+  // hacer nada.
+  if(typeof openCloudWizard === 'function' && document.getElementById('modal-overlay')?.classList.contains('active')) openCloudWizard();
 }
 
 /* La página pública solo conoce el `publicId` (va en el QR y en el enlace),
@@ -4274,6 +4329,10 @@ function initPublicRequestsListener(){
   getPublicMirrorApp().then(app => {
     if(!app || publicRequestsListenerAttached) return;
     publicRequestsListenerAttached = true;
+    // Una sola vez por arranque, en paralelo, sin bloquear nada: es una
+    // lectura de "última hora" para un aviso, no algo de lo que dependa el
+    // oyente de reservas/pedidos que sigue justo debajo.
+    if(saturacionPublicaReciente === null) comprobarSaturacionPublica().catch(() => {});
     app.database().ref('gastrogoan/public/' + publicId + '/requests').on('child_added', snap => {
       const req = snap.val();
       const reqRef = snap.ref;
@@ -6801,6 +6860,13 @@ function openCloudWizard(){
              bien salvo los pagos con tarjeta y el borrado del histórico. */
         espejoEnNubePropia === false ? t('gate.oldRulesBody') : t('gate.oldRulesBodyMenor')}
       <div style="margin-top:10px"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
+    </div>` : ''}
+    ${saturacionPublicaReciente ? `<div style="background:var(--amber-l,#FDF3E0);border-left:3px solid var(--amber,#D98F3F);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
+      <strong><i class="ti ti-users"></i> ${t('gate.saturationTitle')}</strong><br>${t('gate.saturationBody')}
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn btn-sm" href="https://firebase.google.com/pricing" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('gate.saturationLink')}</a>
+        <button class="btn btn-sm" onclick="descartarAvisoSaturacion()">${t('gate.saturationDismiss')}</button>
+      </div>
     </div>` : ''}
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <button class="btn" style="flex:1" onclick="probarNubeDesdeElModal()"><i class="ti ti-refresh"></i> ${t('gate.testCloudNow')}</button>
