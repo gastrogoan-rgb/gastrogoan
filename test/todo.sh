@@ -118,6 +118,7 @@ lanzar; node test/cliente-en-riesgo.mjs > "$SALIDA/clienteriesgo.txt" 2>&1 & P84
 lanzar; node test/movil.mjs > "$SALIDA/movil.txt" 2>&1 & P85=$!
 lanzar; node test/endurecido-publico.mjs > "$SALIDA/endurecido.txt" 2>&1 & P86=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
+lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -230,5 +231,6 @@ espera $P85 "La app en un móvil de verdad: 5 anchos (320-430), nada cortado ni 
 
 espera $P86 "Espejo público endurecido: holds sin saltos, tokens largos, zoom libre" "$SALIDA/endurecido.txt" "casos pasaron"
 espera $P87 "Iconos recortados: ninguno de los que usa la app se ha quedado fuera" "$SALIDA/iconos.txt" "casos pasaron"
+espera $P88 "El service worker no secuestra el contrato ni la privacidad (los enlaces de Stripe)" "$SALIDA/sw-legal.txt" "respeta /legal/"
 
 exit $FALLOS
