@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contrato de Licencia de Uso — GastroGoan App</title>
+<!--
+  El contrato que el hostelero acepta al pagar.
+
+  ⚠️ Esta es la FUENTE DE LA VERDAD del contrato, y vive aquí a propósito:
+  se publica en app.gastrogoan.com/legal/contrato-licencia.html, que es la
+  dirección a la que apunta la casilla de aceptación de Stripe. Si el
+  contrato viviera solo en un documento de Drive, Stripe enlazaría a algo
+  que se puede editar sin dejar rastro — y lo que hay que poder demostrar
+  es QUÉ texto aceptó el cliente el día que pagó. Aquí cada cambio queda
+  en el historial de git, con fecha y con su motivo.
+
+  ⚠️ La versión y la fecha de abajo se suben A MANO al tocar el texto. No
+  se derivan de GG_BUILD: el contrato no cambia porque se publique la app.
+-->
+<style>
+  :root{
+    --ink:#1C1A17; --body:#3D3A34; --muted:#716C65;
+    --paper:#FFFFFF; --bg:#FAF8F4; --border:#E7E2D9; --olive:#4A5D4E;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--body);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .hoja{max-width:800px;margin:0 auto;background:var(--paper);
+    padding:56px 56px 72px;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+  @media (max-width:640px){ .hoja{padding:28px 20px 48px;border:0} }
+
+  .marca{display:flex;align-items:center;gap:9px;font-weight:700;color:var(--ink);
+    letter-spacing:-.02em;margin-bottom:28px}
+  .marca i{width:11px;height:11px;border-radius:50%;background:var(--olive);display:block}
+
+  h1{font-size:26px;line-height:1.25;letter-spacing:-.02em;color:var(--ink);margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+  .ver{color:var(--muted);font-size:13px;margin:0 0 32px;
+    padding-bottom:22px;border-bottom:2px solid var(--ink)}
+
+  h2{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);
+    margin:38px 0 14px}
+  h3{font-size:16px;color:var(--ink);margin:30px 0 8px;letter-spacing:-.01em}
+  p{margin:0 0 14px}
+  ol,ul{margin:0 0 14px;padding-left:22px}
+  li{margin-bottom:7px}
+  strong{color:var(--ink)}
+  hr{border:0;border-top:1px solid var(--border);margin:34px 0}
+
+  /* Los avisos que el cliente NO debe pasar por alto. Filete a la izquierda
+     en vez de recuadro: se lee como parte del texto, no como una caja de
+     publicidad, que es lo que se salta todo el mundo. */
+  .ojo{border-left:3px solid var(--olive);padding:2px 0 2px 16px;margin:0 0 16px}
+
+  .firma{margin-top:44px;padding-top:22px;border-top:1px solid var(--border);
+    color:var(--muted);font-size:14px}
+</style>
+
+<div class="hoja">
+  <div class="marca"><i></i><span>GastroGoan App</span></div>
+
+  <h1>Contrato de Licencia de Uso</h1>
+  <p class="sub">Entre GastroGoan y el titular del establecimiento</p>
+  <p class="ver">Versión 1.0 · 16 de septiembre de 2026</p>
+
+  <h2>Partes</h2>
+  <p><strong>El licenciante:</strong> D. Marcos González, con NIF 47668150Y y
+  domicilio profesional en Plaza Marià Manent 13, 08720 Vilafranca del Penedès
+  (Barcelona), correo gastrogoan@gmail.com, actuando como empresario
+  individual y titular de la aplicación GastroGoan App.</p>
+
+  <p><strong>El cliente:</strong> la persona física o jurídica que contrata la
+  licencia, identificada con los datos facilitados en el proceso de pago.</p>
+
+  <p>El cliente declara contratar <strong>en el ejercicio de su actividad
+  empresarial o profesional y no como consumidor</strong>, por lo que no
+  resulta de aplicación el derecho de desistimiento previsto para las ventas
+  a distancia a consumidores.</p>
+
+  <hr>
+  <h2>Cláusulas</h2>
+
+  <h3>1. Objeto</h3>
+  <p>El licenciante cede al cliente una <strong>licencia de uso</strong> de
+  GastroGoan App, no exclusiva e intransferible —salvo lo previsto en la
+  cláusula 13— y limitada al plazo pactado.</p>
+  <p>No se transmite la propiedad del programa, únicamente su uso. La
+  titularidad del software, su código, su interfaz, su documentación y su
+  marca continúan siendo del licenciante.</p>
+  <p>La licencia habilita el uso en <strong>un (1) establecimiento</strong>.
+  Cada local adicional, incluidas sucursales del mismo titular, requiere su
+  propia licencia. Dentro de ese establecimiento, el cliente puede usar la
+  aplicación en <strong>cuantos dispositivos necesite y dar acceso a su
+  personal</strong>, sin límite de usuarios.</p>
+
+  <h3>2. Duración: un año</h3>
+  <div class="ojo">
+    <p><strong>La licencia da derecho a usar la aplicación durante DOCE (12)
+    MESES</strong> desde la fecha de alta. Transcurrido ese plazo, el contrato
+    se extingue por cumplimiento.</p>
+  </div>
+  <p><strong>No hay renovación automática ni cargos recurrentes.</strong> Si
+  el cliente desea continuar, deberá contratar una nueva anualidad, tras lo
+  cual recibirá un nuevo código de licencia. Si no hace nada, simplemente deja
+  de pagar: no tiene que cancelar ni avisar.</p>
+
+  <div class="ojo">
+    <p><strong>Garantía de precio.</strong> Mientras el cliente renueve sin
+    interrupción, la cuota de renovación será <strong>la misma que abonó en su
+    primera anualidad</strong>. Un aumento de tarifas solo afectará a clientes
+    nuevos o a quien vuelva tras haber dejado de renovar.</p>
+  </div>
+
+  <h3>3. Precio y forma de pago</h3>
+  <p><strong>Cien euros (100 €) más IVA</strong> por establecimiento y año,
+  pagaderos por adelantado al contratar.</p>
+  <p>No comprende:</p>
+  <ul>
+    <li>La cuenta de Google Firebase del propio cliente (cláusula 7). En su
+      plan gratuito es suficiente para un establecimiento y no supone coste
+      alguno en condiciones normales de uso.</li>
+    <li>La cuenta con el proveedor homologado de facturación, si el cliente
+      activa la funcionalidad de la cláusula 9.</li>
+    <li>Las claves de proveedores de inteligencia artificial del módulo de
+      I+D, que el cliente contrata y paga directamente si desea usarlo.</li>
+    <li>El equipamiento: tablets, impresoras o cajones portamonedas.</li>
+  </ul>
+  <p><strong>No se contemplan devoluciones.</strong> El pago es único y
+  anticipado. Si el cliente no desea continuar, le basta con no renovar.</p>
+
+  <h3>4. Qué incluye</h3>
+  <ul>
+    <li>Uso completo de la aplicación durante la vigencia, sin límite de
+      dispositivos ni de usuarios.</li>
+    <li><strong>Todas las actualizaciones</strong> publicadas durante el
+      periodo, sin coste adicional.</li>
+    <li>La <strong>web pública de reservas y pedidos</strong> del
+      establecimiento.</li>
+    <li>El <strong>soporte</strong> de la cláusula 5.</li>
+  </ul>
+  <p>No incluye formación presencial, desarrollos a medida, migración de datos
+  desde otros programas ni hardware.</p>
+
+  <h3>5. Soporte</h3>
+  <p>Por <strong>correo electrónico y WhatsApp</strong> en días laborables,
+  con un <strong>plazo máximo de respuesta de 48 horas hábiles</strong>. Ese
+  plazo se refiere a dar respuesta, no necesariamente a resolver la
+  incidencia, cuya complejidad puede requerir más tiempo.</p>
+  <p>Quedan excluidos: la configuración de la cuenta de Google Firebase del
+  cliente más allá del asistente incluido en la aplicación, la configuración
+  de su hardware, y las incidencias imputables a terceros (Google, el
+  proveedor de facturación, la pasarela de pago o su conexión a internet).</p>
+
+  <h3>6. Obligaciones del cliente</h3>
+  <ol>
+    <li><strong>Configurar su propio proyecto de Google Firebase</strong>,
+      gratuito, siguiendo el asistente de la aplicación. Es imprescindible
+      para que funcione la sincronización.</li>
+    <li><strong>Custodiar el código de licencia y sus claves</strong>, que son
+      personales e intransferibles.</li>
+    <li><strong>No compartir, revender, ceder ni publicar</strong> el código
+      de licencia.</li>
+    <li><strong>No usar la licencia en más establecimientos</strong> de los
+      contratados.</li>
+    <li>Mantener actualizadas las reglas de seguridad de su proyecto de
+      Firebase cuando la aplicación se lo indique.</li>
+    <li>Usar la aplicación conforme a la legislación vigente, en particular en
+      materia fiscal, laboral y de protección de datos.</li>
+  </ol>
+
+  <h3>7. De quién son los datos y dónde están</h3>
+  <p>Los datos del negocio —ventas, empleados, clientes, proveedores, recetas
+  y escandallos— <strong>no se alojan ni pasan por sistemas del
+  licenciante</strong>. Se guardan en los dispositivos del cliente y se
+  sincronizan exclusivamente contra el proyecto de Google Firebase que el
+  propio cliente ha creado, configurado y del que es titular.</p>
+  <ul>
+    <li><strong>El cliente es el único responsable del tratamiento</strong> de
+      los datos personales que gestione con la aplicación.</li>
+    <li><strong>El licenciante no es encargado del tratamiento</strong> de
+      esos datos: no accede a ellos, no los almacena y no puede
+      recuperarlos.</li>
+    <li>El licenciante solo trata los datos mínimos de la cuenta de licencia:
+      nombre de usuario, identificador del negocio y datos de facturación.</li>
+  </ul>
+  <div class="ojo">
+    <p><strong>Al terminar el contrato, los datos siguen siendo del cliente y
+    siguen donde están.</strong> El licenciante no los retiene, no los borra y
+    no puede condicionar su entrega, porque nunca dispuso de ellos.</p>
+  </div>
+
+  <h3>8. Protección de datos de la contratación</h3>
+  <p>Los datos identificativos y de facturación del cliente se tratan para
+  gestionar la licencia y cumplir obligaciones fiscales, sobre la base de la
+  ejecución del contrato y de obligación legal. Se conservan durante la
+  vigencia y los plazos legales de prescripción. El cliente puede ejercer sus
+  derechos de acceso, rectificación, supresión, oposición, limitación y
+  portabilidad escribiendo a gastrogoan@gmail.com.</p>
+
+  <h3>9. Facturación electrónica y VeriFactu</h3>
+  <div class="ojo">
+    <p><strong>9.1.</strong> A la fecha de esta versión, la funcionalidad de
+    facturación verificable se encuentra <strong>en vista previa y no está
+    activa</strong>. La aplicación <strong>no debe utilizarse como sistema
+    informático de facturación verificable</strong> en el sentido del
+    Reglamento que desarrolla la Ley Antifraude. El cliente es el único
+    responsable de cumplir sus obligaciones de facturación por los medios que
+    correspondan, y reconoce no contratar esta aplicación con esa
+    finalidad.</p>
+  </div>
+  <p><strong>9.2.</strong> Cuando el licenciante habilite esa funcionalidad,
+  regirá el siguiente régimen, que el cliente acepta desde ahora:</p>
+  <ul>
+    <li>La remisión de los registros de facturación a la Agencia Tributaria se
+      realiza <strong>a través de un proveedor homologado</strong>, con el que
+      <strong>el cliente contrata y paga su propia cuenta</strong>. El
+      licenciante no interviene en esa relación económica ni responde de
+      ella.</li>
+    <li>El licenciante pondrá a disposición del cliente su <strong>Declaración
+      Responsable como productor del software</strong>, y el enlace a la del
+      proveedor, accesibles desde la propia aplicación.</li>
+    <li><strong>Una vez activada la remisión, no podrá desactivarse</strong>,
+      por exigencia del propio Reglamento.</li>
+    <li>Si un envío falla, por falta de conexión o incidencia del proveedor,
+      la venta no se bloquea: queda marcada como pendiente, se reintenta
+      automáticamente y el cliente la ve en la aplicación, siendo de su
+      responsabilidad atenderla.</li>
+  </ul>
+  <p><strong>9.3.</strong> Ninguna manifestación comercial anterior a la
+  activación efectiva de esta funcionalidad puede interpretarse como garantía
+  de cumplimiento normativo en esta materia.</p>
+
+  <h3>10. Disponibilidad y funcionamiento</h3>
+  <p>La aplicación se ejecuta <strong>íntegramente en los dispositivos del
+  cliente</strong> y <strong>funciona sin conexión a internet</strong>. No
+  depende de servidores del licenciante, por lo que no hay riesgo de caída del
+  servicio por causas ajenas al cliente.</p>
+  <p>La sincronización entre dispositivos, la web pública de reservas y, en su
+  caso, la remisión de registros de facturación dependen de terceros —Google,
+  el proveedor homologado— y de la conexión del cliente. Las interrupciones
+  imputables a esos terceros quedan fuera del control y de la responsabilidad
+  del licenciante.</p>
+
+  <h3>11. Limitación de responsabilidad</h3>
+  <p>El licenciante responderá únicamente de los daños directos causados por
+  dolo o negligencia grave.</p>
+  <div class="ojo">
+    <p>En todo caso, <strong>la responsabilidad total acumulada del
+    licenciante frente al cliente queda limitada al importe efectivamente
+    abonado por este en la anualidad en curso</strong>.</p>
+  </div>
+  <p>Quedan excluidos: el lucro cesante, la pérdida de datos imputable a la
+  configuración o al proveedor de nube del cliente, las sanciones derivadas
+  del incumplimiento de obligaciones propias del cliente, y los daños
+  derivados de un uso contrario a este contrato.</p>
+
+  <h3>12. Resolución y revocación</h3>
+  <p>El licenciante podrá revocar la licencia, sin devolución del importe, en
+  caso de: impago o devolución del cargo; reventa, cesión no autorizada o
+  publicación del código de licencia; uso en más establecimientos de los
+  contratados; o uso de la aplicación para fines ilícitos.</p>
+  <p>El cliente puede dejar de usar la aplicación cuando quiera. Dado que el
+  pago es único y anticipado, no procede devolución por el periodo no
+  consumido.</p>
+
+  <h3>13. Traspaso del establecimiento</h3>
+  <p>Si el cliente traspasa o vende el establecimiento, podrá ceder la
+  licencia al nuevo titular por el tiempo que reste de la anualidad en curso,
+  comunicándolo previamente al licenciante, que actualizará la titularidad sin
+  coste.</p>
+  <p>La cesión <strong>no comprende los datos</strong>, que permanecen en el
+  proyecto de Firebase del cliente cedente, siendo este quien decide qué
+  entrega al nuevo titular. El licenciante no participa en esa entrega ni
+  puede realizarla en su nombre.</p>
+
+  <h3>14. Propiedad intelectual</h3>
+  <p>El software, su código, su interfaz, su documentación y la marca
+  GastroGoan son titularidad exclusiva del licenciante. El cliente no podrá
+  crear obras derivadas de la aplicación, retirar avisos de titularidad ni
+  redistribuirla, con o sin ánimo de lucro.</p>
+
+  <h3>15. Modificaciones del servicio</h3>
+  <p>El licenciante podrá actualizar y mejorar la aplicación durante la
+  vigencia. Si una actualización suprimiera alguna de las funcionalidades
+  esenciales del anexo, el cliente podrá resolver el contrato y percibir la
+  parte proporcional no consumida de la anualidad.</p>
+
+  <h3>16. Fuerza mayor</h3>
+  <p>Ninguna de las partes responderá por incumplimientos debidos a causas
+  fuera de su control razonable: catástrofes, cortes generalizados de
+  suministro o de red, ataques informáticos a terceros proveedores, o cambios
+  normativos que impidan la prestación.</p>
+
+  <h3>17. Comunicaciones</h3>
+  <p>Las comunicaciones entre las partes se realizarán por <strong>correo
+  electrónico</strong> a las direcciones facilitadas, y se considerarán
+  válidamente efectuadas a todos los efectos. Corresponde a cada parte
+  mantener actualizada su dirección.</p>
+
+  <h3>18. Nulidad parcial</h3>
+  <p>Si alguna cláusula fuera declarada nula o inaplicable, el resto del
+  contrato mantendrá su plena vigencia, sustituyéndose la cláusula afectada
+  por otra de efecto económico equivalente y conforme a derecho.</p>
+
+  <h3>19. Legislación aplicable y fuero</h3>
+  <p>Este contrato se rige por la legislación española. Para cualquier
+  controversia, las partes se someten a los <strong>Juzgados y Tribunales de
+  Vilafranca del Penedès</strong>, con renuncia a cualquier otro fuero.</p>
+
+  <hr>
+  <h2>Anexo — Funcionalidades esenciales</h2>
+  <p>A los efectos de la cláusula 15.</p>
+  <ul>
+    <li>TPV y cobro, con cierre de caja</li>
+    <li>Comandas de cocina y de sala</li>
+    <li>Gestión de carta, menús, recetas y escandallos</li>
+    <li>Control de stock e inventario</li>
+    <li>Proveedores y pedidos de compra</li>
+    <li>Gestión de personal: fichas, turnos, horarios y fichajes</li>
+    <li>Gestión económica: ventas, gastos, tesorería y cuenta de resultados</li>
+    <li>Reservas y pedidos online, con web pública propia</li>
+    <li>Sincronización entre dispositivos</li>
+    <li>Módulo de I+D (requiere clave propia del cliente)</li>
+  </ul>
+
+  <p class="firma">La contratación de la licencia y el pago del precio
+  implican la aceptación íntegra de estas condiciones.<br>
+  GastroGoan · NIF 47668150Y · gastrogoan@gmail.com</p>
+</div>
+</html>

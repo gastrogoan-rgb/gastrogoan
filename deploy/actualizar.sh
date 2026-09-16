@@ -14,5 +14,5 @@ rm -rf deploy/reservas/public/fonts && cp -r dist/fonts deploy/reservas/public/
 # Documentos legales (declaracion responsable de VeriFactu). Ver legal/README.md:
 # la app enlaza a app.gastrogoan.com/legal/<archivo> con una direccion fija.
 mkdir -p deploy/app/public/legal
-cp -f legal/*.pdf deploy/app/public/legal/ 2>/dev/null || true
+cp -f legal/*.pdf legal/*.html deploy/app/public/legal/ 2>/dev/null || true
 echo "OK: deploy/ actualizado. Ahora commit y push."
