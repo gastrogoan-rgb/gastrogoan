@@ -40,7 +40,20 @@ self.addEventListener('fetch', event => {
      `version.json`: 50 bytes en vez de 4 MB. Cuando la hay, avisa al
      hostelero y él decide cuándo actualizar (ver comprobarVersionPublicada
      en js/polish.js). */
-  if(req.mode === 'navigate'){
+  /* ⚠️ Solo para la app EN SÍ, no para cualquier página de este dominio.
+
+     Antes bastaba con que la navegación fuera a app.gastrogoan.com para que
+     se devolviera la copia guardada de la app. Y en el mismo dominio viven
+     otras páginas: el contrato y la política de privacidad de /legal/ —que
+     son las que enlaza Stripe en la pantalla de pago— y el tutorial.
+
+     Resultado: cualquiera que hubiera abierto la app alguna vez tenía el
+     service worker instalado, y al pulsar el enlace del contrato le salía
+     LA PANTALLA DE INICIO DE SESIÓN. En una pestaña nueva y sin haber
+     entrado nunca funcionaba bien, que es lo que hacía difícil de ver el
+     fallo: fallaba justo para quien ya es cliente. */
+  const esLaApp = url.pathname === '/' || url.pathname.endsWith('/index.html');
+  if(req.mode === 'navigate' && esLaApp){
     event.respondWith(
       caches.match(SHELL_URL).then(cached => cached || fetch(req).then(res => {
         // Primera visita en este dispositivo: se guarda para las siguientes.
