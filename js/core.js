@@ -6092,6 +6092,19 @@ function startCloudSync(tenantId){
 // que no existe, y el QR de todos los clientes habría dado error.
 // Vacío = la web pública está junto al index.html (un solo sitio, y las
 // pruebas en local, que es como se ha probado hasta ahora).
+/* La Declaración Responsable del FABRICANTE del software. La exige el
+   Reglamento de VeriFactu y es uno de los seis puntos que comprueban: el
+   usuario tiene que poder llegar a ella desde el propio programa.
+
+   ⚠️ Va aquí, en una constante, y NO en DB.business: es el mismo documento
+   para los 5.000 negocios. Estaba como campo editable en la ficha de cada
+   negocio, lo cual no tenía sentido -el hostelero no tiene ese PDF ni sabe
+   qué es- y, sobre todo, dejaba a la app incumpliendo ese punto en cuanto
+   alguien lo dejaba en blanco, que habría sido siempre.
+
+   El PDF se publica desde legal/ (ver legal/README.md). */
+const DECLARACION_RESPONSABLE_URL = 'https://app.gastrogoan.com/legal/declaracion-responsable.pdf';
+
 const PUBLIC_RESERVAS_BASE = 'https://reservas.gastrogoan.com/';
 /* El que se ENSEÑA al hostelero y se convierte en QR: la versión corta,
    reservas.gastrogoan.com/casapaco, que es la que va a repartir a sus

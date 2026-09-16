@@ -1,6 +1,62 @@
 # VeriFactu — estado y pendientes
 
-Última actualización: 10/08/2026.
+Última actualización: **16/09/2026**.
+
+## ⚠️ 16/09/2026 — Estado actual, en una tabla
+
+**El código está terminado.** Lo que falta son seis cosas y cuatro son del
+dueño. El orden importa: el punto 1 bloquea todos los demás.
+
+| # | Qué falta | Quién | Bloquea |
+|---|---|---|---|
+| 1 | **Contratar la cuenta de pago de Invocash** | Dueño | ⛔ todo |
+| 2 | Probar una venta real y ver el PDF con sello y QR (hoy sale "FACTURA NO VÁLIDA") | Dueño | firmar |
+| 3 | Esquema de versión del módulo fiscal (ver abajo) | Código | firmar |
+| 4 | Revisión del gestor + decidir autónomo o sociedad | Dueño + gestor | activar |
+| 5 | Dejar el PDF firmado en `legal/declaracion-responsable.pdf` | Dueño → publicar | activar |
+| 6 | Quitar el badge de "vista previa" | Código | — |
+
+### Hecho el 16/09
+
+- **El enlace a la Declaración Responsable ya no es un campo por negocio.**
+  Estaba en `DB.business.verifactu.ownDeclarationUrl`, editable por cada
+  hostelero. No tenía sentido —es el mismo documento para los 5.000, y el
+  hostelero no tiene ese PDF ni sabe qué es— y al quedarse en blanco, que
+  habría pasado siempre, la app incumplía uno de los seis puntos del
+  CheckPoint: poder llegar al documento desde el propio programa. Ahora es
+  `DECLARACION_RESPONSABLE_URL` en `js/core.js`.
+- **Carpeta `legal/`** en la raíz: lo que se deje ahí lo publica
+  `deploy/actualizar.sh` en `app.gastrogoan.com/legal/`. Ver `legal/README.md`.
+- **Borrador de la Declaración Responsable escrito** (Drive: "Declaración
+  Responsable VeriFactu — BORRADOR"). Con los datos del productor, los ocho
+  puntos a declarar y el apartado del proveedor pendiente de rellenar.
+- **Condiciones de Licencia v1.1** (Drive), con la cláusula 9 partida en dos:
+  9.1 protege hoy (módulo en vista previa, no activo) y 9.2 describe cómo
+  funcionará al activarse —cuenta propia con el proveedor, envío que no se
+  puede desactivar, incidencias a cargo del cliente—, aceptado desde ya.
+
+### ⚠️ Problema sin resolver: la versión declarada
+
+La Declaración Responsable se hace sobre **una versión concreta**. Y aquí se
+publica varias veces por semana: cada `deploy/actualizar.sh` genera un
+`GG_BUILD` nuevo. Declarar "versión 1.0" no se sostiene.
+
+Propuesta pendiente de implementar:
+- Una **versión propia del módulo fiscal** (`Módulo de Facturación v1.0`) que
+  solo cambie cuando se toque el módulo, no en cada despliegue.
+- Que **se vea en la app**, junto al enlace a la declaración.
+- Y dejar escrito **qué cambio obliga a re-declarar**: el registro de
+  facturación, el encadenamiento, el QR o el envío.
+
+### ⚠️ Decisión legal pendiente, antes de firmar
+
+Firmar la Declaración Responsable como **autónomo** significa responder con
+el patrimonio personal ante Hacienda, y esa responsabilidad **se multiplica
+por cada cliente que use el sistema**. Preguntar al gestor si conviene
+constituir una sociedad ANTES de firmar. Es una decisión que se toma antes,
+no después.
+
+---
 
 ## ⚠️ 10/08/2026 — Invocash cambió de API, ya corregido
 
