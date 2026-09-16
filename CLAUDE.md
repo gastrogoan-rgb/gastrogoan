@@ -285,6 +285,22 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
   toca, comprobar contra los cuatro fondos de la app (blanco, `#FAF8F4`,
   `#F1EFE9`, `#F4F4F4`). Lo verifica `test/contraste.mjs`.
 
+### El plugin de diseño MEJORA lo que hay, no lo cambia
+
+`.claude/settings.json` carga **ui-ux-pro-max** (paletas, tipografías,
+jerarquía) en cualquier sesión de este repositorio. Está para afinar, no para
+rediseñar:
+
+> ⚠️ **El sistema de diseño de GastroGoan manda siempre.** Los cuatro fondos,
+> `--muted` y su contraste, los 44×44 px de objetivo táctil, `.txt-xs` y las
+> reglas de móvil al final del CSS son decisiones tomadas, casi todas a raíz
+> de un fallo real. Si el plugin propone otra paleta, otros tamaños o mover
+> las reglas de sitio, **gana lo que ya existe**.
+
+El motivo no es gusto: `test/contraste.mjs`, `test/movil.mjs` y
+`test/visual-audit.mjs` miden precisamente eso. Una sugerencia aceptada a la
+ligera tumba la batería y cuesta media tarde entender por qué.
+
 ---
 
 ## El módulo de I+D (`js/idr.js`)

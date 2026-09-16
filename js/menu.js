@@ -1089,7 +1089,7 @@ function renderImportEscList(){
     return `<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);${done?'opacity:.5':''}">
       <input type="checkbox" value="${r.id}" ${done?'disabled checked':(importEscChecked.has(r.id)?'checked':'')} style="width:auto">
       <span style="flex:1">${escapeHtml(r.name)}</span>
-      <span style="font-family:monospace;color:var(--brand-orange);font-weight:600">${fmtMoney(r.price)}</span>
+      <span style="font-family:monospace;color:var(--ink);font-weight:600">${fmtMoney(r.price)}</span>
     </label>`;
   }).join('') : `<div class="empty" style="padding:16px 4px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
   const allBox = document.getElementById('import-esc-all');
@@ -1380,7 +1380,7 @@ function renderMenuGrupos(){
         <div class="ge-item">
           <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
           <span style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameOption')}" onclick="renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
-          ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
+          ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--ink)">+${fmtMoney(o.suplemento)}</span>` : ''}
           <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${o.disponible===false?'btn-danger':''}" onclick="toggleMenuOpcionDisponible(${g.id},${o.id})">${o.disponible===false?t('common.unavailable'):t('common.available')}</button>
           <button class="btn btn-sm ${o.stock!=null && o.stock<=0?'btn-danger':''}" style="${o.stock!=null && o.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setMenuOpcionStock(${g.id},${o.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${o.stock!=null ? t('label.portionsLeft').replace('${n}', o.stock) : t('btn.limitPortions')}</button>
@@ -1591,7 +1591,7 @@ function renderMenuOpcionModsModalHtml(grupoId, opcionId){
       ${mods.length ? mods.map(m => `
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(m.nombre)}</span>
-          <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
+          <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--ink)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
           <button class="btn btn-sm btn-icon" onclick="startEditMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
         </div>

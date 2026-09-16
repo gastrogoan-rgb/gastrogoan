@@ -261,7 +261,7 @@ function renderDashboardBarTrend(elId, trend, allowNegative){
     <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;max-width:100%">
     <div style="display:flex;align-items:flex-end;gap:6px;height:140px;${anchoMin?`min-width:${trend.length*(anchoMin+6)}px`:''}">
       ${trend.map(t => {
-        const color = (allowNegative && t.value < 0) ? 'var(--red)' : 'var(--brand-orange)';
+        const color = (allowNegative && t.value < 0) ? 'var(--red)' : 'var(--ink)';
         return `
         <div style="flex:1;${anchoMin?`min-width:${anchoMin}px`:''};display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
           <div style="font-size:11px;color:var(--muted);margin-bottom:2px;white-space:nowrap">${t.value!==0?fmtMoney(t.value):''}</div>
@@ -465,8 +465,8 @@ function renderDashboard(){
           const isToday = ds === todayDate;
           return `
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer" onclick="navigate('reservas');goToReservasDia('${ds}')" title="${t('dash.viewReservationsDay')}">
-            <div style="font-size:11px;font-weight:700;color:var(--brand-orange);margin-bottom:2px">${covers||''}</div>
-            <div style="width:100%;background:${isToday?'var(--brand-orange)':'var(--teal)'};border-radius:4px 4px 0 0;height:${Math.max(2,(covers/maxCovers*100))}%"></div>
+            <div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:2px">${covers||''}</div>
+            <div style="width:100%;background:${isToday?'var(--ink)':'var(--ink)'};border-radius:4px 4px 0 0;height:${Math.max(2,(covers/maxCovers*100))}%"></div>
             <div style="font-size:11px;color:var(--muted);margin-top:4px">${weekDayShort(d.getDay()===0?6:d.getDay()-1)}<br>${d.getDate()}/${d.getMonth()+1}</div>
           </div>
         `;}).join('')}
@@ -635,7 +635,7 @@ function renderDashboard(){
         <div style="display:flex;align-items:flex-end;gap:2px;height:120px">
           ${hourTotals.map((v,h) => `
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${h}:00 - ${fmtMoney(v)}">
-              <div style="width:100%;background:var(--brand-orange);border-radius:2px 2px 0 0;height:${Math.max(2,(v/maxHour*100))}%"></div>
+              <div style="width:100%;background:var(--ink);border-radius:2px 2px 0 0;height:${Math.max(2,(v/maxHour*100))}%"></div>
               ${h%3===0?`<div class="txt-xs" style="color:var(--muted);margin-top:2px">${h}h</div>`:''}
             </div>
           `).join('')}

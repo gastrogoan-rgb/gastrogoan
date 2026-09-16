@@ -1274,7 +1274,7 @@ function renderPedidoResultsList(){
   }
 
   const totalFiltrado = orders.reduce((sum,o) => sum + pedidoTotalConIva(o), 0);
-  const totalHtml = avisoFuera + `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--teal)">${fmtMoney(totalFiltrado)}</strong></div>`;
+  const totalHtml = avisoFuera + `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--ink)">${fmtMoney(totalFiltrado)}</strong></div>`;
 
   const sorted = orders.slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
   box.innerHTML = totalHtml + sorted.map(o => {
@@ -1374,7 +1374,7 @@ function renderPedidoIvaBreakdownHtml(o, isRecibido){
       <div><span style="color:var(--muted)">${t('label.vat')}:</span> <strong>${fmtMoney(groups[r]*r/100)}</strong></div>
     </div>`).join('')}
     ${envio > 0 ? `<div style="margin-bottom:4px"><span style="color:var(--muted)">${t('label.shipping')}:</span> <strong>${fmtMoney(envio)}</strong></div>` : ''}
-    ${rates.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--muted)">${t('common.total')}:</span> <strong style="color:var(--teal)">${fmtMoney(totalBase+totalIva+envio)}</strong></div>` : ''}
+    ${rates.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--muted)">${t('common.total')}:</span> <strong style="color:var(--ink)">${fmtMoney(totalBase+totalIva+envio)}</strong></div>` : ''}
     ${missingIva ? `<div style="color:var(--red);margin-top:6px"><i class="ti ti-alert-triangle"></i> ${t('msg.someIngredientsMissingIva')}</div>` : ''}
   </div>`;
 }

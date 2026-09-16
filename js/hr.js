@@ -365,7 +365,7 @@ const GE = (function(){
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.personalNoVat')}</div><div class="val">${fmtMoney(tpN)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.fixedNoVat')}</div><div class="val">${fmtMoney(tgN)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupportedFixed')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivFijos)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realMonthlyCost')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realMonthlyCost')}</div><div class="val" style="color:var(--ink)">${fmtMoney(totN)}</div></div>
       ${irpfMes>0.001 ? `<div class="ge-kpi" title="${escapeHtml(t('hr.gf.irpfWithheldHint'))}"><div class="lbl">${t('hr.gf.irpfWithheld')}</div><div class="val" style="color:var(--amber-dark)">${fmtMoney(irpfMes)}</div></div>` : ''}`;
     document.getElementById('gf-cost-hint').textContent = t('hr.lbl.realMonthlyCostHint');
     renderGFList('gf-personal', personal);
@@ -401,7 +401,7 @@ const GE = (function(){
         <div style="margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
             <span style="font-weight:600">${it.lbl}</span>
-            <span style="font-family:monospace">${fmtMoney(it.v)} · <span style="color:${it.pct>35?'var(--red)':'var(--teal-d)'}">${it.pct>999?'&gt;999':it.pct.toFixed(1)}% ${t('hr.lbl.ofSales')}</span></span>
+            <span style="font-family:monospace">${fmtMoney(it.v)} · <span style="color:${it.pct>35?'var(--red)':'var(--ink)'}">${it.pct>999?'&gt;999':it.pct.toFixed(1)}% ${t('hr.lbl.ofSales')}</span></span>
           </div>
           <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
             <div style="height:100%;width:${Math.min(it.pct/50*100,100)}%;background:${it.color};border-radius:4px;transition:width .4s"></div>
@@ -502,7 +502,7 @@ const GE = (function(){
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.grossSalary')}</div><div class="val" id="gf-auto-bruto">0,00 €</div></div>
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.companySs')}</div><div class="val" id="gf-auto-ss">0,00 €</div></div>
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.irpfWithheld')}</div><div class="val" id="gf-auto-irpf" style="color:var(--amber-dark)">0,00 €</div></div>
-          <div class="ge-kpi"><div class="lbl">${t('hr.gf.totalCompanyCost')}</div><div class="val" id="gf-auto-total" style="color:var(--teal)">0,00 €</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.gf.totalCompanyCost')}</div><div class="val" id="gf-auto-total" style="color:var(--ink)">0,00 €</div></div>
         </div>
       </div>
       ` : ''}
@@ -734,7 +734,7 @@ const GE = (function(){
           <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('ge.ventas.byType')}</h4>
           <div class="ge-kpi-grid" style="margin-bottom:14px">
             ${tiposActivos.map(k => `<div class="ge-kpi"><div class="lbl">${t('ge.ventas.tipo.'+k)}</div><div class="val">${fmtMoney(porTipo[k])}</div></div>`).join('')}
-            <div class="ge-kpi" style="border-color:var(--teal)"><div class="lbl" style="color:var(--teal)">${t('common.total')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totalTipos)}</div></div>
+            <div class="ge-kpi" style="border-color:var(--ink)"><div class="lbl" style="color:var(--ink)">${t('common.total')}</div><div class="val" style="color:var(--ink)">${fmtMoney(totalTipos)}</div></div>
           </div>`;
       }
     }
@@ -1154,7 +1154,7 @@ const GE = (function(){
     ];
     const quarters = ['T1','T2','T3','T4'];
     const isMes = cdrGranularidad === 'mes';
-    let html = `<thead><tr><th>${t('hr.lbl.concept')}</th>${isMes?getMeses().map(m=>`<th>${m}</th>`).join(''):''}${quarters.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}<th style="background:var(--dark);color:#fff">${t('hr.lbl.yearAbbrev')}</th></tr></thead><tbody>`;
+    let html = `<thead><tr><th>${t('hr.lbl.concept')}</th>${isMes?getMeses().map(m=>`<th>${m}</th>`).join(''):''}${quarters.map(q=>`<th style="background:var(--ink);color:#fff">${q}</th>`).join('')}<th style="background:var(--ink);color:#fff">${t('hr.lbl.yearAbbrev')}</th></tr></thead><tbody>`;
     rows.forEach(r=>{
       const total = r.vals.reduce((s,v)=>s+v,0);
       const q = [0,1,2,3].map(qi=>r.vals.slice(qi*3,qi*3+3).reduce((s,v)=>s+v,0));
@@ -1271,7 +1271,7 @@ const GE = (function(){
         <span>0</span><span style="color:var(--amber-dark);font-weight:600">${t('hr.pe.breakevenGauge').replace('${n}', cubNec)}</span><span>${Math.ceil(max)}</span>
       </div>
       <div style="position:relative;height:28px;background:var(--border);border-radius:6px;overflow:visible">
-        <div style="position:absolute;left:0;top:0;height:100%;width:${pctAct}%;background:${ok?'var(--teal)':'var(--red)'};border-radius:6px;transition:width .4s"></div>
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pctAct}%;background:${ok?'var(--ink)':'var(--red)'};border-radius:6px;transition:width .4s"></div>
         <div style="position:absolute;left:${pctNec}%;top:-4px;height:36px;width:3px;background:var(--amber-dark);border-radius:2px"></div>
         <div class="txt-xs" style="position:absolute;left:clamp(28px,${pctNec}%,calc(100% - 28px));top:34px;transform:translateX(-50%);color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
       </div>
@@ -1653,7 +1653,7 @@ const GE = (function(){
     document.getElementById('te-kpis').innerHTML = `
       <div class="kpi-mini"><div class="l">${t('hr.te.grossRevenue')}</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.salesWithVat')}</div></div>
       <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">${t('hr.te.vatPassedOn')}</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.vatIncludedInSales')}</div></div>
-      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">${t('hr.lbl.netRevenue')}</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.baseToDistribute')}</div></div>`;
+      <div class="kpi-mini" style="border-color:var(--ink)"><div class="l">${t('hr.lbl.netRevenue')}</div><div class="v" style="color:var(--ink)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.baseToDistribute')}</div></div>`;
 
     const realPer = geTotalPersonalNetoForMonth(teYear, activeMonth);
     const realGF = geTotalGFNetoForMonth(teYear, activeMonth);
@@ -1685,7 +1685,7 @@ const GE = (function(){
       {lbl:t('hr.lbl.fixedNoVat'), pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
       {lbl:t('hr.lbl.variableExpenses'), pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
       {lbl:t('hr.te.otherExpenses'), pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
-      {lbl:t('hr.te.profitSavings'), pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
+      {lbl:t('hr.te.profitSavings'), pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--ink)', isBen:true},
       {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, obj:null, real:ivaReserva, color:'var(--amber-dark)', isReserve:true, icon:'ti-pig-money'},
       /* La reserva de IRPF solo aparecía si había importe, así que un negocio
          con nóminas pero sin el cálculo automático activado no la veía por
@@ -1847,7 +1847,7 @@ const GE = (function(){
     const max = Math.max(...vals.map(Math.abs), 1);
     return data.map(d=>{
       const pct = Math.abs(d.v)/max*100;
-      const color = d.v>=0 ? 'var(--teal)' : 'var(--red)';
+      const color = d.v>=0 ? 'var(--ink)' : 'var(--red)';
       return `<div class="bar-col" title="${d.lbl}: ${fmtMoney(d.v)}">
         <div class="bar-fill" style="height:${pct*0.7}px;background:${color}"></div>
         <div class="bar-lbl">${d.lbl}</div>
@@ -1987,7 +1987,7 @@ const GE = (function(){
     }).sort((a,b) => b.revenue - a.revenue);
     const counts = {star:0, review:0, promote:0, drop:0};
     classified.forEach(i => counts[i.cls]++);
-    const badgeColor = {star:'var(--green)', review:'var(--brand-orange)', promote:'var(--blue)', drop:'var(--red)'};
+    const badgeColor = {star:'var(--green)', review:'var(--ink)', promote:'var(--blue)', drop:'var(--red)'};
     kpisEl.innerHTML = `
       <div class="ge-kpi"><div class="lbl"><i class="ti ti-star"></i> ${t('dash.menuEngStar')}</div><div class="val" style="color:${badgeColor.star}">${counts.star}</div></div>
       <div class="ge-kpi"><div class="lbl"><i class="ti ti-search"></i> ${t('dash.menuEngReview')}</div><div class="val" style="color:${badgeColor.review}">${counts.review}</div></div>
@@ -2725,7 +2725,7 @@ function renderHorariosMes(){
     const count = counts[ds] || 0;
     const isToday = ds === todayStr();
     cells += `
-      <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToHorariosDia('${ds}')">
+      <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--ink)':''}" onclick="goToHorariosDia('${ds}')">
         <div style="font-weight:700">${day}</div>
         ${count ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(count===1?t('hr2.oneShift'):t('hr2.nShifts').replace('${n}', count))}">${count}</span>` : ''}
       </div>
@@ -3272,7 +3272,7 @@ function renderHorariosPersonal(){
         <span style="white-space:nowrap">${t('label.avgTicket')}: <strong style="color:var(--text);white-space:nowrap">${fmtMoney(w.count?w.total/w.count:0)}</strong></span>
       </div>` : ''}
       <div style="text-align:center;margin-bottom:10px">
-        <span style="font-size:12px;font-weight:700;color:#fff;background:${isOwnerSession?'var(--teal)':'var(--brand-orange)'};padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession?t('label.viewEmployeeFile'):t('label.clickToClockIn')}</span>
+        <span style="font-size:12px;font-weight:700;color:#fff;background:${isOwnerSession?'var(--ink)':'var(--ink)'};padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession?t('label.viewEmployeeFile'):t('label.clickToClockIn')}</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
@@ -4613,7 +4613,7 @@ function maybeShowEmployeeOnboarding(employeeId){
       <h3><i class="ti ti-confetti"></i> ${t('onboarding.title').replace('${name}', escapeHtml(e.name))}</h3>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${tips.map(tip => `<div style="display:flex;gap:8px;align-items:flex-start"><i class="ti ti-circle-check" style="color:var(--brand-orange);margin-top:2px"></i><span style="font-size:13.5px">${tip}</span></div>`).join('')}
+      ${tips.map(tip => `<div style="display:flex;gap:8px;align-items:flex-start"><i class="ti ti-circle-check" style="color:var(--ink);margin-top:2px"></i><span style="font-size:13.5px">${tip}</span></div>`).join('')}
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary" style="flex:1" onclick="dismissEmployeeOnboarding(${JSON.stringify(employeeId)})">${t('onboarding.gotIt')}</button>

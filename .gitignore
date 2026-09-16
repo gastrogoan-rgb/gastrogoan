@@ -14,3 +14,8 @@ test/capturas/
 # Recorte de la fuente de iconos: lo genera build.sh desde
 # css/tabler-icons.min.css, no se commitea (como dist/).
 build/
+
+# Las creatividades y capturas se generan con anuncios/creatividades.mjs;
+# se suben a Meta, no al repositorio (como dist/ y build/).
+anuncios/salida/
+anuncios/capturas/

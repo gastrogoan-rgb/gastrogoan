@@ -1,23 +1,32 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  /* GastroGoan — Sistema de diseño nórdico (handoff) */
-  --brand-orange:#1C1A17;   /* estructural: negro humo (antes acento) */
-  --brand-yellow:#4A5D4E;   /* verd oliva */
+  /* GastroGoan — Sistema de diseño nórdico (handoff)
+   *
+   * ⚠️ Los COLORES DE VERDAD son estos tres y solo estos tres. Cualquier
+   * otro nombre de color de aquí abajo tiene que apuntar a uno de ellos
+   * con var(), nunca repetir el valor a mano.
+   *
+   * Por qué se insiste: había SEIS nombres distintos para este mismo negro
+   * —--brand-orange, --brand-black, --dark, --dark2, --teal, --teal-d— y
+   * tres para el oliva. Restos de cuando la marca era naranja y amarilla.
+   * No se veía (todo pintaba igual) pero dejaba la app imposible de
+   * retocar: --brand-orange se usaba 125 veces y era TINTA, así que
+   * cambiar el color de marca habría pintado de naranja 125 sitios, casi
+   * todos texto. Nadie podía tocar la paleta sin romper media app. */
+  --ink:#1C1A17;            /* negro humo — estructura y texto */
+  --olive:#4A5D4E;          /* verde oliva — el acento */
   --brand-cream:#F1EFE9;    /* neutro cálido apagado */
-  --brand-black:#1C1A17;
 
-  /* Primario = Negre Fumat; acento = Verd Oliva */
-  --dark:#1C1A17;--dark2:#1C1A17;
-  --teal:#1C1A17;--teal-l:#F1EFE9;--teal-d:#1C1A17;
-  --olive:#4A5D4E;--olive-l:#7E9B84;
-  --mid:#1C1A17;
+  --olive-l:#7E9B84;
 
   /* Aviso apagado coherente con la paleta */
   --amber:#8A7440;--amber-l:#F5F0E3;--amber-dark:#8A7440;
 
   /* Datos financieros — familia apagada, no primarios brillantes */
   --blue:#4E5A63;--blue-l:#ECEFF1;--blue-d:#2E363C;
-  --green:#4A5D4E;--green-l:#EDF1EC;
+  /* Semánticos: dicen para QUÉ sirven, y toman el valor del primitivo. Son
+     los únicos alias legítimos — --green significa "va bien", no "verde". */
+  --green:var(--olive);--green-l:#EDF1EC;
   --purple:#6E5A6B;--purple-l:#F1ECEF;
   --red-l:#F5EBE7;--red:#8A4A3B;
 
@@ -30,7 +39,7 @@
      sola pantalla, así que era EL problema de legibilidad de la app.
      #716C65 es el mismo tono, solo más oscuro: cumple 4,5:1 contra los
      cuatro fondos que usa la app (peor caso 4,53:1 sobre el crema). */
-  --text:#1C1A17;--body:#3D3A34;--muted:#716C65;
+  --text:var(--ink);--body:#3D3A34;--muted:#716C65;
 
   --radius:0;
   --header-h:60px;
@@ -66,7 +75,7 @@ a{color:var(--text)}a:hover{color:var(--olive)}
   height:var(--header-h);
   display:flex;align-items:center;
   padding:0 16px;
-  background:var(--dark);
+  background:var(--ink);
   position:sticky;top:0;z-index:50;
   gap:12px;
   flex-shrink:0;
@@ -98,7 +107,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 @media (max-width:1024px){ .app-logo{min-height:44px} }
 .app-logo-icon{
   width:36px;height:36px;border-radius:10px;
-  background:var(--teal);color:#fff;
+  background:var(--ink);color:#fff;
   display:flex;align-items:center;justify-content:center;font-size:18px;
 }
 .app-logo-text{font-weight:700;font-size:16px;letter-spacing:.2px}
@@ -129,12 +138,12 @@ body:not(.owner-session) .owner-strict{display:none !important}
 /* ===== Home (selección de área) ===== */
 #view-home.active{display:flex;flex-direction:column;min-height:100%}
 .home-hero{
-  background:linear-gradient(135deg,var(--dark) 0%,#1A1A1A 100%);
+  background:linear-gradient(135deg,var(--ink) 0%,#1A1A1A 100%);
   padding:48px 28px 36px;text-align:center;
   margin:-22px -22px 0;border-radius:0 0 24px 24px;
 }
 .folder-grid{flex:1;align-content:center}
-.home-hero .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,0,.22);color:var(--brand-yellow);border:1px solid rgba(255,255,0,.5);font-size:14px;font-weight:700;padding:6px 16px;border-radius:999px;margin-bottom:16px}
+.home-hero .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,0,.22);color:var(--olive);border:1px solid rgba(255,255,0,.5);font-size:14px;font-weight:700;padding:6px 16px;border-radius:999px;margin-bottom:16px}
 .home-hero h1{font-size:28px;font-weight:800;color:#fff;margin-bottom:6px}
 .home-hero p{color:rgba(255,255,255,.9);font-size:15px}
 
@@ -147,14 +156,14 @@ body:not(.owner-session) .owner-strict{display:none !important}
   transition:transform .2s, box-shadow .2s;
 }
 .folder-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.3)}
-.folder-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--folder-color, var(--teal))}
+.folder-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--folder-color, var(--ink))}
 .folder-card.folder-cocina{background:linear-gradient(140deg,#1A1A1A,#2A1500)}
 .folder-card.folder-sala{background:linear-gradient(140deg,#0A0A1A,#1A1A1A)}
 .folder-card.folder-gestion{background:linear-gradient(140deg,#150A00,#2A1200)}
 .folder-icon{font-size:64px;display:block;line-height:1}
 .folder-card h2{font-size:28px;font-weight:800;color:#fff;margin:0}
 .folder-card p,.folder-chips{display:none}
-.folder-btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:10px 22px;border-radius:9px;width:fit-content;color:#fff;background:var(--brand-orange);border:1px solid var(--brand-orange)}
+.folder-btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:10px 22px;border-radius:9px;width:fit-content;color:#fff;background:var(--ink);border:1px solid var(--ink)}
 .folder-count{display:none}
 
 /* ===== Folder (módulos de un área) ===== */
@@ -165,12 +174,12 @@ body:not(.owner-session) .owner-strict{display:none !important}
   background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;
   cursor:pointer;transition:all .18s;position:relative;overflow:hidden;text-align:left;
 }
-.module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--teal)}
-.module-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.1);border-color:var(--teal)}
-.module-icon{font-size:28px;margin-bottom:8px;display:block;color:var(--teal-d)}
+.module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ink)}
+.module-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.1);border-color:var(--ink)}
+.module-icon{font-size:28px;margin-bottom:8px;display:block;color:var(--ink)}
 .module-card h3{font-size:16px;font-weight:700;margin-bottom:4px;justify-content:flex-start;gap:0}
 .module-card p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px}
-.module-open{font-size:13px;font-weight:600;color:var(--teal);display:flex;align-items:center;gap:4px}
+.module-open{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:4px}
 
 /* ===== Cards / generic ===== */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
@@ -222,7 +231,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .caos-fila .caos-plato{flex:1;min-width:0;overflow-wrap:anywhere}
 .caos-fila .caos-plato strong{font-size:20px;line-height:1.2;display:block}
 .caos-fila .caos-donde{font-size:12.5px;color:var(--muted);margin-top:2px}
-.caos-fila .caos-nota{font-size:13px;color:var(--brand-orange);font-weight:600;margin-top:4px}
+.caos-fila .caos-nota{font-size:13px;color:var(--ink);font-weight:600;margin-top:4px}
 .caos-fila .caos-alergia{margin-top:6px}
 .caos-fila .caos-alergia .card{margin-bottom:0;padding:6px 10px;font-size:12px}
 .caos-urgente{border-color:var(--red);border-left-color:var(--red);background:var(--red-l)}
@@ -251,7 +260,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 
 .card-compact{padding:10px 12px;margin-bottom:0}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
-.card-compact summary{cursor:pointer;font-size:12px;color:var(--brand-orange);font-weight:600;margin:6px 0}
+.card-compact summary{cursor:pointer;font-size:12px;color:var(--ink);font-weight:600;margin:6px 0}
 /* Nombre de una carpeta de categoría (Mega Lista, Stock, Escandallo,
    Fichas...): con un nombre largo se comía el botón de lápiz de al lado
    empujándolo fuera de la tarjeta. Se recorta a 2 líneas como mucho, más
@@ -305,7 +314,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .togo-order-row .badge{font-size:10px}
 .togo-order-row-top{padding-bottom:6px;border-bottom:1px solid var(--border)}
 .togo-order-client{font-size:15px;color:var(--text);font-weight:800}
-.togo-order-price{font-size:14px;color:var(--brand-orange);font-weight:800}
+.togo-order-price{font-size:14px;color:var(--ink);font-weight:800}
 .togo-order-address{display:flex;align-items:flex-start;gap:4px;font-size:12px;color:var(--muted)}
 
 /* min-height fijo para que TODAS las mesas midan igual, estén en la zona que
@@ -316,7 +325,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
    una altura mínima común, todas ocupan el mismo sitio siempre. */
 .mesa-card{padding:16px 10px 12px;margin-bottom:0;font-size:11px;border-radius:14px;border-top-width:4px;border-top-style:solid;display:flex;flex-direction:column;align-items:center;min-height:150px;justify-content:center}
 .mesa-card.mesa-free{background:var(--surface);border:1px dashed var(--border);border-top:4px dashed var(--border)}
-.mesa-card.mesa-free:hover{border-color:var(--brand-orange)}
+.mesa-card.mesa-free:hover{border-color:var(--ink)}
 /* Una mesa abierta se leía casi igual que una libre: mismo borde fino y del
    mismo gris. Con el plano lleno cuesta ver de un vistazo cuáles están
    ocupadas (lo pidió el dueño el 12/09, señalando el recuadro marcado que ya
@@ -336,11 +345,11 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .mesa-card .badge{font-size:10.5px;padding:2px 6px;gap:2px}
 .mesa-card .mesa-status-free{font-size:12px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:4px}
 .mesa-card .mesa-status-free .ti{font-size:15px}
-.mesa-card.mesa-reserved-soon{border-color:var(--brand-orange);border-style:dashed}
+.mesa-card.mesa-reserved-soon{border-color:var(--ink);border-style:dashed}
 .mesa-card .mesa-pax-free{margin-top:4px;justify-content:center;width:100%}
-.mesa-card .mesa-reservation-hint{margin-top:6px;font-size:10.5px;font-weight:700;color:var(--brand-orange);display:flex;align-items:center;justify-content:center;gap:3px;flex-wrap:wrap;text-align:center}
+.mesa-card .mesa-reservation-hint{margin-top:6px;font-size:10.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:3px;flex-wrap:wrap;text-align:center}
 .mesa-card .mesa-phase-row{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;color:var(--muted);margin-top:6px}
-.mesa-card .mesa-total{margin-top:6px;padding-top:6px;border-top:1px solid var(--border);width:100%;font-weight:800;font-size:20px;color:var(--brand-orange)}
+.mesa-card .mesa-total{margin-top:6px;padding-top:6px;border-top:1px solid var(--border);width:100%;font-weight:800;font-size:20px;color:var(--ink)}
 .mesa-card .mesa-meta-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:7px;flex-wrap:wrap;width:100%}
 .mesa-card .mesa-pax{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
 .mesa-card .mesa-pax .ti{font-size:12px}
@@ -348,7 +357,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .mesa-card .mesa-waiter-avatar{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0}
 .mesa-card .mesa-icons-row{position:absolute;top:6px;left:6px;display:flex;gap:3px}
 .mesa-card .mesa-mini-badge{font-size:12px;line-height:1}
-.mesa-card .mesa-mini-badge .ti{font-size:13px;color:var(--brand-orange)}
+.mesa-card .mesa-mini-badge .ti{font-size:13px;color:var(--ink)}
 .mesa-card .mesa-elapsed-row{position:absolute;top:6px;right:6px}
 .mesa-card .mesa-elapsed{display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:700}
 .mesa-card .mesa-elapsed .ti{font-size:11px}
@@ -361,7 +370,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 @media (prefers-reduced-motion: reduce){.mesa-card.mesa-blink-urgent{animation:none;border:2px solid var(--red)}}
 
 .view-toggle{display:flex;gap:4px}
-.view-toggle .btn.active{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)}
+.view-toggle .btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 
 .list-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--surface)}
 /* El nombre nunca se corta con "..." en ningún listado de la app (Fichas
@@ -402,7 +411,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
 .btn:disabled:hover{filter:grayscale(.3)}
 .btn:disabled:active{transform:none}
-.btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:#fff}
 .btn-danger{background:var(--red);border-color:var(--red);color:#fff}
 .btn-sm{padding:7px 12px;min-height:36px;font-size:13px;border-radius:8px}
 /* min-height:auto ANULABA el mínimo que trae .btn-sm (36 px), así que los
@@ -495,7 +504,7 @@ input[type="text"],input[type="search"],input[type="tel"],input[type="email"]{te
 .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
-th{background:var(--teal-l);color:var(--teal-d);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+th{background:var(--brand-cream);color:var(--ink);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
 tr:last-child td{border-bottom:none}
 td.wrap{white-space:normal}
 .actions-cell{display:flex;gap:6px;flex-wrap:wrap}
@@ -624,7 +633,7 @@ td.wrap{white-space:normal}
 .ingredients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
 .ingredient-pill{background:var(--bg-soft,#f4f5f7);border-radius:8px;padding:8px 12px;font-size:13px}
 .step-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
-.step-num{width:24px;height:24px;border-radius:50%;background:var(--brand-orange);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px}
 
 /* ===== Modal ===== */
 /* Con align-items/justify-content:center, un modal más alto que la pantalla
@@ -722,7 +731,7 @@ td.wrap{white-space:normal}
    llegar al botón. Aplica en todos los tamaños de pantalla por igual. */
 .modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:10px;flex-shrink:0}
 
-.cat-heading{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal-d);background:var(--teal-l);padding:8px 14px;border-radius:8px;margin:18px 0 10px}
+.cat-heading{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink);background:var(--brand-cream);padding:8px 14px;border-radius:8px;margin:18px 0 10px}
 .cat-heading:first-child{margin-top:0}
 
 /* Empty state */
@@ -769,7 +778,7 @@ td.wrap{white-space:normal}
 .mn-indice-chip:hover{border-color:var(--text);background:var(--surface)}
 /* En el manual el índice marca en qué capítulo estás, cosa que en Mi
    Negocio no hace falta porque allí son saltos dentro de la misma página. */
-.mn-indice-chip.activo{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)}
+.mn-indice-chip.activo{background:var(--ink);color:#fff;border-color:var(--ink)}
 @media (max-width:1024px){ .mn-indice-chip{min-height:44px} }
 /* Único índice del Manual (9/09: se quitó la columna lateral duplicada,
    .manual-nav) — fijo arriba para no perderlo al leer un capítulo largo. */
@@ -889,7 +898,7 @@ td.wrap{white-space:normal}
   background:var(--olive-l);color:var(--olive);
   display:flex;align-items:center;justify-content:center;font-size:20px;
 }
-.tour-icon-badge-finale{background:var(--dark);color:#fff}
+.tour-icon-badge-finale{background:var(--ink);color:#fff}
 .tour-bubble h3{font-size:16px;margin:2px 0 0;line-height:1.3}
 .tour-step-count{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
 .tour-bubble-desc{font-size:13.5px;line-height:1.6;margin:12px 0 4px;color:var(--body)}
@@ -907,7 +916,7 @@ td.wrap{white-space:normal}
 }
 .tour-phase-pill i{font-size:13px}
 .tour-phase-pill span{display:none}
-.tour-phase-pill.current{background:var(--dark);border-color:var(--dark);color:#fff}
+.tour-phase-pill.current{background:var(--ink);border-color:var(--ink);color:#fff}
 .tour-phase-pill.current span{display:inline}
 .tour-phase-pill.done{color:var(--olive);border-color:var(--olive-l)}
 .tour-phase-pill:hover{border-color:var(--olive)}
@@ -923,7 +932,7 @@ td.wrap{white-space:normal}
 /* Toast */
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:var(--dark2);color:#fff;padding:12px 20px;border-radius:8px;
+  background:var(--ink);color:#fff;padding:12px 20px;border-radius:8px;
   font-size:14px;font-weight:600;z-index:200020;opacity:0;transition:.25s;
   pointer-events:none;
 }
@@ -946,7 +955,7 @@ td.wrap{white-space:normal}
   border:1px solid var(--border);
 }
 .help-panel.active{display:flex}
-.help-panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--dark);color:#fff}
+.help-panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--ink);color:#fff}
 .help-panel-header h4{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
 /* Medía 12×20 px: es el botón para CERRAR el chat y el centro de ayuda,
    y estaba entre los más difíciles de acertar de toda la app. Un aspa sin
@@ -960,36 +969,36 @@ td.wrap{white-space:normal}
 @media (max-width:1024px){ .help-panel-close{min-width:44px;min-height:44px} }
 .tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--border);padding-bottom:10px}
 .tabs .tab{padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;background:none;display:flex;align-items:center;gap:6px}
-.tabs .tab.active{color:var(--teal);border-color:var(--teal);background:rgba(0,200,180,.08)}
+.tabs .tab.active{color:var(--ink);border-color:var(--ink);background:rgba(0,200,180,.08)}
 .help-tabs{display:flex;border-bottom:1px solid var(--border)}
 .help-tab{flex:1;padding:9px 6px;font-size:12.5px;font-weight:600;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
-.help-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.help-tab.active{color:var(--ink);border-bottom-color:var(--ink)}
 .help-tab-panel{display:none;flex:1;flex-direction:column;min-height:0}
 .help-tab-panel.active{display:flex}
 .help-chat-messages{flex:1;overflow-y:auto;min-height:0;padding:12px;display:flex;flex-direction:column;gap:8px}
 .help-msg{max-width:85%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4}
-.help-msg.bot{align-self:flex-start;background:var(--teal-l);color:var(--teal-d);border-bottom-left-radius:2px}
-.help-msg.user{align-self:flex-end;background:var(--dark2);color:#fff;border-bottom-right-radius:2px}
+.help-msg.bot{align-self:flex-start;background:var(--brand-cream);color:var(--ink);border-bottom-left-radius:2px}
+.help-msg.user{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:2px}
 .help-msg ul{margin:6px 0 0 16px}
 .help-suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px}
 .help-suggestion{font-size:11.5px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit}
-.help-suggestion:hover{border-color:var(--teal);color:var(--teal-d)}
+.help-suggestion:hover{border-color:var(--ink);color:var(--ink)}
 .help-chat-input-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)}
 .help-chat-input-row input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:999px;font-size:13px;font-family:inherit}
-.help-chat-input-row button{width:38px;height:38px;border-radius:50%;border:none;background:var(--teal);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.help-chat-input-row button{width:38px;height:38px;border-radius:50%;border:none;background:var(--ink);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .help-contact{padding:18px;display:flex;flex-direction:column;gap:10px;text-align:center;align-items:center;justify-content:flex-start;height:100%;overflow-y:auto}
-.help-contact>i{font-size:36px;color:var(--teal)}
+.help-contact>i{font-size:36px;color:var(--ink)}
 .help-contact h4{font-size:15px}
 .help-contact p{font-size:13px;color:var(--muted)}
 .help-contact-fallback{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);width:100%}
 .help-contact-fallback p{font-size:12px;margin-bottom:8px}
 .help-contact-email-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
-.help-contact-email-row code{background:var(--surface-2,var(--teal-l));border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px}
+.help-contact-email-row code{background:var(--surface-2,var(--brand-cream));border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px}
 .help-topics{padding:10px 14px;overflow-y:auto;flex:1;min-height:0}
 .help-topic-group{margin-bottom:14px}
 .help-topic-group-title{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px 2px}
 .help-topic-item{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--border);padding:9px 4px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit}
-.help-topic-item:hover{color:var(--teal-d)}
+.help-topic-item:hover{color:var(--ink)}
 .help-topic-item:last-child{border-bottom:none}
 #chat-fab .chat-badge{
   position:absolute;top:-2px;right:-2px;background:#8A4A3B;color:#fff;font-size:10px;font-weight:700;
@@ -997,8 +1006,8 @@ td.wrap{white-space:normal}
 }
 .chat-author-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12.5px}
 .chat-author-row select{flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-family:inherit}
-.help-msg.own{align-self:flex-end;background:var(--teal-l);color:var(--teal-d);border-bottom-right-radius:2px}
-.help-msg.other{align-self:flex-start;background:var(--dark2);color:#fff;border-bottom-left-radius:2px}
+.help-msg.own{align-self:flex-end;background:var(--brand-cream);color:var(--ink);border-bottom-right-radius:2px}
+.help-msg.other{align-self:flex-start;background:var(--ink);color:#fff;border-bottom-left-radius:2px}
 .help-msg .chat-meta{display:block;font-size:10.5px;opacity:.7;margin-bottom:2px;font-weight:600}
 .chat-msg-urgent{border:2px solid var(--red)!important}
 .chat-pinned-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--amber-l);border-bottom:1px solid var(--border);font-size:12.5px}
@@ -1007,7 +1016,7 @@ td.wrap{white-space:normal}
 }
 
 /* ===== Gestión Económica ===== */
-.ge-auto{background:var(--teal-l);color:var(--teal-d);font-size:11px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
+.ge-auto{background:var(--brand-cream);color:var(--ink);font-size:11px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
 .ge-tab-row{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;gap:0;position:relative}
 /* Aviso de que la fila de pestañas sigue hacia la derecha/izquierda (móvil,
    cuando no caben todas): una sombra HACIA DENTRO, no un degradado con un
@@ -1023,13 +1032,13 @@ td.wrap{white-space:normal}
   box-shadow:inset 12px 0 8px -8px rgba(0,0,0,.28);pointer-events:none;
 }
 .ge-tab{padding:9px 18px;font-size:13px;font-weight:500;color:var(--muted);border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;background:none;white-space:nowrap;font-family:inherit;user-select:none;transition:color .12s ease,border-color .12s ease}
-.ge-tab.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:700}
+.ge-tab.active{color:var(--ink);border-bottom-color:var(--ink);font-weight:700}
 .ge-tab:hover:not(.active){color:var(--text)}
 .ge-tab-panel{display:none}
 .ge-tab-panel.active{display:block}
 
 .dia-pill{padding:6px 14px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--muted)}
-.dia-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d);font-weight:700}
+.dia-pill.active{border-color:var(--ink);background:var(--brand-cream);color:var(--ink);font-weight:700}
 
 /* ===== Mi Negocio: rejilla de tarjetas =====
    Antes cada tarjeta tenía max-width:720px y se apilaban todas en una
@@ -1064,7 +1073,7 @@ td.wrap{white-space:normal}
 .manual-detail p{font-size:14px;line-height:1.6;color:var(--text);margin-bottom:10px}
 .manual-detail ul{margin:0 0 12px 18px;font-size:14px;line-height:1.8;color:var(--text)}
 .manual-step{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--bg);border-radius:8px;margin-bottom:8px}
-.manual-step .sn{min-width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.manual-step .sn{min-width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 /* Sin min-width:0, un elemento flex no encoge nunca por debajo del ancho
    de su contenido — con textos largos (o una palabra/URL sin espacios) el
    texto del manual se salía por el margen derecho en vez de partirse en
@@ -1075,7 +1084,7 @@ td.wrap{white-space:normal}
    propio: el <strong>GGGG</strong> del manual se quedaba con 10 px de ancho
    y salía partido en CUATRO renglones, una letra por línea. El icono va
    flotado, que es lo que hace falta de verdad aquí. */
-.manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d);display:block;overflow-wrap:break-word}
+.manual-tip{background:var(--brand-cream);border-left:3px solid var(--ink);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--ink);display:block;overflow-wrap:break-word}
 .manual-tip>i:first-child{float:left;margin-right:8px}
 /* Mismo caso que .manual-tip: block + icono flotado, no flex. */
 .manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#8A7440;display:block;overflow-wrap:break-word}
@@ -1086,11 +1095,11 @@ td.wrap{white-space:normal}
 .manual-detail table th{background:var(--bg);font-weight:700}
 
 .ge-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
-.ge-sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--brand-cream);border-bottom:1px solid var(--border);border-left:4px solid var(--teal)}
+.ge-sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--brand-cream);border-bottom:1px solid var(--border);border-left:4px solid var(--ink)}
 .ge-sec-head h4{margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
 .ge-item{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border)}
 .ge-item:last-child{border-bottom:none}
-.ge-total-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--teal);color:#fff;font-weight:700;font-size:15px;border-radius:12px}
+.ge-total-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--ink);color:#fff;font-weight:700;font-size:15px;border-radius:12px}
 
 .ge-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px}
 .ge-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px}
@@ -1116,10 +1125,10 @@ td.wrap{white-space:normal}
 .ge-grid th:first-child{text-align:left;min-width:160px}
 .ge-grid td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:monospace;font-size:13px;white-space:nowrap}
 .ge-grid td:has(.empty),.ge-grid .empty{white-space:normal;text-align:left;font-family:inherit}
-.ge-grid td:first-child{text-align:left;font-family:inherit;font-weight:600;background:var(--brand-cream);border-left:3px solid var(--teal)}
+.ge-grid td:first-child{text-align:left;font-family:inherit;font-weight:600;background:var(--brand-cream);border-left:3px solid var(--ink)}
 .ge-grid tr:last-child td{border-bottom:none}
-.ge-grid tr.highlight td{background:var(--teal-l);font-weight:700}
-.ge-grid tr.total td{background:var(--brand-black);color:#fff;font-weight:700}
+.ge-grid tr.highlight td{background:var(--brand-cream);font-weight:700}
+.ge-grid tr.total td{background:var(--ink);color:#fff;font-weight:700}
 .ge-grid td.pos{color:var(--green)}
 .ge-grid td.neg{color:var(--red)}
 .ge-grid tr.total td.pos{color:var(--green)}
@@ -1136,14 +1145,14 @@ td.wrap{white-space:normal}
    reglas de botón. */
 .month-pill{padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-weight:500;min-height:36px;display:inline-flex;align-items:center;justify-content:center}
 @media (max-width:1024px){.month-pill{min-height:44px;padding:6px 14px}}
-.month-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)}
+.month-pill.active{border-color:var(--ink);background:var(--brand-cream);color:var(--ink)}
 .month-sel{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
 /* Ventas/Variables/Tesorería llevan el año arriba ya centrado (flechas +
    número) — los doce meses debajo se quedaban pegados a la izquierda, sin
    relación visual con el año que tienen encima. Centrados quedan "debajo"
    del año de verdad, no como una fila suelta aparte. */
 .month-sel-centered{justify-content:center}
-.ge-link-note{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--teal-d);background:var(--teal-l);padding:4px 10px;border-radius:6px;margin-bottom:4px}
+.ge-link-note{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink);background:var(--brand-cream);padding:4px 10px;border-radius:6px;margin-bottom:4px}
 
 .vis-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
 .vis-section h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:0 0 12px}
@@ -1802,8 +1811,8 @@ td.wrap{white-space:normal}
 .bs-title{font-size:20px;font-weight:800;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
 .bs-list{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto}
 .bs-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:border-color .15s}
-.bs-item:hover{border-color:var(--brand-orange)}
-.bs-item.active{border:2px solid var(--brand-orange)}
+.bs-item:hover{border-color:var(--ink)}
+.bs-item.active{border:2px solid var(--ink)}
 .bs-item-name{font-weight:600;white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip;line-height:1.3}
 /* El nombre del negocio es lo único que el dueño usa para distinguirlos, así
    que se lleva TODO el ancho que sobre y se parte en varias líneas si hace
@@ -1814,8 +1823,8 @@ td.wrap{white-space:normal}
 @media (max-width:520px){ .bs-item-tag{display:none} }
 .bs-group{display:flex;flex-direction:column;gap:3px}
 .bs-group-header{display:flex;align-items:center;gap:8px;padding:11px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:border-color .15s,border-radius .2s;font-weight:700;user-select:none}
-.bs-group-header:hover{border-color:var(--brand-orange)}
-.bs-group-header.active{border:2px solid var(--brand-orange)}
+.bs-group-header:hover{border-color:var(--ink)}
+.bs-group-header.active{border:2px solid var(--ink)}
 .bs-group-header.open{border-bottom-left-radius:4px;border-bottom-right-radius:4px;border-bottom-color:transparent}
 .bs-group-children{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-top:none;border-bottom-left-radius:12px;border-bottom-right-radius:12px;overflow:hidden}
 .bs-sub-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px 10px 28px;background:#FAF8F4;cursor:pointer;transition:background .15s;font-size:14px;border-top:1px solid var(--border)}
@@ -2036,9 +2045,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .pp-card.pp-plegada{padding:14px 22px;margin-bottom:20px}
 .pp-card.pp-plegada .pp-barra{margin:10px 0 0}
 .pp-cab-txt{border-radius:8px}
-.pp-cab-txt:hover h2{color:var(--brand-orange)}
+.pp-cab-txt:hover h2{color:var(--ink)}
 .pp-barra{height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin:14px 0 6px}
-.pp-barra span{display:block;height:100%;background:var(--brand-orange);border-radius:99px;
+.pp-barra span{display:block;height:100%;background:var(--ink);border-radius:99px;
   transition:width .5s cubic-bezier(.22,1,.36,1)}
 .pp-progreso{font-size:12px;color:var(--muted);margin-bottom:10px}
 .pp-lista{list-style:none;margin:0;padding:0}
@@ -2048,7 +2057,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .pp-texto{flex:1;min-width:0}
 .pp-texto strong{display:block;font-size:14px;font-weight:600}
 .pp-texto small{display:block;font-size:12px;color:var(--muted);line-height:1.45;margin-top:2px}
-.pp-dato{font-weight:700;color:var(--brand-orange)}
+.pp-dato{font-weight:700;color:var(--ink)}
 /* Lo hecho se apaga: ya no pide nada, solo confirma. */
 .pp-hecho .pp-marca{color:var(--green,#1F8A4C)}
 .pp-hecho .pp-texto strong{color:var(--muted);font-weight:500}

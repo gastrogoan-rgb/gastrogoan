@@ -1559,7 +1559,7 @@ function sendDirectChatMessage(){
 /* ============== Áreas de trabajo ============== */
 const FOLDERS = {
   cocina: {
-    icon:'ti-tools-kitchen-2', color:'var(--teal)',
+    icon:'ti-tools-kitchen-2', color:'var(--ink)',
     modules:[
       {id:'comandascocina', icon:'ti-bell-ringing'},
       {id:'carta', icon:'ti-tools-kitchen-2'},
@@ -1576,7 +1576,7 @@ const FOLDERS = {
     ]
   },
   sala: {
-    icon:'ti-users', color:'var(--brand-yellow)',
+    icon:'ti-users', color:'var(--olive)',
     modules:[
       {id:'tpv', icon:'ti-device-desktop'},
       {id:'reservas', icon:'ti-calendar-event'},
@@ -1595,7 +1595,7 @@ const FOLDERS = {
     ]
   },
   gestion: {
-    icon:'ti-coin', color:'var(--teal)',
+    icon:'ti-coin', color:'var(--ink)',
     modules:[
       {id:'manual', icon:'ti-book'},
       {id:'minegocio', icon:'ti-building-store'},
