@@ -389,6 +389,7 @@ const I18N = {
     'error.envio':'No se ha podido enviar. Comprueba tu conexión e inténtalo de nuevo.',
     'error.zona':'Lo sentimos, tu dirección está fuera de la zona de entrega del restaurante.',
     'error.pedidosPausados.title':'Cocina a tope ahora mismo 🙏','error.pedidosPausados.body':'De momento no podemos aceptar nuevos encargos para llevar ni a domicilio. Vuelve a intentarlo en unos minutos — ¡gracias por tu paciencia!',
+    'error.saturacion.title':'¡Estamos teniendo mucho movimiento! 🙏','error.saturacion.body':'En este momento hay más gente de la habitual viendo la carta de este restaurante. Vuelve a intentarlo en unos minutos.','common.retry':'Reintentar',
     'error.antelacion':'Con la antelación mínima de %d minutos, lo antes que puedes elegir hoy es a las %s.',
     'error.conexion':'No se ha podido conectar con el restaurante','error.carga':'No se ha podido cargar la información del restaurante','error.enlace':'Enlace no válido o incompleto',
     'error.enlace.sub':'Pide al restaurante que te envíe un enlace válido.',
@@ -473,6 +474,7 @@ const I18N = {
     'error.envio':'Could not send. Check your connection and try again.',
     'error.zona':'Sorry, your address is outside the delivery area.',
     'error.pedidosPausados.title':'Kitchen is slammed right now 🙏','error.pedidosPausados.body':'We can\'t take new takeaway or delivery orders at the moment. Please try again in a few minutes — thanks for your patience!',
+    'error.saturacion.title':'We\'re seeing a lot of traffic! 🙏','error.saturacion.body':'Right now more people than usual are viewing this restaurant\'s menu. Please try again in a few minutes.','common.retry':'Retry',
     'error.antelacion':'With a minimum lead time of %d minutes, the earliest you can choose today is %s.',
     'error.conexion':'Could not connect to the restaurant','error.carga':'Could not load restaurant information','error.enlace':'Invalid or incomplete link',
     'error.enlace.sub':'Ask the restaurant for a valid link.',
@@ -557,6 +559,7 @@ const I18N = {
     'error.envio':'No s\'ha pogut enviar. Comprova la connexió i torna-ho a provar.',
     'error.zona':'Ho sentim, la teva adreça està fora de la zona d\'entrega del restaurant.',
     'error.pedidosPausados.title':'Cuina a tope ara mateix 🙏','error.pedidosPausados.body':'De moment no podem acceptar nous encàrrecs per emportar ni a domicili. Torna-ho a provar d\'aquí a uns minuts — gràcies per la paciència!',
+    'error.saturacion.title':'Estem tenint molt moviment! 🙏','error.saturacion.body':'En aquest moment hi ha més gent de l\'habitual veient la carta d\'aquest restaurant. Torna-ho a provar d\'aquí a uns minuts.','common.retry':'Reintentar',
     'error.antelacion':'Amb una antelació mínima de %d minuts, el més aviat que pots triar avui és a les %s.',
     'error.conexion':'No s\'ha pogut connectar amb el restaurant','error.carga':'No s\'ha pogut carregar la informació del restaurant','error.enlace':'Enllaç no vàlid o incomplet',
     'error.enlace.sub':'Demana al restaurant que t\'enviï un enllaç vàlid.',
@@ -841,6 +844,23 @@ function apuntarDetalle(txt){
   detalleTecnico.push(new Date().toISOString().slice(11,19) + ' · ' + txt);
   if(detalleTecnico.length > 12) detalleTecnico.shift();
 }
+/* Pantalla de "hay mucha gente ahora mismo", distinta a propósito de
+   showError(): esto NO es un fallo del restaurante ni del enlace (no lleva
+   el icono de alerta ni el "pide un enlace válido"), es una cola. Se dispara
+   cuando la carga inicial no llega en un tiempo razonable — Firebase no
+   avisa con un error explícito de "límite de conexiones alcanzado", así que
+   no se puede DISTINGUIR eso de una red lenta cualquiera; el mensaje es
+   honesto para los dos casos y el botón de reintentar cubre ambos. */
+function showSaturacion(){
+  document.getElementById('app').innerHTML = `
+    <div class="error-box">
+      <div class="icon">⏳</div>
+      <h2>${escapeHtml(t('error.saturacion.title'))}</h2>
+      <p style="font-size:13px;color:var(--muted)">${t('error.saturacion.body')}</p>
+      <button class="btn" style="margin-top:14px" onclick="location.reload()"><i class="ti ti-refresh"></i> ${t('common.retry')}</button>
+    </div>
+  `;
+}
 function showError(key, detalle){
   lastErrorKey = key;
   if(detalle) apuntarDetalle(detalle);
@@ -1036,7 +1056,22 @@ function loadBusinessInfo(){
   // disponibilidad ya se revalida en vivo al enviar, vía getAforoInfo /
   // reserveAforoAtomic), o el formulario de otros clientes se vaciaría
   // constantemente por reservas ajenas sin ningún cambio real de carta.
-  db.ref('gastrogoan/public/' + publicId + '/info').on('value', snap => {
+  /* ⚠️ Si la primera respuesta tarda demasiado, puede que este negocio
+     tenga las 100 conexiones simultáneas de su Firebase gratuito agotadas
+     (un pico real de gente mirando la carta a la vez). Firebase no da un
+     error explícito para eso — el socket simplemente no llega a abrirse—,
+     así que no se puede DISTINGUIR de una red lenta cualquiera. El aviso es
+     honesto para los dos casos: "hay mucha gente ahora mismo, reintenta".
+     Se cancela en cuanto llega la primera respuesta, sea la que sea. */
+  infoLoadTimeout = setTimeout(() => {
+    if(businessInfoLoadedOnce) return;
+    apuntarDetalle('sin respuesta tras ' + (INFO_LOAD_TIMEOUT_MS/1000) + 's — posible saturación');
+    showSaturacion();
+    anotarPosibleSaturacion();
+  }, INFO_LOAD_TIMEOUT_MS);
+  infoListenerRef = db.ref('gastrogoan/public/' + publicId + '/info');
+  infoListenerCallback = snap => {
+    clearTimeout(infoLoadTimeout);
     const val = snap.val();
     if(!val){ if(!businessInfoLoadedOnce) showError('error.carga'); return; }
 
@@ -1085,11 +1120,61 @@ function loadBusinessInfo(){
         renderTabContentPreservingForm();
       }
     }
-  }, e => {
+  };
+  infoListenerErrorCallback = e => {
+    clearTimeout(infoLoadTimeout);
     console.error(e);
     if(!businessInfoLoadedOnce) showError('error.conexion');
-  });
+  };
+  infoListenerRef.on('value', infoListenerCallback, infoListenerErrorCallback);
 }
+
+/* Best-effort: si de verdad hubo saturación, se lo hacemos saber al dueño
+   desde SU PROPIA app (Mi Negocio → nube), no aquí — este cliente que se
+   quedó fuera no tiene forma de avisarle directamente. Se anota un evento
+   con marca de tiempo en el propio Firebase del negocio; el SDK lo deja en
+   cola local y lo envía en cuanto consiga abrir hueco (puede que no sea
+   inmediato si de verdad las 100 conexiones están todas ocupadas, pero basta
+   con que UNA de las tentativas de saturación de la noche llegue a escribir).
+   Sin await ni then con acción: si nunca llega a enviarse, no pasa nada —
+   es solo una señal para el dueño, nunca bloquea al cliente. */
+function anotarPosibleSaturacion(){
+  try{
+    db.ref('gastrogoan/public/' + publicId + '/saturationEvents').push({ts: Date.now()});
+  }catch(e){ /* sin conexión ni para encolar: no hay nada más que hacer aquí */ }
+}
+
+/* ⚠️ DESENGANCHE POR INACTIVIDAD (10 min).
+   Cada pestaña abierta cuenta como UNA de las 100 conexiones simultáneas del
+   Firebase gratuito del negocio, la esté mirando alguien o no — un cliente
+   que dejó el móvil bloqueado en la mesa sigue ocupando su plaza. Pasados 10
+   minutos sin tocar la pantalla, se suelta el oyente en vivo (los datos ya
+   cargados se quedan tal cual en pantalla, no desaparece nada) y se
+   reengancha en cuanto vuelve a haber interacción. */
+const INFO_LOAD_TIMEOUT_MS = 8000;
+const IDLE_DISCONNECT_MS = 10 * 60 * 1000;
+let infoLoadTimeout = null;
+let infoListenerRef = null;
+let infoListenerCallback = null;
+let infoListenerErrorCallback = null;
+let idleListenerDetached = false;
+let lastInteractionAt = Date.now();
+function marcarInteraccion(){
+  lastInteractionAt = Date.now();
+  if(idleListenerDetached && infoListenerRef && infoListenerCallback){
+    idleListenerDetached = false;
+    apuntarDetalle('reenganchado tras inactividad');
+    infoListenerRef.on('value', infoListenerCallback, infoListenerErrorCallback);
+  }
+}
+['click','touchstart','keydown','scroll'].forEach(ev => document.addEventListener(ev, marcarInteraccion, {passive: true}));
+setInterval(() => {
+  if(idleListenerDetached || !infoListenerRef || !infoListenerCallback) return;
+  if(Date.now() - lastInteractionAt < IDLE_DISCONNECT_MS) return;
+  idleListenerDetached = true;
+  apuntarDetalle('desenganchado por 10 min de inactividad');
+  infoListenerRef.off('value', infoListenerCallback);
+}, 60 * 1000);
 
 function renderBranchSelector(business, sucursales){
   if(business.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(business.logo)}" alt="${escapeHtml(business.name||'Logo')}">`;
