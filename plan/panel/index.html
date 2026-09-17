@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panel · Plan 360°</title>
+<!--
+  El panel de Marcos: entra con su cuenta real de Google (gastrogoan@gmail.com),
+  mismo patrón que generador-licencias.html — un único admin, Firebase Auth
+  de correo/contraseña de verdad, no el usuario+PIN de los clientes (ver
+  plan/comun.js para el porqué de la diferencia).
+-->
+<style>
+  @font-face{font-family:'SG';src:url('/fonts/schibsted-grotesk-500-normal.woff2') format('woff2');font-weight:500}
+  @font-face{font-family:'SG';src:url('/fonts/schibsted-grotesk-700-normal.woff2') format('woff2');font-weight:700}
+  @font-face{font-family:'PM';src:url('/fonts/ibm-plex-mono-500-normal.woff2') format('woff2');font-weight:500}
+
+  :root{
+    --ink:#1C1A17; --olive:#4A5D4E; --olive-l:#EDF1EC;
+    --paper:#FBFAF7; --bg:#FAF8F4; --border:#E7E2D9; --muted:#716C65;
+    --red:#8A4A3B; --red-l:#F5EBE7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);
+    font:15px/1.5 'SG',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  .envoltorio{max-width:760px;margin:0 auto;padding:24px 20px;
+    padding-block:calc(24px + env(safe-area-inset-top,0px)) 40px}
+
+  .marca{display:flex;align-items:center;gap:9px;font-weight:700;
+    letter-spacing:-.02em;margin-bottom:8px}
+  .marca i{width:10px;height:10px;border-radius:50%;background:var(--olive);display:block}
+  h1{font-size:24px;letter-spacing:-.02em;margin:0 0 24px}
+
+  /* ── Login ─────────────────────────────────────────────────────────── */
+  #login{max-width:360px;margin:60px auto 0}
+  #login form{background:var(--paper);border-radius:16px;padding:26px 22px;
+    box-shadow:0 2px 3px rgba(28,26,23,.05), 0 18px 44px rgba(28,26,23,.1)}
+  label{display:block;font-family:'PM',monospace;font-size:11px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  input{width:100%;font:500 15px 'SG',sans-serif;padding:12px 13px;
+    border:1.5px solid var(--border);border-radius:9px;background:#fff;
+    color:var(--ink);margin-bottom:14px}
+  input:focus{outline:none;border-color:var(--olive)}
+  button{border:none;border-radius:9px;background:var(--ink);color:#fff;
+    font:700 14px 'SG',sans-serif;cursor:pointer;padding:12px 18px;min-height:44px}
+  button.secundario{background:none;color:var(--ink);border:1.5px solid var(--border)}
+  button:disabled{opacity:.55;cursor:default}
+  .full{width:100%}
+
+  .error{background:var(--red-l);color:var(--red);font-size:13px;
+    padding:9px 11px;border-radius:8px;margin-bottom:12px;display:none}
+  .error.show{display:block}
+
+  /* ── El panel de verdad ────────────────────────────────────────────── */
+  #panel{display:none}
+  .topbar{display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:24px;flex-wrap:wrap;gap:10px}
+  .cerrar{font-size:13px;color:var(--muted);background:none;border:none;
+    cursor:pointer;padding:8px;text-decoration:underline}
+
+  .tarjeta{background:var(--paper);border-radius:14px;padding:20px;
+    box-shadow:0 2px 3px rgba(28,26,23,.05), 0 12px 30px rgba(28,26,23,.08);
+    margin-bottom:20px}
+  .tarjeta h2{font-size:16px;margin:0 0 14px;display:flex;align-items:center;gap:8px}
+
+  .fila-cliente{display:flex;align-items:center;justify-content:space-between;
+    gap:10px;padding:12px 0;border-top:1px solid var(--border)}
+  .fila-cliente:first-child{border-top:none}
+  .fila-cliente .nombre{font-weight:700}
+  .fila-cliente .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .fila-cliente a{font-size:13px;color:var(--olive);text-decoration:none;font-weight:700;white-space:nowrap}
+
+  .vacio{color:var(--muted);font-size:13.5px;text-align:center;padding:20px 0}
+
+  .grid2{display:flex;gap:12px;flex-wrap:wrap}
+  .grid2 > div{flex:1 1 140px}
+
+  .aviso-ok{background:var(--olive-l);color:var(--ink);font-size:13px;
+    padding:10px 12px;border-radius:8px;margin-bottom:14px;display:none}
+  .aviso-ok.show{display:block}
+</style>
+
+<div class="envoltorio">
+  <div class="marca"><i></i><span>PLAN 360° · PANEL</span></div>
+
+  <div id="login">
+    <h1 style="text-align:center">Entrar</h1>
+    <form id="form-login" onsubmit="return false">
+      <div class="error" id="err-login"></div>
+      <label for="email">Correo</label>
+      <input id="email" type="email" autocomplete="username" value="gastrogoan@gmail.com">
+      <label for="pass">Contraseña</label>
+      <input id="pass" type="password" autocomplete="current-password">
+      <button class="full" id="btn-login" type="submit">Entrar</button>
+    </form>
+  </div>
+
+  <div id="panel">
+    <div class="topbar">
+      <h1 style="margin:0">Tus clientes</h1>
+      <button class="cerrar" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+
+    <div class="tarjeta">
+      <h2>+ Dar de alta un cliente nuevo</h2>
+      <div class="aviso-ok" id="alta-ok"></div>
+      <div class="error" id="err-alta"></div>
+      <form id="form-alta" onsubmit="return false">
+        <label for="alta-negocio">Nombre del negocio</label>
+        <input id="alta-negocio" placeholder="Casa Paco">
+        <div class="grid2">
+          <div>
+            <label for="alta-usuario">Usuario (para entrar)</label>
+            <input id="alta-usuario" placeholder="casapaco" autocapitalize="off">
+          </div>
+          <div>
+            <label for="alta-pin">PIN</label>
+            <input id="alta-pin" inputmode="numeric" placeholder="4 dígitos">
+          </div>
+        </div>
+        <button id="btn-alta" type="submit">Crear cliente</button>
+      </form>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Clientes activos</h2>
+      <div id="lista-clientes"><p class="vacio">Cargando…</p></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="../comun.js"></script>
+<script>
+  function mostrar(id, msg){
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+  function ocultar(id){ document.getElementById(id).classList.remove('show'); }
+
+  async function initApp(){
+    if(!COACH_FIREBASE_CONFIG.apiKey){
+      mostrar('err-login', 'Falta rellenar COACH_FIREBASE_CONFIG en plan/comun.js');
+      return;
+    }
+    firebase.initializeApp(COACH_FIREBASE_CONFIG);
+    firebase.auth().onAuthStateChanged(user => {
+      if(user && user.email === 'gastrogoan@gmail.com'){
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+        cargarClientes();
+      }else{
+        document.getElementById('login').style.display = 'block';
+        document.getElementById('panel').style.display = 'none';
+      }
+    });
+  }
+  initApp();
+
+  document.getElementById('form-login').addEventListener('submit', async () => {
+    ocultar('err-login');
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    try{
+      await firebase.auth().signInWithEmailAndPassword(
+        document.getElementById('email').value.trim(),
+        document.getElementById('pass').value
+      );
+    }catch(e){
+      mostrar('err-login', 'Correo o contraseña incorrectos.');
+    }
+    btn.disabled = false; btn.textContent = 'Entrar';
+  });
+
+  function cerrarSesion(){ firebase.auth().signOut(); }
+
+  async function cargarClientes(){
+    const cont = document.getElementById('lista-clientes');
+    try{
+      const snap = await firebase.database().ref('coaching/clientes').once('value');
+      const val = snap.val() || {};
+      const claves = Object.keys(val);
+      if(!claves.length){
+        cont.innerHTML = '<p class="vacio">Todavía no hay ningún cliente dado de alta.</p>';
+        return;
+      }
+      cont.innerHTML = claves.map(k => {
+        const c = val[k];
+        return `<div class="fila-cliente">
+          <div>
+            <div class="nombre">${coachEscapeHtml(c.negocio || '(sin nombre)')}</div>
+            <div class="meta">${coachEscapeHtml(c.usuario || '')} · alta ${coachEscapeHtml(c.fechaAlta || '')}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }catch(e){
+      console.error(e);
+      cont.innerHTML = '<p class="vacio">No se ha podido cargar la lista.</p>';
+    }
+  }
+
+  document.getElementById('form-alta').addEventListener('submit', async () => {
+    ocultar('err-alta'); ocultar('alta-ok');
+    const negocio = document.getElementById('alta-negocio').value.trim();
+    const usuario = document.getElementById('alta-usuario').value.trim();
+    const pin = document.getElementById('alta-pin').value.trim();
+    if(!negocio || !usuario || !pin){ mostrar('err-alta', 'Rellena los tres campos.'); return; }
+    const authKey = coachAuthKey(usuario, pin);
+    if(!authKey){ mostrar('err-alta', 'Usuario o PIN no válidos.'); return; }
+
+    const btn = document.getElementById('btn-alta');
+    btn.disabled = true; btn.textContent = 'Creando…';
+    try{
+      const ref = firebase.database().ref('coaching/clientes/' + authKey);
+      const existe = (await ref.once('value')).exists();
+      if(existe){
+        mostrar('err-alta', 'Ya existe un cliente con ese usuario y PIN.');
+      }else{
+        await ref.set({
+          negocio,
+          usuario: coachNormalizeUser(usuario),
+          fechaAlta: new Date().toISOString().slice(0,10),
+        });
+        mostrar('alta-ok', `Cliente creado. Dale a "${coachNormalizeUser(usuario)}" y el PIN "${pin}" para que entre en /plan/cliente/`);
+        document.getElementById('form-alta').reset();
+        cargarClientes();
+      }
+    }catch(e){
+      console.error(e);
+      mostrar('err-alta', 'No se ha podido crear. Comprueba tu conexión.');
+    }
+    btn.disabled = false; btn.textContent = 'Crear cliente';
+  });
+</script>
+</html>
