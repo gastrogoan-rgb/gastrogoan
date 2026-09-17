@@ -5132,18 +5132,70 @@ function irAApartadoMiNegocio(id){
   setTimeout(()=>el.classList.remove('mn-ap-resaltado'), 1400);
 }
 
-// Placeholder: el contenido real (el programa de 30 días, el seguimiento
-// mensual) se decide y se construye más adelante. Por ahora solo aparece la
-// pestaña, y solo en los negocios marcados con la casilla "Plan 360°" al
-// emitirles el código (ver generador-licencias.html).
+// El seguimiento mensual (acumulativo, sin fecha de fin) es OTRA cosa y se
+// plantea aparte: esto es solo el programa inicial de 30 días. Cada negocio
+// tiene su PROPIA copia editable (ensurePlan360Program, js/core.js), así
+// que tocar un día aquí no afecta a ningún otro cliente.
 function renderPlan360(){
   if(isGestionLocked('plan360')){ denyGestionAccess(); return; }
+  ensurePlan360Program();
+  const prog = DB.business.plan360Program || [];
+  const hechos = prog.filter(d => d.done).length;
   document.getElementById('plan360-content').innerHTML = `
-    <div class="card" style="text-align:center;padding:40px 20px">
-      <i class="ti ti-compass" style="font-size:40px;color:var(--muted)"></i>
-      <p style="margin-top:12px;color:var(--muted)">${escapeHtml(t('plan360.comingSoon'))}</p>
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.programTitle'))}</div>
+        <div style="font-family:'Plex Mono',monospace;font-size:13px;color:var(--muted)">${hechos} / ${prog.length}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px">
+      ${prog.map(d => `
+        <div class="card" style="padding:10px;text-align:center;cursor:pointer;min-height:44px" onclick="openPlan360Day(${d.day})">
+          <div style="font-family:'Plex Mono',monospace;font-size:11px;color:var(--muted)">${escapeHtml(t('plan360.day'))} ${d.day}</div>
+          <div style="font-size:13px;margin-top:4px;font-weight:600;overflow-wrap:break-word">${escapeHtml(d.title)}</div>
+          ${d.done ? '<i class="ti ti-circle-check" style="color:var(--green,#2e7d32);margin-top:4px"></i>' : ''}
+        </div>
+      `).join('')}
     </div>
   `;
+}
+function openPlan360Day(day){
+  const prog = DB.business.plan360Program || [];
+  const d = prog.find(x => x.day === day);
+  if(!d) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.day'))} ${d.day}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>${escapeHtml(t('plan360.dayTitle'))}</label>
+      <input id="p360-title" value="${escapeHtml(d.title)}">
+    </div>
+    <div class="field">
+      <label>${escapeHtml(t('plan360.dayTask'))}</label>
+      <textarea id="p360-task" rows="5">${escapeHtml(d.task)}</textarea>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+      <input type="checkbox" id="p360-done" style="width:auto" ${d.done ? 'checked' : ''}>
+      ${escapeHtml(t('plan360.markDone'))}
+    </label>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${escapeHtml(t('common.cancel'))}</button>
+      <button class="btn btn-primary" onclick="savePlan360Day(${day})">${escapeHtml(t('common.save'))}</button>
+    </div>
+  `);
+}
+function savePlan360Day(day){
+  const prog = DB.business.plan360Program || [];
+  const d = prog.find(x => x.day === day);
+  if(!d) return;
+  d.title = (document.getElementById('p360-title').value || '').trim() || d.title;
+  d.task = (document.getElementById('p360-task').value || '').trim();
+  d.done = !!document.getElementById('p360-done').checked;
+  saveDB();
+  closeModal();
+  renderPlan360();
 }
 function renderMiNegocio(){
   if(isGestionLocked('minegocio')){ denyGestionAccess(); return; }
