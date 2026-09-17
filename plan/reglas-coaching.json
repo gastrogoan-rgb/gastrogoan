@@ -1,0 +1,16 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "coaching": {
+      "clientes": {
+        ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
+        "$authKey": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com'"
+        }
+      }
+    }
+  }
+}
