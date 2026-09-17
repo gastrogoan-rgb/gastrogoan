@@ -2082,6 +2082,33 @@ async function redeemBusinessCode(code){
   return {lic, reason: null};
 }
 
+/* ============================================================
+   PLAN 360° — programa de 30 días
+   ============================================================
+   Contenido de referencia (Marcos lo va rellenando día a día). Al activar
+   Plan 360° en un negocio, ESTA plantilla se COPIA entera dentro de
+   DB.business.plan360Program: a partir de ahí cada negocio tiene su propia
+   copia, editable sin tocar la plantilla ni la de ningún otro cliente —
+   igual que addSucursal copia la carta de un negocio a otro sin dejarlas
+   enganchadas. Cambiar esta plantilla solo afecta a los negocios que
+   activen el plan DESPUÉS del cambio. */
+const PLAN360_DEFAULT_PROGRAM = Array.from({length: 30}, (_, i) => ({
+  title: 'Día ' + (i + 1),
+  task: '(Contenido pendiente de definir)'
+}));
+
+// Crea la copia del negocio la primera vez que hace falta (lectura
+// perezosa: no hay que acordarse de llamarla en cada sitio donde
+// DB.business.plan360 se pone a true).
+function ensurePlan360Program(){
+  if(!DB.business.plan360) return;
+  if(Array.isArray(DB.business.plan360Program) && DB.business.plan360Program.length) return;
+  DB.business.plan360Program = PLAN360_DEFAULT_PROGRAM.map((d, i) => ({
+    day: i + 1, title: d.title, task: d.task, done: false
+  }));
+  saveDB();
+}
+
 // Una licencia guardada es válida si su tenantId es el que de verdad se
 // deriva de su código — así no hace falta volver a pedir la contraseña
 // cada vez que se lee la licencia, solo al activarla la primera vez.
