@@ -108,6 +108,15 @@
         }
       },
 
+      "coaching360": {
+        "//": "Puntero minimo: que negocios tienen el Plan 360 activo, para que el panel del coach (admin-panel/) arme su lista sin que nadie tenga que copiarle nada a mano. El propio negocio escribe su entrada al activar el plan (auth anonima, como tenantLookup); SOLO el admin puede LISTARLOS todos.",
+        ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
+        "$tenantId": {
+          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".validate": "newData.hasChildren(['name']) && newData.child('name').isString() && newData.child('name').val().length <= 200"
+        }
+      },
+
       "issuedCodes": {
         "$code": {
           "//": "El admin puede crear, BORRAR (anular una licencia) o actualizar un codigo ya emitido (p.ej. marcar plan360 despues de crearlo). Antes solo se podia crear o borrar, asi que una venta era irreversible: ni una devolucion ni un error al vender tenian arreglo desde el generador.",

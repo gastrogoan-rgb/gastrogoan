@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GastroGoan · Plan 360° (PRIVADO)</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<style>
+/* Mismo sistema de diseño que la app y que admin-panel/app.html. */
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/schibsted-grotesk-400-normal.woff2") format("woff2");}
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/schibsted-grotesk-600-normal.woff2") format("woff2");}
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/schibsted-grotesk-700-normal.woff2") format("woff2");}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/ibm-plex-mono-400-normal.woff2") format("woff2");}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/ibm-plex-mono-500-normal.woff2") format("woff2");}
+:root{
+  --ink:#1C1A17; --olive:#4A5D4E; --cream:#F1EFE9; --bg:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
+  --text:#1C1A17; --body:#3D3A34; --muted:#716C65; --brand-cream:#FAF8F4;
+  --green:#4A5D4E; --green-l:#EDF1EC; --red:#8A4A3B; --red-l:#F5EBE7; --amber:#8A7440; --amber-l:#F5F0E3;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Schibsted Grotesk',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--body);min-height:100vh;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+header{background:var(--ink);color:#FAF8F4;padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header .logo{width:40px;height:40px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex:none;font-family:'IBM Plex Mono',monospace}
+header h1{font-family:'Schibsted Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:-.01em;flex:1;min-width:180px}
+header .hd-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--border);padding:12px 18px;min-height:46px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;
+     text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center;background:#fff;color:var(--text)}
+.btn:hover{background:var(--cream)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:#FAF8F4}
+.btn-primary:hover{background:var(--olive);border-color:var(--olive)}
+.btn-sm{min-height:36px;padding:7px 12px;font-size:12.5px}
+.card{background:var(--surface);border:1px solid var(--border);padding:18px}
+label{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px;color:var(--muted)}
+input,select,textarea{width:100%;border:1px solid var(--border);padding:11px;font-size:14px;font-family:inherit;background:#fff;min-height:46px;color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
+.field{margin-bottom:12px}
+.muted{color:var(--muted);font-size:12.5px;line-height:1.5}
+.hidden{display:none!important}
+#login-gate{max-width:420px;margin:60px auto}
+#login-gate .card{display:flex;flex-direction:column;gap:12px}
+.folder-tile{background:var(--surface);border:1px solid var(--border);padding:16px;cursor:pointer;display:flex;align-items:center;gap:12px}
+.folder-tile:hover{background:var(--cream)}
+.folder-tile .avatar{width:38px;height:38px;background:var(--ink);color:#FAF8F4;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'IBM Plex Mono',monospace;flex:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.daybox{padding:10px;text-align:center;cursor:pointer;min-height:44px;background:#fff;border:1px solid var(--border)}
+.daybox b{font-size:13px;font-weight:600;overflow-wrap:break-word;display:block}
+.modal-fondo{position:fixed;inset:0;background:rgba(28,26,23,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;overflow:auto}
+.modal{background:#fff;border:1px solid var(--border);padding:22px;max-width:520px;width:100%;display:flex;flex-direction:column;gap:4px;max-height:90vh;overflow:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.modal-header h3{font-size:16px;font-family:'Schibsted Grotesk',sans-serif;font-weight:700}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.status-line{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div id="login-gate" class="wrap">
+  <div class="card">
+    <h1 style="font-size:18px;margin-bottom:6px">🔑 Plan 360° — panel del coach</h1>
+    <p class="muted" style="margin-bottom:14px">Archivo privado. Inicia sesión con tu email y contraseña de administrador.</p>
+    <label>Email</label>
+    <input id="login-email" type="email" placeholder="gastrogoan@gmail.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    <label style="margin-top:10px">Contraseña</label>
+    <input id="login-pass" type="password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="doLogin()">Entrar</button>
+    <p id="login-status" class="muted" style="margin-top:6px"></p>
+  </div>
+</div>
+
+<div id="panel" class="wrap hidden">
+  <header>
+    <div class="logo">GG</div>
+    <h1>Plan 360°<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#C9A15A;margin-top:4px">ARCHIVO PRIVADO</span></h1>
+    <div class="hd-btns">
+      <a class="btn" href="index.html">← Panel</a>
+      <button class="btn" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+
+  <div id="view-list">
+    <div class="card" style="margin-bottom:4px"><span class="muted">Clientes con Plan 360° activo. Aparecen solos en cuanto activan la casilla al emitirles el código.</span></div>
+    <div id="client-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <p id="client-list-empty" class="muted hidden">Todavía no hay ningún cliente con el Plan 360° activo.</p>
+  </div>
+
+  <div id="view-client" class="hidden">
+    <button class="btn btn-sm" onclick="closeClient()">← Clientes</button>
+    <h2 id="client-name" style="margin:10px 0 4px"></h2>
+    <p id="client-status" class="status-line" style="margin-bottom:10px"></p>
+    <div id="client-grid"></div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PLATFORM_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
+  authDomain: "plataforma-gastrogoan.firebaseapp.com",
+  databaseURL: "https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "plataforma-gastrogoan",
+  storageBucket: "plataforma-gastrogoan.firebasestorage.app",
+  messagingSenderId: "894218847556",
+  appId: "1:894218847556:web:2fa1f699489790bb5f8311"
+};
+function getApp(){
+  try{ return firebase.app('platform'); }
+  catch(e){ return firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
+}
+async function doLogin(){
+  const statusEl = document.getElementById('login-status');
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if(!email || !pass){ statusEl.textContent = 'Escribe email y contraseña.'; return; }
+  statusEl.textContent = 'Entrando...';
+  try{
+    const app = getApp();
+    await app.auth().signInWithEmailAndPassword(email, pass);
+    onLoggedIn();
+  }catch(e){
+    console.error(e);
+    statusEl.textContent = '⚠️ No se pudo entrar (' + (e.message || e.code || 'error') + ').';
+  }
+}
+function doLogout(){
+  getApp().auth().signOut();
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('login-gate').classList.remove('hidden');
+}
+async function onLoggedIn(){
+  document.getElementById('login-gate').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+  await loadClientList();
+}
+try{
+  if(typeof firebase !== 'undefined') getApp().auth().onAuthStateChanged(user => {
+    if(user && user.email) onLoggedIn();
+  });
+}catch(e){ console.error('No se pudo comprobar la sesión persistida', e); }
+
+/* ============================================================
+   LISTA DE CLIENTES — gastrogoan/coaching360, solo lectura de admin
+   ============================================================ */
+async function loadClientList(){
+  const snap = await getApp().database().ref('gastrogoan/coaching360').once('value');
+  const val = snap.val() || {};
+  const entries = Object.keys(val).map(tenantId => ({tenantId, name: val[tenantId].name || '(sin nombre)'}));
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+  document.getElementById('client-list-empty').classList.toggle('hidden', entries.length > 0);
+  document.getElementById('client-list').innerHTML = entries.map(e => `
+    <div class="folder-tile" onclick="openClient('${esc(e.tenantId)}','${esc(e.name)}')">
+      <div class="avatar">${esc(e.name.slice(0,2).toUpperCase())}</div>
+      <div><strong>${esc(e.name)}</strong></div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   CONEXIÓN A LA NUBE DE CADA NEGOCIO — se busca su configuración en
+   tenantLookup (la publica su propia app al conectarse, ver publishTenantLookup
+   en js/core.js) y se abre una instancia de Firebase aparte, con SU MISMA
+   base de datos. Es el mismo mecanismo por el que la tablet y el móvil de un
+   negocio ven los mismos datos: aquí este panel es un dispositivo más.
+   ============================================================ */
+let currentTenantId = null;
+let currentBizRef = null;
+let remoteBiz = null;
+let savingRemote = false;
+let lastPushedJson = null;
+
+async function openClient(tenantId, name){
+  document.getElementById('view-list').classList.add('hidden');
+  document.getElementById('view-client').classList.remove('hidden');
+  document.getElementById('client-name').textContent = name;
+  document.getElementById('client-status').textContent = 'Conectando con su nube...';
+  document.getElementById('client-grid').innerHTML = '';
+  if(currentBizRef) currentBizRef.off();
+  currentTenantId = tenantId;
+  try{
+    const lookupSnap = await getApp().database().ref('gastrogoan/tenantLookup/' + tenantId).once('value');
+    const cfg = lookupSnap.val();
+    if(!cfg || !cfg.apiKey || !cfg.databaseURL){
+      document.getElementById('client-status').textContent = '⚠️ No se encontró la nube de este negocio (todavía no ha sincronizado ninguna vez).';
+      return;
+    }
+    const appName = 'biz-' + tenantId;
+    let bizApp;
+    try{ bizApp = firebase.app(appName); }catch(e){ bizApp = firebase.initializeApp(cfg, appName); }
+    if(!bizApp.auth().currentUser) await bizApp.auth().signInAnonymously();
+    currentBizRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/business');
+    currentBizRef.on('value', snap => {
+      const val = snap.val();
+      const json = JSON.stringify(val);
+      if(json === lastPushedJson) return; // es el eco de lo que acabamos de escribir nosotros mismos
+      remoteBiz = val || {};
+      ensureRemotePlan360();
+      document.getElementById('client-status').textContent = 'Conectado — los cambios se ven al instante en su app, y los suyos aquí.';
+      renderClientGrid();
+    }, err => {
+      console.error(err);
+      document.getElementById('client-status').textContent = '⚠️ Error de conexión: ' + (err.message || err.code || 'error');
+    });
+  }catch(e){
+    console.error(e);
+    document.getElementById('client-status').textContent = '⚠️ No se pudo conectar: ' + (e.message || e.code || 'error');
+  }
+}
+function closeClient(){
+  if(currentBizRef) currentBizRef.off();
+  currentBizRef = null; currentTenantId = null; remoteBiz = null;
+  document.getElementById('view-client').classList.add('hidden');
+  document.getElementById('view-list').classList.remove('hidden');
+  loadClientList();
+}
+function saveRemoteBiz(){
+  if(!currentBizRef || !remoteBiz) return;
+  const json = JSON.stringify(remoteBiz);
+  lastPushedJson = json;
+  savingRemote = true;
+  currentBizRef.set(remoteBiz).catch(e => console.error('Error guardando en la nube del negocio', e)).finally(() => { savingRemote = false; });
+}
+
+/* ============================================================
+   PLAN 360° — MISMA estructura y plantillas que js/core.js
+   (PLAN360_DOCS_TEMPLATE, PLAN360_INTAKE_TEMPLATE, PLAN360_DEFAULT_PROGRAM).
+   Si cambias el contenido de las plantillas allí, cámbialo aquí también.
+   ============================================================ */
+const PLAN360_DOCS_TEMPLATE = [
+  {id: 'identidad', title: 'Identidad de marca'},
+  {id: 'playbook-sala', title: 'Playbook de sala'},
+  {id: 'playbook-cocina', title: 'Playbook de cocina'},
+];
+const PLAN360_INTAKE_TEMPLATE = [
+  {title: 'Cuestionario inicial', questions: ['(Pregunta pendiente de definir)']},
+  {title: 'Cuestionario en profundidad', questions: ['(Pregunta pendiente de definir)']},
+];
+const PLAN360_DEFAULT_PROGRAM = [
+  {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
+  {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
+  ...Array.from({length: 26}, (_, i) => ({
+    day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3), task: '(Contenido pendiente de definir)',
+  })),
+];
+function ensureRemotePlan360(){
+  if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
+    remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
+  }
+  if(!remoteBiz.plan360Intake || !Array.isArray(remoteBiz.plan360Intake.sections)){
+    remoteBiz.plan360Intake = {sections: PLAN360_INTAKE_TEMPLATE.map(s => ({title: s.title, questions: s.questions.map(q => ({q, a: ''}))}))};
+  }
+  if(!Array.isArray(remoteBiz.plan360Program) || !remoteBiz.plan360Program.length){
+    remoteBiz.plan360Program = PLAN360_DEFAULT_PROGRAM.map(d => {
+      if(d.phase === 'presencial') return {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: '', objectives: d.day === 1 ? [] : undefined};
+      return {day: d.day, phase: 'trabajo', title: d.title, priority: null, reviewType: null, tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
+    });
+  }
+}
+function plan360PriorityColor(p){ return p === 'alta' ? 'var(--red)' : p === 'media' ? 'var(--amber)' : p === 'baja' ? 'var(--green)' : null; }
+function plan360PriorityBg(p){ return p === 'alta' ? 'var(--red-l)' : p === 'media' ? 'var(--amber-l)' : p === 'baja' ? 'var(--green-l)' : ''; }
+
+function renderClientGrid(){
+  const prog = remoteBiz.plan360Program || [];
+  const trabajo = prog.filter(d => d.phase === 'trabajo');
+  const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.done).length, 0);
+  const totalTareas = trabajo.reduce((n, d) => n + d.tasks.length, 0);
+  const casilla = (onclick, label, style, badge) => `<div class="daybox" style="${style||''}" onclick="${onclick}"><b>${label}</b>${badge||''}</div>`;
+  const dias = prog.map(d => {
+    if(d.phase === 'presencial'){
+      return casilla(`openPresencial(${d.day})`, 'Día ' + d.day, 'background:var(--ink);color:#fff',
+        '<div style="font-size:11px;margin-top:4px;opacity:.8">Presencial</div>');
+    }
+    const col = plan360PriorityColor(d.priority), bg = plan360PriorityBg(d.priority);
+    const done = d.tasks.length && d.tasks.every(x => x.done);
+    const badges = (d.reviewType ? `<div style="font-size:10px;margin-top:2px;color:var(--muted)">${d.reviewType==='presencial'?'Revisión presencial':'Reunión online'}</div>` : '')
+      + (done ? '<div style="color:var(--green);margin-top:4px">✓</div>' : '');
+    return casilla(`openTrabajo(${d.day})`, 'Día ' + d.day, bg ? `background:${bg};border-color:${col}` : '', badges);
+  }).join('');
+  document.getElementById('client-grid').innerHTML = `
+    <div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <div>Programa de 30 días</div>
+      <div class="muted" style="font-family:'IBM Plex Mono',monospace">${hechos} / ${totalTareas}</div>
+    </div>
+    <div class="grid">
+      ${casilla('openDocs()', 'GG', 'background:var(--brand-cream)')}
+      ${casilla('openIntake()', 'Día 0', '')}
+      ${dias}
+      ${casilla('openSummary()', '★', 'background:var(--brand-cream)')}
+    </div>
+  `;
+}
+function openModal(html){ document.getElementById('modal-root').innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
+function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
+
+/* ---- GG ---- */
+function openDocs(){
+  const docs = remoteBiz.plan360Docs || [];
+  openModal(`
+    <div class="modal-header"><h3>Documentos auxiliares</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    ${docs.map((doc, i) => `<div class="field"><label>${esc(doc.title)}</label><textarea id="doc-${i}" rows="4">${esc(doc.body)}</textarea></div>`).join('')}
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveDocs()">Guardar</button></div>
+  `);
+}
+function saveDocs(){
+  (remoteBiz.plan360Docs || []).forEach((doc, i) => { doc.body = (document.getElementById('doc-' + i).value || '').trim(); });
+  saveRemoteBiz(); closeModal();
+}
+
+/* ---- Día 0 ---- */
+function openIntake(){
+  const sections = (remoteBiz.plan360Intake || {}).sections || [];
+  openModal(`
+    <div class="modal-header"><h3>Día 0 — Cuéntanos tu negocio</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    ${sections.map((s, si) => `<div style="font-weight:600;margin:12px 0 6px">${esc(s.title)}</div>
+      ${s.questions.map((q, qi) => `<div class="field"><label>${esc(q.q)}</label><textarea id="intake-${si}-${qi}" rows="2">${esc(q.a)}</textarea></div>`).join('')}
+    `).join('')}
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveIntake()">Guardar</button></div>
+  `);
+}
+function saveIntake(){
+  const sections = (remoteBiz.plan360Intake || {}).sections || [];
+  sections.forEach((s, si) => s.questions.forEach((q, qi) => { q.a = (document.getElementById('intake-' + si + '-' + qi).value || '').trim(); }));
+  saveRemoteBiz(); closeModal();
+}
+
+/* ---- Días 1-2 ---- */
+function objRow(o, i){
+  return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+    <input id="obj-text-${i}" value="${esc(o.text)}" style="flex:1">
+    <select id="obj-prio-${i}">
+      <option value="alta" ${o.priority==='alta'?'selected':''}>Alta</option>
+      <option value="media" ${o.priority==='media'?'selected':''}>Media</option>
+      <option value="baja" ${o.priority==='baja'?'selected':''}>Baja</option>
+    </select>
+  </div>`;
+}
+function openPresencial(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  const obj = d.objectives;
+  openModal(`
+    <div class="modal-header"><h3>Día ${d.day} — ${esc(d.title)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    ${Array.isArray(obj) ? `
+      <div style="font-weight:600;margin-bottom:6px">Objetivos</div>
+      <div id="obj-list">${obj.map((o, i) => objRow(o, i)).join('')}</div>
+      <button class="btn btn-sm" onclick="addObjective(${day})" style="margin:6px 0 12px">+ Añadir objetivo</button>
+      <div class="field"><label>Nota privada del coach <span class="muted">(no la ve el negocio — ver aviso más abajo)</span></label><textarea id="private-note" rows="5">${esc(d.privateNote || '')}</textarea></div>
+    ` : ''}
+    <div class="field"><label>Qué toca hacer</label><textarea id="pres-notes" rows="4">${esc(d.notes || '')}</textarea></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="savePresencial(${day})">Guardar</button></div>
+  `);
+}
+function addObjective(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !Array.isArray(d.objectives)) return;
+  syncObjectivesFromForm(d);
+  d.objectives.push({text: '', priority: 'media', done: false});
+  document.getElementById('obj-list').innerHTML = d.objectives.map((o, i) => objRow(o, i)).join('');
+}
+function syncObjectivesFromForm(d){
+  d.objectives.forEach((o, i) => {
+    const t = document.getElementById('obj-text-' + i), p = document.getElementById('obj-prio-' + i);
+    if(t) o.text = t.value.trim();
+    if(p) o.priority = p.value;
+  });
+}
+function savePresencial(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  if(Array.isArray(d.objectives)){
+    syncObjectivesFromForm(d);
+    d.objectives = d.objectives.filter(o => o.text);
+    const priv = document.getElementById('private-note');
+    if(priv) d.privateNote = priv.value.trim();
+  }
+  d.notes = (document.getElementById('pres-notes').value || '').trim();
+  saveRemoteBiz(); closeModal(); renderClientGrid();
+}
+
+/* ---- Días 3-28 ---- */
+const PLAN360_MAX_FILE_BYTES = 350 * 1024;
+function taskRow(tk, i){
+  return `<div class="card" style="padding:10px;margin-bottom:8px">
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <input type="checkbox" id="task-done-${i}" style="width:auto;margin-top:4px" ${tk.done?'checked':''}>
+      <textarea id="task-text-${i}" rows="2" style="flex:1">${esc(tk.text)}</textarea>
+    </div>
+    <div class="field" style="margin:6px 0 0"><label>Comentario</label><textarea id="task-note-${i}" rows="2">${esc(tk.note || '')}</textarea></div>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted)">
+      <input type="file" id="task-file-${i}" accept="image/*,.pdf" style="width:auto">
+      ${tk.fileName ? esc(tk.fileName) + ' <a href="#" onclick="event.preventDefault();document.getElementById(\'task-file-clear-' + i + '\').value=\'1\'">Eliminar</a><input type="hidden" id="task-file-clear-' + i + '">' : ''}
+    </div>
+  </div>`;
+}
+function openTrabajo(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  openModal(`
+    <div class="modal-header"><h3>Día ${d.day}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="field"><label>Título del día</label><input id="day-title" value="${esc(d.title)}"></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div class="field" style="flex:1;margin-bottom:0"><label>Prioridad</label>
+        <select id="day-priority">
+          <option value="" ${!d.priority?'selected':''}>—</option>
+          <option value="alta" ${d.priority==='alta'?'selected':''}>Alta</option>
+          <option value="media" ${d.priority==='media'?'selected':''}>Media</option>
+          <option value="baja" ${d.priority==='baja'?'selected':''}>Baja</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1;margin-bottom:0"><label>Tipo de revisión</label>
+        <select id="day-reviewtype">
+          <option value="" ${!d.reviewType?'selected':''}>—</option>
+          <option value="presencial" ${d.reviewType==='presencial'?'selected':''}>Revisión presencial</option>
+          <option value="online" ${d.reviewType==='online'?'selected':''}>Reunión online</option>
+        </select>
+      </div>
+    </div>
+    <div style="font-weight:600;margin-bottom:6px">Tareas</div>
+    <div id="task-list">${d.tasks.map((tk, i) => taskRow(tk, i)).join('')}</div>
+    <button class="btn btn-sm" onclick="addTask(${day})" style="margin:6px 0 12px">+ Añadir tarea</button>
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveTrabajo(${day})">Guardar</button></div>
+  `);
+}
+function addTask(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  syncTasksFromForm(d);
+  d.tasks.push({text: '', done: false, note: '', fileData: null, fileName: null});
+  document.getElementById('task-list').innerHTML = d.tasks.map((tk, i) => taskRow(tk, i)).join('');
+}
+function syncTasksFromForm(d){
+  d.tasks.forEach((tk, i) => {
+    const t = document.getElementById('task-text-' + i), dn = document.getElementById('task-done-' + i),
+          n = document.getElementById('task-note-' + i), cl = document.getElementById('task-file-clear-' + i);
+    if(t) tk.text = t.value.trim();
+    if(dn) tk.done = dn.checked;
+    if(n) tk.note = n.value.trim();
+    if(cl && cl.value === '1'){ tk.fileData = null; tk.fileName = null; }
+  });
+}
+function readFileAsDataUrl(file){
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+async function saveTrabajo(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  d.title = (document.getElementById('day-title').value || '').trim() || d.title;
+  d.priority = document.getElementById('day-priority').value || null;
+  d.reviewType = document.getElementById('day-reviewtype').value || null;
+  syncTasksFromForm(d);
+  d.tasks = d.tasks.filter(tk => tk.text);
+  for(let i = 0; i < d.tasks.length; i++){
+    const fileEl = document.getElementById('task-file-' + i);
+    const file = fileEl && fileEl.files && fileEl.files[0];
+    if(!file) continue;
+    if(file.size > PLAN360_MAX_FILE_BYTES){ alert('El archivo pesa demasiado (máx. 350 KB)'); continue; }
+    d.tasks[i].fileData = await readFileAsDataUrl(file);
+    d.tasks[i].fileName = file.name;
+  }
+  saveRemoteBiz(); closeModal(); renderClientGrid();
+}
+
+/* ---- Resumen ---- */
+function openSummary(){
+  const prog = remoteBiz.plan360Program || [];
+  const dia1 = prog.find(x => x.day === 1);
+  const objetivos = (dia1 && dia1.objectives) || [];
+  const trabajo = prog.filter(x => x.phase === 'trabajo');
+  const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.map(tk => ({...tk, day: d.day}))), []);
+  const hechas = tareas.filter(tk => tk.done);
+  const pendientes = tareas.filter(tk => !tk.done);
+  openModal(`
+    <div class="modal-header"><h3>★ Resumen del programa</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div style="font-weight:600;margin-bottom:6px">Objetivos</div>
+    ${objetivos.length ? objetivos.map(o => `
+      <div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span>${o.done ? '✓' : '○'}</span><span style="flex:1">${esc(o.text)}</span>
+        <span style="font-size:11px;color:${plan360PriorityColor(o.priority) || 'var(--muted)'}">${esc(o.priority||'')}</span>
+      </div>`).join('') : '<p class="muted">Todavía no hay objetivos definidos</p>'}
+    <div style="font-weight:600;margin:14px 0 6px">Tareas completadas (${hechas.length}/${tareas.length})</div>
+    ${pendientes.length ? `<div style="font-weight:600;margin:10px 0 6px;color:var(--muted);font-size:12px">Pendientes</div>
+      ${pendientes.map(tk => `<div style="padding:4px 0;font-size:13px">Día ${tk.day} — ${esc(tk.text)}</div>`).join('')}` : ''}
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Cerrar</button></div>
+  `);
+}
+</script>
+</body>
+</html>

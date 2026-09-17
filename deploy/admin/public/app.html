@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GastroGoan · Panel de administración (PRIVADO)</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<style>
+/* Mismo sistema de diseño que la app (css/styles.css): nórdico, negro humo +
+   verde oliva, cero radios, Schibsted Grotesk + IBM Plex Mono. Tipografías
+   autoalojadas en fonts/ — este archivo vive en la raíz del repo, igual que
+   reservagastrogoan.html, así que la ruta relativa es la misma. */
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/schibsted-grotesk-400-normal.woff2") format("woff2");}
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/schibsted-grotesk-500-normal.woff2") format("woff2");}
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/schibsted-grotesk-600-normal.woff2") format("woff2");}
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/schibsted-grotesk-700-normal.woff2") format("woff2");}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/ibm-plex-mono-400-normal.woff2") format("woff2");}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/ibm-plex-mono-500-normal.woff2") format("woff2");}
+
+:root{
+  --ink:#1C1A17; --olive:#4A5D4E; --cream:#F1EFE9; --bg:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
+  --text:#1C1A17; --body:#3D3A34; --muted:#716C65;
+  --green:#4A5D4E; --green-l:#EDF1EC; --red:#8A4A3B; --red-l:#F5EBE7; --amber:#8A7440; --amber-l:#F5F0E3;
+  --radius:0;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Schibsted Grotesk',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--body);min-height:100vh;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+header{background:var(--ink);color:#FAF8F4;padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header .logo{width:40px;height:40px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+header h1{font-family:'Schibsted Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:-.01em;flex:1;min-width:180px}
+header h1 span{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#C9A15A;margin-top:4px}
+header .hd-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--border);padding:12px 18px;min-height:46px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;
+     text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center;background:#fff;color:var(--text);
+     transition:filter .12s ease,background-color .12s ease}
+.btn:hover{background:var(--cream)}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:#FAF8F4}
+.btn-primary:hover{background:var(--olive);border-color:var(--olive)}
+.btn-dark{background:var(--ink);border-color:var(--ink);color:#FAF8F4}
+.btn-light{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn-wa{background:#25D366;border-color:#25D366;color:#fff}
+.btn-rojo{background:none;border:1px solid var(--red);color:var(--red)}
+.btn-rojo:hover{background:var(--red-l)}
+.btn-sm{min-height:36px;padding:7px 12px;font-size:12.5px}
+.card{background:var(--surface);border:1px solid var(--border);padding:18px}
+.tabs{display:flex;gap:0;background:var(--surface);border:1px solid var(--border)}
+.tab{flex:1;text-align:center;padding:12px;font-weight:600;font-size:13.5px;cursor:pointer;color:var(--muted);border-right:1px solid var(--border);font-family:'IBM Plex Mono',monospace;letter-spacing:.04em;text-transform:uppercase;font-size:11.5px}
+.tab:last-child{border-right:none}
+.tab.active{background:var(--ink);color:#FAF8F4}
+label{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px;color:var(--muted)}
+input,select,textarea{width:100%;border:1px solid var(--border);padding:11px;font-size:14px;font-family:inherit;background:#fff;min-height:46px;color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
+.muted{color:var(--muted);font-size:12.5px;line-height:1.5}
+.warn{background:var(--amber-l);border-left:3px solid var(--amber);padding:12px 14px;font-size:12.5px;line-height:1.5;color:var(--body)}
+.hidden{display:none!important}
+
+/* Panel de login: gate real, nada del panel se pinta antes de tener sesión */
+#login-gate{max-width:420px;margin:60px auto}
+#login-gate .card{display:flex;flex-direction:column;gap:12px}
+#login-gate h1{font-family:'Schibsted Grotesk',sans-serif;font-weight:700;letter-spacing:-.01em}
+
+/* Carpetas de cliente */
+.folder{border:1px solid var(--border);background:#fff}
+.folder-head{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap}
+.folder-ico{font-size:20px;flex:none}
+.folder-user{font-weight:700;font-size:15px;font-family:'Schibsted Grotesk',sans-serif}
+.folder-sub{font-size:12px;color:var(--muted)}
+.folder-pastilla{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 9px;border:1px solid var(--border);color:var(--body);white-space:nowrap}
+.folder-arrow{margin-left:auto;font-size:13px;color:var(--muted);flex:none}
+.folder-body{border-top:1px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.fila-dato{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;background:var(--cream);padding:10px 12px}
+.dato-et{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.dato-val{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:14px}
+.contacto-edit{display:flex;gap:8px;flex-wrap:wrap}
+.contacto-edit input{flex:1;min-width:160px}
+
+/* Licencias dentro de la carpeta */
+.lic{border:1px solid var(--border);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.lic.revocada{background:var(--red-l);border-color:var(--red)}
+.lic.atrasada{background:var(--amber-l);border-color:var(--amber)}
+.lic-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lic-code{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:15px;letter-spacing:.03em}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border:1px solid currentColor;background:transparent}
+.badge-activa{color:var(--green)}
+.badge-revocada{color:var(--red)}
+.badge-atrasada{color:var(--amber)}
+.lic-fechas{font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.lic-btns{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Modal genérico */
+.modal-fondo{position:fixed;inset:0;background:rgba(28,26,23,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{background:#fff;border:1px solid var(--border);padding:22px;max-width:420px;width:100%;display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow:auto}
+.modal h3{font-size:16px;font-family:'Schibsted Grotesk',sans-serif;font-weight:700}
+.key-out{background:var(--cream);border:1px dashed var(--olive);padding:14px;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;text-align:center;line-height:1.6}
+
+/* Calendario de cobros */
+.cal-atrasados{border:1px solid var(--amber);background:var(--amber-l);padding:14px 16px}
+.cal-atrasados h4{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--amber);margin-bottom:8px}
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1px;background:var(--border);border:1px solid var(--border)}
+.cal-mes{padding:12px 14px;background:#fff}
+.cal-mes h4{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.cal-lic{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer}
+.cal-lic:last-child{border-bottom:none}
+.cal-lic:hover{color:var(--olive)}
+.cal-vacio{color:var(--muted);font-size:12px}
+
+/* Historial de ventas (flat, opcional) */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:500}
+td.key{font-family:'IBM Plex Mono',monospace;font-size:11px}
+</style>
+</head>
+<body>
+
+<div id="login-gate" class="wrap">
+  <div class="card">
+    <h1 style="font-size:18px;margin-bottom:6px">🔑 Panel de administración GastroGoan</h1>
+    <p class="muted" style="margin-bottom:14px">Archivo privado. Inicia sesión con tu email y contraseña de administrador (Firebase Authentication).</p>
+    <label>Email</label>
+    <input id="login-email" type="email" placeholder="gastrogoan@gmail.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    <label style="margin-top:10px">Contraseña</label>
+    <input id="login-pass" type="password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="doLogin()">Entrar</button>
+    <p id="login-status" class="muted" style="margin-top:6px"></p>
+  </div>
+</div>
+
+<div id="panel" class="wrap hidden">
+  <header>
+    <div class="logo">🔑</div>
+    <h1>Panel de administración GastroGoan<span>ARCHIVO PRIVADO — no lo envíes NUNCA a ningún cliente</span></h1>
+    <div class="hd-btns">
+      <a class="btn btn-light" href="index.html">← Panel</a>
+      <a class="btn btn-light" href="plan360.html">Plan 360°</a>
+      <button class="btn btn-light" onclick="openAgregarUsuario()">＋ Agregar usuario</button>
+      <button class="btn btn-light" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-clientes" onclick="setTab('clientes')">👥 Clientes</div>
+    <div class="tab" id="tab-calendario" onclick="setTab('calendario')">📅 Calendario de cobros</div>
+    <div class="tab" id="tab-historial" onclick="setTab('historial')">🧾 Historial</div>
+  </div>
+
+  <div id="view-clientes">
+    <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input id="buscador" placeholder="Buscar cliente por usuario o nombre..." style="flex:1;min-width:200px" oninput="renderFolders()">
+      <span class="muted" id="resumen-clientes"></span>
+    </div>
+    <div id="folders" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
+    <p id="folders-vacio" class="muted hidden" style="margin-top:10px">Aún no hay ningún cliente. Usa "Agregar usuario" arriba.</p>
+  </div>
+
+  <div id="view-calendario" class="hidden">
+    <div id="cal-atrasados-wrap" style="margin-bottom:12px"></div>
+    <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <button class="btn btn-sm btn-light" onclick="calYear--;renderCalendario()">←</button>
+      <strong id="cal-year-lbl" style="flex:1;text-align:center"></strong>
+      <button class="btn btn-sm btn-light" onclick="calYear++;renderCalendario()">→</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <div id="view-historial" class="hidden card">
+    <h2 style="font-size:15px;margin-bottom:10px">Historial de ventas <span class="muted" id="hist-count"></span></h2>
+    <div style="overflow-x:auto">
+      <table id="hist-table"><thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Dato</th><th>Cuenta</th><th>Estado</th></tr></thead><tbody id="hist-body"></tbody></table>
+    </div>
+    <button class="btn btn-light" style="margin-top:12px" onclick="exportCSV()">⬇ Descargar CSV</button>
+  </div>
+
+  <div class="warn">
+    ⚠️ <strong>Guarda este archivo a buen recaudo.</strong> Quien tenga sesión de administrador puede generar y anular licencias. Todo lo que ves aquí vive en <code>gastrogoan/adminSalesLog</code>, protegido por las reglas de Firebase para tu email de admin.
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+/* ============================================================
+   IDÉNTICO a js/core.js: ggLicHash, ggOwnerUser, _ggOwnerSecret,
+   ggOwnerDerive, ggOwnerAuthKey, ggOwnerId. Si cambias algo aquí,
+   cámbialo también allí.
+   ============================================================ */
+function ggLicHash(str){
+  let h = 0x811c9dc5 >>> 0;
+  for(let i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+const GG_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin I, O, 0, 1: ilegibles al dictarlos
+function ggRandomChars(n){
+  const rnd = new Uint32Array(n);
+  crypto.getRandomValues(rnd);
+  let out = '';
+  for(let i = 0; i < n; i++) out += GG_ALPHABET[rnd[i] % 32];
+  return out;
+}
+function generateBizCode(){ return ggRandomChars(8); }
+function genUuid(){
+  if(crypto.randomUUID) return crypto.randomUUID();
+  return ggRandomChars(10) + Date.now().toString(36);
+}
+function ggOwnerUser(raw){
+  return String(raw || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+function _ggOwnerSecret(){
+  const c = [117,117,197,125,133,124,115,128,197,64,62,64,68,197,121,69];
+  return c.map(x => String.fromCharCode(x - 14)).join('');
+}
+function ggOwnerDerive(input, groups){
+  const out = [];
+  let h = ggLicHash(input);
+  for(let g = 0; g < groups; g++){
+    h = ggLicHash(input + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += GG_ALPHABET[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('');
+}
+function ggOwnerAuthKey(user, pin){
+  const u = ggOwnerUser(user);
+  const p = String(pin || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if(!u || !p) return null;
+  return ggOwnerDerive(u + '·' + p + _ggOwnerSecret() + '·auth', 6);
+}
+function ggOwnerId(user){
+  const u = ggOwnerUser(user);
+  if(!u) return null;
+  return ggOwnerDerive(u + _ggOwnerSecret() + '·owner', 5);
+}
+function generateOwnerPin(){ return ggRandomChars(6); }
+
+// Nunca usar toISOString para aritmética de fechas de calendario (desfase de
+// un día en cualquier huso por delante de UTC). Aquí no hace ni falta un
+// objeto Date: son solo tres números en una cadena yyyy-mm-dd.
+function pad2(n){ return String(n).padStart(2,'0'); }
+function todayStr(){ const d = new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function addYearsStr(dateStr, n){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  return (y+n)+'-'+pad2(m)+'-'+pad2(d);
+}
+
+/* ============================================================
+   PLATAFORMA COMPARTIDA (proyecto plataforma-gastrogoan). MISMO
+   PLATFORM_FIREBASE_CONFIG que en js/core.js.
+   ============================================================ */
+const PLATFORM_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
+  authDomain: "plataforma-gastrogoan.firebaseapp.com",
+  databaseURL: "https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "plataforma-gastrogoan",
+  storageBucket: "plataforma-gastrogoan.firebasestorage.app",
+  messagingSenderId: "894218847556",
+  appId: "1:894218847556:web:2fa1f699489790bb5f8311"
+};
+function getApp(){
+  try{ return firebase.app('platform'); }
+  catch(e){ return firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
+}
+let adminUser = null; // {email}, solo si hay sesión REAL de admin (no anónima)
+
+/* Login OBLIGATORIO a la entrada: nada del panel se pinta sin sesión real de
+   administrador. A diferencia del generador viejo, aquí no hay ningún modo
+   "sin sesión, código sin verificar": o hay sesión, o no hay panel. */
+async function doLogin(){
+  const statusEl = document.getElementById('login-status');
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if(!email || !pass){ statusEl.textContent = 'Escribe email y contraseña.'; return; }
+  statusEl.textContent = 'Entrando...';
+  try{
+    const app = getApp();
+    await app.auth().signInWithEmailAndPassword(email, pass);
+    onLoggedIn(app.auth().currentUser);
+  }catch(e){
+    console.error(e);
+    statusEl.textContent = '⚠️ No se pudo entrar (' + (e.message || e.code || 'error') + ').';
+  }
+}
+function doLogout(){
+  getApp().auth().signOut();
+  adminUser = null;
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('login-gate').classList.remove('hidden');
+  document.getElementById('login-status').textContent = '';
+}
+async function onLoggedIn(user){
+  adminUser = user;
+  document.getElementById('login-gate').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+  await syncSalesWithCloud();
+  renderFolders();
+  renderCalendario();
+  renderHistorial();
+}
+// Al cargar, comprueba si ya había sesión de admin persistida por Firebase
+// (no anónima: sesiones anónimas nunca las crea este panel). Envuelto en
+// try/catch: si el SDK no llegó a cargar (red bloqueada, prueba local), el
+// resto del panel debe poder seguir cargándose igual, solo sin auto-login.
+try{
+  if(typeof firebase !== 'undefined') getApp().auth().onAuthStateChanged(user => {
+    if(user && user.email) onLoggedIn(user);
+  });
+}catch(e){ console.error('No se pudo comprobar la sesión persistida', e); }
+
+/* ============================================================
+   CÓDIGOS DE NEGOCIO Y CUENTAS DE PROPIETARIO — misma lógica que el
+   generador anterior (transacciones atómicas contra issuedCodes /
+   ownerNames / ownerAuth).
+   ============================================================ */
+const MAX_UNIQUENESS_ATTEMPTS = 5;
+async function claimUniqueBizCode(){
+  for(let attempt = 1; attempt <= MAX_UNIQUENESS_ATTEMPTS; attempt++){
+    const code = generateBizCode();
+    const ref = getApp().database().ref('gastrogoan/issuedCodes/' + code);
+    const result = await ref.transaction(current => current === null ? {issuedAt: Date.now()} : undefined);
+    if(result.committed) return code;
+  }
+  throw new Error('No se pudo confirmar unicidad tras varios intentos.');
+}
+const MAX_OWNER_NAME_ATTEMPTS = 20;
+async function claimOwnerAccount(rawName){
+  const base = ggOwnerUser(rawName);
+  if(!base) return {error: 'Ese nombre no deja ninguna letra ni número utilizable. Prueba con otro.'};
+  for(let attempt = 0; attempt < MAX_OWNER_NAME_ATTEMPTS; attempt++){
+    const user = attempt === 0 ? base : base + (attempt + 1);
+    let claimed;
+    try{
+      const ref = getApp().database().ref('gastrogoan/ownerNames/' + user);
+      const result = await ref.transaction(current => current === null ? {createdAt: Date.now()} : undefined);
+      claimed = result.committed;
+    }catch(e){
+      return {error: 'No se pudo reservar el nombre: ' + (e.message || e.code || 'error')};
+    }
+    if(!claimed) continue;
+    const pin = generateOwnerPin();
+    try{
+      await getApp().database().ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, pin)).set({ user, createdAt: Date.now() });
+    }catch(e){
+      return {error: 'El nombre quedó reservado pero no se pudo crear la cuenta: ' + (e.message || e.code || 'error')};
+    }
+    return {user, pin, renamed: user !== base};
+  }
+  return {error: 'Demasiados nombres parecidos ya en uso. Pídele al cliente otro nombre distinto.'};
+}
+async function resetOwnerPinFor(user){
+  const pin = generateOwnerPin();
+  await getApp().database().ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, pin)).set({ user, createdAt: Date.now() });
+  return pin;
+}
+
+/* ============================================================
+   REGISTRO DE VENTAS (gastrogoan/adminSalesLog) — sigue siendo la única
+   fuente de verdad de este panel: cada entrada 'cuenta' lleva ahora también
+   el contacto (email/teléfono) del propietario; cada entrada 'negocio' lleva
+   la fecha de alta y el próximo cobro (proximoPago), para el calendario.
+   ============================================================ */
+const LOG_KEY = 'gg_biz_sales_v3';
+let sales = [];
+try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
+function saveSales(){ localStorage.setItem(LOG_KEY, JSON.stringify(sales)); }
+if(sales.some(s => !s.id)){ sales.forEach(s => { if(!s.id) s.id = genUuid(); }); saveSales(); }
+
+async function pushSaleEntry(entry){
+  entry.id = entry.id || genUuid();
+  sales.unshift(entry);
+  saveSales();
+  if(adminUser){
+    try{
+      await getApp().database().ref('gastrogoan/adminSalesLog/' + entry.id).set(entry);
+    }catch(e){ console.error('Error guardando la venta en la nube', e); }
+  }
+}
+async function updateSaleEntry(entry, patch){
+  Object.assign(entry, patch);
+  saveSales();
+  if(adminUser && entry.id){
+    try{ await getApp().database().ref('gastrogoan/adminSalesLog/' + entry.id).update(patch); }
+    catch(e){ console.error('Error actualizando la venta en la nube', e); }
+  }
+}
+async function syncSalesWithCloud(){
+  if(!adminUser) return;
+  try{
+    const snap = await getApp().database().ref('gastrogoan/adminSalesLog').once('value');
+    const remote = snap.val() || {};
+    const localIds = new Set(sales.map(s => s.id));
+    Object.keys(remote).forEach(id => {
+      if(!localIds.has(id)) sales.push({...remote[id], id});
+    });
+    const remoteIds = new Set(Object.keys(remote));
+    const updates = {};
+    sales.forEach(s => { if(!remoteIds.has(s.id)) updates[s.id] = s; });
+    if(Object.keys(updates).length) await getApp().database().ref('gastrogoan/adminSalesLog').update(updates);
+    sales.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    saveSales();
+  }catch(e){ console.error('Error sincronizando el registro de ventas', e); }
+}
+
+/* ============================================================
+   PESTAÑAS
+   ============================================================ */
+function setTab(t){
+  ['clientes','calendario','historial'].forEach(x => {
+    document.getElementById('tab-'+x).classList.toggle('active', x===t);
+    document.getElementById('view-'+x).classList.toggle('hidden', x!==t);
+  });
+  if(t==='calendario') renderCalendario();
+  if(t==='historial') renderHistorial();
+}
+
+/* ============================================================
+   AGRUPACIÓN: una tarjeta por cuenta de propietario, con sus locales dentro.
+   ============================================================ */
+let openFolders = new Set();
+function agrupar(){
+  const conIdx = sales.map((s,i) => ({...s, i}));
+  const cuentas = conIdx.filter(s => s.kind === 'cuenta' && !s.anulada);
+  const locales = conIdx.filter(s => s.kind === 'negocio');
+  const grupos = [];
+  cuentas.forEach(c => {
+    if(grupos.some(g => g.user === c.value)) return; // PIN restablecido: una sola tarjeta, la última
+    const mismas = cuentas.filter(x => x.value === c.value).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    grupos.push({ user: c.value, ultima: mismas[0], locales: locales.filter(l => l.owner === c.value) });
+  });
+  const usuarios = new Set(cuentas.map(c => c.value));
+  const huerfanos = locales.filter(l => !usuarios.has(l.owner));
+  if(huerfanos.length) grupos.push({ user: null, ultima: null, locales: huerfanos });
+  return grupos;
+}
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function renderFolders(){
+  const q = ggOwnerUser(document.getElementById('buscador').value) || document.getElementById('buscador').value.toLowerCase().trim();
+  let grupos = agrupar();
+  if(q){
+    grupos = grupos.filter(g => (g.user||'').includes(q) ||
+      g.locales.some(l => (l.name||'').toLowerCase().includes(q) || (l.value||'').toLowerCase().includes(q)));
+  }
+  document.getElementById('folders-vacio').classList.toggle('hidden', agrupar().length > 0);
+  document.getElementById('resumen-clientes').textContent = `${agrupar().length} cliente(s) · ${sales.filter(s=>s.kind==='negocio' && !s.anulada).length} licencia(s) activa(s)`;
+
+  document.getElementById('folders').innerHTML = grupos.map(g => {
+    const key = g.user || '(sin-cuenta)';
+    const abierta = openFolders.has(key);
+    const nActivas = g.locales.filter(l => !l.anulada).length;
+    const nombreExtra = g.ultima && g.ultima.name && g.ultima.name !== g.user ? esc(g.ultima.name) : '';
+    const titulo = g.user ? esc(g.user) : '⚠️ Locales sin cuenta en el registro';
+    return `<div class="folder">
+      <div class="folder-head" onclick="toggleFolder('${esc(key)}')">
+        <span class="folder-ico">📁</span>
+        <div>
+          <div class="folder-user">${titulo} ${nombreExtra ? `<span class="folder-sub">(${nombreExtra})</span>` : ''}</div>
+          <div class="folder-sub">${g.locales.length} licencia(s), ${nActivas} activa(s)</div>
+        </div>
+        <span class="folder-pastilla">PIN: ${g.ultima ? esc(g.ultima.pin || '—') : '—'}</span>
+        <span class="folder-arrow">${abierta ? '▲' : '▼'}</span>
+      </div>
+      ${abierta ? renderFolderBody(g) : ''}
+    </div>`;
+  }).join('');
+}
+function toggleFolder(key){
+  if(openFolders.has(key)) openFolders.delete(key); else openFolders.add(key);
+  renderFolders();
+}
+function renderFolderBody(g){
+  const email = g.ultima ? esc(g.ultima.email || '') : '';
+  const phone = g.ultima ? esc(g.ultima.phone || '') : '';
+  const licsHtml = g.locales.length ? g.locales.map(l => renderLicRow(l)).join('') :
+    `<p class="muted">Todavía no le has vendido ningún local.</p>`;
+  return `<div class="folder-body">
+    ${g.user ? `
+    <div class="fila-dato">
+      <span class="dato-et">Usuario</span><span class="dato-val">${esc(g.user)}</span>
+      <span class="dato-et">PIN</span><span class="dato-val">${g.ultima ? esc(g.ultima.pin || '—') : '—'}</span>
+      <button class="btn btn-sm btn-light" onclick="copiar('Usuario: ${esc(g.user)}  ·  PIN: ${g.ultima ? esc(g.ultima.pin||'') : ''}')">Copiar</button>
+      <button class="btn btn-sm btn-light" onclick="hacerResetPin('${esc(g.user)}')">🔁 Nuevo PIN</button>
+      <button class="btn btn-sm btn-rojo" onclick="borrarCuenta('${esc(g.user)}')">Borrar cuenta</button>
+    </div>
+    <div class="fila-dato contacto-edit">
+      <span class="dato-et" style="flex:0 0 100%">Ficha de cliente (para el botón Cobrar)</span>
+      <input placeholder="Email" id="email-${esc(g.user)}" value="${email}">
+      <input placeholder="Teléfono (WhatsApp)" id="phone-${esc(g.user)}" value="${phone}">
+      <button class="btn btn-sm btn-light" onclick="guardarContacto('${esc(g.user)}')">Guardar</button>
+    </div>
+    <button class="btn btn-light" onclick="openNuevaLicencia('${esc(g.user)}')">＋ Nueva licencia para este cliente</button>
+    ` : ''}
+    <div style="display:flex;flex-direction:column;gap:10px" id="lics-${esc(g.user||'huerfanos')}">${licsHtml}</div>
+  </div>`;
+}
+function renderLicRow(l){
+  const revocada = !!l.anulada;
+  const proximoPago = l.proximoPago || (l.date ? addYearsStr(l.date, 1) : '—');
+  const atrasada = !revocada && proximoPago !== '—' && proximoPago < todayStr();
+  const estadoClase = revocada ? 'revocada' : (atrasada ? 'atrasada' : '');
+  const badge = revocada ? {c:'badge-revocada', t:'Acceso revocado'} : (atrasada ? {c:'badge-atrasada', t:'Atrasada'} : {c:'badge-activa', t:'Activa'});
+  return `<div class="lic${estadoClase ? ' '+estadoClase : ''}" id="lic-${esc(l.id)}">
+    <div class="lic-top">
+      <span class="lic-code">${esc(l.value)}</span>
+      <span class="badge ${badge.c}">${badge.t}</span>
+      ${l.name ? `<span class="muted">${esc(l.name)}</span>` : ''}
+    </div>
+    <div class="lic-fechas">
+      <span>Alta: <strong>${esc(l.date || '—')}</strong></span>
+      ${!revocada ? `<span>Próximo cobro: <strong>${esc(proximoPago)}</strong>${atrasada ? ' ⚠️' : ''}</span>` : ''}
+      ${revocada && l.motivo ? `<span>Motivo: ${esc(l.motivo)}</span>` : ''}
+    </div>
+    <div class="lic-btns">
+      ${!revocada ? `
+        <button class="btn btn-sm btn-wa" onclick="cobrarLicencia('${esc(l.id)}')">💬 Cobrar</button>
+        <button class="btn btn-sm btn-light" onclick="marcarCobrado('${esc(l.id)}')">✓ Marcar cobrado (+1 año)</button>
+        <button class="btn btn-sm btn-rojo" onclick="quitarAcceso('${esc(l.id)}')">Quitar acceso</button>
+      ` : `
+        <button class="btn btn-sm btn-primary" onclick="restablecerLicencia('${esc(l.id)}')">Restablecer la licencia</button>
+      `}
+      <button class="btn btn-sm btn-light" onclick="delSale('${esc(l.id)}')">Quitar del registro</button>
+    </div>
+  </div>`;
+}
+function findSale(id){ return sales.find(s => s.id === id); }
+function copiar(txt){ navigator.clipboard.writeText(txt).then(() => alert('Copiado: ' + txt)); }
+
+/* ============================================================
+   COBRAR — abre WhatsApp o email con el contacto guardado en la ficha
+   (entrada 'cuenta' del propietario), no en el negocio distribuido.
+   ============================================================ */
+function cobrarLicencia(licId){
+  const l = findSale(licId);
+  if(!l) return;
+  const cuenta = sales.find(s => s.kind==='cuenta' && s.value===l.owner);
+  const email = cuenta && cuenta.email;
+  const phone = cuenta && cuenta.phone;
+  if(!email && !phone){
+    alert('No hay email ni teléfono guardado para "' + (l.owner||'este cliente') + '". Rellénalo en la ficha del cliente, dentro de su carpeta.');
+    return;
+  }
+  const proximoPago = l.proximoPago || (l.date ? addYearsStr(l.date, 1) : '');
+  const msg = `Hola${l.name ? ' de ' + l.name : ''} 👋 Te escribimos de GastroGoan para la renovación anual de tu licencia (código ${l.value}).\n\nImporte: 100 €/año.\n${proximoPago ? 'Vencimiento: ' + proximoPago + '\n' : ''}\n¿Nos confirmas el pago cuando puedas? Gracias 🙏`;
+  showCobrarModal(msg, email, phone);
+}
+function showCobrarModal(msg, email, phone){
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal">
+      <h3>💬 Enviar cobro</h3>
+      <textarea readonly style="width:100%;min-height:120px;border:1.5px solid var(--border);border-radius:9px;padding:10px;font-family:inherit;font-size:13px">${esc(msg)}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${phone ? `<a class="btn btn-wa" style="flex:1" target="_blank" rel="noopener" href="https://wa.me/${esc(phone.replace(/[^0-9]/g,''))}?text=${encodeURIComponent(msg)}">📱 WhatsApp</a>` : ''}
+        ${email ? `<a class="btn btn-light" style="flex:1" href="mailto:${esc(email)}?subject=${encodeURIComponent('Renovación de tu licencia GastroGoan')}&body=${encodeURIComponent(msg)}">✉️ Email</a>` : ''}
+      </div>
+      <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
+    </div>
+  </div>`;
+}
+function cerrarModal(){ document.getElementById('modal-root').innerHTML = ''; }
+
+async function marcarCobrado(licId){
+  const l = findSale(licId);
+  if(!l) return;
+  const base = l.proximoPago || addYearsStr(l.date || todayStr(), 1);
+  const nuevo = addYearsStr(base, 1);
+  if(!confirm(`¿Marcar cobrado? El próximo vencimiento pasará a ${nuevo}.`)) return;
+  await updateSaleEntry(l, {proximoPago: nuevo});
+  renderFolders(); renderCalendario();
+}
+
+/* ============================================================
+   QUITAR / RESTABLECER ACCESO (antes "anular"/"reactivar")
+   ============================================================ */
+async function quitarAcceso(licId){
+  const l = findSale(licId);
+  if(!l) return;
+  const code = l.value;
+  if(!confirm('¿Quitar el acceso al código ' + code + '?\n\nDejará de poder canjearse y, si ya está en uso, la app de ese cliente quedará bloqueada la próxima vez que se abra con internet.')) return;
+  const motivo = prompt('Motivo (opcional, para tu registro):', '') || '';
+  const db = getApp().database();
+  try{
+    await db.ref('gastrogoan/revokedCodes/' + code).set({at: Date.now(), motivo});
+    await db.ref('gastrogoan/issuedCodes/' + code).remove();
+    await db.ref('gastrogoan/codeClaims/' + code).remove();
+    await updateSaleEntry(l, {anulada: todayStr(), motivo});
+    renderFolders(); renderCalendario(); renderHistorial();
+  }catch(e){ console.error(e); alert('No se ha podido quitar el acceso: ' + (e && e.message)); }
+}
+async function restablecerLicencia(licId){
+  const l = findSale(licId);
+  if(!l) return;
+  const code = l.value;
+  if(!confirm('¿Restablecer la licencia ' + code + '?\n\nVolverá a poder canjearse y se quitará el bloqueo de la app del cliente.')) return;
+  const db = getApp().database();
+  try{
+    await db.ref('gastrogoan/issuedCodes/' + code).set({at: Date.now(), reactivado: true});
+    await db.ref('gastrogoan/revokedCodes/' + code).remove();
+    await updateSaleEntry(l, {anulada: null, motivo: null, proximoPago: addYearsStr(todayStr(), 1)});
+    renderFolders(); renderCalendario(); renderHistorial();
+  }catch(e){ console.error(e); alert('No se ha podido restablecer: ' + (e && e.message)); }
+}
+async function delSale(id){
+  if(!confirm('¿Quitar esta entrada de tu registro?\n\nOJO: esto NO revoca ni restablece nada, solo la anotación.')) return;
+  const idx = sales.findIndex(s => s.id === id);
+  if(idx === -1) return;
+  sales.splice(idx, 1);
+  saveSales();
+  if(adminUser){
+    try{ await getApp().database().ref('gastrogoan/adminSalesLog/' + id).remove(); }catch(e){ console.error(e); }
+  }
+  renderFolders(); renderCalendario(); renderHistorial();
+}
+async function borrarCuenta(user){
+  const cuenta = sales.find(s => s.kind === 'cuenta' && s.value === user);
+  if(!confirm('¿Borrar la cuenta "' + user + '"?\n\nEsa persona dejará de poder entrar. Sus negocios NO se anulan.')) return;
+  const db = getApp().database();
+  try{
+    if(cuenta && cuenta.pin){
+      await db.ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, cuenta.pin)).remove();
+    }
+    await db.ref('gastrogoan/ownerNames/' + user).remove();
+    if(cuenta) await updateSaleEntry(cuenta, {anulada: todayStr()});
+    renderFolders();
+    alert('Cuenta borrada y nombre liberado.' + (cuenta && cuenta.pin ? '' : '\n\nOJO: sin el PIN guardado no se ha podido borrar el acceso, solo el nombre.'));
+  }catch(e){ console.error(e); alert('No se ha podido borrar: ' + (e && e.message)); }
+}
+async function hacerResetPin(user){
+  if(!confirm('¿Darle un PIN nuevo a "' + user + '"? El anterior deja de servir en dispositivos nuevos (los que ya entraron siguen con GGGG).')) return;
+  try{
+    const pin = await resetOwnerPinFor(user);
+    await pushSaleEntry({ id: genUuid(), date: todayStr(), name: '(PIN restablecido)', kind: 'cuenta', value: user, pin, owner: user });
+    renderFolders();
+    const cuenta = sales.find(s => s.kind==='cuenta' && s.value===user);
+    const msg = 'Tu nuevo PIN de GastroGoan 🍽\n\nUsuario: ' + user + '\nPIN: ' + pin + '\n\nEntra con estos datos.';
+    showCobrarModal(msg, cuenta && cuenta.email, cuenta && cuenta.phone);
+  }catch(e){ console.error(e); alert('No se pudo generar el PIN nuevo: ' + (e && e.message)); }
+}
+async function guardarContacto(user){
+  const email = document.getElementById('email-'+user).value.trim();
+  const phone = document.getElementById('phone-'+user).value.trim();
+  const cuenta = sales.find(s => s.kind === 'cuenta' && s.value === user);
+  if(!cuenta) return;
+  await updateSaleEntry(cuenta, {email, phone});
+  alert('Ficha de contacto guardada.');
+}
+
+/* ============================================================
+   MODAL: AGREGAR USUARIO (solo cuenta, sin licencia — a propósito, para no
+   confundir a qué cliente pertenece luego cada código)
+   ============================================================ */
+function openAgregarUsuario(){
+  document.getElementById('modal-root').innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal">
+      <h3>＋ Agregar usuario</h3>
+      <p class="muted">Crea solo la cuenta (usuario + PIN). Las licencias de negocio se añaden después, desde dentro de la carpeta del cliente.</p>
+      <label>Nombre de usuario que ha pedido el cliente</label>
+      <input id="nu-name" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')checkNuevoUsuario()">
+      <label style="margin-top:6px">Email (opcional, para el botón Cobrar)</label>
+      <input id="nu-email" type="email" placeholder="cliente@email.com">
+      <label style="margin-top:6px">Teléfono / WhatsApp (opcional)</label>
+      <input id="nu-phone" placeholder="+34...">
+      <p id="nu-check" class="muted"></p>
+      <button class="btn btn-light" onclick="checkNuevoUsuario()">🔎 ¿Ese nombre ya existe?</button>
+      <button class="btn btn-primary" id="nu-btn" onclick="crearNuevoUsuario()">Crear cuenta</button>
+      <div id="nu-out" class="hidden">
+        <div class="key-out" id="nu-key"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <a class="btn btn-wa" style="flex:1" id="nu-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
+          <a class="btn btn-light" style="flex:1" id="nu-mail">✉️ Email</a>
+        </div>
+      </div>
+      <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
+    </div>
+  </div>`;
+}
+async function checkNuevoUsuario(){
+  const el = document.getElementById('nu-check');
+  const user = ggOwnerUser(document.getElementById('nu-name').value);
+  if(!user){ el.textContent = 'Escribe primero el nombre.'; return; }
+  el.textContent = 'Consultando...';
+  try{
+    const existe = (await getApp().database().ref('gastrogoan/ownerNames/' + user).once('value')).exists();
+    el.innerHTML = existe
+      ? `<span style="color:var(--amber)">⚠️ "${esc(user)}" ya existe. Si creas otro, se le asignará "${esc(user)}2".</span>`
+      : `<span style="color:var(--green)">✅ "${esc(user)}" está libre.</span>`;
+  }catch(e){ el.textContent = 'No se pudo consultar.'; }
+}
+async function crearNuevoUsuario(){
+  const btn = document.getElementById('nu-btn');
+  btn.disabled = true;
+  const raw = document.getElementById('nu-name').value.trim();
+  const email = document.getElementById('nu-email').value.trim();
+  const phone = document.getElementById('nu-phone').value.trim();
+  const res = await claimOwnerAccount(raw);
+  if(res.error){ alert(res.error); btn.disabled = false; return; }
+  document.getElementById('nu-key').innerHTML = `Usuario: ${esc(res.user)}<br>PIN: ${esc(res.pin)}`;
+  document.getElementById('nu-out').classList.remove('hidden');
+  const msg = 'Tu cuenta de GastroGoan 🍽\n\nUsuario: ' + res.user + '\nPIN: ' + res.pin + '\n\nAbre la app, pulsa "Acceso Propietarios" y entra con estos dos datos. Dentro verás la pantalla de negocios: pulsa "Canjear negocio" e introduce el código que te enviaré aparte.';
+  document.getElementById('nu-wa').href = 'https://wa.me/' + (phone ? phone.replace(/[^0-9]/g,'') : '') + '?text=' + encodeURIComponent(msg);
+  document.getElementById('nu-mail').href = 'mailto:' + (email||'') + '?subject=' + encodeURIComponent('Tu cuenta de GastroGoan') + '&body=' + encodeURIComponent(msg);
+  await pushSaleEntry({ id: genUuid(), date: todayStr(), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin, owner: res.user, email, phone });
+  renderFolders();
+  btn.disabled = false;
+}
+
+/* ============================================================
+   MODAL: NUEVA LICENCIA (solo desde dentro de la carpeta de un cliente)
+   ============================================================ */
+function openNuevaLicencia(user){
+  document.getElementById('modal-root').innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal">
+      <h3>＋ Nueva licencia para ${esc(user)}</h3>
+      <label>Nombre del restaurante (solo para tu registro)</label>
+      <input id="nl-name" placeholder="Ej: Casa Paco - Sucursal 2" onkeydown="if(event.key==='Enter')crearNuevaLicencia('${esc(user)}')">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer"><input type="checkbox" id="nl-plan360" style="width:auto"> Plan 360° (verá su pestaña en la app)</label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer"><input type="checkbox" id="nl-planmensual" style="width:auto"> Plan mensual (solo para tu control)</label>
+      <button class="btn btn-primary" id="nl-btn" onclick="crearNuevaLicencia('${esc(user)}')" style="margin-top:8px">Generar código</button>
+      <div id="nl-out" class="hidden">
+        <div class="key-out" id="nl-key"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <a class="btn btn-wa" style="flex:1" id="nl-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
+          <a class="btn btn-light" style="flex:1" id="nl-mail">✉️ Email</a>
+        </div>
+      </div>
+      <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
+    </div>
+  </div>`;
+}
+async function crearNuevaLicencia(user){
+  const btn = document.getElementById('nl-btn');
+  btn.disabled = true;
+  const raw = document.getElementById('nl-name').value.trim();
+  const plan360 = document.getElementById('nl-plan360').checked;
+  const planMensual = document.getElementById('nl-planmensual').checked;
+  let code;
+  try{ code = await claimUniqueBizCode(); }
+  catch(e){ alert('No se pudo generar el código: ' + e.message); btn.disabled = false; return; }
+  if(plan360){
+    try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({plan360: true}); }
+    catch(e){ console.error('No se pudo marcar el Plan 360° en issuedCodes', e); }
+  }
+  const fecha = todayStr();
+  document.getElementById('nl-key').innerHTML = `Código de negocio: ${esc(code)}`;
+  document.getElementById('nl-out').classList.remove('hidden');
+  const msg = 'Tu código de negocio de GastroGoan 🍽\n\nCódigo: ' + code + '\n\nEntra en la app con tu usuario y PIN, y en la pantalla de negocios pulsa "Canjear negocio" para introducirlo.';
+  const cuenta = sales.find(s => s.kind==='cuenta' && s.value===user);
+  document.getElementById('nl-wa').href = 'https://wa.me/' + (cuenta && cuenta.phone ? cuenta.phone.replace(/[^0-9]/g,'') : '') + '?text=' + encodeURIComponent(msg);
+  document.getElementById('nl-mail').href = 'mailto:' + (cuenta && cuenta.email || '') + '?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
+  await pushSaleEntry({ id: genUuid(), date: fecha, name: raw || '(sin nombre)', kind: 'negocio', value: code, owner: user, proximoPago: addYearsStr(fecha, 1), plan360, planMensual });
+  openFolders.add(user);
+  renderFolders(); renderCalendario();
+  btn.disabled = false;
+}
+
+/* ============================================================
+   CALENDARIO ANUAL DE COBROS
+   ============================================================ */
+let calYear = new Date().getFullYear();
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+/* Las licencias de antes del cambio a 100€/año recurrente no tenían ningún
+   "próximo cobro" real: aquí se les da uno por defecto (fecha de alta + 1
+   año), y en la inmensa mayoría de los casos esa fecha YA PASÓ hace tiempo.
+   Si el calendario solo mirase el mes/año exacto de esa fecha, todas esas
+   licencias quedarían enterradas en un año anterior y jamás se verían al
+   abrir el calendario de hoy — el fallo que reportó el dueño ("el calendario
+   no refleja las licencias a cobrar"). Por eso los atrasados se sacan a un
+   bloque aparte, SIEMPRE visible, sin depender del año que se esté mirando. */
+function renderCalendario(){
+  document.getElementById('cal-year-lbl').textContent = calYear;
+  const hoy = todayStr();
+  const activas = sales.filter(s => s.kind === 'negocio' && !s.anulada).map(l => ({
+    ...l, proximoPago: l.proximoPago || (l.date ? addYearsStr(l.date, 1) : null)
+  })).filter(l => l.proximoPago);
+
+  const atrasadas = activas.filter(l => l.proximoPago < hoy).sort((a,b) => a.proximoPago.localeCompare(b.proximoPago));
+  const alDia = activas.filter(l => l.proximoPago >= hoy);
+
+  document.getElementById('cal-atrasados-wrap').innerHTML = atrasadas.length ? `<div class="cal-atrasados">
+    <h4>⚠️ Atrasados — ${atrasadas.length} licencia(s) con el cobro ya vencido</h4>
+    ${atrasadas.map(l => `<div class="cal-lic" onclick="irACobro('${esc(l.owner)}','${esc(l.id)}')">
+        <span>${esc(l.value)} · ${esc(l.name||'')} — vencía el ${esc(l.proximoPago)}</span><span>${esc(l.owner||'')}</span>
+      </div>`).join('')}
+  </div>` : '';
+
+  const porMes = Array.from({length:12}, () => []);
+  alDia.forEach(l => {
+    const [y, m] = l.proximoPago.split('-').map(Number);
+    if(y === calYear) porMes[m-1].push(l);
+  });
+  document.getElementById('cal-grid').innerHTML = MESES.map((nombre, i) => {
+    const lics = porMes[i].sort((a,b) => a.proximoPago.localeCompare(b.proximoPago));
+    return `<div class="cal-mes">
+      <h4>${nombre}</h4>
+      ${lics.length ? lics.map(l => `<div class="cal-lic" onclick="irACobro('${esc(l.owner)}','${esc(l.id)}')">
+          <span>${esc(l.value)} · ${esc(l.name||'')}</span><span>${esc(l.proximoPago.slice(8,10))}</span>
+        </div>`).join('') : `<div class="cal-vacio">Sin cobros</div>`}
+    </div>`;
+  }).join('');
+}
+function irACobro(user, licId){
+  setTab('clientes');
+  if(user) openFolders.add(user);
+  renderFolders();
+  setTimeout(() => {
+    const el = document.getElementById('lic-' + licId);
+    if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline = '2px solid var(--brand-orange)'; setTimeout(()=>el.style.outline='', 2000); }
+  }, 50);
+}
+
+/* ============================================================
+   HISTORIAL (opcional, plano y cronológico)
+   ============================================================ */
+function renderHistorial(){
+  document.getElementById('hist-count').textContent = `· ${sales.length} entradas`;
+  document.getElementById('hist-body').innerHTML = sales.map(s => `<tr>
+    <td>${esc(s.date)}</td><td>${esc(s.name)}</td><td>${esc(s.kind)}</td>
+    <td class="key">${esc(s.value)}</td><td>${esc(s.owner||'')}</td>
+    <td>${s.anulada ? 'Revocada ' + esc(s.anulada) : 'Activa'}</td>
+  </tr>`).join('');
+}
+function exportCSV(){
+  const csv = 'Fecha;Cliente;Tipo;Dato;Cuenta;Estado\n' + sales.map(s => `${s.date};${s.name};${s.kind};${s.value};${s.owner||''};${s.anulada ? 'Revocada '+s.anulada : 'Activa'}`).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'ventas-gastrogoan.csv';
+  a.click();
+}
+</script>
+</body>
+</html>

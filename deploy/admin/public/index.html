@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GastroGoan · Panel de administración (PRIVADO)</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<style>
+/* Mismo sistema de diseño que la app (css/styles.css) y que admin-panel/app.html:
+   nórdico, negro humo + verde oliva, cero radios, Schibsted Grotesk + IBM Plex Mono. */
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/schibsted-grotesk-400-normal.woff2") format("woff2");}
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/schibsted-grotesk-700-normal.woff2") format("woff2");}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/ibm-plex-mono-500-normal.woff2") format("woff2");}
+:root{
+  --ink:#1C1A17; --olive:#4A5D4E; --cream:#F1EFE9; --bg:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
+  --text:#1C1A17; --body:#3D3A34; --muted:#716C65;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Schibsted Grotesk',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--body);min-height:100vh;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:640px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);padding:18px}
+label{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px;color:var(--muted)}
+input{width:100%;border:1px solid var(--border);padding:11px;font-size:14px;font-family:inherit;background:#fff;min-height:46px;color:var(--text)}
+input:focus{outline:none;border-color:var(--ink)}
+.muted{color:var(--muted);font-size:12.5px;line-height:1.5}
+.btn{border:1px solid var(--border);padding:12px 18px;min-height:46px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;
+     text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center;background:#fff;color:var(--text);width:100%}
+.btn-primary{background:var(--ink);border-color:var(--ink);color:#FAF8F4}
+.btn-primary:hover{background:var(--olive);border-color:var(--olive)}
+.hidden{display:none!important}
+#login-gate{margin-top:60px}
+#login-gate h1{font-size:18px;margin-bottom:6px}
+h1{font-family:'Schibsted Grotesk',sans-serif;font-weight:700;letter-spacing:-.01em}
+.folders{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:20px}
+.folder-tile{background:var(--surface);border:1px solid var(--border);padding:28px 20px;text-align:center;cursor:pointer;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:8px;align-items:center}
+.folder-tile:hover{background:var(--cream)}
+.folder-tile .ico{width:48px;height:48px;background:var(--ink);color:#FAF8F4;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+.folder-tile h2{font-size:16px}
+.folder-tile p{font-size:12.5px;color:var(--muted)}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+</style>
+</head>
+<body>
+
+<div id="login-gate" class="wrap">
+  <div class="card">
+    <h1>🔑 Panel de administración GastroGoan</h1>
+    <p class="muted" style="margin-bottom:14px">Archivo privado. Inicia sesión con tu email y contraseña de administrador (Firebase Authentication).</p>
+    <label>Email</label>
+    <input id="login-email" type="email" placeholder="gastrogoan@gmail.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    <label style="margin-top:10px">Contraseña</label>
+    <input id="login-pass" type="password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="margin-top:10px" onclick="doLogin()">Entrar</button>
+    <p id="login-status" class="muted" style="margin-top:6px"></p>
+  </div>
+</div>
+
+<div id="panel" class="wrap hidden">
+  <header>
+    <h1>Panel de administración GastroGoan</h1>
+    <button class="btn" style="width:auto" onclick="doLogout()">Salir</button>
+  </header>
+  <p class="muted">Elige dónde quieres trabajar.</p>
+  <div class="folders">
+    <a class="folder-tile" href="app.html">
+      <div class="ico">GG</div>
+      <h2>App</h2>
+      <p>Cuentas, códigos de negocio, ventas y calendario de cobros</p>
+    </a>
+    <a class="folder-tile" href="plan360.html">
+      <div class="ico">360</div>
+      <h2>Plan 360°</h2>
+      <p>Tus clientes de coaching: GG, día 0, presencial, trabajo y resumen</p>
+    </a>
+  </div>
+</div>
+
+<script>
+const PLATFORM_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
+  authDomain: "plataforma-gastrogoan.firebaseapp.com",
+  databaseURL: "https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "plataforma-gastrogoan",
+  storageBucket: "plataforma-gastrogoan.firebasestorage.app",
+  messagingSenderId: "894218847556",
+  appId: "1:894218847556:web:2fa1f699489790bb5f8311"
+};
+function getApp(){
+  try{ return firebase.app('platform'); }
+  catch(e){ return firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
+}
+async function doLogin(){
+  const statusEl = document.getElementById('login-status');
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if(!email || !pass){ statusEl.textContent = 'Escribe email y contraseña.'; return; }
+  statusEl.textContent = 'Entrando...';
+  try{
+    const app = getApp();
+    await app.auth().signInWithEmailAndPassword(email, pass);
+    onLoggedIn();
+  }catch(e){
+    console.error(e);
+    statusEl.textContent = '⚠️ No se pudo entrar (' + (e.message || e.code || 'error') + ').';
+  }
+}
+function doLogout(){
+  getApp().auth().signOut();
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('login-gate').classList.remove('hidden');
+}
+function onLoggedIn(){
+  document.getElementById('login-gate').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+}
+try{
+  if(typeof firebase !== 'undefined') getApp().auth().onAuthStateChanged(user => {
+    if(user && user.email) onLoggedIn();
+  });
+}catch(e){ console.error('No se pudo comprobar la sesión persistida', e); }
+</script>
+</body>
+</html>
