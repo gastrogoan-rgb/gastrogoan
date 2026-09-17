@@ -1,0 +1,6 @@
+{
+  // Panel privado del dueño: admin.gastrogoan.com (nunca enlazado desde ningún sitio publico)
+  "name": "gastrogoanadmin",
+  "compatibility_date": "2025-01-01",
+  "assets": { "directory": "./public" }
+}

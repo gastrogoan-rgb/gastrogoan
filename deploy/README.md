@@ -1,11 +1,12 @@
 # Publicar GastroGoan
 
-Dos sitios estáticos, servidos desde este repositorio:
+Tres sitios estáticos, servidos desde este repositorio:
 
 | Carpeta | Se publica en | Qué es |
 |---|---|---|
 | `deploy/app/public` | `app.gastrogoan.com` | La app de gestión (+ `sw.js` y `version.json`) |
 | `deploy/reservas/public` | `reservas.gastrogoan.com` | La web pública de reservas y pedidos |
+| `deploy/admin/public` | `admin.gastrogoan.com` | Panel privado del dueño: licencias (`app.html`) y Plan 360º (`plan360.html`) — **nunca enlazado desde ningún sitio público** |
 
 **Nunca se editan a mano.** Salen de `bash build.sh` y se copian con
 `bash deploy/actualizar.sh`. Si se editan aquí, el siguiente build los pisa.
@@ -72,12 +73,19 @@ Como `app.` y `reservas.` son subdominios, **Pages funciona y Workers no**.
 Cloudflare → **Workers & Pages** → **Create** → pestaña **Pages** →
 **Connect to Git** → este repositorio.
 
-| | app | reservas |
-|---|---|---|
-| Framework preset | **None** | **None** |
-| Build command | *(vacío)* | *(vacío)* |
-| Build output directory | `deploy/app/public` | `deploy/reservas/public` |
-| Production branch | `main` | `main` |
+| | app | reservas | admin |
+|---|---|---|---|
+| Framework preset | **None** | **None** | **None** |
+| Build command | *(vacío)* | *(vacío)* | *(vacío)* |
+| Build output directory | `deploy/app/public` | `deploy/reservas/public` | `deploy/admin/public` |
+| Production branch | `main` | `main` | `main` |
+
+⚠️ **El sitio `admin` no lleva `Custom domain` público en el sentido normal**:
+se le pone igualmente `admin.gastrogoan.com` (paso 6 más abajo), pero ese
+subdominio **no se enlaza desde ningún sitio** — ni desde `gastrogoan.com`, ni
+desde la app, ni desde `robots.txt`. Solo lo conoce quien lo tiene guardado.
+La seguridad real la pone Firebase (solo tu email de admin puede escribir
+nada), pero no hace falta ponerle un cartel encima.
 
 ⚠️ Con un *framework preset* distinto de None, Cloudflare esconde el campo de
 la carpeta de salida y decide él: por ahí se pierde un rato.

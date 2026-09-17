@@ -5195,6 +5195,7 @@ function syncPublicMirror(){
    cuando de verdad ha cambiado, así que un negocio ya dado de alta no vuelve
    a tocar la plataforma en toda su vida. */
 const TENANT_LOOKUP_PUBLICADO_LS = 'gastrogoan_tenantlookup_publicado';
+const COACHING360_PUBLICADO_LS = 'gastrogoan_coaching360_publicado';
 function publishTenantLookup(tenantId, config){
   if(!tenantId || !config) return;
   const huella = tenantId + '|' + config.apiKey + '|' + config.databaseURL;
@@ -5206,6 +5207,24 @@ function publishTenantLookup(tenantId, config){
     }).then(() => {
       try{ localStorage.setItem(TENANT_LOOKUP_PUBLICADO_LS, huella); }catch(e){}
     }).catch(e => console.error('Error publicando la referencia del negocio', e));
+  }).catch(()=>{});
+  publishCoaching360Pointer(tenantId);
+}
+
+// Puntero mínimo para que admin-panel/plan360.html arme solo la lista de
+// clientes del coach, sin que nadie tenga que copiarle el tenantId a mano.
+// Solo escribe si el plan está activo, y solo cuando el nombre cambia (la
+// huella evita escrituras de sobra en cada arranque).
+function publishCoaching360Pointer(tenantId){
+  if(!DB.business.plan360) return;
+  const nombre = (DB.business.name || '(sin nombre)').slice(0, 200);
+  const huella = 'c360|' + tenantId + '|' + nombre;
+  try{ if(localStorage.getItem(COACHING360_PUBLICADO_LS) === huella) return; }catch(e){}
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    app.database().ref('gastrogoan/coaching360/' + tenantId).set({name: nombre, updatedAt: Date.now()})
+      .then(() => { try{ localStorage.setItem(COACHING360_PUBLICADO_LS, huella); }catch(e){} })
+      .catch(e => console.error('Error publicando el puntero de Plan 360°', e));
   }).catch(()=>{});
 }
 function lookupTenantFirebaseConfig(tenantId){
