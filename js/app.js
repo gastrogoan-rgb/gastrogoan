@@ -5684,13 +5684,29 @@ function dataMaintenanceCutoff(){
    datos). Solo afecta a histórico del TPV; recetas, cartas, empleados,
    etc. nunca se tocan.
    ============================================================ */
-function checkArchiveReminder(){
+// ⚠️ (17/09) Antes esto encendía un botón "Archivar" fijo en la cabecera,
+// macizo y en rojizo, permanentemente al lado de "Actualizar" mientras
+// hubiera 50+ registros antiguos — se veía apelotonado y no se podía
+// descartar. Ahora sigue el MISMO patrón que checkBackupReminder: avisa una
+// vez al día como mucho, solo al propietario, con un modal que deja elegir
+// "Ahora no" o ir a archivar — no una pieza fija en la barra superior.
+const ARCHIVE_REMINDER_DAY_KEY = 'gastrogoan_archive_reminder_day';
+function oldDataCount(){
   const cutoff = dataMaintenanceCutoff();
-  const oldCount = DB.sales.filter(s => s.date && s.date < cutoff).length
+  return DB.sales.filter(s => s.date && s.date < cutoff).length
     + DB.reservations.filter(r => r.date && r.date < cutoff && (r.status==='completada'||r.status==='cancelada')).length
     + DB.cashClosures.filter(c => c.fecha && c.fecha < cutoff).length;
-  const btn = document.getElementById('archive-reminder-btn');
-  if(btn) btn.style.display = oldCount >= 50 ? '' : 'none';
+}
+function checkArchiveReminder(){
+  if(oldDataCount() < 50) return;
+  // Igual que el recordatorio de copia de seguridad: solo al propietario,
+  // que es quien puede archivar; a un empleado no le sirve de nada.
+  const session = getAccessSession();
+  if(!session || session.type !== 'owner') return;
+  const hoy = todayStr();
+  try{ if(localStorage.getItem(ARCHIVE_REMINDER_DAY_KEY) === hoy) return; }catch(e){}
+  try{ localStorage.setItem(ARCHIVE_REMINDER_DAY_KEY, hoy); }catch(e){}
+  openArchiveReminderModal();
 }
 
 function goToArchiveFromReminder(){
@@ -5909,6 +5925,20 @@ function checkBackupReminder(){
   try{ localStorage.setItem(BACKUP_REMINDER_DAY_KEY, hoy); }catch(e){}
   openBackupReminderModal();
 }
+function openArchiveReminderModal(){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-archive"></i> ${t('hdr.archive')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13.5px">${t('mn.data.archiveReminderBody').replace('${n}', oldDataCount())}</p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.notNow')}</button>
+      <button class="btn btn-primary" onclick="closeModal();goToArchiveFromReminder()"><i class="ti ti-archive"></i> ${t('mn.data.archiveTitle')}</button>
+    </div>
+  `);
+}
+
 function openBackupReminderModal(){
   const never = daysSinceLastBackup() === Infinity;
   openModal(`
