@@ -2028,7 +2028,7 @@ async function verifyCodeIssuedOnPlatform(code){
   try{
     const snap = await withTimeout(app.database().ref('gastrogoan/issuedCodes/' + code).once('value'), 12000);
     if(snap === null) return null;
-    return snap.exists();
+    return snap.exists() ? (snap.val() || true) : false;
   }catch(e){
     console.error('Error comprobando el código contra la plataforma', e);
     return null;
@@ -2056,7 +2056,7 @@ async function redeemBusinessCode(code){
   if(issued === null) return {lic: null, reason: 'offline'};
   if(issued === false) return {lic: null, reason: 'unknown'};
 
-  const lic = {code, tenantId: ggBizTenantId(code)};
+  const lic = {code, tenantId: ggBizTenantId(code), plan360: !!(issued && issued.plan360)};
   const login = getOwnerLogin();
   // Sin cuenta (dispositivo a medio configurar) se canjea igual: la lista
   // de negocios se vinculará en cuanto entre con su cuenta.
@@ -2832,6 +2832,7 @@ async function activateLicenseFromGate(){
   }
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
+  if(lic.plan360) DB.business.plan360 = true;
   saveDB();
   // El código de negocio de este slot es el mismo que el de la licencia —
   // es lo que se usará después para que los empleados entren desde
@@ -2879,7 +2880,13 @@ function continuePendingOwnerSetup(){
   // es el selector de negocios vacío, con su botón de canjear — no el
   // asistente de configuración de un negocio que aún no existe.
   if(!ownerHasAnyBusiness()) return false;
-  if(!getLicense()){ showActivationGate(); return true; }
+  const lic0 = getLicense();
+  if(!lic0){ showActivationGate(); return true; }
+  // addNewBusiness/addSucursal canjean la licencia ANTES de que exista este
+  // slot (ver redeemBusinessCode): el nuevo hueco arranca con DB vacía y el
+  // aviso de Plan 360° se pierde si no se copia aquí, en el primer arranque
+  // del slot recién creado.
+  if(lic0.plan360 && !DB.business.plan360) DB.business.plan360 = true;
   if(!getCloudConfig()){ showFirebaseSetupGate(); return true; }
   if(!DB.business.extConnPromptSeen){ showExternalConnectionsPrompt(); return true; }
   if(!DB.business.tourSeen){ promptAppTour(); return true; }

@@ -720,6 +720,8 @@ function openNuevaLicencia(user){
       <h3>＋ Nueva licencia para ${esc(user)}</h3>
       <label>Nombre del restaurante (solo para tu registro)</label>
       <input id="nl-name" placeholder="Ej: Casa Paco - Sucursal 2" onkeydown="if(event.key==='Enter')crearNuevaLicencia('${esc(user)}')">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer"><input type="checkbox" id="nl-plan360" style="width:auto"> Plan 360° (verá su pestaña en la app)</label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer"><input type="checkbox" id="nl-planmensual" style="width:auto"> Plan mensual (solo para tu control)</label>
       <button class="btn btn-primary" id="nl-btn" onclick="crearNuevaLicencia('${esc(user)}')" style="margin-top:8px">Generar código</button>
       <div id="nl-out" class="hidden">
         <div class="key-out" id="nl-key"></div>
@@ -736,9 +738,15 @@ async function crearNuevaLicencia(user){
   const btn = document.getElementById('nl-btn');
   btn.disabled = true;
   const raw = document.getElementById('nl-name').value.trim();
+  const plan360 = document.getElementById('nl-plan360').checked;
+  const planMensual = document.getElementById('nl-planmensual').checked;
   let code;
   try{ code = await claimUniqueBizCode(); }
   catch(e){ alert('No se pudo generar el código: ' + e.message); btn.disabled = false; return; }
+  if(plan360){
+    try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({plan360: true}); }
+    catch(e){ console.error('No se pudo marcar el Plan 360° en issuedCodes', e); }
+  }
   const fecha = todayStr();
   document.getElementById('nl-key').innerHTML = `Código de negocio: ${esc(code)}`;
   document.getElementById('nl-out').classList.remove('hidden');
@@ -746,7 +754,7 @@ async function crearNuevaLicencia(user){
   const cuenta = sales.find(s => s.kind==='cuenta' && s.value===user);
   document.getElementById('nl-wa').href = 'https://wa.me/' + (cuenta && cuenta.phone ? cuenta.phone.replace(/[^0-9]/g,'') : '') + '?text=' + encodeURIComponent(msg);
   document.getElementById('nl-mail').href = 'mailto:' + (cuenta && cuenta.email || '') + '?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  await pushSaleEntry({ id: genUuid(), date: fecha, name: raw || '(sin nombre)', kind: 'negocio', value: code, owner: user, proximoPago: addYearsStr(fecha, 1) });
+  await pushSaleEntry({ id: genUuid(), date: fecha, name: raw || '(sin nombre)', kind: 'negocio', value: code, owner: user, proximoPago: addYearsStr(fecha, 1), plan360, planMensual });
   openFolders.add(user);
   renderFolders(); renderCalendario();
   btn.disabled = false;

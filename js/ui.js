@@ -1601,6 +1601,7 @@ const FOLDERS = {
       {id:'minegocio', icon:'ti-building-store'},
       {id:'dashboard', icon:'ti-layout-dashboard'},
       {id:'economia', icon:'ti-coin'},
+      {id:'plan360', icon:'ti-compass'},
     ]
   }
 };
@@ -1961,6 +1962,7 @@ function renderView(view){
     case 'distribucion': renderDistribucion(); break;
     case 'minegocio': renderMiNegocio(); break;
     case 'manual': renderManual(); break;
+    case 'plan360': renderPlan360(); break;
   }
   requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
 }
@@ -1996,7 +1998,10 @@ function renderFolder(){
   // Un empleado no tiene "Inicio": solo existe su propia área de trabajo.
   if(homeBtn) homeBtn.style.display = (session && session.type === 'employee') ? 'none' : '';
   const hiddenIds = editUnlocked ? [] : (HIDDEN_MODULES_WHEN_LOCKED[currentFolder] || []);
-  const visibleModules = f.modules.filter(m => !hiddenIds.includes(m.id));
+  // La pestaña Plan 360º solo tiene sentido para los negocios que lo
+  // contrataron: al resto (la inmensa mayoría) les sobraría una pestaña
+  // vacía que no van a usar nunca.
+  const visibleModules = f.modules.filter(m => !hiddenIds.includes(m.id) && (m.id !== 'plan360' || (DB.business && DB.business.plan360)));
   document.getElementById('folder-modules').innerHTML = visibleModules.map(m => `
     <div class="module-card" onclick="navigate('${m.id}')">
       <i class="ti ${m.icon} module-icon"></i>
