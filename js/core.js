@@ -2085,27 +2085,82 @@ async function redeemBusinessCode(code){
 /* ============================================================
    PLAN 360° — programa de 30 días
    ============================================================
-   Contenido de referencia (Marcos lo va rellenando día a día). Al activar
-   Plan 360° en un negocio, ESTA plantilla se COPIA entera dentro de
-   DB.business.plan360Program: a partir de ahí cada negocio tiene su propia
-   copia, editable sin tocar la plantilla ni la de ningún otro cliente —
-   igual que addSucursal copia la carta de un negocio a otro sin dejarlas
-   enganchadas. Cambiar esta plantilla solo afecta a los negocios que
-   activen el plan DESPUÉS del cambio. */
-const PLAN360_DEFAULT_PROGRAM = Array.from({length: 30}, (_, i) => ({
-  title: 'Día ' + (i + 1),
-  task: '(Contenido pendiente de definir)'
-}));
+   Todo esto son PLANTILLAS de referencia (Marcos las va rellenando). Al
+   activar Plan 360° en un negocio, se COPIAN enteras dentro de DB.business:
+   a partir de ahí cada negocio tiene su propia copia, editable sin tocar
+   la plantilla ni la de ningún otro cliente — igual que addSucursal copia
+   la carta de un negocio a otro sin dejarlas enganchadas. Cambiar una
+   plantilla solo afecta a los negocios que activen el plan DESPUÉS.
+
+   Estructura del programa:
+   - GG (plan360Docs): documentos auxiliares (identidad de marca, playbook
+     de sala...). Mismo esqueleto para todos los negocios; Marcos solo
+     rellena el contenido de cada uno.
+   - Día 0 (plan360Intake): cuestionario inicial + en profundidad, lo
+     responde el propio negocio, para que Marcos tenga contexto ANTES de
+     ir a visitarlo.
+   - Días 1 y 2 (plan360Program, phase:'presencial'): el trabajo cara a
+     cara. El día 1 lleva además una nota privada de Marcos (cliente
+     misterioso) y la lista de objetivos por prioridad que se acuerdan con
+     el negocio ese mismo día.
+   - Días 3-28 (plan360Program, phase:'trabajo'): tareas con prioridad
+     (color) y, aparte, se pueden marcar como revisión presencial u online
+     (otro color, independiente de la prioridad). Cada tarea admite
+     comentario Y foto/archivo de prueba.
+   - ★ (resumen final): no se guarda aparte, se calcula solo a partir de
+     objetivos y tareas. */
+const PLAN360_DOCS_TEMPLATE = [
+  {id: 'identidad', title: 'Identidad de marca'},
+  {id: 'playbook-sala', title: 'Playbook de sala'},
+  {id: 'playbook-cocina', title: 'Playbook de cocina'},
+];
+const PLAN360_INTAKE_TEMPLATE = [
+  {
+    title: 'Cuestionario inicial',
+    questions: ['(Pregunta pendiente de definir)'],
+  },
+  {
+    title: 'Cuestionario en profundidad',
+    questions: ['(Pregunta pendiente de definir)'],
+  },
+];
+const PLAN360_DEFAULT_PROGRAM = [
+  {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
+  {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
+  ...Array.from({length: 26}, (_, i) => ({
+    day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3),
+    task: '(Contenido pendiente de definir)',
+  })),
+];
 
 // Crea la copia del negocio la primera vez que hace falta (lectura
 // perezosa: no hay que acordarse de llamarla en cada sitio donde
 // DB.business.plan360 se pone a true).
 function ensurePlan360Program(){
   if(!DB.business.plan360) return;
-  if(Array.isArray(DB.business.plan360Program) && DB.business.plan360Program.length) return;
-  DB.business.plan360Program = PLAN360_DEFAULT_PROGRAM.map((d, i) => ({
-    day: i + 1, title: d.title, task: d.task, done: false
-  }));
+  if(!Array.isArray(DB.business.plan360Docs) || !DB.business.plan360Docs.length){
+    DB.business.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
+  }
+  if(!DB.business.plan360Intake || !Array.isArray(DB.business.plan360Intake.sections)){
+    DB.business.plan360Intake = {
+      sections: PLAN360_INTAKE_TEMPLATE.map(s => ({
+        title: s.title,
+        questions: s.questions.map(q => ({q, a: ''})),
+      })),
+    };
+  }
+  if(!Array.isArray(DB.business.plan360Program) || !DB.business.plan360Program.length){
+    DB.business.plan360Program = PLAN360_DEFAULT_PROGRAM.map(d => {
+      if(d.phase === 'presencial'){
+        return {day: d.day, phase: 'presencial', title: d.title,
+          notes: '', privateNote: '',
+          objectives: d.day === 1 ? [] : undefined};
+      }
+      return {day: d.day, phase: 'trabajo', title: d.title,
+        priority: null, reviewType: null,
+        tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
+    });
+  }
   saveDB();
 }
 
