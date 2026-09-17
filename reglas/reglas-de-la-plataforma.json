@@ -110,9 +110,9 @@
 
       "issuedCodes": {
         "$code": {
-          "//": "El admin puede BORRAR un codigo (anular una licencia). Antes solo se podia crear (!data.exists()), asi que una venta era irreversible: ni una devolucion ni un error al vender tenian arreglo desde el generador.",
+          "//": "El admin puede crear, BORRAR (anular una licencia) o actualizar un codigo ya emitido (p.ej. marcar plan360 despues de crearlo). Antes solo se podia crear o borrar, asi que una venta era irreversible: ni una devolucion ni un error al vender tenian arreglo desde el generador.",
           ".read": "auth != null",
-          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && (!data.exists() || !newData.exists())"
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8"
         }
       },
       "revokedCodes": {

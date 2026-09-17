@@ -5132,6 +5132,19 @@ function irAApartadoMiNegocio(id){
   setTimeout(()=>el.classList.remove('mn-ap-resaltado'), 1400);
 }
 
+// Placeholder: el contenido real (el programa de 30 días, el seguimiento
+// mensual) se decide y se construye más adelante. Por ahora solo aparece la
+// pestaña, y solo en los negocios marcados con la casilla "Plan 360°" al
+// emitirles el código (ver generador-licencias.html).
+function renderPlan360(){
+  if(isGestionLocked('plan360')){ denyGestionAccess(); return; }
+  document.getElementById('plan360-content').innerHTML = `
+    <div class="card" style="text-align:center;padding:40px 20px">
+      <i class="ti ti-compass" style="font-size:40px;color:var(--muted)"></i>
+      <p style="margin-top:12px;color:var(--muted)">${escapeHtml(t('plan360.comingSoon'))}</p>
+    </div>
+  `;
+}
 function renderMiNegocio(){
   if(isGestionLocked('minegocio')){ denyGestionAccess(); return; }
   const b = DB.business || {};

@@ -15,13 +15,9 @@ rm -rf deploy/reservas/public/fonts && cp -r dist/fonts deploy/reservas/public/
 # la app enlaza a app.gastrogoan.com/legal/<archivo> con una direccion fija.
 mkdir -p deploy/app/public/legal
 cp -f legal/*.pdf legal/*.html deploy/app/public/legal/ 2>/dev/null || true
-# El Plan 360º (coaching). UN solo enlace para recordar: /360. Ver plan/README.md.
-mkdir -p deploy/app/public/360
-cp -f plan/comun.js deploy/app/public/
-cp -f plan/360/index.html deploy/app/public/360/
-# /legal/ y /360/ NO son el HTML unico de la app -que lleva las fuentes
-# incrustadas en base64- y piden estos .woff2 como fichero externo. Sin
-# esto, app.gastrogoan.com/360/... cargaba con la tipografia del sistema
-# en vez de la de marca, y nadie lo notaba hasta mirarlo de cerca.
+# /legal/ NO es el HTML unico de la app -que lleva las fuentes incrustadas
+# en base64- y pide estos .woff2 como fichero externo. Sin esto,
+# app.gastrogoan.com/legal/... cargaba con la tipografia del sistema en vez
+# de la de marca, y nadie lo notaba hasta mirarlo de cerca.
 rm -rf deploy/app/public/fonts && cp -r fonts deploy/app/public/fonts
 echo "OK: deploy/ actualizado. Ahora commit y push."
