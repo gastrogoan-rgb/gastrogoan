@@ -5136,167 +5136,191 @@ function irAApartadoMiNegocio(id){
 // plantea aparte: esto es solo el programa inicial. Cada negocio tiene su
 // PROPIA copia editable de todo (ensurePlan360Program, js/core.js), así
 // que tocar algo aquí no afecta a ningún otro cliente.
+//
+// Agenda de fechas REALES (no "Día 1, Día 2..."): el día 1 es el día en
+// que de verdad arranca el programa con ese cliente (DB.business.plan360StartDate,
+// fijado una sola vez). Documentación inicial (antes "Día 0") y Recursos
+// (antes "GG") son sitios aparte, no casillas de la cuadrícula de trabajo.
+// Cada casilla —día, documentación, recursos, resumen— es una pantalla
+// completa a la que se entra (sustituye todo #plan360-content), no un
+// modal flotante encima.
 function plan360PriorityColor(p){
   return p === 'alta' ? 'var(--red)' : p === 'media' ? 'var(--amber)' : p === 'baja' ? 'var(--green)' : null;
 }
-function plan360PriorityBg(p){
-  return p === 'alta' ? 'var(--red-l)' : p === 'media' ? 'var(--amber-l)' : p === 'baja' ? 'var(--green-l)' : '';
+function plan360FormatDate(day){
+  const dstr = plan360DateForDay(day);
+  const [y, m, d] = dstr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return {
+    weekday: dt.toLocaleDateString(localeActual(), {weekday: 'short'}),
+    dayMonth: dt.toLocaleDateString(localeActual(), {day: 'numeric', month: 'short'}),
+  };
 }
 function renderPlan360(){
   if(isGestionLocked('plan360')){ denyGestionAccess(); return; }
   ensurePlan360Program();
+  renderPlan360Grid();
+}
+function renderPlan360Grid(){
   const prog = DB.business.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
   const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.done).length, 0);
   const totalTareas = trabajo.reduce((n, d) => n + d.tasks.length, 0);
-  const casilla = (key, label, extraStyle, badge) => `
-    <div class="card" style="padding:10px;text-align:center;cursor:pointer;min-height:44px;${extraStyle||''}" onclick="${key}">
-      <div style="font-size:13px;font-weight:600;overflow-wrap:break-word">${label}</div>
-      ${badge || ''}
-    </div>`;
-  const dias = prog.map(d => {
+
+  // Semanas de verdad (lunes a domingo), no bloques sueltos de 7 — así la
+  // cuadrícula se lee como un calendario real.
+  const semanas = [];
+  prog.forEach(d => {
+    const fecha = plan360DateForDay(d.day);
+    const [y, m, dd] = fecha.split('-').map(Number);
+    const diaSemana = (new Date(y, m - 1, dd).getDay() + 6) % 7; // 0 = lunes
+    const inicioSemana = addDaysStr(fecha, -diaSemana);
+    let semana = semanas.find(s => s.inicio === inicioSemana);
+    if(!semana){ semana = {inicio: inicioSemana, dias: []}; semanas.push(semana); }
+    semana.dias.push(d);
+  });
+
+  const dayCard = d => {
+    const {weekday, dayMonth} = plan360FormatDate(d.day);
     if(d.phase === 'presencial'){
-      return casilla(`openPlan360Presencial(${d.day})`,
-        escapeHtml(t('plan360.day')) + ' ' + d.day,
-        'background:var(--ink);color:#fff',
-        `<div style="font-size:11px;margin-top:4px;opacity:.8">${escapeHtml(t('plan360.presencial'))}</div>`);
+      return `<div class="p360-day p360-day-presencial" onclick="renderPlan360DayDetail(${d.day})">
+        <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
+        <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
+        <div class="p360-day-tag">${escapeHtml(t('plan360.presencial'))}</div>
+      </div>`;
     }
     const col = plan360PriorityColor(d.priority);
-    const bg = plan360PriorityBg(d.priority);
     const done = d.tasks.length && d.tasks.every(x => x.done);
-    const badges = [
-      d.reviewType ? `<div style="font-size:10px;margin-top:2px;color:var(--muted)">${escapeHtml(t('plan360.reviewType.' + d.reviewType))}</div>` : '',
-      done ? '<i class="ti ti-circle-check" style="color:var(--green);margin-top:4px"></i>' : '',
-    ].join('');
-    return casilla(`openPlan360Trabajo(${d.day})`,
-      escapeHtml(t('plan360.day')) + ' ' + d.day,
-      bg ? `background:${bg};border-color:${col}` : '',
-      badges);
-  }).join('');
+    const doneCount = d.tasks.filter(x => x.done).length;
+    return `<div class="p360-day" style="${col ? 'border-left-color:' + col : ''}" onclick="renderPlan360DayDetail(${d.day})">
+      <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
+      <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
+      ${d.reviewType ? `<div class="p360-day-tag">${escapeHtml(t('plan360.reviewType.' + d.reviewType))}</div>` : ''}
+      ${d.tasks.length ? `<div class="p360-day-progress">${done ? '<i class="ti ti-circle-check"></i>' : doneCount + '/' + d.tasks.length}</div>` : ''}
+    </div>`;
+  };
+
   document.getElementById('plan360-content').innerHTML = `
-    <div class="card" style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.programTitle'))}</div>
-        <div style="font-family:'Plex Mono',monospace;font-size:13px;color:var(--muted)">${hechos} / ${totalTareas}</div>
+    <div class="p360-toprow">
+      <div class="p360-card" onclick="renderPlan360Intake()">
+        <i class="ti ti-clipboard-text"></i>
+        <div><h3>${escapeHtml(t('plan360.initialDocs'))}</h3><p>${escapeHtml(t('plan360.initialDocsDesc'))}</p></div>
+      </div>
+      <div class="p360-card" onclick="renderPlan360Docs()">
+        <i class="ti ti-folder"></i>
+        <div><h3>${escapeHtml(t('plan360.resources'))}</h3><p>${escapeHtml(t('plan360.resourcesDesc'))}</p></div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px">
-      ${casilla('openPlan360Docs()', 'GG', 'background:var(--brand-cream, #FAF8F4)')}
-      ${casilla('openPlan360Intake()', escapeHtml(t('plan360.day')) + ' 0', '')}
-      ${dias}
-      ${casilla('openPlan360Summary()', '<i class="ti ti-star"></i>', 'background:var(--brand-cream, #FAF8F4)')}
+    <div class="card p360-summary-bar" onclick="renderPlan360SummaryPage()">
+      <div><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.programTitle'))}</div>
+      <div class="p360-summary-count"><i class="ti ti-star"></i> ${hechos} / ${totalTareas}</div>
     </div>
+    ${semanas.map((s, i) => `
+      <div class="p360-week">
+        <div class="p360-week-label">${escapeHtml(t('plan360.week'))} ${i + 1}</div>
+        <div class="p360-week-grid">${s.dias.map(dayCard).join('')}</div>
+      </div>
+    `).join('')}
   `;
 }
-
-/* ---- GG: documentos auxiliares ---- */
-function openPlan360Docs(){
-  const docs = DB.business.plan360Docs || [];
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.docsTitle'))}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    ${docs.map((doc, i) => `
-      <div class="field">
-        <label>${escapeHtml(doc.title)}</label>
-        <textarea id="p360-doc-${i}" rows="4">${escapeHtml(doc.body)}</textarea>
-      </div>
-    `).join('')}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${escapeHtml(t('common.cancel'))}</button>
-      <button class="btn btn-primary" onclick="savePlan360Docs()">${escapeHtml(t('common.save'))}</button>
-    </div>
-  `, {xl: true});
-}
-function savePlan360Docs(){
-  const docs = DB.business.plan360Docs || [];
-  docs.forEach((doc, i) => { doc.body = (document.getElementById('p360-doc-' + i).value || '').trim(); });
-  saveDB();
-  closeModal();
+function plan360PageHeader(title, subtitle){
+  return `<button class="btn btn-sm btn-back" onclick="renderPlan360Grid()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(title)}</div>
+    ${subtitle ? `<div class="view-subtitle">${escapeHtml(subtitle)}</div>` : ''}`;
 }
 
-/* ---- Día 0: cuestionario inicial + en profundidad, lo rellena el negocio ---- */
-function openPlan360Intake(){
+/* ---- Documentación inicial (antes "Día 0"): lo responde el negocio ---- */
+function renderPlan360Intake(){
   const sections = (DB.business.plan360Intake || {}).sections || [];
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.day'))} 0 — ${escapeHtml(t('plan360.intakeTitle'))}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    ${sections.map((s, si) => `
-      <div style="font-weight:600;margin:12px 0 6px">${escapeHtml(s.title)}</div>
-      ${s.questions.map((q, qi) => `
-        <div class="field">
-          <label>${escapeHtml(q.q)}</label>
-          <textarea id="p360-intake-${si}-${qi}" rows="2">${escapeHtml(q.a)}</textarea>
-        </div>
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(t('plan360.initialDocs'), t('plan360.initialDocsDesc'))}
+    <div class="card" style="margin-top:14px">
+      ${sections.map((s, si) => `
+        <div style="font-weight:600;margin:${si ? '18' : '0'}px 0 8px">${escapeHtml(s.title)}</div>
+        ${s.questions.map((q, qi) => `
+          <div class="field">
+            <label>${escapeHtml(q.q)}</label>
+            <textarea id="p360-intake-${si}-${qi}" rows="2">${escapeHtml(q.a)}</textarea>
+          </div>
+        `).join('')}
       `).join('')}
-    `).join('')}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${escapeHtml(t('common.cancel'))}</button>
       <button class="btn btn-primary" onclick="savePlan360Intake()">${escapeHtml(t('common.save'))}</button>
     </div>
-  `, {xl: true});
+  `;
 }
 function savePlan360Intake(){
   const sections = (DB.business.plan360Intake || {}).sections || [];
   sections.forEach((s, si) => {
-    s.questions.forEach((q, qi) => {
-      q.a = (document.getElementById('p360-intake-' + si + '-' + qi).value || '').trim();
-    });
+    s.questions.forEach((q, qi) => { q.a = (document.getElementById('p360-intake-' + si + '-' + qi).value || '').trim(); });
   });
   saveDB();
-  closeModal();
+  showToast(t('plan360.saved'));
+  renderPlan360Grid();
 }
 
-/* ---- Días 1-2: presencial ---- */
-function openPlan360Presencial(day){
-  const prog = DB.business.plan360Program || [];
-  const d = prog.find(x => x.day === day);
+/* ---- Recursos (antes "GG"): identidad de marca, playbooks... ---- */
+function renderPlan360Docs(){
+  const docs = DB.business.plan360Docs || [];
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(t('plan360.resources'), t('plan360.resourcesDesc'))}
+    <div class="card" style="margin-top:14px">
+      ${docs.map((doc, i) => `
+        <div class="field">
+          <label>${escapeHtml(doc.title)}</label>
+          <textarea id="p360-doc-${i}" rows="4">${escapeHtml(doc.body)}</textarea>
+        </div>
+      `).join('')}
+      <button class="btn btn-primary" onclick="savePlan360Docs()">${escapeHtml(t('common.save'))}</button>
+    </div>
+  `;
+}
+function savePlan360Docs(){
+  (DB.business.plan360Docs || []).forEach((doc, i) => { doc.body = (document.getElementById('p360-doc-' + i).value || '').trim(); });
+  saveDB();
+  showToast(t('plan360.saved'));
+  renderPlan360Grid();
+}
+
+/* ---- Un día concreto: presencial o de trabajo ---- */
+function renderPlan360DayDetail(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
+  if(d.phase === 'presencial') renderPlan360PresencialDetail(d);
+  else renderPlan360TrabajoDetail(d);
+}
+function renderPlan360PresencialDetail(d){
   const obj = d.objectives;
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.day'))} ${d.day} — ${escapeHtml(d.title)}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+  const {weekday, dayMonth} = plan360FormatDate(d.day);
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    <div class="card" style="margin-top:14px">
+      ${Array.isArray(obj) ? `
+        <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.objectives'))}</div>
+        <div id="p360-obj-list">${obj.map((o, i) => plan360ObjectiveRow(o, i)).join('')}</div>
+        <button class="btn btn-sm" onclick="addPlan360Objective(${d.day})" style="margin:6px 0 16px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addObjective'))}</button>
+        <div class="field">
+          <label>${escapeHtml(t('plan360.privateNote'))} <span style="color:var(--muted)">(${escapeHtml(t('plan360.privateNoteHint'))})</span></label>
+          <textarea id="p360-private" rows="5">${escapeHtml(d.privateNote || '')}</textarea>
+        </div>
+      ` : ''}
+      <div class="field"><label>${escapeHtml(t('plan360.dayTask'))}</label><textarea id="p360-notes" rows="4">${escapeHtml(d.notes || '')}</textarea></div>
+      <button class="btn btn-primary" onclick="savePlan360Presencial(${d.day})">${escapeHtml(t('common.save'))}</button>
     </div>
-    ${Array.isArray(obj) ? `
-      <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.objectives'))}</div>
-      <div id="p360-obj-list">
-        ${obj.map((o, i) => plan360ObjectiveRow(o, i)).join('')}
-      </div>
-      <button class="btn btn-sm" onclick="addPlan360Objective(${day})" style="margin:6px 0 12px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addObjective'))}</button>
-      <div class="field">
-        <label>${escapeHtml(t('plan360.privateNote'))} <span style="color:var(--muted)">(${escapeHtml(t('plan360.privateNoteHint'))})</span></label>
-        <textarea id="p360-private" rows="5">${escapeHtml(d.privateNote || '')}</textarea>
-      </div>
-    ` : ''}
-    <div class="field">
-      <label>${escapeHtml(t('plan360.dayTask'))}</label>
-      <textarea id="p360-notes" rows="4">${escapeHtml(d.notes || '')}</textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${escapeHtml(t('common.cancel'))}</button>
-      <button class="btn btn-primary" onclick="savePlan360Presencial(${day})">${escapeHtml(t('common.save'))}</button>
-    </div>
-  `, {xl: true});
+  `;
 }
 function plan360ObjectiveRow(o, i){
   return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
     <input id="p360-obj-text-${i}" value="${escapeHtml(o.text)}" style="flex:1">
     <select id="p360-obj-prio-${i}">
-      <option value="alta" ${o.priority==='alta'?'selected':''}>${escapeHtml(t('plan360.priority.alta'))}</option>
-      <option value="media" ${o.priority==='media'?'selected':''}>${escapeHtml(t('plan360.priority.media'))}</option>
-      <option value="baja" ${o.priority==='baja'?'selected':''}>${escapeHtml(t('plan360.priority.baja'))}</option>
+      <option value="alta" ${o.priority === 'alta' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.alta'))}</option>
+      <option value="media" ${o.priority === 'media' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.media'))}</option>
+      <option value="baja" ${o.priority === 'baja' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.baja'))}</option>
     </select>
   </div>`;
 }
 function addPlan360Objective(day){
-  const prog = DB.business.plan360Program || [];
-  const d = prog.find(x => x.day === day);
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
-  // Guardamos lo ya escrito antes de repintar, si no se pierde.
   plan360SyncObjectivesFromForm(d);
   d.objectives.push({text: '', priority: 'media', done: false});
   document.getElementById('p360-obj-list').innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(o, i)).join('');
@@ -5310,8 +5334,7 @@ function plan360SyncObjectivesFromForm(d){
   });
 }
 function savePlan360Presencial(day){
-  const prog = DB.business.plan360Program || [];
-  const d = prog.find(x => x.day === day);
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
   if(Array.isArray(d.objectives)){
     plan360SyncObjectivesFromForm(d);
@@ -5321,57 +5344,48 @@ function savePlan360Presencial(day){
   }
   d.notes = (document.getElementById('p360-notes').value || '').trim();
   saveDB();
-  closeModal();
-  renderPlan360();
+  showToast(t('plan360.saved'));
+  renderPlan360Grid();
 }
 
-/* ---- Días 3-28: trabajo ---- */
+/* ---- Días de trabajo ---- */
 const PLAN360_MAX_FILE_BYTES = 350 * 1024; // el archivo se guarda en la nube DEL PROPIO negocio: límite bajo para no gastarle el cupo gratuito
-function openPlan360Trabajo(day){
-  const prog = DB.business.plan360Program || [];
-  const d = prog.find(x => x.day === day);
-  if(!d) return;
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.day'))} ${d.day}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>${escapeHtml(t('plan360.dayTitle'))}</label>
-      <input id="p360-title" value="${escapeHtml(d.title)}">
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <div class="field" style="flex:1;margin-bottom:0">
-        <label>${escapeHtml(t('plan360.priorityLabel'))}</label>
-        <select id="p360-priority">
-          <option value="" ${!d.priority?'selected':''}>—</option>
-          <option value="alta" ${d.priority==='alta'?'selected':''}>${escapeHtml(t('plan360.priority.alta'))}</option>
-          <option value="media" ${d.priority==='media'?'selected':''}>${escapeHtml(t('plan360.priority.media'))}</option>
-          <option value="baja" ${d.priority==='baja'?'selected':''}>${escapeHtml(t('plan360.priority.baja'))}</option>
-        </select>
+function renderPlan360TrabajoDetail(d){
+  const {weekday, dayMonth} = plan360FormatDate(d.day);
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    <div class="card" style="margin-top:14px">
+      <div class="field"><label>${escapeHtml(t('plan360.dayTitle'))}</label><input id="p360-title" value="${escapeHtml(d.title)}"></div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div class="field" style="flex:1;margin-bottom:0">
+          <label>${escapeHtml(t('plan360.priorityLabel'))}</label>
+          <select id="p360-priority">
+            <option value="" ${!d.priority ? 'selected' : ''}>—</option>
+            <option value="alta" ${d.priority === 'alta' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.alta'))}</option>
+            <option value="media" ${d.priority === 'media' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.media'))}</option>
+            <option value="baja" ${d.priority === 'baja' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.baja'))}</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1;margin-bottom:0">
+          <label>${escapeHtml(t('plan360.reviewTypeLabel'))}</label>
+          <select id="p360-reviewtype">
+            <option value="" ${!d.reviewType ? 'selected' : ''}>—</option>
+            <option value="presencial" ${d.reviewType === 'presencial' ? 'selected' : ''}>${escapeHtml(t('plan360.reviewType.presencial'))}</option>
+            <option value="online" ${d.reviewType === 'online' ? 'selected' : ''}>${escapeHtml(t('plan360.reviewType.online'))}</option>
+          </select>
+        </div>
       </div>
-      <div class="field" style="flex:1;margin-bottom:0">
-        <label>${escapeHtml(t('plan360.reviewTypeLabel'))}</label>
-        <select id="p360-reviewtype">
-          <option value="" ${!d.reviewType?'selected':''}>—</option>
-          <option value="presencial" ${d.reviewType==='presencial'?'selected':''}>${escapeHtml(t('plan360.reviewType.presencial'))}</option>
-          <option value="online" ${d.reviewType==='online'?'selected':''}>${escapeHtml(t('plan360.reviewType.online'))}</option>
-        </select>
-      </div>
+      <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.tasks'))}</div>
+      <div id="p360-task-list">${d.tasks.map((tk, i) => plan360TaskRow(tk, i)).join('')}</div>
+      <button class="btn btn-sm" onclick="addPlan360Task(${d.day})" style="margin:6px 0 16px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addTask'))}</button>
+      <button class="btn btn-primary" onclick="savePlan360Trabajo(${d.day})">${escapeHtml(t('common.save'))}</button>
     </div>
-    <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.tasks'))}</div>
-    <div id="p360-task-list">${d.tasks.map((tk, i) => plan360TaskRow(tk, i)).join('')}</div>
-    <button class="btn btn-sm" onclick="addPlan360Task(${day})" style="margin:6px 0 12px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addTask'))}</button>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${escapeHtml(t('common.cancel'))}</button>
-      <button class="btn btn-primary" onclick="savePlan360Trabajo(${day})">${escapeHtml(t('common.save'))}</button>
-    </div>
-  `, {xl: true});
+  `;
 }
 function plan360TaskRow(tk, i){
   return `<div class="card" style="padding:10px;margin-bottom:8px">
     <div style="display:flex;gap:8px;align-items:flex-start">
-      <input type="checkbox" id="p360-task-done-${i}" style="width:auto;margin-top:4px" ${tk.done?'checked':''}>
+      <input type="checkbox" id="p360-task-done-${i}" style="width:auto;margin-top:4px" ${tk.done ? 'checked' : ''}>
       <textarea id="p360-task-text-${i}" rows="2" style="flex:1">${escapeHtml(tk.text)}</textarea>
     </div>
     <div class="field" style="margin:6px 0 0">
@@ -5385,8 +5399,7 @@ function plan360TaskRow(tk, i){
   </div>`;
 }
 function addPlan360Task(day){
-  const prog = DB.business.plan360Program || [];
-  const d = prog.find(x => x.day === day);
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
   plan360SyncTasksFromForm(d);
   d.tasks.push({text: '', done: false, note: '', fileData: null, fileName: null});
@@ -5405,8 +5418,7 @@ function plan360SyncTasksFromForm(d){
   });
 }
 async function savePlan360Trabajo(day){
-  const prog = DB.business.plan360Program || [];
-  const d = prog.find(x => x.day === day);
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
   d.title = (document.getElementById('p360-title').value || '').trim() || d.title;
   d.priority = document.getElementById('p360-priority').value || null;
@@ -5427,8 +5439,8 @@ async function savePlan360Trabajo(day){
     d.tasks[i].fileName = file.name;
   }
   saveDB();
-  closeModal();
-  renderPlan360();
+  showToast(t('plan360.saved'));
+  renderPlan360Grid();
 }
 function plan360ReadFileAsDataUrl(file){
   return new Promise(resolve => {
@@ -5440,7 +5452,7 @@ function plan360ReadFileAsDataUrl(file){
 }
 
 /* ---- ★ Resumen ---- */
-function openPlan360Summary(){
+function renderPlan360SummaryPage(){
   const prog = DB.business.plan360Program || [];
   const dia1 = prog.find(x => x.day === 1);
   const objetivos = (dia1 && dia1.objectives) || [];
@@ -5448,28 +5460,24 @@ function openPlan360Summary(){
   const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.map(tk => ({...tk, day: d.day}))), []);
   const hechas = tareas.filter(tk => tk.done);
   const pendientes = tareas.filter(tk => !tk.done);
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-star"></i> ${escapeHtml(t('plan360.summaryTitle'))}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(t('plan360.summaryTitle'))}
+    <div class="card" style="margin-top:14px">
+      <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.objectives'))}</div>
+      ${objetivos.length ? objetivos.map(o => `
+        <div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+          <i class="ti ${o.done ? 'ti-circle-check' : 'ti-circle'}" style="color:${o.done ? 'var(--green)' : 'var(--muted)'}"></i>
+          <span style="flex:1">${escapeHtml(o.text)}</span>
+          <span style="font-size:11px;color:${plan360PriorityColor(o.priority) || 'var(--muted)'}">${escapeHtml(t('plan360.priority.' + o.priority))}</span>
+        </div>
+      `).join('') : `<p style="color:var(--muted)">${escapeHtml(t('plan360.noObjectives'))}</p>`}
+      <div style="font-weight:600;margin:14px 0 6px">${escapeHtml(t('plan360.tasksDone'))} (${hechas.length}/${tareas.length})</div>
+      ${pendientes.length ? `
+        <div style="font-weight:600;margin:10px 0 6px;color:var(--muted);font-size:12px">${escapeHtml(t('plan360.tasksPending'))}</div>
+        ${pendientes.map(tk => `<div style="padding:4px 0;font-size:13px">${escapeHtml(plan360FormatDate(tk.day).dayMonth)} — ${escapeHtml(tk.text)}</div>`).join('')}
+      ` : ''}
     </div>
-    <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.objectives'))}</div>
-    ${objetivos.length ? objetivos.map(o => `
-      <div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
-        <i class="ti ${o.done ? 'ti-circle-check' : 'ti-circle'}" style="color:${o.done ? 'var(--green)' : 'var(--muted)'}"></i>
-        <span style="flex:1">${escapeHtml(o.text)}</span>
-        <span style="font-size:11px;color:${plan360PriorityColor(o.priority) || 'var(--muted)'}">${escapeHtml(t('plan360.priority.' + o.priority))}</span>
-      </div>
-    `).join('') : `<p style="color:var(--muted)">${escapeHtml(t('plan360.noObjectives'))}</p>`}
-    <div style="font-weight:600;margin:14px 0 6px">${escapeHtml(t('plan360.tasksDone'))} (${hechas.length}/${tareas.length})</div>
-    ${pendientes.length ? `
-      <div style="font-weight:600;margin:10px 0 6px;color:var(--muted);font-size:12px">${escapeHtml(t('plan360.tasksPending'))}</div>
-      ${pendientes.map(tk => `<div style="padding:4px 0;font-size:13px">${escapeHtml(t('plan360.day'))} ${tk.day} — ${escapeHtml(tk.text)}</div>`).join('')}
-    ` : ''}
-    <div class="modal-footer">
-      <button class="btn btn-primary" onclick="closeModal()">${escapeHtml(t('common.close') || t('common.cancel'))}</button>
-    </div>
-  `, {xl: true});
+  `;
 }
 function renderMiNegocio(){
   if(isGestionLocked('minegocio')){ denyGestionAccess(); return; }
