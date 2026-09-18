@@ -5159,7 +5159,20 @@ function plan360FormatDate(day){
 function renderPlan360(){
   if(isGestionLocked('plan360')){ denyGestionAccess(); return; }
   ensurePlan360Program();
+  if(!DB.business.plan360WelcomeShown){ renderPlan360Welcome(false); return; }
   renderPlan360Grid();
+}
+// La carta se ve entera una vez, sola, la primera vez que se entra — y
+// queda siempre accesible después desde Documentación inicial (fromIntake).
+function renderPlan360Welcome(fromIntake){
+  const nombre = (DB.business.plan360Contract && DB.business.plan360Contract.clienteNombre) || DB.business.name || '';
+  const texto = plan360FillTemplate(PLAN360_WELCOME_TEXT, {clienteNombre: nombre});
+  const volver = fromIntake ? `<button class="btn btn-sm btn-back" onclick="renderPlan360Intake()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>` : '';
+  document.getElementById('plan360-content').innerHTML = `
+    ${volver}
+    <div class="card" style="margin-top:${fromIntake ? '10' : '0'}px;white-space:pre-wrap;font-size:14px;line-height:1.6">${escapeHtml(texto)}</div>
+    ${fromIntake ? '' : `<button class="btn btn-primary" style="margin-top:14px" onclick="DB.business.plan360WelcomeShown=true;saveDB();renderPlan360Grid()">${escapeHtml(t('plan360.welcomeContinue'))}</button>`}
+  `;
 }
 function renderPlan360Grid(){
   const prog = DB.business.plan360Program || [];
@@ -5229,12 +5242,24 @@ function plan360PageHeader(title, subtitle){
     ${subtitle ? `<div class="view-subtitle">${escapeHtml(subtitle)}</div>` : ''}`;
 }
 
-/* ---- Documentación inicial (antes "Día 0"): lo responde el negocio ---- */
+/* ---- Documentación inicial (antes "Día 0"): lo responde el negocio ----
+   Lleva tres partes, en el mismo orden en que se entregan de verdad: la
+   carta de bienvenida (para releerla), el contrato + RGPD (se lee y se
+   firma aquí mismo), y el cuestionario inicial. */
 function renderPlan360Intake(){
   const sections = (DB.business.plan360Intake || {}).sections || [];
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(t('plan360.initialDocs'), t('plan360.initialDocsDesc'))}
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Welcome(true)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-mail" style="font-size:20px"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.welcomeLetter'))}</strong></div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+    ${plan360ContractSectionHtml()}
     <div class="card" style="margin-top:14px">
+      <div style="font-weight:700;margin-bottom:10px">${escapeHtml(t('plan360.questionnaire'))}</div>
       ${sections.map((s, si) => `
         <div style="font-weight:600;margin:${si ? '18' : '0'}px 0 8px">${escapeHtml(s.title)}</div>
         ${s.questions.map((q, qi) => `
@@ -5247,6 +5272,67 @@ function renderPlan360Intake(){
       <button class="btn btn-primary" onclick="savePlan360Intake()">${escapeHtml(t('common.save'))}</button>
     </div>
   `;
+}
+/* ---- Contrato + RGPD: se lee y se firma en el sitio (firma electrónica
+   simple: nombre + DNI + fecha, sobre el texto exacto aceptado). No es una
+   firma digital certificada, pero es una aceptación electrónica válida —
+   suficiente para un contrato de servicios de este importe. */
+function plan360ContractSectionHtml(){
+  const c = DB.business.plan360Contract || {};
+  const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
+  if(c.signedAt){
+    return `<div class="card" style="margin-top:14px">
+      <div style="font-weight:700;margin-bottom:10px">${escapeHtml(t('plan360.contract'))}</div>
+      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:10px">${escapeHtml(texto)}</div>
+      <div class="card" style="background:var(--green-l);border-color:var(--green)">
+        <i class="ti ti-circle-check" style="color:var(--green)"></i>
+        ${escapeHtml(t('plan360.signedBy'))} <strong>${escapeHtml(c.signedName)}</strong> (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}
+      </div>
+    </div>`;
+  }
+  return `<div class="card" style="margin-top:14px">
+    <div style="font-weight:700;margin-bottom:10px">${escapeHtml(t('plan360.contract'))}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-c-nombre" value="${escapeHtml(c.clienteNombre || '')}"></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.contractNIF'))}</label><input id="p360-c-nif" value="${escapeHtml(c.clienteNIF || '')}"></div>
+    </div>
+    <div class="field"><label>${escapeHtml(t('plan360.contractAddress'))}</label><input id="p360-c-direccion" value="${escapeHtml(c.clienteDireccion || '')}"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPrice'))}</label><input id="p360-c-precio" value="${escapeHtml(c.precio || '')}"></div>
+      <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPayment'))}</label><input id="p360-c-formapago" value="${escapeHtml(c.formaPago || '')}"></div>
+    </div>
+    <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Intake()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
+    <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:14px">${escapeHtml(texto)}</div>
+    <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-sign-name"></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-sign-dni"></div>
+    </div>
+    <button class="btn btn-primary" onclick="plan360SignContract()">${escapeHtml(t('plan360.signSubmit'))}</button>
+    <p class="view-subtitle" style="margin-top:8px">${escapeHtml(t('plan360.signLegalNote'))}</p>
+  </div>`;
+}
+function plan360SaveContractFields(){
+  const c = DB.business.plan360Contract;
+  c.clienteNombre = (document.getElementById('p360-c-nombre').value || '').trim();
+  c.clienteNIF = (document.getElementById('p360-c-nif').value || '').trim();
+  c.clienteDireccion = (document.getElementById('p360-c-direccion').value || '').trim();
+  c.precio = (document.getElementById('p360-c-precio').value || '').trim();
+  c.formaPago = (document.getElementById('p360-c-formapago').value || '').trim();
+  saveDB();
+}
+function plan360SignContract(){
+  const name = (document.getElementById('p360-sign-name').value || '').trim();
+  const dni = (document.getElementById('p360-sign-dni').value || '').trim();
+  if(!name || !dni){ showToast(t('plan360.signMissing')); return; }
+  plan360SaveContractFields();
+  const c = DB.business.plan360Contract;
+  c.signedName = name;
+  c.signedDNI = dni;
+  c.signedAt = Date.now();
+  saveDB();
+  showToast(t('plan360.saved'));
+  renderPlan360Intake();
 }
 function savePlan360Intake(){
   const sections = (DB.business.plan360Intake || {}).sections || [];
