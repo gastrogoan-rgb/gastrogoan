@@ -2114,16 +2114,156 @@ const PLAN360_DOCS_TEMPLATE = [
   {id: 'playbook-sala', title: 'Playbook de sala'},
   {id: 'playbook-cocina', title: 'Playbook de cocina'},
 ];
+// Cuestionario real de GastroGoan (CUESTIONARIO INICIAL.docx).
 const PLAN360_INTAKE_TEMPLATE = [
   {
-    title: 'Cuestionario inicial',
-    questions: ['(Pregunta pendiente de definir)'],
+    title: 'Datos de la empresa',
+    questions: [
+      'Nombre comercial', 'Razón social', 'CIF/NIF',
+      'Estructura societaria (nombres, apellidos y %)', 'Dirección completa',
+      'Localidad y provincia', 'Teléfono', 'Email', 'Página web',
+      'Redes sociales (Instagram, Facebook, TikTok…)',
+    ],
   },
   {
-    title: 'Cuestionario en profundidad',
-    questions: ['(Pregunta pendiente de definir)'],
+    title: 'Información básica del negocio',
+    questions: [
+      'Tipo de establecimiento (restaurante / bar / cafetería / catering / foodtruck / obrador…)',
+      'Año de apertura', 'Nº de empleados (desglosar por categorías)',
+      'Horario de apertura', 'Nº total de plazas',
+      'Modalidades de servicio (carta / menú del día / delivery…)',
+      'Ticket medio estimado (por persona)', 'Nº de comensales/día promedio',
+    ],
+  },
+  {
+    title: 'Situación actual',
+    questions: [
+      'Gastos fijos mensuales (detallados)', 'Gastos variables (detallados)',
+      'Gasto mensual en materia prima', 'Coste de trabajadores',
+      'Facturación anual aproximada', 'EBITDA',
+      'Principales 3 problemas urgentes a resolver',
+      'Objetivos principales a 3 meses', 'Objetivos principales a 12 meses',
+      'Capacidad de inversión material (hornos, pintura, rótulo…)',
+    ],
   },
 ];
+// Carta de bienvenida real (1- CARTA DE BIENVENIDA NUEVOS CLIENTES.docx).
+// {{cliente}} se sustituye por el nombre que se rellena en el contrato.
+const PLAN360_WELCOME_TEXT =
+`Estimado/a {{cliente}}:
+
+Le doy la más cordial bienvenida al programa 360º de GastroGoan. Agradezco la confianza depositada para acompañarle en el crecimiento de su negocio.
+
+NUESTRO ENFOQUE DE TRABAJO
+
+En GastroGoan aplicamos un método 360° que abarca:
+— Análisis de la situación actual y definición de objetivos.
+— Diseño de estrategias a medida.
+— Implementación y optimización de acciones.
+— Seguimiento y medición de resultados.
+
+FASES DEL PROCESO
+
+— Diagnóstico (1 semana): recopilación de datos y reporte inicial.
+— Planificación estratégica (1 semana): hoja de ruta y plan de acción.
+— Implementación (2,5 meses): ejecución de iniciativas acordadas.
+— Seguimiento y ajustes (opcional): revisión de métricas y optimizaciones continuas.
+
+RESPONSABILIDADES COMPARTIDAS
+
+GastroGoan se compromete a:
+— Aportar su experiencia y herramientas especializadas.
+— Mantener comunicación fluida y reportes periódicos.
+— Adaptar estrategias según necesidades.
+— Tratar su negocio como si fuera el suyo propio.
+
+Usted como cliente se compromete a:
+— Proporcionar información precisa y oportuna.
+— Aplicar las medidas correctivas indicadas.
+— Participar activamente en reuniones y validaciones.
+— Compartir feedback para mejorar continuamente.
+
+PRÓXIMOS PASOS
+
+— Confirmar la recepción de este documento y completar el cuestionario inicial.
+— Realizar el pago correspondiente por los servicios GastroGoan.
+— Leer y firmar el Acuerdo de Servicios y el RGPD, aquí mismo.
+— Agendar la reunión presencial de arranque.
+
+Quedo a su disposición para cualquier duda o comentario.
+
+Un cordial saludo,
+Marcos González Anguiano — GastroGoan`;
+// Contrato real (2. CONTRATO_RGPD.docx). {{cliente}}, {{nif}}, {{direccion}},
+// {{precio}} y {{formaPago}} se sustituyen por lo que se rellene antes de firmar.
+const PLAN360_CONTRACT_TEXT =
+`ACUERDO DE PRESTACIÓN DE SERVICIOS
+
+Partes: de una parte, Marcos González Anguiano (GastroGoan), con DNI 47668150Y y domicilio en Vilafranca del Penedès. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
+
+1. Objeto y alcance
+GastroGoan se compromete a prestar servicios de asesoría gastronómica integral 360°, consistentes en diagnóstico y análisis operativo, financiero y de marketing; diseño e implementación de estrategias a medida; formación de equipo y optimización de procesos; y seguimiento y reporting de resultados con indicadores clave.
+
+2. Duración
+Duración inicial: 3 meses, desde la firma hasta la entrega del informe final y seguimiento.
+
+3. Tarifas y forma de pago
+Precio total del servicio: {{precio}}.
+Modalidad de pago: {{formaPago}}.
+Transferencia bancaria a la cuenta BE24 9677 3509 2638 — Concepto: Programa 360 GastroGoan.
+
+4. Responsabilidades
+GastroGoan se compromete a aportar su experiencia y herramientas especializadas, mantener comunicación fluida y reportes periódicos, adaptar las estrategias según necesidades y mantener confidencial la información del cliente (cláusula 7).
+El cliente se compromete a proporcionar información precisa y oportuna, aplicar las medidas correctivas indicadas en el dosier, participar activamente en reuniones y validaciones, y compartir feedback para mejorar continuamente.
+
+5. Garantías y limitación de responsabilidad
+GastroGoan garantiza la prestación profesional de sus servicios, pero no responde de resultados concretos distintos a los objetivos mutuamente acordados. La responsabilidad total no excederá el importe efectivamente abonado.
+
+6. Propiedad intelectual
+Todos los entregables, metodologías, plantillas y materiales desarrollados permanecen como propiedad de GastroGoan. El cliente recibe una copia exclusiva para uso interno y no comercial.
+
+7. Confidencialidad
+Las partes se someten a lo establecido en el contrato de confidencialidad (RGPD) que forma parte integrante de este acuerdo, más abajo.
+
+8. Terminación anticipada
+El cliente podrá rescindir este contrato dentro de los tres meses que dura el programa, mediante notificación por escrito. En caso de rescisión voluntaria, deberá abonar a GastroGoan el importe restante del precio pactado, exigible en el plazo de treinta días desde la notificación.
+
+9. Resolución de conflictos
+En caso de discrepancias, las partes intentarán solucionarlas amistosamente; si no fuera posible, se someterán a mediación previa y, en última instancia, a los Juzgados y Tribunales de Barcelona.
+
+10. Legislación aplicable
+Ley española.
+
+CONTRATO DE CONFIDENCIALIDAD (RGPD)
+
+1. Definición de información confidencial
+Se considera "información confidencial" todo dato, documento, proceso, know-how, modelo de negocio, informe, presupuesto, plan estratégico, recetas, proveedores, bases de datos, software y cualquier material entregado por la parte reveladora durante la relación.
+
+2. Obligaciones del receptor
+Mantener en estricta reserva la información confidencial; no utilizarla para fines distintos a los acordados; no reproducirla, difundirla ni cederla a terceros sin autorización escrita; adoptar medidas de seguridad equivalentes a las propias. El receptor responde por los incumplimientos de sus empleados, subcontratistas y filiales.
+
+3. Protección de datos
+Si la información confidencial contiene datos personales, las partes cumplirán con la normativa aplicable en materia de protección de datos.
+
+4. Excepciones
+No se considera confidencial la información que sea de dominio público sin culpa del receptor, que el receptor ya poseyera antes de la revelación, que se obtenga legítimamente de un tercero sin obligación de confidencialidad, o que deba revelarse por mandato legal o judicial (notificándolo antes a la parte reveladora).
+
+5. Plazo de vigencia
+Las obligaciones de confidencialidad permanecen vigentes durante la relación contractual y un (1) año posterior a su finalización.
+
+6. Penalizaciones
+El incumplimiento da derecho a la parte reveladora a reclamar daños y perjuicios, con una penalización mínima de 250 € por cada infracción comprobada.
+
+7. Legislación y jurisdicción
+Ley española. Juzgados y Tribunales de Barcelona.`;
+function plan360FillTemplate(text, c){
+  return text
+    .replace(/\{\{cliente\}\}/g, (c && c.clienteNombre) || '________')
+    .replace(/\{\{nif\}\}/g, (c && c.clienteNIF) || '________')
+    .replace(/\{\{direccion\}\}/g, (c && c.clienteDireccion) || '________')
+    .replace(/\{\{precio\}\}/g, (c && c.precio) || '________')
+    .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________');
+}
 const PLAN360_DEFAULT_PROGRAM = [
   {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
   {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
@@ -2167,6 +2307,13 @@ function ensurePlan360Program(){
   if(!DB.business.plan360StartDate){
     DB.business.plan360StartDate = todayStr();
   }
+  if(!DB.business.plan360Contract){
+    DB.business.plan360Contract = {
+      clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '', formaPago: '',
+      signedName: '', signedDNI: '', signedAt: null,
+    };
+  }
+  if(DB.business.plan360WelcomeShown === undefined) DB.business.plan360WelcomeShown = false;
   saveDB();
 }
 
