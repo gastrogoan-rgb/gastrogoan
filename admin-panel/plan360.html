@@ -395,7 +395,10 @@ function ensureRemotePlan360(){
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
     remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
   }
-  if(!remoteBiz.plan360Intake || !Array.isArray(remoteBiz.plan360Intake.sections)){
+  const intakeDesactualizado = remoteBiz.plan360Intake
+    && Array.isArray(remoteBiz.plan360Intake.sections)
+    && remoteBiz.plan360Intake.sections.map(s => s.title).join('|') !== PLAN360_INTAKE_TEMPLATE.map(s => s.title).join('|');
+  if(!remoteBiz.plan360Intake || !Array.isArray(remoteBiz.plan360Intake.sections) || intakeDesactualizado){
     remoteBiz.plan360Intake = {sections: PLAN360_INTAKE_TEMPLATE.map(s => ({title: s.title, questions: s.questions.map(q => ({q, a: ''}))}))};
   }
   if(!Array.isArray(remoteBiz.plan360Program) || !remoteBiz.plan360Program.length){
@@ -541,7 +544,16 @@ function renderIntakePage(){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
-    ${plan360ContractSectionHtml()}
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderContractPage()">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${(remoteBiz.plan360Contract && remoteBiz.plan360Contract.signedAt) ? 'ti-circle-check' : 'ti-file-text'}" style="font-size:20px;${(remoteBiz.plan360Contract && remoteBiz.plan360Contract.signedAt) ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1">
+          <strong>Contrato y RGPD</strong>
+          ${(remoteBiz.plan360Contract && remoteBiz.plan360Contract.signedAt) ? `<div class="p360-day-tag">Firmado por ${esc(remoteBiz.plan360Contract.signedName)}</div>` : ''}
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
     <div class="card" style="margin-top:14px">
       <div style="font-weight:700;margin-bottom:10px">Cuestionario inicial</div>
       ${sections.map((s, si) => `
@@ -560,12 +572,18 @@ function renderWelcomePage(fromIntake){
     <div class="card" style="margin-top:10px;white-space:pre-wrap;font-size:14px;line-height:1.6">${esc(texto)}</div>
   `;
 }
+function renderContractPage(){
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderIntakePage()">← Documentación inicial</button>
+    <h2 style="margin:10px 0 4px">Contrato y RGPD</h2>
+    ${plan360ContractSectionHtml()}
+  `;
+}
 function plan360ContractSectionHtml(){
   const c = remoteBiz.plan360Contract || {};
   const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   if(c.signedAt){
     return `<div class="card" style="margin-top:14px">
-      <div style="font-weight:700;margin-bottom:10px">Contrato y RGPD</div>
       <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:10px">${esc(texto)}</div>
       <div class="card" style="background:var(--green-l);border-color:var(--green)">
         ✓ Firmado por <strong>${esc(c.signedName)}</strong> (${esc(c.signedDNI)}) — ${esc(new Date(c.signedAt).toLocaleString('es-ES'))}
@@ -573,7 +591,6 @@ function plan360ContractSectionHtml(){
     </div>`;
   }
   return `<div class="card" style="margin-top:14px">
-    <div style="font-weight:700;margin-bottom:10px">Contrato y RGPD</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <div class="field" style="flex:1;min-width:200px"><label>Nombre del cliente</label><input id="c-nombre" value="${esc(c.clienteNombre || '')}"></div>
       <div class="field" style="flex:1;min-width:140px"><label>NIF</label><input id="c-nif" value="${esc(c.clienteNIF || '')}"></div>
@@ -583,7 +600,7 @@ function plan360ContractSectionHtml(){
       <div class="field" style="flex:1;min-width:160px"><label>Precio del servicio</label><input id="c-precio" value="${esc(c.precio || '')}"></div>
       <div class="field" style="flex:1;min-width:160px"><label>Forma de pago</label><input id="c-formapago" value="${esc(c.formaPago || '')}"></div>
     </div>
-    <button class="btn btn-sm" onclick="plan360SaveContractFields();renderIntakePage()" style="margin-bottom:10px">Actualizar datos del contrato</button>
+    <button class="btn btn-sm" onclick="plan360SaveContractFields();renderContractPage()" style="margin-bottom:10px">Actualizar datos del contrato</button>
     <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:14px">${esc(texto)}</div>
     <div style="font-weight:600;margin-bottom:6px">Firma aquí (si la recoges tú en persona)</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
@@ -613,7 +630,7 @@ function plan360SignContract(){
   c.signedDNI = dni;
   c.signedAt = Date.now();
   saveRemoteBiz();
-  renderIntakePage();
+  renderContractPage();
 }
 function saveIntake(){
   const sections = (remoteBiz.plan360Intake || {}).sections || [];

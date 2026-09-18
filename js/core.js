@@ -2281,7 +2281,17 @@ function ensurePlan360Program(){
   if(!Array.isArray(DB.business.plan360Docs) || !DB.business.plan360Docs.length){
     DB.business.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
   }
-  if(!DB.business.plan360Intake || !Array.isArray(DB.business.plan360Intake.sections)){
+  // ⚠️ Migración: los negocios que activaron Plan 360º antes de que este
+  // cuestionario tuviera contenido real se habían quedado con la plantilla
+  // vieja ("Pregunta pendiente de definir") para siempre, porque este `if`
+  // solo mira si YA existe algo, no si es la plantilla actual. Se compara
+  // por título de sección: si no coincide con la plantilla de hoy, se
+  // regenera — no hay respuestas de verdad que perder, porque la pregunta
+  // vieja era un cajón de sastre sin sentido.
+  const intakeDesactualizado = DB.business.plan360Intake
+    && Array.isArray(DB.business.plan360Intake.sections)
+    && DB.business.plan360Intake.sections.map(s => s.title).join('|') !== PLAN360_INTAKE_TEMPLATE.map(s => s.title).join('|');
+  if(!DB.business.plan360Intake || !Array.isArray(DB.business.plan360Intake.sections) || intakeDesactualizado){
     DB.business.plan360Intake = {
       sections: PLAN360_INTAKE_TEMPLATE.map(s => ({
         title: s.title,
