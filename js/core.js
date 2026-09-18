@@ -2161,7 +2161,19 @@ function ensurePlan360Program(){
         tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
     });
   }
+  // La agenda es de fechas REALES, no de un contador "Día 1, Día 2...": el
+  // día 1 empieza el día que de verdad arranca el programa con ese cliente.
+  // Se fija una sola vez, la primera vez que se crea el programa.
+  if(!DB.business.plan360StartDate){
+    DB.business.plan360StartDate = todayStr();
+  }
   saveDB();
+}
+
+// Fecha real (YYYY-MM-DD) que le corresponde al día N del programa.
+function plan360DateForDay(day){
+  const start = DB.business.plan360StartDate || todayStr();
+  return addDaysStr(start, day - 1);
 }
 
 // Una licencia guardada es válida si su tenantId es el que de verdad se
