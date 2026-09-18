@@ -190,6 +190,7 @@ async function openClient(tenantId, name){
   document.getElementById('client-name').textContent = name;
   document.getElementById('client-status').textContent = 'Conectando con su nube...';
   document.getElementById('client-grid').innerHTML = '';
+  startDateEditing = false;
   if(currentBizRef) currentBizRef.off();
   currentTenantId = tenantId;
   try{
@@ -297,7 +298,18 @@ function plan360FormatDate(day){
 function plan360PriorityColor(p){ return p === 'alta' ? 'var(--red)' : p === 'media' ? 'var(--amber)' : p === 'baja' ? 'var(--green)' : null; }
 
 /* ---- Cuadrícula (agenda real, agrupada por semanas) ---- */
+let startDateEditing = false;
 function renderStartDateControl(){
+  const fija = remoteBiz.plan360StartDateConfirmed && !startDateEditing;
+  if(fija){
+    const {weekday, dayMonth} = plan360FormatDate(1);
+    document.getElementById('client-startdate').innerHTML = `
+      <label style="margin:0">Fecha de inicio del programa</label>
+      <div style="font-weight:600">${esc(weekday)} · ${esc(dayMonth)}</div>
+      <button class="btn btn-sm" onclick="startDateEditing=true;renderStartDateControl()" title="Modificar la fecha de inicio">✏️</button>
+    `;
+    return;
+  }
   document.getElementById('client-startdate').innerHTML = `
     <label style="margin:0">Fecha de inicio del programa</label>
     <input type="date" id="p360-startdate" value="${esc(remoteBiz.plan360StartDate || todayStr())}" style="width:auto;flex:none;min-width:160px">
@@ -308,6 +320,8 @@ function saveStartDate(){
   const val = document.getElementById('p360-startdate').value;
   if(!val) return;
   remoteBiz.plan360StartDate = val;
+  remoteBiz.plan360StartDateConfirmed = true;
+  startDateEditing = false;
   saveRemoteBiz();
   renderClientGrid();
 }
