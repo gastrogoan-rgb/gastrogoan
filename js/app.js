@@ -5257,7 +5257,16 @@ function renderPlan360Intake(){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
-    ${plan360ContractSectionHtml()}
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Contract()">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${(DB.business.plan360Contract && DB.business.plan360Contract.signedAt) ? 'ti-circle-check' : 'ti-file-text'}" style="font-size:20px;${(DB.business.plan360Contract && DB.business.plan360Contract.signedAt) ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1">
+          <strong>${escapeHtml(t('plan360.contract'))}</strong>
+          ${(DB.business.plan360Contract && DB.business.plan360Contract.signedAt) ? `<div class="p360-day-tag">${escapeHtml(t('plan360.signedBy'))} ${escapeHtml(DB.business.plan360Contract.signedName)}</div>` : ''}
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
     <div class="card" style="margin-top:14px">
       <div style="font-weight:700;margin-bottom:10px">${escapeHtml(t('plan360.questionnaire'))}</div>
       ${sections.map((s, si) => `
@@ -5276,13 +5285,22 @@ function renderPlan360Intake(){
 /* ---- Contrato + RGPD: se lee y se firma en el sitio (firma electrónica
    simple: nombre + DNI + fecha, sobre el texto exacto aceptado). No es una
    firma digital certificada, pero es una aceptación electrónica válida —
-   suficiente para un contrato de servicios de este importe. */
+   suficiente para un contrato de servicios de este importe.
+   Es su propia pantalla (como la carta de bienvenida), no un bloque más
+   suelto dentro de Documentación inicial: un contrato entero de un tirón
+   ahí mezclado con lo demás no queda profesional. */
+function renderPlan360Contract(){
+  document.getElementById('plan360-content').innerHTML = `
+    <button class="btn btn-sm btn-back" onclick="renderPlan360Intake()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.contract'))}</div>
+    ${plan360ContractSectionHtml()}
+  `;
+}
 function plan360ContractSectionHtml(){
   const c = DB.business.plan360Contract || {};
   const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   if(c.signedAt){
     return `<div class="card" style="margin-top:14px">
-      <div style="font-weight:700;margin-bottom:10px">${escapeHtml(t('plan360.contract'))}</div>
       <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:10px">${escapeHtml(texto)}</div>
       <div class="card" style="background:var(--green-l);border-color:var(--green)">
         <i class="ti ti-circle-check" style="color:var(--green)"></i>
@@ -5291,7 +5309,6 @@ function plan360ContractSectionHtml(){
     </div>`;
   }
   return `<div class="card" style="margin-top:14px">
-    <div style="font-weight:700;margin-bottom:10px">${escapeHtml(t('plan360.contract'))}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-c-nombre" value="${escapeHtml(c.clienteNombre || '')}"></div>
       <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.contractNIF'))}</label><input id="p360-c-nif" value="${escapeHtml(c.clienteNIF || '')}"></div>
@@ -5302,7 +5319,7 @@ function plan360ContractSectionHtml(){
       <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPayment'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(c.formaPago || '—')}</div></div>
     </div>
     <p class="view-subtitle" style="margin:-4px 0 10px">${escapeHtml(t('plan360.priceLockedHint'))}</p>
-    <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Intake()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
+    <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Contract()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
     <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:14px">${escapeHtml(texto)}</div>
     <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
@@ -5334,7 +5351,7 @@ function plan360SignContract(){
   c.signedAt = Date.now();
   saveDB();
   showToast(t('plan360.saved'));
-  renderPlan360Intake();
+  renderPlan360Contract();
 }
 function savePlan360Intake(){
   const sections = (DB.business.plan360Intake || {}).sections || [];
