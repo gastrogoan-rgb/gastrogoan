@@ -241,6 +241,26 @@ function ggOwnerId(user){
   return ggOwnerDerive(u + _ggOwnerSecret() + '·owner', 5);
 }
 function generateOwnerPin(){ return ggRandomChars(6); }
+// Idéntico a _ggBizSecret/ggBizTenantId en js/core.js — deriva el tenantId
+// de un código YA EMITIDO, para poder activar Plan 360º con retraso sobre
+// una licencia que se dio de alta antes de que existiera esta casilla.
+function _ggBizSecret(){
+  const c = [117,117,197,112,119,136,197,64,62,64,68,197,127,65];
+  return c.map(x => String.fromCharCode(x - 14)).join('');
+}
+function ggBizTenantId(code){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const secret = _ggBizSecret() + '·tenant';
+  const out = [];
+  let h = ggLicHash(code + secret);
+  for(let g = 0; g < 5; g++){
+    h = ggLicHash(code + secret + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += A[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('');
+}
 
 // Nunca usar toISOString para aritmética de fechas de calendario (desfase de
 // un día en cualquier huso por delante de UTC). Aquí no hace ni falta un
@@ -527,9 +547,50 @@ function renderLicRow(l){
       ` : `
         <button class="btn btn-sm btn-primary" onclick="restablecerLicencia('${esc(l.id)}')">Restablecer la licencia</button>
       `}
+      ${!revocada && l.kind === 'negocio' ? `
+        <button class="btn btn-sm btn-light" onclick="togglePlan360('${esc(l.id)}')">${l.plan360 ? '✓ Plan 360° activo' : 'Activar Plan 360°'}</button>
+      ` : ''}
       <button class="btn btn-sm btn-light" onclick="delSale('${esc(l.id)}')">Quitar del registro</button>
     </div>
   </div>`;
+}
+// Marca (o desmarca) el Plan 360º de una licencia YA EMITIDA — para las
+// que se dieron de alta antes de que existiera la casilla al crearlas.
+// Actualiza issuedCodes (para que quede en el registro) y, si el negocio ya
+// sincronizó alguna vez (tiene tenantLookup), también su nube en directo,
+// para no tener que esperar a que reactive la licencia para que le aparezca
+// la pestaña.
+async function togglePlan360(id){
+  const l = findSale(id);
+  if(!l || l.kind !== 'negocio') return;
+  const code = l.value;
+  const nuevoValor = !l.plan360;
+  try{
+    await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({plan360: nuevoValor});
+  }catch(e){
+    alert('No se pudo actualizar issuedCodes: ' + (e.message || e.code || 'error'));
+    return;
+  }
+  l.plan360 = nuevoValor;
+  saveSales();
+  renderFolders();
+  const tenantId = ggBizTenantId(code);
+  try{
+    const lookupSnap = await getApp().database().ref('gastrogoan/tenantLookup/' + tenantId).once('value');
+    const cfg = lookupSnap.val();
+    if(!cfg || !cfg.apiKey || !cfg.databaseURL){
+      alert('Marcado en el registro. Este negocio todavía no ha sincronizado nunca con su nube, así que verá la pestaña en cuanto lo haga (o al reactivar la licencia).');
+      return;
+    }
+    const appName = 'biz-' + tenantId;
+    let bizApp;
+    try{ bizApp = firebase.app(appName); }catch(e){ bizApp = firebase.initializeApp(cfg, appName); }
+    if(!bizApp.auth().currentUser) await bizApp.auth().signInAnonymously();
+    await bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/business').update({plan360: nuevoValor});
+  }catch(e){
+    console.error(e);
+    alert('Marcado en el registro, pero no se pudo avisar a su nube en directo: ' + (e.message || e.code || 'error') + '. Le aparecerá igualmente la próxima vez que sincronice.');
+  }
 }
 function findSale(id){ return sales.find(s => s.id === id); }
 function copiar(txt){ navigator.clipboard.writeText(txt).then(() => alert('Copiado: ' + txt)); }
