@@ -66,6 +66,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-day-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
 .p360-day-presencial{background:var(--ink);border-left-color:var(--ink);color:#fff}
 .p360-day-presencial .p360-day-weekday,.p360-day-presencial .p360-day-tag{color:#fff;opacity:.75}
+.p360-task-done .p360-task-text{text-decoration:line-through;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -492,10 +493,10 @@ function savePresencial(day){
 /* ---- Días de trabajo ---- */
 const PLAN360_MAX_FILE_BYTES = 350 * 1024;
 function taskRow(tk, i){
-  return `<div class="card" style="padding:10px;margin-bottom:8px">
+  return `<div class="card p360-task-row${tk.done ? ' p360-task-done' : ''}" id="task-row-${i}" style="padding:10px;margin-bottom:8px">
     <div style="display:flex;gap:8px;align-items:flex-start">
-      <input type="checkbox" id="task-done-${i}" style="width:auto;margin-top:4px" ${tk.done?'checked':''}>
-      <textarea id="task-text-${i}" rows="2" style="flex:1">${esc(tk.text)}</textarea>
+      <i class="ti ${tk.done ? 'ti-circle-check' : 'ti-circle'}" id="task-icon-${i}" data-done="${tk.done ? '1' : '0'}" onclick="toggleTask(${i})" style="cursor:pointer;font-size:24px;flex:none;margin-top:2px;color:${tk.done ? 'var(--green)' : 'var(--border)'}"></i>
+      <textarea id="task-text-${i}" class="p360-task-text" rows="2" style="flex:1">${esc(tk.text)}</textarea>
     </div>
     <div class="field" style="margin:6px 0 0"><label>Comentario</label><textarea id="task-note-${i}" rows="2">${esc(tk.note || '')}</textarea></div>
     <div style="margin-top:6px;font-size:12px;color:var(--muted)">
@@ -541,12 +542,22 @@ function addTask(day){
   d.tasks.push({text: '', done: false, note: '', fileData: null, fileName: null});
   document.getElementById('task-list').innerHTML = d.tasks.map((tk, i) => taskRow(tk, i)).join('');
 }
+function toggleTask(i){
+  const icon = document.getElementById('task-icon-' + i);
+  const row = document.getElementById('task-row-' + i);
+  if(!icon || !row) return;
+  const done = icon.dataset.done !== '1';
+  icon.dataset.done = done ? '1' : '0';
+  icon.className = 'ti ' + (done ? 'ti-circle-check' : 'ti-circle');
+  icon.style.color = done ? 'var(--green)' : 'var(--border)';
+  row.classList.toggle('p360-task-done', done);
+}
 function syncTasksFromForm(d){
   d.tasks.forEach((tk, i) => {
-    const t = document.getElementById('task-text-' + i), dn = document.getElementById('task-done-' + i),
+    const t = document.getElementById('task-text-' + i), dn = document.getElementById('task-icon-' + i),
           n = document.getElementById('task-note-' + i), cl = document.getElementById('task-file-clear-' + i);
     if(t) tk.text = t.value.trim();
-    if(dn) tk.done = dn.checked;
+    if(dn) tk.done = dn.dataset.done === '1';
     if(n) tk.note = n.value.trim();
     if(cl && cl.value === '1'){ tk.fileData = null; tk.fileName = null; }
   });

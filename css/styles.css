@@ -2128,6 +2128,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .p360-day-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
 .p360-day-presencial{background:var(--ink);border-left-color:var(--ink);color:#fff}
 .p360-day-presencial .p360-day-weekday,.p360-day-presencial .p360-day-tag{color:#fff;opacity:.75}
+.p360-task-done .p360-task-text{text-decoration:line-through;color:var(--muted)}
 
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)
