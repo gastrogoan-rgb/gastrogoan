@@ -103,6 +103,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
     <button class="btn btn-sm" onclick="closeClient()">← Clientes</button>
     <h2 id="client-name" style="margin:10px 0 4px"></h2>
     <p id="client-status" class="status-line" style="margin-bottom:10px"></p>
+    <div id="client-startdate" class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
     <div id="client-grid"></div>
   </div>
 </div>
@@ -296,7 +297,22 @@ function plan360FormatDate(day){
 function plan360PriorityColor(p){ return p === 'alta' ? 'var(--red)' : p === 'media' ? 'var(--amber)' : p === 'baja' ? 'var(--green)' : null; }
 
 /* ---- Cuadrícula (agenda real, agrupada por semanas) ---- */
+function renderStartDateControl(){
+  document.getElementById('client-startdate').innerHTML = `
+    <label style="margin:0">Fecha de inicio del programa</label>
+    <input type="date" id="p360-startdate" value="${esc(remoteBiz.plan360StartDate || todayStr())}" style="width:auto;flex:none;min-width:160px">
+    <button class="btn btn-sm btn-primary" onclick="saveStartDate()">Guardar</button>
+  `;
+}
+function saveStartDate(){
+  const val = document.getElementById('p360-startdate').value;
+  if(!val) return;
+  remoteBiz.plan360StartDate = val;
+  saveRemoteBiz();
+  renderClientGrid();
+}
 function renderClientGrid(){
+  renderStartDateControl();
   const prog = remoteBiz.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
   const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.done).length, 0);
