@@ -550,6 +550,7 @@ function renderLicRow(l){
       `}
       ${!revocada && l.kind === 'negocio' ? `
         <button class="btn btn-sm btn-light" onclick="togglePlan360('${esc(l.id)}')">${l.plan360 ? '✓ Plan 360° activo' : 'Activar Plan 360°'}</button>
+        <button class="btn btn-sm btn-light" onclick="togglePlanMensual('${esc(l.id)}')">${l.planMensual ? '✓ Plan mensual' : 'Marcar Plan mensual'}</button>
       ` : ''}
       <button class="btn btn-sm btn-light" onclick="delSale('${esc(l.id)}')">Quitar del registro</button>
     </div>
@@ -566,6 +567,7 @@ async function togglePlan360(id){
   if(!l || l.kind !== 'negocio') return;
   const code = l.value;
   const nuevoValor = !l.plan360;
+  if(!confirm(nuevoValor ? '¿Activar el Plan 360° para ' + code + '?' : '¿Desactivar el Plan 360° para ' + code + '? El negocio dejará de ver su pestaña.')) return;
   try{
     await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({plan360: nuevoValor});
   }catch(e){
@@ -592,6 +594,16 @@ async function togglePlan360(id){
     console.error(e);
     alert('Marcado en el registro, pero no se pudo avisar a su nube en directo: ' + (e.message || e.code || 'error') + '. Le aparecerá igualmente la próxima vez que sincronice.');
   }
+}
+// Solo para tu propio control (calendario de cobros, registro de ventas):
+// no toca la app del negocio ni su nube, así que no hace falta avisarle.
+function togglePlanMensual(id){
+  const l = findSale(id);
+  if(!l || l.kind !== 'negocio') return;
+  const nuevoValor = !l.planMensual;
+  if(!confirm(nuevoValor ? '¿Marcar ' + l.value + ' como Plan mensual?' : '¿Quitar el Plan mensual de ' + l.value + '?')) return;
+  updateSaleEntry(l, {planMensual: nuevoValor});
+  renderFolders();
 }
 function findSale(id){ return sales.find(s => s.id === id); }
 function copiar(txt){ navigator.clipboard.writeText(txt).then(() => alert('Copiado: ' + txt)); }
