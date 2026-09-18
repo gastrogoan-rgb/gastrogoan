@@ -5298,9 +5298,10 @@ function plan360ContractSectionHtml(){
     </div>
     <div class="field"><label>${escapeHtml(t('plan360.contractAddress'))}</label><input id="p360-c-direccion" value="${escapeHtml(c.clienteDireccion || '')}"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPrice'))}</label><input id="p360-c-precio" value="${escapeHtml(c.precio || '')}"></div>
-      <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPayment'))}</label><input id="p360-c-formapago" value="${escapeHtml(c.formaPago || '')}"></div>
+      <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPrice'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(c.precio || '—')}</div></div>
+      <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPayment'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(c.formaPago || '—')}</div></div>
     </div>
+    <p class="view-subtitle" style="margin:-4px 0 10px">${escapeHtml(t('plan360.priceLockedHint'))}</p>
     <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Intake()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
     <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:14px">${escapeHtml(texto)}</div>
     <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
@@ -5312,13 +5313,14 @@ function plan360ContractSectionHtml(){
     <p class="view-subtitle" style="margin-top:8px">${escapeHtml(t('plan360.signLegalNote'))}</p>
   </div>`;
 }
+// El precio y la forma de pago NO se tocan desde aquí: los pacta el coach,
+// no se editan desde la app del negocio (solo se ven, en gris). Se cambian
+// exclusivamente desde admin-panel/plan360.html.
 function plan360SaveContractFields(){
   const c = DB.business.plan360Contract;
   c.clienteNombre = (document.getElementById('p360-c-nombre').value || '').trim();
   c.clienteNIF = (document.getElementById('p360-c-nif').value || '').trim();
   c.clienteDireccion = (document.getElementById('p360-c-direccion').value || '').trim();
-  c.precio = (document.getElementById('p360-c-precio').value || '').trim();
-  c.formaPago = (document.getElementById('p360-c-formapago').value || '').trim();
   saveDB();
 }
 function plan360SignContract(){
@@ -5344,27 +5346,22 @@ function savePlan360Intake(){
   renderPlan360Grid();
 }
 
-/* ---- Recursos (antes "GG"): identidad de marca, playbooks... ---- */
+/* ---- Recursos (antes "GG"): identidad de marca, playbooks... ----
+   Los rellena el coach desde su panel; aquí el negocio SOLO LOS LEE — de
+   ahí que no lleve textarea ni Guardar, a diferencia de todo lo demás en
+   Plan 360º. Mismo criterio que la nota privada del día 1: lo que es
+   trabajo del coach no se edita desde la app del cliente, ni de adorno. */
 function renderPlan360Docs(){
   const docs = DB.business.plan360Docs || [];
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(t('plan360.resources'), t('plan360.resourcesDesc'))}
-    <div class="card" style="margin-top:14px">
-      ${docs.map((doc, i) => `
-        <div class="field">
-          <label>${escapeHtml(doc.title)}</label>
-          <textarea id="p360-doc-${i}" rows="4">${escapeHtml(doc.body)}</textarea>
-        </div>
-      `).join('')}
-      <button class="btn btn-primary" onclick="savePlan360Docs()">${escapeHtml(t('common.save'))}</button>
-    </div>
+    ${docs.map(doc => `
+      <div class="card" style="margin-top:14px">
+        <div style="font-weight:700;margin-bottom:8px">${escapeHtml(doc.title)}</div>
+        <div style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:${doc.body ? 'inherit' : 'var(--muted)'}">${doc.body ? escapeHtml(doc.body) : escapeHtml(t('plan360.resourceEmpty'))}</div>
+      </div>
+    `).join('')}
   `;
-}
-function savePlan360Docs(){
-  (DB.business.plan360Docs || []).forEach((doc, i) => { doc.body = (document.getElementById('p360-doc-' + i).value || '').trim(); });
-  saveDB();
-  showToast(t('plan360.saved'));
-  renderPlan360Grid();
 }
 
 /* ---- Un día concreto: presencial o de trabajo ---- */
@@ -5384,10 +5381,6 @@ function renderPlan360PresencialDetail(d){
         <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.objectives'))}</div>
         <div id="p360-obj-list">${obj.map((o, i) => plan360ObjectiveRow(o, i)).join('')}</div>
         <button class="btn btn-sm" onclick="addPlan360Objective(${d.day})" style="margin:6px 0 16px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addObjective'))}</button>
-        <div class="field">
-          <label>${escapeHtml(t('plan360.privateNote'))} <span style="color:var(--muted)">(${escapeHtml(t('plan360.privateNoteHint'))})</span></label>
-          <textarea id="p360-private" rows="5">${escapeHtml(d.privateNote || '')}</textarea>
-        </div>
       ` : ''}
       <div class="field"><label>${escapeHtml(t('plan360.dayTask'))}</label><textarea id="p360-notes" rows="4">${escapeHtml(d.notes || '')}</textarea></div>
       <button class="btn btn-primary" onclick="savePlan360Presencial(${d.day})">${escapeHtml(t('common.save'))}</button>
@@ -5422,11 +5415,11 @@ function plan360SyncObjectivesFromForm(d){
 function savePlan360Presencial(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
+  // d.privateNote NUNCA se toca desde aquí: no tiene campo en esta pantalla
+  // a propósito — es del coach, y él la edita solo desde su panel.
   if(Array.isArray(d.objectives)){
     plan360SyncObjectivesFromForm(d);
     d.objectives = d.objectives.filter(o => o.text);
-    const priv = document.getElementById('p360-private');
-    if(priv) d.privateNote = priv.value.trim();
   }
   d.notes = (document.getElementById('p360-notes').value || '').trim();
   saveDB();
