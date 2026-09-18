@@ -5383,10 +5383,10 @@ function renderPlan360TrabajoDetail(d){
   `;
 }
 function plan360TaskRow(tk, i){
-  return `<div class="card" style="padding:10px;margin-bottom:8px">
+  return `<div class="card p360-task-row${tk.done ? ' p360-task-done' : ''}" id="p360-task-row-${i}" style="padding:10px;margin-bottom:8px">
     <div style="display:flex;gap:8px;align-items:flex-start">
-      <input type="checkbox" id="p360-task-done-${i}" style="width:auto;margin-top:4px" ${tk.done ? 'checked' : ''}>
-      <textarea id="p360-task-text-${i}" rows="2" style="flex:1">${escapeHtml(tk.text)}</textarea>
+      <i class="ti ${tk.done ? 'ti-circle-check' : 'ti-circle'}" id="p360-task-icon-${i}" data-done="${tk.done ? '1' : '0'}" onclick="plan360ToggleTask(${i})" style="cursor:pointer;font-size:24px;flex:none;margin-top:2px;color:${tk.done ? 'var(--green)' : 'var(--border)'}"></i>
+      <textarea id="p360-task-text-${i}" class="p360-task-text" rows="2" style="flex:1">${escapeHtml(tk.text)}</textarea>
     </div>
     <div class="field" style="margin:6px 0 0">
       <label>${escapeHtml(t('plan360.taskNote'))}</label>
@@ -5405,14 +5405,26 @@ function addPlan360Task(day){
   d.tasks.push({text: '', done: false, note: '', fileData: null, fileName: null});
   document.getElementById('p360-task-list').innerHTML = d.tasks.map((tk, i) => plan360TaskRow(tk, i)).join('');
 }
+// Tachar la tarea y poner el tick en verde al instante, sin esperar a
+// Guardar — el dato de verdad se lee de data-done en plan360SyncTasksFromForm.
+function plan360ToggleTask(i){
+  const icon = document.getElementById('p360-task-icon-' + i);
+  const row = document.getElementById('p360-task-row-' + i);
+  if(!icon || !row) return;
+  const done = icon.dataset.done !== '1';
+  icon.dataset.done = done ? '1' : '0';
+  icon.className = 'ti ' + (done ? 'ti-circle-check' : 'ti-circle');
+  icon.style.color = done ? 'var(--green)' : 'var(--border)';
+  row.classList.toggle('p360-task-done', done);
+}
 function plan360SyncTasksFromForm(d){
   d.tasks.forEach((tk, i) => {
     const textEl = document.getElementById('p360-task-text-' + i);
-    const doneEl = document.getElementById('p360-task-done-' + i);
+    const doneIcon = document.getElementById('p360-task-icon-' + i);
     const noteEl = document.getElementById('p360-task-note-' + i);
     const clearEl = document.getElementById('p360-task-file-clear-' + i);
     if(textEl) tk.text = textEl.value.trim();
-    if(doneEl) tk.done = doneEl.checked;
+    if(doneIcon) tk.done = doneIcon.dataset.done === '1';
     if(noteEl) tk.note = noteEl.value.trim();
     if(clearEl && clearEl.value === '1'){ tk.fileData = null; tk.fileName = null; }
   });
