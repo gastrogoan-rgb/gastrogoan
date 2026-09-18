@@ -5198,6 +5198,12 @@ const TENANT_LOOKUP_PUBLICADO_LS = 'gastrogoan_tenantlookup_publicado';
 const COACHING360_PUBLICADO_LS = 'gastrogoan_coaching360_publicado';
 function publishTenantLookup(tenantId, config){
   if(!tenantId || !config) return;
+  // ⚠️ El puntero de Plan 360º tiene su PROPIA huella (COACHING360_PUBLICADO_LS)
+  // y no puede depender del "return" de aquí abajo: un negocio que ya
+  // sincronizaba desde antes de que existiera este puntero tiene la huella
+  // de tenantLookup ya puesta para siempre, así que ese return se ejecutaría
+  // en CADA arranque y el aviso de Plan 360º no se publicaría jamás.
+  publishCoaching360Pointer(tenantId);
   const huella = tenantId + '|' + config.apiKey + '|' + config.databaseURL;
   try{ if(localStorage.getItem(TENANT_LOOKUP_PUBLICADO_LS) === huella) return; }catch(e){}
   getPlatformFirebaseApp().then(app => {
@@ -5208,7 +5214,6 @@ function publishTenantLookup(tenantId, config){
       try{ localStorage.setItem(TENANT_LOOKUP_PUBLICADO_LS, huella); }catch(e){}
     }).catch(e => console.error('Error publicando la referencia del negocio', e));
   }).catch(()=>{});
-  publishCoaching360Pointer(tenantId);
 }
 
 // Puntero mínimo para que admin-panel/plan360.html arme solo la lista de
