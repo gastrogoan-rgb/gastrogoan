@@ -5236,8 +5236,8 @@ function renderPlan360Grid(){
     `).join('')}
   `;
 }
-function plan360PageHeader(title, subtitle){
-  return `<button class="btn btn-sm btn-back" onclick="renderPlan360Grid()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+function plan360PageHeader(title, subtitle, backFn){
+  return `<button class="btn btn-sm btn-back" onclick="${backFn || 'renderPlan360Grid'}()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(title)}</div>
     ${subtitle ? `<div class="view-subtitle">${escapeHtml(subtitle)}</div>` : ''}`;
 }
@@ -5267,8 +5267,28 @@ function renderPlan360Intake(){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Questionnaire()">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-clipboard-list" style="font-size:20px"></i>
+        <div style="flex:1">
+          <strong>${escapeHtml(t('plan360.questionnaire'))}</strong>
+          <div class="p360-day-tag">${plan360IntakeAnswered(sections)} / ${plan360IntakeTotal(sections)}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+  `;
+}
+function plan360IntakeTotal(sections){ return sections.reduce((n, s) => n + s.questions.length, 0); }
+function plan360IntakeAnswered(sections){ return sections.reduce((n, s) => n + s.questions.filter(q => q.a).length, 0); }
+/* ---- Cuestionario inicial: su propia pantalla, no un bloque más dentro
+   de Documentación inicial — con 28 preguntas de un tirón, mezclado con la
+   carta y el contrato, no hay quien lo lea con calma. */
+function renderPlan360Questionnaire(){
+  const sections = (DB.business.plan360Intake || {}).sections || [];
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(t('plan360.questionnaire'), null, 'renderPlan360Intake')}
     <div class="card" style="margin-top:14px">
-      <div style="font-weight:700;margin-bottom:10px">${escapeHtml(t('plan360.questionnaire'))}</div>
       ${sections.map((s, si) => `
         <div style="font-weight:600;margin:${si ? '18' : '0'}px 0 8px">${escapeHtml(s.title)}</div>
         ${s.questions.map((q, qi) => `
@@ -5360,7 +5380,7 @@ function savePlan360Intake(){
   });
   saveDB();
   showToast(t('plan360.saved'));
-  renderPlan360Grid();
+  renderPlan360Intake();
 }
 
 /* ---- Recursos (antes "GG"): identidad de marca, playbooks... ----
