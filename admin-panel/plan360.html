@@ -22,7 +22,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Schibsted Grotesk',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--body);min-height:100vh;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
-.wrap{max-width:960px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.wrap{max-width:960px;margin:0 auto;padding:20px 20px 80px;display:flex;flex-direction:column;gap:16px}
 header{background:var(--ink);color:#FAF8F4;padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 header .logo{width:40px;height:40px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex:none;font-family:'IBM Plex Mono',monospace}
 header h1{font-family:'Schibsted Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:-.01em;flex:1;min-width:180px}
@@ -234,12 +234,30 @@ function closeClient(){
   document.getElementById('view-list').classList.remove('hidden');
   loadClientList();
 }
+// Firebase rechaza CUALQUIER escritura que contenga un valor undefined en
+// cualquier parte del objeto — no solo ese campo, la escritura entera. Un
+// solo dato mal formado en cualquier rincón (día, tarea, objetivo...)
+// bastaba para que ESTA función fallara siempre, en silencio, sin que
+// nada de lo que se guardara desde el panel llegara nunca a la nube.
+function sinIndefinidos(v){
+  if(v === undefined) return null;
+  if(typeof v === 'number' && !Number.isFinite(v)) return null;
+  if(v === null || typeof v !== 'object') return v;
+  if(Array.isArray(v)) return Array.from(v, x => x === undefined ? null : sinIndefinidos(x));
+  const out = {};
+  Object.keys(v).forEach(k => { if(v[k] !== undefined) out[k] = sinIndefinidos(v[k]); });
+  return out;
+}
 function saveRemoteBiz(){
   if(!currentBizRef || !remoteBiz) return;
-  const json = JSON.stringify(remoteBiz);
+  const limpio = sinIndefinidos(remoteBiz);
+  const json = JSON.stringify(limpio);
   lastPushedJson = json;
   savingRemote = true;
-  currentBizRef.set(remoteBiz).catch(e => console.error('Error guardando en la nube del negocio', e)).finally(() => { savingRemote = false; });
+  currentBizRef.set(limpio).catch(e => {
+    console.error('Error guardando en la nube del negocio', e);
+    alert('No se pudo guardar en la nube: ' + (e.message || e.code || 'error'));
+  }).finally(() => { savingRemote = false; });
 }
 
 /* ============================================================
@@ -407,7 +425,15 @@ function ensureRemotePlan360(){
   }
   if(!Array.isArray(remoteBiz.plan360Program) || !remoteBiz.plan360Program.length){
     remoteBiz.plan360Program = PLAN360_DEFAULT_PROGRAM.map(d => {
-      if(d.phase === 'presencial') return {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: '', objectives: d.day === 1 ? [] : undefined};
+      if(d.phase === 'presencial'){
+        // ⚠️ Firebase rechaza CUALQUIER guardado con un undefined en
+        // cualquier parte del objeto: el día 2 no lleva la clave en
+        // absoluto (nunca "objectives: undefined"), o cualquier .set()
+        // posterior de todo el negocio fallaba en silencio.
+        const dia = {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: ''};
+        if(d.day === 1) dia.objectives = [];
+        return dia;
+      }
       return {day: d.day, phase: 'trabajo', title: d.title, priority: null, reviewType: null, tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
     });
   }
