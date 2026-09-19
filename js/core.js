@@ -2302,9 +2302,13 @@ function ensurePlan360Program(){
   if(!Array.isArray(DB.business.plan360Program) || !DB.business.plan360Program.length){
     DB.business.plan360Program = PLAN360_DEFAULT_PROGRAM.map(d => {
       if(d.phase === 'presencial'){
-        return {day: d.day, phase: 'presencial', title: d.title,
-          notes: '', privateNote: '',
-          objectives: d.day === 1 ? [] : undefined};
+        // ⚠️ Firebase rechaza CUALQUIER guardado que contenga un valor
+        // undefined en cualquier parte del objeto — no solo ese campo, todo
+        // el guardado. d.day===1 tiene objectives; el día 2 no lleva la
+        // clave en absoluto (nunca "objectives: undefined").
+        const dia = {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: ''};
+        if(d.day === 1) dia.objectives = [];
+        return dia;
       }
       return {day: d.day, phase: 'trabajo', title: d.title,
         priority: null, reviewType: null,
