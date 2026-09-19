@@ -550,6 +550,44 @@ const PLAN360_MISTERY_BLOCKS = [
     'Acciones de promoción local recientes (eventos, colaboraciones, posts).',
     'Engagement y comunidad (comentarios reales, interacción).',
   ]},
+  // Bloques 14, 15, 17 y 18 del documento original: eran "de negocio",
+  // pensados para resolverse con el propietario delante. El coach decidió
+  // (18/09) que no hace falta el dueño para verlos — se cierran solos con
+  // lo observado — y que la reunión con el propietario (bloque 16 del
+  // documento) se sustituye por una conversación aparte de solo preguntas
+  // abiertas ("Reunión inicial"), no por un bloque puntuable más.
+  {title: 'Concepto y posicionamiento', items: [
+    '¿Se entiende en 5 segundos qué es el sitio y qué ofrece?',
+    'Coherencia producto ↔ precio ↔ cliente ↔ ubicación (el triángulo encaja).',
+    'Diferenciación real frente al de al lado (¿por qué te eligen a ti?).',
+    'El cliente que entra hoy, ¿es el que el negocio necesita para ser rentable?',
+    '¿Hay un hueco de mercado en la zona que no se está aprovechando?',
+  ]},
+  {title: 'Ingeniería de carta', items: [
+    'Nº de referencias razonable (no una carta interminable que dispara mermas).',
+    'Platos rentables destacados (recuadros, arriba, sin columna de precios alineada).',
+    'Descripciones que dan hambre y foto buena o ninguna.',
+    'Se identifican estrellas (venden y dejan) vs. perros (ni venden ni dejan).',
+    'Estructura por franjas coherente (menú mediodía, carta noche, tardeo…).',
+  ]},
+  {title: 'Gestión y números', items: [
+    '¿Existe punto de equilibrio calculado? (cuánto vender solo para no perder).',
+  ], openQuestions: [
+    'Facturación media mensual y estacionalidad (mejor y peor mes)',
+    'Ticket medio y ventas por servicio (comidas/cenas, semana/finde)',
+    'Food cost aproximado (gasto en compras / ventas) — sano: comida 28-35%, bebida 18-25%',
+    'Nº de empleados y coste de personal — sano: 30-35% de las ventas',
+    'Gastos fijos principales (alquiler, suministros, cuotas, préstamos)',
+    '¿Sabe si gana o pierde cada mes y cuánto? ¿Lleva algún control?',
+    'Deudas o compromisos que arrastra (bancos, Hacienda, proveedores)',
+  ]},
+  {title: 'Fidelización y base de clientes', items: [
+    '¿Hay alguna base de datos de clientes o se pierde a cada cliente que sale?',
+    '¿Existe programa o gesto de fidelización (aunque sea informal)?',
+    '¿Se sabe quién es cliente recurrente y quién viene una vez?',
+    '¿Hay acciones para llenar las franjas flojas identificadas?',
+    '¿Se pide reseña o se capta contacto de algún modo?',
+  ]},
 ];
 function plan360MisteryBlockAvg(block){
   const scored = block.items.filter(i => i.score !== null && i.score !== undefined && i.score !== '');
@@ -572,6 +610,28 @@ function plan360FreshMisteryCheck(){
     sentAt: null,
   };
 }
+// Reunión inicial con el hostelero: lo que el cliente siente y ve de su
+// negocio, complementario a lo que observa el coach en el cliente
+// misterioso. Pocas preguntas a propósito — es una conversación, no un
+// formulario — para sacar el punto de dolor real.
+const PLAN360_REUNION_PREGUNTAS = [
+  'Si tuvieras que explicarle a un amigo, en una frase, qué le pasa a tu negocio ahora mismo, ¿qué le dirías?',
+  'De todo lo que va mal, ¿qué es lo que de verdad te quita el sueño?',
+  '¿Cuándo empezaste a notar que algo no iba bien, y qué crees que lo desencadenó?',
+  '¿Qué has probado ya para arreglarlo, y por qué crees que no ha funcionado o no lo has llegado a hacer?',
+  'Ahora mismo, ¿el negocio te da de comer a ti o tú le das de comer al negocio?',
+  'Si nada cambia en los próximos 6 meses, ¿qué crees que va a pasar?',
+  'Piensa en tu equipo: si pudieras cambiar una sola cosa de cómo trabaja tu gente, ¿qué cambiarías?',
+  '¿Quién más tiene que estar de acuerdo con los cambios, y tú mismo vienes con ganas o porque ya no sabes qué más hacer?',
+  '¿Cuánto quieres ganar limpio al mes, y cuántas horas quieres trabajar para conseguirlo?',
+  'Dentro de un año, si esto sale bien, ¿qué es lo primero que notarías distinto en tu vida, no solo en el negocio?',
+];
+function plan360FreshReunionInicial(){
+  return {
+    answers: PLAN360_REUNION_PREGUNTAS.map(q => ({q, a: ''})),
+    sentAt: null,
+  };
+}
 function ensureRemotePlan360(){
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
     remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
@@ -590,17 +650,44 @@ function ensureRemotePlan360(){
         // absoluto (nunca "objectives: undefined"), o cualquier .set()
         // posterior de todo el negocio fallaba en silencio.
         const dia = {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: ''};
-        if(d.day === 1){ dia.objectives = []; dia.misteryCheck = plan360FreshMisteryCheck(); }
+        if(d.day === 1){
+          dia.objectives = [];
+          dia.misteryCheck = plan360FreshMisteryCheck();
+          dia.reunionInicial = plan360FreshReunionInicial();
+        }
         return dia;
       }
       return {day: d.day, phase: 'trabajo', title: d.title, priority: null, reviewType: null, tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
     });
   }
   // Migración: negocios cuyo día 1 se creó antes de que existiera el
-  // checklist de cliente misterioso se quedarían sin él para siempre.
+  // checklist de cliente misterioso o la reunión inicial se quedarían sin
+  // ellos para siempre.
   const dia1Existente = (remoteBiz.plan360Program || []).find(d => d.day === 1);
   if(dia1Existente && !dia1Existente.misteryCheck){
     dia1Existente.misteryCheck = plan360FreshMisteryCheck();
+  }
+  if(dia1Existente && !dia1Existente.reunionInicial){
+    dia1Existente.reunionInicial = plan360FreshReunionInicial();
+  }
+  // Migración: el checklist creció de 14 a 18 bloques (18/09, al mover
+  // "Concepto y posicionamiento", "Ingeniería de carta", "Gestión y
+  // números" y "Fidelización" desde la desaparecida Reunión presencial).
+  // Los negocios con un checklist ya empezado se quedarían con solo los
+  // 14 bloques originales para siempre si no se completan los que faltan
+  // — sin tocar lo ya puntuado.
+  if(dia1Existente && dia1Existente.misteryCheck && Array.isArray(dia1Existente.misteryCheck.blocks)
+    && dia1Existente.misteryCheck.blocks.length < PLAN360_MISTERY_BLOCKS.length){
+    const titulosYa = dia1Existente.misteryCheck.blocks.map(b => b.title);
+    PLAN360_MISTERY_BLOCKS.forEach(b => {
+      if(!titulosYa.includes(b.title)){
+        dia1Existente.misteryCheck.blocks.push({
+          title: b.title,
+          items: b.items.map(text => ({text, score: null})),
+          openQuestions: (b.openQuestions || []).map(q => ({q, a: ''})),
+        });
+      }
+    });
   }
   if(!remoteBiz.plan360StartDate) remoteBiz.plan360StartDate = todayStr();
   if(!remoteBiz.plan360Contract){
@@ -913,10 +1000,13 @@ function renderDia1Hub(d){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
-    <div class="card" style="margin-top:14px;opacity:.55">
+    <div class="card" style="cursor:pointer;margin-top:14px" onclick="renderReunionPage(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-users" style="font-size:20px"></i>
-        <div style="flex:1"><strong>Reunión presencial</strong><div class="p360-day-tag">Próximamente</div></div>
+        <i class="ti ${d.reunionInicial && d.reunionInicial.sentAt ? 'ti-circle-check' : 'ti-users'}" style="font-size:20px;${d.reunionInicial && d.reunionInicial.sentAt ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>Reunión inicial</strong>
+          <div class="p360-day-tag">${d.reunionInicial && d.reunionInicial.sentAt ? 'Enviada al negocio' : 'Sin enviar (el negocio no lo ve todavía)'}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
       </div>
     </div>
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderObjetivosPage(${d.day})">
@@ -951,6 +1041,110 @@ function saveObjetivos(day){
   if(priv) d.privateNote = priv.value.trim();
   saveRemoteBiz();
   renderObjetivosPage(day);
+}
+/* ---- Reunión inicial: guion de 10 preguntas con dictado por voz ----
+   La idea (pedida expresamente por el coach) es que él no tenga que estar
+   escribiendo mientras habla con el hostelero: pulsa el micro, la respuesta
+   se va transcribiendo sola en el recuadro con el reconocimiento de voz
+   nativo del navegador (gratis, sin servidor), y queda editable por si el
+   dictado se equivoca. Solo funciona bien en Chrome/Android; en Safari
+   puede no estar disponible, así que el botón se oculta si el navegador no
+   lo soporta y el recuadro sigue siendo editable a mano igualmente. */
+function plan360SpeechSupported(){
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+let plan360ActiveRecognition = null;
+let plan360ActiveRecognitionIdx = null;
+function plan360ToggleDictado(idx){
+  const btn = document.getElementById('reunion-mic-' + idx);
+  const ta = document.getElementById('reunion-a-' + idx);
+  if(!btn || !ta) return;
+  if(plan360ActiveRecognition && plan360ActiveRecognitionIdx === idx){
+    plan360ActiveRecognition.stop();
+    return;
+  }
+  if(plan360ActiveRecognition){
+    plan360ActiveRecognition.stop();
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = 'es-ES';
+  rec.continuous = true;
+  rec.interimResults = true;
+  const base = ta.value ? ta.value.replace(/\s+$/, '') + ' ' : '';
+  rec.onresult = (ev) => {
+    let texto = '';
+    for(let i = 0; i < ev.results.length; i++){
+      texto += ev.results[i][0].transcript;
+    }
+    ta.value = base + texto;
+  };
+  rec.onerror = () => {
+    btn.classList.remove('btn-primary');
+    btn.innerHTML = '<i class="ti ti-microphone"></i>';
+    plan360ActiveRecognition = null;
+    plan360ActiveRecognitionIdx = null;
+  };
+  rec.onend = () => {
+    btn.classList.remove('btn-primary');
+    btn.innerHTML = '<i class="ti ti-microphone"></i>';
+    plan360ActiveRecognition = null;
+    plan360ActiveRecognitionIdx = null;
+  };
+  rec.start();
+  plan360ActiveRecognition = rec;
+  plan360ActiveRecognitionIdx = idx;
+  btn.classList.add('btn-primary');
+  btn.innerHTML = '<i class="ti ti-player-stop"></i>';
+}
+function renderReunionPage(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunionInicial) return;
+  const r = d.reunionInicial;
+  const soporte = plan360SpeechSupported();
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día 1</button>
+    <h2 style="margin:10px 0 4px">Reunión inicial con el hostelero</h2>
+    <p class="muted" style="margin-bottom:14px">Unas pocas preguntas de mucho valor para entender lo que él siente y ve de su negocio — complementa al cliente misterioso.</p>
+    ${!soporte ? '<p class="muted" style="margin-bottom:10px">Este navegador no permite dictado por voz — escribe a mano.</p>' : ''}
+    <div class="card">
+      ${r.answers.map((it, i) => `
+        <div class="field" style="margin-bottom:16px">
+          <label>${i + 1}. ${esc(it.q)}</label>
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <textarea id="reunion-a-${i}" rows="3" style="flex:1">${esc(it.a || '')}</textarea>
+            ${soporte ? `<button type="button" id="reunion-mic-${i}" class="btn btn-sm" style="flex-shrink:0" onclick="plan360ToggleDictado(${i})"><i class="ti ti-microphone"></i></button>` : ''}
+          </div>
+        </div>
+      `).join('')}
+      <button class="btn btn-sm" onclick="saveReunion(${day})" style="margin-bottom:10px">Guardar</button>
+      ${!r.sentAt ? `<button class="btn btn-primary" onclick="sendReunion(${day})" style="display:block">Enviar al negocio</button>` : '<p class="muted">Ya enviada al negocio — se puede seguir editando y se actualiza en su pantalla.</p>'}
+    </div>
+  `;
+}
+function syncReunionFromForm(d){
+  d.reunionInicial.answers.forEach((it, i) => {
+    const ta = document.getElementById('reunion-a-' + i);
+    if(ta) it.a = ta.value.trim();
+  });
+}
+function saveReunion(day){
+  if(plan360ActiveRecognition) plan360ActiveRecognition.stop();
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunionInicial) return;
+  syncReunionFromForm(d);
+  saveRemoteBiz();
+  renderReunionPage(day);
+}
+function sendReunion(day){
+  if(!confirm('¿Enviar la reunión inicial al negocio? A partir de ahora la verá en su pantalla (y se actualizará si la sigues editando).')) return;
+  if(plan360ActiveRecognition) plan360ActiveRecognition.stop();
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunionInicial) return;
+  syncReunionFromForm(d);
+  d.reunionInicial.sentAt = Date.now();
+  saveRemoteBiz();
+  renderReunionPage(day);
 }
 /* ---- Cliente misterioso: 14 bloques, una pantalla cada uno ---- */
 function renderMisteryHub(day){

@@ -2264,6 +2264,28 @@ function plan360FillTemplate(text, c){
     .replace(/\{\{precio\}\}/g, (c && c.precio) || '________')
     .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________');
 }
+// Reunión inicial con el hostelero: la mitad "lo que el cliente siente y ve
+// de su negocio", complementaria al cliente misterioso ("lo que el coach
+// observa"). Son pocas preguntas a propósito — es una conversación, no un
+// formulario — pensadas para sacar el punto de dolor real, no datos.
+const PLAN360_REUNION_PREGUNTAS = [
+  'Si tuvieras que explicarle a un amigo, en una frase, qué le pasa a tu negocio ahora mismo, ¿qué le dirías?',
+  'De todo lo que va mal, ¿qué es lo que de verdad te quita el sueño?',
+  '¿Cuándo empezaste a notar que algo no iba bien, y qué crees que lo desencadenó?',
+  '¿Qué has probado ya para arreglarlo, y por qué crees que no ha funcionado o no lo has llegado a hacer?',
+  'Ahora mismo, ¿el negocio te da de comer a ti o tú le das de comer al negocio?',
+  'Si nada cambia en los próximos 6 meses, ¿qué crees que va a pasar?',
+  'Piensa en tu equipo: si pudieras cambiar una sola cosa de cómo trabaja tu gente, ¿qué cambiarías?',
+  '¿Quién más tiene que estar de acuerdo con los cambios, y tú mismo vienes con ganas o porque ya no sabes qué más hacer?',
+  '¿Cuánto quieres ganar limpio al mes, y cuántas horas quieres trabajar para conseguirlo?',
+  'Dentro de un año, si esto sale bien, ¿qué es lo primero que notarías distinto en tu vida, no solo en el negocio?',
+];
+function plan360FreshReunionInicial(){
+  return {
+    answers: PLAN360_REUNION_PREGUNTAS.map(q => ({q, a: ''})),
+    sentAt: null,
+  };
+}
 const PLAN360_DEFAULT_PROGRAM = [
   {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
   {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
@@ -2307,13 +2329,23 @@ function ensurePlan360Program(){
         // el guardado. d.day===1 tiene objectives; el día 2 no lleva la
         // clave en absoluto (nunca "objectives: undefined").
         const dia = {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: ''};
-        if(d.day === 1) dia.objectives = [];
+        if(d.day === 1){
+          dia.objectives = [];
+          dia.reunionInicial = plan360FreshReunionInicial();
+        }
         return dia;
       }
       return {day: d.day, phase: 'trabajo', title: d.title,
         priority: null, reviewType: null,
         tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
     });
+  }
+  // Migración: negocios cuyo Día 1 se creó antes de que existiera la
+  // Reunión Inicial no tienen esta clave — sin esto se quedarían con
+  // "Próximamente" para siempre.
+  const dia1Ya = (DB.business.plan360Program || []).find(d => d.day === 1);
+  if(dia1Ya && !dia1Ya.reunionInicial){
+    dia1Ya.reunionInicial = plan360FreshReunionInicial();
   }
   // La agenda es de fechas REALES, no de un contador "Día 1, Día 2...": el
   // día 1 empieza el día que de verdad arranca el programa con ese cliente.

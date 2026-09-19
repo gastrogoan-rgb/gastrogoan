@@ -5451,10 +5451,13 @@ function renderPlan360Dia1Hub(d){
         ${enviado ? '<i class="ti ti-chevron-right"></i>' : ''}
       </div>
     </div>
-    <div class="card" style="margin-top:14px;opacity:.55">
+    <div class="card" style="margin-top:14px;${d.reunionInicial && d.reunionInicial.sentAt ? 'cursor:pointer' : 'opacity:.55'}" ${d.reunionInicial && d.reunionInicial.sentAt ? `onclick="renderPlan360ReunionReport(${d.day})"` : ''}>
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-users" style="font-size:20px"></i>
-        <div style="flex:1"><strong>${escapeHtml(t('plan360.presentialMeeting'))}</strong><div class="p360-day-tag">${escapeHtml(t('plan360.comingSoonShort'))}</div></div>
+        <i class="ti ${d.reunionInicial && d.reunionInicial.sentAt ? 'ti-circle-check' : 'ti-users'}" style="font-size:20px;${d.reunionInicial && d.reunionInicial.sentAt ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.presentialMeeting'))}</strong>
+          <div class="p360-day-tag">${escapeHtml(d.reunionInicial && d.reunionInicial.sentAt ? t('plan360.misteryReady') : t('plan360.misteryPending'))}</div>
+        </div>
+        ${d.reunionInicial && d.reunionInicial.sentAt ? '<i class="ti ti-chevron-right"></i>' : ''}
       </div>
     </div>
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Objectives(${d.day})">
@@ -5528,6 +5531,24 @@ function renderPlan360MisteryReport(day){
         ${(b.openQuestions || []).filter(q => q.a).map(q => `<div style="margin-top:8px"><div style="font-weight:600;font-size:12.5px">${escapeHtml(q.q)}</div><p style="font-size:13px">${escapeHtml(q.a)}</p></div>`).join('')}
       </div>`;
     }).join('')}
+  `;
+}
+/* ---- Reunión inicial: SOLO LECTURA, y solo tras enviarla ---- */
+function renderPlan360ReunionReport(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const r = d && d.reunionInicial;
+  if(!r || !r.sentAt) return;
+  document.getElementById('plan360-content').innerHTML = `
+    <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.presentialMeeting'))}</div>
+    <div class="card" style="margin-top:14px">
+      ${r.answers.map(it => `
+        <div style="margin-bottom:14px">
+          <div style="font-weight:600;font-size:13px">${escapeHtml(it.q)}</div>
+          <p style="font-size:14px;margin-top:4px">${it.a ? escapeHtml(it.a) : '—'}</p>
+        </div>
+      `).join('')}
+    </div>
   `;
 }
 function plan360ObjectiveRow(o, i){
