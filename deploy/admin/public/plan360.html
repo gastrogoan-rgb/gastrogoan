@@ -554,8 +554,24 @@ function renderIntakePage(){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderQuestionnairePage()">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-clipboard-list" style="font-size:20px"></i>
+        <div style="flex:1">
+          <strong>Cuestionario inicial</strong>
+          <div class="p360-day-tag">${sections.reduce((n,s)=>n+s.questions.filter(q=>q.a).length,0)} / ${sections.reduce((n,s)=>n+s.questions.length,0)}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+  `;
+}
+function renderQuestionnairePage(){
+  const sections = (remoteBiz.plan360Intake || {}).sections || [];
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderIntakePage()">← Documentación inicial</button>
+    <h2 style="margin:10px 0 4px">Cuestionario inicial</h2>
     <div class="card" style="margin-top:14px">
-      <div style="font-weight:700;margin-bottom:10px">Cuestionario inicial</div>
       ${sections.map((s, si) => `
         <div style="font-weight:600;margin:${si ? '18' : '0'}px 0 8px">${esc(s.title)}</div>
         ${s.questions.map((q, qi) => `<div class="field"><label>${esc(q.q)}</label><textarea id="intake-${si}-${qi}" rows="2">${esc(q.a)}</textarea></div>`).join('')}
@@ -636,7 +652,7 @@ function saveIntake(){
   const sections = (remoteBiz.plan360Intake || {}).sections || [];
   sections.forEach((s, si) => s.questions.forEach((q, qi) => { q.a = (document.getElementById('intake-' + si + '-' + qi).value || '').trim(); }));
   saveRemoteBiz();
-  renderClientGrid();
+  renderIntakePage();
 }
 
 /* ---- Recursos ---- */
