@@ -138,6 +138,7 @@ td.key{font-family:'IBM Plex Mono',monospace;font-size:11px}
       <a class="btn btn-light" href="index.html">← Panel</a>
       <a class="btn btn-light" href="plan360.html">Plan 360°</a>
       <button class="btn btn-light" onclick="openAgregarUsuario()">＋ Agregar usuario</button>
+      <button class="btn btn-light" onclick="ggAdminHardReload()">↻ Actualizar</button>
       <button class="btn btn-light" onclick="doLogout()">Salir</button>
     </div>
   </header>
@@ -291,6 +292,11 @@ function getApp(){
   catch(e){ return firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
 }
 let adminUser = null; // {email}, solo si hay sesión REAL de admin (no anónima)
+// Este panel no lleva service worker ni versión propia (a diferencia de la
+// app de los negocios): un refresco normal a veces sirve la copia en
+// caché del navegador. Una URL con parámetro nuevo nunca tiene caché
+// previa, así que fuerza una carga real.
+function ggAdminHardReload(){ location.href = location.pathname + '?_r=' + Date.now(); }
 
 /* Login OBLIGATORIO a la entrada: nada del panel se pinta sin sesión real de
    administrador. A diferencia del generador viejo, aquí no hay ningún modo

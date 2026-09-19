@@ -60,7 +60,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 <div id="panel" class="wrap hidden">
   <header>
     <h1>Panel de administración GastroGoan</h1>
-    <button class="btn" style="width:auto" onclick="doLogout()">Salir</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="width:auto" onclick="ggAdminHardReload()">↻ Actualizar</button>
+      <button class="btn" style="width:auto" onclick="doLogout()">Salir</button>
+    </div>
   </header>
   <p class="muted">Elige dónde quieres trabajar.</p>
   <div class="folders">
@@ -87,6 +90,9 @@ const PLATFORM_FIREBASE_CONFIG = {
   messagingSenderId: "894218847556",
   appId: "1:894218847556:web:2fa1f699489790bb5f8311"
 };
+// Sin service worker ni versión propia aquí: una URL con parámetro nuevo
+// nunca tiene caché previa del navegador, así que fuerza una carga real.
+function ggAdminHardReload(){ location.href = location.pathname + '?_r=' + Date.now(); }
 function getApp(){
   try{ return firebase.app('platform'); }
   catch(e){ return firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }

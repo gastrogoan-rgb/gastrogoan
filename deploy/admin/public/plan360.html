@@ -90,6 +90,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
     <h1>Plan 360°<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#C9A15A;margin-top:4px">ARCHIVO PRIVADO</span></h1>
     <div class="hd-btns">
       <a class="btn" href="index.html">← Panel</a>
+      <button class="btn" onclick="ggAdminHardReload()">↻ Actualizar</button>
       <button class="btn" onclick="doLogout()">Salir</button>
     </div>
   </header>
@@ -111,6 +112,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 
 <script>
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Sin service worker ni versión propia aquí: una URL con parámetro nuevo
+// nunca tiene caché previa del navegador, así que fuerza una carga real.
+function ggAdminHardReload(){ location.href = location.pathname + '?_r=' + Date.now(); }
 const PLATFORM_FIREBASE_CONFIG = {
   apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
   authDomain: "plataforma-gastrogoan.firebaseapp.com",
@@ -600,7 +604,7 @@ function plan360ContractSectionHtml(){
   const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   if(c.signedAt){
     return `<div class="card" style="margin-top:14px">
-      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:10px">${esc(texto)}</div>
+      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:10px">${esc(texto)}</div>
       <div class="card" style="background:var(--green-l);border-color:var(--green)">
         ✓ Firmado por <strong>${esc(c.signedName)}</strong> (${esc(c.signedDNI)}) — ${esc(new Date(c.signedAt).toLocaleString('es-ES'))}
       </div>
@@ -617,7 +621,7 @@ function plan360ContractSectionHtml(){
       <div class="field" style="flex:1;min-width:160px"><label>Forma de pago</label><input id="c-formapago" value="${esc(c.formaPago || '')}"></div>
     </div>
     <button class="btn btn-sm" onclick="plan360SaveContractFields();renderContractPage()" style="margin-bottom:10px">Actualizar datos del contrato</button>
-    <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:14px">${esc(texto)}</div>
+    <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:14px">${esc(texto)}</div>
     <div style="font-weight:600;margin-bottom:6px">Firma aquí (si la recoges tú en persona)</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <div class="field" style="flex:1;min-width:180px"><label>Nombre completo</label><input id="sign-name"></div>
