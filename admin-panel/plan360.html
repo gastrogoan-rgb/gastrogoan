@@ -162,18 +162,27 @@ try{
 /* ============================================================
    LISTA DE CLIENTES — gastrogoan/coaching360, solo lectura de admin
    ============================================================ */
+// Marca "actividad nueva" comparando lo último que hizo el negocio
+// (lastActivityAt, publicado por plan360PingActivity en js/core.js) con la
+// última vez que TÚ abriste su ficha (guardado en este mismo navegador).
+function plan360SeenKey(tenantId){ return 'gg_p360_seen_' + tenantId; }
 async function loadClientList(){
   const snap = await getApp().database().ref('gastrogoan/coaching360').once('value');
   const val = snap.val() || {};
-  const entries = Object.keys(val).map(tenantId => ({tenantId, name: val[tenantId].name || '(sin nombre)'}));
+  const entries = Object.keys(val).map(tenantId => ({
+    tenantId, name: val[tenantId].name || '(sin nombre)', lastActivityAt: val[tenantId].lastActivityAt || 0,
+  }));
   entries.sort((a, b) => a.name.localeCompare(b.name));
   document.getElementById('client-list-empty').classList.toggle('hidden', entries.length > 0);
-  document.getElementById('client-list').innerHTML = entries.map(e => `
-    <div class="folder-tile" onclick="openClient('${esc(e.tenantId)}','${esc(e.name)}')">
+  document.getElementById('client-list').innerHTML = entries.map(e => {
+    const visto = Number(localStorage.getItem(plan360SeenKey(e.tenantId)) || 0);
+    const nuevo = e.lastActivityAt > visto;
+    return `<div class="folder-tile" onclick="openClient('${esc(e.tenantId)}','${esc(e.name)}')">
       <div class="avatar">${esc(e.name.slice(0,2).toUpperCase())}</div>
-      <div><strong>${esc(e.name)}</strong></div>
-    </div>
-  `).join('');
+      <div style="flex:1"><strong>${esc(e.name)}</strong></div>
+      ${nuevo ? '<span style="background:var(--olive);color:#fff;font-family:\'IBM Plex Mono\',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:4px 9px;flex:none">Nuevo</span>' : ''}
+    </div>`;
+  }).join('');
 }
 
 /* ============================================================
@@ -190,6 +199,7 @@ let savingRemote = false;
 let lastPushedJson = null;
 
 async function openClient(tenantId, name){
+  try{ localStorage.setItem(plan360SeenKey(tenantId), String(Date.now())); }catch(e){}
   document.getElementById('view-list').classList.add('hidden');
   document.getElementById('view-client').classList.remove('hidden');
   document.getElementById('client-name').textContent = name;
@@ -569,7 +579,7 @@ function renderIntakePage(){
     ${plan360PageHeader('Documentación inicial')}
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderWelcomePage(true)">
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-mail" style="font-size:20px"></i>
+        <i class="ti ${remoteBiz.plan360WelcomeShown ? 'ti-circle-check' : 'ti-mail'}" style="font-size:20px;${remoteBiz.plan360WelcomeShown ? 'color:var(--green)' : ''}"></i>
         <div style="flex:1"><strong>Carta de bienvenida</strong></div>
         <i class="ti ti-chevron-right"></i>
       </div>

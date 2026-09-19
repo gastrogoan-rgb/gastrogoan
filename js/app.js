@@ -5171,8 +5171,18 @@ function renderPlan360Welcome(fromIntake){
   document.getElementById('plan360-content').innerHTML = `
     ${volver}
     <div class="card" style="margin-top:${fromIntake ? '10' : '0'}px;white-space:pre-wrap;font-size:14px;line-height:1.6">${escapeHtml(texto)}</div>
-    ${fromIntake ? '' : `<button class="btn btn-primary" style="margin-top:14px" onclick="DB.business.plan360WelcomeShown=true;saveDB();renderPlan360Grid()">${escapeHtml(t('plan360.welcomeContinue'))}</button>`}
+    ${fromIntake ? '' : `<button class="btn btn-primary" style="margin-top:14px" onclick="plan360ConfirmWelcome()">${escapeHtml(t('plan360.welcomeContinue'))}</button>`}
   `;
+}
+// Pulsar "Entendido, continuar" ES la confirmación de recepción que pide
+// la propia carta como primer paso — no hace falta un botón aparte para
+// lo mismo. Avisa al coach de que ya se ha leído.
+function plan360ConfirmWelcome(){
+  DB.business.plan360WelcomeShown = true;
+  DB.business.plan360ReceivedConfirmedAt = Date.now();
+  saveDB();
+  plan360PingActivity();
+  renderPlan360Grid();
 }
 function renderPlan360Grid(){
   const prog = DB.business.plan360Program || [];
@@ -5252,7 +5262,7 @@ function renderPlan360Intake(){
     ${plan360PageHeader(t('plan360.initialDocs'), t('plan360.initialDocsDesc'))}
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Welcome(true)">
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-mail" style="font-size:20px"></i>
+        <i class="ti ${DB.business.plan360WelcomeShown ? 'ti-circle-check' : 'ti-mail'}" style="font-size:20px;${DB.business.plan360WelcomeShown ? 'color:var(--green)' : ''}"></i>
         <div style="flex:1"><strong>${escapeHtml(t('plan360.welcomeLetter'))}</strong></div>
         <i class="ti ti-chevron-right"></i>
       </div>
@@ -5370,6 +5380,7 @@ function plan360SignContract(){
   c.signedDNI = dni;
   c.signedAt = Date.now();
   saveDB();
+  plan360PingActivity();
   showToast(t('plan360.saved'));
   renderPlan360Contract();
 }
@@ -5379,6 +5390,7 @@ function savePlan360Intake(){
     s.questions.forEach((q, qi) => { q.a = (document.getElementById('p360-intake-' + si + '-' + qi).value || '').trim(); });
   });
   saveDB();
+  plan360PingActivity();
   showToast(t('plan360.saved'));
   renderPlan360Intake();
 }
