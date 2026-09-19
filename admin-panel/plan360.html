@@ -1070,54 +1070,66 @@ function plan360SpeechSupported(){
 }
 let plan360ActiveRecognition = null;
 let plan360ActiveRecognitionIdx = null;
+let plan360DictadoParar = false;
+// ⚠️ El primer intento usaba continuous:true, y en Chrome/Android ESE modo
+// concreto tiene un fallo conocido del propio navegador (no del código):
+// cada nuevo tramo de voz reescribe el reconocimiento entero desde el
+// principio, así que el texto se iba doblando ("puespues quepues que...").
+// La solución que de verdad funciona en Android es la contraria: sesiones
+// CORTAS (continuous:false, una frase y termina sola) que se relanzan
+// automáticamente en cuanto acaban — el coach no nota el corte, pero cada
+// frase llega limpia porque nace en un reconocimiento nuevo, no reescrito.
 function plan360ToggleDictado(idx){
   const btn = document.getElementById('reunion-mic-' + idx);
   const ta = document.getElementById('reunion-a-' + idx);
   if(!btn || !ta) return;
   if(plan360ActiveRecognition && plan360ActiveRecognitionIdx === idx){
+    plan360DictadoParar = true;
     plan360ActiveRecognition.stop();
     return;
   }
   if(plan360ActiveRecognition){
+    plan360DictadoParar = true;
     plan360ActiveRecognition.stop();
   }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const rec = new SR();
-  rec.lang = 'es-ES';
-  rec.continuous = true;
-  rec.interimResults = true;
-  const base = ta.value ? ta.value.replace(/\s+$/, '') + ' ' : '';
-  // ⚠️ Recomponer TODO ev.results en cada evento (como se hacía antes)
-  // duplicaba palabras sin parar ("puespues quepues que...") porque
-  // Chrome/Android va reescribiendo tramos ya dados por buenos. La
-  // solución real: quedarse solo con lo que YA está marcado como
-  // definitivo (isFinal) y usar resultIndex para no releer lo procesado;
-  // lo interino se muestra aparte, sin sumarse al texto acumulado.
-  let definitivo = '';
-  rec.onresult = (ev) => {
-    let interino = '';
-    for(let i = ev.resultIndex; i < ev.results.length; i++){
-      const tramo = ev.results[i][0].transcript;
-      if(ev.results[i].isFinal) definitivo += tramo + ' ';
-      else interino += tramo;
-    }
-    ta.value = base + definitivo + interino;
-  };
-  rec.onerror = () => {
-    btn.classList.remove('btn-primary');
-    btn.innerHTML = '<i class="ti ti-microphone"></i>';
-    plan360ActiveRecognition = null;
-    plan360ActiveRecognitionIdx = null;
-  };
-  rec.onend = () => {
-    btn.classList.remove('btn-primary');
-    btn.innerHTML = '<i class="ti ti-microphone"></i>';
-    plan360ActiveRecognition = null;
-    plan360ActiveRecognitionIdx = null;
-  };
-  rec.start();
-  plan360ActiveRecognition = rec;
+  let acumulado = ta.value ? ta.value.replace(/\s+$/, '') + ' ' : '';
+  plan360DictadoParar = false;
   plan360ActiveRecognitionIdx = idx;
+  const lanzarSesion = () => {
+    const rec = new SR();
+    rec.lang = 'es-ES';
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.onresult = (ev) => {
+      let interino = '';
+      for(let i = ev.resultIndex; i < ev.results.length; i++){
+        const tramo = ev.results[i][0].transcript;
+        if(ev.results[i].isFinal) acumulado += tramo.trim() + ' ';
+        else interino += tramo;
+      }
+      ta.value = acumulado + interino;
+    };
+    rec.onerror = (e) => {
+      // 'no-speech' salta con cualquier silencio entre frases — normal,
+      // no hay que cortar el dictado por eso, se relanza en onend.
+      if(e.error !== 'no-speech' && e.error !== 'aborted') plan360DictadoParar = true;
+    };
+    rec.onend = () => {
+      ta.value = acumulado.trim();
+      if(plan360DictadoParar || plan360ActiveRecognitionIdx !== idx){
+        btn.classList.remove('btn-primary');
+        btn.innerHTML = '<i class="ti ti-microphone"></i>';
+        plan360ActiveRecognition = null;
+        plan360ActiveRecognitionIdx = null;
+        return;
+      }
+      lanzarSesion();
+    };
+    rec.start();
+    plan360ActiveRecognition = rec;
+  };
+  lanzarSesion();
   btn.classList.add('btn-primary');
   btn.innerHTML = '<i class="ti ti-player-stop"></i>';
 }
@@ -1153,7 +1165,7 @@ function syncReunionFromForm(d){
   });
 }
 function saveReunion(day){
-  if(plan360ActiveRecognition) plan360ActiveRecognition.stop();
+  if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunionInicial) return;
   syncReunionFromForm(d);
@@ -1162,7 +1174,7 @@ function saveReunion(day){
 }
 function sendReunion(day){
   if(!confirm('¿Enviar la reunión inicial al negocio? A partir de ahora la verá en su pantalla (y se actualizará si la sigues editando).')) return;
-  if(plan360ActiveRecognition) plan360ActiveRecognition.stop();
+  if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunionInicial) return;
   syncReunionFromForm(d);
