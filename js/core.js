@@ -5405,6 +5405,25 @@ function publishCoaching360Pointer(tenantId){
       .catch(e => console.error('Error publicando el puntero de Plan 360°', e));
   }).catch(()=>{});
 }
+// Aviso ligero para que tu panel sepa qué cliente tiene actividad nueva
+// (firmó el contrato, confirmó la carta, guardó el cuestionario) sin que
+// tengas que entrar en cada uno a mirar. Independiente de la huella de
+// publishCoaching360Pointer (esa solo mira si cambió el NOMBRE): esto
+// tiene que escribir cada vez, no una sola vez por sesión.
+function plan360PingActivity(){
+  if(!DB.business.plan360) return;
+  const tenantId = getTenantId();
+  if(!tenantId) return;
+  const nombre = (DB.business.name || '(sin nombre)').slice(0, 200);
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    // .update() y no .set(): incluye "name" siempre para cumplir la regla
+    // de validación aunque el puntero no existiera todavía, sin pisar
+    // otros campos que ya hubiera.
+    app.database().ref('gastrogoan/coaching360/' + tenantId).update({name: nombre, lastActivityAt: Date.now()})
+      .catch(e => console.error('Error avisando actividad de Plan 360°', e));
+  }).catch(()=>{});
+}
 function lookupTenantFirebaseConfig(tenantId){
   return getPlatformFirebaseApp().then(app => {
     if(!app) return null;

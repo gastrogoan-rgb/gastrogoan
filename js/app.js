@@ -5171,8 +5171,18 @@ function renderPlan360Welcome(fromIntake){
   document.getElementById('plan360-content').innerHTML = `
     ${volver}
     <div class="card" style="margin-top:${fromIntake ? '10' : '0'}px;white-space:pre-wrap;font-size:14px;line-height:1.6">${escapeHtml(texto)}</div>
-    ${fromIntake ? '' : `<button class="btn btn-primary" style="margin-top:14px" onclick="DB.business.plan360WelcomeShown=true;saveDB();renderPlan360Grid()">${escapeHtml(t('plan360.welcomeContinue'))}</button>`}
+    ${fromIntake ? '' : `<button class="btn btn-primary" style="margin-top:14px" onclick="plan360ConfirmWelcome()">${escapeHtml(t('plan360.welcomeContinue'))}</button>`}
   `;
+}
+// Pulsar "Entendido, continuar" ES la confirmación de recepción que pide
+// la propia carta como primer paso — no hace falta un botón aparte para
+// lo mismo. Avisa al coach de que ya se ha leído.
+function plan360ConfirmWelcome(){
+  DB.business.plan360WelcomeShown = true;
+  DB.business.plan360ReceivedConfirmedAt = Date.now();
+  saveDB();
+  plan360PingActivity();
+  renderPlan360Grid();
 }
 function renderPlan360Grid(){
   const prog = DB.business.plan360Program || [];
@@ -5252,7 +5262,7 @@ function renderPlan360Intake(){
     ${plan360PageHeader(t('plan360.initialDocs'), t('plan360.initialDocsDesc'))}
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Welcome(true)">
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-mail" style="font-size:20px"></i>
+        <i class="ti ${DB.business.plan360WelcomeShown ? 'ti-circle-check' : 'ti-mail'}" style="font-size:20px;${DB.business.plan360WelcomeShown ? 'color:var(--green)' : ''}"></i>
         <div style="flex:1"><strong>${escapeHtml(t('plan360.welcomeLetter'))}</strong></div>
         <i class="ti ti-chevron-right"></i>
       </div>
@@ -5370,6 +5380,7 @@ function plan360SignContract(){
   c.signedDNI = dni;
   c.signedAt = Date.now();
   saveDB();
+  plan360PingActivity();
   showToast(t('plan360.saved'));
   renderPlan360Contract();
 }
@@ -5379,6 +5390,7 @@ function savePlan360Intake(){
     s.questions.forEach((q, qi) => { q.a = (document.getElementById('p360-intake-' + si + '-' + qi).value || '').trim(); });
   });
   saveDB();
+  plan360PingActivity();
   showToast(t('plan360.saved'));
   renderPlan360Intake();
 }
@@ -5409,19 +5421,113 @@ function renderPlan360DayDetail(day){
   else renderPlan360TrabajoDetail(d);
 }
 function renderPlan360PresencialDetail(d){
-  const obj = d.objectives;
+  if(d.day === 1){ renderPlan360Dia1Hub(d); return; }
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px">
-      ${Array.isArray(obj) ? `
-        <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.objectives'))}</div>
-        <div id="p360-obj-list">${obj.map((o, i) => plan360ObjectiveRow(o, i)).join('')}</div>
-        <button class="btn btn-sm" onclick="addPlan360Objective(${d.day})" style="margin:6px 0 16px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addObjective'))}</button>
-      ` : ''}
       <div class="field"><label>${escapeHtml(t('plan360.dayTask'))}</label><textarea id="p360-notes" rows="4">${escapeHtml(d.notes || '')}</textarea></div>
       <button class="btn btn-primary" onclick="savePlan360Presencial(${d.day})">${escapeHtml(t('common.save'))}</button>
     </div>
+  `;
+}
+/* ---- Día 1: tres sitios propios ----
+   El cliente misterioso lo redacta el coach entero desde su panel — aquí
+   no hay nada que rellenar. Antes de "Enviar" no se ve ni que existe; en
+   cuanto se envía, aparece el informe COMPLETO (todas las notas), de solo
+   lectura. Nunca editable desde la app del negocio. */
+function renderPlan360Dia1Hub(d){
+  const {weekday, dayMonth} = plan360FormatDate(d.day);
+  const mc = d.misteryCheck;
+  const enviado = !!(mc && mc.sentAt);
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    <div class="card" style="margin-top:14px;${enviado ? 'cursor:pointer' : 'opacity:.55'}" ${enviado ? `onclick="renderPlan360MisteryReport(${d.day})"` : ''}>
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${enviado ? 'ti-circle-check' : 'ti-user-search'}" style="font-size:20px;${enviado ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.misteryClient'))}</strong>
+          <div class="p360-day-tag">${escapeHtml(enviado ? t('plan360.misteryReady') : t('plan360.misteryPending'))}</div>
+        </div>
+        ${enviado ? '<i class="ti ti-chevron-right"></i>' : ''}
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;opacity:.55">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-users" style="font-size:20px"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.presentialMeeting'))}</strong><div class="p360-day-tag">${escapeHtml(t('plan360.comingSoonShort'))}</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Objectives(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-target-arrow" style="font-size:20px"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.objectives'))}</strong></div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+  `;
+}
+function renderPlan360Objectives(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  if(!d || !Array.isArray(d.objectives)) return;
+  document.getElementById('plan360-content').innerHTML = `
+    <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.objectives'))}</div>
+    <div class="card" style="margin-top:14px">
+      <div id="p360-obj-list">${d.objectives.map((o, i) => plan360ObjectiveRow(o, i)).join('')}</div>
+      <button class="btn btn-sm" onclick="addPlan360Objective(${day})" style="margin:6px 0 16px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addObjective'))}</button>
+      <button class="btn btn-primary" onclick="savePlan360ObjectivesOnly(${day})">${escapeHtml(t('common.save'))}</button>
+    </div>
+  `;
+}
+function savePlan360ObjectivesOnly(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  if(!d || !Array.isArray(d.objectives)) return;
+  plan360SyncObjectivesFromForm(d);
+  d.objectives = d.objectives.filter(o => o.text);
+  saveDB();
+  showToast(t('plan360.saved'));
+  renderPlan360Objectives(day);
+}
+/* ---- Informe de cliente misterioso: SOLO LECTURA, y solo tras enviarlo ---- */
+function plan360MisteryBlockAvgClient(block){
+  const scored = block.items.filter(i => i.score !== null && i.score !== undefined && i.score !== '');
+  if(!scored.length) return null;
+  return Math.round((scored.reduce((s, i) => s + Number(i.score), 0) / scored.length) * 10) / 10;
+}
+function plan360MisteryOverallAvgClient(mc){
+  const avgs = mc.blocks.map(plan360MisteryBlockAvgClient).filter(a => a !== null);
+  if(!avgs.length) return null;
+  return Math.round((avgs.reduce((s, a) => s + a, 0) / avgs.length) * 10) / 10;
+}
+function renderPlan360MisteryReport(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const mc = d && d.misteryCheck;
+  if(!mc || !mc.sentAt) return;
+  const media = plan360MisteryOverallAvgClient(mc);
+  document.getElementById('plan360-content').innerHTML = `
+    <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.misteryClient'))}</div>
+    <div class="card" style="margin-top:14px;text-align:center">
+      <div style="font-weight:700;margin-bottom:6px">${escapeHtml(t('plan360.misteryOverallScore'))}</div>
+      <div style="font-size:32px;font-weight:700">${media !== null ? media + '/10' : '—'}</div>
+    </div>
+    ${mc.blocks.map(b => {
+      const avg = plan360MisteryBlockAvgClient(b);
+      return `<div class="card" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">
+          <strong>${escapeHtml(b.title)}</strong>
+          <span class="p360-day-tag" style="margin:0;flex:none">${avg !== null ? avg + '/10' : '—'}</span>
+        </div>
+        ${b.items.map(it => `
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px">
+            <span style="flex:1">${escapeHtml(it.text)}</span>
+            <span style="font-family:'IBM Plex Mono',monospace;color:var(--muted);flex:none">${it.score === null || it.score === undefined ? '—' : it.score}</span>
+          </div>
+        `).join('')}
+        ${b.comment ? `<p style="margin-top:8px;font-size:13px;color:var(--muted)">${escapeHtml(b.comment)}</p>` : ''}
+        ${(b.openQuestions || []).filter(q => q.a).map(q => `<div style="margin-top:8px"><div style="font-weight:600;font-size:12.5px">${escapeHtml(q.q)}</div><p style="font-size:13px">${escapeHtml(q.a)}</p></div>`).join('')}
+      </div>`;
+    }).join('')}
   `;
 }
 function plan360ObjectiveRow(o, i){
@@ -5449,15 +5555,11 @@ function plan360SyncObjectivesFromForm(d){
     if(prioEl) o.priority = prioEl.value;
   });
 }
+// Solo para el día 2 (presentación): el día 1 tiene su propio hub con tres
+// sitios separados, ver renderPlan360Dia1Hub.
 function savePlan360Presencial(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
-  // d.privateNote NUNCA se toca desde aquí: no tiene campo en esta pantalla
-  // a propósito — es del coach, y él la edita solo desde su panel.
-  if(Array.isArray(d.objectives)){
-    plan360SyncObjectivesFromForm(d);
-    d.objectives = d.objectives.filter(o => o.text);
-  }
   d.notes = (document.getElementById('p360-notes').value || '').trim();
   saveDB();
   showToast(t('plan360.saved'));
