@@ -5321,7 +5321,7 @@ function plan360ContractSectionHtml(){
   const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   if(c.signedAt){
     return `<div class="card" style="margin-top:14px">
-      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:10px">${escapeHtml(texto)}</div>
+      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:10px">${escapeHtml(texto)}</div>
       <div class="card" style="background:var(--green-l);border-color:var(--green)">
         <i class="ti ti-circle-check" style="color:var(--green)"></i>
         ${escapeHtml(t('plan360.signedBy'))} <strong>${escapeHtml(c.signedName)}</strong> (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}
@@ -5340,7 +5340,7 @@ function plan360ContractSectionHtml(){
     </div>
     <p class="view-subtitle" style="margin:-4px 0 10px">${escapeHtml(t('plan360.priceLockedHint'))}</p>
     <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Contract()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
-    <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px;margin-bottom:14px">${escapeHtml(texto)}</div>
+    <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:14px">${escapeHtml(texto)}</div>
     <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-sign-name"></div>
