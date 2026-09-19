@@ -162,18 +162,27 @@ try{
 /* ============================================================
    LISTA DE CLIENTES — gastrogoan/coaching360, solo lectura de admin
    ============================================================ */
+// Marca "actividad nueva" comparando lo último que hizo el negocio
+// (lastActivityAt, publicado por plan360PingActivity en js/core.js) con la
+// última vez que TÚ abriste su ficha (guardado en este mismo navegador).
+function plan360SeenKey(tenantId){ return 'gg_p360_seen_' + tenantId; }
 async function loadClientList(){
   const snap = await getApp().database().ref('gastrogoan/coaching360').once('value');
   const val = snap.val() || {};
-  const entries = Object.keys(val).map(tenantId => ({tenantId, name: val[tenantId].name || '(sin nombre)'}));
+  const entries = Object.keys(val).map(tenantId => ({
+    tenantId, name: val[tenantId].name || '(sin nombre)', lastActivityAt: val[tenantId].lastActivityAt || 0,
+  }));
   entries.sort((a, b) => a.name.localeCompare(b.name));
   document.getElementById('client-list-empty').classList.toggle('hidden', entries.length > 0);
-  document.getElementById('client-list').innerHTML = entries.map(e => `
-    <div class="folder-tile" onclick="openClient('${esc(e.tenantId)}','${esc(e.name)}')">
+  document.getElementById('client-list').innerHTML = entries.map(e => {
+    const visto = Number(localStorage.getItem(plan360SeenKey(e.tenantId)) || 0);
+    const nuevo = e.lastActivityAt > visto;
+    return `<div class="folder-tile" onclick="openClient('${esc(e.tenantId)}','${esc(e.name)}')">
       <div class="avatar">${esc(e.name.slice(0,2).toUpperCase())}</div>
-      <div><strong>${esc(e.name)}</strong></div>
-    </div>
-  `).join('');
+      <div style="flex:1"><strong>${esc(e.name)}</strong></div>
+      ${nuevo ? '<span style="background:var(--olive);color:#fff;font-family:\'IBM Plex Mono\',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:4px 9px;flex:none">Nuevo</span>' : ''}
+    </div>`;
+  }).join('');
 }
 
 /* ============================================================
@@ -190,6 +199,7 @@ let savingRemote = false;
 let lastPushedJson = null;
 
 async function openClient(tenantId, name){
+  try{ localStorage.setItem(plan360SeenKey(tenantId), String(Date.now())); }catch(e){}
   document.getElementById('view-list').classList.add('hidden');
   document.getElementById('view-client').classList.remove('hidden');
   document.getElementById('client-name').textContent = name;
@@ -413,6 +423,155 @@ const PLAN360_DEFAULT_PROGRAM = [
     day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3), task: '(Contenido pendiente de definir)',
   })),
 ];
+/* Checklist de Evaluación Inicial — la mitad "de incógnito" (bloques 0-13
+   del documento de referencia): cliente misterioro + inspección física.
+   La otra mitad ("Reunión presencial", bloques 14-18) se construye aparte
+   más adelante. Solo vive aquí (panel del coach): el negocio nunca ve el
+   proceso de rellenarlo, solo el informe entero una vez enviado. */
+const PLAN360_MISTERY_BLOCKS = [
+  {title: 'Cliente misterio (antes de identificarte)', items: [
+    'Calidad del sabor de los platos (consistencia con lo que promete la carta).',
+    'Presentación y emplatado (claridad, temperatura, timing).',
+    'Porciones y relación cantidad / precio.',
+    'Tempo del servicio (tiempos entre platos y espera total).',
+    'Coordinación cocina-sala en el pase (timing y temperatura).',
+    'Conocimiento de la carta por el servicio (alérgenos, recomendaciones).',
+    'Atención y trato (calidez, profesionalidad, uso del nombre).',
+    'Calidad de las bebidas (temperatura, servicio por copa, maridaje).',
+    'Coherencia entre lo ofrecido en carta y lo entregado (producto/receta).',
+    'Upsell: ¿el servicio sugiere entrantes, bebidas o postres, o cero venta?',
+    'Bienvenida y despedida: ¿te reciben y despiden, o entras y sales como un fantasma?',
+    '¿Te invitan a volver, piden reseña o dan motivo de retorno?',
+  ], openQuestions: [
+    'Las 3 fugas más claras (una de comida, una de servicio, una de imagen)',
+    '¿Volverías como cliente y por qué?',
+  ]},
+  {title: 'Exterior y fachada', items: [
+    'Señalética visible y legible (nombre, horario).',
+    'Limpieza de acceso y entrada (escaleras, rampas).',
+    'Estado de cristaleras/puerta y tiradores.',
+    'Accesibilidad: rampa/espacio para PMR y señalización.',
+    'Iluminación exterior adecuada.',
+    'Aparcamiento/carga-descarga identificado y libre.',
+    '¿La fachada invita a entrar? ¿Carta y precios visibles desde fuera?',
+  ]},
+  {title: 'Recepción / reserva / espera', items: [
+    'Punto de recepción operativo y ordenado.',
+    'Agenda/reservas accesible y sincronizada (comprobar 1 reserva test).',
+    'Tiempo de espera visualizado y comunicado al cliente.',
+    'Zona de espera limpia y con información (carta compacta/QR).',
+    'Protocolos de alérgenos visibles si aplica.',
+  ]},
+  {title: 'Sala y montaje de mesas', items: [
+    'Kit de montaje por mesa correcto (vajilla, cristalería, cubertería, servilleta).',
+    'Uniformidad y limpieza del textil y mobiliario.',
+    'Iluminación y temperatura acordes al servicio.',
+    'Música: volumen y playlist adecuados.',
+    'Señalética de salidas y baños visible.',
+    'Exhibición de botellas/elementos decorativos segura y coherente.',
+    'Estado y limpieza del piso y paredes.',
+  ]},
+  {title: 'Barra y zona de bebidas', items: [
+    'Barra ordenada y sin acumulación de elementos.',
+    'Cristalería limpia y sin marcas.',
+    'Stock visible y organizado (refrescos, vino por copa, licores).',
+    'Máquinas (cafetera, coctelera, lavavasos) funcionando.',
+    'Temperaturas de neveras/bar comprobadas.',
+    'Carta de bebidas accesible y actualizada.',
+  ]},
+  {title: 'Baños y zonas públicas', items: [
+    'Número y estado de baños acordes al aforo.',
+    'Limpieza, papel, jabón y secamanos disponibles.',
+    'Señalización e higiene general (olor, iluminación).',
+    'Registro de limpieza visible si aplica.',
+  ]},
+  {title: 'Cocina — orden general', items: [
+    'Limpieza general y ausencia de plagas o rastros.',
+    'Flujo de trabajo despejado (preparación, cocción, pase).',
+    'Equipos principales operativos (hornos, planchas, freidoras, cámaras).',
+    'Extractores y ventilación en funcionamiento.',
+    'Orden y etiquetado en mesas de trabajo.',
+    'Seguridad: suelo antideslizante, salidas libres.',
+    'Emplatado en pase coherente y presentable (observar 1 plato).',
+  ]},
+  {title: 'Cocina — control de calidad y documentación', items: [
+    'Fichas de recetas y emplatado accesibles.',
+    'Registro de temperaturas de cámaras y congeladores actualizado.',
+    'Registros de recepción (albaranes + certificados) visibles.',
+    'Procedimiento de alérgenos y rotulado en cocina.',
+    'Muestras conservadas de producciones críticas (si aplica).',
+    'Plan APPCC documentado y actualizado.',
+  ]},
+  {title: 'Almacén y cámaras', items: [
+    'Orden y FIFO (first in, first out) aplicado.',
+    'Temperaturas de cámaras y frigos en rango (anotar lecturas).',
+    'Productos etiquetados con fecha de recepción y consumo.',
+    'Separación adecuada de alimentos (crudo/cocinado) y alérgenos.',
+    'Aceites y residuos almacenados correctamente.',
+  ]},
+  {title: 'Proveedores y compras', items: [
+    'Hoja de proveedores actualizada y accesible.',
+    'Lead times y condiciones documentadas.',
+    'Contratos/seguimientos básicos vigentes (lácteos, carnes, pescados).',
+    'Muestras de proveedor revisadas si hay dudas de calidad.',
+  ]},
+  {title: 'Seguridad, instalaciones y cumplimiento', items: [
+    'Licencia de actividad y registro sanitario visibles o localizados.',
+    'Boletín eléctrico y certificados de instalaciones presentes.',
+    'Certificado y mantenimiento de salida de humos comprobado.',
+    'Extintores y señalización de emergencias con fecha de revisión.',
+    'Iluminación de emergencia y vías de evacuación despejadas.',
+    'Cartelería obligatoria visible (aforo, reclamaciones, teléfono emergencias).',
+    'Botiquín visible y dispuesto con lo mínimo (heridas, quemaduras).',
+  ]},
+  {title: 'Personal y formación', items: [
+    'Vestuario/uniforme y presencia profesional del equipo.',
+    'Personal con nociones de la oferta gastronómica y de bebidas.',
+    'Personal formado en alérgenos y procedimiento de sala.',
+    'Roles por turno claros (jefe de sala, responsables de barra/caja).',
+    'Moral y actitud del equipo (nota rápida de clima).',
+  ]},
+  {title: 'Experiencia cliente y operativa', items: [
+    'Carta/menú física y QR actualizados y legibles.',
+    'Tiempo medio estimado de servicio (por sección).',
+    'Guion de bienvenida/despedida implementado (comprobar en 1 interacción).',
+    'Proceso de cobro eficiente (TPV operativo, tickets, split bill).',
+    'Encuesta/QR post-visita disponible en la cuenta.',
+  ]},
+  {title: 'Marketing y presencia online', items: [
+    'Ficha de Google Business completa (horario, teléfono, fotos, reseñas).',
+    'Nivel y respuesta a reseñas (rapidez y tono; últimas 6 reseñas).',
+    'Instagram: actividad (última publicación <30 días), calidad visual y coherencia del feed.',
+    'Facebook u otros relevantes: información y actividad reciente.',
+    'Menú online disponible (link en bio/Google/web).',
+    'Calidad de las fotos públicas (representan la experiencia real).',
+    'Consistencia del mensaje entre web/redes/carta (precios, horario, oferta).',
+    'Herramientas activas: reservas online, enlace en Google/Instagram, pago visible.',
+    'Acciones de promoción local recientes (eventos, colaboraciones, posts).',
+    'Engagement y comunidad (comentarios reales, interacción).',
+  ]},
+];
+function plan360MisteryBlockAvg(block){
+  const scored = block.items.filter(i => i.score !== null && i.score !== undefined && i.score !== '');
+  if(!scored.length) return null;
+  const sum = scored.reduce((s, i) => s + Number(i.score), 0);
+  return Math.round((sum / scored.length) * 10) / 10;
+}
+function plan360MisteryOverallAvg(mc){
+  const avgs = mc.blocks.map(plan360MisteryBlockAvg).filter(a => a !== null);
+  if(!avgs.length) return null;
+  return Math.round((avgs.reduce((s, a) => s + a, 0) / avgs.length) * 10) / 10;
+}
+function plan360FreshMisteryCheck(){
+  return {
+    blocks: PLAN360_MISTERY_BLOCKS.map(b => ({
+      title: b.title,
+      items: b.items.map(text => ({text, score: null})),
+      openQuestions: (b.openQuestions || []).map(q => ({q, a: ''})),
+    })),
+    sentAt: null,
+  };
+}
 function ensureRemotePlan360(){
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
     remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
@@ -431,11 +590,17 @@ function ensureRemotePlan360(){
         // absoluto (nunca "objectives: undefined"), o cualquier .set()
         // posterior de todo el negocio fallaba en silencio.
         const dia = {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: ''};
-        if(d.day === 1) dia.objectives = [];
+        if(d.day === 1){ dia.objectives = []; dia.misteryCheck = plan360FreshMisteryCheck(); }
         return dia;
       }
       return {day: d.day, phase: 'trabajo', title: d.title, priority: null, reviewType: null, tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
     });
+  }
+  // Migración: negocios cuyo día 1 se creó antes de que existiera el
+  // checklist de cliente misterioso se quedarían sin él para siempre.
+  const dia1Existente = (remoteBiz.plan360Program || []).find(d => d.day === 1);
+  if(dia1Existente && !dia1Existente.misteryCheck){
+    dia1Existente.misteryCheck = plan360FreshMisteryCheck();
   }
   if(!remoteBiz.plan360StartDate) remoteBiz.plan360StartDate = todayStr();
   if(!remoteBiz.plan360Contract){
@@ -569,7 +734,7 @@ function renderIntakePage(){
     ${plan360PageHeader('Documentación inicial')}
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderWelcomePage(true)">
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-mail" style="font-size:20px"></i>
+        <i class="ti ${remoteBiz.plan360WelcomeShown ? 'ti-circle-check' : 'ti-mail'}" style="font-size:20px;${remoteBiz.plan360WelcomeShown ? 'color:var(--green)' : ''}"></i>
         <div style="flex:1"><strong>Carta de bienvenida</strong></div>
         <i class="ti ti-chevron-right"></i>
       </div>
@@ -720,21 +885,144 @@ function objRow(o, i){
   </div>`;
 }
 function renderPresencialPage(d){
-  const obj = d.objectives;
+  if(d.day === 1){ renderDia1Hub(d); return; }
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px">
-      ${Array.isArray(obj) ? `
-        <div style="font-weight:600;margin-bottom:6px">Objetivos</div>
-        <div id="obj-list">${obj.map((o, i) => objRow(o, i)).join('')}</div>
-        <button class="btn btn-sm" onclick="addObjective(${d.day})" style="margin:6px 0 16px">+ Añadir objetivo</button>
-        <div class="field"><label>Nota privada del coach <span class="muted">(no la ve el negocio)</span></label><textarea id="private-note" rows="5">${esc(d.privateNote || '')}</textarea></div>
-      ` : ''}
       <div class="field"><label>Qué toca hacer</label><textarea id="pres-notes" rows="4">${esc(d.notes || '')}</textarea></div>
       <button class="btn btn-primary" onclick="savePresencial(${d.day})">Guardar</button>
     </div>
   `;
+}
+/* ---- Día 1: tres sitios propios, no una sola pantalla ---- */
+function renderDia1Hub(d){
+  const {weekday, dayMonth} = plan360FormatDate(d.day);
+  const mc = d.misteryCheck;
+  const media = mc ? plan360MisteryOverallAvg(mc) : null;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderClientGrid()">← Calendario</button>
+    <h2 style="margin:10px 0 4px">${esc(d.title)}</h2>
+    <p class="muted" style="margin-bottom:14px">${weekday} · ${dayMonth}</p>
+    <div class="card" style="cursor:pointer" onclick="renderMisteryHub(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${mc && mc.sentAt ? 'ti-circle-check' : 'ti-user-search'}" style="font-size:20px;${mc && mc.sentAt ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>Cliente misterioso</strong>
+          <div class="p360-day-tag">${mc && mc.sentAt ? 'Enviado al negocio — nota ' + media + '/10' : 'Sin enviar (el negocio no lo ve todavía)'}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;opacity:.55">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-users" style="font-size:20px"></i>
+        <div style="flex:1"><strong>Reunión presencial</strong><div class="p360-day-tag">Próximamente</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderObjetivosPage(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-target-arrow" style="font-size:20px"></i>
+        <div style="flex:1"><strong>Objetivos</strong></div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+  `;
+}
+function renderObjetivosPage(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
+    <h2 style="margin:10px 0 4px">Objetivos</h2>
+    <div class="card" style="margin-top:14px">
+      <div id="obj-list">${d.objectives.map((o, i) => objRow(o, i)).join('')}</div>
+      <button class="btn btn-sm" onclick="addObjective(${day})" style="margin:6px 0 16px">+ Añadir objetivo</button>
+      <div class="field"><label>Nota privada del coach <span class="muted">(no la ve el negocio)</span></label><textarea id="private-note" rows="5">${esc(d.privateNote || '')}</textarea></div>
+      <button class="btn btn-primary" onclick="saveObjetivos(${day})">Guardar</button>
+    </div>
+  `;
+}
+function saveObjetivos(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  syncObjectivesFromForm(d);
+  d.objectives = d.objectives.filter(o => o.text);
+  const priv = document.getElementById('private-note');
+  if(priv) d.privateNote = priv.value.trim();
+  saveRemoteBiz();
+  renderObjetivosPage(day);
+}
+/* ---- Cliente misterioso: 14 bloques, una pantalla cada uno ---- */
+function renderMisteryHub(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.misteryCheck) return;
+  const mc = d.misteryCheck;
+  const media = plan360MisteryOverallAvg(mc);
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
+    <h2 style="margin:10px 0 4px">Cliente misterioso</h2>
+    <p class="muted" style="margin-bottom:14px">Puntúa cada bloque; la nota del bloque y la nota final se calculan solas.</p>
+    ${mc.sentAt ? `<div class="card" style="background:var(--green-l);border-color:var(--green);margin-bottom:14px">✓ Enviado al negocio el ${esc(new Date(mc.sentAt).toLocaleString('es-ES'))}</div>` : ''}
+    ${mc.blocks.map((b, bi) => {
+      const avg = plan360MisteryBlockAvg(b);
+      return `<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="renderMisteryBlockPage(${day},${bi})">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1"><strong>${esc(b.title)}</strong></div>
+          <div class="p360-day-tag" style="margin:0;flex:none">${avg !== null ? avg + '/10' : 'Sin empezar'}</div>
+          <i class="ti ti-chevron-right"></i>
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="card" style="margin-top:14px;text-align:center">
+      <div style="font-weight:700;margin-bottom:6px">Nota media del local</div>
+      <div style="font-size:28px;font-weight:700">${media !== null ? media + '/10' : '—'}</div>
+      ${!mc.sentAt ? `<button class="btn btn-primary" style="margin-top:10px" onclick="sendMisteryCheck(${day})">Enviar diagnóstico al negocio</button>
+        <p class="muted" style="margin-top:8px">El negocio verá el informe entero, tal cual, con todas las notas.</p>` : ''}
+    </div>
+  `;
+}
+function renderMisteryBlockPage(day, blockIdx){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  const b = d.misteryCheck.blocks[blockIdx];
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderMisteryHub(${day})">← Cliente misterioso</button>
+    <h2 style="margin:10px 0 4px">${esc(b.title)}</h2>
+    <div class="card" style="margin-top:14px">
+      ${b.items.map((it, i) => `
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:13.5px">${esc(it.text)}</div>
+          <select id="mi-score-${i}" style="width:auto;min-width:64px;flex:none">
+            <option value="">—</option>
+            ${Array.from({length: 11}, (_, n) => n).map(n => `<option value="${n}" ${it.score === n ? 'selected' : ''}>${n}</option>`).join('')}
+          </select>
+        </div>
+      `).join('')}
+      <div class="field" style="margin-top:6px"><label>Comentario del bloque (opcional)</label><textarea id="mi-comment" rows="2">${esc(b.comment || '')}</textarea></div>
+      ${(b.openQuestions || []).map((q, qi) => `
+        <div class="field" style="margin-top:10px"><label>${esc(q.q)}</label><textarea id="mi-open-${qi}" rows="3">${esc(q.a)}</textarea></div>
+      `).join('')}
+      <button class="btn btn-primary" style="margin-top:14px" onclick="saveMisteryBlock(${day},${blockIdx})">Guardar</button>
+    </div>
+  `;
+}
+function saveMisteryBlock(day, blockIdx){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  const b = d.misteryCheck.blocks[blockIdx];
+  b.items.forEach((it, i) => {
+    const val = document.getElementById('mi-score-' + i).value;
+    it.score = val === '' ? null : Number(val);
+  });
+  b.comment = (document.getElementById('mi-comment').value || '').trim();
+  (b.openQuestions || []).forEach((q, qi) => { q.a = (document.getElementById('mi-open-' + qi).value || '').trim(); });
+  saveRemoteBiz();
+  renderMisteryHub(day);
+}
+function sendMisteryCheck(day){
+  if(!confirm('¿Enviar el diagnóstico? El negocio verá el informe entero, con todas las notas, en su propia app.')) return;
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  d.misteryCheck.sentAt = Date.now();
+  saveRemoteBiz();
+  renderMisteryHub(day);
 }
 function addObjective(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
