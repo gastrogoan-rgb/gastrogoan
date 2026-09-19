@@ -5502,6 +5502,13 @@ function plan360MisteryOverallAvgClient(mc){
   if(!avgs.length) return null;
   return Math.round((avgs.reduce((s, a) => s + a, 0) / avgs.length) * 10) / 10;
 }
+// Semáforo de la nota (0-10): mismos umbrales y colores que el panel del coach.
+function plan360ScoreColorClient(score){
+  if(score === null || score === undefined) return null;
+  if(score < 5) return 'var(--red)';
+  if(score < 7.5) return 'var(--amber)';
+  return 'var(--green)';
+}
 function renderPlan360MisteryReport(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   const mc = d && d.misteryCheck;
@@ -5512,14 +5519,15 @@ function renderPlan360MisteryReport(day){
     <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.misteryClient'))}</div>
     <div class="card" style="margin-top:14px;text-align:center">
       <div style="font-weight:700;margin-bottom:6px">${escapeHtml(t('plan360.misteryOverallScore'))}</div>
-      <div style="font-size:32px;font-weight:700">${media !== null ? media + '/10' : '—'}</div>
+      <div style="font-size:32px;font-weight:700;${plan360ScoreColorClient(media) ? `color:${plan360ScoreColorClient(media)}` : ''}">${media !== null ? media + '/10' : '—'}</div>
     </div>
     ${mc.blocks.map(b => {
       const avg = plan360MisteryBlockAvgClient(b);
+      const col = plan360ScoreColorClient(avg);
       return `<div class="card" style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">
           <strong>${escapeHtml(b.title)}</strong>
-          <span class="p360-day-tag" style="margin:0;flex:none">${avg !== null ? avg + '/10' : '—'}</span>
+          <span class="p360-day-tag" style="margin:0;flex:none;${col ? `background:${col};color:#fff` : ''}">${avg !== null ? avg + '/10' : '—'}</span>
         </div>
         ${b.items.map(it => `
           <div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px">
