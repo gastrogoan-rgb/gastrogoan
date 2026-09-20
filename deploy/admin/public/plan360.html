@@ -676,6 +676,45 @@ function plan360FreshReunionPersonal(){
     resumenSentAt: null,
   };
 }
+// Masterclass de la app: checklist de lo imprescindible que el hostelero
+// tiene que saber hacer y tener metido en la app antes de arrancar el
+// plan de acción. Editable (se puede tachar, editar texto o añadir
+// puntos), pero nace con un contenido real, no una plantilla vacía.
+const PLAN360_MASTERCLASS_CHECKLIST = [
+  'Sabe abrir y cerrar el turno de caja en el TPV',
+  'Sabe registrar una venta completa: mesa, para llevar y a domicilio',
+  'Sabe aplicar un descuento y anular una venta con motivo',
+  'La Carta está cargada con categorías, precios y alérgenos',
+  'Sabe editar un plato o añadir uno nuevo desde Carta y Menú',
+  'Los ingredientes básicos están dados de alta con precio y proveedor',
+  'Sabe dar de alta a un empleado y asignarle su PIN',
+  'Sabe crear y publicar los turnos de la semana',
+  'Sabe gestionar una reserva desde el panel: crear, confirmar, cancelar',
+  'Sabe leer el semáforo de Tesorería y la Cuenta de Resultados en Gestión Económica',
+  'Tiene el QR de la web de reservas enseñado y accesible para el equipo',
+  'Sabe dónde consultar el Manual dentro de la app si se atasca',
+];
+function plan360FreshMasterclass(){
+  return {
+    items: PLAN360_MASTERCLASS_CHECKLIST.map(text => ({text, done: false})),
+    completadoAt: null,
+  };
+}
+// Team building: no es una nota, es un guion de presentación para leer o
+// apoyarse delante de TODO el equipo — de ahí que nazca con un texto real
+// y no en blanco. El coach lo ajusta al negocio antes de usarlo.
+const PLAN360_TEAMBUILDING_SCRIPT = `Buenas a todos. Soy vuestro coach de GastroGoan, y voy a acompañar al negocio durante las próximas 4 semanas en un plan de trabajo a fondo para mejorar el día a día.
+
+¿Qué es esto? No es una auditoría para buscar culpables: es un plan con objetivos claros y un calendario día a día, pensado para que el negocio funcione mejor — y que eso se note también en vuestro trabajo diario, con menos caos y procesos más claros.
+
+¿Qué vais a notar? Durante estas 4 semanas van a pasar cosas en el local: cambios en la carta, en los turnos, en cómo se hacen algunas tareas, quizás alguna mejora física. Nada de esto es una crítica a cómo lo hacíais hasta ahora: es evolucionar juntos, con un plan detrás.
+
+¿Qué necesito de vosotros? Sinceridad si algo no funciona, paciencia mientras probamos cosas nuevas, y que le deis una oportunidad a la app de gestión — os va a facilitar el día a día en cuanto le cojáis el truco.
+
+Cualquier duda, me tenéis aquí estas semanas, y al dueño siempre. Vamos a ello.`;
+function plan360FreshTeamBuilding(){
+  return {script: PLAN360_TEAMBUILDING_SCRIPT, completadoAt: null};
+}
 function ensureRemotePlan360(){
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
     remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
@@ -695,10 +734,14 @@ function ensureRemotePlan360(){
         // posterior de todo el negocio fallaba en silencio.
         const dia = {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: ''};
         if(d.day === 1){
-          dia.objectives = [];
           dia.misteryCheck = plan360FreshMisteryCheck();
           dia.reunionInicial = plan360FreshReunionInicial();
           dia.reunionPersonal = plan360FreshReunionPersonal();
+        }
+        if(d.day === 2){
+          dia.objectives = [];
+          dia.masterclass = plan360FreshMasterclass();
+          dia.teamBuilding = plan360FreshTeamBuilding();
         }
         return dia;
       }
@@ -709,12 +752,28 @@ function ensureRemotePlan360(){
   // checklist de cliente misterioso o la reunión inicial se quedarían sin
   // ellos para siempre.
   const dia1Existente = (remoteBiz.plan360Program || []).find(d => d.day === 1);
-  // Migración: negocios de antes de que "objectives" existiera se quedan
-  // sin la clave para siempre y la pantalla de Objetivos revienta en
-  // silencio al abrirla (un .map sobre undefined) — el coach ve que no
-  // pasa nada al pulsar y parece un botón roto.
-  if(dia1Existente && !Array.isArray(dia1Existente.objectives)){
-    dia1Existente.objectives = [];
+  const dia2Existente = (remoteBiz.plan360Program || []).find(d => d.day === 2);
+  // Objetivos vivía en el Día 1; el coach decidió (20/09) moverlo al Día 2,
+  // junto a la presentación del plan de acción. Si un negocio ya tenía
+  // objetivos puestos en el Día 1 de antes de este cambio, se mudan sin
+  // perderlos; si no, el Día 2 simplemente empieza vacío. Sin esta clave,
+  // la pantalla de Objetivos revienta en silencio al abrirla (un .map
+  // sobre undefined) — el coach ve que no pasa nada al pulsar.
+  if(dia2Existente && !Array.isArray(dia2Existente.objectives)){
+    dia2Existente.objectives = (dia1Existente && Array.isArray(dia1Existente.objectives)) ? dia1Existente.objectives : [];
+  }
+  if(dia1Existente && Array.isArray(dia1Existente.objectives)){
+    delete dia1Existente.objectives;
+  }
+  // Migración: la primera versión de Masterclass/Team building era una
+  // nota libre ({notas, completadoAt}); ahora son checklist y guion
+  // reales ({items,...}/{script,...}). Sin uso real todavía (recién
+  // publicado), así que se sustituye entero sin intentar migrar texto.
+  if(dia2Existente && !Array.isArray(dia2Existente.masterclass && dia2Existente.masterclass.items)){
+    dia2Existente.masterclass = plan360FreshMasterclass();
+  }
+  if(dia2Existente && typeof (dia2Existente.teamBuilding && dia2Existente.teamBuilding.script) !== 'string'){
+    dia2Existente.teamBuilding = plan360FreshTeamBuilding();
   }
   if(dia1Existente && !dia1Existente.misteryCheck){
     dia1Existente.misteryCheck = plan360FreshMisteryCheck();
@@ -1035,6 +1094,7 @@ function objRow(o, i){
 }
 function renderPresencialPage(d){
   if(d.day === 1){ renderDia1Hub(d); return; }
+  if(d.day === 2){ renderDia2Hub(d); return; }
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
@@ -1080,13 +1140,6 @@ function renderDia1Hub(d){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
-    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderObjetivosPage(${d.day})">
-      <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-target-arrow" style="font-size:20px"></i>
-        <div style="flex:1"><strong>Objetivos</strong></div>
-        <i class="ti ti-chevron-right"></i>
-      </div>
-    </div>
   `;
 }
 function renderObjetivosPage(day){
@@ -1112,6 +1165,205 @@ function saveObjetivos(day){
   if(priv) d.privateNote = priv.value.trim();
   saveRemoteBiz();
   renderObjetivosPage(day);
+}
+/* ---- Día 2: presentación y entrega del plan. Orden real de la sesión
+   (según el coach, 20/09): objetivos por prioridad → plan de acción de
+   las 4 semanas → masterclass de la app → team building. Las dos últimas
+   son notas simples con "marcar como hecha" — dinámicas presenciales sin
+   más contenido que rellenar. El plan de acción es el propio calendario
+   (días 3-28) que ya existe, no una pantalla nueva. */
+function renderDia2Hub(d){
+  const {weekday, dayMonth} = plan360FormatDate(d.day);
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderClientGrid()">← Calendario</button>
+    <h2 style="margin:10px 0 4px">${esc(d.title)}</h2>
+    <p class="muted" style="margin-bottom:14px">${weekday} · ${dayMonth}</p>
+    <div class="card" style="cursor:pointer" onclick="renderPlanAccionPage(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-calendar-event" style="font-size:20px"></i>
+        <div style="flex:1"><strong>1. Plan de acción — 4 semanas</strong>
+          <div class="p360-day-tag">Objetivos por prioridad + resumen visual de los días 3-28</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderMasterclassPage(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${d.masterclass && d.masterclass.completadoAt ? 'ti-circle-check' : 'ti-device-laptop'}" style="font-size:20px;${d.masterclass && d.masterclass.completadoAt ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>2. Masterclass de la app</strong>
+          <div class="p360-day-tag">${d.masterclass && d.masterclass.completadoAt ? 'Hecha' : 'Pendiente'}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderTeamBuildingPage(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${d.teamBuilding && d.teamBuilding.completadoAt ? 'ti-circle-check' : 'ti-users-group'}" style="font-size:20px;${d.teamBuilding && d.teamBuilding.completadoAt ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>3. Team building</strong>
+          <div class="p360-day-tag">${d.teamBuilding && d.teamBuilding.completadoAt ? 'Hecha' : 'Pendiente'}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+  `;
+}
+/* ---- Plan de acción: objetivos por prioridad arriba (ya fijados en su
+   propia pantalla) + debajo un resumen visual de los días 3-28 — cada
+   día, al abrirlo, ya trae su propio contenido detallado; esto es solo
+   la foto de conjunto. ---- */
+function plan360DiasTrabajoVisual(day){
+  const prog = remoteBiz.plan360Program || [];
+  const trabajo = prog.filter(x => x.phase === 'trabajo');
+  const semanas = [];
+  trabajo.forEach(x => {
+    const fecha = plan360DateForDay(x.day);
+    const [y, m, dd] = fecha.split('-').map(Number);
+    const diaSemana = (new Date(y, m - 1, dd).getDay() + 6) % 7;
+    const inicioSemana = addDaysStr(fecha, -diaSemana);
+    let semana = semanas.find(s => s.inicio === inicioSemana);
+    if(!semana){ semana = {inicio: inicioSemana, dias: []}; semanas.push(semana); }
+    semana.dias.push(x);
+  });
+  const dayCard = x => {
+    const {weekday, dayMonth} = plan360FormatDate(x.day);
+    const col = plan360PriorityColor(x.priority);
+    const done = x.tasks.length && x.tasks.every(t => t.done);
+    const doneCount = x.tasks.filter(t => t.done).length;
+    return `<div class="p360-day" style="${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${x.day})">
+      <div class="p360-day-weekday">${esc(weekday)}</div>
+      <div class="p360-day-date">${esc(dayMonth)}</div>
+      ${x.reviewType ? `<div class="p360-day-tag">${x.reviewType === 'presencial' ? 'Revisión presencial' : 'Reunión online'}</div>` : ''}
+      ${x.tasks.length ? `<div class="p360-day-progress">${done ? '✓' : doneCount + '/' + x.tasks.length}</div>` : ''}
+    </div>`;
+  };
+  return semanas.map((s, i) => `
+    <div class="p360-week">
+      <div class="p360-week-label">Semana ${i + 1}</div>
+      <div class="p360-week-grid">${s.dias.map(dayCard).join('')}</div>
+    </div>
+  `).join('');
+}
+function renderPlanAccionPage(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  const orden = {alta: 0, media: 1, baja: 2};
+  const objetivos = (d.objectives || []).filter(o => o.text).slice().sort((a, b) => (orden[a.priority] ?? 1) - (orden[b.priority] ?? 1));
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
+    <h2 style="margin:10px 0 4px">Plan de acción — 4 semanas</h2>
+    <div class="card" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <strong>Objetivos por prioridad</strong>
+        <button class="btn btn-sm" onclick="renderObjetivosPage(${day})">Editar</button>
+      </div>
+      ${objetivos.length ? objetivos.map(o => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span style="width:9px;height:9px;border-radius:50%;background:${plan360PriorityColor(o.priority)};flex:none"></span>
+          <span style="flex:1">${esc(o.text)}</span>
+        </div>
+      `).join('') : '<p class="muted">Todavía no se han fijado objetivos.</p>'}
+    </div>
+    <p class="muted" style="margin:16px 0 6px">Resumen visual — cada día trae su contenido detallado al abrirlo</p>
+    ${plan360DiasTrabajoVisual(day)}
+  `;
+}
+/* ---- Masterclass de la app: checklist real, no una nota en blanco ---- */
+function renderMasterclassPage(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.masterclass) return;
+  const m = d.masterclass;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
+    <h2 style="margin:10px 0 4px">Masterclass de la app</h2>
+    <p class="muted" style="margin-bottom:14px">Repásalo con el hostelero: lo que debería saber hacer y los datos que hay que tener metidos antes de arrancar.</p>
+    <div class="card">
+      <div id="mc-list">${m.items.map((it, i) => plan360MasterclassRow(day, it, i)).join('')}</div>
+      <button class="btn btn-sm" onclick="addMasterclassItem(${day})" style="margin:6px 0 16px">+ Añadir punto</button>
+      <button class="btn btn-sm" onclick="saveMasterclass(${day})" style="margin-bottom:10px">Guardar</button>
+      ${!m.completadoAt ? `<button class="btn btn-primary" onclick="marcarMasterclassHecha(${day})">Marcar como hecha</button>` : '<p class="muted">Marcada como hecha — se puede seguir editando.</p>'}
+    </div>
+  `;
+}
+function plan360MasterclassRow(day, it, i){
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    <i class="ti ${it.done ? 'ti-circle-check' : 'ti-circle'}" id="mc-icon-${i}" style="font-size:22px;cursor:pointer;flex:none;color:${it.done ? 'var(--green)' : 'var(--border)'}" onclick="toggleMasterclassItem(${day},${i})"></i>
+    <input id="mc-text-${i}" value="${esc(it.text)}" style="flex:1">
+  </div>`;
+}
+function toggleMasterclassItem(day, i){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.masterclass) return;
+  const it = d.masterclass.items[i];
+  it.done = !it.done;
+  const icon = document.getElementById('mc-icon-' + i);
+  if(icon){
+    icon.className = 'ti ' + (it.done ? 'ti-circle-check' : 'ti-circle');
+    icon.style.color = it.done ? 'var(--green)' : 'var(--border)';
+  }
+  saveRemoteBiz();
+}
+function plan360SyncMasterclassTexts(d){
+  d.masterclass.items.forEach((it, i) => {
+    const ta = document.getElementById('mc-text-' + i);
+    if(ta) it.text = ta.value.trim();
+  });
+}
+function addMasterclassItem(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.masterclass) return;
+  plan360SyncMasterclassTexts(d);
+  d.masterclass.items.push({text: '', done: false});
+  document.getElementById('mc-list').innerHTML = d.masterclass.items.map((it, i) => plan360MasterclassRow(day, it, i)).join('');
+}
+function saveMasterclass(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.masterclass) return;
+  plan360SyncMasterclassTexts(d);
+  d.masterclass.items = d.masterclass.items.filter(it => it.text);
+  saveRemoteBiz();
+  renderMasterclassPage(day);
+}
+function marcarMasterclassHecha(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.masterclass) return;
+  plan360SyncMasterclassTexts(d);
+  d.masterclass.items = d.masterclass.items.filter(it => it.text);
+  d.masterclass.completadoAt = Date.now();
+  saveRemoteBiz();
+  renderMasterclassPage(day);
+}
+/* ---- Team building: guion de presentación para todo el equipo ---- */
+function renderTeamBuildingPage(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.teamBuilding) return;
+  const tb = d.teamBuilding;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
+    <h2 style="margin:10px 0 4px">Team building</h2>
+    <p class="muted" style="margin-bottom:14px">Guion para presentar a todo el equipo — ajústalo al negocio antes de usarlo.</p>
+    <div class="card">
+      <div class="field"><label>Guion de la presentación</label><textarea id="tb-script" rows="14">${esc(tb.script || '')}</textarea></div>
+      <button class="btn btn-sm" onclick="saveTeamBuilding(${day})" style="margin-bottom:10px">Guardar</button>
+      ${!tb.completadoAt ? `<button class="btn btn-primary" onclick="marcarTeamBuildingHecha(${day})">Marcar como hecha</button>` : '<p class="muted">Marcada como hecha — se puede seguir editando.</p>'}
+    </div>
+  `;
+}
+function saveTeamBuilding(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.teamBuilding) return;
+  const ta = document.getElementById('tb-script');
+  if(ta) d.teamBuilding.script = ta.value.trim();
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function marcarTeamBuildingHecha(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.teamBuilding) return;
+  const ta = document.getElementById('tb-script');
+  if(ta) d.teamBuilding.script = ta.value.trim();
+  d.teamBuilding.completadoAt = Date.now();
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 /* ---- Reunión inicial: guion de 10 preguntas con dictado por voz ----
    La idea (pedida expresamente por el coach) es que él no tenga que estar

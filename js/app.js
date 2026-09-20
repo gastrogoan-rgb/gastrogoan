@@ -5422,6 +5422,7 @@ function renderPlan360DayDetail(day){
 }
 function renderPlan360PresencialDetail(d){
   if(d.day === 1){ renderPlan360Dia1Hub(d); return; }
+  if(d.day === 2){ renderPlan360Dia2Hub(d); return; }
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
@@ -5470,13 +5471,82 @@ function renderPlan360Dia1Hub(d){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>` : ''}
-    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Objectives(${d.day})">
+  `;
+}
+/* ---- Día 2: presentación y entrega del plan. Orden real de la sesión
+   (según el coach, 20/09): objetivos por prioridad → plan de acción de las
+   4 semanas → masterclass de la app → team building. Las dos últimas son
+   dinámicas presenciales del coach y no tienen contenido propio que ver
+   aquí; solo objetivos (editable) y el plan (el calendario que ya existe). */
+function renderPlan360Dia2Hub(d){
+  const {weekday, dayMonth} = plan360FormatDate(d.day);
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360PlanAccion(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-target-arrow" style="font-size:20px"></i>
-        <div style="flex:1"><strong>${escapeHtml(t('plan360.objectives'))}</strong></div>
+        <i class="ti ti-calendar-event" style="font-size:20px"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.actionPlan'))}</strong></div>
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
+  `;
+}
+/* ---- Plan de acción: objetivos por prioridad + resumen visual de los
+   días 3-28 — cada día trae su propio contenido detallado al abrirlo. */
+function plan360DiasTrabajoVisual(){
+  const prog = DB.business.plan360Program || [];
+  const trabajo = prog.filter(x => x.phase === 'trabajo');
+  const semanas = [];
+  trabajo.forEach(x => {
+    const fecha = plan360DateForDay(x.day);
+    const [y, m, dd] = fecha.split('-').map(Number);
+    const diaSemana = (new Date(y, m - 1, dd).getDay() + 6) % 7;
+    const inicioSemana = addDaysStr(fecha, -diaSemana);
+    let semana = semanas.find(s => s.inicio === inicioSemana);
+    if(!semana){ semana = {inicio: inicioSemana, dias: []}; semanas.push(semana); }
+    semana.dias.push(x);
+  });
+  const dayCard = x => {
+    const {weekday, dayMonth} = plan360FormatDate(x.day);
+    const col = plan360PriorityColor(x.priority);
+    const done = x.tasks.length && x.tasks.every(t => t.done);
+    const doneCount = x.tasks.filter(t => t.done).length;
+    return `<div class="p360-day" style="${col ? 'border-left-color:' + col : ''}" onclick="renderPlan360DayDetail(${x.day})">
+      <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
+      <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
+      ${x.reviewType ? `<div class="p360-day-tag">${escapeHtml(t('plan360.reviewType.' + x.reviewType))}</div>` : ''}
+      ${x.tasks.length ? `<div class="p360-day-progress">${done ? '<i class="ti ti-circle-check"></i>' : doneCount + '/' + x.tasks.length}</div>` : ''}
+    </div>`;
+  };
+  return semanas.map((s, i) => `
+    <div class="p360-week">
+      <div class="p360-week-label">${escapeHtml(t('plan360.week'))} ${i + 1}</div>
+      <div class="p360-week-grid">${s.dias.map(dayCard).join('')}</div>
+    </div>
+  `).join('');
+}
+function renderPlan360PlanAccion(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  const orden = {alta: 0, media: 1, baja: 2};
+  const objetivos = (d.objectives || []).filter(o => o.text).slice().sort((a, b) => (orden[a.priority] ?? 1) - (orden[b.priority] ?? 1));
+  document.getElementById('plan360-content').innerHTML = `
+    <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.actionPlan'))}</div>
+    <div class="card" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <strong>${escapeHtml(t('plan360.objectives'))}</strong>
+        <button class="btn btn-sm" onclick="renderPlan360Objectives(${day})">${escapeHtml(t('common.edit'))}</button>
+      </div>
+      ${objetivos.length ? objetivos.map(o => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span style="width:9px;height:9px;border-radius:50%;background:${plan360PriorityColor(o.priority)};flex:none"></span>
+          <span style="flex:1">${escapeHtml(o.text)}</span>
+        </div>
+      `).join('') : `<p class="muted">${escapeHtml(t('plan360.noObjectivesYet'))}</p>`}
+    </div>
+    <p class="muted" style="margin:16px 0 6px">${escapeHtml(t('plan360.visualSummary'))}</p>
+    ${plan360DiasTrabajoVisual()}
   `;
 }
 function renderPlan360StaffVoice(day){
