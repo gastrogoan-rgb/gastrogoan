@@ -2331,8 +2331,10 @@ function ensurePlan360Program(){
         // clave en absoluto (nunca "objectives: undefined").
         const dia = {day: d.day, phase: 'presencial', title: d.title, notes: '', privateNote: ''};
         if(d.day === 1){
-          dia.objectives = [];
           dia.reunionInicial = plan360FreshReunionInicial();
+        }
+        if(d.day === 2){
+          dia.objectives = [];
         }
         return dia;
       }
@@ -2351,9 +2353,17 @@ function ensurePlan360Program(){
   if(dia1Ya && dia1Ya.reunionInicial && dia1Ya.reunionInicial.notaLibre === undefined){
     dia1Ya.reunionInicial.notaLibre = '';
   }
-  // Migración: sin esta clave, la pantalla de Objetivos revienta al abrirla.
-  if(dia1Ya && !Array.isArray(dia1Ya.objectives)){
-    dia1Ya.objectives = [];
+  // Objetivos vivía en el Día 1; el coach decidió (20/09) moverlo al Día 2,
+  // junto a la presentación del plan de acción. Si un negocio ya tenía
+  // objetivos puestos en el Día 1 de antes de este cambio, se mudan sin
+  // perderlos; si no, el Día 2 simplemente empieza vacío. Sin esta clave,
+  // la pantalla de Objetivos revienta al abrirla (un .map sobre undefined).
+  const dia2Ya = (DB.business.plan360Program || []).find(d => d.day === 2);
+  if(dia2Ya && !Array.isArray(dia2Ya.objectives)){
+    dia2Ya.objectives = (dia1Ya && Array.isArray(dia1Ya.objectives)) ? dia1Ya.objectives : [];
+  }
+  if(dia1Ya && Array.isArray(dia1Ya.objectives)){
+    delete dia1Ya.objectives;
   }
   // La agenda es de fechas REALES, no de un contador "Día 1, Día 2...": el
   // día 1 empieza el día que de verdad arranca el programa con ese cliente.
