@@ -676,6 +676,69 @@ function plan360FreshReunionPersonal(){
     resumenSentAt: null,
   };
 }
+// "Este es tu negocio" — el cuestionario en profundidad (documento del
+// Drive del mismo nombre), transcrito TAL CUAL, área por área. Se rellena
+// A MANO con el propietario durante la reunión de Día 1 (no es una
+// entrevista que deba fluir con dictado, es reflexión y respuesta punto
+// por punto). Es privado del coach — el negocio NUNCA ve este cuestionario
+// en bruto (pregunta+respuesta): lo que recibe más adelante es un
+// documento aparte, pulido, sin preguntas — el "libro de marca" — que se
+// construye a partir de esto pero es una entrega distinta, todavía por
+// diseñar. Se queda para siempre en el negocio como material de trabajo
+// de los 28 días (ej.: si aquí se define "cocina de autor", las tareas
+// de las semanas siguientes lo hacen realidad).
+// ⚠️ Van 8 áreas en total (01/08 a 08/08 en el documento). Solo la primera
+// (Concepto) está transcrita por ahora — las 7 restantes se añaden a
+// continuación, una vez validada la estructura.
+const PLAN360_NEGOCIO_AREAS = [
+  {title: 'Concepto', subtitle: 'Quién eres y por qué te eligen. Todo nace de aquí.', subsections: [
+    {title: 'Misión, visión y valores', questions: [
+      'Redacta la misión usando la fórmula: Hacemos [qué] para [a quién] mediante [cómo]; escribe 2–3 versiones y elige la más directa.',
+      'Define la visión incluyendo tres ejes: quien transformas (cliente), qué cambio generas (impacto) y en qué plazo (horizonte), todo ello en una frase inspiradora, concreta y accionable que inspire al equipo y atraiga al mercado.',
+      'Lista 3–5 valores que definan tu negocio y para cada uno añade una acción concreta que demuestre ese valor en el día a día.',
+      'Tómate un tiempo y define qué buscas cambiar en tu sector, cómo mejorarás la vida de tu cliente, qué principios guían cada decisión diaria.',
+    ]},
+    {title: 'Propuesta única de valor', questions: [
+      'Define la PUV en 1 frase. Usa la siguiente fórmula: Hacemos [qué] para [quién] ofreciendo [cómo] qué [beneficio principal].',
+    ]},
+    {title: 'Posicionamiento competitivo', questions: [
+      'Describe 10 atributos que representen el global de tu negocio.',
+      'Define qué estrategia de precios aplicaréis.',
+    ]},
+    {title: 'Competidores directos e indirectos (DAFO)', questions: [
+      'Selecciona 5 competidores: 3 que compiten directamente (mismo sector y mismo estilo de negocio) y 2 que compiten indirectamente (mismo sector, diferente tipo de negocio: restaurante→cafetería).',
+      'Analiza 5 debilidades que presentas frente a tus competidores: los aspectos limitadores de la capacidad de desarrollo de tu negocio, debido a sus características internas.',
+      'Analiza 5 amenazas que presentas frente a tus competidores: los factores externos que pueden impedir la ejecución de tu estrategia empresarial o poner en peligro la viabilidad de tu negocio.',
+      'Analiza 5 fortalezas que presentas frente a tus competidores: el conjunto de recursos internos, posiciones de poder y ventajas competitivas propias de tu negocio.',
+      'Analiza 5 oportunidades que presentas frente a tus competidores: los factores ajenos a tu negocio que favorecen su desarrollo o brindan la posibilidad de implantar mejoras.',
+    ]},
+    {title: 'Clientes actual vs. cliente objetivo', questions: [
+      'Extrae datos reales de tu clientela actual.',
+      'Define 4 perfiles de cliente objetivo con perfiles completos.',
+      'Crea una comparación simple con 3 diferencias clave entre cliente actual y cliente objetivo.',
+    ]},
+    {title: 'Síntesis del DAFO', questions: [
+      'De tu DAFO, extrae 3 aprendizajes aplicables y 3 riesgos que debes evitar, y marca una ventaja competitiva propia que debes proteger.',
+    ]},
+    {title: 'Customer journey — por etapa', questions: [
+      'Para cada una de las 5 etapas (Descubrimiento → Reserva → Llegada → Experiencia → Despedida y fidelización) anota: canal principal, emoción esperada, 2 fricciones reales y su impacto en reservas/repeticiones.',
+      'Propón 1 mejora rápida para cada fricción detectada, con responsable y plazo.',
+      'Diseña una encuesta post-visita de 3 preguntas para medir la percepción en las etapas clave.',
+    ]},
+  ]},
+];
+function plan360FreshNegocio(){
+  return {
+    areas: PLAN360_NEGOCIO_AREAS.map(a => ({
+      title: a.title,
+      subsections: a.subsections.map(s => ({
+        title: s.title,
+        questions: s.questions.map(q => ({q, a: ''})),
+      })),
+      completadoAt: null,
+    })),
+  };
+}
 // Masterclass de la app: checklist de lo imprescindible que el hostelero
 // tiene que saber hacer y tener metido en la app antes de arrancar el
 // plan de acción. Editable (se puede tachar, editar texto o añadir
@@ -737,6 +800,7 @@ function ensureRemotePlan360(){
           dia.misteryCheck = plan360FreshMisteryCheck();
           dia.reunionInicial = plan360FreshReunionInicial();
           dia.reunionPersonal = plan360FreshReunionPersonal();
+          dia.negocio = plan360FreshNegocio();
         }
         if(d.day === 2){
           dia.objectives = [];
@@ -790,6 +854,25 @@ function ensureRemotePlan360(){
   if(dia1Existente && dia1Existente.reunionPersonal && dia1Existente.reunionPersonal.resumenNegocio === undefined){
     dia1Existente.reunionPersonal.resumenNegocio = '';
     dia1Existente.reunionPersonal.resumenSentAt = null;
+  }
+  if(dia1Existente && !dia1Existente.negocio){
+    dia1Existente.negocio = plan360FreshNegocio();
+  }
+  // Migración: "Este es tu negocio" crecerá de 1 a 8 áreas a medida que se
+  // transcriban del Drive — igual que el checklist de cliente misterioso
+  // creció de 14 a 18 bloques. Sin perder lo ya escrito en las que existan.
+  if(dia1Existente && dia1Existente.negocio && Array.isArray(dia1Existente.negocio.areas)
+    && dia1Existente.negocio.areas.length < PLAN360_NEGOCIO_AREAS.length){
+    const titulosYa = dia1Existente.negocio.areas.map(a => a.title);
+    PLAN360_NEGOCIO_AREAS.forEach(a => {
+      if(!titulosYa.includes(a.title)){
+        dia1Existente.negocio.areas.push({
+          title: a.title,
+          subsections: a.subsections.map(s => ({title: s.title, questions: s.questions.map(q => ({q, a: ''}))})),
+          completadoAt: null,
+        });
+      }
+    });
   }
   // Migración: el checklist creció de 14 a 18 bloques (18/09, al mover
   // "Concepto y posicionamiento", "Ingeniería de carta", "Gestión y
@@ -1140,7 +1223,88 @@ function renderDia1Hub(d){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
+    <div class="card" style="cursor:pointer;margin-top:14px" onclick="renderNegocioHub(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-notebook" style="font-size:20px"></i>
+        <div style="flex:1"><strong>Este es tu negocio</strong>
+          <div class="p360-day-tag">${(d.negocio ? d.negocio.areas.filter(a => a.completadoAt).length : 0)}/${d.negocio ? d.negocio.areas.length : 0} áreas — cuestionario interno, nunca lo ve el negocio</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
   `;
+}
+/* ---- "Este es tu negocio": cuestionario en profundidad, área por área.
+   Privado del coach — el negocio nunca ve esto en bruto. La entrega
+   pulida ("libro de marca") es un documento aparte, todavía por diseñar. */
+function renderNegocioHub(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.negocio) return;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día 1</button>
+    <h2 style="margin:10px 0 4px">Este es tu negocio</h2>
+    <p class="muted" style="margin-bottom:14px">Cuestionario en profundidad, área por área — se rellena a mano con el propietario. Privado: el negocio no ve preguntas ni respuestas, solo la entrega pulida que se construye a partir de esto más adelante.</p>
+    ${d.negocio.areas.map((a, i) => `
+      <div class="card" style="margin-bottom:8px;cursor:pointer" onclick="renderNegocioAreaPage(${day},${i})">
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="ti ${a.completadoAt ? 'ti-circle-check' : 'ti-circle'}" style="font-size:20px;${a.completadoAt ? 'color:var(--green)' : ''}"></i>
+          <div style="flex:1"><strong>${esc(a.title)}</strong></div>
+          <i class="ti ti-chevron-right"></i>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+function renderNegocioAreaPage(day, areaIdx){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.negocio || !d.negocio.areas[areaIdx]) return;
+  const area = d.negocio.areas[areaIdx];
+  let campoIdx = 0;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderNegocioHub(${day})">← Este es tu negocio</button>
+    <h2 style="margin:10px 0 4px">${esc(area.title)}</h2>
+    ${area.subsections.map(s => `
+      <div class="card" style="margin-top:14px">
+        <div style="font-weight:700;margin-bottom:10px">${esc(s.title)}</div>
+        ${s.questions.map(q => {
+          const idx = campoIdx++;
+          return `<div class="field" style="margin-bottom:14px">
+            <label>${esc(q.q)}</label>
+            <textarea id="neg-a-${idx}" rows="3">${esc(q.a || '')}</textarea>
+          </div>`;
+        }).join('')}
+      </div>
+    `).join('')}
+    <div class="card" style="margin-top:14px">
+      <button class="btn btn-sm" onclick="saveNegocioArea(${day},${areaIdx})" style="margin-bottom:10px">Guardar</button>
+      ${!area.completadoAt ? `<button class="btn btn-primary" onclick="marcarNegocioAreaHecha(${day},${areaIdx})">Marcar área como hecha</button>` : '<p class="muted">Marcada como hecha — se puede seguir editando.</p>'}
+    </div>
+  `;
+}
+function plan360SyncNegocioArea(area){
+  let campoIdx = 0;
+  area.subsections.forEach(s => {
+    s.questions.forEach(q => {
+      const ta = document.getElementById('neg-a-' + campoIdx);
+      if(ta) q.a = ta.value.trim();
+      campoIdx++;
+    });
+  });
+}
+function saveNegocioArea(day, areaIdx){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.negocio || !d.negocio.areas[areaIdx]) return;
+  plan360SyncNegocioArea(d.negocio.areas[areaIdx]);
+  saveRemoteBiz();
+  renderNegocioAreaPage(day, areaIdx);
+}
+function marcarNegocioAreaHecha(day, areaIdx){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.negocio || !d.negocio.areas[areaIdx]) return;
+  plan360SyncNegocioArea(d.negocio.areas[areaIdx]);
+  d.negocio.areas[areaIdx].completadoAt = Date.now();
+  saveRemoteBiz();
+  renderNegocioAreaPage(day, areaIdx);
 }
 function renderObjetivosPage(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
