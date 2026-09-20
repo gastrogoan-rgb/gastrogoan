@@ -283,10 +283,17 @@ function saveRemoteBiz(){
    Si cambias el contenido de las plantillas allí, cámbialo aquí también.
    ============================================================ */
 const PLAN360_DOCS_TEMPLATE = [
-  {id: 'identidad', title: 'Identidad de marca'},
+  {id: 'identidad', title: 'Libro de marca'},
   {id: 'playbook-sala', title: 'Playbook de sala'},
   {id: 'playbook-cocina', title: 'Playbook de cocina'},
 ];
+// Secciones del Libro de marca (espejo de las 8 áreas del cuestionario en
+// profundidad): resumen + destacados, redactados por el coach (con ayuda
+// de Claude fuera de la app, ver "Ver / copiar todo" del cuestionario) a
+// partir de las respuestas. El negocio nunca ve el cuestionario en bruto.
+function plan360FreshLibroSecciones(){
+  return PLAN360_NEGOCIO_AREAS.map(a => ({area: a.title, resumen: '', destacados: []}));
+}
 const PLAN360_INTAKE_TEMPLATE = [
   {title: 'Datos de la empresa', questions: [
     'Nombre comercial', 'Razón social', 'CIF/NIF',
@@ -1193,7 +1200,23 @@ function plan360FreshTeamBuilding(){
 }
 function ensureRemotePlan360(){
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
-    remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
+    remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => {
+      const doc = {id: d.id, title: d.title, body: '', visible: true};
+      if(d.id === 'identidad'){
+        doc.libroSecciones = plan360FreshLibroSecciones();
+        doc.sentAt = null;
+      }
+      return doc;
+    });
+  }
+  // Migración: negocios cuyo Recursos se creó antes del Libro de marca
+  // estructurado se quedarían con la "Identidad de marca" antigua (texto
+  // libre) para siempre.
+  const libroDoc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  if(libroDoc && !Array.isArray(libroDoc.libroSecciones)){
+    libroDoc.title = 'Libro de marca';
+    libroDoc.libroSecciones = plan360FreshLibroSecciones();
+    libroDoc.sentAt = null;
   }
   const intakeDesactualizado = remoteBiz.plan360Intake
     && Array.isArray(remoteBiz.plan360Intake.sections)
@@ -1587,16 +1610,150 @@ function renderDocsPage(){
   const docs = remoteBiz.plan360Docs || [];
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader('Recursos')}
+    ${docs.map((doc, i) => {
+      if(doc.id === 'identidad'){
+        const hechas = doc.libroSecciones.filter(s => s.resumen).length;
+        return `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="renderLibroMarcaHub()">
+          <div style="display:flex;align-items:center;gap:10px">
+            <i class="ti ${doc.sentAt ? 'ti-circle-check' : 'ti-book-2'}" style="font-size:20px;${doc.sentAt ? 'color:var(--green)' : ''}"></i>
+            <div style="flex:1"><strong>${esc(doc.title)}</strong>
+              <div class="p360-day-tag">${doc.sentAt ? 'Publicado' : hechas + '/' + doc.libroSecciones.length + ' secciones'}</div>
+            </div>
+            <i class="ti ti-chevron-right"></i>
+          </div>
+        </div>`;
+      }
+      return `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="renderDocSimplePage(${i})">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1"><strong>${esc(doc.title)}</strong></div>
+          <i class="ti ti-chevron-right"></i>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+function renderDocSimplePage(i){
+  const doc = (remoteBiz.plan360Docs || [])[i];
+  if(!doc) return;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDocsPage()">← Recursos</button>
+    <h2 style="margin:10px 0 4px">${esc(doc.title)}</h2>
     <div class="card" style="margin-top:14px">
-      ${docs.map((doc, i) => `<div class="field"><label>${esc(doc.title)}</label><textarea id="doc-${i}" rows="4">${esc(doc.body)}</textarea></div>`).join('')}
-      <button class="btn btn-primary" onclick="saveDocs()">Guardar</button>
+      <textarea id="doc-body" rows="10">${esc(doc.body || '')}</textarea>
+      <button class="btn btn-primary" onclick="saveDocSimple(${i})" style="margin-top:10px">Guardar</button>
     </div>
   `;
 }
-function saveDocs(){
-  (remoteBiz.plan360Docs || []).forEach((doc, i) => { doc.body = (document.getElementById('doc-' + i).value || '').trim(); });
+function saveDocSimple(i){
+  const doc = (remoteBiz.plan360Docs || [])[i];
+  if(!doc) return;
+  doc.body = (document.getElementById('doc-body').value || '').trim();
   saveRemoteBiz();
-  renderClientGrid();
+  renderDocSimplePage(i);
+}
+/* ---- Libro de marca: espejo visual y resumido del cuestionario en
+   profundidad. El coach pega aquí el texto que Claude redacta a partir
+   del "Ver / copiar todo" del cuestionario — el diseño es siempre el
+   mismo, solo cambia el contenido de cada negocio. Las imágenes de cada
+   sección (logo, paleta, moodboard, mesa, vajilla...) se traen SOLAS de
+   los archivos ya subidos en el cuestionario, sin volver a subirlas. */
+function plan360LibroImagenesDeArea(areaTitle){
+  const dia1 = (remoteBiz.plan360Program || []).find(x => x.day === 1);
+  const areaNeg = dia1 && dia1.negocio && dia1.negocio.areas.find(a => a.title === areaTitle);
+  if(!areaNeg) return [];
+  const imgs = [];
+  areaNeg.subsections.forEach(s => s.questions.forEach(q => {
+    if(q.archivo && q.fileData) imgs.push({name: q.fileName, data: q.fileData});
+  }));
+  return imgs;
+}
+function renderLibroMarcaHub(){
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  if(!doc) return;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDocsPage()">← Recursos</button>
+    <h2 style="margin:10px 0 4px">Libro de marca</h2>
+    <p class="muted" style="margin-bottom:14px">Mismo diseño para todos los negocios — aquí solo cambia el contenido. Pega en cada sección lo que te redacte Claude a partir del cuestionario.</p>
+    ${doc.libroSecciones.map((s, i) => `
+      <div class="card" style="margin-bottom:8px;cursor:pointer" onclick="renderLibroMarcaSeccionPage(${i})">
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="ti ${s.resumen ? 'ti-circle-check' : 'ti-circle'}" style="font-size:20px;${s.resumen ? 'color:var(--green)' : ''}"></i>
+          <div style="flex:1"><strong>${esc(s.area)}</strong></div>
+          <i class="ti ti-chevron-right"></i>
+        </div>
+      </div>
+    `).join('')}
+    <div class="card" style="margin-top:14px;text-align:center">
+      ${!doc.sentAt ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Publicar libro de marca</button>
+        <p class="muted" style="margin-top:8px">El negocio lo verá tal cual, con el diseño de la app — nada de preguntas ni respuestas.</p>` : '<p class="muted">Publicado — se actualiza si lo sigues editando.</p>'}
+    </div>
+  `;
+}
+function renderLibroMarcaSeccionPage(i){
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  const s = doc && doc.libroSecciones[i];
+  if(!s) return;
+  const imgs = plan360LibroImagenesDeArea(s.area);
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderLibroMarcaHub()">← Libro de marca</button>
+    <h2 style="margin:10px 0 4px">${esc(s.area)}</h2>
+    <div class="card">
+      <div class="field" style="margin-bottom:14px">
+        <label>Resumen <span class="muted">(el párrafo que te dé Claude para esta área)</span></label>
+        <textarea id="libro-resumen" rows="6">${esc(s.resumen || '')}</textarea>
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Destacados <span class="muted">(puntos clave cortos, tipo ficha — no frases largas)</span></label>
+        <div id="libro-destacados-list">${s.destacados.map((dst, di) => libroDestacadoRow(dst, di)).join('')}</div>
+        <button class="btn btn-sm" onclick="addLibroDestacado(${i})" style="margin-top:6px">+ Añadir destacado</button>
+      </div>
+      ${imgs.length ? `<div class="field">
+        <label>Imágenes de esta área <span class="muted">(vienen solas del cuestionario, no hace falta subirlas aquí)</span></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${imgs.map(img => `<img src="${img.data}" alt="${esc(img.name || '')}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">`).join('')}
+        </div>
+      </div>` : '<p class="muted">Sin imágenes subidas todavía en el cuestionario para esta área.</p>'}
+      <button class="btn btn-primary" onclick="saveLibroMarcaSeccion(${i})" style="margin-top:14px">Guardar</button>
+    </div>
+  `;
+}
+function libroDestacadoRow(text, i){
+  return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+    <input id="libro-destacado-${i}" value="${esc(text)}" style="flex:1">
+  </div>`;
+}
+function addLibroDestacado(i){
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  const s = doc && doc.libroSecciones[i];
+  if(!s) return;
+  plan360SyncLibroDestacados(s);
+  s.destacados.push('');
+  document.getElementById('libro-destacados-list').innerHTML = s.destacados.map((dst, di) => libroDestacadoRow(dst, di)).join('');
+}
+function plan360SyncLibroDestacados(s){
+  s.destacados.forEach((_, i) => {
+    const inp = document.getElementById('libro-destacado-' + i);
+    if(inp) s.destacados[i] = inp.value.trim();
+  });
+}
+function saveLibroMarcaSeccion(i){
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  const s = doc && doc.libroSecciones[i];
+  if(!s) return;
+  const resumen = document.getElementById('libro-resumen');
+  if(resumen) s.resumen = resumen.value.trim();
+  plan360SyncLibroDestacados(s);
+  s.destacados = s.destacados.filter(d => d);
+  saveRemoteBiz();
+  renderLibroMarcaSeccionPage(i);
+}
+function publicarLibroMarca(){
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  if(!doc) return;
+  if(!confirm('¿Publicar el libro de marca? El negocio lo verá con el diseño final, sin preguntas ni respuestas.')) return;
+  doc.sentAt = Date.now();
+  saveRemoteBiz();
+  renderLibroMarcaHub();
 }
 
 /* ---- Un día concreto ---- */

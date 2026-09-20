@@ -5404,13 +5404,57 @@ function renderPlan360Docs(){
   const docs = DB.business.plan360Docs || [];
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(t('plan360.resources'), t('plan360.resourcesDesc'))}
-    ${docs.map(doc => `
-      <div class="card" style="margin-top:14px">
+    ${docs.map(doc => {
+      if(doc.id === 'identidad'){
+        const listo = !!doc.sentAt;
+        return `<div class="card" style="margin-top:14px;${listo ? 'cursor:pointer' : 'opacity:.55'}" ${listo ? 'onclick="renderPlan360LibroMarca()"' : ''}>
+          <div style="display:flex;align-items:center;gap:10px">
+            <i class="ti ${listo ? 'ti-circle-check' : 'ti-book-2'}" style="font-size:20px;${listo ? 'color:var(--green)' : ''}"></i>
+            <div style="flex:1"><strong>${escapeHtml(doc.title)}</strong>
+              <div class="p360-day-tag">${escapeHtml(listo ? t('plan360.misteryReady') : t('plan360.misteryPending'))}</div>
+            </div>
+            ${listo ? '<i class="ti ti-chevron-right"></i>' : ''}
+          </div>
+        </div>`;
+      }
+      return `<div class="card" style="margin-top:14px">
         <div style="font-weight:700;margin-bottom:8px">${escapeHtml(doc.title)}</div>
         <div style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:${doc.body ? 'inherit' : 'var(--muted)'}">${doc.body ? escapeHtml(doc.body) : escapeHtml(t('plan360.resourceEmpty'))}</div>
-      </div>
-    `).join('')}
+      </div>`;
+    }).join('')}
   `;
+}
+/* ---- Libro de marca: la entrega visual y resumida, solo lectura ---- */
+function renderPlan360LibroMarca(){
+  const doc = (DB.business.plan360Docs || []).find(d => d.id === 'identidad');
+  if(!doc || !doc.sentAt) return;
+  document.getElementById('plan360-content').innerHTML = `
+    <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(doc.title)}</div>
+    ${doc.libroSecciones.filter(s => s.resumen || s.destacados.length).map(s => {
+      const imgs = plan360LibroImagenesDeAreaCliente(s.area);
+      return `<div class="card" style="margin-top:14px">
+        <div style="font-weight:700;font-size:17px;margin-bottom:8px">${escapeHtml(s.area)}</div>
+        ${s.resumen ? `<p style="font-size:14px;line-height:1.6;margin-bottom:${s.destacados.length ? '10px' : '0'}">${escapeHtml(s.resumen)}</p>` : ''}
+        ${s.destacados.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${imgs.length ? '10px' : '0'}">
+          ${s.destacados.map(d => `<span style="background:var(--brand-cream);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12.5px">${escapeHtml(d)}</span>`).join('')}
+        </div>` : ''}
+        ${imgs.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${imgs.map(img => `<img src="${img.data}" alt="" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">`).join('')}
+        </div>` : ''}
+      </div>`;
+    }).join('')}
+  `;
+}
+function plan360LibroImagenesDeAreaCliente(areaTitle){
+  const dia1 = (DB.business.plan360Program || []).find(x => x.day === 1);
+  const areaNeg = dia1 && dia1.negocio && dia1.negocio.areas.find(a => a.title === areaTitle);
+  if(!areaNeg) return [];
+  const imgs = [];
+  areaNeg.subsections.forEach(s => s.questions.forEach(q => {
+    if(q.archivo && q.fileData) imgs.push({data: q.fileData});
+  }));
+  return imgs;
 }
 
 /* ---- Un día concreto: presencial o de trabajo ---- */

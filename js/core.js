@@ -2110,7 +2110,7 @@ async function redeemBusinessCode(code){
    - ★ (resumen final): no se guarda aparte, se calcula solo a partir de
      objetivos y tareas. */
 const PLAN360_DOCS_TEMPLATE = [
-  {id: 'identidad', title: 'Identidad de marca'},
+  {id: 'identidad', title: 'Libro de marca'},
   {id: 'playbook-sala', title: 'Playbook de sala'},
   {id: 'playbook-cocina', title: 'Playbook de cocina'},
 ];
@@ -2299,10 +2299,35 @@ const PLAN360_DEFAULT_PROGRAM = [
 // Crea la copia del negocio la primera vez que hace falta (lectura
 // perezosa: no hay que acordarse de llamarla en cada sitio donde
 // DB.business.plan360 se pone a true).
+// Secciones del Libro de marca (espejo de las 8 áreas del cuestionario en
+// profundidad, ver admin-panel/plan360.html): cada una es un resumen +
+// unos destacados, redactados por el coach (con ayuda de Claude fuera de
+// la app) a partir de las respuestas del cuestionario — el negocio nunca
+// ve preguntas ni respuestas en bruto, solo esto.
+const PLAN360_LIBRO_MARCA_AREAS = ['Concepto', 'Marca', 'Cocina', 'Sala', 'Equipo', 'Gestión', 'Captación', 'Tú al frente'];
+function plan360FreshLibroSecciones(){
+  return PLAN360_LIBRO_MARCA_AREAS.map(area => ({area, resumen: '', destacados: []}));
+}
 function ensurePlan360Program(){
   if(!DB.business.plan360) return;
   if(!Array.isArray(DB.business.plan360Docs) || !DB.business.plan360Docs.length){
-    DB.business.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
+    DB.business.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => {
+      const doc = {id: d.id, title: d.title, body: '', visible: true};
+      if(d.id === 'identidad'){
+        doc.libroSecciones = plan360FreshLibroSecciones();
+        doc.sentAt = null;
+      }
+      return doc;
+    });
+  }
+  // Migración: negocios cuyo Recursos se creó antes del Libro de marca
+  // estructurado se quedarían con la "Identidad de marca" antigua (texto
+  // libre) para siempre.
+  const libroDoc = (DB.business.plan360Docs || []).find(d => d.id === 'identidad');
+  if(libroDoc && !Array.isArray(libroDoc.libroSecciones)){
+    libroDoc.title = 'Libro de marca';
+    libroDoc.libroSecciones = plan360FreshLibroSecciones();
+    libroDoc.sentAt = null;
   }
   // ⚠️ Migración: los negocios que activaron Plan 360º antes de que este
   // cuestionario tuviera contenido real se habían quedado con la plantilla
