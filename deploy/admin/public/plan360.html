@@ -644,6 +644,7 @@ const PLAN360_REUNION_PREGUNTAS = [
 function plan360FreshReunionInicial(){
   return {
     answers: PLAN360_REUNION_PREGUNTAS.map(q => ({q, a: ''})),
+    notaLibre: '',
     sentAt: null,
   };
 }
@@ -679,11 +680,21 @@ function ensureRemotePlan360(){
   // checklist de cliente misterioso o la reunión inicial se quedarían sin
   // ellos para siempre.
   const dia1Existente = (remoteBiz.plan360Program || []).find(d => d.day === 1);
+  // Migración: negocios de antes de que "objectives" existiera se quedan
+  // sin la clave para siempre y la pantalla de Objetivos revienta en
+  // silencio al abrirla (un .map sobre undefined) — el coach ve que no
+  // pasa nada al pulsar y parece un botón roto.
+  if(dia1Existente && !Array.isArray(dia1Existente.objectives)){
+    dia1Existente.objectives = [];
+  }
   if(dia1Existente && !dia1Existente.misteryCheck){
     dia1Existente.misteryCheck = plan360FreshMisteryCheck();
   }
   if(dia1Existente && !dia1Existente.reunionInicial){
     dia1Existente.reunionInicial = plan360FreshReunionInicial();
+  }
+  if(dia1Existente && dia1Existente.reunionInicial && dia1Existente.reunionInicial.notaLibre === undefined){
+    dia1Existente.reunionInicial.notaLibre = '';
   }
   // Migración: el checklist creció de 14 a 18 bloques (18/09, al mover
   // "Concepto y posicionamiento", "Ingeniería de carta", "Gestión y
@@ -1153,6 +1164,13 @@ function renderReunionPage(day){
           </div>
         </div>
       `).join('')}
+      <div class="field" style="margin-bottom:16px">
+        <label>Espacio libre <span class="muted">(cualquier cosa que salga en la charla y no encaje en las 10 preguntas)</span></label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <textarea id="reunion-a-libre" rows="5" style="flex:1">${esc(r.notaLibre || '')}</textarea>
+          ${soporte ? `<button type="button" id="reunion-mic-libre" class="btn btn-sm" style="flex-shrink:0" onclick="plan360ToggleDictado('libre')"><i class="ti ti-microphone"></i></button>` : ''}
+        </div>
+      </div>
       <button class="btn btn-sm" onclick="saveReunion(${day})" style="margin-bottom:10px">Guardar</button>
       ${!r.sentAt ? `<button class="btn btn-primary" onclick="sendReunion(${day})" style="display:block">Enviar al negocio</button>` : '<p class="muted">Ya enviada al negocio — se puede seguir editando y se actualiza en su pantalla.</p>'}
     </div>
@@ -1163,6 +1181,8 @@ function syncReunionFromForm(d){
     const ta = document.getElementById('reunion-a-' + i);
     if(ta) it.a = ta.value.trim();
   });
+  const libre = document.getElementById('reunion-a-libre');
+  if(libre) d.reunionInicial.notaLibre = libre.value.trim();
 }
 function saveReunion(day){
   if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }

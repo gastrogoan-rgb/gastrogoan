@@ -2283,6 +2283,7 @@ const PLAN360_REUNION_PREGUNTAS = [
 function plan360FreshReunionInicial(){
   return {
     answers: PLAN360_REUNION_PREGUNTAS.map(q => ({q, a: ''})),
+    notaLibre: '',
     sentAt: null,
   };
 }
@@ -2346,6 +2347,13 @@ function ensurePlan360Program(){
   const dia1Ya = (DB.business.plan360Program || []).find(d => d.day === 1);
   if(dia1Ya && !dia1Ya.reunionInicial){
     dia1Ya.reunionInicial = plan360FreshReunionInicial();
+  }
+  if(dia1Ya && dia1Ya.reunionInicial && dia1Ya.reunionInicial.notaLibre === undefined){
+    dia1Ya.reunionInicial.notaLibre = '';
+  }
+  // Migración: sin esta clave, la pantalla de Objetivos revienta al abrirla.
+  if(dia1Ya && !Array.isArray(dia1Ya.objectives)){
+    dia1Ya.objectives = [];
   }
   // La agenda es de fechas REALES, no de un contador "Día 1, Día 2...": el
   // día 1 empieza el día que de verdad arranca el programa con ese cliente.

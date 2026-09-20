@@ -5556,6 +5556,10 @@ function renderPlan360ReunionReport(day){
           <p style="font-size:14px;margin-top:4px">${it.a ? escapeHtml(it.a) : '—'}</p>
         </div>
       `).join('')}
+      ${r.notaLibre ? `<div>
+        <div style="font-weight:600;font-size:13px">Espacio libre</div>
+        <p style="font-size:14px;margin-top:4px">${escapeHtml(r.notaLibre)}</p>
+      </div>` : ''}
     </div>
   `;
 }
