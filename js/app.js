@@ -5460,12 +5460,34 @@ function renderPlan360Dia1Hub(d){
         ${d.reunionInicial && d.reunionInicial.sentAt ? '<i class="ti ti-chevron-right"></i>' : ''}
       </div>
     </div>
+    ${d.reunionPersonal && d.reunionPersonal.resumenSentAt ? `
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360StaffVoice(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-circle-check" style="font-size:20px;color:var(--green)"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.staffVoice'))}</strong>
+          <div class="p360-day-tag">${escapeHtml(t('plan360.staffVoiceReady'))}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>` : ''}
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360Objectives(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ti-target-arrow" style="font-size:20px"></i>
         <div style="flex:1"><strong>${escapeHtml(t('plan360.objectives'))}</strong></div>
         <i class="ti ti-chevron-right"></i>
       </div>
+    </div>
+  `;
+}
+function renderPlan360StaffVoice(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const r = d && d.reunionPersonal;
+  if(!r || !r.resumenSentAt) return;
+  document.getElementById('plan360-content').innerHTML = `
+    <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.staffVoice'))}</div>
+    <div class="card" style="margin-top:14px">
+      <p style="font-size:14px;white-space:pre-wrap">${escapeHtml(r.resumenNegocio || '')}</p>
     </div>
   `;
 }
