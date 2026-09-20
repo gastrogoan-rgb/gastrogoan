@@ -2364,7 +2364,7 @@ function ensurePlan360Program(){
         return dia;
       }
       return {day: d.day, phase: 'trabajo', title: d.title,
-        priority: null, reviewType: null,
+        priority: null, reviewType: null, enfoqueTitulo: '', enfoqueColor: null,
         tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
     });
   }
@@ -2390,6 +2390,26 @@ function ensurePlan360Program(){
   if(dia1Ya && Array.isArray(dia1Ya.objectives)){
     delete dia1Ya.objectives;
   }
+  // Migración: días de trabajo (3-28) de antes de que existiera el
+  // enfoque del día (título + color rojo/ámbar/verde del resumen visual).
+  (DB.business.plan360Program || []).filter(x => x.phase === 'trabajo').forEach(x => {
+    if(x.enfoqueTitulo === undefined) x.enfoqueTitulo = '';
+    if(x.enfoqueColor === undefined) x.enfoqueColor = null;
+  });
+  // Migración: objetivos de antes de que fueran título+porqué+urgencia.
+  (DB.business.plan360Program || []).forEach(x => {
+    if(!Array.isArray(x.objectives)) return;
+    x.objectives.forEach(o => {
+      if(o.titulo === undefined){
+        o.titulo = o.text || '';
+        o.explicacion = o.explicacion || '';
+        o.prioridad = o.priority === 'alta' ? 'prioritario' : o.priority === 'baja' ? 'complementario' : 'esencial';
+        delete o.text;
+        delete o.priority;
+        delete o.done;
+      }
+    });
+  });
   // La agenda es de fechas REALES, no de un contador "Día 1, Día 2...": el
   // día 1 empieza el día que de verdad arranca el programa con ese cliente.
   // Se fija una sola vez, la primera vez que se crea el programa.

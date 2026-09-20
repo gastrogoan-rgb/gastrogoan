@@ -5147,6 +5147,14 @@ function irAApartadoMiNegocio(id){
 function plan360PriorityColor(p){
   return p === 'alta' ? 'var(--red)' : p === 'media' ? 'var(--amber)' : p === 'baja' ? 'var(--green)' : null;
 }
+// Urgencia de los OBJETIVOS (prioritario/esencial/complementario) —
+// distinta de la prioridad del DÍA (alta/media/baja) de arriba.
+function plan360ObjPriorityColor(p){
+  return p === 'prioritario' ? 'var(--red)' : p === 'esencial' ? 'var(--amber)' : p === 'complementario' ? 'var(--green)' : null;
+}
+function plan360EnfoqueColorHex(c){
+  return c === 'rojo' ? 'var(--red)' : c === 'ambar' ? 'var(--amber)' : c === 'verde' ? 'var(--green)' : 'var(--border)';
+}
 function plan360FormatDate(day){
   const dstr = plan360DateForDay(day);
   const [y, m, d] = dstr.split('-').map(Number);
@@ -5538,42 +5546,21 @@ function renderPlan360Dia2Hub(d){
 /* ---- Plan de acción: objetivos por prioridad + resumen visual de los
    días 3-28 — cada día trae su propio contenido detallado al abrirlo. */
 function plan360DiasTrabajoVisual(){
-  const prog = DB.business.plan360Program || [];
-  const trabajo = prog.filter(x => x.phase === 'trabajo');
-  const semanas = [];
-  trabajo.forEach(x => {
-    const fecha = plan360DateForDay(x.day);
-    const [y, m, dd] = fecha.split('-').map(Number);
-    const diaSemana = (new Date(y, m - 1, dd).getDay() + 6) % 7;
-    const inicioSemana = addDaysStr(fecha, -diaSemana);
-    let semana = semanas.find(s => s.inicio === inicioSemana);
-    if(!semana){ semana = {inicio: inicioSemana, dias: []}; semanas.push(semana); }
-    semana.dias.push(x);
-  });
-  const dayCard = x => {
+  const trabajo = (DB.business.plan360Program || []).filter(x => x.phase === 'trabajo');
+  return trabajo.map(x => {
     const {weekday, dayMonth} = plan360FormatDate(x.day);
-    const col = plan360PriorityColor(x.priority);
-    const done = x.tasks.length && x.tasks.every(t => t.done);
-    const doneCount = x.tasks.filter(t => t.done).length;
-    return `<div class="p360-day" style="${col ? 'border-left-color:' + col : ''}" onclick="renderPlan360DayDetail(${x.day})">
-      <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
-      <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
-      ${x.reviewType ? `<div class="p360-day-tag">${escapeHtml(t('plan360.reviewType.' + x.reviewType))}</div>` : ''}
-      ${x.tasks.length ? `<div class="p360-day-progress">${done ? '<i class="ti ti-circle-check"></i>' : doneCount + '/' + x.tasks.length}</div>` : ''}
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="renderPlan360DayDetail(${x.day})">
+      <div style="width:56px;flex:none;font-size:11px;color:var(--muted);line-height:1.3">${escapeHtml(weekday)}<br>${escapeHtml(dayMonth)}</div>
+      <span style="flex:1;font-size:13.5px">${x.enfoqueTitulo ? escapeHtml(x.enfoqueTitulo) : '<span style="color:var(--muted)">' + escapeHtml(t('plan360.dayFocusEmpty')) + '</span>'}</span>
+      <span style="width:12px;height:12px;border-radius:50%;flex:none;background:${plan360EnfoqueColorHex(x.enfoqueColor)}"></span>
     </div>`;
-  };
-  return semanas.map((s, i) => `
-    <div class="p360-week">
-      <div class="p360-week-label">${escapeHtml(t('plan360.week'))} ${i + 1}</div>
-      <div class="p360-week-grid">${s.dias.map(dayCard).join('')}</div>
-    </div>
-  `).join('');
+  }).join('');
 }
 function renderPlan360PlanAccion(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
-  const orden = {alta: 0, media: 1, baja: 2};
-  const objetivos = (d.objectives || []).filter(o => o.text).slice().sort((a, b) => (orden[a.priority] ?? 1) - (orden[b.priority] ?? 1));
+  const orden = {prioritario: 0, esencial: 1, complementario: 2};
+  const objetivos = (d.objectives || []).filter(o => o.titulo).slice().sort((a, b) => (orden[a.prioridad] ?? 1) - (orden[b.prioridad] ?? 1));
   document.getElementById('plan360-content').innerHTML = `
     <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.actionPlan'))}</div>
@@ -5583,14 +5570,17 @@ function renderPlan360PlanAccion(day){
         <button class="btn btn-sm" onclick="renderPlan360Objectives(${day})">${escapeHtml(t('common.edit'))}</button>
       </div>
       ${objetivos.length ? objetivos.map(o => `
-        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
-          <span style="width:9px;height:9px;border-radius:50%;background:${plan360PriorityColor(o.priority)};flex:none"></span>
-          <span style="flex:1">${escapeHtml(o.text)}</span>
+        <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:9px;height:9px;border-radius:50%;background:${plan360ObjPriorityColor(o.prioridad)};flex:none"></span>
+            <strong style="flex:1">${escapeHtml(o.titulo)}</strong>
+          </div>
+          ${o.explicacion ? `<p class="muted" style="margin:4px 0 0 17px;font-size:13px">${escapeHtml(o.explicacion)}</p>` : ''}
         </div>
       `).join('') : `<p class="muted">${escapeHtml(t('plan360.noObjectivesYet'))}</p>`}
     </div>
     <p class="muted" style="margin:16px 0 6px">${escapeHtml(t('plan360.visualSummary'))}</p>
-    ${plan360DiasTrabajoVisual()}
+    <div class="card">${plan360DiasTrabajoVisual()}</div>
   `;
 }
 function renderPlan360StaffVoice(day){
@@ -5622,7 +5612,8 @@ function savePlan360ObjectivesOnly(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360SyncObjectivesFromForm(d);
-  d.objectives = d.objectives.filter(o => o.text);
+  const orden = {prioritario: 0, esencial: 1, complementario: 2};
+  d.objectives = d.objectives.filter(o => o.titulo).sort((a, b) => (orden[a.prioridad] ?? 1) - (orden[b.prioridad] ?? 1));
   saveDB();
   showToast(t('plan360.saved'));
   renderPlan360Objectives(day);
@@ -5700,28 +5691,41 @@ function renderPlan360ReunionReport(day){
   `;
 }
 function plan360ObjectiveRow(o, i){
-  return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-    <input id="p360-obj-text-${i}" value="${escapeHtml(o.text)}" style="flex:1">
-    <select id="p360-obj-prio-${i}">
-      <option value="alta" ${o.priority === 'alta' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.alta'))}</option>
-      <option value="media" ${o.priority === 'media' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.media'))}</option>
-      <option value="baja" ${o.priority === 'baja' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.baja'))}</option>
-    </select>
+  const col = plan360ObjPriorityColor(o.prioridad);
+  return `<div class="card" style="margin-bottom:10px;${col ? 'border-left:4px solid ' + col : ''}">
+    <div class="field" style="margin-bottom:8px">
+      <label>${escapeHtml(t('plan360.objTitle'))}</label>
+      <input id="p360-obj-titulo-${i}" value="${escapeHtml(o.titulo || '')}">
+    </div>
+    <div class="field" style="margin-bottom:8px">
+      <label>${escapeHtml(t('plan360.objWhy'))}</label>
+      <textarea id="p360-obj-explicacion-${i}" rows="3">${escapeHtml(o.explicacion || '')}</textarea>
+    </div>
+    <div class="field">
+      <label>${escapeHtml(t('plan360.objUrgency'))}</label>
+      <select id="p360-obj-prioridad-${i}">
+        <option value="prioritario" ${o.prioridad === 'prioritario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.prioritario'))}</option>
+        <option value="esencial" ${o.prioridad === 'esencial' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.esencial'))}</option>
+        <option value="complementario" ${o.prioridad === 'complementario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.complementario'))}</option>
+      </select>
+    </div>
   </div>`;
 }
 function addPlan360Objective(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360SyncObjectivesFromForm(d);
-  d.objectives.push({text: '', priority: 'media', done: false});
+  d.objectives.push({titulo: '', explicacion: '', prioridad: 'esencial'});
   document.getElementById('p360-obj-list').innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(o, i)).join('');
 }
 function plan360SyncObjectivesFromForm(d){
   d.objectives.forEach((o, i) => {
-    const textEl = document.getElementById('p360-obj-text-' + i);
-    const prioEl = document.getElementById('p360-obj-prio-' + i);
-    if(textEl) o.text = textEl.value.trim();
-    if(prioEl) o.priority = prioEl.value;
+    const tituloEl = document.getElementById('p360-obj-titulo-' + i);
+    const explEl = document.getElementById('p360-obj-explicacion-' + i);
+    const prioEl = document.getElementById('p360-obj-prioridad-' + i);
+    if(tituloEl) o.titulo = tituloEl.value.trim();
+    if(explEl) o.explicacion = explEl.value.trim();
+    if(prioEl) o.prioridad = prioEl.value;
   });
 }
 // Solo para el día 2 (presentación): el día 1 tiene su propio hub con tres
@@ -5853,8 +5857,9 @@ function plan360ReadFileAsDataUrl(file){
 /* ---- ★ Resumen ---- */
 function renderPlan360SummaryPage(){
   const prog = DB.business.plan360Program || [];
-  const dia1 = prog.find(x => x.day === 1);
-  const objetivos = (dia1 && dia1.objectives) || [];
+  const dia2 = prog.find(x => x.day === 2);
+  const orden = {prioritario: 0, esencial: 1, complementario: 2};
+  const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo).slice().sort((a, b) => (orden[a.prioridad] ?? 1) - (orden[b.prioridad] ?? 1));
   const trabajo = prog.filter(x => x.phase === 'trabajo');
   const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.map(tk => ({...tk, day: d.day}))), []);
   const hechas = tareas.filter(tk => tk.done);
@@ -5865,9 +5870,8 @@ function renderPlan360SummaryPage(){
       <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.objectives'))}</div>
       ${objetivos.length ? objetivos.map(o => `
         <div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
-          <i class="ti ${o.done ? 'ti-circle-check' : 'ti-circle'}" style="color:${o.done ? 'var(--green)' : 'var(--muted)'}"></i>
-          <span style="flex:1">${escapeHtml(o.text)}</span>
-          <span style="font-size:11px;color:${plan360PriorityColor(o.priority) || 'var(--muted)'}">${escapeHtml(t('plan360.priority.' + o.priority))}</span>
+          <span style="width:9px;height:9px;border-radius:50%;background:${plan360ObjPriorityColor(o.prioridad)};flex:none"></span>
+          <span style="flex:1">${escapeHtml(o.titulo)}</span>
         </div>
       `).join('') : `<p style="color:var(--muted)">${escapeHtml(t('plan360.noObjectives'))}</p>`}
       <div style="font-weight:600;margin:14px 0 6px">${escapeHtml(t('plan360.tasksDone'))} (${hechas.length}/${tareas.length})</div>
