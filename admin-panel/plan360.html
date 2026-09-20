@@ -648,6 +648,34 @@ function plan360FreshReunionInicial(){
     sentAt: null,
   };
 }
+// Reunión con el personal: el tercer ángulo del diagnóstico. Cliente
+// misterioso = lo que el coach observa (objetivo); Reunión inicial = lo
+// que el propietario siente (subjetivo, "fuera"); esto es lo que vive el
+// EQUIPO por dentro — clima, fricción, lo que no llega a oídos del dueño.
+// Las 8 respuestas + espacio libre son privadas del coach y NUNCA se
+// envían: el personal solo habla con confianza si sabe que su jefe no va
+// a leerlo tal cual. Lo que SÍ llega al negocio es un resumen aparte
+// (resumenNegocio), escrito por el coach con el feeling general — nunca
+// las respuestas individuales.
+const PLAN360_REUNION_PERSONAL_PREGUNTAS = [
+  'Si pudieras cambiar una sola cosa de cómo funciona este sitio por dentro, ¿qué cambiarías?',
+  '¿Qué es lo que más te frustra o te cansa del día a día aquí?',
+  '¿Sientes que lo que dices o propones se escucha de verdad, o al final da igual?',
+  'Cuando un cliente se queja de algo, ¿de qué suele ser? (lo que veis vosotros y quizás el dueño no ve)',
+  '¿Cómo es de verdad el ambiente entre compañeros y con los jefes, más allá de las apariencias?',
+  '¿Qué te haría plantearte irte de aquí, y qué es lo que te hace quedarte?',
+  'Si tú llevaras el negocio un día entero, ¿qué es lo primero que cambiarías o harías distinto?',
+  '¿Hay algo que llevas tiempo queriendo decir y nunca ha salido el momento?',
+];
+function plan360FreshReunionPersonal(){
+  return {
+    preguntas: PLAN360_REUNION_PERSONAL_PREGUNTAS.map(q => ({q, a: ''})),
+    notaLibre: '',
+    completadoAt: null,
+    resumenNegocio: '',
+    resumenSentAt: null,
+  };
+}
 function ensureRemotePlan360(){
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
     remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => ({id: d.id, title: d.title, body: '', visible: true}));
@@ -670,6 +698,7 @@ function ensureRemotePlan360(){
           dia.objectives = [];
           dia.misteryCheck = plan360FreshMisteryCheck();
           dia.reunionInicial = plan360FreshReunionInicial();
+          dia.reunionPersonal = plan360FreshReunionPersonal();
         }
         return dia;
       }
@@ -695,6 +724,13 @@ function ensureRemotePlan360(){
   }
   if(dia1Existente && dia1Existente.reunionInicial && dia1Existente.reunionInicial.notaLibre === undefined){
     dia1Existente.reunionInicial.notaLibre = '';
+  }
+  if(dia1Existente && !dia1Existente.reunionPersonal){
+    dia1Existente.reunionPersonal = plan360FreshReunionPersonal();
+  }
+  if(dia1Existente && dia1Existente.reunionPersonal && dia1Existente.reunionPersonal.resumenNegocio === undefined){
+    dia1Existente.reunionPersonal.resumenNegocio = '';
+    dia1Existente.reunionPersonal.resumenSentAt = null;
   }
   // Migración: el checklist creció de 14 a 18 bloques (18/09, al mover
   // "Concepto y posicionamiento", "Ingeniería de carta", "Gestión y
@@ -1035,6 +1071,15 @@ function renderDia1Hub(d){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
+    <div class="card" style="cursor:pointer;margin-top:14px" onclick="renderReunionPersonalPage(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'ti-circle-check' : 'ti-users-group'}" style="font-size:20px;${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>Reunión con el personal</strong>
+          <div class="p360-day-tag">${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'Hecha' : 'Pendiente'}${d.reunionPersonal && d.reunionPersonal.resumenSentAt ? ' · resumen enviado' : ' · respuestas privadas'}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderObjetivosPage(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ti-target-arrow" style="font-size:20px"></i>
@@ -1090,11 +1135,13 @@ let plan360DictadoParar = false;
 // CORTAS (continuous:false, una frase y termina sola) que se relanzan
 // automáticamente en cuanto acaban — el coach no nota el corte, pero cada
 // frase llega limpia porque nace en un reconocimiento nuevo, no reescrito.
-function plan360ToggleDictado(idx){
-  const btn = document.getElementById('reunion-mic-' + idx);
-  const ta = document.getElementById('reunion-a-' + idx);
+function plan360ToggleDictado(idx, grupo){
+  grupo = grupo || 'reunion';
+  const clave = grupo + ':' + idx;
+  const btn = document.getElementById(grupo + '-mic-' + idx);
+  const ta = document.getElementById(grupo + '-a-' + idx);
   if(!btn || !ta) return;
-  if(plan360ActiveRecognition && plan360ActiveRecognitionIdx === idx){
+  if(plan360ActiveRecognition && plan360ActiveRecognitionIdx === clave){
     plan360DictadoParar = true;
     plan360ActiveRecognition.stop();
     return;
@@ -1106,7 +1153,7 @@ function plan360ToggleDictado(idx){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let acumulado = ta.value ? ta.value.replace(/\s+$/, '') + ' ' : '';
   plan360DictadoParar = false;
-  plan360ActiveRecognitionIdx = idx;
+  plan360ActiveRecognitionIdx = clave;
   const lanzarSesion = () => {
     const rec = new SR();
     rec.lang = 'es-ES';
@@ -1128,7 +1175,7 @@ function plan360ToggleDictado(idx){
     };
     rec.onend = () => {
       ta.value = acumulado.trim();
-      if(plan360DictadoParar || plan360ActiveRecognitionIdx !== idx){
+      if(plan360DictadoParar || plan360ActiveRecognitionIdx !== clave){
         btn.classList.remove('btn-primary');
         btn.innerHTML = '<i class="ti ti-microphone"></i>';
         plan360ActiveRecognition = null;
@@ -1201,6 +1248,93 @@ function sendReunion(day){
   d.reunionInicial.sentAt = Date.now();
   saveRemoteBiz();
   renderReunionPage(day);
+}
+/* ---- Reunión con el personal: mismo patrón que la Reunión inicial, pero
+   nunca se envía al negocio (ver nota junto a PLAN360_REUNION_PERSONAL_
+   PREGUNTAS) — solo un "marcar como hecha" en vez de "enviar". ---- */
+function renderReunionPersonalPage(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunionPersonal) return;
+  const r = d.reunionPersonal;
+  const soporte = plan360SpeechSupported();
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día 1</button>
+    <h2 style="margin:10px 0 4px">Reunión con el personal</h2>
+    <p class="muted" style="margin-bottom:14px">Lo que vive el equipo por dentro. Las respuestas de abajo son privadas y NUNCA se envían — solo el resumen final, aparte, llega al negocio.</p>
+    ${!soporte ? '<p class="muted" style="margin-bottom:10px">Este navegador no permite dictado por voz — escribe a mano.</p>' : ''}
+    <div class="card">
+      ${r.preguntas.map((it, i) => `
+        <div class="field" style="margin-bottom:16px">
+          <label>${i + 1}. ${esc(it.q)}</label>
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <textarea id="personal-a-${i}" rows="3" style="flex:1">${esc(it.a || '')}</textarea>
+            ${soporte ? `<button type="button" id="personal-mic-${i}" class="btn btn-sm" style="flex-shrink:0" onclick="plan360ToggleDictado(${i},'personal')"><i class="ti ti-microphone"></i></button>` : ''}
+          </div>
+        </div>
+      `).join('')}
+      <div class="field" style="margin-bottom:16px">
+        <label>Espacio libre <span class="muted">(cualquier cosa que salga y no encaje en las preguntas — privado)</span></label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <textarea id="personal-a-libre" rows="5" style="flex:1">${esc(r.notaLibre || '')}</textarea>
+          ${soporte ? `<button type="button" id="personal-mic-libre" class="btn btn-sm" style="flex-shrink:0" onclick="plan360ToggleDictado('libre','personal')"><i class="ti ti-microphone"></i></button>` : ''}
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="saveReunionPersonal(${day})" style="margin-bottom:10px">Guardar</button>
+      ${!r.completadoAt ? `<button class="btn" onclick="marcarReunionPersonalHecha(${day})" style="display:block;margin-bottom:6px">Marcar como hecha</button>` : '<p class="muted" style="margin-bottom:6px">Marcada como hecha — se puede seguir editando.</p>'}
+    </div>
+    <div class="card" style="margin-top:14px;border-color:var(--olive)">
+      <div class="field" style="margin-bottom:10px">
+        <label>Resumen para el negocio <span class="muted">— ESTO SÍ lo verá el dueño, con el feeling general del equipo, nunca las respuestas de arriba</span></label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <textarea id="personal-resumen" rows="5" style="flex:1" placeholder="Ej: el equipo se siente escuchado pero saturado en las horas punta; hay ganas de mejorar la comunicación entre sala y cocina...">${esc(r.resumenNegocio || '')}</textarea>
+          ${soporte ? `<button type="button" id="personal-mic-resumen" class="btn btn-sm" style="flex-shrink:0" onclick="plan360ToggleDictado('resumen','personal')"><i class="ti ti-microphone"></i></button>` : ''}
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="saveReunionPersonal(${day})" style="margin-bottom:10px">Guardar resumen</button>
+      ${!r.resumenSentAt ? `<button class="btn btn-primary" onclick="sendReunionPersonalResumen(${day})" style="display:block">Enviar resumen al negocio</button>` : '<p class="muted">Resumen enviado al negocio — se actualiza si lo sigues editando.</p>'}
+    </div>
+  `;
+}
+function syncReunionPersonalFromForm(d){
+  d.reunionPersonal.preguntas.forEach((it, i) => {
+    const ta = document.getElementById('personal-a-' + i);
+    if(ta) it.a = ta.value.trim();
+  });
+  const libre = document.getElementById('personal-a-libre');
+  if(libre) d.reunionPersonal.notaLibre = libre.value.trim();
+  const resumen = document.getElementById('personal-resumen');
+  if(resumen) d.reunionPersonal.resumenNegocio = resumen.value.trim();
+}
+function saveReunionPersonal(day){
+  if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunionPersonal) return;
+  syncReunionPersonalFromForm(d);
+  saveRemoteBiz();
+  renderReunionPersonalPage(day);
+}
+function marcarReunionPersonalHecha(day){
+  if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunionPersonal) return;
+  syncReunionPersonalFromForm(d);
+  d.reunionPersonal.completadoAt = Date.now();
+  saveRemoteBiz();
+  renderReunionPersonalPage(day);
+}
+function sendReunionPersonalResumen(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunionPersonal) return;
+  syncReunionPersonalFromForm(d);
+  if(!d.reunionPersonal.resumenNegocio){
+    alert('Escribe antes el resumen — es lo único que verá el negocio.');
+    return;
+  }
+  if(!confirm('¿Enviar este resumen al negocio? Las respuestas individuales del personal NUNCA se envían, solo este resumen.')) return;
+  if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }
+  d.reunionPersonal.resumenSentAt = Date.now();
+  saveRemoteBiz();
+  renderReunionPersonalPage(day);
 }
 /* ---- Cliente misterioso: 14 bloques, una pantalla cada uno ---- */
 function renderMisteryHub(day){
