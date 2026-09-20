@@ -690,6 +690,10 @@ function plan360FreshReunionPersonal(){
 // ⚠️ Van 8 áreas en total (01/08 a 08/08 en el documento). Solo la primera
 // (Concepto) está transcrita por ahora — las 7 restantes se añaden a
 // continuación, una vez validada la estructura.
+// Marca las preguntas que piden algo externo como referencia (logo,
+// paleta, moodboard, fotos, vajilla, mesa...) — esas admiten adjuntar un
+// archivo además de texto, el resto es solo texto.
+function archivo(texto){ return {texto, archivo: true}; }
 const PLAN360_NEGOCIO_AREAS = [
   {title: 'Concepto', subtitle: 'Quién eres y por qué te eligen. Todo nace de aquí.', subsections: [
     {title: 'Misión, visión y valores', questions: [
@@ -731,13 +735,13 @@ const PLAN360_NEGOCIO_AREAS = [
       'Describe en un párrafo la historia que hay detrás del negocio.',
       '¿Tu historia de origen refleja algún valor o concepto clave de tu oferta?',
       'Elige de modo global qué estilo general quieres para tu negocio.',
-      'Confirma el logo y define variantes según uso (mantelería, uniformes, web…).',
+      archivo('Confirma el logo y define variantes según uso (mantelería, uniformes, web…).'),
       'Redefine tu eslogan.',
-      'Elige la paleta y tipografías.',
+      archivo('Elige la paleta y tipografías.'),
       'Define 3 adjetivos que describan tu personalidad comunicativa.',
       'Define el tono de voz con 5 adjetivos.',
-      'Crea un moodboard inspiracional.',
-      'Define cómo quieres que se hagan las fotografías de tu negocio.',
+      archivo('Crea un moodboard inspiracional.'),
+      archivo('Define cómo quieres que se hagan las fotografías de tu negocio.'),
       'Presentación del reconcepto al equipo.',
     ]},
     {title: 'Customer journey', questions: [
@@ -749,7 +753,7 @@ const PLAN360_NEGOCIO_AREAS = [
       '¿Cómo resumirías en una frase la promesa gastronómica de tu local?',
       '¿Qué 3–5 adjetivos describen el carácter único de tu cocina?',
       '¿Qué emociones, sensaciones o recuerdos quieres evocar en el comensal?',
-      'Define el estilo de emplatado que mejor exprese tu ADN y elige la vajilla y cristalería para que vaya acorde y potencien cada plato.',
+      archivo('Define el estilo de emplatado que mejor exprese tu ADN y elige la vajilla y cristalería para que vaya acorde y potencien cada plato.'),
       '¿Cuál es tu "plato estrella"?',
       'Señala tres influencias principales (recuerdos, experiencia profesional, región, técnica, perfil de sabor...) y determina su nivel de riesgo: fusiones atrevidas, reinterpretaciones clásicas o matices innovadores.',
       'Identifica tus ingredientes emblemáticos (raza, cepa, huerto) y establece criterios organolépticos (frescura, textura, aroma, color) para su elección.',
@@ -812,8 +816,8 @@ const PLAN360_NEGOCIO_AREAS = [
       '¿Ofreces opciones de bebida sin alcohol?',
     ]},
     {title: 'Presentación general y storytelling', questions: [
-      'Define la composición general de la mesa.',
-      'Determina si exhibir botellas y barriles como elementos decorativos y didácticos, integrándose en tu espacio sin restar funcionalidad.',
+      archivo('Define la composición general de la mesa.'),
+      archivo('Determina si exhibir botellas y barriles como elementos decorativos y didácticos, integrándose en tu espacio sin restar funcionalidad.'),
       '¿Cómo te gustaría organizar la temperatura, música y luz en la sala?',
       '¿Qué estímulos extra completan la propuesta sensorial (velas, centros de mesa, pequeños jardines…)?',
       '¿Qué gestos o rituales reforzarán la experiencia?',
@@ -1129,6 +1133,12 @@ const PLAN360_NEGOCIO_AREAS = [
     ]},
   ]},
 ];
+function plan360NegocioQuestionFresh(q){
+  // q es un texto normal, o {texto, archivo:true} para las que admiten
+  // adjuntar un archivo de referencia (ver archivo() arriba).
+  if(typeof q === 'string') return {q, a: ''};
+  return {q: q.texto, a: '', archivo: true, fileData: null, fileName: null};
+}
 function plan360FreshNegocio(){
   return {
     areas: PLAN360_NEGOCIO_AREAS.map(a => ({
@@ -1136,7 +1146,7 @@ function plan360FreshNegocio(){
       subtitle: a.subtitle,
       subsections: a.subsections.map(s => ({
         title: s.title,
-        questions: s.questions.map(q => ({q, a: ''})),
+        questions: s.questions.map(plan360NegocioQuestionFresh),
         completadoAt: null,
       })),
     })),
@@ -1271,7 +1281,7 @@ function ensureRemotePlan360(){
         dia1Existente.negocio.areas.push({
           title: a.title,
           subtitle: a.subtitle,
-          subsections: a.subsections.map(s => ({title: s.title, questions: s.questions.map(q => ({q, a: ''})), completadoAt: null})),
+          subsections: a.subsections.map(s => ({title: s.title, questions: s.questions.map(plan360NegocioQuestionFresh), completadoAt: null})),
         });
       }
     });
@@ -1282,6 +1292,26 @@ function ensureRemotePlan360(){
       delete a.completadoAt;
       a.subsections.forEach(s => {
         if(s.completadoAt === undefined) s.completadoAt = null;
+      });
+    });
+    // Migración: preguntas que ganaron la posibilidad de adjuntar archivo
+    // (logo, paleta, moodboard...) — se añade sin tocar lo ya escrito.
+    // Se casa por título de área+bloque y posición, ya que el número de
+    // preguntas por bloque no ha cambiado en este cambio.
+    PLAN360_NEGOCIO_AREAS.forEach(aTpl => {
+      const aReal = dia1Existente.negocio.areas.find(x => x.title === aTpl.title);
+      if(!aReal) return;
+      aTpl.subsections.forEach(sTpl => {
+        const sReal = aReal.subsections.find(x => x.title === sTpl.title);
+        if(!sReal) return;
+        sTpl.questions.forEach((qTpl, i) => {
+          const qReal = sReal.questions[i];
+          if(qReal && typeof qTpl !== 'string' && qTpl.archivo && qReal.archivo === undefined){
+            qReal.archivo = true;
+            qReal.fileData = null;
+            qReal.fileName = null;
+          }
+        });
       });
     });
   }
@@ -1633,20 +1663,20 @@ function renderDia1Hub(d){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
-    <div class="card" style="cursor:pointer;margin-top:14px" onclick="renderReunionPersonalPage(${d.day})">
-      <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'ti-circle-check' : 'ti-users-group'}" style="font-size:20px;${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'color:var(--green)' : ''}"></i>
-        <div style="flex:1"><strong>Reunión con el personal</strong>
-          <div class="p360-day-tag">${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'Hecha' : 'Pendiente'}${d.reunionPersonal && d.reunionPersonal.resumenSentAt ? ' · resumen enviado' : ' · respuestas privadas'}</div>
-        </div>
-        <i class="ti ti-chevron-right"></i>
-      </div>
-    </div>
     <div class="card" style="cursor:pointer;margin-top:14px" onclick="renderNegocioHub(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ti-notebook" style="font-size:20px"></i>
         <div style="flex:1"><strong>Cuestionario en profundidad</strong>
           <div class="p360-day-tag">${plan360NegocioBloquesHechos(d)}/${plan360NegocioBloquesTotal(d)} bloques — interno, nunca lo ve el negocio</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+    <div class="card" style="cursor:pointer;margin-top:14px" onclick="renderReunionPersonalPage(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'ti-circle-check' : 'ti-users-group'}" style="font-size:20px;${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>Reunión con el personal</strong>
+          <div class="p360-day-tag">${d.reunionPersonal && d.reunionPersonal.completadoAt ? 'Hecha' : 'Pendiente'}${d.reunionPersonal && d.reunionPersonal.resumenSentAt ? ' · resumen enviado' : ' · respuestas privadas'}</div>
         </div>
         <i class="ti ti-chevron-right"></i>
       </div>
@@ -1665,6 +1695,7 @@ function renderNegocioHub(day){
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día 1</button>
     <h2 style="margin:10px 0 4px">Cuestionario en profundidad</h2>
     <p class="muted" style="margin-bottom:14px">"Este es tu negocio" — área por área, se rellena a mano con el propietario. Privado: el negocio no ve preguntas ni respuestas, solo la entrega pulida que se construye a partir de esto más adelante.</p>
+    <button class="btn btn-sm" onclick="renderNegocioExport(${day})" style="margin-bottom:14px"><i class="ti ti-copy"></i> Ver / copiar todo (para redactar el libro de marca)</button>
     ${d.negocio.areas.map((a, i) => {
       const hechos = a.subsections.filter(s => s.completadoAt).length;
       return `<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="renderNegocioAreaHub(${day},${i})">
@@ -1678,6 +1709,47 @@ function renderNegocioHub(day){
       </div>`;
     }).join('')}
   `;
+}
+// Vuelca todo el cuestionario en texto plano para pegárselo a Claude y que
+// redacte el libro de marca — no hay IA dentro de la app, es el propio
+// coach quien lleva esto a la conversación y trae de vuelta el texto ya
+// escrito para pegarlo en la plantilla del libro de marca.
+function plan360NegocioComoTexto(d){
+  let out = 'CUESTIONARIO EN PROFUNDIDAD — ' + (remoteBiz.name || 'negocio') + '\n\n';
+  d.negocio.areas.forEach(a => {
+    out += '=== ' + a.title.toUpperCase() + ' ===\n\n';
+    a.subsections.forEach(s => {
+      out += '-- ' + s.title + ' --\n';
+      s.questions.forEach(q => {
+        out += 'P: ' + q.q + '\n';
+        out += 'R: ' + (q.a ? q.a : '(sin responder)') + (q.archivo && q.fileName ? '  [archivo adjunto: ' + q.fileName + ']' : '') + '\n\n';
+      });
+    });
+  });
+  return out;
+}
+function renderNegocioExport(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.negocio) return;
+  const texto = plan360NegocioComoTexto(d);
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderNegocioHub(${day})">← Cuestionario en profundidad</button>
+    <h2 style="margin:10px 0 4px">Ver / copiar todo</h2>
+    <p class="muted" style="margin-bottom:14px">Pégaselo a Claude para que redacte el contenido del libro de marca a partir de esto. Los archivos adjuntos no se copian, solo se indica su nombre.</p>
+    <div class="card">
+      <textarea id="neg-export-text" rows="20" readonly style="font-family:'IBM Plex Mono',monospace;font-size:12px">${esc(texto)}</textarea>
+      <button class="btn btn-primary" onclick="copiarNegocioTexto()" style="margin-top:10px"><i class="ti ti-copy"></i> Copiar todo</button>
+      <span id="neg-copy-ok" class="muted" style="margin-left:10px;display:none">Copiado ✓</span>
+    </div>
+  `;
+}
+function copiarNegocioTexto(){
+  const ta = document.getElementById('neg-export-text');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const ok = document.getElementById('neg-copy-ok');
+    if(ok){ ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 2000); }
+  }).catch(() => document.execCommand('copy'));
 }
 function renderNegocioAreaHub(day, areaIdx){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
@@ -1711,12 +1783,60 @@ function renderNegocioBlockPage(day, areaIdx, subIdx){
         <div class="field" style="margin-bottom:14px">
           <label>${esc(q.q)}</label>
           <textarea id="neg-a-${i}" rows="3">${esc(q.a || '')}</textarea>
+          ${q.archivo ? `
+            <div style="margin-top:8px">
+              ${q.fileData ? `
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+                  <i class="ti ti-paperclip"></i> ${esc(q.fileName || 'archivo')}
+                  <button type="button" class="btn btn-sm" onclick="quitarArchivoNegocio(${day},${areaIdx},${subIdx},${i})">Quitar</button>
+                </div>
+              ` : `
+                <input type="file" accept="image/*,.pdf" onchange="subirArchivoNegocio(this,${day},${areaIdx},${subIdx},${i})">
+                <p class="muted" style="margin-top:2px">Adjunta una imagen o PDF de referencia (logo, paleta, moodboard...) — hasta 1,5 MB.</p>
+              `}
+            </div>
+          ` : ''}
         </div>
       `).join('')}
       <button class="btn btn-sm" onclick="saveNegocioBlock(${day},${areaIdx},${subIdx})" style="margin-bottom:10px">Guardar</button>
       ${!block.completadoAt ? `<button class="btn btn-primary" onclick="marcarNegocioBlockHecho(${day},${areaIdx},${subIdx})">Marcar bloque como hecho</button>` : '<p class="muted">Marcado como hecho — se puede seguir editando.</p>'}
     </div>
   `;
+}
+const PLAN360_NEGOCIO_ARCHIVO_MAX_KB = 1500;
+function subirArchivoNegocio(input, day, areaIdx, subIdx, qIdx){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > PLAN360_NEGOCIO_ARCHIVO_MAX_KB * 1024){
+    alert('El archivo pesa demasiado (máximo 1,5 MB).');
+    input.value = '';
+    return;
+  }
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  const block = d && d.negocio && d.negocio.areas[areaIdx] && d.negocio.areas[areaIdx].subsections[subIdx];
+  const q = block && block.questions[qIdx];
+  if(!q) return;
+  plan360SyncNegocioBlock(block);
+  const reader = new FileReader();
+  reader.onload = () => {
+    q.fileData = reader.result;
+    q.fileName = file.name;
+    saveRemoteBiz();
+    renderNegocioBlockPage(day, areaIdx, subIdx);
+  };
+  reader.onerror = () => alert('No se pudo leer el archivo.');
+  reader.readAsDataURL(file);
+}
+function quitarArchivoNegocio(day, areaIdx, subIdx, qIdx){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  const block = d && d.negocio && d.negocio.areas[areaIdx] && d.negocio.areas[areaIdx].subsections[subIdx];
+  const q = block && block.questions[qIdx];
+  if(!q) return;
+  plan360SyncNegocioBlock(block);
+  q.fileData = null;
+  q.fileName = null;
+  saveRemoteBiz();
+  renderNegocioBlockPage(day, areaIdx, subIdx);
 }
 function plan360SyncNegocioBlock(block){
   block.questions.forEach((q, i) => {
