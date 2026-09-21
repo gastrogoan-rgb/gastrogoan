@@ -229,7 +229,7 @@ async function openClient(tenantId, name){
     currentBizRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/business');
     currentBizRef.on('value', snap => {
       const val = snap.val();
-      const json = JSON.stringify(val);
+      const json = stableJson(val);
       if(json === lastPushedJson) return; // es el eco de lo que acabamos de escribir nosotros mismos
       remoteBiz = val || {};
       ensureRemotePlan360();
@@ -265,11 +265,24 @@ function sinIndefinidos(v){
   Object.keys(v).forEach(k => { if(v[k] !== undefined) out[k] = sinIndefinidos(v[k]); });
   return out;
 }
+// ⚠️ Firebase NO conserva el orden de inserción de las claves de un objeto:
+// al releer lo que se acaba de escribir, puede devolver las claves en otro
+// orden. Comparar con JSON.stringify normal (sensible al orden) hacía que
+// casi CUALQUIER guardado se confundiera con un cambio real llegado de
+// fuera y disparara renderClientGrid() — el bug de "al dar tick me manda a
+// la pantalla de inicio". stableJson ordena las claves antes de comparar,
+// así el eco de nuestro propio guardado se reconoce siempre.
+function stableJson(v){
+  if(Array.isArray(v)) return '[' + v.map(stableJson).join(',') + ']';
+  if(v && typeof v === 'object'){
+    return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stableJson(v[k])).join(',') + '}';
+  }
+  return JSON.stringify(v);
+}
 function saveRemoteBiz(){
   if(!currentBizRef || !remoteBiz) return;
   const limpio = sinIndefinidos(remoteBiz);
-  const json = JSON.stringify(limpio);
-  lastPushedJson = json;
+  lastPushedJson = stableJson(limpio);
   savingRemote = true;
   currentBizRef.set(limpio).catch(e => {
     console.error('Error guardando en la nube del negocio', e);
@@ -1163,23 +1176,73 @@ function plan360FreshNegocio(){
 // tiene que saber hacer y tener metido en la app antes de arrancar el
 // plan de acción. Editable (se puede tachar, editar texto o añadir
 // puntos), pero nace con un contenido real, no una plantilla vacía.
-const PLAN360_MASTERCLASS_CHECKLIST = [
-  'Sabe abrir y cerrar el turno de caja en el TPV',
-  'Sabe registrar una venta completa: mesa, para llevar y a domicilio',
-  'Sabe aplicar un descuento y anular una venta con motivo',
-  'La Carta está cargada con categorías, precios y alérgenos',
-  'Sabe editar un plato o añadir uno nuevo desde Carta y Menú',
-  'Los ingredientes básicos están dados de alta con precio y proveedor',
-  'Sabe dar de alta a un empleado y asignarle su PIN',
-  'Sabe crear y publicar los turnos de la semana',
-  'Sabe gestionar una reserva desde el panel: crear, confirmar, cancelar',
-  'Sabe leer el semáforo de Tesorería y la Cuenta de Resultados en Gestión Económica',
-  'Tiene el QR de la web de reservas enseñado y accesible para el equipo',
-  'Sabe dónde consultar el Manual dentro de la app si se atasca',
+// Masterclass de la app: un RECORRIDO en el orden real en que tiene
+// sentido enseñarla (20/09, pedido explícito del coach) — no una lista
+// suelta de comprobaciones. Un encabezado dentro de una sección (marcado
+// con cabecera:true) es solo un rótulo, no se puede marcar.
+function mcCabecera(text){ return {cabecera: true, text}; }
+const PLAN360_MASTERCLASS_SECCIONES = [
+  {titulo: 'Configuración', items: [
+    'Repasar que el negocio está dado de alta (nombre, tipo, horario, aforo) en Mi Negocio',
+    'Comprobar que la nube propia (Firebase) está conectada y en verde',
+    'Enseñar dónde cambiar el idioma y el PIN de propietario',
+    'Enseñar cómo añadir un nuevo negocio o sucursal si hiciera falta',
+  ]},
+  {titulo: 'Pantalla principal', items: [
+    'Enseñar el indicador de nube (guardando / conectado)',
+    'Enseñar el selector de idioma',
+    'Enseñar el chat de ayuda y el acceso al Manual',
+    'Enseñar el menú principal y cómo moverse entre módulos',
+  ]},
+  {titulo: 'Cocina', items: [
+    'Dar de alta ingredientes con su precio y proveedor',
+    'Dar de alta proveedores',
+    'Crear una receta con su ficha técnica y escandallo',
+    'Cargar la Carta y el Menú',
+    'Enseñar la pantalla de Comandas Cocina (modo caos y pase de platos)',
+    'Enseñar turnos y fichajes del personal de cocina',
+  ]},
+  {titulo: 'Sala — TPV, Reservas, Clientes y Promoción', items: [
+    mcCabecera('TPV, a fondo — el módulo más importante'),
+    'Abrir y cerrar el turno de caja',
+    'Registrar una venta completa: mesa, para llevar y a domicilio',
+    'Aplicar un descuento',
+    'Anular una venta con motivo y PIN',
+    'Dividir cuenta (split bill) y cobrar con varias formas de pago',
+    mcCabecera('Reservas'),
+    'Crear una reserva desde el panel',
+    'Confirmar y cancelar una reserva',
+    'Gestionar la lista de espera',
+    mcCabecera('Clientes'),
+    'Ver la ficha de un cliente y su histórico de visitas',
+    'Identificar un cliente "en riesgo"',
+    mcCabecera('Promoción'),
+    'Lanzar una promoción o gesto de fidelización',
+    'Enseñar el QR / enlace de la web pública de reservas',
+  ]},
+  {titulo: 'Gestión', items: [
+    'Entrar los gastos fijos reales del negocio',
+    'Entrar los gastos variables / food cost',
+    'Repasar la Cuenta de Resultados juntos',
+    'Repasar la Tesorería y su semáforo',
+    'Hacer juntos la simulación del punto de equilibrio con datos reales',
+    'Enseñar el cierre de mes',
+  ]},
+  {titulo: 'Web pública de Pedidos y Reservas', items: [
+    'Abrir la web pública desde el QR',
+    'Hacer una reserva de prueba desde fuera',
+    'Ver cómo llega esa reserva al panel',
+  ]},
 ];
+function plan360McItemFresh(it){
+  return typeof it === 'string' ? {text: it, done: false} : {cabecera: true, text: it.text};
+}
 function plan360FreshMasterclass(){
   return {
-    items: PLAN360_MASTERCLASS_CHECKLIST.map(text => ({text, done: false})),
+    secciones: PLAN360_MASTERCLASS_SECCIONES.map(s => ({
+      titulo: s.titulo,
+      items: s.items.map(plan360McItemFresh),
+    })),
     completadoAt: null,
   };
 }
@@ -1269,7 +1332,11 @@ function ensureRemotePlan360(){
   // nota libre ({notas, completadoAt}); ahora son checklist y guion
   // reales ({items,...}/{script,...}). Sin uso real todavía (recién
   // publicado), así que se sustituye entero sin intentar migrar texto.
-  if(dia2Existente && !Array.isArray(dia2Existente.masterclass && dia2Existente.masterclass.items)){
+  // Migración: la Masterclass pasó de una lista plana de puntos (items) a
+  // un recorrido por secciones (Configuración, Pantalla principal,
+  // Cocina, Sala, Gestión, Web pública) — 20/09, pedido del coach. Sin
+  // uso real todavía, se sustituye entero sin intentar migrar marcas.
+  if(dia2Existente && !Array.isArray(dia2Existente.masterclass && dia2Existente.masterclass.secciones)){
     dia2Existente.masterclass = plan360FreshMasterclass();
   }
   if(dia2Existente && typeof (dia2Existente.teamBuilding && dia2Existente.teamBuilding.script) !== 'string'){
@@ -2186,7 +2253,13 @@ function renderPlanAccionPage(day){
     <div class="card">${plan360DiasTrabajoVisual()}</div>
   `;
 }
-/* ---- Masterclass de la app: checklist real, no una nota en blanco ---- */
+/* ---- Masterclass de la app: recorrido guiado por secciones (20/09,
+   pedido del coach) — Configuración → Pantalla principal → Cocina →
+   Sala (TPV a fondo + Reservas + Clientes + Promoción) → Gestión → Web
+   pública. El tick es instantáneo (solo toca el icono en el DOM, no
+   vuelve a pintar toda la pantalla ni guarda de forma que dispare el
+   listener de la nube — ver stableJson): así no hay riesgo de que marcar
+   un punto te devuelva al calendario, que era el bug reportado. */
 function renderMasterclassPage(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.masterclass) return;
@@ -2194,59 +2267,66 @@ function renderMasterclassPage(day){
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
     <h2 style="margin:10px 0 4px">Masterclass de la app</h2>
-    <p class="muted" style="margin-bottom:14px">Repásalo con el hostelero: lo que debería saber hacer y los datos que hay que tener metidos antes de arrancar.</p>
-    <div class="card">
-      <div id="mc-list">${m.items.map((it, i) => plan360MasterclassRow(day, it, i)).join('')}</div>
-      <button class="btn btn-sm" onclick="addMasterclassItem(${day})" style="margin:6px 0 16px">+ Añadir punto</button>
-      <button class="btn btn-sm" onclick="saveMasterclass(${day})" style="margin-bottom:10px">Guardar</button>
-      ${!m.completadoAt ? `<button class="btn btn-primary" onclick="marcarMasterclassHecha(${day})">Marcar como hecha</button>` : '<p class="muted">Marcada como hecha — se puede seguir editando.</p>'}
+    <p class="muted" style="margin-bottom:14px">El recorrido, en orden, para enseñarle la app de arriba a abajo.</p>
+    ${m.secciones.map((s, si) => {
+      const marcables = s.items.filter(it => !it.cabecera);
+      const hechos = marcables.filter(it => it.done).length;
+      return `<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="renderMasterclassSeccionPage(${day},${si})">
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="ti ${hechos === marcables.length && marcables.length ? 'ti-circle-check' : 'ti-circle'}" style="font-size:20px;${hechos === marcables.length && marcables.length ? 'color:var(--green)' : ''}"></i>
+          <div style="flex:1"><strong>${esc(s.titulo)}</strong>
+            <div class="p360-day-tag">${hechos}/${marcables.length}</div>
+          </div>
+          <i class="ti ti-chevron-right"></i>
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="card" style="margin-top:14px;text-align:center">
+      ${!m.completadoAt ? `<button class="btn btn-primary" onclick="marcarMasterclassHecha(${day})">Marcar masterclass como hecha</button>` : '<p class="muted">Marcada como hecha.</p>'}
     </div>
   `;
 }
-function plan360MasterclassRow(day, it, i){
+function plan360MasterclassRow(day, si, it, i){
+  if(it.cabecera){
+    return `<div style="font-weight:700;font-size:13px;margin:${i === 0 ? '0' : '14px'} 0 6px;color:var(--olive)">${esc(it.text)}</div>`;
+  }
   return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-    <i class="ti ${it.done ? 'ti-circle-check' : 'ti-circle'}" id="mc-icon-${i}" style="font-size:22px;cursor:pointer;flex:none;color:${it.done ? 'var(--green)' : 'var(--border)'}" onclick="toggleMasterclassItem(${day},${i})"></i>
-    <input id="mc-text-${i}" value="${esc(it.text)}" style="flex:1">
+    <i class="ti ${it.done ? 'ti-circle-check' : 'ti-circle'}" id="mc-icon-${si}-${i}" style="font-size:22px;cursor:pointer;flex:none;color:${it.done ? 'var(--green)' : 'var(--border)'}" onclick="toggleMasterclassItem(${day},${si},${i})"></i>
+    <span style="flex:1;${it.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(it.text)}</span>
   </div>`;
 }
-function toggleMasterclassItem(day, i){
+function renderMasterclassSeccionPage(day, si){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.masterclass) return;
-  const it = d.masterclass.items[i];
+  const s = d && d.masterclass && d.masterclass.secciones[si];
+  if(!s) return;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderMasterclassPage(${day})">← Masterclass de la app</button>
+    <h2 style="margin:10px 0 4px">${esc(s.titulo)}</h2>
+    <div class="card">
+      ${s.items.map((it, i) => plan360MasterclassRow(day, si, it, i)).join('')}
+    </div>
+  `;
+}
+function toggleMasterclassItem(day, si, i){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  const it = d && d.masterclass && d.masterclass.secciones[si] && d.masterclass.secciones[si].items[i];
+  if(!it || it.cabecera) return;
   it.done = !it.done;
-  const icon = document.getElementById('mc-icon-' + i);
+  const icon = document.getElementById('mc-icon-' + si + '-' + i);
   if(icon){
     icon.className = 'ti ' + (it.done ? 'ti-circle-check' : 'ti-circle');
     icon.style.color = it.done ? 'var(--green)' : 'var(--border)';
+    const label = icon.nextElementSibling;
+    if(label){
+      label.style.textDecoration = it.done ? 'line-through' : 'none';
+      label.style.color = it.done ? 'var(--muted)' : '';
+    }
   }
   saveRemoteBiz();
-}
-function plan360SyncMasterclassTexts(d){
-  d.masterclass.items.forEach((it, i) => {
-    const ta = document.getElementById('mc-text-' + i);
-    if(ta) it.text = ta.value.trim();
-  });
-}
-function addMasterclassItem(day){
-  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.masterclass) return;
-  plan360SyncMasterclassTexts(d);
-  d.masterclass.items.push({text: '', done: false});
-  document.getElementById('mc-list').innerHTML = d.masterclass.items.map((it, i) => plan360MasterclassRow(day, it, i)).join('');
-}
-function saveMasterclass(day){
-  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.masterclass) return;
-  plan360SyncMasterclassTexts(d);
-  d.masterclass.items = d.masterclass.items.filter(it => it.text);
-  saveRemoteBiz();
-  renderMasterclassPage(day);
 }
 function marcarMasterclassHecha(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.masterclass) return;
-  plan360SyncMasterclassTexts(d);
-  d.masterclass.items = d.masterclass.items.filter(it => it.text);
   d.masterclass.completadoAt = Date.now();
   saveRemoteBiz();
   renderMasterclassPage(day);
