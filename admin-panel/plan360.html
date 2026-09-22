@@ -1249,15 +1249,36 @@ function plan360FreshMasterclass(){
 // Team building: no es una nota, es un guion de presentación para leer o
 // apoyarse delante de TODO el equipo — de ahí que nazca con un texto real
 // y no en blanco. El coach lo ajusta al negocio antes de usarlo.
-const PLAN360_TEAMBUILDING_SCRIPT = `Buenas a todos. Soy vuestro coach de GastroGoan, y voy a acompañar al negocio durante las próximas 4 semanas en un plan de trabajo a fondo para mejorar el día a día.
+const PLAN360_TEAMBUILDING_SCRIPT = `EL DESAFÍO DE LOS 5 SENTIDOS
+Dinámica de equipo — Día 2, tras presentar el plan. Duración total: 35-40 min.
 
-¿Qué es esto? No es una auditoría para buscar culpables: es un plan con objetivos claros y un calendario día a día, pensado para que el negocio funcione mejor — y que eso se note también en vuestro trabajo diario, con menos caos y procesos más claros.
+POR QUÉ ESTA Y NO OTRA
+Nada de "reto de cocina" ni de rondas de confianza de manual. Es un JUEGO de verdad, con dos equipos, puntos y un ganador — eso genera la energía y las risas que ningún ejercicio reflexivo consigue. Y de paso entrena algo útil de verdad: el vocabulario sensorial es la herramienta con la que el equipo de sala describe los platos a un cliente.
 
-¿Qué vais a notar? Durante estas 4 semanas van a pasar cosas en el local: cambios en la carta, en los turnos, en cómo se hacen algunas tareas, quizás alguna mejora física. Nada de esto es una crítica a cómo lo hacíais hasta ahora: es evolucionar juntos, con un plan detrás.
+PREPARACIÓN (antes de la sesión, 15-20 min)
+Prepara tú (el coach) el material de los 5 sentidos — así la dinámica arranca rápido y no se pierde tiempo montando cosas delante del equipo:
+- OÍDO: 3-4 sonidos grabados (móvil vale) — la freidora, la campana del pase, la cafetera, el cuchillo sobre la tabla...
+- GUSTO: 3-4 muestras pequeñas a ciegas de sabores o ingredientes que ellos mismos usan en su carta.
+- OLFATO: 3-4 especias o ingredientes con aroma reconocible de su propia cocina.
+- TACTO: 3-4 texturas para tocar con los ojos vendados (un producto crudo, algo del almacén, una herramienta).
+- VISTA: 3-4 fotos muy recortadas o borrosas de platos o rincones del propio local.
 
-¿Qué necesito de vosotros? Sinceridad si algo no funciona, paciencia mientras probamos cosas nuevas, y que le deis una oportunidad a la app de gestión — os va a facilitar el día a día en cuanto le cojáis el truco.
+Todo tiene que salir DE SU NEGOCIO, no de objetos random — así el juego no es genérico, es "sobre nosotros", y la gente se ríe reconociendo su propio día a día.
 
-Cualquier duda, me tenéis aquí estas semanas, y al dueño siempre. Vamos a ello.`;
+1. DIVISIÓN DE EQUIPOS (2 min)
+Dos equipos MEZCLADOS a propósito — cocina y sala repartidos entre los dos, nunca "cocina contra sala". El objetivo es que se conozcan entre puestos, no que gane un departamento.
+
+2. LAS RONDAS (25-30 min)
+Por turnos, un equipo presenta al otro una muestra de un sentido (a ciegas cuando aplique: antifaz para gusto, olfato y tacto). El equipo rival adivina. Un acierto = un punto.
+
+Antes de revelar si aciertan, el equipo que preparó la muestra cuenta en 10 segundos POR QUÉ eligió justo eso — un ingrediente que le encanta, un sonido que oye 8 horas al día, una textura con la que curra a diario. Aquí es donde se cuela la parte humana: no es un ejercicio aparte, es parte del juego, y sale sola sin forzarla.
+
+Se van alternando sentidos y turnos hasta agotar el material. Gana el equipo con más puntos.
+
+3. CIERRE (5-8 min)
+El equipo ganador elige algo simbólico — poner nombre a un plato nuevo, decidir el orden de turnos de la semana que viene, algo que de verdad pese un poco (nada de trofeos cutres).
+
+Aprovecha este momento, con el equipo ya suelto y de buen humor, para conectar con el mensaje real: "esto es lo que vamos a construir juntos" — y enlaza con los objetivos y el plan que ya habéis presentado antes en la sesión.`;
 function plan360FreshTeamBuilding(){
   return {script: PLAN360_TEAMBUILDING_SCRIPT, completadoAt: null};
 }
@@ -1341,6 +1362,15 @@ function ensureRemotePlan360(){
   }
   if(dia2Existente && typeof (dia2Existente.teamBuilding && dia2Existente.teamBuilding.script) !== 'string'){
     dia2Existente.teamBuilding = plan360FreshTeamBuilding();
+  }
+  // Migración: el guion por defecto cambió (21/09) de una carta genérica a
+  // "El desafío de los 5 sentidos". Solo se sustituye si el negocio se
+  // quedó con el guion viejo SIN TOCAR — si el coach ya lo había editado
+  // para ese negocio, no se toca nada de lo escrito.
+  const PLAN360_TEAMBUILDING_SCRIPT_VIEJO = 'Buenas a todos. Soy vuestro coach de GastroGoan, y voy a acompañar al negocio durante las próximas 4 semanas en un plan de trabajo a fondo para mejorar el día a día.';
+  if(dia2Existente && dia2Existente.teamBuilding && dia2Existente.teamBuilding.script
+    && dia2Existente.teamBuilding.script.startsWith(PLAN360_TEAMBUILDING_SCRIPT_VIEJO)){
+    dia2Existente.teamBuilding.script = PLAN360_TEAMBUILDING_SCRIPT;
   }
   if(dia1Existente && !dia1Existente.misteryCheck){
     dia1Existente.misteryCheck = plan360FreshMisteryCheck();
