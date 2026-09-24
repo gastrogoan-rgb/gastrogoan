@@ -1515,7 +1515,16 @@ td.wrap{white-space:normal}
      Solo hay 3 tarjetas y de normal sobra alto de sitio (ver #view-home
      centrado más abajo), así que más grandes se leen mejor y son más
      fáciles de tocar sin perder nada de sitio real. */
-  .folder-grid{grid-template-columns:1fr !important;gap:14px;padding:12px 0 4px;max-width:100%}
+  /* En móvil NO centrar verticalmente: .folder-grid trae flex:1 más arriba
+     para repartir las 3 tarjetas en todo el hueco libre bajo la cabecera,
+     y con poco contenido (3 tarjetas) eso las dejaba flotando en medio de
+     un mar en blanco, con el sello de versión desperdigado más abajo
+     todavía — se veía suelto, no "fino". En móvil las tarjetas van
+     pegadas a la cabecera, como el resto de la app, y el sello de
+     versión las sigue de cerca; si sobra alto, sobra al final, no en
+     medio. */
+  .folder-grid{grid-template-columns:1fr !important;gap:14px;padding:12px 0 4px;max-width:100%;flex:0 1 auto;align-content:flex-start}
+  #home-version{margin:16px 0 8px !important}
   .folder-card{padding:24px 20px;min-height:auto;flex-direction:row;gap:16px;justify-content:flex-start;align-items:center;text-align:left;border-radius:14px}
   .folder-icon{font-size:40px}
   .folder-card h2{font-size:19px}
