@@ -1514,6 +1514,16 @@ td.wrap{white-space:normal}
      "exagerado" al probar la app entera en el móvil. */
   .folder-btn{padding:8px 16px;font-size:13px}
 
+  /* Gestión solo tiene 4 módulos (Cocina y Sala rondan la docena): con
+     tan pocas tarjetas, la lista se quedaba pegada arriba y dejaba media
+     pantalla en blanco debajo — mismo criterio que #view-home ya
+     aplicaba a las 3 tarjetas de Cocina/Sala/Gestión. El título se queda
+     arriba (no entra en el centrado) y la rejilla de módulos se centra
+     SOLO cuando sobra alto; si hay muchos módulos (Cocina, Sala) no
+     sobra nada y sigue quedando arriba, con scroll normal, como siempre. */
+  #view-folder.active{display:flex;flex-direction:column;min-height:100%}
+  #folder-modules{margin-top:auto;margin-bottom:auto}
+
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
   /* Se probó con columnas más estrechas para caber 2-3 tickets por fila en
