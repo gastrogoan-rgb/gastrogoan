@@ -118,6 +118,31 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 </div>
 
 <script>
+// Banner de error global, visible en la propia página: en tablet no hay
+// forma cómoda de abrir la consola del navegador para ver qué ha fallado
+// de verdad, así que cualquier error sin capturar (no solo los ya
+// envueltos en try/catch de sitios concretos) se enseña aquí arriba,
+// en rojo, con el texto completo para poder copiarlo.
+function ggMostrarErrorGlobal(msg, detalle){
+  let banner = document.getElementById('gg-error-global');
+  if(!banner){
+    banner = document.createElement('div');
+    banner.id = 'gg-error-global';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#B33;color:#fff;padding:14px 18px;font-size:13px;max-height:40vh;overflow:auto;box-shadow:0 4px 14px rgba(0,0,0,.3)';
+    document.body.prepend(banner);
+  }
+  const linea = document.createElement('div');
+  linea.style.cssText = 'margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.3);white-space:pre-wrap;font-family:monospace';
+  linea.textContent = msg + (detalle ? '\n' + detalle : '');
+  banner.appendChild(linea);
+  const cerrar = document.createElement('button');
+  cerrar.textContent = '✕ Cerrar todos';
+  cerrar.style.cssText = 'background:#fff;color:#B33;border:none;padding:4px 10px;border-radius:6px;font-weight:700;cursor:pointer;margin-top:4px';
+  cerrar.onclick = () => banner.remove();
+  banner.appendChild(cerrar);
+}
+window.addEventListener('error', ev => ggMostrarErrorGlobal('Error: ' + ev.message, (ev.filename||'') + ':' + (ev.lineno||'') + '\n' + (ev.error && ev.error.stack || '')));
+window.addEventListener('unhandledrejection', ev => ggMostrarErrorGlobal('Promesa rechazada: ' + (ev.reason && ev.reason.message || ev.reason), ev.reason && ev.reason.stack || ''));
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Sin service worker ni versión propia aquí: una URL con parámetro nuevo
 // nunca tiene caché previa del navegador, así que fuerza una carga real.
@@ -2533,9 +2558,33 @@ function tbTotalGeneral(tb, equipo){
   });
   return total;
 }
+// Autorreparación: un negocio real se ha quedado con tb.sentidos.vista
+// puesto pero SIN oido/olfato/gusto/tacto (venía de una versión
+// intermedia entre el marcador simple y las 3 pruebas — la comprobación
+// de la migración solo miraba si .vista existía, no si estaban las 5).
+// En vez de que cada función que toca tb.sentidos[algo] tenga que
+// defenderse por su cuenta, se repara aquí, en el único sitio por el que
+// pasa cualquier acceso al team building — así ningún negocio se queda
+// con una pantalla rota, tenga la forma que tenga su dato guardado.
+function tbSentidosRepair(tb){
+  if(!tb || !tb.sentidos) return;
+  PLAN360_TB_SENTIDOS.forEach(sen => {
+    if(sen.id === 'vista'){
+      if(!tb.sentidos.vista || !Array.isArray(tb.sentidos.vista.palabras)) tb.sentidos.vista = plan360FreshSopa();
+    } else if(!tb.sentidos[sen.id] || !Array.isArray(tb.sentidos[sen.id].preparaA)){
+      tb.sentidos[sen.id] = plan360FreshReto();
+    }
+  });
+  if(!tb.creatividad || !Array.isArray(tb.creatividad.criterios)){
+    const fresh = plan360FreshTeamBuilding().creatividad;
+    tb.creatividad = {...fresh, ...tb.creatividad, criterios: (tb.creatividad && tb.creatividad.criterios) || fresh.criterios, notas: (tb.creatividad && tb.creatividad.notas) || fresh.notas};
+  }
+}
 function tbGet(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  return d && d.teamBuilding ? d.teamBuilding : null;
+  if(!d || !d.teamBuilding) return null;
+  tbSentidosRepair(d.teamBuilding);
+  return d.teamBuilding;
 }
 // Cabecera con el marcador GENERAL, fija arriba en las 3 pruebas — así
 // se sabe en todo momento quién va ganando, no solo en la pantalla final.
