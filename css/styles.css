@@ -1740,6 +1740,12 @@ td.wrap{white-space:normal}
      que los botones sigan fluyendo en fila, dos o tres por línea. */
   .toolbar{flex-direction:row;flex-wrap:wrap;align-items:center}
   .toolbar .left{width:100%;flex:0 0 100%}
+  /* Selects con max-width fijo a mano (p.ej. los filtros de Promoción,
+     "Todos los responsables"/"Todos los estados") se apretaban dos por
+     fila y el texto salía cortado a medias — el propio <select> lo
+     recorta solo, sin ningún aviso. En vez de cada max-width a mano, que
+     ocupen la fila entera y se apilen. */
+  .toolbar .left select{max-width:none !important;flex:1 1 100%}
   .kpi-row{flex-wrap:wrap}
   .grid-compact{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)) !important}
 
