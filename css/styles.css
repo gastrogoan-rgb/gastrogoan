@@ -1431,7 +1431,7 @@ td.wrap{white-space:normal}
      ajustada. Un punto y medio menos de base para todo lo que no tiene
      su propio font-size — no toca los inputs (fijados aparte a 16px,
      imprescindible contra el zoom de iOS). */
-  body{font-size:13.5px}
+  body{font-size:13px}
 
   /* Checkboxes/radios un poco más grandes todavía en móvil: el dedo es
      menos preciso que un ratón, y aquí no hay motivo para ahorrar espacio. */
