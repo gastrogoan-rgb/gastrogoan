@@ -1279,33 +1279,92 @@ Se van alternando sentidos y turnos hasta agotar el material. Gana el equipo con
 El equipo ganador elige algo simbólico — poner nombre a un plato nuevo, decidir el orden de turnos de la semana que viene, algo que de verdad pese un poco (nada de trofeos cutres).
 
 Aprovecha este momento, con el equipo ya suelto y de buen humor, para conectar con el mensaje real: "esto es lo que vamos a construir juntos" — y enlaza con los objetivos y el plan que ya habéis presentado antes en la sesión.`;
-// Los 5 sentidos del juego, con su icono — se repiten en el marcador y en
-// el desglose, así que van en una sola lista en vez de escritos a mano
-// cuatro veces.
+// Los 5 sentidos del juego, en el orden clásico (vista, oído, olfato,
+// gusto, tacto) — antes iban en un orden suelto y era lo primero que el
+// coach pidió arreglar del marcador final. `necesitaAudio` es solo para
+// Oído: ahí cada reto lleva un archivo de sonido de verdad.
 const PLAN360_TB_SENTIDOS = [
-  {id: 'oido', label: 'Oído', icon: 'ti-ear'},
-  {id: 'gusto', label: 'Gusto', icon: 'ti-soup'},
-  {id: 'olfato', label: 'Olfato', icon: 'ti-wind'},
-  {id: 'tacto', label: 'Tacto', icon: 'ti-hand-stop'},
   {id: 'vista', label: 'Vista', icon: 'ti-eye'},
+  {id: 'oido', label: 'Oído', icon: 'ti-ear', necesitaAudio: true},
+  {id: 'olfato', label: 'Olfato', icon: 'ti-wind'},
+  {id: 'gusto', label: 'Gusto', icon: 'ti-soup'},
+  {id: 'tacto', label: 'Tacto', icon: 'ti-hand-stop'},
 ];
-// Vocabulario por defecto de la sopa de letras (Prueba 2, Vista) — términos
-// de pase/sala que cualquier negocio reconoce, así el juego arranca ya
-// jugable; el coach puede cambiar la lista por la jerga propia del sitio.
-const PLAN360_TB_PALABRAS_DEFECTO = ['COMANDA','MARCHAR','EMPLATAR','MISE','BARRA','TERRAZA','PROPINA','ALERGENO','RESERVA','COMENSAL','APERITIVO','PASE'];
-// 5 preguntas de ejemplo para la Prueba 1 (Kahoot) — genéricas de
-// hostelería, para que el juego no arranque en blanco; el coach las
-// cambia por preguntas sobre ESTE negocio antes de usarlas.
+// Vocabulario de la sopa de letras (Prueba 2, Vista) — vocabulario real de
+// sala y cocina, palabras largas de verdad (hasta 11 letras) para que dé
+// trabajo encontrarlas, no cuatro palabras sueltas en una cuadrícula
+// pequeña. El coach puede cambiar la lista por la jerga propia del sitio.
+const PLAN360_TB_PALABRAS_DEFECTO = ['COMANDA','MARCHAR','EMPLATAR','TERRAZA','PROPINA','ALERGENO','RESERVA','COMENSAL','APERITIVO','ESCANDALLO','MARIDAJE','BRIGADA'];
+const PLAN360_TB_SOPA_SIZE = 14;
+// 30 preguntas — 10 fáciles, 10 medias, 10 difíciles — de cocina y sala,
+// para que el Kahoot no dependa de que el coach se invente preguntas
+// desde cero. Las cambia o añade las suyas propias del negocio si quiere,
+// pero ya arranca con partido de sobra para una sesión entera.
 const PLAN360_TB_KAHOOT_DEFECTO = [
-  {texto: '¿Qué significa "mise en place"?', opciones: ['Lo primero que se sirve','Todo preparado antes del servicio','La mesa del jefe de sala','Un tipo de salsa'], correcta: 1},
-  {texto: '¿Cuál de estos NO es un alérgeno de declaración obligatoria?', opciones: ['Gluten','Sal','Marisco','Frutos de cáscara'], correcta: 1},
-  {texto: '¿Qué quiere decir "vamos 86 en el salmón"?', opciones: ['Hay 86 raciones','Se ha agotado','Está en el punto 86 de cocción','Es la mesa 86'], correcta: 1},
-  {texto: '¿Por dónde se sirve tradicionalmente el vino?', opciones: ['Por la izquierda del comensal','Por la derecha del comensal','Por detrás siempre','Da igual'], correcta: 1},
-  {texto: '¿Qué es el "food cost"?', opciones: ['El precio del menú','El coste de los ingredientes de un plato sobre su venta','El sueldo de cocina','El gasto en decoración'], correcta: 1},
+  // FÁCILES
+  {dificultad: 'facil', texto: '¿Qué significa "mise en place"?', opciones: ['Lo primero que se sirve','Todo preparado antes del servicio','La mesa del jefe de sala','Un tipo de salsa'], correcta: 1},
+  {dificultad: 'facil', texto: '¿Por dónde se sirve tradicionalmente el vino?', opciones: ['Por la izquierda del comensal','Por la derecha del comensal','Por detrás siempre','Da igual'], correcta: 1},
+  {dificultad: 'facil', texto: '¿Qué es una "comanda"?', opciones: ['La cuenta final','El pedido que toma el camarero','Un tipo de mesa','El menú del día'], correcta: 1},
+  {dificultad: 'facil', texto: '¿Qué cubiertos se usan para el pescado?', opciones: ['Cuchillo y tenedor normales','Pala y tenedor de pescado','Solo tenedor','Cuchara sopera'], correcta: 1},
+  {dificultad: 'facil', texto: '¿A qué temperatura debe estar una nevera de conservación?', opciones: ['0-4°C','10-15°C','-18°C','18-20°C'], correcta: 0},
+  {dificultad: 'facil', texto: '¿Qué significa "marchar" un plato?', opciones: ['Retirarlo de la carta','Que empiece a prepararse en cocina','Servirlo frío','Anularlo'], correcta: 1},
+  {dificultad: 'facil', texto: '¿Cuál es el orden habitual de un menú?', opciones: ['Postre, principal, entrante','Entrante, principal, postre','Principal, postre, entrante','Da igual el orden'], correcta: 1},
+  {dificultad: 'facil', texto: '¿Qué es el "show cooking"?', opciones: ['Cocinar a puerta cerrada','Cocinar delante del cliente','Un concurso de cocina','Una carta especial'], correcta: 1},
+  {dificultad: 'facil', texto: '¿Cómo se debe servir tradicionalmente el vino blanco?', opciones: ['Bien frío','A temperatura ambiente','Caliente','Con hielo dentro'], correcta: 0},
+  {dificultad: 'facil', texto: '¿Qué es un "aperitivo"?', opciones: ['El plato principal','Algo ligero antes de comer','El postre','La cuenta'], correcta: 1},
+  // MEDIAS
+  {dificultad: 'media', texto: '¿Qué es el "food cost"?', opciones: ['El precio del menú','El coste de los ingredientes sobre el precio de venta','El sueldo de cocina','El gasto en decoración'], correcta: 1},
+  {dificultad: 'media', texto: '¿Qué quiere decir "vamos 86 en el salmón"?', opciones: ['Hay 86 raciones','Se ha agotado','Está en el punto 86 de cocción','Es la mesa 86'], correcta: 1},
+  {dificultad: 'media', texto: '¿Cuál de estos NO es alérgeno de declaración obligatoria?', opciones: ['Gluten','Sal','Marisco','Frutos de cáscara'], correcta: 1},
+  {dificultad: 'media', texto: '¿Qué es el "escandallo" de un plato?', opciones: ['La lista de alérgenos','La ficha de coste del plato','El nombre en carta','La foto para el menú'], correcta: 1},
+  {dificultad: 'media', texto: '¿Qué significa FIFO en el almacén?', opciones: ['El más caro sale primero','Primero en entrar, primero en salir','First In, Forever Out','No importa el orden'], correcta: 1},
+  {dificultad: 'media', texto: '¿Qué es un menú "degustación"?', opciones: ['El menú más barato','Varios platos pequeños para probar variedad','Un menú solo de postres','El menú infantil'], correcta: 1},
+  {dificultad: 'media', texto: '¿Qué es el "maridaje"?', opciones: ['Combinar comida y bebida','Un tipo de salsa','Casar dos platos en uno','El servicio de bodas'], correcta: 0},
+  {dificultad: 'media', texto: '¿Qué es un "cover" en un restaurante?', opciones: ['La tapa de un plato','Un comensal / ración servida','El mantel','Una reserva anulada'], correcta: 1},
+  {dificultad: 'media', texto: '¿Qué temperatura mínima debe alcanzar el centro de una carne bien hecha?', opciones: ['Más de 70°C','Más de 40°C','Más de 100°C','No hace falta medirla'], correcta: 0},
+  {dificultad: 'media', texto: '¿Qué es la "brigada de cocina"?', opciones: ['El equipo de limpieza','La jerarquía y reparto de puestos en cocina','Los proveedores habituales','El turno de noche'], correcta: 1},
+  // DIFÍCILES
+  {dificultad: 'dificil', texto: '¿Qué técnica consiste en cocinar al vacío a baja temperatura?', opciones: ['Sous-vide','Flambeado','Gratinado','Escaldado'], correcta: 0},
+  {dificultad: 'dificil', texto: '¿Qué es la "reacción de Maillard"?', opciones: ['La fermentación del pan','El dorado de proteínas y azúcares al calor','La coagulación del huevo','La oxidación de la fruta'], correcta: 1},
+  {dificultad: 'dificil', texto: '¿Qué es el "punto de humo" de un aceite?', opciones: ['La temperatura a la que empieza a quemarse','El punto de congelación','Cuando se pone rancio','El momento de añadir sal'], correcta: 0},
+  {dificultad: 'dificil', texto: '¿Qué es una "reducción" en cocina?', opciones: ['Bajar el precio de un plato','Concentrar un líquido evaporando agua','Cortar en trozos más pequeños','Congelar rápido'], correcta: 1},
+  {dificultad: 'dificil', texto: '¿Cuál es la temperatura ideal de servicio de un vino tinto joven?', opciones: ['16-18°C','4-6°C','25-28°C','0°C'], correcta: 0},
+  {dificultad: 'dificil', texto: '¿Qué es el "mise en bouche"?', opciones: ['El último plato del menú','Un pequeño bocado de bienvenida antes del menú','La carta de quesos','El aperitivo con alcohol'], correcta: 1},
+  {dificultad: 'dificil', texto: '¿Qué significa que la pasta esté "al dente"?', opciones: ['Muy blanda','Firme al morder','Fría','Con mucha salsa'], correcta: 1},
+  {dificultad: 'dificil', texto: '¿Qué es un "gueridón"?', opciones: ['Un tipo de copa','Mesa auxiliar de servicio en sala','Un cuchillo especial','Un corte de carne'], correcta: 1},
+  {dificultad: 'dificil', texto: '¿Qué es el "emplatado"?', opciones: ['Lavar los platos','La forma de disponer el plato visualmente','Calentar el plato antes de servir','Contar los platos usados'], correcta: 1},
+  {dificultad: 'dificil', texto: '¿Qué es la "trazabilidad alimentaria"?', opciones: ['El sabor de un plato','Poder seguir el origen de un alimento','La velocidad del servicio','El recorrido del camarero'], correcta: 1},
+];
+// Ideas de premio para picar directamente sin escribir desde cero — el
+// coach puede editarlas o escribir la suya propia igualmente.
+const PLAN360_TB_PREMIOS = [
+  'Elegir los turnos de la semana que viene',
+  'Comida de equipo pagada por el jefe',
+  'Salir 1 hora antes un día a elegir',
+  'Elegir la música de un turno completo',
+  'Poner nombre a un plato nuevo de la carta',
+  'Un día libre extra a repartir entre el equipo',
+  'Elegir el menú del "family meal" de una semana',
+  'Cerveza/refresco de equipo tras el turno',
 ];
 // El orden real del juego: Explicación → 3 Pruebas → Premio final.
 // La Prueba 2 (sentidos) tiene 5 pantallas propias, una por sentido.
-const PLAN360_TB_PANTALLAS = ['intro','kahoot','oido','gusto','olfato','tacto','vista','creatividad','final'];
+const PLAN360_TB_PANTALLAS = ['intro', 'kahoot', ...PLAN360_TB_SENTIDOS.map(s => s.id), 'creatividad', 'final'];
+// Un reto de sentido (Oído/Olfato/Gusto/Tacto) es SIEMPRE dos listas: lo
+// que preparó el equipo A para que adivine el B, y viceversa — así el
+// punto se sabe siempre a quién dárselo (a quien adivina, no a quien
+// prepara). Vista es la sopa de letras y va aparte (ver plan360FreshSopa).
+function plan360FreshReto(){
+  return {preparaA: [], preparaB: []};
+}
+function plan360FreshSopa(){
+  return {
+    palabras: [...PLAN360_TB_PALABRAS_DEFECTO],
+    size: PLAN360_TB_SOPA_SIZE,
+    sopa: null,          // se genera al entrar en la pantalla (ver tbGenerarSopa)
+    encontradas: {},     // {PALABRA: {equipo:'A'|'B', celdas:[[f,c],...]}}
+  };
+}
 function plan360FreshTeamBuilding(){
   // El marcador vive SEPARADO del guion a propósito: el guion se prepara
   // antes (texto largo, se edita con calma); el marcador se toca EN VIVO,
@@ -1321,18 +1380,25 @@ function plan360FreshTeamBuilding(){
     kahoot: {
       preguntas: PLAN360_TB_KAHOOT_DEFECTO.map(q => ({...q, opciones: [...q.opciones]})),
       actual: 0,
+      tiempoSeg: 20,
       puntos: {A: 0, B: 0},
     },
     sentidos: {
-      palabras: [...PLAN360_TB_PALABRAS_DEFECTO],
-      sopa: null,   // se genera al entrar en la pantalla de Vista (ver tbGenerarSopa)
-      puntos: Object.fromEntries(PLAN360_TB_SENTIDOS.map(s => [s.id, {A: 0, B: 0}])),
+      vista: plan360FreshSopa(),
+      oido: plan360FreshReto(),
+      olfato: plan360FreshReto(),
+      gusto: plan360FreshReto(),
+      tacto: plan360FreshReto(),
     },
     creatividad: {
       presupuesto: 25,
       tiempoMin: 90,
-      brief: 'Con 25€ por equipo, ir al súper, comprar, preparar y emplatar un plato o bebida original en el tiempo dado. Se valora sabor, presentación y que se sirva dentro de tiempo.',
+      brief: 'Con 25€ por equipo, ir al súper, comprar, preparar y emplatar un plato o bebida original en el tiempo dado.',
+      criterios: ['Presentación', 'Sabor', 'Innovación'],
+      notas: {A: {}, B: {}},
+      puntosPrueba: 3,
       puntos: {A: 0, B: 0},
+      resuelta: false,
     },
     premio: '',
     completadoAt: null,
@@ -1428,37 +1494,25 @@ function ensureRemotePlan360(){
     && dia2Existente.teamBuilding.script.startsWith(PLAN360_TEAMBUILDING_SCRIPT_VIEJO)){
     dia2Existente.teamBuilding.script = PLAN360_TEAMBUILDING_SCRIPT;
   }
-  // Migración: el team building pasó de ser solo un guion de texto a
-  // llevar también un marcador en vivo (21/09) y luego (21/09, mismo día)
-  // a 3 pruebas completas (Kahoot, 5 sentidos, creatividad) con premio
-  // final — un negocio que ya tenía el guion o el marcador simple no
-  // tiene por qué perderlo, solo se le añaden los campos que le falten.
-  if(dia2Existente && dia2Existente.teamBuilding && !dia2Existente.teamBuilding.sentidos){
+  // Migración: el team building ha pasado por varias formas (guion suelto
+  // → marcador simple → 3 pruebas con puntos planos → 3 pruebas con retos
+  // reales por equipo, sopa interactiva y creatividad por criterios,
+  // 21/09) — sin uso real todavía en ningún negocio, así que cada versión
+  // se sustituye entera por la nueva en cuanto se detecta la forma vieja,
+  // conservando solo lo que tiene sentido conservar: el guion, los
+  // nombres/integrantes de cada equipo y si ya estaba marcada como hecha.
+  if(dia2Existente && dia2Existente.teamBuilding && !(dia2Existente.teamBuilding.sentidos && dia2Existente.teamBuilding.sentidos.vista)){
     const tbViejo = dia2Existente.teamBuilding;
     const fresh = plan360FreshTeamBuilding();
     dia2Existente.teamBuilding = {
+      ...fresh,
       script: tbViejo.script || fresh.script,
       equipoA: tbViejo.equipoA || fresh.equipoA,
       equipoB: tbViejo.equipoB || fresh.equipoB,
       integrantesA: tbViejo.integrantesA || '',
       integrantesB: tbViejo.integrantesB || '',
-      pantalla: 'intro',
-      kahoot: fresh.kahoot,
-      // El marcador simple de antes (un solo puntos{sentido:{A,B}}) era
-      // exactamente lo que ahora vive en sentidos.puntos — se traslada
-      // tal cual, sin perder los tantos que ya llevara la partida.
-      sentidos: {...fresh.sentidos, puntos: tbViejo.puntos || fresh.sentidos.puntos},
-      creatividad: fresh.creatividad,
-      premio: '',
       completadoAt: tbViejo.completadoAt || null,
     };
-  }
-  // Migración menor: negocios que ya tenían las 3 pruebas (commit
-  // anterior) pero no los integrantes de cada equipo, añadido después.
-  if(dia2Existente && dia2Existente.teamBuilding && dia2Existente.teamBuilding.sentidos
-    && dia2Existente.teamBuilding.integrantesA === undefined){
-    dia2Existente.teamBuilding.integrantesA = '';
-    dia2Existente.teamBuilding.integrantesB = '';
   }
   if(dia1Existente && !dia1Existente.misteryCheck){
     dia1Existente.misteryCheck = plan360FreshMisteryCheck();
@@ -2463,13 +2517,21 @@ function marcarMasterclassHecha(day){
    EN VIVO delante del equipo — de ahí los botones grandes y el guion de
    preparación aparte, en su propia pantalla, para no estorbar durante
    el juego. */
-function tbTotalPrueba(puntos, equipo){
-  return Object.values(puntos).reduce((s, p) => s + (p[equipo] || 0), 0);
+// Un reto (Oído/Olfato/Gusto/Tacto) puntúa a quien ADIVINA, no a quien
+// prepara: lo que preparó A (preparaA) lo adivina B, y viceversa.
+function tbRetoTotal(reto, equipo){
+  const items = equipo === 'A' ? (reto.preparaB || []) : (reto.preparaA || []);
+  return items.filter(it => it.adivinado === true).length;
+}
+function tbSopaTotal(sopa, equipo){
+  return Object.values(sopa.encontradas || {}).filter(f => f.equipo === equipo).length;
 }
 function tbTotalGeneral(tb, equipo){
-  return (tb.kahoot.puntos[equipo] || 0)
-    + tbTotalPrueba(tb.sentidos.puntos, equipo)
-    + (tb.creatividad.puntos[equipo] || 0);
+  let total = (tb.kahoot.puntos[equipo] || 0) + (tb.creatividad.puntos[equipo] || 0);
+  PLAN360_TB_SENTIDOS.forEach(sen => {
+    total += sen.id === 'vista' ? tbSopaTotal(tb.sentidos.vista, equipo) : tbRetoTotal(tb.sentidos[sen.id], equipo);
+  });
+  return total;
 }
 function tbGet(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
@@ -2562,13 +2624,13 @@ function tbRenderIntro(box, day, tb){
         <label style="font-size:12px;color:var(--muted)">Nombre del equipo A</label>
         <input value="${esc(tb.equipoA)}" onchange="tbRenombrar(${day},'A',this.value)" style="width:100%;margin-bottom:10px">
         <label style="font-size:12px;color:var(--muted)">Integrantes (opcional, para que quede claro quién juega con quién)</label>
-        <textarea rows="3" placeholder="Un nombre por línea" onchange="tbIntegrantes(${day},'A',this.value)" style="width:100%">${esc(tb.integrantesA || '')}</textarea>
+        <textarea rows="3" placeholder="Un nombre por línea" oninput="tbIntegrantesLocal(${day},'A',this.value)" onblur="tbIntegrantesGuardar(${day},'A',this.value)" style="width:100%">${esc(tb.integrantesA || '')}</textarea>
       </div>
       <div class="card" style="flex:1;min-width:220px">
         <label style="font-size:12px;color:var(--muted)">Nombre del equipo B</label>
         <input value="${esc(tb.equipoB)}" onchange="tbRenombrar(${day},'B',this.value)" style="width:100%;margin-bottom:10px">
         <label style="font-size:12px;color:var(--muted)">Integrantes (opcional)</label>
-        <textarea rows="3" placeholder="Un nombre por línea" onchange="tbIntegrantes(${day},'B',this.value)" style="width:100%">${esc(tb.integrantesB || '')}</textarea>
+        <textarea rows="3" placeholder="Un nombre por línea" oninput="tbIntegrantesLocal(${day},'B',this.value)" onblur="tbIntegrantesGuardar(${day},'B',this.value)" style="width:100%">${esc(tb.integrantesB || '')}</textarea>
       </div>
     </div>
     <details class="card">
@@ -2579,10 +2641,21 @@ function tbRenderIntro(box, day, tb){
     <button class="btn btn-primary" onclick="tbIr(${day},'kahoot')">Empezar Prueba 1 →</button>
   `;
 }
-function tbIntegrantes(day, equipo, valor){
+// Bug real reportado: con solo onchange (dispara al perder el foco), si
+// el coach escribía los integrantes y pulsaba directamente una pestaña de
+// navegación SIN hacer clic fuera del textarea antes, el cambio nunca
+// llegaba a dispararse y esa pantalla se repintaba entera con el dato
+// vacío de antes — parecía que "no dejaba poner integrantes" cuando en
+// realidad es que se perdía silenciosamente. Con oninput el dato ya vive
+// en el objeto en memoria en cada tecla (ninguna navegación puede
+// perderlo); onblur es solo el momento en que además se guarda en la nube.
+function tbIntegrantesLocal(day, equipo, valor){
   const tb = tbGet(day);
   if(!tb) return;
   tb[equipo === 'A' ? 'integrantesA' : 'integrantesB'] = valor;
+}
+function tbIntegrantesGuardar(day, equipo, valor){
+  tbIntegrantesLocal(day, equipo, valor);
   saveRemoteBiz();
 }
 function tbRenombrar(day, equipo, valor){
@@ -2608,22 +2681,81 @@ function marcarTeamBuildingHecha(day){
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
-/* ---- Pantalla Kahoot (Prueba 1): una pregunta a la vez, el coach marca
-   qué equipo acertó primero. Editor de preguntas plegado aparte: se
-   prepara antes, no se toca durante el juego. ---- */
+/* ---- Pantalla Kahoot (Prueba 1): una pregunta a la vez, con cuenta
+   atrás y tictac de fondo (sintetizado, sin depender de ningún archivo
+   de audio externo), el coach marca qué equipo acertó primero.
+
+   Formato de respuesta: EN VOZ ALTA, no por móvil — montar un buzz-in
+   real desde el móvil de cada equipo exigiría que cada uno entre a una
+   sala en vivo desde su propio aparato y una sincronización en tiempo
+   real con esta pantalla (WebSockets o Firebase Realtime, con un código
+   de sala, reconexión si alguien pierde cobertura...). Es una app
+   aparte, no una tarde de mejora. La cuenta atrás + el tictac ya dan la
+   tensión de un Kahoot real sin ese coste: los equipos gritan la
+   respuesta y el coach, que ve la pantalla, decide quién la dijo
+   primero — exactamente el mismo criterio que ya usa el resto de
+   pruebas (el coach arbitra en vivo, no hace falta un buzzer). */
+const PLAN360_TB_DIFICULTAD_LABEL = {facil: 'Fácil', media: 'Media', dificil: 'Difícil'};
+const PLAN360_TB_DIFICULTAD_COLOR = {facil: 'var(--green)', media: 'var(--amber, #c98a1f)', dificil: 'var(--red)'};
+let tbTimerHandle = null;
+let tbTimerRestante = 0;
+let tbAudioCtx = null;
+let tbSonidoActivo = false;
+function tbTic(){
+  // Un "tic" corto sintetizado con el propio navegador — nada que
+  // descargar ni alojar, y funciona sin conexión en mitad de una sala.
+  try{
+    if(!tbAudioCtx) tbAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = tbAudioCtx.createOscillator(), gain = tbAudioCtx.createGain();
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.05, tbAudioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, tbAudioCtx.currentTime + 0.08);
+    osc.connect(gain); gain.connect(tbAudioCtx.destination);
+    osc.start(); osc.stop(tbAudioCtx.currentTime + 0.08);
+  }catch(e){ /* algunos navegadores exigen una interacción antes de sonar — no pasa nada, sigue sin sonido */ }
+}
+function tbKahootEmpezarTiempo(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  clearInterval(tbTimerHandle);
+  tbTimerRestante = tb.kahoot.tiempoSeg;
+  tbSonidoActivo = true;
+  tbTimerHandle = setInterval(() => {
+    tbTimerRestante--;
+    if(tbSonidoActivo) tbTic();
+    const barra = document.getElementById('tb-kahoot-barra');
+    const num = document.getElementById('tb-kahoot-num');
+    if(barra) barra.style.width = Math.max(0, (tbTimerRestante / tb.kahoot.tiempoSeg) * 100) + '%';
+    if(num) num.textContent = Math.max(0, tbTimerRestante);
+    if(tbTimerRestante <= 0){ clearInterval(tbTimerHandle); tbSonidoActivo = false; }
+  }, 1000);
+  renderTeamBuildingPage(day);
+}
+function tbKahootPararTiempo(){
+  clearInterval(tbTimerHandle);
+  tbSonidoActivo = false;
+}
 function tbRenderKahoot(box, day, tb){
   const k = tb.kahoot;
   const total = k.preguntas.length;
   const i = Math.min(k.actual, Math.max(0, total - 1));
   const q = k.preguntas[i];
+  const corriendo = tbTimerHandle !== null;
   box.innerHTML = `
     ${tbMiniMarcador(tb)}
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
         <strong>Prueba 1 — Kahoot</strong>
         <span class="muted">Pregunta ${total ? i + 1 : 0} de ${total}</span>
       </div>
       ${!q ? '<p class="muted">No hay preguntas todavía — añade alguna en el editor de abajo.</p>' : `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TB_DIFICULTAD_COLOR[q.dificultad]||'var(--muted)'}">${esc(PLAN360_TB_DIFICULTAD_LABEL[q.dificultad] || '')}</span>
+          <div style="flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden">
+            <div id="tb-kahoot-barra" style="height:100%;background:var(--ink);width:${corriendo ? (tbTimerRestante/k.tiempoSeg*100) : 100}%;transition:width 1s linear"></div>
+          </div>
+          <span id="tb-kahoot-num" style="font-weight:800;min-width:22px;text-align:right">${corriendo ? Math.max(0,tbTimerRestante) : k.tiempoSeg}</span>
+        </div>
         <div style="font-size:18px;font-weight:700;margin-bottom:14px">${esc(q.texto)}</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
           ${q.opciones.map((op, oi) => `
@@ -2631,7 +2763,11 @@ function tbRenderKahoot(box, day, tb){
               ${esc(op)} ${oi===q.correcta ? '<i class="ti ti-check" style="color:var(--green)"></i>' : ''}
             </div>`).join('')}
         </div>
-        <p class="muted" style="font-size:12px">La opción correcta se ve marcada aquí solo para ti — enseña las 4 opciones al equipo sin decir cuál es, y marca quién acertó.</p>
+        <p class="muted" style="font-size:12px">La opción correcta se ve marcada aquí solo para ti. Formato: se responde EN VOZ ALTA — pulsa "Empezar tiempo", enseña las 4 opciones al equipo, y cuando alguien grite la respuesta marca qué equipo acertó primero.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          ${!corriendo ? `<button class="btn btn-sm" onclick="tbKahootEmpezarTiempo(${day})"><i class="ti ti-player-play"></i> Empezar tiempo (${k.tiempoSeg}s)</button>`
+                       : `<button class="btn btn-sm" onclick="tbKahootPararTiempo();renderTeamBuildingPage(${day})"><i class="ti ti-player-pause"></i> Parar</button>`}
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="tbKahootPunto(${day},'A')">✓ Acertó ${esc(tb.equipoA)}</button>
           <button class="btn btn-primary" onclick="tbKahootPunto(${day},'B')">✓ Acertó ${esc(tb.equipoB)}</button>
@@ -2640,14 +2776,21 @@ function tbRenderKahoot(box, day, tb){
       `}
     </div>
     <details class="card">
+      <summary style="cursor:pointer;font-weight:600">Tiempo por pregunta</summary>
+      <div class="field" style="margin-top:10px;max-width:160px"><label>Segundos</label><input type="number" value="${k.tiempoSeg}" onchange="tbKahootTiempo(${day},this.value)"></div>
+    </details>
+    <details class="card">
       <summary style="cursor:pointer;font-weight:600">Editar preguntas (${total})</summary>
       <div style="margin-top:10px">
         ${k.preguntas.map((qq, qi) => `
           <div class="card" style="background:var(--bg)">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span class="muted">Pregunta ${qi + 1}</span>
+              <span class="muted">Pregunta ${qi + 1} · ${esc(PLAN360_TB_DIFICULTAD_LABEL[qq.dificultad] || '')}</span>
               <button class="btn btn-sm btn-danger" onclick="tbKahootBorrar(${day},${qi})"><i class="ti ti-trash"></i></button>
             </div>
+            <select onchange="tbKahootDificultad(${day},${qi},this.value)" style="margin-bottom:6px">
+              ${['facil','media','dificil'].map(d => `<option value="${d}" ${qq.dificultad===d?'selected':''}>${PLAN360_TB_DIFICULTAD_LABEL[d]}</option>`).join('')}
+            </select>
             <input value="${esc(qq.texto)}" onchange="tbKahootEditarTexto(${day},${qi},this.value)" placeholder="Pregunta" style="width:100%;margin-bottom:6px">
             ${qq.opciones.map((op, oi) => `
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
@@ -2658,8 +2801,21 @@ function tbRenderKahoot(box, day, tb){
         <button class="btn btn-sm" onclick="tbKahootAnadir(${day})"><i class="ti ti-plus"></i> Añadir pregunta</button>
       </div>
     </details>
-    <button class="btn btn-sm" onclick="tbIr(${day},'oido')">Siguiente prueba: Oído →</button>
+    <button class="btn btn-sm" onclick="tbKahootPararTiempo();tbIr(${day},'${PLAN360_TB_SENTIDOS[0].id}')">Siguiente prueba: ${esc(PLAN360_TB_SENTIDOS[0].label)} →</button>
   `;
+}
+function tbKahootTiempo(day, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.tiempoSeg = Math.max(5, Number(valor) || 20);
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbKahootDificultad(day, qi, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.preguntas[qi].dificultad = valor;
+  saveRemoteBiz();
 }
 function tbKahootPunto(day, equipo){
   const tb = tbGet(day);
@@ -2670,6 +2826,7 @@ function tbKahootPunto(day, equipo){
 function tbKahootSiguiente(day){
   const tb = tbGet(day);
   if(!tb) return;
+  tbKahootPararTiempo();
   if(tb.kahoot.actual < tb.kahoot.preguntas.length - 1) tb.kahoot.actual++;
   saveRemoteBiz();
   renderTeamBuildingPage(day);
@@ -2708,19 +2865,136 @@ function tbKahootMarcarCorrecta(day, qi, oi){
   saveRemoteBiz();
 }
 /* ---- Pantallas de los 5 sentidos (Prueba 2) ---- */
-// Generador de sopa de letras: coloca cada palabra en una dirección al
-// azar (las 8 posibles, incluidas diagonales e invertidas) y rellena el
-// resto con letras sueltas — es solo VISUAL (se mira y se busca a ojo
-// entre los dos equipos), no hace falta que sea clicable.
+function tbRenderSentido(box, day, tb, sentidoId){
+  const sen = PLAN360_TB_SENTIDOS.find(s => s.id === sentidoId);
+  if(!sen){ box.innerHTML = ''; return; }
+  box.innerHTML = `${tbMiniMarcador(tb)}` + (sen.id === 'vista' ? tbRenderVista(day, tb) : tbRenderReto(day, tb, sen));
+}
+// El orden de "siguiente prueba" sigue PLAN360_TB_SENTIDOS (Vista, Oído,
+// Olfato, Gusto, Tacto) y desde Tacto salta a la Prueba 3.
+function tbSiguienteSentidoBtn(day, actualId){
+  const idx = PLAN360_TB_SENTIDOS.findIndex(s => s.id === actualId);
+  const siguiente = PLAN360_TB_SENTIDOS[idx + 1];
+  return siguiente
+    ? `<button class="btn btn-sm" onclick="tbIr(${day},'${siguiente.id}')">Siguiente: ${esc(siguiente.label)} →</button>`
+    : `<button class="btn btn-sm" onclick="tbIr(${day},'creatividad')">Siguiente prueba: Creatividad →</button>`;
+}
+
+/* -- Oído / Olfato / Gusto / Tacto: reto por listas -----------------
+   Cada equipo prepara una lista de cosas (sonidos/olores/sabores/
+   texturas) para que adivine el CONTRARIO. Oído además deja subir el
+   archivo de sonido y reproducirlo ahí mismo — Olfato/Gusto/Tacto son
+   físicos de verdad (no se puede "subir un olor"), así que ahí la
+   lista es solo el nombre de lo que se preparó, tachado en cuanto se
+   adivina. El punto es siempre para quien ADIVINA. */
+const PLAN360_TB_RETO_HINT = {
+  oido: 'Cada equipo prepara sonidos para que adivine el otro. Sube el archivo aquí y reprodúcelo en el momento — un acierto, un punto para quien adivina.',
+  olfato: 'Cada equipo prepara olores (especias, ingredientes de su cocina) para que adivine el otro a ciegas. Anota cada uno y marca si acertaron.',
+  gusto: 'Cada equipo prepara muestras para que pruebe el otro a ciegas. Anota cada una y marca si acertaron qué era.',
+  tacto: 'Cada equipo prepara objetos para tocar con los ojos vendados. Anota cada uno y marca si acertaron.',
+};
+function tbRenderRetoLista(day, senId, lado, items, equipoQuePrepara, equipoQueAdivina, necesitaAudio){
+  const total = items.length, acertados = items.filter(it => it.adivinado === true).length;
+  return `
+    <div style="flex:1;min-width:240px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Preparó <strong>${esc(equipoQuePrepara)}</strong> · adivina <strong>${esc(equipoQueAdivina)}</strong> (${acertados}/${total})</div>
+      ${items.map((it, idx) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+          ${necesitaAudio ? `
+            ${it.url ? `<button class="btn btn-sm btn-icon" onclick="tbRetoReproducir('${esc(it.url)}')" title="Reproducir"><i class="ti ti-player-play"></i></button>`
+                      : `<label class="btn btn-sm btn-icon" title="Subir sonido" style="cursor:pointer"><i class="ti ti-upload"></i><input type="file" accept="audio/*" style="display:none" onchange="tbRetoSubirAudio(event,${day},'${senId}','${lado}',${idx})"></label>`}
+          ` : ''}
+          <input value="${esc(it.nombre)}" placeholder="¿Qué es?" onchange="tbRetoNombre(${day},'${senId}','${lado}',${idx},this.value)"
+            style="flex:1;${it.adivinado===true?'text-decoration:line-through;color:var(--muted)':''}">
+          <button class="btn btn-sm ${it.adivinado===true?'btn-primary':''}" onclick="tbRetoMarcar(${day},'${senId}','${lado}',${idx},true)" title="Acertó">✓</button>
+          <button class="btn btn-sm ${it.adivinado===false?'btn-danger':''}" onclick="tbRetoMarcar(${day},'${senId}','${lado}',${idx},false)" title="Falló">✗</button>
+          <button class="btn btn-sm btn-icon" onclick="tbRetoBorrar(${day},'${senId}','${lado}',${idx})" title="Quitar"><i class="ti ti-trash"></i></button>
+        </div>`).join('')}
+      <button class="btn btn-sm" style="margin-top:8px" onclick="tbRetoAnadir(${day},'${senId}','${lado}')"><i class="ti ti-plus"></i> Añadir</button>
+    </div>`;
+}
+function tbRenderReto(day, tb, sen){
+  const reto = tb.sentidos[sen.id];
+  return `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <i class="ti ${sen.icon}" style="font-size:22px"></i>
+        <strong>Prueba 2 — ${esc(sen.label)}</strong>
+      </div>
+      <p class="muted" style="margin-bottom:14px">${PLAN360_TB_RETO_HINT[sen.id]}</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        ${tbRenderRetoLista(day, sen.id, 'preparaA', reto.preparaA, tb.equipoA, tb.equipoB, sen.necesitaAudio)}
+        ${tbRenderRetoLista(day, sen.id, 'preparaB', reto.preparaB, tb.equipoB, tb.equipoA, sen.necesitaAudio)}
+      </div>
+    </div>
+    ${tbSiguienteSentidoBtn(day, sen.id)}
+  `;
+}
+function tbRetoAnadir(day, senId, lado){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId][lado].push({nombre: '', url: null, adivinado: null});
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbRetoBorrar(day, senId, lado, idx){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId][lado].splice(idx, 1);
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbRetoNombre(day, senId, lado, idx, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId][lado][idx].nombre = valor;
+  saveRemoteBiz();
+}
+function tbRetoMarcar(day, senId, lado, idx, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const it = tb.sentidos[senId][lado][idx];
+  it.adivinado = it.adivinado === valor ? null : valor;   // pulsar dos veces deshace el marcado, por si se ha tocado sin querer
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+// El audio se queda como blob LOCAL del navegador (URL.createObjectURL):
+// no hace falta subirlo a ningún sitio para reproducirlo en el momento,
+// pero eso también quiere decir que no sobrevive a un refresco de
+// página — coherente con ser material de UNA sesión de juego en vivo,
+// no un archivo que haya que guardar para otro día.
+function tbRetoSubirAudio(ev, day, senId, lado, idx){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const tb = tbGet(day);
+  if(!tb) return;
+  const url = URL.createObjectURL(file);
+  const it = tb.sentidos[senId][lado][idx];
+  it.url = url;
+  if(!it.nombre) it.nombre = file.name.replace(/\.[^.]+$/, '');
+  renderTeamBuildingPage(day);
+}
+function tbRetoReproducir(url){
+  try{ new Audio(url).play(); }catch(e){}
+}
+
+/* -- Vista: sopa de letras interactiva --------------------------------
+   Antes era solo una imagen de la cuadrícula, sin más interacción que
+   los botones de +1/-1 sueltos — "de juguete", tal cual lo describió el
+   coach. Ahora se puede tocar de verdad: se pulsa la primera letra de
+   una palabra y la última, se traza la línea recta entre ellas (recta
+   en cualquiera de las 8 direcciones, del derecho o del revés) y si
+   coincide con una palabra pendiente, queda marcada en el sitio y pide
+   a quién dar el punto. */
 function tbGenerarSopa(palabras, size){
-  size = size || 12;
+  size = size || PLAN360_TB_SOPA_SIZE;
   const grid = Array.from({length: size}, () => Array(size).fill(null));
   const dirs = [[0,1],[1,0],[1,1],[0,-1],[-1,0],[-1,-1],[1,-1],[-1,1]];
   palabras.forEach(palabra => {
     const w = (palabra || '').toUpperCase().replace(/[^A-ZÑ]/g, '');
     if(!w || w.length > size) return;
     let colocada = false, intentos = 0;
-    while(!colocada && intentos < 300){
+    while(!colocada && intentos < 400){
       intentos++;
       const dir = dirs[Math.floor(Math.random() * dirs.length)];
       const f0 = Math.floor(Math.random() * size), c0 = Math.floor(Math.random() * size);
@@ -2745,78 +3019,90 @@ function tbGenerarSopa(palabras, size){
   }
   return grid;
 }
-function tbRenderSentido(box, day, tb, sentidoId){
-  const sen = PLAN360_TB_SENTIDOS.find(s => s.id === sentidoId);
-  if(!sen){ box.innerHTML = ''; return; }
-  const p = tb.sentidos.puntos[sen.id] || (tb.sentidos.puntos[sen.id] = {A: 0, B: 0});
-  const esVista = sen.id === 'vista';
-  box.innerHTML = `
-    ${tbMiniMarcador(tb)}
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <i class="ti ${sen.icon}" style="font-size:22px"></i>
-        <strong>Prueba 2 — ${esc(sen.label)}</strong>
-      </div>
-      ${esVista ? tbSopaHtml(day, tb) : `<p class="muted">${sentidoHint(sen.id)}</p>`}
-      <div style="display:flex;gap:10px;margin:16px 0 6px;font-size:11px;color:var(--muted)">
-        <span style="flex:1;text-align:center">${esc(tb.equipoA)}</span>
-        <span style="flex:1;text-align:center">${esc(tb.equipoB)}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
-          <button class="btn btn-sm" onclick="tbSumar(${day},'${sen.id}','A',-1)" ${p.A<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
-          <span style="min-width:16px;text-align:center;font-weight:700">${p.A}</span>
-          <button class="btn btn-sm btn-primary" onclick="tbSumar(${day},'${sen.id}','A',1)" style="min-width:38px;padding:3px 10px">+1</button>
-        </div>
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
-          <button class="btn btn-sm btn-primary" onclick="tbSumar(${day},'${sen.id}','B',1)" style="min-width:38px;padding:3px 10px">+1</button>
-          <span style="min-width:16px;text-align:center;font-weight:700">${p.B}</span>
-          <button class="btn btn-sm" onclick="tbSumar(${day},'${sen.id}','B',-1)" ${p.B<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
-        </div>
-      </div>
-    </div>
-    ${tbSiguienteSentidoBtn(day, sen.id)}
-  `;
-}
-function sentidoHint(id){
-  return {
-    oido: 'Reproduce un sonido de la cocina/sala (móvil vale). Quien adivine qué es, un punto para su equipo.',
-    olfato: 'Que huelan a ciegas una especia o ingrediente de vuestra cocina. Quien acierte, un punto.',
-    gusto: 'Que prueben a ciegas una muestra pequeña. Quien acierte qué es, un punto.',
-    tacto: 'Con los ojos vendados, que toquen un producto o herramienta. Quien acierte, un punto.',
-  }[id] || '';
-}
-// El orden de "siguiente prueba" sigue PLAN360_TB_SENTIDOS (Oído, Gusto,
-// Olfato, Tacto, Vista) y desde Vista salta a la Prueba 3.
-function tbSiguienteSentidoBtn(day, actualId){
-  const idx = PLAN360_TB_SENTIDOS.findIndex(s => s.id === actualId);
-  const siguiente = PLAN360_TB_SENTIDOS[idx + 1];
-  return siguiente
-    ? `<button class="btn btn-sm" onclick="tbIr(${day},'${siguiente.id}')">Siguiente: ${esc(siguiente.label)} →</button>`
-    : `<button class="btn btn-sm" onclick="tbIr(${day},'creatividad')">Siguiente prueba: Creatividad →</button>`;
-}
-function tbSopaHtml(day, tb){
-  if(!tb.sentidos.sopa) tb.sentidos.sopa = tbGenerarSopa(tb.sentidos.palabras);
-  const grid = tb.sentidos.sopa;
+let tbSopaSel = null;   // {f,c} de la primera letra pulsada — estado de UI, no se guarda
+let tbSopaPend = null;  // {palabra, celdas} encontrada, esperando decir de quién es el punto
+function tbRenderVista(day, tb){
+  const v = tb.sentidos.vista;
+  if(!v.sopa) v.sopa = tbGenerarSopa(v.palabras, v.size);
+  const grid = v.sopa;
+  const encontradas = v.encontradas || {};
+  // ¿esta celda es parte de una palabra ya encontrada? (para pintarla)
+  const celdaEncontrada = (f, c) => Object.values(encontradas).find(e => e.celdas.some(([ff,cc]) => ff===f && cc===c));
   return `
-    <p class="muted" style="margin-bottom:10px">Un ticket de sala convertido en sopa de letras. Un punto por cada palabra que encuentren entre los dos equipos.</p>
-    <div style="overflow-x:auto;margin-bottom:10px">
-      <div style="display:inline-grid;grid-template-columns:repeat(${grid.length},22px);gap:2px;font-family:monospace;font-weight:700;background:var(--bg);padding:10px;border-radius:8px">
-        ${grid.map(fila => fila.map(letra => `<div style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:3px">${letra}</div>`).join('')).join('')}
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <i class="ti ti-eye" style="font-size:22px"></i>
+        <strong>Prueba 2 — Vista</strong>
       </div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-      ${tb.sentidos.palabras.map(w => `<span class="badge">${esc(w.toUpperCase())}</span>`).join('')}
-    </div>
-    <details>
-      <summary style="cursor:pointer;font-size:12px;color:var(--muted)">Cambiar las palabras</summary>
-      <div class="field" style="margin-top:8px">
-        <label>Palabras (una por línea)</label>
-        <textarea id="tb-palabras" rows="6">${esc(tb.sentidos.palabras.join('\n'))}</textarea>
+      <p class="muted" style="margin-bottom:10px">Toca la primera letra de una palabra y luego la última (en línea recta, en cualquier dirección). Un punto por cada palabra, para quien la encuentre.</p>
+      <div style="overflow-x:auto;margin-bottom:12px">
+        <div style="display:inline-grid;grid-template-columns:repeat(${grid.length},24px);gap:2px;font-family:monospace;font-weight:700;background:var(--bg);padding:10px;border-radius:8px;user-select:none">
+          ${grid.map((fila, f) => fila.map((letra, c) => {
+            const enc = celdaEncontrada(f, c);
+            const sel = tbSopaSel && tbSopaSel.f === f && tbSopaSel.c === c;
+            const bg = enc ? (enc.equipo === 'A' ? '#DCEEFF' : '#FFE3D6') : (sel ? 'var(--ink)' : '#fff');
+            const color = sel ? '#fff' : (enc ? 'var(--ink)' : 'inherit');
+            return `<div onclick="tbSopaClick(${day},${f},${c})" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:${bg};color:${color};border-radius:3px;cursor:pointer">${letra}</div>`;
+          }).join('')).join('')}
+        </div>
       </div>
-      <button class="btn btn-sm" onclick="tbGuardarPalabras(${day})">Guardar y regenerar sopa</button>
-    </details>
+      ${tbSopaPend ? `
+        <div class="card" style="background:var(--bg);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <strong>¡"${esc(tbSopaPend.palabra)}"! ¿Para quién?</strong>
+          <button class="btn btn-sm btn-primary" onclick="tbSopaPunto(${day},'A')">${esc(tb.equipoA)}</button>
+          <button class="btn btn-sm btn-primary" onclick="tbSopaPunto(${day},'B')">${esc(tb.equipoB)}</button>
+        </div>` : ''}
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+        ${v.palabras.map(w => {
+          const W = w.toUpperCase();
+          const e = encontradas[W];
+          return `<span class="badge" style="${e?'text-decoration:line-through;opacity:.6':''}">${esc(W)}${e?` (${esc(e.equipo==='A'?tb.equipoA:tb.equipoB)})`:''}</span>`;
+        }).join('')}
+      </div>
+      <details>
+        <summary style="cursor:pointer;font-size:12px;color:var(--muted)">Cambiar las palabras (más difícil = palabras más largas)</summary>
+        <div class="field" style="margin-top:8px">
+          <label>Palabras (una por línea)</label>
+          <textarea id="tb-palabras" rows="6">${esc(v.palabras.join('\n'))}</textarea>
+        </div>
+        <button class="btn btn-sm" onclick="tbGuardarPalabras(${day})">Guardar y regenerar sopa</button>
+      </details>
+    </div>
+    ${tbSiguienteSentidoBtn(day, 'vista')}
   `;
+}
+function tbSopaClick(day, f, c){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const v = tb.sentidos.vista;
+  if(Object.values(v.encontradas || {}).some(e => e.celdas.some(([ff,cc]) => ff===f && cc===c))) return; // ya encontrada, no se vuelve a tocar
+  if(!tbSopaSel){ tbSopaSel = {f, c}; renderTeamBuildingPage(day); return; }
+  const {f: f0, c: c0} = tbSopaSel;
+  tbSopaSel = null;
+  if(f0 === f && c0 === c){ renderTeamBuildingPage(day); return; }
+  const recta = f === f0 || c === c0 || Math.abs(f - f0) === Math.abs(c - c0);
+  if(!recta){ renderTeamBuildingPage(day); return; }
+  const df = Math.sign(f - f0), dc = Math.sign(c - c0);
+  const len = Math.max(Math.abs(f - f0), Math.abs(c - c0)) + 1;
+  const celdas = [];
+  let str = '';
+  for(let i = 0; i < len; i++){
+    const ff = f0 + df * i, cc = c0 + dc * i;
+    celdas.push([ff, cc]);
+    str += v.sopa[ff][cc];
+  }
+  const rev = str.split('').reverse().join('');
+  const match = v.palabras.map(w => w.toUpperCase()).find(w => (w === str || w === rev) && !(v.encontradas || {})[w]);
+  if(match) tbSopaPend = {palabra: match, celdas};
+  renderTeamBuildingPage(day);
+}
+function tbSopaPunto(day, equipo){
+  const tb = tbGet(day);
+  if(!tb || !tbSopaPend) return;
+  (tb.sentidos.vista.encontradas || (tb.sentidos.vista.encontradas = {}))[tbSopaPend.palabra] = {equipo, celdas: tbSopaPend.celdas};
+  tbSopaPend = null;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 function tbGuardarPalabras(day){
   const tb = tbGet(day);
@@ -2824,36 +3110,37 @@ function tbGuardarPalabras(day){
   const ta = document.getElementById('tb-palabras');
   if(!ta) return;
   const palabras = ta.value.split('\n').map(w => w.trim()).filter(Boolean);
-  tb.sentidos.palabras = palabras.length ? palabras : [...PLAN360_TB_PALABRAS_DEFECTO];
-  tb.sentidos.sopa = tbGenerarSopa(tb.sentidos.palabras);
-  saveRemoteBiz();
-  renderTeamBuildingPage(day);
-}
-function tbSumar(day, sentidoId, equipo, delta){
-  const tb = tbGet(day);
-  if(!tb) return;
-  const p = tb.sentidos.puntos[sentidoId] || (tb.sentidos.puntos[sentidoId] = {A: 0, B: 0});
-  p[equipo] = Math.max(0, (p[equipo] || 0) + delta);
+  const v = tb.sentidos.vista;
+  v.palabras = palabras.length ? palabras : [...PLAN360_TB_PALABRAS_DEFECTO];
+  v.sopa = tbGenerarSopa(v.palabras, v.size);
+  v.encontradas = {};
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
 function tbReiniciar(day){
   const tb = tbGet(day);
   if(!tb) return;
-  if(!confirm('¿Poner a cero el marcador de las 3 pruebas? Los nombres de los equipos, las preguntas y el guion no se tocan.')) return;
+  if(!confirm('¿Poner a cero el marcador de las 3 pruebas? Los nombres de los equipos y el guion no se tocan.')) return;
+  const fresh = plan360FreshTeamBuilding();
   tb.kahoot.puntos = {A: 0, B: 0};
   tb.kahoot.actual = 0;
-  tb.sentidos.puntos = Object.fromEntries(PLAN360_TB_SENTIDOS.map(s => [s.id, {A: 0, B: 0}]));
+  tb.sentidos = fresh.sentidos;
   tb.creatividad.puntos = {A: 0, B: 0};
+  tb.creatividad.notas = {A: {}, B: {}};
+  tb.creatividad.resuelta = false;
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
 /* ---- Pantalla Creatividad (Prueba 3): reto de cocina con presupuesto y
-   tiempo. La puntuación aquí es un criterio del coach (sabor,
-   presentación, tiempo...), no un "acierto/fallo" como en las otras
-   pruebas — por eso son botones sueltos de +1, sin desglose fijo. ---- */
+   tiempo. Se puntúa por criterios (Presentación/Sabor/Innovación, o los
+   que ponga el coach) del 0 al 10 por equipo — el equipo con más nota
+   total se lleva los puntos de la prueba de una vez (no punto a punto
+   como las otras pruebas: aquí gana UN plato, no una lista de aciertos
+   sueltos). ---- */
 function tbRenderCreatividad(box, day, tb){
   const c = tb.creatividad;
+  const subA = c.criterios.reduce((s, cr) => s + (c.notas.A[cr] || 0), 0);
+  const subB = c.criterios.reduce((s, cr) => s + (c.notas.B[cr] || 0), 0);
   box.innerHTML = `
     ${tbMiniMarcador(tb)}
     <div class="card">
@@ -2862,26 +3149,33 @@ function tbRenderCreatividad(box, day, tb){
         <div class="field" style="flex:1"><label>Presupuesto por equipo (€)</label><input type="number" value="${c.presupuesto}" onchange="tbCreatividadCampo(${day},'presupuesto',this.value)"></div>
         <div class="field" style="flex:1"><label>Tiempo (min)</label><input type="number" value="${c.tiempoMin}" onchange="tbCreatividadCampo(${day},'tiempoMin',this.value)"></div>
       </div>
-      <div class="field"><label>Encargo</label><textarea id="tb-brief" rows="4" onchange="tbCreatividadCampo(${day},'brief',this.value)">${esc(c.brief)}</textarea></div>
-      <p class="muted" style="font-size:12px">Cada equipo va al súper, compra con su presupuesto, prepara y sirve dentro del tiempo. Valora sabor, presentación y si cumplen el tiempo — un punto por cada cosa que hagan mejor que el otro equipo.</p>
-      <div style="display:flex;gap:10px;margin:16px 0 6px;font-size:11px;color:var(--muted)">
-        <span style="flex:1;text-align:center">${esc(tb.equipoA)}</span>
-        <span style="flex:1;text-align:center">${esc(tb.equipoB)}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
-          <button class="btn btn-sm" onclick="tbCreatividadPunto(${day},'A',-1)" ${c.puntos.A<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
-          <span style="min-width:16px;text-align:center;font-weight:700">${c.puntos.A}</span>
-          <button class="btn btn-sm btn-primary" onclick="tbCreatividadPunto(${day},'A',1)" style="min-width:38px;padding:3px 10px">+1</button>
-        </div>
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
-          <button class="btn btn-sm btn-primary" onclick="tbCreatividadPunto(${day},'B',1)" style="min-width:38px;padding:3px 10px">+1</button>
-          <span style="min-width:16px;text-align:center;font-weight:700">${c.puntos.B}</span>
-          <button class="btn btn-sm" onclick="tbCreatividadPunto(${day},'B',-1)" ${c.puntos.B<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
-        </div>
-      </div>
+      <div class="field"><label>Encargo</label><textarea id="tb-brief" rows="3" onchange="tbCreatividadCampo(${day},'brief',this.value)">${esc(c.brief)}</textarea></div>
+      <div class="field"><label>Puntos de la prueba para quien gane</label><input type="number" value="${c.puntosPrueba}" onchange="tbCreatividadCampo(${day},'puntosPrueba',this.value)" style="max-width:100px"></div>
     </div>
-    <button class="btn btn-primary" onclick="tbIr(${day},'final')">Ver marcador final →</button>
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Puntúa cada criterio del 0 al 10 por equipo. El de más nota se lleva los ${c.puntosPrueba} puntos de la prueba.</div>
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px 14px;align-items:center">
+        <div></div>
+        <div style="text-align:center;font-weight:700;font-size:12px">${esc(tb.equipoA)}</div>
+        <div style="text-align:center;font-weight:700;font-size:12px">${esc(tb.equipoB)}</div>
+        ${c.criterios.map((cr, ci) => `
+          <div style="display:flex;align-items:center;gap:4px">${esc(cr)} <button class="btn btn-sm btn-icon" onclick="tbCreatividadCriterioBorrar(${day},${ci})" title="Quitar criterio" style="min-width:22px;min-height:22px;padding:0"><i class="ti ti-x" style="font-size:11px"></i></button></div>
+          <input type="number" min="0" max="10" value="${c.notas.A[cr] || 0}" onchange="tbCreatividadNota(${day},'A','${esc(cr)}',this.value)" style="width:56px;text-align:center">
+          <input type="number" min="0" max="10" value="${c.notas.B[cr] || 0}" onchange="tbCreatividadNota(${day},'B','${esc(cr)}',this.value)" style="width:56px;text-align:center">
+        `).join('')}
+        <div style="font-weight:700">Total</div>
+        <div style="text-align:center;font-weight:800;font-size:18px">${subA}</div>
+        <div style="text-align:center;font-weight:800;font-size:18px">${subB}</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <input id="tb-nuevo-criterio" placeholder="Nuevo criterio (ej. Uso de producto de km 0)" style="flex:1">
+        <button class="btn btn-sm" onclick="tbCreatividadCriterioAnadir(${day})">Añadir</button>
+      </div>
+      ${c.resuelta
+        ? `<p class="muted" style="margin-top:10px">Prueba resuelta: ${c.puntos.A > c.puntos.B ? esc(tb.equipoA) : (c.puntos.B > c.puntos.A ? esc(tb.equipoB) : 'empate')} se lleva ${c.puntos.A > c.puntos.B ? c.puntos.A : c.puntos.B || c.puntosPrueba} puntos.</p>`
+        : `<button class="btn btn-primary" style="margin-top:14px" onclick="tbCreatividadResolver(${day})">🍽️ Decidir ganador de la prueba (${subA > subB ? esc(tb.equipoA) : (subB > subA ? esc(tb.equipoB) : 'empate ahora mismo')})</button>`}
+    </div>
+    <button class="btn btn-sm" onclick="tbIr(${day},'final')">Ver marcador final →</button>
   `;
 }
 function tbCreatividadCampo(day, campo, valor){
@@ -2889,15 +3183,48 @@ function tbCreatividadCampo(day, campo, valor){
   if(!tb) return;
   tb.creatividad[campo] = (campo === 'brief') ? valor : (Number(valor) || 0);
   saveRemoteBiz();
+  if(campo === 'puntosPrueba') renderTeamBuildingPage(day);
 }
-function tbCreatividadPunto(day, equipo, delta){
+function tbCreatividadNota(day, equipo, criterio, valor){
   const tb = tbGet(day);
   if(!tb) return;
-  tb.creatividad.puntos[equipo] = Math.max(0, (tb.creatividad.puntos[equipo] || 0) + delta);
+  const n = Math.max(0, Math.min(10, Number(valor) || 0));
+  tb.creatividad.notas[equipo][criterio] = n;
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
-/* ---- Pantalla final: marcador general + premio ---- */
+function tbCreatividadCriterioAnadir(day){
+  const tb = tbGet(day);
+  const input = document.getElementById('tb-nuevo-criterio');
+  if(!tb || !input || !input.value.trim()) return;
+  tb.creatividad.criterios.push(input.value.trim());
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbCreatividadCriterioBorrar(day, idx){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const cr = tb.creatividad.criterios[idx];
+  tb.creatividad.criterios.splice(idx, 1);
+  delete tb.creatividad.notas.A[cr];
+  delete tb.creatividad.notas.B[cr];
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbCreatividadResolver(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const c = tb.creatividad;
+  const subA = c.criterios.reduce((s, cr) => s + (c.notas.A[cr] || 0), 0);
+  const subB = c.criterios.reduce((s, cr) => s + (c.notas.B[cr] || 0), 0);
+  if(subA === subB){ c.puntos.A = Math.round(c.puntosPrueba / 2); c.puntos.B = Math.round(c.puntosPrueba / 2); }
+  else if(subA > subB){ c.puntos.A = c.puntosPrueba; c.puntos.B = 0; }
+  else { c.puntos.B = c.puntosPrueba; c.puntos.A = 0; }
+  c.resuelta = true;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+/* ---- Pantalla final: marcador general + revelado del premio ---- */
 function tbRenderFinal(box, day, tb){
   const totalA = tbTotalGeneral(tb, 'A'), totalB = tbTotalGeneral(tb, 'B');
   const ganaA = totalA > totalB, ganaB = totalB > totalA, empate = totalA === totalB;
@@ -2923,14 +3250,23 @@ function tbRenderFinal(box, day, tb){
       <div style="flex:1"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">${esc(tb.equipoB)}</div><div style="white-space:pre-line;font-size:13px">${esc(tb.integrantesB || '—')}</div></div>
     </div>` : ''}
     <div class="card">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Desglose por prueba (${esc(tb.equipoA)} / ${esc(tb.equipoB)})</div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>Kahoot</span><span>${tb.kahoot.puntos.A} / ${tb.kahoot.puntos.B}</span></div>
-      ${PLAN360_TB_SENTIDOS.map(sen => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>${esc(sen.label)}</span><span>${(tb.sentidos.puntos[sen.id]||{A:0}).A} / ${(tb.sentidos.puntos[sen.id]||{B:0}).B}</span></div>`).join('')}
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>Creatividad</span><span>${tb.creatividad.puntos.A} / ${tb.creatividad.puntos.B}</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Desglose por prueba, en orden de juego (${esc(tb.equipoA)} / ${esc(tb.equipoB)})</div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>1. Kahoot</span><span>${tb.kahoot.puntos.A} / ${tb.kahoot.puntos.B}</span></div>
+      ${PLAN360_TB_SENTIDOS.map((sen, i) => {
+        const a = sen.id === 'vista' ? tbSopaTotal(tb.sentidos.vista, 'A') : tbRetoTotal(tb.sentidos[sen.id], 'A');
+        const b = sen.id === 'vista' ? tbSopaTotal(tb.sentidos.vista, 'B') : tbRetoTotal(tb.sentidos[sen.id], 'B');
+        return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>2.${i+1}. ${esc(sen.label)}</span><span>${a} / ${b}</span></div>`;
+      }).join('')}
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>3. Creatividad</span><span>${tb.creatividad.puntos.A} / ${tb.creatividad.puntos.B}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:2px solid var(--ink);font-weight:800;margin-top:4px"><span>Total</span><span>${totalA} / ${totalB}</span></div>
     </div>
     <div class="card">
-      <div class="field"><label>Premio para el equipo ganador</label><textarea id="tb-premio" rows="3" placeholder="Ej. elige el nombre del próximo plato, decide los turnos de la semana que viene...">${esc(tb.premio || '')}</textarea></div>
+      <div class="field"><label>Premio para el equipo ganador</label><textarea id="tb-premio" rows="2" placeholder="Escribe uno o elige una idea">${esc(tb.premio || '')}</textarea></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+        ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" onclick="tbElegirPremio(${day},'${esc(p).replace(/'/g,"\\'")}')" style="font-size:11px;padding:5px 9px">${esc(p)}</button>`).join('')}
+      </div>
       <button class="btn btn-sm" onclick="tbGuardarPremio(${day})">Guardar premio</button>
+      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} onclick="tbRevelarPremio('${esc(ganador||'')}','${esc(tb.premio||'')}')" style="margin-left:6px">🎬 Revelar ganador</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-sm" onclick="tbReiniciar(${day})">↺ Reiniciar las 3 pruebas</button>
@@ -2944,6 +3280,46 @@ function tbGuardarPremio(day){
   const ta = document.getElementById('tb-premio');
   if(ta) tb.premio = ta.value.trim();
   saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbElegirPremio(day, texto){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.premio = texto;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+// El revelado: pantalla completa, oscuro, un poco de suspense y luego el
+// nombre del equipo entrando en grande — lo que pidió el coach para el
+// momento del premio, no un simple "gana fulano" en una línea de texto.
+function tbRevelarPremio(ganador, premio){
+  if(!ganador) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'tb-revelado';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#0A0A0A;color:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;font-family:inherit;animation:tbFadeIn .4s ease';
+  overlay.innerHTML = `
+    <style>
+      @keyframes tbFadeIn{from{opacity:0}to{opacity:1}}
+      @keyframes tbPulso{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+      @keyframes tbEntra{from{opacity:0;transform:scale(.5) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+      @keyframes tbFlota{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    </style>
+    <div id="tb-rev-suspense" style="font-size:16px;letter-spacing:3px;text-transform:uppercase;color:var(--muted,#999);animation:tbPulso 1s infinite">Calculando resultados…</div>
+    <div id="tb-rev-final" style="display:none">
+      <div style="font-size:64px;animation:tbFlota 2s ease-in-out infinite">🏆</div>
+      <div style="font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--brand-orange,#F0A868);margin-top:10px">¡Habéis ganado!</div>
+      <div style="font-size:44px;font-weight:800;margin-top:6px">${esc(ganador)}</div>
+      ${premio ? `<div style="margin-top:24px;padding:16px 24px;border:1px solid rgba(255,255,255,.25);border-radius:12px;font-size:18px;max-width:460px">${esc(premio)}</div>` : ''}
+      <button onclick="document.getElementById('tb-revelado').remove()" style="margin-top:32px;background:#fff;color:#0A0A0A;border:none;padding:12px 26px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">Cerrar</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => {
+    document.getElementById('tb-rev-suspense').style.display = 'none';
+    const final = document.getElementById('tb-rev-final');
+    final.style.display = 'block';
+    final.style.animation = 'tbEntra .6s cubic-bezier(.2,1.3,.4,1)';
+  }, 1600);
 }
 /* ---- Reunión inicial: guion de 10 preguntas con dictado por voz ----
    La idea (pedida expresamente por el coach) es que él no tenga que estar
