@@ -1424,6 +1424,15 @@ td.wrap{white-space:normal}
 }
 
 @media (max-width: 600px){
+  /* La letra base (15px, `body`) nunca se había bajado para móvil: todo
+     texto SIN tamaño propio (nombres de empleado, texto suelto en
+     tarjetas, listas...) la heredaba tal cual, y en una pantalla pequeña
+     se lee más grande de lo que toca comparado con el resto de la app ya
+     ajustada. Un punto y medio menos de base para todo lo que no tiene
+     su propio font-size — no toca los inputs (fijados aparte a 16px,
+     imprescindible contra el zoom de iOS). */
+  body{font-size:13.5px}
+
   /* Checkboxes/radios un poco más grandes todavía en móvil: el dedo es
      menos preciso que un ratón, y aquí no hay motivo para ahorrar espacio. */
   /* 22 px se falla con el dedo. En el TPV y en Stock estas casillas se
@@ -2307,6 +2316,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .ge-tab-row::after,.ge-tab-row::before,
   .mn-indice::after,.mn-indice::before{display:none}   /* ya no hay que avisar de scroll */
   .ge-tab{flex:1 1 auto;justify-content:center}
+  /* El índice "IR A:" del Manual se quedaba fijo (position:sticky) al
+     desplazarse — pensado para cuando era una sola fila, pero en móvil ya
+     envuelve en varias (regla de arriba) y un índice de varias líneas
+     pegado arriba tapa media pantalla de texto sin dejar ver por dónde va
+     el desplazamiento. En móvil se desfija: se queda donde está en el
+     documento y se desplaza con el resto. */
+  #view-manual .mn-indice{position:static}
 
   /* ── 4c. Los gráficos de barras caben enteros ──────────────────────
      Doce meses en 360 px salen a 26 px por barra: entran. Se quedaban
