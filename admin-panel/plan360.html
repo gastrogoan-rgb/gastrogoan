@@ -1315,6 +1315,8 @@ function plan360FreshTeamBuilding(){
     script: PLAN360_TEAMBUILDING_SCRIPT,
     equipoA: 'Equipo A',
     equipoB: 'Equipo B',
+    integrantesA: '',
+    integrantesB: '',
     pantalla: 'intro',
     kahoot: {
       preguntas: PLAN360_TB_KAHOOT_DEFECTO.map(q => ({...q, opciones: [...q.opciones]})),
@@ -1438,6 +1440,8 @@ function ensureRemotePlan360(){
       script: tbViejo.script || fresh.script,
       equipoA: tbViejo.equipoA || fresh.equipoA,
       equipoB: tbViejo.equipoB || fresh.equipoB,
+      integrantesA: tbViejo.integrantesA || '',
+      integrantesB: tbViejo.integrantesB || '',
       pantalla: 'intro',
       kahoot: fresh.kahoot,
       // El marcador simple de antes (un solo puntos{sentido:{A,B}}) era
@@ -1448,6 +1452,13 @@ function ensureRemotePlan360(){
       premio: '',
       completadoAt: tbViejo.completadoAt || null,
     };
+  }
+  // Migración menor: negocios que ya tenían las 3 pruebas (commit
+  // anterior) pero no los integrantes de cada equipo, añadido después.
+  if(dia2Existente && dia2Existente.teamBuilding && dia2Existente.teamBuilding.sentidos
+    && dia2Existente.teamBuilding.integrantesA === undefined){
+    dia2Existente.teamBuilding.integrantesA = '';
+    dia2Existente.teamBuilding.integrantesB = '';
   }
   if(dia1Existente && !dia1Existente.misteryCheck){
     dia1Existente.misteryCheck = plan360FreshMisteryCheck();
@@ -2469,7 +2480,8 @@ function tbGet(day){
 function tbMiniMarcador(tb){
   const totalA = tbTotalGeneral(tb, 'A'), totalB = tbTotalGeneral(tb, 'B');
   return `
-    <div style="display:flex;align-items:center;justify-content:center;gap:14px;background:var(--ink);color:#fff;border-radius:10px;padding:8px 14px;margin-bottom:14px;font-weight:700">
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;background:var(--ink);color:#fff;border-radius:10px;padding:8px 14px;margin-bottom:14px;font-weight:700"
+      title="${esc(tb.equipoA)}: ${esc(tb.integrantesA || 'sin integrantes anotados')}\n${esc(tb.equipoB)}: ${esc(tb.integrantesB || 'sin integrantes anotados')}">
       <span>${esc(tb.equipoA)}</span><span style="font-size:18px">${totalA}</span>
       <span style="opacity:.5">—</span>
       <span style="font-size:18px">${totalB}</span><span>${esc(tb.equipoB)}</span>
@@ -2480,9 +2492,16 @@ function tbMiniMarcador(tb){
 // preparado y volver luego al Kahoot).
 const PLAN360_TB_PANTALLA_LABEL = {intro:'Explicación', kahoot:'Prueba 1 · Kahoot', oido:'Oído', gusto:'Gusto', olfato:'Olfato', tacto:'Tacto', vista:'Vista', creatividad:'Prueba 3 · Creatividad', final:'Marcador final'};
 function tbNav(day, actual){
-  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
-    ${PLAN360_TB_PANTALLAS.map(p => `<button class="btn btn-sm ${p===actual?'btn-primary':''}" onclick="tbIr(${day},'${p}')" style="font-size:11px;padding:5px 8px">${esc(PLAN360_TB_PANTALLA_LABEL[p])}</button>`).join('')}
-  </div>`;
+  // Envuelta en su propia caja con borde y fondo — suelta entre el resto
+  // de botones de la página (Volver, Empezar Prueba 1...) no se leía como
+  // una barra de navegación, se confundía con "un montón de botones más".
+  return `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:16px;background:var(--bg)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px">Ir a</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${PLAN360_TB_PANTALLAS.map(p => `<button class="btn btn-sm ${p===actual?'btn-primary':''}" onclick="tbIr(${day},'${p}')" style="font-size:11px;padding:6px 10px">${esc(PLAN360_TB_PANTALLA_LABEL[p])}</button>`).join('')}
+      </div>
+    </div>`;
 }
 function tbIr(day, pantalla){
   const tb = tbGet(day);
@@ -2513,26 +2532,43 @@ function tbRenderPantalla(day, tb){
   return tbRenderSentido(box, day, tb, tb.pantalla);
 }
 /* ---- Pantalla 0: Explicación ---- */
+// Las 3 pruebas explicadas como tarjetas, no como una lista de texto: se
+// lee de un vistazo (icono + número + una frase), no hay que leerse un
+// párrafo para saber "qué toca ahora" — el coach lo puede enseñar en
+// pantalla al equipo entero sin que parezca un documento.
+function tbPruebaCard(numero, icon, titulo, detalle){
+  return `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
+      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800">${numero}</div>
+      <i class="ti ${icon}" style="font-size:22px;flex-shrink:0;color:var(--muted)"></i>
+      <div>
+        <div style="font-weight:700">${esc(titulo)}</div>
+        <div class="muted" style="font-size:12.5px">${esc(detalle)}</div>
+      </div>
+    </div>`;
+}
 function tbRenderIntro(box, day, tb){
   box.innerHTML = `
     <div class="card">
       <h3 style="margin-top:0">Cómo va el juego</h3>
-      <ol style="padding-left:18px;line-height:1.7">
-        <li><strong>Prueba 1 — Kahoot:</strong> preguntas de hostelería, responde primero el equipo que sepa la respuesta. Un acierto, un punto.</li>
-        <li><strong>Prueba 2 — Los 5 sentidos:</strong> Vista (sopa de letras), Oído, Olfato, Gusto y Tacto — un punto por cada acierto en cada uno.</li>
-        <li><strong>Prueba 3 — Creatividad:</strong> ${tb.creatividad.presupuesto}€ y ${tb.creatividad.tiempoMin} min para comprar, preparar y servir algo propio.</li>
-        <li><strong>Marcador final:</strong> se suman las 3 pruebas. El equipo con más puntos se lleva el premio.</li>
-      </ol>
-      <p class="muted">Dos equipos MEZCLADOS a propósito — cocina y sala repartidos entre los dos, nunca "cocina contra sala". El objetivo es que se conozcan entre puestos, no que gane un departamento.</p>
+      ${tbPruebaCard(1, 'ti-brain', 'Kahoot', 'Preguntas de hostelería. Responde primero el equipo que sepa la respuesta — un acierto, un punto.')}
+      ${tbPruebaCard(2, 'ti-eye', 'Los 5 sentidos', 'Vista (sopa de letras), Oído, Olfato, Gusto y Tacto — un punto por cada acierto en cada uno.')}
+      ${tbPruebaCard(3, 'ti-chef-hat', 'Creatividad', `${tb.creatividad.presupuesto}€ y ${tb.creatividad.tiempoMin} min para ir al súper, comprar, preparar y servir algo propio.`)}
+      ${tbPruebaCard('🏆', '', 'Marcador final', 'Se suman las 3 pruebas. El equipo con más puntos se lleva el premio.')}
+      <p class="muted" style="margin-bottom:0">Dos equipos MEZCLADOS a propósito — cocina y sala repartidos entre los dos, nunca "cocina contra sala". El objetivo es que se conozcan entre puestos, no que gane un departamento.</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <div class="card" style="flex:1;min-width:200px">
+      <div class="card" style="flex:1;min-width:220px">
         <label style="font-size:12px;color:var(--muted)">Nombre del equipo A</label>
-        <input value="${esc(tb.equipoA)}" onchange="tbRenombrar(${day},'A',this.value)" style="width:100%">
+        <input value="${esc(tb.equipoA)}" onchange="tbRenombrar(${day},'A',this.value)" style="width:100%;margin-bottom:10px">
+        <label style="font-size:12px;color:var(--muted)">Integrantes (opcional, para que quede claro quién juega con quién)</label>
+        <textarea rows="3" placeholder="Un nombre por línea" onchange="tbIntegrantes(${day},'A',this.value)" style="width:100%">${esc(tb.integrantesA || '')}</textarea>
       </div>
-      <div class="card" style="flex:1;min-width:200px">
+      <div class="card" style="flex:1;min-width:220px">
         <label style="font-size:12px;color:var(--muted)">Nombre del equipo B</label>
-        <input value="${esc(tb.equipoB)}" onchange="tbRenombrar(${day},'B',this.value)" style="width:100%">
+        <input value="${esc(tb.equipoB)}" onchange="tbRenombrar(${day},'B',this.value)" style="width:100%;margin-bottom:10px">
+        <label style="font-size:12px;color:var(--muted)">Integrantes (opcional)</label>
+        <textarea rows="3" placeholder="Un nombre por línea" onchange="tbIntegrantes(${day},'B',this.value)" style="width:100%">${esc(tb.integrantesB || '')}</textarea>
       </div>
     </div>
     <details class="card">
@@ -2542,6 +2578,12 @@ function tbRenderIntro(box, day, tb){
     </details>
     <button class="btn btn-primary" onclick="tbIr(${day},'kahoot')">Empezar Prueba 1 →</button>
   `;
+}
+function tbIntegrantes(day, equipo, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb[equipo === 'A' ? 'integrantesA' : 'integrantesB'] = valor;
+  saveRemoteBiz();
 }
 function tbRenombrar(day, equipo, valor){
   const tb = tbGet(day);
@@ -2875,6 +2917,11 @@ function tbRenderFinal(box, day, tb){
       </div>
       <div style="margin-top:14px;font-size:18px">${empate ? '🤝 Empate' : `🏆 Gana ${esc(ganador)}`}</div>
     </div>
+    ${(tb.integrantesA || tb.integrantesB) ? `
+    <div class="card" style="display:flex;gap:10px">
+      <div style="flex:1"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">${esc(tb.equipoA)}</div><div style="white-space:pre-line;font-size:13px">${esc(tb.integrantesA || '—')}</div></div>
+      <div style="flex:1"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">${esc(tb.equipoB)}</div><div style="white-space:pre-line;font-size:13px">${esc(tb.integrantesB || '—')}</div></div>
+    </div>` : ''}
     <div class="card">
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Desglose por prueba (${esc(tb.equipoA)} / ${esc(tb.equipoB)})</div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>Kahoot</span><span>${tb.kahoot.puntos.A} / ${tb.kahoot.puntos.B}</span></div>
