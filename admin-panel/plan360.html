@@ -1289,6 +1289,23 @@ const PLAN360_TB_SENTIDOS = [
   {id: 'tacto', label: 'Tacto', icon: 'ti-hand-stop'},
   {id: 'vista', label: 'Vista', icon: 'ti-eye'},
 ];
+// Vocabulario por defecto de la sopa de letras (Prueba 2, Vista) — términos
+// de pase/sala que cualquier negocio reconoce, así el juego arranca ya
+// jugable; el coach puede cambiar la lista por la jerga propia del sitio.
+const PLAN360_TB_PALABRAS_DEFECTO = ['COMANDA','MARCHAR','EMPLATAR','MISE','BARRA','TERRAZA','PROPINA','ALERGENO','RESERVA','COMENSAL','APERITIVO','PASE'];
+// 5 preguntas de ejemplo para la Prueba 1 (Kahoot) — genéricas de
+// hostelería, para que el juego no arranque en blanco; el coach las
+// cambia por preguntas sobre ESTE negocio antes de usarlas.
+const PLAN360_TB_KAHOOT_DEFECTO = [
+  {texto: '¿Qué significa "mise en place"?', opciones: ['Lo primero que se sirve','Todo preparado antes del servicio','La mesa del jefe de sala','Un tipo de salsa'], correcta: 1},
+  {texto: '¿Cuál de estos NO es un alérgeno de declaración obligatoria?', opciones: ['Gluten','Sal','Marisco','Frutos de cáscara'], correcta: 1},
+  {texto: '¿Qué quiere decir "vamos 86 en el salmón"?', opciones: ['Hay 86 raciones','Se ha agotado','Está en el punto 86 de cocción','Es la mesa 86'], correcta: 1},
+  {texto: '¿Por dónde se sirve tradicionalmente el vino?', opciones: ['Por la izquierda del comensal','Por la derecha del comensal','Por detrás siempre','Da igual'], correcta: 1},
+  {texto: '¿Qué es el "food cost"?', opciones: ['El precio del menú','El coste de los ingredientes de un plato sobre su venta','El sueldo de cocina','El gasto en decoración'], correcta: 1},
+];
+// El orden real del juego: Explicación → 3 Pruebas → Premio final.
+// La Prueba 2 (sentidos) tiene 5 pantallas propias, una por sentido.
+const PLAN360_TB_PANTALLAS = ['intro','kahoot','oido','gusto','olfato','tacto','vista','creatividad','final'];
 function plan360FreshTeamBuilding(){
   // El marcador vive SEPARADO del guion a propósito: el guion se prepara
   // antes (texto largo, se edita con calma); el marcador se toca EN VIVO,
@@ -1298,7 +1315,24 @@ function plan360FreshTeamBuilding(){
     script: PLAN360_TEAMBUILDING_SCRIPT,
     equipoA: 'Equipo A',
     equipoB: 'Equipo B',
-    puntos: Object.fromEntries(PLAN360_TB_SENTIDOS.map(s => [s.id, {A: 0, B: 0}])),
+    pantalla: 'intro',
+    kahoot: {
+      preguntas: PLAN360_TB_KAHOOT_DEFECTO.map(q => ({...q, opciones: [...q.opciones]})),
+      actual: 0,
+      puntos: {A: 0, B: 0},
+    },
+    sentidos: {
+      palabras: [...PLAN360_TB_PALABRAS_DEFECTO],
+      sopa: null,   // se genera al entrar en la pantalla de Vista (ver tbGenerarSopa)
+      puntos: Object.fromEntries(PLAN360_TB_SENTIDOS.map(s => [s.id, {A: 0, B: 0}])),
+    },
+    creatividad: {
+      presupuesto: 25,
+      tiempoMin: 90,
+      brief: 'Con 25€ por equipo, ir al súper, comprar, preparar y emplatar un plato o bebida original en el tiempo dado. Se valora sabor, presentación y que se sirva dentro de tiempo.',
+      puntos: {A: 0, B: 0},
+    },
+    premio: '',
     completadoAt: null,
   };
 }
@@ -1393,14 +1427,27 @@ function ensureRemotePlan360(){
     dia2Existente.teamBuilding.script = PLAN360_TEAMBUILDING_SCRIPT;
   }
   // Migración: el team building pasó de ser solo un guion de texto a
-  // llevar también un marcador en vivo (21/09) — un negocio que ya tenía
-  // el guion (con o sin editar) no tiene por qué perderlo, solo se le
-  // añaden los campos del marcador que le faltan.
-  if(dia2Existente && dia2Existente.teamBuilding && !dia2Existente.teamBuilding.puntos){
+  // llevar también un marcador en vivo (21/09) y luego (21/09, mismo día)
+  // a 3 pruebas completas (Kahoot, 5 sentidos, creatividad) con premio
+  // final — un negocio que ya tenía el guion o el marcador simple no
+  // tiene por qué perderlo, solo se le añaden los campos que le falten.
+  if(dia2Existente && dia2Existente.teamBuilding && !dia2Existente.teamBuilding.sentidos){
+    const tbViejo = dia2Existente.teamBuilding;
     const fresh = plan360FreshTeamBuilding();
-    dia2Existente.teamBuilding.equipoA = dia2Existente.teamBuilding.equipoA || fresh.equipoA;
-    dia2Existente.teamBuilding.equipoB = dia2Existente.teamBuilding.equipoB || fresh.equipoB;
-    dia2Existente.teamBuilding.puntos = fresh.puntos;
+    dia2Existente.teamBuilding = {
+      script: tbViejo.script || fresh.script,
+      equipoA: tbViejo.equipoA || fresh.equipoA,
+      equipoB: tbViejo.equipoB || fresh.equipoB,
+      pantalla: 'intro',
+      kahoot: fresh.kahoot,
+      // El marcador simple de antes (un solo puntos{sentido:{A,B}}) era
+      // exactamente lo que ahora vive en sentidos.puntos — se traslada
+      // tal cual, sin perder los tantos que ya llevara la partida.
+      sentidos: {...fresh.sentidos, puntos: tbViejo.puntos || fresh.sentidos.puntos},
+      creatividad: fresh.creatividad,
+      premio: '',
+      completadoAt: tbViejo.completadoAt || null,
+    };
   }
   if(dia1Existente && !dia1Existente.misteryCheck){
     dia1Existente.misteryCheck = plan360FreshMisteryCheck();
@@ -2398,115 +2445,458 @@ function marcarMasterclassHecha(day){
    guion se prepara ANTES con calma y se consulta menos durante la
    partida. Mezclarlos en un único bloque habría hecho torpe lo segundo
    para ganar algo que el primero no necesita. */
-function tbTotal(tb, equipo){
-  return PLAN360_TB_SENTIDOS.reduce((s, sen) => s + ((tb.puntos[sen.id] || {})[equipo] || 0), 0);
+/* ---- Team building: 3 pruebas + explicación + premio final ----
+   Kahoot (trivia) → 5 sentidos (uno por pantalla, Vista con sopa de
+   letras) → Creatividad (reto de cocina con presupuesto y tiempo) →
+   marcador final con el premio para el ganador. Cada pantalla se toca
+   EN VIVO delante del equipo — de ahí los botones grandes y el guion de
+   preparación aparte, en su propia pantalla, para no estorbar durante
+   el juego. */
+function tbTotalPrueba(puntos, equipo){
+  return Object.values(puntos).reduce((s, p) => s + (p[equipo] || 0), 0);
+}
+function tbTotalGeneral(tb, equipo){
+  return (tb.kahoot.puntos[equipo] || 0)
+    + tbTotalPrueba(tb.sentidos.puntos, equipo)
+    + (tb.creatividad.puntos[equipo] || 0);
+}
+function tbGet(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  return d && d.teamBuilding ? d.teamBuilding : null;
+}
+// Cabecera con el marcador GENERAL, fija arriba en las 3 pruebas — así
+// se sabe en todo momento quién va ganando, no solo en la pantalla final.
+function tbMiniMarcador(tb){
+  const totalA = tbTotalGeneral(tb, 'A'), totalB = tbTotalGeneral(tb, 'B');
+  return `
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;background:var(--ink);color:#fff;border-radius:10px;padding:8px 14px;margin-bottom:14px;font-weight:700">
+      <span>${esc(tb.equipoA)}</span><span style="font-size:18px">${totalA}</span>
+      <span style="opacity:.5">—</span>
+      <span style="font-size:18px">${totalB}</span><span>${esc(tb.equipoB)}</span>
+    </div>`;
+}
+// La tira de las 9 pantallas — se pulsa cualquiera directamente, no hace
+// falta ir en orden (el coach puede saltar a Creatividad si ya lo dejó
+// preparado y volver luego al Kahoot).
+const PLAN360_TB_PANTALLA_LABEL = {intro:'Explicación', kahoot:'Prueba 1 · Kahoot', oido:'Oído', gusto:'Gusto', olfato:'Olfato', tacto:'Tacto', vista:'Vista', creatividad:'Prueba 3 · Creatividad', final:'Marcador final'};
+function tbNav(day, actual){
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+    ${PLAN360_TB_PANTALLAS.map(p => `<button class="btn btn-sm ${p===actual?'btn-primary':''}" onclick="tbIr(${day},'${p}')" style="font-size:11px;padding:5px 8px">${esc(PLAN360_TB_PANTALLA_LABEL[p])}</button>`).join('')}
+  </div>`;
+}
+function tbIr(day, pantalla){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.pantalla = pantalla;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 function renderTeamBuildingPage(day){
-  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.teamBuilding) return;
-  const tb = d.teamBuilding;
-  const totalA = tbTotal(tb, 'A'), totalB = tbTotal(tb, 'B');
-  const ganaA = totalA > totalB, ganaB = totalB > totalA;
+  const tb = tbGet(day);
+  if(!tb) return;
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
     <h2 style="margin:10px 0 4px">Team building</h2>
-    <p class="muted" style="margin-bottom:14px">El desafío de los 5 sentidos — marca cada acierto en vivo, delante del equipo.</p>
-
-    <div class="card" style="background:var(--ink);color:#fff">
-      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
-        <div style="flex:1;text-align:center">
-          <input value="${esc(tb.equipoA)}" onchange="tbRenombrar(${day},'A',this.value)"
-            style="width:100%;text-align:center;font-weight:700;font-size:15px;background:none;border:none;color:#fff;border-bottom:1px solid rgba(255,255,255,.3);padding:4px">
-          <div style="font-size:44px;font-weight:800;line-height:1.1;margin-top:6px;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${totalA}</div>
-        </div>
-        <div style="font-size:20px;font-weight:700;opacity:.5">—</div>
-        <div style="flex:1;text-align:center">
-          <input value="${esc(tb.equipoB)}" onchange="tbRenombrar(${day},'B',this.value)"
-            style="width:100%;text-align:center;font-weight:700;font-size:15px;background:none;border:none;color:#fff;border-bottom:1px solid rgba(255,255,255,.3);padding:4px">
-          <div style="font-size:44px;font-weight:800;line-height:1.1;margin-top:6px;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div>
-        </div>
-      </div>
-    </div>
-
+    <p class="muted" style="margin-bottom:14px">3 pruebas: Kahoot → 5 sentidos → Creatividad. Marca los aciertos en vivo, delante del equipo.</p>
+    ${tbNav(day, tb.pantalla)}
+    <div id="tb-pantalla"></div>
+  `;
+  tbRenderPantalla(day, tb);
+}
+function tbRenderPantalla(day, tb){
+  const box = document.getElementById('tb-pantalla');
+  if(!box) return;
+  if(tb.pantalla === 'intro') return tbRenderIntro(box, day, tb);
+  if(tb.pantalla === 'kahoot') return tbRenderKahoot(box, day, tb);
+  if(tb.pantalla === 'creatividad') return tbRenderCreatividad(box, day, tb);
+  if(tb.pantalla === 'final') return tbRenderFinal(box, day, tb);
+  return tbRenderSentido(box, day, tb, tb.pantalla);
+}
+/* ---- Pantalla 0: Explicación ---- */
+function tbRenderIntro(box, day, tb){
+  box.innerHTML = `
     <div class="card">
-      <div style="display:flex;gap:10px;margin-bottom:6px;font-size:11px;color:var(--muted);padding-left:32px">
-        <span style="flex:1;text-align:center">${esc(tb.equipoA)}</span>
-        <span style="flex:1;text-align:center">${esc(tb.equipoB)}</span>
-      </div>
-      ${PLAN360_TB_SENTIDOS.map(sen => {
-        const p = tb.puntos[sen.id] || {A: 0, B: 0};
-        // Un solo "+1" por equipo, sin repetir su nombre dentro del botón
-        // (ya está arriba, en el marcador y en la cabecera de esta lista):
-        // con el nombre dentro, el texto envolvía en dos líneas y el botón
-        // se volvía imposible de leer de un vistazo, justo lo contrario de
-        // lo que pide un marcador que se mira en caliente, jugando.
-        return `
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border)">
-          <i class="ti ${sen.icon}" style="font-size:18px;flex-shrink:0;width:22px;text-align:center;color:var(--muted)" title="${esc(sen.label)}"></i>
-          <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
-            <button class="btn btn-sm" onclick="tbSumar(${day},'${sen.id}','A',-1)" ${p.A<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
-            <span style="min-width:16px;text-align:center;font-weight:700">${p.A}</span>
-            <button class="btn btn-sm btn-primary" onclick="tbSumar(${day},'${sen.id}','A',1)" style="min-width:38px;padding:3px 10px">+1</button>
-          </div>
-          <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
-            <button class="btn btn-sm btn-primary" onclick="tbSumar(${day},'${sen.id}','B',1)" style="min-width:38px;padding:3px 10px">+1</button>
-            <span style="min-width:16px;text-align:center;font-weight:700">${p.B}</span>
-            <button class="btn btn-sm" onclick="tbSumar(${day},'${sen.id}','B',-1)" ${p.B<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
-          </div>
-        </div>`;
-      }).join('')}
-      <button class="btn btn-sm" onclick="tbReiniciar(${day})" style="margin-top:12px">↺ Reiniciar marcador</button>
+      <h3 style="margin-top:0">Cómo va el juego</h3>
+      <ol style="padding-left:18px;line-height:1.7">
+        <li><strong>Prueba 1 — Kahoot:</strong> preguntas de hostelería, responde primero el equipo que sepa la respuesta. Un acierto, un punto.</li>
+        <li><strong>Prueba 2 — Los 5 sentidos:</strong> Vista (sopa de letras), Oído, Olfato, Gusto y Tacto — un punto por cada acierto en cada uno.</li>
+        <li><strong>Prueba 3 — Creatividad:</strong> ${tb.creatividad.presupuesto}€ y ${tb.creatividad.tiempoMin} min para comprar, preparar y servir algo propio.</li>
+        <li><strong>Marcador final:</strong> se suman las 3 pruebas. El equipo con más puntos se lleva el premio.</li>
+      </ol>
+      <p class="muted">Dos equipos MEZCLADOS a propósito — cocina y sala repartidos entre los dos, nunca "cocina contra sala". El objetivo es que se conozcan entre puestos, no que gane un departamento.</p>
     </div>
-
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="card" style="flex:1;min-width:200px">
+        <label style="font-size:12px;color:var(--muted)">Nombre del equipo A</label>
+        <input value="${esc(tb.equipoA)}" onchange="tbRenombrar(${day},'A',this.value)" style="width:100%">
+      </div>
+      <div class="card" style="flex:1;min-width:200px">
+        <label style="font-size:12px;color:var(--muted)">Nombre del equipo B</label>
+        <input value="${esc(tb.equipoB)}" onchange="tbRenombrar(${day},'B',this.value)" style="width:100%">
+      </div>
+    </div>
     <details class="card">
-      <summary style="cursor:pointer;font-weight:600">Guion de la presentación (preparación, antes de jugar)</summary>
+      <summary style="cursor:pointer;font-weight:600">Guion completo de la presentación (preparación, antes de jugar)</summary>
       <div class="field" style="margin-top:10px"><label>Guion</label><textarea id="tb-script" rows="14">${esc(tb.script || '')}</textarea></div>
       <button class="btn btn-sm" onclick="saveTeamBuilding(${day})">Guardar guion</button>
     </details>
-
-    ${!tb.completadoAt ? `<button class="btn btn-primary" onclick="marcarTeamBuildingHecha(${day})">Marcar como hecha</button>` : '<p class="muted">Marcada como hecha — el marcador se puede seguir tocando.</p>'}
+    <button class="btn btn-primary" onclick="tbIr(${day},'kahoot')">Empezar Prueba 1 →</button>
   `;
 }
-function tbSumar(day, sentidoId, equipo, delta){
-  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.teamBuilding) return;
-  const p = d.teamBuilding.puntos[sentidoId] || (d.teamBuilding.puntos[sentidoId] = {A: 0, B: 0});
-  p[equipo] = Math.max(0, (p[equipo] || 0) + delta);
-  saveRemoteBiz();
-  renderTeamBuildingPage(day);
-}
 function tbRenombrar(day, equipo, valor){
-  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.teamBuilding) return;
+  const tb = tbGet(day);
+  if(!tb) return;
   const limpio = (valor || '').trim() || (equipo === 'A' ? 'Equipo A' : 'Equipo B');
-  d.teamBuilding[equipo === 'A' ? 'equipoA' : 'equipoB'] = limpio;
-  saveRemoteBiz();
-  renderTeamBuildingPage(day);
-}
-function tbReiniciar(day){
-  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.teamBuilding) return;
-  if(!confirm('¿Poner el marcador a cero? Los nombres de los equipos y el guion no se tocan.')) return;
-  d.teamBuilding.puntos = Object.fromEntries(PLAN360_TB_SENTIDOS.map(s => [s.id, {A: 0, B: 0}]));
+  tb[equipo === 'A' ? 'equipoA' : 'equipoB'] = limpio;
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
 function saveTeamBuilding(day){
-  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.teamBuilding) return;
+  const tb = tbGet(day);
+  if(!tb) return;
   const ta = document.getElementById('tb-script');
-  if(ta) d.teamBuilding.script = ta.value.trim();
+  if(ta) tb.script = ta.value.trim();
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
 function marcarTeamBuildingHecha(day){
-  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.teamBuilding) return;
-  const ta = document.getElementById('tb-script');
-  if(ta) d.teamBuilding.script = ta.value.trim();
-  d.teamBuilding.completadoAt = Date.now();
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.completadoAt = Date.now();
   saveRemoteBiz();
   renderTeamBuildingPage(day);
+}
+/* ---- Pantalla Kahoot (Prueba 1): una pregunta a la vez, el coach marca
+   qué equipo acertó primero. Editor de preguntas plegado aparte: se
+   prepara antes, no se toca durante el juego. ---- */
+function tbRenderKahoot(box, day, tb){
+  const k = tb.kahoot;
+  const total = k.preguntas.length;
+  const i = Math.min(k.actual, Math.max(0, total - 1));
+  const q = k.preguntas[i];
+  box.innerHTML = `
+    ${tbMiniMarcador(tb)}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <strong>Prueba 1 — Kahoot</strong>
+        <span class="muted">Pregunta ${total ? i + 1 : 0} de ${total}</span>
+      </div>
+      ${!q ? '<p class="muted">No hay preguntas todavía — añade alguna en el editor de abajo.</p>' : `
+        <div style="font-size:18px;font-weight:700;margin-bottom:14px">${esc(q.texto)}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          ${q.opciones.map((op, oi) => `
+            <div style="padding:10px 14px;border-radius:8px;border:2px solid ${oi===q.correcta?'var(--green)':'var(--border)'};background:${oi===q.correcta?'var(--green-l,#eafaf0)':'#fff'}">
+              ${esc(op)} ${oi===q.correcta ? '<i class="ti ti-check" style="color:var(--green)"></i>' : ''}
+            </div>`).join('')}
+        </div>
+        <p class="muted" style="font-size:12px">La opción correcta se ve marcada aquí solo para ti — enseña las 4 opciones al equipo sin decir cuál es, y marca quién acertó.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="tbKahootPunto(${day},'A')">✓ Acertó ${esc(tb.equipoA)}</button>
+          <button class="btn btn-primary" onclick="tbKahootPunto(${day},'B')">✓ Acertó ${esc(tb.equipoB)}</button>
+          <button class="btn btn-sm" onclick="tbKahootSiguiente(${day})">Nadie acertó — siguiente →</button>
+        </div>
+      `}
+    </div>
+    <details class="card">
+      <summary style="cursor:pointer;font-weight:600">Editar preguntas (${total})</summary>
+      <div style="margin-top:10px">
+        ${k.preguntas.map((qq, qi) => `
+          <div class="card" style="background:var(--bg)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span class="muted">Pregunta ${qi + 1}</span>
+              <button class="btn btn-sm btn-danger" onclick="tbKahootBorrar(${day},${qi})"><i class="ti ti-trash"></i></button>
+            </div>
+            <input value="${esc(qq.texto)}" onchange="tbKahootEditarTexto(${day},${qi},this.value)" placeholder="Pregunta" style="width:100%;margin-bottom:6px">
+            ${qq.opciones.map((op, oi) => `
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                <input type="radio" name="tb-correcta-${qi}" ${oi===qq.correcta?'checked':''} onchange="tbKahootMarcarCorrecta(${day},${qi},${oi})">
+                <input value="${esc(op)}" onchange="tbKahootEditarOpcion(${day},${qi},${oi},this.value)" placeholder="Opción ${oi+1}" style="flex:1">
+              </div>`).join('')}
+          </div>`).join('')}
+        <button class="btn btn-sm" onclick="tbKahootAnadir(${day})"><i class="ti ti-plus"></i> Añadir pregunta</button>
+      </div>
+    </details>
+    <button class="btn btn-sm" onclick="tbIr(${day},'oido')">Siguiente prueba: Oído →</button>
+  `;
+}
+function tbKahootPunto(day, equipo){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.puntos[equipo] = (tb.kahoot.puntos[equipo] || 0) + 1;
+  tbKahootSiguiente(day);
+}
+function tbKahootSiguiente(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  if(tb.kahoot.actual < tb.kahoot.preguntas.length - 1) tb.kahoot.actual++;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbKahootAnadir(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.preguntas.push({texto: '', opciones: ['', '', '', ''], correcta: 0});
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbKahootBorrar(day, qi){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.preguntas.splice(qi, 1);
+  if(tb.kahoot.actual >= tb.kahoot.preguntas.length) tb.kahoot.actual = Math.max(0, tb.kahoot.preguntas.length - 1);
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbKahootEditarTexto(day, qi, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.preguntas[qi].texto = valor;
+  saveRemoteBiz();
+}
+function tbKahootEditarOpcion(day, qi, oi, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.preguntas[qi].opciones[oi] = valor;
+  saveRemoteBiz();
+}
+function tbKahootMarcarCorrecta(day, qi, oi){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.preguntas[qi].correcta = oi;
+  saveRemoteBiz();
+}
+/* ---- Pantallas de los 5 sentidos (Prueba 2) ---- */
+// Generador de sopa de letras: coloca cada palabra en una dirección al
+// azar (las 8 posibles, incluidas diagonales e invertidas) y rellena el
+// resto con letras sueltas — es solo VISUAL (se mira y se busca a ojo
+// entre los dos equipos), no hace falta que sea clicable.
+function tbGenerarSopa(palabras, size){
+  size = size || 12;
+  const grid = Array.from({length: size}, () => Array(size).fill(null));
+  const dirs = [[0,1],[1,0],[1,1],[0,-1],[-1,0],[-1,-1],[1,-1],[-1,1]];
+  palabras.forEach(palabra => {
+    const w = (palabra || '').toUpperCase().replace(/[^A-ZÑ]/g, '');
+    if(!w || w.length > size) return;
+    let colocada = false, intentos = 0;
+    while(!colocada && intentos < 300){
+      intentos++;
+      const dir = dirs[Math.floor(Math.random() * dirs.length)];
+      const f0 = Math.floor(Math.random() * size), c0 = Math.floor(Math.random() * size);
+      const fFin = f0 + dir[0] * (w.length - 1), cFin = c0 + dir[1] * (w.length - 1);
+      if(fFin < 0 || fFin >= size || cFin < 0 || cFin >= size) continue;
+      let cabe = true;
+      for(let i = 0; i < w.length; i++){
+        const f = f0 + dir[0] * i, c = c0 + dir[1] * i;
+        if(grid[f][c] && grid[f][c] !== w[i]){ cabe = false; break; }
+      }
+      if(!cabe) continue;
+      for(let i = 0; i < w.length; i++){
+        const f = f0 + dir[0] * i, c = c0 + dir[1] * i;
+        grid[f][c] = w[i];
+      }
+      colocada = true;
+    }
+  });
+  const letras = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+  for(let f = 0; f < size; f++) for(let c = 0; c < size; c++){
+    if(!grid[f][c]) grid[f][c] = letras[Math.floor(Math.random() * letras.length)];
+  }
+  return grid;
+}
+function tbRenderSentido(box, day, tb, sentidoId){
+  const sen = PLAN360_TB_SENTIDOS.find(s => s.id === sentidoId);
+  if(!sen){ box.innerHTML = ''; return; }
+  const p = tb.sentidos.puntos[sen.id] || (tb.sentidos.puntos[sen.id] = {A: 0, B: 0});
+  const esVista = sen.id === 'vista';
+  box.innerHTML = `
+    ${tbMiniMarcador(tb)}
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <i class="ti ${sen.icon}" style="font-size:22px"></i>
+        <strong>Prueba 2 — ${esc(sen.label)}</strong>
+      </div>
+      ${esVista ? tbSopaHtml(day, tb) : `<p class="muted">${sentidoHint(sen.id)}</p>`}
+      <div style="display:flex;gap:10px;margin:16px 0 6px;font-size:11px;color:var(--muted)">
+        <span style="flex:1;text-align:center">${esc(tb.equipoA)}</span>
+        <span style="flex:1;text-align:center">${esc(tb.equipoB)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
+          <button class="btn btn-sm" onclick="tbSumar(${day},'${sen.id}','A',-1)" ${p.A<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
+          <span style="min-width:16px;text-align:center;font-weight:700">${p.A}</span>
+          <button class="btn btn-sm btn-primary" onclick="tbSumar(${day},'${sen.id}','A',1)" style="min-width:38px;padding:3px 10px">+1</button>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
+          <button class="btn btn-sm btn-primary" onclick="tbSumar(${day},'${sen.id}','B',1)" style="min-width:38px;padding:3px 10px">+1</button>
+          <span style="min-width:16px;text-align:center;font-weight:700">${p.B}</span>
+          <button class="btn btn-sm" onclick="tbSumar(${day},'${sen.id}','B',-1)" ${p.B<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
+        </div>
+      </div>
+    </div>
+    ${tbSiguienteSentidoBtn(day, sen.id)}
+  `;
+}
+function sentidoHint(id){
+  return {
+    oido: 'Reproduce un sonido de la cocina/sala (móvil vale). Quien adivine qué es, un punto para su equipo.',
+    olfato: 'Que huelan a ciegas una especia o ingrediente de vuestra cocina. Quien acierte, un punto.',
+    gusto: 'Que prueben a ciegas una muestra pequeña. Quien acierte qué es, un punto.',
+    tacto: 'Con los ojos vendados, que toquen un producto o herramienta. Quien acierte, un punto.',
+  }[id] || '';
+}
+// El orden de "siguiente prueba" sigue PLAN360_TB_SENTIDOS (Oído, Gusto,
+// Olfato, Tacto, Vista) y desde Vista salta a la Prueba 3.
+function tbSiguienteSentidoBtn(day, actualId){
+  const idx = PLAN360_TB_SENTIDOS.findIndex(s => s.id === actualId);
+  const siguiente = PLAN360_TB_SENTIDOS[idx + 1];
+  return siguiente
+    ? `<button class="btn btn-sm" onclick="tbIr(${day},'${siguiente.id}')">Siguiente: ${esc(siguiente.label)} →</button>`
+    : `<button class="btn btn-sm" onclick="tbIr(${day},'creatividad')">Siguiente prueba: Creatividad →</button>`;
+}
+function tbSopaHtml(day, tb){
+  if(!tb.sentidos.sopa) tb.sentidos.sopa = tbGenerarSopa(tb.sentidos.palabras);
+  const grid = tb.sentidos.sopa;
+  return `
+    <p class="muted" style="margin-bottom:10px">Un ticket de sala convertido en sopa de letras. Un punto por cada palabra que encuentren entre los dos equipos.</p>
+    <div style="overflow-x:auto;margin-bottom:10px">
+      <div style="display:inline-grid;grid-template-columns:repeat(${grid.length},22px);gap:2px;font-family:monospace;font-weight:700;background:var(--bg);padding:10px;border-radius:8px">
+        ${grid.map(fila => fila.map(letra => `<div style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:3px">${letra}</div>`).join('')).join('')}
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      ${tb.sentidos.palabras.map(w => `<span class="badge">${esc(w.toUpperCase())}</span>`).join('')}
+    </div>
+    <details>
+      <summary style="cursor:pointer;font-size:12px;color:var(--muted)">Cambiar las palabras</summary>
+      <div class="field" style="margin-top:8px">
+        <label>Palabras (una por línea)</label>
+        <textarea id="tb-palabras" rows="6">${esc(tb.sentidos.palabras.join('\n'))}</textarea>
+      </div>
+      <button class="btn btn-sm" onclick="tbGuardarPalabras(${day})">Guardar y regenerar sopa</button>
+    </details>
+  `;
+}
+function tbGuardarPalabras(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const ta = document.getElementById('tb-palabras');
+  if(!ta) return;
+  const palabras = ta.value.split('\n').map(w => w.trim()).filter(Boolean);
+  tb.sentidos.palabras = palabras.length ? palabras : [...PLAN360_TB_PALABRAS_DEFECTO];
+  tb.sentidos.sopa = tbGenerarSopa(tb.sentidos.palabras);
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbSumar(day, sentidoId, equipo, delta){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const p = tb.sentidos.puntos[sentidoId] || (tb.sentidos.puntos[sentidoId] = {A: 0, B: 0});
+  p[equipo] = Math.max(0, (p[equipo] || 0) + delta);
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbReiniciar(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  if(!confirm('¿Poner a cero el marcador de las 3 pruebas? Los nombres de los equipos, las preguntas y el guion no se tocan.')) return;
+  tb.kahoot.puntos = {A: 0, B: 0};
+  tb.kahoot.actual = 0;
+  tb.sentidos.puntos = Object.fromEntries(PLAN360_TB_SENTIDOS.map(s => [s.id, {A: 0, B: 0}]));
+  tb.creatividad.puntos = {A: 0, B: 0};
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+/* ---- Pantalla Creatividad (Prueba 3): reto de cocina con presupuesto y
+   tiempo. La puntuación aquí es un criterio del coach (sabor,
+   presentación, tiempo...), no un "acierto/fallo" como en las otras
+   pruebas — por eso son botones sueltos de +1, sin desglose fijo. ---- */
+function tbRenderCreatividad(box, day, tb){
+  const c = tb.creatividad;
+  box.innerHTML = `
+    ${tbMiniMarcador(tb)}
+    <div class="card">
+      <strong>Prueba 3 — Creatividad</strong>
+      <div style="display:flex;gap:10px;margin:10px 0">
+        <div class="field" style="flex:1"><label>Presupuesto por equipo (€)</label><input type="number" value="${c.presupuesto}" onchange="tbCreatividadCampo(${day},'presupuesto',this.value)"></div>
+        <div class="field" style="flex:1"><label>Tiempo (min)</label><input type="number" value="${c.tiempoMin}" onchange="tbCreatividadCampo(${day},'tiempoMin',this.value)"></div>
+      </div>
+      <div class="field"><label>Encargo</label><textarea id="tb-brief" rows="4" onchange="tbCreatividadCampo(${day},'brief',this.value)">${esc(c.brief)}</textarea></div>
+      <p class="muted" style="font-size:12px">Cada equipo va al súper, compra con su presupuesto, prepara y sirve dentro del tiempo. Valora sabor, presentación y si cumplen el tiempo — un punto por cada cosa que hagan mejor que el otro equipo.</p>
+      <div style="display:flex;gap:10px;margin:16px 0 6px;font-size:11px;color:var(--muted)">
+        <span style="flex:1;text-align:center">${esc(tb.equipoA)}</span>
+        <span style="flex:1;text-align:center">${esc(tb.equipoB)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
+          <button class="btn btn-sm" onclick="tbCreatividadPunto(${day},'A',-1)" ${c.puntos.A<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
+          <span style="min-width:16px;text-align:center;font-weight:700">${c.puntos.A}</span>
+          <button class="btn btn-sm btn-primary" onclick="tbCreatividadPunto(${day},'A',1)" style="min-width:38px;padding:3px 10px">+1</button>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
+          <button class="btn btn-sm btn-primary" onclick="tbCreatividadPunto(${day},'B',1)" style="min-width:38px;padding:3px 10px">+1</button>
+          <span style="min-width:16px;text-align:center;font-weight:700">${c.puntos.B}</span>
+          <button class="btn btn-sm" onclick="tbCreatividadPunto(${day},'B',-1)" ${c.puntos.B<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="tbIr(${day},'final')">Ver marcador final →</button>
+  `;
+}
+function tbCreatividadCampo(day, campo, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.creatividad[campo] = (campo === 'brief') ? valor : (Number(valor) || 0);
+  saveRemoteBiz();
+}
+function tbCreatividadPunto(day, equipo, delta){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.creatividad.puntos[equipo] = Math.max(0, (tb.creatividad.puntos[equipo] || 0) + delta);
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+/* ---- Pantalla final: marcador general + premio ---- */
+function tbRenderFinal(box, day, tb){
+  const totalA = tbTotalGeneral(tb, 'A'), totalB = tbTotalGeneral(tb, 'B');
+  const ganaA = totalA > totalB, ganaB = totalB > totalA, empate = totalA === totalB;
+  const ganador = empate ? null : (ganaA ? tb.equipoA : tb.equipoB);
+  box.innerHTML = `
+    <div class="card" style="background:var(--ink);color:#fff;text-align:center">
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+        <div style="flex:1">
+          <div style="font-weight:700">${esc(tb.equipoA)}</div>
+          <div style="font-size:48px;font-weight:800;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${totalA}</div>
+        </div>
+        <div style="opacity:.5;font-size:20px">—</div>
+        <div style="flex:1">
+          <div style="font-weight:700">${esc(tb.equipoB)}</div>
+          <div style="font-size:48px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-size:18px">${empate ? '🤝 Empate' : `🏆 Gana ${esc(ganador)}`}</div>
+    </div>
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Desglose por prueba (${esc(tb.equipoA)} / ${esc(tb.equipoB)})</div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>Kahoot</span><span>${tb.kahoot.puntos.A} / ${tb.kahoot.puntos.B}</span></div>
+      ${PLAN360_TB_SENTIDOS.map(sen => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>${esc(sen.label)}</span><span>${(tb.sentidos.puntos[sen.id]||{A:0}).A} / ${(tb.sentidos.puntos[sen.id]||{B:0}).B}</span></div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>Creatividad</span><span>${tb.creatividad.puntos.A} / ${tb.creatividad.puntos.B}</span></div>
+    </div>
+    <div class="card">
+      <div class="field"><label>Premio para el equipo ganador</label><textarea id="tb-premio" rows="3" placeholder="Ej. elige el nombre del próximo plato, decide los turnos de la semana que viene...">${esc(tb.premio || '')}</textarea></div>
+      <button class="btn btn-sm" onclick="tbGuardarPremio(${day})">Guardar premio</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="tbReiniciar(${day})">↺ Reiniciar las 3 pruebas</button>
+      ${!tb.completadoAt ? `<button class="btn btn-primary" onclick="marcarTeamBuildingHecha(${day})">Marcar como hecha</button>` : '<p class="muted" style="margin:0">Marcada como hecha — el marcador se puede seguir tocando.</p>'}
+    </div>
+  `;
+}
+function tbGuardarPremio(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const ta = document.getElementById('tb-premio');
+  if(ta) tb.premio = ta.value.trim();
+  saveRemoteBiz();
 }
 /* ---- Reunión inicial: guion de 10 preguntas con dictado por voz ----
    La idea (pedida expresamente por el coach) es que él no tenga que estar
