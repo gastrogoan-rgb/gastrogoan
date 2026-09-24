@@ -142,7 +142,14 @@ body:not(.owner-session) .owner-strict{display:none !important}
   padding:48px 28px 36px;text-align:center;
   margin:-22px -22px 0;border-radius:0 0 24px 24px;
 }
-.folder-grid{flex:1;align-content:center}
+/* Antes: flex:1;align-content:center — centraba las 3 tarjetas en TODO el
+   hueco libre bajo la cabecera. Con solo 3 tarjetas, en cualquier pantalla
+   donde sobra alto (la mayoría, en móvil, tablet Y escritorio) eso las
+   dejaba flotando en medio de un espacio en blanco enorme, con el sello de
+   versión suelto más abajo todavía. Ahora las tarjetas van pegadas a la
+   cabecera, como el resto de la app; si sobra alto de verdad, se queda al
+   final del todo (tras el sello de versión), no repartido en medio. */
+.folder-grid{flex:0 1 auto;align-content:flex-start}
 .home-hero .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,0,.22);color:var(--olive);border:1px solid rgba(255,255,0,.5);font-size:14px;font-weight:700;padding:6px 16px;border-radius:999px;margin-bottom:16px}
 .home-hero h1{font-size:28px;font-weight:800;color:#fff;margin-bottom:6px}
 .home-hero p{color:rgba(255,255,255,.9);font-size:15px}
@@ -1433,6 +1440,23 @@ td.wrap{white-space:normal}
      imprescindible contra el zoom de iOS). */
   body{font-size:13px}
 
+  /* Los cuadros de texto (inputs, select, textarea) se quedaban en 44px de
+     alto en cualquier pantalla ≤1024px (regla de tablet de más arriba,
+     pensada para el dedo) — el mismo criterio que ya se aplicó a los
+     botones: la letra no puede bajar de 16px (si no, el teclado de iOS
+     hace zoom solo), pero la CAJA sí puede ser más ajustada, como ya
+     pasa con el resto de la app tras este repaso.
+     height, no solo min-height: varias filas (p.ej. "Nueva tarea" en
+     Distribución) son flex sin align-items propio, así que por defecto
+     (stretch) el input crecía para igualar al botón de al lado — con
+     min-height a secas eso seguía ganando y el cuadro se quedaba en 44px
+     de todas formas. */
+  input[type="text"],input[type="number"],input[type="search"],input[type="tel"],
+  input[type="email"],input[type="date"],input[type="time"],select{
+    height:36px !important;min-height:36px !important;padding:6px 9px !important;
+  }
+  textarea{min-height:36px !important;padding:6px 9px !important}
+
   /* Checkboxes/radios un poco más grandes todavía en móvil: el dedo es
      menos preciso que un ratón, y aquí no hay motivo para ahorrar espacio. */
   /* 22 px se falla con el dedo. En el TPV y en Stock estas casillas se
@@ -1515,15 +1539,7 @@ td.wrap{white-space:normal}
      Solo hay 3 tarjetas y de normal sobra alto de sitio (ver #view-home
      centrado más abajo), así que más grandes se leen mejor y son más
      fáciles de tocar sin perder nada de sitio real. */
-  /* En móvil NO centrar verticalmente: .folder-grid trae flex:1 más arriba
-     para repartir las 3 tarjetas en todo el hueco libre bajo la cabecera,
-     y con poco contenido (3 tarjetas) eso las dejaba flotando en medio de
-     un mar en blanco, con el sello de versión desperdigado más abajo
-     todavía — se veía suelto, no "fino". En móvil las tarjetas van
-     pegadas a la cabecera, como el resto de la app, y el sello de
-     versión las sigue de cerca; si sobra alto, sobra al final, no en
-     medio. */
-  .folder-grid{grid-template-columns:1fr !important;gap:14px;padding:12px 0 4px;max-width:100%;flex:0 1 auto;align-content:flex-start}
+  .folder-grid{grid-template-columns:1fr !important;gap:14px;padding:12px 0 4px;max-width:100%}
   #home-version{margin:16px 0 8px !important}
   .folder-card{padding:24px 20px;min-height:auto;flex-direction:row;gap:16px;justify-content:flex-start;align-items:center;text-align:left;border-radius:14px}
   .folder-icon{font-size:40px}
