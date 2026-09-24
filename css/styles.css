@@ -1477,9 +1477,11 @@ td.wrap{white-space:normal}
      tarjetas de Cocina/Sala/Gestión sin tener que hacer tanto scroll. */
   .home-hero{padding:14px 14px 12px;border-radius:0 0 14px 14px;margin:-10px -10px 0}
   .home-hero .hero-badge{font-size:10.5px;padding:3px 9px;margin-bottom:6px}
-  .home-hero h1{font-size:18px;margin-bottom:3px}
+  /* Un punto o dos menos en los títulos grandes: el dueño lo vio
+     "demasiado grande" al probar la app entera en el móvil. */
+  .home-hero h1{font-size:16px;margin-bottom:3px}
   .home-hero p{font-size:11.5px}
-  .view-title{font-size:17px}
+  .view-title{font-size:15px}
   .view-subtitle{font-size:12px;margin-bottom:10px}
 
   /* Carpetas principales (Cocina/Sala/Gestión) — vertical en móvil.
@@ -1488,9 +1490,11 @@ td.wrap{white-space:normal}
      fáciles de tocar sin perder nada de sitio real. */
   .folder-grid{grid-template-columns:1fr !important;gap:14px;padding:12px 0 4px;max-width:100%}
   .folder-card{padding:24px 20px;min-height:auto;flex-direction:row;gap:16px;justify-content:flex-start;align-items:center;text-align:left;border-radius:14px}
-  .folder-icon{font-size:44px}
-  .folder-card h2{font-size:21px}
-  .folder-btn{padding:12px 22px;font-size:14px}
+  .folder-icon{font-size:40px}
+  .folder-card h2{font-size:19px}
+  /* Antes crecía en móvil (12px 22px) en vez de encoger: el dueño lo vio
+     "exagerado" al probar la app entera en el móvil. */
+  .folder-btn{padding:8px 16px;font-size:13px}
 
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
@@ -1505,17 +1509,18 @@ td.wrap{white-space:normal}
   .module-card{padding:14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}
   .module-card::before{width:3px;height:100%;top:0;left:0;right:auto;bottom:0}
   .module-icon{font-size:24px;margin-bottom:0;flex-shrink:0}
-  .module-card h3{font-size:14px;margin-bottom:2px}
+  .module-card h3{font-size:13px;margin-bottom:2px}
   .module-card p{font-size:11px;margin-bottom:4px}
   .module-open{font-size:12px}
   .folder-top{flex-wrap:wrap;gap:8px}
-  .folder-top-title{font-size:18px}
+  .folder-top-title{font-size:16px}
 
   /* Cards / KPIs */
   .card{padding:10px;margin-bottom:10px;border-radius:10px}
-  .card h3{font-size:14px}
+  .card h3{font-size:13px}
   .kpi{padding:10px}
-  .kpi .value{font-size:18px}
+  .kpi .value{font-size:16px}
+  .ge-kpi .val{font-size:18px}
   /* 10px con mayúsculas y espaciado de letra era ilegible de un vistazo en
      un móvil — y estas etiquetas ("Ventas hoy", "Ticket medio") son
      justo lo que se mira de reojo en mitad del servicio. */
@@ -1569,7 +1574,15 @@ td.wrap{white-space:normal}
   table{font-size:11px}
   th,td{padding:6px 6px}
   .ge-grid th,.ge-grid td{padding:5px 6px;font-size:11px}
-  .ge-grid th:first-child{min-width:100px}
+  /* La columna de "Concepto" heredaba white-space:nowrap de la regla base:
+     con conceptos largos ("Impuesto sobre beneficios (IRPF/IS)") esa sola
+     columna pedía 300+ px, más ancha que la pantalla entera — el resto de
+     columnas (T1-T4, AÑO) quedaban siempre fuera, sin que ningún scroll
+     lateral llegara a mostrarlas nunca (la columna, fija a la izquierda,
+     ya ocupaba ella sola todo el ancho visible). Con el texto en varias
+     líneas, la columna vuelve a medir lo que dice min-width y el resto de
+     columnas entran en juego arrastrando. */
+  .ge-grid th:first-child,.ge-grid td:first-child{min-width:100px;max-width:120px;white-space:normal;line-height:1.25}
 
   /* Modal — fullscreen en móvil */
   .modal-overlay{padding:0;align-items:flex-end}
@@ -2037,6 +2050,26 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .carta-schedule-time, .mn-horario-time{
     font-size:16px !important;
   }
+}
+
+/* ── Botones más compactos en móvil (toda la app) ──────────────────────
+   El dueño lo pidió tras probar la cabecera reducida en su móvil: "se
+   pulsan perfectamente" con menos de 44 px, y el resto de la app (Cocina,
+   Sala/TPV, Gestión Económica, Reservas, Pedidos online, el propio
+   selector…) se veía "muy grande, exagerado" en comparación. Esto NO
+   toca tablet ni PC (el dueño dijo que ahí no le importa todavía): va en
+   el mismo @media (max-width:600px) que ya usa el resto de reglas de
+   móvil, no en pointer:coarse (que también alcanza tablets con dedo).
+   !important porque el bloque de pointer:coarse de arriba fija 44px con
+   la misma especificidad y va DESPUÉS en cascada normal — sin
+   !important, ganaría él y esto no haría nada. */
+@media (max-width: 600px){
+  .btn, .btn-sm, .ge-tab, .tab-btn, .month-pill,
+  .toolbar .btn, .actions-cell .btn{
+    min-height:36px !important;padding:6px 10px !important;font-size:12.5px !important
+  }
+  .btn-icon, .btn-sm.btn-icon{min-width:36px !important;min-height:36px !important}
+  .btn i, .btn-sm i{font-size:15px}
 }
 
 /* ── La puesta a punto (pantalla de inicio) ──────────────────────────────
