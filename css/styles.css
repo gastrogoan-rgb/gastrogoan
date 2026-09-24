@@ -1553,17 +1553,16 @@ td.wrap{white-space:normal}
   .view-subtitle{font-size:12px;margin-bottom:10px}
 
   /* Carpetas principales (Cocina/Sala/Gestión) — vertical en móvil.
-     Solo hay 3 tarjetas y de normal sobra alto de sitio (ver #view-home
-     centrado más abajo), así que más grandes se leen mejor y son más
-     fáciles de tocar sin perder nada de sitio real. */
-  /* A petición del dueño: no se puede "quitar" el hueco de un móvil muy
-     alto con solo 3 tarjetas de contenido (es fondo normal, mismo color en
-     toda la pantalla) — en vez de centrarlas en todo el hueco libre (lo
-     que las dejaba flotando en medio de la nada, ver más arriba), se
-     reparte MÁS separación entre ellas para que el bloque en sí ocupe
-     más alto real y quede menos vacío al final. */
-  .folder-grid{grid-template-columns:1fr !important;gap:32px;padding:16px 0 4px;max-width:100%}
-  #home-version{margin:32px 0 8px !important}
+     A petición del dueño: las 3 tarjetas CRECEN para rellenar de verdad
+     el hueco libre bajo la cabecera (flex:1 en la rejilla + filas a 1fr
+     reparten ese alto por igual entre las tres), en vez de quedarse a su
+     tamaño natural con hueco vacío detrás. #view-home ya trae
+     display:flex;flex-direction:column;min-height:100% (más arriba), así
+     que .folder-grid con flex:1 crece exactamente lo que sobre — ni más
+     ni menos — y el sello de versión se queda pegado justo debajo de la
+     última tarjeta, no perdido en medio de la nada. */
+  .folder-grid{grid-template-columns:1fr !important;grid-auto-rows:1fr;flex:1;gap:16px;padding:16px 0 4px;max-width:100%}
+  #home-version{margin:16px 0 8px !important}
   .folder-card{padding:24px 20px;min-height:auto;flex-direction:row;gap:16px;justify-content:flex-start;align-items:center;text-align:left;border-radius:14px}
   .folder-icon{font-size:40px}
   .folder-card h2{font-size:19px}
