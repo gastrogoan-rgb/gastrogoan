@@ -1279,8 +1279,28 @@ Se van alternando sentidos y turnos hasta agotar el material. Gana el equipo con
 El equipo ganador elige algo simbólico — poner nombre a un plato nuevo, decidir el orden de turnos de la semana que viene, algo que de verdad pese un poco (nada de trofeos cutres).
 
 Aprovecha este momento, con el equipo ya suelto y de buen humor, para conectar con el mensaje real: "esto es lo que vamos a construir juntos" — y enlaza con los objetivos y el plan que ya habéis presentado antes en la sesión.`;
+// Los 5 sentidos del juego, con su icono — se repiten en el marcador y en
+// el desglose, así que van en una sola lista en vez de escritos a mano
+// cuatro veces.
+const PLAN360_TB_SENTIDOS = [
+  {id: 'oido', label: 'Oído', icon: 'ti-ear'},
+  {id: 'gusto', label: 'Gusto', icon: 'ti-soup'},
+  {id: 'olfato', label: 'Olfato', icon: 'ti-wind'},
+  {id: 'tacto', label: 'Tacto', icon: 'ti-hand-stop'},
+  {id: 'vista', label: 'Vista', icon: 'ti-eye'},
+];
 function plan360FreshTeamBuilding(){
-  return {script: PLAN360_TEAMBUILDING_SCRIPT, completadoAt: null};
+  // El marcador vive SEPARADO del guion a propósito: el guion se prepara
+  // antes (texto largo, se edita con calma); el marcador se toca EN VIVO,
+  // delante del equipo, un tap por acierto — mezclar los dos en un solo
+  // textarea habría hecho imposible lo segundo.
+  return {
+    script: PLAN360_TEAMBUILDING_SCRIPT,
+    equipoA: 'Equipo A',
+    equipoB: 'Equipo B',
+    puntos: Object.fromEntries(PLAN360_TB_SENTIDOS.map(s => [s.id, {A: 0, B: 0}])),
+    completadoAt: null,
+  };
 }
 function ensureRemotePlan360(){
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
@@ -1371,6 +1391,16 @@ function ensureRemotePlan360(){
   if(dia2Existente && dia2Existente.teamBuilding && dia2Existente.teamBuilding.script
     && dia2Existente.teamBuilding.script.startsWith(PLAN360_TEAMBUILDING_SCRIPT_VIEJO)){
     dia2Existente.teamBuilding.script = PLAN360_TEAMBUILDING_SCRIPT;
+  }
+  // Migración: el team building pasó de ser solo un guion de texto a
+  // llevar también un marcador en vivo (21/09) — un negocio que ya tenía
+  // el guion (con o sin editar) no tiene por qué perderlo, solo se le
+  // añaden los campos del marcador que le faltan.
+  if(dia2Existente && dia2Existente.teamBuilding && !dia2Existente.teamBuilding.puntos){
+    const fresh = plan360FreshTeamBuilding();
+    dia2Existente.teamBuilding.equipoA = dia2Existente.teamBuilding.equipoA || fresh.equipoA;
+    dia2Existente.teamBuilding.equipoB = dia2Existente.teamBuilding.equipoB || fresh.equipoB;
+    dia2Existente.teamBuilding.puntos = fresh.puntos;
   }
   if(dia1Existente && !dia1Existente.misteryCheck){
     dia1Existente.misteryCheck = plan360FreshMisteryCheck();
@@ -2361,21 +2391,105 @@ function marcarMasterclassHecha(day){
   saveRemoteBiz();
   renderMasterclassPage(day);
 }
-/* ---- Team building: guion de presentación para todo el equipo ---- */
+/* ---- Team building: marcador en vivo + guion de presentación ----
+   Dos piezas separadas a propósito: el marcador se toca EN VIVO delante
+   del equipo (un tap por acierto, letra grande para leerlo desde lejos —
+   la pantalla se puede dejar apoyada en la mesa mientras se juega), el
+   guion se prepara ANTES con calma y se consulta menos durante la
+   partida. Mezclarlos en un único bloque habría hecho torpe lo segundo
+   para ganar algo que el primero no necesita. */
+function tbTotal(tb, equipo){
+  return PLAN360_TB_SENTIDOS.reduce((s, sen) => s + ((tb.puntos[sen.id] || {})[equipo] || 0), 0);
+}
 function renderTeamBuildingPage(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.teamBuilding) return;
   const tb = d.teamBuilding;
+  const totalA = tbTotal(tb, 'A'), totalB = tbTotal(tb, 'B');
+  const ganaA = totalA > totalB, ganaB = totalB > totalA;
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
     <h2 style="margin:10px 0 4px">Team building</h2>
-    <p class="muted" style="margin-bottom:14px">Guion para presentar a todo el equipo — ajústalo al negocio antes de usarlo.</p>
-    <div class="card">
-      <div class="field"><label>Guion de la presentación</label><textarea id="tb-script" rows="14">${esc(tb.script || '')}</textarea></div>
-      <button class="btn btn-sm" onclick="saveTeamBuilding(${day})" style="margin-bottom:10px">Guardar</button>
-      ${!tb.completadoAt ? `<button class="btn btn-primary" onclick="marcarTeamBuildingHecha(${day})">Marcar como hecha</button>` : '<p class="muted">Marcada como hecha — se puede seguir editando.</p>'}
+    <p class="muted" style="margin-bottom:14px">El desafío de los 5 sentidos — marca cada acierto en vivo, delante del equipo.</p>
+
+    <div class="card" style="background:var(--ink);color:#fff">
+      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+        <div style="flex:1;text-align:center">
+          <input value="${esc(tb.equipoA)}" onchange="tbRenombrar(${day},'A',this.value)"
+            style="width:100%;text-align:center;font-weight:700;font-size:15px;background:none;border:none;color:#fff;border-bottom:1px solid rgba(255,255,255,.3);padding:4px">
+          <div style="font-size:44px;font-weight:800;line-height:1.1;margin-top:6px;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${totalA}</div>
+        </div>
+        <div style="font-size:20px;font-weight:700;opacity:.5">—</div>
+        <div style="flex:1;text-align:center">
+          <input value="${esc(tb.equipoB)}" onchange="tbRenombrar(${day},'B',this.value)"
+            style="width:100%;text-align:center;font-weight:700;font-size:15px;background:none;border:none;color:#fff;border-bottom:1px solid rgba(255,255,255,.3);padding:4px">
+          <div style="font-size:44px;font-weight:800;line-height:1.1;margin-top:6px;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div>
+        </div>
+      </div>
     </div>
+
+    <div class="card">
+      <div style="display:flex;gap:10px;margin-bottom:6px;font-size:11px;color:var(--muted);padding-left:32px">
+        <span style="flex:1;text-align:center">${esc(tb.equipoA)}</span>
+        <span style="flex:1;text-align:center">${esc(tb.equipoB)}</span>
+      </div>
+      ${PLAN360_TB_SENTIDOS.map(sen => {
+        const p = tb.puntos[sen.id] || {A: 0, B: 0};
+        // Un solo "+1" por equipo, sin repetir su nombre dentro del botón
+        // (ya está arriba, en el marcador y en la cabecera de esta lista):
+        // con el nombre dentro, el texto envolvía en dos líneas y el botón
+        // se volvía imposible de leer de un vistazo, justo lo contrario de
+        // lo que pide un marcador que se mira en caliente, jugando.
+        return `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border)">
+          <i class="ti ${sen.icon}" style="font-size:18px;flex-shrink:0;width:22px;text-align:center;color:var(--muted)" title="${esc(sen.label)}"></i>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
+            <button class="btn btn-sm" onclick="tbSumar(${day},'${sen.id}','A',-1)" ${p.A<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
+            <span style="min-width:16px;text-align:center;font-weight:700">${p.A}</span>
+            <button class="btn btn-sm btn-primary" onclick="tbSumar(${day},'${sen.id}','A',1)" style="min-width:38px;padding:3px 10px">+1</button>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px">
+            <button class="btn btn-sm btn-primary" onclick="tbSumar(${day},'${sen.id}','B',1)" style="min-width:38px;padding:3px 10px">+1</button>
+            <span style="min-width:16px;text-align:center;font-weight:700">${p.B}</span>
+            <button class="btn btn-sm" onclick="tbSumar(${day},'${sen.id}','B',-1)" ${p.B<=0?'disabled':''} style="min-width:30px;padding:3px 6px">–</button>
+          </div>
+        </div>`;
+      }).join('')}
+      <button class="btn btn-sm" onclick="tbReiniciar(${day})" style="margin-top:12px">↺ Reiniciar marcador</button>
+    </div>
+
+    <details class="card">
+      <summary style="cursor:pointer;font-weight:600">Guion de la presentación (preparación, antes de jugar)</summary>
+      <div class="field" style="margin-top:10px"><label>Guion</label><textarea id="tb-script" rows="14">${esc(tb.script || '')}</textarea></div>
+      <button class="btn btn-sm" onclick="saveTeamBuilding(${day})">Guardar guion</button>
+    </details>
+
+    ${!tb.completadoAt ? `<button class="btn btn-primary" onclick="marcarTeamBuildingHecha(${day})">Marcar como hecha</button>` : '<p class="muted">Marcada como hecha — el marcador se puede seguir tocando.</p>'}
   `;
+}
+function tbSumar(day, sentidoId, equipo, delta){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.teamBuilding) return;
+  const p = d.teamBuilding.puntos[sentidoId] || (d.teamBuilding.puntos[sentidoId] = {A: 0, B: 0});
+  p[equipo] = Math.max(0, (p[equipo] || 0) + delta);
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbRenombrar(day, equipo, valor){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.teamBuilding) return;
+  const limpio = (valor || '').trim() || (equipo === 'A' ? 'Equipo A' : 'Equipo B');
+  d.teamBuilding[equipo === 'A' ? 'equipoA' : 'equipoB'] = limpio;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbReiniciar(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.teamBuilding) return;
+  if(!confirm('¿Poner el marcador a cero? Los nombres de los equipos y el guion no se tocan.')) return;
+  d.teamBuilding.puntos = Object.fromEntries(PLAN360_TB_SENTIDOS.map(s => [s.id, {A: 0, B: 0}]));
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 function saveTeamBuilding(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
