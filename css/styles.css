@@ -241,6 +241,8 @@ body:not(.owner-session) .owner-strict{display:none !important}
   .caos-fila .caos-reloj{font-size:24px;min-width:56px}
   .caos-fila .caos-plato strong{font-size:17px}
 }
+.kds-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.kds-toolbar-caos{margin-left:auto}
 .kds-ticket{border:2px solid var(--text);box-shadow:0 3px 0 rgba(28,26,23,.10);padding:0;overflow:hidden}
 .kds-ticket>.kds-head{background:var(--brand-cream);border-bottom:2px solid var(--text);padding:10px 14px;margin:0}
 .kds-ticket>.kds-body{padding:12px 14px}
@@ -1428,6 +1430,22 @@ td.wrap{white-space:normal}
      marcan en mitad del servicio, con prisa y a veces con guantes. */
   input[type="checkbox"],input[type="radio"]{width:26px !important;height:26px !important;min-width:26px;min-height:26px}
 
+  /* Selector de negocio: la casilla con el nombre de cada negocio se veía
+     "muy grande" — menos relleno y letra más ajustada, igual que el resto
+     de la app tras este repaso. */
+  .bs-item{padding:9px 11px;gap:6px}
+  .bs-item-name{font-size:13.5px}
+  .bs-group-header{padding:8px 11px;font-size:13.5px}
+
+  /* Comandas Cocina: 5 botones que antes quedaban descuadrados al envolver
+     — "Modo caos" llevaba margin-left:auto (para separarlo de las
+     pestañas Activas/Cerradas en pantallas anchas) y eso partía la fila en
+     dos grupos, cada uno pegado a un lado, en cuanto no cabían en una
+     línea. En móvil se quita ese margen y se centra todo: cada botón que
+     no quepa salta de línea, pero siempre centrado como conjunto. */
+  .kds-toolbar{justify-content:center}
+  .kds-toolbar-caos{margin-left:0}
+
   /* .te-kpis (Tesorería) se fuerza a 4 columnas iguales para tablet en el
      breakpoint de 800px, pero solo hay 3 KPIs — en un móvil (320-430px) esas
      4 columnas quedaban tan estrechas que el texto de cada tarjeta
@@ -1603,6 +1621,16 @@ td.wrap{white-space:normal}
 
   /* Manual */
   .manual-detail{padding:12px}
+  /* Las tablas del manual (auto-layout, sin ancho fijo) se dimensionaban a
+     su contenido SIN envolver texto — con una sola celda algo larga
+     ("Margen ajustado o negativo — revisa precio...") la tabla pedía más
+     ancho que la pantalla entera y quedaba "fija", solo visible
+     arrastrando el dedo (y sin ninguna pista de que hiciera falta).
+     table-layout:fixed reparte el ancho disponible entre columnas y deja
+     que el texto envuelva dentro de cada una — mismo criterio que ya se
+     aplicó en Cuenta de Resultados. */
+  .manual-detail table{table-layout:fixed;width:100%;display:table}
+  .manual-detail table th,.manual-detail table td{white-space:normal;overflow-wrap:break-word;font-size:12px;padding:6px 8px}
 
   /* Promoción — botones de compartir (WhatsApp/Email) apilados en móvil */
   .promo-share-actions{flex-direction:column !important}
