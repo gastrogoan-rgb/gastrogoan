@@ -1457,6 +1457,23 @@ td.wrap{white-space:normal}
   }
   textarea{min-height:36px !important;padding:6px 9px !important}
 
+  /* Los 16px de letra en los campos son SOLO por Safari de iOS (si baja de
+     16, el teclado hace zoom solo). Android no tiene ese problema, y
+     bloquear la letra a 16px ahí de todas formas era penalizar sin motivo
+     al 100% del texto escrito de la app (Distribución, Gestión
+     Económica...) en el sistema operativo que no lo necesita.
+     `-webkit-touch-callout` solo existe en WebKit de iOS (Safari Y
+     cualquier navegador en iPhone/iPad, todos usan ese motor por
+     obligación de Apple) — ninguna versión de Android lo tiene, así que
+     sirve para distinguir uno de otro sin necesidad de mirar el user
+     agent (frágil y fácil de falsear). */
+  @supports not (-webkit-touch-callout: none){
+    input[type="text"],input[type="number"],input[type="search"],input[type="tel"],
+    input[type="email"],input[type="date"],input[type="time"],select,textarea{
+      font-size:13px !important;
+    }
+  }
+
   /* Checkboxes/radios un poco más grandes todavía en móvil: el dedo es
      menos preciso que un ratón, y aquí no hay motivo para ahorrar espacio. */
   /* 22 px se falla con el dedo. En el TPV y en Stock estas casillas se
@@ -1539,8 +1556,14 @@ td.wrap{white-space:normal}
      Solo hay 3 tarjetas y de normal sobra alto de sitio (ver #view-home
      centrado más abajo), así que más grandes se leen mejor y son más
      fáciles de tocar sin perder nada de sitio real. */
-  .folder-grid{grid-template-columns:1fr !important;gap:14px;padding:12px 0 4px;max-width:100%}
-  #home-version{margin:16px 0 8px !important}
+  /* A petición del dueño: no se puede "quitar" el hueco de un móvil muy
+     alto con solo 3 tarjetas de contenido (es fondo normal, mismo color en
+     toda la pantalla) — en vez de centrarlas en todo el hueco libre (lo
+     que las dejaba flotando en medio de la nada, ver más arriba), se
+     reparte MÁS separación entre ellas para que el bloque en sí ocupe
+     más alto real y quede menos vacío al final. */
+  .folder-grid{grid-template-columns:1fr !important;gap:32px;padding:16px 0 4px;max-width:100%}
+  #home-version{margin:32px 0 8px !important}
   .folder-card{padding:24px 20px;min-height:auto;flex-direction:row;gap:16px;justify-content:flex-start;align-items:center;text-align:left;border-radius:14px}
   .folder-icon{font-size:40px}
   .folder-card h2{font-size:19px}
