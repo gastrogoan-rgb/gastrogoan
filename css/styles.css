@@ -1444,15 +1444,20 @@ td.wrap{white-space:normal}
   .protocolo-step-row>div:last-child{margin-left:0 !important;justify-content:flex-end}
 
   /* Header — dos filas fijas y centradas, siempre (no solo "si no caben").
-     Fila 1: logo + nombre del negocio. Fila 2: el resto de botones. Antes
-     hacía scroll lateral (overflow-x:auto de la regla base) y algunos
-     botones solo se veían arrastrando el dedo — ahora nunca se mueve.
-     .hdr-break (un div vacío justo después de #sync-badge en el HTML) es lo
-     que fuerza el salto a la fila 2: con flex-wrap, cada fila del header
-     centra su propio contenido con justify-content, así que basta con ese
-     "corte" en el sitio justo, sin tener que reestructurar el HTML. */
+     Fila 1: solo el logo "gg". Fila 2: nube + idioma + negocios + refrescar
+     + ayuda + chat + cerrar sesión, los 7 juntos. Antes hacía scroll
+     lateral (overflow-x:auto de la regla base) y algunos botones solo se
+     veían arrastrando el dedo — ahora nunca se mueve. Un único .hdr-break
+     (div vacío en el HTML, justo tras el logo) fuerza el salto a la fila
+     2: con flex-wrap, cada fila del header centra su propio contenido con
+     justify-content, así que basta con ese "corte" en el sitio justo, sin
+     tener que reestructurar el HTML.
+     ⚠️ A petición expresa del dueño (probar y ver), la fila 2 baja del
+     mínimo táctil de 44 px para caber toda en una línea — ver el bloque
+     de #sync-badge y .app-header .btn más abajo, que lo hacen a propósito
+     y explican por qué. */
   :root{--header-h:44px}
-  .app-header{padding:6px;gap:3px;height:auto;min-height:var(--header-h);flex-wrap:wrap;overflow-x:visible;row-gap:6px;justify-content:center}
+  .app-header{padding:6px;gap:3px;height:auto;min-height:var(--header-h);flex-wrap:wrap;overflow:visible;row-gap:6px;justify-content:center}
   .hdr-break{flex-basis:100%;height:0}
   /* Sin width:100% aquí a propósito: eso obligaba al logo a ocupar toda la
      fila él solo y empujaba la nube (que va justo detrás en el HTML) a su
@@ -1460,12 +1465,22 @@ td.wrap{white-space:normal}
      centra el contenido de cada fila por sí solo. */
   .app-logo{justify-content:center}
   .app-logo-sub{display:none}
-  .app-logo-text{font-size:13px}
+  /* En móvil el logo es solo el icono "gg": la palabra "GastroGoan" no
+     aporta nada que el icono no diga ya. Va solo en su propia fila (ver
+     hdr-break en el HTML), centrado con el resto de la cabecera. */
+  .app-logo-text{display:none}
   .app-logo-icon{width:26px;height:26px;font-size:13px;border-radius:6px}
   .app-header .hdr-text{display:none}
   .app-header .btn{padding:4px 6px;font-size:10px;min-height:32px;min-width:32px;margin-right:0 !important;justify-content:center}
   .app-header .btn i{margin:0;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px}
   #sync-badge{font-size:9px;padding:2px 6px;margin-right:2px !important}
+  /* A petición expresa (probar y ver), estos botones bajan del mínimo
+     táctil de 44 px que fuerza pointer:coarde más abajo, para igualar el
+     tamaño pequeño que ya tenía la nube. !important porque la regla de
+     pointer:coarse va DESPUÉS en el fichero y si no, gana ella por orden
+     de cascada (misma especificidad, `.app-header .btn` en ambas). */
+  .app-header .btn{min-height:25px !important;min-width:31px !important;padding:2px 6px !important;font-size:9px !important}
+  .app-header .btn i{font-size:13px !important;width:13px !important;height:13px !important}
   #lang-select{padding:3px 2px;font-size:10px;width:auto;min-width:40px;margin-right:0 !important;border-radius:6px}
 
   /* Layout */
