@@ -2587,11 +2587,25 @@ function renderTeamBuildingPage(day){
 function tbRenderPantalla(day, tb){
   const box = document.getElementById('tb-pantalla');
   if(!box) return;
-  if(tb.pantalla === 'intro') return tbRenderIntro(box, day, tb);
-  if(tb.pantalla === 'kahoot') return tbRenderKahoot(box, day, tb);
-  if(tb.pantalla === 'creatividad') return tbRenderCreatividad(box, day, tb);
-  if(tb.pantalla === 'final') return tbRenderFinal(box, day, tb);
-  return tbRenderSentido(box, day, tb, tb.pantalla);
+  // Envuelto en try/catch a propósito: un fallo aquí dejaba la pantalla
+  // en blanco sin ninguna pista de qué había pasado ("no me deja entrar,
+  // están vacías") — ahora al menos se ve el error de verdad en vez de la
+  // nada, para poder arreglarlo con datos reales en vez de a ciegas.
+  try{
+    if(tb.pantalla === 'intro') return tbRenderIntro(box, day, tb);
+    if(tb.pantalla === 'kahoot') return tbRenderKahoot(box, day, tb);
+    if(tb.pantalla === 'creatividad') return tbRenderCreatividad(box, day, tb);
+    if(tb.pantalla === 'final') return tbRenderFinal(box, day, tb);
+    return tbRenderSentido(box, day, tb, tb.pantalla);
+  }catch(e){
+    console.error('Error pintando team building', tb.pantalla, e);
+    box.innerHTML = `<div class="card" style="border:2px solid var(--red)">
+      <strong style="color:var(--red)">Error al mostrar esta pantalla</strong>
+      <p class="muted" style="margin:8px 0">Pantalla: ${esc(tb.pantalla)} — copia este texto y pásaselo a soporte:</p>
+      <pre style="white-space:pre-wrap;font-size:11px;background:var(--bg);padding:10px;border-radius:8px">${esc(e.message)}\n${esc(e.stack || '')}</pre>
+      <button class="btn btn-sm" onclick="tbIr(${day},'intro')" style="margin-top:8px">← Volver a Explicación</button>
+    </div>`;
+  }
 }
 /* ---- Pantalla 0: Explicación ---- */
 // Las 3 pruebas explicadas como tarjetas, no como una lista de texto: se
