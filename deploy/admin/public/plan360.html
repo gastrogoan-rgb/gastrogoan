@@ -1382,6 +1382,15 @@ const PLAN360_TB_PANTALLAS = ['intro', 'kahoot', ...PLAN360_TB_SENTIDOS.map(s =>
 function plan360FreshReto(){
   return {preparaA: [], preparaB: []};
 }
+// Oído funciona distinto al resto: no son "10 que prepara A + 10 que
+// prepara B", es UN banco compartido de sonidos (los sube el coach antes
+// de empezar) y los DOS equipos intentan adivinar cada uno — pueden
+// acertar los dos, uno, o ninguno. El nombre real de cada sonido se
+// queda oculto hasta pulsar el "?", igual que la respuesta del Test no
+// se ve hasta revelarla.
+function plan360FreshBanco(){
+  return {items: [], fase: 'jugando'};   // fase: 'jugando' | 'resultado'
+}
 function plan360FreshSopa(){
   return {
     palabras: [...PLAN360_TB_PALABRAS_DEFECTO],
@@ -1416,7 +1425,7 @@ function plan360FreshTeamBuilding(){
     },
     sentidos: {
       vista: plan360FreshSopa(),
-      oido: plan360FreshReto(),
+      oido: plan360FreshBanco(),
       olfato: plan360FreshReto(),
       gusto: plan360FreshReto(),
       tacto: plan360FreshReto(),
@@ -2550,26 +2559,39 @@ function marcarMasterclassHecha(day){
    EN VIVO delante del equipo — de ahí los botones grandes y el guion de
    preparación aparte, en su propia pantalla, para no estorbar durante
    el juego. */
-// Un reto (Oído/Olfato/Gusto/Tacto) puntúa a quien ADIVINA, no a quien
-// prepara: lo que preparó A (preparaA) lo adivina B, y viceversa.
+// Un reto (Olfato/Gusto/Tacto) puntúa a quien ADIVINA, no a quien
+// prepara: lo que preparó A (preparaA) lo adivina B, y viceversa. Oído es
+// distinto (banco compartido, ver tbBancoTotal) porque ahí no hay "quien
+// prepara": las sube el coach y los dos equipos intentan adivinar cada
+// sonido por igual.
 function tbRetoTotal(reto, equipo){
   const items = equipo === 'A' ? (reto.preparaB || []) : (reto.preparaA || []);
   return items.filter(it => it.adivinado === true).length;
 }
+function tbBancoTotal(banco, equipo){
+  return (banco.items || []).filter(it => equipo === 'A' ? it.aciertoA : it.aciertoB).length;
+}
 function tbSopaTotal(sopa, equipo){
   return Object.values(sopa.encontradas || {}).filter(f => f.equipo === equipo).length;
 }
+// Un solo punto de entrada para "cuántos lleva este equipo en este
+// sentido", sea cual sea su forma (sopa / banco / reto) — así el
+// marcador general y el desglose final no tienen que saber los detalles
+// de cada uno.
+function tbSentidoTotal(tb, senId, equipo){
+  if(senId === 'vista') return tbSopaTotal(tb.sentidos.vista, equipo);
+  if(senId === 'oido') return tbBancoTotal(tb.sentidos.oido, equipo);
+  return tbRetoTotal(tb.sentidos[senId], equipo);
+}
 function tbTotalGeneral(tb, equipo){
   let total = (tb.kahoot.puntos[equipo] || 0) + (tb.creatividad.puntos[equipo] || 0);
-  PLAN360_TB_SENTIDOS.forEach(sen => {
-    total += sen.id === 'vista' ? tbSopaTotal(tb.sentidos.vista, equipo) : tbRetoTotal(tb.sentidos[sen.id], equipo);
-  });
+  PLAN360_TB_SENTIDOS.forEach(sen => { total += tbSentidoTotal(tb, sen.id, equipo); });
   return total;
 }
-// Autorreparación: un negocio real se ha quedado con tb.sentidos.vista
-// puesto pero SIN oido/olfato/gusto/tacto (venía de una versión
-// intermedia entre el marcador simple y las 3 pruebas — la comprobación
-// de la migración solo miraba si .vista existía, no si estaban las 5).
+// Autorreparación: un negocio real se ha quedado con sentidos en una
+// forma incompleta o antigua más de una vez ya (primero .vista sin el
+// resto; ahora que Oído cambió de "reto" a "banco" compartido, un
+// negocio que ya hubiera tocado Oído se quedaría con la forma vieja).
 // En vez de que cada función que toca tb.sentidos[algo] tenga que
 // defenderse por su cuenta, se repara aquí, en el único sitio por el que
 // pasa cualquier acceso al team building — así ningún negocio se queda
@@ -2579,6 +2601,8 @@ function tbSentidosRepair(tb){
   PLAN360_TB_SENTIDOS.forEach(sen => {
     if(sen.id === 'vista'){
       if(!tb.sentidos.vista || !Array.isArray(tb.sentidos.vista.palabras)) tb.sentidos.vista = plan360FreshSopa();
+    } else if(sen.id === 'oido'){
+      if(!tb.sentidos.oido || !Array.isArray(tb.sentidos.oido.items)) tb.sentidos.oido = plan360FreshBanco();
     } else if(!tb.sentidos[sen.id] || !Array.isArray(tb.sentidos[sen.id].preparaA)){
       tb.sentidos[sen.id] = plan360FreshReto();
     }
@@ -3067,7 +3091,10 @@ function tbKahootMarcarCorrecta(day, qi, oi){
 function tbRenderSentido(box, day, tb, sentidoId){
   const sen = PLAN360_TB_SENTIDOS.find(s => s.id === sentidoId);
   if(!sen){ box.innerHTML = ''; return; }
-  box.innerHTML = `${tbMiniMarcador(tb)}` + (sen.id === 'vista' ? tbRenderVista(day, tb) : tbRenderReto(day, tb, sen));
+  const cuerpo = sen.id === 'vista' ? tbRenderVista(day, tb)
+    : sen.id === 'oido' ? tbRenderBanco(day, tb, sen)
+    : tbRenderReto(day, tb, sen);
+  box.innerHTML = `${tbMiniMarcador(tb)}` + cuerpo;
 }
 // El orden de "siguiente prueba" sigue PLAN360_TB_SENTIDOS (Vista, Oído,
 // Olfato, Gusto, Tacto) y desde Tacto salta a la Prueba 3.
@@ -3105,6 +3132,7 @@ const PLAN360_TB_SUGERENCIAS = {
   tacto: ['Hielo', 'Harina', 'Un limón entero', 'Servilleta de tela', 'Cuchara de madera', 'Papel de aluminio', 'Un corcho', 'Sal gorda', 'Piel de naranja', 'Posavasos de corcho'],
 };
 function tbRenderRetoLista(day, senId, lado, items, equipoQuePrepara, equipoQueAdivina, necesitaAudio){
+  items = items || [];   // red de seguridad: no debería pasar (tbSentidosRepair ya lo garantiza), pero mejor esto que una pantalla en blanco
   const total = items.length, acertados = items.filter(it => it.adivinado === true).length;
   const usadas = new Set(items.map(it => it.nombre));
   const sugerencias = (PLAN360_TB_SUGERENCIAS[senId] || []).filter(s => !usadas.has(s));
@@ -3161,6 +3189,124 @@ function tbRetoAnadirSugerida(day, senId, lado, nombre){
   const tb = tbGet(day);
   if(!tb) return;
   tb.sentidos[senId][lado].push({nombre, url: null, adivinado: null});
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+/* -- Oído: banco compartido de sonidos (distinto de Olfato/Gusto/Tacto) --
+   Un solo listado (no "lo que prepara cada equipo") de hasta 10 sonidos.
+   Cada sonido: se reproduce, y el "?" revela el nombre solo cuando el
+   coach quiere (para no chafarlo mientras los equipos siguen
+   escuchando/pensando). Los dos equipos pueden acertar el mismo sonido —
+   un botón por equipo, en modo interruptor, igual que en el Test. */
+function tbRenderBanco(day, tb, sen){
+  const banco = tb.sentidos[sen.id];
+  if(banco.fase === 'resultado') return tbRenderBancoResultado(day, tb, sen, banco);
+  const total = banco.items.length;
+  return `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <i class="ti ${sen.icon}" style="font-size:22px"></i>
+        <strong>Prueba 2 — ${esc(sen.label)}</strong>
+      </div>
+      <p class="muted" style="margin-bottom:14px">Sube hasta 10 sonidos antes de jugar. Por cada uno: reprodúcelo, y cuando los equipos digan su respuesta pulsa el "?" para revelar cuál era — pueden acertar los dos equipos, uno, o ninguno.</p>
+      ${banco.items.map((it, idx) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border);flex-wrap:wrap">
+          ${it.url ? `<button class="btn btn-sm btn-icon" onclick="tbBancoReproducir('${esc(it.url)}')" title="Reproducir"><i class="ti ti-player-play"></i></button>`
+                    : `<label class="btn btn-sm btn-icon" title="Subir sonido" style="cursor:pointer"><i class="ti ti-upload"></i><input type="file" accept="audio/*" style="display:none" onchange="tbBancoSubirAudio(event,${day},'${sen.id}',${idx})"></label>`}
+          <span style="font-weight:700;min-width:20px">${idx + 1}.</span>
+          ${it.revelado
+            ? `<span style="flex:1;min-width:100px">${esc(it.nombre) || '<span class=\"muted\">(sin nombre)</span>'}</span>`
+            : `<button class="btn btn-sm" onclick="tbBancoRevelar(${day},'${sen.id}',${idx})" style="flex:1;min-width:100px" title="Revelar qué era">? ¿Qué sonido era?</button>`}
+          <button class="btn btn-sm ${it.aciertoA?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'A')">${it.aciertoA?'✓ ':''}${esc(tb.equipoA)}</button>
+          <button class="btn btn-sm ${it.aciertoB?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'B')">${it.aciertoB?'✓ ':''}${esc(tb.equipoB)}</button>
+          <button class="btn btn-sm btn-icon" onclick="tbBancoBorrar(${day},'${sen.id}',${idx})" title="Quitar"><i class="ti ti-trash"></i></button>
+        </div>
+        ${!it.revelado ? `<div style="padding:0 0 6px 30px"><input placeholder="Nombre del sonido (oculto hasta revelar)" value="${esc(it.nombre)}" onchange="tbBancoNombre(${day},'${sen.id}',${idx},this.value)" style="width:100%;max-width:320px"></div>` : ''}
+      `).join('')}
+      ${total < 10 ? `<button class="btn btn-sm" style="margin-top:10px" onclick="tbBancoAnadir(${day},'${sen.id}')"><i class="ti ti-plus"></i> Añadir sonido (${total}/10)</button>` : `<p class="muted" style="margin-top:10px;font-size:12px">Ya tienes los 10 sonidos.</p>`}
+      ${total ? `<button class="btn btn-primary" style="margin-top:14px" onclick="tbBancoTerminar(${day},'${sen.id}')">Terminar y ver resultado →</button>` : ''}
+    </div>
+  `;
+}
+function tbRenderBancoResultado(day, tb, sen, banco){
+  const totalA = banco.items.filter(it => it.aciertoA).length, totalB = banco.items.filter(it => it.aciertoB).length;
+  const ganaA = totalA > totalB, ganaB = totalB > totalA, empate = totalA === totalB;
+  return `
+    <div class="card" style="background:var(--ink);color:#fff;text-align:center;padding:28px 16px">
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999)">Resultado de ${esc(sen.label)}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
+        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoA)}</div><div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${totalA}</div></div>
+        <div style="opacity:.5;font-size:20px">—</div>
+        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div></div>
+      </div>
+      <div style="margin-top:12px;font-size:16px">${empate ? `🤝 Empate en ${esc(sen.label)}` : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana ${esc(sen.label)}`}</div>
+    </div>
+    <button class="btn btn-sm" onclick="tbBancoVolver(${day},'${sen.id}')">← Volver a los sonidos</button>
+    ${tbSiguienteSentidoBtn(day, sen.id)}
+  `;
+}
+function tbBancoAnadir(day, senId){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const banco = tb.sentidos[senId];
+  if(banco.items.length >= 10) return;
+  banco.items.push({nombre: '', url: null, revelado: false, aciertoA: false, aciertoB: false});
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbBancoBorrar(day, senId, idx){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId].items.splice(idx, 1);
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbBancoNombre(day, senId, idx, valor){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId].items[idx].nombre = valor;
+  saveRemoteBiz();
+}
+function tbBancoSubirAudio(ev, day, senId, idx){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const tb = tbGet(day);
+  if(!tb) return;
+  const it = tb.sentidos[senId].items[idx];
+  it.url = URL.createObjectURL(file);
+  if(!it.nombre) it.nombre = file.name.replace(/\.[^.]+$/, '');
+  renderTeamBuildingPage(day);
+}
+function tbBancoReproducir(url){
+  try{ new Audio(url).play(); }catch(e){}
+}
+function tbBancoRevelar(day, senId, idx){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId].items[idx].revelado = true;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbBancoAcierto(day, senId, idx, equipo){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const it = tb.sentidos[senId].items[idx];
+  const campo = equipo === 'A' ? 'aciertoA' : 'aciertoB';
+  it[campo] = !it[campo];
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbBancoTerminar(day, senId){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId].fase = 'resultado';
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbBancoVolver(day, senId){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId].fase = 'jugando';
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
@@ -3624,8 +3770,7 @@ function tbRenderFinal(box, day, tb){
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Desglose por prueba, en orden de juego (${esc(tb.equipoA)} / ${esc(tb.equipoB)})</div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>1. Test</span><span>${tb.kahoot.puntos.A} / ${tb.kahoot.puntos.B}</span></div>
       ${PLAN360_TB_SENTIDOS.map((sen, i) => {
-        const a = sen.id === 'vista' ? tbSopaTotal(tb.sentidos.vista, 'A') : tbRetoTotal(tb.sentidos[sen.id], 'A');
-        const b = sen.id === 'vista' ? tbSopaTotal(tb.sentidos.vista, 'B') : tbRetoTotal(tb.sentidos[sen.id], 'B');
+        const a = tbSentidoTotal(tb, sen.id, 'A'), b = tbSentidoTotal(tb, sen.id, 'B');
         return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>2.${i+1}. ${esc(sen.label)}</span><span>${a} / ${b}</span></div>`;
       }).join('')}
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>3. Creatividad</span><span>${tb.creatividad.puntos.A} / ${tb.creatividad.puntos.B}</span></div>
