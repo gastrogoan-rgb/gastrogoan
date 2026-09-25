@@ -5302,7 +5302,7 @@ function renderPlan360Grid(){
       <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
       <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
       ${atrasado ? `<div class="p360-day-tag" style="color:var(--red);font-weight:700"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.overdueShort'))}</div>`
-        : d.reviewType ? `<div class="p360-day-tag">${escapeHtml(t('plan360.reviewType.' + d.reviewType))}</div>` : ''}
+        : d.reunion ? `<div class="p360-day-tag">${escapeHtml(t('plan360.reviewType.' + d.reunion.tipo))}</div>` : ''}
       ${d.tasks.length ? `<div class="p360-day-progress">${done ? '<i class="ti ti-circle-check"></i>' : doneCount + '/' + d.tasks.length}</div>` : ''}
     </div>`;
   };
@@ -5800,11 +5800,12 @@ function renderPlan360Objectives(day){
   if(!plan360EsOwner()){ showToast(t('plan360.objectivesOwnerOnly')); renderPlan360PlanAccion(day); return; }
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
+  plan360ObjetivosDiaActivo = d;
   document.getElementById('plan360-content').innerHTML = `
     <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.objectives'))}</div>
     <div class="card" style="margin-top:14px">
-      <div id="p360-obj-list">${d.objectives.map((o, i) => plan360ObjectiveRow(o, i)).join('')}</div>
+      <div id="p360-obj-list">${d.objectives.map((o, i) => plan360ObjectiveRow(day, o, i)).join('')}</div>
       <button class="btn btn-sm" onclick="addPlan360Objective(${day})" style="margin:6px 0 16px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addObjective'))}</button>
       <button class="btn btn-primary" onclick="savePlan360ObjectivesOnly(${day})">${escapeHtml(t('common.save'))}</button>
     </div>
@@ -5893,8 +5894,16 @@ function renderPlan360ReunionReport(day){
     </div>
   `;
 }
-function plan360ObjectiveRow(o, i){
+// La métrica y sus mediciones son lo que distingue "hice las tareas" de
+// "el objetivo se está cumpliendo de verdad" — tareas tachadas miden
+// actividad, no resultado. El propietario dice CÓMO se mide su objetivo
+// (ej. "% de mermas semanales") y va anotando el valor cada vez que
+// corresponda (típicamente en cada reunión de seguimiento, ver
+// plan360ReunionAgendaHtml), quedando un historial real, no solo una lista
+// de tareas cerradas.
+function plan360ObjectiveRow(day, o, i){
   const col = plan360ObjPriorityColor(o.prioridad);
+  const mediciones = o.mediciones || [];
   return `<div class="card" style="margin-bottom:10px;${col ? 'border-left:4px solid ' + col : ''}">
     <div class="field" style="margin-bottom:8px">
       <label>${escapeHtml(t('plan360.objTitle'))}</label>
@@ -5904,7 +5913,7 @@ function plan360ObjectiveRow(o, i){
       <label>${escapeHtml(t('plan360.objWhy'))}</label>
       <textarea id="p360-obj-explicacion-${i}" rows="3">${escapeHtml(o.explicacion || '')}</textarea>
     </div>
-    <div class="field">
+    <div class="field" style="margin-bottom:8px">
       <label>${escapeHtml(t('plan360.objUrgency'))}</label>
       <select id="p360-obj-prioridad-${i}">
         <option value="prioritario" ${o.prioridad === 'prioritario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.prioritario'))}</option>
@@ -5912,21 +5921,52 @@ function plan360ObjectiveRow(o, i){
         <option value="complementario" ${o.prioridad === 'complementario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.complementario'))}</option>
       </select>
     </div>
+    <div class="field" style="margin-bottom:0">
+      <label>${escapeHtml(t('plan360.objMetric'))}</label>
+      <input id="p360-obj-metrica-${i}" value="${escapeHtml(o.metrica || '')}" placeholder="${escapeHtml(t('plan360.objMetricPlaceholder'))}">
+    </div>
+    ${o.metrica ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${escapeHtml(t('plan360.objMeasurements'))}</div>
+        ${mediciones.length ? mediciones.map(m => `<div style="display:flex;gap:8px;padding:3px 0;font-size:13px"><span class="muted" style="flex:none">${escapeHtml(m.fecha)}</span><span style="font-weight:600">${escapeHtml(m.valor)}</span>${m.nota ? `<span class="muted">— ${escapeHtml(m.nota)}</span>` : ''}</div>`).join('')
+          : `<p class="muted" style="margin:0;font-size:13px">${escapeHtml(t('plan360.objNoMeasurementsYet'))}</p>`}
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input id="p360-obj-medicion-${i}" placeholder="${escapeHtml(t('plan360.objMeasurementValue'))}" style="flex:1">
+          <button class="btn btn-sm" onclick="plan360AddMedicion(${i})">${escapeHtml(t('plan360.objMeasurementAdd'))}</button>
+        </div>
+      </div>` : ''}
   </div>`;
 }
+let plan360ObjetivosDiaActivo = null;
 function addPlan360Objective(day){
   if(!plan360EsOwner()) return;   // segunda barrera: la pantalla que llama aquí ya está gateada
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360SyncObjectivesFromForm(d);
-  d.objectives.push({id: genId(), titulo: '', explicacion: '', prioridad: 'esencial'});
-  document.getElementById('p360-obj-list').innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(o, i)).join('');
+  d.objectives.push({id: genId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: []});
+  document.getElementById('p360-obj-list').innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(day, o, i)).join('');
+}
+// La medición se guarda al momento (no espera al botón Guardar general de
+// la pantalla) porque es un hecho puntual — "hoy tocaba anotar el número"
+// — no un borrador de texto que tenga sentido dejar a medias.
+function plan360AddMedicion(i){
+  if(!plan360EsOwner() || !plan360ObjetivosDiaActivo) return;
+  const d = plan360ObjetivosDiaActivo;
+  const o = d.objectives[i];
+  const input = document.getElementById('p360-obj-medicion-' + i);
+  if(!o || !input || !input.value.trim()) return;
+  if(!Array.isArray(o.mediciones)) o.mediciones = [];
+  o.mediciones.push({fecha: todayStr(), valor: input.value.trim(), nota: ''});
+  saveDB();
+  document.getElementById('p360-obj-list').innerHTML = d.objectives.map((ob, j) => plan360ObjectiveRow(d.day, ob, j)).join('');
 }
 function plan360SyncObjectivesFromForm(d){
   d.objectives.forEach((o, i) => {
     const tituloEl = document.getElementById('p360-obj-titulo-' + i);
     const explEl = document.getElementById('p360-obj-explicacion-' + i);
     const prioEl = document.getElementById('p360-obj-prioridad-' + i);
+    const metricaEl = document.getElementById('p360-obj-metrica-' + i);
+    if(metricaEl) o.metrica = metricaEl.value.trim();
     if(tituloEl) o.titulo = tituloEl.value.trim();
     if(explEl) o.explicacion = explEl.value.trim();
     if(prioEl) o.prioridad = prioEl.value;
@@ -5968,11 +6008,81 @@ function renderPlan360TrabajoDetail(d){
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360ReunionCardHtml(d.day, d.reunion)}
     <div class="card" style="margin-top:14px">
       <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.tasks'))}</div>
       <div id="p360-task-list">${d.tasks.length ? d.tasks.map((tk, i) => plan360TaskRow(d.day, tk, i)).join('') : `<p class="muted">${escapeHtml(t('plan360.noTasksYet'))}</p>`}</div>
     </div>
   `;
+}
+// La reunión (presencial u online) la plantea el coach desde su panel:
+// tipo + agenda (qué objetivos se revisan ese día). El negocio la marca
+// como hecha, deja sus notas/acuerdos, y — el enlace real con "¿se está
+// cumpliendo el objetivo?" — puede anotar ahí mismo el valor de cada
+// métrica de la agenda, en el momento en que se acaba de hablar de ella.
+function plan360ReunionCardHtml(day, reunion){
+  if(!reunion) return '';
+  const dia2 = (DB.business.plan360Program || []).find(x => x.day === 2);
+  const objetivos = ((dia2 && dia2.objectives) || []).filter(o => (reunion.objectiveIds || []).includes(o.id));
+  const esOwner = plan360EsOwner();
+  return `<div class="card" style="margin-top:14px;border-color:var(--ink)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <i class="ti ${reunion.tipo === 'online' ? 'ti-video' : 'ti-users'}" style="font-size:20px"></i>
+      <strong style="flex:1">${escapeHtml(t('plan360.meeting'))} — ${escapeHtml(t('plan360.reviewType.' + reunion.tipo))}</strong>
+      <span class="p360-day-tag" style="margin:0;${reunion.hecha ? 'background:var(--green);color:#fff' : ''}">${escapeHtml(t(reunion.hecha ? 'plan360.meetingDone' : 'plan360.meetingPending'))}</span>
+    </div>
+    ${objetivos.length ? `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${escapeHtml(t('plan360.meetingAgenda'))}</div>
+      <ul style="margin:0 0 10px 18px;padding:0;font-size:13.5px">${objetivos.map(o => `<li>${escapeHtml(o.titulo)}</li>`).join('')}</ul>
+    ` : `<p class="muted" style="font-size:13px">${escapeHtml(t('plan360.meetingNoAgenda'))}</p>`}
+    ${esOwner && !reunion.hecha ? `<button class="btn btn-sm btn-primary" onclick="plan360MarcarReunionHecha(${day})">${escapeHtml(t('plan360.meetingMarkDone'))}</button>` : ''}
+    ${reunion.hecha && objetivos.length ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${escapeHtml(t('plan360.meetingLogProgress'))}</div>
+        ${objetivos.map(o => `
+          <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+            <span style="flex:1;font-size:13px">${escapeHtml(o.titulo)}</span>
+            ${esOwner ? `
+              <input id="p360-reunion-medicion-${o.id}" placeholder="${escapeHtml(t('plan360.objMeasurementValue'))}" style="width:110px">
+              <button class="btn btn-sm" onclick="plan360AddMedicionDesdeReunion(${day},${o.id})">${escapeHtml(t('plan360.objMeasurementAdd'))}</button>
+            ` : `<span class="muted" style="font-size:12px">${(o.mediciones || []).length ? escapeHtml(o.mediciones[o.mediciones.length - 1].valor) : '—'}</span>`}
+          </div>
+        `).join('')}
+      </div>` : ''}
+    ${esOwner ? `<div class="field" style="margin-top:10px">
+      <label>${escapeHtml(t('plan360.meetingNotes'))}</label>
+      <textarea id="p360-reunion-notas" rows="3" onchange="plan360SaveReunionNotas(${day},this.value)">${escapeHtml(reunion.notas || '')}</textarea>
+    </div>` : (reunion.notas ? `<p style="font-size:13px;margin-top:10px">${escapeHtml(reunion.notas)}</p>` : '')}
+  </div>`;
+}
+function plan360MarcarReunionHecha(day){
+  if(!plan360EsOwner()) return;
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunion) return;
+  d.reunion.hecha = true;
+  d.reunion.completadaAt = Date.now();
+  saveDB();
+  renderPlan360TrabajoDetail(d);
+}
+function plan360SaveReunionNotas(day, valor){
+  if(!plan360EsOwner()) return;
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunion) return;
+  d.reunion.notas = valor.trim();
+  saveDB();
+}
+function plan360AddMedicionDesdeReunion(day, objId){
+  if(!plan360EsOwner()) return;
+  const dia2 = (DB.business.plan360Program || []).find(x => x.day === 2);
+  if(!dia2) return;
+  const o = (dia2.objectives || []).find(x => x.id === objId);
+  const input = document.getElementById('p360-reunion-medicion-' + objId);
+  if(!o || !input || !input.value.trim()) return;
+  if(!Array.isArray(o.mediciones)) o.mediciones = [];
+  o.mediciones.push({fecha: todayStr(), valor: input.value.trim(), nota: ''});
+  saveDB();
+  input.value = '';
+  showToast(t('plan360.saved'));
 }
 function plan360TaskRow(day, tk, i){
   const obj = plan360ObjetivoDeTarea(tk);
@@ -6012,6 +6122,17 @@ function plan360SaveTaskNote(day, i, valor){
 }
 
 /* ---- ★ Resumen ---- */
+// De un vistazo: primer valor registrado vs. el último, para ver si el
+// objetivo se mueve de verdad — no solo si hay tareas tachadas debajo.
+function plan360MedicionesResumenHtml(obj){
+  if(!obj.metrica) return '';
+  const m = obj.mediciones || [];
+  if(!m.length) return `<p class="muted" style="margin:0 0 6px;font-size:12.5px">${escapeHtml(obj.metrica)} — ${escapeHtml(t('plan360.objNoMeasurementsYet'))}</p>`;
+  const primero = m[0], ultimo = m[m.length - 1];
+  return `<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
+    ${escapeHtml(obj.metrica)}: ${m.length > 1 ? `<strong style="color:var(--text)">${escapeHtml(primero.valor)}</strong> → ` : ''}<strong style="color:var(--text)">${escapeHtml(ultimo.valor)}</strong> <span>(${escapeHtml(ultimo.fecha)})</span>
+  </div>`;
+}
 function renderPlan360SummaryPage(){
   const prog = DB.business.plan360Program || [];
   const dia2 = prog.find(x => x.day === 2);
@@ -6039,6 +6160,7 @@ function renderPlan360SummaryPage(){
           <span style="width:9px;height:9px;border-radius:50%;background:${plan360ObjPriorityColor(g.obj.prioridad)};flex:none"></span>
           <strong style="flex:1">${escapeHtml(g.obj.titulo)}</strong>
         </div>
+        ${plan360MedicionesResumenHtml(g.obj)}
         ${g.tareas.length ? g.tareas.map(tareaLinea).join('') : `<p class="muted" style="margin:0;font-size:13px">${escapeHtml(t('plan360.noTasksYet'))}</p>`}
       </div>`).join('')}
   `;

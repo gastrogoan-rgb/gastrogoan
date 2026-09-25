@@ -1610,7 +1610,7 @@ function ensureRemotePlan360(){
       // se veía tal cual, en castellano fijo, como si fuera la primera
       // tarea de cada uno de los 26 días de trabajo para CUALQUIER
       // negocio, en cualquier idioma.
-      return {day: d.day, phase: 'trabajo', title: d.title, priority: null, reviewType: null, enfoqueTitulo: '', enfoqueColor: null, tasks: []};
+      return {day: d.day, phase: 'trabajo', title: d.title, priority: null, reunion: null, enfoqueTitulo: '', enfoqueColor: null, tasks: []};
     });
   }
   // Migración: negocios cuyo día 1 se creó antes de que existiera el
@@ -1741,6 +1741,14 @@ function ensureRemotePlan360(){
   (remoteBiz.plan360Program || []).filter(x => x.phase === 'trabajo').forEach(x => {
     if(x.enfoqueTitulo === undefined) x.enfoqueTitulo = '';
     if(x.enfoqueColor === undefined) x.enfoqueColor = null;
+    // Migración: el "Tipo de revisión" (una etiqueta suelta, sin agenda ni
+    // notas) pasa a ser una reunión de verdad — con qué objetivos se
+    // revisan y sitio para las conclusiones. Se conserva el tipo que ya
+    // hubiera elegido el coach.
+    if(x.reunion === undefined){
+      x.reunion = x.reviewType ? {tipo: x.reviewType, objectiveIds: [], notas: '', hecha: false, completadaAt: null} : null;
+    }
+    delete x.reviewType;
   });
   // Migración: objetivos de antes de que fueran título+porqué+urgencia
   // (eran solo texto+prioridad alta/media/baja) — se adaptan sin perder
@@ -1761,6 +1769,8 @@ function ensureRemotePlan360(){
       // (solo se leían por posición, y esa posición cambia al filtrar y
       // reordenar por prioridad en cada guardado).
       if(o.id === undefined) o.id = plan360GenId();
+      if(o.metrica === undefined) o.metrica = '';
+      if(!Array.isArray(o.mediciones)) o.mediciones = [];
     });
   });
   // Igual que los objetivos: las tareas de los 26 días de trabajo pasan
@@ -1895,7 +1905,7 @@ function renderClientGrid(){
     return `<div class="p360-day" style="${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
       <div class="p360-day-weekday">${esc(weekday)}</div>
       <div class="p360-day-date">${esc(dayMonth)}</div>
-      ${d.reviewType ? `<div class="p360-day-tag">${d.reviewType === 'presencial' ? 'Revisión presencial' : 'Reunión online'}</div>` : ''}
+      ${d.reunion ? `<div class="p360-day-tag">${d.reunion.tipo === 'presencial' ? 'Presencial' : 'Online'}</div>` : ''}
       ${d.tasks.length ? `<div class="p360-day-progress">${done ? '✓' : doneCount + '/' + d.tasks.length}</div>` : ''}
     </div>`;
   };
@@ -4496,14 +4506,29 @@ function renderTrabajoPage(d){
             <option value="baja" ${d.priority==='baja'?'selected':''}>Baja</option>
           </select>
         </div>
-        <div class="field" style="flex:1;margin-bottom:0"><label>Tipo de revisión</label>
-          <select id="day-reviewtype">
-            <option value="" ${!d.reviewType?'selected':''}>—</option>
-            <option value="presencial" ${d.reviewType==='presencial'?'selected':''}>Revisión presencial</option>
-            <option value="online" ${d.reviewType==='online'?'selected':''}>Reunión online</option>
-          </select>
-        </div>
       </div>
+      <div class="field"><label>Reunión de este día</label>
+        <select id="day-reunion-tipo" onchange="cambiarReunionTipo(${d.day}, this.value)">
+          <option value="" ${!d.reunion?'selected':''}>Sin reunión</option>
+          <option value="presencial" ${d.reunion && d.reunion.tipo==='presencial'?'selected':''}>Presencial</option>
+          <option value="online" ${d.reunion && d.reunion.tipo==='online'?'selected':''}>Online</option>
+        </select>
+      </div>
+      ${d.reunion ? `
+        <div class="card" style="margin-bottom:10px;background:var(--brand-cream)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Agenda — qué objetivos se revisan</div>
+          ${plan360ObjetivosDelDia2().length ? plan360ObjetivosDelDia2().map(o => `
+            <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
+              <input type="checkbox" ${d.reunion.objectiveIds.includes(o.id)?'checked':''} onchange="toggleReunionObjetivo(${d.day},${o.id},this.checked)">
+              <span>${esc(o.titulo)}</span>
+            </label>
+          `).join('') : '<p class="muted" style="margin:0">Todavía no hay objetivos en el Día 2.</p>'}
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${d.reunion.hecha?'var(--green)':'var(--muted)'}">${d.reunion.hecha?'Hecha':'Pendiente'}</span>
+            ${d.reunion.notas ? `<p style="font-size:13px;margin:8px 0 0">${esc(d.reunion.notas)}</p>` : '<p class="muted" style="font-size:12px;margin:8px 0 0">Todavía sin notas del negocio.</p>'}
+          </div>
+        </div>
+      ` : ''}
       <div style="font-weight:600;margin-bottom:6px">Tareas</div>
       ${!plan360ObjetivosDelDia2().length ? `<p class="muted" style="margin-bottom:10px">Todavía no hay objetivos fijados en el Día 2 — las tareas se pueden crear igual, pero sin enganchar a ninguno hasta que el negocio los ponga.</p>` : ''}
       <div id="task-list">${d.tasks.map((tk, i) => taskRow(tk, i)).join('')}</div>
@@ -4544,12 +4569,29 @@ function readFileAsDataUrl(file){
   });
 }
 let plan360TrabajoDiaActivo = null;
+// La reunión se guarda al momento (cambiarReunionTipo/toggleReunionObjetivo),
+// no espera al botón Guardar general — así el select y los checks de la
+// agenda no se pierden si el coach navega a otro día antes de guardar.
+function cambiarReunionTipo(day, tipo){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  d.reunion = tipo ? (d.reunion ? {...d.reunion, tipo} : {tipo, objectiveIds: [], notas: '', hecha: false, completadaAt: null}) : null;
+  saveRemoteBiz();
+  renderTrabajoPage(d);
+}
+function toggleReunionObjetivo(day, objId, checked){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunion) return;
+  const set = new Set(d.reunion.objectiveIds);
+  if(checked) set.add(objId); else set.delete(objId);
+  d.reunion.objectiveIds = [...set];
+  saveRemoteBiz();
+}
 async function saveTrabajo(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d) return;
   d.title = (document.getElementById('day-title').value || '').trim() || d.title;
   d.priority = document.getElementById('day-priority').value || null;
-  d.reviewType = document.getElementById('day-reviewtype').value || null;
   syncTasksFromForm(d);
   d.tasks = d.tasks.filter(tk => tk.title);
   for(let i = 0; i < d.tasks.length; i++){
@@ -4568,6 +4610,19 @@ async function saveTrabajo(day){
    es la vista que deja ver de un vistazo si el trabajo de las 4 semanas
    está repartido de verdad entre los objetivos del Día 2, o si alguno se
    ha quedado sin ninguna tarea detrás. ---- */
+// Mismo cálculo que plan360MedicionesResumenHtml en js/app.js (que el
+// negocio ve en su propia app): primer valor vs. último, para que tú
+// también veas si el objetivo se mueve de verdad, no solo si hay tareas
+// tachadas debajo.
+function plan360MedicionesResumenHtml(obj){
+  if(!obj.metrica) return '';
+  const m = obj.mediciones || [];
+  if(!m.length) return `<p class="muted" style="margin:0 0 6px;font-size:12.5px">${esc(obj.metrica)} — todavía sin ninguna medición</p>`;
+  const primero = m[0], ultimo = m[m.length - 1];
+  return `<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
+    ${esc(obj.metrica)}: ${m.length > 1 ? `<strong style="color:var(--text)">${esc(primero.valor)}</strong> → ` : ''}<strong style="color:var(--text)">${esc(ultimo.valor)}</strong> <span>(${esc(ultimo.fecha)})</span>
+  </div>`;
+}
 function renderSummaryPage(){
   const prog = remoteBiz.plan360Program || [];
   const dia2 = prog.find(x => x.day === 2);
@@ -4597,6 +4652,7 @@ function renderSummaryPage(){
           <strong style="flex:1">${esc(g.obj.titulo)}</strong>
           <span class="muted" style="font-size:12px">${g.tareas.length} tarea${g.tareas.length === 1 ? '' : 's'}</span>
         </div>
+        ${plan360MedicionesResumenHtml(g.obj)}
         ${g.tareas.length ? g.tareas.map(tareaLinea).join('')
           : '<p style="margin:0;font-size:13px;color:var(--red)">⚠ Sin ninguna tarea asignada todavía en los 26 días de trabajo.</p>'}
       </div>`).join('')}

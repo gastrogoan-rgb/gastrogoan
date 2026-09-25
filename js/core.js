@@ -2368,7 +2368,7 @@ function ensurePlan360Program(){
       // diseñado, no un encargo real — ver el mismo comentario en
       // admin-panel/plan360.html, que debe quedar igual que aquí.
       return {day: d.day, phase: 'trabajo', title: d.title,
-        priority: null, reviewType: null, enfoqueTitulo: '', enfoqueColor: null,
+        priority: null, reunion: null, enfoqueTitulo: '', enfoqueColor: null,
         tasks: []};
     });
   }
