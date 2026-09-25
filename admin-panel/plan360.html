@@ -1599,6 +1599,8 @@ function ensureRemotePlan360(){
         }
         if(d.day === 2){
           dia.objectives = [];
+          dia.inversiones = [];
+          dia.presupuestoMaximo = '';
           dia.masterclass = plan360FreshMasterclass();
           dia.teamBuilding = plan360FreshTeamBuilding();
         }
@@ -1630,6 +1632,8 @@ function ensureRemotePlan360(){
   if(dia1Existente && Array.isArray(dia1Existente.objectives)){
     delete dia1Existente.objectives;
   }
+  if(dia2Existente && !Array.isArray(dia2Existente.inversiones)) dia2Existente.inversiones = [];
+  if(dia2Existente && dia2Existente.presupuestoMaximo === undefined) dia2Existente.presupuestoMaximo = '';
   // Migración: la primera versión de Masterclass/Team building era una
   // nota libre ({notas, completadoAt}); ahora son checklist y guion
   // reales ({items,...}/{script,...}). Sin uso real todavía (recién
@@ -1812,7 +1816,7 @@ function ensureRemotePlan360(){
     });
   }
   if(!remoteBiz.plan360StartDate) remoteBiz.plan360StartDate = todayStr();
-  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = {mensajeMantenimiento: ''};
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
   if(!remoteBiz.plan360Contract){
     remoteBiz.plan360Contract = {
       clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '', formaPago: '',
@@ -1943,14 +1947,76 @@ function renderClientGrid(){
 // el mensaje del plan de mantenimiento, que es tuyo para escribir.
 const PLAN360_ESTADO_FINAL_LABEL = {cumplido: 'Cumplido', parcial: 'Parcial', no_cumplido: 'No cumplido'};
 const PLAN360_ESTADO_FINAL_COLOR = {cumplido: 'var(--green)', parcial: 'var(--amber)', no_cumplido: 'var(--red)'};
+// Mismo documento fuente que "6- OBJETIVOS ALCANZADOS + SEGUIMIENTO" del
+// Drive: la tabla fija de 7 KPI (no la métrica libre de cada objetivo,
+// que es aparte), el recuento de acciones por nivel de color, y la
+// oferta REAL del plan de mantenimiento — con precio y un sitio para que
+// el negocio firme, no un mensaje suelto.
+function plan360FreshCierre(){
+  return {
+    kpis: {}, mejorasVisibles: '', queVigilar: '', siguienteNivel: '',
+    mantenimiento: {precio: '99€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
+  };
+}
+const PLAN360_CIERRE_KPIS = [
+  {key: 'notaLocal', label: 'Nota media del local (/10)'},
+  {key: 'ticketMedio', label: 'Ticket medio'},
+  {key: 'foodCostPct', label: 'Food cost aprox. (%)'},
+  {key: 'costePersonalPct', label: 'Coste de personal (%)'},
+  {key: 'ventasMensuales', label: 'Ventas mensuales'},
+  {key: 'resenasGoogle', label: 'Nota / nº de reseñas Google'},
+  {key: 'horasSemanaDueno', label: 'Horas/semana del dueño'},
+];
+function plan360CierreKpi(cierre, key){
+  if(!cierre.kpis) cierre.kpis = {};
+  if(!cierre.kpis[key]) cierre.kpis[key] = {antes: '', hoy: ''};
+  return cierre.kpis[key];
+}
+// No hace falta que nadie cuente a mano cuántas acciones de cada color se
+// cerraron: cada tarea ya sabe a qué objetivo está enganchada, y cada
+// objetivo ya sabe su nivel (prioritario/esencial/complementario =
+// rojo/amarillo/verde) — se cuenta solo.
+function plan360AccionesPorNivel(){
+  const dia2 = (remoteBiz.plan360Program || []).find(x => x.day === 2);
+  const objetivos = ((dia2 && dia2.objectives) || []);
+  const trabajo = (remoteBiz.plan360Program || []).filter(x => x.phase === 'trabajo');
+  const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.filter(tk => tk.title)), []);
+  return ['prioritario', 'esencial', 'complementario'].map(nivel => {
+    const idsDeNivel = new Set(objetivos.filter(o => o.prioridad === nivel).map(o => o.id));
+    const deEseNivel = tareas.filter(tk => idsDeNivel.has(tk.objectiveId));
+    return {nivel, total: deEseNivel.length, hechas: deEseNivel.filter(tk => tk.status === 'hecha').length};
+  });
+}
+const PLAN360_NIVEL_LABEL = {prioritario: 'Prioritario', esencial: 'Esencial', complementario: 'Complementario'};
 function plan360CierreHtml(){
   const dia2 = (remoteBiz.plan360Program || []).find(x => x.day === 2);
   const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
-  const cierre = remoteBiz.plan360Cierre || {mensajeMantenimiento: ''};
+  const cierre = remoteBiz.plan360Cierre || plan360FreshCierre();
+  const dia1 = (remoteBiz.plan360Program || []).find(x => x.day === 1);
+  const notaMisterio = dia1 && dia1.misteryCheck ? plan360MisteryOverallAvg(dia1.misteryCheck) : null;
+  const m = cierre.mantenimiento || {};
   return `
     <div class="p360-week">
       <div class="p360-week-label">Cierre y próximos pasos</div>
-      <div class="card">
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-weight:600;margin-bottom:8px">Los números: antes → hoy</div>
+        ${notaMisterio !== null ? `<button class="btn btn-sm" style="margin-bottom:8px" onclick="plan360CierreUsarNotaMisterio(${notaMisterio})">Usar la nota del cliente misterioso (${notaMisterio}) como "antes"</button>` : ''}
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center">
+          <div></div><div style="font-size:11px;color:var(--muted);text-align:center">Antes</div><div style="font-size:11px;color:var(--muted);text-align:center">Hoy</div>
+          ${PLAN360_CIERRE_KPIS.map(k => {
+            const v = plan360CierreKpi(cierre, k.key);
+            return `<div style="font-size:13px">${esc(k.label)}</div>
+              <input value="${esc(v.antes)}" onchange="guardarCierreKpi('${k.key}','antes',this.value)" style="width:90px">
+              <input value="${esc(v.hoy)}" onchange="guardarCierreKpi('${k.key}','hoy',this.value)" style="width:90px">`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-weight:600;margin-bottom:8px">Acciones completadas por nivel</div>
+        ${plan360AccionesPorNivel().map(n => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px"><span>${PLAN360_NIVEL_LABEL[n.nivel]}</span><span>${n.hechas} / ${n.total}</span></div>`).join('')}
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-weight:600;margin-bottom:8px">Objetivos</div>
         ${!objetivos.length ? '<p class="muted">Todavía no hay objetivos definidos en el Día 2.</p>' : objetivos.map(o => `
           <div style="padding:8px 0;border-bottom:1px solid var(--border)">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -1965,25 +2031,60 @@ function plan360CierreHtml(){
             ${plan360MedicionesResumenHtml(o)}
           </div>`).join('')}
       </div>
-      <div class="card" style="margin-top:10px">
-        <div class="field" style="margin-bottom:8px"><label>Mensaje del plan de mantenimiento</label>
-          <textarea id="cierre-mantenimiento" rows="4" placeholder="Lo que sigue después de estas 4 semanas...">${esc(cierre.mensajeMantenimiento || '')}</textarea>
+      <div class="card" style="margin-bottom:10px">
+        <div class="field" style="margin-bottom:8px"><label>3 mejoras más visibles</label>
+          <textarea rows="2" onchange="guardarCierreTexto('mejorasVisibles',this.value)">${esc(cierre.mejorasVisibles || '')}</textarea>
         </div>
-        <button class="btn btn-sm" onclick="guardarMensajeMantenimiento()">Guardar</button>
+        <div class="field" style="margin-bottom:8px"><label>Qué hay que vigilar para no retroceder</label>
+          <textarea rows="2" onchange="guardarCierreTexto('queVigilar',this.value)">${esc(cierre.queVigilar || '')}</textarea>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>El siguiente nivel (3-6 meses)</label>
+          <textarea rows="2" onchange="guardarCierreTexto('siguienteNivel',this.value)">${esc(cierre.siguienteNivel || '')}</textarea>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:8px">Plan de Mantenimiento GastroGoan</div>
+        <p class="muted" style="margin:0 0 8px;font-size:13px">WhatsApp de apoyo · videollamada cada 2 semanas · apoyo presencial a precio reducido.</p>
+        <div class="field" style="margin-bottom:8px;max-width:160px"><label>Precio</label>
+          <input value="${esc(m.precio || '99€/mes')}" onchange="guardarCierreMantenimientoPrecio(this.value)">
+        </div>
+        ${m.respuesta ? `
+          <div class="card" style="background:${m.respuesta==='acepta'?'var(--green-l)':'var(--amber-l)'};border-color:${m.respuesta==='acepta'?'var(--green)':'var(--amber)'}">
+            ${m.respuesta==='acepta'
+              ? `✓ El negocio ha activado el plan de mantenimiento — firmado por <strong>${esc(m.firmaNombre)}</strong> el ${esc(new Date(m.firmaFecha).toLocaleDateString('es-ES'))}.`
+              : `El negocio se lo piensa. Volver a hablar el: <strong>${esc(m.volverAHablarFecha || '—')}</strong>.`}
+          </div>` : `<p class="muted" style="font-size:12px;margin:0">Todavía no ha respondido — se lo enseñas en su app, en su propio Cierre.</p>`}
       </div>
     </div>
   `;
+}
+function plan360CierreUsarNotaMisterio(nota){
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
+  plan360CierreKpi(remoteBiz.plan360Cierre, 'notaLocal').antes = String(nota);
+  saveRemoteBiz();
+  renderClientGrid();
+}
+function guardarCierreKpi(key, cual, valor){
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
+  plan360CierreKpi(remoteBiz.plan360Cierre, key)[cual] = valor.trim();
+  saveRemoteBiz();
+}
+function guardarCierreTexto(campo, valor){
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
+  remoteBiz.plan360Cierre[campo] = valor.trim();
+  saveRemoteBiz();
+}
+function guardarCierreMantenimientoPrecio(valor){
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
+  if(!remoteBiz.plan360Cierre.mantenimiento) remoteBiz.plan360Cierre.mantenimiento = {precio: '', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null};
+  remoteBiz.plan360Cierre.mantenimiento.precio = valor.trim();
+  saveRemoteBiz();
 }
 function cambiarEstadoFinalObjetivo(objId, valor){
   const dia2 = (remoteBiz.plan360Program || []).find(x => x.day === 2);
   const o = dia2 && (dia2.objectives || []).find(x => x.id === objId);
   if(!o) return;
   o.estadoFinal = valor || null;
-  saveRemoteBiz();
-}
-function guardarMensajeMantenimiento(){
-  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = {mensajeMantenimiento: ''};
-  remoteBiz.plan360Cierre.mensajeMantenimiento = (document.getElementById('cierre-mantenimiento').value || '').trim();
   saveRemoteBiz();
 }
 function plan360PageHeader(title, subtitle){

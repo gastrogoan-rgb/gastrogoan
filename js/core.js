@@ -2360,6 +2360,8 @@ function ensurePlan360Program(){
         }
         if(d.day === 2){
           dia.objectives = [];
+          dia.inversiones = [];
+          dia.presupuestoMaximo = '';
         }
         return dia;
       }
@@ -2427,12 +2429,15 @@ function ensurePlan360Program(){
     };
   }
   if(DB.business.plan360WelcomeShown === undefined) DB.business.plan360WelcomeShown = false;
-  // El cierre del programa: qué objetivos se cumplieron de verdad (lo
-  // decide el coach en la revisión final) y el mensaje del plan de
-  // mantenimiento — vive aparte de plan360Program porque es del programa
-  // entero, no de un día concreto.
+  // El cierre del programa: los KPI antes/hoy, lo que sigue pendiente y la
+  // oferta del plan de mantenimiento — vive aparte de plan360Program
+  // porque es del programa entero, no de un día concreto. Mismo documento
+  // fuente que "6- OBJETIVOS ALCANZADOS + SEGUIMIENTO" del Drive.
   if(!DB.business.plan360Cierre){
-    DB.business.plan360Cierre = {mensajeMantenimiento: ''};
+    DB.business.plan360Cierre = {
+      kpis: {}, mejorasVisibles: '', queVigilar: '', siguienteNivel: '',
+      mantenimiento: {precio: '99€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
+    };
   }
   saveDB();
 }
