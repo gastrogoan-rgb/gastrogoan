@@ -1425,6 +1425,8 @@ function plan360FreshTeamBuilding(){
       puntosPrueba: 3,
       puntos: {A: 0, B: 0},
       resuelta: false,
+      fotoA: null,
+      fotoB: null,
     },
     premio: '',
     completadoAt: null,
@@ -3020,8 +3022,22 @@ const PLAN360_TB_RETO_HINT = {
   gusto: 'Cada equipo prepara muestras para que pruebe el otro a ciegas. Anota cada una y marca si acertaron qué era.',
   tacto: 'Cada equipo prepara objetos para tocar con los ojos vendados. Anota cada uno y marca si acertaron.',
 };
+// El Test arranca con 30 preguntas listas y la sopa con 12 palabras —
+// Oído/Olfato/Gusto/Tacto en cambio arrancaban en una lista vacía del
+// todo, sin ni una idea, que es justo lo que hacía que se sintieran
+// "menos cuidados" que el resto. Con estas sugerencias (un toque y se
+// añaden) el coach parte de algo en vez de la hoja en blanco — las puede
+// borrar o cambiar igual que cualquier otra.
+const PLAN360_TB_SUGERENCIAS = {
+  oido: ['Freidora', 'Campana del pase', 'Cafetera espresso', 'Cuchillo sobre la tabla', 'Hielo en la coctelera', 'Grifo de cerveza', 'Máquina de café moliendo', 'Silla arrastrándose', 'Corcho al descorchar', 'Lavavajillas'],
+  olfato: ['Canela', 'Albahaca fresca', 'Café molido', 'Ajo', 'Limón', 'Vinagre', 'Chocolate', 'Romero', 'Café con leche', 'Aceite de oliva'],
+  gusto: ['Limón', 'Sal', 'Azúcar', 'Vinagre', 'Miel', 'Café solo', 'Guindilla', 'Menta', 'Chocolate negro', 'Aceituna'],
+  tacto: ['Hielo', 'Harina', 'Un limón entero', 'Servilleta de tela', 'Cuchara de madera', 'Papel de aluminio', 'Un corcho', 'Sal gorda', 'Piel de naranja', 'Posavasos de corcho'],
+};
 function tbRenderRetoLista(day, senId, lado, items, equipoQuePrepara, equipoQueAdivina, necesitaAudio){
   const total = items.length, acertados = items.filter(it => it.adivinado === true).length;
+  const usadas = new Set(items.map(it => it.nombre));
+  const sugerencias = (PLAN360_TB_SUGERENCIAS[senId] || []).filter(s => !usadas.has(s));
   return `
     <div style="flex:1;min-width:240px">
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Preparó <strong>${esc(equipoQuePrepara)}</strong> · adivina <strong>${esc(equipoQueAdivina)}</strong> (${acertados}/${total})</div>
@@ -3038,6 +3054,13 @@ function tbRenderRetoLista(day, senId, lado, items, equipoQuePrepara, equipoQueA
           <button class="btn btn-sm btn-icon" onclick="tbRetoBorrar(${day},'${senId}','${lado}',${idx})" title="Quitar"><i class="ti ti-trash"></i></button>
         </div>`).join('')}
       <button class="btn btn-sm" style="margin-top:8px" onclick="tbRetoAnadir(${day},'${senId}','${lado}')"><i class="ti ti-plus"></i> Añadir</button>
+      ${sugerencias.length ? `
+        <div style="margin-top:10px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ideas rápidas (un toque para añadir):</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            ${sugerencias.slice(0, 6).map(s => `<button class="btn btn-sm" onclick="tbRetoAnadirSugerida(${day},'${senId}','${lado}','${esc(s).replace(/'/g,"\\'")}')" style="font-size:11px;padding:4px 9px">${esc(s)}</button>`).join('')}
+          </div>
+        </div>` : ''}
     </div>`;
 }
 function tbRenderReto(day, tb, sen){
@@ -3061,6 +3084,13 @@ function tbRetoAnadir(day, senId, lado){
   const tb = tbGet(day);
   if(!tb) return;
   tb.sentidos[senId][lado].push({nombre: '', url: null, adivinado: null});
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbRetoAnadirSugerida(day, senId, lado, nombre){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos[senId][lado].push({nombre, url: null, adivinado: null});
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
@@ -3280,6 +3310,13 @@ function tbRenderCreatividad(box, day, tb){
       <div class="field"><label>Puntos de la prueba para quien gane</label><input type="number" value="${c.puntosPrueba}" onchange="tbCreatividadCampo(${day},'puntosPrueba',this.value)" style="max-width:100px"></div>
     </div>
     <div class="card">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Foto del plato o bebida de cada equipo — queda guardada para enseñarla en el marcador final.</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        ${tbCreatividadFotoBox(day, 'A', tb.equipoA, c.fotoA)}
+        ${tbCreatividadFotoBox(day, 'B', tb.equipoB, c.fotoB)}
+      </div>
+    </div>
+    <div class="card">
       <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Puntúa cada criterio del 0 al 10 por equipo. El de más nota se lleva los ${c.puntosPrueba} puntos de la prueba.</div>
       <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px 14px;align-items:center">
         <div></div>
@@ -3311,6 +3348,30 @@ function tbCreatividadCampo(day, campo, valor){
   tb.creatividad[campo] = (campo === 'brief') ? valor : (Number(valor) || 0);
   saveRemoteBiz();
   if(campo === 'puntosPrueba') renderTeamBuildingPage(day);
+}
+// Mismo criterio que el audio de Oído: blob LOCAL del navegador
+// (URL.createObjectURL), sin subir a ningún sitio — vale para enseñarla
+// en el momento y en el marcador final de esa misma sesión, pero no
+// sobrevive a un refresco de página.
+function tbCreatividadFotoBox(day, equipo, nombreEquipo, url){
+  return `
+    <div style="flex:1;min-width:160px;text-align:center">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${esc(nombreEquipo)}</div>
+      ${url ? `<img src="${esc(url)}" style="width:100%;max-width:200px;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--border)">`
+            : `<div style="width:100%;max-width:200px;aspect-ratio:1;border-radius:10px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto;color:var(--muted)"><i class="ti ti-camera" style="font-size:28px"></i></div>`}
+      <label class="btn btn-sm" style="margin-top:8px;cursor:pointer;display:inline-flex">
+        <i class="ti ti-upload"></i> ${url ? 'Cambiar foto' : 'Subir foto'}
+        <input type="file" accept="image/*" style="display:none" onchange="tbCreatividadFoto(event,${day},'${equipo}')">
+      </label>
+    </div>`;
+}
+function tbCreatividadFoto(ev, day, equipo){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.creatividad[equipo === 'A' ? 'fotoA' : 'fotoB'] = URL.createObjectURL(file);
+  renderTeamBuildingPage(day);
 }
 function tbCreatividadNota(day, equipo, criterio, valor){
   const tb = tbGet(day);
@@ -3376,6 +3437,14 @@ function tbRenderFinal(box, day, tb){
       <div style="flex:1"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">${esc(tb.equipoA)}</div><div style="white-space:pre-line;font-size:13px">${esc(tb.integrantesA || '—')}</div></div>
       <div style="flex:1"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">${esc(tb.equipoB)}</div><div style="white-space:pre-line;font-size:13px">${esc(tb.integrantesB || '—')}</div></div>
     </div>` : ''}
+    ${(tb.creatividad.fotoA || tb.creatividad.fotoB) ? `
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Lo que hicieron en la Prueba 3</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        ${tb.creatividad.fotoA ? `<div style="text-align:center"><img src="${esc(tb.creatividad.fotoA)}" style="width:160px;height:160px;object-fit:cover;border-radius:10px;border:1px solid var(--border)"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoA)}</div></div>` : ''}
+        ${tb.creatividad.fotoB ? `<div style="text-align:center"><img src="${esc(tb.creatividad.fotoB)}" style="width:160px;height:160px;object-fit:cover;border-radius:10px;border:1px solid var(--border)"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoB)}</div></div>` : ''}
+      </div>
+    </div>` : ''}
     <div class="card">
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Desglose por prueba, en orden de juego (${esc(tb.equipoA)} / ${esc(tb.equipoB)})</div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>1. Test</span><span>${tb.kahoot.puntos.A} / ${tb.kahoot.puntos.B}</span></div>
@@ -3393,7 +3462,7 @@ function tbRenderFinal(box, day, tb){
         ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" onclick="tbElegirPremio(${day},'${esc(p).replace(/'/g,"\\'")}')" style="font-size:11px;padding:5px 9px">${esc(p)}</button>`).join('')}
       </div>
       <button class="btn btn-sm" onclick="tbGuardarPremio(${day})">Guardar premio</button>
-      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} onclick="tbRevelarPremio('${esc(ganador||'')}','${esc(tb.premio||'')}')" style="margin-left:6px">🎬 Revelar ganador</button>
+      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} onclick="tbRevelarPremio('${esc(ganador||'')}','${esc(tb.premio||'')}','${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}')" style="margin-left:6px">🎬 Revelar ganador</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-sm" onclick="tbReiniciar(${day})">↺ Reiniciar las 3 pruebas</button>
@@ -3419,23 +3488,26 @@ function tbElegirPremio(day, texto){
 // El revelado: pantalla completa, oscuro, un poco de suspense y luego el
 // nombre del equipo entrando en grande — lo que pidió el coach para el
 // momento del premio, no un simple "gana fulano" en una línea de texto.
-function tbRevelarPremio(ganador, premio){
+function tbRevelarPremio(ganador, premio, foto){
   if(!ganador) return;
   const overlay = document.createElement('div');
   overlay.id = 'tb-revelado';
-  overlay.style.cssText = 'position:fixed;inset:0;background:#0A0A0A;color:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;font-family:inherit;animation:tbFadeIn .4s ease';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#0A0A0A;color:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;font-family:inherit;animation:tbFadeIn .4s ease;overflow:auto';
   overlay.innerHTML = `
     <style>
       @keyframes tbFadeIn{from{opacity:0}to{opacity:1}}
       @keyframes tbPulso{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
       @keyframes tbEntra{from{opacity:0;transform:scale(.5) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
       @keyframes tbFlota{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+      @keyframes tbCae{0%{transform:translateY(-40px) rotate(0deg);opacity:1}100%{transform:translateY(560px) rotate(360deg);opacity:.2}}
     </style>
+    <div id="tb-rev-confeti" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
     <div id="tb-rev-suspense" style="font-size:16px;letter-spacing:3px;text-transform:uppercase;color:var(--muted,#999);animation:tbPulso 1s infinite">Calculando resultados…</div>
     <div id="tb-rev-final" style="display:none">
       <div style="font-size:64px;animation:tbFlota 2s ease-in-out infinite">🏆</div>
       <div style="font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--brand-orange,#F0A868);margin-top:10px">¡Habéis ganado!</div>
       <div style="font-size:44px;font-weight:800;margin-top:6px">${esc(ganador)}</div>
+      ${foto ? `<img src="${esc(foto)}" style="width:140px;height:140px;object-fit:cover;border-radius:14px;margin-top:18px;border:3px solid var(--brand-orange,#F0A868)">` : ''}
       ${premio ? `<div style="margin-top:24px;padding:16px 24px;border:1px solid rgba(255,255,255,.25);border-radius:12px;font-size:18px;max-width:460px">${esc(premio)}</div>` : ''}
       <button onclick="document.getElementById('tb-revelado').remove()" style="margin-top:32px;background:#fff;color:#0A0A0A;border:none;padding:12px 26px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">Cerrar</button>
     </div>
@@ -3446,6 +3518,17 @@ function tbRevelarPremio(ganador, premio){
     const final = document.getElementById('tb-rev-final');
     final.style.display = 'block';
     final.style.animation = 'tbEntra .6s cubic-bezier(.2,1.3,.4,1)';
+    tbAcorde();
+    // Un puñado de confeti CSS, nada de librerías: cuadraditos de color
+    // cayendo desde arriba, cada uno con su propio retraso y deriva.
+    const colores = ['#F0A868', '#E53E3E', '#3182CE', '#38A169', '#D69E2E'];
+    const capa = document.getElementById('tb-rev-confeti');
+    for(let i = 0; i < 40; i++){
+      const pieza = document.createElement('div');
+      const izq = Math.random() * 100;
+      pieza.style.cssText = `position:absolute;top:-20px;left:${izq}%;width:8px;height:14px;background:${colores[i % colores.length]};animation:tbCae ${2 + Math.random()*1.5}s linear ${Math.random()*0.6}s forwards`;
+      capa.appendChild(pieza);
+    }
   }, 1600);
 }
 /* ---- Reunión inicial: guion de 10 preguntas con dictado por voz ----
