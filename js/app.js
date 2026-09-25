@@ -5192,11 +5192,82 @@ function plan360ConfirmWelcome(){
   plan360PingActivity();
   renderPlan360Grid();
 }
+// Qué día N del programa cae HOY, comparando la fecha real contra
+// plan360StartDate — así "Hoy" y "atrasado" se calculan contra el
+// calendario, no contra un contador suelto. Devuelve null si el negocio
+// todavía no tiene fecha de arranque fijada (no debería pasar: se fija
+// sola al crear el programa, ver ensurePlan360Program en js/core.js).
+function plan360DiaDeHoy(){
+  const start = DB.business.plan360StartDate;
+  if(!start) return null;
+  const [ys, ms, ds] = start.split('-').map(Number);
+  const [yt, mt, dt] = todayStr().split('-').map(Number);
+  const diffDays = Math.round((new Date(yt, mt - 1, dt) - new Date(ys, ms - 1, ds)) / 86400000);
+  return diffDays + 1;
+}
+// Cualquier tarea de un día de trabajo YA PASADO que no esté "hecha" —
+// da igual que esté en pendiente o en no_hecha, las dos cuentan como
+// trabajo que se quedó sin cerrar. Es la pieza que de verdad desincentiva
+// posponer: lo que no se hizo no desaparece, se acumula y se ve.
+function plan360TareasAtrasadas(diaHoy){
+  const prog = DB.business.plan360Program || [];
+  const atrasadas = [];
+  prog.filter(d => d.phase === 'trabajo' && d.day < diaHoy).forEach(d => {
+    (d.tasks || []).forEach((tk, i) => {
+      if(tk.title && tk.status !== 'hecha') atrasadas.push({day: d.day, i, tk, retraso: diaHoy - d.day});
+    });
+  });
+  return atrasadas;
+}
+// La tarjeta "Hoy": lo primero que se ve al entrar a Plan 360°, sin tener
+// que buscar el día en el calendario de abajo. Muestra las tareas de HOY
+// mismo (con sus botones de estado, ya operativos) y, si las hay, las
+// atrasadas de días anteriores — con cuántos días de retraso llevan cada
+// una, para que ignorarlas cueste ver algo en vez de no ver nada.
+function plan360HoyCardHtml(){
+  const diaHoy = plan360DiaDeHoy();
+  if(diaHoy === null) return '';
+  const prog = DB.business.plan360Program || [];
+  const dHoy = prog.find(x => x.day === diaHoy);
+  const atrasadas = plan360TareasAtrasadas(diaHoy);
+  const fechaHoy = dHoy ? plan360FormatDate(diaHoy) : {weekday: '', dayMonth: ''};
+
+  let cuerpoHoy;
+  if(!dHoy){
+    cuerpoHoy = `<p class="muted" style="margin:0">${escapeHtml(t(diaHoy < 1 ? 'plan360.programNotStartedYet' : 'plan360.programFinished'))}</p>`;
+  } else if(dHoy.phase === 'presencial'){
+    cuerpoHoy = `<p style="margin:0;font-size:13.5px">${escapeHtml(t('plan360.todayIsPresencial'))}</p>`;
+  } else {
+    const conTitulo = dHoy.tasks.filter(tk => tk.title);
+    cuerpoHoy = conTitulo.length
+      ? dHoy.tasks.map((tk, i) => tk.title ? plan360TaskRow(diaHoy, tk, i) : '').join('')
+      : `<p class="muted" style="margin:0">${escapeHtml(t('plan360.todayNoTasks'))}</p>`;
+  }
+
+  return `<div class="card" style="margin-bottom:14px;border:2px solid var(--ink)">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+      <strong style="font-size:16px"><i class="ti ti-sun"></i> ${escapeHtml(t('plan360.today'))}</strong>
+      ${dHoy ? `<span class="muted" style="font-size:12px">${escapeHtml(fechaHoy.weekday)} · ${escapeHtml(fechaHoy.dayMonth)}</span>` : ''}
+    </div>
+    ${cuerpoHoy}
+    ${atrasadas.length ? `
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-weight:700;color:var(--red);font-size:13px;margin-bottom:8px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.overdue'))} (${atrasadas.length})</div>
+        ${atrasadas.map(a => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);cursor:pointer" onclick="renderPlan360DayDetail(${a.day})">
+            <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:var(--red);flex:none;white-space:nowrap">${escapeHtml(a.retraso === 1 ? t('plan360.overdueOneDay') : t('plan360.overdueDays').replace('${n}', String(a.retraso)))}</span>
+            <span style="flex:1;font-size:13px">${escapeHtml(a.tk.title)}</span>
+          </div>
+        `).join('')}
+      </div>` : ''}
+  </div>`;
+}
 function renderPlan360Grid(){
   const prog = DB.business.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
   const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.status === 'hecha').length, 0);
   const totalTareas = trabajo.reduce((n, d) => n + d.tasks.length, 0);
+  const diaHoy = plan360DiaDeHoy();
 
   // Semanas de verdad (lunes a domingo), no bloques sueltos de 7 — así la
   // cuadrícula se lee como un calendario real.
@@ -5213,25 +5284,31 @@ function renderPlan360Grid(){
 
   const dayCard = d => {
     const {weekday, dayMonth} = plan360FormatDate(d.day);
+    const esHoy = d.day === diaHoy;
+    const anillo = esHoy ? 'outline:2px solid var(--ink);outline-offset:-2px' : '';
     if(d.phase === 'presencial'){
-      return `<div class="p360-day p360-day-presencial" onclick="renderPlan360DayDetail(${d.day})">
+      return `<div class="p360-day p360-day-presencial" style="${anillo}" onclick="renderPlan360DayDetail(${d.day})">
         <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
         <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
         <div class="p360-day-tag">${escapeHtml(t('plan360.presencial'))}</div>
       </div>`;
     }
-    const col = plan360PriorityColor(d.priority);
+    const pendientes = d.tasks.filter(tk => tk.title && tk.status !== 'hecha').length;
+    const atrasado = diaHoy !== null && d.day < diaHoy && pendientes > 0;
+    const col = atrasado ? 'var(--red)' : plan360PriorityColor(d.priority);
     const done = d.tasks.length && d.tasks.every(x => x.status === 'hecha');
     const doneCount = d.tasks.filter(x => x.status === 'hecha').length;
-    return `<div class="p360-day" style="${col ? 'border-left-color:' + col : ''}" onclick="renderPlan360DayDetail(${d.day})">
+    return `<div class="p360-day" style="${col ? 'border-left-color:' + col + ';' : ''}${anillo}" onclick="renderPlan360DayDetail(${d.day})">
       <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
       <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
-      ${d.reviewType ? `<div class="p360-day-tag">${escapeHtml(t('plan360.reviewType.' + d.reviewType))}</div>` : ''}
+      ${atrasado ? `<div class="p360-day-tag" style="color:var(--red);font-weight:700"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.overdueShort'))}</div>`
+        : d.reviewType ? `<div class="p360-day-tag">${escapeHtml(t('plan360.reviewType.' + d.reviewType))}</div>` : ''}
       ${d.tasks.length ? `<div class="p360-day-progress">${done ? '<i class="ti ti-circle-check"></i>' : doneCount + '/' + d.tasks.length}</div>` : ''}
     </div>`;
   };
 
   document.getElementById('plan360-content').innerHTML = `
+    ${plan360HoyCardHtml()}
     <div class="p360-toprow">
       <div class="p360-card" onclick="renderPlan360Intake()">
         <i class="ti ti-clipboard-text"></i>
@@ -5919,7 +5996,13 @@ function plan360SetTaskEstado(day, i, estado){
   if(!d || !d.tasks[i]) return;
   d.tasks[i].status = estado;
   saveDB();
-  document.getElementById('p360-task-list').innerHTML = d.tasks.map((tk, j) => plan360TaskRow(day, tk, j)).join('');
+  // El mismo botón se pinta en dos sitios distintos (el detalle del día y
+  // la tarjeta "Hoy" de la pantalla principal), y solo el primero tiene el
+  // contenedor #p360-task-list — en el segundo hay que repintar la
+  // pantalla entera para que también se actualicen los atrasados.
+  const lista = document.getElementById('p360-task-list');
+  if(lista) lista.innerHTML = d.tasks.map((tk, j) => plan360TaskRow(day, tk, j)).join('');
+  else renderPlan360Grid();
 }
 function plan360SaveTaskNote(day, i, valor){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
