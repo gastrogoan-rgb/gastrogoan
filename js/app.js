@@ -5626,28 +5626,39 @@ function savePlan360Intake(){
    ahí que no lleve textarea ni Guardar, a diferencia de todo lo demás en
    Plan 360º. Mismo criterio que la nota privada del día 1: lo que es
    trabajo del coach no se edita desde la app del cliente, ni de adorno. */
+const PLAN360_DOCS_CATEGORIAS_ORDEN = ['Marca', 'Cocina', 'Sala', 'Personal', 'Marketing', 'Gestión'];
+function plan360DocCategoria(id){
+  const t2 = PLAN360_DOCS_TEMPLATE.find(x => x.id === id);
+  return (t2 && t2.categoria) || 'Otros';
+}
 function renderPlan360Docs(){
   const docs = DB.business.plan360Docs || [];
+  const categorias = [...new Set([...PLAN360_DOCS_CATEGORIAS_ORDEN, ...docs.map(d => plan360DocCategoria(d.id))])]
+    .filter(cat => docs.some(d => plan360DocCategoria(d.id) === cat));
+  const filaDoc = doc => {
+    if(doc.id === 'identidad'){
+      const listo = !!doc.sentAt;
+      return `<div class="card" style="margin-top:14px;${listo ? 'cursor:pointer' : 'opacity:.55'}" ${listo ? 'onclick="renderPlan360LibroMarca()"' : ''}>
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="ti ${listo ? 'ti-circle-check' : 'ti-book-2'}" style="font-size:20px;${listo ? 'color:var(--green)' : ''}"></i>
+          <div style="flex:1"><strong>${escapeHtml(doc.title)}</strong>
+            <div class="p360-day-tag">${escapeHtml(listo ? t('plan360.misteryReady') : t('plan360.misteryPending'))}</div>
+          </div>
+          ${listo ? '<i class="ti ti-chevron-right"></i>' : ''}
+        </div>
+      </div>`;
+    }
+    return `<div class="card" style="margin-top:14px">
+      <div style="font-weight:700;margin-bottom:8px">${escapeHtml(doc.title)}</div>
+      <div style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:${doc.body ? 'inherit' : 'var(--muted)'}">${doc.body ? escapeHtml(doc.body) : escapeHtml(t('plan360.resourceEmpty'))}</div>
+    </div>`;
+  };
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(t('plan360.resources'), t('plan360.resourcesDesc'))}
-    ${docs.map(doc => {
-      if(doc.id === 'identidad'){
-        const listo = !!doc.sentAt;
-        return `<div class="card" style="margin-top:14px;${listo ? 'cursor:pointer' : 'opacity:.55'}" ${listo ? 'onclick="renderPlan360LibroMarca()"' : ''}>
-          <div style="display:flex;align-items:center;gap:10px">
-            <i class="ti ${listo ? 'ti-circle-check' : 'ti-book-2'}" style="font-size:20px;${listo ? 'color:var(--green)' : ''}"></i>
-            <div style="flex:1"><strong>${escapeHtml(doc.title)}</strong>
-              <div class="p360-day-tag">${escapeHtml(listo ? t('plan360.misteryReady') : t('plan360.misteryPending'))}</div>
-            </div>
-            ${listo ? '<i class="ti ti-chevron-right"></i>' : ''}
-          </div>
-        </div>`;
-      }
-      return `<div class="card" style="margin-top:14px">
-        <div style="font-weight:700;margin-bottom:8px">${escapeHtml(doc.title)}</div>
-        <div style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:${doc.body ? 'inherit' : 'var(--muted)'}">${doc.body ? escapeHtml(doc.body) : escapeHtml(t('plan360.resourceEmpty'))}</div>
-      </div>`;
-    }).join('')}
+    ${categorias.map(cat => `
+      <div class="p360-week-label" style="margin-top:14px">${escapeHtml(cat)}</div>
+      ${docs.filter(d => plan360DocCategoria(d.id) === cat).map(filaDoc).join('')}
+    `).join('')}
   `;
 }
 /* ---- Libro de marca: la entrega visual y resumida, solo lectura ---- */
