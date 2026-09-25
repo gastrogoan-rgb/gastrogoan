@@ -5683,7 +5683,7 @@ function renderPlan360PlanAccion(day){
     <div class="card" style="margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <strong>${escapeHtml(t('plan360.objectives'))}</strong>
-        <button class="btn btn-sm" onclick="renderPlan360Objectives(${day})">${escapeHtml(t('common.edit'))}</button>
+        ${plan360EsOwner() ? `<button class="btn btn-sm" onclick="renderPlan360Objectives(${day})">${escapeHtml(t('common.edit'))}</button>` : ''}
       </div>
       ${objetivos.length ? objetivos.map(o => `
         <div style="padding:8px 0;border-bottom:1px solid var(--border)">
@@ -5711,7 +5711,16 @@ function renderPlan360StaffVoice(day){
     </div>
   `;
 }
+// Los objetivos son el plan estratégico del negocio: es el propietario
+// quien los pacta con el coach, igual que el resto del Día 1 es "el coach
+// escribe, el negocio lee". No tenía NINGÚN guard — cualquier empleado
+// con la pestaña Plan 360° visible podía reescribirlos.
+function plan360EsOwner(){
+  const s = getAccessSession();
+  return !!(s && s.type === 'owner');
+}
 function renderPlan360Objectives(day){
+  if(!plan360EsOwner()){ showToast(t('plan360.objectivesOwnerOnly')); renderPlan360PlanAccion(day); return; }
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   document.getElementById('plan360-content').innerHTML = `
@@ -5725,6 +5734,7 @@ function renderPlan360Objectives(day){
   `;
 }
 function savePlan360ObjectivesOnly(day){
+  if(!plan360EsOwner()) return;   // segunda barrera: la pantalla que llama aquí ya está gateada
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360SyncObjectivesFromForm(d);
@@ -5828,6 +5838,7 @@ function plan360ObjectiveRow(o, i){
   </div>`;
 }
 function addPlan360Objective(day){
+  if(!plan360EsOwner()) return;   // segunda barrera: la pantalla que llama aquí ya está gateada
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360SyncObjectivesFromForm(d);

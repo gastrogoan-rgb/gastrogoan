@@ -687,6 +687,21 @@ const PLAN360_MISTERY_BLOCKS = [
     'Acciones de promoción local recientes (eventos, colaboraciones, posts).',
     'Engagement y comunidad (comentarios reales, interacción).',
   ]},
+  // No estaba en el documento original: un canal que hoy es 15-30% de la
+  // facturación en muchos negocios se quedaba fuera del diagnóstico por
+  // completo. Se puede rellenar de incógnito (pedir a través del agregador
+  // como un cliente más) igual que el resto del bloque de "antes de
+  // identificarte".
+  {title: 'Delivery y agregadores (Glovo, Uber Eats, Just Eat...)', items: [
+    'Presencia y ficha actualizada en las plataformas que trabaja el negocio (fotos, horario, descripciones).',
+    'Precios y carta coherentes con los de sala (o diferencia justificada y asumida).',
+    'Comisión de cada plataforma conocida y considerada en el precio (no se vende a pérdida sin saberlo).',
+    'Tiempo real de entrega vs. el prometido en la app (pedir uno de prueba).',
+    'Calidad del packaging: aguanta el trayecto, mantiene temperatura, no se derrama ni desmonta el emplatado.',
+    'El pedido llega completo y tal como se pidió (sin faltar salsas, cubiertos, alérgenos marcados).',
+    'Valoración media y últimas reseñas en cada plataforma (motivos de queja recurrentes).',
+    '¿Hay un flujo de preparación específico para delivery o sale de la misma cocina sin diferenciar prioridad en hora punta?',
+  ]},
   // Bloques 14, 15, 17 y 18 del documento original: eran "de negocio",
   // pensados para resolverse con el propietario delante. El coach decidió
   // (18/09) que no hace falta el dueño para verlos — se cierran solos con
@@ -4297,7 +4312,7 @@ function sendReunionPersonalResumen(day){
   saveCoachPrivate();
   renderReunionPersonalPage(day);
 }
-/* ---- Cliente misterioso: 14 bloques, una pantalla cada uno ---- */
+/* ---- Cliente misterioso: un bloque de PLAN360_MISTERY_BLOCKS por pantalla ---- */
 function renderMisteryHub(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.misteryCheck) return;
