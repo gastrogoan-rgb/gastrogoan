@@ -320,6 +320,10 @@ function sinIndefinidos(v){
 // fuera y disparara renderClientGrid() — el bug de "al dar tick me manda a
 // la pantalla de inicio". stableJson ordena las claves antes de comparar,
 // así el eco de nuestro propio guardado se reconoce siempre.
+// Igual que genId() en js/core.js (que aquí no está disponible: este panel
+// es un HTML autocontenido aparte) — único incluso si dos pestañas del
+// panel crean datos casi a la vez.
+function plan360GenId(){ return Date.now() * 1000 + Math.floor(Math.random() * 1000); }
 function stableJson(v){
   if(Array.isArray(v)) return '[' + v.map(stableJson).join(',') + ']';
   if(v && typeof v === 'object'){
@@ -1752,6 +1756,29 @@ function ensureRemotePlan360(){
         delete o.priority;
         delete o.done;
       }
+      // Id estable para poder enganchar tareas de los días de trabajo a
+      // un objetivo concreto — antes los objetivos no tenían ninguno
+      // (solo se leían por posición, y esa posición cambia al filtrar y
+      // reordenar por prioridad en cada guardado).
+      if(o.id === undefined) o.id = plan360GenId();
+    });
+  });
+  // Igual que los objetivos: las tareas de los 26 días de trabajo pasan
+  // de "un texto suelto + hecho/no hecho" a título+descripción (lo que
+  // plantea el coach) enganchado a un objetivo, con un estado de tres
+  // valores que rellena el negocio (pendiente/hecha/no hecha) y su nota
+  // de feedback aparte — sin perder nada de lo que ya hubiera escrito.
+  (remoteBiz.plan360Program || []).filter(x => x.phase === 'trabajo').forEach(x => {
+    (x.tasks || []).forEach(tk => {
+      if(tk.id === undefined) tk.id = plan360GenId();
+      if(tk.title === undefined){
+        tk.title = tk.text || '';
+        tk.description = tk.description || '';
+        tk.objectiveId = tk.objectiveId || null;
+        tk.status = tk.status || (tk.done ? 'hecha' : 'pendiente');
+        delete tk.text;
+        delete tk.done;
+      }
     });
   });
   // Migración: el checklist creció de 14 a 18 bloques (18/09, al mover
@@ -1841,7 +1868,7 @@ function renderClientGrid(){
   renderStartDateControl();
   const prog = remoteBiz.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
-  const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.done).length, 0);
+  const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.status === 'hecha').length, 0);
   const totalTareas = trabajo.reduce((n, d) => n + d.tasks.length, 0);
   const semanas = [];
   prog.forEach(d => {
@@ -1863,8 +1890,8 @@ function renderClientGrid(){
       </div>`;
     }
     const col = plan360PriorityColor(d.priority);
-    const done = d.tasks.length && d.tasks.every(x => x.done);
-    const doneCount = d.tasks.filter(x => x.done).length;
+    const done = d.tasks.length && d.tasks.every(x => x.status === 'hecha');
+    const doneCount = d.tasks.filter(x => x.status === 'hecha').length;
     return `<div class="p360-day" style="${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
       <div class="p360-day-weekday">${esc(weekday)}</div>
       <div class="p360-day-date">${esc(dayMonth)}</div>
@@ -4416,22 +4443,45 @@ function savePresencial(day){
   renderClientGrid();
 }
 
-/* ---- Días de trabajo ---- */
+/* ---- Días de trabajo ----
+   Cada tarea se engancha a un objetivo del Día 2 (objectiveId), y separa
+   quién escribe qué: el coach plantea título+descripción (el "qué hay que
+   hacer y por qué"), el negocio responde con estado (pendiente/hecha/no
+   hecha) y su propia nota de feedback — igual que el resto del programa
+   separa "lo que escribe el coach" de "lo que responde el negocio". El
+   estado y la nota se ven aquí en solo lectura: si el coach pudiera
+   tocarlos, el negocio no sabría si el "hecha" lo puso él o se lo
+   inventaron por él. */
 const PLAN360_MAX_FILE_BYTES = 350 * 1024;
+const PLAN360_TASK_ESTADO_LABEL = {pendiente: 'Pendiente', hecha: 'Hecha', no_hecha: 'No hecha'};
+const PLAN360_TASK_ESTADO_COLOR = {pendiente: 'var(--muted)', hecha: 'var(--green)', no_hecha: 'var(--red)'};
+function plan360ObjetivosDelDia2(){
+  const dia2 = (remoteBiz.plan360Program || []).find(x => x.day === 2);
+  return ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
+}
 function taskRow(tk, i){
-  return `<div class="card p360-task-row${tk.done ? ' p360-task-done' : ''}" id="task-row-${i}" style="padding:10px;margin-bottom:8px">
-    <div style="display:flex;gap:8px;align-items:flex-start">
-      <i class="ti ${tk.done ? 'ti-circle-check' : 'ti-circle'}" id="task-icon-${i}" data-done="${tk.done ? '1' : '0'}" onclick="toggleTask(${i})" style="cursor:pointer;font-size:24px;flex:none;margin-top:2px;color:${tk.done ? 'var(--green)' : 'var(--border)'}"></i>
-      <textarea id="task-text-${i}" class="p360-task-text" rows="2" style="flex:1">${esc(tk.text)}</textarea>
+  const objetivos = plan360ObjetivosDelDia2();
+  const estado = tk.status || 'pendiente';
+  return `<div class="card" id="task-row-${i}" style="padding:10px;margin-bottom:8px">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <select id="task-objetivo-${i}" style="flex:1">
+        <option value="">— Sin objetivo —</option>
+        ${objetivos.map(o => `<option value="${o.id}" ${tk.objectiveId === o.id ? 'selected' : ''}>${esc(o.titulo)}</option>`).join('')}
+      </select>
+      <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TASK_ESTADO_COLOR[estado]};white-space:nowrap">${PLAN360_TASK_ESTADO_LABEL[estado]}</span>
+      <button class="btn btn-sm btn-icon" onclick="borrarTask(${i})" title="Quitar tarea"><i class="ti ti-trash"></i></button>
     </div>
-    <div class="field" style="margin:6px 0 0"><label>Comentario</label><textarea id="task-note-${i}" rows="2">${esc(tk.note || '')}</textarea></div>
-    <div style="margin-top:6px;font-size:12px;color:var(--muted)">
+    <div class="field" style="margin-bottom:8px"><label>Título</label><input id="task-title-${i}" value="${esc(tk.title)}" placeholder="Qué hay que hacer"></div>
+    <div class="field" style="margin-bottom:8px"><label>Descripción</label><textarea id="task-desc-${i}" rows="3" placeholder="Por qué / cómo se hace">${esc(tk.description || '')}</textarea></div>
+    ${tk.note ? `<div class="field" style="margin-bottom:8px"><label>Nota del negocio</label><p style="font-size:13px;margin:0;padding:8px;background:var(--brand-cream);border-radius:6px">${esc(tk.note)}</p></div>` : ''}
+    <div style="font-size:12px;color:var(--muted)">
       <input type="file" id="task-file-${i}" accept="image/*,.pdf" style="width:auto">
       ${tk.fileName ? esc(tk.fileName) + ' <a href="#" onclick="event.preventDefault();document.getElementById(\'task-file-clear-' + i + '\').value=\'1\'">Eliminar</a><input type="hidden" id="task-file-clear-' + i + '">' : ''}
     </div>
   </div>`;
 }
 function renderTrabajoPage(d){
+  plan360TrabajoDiaActivo = d;
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
@@ -4455,6 +4505,7 @@ function renderTrabajoPage(d){
         </div>
       </div>
       <div style="font-weight:600;margin-bottom:6px">Tareas</div>
+      ${!plan360ObjetivosDelDia2().length ? `<p class="muted" style="margin-bottom:10px">Todavía no hay objetivos fijados en el Día 2 — las tareas se pueden crear igual, pero sin enganchar a ninguno hasta que el negocio los ponga.</p>` : ''}
       <div id="task-list">${d.tasks.map((tk, i) => taskRow(tk, i)).join('')}</div>
       <button class="btn btn-sm" onclick="addTask(${d.day})" style="margin:6px 0 16px">+ Añadir tarea</button>
       <button class="btn btn-primary" onclick="saveTrabajo(${d.day})">Guardar</button>
@@ -4465,26 +4516,22 @@ function addTask(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d) return;
   syncTasksFromForm(d);
-  d.tasks.push({text: '', done: false, note: '', fileData: null, fileName: null});
+  d.tasks.push({id: plan360GenId(), objectiveId: null, title: '', description: '', status: 'pendiente', note: '', fileData: null, fileName: null});
   document.getElementById('task-list').innerHTML = d.tasks.map((tk, i) => taskRow(tk, i)).join('');
 }
-function toggleTask(i){
-  const icon = document.getElementById('task-icon-' + i);
-  const row = document.getElementById('task-row-' + i);
-  if(!icon || !row) return;
-  const done = icon.dataset.done !== '1';
-  icon.dataset.done = done ? '1' : '0';
-  icon.className = 'ti ' + (done ? 'ti-circle-check' : 'ti-circle');
-  icon.style.color = done ? 'var(--green)' : 'var(--border)';
-  row.classList.toggle('p360-task-done', done);
+function borrarTask(i){
+  if(!plan360TrabajoDiaActivo) return;
+  syncTasksFromForm(plan360TrabajoDiaActivo);
+  plan360TrabajoDiaActivo.tasks.splice(i, 1);
+  document.getElementById('task-list').innerHTML = plan360TrabajoDiaActivo.tasks.map((tk, i2) => taskRow(tk, i2)).join('');
 }
 function syncTasksFromForm(d){
   d.tasks.forEach((tk, i) => {
-    const t = document.getElementById('task-text-' + i), dn = document.getElementById('task-icon-' + i),
-          n = document.getElementById('task-note-' + i), cl = document.getElementById('task-file-clear-' + i);
-    if(t) tk.text = t.value.trim();
-    if(dn) tk.done = dn.dataset.done === '1';
-    if(n) tk.note = n.value.trim();
+    const obj = document.getElementById('task-objetivo-' + i), ti = document.getElementById('task-title-' + i),
+          de = document.getElementById('task-desc-' + i), cl = document.getElementById('task-file-clear-' + i);
+    if(obj) tk.objectiveId = obj.value ? Number(obj.value) : null;
+    if(ti) tk.title = ti.value.trim();
+    if(de) tk.description = de.value.trim();
     if(cl && cl.value === '1'){ tk.fileData = null; tk.fileName = null; }
   });
 }
@@ -4496,6 +4543,7 @@ function readFileAsDataUrl(file){
     reader.readAsDataURL(file);
   });
 }
+let plan360TrabajoDiaActivo = null;
 async function saveTrabajo(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d) return;
@@ -4503,7 +4551,7 @@ async function saveTrabajo(day){
   d.priority = document.getElementById('day-priority').value || null;
   d.reviewType = document.getElementById('day-reviewtype').value || null;
   syncTasksFromForm(d);
-  d.tasks = d.tasks.filter(tk => tk.text);
+  d.tasks = d.tasks.filter(tk => tk.title);
   for(let i = 0; i < d.tasks.length; i++){
     const fileEl = document.getElementById('task-file-' + i);
     const file = fileEl && fileEl.files && fileEl.files[0];
@@ -4516,29 +4564,47 @@ async function saveTrabajo(day){
   renderClientGrid();
 }
 
-/* ---- Resumen ---- */
+/* ---- Resumen: ahora agrupado por objetivo, no solo por hecha/pendiente —
+   es la vista que deja ver de un vistazo si el trabajo de las 4 semanas
+   está repartido de verdad entre los objetivos del Día 2, o si alguno se
+   ha quedado sin ninguna tarea detrás. ---- */
 function renderSummaryPage(){
   const prog = remoteBiz.plan360Program || [];
   const dia2 = prog.find(x => x.day === 2);
   const orden = {prioritario: 0, esencial: 1, complementario: 2};
   const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo).slice().sort((a, b) => (orden[a.prioridad] ?? 1) - (orden[b.prioridad] ?? 1));
   const trabajo = prog.filter(x => x.phase === 'trabajo');
-  const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.map(tk => ({...tk, day: d.day}))), []);
-  const hechas = tareas.filter(tk => tk.done);
-  const pendientes = tareas.filter(tk => !tk.done);
+  const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.filter(tk => tk.title).map(tk => ({...tk, day: d.day}))), []);
+  const hechas = tareas.filter(tk => tk.status === 'hecha');
+  const grupos = objetivos.map(o => ({obj: o, tareas: tareas.filter(tk => tk.objectiveId === o.id)}));
+  const sinObjetivo = tareas.filter(tk => !tk.objectiveId || !objetivos.some(o => o.id === tk.objectiveId));
+  const tareaLinea = tk => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px">
+    <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:${PLAN360_TASK_ESTADO_COLOR[tk.status || 'pendiente']};flex:none">${PLAN360_TASK_ESTADO_LABEL[tk.status || 'pendiente']}</span>
+    <span class="muted" style="flex:none">${esc(plan360FormatDate(tk.day).dayMonth)}</span>
+    <span style="flex:1">${esc(tk.title)}</span>
+  </div>`;
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader('★ Resumen del programa')}
     <div class="card" style="margin-top:14px">
-      <div style="font-weight:600;margin-bottom:6px">Objetivos</div>
-      ${objetivos.length ? objetivos.map(o => `
-        <div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
-          <span style="width:9px;height:9px;border-radius:50%;background:${plan360ObjPriorityColor(o.prioridad)};flex:none"></span>
-          <span style="flex:1">${esc(o.titulo)}</span>
-        </div>`).join('') : '<p class="muted">Todavía no hay objetivos definidos</p>'}
-      <div style="font-weight:600;margin:14px 0 6px">Tareas completadas (${hechas.length}/${tareas.length})</div>
-      ${pendientes.length ? `<div style="font-weight:600;margin:10px 0 6px;color:var(--muted);font-size:12px">Pendientes</div>
-        ${pendientes.map(tk => `<div style="padding:4px 0;font-size:13px">${esc(plan360FormatDate(tk.day).dayMonth)} — ${esc(tk.text)}</div>`).join('')}` : ''}
+      <div style="font-weight:600">Tareas completadas</div>
+      <div style="font-size:28px;font-weight:800;margin-top:4px">${hechas.length}<span style="font-size:16px;color:var(--muted);font-weight:600"> / ${tareas.length}</span></div>
     </div>
+    <div style="font-weight:600;margin:16px 0 4px">Trabajo por objetivo</div>
+    ${!objetivos.length ? '<p class="muted">Todavía no hay objetivos definidos en el Día 2.</p>' : grupos.map(g => `
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="width:9px;height:9px;border-radius:50%;background:${plan360ObjPriorityColor(g.obj.prioridad)};flex:none"></span>
+          <strong style="flex:1">${esc(g.obj.titulo)}</strong>
+          <span class="muted" style="font-size:12px">${g.tareas.length} tarea${g.tareas.length === 1 ? '' : 's'}</span>
+        </div>
+        ${g.tareas.length ? g.tareas.map(tareaLinea).join('')
+          : '<p style="margin:0;font-size:13px;color:var(--red)">⚠ Sin ninguna tarea asignada todavía en los 26 días de trabajo.</p>'}
+      </div>`).join('')}
+    ${sinObjetivo.length ? `
+      <div class="card" style="margin-bottom:10px;border-color:var(--amber)">
+        <strong>Sin objetivo asignado</strong>
+        ${sinObjetivo.map(tareaLinea).join('')}
+      </div>` : ''}
   `;
 }
 </script>
