@@ -4516,6 +4516,73 @@ function savePresencial(day){
    estado y la nota se ven aquí en solo lectura: si el coach pudiera
    tocarlos, el negocio no sabría si el "hecha" lo puso él o se lo
    inventaron por él. */
+// Banco de contenido: tareas ya escritas, listas para soltar en cualquier
+// día de trabajo de cualquier negocio, en vez de escribir cada una desde
+// cero. NO sustituye "+ Añadir tarea" (eso sigue ahí para lo que es
+// específico de un local concreto) — es un punto de partida con
+// variedad real que se puede editar después como cualquier otra tarea.
+// Crece con el tiempo: añadir un módulo nuevo es una línea más aquí, no
+// hace falta tocar nada más. Empieza con 33 en 7 categorías.
+const PLAN360_CONTENT_BANK = [
+  {categoria: 'Cocina', titulo: 'Control de mermas', descripcion: 'Cada mañana, antes de abrir, pesa y anota lo que se ha tirado el día anterior por categoría (verdura, carne, pescado, pan). Al final de la semana, súmalo y sácalo en % sobre compras.', metrica: '% de mermas sobre compras semanales'},
+  {categoria: 'Cocina', titulo: 'Escandallo de los 10 más vendidos', descripcion: 'Recalcula el coste real de los 10 platos que más se venden, con precios de proveedor actualizados, y compáralo con el food cost objetivo.', metrica: '% food cost medio de los 10 platos'},
+  {categoria: 'Cocina', titulo: 'Estandarizar una receta crítica', descripcion: 'Elige un plato con quejas de inconsistencia y escribe su ficha técnica exacta (gramajes, tiempos, emplatado) para que salga igual lo cocine quien lo cocine.', metrica: 'Nº de quejas de inconsistencia al mes'},
+  {categoria: 'Cocina', titulo: 'Revisión de temperaturas de cámaras', descripcion: 'Comprueba y registra las temperaturas de cámaras y congeladores durante una semana, dos veces al día.', metrica: 'Nº de incidencias de temperatura'},
+  {categoria: 'Cocina', titulo: 'Reducir tiempo de pase en hora punta', descripcion: 'Cronometra el tiempo real entre comanda y plato listo en el pase durante un servicio de hora punta, e identifica el cuello de botella.', metrica: 'Minutos medios de pase en hora punta'},
+  {categoria: 'Sala', titulo: 'Guion de bienvenida y despedida', descripcion: 'Escribe y ensaya con el equipo una frase de bienvenida y otra de despedida que se digan siempre, no solo cuando toque.', metrica: '% de mesas donde se aplica (observación)'},
+  {categoria: 'Sala', titulo: 'Upsell activo', descripcion: 'Forma al equipo de sala en 3 sugerencias concretas (aperitivo, bebida, postre) y comprueba cuántas veces se ofrecen en un servicio.', metrica: '% de mesas con sugerencia ofrecida'},
+  {categoria: 'Sala', titulo: 'Reducir tiempo de espera para pagar', descripcion: 'Mide cuánto tarda un cliente desde que pide la cuenta hasta que paga, durante una semana entera.', metrica: 'Minutos medios de espera para pagar'},
+  {categoria: 'Sala', titulo: 'Conocimiento de alérgenos del equipo', descripcion: 'Haz un examen rápido al equipo de sala sobre los alérgenos de los platos de carta más vendidos.', metrica: '% de aciertos del equipo'},
+  {categoria: 'Sala', titulo: 'Montaje de mesa estandarizado', descripcion: 'Cuelga en el office una foto de referencia del montaje correcto de mesa y haz comprobaciones aleatorias durante una semana.', metrica: '% de mesas montadas según el estándar'},
+  {categoria: 'Finanzas', titulo: 'Cuenta de resultados mensual al día', descripcion: 'Cierra la cuenta de resultados del mes anterior antes del día 10 del mes siguiente, sin excepciones.', metrica: 'Día del mes en que se cierra'},
+  {categoria: 'Finanzas', titulo: 'Renegociar un proveedor', descripcion: 'Elige el proveedor con mayor gasto mensual y pide una revisión de precios o condiciones de pago.', metrica: '% de ahorro conseguido'},
+  {categoria: 'Finanzas', titulo: 'Control de caja diario', descripcion: 'Implanta un cierre de caja con conteo físico cada noche, sin excepciones, durante dos semanas.', metrica: 'Nº de descuadres de caja'},
+  {categoria: 'Finanzas', titulo: 'Revisar gastos fijos', descripcion: 'Repasa todos los gastos fijos mensuales (suministros, seguros, software) y detecta cuáles se pueden reducir o eliminar.', metrica: '€ de ahorro mensual detectado'},
+  {categoria: 'Finanzas', titulo: 'Replantear un plato con food cost disparado', descripcion: 'Recalcula precio o receta del plato con peor food cost de la carta.', metrica: '% food cost de ese plato'},
+  {categoria: 'Marketing', titulo: 'Ficha de Google Business completa', descripcion: 'Rellena horario, teléfono, fotos y categoría en Google Business, y responde las reseñas pendientes.', metrica: 'Nº de reseñas respondidas'},
+  {categoria: 'Marketing', titulo: 'Plan de contenido de Instagram (2 semanas)', descripcion: 'Planifica y publica contenido real (no solo comida) 3 veces por semana durante dos semanas.', metrica: 'Nº de publicaciones / seguidores nuevos'},
+  {categoria: 'Marketing', titulo: 'Fotos profesionales de los platos estrella', descripcion: 'Haz buenas fotos (luz natural, sin flash) de los 5 platos más vendidos para redes y carta online.', metrica: 'Nº de fotos nuevas en uso'},
+  {categoria: 'Marketing', titulo: 'Encuesta de satisfacción post-visita', descripcion: 'Activa o revisa la encuesta/QR post-visita y lee las respuestas de las últimas dos semanas.', metrica: 'Nota media de satisfacción'},
+  {categoria: 'Marketing', titulo: 'Colaboración local', descripcion: 'Contacta con un negocio o creador de contenido local para una colaboración o evento conjunto.', metrica: 'Nº de colaboraciones cerradas'},
+  {categoria: 'Personal', titulo: 'Reunión de equipo mensual', descripcion: 'Monta una reunión corta (15-20 min) con todo el equipo para comunicar objetivos y recoger feedback.', metrica: 'Nº de reuniones hechas'},
+  {categoria: 'Personal', titulo: 'Turnos publicados con antelación', descripcion: 'Publica los turnos de la semana siguiente con al menos 5 días de antelación, sin excepciones.', metrica: 'Días de antelación media'},
+  {categoria: 'Personal', titulo: 'Onboarding de un nuevo empleado', descripcion: 'Crea o mejora un documento/checklist de bienvenida para que cualquier persona nueva sepa qué hacer el primer día.', metrica: 'Existe sí/no'},
+  {categoria: 'Personal', titulo: 'Reconocer al empleado del mes', descripcion: 'Elige un criterio simple y reconoce públicamente a un empleado destacado cada mes.', metrica: 'Nº de reconocimientos hechos'},
+  {categoria: 'Personal', titulo: 'Reducir rotación de personal', descripcion: 'Identifica el motivo real de las últimas 2-3 bajas voluntarias y propón una mejora concreta.', metrica: 'Nº de bajas voluntarias al trimestre'},
+  {categoria: 'Delivery', titulo: 'Revisar packaging de delivery', descripcion: 'Pide un pedido de prueba y comprueba si llega en buen estado, temperatura y presentación.', metrica: 'Nota de la prueba (1-10)'},
+  {categoria: 'Delivery', titulo: 'Calcular margen real del delivery', descripcion: 'Resta la comisión de la plataforma al precio de cada plato y comprueba si sigue siendo rentable.', metrica: '% margen medio en delivery'},
+  {categoria: 'Delivery', titulo: 'Actualizar fichas en la plataforma', descripcion: 'Revisa que las fotos y descripciones de los platos en Glovo/Uber Eats/Just Eat estén actualizadas y sean atractivas.', metrica: 'Nº de platos actualizados'},
+  {categoria: 'Delivery', titulo: 'Reducir tiempo de preparación de pedidos online', descripcion: 'Cronometra el tiempo real desde que llega el pedido hasta que sale, durante una semana.', metrica: 'Minutos medios de preparación'},
+  {categoria: 'Cliente', titulo: 'Mapa del recorrido del cliente', descripcion: 'Dibuja, aunque sea a mano, todos los puntos de contacto del cliente desde que ve el negocio hasta que se va, y marca los 2 peores momentos.', metrica: 'Nº de puntos de fricción detectados'},
+  {categoria: 'Cliente', titulo: 'Programa de clientes recurrentes', descripcion: 'Diseña algo simple (tarjeta de sellos, descuento a la 5ª visita...) para premiar a quien repite.', metrica: 'Nº de clientes recurrentes identificados'},
+  {categoria: 'Cliente', titulo: 'Revisar quejas de los últimos 3 meses', descripcion: 'Lee todas las quejas o reseñas negativas de los últimos 3 meses y saca el patrón más repetido.', metrica: 'Patrón principal identificado'},
+  {categoria: 'Cliente', titulo: 'Mistery check interno', descripcion: 'Que alguien del equipo (o el propio dueño) viva la experiencia como cliente un día y anote 3 cosas a mejorar.', metrica: 'Nº de mejoras detectadas'},
+];
+function plan360BancoCategorias(){
+  return [...new Set(PLAN360_CONTENT_BANK.map(m => m.categoria))];
+}
+function plan360BancoModulosHtml(categoria){
+  const usados = new Set((plan360TrabajoDiaActivo.tasks || []).map(tk => tk.title));
+  return PLAN360_CONTENT_BANK
+    .map((m, idx) => ({m, idx}))
+    .filter(({m}) => !categoria || m.categoria === categoria)
+    .map(({m, idx}) => `<button class="btn btn-sm" ${usados.has(m.titulo) ? 'disabled title="Ya está en este día"' : `onclick="addTaskDesdeBanco(${idx})"`}>${esc(m.titulo)}</button>`)
+    .join('');
+}
+function cambiarBancoCategoria(){
+  const sel = document.getElementById('banco-categoria');
+  document.getElementById('banco-modulos').innerHTML = plan360BancoModulosHtml(sel.value);
+}
+function addTaskDesdeBanco(idx){
+  const d = plan360TrabajoDiaActivo;
+  if(!d) return;
+  syncTasksFromForm(d);
+  const m = PLAN360_CONTENT_BANK[idx];
+  d.tasks.push({id: plan360GenId(), objectiveId: null, title: m.titulo, description: m.descripcion + (m.metrica ? `\n\nMétrica sugerida: ${m.metrica}` : ''), status: 'pendiente', note: '', fileData: null, fileName: null});
+  document.getElementById('task-list').innerHTML = d.tasks.map((tk, i) => taskRow(tk, i)).join('');
+  const sel = document.getElementById('banco-categoria');
+  document.getElementById('banco-modulos').innerHTML = plan360BancoModulosHtml(sel ? sel.value : '');
+}
 const PLAN360_MAX_FILE_BYTES = 350 * 1024;
 const PLAN360_TASK_ESTADO_LABEL = {pendiente: 'Pendiente', hecha: 'Hecha', no_hecha: 'No hecha'};
 const PLAN360_TASK_ESTADO_COLOR = {pendiente: 'var(--muted)', hecha: 'var(--green)', no_hecha: 'var(--red)'};
@@ -4585,8 +4652,16 @@ function renderTrabajoPage(d){
       ` : ''}
       <div style="font-weight:600;margin-bottom:6px">Tareas</div>
       ${!plan360ObjetivosDelDia2().length ? `<p class="muted" style="margin-bottom:10px">Todavía no hay objetivos fijados en el Día 2 — las tareas se pueden crear igual, pero sin enganchar a ninguno hasta que el negocio los ponga.</p>` : ''}
+      <div class="card" style="margin-bottom:10px;background:var(--brand-cream)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Banco de contenido — un toque para añadirla a este día (luego se puede editar como cualquier otra)</div>
+        <select id="banco-categoria" onchange="cambiarBancoCategoria()" style="margin-bottom:8px">
+          <option value="">Todas las categorías</option>
+          ${plan360BancoCategorias().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+        </select>
+        <div id="banco-modulos" style="display:flex;flex-wrap:wrap;gap:6px">${plan360BancoModulosHtml('')}</div>
+      </div>
       <div id="task-list">${d.tasks.map((tk, i) => taskRow(tk, i)).join('')}</div>
-      <button class="btn btn-sm" onclick="addTask(${d.day})" style="margin:6px 0 16px">+ Añadir tarea</button>
+      <button class="btn btn-sm" onclick="addTask(${d.day})" style="margin:6px 0 16px">+ Añadir tarea (especial de este local)</button>
       <button class="btn btn-primary" onclick="saveTrabajo(${d.day})">Guardar</button>
     </div>
   `;
@@ -4603,6 +4678,9 @@ function borrarTask(i){
   syncTasksFromForm(plan360TrabajoDiaActivo);
   plan360TrabajoDiaActivo.tasks.splice(i, 1);
   document.getElementById('task-list').innerHTML = plan360TrabajoDiaActivo.tasks.map((tk, i2) => taskRow(tk, i2)).join('');
+  const sel = document.getElementById('banco-categoria');
+  const banco = document.getElementById('banco-modulos');
+  if(banco) banco.innerHTML = plan360BancoModulosHtml(sel ? sel.value : '');
 }
 function syncTasksFromForm(d){
   d.tasks.forEach((tk, i) => {
