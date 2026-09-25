@@ -5344,8 +5344,13 @@ function plan360ContractSectionHtml(){
         <i class="ti ti-circle-check" style="color:var(--green)"></i>
         ${escapeHtml(t('plan360.signedBy'))} <strong>${escapeHtml(c.signedName)}</strong> (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}
       </div>
+      <button class="btn btn-sm" style="margin-top:10px" onclick="plan360PrintContract()"><i class="ti ti-printer"></i> ${escapeHtml(t('plan360.contractPrint'))}</button>
     </div>`;
   }
+  // Sin precio o forma de pago (los pacta el coach, no se tocan desde
+  // aquí) no se puede firmar: si no, se firma un contrato con el precio
+  // en blanco, y eso no vale como acuerdo de servicios.
+  const listoParaFirmar = !!(c.precio && c.formaPago);
   return `<div class="card" style="margin-top:14px">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-c-nombre" value="${escapeHtml(c.clienteNombre || '')}"></div>
@@ -5359,14 +5364,32 @@ function plan360ContractSectionHtml(){
     <p class="view-subtitle" style="margin:-4px 0 10px">${escapeHtml(t('plan360.priceLockedHint'))}</p>
     <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Contract()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
     <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:14px">${escapeHtml(texto)}</div>
+    ${!listoParaFirmar ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.signBlockedNoPrice'))}</div>` : ''}
     <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-sign-name"></div>
-      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-sign-dni"></div>
+      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-sign-name" ${listoParaFirmar ? '' : 'disabled'}></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-sign-dni" ${listoParaFirmar ? '' : 'disabled'}></div>
     </div>
-    <button class="btn btn-primary" onclick="plan360SignContract()">${escapeHtml(t('plan360.signSubmit'))}</button>
+    <button class="btn btn-primary" onclick="plan360SignContract()" ${listoParaFirmar ? '' : 'disabled'}>${escapeHtml(t('plan360.signSubmit'))}</button>
     <p class="view-subtitle" style="margin-top:8px">${escapeHtml(t('plan360.signLegalNote'))}</p>
   </div>`;
+}
+// Ventana aparte con el texto ya rellenado + el bloque de firma, para que
+// el cliente se lleve una copia de verdad del contrato firmado — antes
+// solo se podía leer dentro de la app, sin imprimir ni exportar.
+function plan360PrintContract(){
+  const c = DB.business.plan360Contract || {};
+  if(!c.signedAt) return;
+  const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
+  const win = window.open('', '_blank', 'width=700,height=800');
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(t('plan360.contract'))}</title>
+    <style>@page{margin:16mm} body{font-family:sans-serif;white-space:pre-wrap;line-height:1.6;font-size:13px;padding:0 6px} .firma{margin-top:24px;padding:12px;border:1px solid #4A5D4E;background:#EDF1EC}</style>
+    </head><body>${escapeHtml(texto)}
+    <div class="firma">${escapeHtml(t('plan360.signedBy'))} ${escapeHtml(c.signedName)} (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}</div>
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  win.document.close();
 }
 // El precio y la forma de pago NO se tocan desde aquí: los pacta el coach,
 // no se editan desde la app del negocio (solo se ven, en gris). Se cambian
@@ -5379,11 +5402,12 @@ function plan360SaveContractFields(){
   saveDB();
 }
 function plan360SignContract(){
+  const c = DB.business.plan360Contract || {};
+  if(!c.precio || !c.formaPago){ showToast(t('plan360.signBlockedNoPrice')); return; }
   const name = (document.getElementById('p360-sign-name').value || '').trim();
   const dni = (document.getElementById('p360-sign-dni').value || '').trim();
   if(!name || !dni){ showToast(t('plan360.signMissing')); return; }
   plan360SaveContractFields();
-  const c = DB.business.plan360Contract;
   c.signedName = name;
   c.signedDNI = dni;
   c.signedAt = Date.now();
@@ -5776,7 +5800,7 @@ function renderPlan360ReunionReport(day){
         </div>
       `).join('')}
       ${r.notaLibre ? `<div>
-        <div style="font-weight:600;font-size:13px">Espacio libre</div>
+        <div style="font-weight:600;font-size:13px">${escapeHtml(t('plan360.freeSpace'))}</div>
         <p style="font-size:14px;margin-top:4px">${escapeHtml(r.notaLibre)}</p>
       </div>` : ''}
     </div>

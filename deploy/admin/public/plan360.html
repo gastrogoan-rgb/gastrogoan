@@ -244,7 +244,9 @@ async function openClient(tenantId, name){
   document.getElementById('client-grid').innerHTML = '';
   startDateEditing = false;
   if(currentBizRef) currentBizRef.off();
+  if(currentCoachPrivateRef) currentCoachPrivateRef.off();
   currentTenantId = tenantId;
+  migracionCoachPrivadoHecha = false;
   try{
     const lookupSnap = await getApp().database().ref('gastrogoan/tenantLookup/' + tenantId).once('value');
     const cfg = lookupSnap.val();
@@ -263,12 +265,26 @@ async function openClient(tenantId, name){
       if(json === lastPushedJson) return; // es el eco de lo que acabamos de escribir nosotros mismos
       remoteBiz = val || {};
       ensureRemotePlan360();
+      intentarMigrarReunionPersonal();
       document.getElementById('client-status').textContent = 'Conectado — los cambios se ven al instante en su app, y los suyos aquí.';
       renderClientGrid();
     }, err => {
       console.error(err);
       document.getElementById('client-status').textContent = '⚠️ Error de conexión: ' + (err.message || err.code || 'error');
     });
+    // Nodo hermano, no dentro de db/business: por eso necesita su propia
+    // conexión. La app del negocio no lo lee nunca, así que aquí no hay
+    // ningún "eco de nuestro propio guardado" que temer del lado del
+    // negocio — pero sí puede haberlo si este mismo panel está abierto en
+    // dos pestañas, de ahí el mismo filtro por lastPushedCoachPrivateJson.
+    currentCoachPrivateRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/coachPrivate');
+    currentCoachPrivateRef.on('value', snap => {
+      const val = snap.val();
+      const json = stableJson(val);
+      if(json === lastPushedCoachPrivateJson) return;
+      coachPrivate = val || {};
+      intentarMigrarReunionPersonal();
+    }, err => console.error('Error cargando coachPrivate', err));
   }catch(e){
     console.error(e);
     document.getElementById('client-status').textContent = '⚠️ No se pudo conectar: ' + (e.message || e.code || 'error');
@@ -276,7 +292,9 @@ async function openClient(tenantId, name){
 }
 function closeClient(){
   if(currentBizRef) currentBizRef.off();
+  if(currentCoachPrivateRef) currentCoachPrivateRef.off();
   currentBizRef = null; currentTenantId = null; remoteBiz = null;
+  currentCoachPrivateRef = null; coachPrivate = null;
   document.getElementById('view-client').classList.add('hidden');
   document.getElementById('view-list').classList.remove('hidden');
   loadClientList();
@@ -318,6 +336,68 @@ function saveRemoteBiz(){
     console.error('Error guardando en la nube del negocio', e);
     alert('No se pudo guardar en la nube: ' + (e.message || e.code || 'error'));
   }).finally(() => { savingRemote = false; });
+}
+/* ============================================================
+   "COACH PRIVATE" — db/coachPrivate, HERMANO de db/business, no dentro.
+   Aquí viven las respuestas en crudo de la Voz del equipo (Reunión con el
+   personal): antes vivían dentro de reunionPersonal, en el MISMO bloque
+   que se sincroniza entero a cada dispositivo del negocio (tablet, móvil
+   del dueño, del encargado...) por el simple hecho de abrir la app — la
+   promesa de "esto nunca se envía" era solo de interfaz, el dato en
+   crudo viajaba igual a cada aparato. Ahora es un nodo hermano que la
+   app del negocio NUNCA lee ni descarga: solo este panel lo abre. No
+   cambia la limitación ya documentada de que `tenants/$tenantId` da
+   lectura a cualquiera autenticado (Cloud Function + Blaze, descartado),
+   pero ya no viaja dentro de la sincronización rutinaria de cada aparato.
+   ============================================================ */
+let currentCoachPrivateRef = null;
+let coachPrivate = null;
+let lastPushedCoachPrivateJson = null;
+function plan360FreshCoachPrivadoDia(){
+  return {preguntas: PLAN360_REUNION_PERSONAL_PREGUNTAS.map(q => ({q, a: ''})), notaLibre: ''};
+}
+// Clave 'd'+day, NUNCA el número desnudo: Firebase Realtime Database
+// convierte en ARRAY cualquier objeto cuyas claves sean todas números
+// consecutivos, y aquí el día 1 (sin día 0) ya dispara ese caso — con la
+// letra delante se guarda siempre como objeto de verdad.
+function coachPrivadoClave(day){ return 'd' + day; }
+function coachPrivadoDia(day){
+  if(!coachPrivate) coachPrivate = {};
+  const clave = coachPrivadoClave(day);
+  if(!coachPrivate[clave]) coachPrivate[clave] = plan360FreshCoachPrivadoDia();
+  return coachPrivate[clave];
+}
+function saveCoachPrivate(){
+  if(!currentCoachPrivateRef || !coachPrivate) return;
+  const limpio = sinIndefinidos(coachPrivate);
+  lastPushedCoachPrivateJson = stableJson(limpio);
+  currentCoachPrivateRef.set(limpio).catch(e => {
+    console.error('Error guardando la voz del equipo (privado)', e);
+    alert('No se pudo guardar en la nube: ' + (e.message || e.code || 'error'));
+  });
+}
+// Migración de negocios que ya tenían las respuestas en crudo dentro de
+// reunionPersonal (de antes de este cambio): se mueven a coachPrivate y se
+// borran de remoteBiz en cuanto los dos nodos han cargado al menos una vez.
+// Sin esto, un negocio dado de alta antes de este cambio seguiría
+// exponiendo las respuestas de su equipo en cada sincronización.
+let migracionCoachPrivadoHecha = false;
+function intentarMigrarReunionPersonal(){
+  if(migracionCoachPrivadoHecha || !remoteBiz || !coachPrivate) return;
+  let tocado = false;
+  (remoteBiz.plan360Program || []).forEach(d => {
+    if(d.reunionPersonal && Array.isArray(d.reunionPersonal.preguntas)){
+      const clave = coachPrivadoClave(d.day);
+      if(!coachPrivate[clave]){
+        coachPrivate[clave] = {preguntas: d.reunionPersonal.preguntas, notaLibre: d.reunionPersonal.notaLibre || ''};
+      }
+      delete d.reunionPersonal.preguntas;
+      delete d.reunionPersonal.notaLibre;
+      tocado = true;
+    }
+  });
+  migracionCoachPrivadoHecha = true;
+  if(tocado){ saveRemoteBiz(); saveCoachPrivate(); }
 }
 
 /* ============================================================
@@ -375,9 +455,9 @@ En GastroGoan aplicamos un método 360° que abarca:
 
 FASES DEL PROCESO
 
-— Diagnóstico (1 semana): recopilación de datos y reporte inicial.
-— Planificación estratégica (1 semana): hoja de ruta y plan de acción.
-— Implementación (2,5 meses): ejecución de iniciativas acordadas.
+— Día 1: diagnóstico completo (cliente misterioso, inspección física y reunión presencial).
+— Día 2: presentación y entrega del plan de acción.
+— 4 semanas de implementación (26 días): ejecución guiada de las iniciativas acordadas.
 — Seguimiento y ajustes (opcional): revisión de métricas y optimizaciones continuas.
 
 RESPONSABILIDADES COMPARTIDAS
@@ -414,7 +494,7 @@ Partes: de una parte, Marcos González Anguiano (GastroGoan), con DNI 47668150Y 
 GastroGoan se compromete a prestar servicios de asesoría gastronómica integral 360°, consistentes en diagnóstico y análisis operativo, financiero y de marketing; diseño e implementación de estrategias a medida; formación de equipo y optimización de procesos; y seguimiento y reporting de resultados con indicadores clave.
 
 2. Duración
-Duración inicial: 3 meses, desde la firma hasta la entrega del informe final y seguimiento.
+Duración inicial: 4 semanas (28 días), desde la firma hasta la entrega del informe final y seguimiento.
 
 3. Tarifas y forma de pago
 Precio total del servicio: {{precio}}.
@@ -717,10 +797,13 @@ const PLAN360_REUNION_PERSONAL_PREGUNTAS = [
   'Si tú llevaras el negocio un día entero, ¿qué es lo primero que cambiarías o harías distinto?',
   '¿Hay algo que llevas tiempo queriendo decir y nunca ha salido el momento?',
 ];
+// Las preguntas y la nota libre (las respuestas EN CRUDO) ya no viven
+// aquí: viven en coachPrivate, un nodo hermano que la app del negocio
+// nunca lee (ver la sección "COACH PRIVATE" más abajo). Lo que queda en
+// este objeto es justo lo que SÍ es del negocio: si está hecha y, aparte,
+// el resumen que decide enviarle el coach.
 function plan360FreshReunionPersonal(){
   return {
-    preguntas: PLAN360_REUNION_PERSONAL_PREGUNTAS.map(q => ({q, a: ''})),
-    notaLibre: '',
     completadoAt: null,
     resumenNegocio: '',
     resumenSentAt: null,
@@ -1502,7 +1585,13 @@ function ensureRemotePlan360(){
         }
         return dia;
       }
-      return {day: d.day, phase: 'trabajo', title: d.title, priority: null, reviewType: null, enfoqueTitulo: '', enfoqueColor: null, tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
+      // tasks arranca VACÍO a propósito: el texto de d.task ('Contenido
+      // pendiente de definir') es un aviso interno de que ese día aún no
+      // se ha diseñado, no un encargo de verdad — metido como tarea real
+      // se veía tal cual, en castellano fijo, como si fuera la primera
+      // tarea de cada uno de los 26 días de trabajo para CUALQUIER
+      // negocio, en cualquier idioma.
+      return {day: d.day, phase: 'trabajo', title: d.title, priority: null, reviewType: null, enfoqueTitulo: '', enfoqueColor: null, tasks: []};
     });
   }
   // Migración: negocios cuyo día 1 se creó antes de que existiera el
@@ -4123,6 +4212,7 @@ function renderReunionPersonalPage(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunionPersonal) return;
   const r = d.reunionPersonal;
+  const cp = coachPrivadoDia(day);
   const soporte = plan360SpeechSupported();
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día 1</button>
@@ -4130,7 +4220,7 @@ function renderReunionPersonalPage(day){
     <p class="muted" style="margin-bottom:14px">Lo que vive el equipo por dentro. Las respuestas de abajo son privadas y NUNCA se envían — solo el resumen final, aparte, llega al negocio.</p>
     ${!soporte ? '<p class="muted" style="margin-bottom:10px">Este navegador no permite dictado por voz — escribe a mano.</p>' : ''}
     <div class="card">
-      ${r.preguntas.map((it, i) => `
+      ${cp.preguntas.map((it, i) => `
         <div class="field" style="margin-bottom:16px">
           <label>${i + 1}. ${esc(it.q)}</label>
           <div style="display:flex;gap:8px;align-items:flex-start">
@@ -4142,7 +4232,7 @@ function renderReunionPersonalPage(day){
       <div class="field" style="margin-bottom:16px">
         <label>Espacio libre <span class="muted">(cualquier cosa que salga y no encaje en las preguntas — privado)</span></label>
         <div style="display:flex;gap:8px;align-items:flex-start">
-          <textarea id="personal-a-libre" rows="5" style="flex:1">${esc(r.notaLibre || '')}</textarea>
+          <textarea id="personal-a-libre" rows="5" style="flex:1">${esc(cp.notaLibre || '')}</textarea>
           ${soporte ? `<button type="button" id="personal-mic-libre" class="btn btn-sm" style="flex-shrink:0" onclick="plan360ToggleDictado('libre','personal')"><i class="ti ti-microphone"></i></button>` : ''}
         </div>
       </div>
@@ -4162,13 +4252,14 @@ function renderReunionPersonalPage(day){
     </div>
   `;
 }
-function syncReunionPersonalFromForm(d){
-  d.reunionPersonal.preguntas.forEach((it, i) => {
+function syncReunionPersonalFromForm(d, day){
+  const cp = coachPrivadoDia(day);
+  cp.preguntas.forEach((it, i) => {
     const ta = document.getElementById('personal-a-' + i);
     if(ta) it.a = ta.value.trim();
   });
   const libre = document.getElementById('personal-a-libre');
-  if(libre) d.reunionPersonal.notaLibre = libre.value.trim();
+  if(libre) cp.notaLibre = libre.value.trim();
   const resumen = document.getElementById('personal-resumen');
   if(resumen) d.reunionPersonal.resumenNegocio = resumen.value.trim();
 }
@@ -4176,23 +4267,25 @@ function saveReunionPersonal(day){
   if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunionPersonal) return;
-  syncReunionPersonalFromForm(d);
+  syncReunionPersonalFromForm(d, day);
   saveRemoteBiz();
+  saveCoachPrivate();
   renderReunionPersonalPage(day);
 }
 function marcarReunionPersonalHecha(day){
   if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunionPersonal) return;
-  syncReunionPersonalFromForm(d);
+  syncReunionPersonalFromForm(d, day);
   d.reunionPersonal.completadoAt = Date.now();
   saveRemoteBiz();
+  saveCoachPrivate();
   renderReunionPersonalPage(day);
 }
 function sendReunionPersonalResumen(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunionPersonal) return;
-  syncReunionPersonalFromForm(d);
+  syncReunionPersonalFromForm(d, day);
   if(!d.reunionPersonal.resumenNegocio){
     alert('Escribe antes el resumen — es lo único que verá el negocio.');
     return;
@@ -4201,6 +4294,7 @@ function sendReunionPersonalResumen(day){
   if(plan360ActiveRecognition){ plan360DictadoParar = true; plan360ActiveRecognition.stop(); }
   d.reunionPersonal.resumenSentAt = Date.now();
   saveRemoteBiz();
+  saveCoachPrivate();
   renderReunionPersonalPage(day);
 }
 /* ---- Cliente misterioso: 14 bloques, una pantalla cada uno ---- */
