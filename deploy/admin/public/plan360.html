@@ -1318,8 +1318,8 @@ const PLAN360_TB_SENTIDOS = [
   {id: 'vista', label: 'Vista', icon: 'ti-eye'},
   {id: 'oido', label: 'Oído', icon: 'ti-ear', usaBanco: true, necesitaAudio: true},
   {id: 'olfato', label: 'Olfato', icon: 'ti-wind', usaBanco: true},
-  {id: 'gusto', label: 'Gusto', icon: 'ti-soup'},
-  {id: 'tacto', label: 'Tacto', icon: 'ti-hand-stop'},
+  {id: 'gusto', label: 'Gusto', icon: 'ti-soup', usaBanco: true},
+  {id: 'tacto', label: 'Tacto', icon: 'ti-hand-stop', usaBanco: true},
 ];
 // Vocabulario de la sopa de letras (Prueba 2, Vista) — vocabulario real de
 // sala y cocina, palabras largas de verdad (hasta 11 letras) para que dé
@@ -1381,13 +1381,6 @@ const PLAN360_TB_PREMIOS = [
 // El orden real del juego: Explicación → 3 Pruebas → Premio final.
 // La Prueba 2 (sentidos) tiene 5 pantallas propias, una por sentido.
 const PLAN360_TB_PANTALLAS = ['intro', 'kahoot', ...PLAN360_TB_SENTIDOS.map(s => s.id), 'creatividad', 'final'];
-// Un reto de sentido (Oído/Olfato/Gusto/Tacto) es SIEMPRE dos listas: lo
-// que preparó el equipo A para que adivine el B, y viceversa — así el
-// punto se sabe siempre a quién dárselo (a quien adivina, no a quien
-// prepara). Vista es la sopa de letras y va aparte (ver plan360FreshSopa).
-function plan360FreshReto(){
-  return {preparaA: [], preparaB: []};
-}
 // Oído funciona distinto al resto: no son "10 que prepara A + 10 que
 // prepara B", es UN banco compartido de sonidos (los sube el coach antes
 // de empezar) y los DOS equipos intentan adivinar cada uno — pueden
@@ -1433,8 +1426,8 @@ function plan360FreshTeamBuilding(){
       vista: plan360FreshSopa(),
       oido: plan360FreshBanco(),
       olfato: plan360FreshBanco(),
-      gusto: plan360FreshReto(),
-      tacto: plan360FreshReto(),
+      gusto: plan360FreshBanco(),
+      tacto: plan360FreshBanco(),
     },
     creatividad: {
       presupuesto: 25,
@@ -2565,15 +2558,6 @@ function marcarMasterclassHecha(day){
    EN VIVO delante del equipo — de ahí los botones grandes y el guion de
    preparación aparte, en su propia pantalla, para no estorbar durante
    el juego. */
-// Un reto (Olfato/Gusto/Tacto) puntúa a quien ADIVINA, no a quien
-// prepara: lo que preparó A (preparaA) lo adivina B, y viceversa. Oído es
-// distinto (banco compartido, ver tbBancoTotal) porque ahí no hay "quien
-// prepara": las sube el coach y los dos equipos intentan adivinar cada
-// sonido por igual.
-function tbRetoTotal(reto, equipo){
-  const items = equipo === 'A' ? (reto.preparaB || []) : (reto.preparaA || []);
-  return items.filter(it => it.adivinado === true).length;
-}
 function tbBancoTotal(banco, equipo){
   return (banco.items || []).filter(it => equipo === 'A' ? it.aciertoA : it.aciertoB).length;
 }
@@ -2584,11 +2568,13 @@ function tbSopaTotal(sopa, equipo){
 // sentido", sea cual sea su forma (sopa / banco / reto) — así el
 // marcador general y el desglose final no tienen que saber los detalles
 // de cada uno.
+// Los 5 sentidos usan solo dos formas: Vista es la sopa de letras
+// (tbSopaTotal) y las otras 4 son un banco compartido (tbBancoTotal) —
+// ya no queda ningún sentido con el modelo viejo de "reto" (dos listas,
+// una por equipo), así que no hace falta rama para eso.
 function tbSentidoTotal(tb, senId, equipo){
   if(senId === 'vista') return tbSopaTotal(tb.sentidos.vista, equipo);
-  const sen = PLAN360_TB_SENTIDOS.find(s => s.id === senId);
-  if(sen && sen.usaBanco) return tbBancoTotal(tb.sentidos[senId], equipo);
-  return tbRetoTotal(tb.sentidos[senId], equipo);
+  return tbBancoTotal(tb.sentidos[senId], equipo);
 }
 function tbTotalGeneral(tb, equipo){
   let total = (tb.kahoot.puntos[equipo] || 0) + (tb.creatividad.puntos[equipo] || 0);
@@ -2597,22 +2583,19 @@ function tbTotalGeneral(tb, equipo){
 }
 // Autorreparación: un negocio real se ha quedado con sentidos en una
 // forma incompleta o antigua más de una vez ya (primero .vista sin el
-// resto; luego Oído y ahora Olfato pasaron de "reto" a "banco"
-// compartido, así que un negocio que ya los hubiera tocado se quedaría
-// con la forma vieja). En vez de que cada función que toca
-// tb.sentidos[algo] tenga que defenderse por su cuenta, se repara aquí,
-// en el único sitio por el que pasa cualquier acceso al team building —
-// así ningún negocio se queda con una pantalla rota, tenga la forma que
-// tenga su dato guardado.
+// resto; luego cada sentido de sonido/olor/sabor/tacto pasó del modelo
+// viejo "reto" al banco compartido). En vez de que cada función que
+// toca tb.sentidos[algo] tenga que defenderse por su cuenta, se repara
+// aquí, en el único sitio por el que pasa cualquier acceso al team
+// building — así ningún negocio se queda con una pantalla rota, tenga
+// la forma que tenga su dato guardado.
 function tbSentidosRepair(tb){
   if(!tb || !tb.sentidos) return;
   PLAN360_TB_SENTIDOS.forEach(sen => {
     if(sen.id === 'vista'){
       if(!tb.sentidos.vista || !Array.isArray(tb.sentidos.vista.palabras)) tb.sentidos.vista = plan360FreshSopa();
-    } else if(sen.usaBanco){
-      if(!tb.sentidos[sen.id] || !Array.isArray(tb.sentidos[sen.id].items)) tb.sentidos[sen.id] = plan360FreshBanco();
-    } else if(!tb.sentidos[sen.id] || !Array.isArray(tb.sentidos[sen.id].preparaA)){
-      tb.sentidos[sen.id] = plan360FreshReto();
+    } else if(!tb.sentidos[sen.id] || !Array.isArray(tb.sentidos[sen.id].items)){
+      tb.sentidos[sen.id] = plan360FreshBanco();
     }
   });
   if(!tb.creatividad || !Array.isArray(tb.creatividad.criterios)){
@@ -3099,9 +3082,7 @@ function tbKahootMarcarCorrecta(day, qi, oi){
 function tbRenderSentido(box, day, tb, sentidoId){
   const sen = PLAN360_TB_SENTIDOS.find(s => s.id === sentidoId);
   if(!sen){ box.innerHTML = ''; return; }
-  const cuerpo = sen.id === 'vista' ? tbRenderVista(day, tb)
-    : sen.usaBanco ? tbRenderBanco(day, tb, sen)
-    : tbRenderReto(day, tb, sen);
+  const cuerpo = sen.id === 'vista' ? tbRenderVista(day, tb) : tbRenderBanco(day, tb, sen);
   box.innerHTML = `${tbMiniMarcador(tb)}` + cuerpo;
 }
 // El orden de "siguiente prueba" sigue PLAN360_TB_SENTIDOS (Vista, Oído,
@@ -3121,10 +3102,6 @@ function tbSiguienteSentidoBtn(day, actualId){
    físicos de verdad (no se puede "subir un olor"), así que ahí la
    lista es solo el nombre de lo que se preparó, tachado en cuanto se
    adivina. El punto es siempre para quien ADIVINA. */
-const PLAN360_TB_RETO_HINT = {
-  gusto: 'Cada equipo prepara muestras para que pruebe el otro a ciegas. Anota cada una y marca si acertaron qué era.',
-  tacto: 'Cada equipo prepara objetos para tocar con los ojos vendados. Anota cada uno y marca si acertaron.',
-};
 // El Test arranca con 30 preguntas listas y la sopa con 12 palabras —
 // Oído/Olfato/Gusto/Tacto en cambio arrancaban en una lista vacía del
 // todo, sin ni una idea, que es justo lo que hacía que se sintieran
@@ -3137,67 +3114,6 @@ const PLAN360_TB_SUGERENCIAS = {
   gusto: ['Limón', 'Sal', 'Azúcar', 'Vinagre', 'Miel', 'Café solo', 'Guindilla', 'Menta', 'Chocolate negro', 'Aceituna'],
   tacto: ['Hielo', 'Harina', 'Un limón entero', 'Servilleta de tela', 'Cuchara de madera', 'Papel de aluminio', 'Un corcho', 'Sal gorda', 'Piel de naranja', 'Posavasos de corcho'],
 };
-function tbRenderRetoLista(day, senId, lado, items, equipoQuePrepara, equipoQueAdivina, necesitaAudio){
-  items = items || [];   // red de seguridad: no debería pasar (tbSentidosRepair ya lo garantiza), pero mejor esto que una pantalla en blanco
-  const total = items.length, acertados = items.filter(it => it.adivinado === true).length;
-  const usadas = new Set(items.map(it => it.nombre));
-  const sugerencias = (PLAN360_TB_SUGERENCIAS[senId] || []).filter(s => !usadas.has(s));
-  return `
-    <div style="flex:1;min-width:240px">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Preparó <strong>${esc(equipoQuePrepara)}</strong> · adivina <strong>${esc(equipoQueAdivina)}</strong> (${acertados}/${total})</div>
-      ${items.map((it, idx) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
-          ${necesitaAudio ? `
-            ${it.url ? `<button class="btn btn-sm btn-icon" onclick="tbRetoReproducir('${esc(it.url)}')" title="Reproducir"><i class="ti ti-player-play"></i></button>`
-                      : `<label class="btn btn-sm btn-icon" title="Subir sonido" style="cursor:pointer"><i class="ti ti-upload"></i><input type="file" accept="audio/*" style="display:none" onchange="tbRetoSubirAudio(event,${day},'${senId}','${lado}',${idx})"></label>`}
-          ` : ''}
-          <input value="${esc(it.nombre)}" placeholder="¿Qué es?" onchange="tbRetoNombre(${day},'${senId}','${lado}',${idx},this.value)"
-            style="flex:1;${it.adivinado===true?'text-decoration:line-through;color:var(--muted)':''}">
-          <button class="btn btn-sm ${it.adivinado===true?'btn-primary':''}" onclick="tbRetoMarcar(${day},'${senId}','${lado}',${idx},true)" title="Acertó">✓</button>
-          <button class="btn btn-sm ${it.adivinado===false?'btn-danger':''}" onclick="tbRetoMarcar(${day},'${senId}','${lado}',${idx},false)" title="Falló">✗</button>
-          <button class="btn btn-sm btn-icon" onclick="tbRetoBorrar(${day},'${senId}','${lado}',${idx})" title="Quitar"><i class="ti ti-trash"></i></button>
-        </div>`).join('')}
-      <button class="btn btn-sm" style="margin-top:8px" onclick="tbRetoAnadir(${day},'${senId}','${lado}')"><i class="ti ti-plus"></i> Añadir</button>
-      ${sugerencias.length ? `
-        <div style="margin-top:10px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ideas rápidas (un toque para añadir):</div>
-          <div style="display:flex;flex-wrap:wrap;gap:5px">
-            ${sugerencias.slice(0, 6).map(s => `<button class="btn btn-sm" onclick="tbRetoAnadirSugerida(${day},'${senId}','${lado}','${esc(s).replace(/'/g,"\\'")}')" style="font-size:11px;padding:4px 9px">${esc(s)}</button>`).join('')}
-          </div>
-        </div>` : ''}
-    </div>`;
-}
-function tbRenderReto(day, tb, sen){
-  const reto = tb.sentidos[sen.id];
-  return `
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <i class="ti ${sen.icon}" style="font-size:22px"></i>
-        <strong>Prueba 2 — ${esc(sen.label)}</strong>
-      </div>
-      <p class="muted" style="margin-bottom:14px">${PLAN360_TB_RETO_HINT[sen.id]}</p>
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        ${tbRenderRetoLista(day, sen.id, 'preparaA', reto.preparaA, tb.equipoA, tb.equipoB, sen.necesitaAudio)}
-        ${tbRenderRetoLista(day, sen.id, 'preparaB', reto.preparaB, tb.equipoB, tb.equipoA, sen.necesitaAudio)}
-      </div>
-    </div>
-    ${tbSiguienteSentidoBtn(day, sen.id)}
-  `;
-}
-function tbRetoAnadir(day, senId, lado){
-  const tb = tbGet(day);
-  if(!tb) return;
-  tb.sentidos[senId][lado].push({nombre: '', url: null, adivinado: null});
-  saveRemoteBiz();
-  renderTeamBuildingPage(day);
-}
-function tbRetoAnadirSugerida(day, senId, lado, nombre){
-  const tb = tbGet(day);
-  if(!tb) return;
-  tb.sentidos[senId][lado].push({nombre, url: null, adivinado: null});
-  saveRemoteBiz();
-  renderTeamBuildingPage(day);
-}
 /* -- Oído / Olfato: banco compartido (distinto de Gusto/Tacto, que
    siguen siendo "reto" con dos listas) --
    Un solo listado de hasta 10 elementos que anota/prepara el coach antes
@@ -3209,6 +3125,8 @@ function tbRetoAnadirSugerida(day, senId, lado, nombre){
 const PLAN360_TB_BANCO_HINT = {
   oido: 'Sube hasta 10 sonidos antes de jugar. Por cada uno: reprodúcelo, y cuando los equipos digan su respuesta pulsa el "?" para revelar cuál era — pueden acertar los dos equipos, uno, o ninguno.',
   olfato: 'Prepara hasta 10 olores antes de jugar (especias, ingredientes de la cocina). Por cada uno: que los equipos huelan a ciegas y digan qué es, y pulsa el "?" para revelar cuál era — pueden acertar los dos equipos, uno, o ninguno.',
+  gusto: 'Prepara hasta 10 muestras de sabor antes de jugar. Por cada una: que los equipos prueben a ciegas y digan qué es, y pulsa el "?" para revelar cuál era — pueden acertar los dos equipos, uno, o ninguno.',
+  tacto: 'Prepara hasta 10 objetos o texturas antes de jugar. Por cada uno: que los equipos lo toquen con los ojos vendados y digan qué es, y pulsa el "?" para revelar cuál era — pueden acertar los dos equipos, uno, o ninguno.',
 };
 function tbRenderBanco(day, tb, sen){
   const banco = tb.sentidos[sen.id];
@@ -3342,46 +3260,6 @@ function tbBancoVolver(day, senId){
   tb.sentidos[senId].fase = 'jugando';
   saveRemoteBiz();
   renderTeamBuildingPage(day);
-}
-function tbRetoBorrar(day, senId, lado, idx){
-  const tb = tbGet(day);
-  if(!tb) return;
-  tb.sentidos[senId][lado].splice(idx, 1);
-  saveRemoteBiz();
-  renderTeamBuildingPage(day);
-}
-function tbRetoNombre(day, senId, lado, idx, valor){
-  const tb = tbGet(day);
-  if(!tb) return;
-  tb.sentidos[senId][lado][idx].nombre = valor;
-  saveRemoteBiz();
-}
-function tbRetoMarcar(day, senId, lado, idx, valor){
-  const tb = tbGet(day);
-  if(!tb) return;
-  const it = tb.sentidos[senId][lado][idx];
-  it.adivinado = it.adivinado === valor ? null : valor;   // pulsar dos veces deshace el marcado, por si se ha tocado sin querer
-  saveRemoteBiz();
-  renderTeamBuildingPage(day);
-}
-// El audio se queda como blob LOCAL del navegador (URL.createObjectURL):
-// no hace falta subirlo a ningún sitio para reproducirlo en el momento,
-// pero eso también quiere decir que no sobrevive a un refresco de
-// página — coherente con ser material de UNA sesión de juego en vivo,
-// no un archivo que haya que guardar para otro día.
-function tbRetoSubirAudio(ev, day, senId, lado, idx){
-  const file = ev.target.files && ev.target.files[0];
-  if(!file) return;
-  const tb = tbGet(day);
-  if(!tb) return;
-  const url = URL.createObjectURL(file);
-  const it = tb.sentidos[senId][lado][idx];
-  it.url = url;
-  if(!it.nombre) it.nombre = file.name.replace(/\.[^.]+$/, '');
-  renderTeamBuildingPage(day);
-}
-function tbRetoReproducir(url){
-  try{ new Audio(url).play(); }catch(e){}
 }
 
 /* -- Vista: sopa de letras interactiva --------------------------------
