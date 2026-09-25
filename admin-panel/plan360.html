@@ -1406,6 +1406,7 @@ function plan360FreshTeamBuilding(){
       preguntas: PLAN360_TB_KAHOOT_DEFECTO.map(q => ({...q, opciones: [...q.opciones]})),
       actual: 0,
       tiempoSeg: 20,
+      revelada: false,   // true = ya se enseñó cuál era la correcta (transitorio por pregunta)
       puntos: {A: 0, B: 0},
     },
     sentidos: {
@@ -2601,7 +2602,7 @@ function tbMiniMarcador(tb){
 // La tira de las 9 pantallas — se pulsa cualquiera directamente, no hace
 // falta ir en orden (el coach puede saltar a Creatividad si ya lo dejó
 // preparado y volver luego al Kahoot).
-const PLAN360_TB_PANTALLA_LABEL = {intro:'Explicación', kahoot:'Prueba 1 · Kahoot', oido:'Oído', gusto:'Gusto', olfato:'Olfato', tacto:'Tacto', vista:'Vista', creatividad:'Prueba 3 · Creatividad', final:'Marcador final'};
+const PLAN360_TB_PANTALLA_LABEL = {intro:'Explicación', kahoot:'Prueba 1 · Test', oido:'Oído', gusto:'Gusto', olfato:'Olfato', tacto:'Tacto', vista:'Vista', creatividad:'Prueba 3 · Creatividad', final:'Marcador final'};
 function tbNav(day, actual){
   // Envuelta en su propia caja con borde y fondo — suelta entre el resto
   // de botones de la página (Volver, Empezar Prueba 1...) no se leía como
@@ -2627,7 +2628,7 @@ function renderTeamBuildingPage(day){
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
     <h2 style="margin:10px 0 4px">Team building</h2>
-    <p class="muted" style="margin-bottom:14px">3 pruebas: Kahoot → 5 sentidos → Creatividad. Marca los aciertos en vivo, delante del equipo.</p>
+    <p class="muted" style="margin-bottom:14px">3 pruebas: Test → 5 sentidos → Creatividad. Marca los aciertos en vivo, delante del equipo.</p>
     ${tbNav(day, tb.pantalla)}
     <div id="tb-pantalla"></div>
   `;
@@ -2676,7 +2677,7 @@ function tbRenderIntro(box, day, tb){
   box.innerHTML = `
     <div class="card">
       <h3 style="margin-top:0">Cómo va el juego</h3>
-      ${tbPruebaCard(1, 'ti-brain', 'Kahoot', 'Preguntas de hostelería. Responde primero el equipo que sepa la respuesta — un acierto, un punto.')}
+      ${tbPruebaCard(1, 'ti-brain', 'Test', 'Preguntas de hostelería. Responde primero el equipo que sepa la respuesta — un acierto, un punto.')}
       ${tbPruebaCard(2, 'ti-eye', 'Los 5 sentidos', 'Vista (sopa de letras), Oído, Olfato, Gusto y Tacto — un punto por cada acierto en cada uno.')}
       ${tbPruebaCard(3, 'ti-chef-hat', 'Creatividad', `${tb.creatividad.presupuesto}€ y ${tb.creatividad.tiempoMin} min para ir al súper, comprar, preparar y servir algo propio.`)}
       ${tbPruebaCard('🏆', '', 'Marcador final', 'Se suman las 3 pruebas. El equipo con más puntos se lleva el premio.')}
@@ -2760,22 +2761,54 @@ function marcarTeamBuildingHecha(day){
    pruebas (el coach arbitra en vivo, no hace falta un buzzer). */
 const PLAN360_TB_DIFICULTAD_LABEL = {facil: 'Fácil', media: 'Media', dificil: 'Difícil'};
 const PLAN360_TB_DIFICULTAD_COLOR = {facil: 'var(--green)', media: 'var(--amber, #c98a1f)', dificil: 'var(--red)'};
+// Los 4 colores + forma de Kahoot de verdad (rojo triángulo, azul rombo,
+// amarillo círculo, verde cuadrado) — así las opciones se pueden nombrar
+// a voces ("¡la roja!", "¡el rombo azul!") sin tener que leer el texto
+// entero, que es justo el punto de ese diseño y lo que lo hace sentir
+// como el juego real y no cuatro cajas blancas con un borde.
+const PLAN360_TB_FORMAS = [
+  {color: '#E53E3E', icon: 'ti-triangle'},
+  {color: '#3182CE', icon: 'ti-diamond'},
+  {color: '#D69E2E', icon: 'ti-circle'},
+  {color: '#38A169', icon: 'ti-square'},
+];
 let tbTimerHandle = null;
 let tbTimerRestante = 0;
 let tbAudioCtx = null;
 let tbSonidoActivo = false;
+function tbGetAudioCtx(){
+  if(!tbAudioCtx) tbAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return tbAudioCtx;
+}
 function tbTic(){
   // Un "tic" corto sintetizado con el propio navegador — nada que
   // descargar ni alojar, y funciona sin conexión en mitad de una sala.
   try{
-    if(!tbAudioCtx) tbAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = tbAudioCtx.createOscillator(), gain = tbAudioCtx.createGain();
+    const ctx = tbGetAudioCtx();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
     osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.05, tbAudioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, tbAudioCtx.currentTime + 0.08);
-    osc.connect(gain); gain.connect(tbAudioCtx.destination);
-    osc.start(); osc.stop(tbAudioCtx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.08);
   }catch(e){ /* algunos navegadores exigen una interacción antes de sonar — no pasa nada, sigue sin sonido */ }
+}
+// Acorde ascendente al revelar la respuesta — el "ta-chán" corto que
+// marca el corte entre "se está jugando" y "esto es lo que era".
+function tbAcorde(){
+  try{
+    const ctx = tbGetAudioCtx();
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.frequency.value = freq;
+      const t0 = ctx.currentTime + i * 0.08;
+      gain.gain.setValueAtTime(0.001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.5);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t0); osc.stop(t0 + 0.5);
+    });
+  }catch(e){}
 }
 function tbKahootEmpezarTiempo(day){
   const tb = tbGet(day);
@@ -2790,13 +2823,29 @@ function tbKahootEmpezarTiempo(day){
     const num = document.getElementById('tb-kahoot-num');
     if(barra) barra.style.width = Math.max(0, (tbTimerRestante / tb.kahoot.tiempoSeg) * 100) + '%';
     if(num) num.textContent = Math.max(0, tbTimerRestante);
-    if(tbTimerRestante <= 0){ clearInterval(tbTimerHandle); tbSonidoActivo = false; }
+    // Al agotarse el tiempo se revela sola — como en el Kahoot real, no
+    // hace falta que el coach pulse nada si nadie contestó a tiempo.
+    if(tbTimerRestante <= 0) tbKahootRevelar(day);
   }, 1000);
   renderTeamBuildingPage(day);
 }
 function tbKahootPararTiempo(){
   clearInterval(tbTimerHandle);
+  tbTimerHandle = null;
   tbSonidoActivo = false;
+}
+// Revelar es un paso propio, separado de marcar quién acertó — mientras
+// no se revela, ni el propio coach ve la opción correcta resaltada en su
+// pantalla: así se puede tener la pantalla a la vista del equipo (móvil,
+// tablet, proyector) sin chafar la respuesta antes de tiempo.
+function tbKahootRevelar(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tbKahootPararTiempo();
+  tb.kahoot.revelada = true;
+  tbAcorde();
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 function tbRenderKahoot(box, day, tb){
   const k = tb.kahoot;
@@ -2808,34 +2857,48 @@ function tbRenderKahoot(box, day, tb){
     ${tbMiniMarcador(tb)}
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
-        <strong>Prueba 1 — Kahoot</strong>
+        <strong>Prueba 1 — Test</strong>
         <span class="muted">Pregunta ${total ? i + 1 : 0} de ${total}</span>
       </div>
       ${!q ? '<p class="muted">No hay preguntas todavía — añade alguna en el editor de abajo.</p>' : `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
           <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TB_DIFICULTAD_COLOR[q.dificultad]||'var(--muted)'}">${esc(PLAN360_TB_DIFICULTAD_LABEL[q.dificultad] || '')}</span>
           <div style="flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden">
-            <div id="tb-kahoot-barra" style="height:100%;background:var(--ink);width:${corriendo ? (tbTimerRestante/k.tiempoSeg*100) : 100}%;transition:width 1s linear"></div>
+            <div id="tb-kahoot-barra" style="height:100%;background:var(--ink);width:${corriendo ? (tbTimerRestante/k.tiempoSeg*100) : (k.revelada?0:100)}%;transition:width 1s linear"></div>
           </div>
-          <span id="tb-kahoot-num" style="font-weight:800;min-width:22px;text-align:right">${corriendo ? Math.max(0,tbTimerRestante) : k.tiempoSeg}</span>
+          <span id="tb-kahoot-num" style="font-weight:800;min-width:22px;text-align:right">${corriendo ? Math.max(0,tbTimerRestante) : (k.revelada?0:k.tiempoSeg)}</span>
         </div>
-        <div style="font-size:18px;font-weight:700;margin-bottom:14px">${esc(q.texto)}</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-          ${q.opciones.map((op, oi) => `
-            <div style="padding:10px 14px;border-radius:8px;border:2px solid ${oi===q.correcta?'var(--green)':'var(--border)'};background:${oi===q.correcta?'var(--green-l,#eafaf0)':'#fff'}">
-              ${esc(op)} ${oi===q.correcta ? '<i class="ti ti-check" style="color:var(--green)"></i>' : ''}
-            </div>`).join('')}
+        <div style="font-size:20px;font-weight:800;margin-bottom:14px;text-align:center">${esc(q.texto)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          ${q.opciones.map((op, oi) => {
+            const forma = PLAN360_TB_FORMAS[oi] || PLAN360_TB_FORMAS[0];
+            const esCorrecta = k.revelada && oi === q.correcta;
+            const atenuada = k.revelada && oi !== q.correcta;
+            return `
+            <div style="padding:16px 12px;border-radius:10px;background:${forma.color};color:#fff;display:flex;align-items:center;gap:10px;min-height:64px;
+              opacity:${atenuada?0.35:1};transform:${esCorrecta?'scale(1.03)':'scale(1)'};
+              box-shadow:${esCorrecta?'0 0 0 3px #fff, 0 0 0 6px '+forma.color:'none'};transition:all .3s ease">
+              <i class="ti ${forma.icon}" style="font-size:22px;flex-shrink:0"></i>
+              <span style="font-weight:700;font-size:15px">${esc(op)}</span>
+              ${esCorrecta ? '<i class="ti ti-check" style="margin-left:auto;font-size:22px"></i>' : ''}
+            </div>`;
+          }).join('')}
         </div>
-        <p class="muted" style="font-size:12px">La opción correcta se ve marcada aquí solo para ti. Formato: se responde EN VOZ ALTA — pulsa "Empezar tiempo", enseña las 4 opciones al equipo, y cuando alguien grite la respuesta marca qué equipo acertó primero.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-          ${!corriendo ? `<button class="btn btn-sm" onclick="tbKahootEmpezarTiempo(${day})"><i class="ti ti-player-play"></i> Empezar tiempo (${k.tiempoSeg}s)</button>`
-                       : `<button class="btn btn-sm" onclick="tbKahootPararTiempo();renderTeamBuildingPage(${day})"><i class="ti ti-player-pause"></i> Parar</button>`}
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="tbKahootPunto(${day},'A')">✓ Acertó ${esc(tb.equipoA)}</button>
-          <button class="btn btn-primary" onclick="tbKahootPunto(${day},'B')">✓ Acertó ${esc(tb.equipoB)}</button>
-          <button class="btn btn-sm" onclick="tbKahootSiguiente(${day})">Nadie acertó — siguiente →</button>
-        </div>
+        ${!k.revelada ? `
+          <p class="muted" style="font-size:12px">Enseña esta pantalla al equipo si quieres (la respuesta no se ve hasta revelarla). Se responde EN VOZ ALTA, nombrando el color o la forma.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${!corriendo ? `<button class="btn btn-sm" onclick="tbKahootEmpezarTiempo(${day})"><i class="ti ti-player-play"></i> Empezar tiempo (${k.tiempoSeg}s)</button>`
+                         : `<button class="btn btn-sm" onclick="tbKahootPararTiempo();renderTeamBuildingPage(${day})"><i class="ti ti-player-pause"></i> Parar tiempo</button>`}
+            <button class="btn btn-primary" onclick="tbKahootRevelar(${day})">Ver respuesta →</button>
+          </div>
+        ` : `
+          <p class="muted" style="font-size:12px">¿Qué equipo la dijo bien primero?</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="tbKahootPunto(${day},'A')">✓ Acertó ${esc(tb.equipoA)}</button>
+            <button class="btn btn-primary" onclick="tbKahootPunto(${day},'B')">✓ Acertó ${esc(tb.equipoB)}</button>
+            <button class="btn btn-sm" onclick="tbKahootSiguiente(${day})">Nadie acertó — siguiente pregunta →</button>
+          </div>
+        `}
       `}
     </div>
     <details class="card">
@@ -2891,6 +2954,7 @@ function tbKahootSiguiente(day){
   if(!tb) return;
   tbKahootPararTiempo();
   if(tb.kahoot.actual < tb.kahoot.preguntas.length - 1) tb.kahoot.actual++;
+  tb.kahoot.revelada = false;
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
@@ -3314,7 +3378,7 @@ function tbRenderFinal(box, day, tb){
     </div>` : ''}
     <div class="card">
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Desglose por prueba, en orden de juego (${esc(tb.equipoA)} / ${esc(tb.equipoB)})</div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>1. Kahoot</span><span>${tb.kahoot.puntos.A} / ${tb.kahoot.puntos.B}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border)"><span>1. Test</span><span>${tb.kahoot.puntos.A} / ${tb.kahoot.puntos.B}</span></div>
       ${PLAN360_TB_SENTIDOS.map((sen, i) => {
         const a = sen.id === 'vista' ? tbSopaTotal(tb.sentidos.vista, 'A') : tbRetoTotal(tb.sentidos[sen.id], 'A');
         const b = sen.id === 'vista' ? tbSopaTotal(tb.sentidos.vista, 'B') : tbRetoTotal(tb.sentidos[sen.id], 'B');
