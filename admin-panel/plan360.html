@@ -73,6 +73,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-day-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
 .p360-day-presencial{background:var(--ink);border-left-color:var(--ink);color:#fff}
 .p360-day-presencial .p360-day-weekday,.p360-day-presencial .p360-day-tag{color:#fff;opacity:.75}
+/* Mismo fallo que en css/styles.css: .p360-day:hover pone fondo claro para
+   el resto de días, pero un día presencial (1 y 2) ya tiene fondo oscuro y
+   letra blanca — sin esto, al pasar el ratón por encima quedaba texto
+   blanco sobre fondo claro, casi invisible. */
+.p360-day-presencial:hover{background:var(--olive)}
 .p360-task-done .p360-task-text{text-decoration:line-through;color:var(--muted)}
 </style>
 </head>
