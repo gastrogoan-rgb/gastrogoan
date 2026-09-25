@@ -409,10 +409,237 @@ function intentarMigrarReunionPersonal(){
    (PLAN360_DOCS_TEMPLATE, PLAN360_INTAKE_TEMPLATE, PLAN360_DEFAULT_PROGRAM).
    Si cambias el contenido de las plantillas allí, cámbialo aquí también.
    ============================================================ */
+// Cada documento lleva una categoría (para agrupar Recursos, que si no
+// era una lista plana e ilocalizable en cuanto pasó de 3 a 14 fichas) y,
+// salvo el Libro de marca (que tiene su propia estructura por secciones),
+// un "seed": el contenido real de los entregables del Drive, no un
+// genérico inventado — el coach lo ajusta luego a cada negocio, igual
+// que ya hacía con playbook-sala/cocina en blanco, pero partiendo de
+// algo en vez de la hoja en blanco.
 const PLAN360_DOCS_TEMPLATE = [
-  {id: 'identidad', title: 'Libro de marca'},
-  {id: 'playbook-sala', title: 'Playbook de sala'},
-  {id: 'playbook-cocina', title: 'Playbook de cocina'},
+  {id: 'identidad', title: 'Libro de marca', categoria: 'Marca'},
+  {id: 'playbook-sala', title: 'Playbook de sala', categoria: 'Sala', seed:
+`Tono y promesa de servicio
+Define cómo hablamos, a qué ritmo y qué transmitimos. Ej: "Cálido, experto y sin pretensiones: acogemos con cercanía, guiamos con conocimiento y resolvemos rápido." Regla de oro: primera persona, voz baja, ritmo pausado, sonreír con la mirada, nunca explicar de más los fallos.
+
+Sello identificativo
+Qué es lo que hace reconocible NUESTRO servicio (un corte de jamón en sala, los postres, un cóctel de bienvenida...) y qué tipo de servicio somos: atento, exclusivo, rápido...
+
+Storytelling
+Cómo se cuenta la historia del negocio y de los platos, y cómo conecta con el cliente.
+
+Secuencia de servicio, paso a paso
+- Reservas: voz sonriente, hablar despacio, nunca decir "no hay sitio" (siempre ofrecer alternativa), repetir la reserva antes de colgar.
+- Bienvenida: breve, institucional, marca el estilo sin dar detalles operativos.
+- Acompañar a la mesa: sugerir UNA recomendación con elegancia, entregar cartas.
+- Toma de comanda: preguntar alérgenos con respeto, repetir la comanda como parte del servicio.
+- Entrantes: nombrar el plato + un atributo + un consejo de consumo, en una frase.
+- Principales: anunciar con discreción, cuidar los tiempos.
+- Durante el servicio: aparecer con naturalidad, preguntar algo concreto ("¿todo correcto con el plato?"), anticipar el siguiente paso.
+- Postres y café: sugerir uno, lenguaje evocador, opción de compartir.
+- Cuenta y despedida: con calidez, agradecer, dar una razón concreta para volver.
+- Cierre y fidelización: una invitación concreta y personal (tarjeta, oferta, nota) que genere motivo de retorno.`},
+  {id: 'playbook-cocina', title: 'Playbook de cocina', categoria: 'Cocina'},
+  {id: 'guia-crear-plato', title: 'Cómo crear un plato', categoria: 'Cocina', seed:
+`Un método en 7 pasos para crear platos con identidad, rentables y reproducibles en servicio.
+
+1. Definir la identidad del local — ¿Qué tipo de cocina hacemos? ¿Qué nos diferencia? ¿Qué emociones queremos transmitir? ¿Qué productos representan nuestra zona? Sin identidad clara, no hay plato propio.
+
+2. Elegir el producto protagonista — De temporada, local o representativo, que el cliente reconoce, rentable, que encaja con la identidad. Un plato sin protagonista es un plato sin alma.
+
+3. Definir técnica y estilo — Brasa, plancha, confitado, salteado, horno, crujiente, marinado, fermentado... La técnica debe reforzar la identidad, no complicar la operativa.
+
+4. Construir el plato en 4 capas:
+   — Intención y función: qué debe lograr (emoción, rol en la carta, cliente objetivo).
+   — Arquitectura: base + protagonista (con su técnica) + 1-2 acompañamientos + elemento de contraste (ácido/amargo/crujiente) + toque final. Regla: 1 protagonista + 2 apoyos + 1 sorpresa.
+   — Balance de sabores: sal (al final), ácido (ligereza), grasa (redondez), dulce (equilibra), amargo/umami (profundidad). Cada bocado, al menos dos notas.
+   — Texturas y temperaturas: mínimo 3 texturas (cremoso, tierno, crujiente), una temperatura dominante y un contraste, mínimo 3 tonos de color.
+   Operativa real: montaje ≤ 3 min por plato, mise en place definido, escandallo calculado (coste por ración y margen objetivo).
+
+5. Asegurar identidad y diferenciación — Un aliño característico, una salsa de la casa, un toque de brasa, un ingrediente local, una presentación reconocible. Ese "toque propio" es lo que hace que el plato sea tuyo.
+
+6. Validar rentabilidad y operativa — ¿Escandallo rentable? ¿Reproducible cada día? ¿Se monta en menos de 3 min? ¿Ingredientes fáciles de conseguir? ¿Encaja con el resto de la carta? Un plato espectacular que no se puede ejecutar no sirve.
+
+7. Testeo y ajustes — Validación interna (equipo de cocina), operativa (¿funciona en servicio real?) y del cliente (prueba con 5-10 habituales: ¿lo volverían a pedir?). El plato final es la versión ajustada, nunca la primera idea.`},
+  {id: 'playbook-liderazgo', title: 'Playbook de liderazgo', categoria: 'Personal', seed:
+`Principios básicos para liderar
+Liderar con ejemplo (puntualidad, seguridad, trato). Comunicar con propósito (objetivo claro, receptor definido, acción esperada). Decidir y responsabilizar (decisiones rápidas en servicio, escalado definido). Aprender y mejorar (los errores como aprendizaje, registrados). Reconocer y visibilizar (reconocimiento frecuente y público).
+
+Prácticas diarias
+- Briefing de inicio de turno (2-3 min): prioridad del día · responsables · riesgos · objetivo medible. Ej: "Hoy priorizamos [X]. Responsable de pase: [A]. Riesgo: [Z]. Objetivo: cero incidencias."
+- Micro-feedback en servicio (30-60 s): 1 cosa bien + 1 mejora inmediata. Corregir en el momento, reforzar después.
+- 1:1 semanal con cada persona (10-15 min): estado, logro, bloqueo, objetivo semanal, apoyo requerido. Registrar 1 línea con acción y fecha de revisión.
+- Reconocimiento: mencionar 1 logro en cada briefing semanal y documentarlo. Recompensas simples: turno preferente, mención en grupo, incentivo operativo.
+- Delegación clara: tarea · resultado esperado · tiempo · recursos · señal de bloqueo. Siempre con confirmación verbal.
+
+Cultura
+El compromiso del equipo (la frase que nos define) y los valores clave (ej: respeto, responsabilidad, calidad, proactividad, seguridad) se definen con cada negocio — no son genéricos.`},
+  {id: 'proceso-seleccion', title: 'Proceso de selección de personal', categoria: 'Personal', seed:
+`De la publicación a la contratación, con textos listos para usar.
+
+1. Publicación y recepción — Anuncio claro y breve: puesto, responsabilidades, turno/jornada, salario orientativo. Cómo aplicar: CV + formulario corto (nombre, teléfono, disponibilidad, turno preferente). Lista ordenada por preferencia.
+
+2. Criba general — Revisar en bloques de 10-15. Sacar los 5 mejores perfiles para entrevista. A los que no encajan, mensaje cordial y guardar en el banco de candidatos.
+
+3. Validación inicial — Confirmar disponibilidad y convocar por WhatsApp o llamada: "Hola [Nombre], te convocamos a una entrevista presencial el [día] a las [hora] en [dirección]. ¿Puedes confirmar?"
+
+4. Entrevista presencial (20-25 min), guion paso a paso:
+   — Bienvenida: puntualidad, saludo, lenguaje corporal.
+   — Presentación del local: estilo, nº de servicios diarios, equipo, pico de horario.
+   — Objetivo de la entrevista: experiencia + situaciones reales + técnica; si avanza, prueba práctica.
+   — Repaso del CV: rol exacto, fechas, tareas diarias — verificar veracidad.
+   — Disponibilidad y condiciones: fecha de incorporación, turnos, expectativa salarial.
+   — Preguntas conductuales (situación·acción·resultado): "Cuéntame una vez que hubo un fallo en servicio, ¿qué hiciste?" "Un ejemplo de cuando el equipo se saturó y cómo ayudaste."
+   — Preguntas técnicas/casos: "En plena salida falta un ingrediente base, ¿qué haces en 5 minutos?"
+   — Cierre: DNI y referencias para la prueba práctica, confirmación en 48-72h.
+   Evaluación: puntualidad, presentación, CV, experiencia, técnica, actitud, disponibilidad — total /30.
+
+5. Prueba práctica (15-45 min) — Máximo 3 acciones observadas de una en una. Puntuar: puntualidad, técnica, limpieza/orden, ritmo, resultado, comunicación — total /30.
+
+6. Decisión — Entrevista + prueba sobre 60. 45-60: contratar. 30-44: priorizar por feeling. <30: descartar. Oferta positiva con puesto, salario, turno, fecha de inicio y plan de 7 días; confirmación en 48h.`},
+  {id: 'evaluacion-retencion', title: 'Evaluación, reconocimiento y retención', categoria: 'Personal', seed:
+`Evaluación del rendimiento (1-3 por ítem: 1 necesita mejorar, 2 correcto, 3 sobresaliente, total /21): puntualidad y asistencia, cumplimiento operativo (checklists/HACCP), calidad técnica, comunicación, trabajo en equipo, actitud y profesionalidad, feeling general.
+
+Reconocimiento
+Cuándo: en el momento (resolver una queja, salvar un servicio), al cierre del turno (micro-reconocimiento), semanalmente (mención en el briefing) y trimestralmente (premio operativo). Combinar reconocimiento social (mención pública) y tangible (comida, turno preferente) es más efectivo que solo uno.
+
+Compensación
+Criterios: impacto medible, iniciativa sin esperar instrucciones, consistencia (7-30 días), comportamiento cultural. Tipos, de menor a mayor: reconocimiento verbal, mención pública, micro-beneficio (comida/turno), micro-bono (5-20€), bono mensual/trimestral, formación pagada, día libre extra.
+
+Retención — 10 acciones prácticas
+Pago anticipado de salario ya ganado · participación en % del beneficio si se alcanzan metas · bolsa de horas flexibles · microformación certificable · días extra por antigüedad (2 cada 6 meses) · uniforme gratuito con reposición anual · una comida completa del personal · día de descanso flexible · convenio con gimnasio o salud · lotes de producto de calidad por buen desempeño.`},
+  {id: 'onboarding-seguimiento', title: 'Onboarding y seguimiento', categoria: 'Personal', seed:
+`Cómo recibir a una nueva persona y acompañarla sus primeros 90 días.
+
+Checklist previo al primer día
+- Documentación: contrato firmado y archivado, DNI/permiso de trabajo, certificados (HACCP, manipulador) verificados.
+- Comunicación: mensaje de bienvenida con fecha/hora/punto de encuentro, plan de incorporación enviado, contacto de emergencias compartido.
+- Puesto: uniforme y EPI asignado, estación preparada (ficha técnica, foto de montaje), accesos (taquilla, fichaje, grupo del equipo), sesión de seguridad e higiene el primer día.
+
+Plan de seguimiento por hitos
+- Día 15 — Integrado y seguro: puntualidad, ejecuta tareas esenciales con supervisión, usa EPI y HACCP, participa en briefing.
+- Día 30 — Operativo con supervisión mínima: 80% de tareas autónomo, calidad en estándar, mantiene ritmo.
+- Día 60 — Consolidado: autonomía 90%, calidad consistente, minimiza mermas, ayuda al equipo.
+- Día 90 — Desempeño pleno: cumple estándares, actitud alineada, puede formar a otros — decisión de continuidad.
+
+Comportamientos clave a reforzar
+Puntualidad activa (10 min antes, avisar con 24h si falta) · proactividad resolutiva (propone y ejecuta o escala con propuesta) · respeto operativo (tono profesional, conflictos en privado) · responsabilidad con recursos (anotar mermas, rotar stock).`},
+  {id: 'estrategia-editorial', title: 'Estrategia editorial mensual', categoria: 'Marketing', seed:
+`Un sistema sencillo para organizar un mes de contenido, publicidad y reputación. Constancia antes que perfección.
+
+Los 5 pilares
+- Producto: el plato que da hambre, tu contenido estrella.
+- Personas: equipo, cocina, backstage — genera cercanía.
+- Prueba social: reseñas, clientes disfrutando, el local lleno — convence más que hablar de uno mismo.
+- Promo: nuevo plato, menú del día, evento — llamada a la acción clara.
+- Valor: un tip, el origen de un producto, la historia del local — te posiciona como referente.
+
+Semana tipo (qué publicar cada día)
+Lunes Valor · Martes Personas · Miércoles Producto (reel) · Jueves Promo del finde · Viernes Producto de finde · Sábado Prueba social (local lleno) · Domingo Prueba social (repost de cliente).
+
+Cómo se usa (una vez al mes)
+1) Elige el foco del mes (plato de temporada, fecha señalada, objetivo). 2) Reparte los 5 pilares en la semana tipo. 3) Rellena la parrilla con publicaciones concretas. 4) Revisa cada semana qué funcionó (guardados, mensajes, reservas) y ajusta.
+
+Reputación: las reseñas venden mientras duermes
+Pídelas en el mejor momento (cliente contento, justo al pagar), con un QR sin fricción. Responde SIEMPRE: a las buenas con cercanía, a las malas sin pelear (reconocer, disculpar, invitar a arreglarlo en privado).
+
+Métricas que se miran cada semana
+Alcance y guardados · mensajes directos y seguidores nuevos · reseñas nuevas y nota media · reservas y clics que llegan por redes. La única pregunta que importa: ¿esto trae clientes? Dobla lo que funciona, corta lo que no.
+
+Consejo: graba en lote — un día a la semana, 30 min, para tener 4-5 vídeos o fotos listos.`},
+  {id: 'guia-meta-ads', title: 'Guía de Meta Ads', categoria: 'Marketing', seed:
+`Cómo conseguir clientes con anuncios en Instagram y Facebook sin perder dinero. Lee primero esto: te ahorra el error que comete casi todo el mundo.
+
+Antes de gastar un euro
+- El error nº1: pulsar "Promocionar publicación" desde Instagram. Siempre se crea desde el Administrador de Anuncios (business.facebook.com) — gastas menos y segmentas mejor.
+- El anuncio lleva a tu perfil: si el perfil da pena (fotos, bio, cómo reservar), el cliente no viene aunque el anuncio sea bueno.
+- Amplifica, no salva: la publicidad multiplica un buen negocio, no arregla uno malo.
+- Local, no el mundo: anúnciate solo a 3-5 km a la redonda.
+- Valor, no descuento: el que viene solo por un 50% no vuelve a pagar precio completo.
+Necesitas: página de Facebook, Instagram vinculado, cuenta en Meta Business Suite y un método de pago (se crean gratis en 10 min).
+
+Crear la campaña, 6 pasos
+1) Administrador de Anuncios → "Crear" (nunca desde el botón azul de la app). 2) Objetivo: "Interacción" (mensajes) o "Tráfico" (web de reservas). 3) Presupuesto: 5-10€/día, diario no total. 4) Segmenta: ubicación + 3-5km, edad/sexo del cliente ideal, intereses (gastronomía, restaurantes, planes locales). 5) Creatividad: vídeo corto (10-20s) o foto muy buena + texto breve con llamada clara ("Reserva"). 6) Publica y espera 3-4 días sin tocar — Meta necesita tiempo para aprender.
+
+Truco: crea 2-3 versiones (distinta foto o texto) con poco presupuesto cada una; a los pocos días, apaga las que no funcionan y pon el dinero en la ganadora.`},
+  {id: 'guia-fotografica', title: 'Guía fotográfica', categoria: 'Marketing', seed:
+`Fotos que dan hambre, con el móvil que ya tienes. La foto no corrige errores: el plato sale de cocina impecable y entonces se dispara.
+
+Preparación
+Superficie y fondo neutro (madera, mármol, tela lisa), máximo 2 props. Luz natural lateral (junto a una ventana, sin luz directa ni sombras duras). Ten a mano el plato, el móvil, un reflector improvisado (cartón blanco) y un paño.
+
+Ajustes técnicos
+Activa la cuadrícula (regla de tercios). Máxima calidad/RAW si el móvil lo permite. Bloqueo de exposición y enfoque: toca el punto y mantén. HDR según el plato. Lente limpia antes de cada sesión.
+
+Composición y ángulos
+90° cenital para bowls y mesas con varios elementos. 45° tres cuartos para platos con volumen. 10-20° bajo para carnes y platos con altura. Regla práctica: 3 ángulos por plato + espacio negativo para textos.
+
+Estilismo
+Último toque en el momento (hierba fresca, crujiente, gotas de aceite). Controla brillos con un paño mate. Un elemento verde o ácido da contraste cromático. Una toma con salsa vertiéndose o una mano aporta storytelling.
+
+Paso a paso
+Monta el plato y da el toque final → móvil estable (trípode pequeño) → encuadre + bloqueo de exposición/enfoque → ráfaga de 5-8 fotos variando ángulo → revisa y repite si hace falta.
+
+Edición rápida
+Lightroom Mobile o Snapseed: exposición, contraste, temperatura, sombras, claridad. Recorte 4:3/3:2 para web, 1:1 para Instagram. Exportar JPG sRGB, 1200-1600px, calidad 80-90%.`},
+  {id: 'gestion-google-maps', title: 'Gestión del perfil de Google', categoria: 'Marketing', seed:
+`Cómo tener un perfil que atrae clientes y cómo responder reseñas. Plan a 3 meses.
+
+Información básica: horario actualizado (con festivos), teléfono correcto, dirección exacta con el pin bien colocado, web y enlace de reservas funcionando, categoría principal + secundarias correctas.
+
+Fotos y vídeos (mínimo 5 nuevas al mes): platos actuales, local, equipo y ambiente; vídeos cortos (10-20s); eliminar fotos antiguas o de baja calidad; subir en vertical (Google las prioriza).
+
+Servicios, atributos y menú: terraza, delivery, take away, menú del día, accesibilidad, pago con tarjeta; atributos (familias, pet friendly, sin gluten); menú actualizado con platos estrella, precios y fotos reales, quitando lo que ya no existe.
+
+Reseñas: responder al 100% en máximo 24h, solicitar a clientes satisfechos, detectar patrones (platos, servicio, tiempos).
+
+Mantenimiento: diario (leer y responder reseñas), semanal (5 fotos, 1-2 posts, revisar menú/precios/horarios), mensual (auditar categorías, fotos, coherencia del menú, estadísticas).
+
+Protocolo de respuestas
+- Positiva (24h): agradecer y mencionar el detalle, invitar a volver.
+- Neutra 3★ (12h): agradecer, tomar nota, invitar de nuevo.
+- Negativa 1-2★ (6h): lamentar sin excusas, indicar revisión interna, ofrecer contacto.
+- Falsa/injusta: cordial, indicar que no hay registro pero se quiere ayudar, reportar a Google.
+Tono siempre: cercano pero profesional, sin confrontación, cerrando con invitación a volver.`},
+  {id: 'guia-prueba-social', title: 'Guía de prueba social', categoria: 'Marketing', seed:
+`Cómo conseguir testimonios en vídeo que generan confianza y venden.
+
+Preparación antes de grabar: clientes contentos y relajados, buena luz y poco ruido, vertical (Reels/TikTok/Shorts), móvil a la altura de los ojos, pedir permiso para usar el vídeo, avisar que será rápido (1 min).
+
+Estructura del testimonio (genera más confianza que un "todo muy rico"): quién soy → qué buscaba → qué encontré → qué me sorprendió → por qué volvería/recomendaría → resumen en una frase.
+
+Guion de entrevista (3-5 preguntas, frases cortas)
+"¿Cómo te llamas y qué te trajo hoy al restaurante?" · "¿Qué estabas buscando o qué esperabas encontrar?" · "¿Qué es lo que más te ha gustado?" · "¿Qué nos hace diferentes a otros sitios de la zona?" · "Si tuvieras que recomendarlo, ¿qué le dirías?" · "Resume tu experiencia en una frase."
+
+Checklist de calidad: cliente cómodo y sonriente, audio claro, vídeo vertical, 20-40 segundos, menciona al menos 1 beneficio, menciona por qué volvería, fondo limpio y luz frontal.
+
+Dónde usarlos: Reels/TikTok, Stories destacadas, Google Maps (como vídeo), web (sección testimonios), WhatsApp Business (bienvenida), anuncios de Meta Ads.`},
+  {id: 'checklist-gestion', title: 'Checklist de gestión', categoria: 'Gestión', seed:
+`Las rutinas que mantienen el negocio bajo control, cada día y cada mes. Asigna un responsable a cada etapa — lo que no tiene dueño, no se hace.
+
+Revisión diaria
+1) Gestión inicial: alinear objetivos del día, resolver incidencias (proveedores, personal, pagos, clientes).
+2) Gestión de personal: confirmar turnos, resolver incidencias de última hora, asignar sustituciones.
+3) Repaso de reservas/ocupación: ajustar personal, prever picos, definir prioridades de servicio.
+4) Servicio y satisfacción: detectar desviaciones operativas, resolver incidencias en tiempo real.
+5) Cierre administrativo: revisar KPIs (food cost, ticket medio, ocupación, satisfacción), cerrar caja, pasar tickets y facturas.
+
+Revisión mensual
+1) Cierre contable: consolidar ventas y costes, preparar el informe de resultados.
+2) Cashflow: proyección de liquidez 30/60 días, detectar picos de pago.
+3) Nóminas: validar nómina, horas extras, variaciones de plantilla.
+4) Fiscal: preparar impuestos (retenciones, IVA, modelos) con la asesoría.
+5) Inventario completo del almacén.
+6) Actualizar escandallos y precios frente a variaciones de producto.
+7) Evaluación de proveedores: precios, plazos, calidad; renegociar si procede.
+8) Mantenimiento preventivo: revisar partes y coordinar intervenciones.
+9) Formación y evaluación del personal del mes.
+10) Marketing y ventas: revisar campañas, reservas, eventos, ROI.
+11) KPIs del mes: ticket medio, covers, ocupación, food cost, % margen.
+12) Planificar el mes que entra según rotación y demanda.
+13) Resumen mensual y plan de acción: incidencias, responsables, objetivos.
+14) Revisión de la cuenta de resultados: margen bruto, EBITDA, resultado neto, desviaciones.
+15) Obligaciones legales: IVA, Sociedades, retenciones, IRPF, cotizaciones, tasas locales, HACCP, contratos, seguros.`},
 ];
 // Secciones del Libro de marca (espejo de las 8 áreas del cuestionario en
 // profundidad): resumen + destacados, redactados por el coach (con ayuda
@@ -1557,17 +1784,26 @@ function plan360FreshTeamBuilding(){
     completadoAt: null,
   };
 }
+function plan360FreshDoc(d){
+  const doc = {id: d.id, title: d.title, body: d.seed || '', visible: true};
+  if(d.id === 'identidad'){
+    doc.libroSecciones = plan360FreshLibroSecciones();
+    doc.sentAt = null;
+  }
+  return doc;
+}
 function ensureRemotePlan360(){
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
-    remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(d => {
-      const doc = {id: d.id, title: d.title, body: '', visible: true};
-      if(d.id === 'identidad'){
-        doc.libroSecciones = plan360FreshLibroSecciones();
-        doc.sentAt = null;
-      }
-      return doc;
-    });
+    remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(plan360FreshDoc);
   }
+  // Migración: Recursos pasó de 3 fichas a 14 repartidas en categorías
+  // (25/09) — a un negocio con Recursos ya creado se le añaden las que le
+  // falten, sin tocar las que ya tuviera (aunque el coach ya las hubiera
+  // editado).
+  const idsYa = new Set(remoteBiz.plan360Docs.map(d => d.id));
+  PLAN360_DOCS_TEMPLATE.forEach(d => {
+    if(!idsYa.has(d.id)) remoteBiz.plan360Docs.push(plan360FreshDoc(d));
+  });
   // Migración: negocios cuyo Recursos se creó antes del Libro de marca
   // estructurado se quedarían con la "Identidad de marca" antigua (texto
   // libre) para siempre.
@@ -2217,30 +2453,44 @@ function saveIntake(){
 }
 
 /* ---- Recursos ---- */
+// Categorías en un orden fijo (no alfabético): el mismo orden en que se
+// presentan las áreas del negocio en el resto del programa.
+const PLAN360_DOCS_CATEGORIAS_ORDEN = ['Marca', 'Cocina', 'Sala', 'Personal', 'Marketing', 'Gestión'];
+function plan360DocCategoria(id){
+  const t = PLAN360_DOCS_TEMPLATE.find(x => x.id === id);
+  return (t && t.categoria) || 'Otros';
+}
 function renderDocsPage(){
   const docs = remoteBiz.plan360Docs || [];
-  document.getElementById('client-grid').innerHTML = `
-    ${plan360PageHeader('Recursos')}
-    ${docs.map((doc, i) => {
-      if(doc.id === 'identidad'){
-        const hechas = doc.libroSecciones.filter(s => s.resumen).length;
-        return `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="renderLibroMarcaHub()">
-          <div style="display:flex;align-items:center;gap:10px">
-            <i class="ti ${doc.sentAt ? 'ti-circle-check' : 'ti-book-2'}" style="font-size:20px;${doc.sentAt ? 'color:var(--green)' : ''}"></i>
-            <div style="flex:1"><strong>${esc(doc.title)}</strong>
-              <div class="p360-day-tag">${doc.sentAt ? 'Publicado' : hechas + '/' + doc.libroSecciones.length + ' secciones'}</div>
-            </div>
-            <i class="ti ti-chevron-right"></i>
-          </div>
-        </div>`;
-      }
-      return `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="renderDocSimplePage(${i})">
+  const conIndice = docs.map((doc, i) => ({doc, i}));
+  const categorias = [...new Set([...PLAN360_DOCS_CATEGORIAS_ORDEN, ...conIndice.map(x => plan360DocCategoria(x.doc.id))])]
+    .filter(cat => conIndice.some(x => plan360DocCategoria(x.doc.id) === cat));
+  const filaDoc = ({doc, i}) => {
+    if(doc.id === 'identidad'){
+      const hechas = doc.libroSecciones.filter(s => s.resumen).length;
+      return `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="renderLibroMarcaHub()">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="flex:1"><strong>${esc(doc.title)}</strong></div>
+          <i class="ti ${doc.sentAt ? 'ti-circle-check' : 'ti-book-2'}" style="font-size:20px;${doc.sentAt ? 'color:var(--green)' : ''}"></i>
+          <div style="flex:1"><strong>${esc(doc.title)}</strong>
+            <div class="p360-day-tag">${doc.sentAt ? 'Publicado' : hechas + '/' + doc.libroSecciones.length + ' secciones'}</div>
+          </div>
           <i class="ti ti-chevron-right"></i>
         </div>
       </div>`;
-    }).join('')}
+    }
+    return `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="renderDocSimplePage(${i})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="flex:1"><strong>${esc(doc.title)}</strong></div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>`;
+  };
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Recursos')}
+    ${categorias.map(cat => `
+      <div class="p360-week-label" style="margin-top:14px">${esc(cat)}</div>
+      ${conIndice.filter(x => plan360DocCategoria(x.doc.id) === cat).map(filaDoc).join('')}
+    `).join('')}
   `;
 }
 function renderDocSimplePage(i){
