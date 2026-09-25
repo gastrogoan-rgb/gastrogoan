@@ -5527,11 +5527,16 @@ function renderPlan360Dia1Hub(d){
 }
 /* ---- Día 2: presentación y entrega del plan. Orden real de la sesión
    (según el coach, 20/09): objetivos por prioridad → plan de acción de las
-   4 semanas → masterclass de la app → team building. Las dos últimas son
-   dinámicas presenciales del coach y no tienen contenido propio que ver
-   aquí; solo objetivos (editable) y el plan (el calendario que ya existe). */
+   4 semanas → masterclass de la app → team building. La masterclass es una
+   dinámica presencial del coach y no tiene contenido propio que ver aquí.
+   El team building SÍ lo tiene desde que el negocio pidió verlo (25/09):
+   quién ganó y un check de a quién ya se le dio el premio — lo juega el
+   coach desde su panel (admin-panel/plan360.html) y esto es de solo
+   lectura salvo el check, que sí guarda el negocio. */
 function renderPlan360Dia2Hub(d){
   const {weekday, dayMonth} = plan360FormatDate(d.day);
+  const tb = d.teamBuilding;
+  const listo = !!(tb && tb.completadoAt);
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360PlanAccion(${d.day})">
@@ -5541,7 +5546,94 @@ function renderPlan360Dia2Hub(d){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
+    <div class="card" style="margin-top:14px;${listo ? 'cursor:pointer' : 'opacity:.55'}" ${listo ? `onclick="renderPlan360TeamBuilding(${d.day})"` : ''}>
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-trophy" style="font-size:20px;${listo ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.teamBuilding'))}</strong>
+          <div class="p360-day-tag">${escapeHtml(listo ? t('plan360.teamBuildingReady') : t('plan360.teamBuildingPending'))}</div>
+        </div>
+        ${listo ? '<i class="ti ti-chevron-right"></i>' : ''}
+      </div>
+    </div>
   `;
+}
+// Mismo cálculo que tbTotalGeneral del panel del coach (admin-panel/
+// plan360.html), reimplementado aquí porque esta pantalla vive en un HTML
+// distinto y de solo lectura no vale la pena compartir módulo por esto.
+// Se detecta la forma del sentido en vez de dar por hecho una lista fija
+// (vista tiene .palabras+.encontradas, el resto tiene .items) para que
+// siga funcionando aunque el panel del coach añada o quite sentidos.
+function plan360TbTotal(tb, equipo){
+  let total = (tb.kahoot && tb.kahoot.puntos && tb.kahoot.puntos[equipo]) || 0;
+  total += (tb.creatividad && tb.creatividad.puntos && tb.creatividad.puntos[equipo]) || 0;
+  Object.values(tb.sentidos || {}).forEach(sen => {
+    if(!sen) return;
+    if(Array.isArray(sen.palabras)){
+      total += Object.values(sen.encontradas || {}).filter(f => f.equipo === equipo).length;
+    } else if(Array.isArray(sen.items)){
+      total += sen.items.filter(it => equipo === 'A' ? it.aciertoA : it.aciertoB).length;
+    }
+  });
+  return total;
+}
+function renderPlan360TeamBuilding(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tb = d && d.teamBuilding;
+  if(!tb){ renderPlan360DayDetail(day); return; }
+  const totalA = plan360TbTotal(tb, 'A'), totalB = plan360TbTotal(tb, 'B');
+  const ganaA = totalA > totalB, ganaB = totalB > totalA, empate = totalA === totalB;
+  const equipoGanador = empate ? null : (ganaA ? 'A' : 'B');
+  const nombreGanador = empate ? '' : (ganaA ? tb.equipoA : tb.equipoB);
+  const integrantesGanador = empate ? [] : ((ganaA ? tb.integrantesA : tb.integrantesB) || '')
+    .split('\n').map(s => s.trim()).filter(Boolean);
+  const entregado = tb.premioEntregado || {};
+  const hechos = integrantesGanador.filter((n, idx) => entregado[equipoGanador + '_' + idx]).length;
+  document.getElementById('plan360-content').innerHTML = `
+    <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.tbResultsTitle'))}</div>
+    <div class="card" style="margin-top:14px;background:var(--ink);color:#fff;text-align:center;padding:24px 16px">
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+        <div style="flex:1">
+          <div style="font-weight:700">${escapeHtml(tb.equipoA)}</div>
+          <div style="font-size:42px;font-weight:800;${ganaA ? 'color:#F0A868' : ''}">${totalA}</div>
+        </div>
+        <div style="opacity:.5;font-size:20px">—</div>
+        <div style="flex:1">
+          <div style="font-weight:700">${escapeHtml(tb.equipoB)}</div>
+          <div style="font-size:42px;font-weight:800;${ganaB ? 'color:#F0A868' : ''}">${totalB}</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:16px">${empate ? '🤝 ' + escapeHtml(t('plan360.tbTie')) : '🏆 ' + escapeHtml(nombreGanador)}</div>
+    </div>
+    ${tb.premio ? `
+    <div class="card" style="margin-top:14px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">${escapeHtml(t('plan360.tbPrize'))}</div>
+      <div style="font-size:15px;font-weight:600">${escapeHtml(tb.premio)}</div>
+    </div>` : ''}
+    ${!empate ? `
+    <div class="card" style="margin-top:14px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--muted)">${escapeHtml(t('plan360.tbChecklistTitle'))}</div>
+        ${integrantesGanador.length ? `<div style="font-size:12px;color:var(--muted);white-space:nowrap">${escapeHtml(t('plan360.tbChecklistProgress').replace('${n}', String(hechos)).replace('${total}', String(integrantesGanador.length)))}</div>` : ''}
+      </div>
+      ${integrantesGanador.length ? integrantesGanador.map((nombre, idx) => {
+        const key = equipoGanador + '_' + idx;
+        const marcado = !!entregado[key];
+        return `<label style="display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--border);cursor:pointer;min-height:44px">
+          <input type="checkbox" ${marcado ? 'checked' : ''} onchange="plan360TbTogglePremio(${day},'${key}',this.checked)" style="width:22px;height:22px;flex:none">
+          <span style="flex:1;${marcado ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(nombre)}</span>
+        </label>`;
+      }).join('') : `<p class="muted" style="margin:0">${escapeHtml(t('plan360.tbChecklistEmpty'))}</p>`}
+    </div>` : ''}
+  `;
+}
+function plan360TbTogglePremio(day, key, checked){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.teamBuilding) return;
+  if(!d.teamBuilding.premioEntregado) d.teamBuilding.premioEntregado = {};
+  d.teamBuilding.premioEntregado[key] = checked;
+  saveDB();
+  renderPlan360TeamBuilding(day);
 }
 /* ---- Plan de acción: objetivos por prioridad + resumen visual de los
    días 3-28 — cada día trae su propio contenido detallado al abrirlo. */
