@@ -5244,7 +5244,7 @@ function plan360HoyCardHtml(){
       : `<p class="muted" style="margin:0">${escapeHtml(t('plan360.todayNoTasks'))}</p>`;
   }
 
-  return `<div class="card" style="margin-bottom:14px;border:2px solid var(--ink)">
+  return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--ink);box-shadow:0 6px 18px rgba(28,26,23,.08)">
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
       <strong style="font-size:16px"><i class="ti ti-sun"></i> ${escapeHtml(t('plan360.today'))}</strong>
       ${dHoy ? `<span class="muted" style="font-size:12px">${escapeHtml(fechaHoy.weekday)} · ${escapeHtml(fechaHoy.dayMonth)}</span>` : ''}
@@ -5260,6 +5260,27 @@ function plan360HoyCardHtml(){
           </div>
         `).join('')}
       </div>` : ''}
+  </div>`;
+}
+// La cabecera de todo Plan 360º: día del programa, tareas hechas y
+// objetivos cumplidos, con una barra de avance — lo primero que se ve al
+// entrar, para que de un vistazo se sepa "dónde estoy" sin tener que
+// bajar a buscarlo en el calendario o en el resumen.
+function plan360HeroHtml(diaHoy, hechos, totalTareas){
+  const dia2 = (DB.business.plan360Program || []).find(x => x.day === 2);
+  const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
+  const cumplidos = objetivos.filter(o => o.estadoFinal === 'cumplido').length;
+  const diaMostrado = diaHoy === null ? 0 : Math.max(1, Math.min(28, diaHoy));
+  const pct = totalTareas ? Math.round((hechos / totalTareas) * 100) : 0;
+  return `<div class="p360-hero">
+    <div class="p360-hero-title">${escapeHtml(t('plan360.programTitle'))}</div>
+    <div class="p360-hero-sub">${escapeHtml(t('plan360.heroSub'))}</div>
+    <div class="p360-hero-stats">
+      <div class="p360-hero-stat"><div class="p360-hero-stat-num">${diaMostrado}<span style="font-size:14px;opacity:.6">/28</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.heroDay'))}</div></div>
+      <div class="p360-hero-stat"><div class="p360-hero-stat-num">${hechos}<span style="font-size:14px;opacity:.6">/${totalTareas}</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.tasksDone'))}</div></div>
+      <div class="p360-hero-stat"><div class="p360-hero-stat-num">${cumplidos}<span style="font-size:14px;opacity:.6">/${objetivos.length}</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.heroObjectives'))}</div></div>
+    </div>
+    <div class="p360-hero-bar"><div class="p360-hero-bar-fill" style="width:${pct}%"></div></div>
   </div>`;
 }
 function renderPlan360Grid(){
@@ -5308,6 +5329,7 @@ function renderPlan360Grid(){
   };
 
   document.getElementById('plan360-content').innerHTML = `
+    ${plan360HeroHtml(diaHoy, hechos, totalTareas)}
     ${plan360HoyCardHtml()}
     <div class="p360-toprow">
       <div class="p360-card" onclick="renderPlan360Intake()">
