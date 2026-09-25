@@ -1440,6 +1440,8 @@ function plan360FreshTeamBuilding(){
       resuelta: false,
       fotoA: null,
       fotoB: null,
+      fase: 'intro',    // 'intro' (explicación + ajustes) → 'preparando' (cronómetro) → 'evaluando' (fotos y notas) → 'resultado'
+      inicioAt: null,   // Date.now() al pulsar Empezar — el cronómetro se calcula contra la hora real, no con un contador que se para si se cambia de pantalla
     },
     premio: '',
     completadoAt: null,
@@ -3526,36 +3528,150 @@ function tbReiniciar(day){
    total se lleva los puntos de la prueba de una vez (no punto a punto
    como las otras pruebas: aquí gana UN plato, no una lista de aciertos
    sueltos). ---- */
+// Prueba 3, de un vistazo: explicación visual → cronómetro real →
+// presentación y notas → resultado con el ganador destacado. Antes era
+// una sola pantalla con formulario y marcador mezclados, sin ningún
+// "ya" que dijera cuándo se pasa de comprar/preparar a puntuar — igual
+// que se pidió para el Test y para Vista, aquí también hace falta un
+// flujo con fases en vez de un formulario suelto.
 function tbRenderCreatividad(box, day, tb){
+  const c = tb.creatividad;
+  if(c.fase === 'preparando') return tbRenderCreatividadPreparando(box, day, tb);
+  if(c.fase === 'evaluando') return tbRenderCreatividadEvaluando(box, day, tb);
+  if(c.fase === 'resultado') return tbRenderCreatividadResultado(box, day, tb);
+  return tbRenderCreatividadIntro(box, day, tb);
+}
+const PLAN360_TB_CREATIVIDAD_PASOS = [
+  {icon: 'ti-shopping-cart', label: 'Comprar'},
+  {icon: 'ti-knife', label: 'Preparar'},
+  {icon: 'ti-tools-kitchen-2', label: 'Emplatar'},
+  {icon: 'ti-spray', label: 'Dejar limpio'},
+];
+function tbRenderCreatividadIntro(box, day, tb){
+  const c = tb.creatividad;
+  box.innerHTML = `
+    ${tbMiniMarcador(tb)}
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <i class="ti ti-tools-kitchen-2" style="font-size:22px"></i>
+        <strong>Prueba 3 — Creatividad</strong>
+      </div>
+      <p class="muted" style="margin-bottom:16px">Con el mismo presupuesto y el mismo tiempo, cada equipo tiene que comprar, preparar y emplatar un plato o bebida original — y dejarlo todo limpio. Al acabar el tiempo, cada equipo presenta lo suyo delante de todos y se puntúa.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:18px">
+        ${PLAN360_TB_CREATIVIDAD_PASOS.map((p, i) => `
+          <div style="text-align:center;padding:14px 8px;border:1px solid var(--border);border-radius:10px;background:var(--bg)">
+            <div style="font-size:11px;font-weight:700;color:var(--muted)">${i + 1}</div>
+            <i class="ti ${p.icon}" style="font-size:26px;margin:6px 0;display:block"></i>
+            <div style="font-size:12px;font-weight:600">${p.label}</div>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="field" style="flex:1;min-width:120px"><label>Presupuesto por equipo (€)</label><input type="number" value="${c.presupuesto}" onchange="tbCreatividadCampo(${day},'presupuesto',this.value)"></div>
+        <div class="field" style="flex:1;min-width:120px"><label>Tiempo (min)</label><input type="number" value="${c.tiempoMin}" onchange="tbCreatividadCampo(${day},'tiempoMin',this.value)"></div>
+        <div class="field" style="flex:1;min-width:120px"><label>Puntos de la prueba</label><input type="number" value="${c.puntosPrueba}" onchange="tbCreatividadCampo(${day},'puntosPrueba',this.value)"></div>
+      </div>
+      <div class="field"><label>Encargo (lo que se lee al equipo)</label><textarea rows="2" onchange="tbCreatividadCampo(${day},'brief',this.value)">${esc(c.brief)}</textarea></div>
+      <div style="margin-top:14px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Cómo se va a evaluar cada plato:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${c.criterios.map((cr, ci) => `<span class="badge" style="display:inline-flex;align-items:center;gap:5px">${esc(cr)} <button onclick="tbCreatividadCriterioBorrar(${day},${ci})" title="Quitar" style="border:none;background:none;cursor:pointer;color:inherit;padding:0;font-size:12px;line-height:1">✕</button></span>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input id="tb-nuevo-criterio" placeholder="Añadir criterio (ej. Aprovechamiento del presupuesto)" style="flex:1">
+          <button class="btn btn-sm" onclick="tbCreatividadCriterioAnadir(${day})">Añadir</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:18px" onclick="tbCreatividadEmpezar(${day})">▶️ Empezar (${c.tiempoMin} min)</button>
+    </div>
+  `;
+}
+function tbCreatividadEmpezar(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.creatividad.fase = 'preparando';
+  tb.creatividad.inicioAt = Date.now();
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbCreatFormatoTiempo(segTotal){
+  segTotal = Math.max(0, Math.round(segTotal));
+  const m = Math.floor(segTotal / 60), s = segTotal % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+function tbRenderCreatividadPreparando(box, day, tb){
+  const c = tb.creatividad;
+  box.innerHTML = `
+    ${tbMiniMarcador(tb)}
+    <div class="card" style="text-align:center">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Comprando, preparando y emplatando…</div>
+      <div id="tb-creat-num" style="font-size:56px;font-weight:800;font-variant-numeric:tabular-nums">${tbCreatFormatoTiempo(c.tiempoMin * 60)}</div>
+      <div style="height:10px;border-radius:6px;background:var(--border);margin:14px 0;overflow:hidden">
+        <div id="tb-creat-barra" style="height:100%;width:100%;background:var(--brand-orange,#F0A868);transition:width 1s linear"></div>
+      </div>
+      <p class="muted" style="margin:0">Presupuesto ${c.presupuesto}€ por equipo · ${esc(c.brief)}</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">
+        <button class="btn btn-sm" onclick="tbCreatividadAjustarTiempo(${day},5)">+5 min</button>
+        <button class="btn btn-sm" onclick="tbCreatividadAjustarTiempo(${day},-5)">-5 min</button>
+        <button class="btn btn-primary" onclick="tbCreatividadTerminarTiempo(${day})">🍽️ Terminar y pasar a evaluar</button>
+      </div>
+    </div>
+  `;
+  tbCreatividadArrancarReloj(day);
+}
+let tbCreatTimerHandle = null;
+// Cuenta atrás contra la hora real (inicioAt), no un contador que
+// descuenta 1 cada segundo: así, si el coach cambia de pantalla y
+// vuelve, o si se refresca la página a media compra, el tiempo que
+// queda sigue siendo el correcto en vez de congelarse.
+function tbCreatividadArrancarReloj(day){
+  clearInterval(tbCreatTimerHandle);
+  const tick = () => {
+    const tb = tbGet(day);
+    if(!tb || tb.pantalla !== 'creatividad' || tb.creatividad.fase !== 'preparando'){ clearInterval(tbCreatTimerHandle); return; }
+    const c = tb.creatividad;
+    const totalSeg = c.tiempoMin * 60;
+    const restante = totalSeg - (Date.now() - c.inicioAt) / 1000;
+    const num = document.getElementById('tb-creat-num');
+    const barra = document.getElementById('tb-creat-barra');
+    if(num){ num.textContent = tbCreatFormatoTiempo(restante); num.style.color = restante <= 0 ? 'var(--red,#E53E3E)' : ''; }
+    if(barra) barra.style.width = Math.max(0, Math.min(100, (restante / totalSeg) * 100)) + '%';
+  };
+  tick();
+  tbCreatTimerHandle = setInterval(tick, 1000);
+}
+function tbCreatividadAjustarTiempo(day, delta){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.creatividad.tiempoMin = Math.max(5, tb.creatividad.tiempoMin + delta);
+  saveRemoteBiz();
+}
+function tbCreatividadTerminarTiempo(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  clearInterval(tbCreatTimerHandle);
+  tb.creatividad.fase = 'evaluando';
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbRenderCreatividadEvaluando(box, day, tb){
   const c = tb.creatividad;
   const subA = c.criterios.reduce((s, cr) => s + (c.notas.A[cr] || 0), 0);
   const subB = c.criterios.reduce((s, cr) => s + (c.notas.B[cr] || 0), 0);
   box.innerHTML = `
     ${tbMiniMarcador(tb)}
     <div class="card">
-      <strong>Prueba 3 — Creatividad</strong>
-      <div style="display:flex;gap:10px;margin:10px 0">
-        <div class="field" style="flex:1"><label>Presupuesto por equipo (€)</label><input type="number" value="${c.presupuesto}" onchange="tbCreatividadCampo(${day},'presupuesto',this.value)"></div>
-        <div class="field" style="flex:1"><label>Tiempo (min)</label><input type="number" value="${c.tiempoMin}" onchange="tbCreatividadCampo(${day},'tiempoMin',this.value)"></div>
-      </div>
-      <div class="field"><label>Encargo</label><textarea id="tb-brief" rows="3" onchange="tbCreatividadCampo(${day},'brief',this.value)">${esc(c.brief)}</textarea></div>
-      <div class="field"><label>Puntos de la prueba para quien gane</label><input type="number" value="${c.puntosPrueba}" onchange="tbCreatividadCampo(${day},'puntosPrueba',this.value)" style="max-width:100px"></div>
-    </div>
-    <div class="card">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Foto del plato o bebida de cada equipo — queda guardada para enseñarla en el marcador final.</div>
-      <div style="display:flex;gap:14px;flex-wrap:wrap">
+      <strong>Presentación y evaluación</strong>
+      <p class="muted" style="margin:6px 0 14px">Cada equipo presenta su plato. Sube una foto y puntúa del 0 al 10 en cada criterio — el de más nota se lleva los ${c.puntosPrueba} puntos de la prueba.</p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">
         ${tbCreatividadFotoBox(day, 'A', tb.equipoA, c.fotoA)}
         ${tbCreatividadFotoBox(day, 'B', tb.equipoB, c.fotoB)}
       </div>
-    </div>
-    <div class="card">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Puntúa cada criterio del 0 al 10 por equipo. El de más nota se lleva los ${c.puntosPrueba} puntos de la prueba.</div>
       <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px 14px;align-items:center">
         <div></div>
         <div style="text-align:center;font-weight:700;font-size:12px">${esc(tb.equipoA)}</div>
         <div style="text-align:center;font-weight:700;font-size:12px">${esc(tb.equipoB)}</div>
-        ${c.criterios.map((cr, ci) => `
-          <div style="display:flex;align-items:center;gap:4px">${esc(cr)} <button class="btn btn-sm btn-icon" onclick="tbCreatividadCriterioBorrar(${day},${ci})" title="Quitar criterio" style="min-width:22px;min-height:22px;padding:0"><i class="ti ti-x" style="font-size:11px"></i></button></div>
+        ${c.criterios.map(cr => `
+          <div>${esc(cr)}</div>
           <input type="number" min="0" max="10" value="${c.notas.A[cr] || 0}" onchange="tbCreatividadNota(${day},'A','${esc(cr)}',this.value)" style="width:56px;text-align:center">
           <input type="number" min="0" max="10" value="${c.notas.B[cr] || 0}" onchange="tbCreatividadNota(${day},'B','${esc(cr)}',this.value)" style="width:56px;text-align:center">
         `).join('')}
@@ -3563,15 +3679,8 @@ function tbRenderCreatividad(box, day, tb){
         <div style="text-align:center;font-weight:800;font-size:18px">${subA}</div>
         <div style="text-align:center;font-weight:800;font-size:18px">${subB}</div>
       </div>
-      <div style="display:flex;gap:6px;margin-top:10px">
-        <input id="tb-nuevo-criterio" placeholder="Nuevo criterio (ej. Uso de producto de km 0)" style="flex:1">
-        <button class="btn btn-sm" onclick="tbCreatividadCriterioAnadir(${day})">Añadir</button>
-      </div>
-      ${c.resuelta
-        ? `<p class="muted" style="margin-top:10px">Prueba resuelta: ${c.puntos.A > c.puntos.B ? esc(tb.equipoA) : (c.puntos.B > c.puntos.A ? esc(tb.equipoB) : 'empate')} se lleva ${c.puntos.A > c.puntos.B ? c.puntos.A : c.puntos.B || c.puntosPrueba} puntos.</p>`
-        : `<button class="btn btn-primary" style="margin-top:14px" onclick="tbCreatividadResolver(${day})">🍽️ Decidir ganador de la prueba (${subA > subB ? esc(tb.equipoA) : (subB > subA ? esc(tb.equipoB) : 'empate ahora mismo')})</button>`}
+      <button class="btn btn-primary" style="margin-top:16px" onclick="tbCreatividadResolver(${day})">🍽️ Decidir ganador de la prueba (${subA > subB ? esc(tb.equipoA) : (subB > subA ? esc(tb.equipoB) : 'empate ahora mismo')})</button>
     </div>
-    <button class="btn btn-sm" onclick="tbIr(${day},'final')">Ver marcador final →</button>
   `;
 }
 function tbCreatividadCampo(day, campo, valor){
@@ -3579,7 +3688,7 @@ function tbCreatividadCampo(day, campo, valor){
   if(!tb) return;
   tb.creatividad[campo] = (campo === 'brief') ? valor : (Number(valor) || 0);
   saveRemoteBiz();
-  if(campo === 'puntosPrueba') renderTeamBuildingPage(day);
+  if(campo === 'tiempoMin' || campo === 'puntosPrueba') renderTeamBuildingPage(day);
 }
 // Mismo criterio que el audio de Oído: blob LOCAL del navegador
 // (URL.createObjectURL), sin subir a ningún sitio — vale para enseñarla
@@ -3641,6 +3750,51 @@ function tbCreatividadResolver(day){
   else if(subA > subB){ c.puntos.A = c.puntosPrueba; c.puntos.B = 0; }
   else { c.puntos.B = c.puntosPrueba; c.puntos.A = 0; }
   c.resuelta = true;
+  c.fase = 'resultado';
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbRenderCreatividadResultado(box, day, tb){
+  const c = tb.creatividad;
+  const subA = c.criterios.reduce((s, cr) => s + (c.notas.A[cr] || 0), 0);
+  const subB = c.criterios.reduce((s, cr) => s + (c.notas.B[cr] || 0), 0);
+  const ganaA = c.puntos.A > c.puntos.B, ganaB = c.puntos.B > c.puntos.A, empate = c.puntos.A === c.puntos.B;
+  box.innerHTML = `
+    ${tbMiniMarcador(tb)}
+    <div class="card" style="background:var(--ink);color:#fff;text-align:center;padding:28px 16px">
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999)">Resultado de Creatividad</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
+        <div style="flex:1;${ganaA ? 'transform:scale(1.08)' : ''}">
+          <div style="font-weight:700">${esc(tb.equipoA)}${ganaA ? ' 🏆' : ''}</div>
+          <div style="font-size:44px;font-weight:800;${ganaA ? 'color:var(--brand-orange,#F0A868)' : ''}">${subA}</div>
+          <div style="font-size:12px;opacity:.7">${c.puntos.A} pto${c.puntos.A === 1 ? '' : 's'} de la prueba</div>
+        </div>
+        <div style="opacity:.5;font-size:20px">—</div>
+        <div style="flex:1;${ganaB ? 'transform:scale(1.08)' : ''}">
+          <div style="font-weight:700">${esc(tb.equipoB)}${ganaB ? ' 🏆' : ''}</div>
+          <div style="font-size:44px;font-weight:800;${ganaB ? 'color:var(--brand-orange,#F0A868)' : ''}">${subB}</div>
+          <div style="font-size:12px;opacity:.7">${c.puntos.B} pto${c.puntos.B === 1 ? '' : 's'} de la prueba</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-size:16px">${empate ? '🤝 Empate en Creatividad' : `🎉 ${esc(ganaA ? tb.equipoA : tb.equipoB)} gana la prueba de Creatividad`}</div>
+    </div>
+    ${(c.fotoA || c.fotoB) ? `
+    <div class="card">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
+        ${c.fotoA ? `<div style="text-align:center"><img src="${esc(c.fotoA)}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;border:${ganaA ? '3px solid var(--brand-orange,#F0A868)' : '1px solid var(--border)'}"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoA)}</div></div>` : ''}
+        ${c.fotoB ? `<div style="text-align:center"><img src="${esc(c.fotoB)}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;border:${ganaB ? '3px solid var(--brand-orange,#F0A868)' : '1px solid var(--border)'}"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoB)}</div></div>` : ''}
+      </div>
+    </div>` : ''}
+    <button class="btn btn-sm" onclick="tbCreatividadRepetir(${day})">↺ Repetir Creatividad desde el principio</button>
+    <button class="btn btn-primary" onclick="tbIr(${day},'final')">Ver marcador final →</button>
+  `;
+}
+function tbCreatividadRepetir(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const base = plan360FreshTeamBuilding().creatividad;
+  const c = tb.creatividad;
+  tb.creatividad = {...base, presupuesto: c.presupuesto, tiempoMin: c.tiempoMin, brief: c.brief, criterios: c.criterios, puntosPrueba: c.puntosPrueba};
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
@@ -3651,18 +3805,22 @@ function tbRenderFinal(box, day, tb){
   const ganador = empate ? null : (ganaA ? tb.equipoA : tb.equipoB);
   box.innerHTML = `
     <div class="card" style="background:var(--ink);color:#fff;text-align:center">
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999);margin-bottom:10px">Cómputo final de puntos</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:16px">
         <div style="flex:1">
           <div style="font-weight:700">${esc(tb.equipoA)}</div>
-          <div style="font-size:48px;font-weight:800;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${totalA}</div>
+          <div id="tb-final-totalA" style="font-size:48px;font-weight:800">${totalA}</div>
         </div>
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1">
           <div style="font-weight:700">${esc(tb.equipoB)}</div>
-          <div style="font-size:48px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div>
+          <div id="tb-final-totalB" style="font-size:48px;font-weight:800">${totalB}</div>
         </div>
       </div>
-      <div style="margin-top:14px;font-size:18px">${empate ? '🤝 Empate' : `🏆 Gana ${esc(ganador)}`}</div>
+      <div id="tb-final-ganador" style="margin-top:14px;font-size:18px;min-height:26px"></div>
+      ${empate
+        ? `<div style="margin-top:6px;font-size:14px;opacity:.8">🤝 Empate — no hay equipo ganador</div>`
+        : `<button id="tb-final-btn-ganador" class="btn btn-primary" style="margin-top:6px" onclick="tbMostrarGanadorFinal(${day})">🏆 Mostrar equipo ganador</button>`}
     </div>
     ${(tb.integrantesA || tb.integrantesB) ? `
     <div class="card" style="display:flex;gap:10px">
@@ -3693,13 +3851,34 @@ function tbRenderFinal(box, day, tb){
         ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" onclick="tbElegirPremio(${day},'${esc(p).replace(/'/g,"\\'")}')" style="font-size:11px;padding:5px 9px">${esc(p)}</button>`).join('')}
       </div>
       <button class="btn btn-sm" onclick="tbGuardarPremio(${day})">Guardar premio</button>
-      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} onclick="tbRevelarPremio('${esc(ganador||'')}','${esc(tb.premio||'')}','${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}')" style="margin-left:6px">🎬 Revelar ganador</button>
+      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} onclick="tbRevelarPremio('${esc(ganador||'')}','${esc(tb.premio||'')}','${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}')" style="margin-left:6px">🎁 Premios</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-sm" onclick="tbReiniciar(${day})">↺ Reiniciar las 3 pruebas</button>
       ${!tb.completadoAt ? `<button class="btn btn-primary" onclick="marcarTeamBuildingHecha(${day})">Marcar como hecha</button>` : '<p class="muted" style="margin:0">Marcada como hecha — el marcador se puede seguir tocando.</p>'}
     </div>
   `;
+}
+// Separado del cómputo de puntos a propósito: el coach lee el marcador en
+// voz alta con el equipo delante y quiere un momento propio de "y el
+// equipo ganador es…" en vez de que el nombre ya esté escrito arriba
+// desde que se entra a la pantalla. Toca el DOM directo (sin re-render)
+// para no perder este estado si se vuelve a pintar la pantalla por otra
+// cosa mientras tanto.
+function tbMostrarGanadorFinal(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const totalA = tbTotalGeneral(tb, 'A'), totalB = tbTotalGeneral(tb, 'B');
+  const ganaA = totalA > totalB, ganaB = totalB > totalA;
+  const elA = document.getElementById('tb-final-totalA');
+  const elB = document.getElementById('tb-final-totalB');
+  const elG = document.getElementById('tb-final-ganador');
+  const btn = document.getElementById('tb-final-btn-ganador');
+  if(elA && ganaA) elA.style.color = 'var(--brand-orange,#F0A868)';
+  if(elB && ganaB) elB.style.color = 'var(--brand-orange,#F0A868)';
+  if(elG) elG.textContent = `🏆 Gana ${ganaA ? tb.equipoA : tb.equipoB}`;
+  if(btn) btn.style.display = 'none';
+  tbAcorde();
 }
 function tbGuardarPremio(day){
   const tb = tbGet(day);
