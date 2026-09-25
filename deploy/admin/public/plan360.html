@@ -2637,13 +2637,25 @@ function tbNav(day, actual){
     <div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:16px;background:var(--bg)">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px">Ir a</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${PLAN360_TB_PANTALLAS.map(p => `<button class="btn btn-sm ${p===actual?'btn-primary':''}" onclick="tbIr(${day},'${p}')" style="font-size:11px;padding:6px 10px">${esc(PLAN360_TB_PANTALLA_LABEL[p])}</button>`).join('')}
+        ${PLAN360_TB_PANTALLAS.map(p => `<button class="btn btn-sm ${p===actual?'btn-primary':''}" onclick="tbIr(${day},'${p}')">${esc(PLAN360_TB_PANTALLA_LABEL[p])}</button>`).join('')}
       </div>
     </div>`;
 }
 function tbIr(day, pantalla){
   const tb = tbGet(day);
   if(!tb) return;
+  // La barra de navegación deja saltar a CUALQUIER pantalla en cualquier
+  // momento, así que hay que parar aquí, en el único sitio por el que pasa
+  // cualquier cambio de pantalla, los cronómetros que no se calculan contra
+  // reloj real (el del Test y el de memorizar de Vista) — si no, seguían
+  // corriendo de fondo: sonando, tocando datos y forzando un repintado de
+  // la pantalla nueva cuando llegaban a cero. El de Creatividad no hace
+  // falta pararlo aquí porque se calcula contra Date.now(), no cuenta ticks.
+  clearInterval(tbTimerHandle);
+  tbTimerHandle = null;
+  tbSonidoActivo = false;
+  clearInterval(tbMemorizarHandle);
+  tbMemorizarHandle = null;
   tb.pantalla = pantalla;
   saveRemoteBiz();
   renderTeamBuildingPage(day);
@@ -2999,6 +3011,7 @@ function tbKahootRepetir(day){
   tb.kahoot.revelada = false;
   tb.kahoot.terminado = false;
   tb.kahoot.marcActual = {A: false, B: false};
+  tb.kahoot.puntos = {A: 0, B: 0};
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
@@ -3014,6 +3027,7 @@ function tbKahootDificultad(day, qi, valor){
   if(!tb) return;
   tb.kahoot.preguntas[qi].dificultad = valor;
   saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 // Botón-interruptor: los dos equipos pueden acertar la misma pregunta
 // (antes marcar uno pasaba sola a la siguiente y el otro equipo, aunque
@@ -3081,6 +3095,7 @@ function tbKahootMarcarCorrecta(day, qi, oi){
   if(!tb) return;
   tb.kahoot.preguntas[qi].correcta = oi;
   saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 /* ---- Pantallas de los 5 sentidos (Prueba 2) ---- */
 function tbRenderSentido(box, day, tb, sentidoId){
@@ -3143,6 +3158,7 @@ function tbRenderBanco(day, tb, sen){
         <strong>Prueba 2 — ${esc(sen.label)}</strong>
       </div>
       <p class="muted" style="margin-bottom:14px">${esc(PLAN360_TB_BANCO_HINT[sen.id] || '')}</p>
+      ${sen.necesitaAudio ? `<p style="font-size:12px;color:var(--amber,#c98a1f);margin:-6px 0 14px"><i class="ti ti-alert-triangle"></i> Los sonidos subidos son solo de esta sesión: si refrescas la página hay que volver a subirlos.</p>` : ''}
       ${banco.items.map((it, idx) => `
         <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border);flex-wrap:wrap">
           ${sen.necesitaAudio ? (it.url
@@ -3166,7 +3182,7 @@ function tbRenderBanco(day, tb, sen){
           <div style="margin-top:10px">
             <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ideas rápidas (un toque para añadir):</div>
             <div style="display:flex;flex-wrap:wrap;gap:5px">
-              ${sugerencias.slice(0, 6).map(s => `<button class="btn btn-sm" onclick="tbBancoAnadirSugerida(${day},'${sen.id}','${esc(s).replace(/'/g,"\\'")}')" style="font-size:11px;padding:4px 9px">${esc(s)}</button>`).join('')}
+              ${sugerencias.slice(0, 6).map(s => `<button class="btn btn-sm" onclick="tbBancoAnadirSugerida(${day},'${sen.id}','${esc(s).replace(/'/g,"\\'")}')">${esc(s)}</button>`).join('')}
             </div>
           </div>` : '';
       })()}
@@ -3233,7 +3249,15 @@ function tbBancoSubirAudio(ev, day, senId, idx){
   renderTeamBuildingPage(day);
 }
 function tbBancoReproducir(url){
-  try{ new Audio(url).play(); }catch(e){}
+  // Los sonidos son un blob local (URL.createObjectURL): si la página se
+  // refrescó desde que se subieron, el blob ya no existe y .play() falla
+  // de forma ASÍNCRONA (una promesa rechazada, no una excepción), así que
+  // el try/catch de siempre no la atrapaba — sonaba a "no ha hecho nada"
+  // en vez de avisar de que hay que volver a subir el archivo.
+  try{
+    const p = new Audio(url).play();
+    if(p && p.catch) p.catch(() => alert('No se puede reproducir: si la página se refrescó desde que se subió, hay que volver a subirlo.'));
+  }catch(e){}
 }
 function tbBancoRevelar(day, senId, idx){
   const tb = tbGet(day);
@@ -3498,6 +3522,12 @@ function tbGuardarPalabras(day){
   const ta = document.getElementById('tb-palabras');
   if(!ta) return;
   const palabras = ta.value.split('\n').map(w => w.trim()).filter(Boolean);
+  // tbGenerarSopa descarta en silencio cualquier palabra más larga que la
+  // cuadrícula (nunca cabría en una línea recta) — mejor avisar aquí, al
+  // guardar, que dejar que el equipo busque para siempre una palabra que
+  // nunca se llegó a colocar.
+  const demasiadoLargas = palabras.filter(w => w.length > PLAN360_TB_SOPA_SIZE);
+  if(demasiadoLargas.length) alert(`Estas palabras no caben en la cuadrícula de ${PLAN360_TB_SOPA_SIZE} letras y no se colocarán en la sopa: ${demasiadoLargas.join(', ')}`);
   const v = tb.sentidos.vista;
   v.palabras = palabras.length ? palabras : [...PLAN360_TB_PALABRAS_DEFECTO];
   v.fase = 'intro';
@@ -3545,7 +3575,7 @@ function tbRenderCreatividad(box, day, tb){
 }
 const PLAN360_TB_CREATIVIDAD_PASOS = [
   {icon: 'ti-shopping-cart', label: 'Comprar'},
-  {icon: 'ti-knife', label: 'Preparar'},
+  {icon: 'ti-cut', label: 'Preparar'},
   {icon: 'ti-tools-kitchen-2', label: 'Emplatar'},
   {icon: 'ti-spray', label: 'Dejar limpio'},
 ];
@@ -3664,6 +3694,7 @@ function tbRenderCreatividadEvaluando(box, day, tb){
     <div class="card">
       <strong>Presentación y evaluación</strong>
       <p class="muted" style="margin:6px 0 14px">Cada equipo presenta su plato. Sube una foto y puntúa del 0 al 10 en cada criterio — el de más nota se lleva los ${c.puntosPrueba} puntos de la prueba.</p>
+      <p style="font-size:12px;color:var(--amber,#c98a1f);margin:-6px 0 14px"><i class="ti ti-alert-triangle"></i> Las fotos son solo de esta sesión: si refrescas la página antes del marcador final, hay que volver a subirlas.</p>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">
         ${tbCreatividadFotoBox(day, 'A', tb.equipoA, c.fotoA)}
         ${tbCreatividadFotoBox(day, 'B', tb.equipoB, c.fotoB)}
@@ -3850,7 +3881,7 @@ function tbRenderFinal(box, day, tb){
     <div class="card">
       <div class="field"><label>Premio para el equipo ganador</label><textarea id="tb-premio" rows="2" placeholder="Escribe uno o elige una idea">${esc(tb.premio || '')}</textarea></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-        ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" onclick="tbElegirPremio(${day},'${esc(p).replace(/'/g,"\\'")}')" style="font-size:11px;padding:5px 9px">${esc(p)}</button>`).join('')}
+        ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" onclick="tbElegirPremio(${day},'${esc(p).replace(/'/g,"\\'")}')">${esc(p)}</button>`).join('')}
       </div>
       <button class="btn btn-sm" onclick="tbGuardarPremio(${day})">Guardar premio</button>
       <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} onclick="tbRevelarPremio('${esc(ganador||'')}','${esc(tb.premio||'')}','${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}')" style="margin-left:6px">🎁 Premios</button>
