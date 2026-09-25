@@ -1407,6 +1407,8 @@ function plan360FreshTeamBuilding(){
       actual: 0,
       tiempoSeg: 20,
       revelada: false,   // true = ya se enseñó cuál era la correcta (transitorio por pregunta)
+      marcActual: {A: false, B: false},   // qué equipos han acertado ESTA pregunta (los dos pueden acertar)
+      terminado: false,   // true = ya se pasó la pregunta 30, toca ver el resultado del Test
       puntos: {A: 0, B: 0},
     },
     sentidos: {
@@ -2851,10 +2853,12 @@ function tbKahootRevelar(day){
 }
 function tbRenderKahoot(box, day, tb){
   const k = tb.kahoot;
+  if(k.terminado) return tbRenderKahootResultado(box, day, tb);
   const total = k.preguntas.length;
   const i = Math.min(k.actual, Math.max(0, total - 1));
   const q = k.preguntas[i];
   const corriendo = tbTimerHandle !== null;
+  const marc = k.marcActual || (k.marcActual = {A: false, B: false});
   box.innerHTML = `
     ${tbMiniMarcador(tb)}
     <div class="card">
@@ -2894,12 +2898,12 @@ function tbRenderKahoot(box, day, tb){
             <button class="btn btn-primary" onclick="tbKahootRevelar(${day})">Ver respuesta →</button>
           </div>
         ` : `
-          <p class="muted" style="font-size:12px">¿Qué equipo la dijo bien primero?</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="tbKahootPunto(${day},'A')">✓ Acertó ${esc(tb.equipoA)}</button>
-            <button class="btn btn-primary" onclick="tbKahootPunto(${day},'B')">✓ Acertó ${esc(tb.equipoB)}</button>
-            <button class="btn btn-sm" onclick="tbKahootSiguiente(${day})">Nadie acertó — siguiente pregunta →</button>
+          <p class="muted" style="font-size:12px">¿Qué equipos la acertaron? Los dos pueden llevarse el punto si los dos la dijeron bien.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <button class="btn ${marc.A?'btn-primary':''}" onclick="tbKahootPunto(${day},'A')">${marc.A?'✓ ':''}Acertó ${esc(tb.equipoA)}</button>
+            <button class="btn ${marc.B?'btn-primary':''}" onclick="tbKahootPunto(${day},'B')">${marc.B?'✓ ':''}Acertó ${esc(tb.equipoB)}</button>
           </div>
+          <button class="btn btn-sm" onclick="tbKahootSiguiente(${day})">${i < total - 1 ? 'Siguiente pregunta →' : 'Ver resultado del Test →'}</button>
         `}
       `}
     </div>
@@ -2912,25 +2916,69 @@ function tbRenderKahoot(box, day, tb){
       <div style="margin-top:10px">
         ${k.preguntas.map((qq, qi) => `
           <div class="card" style="background:var(--bg)">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
               <span class="muted">Pregunta ${qi + 1} · ${esc(PLAN360_TB_DIFICULTAD_LABEL[qq.dificultad] || '')}</span>
               <button class="btn btn-sm btn-danger" onclick="tbKahootBorrar(${day},${qi})"><i class="ti ti-trash"></i></button>
             </div>
-            <select onchange="tbKahootDificultad(${day},${qi},this.value)" style="margin-bottom:6px">
+            <select onchange="tbKahootDificultad(${day},${qi},this.value)" style="margin-bottom:10px;min-height:40px">
               ${['facil','media','dificil'].map(d => `<option value="${d}" ${qq.dificultad===d?'selected':''}>${PLAN360_TB_DIFICULTAD_LABEL[d]}</option>`).join('')}
             </select>
-            <input value="${esc(qq.texto)}" onchange="tbKahootEditarTexto(${day},${qi},this.value)" placeholder="Pregunta" style="width:100%;margin-bottom:6px">
-            ${qq.opciones.map((op, oi) => `
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                <input type="radio" name="tb-correcta-${qi}" ${oi===qq.correcta?'checked':''} onchange="tbKahootMarcarCorrecta(${day},${qi},${oi})">
-                <input value="${esc(op)}" onchange="tbKahootEditarOpcion(${day},${qi},${oi},this.value)" placeholder="Opción ${oi+1}" style="flex:1">
-              </div>`).join('')}
+            <textarea onchange="tbKahootEditarTexto(${day},${qi},this.value)" placeholder="Pregunta" rows="2" style="width:100%;margin-bottom:10px;font-size:15px;font-weight:600;padding:10px">${esc(qq.texto)}</textarea>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Opciones (marca la correcta)</div>
+            ${qq.opciones.map((op, oi) => {
+              const forma = PLAN360_TB_FORMAS[oi] || PLAN360_TB_FORMAS[0];
+              return `
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;background:#fff;border-radius:8px;padding:6px;border:2px solid ${oi===qq.correcta?forma.color:'var(--border)'}">
+                <label style="display:flex;align-items:center;gap:6px;flex-shrink:0;cursor:pointer">
+                  <input type="radio" name="tb-correcta-${qi}" ${oi===qq.correcta?'checked':''} onchange="tbKahootMarcarCorrecta(${day},${qi},${oi})">
+                  <i class="ti ${forma.icon}" style="font-size:18px;color:${forma.color}"></i>
+                </label>
+                <input value="${esc(op)}" onchange="tbKahootEditarOpcion(${day},${qi},${oi},this.value)" placeholder="Opción ${oi+1}" style="flex:1;min-width:0;font-size:15px;padding:10px;border:none;background:transparent">
+              </div>`;
+            }).join('')}
           </div>`).join('')}
         <button class="btn btn-sm" onclick="tbKahootAnadir(${day})"><i class="ti ti-plus"></i> Añadir pregunta</button>
       </div>
     </details>
     <button class="btn btn-sm" onclick="tbKahootPararTiempo();tbIr(${day},'${PLAN360_TB_SENTIDOS[0].id}')">Siguiente prueba: ${esc(PLAN360_TB_SENTIDOS[0].label)} →</button>
   `;
+}
+// Resultado del Test al terminar la pregunta 30 — un corte visual propio
+// (no hay que esperar al marcador final de las 3 pruebas para saber cómo
+// ha ido esta) antes de pasar a la Prueba 2.
+function tbRenderKahootResultado(box, day, tb){
+  const k = tb.kahoot;
+  const ganaA = k.puntos.A > k.puntos.B, ganaB = k.puntos.B > k.puntos.A, empate = k.puntos.A === k.puntos.B;
+  box.innerHTML = `
+    ${tbMiniMarcador(tb)}
+    <div class="card" style="background:var(--ink);color:#fff;text-align:center;padding:28px 16px">
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999)">Resultado del Test</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
+        <div style="flex:1">
+          <div style="font-weight:700">${esc(tb.equipoA)}</div>
+          <div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${k.puntos.A}</div>
+        </div>
+        <div style="opacity:.5;font-size:20px">—</div>
+        <div style="flex:1">
+          <div style="font-weight:700">${esc(tb.equipoB)}</div>
+          <div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${k.puntos.B}</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:16px">${empate ? '🤝 Empate en el Test' : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana el Test`}</div>
+    </div>
+    <button class="btn btn-sm" onclick="tbKahootRepetir(${day})">↺ Repetir el Test desde la pregunta 1</button>
+    <button class="btn btn-primary" onclick="tbIr(${day},'${PLAN360_TB_SENTIDOS[0].id}')">Siguiente prueba: ${esc(PLAN360_TB_SENTIDOS[0].label)} →</button>
+  `;
+}
+function tbKahootRepetir(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.kahoot.actual = 0;
+  tb.kahoot.revelada = false;
+  tb.kahoot.terminado = false;
+  tb.kahoot.marcActual = {A: false, B: false};
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 function tbKahootTiempo(day, valor){
   const tb = tbGet(day);
@@ -2945,20 +2993,39 @@ function tbKahootDificultad(day, qi, valor){
   tb.kahoot.preguntas[qi].dificultad = valor;
   saveRemoteBiz();
 }
+// Botón-interruptor: los dos equipos pueden acertar la misma pregunta
+// (antes marcar uno pasaba sola a la siguiente y el otro equipo, aunque
+// también hubiera contestado bien, se quedaba sin su punto). Pulsar de
+// nuevo quita el punto, por si se toca sin querer.
 function tbKahootPunto(day, equipo){
   const tb = tbGet(day);
   if(!tb) return;
-  tb.kahoot.puntos[equipo] = (tb.kahoot.puntos[equipo] || 0) + 1;
-  tbKahootSiguiente(day);
+  const marc = tb.kahoot.marcActual || (tb.kahoot.marcActual = {A: false, B: false});
+  const yaMarcado = marc[equipo];
+  tb.kahoot.puntos[equipo] = Math.max(0, (tb.kahoot.puntos[equipo] || 0) + (yaMarcado ? -1 : 1));
+  marc[equipo] = !yaMarcado;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 function tbKahootSiguiente(day){
   const tb = tbGet(day);
   if(!tb) return;
   tbKahootPararTiempo();
-  if(tb.kahoot.actual < tb.kahoot.preguntas.length - 1) tb.kahoot.actual++;
-  tb.kahoot.revelada = false;
+  const k = tb.kahoot;
+  if(k.actual >= k.preguntas.length - 1){
+    // Pregunta 30 ya resuelta: no hay pregunta 31, toca ver el resultado.
+    k.terminado = true;
+    saveRemoteBiz();
+    renderTeamBuildingPage(day);
+    return;
+  }
+  k.actual++;
+  k.revelada = false;
+  k.marcActual = {A: false, B: false};
   saveRemoteBiz();
-  renderTeamBuildingPage(day);
+  // La pregunta siguiente empieza sola — el coach no tiene que volver a
+  // pulsar "Empezar tiempo" cada vez, solo la primera de todas.
+  tbKahootEmpezarTiempo(day);
 }
 function tbKahootAnadir(day){
   const tb = tbGet(day);
@@ -3281,6 +3348,9 @@ function tbReiniciar(day){
   const fresh = plan360FreshTeamBuilding();
   tb.kahoot.puntos = {A: 0, B: 0};
   tb.kahoot.actual = 0;
+  tb.kahoot.revelada = false;
+  tb.kahoot.terminado = false;
+  tb.kahoot.marcActual = {A: false, B: false};
   tb.sentidos = fresh.sentidos;
   tb.creatividad.puntos = {A: 0, B: 0};
   tb.creatividad.notas = {A: {}, B: {}};
