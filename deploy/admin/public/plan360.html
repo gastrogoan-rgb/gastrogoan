@@ -1386,8 +1386,11 @@ function plan360FreshSopa(){
   return {
     palabras: [...PLAN360_TB_PALABRAS_DEFECTO],
     size: PLAN360_TB_SOPA_SIZE,
-    sopa: null,          // se genera al entrar en la pantalla (ver tbGenerarSopa)
+    sopa: null,          // se genera al pulsar Empezar (ver tbGenerarSopa)
     encontradas: {},     // {PALABRA: {equipo:'A'|'B', celdas:[[f,c],...]}}
+    fase: 'intro',       // 'intro' → 'memorizar' (10s con la lista) → 'jugando' (la sopa) → 'resultado'
+    equipoActivo: null,  // 'A' | 'B' — a quién se le apunta la próxima palabra que se encuentre
+    terminado: false,
   };
 }
 function plan360FreshTeamBuilding(){
@@ -2606,7 +2609,7 @@ function tbMiniMarcador(tb){
 // La tira de las 9 pantallas — se pulsa cualquiera directamente, no hace
 // falta ir en orden (el coach puede saltar a Creatividad si ya lo dejó
 // preparado y volver luego al Kahoot).
-const PLAN360_TB_PANTALLA_LABEL = {intro:'Explicación', kahoot:'Prueba 1 · Test', oido:'Oído', gusto:'Gusto', olfato:'Olfato', tacto:'Tacto', vista:'Vista', creatividad:'Prueba 3 · Creatividad', final:'Marcador final'};
+const PLAN360_TB_PANTALLA_LABEL = {intro:'Explicación', kahoot:'Test', oido:'Oído', gusto:'Gusto', olfato:'Olfato', tacto:'Tacto', vista:'Vista', creatividad:'Prueba 3 · Creatividad', final:'Marcador final'};
 function tbNav(day, actual){
   // Envuelta en su propia caja con borde y fondo — suelta entre el resto
   // de botones de la página (Volver, Empezar Prueba 1...) no se leía como
@@ -2863,7 +2866,7 @@ function tbRenderKahoot(box, day, tb){
     ${tbMiniMarcador(tb)}
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
-        <strong>Prueba 1 — Test</strong>
+        <strong>Test</strong>
         <span class="muted">Pregunta ${total ? i + 1 : 0} de ${total}</span>
       </div>
       ${!q ? '<p class="muted">No hay preguntas todavía — añade alguna en el editor de abajo.</p>' : `
@@ -3244,61 +3247,163 @@ function tbGenerarSopa(palabras, size){
   return grid;
 }
 let tbSopaSel = null;   // {f,c} de la primera letra pulsada — estado de UI, no se guarda
-let tbSopaPend = null;  // {palabra, celdas} encontrada, esperando decir de quién es el punto
+let tbMemorizarHandle = null;
+let tbMemorizarRestante = 0;
+// Router de la propia prueba (intro → memorizar → jugando → resultado),
+// mismo patrón que ya usa el Test con sus preguntas: cada fase es una
+// pantalla propia, no un modo dentro de otro.
 function tbRenderVista(day, tb){
   const v = tb.sentidos.vista;
-  if(!v.sopa) v.sopa = tbGenerarSopa(v.palabras, v.size);
+  if(v.fase === 'memorizar') return tbRenderVistaMemorizar(day, tb, v);
+  if(v.fase === 'jugando') return tbRenderVistaJugando(day, tb, v);
+  if(v.fase === 'resultado') return tbRenderVistaResultado(day, tb, v);
+  return tbRenderVistaIntro(day, tb, v);
+}
+function tbRenderVistaIntro(day, tb, v){
+  return `
+    <div class="card" style="text-align:center;padding:28px 16px">
+      <i class="ti ti-eye" style="font-size:32px"></i>
+      <h3 style="margin:10px 0 4px">Prueba 2 — Vista</h3>
+      <p class="muted" style="max-width:340px;margin:0 auto 18px">
+        Primero se ven las ${v.palabras.length} palabras 10 segundos para memorizarlas, luego aparece la sopa de letras.
+        Cada palabra que se encuentre se apunta al equipo que esté activo en ese momento.
+      </p>
+      <button class="btn btn-primary" onclick="tbVistaEmpezar(${day})"><i class="ti ti-player-play"></i> Empezar</button>
+    </div>
+  `;
+}
+function tbVistaEmpezar(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const v = tb.sentidos.vista;
+  v.fase = 'memorizar';
+  v.sopa = tbGenerarSopa(v.palabras, v.size);
+  v.encontradas = {};
+  v.equipoActivo = null;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+  clearInterval(tbMemorizarHandle);
+  tbMemorizarRestante = 10;
+  tbMemorizarHandle = setInterval(() => {
+    tbMemorizarRestante--;
+    const num = document.getElementById('tb-memorizar-num');
+    const barra = document.getElementById('tb-memorizar-barra');
+    if(num) num.textContent = Math.max(0, tbMemorizarRestante);
+    if(barra) barra.style.width = Math.max(0, tbMemorizarRestante / 10 * 100) + '%';
+    tbTic();
+    if(tbMemorizarRestante <= 0){
+      clearInterval(tbMemorizarHandle);
+      tbMemorizarHandle = null;
+      const tb2 = tbGet(day);
+      if(tb2){ tb2.sentidos.vista.fase = 'jugando'; saveRemoteBiz(); renderTeamBuildingPage(day); }
+    }
+  }, 1000);
+}
+function tbRenderVistaMemorizar(day, tb, v){
+  return `
+    <div class="card" style="text-align:center;padding:24px 16px">
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Memoriza estas palabras</div>
+      <div style="height:8px;background:var(--bg);border-radius:99px;overflow:hidden;margin:14px 0">
+        <div id="tb-memorizar-barra" style="height:100%;background:var(--ink);width:100%;transition:width 1s linear"></div>
+      </div>
+      <div id="tb-memorizar-num" style="font-size:14px;font-weight:800;color:var(--muted);margin-bottom:18px">10</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+        ${v.palabras.map(w => `<span style="font-size:16px;font-weight:700;padding:8px 14px;border-radius:8px;background:var(--ink);color:#fff">${esc(w.toUpperCase())}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+function tbRenderVistaJugando(day, tb, v){
   const grid = v.sopa;
   const encontradas = v.encontradas || {};
-  // ¿esta celda es parte de una palabra ya encontrada? (para pintarla)
   const celdaEncontrada = (f, c) => Object.values(encontradas).find(e => e.celdas.some(([ff,cc]) => ff===f && cc===c));
+  const todasEncontradas = v.palabras.every(w => encontradas[w.toUpperCase()]);
   return `
     <div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <i class="ti ti-eye" style="font-size:22px"></i>
-        <strong>Prueba 2 — Vista</strong>
+        <strong>Vista</strong>
       </div>
-      <p class="muted" style="margin-bottom:10px">Toca la primera letra de una palabra y luego la última (en línea recta, en cualquier dirección). Un punto por cada palabra, para quien la encuentre.</p>
-      <div style="overflow-x:auto;margin-bottom:12px">
-        <div style="display:inline-grid;grid-template-columns:repeat(${grid.length},24px);gap:2px;font-family:monospace;font-weight:700;background:var(--bg);padding:10px;border-radius:8px;user-select:none">
+      <p class="muted" style="font-size:12px;margin-bottom:10px">1. Toca qué equipo está buscando ahora. 2. Toca la primera y la última letra de una palabra (en línea recta). Se apunta sola al equipo activo.</p>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn ${v.equipoActivo==='A'?'btn-primary':''}" style="flex:1" onclick="tbVistaEquipoActivo(${day},'A')">${esc(tb.equipoA)}</button>
+        <button class="btn ${v.equipoActivo==='B'?'btn-primary':''}" style="flex:1" onclick="tbVistaEquipoActivo(${day},'B')">${esc(tb.equipoB)}</button>
+      </div>
+      <div style="width:100%;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:repeat(${grid.length},1fr);gap:2px;font-family:monospace;font-weight:700;background:var(--bg);padding:6px;border-radius:8px;user-select:none;width:100%">
           ${grid.map((fila, f) => fila.map((letra, c) => {
             const enc = celdaEncontrada(f, c);
             const sel = tbSopaSel && tbSopaSel.f === f && tbSopaSel.c === c;
             const bg = enc ? (enc.equipo === 'A' ? '#DCEEFF' : '#FFE3D6') : (sel ? 'var(--ink)' : '#fff');
             const color = sel ? '#fff' : (enc ? 'var(--ink)' : 'inherit');
-            return `<div onclick="tbSopaClick(${day},${f},${c})" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:${bg};color:${color};border-radius:3px;cursor:pointer">${letra}</div>`;
+            return `<div onclick="tbSopaClick(${day},${f},${c})" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${bg};color:${color};border-radius:3px;cursor:pointer;font-size:clamp(9px,2.4vw,16px)">${letra}</div>`;
           }).join('')).join('')}
         </div>
       </div>
-      ${tbSopaPend ? `
-        <div class="card" style="background:var(--bg);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <strong>¡"${esc(tbSopaPend.palabra)}"! ¿Para quién?</strong>
-          <button class="btn btn-sm btn-primary" onclick="tbSopaPunto(${day},'A')">${esc(tb.equipoA)}</button>
-          <button class="btn btn-sm btn-primary" onclick="tbSopaPunto(${day},'B')">${esc(tb.equipoB)}</button>
-        </div>` : ''}
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
         ${v.palabras.map(w => {
           const W = w.toUpperCase();
           const e = encontradas[W];
           return `<span class="badge" style="${e?'text-decoration:line-through;opacity:.6':''}">${esc(W)}${e?` (${esc(e.equipo==='A'?tb.equipoA:tb.equipoB)})`:''}</span>`;
         }).join('')}
       </div>
-      <details>
-        <summary style="cursor:pointer;font-size:12px;color:var(--muted)">Cambiar las palabras (más difícil = palabras más largas)</summary>
-        <div class="field" style="margin-top:8px">
-          <label>Palabras (una por línea)</label>
-          <textarea id="tb-palabras" rows="6">${esc(v.palabras.join('\n'))}</textarea>
-        </div>
-        <button class="btn btn-sm" onclick="tbGuardarPalabras(${day})">Guardar y regenerar sopa</button>
-      </details>
+      <button class="btn btn-primary" onclick="tbVistaTerminar(${day})">${todasEncontradas ? 'Ver resultado →' : 'Terminar y ver resultado →'}</button>
     </div>
+    <details class="card">
+      <summary style="cursor:pointer;font-size:12px;color:var(--muted)">Cambiar las palabras (más difícil = palabras más largas)</summary>
+      <div class="field" style="margin-top:8px">
+        <label>Palabras (una por línea)</label>
+        <textarea id="tb-palabras" rows="6">${esc(v.palabras.join('\n'))}</textarea>
+      </div>
+      <button class="btn btn-sm" onclick="tbGuardarPalabras(${day})">Guardar y volver a empezar</button>
+    </details>
+  `;
+}
+function tbRenderVistaResultado(day, tb, v){
+  const totalA = tbSopaTotal(v, 'A'), totalB = tbSopaTotal(v, 'B');
+  const ganaA = totalA > totalB, ganaB = totalB > totalA, empate = totalA === totalB;
+  return `
+    <div class="card" style="background:var(--ink);color:#fff;text-align:center;padding:28px 16px">
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999)">Resultado de Vista</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
+        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoA)}</div><div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${totalA}</div></div>
+        <div style="opacity:.5;font-size:20px">—</div>
+        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div></div>
+      </div>
+      <div style="margin-top:12px;font-size:16px">${empate ? '🤝 Empate en Vista' : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana Vista`}</div>
+    </div>
+    <button class="btn btn-sm" onclick="tbVistaRepetir(${day})">↺ Repetir Vista</button>
     ${tbSiguienteSentidoBtn(day, 'vista')}
   `;
+}
+function tbVistaEquipoActivo(day, equipo){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos.vista.equipoActivo = tb.sentidos.vista.equipoActivo === equipo ? null : equipo;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbVistaTerminar(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos.vista.fase = 'resultado';
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbVistaRepetir(day){
+  const tb = tbGet(day);
+  if(!tb) return;
+  tb.sentidos.vista.fase = 'intro';
+  tb.sentidos.vista.encontradas = {};
+  tb.sentidos.vista.equipoActivo = null;
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
 }
 function tbSopaClick(day, f, c){
   const tb = tbGet(day);
   if(!tb) return;
   const v = tb.sentidos.vista;
+  if(!v.equipoActivo) return;  // hay que elegir primero quién está buscando
   if(Object.values(v.encontradas || {}).some(e => e.celdas.some(([ff,cc]) => ff===f && cc===c))) return; // ya encontrada, no se vuelve a tocar
   if(!tbSopaSel){ tbSopaSel = {f, c}; renderTeamBuildingPage(day); return; }
   const {f: f0, c: c0} = tbSopaSel;
@@ -3317,15 +3422,13 @@ function tbSopaClick(day, f, c){
   }
   const rev = str.split('').reverse().join('');
   const match = v.palabras.map(w => w.toUpperCase()).find(w => (w === str || w === rev) && !(v.encontradas || {})[w]);
-  if(match) tbSopaPend = {palabra: match, celdas};
-  renderTeamBuildingPage(day);
-}
-function tbSopaPunto(day, equipo){
-  const tb = tbGet(day);
-  if(!tb || !tbSopaPend) return;
-  (tb.sentidos.vista.encontradas || (tb.sentidos.vista.encontradas = {}))[tbSopaPend.palabra] = {equipo, celdas: tbSopaPend.celdas};
-  tbSopaPend = null;
-  saveRemoteBiz();
+  if(match){
+    // Se apunta directa al equipo activo — sin diálogo de por medio,
+    // que es justo lo que pedía el coach: elegir el equipo ANTES de
+    // buscar, no después de encontrar la palabra.
+    (v.encontradas || (v.encontradas = {}))[match] = {equipo: v.equipoActivo, celdas};
+    saveRemoteBiz();
+  }
   renderTeamBuildingPage(day);
 }
 function tbGuardarPalabras(day){
@@ -3336,8 +3439,10 @@ function tbGuardarPalabras(day){
   const palabras = ta.value.split('\n').map(w => w.trim()).filter(Boolean);
   const v = tb.sentidos.vista;
   v.palabras = palabras.length ? palabras : [...PLAN360_TB_PALABRAS_DEFECTO];
-  v.sopa = tbGenerarSopa(v.palabras, v.size);
+  v.fase = 'intro';
+  v.sopa = null;
   v.encontradas = {};
+  v.equipoActivo = null;
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
