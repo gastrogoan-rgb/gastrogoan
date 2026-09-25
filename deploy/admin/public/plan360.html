@@ -1308,10 +1308,16 @@ Aprovecha este momento, con el equipo ya suelto y de buen humor, para conectar c
 // gusto, tacto) — antes iban en un orden suelto y era lo primero que el
 // coach pidió arreglar del marcador final. `necesitaAudio` es solo para
 // Oído: ahí cada reto lleva un archivo de sonido de verdad.
+// usaBanco: un único listado de hasta 10 (los sube/anota el coach antes
+// de jugar) donde los DOS equipos intentan adivinar cada uno — distinto
+// de "reto" (dos listas, una que prepara cada equipo para el otro).
+// necesitaAudio: además del banco, deja subir y reproducir un archivo
+// (solo tiene sentido en Oído — Olfato/Gusto/Tacto son presenciales,
+// no hay "archivo de un olor").
 const PLAN360_TB_SENTIDOS = [
   {id: 'vista', label: 'Vista', icon: 'ti-eye'},
-  {id: 'oido', label: 'Oído', icon: 'ti-ear', necesitaAudio: true},
-  {id: 'olfato', label: 'Olfato', icon: 'ti-wind'},
+  {id: 'oido', label: 'Oído', icon: 'ti-ear', usaBanco: true, necesitaAudio: true},
+  {id: 'olfato', label: 'Olfato', icon: 'ti-wind', usaBanco: true},
   {id: 'gusto', label: 'Gusto', icon: 'ti-soup'},
   {id: 'tacto', label: 'Tacto', icon: 'ti-hand-stop'},
 ];
@@ -1426,7 +1432,7 @@ function plan360FreshTeamBuilding(){
     sentidos: {
       vista: plan360FreshSopa(),
       oido: plan360FreshBanco(),
-      olfato: plan360FreshReto(),
+      olfato: plan360FreshBanco(),
       gusto: plan360FreshReto(),
       tacto: plan360FreshReto(),
     },
@@ -2580,7 +2586,8 @@ function tbSopaTotal(sopa, equipo){
 // de cada uno.
 function tbSentidoTotal(tb, senId, equipo){
   if(senId === 'vista') return tbSopaTotal(tb.sentidos.vista, equipo);
-  if(senId === 'oido') return tbBancoTotal(tb.sentidos.oido, equipo);
+  const sen = PLAN360_TB_SENTIDOS.find(s => s.id === senId);
+  if(sen && sen.usaBanco) return tbBancoTotal(tb.sentidos[senId], equipo);
   return tbRetoTotal(tb.sentidos[senId], equipo);
 }
 function tbTotalGeneral(tb, equipo){
@@ -2590,19 +2597,20 @@ function tbTotalGeneral(tb, equipo){
 }
 // Autorreparación: un negocio real se ha quedado con sentidos en una
 // forma incompleta o antigua más de una vez ya (primero .vista sin el
-// resto; ahora que Oído cambió de "reto" a "banco" compartido, un
-// negocio que ya hubiera tocado Oído se quedaría con la forma vieja).
-// En vez de que cada función que toca tb.sentidos[algo] tenga que
-// defenderse por su cuenta, se repara aquí, en el único sitio por el que
-// pasa cualquier acceso al team building — así ningún negocio se queda
-// con una pantalla rota, tenga la forma que tenga su dato guardado.
+// resto; luego Oído y ahora Olfato pasaron de "reto" a "banco"
+// compartido, así que un negocio que ya los hubiera tocado se quedaría
+// con la forma vieja). En vez de que cada función que toca
+// tb.sentidos[algo] tenga que defenderse por su cuenta, se repara aquí,
+// en el único sitio por el que pasa cualquier acceso al team building —
+// así ningún negocio se queda con una pantalla rota, tenga la forma que
+// tenga su dato guardado.
 function tbSentidosRepair(tb){
   if(!tb || !tb.sentidos) return;
   PLAN360_TB_SENTIDOS.forEach(sen => {
     if(sen.id === 'vista'){
       if(!tb.sentidos.vista || !Array.isArray(tb.sentidos.vista.palabras)) tb.sentidos.vista = plan360FreshSopa();
-    } else if(sen.id === 'oido'){
-      if(!tb.sentidos.oido || !Array.isArray(tb.sentidos.oido.items)) tb.sentidos.oido = plan360FreshBanco();
+    } else if(sen.usaBanco){
+      if(!tb.sentidos[sen.id] || !Array.isArray(tb.sentidos[sen.id].items)) tb.sentidos[sen.id] = plan360FreshBanco();
     } else if(!tb.sentidos[sen.id] || !Array.isArray(tb.sentidos[sen.id].preparaA)){
       tb.sentidos[sen.id] = plan360FreshReto();
     }
@@ -3092,7 +3100,7 @@ function tbRenderSentido(box, day, tb, sentidoId){
   const sen = PLAN360_TB_SENTIDOS.find(s => s.id === sentidoId);
   if(!sen){ box.innerHTML = ''; return; }
   const cuerpo = sen.id === 'vista' ? tbRenderVista(day, tb)
-    : sen.id === 'oido' ? tbRenderBanco(day, tb, sen)
+    : sen.usaBanco ? tbRenderBanco(day, tb, sen)
     : tbRenderReto(day, tb, sen);
   box.innerHTML = `${tbMiniMarcador(tb)}` + cuerpo;
 }
@@ -3114,8 +3122,6 @@ function tbSiguienteSentidoBtn(day, actualId){
    lista es solo el nombre de lo que se preparó, tachado en cuanto se
    adivina. El punto es siempre para quien ADIVINA. */
 const PLAN360_TB_RETO_HINT = {
-  oido: 'Cada equipo prepara sonidos para que adivine el otro. Sube el archivo aquí y reprodúcelo en el momento — un acierto, un punto para quien adivina.',
-  olfato: 'Cada equipo prepara olores (especias, ingredientes de su cocina) para que adivine el otro a ciegas. Anota cada uno y marca si acertaron.',
   gusto: 'Cada equipo prepara muestras para que pruebe el otro a ciegas. Anota cada una y marca si acertaron qué era.',
   tacto: 'Cada equipo prepara objetos para tocar con los ojos vendados. Anota cada uno y marca si acertaron.',
 };
@@ -3192,12 +3198,18 @@ function tbRetoAnadirSugerida(day, senId, lado, nombre){
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
-/* -- Oído: banco compartido de sonidos (distinto de Olfato/Gusto/Tacto) --
-   Un solo listado (no "lo que prepara cada equipo") de hasta 10 sonidos.
-   Cada sonido: se reproduce, y el "?" revela el nombre solo cuando el
-   coach quiere (para no chafarlo mientras los equipos siguen
-   escuchando/pensando). Los dos equipos pueden acertar el mismo sonido —
-   un botón por equipo, en modo interruptor, igual que en el Test. */
+/* -- Oído / Olfato: banco compartido (distinto de Gusto/Tacto, que
+   siguen siendo "reto" con dos listas) --
+   Un solo listado de hasta 10 elementos que anota/prepara el coach antes
+   de jugar (con Oído, además, el archivo de sonido de verdad). Por cada
+   uno, el "?" revela qué era solo cuando el coach quiere — para no
+   chafarlo mientras los equipos siguen oliendo/escuchando/pensando — y
+   los dos equipos pueden acertar el mismo, con un botón cada uno en modo
+   interruptor, igual que en el Test. */
+const PLAN360_TB_BANCO_HINT = {
+  oido: 'Sube hasta 10 sonidos antes de jugar. Por cada uno: reprodúcelo, y cuando los equipos digan su respuesta pulsa el "?" para revelar cuál era — pueden acertar los dos equipos, uno, o ninguno.',
+  olfato: 'Prepara hasta 10 olores antes de jugar (especias, ingredientes de la cocina). Por cada uno: que los equipos huelan a ciegas y digan qué es, y pulsa el "?" para revelar cuál era — pueden acertar los dos equipos, uno, o ninguno.',
+};
 function tbRenderBanco(day, tb, sen){
   const banco = tb.sentidos[sen.id];
   if(banco.fase === 'resultado') return tbRenderBancoResultado(day, tb, sen, banco);
@@ -3208,22 +3220,34 @@ function tbRenderBanco(day, tb, sen){
         <i class="ti ${sen.icon}" style="font-size:22px"></i>
         <strong>Prueba 2 — ${esc(sen.label)}</strong>
       </div>
-      <p class="muted" style="margin-bottom:14px">Sube hasta 10 sonidos antes de jugar. Por cada uno: reprodúcelo, y cuando los equipos digan su respuesta pulsa el "?" para revelar cuál era — pueden acertar los dos equipos, uno, o ninguno.</p>
+      <p class="muted" style="margin-bottom:14px">${esc(PLAN360_TB_BANCO_HINT[sen.id] || '')}</p>
       ${banco.items.map((it, idx) => `
         <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border);flex-wrap:wrap">
-          ${it.url ? `<button class="btn btn-sm btn-icon" onclick="tbBancoReproducir('${esc(it.url)}')" title="Reproducir"><i class="ti ti-player-play"></i></button>`
-                    : `<label class="btn btn-sm btn-icon" title="Subir sonido" style="cursor:pointer"><i class="ti ti-upload"></i><input type="file" accept="audio/*" style="display:none" onchange="tbBancoSubirAudio(event,${day},'${sen.id}',${idx})"></label>`}
+          ${sen.necesitaAudio ? (it.url
+            ? `<button class="btn btn-sm btn-icon" onclick="tbBancoReproducir('${esc(it.url)}')" title="Reproducir"><i class="ti ti-player-play"></i></button>`
+            : `<label class="btn btn-sm btn-icon" title="Subir sonido" style="cursor:pointer"><i class="ti ti-upload"></i><input type="file" accept="audio/*" style="display:none" onchange="tbBancoSubirAudio(event,${day},'${sen.id}',${idx})"></label>`) : ''}
           <span style="font-weight:700;min-width:20px">${idx + 1}.</span>
           ${it.revelado
             ? `<span style="flex:1;min-width:100px">${esc(it.nombre) || '<span class=\"muted\">(sin nombre)</span>'}</span>`
-            : `<button class="btn btn-sm" onclick="tbBancoRevelar(${day},'${sen.id}',${idx})" style="flex:1;min-width:100px" title="Revelar qué era">? ¿Qué sonido era?</button>`}
+            : `<button class="btn btn-sm" onclick="tbBancoRevelar(${day},'${sen.id}',${idx})" style="flex:1;min-width:100px" title="Revelar qué era">? ¿Qué era?</button>`}
           <button class="btn btn-sm ${it.aciertoA?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'A')">${it.aciertoA?'✓ ':''}${esc(tb.equipoA)}</button>
           <button class="btn btn-sm ${it.aciertoB?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'B')">${it.aciertoB?'✓ ':''}${esc(tb.equipoB)}</button>
           <button class="btn btn-sm btn-icon" onclick="tbBancoBorrar(${day},'${sen.id}',${idx})" title="Quitar"><i class="ti ti-trash"></i></button>
         </div>
-        ${!it.revelado ? `<div style="padding:0 0 6px 30px"><input placeholder="Nombre del sonido (oculto hasta revelar)" value="${esc(it.nombre)}" onchange="tbBancoNombre(${day},'${sen.id}',${idx},this.value)" style="width:100%;max-width:320px"></div>` : ''}
+        ${!it.revelado ? `<div style="padding:0 0 6px ${sen.necesitaAudio?'30':'0'}px"><input placeholder="¿Qué es? (oculto hasta revelar)" value="${esc(it.nombre)}" onchange="tbBancoNombre(${day},'${sen.id}',${idx},this.value)" style="width:100%;max-width:320px"></div>` : ''}
       `).join('')}
-      ${total < 10 ? `<button class="btn btn-sm" style="margin-top:10px" onclick="tbBancoAnadir(${day},'${sen.id}')"><i class="ti ti-plus"></i> Añadir sonido (${total}/10)</button>` : `<p class="muted" style="margin-top:10px;font-size:12px">Ya tienes los 10 sonidos.</p>`}
+      ${total < 10 ? `<button class="btn btn-sm" style="margin-top:10px" onclick="tbBancoAnadir(${day},'${sen.id}')"><i class="ti ti-plus"></i> Añadir (${total}/10)</button>` : `<p class="muted" style="margin-top:10px;font-size:12px">Ya tienes los 10.</p>`}
+      ${(() => {
+        const usadas = new Set(banco.items.map(it => it.nombre));
+        const sugerencias = (PLAN360_TB_SUGERENCIAS[sen.id] || []).filter(s => !usadas.has(s));
+        return total < 10 && sugerencias.length ? `
+          <div style="margin-top:10px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ideas rápidas (un toque para añadir):</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px">
+              ${sugerencias.slice(0, 6).map(s => `<button class="btn btn-sm" onclick="tbBancoAnadirSugerida(${day},'${sen.id}','${esc(s).replace(/'/g,"\\'")}')" style="font-size:11px;padding:4px 9px">${esc(s)}</button>`).join('')}
+            </div>
+          </div>` : '';
+      })()}
       ${total ? `<button class="btn btn-primary" style="margin-top:14px" onclick="tbBancoTerminar(${day},'${sen.id}')">Terminar y ver resultado →</button>` : ''}
     </div>
   `;
@@ -3251,6 +3275,15 @@ function tbBancoAnadir(day, senId){
   const banco = tb.sentidos[senId];
   if(banco.items.length >= 10) return;
   banco.items.push({nombre: '', url: null, revelado: false, aciertoA: false, aciertoB: false});
+  saveRemoteBiz();
+  renderTeamBuildingPage(day);
+}
+function tbBancoAnadirSugerida(day, senId, nombre){
+  const tb = tbGet(day);
+  if(!tb) return;
+  const banco = tb.sentidos[senId];
+  if(banco.items.length >= 10) return;
+  banco.items.push({nombre, url: null, revelado: false, aciertoA: false, aciertoB: false});
   saveRemoteBiz();
   renderTeamBuildingPage(day);
 }
