@@ -1771,6 +1771,7 @@ function ensureRemotePlan360(){
       if(o.id === undefined) o.id = plan360GenId();
       if(o.metrica === undefined) o.metrica = '';
       if(!Array.isArray(o.mediciones)) o.mediciones = [];
+      if(o.estadoFinal === undefined) o.estadoFinal = null;
     });
   });
   // Igual que los objetivos: las tareas de los 26 días de trabajo pasan
@@ -1811,6 +1812,7 @@ function ensureRemotePlan360(){
     });
   }
   if(!remoteBiz.plan360StartDate) remoteBiz.plan360StartDate = todayStr();
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = {mensajeMantenimiento: ''};
   if(!remoteBiz.plan360Contract){
     remoteBiz.plan360Contract = {
       clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '', formaPago: '',
@@ -1930,7 +1932,59 @@ function renderClientGrid(){
         <div class="p360-week-grid">${s.dias.map(dayCard).join('')}</div>
       </div>
     `).join('')}
+    ${plan360CierreHtml()}
   `;
+}
+// Cierre y próximos pasos: debajo de la última semana, a propósito — es
+// literalmente lo que viene después de las 4 semanas. Dos piezas: qué
+// objetivos se cumplieron de verdad (lo decides tú, en la revisión
+// final, no un cálculo automático — un objetivo con métrica "8% → 5%"
+// puede ser un éxito o quedarse corto según lo que se hubiera pactado) y
+// el mensaje del plan de mantenimiento, que es tuyo para escribir.
+const PLAN360_ESTADO_FINAL_LABEL = {cumplido: 'Cumplido', parcial: 'Parcial', no_cumplido: 'No cumplido'};
+const PLAN360_ESTADO_FINAL_COLOR = {cumplido: 'var(--green)', parcial: 'var(--amber)', no_cumplido: 'var(--red)'};
+function plan360CierreHtml(){
+  const dia2 = (remoteBiz.plan360Program || []).find(x => x.day === 2);
+  const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
+  const cierre = remoteBiz.plan360Cierre || {mensajeMantenimiento: ''};
+  return `
+    <div class="p360-week">
+      <div class="p360-week-label">Cierre y próximos pasos</div>
+      <div class="card">
+        ${!objetivos.length ? '<p class="muted">Todavía no hay objetivos definidos en el Día 2.</p>' : objetivos.map(o => `
+          <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <strong style="flex:1">${esc(o.titulo)}</strong>
+              <select onchange="cambiarEstadoFinalObjetivo(${o.id}, this.value)" style="width:auto;flex:none">
+                <option value="" ${!o.estadoFinal?'selected':''}>Sin evaluar</option>
+                <option value="cumplido" ${o.estadoFinal==='cumplido'?'selected':''}>Cumplido</option>
+                <option value="parcial" ${o.estadoFinal==='parcial'?'selected':''}>Parcial</option>
+                <option value="no_cumplido" ${o.estadoFinal==='no_cumplido'?'selected':''}>No cumplido</option>
+              </select>
+            </div>
+            ${plan360MedicionesResumenHtml(o)}
+          </div>`).join('')}
+      </div>
+      <div class="card" style="margin-top:10px">
+        <div class="field" style="margin-bottom:8px"><label>Mensaje del plan de mantenimiento</label>
+          <textarea id="cierre-mantenimiento" rows="4" placeholder="Lo que sigue después de estas 4 semanas...">${esc(cierre.mensajeMantenimiento || '')}</textarea>
+        </div>
+        <button class="btn btn-sm" onclick="guardarMensajeMantenimiento()">Guardar</button>
+      </div>
+    </div>
+  `;
+}
+function cambiarEstadoFinalObjetivo(objId, valor){
+  const dia2 = (remoteBiz.plan360Program || []).find(x => x.day === 2);
+  const o = dia2 && (dia2.objectives || []).find(x => x.id === objId);
+  if(!o) return;
+  o.estadoFinal = valor || null;
+  saveRemoteBiz();
+}
+function guardarMensajeMantenimiento(){
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = {mensajeMantenimiento: ''};
+  remoteBiz.plan360Cierre.mensajeMantenimiento = (document.getElementById('cierre-mantenimiento').value || '').trim();
+  saveRemoteBiz();
 }
 function plan360PageHeader(title, subtitle){
   return `<button class="btn btn-sm" onclick="renderClientGrid()">← Calendario</button>

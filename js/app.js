@@ -5329,6 +5329,38 @@ function renderPlan360Grid(){
         <div class="p360-week-grid">${s.dias.map(dayCard).join('')}</div>
       </div>
     `).join('')}
+    ${plan360CierreHtml()}
+  `;
+}
+// Debajo de la última semana, a propósito: es lo que viene después de las
+// 4 semanas. Qué objetivos se cumplieron (lo decide el coach en la
+// revisión final, aquí solo se lee) y el mensaje del plan de
+// mantenimiento — el siguiente paso real con GastroGoan.
+const PLAN360_ESTADO_FINAL_LABEL = {cumplido: 'plan360.estadoFinal.cumplido', parcial: 'plan360.estadoFinal.parcial', no_cumplido: 'plan360.estadoFinal.noCumplido'};
+const PLAN360_ESTADO_FINAL_COLOR = {cumplido: 'var(--green)', parcial: 'var(--amber)', no_cumplido: 'var(--red)'};
+function plan360CierreHtml(){
+  const dia2 = (DB.business.plan360Program || []).find(x => x.day === 2);
+  const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
+  const cierre = DB.business.plan360Cierre || {mensajeMantenimiento: ''};
+  if(!objetivos.length && !cierre.mensajeMantenimiento) return '';
+  return `
+    <div class="p360-week">
+      <div class="p360-week-label">${escapeHtml(t('plan360.closing'))}</div>
+      ${objetivos.length ? `<div class="card" style="margin-bottom:10px">
+        ${objetivos.map(o => `
+          <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <strong style="flex:1">${escapeHtml(o.titulo)}</strong>
+              ${o.estadoFinal ? `<span class="p360-day-tag" style="margin:0;background:${PLAN360_ESTADO_FINAL_COLOR[o.estadoFinal]};color:#fff">${escapeHtml(t(PLAN360_ESTADO_FINAL_LABEL[o.estadoFinal]))}</span>` : `<span class="p360-day-tag" style="margin:0">${escapeHtml(t('plan360.estadoFinal.pending'))}</span>`}
+            </div>
+            ${plan360MedicionesResumenHtml(o)}
+          </div>`).join('')}
+      </div>` : ''}
+      ${cierre.mensajeMantenimiento ? `<div class="card" style="background:var(--ink);color:#fff">
+        <div style="font-weight:700;margin-bottom:6px"><i class="ti ti-rocket"></i> ${escapeHtml(t('plan360.maintenancePlan'))}</div>
+        <p style="margin:0;font-size:13.5px;white-space:pre-wrap">${escapeHtml(cierre.mensajeMantenimiento)}</p>
+      </div>` : ''}
+    </div>
   `;
 }
 function plan360PageHeader(title, subtitle, backFn){
@@ -5943,7 +5975,7 @@ function addPlan360Objective(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360SyncObjectivesFromForm(d);
-  d.objectives.push({id: genId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: []});
+  d.objectives.push({id: genId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null});
   document.getElementById('p360-obj-list').innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(day, o, i)).join('');
 }
 // La medición se guarda al momento (no espera al botón Guardar general de

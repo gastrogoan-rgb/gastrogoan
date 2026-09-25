@@ -2427,6 +2427,13 @@ function ensurePlan360Program(){
     };
   }
   if(DB.business.plan360WelcomeShown === undefined) DB.business.plan360WelcomeShown = false;
+  // El cierre del programa: qué objetivos se cumplieron de verdad (lo
+  // decide el coach en la revisión final) y el mensaje del plan de
+  // mantenimiento — vive aparte de plan360Program porque es del programa
+  // entero, no de un día concreto.
+  if(!DB.business.plan360Cierre){
+    DB.business.plan360Cierre = {mensajeMantenimiento: ''};
+  }
   saveDB();
 }
 
