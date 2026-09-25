@@ -2164,9 +2164,9 @@ En GastroGoan aplicamos un método 360° que abarca:
 
 FASES DEL PROCESO
 
-— Diagnóstico (1 semana): recopilación de datos y reporte inicial.
-— Planificación estratégica (1 semana): hoja de ruta y plan de acción.
-— Implementación (2,5 meses): ejecución de iniciativas acordadas.
+— Día 1: diagnóstico completo (cliente misterioso, inspección física y reunión presencial).
+— Día 2: presentación y entrega del plan de acción.
+— 4 semanas de implementación (26 días): ejecución guiada de las iniciativas acordadas.
 — Seguimiento y ajustes (opcional): revisión de métricas y optimizaciones continuas.
 
 RESPONSABILIDADES COMPARTIDAS
@@ -2205,7 +2205,7 @@ Partes: de una parte, Marcos González Anguiano (GastroGoan), con DNI 47668150Y 
 GastroGoan se compromete a prestar servicios de asesoría gastronómica integral 360°, consistentes en diagnóstico y análisis operativo, financiero y de marketing; diseño e implementación de estrategias a medida; formación de equipo y optimización de procesos; y seguimiento y reporting de resultados con indicadores clave.
 
 2. Duración
-Duración inicial: 3 meses, desde la firma hasta la entrega del informe final y seguimiento.
+Duración inicial: 4 semanas (28 días), desde la firma hasta la entrega del informe final y seguimiento.
 
 3. Tarifas y forma de pago
 Precio total del servicio: {{precio}}.
@@ -2363,9 +2363,13 @@ function ensurePlan360Program(){
         }
         return dia;
       }
+      // tasks arranca VACÍO a propósito: d.task ('Contenido pendiente de
+      // definir') es un aviso interno de que ese día aún no se ha
+      // diseñado, no un encargo real — ver el mismo comentario en
+      // admin-panel/plan360.html, que debe quedar igual que aquí.
       return {day: d.day, phase: 'trabajo', title: d.title,
         priority: null, reviewType: null, enfoqueTitulo: '', enfoqueColor: null,
-        tasks: [{text: d.task, done: false, note: '', fileData: null, fileName: null}]};
+        tasks: []};
     });
   }
   // Migración: negocios cuyo Día 1 se creó antes de que existiera la
