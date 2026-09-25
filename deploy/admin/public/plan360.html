@@ -1367,28 +1367,17 @@ const PLAN360_TB_KAHOOT_DEFECTO = [
   {dificultad: 'dificil', texto: '¿Qué es la "trazabilidad alimentaria"?', opciones: ['El sabor de un plato','Poder seguir el origen de un alimento','La velocidad del servicio','El recorrido del camarero'], correcta: 1},
 ];
 // Ideas de premio para picar directamente sin escribir desde cero — el
-// coach puede editarlas o escribir la suya propia igualmente.
-// Casi todas cuestan privilegio, no dinero: el negocio ya reparte turnos,
-// música, vacaciones o family meal de alguna forma — lo único que cambia es
-// QUIÉN decide esta vez. Las poquísimas que sí cuestan algo (comida, cerveza,
-// hora libre) son gasto mínimo y puntual, nunca recurrente, así que no chocan
-// con la regla de "nada que le cueste dinero al negocio por cada cliente" del
-// resto de la app (esto es coste del NEGOCIO cliente sobre su propio equipo,
-// no de GastroGoan — pero el mismo espíritu de "barato o gratis" aplica).
+// campo empieza en blanco a propósito (el coach lo decide con cada
+// hostelero, no viene precargado) y estas son solo atajos si hacen falta.
+// Ninguna es gasto fijo por licencia: son puntuales, del negocio cliente
+// hacia SU equipo, y el hostelero elige si le encaja o escribe otra.
 const PLAN360_TB_PREMIOS = [
   'Elegir los turnos de la semana que viene',
+  'Un día extra de vacaciones',
+  '25% más de propina esa semana',
   'Elegir la música de un turno completo',
   'Poner nombre a un plato nuevo de la carta',
-  'Elegir el menú del "family meal" de la semana',
-  'Ser los primeros en elegir turno de vacaciones',
-  'Elegir qué plato se prueba en la próxima cata de carta',
-  'Vale para llegar 15 min tarde un día sin que cuente',
-  'Se libran de la limpieza a fondo de un turno (la hace el resto)',
-  'Elegir qué foto/plato sale en las redes esta semana',
-  'Dirigir ellos la próxima reunión de equipo',
-  'Su foto en un sitio de honor en el local, como equipo ganador',
   'Salir 1 hora antes un día a elegir',
-  'Un día libre extra a repartir entre el equipo',
   'Comida o cerveza de equipo tras el turno, paga el jefe',
 ];
 // El orden real del juego: Explicación → 3 Pruebas → Premio final.
