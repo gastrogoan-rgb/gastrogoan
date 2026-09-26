@@ -1862,6 +1862,179 @@ function openStockLogModal(){
   `);
 }
 
+/* ============== Mermas (27/09) ==============
+   Lo que se tira, anotado en el momento desde Stock. Antes solo existía la
+   hoja de papel de la guía de mermas: alguien tenía que sumarla a mano cada
+   semana y se acababa dejando. Aquí cada merma sale ya en euros (con el
+   precio de la Mega Lista) y se descuenta del stock, que hasta ahora seguía
+   creyendo que lo tirado estaba en la cámara.
+   El motivo se guarda como clave estable en castellano y se traduce al
+   pintarlo; "otro" guarda además el texto libre que escriba el equipo. */
+const MERMA_MOTIVOS = ['caducado', 'malEstado', 'sobreproduccion', 'error', 'devolucion', 'otro'];
+function mermaMotivoLabel(m){
+  if(!m) return '—';
+  if(m.motivo === 'otro') return m.motivoOtro || t('merma.r.otro');
+  return t('merma.r.' + m.motivo);
+}
+function mermaProductos(){
+  const area = currentArea();
+  const ings = DB.ingredients.filter(i => (i.area||'cocina') === area && i.activo !== false)
+    .sort((a,b) => a.name.localeCompare(b.name));
+  const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina') === area)
+    .sort((a,b) => a.name.localeCompare(b.name));
+  return {ings, elabs};
+}
+function mermaCosteUnidad(tipo, id){
+  if(tipo === 'ing'){ const ing = getIngredient(id); return ing ? (parseFloat(ing.price)||0) : 0; }
+  const e = getElaboracion(id);
+  const r = e && e.recipeId ? getRecipe(e.recipeId) : null;
+  return r ? (recipeBaseCostPerUnit(r) || 0) : 0;
+}
+function openMermaModal(){
+  const {ings, elabs} = mermaProductos();
+  const byCat = {};
+  ings.forEach(i => { const c = i.category || t('label.noCategory'); (byCat[c] = byCat[c] || []).push(i); });
+  const opts = Object.keys(byCat).sort((a,b) => a.localeCompare(b)).map(c =>
+    `<optgroup label="${escapeHtml(ingredientCategoryLabel(c))}">${byCat[c].map(i => `<option value="ing:${i.id}">${escapeHtml(i.name)}</option>`).join('')}</optgroup>`).join('')
+    + (elabs.length ? `<optgroup label="${escapeHtml(t('label.elaborations'))}">${elabs.map(e => `<option value="elab:${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-trash-x"></i> ${t('merma.title')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="form-group">
+      <label for="merma-prod">${t('merma.product')}</label>
+      <select id="merma-prod" onchange="mermaActualizar()"><option value="">${t('merma.choose')}</option>${opts}</select>
+    </div>
+    <div class="form-group">
+      <label for="merma-qty" id="merma-qty-l">${t('merma.qty').replace('${u}', '—')}</label>
+      <input type="number" id="merma-qty" min="0" step="0.01" inputmode="decimal" oninput="mermaActualizar()">
+    </div>
+    <div class="form-group">
+      <label>${t('merma.reason')}</label>
+      <div class="merma-motivos">${MERMA_MOTIVOS.map(m => `<label class="merma-motivo"><input type="radio" name="merma-motivo" value="${m}" onchange="mermaActualizar()"> <span>${t('merma.r.' + m)}</span></label>`).join('')}</div>
+      <input type="text" id="merma-otro" maxlength="80" placeholder="${escapeHtml(t('merma.otherPh'))}" style="display:none;margin-top:8px">
+    </div>
+    <div class="txt-xs" id="merma-coste" style="color:var(--muted)">${t('merma.stockNote')}</div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="guardarMerma()"><i class="ti ti-check"></i> ${t('merma.save')}</button>
+    </div>
+  `);
+}
+function mermaLeer(){
+  const v = (document.getElementById('merma-prod')||{}).value || '';
+  const [tipo, idStr] = v.split(':');
+  const id = idStr ? Number(idStr) : null;
+  const qty = parseFloat((document.getElementById('merma-qty')||{}).value);
+  const r = document.querySelector('input[name="merma-motivo"]:checked');
+  const motivo = r ? r.value : '';
+  const otro = ((document.getElementById('merma-otro')||{}).value || '').trim();
+  const item = !id ? null : (tipo === 'ing' ? getIngredient(id) : getElaboracion(id));
+  return {tipo, id, qty, motivo, otro, item};
+}
+function mermaActualizar(){
+  const d = mermaLeer();
+  const otro = document.getElementById('merma-otro');
+  if(otro) otro.style.display = d.motivo === 'otro' ? '' : 'none';
+  const lab = document.getElementById('merma-qty-l');
+  if(lab) lab.textContent = t('merma.qty').replace('${u}', d.item ? (d.item.unit || '—') : '—');
+  const box = document.getElementById('merma-coste');
+  if(!box) return;
+  if(d.item && d.qty > 0){
+    const cu = mermaCosteUnidad(d.tipo, d.id);
+    box.innerHTML = `<strong style="color:var(--text)">${escapeHtml(t('merma.cost').replace('${v}', cu ? fmtMoney(cu * d.qty) : t('merma.noPrice')))}</strong> · ${escapeHtml(t('merma.stockNote'))}`;
+  } else {
+    box.textContent = t('merma.stockNote');
+  }
+}
+function guardarMerma(){
+  const d = mermaLeer();
+  // Nada se rechaza en silencio: cada dato que falta dice cuál es.
+  if(!d.item){ showToast(t('merma.needProduct')); return; }
+  if(!(d.qty > 0)){ showToast(t('merma.needQty')); return; }
+  if(!d.motivo || (d.motivo === 'otro' && !d.otro)){ showToast(t('merma.needReason')); return; }
+  const cu = mermaCosteUnidad(d.tipo, d.id);
+  const coste = Math.round(cu * d.qty * 100) / 100;
+  if(!DB.mermas) DB.mermas = [];
+  DB.mermas.push({
+    id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
+    area: currentArea(), tipo: d.tipo, refId: d.id, name: d.item.name, unit: d.item.unit || '',
+    qty: d.qty, motivo: d.motivo, motivoOtro: d.motivo === 'otro' ? d.otro : '', coste,
+    actor: (typeof currentActorName === 'function') ? currentActorName() : ''
+  });
+  // Lo tirado sale del stock. Nunca por debajo de cero: si el stock ya
+  // estaba mal contado, la merma se anota igual y el recuento lo corregirá.
+  if(d.tipo === 'ing'){
+    const s = getStockEntry(d.id);
+    const before = s.qty || 0, after = Math.max(0, Math.round((before - d.qty) * 1000) / 1000);
+    if(after !== before){ s.qty = after; logStockAdjustment('ing', d.id, d.item.name, before, after, 'merma'); }
+  } else {
+    const before = d.item.qty || 0, after = Math.max(0, Math.round((before - d.qty) * 1000) / 1000);
+    if(after !== before){ d.item.qty = after; logStockAdjustment('elab', d.id, d.item.name, before, after, 'merma'); }
+  }
+  saveDB();
+  closeModal();
+  showToast(t('merma.saved').replace('${v}', coste ? fmtMoney(coste) : d.item.name));
+  if(typeof renderStock === 'function') withScrollPreserved(() => renderStock());
+}
+function mermaLunes(fecha){
+  const d = new Date(fecha + 'T12:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return dateStr(d);
+}
+function openMermasInformeModal(){
+  const area = currentArea();
+  const lista = (DB.mermas||[]).filter(m => (m.area||'cocina') === area);
+  const hoy = todayStr();
+  const lunes = mermaLunes(hoy);
+  const lunesPasado = dateStr(new Date(new Date(lunes + 'T12:00:00').getTime() - 7*86400000));
+  const mes = hoy.slice(0,7);
+  const hace28 = dateStr(new Date(Date.now() - 27*86400000));
+  const suma = arr => arr.reduce((s,m) => s + (m.coste||0), 0);
+  const semana = suma(lista.filter(m => m.fecha >= lunes));
+  const pasada = suma(lista.filter(m => m.fecha >= lunesPasado && m.fecha < lunes));
+  const delMes = lista.filter(m => (m.fecha||'').slice(0,7) === mes);
+  const ritmoAnual = suma(lista.filter(m => m.fecha >= hace28)) * 13;
+  const agrupa = (arr, clave, nombre) => {
+    const g = {};
+    arr.forEach(m => { const k = clave(m); (g[k] = g[k] || {n: nombre(m), coste: 0, qty: 0, unit: m.unit, veces: 0}); g[k].coste += m.coste||0; g[k].qty += m.qty||0; g[k].veces++; });
+    return Object.values(g).sort((a,b) => b.coste - a.coste || b.veces - a.veces);
+  };
+  const top = agrupa(delMes, m => m.tipo + ':' + m.refId, m => m.name).slice(0, 8);
+  const porMotivo = agrupa(delMes, m => m.motivo === 'otro' ? 'otro:' + (m.motivoOtro||'').toLowerCase() : m.motivo, mermaMotivoLabel);
+  const ultimas = [...lista].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||'')).slice(0, 30);
+  const flecha = pasada > 0 ? (semana <= pasada ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-trash-x"></i> ${t('merma.reportTitle')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${lista.length ? `
+    <div class="grid grid-4" style="margin-bottom:14px">
+      <div class="kpi"><div class="label">${t('merma.thisWeek')}</div><div class="value" style="color:${flecha}">${fmtMoney(semana)}</div></div>
+      <div class="kpi"><div class="label">${t('merma.lastWeek')}</div><div class="value">${fmtMoney(pasada)}</div></div>
+      <div class="kpi"><div class="label">${t('merma.thisMonth')}</div><div class="value">${fmtMoney(suma(delMes))}</div></div>
+      <div class="kpi"><div class="label">${t('merma.yearPace')}</div><div class="value">${fmtMoney(ritmoAnual)}</div></div>
+    </div>
+    <div class="view-subtitle" style="margin-bottom:6px"><strong>${t('merma.topProducts')}</strong></div>
+    ${top.length ? `<div class="table-wrap"><table class="table-cards"><thead><tr><th>${t('merma.product')}</th><th>${t('merma.qtyShort')}</th><th>${t('merma.times')}</th><th>${t('label.total')}</th></tr></thead>
+      <tbody>${top.map(g => `<tr><td data-label="${t('merma.product')}">${escapeHtml(g.n)}</td><td data-label="${t('merma.qtyShort')}">${fmtNum(g.qty)} ${escapeHtml(g.unit||'')}</td><td data-label="${t('merma.times')}">${g.veces}</td><td data-label="${t('label.total')}" style="font-weight:700">${fmtMoney(g.coste)}</td></tr>`).join('')}</tbody></table></div>`
+      : `<div class="empty" style="padding:10px">${t('merma.noneMonth')}</div>`}
+    ${porMotivo.length ? `<div class="view-subtitle" style="margin:14px 0 6px"><strong>${t('merma.byReason')}</strong></div>
+    <div class="table-wrap"><table class="table-cards"><thead><tr><th>${t('merma.reason')}</th><th>${t('merma.times')}</th><th>${t('label.total')}</th></tr></thead>
+      <tbody>${porMotivo.map(g => `<tr><td data-label="${t('merma.reason')}">${escapeHtml(g.n)}</td><td data-label="${t('merma.times')}">${g.veces}</td><td data-label="${t('label.total')}" style="font-weight:700">${fmtMoney(g.coste)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    <div class="view-subtitle" style="margin:14px 0 6px"><strong>${t('merma.recent')}</strong></div>
+    <div class="table-wrap"><table class="table-cards"><thead><tr><th>${t('common.date')}</th><th>${t('merma.product')}</th><th>${t('merma.qtyShort')}</th><th>${t('merma.reason')}</th><th>${t('label.total')}</th><th>${t('common.responsible')}</th></tr></thead>
+      <tbody>${ultimas.map(m => `<tr><td data-label="${t('common.date')}">${escapeHtml(m.fecha)} ${escapeHtml(m.hora||'')}</td><td data-label="${t('merma.product')}">${escapeHtml(m.name)}</td><td data-label="${t('merma.qtyShort')}">${fmtNum(m.qty)} ${escapeHtml(m.unit||'')}</td><td data-label="${t('merma.reason')}">${escapeHtml(mermaMotivoLabel(m))}</td><td data-label="${t('label.total')}">${m.coste ? fmtMoney(m.coste) : '—'}</td><td data-label="${t('common.responsible')}">${escapeHtml(m.actor||'—')}</td></tr>`).join('')}</tbody></table></div>
+    ` : `<div class="empty"><i class="ti ti-trash-x"></i>${t('merma.none')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+      <button class="btn btn-primary" onclick="openMermaModal()"><i class="ti ti-plus"></i> ${t('merma.btn')}</button>
+    </div>
+  `, {xl: true});
+}
+
 // Cantidad "Actual" editable directamente en la propia fila, sin pasar por
 // un modal — antes hacía falta abrir un modal aparte solo para escribir un
 // número. Sigue quedando registrado en el Historial igual que antes.

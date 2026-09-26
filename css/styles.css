@@ -2327,6 +2327,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 /* Recursos como documento maquetado (plan360DocRicoHtml): una hoja con
    aspecto de página impresa. Mismo bloque en css/styles.css y en el
    <style> propio de admin-panel/plan360.html. Sin esquinas redondeadas. */
+/* Motivos de merma: casillas grandes para tocarlas con prisa en la tablet
+   de cocina (44 px), que envuelven en vez de salirse. */
+.merma-motivos{display:flex;flex-wrap:wrap;gap:8px}
+.merma-motivo{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:#fff;font-weight:600;font-size:13.5px;cursor:pointer}
+.merma-motivo input{width:auto;margin:0}
+.merma-motivo:has(input:checked){border-color:var(--text);background:#F1EFE9}
 .dr-doc{max-width:794px;margin:14px auto 0;background:#fff;border:1px solid #E7E2D9;box-shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px rgba(28,26,23,.06);color:#1C1A17;font-family:'Schibsted Grotesk',system-ui,sans-serif}
 .dr-portada{background:#1C1A17;color:#FAF8F4;padding:44px 44px 36px;border-left:8px solid #4A5D4E}
 .dr-portada-e{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#9DB0A2;margin-bottom:28px}

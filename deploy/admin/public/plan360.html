@@ -1204,7 +1204,7 @@ const PLAN360_DOC_PLANTILLAS = {
     titulo: 'Mermas: cómo evitarlas',
     sub: 'Cada gramo que se tira es dinero que se pierde. Guía práctica para el equipo de cocina.',
     bloques: [
-      {t: 'dato', items: [{v: '1 €', l: 'que se tira es 1 € menos de beneficio'}, {v: '2', l: 'tipos de merma: la técnica y la evitable'}, {v: '10', l: 'hábitos que la reducen'}, {v: '1 min', l: 'es lo que cuesta anotar una merma'}]},
+      {t: 'dato', items: [{v: '1 €', l: 'que se tira es 1 € menos de beneficio'}, {v: '2', l: 'tipos de merma: la técnica y la evitable'}, {v: '10', l: 'hábitos que la reducen'}, {v: '30 s', l: 'es lo que cuesta anotar una merma en la app'}]},
       {t: 'cap', n: '01', titulo: 'Por qué importa', sub: 'La merma no se ve en la caja, pero se paga.'},
       {t: 'p', x: 'Merma es todo lo que se compra y no llega a venderse: lo que caduca, lo que se estropea, lo que se produce de más, lo que se corta mal o lo que vuelve de sala. No es un problema de la dirección: se decide cada día en la cocina, en cada pedido, en cada corte y en cada ración.'},
       {t: 'p', x: 'Cuando un plato deja un 70 % de margen, tirar el producto de una ración se come el beneficio de varias. Por eso reducir mermas es la forma más rápida de ganar dinero sin vender más.'},
@@ -1237,8 +1237,9 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'regla', x: 'Aprovechar nunca es servir algo en mal estado. Si hay dudas sobre la seguridad, se tira y se anota.'},
 
       {t: 'cap', n: '06', titulo: 'El registro de mermas', sub: 'Lo que no se anota no se puede corregir.'},
-      {t: 'p', x: 'Cada merma evitable se anota en el momento, en la hoja de mermas junto a la cámara. Es un minuto y es la única forma de saber qué está fallando. En la revisión semanal, si un producto se tira de forma constante, se ajusta en la app: el pedido al proveedor, el stock mínimo o la ración de la ficha técnica.'},
-      {t: 'ficha', filas: ['Fecha', 'Producto', 'Cantidad', 'Motivo: caducado · mal estado · sobreproducción · error · devolución', 'Coste aproximado', 'Quién lo anota']},
+      {t: 'p', x: 'Cada merma evitable se anota en el momento, en la app: Stock → «Anotar merma». Producto, cantidad y motivo; si el motivo no está en la lista, se elige «Otro» y se escribe. La app la pasa a euros con el precio de la Mega Lista y la descuenta del stock. Es medio minuto y es la única forma de saber qué está fallando.'},
+      {t: 'tabla', titulo: 'Qué se anota', cab: ['Dato', 'Cómo'], filas: [['Producto', 'De la Mega Lista o una elaboración'], ['Cantidad', 'En la unidad en que se compra'], ['Motivo', 'Caducado · en mal estado · sobreproducción · error · devolución · otro'], ['Coste', 'Lo calcula la app'], ['Quién y cuándo', 'Lo guarda la app']]},
+      {t: 'p', x: 'El botón «Mermas» de Stock da la revisión semanal hecha: lo tirado esta semana frente a la anterior, lo que más se tira, los motivos y lo que costaría en un año a ese ritmo. Si un producto se tira de forma constante, se ajusta el pedido al proveedor, el stock mínimo o la ración de la ficha técnica.'},
       {t: 'check', titulo: 'Revisión semanal', items: ['¿Qué producto se tira más?', '¿Por qué motivo?', '¿Qué cambiamos: pedido, ración, producción o conservación?', '¿Ha bajado respecto a la semana anterior?']},
       {t: 'campos', items: [
         {id: 'resp-mermas', label: 'Responsable del registro', ayuda: 'Nombre'},
