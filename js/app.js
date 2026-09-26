@@ -5740,6 +5740,7 @@ function renderPlan360LibroMarca(){
   document.getElementById('plan360-content').innerHTML = `
     <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(doc.title)}</div>
+    <button class="btn btn-sm" onclick="descargarLibroMarcaPdf()" style="margin-top:10px"><i class="ti ti-download"></i> ${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</button>
     <div class="card p360-doc" style="margin-top:14px">
       ${plan360RenderCuestionarioDoc(negocio, plan360LibroImagenesDeAreaCliente)}
     </div>
@@ -5776,6 +5777,163 @@ function plan360LibroImagenesDeAreaCliente(areaTitle){
     if(q.archivo && q.fileData) imgs.push({data: q.fileData});
   }));
   return imgs;
+}
+/* ---- Descargar en PDF: mismo generador que admin-panel/plan360.html
+   (ventana de impresión → "Guardar como PDF"), para que el propietario
+   también pueda guardarse su copia. Ver el comentario de
+   descargarLibroMarcaPdf en el panel del coach para el porqué del
+   contenido adaptado por tipo de respuesta y de la matriz DAFO aparte. */
+function plan360FormatearRespuesta(texto){
+  const t = (texto || '').trim();
+  if(!t) return null;
+  const lineas = t.split('\n').map(x => x.trim()).filter(Boolean);
+  if(lineas.length >= 2) return {tipo: 'lista', items: lineas};
+  if(!t.includes('.') && t.length < 180){
+    const partes = t.split(/[;,]\s+/).map(x => x.trim()).filter(Boolean);
+    if(partes.length >= 3) return {tipo: 'lista', items: partes};
+  }
+  if(t.length <= 90) return {tipo: 'corta', texto: t};
+  return {tipo: 'larga', texto: t};
+}
+function plan360RenderPreguntaPdf(q){
+  const f = plan360FormatearRespuesta(q.a);
+  if(!f) return '';
+  if(f.tipo === 'lista'){
+    return `<div class="lm-bloque">
+      <div class="lm-q">${escapeHtml(q.q)}</div>
+      <div class="lm-lista">${f.items.map((it, i) => `<div class="lm-lista-item"><span class="lm-lista-num">${String(i + 1).padStart(2, '0')}</span><span>${escapeHtml(it)}</span></div>`).join('')}</div>
+    </div>`;
+  }
+  if(f.tipo === 'corta'){
+    return `<div class="lm-bloque lm-corta">
+      <div class="lm-corta-valor">${escapeHtml(f.texto)}</div>
+      <div class="lm-corta-label">${escapeHtml(q.q)}</div>
+    </div>`;
+  }
+  return `<div class="lm-bloque">
+    <div class="lm-q">${escapeHtml(q.q)}</div>
+    <div class="lm-p">${escapeHtml(f.texto)}</div>
+  </div>`;
+}
+function plan360EsSubsecDafo(title){
+  return title === 'Competidores directos e indirectos (DAFO)';
+}
+function plan360RenderDafoPdf(subsec){
+  const buscar = p => { const q = subsec.questions.find(x => x.q.startsWith(p)); return (q && q.a) ? q.a.trim() : ''; };
+  const partir = t => {
+    const l = t.split('\n').map(x => x.trim()).filter(Boolean);
+    return (l.length >= 2 ? l : t.split(/[;,]\s+/).map(x => x.trim()).filter(Boolean)).filter(Boolean);
+  };
+  const cuadrantes = [
+    {label: 'Fortalezas', color: '#4A5D4E', items: partir(buscar('Analiza 5 fortalezas'))},
+    {label: 'Debilidades', color: '#8A4A3B', items: partir(buscar('Analiza 5 debilidades'))},
+    {label: 'Oportunidades', color: '#4A5D4E', items: partir(buscar('Analiza 5 oportunidades'))},
+    {label: 'Amenazas', color: '#8A4A3B', items: partir(buscar('Analiza 5 amenazas'))},
+  ];
+  const otras = subsec.questions.filter(q => !/^Analiza 5 (fortalezas|debilidades|oportunidades|amenazas)/.test(q.q) && q.a);
+  const matriz = cuadrantes.some(c => c.items.length) ? `
+    <div class="lm-h3">Síntesis del DAFO</div>
+    <div class="lm-dafo">
+      ${cuadrantes.map(c => `<div class="lm-dafo-cuad">
+        <div class="lm-dafo-label" style="color:${c.color}">${escapeHtml(c.label)}</div>
+        ${c.items.length ? c.items.map(it => `<div class="lm-dafo-item">${escapeHtml(it)}</div>`).join('') : '<div class="lm-dafo-item lm-muted">—</div>'}
+      </div>`).join('')}
+    </div>` : '';
+  return otras.map(plan360RenderPreguntaPdf).join('') + matriz;
+}
+function plan360ConstruirHtmlLibroMarcaPdf(negocio, imagenesDeArea, nombreNegocio){
+  const total = negocio.areas.length;
+  const fecha = new Date().toLocaleDateString('es-ES', {day: 'numeric', month: 'long', year: 'numeric'});
+  const paginasAreas = negocio.areas.map((a, i) => {
+    const num = String(i + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    const subsHtml = a.subsections.map(s => {
+      const esDafo = plan360EsSubsecDafo(s.title);
+      const contenido = esDafo ? plan360RenderDafoPdf(s) : s.questions.map(plan360RenderPreguntaPdf).join('');
+      if(!contenido.trim()) return '';
+      return `<div class="lm-sub">${!esDafo ? `<div class="lm-h3">${escapeHtml(s.title)}</div>` : ''}${contenido}</div>`;
+    }).join('');
+    const imgs = imagenesDeArea(a.title);
+    const moodboard = imgs.length ? `<div class="lm-h3">Imágenes</div><div class="lm-mood">${imgs.map(img => `<img src="${img.data}" alt="">`).join('')}</div>` : '';
+    if(!subsHtml.trim() && !moodboard) return '';
+    return `<section class="lm-page">
+      <div class="lm-ghost">${String(i + 1).padStart(2, '0')}</div>
+      <div class="lm-header">
+        <div class="lm-eyebrow">${num} · ${escapeHtml(a.title.toUpperCase())}</div>
+        <h1>${escapeHtml(a.title)}</h1>
+        ${a.subtitle ? `<div class="lm-subtitle">${escapeHtml(a.subtitle)}</div>` : ''}
+      </div>
+      ${subsHtml}
+      ${moodboard}
+      <div class="lm-foot">${escapeHtml(nombreNegocio)} — libro de marca</div>
+    </section>`;
+  }).join('');
+  const indice = negocio.areas.map((a, i) => `<div class="lm-idx-item"><span class="lm-idx-num">${String(i + 1).padStart(2, '0')}</span><span>${escapeHtml(a.title)}</span></div>`).join('');
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Libro de marca — ${escapeHtml(nombreNegocio)}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @page{size:A4;margin:16mm}
+    body{margin:0;font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#1C1A17;background:#fff}
+    .lm-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E;font-weight:600}
+    .lm-h3{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#716C65;font-weight:600;margin:22px 0 10px}
+    .lm-cover{background:#1C1A17;color:#FAF8F4;min-height:257mm;padding:20mm 14mm;position:relative;page-break-after:always}
+    .lm-cover-rail{position:absolute;top:0;left:0;width:8px;height:100%;background:#4A5D4E}
+    .lm-cover-title{font-size:52px;font-weight:800;line-height:1.03;letter-spacing:-.01em;margin:60px 0 18px}
+    .lm-cover-lede{font-size:15px;color:#C9C4BA;max-width:480px;line-height:1.55}
+    .lm-idx{display:grid;grid-template-columns:1fr 1fr;column-gap:32px;row-gap:9px;margin-top:50px;padding-top:24px;border-top:1px solid #3A362F}
+    .lm-idx-item{display:flex;gap:10px;align-items:baseline;font-size:14px}
+    .lm-idx-num{font-family:'IBM Plex Mono',monospace;color:#4A5D4E;font-size:12px;width:22px}
+    .lm-cover-foot{position:absolute;bottom:20mm;left:14mm;right:14mm;display:flex;justify-content:space-between;align-items:flex-end}
+    .lm-page{page-break-before:always;position:relative;padding-top:4mm}
+    .lm-ghost{position:absolute;top:-14mm;right:-4mm;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:170px;line-height:1;color:#4A5D4E;opacity:.07;z-index:0}
+    .lm-header{position:relative;padding-bottom:14px;margin-bottom:14px;border-bottom:2px solid #1C1A17;z-index:1}
+    .lm-header h1{font-size:32px;font-weight:800;margin:5px 0 0;letter-spacing:-.01em}
+    .lm-subtitle{font-size:13px;color:#716C65;margin-top:4px}
+    .lm-sub{position:relative;z-index:1;page-break-inside:avoid}
+    .lm-bloque{margin-bottom:16px;page-break-inside:avoid}
+    .lm-q{font-size:11.5px;color:#8B8579;font-style:italic;margin-bottom:4px;line-height:1.4}
+    .lm-p{font-size:13.5px;line-height:1.6;color:#3D3A34}
+    .lm-corta{display:flex;flex-direction:column;gap:2px}
+    .lm-corta-valor{font-size:19px;font-weight:700;color:#1C1A17}
+    .lm-corta-label{font-size:11px;color:#8B8579}
+    .lm-lista{display:flex;flex-direction:column;gap:6px}
+    .lm-lista-item{display:flex;gap:9px;align-items:baseline;font-size:13.5px;color:#3D3A34}
+    .lm-lista-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4A5D4E;font-weight:600;width:18px;flex:none}
+    .lm-dafo{border:2px solid #1C1A17;display:grid;grid-template-columns:1fr 1fr;margin-top:4px;page-break-inside:avoid}
+    .lm-dafo-cuad{padding:13px 16px;border-right:1px solid #1C1A17;border-bottom:1px solid #1C1A17}
+    .lm-dafo-cuad:nth-child(2n){border-right:none}
+    .lm-dafo-cuad:nth-child(n+3){border-bottom:none}
+    .lm-dafo-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+    .lm-dafo-item{font-size:12.5px;color:#3D3A34;line-height:1.5;margin-bottom:4px}
+    .lm-dafo-item.lm-muted{color:#B5AE9F}
+    .lm-mood{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+    .lm-mood img{width:100px;height:100px;object-fit:cover;border:1px solid #E7E2D9}
+    .lm-foot{margin-top:20px;padding-top:10px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#B5AE9F}
+  </style>
+  </head><body>
+  <section class="lm-cover">
+    <div class="lm-cover-rail"></div>
+    <div class="lm-eyebrow" style="color:#9DB0A2">GASTROGOAN · PLAN 360°</div>
+    <div class="lm-cover-title">Libro de<br>marca</div>
+    <div class="lm-cover-lede">El retrato completo de tu negocio — misión, identidad, cocina, sala, equipo, números y captación — en un único documento.</div>
+    <div class="lm-idx">${indice}</div>
+    <div class="lm-cover-foot">
+      <div><div style="font-size:20px;font-weight:700">${escapeHtml(nombreNegocio)}</div><div style="font-size:12px;color:#8B8579;margin-top:2px">${escapeHtml(fecha)}</div></div>
+      <div class="lm-eyebrow" style="color:#5C5749;text-align:right">Elaborado junto a<br>tu coach GastroGoan</div>
+    </div>
+  </section>
+  ${paginasAreas}
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+}
+function descargarLibroMarcaPdf(){
+  const dia1 = (DB.business.plan360Program || []).find(x => x.day === 1);
+  const negocio = dia1 && dia1.negocio;
+  if(!negocio) return;
+  const win = window.open('', '_blank');
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  win.document.write(plan360ConstruirHtmlLibroMarcaPdf(negocio, plan360LibroImagenesDeAreaCliente, DB.business.name || 'tu negocio'));
+  win.document.close();
 }
 
 /* ---- Un día concreto: presencial o de trabajo ---- */
