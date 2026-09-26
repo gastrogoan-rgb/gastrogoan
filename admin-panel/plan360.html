@@ -100,6 +100,19 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-doc-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12.5px}
 .p360-doc-table th{background:var(--ink);color:#fff;text-align:left;padding:6px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em}
 .p360-doc-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--body)}
+/* Editor de Recursos: se escribe DIRECTAMENTE sobre el documento con el
+   diseño final (mismas clases .p360-doc-* de arriba) — nada de una caja de
+   texto aparte con la marca en crudo. Cada bloque lleva sus propios
+   controles (subir/bajar/borrar) que solo aparecen al pasar el ratón. */
+.p360-doc-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0;margin-bottom:6px;border-bottom:1px dashed var(--border)}
+.p360-doc-editor [contenteditable]{outline:none;cursor:text;border-radius:0}
+.p360-doc-editor [contenteditable]:focus{background:var(--brand-cream,#F1EFE9);box-shadow:0 0 0 2px var(--olive) inset}
+.p360-doc-editor table[contenteditable] td:focus,.p360-doc-editor table[contenteditable] th:focus{background:var(--brand-cream,#F1EFE9);outline:2px solid var(--olive);outline-offset:-2px}
+.p360-block{position:relative;padding:2px 34px 2px 0}
+.p360-block-tools{position:absolute;top:0;right:0;display:flex;flex-direction:column;gap:2px;opacity:0;transition:opacity .15s}
+.p360-block:hover .p360-block-tools,.p360-block:focus-within .p360-block-tools{opacity:1}
+.p360-block-tools button{width:24px;height:24px;border:1px solid var(--border);background:#fff;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;padding:0}
+.p360-block-tools button:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
 </style>
 </head>
 <body>
@@ -2853,6 +2866,133 @@ function plan360RenderDocBody(body){
   flushAll();
   return html;
 }
+// ---- Recursos: editor de bloques, EN el propio documento (no un textarea
+// aparte). El coach edita directamente sobre el mismo diseño que verá el
+// negocio — "lo que ves es lo que se guarda", nada de escribir marcas a
+// mano en una caja de texto. ----
+function plan360ParseDocBlocks(body){
+  const blocks = [];
+  if(!body) return blocks;
+  const lines = body.split('\n');
+  let list = [], quote = [], table = [];
+  const flushList = () => { if(list.length){ blocks.push({type: 'list', items: list}); list = []; } };
+  const flushQuote = () => { if(quote.length){ blocks.push({type: 'quote', items: quote}); quote = []; } };
+  const flushTable = () => { if(table.length){ blocks.push({type: 'table', rows: table}); table = []; } };
+  const flushAll = () => { flushList(); flushQuote(); flushTable(); };
+  lines.forEach(raw => {
+    const l = raw.trim();
+    if(!l){ flushAll(); return; }
+    if(l.startsWith('### ')){ flushAll(); blocks.push({type: 'h3', text: l.slice(4)}); return; }
+    if(l.startsWith('## ')){ flushAll(); blocks.push({type: 'h2', text: l.slice(3)}); return; }
+    if(l.startsWith('> ')){ flushList(); flushTable(); quote.push(l.slice(2)); return; }
+    if(l.startsWith('- ')){ flushQuote(); flushTable(); list.push(l.slice(2)); return; }
+    if(l.startsWith('|')){ flushList(); flushQuote(); table.push(l.split('|').map(c => c.trim()).filter((c, i, arr) => !(i === 0 && c === '') && !(i === arr.length - 1 && c === ''))); return; }
+    if(l.startsWith('✎')){ flushAll(); blocks.push({type: 'fill', text: l}); return; }
+    flushAll();
+    blocks.push({type: 'p', text: l});
+  });
+  flushAll();
+  return blocks;
+}
+function plan360BlockToMarkup(b){
+  if(b.type === 'h2') return '## ' + b.text;
+  if(b.type === 'h3') return '### ' + b.text;
+  if(b.type === 'p') return b.text;
+  if(b.type === 'fill') return b.text.startsWith('✎') ? b.text : '✎ ' + b.text;
+  if(b.type === 'list') return b.items.filter(x => x.trim()).map(x => '- ' + x).join('\n');
+  if(b.type === 'quote') return b.items.filter(x => x.trim()).map(x => '> ' + x).join('\n');
+  if(b.type === 'table') return b.rows.map(r => '| ' + r.join(' | ') + ' |').join('\n');
+  return '';
+}
+function plan360BlockToHtml(b, idx){
+  const tools = `<div class="p360-block-tools">
+    <button type="button" title="Subir" onclick="plan360MoveBlock(${idx},-1)"><i class="ti ti-chevron-up"></i></button>
+    <button type="button" title="Bajar" onclick="plan360MoveBlock(${idx},1)"><i class="ti ti-chevron-down"></i></button>
+    <button type="button" title="Borrar" onclick="plan360DeleteBlock(${idx})"><i class="ti ti-trash"></i></button>
+  </div>`;
+  let inner = '';
+  if(b.type === 'h2') inner = `<h3 class="p360-doc-h2" contenteditable="true">${esc(b.text)}</h3>`;
+  else if(b.type === 'h3') inner = `<h4 class="p360-doc-h3" contenteditable="true">${esc(b.text)}</h4>`;
+  else if(b.type === 'p') inner = `<p class="p360-doc-p" contenteditable="true">${esc(b.text)}</p>`;
+  else if(b.type === 'fill') inner = `<div class="p360-doc-fill" contenteditable="true">${esc(b.text)}</div>`;
+  else if(b.type === 'list') inner = `<ul class="p360-doc-list" contenteditable="true">${b.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  else if(b.type === 'quote') inner = `<div class="p360-doc-quote" contenteditable="true">${b.items.map(x => `<p>${esc(x)}</p>`).join('')}</div>`;
+  else if(b.type === 'table'){
+    const [head, ...rows] = b.rows;
+    inner = `<table class="p360-doc-table" contenteditable="true"><thead><tr>${head.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => '<tr>' + r.map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('')}</tbody></table>
+      <button type="button" class="btn btn-sm" style="margin-top:4px" onclick="plan360AddTableRow(${idx})">+ fila</button>`;
+  }
+  return `<div class="p360-block" data-idx="${idx}" data-type="${b.type}">${tools}${inner}</div>`;
+}
+function plan360RenderDocEditor(){
+  const blocks = window.__plan360EditBlocks || [];
+  const html = blocks.length
+    ? blocks.map((b, i) => plan360BlockToHtml(b, i)).join('')
+    : '<p class="muted" style="padding:10px 0">Vacío todavía — añade un bloque con los botones de arriba.</p>';
+  const el = document.getElementById('doc-editor');
+  if(el) el.innerHTML = html;
+}
+function plan360SyncBlockFromDom(idx){
+  const b = (window.__plan360EditBlocks || [])[idx];
+  const node = document.querySelector(`.p360-block[data-idx="${idx}"]`);
+  if(!b || !node) return;
+  if(b.type === 'h2' || b.type === 'h3' || b.type === 'p' || b.type === 'fill'){
+    const child = node.querySelector('[contenteditable]');
+    b.text = (child ? child.textContent : '').trim();
+  } else if(b.type === 'list'){
+    b.items = [...node.querySelectorAll('li')].map(li => li.textContent.trim());
+  } else if(b.type === 'quote'){
+    b.items = [...node.querySelectorAll('p')].map(p => p.textContent.trim());
+  } else if(b.type === 'table'){
+    const head = [...node.querySelectorAll('thead th')].map(th => th.textContent.trim());
+    const rows = [...node.querySelectorAll('tbody tr')].map(tr => [...tr.querySelectorAll('td')].map(td => td.textContent.trim()));
+    b.rows = [head, ...rows];
+  }
+}
+function plan360SyncAllBlocksFromDom(){
+  (window.__plan360EditBlocks || []).forEach((b, i) => plan360SyncBlockFromDom(i));
+}
+function plan360AddBlock(type){
+  plan360SyncAllBlocksFromDom();
+  const blocks = window.__plan360EditBlocks || (window.__plan360EditBlocks = []);
+  const fresh = {
+    h2: {type: 'h2', text: 'Nuevo título'},
+    h3: {type: 'h3', text: 'Nuevo subtítulo'},
+    p: {type: 'p', text: ''},
+    list: {type: 'list', items: ['']},
+    quote: {type: 'quote', items: ['']},
+    fill: {type: 'fill', text: '✎ Completar…'},
+    table: {type: 'table', rows: [['Columna 1', 'Columna 2'], ['', '']]},
+  }[type];
+  if(!fresh) return;
+  blocks.push(fresh);
+  plan360RenderDocEditor();
+  const nodes = document.querySelectorAll('.p360-block');
+  const last = nodes[nodes.length - 1];
+  const focusable = last && last.querySelector('[contenteditable]');
+  if(focusable) focusable.focus();
+}
+function plan360AddTableRow(idx){
+  plan360SyncBlockFromDom(idx);
+  const b = (window.__plan360EditBlocks || [])[idx];
+  if(!b || b.type !== 'table') return;
+  b.rows.push(b.rows[0].map(() => ''));
+  plan360RenderDocEditor();
+}
+function plan360MoveBlock(idx, dir){
+  plan360SyncAllBlocksFromDom();
+  const blocks = window.__plan360EditBlocks || [];
+  const j = idx + dir;
+  if(j < 0 || j >= blocks.length) return;
+  [blocks[idx], blocks[j]] = [blocks[j], blocks[idx]];
+  plan360RenderDocEditor();
+}
+function plan360DeleteBlock(idx){
+  plan360SyncAllBlocksFromDom();
+  const blocks = window.__plan360EditBlocks || [];
+  blocks.splice(idx, 1);
+  plan360RenderDocEditor();
+}
 function renderDocsPage(){
   const docs = remoteBiz.plan360Docs || [];
   const conIndice = docs.map((doc, i) => ({doc, i}));
@@ -2890,31 +3030,41 @@ function renderDocSimplePage(i){
   const doc = (remoteBiz.plan360Docs || [])[i];
   if(!doc) return;
   const subtitulo = plan360DocSubtitulo(doc.id);
+  window.__plan360EditDocIdx = i;
+  window.__plan360EditBlocks = plan360ParseDocBlocks(doc.body || '');
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDocsPage()">← Recursos</button>
-    <h2 style="margin:10px 0 4px">${esc(doc.title)}</h2>
-    <div class="card" style="margin-top:14px">
-      <div class="muted" style="font-size:12px;margin-bottom:6px">Formato: ## título de sección · &gt; frase destacada · - punto de lista · | fila de tabla | con | columnas | · ✎ campo para rellenar</div>
-      <textarea id="doc-body" rows="14">${esc(doc.body || '')}</textarea>
-      <button class="btn btn-primary" onclick="saveDocSimple(${i})" style="margin-top:10px">Guardar</button>
-    </div>
-    <div class="card p360-doc" style="margin-top:14px">
+    <div class="card p360-doc p360-doc-editing" style="margin-top:14px">
       <div class="p360-doc-header">
         <div class="p360-doc-eyebrow">${esc(plan360DocCategoria(doc.id))}</div>
         <div class="p360-doc-title">${esc(doc.title)}</div>
         ${subtitulo ? `<div class="p360-doc-subtitle">${esc(subtitulo)}</div>` : ''}
       </div>
-      ${doc.body ? plan360RenderDocBody(doc.body) : '<p class="muted">Vacío todavía.</p>'}
+      <div class="p360-doc-toolbar">
+        <button type="button" class="btn btn-sm" onclick="plan360AddBlock('h2')">+ Título</button>
+        <button type="button" class="btn btn-sm" onclick="plan360AddBlock('h3')">+ Subtítulo</button>
+        <button type="button" class="btn btn-sm" onclick="plan360AddBlock('p')">+ Párrafo</button>
+        <button type="button" class="btn btn-sm" onclick="plan360AddBlock('list')">+ Lista</button>
+        <button type="button" class="btn btn-sm" onclick="plan360AddBlock('quote')">+ Cita</button>
+        <button type="button" class="btn btn-sm" onclick="plan360AddBlock('table')">+ Tabla</button>
+        <button type="button" class="btn btn-sm" onclick="plan360AddBlock('fill')">+ Rellenable</button>
+      </div>
+      <div id="doc-editor" class="p360-doc-editor"></div>
+      <button class="btn btn-primary" onclick="saveDocSimple(${i})" style="margin-top:16px">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
+      <span id="doc-save-ok" class="muted" style="margin-left:10px;display:none">✓ Guardado y enviado</span>
     </div>
   `;
+  plan360RenderDocEditor();
 }
 function saveDocSimple(i){
   const doc = (remoteBiz.plan360Docs || [])[i];
   if(!doc) return;
-  doc.body = (document.getElementById('doc-body').value || '').trim();
+  plan360SyncAllBlocksFromDom();
+  doc.body = (window.__plan360EditBlocks || []).map(plan360BlockToMarkup).filter(x => x.trim()).join('\n\n');
   doc.bodyIsSeed = false; // a partir de aquí es del coach: ninguna migración vuelve a tocarlo
   saveRemoteBiz();
-  renderDocSimplePage(i);
+  const ok = document.getElementById('doc-save-ok');
+  if(ok){ ok.style.display = 'inline'; setTimeout(() => { ok.style.display = 'none'; }, 2500); }
 }
 /* ---- Libro de marca: espejo visual y resumido del cuestionario en
    profundidad. El coach pega aquí el texto que Claude redacta a partir
