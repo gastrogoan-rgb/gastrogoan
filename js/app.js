@@ -5737,6 +5737,17 @@ function renderPlan360LibroMarca(){
   const dia1 = (DB.business.plan360Program || []).find(x => x.day === 1);
   const negocio = dia1 && dia1.negocio;
   if(!doc || !doc.sentAt || !negocio) return;
+  if(doc.pdfData){
+    document.getElementById('plan360-content').innerHTML = `
+      <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+      <div class="view-title" style="margin-top:10px">${escapeHtml(doc.title)}</div>
+      <a href="${doc.pdfData}" download="${escapeHtml(doc.pdfName || 'libro-de-marca.pdf')}" class="btn btn-primary" style="margin-top:10px"><i class="ti ti-download"></i> ${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</a>
+      <div class="card" style="margin-top:14px;padding:0;overflow:hidden">
+        <embed src="${doc.pdfData}" type="application/pdf" style="width:100%;height:75vh;display:block">
+      </div>
+    `;
+    return;
+  }
   document.getElementById('plan360-content').innerHTML = `
     <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(doc.title)}</div>
