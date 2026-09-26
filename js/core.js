@@ -2828,8 +2828,10 @@ const PLAN360_LIBRO_MARCA_AREAS = ['Concepto', 'Marca', 'Cocina', 'Sala', 'Equip
 function plan360FreshLibroSecciones(){
   return PLAN360_LIBRO_MARCA_AREAS.map(area => ({area, resumen: '', destacados: []}));
 }
+const PLAN360_DOCS_SEED_REV = 2; // súbelo cada vez que cambie el texto verbatim de un seed — MISMO valor que admin-panel/plan360.html
 function plan360FreshDoc(d){
   const doc = {id: d.id, title: d.title, body: d.seed || '', visible: true};
+  if(d.seed) doc.bodyIsSeed = true; // false en cuanto el coach guarda algo escrito a mano
   if(d.id === 'identidad'){
     doc.libroSecciones = plan360FreshLibroSecciones();
     doc.sentAt = null;
@@ -2844,18 +2846,29 @@ function ensurePlan360Program(){
   // Migración: Recursos pasó de 3 fichas a 14 repartidas en categorías
   // (25/09) — a un negocio con Recursos ya creado se le añaden las que le
   // falten. Y a las que YA tenía (playbook-sala/cocina, que antes nacían
-  // vacías) se les mete el contenido real del Drive si SIGUEN vacías —
-  // en cuanto el coach escribe una palabra, esa ficha ya es suya y la
-  // migración no la vuelve a tocar nunca.
+  // vacías) se les mete el contenido real del Drive si SIGUEN vacías, o si
+  // el texto del Drive se ha vuelto a reescribir y esa ficha sigue siendo
+  // la del seed (bodyIsSeed !== false) — en cuanto el coach guarda algo
+  // escrito a mano, bodyIsSeed pasa a false y la migración no la vuelve a
+  // tocar nunca.
   const idsYa = new Set(DB.business.plan360Docs.map(d => d.id));
+  const revYaAplicada = DB.business.plan360DocsSeedRev || 0;
   PLAN360_DOCS_TEMPLATE.forEach(d => {
     if(!idsYa.has(d.id)){
       DB.business.plan360Docs.push(plan360FreshDoc(d));
     } else if(d.seed){
       const existente = DB.business.plan360Docs.find(x => x.id === d.id);
-      if(existente && !existente.body) existente.body = d.seed;
+      if(!existente) return;
+      if(!existente.body){
+        existente.body = d.seed;
+        existente.bodyIsSeed = true;
+      } else if(existente.bodyIsSeed !== false && revYaAplicada < PLAN360_DOCS_SEED_REV){
+        existente.body = d.seed;
+        existente.bodyIsSeed = true;
+      }
     }
   });
+  DB.business.plan360DocsSeedRev = PLAN360_DOCS_SEED_REV;
   // Migración: negocios cuyo Recursos se creó antes del Libro de marca
   // estructurado se quedarían con la "Identidad de marca" antigua (texto
   // libre) para siempre.
@@ -2864,6 +2877,10 @@ function ensurePlan360Program(){
     libroDoc.title = 'Libro de marca';
     libroDoc.libroSecciones = plan360FreshLibroSecciones();
     libroDoc.sentAt = null;
+  } else if(libroDoc){
+    // Migración: secciones creadas antes de llevar "destacados" reventaban
+    // el .map()/.length al abrirlas — mismo fallo que el de Recursos.
+    libroDoc.libroSecciones.forEach(s => { if(!Array.isArray(s.destacados)) s.destacados = []; });
   }
   // ⚠️ Migración: los negocios que activaron Plan 360º antes de que este
   // cuestionario tuviera contenido real se habían quedado con la plantilla
