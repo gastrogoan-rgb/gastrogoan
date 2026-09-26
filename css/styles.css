@@ -2298,6 +2298,30 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .p360-hero-stat-label{font-size:10.5px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
 .p360-hero-bar{height:4px;background:rgba(255,255,255,.18);margin-top:16px;overflow:hidden}
 .p360-hero-bar-fill{height:100%;background:var(--olive-l,#7E9B84)}
+/* Cada recurso de Plan 360º se pinta como un documento de verdad — título,
+   secciones, listas, citas y tablas — en vez de un bloque de texto plano.
+   El body escribe el contenido con una marca ligera (## título, > cita,
+   - lista, | tabla) que tbRenderDocBody/plan360RenderDocBody convierte en
+   esto. Mismos tokens de siempre: sin esquinas redondeadas, --olive como
+   único acento. */
+.p360-doc-header{padding-bottom:14px;margin-bottom:14px;border-bottom:2px solid var(--ink)}
+.p360-doc-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--olive);font-weight:700;margin-bottom:4px}
+.p360-doc-title{font-size:21px;font-weight:800;color:var(--ink);line-height:1.25}
+.p360-doc-subtitle{font-size:13.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+.p360-doc-h2{font-size:15px;font-weight:800;color:var(--ink);margin:22px 0 8px;padding-left:10px;border-left:3px solid var(--olive)}
+.p360-doc h3.p360-doc-h2:first-of-type{margin-top:0}
+.p360-doc-h3{font-size:12.5px;font-weight:700;color:var(--olive);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 6px}
+.p360-doc-p{font-size:14px;line-height:1.65;color:var(--body);margin-bottom:10px}
+.p360-doc-list{margin:0 0 12px;padding:0;list-style:none}
+.p360-doc-list li{font-size:14px;line-height:1.6;color:var(--body);padding-left:18px;position:relative;margin-bottom:5px}
+.p360-doc-list li::before{content:'';position:absolute;left:0;top:9px;width:6px;height:6px;background:var(--olive)}
+.p360-doc-quote{background:var(--brand-cream);border-left:3px solid var(--olive);padding:10px 14px;margin-bottom:12px}
+.p360-doc-quote p{font-size:13.5px;font-style:italic;color:var(--ink);margin:0 0 4px;line-height:1.5}
+.p360-doc-quote p:last-child{margin-bottom:0}
+.p360-doc-fill{border:1px dashed var(--border);padding:8px 12px;font-size:13px;color:var(--muted);margin-bottom:12px}
+.p360-doc-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12.5px}
+.p360-doc-table th{background:var(--ink);color:#fff;text-align:left;padding:6px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em}
+.p360-doc-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--body)}
 
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)

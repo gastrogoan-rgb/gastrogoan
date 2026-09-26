@@ -5653,6 +5653,46 @@ function plan360DocCategoria(id){
   const t2 = PLAN360_DOCS_TEMPLATE.find(x => x.id === id);
   return (t2 && t2.categoria) || 'Otros';
 }
+function plan360DocSubtitulo(id){
+  const t2 = PLAN360_DOCS_TEMPLATE.find(x => x.id === id);
+  return (t2 && t2.subtitulo) || '';
+}
+// El texto de cada documento se escribe con una marca ligera (## título de
+// sección, > frase destacada, - punto de lista, | fila de tabla, ✎ campo
+// para rellenar) y esta función la convierte en un documento de verdad
+// (títulos, listas, citas, tablas) en vez de un bloque de texto plano —
+// así cada recurso se lee como el documento cuidado que es, con la
+// identidad visual de GastroGoan, no como una nota pegada sin formato.
+function plan360RenderDocBody(body){
+  if(!body) return '';
+  const lines = body.split('\n');
+  let html = '', list = [], quote = [], table = [];
+  const flushList = () => { if(list.length){ html += '<ul class="p360-doc-list">' + list.map(x => `<li>${escapeHtml(x)}</li>`).join('') + '</ul>'; list = []; } };
+  const flushQuote = () => { if(quote.length){ html += '<div class="p360-doc-quote">' + quote.map(x => `<p>${escapeHtml(x)}</p>`).join('') + '</div>'; quote = []; } };
+  const flushTable = () => {
+    if(table.length){
+      const [head, ...rows] = table;
+      html += '<table class="p360-doc-table"><thead><tr>' + head.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead><tbody>'
+        + rows.map(r => '<tr>' + r.map(c => `<td>${escapeHtml(c)}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+      table = [];
+    }
+  };
+  const flushAll = () => { flushList(); flushQuote(); flushTable(); };
+  lines.forEach(raw => {
+    const l = raw.trim();
+    if(!l){ flushAll(); return; }
+    if(l.startsWith('### ')){ flushAll(); html += `<h4 class="p360-doc-h3">${escapeHtml(l.slice(4))}</h4>`; return; }
+    if(l.startsWith('## ')){ flushAll(); html += `<h3 class="p360-doc-h2">${escapeHtml(l.slice(3))}</h3>`; return; }
+    if(l.startsWith('> ')){ flushList(); flushTable(); quote.push(l.slice(2)); return; }
+    if(l.startsWith('- ')){ flushQuote(); flushTable(); list.push(l.slice(2)); return; }
+    if(l.startsWith('|')){ flushList(); flushQuote(); table.push(l.split('|').map(c => c.trim()).filter((c, i, arr) => !(i === 0 && c === '') && !(i === arr.length - 1 && c === ''))); return; }
+    if(l.startsWith('✎')){ flushAll(); html += `<div class="p360-doc-fill">${escapeHtml(l)}</div>`; return; }
+    flushAll();
+    html += `<p class="p360-doc-p">${escapeHtml(l)}</p>`;
+  });
+  flushAll();
+  return html;
+}
 function renderPlan360Docs(){
   const docs = DB.business.plan360Docs || [];
   const categorias = [...new Set([...PLAN360_DOCS_CATEGORIAS_ORDEN, ...docs.map(d => plan360DocCategoria(d.id))])]
@@ -5670,9 +5710,14 @@ function renderPlan360Docs(){
         </div>
       </div>`;
     }
-    return `<div class="card" style="margin-top:14px">
-      <div style="font-weight:700;margin-bottom:8px">${escapeHtml(doc.title)}</div>
-      <div style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:${doc.body ? 'inherit' : 'var(--muted)'}">${doc.body ? escapeHtml(doc.body) : escapeHtml(t('plan360.resourceEmpty'))}</div>
+    const subtitulo = plan360DocSubtitulo(doc.id);
+    return `<div class="card p360-doc" style="margin-top:14px">
+      <div class="p360-doc-header">
+        <div class="p360-doc-eyebrow">${escapeHtml(plan360DocCategoria(doc.id))}</div>
+        <div class="p360-doc-title">${escapeHtml(doc.title)}</div>
+        ${subtitulo ? `<div class="p360-doc-subtitle">${escapeHtml(subtitulo)}</div>` : ''}
+      </div>
+      ${doc.body ? plan360RenderDocBody(doc.body) : `<p class="muted">${escapeHtml(t('plan360.resourceEmpty'))}</p>`}
     </div>`;
   };
   document.getElementById('plan360-content').innerHTML = `
