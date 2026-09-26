@@ -2322,6 +2322,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .p360-doc-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12.5px}
 .p360-doc-table th{background:var(--ink);color:#fff;text-align:left;padding:6px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em}
 .p360-doc-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--body)}
+.p360-doc-qa{margin-bottom:14px}
+.p360-doc-question{font-size:12.5px;font-style:italic;color:var(--muted);margin-bottom:3px;line-height:1.4}
 
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)
