@@ -5710,6 +5710,18 @@ function renderPlan360Docs(){
         </div>
       </div>`;
     }
+    const pl = PLAN360_DOC_PLANTILLAS[doc.id];
+    if(pl){
+      return `<div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360DocRico('${doc.id}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="ti ti-file-text" style="font-size:20px;color:var(--olive)"></i>
+          <div style="flex:1"><strong>${escapeHtml(pl.titulo)}</strong>
+            <div class="p360-day-tag">${escapeHtml(pl.sub)}</div>
+          </div>
+          <i class="ti ti-chevron-right"></i>
+        </div>
+      </div>`;
+    }
     const subtitulo = plan360DocSubtitulo(doc.id);
     return `<div class="card p360-doc" style="margin-top:14px">
       <div class="p360-doc-header">
@@ -5727,6 +5739,32 @@ function renderPlan360Docs(){
       ${docs.filter(d => plan360DocCategoria(d.id) === cat).map(filaDoc).join('')}
     `).join('')}
   `;
+}
+/* Recurso maquetado (Playbook de cocina…): contenido fijo + lo que el
+   coach haya escrito para este negocio. Solo lectura. */
+function renderPlan360DocRico(id){
+  const doc = (DB.business.plan360Docs || []).find(d => d.id === id);
+  const pl = PLAN360_DOC_PLANTILLAS[id];
+  if(!doc || !pl) return;
+  document.getElementById('plan360-content').innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+      <button class="btn btn-sm" onclick="descargarPlan360DocRico('${id}')"><i class="ti ti-download"></i> <span>${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</span></button>
+    </div>
+    ${plan360DocRicoHtml(pl, doc.campos, 'ver', escapeHtml, DB.business.name || '')}
+  `;
+}
+function descargarPlan360DocRico(id){
+  const doc = (DB.business.plan360Docs || []).find(d => d.id === id);
+  const pl = PLAN360_DOC_PLANTILLAS[id];
+  if(!doc || !pl) return;
+  const win = window.open('', '_blank');
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  const estilos = [...document.querySelectorAll('style')].map(x => x.outerHTML).join('');
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${escapeHtml(pl.titulo)}</title>${estilos}
+    <style>@page{size:A4;margin:12mm}html,body{overflow:visible!important;height:auto!important;display:block!important;background:#fff!important;padding:0!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head>
+    <body>${plan360DocRicoHtml(pl, doc.campos, 'ver', escapeHtml, DB.business.name || '')}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+  win.document.close();
 }
 /* ---- Libro de marca: ES el cuestionario "Este es tu negocio", con sus
    mismas áreas/preguntas, mostrado como documento final de solo lectura

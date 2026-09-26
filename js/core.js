@@ -2634,6 +2634,115 @@ Haz 3-5 preguntas, no más. El cliente debe hablar en frases cortas y naturales.
 - 14. Revisión de la cuenta de resultados — ingresos, coste de ventas (food cost), gastos fijos y variables, margen bruto, EBITDA y resultado neto; identificar desviaciones y acciones correctoras.
 - 15. Obligaciones legales y fiscales — IVA, Impuesto de Sociedades, retenciones e impuestos laborales (IRPF y cotizaciones), tasas locales (IAE, licencias), HACCP, contratos, seguros y revisiones periódicas.`},
 ];
+/* ---- Recursos como documento maquetado (27/09) ----
+   El contenido FIJO de un recurso vive aquí, en bloques, igual para todos
+   los negocios. Lo único que cambia por negocio son los campos ✎, que el
+   coach rellena en su panel y se guardan en doc.campos = {id: texto}. El
+   negocio ve el mismo documento en solo lectura, y un campo vacío
+   simplemente no aparece. MISMO bloque en admin-panel/plan360.html y en
+   js/core.js — cópiese entero si se toca. */
+const PLAN360_DOC_PLANTILLAS = {
+  'playbook-cocina': {
+    eyebrow: 'Playbook · Cocina',
+    titulo: 'Playbook de Cocina',
+    sub: 'La guía para que cada plato salga igual, bien y a tiempo — lo haga quien lo haga.',
+    bloques: [
+      {t: 'cap', n: '01', titulo: 'Nuestra cocina', sub: 'Qué prometemos y qué nos hace reconocibles.'},
+      {t: 'p', x: 'Una cocina fiable no depende de quién esté ese día en el pase: depende de que todo el equipo sepa qué se promete, cómo se hace y qué no se negocia. Este playbook es esa referencia.'},
+      {t: 'campo', id: 'promesa', label: 'La promesa de nuestra cocina', ayuda: 'Qué prometemos en cada plato, en una frase', grande: true},
+      {t: 'regla', x: 'Ningún plato sale del pase si no se lo servirías a tu propia familia. Si dudas, no sale.'},
+      {t: 'campos', items: [
+        {id: 'plato-estrella', label: 'Plato estrella', ayuda: 'El plato que nos define'},
+        {id: 'tecnica-casa', label: 'Técnica de la casa', ayuda: 'Brasa, fermentados, masa madre…'},
+        {id: 'hilo-conductor', label: 'Hilo conductor', ayuda: 'Lo que une toda la carta'},
+      ]},
+
+      {t: 'cap', n: '02', titulo: 'La jornada en 10 pasos', sub: 'De la carta al cierre: el proceso productivo, paso a paso.'},
+      {t: 'pasos', items: [
+        {t: 'Diseño de la oferta', d: 'Carta y menús alineados con la identidad, la temporada y el margen objetivo.', e: 'Ningún plato entra en carta sin ficha técnica y escandallo.', id: 'paso-1'},
+        {t: 'Ficha técnica y escandallo', d: 'Gramajes, elaboración paso a paso, foto de emplatado y coste por ración.', e: 'Food cost de cada plato dentro del objetivo; la ficha se revisa cuando cambia un precio.', id: 'paso-2'},
+        {t: 'Proveedores y pedidos', d: 'Pedido según stock mínimo, días fijos de pedido y un proveedor de emergencia por sección.', e: 'Nunca se pide «a ojo».', id: 'paso-3'},
+        {t: 'Recepción de mercancía', d: 'Cotejar albarán y pedido, pesar lo que va a peso, medir temperatura y revisar caducidades.', e: 'Nada entra en cámara sin revisar. Lo que no cumple, se devuelve.', id: 'paso-4'},
+        {t: 'Planificación de producción', d: 'Prever según reservas e histórico de ventas; lista de producción por partida.', e: 'La lista de producción está escrita antes de empezar.', id: 'paso-5'},
+        {t: 'Mise en place y producción', d: 'Elaborar siguiendo la ficha; etiquetar producto, fecha de elaboración y caducidad.', e: 'Todo lo elaborado va etiquetado. Primero entra, primero sale.', id: 'paso-6'},
+        {t: 'Conservación', d: 'Cámaras entre 0 y 4 ºC, congelado a –18 ºC, abatimiento rápido y registro diario.', e: 'Temperaturas anotadas cada día, sin excepción.', id: 'paso-7'},
+        {t: 'Montaje y pase', d: 'Montaje según la foto de la ficha, en 3 minutos o menos; el pase revisa cada plato.', e: 'Ningún plato sale sin pasar por el pase.', id: 'paso-8'},
+        {t: 'Salida y comunicación', d: 'Cantar, confirmar y avisar a sala de cualquier retraso; recoger lo que dice el cliente.', e: 'Toda comanda cantada tiene su «¡oído!».', id: 'paso-9'},
+        {t: 'Reorganización post-servicio', d: 'Limpieza, recogida, mermas anotadas, inventario rápido y lista para mañana.', e: 'La cocina se deja lista para el turno siguiente.', id: 'paso-10'},
+      ]},
+
+      {t: 'cap', n: '03', titulo: 'Apertura y cierre', sub: 'Lo que se comprueba siempre, en el mismo orden.'},
+      {t: 'check2', a: {titulo: 'Apertura', items: ['Temperaturas de cámaras anotadas', 'Mercancía del día revisada', 'Lista de producción repasada', 'Mise en place completa por partida', 'Equipos encendidos y comprobados', 'Alérgenos del día revisados con sala', 'Pase limpio y preparado']},
+                    b: {titulo: 'Cierre', items: ['Producto sobrante etiquetado y guardado', 'Mermas anotadas con su causa', 'Cámaras ordenadas (primero entra, primero sale)', 'Superficies y equipos limpios', 'Suelos y desagües', 'Pedido del día siguiente hecho', 'Lista de producción de mañana', 'Gas, fuegos y extracción apagados']}},
+      {t: 'campo', id: 'checklist-propio', label: 'Lo que añadimos en nuestra cocina', ayuda: 'Puntos propios de apertura o cierre'},
+
+      {t: 'cap', n: '04', titulo: 'El pase', sub: 'El punto donde cocina y sala se entienden.'},
+      {t: 'p', x: 'El pase es el control de calidad y el centro de comunicación. Quien está en el pase manda el ritmo: canta, confirma, revisa y avisa.'},
+      {t: 'frases', titulo: 'Así se habla en el pase', items: ['«¡Marchando mesa 4: dos croquetas y un pulpo!»', '«¡Oído!» — confirmación obligatoria de quien la recibe', '«¡Tiempo mesa 6!» — cuánto le falta', '«¡Atención, alérgico mesa 2: sin gluten!»', '«¡Servicio, mesa 4!» — el plato está listo para salir']},
+      {t: 'regla', x: 'Toda comanda cantada se contesta con «¡oído!». Si nadie contesta, no está oída.'},
+      {t: 'tabla', cab: ['Momento', 'Tiempo objetivo'], filas: [['Entrantes y tapas', '8 – 12 min desde la comanda'], ['Principales', '15 – 20 min tras el entrante'], ['Postres', '5 – 8 min'], ['Montaje de un plato', '3 min o menos']]},
+      {t: 'campo', id: 'tiempos', label: 'Nuestros tiempos objetivo', ayuda: 'Si difieren de la referencia'},
+      {t: 'lista', titulo: 'Si un plato se retrasa', items: ['El pase avisa a sala en cuanto un plato va a pasar de tiempo.', 'Sala informa a la mesa antes de que pregunte.', 'Si el retraso es largo, se ofrece un detalle.', 'Se anota la causa para revisarla al cierre.']},
+      {t: 'campo', id: 'retrasos', label: 'Nuestro protocolo de retraso', ayuda: 'Detalle que ofrecemos, a partir de cuántos minutos…'},
+
+      {t: 'cap', n: '05', titulo: 'Lo no negociable', sub: 'Seguridad, alérgenos y control: aquí no hay excepciones.'},
+      {t: 'tabla', titulo: 'Temperaturas de control', cab: ['Producto o momento', 'Temperatura', 'Control'], filas: [['Refrigerado', '0 – 4 ºC', 'Diario'], ['Congelado', '–18 ºC o menos', 'Diario'], ['Pescado fresco', '0 – 2 ºC', 'En recepción'], ['Cocinado (núcleo)', '70 ºC o más', 'Por elaboración'], ['Mantenimiento en caliente', '65 ºC o más', 'Durante el servicio'], ['Abatimiento', 'Menos de 10 ºC en 2 h', 'Por elaboración']]},
+      {t: 'lista', titulo: 'Alérgenos', items: ['Los 14 alérgenos identificados en cada ficha técnica.', 'Utensilios y zona separados para elaborar sin alérgeno.', 'Se confirma en la comanda y otra vez en el pase.', 'Nunca «creo que no lleva»: si no se sabe, no se sirve.']},
+      {t: 'regla', x: 'Un error con un alérgeno no es un fallo de servicio: es un riesgo para la salud. Ante la duda, se para y se pregunta.'},
+      {t: 'lista', titulo: 'Mermas y fichas técnicas', items: ['Cada merma se anota con su causa.', 'Las mermas se revisan cada semana para corregir pedidos y raciones.', 'La ficha técnica manda: si el plato cambia, cambia la ficha.']},
+      {t: 'campos', items: [
+        {id: 'resp-appcc', label: 'Responsable de APPCC', ayuda: 'Nombre'},
+        {id: 'resp-alergenos', label: 'Responsable de alérgenos', ayuda: 'Nombre'},
+        {id: 'resp-mermas', label: 'Revisión de mermas', ayuda: 'Quién y qué día'},
+      ]},
+
+      {t: 'cap', n: '06', titulo: 'El equipo de cocina', sub: 'Quién hace qué, y cómo trabajamos juntos.'},
+      {t: 'campos', items: [
+        {id: 'jefe', label: 'Jefe de cocina', ayuda: 'Nombre'},
+        {id: 'pase', label: 'Responsable del pase', ayuda: 'Nombre'},
+        {id: 'partidas', label: 'Partidas y responsables', ayuda: 'Frío, caliente, postres…'},
+      ]},
+      {t: 'regla', x: 'Se limpia sobre la marcha. Se habla con respeto. Lo que no se sabe, se pregunta.'},
+      {t: 'campo', id: 'formacion', label: 'Formación prevista este año', ayuda: 'Cursos, fechas, quién'},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo más importante para este equipo', grande: true},
+    ],
+  },
+};
+
+function plan360DocRicoHtml(pl, campos, modo, esc, negocio){
+  const c = campos || {};
+  const editar = modo === 'editar';
+  const campo = (f, grande) => {
+    const v = (c[f.id] || '').trim();
+    if(editar) return `<div class="dr-campo${grande ? ' dr-campo-g' : ''}"><label class="dr-campo-l" for="dr-${f.id}">✎ ${esc(f.label)}</label><textarea id="dr-${f.id}" data-dr-campo="${f.id}" rows="${grande ? 3 : 2}" placeholder="${esc(f.ayuda || '')}">${esc(v)}</textarea></div>`;
+    if(!v) return '';
+    return `<div class="dr-campo${grande ? ' dr-campo-g' : ''}"><div class="dr-campo-l">${esc(f.label)}</div><div class="dr-campo-v">${esc(v).replace(/\n/g, '<br>')}</div></div>`;
+  };
+  const b = pl.bloques.map(x => {
+    if(x.t === 'cap') return `<div class="dr-cap"><span class="dr-cap-n">${x.n}</span><div class="dr-cap-e">Capítulo ${x.n}</div><div class="dr-cap-t">${esc(x.titulo)}</div><div class="dr-cap-s">${esc(x.sub)}</div></div>`;
+    if(x.t === 'p') return `<p class="dr-p">${esc(x.x)}</p>`;
+    if(x.t === 'regla') return `<div class="dr-regla"><span>★ Regla de oro</span>${esc(x.x)}</div>`;
+    if(x.t === 'campo') return campo(x, x.grande);
+    if(x.t === 'campos'){ const h = x.items.map(f => campo(f)).join(''); return h ? `<div class="dr-campos">${h}</div>` : ''; }
+    if(x.t === 'pasos') return `<div class="dr-pasos">${x.items.map((s, i) => `<div class="dr-paso"><div class="dr-paso-n">${String(i + 1).padStart(2, '0')}</div><div class="dr-paso-b"><div class="dr-paso-t">${esc(s.t)}</div><div class="dr-paso-d">${esc(s.d)}</div><div class="dr-paso-e"><span>Estándar</span>${esc(s.e)}</div>${campo({id: s.id, label: 'Cómo lo hacemos aquí', ayuda: 'Lo propio de este negocio en este paso'})}</div></div>`).join('')}</div>`;
+    if(x.t === 'check2') return `<div class="dr-check2">${[x.a, x.b].map(l => `<div class="dr-check"><div class="dr-check-h">${esc(l.titulo)}</div>${l.items.map(it => `<div class="dr-check-i"><i></i>${esc(it)}</div>`).join('')}</div>`).join('')}</div>`;
+    if(x.t === 'frases') return `<div class="dr-frases"><div class="dr-frases-h">${esc(x.titulo)}</div>${x.items.map(it => `<div class="dr-frase">${esc(it)}</div>`).join('')}</div>`;
+    if(x.t === 'tabla') return `${x.titulo ? `<div class="dr-h">${esc(x.titulo)}</div>` : ''}<div class="dr-tabla-w"><table class="dr-tabla"><thead><tr>${x.cab.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${x.filas.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    if(x.t === 'lista') return `<div class="dr-h">${esc(x.titulo)}</div><div class="dr-lista">${x.items.map((it, i) => `<div><span>${i + 1}</span>${esc(it)}</div>`).join('')}</div>`;
+    return '';
+  }).join('');
+  return `<div class="dr-doc">
+    <div class="dr-portada"><div class="dr-portada-e">GastroGoan · Plan 360° · ${esc(pl.eyebrow)}</div><div class="dr-portada-t">${esc(pl.titulo)}</div><div class="dr-portada-s">${esc(pl.sub)}</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}</div>` : ''}</div>
+    <div class="dr-cuerpo">${b}</div>
+    <div class="dr-pie">GastroGoan · Plan 360° — ${esc(pl.titulo)}</div>
+  </div>`;
+}
+function plan360DocRicoLeerCampos(){
+  const out = {};
+  document.querySelectorAll('[data-dr-campo]').forEach(el => { const v = el.value.trim(); if(v) out[el.dataset.drCampo] = v; });
+  return out;
+}
+
 // Cuestionario real de GastroGoan (CUESTIONARIO INICIAL.docx).
 const PLAN360_INTAKE_TEMPLATE = [
   {
