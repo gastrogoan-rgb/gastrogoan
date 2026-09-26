@@ -2174,6 +2174,7 @@ Dejar una invitación concreta y personal que genere motivo de retorno (tarjeta,
 > "Si desean, les dejo una tarjeta con un 10% en su próxima visita entre semana."`},
   {id: 'playbook-cocina', title: 'Playbook de cocina', categoria: 'Cocina'},
   {id: 'gestion-mermas', title: 'Gestión de mermas', categoria: 'Cocina'},
+  {id: 'ingenieria-carta', title: 'Ingeniería de carta', categoria: 'Cocina'},
   {id: 'guia-crear-plato', title: 'Cómo crear un plato', categoria: 'Cocina', subtitulo: 'Del concepto al plato: un método para crear platos con identidad, rentables y reproducibles en servicio.', seed:
 `## 1. Definir la identidad del local
 Antes de pensar en ingredientes, hay que saber quién eres. Responde:
@@ -2827,6 +2828,84 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo que más merma genera en esta cocina y por dónde empezar', grande: true},
     ],
   },
+  'ingenieria-carta': {
+    eyebrow: 'Método · Cocina y gestión',
+    titulo: 'Ingeniería de carta',
+    sub: 'Qué plato se queda, cuál se toca y cuál se va. Decidirlo con las ventas y los costes, no con el gusto.',
+    bloques: [
+      {t: 'dato', items: [{v: '2', l: 'preguntas: ¿se vende? ¿deja dinero?'}, {v: '4', l: 'tipos de plato, cada uno con su acción'}, {v: '1 mes', l: 'de ventas como mínimo para decidir'}, {v: '€', l: 'el margen se mide en euros, no solo en %'}]},
+      {t: 'cap', n: '01', titulo: 'Por qué importa', sub: 'La carta es el vendedor que tienes en cada mesa.'},
+      {t: 'p', x: 'Casi todas las cartas crecen por acumulación: un plato que gustó, otro que pidió un cliente, uno que se quedó de la temporada pasada. Nadie se pregunta si cada plato se gana su sitio. La ingeniería de carta responde a eso con dos datos que ya tienes: cuánto se vende cada plato y cuánto deja.'},
+      {t: 'p', x: 'No se trata de quitar platos por quitar. Una carta más corta y bien pensada se produce mejor, genera menos merma, se vende más fácil y deja más dinero con los mismos clientes.'},
+      {t: 'regla', x: 'Lo que manda es cuántos euros deja un plato, no lo bonito que queda su food cost.'},
+      {t: 'p', x: 'Un arroz con un 26 % de food cost a 16 € deja 11,80 €. Una ensalada con un 20 % a 9 € deja 7,20 €. La ensalada tiene mejor porcentaje, pero cada vez que se vende el arroz entran 4,60 € más.'},
+
+      {t: 'cap', n: '02', titulo: 'Los cuatro tipos de plato', sub: 'Cada plato cae en uno. Cada uno pide una cosa distinta.'},
+      {t: 'tarjetas', items: [{k: 'Estrella', t: 'Se vende mucho y deja buen margen', d: 'Es el corazón de la carta. Se cuida, se destaca y no se toca la receta.'}, {k: 'Revisar precio o receta', t: 'Se vende mucho, deja poco', d: 'El cliente lo quiere. Se sube un poco el precio o se ajusta la receta sin que se note.'}, {k: 'Promocionar', t: 'Deja buen margen, se vende poco', d: 'Tiene que verse más: mejor sitio en la carta, recomendación de sala, mejor nombre o foto.'}, {k: 'Candidato a quitar', t: 'Se vende poco y deja poco', d: 'Ocupa cámara, mise en place y cabeza. Se quita o se rehace, salvo que tenga una razón para estar.'}]},
+      {t: 'tabla', titulo: 'Qué hacer y qué no hacer', cab: ['Tipo', 'Sí', 'No'], filas: [['Estrella', 'Mejor sitio de la carta, que la sala lo recomiende, mantener calidad', 'Cambiar la receta o subir mucho el precio'], ['Revisar precio o receta', 'Subir 0,50–1,50 €, ajustar ración o guarnición, cambiar un ingrediente caro', 'Quitarlo: es de lo que más se vende'], ['Promocionar', 'Moverlo arriba, destacarlo, contarlo en sala, mejorar el nombre', 'Bajarle el precio de entrada'], ['Candidato a quitar', 'Quitarlo o rehacerlo como plato nuevo', 'Mantenerlo por costumbre']]},
+      {t: 'regla', x: 'Antes de quitar un plato, pregúntate si cumple una función: el plato infantil, la opción vegana, el que pide un cliente fijo cada semana. Si la cumple, se queda y se intenta mejorar su margen.'},
+
+      {t: 'cap', n: '03', titulo: 'Cómo se hace', sub: 'Una vez al mes o al trimestre, en media hora.'},
+      {t: 'pasos', items: [
+        {t: 'Elige el periodo', d: 'Un mes completo como mínimo. Con una semana, un día de lluvia o un grupo grande lo distorsionan todo.', e: 'Mejor un mes o un trimestre entero, y comparar siempre periodos parecidos.'},
+        {t: 'Compara platos de la misma sección', d: 'Principales con principales, postres con postres. Un postre nunca va a vender como un principal y no por eso es malo.', e: ''},
+        {t: 'Comprueba los escandallos', d: 'La clasificación es tan buena como los costes. Un escandallo sin merma o con precios viejos da un margen falso.', e: 'Revisa la columna «Merma %» y los precios de la Mega Lista antes de mirar la matriz.'},
+        {t: 'Clasifica cada plato', d: 'Se vende mucho o poco comparado con la mitad de su sección; deja mucho o poco margen comparado con el resto.', e: 'La app lo hace sola en Panel de Control → Análisis de Platos → Matriz de rentabilidad.'},
+        {t: 'Mira los euros', d: 'Junto al cuadrante, mira cuánto dinero deja cada plato en el mes: unidades × margen en euros. Así sabes cuánto pesa cada decisión.', e: ''},
+        {t: 'Decide una acción por plato', d: 'Una sola y concreta: subir 1 €, mover a la primera línea, quitar. Anótala con la fecha.', e: ''},
+        {t: 'Mide el mes siguiente', d: 'Repite el análisis con el nuevo mes y comprueba si la acción funcionó. Si no, se prueba otra.', e: ''},
+      ]},
+      {t: 'p', x: 'Para que la app calcule la matriz, cada plato de la carta tiene que tener su escandallo vinculado y hacen falta al menos cuatro platos con ventas en el periodo.'},
+
+      {t: 'cap', n: '04', titulo: 'Un ejemplo resuelto', sub: 'Seis principales, un mes de ventas. Las cifras son de ejemplo, sin IVA.'},
+      {t: 'tabla', cab: ['Plato', 'Vendidos', 'Coste', 'PVP', 'Margen', 'Deja al mes', 'Tipo'], filas: [
+        ['Arroz negro', '140', '4,20 €', '16,00 €', '11,80 €', '1.652 €', 'Estrella'],
+        ['Entrecot', '120', '11,00 €', '22,00 €', '11,00 €', '1.320 €', 'Revisar precio o receta'],
+        ['Canelones de la casa', '110', '2,50 €', '12,00 €', '9,50 €', '1.045 €', 'Estrella'],
+        ['Hamburguesa', '60', '4,50 €', '13,00 €', '8,50 €', '510 €', 'Candidato a quitar'],
+        ['Merluza a la brasa', '45', '3,90 €', '20,00 €', '16,10 €', '725 €', 'Promocionar'],
+        ['Carrillera', '30', '4,80 €', '15,00 €', '10,20 €', '306 €', 'Candidato a quitar']]},
+      {t: 'h', x: 'Las decisiones'},
+      {t: 'lista', titulo: 'Plato a plato', items: [
+        'Arroz negro y canelones: primera línea de la sección y los recomienda la sala. No se tocan.',
+        'Entrecot: es el que menos porcentaje deja, pero aporta 1.320 € al mes. Quitarlo sería un error. Se sube a 23,50 €: 1,50 € más en 120 platos son 180 € al mes.',
+        'Merluza: es el plato que más euros deja por ración de toda la carta. Se mueve arriba, se cambia el nombre por uno que diga de dónde viene el pescado y la sala la recomienda. Con 20 platos más al mes entran 322 €.',
+        'Hamburguesa: cae en «quitar», pero es la opción de las familias con niños. Se queda y se revisa su coste: el pan y la guarnición.',
+        'Carrillera: pocas ventas y mucho trabajo de preparación. Se quita y su hueco lo ocupa un plato nuevo de temporada.']},
+      {t: 'dato', items: [{v: '+180 €', l: 'al mes con el entrecot'}, {v: '+322 €', l: 'al mes si la merluza sube 20 platos'}, {v: '−1', l: 'plato menos que preparar cada día'}, {v: '≈ 6.000 €', l: 'más al año con estas dos acciones'}]},
+
+      {t: 'cap', n: '05', titulo: 'Diseñar la carta para que venda', sub: 'El orden y la forma de la carta también deciden qué se pide.'},
+      {t: 'lista', titulo: 'Prácticas que funcionan', items: [
+        'El primer y el último plato de cada sección son los que más se leen: ahí van las estrellas y los platos a promocionar.',
+        'Un recuadro o una marca discreta para uno o dos platos por sección, no para todos: si todo destaca, nada destaca.',
+        'Los precios, a continuación de la descripción y no alineados en una columna a la derecha: así se elige por el plato, no por el precio.',
+        'Sin el símbolo € y sin céntimos innecesarios: 16 en vez de 16,00 €.',
+        'Pocos platos por sección, cinco a siete. Más opciones hacen dudar y alargan la toma de comanda.',
+        'Descripciones cortas y concretas: el producto, su origen y la técnica. «Merluza de lonja a la brasa» vende más que «Merluza».',
+        'Un plato de precio alto en la sección hace que los demás parezcan razonables, aunque se venda poco.']},
+      {t: 'regla', x: 'La sala es la otra mitad de la carta. Si el equipo no sabe cuáles son las estrellas y los platos a promocionar, no los recomendará.'},
+
+      {t: 'cap', n: '06', titulo: 'Fijar el precio de un plato', sub: 'Primero la cuenta, después el mercado.'},
+      {t: 'pasos', items: [
+        {t: 'Parte del coste real', d: 'El coste por ración del escandallo, con la merma incluida.', e: 'Merluza: 3,90 € por ración.'},
+        {t: 'Divide por tu food cost objetivo', d: 'Precio sin IVA = coste ÷ food cost objetivo.', e: '3,90 ÷ 0,28 = 13,93 € sin IVA.'},
+        {t: 'Añade el IVA', d: 'En restauración, el 10 %.', e: '13,93 × 1,10 = 15,32 €.'},
+        {t: 'Compara con el mercado y con tu carta', d: 'Qué cobra la competencia por algo parecido y dónde queda el plato dentro de tu sección. Si el mercado aguanta más, cobra más: ese margen extra es tuyo.', e: 'Se fijó en 22 € con IVA (20 € sin IVA) por ser pescado de lonja con técnica propia: food cost del 19,5 %.'},
+        {t: 'Redondea', d: 'A precios limpios: 15,50 o 16, no 15,32.', e: ''},
+      ]},
+      {t: 'regla', x: 'El food cost objetivo es un mínimo de seguridad, no un techo: si un plato puede cobrarse más, se cobra.'},
+
+      {t: 'cap', n: '07', titulo: 'Nuestra revisión de carta', sub: 'Lo que ha decidido este negocio.'},
+      {t: 'campos', items: [
+        {id: 'food-cost-objetivo', label: 'Food cost objetivo', ayuda: 'Por ejemplo, 28 %'},
+        {id: 'frecuencia', label: 'Cada cuánto revisamos', ayuda: 'Por ejemplo, el primer lunes de cada mes'},
+        {id: 'responsable', label: 'Responsable', ayuda: 'Nombre'},
+      ]},
+      {t: 'campo', id: 'intocables', label: 'Platos que no se quitan y por qué', ayuda: 'El plato de la casa, la opción infantil, la vegana…'},
+      {t: 'campo', id: 'decisiones', label: 'Decisiones de esta revisión', ayuda: 'Plato, tipo, acción y fecha', grande: true},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo más importante de la carta de este negocio', grande: true},
+    ],
+  },
 };
 
 function plan360DocRicoHtml(pl, campos, modo, esc, negocio){
@@ -2847,7 +2926,7 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio){
     if(x.t === 'pasos') return `<div class="dr-pasos">${x.items.map((s, i) => `<div class="dr-paso"><div class="dr-paso-n">${String(i + 1).padStart(2, '0')}</div><div class="dr-paso-b"><div class="dr-paso-t">${esc(s.t)}</div><div class="dr-paso-d">${esc(s.d)}</div><div class="dr-paso-e"><span>Estándar</span>${esc(s.e)}</div>${campo({id: s.id, label: 'Cómo lo hacemos aquí', ayuda: 'Lo propio de este negocio en este paso'})}</div></div>`).join('')}</div>`;
     if(x.t === 'check2') return `<div class="dr-check2">${[x.a, x.b].map(l => `<div class="dr-check"><div class="dr-check-h">${esc(l.titulo)}</div>${l.items.map(it => `<div class="dr-check-i"><i></i>${esc(it)}</div>`).join('')}</div>`).join('')}</div>`;
     if(x.t === 'frases') return `<div class="dr-frases"><div class="dr-frases-h">${esc(x.titulo)}</div>${x.items.map(it => `<div class="dr-frase">${esc(it)}</div>`).join('')}</div>`;
-    if(x.t === 'tabla') return `${x.titulo ? `<div class="dr-h">${esc(x.titulo)}</div>` : ''}<div class="dr-tabla-w"><table class="dr-tabla"><thead><tr>${x.cab.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${x.filas.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    if(x.t === 'tabla') return `${x.titulo ? `<div class="dr-h">${esc(x.titulo)}</div>` : ''}<div class="dr-tabla-w"><table class="dr-tabla${x.cab.length >= 5 ? ' dr-tabla-ancha' : ''}"><thead><tr>${x.cab.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${x.filas.map(r => `<tr>${r.map((v, k) => `<td data-l="${esc(x.cab[k] || '')}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
     if(x.t === 'h') return `<div class="dr-h">${esc(x.x)}</div>`;
     if(x.t === 'dato') return `<div class="dr-datos">${x.items.map(d => `<div class="dr-dato"><div class="dr-dato-v">${esc(d.v)}</div><div class="dr-dato-l">${esc(d.l)}</div></div>`).join('')}</div>`;
     if(x.t === 'tarjetas') return `<div class="dr-tarjetas" data-n="${x.items.length}">${x.items.map(d => `<div class="dr-tarjeta"><div class="dr-tarjeta-k">${esc(d.k)}</div><div class="dr-tarjeta-t">${esc(d.t)}</div>${d.d ? `<div class="dr-tarjeta-d">${esc(d.d)}</div>` : ''}</div>`).join('')}</div>`;
