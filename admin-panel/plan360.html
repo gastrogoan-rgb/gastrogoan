@@ -3274,6 +3274,43 @@ function descargarLibroMarcaPdf(){
   win.document.write(plan360ConstruirHtmlLibroMarcaPdf(negocio, plan360LibroImagenesDeArea, remoteBiz.name || 'tu negocio'));
   win.document.close();
 }
+const PLAN360_LIBRO_PDF_MAX_MB = 15;
+function subirLibroMarcaPdf(input){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.type !== 'application/pdf'){
+    alert('Tiene que ser un PDF.');
+    input.value = '';
+    return;
+  }
+  if(file.size > PLAN360_LIBRO_PDF_MAX_MB * 1024 * 1024){
+    alert('El PDF pesa demasiado (máximo ' + PLAN360_LIBRO_PDF_MAX_MB + ' MB). Comprímelo o exporta las fotos a menor resolución.');
+    input.value = '';
+    return;
+  }
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  if(!doc) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    doc.pdfData = reader.result;
+    doc.pdfName = file.name;
+    doc.pdfSize = file.size;
+    saveRemoteBiz();
+    renderLibroMarcaHub();
+  };
+  reader.onerror = () => alert('No se pudo leer el archivo.');
+  reader.readAsDataURL(file);
+}
+function quitarLibroMarcaPdf(){
+  if(!confirm('¿Quitar el PDF subido? El negocio dejará de verlo.')) return;
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  if(!doc) return;
+  doc.pdfData = null;
+  doc.pdfName = null;
+  doc.pdfSize = null;
+  saveRemoteBiz();
+  renderLibroMarcaHub();
+}
 function renderLibroMarcaHub(){
   const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
   const dia1 = (remoteBiz.plan360Program || []).find(x => x.day === 1);
@@ -3282,23 +3319,47 @@ function renderLibroMarcaHub(){
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDocsPage()">← Recursos</button>
     <h2 style="margin:10px 0 4px">${esc(doc.title)}</h2>
+    <div class="card" style="margin:14px 0">
+      <div style="font-weight:600;margin-bottom:6px">El PDF final</div>
+      <p class="muted" style="margin-bottom:10px">Diséñalo fuera (o pídemelo con todo el contenido del cuestionario) y súbelo aquí tal cual — eso es lo que verá el negocio.</p>
+      ${doc.pdfData ? `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--brand-cream);border:1px solid var(--border);margin-bottom:10px">
+          <i class="ti ti-file-type-pdf" style="font-size:22px;color:var(--olive)"></i>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13.5px">${esc(doc.pdfName || 'libro-de-marca.pdf')}</div>
+            <div class="muted" style="font-size:12px">${(doc.pdfSize / (1024 * 1024)).toFixed(1)} MB</div>
+          </div>
+          <a href="${doc.pdfData}" download="${esc(doc.pdfName || 'libro-de-marca.pdf')}" class="btn btn-sm">Ver</a>
+          <button class="btn btn-sm" onclick="quitarLibroMarcaPdf()">Quitar</button>
+        </div>
+      ` : ''}
+      <label class="btn btn-sm" style="display:inline-block;cursor:pointer">
+        ${doc.pdfData ? 'Sustituir PDF' : 'Subir PDF'}
+        <input type="file" accept="application/pdf" onchange="subirLibroMarcaPdf(this)" style="display:none">
+      </label>
+    </div>
     <div class="card" style="margin:14px 0;text-align:center">
       ${!doc.sentAt
         ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
-           <p class="muted" style="margin-top:8px">${plan360NegocioBloquesHechos(dia1)}/${plan360NegocioBloquesTotal(dia1)} bloques del cuestionario respondidos — se envía tal cual esté.</p>`
-        : `<button class="btn btn-sm" onclick="publicarLibroMarca()">Volver a enviar (con lo último respondido)</button>
+           <p class="muted" style="margin-top:8px">${doc.pdfData ? 'Se envía el PDF que has subido.' : `${plan360NegocioBloquesHechos(dia1)}/${plan360NegocioBloquesTotal(dia1)} bloques del cuestionario respondidos — sin PDF propio, se envía el documento generado con las respuestas.`}</p>`
+        : `<button class="btn btn-sm" onclick="publicarLibroMarca()">Volver a enviar (con lo último subido/respondido)</button>
            <p class="muted" style="margin-top:8px">✓ Enviado — el negocio ya lo ve como documento final.</p>`}
-      <button class="btn btn-sm" onclick="descargarLibroMarcaPdf()" style="margin-top:8px"><i class="ti ti-download"></i> Descargar en PDF</button>
     </div>
-    <div class="card p360-doc" style="margin-top:14px">
-      ${plan360RenderCuestionarioDoc(negocio, plan360LibroImagenesDeArea)}
-    </div>
+    ${!doc.pdfData ? `
+      <p class="muted" style="margin:14px 0 6px">Sin PDF propio todavía — esto es lo que vería el negocio, generado con las respuestas del cuestionario:</p>
+      <div class="card" style="margin-bottom:8px;text-align:center">
+        <button class="btn btn-sm" onclick="descargarLibroMarcaPdf()"><i class="ti ti-download"></i> Descargar este documento en PDF</button>
+      </div>
+      <div class="card p360-doc" style="margin-top:14px">
+        ${plan360RenderCuestionarioDoc(negocio, plan360LibroImagenesDeArea)}
+      </div>
+    ` : ''}
   `;
 }
 function publicarLibroMarca(){
   const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
   if(!doc) return;
-  if(!confirm('¿Enviar el documento al negocio con lo que hay respondido ahora mismo?')) return;
+  if(!confirm('¿Enviar el documento al negocio con lo que hay ahora mismo?')) return;
   doc.sentAt = Date.now();
   saveRemoteBiz();
   renderLibroMarcaHub();
