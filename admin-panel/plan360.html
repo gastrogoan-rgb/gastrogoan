@@ -3203,7 +3203,6 @@ function plan360ConstruirHtmlLibroMarcaPdf(negocio, imagenesDeArea, nombreNegoci
       </div>
       ${subsHtml}
       ${moodboard}
-      <div class="lm-foot">${esc(nombreNegocio)} — libro de marca</div>
     </section>`;
   }).join('');
   const indice = negocio.areas.map((a, i) => `<div class="lm-idx-item"><span class="lm-idx-num">${String(i + 1).padStart(2, '0')}</span><span>${esc(a.title)}</span></div>`).join('');
@@ -3247,7 +3246,6 @@ function plan360ConstruirHtmlLibroMarcaPdf(negocio, imagenesDeArea, nombreNegoci
     .lm-dafo-item.lm-muted{color:#B5AE9F}
     .lm-mood{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
     .lm-mood img{width:100px;height:100px;object-fit:cover;border:1px solid #E7E2D9}
-    .lm-foot{margin-top:20px;padding-top:10px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#B5AE9F}
   </style>
   </head><body>
   <section class="lm-cover">
@@ -3338,22 +3336,23 @@ function renderLibroMarcaHub(){
         <input type="file" accept="application/pdf" onchange="subirLibroMarcaPdf(this)" style="display:none">
       </label>
     </div>
-    <div class="card" style="margin:14px 0;text-align:center">
-      ${!doc.sentAt
-        ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
-           <p class="muted" style="margin-top:8px">${doc.pdfData ? 'Se envía el PDF que has subido.' : `${plan360NegocioBloquesHechos(dia1)}/${plan360NegocioBloquesTotal(dia1)} bloques del cuestionario respondidos — sin PDF propio, se envía el documento generado con las respuestas.`}</p>`
-        : `<button class="btn btn-sm" onclick="publicarLibroMarca()">Volver a enviar (con lo último subido/respondido)</button>
-           <p class="muted" style="margin-top:8px">✓ Enviado — el negocio ya lo ve como documento final.</p>`}
-    </div>
-    ${!doc.pdfData ? `
-      <p class="muted" style="margin:14px 0 6px">Sin PDF propio todavía — esto es lo que vería el negocio, generado con las respuestas del cuestionario:</p>
+    ${doc.pdfData ? `
+      <div class="card" style="margin:14px 0;text-align:center">
+        ${!doc.sentAt
+          ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
+             <p class="muted" style="margin-top:8px">Se envía el PDF que has subido.</p>`
+          : `<button class="btn btn-sm" onclick="publicarLibroMarca()">Volver a enviar (con el PDF actual)</button>
+             <p class="muted" style="margin-top:8px">✓ Enviado — el negocio ya lo ve.</p>`}
+      </div>
+    ` : `
+      <p class="muted" style="margin:14px 0">Hasta que no subas un PDF, el negocio no ve nada en Libro de marca. Herramienta para ir montando el contenido mientras tanto (esto NO lo ve el negocio):</p>
       <div class="card" style="margin-bottom:8px;text-align:center">
-        <button class="btn btn-sm" onclick="descargarLibroMarcaPdf()"><i class="ti ti-download"></i> Descargar este documento en PDF</button>
+        <button class="btn btn-sm" onclick="descargarLibroMarcaPdf()"><i class="ti ti-download"></i> Generar un borrador en PDF con las respuestas del cuestionario</button>
       </div>
       <div class="card p360-doc" style="margin-top:14px">
         ${plan360RenderCuestionarioDoc(negocio, plan360LibroImagenesDeArea)}
       </div>
-    ` : ''}
+    `}
   `;
 }
 function publicarLibroMarca(){
