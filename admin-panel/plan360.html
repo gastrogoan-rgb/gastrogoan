@@ -2105,8 +2105,10 @@ function plan360FreshTeamBuilding(){
     completadoAt: null,
   };
 }
+const PLAN360_DOCS_SEED_REV = 2; // súbelo cada vez que cambie el texto verbatim de un seed
 function plan360FreshDoc(d){
   const doc = {id: d.id, title: d.title, body: d.seed || '', visible: true};
+  if(d.seed) doc.bodyIsSeed = true; // false en cuanto el coach guarda algo escrito a mano
   if(d.id === 'identidad'){
     doc.libroSecciones = plan360FreshLibroSecciones();
     doc.sentAt = null;
@@ -2124,14 +2126,29 @@ function ensureRemotePlan360(){
   // solo si siguen vacías: en cuanto el coach escribe una palabra, esa
   // ficha ya es suya y la migración no la vuelve a tocar nunca.
   const idsYa = new Set(remoteBiz.plan360Docs.map(d => d.id));
+  // ⚠️ El texto verbatim del Drive se ha reescrito varias veces (25/09,
+  // 26/09). Una ficha vacía se rellena siempre; una que YA tenía seed se
+  // actualiza al texto nuevo SOLO si sigue siendo la del seed (bodyIsSeed
+  // true, o no existe ese campo porque es de antes de que se creara) — en
+  // cuanto el coach guarda algo escrito a mano, bodyIsSeed pasa a false y
+  // la migración ya no la toca nunca más.
+  const revYaAplicada = remoteBiz.plan360DocsSeedRev || 0;
   PLAN360_DOCS_TEMPLATE.forEach(d => {
     if(!idsYa.has(d.id)){
       remoteBiz.plan360Docs.push(plan360FreshDoc(d));
     } else if(d.seed){
       const existente = remoteBiz.plan360Docs.find(x => x.id === d.id);
-      if(existente && !existente.body) existente.body = d.seed;
+      if(!existente) return;
+      if(!existente.body){
+        existente.body = d.seed;
+        existente.bodyIsSeed = true;
+      } else if(existente.bodyIsSeed !== false && revYaAplicada < PLAN360_DOCS_SEED_REV){
+        existente.body = d.seed;
+        existente.bodyIsSeed = true;
+      }
     }
   });
+  remoteBiz.plan360DocsSeedRev = PLAN360_DOCS_SEED_REV;
   // Migración: negocios cuyo Recursos se creó antes del Libro de marca
   // estructurado se quedarían con la "Identidad de marca" antigua (texto
   // libre) para siempre.
@@ -2140,6 +2157,16 @@ function ensureRemotePlan360(){
     libroDoc.title = 'Libro de marca';
     libroDoc.libroSecciones = plan360FreshLibroSecciones();
     libroDoc.sentAt = null;
+  } else if(libroDoc){
+    // Migración: secciones creadas antes de que cada una llevara
+    // "destacados" (o antes de que se añadiera un área nueva a
+    // PLAN360_NEGOCIO_AREAS) se quedaban sin ese campo para siempre y
+    // reventaban el .map() al abrirlas — mismo fallo que el de Recursos.
+    libroDoc.libroSecciones.forEach(s => { if(!Array.isArray(s.destacados)) s.destacados = []; });
+    const areasYa = new Set(libroDoc.libroSecciones.map(s => s.area));
+    PLAN360_NEGOCIO_AREAS.forEach(a => {
+      if(!areasYa.has(a.title)) libroDoc.libroSecciones.push({area: a.title, resumen: '', destacados: []});
+    });
   }
   const intakeDesactualizado = remoteBiz.plan360Intake
     && Array.isArray(remoteBiz.plan360Intake.sections)
@@ -2885,6 +2912,7 @@ function saveDocSimple(i){
   const doc = (remoteBiz.plan360Docs || [])[i];
   if(!doc) return;
   doc.body = (document.getElementById('doc-body').value || '').trim();
+  doc.bodyIsSeed = false; // a partir de aquí es del coach: ninguna migración vuelve a tocarlo
   saveRemoteBiz();
   renderDocSimplePage(i);
 }
