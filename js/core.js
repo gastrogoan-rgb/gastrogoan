@@ -2543,10 +2543,18 @@ function ensurePlan360Program(){
   }
   // Migración: Recursos pasó de 3 fichas a 14 repartidas en categorías
   // (25/09) — a un negocio con Recursos ya creado se le añaden las que le
-  // falten, sin tocar las que ya tuviera.
+  // falten. Y a las que YA tenía (playbook-sala/cocina, que antes nacían
+  // vacías) se les mete el contenido real del Drive si SIGUEN vacías —
+  // en cuanto el coach escribe una palabra, esa ficha ya es suya y la
+  // migración no la vuelve a tocar nunca.
   const idsYa = new Set(DB.business.plan360Docs.map(d => d.id));
   PLAN360_DOCS_TEMPLATE.forEach(d => {
-    if(!idsYa.has(d.id)) DB.business.plan360Docs.push(plan360FreshDoc(d));
+    if(!idsYa.has(d.id)){
+      DB.business.plan360Docs.push(plan360FreshDoc(d));
+    } else if(d.seed){
+      const existente = DB.business.plan360Docs.find(x => x.id === d.id);
+      if(existente && !existente.body) existente.body = d.seed;
+    }
   });
   // Migración: negocios cuyo Recursos se creó antes del Libro de marca
   // estructurado se quedarían con la "Identidad de marca" antigua (texto
