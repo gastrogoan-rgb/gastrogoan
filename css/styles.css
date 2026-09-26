@@ -2324,6 +2324,56 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .p360-doc-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--body)}
 .p360-doc-qa{margin-bottom:14px}
 .p360-doc-question{font-size:12.5px;font-style:italic;color:var(--muted);margin-bottom:3px;line-height:1.4}
+/* Recursos como documento maquetado (plan360DocRicoHtml): una hoja con
+   aspecto de página impresa. Mismo bloque en css/styles.css y en el
+   <style> propio de admin-panel/plan360.html. Sin esquinas redondeadas. */
+.dr-doc{max-width:794px;margin:14px auto 0;background:#fff;border:1px solid #E7E2D9;box-shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px rgba(28,26,23,.06);color:#1C1A17;font-family:'Schibsted Grotesk',system-ui,sans-serif}
+.dr-portada{background:#1C1A17;color:#FAF8F4;padding:44px 44px 36px;border-left:8px solid #4A5D4E}
+.dr-portada-e{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#9DB0A2;margin-bottom:28px}
+.dr-portada-t{font-size:44px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.dr-portada-s{font-size:15px;color:#C9C4BA;margin-top:14px;max-width:520px;line-height:1.5}
+.dr-portada-n{margin-top:26px;padding-top:14px;border-top:1px solid #34312A;font-size:17px;font-weight:600}
+.dr-cuerpo{padding:8px 44px 20px}
+.dr-cap{position:relative;overflow:hidden;margin:34px -44px 20px;padding:26px 44px 22px;background:#F1EFE9;border-top:2px solid #1C1A17}
+.dr-cap-n{position:absolute;right:28px;top:-14px;font-size:120px;font-weight:700;line-height:1;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1.5px #CFC8BA}
+.dr-cap-e{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#4A5D4E;font-weight:600;position:relative}
+.dr-cap-t{font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:4px;position:relative}
+.dr-cap-s{font-size:13px;color:#716C65;margin-top:4px;position:relative}
+.dr-p{font-size:14px;line-height:1.65;color:#3D3A34;margin:0 0 14px}
+.dr-h{font-size:14.5px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:2px solid #1C1A17}
+.dr-regla{background:#1C1A17;color:#FAF8F4;padding:16px 20px;margin:16px 0;font-size:14.5px;font-weight:600;line-height:1.45}
+.dr-regla span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A95C;margin-bottom:6px;font-weight:500}
+.dr-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:14px 0}
+.dr-campo{border-left:3px solid #4A5D4E;background:#F7F5F0;padding:10px 14px;margin:12px 0}
+.dr-campos .dr-campo{margin:0}
+.dr-campo-l{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-bottom:6px}
+.dr-campo-v{font-size:14px;line-height:1.55;color:#1C1A17}
+.dr-campo-g .dr-campo-v{font-size:18px;font-weight:600;line-height:1.4}
+.dr-campo textarea{width:100%;box-sizing:border-box;border:1px dashed #9FAE9F;background:#fff;padding:8px 10px;font:inherit;font-size:13.5px;resize:vertical;border-radius:0}
+.dr-pasos{border-top:1px solid #1C1A17}
+.dr-paso{display:grid;grid-template-columns:52px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid #E7E2D9}
+.dr-paso-n{font-size:26px;font-weight:700;color:#4A5D4E;letter-spacing:-.02em;line-height:1}
+.dr-paso-t{font-size:15px;font-weight:700;margin-bottom:4px}
+.dr-paso-d{font-size:13.5px;line-height:1.55;color:#3D3A34}
+.dr-paso-e{margin-top:8px;font-size:12.5px;line-height:1.45;color:#1C1A17;background:#EDF1EC;padding:7px 10px}
+.dr-paso-e span{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-right:8px}
+.dr-paso .dr-campo{margin:8px 0 0}
+.dr-check2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:6px 0 10px}
+.dr-check{border:1px solid #1C1A17}
+.dr-check-h{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:9px 14px}
+.dr-check-i{display:flex;gap:10px;align-items:flex-start;padding:8px 14px;border-top:1px solid #E7E2D9;font-size:13px;line-height:1.4}
+.dr-check-i i{width:13px;height:13px;border:1.5px solid #1C1A17;flex:none;margin-top:2px}
+.dr-frases{border:1px solid #1C1A17;margin:14px 0}
+.dr-frases-h{background:#4A5D4E;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:9px 14px}
+.dr-frase{padding:9px 14px;border-top:1px solid #E7E2D9;font-size:13.5px;line-height:1.45}
+.dr-tabla-w{overflow-x:auto;margin:10px 0 14px}.dr-tabla{width:100%;border-collapse:collapse;font-size:13px}
+.dr-tabla th{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:8px 10px}
+.dr-tabla td{padding:8px 10px;border-bottom:1px solid #E7E2D9}.dr-tabla td,.dr-tabla th{white-space:normal}
+.dr-tabla td:first-child{font-weight:600}
+.dr-lista>div{display:grid;grid-template-columns:26px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid #E7E2D9;font-size:13.5px;line-height:1.45;color:#3D3A34}
+.dr-lista span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4A5D4E;font-weight:600}
+.dr-pie{padding:14px 44px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
+@media print{.dr-doc{box-shadow:none;border:none;max-width:none;margin:0}.dr-cap,.dr-paso,.dr-check,.dr-frases,.dr-regla{break-inside:avoid}}
 
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)
@@ -2455,6 +2505,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
      largo de lo previsto rompa una pantalla en casa de un cliente. */
   .view.active img,.view.active canvas{max-width:100%;height:auto}
   .bar-chart{max-width:100%;overflow-x:auto}
+  /* Recursos maquetados (.dr-*): menos margen en la hoja */
+  .dr-portada{padding:30px 22px 24px}.dr-portada-t{font-size:32px}
+  .dr-cuerpo{padding:4px 18px 14px}.dr-cap{margin:26px -18px 16px;padding:22px 18px 18px}.dr-cap-n{font-size:84px}
+  .dr-pie{padding:12px 18px}.dr-paso{grid-template-columns:40px 1fr;gap:10px}
 }
 
 /* Pantallas pequeñas de verdad (320-360 px): iPhone SE y los Android
