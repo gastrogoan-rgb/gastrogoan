@@ -331,6 +331,27 @@ ligera tumba la batería y cuesta media tarde entender por qué.
 
 ---
 
+## Libro de marca (Plan 360º) — tarea pendiente de repetir por negocio
+
+**Cuando el dueño diga "hazme el libro de marca de [negocio]", es ESTO:**
+él pasa las respuestas del Cuestionario en profundidad (botón "Ver /
+copiar todo" del panel del coach, más fotos si las hay) → Claude rellena la
+plantilla con respuestas y **conclusiones** (sin preguntas) → entrega un PDF
+→ el coach lo sube en Recursos → Libro de marca → "Subir PDF" (máx. 15 MB) y
+lo envía. Sin PDF subido, el negocio no ve nada.
+
+Todo está en `tools/libro-marca/` (léase su README antes de empezar):
+`generar.mjs` hace la plantilla de 39 páginas y **aborta si alguna de las
+323 preguntas del cuestionario no tiene sitio** (`cobertura.mjs`). Eso lo
+exigió el dueño: tiene que entrar TODO, con más espacio para lo importante
+(páginas de diseño) y lo operativo en las fichas detalladas.
+
+⚠️ Costó muchas vueltas llegar aquí. Lo que el dueño rechazó, para no
+repetirlo: un resumen que se salte cosas, la lista plana de pregunta +
+respuesta, un editor tipo Word, y cualquier diseño que "huela a IA"
+(tipografías inventadas, tarjetas con borde de color, chips por todas
+partes). Tipografía y paleta: siempre las de GastroGoan.
+
 ## El módulo de I+D (`js/idr.js`)
 
 Un asistente de cocina que crea **elaboraciones base, platos, menús y cartas**

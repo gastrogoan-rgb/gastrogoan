@@ -19,3 +19,6 @@ build/
 # se suben a Meta, no al repositorio (como dist/ y build/).
 anuncios/salida/
 anuncios/capturas/
+
+# PDFs del Libro de marca generados — se entregan al coach, no se commitean.
+tools/libro-marca/salida/
