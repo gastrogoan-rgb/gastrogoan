@@ -5728,27 +5728,44 @@ function renderPlan360Docs(){
     `).join('')}
   `;
 }
-/* ---- Libro de marca: la entrega visual y resumida, solo lectura ---- */
+/* ---- Libro de marca: ES el cuestionario "Este es tu negocio", con sus
+   mismas áreas/preguntas, mostrado como documento final de solo lectura
+   con el diseño de GastroGoan (26/09 — antes era un resumen aparte que el
+   coach redactaba; ahora es el mismo documento, no una versión distinta). */
 function renderPlan360LibroMarca(){
   const doc = (DB.business.plan360Docs || []).find(d => d.id === 'identidad');
-  if(!doc || !doc.sentAt) return;
+  const dia1 = (DB.business.plan360Program || []).find(x => x.day === 1);
+  const negocio = dia1 && dia1.negocio;
+  if(!doc || !doc.sentAt || !negocio) return;
   document.getElementById('plan360-content').innerHTML = `
     <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(doc.title)}</div>
-    ${doc.libroSecciones.filter(s => s.resumen || s.destacados.length).map(s => {
-      const imgs = plan360LibroImagenesDeAreaCliente(s.area);
-      return `<div class="card" style="margin-top:14px">
-        <div style="font-weight:700;font-size:17px;margin-bottom:8px">${escapeHtml(s.area)}</div>
-        ${s.resumen ? `<p style="font-size:14px;line-height:1.6;margin-bottom:${s.destacados.length ? '10px' : '0'}">${escapeHtml(s.resumen)}</p>` : ''}
-        ${s.destacados.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${imgs.length ? '10px' : '0'}">
-          ${s.destacados.map(d => `<span style="background:var(--brand-cream);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12.5px">${escapeHtml(d)}</span>`).join('')}
-        </div>` : ''}
-        ${imgs.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${imgs.map(img => `<img src="${img.data}" alt="" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">`).join('')}
-        </div>` : ''}
-      </div>`;
-    }).join('')}
+    <div class="card p360-doc" style="margin-top:14px">
+      ${plan360RenderCuestionarioDoc(negocio, plan360LibroImagenesDeAreaCliente)}
+    </div>
   `;
+}
+function plan360RenderCuestionarioDoc(negocio, imagenesDeArea){
+  const total = negocio.areas.length;
+  return negocio.areas.map((a, i) => {
+    const num = String(i + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    const imgs = imagenesDeArea(a.title);
+    return `<div class="p360-doc-header" style="${i > 0 ? 'margin-top:30px;padding-top:22px;border-top:1px solid var(--border)' : ''}">
+      <div class="p360-doc-eyebrow">${num} · ${escapeHtml(a.title)}</div>
+      <div class="p360-doc-title">${escapeHtml(a.title)}</div>
+      ${a.subtitle ? `<div class="p360-doc-subtitle">${escapeHtml(a.subtitle)}</div>` : ''}
+    </div>
+    ${a.subsections.map(s => `
+      <h3 class="p360-doc-h2">${escapeHtml(s.title)}</h3>
+      ${s.questions.map(q => `<div class="p360-doc-qa">
+        <div class="p360-doc-question">${escapeHtml(q.q)}</div>
+        ${q.a ? `<p class="p360-doc-p">${escapeHtml(q.a)}</p>` : '<div class="p360-doc-fill">Sin responder todavía</div>'}
+      </div>`).join('')}
+    `).join('')}
+    ${imgs.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px">
+      ${imgs.map(img => `<img src="${img.data}" alt="" style="width:90px;height:90px;object-fit:cover;border:1px solid var(--border)">`).join('')}
+    </div>` : ''}`;
+  }).join('');
 }
 function plan360LibroImagenesDeAreaCliente(areaTitle){
   const dia1 = (DB.business.plan360Program || []).find(x => x.day === 1);

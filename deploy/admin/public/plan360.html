@@ -100,6 +100,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-doc-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12.5px}
 .p360-doc-table th{background:var(--ink);color:#fff;text-align:left;padding:6px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em}
 .p360-doc-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--body)}
+.p360-doc-qa{margin-bottom:14px}
+.p360-doc-question{font-size:12.5px;font-style:italic;color:var(--muted);margin-bottom:3px;line-height:1.4}
 /* Editor de Recursos: se escribe DIRECTAMENTE sobre el documento con el
    diseño final (mismas clases .p360-doc-* de arriba) — nada de una caja de
    texto aparte con la marca en crudo. Cada bloque lleva sus propios
@@ -3000,12 +3002,14 @@ function renderDocsPage(){
     .filter(cat => conIndice.some(x => plan360DocCategoria(x.doc.id) === cat));
   const filaDoc = ({doc, i}) => {
     if(doc.id === 'identidad'){
-      const hechas = doc.libroSecciones.filter(s => s.resumen).length;
+      const dia1 = (remoteBiz.plan360Program || []).find(x => x.day === 1);
+      const hechas = dia1 ? plan360NegocioBloquesHechos(dia1) : 0;
+      const totalBloques = dia1 ? plan360NegocioBloquesTotal(dia1) : 0;
       return `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="renderLibroMarcaHub()">
         <div style="display:flex;align-items:center;gap:10px">
           <i class="ti ${doc.sentAt ? 'ti-circle-check' : 'ti-book-2'}" style="font-size:20px;${doc.sentAt ? 'color:var(--green)' : ''}"></i>
           <div style="flex:1"><strong>${esc(doc.title)}</strong>
-            <div class="p360-day-tag">${doc.sentAt ? 'Publicado' : hechas + '/' + doc.libroSecciones.length + ' secciones'}</div>
+            <div class="p360-day-tag">${doc.sentAt ? 'Enviado' : hechas + '/' + totalBloques + ' bloques respondidos'}</div>
           </div>
           <i class="ti ti-chevron-right"></i>
         </div>
@@ -3066,12 +3070,13 @@ function saveDocSimple(i){
   const ok = document.getElementById('doc-save-ok');
   if(ok){ ok.style.display = 'inline'; setTimeout(() => { ok.style.display = 'none'; }, 2500); }
 }
-/* ---- Libro de marca: espejo visual y resumido del cuestionario en
-   profundidad. El coach pega aquí el texto que Claude redacta a partir
-   del "Ver / copiar todo" del cuestionario — el diseño es siempre el
-   mismo, solo cambia el contenido de cada negocio. Las imágenes de cada
-   sección (logo, paleta, moodboard, mesa, vajilla...) se traen SOLAS de
-   los archivos ya subidos en el cuestionario, sin volver a subirlas. */
+/* ---- Libro de marca: YA NO es un resumen que el coach redacta aparte —
+   es el propio "Este es tu negocio" del Drive, con sus mismas 8 áreas,
+   subsecciones y preguntas, mostrado como documento con el diseño de
+   GastroGoan y con las respuestas que ya se han escrito en el Cuestionario
+   en profundidad. Nada que redactar dos veces: se rellena una vez (ahí) y
+   aquí se ve como entrega final. Las imágenes de cada área (logo, paleta,
+   moodboard, mesa, vajilla...) se traen solas de los archivos ya subidos. */
 function plan360LibroImagenesDeArea(areaTitle){
   const dia1 = (remoteBiz.plan360Program || []).find(x => x.day === 1);
   const areaNeg = dia1 && dia1.negocio && dia1.negocio.areas.find(a => a.title === areaTitle);
@@ -3082,90 +3087,52 @@ function plan360LibroImagenesDeArea(areaTitle){
   }));
   return imgs;
 }
+function plan360RenderCuestionarioDoc(negocio, imagenesDeArea){
+  const total = negocio.areas.length;
+  return negocio.areas.map((a, i) => {
+    const num = String(i + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    const imgs = imagenesDeArea(a.title);
+    return `<div class="p360-doc-header" style="${i > 0 ? 'margin-top:30px;padding-top:22px;border-top:1px solid var(--border)' : ''}">
+      <div class="p360-doc-eyebrow">${num} · ${esc(a.title)}</div>
+      <div class="p360-doc-title">${esc(a.title)}</div>
+      ${a.subtitle ? `<div class="p360-doc-subtitle">${esc(a.subtitle)}</div>` : ''}
+    </div>
+    ${a.subsections.map(s => `
+      <h3 class="p360-doc-h2">${esc(s.title)}</h3>
+      ${s.questions.map(q => `<div class="p360-doc-qa">
+        <div class="p360-doc-question">${esc(q.q)}</div>
+        ${q.a ? `<p class="p360-doc-p">${esc(q.a)}</p>` : '<div class="p360-doc-fill">Sin responder todavía</div>'}
+      </div>`).join('')}
+    `).join('')}
+    ${imgs.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px">
+      ${imgs.map(img => `<img src="${img.data}" alt="${esc(img.name || '')}" style="width:90px;height:90px;object-fit:cover;border:1px solid var(--border)">`).join('')}
+    </div>` : ''}`;
+  }).join('');
+}
 function renderLibroMarcaHub(){
   const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
-  if(!doc) return;
+  const dia1 = (remoteBiz.plan360Program || []).find(x => x.day === 1);
+  const negocio = dia1 && dia1.negocio;
+  if(!doc || !negocio) return;
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDocsPage()">← Recursos</button>
-    <h2 style="margin:10px 0 4px">Libro de marca</h2>
-    <p class="muted" style="margin-bottom:14px">Mismo diseño para todos los negocios — aquí solo cambia el contenido. Pega en cada sección lo que te redacte Claude a partir del cuestionario.</p>
-    ${doc.libroSecciones.map((s, i) => `
-      <div class="card" style="margin-bottom:8px;cursor:pointer" onclick="renderLibroMarcaSeccionPage(${i})">
-        <div style="display:flex;align-items:center;gap:10px">
-          <i class="ti ${s.resumen ? 'ti-circle-check' : 'ti-circle'}" style="font-size:20px;${s.resumen ? 'color:var(--green)' : ''}"></i>
-          <div style="flex:1"><strong>${esc(s.area)}</strong></div>
-          <i class="ti ti-chevron-right"></i>
-        </div>
-      </div>
-    `).join('')}
-    <div class="card" style="margin-top:14px;text-align:center">
-      ${!doc.sentAt ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Publicar libro de marca</button>
-        <p class="muted" style="margin-top:8px">El negocio lo verá tal cual, con el diseño de la app — nada de preguntas ni respuestas.</p>` : '<p class="muted">Publicado — se actualiza si lo sigues editando.</p>'}
+    <h2 style="margin:10px 0 4px">${esc(doc.title)}</h2>
+    <div class="card" style="margin:14px 0;text-align:center">
+      ${!doc.sentAt
+        ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
+           <p class="muted" style="margin-top:8px">${plan360NegocioBloquesHechos(dia1)}/${plan360NegocioBloquesTotal(dia1)} bloques del cuestionario respondidos — se envía tal cual esté.</p>`
+        : `<button class="btn btn-sm" onclick="publicarLibroMarca()">Volver a enviar (con lo último respondido)</button>
+           <p class="muted" style="margin-top:8px">✓ Enviado — el negocio ya lo ve como documento final.</p>`}
+    </div>
+    <div class="card p360-doc" style="margin-top:14px">
+      ${plan360RenderCuestionarioDoc(negocio, plan360LibroImagenesDeArea)}
     </div>
   `;
-}
-function renderLibroMarcaSeccionPage(i){
-  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
-  const s = doc && doc.libroSecciones[i];
-  if(!s) return;
-  const imgs = plan360LibroImagenesDeArea(s.area);
-  document.getElementById('client-grid').innerHTML = `
-    <button class="btn btn-sm" onclick="renderLibroMarcaHub()">← Libro de marca</button>
-    <h2 style="margin:10px 0 4px">${esc(s.area)}</h2>
-    <div class="card">
-      <div class="field" style="margin-bottom:14px">
-        <label>Resumen <span class="muted">(el párrafo que te dé Claude para esta área)</span></label>
-        <textarea id="libro-resumen" rows="6">${esc(s.resumen || '')}</textarea>
-      </div>
-      <div class="field" style="margin-bottom:10px">
-        <label>Destacados <span class="muted">(puntos clave cortos, tipo ficha — no frases largas)</span></label>
-        <div id="libro-destacados-list">${s.destacados.map((dst, di) => libroDestacadoRow(dst, di)).join('')}</div>
-        <button class="btn btn-sm" onclick="addLibroDestacado(${i})" style="margin-top:6px">+ Añadir destacado</button>
-      </div>
-      ${imgs.length ? `<div class="field">
-        <label>Imágenes de esta área <span class="muted">(vienen solas del cuestionario, no hace falta subirlas aquí)</span></label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${imgs.map(img => `<img src="${img.data}" alt="${esc(img.name || '')}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">`).join('')}
-        </div>
-      </div>` : '<p class="muted">Sin imágenes subidas todavía en el cuestionario para esta área.</p>'}
-      <button class="btn btn-primary" onclick="saveLibroMarcaSeccion(${i})" style="margin-top:14px">Guardar</button>
-    </div>
-  `;
-}
-function libroDestacadoRow(text, i){
-  return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-    <input id="libro-destacado-${i}" value="${esc(text)}" style="flex:1">
-  </div>`;
-}
-function addLibroDestacado(i){
-  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
-  const s = doc && doc.libroSecciones[i];
-  if(!s) return;
-  plan360SyncLibroDestacados(s);
-  s.destacados.push('');
-  document.getElementById('libro-destacados-list').innerHTML = s.destacados.map((dst, di) => libroDestacadoRow(dst, di)).join('');
-}
-function plan360SyncLibroDestacados(s){
-  s.destacados.forEach((_, i) => {
-    const inp = document.getElementById('libro-destacado-' + i);
-    if(inp) s.destacados[i] = inp.value.trim();
-  });
-}
-function saveLibroMarcaSeccion(i){
-  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
-  const s = doc && doc.libroSecciones[i];
-  if(!s) return;
-  const resumen = document.getElementById('libro-resumen');
-  if(resumen) s.resumen = resumen.value.trim();
-  plan360SyncLibroDestacados(s);
-  s.destacados = s.destacados.filter(d => d);
-  saveRemoteBiz();
-  renderLibroMarcaSeccionPage(i);
 }
 function publicarLibroMarca(){
   const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
   if(!doc) return;
-  if(!confirm('¿Publicar el libro de marca? El negocio lo verá con el diseño final, sin preguntas ni respuestas.')) return;
+  if(!confirm('¿Enviar el documento al negocio con lo que hay respondido ahora mismo?')) return;
   doc.sentAt = Date.now();
   saveRemoteBiz();
   renderLibroMarcaHub();
@@ -3271,17 +3238,18 @@ function renderDia1Hub(d){
 }
 /* ---- Cuestionario en profundidad ("Este es tu negocio" en el Drive):
    3 niveles de navegación, un bloque = una pantalla, como el cliente
-   misterioso. Privado del coach — el negocio nunca ve esto en bruto
-   (pregunta+respuesta). La entrega pulida ("libro de marca", sin
-   preguntas) es un documento aparte, todavía por diseñar. */
+   misterioso. Se rellena aquí, con el propietario — y el "Libro de
+   marca" de Recursos es ESTE MISMO cuestionario, con sus mismas
+   preguntas, mostrado como documento final con el diseño de GastroGoan
+   (26/09, pedido explícito: "quiero el mismo documento, no un resumen"). */
 function renderNegocioHub(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.negocio) return;
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día 1</button>
     <h2 style="margin:10px 0 4px">Cuestionario en profundidad</h2>
-    <p class="muted" style="margin-bottom:14px">"Este es tu negocio" — área por área, se rellena a mano con el propietario. Privado: el negocio no ve preguntas ni respuestas, solo la entrega pulida que se construye a partir de esto más adelante.</p>
-    <button class="btn btn-sm" onclick="renderNegocioExport(${day})" style="margin-bottom:14px"><i class="ti ti-copy"></i> Ver / copiar todo (para redactar el libro de marca)</button>
+    <p class="muted" style="margin-bottom:14px">"Este es tu negocio" — área por área, se rellena a mano con el propietario. Lo que respondas aquí es lo que verá en "Libro de marca" (Recursos) en cuanto lo envíes desde ahí.</p>
+    <button class="btn btn-sm" onclick="renderNegocioExport(${day})" style="margin-bottom:14px"><i class="ti ti-copy"></i> Ver / copiar todo</button>
     ${d.negocio.areas.map((a, i) => {
       const hechos = a.subsections.filter(s => s.completadoAt).length;
       return `<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="renderNegocioAreaHub(${day},${i})">
