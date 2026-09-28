@@ -5347,6 +5347,10 @@ function renderPlan360Grid(){
         <i class="ti ti-folder"></i>
         <div><h3>${escapeHtml(t('plan360.resources'))}</h3><p>${escapeHtml(t('plan360.resourcesDesc'))}</p></div>
       </div>
+      ${plan360MantHayAlgo() ? `<div class="p360-card" onclick="renderPlan360Mant()">
+        <i class="ti ti-calendar-repeat"></i>
+        <div><h3>${escapeHtml(t('plan360.mant.title'))}</h3><p>${escapeHtml(t('plan360.mant.cardDesc'))}</p></div>
+      </div>` : ''}
     </div>
     <div class="card p360-summary-bar" onclick="renderPlan360SummaryPage()">
       <div><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.programTitle'))}</div>
@@ -5491,6 +5495,94 @@ function plan360MantenimientoPensar(){
   plan360PingActivity();
   showToast(t('plan360.saved'));
   renderPlan360Grid();
+}
+/* ---- Mantenimiento (29/09): el mes con el coach, después del programa ----
+   El coach lo monta en su panel (plan360Mant.meses['AAAA-MM'].semanas.sN.items).
+   Aquí el negocio ve cada lunes cómo se trabaja (WhatsApp o videollamada),
+   lo que el coach le entrega y SUS tareas, que marca él. Son objetos con
+   clave y no listas: si el coach añade un gadget mientras aquí se marca
+   una tarea, la fusión a tres bandas no se pisa por posición. */
+let plan360MantMes = null;
+function plan360MantHayAlgo(){
+  const m = DB.business.plan360Mant;
+  return !!(m && m.meses && typeof m.meses === 'object' && Object.keys(m.meses).length);
+}
+function plan360MantClave(fecha){ return fecha.getFullYear() + '-' + String(fecha.getMonth() + 1).padStart(2, '0'); }
+function plan360MantLunes(clave){
+  const [y, m] = clave.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  while(d.getDay() !== 1) d.setDate(d.getDate() + 1);
+  const out = [];
+  while(d.getMonth() === m - 1){ out.push(new Date(d)); d.setDate(d.getDate() + 7); }
+  return out;
+}
+function renderPlan360Mant(clave){
+  if(clave) plan360MantMes = clave;
+  if(!plan360MantMes) plan360MantMes = plan360MantClave(new Date());
+  const mant = DB.business.plan360Mant || {};
+  const meses = (mant.meses && typeof mant.meses === 'object') ? mant.meses : {};
+  const mes = meses[plan360MantMes];
+  const semanas = (mes && mes.semanas && typeof mes.semanas === 'object') ? mes.semanas : {};
+  const [y, m] = plan360MantMes.split('-').map(Number);
+  const nombreMes = new Date(y, m - 1, 1).toLocaleDateString(localeActual(), {month: 'long', year: 'numeric'});
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const esOwner = plan360EsOwner();
+  const semanaHtml = (lunes, i) => {
+    const sk = 's' + (i + 1);
+    const sem = semanas[sk];
+    const items = Object.keys((sem && sem.items) || {}).map(id => Object.assign({id}, sem.items[id]))
+      .filter(it => it && it.titulo).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    if(!sem || !items.length) return '';
+    const esEsta = hoy >= lunes && hoy < new Date(lunes.getTime() + 7 * 86400000);
+    const video = sem.canal === 'video';
+    const fila = it => {
+      const tarea = it.tipo === 'tarea';
+      const marca = tarea
+        ? `<input type="checkbox" ${it.hecho ? 'checked' : ''} ${esOwner ? '' : 'disabled'} onchange="plan360MantMarcar('${sk}','${escapeHtml(it.id)}',this.checked)" style="width:22px;height:22px;flex:none;margin-top:1px" aria-label="${escapeHtml(t('plan360.mant.markDone'))}">`
+        : `<i class="ti ${it.hecho ? 'ti-circle-check' : 'ti-circle'}" style="font-size:22px;flex:none;color:${it.hecho ? 'var(--green)' : 'var(--muted)'}"></i>`;
+      return `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--border)">
+        ${marca}
+        <div style="flex:1;min-width:0">
+          <div class="txt-xs" style="font-weight:700;color:${tarea ? 'var(--amber, #8A7440)' : 'var(--muted)'};text-transform:uppercase;letter-spacing:.04em">${escapeHtml(t(tarea ? 'plan360.mant.yourTask' : 'plan360.mant.fromCoach'))}</div>
+          <div style="font-weight:600;${it.hecho ? 'text-decoration:line-through;opacity:.65' : ''}">${escapeHtml(it.titulo)}</div>
+          ${it.detalle ? `<div style="font-size:13px;color:var(--muted);white-space:pre-wrap;margin-top:2px">${escapeHtml(it.detalle)}</div>` : ''}
+          ${!tarea && it.hecho ? `<div class="txt-xs" style="color:var(--green);margin-top:2px">${escapeHtml(t('plan360.mant.delivered'))}</div>` : ''}
+        </div>
+      </div>`;
+    };
+    return `<div class="card" style="margin-bottom:10px;${esEsta ? 'outline:2px solid var(--ink);outline-offset:-2px' : ''}">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <strong style="flex:1;min-width:150px;text-transform:capitalize">${escapeHtml(lunes.toLocaleDateString(localeActual(), {weekday: 'long', day: 'numeric', month: 'long'}))}</strong>
+        <span class="p360-day-tag" style="margin:0"><i class="ti ${video ? 'ti-video' : 'ti-brand-whatsapp'}"></i> ${escapeHtml(t(video ? 'plan360.mant.video' : 'plan360.mant.whatsapp'))}</span>
+      </div>
+      ${items.map(fila).join('')}
+    </div>`;
+  };
+  const cuerpo = plan360MantLunes(plan360MantMes).map(semanaHtml).join('');
+  document.getElementById('plan360-content').innerHTML = `
+    ${plan360PageHeader(t('plan360.mant.title'), t('plan360.mant.desc'))}
+    <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
+      <button class="btn btn-sm" onclick="plan360MantMover(-1)" aria-label="${escapeHtml(t('plan360.mant.prev'))}"><i class="ti ti-chevron-left"></i></button>
+      <strong style="flex:1;text-align:center;text-transform:capitalize;font-size:16px">${escapeHtml(nombreMes)}</strong>
+      <button class="btn btn-sm" onclick="plan360MantMover(1)" aria-label="${escapeHtml(t('plan360.mant.next'))}"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    ${cuerpo || `<div class="card"><p class="muted" style="margin:0">${escapeHtml(t('plan360.mant.empty'))}</p></div>`}
+  `;
+}
+function plan360MantMover(delta){
+  const [y, m] = plan360MantMes.split('-').map(Number);
+  renderPlan360Mant(plan360MantClave(new Date(y, m - 1 + delta, 1)));
+}
+function plan360MantMarcar(sk, id, hecho){
+  if(!plan360EsOwner()){ showToast(t('plan360.mant.ownerOnly')); renderPlan360Mant(); return; }
+  const mes = ((DB.business.plan360Mant || {}).meses || {})[plan360MantMes];
+  const it = mes && mes.semanas && mes.semanas[sk] && mes.semanas[sk].items && mes.semanas[sk].items[id];
+  if(!it || it.tipo !== 'tarea') return;
+  it.hecho = !!hecho;
+  it.hechoEn = hecho ? Date.now() : null;
+  saveDB();
+  plan360PingActivity();
+  withScrollPreserved(() => renderPlan360Mant());
 }
 function plan360PageHeader(title, subtitle, backFn){
   return `<button class="btn btn-sm btn-back" onclick="${backFn || 'renderPlan360Grid'}()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
