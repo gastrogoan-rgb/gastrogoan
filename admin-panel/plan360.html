@@ -1067,6 +1067,100 @@ Haz 3-5 preguntas, no más. El cliente debe hablar en frases cortas y naturales.
    simplemente no aparece. MISMO bloque en admin-panel/plan360.html y en
    js/core.js — cópiese entero si se toca. */
 const PLAN360_DOC_PLANTILLAS = {
+  'playbook-sala': {
+    eyebrow: 'Playbook · Sala',
+    titulo: 'Playbook de sala',
+    sub: 'La guía para que cualquiera del equipo dé el mismo servicio, siempre. Del teléfono de reservas a la despedida.',
+    bloques: [
+      {t: 'dato', items: [{v: '9', l: 'momentos del servicio, siempre en este orden'}, {v: '30 s', l: 'como mucho para saludar a quien entra'}, {v: '1', l: 'recomendación concreta, no la carta entera'}, {v: '0', l: '«no» sin una alternativa detrás'}]},
+      {t: 'cap', n: '01', titulo: 'Nuestra forma de servir', sub: 'El tono, la promesa y lo que nos hace reconocibles.'},
+      {t: 'p', x: 'Dos restaurantes con la misma comida pueden dar dos experiencias opuestas. Lo que las separa es la sala: cómo se recibe, cómo se habla, cómo se resuelve. Este playbook existe para que esa experiencia no dependa de quién esté de turno.'},
+      {t: 'campo', id: 'promesa', label: 'Nuestra promesa de servicio', ayuda: 'Por ejemplo: «Cálido, experto y sin pretensiones: acogemos con cercanía, guiamos con conocimiento y resolvemos rápido.»', grande: true},
+      {t: 'campos', items: [
+        {id: 'tono', label: 'Nuestro tono', ayuda: 'Cercano, formal, desenfadado… ¿tú o usted?'},
+        {id: 'sello', label: 'Nuestro sello', ayuda: 'Lo que el cliente recuerda: el corte de jamón en sala, el postre en mesa…'},
+      ]},
+      {t: 'campo', id: 'historia', label: 'La historia que contamos', ayuda: 'En dos frases: quiénes somos, de dónde viene el producto, qué nos hace distintos'},
+      {t: 'h', x: 'Cómo hablamos'},
+      {t: 'tabla', cab: ['En vez de…', 'Decimos'], filas: [
+        ['«No hay sitio»', '«A esa hora estamos completos; puedo ofrecerle las 21:30 o la barra.»'],
+        ['«Eso no se puede»', '«Déjeme ver qué podemos hacer.»'],
+        ['«No lo sé»', '«Lo pregunto ahora mismo en cocina.»'],
+        ['«¿Todo bien?»', '«¿Qué tal el punto de la carne?»'],
+        ['«Es que en cocina…»', '«Lo siento, lo soluciono ahora mismo.»'],
+        ['«¿Ya han terminado?»', '«¿Puedo retirar?»'],
+        ['«Chicos, ¿qué os pongo?»', '«Buenas noches, ¿les apetece algo para empezar?»']]},
+      {t: 'regla', x: 'Voz baja, ritmo tranquilo, mirar a los ojos. Nunca se culpa a cocina ni a un compañero delante del cliente.'},
+
+      {t: 'cap', n: '02', titulo: 'Antes de abrir', sub: 'El servicio se gana antes de que entre el primer cliente.'},
+      {t: 'check2', a: {titulo: 'La sala, lista', items: ['Mesas montadas, limpias y alineadas', 'Cartas limpias y sin manchas', 'Estación de servicio repuesta: cubiertos, servilletas, pan, aceite', 'Barra: hielo, cítricos, cristalería', 'Baños revisados', 'Luz, música y temperatura', 'TPV encendido y con cambio', 'Reservas del día revisadas en la app']},
+                    b: {titulo: 'Briefing de 10 minutos', items: ['Reservas: grupos, celebraciones, clientes habituales', 'Alérgenos anotados en reservas', 'Platos del día y cómo se cuentan', 'Lo que está agotado o casi', 'Estrellas y platos a promocionar hoy', 'Zonas y mesas de cada uno', 'Un objetivo del servicio: postres, vinos, tiempos…']}},
+      {t: 'p', x: 'Las estrellas y los platos a promocionar salen de la Ingeniería de carta. Si la sala no sabe cuáles son, no los recomendará.'},
+      {t: 'campos', items: [
+        {id: 'hora-briefing', label: 'Hora del briefing', ayuda: 'Por ejemplo, 12:45 y 20:15'},
+        {id: 'quien-briefing', label: 'Quién lo da', ayuda: 'Nombre'},
+      ]},
+
+      {t: 'cap', n: '03', titulo: 'Reservas y llegada', sub: 'El primer contacto ya es servicio.'},
+      {t: 'pasos', etiqueta: 'Frase modelo', items: [
+        {t: 'Coger el teléfono', d: 'Antes del tercer tono, sin ruido de fondo y con la app de reservas delante. Se sonríe: se nota en la voz.', e: '«Buenas tardes, restaurante ___, le atiende ___. ¿En qué puedo ayudarle?»'},
+        {t: 'Tomar los datos', d: 'Día, hora, personas, nombre, teléfono. Y siempre dos preguntas más: si hay alguna alergia y si celebran algo.', e: '«¿Alguien de la mesa tiene alguna alergia o intolerancia? ¿Celebran algo especial?»'},
+        {t: 'Si no hay sitio, alternativa', d: 'Otra hora, la barra, otro día o la lista de espera de la app. Nunca un «no» a secas.', e: '«A esa hora estamos completos, pero puedo ofrecerle las 21:30, o apuntarle en lista de espera y le llamo si se libera una mesa.»'},
+        {t: 'Repetir antes de colgar', d: 'Se confirma todo en voz alta. Es lo que evita la mitad de los errores de reserva.', e: '«Confirmo: sábado a las 21:00, cuatro personas, a nombre de Laura, sin alergias. Le esperamos.»'},
+        {t: 'Recibir en la puerta', d: 'Saludar en menos de 30 segundos, aunque se esté ocupado: un gesto y un «enseguida estoy con ustedes» basta.', e: '«Buenas noches, bienvenidos. ¿Tienen reserva?»'},
+        {t: 'Acompañar a la mesa', d: 'Se les lleva, no se les señala. Se retira la silla si procede y se entrega la carta abierta.', e: '«Les acompaño. Esta es su mesa; enseguida les traigo la carta y el agua.»'},
+      ]},
+
+      {t: 'cap', n: '04', titulo: 'La secuencia de servicio', sub: 'Los momentos de la mesa, uno tras otro.'},
+      {t: 'pasos', etiqueta: 'Frase modelo', items: [
+        {t: 'Primera bebida', d: 'En los primeros minutos, antes de que pidan la comida. Se ofrece algo concreto, no «¿qué quieren beber?».', e: '«¿Les apetece empezar con un vermut de la casa o una copa de blanco fresco?»', id: 'p-bebida'},
+        {t: 'Toma de comanda', d: 'Preguntas cortas, una recomendación y alérgenos siempre confirmados. Se repite la comanda.', e: '«Antes de anotar, ¿alguna alergia o intolerancia? … Repito: dos arroces negros y un entrecot al punto, ¿correcto?»', id: 'p-comanda'},
+        {t: 'Servir los entrantes', d: 'Se nombra el plato, un detalle y cómo disfrutarlo, en una frase. Se sirve por la izquierda, se retira por la derecha.', e: '«Croquetas de jamón, hechas esta mañana: mejor con los dedos, recién salidas.»', id: 'p-entrantes'},
+        {t: 'Principales y ritmo', d: 'Se coordina con cocina para que no se solapen los pases ni haya esperas largas entre ellos. Si algo se retrasa, se avisa antes de que pregunten.', e: '«Su principal sale en cinco minutos; les he traído un poco más de pan mientras tanto.»', id: 'p-principales'},
+        {t: 'Durante la comida', d: 'Se pasa con naturalidad a los dos o tres minutos de servir y se pregunta algo concreto. Se rellena el agua y el vino sin que lo pidan.', e: '«¿Qué tal el punto del entrecot?»', id: 'p-durante'},
+        {t: 'Retirar', d: 'Cuando todos han terminado, no antes. Se retira en silencio y se deja la mesa limpia para el siguiente paso.', e: '«¿Puedo retirar?»', id: 'p-retirar'},
+        {t: 'Postres y café', d: 'Se propone un postre concreto antes de dejar la carta, y la opción de compartir. Con el café, un digestivo.', e: '«Para terminar, la torrija de la casa es perfecta para compartir. ¿Les traigo dos cucharas?»', id: 'p-postres'},
+        {t: 'La cuenta', d: 'Se lleva en cuanto la piden, revisada. Nunca se presiona para que se vayan.', e: '«Aquí tienen. Ha sido un placer atenderles.»', id: 'p-cuenta'},
+        {t: 'Despedida', d: 'Se acompaña hasta la puerta si se puede, se da las gracias por el nombre y se deja una razón para volver.', e: '«Gracias, Laura. La semana que viene entra el menú de setas; les esperamos.»', id: 'p-despedida'},
+      ]},
+      {t: 'tabla', titulo: 'Los tiempos que cuidamos', cab: ['Momento', 'Orientativo'], filas: [['Saludo al entrar', 'Menos de 30 segundos'], ['Carta y agua en la mesa', 'Menos de 2 minutos'], ['Primera bebida servida', 'Menos de 5 minutos'], ['Comanda tomada', 'Menos de 10 minutos desde que se sientan'], ['Primer plato en mesa', 'Menos de 15 minutos desde la comanda'], ['Cuenta entregada', 'Menos de 3 minutos desde que la piden']]},
+      {t: 'campo', id: 'tiempos', label: 'Nuestros tiempos', ayuda: 'Ajustados a este negocio y a su tipo de servicio'},
+
+      {t: 'cap', n: '05', titulo: 'Recomendar sin empujar', sub: 'Recomendar es ayudar a elegir, no vender más caro.'},
+      {t: 'p', x: 'El cliente que duda agradece una recomendación clara. Una sola, concreta y con un motivo. Eso sube el ticket medio sin que nadie se sienta presionado.'},
+      {t: 'frases', titulo: 'Frases que funcionan', items: ['«Si es su primera vez, el arroz negro es el plato de la casa.»', '«Hoy ha entrado merluza de lonja, la hacemos a la brasa. Es mi favorito.»', '«Con el entrecot, un tinto de la zona le va perfecto; ¿le traigo una copa?»', '«Para compartir al centro, las croquetas y la ensaladilla.»', '«¿Les apetece un café y un chupito de la casa para terminar?»']},
+      {t: 'lista', titulo: 'Cuándo sí y cuándo no', items: ['Sí: cuando dudan, cuando preguntan «¿qué nos recomienda?», cuando es su primera vez.', 'Sí: el plato del día, una estrella o un plato a promocionar.', 'No: recomendar siempre lo más caro. Se nota y se pierde la confianza.', 'No: insistir después de un «no, gracias».']},
+      {t: 'campo', id: 'recomendaciones', label: 'Lo que recomendamos este mes', ayuda: 'Platos, vinos y postres, con la frase de cada uno'},
+
+      {t: 'cap', n: '06', titulo: 'Alergias e intolerancias', sub: 'Aquí no se improvisa nunca.'},
+      {t: 'pasos', items: [
+        {t: 'Preguntar siempre', d: 'En la reserva y al tomar la comanda, en todas las mesas.', e: ''},
+        {t: 'Consultar, no suponer', d: 'Los alérgenos de cada plato están en la carta de la app. Si hay dudas, se pregunta a cocina.', e: ''},
+        {t: 'Marcarlo en la comanda', d: 'Con la alergia escrita, para que cocina lo vea en el pase.', e: ''},
+        {t: 'Confirmar al servir', d: 'El plato de la persona alérgica se sirve aparte y se nombra.', e: ''},
+      ]},
+      {t: 'regla', x: 'Nunca se dice «creo que no lleva». Si no se sabe con seguridad, se pregunta a cocina antes de responder.'},
+
+      {t: 'cap', n: '07', titulo: 'Cuando algo sale mal', sub: 'Una queja bien resuelta fideliza más que un servicio sin fallos.'},
+      {t: 'embudo', items: [{t: 'Escuchar', d: 'Sin interrumpir ni justificarse. Mirando a los ojos.'}, {t: 'Disculparse', d: 'Una vez, de verdad y sin excusas: «Lo siento, tiene razón».'}, {t: 'Solucionar', d: 'Rápido y en la mesa: cambiar el plato, rehacerlo, corregir la cuenta.'}, {t: 'Compensar si hace falta', d: 'Un postre, una copa, quitar el plato de la cuenta.'}, {t: 'Comprobar', d: 'Volver a los minutos a preguntar si ya está todo bien.'}]},
+      {t: 'tabla', titulo: 'Situaciones habituales', cab: ['Qué pasa', 'Qué hacemos'], filas: [['Un plato frío o fuera de punto', 'Se retira sin discutir y se rehace con prioridad'], ['Una espera larga', 'Se avisa antes de que pregunten y se ofrece algo mientras'], ['Un error en la cuenta', 'Se corrige al momento y se pide disculpas'], ['No les ha gustado el plato', 'Se ofrece cambiarlo por otro'], ['Un cliente molesto que alza la voz', 'Se le atiende aparte con calma y se avisa al responsable'], ['Una reseña negativa', 'La responde el responsable, en 48 horas, con educación y una solución']]},
+      {t: 'campo', id: 'compensaciones', label: 'Lo que cada uno puede ofrecer sin preguntar', ayuda: 'Por ejemplo: un postre o una copa sí; quitar un plato, el responsable'},
+
+      {t: 'cap', n: '08', titulo: 'Que vuelvan', sub: 'El cliente que repite es el que sostiene el negocio.'},
+      {t: 'lista', titulo: 'Lo que hacemos', items: ['Recordar nombres y gustos de los habituales, y anotarlos en su ficha de clientes de la app.', 'Dar una razón concreta para volver: el plato de temporada que entra, un evento, el menú de mediodía.', 'A los clientes contentos, pedirles una reseña en Google en el momento de la despedida.', 'Enviar la encuesta de satisfacción y leer las respuestas cada semana.', 'Tratar a quien vuelve como alguien de la casa: «Me alegro de verles otra vez».']},
+      {t: 'frases', titulo: 'Pedir una reseña sin incomodar', items: ['«Me alegro mucho de que les haya gustado. Si les apetece contarlo en Google, nos ayuda muchísimo.»', '«Les dejo la tarjeta con el código: en un minuto pueden dejar su opinión.»']},
+
+      {t: 'cap', n: '09', titulo: 'El equipo de sala', sub: 'Quién hace qué y cómo trabajamos juntos.'},
+      {t: 'campos', items: [
+        {id: 'jefe', label: 'Responsable de sala', ayuda: 'Nombre'},
+        {id: 'reservas-resp', label: 'Responsable de reservas', ayuda: 'Nombre'},
+        {id: 'zonas', label: 'Zonas y rangos', ayuda: 'Qué mesas lleva cada uno'},
+      ]},
+      {t: 'check', titulo: 'Así trabajamos', items: ['Nadie pasa por la sala con las manos vacías', 'Se ayuda al compañero que va desbordado', 'Lo que se ve mal se arregla o se avisa', 'Con cocina, en el pase, se habla claro y con respeto', 'Uniforme limpio y completo en cada servicio']},
+      {t: 'campo', id: 'formacion', label: 'Formación prevista este año', ayuda: 'Vinos, cafés, idiomas, atención al cliente…'},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo más importante para este equipo de sala', grande: true},
+    ],
+  },
   'playbook-cocina': {
     eyebrow: 'Playbook · Cocina',
     titulo: 'Playbook de Cocina',
@@ -1269,7 +1363,7 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'regla', x: 'Antes de quitar un plato, pregúntate si cumple una función: el plato infantil, la opción vegana, el que pide un cliente fijo cada semana. Si la cumple, se queda y se intenta mejorar su margen.'},
 
       {t: 'cap', n: '03', titulo: 'Cómo se hace', sub: 'Una vez al mes o al trimestre, en media hora.'},
-      {t: 'pasos', items: [
+      {t: 'pasos', etiqueta: 'Consejo', items: [
         {t: 'Elige el periodo', d: 'Un mes completo como mínimo. Con una semana, un día de lluvia o un grupo grande lo distorsionan todo.', e: 'Mejor un mes o un trimestre entero, y comparar siempre periodos parecidos.'},
         {t: 'Compara platos de la misma sección', d: 'Principales con principales, postres con postres. Un postre nunca va a vender como un principal y no por eso es malo.', e: ''},
         {t: 'Comprueba los escandallos', d: 'La clasificación es tan buena como los costes. Un escandallo sin merma o con precios viejos da un margen falso.', e: 'Revisa la columna «Merma %» y los precios de la Mega Lista antes de mirar la matriz.'},
@@ -1309,7 +1403,7 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'regla', x: 'La sala es la otra mitad de la carta. Si el equipo no sabe cuáles son las estrellas y los platos a promocionar, no los recomendará.'},
 
       {t: 'cap', n: '06', titulo: 'Fijar el precio de un plato', sub: 'Primero la cuenta, después el mercado.'},
-      {t: 'pasos', items: [
+      {t: 'pasos', etiqueta: 'Ejemplo', items: [
         {t: 'Parte del coste real', d: 'El coste por ración del escandallo, con la merma incluida.', e: 'Merluza: 3,90 € por ración.'},
         {t: 'Divide por tu food cost objetivo', d: 'Precio sin IVA = coste ÷ food cost objetivo.', e: '3,90 ÷ 0,28 = 13,93 € sin IVA.'},
         {t: 'Añade el IVA', d: 'En restauración, el 10 %.', e: '13,93 × 1,10 = 15,32 €.'},
@@ -1331,7 +1425,17 @@ const PLAN360_DOC_PLANTILLAS = {
   },
 };
 
-function plan360DocRicoHtml(pl, campos, modo, esc, negocio){
+/* Los recursos que antes eran texto (Playbook de sala) pueden traer en
+   doc.body lo que el coach ya escribió para ese negocio. Si difiere del
+   texto de partida, es trabajo suyo: se enseña al final en vez de perderlo
+   al pasar al formato maquetado. */
+function plan360DocTextoAnterior(doc){
+  const body = doc && typeof doc.body === 'string' ? doc.body.trim() : '';
+  if(!body) return '';
+  const base = (PLAN360_DOCS_TEMPLATE.find(d => d.id === doc.id) || {}).seed || '';
+  return body === base.trim() ? '' : body;
+}
+function plan360DocRicoHtml(pl, campos, modo, esc, negocio, anterior){
   const c = campos || {};
   const editar = modo === 'editar';
   const campo = (f, grande) => {
@@ -1346,7 +1450,7 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio){
     if(x.t === 'regla') return `<div class="dr-regla"><span>★ Regla de oro</span>${esc(x.x)}</div>`;
     if(x.t === 'campo') return campo(x, x.grande);
     if(x.t === 'campos'){ const h = x.items.map(f => campo(f)).join(''); return h ? `<div class="dr-campos">${h}</div>` : ''; }
-    if(x.t === 'pasos') return `<div class="dr-pasos">${x.items.map((s, i) => `<div class="dr-paso"><div class="dr-paso-n">${String(i + 1).padStart(2, '0')}</div><div class="dr-paso-b"><div class="dr-paso-t">${esc(s.t)}</div><div class="dr-paso-d">${esc(s.d)}</div><div class="dr-paso-e"><span>Estándar</span>${esc(s.e)}</div>${campo({id: s.id, label: 'Cómo lo hacemos aquí', ayuda: 'Lo propio de este negocio en este paso'})}</div></div>`).join('')}</div>`;
+    if(x.t === 'pasos') return `<div class="dr-pasos">${x.items.map((s, i) => `<div class="dr-paso"><div class="dr-paso-n">${String(i + 1).padStart(2, '0')}</div><div class="dr-paso-b"><div class="dr-paso-t">${esc(s.t)}</div><div class="dr-paso-d">${esc(s.d)}</div>${s.e ? `<div class="dr-paso-e"><span>${esc(x.etiqueta || 'Estándar')}</span>${esc(s.e)}</div>` : ''}${s.id ? campo({id: s.id, label: 'Cómo lo hacemos aquí', ayuda: 'Lo propio de este negocio en este paso'}) : ''}</div></div>`).join('')}</div>`;
     if(x.t === 'check2') return `<div class="dr-check2">${[x.a, x.b].map(l => `<div class="dr-check"><div class="dr-check-h">${esc(l.titulo)}</div>${l.items.map(it => `<div class="dr-check-i"><i></i>${esc(it)}</div>`).join('')}</div>`).join('')}</div>`;
     if(x.t === 'frases') return `<div class="dr-frases"><div class="dr-frases-h">${esc(x.titulo)}</div>${x.items.map(it => `<div class="dr-frase">${esc(it)}</div>`).join('')}</div>`;
     if(x.t === 'tabla') return `${x.titulo ? `<div class="dr-h">${esc(x.titulo)}</div>` : ''}<div class="dr-tabla-w"><table class="dr-tabla${x.cab.length >= 5 ? ' dr-tabla-ancha' : ''}"><thead><tr>${x.cab.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${x.filas.map(r => `<tr>${r.map((v, k) => `<td data-l="${esc(x.cab[k] || '')}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -1361,7 +1465,7 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio){
   }).join('');
   return `<div class="dr-doc">
     <div class="dr-portada"><div class="dr-portada-e">GastroGoan · Plan 360° · ${esc(pl.eyebrow)}</div><div class="dr-portada-t">${esc(pl.titulo)}</div><div class="dr-portada-s">${esc(pl.sub)}</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}</div>` : ''}</div>
-    <div class="dr-cuerpo">${b}</div>
+    <div class="dr-cuerpo">${b}${anterior ? `<div class="dr-campo"><div class="dr-campo-l">${editar ? 'Texto anterior (solo lectura): pásalo a los campos ✎' : 'Notas anteriores de tu coach'}</div><div class="dr-campo-v">${esc(anterior).replace(/\n/g, '<br>')}</div></div>` : ''}</div>
     <div class="dr-pie">GastroGoan · Plan 360° — ${esc(pl.titulo)}</div>
   </div>`;
 }
@@ -3446,7 +3550,7 @@ function renderDocRicoPage(i){
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderDocsPage()">← Recursos</button>
     <p class="muted" style="margin:10px 0 0">El contenido es el mismo para todos los negocios. Rellena solo los campos ✎ con lo propio de ${esc(remoteBiz.name || 'este negocio')}: los que dejes vacíos no aparecen en su documento.</p>
-    ${plan360DocRicoHtml(pl, doc.campos, 'editar', esc, remoteBiz.name || '')}
+    ${plan360DocRicoHtml(pl, doc.campos, 'editar', esc, remoteBiz.name || '', plan360DocTextoAnterior(doc))}
     <div style="position:sticky;bottom:0;background:var(--bg);padding:12px 0;margin-top:12px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center">
       <button class="btn btn-primary" onclick="saveDocRico(${i})">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
       <span id="dr-ok" class="muted" style="display:none">✓ Guardado — el negocio ya lo ve</span>

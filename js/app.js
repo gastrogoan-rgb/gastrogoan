@@ -5751,7 +5751,7 @@ function renderPlan360DocRico(id){
       <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
       <button class="btn btn-sm" onclick="descargarPlan360DocRico('${id}')"><i class="ti ti-download"></i> <span>${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</span></button>
     </div>
-    ${plan360DocRicoHtml(pl, doc.campos, 'ver', escapeHtml, DB.business.name || '')}
+    ${plan360DocRicoHtml(pl, doc.campos, 'ver', escapeHtml, DB.business.name || '', plan360DocTextoAnterior(doc))}
   `;
 }
 function descargarPlan360DocRico(id){
@@ -5763,7 +5763,7 @@ function descargarPlan360DocRico(id){
   const estilos = [...document.querySelectorAll('style')].map(x => x.outerHTML).join('');
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${escapeHtml(pl.titulo)}</title>${estilos}
     <style>@page{size:A4;margin:12mm}html,body{overflow:visible!important;height:auto!important;display:block!important;background:#fff!important;padding:0!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head>
-    <body>${plan360DocRicoHtml(pl, doc.campos, 'ver', escapeHtml, DB.business.name || '')}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+    <body>${plan360DocRicoHtml(pl, doc.campos, 'ver', escapeHtml, DB.business.name || '', plan360DocTextoAnterior(doc))}<script>window.onload=function(){window.print();}<\/script></body></html>`);
   win.document.close();
 }
 /* ---- Libro de marca: ES el cuestionario "Este es tu negocio", con sus
