@@ -61,6 +61,36 @@ tinta/oliva/crema, sin esquinas redondeadas. Los huecos a rellenar son
 `<mark class="ph">[ … ]</mark>` (helper `ph()`); al rellenar un negocio se
 sustituyen por el texto real.
 
+## Rellenar el libro de un negocio
+
+El generador tiene dos modos:
+
+```bash
+node tools/libro-marca/generar.mjs                       # plantilla vacía
+node tools/libro-marca/generar.mjs ruta/al/negocio.mjs   # libro de ese negocio
+CAPTURAS=1 node tools/libro-marca/generar.mjs …          # + una imagen por página en salida/capturas
+VOLCAR=1 node tools/libro-marca/generar.mjs              # lista de huecos en orden → salida/huecos.json
+```
+
+El fichero de un negocio exporta `{fijos, huecos, cuadros, fichas, marcas}`
+(ver `ejemplos/casa-nela.mjs`, un negocio **inventado** para enseñar el libro
+sin tener todavía un cliente):
+
+- `fijos`: nombre del negocio, ciudad, mes y año, coach, propietario, fecha.
+- `huecos`: pares `[texto del hueco en la plantilla, respuesta]`, en orden. El
+  generador **se para** si el texto no coincide o sobra/falta alguno: así una
+  respuesta nunca cae en el sitio equivocado si alguien toca la plantilla.
+- `cuadros`: los textos largos, por su etiqueta.
+- `fichas`: los 194 campos de las fichas detalladas, por su etiqueta
+  (texto, cifra, lista de 3, `'Sí'`/`['Parcial', 'nota']`, casillas marcadas
+  o el cuadrante de menú engineering). También obligatorio.
+- `marcas`: lo visual — puntos del diagnóstico, semáforos, casillas,
+  escalas, reparto de costes, barras, franjas y pies de foto.
+
+Para un negocio real: `VOLCAR=1` da la lista de huecos en orden, se copia el
+ejemplo, se sustituyen las respuestas y se genera. `desbordadas` tiene que
+salir vacío: si una página se pasa, se acorta el texto de esa página.
+
 ## Pendiente para la primera vez que se rellene de verdad
 
 La plantilla genera los huecos vacíos. Para un negocio concreto, lo más
