@@ -2566,6 +2566,7 @@ Tono siempre: cercano pero profesional, agradecido, sin excusas, sin confrontaci
 > Negativa: "Hola [Nombre], gracias por compartir tu experiencia. Lamentamos que [situación] no haya estado a la altura. Lo estamos revisando; escríbenos a [email] para ayudarte. Nos gustaría verte de nuevo."
 > Injusta: "Hola [Nombre], gracias por tu comentario. No encontramos registro de tu visita, pero queremos ayudarte. Contáctanos en [email] para revisar el caso."
 > Pedir reseña: "Hola [Nombre], gracias por venir. ¿Te importaría dejarnos una reseña en Google? Nos ayuda muchísimo: [link]. ¡Mil gracias!"`},
+  {id: 'fidelizacion-clientes', title: 'Fidelización y clientes', categoria: 'Marketing'},
   {id: 'guia-prueba-social', title: 'Guía de prueba social', categoria: 'Marketing', subtitulo: 'Cómo conseguir testimonios en vídeo que generan confianza y venden.', seed:
 `## Preparación antes de grabar
 - Elige clientes que estén contentos y relajados.
@@ -3262,6 +3263,310 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Dónde está el mayor margen de mejora en las compras de este negocio', grande: true},
     ],
   },
+  'estrategia-editorial': {
+    eyebrow: 'Plan editorial · 1 mes',
+    titulo: 'Estrategia editorial mensual',
+    sub: 'Un sistema sencillo para organizar todo un mes de contenido, publicidad y reputación. Menos improvisar, más publicar con cabeza.',
+    bloques: [
+      {t: 'dato', items: [{v: '5', l: 'pilares de contenido'}, {v: '7', l: 'días con su tipo de publicación'}, {v: '4', l: 'acciones fijas cada mes'}, {v: '30', l: 'ideas para no quedarse nunca en blanco'}]},
+      {t: 'cap', n: '01', titulo: 'Cómo se usa', sub: 'Cuatro pasos, una vez al mes.'},
+      {t: 'p', x: 'Rellénalo una vez al mes y sabrás qué toca cada día. Lo que hace crecer una cuenta de restaurante no es un vídeo que se hace viral: es publicar algo bueno cada semana, durante meses.'},
+      {t: 'regla', x: 'Regla base: constancia > perfección.'},
+      {t: 'pasos', items: [
+        {t: 'Elige el foco del mes', d: 'Una idea que lo ordene todo: un plato de temporada, una fecha señalada, una promo o un objetivo (llenar los martes).', e: ''},
+        {t: 'Reparte los 5 pilares en la semana tipo', d: 'Cada día de la semana tiene su pilar (capítulo 03).', e: ''},
+        {t: 'Rellena la parrilla mensual', d: 'Con las publicaciones y acciones concretas de cada día.', e: ''},
+        {t: 'Revisa cada semana qué funcionó', d: 'Guardados, mensajes, reservas. Y ajusta.', e: ''},
+      ]},
+      {t: 'campo', id: 'foco', label: 'Foco de este mes', ayuda: 'El plato, la fecha, la promo o el objetivo que lo ordena todo'},
+
+      {t: 'cap', n: '02', titulo: 'Los 5 pilares', sub: 'Todo lo que se publica cae en uno de estos cinco.'},
+      {t: 'tarjetas', items: [{k: 'Producto', t: 'El plato que da hambre', d: 'Foto o vídeo del que más vende. Tu contenido estrella.'}, {k: 'Personas', t: 'Equipo y cocina', d: 'Backstage, el género fresco. Genera cercanía y confianza.'}, {k: 'Prueba social', t: 'Los clientes hablan', d: 'Reseñas, clientes disfrutando, el local lleno. Convence más que tú hablando de ti.'}, {k: 'Promo', t: 'La llamada a la acción', d: 'Nuevo plato, menú del día, evento, reserva. Clara.'}, {k: 'Valor', t: 'Lo que sabes', d: 'Un tip, el origen de un producto, la historia del local. Te posiciona como referente.'}]},
+
+      {t: 'cap', n: '03', titulo: 'Ritmo semanal', sub: 'Semana tipo: qué publicar cada día.'},
+      {t: 'tabla', cab: ['Día', 'Pilar', 'Qué publicar'], filas: [
+        ['Lunes', 'Valor', 'Consejo, historia o el origen de un producto. Feed + Story.'],
+        ['Martes', 'Personas', 'Backstage: el género que llega, el equipo. Story.'],
+        ['Miércoles', 'Producto', 'El plato estrella en vídeo (reel). Feed + Story.'],
+        ['Jueves', 'Promo', 'Anuncia el finde: reservas, plato especial. Story.'],
+        ['Viernes', 'Producto', 'Plato o bebida de finde + cómo reservar. Feed + Story.'],
+        ['Sábado', 'Prueba social', 'Local lleno, ambiente, una reseña. Story o directo.'],
+        ['Domingo', 'Prueba social', 'Repost de un cliente o reseña de la semana. Feed.']]},
+      {t: 'campo', id: 'semana-tipo', label: 'Nuestra semana tipo', ayuda: 'Si este negocio necesita otro ritmo (cierra lunes, vive del mediodía…)'},
+
+      {t: 'cap', n: '04', titulo: 'Parrilla mensual', sub: 'Mes: ________ · Foco del mes: ________'},
+      {t: 'calendario'},
+      {t: 'p', x: 'En cada día anota el pilar (Producto / Personas / Prueba social / Promo / Valor) y la idea concreta. En la app, la parrilla se puede llevar en Promoción → calendario de marketing (Día, Semana y Mes), y en «Ideas de contenido» hay propuestas listas.'},
+
+      {t: 'cap', n: '05', titulo: 'Planificación a 3 meses por canal', sub: 'Cada canal con su ritmo, semana a semana.'},
+      {t: 'ficha', filas: ['Objetivo (por ejemplo: subir seguidores y aumentar ticket medio)', 'Promociones asociadas (por ejemplo: menú para estudiantes…)']},
+      {t: 'tabla', cab: ['Canal', 'Ritmo', 'En 3 meses'], filas: [['Instagram / Facebook', '1 reel + 1 post por semana (recomendable hacer historias diarias)', '12 reels + 12 posts'], ['Google', '1 foto nueva por semana', '12 fotos'], ['WhatsApp', '1 difusión cada 15 días', '6 difusiones'], ['Email', '1 difusión al mes, a clientes a los que se les quiera enviar publicidad por algún motivo (recurrencia, enviar información…)', '3 envíos']]},
+      {t: 'h', x: 'Así queda una semana (ejemplo, semana 1)'},
+      {t: 'tabla', cab: ['Canal', 'Qué se hace'], filas: [['Reel', 'Chef salteando verduras y diciendo si te gusta'], ['Post', 'Foto de plato e info'], ['Foto Google Maps', 'Pedir a algún cliente que haga una foto a su plato y ofrecer cóctel gratis'], ['Difusión WhatsApp', 'Enviar nuevo plato de la carta o oferta del menú semanal'], ['Email', 'Enviar algún dato curioso del restaurante']]},
+      {t: 'p', x: 'La misma plantilla se repite para las semanas 1 a 12, cada una con su fecha:'},
+      {t: 'ficha', filas: ['Semana · fecha', 'Reel', 'Post', 'Foto Google Maps', 'Difusión WhatsApp', 'Email']},
+      {t: 'p', x: 'WhatsApp y email, solo a clientes que han dado su permiso. En la app, Clientes → filtro «Sin consentimiento marketing» enseña a quién no se le puede escribir.'},
+      {t: 'campos', items: [
+        {id: 'objetivo-3m', label: 'Nuestro objetivo a 3 meses', ayuda: 'Seguidores, ticket medio, días flojos…'},
+        {id: 'promos-3m', label: 'Promociones asociadas', ayuda: 'Las de este trimestre'},
+      ]},
+
+      {t: 'cap', n: '06', titulo: 'Acciones del mes', sub: 'Cuatro, todos los meses, sin excepción.'},
+      {t: 'check', titulo: 'Este mes', items: ['Pedir 10 reseñas nuevas en Google', 'Responder TODAS las reseñas', 'Actualizar fotos de Google/Maps', 'Tener 1 campaña de Meta Ads activa']},
+
+      {t: 'cap', n: '07', titulo: 'Reputación', sub: 'Las reseñas venden mientras duermes.'},
+      {t: 'lista', titulo: 'Cómo conseguirlas', items: ['Pídelas en el mejor momento: al cliente contento, justo al pagar. Un QR en mesa o ticket que lleve directo a reseña.', 'Pon fácil el paso: «¿Nos ayudas con una reseña? Te lleva 20 segundos» + el QR. Sin fricción.', 'Responde SIEMPRE: a las buenas, gracias y cercanía. A las malas, sin pelear: reconoce, disculpa e invita a arreglarlo en privado.']},
+      {t: 'p', x: 'En la app, el QR de reseña puede salir al final de cada ticket (Mi Negocio, con el enlace de Google Maps puesto en Redes sociales). Y la encuesta de satisfacción privada (Promoción → Clientes) recoge las quejas antes de que acaben en Google.'},
+      {t: 'regla', x: 'Nunca se regala nada a cambio de una reseña: Google lo prohíbe y puede borrarlas todas.'},
+
+      {t: 'cap', n: '08', titulo: 'Publicidad del mes', sub: 'Si inviertes, con foco.'},
+      {t: 'tabla', cab: ['', 'Cómo'], filas: [['Objetivo', 'Llenar días flojos, anunciando a 3–5 km a tu cliente local'], ['Presupuesto', '5–10 €/día (diario, no total). Empieza pequeño y sube lo que funcione'], ['Creatividad', 'Tu mejor reel del plato estrella + llamada clara: «Reserva»']]},
+      {t: 'p', x: 'El paso a paso está en la guía de Meta Ads.'},
+
+      {t: 'cap', n: '09', titulo: 'Métricas', sub: 'Los números que miras cada semana.'},
+      {t: 'lista', titulo: 'Cada semana', items: ['Alcance y guardados (qué post gustó más).', 'Mensajes directos y seguidores nuevos.', 'Reseñas nuevas y nota media.', 'Reservas y clics que llegan por redes.']},
+      {t: 'regla', x: 'Recuerda: la única pregunta que importa es ¿esto me trae clientes? Dobla lo que funciona, corta lo que no.'},
+
+      {t: 'cap', n: '10', titulo: 'Nunca sin ideas', sub: 'Banco de 30 ideas.'},
+      {t: 'check2', a: {titulo: 'Producto', items: ['Plato estrella en reel', 'Salsa cayendo a cámara lenta', 'El corte / primer bocado', 'Bebida o cóctel de la casa', 'Postre montándose', 'Plato nuevo de temporada']},
+                    b: {titulo: 'Personas y cocina', items: ['El género fresco que llega', 'Un día con el chef', 'Cómo se elabora un plato', 'El café de la mañana', 'Presenta a un miembro del equipo', 'Montaje de sala antes de abrir']}},
+      {t: 'check2', a: {titulo: 'Prueba social', items: ['Repost de un cliente', 'Captura de una reseña 5★', 'El local lleno un sábado', 'Testimonio en vídeo', '«Gracias por otro finde lleno»', 'Cliente habitual y su plato favorito']},
+                    b: {titulo: 'Promo y valor', items: ['Menú del día en Story', 'Reserva para el puente', 'Evento o cena especial', 'Encuesta: ¿carne o pescado?', 'El origen de un producto local', 'Un consejo de cocina en casa']}},
+      {t: 'check', titulo: 'Fechas y temporada', items: ['El primer producto de la temporada que entra en cocina', 'San Valentín, Día de la Madre o del Padre: la mesa para esa fecha', 'Las fiestas del barrio o del pueblo', 'Navidad: comidas de empresa y cenas de grupo', 'La vuelta de vacaciones: «ya estamos abiertos»', 'El aniversario del local']},
+      {t: 'regla', x: 'Consejo final: graba en lote. Un día a la semana, 30 minutos para hacer 4–5 vídeos o fotos de varios platos. Así siempre tienes contenido listo.'},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Por dónde empezar con el contenido de este negocio', grande: true},
+    ],
+  },
+  'guia-meta-ads': {
+    eyebrow: 'Manual para el cliente · Captación',
+    titulo: 'Meta Ads',
+    sub: 'Cómo conseguir clientes con anuncios en Instagram y Facebook, paso a paso, sin perder dinero. Pensado para un restaurante o bar de barrio, no para un experto en marketing.',
+    bloques: [
+      {t: 'dato', items: [{v: '3–5 km', l: 'a la redonda: tu cliente real'}, {v: '5–10 €', l: 'al día para empezar, diario y no total'}, {v: '3–4 días', l: 'sin tocar el anuncio para que aprenda'}, {v: '2–3', l: 'versiones del anuncio para quedarte con la mejor'}]},
+      {t: 'p', x: 'Lee primero el capítulo 01. Te ahorrará el error que comete casi todo el mundo.'},
+      {t: 'cap', n: '01', titulo: 'Antes de gastar un euro', sub: 'Lo primero que tienes que entender: cuatro ideas antes de gastar.'},
+      {t: 'p', x: 'Meta Ads es la herramienta para anunciarte en Instagram y Facebook. Bien usada, llena tus mesas flojas con clientes de tu zona. Mal usada, es tirar dinero.'},
+      {t: 'regla', x: 'El error nº1 que comete todo el mundo: darle al botón azul de «Promocionar publicación» en Instagram. Es cómodo, pero gastas más y segmentas peor. Siempre se crea desde el Administrador de Anuncios. Esa diferencia sola ya te ahorra dinero.'},
+      {t: 'tarjetas', items: [{k: 'Idea 1', t: 'El anuncio lleva a tu perfil', d: 'Antes de anunciarte, tu Instagram tiene que estar cuidado: buenas fotos, bio clara y cómo reservar. Si el perfil da pena, el cliente no viene.'}, {k: 'Idea 2', t: 'Amplifica, no salva', d: 'La publicidad multiplica un buen negocio; no arregla uno malo. Primero el negocio, luego el anuncio.'}, {k: 'Idea 3', t: 'Local, no el mundo', d: 'Anúnciate solo a 3–5 km a la redonda: tu cliente real es el que puede venir andando o en un trayecto corto.'}, {k: 'Idea 4', t: 'Valor, no descuento', d: 'El que viene solo por un 50 % no vuelve a pagar precio completo. Mejor un plato que da hambre que regalar margen.'}]},
+      {t: 'check', titulo: 'Lo que necesitas tener listo', items: ['Una página de Facebook del negocio', 'Tu Instagram vinculado a ella', 'Una cuenta en Meta Business Suite (business.facebook.com)', 'Un método de pago', 'Si no los tienes, se crean gratis en 10 minutos']},
+
+      {t: 'cap', n: '02', titulo: 'Crear tu campaña, paso a paso', sub: 'Manos a la obra: seis pasos.'},
+      {t: 'pasos', etiqueta: 'Consejo', items: [
+        {t: 'Entra en el Administrador de Anuncios', d: 'Ve a business.facebook.com → Administrador de Anuncios → botón verde «Crear». Nunca desde el botón azul de la app.', e: ''},
+        {t: 'Elige el objetivo', d: 'Para un negocio local, casi siempre «Interacción» (mensajes a tu WhatsApp/Instagram) o «Tráfico» (llevar a tu web de reservas). Si dudas, empieza por interacción.', e: 'Tu web de reservas es el enlace público de GastroGoan que tienes en Mi Negocio: la reserva entra sola en la app.'},
+        {t: 'Define el presupuesto', d: 'Empieza con 5–10 € al día. No hace falta más para probar. Pon presupuesto diario, no total, para controlarlo mejor.', e: ''},
+        {t: 'Segmenta tu público', d: 'Ubicación: tu local + 3–5 km. Edad y sexo: tu cliente ideal. Intereses: gastronomía, restaurantes, planes locales… Empieza ancho; ya afinarás.', e: ''},
+        {t: 'Sube la creatividad', d: 'Un vídeo corto (10–20 s) que dé hambre o una foto muy buena del plato estrella. Texto breve con un gancho y una llamada clara: «Reserva», «Te esperamos», «Pídelo».', e: 'Las fotos y los vídeos, con la Guía fotográfica. Un testimonio de un cliente (Guía de prueba social) convierte muy bien.'},
+        {t: 'Publica y espera', d: 'Meta lo revisa en unas horas. Déjalo correr 3–4 días sin tocarlo: necesita tiempo para aprender a quién enseñarlo.', e: ''},
+      ]},
+      {t: 'regla', x: 'Truco: crea 2–3 versiones del anuncio (distinta foto o distinto texto) con poco presupuesto cada una. A los pocos días verás cuál funciona mejor; apaga las otras y pon el dinero en la ganadora.'},
+
+      {t: 'cap', n: '03', titulo: 'Qué anunciar', sub: 'Un anuncio, un objetivo, un público.'},
+      {t: 'tabla', cab: ['Si quieres…', 'Anuncia', 'A quién y cuándo'], filas: [
+        ['Llenar los martes o miércoles', 'Un plato o un plan concreto de ese día', '3–5 km, de domingo a martes'],
+        ['El menú del mediodía', 'El menú de la semana, con precio', '1–2 km alrededor, de lunes a jueves por la mañana'],
+        ['Un evento o una cena especial', 'El evento, la fecha y cómo reservar', '5 km, las dos semanas antes'],
+        ['Pedidos para llevar o a domicilio', 'El plato que mejor viaja y cómo pedirlo', 'Tu zona de reparto, a la hora de la cena'],
+        ['Que te conozca gente nueva', 'Tu mejor reel o un testimonio', '3–5 km, siempre encendido con poco presupuesto']]},
+      {t: 'campo', id: 'campanas', label: 'Nuestras campañas', ayuda: 'Qué anunciamos, a quién, cuándo y con qué presupuesto'},
+
+      {t: 'cap', n: '04', titulo: '¿Funciona? Las cuentas', sub: 'Un anuncio se mide en reservas, no en «me gusta».'},
+      {t: 'p', x: 'Ejemplo: 7 € al día durante 30 días son 210 €. Si la campaña trae 30 reservas de 2 personas con un ticket medio de 25 €, son 1.500 € en ventas. Con un food cost del 30 %, quedan unos 1.050 € para pagar lo demás: la campaña se ha pagado cinco veces.'},
+      {t: 'lista', titulo: 'Cómo saber qué reservas vienen del anuncio', items: ['Preguntar al reservar: «¿Cómo nos has conocido?» y apuntarlo.', 'Usar en el anuncio una frase o un plato que solo se anuncia ahí («pregunta por el menú de martes»).', 'Mirar los mensajes y los clics al enlace de reservas que da el propio Administrador de Anuncios.', 'Comparar las reservas de esos días con las de las semanas anteriores.']},
+      {t: 'tabla', titulo: 'Qué mirar en el Administrador de Anuncios', cab: ['Dato', 'Qué dice'], filas: [['Coste por resultado', 'Cuánto cuesta cada mensaje o cada clic. Es el número principal'], ['Alcance', 'Cuántas personas distintas lo han visto'], ['Frecuencia', 'Cuántas veces lo ha visto cada persona. Por encima de 3–4, cansa: cambia la creatividad'], ['CTR', 'De cada 100 que lo ven, cuántos hacen clic. Si es muy bajo, la foto o el texto no enganchan']]},
+      {t: 'regla', x: 'Si en dos semanas no trae reservas, se apaga. Se cambia la creatividad o el público y se prueba otra vez.'},
+
+      {t: 'cap', n: '05', titulo: 'Los errores más caros', sub: 'Lo que hace que la publicidad «no funcione».'},
+      {t: 'lista', titulo: 'Evitar siempre', items: ['Promocionar desde el botón azul de Instagram.', 'Anunciarse a toda la provincia en vez de a 3–5 km.', 'Tocar el anuncio cada día sin dejarle aprender.', 'Un anuncio sin llamada a la acción ni forma de reservar.', 'Fotos oscuras o de catálogo: tiene que dar hambre.', 'Regalar descuentos grandes que atraen a quien no volverá.', 'No mirar nunca si trae reservas.']},
+      {t: 'campos', items: [
+        {id: 'presupuesto', label: 'Nuestro presupuesto', ayuda: 'Al día y al mes'},
+        {id: 'zona', label: 'Nuestra zona', ayuda: 'Radio y barrios'},
+      ]},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Qué anunciar primero en este negocio y por qué', grande: true},
+    ],
+  },
+  'guia-fotografica': {
+    eyebrow: 'Contenido · Fotografía',
+    titulo: 'Fotos que dan hambre',
+    sub: 'Cómo fotografiar un plato desde el móvil. Buenas fotos con el smartphone que ya tienes.',
+    bloques: [
+      {t: 'dato', items: [{v: '3', l: 'ángulos por plato'}, {v: '5–8', l: 'fotos en ráfaga por toma'}, {v: '2', l: 'props como máximo'}, {v: '0', l: 'veces el flash del móvil'}]},
+      {t: 'regla', x: 'La foto no corrige errores: el plato sale de cocina impecable y solo entonces disparas.'},
+      {t: 'cap', n: '01', titulo: 'Preparación previa', sub: 'Antes de sacar el móvil.'},
+      {t: 'lista', titulo: 'Preparación', items: ['Plato perfecto: sale de cocina impecable; la foto no corrige errores.', 'Superficie y fondo neutro: madera, mármol o tela lisa; máximo 2 props coherentes.', 'Luz natural lateral: junto a una ventana; evita luz directa y sombras duras.', 'Organiza el flujo: ten a mano el plato, el móvil, un reflector improvisado (cartón blanco) y un paño.']},
+
+      {t: 'cap', n: '02', titulo: 'Ajustes técnicos', sub: 'Lo que hay que tocar en el móvil.'},
+      {t: 'lista', titulo: 'Ajustes recomendados', items: ['Activa la cuadrícula para componer con la regla de tercios.', 'Dispara en RAW si tu móvil lo permite; si no, en la máxima calidad JPG.', 'Bloqueo de exposición y enfoque (AE/AF Lock): toca el punto y mantén para fijar.', 'HDR para platos con alto rango dinámico; prueba ON/OFF.', 'Modo retrato para platos con altura; modo manual/pro si quieres controlar ISO y velocidad.', 'Limpia la lente antes de cada sesión.']},
+
+      {t: 'cap', n: '03', titulo: 'Iluminación', sub: 'La luz lo es casi todo.'},
+      {t: 'lista', titulo: 'Luz', items: ['Luz lateral suave: coloca el plato perpendicular a la ventana.', 'Reflector casero: cartón blanco o papel para rellenar sombras desde el lado opuesto.', 'Evita el flash del móvil. Si necesitas más luz, usa una LED continua con difusor, lateral.', 'Hora ideal: luz de día, mañana o tarde con cielo ligeramente nublado.']},
+
+      {t: 'cap', n: '04', titulo: 'Composición y ángulos', sub: 'Cada plato tiene su ángulo.'},
+      {t: 'tarjetas', items: [{k: '90°', t: 'Cenital', d: 'Bowls, mesas con varios elementos o platos planos.'}, {k: '45°', t: 'Tres cuartos', d: 'Platos con volumen y contexto de mesa.'}, {k: '10–20°', t: 'Bajo', d: 'Carnes y platos con altura.'}]},
+      {t: 'regla', x: 'Regla práctica: toma 3 ángulos por plato (cenital, 45° y detalle cercano) y deja espacio negativo para textos o recortes posteriores.'},
+
+      {t: 'cap', n: '05', titulo: 'Estilismo y detalles finales', sub: 'El último minuto antes de disparar.'},
+      {t: 'lista', titulo: 'Detalles', items: ['Último toque en el momento: hierba fresca, crujiente o gotas de aceite.', 'Controla brillos: un papel mate o un paño para eliminar reflejos indeseados.', 'Color: añade un elemento verde o ácido para contraste cromático.', 'Acción: una toma con salsa vertiéndose o una mano aporta storytelling.']},
+
+      {t: 'cap', n: '06', titulo: 'Paso a paso', sub: 'La sesión, en seis movimientos.'},
+      {t: 'pasos', items: [
+        {t: 'Monta el plato', d: 'Y retoca el detalle final.', e: ''},
+        {t: 'Apoya el móvil estable', d: 'En un trípode pequeño o bien apoyado.', e: ''},
+        {t: 'Encuadra y bloquea', d: 'Ajusta encuadre, bloquea exposición y enfoque.', e: ''},
+        {t: 'Dispara en ráfaga', d: 'Ráfaga de 5–8 fotos variando ligeramente distancia y ángulo.', e: ''},
+        {t: 'Revisa', d: 'En pantalla, y repite si hace falta.', e: ''},
+        {t: 'Etiqueta la mejor', d: 'Con el nombre del plato y la versión.', e: ''},
+      ]},
+
+      {t: 'cap', n: '07', titulo: 'Edición rápida', sub: 'Cinco minutos, no una hora.'},
+      {t: 'tabla', cab: ['', 'Cómo'], filas: [['Apps', 'Lightroom Mobile o Snapseed'], ['Ajustes', 'Exposición, contraste, temperatura, sombras y claridad; saturación selectiva sin exagerar'], ['Recorte', '4:3 o 3:2 para web; 1:1 para Instagram (el vertical 4:5 también funciona muy bien en el feed)'], ['Exportar', 'JPG sRGB, lado largo 1200–1600 px, calidad 80–90 %']]},
+      {t: 'regla', x: 'Si la foto necesita mucha edición, es mejor repetirla. El plato de la foto tiene que ser el que llega a la mesa.'},
+
+      {t: 'cap', n: '08', titulo: 'Vídeo corto', sub: 'Lo que más alcance tiene hoy en redes.'},
+      {t: 'lista', titulo: 'Las tomas que funcionan', items: ['La salsa cayendo o el queso fundiéndose, a cámara lenta.', 'El corte o el primer bocado.', 'El plato montándose, de principio a fin, en pocos segundos.', 'El plato saliendo del pase hacia la mesa.', 'El género fresco llegando a cocina.']},
+      {t: 'check', titulo: 'Antes de publicar', items: ['Vertical (9:16) y de 10 a 20 segundos', 'Lo mejor, en los 2 primeros segundos', 'Texto en pantalla o subtítulos: mucha gente lo ve sin sonido', 'Luz lateral, como en las fotos', 'Móvil apoyado o con las dos manos, sin temblar']},
+
+      {t: 'cap', n: '09', titulo: 'Una sesión al mes', sub: 'Tener fotos siempre, sin agobios.'},
+      {t: 'p', x: 'Una mañana tranquila al mes, antes de abrir, con luz de día: se fotografían los platos nuevos y los estrella con sus tres ángulos y un vídeo de cada uno. Con eso hay material para las redes, para el perfil de Google, para la carta y para los anuncios de todo el mes.'},
+      {t: 'campos', items: [
+        {id: 'rincon', label: 'Nuestro rincón de fotos', ayuda: 'La mesa, la ventana y la hora con mejor luz'},
+        {id: 'estilo', label: 'Nuestro estilo', ayuda: 'Fondo, vajilla y props de la casa'},
+        {id: 'resp-fotos', label: 'Quién hace las fotos', ayuda: 'Nombre'},
+      ]},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo más importante para las fotos de este negocio', grande: true},
+    ],
+  },
+  'gestion-google-maps': {
+    eyebrow: 'Documento de entrega · Marketing',
+    titulo: 'Gestión del perfil de Google',
+    sub: 'Cómo tener un perfil que atrae clientes y cómo responder reseñas. Plan a 3 meses.',
+    bloques: [
+      {t: 'dato', items: [{v: '5', l: 'fotos nuevas al mes como mínimo'}, {v: '100 %', l: 'de las reseñas, respondidas'}, {v: '6 h', l: 'como mucho para responder una negativa'}, {v: '3', l: 'meses para tener un perfil que trabaje solo'}]},
+      {t: 'cap', n: '01', titulo: 'Por qué importa', sub: 'Es el escaparate donde se decide la mayoría de visitas.'},
+      {t: 'p', x: 'Cuando alguien busca «restaurante cerca» o el nombre del local, lo primero que ve es el perfil de Google: fotos, nota, reseñas, horario y cómo reservar. Muchos clientes deciden ahí, en segundos, sin llegar a entrar en la web ni en Instagram. Un perfil cuidado trae clientes cada día sin pagar publicidad.'},
+      {t: 'campo', id: 'mejoras', label: 'Mejoras que necesita el perfil de Google de este negocio', ayuda: 'Lo que el coach ha detectado', grande: true},
+
+      {t: 'cap', n: '02', titulo: 'Condiciones de un buen perfil', sub: 'Revisa cada punto y márcalo cuando esté.'},
+      {t: 'check2', a: {titulo: 'Información básica', items: ['Horario actualizado (incluye festivos y cierres)', 'Teléfono correcto y operativo', 'Dirección exacta + pin bien colocado', 'Web y enlace de reservas funcionando', 'Categoría principal correcta + secundarias relevantes']},
+                    b: {titulo: 'Fotos y vídeos (mínimo 5 nuevas al mes)', items: ['Fotos de platos actuales, local, equipo y ambiente', 'Vídeos cortos (10–20 s)', 'Eliminar fotos antiguas o de baja calidad', 'Subir fotos verticales (Google las prioriza)']}},
+      {t: 'check2', a: {titulo: 'Servicios, atributos y menú', items: ['Servicios: terraza, delivery, take away, menú del día, accesibilidad, pago con tarjeta', 'Atributos: apto para familias, pet friendly, veg-friendly, sin gluten', 'Menú actualizado con platos estrella destacados, precios y fotos reales', 'Quitar platos que ya no existen']},
+                    b: {titulo: 'Reseñas', items: ['Responder al 100 % de reseñas (máx. 24 h)', 'Solicitar reseñas a clientes satisfechos', 'Detectar patrones (platos, servicio, tiempos)']}},
+      {t: 'p', x: 'El enlace de reservas del perfil puede ser el enlace público de GastroGoan (Mi Negocio): las reservas que entran por Google llegan directas a la app.'},
+
+      {t: 'cap', n: '03', titulo: 'Mantenimiento', sub: 'Diario, semanal y mensual.'},
+      {t: 'tabla', cab: ['Cuándo', 'Qué se hace'], filas: [['Diario', 'Leer reseñas nuevas, responder con tono profesional, marcar las que requieren acción interna'], ['Semanal', 'Subir 5 fotos, publicar 1–2 posts, revisar menú, precios, horarios y atributos'], ['Mensual', 'Auditar categorías, fotos antiguas, coherencia del menú y estadísticas (visitas, llamadas, clics)']]},
+      {t: 'campos', items: [
+        {id: 'resp-google', label: 'Quién lleva el perfil', ayuda: 'Nombre'},
+        {id: 'dia-google', label: 'Día de la revisión semanal', ayuda: 'Por ejemplo, lunes'},
+      ]},
+
+      {t: 'cap', n: '04', titulo: 'Conseguir más reseñas', sub: 'La nota y el número de reseñas pesan en cómo te encuentran.'},
+      {t: 'lista', titulo: 'Cómo pedirlas', items: ['En el mejor momento: al cliente contento, al despedirse o al pagar.', 'Sin fricción: un QR que lleve directo a escribir la reseña. En la app se puede imprimir al final de cada ticket (Mi Negocio, con el enlace de Google Maps puesto en Redes sociales).', 'Por mensaje, a los clientes habituales que ya han dado su contacto.', 'La encuesta de satisfacción privada de la app ayuda a enterarse de lo que falla antes de que llegue a Google.']},
+      {t: 'regla', x: 'Nunca se ofrece nada a cambio de una reseña, ni se piden solo a quien va a poner cinco estrellas de forma forzada: Google lo prohíbe y puede borrar las reseñas o penalizar el perfil.'},
+
+      {t: 'cap', n: '05', titulo: 'Protocolo de respuestas a reseñas', sub: 'Cada tipo de reseña, con su tiempo y su tono.'},
+      {t: 'tabla', cab: ['Tipo', 'Tiempo máx.', 'Cómo responder'], filas: [['Positiva', '24 h', 'Agradecer y mencionar el detalle; invitar a volver.'], ['Neutra (3★)', '12 h', 'Agradecer, tomar nota para mejorar, invitar de nuevo.'], ['Negativa (1–2★)', '6 h', 'Lamentar sin excusas, indicar revisión interna, ofrecer contacto.'], ['Falsa / injusta', '—', 'Cordial, indicar que no hay registro pero se quiere ayudar; reportar a Google.']]},
+      {t: 'regla', x: 'Tono siempre: cercano pero profesional, agradecido, sin excusas, sin confrontación, ofreciendo solución y cerrando con invitación a volver.'},
+      {t: 'p', x: 'Una respuesta no es solo para quien escribió la reseña: la leen todos los que miran el perfil después. Una negativa bien contestada da más confianza que diez positivas sin respuesta.'},
+
+      {t: 'cap', n: '06', titulo: 'Plantillas listas para copiar', sub: 'Se personalizan siempre con el nombre y un detalle.'},
+      {t: 'frases', titulo: 'Frases para usar', items: ['Positiva: «¡Gracias, [Nombre]! Nos alegra que hayas disfrutado de [detalle]. Te esperamos pronto para seguir sorprendiéndote.»', 'Neutra: «Gracias por tu comentario, [Nombre]. Tomamos nota de lo que mencionas para mejorar. Nos encantará verte de nuevo.»', 'Negativa: «Hola [Nombre], gracias por compartir tu experiencia. Lamentamos que [situación] no haya estado a la altura. Lo estamos revisando; escríbenos a [email] para ayudarte. Nos gustaría verte de nuevo.»', 'Injusta: «Hola [Nombre], gracias por tu comentario. No encontramos registro de tu visita, pero queremos ayudarte. Contáctanos en [email] para revisar el caso.»', 'Pedir reseña: «Hola [Nombre], gracias por venir. ¿Te importaría dejarnos una reseña en Google? Nos ayuda muchísimo: [link]. ¡Mil gracias!»']},
+
+      {t: 'cap', n: '07', titulo: 'Plan a 3 meses', sub: 'Del perfil a medias al perfil que trabaja solo.'},
+      {t: 'tabla', cab: ['Mes', 'Foco', 'Qué se hace'], filas: [['Mes 1', 'La base', 'Información básica completa y revisada, servicios y atributos, menú con fotos reales, 15 fotos nuevas y todas las reseñas antiguas respondidas'], ['Mes 2', 'Reseñas', 'QR de reseña en ticket y mesa, pedirlas al despedir, responder en plazo y detectar patrones'], ['Mes 3', 'Actividad', '1–2 posts por semana (plato de temporada, evento, menú), fotos semanales y primera revisión de estadísticas']]},
+      {t: 'campo', id: 'plan-3m', label: 'Nuestro plan', ayuda: 'Objetivo de nota y de número de reseñas a 3 meses'},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo más urgente del perfil de este negocio', grande: true},
+    ],
+  },
+  'guia-prueba-social': {
+    eyebrow: 'Documento de entrega · Marketing',
+    titulo: 'Guía para grabar prueba social',
+    sub: 'Cómo conseguir testimonios en vídeo que generan confianza y venden.',
+    bloques: [
+      {t: 'dato', items: [{v: '20–40 s', l: 'dura un buen testimonio'}, {v: '3–5', l: 'preguntas, no más'}, {v: '1 min', l: 'le cuesta al cliente'}, {v: '6', l: 'sitios donde usarlo'}]},
+      {t: 'cap', n: '01', titulo: 'Por qué funciona', sub: 'Lo que dice un cliente vale más que lo que dices tú.'},
+      {t: 'p', x: 'Cuando el negocio habla de sí mismo, es publicidad. Cuando lo cuenta un cliente de verdad, con su cara y sus palabras, es confianza. Un testimonio bien grabado sirve durante meses: en redes, en Google, en la web y en los anuncios.'},
+      {t: 'tabla', cab: ['Tipo de prueba social', 'Ejemplo'], filas: [['Testimonio en vídeo', 'Un cliente contando su experiencia en 30 segundos'], ['Reseñas', 'Una captura de una reseña de 5★ en Google'], ['Contenido de clientes', 'Repost de la foto que un cliente subió de su plato'], ['El local lleno', 'Un sábado a tope, en un vídeo de pocos segundos'], ['Cifras', '«Más de 500 reseñas con un 4,7»']]},
+
+      {t: 'cap', n: '02', titulo: 'Preparación antes de grabar', sub: 'Cinco minutos de preparación, un testimonio que sirve meses.'},
+      {t: 'check', titulo: 'Antes de grabar', items: ['Elige clientes que estén contentos y relajados', 'Busca un lugar con buena luz y poco ruido', 'Graba en vertical (Reels, TikTok, Shorts)', 'Móvil a la altura de los ojos', 'Pide permiso para usar el vídeo en redes y web', 'Explica que será rápido y sencillo (1 minuto)']},
+      {t: 'frases', titulo: 'Cómo pedirlo sin incomodar', items: ['«Nos encanta que os haya gustado. ¿Os importaría contarlo en un vídeo de un minuto para nuestras redes? Son tres preguntas y lo hacemos aquí mismo.»']},
+      {t: 'regla', x: 'El permiso, por escrito: un mensaje o una firma que diga que acepta que el vídeo se use en redes, web y anuncios. Y nunca menores sin autorización de sus padres.'},
+
+      {t: 'cap', n: '03', titulo: 'Estructura del testimonio', sub: 'Genera más confianza que un «todo muy rico».'},
+      {t: 'pasos', items: [
+        {t: 'Quién soy', d: '', e: ''},
+        {t: 'Qué buscaba / qué problema tenía', d: '', e: ''},
+        {t: 'Qué encontré en el restaurante', d: '', e: ''},
+        {t: 'Qué me sorprendió / qué me encantó', d: '', e: ''},
+        {t: 'Por qué volvería / por qué lo recomiendo', d: '', e: ''},
+        {t: 'Resumen final en una frase', d: '', e: ''},
+      ]},
+
+      {t: 'cap', n: '04', titulo: 'Guion de entrevista', sub: 'Preguntas exactas. Haz 3–5, no más.'},
+      {t: 'p', x: 'El cliente debe hablar en frases cortas y naturales. Se le pide que repita la pregunta en su respuesta («Lo que más me ha gustado es…»), así el vídeo se entiende sin oír al que pregunta.'},
+      {t: 'frases', titulo: 'Frases para usar', items: ['«¿Cómo te llamas y qué te trajo hoy al restaurante?»', '«¿Qué estabas buscando o qué esperabas encontrar?»', '«¿Qué es lo que más te ha gustado de la comida o del ambiente?»', '«¿Qué dirías que nos hace diferentes a otros sitios de la zona?»', '«Si tuvieras que recomendarlo a un amigo, ¿qué le dirías?»', '«Resume tu experiencia en una frase corta y contundente.»']},
+      {t: 'h', x: 'Guion largo: 7 preguntas'},
+      {t: 'p', x: 'Para un testimonio más completo, con un cliente habitual o después de una celebración o un evento. Se graba con calma, y del vídeo largo salen varios cortos.'},
+      {t: 'frases', titulo: 'Plantilla de guion para grabar testimoniales', items: ['1 · «Bueno, [NOMBRE], cuéntame un poquito sobre ti: de dónde eres, a qué te dedicas y desde cuándo vienes por aquí.»', '2 · «¿Qué buscabas antes de venir? ¿Qué te faltaba en otros sitios?»', '3 · «¿Por qué elegiste venir a [restaurante] con respecto a otros?»', '4 · «¿Qué cosa en particular te ha gustado en especial? ¿Por qué piensas que te gustó eso?»', '5 · «¿Qué te llevas de la experiencia? ¿Qué conseguiste: la celebración, la comida, el rato con los tuyos?»', '6 · «¿Cómo te imaginas la próxima vez que vuelvas?»', '7 · «¿Qué le dirías a la gente que aún está pensando si venir a [restaurante], para que se animen a hacerlo?»']},
+
+      {t: 'cap', n: '05', titulo: 'Checklist de calidad del testimonio', sub: 'Antes de publicarlo, que cumpla todo.'},
+      {t: 'check', titulo: 'Calidad', items: ['Cliente cómodo y sonriente', 'Audio claro', 'Vídeo vertical', 'Duración 20–40 segundos', 'Menciona al menos 1 beneficio (comida, servicio, ambiente)', 'Menciona por qué volvería', 'Fondo limpio y luz frontal']},
+      {t: 'p', x: 'Al editar: se cortan los silencios, se deja lo mejor en los primeros segundos y se ponen subtítulos, porque mucha gente ve los vídeos sin sonido. Apps como CapCut o Edits los ponen solos.'},
+
+      {t: 'cap', n: '06', titulo: 'Dónde usar estos testimonios', sub: 'Un vídeo, seis usos.'},
+      {t: 'tabla', cab: ['Dónde', 'Cómo'], filas: [['Reels / TikTok', 'Tal cual, con subtítulos'], ['Stories destacadas', 'Un destacado de «Clientes» en el perfil'], ['Google Maps', 'Subir como vídeo al perfil'], ['Web', 'Sección de testimonios'], ['WhatsApp Business', 'En el mensaje de bienvenida'], ['Anuncios de Meta Ads', 'Prueba social = conversión alta']]},
+      {t: 'campos', items: [
+        {id: 'resp-testimonios', label: 'Quién graba', ayuda: 'Nombre'},
+        {id: 'objetivo-testimonios', label: 'Nuestro objetivo', ayuda: 'Por ejemplo, 2 testimonios al mes'},
+      ]},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Qué clientes grabar primero en este negocio', grande: true},
+    ],
+  },
+  'fidelizacion-clientes': {
+    eyebrow: 'Guía · Marketing',
+    titulo: 'Fidelización y clientes',
+    sub: 'Captar un cliente nuevo cuesta mucho más que hacer volver a uno que ya vino. Cómo cuidar la base de clientes con la app, WhatsApp y email.',
+    bloques: [
+      {t: 'dato', items: [{v: '1', l: 'ficha por cliente, con sus visitas y su gasto'}, {v: '60 días', l: 'sin venir: el aviso para escribirle'}, {v: '15 días', l: 'entre difusiones de WhatsApp como mucho'}, {v: '0', l: 'mensajes a quien no ha dado permiso'}]},
+      {t: 'cap', n: '01', titulo: 'Por qué fidelizar', sub: 'El cliente que repite es el que sostiene el negocio.'},
+      {t: 'p', x: 'Un restaurante vive de los que vuelven. Si 200 clientes habituales vienen una vez más al año, con un ticket medio de 25 € por persona y en mesas de dos, son 10.000 € de ventas sin gastar un euro en publicidad. Y el que vuelve recomienda, deja reseña y perdona un mal día.'},
+      {t: 'regla', x: 'Primero cuidar a los que ya vienen. Después, buscar nuevos.'},
+
+      {t: 'cap', n: '02', titulo: 'La base de clientes', sub: 'Lo que no se apunta, no se puede usar.'},
+      {t: 'p', x: 'En la app, cada cliente tiene su ficha en Clientes: contacto, cumpleaños, visitas, última visita, ticket medio, alergias, notas y si ha dado permiso para recibir comunicaciones. Cuanto antes se crea la ficha de un cliente, antes se le puede cuidar.'},
+      {t: 'lista', titulo: 'Cómo hacer crecer la base', items: ['Al reservar por teléfono: pedir nombre y móvil, y preguntar si quiere recibir novedades.', 'Al reservar por la web: con el nombre y el teléfono de la reserva se crea su ficha.', 'Con una excusa que valga la pena: el menú del mes, los eventos, la carta de temporada.', 'Anotando lo que se sabe: su mesa favorita, su vino, su celebración.']},
+      {t: 'regla', x: 'Solo se escribe a quien ha dado su permiso para recibir comunicaciones. Es la ley (RGPD), y además un mensaje no pedido se lee como spam.'},
+
+      {t: 'cap', n: '03', titulo: 'A quién escribir y qué decirle', sub: 'Un mensaje para todos no le habla a nadie.'},
+      {t: 'tabla', cab: ['Grupo (filtro en Clientes)', 'Qué necesita', 'Mensaje'], filas: [
+        ['Nuevos (primera visita hace menos de 30 días)', 'Una razón para volver pronto', '«Gracias por venir, Laura. La próxima vez, pregunta por el arroz del domingo.»'],
+        ['Inactivos (60+ días)', 'Que se acuerden de ti', '«Hace tiempo que no te vemos. Ha entrado la carta de otoño; te guardamos mesa cuando quieras.»'],
+        ['En riesgo de fuga', 'Saber qué ha pasado', 'Una llamada o un mensaje personal del responsable, no una difusión'],
+        ['VIP (7+ puntos)', 'Sentirse de la casa', 'Enterarse antes que nadie: la cena especial, el plato nuevo'],
+        ['Con alergias', 'Seguridad', 'Avisar cuando haya platos nuevos aptos para ellos']]},
+      {t: 'campo', id: 'grupos', label: 'Nuestros grupos de clientes', ayuda: 'Qué mensaje recibe cada uno y cada cuánto'},
+
+      {t: 'cap', n: '04', titulo: 'WhatsApp y email', sub: 'Poco, útil y personal.'},
+      {t: 'tabla', cab: ['Canal', 'Ritmo', 'Qué funciona'], filas: [['WhatsApp', '1 difusión cada 15 días', 'El plato nuevo, el menú de la semana, un evento. Corto, con foto y cómo reservar'], ['Email', '1 al mes', 'Un dato curioso del restaurante, la carta de temporada, las fechas señaladas']]},
+      {t: 'lista', titulo: 'Reglas de oro de los mensajes', items: ['Con el nombre del cliente y desde el nombre del restaurante.', 'Una sola idea por mensaje, con foto y el enlace de reservas.', 'Nada de mensajes diarios: cansan y se bloquean.', 'Siempre una forma fácil de darse de baja.', 'Las listas de difusión de WhatsApp solo llegan a quien tiene guardado el número del restaurante: pídele que lo guarde.']},
+      {t: 'frases', titulo: 'Mensajes modelo', items: ['«Hola, Laura 👋 Esta semana entra la carta de otoño: setas, caza y el arroz de boletus. ¿Te guardamos mesa? Reserva aquí: [enlace]»', '«Hola, Jordi. Te echamos de menos por aquí. Este jueves hacemos cena de maridaje con vinos de la zona; quedan 8 plazas: [enlace]»']},
+
+      {t: 'cap', n: '05', titulo: 'Premiar la fidelidad', sub: 'Que volver tenga su recompensa.'},
+      {t: 'lista', titulo: 'Ideas que funcionan', items: ['Puntos de fidelidad: se suman en la ficha de cada cliente, y los VIP (7 puntos o más) se ven con un filtro.', 'Un detalle en la visita número 5 o 10: un postre, una copa.', 'Vales regalo: la app los emite desde Clientes, y son un regalo que trae clientes nuevos.', 'El cumpleaños o el aniversario: un mensaje y un detalle si celebran aquí.', 'Reconocer al habitual por su nombre: no cuesta nada y es lo que más se recuerda.']},
+      {t: 'regla', x: 'Mejor un detalle inesperado que un descuento: el descuento enseña a venir solo cuando lo hay.'},
+      {t: 'campo', id: 'programa', label: 'Nuestro programa de fidelidad', ayuda: 'Qué se premia y cómo'},
+
+      {t: 'cap', n: '06', titulo: 'Escuchar', sub: 'Enterarse de lo que falla antes de que el cliente se vaya.'},
+      {t: 'p', x: 'La encuesta de satisfacción privada se envía desde Promoción → Clientes, con su plantilla de mensaje y el enlace, justo después de la visita. Quien pone un 6 o menos se lo cuenta al negocio y no a Google: es la oportunidad de llamarle, pedir disculpas y arreglarlo. En esa misma pantalla hay plantillas listas para felicitar el cumpleaños, pedir una reseña con el enlace de Google o invitar a volver.'},
+      {t: 'check', titulo: 'Cada semana', items: ['Leer las respuestas de la encuesta', 'Llamar o escribir a quien puntuó bajo', 'Revisar el filtro «En riesgo de fuga»', 'Anotar en la ficha lo que se ha hablado']},
+      {t: 'campos', items: [
+        {id: 'resp-clientes', label: 'Quién lleva la relación con los clientes', ayuda: 'Nombre'},
+        {id: 'dia-difusion', label: 'Días de difusión', ayuda: 'WhatsApp y email'},
+      ]},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo primero que hay que hacer con los clientes de este negocio', grande: true},
+    ],
+  },
   'playbook-cocina': {
     eyebrow: 'Playbook · Cocina',
     titulo: 'Playbook de Cocina',
@@ -3567,6 +3872,9 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio, anterior){
     if(x.t === 'frases') return `<div class="dr-frases"><div class="dr-frases-h">${esc(x.titulo)}</div>${x.items.map(it => `<div class="dr-frase">${esc(it)}</div>`).join('')}</div>`;
     if(x.t === 'tabla') return `${x.titulo ? `<div class="dr-h">${esc(x.titulo)}</div>` : ''}<div class="dr-tabla-w"><table class="dr-tabla${x.cab.length >= 3 ? ' dr-tabla-ancha' : ''}"><thead><tr>${x.cab.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${x.filas.map(r => `<tr>${r.map((v, k) => `<td data-l="${esc(x.cab[k] || '')}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
     if(x.t === 'h') return `<div class="dr-h">${esc(x.x)}</div>`;
+    // Parrilla de un mes para rellenar a mano: casillas altas en la hoja
+    // impresa; como tabla, en el móvil se convertía en 35 fichas seguidas.
+    if(x.t === 'calendario') return `<div class="dr-cal">${['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => `<div class="dr-cal-h">${d}</div>`).join('')}${Array.from({length: 35}, (_, k) => `<div class="dr-cal-d">${k < 31 ? k + 1 : ''}</div>`).join('')}</div>`;
     if(x.t === 'dato') return `<div class="dr-datos">${x.items.map(d => `<div class="dr-dato"><div class="dr-dato-v">${esc(d.v)}</div><div class="dr-dato-l">${esc(d.l)}</div></div>`).join('')}</div>`;
     if(x.t === 'tarjetas') return `<div class="dr-tarjetas" data-n="${x.items.length}">${x.items.map(d => `<div class="dr-tarjeta"><div class="dr-tarjeta-k">${esc(d.k)}</div><div class="dr-tarjeta-t">${esc(d.t)}</div>${d.d ? `<div class="dr-tarjeta-d">${esc(d.d)}</div>` : ''}</div>`).join('')}</div>`;
     if(x.t === 'embudo') return `<div class="dr-embudo">${x.items.map((d, i) => `<div class="dr-embudo-f" style="margin-left:${i * 6}%;margin-right:${i * 6}%"><span>Fase ${i + 1}</span><b>${esc(d.t)}</b>${esc(d.d)}</div>`).join('')}</div>`;
