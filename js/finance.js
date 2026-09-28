@@ -371,6 +371,7 @@ function renderDashboard(){
   const attentionItems = [
     {count: unmatchedPaymentsCount, icon:'ti-credit-card-off', label: t('dash.att.unmatchedPayments'), onclick: `openUnmatchedPaymentsModal()`, warn:true},
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
+    {count: subidasDePrecio(14).length, icon:'ti-trending-up', label: t('dash.att.priceRises'), onclick: `openSubidasPrecioModal()`, warn:true},
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},
@@ -1174,6 +1175,18 @@ function openIngredientModal(id, overrideState){
         <input type="number" id="ing-pack-price" value="${ing.packPrice!=null?ing.packPrice:ing.price}" step="0.01" min="0" oninput="updateIngPackPrice()">
       </div>
     </div>
+    ${(() => {
+      // Los últimos cambios de precio de ESTE producto, para ver de un
+      // vistazo si el proveedor lo está subiendo.
+      const hist = (DB.preciosHistorial || []).filter(h => ing.id && h.ingredientId === ing.id).slice(-5).reverse();
+      if(!hist.length) return '';
+      return `<div class="field"><label>${escapeHtml(t('precios.historial'))}</label>
+        ${hist.map(h => `<div style="display:flex;gap:8px;font-size:13px;padding:3px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--muted);flex:none">${escapeHtml(h.fecha)}</span>
+          <span style="flex:1">${fmtMoney(h.antes)} → ${fmtMoney(h.despues)}/${escapeHtml(h.unidad || '')}</span>
+          <strong style="color:${h.despues > h.antes ? 'var(--red)' : 'var(--green)'};white-space:nowrap">${h.despues > h.antes ? '+' : ''}${fmtNum(h.pct, 1)} %</strong>
+        </div>`).join('')}</div>`;
+    })()}
     <div class="field">
       <label>${t('label.allergens')}</label>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:4px">
@@ -1371,6 +1384,7 @@ async function saveIngredient(id){
   if(id){
     const ing = getIngredient(id);
     if(!ing) return;
+    registrarCambioPrecio(ing, price, 'megalista', supplier);
     Object.assign(ing, {name, category, unit, supplier, price, packQty, packPrice, allergens});
   }else{
     const newId = genId();

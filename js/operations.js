@@ -1415,6 +1415,13 @@ function renderPedidoDetail(){
           <button type="button" title="${t('label.arrived')}" ${canEditChecklist?'':'disabled'} onclick="toggleRecepcionCheck(${idx}, true)" style="width:30px;height:30px;border-radius:6px;cursor:${canEditChecklist?'pointer':'default'};display:flex;align-items:center;justify-content:center;border:1px solid ${state===true?'#2e7d32':'var(--border)'};background:${state===true?'#2e7d32':'#fff'};color:${state===true?'#fff':'#2e7d32'}"><i class="ti ti-check" style="font-size:16px"></i></button>
           <button type="button" title="${t('label.notArrived')}" ${canEditChecklist?'':'disabled'} onclick="toggleRecepcionCheck(${idx}, false)" style="width:30px;height:30px;border-radius:6px;cursor:${canEditChecklist?'pointer':'default'};display:flex;align-items:center;justify-content:center;border:1px solid ${state===false?'var(--red)':'var(--border)'};background:${state===false?'var(--red)':'#fff'};color:${state===false?'#fff':'var(--red)'}"><i class="ti ti-x" style="font-size:16px"></i></button>
         </div>
+        ${ing && !isRecibido && canEditChecklist ? (() => {
+          const pa = line.precioAlbaran != null ? line.precioAlbaran : (ing.price || 0);
+          const distinto = line.precioAlbaran != null && Math.abs(line.precioAlbaran - (ing.price || 0)) > 0.0001;
+          return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)" title="${escapeHtml(t('precios.albaranHint'))}">${escapeHtml(t('precios.albaranLabel'))}
+            <input type="number" step="0.01" min="0" value="${pa}" style="width:80px;padding:3px 5px;border:1px solid ${distinto ? 'var(--red)' : 'var(--border)'};border-radius:6px;font-size:13px" onchange="updatePedidoLinePrecio(${idx}, this.value)">€/${escapeHtml(ing.unit)}
+            ${distinto ? `<span style="color:var(--red);font-weight:700">${line.precioAlbaran > (ing.price || 0) ? '▲' : '▼'} ${fmtNum(Math.abs((line.precioAlbaran - (ing.price || 0)) / (ing.price || 1) * 100), 1)} %</span>` : ''}</label>`;
+        })() : ''}
         <input type="text" placeholder="${t('ph.receptionNote')}" value="${escapeHtml(line.notaRecepcion||'')}" style="flex:1;min-width:150px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px" ${canEditChecklist?'':'disabled'} onchange="updatePedidoLineNota(${idx}, this.value)">
         ` : ''}
       </div>
@@ -1678,6 +1685,102 @@ function gvCategoryForIngredient(ing){
   return 'MATERIA PRIMA';
 }
 
+/* ============== Historial de precios (29/09) ==============
+   Antes el precio de un producto era un único número que se sobrescribía:
+   una subida del proveedor no dejaba rastro (ni cuánto, ni cuándo) y solo
+   «existía» si alguien se acordaba de cambiarlo a mano. Ahora cada cambio
+   —desde la Mega Lista o desde el albarán al recibir un pedido— se anota en
+   DB.preciosHistorial, que se sincroniza entre aparatos (fusión por id). */
+const PRECIOS_HISTORIAL_MAX = 1500;
+function registrarCambioPrecio(ing, precioNuevo, origen, proveedor){
+  if(!ing) return;
+  const antes = Number(ing.price) || 0;
+  const despues = Math.round((Number(precioNuevo) || 0) * 10000) / 10000;
+  if(!antes || Math.abs(despues - antes) < 0.0001) return; // alta nueva o sin cambio: nada que comparar
+  if(!DB.preciosHistorial) DB.preciosHistorial = [];
+  DB.preciosHistorial.push({
+    id: genId(), fecha: todayStr(), createdAt: new Date().toISOString(),
+    ingredientId: ing.id, nombre: ing.name, unidad: ing.unit || '',
+    proveedor: proveedor || ing.supplier || '', antes, despues,
+    pct: Math.round((despues - antes) / antes * 1000) / 10,
+    origen, area: ing.area || 'cocina',
+    actor: (typeof currentActorName === 'function') ? currentActorName() : ''
+  });
+  if(DB.preciosHistorial.length > PRECIOS_HISTORIAL_MAX) DB.preciosHistorial = DB.preciosHistorial.slice(-PRECIOS_HISTORIAL_MAX);
+}
+// El precio del albarán pasa a ser el precio del producto (y el del formato
+// de compra, para que la ficha siga cuadrando).
+function aplicarPrecioAlbaran(ing, precio, proveedor){
+  registrarCambioPrecio(ing, precio, 'albaran', proveedor);
+  ing.price = Math.round(precio * 10000) / 10000;
+  if(ing.packQty > 0) ing.packPrice = Math.round(ing.price * ing.packQty * 100) / 100;
+}
+function updatePedidoLinePrecio(idx, valor){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o || !o.items || !o.items[idx]) return;
+  const n = parseFloat(String(valor).replace(',', '.'));
+  if(isNaN(n) || n < 0){ showToast(t('msg.invalidPrice')); renderPedidoDetail(); return; }
+  o.items[idx].precioAlbaran = Math.round(n * 10000) / 10000;
+  saveDB();
+  renderPedidoDetail();
+}
+// Consumo medio al mes de un producto: lo recibido en pedidos de los
+// últimos 90 días, entre 3. Es lo que convierte «+14 %» en «+29 € al mes».
+function consumoMensualCompras(ingredientId){
+  const desde = dateStr(new Date(Date.now() - 90 * 86400000));
+  let total = 0;
+  (DB.purchaseOrders || []).forEach(o => {
+    if(o.estado !== 'RECIBIDO' || (o.date || '') < desde) return;
+    (o.items || []).forEach(l => { if(l.ingredientId === ingredientId) total += Number(l.cantidadRecibida) || 0; });
+  });
+  return total / 3;
+}
+// Subidas del periodo por producto: del primer precio al último (varias
+// subidas seguidas del mismo producto cuentan como una), con su impacto al
+// mes y los platos cuyo escandallo lo usa.
+function subidasDePrecio(dias){
+  const desde = dateStr(new Date(Date.now() - dias * 86400000));
+  const porIng = {};
+  (DB.preciosHistorial || []).filter(h => h.fecha >= desde && (h.area || 'cocina') === currentArea())
+    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+    .forEach(h => {
+      const g = porIng[h.ingredientId] || (porIng[h.ingredientId] = {ingredientId: h.ingredientId, nombre: h.nombre, unidad: h.unidad, proveedor: h.proveedor, antes: h.antes, despues: h.despues, fecha: h.fecha, origen: h.origen});
+      g.despues = h.despues; g.fecha = h.fecha; g.proveedor = h.proveedor || g.proveedor; g.origen = h.origen;
+    });
+  return Object.values(porIng).filter(g => g.despues > g.antes).map(g => {
+    const ing = getIngredient(g.ingredientId);
+    const consumo = consumoMensualCompras(g.ingredientId);
+    const platos = (DB.recipes || []).filter(r => (r.ingredients || []).some(l => l.type !== 'base' && l.ingredientId === g.ingredientId)).map(r => r.name);
+    return {...g, nombre: ing ? ing.name : g.nombre, pct: Math.round((g.despues - g.antes) / g.antes * 1000) / 10,
+      impactoMes: consumo ? (g.despues - g.antes) * consumo : null, platos};
+  }).sort((a, b) => (b.impactoMes || 0) - (a.impactoMes || 0) || b.pct - a.pct);
+}
+function openSubidasPrecioModal(){
+  const lista = subidasDePrecio(30);
+  const total = lista.reduce((s, x) => s + (x.impactoMes || 0), 0);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-trending-up"></i> ${t('precios.titulo')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 10px">${t('precios.explica')}</p>
+    ${lista.length ? `
+      ${total ? `<div class="card" style="margin-bottom:10px;border-left:4px solid var(--red)"><strong>${escapeHtml(t('precios.total').replace('${v}', fmtMoney(total)))}</strong></div>` : ''}
+      ${lista.map(x => `<div class="card" style="margin-bottom:8px;padding:10px 12px">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
+          <strong>${escapeHtml(x.nombre)}</strong>
+          <span style="color:var(--red);font-weight:800;white-space:nowrap">+${fmtNum(x.pct, 1)} %</span>
+        </div>
+        <div style="font-size:13px;margin-top:2px">${fmtMoney(x.antes)} → <strong>${fmtMoney(x.despues)}</strong>/${escapeHtml(x.unidad || '')} · ${escapeHtml(x.proveedor || '—')} · ${escapeHtml(x.fecha)} · ${escapeHtml(t('precios.origen.' + (x.origen === 'albaran' ? 'albaran' : 'megalista')))}</div>
+        <div style="font-size:13px;margin-top:4px;${x.impactoMes ? 'font-weight:600' : 'color:var(--muted)'}">${x.impactoMes ? escapeHtml(t('precios.impacto').replace('${v}', fmtMoney(x.impactoMes))) : escapeHtml(t('precios.sinConsumo'))}</div>
+        ${x.platos.length ? `<div style="font-size:12.5px;color:var(--muted);margin-top:4px">${escapeHtml(t('precios.platos'))}: ${escapeHtml(x.platos.slice(0, 6).join(', '))}${x.platos.length > 6 ? '…' : ''}</div>` : ''}
+      </div>`).join('')}` : `<div class="empty"><i class="ti ti-circle-check"></i>${t('precios.vacio')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+
 // Al recibir un pedido, registra su coste en Gastos Variables (Gestión Económica), agrupado por categoría
 function registerPedidoComoGastoVariable(o){
   if(o.gvCreated) return;
@@ -1689,7 +1792,7 @@ function registerPedidoComoGastoVariable(o){
   const byGroup = {};
   (o.items||[]).forEach(line => {
     const ing = getIngredient(line.ingredientId);
-    const costBase = (line.cantidadRecibida||0) * (ing ? (ing.price||0) : 0);
+    const costBase = (line.cantidadRecibida||0) * (line.precioCompra != null ? line.precioCompra : (ing ? (ing.price||0) : 0));
     if(costBase <= 0) return;
     const cat = gvCategoryForIngredient(ing);
     const ivaPct = ing && ing.iva != null ? ing.iva : null;
@@ -1740,6 +1843,7 @@ function changePedidoEstado(estado){
   if(o.estado === estado) return;
   o.estado = estado;
   if(estado === 'ENVIADO' && !o.enviadoEn) o.enviadoEn = todayStr();
+  let preciosCambiados = 0;
   if(estado === 'RECIBIDO'){
     (o.items||[]).forEach(line => {
       // El checklist de recepción manda: un artículo marcado con la cruz (o
@@ -1752,6 +1856,14 @@ function changePedidoEstado(estado){
       line.cantidadRecibida = recibida;
       const ing = getIngredient(line.ingredientId);
       if(!ing) return; // ingrediente borrado de Mega Lista: no hay stock real que sumar
+      // El albarán manda: si trae otro precio, se actualiza el producto y
+      // queda en el historial. Y el precio con el que se compró se guarda en
+      // la línea, para que el gasto sea el real y no el de la Mega Lista.
+      if(checked && line.precioAlbaran != null && Math.abs(line.precioAlbaran - (ing.price || 0)) > 0.0001){
+        aplicarPrecioAlbaran(ing, line.precioAlbaran, o.supplier);
+        preciosCambiados++;
+      }
+      line.precioCompra = ing.price || 0;
       const s = getStockEntry(line.ingredientId);
       s.qty = (s.qty||0) + (recibida||0);
     });
@@ -1769,7 +1881,9 @@ function changePedidoEstado(estado){
   }
   saveDB();
   renderPedidoDetail();
-  showToast(estado === 'RECIBIDO' ? t('msg.orderReceivedStockUpdated') : t('msg.orderMarkedSent'));
+  showToast(estado === 'RECIBIDO'
+    ? t('msg.orderReceivedStockUpdated') + (preciosCambiados ? ' · ' + t('precios.actualizados').replace('${n}', preciosCambiados) : '')
+    : t('msg.orderMarkedSent'));
 }
 
 function pedidoTexto(o){

@@ -128,6 +128,7 @@ lanzar; node test/endurecido-publico.mjs > "$SALIDA/endurecido.txt" 2>&1 & P86=$
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
+lanzar; node test/precios.mjs > "$SALIDA/precios.txt" 2>&1 & P90=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -242,5 +243,6 @@ espera $P86 "Espejo público endurecido: holds sin saltos, tokens largos, zoom l
 espera $P87 "Iconos recortados: ninguno de los que usa la app se ha quedado fuera" "$SALIDA/iconos.txt" "casos pasaron"
 espera $P88 "El service worker no secuestra el contrato ni la privacidad (los enlaces de Stripe)" "$SALIDA/sw-legal.txt" "respeta /legal/"
 espera $P89 "Plan 360: coach y negocio no se pisan, y lo vacío no rompe nada" "$SALIDA/plan360.txt" "casos pasaron"
+espera $P90 "Subidas de precio: historial, albarán, gasto real y aviso con impacto" "$SALIDA/precios.txt" "casos pasaron"
 
 exit $FALLOS
