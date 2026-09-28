@@ -4305,6 +4305,7 @@ function plan360FreshDoc(d){
 }
 function ensurePlan360Program(){
   if(!DB.business.plan360) return;
+  plan360RepararVacios(DB.business);
   if(!Array.isArray(DB.business.plan360Docs) || !DB.business.plan360Docs.length){
     DB.business.plan360Docs = PLAN360_DOCS_TEMPLATE.map(plan360FreshDoc);
   }
@@ -4358,10 +4359,15 @@ function ensurePlan360Program(){
     && Array.isArray(DB.business.plan360Intake.sections)
     && DB.business.plan360Intake.sections.map(s => s.title).join('|') !== PLAN360_INTAKE_TEMPLATE.map(s => s.title).join('|');
   if(!DB.business.plan360Intake || !Array.isArray(DB.business.plan360Intake.sections) || intakeDesactualizado){
+    // Si la plantilla cambia (un título, una pregunta nueva), se rehace
+    // PERO conservando cada respuesta cuya pregunta sigue existiendo: antes
+    // se regeneraba en blanco y el negocio perdía todo lo contestado.
+    const previas = {};
+    ((DB.business.plan360Intake && DB.business.plan360Intake.sections) || []).forEach(sec => (sec.questions || []).forEach(x => { if(x && x.a) previas[x.q] = x.a; }));
     DB.business.plan360Intake = {
       sections: PLAN360_INTAKE_TEMPLATE.map(s => ({
         title: s.title,
-        questions: s.questions.map(q => ({q, a: ''})),
+        questions: s.questions.map(q => ({q, a: previas[q] || ''})),
       })),
     };
   }
@@ -4796,7 +4802,6 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$turnoIdx": {
-                "//": "El salto de +40 por escritura es lo que impide que alguien de fuera deje el aforo en 500 y cierre la agenda del negocio de un plumazo. La app solo suma los comensales de UNA reserva, asi que nunca se acerca a ese tope.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
                 ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
@@ -4806,7 +4811,6 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
               "$slot": {
-                "//": "Mismo tope que aforoHold: la app suma de uno en uno.",
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
                 ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
               }
@@ -4826,7 +4830,6 @@ const FIREBASE_RULES_JSON = `{
           "orderStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
-              "//": "El token es lo unico que separa el pedido de un cliente del de otro, asi que se exige que sea largo: sin longitud minima valia 'a' y el seguimiento de cualquiera se podia adivinar probando. Aqui no habia NINGUN .validate: se podia escribir cualquier cosa en esta rama.",
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
               ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
             }
@@ -7992,6 +7995,53 @@ function fusionarLinea(local, remota){
   return out;
 }
 
+/* Fusión a tres bandas: `base` es lo último que ambos lados tenían en
+   común. Lo que solo cambió en local se queda; lo que solo cambió en la
+   nube entra; si los dos cambiaron el MISMO dato, gana la nube. Las listas
+   se casan por posición (los días y las tareas del Plan 360 tienen orden
+   fijo). */
+function fusion3(b, l, r){
+  const igual = (x, y) => canonicalStringify(x) === canonicalStringify(y);
+  if(igual(l, b)) return r;
+  if(igual(r, b)) return l;
+  if(igual(l, r)) return r;
+  const esObj = x => x && typeof x === 'object' && !Array.isArray(x);
+  if(esObj(l) && esObj(r)){
+    const out = {};
+    new Set([...Object.keys(l), ...Object.keys(r)]).forEach(k => {
+      const v = fusion3(esObj(b) ? b[k] : undefined, l[k], r[k]);
+      if(v !== undefined) out[k] = v;
+    });
+    return out;
+  }
+  if(Array.isArray(l) && Array.isArray(r)){
+    const bb = Array.isArray(b) ? b : [];
+    const out = [];
+    for(let i = 0; i < Math.max(l.length, r.length); i++){
+      const v = fusion3(bb[i], l[i], r[i]);
+      if(v !== undefined) out.push(v);
+    }
+    return out;
+  }
+  return r;
+}
+/* Firebase no guarda listas ni objetos vacíos: un día de trabajo sin tareas
+   vuelve de la nube SIN `tasks`, y recorrerlo tumbaba la pantalla entera
+   del Plan 360 (en blanco, sin ningún aviso). Se reponen al llegar. */
+function plan360RepararVacios(biz){
+  if(!biz || !Array.isArray(biz.plan360Program)) return;
+  biz.plan360Program.forEach(d => {
+    if(!d) return;
+    if(d.phase === 'trabajo' && !Array.isArray(d.tasks)) d.tasks = [];
+    if(d.reunion && !Array.isArray(d.reunion.objectiveIds)) d.reunion.objectiveIds = [];
+    if(d.day === 2){
+      if(!Array.isArray(d.objectives)) d.objectives = [];
+      if(!Array.isArray(d.inversiones)) d.inversiones = [];
+      d.objectives.forEach(o => { if(o && !Array.isArray(o.mediciones)) o.mediciones = []; });
+      if(d.teamBuilding && typeof d.teamBuilding.premioEntregado !== 'object') d.teamBuilding.premioEntregado = {};
+    }
+  });
+}
 function applyRemoteBlock(key, remoteValue){
   const def = defaultData();
   let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
@@ -8059,6 +8109,18 @@ function applyRemoteBlock(key, remoteValue){
   // MERGEABLE_ARRAYS no los alcanza y el bloque entero se sustituía. Dos
   // cocineros lanzando pruebas a la vez desde la tablet y el móvil perdían
   // una de las dos. Es la misma familia de fallo que ya se coló dos veces.
+  // El bloque «business» lo escriben DOS: el negocio (sus ajustes, el
+  // estado de sus tareas del Plan 360, sus notas…) y el coach desde su panel
+  // (el plan, los informes, los recursos). Se sustituía entero: lo que el
+  // negocio hubiera cambiado sin subir aún (los 0,8 s de espera, o sin
+  // conexión) desaparecía al llegar lo del coach. Ahora se fusiona a tres
+  // bandas contra lo último sincronizado.
+  if(key === 'business' && DB.business && merged && typeof merged === 'object'){
+    let base = null;
+    try{ base = lastSyncedSnapshot && lastSyncedSnapshot.business ? JSON.parse(lastSyncedSnapshot.business) : null; }catch(e){ base = null; }
+    if(base) merged = fusion3(base, DB.business, merged);
+    plan360RepararVacios(merged);
+  }
   if(key === 'idr' && DB[key] && typeof merged === 'object'){
     merged = mergeNestedArraysByKey(DB[key], merged, ['creaciones','carpetas']);
     /* Y una vuelta más: fusionar las creaciones POR ID no basta, porque para

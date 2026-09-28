@@ -5236,7 +5236,7 @@ function plan360HoyCardHtml(){
   if(!dHoy){
     cuerpoHoy = `<p class="muted" style="margin:0">${escapeHtml(t(diaHoy < 1 ? 'plan360.programNotStartedYet' : 'plan360.programFinished'))}</p>`;
   } else if(dHoy.phase === 'presencial'){
-    cuerpoHoy = `<p style="margin:0;font-size:13.5px">${escapeHtml(t('plan360.todayIsPresencial'))}</p>`;
+    cuerpoHoy = `<p style="margin:0 0 10px;font-size:13.5px">${escapeHtml(t('plan360.todayIsPresencial'))}</p><button class="btn btn-sm" onclick="renderPlan360DayDetail(${diaHoy})">${escapeHtml(t('common.view'))} <i class="ti ti-chevron-right"></i></button>`;
   } else {
     const conTitulo = dHoy.tasks.filter(tk => tk.title);
     cuerpoHoy = conTitulo.length
@@ -5303,27 +5303,34 @@ function renderPlan360Grid(){
     semana.dias.push(d);
   });
 
-  const dayCard = d => {
+  const dayCard = (d, k, dias) => {
     const {weekday, dayMonth} = plan360FormatDate(d.day);
+    // Cada día en SU columna (lunes = 1): la primera semana del programa
+    // puede empezar un domingo y, sin esto, aparecía en la columna del lunes.
+    const [yy, mm, ddd] = plan360DateForDay(d.day).split('-').map(Number);
+    const col = (new Date(yy, mm - 1, ddd).getDay() + 6) % 7 + 1;
+    const colStyle = k === 0 ? `grid-column-start:${col};` : '';
+    const [diaNum, ...mesPartes] = dayMonth.split(' ');
+    const fechaHtml = `${escapeHtml(diaNum)}<span class="p360-day-mes"> ${escapeHtml(mesPartes.join(' '))}</span>`;
     const esHoy = d.day === diaHoy;
     const anillo = esHoy ? 'outline:2px solid var(--ink);outline-offset:-2px' : '';
     if(d.phase === 'presencial'){
-      return `<div class="p360-day p360-day-presencial" style="${anillo}" onclick="renderPlan360DayDetail(${d.day})">
+      return `<div class="p360-day p360-day-presencial" style="${colStyle}${anillo}" onclick="renderPlan360DayDetail(${d.day})">
         <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
-        <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
-        <div class="p360-day-tag">${escapeHtml(t('plan360.presencial'))}</div>
+        <div class="p360-day-date">${fechaHtml}</div>
+        <div class="p360-day-tag"><i class="ti ti-users"></i><span class="p360-tag-txt"> ${escapeHtml(t('plan360.presencial'))}</span></div>
       </div>`;
     }
     const pendientes = d.tasks.filter(tk => tk.title && tk.status !== 'hecha').length;
     const atrasado = diaHoy !== null && d.day < diaHoy && pendientes > 0;
-    const col = atrasado ? 'var(--red)' : plan360PriorityColor(d.priority);
+    const colorBorde = atrasado ? 'var(--red)' : plan360PriorityColor(d.priority);
     const done = d.tasks.length && d.tasks.every(x => x.status === 'hecha');
     const doneCount = d.tasks.filter(x => x.status === 'hecha').length;
-    return `<div class="p360-day" style="${col ? 'border-left-color:' + col + ';' : ''}${anillo}" onclick="renderPlan360DayDetail(${d.day})">
+    return `<div class="p360-day" style="${colStyle}${colorBorde ? 'border-left-color:' + colorBorde + ';' : ''}${anillo}" onclick="renderPlan360DayDetail(${d.day})">
       <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
-      <div class="p360-day-date">${escapeHtml(dayMonth)}</div>
-      ${atrasado ? `<div class="p360-day-tag" style="color:var(--red);font-weight:700"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.overdueShort'))}</div>`
-        : d.reunion ? `<div class="p360-day-tag">${escapeHtml(t('plan360.reviewType.' + d.reunion.tipo))}</div>` : ''}
+      <div class="p360-day-date">${fechaHtml}</div>
+      ${atrasado ? `<div class="p360-day-tag" style="color:var(--red);font-weight:700"><i class="ti ti-alert-triangle"></i><span class="p360-tag-txt"> ${escapeHtml(t('plan360.overdueShort'))}</span></div>`
+        : d.reunion ? `<div class="p360-day-tag"><i class="ti ${d.reunion.tipo === 'online' ? 'ti-video' : 'ti-users'}"></i><span class="p360-tag-txt"> ${escapeHtml(t('plan360.reviewType.' + d.reunion.tipo))}</span></div>` : ''}
       ${d.tasks.length ? `<div class="p360-day-progress">${done ? '<i class="ti ti-circle-check"></i>' : doneCount + '/' + d.tasks.length}</div>` : ''}
     </div>`;
   };
@@ -5392,7 +5399,13 @@ function plan360CierreHtml(){
   const acciones = plan360AccionesPorNivel();
   const hayAcciones = acciones.some(n => n.total > 0);
   const m = cierre.mantenimiento || {};
-  if(!objetivos.length && !hayKpis && !hayAcciones && !cierre.mejorasVisibles && !cierre.queVigilar && !cierre.siguienteNivel && !m.respuesta) return '';
+  // El cierre (y con él la oferta de mantenimiento) solo aparece cuando
+  // toca: en el día 28 o cuando el coach ya ha empezado la revisión final.
+  // Antes bastaba con tener objetivos — o sea, desde el Día 2 — y el
+  // negocio podía «aceptar» el mantenimiento a mitad de programa.
+  const diaHoy = plan360DiaDeHoy();
+  const revisionFinal = hayKpis || objetivos.some(o => o.estadoFinal) || cierre.mejorasVisibles || cierre.queVigilar || cierre.siguienteNivel;
+  if(!((diaHoy !== null && diaHoy >= 28) || revisionFinal || m.respuesta)) return '';
   const esOwner = plan360EsOwner();
   return `
     <div class="p360-week">
@@ -5431,20 +5444,25 @@ function plan360CierreHtml(){
         <div style="font-weight:700;margin-bottom:6px"><i class="ti ti-rocket"></i> ${escapeHtml(t('plan360.maintenancePlan'))}</div>
         <p style="margin:0 0 10px;font-size:13.5px;opacity:.9">${escapeHtml(t('plan360.maintenanceIncludes'))}</p>
         <div style="font-size:22px;font-weight:800;margin-bottom:12px">${escapeHtml(m.precio || '99€/mes')}</div>
-        ${m.respuesta ? `<div style="background:rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:13.5px">
-            ${m.respuesta === 'acepta'
-              ? `✓ ${escapeHtml(t('plan360.maintenanceAccepted'))} <strong>${escapeHtml(m.firmaNombre)}</strong> — ${escapeHtml(new Date(m.firmaFecha).toLocaleDateString(localeActual()))}`
-              : `${escapeHtml(t('plan360.maintenanceThinking'))} ${escapeHtml(m.volverAHablarFecha || '—')}`}
+        ${m.respuesta === 'acepta' ? `<div style="background:rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:13.5px">
+            ✓ ${escapeHtml(t('plan360.maintenanceAccepted'))} <strong>${escapeHtml(m.firmaNombre)}</strong> — ${escapeHtml(new Date(m.firmaFecha).toLocaleDateString(localeActual()))}
           </div>`
         : esOwner ? `
+          ${m.respuesta === 'piensa' ? `<div style="background:rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:13.5px;margin-bottom:10px">${escapeHtml(t('plan360.maintenanceThinking'))} ${escapeHtml(plan360FechaLegible(m.volverAHablarFecha))}</div>` : ''}
           <div class="field" style="margin-bottom:8px"><label style="color:#fff">${escapeHtml(t('plan360.signName'))}</label><input id="p360-mant-firma" style="color:var(--text)"></div>
           <button class="btn btn-primary btn-sm" onclick="plan360MantenimientoAceptar()" style="margin-right:6px">${escapeHtml(t('plan360.maintenanceAcceptBtn'))}</button>
           <div class="field" style="margin:10px 0 6px"><label style="color:#fff">${escapeHtml(t('plan360.maintenanceThinkDate'))}</label><input id="p360-mant-fecha" type="date" style="color:var(--text);max-width:180px"></div>
           <button class="btn btn-sm" onclick="plan360MantenimientoPensar()">${escapeHtml(t('plan360.maintenanceThinkBtn'))}</button>
-        ` : `<p style="margin:0;font-size:12px;opacity:.8">${escapeHtml(t('plan360.maintenanceOwnerOnly'))}</p>`}
+        ` : m.respuesta === 'piensa' ? `<p style="margin:0;font-size:13.5px">${escapeHtml(t('plan360.maintenanceThinking'))} ${escapeHtml(plan360FechaLegible(m.volverAHablarFecha))}</p>` : `<p style="margin:0;font-size:12px;opacity:.8">${escapeHtml(t('plan360.maintenanceOwnerOnly'))}</p>`}
       </div>
     </div>
   `;
+}
+// Fechas guardadas como AAAA-MM-DD, pintadas en el idioma de la app.
+function plan360FechaLegible(f){
+  if(!f || !/^\d{4}-\d{2}-\d{2}$/.test(f)) return f || '—';
+  const [y, mo, d] = f.split('-').map(Number);
+  return new Date(y, mo - 1, d).toLocaleDateString(localeActual(), {day: 'numeric', month: 'long', year: 'numeric'});
 }
 function plan360MantenimientoAceptar(){
   if(!plan360EsOwner()) return;
@@ -5464,9 +5482,13 @@ function plan360MantenimientoPensar(){
   if(!plan360EsOwner()) return;
   const c = DB.business.plan360Cierre;
   if(!c || !c.mantenimiento) return;
+  const fecha = (document.getElementById('p360-mant-fecha').value || '').trim();
+  // Sin fecha salía «Volvemos a hablar el: —» y el coach no se enteraba.
+  if(!fecha){ showToast(t('plan360.maintenanceDateMissing')); return; }
   c.mantenimiento.respuesta = 'piensa';
-  c.mantenimiento.volverAHablarFecha = (document.getElementById('p360-mant-fecha').value || '').trim();
+  c.mantenimiento.volverAHablarFecha = fecha;
   saveDB();
+  plan360PingActivity();
   showToast(t('plan360.saved'));
   renderPlan360Grid();
 }
@@ -5552,7 +5574,9 @@ function renderPlan360Contract(){
 }
 function plan360ContractSectionHtml(){
   const c = DB.business.plan360Contract || {};
-  const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
+  // Firmado, se enseña el texto que se firmó (guardado al firmar), no el
+  // de la versión actual de la app: si el contrato cambia, el firmado no.
+  const texto = (c.signedAt && c.signedText) || plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   if(c.signedAt){
     return `<div class="card" style="margin-top:14px">
       <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:10px">${escapeHtml(texto)}</div>
@@ -5596,7 +5620,7 @@ function plan360ContractSectionHtml(){
 function plan360PrintContract(){
   const c = DB.business.plan360Contract || {};
   if(!c.signedAt) return;
-  const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
+  const texto = c.signedText || plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   const win = window.open('', '_blank', 'width=700,height=800');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(t('plan360.contract'))}</title>
@@ -5627,6 +5651,7 @@ function plan360SignContract(){
   c.signedName = name;
   c.signedDNI = dni;
   c.signedAt = Date.now();
+  c.signedText = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   saveDB();
   plan360PingActivity();
   showToast(t('plan360.saved'));
@@ -5699,12 +5724,12 @@ function renderPlan360Docs(){
     .filter(cat => docs.some(d => plan360DocCategoria(d.id) === cat));
   const filaDoc = doc => {
     if(doc.id === 'identidad'){
-      const listo = !!(doc.sentAt && doc.pdfData);
+      const listo = !!(doc.sentAt && plan360LibroPdfData(doc));
       return `<div class="card" style="margin-top:14px;${listo ? 'cursor:pointer' : 'opacity:.55'}" ${listo ? 'onclick="renderPlan360LibroMarca()"' : ''}>
         <div style="display:flex;align-items:center;gap:10px">
           <i class="ti ${listo ? 'ti-circle-check' : 'ti-book-2'}" style="font-size:20px;${listo ? 'color:var(--green)' : ''}"></i>
           <div style="flex:1"><strong>${escapeHtml(doc.title)}</strong>
-            <div class="p360-day-tag">${escapeHtml(listo ? t('plan360.misteryReady') : t('plan360.misteryPending'))}</div>
+            <div class="p360-day-tag">${escapeHtml(listo ? t('plan360.libroReady') : t('plan360.libroPending'))}</div>
           </div>
           ${listo ? '<i class="ti ti-chevron-right"></i>' : ''}
         </div>
@@ -5764,17 +5789,29 @@ function descargarPlan360DocRico(id){
    mismas áreas/preguntas, mostrado como documento final de solo lectura
    con el diseño de GastroGoan (26/09 — antes era un resumen aparte que el
    coach redactaba; ahora es el mismo documento, no una versión distinta). */
+/* El PDF vive en su propio nodo (DB.plan360LibroPdf), no dentro de
+   business: ahí viajaba entero con cada cambio. Los libros subidos antes
+   pueden traerlo todavía en doc.pdfData hasta que el coach abra el negocio.
+   Solo se acepta un PDF de verdad: es un texto que llega de la nube y va a
+   un href. */
+function plan360LibroPdfData(doc){
+  if(!doc) return '';
+  const nodo = DB.plan360LibroPdf;
+  const data = doc.pdfData || (doc.pdfName && nodo && nodo.data) || '';
+  return typeof data === 'string' && data.startsWith('data:application/pdf') ? data : '';
+}
 function renderPlan360LibroMarca(){
   const doc = (DB.business.plan360Docs || []).find(d => d.id === 'identidad');
-  const dia1 = (DB.business.plan360Program || []).find(x => x.day === 1);
-  const negocio = dia1 && dia1.negocio;
-  if(!doc || !doc.sentAt || !negocio || !doc.pdfData) return;
+  const pdf = plan360LibroPdfData(doc);
+  // Antes exigía además los datos del Día 1, que ni se usan: la tarjeta
+  // salía como lista, y al pulsarla no pasaba nada.
+  if(!doc || !doc.sentAt || !pdf) return;
   document.getElementById('plan360-content').innerHTML = `
     <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(doc.title)}</div>
-    <a href="${doc.pdfData}" download="${escapeHtml(doc.pdfName || 'libro-de-marca.pdf')}" class="btn btn-primary" style="margin-top:10px"><i class="ti ti-download"></i> ${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</a>
+    <a href="${escapeHtml(pdf)}" download="${escapeHtml(doc.pdfName || 'libro-de-marca.pdf')}" class="btn btn-primary" style="margin-top:10px"><i class="ti ti-download"></i> ${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</a>
     <div class="card" style="margin-top:14px;padding:0;overflow:hidden">
-      <embed src="${doc.pdfData}" type="application/pdf" style="width:100%;height:75vh;display:block">
+      <embed src="${escapeHtml(pdf)}" type="application/pdf" style="width:100%;height:75vh;display:block">
     </div>
   `;
 }
@@ -5909,7 +5946,11 @@ function renderPlan360TeamBuilding(day){
   const integrantesGanador = empate ? [] : ((ganaA ? tb.integrantesA : tb.integrantesB) || '')
     .split('\n').map(s => s.trim()).filter(Boolean);
   const entregado = tb.premioEntregado || {};
-  const hechos = integrantesGanador.filter((n, idx) => entregado[equipoGanador + '_' + idx]).length;
+  // Clave por NOMBRE (antes por posición: si el coach reordenaba o quitaba a
+  // alguien, las marcas pasaban a otra persona). La clave antigua se sigue
+  // leyendo para no perder lo ya marcado.
+  const premioDado = (nombre, idx) => !!(entregado[equipoGanador + '_n_' + plan360ClaveFirebase(nombre)] ?? entregado[equipoGanador + '_' + idx]);
+  const hechos = integrantesGanador.filter((n, idx) => premioDado(n, idx)).length;
   document.getElementById('plan360-content').innerHTML = `
     <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.tbResultsTitle'))}</div>
@@ -5939,21 +5980,30 @@ function renderPlan360TeamBuilding(day){
         ${integrantesGanador.length ? `<div style="font-size:12px;color:var(--muted);white-space:nowrap">${escapeHtml(t('plan360.tbChecklistProgress').replace('${n}', String(hechos)).replace('${total}', String(integrantesGanador.length)))}</div>` : ''}
       </div>
       ${integrantesGanador.length ? integrantesGanador.map((nombre, idx) => {
-        const key = equipoGanador + '_' + idx;
-        const marcado = !!entregado[key];
+        const marcado = premioDado(nombre, idx);
         return `<label style="display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--border);cursor:pointer;min-height:44px">
-          <input type="checkbox" ${marcado ? 'checked' : ''} onchange="plan360TbTogglePremio(${day},'${key}',this.checked)" style="width:22px;height:22px;flex:none">
+          <input type="checkbox" ${marcado ? 'checked' : ''} onchange="plan360TbTogglePremio(${day},${idx},this.checked)" style="width:22px;height:22px;flex:none">
           <span style="flex:1;${marcado ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(nombre)}</span>
         </label>`;
       }).join('') : `<p class="muted" style="margin:0">${escapeHtml(t('plan360.tbChecklistEmpty'))}</p>`}
     </div>` : ''}
   `;
 }
-function plan360TbTogglePremio(day, key, checked){
+// Firebase rechaza la escritura ENTERA si una clave lleva . # $ / [ ]:
+// un nombre como «J. García» habría dejado al negocio sin guardar nada.
+function plan360ClaveFirebase(txt){ return String(txt).replace(/[.#$/\[\]]/g, '_').slice(0, 120); }
+function plan360TbTogglePremio(day, idx, checked){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.teamBuilding) return;
-  if(!d.teamBuilding.premioEntregado) d.teamBuilding.premioEntregado = {};
-  d.teamBuilding.premioEntregado[key] = checked;
+  const tb = d && d.teamBuilding;
+  if(!tb) return;
+  const totalA = plan360TbTotal(tb, 'A'), totalB = plan360TbTotal(tb, 'B');
+  if(totalA === totalB) return;
+  const equipo = totalA > totalB ? 'A' : 'B';
+  const nombre = ((equipo === 'A' ? tb.integrantesA : tb.integrantesB) || '').split('\n').map(x => x.trim()).filter(Boolean)[idx];
+  if(!nombre) return;
+  if(!tb.premioEntregado) tb.premioEntregado = {};
+  tb.premioEntregado[equipo + '_n_' + plan360ClaveFirebase(nombre)] = checked;
+  delete tb.premioEntregado[equipo + '_' + idx];
   saveDB();
   renderPlan360TeamBuilding(day);
 }
@@ -6000,7 +6050,7 @@ function renderPlan360PlanAccion(day){
       </div>
       ${(d.inversiones || []).filter(inv => inv.nombre).length ? (d.inversiones || []).filter(inv => inv.nombre).map(inv => `
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
-          <span>${escapeHtml(inv.nombre)}</span><span>${Number(inv.coste) || 0}€</span>
+          <span>${escapeHtml(inv.nombre)}</span><span style="white-space:nowrap">${escapeHtml(plan360InvEuros(inv.coste))}</span>
         </div>`).join('') : `<p class="muted">${escapeHtml(t('plan360.noInvestmentsYet'))}</p>`}
     </div>
     <p class="muted" style="margin:16px 0 6px">${escapeHtml(t('plan360.visualSummary'))}</p>
@@ -6064,8 +6114,9 @@ function renderPlan360Objectives(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360ObjetivosDiaActivo = d;
+  // Se entra desde el Plan de acción: «Volver» lleva ahí, no al centro del Día 2.
   document.getElementById('plan360-content').innerHTML = `
-    <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+    <button class="btn btn-sm btn-back" onclick="renderPlan360PlanAccion(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.objectives'))}</div>
     <div class="card" style="margin-top:14px">
       <div id="p360-obj-list">${d.objectives.map((o, i) => plan360ObjectiveRow(day, o, i)).join('')}</div>
@@ -6126,7 +6177,7 @@ function renderPlan360MisteryReport(day){
         ${b.items.map(it => `
           <div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px">
             <span style="flex:1">${escapeHtml(it.text)}</span>
-            <span style="font-family:'IBM Plex Mono',monospace;color:var(--muted);flex:none">${it.score === null || it.score === undefined ? '—' : it.score}</span>
+            <span style="font-family:'IBM Plex Mono',monospace;color:var(--muted);flex:none">${it.score === null || it.score === undefined ? '—' : escapeHtml(String(it.score))}</span>
           </div>
         `).join('')}
         ${b.comment ? `<p style="margin-top:8px;font-size:13px;color:var(--muted)">${escapeHtml(b.comment)}</p>` : ''}
@@ -6191,7 +6242,7 @@ function plan360ObjectiveRow(day, o, i){
     ${o.metrica ? `
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${escapeHtml(t('plan360.objMeasurements'))}</div>
-        ${mediciones.length ? mediciones.map(m => `<div style="display:flex;gap:8px;padding:3px 0;font-size:13px"><span class="muted" style="flex:none">${escapeHtml(m.fecha)}</span><span style="font-weight:600">${escapeHtml(m.valor)}</span>${m.nota ? `<span class="muted">— ${escapeHtml(m.nota)}</span>` : ''}</div>`).join('')
+        ${mediciones.length ? mediciones.map(m => `<div style="display:flex;gap:8px;padding:3px 0;font-size:13px"><span class="muted" style="flex:none">${escapeHtml(plan360FechaLegible(m.fecha))}</span><span style="font-weight:600">${escapeHtml(m.valor)}</span>${m.nota ? `<span class="muted">— ${escapeHtml(m.nota)}</span>` : ''}</div>`).join('')
           : `<p class="muted" style="margin:0;font-size:13px">${escapeHtml(t('plan360.objNoMeasurementsYet'))}</p>`}
         <div style="display:flex;gap:6px;margin-top:8px">
           <input id="p360-obj-medicion-${i}" placeholder="${escapeHtml(t('plan360.objMeasurementValue'))}" style="flex:1">
@@ -6214,7 +6265,14 @@ function addPlan360Objective(day){
 // — no un borrador de texto que tenga sentido dejar a medias.
 function plan360AddMedicion(i){
   if(!plan360EsOwner() || !plan360ObjetivosDiaActivo) return;
-  const d = plan360ObjetivosDiaActivo;
+  // Se vuelve a buscar el día en DB: si mientras tanto llegó el bloque de la
+  // nube, el objeto guardado ya no es el de DB y la medición se perdía (la
+  // misma trampa que el cVivo del I+D). Y antes de repintar se recoge lo
+  // escrito en el formulario: repintar sin eso borraba lo no guardado.
+  const d = (DB.business.plan360Program || []).find(x => x.day === plan360ObjetivosDiaActivo.day);
+  if(!d || !Array.isArray(d.objectives)) return;
+  plan360ObjetivosDiaActivo = d;
+  plan360SyncObjectivesFromForm(d);
   const o = d.objectives[i];
   const input = document.getElementById('p360-obj-medicion-' + i);
   if(!o || !input || !input.value.trim()) return;
@@ -6356,31 +6414,39 @@ function plan360TaskRow(day, tk, i){
     ${tk.description ? `<p style="font-size:13.5px;margin:4px 0 0;color:var(--body)">${escapeHtml(tk.description)}</p>` : ''}
     ${tk.fileName ? `<div style="margin-top:6px;font-size:12px"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-      ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? 'btn-primary' : ''}" onclick="plan360SetTaskEstado(${day},${i},'${e}')">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
+      ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? 'btn-primary' : ''}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
     </div>
     <div class="field" style="margin:10px 0 0">
       <label>${escapeHtml(t('plan360.taskNote'))}</label>
-      <textarea id="p360-task-note-${i}" rows="2" onchange="plan360SaveTaskNote(${day},${i},this.value)">${escapeHtml(tk.note || '')}</textarea>
+      <textarea id="p360-task-note-${i}" rows="2" onchange="plan360SaveTaskNote(${day},${i},this.value,${Number(tk.id) || 0})">${escapeHtml(tk.note || '')}</textarea>
     </div>
   </div>`;
 }
-function plan360SetTaskEstado(day, i, estado){
+// Las tareas se buscan por su id: por posición, si el coach reordenaba o
+// quitaba una con esta pantalla abierta, el estado caía en otra tarea.
+function plan360BuscarTarea(d, i, id){
+  const tareas = (d && d.tasks) || [];
+  return (id && tareas.find(tk => Number(tk.id) === Number(id))) || (!id ? tareas[i] : null);
+}
+function plan360SetTaskEstado(day, i, estado, id){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.tasks[i]) return;
-  d.tasks[i].status = estado;
+  const tk = plan360BuscarTarea(d, i, id);
+  if(!tk) return;
+  tk.status = estado;
   saveDB();
   // El mismo botón se pinta en dos sitios distintos (el detalle del día y
   // la tarjeta "Hoy" de la pantalla principal), y solo el primero tiene el
   // contenedor #p360-task-list — en el segundo hay que repintar la
   // pantalla entera para que también se actualicen los atrasados.
   const lista = document.getElementById('p360-task-list');
-  if(lista) lista.innerHTML = d.tasks.map((tk, j) => plan360TaskRow(day, tk, j)).join('');
-  else renderPlan360Grid();
+  if(lista) lista.innerHTML = d.tasks.map((tk2, j) => plan360TaskRow(day, tk2, j)).join('');
+  else withScrollPreserved(() => renderPlan360Grid());
 }
-function plan360SaveTaskNote(day, i, valor){
+function plan360SaveTaskNote(day, i, valor, id){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
-  if(!d || !d.tasks[i]) return;
-  d.tasks[i].note = valor.trim();
+  const tk = plan360BuscarTarea(d, i, id);
+  if(!tk) return;
+  tk.note = valor.trim();
   saveDB();
 }
 
@@ -6393,7 +6459,7 @@ function plan360MedicionesResumenHtml(obj){
   if(!m.length) return `<p class="muted" style="margin:0 0 6px;font-size:12.5px">${escapeHtml(obj.metrica)} — ${escapeHtml(t('plan360.objNoMeasurementsYet'))}</p>`;
   const primero = m[0], ultimo = m[m.length - 1];
   return `<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
-    ${escapeHtml(obj.metrica)}: ${m.length > 1 ? `<strong style="color:var(--text)">${escapeHtml(primero.valor)}</strong> → ` : ''}<strong style="color:var(--text)">${escapeHtml(ultimo.valor)}</strong> <span>(${escapeHtml(ultimo.fecha)})</span>
+    ${escapeHtml(obj.metrica)}: ${m.length > 1 ? `<strong style="color:var(--text)">${escapeHtml(primero.valor)}</strong> → ` : ''}<strong style="color:var(--text)">${escapeHtml(ultimo.valor)}</strong> <span>(${escapeHtml(plan360FechaLegible(ultimo.fecha))})</span>
   </div>`;
 }
 function renderPlan360SummaryPage(){
