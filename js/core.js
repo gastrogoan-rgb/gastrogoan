@@ -5999,7 +5999,10 @@ const MERGEABLE_ARRAYS = new Set([
   // fusionar y la entrada del otro dispositivo desaparecía sin aviso.
   'auditLog','moodCheckins','turnoSwapRequests','trash',
   // Las mermas se anotan desde cualquier tablet de cocina a la vez.
-  'mermas'
+  'mermas',
+  // El historial de precios lo alimentan la Mega Lista y la recepción de
+  // pedidos, desde cualquier aparato.
+  'preciosHistorial'
 ]);
 
 // Se aplica a TODO MERGEABLE_ARRAYS: el hueco (mergeArraysById hace "gana la
