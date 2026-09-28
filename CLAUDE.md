@@ -352,6 +352,39 @@ respuesta, un editor tipo Word, y cualquier diseño que "huela a IA"
 (tipografías inventadas, tarjetas con borde de color, chips por todas
 partes). Tipografía y paleta: siempre las de GastroGoan.
 
+## Plan 360°: lo escriben DOS, contra una nube que borra lo vacío (28/09)
+
+Auditoría completa del 28/09 (panel del coach + app del negocio): 37 fallos,
+casi todos de dos causas. Conviene tenerlas presentes al tocar cualquier cosa
+del Plan 360:
+
+- **Firebase no guarda `[]`, `{}` ni `null`.** Un día de trabajo sin tareas
+  volvía de la nube SIN `tasks` y la pantalla entera se quedaba en blanco (en
+  la app y en el panel). Se reponen al llegar: `plan360RepararVacios`
+  (js/core.js, también en `applyRemoteBlock('business')`) y
+  `plan360RepararVaciosCoach` (panel).
+- **El bloque `business` lo escriben el coach y el negocio.**
+  - La app lo fusiona **a tres bandas** (`fusion3`, contra
+    `lastSyncedSnapshot.business`): lo que el negocio cambió sin subir se
+    queda, lo del coach entra, y si los dos tocaron el mismo dato gana la nube.
+  - El panel guarda con `update()` **solo las claves `plan360*`**, nunca el
+    negocio entero con `set()`.
+  - El panel reconoce su propio eco con `plan360Huella` (compara como lo
+    devuelve Firebase, sin lo vacío). Sin eso, cada guardado parecía un cambio
+    de fuera y te sacaba al calendario. Si el negocio cambia algo mientras el
+    coach edita, sale un aviso, no un redibujado.
+- **El PDF del Libro de marca vive en `db/plan360LibroPdf`**, no dentro de
+  `business` (viajaba entero con cada cambio y, pasado ~7 MB, Firebase
+  rechazaba TODOS los guardados). Tope: 7 MB.
+- Tareas por **id**, no por posición. Claves de Firebase sin `. # $ / [ ]`
+  (`plan360ClaveFirebase`). Nada de `blob:` en lo que se guarda.
+- Prueba permanente: `test/plan360.mjs`.
+
+⚠️ **Las reglas de Firebase no admiten claves `"//"`.** Desde el 14/09 las
+tres copias llevaban comentarios así y el emulador oficial las rechazaba
+(«Expected '{'»), así que la batería del emulador no arrancaba. Las
+explicaciones están ahora en `reglas/NOTAS.md`.
+
 ## El módulo de I+D (`js/idr.js`)
 
 Un asistente de cocina que crea **elaboraciones base, platos, menús y cartas**

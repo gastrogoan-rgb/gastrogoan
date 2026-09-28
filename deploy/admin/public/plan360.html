@@ -64,7 +64,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-summary-count{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
 .p360-week{margin-bottom:18px}
 .p360-week-label{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
-.p360-week-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.p360-week-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .p360-day{background:#fff;border:1px solid var(--border);border-left:4px solid var(--border);padding:12px 10px;min-height:76px;cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:4px;justify-content:center}
 .p360-day:hover{background:var(--brand-cream)}
 .p360-day-weekday{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
@@ -120,24 +120,24 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
    <style> propio de admin-panel/plan360.html. Sin esquinas redondeadas. */
 .dr-doc{max-width:794px;margin:14px auto 0;background:#fff;border:1px solid #E7E2D9;box-shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px rgba(28,26,23,.06);color:#1C1A17;font-family:'Schibsted Grotesk',system-ui,sans-serif}
 .dr-portada{background:#1C1A17;color:#FAF8F4;padding:44px 44px 36px;border-left:8px solid #4A5D4E}
-.dr-portada-e{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#9DB0A2;margin-bottom:28px}
+.dr-portada-e{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9DB0A2;margin-bottom:28px}
 .dr-portada-t{font-size:44px;font-weight:700;line-height:1;letter-spacing:-.03em}
 .dr-portada-s{font-size:15px;color:#C9C4BA;margin-top:14px;max-width:520px;line-height:1.5}
 .dr-portada-n{margin-top:26px;padding-top:14px;border-top:1px solid #34312A;font-size:17px;font-weight:600}
 .dr-cuerpo{padding:8px 44px 20px}
 .dr-cap{position:relative;overflow:hidden;margin:34px -44px 20px;padding:26px 44px 22px;background:#F1EFE9;border-top:2px solid #1C1A17}
 .dr-cap-n{position:absolute;right:28px;top:-14px;font-size:120px;font-weight:700;line-height:1;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1.5px #CFC8BA}
-.dr-cap-e{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#4A5D4E;font-weight:600;position:relative}
+.dr-cap-e{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#4A5D4E;font-weight:600;position:relative}
 .dr-cap-t{font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:4px;position:relative}
 .dr-cap-s{font-size:13px;color:#716C65;margin-top:4px;position:relative}
 .dr-p{font-size:14px;line-height:1.65;color:#3D3A34;margin:0 0 14px}
 .dr-h{font-size:14.5px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:2px solid #1C1A17}
 .dr-regla{background:#1C1A17;color:#FAF8F4;padding:16px 20px;margin:16px 0;font-size:14.5px;font-weight:600;line-height:1.45}
-.dr-regla span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A95C;margin-bottom:6px;font-weight:500}
+.dr-regla span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A95C;margin-bottom:6px;font-weight:500}
 .dr-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:14px 0}
 .dr-campo{border-left:3px solid #4A5D4E;background:#F7F5F0;padding:10px 14px;margin:12px 0}
 .dr-campos .dr-campo{margin:0}
-.dr-campo-l{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-bottom:6px}
+.dr-campo-l{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-bottom:6px}
 .dr-campo-v{font-size:14px;line-height:1.55;color:#1C1A17}
 .dr-campo-g .dr-campo-v{font-size:18px;font-weight:600;line-height:1.4}
 .dr-campo textarea{width:100%;box-sizing:border-box;border:1px dashed #9FAE9F;background:#fff;padding:8px 10px;font:inherit;font-size:13.5px;resize:vertical;border-radius:0}
@@ -147,18 +147,18 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dr-paso-t{font-size:15px;font-weight:700;margin-bottom:4px}
 .dr-paso-d{font-size:13.5px;line-height:1.55;color:#3D3A34}
 .dr-paso-e{margin-top:8px;font-size:12.5px;line-height:1.45;color:#1C1A17;background:#EDF1EC;padding:7px 10px}
-.dr-paso-e span{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-right:8px}
+.dr-paso-e span{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-right:8px}
 .dr-paso .dr-campo{margin:8px 0 0}
 .dr-check2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:6px 0 10px}
 .dr-check{border:1px solid #1C1A17}
-.dr-check-h{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:9px 14px}
+.dr-check-h{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:9px 14px}
 .dr-check-i{display:flex;gap:10px;align-items:flex-start;padding:8px 14px;border-top:1px solid #E7E2D9;font-size:13px;line-height:1.4}
 .dr-check-i i{width:13px;height:13px;border:1.5px solid #1C1A17;flex:none;margin-top:2px}
 .dr-frases{border:1px solid #1C1A17;margin:14px 0}
-.dr-frases-h{background:#4A5D4E;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:9px 14px}
+.dr-frases-h{background:#4A5D4E;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:9px 14px}
 .dr-frase{padding:9px 14px;border-top:1px solid #E7E2D9;font-size:13.5px;line-height:1.45}
 .dr-tabla-w{overflow-x:auto;margin:10px 0 14px}.dr-tabla{width:100%;border-collapse:collapse;font-size:13px}
-.dr-tabla th{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:8px 10px}
+.dr-tabla th{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:8px 10px}
 .dr-tabla td{padding:8px 10px;border-bottom:1px solid #E7E2D9}.dr-tabla td,.dr-tabla th{white-space:normal}
 .dr-tabla td:first-child{font-weight:600}
 .dr-lista>div{display:grid;grid-template-columns:26px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid #E7E2D9;font-size:13.5px;line-height:1.45;color:#3D3A34}
@@ -178,7 +178,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dr-inv-it-c{grid-column:2;grid-row:1/span 2;align-self:center;font-weight:700;font-size:15px;white-space:nowrap}
 .dr-inv-res td:last-child{text-align:right;white-space:nowrap}.dr-inv-tot td{font-weight:700;border-top:2px solid #1C1A17}
 .dr-inv-lema{margin:24px 0 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E;line-height:1.6}
-.dr-pie{padding:14px 44px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
+.dr-pie{padding:14px 44px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
 .dr-datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border:1px solid #1C1A17;margin:18px 0}
 .dr-dato{padding:14px 16px;border-right:1px solid #E7E2D9}
 .dr-dato:last-child{border-right:none}
@@ -186,7 +186,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dr-dato-l{font-size:12px;color:#3D3A34;margin-top:6px;line-height:1.35}
 .dr-tarjetas{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0 16px}
 .dr-tarjeta{border:1px solid #1C1A17;padding:12px 14px;background:#fff}
-.dr-tarjeta-k{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-bottom:6px}
+.dr-tarjeta-k{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-bottom:6px}
 .dr-tarjeta-t{font-size:14px;font-weight:700;line-height:1.3}
 .dr-tarjeta-d{font-size:12.5px;color:#3D3A34;margin-top:4px;line-height:1.4}
 .dr-tarjetas[data-n="4"]{grid-template-columns:repeat(2,1fr)}
@@ -195,7 +195,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dr-embudo{margin:14px 0}
 .dr-embudo-f{background:#4A5D4E;color:#fff;padding:12px 16px;margin-bottom:4px;font-size:13px;line-height:1.4}
 .dr-embudo-f:nth-child(2){background:#3A4A3E}.dr-embudo-f:nth-child(3){background:#1C1A17}
-.dr-embudo-f span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#C9D3C6;margin-bottom:3px}
+.dr-embudo-f span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#C9D3C6;margin-bottom:3px}
 .dr-embudo-f b{display:block;font-size:14.5px;margin-bottom:2px}
 .dr-ficha{border:2px solid #1C1A17;margin:12px 0 16px;background:#fff}
 .dr-ficha-r{display:grid;grid-template-columns:minmax(150px,38%) 1fr;border-bottom:1px solid #E7E2D9;min-height:34px}
@@ -346,7 +346,7 @@ async function loadClientList(){
   document.getElementById('client-list').innerHTML = entries.map(e => {
     const visto = Number(localStorage.getItem(plan360SeenKey(e.tenantId)) || 0);
     const nuevo = e.lastActivityAt > visto;
-    return `<div class="folder-tile" onclick="openClient('${esc(e.tenantId)}','${esc(e.name)}')">
+    return `<div class="folder-tile" data-t="${esc(e.tenantId)}" data-n="${esc(e.name)}" onclick="openClient(this.dataset.t, this.dataset.n)">
       <div class="avatar">${esc(e.name.slice(0,2).toUpperCase())}</div>
       <div style="flex:1"><strong>${esc(e.name)}</strong></div>
       ${nuevo ? '<span style="background:var(--olive);color:#fff;font-family:\'IBM Plex Mono\',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:4px 9px;flex:none">Nuevo</span>' : ''}
@@ -393,13 +393,23 @@ async function openClient(tenantId, name){
     currentBizRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/business');
     currentBizRef.on('value', snap => {
       const val = snap.val();
-      const json = stableJson(val);
-      if(json === lastPushedJson) return; // es el eco de lo que acabamos de escribir nosotros mismos
+      // Solo cuenta lo del Plan 360: si el negocio vende o cambia su
+      // configuración, al coach no le afecta y no hay que tocar su pantalla.
+      const huella = plan360Huella(val);
+      if(huella === lastPushedJson) return; // eco de nuestro guardado, o un cambio del negocio fuera del Plan 360
+      const primeraCarga = lastPushedJson === null;
+      lastPushedJson = huella;
       remoteBiz = val || {};
       ensureRemotePlan360();
       intentarMigrarReunionPersonal();
+      migrarLibroPdfANodo();
+      if(migracionIdsPendiente){ migracionIdsPendiente = false; saveRemoteBiz(); }
       document.getElementById('client-status').textContent = 'Conectado — los cambios se ven al instante en su app, y los suyos aquí.';
-      renderClientGrid();
+      // Si el coach está dentro de un día, un documento o el team building,
+      // redibujar el calendario le sacaba de ahí y perdía lo que llevaba
+      // escrito. Solo se redibuja si está en el calendario; si no, se avisa.
+      if(primeraCarga || document.getElementById('p360-coach-calendario')) renderClientGrid();
+      else avisoCambiosDelNegocio();
     }, err => {
       console.error(err);
       document.getElementById('client-status').textContent = '⚠️ Error de conexión: ' + (err.message || err.code || 'error');
@@ -409,6 +419,8 @@ async function openClient(tenantId, name){
     // ningún "eco de nuestro propio guardado" que temer del lado del
     // negocio — pero sí puede haberlo si este mismo panel está abierto en
     // dos pestañas, de ahí el mismo filtro por lastPushedCoachPrivateJson.
+    currentLibroPdfRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/plan360LibroPdf');
+    libroPdfCache = null;
     currentCoachPrivateRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/coachPrivate');
     currentCoachPrivateRef.on('value', snap => {
       const val = snap.val();
@@ -427,6 +439,7 @@ function closeClient(){
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
   currentBizRef = null; currentTenantId = null; remoteBiz = null;
   currentCoachPrivateRef = null; coachPrivate = null;
+  currentLibroPdfRef = null; libroPdfCache = null;
   document.getElementById('view-client').classList.add('hidden');
   document.getElementById('view-list').classList.remove('hidden');
   loadClientList();
@@ -438,6 +451,10 @@ function closeClient(){
 // nada de lo que se guardara desde el panel llegara nunca a la nube.
 function sinIndefinidos(v){
   if(v === undefined) return null;
+  // Las fotos y audios del team building son un blob: LOCAL de esta pestaña.
+  // Subido a la nube era un enlace roto para siempre (tras recargar, y en
+  // cualquier otro aparato): se usan en la sesión, pero no se guardan.
+  if(typeof v === 'string' && v.startsWith('blob:')) return null;
   if(typeof v === 'number' && !Number.isFinite(v)) return null;
   if(v === null || typeof v !== 'object') return v;
   if(Array.isArray(v)) return Array.from(v, x => x === undefined ? null : sinIndefinidos(x));
@@ -463,12 +480,49 @@ function stableJson(v){
   }
   return JSON.stringify(v);
 }
+/* Lo que Firebase guarda de verdad: sin null, sin listas ni objetos vacíos.
+   Antes se comparaba lo ENVIADO (lleno de null y []) con lo que volvía de
+   la nube (sin ellos): nunca coincidían, el panel creía que el cambio
+   venía de fuera y redibujaba el calendario tras casi cada guardado — el
+   «me saca al calendario al dar un tick». */
+function comoFirebase(v){
+  if(v === null || v === undefined) return undefined;
+  if(typeof v === 'number' && !Number.isFinite(v)) return undefined;
+  if(Array.isArray(v)){
+    const a = v.map(comoFirebase);
+    while(a.length && a[a.length - 1] === undefined) a.pop();
+    return a.length ? a.map(x => x === undefined ? null : x) : undefined;
+  }
+  if(typeof v === 'object'){
+    const o = {};
+    Object.keys(v).forEach(k => { const x = comoFirebase(v[k]); if(x !== undefined) o[k] = x; });
+    return Object.keys(o).length ? o : undefined;
+  }
+  return v;
+}
+const esClavePlan360 = k => k.startsWith('plan360');
+function plan360Huella(biz){
+  const o = {};
+  Object.keys(biz || {}).filter(esClavePlan360).forEach(k => { o[k] = biz[k]; });
+  const n = comoFirebase(o);
+  return stableJson(n === undefined ? null : n);
+}
+function avisoCambiosDelNegocio(){
+  const st = document.getElementById('client-status');
+  if(!st) return;
+  st.innerHTML = 'El negocio ha hecho cambios en su Plan 360. <button class="btn btn-sm" onclick="renderClientGrid()">Ver calendario actualizado</button>';
+}
 function saveRemoteBiz(){
   if(!currentBizRef || !remoteBiz) return;
   const limpio = sinIndefinidos(remoteBiz);
-  lastPushedJson = stableJson(limpio);
+  lastPushedJson = plan360Huella(limpio);
   savingRemote = true;
-  currentBizRef.set(limpio).catch(e => {
+  // update() y SOLO las claves del Plan 360: con set() se reescribía el
+  // negocio entero y, si el negocio cambiaba algo a la vez (una venta, su
+  // configuración), el guardado del coach lo borraba.
+  const cambios = {};
+  Object.keys(limpio).filter(esClavePlan360).forEach(k => { cambios[k] = limpio[k]; });
+  currentBizRef.update(cambios).catch(e => {
     console.error('Error guardando en la nube del negocio', e);
     alert('No se pudo guardar en la nube: ' + (e.message || e.code || 'error'));
   }).finally(() => { savingRemote = false; });
@@ -487,6 +541,15 @@ function saveRemoteBiz(){
    pero ya no viaja dentro de la sincronización rutinaria de cada aparato.
    ============================================================ */
 let currentCoachPrivateRef = null;
+// El PDF del Libro de marca vive en su propio nodo (db/plan360LibroPdf), no
+// dentro de db/business: ahí viajaba entero (hasta ~20 MB en base64) con
+// CADA cambio del negocio, y pasado ~7 MB Firebase rechazaba el guardado y
+// dejaba de guardarse todo lo demás.
+let currentLibroPdfRef = null;
+// Los id que la migración inventa se GUARDAN al momento: si no, eran
+// distintos en cada carga y las tareas y reuniones no casaban con su objetivo.
+let migracionIdsPendiente = false;
+let libroPdfCache = null;
 let coachPrivate = null;
 let lastPushedCoachPrivateJson = null;
 function plan360FreshCoachPrivadoDia(){
@@ -3691,7 +3754,41 @@ function plan360FreshDoc(d){
   }
   return doc;
 }
+/* Firebase no guarda listas ni objetos vacíos: un día de trabajo sin
+   tareas vuelve SIN `tasks` y el calendario del coach no se pintaba; las
+   notas de Creatividad ({A:{},B:{}}) desaparecían y no se podía puntuar.
+   Se reponen cada vez que se carga el negocio. Mismo criterio que
+   plan360RepararVacios en js/core.js. */
+function plan360RepararVaciosCoach(biz){
+  if(!biz || !Array.isArray(biz.plan360Program)) return;
+  biz.plan360Program.forEach(d => {
+    if(!d) return;
+    if(d.phase === 'trabajo' && !Array.isArray(d.tasks)) d.tasks = [];
+    if(d.reunion && !Array.isArray(d.reunion.objectiveIds)) d.reunion.objectiveIds = [];
+    if(d.day === 2){
+      if(!Array.isArray(d.objectives)) d.objectives = [];
+      if(!Array.isArray(d.inversiones)) d.inversiones = [];
+      d.objectives.forEach(o => { if(o && !Array.isArray(o.mediciones)) o.mediciones = []; });
+      const tb = d.teamBuilding;
+      if(tb){
+        if(typeof tb.premioEntregado !== 'object' || !tb.premioEntregado) tb.premioEntregado = {};
+        if(tb.kahoot){
+          if(!Array.isArray(tb.kahoot.preguntas)) tb.kahoot.preguntas = [];
+          if(!tb.kahoot.puntos) tb.kahoot.puntos = {A: 0, B: 0};
+          if(!tb.kahoot.marcActual) tb.kahoot.marcActual = {A: false, B: false};
+        }
+        if(tb.creatividad){
+          if(!tb.creatividad.notas) tb.creatividad.notas = {A: {}, B: {}};
+          if(!tb.creatividad.notas.A) tb.creatividad.notas.A = {};
+          if(!tb.creatividad.notas.B) tb.creatividad.notas.B = {};
+          if(!tb.creatividad.puntos) tb.creatividad.puntos = {A: 0, B: 0};
+        }
+      }
+    }
+  });
+}
 function ensureRemotePlan360(){
+  plan360RepararVaciosCoach(remoteBiz);
   if(!Array.isArray(remoteBiz.plan360Docs) || !remoteBiz.plan360Docs.length){
     remoteBiz.plan360Docs = PLAN360_DOCS_TEMPLATE.map(plan360FreshDoc);
   }
@@ -3748,7 +3845,11 @@ function ensureRemotePlan360(){
     && Array.isArray(remoteBiz.plan360Intake.sections)
     && remoteBiz.plan360Intake.sections.map(s => s.title).join('|') !== PLAN360_INTAKE_TEMPLATE.map(s => s.title).join('|');
   if(!remoteBiz.plan360Intake || !Array.isArray(remoteBiz.plan360Intake.sections) || intakeDesactualizado){
-    remoteBiz.plan360Intake = {sections: PLAN360_INTAKE_TEMPLATE.map(s => ({title: s.title, questions: s.questions.map(q => ({q, a: ''}))}))};
+    // Conserva cada respuesta cuya pregunta sigue existiendo (antes se
+    // regeneraba en blanco y el negocio perdía todo lo contestado).
+    const previas = {};
+    ((remoteBiz.plan360Intake && remoteBiz.plan360Intake.sections) || []).forEach(sec => (sec.questions || []).forEach(x => { if(x && x.a) previas[x.q] = x.a; }));
+    remoteBiz.plan360Intake = {sections: PLAN360_INTAKE_TEMPLATE.map(s => ({title: s.title, questions: s.questions.map(q => ({q, a: previas[q] || ''}))}))};
   }
   if(!Array.isArray(remoteBiz.plan360Program) || !remoteBiz.plan360Program.length){
     remoteBiz.plan360Program = PLAN360_DEFAULT_PROGRAM.map(d => {
@@ -3939,7 +4040,7 @@ function ensureRemotePlan360(){
       // un objetivo concreto — antes los objetivos no tenían ninguno
       // (solo se leían por posición, y esa posición cambia al filtrar y
       // reordenar por prioridad en cada guardado).
-      if(o.id === undefined) o.id = plan360GenId();
+      if(o.id === undefined){ o.id = plan360GenId(); migracionIdsPendiente = true; }
       if(o.metrica === undefined) o.metrica = '';
       if(!Array.isArray(o.mediciones)) o.mediciones = [];
       if(o.estadoFinal === undefined) o.estadoFinal = null;
@@ -3952,7 +4053,7 @@ function ensureRemotePlan360(){
   // de feedback aparte — sin perder nada de lo que ya hubiera escrito.
   (remoteBiz.plan360Program || []).filter(x => x.phase === 'trabajo').forEach(x => {
     (x.tasks || []).forEach(tk => {
-      if(tk.id === undefined) tk.id = plan360GenId();
+      if(tk.id === undefined){ tk.id = plan360GenId(); migracionIdsPendiente = true; }
       if(tk.title === undefined){
         tk.title = tk.text || '';
         tk.description = tk.description || '';
@@ -3982,7 +4083,9 @@ function ensureRemotePlan360(){
       }
     });
   }
-  if(!remoteBiz.plan360StartDate) remoteBiz.plan360StartDate = todayStr();
+  // Se guarda al momento: sin guardar, cada día que se abría el negocio la
+  // fecha de inicio era «hoy» otra vez y el calendario entero se desplazaba.
+  if(!remoteBiz.plan360StartDate){ remoteBiz.plan360StartDate = todayStr(); migracionIdsPendiente = true; }
   if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
   if(!remoteBiz.plan360Contract){
     remoteBiz.plan360Contract = {
@@ -4049,6 +4152,8 @@ function saveStartDate(){
 }
 function renderClientGrid(){
   renderStartDateControl();
+  const st = document.getElementById('client-status');
+  if(st && st.querySelector('button')) st.textContent = 'Conectado — los cambios se ven al instante en su app, y los suyos aquí.';
   const prog = remoteBiz.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
   const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.status === 'hecha').length, 0);
@@ -4063,10 +4168,13 @@ function renderClientGrid(){
     if(!semana){ semana = {inicio: inicioSemana, dias: []}; semanas.push(semana); }
     semana.dias.push(d);
   });
-  const dayCard = d => {
+  const dayCard = (d, k) => {
     const {weekday, dayMonth} = plan360FormatDate(d.day);
+    // Cada día en su columna (lunes = 1), como un calendario de verdad.
+    const [yy, mm, ddd] = plan360DateForDay(d.day).split('-').map(Number);
+    const colStyle = k === 0 ? `grid-column-start:${(new Date(yy, mm - 1, ddd).getDay() + 6) % 7 + 1};` : '';
     if(d.phase === 'presencial'){
-      return `<div class="p360-day p360-day-presencial" onclick="renderDayDetail(${d.day})">
+      return `<div class="p360-day p360-day-presencial" style="${colStyle}" onclick="renderDayDetail(${d.day})">
         <div class="p360-day-weekday">${esc(weekday)}</div>
         <div class="p360-day-date">${esc(dayMonth)}</div>
         <div class="p360-day-tag">Presencial</div>
@@ -4075,14 +4183,14 @@ function renderClientGrid(){
     const col = plan360PriorityColor(d.priority);
     const done = d.tasks.length && d.tasks.every(x => x.status === 'hecha');
     const doneCount = d.tasks.filter(x => x.status === 'hecha').length;
-    return `<div class="p360-day" style="${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
+    return `<div class="p360-day" style="${colStyle}${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
       <div class="p360-day-weekday">${esc(weekday)}</div>
       <div class="p360-day-date">${esc(dayMonth)}</div>
       ${d.reunion ? `<div class="p360-day-tag">${d.reunion.tipo === 'presencial' ? 'Presencial' : 'Online'}</div>` : ''}
       ${d.tasks.length ? `<div class="p360-day-progress">${done ? '✓' : doneCount + '/' + d.tasks.length}</div>` : ''}
     </div>`;
   };
-  document.getElementById('client-grid').innerHTML = `
+  document.getElementById('client-grid').innerHTML = `<span id="p360-coach-calendario" hidden></span>
     <div class="p360-toprow">
       <div class="p360-card" onclick="renderIntakePage()">
         <i class="ti ti-clipboard-text"></i>
@@ -4094,7 +4202,7 @@ function renderClientGrid(){
       </div>
     </div>
     <div class="card p360-summary-bar" onclick="renderSummaryPage()">
-      <div>Programa de 30 días</div>
+      <div>Programa de 28 días</div>
       <div class="p360-summary-count">★ ${hechos} / ${totalTareas}</div>
     </div>
     ${semanas.map((s, i) => `
@@ -4870,7 +4978,33 @@ function descargarLibroMarcaPdf(){
   win.document.write(plan360ConstruirHtmlLibroMarcaPdf(negocio, plan360LibroImagenesDeArea, remoteBiz.name || 'tu negocio'));
   win.document.close();
 }
-const PLAN360_LIBRO_PDF_MAX_MB = 15;
+const PLAN360_LIBRO_PDF_MAX_MB = 7; // en base64 ocupa un tercio más: 7 MB ≈ 9,4 MB, bajo el tope de 10 MB por texto de Firebase
+function libroTienePdf(doc){ return !!(doc && (doc.pdfData || doc.pdfName)); }
+// Libros subidos antes de separar el PDF: se mudan solos al abrir el negocio.
+function migrarLibroPdfANodo(){
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  if(!doc || !doc.pdfData || !currentLibroPdfRef) return;
+  const data = doc.pdfData;
+  currentLibroPdfRef.set({data, nombre: doc.pdfName || 'libro-de-marca.pdf', size: doc.pdfSize || 0, subidoAt: Date.now()}).then(() => {
+    libroPdfCache = data;
+    doc.pdfData = null;
+    saveRemoteBiz();
+  }).catch(e => console.error('No se pudo mudar el PDF del Libro de marca', e));
+}
+async function verLibroPdf(){
+  let data = libroPdfCache;
+  if(!data && currentLibroPdfRef){
+    const snap = await currentLibroPdfRef.once('value');
+    data = snap.val() && snap.val().data;
+    libroPdfCache = data || null;
+  }
+  const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
+  data = data || (doc && doc.pdfData);
+  if(!data){ alert('No se encontró el PDF en la nube del negocio.'); return; }
+  const a = document.createElement('a');
+  a.href = data; a.download = (doc && doc.pdfName) || 'libro-de-marca.pdf';
+  document.body.appendChild(a); a.click(); a.remove();
+}
 function subirLibroMarcaPdf(input){
   const file = input.files[0];
   if(!file) return;
@@ -4888,11 +5022,16 @@ function subirLibroMarcaPdf(input){
   if(!doc) return;
   const reader = new FileReader();
   reader.onload = () => {
-    doc.pdfData = reader.result;
-    doc.pdfName = file.name;
-    doc.pdfSize = file.size;
-    saveRemoteBiz();
-    renderLibroMarcaHub();
+    if(!currentLibroPdfRef){ alert('No hay conexión con la nube del negocio.'); return; }
+    const data = reader.result;
+    currentLibroPdfRef.set({data, nombre: file.name, size: file.size, subidoAt: Date.now()}).then(() => {
+      libroPdfCache = data;
+      doc.pdfData = null;
+      doc.pdfName = file.name;
+      doc.pdfSize = file.size;
+      saveRemoteBiz();
+      renderLibroMarcaHub();
+    }).catch(e => alert('No se pudo subir el PDF: ' + (e.message || e.code || 'error')));
   };
   reader.onerror = () => alert('No se pudo leer el archivo.');
   reader.readAsDataURL(file);
@@ -4901,6 +5040,8 @@ function quitarLibroMarcaPdf(){
   if(!confirm('¿Quitar el PDF subido? El negocio dejará de verlo.')) return;
   const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
   if(!doc) return;
+  if(currentLibroPdfRef) currentLibroPdfRef.remove().catch(e => console.error(e));
+  libroPdfCache = null;
   doc.pdfData = null;
   doc.pdfName = null;
   doc.pdfSize = null;
@@ -4918,23 +5059,23 @@ function renderLibroMarcaHub(){
     <div class="card" style="margin:14px 0">
       <div style="font-weight:600;margin-bottom:6px">El PDF final</div>
       <p class="muted" style="margin-bottom:10px">Diséñalo fuera (o pídemelo con todo el contenido del cuestionario) y súbelo aquí tal cual — eso es lo que verá el negocio.</p>
-      ${doc.pdfData ? `
+      ${libroTienePdf(doc) ? `
         <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--brand-cream);border:1px solid var(--border);margin-bottom:10px">
           <i class="ti ti-file-type-pdf" style="font-size:22px;color:var(--olive)"></i>
           <div style="flex:1">
             <div style="font-weight:600;font-size:13.5px">${esc(doc.pdfName || 'libro-de-marca.pdf')}</div>
             <div class="muted" style="font-size:12px">${(doc.pdfSize / (1024 * 1024)).toFixed(1)} MB</div>
           </div>
-          <a href="${doc.pdfData}" download="${esc(doc.pdfName || 'libro-de-marca.pdf')}" class="btn btn-sm">Ver</a>
+          <button class="btn btn-sm" onclick="verLibroPdf()">Ver</button>
           <button class="btn btn-sm" onclick="quitarLibroMarcaPdf()">Quitar</button>
         </div>
       ` : ''}
       <label class="btn btn-sm" style="display:inline-block;cursor:pointer">
-        ${doc.pdfData ? 'Sustituir PDF' : 'Subir PDF'}
+        ${libroTienePdf(doc) ? 'Sustituir PDF' : 'Subir PDF'}
         <input type="file" accept="application/pdf" onchange="subirLibroMarcaPdf(this)" style="display:none">
       </label>
     </div>
-    ${doc.pdfData ? `
+    ${libroTienePdf(doc) ? `
       <div class="card" style="margin:14px 0;text-align:center">
         ${!doc.sentAt
           ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
@@ -5595,6 +5736,11 @@ function tbSentidosRepair(tb){
       tb.sentidos[sen.id] = plan360FreshBanco();
     }
   });
+  if(tb.creatividad){
+    if(!tb.creatividad.notas) tb.creatividad.notas = {A: {}, B: {}};
+    if(!tb.creatividad.notas.A) tb.creatividad.notas.A = {};
+    if(!tb.creatividad.notas.B) tb.creatividad.notas.B = {};
+  }
   if(!tb.creatividad || !Array.isArray(tb.creatividad.criterios)){
     const fresh = plan360FreshTeamBuilding().creatividad;
     tb.creatividad = {...fresh, ...tb.creatividad, criterios: (tb.creatividad && tb.creatividad.criterios) || fresh.criterios, notas: (tb.creatividad && tb.creatividad.notas) || fresh.notas};
@@ -6175,7 +6321,7 @@ function tbRenderBanco(day, tb, sen){
           <div style="margin-top:10px">
             <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ideas rápidas (un toque para añadir):</div>
             <div style="display:flex;flex-wrap:wrap;gap:5px">
-              ${sugerencias.slice(0, 6).map(s => `<button class="btn btn-sm" onclick="tbBancoAnadirSugerida(${day},'${sen.id}','${esc(s).replace(/'/g,"\\'")}')">${esc(s)}</button>`).join('')}
+              ${sugerencias.slice(0, 6).map(s => `<button class="btn btn-sm" data-v="${esc(s)}" onclick="tbBancoAnadirSugerida(${day},'${sen.id}',this.dataset.v)">${esc(s)}</button>`).join('')}
             </div>
           </div>` : '';
       })()}
@@ -6874,10 +7020,10 @@ function tbRenderFinal(box, day, tb){
     <div class="card">
       <div class="field"><label>Premio para el equipo ganador</label><textarea id="tb-premio" rows="2" placeholder="Escribe uno o elige una idea">${esc(tb.premio || '')}</textarea></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-        ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" onclick="tbElegirPremio(${day},'${esc(p).replace(/'/g,"\\'")}')">${esc(p)}</button>`).join('')}
+        ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" data-v="${esc(p)}" onclick="tbElegirPremio(${day},this.dataset.v)">${esc(p)}</button>`).join('')}
       </div>
       <button class="btn btn-sm" onclick="tbGuardarPremio(${day})">Guardar premio</button>
-      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} onclick="tbRevelarPremio('${esc(ganador||'')}','${esc(tb.premio||'')}','${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}')" style="margin-left:6px">🎁 Premios</button>
+      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} data-g="${esc(ganador||'')}" data-p="${esc(tb.premio||'')}" data-f="${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}" onclick="tbRevelarPremio(this.dataset.g, this.dataset.p, this.dataset.f)" style="margin-left:6px">🎁 Premios</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-sm" onclick="tbReiniciar(${day})">↺ Reiniciar las 3 pruebas</button>
@@ -7272,7 +7418,10 @@ function addObjective(day){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   syncObjectivesFromForm(d);
-  d.objectives.push({titulo: '', explicacion: '', prioridad: 'esencial'});
+  // Completo, igual que en la app (js/app.js): sin id, las tareas y la
+  // agenda de las reuniones no casaban con el objetivo, y el estado final
+  // se aplicaba al primer objetivo sin id en vez de al elegido.
+  d.objectives.push({id: plan360GenId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null});
   document.getElementById('obj-list').innerHTML = d.objectives.map((o, i) => objRow(o, i)).join('');
 }
 function syncObjectivesFromForm(d){
@@ -7506,7 +7655,7 @@ function cambiarReunionTipo(day, tipo){
 function toggleReunionObjetivo(day, objId, checked){
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunion) return;
-  const set = new Set(d.reunion.objectiveIds);
+  const set = new Set(d.reunion.objectiveIds || []);
   if(checked) set.add(objId); else set.delete(objId);
   d.reunion.objectiveIds = [...set];
   saveRemoteBiz();
@@ -7517,7 +7666,9 @@ async function saveTrabajo(day){
   d.title = (document.getElementById('day-title').value || '').trim() || d.title;
   d.priority = document.getElementById('day-priority').value || null;
   syncTasksFromForm(d);
-  d.tasks = d.tasks.filter(tk => tk.title);
+  // Los archivos se leen ANTES de quitar las tareas vacías: los inputs van
+  // numerados por la posición en pantalla, y filtrar primero corría las
+  // posiciones — el adjunto de la tarea 3 acababa en la 2.
   for(let i = 0; i < d.tasks.length; i++){
     const fileEl = document.getElementById('task-file-' + i);
     const file = fileEl && fileEl.files && fileEl.files[0];
@@ -7526,6 +7677,9 @@ async function saveTrabajo(day){
     d.tasks[i].fileData = await readFileAsDataUrl(file);
     d.tasks[i].fileName = file.name;
   }
+  const sinTitulo = d.tasks.filter(tk => !tk.title && (tk.description || tk.fileName)).length;
+  d.tasks = d.tasks.filter(tk => tk.title);
+  if(sinTitulo) alert(sinTitulo === 1 ? 'Una tarea sin título no se ha guardado: ponle título para que el negocio la vea.' : sinTitulo + ' tareas sin título no se han guardado: ponles título para que el negocio las vea.');
   saveRemoteBiz();
   renderClientGrid();
 }

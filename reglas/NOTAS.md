@@ -1,0 +1,15 @@
+# Por qué las reglas son así
+
+Firebase no admite claves de comentario (`"//": "…"`) en las reglas: el emulador oficial las rechaza con «Expected '{'» y la consola hace lo mismo. Las explicaciones que iban dentro de los JSON viven aquí.
+
+- El salto de +40 por escritura es lo que impide que alguien de fuera deje el aforo en 500 y cierre la agenda del negocio de un plumazo. La app solo suma los comensales de UNA reserva, asi que nunca se acerca a ese tope.
+- Mismo tope que aforoHold: la app suma de uno en uno.
+- El token es lo unico que separa el pedido de un cliente del de otro, asi que se exige que sea largo: sin longitud minima valia 'a' y el seguimiento de cualquiera se podia adivinar probando. Aqui no habia NINGUN .validate: se podia escribir cualquier cosa en esta rama.
+- Guía mínima: en qué proyecto de Firebase está el espejo público de este negocio. Se lee SIN autenticar y por REST a propósito: una petición HTTP no abre socket, así que no gasta ninguna de las 100 conexiones simultáneas del plan gratuito. No expone nada: apiKey y databaseURL no son secretos (viajan en el JS de cualquier web con Firebase); lo que protege los datos son las reglas del proyecto del negocio.
+- El tope de +40 por escritura es lo que impide que alguien de fuera ponga el aforo en 500 y cierre la agenda del negocio de una sola vez. La app solo suma los comensales de UNA reserva, asi que nunca se acerca.
+- El token es lo unico que separa el pedido de un cliente del de otro: sin longitud minima valia 'a' como token y el seguimiento de cualquiera se podia adivinar probando.
+- Lectura abierta: la resuelve la web publica de reservas por REST, sin abrir socket, para no gastar conexiones simultaneas del plan gratuito. Solo devuelve el publicId, que ya va en el QR y en el enlace que el negocio reparte.
+- Puntero minimo: que negocios tienen el Plan 360 activo, para que el panel del coach (admin-panel/) arme su lista sin que nadie tenga que copiarle nada a mano. El propio negocio escribe su entrada al activar el plan (auth anonima, como tenantLookup); SOLO el admin puede LISTARLOS todos.
+- El admin puede crear, BORRAR (anular una licencia) o actualizar un codigo ya emitido (p.ej. marcar plan360 despues de crearlo). Antes solo se podia crear o borrar, asi que una venta era irreversible: ni una devolucion ni un error al vender tenian arreglo desde el generador.
+- Codigos anulados. Lo escribe SOLO el admin desde el generador; lo lee la app al arrancar (checkLicenseRevocation) para bloquear una licencia ya canjeada. La lectura es por codigo concreto: nadie puede listar la lista entera de anulados.
+- El admin puede BORRAR un codigo (anular una licencia). Antes solo se podia crear (!data.exists()), asi que una venta era irreversible: ni una devolucion ni un error al vender tenian arreglo desde el generador.
