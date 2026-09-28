@@ -2172,6 +2172,7 @@ Entregar la cuenta con calidez, agradecer y ofrecer una razón concreta para vol
 ## 9. Cierre y fidelización
 Dejar una invitación concreta y personal que genere motivo de retorno (tarjeta, oferta o nota).
 > "Si desean, les dejo una tarjeta con un 10% en su próxima visita entre semana."`},
+  {id: 'barra-rentable', title: 'Barra y bebidas rentables', categoria: 'Sala'},
   {id: 'playbook-cocina', title: 'Playbook de cocina', categoria: 'Cocina'},
   {id: 'gestion-mermas', title: 'Gestión de mermas', categoria: 'Cocina'},
   {id: 'ingenieria-carta', title: 'Ingeniería de carta', categoria: 'Cocina'},
@@ -2738,6 +2739,70 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo más importante para este equipo de sala', grande: true},
     ],
   },
+  'barra-rentable': {
+    eyebrow: 'Guía · Sala y barra',
+    titulo: 'Barra y bebidas rentables',
+    sub: 'La bebida es lo que más margen deja y lo que peor se controla. Cómo calcular cada copa, medir, controlar y vender.',
+    bloques: [
+      {t: 'dato', items: [{v: '5', l: 'copas de vino salen de una botella'}, {v: '14', l: 'medidas de 5 cl en una botella de 70 cl'}, {v: '2 cl', l: 'de más por copa = 4 copas perdidas por botella'}, {v: '1', l: 'inventario de barra a la semana'}]},
+      {t: 'cap', n: '01', titulo: 'Por qué importa', sub: 'En la barra, el dinero se va de gota en gota.'},
+      {t: 'p', x: 'Una copa bien servida puede dejar un 70-80 % de margen, más que casi cualquier plato. Pero una medida a ojo, una botella que no se apunta o una invitación que nadie registra se comen ese margen sin que se vea en ningún sitio: la botella simplemente se acaba antes.'},
+      {t: 'regla', x: 'Lo que no se mide en la barra no se controla. Y lo que no se controla, se regala.'},
+
+      {t: 'cap', n: '02', titulo: 'El coste de cada copa', sub: 'Primero saber cuánto cuesta. Después, cuánto cobrar.'},
+      {t: 'p', x: 'El coste de una copa es el precio de la botella dividido entre las copas que da, más lo que se añade: tónica, hielo, fruta. Estas son las cuentas de ejemplo, sin IVA:'},
+      {t: 'tabla', cab: ['Bebida', 'Compra', 'Rinde', 'Coste por copa', 'PVP sin IVA', 'Coste %'], filas: [
+        ['Vino de la casa', 'Botella 75 cl a 6 €', '5 copas de 15 cl', '1,20 €', '3,50 €', '34 %'],
+        ['Gin-tonic', 'Ginebra 70 cl a 18 € + tónica', '14 medidas de 5 cl', '2,34 €', '9,00 €', '26 %'],
+        ['Caña', 'Barril de 30 l a 90 €', '≈ 135 cañas de 20 cl', '0,67 €', '2,27 €', '29 %'],
+        ['Café solo', '1 kg de café a 20 €', '≈ 140 cafés de 7 g', '0,14 €', '1,36 €', '10 %']]},
+      {t: 'p', x: 'En la caña, un barril de 30 litros da 150 cañas en teoría, pero la espuma, la primera tirada y el final del barril se llevan alrededor de un 10 %. Por eso se calcula con 135.'},
+      {t: 'h', x: 'Cómo se hace en la app'},
+      {t: 'p', x: 'Cada copa y cada combinado se crea como una receta en el Escandallo de Sala: los centilitros de cada ingrediente, con su precio de la Mega Lista. La app calcula el coste y el margen, y al vender descuenta el stock de la barra igual que en cocina.'},
+      {t: 'campo', id: 'costes', label: 'Nuestras copas calculadas', ayuda: 'Bebida, coste y precio de este negocio'},
+
+      {t: 'cap', n: '03', titulo: 'La carta de vinos', sub: 'Ni muy larga ni con el mismo margen para todo.'},
+      {t: 'tabla', cab: ['Botella a coste', 'Multiplicar por', 'PVP orientativo', 'Deja'], filas: [['Hasta 8 €', '×3 a ×3,5', '6 € → 19 €', '13 €'], ['De 8 a 20 €', '×2,5 a ×3', '15 € → 40 €', '25 €'], ['Más de 20 €', '×2 a ×2,5', '40 € → 85 €', '45 €']]},
+      {t: 'p', x: 'Los vinos caros llevan un multiplicador más bajo y aun así dejan más euros por botella. Un margen desmedido en los vinos buenos hace que nadie los pida.'},
+      {t: 'lista', titulo: 'Una carta que se vende', items: ['Pocas referencias bien elegidas: una bodega de 15-25 vinos se entiende, una de 80 asusta.', 'Siempre 3-4 vinos por copa, rotando: es la forma más fácil de vender vino.', 'Ordenada por estilo (fresco, con cuerpo, dulce), no solo por denominación.', 'Una línea de descripción por vino: «Blanco fresco y afrutado, ideal con el arroz».', 'El vino por copa, abierto y fechado: con un tapón de vacío aguanta 2-3 días.']},
+      {t: 'campos', items: [
+        {id: 'vinos-copa', label: 'Vinos por copa', ayuda: 'Cuáles y a qué precio'},
+        {id: 'n-referencias', label: 'Referencias en carta', ayuda: 'Cuántas y de qué estilos'},
+      ]},
+
+      {t: 'cap', n: '04', titulo: 'Servir con medida', sub: 'La generosidad a ojo sale muy cara.'},
+      {t: 'p', x: 'Un gin-tonic con 7 cl en vez de 5 parece un detalle. En una botella de 70 cl son 10 copas en vez de 14: cuatro copas que no se cobran, 36 € por botella a 9 € la copa. Con diez botellas al mes, son 360 € que se van por el vaso.'},
+      {t: 'check', titulo: 'Las reglas de la barra', items: ['Destilados siempre con medidor (jigger), nunca a ojo', 'Copa de vino con la medida marcada o una copa de referencia', 'La caña, tirada con la técnica de la casa y sin tirar la espuma sobrante', 'Todo se marca en el TPV antes de servirse, también lo que se invita', 'Las invitaciones, con nombre y motivo, y solo quien tiene permiso', 'Botellas abiertas con fecha']},
+      {t: 'campos', items: [
+        {id: 'medida-destilado', label: 'Medida de destilado', ayuda: 'Por ejemplo, 5 cl'},
+        {id: 'medida-vino', label: 'Copa de vino', ayuda: 'Por ejemplo, 15 cl'},
+        {id: 'invitaciones', label: 'Quién puede invitar', ayuda: 'Y hasta qué'},
+      ]},
+
+      {t: 'cap', n: '05', titulo: 'Controlar la barra', sub: 'Una vez a la semana, en veinte minutos.'},
+      {t: 'pasos', items: [
+        {t: 'Contar lo que hay', d: 'El mismo día y a la misma hora cada semana, antes de abrir. Las botellas empezadas, en décimas (media botella = 0,5).', e: ''},
+        {t: 'Compararlo con lo vendido', d: 'Si las copas están escandalladas, la app ha ido descontando del stock cada venta: lo que dice el stock y lo que hay en la estantería deberían coincidir.', e: ''},
+        {t: 'Buscar la diferencia', d: 'Si falta más de lo normal, algo se sirve sin medida, sin marcar o se rompe sin anotarse.', e: ''},
+        {t: 'Anotar las mermas', d: 'La botella rota, el barril que se estropea o la copa que vuelve: en Stock de Sala → «Anotar merma». Así la diferencia de la semana tiene explicación.', e: ''},
+      ]},
+      {t: 'campos', items: [
+        {id: 'dia-inventario', label: 'Día del inventario', ayuda: 'Por ejemplo, lunes a las 11:00'},
+        {id: 'resp-barra', label: 'Responsable de barra', ayuda: 'Nombre'},
+      ]},
+
+      {t: 'cap', n: '06', titulo: 'Vender bebida sin empujar', sub: 'Los momentos en que el cliente sí quiere algo más.'},
+      {t: 'tabla', cab: ['Momento', 'Qué ofrecer', 'Frase'], filas: [
+        ['Al sentarse', 'Un aperitivo concreto', '«¿Les apetece un vermut de la casa mientras miran la carta?»'],
+        ['Con la comanda', 'El vino que va con lo que han pedido', '«Con el arroz, este blanco fresco va perfecto. ¿Una copa o la botella?»'],
+        ['Copa a punto de acabarse', 'La segunda, antes de que la pidan', '«¿Le sirvo otra copa del mismo?»'],
+        ['Postre', 'Un vino dulce o un café especial', '«Con la torrija, una copa de moscatel es un final redondo.»'],
+        ['Sobremesa', 'Café y digestivo', '«¿Un café y un chupito de la casa?»']]},
+      {t: 'p', x: 'Tener buenas opciones sin alcohol también vende: un vermut sin alcohol, una kombucha o un cóctel sin alcohol bien hecho se cobran como una copa y dejan un margen parecido. Quien conduce o no bebe también quiere pedir algo especial.'},
+      {t: 'campo', id: 'sin-alcohol', label: 'Nuestras opciones sin alcohol', ayuda: 'Qué ofrecemos y a qué precio'},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo más importante de la barra de este negocio', grande: true},
+    ],
+  },
   'playbook-cocina': {
     eyebrow: 'Playbook · Cocina',
     titulo: 'Playbook de Cocina',
@@ -3030,7 +3095,7 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio, anterior){
     if(x.t === 'pasos') return `<div class="dr-pasos">${x.items.map((s, i) => `<div class="dr-paso"><div class="dr-paso-n">${String(i + 1).padStart(2, '0')}</div><div class="dr-paso-b"><div class="dr-paso-t">${esc(s.t)}</div><div class="dr-paso-d">${esc(s.d)}</div>${s.e ? `<div class="dr-paso-e"><span>${esc(x.etiqueta || 'Estándar')}</span>${esc(s.e)}</div>` : ''}${s.id ? campo({id: s.id, label: 'Cómo lo hacemos aquí', ayuda: 'Lo propio de este negocio en este paso'}) : ''}</div></div>`).join('')}</div>`;
     if(x.t === 'check2') return `<div class="dr-check2">${[x.a, x.b].map(l => `<div class="dr-check"><div class="dr-check-h">${esc(l.titulo)}</div>${l.items.map(it => `<div class="dr-check-i"><i></i>${esc(it)}</div>`).join('')}</div>`).join('')}</div>`;
     if(x.t === 'frases') return `<div class="dr-frases"><div class="dr-frases-h">${esc(x.titulo)}</div>${x.items.map(it => `<div class="dr-frase">${esc(it)}</div>`).join('')}</div>`;
-    if(x.t === 'tabla') return `${x.titulo ? `<div class="dr-h">${esc(x.titulo)}</div>` : ''}<div class="dr-tabla-w"><table class="dr-tabla${x.cab.length >= 5 ? ' dr-tabla-ancha' : ''}"><thead><tr>${x.cab.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${x.filas.map(r => `<tr>${r.map((v, k) => `<td data-l="${esc(x.cab[k] || '')}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    if(x.t === 'tabla') return `${x.titulo ? `<div class="dr-h">${esc(x.titulo)}</div>` : ''}<div class="dr-tabla-w"><table class="dr-tabla${x.cab.length >= 3 ? ' dr-tabla-ancha' : ''}"><thead><tr>${x.cab.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${x.filas.map(r => `<tr>${r.map((v, k) => `<td data-l="${esc(x.cab[k] || '')}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
     if(x.t === 'h') return `<div class="dr-h">${esc(x.x)}</div>`;
     if(x.t === 'dato') return `<div class="dr-datos">${x.items.map(d => `<div class="dr-dato"><div class="dr-dato-v">${esc(d.v)}</div><div class="dr-dato-l">${esc(d.l)}</div></div>`).join('')}</div>`;
     if(x.t === 'tarjetas') return `<div class="dr-tarjetas" data-n="${x.items.length}">${x.items.map(d => `<div class="dr-tarjeta"><div class="dr-tarjeta-k">${esc(d.k)}</div><div class="dr-tarjeta-t">${esc(d.t)}</div>${d.d ? `<div class="dr-tarjeta-d">${esc(d.d)}</div>` : ''}</div>`).join('')}</div>`;
