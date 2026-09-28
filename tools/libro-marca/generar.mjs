@@ -25,9 +25,45 @@ const OUT = path.join(AQUI, 'salida');
 fs.mkdirSync(OUT, { recursive: true });
 const F = 'file://' + path.join(RAIZ, 'fonts') + '/';
 
+// ---------- modo negocio ----------
+// Sin argumentos genera la plantilla vacía. Con un fichero de datos
+// (`node tools/libro-marca/generar.mjs tools/libro-marca/ejemplos/x.mjs`)
+// rellena cada hueco con lo de ese negocio. Los huecos van en ORDEN y cada
+// uno repite el texto de la plantilla: si alguien toca la plantilla, el
+// generador se para en vez de colocar una respuesta en el sitio que no es.
+// Con VOLCAR=1 escribe en salida/huecos.json la lista en orden, para
+// preparar el fichero de un negocio nuevo.
+const DATOS = process.argv[2] ? (await import(path.resolve(process.argv[2]))).default : null;
+const VOLCADO = process.env.VOLCAR === '1';
+const orden = [], fichaCampos = [];
+let iHueco = 0;
+const esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const FIJOS = ['Nombre del negocio', 'Ciudad', 'Mes y año', 'Nombre del coach', 'Nombre del propietario', 'Fecha'];
+
 // ---------- helpers ----------
-const ph = t => `<mark class="ph">[ ${t} ]</mark>`;
-const box = (label, h = 60, extra = '') => `<div class="phb" style="min-height:${h}px;${extra}"><span class="phb-l">${label}</span></div>`;
+const ph = t => {
+  if(DATOS && FIJOS.includes(t)) return `<mark class="ph ok">${esc(DATOS.fijos[t])}</mark>`;
+  if(VOLCADO && !FIJOS.includes(t)) orden.push(t);
+  if(!DATOS) return `<mark class="ph">[ ${t} ]</mark>`;
+  const h = DATOS.huecos[iHueco++];
+  if(!h || h[0] !== t) throw new Error(`Hueco ${iHueco}: la plantilla pide «${t}» y el fichero trae «${h ? h[0] : 'nada'}»`);
+  return `<mark class="ph ok">${esc(h[1])}</mark>`;
+};
+const box = (label, h = 60, extra = '') => {
+  if(VOLCADO) orden.push('[CUADRO] ' + label);
+  const v = DATOS && DATOS.cuadros && DATOS.cuadros[label];
+  if(DATOS && v == null) throw new Error(`Falta el cuadro «${label}»`);
+  if(v) return `<div class="fillb" style="min-height:${h}px;${extra}">${esc(v).replace(/\n/g, '<br>')}</div>`;
+  return `<div class="phb" style="min-height:${h}px;${extra}"><span class="phb-l">${label}</span></div>`;
+};
+// Valor de un campo de la ficha detallada; en modo negocio, obligatorio.
+function fv(l){
+  if(VOLCADO) fichaCampos.push(l);
+  if(!DATOS) return null;
+  const v = DATOS.fichas[l];
+  if(v == null) throw new Error(`Falta en la ficha: «${l}»`);
+  return v;
+}
 const lab = t => `<div class="lab">${t}</div>`;
 const h2 = (t, n) => `<div class="h2">${n ? `<span class="h2n">${n}</span>` : ''}${t}</div>`;
 
@@ -74,11 +110,21 @@ function opener([n, title, sub, list]) {
 // ---------- FICHA DETALLADA ----------
 function fField(f){
   const [t, l, x] = f;
-  if(t === 'T') return `<div class="ff"><div class="ff-l">${l}</div><div class="ff-v"></div><div class="ff-v"></div></div>`;
-  if(t === 'N') return `<div class="ff"><div class="ff-l">${l}</div><div class="ff-n"><span class="ff-nb"></span><em>${x}</em></div></div>`;
-  if(t === 'L') return `<div class="ff"><div class="ff-l">${l}</div>${[1, 2, 3].map(i => `<div class="ff-li"><span>0${i}</span><div class="ff-v"></div></div>`).join('')}</div>`;
-  if(t === 'M') return `<div class="ff"><div class="ff-l">${l}</div><div class="mm"><div><b>Vacas</b></div><div class="mm-s"><b>Estrellas</b></div><div class="mm-d"><b>Perros</b></div><div><b>Incógnitas</b></div></div></div>`;
+  const v = fv(l);
+  if(t === 'T') return `<div class="ff"><div class="ff-l">${l}</div>${v ? `<div class="ff-t">${esc(v)}</div>` : '<div class="ff-v"></div><div class="ff-v"></div>'}</div>`;
+  if(t === 'N') return `<div class="ff"><div class="ff-l">${l}</div><div class="ff-n"><span class="ff-nb${v != null ? ' ok' : ''}">${v != null ? esc(v) : ''}</span><em>${x}</em></div></div>`;
+  if(t === 'L') return `<div class="ff"><div class="ff-l">${l}</div>${[0, 1, 2].map(i => `<div class="ff-li"><span>0${i + 1}</span>${v ? `<div class="ff-t" style="flex:1">${esc(v[i] || '—')}</div>` : '<div class="ff-v"></div>'}</div>`).join('')}</div>`;
+  if(t === 'M') return `<div class="ff"><div class="ff-l">${l}</div><div class="mm"><div><b>Vacas</b>${v ? `<br>${esc(v.vacas)}` : ''}</div><div class="mm-s"><b>Estrellas</b>${v ? `<br>${esc(v.estrellas)}` : ''}</div><div class="mm-d"><b>Perros</b>${v ? `<br>${esc(v.perros)}` : ''}</div><div><b>Incógnitas</b>${v ? `<br>${esc(v.incognitas)}` : ''}</div></div></div>`;
   return '';
+}
+function fSn(f){
+  const v = fv(f[1]);
+  const [r, nota] = Array.isArray(v) ? v : [v, ''];
+  return `<div class="sn"><span class="sn-l">${f[1]}${nota ? `<em class="sn-n">${esc(nota)}</em>` : ''}</span><span class="sn-c">${['Sí', 'Parcial', 'No'].map(o => `<i class="${r === o ? 'on' : ''}">${o}</i>`).join('')}</span></div>`;
+}
+function fCk(f){
+  const v = fv(f[1]) || [];
+  return `<div class="ck"><div class="ff-l">${f[1]} · marcar lo que se aplica hoy</div><div class="ck-g" style="grid-template-columns:repeat(${f[2].length > 6 ? 4 : f[2].length},1fr)">${f[2].map(i => `<div><span class="cb${v.includes(i) ? ' on' : ''}"></span>${i}</div>`).join('')}</div></div>`;
 }
 function fSub(title, fields){
   const g = fields.filter(f => ['T', 'N', 'L', 'M'].includes(f[0]));
@@ -86,15 +132,23 @@ function fSub(title, fields){
   const ck = fields.filter(f => f[0] === 'C');
   return `<div class="fs"><div class="fs-h"><i></i>${title}<span>${fields.length}</span></div>
     ${g.length ? `<div class="fg">${g.map(fField).join('')}</div>` : ''}
-    ${sn.length ? `<div class="sg">${sn.map(f => `<div class="sn"><span class="sn-l">${f[1]}</span><span class="sn-c"><i>Sí</i><i>Parcial</i><i>No</i></span></div>`).join('')}</div>` : ''}
-    ${ck.map(f => `<div class="ck"><div class="ff-l">${f[1]} · marcar lo que se aplica hoy</div><div class="ck-g" style="grid-template-columns:repeat(${f[2].length > 6 ? 4 : f[2].length},1fr)">${f[2].map(i => `<div><span class="cb"></span>${i}</div>`).join('')}</div></div>`).join('')}
+    ${sn.length ? `<div class="sg">${sn.map(fSn).join('')}</div>` : ''}
+    ${ck.map(fCk).join('')}
   </div>`;
 }
 function fHeight(fields){
-  const g = fields.filter(f => ['T', 'N', 'L', 'M'].includes(f[0])).map(f => ({T: 70, N: 62, L: 104, M: 148}[f[0]]));
+  const alto = f => {
+    const base = {T: 70, N: 62, L: 104, M: 148}[f[0]];
+    if(!DATOS) return base;
+    const v = DATOS.fichas[f[1]], largo = x => Math.ceil(String(x || '').length / 48) * 16;
+    if(f[0] === 'T') return 40 + largo(v);
+    if(f[0] === 'L') return 30 + (v || []).reduce((a, x) => a + 6 + largo(x), 0);
+    return base;
+  };
+  const g = fields.filter(f => ['T', 'N', 'L', 'M'].includes(f[0])).map(alto);
   let hg = 0; for(let i = 0; i < g.length; i += 2) hg += Math.max(g[i], g[i + 1] || 0) + 12;
   const nsn = fields.filter(f => f[0] === 'S').length;
-  const hs = Math.ceil(nsn / 2) * 34 + (nsn ? 8 : 0);
+  const hs = Math.ceil(nsn / 2) * (DATOS ? 46 : 34) + (nsn ? 8 : 0);
   const hc = fields.filter(f => f[0] === 'C').reduce((h, f) => h + 40 + Math.ceil(f[2].length / (f[2].length > 6 ? 4 : f[2].length)) * 26, 0);
   return 44 + hg + hs + hc + 18;
 }
@@ -848,14 +902,53 @@ body{font-family:SG,sans-serif;color:var(--ink);background:#888}
 .bk-mark{font-size:22px;font-weight:700;letter-spacing:-.02em}
 `;
 
+if(VOLCADO){
+  fs.writeFileSync(`${OUT}/huecos.json`, JSON.stringify({huecos: orden, fichas: fichaCampos}, null, 1));
+  console.log(`Volcado: ${orden.length} huecos y cuadros, ${fichaCampos.length} campos de ficha → ${OUT}/huecos.json`);
+  process.exit(0);
+}
+if(DATOS && iHueco !== DATOS.huecos.length) throw new Error(`El fichero trae ${DATOS.huecos.length} huecos y la plantilla usa ${iHueco}`);
+// En modo negocio los huecos ya no son huecos: el texto toma la letra de su sitio.
+const cssFinal = !DATOS ? css : css.replace('.ph{display:inline;margin:0;color:var(--ol);font-family:PM;font-size:10.5px;color:var(--ol);', '.ph{display:inline;margin:0;color:inherit;font-family:inherit;font-size:inherit;') + `
+.ph.ok{background:none!important;border-bottom:0!important;padding:0!important;white-space:normal!important;line-height:inherit}
+.fillb{border-left:3px solid var(--ol);background:#fff;padding:10px 14px;font-size:12px;line-height:1.6;color:var(--bo)}
+.dark .fillb{background:rgba(255,255,255,.06);color:#DCD7CC}
+.ff-t{font-size:11.5px;line-height:1.45;color:var(--ink);border-bottom:1px solid var(--bd);padding-bottom:4px}
+.ff-nb.ok{border:1.5px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.sn-n{display:block;font-style:normal;font-size:9.5px;color:var(--mu);margin-top:2px}
+.sn-c i.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.cb.on{background:var(--ink);box-shadow:inset 0 0 0 2px #fff}
+.dots i.on{background:var(--ol)}
+.sem i.off{opacity:.12}
+.risk i.on{background:var(--ol)}
+.mm div{line-height:1.35}
+.mood-c span,.star-img span{text-transform:none;letter-spacing:0;font-size:10px;line-height:1.4}`;
+const nombreSalida = DATOS ? DATOS.fijos['Nombre del negocio'].replace(/[^\p{L}\p{N}]+/gu, '-') : 'PLANTILLA';
 const pagesF = pages.map(x => x.replace(/%%P(\w+)%%/g, (_, k) => String(START[k]).padStart(2, '0')));
-const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Libro de marca — plantilla</title><style>${css}</style></head><body>${pagesF.join('')}</body></html>`;
-fs.writeFileSync(`${OUT}/libro-marca-plantilla.html`, html);
+const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Libro de marca — ${DATOS ? esc(DATOS.fijos['Nombre del negocio']) : 'plantilla'}</title><style>${cssFinal}</style></head><body>${pagesF.join('')}</body></html>`;
+const htmlPath = `${OUT}/libro-marca-${DATOS ? nombreSalida.toLowerCase() : 'plantilla'}.html`;
+fs.writeFileSync(htmlPath, html);
 
 const browser = await puppeteer.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox', '--allow-file-access-from-files'] });
 const p = await browser.newPage();
-await p.goto(`file://${OUT}/libro-marca-plantilla.html`, { waitUntil: 'networkidle0' });
+await p.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
 await p.evaluateHandle('document.fonts.ready');
+// Las marcas visuales (puntos, semáforos, casillas, escalas, colores) se
+// aplican aquí, en el orden en que aparecen en el libro.
+if(DATOS) await p.evaluate(m => {
+  const q = s => [...document.querySelectorAll(s)];
+  q('.dots').forEach((d, i) => [...d.children].forEach((x, k) => { if(k < (m.puntos[i] || 0)) x.classList.add('on'); }));
+  q('.sem').forEach((s, i) => { const c = m.semaforos[i]; if(c) [...s.children].forEach(x => { if(!x.classList.contains(c)) x.classList.add('off'); }); });
+  q('.chk .cb').forEach((c, i) => { if(m.casillas[i]) c.classList.add('on'); });
+  q('.scale-mark').forEach((s, i) => { if(m.escalas[i] != null) s.style.left = m.escalas[i] + '%'; });
+  q('.sw').forEach(sw => { const h = sw.querySelector('.sw-h').textContent.replace(/[^0-9a-fA-F]/g, ''); if(h.length === 6) { const c = sw.querySelector('.sw-c'); c.style.background = '#' + h; c.style.border = '1px solid rgba(0,0,0,.1)'; } });
+  q('.mood-c span').forEach((s, i) => { if(m.fotos[i]) s.textContent = m.fotos[i]; });
+  q('.star-img span').forEach(s => { if(m.fotoEstrella) s.textContent = m.fotoEstrella; });
+  const sp = document.querySelector('.split-a'); if(sp && m.temporadaFija) sp.style.width = m.temporadaFija + '%';
+  const st = q('.stack > div'); (m.reparto || []).forEach((w, i) => { if(st[i]) st[i].style.width = w + '%'; });
+  const barras = q('.bar > div'); (m.barras || []).forEach((w, i) => { if(barras[i] && w != null) barras[i].style.width = w + '%'; });
+  q('.tl-bar').forEach((b, i) => { const f = (m.franjas || [])[i]; if(f){ b.style.left = f[0] + '%'; b.style.width = f[1] + '%'; } });
+}, DATOS.marcas);
 const over = await p.evaluate(() => [...document.querySelectorAll('.pg .in')].map((el, i) => {
   const f = el.querySelector('.flowc'); if(!f) return 0;
   const box = el.getBoundingClientRect();
@@ -866,6 +959,13 @@ const over = await p.evaluate(() => [...document.querySelectorAll('.pg .in')].ma
   return bottom > limit ? `${i + 1} (+${Math.round(bottom - limit)}px)` : 0;
 }).filter(Boolean));
 console.log('desbordadas:', over);
-await p.pdf({ path: `${OUT}/Libro-de-marca-PLANTILLA.pdf`, preferCSSPageSize: true, printBackground: true });
+// CAPTURAS=1: una imagen por página en salida/capturas, para revisar el
+// libro sin abrir el PDF.
+if(process.env.CAPTURAS === '1'){
+  const dir = `${OUT}/capturas`; fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir);
+  const pgs = await p.$$('.pg');
+  for(let i = 0; i < pgs.length; i++) await pgs[i].screenshot({ path: `${dir}/p${String(i + 1).padStart(2, '0')}.png` });
+}
+await p.pdf({ path: `${OUT}/Libro-de-marca-${nombreSalida}.pdf`, preferCSSPageSize: true, printBackground: true });
 console.log('total páginas:', pages.length);
 await browser.close();
