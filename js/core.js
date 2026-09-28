@@ -2220,6 +2220,7 @@ Un plato espectacular que no se puede ejecutar no sirve.
 - Validación operativa: ¿funciona en servicio real? ¿se monta rápido? ¿se mantiene bien?
 - Validación del cliente: prueba con 5-10 habituales, ¿lo volverían a pedir? ¿qué mejorarían?
 El plato final es la versión ajustada, no la primera idea.`},
+  {id: 'mentalidad', title: 'Mentalidad de empresario', categoria: 'Personal'},
   {id: 'playbook-liderazgo', title: 'Playbook de liderazgo', categoria: 'Personal', subtitulo: 'Cómo dirigir al equipo para dejar de ser el cuello de botella.', seed:
 `## Principios básicos para liderar
 - Liderar con ejemplo: el mando es modelo en puntualidad, seguridad, trato y procesos.
@@ -2331,6 +2332,7 @@ Sumar entrevista + prueba sobre 60.
 - 30-44: priorizar por feeling.
 - Menos de 30: descartar.
 Oferta positiva: mensaje con puesto, salario, turno, fecha de inicio y plan de 7 días; pedir confirmación en 48 h.`},
+  {id: 'banco-candidatos', title: 'Banco de candidatos', categoria: 'Personal'},
   {id: 'evaluacion-retencion', title: 'Evaluación, reconocimiento y retención', categoria: 'Personal', subtitulo: 'Cómo evaluar, reconocer, compensar y retener al equipo.', seed:
 `## Evaluación del rendimiento
 Cada ítem se puntúa 1-3 (1 = necesita mejorar, 2 = correcto, 3 = sobresaliente). Suma el total sobre 21.
@@ -2610,6 +2612,7 @@ Haz 3-5 preguntas, no más. El cliente debe hablar en frases cortas y naturales.
 - Web (sección testimonios).
 - WhatsApp Business (bienvenida).
 - Anuncios de Meta Ads (prueba social = conversión alta).`},
+  {id: 'guia-app', title: 'Tu app, paso a paso', categoria: 'Gestión'},
   {id: 'numeros-negocio', title: 'Los números del negocio', categoria: 'Gestión'},
   {id: 'compras-proveedores', title: 'Compras y proveedores', categoria: 'Gestión'},
   {id: 'checklist-gestion', title: 'Checklist de gestión', categoria: 'Gestión', subtitulo: 'Las rutinas que mantienen el negocio bajo control: cada día y cada mes.', seed:
@@ -3565,6 +3568,138 @@ const PLAN360_DOC_PLANTILLAS = {
         {id: 'dia-difusion', label: 'Días de difusión', ayuda: 'WhatsApp y email'},
       ]},
       {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo primero que hay que hacer con los clientes de este negocio', grande: true},
+    ],
+  },
+  'guia-app': {
+    eyebrow: 'Puesta en marcha · App de gestión',
+    titulo: 'Tu app, paso a paso',
+    sub: 'Pon tu negocio dentro de la app en el orden correcto. Una guía sencilla para arrancar sin perderte. Dentro de la app tienes todo explicado; esto es tu mapa para empezar bien.',
+    bloques: [
+      {t: 'dato', items: [{v: '6', l: 'pasos, en este orden'}, {v: '5 min', l: 'cada día'}, {v: '15 min', l: 'cada semana'}, {v: '28–35 %', l: 'food cost sano en comida'}]},
+      {t: 'regla', x: 'Síguela en orden. Cada paso prepara el siguiente. No saltes.'},
+      {t: 'cap', n: '01', titulo: 'El orden lo es todo', sub: 'La app funciona como una pirámide.'},
+      {t: 'p', x: 'Cada cosa se apoya en la anterior. Si metes los datos en este orden, todo encaja solo y el cuadro de mando te acaba diciendo, sin esfuerzo, si ganas o pierdes dinero.'},
+      {t: 'tabla', cab: ['Paso', 'Qué es', 'En la app'], filas: [
+        ['01 · Ficha del negocio', 'Los datos base de tu local. El punto de partida.', 'Mi Negocio'],
+        ['02 · Productos · Mega Lista', 'Todo lo que compras, con sus precios. La despensa digital.', 'Mega Lista'],
+        ['03 · Escandallos', 'El coste real de cada plato. De aquí sale tu margen.', 'Escandallo'],
+        ['04 · Carta', 'Tus platos a la venta, con su precio y su coste.', 'Oferta Gastronómica'],
+        ['05 · Datos del día a día', 'Ventas, mermas y clientes. Lo que alimenta al sistema.', 'TPV, Stock y Clientes'],
+        ['06 · Cuadro de mando', 'Aquí lees los resultados y tomas decisiones.', 'Panel de Control']]},
+      {t: 'regla', x: 'La regla de oro: no pases al siguiente paso hasta tener el anterior bien puesto. Un escandallo mal hecho ensucia todos los números que vienen después.'},
+
+      {t: 'cap', n: '02', titulo: 'Paso 1 · Ficha del negocio', sub: 'Se hace una vez. La app necesita saber quién eres para calcular bien. Es rellenar y olvidarse.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Entra en los datos del negocio', d: 'El apartado de configuración o datos del negocio.', e: 'Mi Negocio.'},
+        {t: 'Rellena lo básico', d: 'Nombre del local, tipo de negocio y horarios de servicio.', e: ''},
+        {t: 'Mesas y apertura', d: 'Indica el número de mesas o cubiertos y los días de apertura.', e: ''},
+        {t: 'Guarda', d: 'Ya tienes la base lista.', e: ''},
+      ]},
+      {t: 'p', x: 'Listo cuando… los datos de tu local aparecen correctos y no sale ningún aviso de campo vacío.'},
+
+      {t: 'cap', n: '03', titulo: 'Paso 2 · Productos · Mega Lista', sub: 'La base de todo. Es tu despensa digital: sin los productos y sus precios, no se puede calcular el coste de ningún plato.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Ve a la Mega Lista', d: 'El apartado de productos o mega lista.', e: 'Mega Lista: ya trae un catálogo de materia prima para no empezar de cero.'},
+        {t: 'Añade cada materia prima', d: 'Nombre, unidad (kg, litro, unidad) y precio de compra.', e: ''},
+        {t: 'Empieza por lo que más usas', d: 'No hace falta meterlos todos el primer día.', e: ''},
+        {t: 'Mantén los precios al día', d: 'Cuando cambie un precio de proveedor, actualízalo aquí y se recalcula todo solo.', e: ''},
+      ]},
+      {t: 'regla', x: 'Cuidado: el precio tiene que ser el de la unidad real de compra. Si el aceite viene en garrafa de 5 L, pon el precio por litro. Un precio mal puesto descuadra los escandallos.'},
+
+      {t: 'cap', n: '04', titulo: 'Paso 3 · Escandallos', sub: 'De aquí sale el dinero. El escandallo es el coste real de un plato: lo que te dice cuánto ganas con cada uno. Es el corazón de la app.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Crea un escandallo', d: 'Entra en escandallos y crea uno nuevo para un plato.', e: 'Escandallo.'},
+        {t: 'Añade los productos', d: 'Los que lleva (salen de tu mega lista) y la cantidad de cada uno.', e: 'Con su «Merma %»: la app calcula lo que de verdad hay que comprar (ver la guía de Mermas).'},
+        {t: 'Mira el coste', d: 'La app calcula sola el coste total del plato.', e: ''},
+        {t: 'Primero los más vendidos', d: 'Repite con tus platos más vendidos primero: esos son los que más te afectan al bolsillo.', e: ''},
+      ]},
+      {t: 'p', x: 'Listo cuando… ves el coste de cada plato y su food cost %. Lo sano suele estar entre 28 % y 35 % en comida.'},
+
+      {t: 'cap', n: '05', titulo: 'Paso 4 · Carta', sub: 'Lo que vendes. Ya tienes el coste de cada plato; ahora le pones el precio de venta y la app te dice el margen real.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Añade los platos que vendes', d: 'Ve al apartado de carta.', e: 'Oferta Gastronómica.'},
+        {t: 'Enlaza cada plato con su escandallo', d: 'Y pon su precio de venta.', e: ''},
+        {t: 'Mira el margen de cada uno', d: 'Ahí ves qué platos dejan dinero y cuáles no.', e: ''},
+        {t: 'Organiza por franjas', d: 'Si lo necesitas: mediodía, noche…', e: 'La carta se puede separar por horarios.'},
+      ]},
+      {t: 'p', x: 'Ganancia inmediata: de un vistazo verás tus platos «estrella» (venden y dejan margen) y los que habría que revisar. Cómo decidir qué hacer con cada uno está en la Ingeniería de carta.'},
+
+      {t: 'cap', n: '06', titulo: 'Paso 5 · Datos del día a día', sub: 'El hábito diario.'},
+      {t: 'check2', a: {titulo: 'Cada día / servicio', items: ['Anota las ventas del servicio: cobrando por el TPV, se registran solas', 'Registra las mermas (lo que se tira o rompe): Stock → «Anotar merma»', 'Apunta los clientes nuevos en el CRM: Clientes']},
+                    b: {titulo: 'Cada semana / mes', items: ['Revisa el APPCC y los registros de higiene', 'Actualiza precios de proveedores si cambiaron', 'Repasa el inventario']}},
+      {t: 'regla', x: 'El error nº1: empezar con muchas ganas y dejar de meter datos a la semana. Mejor 5 minutos cada día que un maratón cada mes. La constancia es lo que da resultados.'},
+
+      {t: 'cap', n: '07', titulo: 'Paso 6 · Cuadro de mando', sub: 'Donde se decide. Si has hecho los 5 pasos anteriores, aquí lo lees todo sin cálculos. Tu negocio, en números claros.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Entra en el cuadro de mando', d: '', e: 'Panel de Control.'},
+        {t: 'Mira tus números clave', d: 'Food cost, ticket medio, ventas y márgenes.', e: 'Qué significa cada uno está en «Los números del negocio».'},
+        {t: 'Compara y decide', d: 'Compara con tus objetivos y decide: qué plato tocar, qué precio ajustar, qué compra revisar.', e: ''},
+      ]},
+
+      {t: 'cap', n: '08', titulo: 'Tu rutina con la app', sub: 'Poco tiempo, pero siempre.'},
+      {t: 'check2', a: {titulo: 'Cada día · 5 min', items: ['Meter las ventas del servicio', 'Anotar las mermas', 'Registrar clientes nuevos']},
+                    b: {titulo: 'Cada semana · 15 min', items: ['Revisar el cuadro de mando y el food cost', 'Actualizar precios de proveedor que cambien', 'Revisar el APPCC y los registros de higiene', 'Repasar el inventario']}},
+      {t: 'campo', id: 'arranque', label: 'Nuestro calendario de arranque', ayuda: 'Qué paso se hace cada semana y quién', grande: true},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Dónde está este negocio en la pirámide y qué toca ahora', grande: true},
+    ],
+  },
+  'mentalidad': {
+    eyebrow: 'Bonus · Liderazgo',
+    titulo: 'Mentalidad de empresario',
+    sub: 'Tu negocio no necesita que trabajes más. Necesita que pienses distinto.',
+    bloques: [
+      {t: 'p', x: 'La diferencia entre tener un empleo y tener un negocio está en la cabeza del dueño. Si el sitio no funciona cuando tú no estás, no tienes un negocio: tienes un puesto de trabajo muy exigente.'},
+      {t: 'cap', n: '01', titulo: 'El cambio de chip', sub: 'De dónde vienes y a dónde vas.'},
+      {t: 'tabla', cab: ['De…', 'A…'], filas: [
+        ['Trabajar EN el negocio (tapar huecos)', 'Trabajar SOBRE el negocio (dirigirlo)'],
+        ['Decidir por sensación e instinto', 'Decidir con números delante'],
+        ['Hacerlo todo tú porque «nadie lo hace igual»', 'Que el equipo brille y tú supervises'],
+        ['Apagar fuegos cada día', 'Construir sistemas que evitan el fuego'],
+        ['Ser imprescindible', 'Ser prescindible en el día a día']]},
+
+      {t: 'cap', n: '02', titulo: 'Cuatro ideas que lo cambian todo', sub: 'Tiempo, delegar, medir y equipo.'},
+      {t: 'tarjetas', items: [{k: 'Tiempo', t: 'Tu tiempo es el activo', d: 'Cada hora tapando huecos es una hora que no dedicas a hacer crecer el negocio. Protégela.'}, {k: 'Delegar', t: 'Delegar no es soltar', d: 'Es dar tarea, resultado, plazo y recursos claros — y luego supervisar, no rehacer.'}, {k: 'Medir', t: 'Lo que no se mide, no se dirige', d: 'Mira pocos números, pero míralos siempre. Sin datos, lideras a ciegas.'}, {k: 'Equipo', t: 'El equipo es tu multiplicador', d: 'Un dueño cansado rinde ×1. Un equipo bien dirigido rinde ×5. Tu trabajo es formarlo.'}]},
+
+      {t: 'cap', n: '03', titulo: 'Las reglas del dueño que dirige', sub: 'Cuatro, para tenerlas siempre delante.'},
+      {t: 'lista', titulo: 'Las reglas', items: ['Si solo lo sabes hacer tú, enséñalo. Lo que vive en tu cabeza es un riesgo, no un valor.', 'Antes de hacer una tarea, pregúntate: ¿debería hacerla yo? Si la respuesta es no, delégala.', 'Reconoce en público, corrige en privado. Así se construye un equipo que se queda.', 'Tu calma es la del equipo. En servicio, el dueño marca el ritmo y la temperatura.']},
+      {t: 'regla', x: '«No trabajo para mi negocio. Mi negocio trabaja para mí.»'},
+
+      {t: 'cap', n: '04', titulo: 'Por dónde empezar', sub: 'Cuatro semanas para cambiar el chip.'},
+      {t: 'pasos', items: [
+        {t: 'Semana 1 · Mira en qué se va tu tiempo', d: 'Apunta durante una semana todo lo que haces y cuánto tarda. Marca lo que solo puedes hacer tú y lo que podría hacer otra persona.', e: ''},
+        {t: 'Semana 2 · Delega tres tareas', d: 'De las que ha marcado la semana 1, con los cinco pasos de delegar del Playbook de liderazgo.', e: ''},
+        {t: 'Semana 3 · Una hora sobre el negocio', d: 'Una hora fija a la semana, lejos del servicio, para mirar los números y decidir. «Los números del negocio» dice qué mirar.', e: ''},
+        {t: 'Semana 4 · Un servicio sin ti', d: 'Un servicio entero en el que no entras en cocina ni en sala. Si algo falla, no es un fracaso: es lo que hay que enseñar.', e: ''},
+      ]},
+      {t: 'campos', items: [
+        {id: 'delego', label: 'Las tres tareas que delego', ayuda: 'Y a quién'},
+        {id: 'hora', label: 'Mi hora semanal sobre el negocio', ayuda: 'Día y hora'},
+      ]},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo que este propietario tiene que soltar primero', grande: true},
+    ],
+  },
+  'banco-candidatos': {
+    eyebrow: 'Documento de entrega · RRHH',
+    titulo: 'Banco de candidatos',
+    sub: 'Tu reserva de talento para no empezar de cero al cubrir un puesto.',
+    bloques: [
+      {t: 'dato', items: [{v: '9', l: 'datos por candidato'}, {v: '0–10', l: 'valoración rápida'}, {v: '1', l: 'llamada al banco antes de publicar'}, {v: '3 meses', l: 'para repasarlo y ponerlo al día'}]},
+      {t: 'p', x: 'Cada vez que un buen candidato no encaja ahora, guárdalo aquí. Clasifícalo por área.'},
+      {t: 'p', x: 'En hostelería, un puesto se queda vacío de un día para otro: una baja, alguien que se va en temporada alta, un extra que falla un sábado. Con el banco al día, la primera llamada es a alguien que ya conoces, no a un portal de empleo.'},
+      {t: 'cap', n: '01', titulo: 'Ficha de candidato', sub: 'Una por persona.'},
+      {t: 'ficha', filas: ['Nombre y teléfono', 'Puesto (sala / cocina / limpieza / delivery)', 'Experiencia relevante (años, tipo de local)', 'Disponibilidad (inmediata / 24h / 48h / fines de semana)', 'Tipo de contrato aceptado (completo / parcial / extra)', 'Salario esperado', 'Documentación verificada (sí/no)', 'Fecha de último contacto', 'Valoración rápida (0-10)']},
+
+      {t: 'cap', n: '02', titulo: 'Lista rápida del banco', sub: 'Para verla de un vistazo cuando hay que cubrir un turno.'},
+      {t: 'tabla', cab: ['Nombre y teléfono', 'Puesto', 'Disponibilidad', 'Valoración'], filas: [['', '', '', ''], ['', '', '', ''], ['', '', '', ''], ['', '', '', ''], ['', '', '', ''], ['', '', '', ''], ['', '', '', ''], ['', '', '', '']]},
+
+      {t: 'cap', n: '03', titulo: 'Cómo mantenerlo vivo', sub: 'Un banco que no se actualiza no sirve.'},
+      {t: 'lista', titulo: 'Las reglas del banco', items: ['Al descartar a alguien bueno en una selección, se le pregunta si quiere que guardemos su candidatura.', 'Antes de publicar una oferta, se llama primero a los del banco.', 'Cada 3 meses se repasa: se actualiza la disponibilidad y se quita a quien ya no está disponible.', 'Los extras de confianza van también aquí, con los días que suelen poder.', 'Se anota la fecha del último contacto: a los seis meses, hay que volver a confirmar.']},
+      {t: 'regla', x: 'Son datos personales: solo con el permiso del candidato, bien guardados y se borran cuando lo pida o cuando dejen de servir (por ejemplo, al año sin contacto).'},
+      {t: 'campos', items: [
+        {id: 'resp-banco', label: 'Quién lleva el banco', ayuda: 'Nombre'},
+        {id: 'donde', label: 'Dónde se guarda', ayuda: 'Carpeta, hoja o archivo'},
+      ]},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Los puestos que más cuesta cubrir en este negocio', grande: true},
     ],
   },
   'playbook-cocina': {
