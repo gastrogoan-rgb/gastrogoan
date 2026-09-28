@@ -1033,6 +1033,7 @@ Haz 3-5 preguntas, no más. El cliente debe hablar en frases cortas y naturales.
 - WhatsApp Business (bienvenida).
 - Anuncios de Meta Ads (prueba social = conversión alta).`},
   {id: 'numeros-negocio', title: 'Los números del negocio', categoria: 'Gestión'},
+  {id: 'compras-proveedores', title: 'Compras y proveedores', categoria: 'Gestión'},
   {id: 'checklist-gestion', title: 'Checklist de gestión', categoria: 'Gestión', subtitulo: 'Las rutinas que mantienen el negocio bajo control: cada día y cada mes.', seed:
 `Asigna un responsable a cada etapa del proceso. Lo que no tiene dueño, no se hace.
 
@@ -1613,6 +1614,75 @@ const PLAN360_DOC_PLANTILLAS = {
         {id: 'pe', label: 'Nuestro punto de equilibrio', ayuda: 'Al mes y al día'},
       ]},
       {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'El número que más hay que vigilar en este negocio y por qué', grande: true},
+    ],
+  },
+  'compras-proveedores': {
+    eyebrow: 'Guía · Gestión',
+    titulo: 'Compras y proveedores',
+    sub: 'La mitad del food cost se decide antes de entrar en la cocina: al elegir proveedor, al pedir y al recibir. Cómo hacerlo bien.',
+    bloques: [
+      {t: 'dato', items: [{v: '€/kg útil', l: 'el único precio que sirve para comparar'}, {v: '4', l: 'momentos: elegir, pedir, recibir y controlar'}, {v: '5 min', l: 'bastan para recibir bien un pedido'}, {v: '1.300 €', l: 'al año se van por no pesar lo que llega'}]},
+      {t: 'cap', n: '01', titulo: 'Por qué comprar bien', sub: 'Lo que se paga de más no lo recupera ningún cocinero.'},
+      {t: 'p', x: 'Se puede tener la mejor receta, el escandallo perfecto y cero mermas, y aun así perder el margen en la compra: un proveedor que parece barato y no lo es, un pedido a ojo que acaba caducando, un albarán que no se revisa o una subida de precio que nadie ve hasta final de mes.'},
+      {t: 'tarjetas', items: [{k: '01', t: 'Elegir', d: 'Comparar por lo que de verdad cuesta, no por la etiqueta.'}, {k: '02', t: 'Pedir', d: 'Lo que hace falta según stock y reservas, no a ojo.'}, {k: '03', t: 'Recibir', d: 'Pesar, mirar y comparar con el albarán, cada vez.'}, {k: '04', t: 'Controlar', d: 'Cada subida de precio, a la Mega Lista el mismo día.'}]},
+      {t: 'regla', x: 'Comprar es la primera partida de la cocina. Se hace con el mismo cuidado que un emplatado.'},
+
+      {t: 'cap', n: '02', titulo: 'Elegir y comparar proveedores', sub: 'El precio barato no siempre es el barato.'},
+      {t: 'p', x: 'Para comparar dos proveedores hay que comparar el precio de lo que se aprovecha, no el de lo que se compra. Un pescado entero más barato puede salir más caro que el lomo limpio, sobre todo si además hay que pagar las horas de limpiarlo.'},
+      {t: 'tabla', cab: ['Merluza', 'Precio', 'Se aprovecha', 'Precio por kg útil'], filas: [['Proveedor A · entera', '12,00 €/kg', '50 %', '24,00 €'], ['Proveedor B · en lomos limpios', '16,00 €/kg', '95 %', '16,84 €']]},
+      {t: 'p', x: 'El proveedor B parece un 33 % más caro y en realidad sale un 30 % más barato, sin contar el tiempo de limpieza que se ahorra. Los rendimientos de cada producto están en la guía de Mermas; lo mejor es medir los propios.'},
+      {t: 'tabla', titulo: 'Qué más se compara', cab: ['Criterio', 'Qué preguntar'], filas: [
+        ['Calidad', '¿Es siempre igual o depende del día? ¿Acepta devoluciones?'],
+        ['Plazo y días de reparto', '¿Cuándo pido y cuándo llega? ¿Reparte los días que lo necesito?'],
+        ['Pedido mínimo y portes', '¿Desde cuánto no cobra el envío?'],
+        ['Forma y plazo de pago', '¿Al contado, a 30 o a 60 días?'],
+        ['Estabilidad de precio', '¿Mantiene precio un mes o un trimestre, o cambia cada semana?'],
+        ['Trato', '¿Avisa si falta algo? ¿Coge el teléfono cuando hay un problema?']]},
+      {t: 'regla', x: 'Siempre dos proveedores para lo importante. El que es el único no tiene por qué esforzarse.'},
+      {t: 'campo', id: 'proveedores', label: 'Nuestros proveedores principales', ayuda: 'Producto, proveedor, días de reparto y condiciones', grande: true},
+
+      {t: 'cap', n: '03', titulo: 'Negociar', sub: 'Todo proveedor tiene margen. Hay que saber qué pedir.'},
+      {t: 'p', x: 'Negociar no es apretar hasta que el proveedor pierda dinero: es encontrar condiciones que le sirvan a los dos. Y no siempre se negocia el precio; a veces vale más un plazo de pago o unos portes gratis.'},
+      {t: 'tabla', cab: ['Qué se puede pedir', 'Ejemplo'], filas: [
+        ['Mejor precio por volumen', 'Un descuento al superar cierta compra al mes o al trimestre (rappel)'],
+        ['Plazo de pago', 'Pasar de pagar al contado a 30 días: la caja respira'],
+        ['Portes', 'Envío gratis a partir de un pedido mínimo razonable'],
+        ['Precio fijo', 'Mantener el precio de los productos clave durante un trimestre'],
+        ['Formato', 'El producto ya limpio, racionado o en el tamaño que se usa'],
+        ['Devoluciones', 'Recogida sin coste de lo que llegue mal']]},
+      {t: 'frases', titulo: 'Frases para negociar', items: ['«Te compro unos 800 € al mes. ¿Qué precio me puedes hacer si te concentro también el pescado?»', '«El proveedor X me deja la merluza a 15,50. No quiero cambiar, pero necesito acercarme a ese precio.»', '«Si me mantienes el precio del aceite hasta final de trimestre, te hago el pedido fijo cada semana.»', '«¿Podemos pasar a pago a 30 días? A cambio te confirmo el pedido con dos días de antelación.»']},
+      {t: 'lista', titulo: 'Antes de sentarse a negociar', items: ['Saber cuánto se le compra al mes y de qué productos.', 'Tener al menos otro precio de referencia de otro proveedor.', 'Decidir qué es lo más importante: precio, plazo, portes o calidad.', 'Revisarlo una vez al año con cada proveedor importante, aunque todo vaya bien.']},
+
+      {t: 'cap', n: '04', titulo: 'Pedir', sub: 'Ni de más, que caduca, ni de menos, que falta.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Mirar el stock', d: 'Lo que hay, lo que está por debajo del mínimo y lo que caduca pronto.', e: 'Stock → «Solo alertas» enseña lo que está por debajo del mínimo.'},
+        {t: 'Mirar las reservas', d: 'Grupos, eventos y días fuertes hasta el próximo reparto.', e: 'Reservas → Semana.'},
+        {t: 'Hacer el pedido', d: 'Lo que falta hasta el próximo reparto, más un pequeño margen. Nunca «por si acaso».', e: 'Pedidos: el pedido se crea con los productos de la Mega Lista.'},
+        {t: 'Enviarlo', d: 'Por escrito, para que quede constancia de qué se pidió.', e: 'Desde el propio pedido, por WhatsApp o email al proveedor.'},
+      ]},
+      {t: 'campos', items: [
+        {id: 'dias-pedido', label: 'Días de pedido', ayuda: 'Qué se pide cada día y a quién'},
+        {id: 'resp-compras', label: 'Responsable de compras', ayuda: 'Nombre'},
+      ]},
+
+      {t: 'cap', n: '05', titulo: 'Recibir la mercancía', sub: 'Aquí se pierde dinero sin que nadie lo vea.'},
+      {t: 'p', x: 'Si cada vez llega un poco menos de lo que se paga y nadie lo pesa, la diferencia se va. Un pedido de 10 kg de merluza que llega con 9,4 kg son 8,40 € a 14 €/kg. Con tres repartos a la semana, más de 1.300 € al año que se pagan y no llegan.'},
+      {t: 'check2', a: {titulo: 'Al recibir, siempre', items: ['Pesar lo que se vende a peso', 'Contar lo que se vende por unidades', 'Comparar con lo pedido y con el albarán', 'Temperatura: frío por debajo de 4 °C y congelado a −18 °C o menos', 'Caducidad y fecha de consumo preferente', 'Envases cerrados y en buen estado', 'Aspecto, olor y color del fresco']},
+                    b: {titulo: 'Si algo no cuadra', items: ['Se dice en el momento, delante del repartidor', 'Se anota en el albarán antes de firmar', 'Foto si hace falta', 'Se rechaza lo que llega mal: no se «aprovecha»', 'Se llama al proveedor ese mismo día', 'Se pide el abono por escrito']}},
+      {t: 'p', x: 'En la app, al recibir un pedido se marca cada artículo: con ✓ si ha llegado bien, con ✗ si no, y una nota explicando qué pasó. Solo lo marcado con ✓ suma al stock y se registra como gasto, y queda guardado quién lo recibió.'},
+      {t: 'regla', x: 'Nunca se firma un albarán sin haber mirado lo que se entrega.'},
+      {t: 'campo', id: 'resp-recepcion', label: 'Quién recibe la mercancía', ayuda: 'Por turnos, si hace falta'},
+
+      {t: 'cap', n: '06', titulo: 'Controlar los precios', sub: 'Una subida que no se ve es un plato que deja de ser rentable.'},
+      {t: 'p', x: 'Los proveedores suben precios poco a poco: unos céntimos aquí, un euro allá. Si la Mega Lista no se actualiza, el escandallo sigue diciendo que un plato deja un 70 % de margen cuando ya no es así.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Revisar cada factura', d: 'Comparar el precio de cada producto con el de la vez anterior.', e: ''},
+        {t: 'Actualizar la Mega Lista', d: 'El mismo día que llega el precio nuevo.', e: 'Mega Lista: al cambiar el precio, todos los escandallos que usan ese producto se recalculan solos.'},
+        {t: 'Revisar los platos afectados', d: 'Si el food cost de un plato se sale del objetivo, se decide qué hacer.', e: 'Escandallo, y la Ingeniería de carta para decidir.'},
+        {t: 'Actuar', d: 'Negociar, cambiar de proveedor o de producto, ajustar la ración o subir el precio del plato.', e: ''},
+      ]},
+      {t: 'check', titulo: 'Cada mes', items: ['Comparar los 10 productos más comprados con el mes anterior', 'Pedir precio a un segundo proveedor de al menos uno de ellos', 'Revisar las facturas pendientes de pago en Gestión Económica', 'Anotar en la ficha de cada proveedor cualquier incidencia del mes']},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Dónde está el mayor margen de mejora en las compras de este negocio', grande: true},
     ],
   },
   'playbook-cocina': {
