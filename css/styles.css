@@ -2378,6 +2378,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .dr-tabla td:first-child{font-weight:600}
 .dr-lista>div{display:grid;grid-template-columns:26px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid #E7E2D9;font-size:13.5px;line-height:1.45;color:#3D3A34}
 .dr-lista span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4A5D4E;font-weight:600}
+.dr-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #1C1A17;border-left:1px solid #1C1A17;margin:10px 0 14px}.dr-cal-h{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:8px;border-right:1px solid #1C1A17}.dr-cal-d{min-height:72px;border-right:1px solid #1C1A17;border-bottom:1px solid #1C1A17;padding:6px 8px;font-size:12px;font-weight:600;color:#4A5D4E}
 .dr-pie{padding:14px 44px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
 .dr-datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border:1px solid #1C1A17;margin:18px 0}
 .dr-dato{padding:14px 16px;border-right:1px solid #E7E2D9}
@@ -2539,6 +2540,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .dr-cuerpo{padding:4px 18px 14px}.dr-cap{margin:26px -18px 16px;padding:22px 18px 18px}.dr-cap-n{font-size:84px}
   .dr-pie{padding:12px 18px}.dr-paso{grid-template-columns:40px 1fr;gap:10px}
   .dr-tabla-ancha thead{display:none}.dr-tabla-ancha tr{display:block;border-bottom:2px solid #1C1A17;padding:6px 0}.dr-tabla-ancha td{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #E7E2D9;padding:6px 4px;text-align:right}.dr-tabla-ancha td::before{content:attr(data-l);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#4A5D4E;font-weight:600;text-align:left}
+  .dr-cal-h{padding:6px 0;letter-spacing:0;text-align:center}.dr-cal-d{min-height:44px;padding:4px}
   .dr-tarjetas[data-n]{grid-template-columns:1fr}.dr-tarjetas[data-n]>div:nth-child(n){grid-column:auto}
 }
 
