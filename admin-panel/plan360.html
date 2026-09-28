@@ -4200,6 +4200,10 @@ function renderClientGrid(){
         <i class="ti ti-folder"></i>
         <div><h3>Recursos</h3><p>Identidad de marca, playbooks y demás documentos del programa</p></div>
       </div>
+      <div class="p360-card" onclick="renderMantPage()">
+        <i class="ti ti-calendar-repeat"></i>
+        <div><h3>Mantenimiento</h3><p>Tu mes con este negocio: los cuatro lunes, lo que le entregas y sus tareas</p></div>
+      </div>
     </div>
     <div class="card p360-summary-bar" onclick="renderSummaryPage()">
       <div>Programa de 28 días</div>
@@ -4362,6 +4366,265 @@ function cambiarEstadoFinalObjetivo(objId, valor){
   o.estadoFinal = valor || null;
   saveRemoteBiz();
 }
+/* ============================================================
+   MANTENIMIENTO (29/09) — el calendario del plan de gestor, después de
+   las 4 semanas. Un mes tipo de cuatro lunes (1º y 3º por WhatsApp, 2º y
+   4º por videollamada) donde se van soltando «gadgets»: lo que TÚ le
+   entregas (reporte, plan de contenido…) y las TAREAS que le dejas a él.
+   Las tareas son el plus: el hostelero las ve en su app y las marca, y así
+   nota que hay alguien encima del negocio, no solo un informe que llega.
+
+   Vive en plan360Mant (empieza por plan360 → saveRemoteBiz lo sube con
+   update, como el resto). Todo son OBJETOS con clave, nunca listas:
+   meses['2026-10'].semanas.s1.items[id]. Con listas, marcar una tarea en
+   la app mientras aquí se añade otra se pisaba por posición; y las claves
+   de semana llevan «s» delante porque Firebase convierte {"1":…,"2":…} en
+   una lista por su cuenta.
+   ============================================================ */
+const MANT_CANAL = {whatsapp: {label: 'WhatsApp', icon: 'ti-brand-whatsapp'}, video: {label: 'Videollamada', icon: 'ti-video'}};
+// La biblioteca de gadgets: «entrega» es lo que haces tú; «tarea» lo que
+// le toca al negocio. Se pueden añadir sueltos con texto libre.
+const MANT_GADGETS = [
+  {tipo: 'entrega', titulo: 'Reporte de la semana', detalle: 'Ventas, cubiertos, ticket medio y food cost frente a la semana anterior. Punto de equilibrio del mes. Alertas y la acción de la semana.'},
+  {tipo: 'entrega', titulo: 'Plan de contenido', detalle: 'Ideas de publicación para las próximas dos semanas, con el texto base.'},
+  {tipo: 'entrega', titulo: 'Videollamada de seguimiento', detalle: 'Cómo vamos, dudas, el equipo y la app. 30 minutos.'},
+  {tipo: 'entrega', titulo: 'Videollamada de planificación', detalle: '1. Cómo ha ido el mes. 2. Qué ofrecemos el mes que viene (I+D de temporada). 3. Cómo está planificado el mes. 60 minutos.'},
+  {tipo: 'entrega', titulo: 'Reporte del mes', detalle: 'El mes frente al anterior y al mismo mes del año pasado, punto de equilibrio, lo mejor y lo peor, y los 3 objetivos del mes siguiente.'},
+  {tipo: 'entrega', titulo: 'Calendario del mes siguiente', detalle: 'Festivos, puentes, eventos de la zona y qué preparar para cada fecha.'},
+  {tipo: 'entrega', titulo: 'Producto de temporada', detalle: 'Lo que entra y está en su mejor precio, con ideas de plato o pizarra.'},
+  {tipo: 'entrega', titulo: 'Formación del mes para el briefing', detalle: 'Un guion de 10 minutos para leer al equipo.'},
+  {tipo: 'entrega', titulo: 'Respuestas a tus reseñas', detalle: 'Listas para copiar y pegar.'},
+  {tipo: 'entrega', titulo: 'Vigilancia de proveedores', detalle: 'Lo que te han subido este mes y lo que te cuesta al mes.'},
+  {tipo: 'entrega', titulo: 'Avisos de normativa y ayudas', detalle: ''},
+  {tipo: 'entrega', titulo: 'Revisión de la carta (trimestral)', detalle: 'Matriz de ingeniería de carta: qué quitar, qué subir de precio y qué destacar.'},
+  {tipo: 'entrega', titulo: 'Revisión de contratos (anual)', detalle: 'Luz, gas, seguros, datáfono, cervecera.'},
+  {tipo: 'tarea', titulo: 'Publicar los contenidos de la semana', detalle: ''},
+  {tipo: 'tarea', titulo: 'Responder las reseñas nuevas', detalle: ''},
+  {tipo: 'tarea', titulo: 'Leer la formación del mes en el briefing', detalle: ''},
+  {tipo: 'tarea', titulo: 'Hacer el inventario de fin de mes', detalle: 'Para que el food cost del reporte sea real.'},
+  {tipo: 'tarea', titulo: 'Revisar los precios de proveedores que han subido', detalle: 'Y los escandallos de los platos afectados.'},
+  {tipo: 'tarea', titulo: 'Pasar las mermas de la semana a la app', detalle: ''},
+];
+// El mes tipo que se acordó (29/09). Se puede sustituir por el tuyo con
+// «Guardar este mes como mi plantilla» — se guarda en este navegador.
+const MANT_PLANTILLA_BASE = {
+  s1: {canal: 'whatsapp', items: ['Reporte de la semana', 'Plan de contenido', 'Publicar los contenidos de la semana']},
+  s2: {canal: 'video', items: ['Reporte de la semana', 'Videollamada de seguimiento', 'Responder las reseñas nuevas']},
+  s3: {canal: 'whatsapp', items: ['Reporte de la semana', 'Plan de contenido', 'Leer la formación del mes en el briefing']},
+  s4: {canal: 'video', items: ['Reporte de la semana', 'Reporte del mes', 'Videollamada de planificación', 'Hacer el inventario de fin de mes']},
+};
+const MANT_PLANTILLA_LS = 'gg_coach_mant_plantilla';
+let mantMesActivo = null;
+
+function mantId(){ return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function mantMesClave(fecha){ return fecha.getFullYear() + '-' + String(fecha.getMonth() + 1).padStart(2, '0'); }
+// Los lunes del mes (4 o 5), como AAAA-MM-DD.
+function mantLunesDelMes(clave){
+  const [y, m] = clave.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  while(d.getDay() !== 1) d.setDate(d.getDate() + 1);
+  const out = [];
+  while(d.getMonth() === m - 1){
+    out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+    d.setDate(d.getDate() + 7);
+  }
+  return out;
+}
+function mantPlantilla(){
+  try { const p = JSON.parse(localStorage.getItem(MANT_PLANTILLA_LS) || 'null'); if(p && typeof p === 'object') return p; } catch(e){}
+  return MANT_PLANTILLA_BASE;
+}
+function mantGadgetPorTitulo(titulo){
+  return MANT_GADGETS.find(g => g.titulo === titulo) || {tipo: 'entrega', titulo, detalle: ''};
+}
+// Firebase borra lo vacío: un mes sin nada vuelve sin semanas, y una
+// semana sin gadgets, sin items. Se repone al leer, nunca se da por hecho.
+function mantMes(clave, crear){
+  if(!remoteBiz.plan360Mant || typeof remoteBiz.plan360Mant !== 'object'){
+    if(!crear) return null;
+    remoteBiz.plan360Mant = {meses: {}};
+  }
+  const mant = remoteBiz.plan360Mant;
+  if(!mant.meses || typeof mant.meses !== 'object') mant.meses = {};
+  if(!mant.meses[clave]){
+    if(!crear) return null;
+    mant.meses[clave] = {semanas: {}};
+  }
+  const mes = mant.meses[clave];
+  if(!mes.semanas || typeof mes.semanas !== 'object') mes.semanas = {};
+  return mes;
+}
+function mantSemana(mes, sk){
+  if(!mes.semanas[sk]) mes.semanas[sk] = {canal: 'whatsapp', items: {}};
+  if(!mes.semanas[sk].items || typeof mes.semanas[sk].items !== 'object') mes.semanas[sk].items = {};
+  return mes.semanas[sk];
+}
+function mantItemsOrdenados(sem){
+  return Object.keys(sem.items || {}).map(id => Object.assign({id}, sem.items[id]))
+    .sort((a, b) => (a.orden || 0) - (b.orden || 0));
+}
+function mantFechaCorta(f){
+  const [y, m, d] = f.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'});
+}
+
+function renderMantPage(clave){
+  mantMesActivo = clave || mantMesActivo || mantMesClave(new Date());
+  const mes = mantMes(mantMesActivo, false);
+  const lunes = mantLunesDelMes(mantMesActivo);
+  const [y, m] = mantMesActivo.split('-').map(Number);
+  const nombreMes = new Date(y, m - 1, 1).toLocaleDateString('es-ES', {month: 'long', year: 'numeric'});
+  const hoy = new Date().toISOString().slice(0, 10);
+  let total = 0, hechos = 0;
+  if(mes) Object.values(mes.semanas).forEach(s => Object.values((s && s.items) || {}).forEach(it => { total++; if(it && it.hecho) hechos++; }));
+  const semanaHtml = (fecha, i) => {
+    const sk = 's' + (i + 1);
+    const sem = mes && mes.semanas[sk];
+    const canal = (sem && sem.canal) || (i % 2 ? 'video' : 'whatsapp');
+    const items = sem ? mantItemsOrdenados(mantSemana(mes, sk)) : [];
+    const pasada = fecha < hoy;
+    return `<div class="card mant-semana" style="margin-bottom:10px;${fecha <= hoy && hoy < addDaysStr(fecha, 7) ? 'outline:2px solid var(--ink);outline-offset:-2px' : ''}">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <strong style="flex:1;min-width:160px;text-transform:capitalize">${i + 1}º lunes · ${esc(mantFechaCorta(fecha))}</strong>
+        <select onchange="mantCambiarCanal('${sk}', this.value)" style="width:auto;flex:none">
+          ${Object.keys(MANT_CANAL).map(c => `<option value="${c}" ${c === canal ? 'selected' : ''}>${MANT_CANAL[c].label}</option>`).join('')}
+        </select>
+      </div>
+      ${!items.length ? `<p class="muted" style="font-size:13px;margin:0 0 8px">Nada todavía.</p>` : items.map(it => `
+        <div class="mant-item" style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border)">
+          <input type="checkbox" ${it.hecho ? 'checked' : ''} onchange="mantMarcar('${sk}','${it.id}',this.checked)" style="width:20px;height:20px;flex:none;margin-top:2px" title="${it.tipo === 'tarea' ? 'Hecha por el negocio' : 'Entregado'}">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;${it.tipo === 'tarea' ? 'background:var(--amber-l);color:#86600F' : 'background:var(--green-l);color:#2F6B3A'}">${it.tipo === 'tarea' ? 'Su tarea' : 'Tu entrega'}</span>
+              <input value="${esc(it.titulo || '')}" onchange="mantEditar('${sk}','${it.id}','titulo',this.value)" style="flex:1;min-width:140px;font-weight:600;${it.hecho ? 'text-decoration:line-through;opacity:.7' : ''}">
+            </div>
+            <textarea rows="2" placeholder="${it.tipo === 'tarea' ? 'Instrucciones para el negocio (opcional)' : 'Lo que le entregas: el texto del reporte, el enlace de la llamada… (opcional)'}" onchange="mantEditar('${sk}','${it.id}','detalle',this.value)" style="margin-top:6px;font-size:13px">${esc(it.detalle || '')}</textarea>
+            ${it.tipo === 'tarea' && it.hecho && it.hechoEn ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Marcada el ${esc(new Date(it.hechoEn).toLocaleDateString('es-ES'))}</div>` : ''}
+          </div>
+          <button class="btn btn-sm" onclick="mantBorrar('${sk}','${it.id}')" title="Quitar"><i class="ti ti-trash"></i></button>
+        </div>`).join('')}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <select id="mant-add-${sk}" style="flex:1;min-width:200px">
+          <optgroup label="Tu entrega">${MANT_GADGETS.filter(g => g.tipo === 'entrega').map(g => `<option value="${esc(g.titulo)}">${esc(g.titulo)}</option>`).join('')}</optgroup>
+          <optgroup label="Tarea para el negocio">${MANT_GADGETS.filter(g => g.tipo === 'tarea').map(g => `<option value="${esc(g.titulo)}">${esc(g.titulo)}</option>`).join('')}</optgroup>
+          <optgroup label="Otra"><option value="__entrega">Otra entrega (texto libre)</option><option value="__tarea">Otra tarea (texto libre)</option></optgroup>
+        </select>
+        <button class="btn btn-sm" onclick="mantAnadir('${sk}')"><i class="ti ti-plus"></i> Añadir</button>
+      </div>
+      ${pasada && items.some(it => !it.hecho) ? `<div style="font-size:12px;color:var(--red);margin-top:6px">Quedan cosas sin marcar de una semana ya pasada.</div>` : ''}
+    </div>`;
+  };
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Mantenimiento', 'Tu mes con este negocio. Lo que marques como «Su tarea» lo ve en su app, en Plan 360, y lo marca él.')}
+    <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
+      <button class="btn btn-sm" onclick="mantMoverMes(-1)"><i class="ti ti-chevron-left"></i></button>
+      <strong style="flex:1;text-align:center;text-transform:capitalize;font-size:16px">${esc(nombreMes)}</strong>
+      <button class="btn btn-sm" onclick="mantMoverMes(1)"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    ${mes ? `<div class="muted" style="font-size:13px;margin-bottom:10px">${hechos} de ${total} hechas este mes.</div>` : `
+      <div class="card" style="margin-bottom:12px">
+        <p style="margin:0 0 8px">Este mes está vacío.</p>
+        <button class="btn btn-primary btn-sm" onclick="mantAplicarPlantilla()">Rellenar con mi mes tipo</button>
+        <button class="btn btn-sm" onclick="mantEmpezarVacio()">Empezar en blanco</button>
+      </div>`}
+    ${mes ? lunes.map(semanaHtml).join('') : ''}
+    ${mes ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+      <button class="btn btn-sm" onclick="mantGuardarComoPlantilla()"><i class="ti ti-template"></i> Guardar este mes como mi plantilla</button>
+      <button class="btn btn-sm" onclick="mantRestaurarPlantilla()">Volver al mes tipo de fábrica</button>
+    </div>` : ''}
+  `;
+}
+function mantMoverMes(delta){
+  const [y, m] = mantMesActivo.split('-').map(Number);
+  renderMantPage(mantMesClave(new Date(y, m - 1 + delta, 1)));
+}
+function mantGuardarYPintar(){ saveRemoteBiz(); renderMantPage(); }
+function mantAplicarPlantilla(){
+  const mes = mantMes(mantMesActivo, true);
+  const plantilla = mantPlantilla();
+  mantLunesDelMes(mantMesActivo).forEach((f, i) => {
+    const sk = 's' + (i + 1);
+    const p = plantilla[sk];
+    if(!p) return;   // el 5º lunes nace libre
+    const sem = mantSemana(mes, sk);
+    sem.canal = p.canal || 'whatsapp';
+    (p.items || []).forEach((it, k) => {
+      const g = typeof it === 'string' ? mantGadgetPorTitulo(it) : it;
+      sem.items[mantId()] = {tipo: g.tipo, titulo: g.titulo, detalle: g.detalle || '', hecho: false, orden: k};
+    });
+  });
+  mantGuardarYPintar();
+}
+function mantEmpezarVacio(){
+  const mes = mantMes(mantMesActivo, true);
+  mantLunesDelMes(mantMesActivo).forEach((f, i) => { mantSemana(mes, 's' + (i + 1)).canal = i % 2 ? 'video' : 'whatsapp'; });
+  // Sin ningún gadget, Firebase no guardaría nada: se deja una marca.
+  mes.creado = Date.now();
+  mantGuardarYPintar();
+}
+function mantCambiarCanal(sk, canal){
+  const mes = mantMes(mantMesActivo, true);
+  mantSemana(mes, sk).canal = canal;
+  mantGuardarYPintar();
+}
+function mantAnadir(sk){
+  const sel = document.getElementById('mant-add-' + sk);
+  if(!sel) return;
+  let g;
+  if(sel.value === '__entrega' || sel.value === '__tarea'){
+    const titulo = (prompt(sel.value === '__tarea' ? '¿Qué tarea le dejas al negocio?' : '¿Qué le entregas?') || '').trim();
+    if(!titulo) return;
+    g = {tipo: sel.value.slice(2), titulo, detalle: ''};
+  } else {
+    g = mantGadgetPorTitulo(sel.value);
+  }
+  const sem = mantSemana(mantMes(mantMesActivo, true), sk);
+  const orden = Object.values(sem.items).reduce((mx, it) => Math.max(mx, (it && it.orden) || 0), -1) + 1;
+  sem.items[mantId()] = {tipo: g.tipo, titulo: g.titulo, detalle: g.detalle || '', hecho: false, orden};
+  mantGuardarYPintar();
+}
+function mantItem(sk, id){
+  const mes = mantMes(mantMesActivo, false);
+  return mes && mes.semanas[sk] && mes.semanas[sk].items && mes.semanas[sk].items[id];
+}
+function mantMarcar(sk, id, hecho){
+  const it = mantItem(sk, id);
+  if(!it) return;
+  it.hecho = !!hecho;
+  it.hechoEn = hecho ? Date.now() : null;
+  mantGuardarYPintar();
+}
+function mantEditar(sk, id, campo, valor){
+  const it = mantItem(sk, id);
+  if(!it) return;
+  it[campo] = valor.trim();
+  saveRemoteBiz();   // sin repintar: se está escribiendo
+}
+function mantBorrar(sk, id){
+  const mes = mantMes(mantMesActivo, false);
+  if(!mes || !mes.semanas[sk] || !mes.semanas[sk].items) return;
+  if(!confirm('¿Quitar este gadget del mes?')) return;
+  delete mes.semanas[sk].items[id];
+  mes.creado = mes.creado || Date.now();
+  mantGuardarYPintar();
+}
+function mantGuardarComoPlantilla(){
+  const mes = mantMes(mantMesActivo, false);
+  if(!mes) return;
+  const p = {};
+  Object.keys(mes.semanas).forEach(sk => {
+    const sem = mes.semanas[sk];
+    p[sk] = {canal: sem.canal, items: mantItemsOrdenados(mantSemana(mes, sk)).map(it => ({tipo: it.tipo, titulo: it.titulo, detalle: it.detalle || ''}))};
+  });
+  try { localStorage.setItem(MANT_PLANTILLA_LS, JSON.stringify(p)); alert('Guardada. Los meses nuevos se rellenarán así.'); }
+  catch(e){ alert('No se pudo guardar la plantilla en este navegador.'); }
+}
+function mantRestaurarPlantilla(){
+  if(!confirm('¿Olvidar tu plantilla y volver al mes tipo de fábrica? Los meses ya creados no cambian.')) return;
+  try { localStorage.removeItem(MANT_PLANTILLA_LS); } catch(e){}
+  alert('Hecho.');
+}
+
 function plan360PageHeader(title, subtitle){
   return `<button class="btn btn-sm" onclick="renderClientGrid()">← Calendario</button>
     <h2 style="margin:10px 0 4px">${esc(title)}</h2>

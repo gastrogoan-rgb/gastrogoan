@@ -143,6 +143,58 @@ await caso('Panel del coach: reconoce su propio guardado aunque Firebase quite l
   return 'eco reconocido · cambio real detectado';
 });
 
+await caso('Mantenimiento: el negocio ve su mes, marca SUS tareas y no las entregas del coach', async () => {
+  const r = await page.evaluate(() => {
+    const clave = plan360MantClave(new Date());
+    // Como vuelve de Firebase: la semana 2 sin items (vacía = borrada).
+    DB.business.plan360Mant = {meses: {[clave]: {semanas: {
+      s1: {canal: 'whatsapp', items: {ga: {tipo: 'entrega', titulo: 'Reporte de la semana', hecho: true, orden: 0}, gb: {tipo: 'tarea', titulo: 'Publicar <b>2</b> reels', orden: 1}}},
+      s2: {canal: 'video'},
+    }}}};
+    renderPlan360Grid();
+    const tarjeta = !!document.querySelector('.p360-card[onclick="renderPlan360Mant()"]');
+    renderPlan360Mant(clave);
+    const html = document.getElementById('plan360-content').innerHTML;
+    plan360MantMarcar('s1', 'gb', true);
+    plan360MantMarcar('s1', 'ga', false);   // una entrega NO la desmarca el negocio
+    const it = DB.business.plan360Mant.meses[clave].semanas.s1.items;
+    return {tarjeta, escapado: html.includes('&lt;b&gt;2&lt;/b&gt;'), whatsapp: html.includes('ti-brand-whatsapp'),
+      tarea: it.gb.hecho === true && !!it.gb.hechoEn, entrega: it.ga.hecho === true};
+  });
+  assert.ok(r.tarjeta, 'no aparece la tarjeta de Mantenimiento en el Plan 360');
+  assert.ok(r.escapado, 'el título del gadget entra en el HTML sin escapar');
+  assert.ok(r.whatsapp, 'no dice por dónde se trabaja esa semana');
+  assert.ok(r.tarea, 'la tarea del negocio no queda marcada');
+  assert.ok(r.entrega, 'el negocio ha podido desmarcar una entrega del coach');
+  return 'tarjeta · escapado · tarea marcada · entrega intocable';
+});
+
+await caso('Mantenimiento (panel): el mes tipo son 4 lunes, con claves que Firebase no convierte en lista', async () => {
+  const coach = await browser.newPage();
+  await coach.setRequestInterception(true);
+  coach.on('request', r => /firebase|gstatic|googleapis/.test(r.url()) ? r.abort() : r.continue());
+  await coach.goto('http://localhost:8950/admin-panel/plan360.html', {waitUntil: 'domcontentloaded'});
+  const r = await coach.evaluate(() => {
+    remoteBiz = {name: 'X'};
+    saveRemoteBiz = () => {};
+    let grid = document.getElementById('client-grid');
+    if(!grid){ grid = document.createElement('div'); grid.id = 'client-grid'; document.body.appendChild(grid); }
+    renderMantPage('2026-11');           // noviembre de 2026: 5 lunes
+    mantAplicarPlantilla();
+    const mes = remoteBiz.plan360Mant.meses['2026-11'];
+    const claves = Object.keys(mes.semanas).sort();
+    const canales = ['s1', 's2', 's3', 's4'].map(k => mes.semanas[k].canal).join(',');
+    const tareasS1 = Object.values(mes.semanas.s1.items).filter(i => i.tipo === 'tarea').length;
+    return {claves, canales, tareasS1, lunes: mantLunesDelMes('2026-11').length};
+  });
+  await coach.close();
+  assert.equal(r.lunes, 5);
+  assert.deepEqual(r.claves, ['s1', 's2', 's3', 's4'], 'el 5º lunes debería nacer libre');
+  assert.equal(r.canales, 'whatsapp,video,whatsapp,video');
+  assert.ok(r.tareasS1 >= 1, 'el mes tipo no deja ninguna tarea al negocio');
+  return '4 lunes · WhatsApp/vídeo alternos · tareas incluidas';
+});
+
 await caso('Ningún error de JavaScript', async () => {
   const reales = errs.filter(e => !/Failed to fetch|NetworkError|network-request-failed/i.test(e));
   assert.deepEqual(reales.slice(0, 5), []);
