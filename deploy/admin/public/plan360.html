@@ -164,6 +164,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dr-lista>div{display:grid;grid-template-columns:26px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid #E7E2D9;font-size:13.5px;line-height:1.45;color:#3D3A34}
 .dr-lista span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4A5D4E;font-weight:600}
 .dr-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #1C1A17;border-left:1px solid #1C1A17;margin:10px 0 14px}.dr-cal-h{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:8px;border-right:1px solid #1C1A17}.dr-cal-d{min-height:72px;border-right:1px solid #1C1A17;border-bottom:1px solid #1C1A17;padding:6px 8px;font-size:12px;font-weight:600;color:#4A5D4E}
+.dr-inv-rojo{background:#A63D2F}.dr-inv-amarillo{background:#D09A2C}.dr-inv-verde{background:#4F8A5B}
+.dr-inv-bar{position:relative;display:flex;height:22px;background:#F1EFE9;margin:28px 0 10px}.dr-inv-bar i{display:block;height:100%}
+.dr-inv-bar b{position:absolute;top:-8px;bottom:-8px;width:2px;background:#1C1A17}.dr-inv-bar b span{position:absolute;top:-20px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;white-space:nowrap;color:#1C1A17}
+.dr-inv-ley{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:#3D3A34;margin-bottom:16px}.dr-inv-ley i{display:inline-block;width:10px;height:10px;margin-right:6px}
+.dr-inv-n{border-left:6px solid #CFC8BA;margin:14px 0 18px;background:#fff;border-top:1px solid #E7E2D9;border-right:1px solid #E7E2D9;border-bottom:1px solid #E7E2D9}.dr-inv-n-rojo{border-left-color:#A63D2F}.dr-inv-n-amarillo{border-left-color:#C08A1E}.dr-inv-n-verde{border-left-color:#3F7A4A}
+.dr-inv-nh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px}.dr-inv-n-rojo .dr-inv-nh{background:#F6E1DC}.dr-inv-n-amarillo .dr-inv-nh{background:#F7EBD0}.dr-inv-n-verde .dr-inv-nh{background:#DFEBDF}
+.dr-inv-nh b{font-size:15px}.dr-inv-nh em{font-style:normal;font-size:12.5px;color:#3D3A34;flex:1;min-width:160px}.dr-inv-nh strong{font-size:15px;margin-left:auto;white-space:nowrap}
+.dr-inv-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;flex:none}
+.dr-inv-it{display:grid;grid-template-columns:1fr auto;gap:3px 14px;padding:10px 14px;border-top:1px solid #E7E2D9}
+.dr-inv-it-t{font-size:14px;line-height:1.4}.dr-inv-it-t b{font-weight:600}.dr-inv-z{display:inline-block;margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#4A5D4E;border:1px solid #CFC8BA;padding:0 6px}
+.dr-inv-it-p{grid-column:1;font-size:13px;color:#3D3A34;line-height:1.45}
+.dr-inv-it-c{grid-column:2;grid-row:1/span 2;align-self:center;font-weight:700;font-size:15px;white-space:nowrap}
+.dr-inv-res td:last-child{text-align:right;white-space:nowrap}.dr-inv-tot td{font-weight:700;border-top:2px solid #1C1A17}
+.dr-inv-lema{margin:24px 0 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E;line-height:1.6}
 .dr-pie{padding:14px 44px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
 .dr-datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border:1px solid #1C1A17;margin:18px 0}
 .dr-dato{padding:14px 16px;border-right:1px solid #E7E2D9}
@@ -2447,6 +2461,75 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio, anterior){
     <div class="dr-portada"><div class="dr-portada-e">GastroGoan · Plan 360° · ${esc(pl.eyebrow)}</div><div class="dr-portada-t">${esc(pl.titulo)}</div><div class="dr-portada-s">${esc(pl.sub)}</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}</div>` : ''}</div>
     <div class="dr-cuerpo">${b}${anterior ? `<div class="dr-campo"><div class="dr-campo-l">${editar ? 'Texto anterior (solo lectura): pásalo a los campos ✎' : 'Notas anteriores de tu coach'}</div><div class="dr-campo-v">${esc(anterior).replace(/\n/g, '<br>')}</div></div>` : ''}</div>
     <div class="dr-pie">GastroGoan · Plan 360° — ${esc(pl.titulo)}</div>
+  </div>`;
+}
+/* Plan de inversiones (Día 2). Lo rellena el coach en su panel y el
+   negocio lo ve así, en solo lectura. Mismo contenido que «4.1 PLAN DE
+   INVERSIONES» del Drive: tres colores que marcan el ORDEN de gasto, un
+   coste por partida y el total frente al presupuesto. Esta función la
+   usan las dos caras (vista previa del coach y pantalla del negocio). */
+const PLAN360_INV_NIVELES = [
+  {id: 'prioritario', color: 'rojo', nombre: 'Prioritario', resumen: 'Estabiliza y evita pérdidas. Se invierte primero.', incluye: 'Estabiliza y evita pérdidas. Maquinaria crítica averiada, seguridad, higiene grave, algo roto que impide operar. Se invierte primero.', ejemplo: 'Ej: reparar plancha/horno/cámara, iluminación deficiente, mobiliario roto, señalización de seguridad, utensilios básicos.'},
+  {id: 'esencial', color: 'amarillo', nombre: 'Esencial', resumen: 'Mejora experiencia, eficiencia y rentabilidad.', incluye: 'Mejora experiencia, eficiencia y rentabilidad. Recepción del cliente, vajilla/cristalería, pintura y luz, herramientas de gestión (TPV, reservas).', ejemplo: 'Ej: renovar vajilla/cristalería, pintura, luz cálida, plantas, atril/cartelería, TPV y software de reservas, carta QR.'},
+  {id: 'complementario', color: 'verde', nombre: 'Complementario', resumen: 'Marca y ticket medio. Lo que pule.', incluye: 'Marca y ticket medio. Mobiliario y decoración, acústica, fotografía profesional, packaging propio, branding y señalética.', ejemplo: 'Ej: mobiliario y decoración, acústica y música, fotografía profesional, packaging propio, branding y señalética nueva.'},
+];
+function plan360InvEuros(n){
+  // Punto de miles siempre: toLocaleString('es-ES') no lo pone con cuatro
+  // cifras, y en la misma tabla salían «9000 €» junto a «13.200 €».
+  return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+}
+function plan360InversionesHtml(d, esc, negocio){
+  const items = (d.inversiones || []).filter(x => x && x.nombre);
+  const sub = {};
+  PLAN360_INV_NIVELES.forEach(n => { sub[n.id] = items.filter(x => (x.nivel || 'esencial') === n.id).reduce((s, x) => s + (Number(x.coste) || 0), 0); });
+  const total = Object.values(sub).reduce((a, b) => a + b, 0);
+  const presu = Number(d.presupuestoMaximo) || 0;
+  const dif = presu - total;
+  const escala = Math.max(total, presu) || 1;
+  const barra = `<div class="dr-inv-bar">${PLAN360_INV_NIVELES.map(n => sub[n.id] ? `<i class="dr-inv-${n.color}" style="width:${(sub[n.id] / escala * 100).toFixed(2)}%"></i>` : '').join('')}${presu ? `<b style="left:${(presu / escala * 100).toFixed(2)}%"><span style="${presu / escala > 0.7 ? 'right:6px' : 'left:6px'}">Presupuesto ${plan360InvEuros(presu)}</span></b>` : ''}</div>
+    <div class="dr-inv-ley">${PLAN360_INV_NIVELES.map(n => `<span><i class="dr-inv-${n.color}"></i>${n.nombre} · ${plan360InvEuros(sub[n.id])}</span>`).join('')}</div>`;
+  const bloque = n => {
+    const lista = items.filter(x => (x.nivel || 'esencial') === n.id);
+    if(!lista.length) return '';
+    return `<div class="dr-inv-n dr-inv-n-${n.color}">
+      <div class="dr-inv-nh"><span class="dr-inv-dot dr-inv-${n.color}"></span><b>${n.nombre}</b><em>${esc(n.resumen)}</em><strong>${plan360InvEuros(sub[n.id])}</strong></div>
+      ${lista.map(x => `<div class="dr-inv-it">
+        <div class="dr-inv-it-t"><b>${esc(x.nombre)}</b>${x.zona ? `<span class="dr-inv-z">${esc(x.zona)}</span>` : ''}</div>
+        ${x.porque ? `<div class="dr-inv-it-p">${esc(x.porque)}</div>` : ''}
+        <div class="dr-inv-it-c">${plan360InvEuros(x.coste)}</div>
+      </div>`).join('')}
+    </div>`;
+  };
+  return `<div class="dr-doc">
+    <div class="dr-portada"><div class="dr-portada-e">GastroGoan · Plan 360° · Plan exprés</div><div class="dr-portada-t">Plan de inversiones</div><div class="dr-portada-s">Qué necesita comprar o reformar el local, y en qué orden.</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}${d.inversionesFecha ? ` · ${esc(d.inversionesFecha)}` : ''}</div>` : ''}</div>
+    <div class="dr-cuerpo">
+      <div class="dr-datos">
+        <div class="dr-dato"><div class="dr-dato-v">${plan360InvEuros(total)}</div><div class="dr-dato-l">inversión total necesaria</div></div>
+        <div class="dr-dato"><div class="dr-dato-v">${presu ? plan360InvEuros(presu) : '—'}</div><div class="dr-dato-l">presupuesto máximo que asume el negocio</div></div>
+        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? 'diferencia' : dif < 0 ? 'de exceso sobre el presupuesto' : 'de margen dentro del presupuesto'}</div></div>
+        <div class="dr-dato"><div class="dr-dato-v">${items.length}</div><div class="dr-dato-l">inversiones detectadas</div></div>
+      </div>
+      ${total ? barra : ''}
+      <p class="dr-p">Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.</p>
+      <div class="dr-regla"><span>★ Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
+      <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">Listado por prioridad</div><div class="dr-cap-t">Inversiones necesarias</div><div class="dr-cap-s">Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).</div></div>
+      ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : '<p class="dr-p">Tu coach todavía no ha añadido inversiones.</p>'}
+      <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">Resumen económico</div><div class="dr-cap-t">Con el dinero delante</div><div class="dr-cap-s">Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.</div></div>
+      <div class="dr-tabla-w"><table class="dr-tabla dr-inv-res"><tbody>
+        ${PLAN360_INV_NIVELES.map(n => `<tr><td><span class="dr-inv-dot dr-inv-${n.color}"></span>Subtotal ${n.nombre}</td><td>${plan360InvEuros(sub[n.id])}</td></tr>`).join('')}
+        <tr class="dr-inv-tot"><td>Inversión total necesaria</td><td>${plan360InvEuros(total)}</td></tr>
+        <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
+        <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
+      </tbody></table></div>
+      <div class="dr-regla"><span>★ Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
+      ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
+      <div class="dr-h">Los 3 niveles de inversión</div>
+      <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>Color</th><th>Nivel</th><th>Qué incluye</th></tr></thead><tbody>
+        ${PLAN360_INV_NIVELES.map(n => `<tr><td data-l="Color"><span class="dr-inv-dot dr-inv-${n.color}"></span>${n.color === 'rojo' ? 'Rojo' : n.color === 'amarillo' ? 'Amarillo' : 'Verde'}</td><td data-l="Nivel">${n.nombre.toUpperCase()}</td><td data-l="Qué incluye">${esc(n.incluye)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="dr-inv-lema">Primero lo que estabiliza. Luego lo que rentabiliza. Después lo que diferencia.</div>
+    </div>
+    <div class="dr-pie">GastroGoan · Plan 360° — Plan de inversiones</div>
   </div>`;
 }
 function plan360DocRicoLeerCampos(){
@@ -5198,10 +5281,19 @@ function renderDia2Hub(d){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderInversionesPage(${d.day})">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${(d.inversiones || []).length ? 'ti-circle-check' : 'ti-coin'}" style="font-size:20px;${(d.inversiones || []).length ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>2. Plan de inversiones</strong>
+          <div class="p360-day-tag">${(d.inversiones || []).length ? (d.inversiones || []).length + ' inversiones · el negocio ya lo ve' : 'Qué comprar o reformar, por prioridad y con coste'}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderMasterclassPage(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ${d.masterclass && d.masterclass.completadoAt ? 'ti-circle-check' : 'ti-device-laptop'}" style="font-size:20px;${d.masterclass && d.masterclass.completadoAt ? 'color:var(--green)' : ''}"></i>
-        <div style="flex:1"><strong>2. Masterclass de la app</strong>
+        <div style="flex:1"><strong>3. Masterclass de la app</strong>
           <div class="p360-day-tag">${d.masterclass && d.masterclass.completadoAt ? 'Hecha' : 'Pendiente'}</div>
         </div>
         <i class="ti ti-chevron-right"></i>
@@ -5210,7 +5302,7 @@ function renderDia2Hub(d){
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderTeamBuildingPage(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ${d.teamBuilding && d.teamBuilding.completadoAt ? 'ti-circle-check' : 'ti-users-group'}" style="font-size:20px;${d.teamBuilding && d.teamBuilding.completadoAt ? 'color:var(--green)' : ''}"></i>
-        <div style="flex:1"><strong>3. Team building</strong>
+        <div style="flex:1"><strong>4. Team building</strong>
           <div class="p360-day-tag">${d.teamBuilding && d.teamBuilding.completadoAt ? 'Hecha' : 'Pendiente'}</div>
         </div>
         <i class="ti ti-chevron-right"></i>
@@ -5284,6 +5376,92 @@ function renderPlanAccionPage(day){
     <p class="muted" style="margin:16px 0 6px">Resumen visual — un vistazo rápido a en qué se enfoca cada día; el detalle está dentro de cada uno</p>
     <div class="card">${plan360DiasTrabajoVisual()}</div>
   `;
+}
+/* ---- Plan de inversiones (Día 2): lo rellena el coach aquí y el negocio
+   lo ve en su Plan 360 en solo lectura (plan360InversionesHtml, mismo
+   bloque compartido que los recursos). Por colores de prioridad: rojo
+   primero, verde al final. ---- */
+function renderInversionesPage(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  if(!Array.isArray(d.inversiones)) d.inversiones = [];
+  const fila = (x, i) => `<div class="inv-fila" style="border:1px solid var(--border);padding:10px;margin-bottom:8px;background:#fff">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="inv-nombre-${i}" value="${esc(x.nombre || '')}" placeholder="Inversión / material" style="flex:2;min-width:180px">
+      <input id="inv-zona-${i}" value="${esc(x.zona || '')}" placeholder="Zona" style="flex:1;min-width:110px">
+      <input id="inv-coste-${i}" type="number" min="0" value="${x.coste || ''}" placeholder="Coste €" style="flex:none;width:110px">
+      <button class="btn btn-sm" onclick="borrarInversion(${day},${i})" title="Quitar">✕</button>
+    </div>
+    <textarea id="inv-porque-${i}" rows="2" placeholder="Por qué / qué resuelve" style="width:100%;margin-top:8px">${esc(x.porque || '')}</textarea>
+  </div>`;
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
+    <h2 style="margin:10px 0 4px">Plan de inversiones</h2>
+    <p class="muted" style="margin-bottom:14px">Qué necesita comprar o reformar el local, y en qué orden. Lo que guardes aquí lo ve ${esc(remoteBiz.name || 'el negocio')} en su Plan 360, ordenado por colores. Cada inversión: qué es, en qué zona, por qué se necesita y su coste estimado.</p>
+    <div class="card">
+      <label for="inv-presupuesto"><strong>Presupuesto máximo que asume el negocio (€)</strong></label>
+      <input id="inv-presupuesto" type="number" min="0" value="${esc(d.presupuestoMaximo || '')}" style="width:200px;margin-top:6px">
+    </div>
+    ${PLAN360_INV_NIVELES.map(n => {
+      const idx = d.inversiones.map((x, i) => [x, i]).filter(([x]) => (x.nivel || 'esencial') === n.id);
+      const color = {rojo: '#A63D2F', amarillo: '#C08A1E', verde: '#3F7A4A'}[n.color];
+      // El ámbar del borde no llega a 4,5:1 como texto: el título va más oscuro.
+      const colorTexto = {rojo: '#A63D2F', amarillo: '#86600F', verde: '#3F7A4A'}[n.color];
+      return `<div class="card" style="margin-top:14px;border-left:6px solid ${color}">
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><strong style="color:${colorTexto}">${n.nombre}</strong><span class="muted" style="font-size:13px">${esc(n.resumen)}</span></div>
+        <p class="muted" style="font-size:12.5px;margin:4px 0 10px">${esc(n.ejemplo)}</p>
+        ${idx.map(([x, i]) => fila(x, i)).join('')}
+        <button class="btn btn-sm" onclick="addInversion(${day},'${n.id}')">+ Añadir ${n.nombre.toLowerCase()}</button>
+      </div>`;
+    }).join('')}
+    <div class="card" style="margin-top:14px">
+      <label for="inv-decision"><strong>Decisión y notas</strong> <span class="muted">(qué se aprueba en esta fase y qué se aplaza)</span></label>
+      <textarea id="inv-decision" rows="3" style="width:100%;margin-top:6px">${esc(d.inversionesDecision || '')}</textarea>
+    </div>
+    <div style="position:sticky;bottom:0;background:var(--bg);padding:12px 0;margin-top:12px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveInversiones(${day})">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
+      <span id="inv-ok" class="muted" style="display:none">✓ Guardado — el negocio ya lo ve</span>
+    </div>
+    <p class="muted" style="margin:18px 0 6px">Así lo ve el negocio:</p>
+    <div id="inv-preview">${plan360InversionesHtml(d, esc, remoteBiz.name || '')}</div>
+  `;
+}
+function syncInversionesForm(d){
+  d.inversiones.forEach((x, i) => {
+    const v = id => { const el = document.getElementById(id + i); return el ? el.value : null; };
+    if(v('inv-nombre-') !== null) x.nombre = v('inv-nombre-').trim();
+    if(v('inv-zona-') !== null) x.zona = v('inv-zona-').trim();
+    if(v('inv-porque-') !== null) x.porque = v('inv-porque-').trim();
+    if(v('inv-coste-') !== null) x.coste = Number(v('inv-coste-')) || 0;
+  });
+  const p = document.getElementById('inv-presupuesto'); if(p) d.presupuestoMaximo = p.value.trim();
+  const dec = document.getElementById('inv-decision'); if(dec) d.inversionesDecision = dec.value.trim();
+}
+function addInversion(day, nivel){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  syncInversionesForm(d);
+  d.inversiones.push({id: Date.now() + Math.floor(Math.random() * 1000), nombre: '', zona: '', porque: '', coste: 0, nivel});
+  renderInversionesPage(day);
+  const i = d.inversiones.length - 1, el = document.getElementById('inv-nombre-' + i);
+  if(el) el.focus();
+}
+function borrarInversion(day, i){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  syncInversionesForm(d);
+  d.inversiones.splice(i, 1);
+  renderInversionesPage(day);
+}
+function saveInversiones(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d) return;
+  syncInversionesForm(d);
+  d.inversiones = d.inversiones.filter(x => x.nombre);
+  d.inversionesFecha = new Date().toLocaleDateString('es-ES', {month: 'long', year: 'numeric'});
+  saveRemoteBiz();
+  renderInversionesPage(day);
+  const ok = document.getElementById('inv-ok'); if(ok) ok.style.display = '';
 }
 /* ---- Masterclass de la app: recorrido guiado por secciones (20/09,
    pedido del coach) — Configuración → Pantalla principal → Cocina →

@@ -5758,13 +5758,7 @@ function descargarPlan360DocRico(id){
   const doc = (DB.business.plan360Docs || []).find(d => d.id === id);
   const pl = PLAN360_DOC_PLANTILLAS[id];
   if(!doc || !pl) return;
-  const win = window.open('', '_blank');
-  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  const estilos = [...document.querySelectorAll('style')].map(x => x.outerHTML).join('');
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${escapeHtml(pl.titulo)}</title>${estilos}
-    <style>@page{size:A4;margin:12mm}html,body{overflow:visible!important;height:auto!important;display:block!important;background:#fff!important;padding:0!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head>
-    <body>${plan360DocRicoHtml(pl, doc.campos, 'ver', escapeHtml, DB.business.name || '', plan360DocTextoAnterior(doc))}<script>window.onload=function(){window.print();}<\/script></body></html>`);
-  win.document.close();
+  plan360ImprimirHtml(pl.titulo, plan360DocRicoHtml(pl, doc.campos, 'ver', escapeHtml, DB.business.name || '', plan360DocTextoAnterior(doc)));
 }
 /* ---- Libro de marca: ES el cuestionario "Este es tu negocio", con sus
    mismas áreas/preguntas, mostrado como documento final de solo lectura
@@ -5863,6 +5857,15 @@ function renderPlan360Dia2Hub(d){
         <i class="ti ti-calendar-event" style="font-size:20px"></i>
         <div style="flex:1"><strong>${escapeHtml(t('plan360.actionPlan'))}</strong></div>
         <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;${(d.inversiones || []).length ? 'cursor:pointer' : 'opacity:.55'}" ${(d.inversiones || []).length ? `onclick="renderPlan360Inversiones(${d.day})"` : ''}>
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-coin" style="font-size:20px;${(d.inversiones || []).length ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1"><strong>${escapeHtml(t('plan360.investmentPlan'))}</strong>
+          <div class="p360-day-tag">${escapeHtml((d.inversiones || []).length ? t('plan360.invReady') : t('plan360.invPendingCoach'))}</div>
+        </div>
+        ${(d.inversiones || []).length ? '<i class="ti ti-chevron-right"></i>' : ''}
       </div>
     </div>
     <div class="card" style="margin-top:14px;${listo ? 'cursor:pointer' : 'opacity:.55'}" ${listo ? `onclick="renderPlan360TeamBuilding(${d.day})"` : ''}>
@@ -5993,7 +5996,7 @@ function renderPlan360PlanAccion(day){
     <div class="card" style="margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <strong>${escapeHtml(t('plan360.investmentPlan'))}</strong>
-        ${plan360EsOwner() ? `<button class="btn btn-sm" onclick="renderPlan360Inversiones(${day})">${escapeHtml(t('common.edit'))}</button>` : ''}
+        ${(d.inversiones || []).length ? `<button class="btn btn-sm" onclick="renderPlan360Inversiones(${day})">${escapeHtml(t('common.view'))}</button>` : ''}
       </div>
       ${(d.inversiones || []).filter(inv => inv.nombre).length ? (d.inversiones || []).filter(inv => inv.nombre).map(inv => `
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
@@ -6004,108 +6007,37 @@ function renderPlan360PlanAccion(day){
     <div class="card">${plan360DiasTrabajoVisual()}</div>
   `;
 }
-// Acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o
-// REFORMAR de lo que hay que HACER: mismo criterio de 3 colores que los
-// objetivos (prioritario estabiliza, esencial rentabiliza, complementario
-// diferencia), con un coste estimado por partida para decidir con el
-// dinero delante. Mismo documento fuente que "4.1 PLAN DE INVERSIONES"
-// del Drive.
-let plan360InversionesDiaActivo = null;
+/* Plan de inversiones: lo rellena el coach en su panel (Día 2) y aquí
+   se ve en solo lectura, con el mismo diseño que los recursos
+   (plan360InversionesHtml, en el bloque compartido de js/core.js). Antes
+   lo editaba el propio negocio; el coach pidió hacerlo él en la sesión
+   (28/09) y que el negocio lo reciba ya ordenado por colores. */
 function renderPlan360Inversiones(day){
-  if(!plan360EsOwner()){ showToast(t('plan360.objectivesOwnerOnly')); renderPlan360PlanAccion(day); return; }
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
-  if(!Array.isArray(d.inversiones)) d.inversiones = [];
-  plan360InversionesDiaActivo = d;
   document.getElementById('plan360-content').innerHTML = `
-    <button class="btn btn-sm btn-back" onclick="renderPlan360PlanAccion(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
-    <div class="view-title" style="margin-top:10px">${escapeHtml(t('plan360.investmentPlan'))}</div>
-    <div class="card" style="margin-top:14px">
-      <div class="field"><label>${escapeHtml(t('plan360.invBudget'))}</label><input id="p360-inv-presupuesto" type="number" value="${escapeHtml(d.presupuestoMaximo || '')}" onchange="guardarPresupuestoInversion(${day},this.value)"></div>
-      <div id="p360-inv-list">${d.inversiones.map((inv, i) => plan360InversionRow(inv, i)).join('')}</div>
-      <button class="btn btn-sm" onclick="addPlan360Inversion(${day})" style="margin:6px 0 16px"><i class="ti ti-plus"></i> ${escapeHtml(t('plan360.addInvestment'))}</button>
-      <button class="btn btn-primary" onclick="savePlan360Inversiones(${day})">${escapeHtml(t('common.save'))}</button>
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-back" onclick="renderPlan360DayDetail(${day})"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
+      <button class="btn btn-sm" onclick="descargarPlan360Inversiones(${day})"><i class="ti ti-download"></i> <span>${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</span></button>
     </div>
-    ${plan360InversionesResumenHtml(d)}
+    ${plan360InversionesHtml(d, escapeHtml, DB.business.name || '')}
   `;
 }
-function plan360InversionRow(inv, i){
-  return `<div class="card" style="padding:10px;margin-bottom:8px">
-    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-      <div class="field" style="flex:2;min-width:160px;margin-bottom:0"><label>${escapeHtml(t('plan360.invItem'))}</label><input id="p360-inv-nombre-${i}" value="${escapeHtml(inv.nombre || '')}"></div>
-      <div class="field" style="flex:1;min-width:110px;margin-bottom:0"><label>${escapeHtml(t('plan360.invZone'))}</label><input id="p360-inv-zona-${i}" value="${escapeHtml(inv.zona || '')}"></div>
-    </div>
-    <div class="field" style="margin-bottom:8px"><label>${escapeHtml(t('plan360.invWhy'))}</label><textarea id="p360-inv-porque-${i}" rows="2">${escapeHtml(inv.porque || '')}</textarea></div>
-    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-      <div class="field" style="flex:1;min-width:130px;margin-bottom:0"><label>${escapeHtml(t('plan360.invLevel'))}</label>
-        <select id="p360-inv-nivel-${i}">
-          <option value="prioritario" ${inv.nivel === 'prioritario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.prioritario'))}</option>
-          <option value="esencial" ${inv.nivel === 'esencial' || !inv.nivel ? 'selected' : ''}>${escapeHtml(t('plan360.priority.esencial'))}</option>
-          <option value="complementario" ${inv.nivel === 'complementario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.complementario'))}</option>
-        </select>
-      </div>
-      <div class="field" style="flex:1;min-width:100px;margin-bottom:0"><label>${escapeHtml(t('plan360.invCost'))}</label><input id="p360-inv-coste-${i}" type="number" value="${inv.coste || ''}"></div>
-      <button class="btn btn-sm btn-icon" onclick="borrarPlan360Inversion(${i})" title="${escapeHtml(t('common.delete'))}"><i class="ti ti-trash"></i></button>
-    </div>
-  </div>`;
-}
-function plan360SyncInversionesFromForm(d){
-  d.inversiones.forEach((inv, i) => {
-    const n = document.getElementById('p360-inv-nombre-' + i), z = document.getElementById('p360-inv-zona-' + i),
-          p = document.getElementById('p360-inv-porque-' + i), niv = document.getElementById('p360-inv-nivel-' + i),
-          c = document.getElementById('p360-inv-coste-' + i);
-    if(n) inv.nombre = n.value.trim();
-    if(z) inv.zona = z.value.trim();
-    if(p) inv.porque = p.value.trim();
-    if(niv) inv.nivel = niv.value;
-    if(c) inv.coste = Number(c.value) || 0;
-  });
-}
-function addPlan360Inversion(day){
-  if(!plan360EsOwner()) return;
-  const d = plan360InversionesDiaActivo;
-  if(!d) return;
-  plan360SyncInversionesFromForm(d);
-  d.inversiones.push({id: genId(), nombre: '', zona: '', porque: '', coste: 0, nivel: 'esencial'});
-  document.getElementById('p360-inv-list').innerHTML = d.inversiones.map((inv, i) => plan360InversionRow(inv, i)).join('');
-}
-function borrarPlan360Inversion(i){
-  if(!plan360EsOwner()) return;
-  const d = plan360InversionesDiaActivo;
-  if(!d) return;
-  plan360SyncInversionesFromForm(d);
-  d.inversiones.splice(i, 1);
-  document.getElementById('p360-inv-list').innerHTML = d.inversiones.map((inv, i2) => plan360InversionRow(inv, i2)).join('');
-}
-function guardarPresupuestoInversion(day, valor){
-  if(!plan360EsOwner()) return;
+function descargarPlan360Inversiones(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
-  d.presupuestoMaximo = valor.trim();
-  saveDB();
+  plan360ImprimirHtml(t('plan360.investmentPlan'), plan360InversionesHtml(d, escapeHtml, DB.business.name || ''));
 }
-function savePlan360Inversiones(day){
-  if(!plan360EsOwner()) return;
-  const d = plan360InversionesDiaActivo;
-  if(!d) return;
-  plan360SyncInversionesFromForm(d);
-  d.inversiones = d.inversiones.filter(inv => inv.nombre);
-  saveDB();
-  showToast(t('plan360.saved'));
-  renderPlan360Inversiones(day);
-}
-function plan360InversionesResumenHtml(d){
-  const niveles = ['prioritario', 'esencial', 'complementario'];
-  const subtotales = niveles.map(nivel => ({nivel, total: (d.inversiones || []).filter(inv => (inv.nivel || 'esencial') === nivel).reduce((s, inv) => s + (Number(inv.coste) || 0), 0)}));
-  const totalNecesario = subtotales.reduce((s, n) => s + n.total, 0);
-  const presupuesto = Number(d.presupuestoMaximo) || 0;
-  const diferencia = presupuesto - totalNecesario;
-  return `<div class="card" style="margin-top:14px">
-    <div style="font-weight:600;margin-bottom:8px">${escapeHtml(t('plan360.investmentSummary'))}</div>
-    ${subtotales.map(n => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px"><span>${escapeHtml(t(PLAN360_NIVEL_LABEL[n.nivel]))}</span><span>${n.total}€</span></div>`).join('')}
-    <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:2px solid var(--ink);font-weight:800;margin-top:4px"><span>${escapeHtml(t('plan360.investmentTotal'))}</span><span>${totalNecesario}€</span></div>
-    ${d.presupuestoMaximo ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:${diferencia < 0 ? 'var(--red)' : 'var(--green)'}"><span>${escapeHtml(t('plan360.investmentDiff'))}</span><span>${diferencia}€</span></div>` : ''}
-  </div>`;
+// Ventana de impresión con los estilos de la app (la misma que los
+// recursos). ⚠️ <\/script> escapado: sin la barra, cierra el script de fuera.
+function plan360ImprimirHtml(titulo, cuerpo){
+  const win = window.open('', '_blank');
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  const estilos = [...document.querySelectorAll('style')].map(x => x.outerHTML).join('');
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${escapeHtml(titulo)}</title>${estilos}
+    <style>@page{size:A4;margin:12mm}html,body{overflow:visible!important;height:auto!important;display:block!important;background:#fff!important;padding:0!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head>
+    <body>${cuerpo}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+  win.document.close();
 }
 function renderPlan360StaffVoice(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);

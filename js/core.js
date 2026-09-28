@@ -4024,6 +4024,75 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio, anterior){
     <div class="dr-pie">GastroGoan · Plan 360° — ${esc(pl.titulo)}</div>
   </div>`;
 }
+/* Plan de inversiones (Día 2). Lo rellena el coach en su panel y el
+   negocio lo ve así, en solo lectura. Mismo contenido que «4.1 PLAN DE
+   INVERSIONES» del Drive: tres colores que marcan el ORDEN de gasto, un
+   coste por partida y el total frente al presupuesto. Esta función la
+   usan las dos caras (vista previa del coach y pantalla del negocio). */
+const PLAN360_INV_NIVELES = [
+  {id: 'prioritario', color: 'rojo', nombre: 'Prioritario', resumen: 'Estabiliza y evita pérdidas. Se invierte primero.', incluye: 'Estabiliza y evita pérdidas. Maquinaria crítica averiada, seguridad, higiene grave, algo roto que impide operar. Se invierte primero.', ejemplo: 'Ej: reparar plancha/horno/cámara, iluminación deficiente, mobiliario roto, señalización de seguridad, utensilios básicos.'},
+  {id: 'esencial', color: 'amarillo', nombre: 'Esencial', resumen: 'Mejora experiencia, eficiencia y rentabilidad.', incluye: 'Mejora experiencia, eficiencia y rentabilidad. Recepción del cliente, vajilla/cristalería, pintura y luz, herramientas de gestión (TPV, reservas).', ejemplo: 'Ej: renovar vajilla/cristalería, pintura, luz cálida, plantas, atril/cartelería, TPV y software de reservas, carta QR.'},
+  {id: 'complementario', color: 'verde', nombre: 'Complementario', resumen: 'Marca y ticket medio. Lo que pule.', incluye: 'Marca y ticket medio. Mobiliario y decoración, acústica, fotografía profesional, packaging propio, branding y señalética.', ejemplo: 'Ej: mobiliario y decoración, acústica y música, fotografía profesional, packaging propio, branding y señalética nueva.'},
+];
+function plan360InvEuros(n){
+  // Punto de miles siempre: toLocaleString('es-ES') no lo pone con cuatro
+  // cifras, y en la misma tabla salían «9000 €» junto a «13.200 €».
+  return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+}
+function plan360InversionesHtml(d, esc, negocio){
+  const items = (d.inversiones || []).filter(x => x && x.nombre);
+  const sub = {};
+  PLAN360_INV_NIVELES.forEach(n => { sub[n.id] = items.filter(x => (x.nivel || 'esencial') === n.id).reduce((s, x) => s + (Number(x.coste) || 0), 0); });
+  const total = Object.values(sub).reduce((a, b) => a + b, 0);
+  const presu = Number(d.presupuestoMaximo) || 0;
+  const dif = presu - total;
+  const escala = Math.max(total, presu) || 1;
+  const barra = `<div class="dr-inv-bar">${PLAN360_INV_NIVELES.map(n => sub[n.id] ? `<i class="dr-inv-${n.color}" style="width:${(sub[n.id] / escala * 100).toFixed(2)}%"></i>` : '').join('')}${presu ? `<b style="left:${(presu / escala * 100).toFixed(2)}%"><span style="${presu / escala > 0.7 ? 'right:6px' : 'left:6px'}">Presupuesto ${plan360InvEuros(presu)}</span></b>` : ''}</div>
+    <div class="dr-inv-ley">${PLAN360_INV_NIVELES.map(n => `<span><i class="dr-inv-${n.color}"></i>${n.nombre} · ${plan360InvEuros(sub[n.id])}</span>`).join('')}</div>`;
+  const bloque = n => {
+    const lista = items.filter(x => (x.nivel || 'esencial') === n.id);
+    if(!lista.length) return '';
+    return `<div class="dr-inv-n dr-inv-n-${n.color}">
+      <div class="dr-inv-nh"><span class="dr-inv-dot dr-inv-${n.color}"></span><b>${n.nombre}</b><em>${esc(n.resumen)}</em><strong>${plan360InvEuros(sub[n.id])}</strong></div>
+      ${lista.map(x => `<div class="dr-inv-it">
+        <div class="dr-inv-it-t"><b>${esc(x.nombre)}</b>${x.zona ? `<span class="dr-inv-z">${esc(x.zona)}</span>` : ''}</div>
+        ${x.porque ? `<div class="dr-inv-it-p">${esc(x.porque)}</div>` : ''}
+        <div class="dr-inv-it-c">${plan360InvEuros(x.coste)}</div>
+      </div>`).join('')}
+    </div>`;
+  };
+  return `<div class="dr-doc">
+    <div class="dr-portada"><div class="dr-portada-e">GastroGoan · Plan 360° · Plan exprés</div><div class="dr-portada-t">Plan de inversiones</div><div class="dr-portada-s">Qué necesita comprar o reformar el local, y en qué orden.</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}${d.inversionesFecha ? ` · ${esc(d.inversionesFecha)}` : ''}</div>` : ''}</div>
+    <div class="dr-cuerpo">
+      <div class="dr-datos">
+        <div class="dr-dato"><div class="dr-dato-v">${plan360InvEuros(total)}</div><div class="dr-dato-l">inversión total necesaria</div></div>
+        <div class="dr-dato"><div class="dr-dato-v">${presu ? plan360InvEuros(presu) : '—'}</div><div class="dr-dato-l">presupuesto máximo que asume el negocio</div></div>
+        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? 'diferencia' : dif < 0 ? 'de exceso sobre el presupuesto' : 'de margen dentro del presupuesto'}</div></div>
+        <div class="dr-dato"><div class="dr-dato-v">${items.length}</div><div class="dr-dato-l">inversiones detectadas</div></div>
+      </div>
+      ${total ? barra : ''}
+      <p class="dr-p">Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.</p>
+      <div class="dr-regla"><span>★ Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
+      <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">Listado por prioridad</div><div class="dr-cap-t">Inversiones necesarias</div><div class="dr-cap-s">Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).</div></div>
+      ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : '<p class="dr-p">Tu coach todavía no ha añadido inversiones.</p>'}
+      <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">Resumen económico</div><div class="dr-cap-t">Con el dinero delante</div><div class="dr-cap-s">Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.</div></div>
+      <div class="dr-tabla-w"><table class="dr-tabla dr-inv-res"><tbody>
+        ${PLAN360_INV_NIVELES.map(n => `<tr><td><span class="dr-inv-dot dr-inv-${n.color}"></span>Subtotal ${n.nombre}</td><td>${plan360InvEuros(sub[n.id])}</td></tr>`).join('')}
+        <tr class="dr-inv-tot"><td>Inversión total necesaria</td><td>${plan360InvEuros(total)}</td></tr>
+        <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
+        <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
+      </tbody></table></div>
+      <div class="dr-regla"><span>★ Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
+      ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
+      <div class="dr-h">Los 3 niveles de inversión</div>
+      <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>Color</th><th>Nivel</th><th>Qué incluye</th></tr></thead><tbody>
+        ${PLAN360_INV_NIVELES.map(n => `<tr><td data-l="Color"><span class="dr-inv-dot dr-inv-${n.color}"></span>${n.color === 'rojo' ? 'Rojo' : n.color === 'amarillo' ? 'Amarillo' : 'Verde'}</td><td data-l="Nivel">${n.nombre.toUpperCase()}</td><td data-l="Qué incluye">${esc(n.incluye)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="dr-inv-lema">Primero lo que estabiliza. Luego lo que rentabiliza. Después lo que diferencia.</div>
+    </div>
+    <div class="dr-pie">GastroGoan · Plan 360° — Plan de inversiones</div>
+  </div>`;
+}
 function plan360DocRicoLeerCampos(){
   const out = {};
   document.querySelectorAll('[data-dr-campo]').forEach(el => { const v = el.value.trim(); if(v) out[el.dataset.drCampo] = v; });
