@@ -1032,6 +1032,7 @@ Haz 3-5 preguntas, no más. El cliente debe hablar en frases cortas y naturales.
 - Web (sección testimonios).
 - WhatsApp Business (bienvenida).
 - Anuncios de Meta Ads (prueba social = conversión alta).`},
+  {id: 'numeros-negocio', title: 'Los números del negocio', categoria: 'Gestión'},
   {id: 'checklist-gestion', title: 'Checklist de gestión', categoria: 'Gestión', subtitulo: 'Las rutinas que mantienen el negocio bajo control: cada día y cada mes.', seed:
 `Asigna un responsable a cada etapa del proceso. Lo que no tiene dueño, no se hace.
 
@@ -1507,6 +1508,111 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'cap', n: '06', titulo: 'Comportamientos clave', sub: 'Cuatro comportamientos que no se negocian.'},
       {t: 'tarjetas', items: [{k: '01', t: 'Puntualidad activa', d: 'Llegar 10 min antes, preparado y con uniforme; avisar con 24 h si no se puede asistir.'}, {k: '02', t: 'Proactividad resolutiva', d: 'Si detectas un problema, propones y ejecutas, o escalas con una propuesta.'}, {k: '03', t: 'Respeto operativo', d: 'Tono profesional, conflictos en privado, espacio ordenado.'}, {k: '04', t: 'Responsabilidad con recursos', d: 'Anotar mermas, rotar stock y minimizar desperdicios.'}]},
       {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Lo más importante al incorporar gente en este negocio', grande: true},
+    ],
+  },
+  'checklist-gestion': {
+    eyebrow: 'Proceso · Gestión',
+    titulo: 'Proceso de gestión operativa',
+    sub: 'Las rutinas que mantienen el negocio bajo control: cada día y cada mes. Y dónde se mira cada cosa en la app.',
+    bloques: [
+      {t: 'dato', items: [{v: '5', l: 'rutinas de revisión diaria'}, {v: '15', l: 'revisiones de cierre de mes'}, {v: '1', l: 'responsable por cada etapa'}, {v: '1', l: 'plan de acción al mes'}]},
+      {t: 'cap', n: '01', titulo: 'Por qué un proceso', sub: 'El negocio no se controla con memoria, se controla con rutina.'},
+      {t: 'p', x: 'En hostelería el día a día se lo come todo: el proveedor que no llega, el camarero que falta, la mesa que se queja. Si la gestión depende de acordarse, se hace a trompicones y los problemas se descubren cuando ya han costado dinero. Estas rutinas son pocas y siempre las mismas, y casi todo lo que piden ya lo tiene la app.'},
+      {t: 'regla', x: 'Asigna un responsable a cada etapa del proceso. Lo que no tiene dueño, no se hace.'},
+
+      {t: 'cap', n: '02', titulo: 'Revisión diaria', sub: 'Cinco rutinas, del primer café al cierre.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Gestión inicial', d: 'Alinear objetivos del día y resolver incidencias (proveedores, personal, pagos, clientes).', e: 'Panel de Control → «Hoy — Atención»: facturas que vencen, pagos sin asignar, mantenimiento vencido, stock bajo mínimos.'},
+        {t: 'Gestión de personal', d: 'Confirmar turnos, resolver incidencias de última hora y asignar sustituciones.', e: 'Horario del Personal: turnos del día, cambios de turno pendientes y quién ha fichado.'},
+        {t: 'Repaso de reservas / ocupación', d: 'Ajustar personal, prever picos y definir prioridades de servicio.', e: 'Reservas → Día, y la lista de espera. Los alérgenos y celebraciones anotados van al briefing.'},
+        {t: 'Gestión del servicio y satisfacción', d: 'Detectar desviaciones operativas y resolver incidencias en tiempo real.', e: 'TPV y Comandas Cocina: mesas que esperan, platos que tardan. Las quejas se resuelven con el método del Playbook de sala.'},
+        {t: 'Cierre administrativo del día', d: 'Revisar KPIs (food cost, ticket medio, ocupación, satisfacción), cerrar caja, pasar tiquets y facturas.', e: 'TPV → Cierre de caja / Arqueo. Las facturas del día, en Gestión Económica → Gastos Variables. El ticket medio, en el Panel de Control.'},
+      ]},
+      {t: 'campo', id: 'resp-diaria', label: 'Responsable de cada etapa diaria', ayuda: 'Etapa y nombre', grande: true},
+
+      {t: 'cap', n: '03', titulo: 'Revisión mensual', sub: 'Quince revisiones para cerrar un mes y preparar el siguiente.'},
+      {t: 'pasos', etiqueta: 'En la app', items: [
+        {t: 'Cierre contable mensual', d: 'Consolidar ventas, costes directos e indirectos y preparar el informe de resultados del mes.', e: 'Gestión Económica → Ventas, Gastos Fijos y Gastos Variables.'},
+        {t: 'Revisión de cashflow y previsión', d: 'Proyección de liquidez para 30/60 días y detección de picos de pago.', e: 'Gestión Económica → Tesorería.'},
+        {t: 'Gestión de nóminas', d: 'Validar la nómina mensual, horas extras y variaciones de plantilla antes de pagar.', e: 'Horario del Personal → fichajes de cada persona: horas trabajadas y horas extra, para cotejar con la gestoría.'},
+        {t: 'Gestión fiscal', d: 'Preparar impuestos mensuales/trimestrales (retenciones, IVA, modelos) y coordinar con asesoría.', e: 'Los datos salen de Gestión Económica; la presentación la hace la asesoría. La app no presenta impuestos.'},
+        {t: 'Inventario completo', d: 'Conteo detallado de almacén para actualizar stocks.', e: 'Stock: se corrige la cantidad real, y «Valor del stock» da lo que hay inmovilizado. Las diferencias se miran junto al resumen de «Mermas».'},
+        {t: 'Actualización de escandallos y precios', d: 'Actualizar costes por plato frente a variaciones de producto y revisar márgenes.', e: 'Mega Lista (precios de compra) y Escandallo: el coste de cada plato se recalcula solo.'},
+        {t: 'Evaluación de proveedores', d: 'Analizar precios, plazos y calidad; renegociar condiciones si procede.', e: 'Proveedores y Pedidos: qué se ha comprado, a qué precio y qué ha llegado.'},
+        {t: 'Mantenimiento preventivo', d: 'Revisar partes y coordinar intervenciones técnicas programadas.', e: 'APPCC e Higiene → Mantenimiento: lo pendiente y lo vencido.'},
+        {t: 'Formación y evaluación del personal', d: 'Planificar microformaciones y evaluar el desempeño del mes.', e: 'Recursos → «Evaluar, reconocer y retener» y «Playbook de liderazgo».'},
+        {t: 'Marketing y ventas', d: 'Revisar campañas, reservas, eventos y ROI de las acciones promocionales.', e: 'Promoción, Reservas y Clientes: qué promociones se usaron, cuántas reservas entraron y quién repite.'},
+        {t: 'Revisión de KPIs del mes', d: 'Ticket medio, covers, ocupación, food cost y % margen por categoría.', e: 'Panel de Control y su «Análisis de Platos». Ver también «Los números del negocio».'},
+        {t: 'Planificación del mes que entra', d: 'Ajustar pedidos según rotación y previsión de demanda.', e: 'Stock (mínimos) y Pedidos; las reservas ya confirmadas del mes siguiente.'},
+        {t: 'Resumen mensual y plan de acción', d: 'Documento ejecutable con incidencias, responsables y objetivos para el mes siguiente.', e: 'La plantilla del capítulo 05 de este documento.'},
+        {t: 'Revisión de la cuenta de resultados', d: 'Ingresos, coste de ventas (food cost), gastos fijos y variables, margen bruto, EBITDA y resultado neto; identificar desviaciones y acciones correctoras.', e: 'Gestión Económica → Cuenta de Resultados (por mes o trimestre) y Punto de Equilibrio.'},
+        {t: 'Obligaciones legales y fiscales', d: 'IVA, Impuesto de Sociedades, retenciones e impuestos laborales (IRPF y cotizaciones), tasas locales (IAE, licencias), HACCP, contratos, seguros y revisiones periódicas.', e: 'Los registros de APPCC/HACCP, en APPCC e Higiene. Lo fiscal y laboral, con la asesoría.'},
+      ]},
+      {t: 'campo', id: 'resp-mensual', label: 'Responsable de cada revisión mensual', ayuda: 'Revisión y nombre', grande: true},
+
+      {t: 'cap', n: '04', titulo: 'El calendario', sub: 'Qué toca cada semana del mes.'},
+      {t: 'tabla', cab: ['Cuándo', 'Qué se hace'], filas: [
+        ['Días 1 a 5', 'Cierre contable, cuenta de resultados, KPIs del mes, inventario completo'],
+        ['Días 5 a 10', 'Nóminas validadas con la asesoría, cashflow a 30/60 días, resumen y plan de acción'],
+        ['Segunda semana', 'Escandallos y precios, evaluación de proveedores, mantenimiento preventivo'],
+        ['Tercera semana', 'Formación y evaluación del personal, marketing y ventas'],
+        ['Última semana', 'Planificación del mes que entra: pedidos, turnos, promociones'],
+        ['Enero, abril, julio y octubre', 'Impuestos trimestrales con la asesoría (normalmente del 1 al 20; el del cuarto trimestre, hasta el 30 de enero)']]},
+      {t: 'p', x: 'Las fechas de los impuestos son las habituales; la asesoría confirma las de cada negocio.'},
+      {t: 'campo', id: 'calendario', label: 'Nuestro calendario', ayuda: 'Los días concretos de este negocio'},
+
+      {t: 'cap', n: '05', titulo: 'Resumen mensual y plan de acción', sub: 'Una hoja. Lo que pasó, quién hace qué y para cuándo.'},
+      {t: 'ficha', filas: ['Mes', 'Ventas y resultado del mes', 'Lo que ha ido bien', 'Incidencias', 'Acción 1 · responsable · fecha', 'Acción 2 · responsable · fecha', 'Acción 3 · responsable · fecha', 'Objetivos del mes que entra']},
+      {t: 'regla', x: 'Tres acciones como mucho. Un plan con diez puntos no se cumple.'},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'Por dónde empezar a poner orden en este negocio', grande: true},
+    ],
+  },
+  'numeros-negocio': {
+    eyebrow: 'Guía · Gestión',
+    titulo: 'Los números del negocio',
+    sub: 'Los seis números que dicen si un restaurante gana dinero, cómo se calculan, dónde verlos en la app y qué hacer cuando se desvían.',
+    bloques: [
+      {t: 'dato', items: [{v: '6', l: 'números para entender el negocio'}, {v: '≤ 65 %', l: 'materia prima + personal, sobre ventas'}, {v: '1', l: 'punto de equilibrio: lo que hay que vender para no perder'}, {v: '1', l: 'revisión al mes'}]},
+      {t: 'cap', n: '01', titulo: 'Por qué estos números', sub: 'La caja llena no significa que se gane dinero.'},
+      {t: 'p', x: 'Un restaurante puede estar lleno cada noche y perder dinero, o parecer tranquilo y ganar bien. La diferencia está en unos pocos números que casi nadie mira hasta que el banco llama. No hace falta ser contable: basta con saber qué dice cada uno y revisarlos una vez al mes.'},
+      {t: 'regla', x: 'Todo se calcula sobre las ventas SIN IVA. El IVA no es tuyo: es de Hacienda.'},
+
+      {t: 'cap', n: '02', titulo: 'Los seis números', sub: 'Qué son, cómo se calculan y dónde están en la app.'},
+      {t: 'tabla', cab: ['Número', 'Qué dice', 'Cómo se calcula', 'Orientativo', 'En la app'], filas: [
+        ['Food cost', 'Cuánto de cada euro vendido se va en materia prima', 'Coste de materia prima ÷ ventas', '25–35 %', 'Escandallo (por plato) y Cuenta de Resultados (del mes)'],
+        ['Coste de personal', 'Cuánto se va en el equipo', 'Salarios + Seguridad Social ÷ ventas', '30–35 %', 'Cuenta de Resultados'],
+        ['Prime cost', 'Los dos grandes costes juntos', 'Food cost + coste de personal', 'Hasta 60–65 %', 'Cuenta de Resultados'],
+        ['Ticket medio', 'Cuánto gasta cada cliente', 'Ventas ÷ cubiertos (o ÷ tickets)', 'Depende del concepto', 'Panel de Control'],
+        ['Ocupación', 'Cuánto se llena el local', 'Cubiertos servidos ÷ plazas disponibles, por servicio', 'Depende del concepto', 'Reservas y Panel de Control'],
+        ['Punto de equilibrio', 'Lo que hay que vender para no perder', 'Gastos fijos ÷ (1 − % de costes variables)', 'Cuanto más bajo, mejor', 'Gestión Económica → Punto de Equilibrio']]},
+      {t: 'p', x: 'Los rangos son los habituales en un restaurante con servicio de mesa. Una hamburguesería, un bar de tapas o un restaurante gastronómico tienen los suyos: lo importante es fijar los de este negocio y vigilar que no se muevan.'},
+
+      {t: 'cap', n: '03', titulo: 'Un ejemplo resuelto', sub: 'Un restaurante que vende 40.000 € al mes sin IVA. Cifras de ejemplo.'},
+      {t: 'tabla', cab: ['Concepto', 'Al mes', 'Sobre ventas'], filas: [['Ventas sin IVA', '40.000 €', '100 %'], ['Materia prima', '12.000 €', '30 %'], ['Personal (con Seguridad Social)', '13.600 €', '34 %'], ['Prime cost', '25.600 €', '64 %'], ['Alquiler', '3.200 €', '8 %'], ['Suministros', '1.600 €', '4 %'], ['Otros gastos fijos', '2.400 €', '6 %'], ['Resultado antes de impuestos y amortizaciones (EBITDA)', '7.200 €', '18 %']]},
+      {t: 'h', x: 'El punto de equilibrio'},
+      {t: 'p', x: 'Si tomamos la materia prima como único coste variable (30 %) y todo lo demás como fijo (20.800 € al mes), cada euro vendido deja 70 céntimos para pagar los fijos. Punto de equilibrio: 20.800 ÷ 0,70 = 29.714 € al mes, unos 990 € al día en un mes de 30 días. Por debajo, se pierde; por encima, se gana.'},
+      {t: 'h', x: 'Lo que cuesta un punto'},
+      {t: 'dato', items: [{v: '−1.200 €', l: 'al mes si el food cost pasa del 30 al 33 %'}, {v: '−14.400 €', l: 'al año por esos tres puntos'}, {v: '+1 €', l: 'de ticket medio con 1.600 cubiertos = +1.600 € al mes'}, {v: '+19.200 €', l: 'al año por ese euro'}]},
+      {t: 'regla', x: 'Un par de puntos de food cost o un euro de ticket medio son la diferencia entre un buen año y uno malo.'},
+
+      {t: 'cap', n: '04', titulo: 'Cuando un número se desvía', sub: 'Dónde mirar y qué hacer.'},
+      {t: 'tabla', cab: ['Síntoma', 'Dónde mirar', 'Qué hacer'], filas: [
+        ['Food cost alto', 'Precios de proveedores, resumen de Mermas, escandallos', 'Renegociar o cambiar proveedor, reducir mermas, pesar raciones, revisar precios (Ingeniería de carta)'],
+        ['Personal alto', 'Turnos frente a las horas en que de verdad se vende', 'Ajustar turnos a los picos, no a la costumbre'],
+        ['Ticket medio bajo', 'Qué se vende y qué no se ofrece', 'Recomendar en sala, vender bebida, postres y cafés (Playbook de sala y Barra)'],
+        ['Ocupación baja', 'Reservas por día y franja, clientes que no vuelven', 'Promociones en los días flojos, fidelizar, trabajar la reputación'],
+        ['Por debajo del punto de equilibrio', 'Gastos fijos uno a uno', 'Recortar fijos que no aportan y subir ventas en los días flojos'],
+        ['Caja justa a fin de mes', 'Tesorería: pagos grandes y cuándo caen', 'Apartar cada mes lo de los impuestos, escalonar pagos, no comprar de más']]},
+
+      {t: 'cap', n: '05', titulo: 'Nuestro cuadro de mando', sub: 'Una línea por número, una vez al mes.'},
+      {t: 'ficha', filas: ['Mes', 'Ventas sin IVA', 'Food cost %', 'Coste de personal %', 'Prime cost %', 'Ticket medio', 'Ocupación media', 'Punto de equilibrio y distancia', 'Resultado (EBITDA)']},
+      {t: 'campos', items: [
+        {id: 'obj-food', label: 'Food cost objetivo', ayuda: 'Por ejemplo, 30 %'},
+        {id: 'obj-personal', label: 'Coste de personal objetivo', ayuda: 'Por ejemplo, 33 %'},
+        {id: 'obj-ticket', label: 'Ticket medio objetivo', ayuda: 'Por ejemplo, 28 €'},
+        {id: 'pe', label: 'Nuestro punto de equilibrio', ayuda: 'Al mes y al día'},
+      ]},
+      {t: 'campo', id: 'nota-coach', label: 'Nota de tu coach', ayuda: 'El número que más hay que vigilar en este negocio y por qué', grande: true},
     ],
   },
   'playbook-cocina': {
