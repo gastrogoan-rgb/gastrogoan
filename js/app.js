@@ -5535,6 +5535,10 @@ function renderPlan360Mant(clave){
     if(!sem || !items.length) return '';
     const esEsta = hoy >= lunes && hoy < new Date(lunes.getTime() + 7 * 86400000);
     const video = sem.canal === 'video';
+    // El icono lo elige el coach en su catálogo (admin-panel/plan360.html,
+    // que el recortador de iconos también rastrea). Solo se acepta un nombre
+    // de icono limpio: es dato que viene de la nube y va a un class="".
+    const icono = it => /^ti-[a-z0-9-]+$/.test(it.icono || '') ? it.icono : (it.tipo === 'tarea' ? 'ti-checkbox' : 'ti-send');
     const fila = it => {
       const tarea = it.tipo === 'tarea';
       const marca = tarea
@@ -5543,7 +5547,7 @@ function renderPlan360Mant(clave){
       return `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--border)">
         ${marca}
         <div style="flex:1;min-width:0">
-          <div class="txt-xs" style="font-weight:700;color:${tarea ? 'var(--amber, #8A7440)' : 'var(--muted)'};text-transform:uppercase;letter-spacing:.04em">${escapeHtml(t(tarea ? 'plan360.mant.yourTask' : 'plan360.mant.fromCoach'))}</div>
+          <div class="txt-xs" style="font-weight:700;color:${tarea ? 'var(--amber, #8A7440)' : 'var(--muted)'};text-transform:uppercase;letter-spacing:.04em"><i class="ti ${icono(it)}" style="font-size:15px;vertical-align:-2px"></i> ${escapeHtml(t(tarea ? 'plan360.mant.yourTask' : 'plan360.mant.fromCoach'))}</div>
           <div style="font-weight:600;${it.hecho ? 'text-decoration:line-through;opacity:.65' : ''}">${escapeHtml(it.titulo)}</div>
           ${it.detalle ? `<div style="font-size:13px;color:var(--muted);white-space:pre-wrap;margin-top:2px">${escapeHtml(it.detalle)}</div>` : ''}
           ${!tarea && it.hecho ? `<div class="txt-xs" style="color:var(--green);margin-top:2px">${escapeHtml(t('plan360.mant.delivered'))}</div>` : ''}
@@ -5555,6 +5559,7 @@ function renderPlan360Mant(clave){
         <strong style="flex:1;min-width:150px;text-transform:capitalize">${escapeHtml(lunes.toLocaleDateString(localeActual(), {weekday: 'long', day: 'numeric', month: 'long'}))}</strong>
         <span class="p360-day-tag" style="margin:0"><i class="ti ${video ? 'ti-video' : 'ti-brand-whatsapp'}"></i> ${escapeHtml(t(video ? 'plan360.mant.video' : 'plan360.mant.whatsapp'))}</span>
       </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px" aria-hidden="true">${items.map(it => `<i class="ti ${icono(it)}" style="font-size:20px;color:${it.hecho ? 'var(--muted)' : it.tipo === 'tarea' ? 'var(--amber, #8A7440)' : 'var(--green)'}"></i>`).join('')}</div>
       ${items.map(fila).join('')}
     </div>`;
   };
