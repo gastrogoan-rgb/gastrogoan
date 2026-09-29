@@ -22,6 +22,9 @@
  * LÍNEA, así que el número es exacto. La primera versión de esta prueba dio
  * doscientos falsos positivos por esto.
  */
+// Objetivo táctil: 36 px (no 40 ni 44) por decisión del dueño del 28/09 —
+// los botones de móvil se quedan en 36. Con 40 salían ~1.300 avisos por algo
+// ya decidido, y el rojo permanente en GitHub enseñaba a no mirar ninguno.
 import puppeteer from 'puppeteer-core';
 
 const ANCHOS = [
@@ -114,7 +117,7 @@ const MIRAR = W => {
       if(fs && fs < 11) out.letra.push(`«${texto(el)}» ${fs}px [${quien(el)}]`);
     }
     const esBoton = el.tagName === 'BUTTON' || (el.tagName === 'A' && String(el.className).includes('btn'));
-    if(esBoton && (r.height < 40 || r.width < 40)) out.toque.push(`«${texto(el)}» ${Math.round(r.width)}×${Math.round(r.height)}`);
+    if(esBoton && (r.height < 36 || r.width < 36)) out.toque.push(`«${texto(el)}» ${Math.round(r.width)}×${Math.round(r.height)}`);
   });
   const uniq = a => [...new Set(a)];
   return {arrastraDoc: out.arrastraDoc, cortado: uniq(out.cortado), partido: uniq(out.partido),
@@ -188,7 +191,7 @@ const auditarModales = async page => {
           const fs = parseFloat(getComputedStyle(el).fontSize);
           if(fs && fs < 11) out.letra.push(`«${texto(el)}» ${fs}px [${quien(el)}]`);
         }
-        if(el.tagName === 'BUTTON' && (r.height < 40 || r.width < 40)) out.toque.push(`«${texto(el)}» ${Math.round(r.width)}×${Math.round(r.height)}`);
+        if(el.tagName === 'BUTTON' && (r.height < 36 || r.width < 36)) out.toque.push(`«${texto(el)}» ${Math.round(r.width)}×${Math.round(r.height)}`);
       });
       const u = a => [...new Set(a)];
       return {cortado:u(out.cortado), partido:u(out.partido), letra:u(out.letra), toque:u(out.toque)};

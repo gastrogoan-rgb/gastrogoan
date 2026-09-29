@@ -2585,3 +2585,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .bar-chart{overflow-x:auto;padding-bottom:4px}
   .bar-col{min-width:34px}
 }
+
+/* <small> dentro de un texto de 13 px daba 10,8 px — por debajo del mínimo
+   de 11 (salía en Mi Negocio → Reservas y en Exportar contabilidad). */
+small{font-size:max(.8333em, 11px)}
