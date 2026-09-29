@@ -149,6 +149,14 @@
       "adminSalesLog": {
         ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
         ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com'"
+      },
+
+      "coachConfig": {
+
+        ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
+
+        ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com'"
+
       }
     }
   }

@@ -5503,6 +5503,9 @@ function plan360MantenimientoPensar(){
    clave y no listas: si el coach añade un gadget mientras aquí se marca
    una tarea, la fusión a tres bandas no se pisa por posición. */
 let plan360MantMes = null;
+// «Septiembre de 2026», no «Septiembre De 2026»: text-transform:capitalize
+// sube TODAS las palabras.
+function plan360Mayus(txt){ return txt ? txt.charAt(0).toUpperCase() + txt.slice(1) : ''; }
 function plan360MantHayAlgo(){
   const m = DB.business.plan360Mant;
   return !!(m && m.meses && typeof m.meses === 'object' && Object.keys(m.meses).length);
@@ -5516,6 +5519,88 @@ function plan360MantLunes(clave){
   while(d.getMonth() === m - 1){ out.push(new Date(d)); d.setDate(d.getDate() + 7); }
   return out;
 }
+// Cada gadget cae en su lunes + el día que el coach le haya puesto (0-6).
+function plan360MantFechaItem(clave, sk, it){
+  const lunes = plan360MantLunes(clave)[Number(String(sk).slice(1)) - 1];
+  if(!lunes) return null;
+  const f = new Date(lunes);
+  f.setDate(f.getDate() + Math.max(0, Math.min(6, Number((it && it.dia) || 0))));
+  return f;
+}
+// Todos los gadgets, con su fecha, recorriendo todos los meses. Firebase
+// borra lo vacío: cualquier nivel puede faltar.
+function plan360MantTodos(){
+  const meses = ((DB.business.plan360Mant || {}).meses) || {};
+  const out = [];
+  Object.keys(meses).forEach(clave => {
+    const semanas = (meses[clave] && meses[clave].semanas) || {};
+    Object.keys(semanas).forEach(sk => {
+      const items = (semanas[sk] && semanas[sk].items) || {};
+      Object.keys(items).forEach(id => {
+        const it = items[id];
+        if(!it || !it.titulo) return;
+        out.push({clave, sk, id, it, fecha: plan360MantFechaItem(clave, sk, it)});
+      });
+    });
+  });
+  return out;
+}
+// Las tareas del negocio que caen en ESTA semana y siguen sin hacer: es lo
+// que sale en el Panel de Control, donde entra cada día — dentro del Plan
+// 360 no las vería nadie.
+function plan360MantPendientesSemana(){
+  if(!DB.business || !plan360MantHayAlgo()) return [];
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
+  const fin = new Date(lunes); fin.setDate(lunes.getDate() + 7);
+  return plan360MantTodos().filter(x => x.it.tipo === 'tarea' && !x.it.hecho && x.fecha && x.fecha >= lunes && x.fecha < fin);
+}
+function plan360IrAMantenimiento(){
+  navigate('plan360');
+  plan360MantMes = null;
+  renderPlan360Mant();
+}
+// «Lo que llevamos juntos»: lo que justifica cada mes el mantenimiento, a
+// la vista. Se cuenta solo de lo que ya hay: nada que rellenar a mano.
+function plan360MantMarcador(){
+  const todos = plan360MantTodos();
+  const hechas = todos.filter(x => x.it.hecho);
+  const esLlamada = it => it.icono === 'ti-video' || it.icono === 'ti-calendar-stats' || /^videollamada/i.test(it.titulo);
+  const esReporte = it => it.icono === 'ti-file-analytics' || it.icono === 'ti-report-money' || /^reporte/i.test(it.titulo);
+  const claves = Object.keys(((DB.business.plan360Mant || {}).meses) || {}).sort();
+  const desde = claves.length ? claves[0] + '-01' : null;
+  const subidas = desde ? (DB.preciosHistorial || []).filter(h => h && h.fecha >= desde && Number(h.despues) > Number(h.antes)).length : 0;
+  return {
+    desde,
+    tareas: hechas.filter(x => x.it.tipo === 'tarea').length,
+    entregas: hechas.filter(x => x.it.tipo !== 'tarea' && !esLlamada(x.it) && !esReporte(x.it)).length,
+    reportes: hechas.filter(x => x.it.tipo !== 'tarea' && esReporte(x.it)).length,
+    llamadas: hechas.filter(x => x.it.tipo !== 'tarea' && esLlamada(x.it)).length,
+    subidas,
+  };
+}
+function plan360MantMarcadorHtml(){
+  const m = plan360MantMarcador();
+  if(!m.desde) return '';
+  const [y, mo] = m.desde.split('-').map(Number);
+  const desdeTxt = new Date(y, mo - 1, 1).toLocaleDateString(localeActual(), {month: 'long', year: 'numeric'});
+  const celda = (n, icono, clave) => `<div style="flex:1;min-width:92px;text-align:center;padding:6px 4px">
+      <i class="ti ${icono}" style="font-size:20px;opacity:.85"></i>
+      <div style="font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums">${n}</div>
+      <div class="txt-xs" style="opacity:.85">${escapeHtml(t(clave))}</div>
+    </div>`;
+  return `<div class="card" style="background:var(--ink);color:#fff;margin-bottom:12px">
+    <div style="font-weight:700;margin-bottom:2px">${escapeHtml(t('plan360.mant.scoreTitle'))}</div>
+    <div class="txt-xs" style="opacity:.8;margin-bottom:8px;text-transform:none">${escapeHtml(t('plan360.mant.scoreSince'))} ${escapeHtml(desdeTxt)}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      ${celda(m.tareas, 'ti-checkbox', 'plan360.mant.scoreTasks')}
+      ${celda(m.reportes, 'ti-file-analytics', 'plan360.mant.scoreReports')}
+      ${celda(m.llamadas, 'ti-video', 'plan360.mant.scoreCalls')}
+      ${celda(m.entregas, 'ti-send', 'plan360.mant.scoreDeliveries')}
+      ${celda(m.subidas, 'ti-trending-up', 'plan360.mant.scoreRises')}
+    </div>
+  </div>`;
+}
 function renderPlan360Mant(clave){
   if(clave) plan360MantMes = clave;
   if(!plan360MantMes) plan360MantMes = plan360MantClave(new Date());
@@ -5527,36 +5612,47 @@ function renderPlan360Mant(clave){
   const nombreMes = new Date(y, m - 1, 1).toLocaleDateString(localeActual(), {month: 'long', year: 'numeric'});
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const esOwner = plan360EsOwner();
+  // El icono lo elige el coach en su catálogo (admin-panel/plan360.html,
+  // que el recortador de iconos también rastrea). Solo se acepta un nombre
+  // de icono limpio: es dato que viene de la nube y va a un class="".
+  const icono = it => /^ti-[a-z0-9-]+$/.test(it.icono || '') ? it.icono : (it.tipo === 'tarea' ? 'ti-checkbox' : 'ti-send');
   const semanaHtml = (lunes, i) => {
     const sk = 's' + (i + 1);
     const sem = semanas[sk];
     const items = Object.keys((sem && sem.items) || {}).map(id => Object.assign({id}, sem.items[id]))
-      .filter(it => it && it.titulo).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+      .filter(it => it && it.titulo)
+      .sort((a, b) => ((a.dia || 0) - (b.dia || 0)) || ((a.orden || 0) - (b.orden || 0)));
     if(!sem || !items.length) return '';
     const esEsta = hoy >= lunes && hoy < new Date(lunes.getTime() + 7 * 86400000);
     const video = sem.canal === 'video';
-    // El icono lo elige el coach en su catálogo (admin-panel/plan360.html,
-    // que el recortador de iconos también rastrea). Solo se acepta un nombre
-    // de icono limpio: es dato que viene de la nube y va a un class="".
-    const icono = it => /^ti-[a-z0-9-]+$/.test(it.icono || '') ? it.icono : (it.tipo === 'tarea' ? 'ti-checkbox' : 'ti-send');
     const fila = it => {
       const tarea = it.tipo === 'tarea';
+      const fecha = plan360MantFechaItem(plan360MantMes, sk, it);
+      const atrasada = tarea && !it.hecho && fecha && fecha < hoy;
+      const idSeguro = escapeHtml(it.id);
       const marca = tarea
-        ? `<input type="checkbox" ${it.hecho ? 'checked' : ''} ${esOwner ? '' : 'disabled'} onchange="plan360MantMarcar('${sk}','${escapeHtml(it.id)}',this.checked)" style="width:22px;height:22px;flex:none;margin-top:1px" aria-label="${escapeHtml(t('plan360.mant.markDone'))}">`
+        ? `<input type="checkbox" ${it.hecho ? 'checked' : ''} ${esOwner ? '' : 'disabled'} onchange="plan360MantMarcar('${sk}','${idSeguro}',this.checked)" style="width:22px;height:22px;flex:none;margin-top:1px" aria-label="${escapeHtml(t('plan360.mant.markDone'))}">`
         : `<i class="ti ${it.hecho ? 'ti-circle-check' : 'ti-circle'}" style="font-size:22px;flex:none;color:${it.hecho ? 'var(--green)' : 'var(--muted)'}"></i>`;
       return `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--border)">
         ${marca}
         <div style="flex:1;min-width:0">
-          <div class="txt-xs" style="font-weight:700;color:${tarea ? 'var(--amber, #8A7440)' : 'var(--muted)'};text-transform:uppercase;letter-spacing:.04em"><i class="ti ${icono(it)}" style="font-size:15px;vertical-align:-2px"></i> ${escapeHtml(t(tarea ? 'plan360.mant.yourTask' : 'plan360.mant.fromCoach'))}</div>
+          <div class="txt-xs" style="font-weight:700;color:${tarea ? 'var(--amber, #8A7440)' : 'var(--muted)'};text-transform:uppercase;letter-spacing:.04em"><i class="ti ${icono(it)}" style="font-size:15px;vertical-align:-2px"></i> ${escapeHtml(t(tarea ? 'plan360.mant.yourTask' : 'plan360.mant.fromCoach'))} · <span style="text-transform:none">${escapeHtml(fecha ? plan360Mayus(fecha.toLocaleDateString(localeActual(), {weekday: 'short', day: 'numeric'})) : '')}</span></div>
           <div style="font-weight:600;${it.hecho ? 'text-decoration:line-through;opacity:.65' : ''}">${escapeHtml(it.titulo)}</div>
           ${it.detalle ? `<div style="font-size:13px;color:var(--muted);white-space:pre-wrap;margin-top:2px">${escapeHtml(it.detalle)}</div>` : ''}
           ${!tarea && it.hecho ? `<div class="txt-xs" style="color:var(--green);margin-top:2px">${escapeHtml(t('plan360.mant.delivered'))}</div>` : ''}
+          ${atrasada ? `<div class="txt-xs" style="color:var(--red);margin-top:2px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.mant.overdue'))}</div>` : ''}
+          ${it.respuesta ? `<div style="margin-top:6px;padding:7px 10px;background:var(--bg);border-left:3px solid var(--green);font-size:13px;white-space:pre-wrap">${escapeHtml(it.respuesta)}</div>` : ''}
+          ${esOwner ? `<details style="margin-top:4px">
+            <summary class="txt-xs" style="cursor:pointer;color:var(--muted);min-height:32px;display:flex;align-items:center;gap:4px"><i class="ti ti-message-circle"></i> ${escapeHtml(t(it.respuesta ? 'plan360.mant.editReply' : 'plan360.mant.reply'))}</summary>
+            <textarea id="p360-mant-resp-${sk}-${idSeguro}" rows="2" placeholder="${escapeHtml(t('plan360.mant.replyPh'))}" style="margin-top:4px;font-size:13px">${escapeHtml(it.respuesta || '')}</textarea>
+            <button class="btn btn-sm btn-primary" style="margin-top:4px" onclick="plan360MantResponder('${sk}','${idSeguro}')">${escapeHtml(t('plan360.mant.sendReply'))}</button>
+          </details>` : ''}
         </div>
       </div>`;
     };
     return `<div class="card" style="margin-bottom:10px;${esEsta ? 'outline:2px solid var(--ink);outline-offset:-2px' : ''}">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-        <strong style="flex:1;min-width:150px;text-transform:capitalize">${escapeHtml(lunes.toLocaleDateString(localeActual(), {weekday: 'long', day: 'numeric', month: 'long'}))}</strong>
+        <strong style="flex:1;min-width:150px">${escapeHtml(plan360Mayus(lunes.toLocaleDateString(localeActual(), {weekday: 'long', day: 'numeric', month: 'long'})))}</strong>
         <span class="p360-day-tag" style="margin:0"><i class="ti ${video ? 'ti-video' : 'ti-brand-whatsapp'}"></i> ${escapeHtml(t(video ? 'plan360.mant.video' : 'plan360.mant.whatsapp'))}</span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px" aria-hidden="true">${items.map(it => `<i class="ti ${icono(it)}" style="font-size:20px;color:${it.hecho ? 'var(--muted)' : it.tipo === 'tarea' ? 'var(--amber, #8A7440)' : 'var(--green)'}"></i>`).join('')}</div>
@@ -5566,9 +5662,10 @@ function renderPlan360Mant(clave){
   const cuerpo = plan360MantLunes(plan360MantMes).map(semanaHtml).join('');
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(t('plan360.mant.title'), t('plan360.mant.desc'))}
+    <div style="margin-top:12px">${plan360MantMarcadorHtml()}</div>
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
       <button class="btn btn-sm" onclick="plan360MantMover(-1)" aria-label="${escapeHtml(t('plan360.mant.prev'))}"><i class="ti ti-chevron-left"></i></button>
-      <strong style="flex:1;text-align:center;text-transform:capitalize;font-size:16px">${escapeHtml(nombreMes)}</strong>
+      <strong style="flex:1;text-align:center;font-size:16px">${escapeHtml(plan360Mayus(nombreMes))}</strong>
       <button class="btn btn-sm" onclick="plan360MantMover(1)" aria-label="${escapeHtml(t('plan360.mant.next'))}"><i class="ti ti-chevron-right"></i></button>
     </div>
     ${cuerpo || `<div class="card"><p class="muted" style="margin:0">${escapeHtml(t('plan360.mant.empty'))}</p></div>`}
@@ -5578,15 +5675,34 @@ function plan360MantMover(delta){
   const [y, m] = plan360MantMes.split('-').map(Number);
   renderPlan360Mant(plan360MantClave(new Date(y, m - 1 + delta, 1)));
 }
+function plan360MantItem(sk, id){
+  const mes = ((DB.business.plan360Mant || {}).meses || {})[plan360MantMes];
+  return mes && mes.semanas && mes.semanas[sk] && mes.semanas[sk].items && mes.semanas[sk].items[id];
+}
 function plan360MantMarcar(sk, id, hecho){
   if(!plan360EsOwner()){ showToast(t('plan360.mant.ownerOnly')); renderPlan360Mant(); return; }
-  const mes = ((DB.business.plan360Mant || {}).meses || {})[plan360MantMes];
-  const it = mes && mes.semanas && mes.semanas[sk] && mes.semanas[sk].items && mes.semanas[sk].items[id];
+  const it = plan360MantItem(sk, id);
   if(!it || it.tipo !== 'tarea') return;
   it.hecho = !!hecho;
   it.hechoEn = hecho ? Date.now() : null;
   saveDB();
   plan360PingActivity();
+  withScrollPreserved(() => renderPlan360Mant());
+}
+// La respuesta del negocio en cada gadget: «hecho, el proveedor nuevo es
+// un 8 % más barato» o «no he podido, falta gente». Así la llamada empieza
+// sabiendo qué ha pasado. Avisa al coach como cualquier otra actividad.
+function plan360MantResponder(sk, id){
+  if(!plan360EsOwner()){ showToast(t('plan360.mant.ownerOnly')); return; }
+  const it = plan360MantItem(sk, id);
+  const ta = document.getElementById('p360-mant-resp-' + sk + '-' + id);
+  if(!it || !ta) return;
+  const texto = ta.value.trim().slice(0, 2000);
+  it.respuesta = texto || null;
+  it.respuestaEn = texto ? Date.now() : null;
+  saveDB();
+  plan360PingActivity();
+  showToast(t(texto ? 'plan360.mant.replySent' : 'plan360.saved'));
   withScrollPreserved(() => renderPlan360Mant());
 }
 function plan360PageHeader(title, subtitle, backFn){

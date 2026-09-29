@@ -385,6 +385,29 @@ tres copias llevaban comentarios así y el emulador oficial las rechazaba
 («Expected '{'»), así que la batería del emulador no arrancaba. Las
 explicaciones están ahora en `reglas/NOTAS.md`.
 
+## Mantenimiento: el mes del gestor, después del Plan 360 (29/09)
+
+Servicio de ~99 €/mes: un mes tipo de cuatro lunes (1º y 3º por WhatsApp, 2º
+y 4º por videollamada) donde el coach va soltando **entregas suyas** y
+**tareas para el negocio**. Las tareas son el plus: el hostelero ve que hay
+alguien encima.
+
+- Vive en `plan360Mant.meses['AAAA-MM'].semanas.sN.items[id]`. **Todo
+  objetos con clave, nunca listas** (la fusión a tres bandas no se pisa por
+  posición) y semanas `s1…s5` (Firebase convierte `{"1":…}` en lista).
+- Catálogo de ~200 actividades con icono en `MANT_GADGETS`
+  (admin-panel/plan360.html). ⚠️ Sus iconos se pintan en la app como DATO:
+  por eso `tools/recortar-iconos.py` rastrea también ese fichero. Escribir
+  siempre el nombre entero (`'ti-glass'`), nunca armado.
+- `meses` de cada actividad = cuándo se sugiere en «Este mes toca».
+- El negocio marca sus tareas, contesta en cada una (`respuesta`) y ve «Lo
+  que llevamos juntos». Las tareas de la semana salen en el Panel de Control.
+- «Mi semana» (lista de clientes del panel) lee SOLO `plan360Mant` de cada
+  nube y se desconecta (`goOffline`) al terminar.
+- La plantilla del coach está en `gastrogoan/coachConfig` de la plataforma
+  (solo admin). ⚠️ Necesita las reglas nuevas publicadas; sin ellas se
+  guarda solo en el navegador y lo avisa.
+
 ## El módulo de I+D (`js/idr.js`)
 
 Un asistente de cocina que crea **elaboraciones base, platos, menús y cartas**

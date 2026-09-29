@@ -170,6 +170,50 @@ await caso('Mantenimiento: el negocio ve su mes, marca SUS tareas y no las entre
   return 'tarjeta · escapado · tarea marcada · entrega intocable';
 });
 
+await caso('Mantenimiento: respuesta al coach, día concreto, marcador y aviso en el Panel de Control', async () => {
+  const r = await page.evaluate(() => {
+    // Un mes con una tarea de ESTA semana (sea el lunes que sea) y otra ya pasada.
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
+    const clave = plan360MantClave(lunes);
+    const lista = plan360MantLunes(clave);
+    const sk = 's' + (lista.findIndex(d => d.getTime() === lunes.getTime()) + 1);
+    const dia = (hoy.getDay() + 6) % 7;   // hoy: cae dentro de esta semana siempre
+    DB.business.plan360Mant = {meses: {[clave]: {semanas: {[sk]: {canal: 'video', items: {
+      t1: {tipo: 'tarea', titulo: 'Cata con sala', dia, orden: 0},
+      e1: {tipo: 'entrega', titulo: 'Reporte de la semana', icono: 'ti-file-analytics', hecho: true, orden: 1},
+      e2: {tipo: 'entrega', titulo: 'Videollamada de seguimiento', icono: 'ti-video', hecho: true, orden: 2},
+      e3: {tipo: 'entrega', titulo: 'Mal icono', icono: 'ti-x" onmouseover="alert(1)', orden: 3},
+    }}}}}};
+    DB.preciosHistorial = [{fecha: clave + '-02', antes: 1, despues: 1.2}, {fecha: clave + '-03', antes: 2, despues: 1.5}];
+    const pendientes = plan360MantPendientesSemana().length;
+    const fechaT1 = plan360MantFechaItem(clave, sk, {dia}).getTime() === hoy.getTime();
+    renderDashboard();
+    const chip = [...document.querySelectorAll('#dashboard-attention [onclick]')].find(el => el.getAttribute('onclick') === 'plan360IrAMantenimiento()');
+    const chipN = chip ? chip.querySelector('strong').textContent : null;
+    plan360MantMes = clave;
+    renderPlan360Mant(clave);
+    const html = document.getElementById('plan360-content').innerHTML;
+    document.getElementById('p360-mant-resp-' + sk + '-t1').value = 'Hecho, <i>genial</i>';
+    plan360MantResponder(sk, 't1');
+    const it = DB.business.plan360Mant.meses[clave].semanas[sk].items.t1;
+    const html2 = document.getElementById('plan360-content').innerHTML;
+    const m = plan360MantMarcador();
+    return {pendientes, fechaT1, chipN, iconoLimpio: !html.includes('onmouseover'),
+      respuesta: it.respuesta === 'Hecho, <i>genial</i>' && !!it.respuestaEn, respEscapada: html2.includes('Hecho, &lt;i&gt;genial&lt;/i&gt;'),
+      marcador: html.includes(t('plan360.mant.scoreTitle')), m};
+  });
+  assert.equal(r.pendientes, 1, 'la tarea de esta semana no cuenta como pendiente');
+  assert.ok(r.fechaT1, 'el día elegido por el coach no cae donde debe');
+  assert.equal(r.chipN, '1', 'el Panel de Control no avisa de las tareas del coach');
+  assert.ok(r.iconoLimpio, 'un icono venido de la nube se cuela en el HTML');
+  assert.ok(r.respuesta, 'la respuesta del negocio no se guarda');
+  assert.ok(r.respEscapada, 'la respuesta del negocio entra sin escapar');
+  assert.ok(r.marcador, 'no se ve «Lo que llevamos juntos»');
+  assert.deepEqual([r.m.reportes, r.m.llamadas, r.m.subidas], [1, 1, 1], 'el marcador cuenta mal: ' + JSON.stringify(r.m));
+  return 'aviso en el panel · día · respuesta escapada · marcador ' + JSON.stringify(r.m);
+});
+
 await caso('Mantenimiento (panel): el mes tipo son 4 lunes, con claves que Firebase no convierte en lista', async () => {
   const coach = await browser.newPage();
   await coach.setRequestInterception(true);
@@ -188,10 +232,28 @@ await caso('Mantenimiento (panel): el mes tipo son 4 lunes, con claves que Fireb
     const tareasS1 = Object.values(mes.semanas.s1.items).filter(i => i.tipo === 'tarea').length;
     const iconos = MANT_GADGETS.map(g => g.icono);
     const sugOct = mantSugerencias('2026-10').map(g => g.titulo);
-    return {claves, canales, tareasS1, lunes: mantLunesDelMes('2026-11').length, iconos, total: MANT_GADGETS.length,
+    // Mover: la misma tarea (id, marca y respuesta) en otra semana.
+    const idS1 = Object.keys(mes.semanas.s1.items)[0];
+    mes.semanas.s1.items[idS1].respuesta = 'ok';
+    mes.semanas.s1.items[idS1].respuestaEn = Date.now();
+    mantMover('s1', idS1, 's3');
+    const movida = !mes.semanas.s1.items[idS1] && mes.semanas.s3.items[idS1] && mes.semanas.s3.items[idS1].respuesta === 'ok';
+    mantCambiarDia('s3', idS1, '3');
+    const jueves = mantFechaItem('2026-11', 's3', mes.semanas.s3.items[idS1]) === '2026-11-19';
+    // «Mi semana»: el lunes 16/11/2026 es el 3º lunes.
+    const res = mantResumenNegocio(remoteBiz.plan360Mant, '2026-11-18', 0);
+    const resVisto = mantResumenNegocio(remoteBiz.plan360Mant, '2026-11-18', Date.now() + 1000);
+    return {movida, jueves, semana: {canal: res.canal, tuyas: res.tuyas.length > 0, atrasadas: res.atrasadas.length > 0, resp: res.respuestas.length, respVisto: resVisto.respuestas.length},
+      claves, canales, tareasS1, lunes: mantLunesDelMes('2026-11').length, iconos, total: MANT_GADGETS.length,
       navidad: sugOct.includes('Encargar el producto de Navidad'), sinIconoEnPlantilla: Object.values(mes.semanas.s1.items).some(i => !i.icono)};
   });
   await coach.close();
+  assert.ok(r.movida, 'mover una tarea de semana pierde su id o la respuesta del negocio');
+  assert.ok(r.jueves, 'el día elegido no cae en el jueves de esa semana');
+  assert.equal(r.semana.canal, 'whatsapp', 'Mi semana no sabe por dónde se trabaja esta semana');
+  assert.ok(r.semana.tuyas, 'Mi semana no ve tus entregas de la semana');
+  assert.ok(r.semana.atrasadas, 'Mi semana no ve lo atrasado');
+  assert.deepEqual([r.semana.resp, r.semana.respVisto], [1, 0], 'Mi semana no distingue una respuesta nueva de una ya vista');
   assert.equal(r.lunes, 5);
   assert.deepEqual(r.claves, ['s1', 's2', 's3', 's4'], 'el 5º lunes debería nacer libre');
   assert.equal(r.canales, 'whatsapp,video,whatsapp,video');

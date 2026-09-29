@@ -372,6 +372,8 @@ function renderDashboard(){
     {count: unmatchedPaymentsCount, icon:'ti-credit-card-off', label: t('dash.att.unmatchedPayments'), onclick: `openUnmatchedPaymentsModal()`, warn:true},
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
     {count: subidasDePrecio(14).length, icon:'ti-trending-up', label: t('dash.att.priceRises'), onclick: `openSubidasPrecioModal()`, warn:true},
+    // Solo si hay mantenimiento y entra el dueño: las tareas del coach son suyas.
+    ...((plan360MantHayAlgo() && plan360EsOwner()) ? [{count: plan360MantPendientesSemana().length, icon:'ti-calendar-repeat', label: t('dash.att.coachTasks'), onclick: `plan360IrAMantenimiento()`, warn:true}] : []),
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},
