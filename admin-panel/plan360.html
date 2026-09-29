@@ -4382,29 +4382,156 @@ function cambiarEstadoFinalObjetivo(objId, valor){
    una lista por su cuenta.
    ============================================================ */
 const MANT_CANAL = {whatsapp: {label: 'WhatsApp', icon: 'ti-brand-whatsapp'}, video: {label: 'Videollamada', icon: 'ti-video'}};
-// La biblioteca de gadgets: «entrega» es lo que haces tú; «tarea» lo que
-// le toca al negocio. Se pueden añadir sueltos con texto libre.
+// La biblioteca de gadgets (29/09): «entrega» es lo que haces tú; «tarea»
+// lo que le toca al negocio. Cada uno con su icono, para que el mes se lea
+// de un vistazo sin abrir nada. `meses` = en qué meses conviene hacerlo:
+// son las cosas que el hostelero NO haría solo porque no las ve venir
+// (el producto de Navidad en octubre, el refuerzo de verano en abril…), y
+// el panel te las sugiere cuando toca para que tampoco dependa de tu memoria.
+// ⚠️ Los iconos se buscan por nombre en este fichero al recortar la fuente
+// de la app (tools/recortar-iconos.py): escribirlos siempre ENTEROS.
+const MANT_AREAS = {
+  entrega: 'Tus entregas', equipo: 'Equipo', cocina: 'Cocina y stock', numeros: 'Números y compras',
+  fugas: 'Fugas de dinero', id: 'Oferta gastronómica (I+D)', marketing: 'Marketing y clientes',
+  relaciones: 'Relaciones', local: 'Local y servicio (con ojos de cliente)', plan: 'Planificación y fechas',
+  legal: 'Plazos, papeles y normativa', dueno: 'El dueño', grande: 'Pensar en grande (trimestral)',
+};
+const TRIM = [1, 4, 7, 10];
 const MANT_GADGETS = [
-  {tipo: 'entrega', titulo: 'Reporte de la semana', detalle: 'Ventas, cubiertos, ticket medio y food cost frente a la semana anterior. Punto de equilibrio del mes. Alertas y la acción de la semana.'},
-  {tipo: 'entrega', titulo: 'Plan de contenido', detalle: 'Ideas de publicación para las próximas dos semanas, con el texto base.'},
-  {tipo: 'entrega', titulo: 'Videollamada de seguimiento', detalle: 'Cómo vamos, dudas, el equipo y la app. 30 minutos.'},
-  {tipo: 'entrega', titulo: 'Videollamada de planificación', detalle: '1. Cómo ha ido el mes. 2. Qué ofrecemos el mes que viene (I+D de temporada). 3. Cómo está planificado el mes. 60 minutos.'},
-  {tipo: 'entrega', titulo: 'Reporte del mes', detalle: 'El mes frente al anterior y al mismo mes del año pasado, punto de equilibrio, lo mejor y lo peor, y los 3 objetivos del mes siguiente.'},
-  {tipo: 'entrega', titulo: 'Calendario del mes siguiente', detalle: 'Festivos, puentes, eventos de la zona y qué preparar para cada fecha.'},
-  {tipo: 'entrega', titulo: 'Producto de temporada', detalle: 'Lo que entra y está en su mejor precio, con ideas de plato o pizarra.'},
-  {tipo: 'entrega', titulo: 'Formación del mes para el briefing', detalle: 'Un guion de 10 minutos para leer al equipo.'},
-  {tipo: 'entrega', titulo: 'Respuestas a tus reseñas', detalle: 'Listas para copiar y pegar.'},
-  {tipo: 'entrega', titulo: 'Vigilancia de proveedores', detalle: 'Lo que te han subido este mes y lo que te cuesta al mes.'},
-  {tipo: 'entrega', titulo: 'Avisos de normativa y ayudas', detalle: ''},
-  {tipo: 'entrega', titulo: 'Revisión de la carta (trimestral)', detalle: 'Matriz de ingeniería de carta: qué quitar, qué subir de precio y qué destacar.'},
-  {tipo: 'entrega', titulo: 'Revisión de contratos (anual)', detalle: 'Luz, gas, seguros, datáfono, cervecera.'},
-  {tipo: 'tarea', titulo: 'Publicar los contenidos de la semana', detalle: ''},
-  {tipo: 'tarea', titulo: 'Responder las reseñas nuevas', detalle: ''},
-  {tipo: 'tarea', titulo: 'Leer la formación del mes en el briefing', detalle: ''},
-  {tipo: 'tarea', titulo: 'Hacer el inventario de fin de mes', detalle: 'Para que el food cost del reporte sea real.'},
-  {tipo: 'tarea', titulo: 'Revisar los precios de proveedores que han subido', detalle: 'Y los escandallos de los platos afectados.'},
-  {tipo: 'tarea', titulo: 'Pasar las mermas de la semana a la app', detalle: ''},
-];
+  // [tipo, área, icono, título, detalle, meses]
+  ['entrega', 'entrega', 'ti-file-analytics', 'Reporte de la semana', 'Ventas, cubiertos, ticket medio y food cost frente a la semana anterior. Punto de equilibrio del mes. Alertas y la acción de la semana.'],
+  ['entrega', 'entrega', 'ti-speakerphone', 'Plan de contenido', 'Ideas de publicación para las próximas dos semanas, con el texto base.'],
+  ['entrega', 'entrega', 'ti-video', 'Videollamada de seguimiento', 'Cómo vamos, dudas, el equipo y la app. 30 minutos.'],
+  ['entrega', 'entrega', 'ti-calendar-stats', 'Videollamada de planificación', '1. Cómo ha ido el mes. 2. Qué ofrecemos el mes que viene (I+D de temporada). 3. Cómo está planificado el mes. 60 minutos.'],
+  ['entrega', 'entrega', 'ti-report-money', 'Reporte del mes', 'El mes frente al anterior y al mismo mes del año pasado, punto de equilibrio, lo mejor y lo peor, y los 3 objetivos del mes siguiente.'],
+  ['entrega', 'entrega', 'ti-calendar-event', 'Calendario del mes siguiente', 'Festivos, puentes, eventos de la zona y qué preparar para cada fecha.'],
+  ['entrega', 'entrega', 'ti-leaf', 'Producto de temporada', 'Lo que entra y está en su mejor precio, con ideas de plato o pizarra.'],
+  ['entrega', 'entrega', 'ti-school', 'Formación del mes para el briefing', 'Un guion de 10 minutos para leer al equipo.'],
+  ['entrega', 'entrega', 'ti-star', 'Respuestas a tus reseñas', 'Listas para copiar y pegar.'],
+  ['entrega', 'entrega', 'ti-truck', 'Vigilancia de proveedores', 'Lo que te han subido este mes y lo que te cuesta al mes.'],
+  ['entrega', 'entrega', 'ti-gavel', 'Avisos de normativa y ayudas', ''],
+  ['entrega', 'entrega', 'ti-tools-kitchen-2', 'Revisión de la carta (trimestral)', 'Matriz de ingeniería de carta: qué quitar, qué subir de precio y qué destacar.', TRIM],
+  ['entrega', 'entrega', 'ti-file-certificate', 'Revisión de contratos (anual)', 'Luz, gas, seguros, datáfono, cervecera.', [1]],
+  ['entrega', 'entrega', 'ti-info-circle', 'Aviso o información importante', ''],
+
+  ['tarea', 'equipo', 'ti-users', 'Briefing con el personal', 'Tema del día:'],
+  ['tarea', 'equipo', 'ti-school', 'Leer la formación del mes en el briefing', ''],
+  ['tarea', 'equipo', 'ti-message-circle', 'Reunión corta de equipo (15 min)', 'Qué ha ido bien, qué no y qué cambiamos.'],
+  ['tarea', 'equipo', 'ti-calendar-time', 'Hacer los turnos del mes siguiente en la app', ''],
+  ['tarea', 'equipo', 'ti-beach', 'Revisar las vacaciones pendientes del equipo', ''],
+  ['tarea', 'equipo', 'ti-calendar-off', 'Cerrar las vacaciones del equipo con 3 meses de margen', '', [3, 9]],
+  ['tarea', 'equipo', 'ti-user-plus', 'Contratar el refuerzo de verano', 'En abril, no en junio cuando ya no queda nadie.', [4]],
+  ['tarea', 'equipo', 'ti-heart-handshake', 'Charla uno a uno con un empleado', ''],
+  ['tarea', 'equipo', 'ti-mood-smile', 'Preguntar a cada empleado «¿qué cambiarías?»', 'Una pregunta y nada más. Apunta las respuestas.'],
+  ['tarea', 'equipo', 'ti-clock', 'Revisar quién lleva más horas extra', 'Es el siguiente que se va.'],
+  ['tarea', 'equipo', 'ti-trophy', 'Reconocer en público al empleado del mes', ''],
+  ['tarea', 'equipo', 'ti-cake', 'Reconocer a quien cumple un año en la casa', ''],
+  ['tarea', 'equipo', 'ti-user-up', 'Dar una responsabilidad nueva a quien tiene potencial', ''],
+  ['tarea', 'equipo', 'ti-confetti', 'Comida de equipo fuera del servicio', ''],
+  ['tarea', 'equipo', 'ti-alert-triangle', 'Repasar alérgenos con sala', ''],
+  ['tarea', 'equipo', 'ti-glass', 'Cata de la carta con sala', 'Que prueben lo que venden para saber venderlo.'],
+  ['tarea', 'equipo', 'ti-device-tablet', 'Formar a un empleado en una tarea nueva de la app', ''],
+  ['tarea', 'equipo', 'ti-id-badge', 'Revisar periodos de prueba y contratos que vencen', ''],
+  ['tarea', 'equipo', 'ti-certificate', 'Carné de manipulador del personal nuevo', ''],
+
+  ['tarea', 'cocina', 'ti-package', 'Repasar el stock y ajustar los mínimos', ''],
+  ['tarea', 'cocina', 'ti-clipboard-list', 'Hacer el inventario de fin de mes', 'Para que el food cost del reporte sea real.'],
+  ['tarea', 'cocina', 'ti-trash', 'Pasar las mermas de la semana a la app', ''],
+  ['tarea', 'cocina', 'ti-trash', 'Revisar las mermas: qué se tira y por qué', ''],
+  ['tarea', 'cocina', 'ti-snowflake', 'Limpieza a fondo de la cámara y rotación de producto', 'Lo primero que entró, lo primero que sale.'],
+  ['tarea', 'cocina', 'ti-clipboard-check', 'Revisar los registros APPCC del mes', 'Temperaturas, limpieza, recepción.'],
+  ['tarea', 'cocina', 'ti-scale', 'Comprobar las fichas técnicas de 3 platos', 'Que la cantidad que se sirve sea la escrita.'],
+  ['tarea', 'cocina', 'ti-tool', 'Revisar el mantenimiento de equipos', 'Extractor, cámaras, lavavajillas.'],
+
+  ['tarea', 'numeros', 'ti-receipt', 'Revisar los precios de proveedores que han subido', 'Y los escandallos de los platos afectados.'],
+  ['tarea', 'numeros', 'ti-file-invoice', 'Pedir presupuesto a un segundo proveedor', 'Del producto que más ha subido.'],
+  ['tarea', 'numeros', 'ti-calculator', 'Revisar los escandallos de los 5 platos más vendidos', ''],
+  ['tarea', 'numeros', 'ti-shopping-cart', 'Planificar las compras del mes siguiente', ''],
+  ['tarea', 'numeros', 'ti-cash', 'Cuadrar la caja de la semana con la app', ''],
+  ['tarea', 'numeros', 'ti-list-check', 'Revisar los gastos fijos: ¿sobra alguno?', ''],
+  ['tarea', 'numeros', 'ti-files', 'Pasar las facturas del mes a la gestoría', ''],
+  ['tarea', 'numeros', 'ti-chart-bar', 'Mirar la Cuenta de Resultados del mes', ''],
+  ['tarea', 'numeros', 'ti-building-bank', 'Apartar el dinero de Hacienda del trimestre', 'IVA e IRPF: que esté apartado dos semanas antes de pagar.', [3, 6, 9, 12]],
+
+  ['tarea', 'fugas', 'ti-bolt', 'Comparar la factura de la luz con la del año pasado', '¿Ha cambiado la potencia o la tarifa?'],
+  ['tarea', 'fugas', 'ti-credit-card', 'Renegociar la comisión del datáfono', ''],
+  ['tarea', 'fugas', 'ti-repeat', 'Buscar suscripciones olvidadas', 'Software, plataformas, alarmas, seguros duplicados.'],
+  ['tarea', 'fugas', 'ti-bike', 'Calcular lo que se queda Glovo o Just Eat', 'Frente a lo que de verdad deja cada pedido.'],
+  ['tarea', 'fugas', 'ti-beer', 'Pedir a la cervecera o al café lo que te corresponde', 'Material, rápel o descuento por el volumen que consumes.'],
+  ['tarea', 'fugas', 'ti-gift', 'Contar las invitaciones y descuentos del mes', '¿Cuánto regalas sin saberlo?'],
+  ['tarea', 'fugas', 'ti-tools-kitchen', 'Revisar el consumo del personal', ''],
+  ['tarea', 'fugas', 'ti-coin', 'Revisar cómo se reparten las propinas', ''],
+
+  ['tarea', 'id', 'ti-flask', 'Sesión de I+D: plato, menú o carta nueva', 'Con el I+D de la app.'],
+  ['tarea', 'id', 'ti-chef-hat', 'Probar el plato nuevo con el equipo y escandallarlo', ''],
+  ['tarea', 'id', 'ti-chalkboard', 'Cambiar la pizarra o las sugerencias de la semana', ''],
+  ['tarea', 'id', 'ti-heart', 'Preparar el menú de una fecha especial', '', [1, 11]],
+  ['tarea', 'id', 'ti-tools-kitchen-2', 'Revisar la carta antes del cambio de estación', '15 días antes.', [3, 6, 9, 12]],
+  ['tarea', 'id', 'ti-circle-minus', 'Quitar de la carta el plato que menos se vende', ''],
+  ['tarea', 'id', 'ti-trending-up', 'Subir el precio del plato estrella', 'El que se vende solo y está por debajo de lo que vale.'],
+  ['tarea', 'id', 'ti-camera', 'Fotografiar los platos nuevos', ''],
+
+  ['tarea', 'marketing', 'ti-brand-instagram', 'Publicar los contenidos de la semana', ''],
+  ['tarea', 'marketing', 'ti-star', 'Responder las reseñas nuevas', ''],
+  ['tarea', 'marketing', 'ti-thumb-up', 'Pedir reseña a 10 clientes contentos', 'Con el guion de la prueba social.'],
+  ['tarea', 'marketing', 'ti-movie', 'Grabar el testimonio en vídeo de un cliente', ''],
+  ['tarea', 'marketing', 'ti-brand-google', 'Actualizar la ficha de Google', 'Horario, fotos y carta.'],
+  ['tarea', 'marketing', 'ti-send', 'Mensaje a los clientes habituales', 'Una novedad o una promo.'],
+  ['tarea', 'marketing', 'ti-user-search', 'Invitar a volver a los clientes «en riesgo»', 'La lista está en Clientes, en la app.'],
+  ['tarea', 'marketing', 'ti-gift-card', 'Felicitar el cumpleaños a los clientes habituales', ''],
+  ['tarea', 'marketing', 'ti-discount', 'Promoción para el día flojo', ''],
+  ['tarea', 'marketing', 'ti-building-community', 'Colaboración con un negocio vecino', ''],
+
+  ['tarea', 'relaciones', 'ti-phone', 'Llamar a tu mejor proveedor (sin pedir nada)', 'Cuidar la relación es lo que te trae el producto bueno antes que a los demás.'],
+  ['tarea', 'relaciones', 'ti-binoculars', 'Cenar en un restaurante de la zona que funcione', 'Y tomar nota de qué hace bien.'],
+  ['tarea', 'relaciones', 'ti-briefcase', 'Contactar hoteles y oficinas cercanas', 'Comidas de empresa y recomendaciones.', [9, 10]],
+  ['tarea', 'relaciones', 'ti-mood-sad', 'Escribir al cliente que se quejó el mes pasado', '¿Ha vuelto?'],
+  ['tarea', 'relaciones', 'ti-heart-handshake', 'Dar las gracias en persona por una reseña buena', ''],
+  ['tarea', 'relaciones', 'ti-building', 'Presentarte a la asociación de comerciantes o vecinos', ''],
+
+  ['tarea', 'local', 'ti-spray', 'Orden y limpieza a fondo de una zona', 'Almacén, barra o terraza.'],
+  ['tarea', 'local', 'ti-door-enter', 'Entrar por la puerta como un cliente', 'La fachada, el cartel, el baño, el olor.'],
+  ['tarea', 'local', 'ti-eye', 'Hacer de cliente misterioso en tu local', ''],
+  ['tarea', 'local', 'ti-book', 'Leer la carta en voz alta', 'Faltas, precios viejos, platos que ya no existen.'],
+  ['tarea', 'local', 'ti-armchair', 'Sentarte en la peor mesa durante un servicio', ''],
+  ['tarea', 'local', 'ti-phone-call', 'Llamar a tu local para reservar', '¿Cómo contestan?'],
+  ['tarea', 'local', 'ti-map-pin', 'Buscar tu local en Google Maps como un turista', 'Fotos, horario, primera impresión.'],
+  ['tarea', 'local', 'ti-photo', 'Mirar tu última publicación en redes', 'Si tiene tres semanas, el local parece cerrado.'],
+  ['tarea', 'local', 'ti-bulb', 'Revisar música, luz y temperatura del comedor', 'En pleno servicio.'],
+  ['tarea', 'local', 'ti-qrcode', 'Comprobar que el QR de reservas funciona y se ve', ''],
+
+  ['tarea', 'plan', 'ti-calendar-plus', 'Planificar el mes siguiente', 'Fechas, eventos, personal y compras.'],
+  ['tarea', 'plan', 'ti-christmas-tree', 'Encargar el producto de Navidad', 'Cordero, marisco, turrones: en octubre, no en diciembre.', [10, 11]],
+  ['tarea', 'plan', 'ti-glass-full', 'Abrir las reservas de cenas de empresa', 'Con un menú cerrado.', [9, 10]],
+  ['tarea', 'plan', 'ti-sun', 'Preparar la terraza para el buen tiempo', 'Mobiliario, estufas, toldo y licencia.', [3, 4]],
+  ['tarea', 'plan', 'ti-clock-hour-4', 'Ajustar horario y luz al cambio de hora', '', [3, 10]],
+  ['tarea', 'plan', 'ti-confetti', 'Preparar las fiestas del barrio', 'Stock extra, personal y horario.'],
+  ['tarea', 'plan', 'ti-calendar-due', 'Decidir ya la acción del día flojo del mes que viene', 'No el mismo día.'],
+  ['tarea', 'plan', 'ti-calendar-check', 'Reservar la fecha de la próxima revisión de carta', '', TRIM],
+
+  ['tarea', 'legal', 'ti-file-text', 'Leer el aviso de normativa o ayudas', ''],
+  ['tarea', 'legal', 'ti-pig-money', 'Solicitar una ayuda o subvención', ''],
+  ['tarea', 'legal', 'ti-fire-extinguisher', 'Revisar la caducidad de los certificados', 'Extintores, salida de humos, gas, instalación eléctrica.', [1]],
+  ['tarea', 'legal', 'ti-bug', 'Revisión de plagas y legionela', '', [5]],
+  ['tarea', 'legal', 'ti-license', 'Renovar la licencia de terraza', '', [1]],
+  ['tarea', 'legal', 'ti-alert-octagon', 'Actualizar la carta de alérgenos', 'Cada vez que cambia un plato.'],
+  ['tarea', 'legal', 'ti-music', 'Licencias de música y hoja de reclamaciones a la vista', ''],
+  ['tarea', 'legal', 'ti-shield-check', 'Renovar el seguro, licencia o certificado que vence', ''],
+
+  ['tarea', 'dueno', 'ti-hourglass', 'Bloquear 2 horas para trabajar EN el negocio', 'No dentro de él: sin servicio, sin teléfono.'],
+  ['tarea', 'dueno', 'ti-bed', 'Coger un día libre de verdad', 'Sin teléfono.'],
+  ['tarea', 'dueno', 'ti-clock-hour-9', 'Contar tus horas trabajadas esta semana', 'Frente al objetivo del Plan 360.'],
+  ['tarea', 'dueno', 'ti-arrows-right-left', 'Delegar una tarea que haces tú', ''],
+  ['tarea', 'dueno', 'ti-notes', 'Anotar 3 cosas que te quitan tiempo', 'Las vemos en la próxima llamada.'],
+  ['tarea', 'dueno', 'ti-target', 'Revisar los objetivos del Plan 360', '¿Se mantienen?'],
+  ['tarea', 'dueno', 'ti-pencil', 'Escribir qué harías si el local fuera de otro', '10 minutos, sin filtro.'],
+
+  ['tarea', 'grande', 'ti-calendar-off', 'Decidir si abrir o cerrar un día u horario', 'Con los números de la app.', TRIM],
+  ['tarea', 'grande', 'ti-rocket', 'Valorar una línea nueva de ingresos', 'Take away, catering, eventos privados, bonos regalo.', TRIM],
+  ['tarea', 'grande', 'ti-percentage', 'Probar a subir un 3-5 % lo que más se vende', '', TRIM],
+  ['tarea', 'grande', 'ti-moneybag', 'Revisar el plan de inversiones', '¿Qué toca este trimestre?', TRIM],
+].map(([tipo, area, icono, titulo, detalle, meses]) => ({tipo, area, icono, titulo, detalle: detalle || '', meses: meses || null}));
+const MANT_ICONO_LIBRE = {entrega: 'ti-send', tarea: 'ti-checkbox'};
 // El mes tipo que se acordó (29/09). Se puede sustituir por el tuyo con
 // «Guardar este mes como mi plantilla» — se guarda en este navegador.
 const MANT_PLANTILLA_BASE = {
@@ -4435,7 +4562,7 @@ function mantPlantilla(){
   return MANT_PLANTILLA_BASE;
 }
 function mantGadgetPorTitulo(titulo){
-  return MANT_GADGETS.find(g => g.titulo === titulo) || {tipo: 'entrega', titulo, detalle: ''};
+  return MANT_GADGETS.find(g => g.titulo === titulo) || {tipo: 'entrega', titulo, detalle: '', icono: MANT_ICONO_LIBRE.entrega};
 }
 // Firebase borra lo vacío: un mes sin nada vuelve sin semanas, y una
 // semana sin gadgets, sin items. Se repone al leer, nunca se da por hecho.
@@ -4486,6 +4613,7 @@ function renderMantPage(clave){
     return `<div class="card mant-semana" style="margin-bottom:10px;${fecha <= hoy && hoy < addDaysStr(fecha, 7) ? 'outline:2px solid var(--ink);outline-offset:-2px' : ''}">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <strong style="flex:1;min-width:160px;text-transform:capitalize">${i + 1}º lunes · ${esc(mantFechaCorta(fecha))}</strong>
+        <span style="display:flex;gap:4px;flex-wrap:wrap">${items.map(it => `<i class="ti ${mantIcono(it)}" title="${esc(it.titulo || '')}" style="font-size:18px;color:${it.hecho ? 'var(--muted)' : it.tipo === 'tarea' ? '#86600F' : '#2F6B3A'}"></i>`).join('')}</span>
         <select onchange="mantCambiarCanal('${sk}', this.value)" style="width:auto;flex:none">
           ${Object.keys(MANT_CANAL).map(c => `<option value="${c}" ${c === canal ? 'selected' : ''}>${MANT_CANAL[c].label}</option>`).join('')}
         </select>
@@ -4495,6 +4623,7 @@ function renderMantPage(clave){
           <input type="checkbox" ${it.hecho ? 'checked' : ''} onchange="mantMarcar('${sk}','${it.id}',this.checked)" style="width:20px;height:20px;flex:none;margin-top:2px" title="${it.tipo === 'tarea' ? 'Hecha por el negocio' : 'Entregado'}">
           <div style="flex:1;min-width:0">
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <i class="ti ${mantIcono(it)}" style="font-size:20px;color:${it.tipo === 'tarea' ? '#86600F' : '#2F6B3A'}"></i>
               <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;${it.tipo === 'tarea' ? 'background:var(--amber-l);color:#86600F' : 'background:var(--green-l);color:#2F6B3A'}">${it.tipo === 'tarea' ? 'Su tarea' : 'Tu entrega'}</span>
               <input value="${esc(it.titulo || '')}" onchange="mantEditar('${sk}','${it.id}','titulo',this.value)" style="flex:1;min-width:140px;font-weight:600;${it.hecho ? 'text-decoration:line-through;opacity:.7' : ''}">
             </div>
@@ -4505,8 +4634,7 @@ function renderMantPage(clave){
         </div>`).join('')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         <select id="mant-add-${sk}" style="flex:1;min-width:200px">
-          <optgroup label="Tu entrega">${MANT_GADGETS.filter(g => g.tipo === 'entrega').map(g => `<option value="${esc(g.titulo)}">${esc(g.titulo)}</option>`).join('')}</optgroup>
-          <optgroup label="Tarea para el negocio">${MANT_GADGETS.filter(g => g.tipo === 'tarea').map(g => `<option value="${esc(g.titulo)}">${esc(g.titulo)}</option>`).join('')}</optgroup>
+          ${Object.keys(MANT_AREAS).map(a => `<optgroup label="${esc(a === 'entrega' ? MANT_AREAS[a] : 'Tarea · ' + MANT_AREAS[a])}">${MANT_GADGETS.filter(g => g.area === a).map(g => `<option value="${esc(g.titulo)}">${esc(g.titulo)}</option>`).join('')}</optgroup>`).join('')}
           <optgroup label="Otra"><option value="__entrega">Otra entrega (texto libre)</option><option value="__tarea">Otra tarea (texto libre)</option></optgroup>
         </select>
         <button class="btn btn-sm" onclick="mantAnadir('${sk}')"><i class="ti ti-plus"></i> Añadir</button>
@@ -4527,6 +4655,20 @@ function renderMantPage(clave){
         <button class="btn btn-primary btn-sm" onclick="mantAplicarPlantilla()">Rellenar con mi mes tipo</button>
         <button class="btn btn-sm" onclick="mantEmpezarVacio()">Empezar en blanco</button>
       </div>`}
+    ${(() => {
+      const sug = mantSugerencias(mantMesActivo);
+      if(!sug.length) return '';
+      return `<div class="card" style="margin-bottom:12px;background:var(--amber-l);border-color:var(--amber)">
+        <div style="font-weight:700;margin-bottom:4px"><i class="ti ti-bulb"></i> Este mes toca</div>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Cosas que van por fecha y que el negocio no haría solo. Elige el lunes y añádelas.</p>
+        ${sug.map((g, k) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--border)">
+          <i class="ti ${g.icono}" style="font-size:20px"></i>
+          <span style="flex:1;min-width:160px;font-size:13.5px">${esc(g.titulo)}</span>
+          <select id="mant-sug-sem-${k}" style="width:auto;flex:none">${lunes.map((f, i) => `<option value="s${i + 1}">${i + 1}º lunes</option>`).join('')}</select>
+          <button class="btn btn-sm" onclick="mantAnadirSugerencia(${k})"><i class="ti ti-plus"></i> Añadir</button>
+        </div>`).join('')}
+      </div>`;
+    })()}
     ${mes ? lunes.map(semanaHtml).join('') : ''}
     ${mes ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
       <button class="btn btn-sm" onclick="mantGuardarComoPlantilla()"><i class="ti ti-template"></i> Guardar este mes como mi plantilla</button>
@@ -4550,7 +4692,7 @@ function mantAplicarPlantilla(){
     sem.canal = p.canal || 'whatsapp';
     (p.items || []).forEach((it, k) => {
       const g = typeof it === 'string' ? mantGadgetPorTitulo(it) : it;
-      sem.items[mantId()] = {tipo: g.tipo, titulo: g.titulo, detalle: g.detalle || '', hecho: false, orden: k};
+      sem.items[mantId()] = {tipo: g.tipo, titulo: g.titulo, detalle: g.detalle || '', icono: g.icono || MANT_ICONO_LIBRE[g.tipo] || '', hecho: false, orden: k};
     });
   });
   mantGuardarYPintar();
@@ -4574,14 +4716,36 @@ function mantAnadir(sk){
   if(sel.value === '__entrega' || sel.value === '__tarea'){
     const titulo = (prompt(sel.value === '__tarea' ? '¿Qué tarea le dejas al negocio?' : '¿Qué le entregas?') || '').trim();
     if(!titulo) return;
-    g = {tipo: sel.value.slice(2), titulo, detalle: ''};
+    g = {tipo: sel.value.slice(2), titulo, detalle: '', icono: MANT_ICONO_LIBRE[sel.value.slice(2)]};
   } else {
     g = mantGadgetPorTitulo(sel.value);
   }
   const sem = mantSemana(mantMes(mantMesActivo, true), sk);
-  const orden = Object.values(sem.items).reduce((mx, it) => Math.max(mx, (it && it.orden) || 0), -1) + 1;
-  sem.items[mantId()] = {tipo: g.tipo, titulo: g.titulo, detalle: g.detalle || '', hecho: false, orden};
+  mantMeter(sem, g);
   mantGuardarYPintar();
+}
+function mantMeter(sem, g){
+  const orden = Object.values(sem.items).reduce((mx, it) => Math.max(mx, (it && it.orden) || 0), -1) + 1;
+  sem.items[mantId()] = {tipo: g.tipo, titulo: g.titulo, detalle: g.detalle || '', icono: g.icono || MANT_ICONO_LIBRE[g.tipo] || '', hecho: false, orden};
+}
+// «Este mes toca»: lo que va por fecha y todavía no está puesto en el mes.
+function mantSugerencias(clave){
+  const mesNum = Number(clave.split('-')[1]);
+  const mes = mantMes(clave, false);
+  const ya = new Set();
+  if(mes) Object.values(mes.semanas).forEach(s => Object.values((s && s.items) || {}).forEach(it => it && ya.add(it.titulo)));
+  return MANT_GADGETS.filter(g => g.meses && g.meses.includes(mesNum) && !ya.has(g.titulo));
+}
+function mantAnadirSugerencia(idx){
+  const g = mantSugerencias(mantMesActivo)[idx];
+  const sel = document.getElementById('mant-sug-sem-' + idx);
+  if(!g || !sel) return;
+  mantMeter(mantSemana(mantMes(mantMesActivo, true), sel.value), g);
+  mantGuardarYPintar();
+}
+function mantIcono(it){
+  const ic = it && it.icono;
+  return /^ti-[a-z0-9-]+$/.test(ic || '') ? ic : MANT_ICONO_LIBRE[(it && it.tipo) || 'tarea'];
 }
 function mantItem(sk, id){
   const mes = mantMes(mantMesActivo, false);
@@ -4614,7 +4778,7 @@ function mantGuardarComoPlantilla(){
   const p = {};
   Object.keys(mes.semanas).forEach(sk => {
     const sem = mes.semanas[sk];
-    p[sk] = {canal: sem.canal, items: mantItemsOrdenados(mantSemana(mes, sk)).map(it => ({tipo: it.tipo, titulo: it.titulo, detalle: it.detalle || ''}))};
+    p[sk] = {canal: sem.canal, items: mantItemsOrdenados(mantSemana(mes, sk)).map(it => ({tipo: it.tipo, titulo: it.titulo, detalle: it.detalle || '', icono: it.icono || ''}))};
   });
   try { localStorage.setItem(MANT_PLANTILLA_LS, JSON.stringify(p)); alert('Guardada. Los meses nuevos se rellenarán así.'); }
   catch(e){ alert('No se pudo guardar la plantilla en este navegador.'); }

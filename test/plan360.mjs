@@ -1,3 +1,4 @@
+import fs from 'fs';
 // Plan 360°: los fallos que encontró la auditoría del 28/09, fijados para
 // que no vuelvan. Todos salen de la misma raíz: el Plan 360 lo escriben DOS
 // (el coach desde su panel y el negocio desde su app) contra una nube que
@@ -185,14 +186,23 @@ await caso('Mantenimiento (panel): el mes tipo son 4 lunes, con claves que Fireb
     const claves = Object.keys(mes.semanas).sort();
     const canales = ['s1', 's2', 's3', 's4'].map(k => mes.semanas[k].canal).join(',');
     const tareasS1 = Object.values(mes.semanas.s1.items).filter(i => i.tipo === 'tarea').length;
-    return {claves, canales, tareasS1, lunes: mantLunesDelMes('2026-11').length};
+    const iconos = MANT_GADGETS.map(g => g.icono);
+    const sugOct = mantSugerencias('2026-10').map(g => g.titulo);
+    return {claves, canales, tareasS1, lunes: mantLunesDelMes('2026-11').length, iconos, total: MANT_GADGETS.length,
+      navidad: sugOct.includes('Encargar el producto de Navidad'), sinIconoEnPlantilla: Object.values(mes.semanas.s1.items).some(i => !i.icono)};
   });
   await coach.close();
   assert.equal(r.lunes, 5);
   assert.deepEqual(r.claves, ['s1', 's2', 's3', 's4'], 'el 5º lunes debería nacer libre');
   assert.equal(r.canales, 'whatsapp,video,whatsapp,video');
   assert.ok(r.tareasS1 >= 1, 'el mes tipo no deja ninguna tarea al negocio');
-  return '4 lunes · WhatsApp/vídeo alternos · tareas incluidas';
+  const subset = fs.readFileSync(new URL('../build/tabler-icons.subset.css', import.meta.url), 'utf8');
+  const faltan = r.iconos.filter(ic => !subset.includes('.' + ic + ':before'));
+  assert.deepEqual(faltan, [], 'iconos del catálogo que la app no tendría (saldrían como un cuadradito vacío)');
+  assert.ok(r.total >= 100, 'el catálogo de actividades se ha quedado corto: ' + r.total);
+  assert.ok(r.navidad, 'en octubre no sugiere encargar el producto de Navidad');
+  assert.ok(!r.sinIconoEnPlantilla, 'el mes tipo mete actividades sin icono');
+  return `4 lunes · WhatsApp/vídeo alternos · ${r.total} actividades con icono · sugerencias por fecha`;
 });
 
 await caso('Ningún error de JavaScript', async () => {
