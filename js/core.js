@@ -9425,7 +9425,7 @@ function conectarStripe(){
   const guia = gl({
     es: `<p style="margin:0 0 10px">Son unos <strong>10 minutos</strong>, una sola vez, en la web de Stripe. Tenlo a mano antes de empezar:</p>
       <ul style="margin:0 0 14px 18px;line-height:1.6">
-        <li>Tu <strong>DNI o NIE</strong> (y el <strong>CIF</strong> si el negocio es una sociedad).</li>
+        <li>Tu <strong>DNI o NIE físico</strong> (y el <strong>CIF</strong> si el negocio es una sociedad): Stripe te pedirá <strong>foto por las dos caras</strong> y a veces un <strong>selfie</strong>. Es más fácil hacerlo desde el móvil.</li>
         <li>El <strong>IBAN</strong> de la cuenta donde quieres cobrar.</li>
         <li>La <strong>dirección</strong> del negocio y tu <strong>móvil</strong>.</li>
         <li>La app <strong>Google Authenticator</strong> instalada en el móvil (gratis en Play Store o App Store). Stripe la pide por seguridad, como un banco.</li>
@@ -9436,6 +9436,7 @@ function conectarStripe(){
         <li><strong>Tu email.</strong> Mejor uno del negocio. Si no tienes cuenta de Stripe, te pedirá crear una contraseña.</li>
         <li><strong>Seguridad (verificación en dos pasos).</strong> Sale un código QR. En el móvil abre Google Authenticator, pulsa <strong>+</strong> → <strong>Escanear un código QR</strong>, apunta al QR y escribe en Stripe los <strong>6 números</strong> que aparecen. Solo se hace esta vez. <strong>Guarda el código de recuperación</strong> que te dé Stripe.</li>
         <li><strong>Tipo de negocio</strong>: si eres <strong>autónomo</strong>, elige <strong>«Vendedor»</strong> (o «Individual»); si es una <strong>S.L. o S.A.</strong>, elige <strong>«Empresa»</strong>. Después, tus datos y los del negocio: DNI, dirección, actividad (restauración).</li>
+        <li><strong>Verificar tu identidad</strong>: foto del DNI por las dos caras (y a veces un selfie). Stripe lo exige a todo el que cobra, como un banco.</li>
         <li><strong>Web del negocio</strong>: si no tienes, pon tu página de reservas de GastroGoan (la tienes abajo, lista para copiar).</li>
         <li><strong>Nombre en el extracto</strong> (<em>statement descriptor</em>): lo que verá tu cliente en su banco al pagarte. Pon el nombre del restaurante, entre 5 y 22 letras y sin símbolos (por ejemplo <strong>BAR PEPE BCN</strong>), para que lo reconozca y no lo reclame.</li>
         <li><strong>Tu cuenta bancaria</strong> (IBAN, empieza por ES), donde Stripe te ingresará lo cobrado.</li>
@@ -9445,7 +9446,7 @@ function conectarStripe(){
       <p style="margin:0;color:var(--muted);font-size:13px">Si te quedas a medias, no pasa nada: vuelve a pulsar el botón y sigues donde lo dejaste. Stripe cobra su comisión en cada pago (alrededor del 1,5 % + 0,25 € con tarjetas europeas) y te ingresa el resto en tu banco. GastroGoan no toca tu dinero.</p>`,
     ca: `<p style="margin:0 0 10px">Són uns <strong>10 minuts</strong>, una sola vegada, a la web de Stripe. Tingues a mà abans de començar:</p>
       <ul style="margin:0 0 14px 18px;line-height:1.6">
-        <li>El teu <strong>DNI o NIE</strong> (i el <strong>CIF</strong> si el negoci és una societat).</li>
+        <li>El teu <strong>DNI o NIE físic</strong> (i el <strong>CIF</strong> si el negoci és una societat): Stripe et demanarà <strong>foto per les dues cares</strong> i de vegades una <strong>selfie</strong>. És més fàcil fer-ho des del mòbil.</li>
         <li>L'<strong>IBAN</strong> del compte on vols cobrar.</li>
         <li>L'<strong>adreça</strong> del negoci i el teu <strong>mòbil</strong>.</li>
         <li>L'app <strong>Google Authenticator</strong> instal·lada al mòbil (gratuïta a Play Store o App Store). Stripe la demana per seguretat, com un banc.</li>
@@ -9456,6 +9457,7 @@ function conectarStripe(){
         <li><strong>El teu email.</strong> Millor un del negoci. Si no tens compte de Stripe, et demanarà crear una contrasenya.</li>
         <li><strong>Seguretat (verificació en dos passos).</strong> Surt un codi QR. Al mòbil obre Google Authenticator, prem <strong>+</strong> → <strong>Escaneja un codi QR</strong>, apunta al QR i escriu a Stripe els <strong>6 números</strong> que apareixen. Només es fa aquesta vegada. <strong>Desa el codi de recuperació</strong> que et doni Stripe.</li>
         <li><strong>Tipus de negoci</strong>: si ets <strong>autònom</strong>, tria <strong>«Venedor»</strong> (o «Individual»); si és una <strong>S.L. o S.A.</strong>, tria <strong>«Empresa»</strong>. Després, les teves dades i les del negoci: DNI, adreça, activitat (restauració).</li>
+        <li><strong>Verificar la teva identitat</strong>: foto del DNI per les dues cares (i de vegades una selfie). Stripe ho exigeix a tothom qui cobra, com un banc.</li>
         <li><strong>Web del negoci</strong>: si no en tens, posa la teva pàgina de reserves de GastroGoan (la tens a baix, a punt per copiar).</li>
         <li><strong>Nom a l'extracte</strong> (<em>statement descriptor</em>): el que veurà el teu client al seu banc en pagar-te. Posa el nom del restaurant, entre 5 i 22 lletres i sense símbols (per exemple <strong>BAR PEPE BCN</strong>), perquè el reconegui i no el reclami.</li>
         <li><strong>El teu compte bancari</strong> (IBAN, comença per ES), on Stripe t'ingressarà el que cobris.</li>
@@ -9465,7 +9467,7 @@ function conectarStripe(){
       <p style="margin:0;color:var(--muted);font-size:13px">Si et quedes a mitges, no passa res: torna a prémer el botó i segueixes on ho vas deixar. Stripe cobra la seva comissió a cada pagament (al voltant de l'1,5 % + 0,25 € amb targetes europees) i t'ingressa la resta al banc. GastroGoan no toca els teus diners.</p>`,
     en: `<p style="margin:0 0 10px">It takes about <strong>10 minutes</strong>, only once, on the Stripe website. Have this ready before you start:</p>
       <ul style="margin:0 0 14px 18px;line-height:1.6">
-        <li>Your <strong>ID card or NIE</strong> (and the <strong>CIF</strong> if the business is a company).</li>
+        <li>Your physical <strong>ID card or NIE</strong> (and the <strong>CIF</strong> if the business is a company): Stripe will ask for a <strong>photo of both sides</strong> and sometimes a <strong>selfie</strong>. It's easiest from your phone.</li>
         <li>The <strong>IBAN</strong> of the account you want to be paid into.</li>
         <li>The business <strong>address</strong> and your <strong>mobile phone</strong>.</li>
         <li>The <strong>Google Authenticator</strong> app installed on your phone (free on Play Store or App Store). Stripe requires it for security, like a bank.</li>
@@ -9476,6 +9478,7 @@ function conectarStripe(){
         <li><strong>Your email.</strong> Preferably a business one. If you don't have a Stripe account, it will ask you to create a password.</li>
         <li><strong>Security (two-step verification).</strong> A QR code appears. On your phone open Google Authenticator, tap <strong>+</strong> → <strong>Scan a QR code</strong>, point it at the QR and type the <strong>6 digits</strong> into Stripe. You only do this once. <strong>Save the recovery code</strong> Stripe gives you.</li>
         <li><strong>Business type</strong>: if you're <strong>self-employed</strong>, choose <strong>“Individual”</strong> (it may say “Seller”); if it's a <strong>limited company</strong>, choose <strong>“Company”</strong>. Then your details and the business's: ID, address, activity (restaurant).</li>
+        <li><strong>Identity check</strong>: a photo of your ID, both sides (and sometimes a selfie). Stripe requires it from everyone who takes payments, like a bank.</li>
         <li><strong>Business website</strong>: if you don't have one, use your GastroGoan booking page (it's below, ready to copy).</li>
         <li><strong>Statement descriptor</strong>: what your customer sees on their bank statement. Use the restaurant's name, 5 to 22 characters with no symbols (for example <strong>BAR PEPE BCN</strong>), so they recognise it and don't dispute it.</li>
         <li><strong>Your bank account</strong> (IBAN, starts with ES), where Stripe will pay out what you take.</li>
