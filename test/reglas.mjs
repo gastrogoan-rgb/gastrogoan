@@ -63,7 +63,7 @@ caso('Un cliente NO puede declarar pagado su propio pedido', () => {
      "mi pedido está pagado, 0 €": la app se lo cree, lo marca cobrado y lo
      manda a cocina. Comida gratis, y el identificador del pedido lo genera su
      propio navegador.
-     No hace falta permitirlo: el Worker de Redsys escribe con la clave de
+     No hace falta permitirlo: el Worker de pagos escribe con la clave de
      administrador de la base (FIREBASE_DB_SECRET), que se salta las reglas.
      Se añadió por error el 2/09 creyendo que los pagos se rechazaban. */
   [negocio, plataforma, incrustadas].forEach(reglas => {

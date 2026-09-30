@@ -1,60 +1,69 @@
-# Worker de Redsys (`gastro`)
+# Worker de pagos (`gastro`) — Stripe
 
-`redsys-worker.js` es el código del Worker de Cloudflare que habla con Redsys.
-Antes solo existía dentro de Cloudflare; desde el 30/09 **la fuente de la verdad
-es este fichero**. Cloudflare no lo coge solo de aquí: hay que pegarlo a mano.
+`pagos-worker.js` es el código del Worker de Cloudflare que habla con Stripe.
+**Es la fuente de la verdad, pero Cloudflare no lo coge solo de aquí:** hay que
+pegarlo a mano cada vez que cambie.
 
-**No lleva ninguna clave.** Las dos que usa están guardadas en Cloudflare
-(Settings → Variables and Secrets) y no se tocan:
+Desde el 30/09 **solo se usa Stripe**. Redsys se quitó: su aviso de "pagado"
+dependía de cómo tuviera configurado el banco cada TPV, con el comercio de
+pruebas no llegaba nunca, y además hay un problema conocido entre los avisos
+de Redsys y Cloudflare. Con Stripe el aviso llega siempre y se puede probar de
+punta a punta en modo pruebas.
 
-- `FIREBASE_DB_URL` — la base de datos de `plataforma-gastrogoan`
-- `FIREBASE_DB_SECRET` — su "Database secret"
+## Cómo funciona
+
+- **Stripe Connect, cuentas estándar, cobro directo.** Cada restaurante tiene
+  SU cuenta de Stripe (la crea él en 10 minutos con el botón "Conectar con
+  Stripe" de Mi Negocio). El dinero va directo a ella y Stripe le cobra la
+  comisión a él. A GastroGoan no le cuesta nada ni pasa ningún euro por aquí.
+- El Worker solo guarda **qué cuenta de Stripe es de qué negocio**
+  (`gastrogoan/private/{publicId}/stripe`). Ninguna clave del negocio.
+- Al pagar, Stripe avisa al Worker (`/stripe/webhook`), que **comprueba la
+  firma** y apunta el pago en `gastrogoan/pagos/{publicId}/{ref}`. La app lo
+  pregunta ahí mientras tenga cobros a medias.
+- Lo que protege de que alguien pague de menos está en la app: recalcula el
+  precio con su carta y compara con lo que Stripe confirma
+  (`revisarPreciosPedidoPublico` y `aplicarPagoConfirmado`, `js/core.js`).
+
+## Claves (en Cloudflare → gastro → Settings → Variables and Secrets)
+
+| Nombre | Qué es |
+|---|---|
+| `FIREBASE_DB_URL` | la base de datos de `plataforma-gastrogoan` |
+| `FIREBASE_DB_SECRET` | su "Database secret" |
+| `STRIPE_SECRET_KEY` | clave secreta de la cuenta de Stripe de GastroGoan (`sk_test_…` en pruebas, `sk_live_…` en real) |
+| `STRIPE_WEBHOOK_SECRET` | secreto de firma del webhook (`whsec_…`) |
+
+El webhook de Stripe: **Desarrolladores → Webhooks**, eventos de **cuentas
+conectadas**, `checkout.session.completed` (y, si se activa Bizum,
+`checkout.session.async_payment_succeeded`), a
+`https://gastro.gastrogoan.workers.dev/stripe/webhook`.
+
+⚠️ **Pruebas y real son dos mundos aparte en Stripe**: el webhook y las claves
+de modo real se crean otra vez, en modo real. Al pasar a real se cambian las
+dos claves de Cloudflare y los restaurantes conectan su cuenta de verdad.
 
 ## Publicarlo (desde un ordenador)
 
-1. Abre `redsys-worker.js` en GitHub → botón **Raw** → selecciona todo y copia.
+1. Abre `pagos-worker.js` en GitHub → **Raw** → selecciona todo y copia.
 2. dash.cloudflare.com → **Workers y Pages** → `gastro` → **Editar código**.
-3. En el editor: selecciona todo, bórralo y pega.
-4. **Desplegar** (*Deploy*).
+3. Selecciona todo, bórralo, pega y **Desplegar**.
 
-⚠️ Antes, publica las reglas nuevas de la plataforma
-(`reglas/reglas-de-la-plataforma.json` → Firebase → `plataforma-gastrogoan` →
-Realtime Database → Reglas → Publicar). Sin la regla de `pagos`, la app no
-puede leer las confirmaciones del banco.
+## Probarlo en modo pruebas (sin dinero real)
 
-## Probarlo con el entorno de pruebas de Redsys (sin dinero real)
+1. App → Mi Negocio → Pago online con tarjeta → **Conectar con Stripe**.
+   En la web de Stripe (modo prueba) se puede rellenar con datos de prueba.
+2. Al volver tiene que salir **Activo**.
+3. Web de reservas → pedido para llevar → pagar con tarjeta `4242 4242 4242 4242`,
+   cualquier fecha futura y cualquier CVC.
+4. En Cloudflare (Observability) debe aparecer un **POST /stripe/webhook**, y
+   en la app el pedido pasa solo a **pagado** en menos de un minuto.
 
-1. En la app: Mi Negocio → Cobro con tarjeta, con los datos de prueba de
-   Redsys (FUC `999008881`, terminal `1`, clave
-   `sq7HjrUOBfKmC576ILgskD5srU870gJ7`) y **sin** marcar "entorno real".
-2. En la web de reservas del negocio: un pedido para llevar pagado con tarjeta.
-   Tarjeta de pruebas `4548810000000003`, caducidad cualquiera futura, CVV `123`.
-3. En la app, el pedido tiene que pasar solo a **pagado** en menos de un minuto.
-4. Repetir con una reserva con señal y con un autopedido de mesa pagado desde el móvil.
-5. Mi Negocio: cambiar el terminal sin escribir la clave actual → tiene que
-   pedirla. Desactivar con la clave → la web deja de ofrecer tarjeta.
+Pruebas automáticas: `node test/pagos-worker.mjs` (el Worker, con Stripe y
+Firebase simulados) y `test/pagos-app.mjs` (la app).
 
-## Qué cambió el 30/09 y por qué
-
-| Antes | Ahora |
-|---|---|
-| Con el `tenantId` (está en cualquier tablet del negocio) se podía poner **otro** código de comercio: los cobros iban al banco de otro. | Cambiar o desactivar exige la **clave secreta actual**, que el equipo nunca ve. |
-| La configuración se guardaba con el `publicId` deducido del `tenantId`. Los negocios con `publicId` sorteado no podían cobrar ("no tiene configurado el pago con tarjeta"). | Se guarda con el `publicId` de la web, comprobando que es de ese negocio (misma nube en `tenantLookup` y `publicLookup`). Las antiguas se mudan solas. |
-| La confirmación del banco iba al buzón de la nube compartida, que la app ya no escucha: el pago entraba en el banco y el pedido se quedaba "pendiente de pago". | Además se guarda en `gastrogoan/pagos/{publicId}/{ref}`, y la app pregunta ahí mientras tenga cobros a medias. |
-| "Desactivar" mandaba campos vacíos y el Worker lo rechazaba: nunca funcionó. | Funciona. |
-
-Lo que protege de que alguien pague menos **no está aquí**: está en la app,
-que recalcula el precio con su carta y compara con lo que el banco confirma
-(ver `revisarPreciosPedidoPublico` y `aplicarPagoConfirmado` en `js/core.js`).
-
-Pruebas: `node test/redsys-worker.mjs` (el Worker, con Firebase simulada, y la
-firma comparada con la de Node) y `test/redsys-app.mjs` (la app).
-
-**Riesgo que queda, asumido:** el **primer** alta de un TPV no puede
-comprobar que lo hace el dueño (la plataforma no tiene nada que solo el dueño
-sepa, más allá de su PIN, y ese no se guarda en ningún sitio). Alguien del
-equipo que se adelantara al dueño podría dar de alta el suyo. Si pasa, el
-dueño lo ve al instante: la app avisa en rojo de que ese TPV no es el que
-guardó él, y al intentar guardar el suyo le pide la clave del otro. Se
-arregla borrando `gastrogoan/private/{publicId}/redsysConfig` desde la consola
-de Firebase.
+**Riesgo que queda, asumido:** el primer alta no puede comprobar que lo hace el
+dueño (la plataforma no tiene nada que solo sepa el dueño). Por eso Mi Negocio
+enseña **a nombre de quién** está la cuenta de Stripe conectada; y una cuenta
+que ya cobra no se puede cambiar desde la app. Si alguna vez pasa, se arregla
+borrando `gastrogoan/private/{publicId}/stripe` en Firebase.

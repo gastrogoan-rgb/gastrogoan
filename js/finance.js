@@ -1757,7 +1757,7 @@ function updateStockMin(ingredientId, value){
 // ningún pedido/reserva (ver initPublicRequestsListener, js/core.js, rama
 // pago_confirmado) — normalmente porque el pedido se rechazó/canceló justo
 // antes de que llegara esta confirmación asíncrona. No hay forma de que la
-// app haga el reembolso sola (eso se hace desde el panel de Redsys/del
+// app haga el reembolso sola (eso se hace desde el panel de Stripe/del
 // proveedor de pago); esto es solo para que el dinero cobrado no desaparezca
 // sin dejar rastro y el negocio sepa que tiene que gestionarlo a mano.
 function openUnmatchedPaymentsModal(){

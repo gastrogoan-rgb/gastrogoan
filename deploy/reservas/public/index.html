@@ -280,11 +280,11 @@ let cart = []; // [{key, recipeId(=platoId), sectionId, name, price, qty, modifi
 let cartTipPct = 0; // 0 | 5 | 10 | 15 | 'custom'
 let cartTipCustom = 0; // importe fijo cuando cartTipPct === 'custom'
 let submittingRequest = false; // evita duplicados por doble clic en pedidos/reservas
-let redsysConfigured = false;
+let pagoOnlineActivo = false;
 
-// Worker (Cloudflare) que firma los pagos del TPV virtual (Redsys) sin
-// exponer la clave secreta del restaurante en este navegador.
-const REDSYS_WORKER_URL = 'https://gastro.gastrogoan.workers.dev';
+// Worker (Cloudflare) que crea los pagos con Stripe en la cuenta del
+// restaurante (ver worker/pagos-worker.js). Ninguna clave pasa por aquí.
+const PAGOS_WORKER_URL = 'https://gastro.gastrogoan.workers.dev';
 
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -891,13 +891,12 @@ function init(){
   resToken = getResTokenFromUrl();
   if(!publicId && !slug){ showError('error.enlace'); return; }
 
-  // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
+  // Vuelta desde Stripe tras pagar con tarjeta.
   const pago = new URLSearchParams(location.search).get('pago');
-  reenviarConfirmacionDelBanco();
-  // Tras el redirect de Redsys, la URL se queda con "?...&pago=ok/ko" — si el
+  // Tras volver de Stripe, la URL se queda con "?...&pago=ok/ko" — si el
   // cliente no sabe que puede quitarlo a mano, esta pantalla era un callejón
   // sin salida real (ni el botón atrás del navegador ayuda, porque la página
-  // anterior en el historial es el propio formulario ya enviado a Redsys).
+  // anterior en el historial es la página de pago de Stripe).
   // El botón vuelve a la MISMA página pero sin ese parámetro, para poder
   // seguir navegando con normalidad.
   const backToSiteUrl = location.href.split('?')[0] + (publicId ? `?neg=${encodeURIComponent(publicId)}` : (slug ? `?n=${encodeURIComponent(slug)}` : ''));
@@ -1036,7 +1035,7 @@ function renderTabContentPreservingForm(){
   if(box){
     // En una casilla o un radio, .value es siempre "on" — lo que hay que
     // conservar es .checked. Sin esto, una actualización en vivo de la carta
-    // (o la respuesta de la comprobación de Redsys) desmarcaba el
+    // (o la respuesta de la comprobación del pago online) desmarcaba el
     // consentimiento de privacidad que el cliente ya había marcado, y al
     // enviar le saltaba "tienes que aceptar el aviso" sobre una casilla que
     // él juraría haber marcado.
@@ -1122,7 +1121,7 @@ function loadBusinessInfo(){
       businessInfoLoadedOnce = true;
       lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, menus: DB.menus, activeMenuIds: DB.activeMenuIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
       renderApp();
-      checkRedsysConfigured();
+      comprobarPagoOnline();
     }else if(currentTab && document.getElementById('tab-content')){
       const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, menus: DB.menus, activeMenuIds: DB.activeMenuIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
       if(newSignature !== lastRenderSignature){
@@ -1209,20 +1208,20 @@ function renderBranchSelector(business, sucursales){
   `;
 }
 
-// Comprueba si el restaurante acepta pago con tarjeta online (TPV virtual).
-// Si la comprobación llega después del primer render, se vuelve a pintar el
+// Comprueba si el restaurante tiene activo el pago online (Stripe). Si la
+// comprobación llega después del primer render, se vuelve a pintar el
 // formulario de pedido para mostrar la opción de pago.
-function checkRedsysConfigured(){
-  fetch(`${REDSYS_WORKER_URL}/config?publicId=${encodeURIComponent(publicId)}`)
+function comprobarPagoOnline(){
+  fetch(`${PAGOS_WORKER_URL}/stripe/estado?publicId=${encodeURIComponent(publicId)}`)
     .then(r => r.json())
     .then(data => {
-      redsysConfigured = !!(data && data.configured);
+      pagoOnlineActivo = !!(data && data.activo);
       // renderTabContentPreservingForm (no renderTabContent a secas): si el
       // cliente ya había empezado a escribir su nombre/teléfono/dirección
       // antes de que esta comprobación terminase (llega por red, puede
       // tardar), un renderTabContent normal lo habría borrado todo de golpe
       // justo cuando aparece la opción de pagar con tarjeta.
-      if(redsysConfigured && (currentTab === 'takeaway' || currentTab === 'delivery' || currentTab === 'mesa')) renderTabContentPreservingForm();
+      if(pagoOnlineActivo && (currentTab === 'takeaway' || currentTab === 'delivery' || currentTab === 'mesa')) renderTabContentPreservingForm();
     })
     .catch(() => {});
 }
@@ -2350,7 +2349,7 @@ function submitReserva(){
   // (mn.ops.requireDeposit ya lo impide al guardar, pero por si un negocio
   // antiguo quedó con datos inconsistentes), se cae al envío normal sin
   // señal en vez de dejar al cliente sin poder reservar.
-  const depositRequired = depositAppliesForPeople(people) && redsysConfigured;
+  const depositRequired = depositAppliesForPeople(people) && pagoOnlineActivo;
   const req = {
     type:'reserva', clientName, clientPhone, clientEmail, date, time, people, notes, referral,
     depositRequired, depositAmount: depositRequired ? reservaDepositAmount() : '',
@@ -2761,7 +2760,7 @@ function renderPaymentMethodRadiosHtml(p){
   // permitirPagoLocal=true y ya no vuelve a aplicar este fallback.
   const legacyForceOnline = p.permitirPagoLocal === false && p.aceptaEfectivo === undefined && p.aceptaTarjetaLocal === undefined;
   const opts = [];
-  if(redsysConfigured && p.aceptaTpvVirtual !== false) opts.push({value:'tpv', label:t('pago.tarjeta')});
+  if(pagoOnlineActivo && p.aceptaTpvVirtual !== false) opts.push({value:'tpv', label:t('pago.tarjeta')});
   if(!legacyForceOnline && p.aceptaEfectivo !== false) opts.push({value:'efectivo', label: t('pago.efectivo')});
   if(!legacyForceOnline && p.aceptaTarjetaLocal !== false) opts.push({value:'tarjeta_local', label: t('pago.tarjetaLocal')});
   if(!opts.length) opts.push({value:'efectivo', label: t('pago.efectivo')}); // salvaguarda: nunca dejar el formulario sin ninguna opción
@@ -3324,17 +3323,14 @@ async function submitOrder(){
   sendRequest(req, t('order.ok'));
 }
 
-/* ============ PAGO CON TARJETA (TPV virtual / Redsys) ============
-   1) Firmamos el pago con el Worker ANTES de registrar el pedido en el
-      negocio (antes se hacía al revés: se registraba el pedido en Firebase
-      y LUEGO se pedía la firma — si el Worker fallaba o el fetch se caía a
-      medio camino, quedaba un pedido huérfano en el TPV sin ningún estado
-      de pago, indistinguible de uno a pagar en el local). Así, si la firma
-      falla, no llega a crearse ningún pedido en el negocio.
-   2) Solo si la firma tiene éxito, registramos el pedido (con su
-      clientRef) y redirigimos al cliente al TPV de Redsys.
-   3) Cuando el banco confirme el pago, el Worker avisará automáticamente
-      al restaurante (evento pago_confirmado). */
+/* ============ PAGO CON TARJETA (Stripe) ============
+   1) Se pide al Worker el pago ANTES de registrar el pedido en el negocio:
+      si el Worker falla, no llega a crearse ningún pedido huérfano, sin
+      estado de pago e indistinguible de uno a pagar en el local.
+   2) Solo si Stripe acepta crear el pago, se registra el pedido (con su
+      clientRef) y se manda al cliente a la página de pago de Stripe.
+   3) Cuando el cliente paga, Stripe avisa al Worker (con su firma) y la app
+      del negocio lo recoge preguntando (ver comprobarPagosTarjeta, js/core.js). */
 // refField: qué campo de `req` identifica el pago al volver del banco
 // (clientRef para pedidos, resToken para la señal de una reserva — ver
 // pago_confirmado en initPublicRequestsListener, js/core.js, que busca por
@@ -3354,7 +3350,7 @@ function payWithCard(req, amount, description, refField, submitBtnId){
   // pantalla de siempre.
   const seguimiento = refField === 'resToken' ? '&res=' + encodeURIComponent(ref)
     : (req.type === 'pedido' && req.tipo !== 'mesa') ? '&track=' + encodeURIComponent(ref) : '';
-  fetch(`${REDSYS_WORKER_URL}/sign`, {
+  fetch(`${PAGOS_WORKER_URL}/stripe/pagar`, {
     method: 'POST',
     headers: {'content-type':'application/json'},
     body: JSON.stringify({
@@ -3369,48 +3365,13 @@ function payWithCard(req, amount, description, refField, submitBtnId){
       return;
     }
     return db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = data.url;
-      Object.entries(data.fields).forEach(([k,v]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden'; input.name = k; input.value = v;
-        form.appendChild(input);
-      });
-      document.body.appendChild(form);
-      form.submit();
+      location.href = data.url;   // la página de pago de Stripe
     });
   }).catch(e => {
     console.error(e);
     showInlineError(t('error.pago.conexion'));
     setPaySubmitEnabled(true, submitBtnId);
   });
-}
-/* Segundo camino para la confirmación del pago (30/09). El aviso directo del
-   banco al Worker (/notify) no llegaba: en la prueba con el comercio genérico
-   de Redsys el Worker ni se enteraba, y el pedido se quedaba «sin pagar».
-   Pero al volver, Redsys trae en la dirección los datos del pago FIRMADOS
-   con la clave del comercio (Ds_MerchantParameters + Ds_Signature). Se le
-   pasan al Worker, que comprueba esa firma igual que en /notify: sin la
-   clave secreta nadie puede fabricarlos, así que un cliente no puede
-   declararse pagado por aquí. Si llegan los dos avisos, el segundo no
-   duplica nada (el Worker guarda con la misma clave). */
-function reenviarConfirmacionDelBanco(){
-  let q;
-  try{ q = new URLSearchParams(location.search); }catch(e){ return; }
-  const params = q.get('Ds_MerchantParameters'), firma = q.get('Ds_Signature');
-  if(!params || !firma) return;
-  fetch(`${REDSYS_WORKER_URL}/notify`, {
-    method: 'POST', keepalive: true,
-    headers: {'content-type': 'application/json'},
-    body: JSON.stringify({Ds_SignatureVersion: q.get('Ds_SignatureVersion') || 'HMAC_SHA256_V1', Ds_MerchantParameters: params, Ds_Signature: firma})
-  }).catch(() => {});
-  // Fuera de la dirección: si se comparte o se recarga, no se reenvía.
-  try{
-    const u = new URL(location.href);
-    ['Ds_SignatureVersion', 'Ds_MerchantParameters', 'Ds_Signature'].forEach(k => u.searchParams.delete(k));
-    history.replaceState(null, '', u.toString());
-  }catch(e){}
 }
 // Aviso fijo arriba, fuera de #app: el seguimiento se redibuja solo cada vez
 // que cambia el estado, y un aviso dentro desaparecería al primer cambio.
@@ -3477,7 +3438,7 @@ function renderMesaOrderForm(){
         <label>${t('order.notas')}</label>
         <textarea id="m-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
       </div>
-      ${redsysConfigured ? `
+      ${pagoOnlineActivo ? `
       <div class="field">
         <label>${t('order.mesa.payWhen')}</label>
         <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:6px;cursor:pointer">
@@ -3528,10 +3489,10 @@ function submitMesaOrder(){
   const notas = document.getElementById('m-notes').value.trim();
   const subtotalMesa = cart.reduce((s,l)=>s+l.price*l.qty,0);
   const tipMesa = computeTipAmount(subtotalMesa);
-  // Solo se pregunta si se ofrece pagar ahora (redsysConfigured); si no
+  // Solo se pregunta si se ofrece pagar ahora (pagoOnlineActivo); si no
   // existe el radio, es que la opción no está disponible y se añade a la
   // cuenta de la mesa como siempre.
-  const pagarAhora = redsysConfigured && document.querySelector('input[name="m-pago-cuando"]:checked')?.value === 'ahora';
+  const pagarAhora = pagoOnlineActivo && document.querySelector('input[name="m-pago-cuando"]:checked')?.value === 'ahora';
 
   const req = {
     type:'pedido', tipo:'mesa', tableId,

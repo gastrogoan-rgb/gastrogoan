@@ -18,7 +18,7 @@ await page.setRequestInterception(true);
 page.on('request', r => /firebase|gstatic|googleapis|workers\.dev|github/.test(r.url()) ? r.abort() : r.continue());
 await page.goto('http://localhost:8950/index.html', {waitUntil: 'domcontentloaded'});
 await page.evaluate(() => {
-  const code = 'REDSYS01';
+  const code = 'PAGOS001';
   localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code, tenantId: ggBizTenantId(code)}));
   localStorage.setItem('gastrogoan_owner_login', '1');
   localStorage.setItem('gastrogoan_access_session', JSON.stringify({type: 'owner', ts: Date.now()}));
@@ -124,7 +124,7 @@ await caso('Pago con tarjeta: se espera, se pregunta a la plataforma y, si falta
 
 await caso('La señal de una reserva la pone el negocio, y pagar menos no confirma', async () => {
   const r = await page.evaluate(async () => {
-    Object.assign(DB.business, {requireDeposit: true, depositAmount: 10, depositType: 'perPerson', depositMinPeople: 0, redsysActivo: true});
+    Object.assign(DB.business, {requireDeposit: true, depositAmount: 10, depositType: 'perPerson', depositMinPeople: 0, pagoOnlineActivo: true});
     const hoy = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
     await __empujar({type: 'reserva', clientName: 'Grupo', clientPhone: '600000000', date: hoy, time: '21:00', people: 4,
       depositRequired: true, depositAmount: '0.01', resToken: 'RESTOK000001', createdAt: new Date().toISOString()});
@@ -156,6 +156,33 @@ await caso('Los pagos que nunca llegan dejan de preguntarse a las 48 h', async (
   });
   assert.deepEqual(r, ['NUEVO000001']);
   return 'el viejo fuera, el nuevo sigue';
+});
+
+await caso('Mi Negocio: la tarjeta de Stripe enseña cada estado y solo activa el cobro cuando Stripe deja cobrar', async () => {
+  const r = await page.evaluate(async () => {
+    const cont = document.createElement('div'); cont.innerHTML = renderPagoOnlineCard(); document.body.appendChild(cont);
+    const estados = {};
+    const probar = async (resp) => {
+      window.fetch = async () => new Response(JSON.stringify(resp));
+      await loadPagoOnlineStatus();
+      return {texto: document.getElementById('pago-online-status').textContent, botones: [...document.querySelectorAll('#pago-online-acciones button, #pago-online-acciones a')].map(b => b.getAttribute('onclick') || b.getAttribute('href')), activo: pagoOnlineActivo};
+    };
+    estados.sin = await probar({conectado: false});
+    estados.pendiente = await probar({conectado: true, activo: false, nombre: 'Bar <b>Pepe</b>', email: 'pepe@bar.es'});
+    estados.activo = await probar({conectado: true, activo: true, nombre: 'Bar <b>Pepe</b>', email: 'pepe@bar.es'});
+    const html = document.getElementById('pago-online-status').innerHTML;
+    estados.desactivado = await probar({conectado: true, activo: false, desconectado: true});
+    cont.remove();
+    return {estados, escapado: html.includes('&lt;b&gt;Pepe&lt;/b&gt;')};
+  });
+  assert.ok(r.estados.sin.botones.includes('conectarStripe()') && !r.estados.sin.activo, 'sin conectar no ofrece «Conectar con Stripe»');
+  assert.equal(r.estados.pendiente.activo, false, 'con el alta a medias ya se ofrece pagar con tarjeta');
+  assert.ok(r.estados.pendiente.texto.includes('pepe@bar.es'), 'no se ve a nombre de quién está la cuenta');
+  assert.equal(r.estados.activo.activo, true);
+  assert.ok(r.estados.activo.botones.includes('desconectarStripe()'));
+  assert.ok(r.escapado, 'el nombre de la cuenta de Stripe entra en el HTML sin escapar');
+  assert.ok(r.estados.desactivado.botones.includes('conectarStripe()') && !r.estados.desactivado.activo);
+  return 'sin conectar · alta a medias · activo · desactivado';
 });
 
 await caso('Ningún error de JavaScript', async () => {
