@@ -9423,69 +9423,75 @@ function copiarWebParaStripe(btn){
 function conectarStripe(){
   const webParaStripe = (typeof getPublicClientLinkPretty === 'function') ? getPublicClientLinkPretty() : '';
   const guia = gl({
-    es: `<p style="margin:0 0 10px">Son unos <strong>10 minutos</strong>, una sola vez, en la web de Stripe. Tenlo a mano antes de empezar:</p>
+    es: `<p style="margin:0 0 10px">Tardarás unos <strong>15 minutos</strong>, una sola vez. Mejor <strong>desde el móvil</strong>: te hará falta la cámara.</p>
+      <p style="margin:0 0 4px;font-weight:700">Antes de empezar, ten a mano:</p>
       <ul style="margin:0 0 14px 18px;line-height:1.6">
-        <li>Tu <strong>DNI o NIE físico</strong> (y el <strong>CIF</strong> si el negocio es una sociedad): Stripe te pedirá <strong>foto por las dos caras</strong> y a veces un <strong>selfie</strong>. Es más fácil hacerlo desde el móvil.</li>
+        <li>Tu <strong>DNI o NIE físico</strong> (y el <strong>CIF</strong> si el negocio es una sociedad).</li>
         <li>El <strong>IBAN</strong> de la cuenta donde quieres cobrar.</li>
-        <li>La <strong>dirección</strong> del negocio y tu <strong>móvil</strong>.</li>
-        <li>La app <strong>Google Authenticator</strong> instalada en el móvil (gratis en Play Store o App Store). Stripe la pide por seguridad, como un banco.</li>
+        <li>La <strong>dirección</strong> del negocio.</li>
+        <li>La app <strong>Google Authenticator</strong> instalada en el móvil (gratis en Play Store o App Store).</li>
       </ul>
-      <p style="margin:0 0 6px;font-weight:700">Lo que te va a pedir Stripe, por orden:</p>
-      <p style="margin:0 0 8px;font-size:13px">Si la página sale en inglés, cambia el idioma a <strong>Español</strong> (abajo a la izquierda) <strong>nada más entrar</strong>. Al cambiarlo, Stripe puede devolverte aquí: no se pierde nada, pulsa <strong>Terminar el alta en Stripe</strong> y sigues donde estabas.</p>
+      <p style="margin:0 0 4px;font-weight:700">Lo que te pedirá Stripe, en este orden:</p>
+      <p style="margin:0 0 8px;font-size:13px">Si sale en inglés, cambia el idioma a <strong>Español</strong> (abajo a la izquierda) nada más entrar. Si al cambiarlo te devuelve aquí, pulsa <strong>Terminar el alta en Stripe</strong>: sigues donde estabas.</p>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
-        <li><strong>Tu email.</strong> Mejor uno del negocio. Si no tienes cuenta de Stripe, te pedirá crear una contraseña.</li>
-        <li><strong>Seguridad (verificación en dos pasos).</strong> Sale un código QR. En el móvil abre Google Authenticator, pulsa <strong>+</strong> → <strong>Escanear un código QR</strong>, apunta al QR y escribe en Stripe los <strong>6 números</strong> que aparecen. Solo se hace esta vez. <strong>Guarda el código de recuperación</strong> que te dé Stripe.</li>
-        <li><strong>Tipo de negocio</strong>: si eres <strong>autónomo</strong>, elige <strong>«Vendedor»</strong> (o «Individual»); si es una <strong>S.L. o S.A.</strong>, elige <strong>«Empresa»</strong>. Después, tus datos y los del negocio: DNI, dirección, actividad (restauración).</li>
-        <li><strong>Verificar tu identidad</strong>: foto del DNI por las dos caras (y a veces un selfie). Stripe lo exige a todo el que cobra, como un banco.</li>
-        <li><strong>Web del negocio</strong>: si no tienes, pon tu página de reservas de GastroGoan (la tienes abajo, lista para copiar).</li>
-        <li><strong>Nombre en el extracto</strong> (<em>statement descriptor</em>): lo que verá tu cliente en su banco al pagarte. Pon el nombre del restaurante, entre 5 y 22 letras y sin símbolos (por ejemplo <strong>BAR PEPE BCN</strong>), para que lo reconozca y no lo reclame.</li>
-        <li><strong>Tu cuenta bancaria</strong> (IBAN, empieza por ES), donde Stripe te ingresará lo cobrado.</li>
-        <li><strong>Ofertas de Stripe que puedes saltar</strong>: el <strong>cálculo de IVA (Stripe Tax)</strong> y el <strong>antifraude de pago</strong> cobran aparte y no te hacen falta — los precios ya llevan el IVA y GastroGoan ya lo calcula. Pulsa <strong>Omitir</strong> o <strong>Ahora no</strong>. Lo único que sí conviene dejar activado es la <strong>verificación 3D Secure</strong> (el cliente confirma el pago en la app de su banco).</li>
-        <li>Al terminar, Stripe te devuelve aquí. Si pone que falta que Stripe revise tus datos, espera unos minutos y pulsa <strong>Volver a comprobar</strong>.</li>
+        <li><strong>Tu email y una contraseña</strong> <span style="color:var(--muted)">· 1 min</span><br>Mejor un email del negocio. Si ya tienes cuenta de Stripe, entra con ella.</li>
+        <li><strong>Seguridad: verificación en dos pasos</strong> <span style="color:var(--muted)">· 2 min</span><br>Sale un código QR. En el móvil abre Google Authenticator → <strong>+</strong> → <strong>Escanear un código QR</strong>, apunta al QR y escribe en Stripe los <strong>6 números</strong>. <strong>Guarda el código de recuperación</strong> que te da Stripe.</li>
+        <li><strong>Tipo de negocio</strong> <span style="color:var(--muted)">· 30 s</span><br><strong>Autónomo → «Vendedor»</strong> (o «Individual»). <strong>S.L. o S.A. → «Empresa»</strong>.</li>
+        <li><strong>Tus datos y los del negocio</strong> <span style="color:var(--muted)">· 3 min</span><br>Nombre, dirección, teléfono y actividad: restauración.</li>
+        <li><strong>Web del negocio</strong> <span style="color:var(--muted)">· 30 s</span><br>Si no tienes, pega tu página de reservas de GastroGoan (la tienes abajo, lista para copiar).</li>
+        <li><strong>Nombre en el extracto</strong> <span style="color:var(--muted)">· 30 s</span><br>Lo que verá tu cliente en su banco. El nombre del restaurante, de 5 a 22 letras y sin símbolos (ej. <strong>BAR PEPE BCN</strong>).</li>
+        <li><strong>Tu cuenta bancaria</strong> <span style="color:var(--muted)">· 1 min</span><br>El IBAN (empieza por ES) donde Stripe te ingresará lo cobrado.</li>
+        <li><strong>Ofertas de Stripe: sáltalas</strong> <span style="color:var(--muted)">· 30 s</span><br>El <strong>cálculo de IVA (Stripe Tax)</strong> y el <strong>antifraude de pago</strong> cobran aparte y no te hacen falta: pulsa <strong>Omitir</strong> o <strong>Ahora no</strong>. Si pregunta por <strong>3D Secure</strong>, déjalo activado.</li>
+        <li><strong>Verificar tu identidad</strong> <span style="color:var(--muted)">· 3 min</span><br>Foto del DNI por las dos caras y, a veces, un selfie. Stripe lo exige a todo el que cobra, como un banco.</li>
+        <li><strong>Vuelta a GastroGoan</strong> <span style="color:var(--muted)">· —</span><br>Stripe te devuelve aquí y aparece <strong>Activo</strong>. Si pone que Stripe está revisando tus datos, espera unos minutos y pulsa <strong>Volver a comprobar</strong>.</li>
       </ol>
-      <p style="margin:0;color:var(--muted);font-size:13px">Si te quedas a medias, no pasa nada: vuelve a pulsar el botón y sigues donde lo dejaste. Stripe cobra su comisión en cada pago (alrededor del 1,5 % + 0,25 € con tarjetas europeas) y te ingresa el resto en tu banco. GastroGoan no toca tu dinero.</p>`,
-    ca: `<p style="margin:0 0 10px">Són uns <strong>10 minuts</strong>, una sola vegada, a la web de Stripe. Tingues a mà abans de començar:</p>
+      <p style="margin:0;color:var(--muted);font-size:13px">Si te quedas a medias, no pasa nada: vuelve a pulsar el botón y sigues donde lo dejaste. Stripe cobra su comisión en cada pago (alrededor del 1,5 % + 0,25 € con tarjetas europeas) y te ingresa el resto en tu banco en pocos días. GastroGoan no toca tu dinero.</p>`,
+    ca: `<p style="margin:0 0 10px">Trigaràs uns <strong>15 minuts</strong>, una sola vegada. Millor <strong>des del mòbil</strong>: et caldrà la càmera.</p>
+      <p style="margin:0 0 4px;font-weight:700">Abans de començar, tingues a mà:</p>
       <ul style="margin:0 0 14px 18px;line-height:1.6">
-        <li>El teu <strong>DNI o NIE físic</strong> (i el <strong>CIF</strong> si el negoci és una societat): Stripe et demanarà <strong>foto per les dues cares</strong> i de vegades una <strong>selfie</strong>. És més fàcil fer-ho des del mòbil.</li>
+        <li>El teu <strong>DNI o NIE físic</strong> (i el <strong>CIF</strong> si el negoci és una societat).</li>
         <li>L'<strong>IBAN</strong> del compte on vols cobrar.</li>
-        <li>L'<strong>adreça</strong> del negoci i el teu <strong>mòbil</strong>.</li>
-        <li>L'app <strong>Google Authenticator</strong> instal·lada al mòbil (gratuïta a Play Store o App Store). Stripe la demana per seguretat, com un banc.</li>
+        <li>L'<strong>adreça</strong> del negoci.</li>
+        <li>L'app <strong>Google Authenticator</strong> instal·lada al mòbil (gratuïta a Play Store o App Store).</li>
       </ul>
-      <p style="margin:0 0 6px;font-weight:700">El que et demanarà Stripe, per ordre:</p>
-      <p style="margin:0 0 8px;font-size:13px">Si la pàgina surt en anglès, canvia l'idioma a <strong>Español</strong> (a baix a l'esquerra) <strong>només entrar</strong>. En canviar-lo, Stripe et pot tornar aquí: no es perd res, prem <strong>Acabar l'alta a Stripe</strong> i continues on eres.</p>
+      <p style="margin:0 0 4px;font-weight:700">El que et demanarà Stripe, en aquest ordre:</p>
+      <p style="margin:0 0 8px;font-size:13px">Si surt en anglès, canvia l'idioma a <strong>Español</strong> (a baix a l'esquerra) només entrar. Si en canviar-lo et torna aquí, prem <strong>Acabar l'alta a Stripe</strong>: continues on eres.</p>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
-        <li><strong>El teu email.</strong> Millor un del negoci. Si no tens compte de Stripe, et demanarà crear una contrasenya.</li>
-        <li><strong>Seguretat (verificació en dos passos).</strong> Surt un codi QR. Al mòbil obre Google Authenticator, prem <strong>+</strong> → <strong>Escaneja un codi QR</strong>, apunta al QR i escriu a Stripe els <strong>6 números</strong> que apareixen. Només es fa aquesta vegada. <strong>Desa el codi de recuperació</strong> que et doni Stripe.</li>
-        <li><strong>Tipus de negoci</strong>: si ets <strong>autònom</strong>, tria <strong>«Venedor»</strong> (o «Individual»); si és una <strong>S.L. o S.A.</strong>, tria <strong>«Empresa»</strong>. Després, les teves dades i les del negoci: DNI, adreça, activitat (restauració).</li>
-        <li><strong>Verificar la teva identitat</strong>: foto del DNI per les dues cares (i de vegades una selfie). Stripe ho exigeix a tothom qui cobra, com un banc.</li>
-        <li><strong>Web del negoci</strong>: si no en tens, posa la teva pàgina de reserves de GastroGoan (la tens a baix, a punt per copiar).</li>
-        <li><strong>Nom a l'extracte</strong> (<em>statement descriptor</em>): el que veurà el teu client al seu banc en pagar-te. Posa el nom del restaurant, entre 5 i 22 lletres i sense símbols (per exemple <strong>BAR PEPE BCN</strong>), perquè el reconegui i no el reclami.</li>
-        <li><strong>El teu compte bancari</strong> (IBAN, comença per ES), on Stripe t'ingressarà el que cobris.</li>
-        <li><strong>Ofertes de Stripe que pots saltar</strong>: el <strong>càlcul d'IVA (Stripe Tax)</strong> i l'<strong>antifrau de pagament</strong> cobren a part i no et calen — els preus ja porten l'IVA i GastroGoan ja el calcula. Prem <strong>Ometre</strong> o <strong>Ara no</strong>. L'únic que sí convé deixar activat és la <strong>verificació 3D Secure</strong> (el client confirma el pagament a l'app del seu banc).</li>
-        <li>En acabar, Stripe et torna aquí. Si diu que falta que Stripe revisi les teves dades, espera uns minuts i prem <strong>Tornar a comprovar</strong>.</li>
+        <li><strong>El teu email i una contrasenya</strong> <span style="color:var(--muted)">· 1 min</span><br>Millor un email del negoci. Si ja tens compte de Stripe, entra-hi.</li>
+        <li><strong>Seguretat: verificació en dos passos</strong> <span style="color:var(--muted)">· 2 min</span><br>Surt un codi QR. Al mòbil obre Google Authenticator → <strong>+</strong> → <strong>Escaneja un codi QR</strong>, apunta al QR i escriu a Stripe els <strong>6 números</strong>. <strong>Desa el codi de recuperació</strong> que et dona Stripe.</li>
+        <li><strong>Tipus de negoci</strong> <span style="color:var(--muted)">· 30 s</span><br><strong>Autònom → «Venedor»</strong> (o «Individual»). <strong>S.L. o S.A. → «Empresa»</strong>.</li>
+        <li><strong>Les teves dades i les del negoci</strong> <span style="color:var(--muted)">· 3 min</span><br>Nom, adreça, telèfon i activitat: restauració.</li>
+        <li><strong>Web del negoci</strong> <span style="color:var(--muted)">· 30 s</span><br>Si no en tens, enganxa la teva pàgina de reserves de GastroGoan (la tens a baix, a punt per copiar).</li>
+        <li><strong>Nom a l'extracte</strong> <span style="color:var(--muted)">· 30 s</span><br>El que veurà el teu client al seu banc. El nom del restaurant, de 5 a 22 lletres i sense símbols (ex. <strong>BAR PEPE BCN</strong>).</li>
+        <li><strong>El teu compte bancari</strong> <span style="color:var(--muted)">· 1 min</span><br>L'IBAN (comença per ES) on Stripe t'ingressarà el que cobris.</li>
+        <li><strong>Ofertes de Stripe: salta-les</strong> <span style="color:var(--muted)">· 30 s</span><br>El <strong>càlcul d'IVA (Stripe Tax)</strong> i l'<strong>antifrau de pagament</strong> cobren a part i no et calen: prem <strong>Ometre</strong> o <strong>Ara no</strong>. Si pregunta per <strong>3D Secure</strong>, deixa-ho activat.</li>
+        <li><strong>Verificar la teva identitat</strong> <span style="color:var(--muted)">· 3 min</span><br>Foto del DNI per les dues cares i, de vegades, una selfie. Stripe ho exigeix a tothom qui cobra, com un banc.</li>
+        <li><strong>Tornada a GastroGoan</strong> <span style="color:var(--muted)">· —</span><br>Stripe et torna aquí i apareix <strong>Actiu</strong>. Si diu que Stripe està revisant les teves dades, espera uns minuts i prem <strong>Tornar a comprovar</strong>.</li>
       </ol>
-      <p style="margin:0;color:var(--muted);font-size:13px">Si et quedes a mitges, no passa res: torna a prémer el botó i segueixes on ho vas deixar. Stripe cobra la seva comissió a cada pagament (al voltant de l'1,5 % + 0,25 € amb targetes europees) i t'ingressa la resta al banc. GastroGoan no toca els teus diners.</p>`,
-    en: `<p style="margin:0 0 10px">It takes about <strong>10 minutes</strong>, only once, on the Stripe website. Have this ready before you start:</p>
+      <p style="margin:0;color:var(--muted);font-size:13px">Si et quedes a mitges, no passa res: torna a prémer el botó i continues on ho vas deixar. Stripe cobra la seva comissió a cada pagament (al voltant de l'1,5 % + 0,25 € amb targetes europees) i t'ingressa la resta al banc en pocs dies. GastroGoan no toca els teus diners.</p>`,
+    en: `<p style="margin:0 0 10px">It takes about <strong>15 minutes</strong>, only once. Best <strong>from your phone</strong>: you'll need the camera.</p>
+      <p style="margin:0 0 4px;font-weight:700">Before you start, have ready:</p>
       <ul style="margin:0 0 14px 18px;line-height:1.6">
-        <li>Your physical <strong>ID card or NIE</strong> (and the <strong>CIF</strong> if the business is a company): Stripe will ask for a <strong>photo of both sides</strong> and sometimes a <strong>selfie</strong>. It's easiest from your phone.</li>
+        <li>Your physical <strong>ID card or NIE</strong> (and the <strong>CIF</strong> if the business is a company).</li>
         <li>The <strong>IBAN</strong> of the account you want to be paid into.</li>
-        <li>The business <strong>address</strong> and your <strong>mobile phone</strong>.</li>
-        <li>The <strong>Google Authenticator</strong> app installed on your phone (free on Play Store or App Store). Stripe requires it for security, like a bank.</li>
+        <li>The business <strong>address</strong>.</li>
+        <li>The <strong>Google Authenticator</strong> app installed on your phone (free on Play Store or App Store).</li>
       </ul>
-      <p style="margin:0 0 6px;font-weight:700">What Stripe will ask for, in order:</p>
-      <p style="margin:0 0 8px;font-size:13px">You can change the page language at the bottom left — do it <strong>as soon as you arrive</strong>. Stripe may bring you back here when you change it: nothing is lost, tap <strong>Finish signing up on Stripe</strong> and carry on where you were.</p>
+      <p style="margin:0 0 4px;font-weight:700">What Stripe will ask for, in this order:</p>
+      <p style="margin:0 0 8px;font-size:13px">If it's not in your language, change it at the bottom left as soon as you arrive. If Stripe brings you back here when you change it, tap <strong>Finish signing up on Stripe</strong>: you carry on where you were.</p>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
-        <li><strong>Your email.</strong> Preferably a business one. If you don't have a Stripe account, it will ask you to create a password.</li>
-        <li><strong>Security (two-step verification).</strong> A QR code appears. On your phone open Google Authenticator, tap <strong>+</strong> → <strong>Scan a QR code</strong>, point it at the QR and type the <strong>6 digits</strong> into Stripe. You only do this once. <strong>Save the recovery code</strong> Stripe gives you.</li>
-        <li><strong>Business type</strong>: if you're <strong>self-employed</strong>, choose <strong>“Individual”</strong> (it may say “Seller”); if it's a <strong>limited company</strong>, choose <strong>“Company”</strong>. Then your details and the business's: ID, address, activity (restaurant).</li>
-        <li><strong>Identity check</strong>: a photo of your ID, both sides (and sometimes a selfie). Stripe requires it from everyone who takes payments, like a bank.</li>
-        <li><strong>Business website</strong>: if you don't have one, use your GastroGoan booking page (it's below, ready to copy).</li>
-        <li><strong>Statement descriptor</strong>: what your customer sees on their bank statement. Use the restaurant's name, 5 to 22 characters with no symbols (for example <strong>BAR PEPE BCN</strong>), so they recognise it and don't dispute it.</li>
-        <li><strong>Your bank account</strong> (IBAN, starts with ES), where Stripe will pay out what you take.</li>
-        <li><strong>Stripe add-ons you can skip</strong>: <strong>VAT calculation (Stripe Tax)</strong> and <strong>paid fraud protection</strong> cost extra and you don't need them — prices already include VAT and GastroGoan already calculates it. Tap <strong>Skip</strong> or <strong>Not now</strong>. The only thing worth keeping on is <strong>3D Secure</strong> (the customer confirms the payment in their banking app).</li>
-        <li>When you finish, Stripe brings you back here. If it says Stripe still needs to review your details, wait a few minutes and tap <strong>Check again</strong>.</li>
+        <li><strong>Your email and a password</strong> <span style="color:var(--muted)">· 1 min</span><br>Preferably a business email. If you already have a Stripe account, sign in with it.</li>
+        <li><strong>Security: two-step verification</strong> <span style="color:var(--muted)">· 2 min</span><br>A QR code appears. On your phone open Google Authenticator → <strong>+</strong> → <strong>Scan a QR code</strong>, point it at the QR and type the <strong>6 digits</strong> into Stripe. <strong>Save the recovery code</strong> Stripe gives you.</li>
+        <li><strong>Business type</strong> <span style="color:var(--muted)">· 30 s</span><br><strong>Self-employed → “Individual”</strong> (it may say “Seller”). <strong>Limited company → “Company”</strong>.</li>
+        <li><strong>Your details and the business's</strong> <span style="color:var(--muted)">· 3 min</span><br>Name, address, phone and activity: restaurant.</li>
+        <li><strong>Business website</strong> <span style="color:var(--muted)">· 30 s</span><br>If you don't have one, paste your GastroGoan booking page (it's below, ready to copy).</li>
+        <li><strong>Statement descriptor</strong> <span style="color:var(--muted)">· 30 s</span><br>What your customer sees on their bank statement. The restaurant's name, 5 to 22 characters, no symbols (e.g. <strong>BAR PEPE BCN</strong>).</li>
+        <li><strong>Your bank account</strong> <span style="color:var(--muted)">· 1 min</span><br>The IBAN (starts with ES) where Stripe will pay out what you take.</li>
+        <li><strong>Stripe add-ons: skip them</strong> <span style="color:var(--muted)">· 30 s</span><br><strong>VAT calculation (Stripe Tax)</strong> and <strong>paid fraud protection</strong> cost extra and you don't need them: tap <strong>Skip</strong> or <strong>Not now</strong>. If it asks about <strong>3D Secure</strong>, keep it on.</li>
+        <li><strong>Identity check</strong> <span style="color:var(--muted)">· 3 min</span><br>A photo of your ID, both sides, and sometimes a selfie. Stripe requires it from everyone who takes payments, like a bank.</li>
+        <li><strong>Back to GastroGoan</strong> <span style="color:var(--muted)">· —</span><br>Stripe brings you back here and it shows <strong>Active</strong>. If it says Stripe is reviewing your details, wait a few minutes and tap <strong>Check again</strong>.</li>
       </ol>
-      <p style="margin:0;color:var(--muted);font-size:13px">If you stop halfway, that's fine: tap the button again and carry on where you left off. Stripe takes its fee on each payment (around 1.5% + €0.25 with European cards) and pays the rest into your bank. GastroGoan never touches your money.</p>`
+      <p style="margin:0;color:var(--muted);font-size:13px">If you stop halfway, that's fine: tap the button again and carry on where you left off. Stripe takes its fee on each payment (around 1.5% + €0.25 with European cards) and pays the rest into your bank within a few days. GastroGoan never touches your money.</p>`
   });
   openModal(`
     <div class="modal-header">
