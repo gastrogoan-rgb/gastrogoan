@@ -53,6 +53,20 @@
   .trk-step.ahora{color:var(--ink);font-weight:700}
   .trk-step.ahora .trk-dot{background:var(--olive);border-color:var(--olive);box-shadow:0 0 0 4px var(--green-l)}
   .trk-now{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--olive)}
+  .grp-aviso{background:var(--surface);border:1px solid var(--ink);padding:16px 18px}
+  .grp-titulo{font-weight:700;font-size:15px;color:var(--ink);margin-bottom:6px;text-wrap:balance}
+  .grp-aviso p{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:var(--body)}
+  .grp-acciones{display:flex;flex-wrap:wrap;gap:8px}
+  .grp-btn{flex:1 1 180px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+  .mesa-sel{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+  .mesa-sel-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .mesa-sel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+  .mesa-opt{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--green-l);border:1px solid var(--green);color:var(--ink);font:inherit;cursor:pointer;padding:6px}
+  .mesa-opt-n{font-weight:700;font-size:13.5px}
+  .mesa-opt-p{font-size:11.5px;color:var(--muted)}
+  .mesa-opt.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .mesa-opt.on .mesa-opt-p{color:#fff}
+  .mesa-opt:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
   .trk-block{background:var(--surface);border:1px solid var(--border);padding:16px 20px;margin-bottom:14px}
   .trk-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   .trk-link{display:flex;align-items:center;min-height:44px;color:var(--ink);font-weight:600;text-decoration:none;border-top:1px solid var(--border)}
@@ -375,6 +389,8 @@ const I18N = {
     'lookup.submit':'Buscar','lookup.needAll':'Rellena los tres datos.','lookup.notFound':'No encontramos ninguna reserva con esos datos. Revisa que estén escritos igual que al reservar, o llama al restaurante.',
     'cal.dia':'Día','cal.semana':'Semana','cal.mes':'Mes','cal.cerrado':'Cerrado este día','cal.sinHuecos':'No quedan horas disponibles hoy',
     'cal.leyendaLibre':'Hay sitio','cal.leyendaLleno':'Completo',
+    'mesa.elige':'Elige tu mesa','mesa.plazas':'%d plazas','mesa.nombre':'Mesa %s',
+    'grupo.titulo':'Para %d personas o más, reserva con nosotros','grupo.texto':'Un grupo así lo preparamos aparte para que todo salga bien. Llámanos o escríbenos y lo cerramos contigo.','grupo.sinMesa':'No tenemos una mesa para %d personas en la web. Llámanos o escríbenos y buscamos la forma.','grupo.llamar':'Llamar','grupo.escribir':'Escribir un email','grupo.asunto':'Reserva para %d personas',
     'notas':'Notas (alergias, peticiones especiales...)','notas.placeholder':'Opcional','reserva.submit':'Enviar solicitud de reserva','reserva.submitWithDeposit':'Pagar señal y reservar',
     'referral.label':'¿Cómo nos conociste? (opcional)','referral.placeholder':'Elige una opción',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -460,6 +476,8 @@ const I18N = {
     'lookup.submit':'Search','lookup.needAll':'Fill in all three fields.','lookup.notFound':'We couldn\'t find any reservation with those details. Check they match what you used to book, or call the restaurant.',
     'cal.dia':'Day','cal.semana':'Week','cal.mes':'Month','cal.cerrado':'Closed this day','cal.sinHuecos':'No times left today',
     'cal.leyendaLibre':'Available','cal.leyendaLleno':'Full',
+    'mesa.elige':'Choose your table','mesa.plazas':'%d seats','mesa.nombre':'Table %s',
+    'grupo.titulo':'For %d people or more, book with us directly','grupo.texto':'We set up groups like yours separately so everything goes smoothly. Call or email us and we will arrange it with you.','grupo.sinMesa':'We have no table for %d people on the website. Call or email us and we will find a way.','grupo.llamar':'Call','grupo.escribir':'Send an email','grupo.asunto':'Booking for %d people',
     'notas':'Notes (allergies, special requests...)','notas.placeholder':'Optional','reserva.submit':'Send booking request','reserva.submitWithDeposit':'Pay deposit and book',
     'referral.label':'How did you hear about us? (optional)','referral.placeholder':'Choose an option',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -545,6 +563,8 @@ const I18N = {
     'lookup.submit':'Cercar','lookup.needAll':'Omple les tres dades.','lookup.notFound':'No hem trobat cap reserva amb aquestes dades. Revisa que estiguin escrites igual que al reservar, o truca al restaurant.',
     'cal.dia':'Dia','cal.semana':'Setmana','cal.mes':'Mes','cal.cerrado':'Tancat aquest dia','cal.sinHuecos':'No queden hores disponibles avui',
     'cal.leyendaLibre':'Hi ha lloc','cal.leyendaLleno':'Complet',
+    'mesa.elige':'Tria la teva taula','mesa.plazas':'%d places','mesa.nombre':'Taula %s',
+    'grupo.titulo':'Per a %d persones o més, reserva amb nosaltres','grupo.texto':'Un grup així el preparem a part perquè tot surti bé. Truca\'ns o escriu-nos i ho tanquem amb tu.','grupo.sinMesa':'No tenim una taula per a %d persones a la web. Truca\'ns o escriu-nos i trobarem la manera.','grupo.llamar':'Trucar','grupo.escribir':'Escriure un email','grupo.asunto':'Reserva per a %d persones',
     'notas':'Notes (al·lèrgies, peticions especials...)','notas.placeholder':'Opcional','reserva.submit':'Enviar sol·licitud de reserva','reserva.submitWithDeposit':'Pagar senyal i reservar',
     'referral.label':'Com ens has conegut? (opcional)','referral.placeholder':'Tria una opció',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
@@ -1571,11 +1591,55 @@ function tableFreeForSlots(dateStr, tableId, slots){
 // más pequeña que cumple people <= plazas + margen y no choca con ninguna
 // reserva ya existente en esa mesa. Solo se consideran mesas con capacidad
 // configurada — una sin plazas no se puede juzgar.
-function getBestFitTable(dateStr, time, people, slots){
-  const candidates = (DB.tables || [])
-    .filter(tb => tb.plazas && tb.plazas >= people && tableFreeForSlots(dateStr, tb.id, slots))
+// ⚠️ Decisión del dueño (1/10): una mesa vale si le caben todos y no le
+// sobran más de dos sillas (3 personas → mesas de 3 a 5). La app aplica la
+// MISMA regla al recibir la reserva (mesaEncajaGrupo, js/core.js): si no
+// coincidieran, la web ofrecería mesas que la app luego deja pendientes.
+const MESA_MARGEN_PLAZAS = 2;
+function mesaEncajaGrupo(tb, people){
+  const plazas = parseInt(tb && tb.plazas) || 0;
+  return plazas >= people && plazas <= people + MESA_MARGEN_PLAZAS;
+}
+function getEligibleTables(dateStr, people, slots){
+  return (DB.tables || [])
+    .filter(tb => mesaEncajaGrupo(tb, people) && tableFreeForSlots(dateStr, tb.id, slots))
     .sort((a, b) => a.plazas - b.plazas);
-  return candidates[0] || null;
+}
+function getBestFitTable(dateStr, time, people, slots){
+  return getEligibleTables(dateStr, people, slots)[0] || null;
+}
+// ¿Existe en el local ALGUNA mesa de ese tamaño, libre o no? Si no, ninguna
+// hora va a salir en verde y no tiene sentido enseñar un calendario todo en
+// rojo: se le dice que llame, igual que a un grupo grande.
+function hayMesaDeEseTamano(people){
+  return (DB.tables || []).some(tb => mesaEncajaGrupo(tb, people));
+}
+// Grupos: a partir de X personas (Mi Negocio) no se reserva por la web.
+function esGrupoPorTelefono(people){
+  const desde = parseInt((DB.business || {}).reservaConfirmManualDesde) || 0;
+  return desde > 0 && people >= desde;
+}
+// Motivo por el que este número de personas no puede reservar online, o null.
+function motivoSinReservaOnline(people){
+  if(esGrupoPorTelefono(people)) return 'grupo';
+  if((DB.tables||[]).some(tb => tb.plazas) && !hayMesaDeEseTamano(people)) return 'sinMesa';
+  return null;
+}
+function avisoGrupoHtml(people, motivo){
+  const b = DB.business || {};
+  const phone = (b.phone || '').trim(), email = (b.email || '').trim();
+  const desde = parseInt(b.reservaConfirmManualDesde) || people;
+  const titulo = motivo === 'grupo' ? t('grupo.titulo').replace('%d', desde) : '';
+  const texto = motivo === 'grupo' ? t('grupo.texto') : t('grupo.sinMesa').replace('%d', people);
+  const asunto = encodeURIComponent(t('grupo.asunto').replace('%d', people));
+  return `<div class="grp-aviso">
+    ${titulo ? `<div class="grp-titulo">${escapeHtml(titulo)}</div>` : ''}
+    <p>${escapeHtml(texto)}</p>
+    <div class="grp-acciones">
+      ${phone ? `<a class="btn btn-primary grp-btn" href="tel:${escapeHtml(phone.replace(/\s+/g,''))}">${t('grupo.llamar')} · ${escapeHtml(phone)}</a>` : ''}
+      ${email ? `<a class="btn grp-btn" href="mailto:${escapeHtml(email)}?subject=${asunto}">${t('grupo.escribir')}</a>` : ''}
+    </div>
+  </div>`;
 }
 // Reserva de forma ATÓMICA una mesa concreta para esas franjas, usando una
 // transacción de Firebase sobre un "candado" independiente del resumen ya
@@ -1921,6 +1985,7 @@ async function submitReservaLookup(){
 let calView = 'dia'; // 'dia' | 'semana' | 'mes'
 let calDate = null;  // fecha (YYYY-MM-DD) que se está mirando ahora mismo
 let calSelectedTime = null;
+let calSelectedTable = null; // id de la mesa que ha elegido el cliente
 
 function currentPeopleValue(){
   return Math.min(50, Math.max(1, parseInt(document.getElementById('r-people')?.value) || 1));
@@ -1967,10 +2032,9 @@ function reservaMinTimeHoy(){
 // se pinta como disponible: la app ya deja pasar esos casos para que el
 // negocio los revise a mano, en vez de rechazarlos sin más.
 function checkSlotFree(dateStr, time, people){
+  if(motivoSinReservaOnline(people)) return false;
   const hasConfiguredTables = (DB.tables||[]).some(tb => tb.plazas);
-  const maxCapacity = getMaxTableCapacity();
-  const needsManualReview = hasConfiguredTables && people > maxCapacity;
-  if(hasConfiguredTables && !needsManualReview){
+  if(hasConfiguredTables){
     const slots = slotsForReservation(time, getReservaDuracionMin());
     if(!getBestFitTable(dateStr, time, people, slots)) return false;
   }
@@ -2022,16 +2086,54 @@ function calGoToDay(dateStr){
 }
 function calPickSlot(dateStr, time){
   calSelectedTime = time;
+  // Se preselecciona la más ajustada; el cliente puede cambiarla.
+  const mejor = getBestFitTable(dateStr, time, currentPeopleValue(), slotsForReservation(time, getReservaDuracionMin()));
+  calSelectedTable = mejor ? mejor.id : null;
   document.getElementById('r-date').value = dateStr;
   document.getElementById('r-time').value = time;
   renderReservaCalendar();
 }
 const CAL_DOT = {libre:'#4A5D4E', lleno:'#8A4A3B', cerrado:'#C8C2B4', pasado:'#E8E4D9'};
+function calPickTable(id){ calSelectedTable = id; renderReservaCalendar(); }
+// Mesas entre las que elige el cliente al tocar una hora en verde.
+function selectorMesasHtml(people){
+  if(!calSelectedTime || !(DB.tables||[]).some(tb => tb.plazas)) return '';
+  const mesas = getEligibleTables(calDate, people, slotsForReservation(calSelectedTime, getReservaDuracionMin()));
+  if(!mesas.length) return '';
+  if(!mesas.some(tb => tb.id === calSelectedTable)) calSelectedTable = mesas[0].id;
+  return `<div class="mesa-sel">
+    <div class="mesa-sel-label">${t('mesa.elige')} · ${escapeHtml(calSelectedTime)}</div>
+    <div class="mesa-sel-grid">
+      ${mesas.map(tb => {
+        const nombre = tb.name ? (/^\d+$/.test(String(tb.name)) ? t('mesa.nombre').replace('%s', tb.name) : tb.name) : t('mesa.nombre').replace('%s', tb.id);
+        const on = tb.id === calSelectedTable;
+        return `<button type="button" class="mesa-opt${on?' on':''}" aria-pressed="${on}" onclick="calPickTable(${JSON.stringify(tb.id).replace(/"/g,'&quot;')})">
+          <span class="mesa-opt-n">${escapeHtml(String(nombre))}</span>
+          <span class="mesa-opt-p">${t('mesa.plazas').replace('%d', tb.plazas)}</span>
+        </button>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
 function renderReservaCalendar(){
   const box = document.getElementById('r-cal');
   if(!box) return;
   const people = currentPeopleValue();
+  const motivo = motivoSinReservaOnline(people);
+  const btnEnviar = document.getElementById('r-submit');
+  if(btnEnviar) btnEnviar.disabled = !!motivo;
+  if(motivo){
+    calSelectedTime = null; calSelectedTable = null;
+    document.getElementById('r-time').value = '';
+    box.innerHTML = avisoGrupoHtml(people, motivo);
+    return;
+  }
   if(document.getElementById('r-date').value && document.getElementById('r-date').value !== calDate) calSelectedTime = null;
+  // Si al cambiar de personas la hora elegida deja de tener mesa, se suelta.
+  if(calSelectedTime && !checkSlotFree(calDate, calSelectedTime, people)){
+    calSelectedTime = null; calSelectedTable = null;
+    document.getElementById('r-time').value = '';
+  }
   const tabs = `
     <div style="display:flex;gap:6px;margin-bottom:10px">
       ${['dia','semana','mes'].map(v => `<button type="button" class="btn btn-sm" style="flex:1;${calView===v?'background:var(--ink);color:#fff':''}" onclick="calSetView('${v}')">${t('cal.'+v)}</button>`).join('')}
@@ -2066,7 +2168,8 @@ function renderReservaCalendar(){
               : 'background:var(--red-l);border-color:var(--red);color:var(--red);text-decoration:line-through';
           return `<button type="button" class="btn btn-sm" ${libre?'':'disabled'} style="min-height:40px;${estilo}" onclick="calPickSlot('${calDate}','${s}')">${s}</button>`;
         }).join('')}
-      </div>`}
+      </div>
+      ${selectorMesasHtml(people)}`}
     `;
   } else if(calView === 'semana'){
     const jsDay = new Date(calDate + 'T00:00:00').getDay();
@@ -2347,19 +2450,22 @@ function submitReserva(){
   // la vez, igual que decidiría el negocio a mano.
   const turnoIdx = getTurnoIndexForTime(date, time);
   const hasConfiguredTables = (DB.tables||[]).some(tb => tb.plazas);
-  const maxCapacity = getMaxTableCapacity();
   const aforoInfo = getAforoInfo(date, time);
 
   let matchedTable = null, slots = null;
-  // Ninguna mesa individual (ni con margen) llegaría al tamaño del grupo:
-  // puede que el negocio sea capaz de juntar varias mesas, pero eso ya no
-  // lo puede decidir la web sola — queda pendiente de que lo revisen a mano,
-  // en vez de rechazar sin más una reserva que quizás sí se pueda hacer.
-  const needsManualReview = hasConfiguredTables && people > maxCapacity;
+  // Grupos grandes o sin mesa de su tamaño: no se reserva por la web (el
+  // calendario ya lo dice; esto es por si se salta la pantalla).
+  if(motivoSinReservaOnline(people)){
+    renderReservaCalendar();
+    submittingRequest = false;
+    setBtnLoading('r-submit', false);
+    return;
+  }
 
-  if(hasConfiguredTables && !needsManualReview){
+  if(hasConfiguredTables){
     slots = slotsForReservation(time, getReservaDuracionMin());
-    matchedTable = getBestFitTable(date, time, people, slots);
+    const elegibles = getEligibleTables(date, people, slots);
+    matchedTable = elegibles.find(tb => tb.id === calSelectedTable) || elegibles[0] || null;
     if(!matchedTable){
       // Sí existe una mesa de ese tamaño, pero está ocupada a esa hora —
       // esto sí es "no hay disponibilidad" de verdad, se dice en el momento.
@@ -3892,6 +3998,7 @@ function renderReservationStatus(data){
           <label>${t('personas')}</label>
           <input type="number" id="res-edit-people" value="${escapeHtml(data.people||1)}" min="1" max="50">
         </div>
+        <div id="res-edit-grupo"></div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn" id="res-edit-cancel-btn" onclick="toggleResEdit(false)">${t('common.close')}</button>
           <button class="btn btn-primary" id="res-edit-save-btn" onclick="submitReservationChange()" style="flex:1">${t('resManage.saveBtn')}</button>
@@ -3927,6 +4034,15 @@ function submitReservationChange(){
   const people = parseInt(document.getElementById('res-edit-people')?.value) || 0;
   if(!date || !time || !people){
     showInlineError(t('error.campos'));
+    return;
+  }
+  // Mismas reglas que al reservar: un grupo grande, o sin mesa de su
+  // tamaño, se gestiona hablando con el negocio.
+  const motivoGrupo = motivoSinReservaOnline(people);
+  if(motivoGrupo){
+    const box = document.getElementById('res-edit-grupo');
+    if(box) box.innerHTML = avisoGrupoHtml(people, motivoGrupo);
+    else showInlineError(t('grupo.sinMesa').replace('%d', people));
     return;
   }
   submittingReservationChange = true;

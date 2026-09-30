@@ -429,7 +429,9 @@ caso('El cliente puede guardarse/enviarse el enlace de seguimiento sin depender 
 caso('Una mesa nunca es más pequeña que el grupo que reserva (se quitó el margen por abajo)', () => {
   assert.ok(!/plazas \|\| 0\) \+ RESERVATION_TABLE_MARGIN >=/.test(core), 'js/core.js todavía deja emparejar una mesa más pequeña que el grupo (margen por abajo)');
   assert.ok(!/tb\.plazas \+ RESERVATION_TABLE_MARGIN >= people/.test(publica), 'reservagastrogoan.html todavía deja emparejar una mesa más pequeña que el grupo (margen por abajo)');
-  assert.ok(/tb\.plazas && tb\.plazas >= people/.test(publica), 'getBestFitTable ya no exige que la mesa sea igual o más grande que el grupo');
+  assert.ok(/plazas >= people && plazas <= people \+ MESA_MARGEN_PLAZAS/.test(publica), 'la web ya no exige mesa de N a N+2 plazas');
+  assert.ok(/plazas >= n && plazas <= n \+ MESA_MARGEN_PLAZAS/.test(core), 'la app ya no exige mesa de N a N+2 plazas');
+  assert.ok(publica.includes('function motivoSinReservaOnline') && publica.includes('avisoGrupoHtml'), 'falta el aviso de grupo (llamar o escribir) en la web');
   const apariciones = (core.match(/const AUTO_CONFIRM_MARGIN = 2;/g) || []).length;
   assert.equal(apariciones, 2, 'el margen superior (mesa demasiado grande para autoconfirmar sola) debe estar en los dos sitios: crear reserva y auto-editarla');
 });

@@ -114,9 +114,12 @@ await caso('Una mesa ocupada TODO el día marca ese día como lleno para ese gru
   assert.equal(r.libre, 'libre', 'liberando la mesa, el día debía volver a salir libre');
 });
 
-await caso('Un grupo más grande que cualquier mesa se deja como reservable (revisión manual), no bloqueado', async () => {
-  const estado = await page.evaluate(() => computeDayStatus(addDaysStr(todayStr(), 2), 20));
-  assert.equal(estado, 'libre', 'un grupo que no cabe en ninguna mesa individual debe poder reservar igualmente (el negocio lo revisa a mano), no debe salir "lleno"');
+// Cambió a propósito el 1/10 (decisión del dueño): nada se queda pendiente
+// de revisar a mano. Sin mesa de su tamaño, se le pide llamar o escribir.
+await caso('Un grupo más grande que cualquier mesa ve el aviso de llamar/escribir, no un calendario', async () => {
+  const r = await page.evaluate(() => ({estado: computeDayStatus(addDaysStr(todayStr(), 2), 20), motivo: motivoSinReservaOnline(20)}));
+  assert.equal(r.motivo, 'sinMesa');
+  assert.equal(r.estado, 'lleno', 'no debe ofrecer horas a un grupo sin mesa de su tamaño');
 });
 
 await caso('Elegir un hueco en la vista de día rellena los campos ocultos de fecha y hora', async () => {
@@ -141,7 +144,7 @@ await caso('Los huecos se ven en verde/rojo según disponibilidad, y el elegido 
   // disponible" (rojo). Se prueba con una marca naranja a propósito.
   const r = await page.evaluate(() => {
     document.documentElement.style.setProperty('--olive', '#E85D3C'); // naranja
-    DB.tables = [{id:1, name:'Mesa 1', plazas:6}];
+    DB.tables = [{id:1, name:'Mesa 1', plazas:3}];
     DB.mesasOcupadas = {};
     calSelectedTime = null;
     renderReservaCalendar();
