@@ -165,6 +165,32 @@ await caso('La comisión de Stripe se apunta sola como gasto, una vez, exacta o 
   return 'exacta 0,85 € · estimada 0,55 € · sin duplicar · explicación en la tarjeta';
 });
 
+await caso('Un pedido pagado online no se vuelve a cobrar: se cierra y la venta queda apuntada', async () => {
+  const r = await page.evaluate(() => {
+    const ayer = new Date(Date.now() - 86400000).toISOString();
+    const mk = (id, tipo) => ({id, tableId: null, tipo, status: 'aceptado', clienteNombre: 'Pagado', items: [{name: 'Hamburguesa', price: 12, qty: 2, estado: 'entregado'}],
+      propina: 1, costeEnvio: 0, pagado: true, pagoImporte: 25, pagoFecha: ayer, clientRef: 'REFpaid' + id, origenOnline: true, createdAt: ayer});
+    DB.tpvOrders.push(mk(990001, 'takeaway'), mk(990002, 'delivery'));
+    const debe = Math.max(0, orderTotal(DB.tpvOrders.find(o => o.id === 990001)) + 1 - orderAmountPaidOnline(DB.tpvOrders.find(o => o.id === 990001)));
+    const antes = DB.sales.length;
+    cerrarPedidoPagadoOnline(990001);
+    const v1 = DB.sales.find(s => s.id === 990001);
+    markRepartoEntregado(990002);
+    const v2 = DB.sales.find(s => s.id === 990002);
+    return {debe, nuevas: DB.sales.length - antes, v1: v1 && {metodo: v1.metodoPago, total: v1.total, fecha: v1.date, efectivo: (v1.pagos||[]).some(p => p.metodoPago === 'Efectivo')},
+      cerrado: DB.tpvOrders.find(o => o.id === 990001).status, v2: !!v2, fechaPago: ayer.slice(0, 10)};
+  });
+  assert.equal(r.debe, 0, 'un pedido pagado online sigue debiendo dinero en caja («Cobrar · 25 €»)');
+  assert.equal(r.nuevas, 2, 'la venta no se apunta');
+  assert.equal(r.v1.metodo, 'Online', 'la venta se apunta como otro método, no como pagada online');
+  assert.equal(r.v1.efectivo, false, 'el arqueo esperaría en caja un dinero que no pasó por ella');
+  assert.equal(r.v1.total, 25);
+  assert.equal(r.v1.fecha, r.fechaPago, 'la venta no va al día en que se cobró');
+  assert.equal(r.cerrado, 'pagada');
+  assert.ok(r.v2, 'un pedido a domicilio pagado no se cierra al marcarlo entregado');
+  return 'nada que cobrar · venta Online de 25 € el día del pago · a domicilio se cierra al entregar';
+});
+
 await caso('Los pagos que nunca llegan dejan de preguntarse a las 48 h', async () => {
   const r = await page.evaluate(async () => {
     window.fetch = async () => new Response('null');

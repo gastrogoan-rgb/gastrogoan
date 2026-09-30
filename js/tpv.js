@@ -37,6 +37,14 @@ function markRepartoEntregado(orderId){
   logAudit('edit', t('audit.orderDelivered').replace('${name}', order.clienteNombre||'?'));
   saveDB();
   if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
+  // Ya pagado entero por internet: entregado = cerrado, y se apunta la venta.
+  // Antes se quedaba abierto esperando un «Cobrar» que nadie pulsaba.
+  const pendiente = order.items && order.items.length ? Math.max(0, roundMoney(orderTotal(order) * (1 - (order.descuentoPct||0)/100) + (order.propina||0) - orderAmountPaidOnline(order))) : 1;
+  if(order.pagado && pendiente <= 0.001 && order.status !== 'pagada'){
+    finalizeCharge(orderId, {auto: true});
+    refreshRepartoUI(orderId);
+    return;
+  }
   refreshRepartoUI(orderId);
   showToast(t('msg.deliveryMarkedDelivered'));
 }
@@ -396,7 +404,7 @@ const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
 const SELECTABLE_PAYMENT_METHODS = ['Efectivo','Tarjeta'];
 // El método de pago se guarda siempre en español (valor interno/histórico);
 // esto solo traduce la etiqueta que se le muestra al usuario.
-const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed'};
+const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed','Online':'label.paidOnline'};
 function paymentMethodTpvLabel(value){
   return PAYMENT_METHOD_LABEL_KEYS[value] ? t(PAYMENT_METHOD_LABEL_KEYS[value]) : (value||'');
 }
@@ -1598,6 +1606,14 @@ function orderTotal(order){
 // orderTotal() sigue representando el valor total de lo servido (para
 // contabilidad); esto es aparte, para saber cuánto queda por cobrar en caja.
 function orderAmountPaidOnline(order){
+  // Pedido para llevar / a domicilio pagado ENTERO por internet (Stripe):
+  // lo que confirmó el pago. Faltaba (1/10): el pedido pagado seguía
+  // diciendo «Cobrar · 25 €», al pulsarlo se cobraba OTRA vez en caja, y si
+  // nadie lo pulsaba la venta no se apuntaba en ningún sitio.
+  if(order && order.pagado && !order.pagoInsuficiente){
+    const pagado = parseFloat(order.pagoImporte);
+    if(pagado > 0) return roundMoney(pagado + (order.depositAmount || 0));
+  }
   const itemsPaid = (order.items||[]).filter(l => l.pagadoOnline).reduce((sum, l) => sum + l.price * l.qty, 0);
   // order.depositAmount: señal de la reserva vinculada, ya cobrada aparte
   // (ver confirmOpenTableOrder) — se resta igual que lo pagado por móvil,
@@ -2227,11 +2243,11 @@ function renderTableOrderModal(orderId){
      otra vez en caja. Dentro, el modal ya calcula bien que no queda nada
      pendiente y lo muestra con el aviso de pago online. */
   const botonCobrarOCerrar = yaPagadoDelTodo
-    ? `<button class="btn btn-primary" style="white-space:nowrap" onclick="openPaymentModal(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
+    ? `<button class="btn btn-primary" style="white-space:nowrap" onclick="cerrarPedidoPagadoOnline(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
     : `<button class="btn" style="white-space:nowrap" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`;
   const actionButtons = allDelivered && order.items.length
     ? (yaPagadoDelTodo
-        ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
+        ? `<button class="btn btn-primary" style="width:100%" onclick="cerrarPedidoPagadoOnline(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
         : `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`)
     : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}${botonCobrarOCerrar}</div>`;
 
@@ -4518,7 +4534,10 @@ function updatePaymentChange(orderId){
   document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, roundMoney(cash - amountDue)));
 }
 
-function finalizeCharge(orderId){
+// opts.auto: cierre sin ventana de cobro (pedido ya pagado online al
+// entregarlo o con «Cerrar pedido»): sin cajón ni ticket, solo la venta.
+function finalizeCharge(orderId, opts){
+  const auto = !!(opts && opts.auto);
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items.length) return;
   // Guarda de re-entrada: aunque hoy la función es síncrona (sin await de
@@ -4533,7 +4552,13 @@ function finalizeCharge(orderId){
   // total (que sí incluye ambas, ver computeFinalTotal) tiene que cuadrar
   // con subtotal - descuento + propina.
   const propina = roundMoney(propinaCaja + (order.propinaPagadaOnline || 0));
-  const metodoPago = document.getElementById('payment-method').value;
+  // Todo pagado ya por internet: la venta es «Online», no el método que
+  // estuviera marcado por defecto en la ventana de cobro (salía «Efectivo»
+  // y el arqueo esperaba en caja un dinero que nunca pasó por ella).
+  const pmEl = document.getElementById('payment-method');
+  const todoOnline = amountDue <= 0.001 && amountPaidOnline > 0;
+  if(!pmEl && !todoOnline) return;   // sin ventana de cobro solo se cierra lo ya pagado
+  const metodoPago = todoOnline ? 'Online' : pmEl.value;
   // Si el camarero teclea por error un importe entregado menor que lo
   // debido, el cambio mostrado se queda en 0€ (Math.max(0,...) en
   // updatePaymentChange) y no avisa de nada raro — sin este control el
@@ -4557,7 +4582,7 @@ function finalizeCharge(orderId){
   // cuenta (para contabilidad/VeriFactu), pero queda constancia exacta de
   // que una parte ya se cobró antes, no ahora mismo en caja.
   if(amountPaidOnline > 0){
-    if(!pagos) pagos = [{label: paymentMethodTpvLabel(metodoPago), amount: amountDue, metodoPago}];
+    if(!pagos) pagos = amountDue > 0.001 ? [{label: paymentMethodTpvLabel(metodoPago), amount: amountDue, metodoPago}] : [];
     // La señal de la reserva (si la hay) se desglosa aparte del resto de lo
     // ya pagado por móvil, para que quede claro en el ticket/informe de
     // dónde viene cada parte — orderAmountPaidOnline() ya la suma dentro
@@ -4601,10 +4626,24 @@ function finalizeCharge(orderId){
   // cambio, guardar un justificante o dejar el ticket dentro. En silencio y
   // sin await: si el negocio no tiene cajón, o la impresora no está
   // conectada, no pasa absolutamente nada y el cobro sigue su curso.
-  if(typeof openCashDrawerOnSale === 'function') openCashDrawerOnSale();
   if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
+  if(auto){
+    renderTPV();
+    showToast(t('msg.orderClosedPaidOnline'));
+    return sale;
+  }
+  if(typeof openCashDrawerOnSale === 'function') openCashDrawerOnSale();
   renderTPV();
   openTicketDeliveryModal(sale.id);
+  return sale;
+}
+// «Cerrar pedido (pagado online)»: no hay nada que cobrar, así que no se
+// abre la ventana de cobro — se apunta la venta y listo.
+function cerrarPedidoPagadoOnline(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const sale = finalizeCharge(orderId, {auto: true});
+  if(sale && document.querySelector('.modal-overlay.active')) closeModal();
 }
 
 /* ------------------ Pestaña: dividir a partes iguales ------------------ */
