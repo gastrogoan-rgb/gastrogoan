@@ -178,7 +178,7 @@ await caso('Mi Negocio: la tarjeta de Stripe enseña cada estado y solo activa e
     window.fetch = async () => { fueAStripe = true; return new Response('{}'); };
     conectarStripe();
     const modal = document.getElementById('modal-box').innerHTML;
-    const guia = {authenticator: modal.includes('Google Authenticator'), iban: modal.includes('IBAN'), sigue: modal.includes('conectarStripeAhora()'), fueAStripe};
+    const guia = {web: modal.includes('reservas.gastrogoan.com') && modal.includes('copiarWebParaStripe'), authenticator: modal.includes('Google Authenticator'), iban: modal.includes('IBAN'), sigue: modal.includes('conectarStripeAhora()'), fueAStripe};
     closeModal();
     return {estados, guia, escapado: html.includes('&lt;b&gt;Pepe&lt;/b&gt;')};
   });
@@ -190,6 +190,7 @@ await caso('Mi Negocio: la tarjeta de Stripe enseña cada estado y solo activa e
   assert.ok(r.escapado, 'el nombre de la cuenta de Stripe entra en el HTML sin escapar');
   assert.ok(r.estados.desactivado.botones.includes('conectarStripe()') && !r.estados.desactivado.activo);
   assert.ok(r.guia.authenticator && r.guia.iban && r.guia.sigue, 'no sale la guía de lo que va a pedir Stripe');
+  assert.ok(r.guia.web, 'la guía no da la web del negocio lista para copiar (Stripe la exige)');
   assert.equal(r.guia.fueAStripe, false, 'manda a Stripe sin explicar antes qué hace falta');
   return 'sin conectar · alta a medias · activo · desactivado · guía antes de ir';
 });
