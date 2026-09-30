@@ -9424,7 +9424,7 @@ function conectarStripe(){
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>Tu email.</strong> Mejor uno del negocio. Si no tienes cuenta de Stripe, te pedirá crear una contraseña.</li>
         <li><strong>Seguridad (verificación en dos pasos).</strong> Sale un código QR. En el móvil abre Google Authenticator, pulsa <strong>+</strong> → <strong>Escanear un código QR</strong>, apunta al QR y escribe en Stripe los <strong>6 números</strong> que aparecen. Solo se hace esta vez. <strong>Guarda el código de recuperación</strong> que te dé Stripe.</li>
-        <li><strong>Tus datos y los del negocio</strong>: DNI, dirección, actividad (restauración).</li>
+        <li><strong>Tipo de negocio</strong>: si eres <strong>autónomo</strong>, elige <strong>«Vendedor»</strong> (o «Individual»); si es una <strong>S.L. o S.A.</strong>, elige <strong>«Empresa»</strong>. Después, tus datos y los del negocio: DNI, dirección, actividad (restauración).</li>
         <li><strong>Tu cuenta bancaria</strong> (IBAN), donde Stripe te ingresará lo cobrado.</li>
         <li>Al terminar, Stripe te devuelve aquí. Si pone que falta que Stripe revise tus datos, espera unos minutos y pulsa <strong>Volver a comprobar</strong>.</li>
       </ol>
@@ -9440,7 +9440,7 @@ function conectarStripe(){
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>El teu email.</strong> Millor un del negoci. Si no tens compte de Stripe, et demanarà crear una contrasenya.</li>
         <li><strong>Seguretat (verificació en dos passos).</strong> Surt un codi QR. Al mòbil obre Google Authenticator, prem <strong>+</strong> → <strong>Escaneja un codi QR</strong>, apunta al QR i escriu a Stripe els <strong>6 números</strong> que apareixen. Només es fa aquesta vegada. <strong>Desa el codi de recuperació</strong> que et doni Stripe.</li>
-        <li><strong>Les teves dades i les del negoci</strong>: DNI, adreça, activitat (restauració).</li>
+        <li><strong>Tipus de negoci</strong>: si ets <strong>autònom</strong>, tria <strong>«Venedor»</strong> (o «Individual»); si és una <strong>S.L. o S.A.</strong>, tria <strong>«Empresa»</strong>. Després, les teves dades i les del negoci: DNI, adreça, activitat (restauració).</li>
         <li><strong>El teu compte bancari</strong> (IBAN), on Stripe t'ingressarà el que cobris.</li>
         <li>En acabar, Stripe et torna aquí. Si diu que falta que Stripe revisi les teves dades, espera uns minuts i prem <strong>Tornar a comprovar</strong>.</li>
       </ol>
@@ -9456,7 +9456,7 @@ function conectarStripe(){
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>Your email.</strong> Preferably a business one. If you don't have a Stripe account, it will ask you to create a password.</li>
         <li><strong>Security (two-step verification).</strong> A QR code appears. On your phone open Google Authenticator, tap <strong>+</strong> → <strong>Scan a QR code</strong>, point it at the QR and type the <strong>6 digits</strong> into Stripe. You only do this once. <strong>Save the recovery code</strong> Stripe gives you.</li>
-        <li><strong>Your details and the business's</strong>: ID, address, activity (restaurant).</li>
+        <li><strong>Business type</strong>: if you're <strong>self-employed</strong>, choose <strong>“Individual”</strong> (it may say “Seller”); if it's a <strong>limited company</strong>, choose <strong>“Company”</strong>. Then your details and the business's: ID, address, activity (restaurant).</li>
         <li><strong>Your bank account</strong> (IBAN), where Stripe will pay out what you take.</li>
         <li>When you finish, Stripe brings you back here. If it says Stripe still needs to review your details, wait a few minutes and tap <strong>Check again</strong>.</li>
       </ol>
