@@ -362,7 +362,18 @@ async function handleWebhook(req, env){
   // El pago tiene que venir de la cuenta de ESE negocio.
   const cfg = await fbGet(env, rutaStripe(md.publicId));
   if(!cfg || cfg.accountId !== evento.account) return json({ received: true });
-  await registrarPago(env, md.publicId, md.orderRef, Number(s.amount_total) / 100, { pasarela: 'stripe', sesion: String(s.id || '') });
+  // La comisión REAL que Stripe le ha cobrado al restaurante por este pago,
+  // para que la app la apunte sola como gasto (y el banco cuadre con las
+  // ventas). Si no se puede leer, la app pone una estimación y lo marca.
+  let comision = null;
+  try {
+    if(s.payment_intent){
+      const pi = await stripe(env, 'GET', `/payment_intents/${s.payment_intent}?expand[]=latest_charge.balance_transaction`, null, evento.account);
+      const bt = pi && pi.latest_charge && pi.latest_charge.balance_transaction;
+      if(bt && typeof bt.fee === 'number') comision = bt.fee / 100;
+    }
+  } catch(e){ /* sin la comisión exacta, el pago se apunta igual */ }
+  await registrarPago(env, md.publicId, md.orderRef, Number(s.amount_total) / 100, { pasarela: 'stripe', sesion: String(s.id || ''), comision });
   return json({ received: true });
 }
 

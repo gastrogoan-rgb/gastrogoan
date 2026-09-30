@@ -146,6 +146,25 @@ await caso('La señal de una reserva la pone el negocio, y pagar menos no confir
   return 'señal 40 € · 0,01 € no confirma · saltársela no confirma';
 });
 
+await caso('La comisión de Stripe se apunta sola como gasto, una vez, exacta o estimada', async () => {
+  const r = await page.evaluate(() => {
+    if(!DB.ge) DB.ge = {}; if(!Array.isArray(DB.ge.variables)) DB.ge.variables = [];
+    const antes = DB.ge.variables.length;
+    aplicarPagoConfirmado({orderRef: 'COMIS0000001', amount: 40, comision: 0.85, createdAt: new Date().toISOString()});
+    aplicarPagoConfirmado({orderRef: 'COMIS0000001', amount: 40, comision: 0.85, createdAt: new Date().toISOString()});   // el aviso llega dos veces
+    aplicarPagoConfirmado({orderRef: 'COMIS0000002', amount: 20, createdAt: new Date().toISOString()});                   // sin cifra exacta
+    const nuevos = DB.ge.variables.slice(antes).filter(v => v.pagoOnlineRef);
+    const cont = document.createElement('div'); cont.innerHTML = renderPagoOnlineCard();
+    const info = cont.textContent.includes('7') && cont.querySelector('details') !== null;
+    return {n: nuevos.length, exacta: nuevos[0] && [nuevos[0].categoria, nuevos[0].importe, nuevos[0].pagada, nuevos[0].iva], estimada: nuevos[1] && [nuevos[1].importe, nuevos[1].comisionEstimada], info};
+  });
+  assert.equal(r.n, 2, 'la comisión se apunta más de una vez por pago (o ninguna)');
+  assert.deepEqual(r.exacta, ['COMISIONES VENTA', 0.85, true, 0]);
+  assert.deepEqual(r.estimada, [0.55, true], 'sin cifra de Stripe no se estima 1,5 % + 0,25 €');
+  assert.ok(r.info, 'la tarjeta de Stripe no explica cómo y cuándo se cobra');
+  return 'exacta 0,85 € · estimada 0,55 € · sin duplicar · explicación en la tarjeta';
+});
+
 await caso('Los pagos que nunca llegan dejan de preguntarse a las 48 h', async () => {
   const r = await page.evaluate(async () => {
     window.fetch = async () => new Response('null');
