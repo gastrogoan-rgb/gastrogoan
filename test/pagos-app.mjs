@@ -207,6 +207,29 @@ await caso('Un pedido pendiente para dentro de horas (o de días) sale en Pendie
   return 'de dentro de 3 h y de 2 días · «esperando el pago con tarjeta»';
 });
 
+await caso('La venta de un pedido pagado se apunta al llegar el pago, en el día de Madrid, y cerrar no la duplica', async () => {
+  await page.emulateTimezone('Europe/Madrid');
+  const r = await page.evaluate(() => {
+    DB.tpvOrders.push({id: 770001, tipo: 'takeaway', status: 'aceptado', origenOnline: true, metodoPagoLocal: null, pagado: false, clienteNombre: 'Medianoche',
+      clientRef: 'REFmidnight01', items: [{name: 'Hamburguesa', price: 12, qty: 1}], propina: 0, createdAt: new Date().toISOString()});
+    // 00:30 del 1 de octubre en Madrid = 22:30 UTC del 30 de septiembre.
+    aplicarPagoConfirmado({orderRef: 'REFmidnight01', amount: 12, comision: 0.43, createdAt: '2026-09-30T22:30:00.000Z'});
+    const venta = DB.sales.find(x => x.id === 770001);
+    const alPagar = venta ? {fecha: venta.date, metodo: venta.metodoPago, total: venta.total} : null;
+    const antes = DB.sales.filter(x => x.id === 770001).length;
+    cerrarPedidoPagadoOnline(770001);
+    const despues = DB.sales.filter(x => x.id === 770001).length;
+    return {alPagar, antes, despues, cerrado: DB.tpvOrders.find(o => o.id === 770001).status};
+  });
+  await page.emulateTimezone('UTC');
+  assert.ok(r.alPagar, 'la venta no se apunta al llegar el pago');
+  assert.equal(r.alPagar.fecha, '2026-10-01', 'un pago a las 00:30 de Madrid se apunta la víspera (fecha en UTC)');
+  assert.equal(r.alPagar.metodo, 'Online');
+  assert.deepEqual([r.antes, r.despues], [1, 1], 'al cerrar el pedido la venta se duplica');
+  assert.equal(r.cerrado, 'pagada');
+  return 'apuntada al pagar · 1 de octubre (no el 30) · cerrar no duplica';
+});
+
 await caso('Los pagos que nunca llegan dejan de preguntarse a las 48 h', async () => {
   const r = await page.evaluate(async () => {
     window.fetch = async () => new Response('null');

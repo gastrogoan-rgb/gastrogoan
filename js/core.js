@@ -6918,6 +6918,7 @@ function aplicarPagoConfirmado(req){
     }else{
       order.pagado = true;
       order.pagoInsuficiente = false;
+      if(typeof apuntarVentaPagoOnline === 'function') apuntarVentaPagoOnline(order);
       if(order.status === 'pendiente-online' && DB.business.pedidosOnlineActivos !== false && !order.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
         acceptOnlineOrder(order.id, true);
       }
@@ -7020,6 +7021,12 @@ function initPublicRequestsListener(){
     publicRequestsListenerAttached = true;
     // Cobros con tarjeta que quedaron a medias antes de cerrar la app.
     if((DB.pagosTarjetaEsperados || []).length) programarComprobacionPagos();
+    // Pedidos pagados antes de que la venta se apuntara al pagar (1/10).
+    if(typeof apuntarVentaPagoOnline === 'function'){
+      let apuntadas = 0;
+      (DB.tpvOrders || []).forEach(o => { if(o && o.status !== 'pagada' && apuntarVentaPagoOnline(o)) apuntadas++; });
+      if(apuntadas) saveDB();
+    }
     // Una sola vez por arranque, en paralelo, sin bloquear nada: es una
     // lectura de "última hora" para un aviso, no algo de lo que dependa el
     // oyente de reservas/pedidos que sigue justo debajo.
