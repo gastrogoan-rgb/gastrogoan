@@ -60,7 +60,7 @@ caso('La señal de reserva se puede pedir solo a partir de un número de persona
   const m = publica.match(/function depositAppliesForPeople\(people\)\{[\s\S]*?\n\}/);
   assert.ok(m, 'no se pudo aislar el cuerpo de depositAppliesForPeople');
   assert.ok(m[0].includes('depositMinPeople'), 'no lee el umbral de personas (depositMinPeople)');
-  assert.ok(publica.includes('depositAppliesForPeople(people)') && !publica.includes('!!(DB.business||{}).requireDeposit && redsysConfigured'),
+  assert.ok(publica.includes('depositAppliesForPeople(people)') && !publica.includes('!!(DB.business||{}).requireDeposit && pagoOnlineActivo'),
     'submitReserva sigue exigiendo la señal a TODAS las reservas sin mirar el umbral de personas');
   assert.ok(/oninput="[^"]*updateDepositNoticeUi\(\)/.test(publica),
     'el aviso de señal y el texto del botón no se actualizan al cambiar el número de personas, sin recargar la página');
@@ -301,14 +301,14 @@ caso('Borrar una zona completa vuelve a comprobar sus mesas justo antes de borra
     'la limpieza de referencias sigue usando la lista capturada antes de confirmar, no la actual');
 });
 
-caso('Desactivar el TPV virtual no borra la configuración local si el Worker rechaza la petición (hallazgo de Codex sobre conexiones externas)', () => {
-  const m = core.match(/async function disableRedsysConfig\(\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró disableRedsysConfig');
+caso('Desactivar el pago online no se da por hecho si el Worker rechaza la petición (hallazgo de Codex sobre conexiones externas)', () => {
+  const m = core.match(/async function desconectarStripe\(\)\{[\s\S]*?\n\}/);
+  assert.ok(m, 'no se encontró desconectarStripe');
   assert.ok(m[0].includes('if(!res.ok || data.error)'),
-    'disableRedsysConfig no comprueba res.ok — puede mostrarse como desactivado aunque el Worker haya fallado');
+    'desconectarStripe no comprueba res.ok — puede mostrarse como desactivado aunque el Worker haya fallado');
   const idxCheck = m[0].indexOf('if(!res.ok || data.error)');
-  const idxLimpieza = m[0].indexOf("['rs-fuc','rs-terminal','rs-clave','rs-clave-actual'].forEach");
-  assert.ok(idxLimpieza > idxCheck, 'la limpieza de campos locales sigue ocurriendo antes de comprobar si el Worker confirmó la desactivación');
+  const idxLimpieza = m[0].indexOf('pagoOnlineActivo = false');
+  assert.ok(idxLimpieza > idxCheck, 'se marca como desactivado antes de comprobar si el Worker confirmó la desactivación');
 });
 
 
@@ -384,10 +384,10 @@ caso('Dos instancias de menú distintas no comparten línea aunque elijan la mis
 // decidía el navegador y los precios del pedido también, así que un pedido
 // de 12 € pagado con 0,01 € «cuadraba». Ahora el precio lo pone la carta del
 // negocio y lo pagado es lo que confirma el banco: si falta dinero, no se da
-// por pagado. El caso de verdad lo prueba test/redsys-app.mjs.
-caso('Un pago de Redsys con importe distinto se avisa, y si falta dinero NO se da por pagado (hallazgo de Codex, endurecido el 30/09)', () => {
+// por pagado. El caso de verdad lo prueba test/pagos-app.mjs.
+caso('Un pago con tarjeta con importe distinto se avisa, y si falta dinero NO se da por pagado (hallazgo de Codex, endurecido el 30/09)', () => {
   const m = core.match(/function aplicarPagoConfirmado\(req\)\{[\s\S]*?\n\}/);
-  assert.ok(m, 'no se encontró la comprobación de importe de Redsys en el manejador de pago_confirmado');
+  assert.ok(m, 'no se encontró la comprobación de importe del pago online en el manejador de pago_confirmado');
   const bloque = m[0];
   assert.ok(bloque.includes('orderTotal(order)'), 'el importe esperado no se calcula a partir de orderTotal(order)');
   assert.ok(bloque.includes('Math.abs(importeConfirmado - importeEsperado) > 0.02'), 'falta el margen de tolerancia');

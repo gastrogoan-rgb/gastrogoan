@@ -1148,13 +1148,13 @@ async function addSucursal(parentSlotId){
   };
   // La nube (Firebase) sí se hereda del negocio padre -copiada dentro de
   // `business` justo arriba- porque de ahí sale el resto del negocio
-  // clonado. Pero Redsys NO se hereda (vive en el Worker, ligado al
-  // tenantId de la licencia propia de esta sucursal, distinta a la del
-  // padre) y el email de confirmación normalmente también conviene
+  // clonado. Pero el pago online NO se hereda (la cuenta de Stripe vive en el
+  // Worker, ligada al negocio de la licencia propia de esta sucursal,
+  // distinta a la del padre) y el email de confirmación normalmente también conviene
   // revisarlo por local. Por eso el asistente de conexiones opcionales debe
   // volver a aparecer para esta sucursal nueva, aunque el negocio padre ya
-  // lo hubiera visto — si no, nunca se le ofrecería configurar su propio
-  // Redsys.
+  // lo hubiera visto — si no, nunca se le ofrecería conectar su propio
+  // pago online.
   snap.business.extConnPromptSeen = false;
   // Hallazgo real de auditoría: al clonar `src.business` entero, el nombre
   // del padre viajaba con él. El `nombre` que acaba de escribir el usuario
@@ -4578,11 +4578,11 @@ function recordarPublicIdEnLicencia(pid){
 const REVOKED_LIST_URL = 'https://raw.githubusercontent.com/gastrogoan-rgb/gastrogoan/main/revoked-licenses.json';
 const REVOKED_CACHE_KEY = 'gastrogoan_revoked_v1';
 
-/* Worker (Cloudflare) que actúa de puente para el TPV virtual (Redsys):
-   firma las peticiones de pago con la clave secreta (que nunca llega al
-   navegador) y recibe la confirmación de pago de Redsys para avisar
-   automáticamente a este negocio. */
-const REDSYS_WORKER_URL = 'https://gastro.gastrogoan.workers.dev';
+/* Worker (Cloudflare) que hace de puente con Stripe: conecta la cuenta de
+   Stripe de cada negocio, crea los pagos en ella y recibe el aviso de
+   «pagado» de Stripe (ver worker/pagos-worker.js). La clave de Stripe nunca
+   llega al navegador. */
+const PAGOS_WORKER_URL = 'https://gastro.gastrogoan.workers.dev';
 
 async function checkLicenseRevocation(){
   const tenantId = getTenantId();
@@ -4975,7 +4975,7 @@ const FIREBASE_GATE_STEPS = [
 ];
 
 // Tras la nube (obligatoria), se ofrecen las otras dos conexiones externas
-// -Redsys y confirmación por email- en dos pantallas, una detrás de otra,
+// -pago online y confirmación por email- en dos pantallas, una detrás de otra,
 // dejando clarísimo que son OPCIONALES: se puede saltar cada una sin
 // configurarla y seguir usando la app con normalidad, porque siempre
 // quedan disponibles en Mi Negocio → Conexiones externas para cuando el
@@ -4985,7 +4985,7 @@ const FIREBASE_GATE_STEPS = [
 // completa, igual que el resto de "gates" del arranque.
 let extConnPromptStep = 0;
 const EXT_CONN_PROMPT_STEPS = [
-  {icon:'ti-credit-card', titleKey:'mn.redsys.title', descKey:'mn.redsys.desc', renderCard: () => renderRedsysCard()},
+  {icon:'ti-credit-card', titleKey:'mn.pago.title', descKey:'mn.pago.desc', renderCard: () => renderPagoOnlineCard()},
 ];
 function showExternalConnectionsPrompt(){
   extConnPromptStep = 0;
@@ -5017,10 +5017,10 @@ function renderExternalConnectionsPromptStep(){
       </button>
       <p style="text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px">${t('gate.extConn.skipHint')}</p>
     </div>`;
-  if(extConnPromptStep === 0) loadRedsysCardStatus();
+  if(extConnPromptStep === 0) loadPagoOnlineStatus();
 }
 // Se llama tanto al pulsar "ahora no" como después de guardar/probar una
-// conexión (las propias tarjetas de Redsys/Email no saben que están dentro
+// conexión (las propias tarjetas de pago online/Email no saben que están dentro
 // de este asistente, así que el avance de paso siempre lo dispara este
 // botón, se haya configurado algo en el paso o no).
 function skipExternalConnectionsPromptStep(){
@@ -6801,7 +6801,7 @@ function avisarPreciosCorregidos(correcciones, sinVerificar, quien){
 
 /* ============================================================
    PAGOS CON TARJETA: la confirmación se PREGUNTA, no se espera (30/09)
-   El Worker de Redsys escribía «pago_confirmado» en la nube COMPARTIDA,
+   El Worker de pagos escribía «pago_confirmado» en la nube COMPARTIDA,
    pero desde septiembre cada negocio escucha su buzón en SU nube: el
    cliente pagaba, el dinero entraba en el banco y en la app el pedido se
    quedaba «pendiente de pago» para siempre, sin ningún error.
@@ -6863,8 +6863,8 @@ async function comprobarPagosTarjeta(){
 
 // Aplica una confirmación de pago del banco, venga del buzón (negocios aún en
 // la nube compartida) o de la consulta a la plataforma. El importe es el que
-// el BANCO confirmó (Ds_Amount, firmado por Redsys y verificado por el
-// Worker), así que aquí sí se puede comparar con lo que cuesta de verdad.
+// STRIPE confirmó (avisado al Worker con la firma de Stripe, que el Worker
+// verifica), así que aquí sí se puede comparar con lo que cuesta de verdad.
 function aplicarPagoConfirmado(req){
   dejarDeEsperarPago(req.orderRef);
   const importeConfirmado = parseFloat(req.amount) || 0;
@@ -7082,7 +7082,7 @@ function initPublicRequestsListener(){
         // 0,01 € o saltársela). Si el negocio la exige y cobra con tarjeta
         // y la reserva llega sin ella, no se confirma sola.
         const senalPropia = senalReservaPropia(req.people);
-        const senalSaltada = senalPropia > 0 && !req.depositRequired && !!DB.business.redsysActivo;
+        const senalSaltada = senalPropia > 0 && !req.depositRequired && !!DB.business.pagoOnlineActivo;
         const exigeConfirmacionManual = mesaSobredimensionada || senalSaltada ||
           (confirmManualDesde > 0 && (req.people || 0) >= confirmManualDesde);
         const newReservation = {
@@ -7243,7 +7243,7 @@ function initPublicRequestsListener(){
             // autopedido pagado online NO cuenta como cobrada hasta que llegue
             // pago_confirmado del banco — antes se sumaba a propinaPagadaOnline
             // en cuanto llegaba la solicitud, aunque la firma con el Worker
-            // pudiera fallar después o el cliente cancelara el pago en Redsys:
+            // pudiera fallar después o el cliente cancelara el pago en Stripe:
             // esos euros aparecían como ya cobrados en el desglose de la mesa
             // sin que hubiera entrado nada de verdad. Hallazgo de una
             // auditoría externa. Se guarda en una lista pendiente por
@@ -7313,7 +7313,7 @@ function initPublicRequestsListener(){
           metodoPagoLocal: req.metodoPagoLocal || null,
           pagaCon: typeof req.pagaCon === 'number' ? req.pagaCon : null
         });
-        // Un pedido pagado con tarjeta (TPV virtual/Redsys) llega sin
+        // Un pedido pagado con tarjeta (pago online/Stripe) llega sin
         // metodoPagoLocal (ese campo solo se rellena para efectivo/tarjeta
         // EN PERSONA — ver submitOrder en reservagastrogoan.html). La firma
         // del Worker ya tuvo éxito antes de llegar aquí, pero el banco
@@ -9176,10 +9176,10 @@ function renderPedidosConfigCard(){
           <input type="checkbox" id="mn-acepta-tarjeta-local" ${p.aceptaTarjetaLocal!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTarjetaLocal')}
         </label>
         <label style="display:flex;align-items:center;gap:8px;font-weight:400" id="mn-acepta-tpv-virtual-label">
-          <input type="checkbox" id="mn-acepta-tpv-virtual" ${(p.aceptaTpvVirtual!==false && redsysIsConfigured)?'checked':''} ${redsysIsConfigured?'':'disabled'} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTpvVirtual')}
+          <input type="checkbox" id="mn-acepta-tpv-virtual" ${(p.aceptaTpvVirtual!==false && pagoOnlineActivo)?'checked':''} ${pagoOnlineActivo?'':'disabled'} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTpvVirtual')}
         </label>
         <small style="color:var(--muted)">${t('mn.pedidos.metodosLocalesDesc')}</small>
-        <small id="mn-acepta-tpv-virtual-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--ink)'}">${redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint')}</small>
+        <small id="mn-acepta-tpv-virtual-hint" style="display:block;color:${pagoOnlineActivo?'var(--muted)':'var(--ink)'}">${pagoOnlineActivo ? '' : t('mn.pedidos.aceptaTpvVirtualHint')}</small>
       </div>
       ${deliveryEnabled ? `
       <div class="field-row">
@@ -9229,7 +9229,7 @@ async function savePedidosConfig(){
   // Por mucho que llegara marcado desde el DOM, el TPV virtual solo se
   // guarda como aceptado si de verdad está configurado (evita ofrecerlo a
   // los clientes sin que funcione realmente).
-  const aceptaTpvVirtual = redsysIsConfigured && document.getElementById('mn-acepta-tpv-virtual').checked;
+  const aceptaTpvVirtual = pagoOnlineActivo && document.getElementById('mn-acepta-tpv-virtual').checked;
   if(!aceptaEfectivo && !aceptaTarjetaLocal && !aceptaTpvVirtual){
     showToast(t('msg.needOnePaymentMethod'));
     return;
@@ -9278,55 +9278,48 @@ async function savePedidosConfig(){
 }
 
 /* ============================================================
-   TPV VIRTUAL (Redsys) - cobro online con tarjeta
-   El dinero va directo a la cuenta bancaria del negocio (TPV virtual
-   de su propio banco). La clave secreta de Redsys nunca se guarda en
-   este dispositivo ni en el navegador del cliente: se envía una sola
-   vez al Worker, que la guarda en una ruta privada de Firebase y la
-   usa para firmar los pagos y validar la confirmación de Redsys.
+   PAGO ONLINE CON TARJETA (Stripe) — desde el 30/09 sustituye a Redsys
+   Cada negocio conecta SU cuenta de Stripe con un botón: el dinero va
+   directo a ella y la comisión se la cobra Stripe a él. La app no guarda
+   ninguna clave del negocio: el Worker solo apunta qué cuenta de Stripe es
+   de qué negocio. Redsys se quitó porque su aviso de «pagado» dependía de
+   cómo tuviera configurado el banco cada TPV, y con el de pruebas no llegaba.
    ============================================================ */
-// Se sabe de forma asíncrona (loadRedsysCardStatus consulta al Worker), así
-// que el checkbox "TPV virtual" de renderPedidosConfigCard arranca
-// deshabilitado por defecto y se habilita en cuanto se confirma que sí está
-// configurado — evita que se pueda marcar como forma de pago aceptada algo
-// que en realidad no funcionaría para los clientes.
-let redsysIsConfigured = false;
+// Se sabe de forma asíncrona (loadPagoOnlineStatus pregunta al Worker), así
+// que las casillas «TPV virtual» y «Pedir señal» arrancan deshabilitadas y se
+// habilitan en cuanto se confirma que el negocio ya puede cobrar — evita
+// ofrecer a los clientes algo que en realidad no funcionaría.
+let pagoOnlineActivo = false;
 function updateTpvVirtualCheckboxAvailability(){
   const cb = document.getElementById('mn-acepta-tpv-virtual');
   const hint = document.getElementById('mn-acepta-tpv-virtual-hint');
   if(!cb) return;
-  cb.disabled = !redsysIsConfigured;
+  cb.disabled = !pagoOnlineActivo;
   const p = (DB.business && DB.business.pedidos) || {};
-  cb.checked = redsysIsConfigured && p.aceptaTpvVirtual !== false;
+  cb.checked = pagoOnlineActivo && p.aceptaTpvVirtual !== false;
   if(hint){
-    hint.style.color = redsysIsConfigured ? 'var(--muted)' : 'var(--ink)';
-    hint.textContent = redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint');
+    hint.style.color = pagoOnlineActivo ? 'var(--muted)' : 'var(--ink)';
+    hint.textContent = pagoOnlineActivo ? '' : t('mn.pedidos.aceptaTpvVirtualHint');
   }
 }
-// Igual que arriba, pero para la casilla "Pedir señal para confirmar
-// reservas" (Mi Negocio → Operativa): la señal se cobra a través del TPV
-// virtual, así que no tiene sentido poder activarla sin él conectado.
+// Igual, para «Pedir señal para confirmar reservas»: la señal se cobra con el
+// pago online, así que no tiene sentido activarla sin él.
 function updateDepositCheckboxAvailability(){
   const cb = document.getElementById('mn-require-deposit');
   const hint = document.getElementById('mn-require-deposit-hint');
   if(!cb) return;
-  cb.disabled = !redsysIsConfigured;
-  cb.checked = redsysIsConfigured && !!(DB.business && DB.business.requireDeposit);
+  cb.disabled = !pagoOnlineActivo;
+  cb.checked = pagoOnlineActivo && !!(DB.business && DB.business.requireDeposit);
   if(hint){
-    hint.style.color = redsysIsConfigured ? 'var(--muted)' : 'var(--ink)';
-    hint.textContent = redsysIsConfigured ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsRedsys');
+    hint.style.color = pagoOnlineActivo ? 'var(--muted)' : 'var(--ink)';
+    hint.textContent = pagoOnlineActivo ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsPago');
   }
 }
-// Resumen a la vista de las 2 conexiones externas que la app puede usar
-// (cada una un servicio de fuera, con su propia cuenta que conecta el
-// negocio): nube propia (Firebase, obligatoria para trabajar en equipo) y
-// cobro con tarjeta online (Redsys, opcional). Antes cada una vivía en su
-// rincón de Mi Negocio sin que quedara claro que son la misma "familia" de
-// configuración externa — este resumen las agrupa y dice de un vistazo
-// cuáles están conectadas.
+// Resumen de las 2 conexiones externas (cada una un servicio de fuera, con su
+// propia cuenta del negocio): nube propia (Firebase, obligatoria para
+// trabajar en equipo) y pago online (Stripe, opcional).
 function renderExternalConnectionsCard(){
   const fbConnected = !!(DB.business && DB.business.ownFirebase);
-  const redsysConnected = !!redsysIsConfigured;
   const row = (icon, label, connected, onclick, withBorder) => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;${withBorder ? 'border-bottom:1px solid var(--border)' : ''}">
       <i class="ti ${icon}" style="font-size:18px;color:var(--muted);flex-shrink:0"></i>
@@ -9341,7 +9334,7 @@ function renderExternalConnectionsCard(){
       <p style="font-size:13px;color:var(--muted);margin-bottom:6px">${t('mn.externalConn.desc')}</p>
       ${row('ti-cloud', t('mn.externalConn.firebase'), fbConnected, 'openCloudWizard()', !fbConnected)}
       ${fbConnected ? `<p style="font-size:12px;color:var(--muted);margin:8px 0 8px 28px;padding-bottom:8px;line-height:1.5;border-bottom:1px solid var(--border)"><i class="ti ti-cloud"></i> ${t('mn.externalConn.firebaseBackupNote')}</p>` : ''}
-      ${row('ti-credit-card', t('mn.externalConn.redsys'), redsysConnected, "scrollToMnCard('mn-card-redsys')", true)}
+      ${row('ti-credit-card', t('mn.externalConn.pago'), !!pagoOnlineActivo, "scrollToMnCard('mn-card-pago-online')", true)}
       ${(typeof puestaAPuntoTareas === 'function' && !puestaAPuntoTareas().completa) ? `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:6px">
         <i class="ti ti-list-check" style="font-size:18px;color:var(--muted);flex-shrink:0"></i>
@@ -9356,185 +9349,110 @@ function scrollToMnCard(id){
   if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-function renderRedsysCard(){
+function renderPagoOnlineCard(){
   if(!getTenantId()) return '';
   return `
-    <div class="card" id="mn-card-redsys">
-      <h3><i class="ti ti-credit-card"></i> ${t('mn.redsys.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.desc')}</p>
-      <div id="redsys-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.checking')}</div>
-      <div class="field">
-        <label>${t('mn.redsys.merchantCode')}</label>
-        <input type="text" id="rs-fuc" placeholder="999008881" style="font-family:monospace">
-      </div>
-      <div class="field">
-        <label>${t('mn.redsys.terminal')}</label>
-        <input type="text" id="rs-terminal" placeholder="1" style="font-family:monospace;max-width:120px">
-      </div>
-      <div class="field">
-        <label>${t('mn.redsys.secretKey')}</label>
-        <input type="password" id="rs-clave" placeholder="${t('mn.redsys.secretKeyPh')}" style="font-family:monospace">
-        <small style="color:var(--muted)">${t('mn.redsys.secretKeyHint')}</small>
-      </div>
-      <div class="field" id="rs-clave-actual-wrap" style="display:none">
-        <label>${t('mn.redsys.currentKey')}</label>
-        <input type="password" id="rs-clave-actual" placeholder="${t('mn.redsys.currentKeyPh')}" style="font-family:monospace">
-        <small style="color:var(--muted)">${t('mn.redsys.currentKeyHint')}</small>
-      </div>
-      <div class="field" style="margin-bottom:10px">
-        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="rs-real" style="width:18px;height:18px"> ${t('mn.redsys.realEnv')}
-        </label>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="saveRedsysConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
-        <button class="btn btn-sm btn-danger" onclick="disableRedsysConfig()"><i class="ti ti-plug-connected-x"></i> ${t('mn.redsys.disable')}</button>
-      </div>
+    <div class="card" id="mn-card-pago-online">
+      <h3><i class="ti ti-credit-card"></i> ${t('mn.pago.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.pago.desc')}</p>
+      <div id="pago-online-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.pago.checking')}</div>
+      <div id="pago-online-acciones" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
   `;
 }
-
-/* Lo que el Worker necesita para saber de QUÉ negocio se habla (30/09):
-   - tenantId + publicId: la configuración se guarda con el publicId que usa
-     la web de reservas. Antes el Worker lo deducía del tenantId con la fórmula
-     antigua, y los negocios nuevos (publicId sorteado) se quedaban con la web
-     diciendo «este negocio no tiene configurado el pago con tarjeta».
-   - claveActual: para CAMBIAR o DESACTIVAR un TPV ya configurado hace falta
-     la clave secreta que tiene puesta. Antes bastaba el tenantId, que está en
-     cualquier tablet del negocio: un empleado podía poner SU código de
-     comercio y los cobros de los clientes irían a SU banco. La clave secreta
-     no la ve nunca nadie del equipo (la app no la devuelve jamás), y si el
-     dueño la pierde, su banco se la vuelve a dar. */
-function redsysIdentidad(){
+function pagoOnlineIdentidad(){
   return {tenantId: getTenantId(), publicId: getPublicId()};
 }
-function redsysErrorTexto(data){
-  if(data && data.code === 'clave_actual') return t('mn.redsys.errCurrentKey');
-  if(data && data.code === 'no_vinculado') return t('mn.redsys.errNotLinked');
-  return (data && data.error) || t('msg.payConfigError');
+function pagoOnlineErrorTexto(data){
+  if(data && data.code === 'no_vinculado') return t('mn.pago.errNotLinked');
+  return (data && data.error) || t('mn.pago.error');
 }
-async function loadRedsysCardStatus(){
-  const el = document.getElementById('redsys-status');
+async function loadPagoOnlineStatus(){
+  const el = document.getElementById('pago-online-status');
+  const acciones = document.getElementById('pago-online-acciones');
   if(!el || !getTenantId()) return;
+  let data = null;
   try{
-    const {tenantId, publicId} = redsysIdentidad();
-    const res = await fetch(`${REDSYS_WORKER_URL}/config?tenantId=${encodeURIComponent(tenantId)}&publicId=${encodeURIComponent(publicId || '')}`);
-    const data = await res.json();
-    redsysIsConfigured = !!(data && data.configured);
-    const wrapActual = document.getElementById('rs-clave-actual-wrap');
-    if(wrapActual) wrapActual.style.display = redsysIsConfigured ? '' : 'none';
-    if(data && data.configured){
-      // Un negocio que YA cobraba con tarjeta antes de esta versión no tenía
-      // apuntado su código de comercio: se adopta el que hay, una sola vez.
-      // Si nunca había activado el cobro con tarjeta, NO se adopta: ese es
-      // justo el caso de un TPV que ha dado de alta otro antes que el dueño,
-      // y adoptarlo en silencio apagaría el aviso que existe para eso.
-      const yaCobrabaConTarjeta = !!((DB.business.pedidos && DB.business.pedidos.aceptaTpvVirtual === true) || DB.business.requireDeposit);
-      if(DB.business.redsysFucPropio === undefined && yaCobrabaConTarjeta){ DB.business.redsysFucPropio = data.fuc || ''; DB.business.redsysActivo = true; saveDB(); }
-      const ajeno = DB.business.redsysFucPropio === undefined ? true : (!!DB.business.redsysFucPropio && data.fuc !== DB.business.redsysFucPropio);
-      el.innerHTML = (ajeno ? `<div style="color:var(--red);font-weight:700;margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('mn.redsys.foreign'))}</div>` : '') +
-        `<span style="color:var(--ink);font-weight:600"><i class="ti ti-check"></i> ${t('mn.redsys.configured')}</span> · FUC ${escapeHtml(data.fuc)} · ${t('mn.redsys.terminal')} ${escapeHtml(data.terminal)} · ${t('mn.redsys.environment')} ${data.ambiente === 'real' ? t('mn.redsys.envReal') : t('mn.redsys.envTest')}`;
-      document.getElementById('rs-fuc').value = data.fuc || '';
-      document.getElementById('rs-terminal').value = data.terminal || '';
-      document.getElementById('rs-real').checked = data.ambiente === 'real';
+    const {tenantId, publicId} = pagoOnlineIdentidad();
+    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/estado?tenantId=${encodeURIComponent(tenantId)}&publicId=${encodeURIComponent(publicId || '')}`);
+    data = await res.json();
+  }catch(e){ data = null; }
+  if(!data || data.error){
+    pagoOnlineActivo = false;
+    el.innerHTML = escapeHtml(data && data.error ? pagoOnlineErrorTexto(data) : t('mn.pago.checkFailed'));
+    if(acciones) acciones.innerHTML = `<button class="btn btn-sm" onclick="loadPagoOnlineStatus()"><i class="ti ti-refresh"></i> ${t('mn.pago.retry')}</button>`;
+  }else{
+    pagoOnlineActivo = !!data.activo;
+    if(DB.business && DB.business.pagoOnlineActivo !== pagoOnlineActivo){ DB.business.pagoOnlineActivo = pagoOnlineActivo; saveDB(); }
+    // A nombre de quién está la cuenta: que el dueño vea que es la SUYA
+    // (el primer alta no puede comprobar quién la hace).
+    const aNombre = [data.nombre, data.email].filter(Boolean).map(escapeHtml).join(' · ');
+    if(!data.conectado){
+      el.innerHTML = escapeHtml(t('mn.pago.notConnected'));
+      if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-plug-connected"></i> ${t('mn.pago.connect')}</button>`;
+    }else if(data.desconectado){
+      el.innerHTML = `${escapeHtml(t('mn.pago.paused'))}${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}`;
+      if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-plug-connected"></i> ${t('mn.pago.reconnect')}</button>`;
+    }else if(!data.activo){
+      el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-clock"></i> ${escapeHtml(t('mn.pago.pending'))}</span>${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}`;
+      if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-arrow-right"></i> ${t('mn.pago.continue')}</button>
+        <button class="btn btn-sm" onclick="loadPagoOnlineStatus()"><i class="ti ti-refresh"></i> ${t('mn.pago.retry')}</button>`;
     }else{
-      el.innerHTML = t('msg.cardPaymentNotConfigured');
+      el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-check"></i> ${escapeHtml(t('mn.pago.active'))}</span>${aNombre ? `<div style="margin-top:4px">${t('mn.pago.account')}: ${aNombre}</div>` : ''}
+        <div style="margin-top:4px">${escapeHtml(t('mn.pago.ownerNote'))}</div>`;
+      if(acciones) acciones.innerHTML = `<a class="btn btn-sm" href="https://dashboard.stripe.com/" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('mn.pago.openStripe')}</a>
+        <button class="btn btn-sm btn-danger" onclick="desconectarStripe()"><i class="ti ti-plug-connected-x"></i> ${t('mn.pago.disconnect')}</button>`;
     }
-  }catch(e){
-    redsysIsConfigured = false;
-    el.innerHTML = t('msg.cardPaymentCheckFailed');
   }
   updateTpvVirtualCheckboxAvailability();
   updateDepositCheckboxAvailability();
 }
-
-async function saveRedsysConfig(){
-  const fuc = document.getElementById('rs-fuc').value.trim();
-  const terminal = document.getElementById('rs-terminal').value.trim();
-  const claveSecreta = document.getElementById('rs-clave').value.trim();
-  const actualEl = document.getElementById('rs-clave-actual');
-  // Si no escribe la actual, se prueba con la nueva: es lo normal cuando solo
-  // cambia el terminal o pasa de pruebas a real con la misma clave.
-  const claveActual = (actualEl && actualEl.value.trim()) || claveSecreta;
-  const ambiente = document.getElementById('rs-real').checked ? 'real' : 'test';
-  if(!fuc || !terminal){ showToast(t('msg.fillMerchantCode')); return; }
-  if(!claveSecreta){ showToast(t('msg.fillSecretKey')); return; }
+// El alta la hace el dueño en la web de Stripe (sus datos, su banco, su DNI)
+// y vuelve aquí: al volver, loadPagoOnlineStatus ya lo ve activo.
+async function conectarStripe(){
+  const acciones = document.getElementById('pago-online-acciones');
+  if(acciones) acciones.querySelectorAll('button').forEach(b => { b.disabled = true; });
   try{
-    const res = await fetch(`${REDSYS_WORKER_URL}/config`, {
-      method: 'POST',
-      headers: {'content-type':'application/json'},
-      body: JSON.stringify(Object.assign(redsysIdentidad(), { fuc, terminal, claveSecreta, claveActual, ambiente }))
+    const volver = location.origin + location.pathname;
+    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/conectar`, {
+      method: 'POST', headers: {'content-type': 'application/json'},
+      body: JSON.stringify(Object.assign(pagoOnlineIdentidad(), {volver}))
     });
     const data = await res.json().catch(() => ({}));
-    if(!res.ok || data.error){
-      if(data && data.code === 'clave_actual'){
-        const wrap = document.getElementById('rs-clave-actual-wrap');
-        if(wrap){ wrap.style.display = ''; const inp = document.getElementById('rs-clave-actual'); if(inp) inp.focus(); }
-      }
-      showToast(redsysErrorTexto(data));
-      return;
-    }
-    document.getElementById('rs-clave').value = '';
-    if(actualEl) actualEl.value = '';
-    DB.business.redsysFucPropio = fuc;
-    DB.business.redsysActivo = true;
-    saveDB();
-    showToast(t('msg.payConfigSaved'));
-    loadRedsysCardStatus();
+    if(!res.ok || data.error){ showToast(pagoOnlineErrorTexto(data)); loadPagoOnlineStatus(); return; }
+    if(data.url){ location.href = data.url; return; }
+    showToast(t('mn.pago.active'));
+    loadPagoOnlineStatus();
   }catch(e){
-    showToast(t('msg.payConfigError'));
+    showToast(t('mn.pago.error'));
+    loadPagoOnlineStatus();
   }
 }
-
-// Desactiva el cobro con tarjeta. Pide la clave actual, igual que cambiarlo.
-// ⚠️ Antes mandaba los campos vacíos y el Worker lo rechazaba siempre por
-// «faltan datos»: desactivar NO había funcionado nunca.
-async function disableRedsysConfig(){
-  const actualEl = document.getElementById('rs-clave-actual');
-  const wrap = document.getElementById('rs-clave-actual-wrap');
-  const claveActual = (actualEl && actualEl.value.trim()) || (document.getElementById('rs-clave').value || '').trim();
-  if(!claveActual){
-    if(wrap){ wrap.style.display = ''; if(actualEl) actualEl.focus(); }
-    showToast(t('mn.redsys.needCurrentKey'));
-    return;
-  }
-  if(!(await confirmModal(t('mn.redsys.confirmDisable')))) return;
-  // ⚠️ Se comprueba res.ok: si el Worker no lo acepta, NO se muestra como
-  // desactivado (el negocio creería haber cortado los cobros sin haberlo hecho).
+// La cuenta de Stripe sigue siendo del negocio: aquí solo se deja de ofrecer
+// el pago con tarjeta en la web. ⚠️ Solo se da por desconectado si el Worker
+// lo confirma: si no, el negocio creería haber cortado los cobros sin hacerlo.
+async function desconectarStripe(){
+  if(!(await confirmModal(t('mn.pago.confirmDisconnect')))) return;
   try{
-    const res = await fetch(`${REDSYS_WORKER_URL}/config`, {
-      method: 'POST',
-      headers: {'content-type':'application/json'},
-      body: JSON.stringify(Object.assign(redsysIdentidad(), { claveActual, disabled: true }))
+    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/desconectar`, {
+      method: 'POST', headers: {'content-type': 'application/json'},
+      body: JSON.stringify(pagoOnlineIdentidad())
     });
     const data = await res.json().catch(() => ({}));
-    if(!res.ok || data.error){ showToast(data && data.code ? redsysErrorTexto(data) : t('mn.redsys.disableError')); return; }
+    if(!res.ok || data.error){ showToast(t('mn.pago.disconnectError')); return; }
   }catch(e){
-    showToast(t('mn.redsys.disableError'));
+    showToast(t('mn.pago.disconnectError'));
     return;
   }
-  ['rs-fuc','rs-terminal','rs-clave','rs-clave-actual'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  const realEl = document.getElementById('rs-real'); if(realEl) realEl.checked = false;
-  const el = document.getElementById('redsys-status');
-  if(el) el.innerHTML = t('msg.cardPaymentNotConfigured');
-  if(wrap) wrap.style.display = 'none';
-  redsysIsConfigured = false;
-  DB.business.redsysActivo = false;
-  // Si el TPV virtual estaba marcado como forma de pago aceptada, se
-  // desmarca aquí mismo: si no, la web pública seguiría ofreciéndoselo a
-  // los clientes aunque ya no funcione de verdad.
-  if(DB.business && DB.business.pedidos && DB.business.pedidos.aceptaTpvVirtual !== false){
-    DB.business.pedidos.aceptaTpvVirtual = false;
-  }
-  // Sin TPV virtual no hay forma de cobrar la señal: se desactiva para no
-  // dejar una reserva pidiendo un pago que ya no se puede completar.
-  if(DB.business && DB.business.requireDeposit){
-    DB.business.requireDeposit = false;
-  }
+  pagoOnlineActivo = false;
+  DB.business.pagoOnlineActivo = false;
+  // Sin pago online no se puede cobrar ni el TPV virtual ni la señal: se
+  // desmarcan para que la web no pida un pago que ya no se puede completar.
+  if(DB.business && DB.business.pedidos && DB.business.pedidos.aceptaTpvVirtual !== false) DB.business.pedidos.aceptaTpvVirtual = false;
+  if(DB.business && DB.business.requireDeposit) DB.business.requireDeposit = false;
   saveDB();
-  updateTpvVirtualCheckboxAvailability();
-  updateDepositCheckboxAvailability();
-  showToast(t('mn.redsys.disabled'));
+  showToast(t('mn.pago.disconnected'));
+  loadPagoOnlineStatus();
 }
 
 function copyPublicLinkFrom(elId){

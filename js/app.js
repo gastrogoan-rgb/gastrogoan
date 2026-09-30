@@ -6917,14 +6917,14 @@ function renderMiNegocio(){
         </div>` : ''}
       </div>
       <div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:6px">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:${redsysIsConfigured?'pointer':'default'}">
-          <input type="checkbox" id="mn-require-deposit" style="width:auto" ${(b.requireDeposit && redsysIsConfigured)?'checked':''} ${redsysIsConfigured?'':'disabled'} onchange="saveBusiness(true);renderMiNegocio()">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:${pagoOnlineActivo?'pointer':'default'}">
+          <input type="checkbox" id="mn-require-deposit" style="width:auto" ${(b.requireDeposit && pagoOnlineActivo)?'checked':''} ${pagoOnlineActivo?'':'disabled'} onchange="saveBusiness(true);renderMiNegocio()">
           ${t('mn.ops.requireDeposit')}
         </label>
-        <small id="mn-require-deposit-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--ink)'}">${redsysIsConfigured ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsRedsys')}</small>
-        ${!redsysIsConfigured ? `<button class="btn btn-sm" style="margin-top:6px" onclick="scrollToMnCard('mn-card-redsys')" type="button"><i class="ti ti-credit-card"></i> ${t('mn.ops.goToRedsys')}</button>` : ''}
+        <small id="mn-require-deposit-hint" style="display:block;color:${pagoOnlineActivo?'var(--muted)':'var(--ink)'}">${pagoOnlineActivo ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsPago')}</small>
+        ${!pagoOnlineActivo ? `<button class="btn btn-sm" style="margin-top:6px" onclick="scrollToMnCard('mn-card-pago-online')" type="button"><i class="ti ti-credit-card"></i> ${t('mn.ops.goToPago')}</button>` : ''}
       </div>
-      ${(b.requireDeposit && redsysIsConfigured) ? `
+      ${(b.requireDeposit && pagoOnlineActivo) ? `
       <div class="field-row">
         <div class="field">
           <label>${t('mn.ops.depositAmount')}</label>
@@ -6985,7 +6985,7 @@ function renderMiNegocio(){
 
     ${renderDeliveryPlatformsCard()}
 
-    ${renderRedsysCard()}
+    ${renderPagoOnlineCard()}
 
     ${renderVerifactuConfigCard()}
 
@@ -6993,7 +6993,7 @@ function renderMiNegocio(){
     </div>
   `;
   renderMiNegocioIndice();
-  loadRedsysCardStatus();
+  loadPagoOnlineStatus();
   renderMesasConfigList();
 }
 
@@ -7727,7 +7727,7 @@ async function saveBusiness(silent){
     DB.business.pedidos.leadTimeMin = DB.business.leadTimeMinPedidos;
   }
   if(el('mn-require-manual-confirm-from')) DB.business.reservaConfirmManualDesde = Math.max(1, parseInt(el('mn-require-manual-confirm-from').value) || 1);
-  if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked && redsysIsConfigured;
+  if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked && pagoOnlineActivo;
   if(el('mn-deposit-amount')) DB.business.depositAmount = Math.max(0, parseFloat(el('mn-deposit-amount').value) || 0) || '';
   if(el('mn-deposit-type')) DB.business.depositType = el('mn-deposit-type').value;
   if(el('mn-deposit-minpeople')) DB.business.depositMinPeople = Math.max(0, parseInt(el('mn-deposit-minpeople').value) || 0);
@@ -10256,7 +10256,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">11</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — activa/desactiva, y enlace/QR para que tus clientes reserven o pidan desde el móvil.</div></div>
     <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
     <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Plataformas de delivery</strong> — Glovo, Uber Eats, Just Eat... con su comisión.</div></div>
-    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>TPV virtual (Redsys)</strong> — cobro online con tarjeta.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>Pago online (Stripe)</strong> — cobro con tarjeta en la web de reservas.</div></div>
     <div class="manual-step"><div class="sn">15</div><div class="st">✉️ <strong>Confirmación por email</strong> — envío automático al cliente.</div></div>
     <div class="manual-step"><div class="sn">16</div><div class="st">🧮 <strong>VeriFactu</strong> — configuración fiscal de facturación verificable.</div></div>
     <div class="manual-step"><div class="sn">17</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad, papelera, archivado y <strong>Registro de actividad</strong> (quién hizo qué, útil con varios encargados).</div></div>
@@ -10333,7 +10333,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">11</div><div class="st">📱 <strong>Reserva i comandes en línia</strong> — activa/desactiva, i enllaç/QR perquè els teus clients reservin o demanin des del mòbil.</div></div>
     <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Comandes per emportar/domicili</strong> — antelació, cost d'enviament i zona de repartiment.</div></div>
     <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Plataformes de delivery</strong> — Glovo, Uber Eats, Just Eat... amb la seva comissió.</div></div>
-    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>TPV virtual (Redsys)</strong> — cobrament en línia amb targeta.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>Pagament en línia (Stripe)</strong> — cobrament amb targeta a la web de reserves.</div></div>
     <div class="manual-step"><div class="sn">15</div><div class="st">✉️ <strong>Confirmació per email</strong> — enviament automàtic al client.</div></div>
     <div class="manual-step"><div class="sn">16</div><div class="st">🧮 <strong>VeriFactu</strong> — configuració fiscal de facturació verificable.</div></div>
     <div class="manual-step"><div class="sn">17</div><div class="st">🗄️ <strong>Manteniment de dades</strong> — còpies de seguretat, paperera, arxivament i <strong>Registre d'activitat</strong>.</div></div>
@@ -10410,7 +10410,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">11</div><div class="st">📱 <strong>Reservations and online ordering</strong> — enable/disable, plus the link and QR code for customers to book or order from their phone.</div></div>
     <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Take away/delivery orders</strong> — lead time, delivery fee and delivery zone.</div></div>
     <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Delivery platforms</strong> — Glovo, Uber Eats, Just Eat... with their commission.</div></div>
-    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>Virtual POS (Redsys)</strong> — online card payment.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>Online payment (Stripe)</strong> — card payment on the booking site.</div></div>
     <div class="manual-step"><div class="sn">15</div><div class="st">✉️ <strong>Email confirmation</strong> — automatic email to the customer.</div></div>
     <div class="manual-step"><div class="sn">16</div><div class="st">🧮 <strong>VeriFactu</strong> — verifiable invoicing tax settings.</div></div>
     <div class="manual-step"><div class="sn">17</div><div class="st">🗄️ <strong>Data maintenance</strong> — backups, trash, archiving and the <strong>Activity log</strong>.</div></div>

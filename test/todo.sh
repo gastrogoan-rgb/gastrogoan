@@ -129,8 +129,8 @@ lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
 lanzar; node test/precios.mjs > "$SALIDA/precios.txt" 2>&1 & P90=$!
-lanzar; node test/redsys-worker.mjs > "$SALIDA/redsys-worker.txt" 2>&1 & P91=$!
-lanzar; node test/redsys-app.mjs > "$SALIDA/redsys-app.txt" 2>&1 & P92=$!
+lanzar; node test/pagos-worker.mjs > "$SALIDA/pagos-worker.txt" 2>&1 & P91=$!
+lanzar; node test/pagos-app.mjs > "$SALIDA/pagos-app.txt" 2>&1 & P92=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -246,7 +246,7 @@ espera $P87 "Iconos recortados: ninguno de los que usa la app se ha quedado fuer
 espera $P88 "El service worker no secuestra el contrato ni la privacidad (los enlaces de Stripe)" "$SALIDA/sw-legal.txt" "respeta /legal/"
 espera $P89 "Plan 360: coach y negocio no se pisan, y lo vacío no rompe nada" "$SALIDA/plan360.txt" "casos pasaron"
 espera $P90 "Subidas de precio: historial, albarán, gasto real y aviso con impacto" "$SALIDA/precios.txt" "casos pasaron"
-espera $P91 "Worker de Redsys: clave actual, publicId del negocio, pagos a la plataforma, firma" "$SALIDA/redsys-worker.txt" "casos pasaron"
-espera $P92 "Pagos y pedidos online: precios de la carta, pago corto no confirma, confirmación por consulta" "$SALIDA/redsys-app.txt" "casos pasaron"
+espera $P91 "Worker de pagos (Stripe): cuenta del negocio, cobro directo, aviso firmado, pagos a la plataforma" "$SALIDA/pagos-worker.txt" "casos pasaron"
+espera $P92 "Pagos y pedidos online: precios de la carta, pago corto no confirma, confirmación por consulta" "$SALIDA/pagos-app.txt" "casos pasaron"
 
 exit $FALLOS

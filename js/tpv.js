@@ -1247,7 +1247,7 @@ async function acceptOnlineOrder(orderId, auto){
   if(!order) return false;
   if(order.tipo === 'takeaway' || order.tipo === 'delivery'){
     // Comprobación de precio/disponibilidad frente a la carta activa actual,
-    // ANTES de tocar nada: si el pedido ya está pagado (Redsys) y hay algún
+    // ANTES de tocar nada: si el pedido ya está pagado (Stripe) y hay algún
     // desajuste, el personal debe confirmarlo explícitamente, porque al
     // cliente ya se le ha cobrado un importe que puede no coincidir con lo
     // que realmente se le va a servir.
@@ -4573,7 +4573,7 @@ function finalizeCharge(orderId){
   // comparten id y la fusión remota (mergeArraysById) se queda con una
   // sola en vez de duplicar el importe — un pedido genera como mucho una
   // venta normal, así que no hay riesgo de colisión con otra venta real.
-  // Si el pedido ya se pagó por adelantado online (TPV virtual/Redsys,
+  // Si el pedido ya se pagó por adelantado online (pago online/Stripe,
   // order.pagado), el dinero de verdad entró el día que el banco confirmó
   // el cobro (order.pagoFecha) — no el día en que el personal termina de
   // cerrar el pedido, que en uno programado con antelación (para llevar o

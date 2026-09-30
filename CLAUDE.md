@@ -408,33 +408,33 @@ alguien encima.
   (solo admin). ⚠️ Necesita las reglas nuevas publicadas; sin ellas se
   guarda solo en el navegador y lo avisa.
 
-## Pagos con tarjeta (Redsys) y pedidos online: lo que se arregló el 30/09
+## Pagos online: solo Stripe (desde el 30/09)
 
-El Worker de Cloudflare (`gastro`) vive ahora en `worker/redsys-worker.js`
-(ver `worker/README.md`). **Se publica pegándolo a mano en Cloudflare**: tocar
-el fichero no cambia nada hasta entonces.
+**Redsys se quitó entero.** Su aviso de «pagado» dependía de cómo configurara
+el banco cada TPV, con el comercio de pruebas genérico no llegaba nunca, y hay
+un problema conocido entre los avisos de Redsys y Cloudflare. Decisión del
+dueño: solo Stripe. No volver a replantearlo sin un motivo nuevo.
 
-- **Los precios de la web pública los pone el negocio, no el navegador.**
-  Cada línea de un pedido online (también de un autopedido de mesa, y
-  también pagando en efectivo) se vuelve a poner precio con la carta propia
-  (`revisarPreciosPedidoPublico`), igual que el envío y la señal de las
-  reservas (`senalReservaPropia`). Antes llegaba una hamburguesa a 0,01 € y
-  se cobraba 0,01 €. La web manda `platoId` para poder hacerlo.
-- **Pagar de menos no confirma nada** (`aplicarPagoConfirmado`): se compara lo
-  que el BANCO confirma con lo que cuesta de verdad.
-- **La confirmación del banco se PREGUNTA** (`comprobarPagosTarjeta`): el
-  Worker la deja en `gastrogoan/pagos/{publicId}/{ref}` de la plataforma y la
-  app pregunta por REST mientras tenga cobros a medias
-  (`DB.pagosTarjetaEsperados`). Antes iba al buzón de la nube compartida, que
-  la app ya no escucha: el pedido se quedaba «pendiente de pago» para siempre.
-  ⚠️ El buzón de cada negocio NO acepta `pago_confirmado` a propósito: si lo
-  aceptara, cualquier comensal se declararía pagado desde la consola.
-- **Cambiar o desactivar el TPV exige la clave secreta actual.** Con el
-  `tenantId` bastaba para desviar los cobros a otro banco.
-- ⚠️ Necesita las reglas nuevas de la plataforma (`pagos`, `coachConfig`)
-  publicadas en `plataforma-gastrogoan`.
+- **Stripe Connect, cuentas estándar, cobro directo**: cada restaurante
+  conecta SU cuenta («Conectar con Stripe», Mi Negocio); el dinero es suyo y
+  la comisión la paga él. A GastroGoan no le cuesta nada.
+- El Worker (`worker/pagos-worker.js`, ver su README) **se publica pegándolo a
+  mano en Cloudflare**: tocar el fichero no cambia nada hasta entonces. Solo
+  guarda qué cuenta de Stripe es de qué negocio (`private/{publicId}/stripe`).
+- **Los precios de la web pública los pone el negocio, no el navegador**
+  (`revisarPreciosPedidoPublico`, `senalReservaPropia`): antes llegaba una
+  hamburguesa a 0,01 € y se cobraba 0,01 €, también en efectivo.
+- **Pagar de menos no confirma nada** (`aplicarPagoConfirmado`).
+- **La confirmación se PREGUNTA** (`comprobarPagosTarjeta`): el Worker la deja,
+  tras verificar la firma de Stripe, en `gastrogoan/pagos/{publicId}/{ref}` y la
+  app pregunta por REST mientras tenga cobros a medias. ⚠️ El buzón de cada
+  negocio NO acepta `pago_confirmado` a propósito: si lo aceptara, cualquier
+  comensal se declararía pagado desde la consola.
+- Al volver de pagar, el cliente cae en el seguimiento de su pedido o en
+  «Gestionar mi reserva».
+- ⚠️ Necesita las reglas de la plataforma con `pagos` y `coachConfig`.
 
-Pruebas: `test/redsys-worker.mjs` y `test/redsys-app.mjs`.
+Pruebas: `test/pagos-worker.mjs` y `test/pagos-app.mjs`.
 
 ## El módulo de I+D (`js/idr.js`)
 
@@ -701,7 +701,7 @@ Verificado de punta a punta el 24 de agosto, por el dueño, sobre el dominio rea
 - Indicador de nube en verde.
 - **Sincronización real entre tablet y móvil**, con una reserva de verdad
   entrando por la web pública y apareciendo en el panel.
-- **Un pago de prueba con Redsys, correcto.**
+- **Un pago de prueba con Redsys, correcto** (Redsys se sustituyó por Stripe el 30/09).
 
 Con esto, todo el circuito de venta está probado: cuenta → código →
 alta → nube → panel → web pública → reserva → cobro.
