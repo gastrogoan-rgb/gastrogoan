@@ -1068,8 +1068,15 @@ function setTogoTabManual(tabName){
   togoTabManual = true;
   renderTPV();
 }
+// TODOS los pendientes, sean para ahora o para el sábado (1/10): un pedido
+// pendiente espera una decisión (aceptar/rechazar) o que llegue el pago, y
+// eso no puede esperar a «una hora antes». Con el filtro de visibilidad, un
+// pedido pagado con tarjeta para más tarde —que sigue pendiente hasta que
+// llega la confirmación— no salía en NINGÚN sitio. Los de hoy primero, por hora.
 function getPendingOnlineOrders(){
-  return DB.tpvOrders.filter(o => o.status === 'pendiente-online' && isTogoOrderVisibleNow(o));
+  const hoy = todayStr();
+  return DB.tpvOrders.filter(o => o.status === 'pendiente-online')
+    .sort((a, b) => ((a.date || hoy) + ' ' + (a.time || '00:00')).localeCompare((b.date || hoy) + ' ' + (b.time || '00:00')));
 }
 // Pedidos de HOY, ya aceptados, pero programados para dentro de más de
 // TOGO_VISIBILITY_WINDOW_MIN (1h) — isTogoOrderVisibleNow los oculta a
@@ -1127,7 +1134,9 @@ function renderTpvPendingOnline(){
             return `<div style="font-size:12px;color:var(--red);margin-bottom:2px"><i class="ti ti-clock-exclamation"></i> ${t('label.waitingSince').replace('${min}', waitMin)}</div>`;
           })()}
           ${o.pendienteVerificarZona ? `<div style="font-size:12px;color:var(--ink);margin:2px 0"><i class="ti ti-alert-triangle"></i> ${t('label.zoneNotVerified')}</div>` : ''}
-          ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
+          ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>`
+            : o.pagoInsuficiente ? `<span class="badge badge-red"><i class="ti ti-alert-triangle"></i> ${t('label.paymentShort')}</span>`
+            : (o.origenOnline && !o.metodoPagoLocal) ? `<span class="badge badge-amber"><i class="ti ti-clock"></i> ${t('label.awaitingCardPayment')}</span>` : ''}
           ${o.clienteTelefono ? `<div style="font-size:12px;color:${o.phoneOdd?'var(--red)':'var(--muted)'}"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}${o.phoneOdd ? ` <i class="ti ti-alert-triangle" title="${t('msg.phoneLooksOdd')}"></i>` : ''}</div>` : ''}
           ${o.time ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}${o.date && o.date !== todayStr() ? ' (' + escapeHtml(o.date) + ')' : ''}</div>` : ''}
           ${o.clienteDireccion ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}${o.clienteCodigoPostal ? ' (' + escapeHtml(o.clienteCodigoPostal) + ')' : ''}</div>` : ''}

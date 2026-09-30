@@ -191,6 +191,22 @@ await caso('Un pedido pagado online no se vuelve a cobrar: se cierra y la venta 
   return 'nada que cobrar · venta Online de 25 € el día del pago · a domicilio se cierra al entregar';
 });
 
+await caso('Un pedido pendiente para dentro de horas (o de días) sale en Pendientes, diciendo que espera el pago', async () => {
+  const r = await page.evaluate(() => {
+    const en = h => { const d = new Date(Date.now() + h * 3600000); return {date: d.toISOString().slice(0, 10), time: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')}; };
+    const f3 = en(3), f48 = en(48);
+    DB.tpvOrders.push({id: 880001, tipo: 'takeaway', status: 'pendiente-online', origenOnline: true, metodoPagoLocal: null, pagado: false, clienteNombre: 'Tarde', items: [{name: 'X', price: 5, qty: 1}], date: f3.date, time: f3.time, createdAt: new Date().toISOString()});
+    DB.tpvOrders.push({id: 880002, tipo: 'delivery', status: 'pendiente-online', origenOnline: true, metodoPagoLocal: 'efectivo', clienteNombre: 'Sabado', items: [{name: 'Y', price: 5, qty: 1}], date: f48.date, time: f48.time, createdAt: new Date().toISOString()});
+    const ids = getPendingOnlineOrders().map(o => o.id);
+    const html = renderTpvPendingOnline();
+    return {tarde: ids.includes(880001), sabado: ids.includes(880002), esperaPago: html.includes(t('label.awaitingCardPayment'))};
+  });
+  assert.ok(r.tarde, 'un pedido pendiente para dentro de 3 horas no sale en Pendientes');
+  assert.ok(r.sabado, 'un pedido pendiente para dentro de 2 días no sale en Pendientes');
+  assert.ok(r.esperaPago, 'no dice que el pedido está esperando el pago con tarjeta');
+  return 'de dentro de 3 h y de 2 días · «esperando el pago con tarjeta»';
+});
+
 await caso('Los pagos que nunca llegan dejan de preguntarse a las 48 h', async () => {
   const r = await page.evaluate(async () => {
     window.fetch = async () => new Response('null');
