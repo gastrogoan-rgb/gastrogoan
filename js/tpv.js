@@ -1253,8 +1253,16 @@ async function acceptOnlineOrder(orderId, auto){
     // que realmente se le va a servir.
     let anyMismatch = false;
     (order.items||[]).forEach(l => {
-      const dish = findActiveDishByName(l.name);
-      if(!dish || dish.disponible === false || (typeof dish.precio === 'number' && Math.abs(dish.precio - l.price) > 0.001)){
+      // El nombre de la línea lleva los extras entre paréntesis: se busca por
+      // el plato. Y el precio ya viene revisado con la carta al llegar
+      // (revisarPreciosPedidoPublico, js/core.js), así que aquí solo cuenta
+      // que sea MÁS BAJO de lo que vale el plato. Antes se exigía igual al
+      // precio base, y cualquier pedido con extras o suplemento de domicilio
+      // «no cuadraba»: pagado con tarjeta, no entraba solo nunca.
+      const dish = findActiveDishByName(l.name) || findActiveDishByName(String(l.name || '').replace(/\s*\(.*\)\s*$/, ''));
+      const pct = (dish && typeof promoPublicaDelPlato === 'function') ? promoPublicaDelPlato(dish.id) : 0;
+      const minimo = dish && typeof dish.precio === 'number' ? dish.precio * (1 - pct / 100) : 0;
+      if(!dish || dish.disponible === false || l.price + 0.01 < minimo){
         anyMismatch = true;
       }
     });

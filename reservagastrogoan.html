@@ -271,6 +271,7 @@ let tableIdFromUrl = null;
 let trackToken = null;
 let trackListenerAttached = false;
 let resToken = null;
+let avisoPagoHecho = null;   // se enseña una vez, arriba del seguimiento, al volver del banco
 let resListenerAttached = false;
 let db = null;
 let DB = null; // { business, cartas, activeCartaId }
@@ -413,7 +414,7 @@ const I18N = {
     'track.step.pendiente':'Recibido','track.step.aceptado':'Aceptado por el restaurante','track.step.preparando':'En preparación','track.step.listo.takeaway':'Listo para recoger','track.step.listo.delivery':'Listo, en reparto','track.step.entregado.takeaway':'Recogido','track.step.entregado.delivery':'Entregado',
     'track.orderNumber':'Nº','track.contactTitle':'¿Necesitas anular o cambiar tu pedido?','track.saveLinkHint':'Guarda este enlace: lo necesitarás para ver el estado de tu pedido.',
     'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
-    'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Tu pedido se ha pagado correctamente. El restaurante lo confirmará en breve.','pago.ok.btn':'Volver al inicio',
+    'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Pago hecho. En cuanto el banco lo confirme, el restaurante lo verá en su pantalla.','pago.ok.banner':'Pago hecho. Aquí puedes seguir tu pedido en directo.','pago.ok.bannerRes':'Pago de la señal hecho. Aquí puedes ver y gestionar tu reserva.','pago.ok.btn':'Volver al inicio',
     'pago.ko.title':'Pago no completado','pago.ko.msg':'El pago no se ha procesado. Si lo deseas, puedes volver a intentarlo.','pago.ko.btn':'Volver',
     'branch.title':'¿En qué local quieres reservar o pedir?','branch.subtitle':'Este negocio tiene varios locales. Elige el tuyo:',
     'app.title':'Reservas y Pedidos','app.loading':'Cargando…','common.back':'Volver','label.dishes':'Platos','label.oneDish':'1 plato','label.nDishes':'${n} platos'
@@ -498,7 +499,7 @@ const I18N = {
     'track.step.pendiente':'Received','track.step.aceptado':'Accepted by the restaurant','track.step.preparando':'Being prepared','track.step.listo.takeaway':'Ready for pickup','track.step.listo.delivery':'Ready, on its way','track.step.entregado.takeaway':'Picked up','track.step.entregado.delivery':'Delivered',
     'track.orderNumber':'No.','track.contactTitle':'Need to cancel or change your order?','track.saveLinkHint':'Save this link: you\'ll need it to check your order status.',
     'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
-    'pago.ok.title':'Payment successful!','pago.ok.msg':'Your order has been paid. The restaurant will confirm shortly.','pago.ok.btn':'Back to home',
+    'pago.ok.title':'Payment successful!','pago.ok.msg':'Payment done. As soon as the bank confirms it, the restaurant will see it on their screen.','pago.ok.banner':'Payment done. You can follow your order live here.','pago.ok.bannerRes':'Deposit paid. You can view and manage your booking here.','pago.ok.btn':'Back to home',
     'pago.ko.title':'Payment not completed','pago.ko.msg':'The payment was not processed. You can try again if you wish.','pago.ko.btn':'Go back',
     'branch.title':'Which location would you like?','branch.subtitle':'This business has multiple locations. Choose yours:',
     'app.title':'Reservations and Orders','app.loading':'Loading…','common.back':'Back','label.dishes':'Dishes','label.oneDish':'1 dish','label.nDishes':'${n} dishes'
@@ -583,7 +584,7 @@ const I18N = {
     'track.step.pendiente':'Rebuda','track.step.aceptado':'Acceptada pel restaurant','track.step.preparando':'En preparació','track.step.listo.takeaway':'Llesta per recollir','track.step.listo.delivery':'Llesta, en repartiment','track.step.entregado.takeaway':'Recollida','track.step.entregado.delivery':'Lliurada',
     'track.orderNumber':'Núm.','track.contactTitle':'Necessites anul·lar o canviar la teva comanda?','track.saveLinkHint':'Guarda aquest enllaç: el necessitaràs per veure l\'estat de la teva comanda.',
     'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
-    'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'La comanda s\'ha pagat correctament. El restaurant la confirmarà aviat.','pago.ok.btn':'Tornar a l\'inici',
+    'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'Pagament fet. Tan bon punt el banc el confirmi, el restaurant el veurà a la pantalla.','pago.ok.banner':'Pagament fet. Aquí pots seguir la teva comanda en directe.','pago.ok.bannerRes':'Pagament de la paga i senyal fet. Aquí pots veure i gestionar la teva reserva.','pago.ok.btn':'Tornar a l\'inici',
     'pago.ko.title':'Pagament no completat','pago.ko.msg':'El pagament no s\'ha processat. Si ho desitges, pots tornar-ho a intentar.','pago.ko.btn':'Tornar',
     'branch.title':'A quin local vols reservar o demanar?','branch.subtitle':'Aquest negoci té diversos locals. Tria el teu:',
     'app.title':'Reserves i Comandes','app.loading':'Carregant…','common.back':'Enrere','label.dishes':'Plats','label.oneDish':'1 plat','label.nDishes':'${n} plats'
@@ -899,7 +900,14 @@ function init(){
   // El botón vuelve a la MISMA página pero sin ese parámetro, para poder
   // seguir navegando con normalidad.
   const backToSiteUrl = location.href.split('?')[0] + (publicId ? `?neg=${encodeURIComponent(publicId)}` : (slug ? `?n=${encodeURIComponent(slug)}` : ''));
-  if(pago === 'ok'){
+  if(pago === 'ok' && (trackToken || resToken)){
+    // Vuelta del banco con seguimiento: se quita «pago=ok» de la dirección
+    // (si no, al recargar o compartir el enlace saldría siempre este aviso) y
+    // se sigue el arranque normal, que abre el seguimiento o la reserva.
+    try{ const u = new URL(location.href); u.searchParams.delete('pago'); history.replaceState(null, '', u.toString()); }catch(e){}
+    avisoPagoHecho = t(resToken ? 'pago.ok.bannerRes' : 'pago.ok.banner');
+    mostrarAvisoPagoHecho();
+  }else if(pago === 'ok'){
     document.getElementById('app').innerHTML = `
       <div class="success">
         <div class="icon">✅</div>
@@ -3336,12 +3344,20 @@ function payWithCard(req, amount, description, refField, submitBtnId){
   req[refField] = ref;
 
   const base = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
+  // Al volver del banco, el cliente entra DIRECTO en el seguimiento de su
+  // pedido o en «Gestionar mi reserva», igual que si hubiera pagado en
+  // efectivo. Antes caía en una pantalla fija sin enlace a nada que decía
+  // «el restaurante lo confirmará», aunque el negocio acepte los pedidos solo.
+  // El autopedido de mesa no tiene seguimiento propio: ese sí va a la
+  // pantalla de siempre.
+  const seguimiento = refField === 'resToken' ? '&res=' + encodeURIComponent(ref)
+    : (req.type === 'pedido' && req.tipo !== 'mesa') ? '&track=' + encodeURIComponent(ref) : '';
   fetch(`${REDSYS_WORKER_URL}/sign`, {
     method: 'POST',
     headers: {'content-type':'application/json'},
     body: JSON.stringify({
       publicId, orderRef: ref, amount, description,
-      urlOk: base + '&pago=ok',
+      urlOk: base + seguimiento + '&pago=ok',
       urlKo: base + '&pago=ko'
     })
   }).then(r => r.json()).then(data => {
@@ -3367,6 +3383,18 @@ function payWithCard(req, amount, description, refField, submitBtnId){
     showInlineError(t('error.pago.conexion'));
     setPaySubmitEnabled(true, submitBtnId);
   });
+}
+// Aviso fijo arriba, fuera de #app: el seguimiento se redibuja solo cada vez
+// que cambia el estado, y un aviso dentro desaparecería al primer cambio.
+function mostrarAvisoPagoHecho(){
+  if(!avisoPagoHecho) return;
+  const el = document.createElement('div');
+  el.setAttribute('role', 'status');
+  el.style.cssText = 'position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;padding:12px 16px;background:var(--ink);color:#fff;font-size:14px;font-weight:600';
+  el.innerHTML = `<span style="flex:1">✅ ${escapeHtml(avisoPagoHecho)}</span><button type="button" aria-label="OK" style="background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:8px;min-width:44px;min-height:44px;cursor:pointer">OK</button>`;
+  el.querySelector('button').onclick = () => el.remove();
+  document.body.insertBefore(el, document.body.firstChild);
+  avisoPagoHecho = null;
 }
 function setPaySubmitEnabled(enabled, submitBtnId){
   submitBtnId = submitBtnId || 'o-submit';
