@@ -230,6 +230,22 @@ await caso('La venta de un pedido pagado se apunta al llegar el pago, en el día
   return 'apuntada al pagar · 1 de octubre (no el 30) · cerrar no duplica';
 });
 
+await caso('Reservas: si cabe en una mesa libre se confirma sola; si es más grande que la mesa más grande, pendiente', async () => {
+  const r = await page.evaluate(async () => {
+    Object.assign(DB.business, {requireDeposit: false, reservaConfirmManualDesde: 0});
+    DB.tables = [{id: 501, name: 'M6', plazas: 6, zona: 'Sala'}, {id: 502, name: 'M10', plazas: 10, zona: 'Sala'}];
+    const dia = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+    await __empujar({type: 'reserva', clientName: 'Tres', clientPhone: '611111111', date: dia, time: '21:00', people: 3, resToken: 'RESauto00003', createdAt: new Date().toISOString()});
+    await __empujar({type: 'reserva', clientName: 'Quince', clientPhone: '622222222', date: dia, time: '21:00', people: 15, resToken: 'RESauto00015', createdAt: new Date().toISOString()});
+    const a = DB.reservations.find(x => x.publicToken === 'RESauto00003'), b = DB.reservations.find(x => x.publicToken === 'RESauto00015');
+    return {tres: a && [a.status, a.tableId], quince: b && [b.status, b.tableId], codigo: codigoCortoPublico('k8F3xQ9zLm2P')};
+  });
+  assert.deepEqual(r.tres, ['confirmada', 501], '3 personas con una mesa de 6 libre no se confirma sola (o no coge la mesa más ajustada)');
+  assert.equal(r.quince[0], 'pendiente', 'un grupo más grande que la mesa más grande se confirma solo');
+  assert.equal(r.codigo, '1QGS8P', 'el número de la app no es el mismo que ve el cliente en su seguimiento');
+  return '3 p → confirmada en la de 6 · 15 p → pendiente · Nº igual que el del cliente';
+});
+
 await caso('Los pagos que nunca llegan dejan de preguntarse a las 48 h', async () => {
   const r = await page.evaluate(async () => {
     window.fetch = async () => new Response('null');

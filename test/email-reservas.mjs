@@ -434,9 +434,11 @@ caso('Una mesa nunca es más pequeña que el grupo que reserva (se quitó el mar
   assert.equal(apariciones, 2, 'el margen superior (mesa demasiado grande para autoconfirmar sola) debe estar en los dos sitios: crear reserva y auto-editarla');
 });
 
-caso('Una mesa muy sobredimensionada no autoconfirma la reserva sola (queda pendiente para el personal)', () => {
-  const m1 = core.match(/if\(tabla && \(tabla\.plazas \|\| 0\) - \(req\.people \|\| 1\) > AUTO_CONFIRM_MARGIN\) mesaSobredimensionada = true;/);
-  assert.ok(m1, 'crear una reserva nueva no comprueba si la mesa asignada es demasiado grande para autoconfirmarse sola');
+// Cambió a propósito el 1/10 (decisión del dueño): si el grupo cabe en una
+// mesa libre, se confirma solo aunque la mesa sea más grande. Antes 3
+// personas en una mesa de 6 quedaban pendientes, igual que 25 sin mesa.
+caso('Una reserva que cabe en una mesa libre se confirma sola, aunque la mesa sea más grande', () => {
+  assert.ok(!/mesaSobredimensionada = true/.test(core), 'vuelve a dejar pendiente una reserva por tener la mesa «demasiado grande»');
   assert.ok(core.includes('!exigeConfirmacionManual) ? \'confirmada\' : \'pendiente\''), 'el estado de la reserva no tiene en cuenta si hace falta confirmación manual');
 });
 

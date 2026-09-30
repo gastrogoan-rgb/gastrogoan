@@ -385,7 +385,7 @@ const I18N = {
     'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
     'reserva.ok.emailHint':' Si el negocio necesita avisarte de algún cambio, te escribirá a ese email.',
-    'email.reserva.label':'Email *','email.reserva.placeholder':'tucorreo@ejemplo.com','email.reserva.hint':'Te avisaremos por aquí en cuanto tu reserva quede confirmada.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'tucorreo@ejemplo.com','email.reserva.hint':'Te mandaremos aquí la confirmación y el enlace para cambiarla o cancelarla.',
     'email.pedido.label':'Email (opcional)','email.pedido.hint':'Solo lo usamos para avisarte cuando el negocio confirme tu pedido (con el enlace para seguirlo) o si tuviera que cancelarlo.',
     'error.email.invalido':'Indica un email válido para que podamos avisarte cuando se confirme tu reserva.',
     'deposit.notice.title':'Esta reserva requiere señal',
@@ -434,14 +434,14 @@ const I18N = {
     'success.trackOrder':'Seguir mi pedido', 'success.manageReservation':'Gestionar mi reserva',
     'success.shareLink':'Guardar/enviarme este enlace', 'success.linkCopied':'Enlace copiado', 'success.copyManually':'Copia este enlace para guardarlo:',
     'success.shareTextPedido':'Aquí puedes seguir tu pedido y cancelarlo si hace falta.', 'success.shareTextReserva':'Aquí puedes gestionar tu reserva: cambiarla o cancelarla.',
-    'resManage.number':'Reserva','resManage.head.confirmada':'Tu reserva está confirmada','resManage.desc.confirmada':'Te esperamos. Si cambian tus planes, puedes modificarla o cancelarla aquí mismo.','resManage.head.pendiente':'Hemos recibido tu reserva','resManage.desc.pendiente':'El restaurante la está revisando. Aquí verás en cuanto la confirme.','resManage.day':'Día','resManage.hour':'Hora','resManage.saveLinkHint':'Guarda este enlace: con él puedes ver, cambiar o cancelar tu reserva cuando quieras.','resManage.loading':'Cargando tu reserva...','resManage.title':'Tu reserva','resManage.date':'Fecha y hora','resManage.people':'Personas',
+    'resManage.number':'Reserva','resManage.head.confirmada':'Tu reserva está confirmada','resManage.desc.confirmada':'Te esperamos. Si cambian tus planes, puedes modificarla o cancelarla aquí mismo.','resManage.head.pendiente':'Hemos recibido tu reserva','resManage.desc.pendiente':'Se confirma en cuanto le llega al restaurante (normalmente al momento). Si tu grupo es más grande que sus mesas, el restaurante te la confirmará. Aquí lo verás sin recargar.','resManage.day':'Día','resManage.hour':'Hora','resManage.saveLinkHint':'Guarda este enlace: con él puedes ver, cambiar o cancelar tu reserva cuando quieras.','resManage.loading':'Cargando tu reserva...','resManage.title':'Tu reserva','resManage.date':'Fecha y hora','resManage.people':'Personas',
     'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendiente de confirmar',
     'resManage.cancelBtn':'Cancelar mi reserva','resManage.cancelSending':'Cancelando...','resManage.confirmCancel':'¿Seguro que quieres cancelar esta reserva?',
     'resManage.editBtn':'Cambiar fecha u hora','resManage.saveBtn':'Guardar cambios','resManage.savingChanges':'Guardando...',
     'resManage.notFound.title':'No encontramos esa reserva','resManage.notFound.msg':'El enlace puede haber caducado.',
     'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la pestaña de reservas.',
     'resManage.completed.title':'Ya has llegado','resManage.completed.msg':'Esta reserva ya se ha registrado como atendida, así que no se puede editar ni cancelar desde aquí. Si necesitas algo, habla directamente con el restaurante.',
-    'track.backToMenu':'Volver a la carta',
+    'track.backToMenu':'Volver a la carta','track.backHome':'Volver al inicio','resManage.lookupAlso':'También puedes volver a ella desde la web del restaurante, en «¿Ya reservaste? Accede a tu reserva», con tu nombre, email y teléfono.',
     'track.head.pendiente':'Hemos recibido tu pedido','track.desc.pendiente':'El restaurante lo está revisando. Aquí verás cada paso, sin recargar.','track.head.aceptado':'Pedido confirmado','track.desc.aceptado':'El restaurante ya lo tiene y va a empezar a prepararlo.','track.head.preparando':'Lo estamos preparando','track.desc.preparando':'Tu pedido está en cocina.','track.head.listo.takeaway':'Listo para recoger','track.desc.listo.takeaway':'Ya puedes pasar a buscarlo. Al llegar, di tu número de pedido.','track.head.listo.delivery':'Va de camino','track.desc.listo.delivery':'El repartidor ya ha salido con tu pedido.','track.head.entregado.takeaway':'Pedido recogido','track.desc.entregado.takeaway':'Que aproveche. Gracias por tu pedido.','track.head.entregado.delivery':'Pedido entregado','track.desc.entregado.delivery':'Que aproveche. Gracias por tu pedido.','track.type.takeaway':'Para recoger','track.type.delivery':'A domicilio','track.call':'Llamar','track.write':'Escribir','track.saveLinkTitle':'Para volver a mirarlo','track.summaryTitle':'Lo que has pedido','track.tip':'Propina','track.total':'Total','track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
     'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
     'track.rejected.title':'Pedido no aceptado','track.rejected.msg':'El restaurante no ha podido aceptar este pedido.',
@@ -470,7 +470,7 @@ const I18N = {
     'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
     'reserva.ok.emailHint':' If the restaurant needs to let you know about any change, they\'ll email you at that address.',
-    'email.reserva.label':'Email *','email.reserva.placeholder':'you@example.com','email.reserva.hint':'We\'ll let you know here as soon as your booking is confirmed.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'you@example.com','email.reserva.hint':'We\'ll send the confirmation here, with the link to change or cancel it.',
     'email.pedido.label':'Email (optional)','email.pedido.hint':'We only use it to let you know when the restaurant confirms your order (with a link to track it) or if it has to cancel it.',
     'error.email.invalido':'Enter a valid email so we can let you know when your booking is confirmed.',
     'deposit.notice.title':'This booking requires a deposit',
@@ -519,14 +519,14 @@ const I18N = {
     'success.trackOrder':'Track my order', 'success.manageReservation':'Manage my reservation',
     'success.shareLink':'Save/send myself this link', 'success.linkCopied':'Link copied', 'success.copyManually':'Copy this link to save it:',
     'success.shareTextPedido':'Here you can track your order and cancel it if needed.', 'success.shareTextReserva':'Here you can manage your reservation: change or cancel it.',
-    'resManage.number':'Booking','resManage.head.confirmada':'Your booking is confirmed','resManage.desc.confirmada':'We look forward to seeing you. If your plans change, you can modify or cancel it right here.','resManage.head.pendiente':"We've got your booking",'resManage.desc.pendiente':"The restaurant is reviewing it. You'll see here as soon as it's confirmed.",'resManage.day':'Day','resManage.hour':'Time','resManage.saveLinkHint':'Save this link: with it you can view, change or cancel your booking whenever you like.','resManage.loading':'Loading your reservation...','resManage.title':'Your reservation','resManage.date':'Date and time','resManage.people':'People',
+    'resManage.number':'Booking','resManage.head.confirmada':'Your booking is confirmed','resManage.desc.confirmada':'We look forward to seeing you. If your plans change, you can modify or cancel it right here.','resManage.head.pendiente':"We've got your booking",'resManage.desc.pendiente':"It's confirmed as soon as the restaurant receives it (usually right away). If your group is larger than their tables, the restaurant will confirm it. You'll see it here without refreshing.",'resManage.day':'Day','resManage.hour':'Time','resManage.saveLinkHint':'Save this link: with it you can view, change or cancel your booking whenever you like.','resManage.loading':'Loading your reservation...','resManage.title':'Your reservation','resManage.date':'Date and time','resManage.people':'People',
     'resManage.status.confirmada':'Confirmed','resManage.status.pendiente':'Pending confirmation',
     'resManage.cancelBtn':'Cancel my reservation','resManage.cancelSending':'Cancelling...','resManage.confirmCancel':'Are you sure you want to cancel this reservation?',
     'resManage.editBtn':'Change date or time','resManage.saveBtn':'Save changes','resManage.savingChanges':'Saving...',
     'resManage.notFound.title':'We can\'t find that reservation','resManage.notFound.msg':'The link may have expired.',
     'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use the reservation tab.',
     'resManage.completed.title':'You\'ve already arrived','resManage.completed.msg':'This reservation is already marked as seated, so it can\'t be edited or cancelled from here. If you need anything, please contact the restaurant directly.',
-    'track.backToMenu':'Back to menu',
+    'track.backToMenu':'Back to menu','track.backHome':'Back to home','resManage.lookupAlso':"You can also get back to it from the restaurant's page, in “Already booked? Access your reservation”, with your name, email and phone.",
     'track.head.pendiente':"We've got your order",'track.desc.pendiente':"The restaurant is reviewing it. You'll see every step here, no need to refresh.",'track.head.aceptado':'Order confirmed','track.desc.aceptado':'The restaurant has it and will start preparing it shortly.','track.head.preparando':"We're preparing it",'track.desc.preparando':'Your order is in the kitchen.','track.head.listo.takeaway':'Ready for pickup','track.desc.listo.takeaway':'You can come and collect it. Give your order number when you arrive.','track.head.listo.delivery':'On its way','track.desc.listo.delivery':'The rider has left with your order.','track.head.entregado.takeaway':'Order collected','track.desc.entregado.takeaway':'Enjoy your meal. Thanks for your order.','track.head.entregado.delivery':'Order delivered','track.desc.entregado.delivery':'Enjoy your meal. Thanks for your order.','track.type.takeaway':'Pickup','track.type.delivery':'Delivery','track.call':'Call','track.write':'Email','track.saveLinkTitle':'To check it later','track.summaryTitle':'Your order','track.tip':'Tip','track.total':'Total','track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
     'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
     'track.rejected.title':'Order not accepted','track.rejected.msg':'The restaurant couldn\'t accept this order.',
@@ -555,7 +555,7 @@ const I18N = {
     'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
     'reserva.ok.emailHint':' Si el negoci necessita avisar-te d\'algun canvi, t\'escriurà a aquest email.',
-    'email.reserva.label':'Email *','email.reserva.placeholder':'elteucorreu@exemple.com','email.reserva.hint':'T\'avisarem aquí quan la teva reserva quedi confirmada.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'elteucorreu@exemple.com','email.reserva.hint':'T\'enviarem aquí la confirmació i l\'enllaç per canviar-la o cancel·lar-la.',
     'email.pedido.label':'Email (opcional)','email.pedido.hint':'Només l\'usem per avisar-te quan el negoci confirmi la teva comanda (amb l\'enllaç per seguir-la) o si l\'hagués de cancel·lar.',
     'error.email.invalido':'Indica un email vàlid perquè puguem avisar-te quan es confirmi la teva reserva.',
     'deposit.notice.title':'Aquesta reserva requereix senyal',
@@ -604,14 +604,14 @@ const I18N = {
     'success.trackOrder':'Seguir la meva comanda', 'success.manageReservation':'Gestionar la meva reserva',
     'success.shareLink':'Guardar/enviar-me aquest enllaç', 'success.linkCopied':'Enllaç copiat', 'success.copyManually':'Copia aquest enllaç per guardar-lo:',
     'success.shareTextPedido':'Aquí pots seguir la teva comanda i cancel·lar-la si cal.', 'success.shareTextReserva':'Aquí pots gestionar la teva reserva: canviar-la o cancel·lar-la.',
-    'resManage.number':'Reserva','resManage.head.confirmada':'La teva reserva està confirmada','resManage.desc.confirmada':"T'esperem. Si canvien els teus plans, pots modificar-la o cancel·lar-la aquí mateix.",'resManage.head.pendiente':'Hem rebut la teva reserva','resManage.desc.pendiente':"El restaurant l'està revisant. Aquí veuràs quan la confirmi.",'resManage.day':'Dia','resManage.hour':'Hora','resManage.saveLinkHint':'Desa aquest enllaç: amb ell pots veure, canviar o cancel·lar la teva reserva quan vulguis.','resManage.loading':'Carregant la teva reserva...','resManage.title':'La teva reserva','resManage.date':'Data i hora','resManage.people':'Persones',
+    'resManage.number':'Reserva','resManage.head.confirmada':'La teva reserva està confirmada','resManage.desc.confirmada':"T'esperem. Si canvien els teus plans, pots modificar-la o cancel·lar-la aquí mateix.",'resManage.head.pendiente':'Hem rebut la teva reserva','resManage.desc.pendiente':"Es confirma tan bon punt li arriba al restaurant (normalment a l'instant). Si el teu grup és més gran que les seves taules, el restaurant te la confirmarà. Aquí ho veuràs sense recarregar.",'resManage.day':'Dia','resManage.hour':'Hora','resManage.saveLinkHint':'Desa aquest enllaç: amb ell pots veure, canviar o cancel·lar la teva reserva quan vulguis.','resManage.loading':'Carregant la teva reserva...','resManage.title':'La teva reserva','resManage.date':'Data i hora','resManage.people':'Persones',
     'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendent de confirmar',
     'resManage.cancelBtn':'Cancel·lar la meva reserva','resManage.cancelSending':'Cancel·lant...','resManage.confirmCancel':'Segur que vols cancel·lar aquesta reserva?',
     'resManage.editBtn':'Canviar data o hora','resManage.saveBtn':'Desar canvis','resManage.savingChanges':'Desant...',
     'resManage.notFound.title':'No trobem aquesta reserva','resManage.notFound.msg':'L\'enllaç pot haver caducat.',
     'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la pestanya de reserves.',
     'resManage.completed.title':'Ja has arribat','resManage.completed.msg':'Aquesta reserva ja s\'ha registrat com atesa, així que no es pot editar ni cancel·lar des d\'aquí. Si necessites res, parla directament amb el restaurant.',
-    'track.backToMenu':'Tornar a la carta',
+    'track.backToMenu':'Tornar a la carta','track.backHome':"Tornar a l'inici",'resManage.lookupAlso':'També hi pots tornar des de la web del restaurant, a «Ja vas reservar? Accedeix a la teva reserva», amb el teu nom, email i telèfon.',
     'track.head.pendiente':'Hem rebut la teva comanda','track.desc.pendiente':"El restaurant l'està revisant. Aquí veuràs cada pas, sense recarregar.",'track.head.aceptado':'Comanda confirmada','track.desc.aceptado':'El restaurant ja la té i començarà a preparar-la aviat.','track.head.preparando':"L'estem preparant",'track.desc.preparando':'La teva comanda és a la cuina.','track.head.listo.takeaway':'A punt per recollir','track.desc.listo.takeaway':'Ja pots passar a buscar-la. En arribar, digues el teu número de comanda.','track.head.listo.delivery':'Ja és de camí','track.desc.listo.delivery':'El repartidor ja ha sortit amb la teva comanda.','track.head.entregado.takeaway':'Comanda recollida','track.desc.entregado.takeaway':'Bon profit. Gràcies per la teva comanda.','track.head.entregado.delivery':'Comanda lliurada','track.desc.entregado.delivery':'Bon profit. Gràcies per la teva comanda.','track.type.takeaway':'Per recollir','track.type.delivery':'A domicili','track.call':'Trucar','track.write':'Escriure','track.saveLinkTitle':'Per tornar-ho a mirar','track.summaryTitle':'El que has demanat','track.tip':'Propina','track.total':'Total','track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
     'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
     'track.rejected.title':'Comanda no acceptada','track.rejected.msg':'El restaurant no ha pogut acceptar aquesta comanda.',
@@ -3648,6 +3648,7 @@ function sendRequest(req, successMsg){
     }
     if(req.type === 'reserva' && req.resToken){
       resToken = req.resToken;
+      resRecienEnviada = {status: 'pendiente', date: req.date, time: req.time, people: req.people, hasta: Date.now() + 15 * 60 * 1000};
       resListenerAttached = false;
       renderReservationManageView();
       return;
@@ -3690,8 +3691,10 @@ const TRACK_STEPS = ['pendiente','aceptado','preparando','listo','entregado'];
 function urlVolverALaCarta(){
   return location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
 }
-function botonVolverALaCarta(){
-  return `<a class="btn" style="margin-top:16px;text-decoration:none" href="${escapeHtml(urlVolverALaCarta())}">${t('track.backToMenu')}</a>`;
+// En un pedido se vuelve «a la carta»; en una reserva no tiene sentido
+// (el cliente no ha pedido nada de la carta): «Volver al inicio».
+function botonVolverALaCarta(esReserva){
+  return `<a class="btn" style="margin-top:16px;text-decoration:none" href="${escapeHtml(urlVolverALaCarta())}">${t(esReserva ? 'track.backHome' : 'track.backToMenu')}</a>`;
 }
 
 function renderOrderTrackingView(){
@@ -3731,6 +3734,7 @@ function guardaEnlaceHtml(token, esReserva){
     <div class="trk-block">
       <div class="trk-label">${t('track.saveLinkTitle')}</div>
       <p style="margin:0 0 10px;font-size:14px">${t(esReserva ? 'resManage.saveLinkHint' : 'track.saveLinkHint')}</p>
+      ${esReserva ? `<p style="margin:0 0 10px;font-size:13px;color:var(--muted)">${t('resManage.lookupAlso')}</p>` : ''}
       <button class="btn" type="button" onclick="shareTrackUrl('${escapeHtml(url).replace(/'/g,"\\'")}', ${!!esReserva}, this)">${t('success.shareLink')}</button>
     </div>`;
 }
@@ -3809,14 +3813,18 @@ function renderReservationManageView(){
   const app = document.getElementById('app');
   if(resListenerAttached) return;
   resListenerAttached = true;
-  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('resManage.loading')}<div style="margin-top:14px">${botonVolverALaCarta()}</div></div>`;
+  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('resManage.loading')}<div style="margin-top:14px">${botonVolverALaCarta(true)}</div></div>`;
   db.ref('gastrogoan/public/' + publicId + '/reservationStatus/' + resToken).on('value', snap => {
     renderReservationStatus(snap.val());
   }, () => {
     renderReservationStatus(null);
   });
 }
+let resRecienEnviada = null;
 function renderReservationStatus(data){
+  // Recién enviada: hasta que la app del negocio la recibe (segundos, si
+  // está abierta) no hay estado publicado. Eso no es «no encontramos tu reserva».
+  if(!data && resRecienEnviada && Date.now() < resRecienEnviada.hasta) data = resRecienEnviada;
   lastResStatusData = data;
   const app = document.getElementById('app');
   const aparte = (titulo, texto) => `
@@ -3824,7 +3832,7 @@ function renderReservationStatus(data){
       <div class="trk-meta">${resToken ? `${t('resManage.number')} <strong>${escapeHtml(shortCode(resToken))}</strong>` : ''}</div>
       <h2 class="trk-h">${titulo}</h2>
       <p class="trk-desc">${texto}</p>
-      ${botonVolverALaCarta()}
+      ${botonVolverALaCarta(true)}
     </div>`;
   if(!data){
     app.innerHTML = aparte(t('resManage.notFound.title'), t('resManage.notFound.msg'));
@@ -3898,7 +3906,7 @@ function renderReservationStatus(data){
       </div>
     </div>
     ${resEditing ? '' : guardaEnlaceHtml(resToken, true)}
-    ${resEditing ? '' : botonVolverALaCarta()}
+    ${resEditing ? '' : botonVolverALaCarta(true)}
   `;
   if(resEditing){
     updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint');

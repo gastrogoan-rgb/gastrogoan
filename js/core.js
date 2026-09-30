@@ -1852,6 +1852,14 @@ function canonicalStringify(value){
    ============================================================ */
 const LICENSE_LS = slotLicenseKey(ACTIVE_SLOT);
 
+// El número que ve el cliente en su seguimiento («Nº PCERVK»): el mismo
+// cálculo que shortCode() de la web de reservas. Antes el cliente lo tenía y
+// el negocio no lo veía en ningún sitio: si llamaba diciendo «soy el
+// PCERVK», nadie sabía qué pedido era (1/10).
+function codigoCortoPublico(token){
+  if(!token) return '';
+  return ggLicHash(String(token) + '·gastrogoan·shortcode·v1').toString(36).toUpperCase().padStart(6, '0').slice(0, 6);
+}
 function ggLicHash(str){
   let h = 0x811c9dc5 >>> 0;
   for(let i = 0; i < str.length; i++){
@@ -7103,11 +7111,14 @@ function initPublicRequestsListener(){
             if(yaReservado + (req.people || 0) > aforo) confirmedTableId = null;
           }
         }
-        let mesaSobredimensionada = false;
-        if(confirmedTableId != null){
-          const tabla = DB.tables.find(tb => tb.id === confirmedTableId);
-          if(tabla && (tabla.plazas || 0) - (req.people || 1) > AUTO_CONFIRM_MARGIN) mesaSobredimensionada = true;
-        }
+        // ⚠️ Decisión del dueño (1/10): si el grupo cabe en una mesa libre, la
+        // reserva se confirma SOLA, aunque la mesa sea más grande. Antes una
+        // mesa «2 plazas más grande» (3 personas en una de 6) la dejaba
+        // pendiente, así que casi ninguna reserva se confirmaba sola y daba
+        // igual reservar para 3 que para 25. Solo queda pendiente si no hay
+        // mesa que le quepa (grupo más grande que la mesa más grande, o todo
+        // ocupado), si pide señal, o si el negocio lo pide a partir de X.
+        void AUTO_CONFIRM_MARGIN;
         // El negocio puede exigir que a partir de X comensales la confirme
         // siempre el personal a mano (grupos grandes suelen necesitar
         // organizarse aparte, aunque técnicamente quepan en una mesa).
@@ -7117,7 +7128,7 @@ function initPublicRequestsListener(){
         // y la reserva llega sin ella, no se confirma sola.
         const senalPropia = senalReservaPropia(req.people);
         const senalSaltada = senalPropia > 0 && !req.depositRequired && !!DB.business.pagoOnlineActivo;
-        const exigeConfirmacionManual = mesaSobredimensionada || senalSaltada ||
+        const exigeConfirmacionManual = senalSaltada ||
           (confirmManualDesde > 0 && (req.people || 0) >= confirmManualDesde);
         const newReservation = {
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
@@ -7193,14 +7204,10 @@ function initPublicRequestsListener(){
               if(yaReservado + newPeople > aforo) matchedTableId = null;
             }
           }
-          let mesaSobredimensionada = false;
-          if(matchedTableId != null){
-            const tabla = DB.tables.find(tb => tb.id === matchedTableId);
-            if(tabla && (tabla.plazas || 0) - newPeople > AUTO_CONFIRM_MARGIN) mesaSobredimensionada = true;
-          }
+          // Igual que al crearla (1/10): si cabe en una mesa libre, confirmada.
+          void AUTO_CONFIRM_MARGIN;
           const confirmManualDesde = parseInt(DB.business.reservaConfirmManualDesde) || 0;
-          const exigeConfirmacionManual = mesaSobredimensionada ||
-            (confirmManualDesde > 0 && newPeople >= confirmManualDesde);
+          const exigeConfirmacionManual = (confirmManualDesde > 0 && newPeople >= confirmManualDesde);
           target.date = newDate; target.time = newTime; target.people = newPeople;
           target.tableId = matchedTableId;
           // Igual que al crear la reserva nueva (más arriba en esta misma

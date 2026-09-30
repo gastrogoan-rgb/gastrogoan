@@ -917,6 +917,7 @@ function renderTpvToGo(tiposServicio){
               ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
             </div>
             <strong class="togo-order-client">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</strong>
+            ${o.clientRef && o.origenOnline ? `<div class="txt-xs" style="color:var(--muted);font-family:'IBM Plex Mono',monospace">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</div>` : ''}
             ${(o.clienteDireccion||o.clienteAddress) ? `<div class="togo-order-address"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</div>` : ''}
             <div class="togo-order-row">
               <span class="togo-order-price">${fmtMoney(orderTotal(o))}</span>
@@ -1128,6 +1129,7 @@ function renderTpvPendingOnline(){
             <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
             <span class="badge badge-amber">${t('badge.newF')}</span>
           </h3>
+          ${o.clientRef ? `<div class="txt-xs" style="color:var(--muted);font-family:'IBM Plex Mono',monospace;margin:-2px 0 4px">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</div>` : ''}
           ${(() => {
             const waitMin = o.createdAt ? minutesSince(o.createdAt) : 0;
             if(waitMin < 30) return '';
@@ -2155,7 +2157,8 @@ function renderTableOrderModal(orderId){
   const titleText = table ? `${orderTableDisplayName(order, table)}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> ${t('label.reservationShort')}</span>` : '';
-  const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
+  const pagadoBadge = (order.clientRef && order.origenOnline ? ` <span class="badge" title="${escapeHtml(t('label.publicCodeHint'))}">Nº ${escapeHtml(codigoCortoPublico(order.clientRef))}</span>` : '') +
+    (order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '');
   const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
   const camareroLabel = camarero ? escapeHtml(camarero.name) : (order.openedByOwner ? escapeHtml(t('label.owner')) : t('label.assignWaiter'));
   const camareroBadge = DB.employees.length ? ` <span class="badge badge-pulsable" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camareroLabel}</span>` : '';
