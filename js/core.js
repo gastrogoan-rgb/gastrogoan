@@ -7329,6 +7329,10 @@ function initPublicRequestsListener(){
           const newOrder = DB.tpvOrders.find(o => o.id === newOrderId);
           if(newOrder) newOrder.pagado = false;
           esperarPagoTarjeta(req.clientRef);
+          // Que el cliente vea «recibido» en su seguimiento mientras llega la
+          // confirmación del banco. Sin esto, el estado no se publicaba hasta
+          // aceptarlo, y al volver del pago leía «No encontramos ese pedido».
+          if(newOrder) syncOrderStatusForPublic(newOrder);
         } else if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
           // Con el interruptor de "Pedidos online" en ON (por defecto), el
           // pedido se acepta solo, sin pasar por la bandeja de pendientes —

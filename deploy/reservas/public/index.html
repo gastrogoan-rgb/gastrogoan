@@ -907,6 +907,7 @@ function init(){
     // se sigue el arranque normal, que abre el seguimiento o la reserva.
     try{ const u = new URL(location.href); u.searchParams.delete('pago'); history.replaceState(null, '', u.toString()); }catch(e){}
     avisoPagoHecho = t(resToken ? 'pago.ok.bannerRes' : 'pago.ok.banner');
+    trackRecienEnviadoHasta = Date.now() + 15 * 60 * 1000;
     mostrarAvisoPagoHecho();
   }else if(pago === 'ok'){
     document.getElementById('app').innerHTML = `
@@ -3599,6 +3600,7 @@ function sendRequest(req, successMsg){
     // desaparece para siempre.
     if(req.type === 'pedido' && req.clientRef){
       trackToken = req.clientRef;
+      trackRecienEnviadoHasta = Date.now() + 15 * 60 * 1000;
       trackListenerAttached = false;
       renderOrderTrackingView();
       return;
@@ -3690,8 +3692,13 @@ function guardaEnlaceHtml(token, esReserva){
       <button class="btn" type="button" style="margin-top:8px;width:100%" onclick="shareTrackUrl('${escapeHtml(url).replace(/'/g,"\\'")}', ${!!esReserva}, this)">🔗 ${t('success.shareLink')}</button>
     </div>`;
 }
+// El pedido se acaba de mandar (o se acaba de pagar): durante un rato su
+// estado puede no estar publicado todavía — la app del negocio tiene que
+// recibirlo primero. Eso no es «no encontramos tu pedido».
+let trackRecienEnviadoHasta = 0;
 function renderTrackStatus(data){
   const app = document.getElementById('app');
+  if(!data && Date.now() < trackRecienEnviadoHasta) data = {status: 'pendiente'};
   if(!data){
     app.innerHTML = `
       <div class="error-box">
