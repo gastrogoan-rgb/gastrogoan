@@ -30,6 +30,37 @@
     -webkit-font-smoothing:antialiased;
   }
   .mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+  /* Seguimiento del pedido (1/10): la pantalla que ve el cliente justo
+     después de pagar. Mismo lenguaje que el resto de la marca: esquinas
+     rectas, tinta y oliva, etiquetas en Plex Mono, nada de emojis. */
+  .trk{background:var(--surface);border:1px solid var(--border);margin-bottom:14px}
+  .trk-head{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
+  .trk-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+  .trk-meta strong{color:var(--ink);font-weight:500}
+  .trk-h{margin:12px 0 6px;font-size:27px;line-height:1.15;font-weight:700;letter-spacing:-.02em;color:var(--ink);text-wrap:balance}
+  .trk-desc{margin:0;font-size:15px;color:var(--body)}
+  .trk-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:18px}
+  .trk-bar span{height:6px;background:var(--border)}
+  .trk-bar span.hecho{background:var(--ink)}
+  .trk-bar span.ahora{background:var(--olive)}
+  .trk-steps{list-style:none;margin:0;padding:6px 20px 8px}
+  .trk-step{position:relative;display:flex;align-items:center;gap:14px;padding:11px 0;font-size:14.5px;color:var(--muted)}
+  .trk-step:not(:last-child)::after{content:"";position:absolute;left:6px;top:calc(50% + 7px);bottom:calc(-50% + 7px);width:1px;background:var(--border)}
+  .trk-step.hecho:not(:last-child)::after{background:var(--ink)}
+  .trk-dot{flex:none;width:13px;height:13px;border:1px solid var(--border);background:var(--surface)}
+  .trk-step.hecho{color:var(--body)}
+  .trk-step.hecho .trk-dot{background:var(--ink);border-color:var(--ink)}
+  .trk-step.ahora{color:var(--ink);font-weight:700}
+  .trk-step.ahora .trk-dot{background:var(--olive);border-color:var(--olive);box-shadow:0 0 0 4px var(--green-l)}
+  .trk-now{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--olive)}
+  .trk-block{background:var(--surface);border:1px solid var(--border);padding:16px 20px;margin-bottom:14px}
+  .trk-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .trk-link{display:flex;align-items:center;min-height:44px;color:var(--ink);font-weight:600;text-decoration:none;border-top:1px solid var(--border)}
+  .trk-link:first-of-type{border-top:0}
+  .trk-link span{margin-left:auto;color:var(--muted);font-weight:400;font-size:13px}
+  .trk-alone{padding:28px 20px;text-align:left}
+  .trk-alone .trk-h{font-size:23px}
+  @media (prefers-reduced-motion:no-preference){ .trk{animation:trkIn .35s ease-out} @keyframes trkIn{from{opacity:.001;transform:translateY(6px)}to{opacity:1;transform:none}} }
   ::selection{background:var(--ink);color:var(--paper)}
   header{
     background:var(--ink);color:#fff;padding:20px 16px;text-align:center;
@@ -400,7 +431,7 @@ const I18N = {
     'success.trackOrder':'Seguir mi pedido', 'success.manageReservation':'Gestionar mi reserva',
     'success.shareLink':'Guardar/enviarme este enlace', 'success.linkCopied':'Enlace copiado', 'success.copyManually':'Copia este enlace para guardarlo:',
     'success.shareTextPedido':'Aquí puedes seguir tu pedido y cancelarlo si hace falta.', 'success.shareTextReserva':'Aquí puedes gestionar tu reserva: cambiarla o cancelarla.',
-    'resManage.loading':'Cargando tu reserva...','resManage.title':'Tu reserva','resManage.date':'Fecha y hora','resManage.people':'Personas',
+    'resManage.number':'Reserva','resManage.head.confirmada':'Tu reserva está confirmada','resManage.desc.confirmada':'Te esperamos. Si cambian tus planes, puedes modificarla o cancelarla aquí mismo.','resManage.head.pendiente':'Hemos recibido tu reserva','resManage.desc.pendiente':'El restaurante la está revisando. Aquí verás en cuanto la confirme.','resManage.day':'Día','resManage.hour':'Hora','resManage.saveLinkHint':'Guarda este enlace: con él puedes ver, cambiar o cancelar tu reserva cuando quieras.','resManage.loading':'Cargando tu reserva...','resManage.title':'Tu reserva','resManage.date':'Fecha y hora','resManage.people':'Personas',
     'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendiente de confirmar',
     'resManage.cancelBtn':'Cancelar mi reserva','resManage.cancelSending':'Cancelando...','resManage.confirmCancel':'¿Seguro que quieres cancelar esta reserva?',
     'resManage.editBtn':'Cambiar fecha u hora','resManage.saveBtn':'Guardar cambios','resManage.savingChanges':'Guardando...',
@@ -408,7 +439,7 @@ const I18N = {
     'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la pestaña de reservas.',
     'resManage.completed.title':'Ya has llegado','resManage.completed.msg':'Esta reserva ya se ha registrado como atendida, así que no se puede editar ni cancelar desde aquí. Si necesitas algo, habla directamente con el restaurante.',
     'track.backToMenu':'Volver a la carta',
-    'track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
+    'track.head.pendiente':'Hemos recibido tu pedido','track.desc.pendiente':'El restaurante lo está revisando. Aquí verás cada paso, sin recargar.','track.head.aceptado':'Pedido confirmado','track.desc.aceptado':'El restaurante ya lo tiene y va a empezar a prepararlo.','track.head.preparando':'Lo estamos preparando','track.desc.preparando':'Tu pedido está en cocina.','track.head.listo.takeaway':'Listo para recoger','track.desc.listo.takeaway':'Ya puedes pasar a buscarlo. Al llegar, di tu número de pedido.','track.head.listo.delivery':'Va de camino','track.desc.listo.delivery':'El repartidor ya ha salido con tu pedido.','track.head.entregado.takeaway':'Pedido recogido','track.desc.entregado.takeaway':'Que aproveche. Gracias por tu pedido.','track.head.entregado.delivery':'Pedido entregado','track.desc.entregado.delivery':'Que aproveche. Gracias por tu pedido.','track.type.takeaway':'Para recoger','track.type.delivery':'A domicilio','track.call':'Llamar','track.write':'Escribir','track.saveLinkTitle':'Para volver a mirarlo','track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
     'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
     'track.rejected.title':'Pedido no aceptado','track.rejected.msg':'El restaurante no ha podido aceptar este pedido.',
     'track.step.pendiente':'Recibido','track.step.aceptado':'Aceptado por el restaurante','track.step.preparando':'En preparación','track.step.listo.takeaway':'Listo para recoger','track.step.listo.delivery':'Listo, en reparto','track.step.entregado.takeaway':'Recogido','track.step.entregado.delivery':'Entregado',
@@ -485,7 +516,7 @@ const I18N = {
     'success.trackOrder':'Track my order', 'success.manageReservation':'Manage my reservation',
     'success.shareLink':'Save/send myself this link', 'success.linkCopied':'Link copied', 'success.copyManually':'Copy this link to save it:',
     'success.shareTextPedido':'Here you can track your order and cancel it if needed.', 'success.shareTextReserva':'Here you can manage your reservation: change or cancel it.',
-    'resManage.loading':'Loading your reservation...','resManage.title':'Your reservation','resManage.date':'Date and time','resManage.people':'People',
+    'resManage.number':'Booking','resManage.head.confirmada':'Your booking is confirmed','resManage.desc.confirmada':'We look forward to seeing you. If your plans change, you can modify or cancel it right here.','resManage.head.pendiente':"We've got your booking",'resManage.desc.pendiente':"The restaurant is reviewing it. You'll see here as soon as it's confirmed.",'resManage.day':'Day','resManage.hour':'Time','resManage.saveLinkHint':'Save this link: with it you can view, change or cancel your booking whenever you like.','resManage.loading':'Loading your reservation...','resManage.title':'Your reservation','resManage.date':'Date and time','resManage.people':'People',
     'resManage.status.confirmada':'Confirmed','resManage.status.pendiente':'Pending confirmation',
     'resManage.cancelBtn':'Cancel my reservation','resManage.cancelSending':'Cancelling...','resManage.confirmCancel':'Are you sure you want to cancel this reservation?',
     'resManage.editBtn':'Change date or time','resManage.saveBtn':'Save changes','resManage.savingChanges':'Saving...',
@@ -493,7 +524,7 @@ const I18N = {
     'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use the reservation tab.',
     'resManage.completed.title':'You\'ve already arrived','resManage.completed.msg':'This reservation is already marked as seated, so it can\'t be edited or cancelled from here. If you need anything, please contact the restaurant directly.',
     'track.backToMenu':'Back to menu',
-    'track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
+    'track.head.pendiente':"We've got your order",'track.desc.pendiente':"The restaurant is reviewing it. You'll see every step here, no need to refresh.",'track.head.aceptado':'Order confirmed','track.desc.aceptado':'The restaurant has it and will start preparing it shortly.','track.head.preparando':"We're preparing it",'track.desc.preparando':'Your order is in the kitchen.','track.head.listo.takeaway':'Ready for pickup','track.desc.listo.takeaway':'You can come and collect it. Give your order number when you arrive.','track.head.listo.delivery':'On its way','track.desc.listo.delivery':'The rider has left with your order.','track.head.entregado.takeaway':'Order collected','track.desc.entregado.takeaway':'Enjoy your meal. Thanks for your order.','track.head.entregado.delivery':'Order delivered','track.desc.entregado.delivery':'Enjoy your meal. Thanks for your order.','track.type.takeaway':'Pickup','track.type.delivery':'Delivery','track.call':'Call','track.write':'Email','track.saveLinkTitle':'To check it later','track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
     'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
     'track.rejected.title':'Order not accepted','track.rejected.msg':'The restaurant couldn\'t accept this order.',
     'track.step.pendiente':'Received','track.step.aceptado':'Accepted by the restaurant','track.step.preparando':'Being prepared','track.step.listo.takeaway':'Ready for pickup','track.step.listo.delivery':'Ready, on its way','track.step.entregado.takeaway':'Picked up','track.step.entregado.delivery':'Delivered',
@@ -570,7 +601,7 @@ const I18N = {
     'success.trackOrder':'Seguir la meva comanda', 'success.manageReservation':'Gestionar la meva reserva',
     'success.shareLink':'Guardar/enviar-me aquest enllaç', 'success.linkCopied':'Enllaç copiat', 'success.copyManually':'Copia aquest enllaç per guardar-lo:',
     'success.shareTextPedido':'Aquí pots seguir la teva comanda i cancel·lar-la si cal.', 'success.shareTextReserva':'Aquí pots gestionar la teva reserva: canviar-la o cancel·lar-la.',
-    'resManage.loading':'Carregant la teva reserva...','resManage.title':'La teva reserva','resManage.date':'Data i hora','resManage.people':'Persones',
+    'resManage.number':'Reserva','resManage.head.confirmada':'La teva reserva està confirmada','resManage.desc.confirmada':"T'esperem. Si canvien els teus plans, pots modificar-la o cancel·lar-la aquí mateix.",'resManage.head.pendiente':'Hem rebut la teva reserva','resManage.desc.pendiente':"El restaurant l'està revisant. Aquí veuràs quan la confirmi.",'resManage.day':'Dia','resManage.hour':'Hora','resManage.saveLinkHint':'Desa aquest enllaç: amb ell pots veure, canviar o cancel·lar la teva reserva quan vulguis.','resManage.loading':'Carregant la teva reserva...','resManage.title':'La teva reserva','resManage.date':'Data i hora','resManage.people':'Persones',
     'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendent de confirmar',
     'resManage.cancelBtn':'Cancel·lar la meva reserva','resManage.cancelSending':'Cancel·lant...','resManage.confirmCancel':'Segur que vols cancel·lar aquesta reserva?',
     'resManage.editBtn':'Canviar data o hora','resManage.saveBtn':'Desar canvis','resManage.savingChanges':'Desant...',
@@ -578,7 +609,7 @@ const I18N = {
     'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la pestanya de reserves.',
     'resManage.completed.title':'Ja has arribat','resManage.completed.msg':'Aquesta reserva ja s\'ha registrat com atesa, així que no es pot editar ni cancel·lar des d\'aquí. Si necessites res, parla directament amb el restaurant.',
     'track.backToMenu':'Tornar a la carta',
-    'track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
+    'track.head.pendiente':'Hem rebut la teva comanda','track.desc.pendiente':"El restaurant l'està revisant. Aquí veuràs cada pas, sense recarregar.",'track.head.aceptado':'Comanda confirmada','track.desc.aceptado':'El restaurant ja la té i començarà a preparar-la aviat.','track.head.preparando':"L'estem preparant",'track.desc.preparando':'La teva comanda és a la cuina.','track.head.listo.takeaway':'A punt per recollir','track.desc.listo.takeaway':'Ja pots passar a buscar-la. En arribar, digues el teu número de comanda.','track.head.listo.delivery':'Ja és de camí','track.desc.listo.delivery':'El repartidor ja ha sortit amb la teva comanda.','track.head.entregado.takeaway':'Comanda recollida','track.desc.entregado.takeaway':'Bon profit. Gràcies per la teva comanda.','track.head.entregado.delivery':'Comanda lliurada','track.desc.entregado.delivery':'Bon profit. Gràcies per la teva comanda.','track.type.takeaway':'Per recollir','track.type.delivery':'A domicili','track.call':'Trucar','track.write':'Escriure','track.saveLinkTitle':'Per tornar-ho a mirar','track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
     'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
     'track.rejected.title':'Comanda no acceptada','track.rejected.msg':'El restaurant no ha pogut acceptar aquesta comanda.',
     'track.step.pendiente':'Rebuda','track.step.aceptado':'Acceptada pel restaurant','track.step.preparando':'En preparació','track.step.listo.takeaway':'Llesta per recollir','track.step.listo.delivery':'Llesta, en repartiment','track.step.entregado.takeaway':'Recollida','track.step.entregado.delivery':'Lliurada',
@@ -3380,7 +3411,7 @@ function mostrarAvisoPagoHecho(){
   const el = document.createElement('div');
   el.setAttribute('role', 'status');
   el.style.cssText = 'position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;padding:12px 16px;background:var(--ink);color:#fff;font-size:14px;font-weight:600';
-  el.innerHTML = `<span style="flex:1">✅ ${escapeHtml(avisoPagoHecho)}</span><button type="button" aria-label="OK" style="background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:8px;min-width:44px;min-height:44px;cursor:pointer">OK</button>`;
+  el.innerHTML = `<span style="flex:1">${escapeHtml(avisoPagoHecho)}</span><button type="button" aria-label="OK" style="background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:8px;min-width:44px;min-height:44px;cursor:pointer">OK</button>`;
   el.querySelector('button').onclick = () => el.remove();
   document.body.insertBefore(el, document.body.firstChild);
   avisoPagoHecho = null;
@@ -3611,7 +3642,7 @@ function urlVolverALaCarta(){
   return location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
 }
 function botonVolverALaCarta(){
-  return `<a class="btn" style="margin-top:16px;text-decoration:none;display:inline-block" href="${escapeHtml(urlVolverALaCarta())}">${t('track.backToMenu')}</a>`;
+  return `<a class="btn" style="margin-top:16px;text-decoration:none" href="${escapeHtml(urlVolverALaCarta())}">${t('track.backToMenu')}</a>`;
 }
 
 function renderOrderTrackingView(){
@@ -3635,10 +3666,10 @@ function contactoParaCambiosHtml(){
   const email = b.email || '';
   if(!phone && !email) return '';
   return `
-    <div class="card" style="margin-top:12px;padding:12px 14px">
-      <div style="font-size:12.5px;font-weight:700;margin-bottom:4px">${t('track.contactTitle')}</div>
-      ${phone ? `<div style="font-size:13px"><a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">📞 ${escapeHtml(phone)}</a></div>` : ''}
-      ${email ? `<div style="font-size:13px;margin-top:2px"><a href="mailto:${escapeHtml(email)}" style="color:var(--ink);font-weight:600">✉️ ${escapeHtml(email)}</a></div>` : ''}
+    <div class="trk-block">
+      <div class="trk-label">${t('track.contactTitle')}</div>
+      ${phone ? `<a class="trk-link" href="tel:${escapeHtml(phone.replace(/\s+/g,''))}">${escapeHtml(phone)}<span>${t('track.call')}</span></a>` : ''}
+      ${email ? `<a class="trk-link" href="mailto:${escapeHtml(email)}">${escapeHtml(email)}<span>${t('track.write')}</span></a>` : ''}
     </div>`;
 }
 // Bloque "guarda este enlace" — el mismo mensaje y botón tanto si se acaba
@@ -3648,9 +3679,10 @@ function contactoParaCambiosHtml(){
 function guardaEnlaceHtml(token, esReserva){
   const url = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + (esReserva ? '&res=' : '&track=') + encodeURIComponent(token);
   return `
-    <div class="card" style="margin-top:12px;padding:12px 14px;border:2px dashed var(--border)">
-      <div style="font-size:12.5px;color:var(--muted)">${t('track.saveLinkHint')}</div>
-      <button class="btn" type="button" style="margin-top:8px;width:100%" onclick="shareTrackUrl('${escapeHtml(url).replace(/'/g,"\\'")}', ${!!esReserva}, this)">🔗 ${t('success.shareLink')}</button>
+    <div class="trk-block">
+      <div class="trk-label">${t('track.saveLinkTitle')}</div>
+      <p style="margin:0 0 10px;font-size:14px">${t(esReserva ? 'resManage.saveLinkHint' : 'track.saveLinkHint')}</p>
+      <button class="btn" type="button" onclick="shareTrackUrl('${escapeHtml(url).replace(/'/g,"\\'")}', ${!!esReserva}, this)">${t('success.shareLink')}</button>
     </div>`;
 }
 // El pedido se acaba de mandar (o se acaba de pagar): durante un rato su
@@ -3660,56 +3692,57 @@ let trackRecienEnviadoHasta = 0;
 function renderTrackStatus(data){
   const app = document.getElementById('app');
   if(!data && Date.now() < trackRecienEnviadoHasta) data = {status: 'pendiente'};
+  const aparte = (titulo, texto) => `
+    <div class="trk trk-alone">
+      <div class="trk-meta">${trackToken ? `${t('track.orderNumber')} <strong>${escapeHtml(shortCode(trackToken))}</strong>` : ''}</div>
+      <h2 class="trk-h">${titulo}</h2>
+      <p class="trk-desc">${texto}</p>
+      ${botonVolverALaCarta()}
+    </div>`;
   if(!data){
-    app.innerHTML = `
-      <div class="error-box">
-        <div class="icon">🔎</div>
-        <h2>${t('track.notFound.title')}</h2>
-        <p style="font-size:13px;color:var(--muted)">${t('track.notFound.msg')}</p>
-        ${botonVolverALaCarta()}
-      </div>`;
+    app.innerHTML = aparte(t('track.notFound.title'), t('track.notFound.msg'));
     return;
   }
   const status = data.status || 'pendiente';
   const codigo = shortCode(trackToken);
   if(status === 'rechazado'){
     const phone = (DB.business||{}).phone;
-    app.innerHTML = `
-      <div class="error-box">
-        <div class="icon">⚠️</div>
-        <h2>${t('track.rejected.title')}</h2>
-        <p style="font-size:11px;color:var(--muted);letter-spacing:.04em">${t('track.orderNumber')} ${codigo}</p>
-        <p style="font-size:13px;color:var(--muted)">${t('track.rejected.msg')}${phone ? ' ' + t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`) : ''}</p>
-        ${botonVolverALaCarta()}
-      </div>`;
+    app.innerHTML = aparte(t('track.rejected.title'), t('track.rejected.msg') + (phone ? ' ' + t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`) : '')) + contactoParaCambiosHtml();
     return;
   }
   const idx = Math.max(0, TRACK_STEPS.indexOf(status));
   const esDelivery = data.tipo === 'delivery';
+  const tipoTxt = data.tipo ? t(esDelivery ? 'track.type.delivery' : 'track.type.takeaway') : '';
+  // Lo que le importa al cliente: qué está pasando AHORA, dicho en una frase.
+  const k = (status === 'listo' || status === 'entregado') ? status + (esDelivery ? '.delivery' : '.takeaway') : status;
   const steps = [
-    {key:'pendiente', icon:'📥', label:t('track.step.pendiente')},
-    {key:'aceptado', icon:'✅', label:t('track.step.aceptado')},
-    {key:'preparando', icon:'👨‍🍳', label:t('track.step.preparando')},
-    {key:'listo', icon: esDelivery ? '🛵' : '🍽️', label: t(esDelivery ? 'track.step.listo.delivery' : 'track.step.listo.takeaway')},
-    {key:'entregado', icon:'🎉', label: t(esDelivery ? 'track.step.entregado.delivery' : 'track.step.entregado.takeaway')},
+    t('track.step.pendiente'), t('track.step.aceptado'), t('track.step.preparando'),
+    t(esDelivery ? 'track.step.listo.delivery' : 'track.step.listo.takeaway'),
+    t(esDelivery ? 'track.step.entregado.delivery' : 'track.step.entregado.takeaway'),
   ];
+  const clase = i => i < idx ? 'hecho' : (i === idx ? (idx === steps.length - 1 ? 'hecho ahora' : 'ahora') : '');
   app.innerHTML = `
-    <div class="card fade-in-play">
-      <h2>${t('track.title')}</h2>
-      <p style="font-size:11px;color:var(--muted);letter-spacing:.04em;margin-top:-6px">${t('track.orderNumber')} ${codigo}</p>
-      <div style="margin-top:14px">
-        ${steps.map((s,i) => `
-          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);${i<=idx?'':'opacity:.35'}">
-            <div style="font-size:22px;line-height:1">${s.icon}</div>
-            <div style="font-weight:${i===idx?'700':'500'};font-size:14px;flex:1">${s.label}</div>
-            ${i===idx ? `<div class="mono" style="font-size:10.5px;color:var(--olive);text-transform:uppercase;letter-spacing:.06em">${t('track.current')}</div>` : (i<idx ? `<div style="color:var(--olive)">✓</div>` : '')}
-          </div>
-        `).join('')}
+    <div class="trk">
+      <div class="trk-head">
+        <div class="trk-meta">
+          <span>${t('track.orderNumber')} <strong>${escapeHtml(codigo)}</strong></span>
+          ${tipoTxt ? `<span>${tipoTxt}</span>` : ''}
+        </div>
+        <h2 class="trk-h">${t('track.head.' + k)}</h2>
+        <p class="trk-desc">${t('track.desc.' + k)}</p>
+        <div class="trk-bar" aria-hidden="true">${steps.map((_, i) => `<span class="${i < idx ? 'hecho' : (i === idx ? 'ahora' : '')}"></span>`).join('')}</div>
       </div>
-      ${botonVolverALaCarta()}
+      <ol class="trk-steps">
+        ${steps.map((label, i) => `
+          <li class="trk-step ${clase(i)}">
+            <span class="trk-dot"></span><span>${label}</span>
+            ${i === idx ? `<span class="trk-now">${t('track.current')}</span>` : ''}
+          </li>`).join('')}
+      </ol>
     </div>
     ${contactoParaCambiosHtml()}
     ${guardaEnlaceHtml(trackToken, false)}
+    ${botonVolverALaCarta()}
   `;
 }
 
@@ -3736,52 +3769,55 @@ function renderReservationManageView(){
 function renderReservationStatus(data){
   lastResStatusData = data;
   const app = document.getElementById('app');
+  const aparte = (titulo, texto) => `
+    <div class="trk trk-alone">
+      <div class="trk-meta">${resToken ? `${t('resManage.number')} <strong>${escapeHtml(shortCode(resToken))}</strong>` : ''}</div>
+      <h2 class="trk-h">${titulo}</h2>
+      <p class="trk-desc">${texto}</p>
+      ${botonVolverALaCarta()}
+    </div>`;
   if(!data){
-    app.innerHTML = `
-      <div class="error-box">
-        <div class="icon">🔎</div>
-        <h2>${t('resManage.notFound.title')}</h2>
-        <p style="font-size:13px;color:var(--muted)">${t('resManage.notFound.msg')}</p>
-        ${botonVolverALaCarta()}
-      </div>`;
+    app.innerHTML = aparte(t('resManage.notFound.title'), t('resManage.notFound.msg'));
     return;
   }
   const phone = (DB.business||{}).phone;
   const phoneLink = phone ? `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>` : '';
   if(data.status === 'cancelada'){
-    app.innerHTML = `
-      <div class="card fade-in-play" style="text-align:center;padding:32px 18px">
-        <div style="font-size:40px">🚫</div>
-        <h2 style="margin-top:10px">${t('resManage.cancelled.title')}</h2>
-        <p style="font-size:13px;color:var(--muted)">${t('resManage.cancelled.msg')}</p>
-        ${botonVolverALaCarta()}
-      </div>`;
+    app.innerHTML = aparte(t('resManage.cancelled.title'), t('resManage.cancelled.msg'));
     return;
   }
   // 'completada' = el cliente ya llegó y está sentado. Antes esta ruta no
   // se distinguía de una reserva normal, así que el enlace seguía
   // ofreciendo Editar/Cancelar sobre una visita que ya ha pasado.
   if(data.status === 'completada'){
-    app.innerHTML = `
-      <div class="card fade-in-play" style="text-align:center;padding:32px 18px">
-        <div style="font-size:40px">✅</div>
-        <h2 style="margin-top:10px">${t('resManage.completed.title')}</h2>
-        <p style="font-size:13px;color:var(--muted)">${t('resManage.completed.msg')}</p>
-        ${botonVolverALaCarta()}
-      </div>`;
+    app.innerHTML = aparte(t('resManage.completed.title'), t('resManage.completed.msg'));
     return;
   }
-  const statusLabel = data.status === 'confirmada' ? t('resManage.status.confirmada') : t('resManage.status.pendiente');
-  const statusClass = data.status === 'confirmada' ? 'var(--olive)' : 'var(--muted)';
+  const confirmada = data.status === 'confirmada';
+  // La fecha como la dice una persona («sábado, 4 de octubre»), no «2026-10-04».
+  let fechaTxt = data.date || '';
+  try{
+    if(/^\d{4}-\d{2}-\d{2}$/.test(fechaTxt)){
+      const [y, m, d] = fechaTxt.split('-').map(Number);
+      const loc = currentLang === 'ca' ? 'ca-ES' : (currentLang === 'en' ? 'en-GB' : 'es-ES');
+      const f = new Date(y, m - 1, d).toLocaleDateString(loc, {weekday: 'long', day: 'numeric', month: 'long'});
+      fechaTxt = f.charAt(0).toUpperCase() + f.slice(1);
+    }
+  }catch(e){}
   app.innerHTML = `
-    <div class="card fade-in-play">
-      <h2>${t('resManage.title')}</h2>
-      <p style="font-size:11px;color:var(--muted);letter-spacing:.04em;margin-top:-6px">${t('track.orderNumber')} ${shortCode(resToken)}</p>
-      <div style="margin-top:6px;font-size:13px;font-weight:700;color:${statusClass}">${statusLabel}</div>
-      <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.date')}</span><strong>${escapeHtml(data.date||'')} · ${escapeHtml(data.time||'')}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.people')}</span><strong>${escapeHtml(data.people||'')}</strong></div>
+    <div class="trk">
+      <div class="trk-head">
+        <div class="trk-meta">
+          <span>${t('resManage.number')} <strong>${escapeHtml(shortCode(resToken))}</strong></span>
+          <span style="color:${confirmada ? 'var(--olive)' : 'var(--muted)'}">${confirmada ? t('resManage.status.confirmada') : t('resManage.status.pendiente')}</span>
+        </div>
+        <h2 class="trk-h">${t(confirmada ? 'resManage.head.confirmada' : 'resManage.head.pendiente')}</h2>
+        <p class="trk-desc">${t(confirmada ? 'resManage.desc.confirmada' : 'resManage.desc.pendiente')}</p>
       </div>
+      <div style="padding:6px 20px 18px">
+        <div class="trk-link" style="cursor:default">${escapeHtml(fechaTxt)}<span>${t('resManage.day')}</span></div>
+        <div class="trk-link" style="cursor:default">${escapeHtml(data.time||'')}<span>${t('resManage.hour')}</span></div>
+        <div class="trk-link" style="cursor:default">${escapeHtml(String(data.people||''))}<span>${t('resManage.people')}</span></div>
       ${resEditing ? `
         <div class="field-row" style="margin-top:16px">
           <div class="field">
@@ -3803,15 +3839,16 @@ function renderReservationStatus(data){
           <button class="btn btn-primary" id="res-edit-save-btn" onclick="submitReservationChange()" style="flex:1">${t('resManage.saveBtn')}</button>
         </div>
       ` : `
-        ${phoneLink ? `<p style="font-size:12.5px;color:var(--muted);margin-top:14px">${t('success.callToChange').replace('%s', phoneLink)}</p>` : ''}
+        ${phoneLink ? `<p style="font-size:13px;color:var(--muted);margin:14px 0 0">${t('success.callToChange').replace('%s', phoneLink)}</p>` : ''}
         <div style="display:flex;gap:8px;margin-top:16px">
           <button class="btn" id="res-edit-btn" onclick="toggleResEdit(true)" style="flex:1">${t('resManage.editBtn')}</button>
           <button class="btn" style="flex:1;color:var(--red);border-color:var(--red)" id="res-cancel-btn" onclick="cancelMyReservation()">${t('resManage.cancelBtn')}</button>
         </div>
       `}
-      ${resEditing ? '' : botonVolverALaCarta()}
+      </div>
     </div>
     ${resEditing ? '' : guardaEnlaceHtml(resToken, true)}
+    ${resEditing ? '' : botonVolverALaCarta()}
   `;
   if(resEditing){
     updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint');
