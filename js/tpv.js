@@ -917,6 +917,7 @@ function renderTpvToGo(tiposServicio){
               ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
             </div>
             <strong class="togo-order-client">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</strong>
+            ${o.clientRef && o.origenOnline ? `<div class="txt-xs" style="color:var(--muted);font-family:'IBM Plex Mono',monospace">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</div>` : ''}
             ${(o.clienteDireccion||o.clienteAddress) ? `<div class="togo-order-address"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</div>` : ''}
             <div class="togo-order-row">
               <span class="togo-order-price">${fmtMoney(orderTotal(o))}</span>
@@ -1128,6 +1129,7 @@ function renderTpvPendingOnline(){
             <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
             <span class="badge badge-amber">${t('badge.newF')}</span>
           </h3>
+          ${o.clientRef ? `<div class="txt-xs" style="color:var(--muted);font-family:'IBM Plex Mono',monospace;margin:-2px 0 4px">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</div>` : ''}
           ${(() => {
             const waitMin = o.createdAt ? minutesSince(o.createdAt) : 0;
             if(waitMin < 30) return '';
@@ -1350,6 +1352,7 @@ function rejectOnlineOrder(orderId){
     // Se avisa ANTES de mover a la papelera/borrar: una vez borrado ya no
     // queda order.clientRef al que asociar el aviso.
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
+    anularVentaPagoOnline(order);
     moveToTrash('order', order);
     logAudit('delete', t('audit.rejectedOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
@@ -1386,6 +1389,7 @@ function cancelAcceptedOnlineOrder(orderId){
     const clienteNombre = order.clienteNombre;
     const {telefono: clienteTelefono, email: clienteEmail} = contactoParaAvisoDePedido(order);
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
+    anularVentaPagoOnline(order);
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
@@ -2153,7 +2157,8 @@ function renderTableOrderModal(orderId){
   const titleText = table ? `${orderTableDisplayName(order, table)}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> ${t('label.reservationShort')}</span>` : '';
-  const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
+  const pagadoBadge = (order.clientRef && order.origenOnline ? ` <span class="badge" title="${escapeHtml(t('label.publicCodeHint'))}">Nº ${escapeHtml(codigoCortoPublico(order.clientRef))}</span>` : '') +
+    (order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '');
   const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
   const camareroLabel = camarero ? escapeHtml(camarero.name) : (order.openedByOwner ? escapeHtml(t('label.owner')) : t('label.assignWaiter'));
   const camareroBadge = DB.employees.length ? ` <span class="badge badge-pulsable" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camareroLabel}</span>` : '';
@@ -4545,6 +4550,52 @@ function updatePaymentChange(orderId){
 
 // opts.auto: cierre sin ventana de cobro (pedido ya pagado online al
 // entregarlo o con «Cerrar pedido»): sin cajón ni ticket, solo la venta.
+/* La venta de un pedido pagado ENTERO por internet se apunta en cuanto llega
+   el pago (1/10), no al cerrar el pedido: el dinero ya ha entrado, y si
+   nadie pulsaba «Cerrar pedido» la venta no aparecía nunca en Ventas (la
+   comisión de Stripe sí). El pedido sigue abierto para cocina y reparto; al
+   cerrarlo solo se descuenta el stock y se cierra, sin apuntar otra venta. */
+function apuntarVentaPagoOnline(order){
+  if(!order || !order.pagado || order.pagoInsuficiente || order.ventaApuntada) return false;
+  if(order.tipo !== 'takeaway' && order.tipo !== 'delivery') return false;
+  if(!Array.isArray(order.items) || !order.items.length) return false;
+  if((DB.sales || []).some(x => x && x.id === order.id)){ order.ventaApuntada = true; return false; }
+  const subtotal = orderTotal(order);
+  const descuentoPct = order.descuentoPct || 0;
+  const descuentoImporte = roundMoney(subtotal * descuentoPct / 100);
+  const propina = order.propina || 0;
+  const total = roundMoney(subtotal - descuentoImporte + propina);
+  const sale = {id: order.id, date: diaLocalDe(order.pagoFecha || new Date().toISOString()), createdAt: new Date().toISOString(),
+    total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: '', descuentoResponsableNombre: '', propina,
+    tableId: null, pax: null, tipo: order.tipo, express: false, clienteNombre: order.clienteNombre || '', clientId: order.clientId || null,
+    camareroId: null, metodoPago: 'Online', pagos: [{label: t('label.paidOnline'), amount: total, metodoPago: 'Online'}],
+    items: buildSaleItemsForOrder(order), pagoOnlineAnticipado: true};
+  applyDeliveryCommission(order, sale);
+  if(!Array.isArray(DB.sales)) DB.sales = [];
+  DB.sales.push(sale);
+  if(typeof enqueueVerifactuSubmission === 'function') enqueueVerifactuSubmission(sale);
+  if(order.clientId && typeof registerClientVisit === 'function') registerClientVisit(order.clientId);
+  order.ventaApuntada = true;
+  return true;
+}
+// Pedido pagado y rechazado/cancelado después: la venta NO se borra (lo
+// registrado no se toca), se anula — y hay que devolver el dinero en Stripe.
+function anularVentaPagoOnline(order){
+  if(!order || !order.ventaApuntada) return;
+  const sale = (DB.sales || []).find(x => x && x.id === order.id);
+  if(!sale || sale.status === 'anulada') return;
+  sale.status = 'anulada';
+  sale.anuladaAt = new Date().toISOString();
+  sale.anuladaMotivo = t('msg.saleVoidedOnlineRefund');
+  if(sale.clientId){ const c = (DB.clients || []).find(x => x.id === sale.clientId); if(c) c.points = Math.max(0, (c.points || 0) - 1); }
+  showToast(t('msg.saleVoidedOnlineRefund'));
+}
+// «AAAA-MM-DD» del día LOCAL de una fecha ISO (que puede venir en UTC).
+function diaLocalDe(iso){
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return todayStr();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
 function finalizeCharge(orderId, opts){
   const auto = !!(opts && opts.auto);
   const order = DB.tpvOrders.find(o => o.id === orderId);
@@ -4556,6 +4607,25 @@ function finalizeCharge(orderId, opts){
   // si en el futuro se añade algo asíncrono antes de marcar 'pagada'.
   if(order.status === 'pagada') return;
   const {total: subtotal, descuentoPct, descuentoImporte, propina: propinaCaja, finalTotal: total, amountPaidOnline, amountDue} = computeFinalTotal(order);
+  // La venta ya se apuntó al llegar el pago (apuntarVentaPagoOnline): cerrar
+  // es solo cerrar. Si al recogerlo se añadió algo y queda dinero por cobrar,
+  // se rehace la venta entera con lo nuevo (mismo id: no se duplica).
+  if(order.ventaApuntada){
+    const yaApuntada = (DB.sales || []).find(x => x && x.id === order.id);
+    if(yaApuntada && amountDue <= 0.001){
+      discountStockForOrder(order);
+      order.status = 'pagada';
+      order.closedAt = new Date().toISOString();
+      saveDB();
+      if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
+      renderTPV();
+      if(auto) showToast(t('msg.orderClosedPaidOnline'));
+      else openTicketDeliveryModal(yaApuntada.id);
+      return yaApuntada;
+    }
+    DB.sales = (DB.sales || []).filter(x => !(x && x.id === order.id));
+    order.ventaApuntada = false;
+  }
   // La propina que se registra en la venta es la de caja + la ya pagada
   // online (order.propinaPagadaOnline): las dos son propina real cobrada,
   // total (que sí incluye ambas, ver computeFinalTotal) tiene que cuadrar
@@ -4620,7 +4690,11 @@ function finalizeCharge(orderId, opts){
   // arqueo de HOY — dejar la venta entera fechada en el pasado hacía que
   // ese efectivo cobrado hoy no apareciera en ningún cierre de caja, ni
   // hoy (el arqueo de hoy solo mira sale.date===hoy) ni nunca.
-  const saleDate = (order.pagado && order.pagoFecha && amountDue <= 0.001) ? order.pagoFecha.slice(0,10) : todayStr();
+  // ⚠️ El día en hora de AQUÍ, no recortando la fecha ISO: pagoFecha viene
+  // en UTC (la pone el Worker), y un pago a la 01:00 de Madrid es la víspera
+  // en UTC — la venta caía en el día (y el mes) anterior y no aparecía en
+  // Ventas, mientras la comisión sí (1/10).
+  const saleDate = (order.pagado && order.pagoFecha && amountDue <= 0.001) ? diaLocalDe(order.pagoFecha) : todayStr();
   const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
@@ -5002,7 +5076,7 @@ function finalizeSplitOrder(orderId){
   // venta se fecha el día real del cobro (pagoFecha), no hoy. Si sí se ha
   // cobrado algo ahora en caja (lo normal al dividir cuenta), la fecha es
   // hoy, para que ese dinero nuevo cuadre en el arqueo de hoy.
-  const saleDate = (order.pagado && order.pagoFecha && collected <= 0.001) ? order.pagoFecha.slice(0,10) : todayStr();
+  const saleDate = (order.pagado && order.pagoFecha && collected <= 0.001) ? diaLocalDe(order.pagoFecha) : todayStr();
   // Mismo motivo que en finalizeCharge: id determinista a partir del
   // pedido, no aleatorio, para que dos dispositivos cobrando la misma
   // mesa dividida casi a la vez no dupliquen la venta al fusionarse.

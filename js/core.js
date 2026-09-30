@@ -1852,6 +1852,14 @@ function canonicalStringify(value){
    ============================================================ */
 const LICENSE_LS = slotLicenseKey(ACTIVE_SLOT);
 
+// El número que ve el cliente en su seguimiento («Nº PCERVK»): el mismo
+// cálculo que shortCode() de la web de reservas. Antes el cliente lo tenía y
+// el negocio no lo veía en ningún sitio: si llamaba diciendo «soy el
+// PCERVK», nadie sabía qué pedido era (1/10).
+function codigoCortoPublico(token){
+  if(!token) return '';
+  return ggLicHash(String(token) + '·gastrogoan·shortcode·v1').toString(36).toUpperCase().padStart(6, '0').slice(0, 6);
+}
 function ggLicHash(str){
   let h = 0x811c9dc5 >>> 0;
   for(let i = 0; i < str.length; i++){
@@ -6918,6 +6926,7 @@ function aplicarPagoConfirmado(req){
     }else{
       order.pagado = true;
       order.pagoInsuficiente = false;
+      if(typeof apuntarVentaPagoOnline === 'function') apuntarVentaPagoOnline(order);
       if(order.status === 'pendiente-online' && DB.business.pedidosOnlineActivos !== false && !order.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
         acceptOnlineOrder(order.id, true);
       }
@@ -7020,6 +7029,12 @@ function initPublicRequestsListener(){
     publicRequestsListenerAttached = true;
     // Cobros con tarjeta que quedaron a medias antes de cerrar la app.
     if((DB.pagosTarjetaEsperados || []).length) programarComprobacionPagos();
+    // Pedidos pagados antes de que la venta se apuntara al pagar (1/10).
+    if(typeof apuntarVentaPagoOnline === 'function'){
+      let apuntadas = 0;
+      (DB.tpvOrders || []).forEach(o => { if(o && o.status !== 'pagada' && apuntarVentaPagoOnline(o)) apuntadas++; });
+      if(apuntadas) saveDB();
+    }
     // Una sola vez por arranque, en paralelo, sin bloquear nada: es una
     // lectura de "última hora" para un aviso, no algo de lo que dependa el
     // oyente de reservas/pedidos que sigue justo debajo.
@@ -7076,7 +7091,7 @@ function initPublicRequestsListener(){
         // navegador del cliente): aquí se revalida contra la lista de mesas
         // que SÍ cumplen el ajuste estricto, igual que si se buscara de cero.
         const candidatas = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
-          .filter(tb => (tb.plazas || 0) >= (req.people || 1));
+          .filter(tb => mesaEncajaGrupo(tb, req.people || 1));
         let confirmedTableId = null;
         if(req.tableId != null && candidatas.some(tb => tb.id === req.tableId)){
           confirmedTableId = req.tableId;
@@ -7096,21 +7111,20 @@ function initPublicRequestsListener(){
             if(yaReservado + (req.people || 0) > aforo) confirmedTableId = null;
           }
         }
-        let mesaSobredimensionada = false;
-        if(confirmedTableId != null){
-          const tabla = DB.tables.find(tb => tb.id === confirmedTableId);
-          if(tabla && (tabla.plazas || 0) - (req.people || 1) > AUTO_CONFIRM_MARGIN) mesaSobredimensionada = true;
-        }
-        // El negocio puede exigir que a partir de X comensales la confirme
-        // siempre el personal a mano (grupos grandes suelen necesitar
-        // organizarse aparte, aunque técnicamente quepan en una mesa).
+        // ⚠️ Decisión del dueño (1/10): ninguna reserva debería esperar a que
+        // alguien la confirme. La web solo ofrece horas con una mesa que
+        // encaje (mesaEncajaGrupo) y el cliente elige cuál; aquí se revalida
+        // con la MISMA regla y se confirma. Los grupos de X o más no pueden
+        // reservar por la web (se les pide llamar): si alguno llega igual
+        // (web vieja en caché, consola), queda pendiente.
+        void AUTO_CONFIRM_MARGIN;
         const confirmManualDesde = parseInt(DB.business.reservaConfirmManualDesde) || 0;
         // La señal la calcula el negocio, no el navegador (que podía mandar
         // 0,01 € o saltársela). Si el negocio la exige y cobra con tarjeta
         // y la reserva llega sin ella, no se confirma sola.
         const senalPropia = senalReservaPropia(req.people);
         const senalSaltada = senalPropia > 0 && !req.depositRequired && !!DB.business.pagoOnlineActivo;
-        const exigeConfirmacionManual = mesaSobredimensionada || senalSaltada ||
+        const exigeConfirmacionManual = senalSaltada ||
           (confirmManualDesde > 0 && (req.people || 0) >= confirmManualDesde);
         const newReservation = {
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
@@ -7172,7 +7186,7 @@ function initPublicRequestsListener(){
           // nuevo número de comensales, ni siquiera la que ya tenía asignada
           // (si el cliente sube de 2 a 6 personas manteniendo la mesa, esa
           // mesa de 2 ya no vale y hay que rebuscar una que sí quepa).
-          const candidatas = available.filter(tb => (tb.plazas || 0) >= newPeople);
+          const candidatas = available.filter(tb => mesaEncajaGrupo(tb, newPeople));
           let matchedTableId = candidatas.some(tb => tb.id === target.tableId) ? target.tableId : null;
           if(matchedTableId == null){
             const autoTable = candidatas.slice().sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
@@ -7186,14 +7200,10 @@ function initPublicRequestsListener(){
               if(yaReservado + newPeople > aforo) matchedTableId = null;
             }
           }
-          let mesaSobredimensionada = false;
-          if(matchedTableId != null){
-            const tabla = DB.tables.find(tb => tb.id === matchedTableId);
-            if(tabla && (tabla.plazas || 0) - newPeople > AUTO_CONFIRM_MARGIN) mesaSobredimensionada = true;
-          }
+          // Igual que al crearla (1/10): si cabe en una mesa libre, confirmada.
+          void AUTO_CONFIRM_MARGIN;
           const confirmManualDesde = parseInt(DB.business.reservaConfirmManualDesde) || 0;
-          const exigeConfirmacionManual = mesaSobredimensionada ||
-            (confirmManualDesde > 0 && newPeople >= confirmManualDesde);
+          const exigeConfirmacionManual = (confirmManualDesde > 0 && newPeople >= confirmManualDesde);
           target.date = newDate; target.time = newTime; target.people = newPeople;
           target.tableId = matchedTableId;
           // Igual que al crear la reserva nueva (más arriba en esta misma
@@ -7583,12 +7593,24 @@ function getActivePromosForSync(){
    privado. Con una lista negra, cualquier cosa que se añada mañana a
    `DB.business` se publicaría sola sin que nadie se diera cuenta — que es
    exactamente cómo llegaron aquí las cinco de arriba. */
+// Una mesa sirve para un grupo si le caben TODOS y no le sobran más de dos
+// sillas (decisión del dueño, 1/10): 3 personas → mesas de 3 a 5 plazas.
+// Así una mesa de 8 no se la lleva una pareja un sábado. La web pública
+// aplica exactamente la misma regla (reservagastrogoan.html).
+const MESA_MARGEN_PLAZAS = 2;
+function mesaEncajaGrupo(tb, people){
+  const plazas = parseInt(tb && tb.plazas) || 0;
+  const n = parseInt(people) || 1;
+  return plazas >= n && plazas <= n + MESA_MARGEN_PLAZAS;
+}
 const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   'name', 'address', 'phone', 'email', 'description', 'logo', 'brandColor',
   'tipo', 'anyo', 'web', 'ig', 'fb', 'gmaps', 'tiktok',
   'horario', 'aforo', 'mesasInterior', 'mesasTerraza',
   'cartaAuto', 'tiposServicio',
   'requireDeposit', 'depositAmount', 'depositType', 'depositMinPeople', 'depositInstructions',
+  // Grupos: a partir de X personas la web no deja reservar y pide llamar.
+  'reservaConfirmManualDesde',
   'leadTimeMin', 'leadTimeMinReservas', 'leadTimeMinPedidos',
   'pedidosOnlineActivos',
   // ⚠️ Sin esto, la web pública nunca veía la zona de reparto (cpList/

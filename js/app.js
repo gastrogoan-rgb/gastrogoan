@@ -2819,7 +2819,9 @@ function renderReservasSearch(){
     const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
     const name = stripAccents(((client?client.name:'') || r.clientName || '').toLowerCase());
     const phone = ((client && client.phone) || r.clientPhone || '').replace(/\D/g,'');
-    return (name && name.includes(normQuery)) || (phone && query.replace(/\D/g,'') && phone.includes(query.replace(/\D/g,'')));
+    // También por el número que ve el cliente («PCERVK»): es lo que dice al llamar.
+    const codigo = r.publicToken ? codigoCortoPublico(r.publicToken).toLowerCase() : '';
+    return (name && name.includes(normQuery)) || (phone && query.replace(/\D/g,'') && phone.includes(query.replace(/\D/g,''))) || (codigo && normQuery.replace(/^n[º°o]?\s*/,'').trim() === codigo);
   }).sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
 
   resultsBox.style.display = '';
@@ -3027,6 +3029,7 @@ function renderReservasDia(){
                 <i class="ti ti-chevron-down reserva-card-chevron"></i>
               </div>
               <div class="reserva-card-detail">
+                ${r.publicToken ? `<div class="reserva-card-detail-row"><span>${t('label.publicCode')}</span><strong style="font-family:'IBM Plex Mono',monospace">${escapeHtml(codigoCortoPublico(r.publicToken))}</strong></div>` : ''}
                 <div class="reserva-card-detail-row"><span>${t('th.table')}</span><strong>${table ? escapeHtml(table.name) : `<span class="badge badge-gray">${t('label.notAssigned')}</span>`}</strong></div>
                 <div class="reserva-card-detail-row"><span>${t('th.notes')}</span><strong>${escapeHtml(r.notes||'—')}</strong></div>
                 <div class="reserva-card-detail-row"><span>${t('th.arrival')}</span>

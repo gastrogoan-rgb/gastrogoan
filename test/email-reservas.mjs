@@ -429,14 +429,18 @@ caso('El cliente puede guardarse/enviarse el enlace de seguimiento sin depender 
 caso('Una mesa nunca es más pequeña que el grupo que reserva (se quitó el margen por abajo)', () => {
   assert.ok(!/plazas \|\| 0\) \+ RESERVATION_TABLE_MARGIN >=/.test(core), 'js/core.js todavía deja emparejar una mesa más pequeña que el grupo (margen por abajo)');
   assert.ok(!/tb\.plazas \+ RESERVATION_TABLE_MARGIN >= people/.test(publica), 'reservagastrogoan.html todavía deja emparejar una mesa más pequeña que el grupo (margen por abajo)');
-  assert.ok(/tb\.plazas && tb\.plazas >= people/.test(publica), 'getBestFitTable ya no exige que la mesa sea igual o más grande que el grupo');
+  assert.ok(/plazas >= people && plazas <= people \+ MESA_MARGEN_PLAZAS/.test(publica), 'la web ya no exige mesa de N a N+2 plazas');
+  assert.ok(/plazas >= n && plazas <= n \+ MESA_MARGEN_PLAZAS/.test(core), 'la app ya no exige mesa de N a N+2 plazas');
+  assert.ok(publica.includes('function motivoSinReservaOnline') && publica.includes('avisoGrupoHtml'), 'falta el aviso de grupo (llamar o escribir) en la web');
   const apariciones = (core.match(/const AUTO_CONFIRM_MARGIN = 2;/g) || []).length;
   assert.equal(apariciones, 2, 'el margen superior (mesa demasiado grande para autoconfirmar sola) debe estar en los dos sitios: crear reserva y auto-editarla');
 });
 
-caso('Una mesa muy sobredimensionada no autoconfirma la reserva sola (queda pendiente para el personal)', () => {
-  const m1 = core.match(/if\(tabla && \(tabla\.plazas \|\| 0\) - \(req\.people \|\| 1\) > AUTO_CONFIRM_MARGIN\) mesaSobredimensionada = true;/);
-  assert.ok(m1, 'crear una reserva nueva no comprueba si la mesa asignada es demasiado grande para autoconfirmarse sola');
+// Cambió a propósito el 1/10 (decisión del dueño): si el grupo cabe en una
+// mesa libre, se confirma solo aunque la mesa sea más grande. Antes 3
+// personas en una mesa de 6 quedaban pendientes, igual que 25 sin mesa.
+caso('Una reserva que cabe en una mesa libre se confirma sola, aunque la mesa sea más grande', () => {
+  assert.ok(!/mesaSobredimensionada = true/.test(core), 'vuelve a dejar pendiente una reserva por tener la mesa «demasiado grande»');
   assert.ok(core.includes('!exigeConfirmacionManual) ? \'confirmada\' : \'pendiente\''), 'el estado de la reserva no tiene en cuenta si hace falta confirmación manual');
 });
 
