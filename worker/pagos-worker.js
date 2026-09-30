@@ -10,7 +10,8 @@
  *  - STRIPE_SECRET_KEY      clave secreta de la cuenta de Stripe de GastroGoan
  *  - STRIPE_WEBHOOK_SECRET  secreto de firma del webhook (eventos de cuentas conectadas)
  *
- * Modelo (30/09): Stripe Connect con cuentas ESTÁNDAR y cobros directos. Cada
+ * Modelo (30/09): Stripe Connect (Accounts v2, panel completo, comisiones y
+ * pérdidas a cargo del restaurante) con cobros directos. Cada
  * restaurante tiene SU cuenta de Stripe; el dinero va directo a ella y Stripe
  * le cobra la comisión a él. GastroGoan no toca el dinero ni paga nada. Aquí
  * solo se guarda qué cuenta de Stripe es de qué negocio
@@ -28,6 +29,12 @@
  */
 
 const STRIPE_API = 'https://api.stripe.com/v1';
+// Las cuentas de los restaurantes se crean con Accounts v2: Stripe ya no deja
+// crear cuentas con la API v1 en integraciones nuevas («Stripe no longer
+// recommends Accounts v1…», 30/09), y en esta cuenta no se puede reactivar.
+// Los cobros (Checkout) y los avisos siguen en v1, que es lo normal.
+const STRIPE_API_V2 = 'https://api.stripe.com/v2';
+const STRIPE_VERSION_V2 = '2026-06-24.preview';
 // A dónde puede volver el navegador después de Stripe. Una lista cerrada:
 // si no, el Worker serviría para mandar a cualquiera a cualquier web.
 const ORIGENES_APP = ['https://app.gastrogoan.com'];
@@ -132,6 +139,18 @@ async function stripe(env, metodo, ruta, datos, cuenta){
   return j;
 }
 
+// v2 va en JSON, con su versión en la cabecera.
+async function stripeV2(env, metodo, ruta, datos){
+  const headers = { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY, 'Stripe-Version': STRIPE_VERSION_V2 };
+  const opts = { method: metodo, headers };
+  if(datos){ headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(datos); }
+  const res = await fetch(STRIPE_API_V2 + ruta, opts);
+  const j = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error((j.error && j.error.message) || ('Stripe ' + res.status));
+  return j;
+}
+const leerCuenta = (env, id) => stripeV2(env, 'GET', `/core/accounts/${id}?include=configuration.merchant&include=requirements`);
+
 /* ===================== ¿Este publicId es de este negocio? =====================
    Un publicId sorteado no se puede deducir del tenantId, así que se comprueba
    que los dos apuntan a la MISMA nube: tenantLookup/{tenantId} (lo publica la
@@ -156,13 +175,17 @@ async function negocioDesdePeticion(env, tenantId, publicId){
   return {publicId: v.publicId};
 }
 // Lo que se enseña de una cuenta de Stripe: si ya cobra y a nombre de quién,
-// para que el dueño vea que es la SUYA (nada más).
+// para que el dueño vea que es la SUYA (nada más). Cobra = la capacidad
+// «card_payments» de su configuración de comercio está activa.
+function cuentaCobra(acc){
+  const c = acc && acc.configuration && acc.configuration.merchant && acc.configuration.merchant.capabilities;
+  return !!(c && c.card_payments && c.card_payments.status === 'active');
+}
 function resumenCuenta(acc){
   return {
-    cobra: !!acc.charges_enabled,
-    datosCompletos: !!acc.details_submitted,
-    nombre: (acc.settings && acc.settings.dashboard && acc.settings.dashboard.display_name) || (acc.business_profile && acc.business_profile.name) || '',
-    email: acc.email || ''
+    cobra: cuentaCobra(acc),
+    nombre: acc.display_name || (acc.identity && acc.identity.business_details && acc.identity.business_details.registered_name) || '',
+    email: acc.contact_email || ''
   };
 }
 
@@ -176,25 +199,30 @@ async function handleConectar(req, env){
 
   let cfg = await fbGet(env, rutaStripe(n.publicId));
   if(cfg && cfg.accountId){
-    const acc = await stripe(env, 'GET', `/accounts/${cfg.accountId}`);
+    const acc = await leerCuenta(env, cfg.accountId);
     // Ya cobra: no se abre ningún formulario de alta. Con el tenantId —que
     // está en cualquier tablet— no se puede tocar una cuenta en marcha.
-    if(acc.charges_enabled){
+    if(cuentaCobra(acc)){
       await fbPatch(env, rutaStripe(n.publicId), { disabled: false, activo: true });
       return json({ ok: true, yaConectado: true, cuenta: resumenCuenta(acc) });
     }
   }else{
-    // Cuenta ESTÁNDAR: es del restaurante, con su panel completo de Stripe.
-    const acc = await stripe(env, 'POST', '/accounts', {
-      type: 'standard', country: 'ES',
+    // Lo que antes era una cuenta «estándar»: del restaurante, con su panel
+    // completo de Stripe, y Stripe le cobra las comisiones y responde de las
+    // pérdidas a él — GastroGoan no queda de avalista de nadie.
+    const acc = await stripeV2(env, 'POST', '/core/accounts', {
+      dashboard: 'full',
+      identity: { country: 'es' },
+      configuration: { merchant: { capabilities: { card_payments: { requested: true } } } },
+      defaults: { currency: 'eur', locales: ['es-ES'], responsibilities: { fees_collector: 'stripe', losses_collector: 'stripe' } },
       metadata: { publicId: n.publicId, tenantId: body.tenantId }
     });
     cfg = { accountId: acc.id, createdAt: new Date().toISOString(), activo: false };
     await fbPut(env, rutaStripe(n.publicId), cfg);
   }
-  const link = await stripe(env, 'POST', '/account_links', {
-    account: cfg.accountId, type: 'account_onboarding',
-    refresh_url: body.volver, return_url: body.volver
+  const link = await stripeV2(env, 'POST', '/core/account_links', {
+    account: cfg.accountId,
+    use_case: { type: 'account_onboarding', account_onboarding: { configurations: ['merchant'], return_url: body.volver, refresh_url: body.volver } }
   });
   await fbPatch(env, rutaStripe(n.publicId), { disabled: false });
   return json({ ok: true, url: link.url });
@@ -210,7 +238,7 @@ async function handleEstado(req, env, url){
     if(n.error) return n.error;
     const cfg = await fbGet(env, rutaStripe(n.publicId));
     if(!cfg || !cfg.accountId) return json({ conectado: false, publicId: n.publicId });
-    const acc = await stripe(env, 'GET', `/accounts/${cfg.accountId}`);
+    const acc = await leerCuenta(env, cfg.accountId);
     const r = resumenCuenta(acc);
     const activo = r.cobra && !cfg.disabled;
     if(activo !== !!cfg.activo) await fbPatch(env, rutaStripe(n.publicId), { activo });

@@ -12,7 +12,10 @@ punta a punta en modo pruebas.
 
 ## Cómo funciona
 
-- **Stripe Connect, cuentas estándar, cobro directo.** Cada restaurante tiene
+- **Stripe Connect con Accounts v2** (panel completo del restaurante, comisiones
+  y pérdidas a su cargo, lo que antes eran cuentas "estándar"), **cobro directo**.
+  Las cuentas se crean con la API v2: Stripe ya no deja crearlas con la v1 en
+  integraciones nuevas, y en nuestra cuenta no se puede reactivar. Cada restaurante tiene
   SU cuenta de Stripe (la crea él en 10 minutos con el botón "Conectar con
   Stripe" de Mi Negocio). El dinero va directo a ella y Stripe le cobra la
   comisión a él. A GastroGoan no le cuesta nada ni pasa ningún euro por aquí.

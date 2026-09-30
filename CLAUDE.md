@@ -415,7 +415,9 @@ el banco cada TPV, con el comercio de pruebas genérico no llegaba nunca, y hay
 un problema conocido entre los avisos de Redsys y Cloudflare. Decisión del
 dueño: solo Stripe. No volver a replantearlo sin un motivo nuevo.
 
-- **Stripe Connect, cuentas estándar, cobro directo**: cada restaurante
+- **Stripe Connect (Accounts v2, panel completo, comisiones a su cargo), cobro
+  directo**. ⚠️ Las cuentas se crean con la API **v2** (`/v2/core/accounts`):
+  Stripe rechaza la v1 en integraciones nuevas y no se puede reactivar. Cada restaurante
   conecta SU cuenta («Conectar con Stripe», Mi Negocio); el dinero es suyo y
   la comisión la paga él. A GastroGoan no le cuesta nada.
 - El Worker (`worker/pagos-worker.js`, ver su README) **se publica pegándolo a
