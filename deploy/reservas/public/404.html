@@ -77,7 +77,10 @@
   }
   #lang-switcher button:hover{border-color:var(--olive-l);color:#fff;}
   #lang-switcher button.active{background:var(--olive);color:#fff;border-color:var(--olive);}
-  .wrap{max-width:560px;margin:0 auto;padding:16px;}
+  /* Aire abajo (1/10): el último botón («Volver a la carta») quedaba a 16 px
+     del borde y en un móvil real lo tapaban la barra del navegador o la de
+     gestos del sistema — parecía que no se podía bajar hasta él. */
+  .wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(96px + env(safe-area-inset-bottom, 0px));}
   .card{
     background:var(--surface);border:1px solid var(--border);border-radius:0;
     padding:18px;margin-bottom:14px;
