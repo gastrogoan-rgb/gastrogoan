@@ -368,7 +368,7 @@ const I18N = {
   es: {
     'tab.mesa':'📱 Pedir en mesa','tab.mesa.qr':'📱 Tu pedido','tab.reserva':'🍽️ Reservar mesa','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Reservar mesa','nombre':'Nombre *','telefono':'Teléfono *','fecha':'Fecha *','hora':'Hora *','personas':'Número de personas *',
-    'lookup.link':'¿Ya reservaste? Accede a tu reserva','lookup.title':'Accede a tu reserva','lookup.desc':'Escribe los mismos datos con los que reservaste. Los tres tienen que coincidir exactamente.',
+    'reserva.editLaterHint':'Después podrás cambiarla o cancelarla aquí mismo, en','lookup.link':'¿Ya reservaste? Accede a tu reserva','lookup.title':'Accede a tu reserva','lookup.desc':'Escribe los mismos datos con los que reservaste. Los tres tienen que coincidir exactamente.',
     'lookup.submit':'Buscar','lookup.needAll':'Rellena los tres datos.','lookup.notFound':'No encontramos ninguna reserva con esos datos. Revisa que estén escritos igual que al reservar, o llama al restaurante.',
     'cal.dia':'Día','cal.semana':'Semana','cal.mes':'Mes','cal.cerrado':'Cerrado este día','cal.sinHuecos':'No quedan horas disponibles hoy',
     'cal.leyendaLibre':'Hay sitio','cal.leyendaLleno':'Completo',
@@ -453,7 +453,7 @@ const I18N = {
   en: {
     'tab.mesa':'📱 Order at table','tab.mesa.qr':'📱 Your order','tab.reserva':'🍽️ Book a table','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Book a table','nombre':'Name *','telefono':'Phone *','fecha':'Date *','hora':'Time *','personas':'Number of people *',
-    'lookup.link':'Already booked? Access your reservation','lookup.title':'Access your reservation','lookup.desc':'Enter the same details you used to book. All three must match exactly.',
+    'reserva.editLaterHint':'You can change or cancel it later right here, in','lookup.link':'Already booked? Access your reservation','lookup.title':'Access your reservation','lookup.desc':'Enter the same details you used to book. All three must match exactly.',
     'lookup.submit':'Search','lookup.needAll':'Fill in all three fields.','lookup.notFound':'We couldn\'t find any reservation with those details. Check they match what you used to book, or call the restaurant.',
     'cal.dia':'Day','cal.semana':'Week','cal.mes':'Month','cal.cerrado':'Closed this day','cal.sinHuecos':'No times left today',
     'cal.leyendaLibre':'Available','cal.leyendaLleno':'Full',
@@ -538,7 +538,7 @@ const I18N = {
   ca: {
     'tab.mesa':'📱 Demanar a taula','tab.mesa.qr':'📱 La teva comanda','tab.reserva':'🍽️ Reservar taula','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Reservar taula','nombre':'Nom *','telefono':'Telèfon *','fecha':'Data *','hora':'Hora *','personas':'Nombre de persones *',
-    'lookup.link':'Ja vas reservar? Accedeix a la teva reserva','lookup.title':'Accedeix a la teva reserva','lookup.desc':'Escriu les mateixes dades amb què vas reservar. Els tres han de coincidir exactament.',
+    'reserva.editLaterHint':'Després podràs canviar-la o cancel·lar-la aquí mateix, a','lookup.link':'Ja vas reservar? Accedeix a la teva reserva','lookup.title':'Accedeix a la teva reserva','lookup.desc':'Escriu les mateixes dades amb què vas reservar. Els tres han de coincidir exactament.',
     'lookup.submit':'Cercar','lookup.needAll':'Omple les tres dades.','lookup.notFound':'No hem trobat cap reserva amb aquestes dades. Revisa que estiguin escrites igual que al reservar, o truca al restaurant.',
     'cal.dia':'Dia','cal.semana':'Setmana','cal.mes':'Mes','cal.cerrado':'Tancat aquest dia','cal.sinHuecos':'No queden hores disponibles avui',
     'cal.leyendaLibre':'Hi ha lloc','cal.leyendaLleno':'Complet',
@@ -2193,6 +2193,7 @@ function renderReservaForm(){
         <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
       </label>
       <button class="btn btn-primary" id="r-submit" onclick="submitReserva()"></button>
+      <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">${t('reserva.editLaterHint')}<br><a href="javascript:void(0)" onclick="showReservaLookup()" style="display:inline-flex;align-items:center;min-height:44px;color:var(--olive);font-weight:600">${t('lookup.link')}</a></p>
     </div>
   `;
   calView = 'dia';
