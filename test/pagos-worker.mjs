@@ -42,6 +42,7 @@ globalThis.fetch = async (url, opts = {}) => {
     const acc = u.pathname.match(/^\/v2\/core\/accounts\/(acct_\w+)$/);
     if(acc) return new Response(JSON.stringify(cuentas[acc[1]]));
     if(u.pathname === '/v2/core/account_links') return new Response(JSON.stringify({url: 'https://connect.stripe.com/setup/' + cuerpo.account}));
+    if(u.pathname.startsWith('/v1/payment_intents/')){ assert.ok(opts.headers['Stripe-Account'], 'la comisión se lee fuera de la cuenta del restaurante'); return new Response(JSON.stringify({id: 'pi_1', latest_charge: {balance_transaction: {fee: 55}}})); }
     if(u.pathname === '/v1/checkout/sessions'){ const s = {id: 'cs_' + sesiones.length, url: 'https://checkout.stripe.com/c/pay/cs_' + sesiones.length}; sesiones.push({s, cuerpo, cuenta: opts.headers['Stripe-Account']}); return new Response(JSON.stringify(s)); }
     throw new Error('Stripe: ruta no simulada ' + u.pathname);
   }
@@ -122,7 +123,7 @@ await caso('Pagar: el cobro se crea en la cuenta DEL RESTAURANTE, en céntimos, 
 
 await caso('El aviso de pago solo vale con la firma de Stripe, de la cuenta correcta, y no se duplica', async () => {
   const evento = (cuenta, orderRef = 'REFabc12345') => JSON.stringify({type: 'checkout.session.completed', account: cuenta,
-    data: {object: {id: 'cs_0', payment_status: 'paid', amount_total: 1990, metadata: {publicId: derivado, orderRef}}}});
+    data: {object: {id: 'cs_0', payment_status: 'paid', amount_total: 1990, payment_intent: 'pi_1', metadata: {publicId: derivado, orderRef}}}});
   let cuerpo = evento('acct_1');
   let r = await llamar('POST', '/stripe/webhook', cuerpo, {'stripe-signature': firmar(cuerpo, 'whsec_OTRO')});
   assert.equal(r.status, 400);
@@ -136,6 +137,7 @@ await caso('El aviso de pago solo vale con la firma de Stripe, de la cuenta corr
   assert.equal(r.status, 200);
   const pago = leer(`gastrogoan/pagos/${derivado}/REFabc12345`);
   assert.ok(pago && pago.amount === 19.9, 'el pago no está donde lo pregunta la app');
+  assert.equal(pago.comision, 0.55, 'no se apunta la comisión real de Stripe');
   await llamar('POST', '/stripe/webhook', cuerpo, {'stripe-signature': firmar(cuerpo)});
   assert.equal(Object.keys(leer(`gastrogoan/pagos/${derivado}`)).length, 1, 'Stripe reintenta y se duplica');
   return 'firma falsa, vieja o de otra cuenta: no · buena: en /pagos, una vez';

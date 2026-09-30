@@ -6846,7 +6846,7 @@ async function comprobarPagosTarjeta(){
     // Puede que otra tablet ya lo haya aplicado mientras se preguntaba.
     const sigue = (DB.pagosTarjetaEsperados || []).some(x => x && x.id === p.id);
     if(pago && pago.amount != null && sigue){
-      aplicarPagoConfirmado({orderRef: p.ref, amount: pago.amount, createdAt: pago.createdAt || new Date().toISOString()});
+      aplicarPagoConfirmado({orderRef: p.ref, amount: pago.amount, comision: pago.comision, createdAt: pago.createdAt || new Date().toISOString()});
       cambios = true;
     }else if(!pago && Date.now() - new Date(p.desde).getTime() > PAGOS_TARJETA_CADUCAN_MS){
       // El banco confirma en segundos: a las 48 h es un pago abandonado.
@@ -6865,9 +6865,36 @@ async function comprobarPagosTarjeta(){
 // la nube compartida) o de la consulta a la plataforma. El importe es el que
 // STRIPE confirmó (avisado al Worker con la firma de Stripe, que el Worker
 // verifica), así que aquí sí se puede comparar con lo que cuesta de verdad.
+/* La comisión de Stripe, apuntada sola como gasto (1/10). Cada venta online
+   entra en la app por su importe TOTAL, pero al banco llega sin la comisión
+   (y en bloques): sin esto, el banco nunca cuadraba con las ventas y el
+   hostelero tenía que ir restando comisiones a mano. Va a «COMISIONES VENTA»,
+   ya pagada (Stripe la descuenta él solo). Si el Worker no ha podido leer la
+   cifra exacta de Stripe, se estima con la tarifa estándar y se marca. Una
+   sola vez por pago, aunque el aviso llegue dos veces o por dos caminos. */
+const STRIPE_TARIFA_PCT = 1.5, STRIPE_TARIFA_FIJA = 0.25;
+function apuntarComisionPagoOnline(req, importe){
+  if(!req || !req.orderRef || !(importe > 0)) return;
+  if(!DB.ge || !Array.isArray(DB.ge.variables)) return;
+  if(DB.ge.variables.some(v => v && v.pagoOnlineRef === req.orderRef)) return;
+  const exacta = typeof req.comision === 'number' && isFinite(req.comision) && req.comision >= 0;
+  const comision = exacta ? req.comision : Math.round((importe * STRIPE_TARIFA_PCT / 100 + STRIPE_TARIFA_FIJA) * 100) / 100;
+  if(!(comision > 0)) return;
+  const fecha = todayStr();
+  const d = new Date(fecha);
+  DB.ge.variables.push({
+    id: genId(), mes: d.getMonth(), año: d.getFullYear(),
+    categoria: 'COMISIONES VENTA', proveedor: 'Stripe', importe: comision,
+    // Las comisiones de cobro con tarjeta son un servicio financiero, sin IVA.
+    iva: 0, fecha, fechaPago: fecha, pagada: true, auto: true,
+    pagoOnlineRef: req.orderRef, comisionEstimada: exacta ? undefined : true,
+    notas: t(exacta ? 'precios.comisionStripe' : 'precios.comisionStripeEstimada').replace('${importe}', fmtMoney(importe))
+  });
+}
 function aplicarPagoConfirmado(req){
   dejarDeEsperarPago(req.orderRef);
   const importeConfirmado = parseFloat(req.amount) || 0;
+  apuntarComisionPagoOnline(req, importeConfirmado);
   const registrarDescuadre = (orderId, importeEsperado) => {
     if(!DB.paymentAmountMismatches) DB.paymentAmountMismatches = [];
     if(DB.paymentAmountMismatches.some(m => m && m.orderRef === req.orderRef)) return;
@@ -9357,8 +9384,61 @@ function renderPagoOnlineCard(){
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.pago.desc')}</p>
       <div id="pago-online-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.pago.checking')}</div>
       <div id="pago-online-acciones" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <details style="margin-top:12px;font-size:13px">
+        <summary style="cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;gap:6px"><i class="ti ti-info-circle"></i> ${t('mn.pago.infoTitle')}</summary>
+        <div style="padding-top:4px">${pagoOnlineInfoHtml()}</div>
+      </details>
     </div>
   `;
+}
+// Cómo y cuándo cobra el negocio: lo primero que pregunta un hostelero, y
+// lo que hay que saber para que el banco le cuadre con las ventas.
+function pagoOnlineInfoHtml(){
+  const ul = 'style="margin:4px 0 10px 18px;line-height:1.6"';
+  return gl({
+    es: `<p style="margin:0 0 4px;font-weight:700">Lo que paga tu cliente</p>
+      <ul ${ul}><li>Lo pone <strong>tu carta</strong>: precios, envío y señal de las reservas. En Stripe no se configura nada de eso.</li></ul>
+      <p style="margin:0 0 4px;font-weight:700">Lo que te cobra Stripe</p>
+      <ul ${ul}><li>Su tarifa estándar, <strong>fija</strong>: alrededor del <strong>1,5 % + 0,25 €</strong> por pago con tarjeta europea (algo más con tarjetas de fuera de Europa). Solo si vendes mucho puedes negociar una rebaja con Stripe.</li>
+        <li><strong>GastroGoan no se queda ninguna comisión.</strong></li></ul>
+      <p style="margin:0 0 4px;font-weight:700">Cuándo te llega el dinero</p>
+      <ul ${ul}><li>El dinero <strong>no pasa por GastroGoan</strong>: va a tu saldo de Stripe al momento y Stripe lo <strong>ingresa solo en tu banco</strong> (el IBAN que pusiste).</li>
+        <li><strong>El primer ingreso</strong> tarda más, unos <strong>7 días</strong> desde tu primer cobro (seguridad de Stripe con las cuentas nuevas).</li>
+        <li><strong>Después</strong>, lo habitual es que cada día te ingrese lo cobrado unos días hábiles antes (en torno a 3).</li>
+        <li><strong>Cada cuánto</strong> lo eliges tú en tu panel de Stripe → <strong>Configuración → Transferencias</strong>: diario, semanal o mensual.</li>
+        <li>Te llega <strong>ya descontada la comisión</strong>. Cada pago, comisión y transferencia los ves en tu panel de Stripe.</li></ul>
+      <p style="margin:0 0 4px;font-weight:700">Y en tus cuentas de GastroGoan</p>
+      <ul ${ul}><li>Cada venta online se apunta por su <strong>importe total</strong>, y la <strong>comisión de Stripe se apunta sola</strong> como gasto en <strong>Gestión Económica → Gastos Variables → Comisiones venta</strong>. Así el banco te cuadra sin hacer cuentas a mano.</li></ul>
+      <p style="margin:0;color:var(--muted)">Los plazos exactos los fija Stripe y pueden variar: los tuyos los ves en tu panel.</p>`,
+    ca: `<p style="margin:0 0 4px;font-weight:700">El que paga el teu client</p>
+      <ul ${ul}><li>Ho posa <strong>la teva carta</strong>: preus, enviament i paga i senyal de les reserves. A Stripe no es configura res d'això.</li></ul>
+      <p style="margin:0 0 4px;font-weight:700">El que et cobra Stripe</p>
+      <ul ${ul}><li>La seva tarifa estàndard, <strong>fixa</strong>: al voltant de l'<strong>1,5 % + 0,25 €</strong> per pagament amb targeta europea (una mica més amb targetes de fora d'Europa). Només si vens molt pots negociar una rebaixa amb Stripe.</li>
+        <li><strong>GastroGoan no es queda cap comissió.</strong></li></ul>
+      <p style="margin:0 0 4px;font-weight:700">Quan et arriben els diners</p>
+      <ul ${ul}><li>Els diners <strong>no passen per GastroGoan</strong>: van al teu saldo de Stripe a l'instant i Stripe els <strong>ingressa sol al teu banc</strong> (l'IBAN que vas posar).</li>
+        <li><strong>El primer ingrés</strong> triga més, uns <strong>7 dies</strong> des del teu primer cobrament (seguretat de Stripe amb els comptes nous).</li>
+        <li><strong>Després</strong>, el més habitual és que cada dia t'ingressi el cobrat uns dies hàbils abans (al voltant de 3).</li>
+        <li><strong>Cada quant</strong> ho tries tu al teu panell de Stripe → <strong>Configuració → Transferències</strong>: diari, setmanal o mensual.</li>
+        <li>T'arriba <strong>ja descomptada la comissió</strong>. Cada pagament, comissió i transferència els veus al teu panell de Stripe.</li></ul>
+      <p style="margin:0 0 4px;font-weight:700">I als teus comptes de GastroGoan</p>
+      <ul ${ul}><li>Cada venda en línia s'apunta pel seu <strong>import total</strong>, i la <strong>comissió de Stripe s'apunta sola</strong> com a despesa a <strong>Gestió Econòmica → Despeses Variables → Comissions venda</strong>. Així el banc et quadra sense fer comptes a mà.</li></ul>
+      <p style="margin:0;color:var(--muted)">Els terminis exactes els fixa Stripe i poden variar: els teus els veus al teu panell.</p>`,
+    en: `<p style="margin:0 0 4px;font-weight:700">What your customer pays</p>
+      <ul ${ul}><li>Set by <strong>your menu</strong>: prices, delivery and booking deposits. None of that is configured in Stripe.</li></ul>
+      <p style="margin:0 0 4px;font-weight:700">What Stripe charges you</p>
+      <ul ${ul}><li>Its standard, <strong>fixed</strong> rate: around <strong>1.5% + €0.25</strong> per payment with a European card (a little more with non-European cards). Only if you sell a lot can you negotiate a lower rate with Stripe.</li>
+        <li><strong>GastroGoan takes no commission.</strong></li></ul>
+      <p style="margin:0 0 4px;font-weight:700">When you get the money</p>
+      <ul ${ul}><li>The money <strong>never goes through GastroGoan</strong>: it lands in your Stripe balance instantly and Stripe <strong>pays it into your bank automatically</strong> (the IBAN you entered).</li>
+        <li><strong>The first payout</strong> takes longer, about <strong>7 days</strong> after your first payment (Stripe's safety period for new accounts).</li>
+        <li><strong>After that</strong>, usually each day you receive what you took a few business days earlier (around 3).</li>
+        <li><strong>How often</strong> is up to you in your Stripe dashboard → <strong>Settings → Payouts</strong>: daily, weekly or monthly.</li>
+        <li>It arrives <strong>with the fee already deducted</strong>. Every payment, fee and payout is in your Stripe dashboard.</li></ul>
+      <p style="margin:0 0 4px;font-weight:700">And in your GastroGoan accounts</p>
+      <ul ${ul}><li>Each online sale is recorded at its <strong>full amount</strong>, and the <strong>Stripe fee is recorded automatically</strong> as an expense in <strong>Financial Management → Variable Expenses → Sales commissions</strong>. So your bank matches without doing sums by hand.</li></ul>
+      <p style="margin:0;color:var(--muted)">Exact timings are set by Stripe and may vary: yours are shown in your dashboard.</p>`
+  });
 }
 function pagoOnlineIdentidad(){
   return {tenantId: getTenantId(), publicId: getPublicId()};
