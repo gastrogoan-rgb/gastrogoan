@@ -9407,9 +9407,76 @@ async function loadPagoOnlineStatus(){
   updateTpvVirtualCheckboxAvailability();
   updateDepositCheckboxAvailability();
 }
+// Antes de mandar al dueño a Stripe, una guía de lo que va a necesitar y de
+// lo que le va a pedir. Stripe exige una verificación en dos pasos con una
+// app de autenticación (no ofrece SMS en este alta) y, sin avisarlo antes, un
+// hostelero que se encuentra un código QR a mitad de camino lo deja ahí.
+function conectarStripe(){
+  const guia = gl({
+    es: `<p style="margin:0 0 10px">Son unos <strong>10 minutos</strong>, una sola vez, en la web de Stripe. Tenlo a mano antes de empezar:</p>
+      <ul style="margin:0 0 14px 18px;line-height:1.6">
+        <li>Tu <strong>DNI o NIE</strong> (y el <strong>CIF</strong> si el negocio es una sociedad).</li>
+        <li>El <strong>IBAN</strong> de la cuenta donde quieres cobrar.</li>
+        <li>La <strong>dirección</strong> del negocio y tu <strong>móvil</strong>.</li>
+        <li>La app <strong>Google Authenticator</strong> instalada en el móvil (gratis en Play Store o App Store). Stripe la pide por seguridad, como un banco.</li>
+      </ul>
+      <p style="margin:0 0 6px;font-weight:700">Lo que te va a pedir Stripe, por orden:</p>
+      <ol style="margin:0 0 14px 18px;line-height:1.6">
+        <li><strong>Tu email.</strong> Mejor uno del negocio. Si no tienes cuenta de Stripe, te pedirá crear una contraseña.</li>
+        <li><strong>Seguridad (verificación en dos pasos).</strong> Sale un código QR. En el móvil abre Google Authenticator, pulsa <strong>+</strong> → <strong>Escanear un código QR</strong>, apunta al QR y escribe en Stripe los <strong>6 números</strong> que aparecen. Solo se hace esta vez. <strong>Guarda el código de recuperación</strong> que te dé Stripe.</li>
+        <li><strong>Tus datos y los del negocio</strong>: DNI, dirección, actividad (restauración).</li>
+        <li><strong>Tu cuenta bancaria</strong> (IBAN), donde Stripe te ingresará lo cobrado.</li>
+        <li>Al terminar, Stripe te devuelve aquí. Si pone que falta que Stripe revise tus datos, espera unos minutos y pulsa <strong>Volver a comprobar</strong>.</li>
+      </ol>
+      <p style="margin:0;color:var(--muted);font-size:13px">Si te quedas a medias, no pasa nada: vuelve a pulsar el botón y sigues donde lo dejaste. Stripe cobra su comisión en cada pago (alrededor del 1,5 % + 0,25 € con tarjetas europeas) y te ingresa el resto en tu banco. GastroGoan no toca tu dinero.</p>`,
+    ca: `<p style="margin:0 0 10px">Són uns <strong>10 minuts</strong>, una sola vegada, a la web de Stripe. Tingues a mà abans de començar:</p>
+      <ul style="margin:0 0 14px 18px;line-height:1.6">
+        <li>El teu <strong>DNI o NIE</strong> (i el <strong>CIF</strong> si el negoci és una societat).</li>
+        <li>L'<strong>IBAN</strong> del compte on vols cobrar.</li>
+        <li>L'<strong>adreça</strong> del negoci i el teu <strong>mòbil</strong>.</li>
+        <li>L'app <strong>Google Authenticator</strong> instal·lada al mòbil (gratuïta a Play Store o App Store). Stripe la demana per seguretat, com un banc.</li>
+      </ul>
+      <p style="margin:0 0 6px;font-weight:700">El que et demanarà Stripe, per ordre:</p>
+      <ol style="margin:0 0 14px 18px;line-height:1.6">
+        <li><strong>El teu email.</strong> Millor un del negoci. Si no tens compte de Stripe, et demanarà crear una contrasenya.</li>
+        <li><strong>Seguretat (verificació en dos passos).</strong> Surt un codi QR. Al mòbil obre Google Authenticator, prem <strong>+</strong> → <strong>Escaneja un codi QR</strong>, apunta al QR i escriu a Stripe els <strong>6 números</strong> que apareixen. Només es fa aquesta vegada. <strong>Desa el codi de recuperació</strong> que et doni Stripe.</li>
+        <li><strong>Les teves dades i les del negoci</strong>: DNI, adreça, activitat (restauració).</li>
+        <li><strong>El teu compte bancari</strong> (IBAN), on Stripe t'ingressarà el que cobris.</li>
+        <li>En acabar, Stripe et torna aquí. Si diu que falta que Stripe revisi les teves dades, espera uns minuts i prem <strong>Tornar a comprovar</strong>.</li>
+      </ol>
+      <p style="margin:0;color:var(--muted);font-size:13px">Si et quedes a mitges, no passa res: torna a prémer el botó i segueixes on ho vas deixar. Stripe cobra la seva comissió a cada pagament (al voltant de l'1,5 % + 0,25 € amb targetes europees) i t'ingressa la resta al banc. GastroGoan no toca els teus diners.</p>`,
+    en: `<p style="margin:0 0 10px">It takes about <strong>10 minutes</strong>, only once, on the Stripe website. Have this ready before you start:</p>
+      <ul style="margin:0 0 14px 18px;line-height:1.6">
+        <li>Your <strong>ID card or NIE</strong> (and the <strong>CIF</strong> if the business is a company).</li>
+        <li>The <strong>IBAN</strong> of the account you want to be paid into.</li>
+        <li>The business <strong>address</strong> and your <strong>mobile phone</strong>.</li>
+        <li>The <strong>Google Authenticator</strong> app installed on your phone (free on Play Store or App Store). Stripe requires it for security, like a bank.</li>
+      </ul>
+      <p style="margin:0 0 6px;font-weight:700">What Stripe will ask for, in order:</p>
+      <ol style="margin:0 0 14px 18px;line-height:1.6">
+        <li><strong>Your email.</strong> Preferably a business one. If you don't have a Stripe account, it will ask you to create a password.</li>
+        <li><strong>Security (two-step verification).</strong> A QR code appears. On your phone open Google Authenticator, tap <strong>+</strong> → <strong>Scan a QR code</strong>, point it at the QR and type the <strong>6 digits</strong> into Stripe. You only do this once. <strong>Save the recovery code</strong> Stripe gives you.</li>
+        <li><strong>Your details and the business's</strong>: ID, address, activity (restaurant).</li>
+        <li><strong>Your bank account</strong> (IBAN), where Stripe will pay out what you take.</li>
+        <li>When you finish, Stripe brings you back here. If it says Stripe still needs to review your details, wait a few minutes and tap <strong>Check again</strong>.</li>
+      </ol>
+      <p style="margin:0;color:var(--muted);font-size:13px">If you stop halfway, that's fine: tap the button again and carry on where you left off. Stripe takes its fee on each payment (around 1.5% + €0.25 with European cards) and pays the rest into your bank. GastroGoan never touches your money.</p>`
+  });
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-credit-card"></i> ${t('mn.pago.guideTitle')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div style="font-size:14px">${guia}</div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="closeModal(); conectarStripeAhora()"><i class="ti ti-arrow-right"></i> ${t('mn.pago.guideGo')}</button>
+    </div>
+  `);
+}
 // El alta la hace el dueño en la web de Stripe (sus datos, su banco, su DNI)
 // y vuelve aquí: al volver, loadPagoOnlineStatus ya lo ve activo.
-async function conectarStripe(){
+async function conectarStripeAhora(){
   const acciones = document.getElementById('pago-online-acciones');
   if(acciones) acciones.querySelectorAll('button').forEach(b => { b.disabled = true; });
   try{

@@ -173,7 +173,14 @@ await caso('Mi Negocio: la tarjeta de Stripe enseña cada estado y solo activa e
     const html = document.getElementById('pago-online-status').innerHTML;
     estados.desactivado = await probar({conectado: true, activo: false, desconectado: true});
     cont.remove();
-    return {estados, escapado: html.includes('&lt;b&gt;Pepe&lt;/b&gt;')};
+    // «Conectar» no manda directo a Stripe: antes explica qué hace falta.
+    let fueAStripe = false;
+    window.fetch = async () => { fueAStripe = true; return new Response('{}'); };
+    conectarStripe();
+    const modal = document.getElementById('modal-box').innerHTML;
+    const guia = {authenticator: modal.includes('Google Authenticator'), iban: modal.includes('IBAN'), sigue: modal.includes('conectarStripeAhora()'), fueAStripe};
+    closeModal();
+    return {estados, guia, escapado: html.includes('&lt;b&gt;Pepe&lt;/b&gt;')};
   });
   assert.ok(r.estados.sin.botones.includes('conectarStripe()') && !r.estados.sin.activo, 'sin conectar no ofrece «Conectar con Stripe»');
   assert.equal(r.estados.pendiente.activo, false, 'con el alta a medias ya se ofrece pagar con tarjeta');
@@ -182,7 +189,9 @@ await caso('Mi Negocio: la tarjeta de Stripe enseña cada estado y solo activa e
   assert.ok(r.estados.activo.botones.includes('desconectarStripe()'));
   assert.ok(r.escapado, 'el nombre de la cuenta de Stripe entra en el HTML sin escapar');
   assert.ok(r.estados.desactivado.botones.includes('conectarStripe()') && !r.estados.desactivado.activo);
-  return 'sin conectar · alta a medias · activo · desactivado';
+  assert.ok(r.guia.authenticator && r.guia.iban && r.guia.sigue, 'no sale la guía de lo que va a pedir Stripe');
+  assert.equal(r.guia.fueAStripe, false, 'manda a Stripe sin explicar antes qué hace falta');
+  return 'sin conectar · alta a medias · activo · desactivado · guía antes de ir';
 });
 
 await caso('Ningún error de JavaScript', async () => {
