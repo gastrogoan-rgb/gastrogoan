@@ -893,6 +893,7 @@ function init(){
 
   // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
   const pago = new URLSearchParams(location.search).get('pago');
+  reenviarConfirmacionDelBanco();
   // Tras el redirect de Redsys, la URL se queda con "?...&pago=ok/ko" — si el
   // cliente no sabe que puede quitarlo a mano, esta pantalla era un callejón
   // sin salida real (ni el botón atrás del navegador ayuda, porque la página
@@ -3383,6 +3384,32 @@ function payWithCard(req, amount, description, refField, submitBtnId){
     showInlineError(t('error.pago.conexion'));
     setPaySubmitEnabled(true, submitBtnId);
   });
+}
+/* Segundo camino para la confirmación del pago (30/09). El aviso directo del
+   banco al Worker (/notify) no llegaba: en la prueba con el comercio genérico
+   de Redsys el Worker ni se enteraba, y el pedido se quedaba «sin pagar».
+   Pero al volver, Redsys trae en la dirección los datos del pago FIRMADOS
+   con la clave del comercio (Ds_MerchantParameters + Ds_Signature). Se le
+   pasan al Worker, que comprueba esa firma igual que en /notify: sin la
+   clave secreta nadie puede fabricarlos, así que un cliente no puede
+   declararse pagado por aquí. Si llegan los dos avisos, el segundo no
+   duplica nada (el Worker guarda con la misma clave). */
+function reenviarConfirmacionDelBanco(){
+  let q;
+  try{ q = new URLSearchParams(location.search); }catch(e){ return; }
+  const params = q.get('Ds_MerchantParameters'), firma = q.get('Ds_Signature');
+  if(!params || !firma) return;
+  fetch(`${REDSYS_WORKER_URL}/notify`, {
+    method: 'POST', keepalive: true,
+    headers: {'content-type': 'application/json'},
+    body: JSON.stringify({Ds_SignatureVersion: q.get('Ds_SignatureVersion') || 'HMAC_SHA256_V1', Ds_MerchantParameters: params, Ds_Signature: firma})
+  }).catch(() => {});
+  // Fuera de la dirección: si se comparte o se recarga, no se reenvía.
+  try{
+    const u = new URL(location.href);
+    ['Ds_SignatureVersion', 'Ds_MerchantParameters', 'Ds_Signature'].forEach(k => u.searchParams.delete(k));
+    history.replaceState(null, '', u.toString());
+  }catch(e){}
 }
 // Aviso fijo arriba, fuera de #app: el seguimiento se redibuja solo cada vez
 // que cambia el estado, y un aviso dentro desaparecería al primer cambio.
