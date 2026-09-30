@@ -9411,7 +9411,17 @@ async function loadPagoOnlineStatus(){
 // lo que le va a pedir. Stripe exige una verificación en dos pasos con una
 // app de autenticación (no ofrece SMS en este alta) y, sin avisarlo antes, un
 // hostelero que se encuentra un código QR a mitad de camino lo deja ahí.
+// Stripe exige una web del negocio. Muchos restaurantes no tienen, pero todos
+// tienen su página de reservas y pedidos de GastroGoan (la del QR), que además
+// es justo donde se cobra: se la damos lista para copiar.
+function copiarWebParaStripe(btn){
+  const url = getPublicClientLinkPretty();
+  const hecho = () => { if(btn) btn.innerHTML = '<i class="ti ti-check"></i> ' + escapeHtml(t('mn.pago.webCopied')); };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(hecho).catch(() => prompt(t('mn.pago.webTitle'), url));
+  else prompt(t('mn.pago.webTitle'), url);
+}
 function conectarStripe(){
+  const webParaStripe = (typeof getPublicClientLinkPretty === 'function') ? getPublicClientLinkPretty() : '';
   const guia = gl({
     es: `<p style="margin:0 0 10px">Son unos <strong>10 minutos</strong>, una sola vez, en la web de Stripe. Tenlo a mano antes de empezar:</p>
       <ul style="margin:0 0 14px 18px;line-height:1.6">
@@ -9426,6 +9436,7 @@ function conectarStripe(){
         <li><strong>Tu email.</strong> Mejor uno del negocio. Si no tienes cuenta de Stripe, te pedirá crear una contraseña.</li>
         <li><strong>Seguridad (verificación en dos pasos).</strong> Sale un código QR. En el móvil abre Google Authenticator, pulsa <strong>+</strong> → <strong>Escanear un código QR</strong>, apunta al QR y escribe en Stripe los <strong>6 números</strong> que aparecen. Solo se hace esta vez. <strong>Guarda el código de recuperación</strong> que te dé Stripe.</li>
         <li><strong>Tipo de negocio</strong>: si eres <strong>autónomo</strong>, elige <strong>«Vendedor»</strong> (o «Individual»); si es una <strong>S.L. o S.A.</strong>, elige <strong>«Empresa»</strong>. Después, tus datos y los del negocio: DNI, dirección, actividad (restauración).</li>
+        <li><strong>Web del negocio</strong>: si no tienes, pon tu página de reservas de GastroGoan (la tienes abajo, lista para copiar).</li>
         <li><strong>Nombre en el extracto</strong> (<em>statement descriptor</em>): lo que verá tu cliente en su banco al pagarte. Pon el nombre del restaurante, entre 5 y 22 letras y sin símbolos (por ejemplo <strong>BAR PEPE BCN</strong>), para que lo reconozca y no lo reclame.</li>
         <li><strong>Tu cuenta bancaria</strong> (IBAN, empieza por ES), donde Stripe te ingresará lo cobrado.</li>
         <li><strong>Ofertas de Stripe que puedes saltar</strong>: el <strong>cálculo de IVA (Stripe Tax)</strong> y el <strong>antifraude de pago</strong> cobran aparte y no te hacen falta — los precios ya llevan el IVA y GastroGoan ya lo calcula. Pulsa <strong>Omitir</strong> o <strong>Ahora no</strong>. Lo único que sí conviene dejar activado es la <strong>verificación 3D Secure</strong> (el cliente confirma el pago en la app de su banco).</li>
@@ -9445,6 +9456,7 @@ function conectarStripe(){
         <li><strong>El teu email.</strong> Millor un del negoci. Si no tens compte de Stripe, et demanarà crear una contrasenya.</li>
         <li><strong>Seguretat (verificació en dos passos).</strong> Surt un codi QR. Al mòbil obre Google Authenticator, prem <strong>+</strong> → <strong>Escaneja un codi QR</strong>, apunta al QR i escriu a Stripe els <strong>6 números</strong> que apareixen. Només es fa aquesta vegada. <strong>Desa el codi de recuperació</strong> que et doni Stripe.</li>
         <li><strong>Tipus de negoci</strong>: si ets <strong>autònom</strong>, tria <strong>«Venedor»</strong> (o «Individual»); si és una <strong>S.L. o S.A.</strong>, tria <strong>«Empresa»</strong>. Després, les teves dades i les del negoci: DNI, adreça, activitat (restauració).</li>
+        <li><strong>Web del negoci</strong>: si no en tens, posa la teva pàgina de reserves de GastroGoan (la tens a baix, a punt per copiar).</li>
         <li><strong>Nom a l'extracte</strong> (<em>statement descriptor</em>): el que veurà el teu client al seu banc en pagar-te. Posa el nom del restaurant, entre 5 i 22 lletres i sense símbols (per exemple <strong>BAR PEPE BCN</strong>), perquè el reconegui i no el reclami.</li>
         <li><strong>El teu compte bancari</strong> (IBAN, comença per ES), on Stripe t'ingressarà el que cobris.</li>
         <li><strong>Ofertes de Stripe que pots saltar</strong>: el <strong>càlcul d'IVA (Stripe Tax)</strong> i l'<strong>antifrau de pagament</strong> cobren a part i no et calen — els preus ja porten l'IVA i GastroGoan ja el calcula. Prem <strong>Ometre</strong> o <strong>Ara no</strong>. L'únic que sí convé deixar activat és la <strong>verificació 3D Secure</strong> (el client confirma el pagament a l'app del seu banc).</li>
@@ -9464,6 +9476,7 @@ function conectarStripe(){
         <li><strong>Your email.</strong> Preferably a business one. If you don't have a Stripe account, it will ask you to create a password.</li>
         <li><strong>Security (two-step verification).</strong> A QR code appears. On your phone open Google Authenticator, tap <strong>+</strong> → <strong>Scan a QR code</strong>, point it at the QR and type the <strong>6 digits</strong> into Stripe. You only do this once. <strong>Save the recovery code</strong> Stripe gives you.</li>
         <li><strong>Business type</strong>: if you're <strong>self-employed</strong>, choose <strong>“Individual”</strong> (it may say “Seller”); if it's a <strong>limited company</strong>, choose <strong>“Company”</strong>. Then your details and the business's: ID, address, activity (restaurant).</li>
+        <li><strong>Business website</strong>: if you don't have one, use your GastroGoan booking page (it's below, ready to copy).</li>
         <li><strong>Statement descriptor</strong>: what your customer sees on their bank statement. Use the restaurant's name, 5 to 22 characters with no symbols (for example <strong>BAR PEPE BCN</strong>), so they recognise it and don't dispute it.</li>
         <li><strong>Your bank account</strong> (IBAN, starts with ES), where Stripe will pay out what you take.</li>
         <li><strong>Stripe add-ons you can skip</strong>: <strong>VAT calculation (Stripe Tax)</strong> and <strong>paid fraud protection</strong> cost extra and you don't need them — prices already include VAT and GastroGoan already calculates it. Tap <strong>Skip</strong> or <strong>Not now</strong>. The only thing worth keeping on is <strong>3D Secure</strong> (the customer confirms the payment in their banking app).</li>
@@ -9477,6 +9490,14 @@ function conectarStripe(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div style="font-size:14px">${guia}</div>
+    ${webParaStripe ? `<div style="margin-top:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px">
+      <div style="font-weight:700;margin-bottom:4px"><i class="ti ti-world"></i> ${t('mn.pago.webTitle')}</div>
+      <div style="color:var(--muted);margin-bottom:6px">${t('mn.pago.webDesc')}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <code style="flex:1;min-width:0;word-break:break-all">${escapeHtml(webParaStripe)}</code>
+        <button class="btn btn-sm" type="button" onclick="copiarWebParaStripe(this)"><i class="ti ti-copy"></i> ${t('mn.pago.webCopy')}</button>
+      </div>
+    </div>` : ''}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="closeModal(); conectarStripeAhora()"><i class="ti ti-arrow-right"></i> ${t('mn.pago.guideGo')}</button>
