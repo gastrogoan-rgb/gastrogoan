@@ -165,6 +165,20 @@
 
         ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com'"
 
+      },
+
+      "pagos": {
+
+        "$publicId": {
+
+          "$ref": {
+
+            ".read": "$ref.length >= 8"
+
+          }
+
+        }
+
       }
     }
   }

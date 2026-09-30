@@ -3285,7 +3285,10 @@ async function submitOrder(){
     type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
     clienteNombre, clienteTelefono, clienteEmail, clienteDireccion, codigoPostal, notas, date, time,
     costeEnvio: deliveryFee, propina: tip,
-    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty, modificadores:l.modificadores||undefined})),
+    // platoId: con él la app del negocio vuelve a poner el precio con SU
+    // carta (ver revisarPreciosPedidoPublico, js/core.js) — el `price` de
+    // aquí es solo lo que el cliente vio, no lo que se cobra.
+    items: cart.map(l => ({platoId: l.recipeId, name:l.name, price:l.price, qty:l.qty, modificadores:l.modificadores||undefined})),
     createdAt: new Date().toISOString(),
     // Token para poder seguir el estado del pedido después de enviarlo (ver
     // trackOrderStatus más abajo) — antes solo se generaba si se pagaba con
@@ -3477,7 +3480,10 @@ function submitMesaOrder(){
   const req = {
     type:'pedido', tipo:'mesa', tableId,
     clienteNombre, notas, propina: tipMesa,
-    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty, modificadores:l.modificadores||undefined})),
+    // platoId: con él la app del negocio vuelve a poner el precio con SU
+    // carta (ver revisarPreciosPedidoPublico, js/core.js) — el `price` de
+    // aquí es solo lo que el cliente vio, no lo que se cobra.
+    items: cart.map(l => ({platoId: l.recipeId, name:l.name, price:l.price, qty:l.qty, modificadores:l.modificadores||undefined})),
     total: subtotalMesa + tipMesa,
     createdAt: new Date().toISOString()
   };
