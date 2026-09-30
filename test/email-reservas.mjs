@@ -304,13 +304,11 @@ caso('Borrar una zona completa vuelve a comprobar sus mesas justo antes de borra
 caso('Desactivar el TPV virtual no borra la configuración local si el Worker rechaza la petición (hallazgo de Codex sobre conexiones externas)', () => {
   const m = core.match(/async function disableRedsysConfig\(\)\{[\s\S]*?\n\}/);
   assert.ok(m, 'no se encontró disableRedsysConfig');
-  assert.ok(m[0].includes('if(!res.ok) throw new Error'),
+  assert.ok(m[0].includes('if(!res.ok || data.error)'),
     'disableRedsysConfig no comprueba res.ok — puede mostrarse como desactivado aunque el Worker haya fallado');
-  assert.ok(m[0].includes("['rs-fuc','rs-terminal','rs-clave'].forEach"),
-    'no se encontró el bloque de limpieza de campos locales');
-  const idxThrow = m[0].indexOf('throw new Error');
-  const idxLimpieza = m[0].indexOf("['rs-fuc'");
-  assert.ok(idxThrow !== -1 && idxLimpieza > idxThrow, 'la limpieza de campos locales sigue ocurriendo antes de comprobar si el Worker confirmó la desactivación');
+  const idxCheck = m[0].indexOf('if(!res.ok || data.error)');
+  const idxLimpieza = m[0].indexOf("['rs-fuc','rs-terminal','rs-clave','rs-clave-actual'].forEach");
+  assert.ok(idxLimpieza > idxCheck, 'la limpieza de campos locales sigue ocurriendo antes de comprobar si el Worker confirmó la desactivación');
 });
 
 
@@ -341,8 +339,10 @@ caso('El cuaderno de I+D se fusiona igual en la carga inicial completa que en la
 caso('La propina de un autopedido de mesa pagado online no cuenta como cobrada hasta que el banco confirma (hallazgo de Codex)', () => {
   assert.ok(core.includes('order.propinasPendientes.push({ref: req.clientRef, importe: req.propina})'),
     'la propina de un autopedido pagado online sigue sumándose a propinaPagadaOnline en cuanto llega la solicitud, antes de que el banco confirme nada');
-  const m = core.match(/if\(Array\.isArray\(o\.propinasPendientes\) && o\.propinasPendientes\.length\)\{[\s\S]*?\n\s*\}/);
-  assert.ok(m, 'no se encontró el reclamo de propinas pendientes en pago_confirmado');
+  // Desde el 30/09 la confirmación vive en aplicarPagoConfirmado (la usan
+  // el buzón y la consulta a la plataforma).
+  const m = core.match(/function aplicarPagoConfirmado\(req\)\{[\s\S]*?\n\}/);
+  assert.ok(m && m[0].includes('o.propinasPendientes.find(p => p.ref === req.orderRef)'), 'no se encontró el reclamo de propinas pendientes en pago_confirmado');
   assert.ok(m[0].includes('o.propinaPagadaOnline = (o.propinaPagadaOnline||0) + pendiente.importe'),
     'pago_confirmado no mueve la propina pendiente a propinaPagadaOnline al confirmarse el pago');
 });
@@ -380,20 +380,20 @@ caso('Dos instancias de menú distintas no comparten línea aunque elijan la mis
     'la fusión de líneas de menú no comprueba menuInstanceId — dos instancias distintas con la misma opción se funden en una sola línea, descuadrando el stock de menús al marchar');
 });
 
-caso('Un pago de Redsys confirmado con un importe distinto del pedido se avisa, sin bloquear el cobro (hallazgo de Codex)', () => {
-  const m = core.match(/const importeEsperado = roundMoney\([\s\S]*?\n(?:\s{10}order\.pagado = true;)/);
+// Cambió a propósito el 30/09: antes era solo un aviso, porque el importe lo
+// decidía el navegador y los precios del pedido también, así que un pedido
+// de 12 € pagado con 0,01 € «cuadraba». Ahora el precio lo pone la carta del
+// negocio y lo pagado es lo que confirma el banco: si falta dinero, no se da
+// por pagado. El caso de verdad lo prueba test/redsys-app.mjs.
+caso('Un pago de Redsys con importe distinto se avisa, y si falta dinero NO se da por pagado (hallazgo de Codex, endurecido el 30/09)', () => {
+  const m = core.match(/function aplicarPagoConfirmado\(req\)\{[\s\S]*?\n\}/);
   assert.ok(m, 'no se encontró la comprobación de importe de Redsys en el manejador de pago_confirmado');
   const bloque = m[0];
-  assert.ok(bloque.includes('orderTotal(order)'),
-    'el importe esperado no se calcula a partir de orderTotal(order) — el TPV virtual manda el importe y nadie comprueba que cuadre con lo que de verdad cuesta el pedido');
-  assert.ok(bloque.includes('Math.abs(importeConfirmado - importeEsperado) > 0.02'),
-    'falta el margen de tolerancia al comparar el importe confirmado con el esperado');
-  assert.ok(bloque.includes('DB.paymentAmountMismatches'),
-    'los desajustes de importe no quedan anotados en ningún sitio para poder revisarlos luego');
-  assert.ok(bloque.includes("notifyDesktop(t('notif.paymentMismatchTitle')"),
-    'un desajuste de importe no avisa al hostelero');
-  assert.ok(bloque.trim().endsWith('order.pagado = true;'),
-    'la comprobación de importe bloquea (o se salta) el marcado de pagado — tiene que ser un aviso, no un bloqueo: el origen real del problema es el Worker externo de Redsys, que no valida el importe contra el pedido y no se puede arreglar desde este repositorio');
+  assert.ok(bloque.includes('orderTotal(order)'), 'el importe esperado no se calcula a partir de orderTotal(order)');
+  assert.ok(bloque.includes('Math.abs(importeConfirmado - importeEsperado) > 0.02'), 'falta el margen de tolerancia');
+  assert.ok(bloque.includes('DB.paymentAmountMismatches'), 'los desajustes de importe no quedan anotados');
+  assert.ok(bloque.includes("notifyDesktop(t('notif.paymentMismatchTitle')"), 'un desajuste de importe no avisa al hostelero');
+  assert.ok(bloque.includes('if(importeConfirmado + 0.02 < importeEsperado)'), 'pagar de menos sigue dando el pedido por pagado');
   const apariciones = (i18n.match(/'notif\.paymentMismatchTitle'/g) || []).length;
   assert.equal(apariciones, 3, 'falta la traducción del aviso de importe no coincidente en alguno de los tres idiomas');
 });

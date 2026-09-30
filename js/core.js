@@ -5809,6 +5809,9 @@ const ARRAYS_CON_LAPIDA = new Set([
   'ingredientCategories', 'recipeCategories', 'ingredients', 'recipes',
   'fichas', 'providers', 'tables', 'employees', 'cartas', 'menus',
   'clients', 'elaboraciones',
+  // Un pago ya aplicado que «resucitara» desde otra tablet se volvería a
+  // preguntar y podría acabar como pago sin pedido.
+  'pagosTarjetaEsperados',
   /* ⚠️ `tpvOrders` también, y el comentario de "las comandas no se borran, se
      anulan" era falso: se borran al juntar dos mesas, al rechazar o cancelar
      un pedido online, al liberar una mesa vacía y al purgar las pagadas.
@@ -5986,7 +5989,7 @@ function mergeLapidas(local, remoto){
 }
 
 const MERGEABLE_ARRAYS = new Set([
-  'ingredients','recipes','fichas','menuItems','cartas','menus',
+  'ingredients','recipes','fichas','menuItems','cartas','menus','pagosTarjetaEsperados',
   'purchaseOrders','providers','tables','tpvOrders','sales',
   'cashClosures','employees','turnos','fichajes','promos','horariosFijos',
   'cleaningTasks','clients','chatMessages','reservations',
@@ -6695,6 +6698,266 @@ function renderModuleBadges(){
   });
 }
 
+/* ============================================================
+   PRECIOS DE LA WEB PÚBLICA: los pone el negocio, no el navegador (30/09)
+   Un pedido online llegaba con `price` en cada línea y `costeEnvio` tal cual
+   los había escrito el navegador del cliente, y la app se los creía. Con la
+   consola abierta, una hamburguesa de 12 € llegaba a 0,01 € — y lo mismo
+   pagando en efectivo: la caja cobraba el total de la app, o sea el falso.
+   El aviso de importe descuadrado (paymentAmountMismatches) tampoco lo
+   veía: comparaba el precio inventado con el pago inventado, y cuadraba.
+   Ahora cada línea se vuelve a poner precio con la carta de ESTE negocio.
+   Se acepta el precio que llega si cae entre el precio con la promo activa
+   y el precio sin ella (la hora del móvil del cliente y la de la tablet no
+   tienen por qué coincidir al minuto); fuera de ese margen, se usa el
+   nuestro y el pedido queda marcado para que el negocio lo vea.
+   ============================================================ */
+function buscarPlatoEnCartas(platoId, nombre){
+  const secciones = [];
+  (DB.cartas || []).forEach(c => (c.secciones || []).forEach(s => secciones.push(s)));
+  if(platoId != null){
+    for(const s of secciones){ const p = (s.platos || []).find(x => x && String(x.id) === String(platoId)); if(p) return p; }
+  }
+  // Solo por nombre si no hay id (una web pública abierta desde antes de
+  // esta versión): y solo si el nombre es único, para no adivinar.
+  if(nombre){
+    const n = String(nombre).trim().toLowerCase();
+    const encontrados = [];
+    secciones.forEach(s => (s.platos || []).forEach(p => { if(p && String(p.nombre || '').trim().toLowerCase() === n) encontrados.push(p); }));
+    if(encontrados.length === 1) return encontrados[0];
+  }
+  return null;
+}
+function promoPublicaDelPlato(platoId){
+  const promo = (DB.promos || []).find(p => p && p.discountPct && p.menuItemPlatoId === platoId);
+  return promo ? promo.discountPct : 0;
+}
+// Devuelve las líneas con el precio bueno y la lista de lo corregido.
+// `tipo`: 'delivery' | 'takeaway' | 'mesa'.
+function revisarPreciosPedidoPublico(reqItems, tipo){
+  const correcciones = [];
+  let sinVerificar = 0;
+  const lineas = (reqItems || []).map(l => {
+    const qty = Math.max(1, Math.min(999, parseInt(l.qty) || 1));
+    const enviado = Number(l.price != null ? l.price : l.precio) || 0;
+    const plato = buscarPlatoEnCartas(l.platoId != null ? l.platoId : l.recipeId, l.name || l.nombre);
+    const modsEnviados = Array.isArray(l.modificadores) ? l.modificadores.filter(m => m && m.nombre) : [];
+    if(!plato){
+      sinVerificar++;
+      return {l, qty, price: enviado, mods: modsEnviados.map(m => ({nombre: m.nombre, precio: Number(m.precio) || 0})), plato: null};
+    }
+    // Los extras, con el precio de NUESTRA ficha del plato (por id, y si no
+    // hay id, por nombre). Uno que el plato no tiene no suma nada.
+    const modsPlato = Array.isArray(plato.modificadores) ? plato.modificadores : [];
+    const mods = modsEnviados.map(m => {
+      const propio = modsPlato.find(x => (m.id != null && x.id === m.id) || (x.nombre && x.nombre === m.nombre));
+      return {nombre: propio ? propio.nombre : m.nombre, precio: propio ? (Number(propio.precio) || 0) : 0};
+    });
+    const extras = mods.reduce((s, m) => s + m.precio, 0);
+    let base = Number(plato.precio) || 0;
+    if(tipo === 'delivery' && plato.deliverySupplement) base = Math.round((base + Number(plato.deliverySupplement)) * 100) / 100;
+    const pct = promoPublicaDelPlato(plato.id);
+    const conPromo = pct ? Math.round(base * (1 - pct / 100) * 100) / 100 : base;
+    const minimo = Math.round((conPromo + extras) * 100) / 100;
+    const maximo = Math.round((base + extras) * 100) / 100;
+    let price = enviado;
+    if(!(enviado >= minimo - 0.01 && enviado <= maximo + 0.01)){
+      price = pct ? minimo : maximo;
+      correcciones.push({nombre: plato.nombre || l.name || '', enviado, real: price});
+    }
+    return {l, qty, price, mods, plato};
+  });
+  return {lineas, correcciones, sinVerificar};
+}
+// El gasto de envío, con la configuración del negocio y el subtotal ya bueno.
+function costeEnvioPedidoPublico(tipo, subtotal, enviado){
+  if(tipo !== 'delivery') return 0;
+  const p = (DB.business && DB.business.pedidos) || {};
+  const fee = Number(p.deliveryFee) || 0;
+  const gratisDesde = Number(p.freeDeliveryFrom) || 0;
+  const real = (gratisDesde > 0 && subtotal >= gratisDesde) ? 0 : fee;
+  // Si el negocio no tiene gasto de envío configurado no hay con qué
+  // comparar: se respeta lo que llegue, que nunca baja de cero.
+  if(!fee && !gratisDesde) return Math.max(0, Number(enviado) || 0);
+  return real;
+}
+// La señal de una reserva con la configuración del negocio (mismas reglas
+// que depositAppliesForPeople / reservaDepositAmount de la web pública).
+function senalReservaPropia(people){
+  const b = DB.business || {};
+  if(!b.requireDeposit) return 0;
+  const minPeople = parseInt(b.depositMinPeople) || 0;
+  const n = parseInt(people) || 1;
+  if(minPeople > 0 && n < minPeople) return 0;
+  const amount = parseFloat(b.depositAmount) || 0;
+  return Math.round((b.depositType === 'perPerson' ? amount * n : amount) * 100) / 100;
+}
+function avisarPreciosCorregidos(correcciones, sinVerificar, quien){
+  if(!correcciones.length && !sinVerificar) return;
+  const txt = correcciones.map(c => `${c.nombre}: ${fmtMoney(c.enviado)} → ${fmtMoney(c.real)}`).join(' · ');
+  if(typeof logAudit === 'function') logAudit('edit', t('audit.onlinePricesFixed').replace('${who}', quien || '?').replace('${detail}', txt || t('audit.onlinePricesUnverified')));
+  if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.onlinePricesTitle'), correcciones.length ? t('notif.onlinePricesBody').replace('${n}', correcciones.length) : t('notif.onlinePricesUnverified'));
+}
+
+/* ============================================================
+   PAGOS CON TARJETA: la confirmación se PREGUNTA, no se espera (30/09)
+   El Worker de Redsys escribía «pago_confirmado» en la nube COMPARTIDA,
+   pero desde septiembre cada negocio escucha su buzón en SU nube: el
+   cliente pagaba, el dinero entraba en el banco y en la app el pedido se
+   quedaba «pendiente de pago» para siempre, sin ningún error.
+   El Worker no puede escribir en la nube de cada negocio, y a propósito:
+   si ese buzón aceptara «pago_confirmado», cualquier comensal podría
+   declararse pagado desde la consola. Así que ahora el Worker lo deja en la
+   plataforma (gastrogoan/pagos/{publicId}/{ref}, que solo él escribe) y la
+   app PREGUNTA por REST — sin socket, no gasta conexiones de la plataforma —
+   y solo mientras tenga algún cobro con tarjeta a medias.
+   ============================================================ */
+const PAGOS_TARJETA_CADA_MS = 20000;
+const PAGOS_TARJETA_CADUCAN_MS = 48 * 3600 * 1000;
+function claveRefPago(ref){ return String(ref || '').replace(/[.#$\/\[\]]/g, '_').slice(0, 120); }
+function esperarPagoTarjeta(ref, importe){
+  if(!ref) return;
+  if(!Array.isArray(DB.pagosTarjetaEsperados)) DB.pagosTarjetaEsperados = [];
+  if(DB.pagosTarjetaEsperados.some(p => p && p.id === ref)) return;
+  DB.pagosTarjetaEsperados.push({id: ref, ref, importe: Number(importe) || 0, desde: new Date().toISOString()});
+  programarComprobacionPagos();
+}
+function dejarDeEsperarPago(ref){
+  if(Array.isArray(DB.pagosTarjetaEsperados)) DB.pagosTarjetaEsperados = DB.pagosTarjetaEsperados.filter(p => p && p.id !== ref);
+}
+let pagosTarjetaTimer = null;
+function programarComprobacionPagos(){
+  if(pagosTarjetaTimer) return;
+  // Un poco de azar: con dos tablets abiertas, que no pregunten a la vez.
+  pagosTarjetaTimer = setTimeout(() => { pagosTarjetaTimer = null; comprobarPagosTarjeta(); }, PAGOS_TARJETA_CADA_MS + Math.floor(Math.random() * 5000));
+}
+async function comprobarPagosTarjeta(){
+  const lista = Array.isArray(DB && DB.pagosTarjetaEsperados) ? DB.pagosTarjetaEsperados.filter(Boolean) : [];
+  if(!lista.length) return;
+  const publicId = getPublicId();
+  if(!publicId || (typeof navigator !== 'undefined' && navigator.onLine === false)){ programarComprobacionPagos(); return; }
+  let cambios = false;
+  for(const p of lista.slice(0, 15)){
+    let pago = null;
+    try{
+      const res = await fetch(`${PLATFORM_FIREBASE_CONFIG.databaseURL}/gastrogoan/pagos/${encodeURIComponent(publicId)}/${encodeURIComponent(claveRefPago(p.ref))}.json`);
+      if(res.ok) pago = await res.json();
+    }catch(e){ /* sin red: se vuelve a preguntar en el siguiente ciclo */ }
+    // Puede que otra tablet ya lo haya aplicado mientras se preguntaba.
+    const sigue = (DB.pagosTarjetaEsperados || []).some(x => x && x.id === p.id);
+    if(pago && pago.amount != null && sigue){
+      aplicarPagoConfirmado({orderRef: p.ref, amount: pago.amount, createdAt: pago.createdAt || new Date().toISOString()});
+      cambios = true;
+    }else if(!pago && Date.now() - new Date(p.desde).getTime() > PAGOS_TARJETA_CADUCAN_MS){
+      // El banco confirma en segundos: a las 48 h es un pago abandonado.
+      dejarDeEsperarPago(p.id);
+      cambios = true;
+    }
+  }
+  if(cambios){
+    await saveDB();
+    if(typeof refreshAfterRemoteChange === 'function') refreshAfterRemoteChange();
+  }
+  if((DB.pagosTarjetaEsperados || []).length) programarComprobacionPagos();
+}
+
+// Aplica una confirmación de pago del banco, venga del buzón (negocios aún en
+// la nube compartida) o de la consulta a la plataforma. El importe es el que
+// el BANCO confirmó (Ds_Amount, firmado por Redsys y verificado por el
+// Worker), así que aquí sí se puede comparar con lo que cuesta de verdad.
+function aplicarPagoConfirmado(req){
+  dejarDeEsperarPago(req.orderRef);
+  const importeConfirmado = parseFloat(req.amount) || 0;
+  const registrarDescuadre = (orderId, importeEsperado) => {
+    if(!DB.paymentAmountMismatches) DB.paymentAmountMismatches = [];
+    if(DB.paymentAmountMismatches.some(m => m && m.orderRef === req.orderRef)) return;
+    DB.paymentAmountMismatches.push({id: genId(), orderId, orderRef: req.orderRef, importeEsperado, importeConfirmado, detectedAt: new Date().toISOString()});
+    if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.paymentMismatchTitle'), t('notif.paymentMismatchBody').replace('${esperado}', fmtMoney(importeEsperado)).replace('${confirmado}', fmtMoney(importeConfirmado)));
+  };
+  let pagoConfirmadoMatched = false;
+  const order = DB.tpvOrders.find(o => o.clientRef && o.clientRef === req.orderRef);
+  if(order){
+    pagoConfirmadoMatched = true;
+    const importeEsperado = roundMoney(orderTotal(order) * (1 - (order.descuentoPct||0)/100) + (order.propina||0));
+    const descuadre = Math.abs(importeConfirmado - importeEsperado) > 0.02;
+    if(descuadre) registrarDescuadre(order.id, importeEsperado);
+    order.pagoImporte = req.amount;
+    order.pagoFecha = req.createdAt;
+    // Pagó MENOS de lo que cuesta: no se da por pagado ni entra solo en
+    // cocina. Se queda pendiente, con el aviso, para que decida el negocio.
+    if(importeConfirmado + 0.02 < importeEsperado){
+      order.pagado = false;
+      order.pagoInsuficiente = true;
+    }else{
+      order.pagado = true;
+      order.pagoInsuficiente = false;
+      if(order.status === 'pendiente-online' && DB.business.pedidosOnlineActivos !== false && !order.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
+        acceptOnlineOrder(order.id, true);
+      }
+    }
+  }
+  const reservationPaid = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.orderRef);
+  if(reservationPaid){
+    pagoConfirmadoMatched = true;
+    const senal = parseFloat(reservationPaid.depositAmount) || 0;
+    reservationPaid.depositPagoImporte = req.amount;
+    reservationPaid.depositPagoFecha = req.createdAt;
+    if(senal > 0 && importeConfirmado + 0.02 < senal){
+      // Señal pagada por menos de lo que pide el negocio: no confirma nada.
+      registrarDescuadre(reservationPaid.id, senal);
+      reservationPaid.depositPagoInsuficiente = true;
+    }else{
+      reservationPaid.depositConfirmed = true;
+      reservationPaid.depositPagoInsuficiente = false;
+      // Pendiente de descontar cuando se abra la mesa de esta reserva
+      // (ver confirmOpenTableOrder, js/tpv.js) — así el cliente no paga
+      // la señal dos veces. No se registra como venta aparte aquí: no se
+      // sabe todavía qué va a pedir ni con qué IVA (ver ventasDepositosDelDia,
+      // js/hr.js).
+      reservationPaid.depositSalePending = req.amount;
+      const pasaAConfirmada = reservationPaid.status === 'pendiente' && reservationPaid.tableId;
+      if(pasaAConfirmada) reservationPaid.status = 'confirmada';
+      syncReservationStatusForPublic(reservationPaid);
+      logAudit('edit', t('audit.depositConfirmed').replace('${name}', reservationPaid.clientName||'?'));
+    }
+  }
+  // Líneas de mesa pagadas por móvil: pueden estar mezcladas con líneas
+  // normales dentro de la misma comanda, así que se recorren TODAS las
+  // comandas buscando este pagoRef concreto.
+  (DB.tpvOrders||[]).forEach(o => {
+    const lineas = (o.items||[]).filter(l => l.pagoRef && l.pagoRef === req.orderRef && l.pagoOnlinePendiente);
+    const pendiente = Array.isArray(o.propinasPendientes) ? o.propinasPendientes.find(p => p.ref === req.orderRef) : null;
+    if(!lineas.length && !pendiente) return;
+    pagoConfirmadoMatched = true;
+    const esperado = roundMoney(lineas.reduce((s, l) => s + (Number(l.price) || 0) * (Number(l.qty) || 0), 0) + (pendiente ? (Number(pendiente.importe) || 0) : 0));
+    if(importeConfirmado + 0.02 < esperado){
+      // Lo pagado no cubre lo pedido: las líneas siguen sin cobrar y se
+      // cobrarán en caja como cualquier otra.
+      registrarDescuadre(o.id, esperado);
+      lineas.forEach(l => { l.pagoOnlinePendiente = false; l.pagoInsuficiente = true; });
+      if(pendiente) o.propinasPendientes = o.propinasPendientes.filter(p => p !== pendiente);
+      return;
+    }
+    lineas.forEach(l => { l.pagoOnlinePendiente = false; l.pagadoOnline = true; });
+    // La propina de ese mismo autopedido: solo cuenta AHORA que el banco
+    // confirmó de verdad ese pago concreto, nunca antes.
+    if(pendiente){
+      o.propinaPagadaOnline = (o.propinaPagadaOnline||0) + pendiente.importe;
+      o.propinasPendientes = o.propinasPendientes.filter(p => p !== pendiente);
+    }
+  });
+  // Nada a lo que aplicar el pago: lo más probable es que el pedido se
+  // rechazara/cancelara antes de que llegara la confirmación. Queda aquí,
+  // visible, para que el negocio gestione el reembolso a mano.
+  if(!pagoConfirmadoMatched){
+    if(!DB.unmatchedOnlinePayments) DB.unmatchedOnlinePayments = [];
+    if(!DB.unmatchedOnlinePayments.some(u => u && u.orderRef === req.orderRef)){
+      DB.unmatchedOnlinePayments.push({id: genId(), orderRef: req.orderRef, amount: req.amount||0, createdAt: req.createdAt||new Date().toISOString(), detectedAt: new Date().toISOString()});
+      if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(req.amount||0)));
+    }
+  }
+}
+
 let publicRequestsListenerAttached = false;
 /* ⚠️ EL OYENTE NO SE ENGANCHA HASTA SABER DÓNDE VIVE EL ESPEJO.
 
@@ -6728,6 +6991,8 @@ function initPublicRequestsListener(){
   getPublicMirrorApp().then(app => {
     if(!app || publicRequestsListenerAttached) return;
     publicRequestsListenerAttached = true;
+    // Cobros con tarjeta que quedaron a medias antes de cerrar la app.
+    if((DB.pagosTarjetaEsperados || []).length) programarComprobacionPagos();
     // Una sola vez por arranque, en paralelo, sin bloquear nada: es una
     // lectura de "última hora" para un aviso, no algo de lo que dependa el
     // oyente de reservas/pedidos que sigue justo debajo.
@@ -6813,7 +7078,12 @@ function initPublicRequestsListener(){
         // siempre el personal a mano (grupos grandes suelen necesitar
         // organizarse aparte, aunque técnicamente quepan en una mesa).
         const confirmManualDesde = parseInt(DB.business.reservaConfirmManualDesde) || 0;
-        const exigeConfirmacionManual = mesaSobredimensionada ||
+        // La señal la calcula el negocio, no el navegador (que podía mandar
+        // 0,01 € o saltársela). Si el negocio la exige y cobra con tarjeta
+        // y la reserva llega sin ella, no se confirma sola.
+        const senalPropia = senalReservaPropia(req.people);
+        const senalSaltada = senalPropia > 0 && !req.depositRequired && !!DB.business.redsysActivo;
+        const exigeConfirmacionManual = mesaSobredimensionada || senalSaltada ||
           (confirmManualDesde > 0 && (req.people || 0) >= confirmManualDesde);
         const newReservation = {
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
@@ -6825,7 +7095,8 @@ function initPublicRequestsListener(){
           // a mitad se quedaría con la mesa/aforo bloqueados como si hubiera pagado.
           tableId: confirmedTableId, notes: req.notes || '', status: (confirmedTableId && !req.depositRequired && !exigeConfirmacionManual) ? 'confirmada' : 'pendiente',
           referral: req.referral || '',
-          depositRequired: req.depositRequired || false, depositAmount: req.depositAmount || '', depositConfirmed: false,
+          depositRequired: req.depositRequired || false, depositAmount: req.depositRequired ? (senalPropia ? senalPropia.toFixed(2) : (req.depositAmount || '')) : '', depositConfirmed: false,
+          senalSaltada: senalSaltada || undefined,
           origen: 'publico', createdAt: new Date().toISOString(),
           // El teléfono llega tal cual lo escribió el cliente en la web pública,
           // sin pasar por la misma validación que saveClient (que sí bloquea con
@@ -6839,6 +7110,7 @@ function initPublicRequestsListener(){
           publicToken: req.resToken || null
         };
         DB.reservations.push(newReservation);
+        if(newReservation.depositRequired && newReservation.publicToken) esperarPagoTarjeta(newReservation.publicToken, newReservation.depositAmount);
         if(newReservation.publicToken) syncReservationStatusForPublic(newReservation);
         notifyNewRequest = true;
       }else if(req.type === 'reserva_cancelar'){
@@ -6943,14 +7215,18 @@ function initPublicRequestsListener(){
         // que llegue esa confirmación, la línea NO cuenta como pagada de cara
         // al cobro de la mesa — así, si el pago fallara o nunca se
         // confirmara, no se le regala la comida a nadie por accidente.
-        const items = (req.items || []).map(l => {
-          const mods = Array.isArray(l.modificadores) ? l.modificadores.filter(m => m && m.nombre).map(m => ({nombre: m.nombre, precio: m.precio||0})) : [];
-          const name = mods.length ? `${l.name} (${mods.map(m=>m.nombre).join(', ')})` : l.name;
+        // Precios con la carta del negocio, no con los que manda el móvil.
+        const revisadoMesa = revisarPreciosPedidoPublico(req.items, 'mesa');
+        avisarPreciosCorregidos(revisadoMesa.correcciones, revisadoMesa.sinVerificar, req.clienteNombre || t('audit.tableSelfOrder'));
+        const items = revisadoMesa.lineas.map(({l, qty, price, mods, plato}) => {
+          const baseName = (plato && plato.nombre) || l.name || '';
+          const name = mods.length ? `${baseName} (${mods.map(m=>m.nombre).join(', ')})` : baseName;
           return {
-            platoId: null, recipeId: null, name, price: l.price, qty: l.qty, tanda: '', notas: '', nuevo: true, modificadores: mods,
+            platoId: null, recipeId: null, name, price, qty, tanda: '', notas: '', nuevo: true, modificadores: mods,
             pagoOnlinePendiente: !!req.pagarAhora, pagadorNombre: req.pagarAhora ? (req.clienteNombre||'') : undefined, pagoRef: req.pagarAhora ? req.clientRef : undefined
           };
         });
+        if(req.pagarAhora) esperarPagoTarjeta(req.clientRef);
         const table = DB.tables.find(t => t.id === req.tableId);
         let order = table ? DB.tpvOrders.find(o => o.tableId === table.id && o.status === 'abierta') : null;
         if(order){
@@ -6996,12 +7272,21 @@ function initPublicRequestsListener(){
         // que ya usa el TPV para que cocina los vea sin tener que abrir nada
         // más, y se guardan también aparte por si algún día hace falta la
         // lista estructurada.
-        const onlineItems = (req.items || []).map(l => {
-          const mods = Array.isArray(l.modificadores) ? l.modificadores.filter(m => m && m.nombre).map(m => ({nombre: m.nombre, precio: m.precio||0})) : [];
-          const baseName = l.name||l.nombre||'';
+        // Precios y gasto de envío con la carta y la configuración del
+        // negocio, no con los que manda el navegador (ver revisarPreciosPedidoPublico).
+        const tipoPedido = req.tipo === 'delivery' ? 'delivery' : 'takeaway';
+        const revisado = revisarPreciosPedidoPublico(req.items, tipoPedido);
+        const onlineItems = revisado.lineas.map(({l, qty, price, mods, plato}) => {
+          const baseName = (plato && plato.nombre) || l.name || l.nombre || '';
           const name = mods.length ? `${baseName} (${mods.map(m=>m.nombre).join(', ')})` : baseName;
-          return {platoId: l.platoId||null, recipeId: l.recipeId||null, name, price: l.price||l.precio||0, qty: l.qty||1, tanda: l.tanda||'', notas: l.notas||'', modificadores: mods};
+          return {platoId: l.platoId||null, recipeId: l.recipeId||null, name, price, qty, tanda: l.tanda||'', notas: l.notas||'', modificadores: mods};
         });
+        const subtotalRevisado = onlineItems.reduce((sum, it) => sum + it.price * it.qty, 0);
+        const costeEnvioRevisado = costeEnvioPedidoPublico(tipoPedido, subtotalRevisado, req.costeEnvio);
+        if(Math.abs(costeEnvioRevisado - (Number(req.costeEnvio) || 0)) > 0.01){
+          revisado.correcciones.push({nombre: t('precios.envio'), enviado: Number(req.costeEnvio) || 0, real: costeEnvioRevisado});
+        }
+        avisarPreciosCorregidos(revisado.correcciones, revisado.sinVerificar, req.clienteNombre);
         const newOrderId = genId();
         const matchedClientPedido = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
         DB.tpvOrders.push({
@@ -7010,7 +7295,10 @@ function initPublicRequestsListener(){
           clienteDireccion: req.clienteDireccion || '', clienteCodigoPostal: req.codigoPostal || '',
           notas: req.notas || '',
           date: req.date || '', time: req.time || '',
-          costeEnvio: req.costeEnvio || 0, propina: typeof req.propina === 'number' ? req.propina : 0,
+          costeEnvio: costeEnvioRevisado, propina: (typeof req.propina === 'number' && req.propina > 0) ? Math.min(req.propina, 1000) : 0,
+          // Lo que el navegador mandó y no cuadraba con la carta: se ve en el pedido.
+          preciosCorregidos: revisado.correcciones.length ? revisado.correcciones : undefined,
+          preciosSinVerificar: revisado.sinVerificar || undefined,
           status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
           /* Marca permanente de que este pedido lo hizo el CLIENTE desde la web.
              `status` no vale para esto: en cuanto se acepta deja de ser
@@ -7040,6 +7328,7 @@ function initPublicRequestsListener(){
         if(pagoTarjetaPendiente){
           const newOrder = DB.tpvOrders.find(o => o.id === newOrderId);
           if(newOrder) newOrder.pagado = false;
+          esperarPagoTarjeta(req.clientRef);
         } else if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
           // Con el interruptor de "Pedidos online" en ON (por defecto), el
           // pedido se acepta solo, sin pasar por la bandeja de pendientes —
@@ -7049,105 +7338,10 @@ function initPublicRequestsListener(){
         }
         notifyNewRequest = true;
       }else if(req.type === 'pago_confirmado'){
-        // Confirmación de pago con tarjeta (TPV virtual / Redsys), recibida
-        // automáticamente a través del Worker. `orderRef` puede ser el
-        // clientRef de un pedido, el resToken de la señal de una reserva, o
-        // el pagoRef de una o varias líneas de un autopedido de mesa pagado
-        // aparte (payWithCard usa uno distinto según lo que se esté
-        // pagando) — se comprueban los tres, nunca coinciden entre sí.
-        let pagoConfirmadoMatched = false;
-        const order = DB.tpvOrders.find(o => o.clientRef && o.clientRef === req.orderRef);
-        if(order){
-          pagoConfirmadoMatched = true;
-          // ⚠️ Red de seguridad, no la solución de fondo: el importe que se
-          // firma con el Worker de Redsys lo decide el navegador del
-          // cliente ANTES de mandar el pedido (reservagastrogoan.html), sin
-          // que el Worker vuelva a calcularlo a partir de las líneas reales
-          // — eso solo se puede arreglar en el propio Worker, que no vive en
-          // este repositorio. Lo que sí se puede hacer aquí: si lo que el
-          // banco confirmó no cuadra con lo que este pedido cuesta de
-          // verdad, no se marca como "todo en orden" en silencio — se avisa
-          // para que el negocio lo revise, aunque se siga aceptando el
-          // pedido (mejor un aviso que dejar comida sin cobrar sin que nadie
-          // se entere, y mejor no bloquear a un cliente legítimo por un
-          // redondeo que esta comprobación no supiera calcular bien).
-          // Hallazgo de una auditoría externa.
-          const importeEsperado = roundMoney(orderTotal(order) * (1 - (order.descuentoPct||0)/100) + (order.propina||0));
-          const importeConfirmado = parseFloat(req.amount) || 0;
-          if(Math.abs(importeConfirmado - importeEsperado) > 0.02){
-            if(!DB.paymentAmountMismatches) DB.paymentAmountMismatches = [];
-            DB.paymentAmountMismatches.push({id: genId(), orderId: order.id, orderRef: req.orderRef, importeEsperado, importeConfirmado, detectedAt: new Date().toISOString()});
-            if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.paymentMismatchTitle'), t('notif.paymentMismatchBody').replace('${esperado}', fmtMoney(importeEsperado)).replace('${confirmado}', fmtMoney(importeConfirmado)));
-          }
-          order.pagado = true;
-          order.pagoImporte = req.amount;
-          order.pagoFecha = req.createdAt;
-          // Si es un pedido de delivery/takeaway que se dejó pendiente
-          // precisamente por esperar esta confirmación (ver rama 'pedido'
-          // más arriba), ahora sí se acepta solo si el interruptor de
-          // pedidos online sigue en ON y no hace falta verificar zona.
-          if(order.status === 'pendiente-online' && DB.business.pedidosOnlineActivos !== false && !order.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
-            acceptOnlineOrder(order.id, true);
-          }
-        }
-        const reservationPaid = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.orderRef);
-        if(reservationPaid){
-          pagoConfirmadoMatched = true;
-          reservationPaid.depositConfirmed = true;
-          reservationPaid.depositPagoImporte = req.amount;
-          reservationPaid.depositPagoFecha = req.createdAt;
-          // Pendiente de descontar cuando se abra la mesa de esta reserva
-          // (ver confirmOpenTableOrder, js/tpv.js) — así el cliente no paga
-          // la señal dos veces. No se registra como venta aparte aquí: no
-          // se sabe todavía qué va a pedir ni con qué IVA, así que crear ya
-          // una "venta" con datos inventados podría descuadrar el desglose
-          // fiscal frente a la cuenta real de la mesa. El dinero cobrado
-          // hoy se ve igualmente en Gestión Económica → Ventas, aparte de
-          // la facturación oficial (ver ventasDepositosDelDia, js/hr.js).
-          reservationPaid.depositSalePending = req.amount;
-          // Ahora sí que el pago está confirmado por el banco: si se había quedado
-          // "pendiente" solo por exigir señal (ya tenía mesa asignada), se confirma.
-          const pasaAConfirmada = reservationPaid.status === 'pendiente' && reservationPaid.tableId;
-          if(pasaAConfirmada) reservationPaid.status = 'confirmada';
-          syncReservationStatusForPublic(reservationPaid);
-          logAudit('edit', t('audit.depositConfirmed').replace('${name}', reservationPaid.clientName||'?'));
-        }
-        // Líneas de mesa pagadas por móvil (ver más arriba, rama 'pedido'
-        // tipo 'mesa'): pueden estar mezcladas con líneas normales dentro de
-        // la misma comanda, así que hay que recorrer TODAS las comandas
-        // abiertas buscando líneas con este pagoRef concreto, no solo una.
-        (DB.tpvOrders||[]).forEach(o => {
-          (o.items||[]).forEach(l => {
-            if(l.pagoRef && l.pagoRef === req.orderRef && l.pagoOnlinePendiente){
-              pagoConfirmadoMatched = true;
-              l.pagoOnlinePendiente = false;
-              l.pagadoOnline = true;
-            }
-          });
-          // La propina de ese mismo autopedido (ver arriba, propinasPendientes):
-          // solo se suma a propinaPagadaOnline AHORA que el banco confirmó de
-          // verdad ese pago concreto, nunca antes.
-          if(Array.isArray(o.propinasPendientes) && o.propinasPendientes.length){
-            const pendiente = o.propinasPendientes.find(p => p.ref === req.orderRef);
-            if(pendiente){
-              pagoConfirmadoMatched = true;
-              o.propinaPagadaOnline = (o.propinaPagadaOnline||0) + pendiente.importe;
-              o.propinasPendientes = o.propinasPendientes.filter(p => p !== pendiente);
-            }
-          }
-        });
-        // Ninguno de los tres casos de arriba encontró a qué aplicar este
-        // pago: lo más probable es que el pedido se rechazara/cancelara (y
-        // se moviera a la papelera) ANTES de que llegara esta confirmación
-        // del banco, que es asíncrona y va por su cuenta. Sin este registro,
-        // el dinero que el cliente sí pagó no dejaría ningún rastro: ni
-        // venta, ni aviso, nada — se queda aquí, visible, para que el
-        // negocio pueda localizar y gestionar el reembolso a mano.
-        if(!pagoConfirmadoMatched){
-          if(!DB.unmatchedOnlinePayments) DB.unmatchedOnlinePayments = [];
-          DB.unmatchedOnlinePayments.push({id: genId(), orderRef: req.orderRef, amount: req.amount||0, createdAt: req.createdAt||new Date().toISOString(), detectedAt: new Date().toISOString()});
-          if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(req.amount||0)));
-        }
+        // Confirmación del banco llegada por el buzón (negocios que aún están
+        // en la nube compartida). La misma lógica que la consulta a la
+        // plataforma: ver aplicarPagoConfirmado.
+        aplicarPagoConfirmado(req);
       }
       // ⚠️ Se espera a que el guardado local termine ANTES de borrar la
       // solicitud de Firebase: si no, un cierre del dispositivo justo en ese
@@ -9178,6 +9372,11 @@ function renderRedsysCard(){
         <input type="password" id="rs-clave" placeholder="${t('mn.redsys.secretKeyPh')}" style="font-family:monospace">
         <small style="color:var(--muted)">${t('mn.redsys.secretKeyHint')}</small>
       </div>
+      <div class="field" id="rs-clave-actual-wrap" style="display:none">
+        <label>${t('mn.redsys.currentKey')}</label>
+        <input type="password" id="rs-clave-actual" placeholder="${t('mn.redsys.currentKeyPh')}" style="font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.redsys.currentKeyHint')}</small>
+      </div>
       <div class="field" style="margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
           <input type="checkbox" id="rs-real" style="width:18px;height:18px"> ${t('mn.redsys.realEnv')}
@@ -9191,15 +9390,46 @@ function renderRedsysCard(){
   `;
 }
 
+/* Lo que el Worker necesita para saber de QUÉ negocio se habla (30/09):
+   - tenantId + publicId: la configuración se guarda con el publicId que usa
+     la web de reservas. Antes el Worker lo deducía del tenantId con la fórmula
+     antigua, y los negocios nuevos (publicId sorteado) se quedaban con la web
+     diciendo «este negocio no tiene configurado el pago con tarjeta».
+   - claveActual: para CAMBIAR o DESACTIVAR un TPV ya configurado hace falta
+     la clave secreta que tiene puesta. Antes bastaba el tenantId, que está en
+     cualquier tablet del negocio: un empleado podía poner SU código de
+     comercio y los cobros de los clientes irían a SU banco. La clave secreta
+     no la ve nunca nadie del equipo (la app no la devuelve jamás), y si el
+     dueño la pierde, su banco se la vuelve a dar. */
+function redsysIdentidad(){
+  return {tenantId: getTenantId(), publicId: getPublicId()};
+}
+function redsysErrorTexto(data){
+  if(data && data.code === 'clave_actual') return t('mn.redsys.errCurrentKey');
+  if(data && data.code === 'no_vinculado') return t('mn.redsys.errNotLinked');
+  return (data && data.error) || t('msg.payConfigError');
+}
 async function loadRedsysCardStatus(){
   const el = document.getElementById('redsys-status');
   if(!el || !getTenantId()) return;
   try{
-    const res = await fetch(`${REDSYS_WORKER_URL}/config?tenantId=${encodeURIComponent(getTenantId())}`);
+    const {tenantId, publicId} = redsysIdentidad();
+    const res = await fetch(`${REDSYS_WORKER_URL}/config?tenantId=${encodeURIComponent(tenantId)}&publicId=${encodeURIComponent(publicId || '')}`);
     const data = await res.json();
     redsysIsConfigured = !!(data && data.configured);
+    const wrapActual = document.getElementById('rs-clave-actual-wrap');
+    if(wrapActual) wrapActual.style.display = redsysIsConfigured ? '' : 'none';
     if(data && data.configured){
-      el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-check"></i> ${t('mn.redsys.configured')}</span> · FUC ${escapeHtml(data.fuc)} · ${t('mn.redsys.terminal')} ${escapeHtml(data.terminal)} · ${t('mn.redsys.environment')} ${data.ambiente === 'real' ? t('mn.redsys.envReal') : t('mn.redsys.envTest')}`;
+      // Un negocio que YA cobraba con tarjeta antes de esta versión no tenía
+      // apuntado su código de comercio: se adopta el que hay, una sola vez.
+      // Si nunca había activado el cobro con tarjeta, NO se adopta: ese es
+      // justo el caso de un TPV que ha dado de alta otro antes que el dueño,
+      // y adoptarlo en silencio apagaría el aviso que existe para eso.
+      const yaCobrabaConTarjeta = !!((DB.business.pedidos && DB.business.pedidos.aceptaTpvVirtual === true) || DB.business.requireDeposit);
+      if(DB.business.redsysFucPropio === undefined && yaCobrabaConTarjeta){ DB.business.redsysFucPropio = data.fuc || ''; DB.business.redsysActivo = true; saveDB(); }
+      const ajeno = DB.business.redsysFucPropio === undefined ? true : (!!DB.business.redsysFucPropio && data.fuc !== DB.business.redsysFucPropio);
+      el.innerHTML = (ajeno ? `<div style="color:var(--red);font-weight:700;margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('mn.redsys.foreign'))}</div>` : '') +
+        `<span style="color:var(--ink);font-weight:600"><i class="ti ti-check"></i> ${t('mn.redsys.configured')}</span> · FUC ${escapeHtml(data.fuc)} · ${t('mn.redsys.terminal')} ${escapeHtml(data.terminal)} · ${t('mn.redsys.environment')} ${data.ambiente === 'real' ? t('mn.redsys.envReal') : t('mn.redsys.envTest')}`;
       document.getElementById('rs-fuc').value = data.fuc || '';
       document.getElementById('rs-terminal').value = data.terminal || '';
       document.getElementById('rs-real').checked = data.ambiente === 'real';
@@ -9218,6 +9448,10 @@ async function saveRedsysConfig(){
   const fuc = document.getElementById('rs-fuc').value.trim();
   const terminal = document.getElementById('rs-terminal').value.trim();
   const claveSecreta = document.getElementById('rs-clave').value.trim();
+  const actualEl = document.getElementById('rs-clave-actual');
+  // Si no escribe la actual, se prueba con la nueva: es lo normal cuando solo
+  // cambia el terminal o pasa de pruebas a real con la misma clave.
+  const claveActual = (actualEl && actualEl.value.trim()) || claveSecreta;
   const ambiente = document.getElementById('rs-real').checked ? 'real' : 'test';
   if(!fuc || !terminal){ showToast(t('msg.fillMerchantCode')); return; }
   if(!claveSecreta){ showToast(t('msg.fillSecretKey')); return; }
@@ -9225,11 +9459,22 @@ async function saveRedsysConfig(){
     const res = await fetch(`${REDSYS_WORKER_URL}/config`, {
       method: 'POST',
       headers: {'content-type':'application/json'},
-      body: JSON.stringify({ tenantId: getTenantId(), fuc, terminal, claveSecreta, ambiente })
+      body: JSON.stringify(Object.assign(redsysIdentidad(), { fuc, terminal, claveSecreta, claveActual, ambiente }))
     });
-    const data = await res.json();
-    if(!res.ok || data.error){ showToast(data.error || 'Error al guardar'); return; }
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok || data.error){
+      if(data && data.code === 'clave_actual'){
+        const wrap = document.getElementById('rs-clave-actual-wrap');
+        if(wrap){ wrap.style.display = ''; const inp = document.getElementById('rs-clave-actual'); if(inp) inp.focus(); }
+      }
+      showToast(redsysErrorTexto(data));
+      return;
+    }
     document.getElementById('rs-clave').value = '';
+    if(actualEl) actualEl.value = '';
+    DB.business.redsysFucPropio = fuc;
+    DB.business.redsysActivo = true;
+    saveDB();
     showToast(t('msg.payConfigSaved'));
     loadRedsysCardStatus();
   }catch(e){
@@ -9237,47 +9482,52 @@ async function saveRedsysConfig(){
   }
 }
 
-// Desactiva el cobro con tarjeta: no hay un endpoint de borrado dedicado en
-// el Worker, así que reenviamos la config marcándola como inactiva (mismo
-// endpoint /config) y, pase lo que pase con la llamada, limpiamos los campos
-// y el estado en pantalla para que quede claro que ya no está configurado.
+// Desactiva el cobro con tarjeta. Pide la clave actual, igual que cambiarlo.
+// ⚠️ Antes mandaba los campos vacíos y el Worker lo rechazaba siempre por
+// «faltan datos»: desactivar NO había funcionado nunca.
 async function disableRedsysConfig(){
+  const actualEl = document.getElementById('rs-clave-actual');
+  const wrap = document.getElementById('rs-clave-actual-wrap');
+  const claveActual = (actualEl && actualEl.value.trim()) || (document.getElementById('rs-clave').value || '').trim();
+  if(!claveActual){
+    if(wrap){ wrap.style.display = ''; if(actualEl) actualEl.focus(); }
+    showToast(t('mn.redsys.needCurrentKey'));
+    return;
+  }
   if(!(await confirmModal(t('mn.redsys.confirmDisable')))) return;
-  // ⚠️ No se comprobaba res.ok: si el Worker respondía con un error (o
-  // directamente no respondía), la app limpiaba igualmente la configuración
-  // local y se mostraba como "desactivado" — el negocio creía haber cortado
-  // los pagos con tarjeta mientras el Worker seguía con la configuración
-  // antigua intacta. Hallazgo de una auditoría externa.
+  // ⚠️ Se comprueba res.ok: si el Worker no lo acepta, NO se muestra como
+  // desactivado (el negocio creería haber cortado los cobros sin haberlo hecho).
   try{
     const res = await fetch(`${REDSYS_WORKER_URL}/config`, {
       method: 'POST',
       headers: {'content-type':'application/json'},
-      body: JSON.stringify({ tenantId: getTenantId(), fuc:'', terminal:'', claveSecreta:'', ambiente:'test', disabled:true })
+      body: JSON.stringify(Object.assign(redsysIdentidad(), { claveActual, disabled: true }))
     });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok || data.error){ showToast(data && data.code ? redsysErrorTexto(data) : t('mn.redsys.disableError')); return; }
   }catch(e){
     showToast(t('mn.redsys.disableError'));
     return;
   }
-  ['rs-fuc','rs-terminal','rs-clave'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['rs-fuc','rs-terminal','rs-clave','rs-clave-actual'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const realEl = document.getElementById('rs-real'); if(realEl) realEl.checked = false;
   const el = document.getElementById('redsys-status');
   if(el) el.innerHTML = t('msg.cardPaymentNotConfigured');
+  if(wrap) wrap.style.display = 'none';
   redsysIsConfigured = false;
+  DB.business.redsysActivo = false;
   // Si el TPV virtual estaba marcado como forma de pago aceptada, se
   // desmarca aquí mismo: si no, la web pública seguiría ofreciéndoselo a
   // los clientes aunque ya no funcione de verdad.
   if(DB.business && DB.business.pedidos && DB.business.pedidos.aceptaTpvVirtual !== false){
     DB.business.pedidos.aceptaTpvVirtual = false;
-    saveDB();
   }
-  // Misma razón que arriba: sin TPV virtual no hay forma de cobrar la señal,
-  // así que se desactiva para no dejar una reserva pidiendo un pago que ya
-  // no se puede completar.
+  // Sin TPV virtual no hay forma de cobrar la señal: se desactiva para no
+  // dejar una reserva pidiendo un pago que ya no se puede completar.
   if(DB.business && DB.business.requireDeposit){
     DB.business.requireDeposit = false;
-    saveDB();
   }
+  saveDB();
   updateTpvVirtualCheckboxAvailability();
   updateDepositCheckboxAvailability();
   showToast(t('mn.redsys.disabled'));

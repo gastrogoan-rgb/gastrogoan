@@ -408,6 +408,34 @@ alguien encima.
   (solo admin). ⚠️ Necesita las reglas nuevas publicadas; sin ellas se
   guarda solo en el navegador y lo avisa.
 
+## Pagos con tarjeta (Redsys) y pedidos online: lo que se arregló el 30/09
+
+El Worker de Cloudflare (`gastro`) vive ahora en `worker/redsys-worker.js`
+(ver `worker/README.md`). **Se publica pegándolo a mano en Cloudflare**: tocar
+el fichero no cambia nada hasta entonces.
+
+- **Los precios de la web pública los pone el negocio, no el navegador.**
+  Cada línea de un pedido online (también de un autopedido de mesa, y
+  también pagando en efectivo) se vuelve a poner precio con la carta propia
+  (`revisarPreciosPedidoPublico`), igual que el envío y la señal de las
+  reservas (`senalReservaPropia`). Antes llegaba una hamburguesa a 0,01 € y
+  se cobraba 0,01 €. La web manda `platoId` para poder hacerlo.
+- **Pagar de menos no confirma nada** (`aplicarPagoConfirmado`): se compara lo
+  que el BANCO confirma con lo que cuesta de verdad.
+- **La confirmación del banco se PREGUNTA** (`comprobarPagosTarjeta`): el
+  Worker la deja en `gastrogoan/pagos/{publicId}/{ref}` de la plataforma y la
+  app pregunta por REST mientras tenga cobros a medias
+  (`DB.pagosTarjetaEsperados`). Antes iba al buzón de la nube compartida, que
+  la app ya no escucha: el pedido se quedaba «pendiente de pago» para siempre.
+  ⚠️ El buzón de cada negocio NO acepta `pago_confirmado` a propósito: si lo
+  aceptara, cualquier comensal se declararía pagado desde la consola.
+- **Cambiar o desactivar el TPV exige la clave secreta actual.** Con el
+  `tenantId` bastaba para desviar los cobros a otro banco.
+- ⚠️ Necesita las reglas nuevas de la plataforma (`pagos`, `coachConfig`)
+  publicadas en `plataforma-gastrogoan`.
+
+Pruebas: `test/redsys-worker.mjs` y `test/redsys-app.mjs`.
+
 ## El módulo de I+D (`js/idr.js`)
 
 Un asistente de cocina que crea **elaboraciones base, platos, menús y cartas**
