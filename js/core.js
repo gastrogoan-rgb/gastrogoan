@@ -9421,7 +9421,7 @@ function conectarStripe(){
         <li>La app <strong>Google Authenticator</strong> instalada en el móvil (gratis en Play Store o App Store). Stripe la pide por seguridad, como un banco.</li>
       </ul>
       <p style="margin:0 0 6px;font-weight:700">Lo que te va a pedir Stripe, por orden:</p>
-      <p style="margin:0 0 8px;font-size:13px">Si la página sale en inglés, abajo a la izquierda puedes cambiar el idioma a <strong>Español</strong>.</p>
+      <p style="margin:0 0 8px;font-size:13px">Si la página sale en inglés, cambia el idioma a <strong>Español</strong> (abajo a la izquierda) <strong>nada más entrar</strong>. Al cambiarlo, Stripe puede devolverte aquí: no se pierde nada, pulsa <strong>Terminar el alta en Stripe</strong> y sigues donde estabas.</p>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>Tu email.</strong> Mejor uno del negocio. Si no tienes cuenta de Stripe, te pedirá crear una contraseña.</li>
         <li><strong>Seguridad (verificación en dos pasos).</strong> Sale un código QR. En el móvil abre Google Authenticator, pulsa <strong>+</strong> → <strong>Escanear un código QR</strong>, apunta al QR y escribe en Stripe los <strong>6 números</strong> que aparecen. Solo se hace esta vez. <strong>Guarda el código de recuperación</strong> que te dé Stripe.</li>
@@ -9439,7 +9439,7 @@ function conectarStripe(){
         <li>L'app <strong>Google Authenticator</strong> instal·lada al mòbil (gratuïta a Play Store o App Store). Stripe la demana per seguretat, com un banc.</li>
       </ul>
       <p style="margin:0 0 6px;font-weight:700">El que et demanarà Stripe, per ordre:</p>
-      <p style="margin:0 0 8px;font-size:13px">Si la pàgina surt en anglès, a baix a l'esquerra pots canviar l'idioma a <strong>Español</strong>.</p>
+      <p style="margin:0 0 8px;font-size:13px">Si la pàgina surt en anglès, canvia l'idioma a <strong>Español</strong> (a baix a l'esquerra) <strong>només entrar</strong>. En canviar-lo, Stripe et pot tornar aquí: no es perd res, prem <strong>Acabar l'alta a Stripe</strong> i continues on eres.</p>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>El teu email.</strong> Millor un del negoci. Si no tens compte de Stripe, et demanarà crear una contrasenya.</li>
         <li><strong>Seguretat (verificació en dos passos).</strong> Surt un codi QR. Al mòbil obre Google Authenticator, prem <strong>+</strong> → <strong>Escaneja un codi QR</strong>, apunta al QR i escriu a Stripe els <strong>6 números</strong> que apareixen. Només es fa aquesta vegada. <strong>Desa el codi de recuperació</strong> que et doni Stripe.</li>
@@ -9457,7 +9457,7 @@ function conectarStripe(){
         <li>The <strong>Google Authenticator</strong> app installed on your phone (free on Play Store or App Store). Stripe requires it for security, like a bank.</li>
       </ul>
       <p style="margin:0 0 6px;font-weight:700">What Stripe will ask for, in order:</p>
-      <p style="margin:0 0 8px;font-size:13px">You can change the page language at the bottom left.</p>
+      <p style="margin:0 0 8px;font-size:13px">You can change the page language at the bottom left — do it <strong>as soon as you arrive</strong>. Stripe may bring you back here when you change it: nothing is lost, tap <strong>Finish signing up on Stripe</strong> and carry on where you were.</p>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>Your email.</strong> Preferably a business one. If you don't have a Stripe account, it will ask you to create a password.</li>
         <li><strong>Security (two-step verification).</strong> A QR code appears. On your phone open Google Authenticator, tap <strong>+</strong> → <strong>Scan a QR code</strong>, point it at the QR and type the <strong>6 digits</strong> into Stripe. You only do this once. <strong>Save the recovery code</strong> Stripe gives you.</li>
