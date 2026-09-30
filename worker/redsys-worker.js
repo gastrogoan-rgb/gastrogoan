@@ -15,7 +15,9 @@
  *  - POST /config  guardar, cambiar o desactivar el TPV de un negocio.
  *  - GET  /config  ¿tiene TPV? (nunca devuelve la clave).
  *  - POST /sign    firmar el formulario de pago (lo llama la web de reservas).
- *  - POST /notify  confirmación del banco (servidor a servidor).
+ *  - POST /notify  confirmación del banco: la manda Redsys (servidor a servidor)
+ *                  y también la web de reservas al volver el cliente, con los
+ *                  datos que Redsys firma en la dirección. Se verifica la firma.
  *
  * Cambios del 30/09 (ver worker/README.md):
  *  1. Cambiar o desactivar un TPV ya configurado exige la clave secreta
@@ -589,16 +591,21 @@ async function handleNotify(req, env){
       dsOrder: String(params.Ds_Order || ''),
       createdAt: new Date().toISOString()
     };
-    // Donde lo PREGUNTA la app (ver comprobarPagosTarjeta, js/core.js). Con
-    // PUT y clave fija: si Redsys reintenta el aviso, no se duplica.
-    await fbPut(env, `gastrogoan/pagos/${publicId}/${claveRefPago(orderRef)}`, pago);
+    // El mismo pago puede llegar dos veces: el aviso del banco y la vuelta del
+    // cliente (la web reenvía aquí los datos firmados que Redsys le pone en la
+    // dirección — el comercio de pruebas genérico no manda el aviso directo).
+    // El segundo no hace nada.
+    const rutaPago = `gastrogoan/pagos/${publicId}/${claveRefPago(orderRef)}`;
+    if(await fbGet(env, rutaPago)) return new Response('OK', { headers: CORS_HEADERS });
+    // Donde lo PREGUNTA la app (ver comprobarPagosTarjeta, js/core.js).
+    await fbPut(env, rutaPago, pago);
     // Y en el buzón de la nube compartida, para los negocios que aún tienen
     // allí su espejo (reglas antiguas). A los demás no les llega, y no pasa
     // nada: lo recogen de arriba.
     try { await fbPush(env, `gastrogoan/public/${publicId}/requests`, pago); } catch(e){}
   }
 
-  return new Response('OK');
+  return new Response('OK', { headers: CORS_HEADERS });
 }
 
 export default {
