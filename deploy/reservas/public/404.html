@@ -3862,22 +3862,26 @@ function renderTrackStatus(data){
     app.innerHTML = aparte(t('track.notFound.title'), t('track.notFound.msg'));
     return;
   }
-  const status = data.status || 'pendiente';
+  let status = data.status || 'pendiente';
   const codigo = shortCode(trackToken);
   if(status === 'rechazado'){
     const phone = (DB.business||{}).phone;
     app.innerHTML = aparte(t('track.rejected.title'), t('track.rejected.msg') + (phone ? ' ' + t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`) : '')) + contactoParaCambiosHtml();
     return;
   }
-  const idx = Math.max(0, TRACK_STEPS.indexOf(status));
   const esDelivery = data.tipo === 'delivery';
+  // Para llevar, «listo para recoger» es el ÚLTIMO paso (1/10): «recogido»
+  // no aportaba nada al cliente —ya lo tiene en la mano— y no se distinguía
+  // del anterior. Un pedido ya cerrado se sigue viendo como listo.
+  if(!esDelivery && status === 'entregado') status = 'listo';
+  const idx = Math.max(0, TRACK_STEPS.indexOf(status));
   const tipoTxt = data.tipo ? t(esDelivery ? 'track.type.delivery' : 'track.type.takeaway') : '';
   // Lo que le importa al cliente: qué está pasando AHORA, dicho en una frase.
   const k = (status === 'listo' || status === 'entregado') ? status + (esDelivery ? '.delivery' : '.takeaway') : status;
   const steps = [
     t('track.step.pendiente'), t('track.step.aceptado'), t('track.step.preparando'),
     t(esDelivery ? 'track.step.listo.delivery' : 'track.step.listo.takeaway'),
-    t(esDelivery ? 'track.step.entregado.delivery' : 'track.step.entregado.takeaway'),
+    ...(esDelivery ? [t('track.step.entregado.delivery')] : []),
   ];
   const clase = i => i < idx ? 'hecho' : (i === idx ? (idx === steps.length - 1 ? 'hecho ahora' : 'ahora') : '');
   app.innerHTML = `

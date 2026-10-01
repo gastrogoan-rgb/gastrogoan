@@ -444,6 +444,13 @@ caso('Una reserva que cabe en una mesa libre se confirma sola, aunque la mesa se
   assert.ok(core.includes('!exigeConfirmacionManual) ? \'confirmada\' : \'pendiente\''), 'el estado de la reserva no tiene en cuenta si hace falta confirmación manual');
 });
 
+caso('Pedidos online (1/10): entran solos, el cliente ve «listo» al tocar el grupo en cocina, y para llevar no hay «recogido»', () => {
+  assert.ok(tpv.includes('if(anyMismatch && order.pagado && !auto)'), 'un pedido pagado con algún desajuste vuelve a quedarse sin aceptar en automático');
+  const m = tpv.match(/function cycleGroupEstado[\s\S]*?\n\}/);
+  assert.ok(m && m[0].includes('syncOrderStatusForPublic(order)'), 'avanzar un grupo en cocina no publica el estado al cliente');
+  assert.ok(publica.includes("if(!esDelivery && status === 'entregado') status = 'listo';"), 'el seguimiento de un pedido para llevar vuelve a tener el paso «recogido»');
+});
+
 caso('Las plazas de una mesa son obligatorias (sin ellas la web no puede ofrecerla)', () => {
   assert.ok(app.includes('id="mn-zona-plazas"'), 'crear una zona no pide las plazas por mesa');
   assert.ok(/plazasZona >= 1 && plazasZona <= 50/.test(app), 'se puede crear una zona sin plazas');

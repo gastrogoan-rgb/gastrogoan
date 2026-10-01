@@ -1257,10 +1257,8 @@ function toggleOnlineOrdersSwitch(){
 
 // `auto` distingue la aceptación automática (interruptor de Pedidos Online
 // en ON, ver renderTpvToGo) de la manual desde la bandeja de pendientes: en
-// automático nunca se puede mostrar un confirm() a nadie, así que si hay un
-// desajuste de precio/disponibilidad en un pedido YA PAGADO (tarjeta virtual)
-// se deja tal cual en pendiente-online para que el personal lo revise a
-// mano — es el único caso en el que el auto-aceptar no acepta.
+// automático nunca se puede mostrar un confirm() a nadie, así que un
+// desajuste de precio/disponibilidad solo se marca en las líneas.
 async function acceptOnlineOrder(orderId, auto){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return false;
@@ -1285,8 +1283,14 @@ async function acceptOnlineOrder(orderId, auto){
         anyMismatch = true;
       }
     });
-    if(anyMismatch && order.pagado){
-      if(auto) return false;
+    // ⚠️ En automático se acepta igual (decisión del dueño, 1/10: los
+    // pedidos online entran SOLOS). El precio ya viene recalculado con la
+    // carta al llegar (revisarPreciosPedidoPublico) y un pago de menos no
+    // se da por pagado (aplicarPagoConfirmado), así que este control solo
+    // conseguía dejar pedidos pagados esperando a que alguien los viera.
+    // Las líneas dudosas se marcan igual más abajo (unavailableNow /
+    // priceMismatch) para que el personal las vea en la comanda.
+    if(anyMismatch && order.pagado && !auto){
       if(!(await confirmModal(t('msg.confirmAcceptPaidMismatch'), {danger:true, confirmLabel:t('common.accept')}))) return false;
     }
 
@@ -3025,6 +3029,10 @@ function cycleGroupEstado(orderId, tanda){
   checkComandaCierre(order);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
+  // Sin esto, el cliente seguía viendo «en preparación» aunque cocina ya lo
+  // hubiera dado por hecho tocando el grupo (1/10): solo se publicaba al
+  // tocar plato a plato (setLineEstado).
+  if((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
   withScrollPreserved(() => {
     const active = document.querySelector('.view.active');
     if(active && active.id === 'view-comandascocina') renderComandasCocina();
