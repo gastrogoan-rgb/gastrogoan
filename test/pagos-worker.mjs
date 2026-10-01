@@ -143,6 +143,25 @@ await caso('El aviso de pago solo vale con la firma de Stripe, de la cuenta corr
   return 'firma falsa, vieja o de otra cuenta: no · buena: en /pagos, una vez';
 });
 
+await caso('Al pasar a modo real, la cuenta de pruebas se olvida: «Conectar» crea una nueva', async () => {
+  // Hay una cuenta guardada de las de antes (sin modo = de pruebas). Con la clave real
+  // NO existe en Stripe: si se usara, el negocio se quedaría con un error.
+  const antes = Object.keys(cuentas).length;
+  env.STRIPE_SECRET_KEY = 'sk_live_X';
+  const orig = globalThis.fetch;
+  globalThis.fetch = (url, opts = {}) => { if(String(url).startsWith('https://api.stripe.com')) opts.headers.Authorization = 'Bearer sk_test_X'; return orig(url, opts); };
+  try{
+    const e = await llamar('GET', '/stripe/estado?tenantId=' + TENANT);
+    assert.equal(e.j.conectado, false, 'en modo real la cuenta de pruebas sigue saliendo como conectada');
+    const r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, volver: VOLVER});
+    assert.equal(r.status, 200, JSON.stringify(r.j));
+    assert.equal(Object.keys(cuentas).length, antes + 1, 'no se creó una cuenta nueva en modo real');
+    const guardada = Object.values(datos.gastrogoan.private)[0].stripe;
+    assert.equal(guardada.modo, 'real');
+  } finally { env.STRIPE_SECRET_KEY = 'sk_test_X'; globalThis.fetch = orig; }
+  return 'la de pruebas no se usa · cuenta nueva marcada «real»';
+});
+
 await caso('Un publicId sorteado solo se acepta si es del negocio (misma nube)', async () => {
   datos = {gastrogoan: {
     tenantLookup: {[TENANT]: {databaseURL: 'https://negocio.firebaseio.com'}},
