@@ -444,6 +444,13 @@ caso('Una reserva que cabe en una mesa libre se confirma sola, aunque la mesa se
   assert.ok(core.includes('!exigeConfirmacionManual) ? \'confirmada\' : \'pendiente\''), 'el estado de la reserva no tiene en cuenta si hace falta confirmación manual');
 });
 
+caso('Las plazas de una mesa son obligatorias (sin ellas la web no puede ofrecerla)', () => {
+  assert.ok(app.includes('id="mn-zona-plazas"'), 'crear una zona no pide las plazas por mesa');
+  assert.ok(/plazasZona >= 1 && plazasZona <= 50/.test(app), 'se puede crear una zona sin plazas');
+  assert.ok(!/plazas: null\}\);/.test(app), 'alguna mesa nueva nace sin plazas');
+  assert.ok(/if\(!\(n >= 1 && n <= 50\)\)\{ showToast\(t\('msg.enterSeats'\)\)/.test(app), 'se pueden borrar las plazas de una mesa');
+});
+
 caso('El negocio puede exigir confirmar a mano las reservas a partir de X comensales', () => {
   assert.ok(core.includes('DB.business.reservaConfirmManualDesde'), 'no se lee el umbral de confirmación manual configurado por el negocio');
   const m = app.match(/function toggleReservaConfirmManual\(checked\)\{[\s\S]*?\n\}/);

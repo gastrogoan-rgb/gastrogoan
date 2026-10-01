@@ -6962,6 +6962,10 @@ function renderMiNegocio(){
           <label>${t('mn.ops.tableCount')}</label>
           <input type="number" id="mn-zona-cantidad" min="1" max="50" value="4">
         </div>
+        <div class="field">
+          <label>${t('mn.ops.seatsPerZone')} *</label>
+          <input type="number" id="mn-zona-plazas" min="1" max="50" placeholder="4" required>
+        </div>
       </div>
       <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> ${t('mn.ops.createZone')}</button>
 
@@ -7025,11 +7029,13 @@ function renderMesasConfigList(){
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="text" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" style="flex:1;min-width:0;padding:6px 8px;font-size:13px" placeholder="${t('mn.ops.tableNamePh')}">
-        <input type="number" min="1" max="50" value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" style="width:52px;flex-shrink:0;padding:6px 4px;font-size:13px;text-align:center" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}">
+        <input type="number" min="1" max="50" required value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" style="width:52px;flex-shrink:0;padding:6px 4px;font-size:13px;text-align:center;${t2.plazas?'':'border-color:var(--red);background:var(--red-l)'}" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}" aria-invalid="${!t2.plazas}">
         <button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('');
   });
+  const sinPlazas = DB.tables.filter(tb => !tb.plazas).length;
+  if(sinPlazas) html = `<div class="card" style="border-color:var(--red);background:var(--red-l);padding:10px 12px;margin:8px 0;font-size:13px"><strong>${t('mn.ops.tablesWithoutSeats').replace('${n}', sinPlazas)}</strong></div>` + html;
   box.innerHTML = html;
   checkAforoWarning();
 }
@@ -7114,21 +7120,24 @@ async function addZonaConMesas(){
   const nombre = (document.getElementById('mn-zona-nombre').value||'').trim();
   const cantidad = Math.max(1, Math.min(50, parseInt(document.getElementById('mn-zona-cantidad').value)||0));
   if(!nombre){ showToast(t('msg.enterZoneName')); return; }
+  // Plazas OBLIGATORIAS (decisión del dueño, 1/10): sin ellas la web de
+  // reservas no puede saber qué mesa le va a un grupo y la reserva llegaría
+  // pendiente. Se ponen para toda la zona; luego se cambian mesa a mesa.
+  const plazasZona = parseInt(document.getElementById('mn-zona-plazas').value);
+  if(!(plazasZona >= 1 && plazasZona <= 50)){ showToast(t('msg.enterSeats')); document.getElementById('mn-zona-plazas').focus(); return; }
   if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
   if(!DB.business.zonaOrder.includes(nombre)) DB.business.zonaOrder.push(nombre);
   const existingInZone = DB.tables.filter(t => t.zona === nombre).length;
   // Si la zona ya tiene mesas, confirma antes de añadir más: evita duplicar
   // el rango entero por pulsar el botón dos veces sin darse cuenta.
   if(existingInZone > 0 && !(await confirmModal(t('msg.confirmAddMoreTablesToZone').replace('${zone}', nombre).replace('${count}', existingInZone)))) return;
-  // Las plazas de cada mesa se rellenan después, en "Mesas configuradas"
-  // (más abajo en esta misma pantalla) — no se piden aquí para no obligar a
-  // que todas las mesas de una zona tengan la misma capacidad de entrada.
   for(let i = 1; i <= cantidad; i++){
-    DB.tables.push({id: genId(), name: `Mesa ${existingInZone+i}`, zona: nombre, plazas: null});
+    DB.tables.push({id: genId(), name: `Mesa ${existingInZone+i}`, zona: nombre, plazas: plazasZona});
   }
   saveDB();
   document.getElementById('mn-zona-nombre').value = '';
   document.getElementById('mn-zona-cantidad').value = '4';
+  document.getElementById('mn-zona-plazas').value = '';
   renderMesasConfigList();
   showToast(t('msg.zoneCreated').replace('${name}', nombre).replace('${count}', cantidad));
 }
@@ -7139,13 +7148,16 @@ function addTableToZona(zona){
   const tablesInZone = DB.tables.filter(t => t.zona === zona);
   const plazasSet = new Set(tablesInZone.map(t => t.plazas||null));
   let plazas = plazasSet.size === 1 ? [...plazasSet][0] : null;
+  // Si no son todas iguales, la nueva copia la última mesa con plazas: nunca
+  // nace sin ellas (se cambian después en su casilla).
+  if(plazas == null){ const conPlazas = tablesInZone.filter(t => t.plazas); if(conPlazas.length) plazas = conPlazas[conPlazas.length-1].plazas; }
   // Misma validación que addZonaConMesas, por si algún dato heredado quedara
   // fuera de rango (p.ej. importado de otra fuente).
   if(plazas != null) plazas = Math.max(1, Math.min(50, parseInt(plazas)||0)) || null;
   DB.tables.push({id: genId(), name: `Mesa ${tablesInZone.length+1}`, zona, plazas});
   saveDB();
   renderMesasConfigList();
-  if(plazas == null && tablesInZone.length) showToast(t('mn.ops.seatsHintSingle'));
+  if(plazas == null) showToast(t('msg.enterSeats'));
 }
 
 function updateTableName(id, val){
@@ -7154,14 +7166,17 @@ function updateTableName(id, val){
   tbl.name = (val||'').trim() || tbl.name;
   saveDB();
 }
-// Nº de plazas de la mesa (opcional): se usa solo para avisar en Reservas si
-// un grupo no cabe, no limita nada por sí sola en el TPV.
+// Nº de plazas de la mesa (obligatorio desde el 1/10): con él la web de
+// reservas decide qué mesas le valen a un grupo (de N a N+2 plazas).
 function updateTablePlazas(id, val){
   const tbl = DB.tables.find(x => x.id === id);
   if(!tbl) return;
   const n = parseInt(val);
-  tbl.plazas = (n && n > 0) ? n : null;
+  // Obligatorias: borrarlas dejaría la mesa fuera de las reservas online.
+  if(!(n >= 1 && n <= 50)){ showToast(t('msg.enterSeats')); renderMesasConfigList(); return; }
+  tbl.plazas = n;
   saveDB();
+  renderMesasConfigList();
 }
 async function deleteTableFromConfig(id){
   const order = getOpenOrderForTable(id);
