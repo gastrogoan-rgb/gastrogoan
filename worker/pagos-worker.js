@@ -109,6 +109,17 @@ async function fbPush(env, path, data){
   return res.json();
 }
 const rutaStripe = publicId => `gastrogoan/private/${publicId}/stripe`;
+// Pruebas y real son dos mundos aparte en Stripe: una cuenta conectada en
+// modo pruebas NO existe con la clave real. Cada cuenta guardada lleva su
+// modo, y una del otro modo se trata como si no hubiera ninguna: al pasar a
+// real, el negocio vuelve a pulsar «Conectar con Stripe» y ya está, sin
+// tocar Firebase a mano. Las guardadas antes de esto eran todas de pruebas.
+const modoStripe = env => String(env.STRIPE_SECRET_KEY || '').startsWith('sk_live') ? 'real' : 'pruebas';
+async function leerCfgStripe(env, publicId){
+  const cfg = await fbGet(env, rutaStripe(publicId));
+  if(!cfg || !cfg.accountId) return cfg;
+  return (cfg.modo || 'pruebas') === modoStripe(env) ? cfg : null;
+}
 
 /* ===================== Stripe por REST ===================== */
 
@@ -197,7 +208,7 @@ async function handleConectar(req, env){
   if(n.error) return n.error;
   if(!urlPermitida(body.volver, ORIGENES_APP)) return json({ error: 'Dirección de vuelta no permitida' }, 400);
 
-  let cfg = await fbGet(env, rutaStripe(n.publicId));
+  let cfg = await leerCfgStripe(env, n.publicId);
   if(cfg && cfg.accountId){
     const acc = await leerCuenta(env, cfg.accountId);
     // Ya cobra: no se abre ningún formulario de alta. Con el tenantId —que
@@ -217,7 +228,7 @@ async function handleConectar(req, env){
       defaults: { currency: 'eur', locales: ['es-ES'], responsibilities: { fees_collector: 'stripe', losses_collector: 'stripe' } },
       metadata: { publicId: n.publicId, tenantId: body.tenantId }
     });
-    cfg = { accountId: acc.id, createdAt: new Date().toISOString(), activo: false };
+    cfg = { accountId: acc.id, createdAt: new Date().toISOString(), activo: false, modo: modoStripe(env) };
     await fbPut(env, rutaStripe(n.publicId), cfg);
   }
   const link = await stripeV2(env, 'POST', '/core/account_links', {
@@ -236,7 +247,7 @@ async function handleEstado(req, env, url){
     // web de reservas no tenga que preguntarle a Stripe en cada visita.
     const n = await negocioDesdePeticion(env, tenantId, publicIdParam);
     if(n.error) return n.error;
-    const cfg = await fbGet(env, rutaStripe(n.publicId));
+    const cfg = await leerCfgStripe(env, n.publicId);
     if(!cfg || !cfg.accountId) return json({ conectado: false, publicId: n.publicId });
     const acc = await leerCuenta(env, cfg.accountId);
     const r = resumenCuenta(acc);
@@ -246,7 +257,7 @@ async function handleEstado(req, env, url){
   }
   // Desde la web de reservas: solo si se puede pagar, sin más datos.
   if(!idValido(publicIdParam, 4, 40)) return json({ error: 'Falta tenantId o publicId' }, 400);
-  const cfg = await fbGet(env, rutaStripe(publicIdParam));
+  const cfg = await leerCfgStripe(env, publicIdParam);
   return json({ activo: !!(cfg && cfg.accountId && cfg.activo && !cfg.disabled) });
 }
 
@@ -254,7 +265,7 @@ async function handleDesconectar(req, env){
   const body = await req.json().catch(() => ({}));
   const n = await negocioDesdePeticion(env, body.tenantId, body.publicId);
   if(n.error) return n.error;
-  const cfg = await fbGet(env, rutaStripe(n.publicId));
+  const cfg = await leerCfgStripe(env, n.publicId);
   // La cuenta de Stripe sigue siendo del restaurante: aquí solo se deja de
   // ofrecer el pago con tarjeta. Volver a conectar recupera la misma cuenta.
   if(cfg) await fbPatch(env, rutaStripe(n.publicId), { disabled: true, activo: false });
@@ -279,7 +290,7 @@ async function handlePagar(req, env){
   if(!isFinite(amountNum) || amountNum < 0.5 || amountNum > 3000 || Math.abs(centimos - amountNum * 100) > 0.01){
     return json({ error: 'Importe inválido' }, 400);
   }
-  const cfg = await fbGet(env, rutaStripe(publicId));
+  const cfg = await leerCfgStripe(env, publicId);
   if(!cfg || !cfg.accountId || !cfg.activo || cfg.disabled){
     return json({ error: 'Este negocio no tiene activado el pago con tarjeta' }, 404);
   }
@@ -360,7 +371,7 @@ async function handleWebhook(req, env){
   const md = s.metadata || {};
   if(!idValido(md.publicId, 4, 40) || !md.orderRef) return json({ received: true });
   // El pago tiene que venir de la cuenta de ESE negocio.
-  const cfg = await fbGet(env, rutaStripe(md.publicId));
+  const cfg = await leerCfgStripe(env, md.publicId);
   if(!cfg || cfg.accountId !== evento.account) return json({ received: true });
   // La comisión REAL que Stripe le ha cobrado al restaurante por este pago,
   // para que la app la apunte sola como gasto (y el banco cuadre con las

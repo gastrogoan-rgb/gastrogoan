@@ -45,6 +45,8 @@ conectadas**, `checkout.session.completed` (y, si se activa Bizum,
 ⚠️ **Pruebas y real son dos mundos aparte en Stripe**: el webhook y las claves
 de modo real se crean otra vez, en modo real. Al pasar a real se cambian las
 dos claves de Cloudflare y los restaurantes conectan su cuenta de verdad.
+La cuenta de pruebas que tuviera guardada un negocio se olvida sola (cada
+cuenta lleva su `modo`): basta con volver a pulsar «Conectar con Stripe».
 
 ## Publicarlo (desde un ordenador)
 
