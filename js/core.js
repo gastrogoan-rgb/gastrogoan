@@ -9504,8 +9504,9 @@ async function loadPagoOnlineStatus(){
         <button class="btn btn-sm" onclick="loadPagoOnlineStatus()"><i class="ti ti-refresh"></i> ${t('mn.pago.retry')}</button>`;
     }else{
       el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-check"></i> ${escapeHtml(t('mn.pago.active'))}</span>${aNombre ? `<div style="margin-top:4px">${t('mn.pago.account')}: ${aNombre}</div>` : ''}
-        <div style="margin-top:4px">${escapeHtml(t('mn.pago.ownerNote'))}</div>`;
-      if(acciones) acciones.innerHTML = `<a class="btn btn-sm" href="https://dashboard.stripe.com/" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('mn.pago.openStripe')}</a>
+        <div style="margin-top:4px">${escapeHtml(t('mn.pago.ownerNote'))}</div>
+        <div style="margin-top:6px;color:var(--muted)">${escapeHtml(t('mn.pago.twoAccounts').replace('${nombre}', data.nombre || data.email || ''))}</div>`;
+      if(acciones) acciones.innerHTML = `<a class="btn btn-sm" href="https://dashboard.stripe.com/${/^acct_\w+$/.test(data.accountId||'') ? data.accountId + '/payments' : ''}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('mn.pago.openStripe')}</a>
         <button class="btn btn-sm btn-danger" onclick="desconectarStripe()"><i class="ti ti-plug-connected-x"></i> ${t('mn.pago.disconnect')}</button>`;
     }
   }
@@ -9538,7 +9539,7 @@ function conectarStripe(){
       </ul>
       <p style="margin:0 0 4px;font-weight:700">Lo que te pedirá Stripe, en este orden:</p>
       <p style="margin:0 0 8px;font-size:13px">Si sale en inglés, cambia el idioma a <strong>Español</strong> (abajo a la izquierda) nada más entrar. Si al cambiarlo te devuelve aquí, pulsa <strong>Terminar el alta en Stripe</strong>: sigues donde estabas.</p>
-      <div style="border:1px solid var(--ink);padding:12px 14px;margin:0 0 14px"><strong>Antes de empezar: crea tu cuenta de Stripe</strong> <span style="color:var(--muted)">· 3 min</span><br>Entra en <strong>stripe.com</strong> → <strong>Empezar ahora</strong>, regístrate con el email del negocio y confirma el email que te llega. Sin esa cuenta, el formulario de alta no te deja seguir. Cuando la tengas, vuelve aquí y pulsa <strong>Entendido, ir a Stripe</strong>.</div>
+      <div style="border:1px solid var(--ink);padding:12px 14px;margin:0 0 14px"><strong>Antes de empezar: crea tu cuenta de Stripe</strong> <span style="color:var(--muted)">· 3 min</span><br>Entra en <strong>stripe.com</strong> → <strong>Empezar ahora</strong>, regístrate con el email del negocio y confirma el email que te llega. Sin esa cuenta, el formulario de alta no te deja seguir. Esa primera cuenta solo es tu acceso: los cobros irán a la cuenta del restaurante que se crea al pulsar el botón. Cuando la tengas, vuelve aquí y pulsa <strong>Entendido, ir a Stripe</strong>.</div>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>Tu email y una contraseña</strong> <span style="color:var(--muted)">· 1 min</span><br>Entra con la cuenta de Stripe que acabas de crear.</li>
         <li><strong>Seguridad: verificación en dos pasos</strong> <span style="color:var(--muted)">· 2 min</span><br>Sale un código QR. En el móvil abre Google Authenticator → <strong>+</strong> → <strong>Escanear un código QR</strong>, apunta al QR y escribe en Stripe los <strong>6 números</strong>. <strong>Guarda el código de recuperación</strong> que te da Stripe.</li>
@@ -9562,7 +9563,7 @@ function conectarStripe(){
       </ul>
       <p style="margin:0 0 4px;font-weight:700">El que et demanarà Stripe, en aquest ordre:</p>
       <p style="margin:0 0 8px;font-size:13px">Si surt en anglès, canvia l'idioma a <strong>Español</strong> (a baix a l'esquerra) només entrar. Si en canviar-lo et torna aquí, prem <strong>Acabar l'alta a Stripe</strong>: continues on eres.</p>
-      <div style="border:1px solid var(--ink);padding:12px 14px;margin:0 0 14px"><strong>Abans de començar: crea el teu compte de Stripe</strong> <span style="color:var(--muted)">· 3 min</span><br>Entra a <strong>stripe.com</strong> → <strong>Comença ara</strong>, registra't amb l'email del negoci i confirma l'email que et rebràs. Sense aquest compte, el formulari d'alta no et deixa continuar. Quan el tinguis, torna aquí i prem <strong>Entesos, anar a Stripe</strong>.</div>
+      <div style="border:1px solid var(--ink);padding:12px 14px;margin:0 0 14px"><strong>Abans de començar: crea el teu compte de Stripe</strong> <span style="color:var(--muted)">· 3 min</span><br>Entra a <strong>stripe.com</strong> → <strong>Comença ara</strong>, registra't amb l'email del negoci i confirma l'email que et rebràs. Sense aquest compte, el formulari d'alta no et deixa continuar. Aquest primer compte només és el teu accés: els cobraments aniran al compte del restaurant que es crea en prémer el botó. Quan el tinguis, torna aquí i prem <strong>Entesos, anar a Stripe</strong>.</div>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>El teu email i una contrasenya</strong> <span style="color:var(--muted)">· 1 min</span><br>Entra amb el compte de Stripe que acabes de crear.</li>
         <li><strong>Seguretat: verificació en dos passos</strong> <span style="color:var(--muted)">· 2 min</span><br>Surt un codi QR. Al mòbil obre Google Authenticator → <strong>+</strong> → <strong>Escaneja un codi QR</strong>, apunta al QR i escriu a Stripe els <strong>6 números</strong>. <strong>Desa el codi de recuperació</strong> que et dona Stripe.</li>
@@ -9586,7 +9587,7 @@ function conectarStripe(){
       </ul>
       <p style="margin:0 0 4px;font-weight:700">What Stripe will ask for, in this order:</p>
       <p style="margin:0 0 8px;font-size:13px">If it's not in your language, change it at the bottom left as soon as you arrive. If Stripe brings you back here when you change it, tap <strong>Finish signing up on Stripe</strong>: you carry on where you were.</p>
-      <div style="border:1px solid var(--ink);padding:12px 14px;margin:0 0 14px"><strong>Before you start: create your Stripe account</strong> <span style="color:var(--muted)">· 3 min</span><br>Go to <strong>stripe.com</strong> → <strong>Start now</strong>, sign up with the business email and confirm the email you receive. Without that account the sign-up form won't let you continue. Once you have it, come back here and tap <strong>Got it, go to Stripe</strong>.</div>
+      <div style="border:1px solid var(--ink);padding:12px 14px;margin:0 0 14px"><strong>Before you start: create your Stripe account</strong> <span style="color:var(--muted)">· 3 min</span><br>Go to <strong>stripe.com</strong> → <strong>Start now</strong>, sign up with the business email and confirm the email you receive. Without that account the sign-up form won't let you continue. That first account is just your login: payments go to the restaurant account created when you tap the button. Once you have it, come back here and tap <strong>Got it, go to Stripe</strong>.</div>
       <ol style="margin:0 0 14px 18px;line-height:1.6">
         <li><strong>Your email and a password</strong> <span style="color:var(--muted)">· 1 min</span><br>Sign in with the Stripe account you just created.</li>
         <li><strong>Security: two-step verification</strong> <span style="color:var(--muted)">· 2 min</span><br>A QR code appears. On your phone open Google Authenticator → <strong>+</strong> → <strong>Scan a QR code</strong>, point it at the QR and type the <strong>6 digits</strong> into Stripe. <strong>Save the recovery code</strong> Stripe gives you.</li>

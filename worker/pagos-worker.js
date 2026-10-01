@@ -253,7 +253,9 @@ async function handleEstado(req, env, url){
     const r = resumenCuenta(acc);
     const activo = r.cobra && !cfg.disabled;
     if(activo !== !!cfg.activo) await fbPatch(env, rutaStripe(n.publicId), { activo });
-    return json(Object.assign({ conectado: true, activo, desconectado: !!cfg.disabled, publicId: n.publicId }, r));
+    // accountId: para que el botón de la app abra el panel de ESA cuenta y no
+    // la cuenta vacía con la que el dueño se registró en stripe.com.
+    return json(Object.assign({ conectado: true, activo, desconectado: !!cfg.disabled, publicId: n.publicId, accountId: cfg.accountId }, r));
   }
   // Desde la web de reservas: solo si se puede pagar, sin más datos.
   if(!idValido(publicIdParam, 4, 40)) return json({ error: 'Falta tenantId o publicId' }, 400);
