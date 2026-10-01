@@ -13,6 +13,9 @@ const MEDIR=`(function(raiz,tactil){
   const visible=e=>{const r=e.getBoundingClientRect(); return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden';};
   raiz.querySelectorAll('button,a,input,select,[onclick]').forEach(e=>{
     if(!visible(e)) return; const r=e.getBoundingClientRect();
+    // Los botones de la cabecera en móvil (25 px) los pidió así el dueño para
+    // que quepan en una sola línea: decisión aceptada, ver css/styles.css.
+    if(tactil && innerWidth<500 && e.closest('.app-header')) return;
     const casilla=e.tagName==='INPUT'&&(e.type==='checkbox'||e.type==='radio');
     const malo = casilla ? (tactil&&r.height<24) : (r.height<26 || (r.height<32 && r.width<140));
     if(malo) out.chicos.push(Math.round(r.width)+'×'+Math.round(r.height)+' "'+(e.textContent||e.tagName).trim().slice(0,22)+'"');

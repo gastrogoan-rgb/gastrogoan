@@ -88,6 +88,9 @@ const ACEPTADAS = new Set([
 const esRuido = s =>
   !s ||
   ACEPTADAS.has(s) ||
+  // las mismas abreviaturas con día delante o con el * del mes en curso
+  // ("1 Oct", "Oct*"): solo aparecen ese mes, y el 1/10 tumbaron la prueba
+  /^(\d{1,2} )?(Oct|Nov|Feb|Mar|Jun|Jul)\*?$/.test(s) ||
   s.length < 3 ||                          // símbolos, iniciales, unidades
   !/[a-záéíóúàèòïüçñ]/i.test(s) ||         // sin letras: números, fechas, importes
   /^[\d\s.,:/€%+\-()]+$/.test(s) ||        // "1.850,00 €", "21/09", "09:00 - 17:00"

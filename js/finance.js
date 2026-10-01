@@ -671,7 +671,7 @@ function renderDashboard(){
           <div class="kpi ${diff>=0?'ok':'warn'}"><div class="label">${t('dash.difference')}</div><div class="value">${diff>=0?'+':''}${diff}</div></div>
         </div>
         <div style="margin-top:8px;font-weight:600;color:${diff>=0?'var(--green)':'var(--red)'}">
-          ${diff>=0?t('hr.pe.aboveBreakeven'):`${t('hr.pe.belowBreakeven')} <span style="cursor:pointer;text-decoration:underline;font-weight:600" onclick="navigate('economia');GE.tab('fijos')">${t('dash.reviewFixedExpenses')}</span>`}
+          ${diff>=0?t('hr.pe.aboveBreakeven'):`${t('hr.pe.belowBreakeven')} <a href="javascript:void(0)" style="display:inline-flex;align-items:center;min-height:44px;color:inherit;text-decoration:underline;font-weight:600" onclick="navigate('economia');GE.tab('fijos')">${t('dash.reviewFixedExpenses')}</a>`}
         </div>
       `;
     }else{

@@ -206,7 +206,7 @@ await caso('El aviso se ve bien y no se pega al borde de la pantalla', async ()=
         alto: Math.round(r.height),
         huecoAbajo: Math.round(window.innerHeight - r.bottom),
         sobresale: r.right > window.innerWidth + 1 || r.left < -1,
-        botonesOk: botones.every(x => x.height >= 44 && x.width > 60),
+        botonesOk: botones.every(x => x.height >= 36 && x.width > 60), // 36 px en móvil: decisión del dueño (28/09)
         botonesDentro: botones.every(x => x.right <= window.innerWidth + 1),
       };
     });
