@@ -125,6 +125,17 @@ for(const ap of APARATOS){
       DB.tables.push({id:1, name:'Mesa 1', zona:'Salón', plazas:4});
       saveDB();
     });
+    // Chromium no es WebKit: no tiene `-webkit-touch-callout`, así que la
+    // regla de Android (`@supports not (-webkit-touch-callout: none)`, que
+    // deja los campos en 13 px a propósito desde el 24/09) le aplica. En un
+    // iPhone de verdad NO aplica: se quita aquí para medir lo que ve Safari.
+    await page.evaluate(()=>{
+      const quitar = lista => { for(let i = lista.length - 1; i >= 0; i--){ const r = lista[i];
+        if(r.conditionText && r.conditionText.includes('touch-callout') && r.parentRule) r.parentRule.deleteRule(i);
+        else if(r.conditionText && r.conditionText.includes('touch-callout')) r.parentStyleSheet.deleteRule(i);
+        else if(r.cssRules) quitar(r.cssRules); } };
+      [...document.styleSheets].forEach(h => { try{ quitar(h.cssRules); }catch(e){} });
+    });
     const VISTAS = [['megalista','cocina'],['pedidos','cocina'],['stock','cocina'],
       ['horarios','cocina'],['limpieza','cocina'],['reservas','sala'],['clientes','sala'],
       ['tpv','sala'],['minegocio','gestion'],['economia','gestion']];

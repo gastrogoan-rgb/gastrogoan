@@ -110,7 +110,11 @@ await caso('Ninguna pantalla del recorrido sale vacía', async ()=>{
      pantallas en blanco no enseña la app, enseña un esqueleto — y encontrarlo
      revisando capturas a mano es insostenible. */
   const PARADAS = [
-    ['comandascocina','cocina', null], ['comandascocina','cocina', "setComandasCocinaTab('cerradas')"],
+    ['comandascocina','cocina', null],
+    // «Cerradas» enseña solo las de HOY: de madrugada (antes de las 6) la
+    // demo aún no tiene ninguna y el hueco es correcto. Tumbó la batería el
+    // 1/10 a las 2:00.
+    ...(new Date().getHours() >= 6 ? [['comandascocina','cocina', "setComandasCocinaTab('cerradas')"]] : []),
     ['carta','cocina', null], ['megalista','cocina', null], ['escandallo','cocina', null],
     ['fichas','cocina', null], ['proveedores','cocina', null],
     ['pedidos','cocina', "setPedidosTab('historial')"],

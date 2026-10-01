@@ -9430,7 +9430,8 @@ function pagoOnlineInfoHtml(){
         <li><strong>Cada cuánto</strong> lo eliges tú en tu panel de Stripe → <strong>Configuración → Transferencias</strong>: diario, semanal o mensual.</li>
         <li>Te llega <strong>ya descontada la comisión</strong>. Cada pago, comisión y transferencia los ves en tu panel de Stripe.</li></ul>
       <p style="margin:0 0 4px;font-weight:700">Y en tus cuentas de GastroGoan</p>
-      <ul ${ul}><li>Cada venta online se apunta por su <strong>importe total</strong>, y la <strong>comisión de Stripe se apunta sola</strong> como gasto en <strong>Gestión Económica → Gastos Variables → Comisiones venta</strong>. Así el banco te cuadra sin hacer cuentas a mano.</li></ul>
+      <ul ${ul}><li>Cada venta online se apunta por su <strong>importe total</strong>, y la <strong>comisión de Stripe se apunta sola</strong> como gasto en <strong>Gestión Económica → Gastos Variables → Comisiones venta</strong>. Así el banco te cuadra sin hacer cuentas a mano.</li>
+        <li><strong>La comisión va sin IVA</strong>: cobrar con tarjeta es un servicio financiero, exento. Por eso se apunta con IVA 0 y no tienes nada que deducir. La factura de comisiones la descargas cada mes en tu panel de Stripe → <strong>Configuración → Documentos</strong>, para tu gestoría.</li></ul>
       <p style="margin:0;color:var(--muted)">Los plazos exactos los fija Stripe y pueden variar: los tuyos los ves en tu panel.</p>`,
     ca: `<p style="margin:0 0 4px;font-weight:700">El que paga el teu client</p>
       <ul ${ul}><li>Ho posa <strong>la teva carta</strong>: preus, enviament i paga i senyal de les reserves. A Stripe no es configura res d'això.</li></ul>
@@ -9444,7 +9445,8 @@ function pagoOnlineInfoHtml(){
         <li><strong>Cada quant</strong> ho tries tu al teu panell de Stripe → <strong>Configuració → Transferències</strong>: diari, setmanal o mensual.</li>
         <li>T'arriba <strong>ja descomptada la comissió</strong>. Cada pagament, comissió i transferència els veus al teu panell de Stripe.</li></ul>
       <p style="margin:0 0 4px;font-weight:700">I als teus comptes de GastroGoan</p>
-      <ul ${ul}><li>Cada venda en línia s'apunta pel seu <strong>import total</strong>, i la <strong>comissió de Stripe s'apunta sola</strong> com a despesa a <strong>Gestió Econòmica → Despeses Variables → Comissions venda</strong>. Així el banc et quadra sense fer comptes a mà.</li></ul>
+      <ul ${ul}><li>Cada venda en línia s'apunta pel seu <strong>import total</strong>, i la <strong>comissió de Stripe s'apunta sola</strong> com a despesa a <strong>Gestió Econòmica → Despeses Variables → Comissions venda</strong>. Així el banc et quadra sense fer comptes a mà.</li>
+        <li><strong>La comissió va sense IVA</strong>: cobrar amb targeta és un servei financer, exempt. Per això s'apunta amb IVA 0 i no tens res a deduir. La factura de comissions la descarregues cada mes al teu panell de Stripe → <strong>Configuració → Documents</strong>, per a la teva gestoria.</li></ul>
       <p style="margin:0;color:var(--muted)">Els terminis exactes els fixa Stripe i poden variar: els teus els veus al teu panell.</p>`,
     en: `<p style="margin:0 0 4px;font-weight:700">What your customer pays</p>
       <ul ${ul}><li>Set by <strong>your menu</strong>: prices, delivery and booking deposits. None of that is configured in Stripe.</li></ul>
@@ -9458,7 +9460,8 @@ function pagoOnlineInfoHtml(){
         <li><strong>How often</strong> is up to you in your Stripe dashboard → <strong>Settings → Payouts</strong>: daily, weekly or monthly.</li>
         <li>It arrives <strong>with the fee already deducted</strong>. Every payment, fee and payout is in your Stripe dashboard.</li></ul>
       <p style="margin:0 0 4px;font-weight:700">And in your GastroGoan accounts</p>
-      <ul ${ul}><li>Each online sale is recorded at its <strong>full amount</strong>, and the <strong>Stripe fee is recorded automatically</strong> as an expense in <strong>Financial Management → Variable Expenses → Sales commissions</strong>. So your bank matches without doing sums by hand.</li></ul>
+      <ul ${ul}><li>Each online sale is recorded at its <strong>full amount</strong>, and the <strong>Stripe fee is recorded automatically</strong> as an expense in <strong>Financial Management → Variable Expenses → Sales commissions</strong>. So your bank matches without doing sums by hand.</li>
+        <li><strong>The fee carries no VAT</strong>: card processing is an exempt financial service. That is why it is recorded with 0% VAT and there is nothing to deduct. Download the monthly fee invoice from your Stripe dashboard → <strong>Settings → Documents</strong> for your accountant.</li></ul>
       <p style="margin:0;color:var(--muted)">Exact timings are set by Stripe and may vary: yours are shown in your dashboard.</p>`
   });
 }
