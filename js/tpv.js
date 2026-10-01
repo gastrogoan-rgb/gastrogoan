@@ -2460,7 +2460,13 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
     else if(hasPreparando) statusBadge = `<button class="btn btn-sm" style="background:var(--ink);color:#fff;border-color:var(--ink);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
   }else{
     if(allPicked) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-    else if(listos.length) statusBadge = `<span class="badge badge-green txt-xs" ><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
+    // Aquí es donde SALA da el último toque: cocina ya lo ha dejado
+    // "servido" (entregado) y es sala quien confirma que el cliente (o el
+    // repartidor) se lo ha llevado de verdad. Un pedido de solo lectura
+    // (ya cerrado/archivado) no puede tocarse.
+    else if(listos.length) statusBadge = esPedidoSoloLectura(order)
+      ? `<span class="badge badge-green txt-xs" ><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`
+      : `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcarTandaRecogidaDesdeSala(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-truck-delivery"></i> ${t('tpv.markPickedUp')}</button>`;
     else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue txt-xs" ><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
     else if(allFired) statusBadge = `<span class="badge badge-amber txt-xs" ><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
@@ -2933,13 +2939,18 @@ function urgencyBadge(mins){
 // antes ese último paso solo lo podía dar Sala desde su propia pantalla,
 // y en cocinas donde el mismo puesto controla el pase no tenía sentido
 // obligar a cambiar de pantalla para una confirmación tan simple.
+// ⚠️ Decisión del dueño (1/10): cocina termina en "entregado" (servido,
+// listo en el pase) y ya no puede dar el paso siguiente. Antes este mismo
+// ciclo dejaba que cocina marcara también "recogido" — el paso que le
+// corresponde a SALA (ver marcarTandaRecogidaDesdeSala) — así que un
+// pedido para llevar podía quedar "recogido" sin que nadie de sala lo
+// hubiera tocado nunca.
 function cycleLineEstado(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
   if(!line) return;
   if(line.estado === 'cocina') setLineEstado(orderId, idx, 'preparando');
   else if(line.estado === 'preparando') setLineEstado(orderId, idx, 'entregado');
-  else if(line.estado === 'entregado' && !line.recogidoAt) markLineRecogida(orderId, idx);
 }
 
 // "Deshacer" a nivel general (pedido del dueño, 9/09): un toque de más en
@@ -3012,7 +3023,7 @@ function cycleGroupEstado(orderId, tanda){
   const idxsAfectados = [];
   (order.items||[]).forEach((line, idx) => {
     if((line.tanda||'') === tanda){
-      if(line.estado === 'cocina' || line.estado === 'preparando' || (line.estado === 'entregado' && !line.recogidoAt)) idxsAfectados.push(idx);
+      if(line.estado === 'cocina' || line.estado === 'preparando') idxsAfectados.push(idx);
     }
   });
   if(!idxsAfectados.length) return;
@@ -3022,7 +3033,6 @@ function cycleGroupEstado(orderId, tanda){
     if((line.tanda||'') === tanda){
       if(line.estado === 'cocina'){ line.estado = 'preparando'; line.preparandoAt = new Date().toISOString(); changed = true; }
       else if(line.estado === 'preparando'){ line.estado = 'entregado'; line.entregadoAt = new Date().toISOString(); changed = true; }
-      else if(line.estado === 'entregado' && !line.recogidoAt){ line.recogidoAt = new Date().toISOString(); changed = true; }
     }
   });
   if(!changed) return;
@@ -3037,6 +3047,31 @@ function cycleGroupEstado(orderId, tanda){
     const active = document.querySelector('.view.active');
     if(active && active.id === 'view-comandascocina') renderComandasCocina();
     else if(active && active.id === 'view-tpv') renderTPV();
+    const overlay = document.getElementById('modal-overlay');
+    if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+  });
+}
+
+// SALA confirma que el cliente (o el repartidor) se ha llevado TODA una
+// tanda de golpe — el paso final del ciclo, que ya NO puede dar cocina
+// (ver cycleLineEstado/cycleGroupEstado). Mismo patrón de "marcar grupo"
+// que ya usa cocina para sus propios pasos, pero solo para este último.
+function marcarTandaRecogidaDesdeSala(orderId, tanda){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const idxs = [];
+  (order.items||[]).forEach((line, idx) => {
+    if((line.tanda||'') === tanda && line.estado === 'entregado' && !line.recogidoAt) idxs.push(idx);
+  });
+  if(!idxs.length) return;
+  pushKitchenUndo(orderId, idxs);
+  idxs.forEach(idx => { order.items[idx].recogidoAt = new Date().toISOString(); });
+  checkComandaCierre(order);
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  withScrollPreserved(() => {
+    const active = document.querySelector('.view.active');
+    if(active && active.id === 'view-tpv') renderTPV();
     const overlay = document.getElementById('modal-overlay');
     if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
   });
@@ -3358,7 +3393,9 @@ function renderComandasCocina(){
       const allReady = g.lines.every(({line}) => line.estado === 'entregado');
       const allPicked = allReady && g.lines.every(({line}) => line.recogidoAt);
       if(allPicked) return `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
-      if(allReady) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</button>`;
+      // Servido: cocina ya no tiene nada más que hacer con esto — el paso de
+      // "recogido" lo da SALA (marcarTandaRecogidaDesdeSala), nunca cocina.
+      if(allReady) return `<span class="badge badge-green" style="flex:none"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</span>`;
       if(hasCocina) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
       if(hasPreparando) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--ink);color:#fff;border-color:var(--ink)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
       return '';
@@ -3379,7 +3416,7 @@ function renderComandasCocina(){
         : line.estado==='cocina' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
         : line.estado==='preparando' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--ink);color:#fff;border-color:var(--ink)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
         : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-        : `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
+        : `<span class="badge badge-green" style="flex:none"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</span>`}
       </div>
     `;
     };

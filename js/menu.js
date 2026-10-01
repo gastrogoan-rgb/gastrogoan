@@ -525,8 +525,12 @@ function renderCartaSecciones(){
           <!-- Un solo nombre: el lápiz va dentro de .owner-only, así el que no
                puede editar ve el nombre limpio y sin un botón que no le sirve.
                La función guarda igualmente el permiso. -->
-          <span class="carta-plato-name" style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameDish')}" onclick="renameCartaPlato(${sec.id},${p.id})">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
-          <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
+          <span class="carta-plato-name" style="flex:1;font-weight:600;cursor:pointer" title="${p.recipeId ? t('title.renameDish') : t('title.editPrice')}" onclick="${p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`}">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
+          <!-- Un plato SIN receta vinculada no tiene "Escandallo" donde ir a
+               cambiar el precio — por eso aquí el propio precio es clicable
+               (y abre el mismo modal de alta). El de una receta vinculada
+               sigue siendo de solo lectura: se gestiona desde Escandallo. -->
+          <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px;${p.recipeId ? '' : 'cursor:pointer;text-decoration:underline dotted'}" ${p.recipeId ? '' : `onclick="addCartaPlato(${sec.id},${p.id})" title="${t('title.editPrice')}"`}>${fmtMoney(p.precio)}</span>
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           ${!p.recipeId ? `<button class="btn btn-sm ${(p.allergensManual||[]).length?'btn-danger':''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${(p.allergensManual||[]).length ? ` (${p.allergensManual.length})` : ''}</button>` : ''}
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
@@ -852,36 +856,46 @@ async function removeCartaPlato(secId, platoId){
   sec.platos = sec.platos.filter(p=>p.id!==platoId);
   renderCartaSecciones();
 }
-function addCartaPlato(secId){
+// `platoId` es null al CREAR, y el id del plato al EDITAR su precio — mismo
+// modal para los dos casos (pedido del dueño, igual que ya hacen los
+// modificadores de ingredientes.js). Hallazgo real (1/10): un plato manual
+// sin receta vinculada (una bebida suelta, un plato sin escandallar) se
+// podía crear con un precio, pero DESPUÉS no había ningún sitio donde
+// cambiárselo — ni al tocar el nombre, ni al tocar el precio, ni en ningún
+// otro botón de su fila. Subir un precio sin receta obligaba a borrar el
+// plato entero y crearlo de nuevo, perdiendo su sitio en la carta.
+function addCartaPlato(secId, platoId){
   const isBebidas = currentArea()==='sala';
+  const sec = cartaEdit && cartaEdit.secciones ? cartaEdit.secciones.find(s=>s.id===secId) : null;
+  const p = (sec && platoId) ? sec.platos.find(x=>x.id===platoId) : null;
   openModal(`
     <div class="modal-header">
-      <h3>${t('title.newDishManual')}</h3>
+      <h3>${p ? t('title.editPrice') : t('title.newDishManual')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
       <label>${isBebidas ? t('label.newDrinkNameField') : t('label.newDishNameField')}</label>
-      <input type="text" id="new-carta-plato-nombre" placeholder="${isBebidas ? t('ph.drinkNameExample') : t('ph.dishNameExample')}">
+      <input type="text" id="new-carta-plato-nombre" value="${p ? escapeHtml(p.nombre) : ''}" placeholder="${isBebidas ? t('ph.drinkNameExample') : t('ph.dishNameExample')}">
     </div>
     <div class="field-row">
       <div class="field">
         <label>${t('label.priceBaseNoVat')}</label>
-        <input type="number" id="new-carta-plato-precio-base" step="0.01" min="0" oninput="updateCartaPlatoFinalPriceDisplay()">
+        <input type="number" id="new-carta-plato-precio-base" step="0.01" min="0" value="${p && p.precioBase!=null ? p.precioBase : ''}" oninput="updateCartaPlatoFinalPriceDisplay()">
       </div>
       <div class="field">
         <label>${t('label.ivaTypeRepercutido')}</label>
         <select id="new-carta-plato-iva" onchange="updateCartaPlatoFinalPriceDisplay()">
-          <option value="" selected disabled>${t('label.chooseIva')}</option>
-          ${[21,10,4,0].map(pct => `<option value="${pct}">${pct}%</option>`).join('')}
+          <option value="" ${p && p.ivaPct!=null ? '' : 'selected'} disabled>${t('label.chooseIva')}</option>
+          ${[21,10,4,0].map(pct => `<option value="${pct}" ${p && p.ivaPct===pct ? 'selected' : ''}>${pct}%</option>`).join('')}
         </select>
       </div>
     </div>
     <div class="field" style="margin-top:-8px">
-      <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="new-carta-plato-precio-final">${fmtMoney(0)}</strong></span>
+      <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="new-carta-plato-precio-final">${fmtMoney(p ? p.precio||0 : 0)}</strong></span>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmAddCartaPlato(${secId})">${t('common.add')}</button>
+      <button class="btn btn-primary" onclick="confirmAddCartaPlato(${secId}${p ? ',' + p.id : ''})">${p ? t('common.save') : t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-carta-plato-nombre')?.focus(), 50);
@@ -892,7 +906,7 @@ function updateCartaPlatoFinalPriceDisplay(){
   const iva = ivaVal === '' ? 0 : parseFloat(ivaVal);
   document.getElementById('new-carta-plato-precio-final').textContent = fmtMoney(base * (1 + iva/100));
 }
-function confirmAddCartaPlato(secId){
+function confirmAddCartaPlato(secId, platoId){
   const nombre = document.getElementById('new-carta-plato-nombre').value;
   if(!nombre || !nombre.trim()){ showToast(currentArea()==='sala' ? t('msg.needDrinkName') : t('msg.needDishName')); return; }
   const precioBaseStr = document.getElementById('new-carta-plato-precio-base').value;
@@ -903,7 +917,13 @@ function confirmAddCartaPlato(secId){
   const ivaPct = parseFloat(ivaRaw);
   const precio = Math.round(precioBase * (1 + ivaPct/100) * 100) / 100;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
-  sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, precioBase, ivaPct, disponible:true, modificadores:[]});
+  if(platoId){
+    const p = sec.platos.find(x=>x.id===platoId);
+    if(!p) return;
+    p.nombre = nombre.trim(); p.precioBase = precioBase; p.ivaPct = ivaPct; p.precio = precio;
+  }else{
+    sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, precioBase, ivaPct, disponible:true, modificadores:[]});
+  }
   closeModal();
   renderCartaSecciones();
 }
