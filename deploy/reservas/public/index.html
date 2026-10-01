@@ -318,6 +318,10 @@ let publicId = null;
 let tableIdFromUrl = null;
 let trackToken = null;
 let trackListenerAttached = false;
+// Último dato recibido, para poder REPINTAR al cambiar de idioma sin volver
+// a enganchar el listener (ver setLang) — mismo patrón que ya usa
+// renderReservationStatus con lastResStatusData.
+let lastTrackStatusData = null;
 let resToken = null;
 let avisoPagoHecho = null;   // se enseña una vez, arriba del seguimiento, al volver del banco
 let resListenerAttached = false;
@@ -654,7 +658,17 @@ function setLang(lang){
   if(document.title === 'Reservas y Pedidos' || Object.values(I18N).some(d=>d['app.title']===document.title)) document.title = t('app.title');
   const loadingEl = document.getElementById('app-loading');
   if(loadingEl) loadingEl.textContent = t('app.loading');
-  if(currentTab){ renderTabBar(); renderTabContent(); }
+  // ⚠️ Las pantallas de seguimiento (?track=) y de gestionar reserva (?res=)
+  // no pasan por currentTab/renderTabContent — cada una tiene su propio
+  // listener y su propio render. Sin esto, tocar el selector de idioma AQUÍ
+  // no hacía NADA: el botón cambiaba de color pero todo el texto de debajo
+  // (la norma dice que la app entera es es/ca/en) se quedaba fijo en el
+  // idioma con el que cargó la página la primera vez — justo las dos
+  // pantallas a las que un cliente llega desde un enlace guardado o
+  // compartido, sin haber pasado antes por el selector.
+  if(trackToken) renderTrackStatus(lastTrackStatusData);
+  else if(resToken) renderReservationStatus(lastResStatusData);
+  else if(currentTab){ renderTabBar(); renderTabContent(); }
   else if(lastErrorKey) showError(lastErrorKey);
 }
 
@@ -3851,6 +3865,7 @@ let trackRecienEnviadoHasta = 0;
 function renderTrackStatus(data){
   const app = document.getElementById('app');
   if(!data && Date.now() < trackRecienEnviadoHasta) data = {status: 'pendiente'};
+  lastTrackStatusData = data;
   const aparte = (titulo, texto) => `
     <div class="trk trk-alone">
       <div class="trk-meta">${trackToken ? `${t('track.orderNumber')} <strong>${escapeHtml(shortCode(trackToken))}</strong>` : ''}</div>

@@ -19,6 +19,7 @@ const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = fs.readFileSync(path.join(raiz, 'js/core.js'), 'utf8');
 const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
 const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
+const menu = fs.readFileSync(path.join(raiz, 'js/menu.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
 const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8');
 const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
@@ -458,6 +459,36 @@ caso('Al volver de Stripe hay un aviso: ni éxito ni «sigue en revisión» se q
   assert.ok(core.includes("localStorage.setItem(STRIPE_VUELTA_LS, '1')"), 'no se marca que se va a Stripe, para avisar a la vuelta');
   assert.ok(core.includes('if(data.conectado && data.activo) showToast(t(\'mn.pago.vueltaOk\'))'), 'no se avisa al volver con la cuenta ya activa');
   assert.ok(core.includes('else if(data.conectado) showToast(t(\'mn.pago.vueltaPendiente\'))'), 'no se avisa al volver con la cuenta todavía en revisión');
+});
+
+caso('El idioma se puede cambiar en la pantalla de seguimiento y en la de gestionar reserva', () => {
+  // Hallazgo real: esas dos pantallas no pasan por currentTab/renderTabContent
+  // (tienen su propio listener en vivo), así que setLang() cambiaba el botón
+  // de color pero no repintaba NADA del texto de debajo — un cliente que
+  // llegaba directo a su enlace de seguimiento se quedaba atascado en el
+  // idioma con el que cargó la página la primera vez.
+  assert.ok(publica.includes('let lastTrackStatusData = null;'), 'falta guardar el último estado del pedido para poder repintarlo');
+  assert.ok(publica.includes('lastTrackStatusData = data;'), 'renderTrackStatus no guarda el último dato recibido');
+  const fn = publica.match(/function setLang\(lang\)\{[\s\S]*?\n\}/);
+  assert.ok(fn, 'no se encontró setLang');
+  assert.ok(fn[0].includes('renderTrackStatus(lastTrackStatusData)'), 'cambiar de idioma no repinta la pantalla de seguimiento del pedido');
+  assert.ok(fn[0].includes('renderReservationStatus(lastResStatusData)'), 'cambiar de idioma no repinta la pantalla de gestionar reserva');
+});
+
+caso('Un plato manual (sin receta) se puede editar el precio después de crearlo, no solo al nacer', () => {
+  // Hallazgo real: un plato sin receta vinculada (una bebida suelta, un
+  // plato sin escandallar) se podía crear con un precio, pero no había
+  // NINGÚN sitio donde cambiárselo después.
+  assert.ok(/function addCartaPlato\(secId, ?platoId\)/.test(menu), 'addCartaPlato ya no admite platoId para reutilizarse como editor');
+  assert.ok(menu.includes("onclick=\"addCartaPlato(${sec.id},${p.id})\" title=\"${t('title.editPrice')}\""), 'el precio de un plato sin receta ya no es clicable para editarlo');
+  assert.ok(/if\(platoId\)\{[\s\S]{0,200}p\.precio = precio;/.test(menu), 'confirmAddCartaPlato no actualiza el plato existente al editar');
+});
+
+caso('Cocina ya no puede marcar "recogido" — ese paso es de SALA (1/10)', () => {
+  assert.ok(!/else if\(line\.estado === 'entregado' && !line\.recogidoAt\) markLineRecogida/.test(tpv), 'cycleLineEstado (cocina) todavía puede marcar recogido');
+  assert.ok(!/else if\(line\.estado === 'entregado' && !line\.recogidoAt\)\{ line\.recogidoAt/.test(tpv), 'cycleGroupEstado todavía marca recogido dentro del bucle compartido con cocina');
+  assert.ok(tpv.includes('function marcarTandaRecogidaDesdeSala'), 'falta la función con la que SALA marca recogida una tanda entera');
+  assert.ok(tpv.includes("onclick=\"marcarTandaRecogidaDesdeSala(${order.id}, '${escapeJsAttr(g.tanda||'')}')\""), 'en Sala no hay ningún botón que llame a marcarTandaRecogidaDesdeSala');
 });
 
 caso('Las plazas de una mesa son obligatorias (sin ellas la web no puede ofrecerla)', () => {
