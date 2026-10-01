@@ -135,6 +135,20 @@ caso('La sonda de comprobarEspejoEnNubePropia usa una ruta por dispositivo, no u
     'la sonda sigue usando una ruta fija (_prueba/_sonda) — dos dispositivos del mismo negocio arrancando a la vez se pisan la sonda');
 });
 
+caso('«Probar mi nube ahora» relanza la sonda de las reglas, no solo la conexión básica (1/10)', () => {
+  // Hallazgo real: tras pegar las reglas nuevas en Firebase, el negocio
+  // pulsaba "Probar mi nube ahora" y la conexión salía en verde — pero el
+  // aviso amarillo de "reglas antiguas" se quedaba clavado toda la sesión,
+  // porque el botón solo miraba lastSyncBadgeState y nunca volvía a llamar
+  // a comprobarEspejoEnNubePropia (que es la que decide espejoEnNubePropia
+  // y, con ella, si se pinta el aviso). Solo desaparecía recargando la
+  // página entera.
+  const fn = core.match(/function probarNubeDesdeElModal\(\)\{[\s\S]*?\n\}/);
+  assert.ok(fn, 'no se encontró probarNubeDesdeElModal');
+  assert.ok(fn[0].includes('espejoEnNubePropia = null'), 'el botón no reinicia espejoEnNubePropia antes de volver a comprobar');
+  assert.ok(fn[0].includes('comprobarEspejoEnNubePropia()'), 'el botón no vuelve a lanzar la sonda de las reglas');
+});
+
 caso('Al tomar comanda hay un botón de información (i) junto a cada plato y opción de menú, con sus alérgenos', () => {
   assert.ok(tpv.includes('function openDishInfoModal'), 'no se encontró openDishInfoModal en tpv.js');
   assert.ok(tpv.includes("openDishInfoModal(${p.recipeId||'null'}"), 'el selector de platos de la carta (renderCartaSelectorInline) no tiene el botón de información');

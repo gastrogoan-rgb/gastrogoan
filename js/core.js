@@ -8790,17 +8790,35 @@ function reintentarNubeAhora(){
 function probarNubeDesdeElModal(){
   if(!reintentarNubeAhora()){ showToast(t('gate.testCloudNoLicense')); return; }
   showToast(t('gate.testCloudRunning'));
+  // ⚠️ Esto comprobaba SOLO la conexión básica (lastSyncBadgeState), nunca
+  // volvía a lanzar la sonda de las reglas nuevas (comprobarEspejoEnNubePropia).
+  // Un negocio que acababa de pegar las reglas correctas veía la nube en
+  // verde (la conexión básica siempre había ido bien) pero el aviso amarillo
+  // de "reglas antiguas" se quedaba clavado para siempre en esa sesión —
+  // solo desaparecía recargando la página entera, que es como se dispara la
+  // sonda la primera vez (initPublicRequestsListener). Ahora el botón
+  // relanza también la sonda: espejoEnNubePropia vuelve a null para que se
+  // repita de cero, y el aviso se actualiza con el resultado real.
+  espejoEnNubePropia = null;
+  esperandoVeredictoDelEspejo = false;
   // Se le contesta pase lo que pase: un botón que no responde es peor que no
   // tener botón. 8 s es de sobra para conectar, y si no, hay veredicto igual.
   setTimeout(() => {
-    if(lastSyncErrorCode || lastSyncBadgeState === 'error'){
-      showToast(t('gate.testCloudFail'));
-    } else if(lastSyncBadgeState === 'online'){
-      showToast(t('gate.testCloudOk'));
-    } else {
-      showToast(t('gate.testCloudSlow'));
-    }
-    if(typeof openCloudWizard === 'function' && document.getElementById('modal-overlay')?.classList.contains('active')) openCloudWizard();
+    Promise.resolve()
+      .then(() => { if(espejoEnNubePropia === null) return comprobarEspejoEnNubePropia(); })
+      .catch(() => {})
+      .then(() => {
+        if(lastSyncErrorCode || lastSyncBadgeState === 'error'){
+          showToast(t('gate.testCloudFail'));
+        } else if(lastSyncBadgeState === 'online' && espejoEnNubePropia !== false){
+          showToast(t('gate.testCloudOk'));
+        } else if(lastSyncBadgeState === 'online'){
+          showToast(t('gate.testCloudOldRules'));
+        } else {
+          showToast(t('gate.testCloudSlow'));
+        }
+        if(typeof openCloudWizard === 'function' && document.getElementById('modal-overlay')?.classList.contains('active')) openCloudWizard();
+      });
   }, 8000);
 }
 // El código de error no se transcribe a mano: se copia y se manda.
