@@ -451,6 +451,15 @@ caso('Pedidos online (1/10): entran solos, el cliente ve «listo» al tocar el g
   assert.ok(publica.includes("if(!esDelivery && status === 'entregado') status = 'listo';"), 'el seguimiento de un pedido para llevar vuelve a tener el paso «recogido»');
 });
 
+caso('Al volver de Stripe hay un aviso: ni éxito ni «sigue en revisión» se quedaban mudos (1/10)', () => {
+  // Hallazgo real: volver antes mandaba a la URL pelada (#home), sin ningún
+  // rastro de Stripe por ningún lado — el dueño no sabía si había ido bien.
+  assert.ok(core.includes("const volver = location.origin + location.pathname + '#minegocio';"), 'la vuelta de Stripe ya no lleva a Mi Negocio');
+  assert.ok(core.includes("localStorage.setItem(STRIPE_VUELTA_LS, '1')"), 'no se marca que se va a Stripe, para avisar a la vuelta');
+  assert.ok(core.includes('if(data.conectado && data.activo) showToast(t(\'mn.pago.vueltaOk\'))'), 'no se avisa al volver con la cuenta ya activa');
+  assert.ok(core.includes('else if(data.conectado) showToast(t(\'mn.pago.vueltaPendiente\'))'), 'no se avisa al volver con la cuenta todavía en revisión');
+});
+
 caso('Las plazas de una mesa son obligatorias (sin ellas la web no puede ofrecerla)', () => {
   assert.ok(app.includes('id="mn-zona-plazas"'), 'crear una zona no pide las plazas por mesa');
   assert.ok(/plazasZona >= 1 && plazasZona <= 50/.test(app), 'se puede crear una zona sin plazas');
