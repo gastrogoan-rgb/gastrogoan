@@ -9527,6 +9527,17 @@ async function loadPagoOnlineStatus(){
       if(acciones) acciones.innerHTML = `<a class="btn btn-sm" href="https://dashboard.stripe.com/${/^acct_\w+$/.test(data.accountId||'') ? data.accountId + '/payments' : ''}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('mn.pago.openStripe')}</a>
         <button class="btn btn-sm btn-danger" onclick="desconectarStripe()"><i class="ti ti-plug-connected-x"></i> ${t('mn.pago.disconnect')}</button>`;
     }
+    // Recién vuelto del alta de Stripe (ver conectarStripeAhora): el dueño
+    // no tenía NINGÚN aviso de si había ido bien — solo se enteraba mirando
+    // la tarjeta con atención. Se avisa una sola vez y se borra la marca,
+    // tanto si ya está activo como si Stripe sigue revisando sus datos.
+    try{
+      if(localStorage.getItem(STRIPE_VUELTA_LS) === '1'){
+        localStorage.removeItem(STRIPE_VUELTA_LS);
+        if(data.conectado && data.activo) showToast(t('mn.pago.vueltaOk'));
+        else if(data.conectado) showToast(t('mn.pago.vueltaPendiente'));
+      }
+    }catch(e){}
   }
   updateTpvVirtualCheckboxAvailability();
   updateDepositCheckboxAvailability();
@@ -9642,11 +9653,20 @@ function conectarStripe(){
 }
 // El alta la hace el dueño en la web de Stripe (sus datos, su banco, su DNI)
 // y vuelve aquí: al volver, loadPagoOnlineStatus ya lo ve activo.
+const STRIPE_VUELTA_LS = 'gastrogoan_stripe_vuelta_pendiente';
 async function conectarStripeAhora(){
   const acciones = document.getElementById('pago-online-acciones');
   if(acciones) acciones.querySelectorAll('button').forEach(b => { b.disabled = true; });
   try{
-    const volver = location.origin + location.pathname;
+    // ⚠️ Sin el hash, Stripe te devolvía a la URL pelada (origin+pathname),
+    // que carga en #home: el dueño volvía del alta y no veía NADA sobre
+    // Stripe, ni aquí ni en ningún otro sitio — parecía que no había pasado
+    // nada. Con #minegocio, el arranque navega derecho a la tarjeta de pago
+    // online; la marca en localStorage (sobrevive a la recarga completa que
+    // hace Stripe al volver) es lo que dispara el aviso de éxito/pendiente
+    // una vez cargado el estado real (ver loadPagoOnlineStatus).
+    try{ localStorage.setItem(STRIPE_VUELTA_LS, '1'); }catch(e){}
+    const volver = location.origin + location.pathname + '#minegocio';
     const res = await fetch(`${PAGOS_WORKER_URL}/stripe/conectar`, {
       method: 'POST', headers: {'content-type': 'application/json'},
       body: JSON.stringify(Object.assign(pagoOnlineIdentidad(), {volver}))
