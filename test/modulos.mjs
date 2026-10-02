@@ -143,6 +143,16 @@ await caso('Comunidad de Bienes: tributa cada comunero por SU IRPF, no un % úni
   assert.ok(r.nota.includes('comunero'), 'falta explicar que tributa cada comunero, no la CB');
 });
 
+await caso('Comunidad de Bienes SIN comuneros todavía: no inventa un impuesto, resultado sin tocar', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'cb'; DB.business.comuneros = [];
+    GE.tab('cdr');
+    return {pct: GE.pctEfectivo(), nota: document.getElementById('res-pct-impuesto-nota').innerText};
+  });
+  assert.equal(r.pct, 0, 'sin comuneros, no debería aplicarse ningún % de impuesto (ni el 25% por defecto de sociedad)');
+  assert.ok(/no.*comuner|comuner.*no/i.test(r.nota), 'falta avisar de que faltan los comuneros: '+r.nota);
+});
+
 await caso('Sociedad: sugiere el tipo real (Ley 7/2024), no un 25% plano siempre', async () => {
   const r = await page.evaluate(() => {
     DB.business.formaJuridica = 'sociedad';
