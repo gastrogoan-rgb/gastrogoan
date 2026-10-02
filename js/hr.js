@@ -148,11 +148,22 @@ const GE = (function(){
   // con sub-pestañas (p.ej. Limpieza) sí recuerdan cuál estaba activa al
   // volver a renderizarse — GE ahora hace lo mismo: si ya hay una pestaña
   // pintada, se vuelve a pintar ESA, no la de por defecto.
+  // Solo tiene sentido para un autónomo que tributa por módulos — una
+  // sociedad paga Impuesto de Sociedades (nunca módulos, que es solo IRPF
+  // de persona física), y un autónomo en directa no tiene nada que calcular
+  // aquí. Se decide en Mi Negocio, no aquí: esta pestaña solo lee el dato.
+  function modulosAplica(){
+    const b = DB.business || {};
+    return b.formaJuridica === 'autonomo' && b.regimenFiscal === 'modulos';
+  }
   function init(){
     if(isGestionLocked('economia')){ denyGestionAccess(); return; }
+    const tabBtn = document.getElementById('ge-tab-modulos');
+    if(tabBtn) tabBtn.style.display = modulosAplica() ? '' : 'none';
     const activo = document.querySelector('#view-economia .ge-tab-panel.active');
     const nombreActivo = activo ? activo.id.replace('ge-','') : null;
-    tab(TABS.includes(nombreActivo) ? nombreActivo : 'ventas');
+    const destino = (nombreActivo==='modulos' && !modulosAplica()) ? 'ventas' : nombreActivo;
+    tab(TABS.includes(destino) ? destino : 'ventas');
   }
   function tab(name){
     document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===name));
@@ -1235,6 +1246,16 @@ const GE = (function(){
     }
     const pctImpEl = document.getElementById('res-pct-impuesto');
     if(pctImpEl) pctImpEl.value = config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25;
+    // La etiqueta y el aviso cambian según lo que se eligió en Mi Negocio
+    // (forma jurídica + régimen fiscal) — mismo dato, pero lo que significa
+    // este % no es lo mismo para una sociedad, un autónomo en directa o un
+    // autónomo en módulos (ver modulosAplica()).
+    const bNeg = DB.business || {};
+    const labelEl = document.getElementById('res-pct-impuesto-label');
+    const notaEl = document.getElementById('res-pct-impuesto-nota');
+    if(labelEl) labelEl.textContent = bNeg.formaJuridica==='sociedad' ? t('label.profitTaxSociedad') : t('label.profitTax');
+    if(notaEl) notaEl.innerHTML = modulosAplica()
+      ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-info-circle"></i> ${t('hr.res.modulosNota')}</p>` : '';
     const ivaPct = ivaVentasPct();
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     // El aviso solo tiene sentido si TODO el año consultado es anterior al
@@ -1522,6 +1543,10 @@ const GE = (function(){
   function renderModulos(){
     const box = document.getElementById('ge-modulos-body');
     if(!box) return;
+    if(!modulosAplica()){
+      box.innerHTML = `<p style="font-size:13px;color:var(--muted)"><i class="ti ti-info-circle"></i> ${t('hr.modulos.noAplica')}</p>`;
+      return;
+    }
     const mc = modulosConfig();
     const r = calcularModulos();
     box.innerHTML = `

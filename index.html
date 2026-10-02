@@ -494,7 +494,7 @@
         <button class="ge-tab" onclick="GE.tab('tesoreria')"><i class="ti ti-building-bank"></i> <span data-i18n="tab.treasury">Tesorería</span></button>
         <button class="ge-tab" onclick="GE.tab('pe')"><i class="ti ti-scale"></i> <span data-i18n="title.breakEven">Punto de Equilibrio</span></button>
         <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> <span data-i18n="tab.capex">CAPEX</span></button>
-        <button class="ge-tab" onclick="GE.tab('modulos')"><i class="ti ti-calculator"></i> <span data-i18n="tab.modulos">Módulos</span></button>
+        <button class="ge-tab" id="ge-tab-modulos" onclick="GE.tab('modulos')" style="display:none"><i class="ti ti-calculator"></i> <span data-i18n="tab.modulos">Módulos</span></button>
       </nav>
 
       <!-- VENTAS (histórico por día y por mes) -->
@@ -582,8 +582,9 @@
           <div id="cdr-chart" class="bar-chart"></div>
         </div>
         <div class="dist-config" style="margin-bottom:14px">
-          <div class="dist-field"><span data-i18n="label.profitTax">Impuesto sobre beneficios (IRPF/IS)</span> <input type="number" id="res-pct-impuesto" value="25" min="0" max="100" step="0.5" oninput="GE.setPctImpuesto()">%</div>
+          <div class="dist-field"><span id="res-pct-impuesto-label" data-i18n="label.profitTax">Impuesto sobre beneficios (IRPF/IS)</span> <input type="number" id="res-pct-impuesto" value="25" min="0" max="100" step="0.5" oninput="GE.setPctImpuesto()">%</div>
         </div>
+        <div id="res-pct-impuesto-nota"></div>
         <p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-info-circle"></i> <span data-i18n="ge.netResultExplanation">El "Resultado Neto" ya descuenta el IVA de tus ventas (configurado en Ajustes &gt; Facturación, % IVA en tickets), resta el coste de tus compras sin el IVA que pagas a proveedores (deducible) y descuenta el impuesto sobre beneficios: es lo que realmente te llevas. Debajo verás también el "IVA a liquidar con Hacienda (modelo 303)" y el "IRPF a ingresar (modelo 111)", que no son gasto del negocio, son dinero ya retenido que hay que declarar cada trimestre.</span></p>
         <div style="margin-bottom:14px">
           <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.linkedBillingNote">Facturación vinculada al TPV · Gastos vinculados a Gastos Fijos y Variables</span></span>

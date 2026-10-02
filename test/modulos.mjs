@@ -30,6 +30,9 @@ await page.evaluate(()=>{
   ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id=>document.getElementById(id)?.remove());
   Object.assign(DB.business,{netlifySetupDone:true,extConnPromptSeen:true,tourSeen:true,categoryIconHintSeen:true});
   DB.employees = [{id:1,name:'A',active:true},{id:2,name:'B',active:true},{id:3,name:'C',active:false}];
+  // Se elige en Mi Negocio (ver test del gate, más abajo) — aquí ya puesto
+  // para poder probar el motor y el panel de verdad.
+  DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'modulos';
   currentFolder='gestion'; navigate('economia'); GE.tab('modulos');
 });
 
@@ -92,6 +95,35 @@ await caso('Las cifras oficiales de los 5 epígrafes de hostelería están verif
   assert.equal(vals['672'].iva.kw, 124.00);
   assert.equal(vals['673.1'].irpf.barra, 371.62);
   assert.equal(vals['673.2'].excesoIrpf, 19084.78);
+});
+
+await caso('Se decide en Mi Negocio: oculta por defecto, visible solo para autónomo en módulos, nunca para sociedad', async () => {
+  const r = await page.evaluate(() => {
+    const out = {};
+    DB.business.formaJuridica = null; DB.business.regimenFiscal = null;
+    currentFolder='gestion'; navigate('economia');
+    out.ocultaSinElegir = document.getElementById('ge-tab-modulos').style.display === 'none';
+    DB.business.formaJuridica = 'sociedad'; DB.business.regimenFiscal = null;
+    navigate('economia');
+    out.ocultaConSociedad = document.getElementById('ge-tab-modulos').style.display === 'none';
+    GE.tab('cdr');
+    out.labelSociedad = document.getElementById('res-pct-impuesto-label').textContent;
+    DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'directa';
+    navigate('economia');
+    out.ocultaAutonomoDirecta = document.getElementById('ge-tab-modulos').style.display === 'none';
+    DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'modulos';
+    navigate('economia');
+    out.visibleAutonomoModulos = document.getElementById('ge-tab-modulos').style.display !== 'none';
+    GE.tab('cdr');
+    out.notaModulos = document.getElementById('res-pct-impuesto-nota').innerText;
+    return out;
+  });
+  assert.ok(r.ocultaSinElegir, 'sin elegir nada en Mi Negocio, la pestaña Módulos no debería verse');
+  assert.ok(r.ocultaConSociedad, 'una sociedad no puede ver la pestaña Módulos (eso es solo de personas físicas)');
+  assert.equal(r.labelSociedad, 'Impuesto de Sociedades', 'con sociedad, la etiqueta del CDR debe decir Impuesto de Sociedades');
+  assert.ok(r.ocultaAutonomoDirecta, 'un autónomo en estimación directa no debería ver la pestaña Módulos');
+  assert.ok(r.visibleAutonomoModulos, 'un autónomo en módulos SÍ debe ver la pestaña');
+  assert.ok(r.notaModulos.includes('Módulos'), 'con módulos, el CDR debe avisar de que el impuesto real está en la pestaña Módulos');
 });
 
 await caso('La pestaña y sus textos están en los tres idiomas', async () => {
