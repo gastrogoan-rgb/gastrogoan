@@ -331,11 +331,17 @@ const GE = (function(){
   // corregirlo) no desvíe el cálculo más de la cuenta.
   function pctImpuestoEfectivoMes(){
     const b = DB.business || {};
-    if(b.formaJuridica === 'cb' && Array.isArray(b.comuneros) && b.comuneros.length){
-      const sumaPct = b.comuneros.reduce((s,c)=>s+(parseFloat(c.pct)||0), 0);
+    if(b.formaJuridica === 'cb'){
+      // Sin comuneros (o sin ningún % puesto todavía), NO se adivina con el
+      // 25% de sociedad — ese campo ni siquiera se ve aquí (está oculto
+      // para una CB). Se deja el resultado SIN tocar, en vez de aplicar un
+      // impuesto que nadie ha confirmado que sea el suyo.
+      const comuneros = Array.isArray(b.comuneros) ? b.comuneros : [];
+      const sumaPct = comuneros.reduce((s,c)=>s+(parseFloat(c.pct)||0), 0);
       if(sumaPct > 0){
-        return b.comuneros.reduce((s,c) => s + (parseFloat(c.pct)||0)/sumaPct * (parseFloat(c.tipoIrpf)||0), 0) / 100;
+        return comuneros.reduce((s,c) => s + (parseFloat(c.pct)||0)/sumaPct * (parseFloat(c.tipoIrpf)||0), 0) / 100;
       }
+      return 0;
     }
     return (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
   }
@@ -1309,7 +1315,11 @@ const GE = (function(){
         const sug = sugerenciaImpuestoSociedad();
         notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-bulb"></i> ${t('hr.res.sugerenciaSociedad').replace('${pct}', sug.pct).replace('${motivo}', sug.motivo)} <button class="btn btn-sm" style="min-height:28px;padding:2px 8px;font-size:11.5px" onclick="document.getElementById('res-pct-impuesto').value=${sug.pct};GE.setPctImpuesto()">${t('hr.res.usarSugerencia')}</button></p>`;
       } else if(bNeg.formaJuridica==='cb'){
-        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-users"></i> ${t('hr.res.cbNota')}</p>`;
+        const comuneros = Array.isArray(bNeg.comuneros) ? bNeg.comuneros : [];
+        const sumaPct = comuneros.reduce((s,c)=>s+(parseFloat(c.pct)||0), 0);
+        notaEl.innerHTML = sumaPct > 0
+          ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-users"></i> ${t('hr.res.cbNota')}</p>`
+          : `<p style="font-size:12px;color:var(--red);margin:-4px 0 10px"><i class="ti ti-alert-triangle"></i> ${t('hr.res.cbSinComuneros')}</p>`;
       } else if(bNeg.formaJuridica==='cooperativa'){
         notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-alert-triangle"></i> ${t('hr.res.cooperativaNota')}</p>`;
       } else {
