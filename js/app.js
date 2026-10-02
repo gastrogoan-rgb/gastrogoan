@@ -6806,6 +6806,29 @@ function renderMiNegocio(){
         </div>
       </div>
 
+      <h4><i class="ti ti-building-bank"></i> ${t('mn.fiscal.title')}</h4>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">${t('mn.fiscal.desc')}</p>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('mn.fiscal.forma')}</label>
+          <select id="mn-forma-juridica" onchange="saveBusiness(true);renderMiNegocio()">
+            <option value="" ${b.formaJuridica?'':'selected'} disabled>${t('mn.fiscal.chooseForma')}</option>
+            <option value="autonomo" ${b.formaJuridica==='autonomo'?'selected':''}>${t('mn.fiscal.autonomo')}</option>
+            <option value="sociedad" ${b.formaJuridica==='sociedad'?'selected':''}>${t('mn.fiscal.sociedad')}</option>
+          </select>
+        </div>
+        ${b.formaJuridica==='autonomo' ? `
+        <div class="field">
+          <label>${t('mn.fiscal.regimen')}</label>
+          <select id="mn-regimen-fiscal" onchange="saveBusiness(true);renderMiNegocio()">
+            <option value="" ${b.regimenFiscal?'':'selected'} disabled>${t('mn.fiscal.chooseRegimen')}</option>
+            <option value="directa" ${b.regimenFiscal==='directa'?'selected':''}>${t('mn.fiscal.directa')}</option>
+            <option value="modulos" ${b.regimenFiscal==='modulos'?'selected':''}>${t('mn.fiscal.modulos')}</option>
+          </select>
+        </div>` : ''}
+      </div>
+      ${b.formaJuridica==='sociedad' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.sociedadHint')}</p>` : ''}
+
       <h4><i class="ti ti-notes"></i> ${t('mn.business.description')}</h4>
       <div class="field">
         <label>${t('mn.business.descriptionLabel')}</label>
@@ -7724,6 +7747,8 @@ async function saveBusiness(silent){
   if(el('business-email')) DB.business.email = el('business-email').value.trim();
   if(el('business-description')) DB.business.description = el('business-description').value.trim();
   if(el('mn-tipo')) DB.business.tipo = el('mn-tipo').value;
+  if(el('mn-forma-juridica')) DB.business.formaJuridica = el('mn-forma-juridica').value;
+  if(el('mn-regimen-fiscal')) DB.business.regimenFiscal = el('mn-regimen-fiscal').value;
   if(el('mn-anyo')) DB.business.anyo = el('mn-anyo').value.trim();
   if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
   if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
