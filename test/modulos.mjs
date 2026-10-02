@@ -126,6 +126,56 @@ await caso('Se decide en Mi Negocio: oculta por defecto, visible solo para autó
   assert.ok(r.notaModulos.includes('Módulos'), 'con módulos, el CDR debe avisar de que el impuesto real está en la pestaña Módulos');
 });
 
+
+await caso('Comunidad de Bienes: tributa cada comunero por SU IRPF, no un % único del negocio', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'cb';
+    DB.business.comuneros = [{nombre:'Ana', pct:60, tipoIrpf:30}, {nombre:'Luis', pct:40, tipoIrpf:19}];
+    currentFolder='gestion'; navigate('economia'); GE.tab('cdr');
+    return {
+      filaOculta: document.getElementById('res-pct-impuesto-row').style.display === 'none',
+      pctEfectivo: Math.round(GE.pctEfectivo()*1000)/10,
+      nota: document.getElementById('res-pct-impuesto-nota').innerText,
+    };
+  });
+  assert.ok(r.filaOculta, 'el campo de impuesto único sigue visible con una Comunidad de Bienes');
+  assert.equal(r.pctEfectivo, 25.6, '60%×30% + 40%×19% debe dar 25,6%: '+r.pctEfectivo);
+  assert.ok(r.nota.includes('comunero'), 'falta explicar que tributa cada comunero, no la CB');
+});
+
+await caso('Sociedad: sugiere el tipo real (Ley 7/2024), no un 25% plano siempre', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'sociedad';
+    DB.business.anyo = String(new Date().getFullYear());
+    currentFolder='gestion'; navigate('economia'); GE.tab('cdr');
+    const nueva = document.getElementById('res-pct-impuesto-nota').innerText;
+    DB.business.anyo = String(new Date().getFullYear() - 10);
+    GE.tab('cdr');
+    const vieja = document.getElementById('res-pct-impuesto-nota').innerText;
+    return {nueva, vieja};
+  });
+  assert.ok(r.nueva.includes('15%'), 'un negocio recién dado de alta debería sugerir el 15% de nueva creación: '+r.nueva);
+  assert.ok(!r.vieja.includes('15%'), 'un negocio de hace 10 años no debería seguir sugiriendo el 15% de nueva creación: '+r.vieja);
+});
+
+await caso('Cooperativa: avisa de que no se calcula, no inventa un tipo', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'cooperativa';
+    currentFolder='gestion'; navigate('economia'); GE.tab('cdr');
+    return document.getElementById('res-pct-impuesto-nota').innerText;
+  });
+  assert.ok(r.includes('gestoría') || r.includes('gestoria'), 'la cooperativa debería remitir a la gestoría, no calcular un tipo inventado: '+r);
+});
+
+await caso('El selector de Mi Negocio ofrece las formas jurídicas reales (autónomo, CB, sociedad, cooperativa)', async () => {
+  const opciones = await page.evaluate(() => {
+    DB.business.formaJuridica = null;
+    navigate('minegocio');
+    return [...document.getElementById('mn-forma-juridica').options].map(o => o.value).filter(Boolean);
+  });
+  assert.deepEqual(opciones, ['autonomo','cb','sociedad','cooperativa']);
+});
+
 await caso('La pestaña y sus textos están en los tres idiomas', async () => {
   const r = await page.evaluate(() => {
     const out = {};

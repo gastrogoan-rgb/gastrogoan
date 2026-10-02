@@ -6710,6 +6710,45 @@ function renderPlan360SummaryPage(){
       </div>`).join('')}
   `;
 }
+// Comunidad de Bienes: NO es una sociedad — no tributa ella, tributa CADA
+// comunero por SU IRPF según SU porcentaje de participación, y cada uno
+// puede estar en un tramo distinto (uno puede tener otros ingresos, el
+// otro no). Por eso aquí no hay un único "% de impuesto": hay una lista de
+// comuneros, cada uno con su % y su propio tipo — se suma lo que le toca
+// a cada uno sobre su parte del resultado. Ver resultadoMes (js/hr.js).
+function renderComunerosHtml(b){
+  const comuneros = b.comuneros || [];
+  const sumaPct = comuneros.reduce((s,c)=>s+(parseFloat(c.pct)||0), 0);
+  return `
+    <div class="ge-section" style="margin:4px 0 10px">
+      <div class="ge-sec-head"><h4 style="margin:0">${t('mn.fiscal.comuneros')}</h4>
+        <button class="btn btn-sm" onclick="addComunero()"><i class="ti ti-plus"></i> ${t('common.add')}</button></div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('mn.fiscal.comunerosDesc')}</p>
+      ${comuneros.length ? comuneros.map((c,i)=>`
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+          <input type="text" value="${escapeHtml(c.nombre||'')}" placeholder="${t('mn.fiscal.comuneroNombrePh')}" style="flex:1;min-width:0;padding:6px 8px;font-size:13px" onchange="updateComunero(${i},'nombre',this.value)">
+          <input type="number" min="0" max="100" step="0.01" value="${c.pct!=null?c.pct:''}" placeholder="%" style="width:72px;padding:6px 4px;font-size:13px;text-align:center" onchange="updateComunero(${i},'pct',this.value)">
+          <input type="number" min="0" max="100" step="0.5" value="${c.tipoIrpf!=null?c.tipoIrpf:''}" placeholder="${t('mn.fiscal.comuneroIrpfPh')}" style="width:72px;padding:6px 4px;font-size:13px;text-align:center" onchange="updateComunero(${i},'tipoIrpf',this.value)">
+          <button class="btn btn-sm btn-icon btn-danger" onclick="removeComunero(${i})"><i class="ti ti-trash"></i></button>
+        </div>`).join('') : `<p style="font-size:13px;color:var(--muted)">${t('mn.fiscal.comunerosEmpty')}</p>`}
+      ${comuneros.length ? `<p style="font-size:12px;margin:4px 0 0;color:${Math.abs(sumaPct-100)>0.5?'var(--red)':'var(--muted)'}">${t('mn.fiscal.comunerosSuma').replace('${pct}', sumaPct.toFixed(2))}</p>` : ''}
+    </div>`;
+}
+function addComunero(){
+  if(!DB.business.comuneros) DB.business.comuneros = [];
+  DB.business.comuneros.push({nombre:'', pct:'', tipoIrpf:''});
+  saveDB(); renderMiNegocio();
+}
+function updateComunero(i, field, val){
+  const c = (DB.business.comuneros||[])[i];
+  if(!c) return;
+  c[field] = (field==='nombre') ? val.trim() : (parseFloat(val)||0);
+  saveDB(); renderMiNegocio();
+}
+function removeComunero(i){
+  DB.business.comuneros = (DB.business.comuneros||[]).filter((_,idx)=>idx!==i);
+  saveDB(); renderMiNegocio();
+}
 function renderMiNegocio(){
   if(isGestionLocked('minegocio')){ denyGestionAccess(); return; }
   const b = DB.business || {};
@@ -6814,7 +6853,9 @@ function renderMiNegocio(){
           <select id="mn-forma-juridica" onchange="saveBusiness(true);renderMiNegocio()">
             <option value="" ${b.formaJuridica?'':'selected'} disabled>${t('mn.fiscal.chooseForma')}</option>
             <option value="autonomo" ${b.formaJuridica==='autonomo'?'selected':''}>${t('mn.fiscal.autonomo')}</option>
+            <option value="cb" ${b.formaJuridica==='cb'?'selected':''}>${t('mn.fiscal.cb')}</option>
             <option value="sociedad" ${b.formaJuridica==='sociedad'?'selected':''}>${t('mn.fiscal.sociedad')}</option>
+            <option value="cooperativa" ${b.formaJuridica==='cooperativa'?'selected':''}>${t('mn.fiscal.cooperativa')}</option>
           </select>
         </div>
         ${b.formaJuridica==='autonomo' ? `
@@ -6828,6 +6869,8 @@ function renderMiNegocio(){
         </div>` : ''}
       </div>
       ${b.formaJuridica==='sociedad' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.sociedadHint')}</p>` : ''}
+      ${b.formaJuridica==='cooperativa' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.cooperativaHint')}</p>` : ''}
+      ${b.formaJuridica==='cb' ? renderComunerosHtml(b) : ''}
 
       <h4><i class="ti ti-notes"></i> ${t('mn.business.description')}</h4>
       <div class="field">

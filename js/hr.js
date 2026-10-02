@@ -324,10 +324,54 @@ const GE = (function(){
     return facturacionNetaMes(mes,año) - totalVariablesNetoMes(mes,año) - geTotalFijosNetoForMonth(año,mes) - comisionesMes(mes,año) - capexCuotaMes(mes,año);
   }
   // Resultado Neto: lo que realmente te llevas, después de IVA e impuesto sobre beneficios.
+  // Comunidad de Bienes: no tributa ella — tributa cada comunero por SU
+  // IRPF, sobre SU parte del resultado, con SU propio tipo (uno puede tener
+  // otros ingresos, el otro no). Se normaliza por la suma real de los
+  // porcentajes para que un reparto mal cuadrado (99% o 101%, antes de
+  // corregirlo) no desvíe el cálculo más de la cuenta.
+  function pctImpuestoEfectivoMes(){
+    const b = DB.business || {};
+    if(b.formaJuridica === 'cb' && Array.isArray(b.comuneros) && b.comuneros.length){
+      const sumaPct = b.comuneros.reduce((s,c)=>s+(parseFloat(c.pct)||0), 0);
+      if(sumaPct > 0){
+        return b.comuneros.reduce((s,c) => s + (parseFloat(c.pct)||0)/sumaPct * (parseFloat(c.tipoIrpf)||0), 0) / 100;
+      }
+    }
+    return (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+  }
   function resultadoMes(mes, año=currentYear()){
     const r = resultadoAntesImpMes(mes,año);
-    const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+    const pctImp = pctImpuestoEfectivoMes();
     return r>0 ? r*(1-pctImp) : r;
+  }
+  // Impuesto de Sociedades real, no el 25% plano: desde la Ley 7/2024
+  // (calendario 2025-2029), casi ninguna SL/SA/SC pequeña paga el 25%.
+  // ⚠️ Es una SUGERENCIA, nunca se aplica sola: el dueño pulsa el botón
+  // para traerla al campo editable de siempre. "Nueva creación" se
+  // aproxima por el año de alta del NEGOCIO en la app — si la sociedad es
+  // más vieja que el negocio (p. ej. abre un segundo local), hay que
+  // corregirlo a mano, y el texto lo dice. Revisar el calendario cada año:
+  // el tipo de "reducida dimensión" baja cada ejercicio hasta 2029.
+  function sugerenciaImpuestoSociedad(){
+    const anioActual = new Date().getFullYear();
+    const anioAlta = parseInt((DB.business||{}).anyo) || null;
+    if(anioAlta && (anioActual - anioAlta) <= 1){
+      return {pct: 15, motivo: t('hr.res.motivoNuevaCreacion')};
+    }
+    let facturacionAnterior = 0;
+    for(let m=0;m<12;m++) facturacionAnterior += facturacionNetaMes(m, anioActual-1);
+    if(facturacionAnterior > 0 && facturacionAnterior < 1000000){
+      let anual = 0;
+      for(let m=0;m<12;m++) anual += resultadoAntesImpMes(m, anioActual);
+      if(anual <= 0) return {pct: 19, motivo: t('hr.res.motivoMicro')};
+      const tramo1 = Math.min(anual, 50000) * 0.19;
+      const tramo2 = Math.max(0, anual-50000) * 0.21;
+      return {pct: Math.round((tramo1+tramo2)/anual*100*100)/100, motivo: t('hr.res.motivoMicro')};
+    }
+    if(facturacionAnterior >= 1000000 && facturacionAnterior <= 10000000){
+      return {pct: 23, motivo: t('hr.res.motivoReducida')};
+    }
+    return {pct: 25, motivo: t('hr.res.motivoGeneral')};
   }
 
   /* ============================================================
@@ -1246,6 +1290,10 @@ const GE = (function(){
     }
     const pctImpEl = document.getElementById('res-pct-impuesto');
     if(pctImpEl) pctImpEl.value = config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25;
+    // En una Comunidad de Bienes el campo no sirve de nada: el tipo lo da
+    // la lista de comuneros (Mi Negocio), no un único porcentaje aquí.
+    const pctImpRow = document.getElementById('res-pct-impuesto-row');
+    if(pctImpRow) pctImpRow.style.display = (DB.business||{}).formaJuridica==='cb' ? 'none' : '';
     // La etiqueta y el aviso cambian según lo que se eligió en Mi Negocio
     // (forma jurídica + régimen fiscal) — mismo dato, pero lo que significa
     // este % no es lo mismo para una sociedad, un autónomo en directa o un
@@ -1254,10 +1302,22 @@ const GE = (function(){
     const labelEl = document.getElementById('res-pct-impuesto-label');
     const notaEl = document.getElementById('res-pct-impuesto-nota');
     if(labelEl) labelEl.textContent = bNeg.formaJuridica==='sociedad' ? t('label.profitTaxSociedad') : t('label.profitTax');
-    if(notaEl) notaEl.innerHTML = modulosAplica()
-      ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-info-circle"></i> ${t('hr.res.modulosNota')}</p>` : '';
+    if(notaEl){
+      if(modulosAplica()){
+        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-info-circle"></i> ${t('hr.res.modulosNota')}</p>`;
+      } else if(bNeg.formaJuridica==='sociedad'){
+        const sug = sugerenciaImpuestoSociedad();
+        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-bulb"></i> ${t('hr.res.sugerenciaSociedad').replace('${pct}', sug.pct).replace('${motivo}', sug.motivo)} <button class="btn btn-sm" style="min-height:28px;padding:2px 8px;font-size:11.5px" onclick="document.getElementById('res-pct-impuesto').value=${sug.pct};GE.setPctImpuesto()">${t('hr.res.usarSugerencia')}</button></p>`;
+      } else if(bNeg.formaJuridica==='cb'){
+        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-users"></i> ${t('hr.res.cbNota')}</p>`;
+      } else if(bNeg.formaJuridica==='cooperativa'){
+        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-alert-triangle"></i> ${t('hr.res.cooperativaNota')}</p>`;
+      } else {
+        notaEl.innerHTML = '';
+      }
+    }
     const ivaPct = ivaVentasPct();
-    const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+    const pctImp = pctImpuestoEfectivoMes();
     // El aviso solo tiene sentido si TODO el año consultado es anterior al
     // primer punto del histórico de gastos fijos (no hay ningún dato real
     // de esas fechas). Si hay histórico, cada mes ya usa su propio valor
@@ -1605,7 +1665,7 @@ const GE = (function(){
         ${(() => {
           let directaAnual = 0;
           for(let m=0;m<12;m++) directaAnual += resultadoAntesImpMes(m);
-          const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+          const pctImp = pctImpuestoEfectivoMes();
           const impuestoDirecta = directaAnual>0 ? directaAnual*pctImp : 0;
           const totalModulos = r.rendimientoAnual*r.pctPago*4 + r.ivaAnual;
           return `
@@ -1892,7 +1952,7 @@ const GE = (function(){
     // Igual que resultadoMes(): tras IVA, el "Beneficio/Ahorro" también debe descontar
     // el impuesto sobre beneficios para que coincida con el "Resultado Neto" post-impuestos
     // que se muestra en CDR/Resultado — si no, aquí se sobreestimaba el beneficio real.
-    const pctImpTe = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+    const pctImpTe = pctImpuestoEfectivoMes();
     const realBen = realBenPreTax>0 ? realBenPreTax*(1-pctImpTe) : realBenPreTax;
     // IVA: Modelo 303 se liquida trimestralmente, no cada mes — mostramos el acumulado
     // del trimestre en curso hasta el mes visto, no solo la porción de este mes.
@@ -2657,7 +2717,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
