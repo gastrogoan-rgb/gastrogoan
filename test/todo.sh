@@ -132,6 +132,7 @@ lanzar; node test/precios.mjs > "$SALIDA/precios.txt" 2>&1 & P90=$!
 lanzar; node test/pagos-worker.mjs > "$SALIDA/pagos-worker.txt" 2>&1 & P91=$!
 lanzar; node test/pagos-app.mjs > "$SALIDA/pagos-app.txt" 2>&1 & P92=$!
 lanzar; node test/reservas-mesas.mjs > "$SALIDA/reservas-mesas.txt" 2>&1 & P93=$!
+lanzar; node test/modulos.mjs > "$SALIDA/modulos.txt" 2>&1 & P94=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -250,5 +251,6 @@ espera $P90 "Subidas de precio: historial, albarán, gasto real y aviso con impa
 espera $P91 "Worker de pagos (Stripe): cuenta del negocio, cobro directo, aviso firmado, pagos a la plataforma" "$SALIDA/pagos-worker.txt" "casos pasaron"
 espera $P92 "Pagos y pedidos online: precios de la carta, pago corto no confirma, confirmación por consulta" "$SALIDA/pagos-app.txt" "casos pasaron"
 espera $P93 "Reservas: horas verde/rojo por mesa de N a N+2, el cliente elige mesa, grupos por teléfono" "$SALIDA/reservas-mesas.txt" "casos pasaron"
+espera $P94 "Módulos: previsión de IRPF/IVA verificada contra la Orden HAC/1425/2025, comparador con el beneficio real" "$SALIDA/modulos.txt" "casos pasaron"
 
 exit $FALLOS

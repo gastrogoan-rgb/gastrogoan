@@ -4,7 +4,7 @@
    ============================================================ */
 const GE = (function(){
   function getMeses(){ return t('months.short'); }
-  const TABS = ['ventas','fijos','variables','cdr','tesoreria','pe','capex'];
+  const TABS = ['ventas','fijos','variables','cdr','tesoreria','pe','capex','modulos'];
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','CUOTA AUTÓNOMOS (RETA)','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
@@ -166,6 +166,7 @@ const GE = (function(){
     if(name==='pe') renderPE();
     if(name==='capex') renderCapex();
     if(name==='tesoreria') renderTesoreria();
+    if(name==='modulos') renderModulos();
     if(typeof scrollContentToTop==='function') scrollContentToTop();
     requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
   }
@@ -316,6 +317,123 @@ const GE = (function(){
     const r = resultadoAntesImpMes(mes,año);
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     return r>0 ? r*(1-pctImp) : r;
+  }
+
+  /* ============================================================
+     MÓDULOS (estimación objetiva de IRPF + régimen simplificado de IVA)
+     ============================================================
+     Solo para quien tributa por módulos — se activa a mano en
+     config().regimenFiscal === 'modulos'. Las cifras son las de la Orden
+     HAC/1425/2025 (BOE-A-2025-25272, hostelería), verificadas contra el
+     propio texto del BOE, no de una web de terceros. ⚠️ Hacienda publica
+     una orden NUEVA cada diciembre: esta tabla hay que revisarla cada año
+     (MODULOS_ANIO lo deja a la vista para no olvidarlo).
+     No sustituye a la gestoría — es una PREVISIÓN para planificar caja,
+     no la declaración oficial (amortización real, prorrateo por horas de
+     personal a tiempo parcial, etc. los ajusta siempre la gestoría). */
+  const MODULOS_ANIO = 2026;
+  // rendimiento neto anual por unidad (IRPF) y cuota devengada anual por
+  // unidad (IVA simplificado) — dos tablas DISTINTAS aunque compartan los
+  // módulos, cada una con su propio valor en euros.
+  const MODULOS_EPIGRAFES = {
+    '671.4': { nombre:'Restaurantes de dos tenedores',
+      irpf:{asalariado:3709.88, noAsalariado:17434.55, kw:201.55, mesa:585.77},
+      iva:{empleado:2993.81, kw:150.57, mesa:168.29}, excesoIrpf:51617.08, cuotaMinimaIvaPct:13 },
+    '671.5': { nombre:'Restaurantes de un tenedor',
+      irpf:{asalariado:3602.80, noAsalariado:16174.82, kw:125.97, mesa:220.45},
+      iva:{empleado:2400.36, kw:70.86, mesa:124.00}, excesoIrpf:38081.38, cuotaMinimaIvaPct:20 },
+    '672': { nombre:'Cafeterías',
+      irpf:{asalariado:1448.68, noAsalariado:13743.56, kw:478.69, mesa:377.92},
+      iva:{empleado:2356.07, kw:124.00, mesa:70.86}, excesoIrpf:39070.26, cuotaMinimaIvaPct:13 },
+    '673.1': { nombre:'Cafés y bares de categoría especial',
+      irpf:{asalariado:4056.30, noAsalariado:15538.66, kw:321.23, mesa:233.04, barra:371.62},
+      iva:{empleado:3294.97, kw:69.09, mesa:60.23, barra:77.95}, excesoIrpf:30586.03, cuotaMinimaIvaPct:6 },
+    '673.2': { nombre:'Otros cafés y bares',
+      irpf:{asalariado:1643.93, noAsalariado:11413.08, kw:94.48, mesa:119.67, barra:163.76},
+      iva:{empleado:2577.52, kw:47.83, mesa:56.69, barra:62.89}, excesoIrpf:19084.78, cuotaMinimaIvaPct:6 },
+  };
+  function modulosConfig(){
+    const c = config();
+    if(!c.modulos) c.modulos = {};
+    return c.modulos;
+  }
+  // Personal asalariado: se cuenta solo, de los empleados activos del
+  // negocio, para no pedir dos veces el mismo dato — si alguno es a tiempo
+  // parcial, el propio dueño puede corregir el número a mano
+  // (modulosConfig().personalOverride).
+  function modulosPersonalAsalariado(){
+    const mc = modulosConfig();
+    if(mc.personalOverride != null && mc.personalOverride !== '') return Math.max(0, parseFloat(mc.personalOverride) || 0);
+    return (DB.employees||[]).filter(e => e.active !== false).length;
+  }
+  // Fase 1 → Fase 4 del anexo de la Orden: ver IRPF_MODULOS_REGLAS arriba.
+  function calcularModulos(){
+    const mc = modulosConfig();
+    const ep = MODULOS_EPIGRAFES[mc.epigrafe];
+    if(!ep) return null;
+    const asalariados = modulosPersonalAsalariado();
+    const noAsalariado = mc.titularTrabaja ? 1 : 0;
+    const kw = parseFloat(mc.kw) || 0;
+    const mesas = parseFloat(mc.mesas) || 0;
+    const barra = parseFloat(mc.barra) || 0;
+
+    // Fase 1: rendimiento neto previo.
+    let previoIrpf = asalariados*ep.irpf.asalariado + noAsalariado*ep.irpf.noAsalariado + kw*ep.irpf.kw + mesas*ep.irpf.mesa;
+    if(ep.irpf.barra) previoIrpf += barra*ep.irpf.barra;
+
+    // Fase 2: minoración por incentivos al empleo (tabla de tramos sobre
+    // las unidades de personal asalariado) y por amortización (importe
+    // real, lo mete el propio negocio — la app no inventa un coeficiente).
+    const TRAMOS_EMPLEO = [[1,0.10],[3,0.15],[5,0.20],[8,0.25],[Infinity,0.30]];
+    let coefEmpleo = 0;
+    for(const [limite,coef] of TRAMOS_EMPLEO){ if(asalariados<=limite){ coefEmpleo=coef; break; } }
+    const minoracionEmpleo = coefEmpleo * ep.irpf.asalariado;
+    const amortizacion = Math.max(0, parseFloat(mc.amortizacionAnual) || 0);
+    let minorado = Math.max(0, previoIrpf - minoracionEmpleo - amortizacion);
+
+    // Fase 3: índices correctores (temporada O inicio de actividad, nunca
+    // los dos — son incompatibles entre sí, lo dice la propia Orden; y el
+    // de exceso solo si el rendimiento minorado supera el umbral de este
+    // epígrafe).
+    let indiceAplicado = null;
+    if(mc.temporadaDias > 0 && mc.temporadaDias <= 180){
+      const dias = parseFloat(mc.temporadaDias);
+      const idx = dias<=60 ? 1.50 : dias<=120 ? 1.35 : 1.25;
+      minorado *= idx; indiceAplicado = {tipo:'temporada', valor:idx};
+    } else if(mc.anioInicio === MODULOS_ANIO || mc.anioInicio === MODULOS_ANIO-1){
+      const idx = mc.anioInicio === MODULOS_ANIO ? 0.80 : 0.90;
+      minorado *= idx; indiceAplicado = {tipo:'inicio', valor:idx};
+    }
+    if(minorado > ep.excesoIrpf){
+      const exceso = (minorado - ep.excesoIrpf) * 0.30;
+      minorado += exceso;
+    }
+
+    // Fase 4: reducción general del 5%, siempre.
+    const rendimientoAnual = minorado * 0.95;
+
+    // Pago fraccionado trimestral (Modelo 131): 4% / 3% (≤1 asalariado) / 2% (ninguno).
+    const pctPago = asalariados===0 ? 0.02 : asalariados<=1 ? 0.03 : 0.04;
+    const pagoTrimestralIrpf = rendimientoAnual * pctPago;
+
+    // IVA simplificado: su propia tabla (cuota devengada, no rendimiento),
+    // con el 1% de "difícil justificación" y el IVA soportado REAL de las
+    // compras del negocio (ya registrado en Gastos Variables/Fijos/CAPEX),
+    // con el suelo de la "cuota mínima" que fija cada epígrafe.
+    let cuotaDevengada = asalariados*ep.iva.empleado + noAsalariado*ep.iva.empleado + kw*ep.iva.kw + mesas*ep.iva.mesa;
+    if(ep.iva.barra) cuotaDevengada += barra*ep.iva.barra;
+    const dificilJustif = cuotaDevengada * 0.01;
+    let ivaSoportadoAnual = 0;
+    for(let m=0;m<12;m++) ivaSoportadoAnual += ivaSoportadoComprasMes(m) + ivaSoportadoFijosMes(m) + ivaSoportadoCapexMes(m);
+    const cuotaMinima = cuotaDevengada * (ep.cuotaMinimaIvaPct/100);
+    const ivaAnual = Math.max(cuotaMinima, cuotaDevengada - dificilJustif - ivaSoportadoAnual);
+
+    return {
+      epigrafe: mc.epigrafe, nombreEpigrafe: ep.nombre, asalariados, noAsalariado, kw, mesas, barra,
+      previoIrpf, minoracionEmpleo, amortizacion, indiceAplicado, rendimientoAnual,
+      pctPago, pagoTrimestralIrpf,
+      cuotaDevengada, dificilJustif, ivaSoportadoAnual, cuotaMinima, ivaAnual, ivaTrimestral: ivaAnual/4,
+    };
   }
   function ivaLiquidarQTD(mes, año=currentYear()){
     const qStart = Math.floor(mes/3)*3;
@@ -1391,6 +1509,91 @@ const GE = (function(){
     });
     return {totalDeuda, totalCuotas};
   }
+  function modulosEpigrafeOptionsHtml(sel){
+    const nombres = t('hr.modulos.epigrafes') || {};
+    return `<option value="" ${sel?'':'selected'} disabled>${t('hr.modulos.chooseEpigrafe')}</option>` +
+      Object.keys(MODULOS_EPIGRAFES).map(k => `<option value="${k}" ${sel===k?'selected':''}>${k} — ${nombres[k]||k}</option>`).join('');
+  }
+  function saveModulosField(field, val, isCheckbox){
+    const mc = modulosConfig();
+    mc[field] = isCheckbox ? !!val : val;
+    saveDB(); renderModulos();
+  }
+  function renderModulos(){
+    const box = document.getElementById('ge-modulos-body');
+    if(!box) return;
+    const mc = modulosConfig();
+    const r = calcularModulos();
+    box.innerHTML = `
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 14px"><i class="ti ti-info-circle"></i> ${t('hr.modulos.disclaimer').replace('${anio}', MODULOS_ANIO)}</p>
+      <div class="ge-section" style="margin-bottom:14px">
+        <h4 style="margin:0 0 10px">${t('hr.modulos.configTitle')}</h4>
+        <div class="field">
+          <label>${t('hr.modulos.epigrafe')}</label>
+          <select id="mod-epigrafe" onchange="GE.saveModulosField('epigrafe', this.value)">${modulosEpigrafeOptionsHtml(mc.epigrafe)}</select>
+        </div>
+        ${mc.epigrafe ? `
+        <div class="field-row">
+          <div class="field"><label>${t('hr.modulos.mesas')}</label><input type="number" id="mod-mesas" min="0" step="1" value="${mc.mesas||''}" onchange="GE.saveModulosField('mesas', this.value)"></div>
+          <div class="field"><label>${t('hr.modulos.kw')}</label><input type="number" id="mod-kw" min="0" step="0.1" value="${mc.kw||''}" onchange="GE.saveModulosField('kw', this.value)"></div>
+        </div>
+        ${MODULOS_EPIGRAFES[mc.epigrafe] && MODULOS_EPIGRAFES[mc.epigrafe].irpf.barra ? `
+        <div class="field"><label>${t('hr.modulos.barra')}</label><input type="number" id="mod-barra" min="0" step="0.1" value="${mc.barra||''}" onchange="GE.saveModulosField('barra', this.value)"></div>` : ''}
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:10px 0;cursor:pointer">
+          <input type="checkbox" id="mod-titular" ${mc.titularTrabaja?'checked':''} onchange="GE.saveModulosField('titularTrabaja', this.checked, true)">
+          ${t('hr.modulos.titularTrabaja')}
+        </label>
+        <div class="field">
+          <label>${t('hr.modulos.personalAsalariado')}</label>
+          <input type="number" id="mod-personal" min="0" step="1" placeholder="${(DB.employees||[]).filter(e=>e.active!==false).length}" value="${mc.personalOverride!=null?mc.personalOverride:''}" onchange="GE.saveModulosField('personalOverride', this.value)">
+          <small style="color:var(--muted)">${t('hr.modulos.personalHint')}</small>
+        </div>
+        <div class="field">
+          <label>${t('hr.modulos.amortizacion')}</label>
+          <input type="number" id="mod-amort" min="0" step="0.01" value="${mc.amortizacionAnual||''}" onchange="GE.saveModulosField('amortizacionAnual', this.value)">
+        </div>
+        <div class="field-row">
+          <div class="field"><label>${t('hr.modulos.temporadaDias')}</label><input type="number" id="mod-temporada" min="0" max="180" step="1" value="${mc.temporadaDias||''}" onchange="GE.saveModulosField('temporadaDias', this.value)"></div>
+          <div class="field"><label>${t('hr.modulos.anioInicio')}</label><input type="number" id="mod-inicio" min="2000" max="2100" step="1" value="${mc.anioInicio||''}" onchange="GE.saveModulosField('anioInicio', this.value)"></div>
+        </div>
+        ` : ''}
+      </div>
+      ${r ? `
+      <div class="ge-section" style="margin-bottom:14px">
+        <h4 style="margin:0 0 10px"><i class="ti ti-receipt-tax"></i> ${t('hr.modulos.irpfTitle')}</h4>
+        <div class="ge-kpi-grid">
+          <div class="ge-kpi"><div class="lbl">${t('hr.modulos.rendimientoAnual')}</div><div class="val">${fmtMoney(r.rendimientoAnual)}</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.modulos.pagoTrimestral')}</div><div class="val" style="color:var(--ink)">${fmtMoney(r.pagoTrimestralIrpf)}</div></div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:10px 0 0">${t('hr.modulos.pagoPct').replace('${pct}', Math.round(r.pctPago*100))}${r.indiceAplicado ? ' · ' + t('hr.modulos.indice.'+r.indiceAplicado.tipo).replace('${valor}', r.indiceAplicado.valor) : ''}</p>
+      </div>
+      <div class="ge-section" style="margin-bottom:14px">
+        <h4 style="margin:0 0 10px"><i class="ti ti-receipt"></i> ${t('hr.modulos.ivaTitle')}</h4>
+        <div class="ge-kpi-grid">
+          <div class="ge-kpi"><div class="lbl">${t('hr.modulos.ivaAnual')}</div><div class="val">${fmtMoney(r.ivaAnual)}</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.modulos.ivaTrimestral')}</div><div class="val" style="color:var(--ink)">${fmtMoney(r.ivaTrimestral)}</div></div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:10px 0 0">${t('hr.modulos.ivaExplain').replace('${soportado}', fmtMoney(r.ivaSoportadoAnual)).replace('${minima}', fmtMoney(r.cuotaMinima))}</p>
+      </div>
+      <div class="ge-section">
+        <h4 style="margin:0 0 10px"><i class="ti ti-scale"></i> ${t('hr.modulos.compareTitle')}</h4>
+        ${(() => {
+          let directaAnual = 0;
+          for(let m=0;m<12;m++) directaAnual += resultadoAntesImpMes(m);
+          const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+          const impuestoDirecta = directaAnual>0 ? directaAnual*pctImp : 0;
+          const totalModulos = r.rendimientoAnual*r.pctPago*4 + r.ivaAnual;
+          return `
+          <div class="ge-kpi-grid">
+            <div class="ge-kpi"><div class="lbl">${t('hr.modulos.cmpModulos')}</div><div class="val">${fmtMoney(totalModulos)}</div></div>
+            <div class="ge-kpi"><div class="lbl">${t('hr.modulos.cmpDirecta')}</div><div class="val">${fmtMoney(impuestoDirecta)}</div></div>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin:10px 0 0">${t('hr.modulos.cmpExplain')}</p>`;
+        })()}
+      </div>` : `<p style="font-size:13px;color:var(--muted)">${t('hr.modulos.chooseEpigrafeHint')}</p>`}
+    `;
+  }
+
   function renderCapex(){
     const tbody = document.getElementById('capex-tbody');
     const empty = document.getElementById('capex-empty');
@@ -2429,7 +2632,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

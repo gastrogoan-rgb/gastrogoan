@@ -44,7 +44,7 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('En móvil se ven las SIETE pestañas de Gestión Económica, sin arrastrar', async () => {
+await caso('En móvil se ven las OCHO pestañas de Gestión Económica (con Módulos), sin arrastrar', async () => {
   const r = await page.evaluate(async ()=>{
     currentFolder='gestion'; navigate('economia');
     await new Promise(r=>setTimeout(r,600));
@@ -60,7 +60,7 @@ await caso('En móvil se ven las SIETE pestañas de Gestión Económica, sin arr
       filas: new Set(tabs.map(t => Math.round(t.getBoundingClientRect().top))).size,
     };
   });
-  assert.equal(r.pestanas, 7, 'las siete pestañas de GE: ' + JSON.stringify(r));
+  assert.equal(r.pestanas, 8, 'las ocho pestañas de GE: ' + JSON.stringify(r));
   assert.equal(r.arrastra, false, 'en móvil no se arrastra, se envuelve: ' + JSON.stringify(r));
   assert.deepEqual(r.cortadas, [], 'ninguna pestaña cortada por el borde: ' + JSON.stringify(r));
   assert.ok(r.filas > 1, 'y ocupan varias filas, que es lo que permite verlas todas: ' + JSON.stringify(r));

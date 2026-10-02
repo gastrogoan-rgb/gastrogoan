@@ -494,6 +494,7 @@
         <button class="ge-tab" onclick="GE.tab('tesoreria')"><i class="ti ti-building-bank"></i> <span data-i18n="tab.treasury">Tesorería</span></button>
         <button class="ge-tab" onclick="GE.tab('pe')"><i class="ti ti-scale"></i> <span data-i18n="title.breakEven">Punto de Equilibrio</span></button>
         <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> <span data-i18n="tab.capex">CAPEX</span></button>
+        <button class="ge-tab" onclick="GE.tab('modulos')"><i class="ti ti-calculator"></i> <span data-i18n="tab.modulos">Módulos</span></button>
       </nav>
 
       <!-- VENTAS (histórico por día y por mes) -->
@@ -706,6 +707,11 @@
           </tr></tfoot>
         </table></div>
         <div id="capex-empty" class="empty" style="display:none"><i class="ti ti-building-factory"></i><p data-i18n="empty.noInvestments">Sin inversiones registradas</p></div>
+      </div>
+
+      <!-- MÓDULOS (estimación objetiva) -->
+      <div id="ge-modulos" class="ge-tab-panel">
+        <div id="ge-modulos-body"></div>
       </div>
     </section>
 
