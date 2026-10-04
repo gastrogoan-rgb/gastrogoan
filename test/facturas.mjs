@@ -153,6 +153,39 @@ await caso('Las fotos se comprimen antes de guardarse (lado largo ≤1600px)', a
   assert.ok(dims.w <= 1600 && dims.h <= 1600, 'una foto de 2000×2000 no se redujo al comprimirla: '+JSON.stringify(dims));
 });
 
+await caso('Descargar facturas del mes: un ZIP de verdad, válido, con lo que corresponde dentro', async () => {
+  const descargas = path.join(scratch, 'descargas');
+  fs.rmSync(descargas, {recursive: true, force: true});
+  fs.mkdirSync(descargas, {recursive: true});
+  const client = await page.createCDPSession();
+  await client.send('Page.setDownloadBehavior', {behavior: 'allow', downloadPath: descargas});
+  // Un gasto fijo con factura, propio de este caso (no depender de que
+  // otro caso anterior haya dejado uno sin borrar).
+  await page.evaluate(() => {
+    const canvas = document.createElement('canvas'); canvas.width=20; canvas.height=20;
+    canvas.getContext('2d').fillRect(0,0,20,20);
+    const adjId = genId();
+    DB['adj_'+adjId] = {dataUrl: canvas.toDataURL('image/jpeg',0.7), name:'alquiler.jpg', size:500, uploadedAt:new Date().toISOString()};
+    DB.ge.fijos.push({id: genId(), nombre:'ALQUILER ZIP TEST', importe:500, categoria:'FIJOS', periodicidadMeses:1, facturaId: adjId});
+    saveDB();
+  });
+  await page.evaluate(() => { currentFolder='gestion'; navigate('economia'); GE.openExportModal(); });
+  await new Promise(r=>setTimeout(r,200));
+  await page.evaluate(() => GE.downloadMonthInvoices());
+  await new Promise(r=>setTimeout(r,1500));
+  const files = fs.readdirSync(descargas).filter(f => f.endsWith('.zip'));
+  assert.equal(files.length, 1, 'no se ha descargado ningún ZIP: '+JSON.stringify(fs.readdirSync(descargas)));
+  // No basta con que exista el archivo: que sea un ZIP de VERDAD, legible
+  // por una herramienta real (unzip del sistema), no solo "parece correcto"
+  // a ojo contando bytes a mano.
+  const zipPath = path.join(descargas, files[0]);
+  const { execSync } = await import('node:child_process');
+  execSync(`unzip -t "${zipPath}"`, {stdio: 'pipe'}); // lanza si el ZIP está corrupto
+  const listado = execSync(`unzip -l "${zipPath}"`, {encoding: 'utf8'});
+  assert.ok(/fijo.*ALQUILER/i.test(listado), 'falta la factura del gasto fijo en el ZIP:\n'+listado);
+  assert.ok(/compra/i.test(listado), 'falta la factura de la compra en el ZIP:\n'+listado);
+});
+
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 
 await browser.close();
