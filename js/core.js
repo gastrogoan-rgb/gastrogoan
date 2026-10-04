@@ -10272,6 +10272,71 @@ function facturaAdjuntaPreviewHtml(id, onRemove){
   </div>`;
 }
 
+/* ============================================================
+   ZIP mínimo, sin dependencias ni compresión — 1/10
+   ============================================================
+   Para "mandar al gestor todas las facturas del mes de golpe". Un correo
+   no puede adjuntar varios archivos solo (eso lo hace el navegador por
+   seguridad, no hay forma de saltárselo sin servidor propio), así que el
+   gesto real es: un ZIP que se descarga y se adjunta a mano, igual que ya
+   se hace con el CSV. No se comprime nada DENTRO del zip (método "store"):
+   las fotos ya llegan comprimidas como JPEG, volver a comprimirlas no
+   ahorra casi nada y complica el código para nada. */
+function crc32Bytes(bytes){
+  let c, crc = 0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++){
+    c = (crc ^ bytes[i]) & 0xFF;
+    for(let k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    crc = (crc >>> 8) ^ c;
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+function dataUrlToBytes(dataUrl){
+  const base64 = (dataUrl.split(',')[1] || '');
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+function construirZip(archivos){
+  // archivos: [{name, bytes: Uint8Array}]
+  const d = new Date();
+  const dosTime = ((d.getHours()&0x1F)<<11) | ((d.getMinutes()&0x3F)<<5) | ((d.getSeconds()>>1)&0x1F);
+  const dosDate = (((d.getFullYear()-1980)&0x7F)<<9) | (((d.getMonth()+1)&0xF)<<5) | (d.getDate()&0x1F);
+  const localParts = [], centralParts = [];
+  let offset = 0;
+  archivos.forEach(a => {
+    const nameBytes = new TextEncoder().encode(a.name);
+    const crc = crc32Bytes(a.bytes);
+    const size = a.bytes.length;
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true);
+    local.setUint16(4, 20, true); local.setUint16(6, 0, true); local.setUint16(8, 0, true);
+    local.setUint16(10, dosTime, true); local.setUint16(12, dosDate, true);
+    local.setUint32(14, crc, true); local.setUint32(18, size, true); local.setUint32(22, size, true);
+    local.setUint16(26, nameBytes.length, true); local.setUint16(28, 0, true);
+    localParts.push(new Uint8Array(local.buffer), nameBytes, a.bytes);
+
+    const central = new DataView(new ArrayBuffer(46));
+    central.setUint32(0, 0x02014b50, true);
+    central.setUint16(4, 20, true); central.setUint16(6, 20, true); central.setUint16(8, 0, true); central.setUint16(10, 0, true);
+    central.setUint16(12, dosTime, true); central.setUint16(14, dosDate, true);
+    central.setUint32(16, crc, true); central.setUint32(20, size, true); central.setUint32(24, size, true);
+    central.setUint16(28, nameBytes.length, true); central.setUint16(30, 0, true); central.setUint16(32, 0, true);
+    central.setUint16(34, 0, true); central.setUint16(36, 0, true); central.setUint32(38, 0, true);
+    central.setUint32(42, offset, true);
+    centralParts.push(new Uint8Array(central.buffer), nameBytes);
+    offset += 30 + nameBytes.length + size;
+  });
+  const centralStart = offset;
+  const centralSize = centralParts.reduce((s,p)=>s+p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(4, 0, true); end.setUint16(6, 0, true);
+  end.setUint16(8, archivos.length, true); end.setUint16(10, archivos.length, true);
+  end.setUint32(12, centralSize, true); end.setUint32(16, centralStart, true); end.setUint16(20, 0, true);
+  return new Blob([...localParts, ...centralParts, new Uint8Array(end.buffer)], {type:'application/zip'});
+}
 function saveDB(){
   const guardado = idbSet(DB_KEY, DB).catch(e => {
     console.error('Error guardando datos', e);

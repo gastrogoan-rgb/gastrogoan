@@ -2498,8 +2498,40 @@ const GE = (function(){
         <button class="btn btn-primary" onclick="GE.exportMonth()"><i class="ti ti-download"></i> ${t('hr.export.downloadCsv')}</button>
         <button class="btn btn-primary" onclick="GE.emailMonth()"><i class="ti ti-mail"></i> ${t('hr.export.sendToAccountant')}</button>
         <button class="btn" onclick="GE.copyMonthSummary()"><i class="ti ti-copy"></i> ${t('hr.export.copySummary')}</button>
+        <button class="btn" onclick="GE.downloadMonthInvoices()"><i class="ti ti-file-zip"></i> ${t('factura.zip.btn')}</button>
       </div>
+      <p style="font-size:11.5px;color:var(--muted);margin:10px 0 0"><i class="ti ti-info-circle"></i> ${t('factura.zip.hint')}</p>
     `);
+  }
+  // Todas las facturas adjuntas del mes elegido, en un único ZIP: las
+  // compras de ESE mes (Gastos Variables) y las facturas de Gastos Fijos
+  // que tengan una adjuntada (no llevan fecha propia — son recurrentes,
+  // el recibo del alquiler no cambia cada mes — así que se incluyen todas
+  // las que haya, no solo las de ese mes).
+  function downloadMonthInvoices(){
+    const mes = parseInt(document.getElementById('exp-mes').value);
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear();
+    const archivos = [];
+    const usados = new Set();
+    let n = 0;
+    const añadir = (prefijo, id, etiqueta) => {
+      if(!id || usados.has(id)) return;
+      const f = facturaAdjunta(id);
+      if(!f) return;
+      usados.add(id);
+      n++;
+      const esImagen = f.dataUrl.startsWith('data:image');
+      const ext = esImagen ? 'jpg' : ((f.name||'').match(/\.([a-z0-9]+)$/i)?.[1] || 'pdf');
+      const limpio = String(etiqueta||f.name||'factura').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,50) || 'factura';
+      archivos.push({name: `${String(n).padStart(2,'0')}_${prefijo}_${limpio}.${ext}`, bytes: dataUrlToBytes(f.dataUrl)});
+    };
+    variablesMes(mes, año).filter(v => !v.anulado).forEach(v => añadir('compra', v.facturaId, `${v.fecha||''}_${v.proveedor||''}`));
+    fijos().forEach(g => añadir('fijo', g.facturaId, g.nombre));
+    if(!archivos.length){ showToast(t('factura.zip.empty')); return; }
+    const blob = construirZip(archivos);
+    const nombreNegocio = ((DB.business||{}).name||'negocio').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'_');
+    guardarArchivo(blob, `facturas_${nombreNegocio}_${año}-${String(mes+1).padStart(2,'0')}.zip`);
+    showToast(t('factura.zip.ok').replace('${n}', archivos.length));
   }
 
   // Desglose de base/IVA de UNA venta usando el tipo real de cada línea
@@ -2840,7 +2872,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
