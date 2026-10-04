@@ -550,6 +550,13 @@
           <div id="gv-cat-chart" class="bar-chart"></div>
         </div>
         <div id="gv-hormiga"></div>
+        <div class="ge-section" style="margin-bottom:14px">
+          <div class="ge-sec-head"><h4 data-i18n="factura.suelta.title">Facturas sin asignar</h4>
+            <button class="btn btn-sm" onclick="GE.sueltaAttach()"><i class="ti ti-camera"></i> <span data-i18n="factura.suelta.add">Foto de factura</span></button></div>
+          <input type="file" id="gv-suelta-input" accept="image/*,application/pdf" style="display:none" onchange="GE.sueltaUpload(this)">
+          <p style="font-size:12px;color:var(--muted);margin:0 0 8px;padding:0 16px" data-i18n="factura.suelta.desc">Para una factura que aún no sabes dónde apuntar: haz la foto ahora y, cuando des de alta la compra, pulsa "Usar esta foto" en vez de subirla otra vez.</p>
+          <div id="gv-suelta-list"></div>
+        </div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 id="gv-sec-title">Compras del mes</h4>
             <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> <span data-i18n="btn.addExtraPurchase">Añadir compra extra</span></button></div>

@@ -645,7 +645,28 @@ const GE = (function(){
     editingGF = id;
     openGFModal(t('hr.gf.titleEdit'), g);
   }
+  // Factura adjunta pendiente de guardar con este gasto fijo — el archivo
+  // se sube y se comprime ANTES de pulsar Guardar (async), así que no
+  // puede vivir directamente en el objeto del gasto hasta que exista.
+  let gfPendingFacturaId = null;
+  async function gfAttachFactura(input){
+    const file = input.files[0];
+    if(!file) return;
+    const id = await guardarFacturaAdjunta(file);
+    if(!id) { input.value = ''; return; }
+    if(gfPendingFacturaId) borrarFacturaAdjunta(gfPendingFacturaId);
+    gfPendingFacturaId = id;
+    const box = document.getElementById('gf-factura-box');
+    if(box) box.innerHTML = facturaAdjuntaPreviewHtml(id, 'GE.gfRemoveFactura()');
+  }
+  function gfRemoveFactura(){
+    if(gfPendingFacturaId) borrarFacturaAdjunta(gfPendingFacturaId);
+    gfPendingFacturaId = null;
+    const box = document.getElementById('gf-factura-box');
+    if(box) box.innerHTML = `<input type="file" id="gf-factura-input" accept="image/*,application/pdf" onchange="GE.gfAttachFactura(this)">`;
+  }
   function openGFModal(title, g){
+    gfPendingFacturaId = g.facturaId || null;
     const sugerencias = (g.categoria==='PERSONAL'?GF_PERSONAL:GF_FIJOS).map(s=>`<option value="${escapeHtml(gfConceptLabel(s))}">`).join('');
     const autoCalc = !!g.autoCalc;
     // Antes había un único "% Retenciones (IRPF + SS trabajador)" mezclado —
@@ -700,6 +721,12 @@ const GE = (function(){
       <div class="field">
         <label>${t('hr.lbl.commentOptional')}</label>
         <textarea id="gf-f-notas" rows="2" placeholder="${t('hr.gf.internalNotesPh')}">${escapeHtml(g.notas||'')}</textarea>
+      </div>
+      <div class="field">
+        <label>${t('factura.attachLabel')}</label>
+        <div id="gf-factura-box">${g.facturaId && facturaAdjunta(g.facturaId)
+          ? facturaAdjuntaPreviewHtml(g.facturaId, 'GE.gfRemoveFactura()')
+          : `<input type="file" id="gf-factura-input" accept="image/*,application/pdf" onchange="GE.gfAttachFactura(this)">`}</div>
       </div>
       <input type="hidden" id="gf-f-cat" value="${g.categoria}">
       <input type="hidden" id="gf-f-empid" value="${g.employeeId!=null?g.employeeId:''}">
@@ -763,7 +790,8 @@ const GE = (function(){
       // meses del periodo, descuadrando el coste real.
       periodicidadMeses: isAutoCalc ? 1 : (parseInt(document.getElementById('gf-f-periodo').value)||1),
       notas: document.getElementById('gf-f-notas').value.trim(),
-      iva: ivaEl ? parseFloat(ivaEl.value) : 0
+      iva: ivaEl ? parseFloat(ivaEl.value) : 0,
+      facturaId: gfPendingFacturaId || null,
     };
     const empIdVal = document.getElementById('gf-f-empid').value;
     if(empIdVal !== '') data.employeeId = parseInt(empIdVal);
@@ -801,6 +829,8 @@ const GE = (function(){
   }
   async function deleteGF(id){
     if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
+    const g = fijos().find(x=>x.id===id);
+    if(g && g.facturaId) borrarFacturaAdjunta(g.facturaId);
     ge().fijos = fijos().filter(g=>g.id!==id);
     snapshotGeFijosNeto();
     saveDB();
@@ -1026,6 +1056,7 @@ const GE = (function(){
           <span style="font-size:12px;color:var(--muted);margin-right:4px">${escapeHtml(v.fecha||'')}</span>
           <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})</span>
           <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
+          ${v.facturaId && facturaAdjunta(v.facturaId) ? `<button class="btn btn-sm btn-icon" title="${t('factura.viewTitle')}" onclick="window.open('${facturaAdjunta(v.facturaId).dataUrl}','_blank')"><i class="ti ti-paperclip"></i></button>` : ''}
           <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGV(${v.id})"><i class="ti ti-ban"></i></button>
         </div>`; }).join('');
         return `<div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(variableCategoryLabel(cat))}</div>${autoHtml}${manualHtml}`;
@@ -1034,6 +1065,7 @@ const GE = (function(){
     document.getElementById('gv-total-lbl').textContent = `${t('hr.lbl.totalVariables')} ${getMeses()[mes].toUpperCase()}`;
     document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ ${t('common.vat')} ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</span>`;
     renderGastoHormiga();
+    renderSueltaList();
   }
   // El objetivo de food cost también se edita desde Punto de Equilibrio, y
   // el mismo número alimenta el "% Gastos Variables" de Tesorería — antes se
@@ -1082,8 +1114,84 @@ const GE = (function(){
   }
   function setMonth(m){ activeMonth = m; renderVariables(); }
   function setGVSearch(v){ gvSearch = v; renderVariables(); }
+  // Facturas sueltas: una foto hecha ANTES de saber a qué compra pertenece
+  // (llega un albarán, hay que fotografiarlo ya o se pierde, pero dar de
+  // alta el gasto exacto puede esperar a un rato con más calma). Solo se
+  // guarda la lista de IDs aquí — cada foto vive en su propio bloque
+  // (ver guardarFacturaAdjunta), así que esta lista nunca pesa nada.
+  function sueltaAttach(){ document.getElementById('gv-suelta-input').click(); }
+  async function sueltaUpload(input){
+    const file = input.files[0];
+    input.value = '';
+    if(!file) return;
+    const id = await guardarFacturaAdjunta(file);
+    if(!id) return;
+    if(!Array.isArray(DB.facturasSueltas)) DB.facturasSueltas = [];
+    DB.facturasSueltas.push(id);
+    saveDB();
+    renderSueltaList();
+    showToast(t('factura.suelta.uploadedOk'));
+  }
+  async function sueltaDelete(id){
+    if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
+    DB.facturasSueltas = (DB.facturasSueltas||[]).filter(x=>x!==id);
+    borrarFacturaAdjunta(id);
+    saveDB();
+    renderSueltaList();
+  }
+  // Pasa la foto suelta a la compra que se está dando de alta y la saca de
+  // la lista de pendientes — no se vuelve a subir, se reutiliza el mismo
+  // bloque ya guardado.
+  function sueltaUsar(id){
+    DB.facturasSueltas = (DB.facturasSueltas||[]).filter(x=>x!==id);
+    saveDB();
+    // ⚠️ newGV() resetea gvPendingFacturaId a null al abrir el formulario en
+    // blanco — hay que ponerlo DESPUÉS de llamarla, nunca antes, o se pierde
+    // la foto que se acababa de "usar" (encontrado al probarlo a mano).
+    newGV();
+    gvPendingFacturaId = id;
+    const box = document.getElementById('gv-factura-box');
+    if(box) box.innerHTML = facturaAdjuntaPreviewHtml(id, 'GE.gvRemoveFactura()');
+  }
+  function renderSueltaList(){
+    const box = document.getElementById('gv-suelta-list');
+    if(!box) return;
+    const ids = (DB.facturasSueltas||[]).filter(id => facturaAdjunta(id));
+    box.innerHTML = ids.length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;padding:0 16px 10px">${ids.map(id => {
+      const f = facturaAdjunta(id);
+      const esImagen = f.dataUrl.startsWith('data:image');
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:92px">
+        ${esImagen ? `<img src="${f.dataUrl}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${f.dataUrl}','_blank')">`
+          : `<a href="${f.dataUrl}" download="${escapeHtml(f.name)}" class="btn btn-sm btn-icon" style="width:80px;height:80px"><i class="ti ti-file-text" style="font-size:28px"></i></a>`}
+        <button class="btn btn-sm" style="width:100%;padding:4px;font-size:11px" onclick="GE.sueltaUsar('${id}')">${t('factura.suelta.usar')}</button>
+        <button class="btn btn-sm btn-icon btn-danger" style="width:100%" onclick="GE.sueltaDelete('${id}')"><i class="ti ti-trash"></i></button>
+      </div>`;
+    }).join('')}</div>` : `<p style="font-size:13px;color:var(--muted);padding:0 16px 10px">${t('factura.suelta.empty')}</p>`;
+  }
+  // Factura adjunta pendiente para la compra que se está dando de alta. Un
+  // gasto variable ya registrado no se modifica nunca (ver editGV), así que
+  // esto solo tiene sentido al CREAR — una vez guardado, el adjunto queda
+  // fijo con esa compra para siempre, igual que el importe o la fecha.
+  let gvPendingFacturaId = null;
+  async function gvAttachFactura(input){
+    const file = input.files[0];
+    if(!file) return;
+    const id = await guardarFacturaAdjunta(file);
+    if(!id) { input.value = ''; return; }
+    if(gvPendingFacturaId) borrarFacturaAdjunta(gvPendingFacturaId);
+    gvPendingFacturaId = id;
+    const box = document.getElementById('gv-factura-box');
+    if(box) box.innerHTML = facturaAdjuntaPreviewHtml(id, 'GE.gvRemoveFactura()');
+  }
+  function gvRemoveFactura(){
+    if(gvPendingFacturaId) borrarFacturaAdjunta(gvPendingFacturaId);
+    gvPendingFacturaId = null;
+    const box = document.getElementById('gv-factura-box');
+    if(box) box.innerHTML = `<input type="file" id="gv-factura-input" accept="image/*,application/pdf" onchange="GE.gvAttachFactura(this)">`;
+  }
   function newGV(){
     editingGV = null;
+    gvPendingFacturaId = null;
     openGVModal({categoria:VARIABLE_CATEGORIES[0], proveedor:'', importe:'', iva:null, fecha:`${gvYear}-${String(activeMonth+1).padStart(2,'0')}-01`});
   }
   function editGV(id){
@@ -1113,6 +1221,10 @@ const GE = (function(){
       <div class="field">
         <label>${t('common.date')}</label><input type="date" id="gv-f-fecha" value="${v.fecha||''}">
       </div>
+      ${!editingGV ? `<div class="field">
+        <label>${t('factura.attachLabel')}</label>
+        <div id="gv-factura-box"><input type="file" id="gv-factura-input" accept="image/*,application/pdf" onchange="GE.gvAttachFactura(this)"></div>
+      </div>` : ''}
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
         <button class="btn btn-primary" onclick="GE.saveGV()">${t("common.save")}</button>
@@ -1156,6 +1268,7 @@ const GE = (function(){
       }
     }else{
       if(isDateClosed(data.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
+      data.facturaId = gvPendingFacturaId || null;
       variables().push({id: genId(), ...data});
     }
     saveDB();
@@ -2727,7 +2840,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

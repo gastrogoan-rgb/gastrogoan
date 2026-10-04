@@ -10184,6 +10184,94 @@ async function loadDB(){
 // justo después tiene que esperar, o la recarga corta la escritura a medio
 // hacer y el cambio se pierde sin decir nada (es lo que le pasaba al
 // selector de idioma). Los que no lo esperan siguen funcionando igual.
+/* ============================================================
+   FACTURAS ADJUNTAS (foto o PDF) — 1/10
+   ============================================================
+   Sin backend propio, el único sitio donde guardar un archivo es la misma
+   base de datos gratuita que cada negocio ya tiene activada desde el alta
+   (Firebase Storage pasó a pedir tarjeta de crédito — descartado a
+   propósito, rompería "tu nube, gratis, sin tarjeta"). Se guarda como
+   texto largo (base64), igual que ya se hace con el PDF del Libro de marca
+   y con el albarán de un pedido a proveedor.
+
+   ⚠️ Cada factura va en su PROPIO bloque de nivel superior de DB
+   (DB['adj_' + id]), NUNCA dentro de un array que crezca (tipo
+   DB.ge.variables): flushCloudSync sube solo los bloques que cambian, así
+   que añadir una factura nueva sube solo ESE bloque pequeño — si en vez de
+   eso se metieran todas en un único array, cada factura nueva volvería a
+   subir TODAS las anteriores de golpe, y con doce al mes el array acabaría
+   pesando decenas de MB (el mismo problema que ya reventó el PDF del Libro
+   de marca por encima de ~7 MB, aquí multiplicado por cada factura). */
+const FACTURA_MAX_KB = 1500;
+// Una foto de móvil sin tocar pesa 3-5 MB y rebotaría siempre contra el
+// límite de arriba. Se reescala al lado largo y se recomprime en JPEG —
+// de sobra para que se lea una factura, y se queda en unos cientos de KB.
+// Un PDF no se toca (ya suele venir ligero de por sí).
+function comprimirFotoFactura(file){
+  return new Promise((resolve, reject) => {
+    if(!file.type.startsWith('image/')){
+      const reader = new FileReader();
+      reader.onload = () => resolve({dataUrl: reader.result, name: file.name});
+      reader.onerror = () => reject(new Error('no se pudo leer el archivo'));
+      reader.readAsDataURL(file);
+      return;
+    }
+    const LADO_MAX = 1600;
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if(w > LADO_MAX || h > LADO_MAX){
+        const r = Math.min(LADO_MAX/w, LADO_MAX/h);
+        w = Math.round(w*r); h = Math.round(h*r);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+      resolve({dataUrl, name: file.name.replace(/\.[a-zA-Z0-9]+$/, '') + '.jpg'});
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('no se pudo leer la imagen')); };
+    img.src = url;
+  });
+}
+// Comprime, valida el tamaño y guarda — devuelve el id del adjunto, o null
+// si no se pudo (ya se avisa con un toast, no hace falta avisar dos veces).
+async function guardarFacturaAdjunta(file){
+  if(!file) return null;
+  let r;
+  try{ r = await comprimirFotoFactura(file); }
+  catch(e){ showToast(t('factura.uploadFailed')); return null; }
+  const sizeAprox = Math.round(r.dataUrl.length * 0.75);
+  if(sizeAprox > FACTURA_MAX_KB * 1024){
+    showToast(t('factura.tooLarge').replace('${maxKb}', FACTURA_MAX_KB));
+    return null;
+  }
+  const id = genId();
+  DB['adj_'+id] = {dataUrl: r.dataUrl, name: r.name, size: sizeAprox, uploadedAt: new Date().toISOString()};
+  saveDB();
+  return id;
+}
+function facturaAdjunta(id){ return id ? DB['adj_'+id] : null; }
+function borrarFacturaAdjunta(id){
+  if(!id) return;
+  delete DB['adj_'+id];
+  saveDB();
+}
+// Miniatura + nombre + quitar, el mismo bloque en todos los sitios donde se
+// puede adjuntar una factura (Gastos Fijos, Variables, facturas sueltas).
+function facturaAdjuntaPreviewHtml(id, onRemove){
+  const f = facturaAdjunta(id);
+  if(!f) return '';
+  const esImagen = f.dataUrl.startsWith('data:image');
+  return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">
+    ${esImagen ? `<img src="${f.dataUrl}" style="max-width:90px;max-height:90px;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${f.dataUrl}','_blank')">`
+      : `<a href="${f.dataUrl}" download="${escapeHtml(f.name)}" class="btn btn-sm"><i class="ti ti-file-text"></i> ${escapeHtml(f.name)}</a>`}
+    <button type="button" class="btn btn-sm btn-icon btn-danger" onclick="${onRemove}"><i class="ti ti-trash"></i></button>
+  </div>`;
+}
+
 function saveDB(){
   const guardado = idbSet(DB_KEY, DB).catch(e => {
     console.error('Error guardando datos', e);
