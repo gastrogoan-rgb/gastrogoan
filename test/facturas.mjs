@@ -169,9 +169,12 @@ await caso('Descargar facturas del mes: un ZIP de verdad, válido, con lo que co
     DB.ge.fijos.push({id: genId(), nombre:'ALQUILER ZIP TEST', importe:500, categoria:'FIJOS', periodicidadMeses:1, facturaId: adjId});
     saveDB();
   });
-  await page.evaluate(() => { currentFolder='gestion'; navigate('economia'); GE.openExportModal(); });
+  // Desde el 5/10 las fotos van DENTRO del paquete para el gestor, junto a
+  // los libros, con el periodo que se elija (aquí: el mes en curso).
+  await page.evaluate(() => { currentFolder='gestion'; navigate('economia'); GE.openExportModal();
+    document.getElementById('pg-tipo').value = 'mes'; GE.pgTipoCambia(); });
   await new Promise(r=>setTimeout(r,200));
-  await page.evaluate(() => GE.downloadMonthInvoices());
+  await page.evaluate(() => GE.descargarPaqueteGestor());
   await new Promise(r=>setTimeout(r,1500));
   const files = fs.readdirSync(descargas).filter(f => f.endsWith('.zip'));
   assert.equal(files.length, 1, 'no se ha descargado ningún ZIP: '+JSON.stringify(fs.readdirSync(descargas)));
@@ -182,8 +185,8 @@ await caso('Descargar facturas del mes: un ZIP de verdad, válido, con lo que co
   const { execSync } = await import('node:child_process');
   execSync(`unzip -t "${zipPath}"`, {stdio: 'pipe'}); // lanza si el ZIP está corrupto
   const listado = execSync(`unzip -l "${zipPath}"`, {encoding: 'utf8'});
-  assert.ok(/fijo.*ALQUILER/i.test(listado), 'falta la factura del gasto fijo en el ZIP:\n'+listado);
-  assert.ok(/compra/i.test(listado), 'falta la factura de la compra en el ZIP:\n'+listado);
+  assert.ok(/facturas\/recibidas\/.*ALQUILER/i.test(listado) || /facturas\/recibidas\/.*\.jpg/i.test(listado), 'faltan las facturas recibidas en el ZIP:\n'+listado);
+  assert.ok(/\.xlsx/.test(listado) && /LEEME\.txt/.test(listado), 'faltan el Excel o el LÉEME:\n'+listado);
 });
 
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });

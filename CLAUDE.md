@@ -468,7 +468,16 @@ impuestos → impuesto → resultado del ejercicio.
 - Envío a domicilio al 10% (accesorio de la comida). Señales: el IVA se
   devenga al cobrarlas (`geAjustarSenalesIva`).
 
-- **Para el gestor** (Exportar → "Para el gestor"): libro de ingresos
+- **Enviar al gestor** (botón Exportar, desde el 5/10): paquete por periodo
+  (mes, trimestre, año o fechas) → un ZIP con un Excel real
+  (`construirXlsx`, js/core.js; una hoja por libro, cifras como números),
+  los mismos libros en `csv/`, las fotos de las facturas del periodo en
+  `facturas/` (cada línea de recibidas cita su archivo) y un `LEEME.txt`.
+  Emitidas con columnas de libro registro: F2 (tickets en asiento resumen
+  por día, serie y TIPO), F1 (factura completa con cliente), R5
+  (rectificativa en su fecha). "Enviar" usa Web Share con el ZIP adjunto;
+  si no se puede, descarga + mailto. Prueba: `test/paquete-gestor.mjs`.
+- **Libros sueltos** (anteriores, siguen dentro del paquete): libro de ingresos
   (asiento resumen por día y tipo), libro de gastos (con nº de factura y NIF
   del proveedor, que se recuerda por proveedor), bienes de inversión,
   resumen del año (303/390, 111/190, 115/180, pagos a cuenta, 347) y

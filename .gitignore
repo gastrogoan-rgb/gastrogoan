@@ -23,3 +23,4 @@ anuncios/capturas/
 # PDFs del Libro de marca generados — se entregan al coach, no se commitean.
 tools/libro-marca/salida/
 test/.scratch-facturas/
+test/.scratch-paquete/
