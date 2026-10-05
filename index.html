@@ -483,8 +483,9 @@
       <div class="view-subtitle" data-i18n="view.economia.subtitle">Gastos · P&amp;L · Punto de equilibrio · Resultado</div>
 
       <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-file-export"></i> <span data-i18n="hr.export.title">Exportar contabilidad mensual</span></button>
+        <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-send"></i> <span data-i18n="pg.title">Enviar al gestor</span></button>
       </div>
+      <div id="ge-checklist"></div>
 
       <nav class="ge-tab-row" id="ge-tabs-row">
         <button class="ge-tab active" onclick="GE.tab('ventas')"><i class="ti ti-chart-line"></i> <span data-i18n="tab.sales">Ventas</span></button>
@@ -523,6 +524,7 @@
         <p id="gf-cost-hint" style="font-size:11.5px;color:var(--muted);margin:6px 0 14px"></p>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 data-i18n="hr.gf.titlePersonal">Personal (nóminas + SS)</h4>
+            <button class="btn btn-sm" onclick="GE.nuevoSueldoTitular()"><i class="ti ti-user-dollar"></i> <span data-i18n="ck.sueldoBtn">Mi sueldo (titular)</span></button>
             <button class="btn btn-sm" onclick="GE.newGF('PERSONAL')"><i class="ti ti-plus"></i> <span data-i18n="common.add">Añadir</span></button></div>
           <div id="gf-personal"></div>
         </div>
@@ -616,6 +618,7 @@
         <div class="month-sel month-sel-centered" id="te-months"></div>
         <div class="te-kpis" id="te-kpis"></div>
         <div id="te-forecast"></div>
+        <div id="te-calendario"></div>
         <div class="ge-section" id="te-upcoming" style="display:none"></div>
         <div class="dist-config" style="flex-direction:column;align-items:stretch">
           <div style="font-weight:600;font-size:13px;margin-bottom:10px"><i class="ti ti-settings"></i> <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></div>

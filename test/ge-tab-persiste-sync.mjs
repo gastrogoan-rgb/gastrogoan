@@ -38,7 +38,7 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-for(const [tabId, tabLabel] of [['tesoreria','Tesorería'], ['pe','Punto de equilibrio'], ['cdr','Cuenta de Resultados'], ['variables','Gastos Variables'], ['capex','CAPEX']]){
+for(const [tabId, tabLabel] of [['tesoreria','Tesorería'], ['pe','Punto de equilibrio'], ['cdr','Cuenta de Resultados'], ['variables','Gastos Variables'], ['capex','Inversiones']]){
   await caso(`Una "sincronización de la nube" (GE.init() de nuevo) NO resetea a Ventas estando en ${tabLabel}`, async () => {
     const r = await page.evaluate((tabId)=>{
       const activeTabName = () => {

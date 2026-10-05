@@ -7621,7 +7621,7 @@ function openBackupReminderModal(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13.5px">${never ? t('mn.data.neverBackedUp') : t('mn.data.lastBackup').replace('${n}', daysSinceLastBackup())}</p>
-    <div class="modal-footer">
+    <div class="modal-footer" style="flex-wrap:wrap">
       <button class="btn" onclick="closeModal()">${t('msg.backupRemindLater')}</button>
       <button class="btn btn-primary" onclick="closeModal();downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
     </div>

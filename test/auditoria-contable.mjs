@@ -348,6 +348,48 @@ await caso('Nómina 2026: la SS va sobre la base (suelo por grupo y jornada, tec
   assert.equal(Math.round((r.corto.ssEmpresa - 1500*0.3215)*100)/100, 67.24);
 });
 
+// --- Revisión de uso (5/10, noche) ---------------------------------------
+await caso('Sin gastos fijos en meses futuros ni antes del primer dato del negocio', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    const hoy = new Date(), y = hoy.getFullYear(), m = hoy.getMonth();
+    DB.ge.fijos = [{id:1, nombre:'ALQUILER', importe:1000, iva:21, categoria:'FIJOS', periodicidadMeses:1}];
+    DB.sales = [{id:1, date:`${y}-${String(m+1).padStart(2,'0')}-01`, total:110, items:[{name:'x', price:110, qty:1, ivaPct:10}]}];
+    const sig = new Date(y, m+1, 1), ant = new Date(y, m-1, 1);
+    return {hoy: geTotalFijosNetoForMonth(y, m), futuro: geTotalFijosNetoForMonth(sig.getFullYear(), sig.getMonth()), antes: geTotalFijosNetoForMonth(ant.getFullYear(), ant.getMonth())};
+  });
+  assert.equal(r.hoy, 1000); assert.equal(r.futuro, 0, 'mes futuro'); assert.equal(r.antes, 0, 'mes anterior al primer dato');
+});
+
+await caso('Cuenta de Resultados: un EBITDA negativo se ve con su signo menos y en rojo', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    const hoy = new Date(), y = hoy.getFullYear(), m = hoy.getMonth();
+    DB.business.formaJuridica = 'sociedad';
+    DB.sales = [{id:1, date:`${y}-${String(m+1).padStart(2,'0')}-01`, total:110, items:[{name:'x', price:110, qty:1, ivaPct:10}]}];
+    DB.ge.fijos = [{id:1, nombre:'ALQUILER', importe:1000, iva:21, categoria:'FIJOS', periodicidadMeses:1}];
+    currentFolder='gestion'; navigate('economia'); GE.tab('cdr');
+    const fila = [...document.querySelectorAll('#cdr-table tr')].find(tr => /EBITDA/.test(tr.textContent));
+    const celda = fila.querySelectorAll('td')[fila.querySelectorAll('td').length-1];
+    return {txt: celda.textContent, clase: celda.className};
+  });
+  assert.ok(/^-/.test(r.txt.trim()), 'sin signo menos: '+r.txt); assert.equal(r.clase, 'neg');
+});
+
+await caso('Sin forma jurídica: aviso rojo arriba de Gestión Económica; y el calendario de pagos en Tesorería', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = '';
+    currentFolder='gestion'; navigate('economia'); GE.init();
+    const aviso = document.getElementById('ge-checklist').textContent;
+    DB.business.formaJuridica = 'sociedad';
+    GE.tab('tesoreria');
+    return {aviso, cal: document.getElementById('te-calendario').textContent};
+  });
+  assert.ok(/autónomo, comunidad de bienes o sociedad/.test(r.aviso), 'falta el aviso: '+r.aviso.slice(0,120));
+  assert.ok(/303/.test(r.cal) && /hasta el/.test(r.cal), 'falta el calendario: '+r.cal.slice(0,160));
+});
+
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 
 await browser.close();
