@@ -468,6 +468,19 @@ impuestos → impuesto → resultado del ejercicio.
 - Envío a domicilio al 10% (accesorio de la comida). Señales: el IVA se
   devenga al cobrarlas (`geAjustarSenalesIva`).
 
+- **Para el gestor** (Exportar → "Para el gestor"): libro de ingresos
+  (asiento resumen por día y tipo), libro de gastos (con nº de factura y NIF
+  del proveedor, que se recuerda por proveedor), bienes de inversión,
+  resumen del año (303/390, 111/190, 115/180, pagos a cuenta, 347) y
+  registro de jornada del mes. ⚠️ La app NO es una gestoría: ordena los
+  datos de forma objetiva; presentar lo hace el gestor.
+- **Registro de jornada**: borrar un empleado ya NO borra sus fichajes (4
+  años, art. 34.9 ET); un fichaje corregido guarda la hora original.
+- **Web de reservas**: aviso de privacidad con responsable, NIF (si el dueño
+  lo publica en Mi Negocio → `legalPublico`), base legal y AEPD.
+- Facturas: numeración de todos los tickets, factura completa con datos del
+  cliente y rectificativas entran con VeriFactu (diciembre).
+
 Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 
 ## El módulo de I+D (`js/idr.js`)

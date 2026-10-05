@@ -814,6 +814,7 @@ const GE = (function(){
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.irpfWithheld')}</div><div class="val" id="gf-auto-irpf" style="color:var(--amber-dark)">0,00 €</div></div>
           <div class="ge-kpi"><div class="lbl">${t('hr.gf.totalCompanyCost')}</div><div class="val" id="gf-auto-total" style="color:var(--ink)">0,00 €</div></div>
         </div>
+        <p id="gf-auto-smi" class="txt-xs" style="display:none;color:var(--red);margin:-4px 0 10px"><i class="ti ti-alert-triangle"></i> ${t('hr.gf.bajoSmi').replace('${smi}', fmtMoney(SMI_ANUAL))}</p>
       </div>
       ` : ''}
       <div class="field-row">
@@ -882,6 +883,11 @@ const GE = (function(){
     indefinido: {empresa:32.15, trabajador:6.50},
     temporal:   {empresa:33.35, trabajador:6.55},
   };
+  // Salario mínimo interprofesional 2026 a jornada completa: 1.221 €/mes en
+  // 14 pagas. ⚠️ Revisar cada año (lo fija un real decreto, normalmente en
+  // enero o febrero). El convenio de hostelería de cada provincia suele
+  // estar por encima: esto solo avisa del suelo legal.
+  const SMI_ANUAL = 1221 * 14;
   function gfContratoCambia(){
     const c = SS_2026[document.getElementById('gf-f-contrato').value] || SS_2026.indefinido;
     document.getElementById('gf-f-sspct').value = c.empresa;
@@ -912,6 +918,12 @@ const GE = (function(){
     document.getElementById('gf-auto-irpf').textContent = fmtMoney(irpfMensual);
     document.getElementById('gf-auto-total').textContent = fmtMoney(total);
     document.getElementById('gf-f-importe').value = total.toFixed(2);
+    // Aviso, no bloqueo: a tiempo parcial es legal cobrar menos.
+    const smiEl = document.getElementById('gf-auto-smi');
+    if(smiEl){
+      const anual = bruto * (pagasEl ? parseInt(pagasEl.value) : 12);
+      smiEl.style.display = (anual > 0 && anual < SMI_ANUAL) ? '' : 'none';
+    }
   }
   function saveGF(){
     const nombre = document.getElementById('gf-f-nombre').value.trim();
@@ -1357,8 +1369,12 @@ const GE = (function(){
       </div>
       <div class="field" style="position:relative">
         <label>${t('common.supplier')}</label>
-        <input type="text" id="gv-f-prov" value="${escapeHtml(v.proveedor||'')}" autocomplete="off" oninput="runTypeahead('gv-f-prov')" onfocus="runTypeahead('gv-f-prov')" onblur="setTimeout(()=>hideTypeahead('gv-f-prov'),150)">
+        <input type="text" id="gv-f-prov" value="${escapeHtml(v.proveedor||'')}" autocomplete="off" oninput="runTypeahead('gv-f-prov')" onfocus="runTypeahead('gv-f-prov')" onblur="setTimeout(()=>{hideTypeahead('gv-f-prov');GE.gvRellenarNif();},150)">
         <div id="gv-f-prov-results" class="typeahead-results" style="display:none"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>${t('hr.gv.numFactura')}</label><input type="text" id="gv-f-numfra" value="${escapeHtml(v.numFactura||'')}"></div>
+        <div class="field"><label>${t('hr.gv.nifProveedor')}</label><input type="text" id="gv-f-nif" value="${escapeHtml(v.nifProveedor || nifDeProveedor(v.proveedor) || '')}" placeholder="B12345678"></div>
       </div>
       <div class="field-row">
         <div class="field"><label>${t('hr.lbl.amountNoVat')}</label><input type="number" id="gv-f-imp" min="0" step="0.01" value="${v.importe||''}"></div>
@@ -1380,6 +1396,14 @@ const GE = (function(){
       q => provs.filter(p => p.toLowerCase().includes(q)),
       p => escapeHtml(p),
       p => { document.getElementById('gv-f-prov').value = p; });
+  }
+  function nifDeProveedor(nombre){
+    const m = config().nifProveedores || {};
+    return nombre ? (m[String(nombre).toUpperCase()] || '') : '';
+  }
+  function gvRellenarNif(){
+    const nifEl = document.getElementById('gv-f-nif'), provEl = document.getElementById('gv-f-prov');
+    if(nifEl && provEl && !nifEl.value) nifEl.value = nifDeProveedor(provEl.value.trim());
   }
   function saveGV(){
     const imp = parseFloat(document.getElementById('gv-f-imp').value);
@@ -1404,7 +1428,12 @@ const GE = (function(){
       proveedor: document.getElementById('gv-f-prov').value.trim().toUpperCase() || 'SIN PROVEEDOR',
       importe: imp,
       iva: parseFloat(ivaRaw),
-      fecha, mes: fm - 1, año: fy
+      fecha, mes: fm - 1, año: fy,
+      // Nº de factura y NIF del proveedor: los pide el libro registro de
+      // gastos (art. 68 RIRPF / art. 64 RIVA) y el modelo 347. El NIF se
+      // recuerda por proveedor para no tener que escribirlo cada vez.
+      numFactura: (document.getElementById('gv-f-numfra').value||'').trim(),
+      nifProveedor: (document.getElementById('gv-f-nif').value||'').trim().toUpperCase(),
     };
     if(editingGV){
       const existing = variables().find(x=>x.id===editingGV);
@@ -1416,6 +1445,11 @@ const GE = (function(){
       if(isDateClosed(data.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
       data.facturaId = gvPendingFacturaId || null;
       variables().push({id: genId(), ...data});
+    }
+    if(data.nifProveedor && data.proveedor !== 'SIN PROVEEDOR'){
+      const cfg = config();
+      cfg.nifProveedores = cfg.nifProveedores || {};
+      cfg.nifProveedores[data.proveedor] = data.nifProveedor;
     }
     saveDB();
     closeModal();
@@ -2671,6 +2705,161 @@ const GE = (function(){
   }
 
   /* -- EXPORTAR CONTABILIDAD PARA EL GESTOR -- */
+  /* ============================================================
+     PARA EL GESTOR: libros registro, resumen del año y registro de jornada
+     ============================================================
+     GastroGoan no presenta nada ante Hacienda: eso lo hace el gestor. Lo
+     que sí hace es entregarle los datos ya ordenados como él los pide, para
+     que no tenga que teclear tickets ni facturas. Todo sale de las mismas
+     funciones que la Cuenta de Resultados, así que las cifras cuadran.
+     - Libro de ingresos: asiento RESUMEN por día y tipo de IVA, que es como
+       se anotan los tickets (facturas simplificadas, art. 63.4 RIVA).
+     - Libro de gastos: compras con su nº de factura y NIF, gastos fijos de
+       cada mes, comisiones de plataformas y amortizaciones.
+     - Libro de bienes de inversión: cada inversión con su amortización.
+     - Resumen del año: lo trimestral (303, 111, 115, pagos a cuenta) y lo
+       anual (390, 190, 180, 347), para que el gestor lo coteje.
+     - Registro de jornada del mes, incluidos los empleados que ya no están
+       (se guarda 4 años, art. 34.9 ET). */
+  function n2(v){ return Math.round((v||0)*100)/100; }
+  function ventasPorDiaYTipo(año){
+    const out = {};   // 'AAAA-MM-DD' -> {rate -> {base, iva, n, nums:[]}}
+    const add = (dia, rate, gross, venta) => {
+      if(!out[dia]) out[dia] = {};
+      if(!out[dia][rate]) out[dia][rate] = {base:0, iva:0, n:0, nums:[]};
+      const g = out[dia][rate], net = gross/(1+rate/100);
+      g.base += net; g.iva += gross - net;
+      if(venta){ g.n++; if(venta.facturaNum) g.nums.push(venta.facturaNum); }
+    };
+    const fallback = ivaVentasPct();
+    activeSales().filter(v => (v.date||'').startsWith(año+'-')).forEach(v => {
+      const desc = parseFloat(v.descuentoPct)||0;
+      const vistos = new Set();
+      (v.items||[]).forEach(l => {
+        const gross = (parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-desc/100);
+        if(gross <= 0) return;
+        const rate = l.ivaPct == null ? fallback : l.ivaPct;
+        add(v.date, rate, gross, vistos.has(rate) ? null : v);
+        vistos.add(rate);
+      });
+      // La señal ya tributó cuando se cobró: se descuenta el día de la cena.
+      if(v.senal > 0 && v.senalPagoFecha && diaLocalDe(v.senalPagoFecha) >= SENAL_IVA_DESDE) add(v.date, 10, -parseFloat(v.senal), null);
+    });
+    (DB.reservations||[]).forEach(r => {
+      const f = r.depositPagoFecha ? diaLocalDe(r.depositPagoFecha) : '';
+      if(r.depositConfirmed && !r.depositNeedsRefund && f >= SENAL_IVA_DESDE && f.startsWith(año+'-')) add(f, 10, parseFloat(r.depositPagoImporte)||0, null);
+    });
+    return out;
+  }
+  function libroIngresos(año){
+    const rows = [[t('hr.libro.ingresos')+' '+año, (DB.business||{}).name||'', (DB.business||{}).cif||''], [],
+      [t('common.date'), t('hr.libro.numTickets'), t('hr.libro.facturasDesdeHasta'), t('hr.libro.base'), t('hr.libro.tipoIva'), t('hr.libro.cuota'), t('hr.libro.total')]];
+    const dias = ventasPorDiaYTipo(año);
+    let tb=0, ti=0;
+    Object.keys(dias).sort().forEach(d => Object.keys(dias[d]).sort((a,b)=>b-a).forEach(rate => {
+      const g = dias[d][rate];
+      const nums = g.nums.slice().sort();
+      rows.push([d, g.n, nums.length ? (nums[0]+(nums.length>1?' – '+nums[nums.length-1]:'')) : '', n2(g.base), rate+'%', n2(g.iva), n2(g.base+g.iva)]);
+      tb += g.base; ti += g.iva;
+    }));
+    rows.push([], [t('hr.libro.totalAño'), '', '', n2(tb), '', n2(ti), n2(tb+ti)]);
+    return rows;
+  }
+  function libroGastos(año){
+    const pf = fiscalPerfil().personaFisica;
+    const rows = [[t('hr.libro.gastos')+' '+año, (DB.business||{}).name||'', (DB.business||{}).cif||''], [],
+      [t('common.date'), t('hr.libro.numFactura'), t('common.supplier'), t('hr.libro.nif'), t('hr.libro.concepto'), t('hr.libro.base'), t('hr.libro.tipoIva'), t('hr.libro.cuota'), t('hr.libro.retencion'), t('hr.libro.total')]];
+    const lineas = [];
+    for(let m=0;m<12;m++){
+      variablesMes(m, año).forEach(v => {
+        const base = parseFloat(v.importe)||0, pct = parseFloat(v.iva)||0;
+        lineas.push([v.fecha||'', v.numFactura||'', v.proveedor||'', v.nifProveedor || nifDeProveedor(v.proveedor), variableCategoryLabel(v.categoria), n2(base), pct+'%', n2(base*pct/100), 0, n2(base*(1+pct/100))]);
+      });
+      // Gastos fijos: la configuración de HOY, mes a mes (el histórico solo
+      // guarda totales). El gestor los casa con las facturas de cada mes.
+      const ultimo = `${año}-${String(m+1).padStart(2,'0')}-${String(new Date(año, m+1, 0).getDate()).padStart(2,'0')}`;
+      (DB.ge.fijos||[]).forEach(g => {
+        if(pf && gfEsRetribucionTitular(g)) return;
+        const base = gfMonthlyImporte(g), pct = g.categoria==='PERSONAL' ? 0 : (parseFloat(g.iva)||0);
+        if(!(base > 0)) return;
+        const ret = gfRetencionMensual(g);
+        lineas.push([ultimo, '', '', '', gfConceptLabel(g.nombre)+(g.categoria==='PERSONAL'?' ('+t('hr.libro.nomina')+')':''), n2(base), pct+'%', n2(base*pct/100), n2(ret), n2(base*(1+pct/100)-ret)]);
+      });
+      const com = comisionesMes(m, año);
+      if(com > 0.005) lineas.push([ultimo, '', t('hr.libro.plataformas'), '', t('hr.lbl.deliveryCommissions'), n2(com), '', n2(ivaSoportadoComisionesMes(m, año)), 0, n2(com + ivaSoportadoComisionesMes(m, año))]);
+      const am = geAmortizacionMes(año, m);
+      if(am > 0.005) lineas.push([ultimo, '', '', '', t('hr.cdr.depreciation'), n2(am), '', 0, 0, n2(am)]);
+      const it = geInteresesMes(año, m);
+      if(it > 0.005) lineas.push([ultimo, '', '', '', t('hr.cdr.financialExpenses'), n2(it), '', 0, 0, n2(it)]);
+    }
+    lineas.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+    const tot = lineas.reduce((s,l)=>({b:s.b+l[5], c:s.c+l[7], r:s.r+l[8], t:s.t+l[9]}), {b:0,c:0,r:0,t:0});
+    rows.push(...lineas, [], [t('hr.libro.totalAño'), '', '', '', '', n2(tot.b), '', n2(tot.c), n2(tot.r), n2(tot.t)]);
+    return rows;
+  }
+  function libroBienesInversion(año){
+    const rows = [[t('hr.libro.bienes')+' '+año, (DB.business||{}).name||'', (DB.business||{}).cif||''], [],
+      [t('common.date'), t('hr.lbl.description'), t('hr.capex.tipoAmort'), t('hr.libro.valor'), t('hr.libro.coef'), t('hr.libro.amortAño'), t('hr.libro.amortAcum'), t('hr.libro.pendiente')]];
+    capex().filter(c => c.fecha && c.fecha.slice(0,4) <= String(año)).sort((a,b)=>a.fecha.localeCompare(b.fecha)).forEach(c => {
+      let delAño = 0, acum = 0;
+      const [fy] = c.fecha.split('-').map(Number);
+      for(let y=fy; y<=año; y++) for(let m=0;m<12;m++){ const a = capexAmortizacionMes(c, y, m); acum += a; if(y===año) delAño += a; }
+      const valor = parseFloat(c.importe)||0;
+      rows.push([c.fecha, c.descripcion||'', t('hr.capex.tipo.'+(c.tipoAmort||'mobiliario')), n2(valor), valor <= AMORT_ESCASO_VALOR ? '100%' : capexCoefAmort(c)+'%', n2(delAño), n2(acum), n2(valor-acum)]);
+    });
+    return rows;
+  }
+  function resumenAño(año){
+    const rows = [[t('hr.libro.resumen')+' '+año, (DB.business||{}).name||'', (DB.business||{}).cif||''], [], ['', 'T1', 'T2', 'T3', 'T4', t('hr.lbl.yearAbbrev')]];
+    const porQ = f => { const q=[0,0,0,0]; for(let m=0;m<12;m++) q[Math.floor(m/3)] += f(m); return [...q.map(n2), n2(q.reduce((a,b)=>a+b,0))]; };
+    rows.push([t('hr.libro.ivaRepercutido'), ...porQ(m=>ivaVentasMes(m,año))]);
+    rows.push([t('hr.libro.ivaSoportado'), ...porQ(m=>ivaSoportadoComprasMes(m,año)+ivaSoportadoFijosMes(m,año)+ivaSoportadoCapexMes(m,año)+ivaSoportadoComisionesMes(m,año))]);
+    rows.push([t('hr.libro.res303'), ...porQ(m=>ivaLiquidarMes(m,año))]);
+    rows.push([t('hr.libro.res111'), ...porQ(m=>geModelo111ForMonth(año,m))]);
+    rows.push([t('hr.libro.res115'), ...porQ(m=>geRetencionForMonth(año,m,'115'))]);
+    const pc = [0,1,2,3].map(q => pagoACuentaTrimestre(q*3+2, año));
+    const modelo = (pc.find(x=>x)||{}).modelo;
+    if(modelo){
+      const imp = pc.map((x,q) => x ? (modelo==='202' ? ([1,3].includes(q) ? x.importe : 0) : x.importe) : 0);
+      rows.push([t('hr.te.pagoCuenta.'+modelo), ...imp.map(n2), n2(imp.reduce((a,b)=>a+b,0))]);
+    }
+    rows.push([t('hr.cdr.resultBeforeTax'), ...porQ(m=>resultadoAntesImpMes(m,año))]);
+    // 347: operaciones con un mismo proveedor de más de 3.005,06 € en el año,
+    // IVA incluido, con su reparto por trimestres. Quedan fuera las que ya
+    // llevan retención (el alquiler va en el 180).
+    rows.push([], [t('hr.libro.res347')], [t('common.supplier'), t('hr.libro.nif'), 'T1', 'T2', 'T3', 'T4', t('hr.lbl.yearAbbrev')]);
+    const prov = {};
+    for(let m=0;m<12;m++) variablesMes(m, año).forEach(v => {
+      const k = v.proveedor || '';
+      if(!k || k === 'SIN PROVEEDOR') return;
+      if(!prov[k]) prov[k] = {nif: v.nifProveedor || nifDeProveedor(k), q:[0,0,0,0]};
+      prov[k].q[Math.floor(m/3)] += (parseFloat(v.importe)||0)*(1+(parseFloat(v.iva)||0)/100);
+    });
+    const lista = Object.entries(prov).map(([k,p]) => [k, p.nif, ...p.q.map(n2), n2(p.q.reduce((a,b)=>a+b,0))]).filter(r => r[6] > 3005.06).sort((a,b)=>b[6]-a[6]);
+    if(lista.length) rows.push(...lista); else rows.push([t('hr.libro.sin347')]);
+    return rows;
+  }
+  function registroJornada(mes, año){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    const rows = [[t('hr.libro.jornada')+' · '+getMeses()[mes]+' '+año, (DB.business||{}).name||'', (DB.business||{}).cif||''], [],
+      [t('common.date'), t('hr.libro.empleado'), t('hr.libro.dni'), t('hr.libro.entrada'), t('hr.libro.salida'), t('hr.libro.horas'), t('hr.libro.editado')]];
+    const hora = iso => iso ? new Date(iso).toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'}) : '';
+    (DB.fichajes||[]).filter(f => (f.fecha||'').startsWith(mesStr)).sort((a,b)=>(a.fecha+a.entrada).localeCompare(b.fecha+b.entrada)).forEach(f => {
+      const e = (DB.employees||[]).find(x => x.id === f.employeeId);
+      rows.push([f.fecha, e ? e.name : (f.empleadoNombre||''), e ? (e.dni||e.nif||'') : (f.empleadoDni||''), hora(f.entrada), hora(f.salida), n2(fichajeHoras(f)), f.editado ? t('hr.libro.editadoDe').replace('${orig}', [hora(f.original&&f.original.entrada), hora(f.original&&f.original.salida)].join('–')) : '']);
+    });
+    return rows;
+  }
+  function descargarLibroGestor(tipo){
+    const mes = parseInt(document.getElementById('exp-mes').value);
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear();
+    const nombre = ((DB.business||{}).name||'negocio').replace(/[^\wÀ-ÿ-]+/g,'-');
+    const tabla = {ingresos: () => libroIngresos(año), gastos: () => libroGastos(año), bienes: () => libroBienesInversion(año), resumen: () => resumenAño(año), jornada: () => registroJornada(mes, año)}[tipo];
+    if(!tabla) return;
+    const sufijo = tipo === 'jornada' ? `${año}-${String(mes+1).padStart(2,'0')}` : String(año);
+    downloadCSV(tabla(), `${t('hr.libro.file.'+tipo)}-${nombre}-${sufijo}.csv`);
+    showToast(t('msg.reportDownloaded'));
+  }
   function openExportModal(){
     const now = new Date();
     openModal(`
@@ -2699,6 +2888,17 @@ const GE = (function(){
         <button class="btn" onclick="GE.downloadMonthInvoices()"><i class="ti ti-file-zip"></i> ${t('factura.zip.btn')}</button>
       </div>
       <p style="font-size:11.5px;color:var(--muted);margin:10px 0 0"><i class="ti ti-info-circle"></i> ${t('factura.zip.hint')}</p>
+      <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
+        <h4 style="margin:0 0 4px">${t('hr.libro.title')}</h4>
+        <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${t('hr.libro.desc')}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('ingresos')"><i class="ti ti-file-spreadsheet"></i> ${t('hr.libro.ingresos')}</button>
+          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('gastos')"><i class="ti ti-file-spreadsheet"></i> ${t('hr.libro.gastos')}</button>
+          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('bienes')"><i class="ti ti-file-spreadsheet"></i> ${t('hr.libro.bienes')}</button>
+          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('resumen')"><i class="ti ti-file-spreadsheet"></i> ${t('hr.libro.resumen')}</button>
+          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('jornada')"><i class="ti ti-clock"></i> ${t('hr.libro.jornada')}</button>
+        </div>
+      </div>
     `);
   }
   // Todas las facturas adjuntas del mes elegido, en un único ZIP: las
@@ -3070,7 +3270,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
@@ -4431,8 +4631,12 @@ function saveEmployee(id){
 // Eliminar a un empleado revoca su acceso de inmediato: al desaparecer de
 // DB.employees, ya no puede fichar (desaparece del selector de la pantalla
 // de "fichar para entrar") ni desbloquear nada con su PIN. Es irreversible
-// (se pierden sus turnos/fichajes) y deja huecos en pedidos/tareas
-// asignadas, así que se protege con el PIN del negocio.
+// (se pierden sus turnos) y deja huecos en pedidos/tareas asignadas, así que
+// se protege con el PIN del negocio.
+// ⚠️ Sus FICHAJES NO se borran: el registro de jornada se guarda 4 años y
+// tiene que poder enseñarse a la Inspección de Trabajo (art. 34.9 ET), y es
+// justo de quien ya no está de quien más se piden. Se les apunta el nombre
+// para que sigan siendo legibles sin la ficha.
 function deleteEmployee(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
@@ -4447,7 +4651,7 @@ function reallyDeleteEmployee(id, pin){
   if(e0){ moveToTrash('employee', e0); logAudit('delete', t('audit.deletedEmployee').replace('${name}', e0.name), 'critical'); }
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
-  DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);
+  (DB.fichajes||[]).forEach(f => { if(f.employeeId===id && e0){ f.empleadoNombre = e0.name; f.empleadoDni = e0.dni || e0.nif || ''; } });
   DB.horariosFijos = (DB.horariosFijos||[]).filter(h => h.employeeId!==id);
   liberarPedidosDeRepartidor(id);
   delete DB.shifts[id];
@@ -5133,6 +5337,13 @@ function saveEditedFichaje(fichajeId){
   // real de este tipo nunca se podría corregir desde aquí (siempre "la
   // salida debe ser posterior a la entrada").
   if(salidaDate <= entradaDate) salidaDate = new Date(salidaDate.getTime() + 24*60*60*1000);
+  // Un registro de jornada corregido a mano tiene que poder distinguirse
+  // del fichado: se guarda la hora ORIGINAL la primera vez y se marca
+  // quién y cuándo lo tocó. Sin eso, el registro no vale ante la Inspección
+  // (debe ser fiable y no manipulable sin rastro).
+  if(!f.original) f.original = {entrada: f.entrada || null, salida: f.salida || null};
+  f.editado = new Date().toISOString();
+  f.editadoPor = (typeof loggedEmployeeId !== 'undefined' && loggedEmployeeId != null) ? loggedEmployeeId : 'owner';
   f.entrada = entradaDate.toISOString();
   f.salida = salidaDate.toISOString();
   saveDB();

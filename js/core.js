@@ -7637,6 +7637,9 @@ const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   // de preparación, formas de pago aceptadas, tarifa de envío...), así que
   // no hay motivo para dejarlo fuera de la lista.
   'pedidos',
+  // Titular y NIF del aviso legal: los rellena el dueño a propósito en Mi
+  // Negocio sabiendo que se publican (los exige la LSSI).
+  'legalPublico',
 ];
 function negocioParaElEspejoPublico(){
   const b = DB.business || {};
