@@ -1029,7 +1029,8 @@ const GE = (function(){
     // Un gasto que no es mensual sin su mes de factura deja el IVA en un mes
     // inventado y nadie se entera: aquí se pide, diciendo para qué.
     const perSel = document.getElementById('gf-f-periodo'), mesSel = document.getElementById('gf-f-mespago');
-    if(perSel && !perSel.disabled && (parseInt(perSel.value)||1) > 1 && mesSel && !mesSel.value){ showToast(t('ck.faltaMes')); mesSel.focus(); return; }
+    const autoOn = !!(document.getElementById('gf-f-autocalc')||{}).checked;
+    if(!autoOn && perSel && !perSel.disabled && (parseInt(perSel.value)||1) > 1 && mesSel && !mesSel.value){ showToast(t('ck.faltaMes')); mesSel.focus(); return; }
     const autocalcEl = document.getElementById('gf-f-autocalc');
     const isAutoCalc = !!(autocalcEl && autocalcEl.checked);
     const data = {
@@ -1623,7 +1624,7 @@ const GE = (function(){
       ${items.map(i => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;min-height:36px">
         <i class="ti ${i.ok?'ti-circle-check':'ti-circle'}" style="color:${i.ok?'var(--green)':'var(--muted)'};font-size:18px;flex:none"></i>
         <span style="flex:1;${i.ok?'color:var(--muted)':''}">${i.txt}</span>
-        ${i.ok ? '' : `${i.alt ? `<button class="btn btn-sm" onclick="${i.alt.ir}">${i.alt.txt}</button>` : ''}<button class="btn btn-sm" onclick="${i.ir}">${t('ck.ir')}</button>`}
+        ${i.ok ? '' : `${i.alt ? `<button class="btn btn-sm" style="min-height:44px" onclick="${i.alt.ir}">${i.alt.txt}</button>` : ''}<button class="btn btn-sm" style="min-width:44px;min-height:44px" onclick="${i.ir}">${t('ck.ir')}</button>`}
       </div>`).join('')}
     </div>` : '';
     box.innerHTML = aviso + lista;
