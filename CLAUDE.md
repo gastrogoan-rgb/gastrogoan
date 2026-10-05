@@ -438,6 +438,38 @@ dueño: solo Stripe. No volver a replantearlo sin un motivo nuevo.
 
 Pruebas: `test/pagos-worker.mjs` y `test/pagos-app.mjs`.
 
+## La Cuenta de Resultados es la del gestor (motor fiscal, 5/10)
+
+Lo que cambia según la forma del negocio (Mi Negocio → forma jurídica y
+régimen) vive en el **motor fiscal** de `js/finance.js`, y lo usan la
+Cuenta de Resultados, Tesorería y el Panel. Estructura del Plan General
+Contable: cifra de negocios → aprovisionamientos → personal → otros gastos
+→ EBITDA → amortización → resultado de explotación → intereses → antes de
+impuestos → impuesto → resultado del ejercicio.
+
+- **El impuesto va por AÑO**, no mes a mes: tipo efectivo del año ×
+  beneficio acumulado, menos pérdidas de años anteriores (sociedad sin
+  límite, persona física 4 años). Un mes puede salir con impuesto negativo:
+  es lo provisionado de más que se devuelve.
+- **Autónomo y CB: escala del IRPF por tramos** (`irpfActividad`), con el
+  mínimo personal y el 5% de difícil justificación (máx. 2.000 €). Su
+  "sueldo" (`gfEsRetribucionTitular`) **no es gasto**: sale debajo del
+  resultado. La cuota de autónomos sí es gasto. En una sociedad, la nómina
+  del administrador sí es gasto.
+- **Inversiones: gasto = amortización + intereses**, nunca la cuota del
+  préstamo (que es caja y va en Tesorería). Coeficientes de la tabla del IS
+  o de la de estimación directa (`AMORT_TIPOS`); ≤300 € va entero a gasto.
+- **Módulos**: el IVA y el IRPF salen de `calcularModulos`, no de lo vendido.
+- **Pagos a cuenta en Tesorería**: 130 (20% acumulado), 131 (módulos), 202
+  (18% del último IS, abril/octubre/diciembre).
+- **Nóminas**: contrato indefinido/temporal pone la SS de 2026 (`SS_2026`,
+  revisar cada enero: el MEI sube hasta 2029) y 14 pagas devengan ×14/12.
+- Retenciones de gastos fijos: alquiler → 115; profesionales → 111.
+- Envío a domicilio al 10% (accesorio de la comida). Señales: el IVA se
+  devenga al cobrarlas (`geAjustarSenalesIva`).
+
+Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
+
 ## El módulo de I+D (`js/idr.js`)
 
 Un asistente de cocina que crea **elaboraciones base, platos, menús y cartas**
