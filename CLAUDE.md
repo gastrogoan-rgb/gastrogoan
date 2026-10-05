@@ -387,7 +387,7 @@ explicaciones están ahora en `reglas/NOTAS.md`.
 
 ## Mantenimiento: el mes del gestor, después del Plan 360 (29/09)
 
-Servicio de 75 €/mes (precio fijado el 6/10): un mes tipo de cuatro lunes (1º y 3º por WhatsApp, 2º
+Servicio de 75 € + IVA al mes (precio fijado el 6/10; el Plan 360, 950 € + IVA): un mes tipo de cuatro lunes (1º y 3º por WhatsApp, 2º
 y 4º por videollamada) donde el coach va soltando **entregas suyas** y
 **tareas para el negocio**. Las tareas son el plus: el hostelero ve que hay
 alguien encima.

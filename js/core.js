@@ -4259,7 +4259,7 @@ function plan360FillTemplate(text, c){
     .replace(/\{\{direccion\}\}/g, (c && c.clienteDireccion) || '________')
     .replace(/\{\{precio\}\}/g, (c && c.precio) || '________')
     .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________')
-    .replace(/\{\{precioMantenimiento\}\}/g, (c && c.precioMantenimiento) || '75 € al mes');
+    .replace(/\{\{precioMantenimiento\}\}/g, (c && c.precioMantenimiento) || '75 € + IVA al mes');
 }
 // Reunión inicial con el hostelero: la mitad "lo que el cliente siente y ve
 // de su negocio", complementaria al cliente misterioso ("lo que el coach
@@ -4460,7 +4460,7 @@ function ensurePlan360Program(){
   }
   if(!DB.business.plan360Contract){
     DB.business.plan360Contract = {
-      clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '950 €', formaPago: 'Un pago al firmar, o dos de 475 € (al firmar y el día 15)',
+      clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '950 € + IVA', formaPago: 'Un pago al firmar, o dos de 475 € + IVA (al firmar y el día 15)',
       signedName: '', signedDNI: '', signedAt: null,
     };
   }
@@ -4472,7 +4472,7 @@ function ensurePlan360Program(){
   if(!DB.business.plan360Cierre){
     DB.business.plan360Cierre = {
       kpis: {}, mejorasVisibles: '', queVigilar: '', siguienteNivel: '',
-      mantenimiento: {precio: '75€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
+      mantenimiento: {precio: '75 € + IVA al mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
     };
   }
   saveDB();
