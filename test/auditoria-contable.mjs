@@ -126,8 +126,9 @@ await caso('Préstamo: solo los intereses son gasto; lo devuelto suma exactament
 });
 
 await caso('Nómina de 14 pagas: el coste de cada mes es el bruto × 14/12 más la SS', async () => {
-  const r = await page.evaluate(() => GE.calcNomina(1000, 0, 0, 30, 14));
-  assert.equal(Math.round(r.total*100)/100, Math.round(1000*14/12*1.30*100)/100);
+  // Por encima de la base mínima (con 1.000 € la SS iría sobre los 1.424,40 €).
+  const r = await page.evaluate(() => GE.calcNomina(2000, 0, 0, 30, 14));
+  assert.equal(Math.round(r.total*100)/100, Math.round(2000*14/12*1.30*100)/100);
 });
 
 await caso('Autónomo: pago del 130 = 20% del beneficio acumulado menos lo ya pagado', async () => {
@@ -332,6 +333,19 @@ await caso('Vale univalente: IVA al venderlo y se resta al canjearlo; el polival
     return {nov: geOtrosIngresosIvaMes(2025,10), ene: geOtrosIngresosIvaMes(2026,0), pend: geValesPendientes()};
   });
   assert.equal(Math.round(r.nov*100)/100, 10); assert.equal(Math.round(r.ene*100)/100, -10); assert.equal(r.pend, 50);
+});
+
+await caso('Nómina 2026: la SS va sobre la base (suelo por grupo y jornada, techo 5.101,20) y la solidaridad por encima', async () => {
+  const r = await page.evaluate(() => ({
+    parcial: GE.calcNomina(500, 0, 0, 32.15, 12, {grupo:7, jornada:50}),
+    alto: GE.calcNomina(7000, 0, 0, 32.15, 12, {grupo:1}),
+    corto: GE.calcNomina(1500, 0, 0, 32.15, 12, {grupo:7, contratosCortos:2}),
+  }));
+  assert.equal(Math.round(r.parcial.base*100)/100, 712.20, 'media jornada: base mínima a la mitad');
+  assert.equal(r.alto.base, 5101.20);
+  // exceso 1.898,80: 510,12 × 0,96% + 1.388,68 × 1,04%
+  assert.equal(Math.round((r.alto.ssEmpresa - 5101.20*0.3215)*100)/100, Math.round((510.12*0.0096 + 1388.68*0.0104)*100)/100);
+  assert.equal(Math.round((r.corto.ssEmpresa - 1500*0.3215)*100)/100, 67.24);
 });
 
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
