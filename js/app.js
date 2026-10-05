@@ -6866,7 +6866,14 @@ function renderMiNegocio(){
             <option value="directa" ${b.regimenFiscal==='directa'?'selected':''}>${t('mn.fiscal.directa')}</option>
             <option value="modulos" ${b.regimenFiscal==='modulos'?'selected':''}>${t('mn.fiscal.modulos')}</option>
           </select>
-        </div>` : ''}
+        </div>
+        ${b.regimenFiscal==='directa' ? `<div class="field">
+          <label>${t('mn.fiscal.modalidad')}</label>
+          <select id="mn-modalidad-directa" onchange="saveBusiness(true)">
+            <option value="simplificada" ${b.modalidadDirecta!=='normal'?'selected':''}>${t('mn.fiscal.simplificada')}</option>
+            <option value="normal" ${b.modalidadDirecta==='normal'?'selected':''}>${t('mn.fiscal.normal')}</option>
+          </select>
+        </div>` : ''}` : ''}
       </div>
       ${b.formaJuridica==='sociedad' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.sociedadHint')}</p>` : ''}
       ${b.formaJuridica==='cooperativa' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.cooperativaHint')}</p>` : ''}
@@ -7800,6 +7807,7 @@ async function saveBusiness(silent){
   if(el('mn-tipo')) DB.business.tipo = el('mn-tipo').value;
   if(el('mn-forma-juridica')) DB.business.formaJuridica = el('mn-forma-juridica').value;
   if(el('mn-regimen-fiscal')) DB.business.regimenFiscal = el('mn-regimen-fiscal').value;
+  if(el('mn-modalidad-directa')) DB.business.modalidadDirecta = el('mn-modalidad-directa').value;
   if(el('mn-anyo')) DB.business.anyo = el('mn-anyo').value.trim();
   if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
   if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
@@ -8057,6 +8065,14 @@ function openDeliveryPlatformModal(title, p){
       <input type="checkbox" id="dp-f-comision-envio" ${p.comisionSobreEnvio!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.delivery.commissionOnShipping')}
     </label>
     <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('mn.delivery.commissionOnShippingDesc')}</p>
+    <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" id="dp-f-isp" ${p.isp?'checked':''} style="width:18px;height:18px;flex:none"> <span>${t('mn.delivery.isp')}</span>
+    </label>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${t('mn.delivery.ispDesc')}</p>
+    <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" id="dp-f-real" ${p.facturaReal?'checked':''} style="width:18px;height:18px;flex:none"> <span>${t('mn.delivery.facturaReal')}</span>
+    </label>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${t('mn.delivery.facturaRealDesc')}</p>
     <p style="font-size:12px;color:var(--muted)">${t('mn.delivery.calcHint')}</p>
     <p style="font-size:13px;font-weight:600" id="dp-example"></p>
     <input type="hidden" id="dp-f-id" value="${p.id||''}">
@@ -8092,7 +8108,8 @@ function saveDeliveryPlatform(){
   const dupe = DB.business.deliveryPlatforms.find(p => p.nombre.trim().toLowerCase()===nombre.toLowerCase() && String(p.id)!==idVal);
   if(dupe){ showToast(t('msg.platformNameDuplicate')); return; }
   const comisionSobreEnvio = document.getElementById('dp-f-comision-envio').checked;
-  const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct), comisionSobreEnvio};
+  const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct), comisionSobreEnvio,
+    isp: document.getElementById('dp-f-isp').checked, facturaReal: document.getElementById('dp-f-real').checked};
   if(idVal){
     const p = DB.business.deliveryPlatforms.find(x=>x.id===parseInt(idVal));
     if(p){

@@ -284,7 +284,7 @@ function registerPlatformSettlementSale(plat, totalBruto, closureHasta){
     isPlatformSettlement: true,
   };
   const comisionPct = parseFloat(plat.comisionPct) || 0;
-  const platIvaPct = parseFloat(plat.ivaPct) || 0;
+  const platIvaPct = plat.isp ? 0 : (parseFloat(plat.ivaPct) || 0);
   // A diferencia de un pedido individual (applyDeliveryCommission, js/tpv.js),
   // aquí no hay un coste de envío desglosado que restar de la base: el total
   // introducido es una cifra agregada que la propia plataforma ya reporta
@@ -295,7 +295,7 @@ function registerPlatformSettlementSale(plat, totalBruto, closureHasta){
   // fuego) para que quede constancia fiel de la configuración del negocio.
   const comisionSobreEnvio = plat.comisionSobreEnvio !== false;
   const comision = sale.total * (comisionPct/100) * (1 + platIvaPct/100);
-  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct: platIvaPct, comisionSobreEnvio};
+  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct: platIvaPct, comisionSobreEnvio, isp: !!plat.isp, facturaReal: !!plat.facturaReal};
   sale.comisionPlataforma = roundMoney(comision);
   if(typeof numerarTicket === 'function') numerarTicket(sale);
   DB.sales.push(sale);

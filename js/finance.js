@@ -69,9 +69,10 @@ function snapshotGeFijosNeto(){
   const ret115 = geTotalRetencionMensual('115');
   const retProf111 = geTotalRetencionMensual('111');
   const retribTitular = geTotalRetribTitular();
+  const items = gfItemsActuales();
   const existing = DB.ge.fijosLog.find(e => e.fecha === today);
-  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; existing.irpfMensual = irpfMensual; existing.ret115 = ret115; existing.retProf111 = retProf111; existing.retribTitular = retribTitular; }
-  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto, irpfMensual, ret115, retProf111, retribTitular});
+  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; existing.irpfMensual = irpfMensual; existing.ret115 = ret115; existing.retProf111 = retProf111; existing.retribTitular = retribTitular; existing.items = items; }
+  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto, irpfMensual, ret115, retProf111, retribTitular, items});
 }
 // Valor del histórico de gastos fijos "vigente" a fecha de un mes concreto:
 // el último punto anterior o igual al último día de ese mes. Si no hay
@@ -111,8 +112,48 @@ function geTotalFijosGrossForMonth(year, month){
 // IVA soportado en gastos fijos de un mes concreto, a partir del histórico
 // (gross - neto de ese momento), en vez de recalcularlo siempre con la
 // configuración actual de gastos fijos.
+// El IVA de un gasto fijo se deduce en el mes de SU factura (art. 99
+// LIVA): uno mensual, cada mes; un seguro anual, entero el mes en que se
+// paga — no 1/12 cada mes, que es como se reparte el GASTO en la Cuenta de
+// Resultados. Con la foto de los gastos de ese momento (items del
+// histórico). Un punto del histórico de antes de esto no tiene items: se
+// mantiene el cálculo antiguo para no mover meses ya cerrados.
 function geIvaSoportadoFijosForMonth(year, month){
-  return geTotalFijosGrossForMonth(year, month) - geTotalFijosNetoForMonth(year, month);
+  const items = geFijosItemsForMonth(year, month);
+  if(!items) return geTotalFijosGrossForMonth(year, month) - geTotalFijosNetoForMonth(year, month);
+  return items.reduce((s,it) => {
+    if(it.c === 'PERSONAL' || !gfPagaEnMes(it, year, month)) return s;
+    return s + (parseFloat(it.importe)||0) * (parseFloat(it.iva)||0) / 100;
+  }, 0);
+}
+// Foto compacta de los gastos fijos, para el histórico: así el libro de
+// gastos de enero dice el alquiler de ENERO aunque en junio subiera.
+function gfItemsActuales(){
+  return (DB.ge.fijos||[]).map(g => ({
+    id: g.id, nombre: g.nombre, importe: parseFloat(g.importe)||0, iva: g.categoria==='PERSONAL' ? 0 : (parseFloat(g.iva)||0),
+    periodicidadMeses: parseInt(g.periodicidadMeses)||1, mesPago: g.mesPago || null, c: g.categoria,
+    retencion: g.retencion || null, titular: gfEsRetribucionTitular(g) ? 1 : 0,
+    proveedor: g.proveedor || '', nifProveedor: g.nifProveedor || '',
+  }));
+}
+// null = hay histórico pero ese punto es anterior a las fotos (usar lo viejo).
+function geFijosItemsForMonth(year, month){
+  const log = DB.ge.fijosLog || [];
+  if(!log.length) return gfItemsActuales();
+  const v = geFijosLogValueForMonth(year, month, 'items');
+  return Array.isArray(v) ? v : null;
+}
+// ¿Toca pagar (y llega la factura de) este gasto este mes? Mensual, siempre.
+// Si no, cada `periodicidadMeses` contando desde su mes de pago; sin mes
+// de pago apuntado, desde el mes en que se dio de alta (el id es la fecha).
+function gfPagaEnMes(g, year, month){
+  const per = parseInt(g.periodicidadMeses)||1;
+  if(per <= 1) return true;
+  const mp = parseInt(g.mesPago);
+  if(mp >= 1 && mp <= 12) return (((month - (mp-1)) % per) + per) % per === 0;
+  const anchor = new Date((g.id||0)/1000);
+  const diff = (year*12 + month) - (anchor.getFullYear()*12 + anchor.getMonth());
+  return diff >= 0 && diff % per === 0;
 }
 // Igual que geTotalFijosNetoForMonth pero para el desglose PERSONAL vs resto
 // de fijos (GF), necesario en Tesorería para no mezclar la configuración de
@@ -252,7 +293,31 @@ function geVentasIvaGroupsMes(year, month){
     });
   });
   geAjustarSenalesIva(groups, mesStr);
+  geAjustarAnulaciones(groups, mesStr, fallbackRate);
   return groups;
+}
+// Una venta anulada con rectificativa (art. 89.Cinco LIVA, art. 15 RD
+// 1619/2012): la factura original SIGUE contando en su mes, y la
+// rectificativa la resta en el mes en que se emite. Antes la anulación
+// sacaba la venta de su mes original: si se anulaba en marzo una venta de
+// enero, el IVA de enero (otro trimestre, ya presentado) bajaba solo.
+// Las anulaciones de antes de las rectificativas no tienen fecha propia y
+// siguen fuera, como siempre.
+function geAjustarAnulaciones(groups, mesStr, fallbackRate){
+  (DB.sales||[]).forEach(v => {
+    if(v.status !== 'anulada' || !v.rectificativa) return;
+    const enOrigen = (v.date||'').startsWith(mesStr), enRect = (v.rectificativa.fecha||'').startsWith(mesStr);
+    if(enOrigen === enRect) return;   // los dos el mismo mes: se anulan entre sí
+    const desc = parseFloat(v.descuentoPct)||0;
+    (v.items||[]).forEach(l => {
+      const gross = (parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-desc/100) * (enOrigen ? 1 : -1);
+      if(!gross) return;
+      const rate = l.ivaPct != null ? parseFloat(l.ivaPct) : fallbackRate;
+      if(!groups[rate]) groups[rate] = {base:0, iva:0};
+      const net = gross/(1+rate/100);
+      groups[rate].base += net; groups[rate].iva += gross - net;
+    });
+  });
 }
 // Señales de reserva (auditoría contable, 5/10): un anticipo tributa
 // cuando se COBRA (art. 75.Dos LIVA), no el día de la cena. Se suma al 10%
@@ -289,7 +354,7 @@ function geComisionesMes(year, month){
   const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
   return activeSales().filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v) => {
     const bruto = parseFloat(v.comisionPlataforma||0);
-    if(!bruto) return s;
+    if(!bruto || (v.plataforma && v.plataforma.facturaReal)) return s;
     const ivaPct = (v.plataforma && v.plataforma.ivaPct!=null) ? parseFloat(v.plataforma.ivaPct) : 0;
     return s + bruto / (1 + ivaPct/100);
   }, 0);
@@ -380,7 +445,31 @@ const AMORT_TIPOS = {
 const AMORT_ESCASO_VALOR = 300;
 function capexCoefAmort(c){
   const tipo = AMORT_TIPOS[c.tipoAmort] || AMORT_TIPOS.mobiliario;
-  return fiscalPerfil().personaFisica ? tipo.ed : tipo.is;
+  const coef = fiscalPerfil().personaFisica ? tipo.ed : tipo.is;
+  // Obras en un local ALQUILADO: se amortizan en lo que dure el contrato
+  // (prórrogas incluidas) si es menos que su vida útil (PGC, norma de
+  // valoración 3ª.h). Un contrato de 5 años = 20% al año, no 10%.
+  const años = parseFloat(c.añosContrato);
+  if(c.tipoAmort === 'obras' && años > 0) return Math.max(coef, Math.min(100, 100 / años));
+  return coef;
+}
+// Vehículo: Hacienda presume que se usa al 50% para el negocio (art.
+// 95.Tres LIVA), así que solo se deduce la mitad de su IVA; la otra mitad
+// es más coste del vehículo y se amortiza con él.
+function capexIvaDeduciblePct(c){ return c.tipoAmort === 'vehiculo' ? 0.5 : 1; }
+function capexBaseAmortizable(c){
+  const imp = parseFloat(c.importe)||0;
+  return imp + imp * (parseFloat(c.iva)||0)/100 * (1 - capexIvaDeduciblePct(c));
+}
+// Bienes de hasta 300 €: a gasto entero, pero solo hasta 25.000 € al año
+// en total (art. 103 LIS); lo que pase de ahí se amortiza normal.
+function capexEsEscasoValor(c){
+  const base = capexBaseAmortizable(c);
+  if(base > AMORT_ESCASO_VALOR || !c.fecha) return false;
+  const año = c.fecha.slice(0,4);
+  const previos = (DB.ge.capex||[]).filter(x => x !== c && x.fecha && x.fecha.slice(0,4) === año && capexBaseAmortizable(x) <= AMORT_ESCASO_VALOR
+    && (x.fecha < c.fecha || (x.fecha === c.fecha && (x.id||0) < (c.id||0))));
+  return previos.reduce((s,x)=>s+capexBaseAmortizable(x), 0) + base <= 25000;
 }
 function capexMesesDesdeCompra(c, year, month){
   const [fy,fm] = (c.fecha||'').split('-').map(Number);
@@ -388,10 +477,10 @@ function capexMesesDesdeCompra(c, year, month){
   return (year*12+month) - (fy*12+(fm-1));
 }
 function capexAmortizacionMes(c, year, month){
-  const base = parseFloat(c.importe)||0;
+  const base = capexBaseAmortizable(c);
   const k = capexMesesDesdeCompra(c, year, month);
   if(!(base > 0) || k == null || k < 0) return 0;
-  if(base <= AMORT_ESCASO_VALOR) return k === 0 ? base : 0;
+  if(capexEsEscasoValor(c)) return k === 0 ? base : 0;
   const cuota = base * capexCoefAmort(c) / 100 / 12;
   const yaAmortizado = Math.min(base, cuota * k);
   return Math.max(0, Math.min(cuota, base - yaAmortizado));
@@ -439,11 +528,81 @@ function geDevolucionPrestamosMes(year, month){
   return (DB.ge.capex||[]).reduce((s,c)=>s+capexCuotaDesglose(c, year, month).principal, 0);
 }
 
+// --- Otros ingresos y autoconsumo ---------------------------------------
+// Lo que entra y no es una venta del TPV, cada uno con su IVA:
+//  · subvención: no lleva IVA (no es contraprestación de nada), pero SÍ es
+//    ingreso del año (PGC, cuenta 74);
+//  · comisión de máquinas recreativas o de tabaco: lo que le paga el
+//    operador al bar es un servicio al 21%, no una venta al 10%; lo que se
+//    queda el operador no es del negocio y no se anota;
+//  · alquiler del local o de un espacio para un evento sin servicio: 21%;
+//  · otro: con el IVA que diga su factura.
+// Y el AUTOCONSUMO del titular (lo que se come o se lleva de su propio
+// negocio, anotado como merma "Consumo propio"): Hacienda lo trata como una
+// venta a precio de coste (arts. 9.1 y 79.Tres LIVA; art. 28.3 LIRPF).
+const OTROS_INGRESOS_TIPOS = {subvencion:0, maquinas:21, alquiler:21, otro:null};
+const AUTOCONSUMO_IVA = 10;
+function geOtrosIngresosMes(year, month){
+  const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
+  let base = 0, iva = 0;
+  (DB.ge.otrosIngresos||[]).forEach(o => {
+    if(!(o.fecha||'').startsWith(mesStr)) return;
+    const b = parseFloat(o.base)||0;
+    base += b; iva += b * (parseFloat(o.iva)||0) / 100;
+  });
+  const auto = (DB.mermas||[]).filter(x => x.motivo === 'consumoPropio' && (x.fecha||'').startsWith(mesStr)).reduce((s,x)=>s+(parseFloat(x.coste)||0), 0);
+  return {base, iva, autoconsumo: auto, autoconsumoIva: auto * AUTOCONSUMO_IVA / 100};
+}
+// Lo que suma al resultado (ingresos sin IVA, autoconsumo incluido).
+function geOtrosIngresosNetoMes(year, month){
+  const o = geOtrosIngresosMes(year, month);
+  return o.base + o.autoconsumo;
+}
+function geOtrosIngresosIvaMes(year, month){
+  const o = geOtrosIngresosMes(year, month);
+  return o.iva + o.autoconsumoIva;
+}
+
+// --- Existencias (PGC, cuenta 61: variación de existencias) --------------
+// Lo comprado no es lo consumido: si acabas el mes con la cámara y la
+// bodega más llenas que lo empezaste, parte de las compras sigue en el
+// almacén y no es gasto todavía. Consumo = compras + existencias iniciales
+// − existencias finales. Sin esto, cerrar el año con la bodega llena
+// "costaba" miles de euros que no eran gasto, y con ellos el impuesto.
+// El valor de cada mes es la foto del stock de la app a coste
+// (stockTotalValueBreakdown), que se va actualizando sola mientras dura el
+// mes; si el negocio hace un recuento real, lo escribe a mano y manda.
+function existenciasClave(year, month){ return `${year}-${String(month+1).padStart(2,'0')}`; }
+function existenciasMes(year, month){
+  const e = (DB.ge.existencias || {})[existenciasClave(year, month)];
+  return e && e.v != null ? parseFloat(e.v) : null;
+}
+function fotoExistenciasAuto(){
+  try{
+    if(typeof stockTotalValueBreakdown !== 'function' || !DB.ingredients) return;
+    const d = new Date(), k = existenciasClave(d.getFullYear(), d.getMonth());
+    DB.ge.existencias = DB.ge.existencias || {};
+    const e = DB.ge.existencias[k];
+    if(e && e.manual) return;
+    const v = Math.round(stockTotalValueBreakdown().total * 100) / 100;
+    if(!e || Math.abs((parseFloat(e.v)||0) - v) > 0.005) DB.ge.existencias[k] = {v, ts: new Date().toISOString()};
+  }catch(err){ console.error('Foto de existencias', err); }
+}
+// Positivo = el almacén bajó (se consumió más de lo comprado): más gasto.
+function geVariacionExistenciasMes(year, month){
+  if((DB.ge.config || {}).usarExistencias === false) return 0;
+  const fin = existenciasMes(year, month);
+  const prev = new Date(year, month - 1, 1);
+  const ini = existenciasMes(prev.getFullYear(), prev.getMonth());
+  if(fin == null || ini == null) return 0;
+  return ini - fin;
+}
+
 // Resultado antes de impuestos de un mes — misma fórmula que GE → Cuenta
 // de Resultados (resultadoAntesImpMes, js/hr.js), para que el Panel diga
 // lo mismo.
 function geResultadoAntesImpMes(year, month){
-  return geFacturacionNetaMes(year,month) - geTotalVariablesNetoMes(year,month) - geFijosDeduciblesForMonth(year,month)
+  return geFacturacionNetaMes(year,month) + geOtrosIngresosNetoMes(year,month) - geTotalVariablesNetoMes(year,month) - geVariacionExistenciasMes(year,month) - geFijosDeduciblesForMonth(year,month)
     - geComisionesMes(year,month) - geAmortizacionMes(year,month) - geInteresesMes(year,month);
 }
 
@@ -467,9 +626,22 @@ function cuotaIrpfEscala(base){
 // directa simplificada: 5% de gastos de difícil justificación, como mucho
 // 2.000 € al año (art. 30.2.4ª LIRPF). El mínimo personal se descuenta
 // como cuota, que es como lo hace la ley (art. 63 y 74 LIRPF).
+// · El 5% de difícil justificación es SOLO de la estimación directa
+//   SIMPLIFICADA (la de casi todo autónomo de hostelería). En la normal no.
+// · Reducción por rendimientos bajos (art. 32.2.3º LIRPF): 1.620 € si el
+//   rendimiento neto no pasa de 8.000 €, y baja en línea recta hasta 0 a
+//   los 12.000 €. Exige no tener otras rentas de más de 6.500 €: se da por
+//   hecho (la app no conoce las demás rentas del titular).
+function reduccionRendimientosBajos(rn){
+  if(!(rn > 0) || rn > 12000) return 0;
+  return rn <= 8000 ? 1620 : Math.max(0, 1620 - 0.405 * (rn - 8000));
+}
 function irpfActividad(rendimiento, opts={}){
   if(!(rendimiento > 0)) return 0;
-  const neto = opts.sinDificilJustificacion ? rendimiento : rendimiento - Math.min(2000, rendimiento*0.05);
+  const simplificada = !opts.sinDificilJustificacion && (DB.business||{}).modalidadDirecta !== 'normal';
+  let neto = simplificada ? rendimiento - Math.min(2000, rendimiento*0.05) : rendimiento;
+  // La reducción exige estimación DIRECTA (art. 32.2.3º.b): en módulos no.
+  if(!opts.sinDificilJustificacion) neto = Math.max(0, neto - reduccionRendimientosBajos(neto));
   return Math.max(0, cuotaIrpfEscala(neto) - cuotaIrpfEscala(IRPF_MINIMO_PERSONAL));
 }
 // Impuesto ANUAL según la forma del negocio, sobre una base anual.
@@ -492,7 +664,11 @@ function impuestoAnual(baseAnual, opts={}){
     }, 0);
   }
   if(p.personaFisica) return irpfActividad(baseAnual, opts);
-  const pct = (DB.ge.config && DB.ge.config.pctImpuestoBeneficio!=null) ? parseFloat(DB.ge.config.pctImpuestoBeneficio) : 25;
+  // Sin tipo puesto a mano: el que toca por ley, no un 25% plano (lo pasa
+  // GE con opts.pctDefecto: 15% nueva creación, 19/21% micro, 23% reducida
+  // dimensión; cooperativa fiscalmente protegida, 20%).
+  const cfg = (DB.ge.config || {}).pctImpuestoBeneficio;
+  const pct = cfg != null ? parseFloat(cfg) : (opts.pctDefecto != null ? opts.pctDefecto : (p.forma === 'cooperativa' ? 20 : 25));
   return Math.max(0, baseAnual) * pct/100;
 }
 function renderDashboardBarTrend(elId, trend, allowNegative){
@@ -2131,7 +2307,10 @@ function openStockLogModal(){
    creyendo que lo tirado estaba en la cámara.
    El motivo se guarda como clave estable en castellano y se traduce al
    pintarlo; "otro" guarda además el texto libre que escriba el equipo. */
-const MERMA_MOTIVOS = ['caducado', 'malEstado', 'sobreproduccion', 'error', 'devolucion', 'otro'];
+// consumoPropio = lo que se come o se lleva el titular (autoconsumo, tributa
+// como venta a coste); comidaPersonal = la comida del equipo (gasto de
+// personal; si es retribución en especie lo decide el convenio/gestor).
+const MERMA_MOTIVOS = ['caducado', 'malEstado', 'sobreproduccion', 'error', 'devolucion', 'consumoPropio', 'comidaPersonal', 'otro'];
 function mermaMotivoLabel(m){
   if(!m) return '—';
   if(m.motivo === 'otro') return m.motivoOtro || t('merma.r.otro');

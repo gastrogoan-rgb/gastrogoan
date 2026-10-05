@@ -4037,7 +4037,9 @@ function requestCancelSale(saleId){
   if(!puedeCancelar()) return;
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
-  if(typeof geIsDateClosed === 'function' && geIsDateClosed(sale.date)){
+  // La anulación ya no toca el mes de la venta: emite una rectificativa con
+  // fecha de HOY. Lo que no se puede es emitirla en un mes ya cerrado.
+  if(typeof geIsDateClosed === 'function' && geIsDateClosed(todayStr())){
     showToast(t('msg.cannotCancelClosedMonth'));
     return;
   }
@@ -5254,7 +5256,12 @@ function applyDeliveryCommission(order, sale){
   const plat = (DB.business.deliveryPlatforms||[]).find(p => p.id === order.plataformaId);
   if(!plat) return;
   const comisionPct = parseFloat(plat.comisionPct) || 0;
-  const ivaPct = parseFloat(plat.ivaPct) || 0;
+  // Plataforma que factura desde otro país de la UE (Uber Eats lo hace
+  // desde Países Bajos): su factura llega SIN IVA español y es el negocio
+  // quien lo autoliquida — inversión del sujeto pasivo (art. 84.Uno.2º
+  // LIVA). La comisión es solo la base; el IVA se devenga y se deduce a la
+  // vez en el 303 (lo enseña el resumen del año).
+  const ivaPct = plat.isp ? 0 : (parseFloat(plat.ivaPct) || 0);
   // Algunas plataformas (acuerdo comercial habitual con Glovo/Uber Eats)
   // cobran su % de comisión solo sobre la comanda, no sobre el gasto de
   // envío — antes esto no se podía distinguir y siempre se calculaba sobre
@@ -5267,7 +5274,7 @@ function applyDeliveryCommission(order, sale){
   // así que hay que restarla igual que ya se resta el envío.
   const baseComision = Math.max(0, sale.total - sale.propina - (comisionSobreEnvio ? 0 : (order.costeEnvio || 0)));
   const comision = baseComision * (comisionPct/100) * (1 + ivaPct/100);
-  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct, comisionSobreEnvio};
+  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct, comisionSobreEnvio, isp: !!plat.isp, facturaReal: !!plat.facturaReal};
   sale.comisionPlataforma = Math.round(comision * 100) / 100;
 }
 
