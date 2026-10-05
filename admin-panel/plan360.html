@@ -505,7 +505,10 @@ function comoFirebase(v){
   }
   return v;
 }
-const esClavePlan360 = k => k.startsWith('plan360');
+// plan360Kpis lo escribe SOLO la app del negocio (sus indicadores del mes):
+// si el panel lo subiera con el resto, devolvería a la nube una copia vieja
+// y, al cambiar, cada recálculo parecería "el negocio ha tocado algo".
+const esClavePlan360 = k => k.startsWith('plan360') && k !== 'plan360Kpis';
 function plan360Huella(biz){
   const o = {};
   Object.keys(biz || {}).filter(esClavePlan360).forEach(k => { o[k] = biz[k]; });
@@ -4288,6 +4291,7 @@ function plan360CierreHtml(){
       <div class="p360-week-label">Cierre y próximos pasos</div>
       <div class="card" style="margin-bottom:10px">
         <div style="font-weight:600;margin-bottom:8px">Los números: antes → hoy</div>
+        ${kpiCierreHtml()}
         ${notaMisterio !== null ? `<button class="btn btn-sm" style="margin-bottom:8px" onclick="plan360CierreUsarNotaMisterio(${notaMisterio})">Usar la nota del cliente misterioso (${notaMisterio}) como "antes"</button>` : ''}
         <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center">
           <div></div><div style="font-size:11px;color:var(--muted);text-align:center">Antes</div><div style="font-size:11px;color:var(--muted);text-align:center">Hoy</div>
@@ -4797,6 +4801,7 @@ function renderMantPage(clave){
       <strong style="flex:1;text-align:center;font-size:16px">${esc(nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1))}</strong>
       <button class="btn btn-sm" onclick="mantMoverMes(1)"><i class="ti ti-chevron-right"></i></button>
     </div>
+    ${kpiInformeHtml(kpiClaveMes(mantMesActivo, mantMesActivo === mantMesClave(new Date()) ? -1 : 0))}
     ${mes ? `<div class="muted" style="font-size:13px;margin-bottom:10px">${hechos} de ${total} hechas este mes.</div>` : `
       <div class="card" style="margin-bottom:12px">
         <p style="margin:0 0 8px">Este mes está vacío.</p>
@@ -4991,6 +4996,156 @@ function mantLunesDeHoy(){
 }
 // Qué hay de un negocio: lo de esta semana, lo atrasado y lo que ha
 // contestado sin que lo hayas visto. Función pura, para poder probarla.
+/* ============================================================
+   NÚMEROS DEL NEGOCIO (6/10)
+   ============================================================
+   La app de cada negocio deja cada mes un resumen de indicadores en
+   business.plan360Kpis (lo calcula con las mismas funciones que su Cuenta
+   de Resultados). Aquí se usan para que el coach no trabaje a ciegas: el
+   informe del mes sale hecho, con alertas y listo para WhatsApp, y el
+   cierre compara el Día 1 con hoy sin teclear nada. */
+const KPI_FILAS = [
+  {k:'netas', lbl:'Ventas sin IVA', fmt:'eur', mejor:'sube'},
+  {k:'tickets', lbl:'Tickets', fmt:'num', mejor:'sube'},
+  {k:'ticketMedio', lbl:'Ticket medio', fmt:'eur', mejor:'sube'},
+  {k:'foodCostPct', lbl:'Food cost', fmt:'pct', mejor:'baja'},
+  {k:'personalPct', lbl:'Personal sobre ventas', fmt:'pct', mejor:'baja'},
+  {k:'resultado', lbl:'Resultado antes de impuestos', fmt:'eur', mejor:'sube'},
+  {k:'puntoEquilibrio', lbl:'Punto de equilibrio (ventas)', fmt:'eur', mejor:'baja'},
+  {k:'mermasPct', lbl:'Mermas sobre compras', fmt:'pct', mejor:'baja'},
+  {k:'nps', lbl:'Valoración de clientes (/10)', fmt:'num1', mejor:'sube'},
+];
+function kpiFmt(v, fmt){
+  if(v == null || isNaN(v)) return '—';
+  if(fmt === 'eur') return Number(v).toLocaleString('es-ES', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' €';
+  if(fmt === 'pct') return Number(v).toLocaleString('es-ES', {maximumFractionDigits:1}) + ' %';
+  if(fmt === 'num1') return Number(v).toLocaleString('es-ES', {maximumFractionDigits:1});
+  return Number(v).toLocaleString('es-ES');
+}
+// Diferencia con su color: verde si va a mejor, rojo si va a peor.
+function kpiDelta(act, ant, fila){
+  if(act == null || ant == null || isNaN(act) || isNaN(ant)) return '';
+  const d = act - ant;
+  if(Math.abs(d) < 0.05) return '<span class="muted" style="font-size:12px">=</span>';
+  const bien = fila.mejor === 'sube' ? d > 0 : d < 0;
+  const txt = fila.fmt === 'pct' ? (d > 0 ? '+' : '') + d.toLocaleString('es-ES', {maximumFractionDigits:1}) + ' pt'
+    : fila.fmt === 'eur' ? (d > 0 ? '+' : '') + Math.round(d).toLocaleString('es-ES') + ' €'
+    : (d > 0 ? '+' : '') + d.toLocaleString('es-ES', {maximumFractionDigits:1});
+  return `<span style="font-size:12px;font-weight:600;color:${bien ? 'var(--green)' : 'var(--red)'}">${txt}</span>`;
+}
+function kpiClaveMes(clave, delta){
+  const [y, m] = clave.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+const KPI_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+function kpiAlertas(k){
+  const a = (k && k.alertas) || {};
+  const out = [];
+  if(a.subida) out.push(`Precio que más ha subido: ${a.subida.producto}${a.subida.proveedor ? ' (' + a.subida.proveedor + ')' : ''}, +${String(a.subida.pct).replace('.', ',')} %.`);
+  if(a.peorPlato) out.push(`Plato con peor food cost: ${a.peorPlato.plato}, ${String(a.peorPlato.fc).replace('.', ',')} % (${a.peorPlato.unidades} vendidos).`);
+  if(a.diaFlojo) out.push(`Día más flojo: el ${KPI_DIAS[a.diaFlojo.dia]}, ${kpiFmt(a.diaFlojo.media, 'eur')} de media.`);
+  return out;
+}
+function kpiNombreMes(clave){
+  const [y, m] = clave.split('-').map(Number);
+  const s = new Date(y, m - 1, 1).toLocaleDateString('es-ES', {month: 'long', year: 'numeric'});
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function kpiInformeTexto(clave){
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const k = (K.meses || {})[clave];
+  if(!k) return '';
+  const ant = (K.meses || {})[kpiClaveMes(clave, -1)];
+  const lineas = [`*Tus números de ${kpiNombreMes(clave).toLowerCase()}*`];
+  KPI_FILAS.forEach(f => {
+    if(k[f.k] == null) return;
+    let l = `• ${f.lbl}: ${kpiFmt(k[f.k], f.fmt)}`;
+    if(ant && ant[f.k] != null){
+      const d = k[f.k] - ant[f.k];
+      if(Math.abs(d) >= 0.05) l += ` (${d > 0 ? '+' : ''}${f.fmt === 'pct' ? d.toLocaleString('es-ES', {maximumFractionDigits:1}) + ' pt' : f.fmt === 'eur' ? Math.round(d).toLocaleString('es-ES') + ' €' : d.toLocaleString('es-ES', {maximumFractionDigits:1})} frente al mes anterior)`;
+    }
+    lineas.push(l);
+  });
+  if(k.puntoEquilibrio != null && k.netas != null) lineas.push(`• ${k.netas >= k.puntoEquilibrio ? 'Por encima' : 'Por debajo'} del punto de equilibrio en ${kpiFmt(Math.abs(k.netas - k.puntoEquilibrio), 'eur')}.`);
+  const al = kpiAlertas(k);
+  if(al.length){ lineas.push('', '*Alertas*'); al.forEach(x => lineas.push('• ' + x)); }
+  return lineas.join('\n');
+}
+function kpiInformeHtml(clave){
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const k = (K.meses || {})[clave];
+  if(!k) return `<div class="card" style="margin-bottom:12px"><div style="font-weight:700;margin-bottom:4px"><i class="ti ti-chart-bar"></i> Números del mes</div>
+    <p class="muted" style="font-size:13px;margin:0">Todavía no hay números de este mes. Aparecen solos cuando el negocio abre su app (se calculan allí con sus ventas, compras y gastos).</p></div>`;
+  const ant = (K.meses || {})[kpiClaveMes(clave, -1)];
+  const haceUnAño = (K.meses || {})[kpiClaveMes(clave, -12)];
+  const enCurso = clave === mantMesClave(new Date());
+  const al = kpiAlertas(k);
+  const lunes = mantLunesDelMes(mantMesActivo || clave);
+  return `<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <strong style="flex:1;min-width:180px"><i class="ti ti-chart-bar"></i> Números de ${esc(kpiNombreMes(clave).toLowerCase())}${enCurso ? ' (en curso)' : ''}</strong>
+      <span class="muted" style="font-size:12px">Calculado en su app${K.ts ? ' el ' + esc(new Date(K.ts).toLocaleString('es-ES', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})) : ''}</span>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:420px">
+      <tr style="color:var(--muted);font-size:12px"><td></td><td style="text-align:right;padding:4px 6px">Este mes</td><td style="text-align:right;padding:4px 6px">Mes anterior</td>${haceUnAño ? '<td style="text-align:right;padding:4px 6px">Hace un año</td>' : ''}</tr>
+      ${KPI_FILAS.filter(f => k[f.k] != null).map(f => `<tr style="border-top:1px solid var(--border)">
+        <td style="padding:6px 6px 6px 0">${esc(f.lbl)}</td>
+        <td style="text-align:right;padding:6px;font-weight:700;white-space:nowrap">${kpiFmt(k[f.k], f.fmt)}</td>
+        <td style="text-align:right;padding:6px;white-space:nowrap">${ant ? kpiFmt(ant[f.k], f.fmt) + ' ' + kpiDelta(k[f.k], ant[f.k], f) : '—'}</td>
+        ${haceUnAño ? `<td style="text-align:right;padding:6px;white-space:nowrap">${kpiFmt(haceUnAño[f.k], f.fmt)} ${kpiDelta(k[f.k], haceUnAño[f.k], f)}</td>` : ''}
+      </tr>`).join('')}
+    </table></div>
+    ${k.puntoEquilibrio != null ? `<p style="font-size:13px;margin:8px 0 0">${k.netas >= k.puntoEquilibrio ? '<span style="color:var(--green);font-weight:600">Por encima</span>' : '<span style="color:var(--red);font-weight:600">Por debajo</span>'} del punto de equilibrio en ${kpiFmt(Math.abs(k.netas - k.puntoEquilibrio), 'eur')}.</p>` : ''}
+    ${k.canal && (k.canal.delivery || k.canal.takeaway) ? `<p class="muted" style="font-size:12.5px;margin:4px 0 0">Por canal: sala ${kpiFmt(k.canal.mesa,'eur')} · para llevar ${kpiFmt(k.canal.takeaway,'eur')} · delivery ${kpiFmt(k.canal.delivery,'eur')}${k.comisiones ? ` (comisiones ${kpiFmt(k.comisiones,'eur')})` : ''}</p>` : ''}
+    ${al.length ? `<div style="margin-top:10px;padding:8px 10px;background:var(--amber-l);border-radius:8px;font-size:13px"><strong><i class="ti ti-alert-triangle"></i> Alertas</strong>${al.map(x => `<div>• ${esc(x)}</div>`).join('')}</div>` : ''}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center">
+      <button class="btn btn-sm" onclick="kpiCopiarInforme('${clave}')"><i class="ti ti-brand-whatsapp"></i> Copiar para WhatsApp</button>
+      <select id="kpi-informe-sem" style="width:auto;flex:none">${lunes.map((f, i) => `<option value="s${i + 1}">${i + 1}º lunes</option>`).join('')}</select>
+      <button class="btn btn-sm" onclick="kpiMeterInforme('${clave}')"><i class="ti ti-plus"></i> Añadir al mes como «Reporte del mes»</button>
+    </div>
+  </div>`;
+}
+async function kpiCopiarInforme(clave){
+  const txt = kpiInformeTexto(clave);
+  try{ await navigator.clipboard.writeText(txt); alert('Copiado. Pégalo en el WhatsApp del negocio.'); }
+  catch(e){ prompt('Cópialo de aquí:', txt); }
+}
+function kpiMeterInforme(clave){
+  const sel = document.getElementById('kpi-informe-sem');
+  const txt = kpiInformeTexto(clave);
+  if(!txt || !sel) return;
+  mantMeter(mantSemana(mantMes(mantMesActivo, true), sel.value), {tipo:'entrega', titulo:'Reporte del mes', detalle: txt, icono:'ti-report-money'});
+  mantGuardarYPintar();
+}
+// Cierre: el Día 1 frente al último mes con datos, sin teclear.
+function kpiCierreHtml(){
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const claves = Object.keys(K.meses || {}).sort();
+  const ult = claves.length ? K.meses[claves[claves.length - 1]] : null;
+  if(!K.dia1 || !ult) return `<p class="muted" style="font-size:12.5px;margin:0 0 8px">Cuando el negocio abra su app con el Plan 360 en marcha, aquí saldrán sus números del Día 1 y de hoy, sin teclearlos.</p>`;
+  const f = KPI_FILAS.filter(x => K.dia1[x.k] != null || ult[x.k] != null);
+  return `<div style="font-size:12.5px;margin-bottom:8px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:360px">
+      <tr style="color:var(--muted);font-size:12px"><td>Datos de su app</td><td style="text-align:right">Día 1 (${esc(kpiNombreMes(K.dia1.mes))})</td><td style="text-align:right">Hoy (${esc(kpiNombreMes(claves[claves.length - 1]))})</td></tr>
+      ${f.map(x => `<tr style="border-top:1px solid var(--border)"><td style="padding:4px 0">${esc(x.lbl)}</td><td style="text-align:right">${kpiFmt(K.dia1[x.k], x.fmt)}</td><td style="text-align:right">${kpiFmt(ult[x.k], x.fmt)} ${kpiDelta(ult[x.k], K.dia1[x.k], x)}</td></tr>`).join('')}
+    </table></div>
+    <button class="btn btn-sm" style="margin-bottom:8px" onclick="kpiRellenarCierre()"><i class="ti ti-arrow-down"></i> Pasar estos números a «antes → hoy»</button>`;
+}
+function kpiRellenarCierre(){
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const claves = Object.keys(K.meses || {}).sort();
+  const ult = claves.length ? K.meses[claves[claves.length - 1]] : null;
+  if(!K.dia1 || !ult) return;
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
+  const c = remoteBiz.plan360Cierre;
+  const pon = (key, a, h, fmt) => { const v = plan360CierreKpi(c, key); if(a != null) v.antes = kpiFmt(a, fmt); if(h != null) v.hoy = kpiFmt(h, fmt); };
+  pon('ticketMedio', K.dia1.ticketMedio, ult.ticketMedio, 'eur');
+  pon('foodCostPct', K.dia1.foodCostPct, ult.foodCostPct, 'pct');
+  pon('costePersonalPct', K.dia1.personalPct, ult.personalPct, 'pct');
+  pon('ventasMensuales', K.dia1.netas, ult.netas, 'eur');
+  saveRemoteBiz();
+  renderClientGrid();
+}
 function mantResumenNegocio(mant, hoyStr, vistoTs){
   const lunesHoy = (() => { const [y, m, d] = hoyStr.split('-').map(Number); const f = new Date(y, m - 1, d); f.setDate(f.getDate() - ((f.getDay() + 6) % 7)); return f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0'); })();
   const finSemana = addDaysStr(lunesHoy, 7);
@@ -5012,6 +5167,8 @@ function mantResumenNegocio(mant, hoyStr, vistoTs){
         if(esta && !it.hecho) (it.tipo === 'tarea' ? r.suyas : r.tuyas).push(it.titulo);
         if(!esta && f < lunesHoy && !it.hecho) r.atrasadas.push(it.titulo);
         if(it.respuesta && (it.respuestaEn || 0) > (vistoTs || 0)) r.respuestas.push(it.titulo);
+        if(it.tipo === 'tarea' && it.hechoEn) r.ultimaMarca = Math.max(r.ultimaMarca || 0, it.hechoEn);
+        if(it.tipo === 'tarea') r.tareasTotal = (r.tareasTotal || 0) + 1;
       });
     });
   });
@@ -5029,8 +5186,9 @@ async function mantLeerDeUnNegocio(e){
   const db = bizApp.database();
   db.goOnline();
   try {
-    const snap = await db.ref('gastrogoan/tenants/' + e.tenantId + '/db/business/plan360Mant').once('value');
-    return {mant: snap.val()};
+    const base = 'gastrogoan/tenants/' + e.tenantId + '/db/business/';
+    const [snap, kp] = await Promise.all([db.ref(base + 'plan360Mant').once('value'), db.ref(base + 'plan360Kpis').once('value')]);
+    return {mant: snap.val(), kpis: kp.val()};
   } finally {
     // Si no es el negocio que tienes abierto, se suelta la conexión.
     if(currentTenantId !== e.tenantId) db.goOffline();
@@ -5048,7 +5206,7 @@ async function renderMiSemana(){
     try {
       const lectura = await Promise.race([mantLeerDeUnNegocio(c), new Promise((_, no) => setTimeout(() => no(new Error('tiempo')), 12000))]);
       if(lectura.sinNube || !lectura.mant) return null;   // sin mantenimiento: no sale
-      return Object.assign({}, c, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)));
+      return Object.assign({}, c, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)), {kpis: lectura.kpis});
     } catch(err){
       console.warn('Mi semana: no se pudo leer', c.name, err);
       return Object.assign({}, c, {error: true});
@@ -5082,6 +5240,25 @@ async function renderMiSemana(){
         ${f.suyas.length ? `<div style="font-size:13px"><span style="color:#86600F;font-weight:600">Negocio:</span> ${lista(f.suyas, 3)}</div>` : ''}
         ${f.atrasadas.length ? `<div style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${f.atrasadas.length} sin hacer de semanas pasadas: ${lista(f.atrasadas, 2)}</div>` : ''}
         ${f.respuestas.length ? `<div style="font-size:13px;color:var(--olive)"><i class="ti ti-message-circle"></i> Te ha contestado en: ${lista(f.respuestas, 2)}</div>` : ''}
+        ${(() => {
+          // Cliente parado: tiene tareas puestas y lleva 14 días sin marcar ninguna.
+          const dias = f.ultimaMarca ? Math.floor((Date.now() - f.ultimaMarca) / 86400000) : null;
+          return f.tareasTotal && f.atrasadas.length && (dias === null || dias >= 14) ? `<div style="font-size:13px;color:var(--red);font-weight:600"><i class="ti ti-phone-call"></i> ${dias === null ? 'No ha marcado ninguna tarea todavía' : 'Lleva ' + dias + ' días sin marcar nada'}: llámale.</div>` : '';
+        })()}
+        ${(() => {
+          const K = f.kpis || {};
+          const cl = Object.keys(K.meses || {}).sort();
+          const hoyClave = mantMesClave(new Date());
+          const clave = cl.filter(x => x < hoyClave).pop();
+          const k = clave && K.meses[clave];
+          if(!k) return '';
+          const ant = K.meses[kpiClaveMes(clave, -1)];
+          const chip = (lbl, v, fmt, fila) => `<span style="white-space:nowrap">${lbl} <strong>${kpiFmt(v, fmt)}</strong> ${ant ? kpiDelta(v, ant[fila.k], fila) : ''}</span>`;
+          const F = x => KPI_FILAS.find(y => y.k === x);
+          return `<div style="font-size:12.5px;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;color:var(--body)"><span class="muted">${esc(kpiNombreMes(clave))}:</span>
+            ${chip('Ventas', k.netas, 'eur', F('netas'))}${k.foodCostPct != null ? chip('Food cost', k.foodCostPct, 'pct', F('foodCostPct')) : ''}${k.personalPct != null ? chip('Personal', k.personalPct, 'pct', F('personalPct')) : ''}
+            ${k.puntoEquilibrio != null ? `<span style="color:${k.netas >= k.puntoEquilibrio ? 'var(--green)' : 'var(--red)'}">${k.netas >= k.puntoEquilibrio ? 'sobre' : 'bajo'} el punto de equilibrio</span>` : ''}</div>`;
+        })()}
         ${!f.tuyas.length && !f.suyas.length && !f.atrasadas.length && !f.respuestas.length ? `<div class="muted" style="font-size:13px"><i class="ti ti-circle-check"></i> Todo al día${f.hechasSemana ? ` · ${f.hechasSemana} hechas esta semana` : ''}.</div>` : ''}
       </div>`).join('')}
   `;

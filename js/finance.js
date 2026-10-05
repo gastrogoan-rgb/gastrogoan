@@ -731,6 +731,145 @@ function impuestoAnual(baseAnual, opts={}){
   const pct = cfg != null ? parseFloat(cfg) : (opts.pctDefecto != null ? opts.pctDefecto : (p.forma === 'cooperativa' ? 20 : 25));
   return Math.max(0, baseAnual) * pct/100;
 }
+/* ============================================================
+   INDICADORES PARA EL COACH (Plan 360 y mantenimiento, 6/10)
+   ============================================================
+   El coach trabajaba a ciegas: el panel no veía ni ventas, ni food cost,
+   ni personal, y el informe del mes y el cierre se escribían a mano. Ahora
+   la app calcula un resumen PEQUEÑO por mes (unos cientos de bytes) y lo
+   deja en DB.business.plan360Kpis, que viaja con el bloque business a la
+   nube del negocio (la del propio negocio: a GastroGoan no le cuesta nada).
+   El panel lo lee en «Mi semana», en el informe del mes y en el cierre, y
+   el negocio ve su marcador en euros. Las cifras salen de las MISMAS
+   funciones que la Cuenta de Resultados: lo que dice el coach cuadra con
+   lo que ve el hostelero.
+   - meses['AAAA-MM']: los indicadores de cada mes (los últimos 15).
+   - dia1: la foto de partida, el mes completo anterior al inicio del Plan
+     360. Se guarda UNA vez y no se toca: es contra lo que se mide todo. */
+const KPI_MESES_GUARDADOS = 15;
+function r2(n){ return Math.round((Number(n)||0)*100)/100; }
+function r1(n){ return Math.round((Number(n)||0)*10)/10; }
+function plan360KpisMes(year, month){
+  const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
+  const ventas = activeSales().filter(v => (v.date||'').startsWith(mesStr));
+  const netas = geFacturacionNetaMes(year, month);
+  const brutas = ventas.reduce((s,v)=>s+(parseFloat(v.total)||0) - (parseFloat(v.propina)||0), 0);
+  const tickets = ventas.length;
+  const comensales = ventas.reduce((s,v)=>s+(parseInt(v.pax)||0), 0);
+  const compras = geTotalVariablesNetoMes(year, month) + geVariacionExistenciasMes(year, month);
+  const personal = geTotalPersonalNetoForMonth(year, month);
+  const otrosFijos = geTotalGFNetoForMonth(year, month);
+  const comisiones = geComisionesMes(year, month);
+  const amortInt = geAmortizacionMes(year, month) + geInteresesMes(year, month);
+  const resultado = geResultadoAntesImpMes(year, month);
+  // Punto de equilibrio: lo que hay que vender para cubrir los fijos con el
+  // margen que deja cada euro vendido (descontadas compras y comisiones).
+  const ratioVariable = netas > 0 ? (compras + comisiones) / netas : null;
+  const fijos = personal + otrosFijos + amortInt;
+  const pe = (ratioVariable != null && ratioVariable < 1) ? fijos / (1 - ratioVariable) : null;
+  const canal = {mesa:0, takeaway:0, delivery:0};
+  ventas.forEach(v => { const k = v.tipo === 'delivery' ? 'delivery' : v.tipo === 'takeaway' ? 'takeaway' : 'mesa'; canal[k] += (parseFloat(v.total)||0) - (parseFloat(v.propina)||0); });
+  const mermas = (DB.mermas||[]).filter(x => (x.fecha||'').startsWith(mesStr) && x.motivo !== 'consumoPropio' && x.motivo !== 'comidaPersonal').reduce((s,x)=>s+(parseFloat(x.coste)||0), 0);
+  const nps = (DB.npsScores||[]).filter(x => (x.createdAt||'').startsWith(mesStr) && x.score != null);
+  // Día más flojo: media de ventas de cada día de la semana en el mes.
+  const porDia = {};
+  ventas.forEach(v => { const d = new Date(v.date+'T12:00:00').getDay(); (porDia[d] = porDia[d] || {s:0, dias:new Set()}); porDia[d].s += (parseFloat(v.total)||0); porDia[d].dias.add(v.date); });
+  let diaFlojo = null;
+  Object.entries(porDia).forEach(([d, x]) => { const media = x.s / x.dias.size; if(!diaFlojo || media < diaFlojo.media) diaFlojo = {dia: parseInt(d), media: r2(media)}; });
+  if(Object.keys(porDia).length < 3) diaFlojo = null;   // con 1-2 días abiertos no hay "más flojo"
+  // El proveedor que más ha subido este mes (historial de precios).
+  let subida = null;
+  (DB.preciosHistorial||[]).filter(h => (h.fecha||'').startsWith(mesStr) && Number(h.pct) > 0).forEach(h => { if(!subida || h.pct > subida.pct) subida = {producto: h.nombre, proveedor: h.proveedor||'', pct: h.pct}; });
+  // El plato con peor food cost del mes (al menos 5 vendidos).
+  const platos = {};
+  ventas.forEach(v => (v.items||[]).forEach(l => {
+    if(!l || !l.name || l.isShipping) return;
+    const coste = (typeof costoUnitarioDeLinea === 'function' && l.recipeId) ? costoUnitarioDeLinea(l) : null;
+    if(coste == null || !(l.price > 0)) return;
+    const p = platos[l.name] = platos[l.name] || {u:0, ingreso:0, coste:0};
+    const neto = (parseFloat(l.price)||0) / (1 + (parseFloat(l.ivaPct)||10)/100);
+    p.u += parseFloat(l.qty)||0; p.ingreso += neto*(parseFloat(l.qty)||0); p.coste += coste*(parseFloat(l.qty)||0);
+  }));
+  let peorPlato = null;
+  Object.entries(platos).forEach(([n,p]) => { if(p.u < 5 || !(p.ingreso > 0)) return; const fc = p.coste/p.ingreso*100; if(!peorPlato || fc > peorPlato.fc) peorPlato = {plato: n, fc: r1(fc), unidades: p.u}; });
+  return {
+    netas: r2(netas), brutas: r2(brutas), tickets, comensales,
+    ticketMedio: tickets ? r2(brutas/tickets) : null,
+    foodCostPct: netas > 0 ? r1(compras/netas*100) : null,
+    personalPct: netas > 0 ? r1(personal/netas*100) : null,
+    compras: r2(compras), personal: r2(personal), fijos: r2(otrosFijos), comisiones: r2(comisiones),
+    resultado: r2(resultado), resultadoPct: netas > 0 ? r1(resultado/netas*100) : null,
+    puntoEquilibrio: pe != null ? r2(pe) : null,
+    canal: {mesa: r2(canal.mesa), takeaway: r2(canal.takeaway), delivery: r2(canal.delivery)},
+    mermas: r2(mermas), mermasPct: compras > 0 ? r1(mermas/compras*100) : null,
+    nps: nps.length ? r1(nps.reduce((s,x)=>s+Number(x.score),0)/nps.length) : null, npsN: nps.length,
+    alertas: {subida, peorPlato, diaFlojo},
+  };
+}
+// Se recalcula a lo sumo cada 10 minutos (al pintar el Panel de Control o
+// abrir Gestión Económica), solo si el negocio está en el Plan 360 o en
+// mantenimiento, y solo se guarda si algo ha cambiado: así no provoca una
+// subida a la nube en cada pintado.
+let plan360KpisUltimo = 0;
+function plan360ActualizarKpis(forzar){
+  try{
+    const b = DB.business || {};
+    if(!b.plan360 && !b.plan360Mant && !b.plan360StartDate) return;
+    if(!forzar && Date.now() - plan360KpisUltimo < 10*60*1000) return;
+    plan360KpisUltimo = Date.now();
+    const prev = JSON.stringify(b.plan360Kpis || null);
+    const k = JSON.parse(prev) || {};
+    k.meses = k.meses || {};
+    const hoy = new Date();
+    // El mes en curso y el anterior se recalculan siempre (aún pueden
+    // cambiar: una compra que llega tarde); los de antes, solo si faltan y
+    // hay ventas — así el informe tiene con qué comparar (mes anterior y
+    // mismo mes del año pasado) desde el primer día.
+    for(let atras = 0; atras <= 13; atras++){
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - atras, 1);
+      const c = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      if(atras <= 1 || (!k.meses[c] && activeSales().some(v => (v.date||'').startsWith(c)))) k.meses[c] = plan360KpisMes(d.getFullYear(), d.getMonth());
+    }
+    Object.keys(k.meses).sort().slice(0, -KPI_MESES_GUARDADOS).forEach(c => delete k.meses[c]);
+    // Foto del Día 1: el mes completo anterior al inicio del plan (si no hay
+    // datos de ese mes, el propio mes del inicio). Una vez y para siempre.
+    if(!k.dia1 && b.plan360StartDate){
+      const [sy, sm] = b.plan360StartDate.split('-').map(Number);
+      const base = new Date(sy, sm-2, 1);
+      let kp = plan360KpisMes(base.getFullYear(), base.getMonth()), clave = `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}`;
+      if(!(kp.netas > 0)){ kp = plan360KpisMes(sy, sm-1); clave = `${sy}-${String(sm).padStart(2,'0')}`; }
+      if(kp.netas > 0) k.dia1 = Object.assign({mes: clave}, kp);
+    }
+    // Lo que el negocio NO ve como "cambio": la hora del cálculo va aparte.
+    const sinTs = JSON.stringify(Object.assign({}, k, {ts: undefined}));
+    if(sinTs === JSON.stringify(Object.assign({}, JSON.parse(prev) || {}, {ts: undefined}))) return;
+    k.ts = new Date().toISOString();
+    b.plan360Kpis = k;
+    saveDB();
+  }catch(e){ console.error('Indicadores para el coach', e); }
+}
+// «Desde que empezamos»: el Día 1 frente al último mes completo, en euros
+// al mes cuando se puede (lo que hace que 75 €/mes se lean como inversión).
+function plan360MarcadorEuros(){
+  const k = (DB.business||{}).plan360Kpis;
+  if(!k || !k.dia1) return null;
+  const hoy = new Date(), d = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
+  const ult = (k.meses||{})[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`];
+  if(!ult || !(ult.netas > 0) || ult === k.dia1 || k.dia1.mes === `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`) return null;
+  const f = [];
+  const pp = (clave, mejorSiBaja) => {
+    const a = k.dia1[clave], h = ult[clave];
+    if(a == null || h == null) return null;
+    const mejora = mejorSiBaja ? a - h : h - a;
+    return {antes: a, hoy: h, mejora, euros: r2(mejora/100 * ult.netas)};
+  };
+  const fc = pp('foodCostPct', true); if(fc) f.push(Object.assign({k:'foodCost'}, fc));
+  const pe = pp('personalPct', true); if(pe) f.push(Object.assign({k:'personal'}, pe));
+  if(k.dia1.ticketMedio && ult.ticketMedio) f.push({k:'ticket', antes: k.dia1.ticketMedio, hoy: ult.ticketMedio, mejora: r2(ult.ticketMedio - k.dia1.ticketMedio), euros: r2((ult.ticketMedio - k.dia1.ticketMedio) * ult.tickets)});
+  f.push({k:'ventas', antes: k.dia1.netas, hoy: ult.netas, mejora: r2(ult.netas - k.dia1.netas), euros: null});
+  if(k.dia1.resultado != null) f.push({k:'resultado', antes: k.dia1.resultado, hoy: ult.resultado, mejora: r2(ult.resultado - k.dia1.resultado), euros: r2(ult.resultado - k.dia1.resultado)});
+  return {desde: k.dia1.mes, mes: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, filas: f};
+}
 function renderDashboardBarTrend(elId, trend, allowNegative){
   const maxVal = Math.max(...trend.map(t=>Math.abs(t.value)), 1);
   // Con 12 meses en un móvil cada barra queda en unos 29 px y la cifra de
@@ -756,6 +895,7 @@ function renderDashboardBarTrend(elId, trend, allowNegative){
 }
 
 function renderDashboard(){
+  plan360ActualizarKpis();
   const today = new Date();
   const todayDate = todayStr();
   const yesterdayDate = dateStr(new Date(today.getTime() - 86400000));

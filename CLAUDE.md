@@ -408,6 +408,27 @@ alguien encima.
   (solo admin). ⚠️ Necesita las reglas nuevas publicadas; sin ellas se
   guarda solo en el navegador y lo avisa.
 
+### Números del negocio para el coach (6/10)
+
+- La app calcula cada mes un resumen pequeño (`plan360KpisMes`, js/finance.js)
+  con las MISMAS funciones que su Cuenta de Resultados y lo deja en
+  `business.plan360Kpis` = `{meses:{'AAAA-MM':…}, dia1:{…}, ts}`: ventas,
+  tickets, ticket medio, food cost, personal, resultado, punto de
+  equilibrio, canales, mermas, NPS y tres alertas (subida de proveedor,
+  plato con peor food cost, día más flojo). Solo si el negocio está en el
+  Plan 360 o en mantenimiento, cada 10 min como mucho y sin guardar si no
+  cambia nada. `dia1` (mes anterior al inicio) se guarda una vez.
+- ⚠️ `plan360Kpis` lo escribe SOLO la app: el panel lo excluye de
+  `esClavePlan360` para no devolver una copia vieja ni tomarlo por un
+  cambio del negocio.
+- Panel: informe del mes en Mantenimiento (frente al mes anterior y al de
+  hace un año, alertas, «Copiar para WhatsApp», «Añadir como Reporte del
+  mes»), cierre «Día 1 → hoy» con botón para pasarlo a los KPIs del cierre,
+  y en «Mi semana» las cifras de cada cliente y el aviso «llámale» si lleva
+  14 días sin marcar tareas. App: marcador «En números» con lo ganado en
+  euros al mes.
+- Prueba: `test/kpis-coach.mjs`.
+
 ## Pagos online: solo Stripe (desde el 30/09)
 
 **Redsys se quitó entero.** Su aviso de «pagado» dependía de cómo configurara

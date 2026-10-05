@@ -159,6 +159,7 @@ const GE = (function(){
   function init(){
     if(isGestionLocked('economia')){ denyGestionAccess(); return; }
     fotoExistenciasAuto();
+    plan360ActualizarKpis();
     renderChecklist();
     const tabBtn = document.getElementById('ge-tab-modulos');
     if(tabBtn) tabBtn.style.display = modulosAplica() ? '' : 'none';

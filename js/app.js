@@ -5602,6 +5602,23 @@ function plan360MantMarcadorHtml(){
       ${celda(m.entregas, 'ti-send', 'plan360.mant.scoreDeliveries')}
       ${celda(m.subidas, 'ti-trending-up', 'plan360.mant.scoreRises')}
     </div>
+    ${plan360MarcadorEurosHtml()}
+  </div>`;
+}
+// Lo mismo en NÚMEROS: el Día 1 frente al último mes, y lo que supone al
+// mes en euros. Es lo que se compara con lo que cuesta el mantenimiento.
+function plan360MarcadorEurosHtml(){
+  const m = plan360MarcadorEuros();
+  if(!m || !m.filas.length) return '';
+  const nombreMes = c => { const [y, mo] = c.split('-').map(Number); return new Date(y, mo-1, 1).toLocaleDateString(localeActual(), {month:'long', year:'numeric'}); };
+  const fmt = (k, v) => v == null ? '—' : (k === 'foodCost' || k === 'personal') ? (Math.round(v*10)/10).toLocaleString(localeActual()) + ' %' : fmtMoney(v);
+  return `<div style="border-top:1px solid rgba(255,255,255,.2);margin-top:8px;padding-top:8px">
+    <div class="txt-xs" style="opacity:.85;margin-bottom:4px;text-transform:none">${escapeHtml(t('plan360.k.titulo').replace('${desde}', nombreMes(m.desde)).replace('${hasta}', nombreMes(m.mes)))}</div>
+    ${m.filas.map(f => `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:2px 0;font-size:13.5px">
+      <span style="flex:1;min-width:120px">${escapeHtml(t('plan360.k.'+f.k))}</span>
+      <span style="font-variant-numeric:tabular-nums">${fmt(f.k, f.antes)} → <strong>${fmt(f.k, f.hoy)}</strong></span>
+      ${f.euros != null && Math.abs(f.euros) >= 1 ? `<span class="txt-xs" style="font-weight:700;color:${f.euros > 0 ? '#BFD8C3' : '#F2B8A8'}">${f.euros > 0 ? '+' : '−'}${fmtMoney(Math.abs(f.euros))} ${escapeHtml(t('plan360.k.alMes'))}</span>` : ''}
+    </div>`).join('')}
   </div>`;
 }
 function renderPlan360Mant(clave){
