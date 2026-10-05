@@ -403,6 +403,7 @@ const I18N = {
     'privacy.linkText':'Ver más', 'common.close':'Cerrar', 'common.cancel':'Cancelar', 'common.confirm':'Confirmar', 'common.sending':'Enviando...', 'confirm.loseCart':'Si cambias de pestaña perderás lo que llevas añadido al pedido. ¿Continuar?', 'aria.removeItem':'Quitar %s', 'aria.addItem':'Añadir %s',
     'privacy.mustAccept':'Tienes que aceptar el aviso de privacidad para continuar.',
     'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
+    'privacy.responsable':"Responsable: ${datos}", 'privacy.extra':"Base legal: gestionar tu reserva o pedido (lo pides tú) y, solo si marcas la casilla, tu consentimiento para avisarte de novedades. Los datos se guardan mientras dure la relación y después solo el tiempo que obliga la ley. Si crees que no se respetan tus derechos, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).",
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
     'reserva.ok.emailHint':' Si el negocio necesita avisarte de algún cambio, te escribirá a ese email.',
     'email.reserva.label':'Email *','email.reserva.placeholder':'tucorreo@ejemplo.com','email.reserva.hint':'Te mandaremos aquí la confirmación y el enlace para cambiarla o cancelarla.',
@@ -490,6 +491,7 @@ const I18N = {
     'privacy.linkText':'Read more', 'common.close':'Close', 'common.cancel':'Cancel', 'common.confirm':'Confirm', 'common.sending':'Sending...', 'confirm.loseCart':'Switching tabs will clear what you\'ve added to your order. Continue?', 'aria.removeItem':'Remove %s', 'aria.addItem':'Add %s',
     'privacy.mustAccept':'You need to accept the privacy notice to continue.',
     'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
+    'privacy.responsable':"Data controller: ${datos}", 'privacy.extra':"Legal basis: managing your reservation or order (at your request) and, only if you tick the box, your consent to updates. Data is kept while the relationship lasts and afterwards only as long as the law requires. If you think your rights are not respected, you can complain to the Spanish Data Protection Agency (www.aepd.es).",
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
     'reserva.ok.emailHint':' If the restaurant needs to let you know about any change, they\'ll email you at that address.',
     'email.reserva.label':'Email *','email.reserva.placeholder':'you@example.com','email.reserva.hint':'We\'ll send the confirmation here, with the link to change or cancel it.',
@@ -577,6 +579,7 @@ const I18N = {
     'privacy.linkText':'Veure més', 'common.close':'Tancar', 'common.cancel':'Cancel·lar', 'common.confirm':'Confirmar', 'common.sending':'Enviant...', 'confirm.loseCart':'Si canvies de pestanya perdràs el que portes afegit a la comanda. Continuar?', 'aria.removeItem':'Treure %s', 'aria.addItem':'Afegir %s',
     'privacy.mustAccept':'Has d\'acceptar l\'avís de privacitat per continuar.',
     'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
+    'privacy.responsable':"Responsable: ${datos}", 'privacy.extra':"Base legal: gestionar la teva reserva o comanda (ho demanes tu) i, només si marques la casella, el teu consentiment per avisar-te de novetats. Les dades es guarden mentre duri la relació i després només el temps que obliga la llei. Si creus que no es respecten els teus drets, pots reclamar davant l'Agència Espanyola de Protecció de Dades (www.aepd.es).",
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
     'reserva.ok.emailHint':' Si el negoci necessita avisar-te d\'algun canvi, t\'escriurà a aquest email.',
     'email.reserva.label':'Email *','email.reserva.placeholder':'elteucorreu@exemple.com','email.reserva.hint':'T\'enviarem aquí la confirmació i l\'enllaç per canviar-la o cancel·lar-la.',
@@ -706,7 +709,12 @@ function showPrivacyNotice(){
   const bizName = (DB && DB.business && DB.business.name) || t('reserva.title');
   const fullText = t('privacy.noticeText').replace('${business}', bizName);
   const [title, ...rest] = fullText.split('\n\n');
-  openInfoModal(title, rest.join('\n\n'));
+  // Quién es el responsable (RGPD art. 13) y aviso legal (LSSI art. 10):
+  // titular, NIF, domicilio y contacto, si el negocio los ha publicado.
+  const b = (DB && DB.business) || {};
+  const lp = b.legalPublico || {};
+  const resp = [lp.titular || bizName, lp.nif ? 'NIF ' + lp.nif : '', b.address || '', b.email || b.phone || ''].filter(Boolean).join(' · ');
+  openInfoModal(title, [t('privacy.responsable').replace('${datos}', resp), ...rest, t('privacy.extra')].join('\n\n'));
 }
 
 // Modal genérico para textos largos (antes solo había alert() nativo, sin

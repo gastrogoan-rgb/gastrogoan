@@ -6903,6 +6903,14 @@ function renderMiNegocio(){
           <input type="text" id="mn-cif" value="${escapeHtml(b.cif||'')}" placeholder="B12345678" onchange="saveBusiness(true)">
         </div>
       </div>
+      <div class="field">
+        <label>${t('mn.legal.titular')}</label>
+        <input type="text" id="mn-legal-titular" value="${escapeHtml((b.legalPublico||{}).titular||'')}" placeholder="${t('mn.legal.titularPh')}" onchange="saveBusiness(true)">
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-top:8px;cursor:pointer">
+          <input type="checkbox" id="mn-legal-nif" ${(b.legalPublico||{}).nif?'checked':''} onchange="saveBusiness(true)" style="width:auto;margin-top:3px">
+          <span class="txt-xs">${t('mn.legal.nifPublico')}</span>
+        </label>
+      </div>
 
       <h4><i class="ti ti-brand-instagram"></i> ${t('mn.business.socialMedia')}</h4>
       <div class="field-row">
@@ -7795,6 +7803,13 @@ async function saveBusiness(silent){
   if(el('mn-anyo')) DB.business.anyo = el('mn-anyo').value.trim();
   if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
   if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
+  // Aviso legal y privacidad de la web de reservas (LSSI art. 10, RGPD art.
+  // 13): el titular y su NIF tienen que salir. Se publica SOLO lo que el
+  // dueño pone aquí a propósito; el CIF sigue sin ir al espejo por su cuenta.
+  if(el('mn-legal-titular')){
+    const nifOn = el('mn-legal-nif') && el('mn-legal-nif').checked;
+    DB.business.legalPublico = {titular: el('mn-legal-titular').value.trim(), nif: nifOn ? (DB.business.cif||'') : ''};
+  }
   if(el('mn-prop')) DB.business.prop = el('mn-prop').value.trim();
   if(el('mn-brand-color')) DB.business.brandColor = el('mn-brand-color').value;
   if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';

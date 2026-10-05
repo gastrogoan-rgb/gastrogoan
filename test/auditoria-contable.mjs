@@ -141,6 +141,47 @@ await caso('Autónomo: pago del 130 = 20% del beneficio acumulado menos lo ya pa
   assert.equal(r.t1.modelo, '130'); assert.equal(Math.round(r.t1.importe), 2000); assert.equal(Math.round(r.t2.importe), 1000);
 });
 
+// --- Para el gestor y registro de jornada --------------------------------
+await caso('Borrar un empleado NO borra sus fichajes (registro de jornada, 4 años) y salen en el registro del mes', async () => {
+  const r = await page.evaluate(() => {
+    DB.employees = [{id:77, name:'Ana Pérez', dni:'12345678Z'}];
+    DB.fichajes = [{id:1, employeeId:77, fecha:'2025-03-04', entrada:'2025-03-04T08:00:00.000Z', salida:'2025-03-04T16:00:00.000Z'}];
+    window.accionSensibleAutorizada = () => true;
+    reallyDeleteEmployee(77, '0000');
+    const rows = GE.registroJornada(2, 2025);
+    return {quedan: DB.fichajes.length, fila: rows[3]};
+  });
+  assert.equal(r.quedan, 1, 'el fichaje se borró');
+  assert.equal(r.fila[1], 'Ana Pérez'); assert.equal(r.fila[2], '12345678Z'); assert.equal(r.fila[5], 8);
+});
+
+await caso('Libro de ingresos: asiento resumen por día y tipo, y cuadra con el IVA del mes', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'sociedad'; DB.reservations = [];
+    DB.sales = [{id:'1', date:'2025-04-02', total:110, items:[{name:'a', price:110, qty:1, ivaPct:10}]},
+                {id:'2', date:'2025-04-02', total:121, items:[{name:'b', price:121, qty:1, ivaPct:21}]},
+                {id:'3', date:'2025-04-03', total:55, items:[{name:'a', price:55, qty:1, ivaPct:10}]}];
+    const rows = GE.libroIngresos(2025);
+    return {filas: rows.slice(3, 6), total: rows[rows.length-1], iva: GE.ivaVentasMes(3, 2025)};
+  });
+  assert.equal(r.filas.length, 3);
+  assert.equal(r.total[5], Math.round(r.iva*100)/100, 'el libro no cuadra con el IVA de la Cuenta de Resultados');
+});
+
+await caso('347: sale el proveedor de más de 3.005,06 € con su NIF; el pequeño no', async () => {
+  const r = await page.evaluate(() => {
+    DB.ge.variables = [
+      {id:1, mes:1, año:2025, fecha:'2025-02-10', importe:2000, iva:10, proveedor:'MAKRO', nifProveedor:'A28647451', categoria:'MATERIA PRIMA'},
+      {id:2, mes:5, año:2025, fecha:'2025-06-10', importe:1000, iva:10, proveedor:'MAKRO', categoria:'MATERIA PRIMA'},
+      {id:3, mes:5, año:2025, fecha:'2025-06-11', importe:500, iva:21, proveedor:'FRUTAS PEPE', categoria:'MATERIA PRIMA'}];
+    DB.ge.config.nifProveedores = {MAKRO:'A28647451'};
+    const rows = GE.resumenAño(2025);
+    const i = rows.findIndex(x => x[0] === 'MAKRO');
+    return {makro: rows[i], pepe: rows.some(x => x[0] === 'FRUTAS PEPE')};
+  });
+  assert.ok(r.makro, 'MAKRO no sale'); assert.equal(r.makro[1], 'A28647451'); assert.equal(r.makro[6], 3300); assert.ok(!r.pepe);
+});
+
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 
 await browser.close();
