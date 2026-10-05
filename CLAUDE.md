@@ -523,6 +523,15 @@ impuestos → impuesto → resultado del ejercicio.
   - Módulos: minoración por empleo POR TRAMOS (texto del BOE, fase 2.ª a),
     más 0,40 por incremento de plantilla.
 
+- **Revisión de uso (5/10, noche)**: signo y color en TODOS los subtotales
+  de la Cuenta de Resultados (un EBITDA negativo salía en positivo); sin
+  gastos fijos en meses futuros ni antes del primer dato del negocio
+  (`geMesConActividad`); aviso rojo si falta la forma jurídica y lista
+  «Para que tus números salgan bien» (`renderChecklist`); botón «Mi sueldo
+  (titular)»; mes de factura obligatorio en gastos no mensuales; calendario
+  de pagos a Hacienda en Tesorería (`renderCalendarioFiscal`); «Inversiones»
+  en vez de CAPEX.
+
 Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 
 ## El módulo de I+D (`js/idr.js`)
