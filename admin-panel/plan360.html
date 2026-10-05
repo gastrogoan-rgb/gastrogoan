@@ -2711,13 +2711,16 @@ Todos los entregables, metodologías, plantillas y materiales desarrollados perm
 Las partes se someten a lo establecido en el contrato de confidencialidad (RGPD) que forma parte integrante de este acuerdo, más abajo.
 
 8. Terminación anticipada
-El cliente podrá rescindir este contrato dentro de los tres meses que dura el programa, mediante notificación por escrito. En caso de rescisión voluntaria, deberá abonar a GastroGoan el importe restante del precio pactado, exigible en el plazo de treinta días desde la notificación.
+El cliente podrá rescindir este contrato durante las 4 semanas (28 días) que dura el programa, mediante notificación por escrito. En caso de rescisión voluntaria, deberá abonar a GastroGoan el importe restante del precio pactado, exigible en el plazo de treinta días desde la notificación.
 
 9. Resolución de conflictos
 En caso de discrepancias, las partes intentarán solucionarlas amistosamente; si no fuera posible, se someterán a mediación previa y, en última instancia, a los Juzgados y Tribunales de Barcelona.
 
 10. Legislación aplicable
 Ley española.
+
+11. Servicio de mantenimiento (opcional)
+Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Incluye cada mes cuatro contactos (dos por WhatsApp y dos por videollamada) con las entregas y tareas que el coach planifique para ese mes. Se contrata por meses naturales, se renueva automáticamente cada mes y se paga por adelantado. El cliente puede darse de baja en cualquier momento comunicándolo por escrito con al menos 15 días de antelación al inicio del mes siguiente; el mes en curso no se devuelve. Las cláusulas 4 a 10 y el acuerdo de confidencialidad se aplican también a este servicio.
 
 CONTRATO DE CONFIDENCIALIDAD (RGPD)
 
@@ -2747,7 +2750,8 @@ function plan360FillTemplate(text, c){
     .replace(/\{\{nif\}\}/g, (c && c.clienteNIF) || '________')
     .replace(/\{\{direccion\}\}/g, (c && c.clienteDireccion) || '________')
     .replace(/\{\{precio\}\}/g, (c && c.precio) || '________')
-    .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________');
+    .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________')
+    .replace(/\{\{precioMantenimiento\}\}/g, (c && c.precioMantenimiento) || '75 € al mes');
 }
 const PLAN360_DEFAULT_PROGRAM = [
   {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
@@ -4421,6 +4425,17 @@ const MANT_GADGETS = [
   ['entrega', 'entrega', 'ti-tools-kitchen-2', 'Revisión de la carta (trimestral)', 'Matriz de ingeniería de carta: qué quitar, qué subir de precio y qué destacar.', TRIM],
   ['entrega', 'entrega', 'ti-file-certificate', 'Revisión de contratos (anual)', 'Luz, gas, seguros, datáfono, cervecera.', [1]],
   ['entrega', 'entrega', 'ti-info-circle', 'Aviso o información importante', ''],
+  // 6/10, revisión de un consultor: lo que hace que el cliente vea cada mes
+  // que el mantenimiento le compensa. Todo opcional: el coach lo pone el día
+  // que quiere, el mes sale vacío.
+  ['entrega', 'entrega', 'ti-target-arrow', 'El objetivo del mes', 'UNO solo, con su cifra y cómo se va a medir. Se repasa en la videollamada de cierre.'],
+  ['entrega', 'entrega', 'ti-alert-triangle', 'Tres alertas del mes', 'El proveedor que más ha subido, el plato que más margen ha perdido y el día más flojo, con qué hacer en cada caso.'],
+  ['entrega', 'entrega', 'ti-trending-up', 'Marcador: lo conseguido desde que empezamos', 'Food cost, personal, ventas y reseñas del Día 1 frente a hoy, traducido a euros al mes.', TRIM],
+  ['entrega', 'entrega', 'ti-certificate', 'Informe del año', 'Todo lo conseguido desde el Día 1, el año frente al anterior y los 3 objetivos del año que empieza.', [1]],
+  ['entrega', 'entrega', 'ti-sun', 'Carta de verano', 'Qué entra, qué sale y a qué precio, escandallada, para la terraza y el calor.', [4, 5]],
+  ['entrega', 'entrega', 'ti-leaf', 'Carta de otoño e invierno', 'Platos de cuchara y producto de temporada, escandallados.', [9, 10]],
+  ['entrega', 'entrega', 'ti-briefcase', 'Menús de empresa y grupos', 'Dos o tres menús cerrados con precio por persona, para la vuelta y para Navidad.', [9, 10]],
+  ['entrega', 'entrega', 'ti-phone-call', 'Llamada al cliente parado', 'Si lleva dos semanas sin marcar tareas: llamar, entender por qué y reajustar el mes.'],
 
   ['tarea', 'equipo', 'ti-users', 'Briefing con el personal', 'Tema del día:'],
   ['tarea', 'equipo', 'ti-school', 'Leer la formación del mes en el briefing', ''],
@@ -4429,6 +4444,7 @@ const MANT_GADGETS = [
   ['tarea', 'equipo', 'ti-beach', 'Revisar las vacaciones pendientes del equipo', ''],
   ['tarea', 'equipo', 'ti-calendar-off', 'Cerrar las vacaciones del equipo con 3 meses de margen', '', [3, 9]],
   ['tarea', 'equipo', 'ti-user-plus', 'Contratar el refuerzo de verano', 'En abril, no en junio cuando ya no queda nadie.', [4]],
+  ['tarea', 'equipo', 'ti-calendar-time', 'Cuadrante de diciembre', 'Cenas de empresa, festivos y vacaciones del equipo, cerrado en noviembre.', [11]],
   ['tarea', 'equipo', 'ti-heart-handshake', 'Charla uno a uno con un empleado', ''],
   ['tarea', 'equipo', 'ti-mood-smile', 'Preguntar a cada empleado «¿qué cambiarías?»', 'Una pregunta y nada más. Apunta las respuestas.'],
   ['tarea', 'equipo', 'ti-clock', 'Revisar quién lleva más horas extra', 'Es el siguiente que se va.'],
@@ -8217,6 +8233,34 @@ const PLAN360_CONTENT_BANK = [
   {categoria: 'Cliente', titulo: 'Mapa del recorrido del cliente', descripcion: 'Dibuja, aunque sea a mano, todos los puntos de contacto del cliente desde que ve el negocio hasta que se va, y marca los 2 peores momentos.', metrica: 'Nº de puntos de fricción detectados'},
   {categoria: 'Cliente', titulo: 'Programa de clientes recurrentes', descripcion: 'Diseña algo simple (tarjeta de sellos, descuento a la 5ª visita...) para premiar a quien repite.', metrica: 'Nº de clientes recurrentes identificados'},
   {categoria: 'Cliente', titulo: 'Revisar quejas de los últimos 3 meses', descripcion: 'Lee todas las quejas o reseñas negativas de los últimos 3 meses y saca el patrón más repetido.', metrica: 'Patrón principal identificado'},
+  {categoria: 'Números', titulo: 'Punto de equilibrio del mes', descripcion: 'En Gestión Económica → Punto de equilibrio: cuánto hay que vender al mes y al día para no perder. Apúntalo en la pizarra de la oficina.', metrica: '€ de ventas diarias necesarias'},
+  {categoria: 'Números', titulo: 'Cierre de caja todos los días', descripcion: 'Cuadrar la caja al cerrar, con la app, todos los días de la semana. Anotar cada descuadre y su motivo.', metrica: 'Nº de días con descuadre'},
+  {categoria: 'Números', titulo: 'Inventario inicial valorado', descripcion: 'Contar cámara, almacén y bodega y anotarlo en la app (Gastos Variables → Recuento). Es la foto de partida para medir el consumo real.', metrica: '€ de existencias a coste'},
+  {categoria: 'Números', titulo: 'Cuenta de resultados del mes pasado', descripcion: 'Repasar con el coach la Cuenta de Resultados: qué parte de cada euro vendido se va en compras, personal y fijos.', metrica: '% de resultado sobre ventas'},
+  {categoria: 'Números', titulo: 'Tesorería de las próximas 13 semanas', descripcion: 'Listar lo que entra y sale cada semana: nóminas, alquiler, IVA del trimestre, seguro anual, proveedores. Detectar la semana en rojo antes de que llegue.', metrica: 'Semanas con saldo negativo previsto'},
+  {categoria: 'Números', titulo: 'Apartar el dinero de Hacienda', descripcion: 'Abrir una cuenta o un sobre aparte y meter cada semana el IVA y las retenciones que marca Tesorería.', metrica: '€ apartados frente a lo que toca'},
+  {categoria: 'Carta', titulo: 'Ingeniería de carta', descripcion: 'Con Análisis de platos de la app: clasificar cada plato por lo que vende y lo que deja (estrella, caballo, puzle, perro) y decidir qué se queda.', metrica: 'Nº de platos en cada grupo'},
+  {categoria: 'Carta', titulo: 'Recortar la carta', descripcion: 'Quitar los platos que ni venden ni dejan margen. Menos platos: menos mermas, menos stock y una cocina más rápida.', metrica: 'Nº de platos de la carta'},
+  {categoria: 'Carta', titulo: 'Ajustar precios con el escandallo', descripcion: 'Subir el precio de los platos que están por encima del food cost objetivo o rehacer la receta.', metrica: 'Food cost teórico de la carta'},
+  {categoria: 'Carta', titulo: 'Escandallos de los 20 más vendidos', descripcion: 'Ficha técnica con gramajes y coste de los 20 platos que más se venden, con el precio de proveedor de hoy.', metrica: '% de ventas con escandallo hecho'},
+  {categoria: 'Compras', titulo: 'Revisar los 5 proveedores principales', descripcion: 'Cuánto se les compra al mes, cuánto han subido en el año y qué condiciones dan (plazo, portes, mínimos).', metrica: '% de subida de precios en el año'},
+  {categoria: 'Compras', titulo: 'Dos presupuestos al proveedor más caro', descripcion: 'Pedir precio de la misma lista de productos a dos proveedores alternativos y comparar.', metrica: '€ al mes de ahorro posible'},
+  {categoria: 'Compras', titulo: 'Pedidos con mínimos y máximos', descripcion: 'Fijar en la app el stock mínimo de los 30 productos más usados y pedir solo cuando se llega a él.', metrica: 'Nº de roturas de stock al mes'},
+  {categoria: 'Personal', titulo: 'Coste de personal sobre ventas', descripcion: 'Gestión Económica → Gastos fijos: comparar el coste de personal con las ventas. En un bar pequeño, sano por debajo del 35 %.', metrica: '% de personal sobre ventas'},
+  {categoria: 'Personal', titulo: 'Ventas por hora trabajada', descripcion: 'Ventas de la semana entre horas fichadas. Comparar por franjas para ver dónde sobra o falta gente.', metrica: '€ vendidos por hora trabajada'},
+  {categoria: 'Personal', titulo: 'Cuadrante según la demanda', descripcion: 'Ajustar los turnos a las horas punta reales (Análisis de ventas → por hora), no a la costumbre.', metrica: 'Horas de personal en franjas flojas'},
+  {categoria: 'Personal', titulo: 'Briefing de 5 minutos antes del servicio', descripcion: 'Cada día: reservas, platos del día, lo que hay que empujar y lo que falta. Siempre a la misma hora.', metrica: 'Nº de días con briefing'},
+  {categoria: 'Personal', titulo: 'Alérgenos: que todo el equipo sepa responder', descripcion: 'Repaso con la carta de alérgenos de la app y prueba rápida a cada persona de sala.', metrica: '% del equipo que responde bien'},
+  {categoria: 'Sala', titulo: 'Tiempos de servicio', descripcion: 'Medir cuánto se tarda en tomar nota, en servir el primero y en cobrar, en un servicio de mediodía y otro de noche.', metrica: 'Minutos de cada tramo'},
+  {categoria: 'Sala', titulo: 'Experiencia del cliente: cliente misterioso', descripcion: 'Repetir el cliente misterioso del Día 1 y comparar punto por punto.', metrica: 'Puntuación frente al Día 1'},
+  {categoria: 'Marketing', titulo: 'Ficha de Google al 100 %', descripcion: 'Horario, fotos recientes, carta, enlace de reservas y respuestas a todas las reseñas.', metrica: 'Nota y nº de reseñas'},
+  {categoria: 'Marketing', titulo: 'Sistema para pedir reseñas', descripcion: 'QR de reseñas en la cuenta y una frase del equipo al despedir a las mesas contentas.', metrica: 'Reseñas nuevas al mes'},
+  {categoria: 'Marketing', titulo: 'Campaña para el día flojo', descripcion: 'Una oferta concreta para el día que menos se vende (Análisis de ventas → por día) y medir el resultado.', metrica: 'Ventas del día flojo frente a antes'},
+  {categoria: 'Marketing', titulo: 'Base de clientes', descripcion: 'Recoger teléfono o email con permiso (reservas, programa de fidelidad) para poder avisarles.', metrica: 'Nº de clientes con contacto'},
+  {categoria: 'Marketing', titulo: 'Reactivar a los clientes en riesgo', descripcion: 'Mensaje a los habituales que llevan tiempo sin venir (Clientes → en riesgo).', metrica: '% que vuelve en 30 días'},
+  {categoria: 'Delivery', titulo: 'Margen real del delivery', descripcion: 'Lo que se queda la plataforma más el envase frente al precio del plato. Subir precios de la carta de delivery si no deja margen.', metrica: 'Margen por pedido de delivery'},
+  {categoria: 'Delivery', titulo: 'Empujar el pedido directo', descripcion: 'Pedido online propio (sin comisión) en la bolsa, en redes y en la ficha de Google.', metrica: '% de pedidos directos frente a plataforma'},
+  {categoria: 'Finanzas', titulo: 'Plan de 90 días', descripcion: 'Las tres prioridades de los próximos tres meses, con responsable, fecha y cifra.', metrica: 'Nº de acciones cumplidas a los 90 días'},
   {categoria: 'Cliente', titulo: 'Mistery check interno', descripcion: 'Que alguien del equipo (o el propio dueño) viva la experiencia como cliente un día y anote 3 cosas a mejorar.', metrica: 'Nº de mejoras detectadas'},
 ];
 function plan360BancoCategorias(){
