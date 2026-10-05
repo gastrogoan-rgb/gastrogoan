@@ -214,6 +214,7 @@ const GE = (function(){
   // caen en el tipo general por defecto para no perder ese importe del
   // cálculo, pero se contabilizan aparte como "sinAsignar" para poder
   // avisar de que conviene revisarlas.
+  const SENAL_IVA_DESDE = '2026-10-05';
   function ventasIvaGroups(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     const groups = {};
@@ -233,6 +234,25 @@ const GE = (function(){
         if(usedFallback) sinAsignar += grossLine;
       });
     });
+    // Señales de reserva (auditoría contable, 5/10): un anticipo tributa
+    // cuando se COBRA (art. 75.Dos LIVA), no el día de la cena. Se suma al
+    // 10% de la hostelería en el mes del cobro, y la venta final descuenta
+    // ese mismo IVA en el suyo — si no, se pagaba entero el mes de la cena.
+    // Solo las cobradas desde SENAL_IVA_DESDE: las anteriores ya tributaron
+    // en su venta final con el criterio viejo y no se tocan.
+    const addSenal = (gross, sign) => {
+      if(!(gross > 0)) return;
+      if(!groups[10]) groups[10] = {base:0, iva:0};
+      const net = gross / 1.10;
+      groups[10].base += sign*net;
+      groups[10].iva += sign*(gross - net);
+    };
+    (DB.reservations||[]).forEach(r => {
+      const f = r.depositPagoFecha ? diaLocalDe(r.depositPagoFecha) : '';
+      if(r.depositConfirmed && !r.depositNeedsRefund && f >= SENAL_IVA_DESDE && f.startsWith(mesStr)) addSenal(parseFloat(r.depositPagoImporte)||0, 1);
+    });
+    activeSales().filter(v => (v.date||'').startsWith(mesStr) && v.senal > 0 && v.senalPagoFecha && diaLocalDe(v.senalPagoFecha) >= SENAL_IVA_DESDE)
+      .forEach(v => addSenal(parseFloat(v.senal)||0, -1));
     return {groups, sinAsignar};
   }
   // Facturación sin IVA: el IVA cobrado no es ingreso del negocio, hay que reservarlo para Hacienda.
@@ -717,7 +737,13 @@ const GE = (function(){
         </select>
         ${autoCalc?`<small style="color:var(--muted)">${t('hr.gf.autoCalcMonthlyHint')}</small>`:''}
       </div>
-      ${g.categoria!=='PERSONAL' ? `<div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gf-f-iva', g.iva)}</div>` : ''}
+      ${g.categoria!=='PERSONAL' ? `<div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gf-f-iva', g.iva)}</div>
+      <div class="field"><label>${t('hr.gf.retencion')}</label><select id="gf-f-ret">
+        <option value="">${t('hr.gf.retNone')}</option>
+        <option value="115_19" ${g.retencion==='115_19'?'selected':''}>${t('hr.gf.ret115')}</option>
+        <option value="111_15" ${g.retencion==='111_15'?'selected':''}>${t('hr.gf.ret111_15')}</option>
+        <option value="111_7" ${g.retencion==='111_7'?'selected':''}>${t('hr.gf.ret111_7')}</option>
+      </select><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.gf.retHint')}</div></div>` : ''}
       <div class="field">
         <label>${t('hr.lbl.commentOptional')}</label>
         <textarea id="gf-f-notas" rows="2" placeholder="${t('hr.gf.internalNotesPh')}">${escapeHtml(g.notas||'')}</textarea>
@@ -792,6 +818,7 @@ const GE = (function(){
       notas: document.getElementById('gf-f-notas').value.trim(),
       iva: ivaEl ? parseFloat(ivaEl.value) : 0,
       facturaId: gfPendingFacturaId || null,
+      retencion: (catVal!=='PERSONAL' && document.getElementById('gf-f-ret')) ? (document.getElementById('gf-f-ret').value || null) : null,
     };
     const empIdVal = document.getElementById('gf-f-empid').value;
     if(empIdVal !== '') data.employeeId = parseInt(empIdVal);
@@ -1472,7 +1499,8 @@ const GE = (function(){
       // El IRPF retenido a los empleados, a diferencia del IVA, no tiene
       // "a favor": siempre es dinero ya retenido pendiente de ingresar, así
       // que no lleva el mismo pos/neg que la fila de IVA.
-      {lbl:t('hr.cdr.irpfToDeposit'), vals:getMeses().map((_,i)=>geIrpfMensualForMonth(cdrYear,i)), auto:true, irpfRow:true},
+      {lbl:t('hr.cdr.irpfToDeposit'), vals:getMeses().map((_,i)=>geModelo111ForMonth(cdrYear,i)), auto:true, irpfRow:true},
+      {lbl:t('hr.cdr.ret115ToDeposit'), vals:getMeses().map((_,i)=>geRetencionForMonth(cdrYear,i,'115')), auto:true, irpfRow:true},
     ];
     const quarters = ['T1','T2','T3','T4'];
     const isMes = cdrGranularidad === 'mes';
@@ -2089,7 +2117,8 @@ const GE = (function(){
     // meses del trimestre en curso hasta el visto, con el histórico de
     // gastos fijos (no la nómina de HOY para un mes pasado).
     let irpfReserva = 0;
-    for(let m=qIdx*3; m<=activeMonth; m++) irpfReserva += geIrpfMensualForMonth(teYear, m);
+    let ret115Reserva = 0;
+    for(let m=qIdx*3; m<=activeMonth; m++){ irpfReserva += geModelo111ForMonth(teYear, m); ret115Reserva += geRetencionForMonth(teYear, m, '115'); }
 
     const rows = [
       {lbl:t('hr.lbl.personalNoVat'), pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
@@ -2106,6 +2135,8 @@ const GE = (function(){
       ...(realPer > 0 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, obj:null, real:irpfReserva,
         color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax',
         hint: irpfReserva>0.001 ? null : t('hr.te.irpfNotConfigured')}] : []),
+      ...(ret115Reserva > 0.001 ? [{lbl:`${t('hr.te.ret115Reserve')} · ${qLabel}`, obj:null, real:ret115Reserva,
+        color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
     ];
 
     document.getElementById('te-rows').innerHTML = rows.map(r=>{
@@ -2537,7 +2568,7 @@ const GE = (function(){
   // Desglose de base/IVA de UNA venta usando el tipo real de cada línea
   // (estampado al cobrar), en vez de un único % adivinado para todo el
   // ticket — si la venta mezcla platos con distinto IVA (ej. comida al 10%
-  // y una copa al 21%), pctLabel devuelve 'mixto' en vez de un porcentaje
+  // y un refresco para llevar al 21%; en sala la copa va al 10%), pctLabel devuelve 'mixto' en vez de un porcentaje
   // que no sería correcto para toda la venta.
   function saleIvaBreakdown(sale){
     const descPct = parseFloat(sale.descuentoPct)||0;
@@ -2872,7 +2903,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
