@@ -134,6 +134,7 @@ lanzar; node test/pagos-app.mjs > "$SALIDA/pagos-app.txt" 2>&1 & P92=$!
 lanzar; node test/reservas-mesas.mjs > "$SALIDA/reservas-mesas.txt" 2>&1 & P93=$!
 lanzar; node test/modulos.mjs > "$SALIDA/modulos.txt" 2>&1 & P94=$!
 lanzar; node test/facturas.mjs > "$SALIDA/facturas.txt" 2>&1 & P95=$!
+lanzar; node test/dispositivo-nuevo.mjs > "$SALIDA/dispositivo-nuevo.txt" 2>&1 & P96=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -254,5 +255,6 @@ espera $P92 "Pagos y pedidos online: precios de la carta, pago corto no confirma
 espera $P93 "Reservas: horas verde/rojo por mesa de N a N+2, el cliente elige mesa, grupos por teléfono" "$SALIDA/reservas-mesas.txt" "casos pasaron"
 espera $P94 "Módulos: previsión de IRPF/IVA verificada contra la Orden HAC/1425/2025, comparador con el beneficio real" "$SALIDA/modulos.txt" "casos pasaron"
 espera $P95 "Facturas adjuntas: foto o PDF en Gastos Fijos/Variables y facturas sueltas, comprimidas" "$SALIDA/facturas.txt" "casos pasaron"
+espera $P96 "Móvil nuevo: una cuenta con negocios en la nube ve su lista, no pide activar licencia" "$SALIDA/dispositivo-nuevo.txt" "casos pasaron"
 
 exit $FALLOS

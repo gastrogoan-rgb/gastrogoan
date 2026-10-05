@@ -5137,7 +5137,22 @@ function showNetlifySetupGate(){
     // hace falta interrumpir con el asistente, se da por resuelto.
     DB.business.netlifySetupDone = true;
     saveDB();
-    if(!getLicense()) showActivationGate();
+    // ⚠️ Antes esto miraba getLicense() directamente: en un dispositivo
+    // NUEVO (hueco "default" vacío, sin licencia TODAVÍA) saltaba derecho a
+    // "activa tu licencia" sin comprobar antes si la CUENTA ya tenía
+    // negocios en la nube — una cuenta que entraba por primera vez en un
+    // móvil nuevo veía pedir un código nuevo en vez de su lista de
+    // siempre. Mismo criterio que ya usa correctamente confirmNetlifyDone,
+    // el hermano de esta función: ownerHasAnyBusiness() va SIEMPRE antes
+    // que getLicense().
+    if(!ownerHasAnyBusiness()){
+      showBusinessSelectScreen();
+      syncOwnerBusinessList().then(() => {
+        const s = getAccessSession();
+        if(s && s.type === 'owner') showBusinessSelectScreen();
+      });
+    }
+    else if(!getLicense()) showActivationGate();
     else if(!getCloudConfig()) showFirebaseSetupGate();
     else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
     else if(!DB.business.tourSeen) promptAppTour();
