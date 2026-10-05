@@ -841,10 +841,17 @@ const GE = (function(){
             <option value="indefinido" ${(g.contrato||'indefinido')==='indefinido'?'selected':''}>${t('hr.gf.contratoIndef')}</option>
             <option value="temporal" ${g.contrato==='temporal'?'selected':''}>${t('hr.gf.contratoTemp')}</option>
           </select></div>
+          <div class="field"><label>${t('hr.gf.grupo')}</label><select id="gf-f-grupo" onchange="GE.recalcGFAuto()">
+            ${[1,2,3,4,5,6,7,8,9,10,11].map(n=>`<option value="${n}" ${parseInt(g.grupo||7)===n?'selected':''}>${n}</option>`).join('')}
+          </select></div>
           <div class="field"><label>${t('hr.gf.pagas')}</label><select id="gf-f-pagas" onchange="GE.recalcGFAuto()">
             <option value="12" ${(g.pagas||12)==12?'selected':''}>${t('hr.gf.pagas12')}</option>
             <option value="14" ${g.pagas==14?'selected':''}>${t('hr.gf.pagas14')}</option>
           </select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>${t('hr.gf.jornada')}</label><input type="number" id="gf-f-jornada" min="1" max="100" step="1" value="${g.jornada||100}" oninput="GE.recalcGFAuto()"></div>
+          <div class="field"><label>${t('hr.gf.cortos')}</label><input type="number" id="gf-f-cortos" min="0" step="1" value="${g.contratosCortos||''}" oninput="GE.recalcGFAuto()"></div>
         </div>
         <div class="field-row">
           <div class="field"><label>${t('hr.gf.ssTrabPct')}</label><input type="number" id="gf-f-sstrabpct" min="0" max="99" step="0.1" value="${ssTrabPctVal}" oninput="GE.recalcGFAuto()"></div>
@@ -949,12 +956,41 @@ const GE = (function(){
   // bruto × 14/12 (más la SS, que también se cotiza prorrateada). Sin esto,
   // el coste anual de una plantilla de 14 pagas salía un 16% corto, y en
   // junio y diciembre la caja se quedaba sin prever.
-  function calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagas){
+  // Bases de cotización 2026 (Orden PJC/297/2026): la SS no se paga sobre
+  // el sueldo tal cual, sino sobre una BASE con suelo (según el grupo de
+  // cotización, proporcional a la jornada si es parcial) y techo (5.101,20
+  // €/mes). Por encima del techo, la cotización de solidaridad (art. 19 bis
+  // LGSS): 1,15% hasta un 10% más, 1,25% hasta un 50% más y 1,46% del
+  // resto; la empresa paga unas 5/6 partes. Y cada contrato temporal de
+  // menos de 30 días cuesta 33,62 € más al terminar (art. 151 LGSS).
+  // ⚠️ Revisar cada año con la nueva Orden de cotización.
+  const BASE_MAX_2026 = 5101.20;
+  const BASE_MIN_2026 = {1:1989.30, 2:1649.70, 3:1435.20};   // grupos 4 a 11: 1.424,40
+  const BASE_MIN_RESTO_2026 = 1424.40;
+  const SOLIDARIDAD_2026 = [[0.10, 0.96], [0.50, 1.04], [Infinity, 1.22]];   // % empresa por tramo
+  const CONTRATO_CORTO_2026 = 33.62;
+  function calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagas, opts={}){
     const retPct = irpfPct + ssTrabPct;
     const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
     const brutoMes = bruto * (pagas||12) / 12;
-    const ssEmpresa = brutoMes * ssPct/100;
-    return {bruto, brutoMes, ssEmpresa, irpfMensual: brutoMes * irpfPct/100, total: brutoMes + ssEmpresa};
+    const jornada = Math.min(100, Math.max(1, parseFloat(opts.jornada) || 100)) / 100;
+    const baseMin = (BASE_MIN_2026[parseInt(opts.grupo)] || BASE_MIN_RESTO_2026) * jornada;
+    const base = Math.min(BASE_MAX_2026, Math.max(baseMin, brutoMes));
+    let solidaridad = 0, desde = 0;
+    const exceso = Math.max(0, brutoMes - BASE_MAX_2026);
+    for(const [hastaPct, pct] of SOLIDARIDAD_2026){
+      const hasta = hastaPct * BASE_MAX_2026;
+      if(exceso <= desde) break;
+      solidaridad += (Math.min(exceso, hasta) - desde) * pct / 100;
+      desde = hasta;
+    }
+    const cortos = (parseFloat(opts.contratosCortos) || 0) * CONTRATO_CORTO_2026;
+    const ssEmpresa = base * ssPct/100 + solidaridad + cortos;
+    return {bruto, brutoMes, base, ssEmpresa, irpfMensual: brutoMes * irpfPct/100, total: brutoMes + ssEmpresa};
+  }
+  function nominaOpts(){
+    const v = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    return {grupo: v('gf-f-grupo'), jornada: v('gf-f-jornada'), contratosCortos: v('gf-f-cortos')};
   }
   function recalcGFAuto(){
     const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
@@ -962,7 +998,7 @@ const GE = (function(){
     const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
     const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
     const pagasEl = document.getElementById('gf-f-pagas');
-    const {bruto, ssEmpresa, irpfMensual, total} = calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagasEl ? parseInt(pagasEl.value) : 12);
+    const {bruto, ssEmpresa, irpfMensual, total} = calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagasEl ? parseInt(pagasEl.value) : 12, nominaOpts());
     document.getElementById('gf-auto-bruto').textContent = fmtMoney(bruto);
     document.getElementById('gf-auto-ss').textContent = fmtMoney(ssEmpresa);
     document.getElementById('gf-auto-irpf').textContent = fmtMoney(irpfMensual);
@@ -972,7 +1008,8 @@ const GE = (function(){
     const smiEl = document.getElementById('gf-auto-smi');
     if(smiEl){
       const anual = bruto * (pagasEl ? parseInt(pagasEl.value) : 12);
-      smiEl.style.display = (anual > 0 && anual < SMI_ANUAL) ? '' : 'none';
+      const jor = Math.min(100, Math.max(1, parseFloat(nominaOpts().jornada) || 100)) / 100;
+      smiEl.style.display = (anual > 0 && anual < SMI_ANUAL * jor) ? '' : 'none';
     }
   }
   function saveGF(){
@@ -1012,7 +1049,8 @@ const GE = (function(){
       const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
       const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
       const pagas = parseInt(document.getElementById('gf-f-pagas').value) || 12;
-      const nom = calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagas);
+      const nom = calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagas, nominaOpts());
+      Object.assign(data, nominaOpts());
       const bruto = nom.bruto;
       data.autoCalc = true;
       data.pagas = pagas;
@@ -1498,6 +1536,38 @@ const GE = (function(){
       </tbody></table></div>` : `<p class="txt-xs" style="color:var(--muted);margin:0">${t('hr.oi.empty')}</p>`}
     </div>`;
   }
+  // DIVIDENDOS (solo sociedades): no son gasto — se reparten del beneficio
+  // después del impuesto —, pero la sociedad retiene un 19% al socio y lo
+  // ingresa en el modelo 123 el trimestre siguiente (art. 101.4 LIRPF).
+  const RET_DIVIDENDOS = 19;
+  function retDividendosMes(mes, año){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    return (ge().dividendos||[]).filter(d => (d.fecha||'').startsWith(mesStr)).reduce((s,d)=>s+(parseFloat(d.importe)||0)*RET_DIVIDENDOS/100, 0);
+  }
+  function renderDividendos(){
+    const box = document.getElementById('cdr-dividendos');
+    if(!box) return;
+    const p = fiscalPerfil();
+    if(p.personaFisica || p.modulos){ box.innerHTML = ''; return; }
+    const lista = (ge().dividendos||[]).filter(d => (d.fecha||'').startsWith(cdrYear+'-'));
+    box.innerHTML = `<div class="vis-section" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <h4 style="margin:0;flex:1">${t('hr.div.title')} ${cdrYear}</h4>
+        <button class="btn btn-sm" onclick="GE.nuevoDividendo()"><i class="ti ti-plus"></i> ${t('hr.div.add')}</button>
+      </div>
+      <p class="txt-xs" style="color:var(--muted);margin:0 0 8px">${t('hr.div.desc')}</p>
+      ${lista.map(d => `<div style="display:flex;gap:10px;font-size:13px;padding:4px 0;flex-wrap:wrap"><span>${escapeHtml(d.fecha)}</span><span style="flex:1">${fmtMoney(parseFloat(d.importe)||0)}</span><span class="txt-xs" style="color:var(--muted)">${t('hr.div.ret').replace('${ret}', fmtMoney((parseFloat(d.importe)||0)*RET_DIVIDENDOS/100))}</span></div>`).join('')}
+    </div>`;
+  }
+  async function nuevoDividendo(){
+    const val = await promptText(t('hr.div.prompt'), '');
+    if(val == null) return;
+    const importe = parseFloat(String(val).replace(',', '.'));
+    if(!(importe > 0)){ showToast(t('msg.enterAmount')); return; }
+    ge().dividendos = ge().dividendos || [];
+    ge().dividendos.push({id: genId(), fecha: todayStr(), importe});
+    saveDB(); renderCDR();
+  }
   function renderVales(){
     const box = document.getElementById('ventas-vales');
     if(!box) return;
@@ -1942,6 +2012,7 @@ const GE = (function(){
     html += '</tbody>';
     document.getElementById('cdr-table').innerHTML = html;
     document.getElementById('cdr-chart').innerHTML = barChartHTML(getMeses().map((m,i)=>({lbl:m, v:resultadoMes(i,cdrYear)})));
+    renderDividendos();
     renderMonthComparison();
   }
 
@@ -2526,7 +2597,8 @@ const GE = (function(){
     // gastos fijos (no la nómina de HOY para un mes pasado).
     let irpfReserva = 0;
     let ret115Reserva = 0;
-    for(let m=qIdx*3; m<=activeMonth; m++){ irpfReserva += geModelo111ForMonth(teYear, m); ret115Reserva += geRetencionForMonth(teYear, m, '115'); }
+    let ret123Reserva = 0;
+    for(let m=qIdx*3; m<=activeMonth; m++){ irpfReserva += geModelo111ForMonth(teYear, m); ret115Reserva += geRetencionForMonth(teYear, m, '115'); ret123Reserva += retDividendosMes(m, teYear); }
 
     const pagoCuenta = pagoACuentaTrimestre(activeMonth, teYear);
     const rows = [
@@ -2545,6 +2617,8 @@ const GE = (function(){
         color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax',
         hint: irpfReserva>0.001 ? null : t('hr.te.irpfNotConfigured')}] : []),
       ...(ret115Reserva > 0.001 ? [{lbl:`${t('hr.te.ret115Reserve')} · ${qLabel}`, obj:null, real:ret115Reserva,
+        color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
+      ...(ret123Reserva > 0.001 ? [{lbl:`${t('hr.libro.res123')} · ${qLabel}`, obj:null, real:ret123Reserva,
         color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
       ...(pagoCuenta && pagoCuenta.importe > 0.001 ? [{lbl:`${t('hr.te.pagoCuenta.'+pagoCuenta.modelo)} · ${qLabel}`, obj:null, real:pagoCuenta.importe,
         color:'var(--ink)', isReserve:true, icon:'ti-building-bank', hint:t('hr.te.pagoCuentaHint.'+pagoCuenta.modelo)}] : []),
@@ -3073,6 +3147,8 @@ const GE = (function(){
     if(Math.abs(ve[4]) > 0.005) rows.push([t('hr.cdr.stockChange'), ...ve]);
     rows.push([t('hr.libro.res111'), ...porQ(m=>geModelo111ForMonth(año,m))]);
     rows.push([t('hr.libro.res115'), ...porQ(m=>geRetencionForMonth(año,m,'115'))]);
+    const r123 = porQ(m=>retDividendosMes(m,año));
+    if(r123[4] > 0.005) rows.push([t('hr.libro.res123'), ...r123]);
     const pc = [0,1,2,3].map(q => pagoACuentaTrimestre(q*3+2, año));
     const modelo = (pc.find(x=>x)||{}).modelo;
     if(modelo){
@@ -3557,7 +3633,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, editarExistencias, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

@@ -496,7 +496,7 @@ impuestos → impuesto → resultado del ejercicio.
   - 347 con gastos fijos (proveedor + NIF) y clientes con factura completa.
     202: abril, octubre y diciembre.
   - Módulos: año que se mira; IVA de inversiones DESPUÉS de la cuota
-    mínima; minoración por empleo × todos los asalariados.
+    mínima.
   - Existencias (`DB.ge.existencias`, foto automática del stock o recuento
     a mano) → variación en la Cuenta de Resultados.
   - Plataformas: `isp` (factura desde la UE, inversión del sujeto pasivo) y
@@ -507,9 +507,12 @@ impuestos → impuesto → resultado del ejercicio.
   - Otros ingresos (subvención, máquinas, alquiler de espacio), autoconsumo
     del titular (merma «Consumo propio»), comidas del personal, vales regalo
     (univalente/polivalente) y renta atribuida de la CB (184).
-  - NO hecho a propósito: bases mínima/máxima y cotizaciones especiales de
-    nómina (cifras de 2026 sin confirmar; la nómina real la hace el gestor),
-    dividendos/123.
+  - Nómina con bases de cotización 2026 (Orden PJC/297/2026: máx. 5.101,20,
+    mín. por grupo y jornada), solidaridad y contratos < 30 días (33,62 €).
+    ⚠️ Revisar cada año con la Orden nueva.
+  - Dividendos (sociedad): no son gasto; retención 19% → modelo 123.
+  - Módulos: minoración por empleo POR TRAMOS (texto del BOE, fase 2.ª a),
+    más 0,40 por incremento de plantilla.
 
 Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 
