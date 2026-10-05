@@ -213,6 +213,127 @@ await caso('Factura completa: pide los datos del cliente, va en serie F y dice a
   assert.ok(r.txt.includes('Talleres Ruiz SL') && r.txt.includes(r.t));
 });
 
+// --- Revisión de la gestoría (5/10, tarde) --------------------------------
+const limpio = () => page.evaluate(() => {
+  DB.business.formaJuridica = 'sociedad'; DB.business.regimenFiscal = ''; DB.ge.config.pctImpuestoBeneficio = 25;
+  DB.sales = []; DB.reservations = []; DB.ge.capex = []; DB.ge.variables = []; DB.ge.fijos = []; DB.ge.fijosLog = [];
+  DB.ge.existencias = {}; DB.ge.otrosIngresos = []; DB.mermas = [];
+});
+
+await caso('Anulación en otro trimestre: enero sigue igual y la rectificativa resta en marzo', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.sales = [{id:1, date:'2025-01-15', total:110, items:[{name:'x', price:110, qty:1, ivaPct:10}], status:'anulada', ticketNum:'T25AAA-000001',
+      rectificativa:{num:'R25AAA-000001', fecha:'2025-03-10', rectifica:'T25AAA-000001'}}];
+    return {ene: GE.ivaVentasMes(0,2025), mar: GE.ivaVentasMes(2,2025)};
+  });
+  assert.equal(Math.round(r.ene*100)/100, 10); assert.equal(Math.round(r.mar*100)/100, -10);
+});
+
+await caso('Seguro anual: su IVA entero el mes de la factura, no 1/12 cada mes', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.ge.fijos = [{id:1, nombre:'SEGURO DEL LOCAL', importe:1200, iva:21, categoria:'FIJOS', periodicidadMeses:12, mesPago:3}];
+    return {feb: geIvaSoportadoFijosForMonth(2025,1), mar: geIvaSoportadoFijosForMonth(2025,2), gasto: geTotalFijosNetoForMonth(2025,5)};
+  });
+  assert.equal(r.feb, 0); assert.equal(Math.round(r.mar), 252); assert.equal(Math.round(r.gasto), 100, 'el GASTO sí se reparte');
+});
+
+await caso('Libro de gastos con el alquiler de ESE mes (histórico), no el de hoy', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    const item = (imp) => [{id:1, nombre:'ALQUILER', importe:imp, iva:21, periodicidadMeses:1, c:'FIJOS', proveedor:'INMO SL', nifProveedor:'B11111111'}];
+    DB.ge.fijosLog = [{fecha:'2025-01-01', totalNeto:1000, items:item(1000)}, {fecha:'2025-06-01', totalNeto:1200, items:item(1200)}];
+    DB.ge.fijos = [{id:1, nombre:'ALQUILER', importe:1200, iva:21, categoria:'FIJOS', periodicidadMeses:1}];
+    const rows = GE.libroGastos(2025);
+    return rows.filter(x => x[4] === 'ALQUILER' || String(x[4]).includes('ALQUILER')).map(x => [x[0], x[5]]);
+  });
+  assert.equal(r.find(x => x[0].startsWith('2025-01'))[1], 1000);
+  assert.equal(r.find(x => x[0].startsWith('2025-07'))[1], 1200);
+});
+
+await caso('347: entra la luz (gasto fijo) y el cliente con facturas completas; 202 suma tres pagos', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.ge.fijos = [{id:1, nombre:'ELECTRICIDAD', importe:300, iva:21, categoria:'FIJOS', periodicidadMeses:1, proveedor:'IBERDROLA', nifProveedor:'A95758389'}];
+    DB.sales = [{id:2, date:'2025-05-02', total:4000, items:[{name:'x', price:4000, qty:1, ivaPct:10}], facturaCompleta:{num:'F25AAA-000001', fecha:'2025-05-02', nombre:'EVENTOS SL', nif:'B22222222', direccion:'x'}},
+                {id:3, date:'2024-06-01', total:110000, items:[{name:'x', price:110000, qty:1, ivaPct:10}]}];
+    const rows = GE.resumenAño(2025);
+    const pc = rows.find(x => String(x[0]).includes('(202)'));
+    return {luz: rows.find(x => x[0] === 'IBERDROLA'), cli: rows.find(x => x[0] === 'EVENTOS SL'), pc};
+  });
+  assert.ok(r.luz, 'la luz no sale en el 347'); assert.equal(r.luz[6], 4356);
+  assert.ok(r.cli, 'el cliente de 4.000 € no sale en el 347');
+  assert.ok(r.pc, 'no sale el 202'); assert.equal(r.pc[1], 0); assert.equal(r.pc[3], 0); assert.equal(Math.round(r.pc[4] / r.pc[2]), 2, 'diciembre y octubre: dos pagos en T4');
+});
+
+await caso('Módulos: el IVA de una inversión se recupera aunque haya cuota mínima; minoración por tramos del BOE', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'modulos';
+    DB.ge.config.modulos = {epigrafe:'672', mesas:10, kw:20, titularTrabaja:true, personalOverride:4};
+    const sin = GE.calcModulos(2025).ivaAnual;
+    DB.ge.capex = [{id:1, descripcion:'CAFETERA', importe:10000, iva:21, fecha:'2025-03-01', tipoAmort:'maquinaria'}];
+    const con = GE.calcModulos(2025);
+    return {sin, con: con.ivaAnual, min: con.minoracionEmpleo};
+  });
+  assert.equal(Math.round(r.sin - r.con), 2100, 'el IVA de la inversión no se descuenta entero');
+  // BOE: 4 personas por tramos = 1×0,10 + 2×0,15 + 1×0,20 = 0,60
+  assert.equal(Math.round(r.min), Math.round(0.60 * 1448.68));
+});
+
+await caso('Existencias: acabar el mes con más género en el almacén baja el gasto del mes', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.ge.variables = [{id:1, mes:1, año:2025, fecha:'2025-02-10', importe:5000, iva:10, proveedor:'X', categoria:'MATERIA PRIMA'}];
+    DB.sales = [{id:1, date:'2025-02-10', total:11000, items:[{name:'x', price:11000, qty:1, ivaPct:10}]}];
+    DB.ge.existencias = {'2025-01':{v:2000}, '2025-02':{v:3500}};
+    return GE.resultadoAntesImpMes(1, 2025);
+  });
+  assert.equal(Math.round(r), 10000 - 5000 + 1500);
+});
+
+await caso('Plataforma con factura real: la estimación no se resta dos veces; autónomo con 9.000 € tiene la reducción del art. 32.2.3', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.sales = [{id:1, date:'2025-04-01', total:100, items:[], comisionPlataforma:36.3, plataforma:{id:1, ivaPct:21, facturaReal:true}},
+                {id:2, date:'2025-04-02', total:100, items:[], comisionPlataforma:36.3, plataforma:{id:1, ivaPct:21}}];
+    DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'directa'; DB.business.modalidadDirecta = 'simplificada';
+    return {com: GE.comisionesMes(3, 2025), irpf9000: irpfActividad(9000), red: reduccionRendimientosBajos(9000)};
+  });
+  assert.equal(Math.round(r.com*100)/100, 30);
+  assert.equal(Math.round(r.red*100)/100, 1215);
+});
+
+await caso('Obras en local con 5 años de contrato: 20% al año; vehículo: la mitad del IVA es coste', async () => {
+  await limpio();
+  const r = await page.evaluate(() => ({
+    obras: capexCoefAmort({tipoAmort:'obras', añosContrato:5}),
+    coche: capexBaseAmortizable({tipoAmort:'vehiculo', importe:20000, iva:21}),
+  }));
+  assert.equal(r.obras, 20); assert.equal(r.coche, 22100);
+});
+
+await caso('Otros ingresos: una subvención suma al resultado sin IVA; el autoconsumo del titular lleva IVA', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.ge.otrosIngresos = [{id:1, fecha:'2025-06-10', tipo:'subvencion', base:3000, iva:0}, {id:2, fecha:'2025-06-12', tipo:'maquinas', base:100, iva:21}];
+    DB.mermas = [{id:1, fecha:'2025-06-20', motivo:'consumoPropio', coste:50}];
+    return {res: GE.resultadoAntesImpMes(5, 2025), iva: GE.ivaLiquidarMes(5, 2025)};
+  });
+  assert.equal(Math.round(r.res), 3150); assert.equal(Math.round(r.iva*100)/100, 26);
+});
+
+await caso('Vale univalente: IVA al venderlo y se resta al canjearlo; el polivalente no toca el IVA', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.ge.vales = [{id:1, fecha:'2025-11-20', tipo:'univalente', importe:110, iva:10, canjeFecha:'2026-01-15'},
+                   {id:2, fecha:'2025-11-21', tipo:'polivalente', importe:50, iva:0, canjeFecha:null}];
+    return {nov: geOtrosIngresosIvaMes(2025,10), ene: geOtrosIngresosIvaMes(2026,0), pend: geValesPendientes()};
+  });
+  assert.equal(Math.round(r.nov*100)/100, 10); assert.equal(Math.round(r.ene*100)/100, -10); assert.equal(r.pend, 50);
+});
+
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 
 await browser.close();

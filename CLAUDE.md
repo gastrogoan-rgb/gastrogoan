@@ -486,6 +486,31 @@ impuestos → impuesto → resultado del ejercicio.
   NIF del negocio sale siempre en el ticket (obligatorio). VeriFactu lo
   hará una empresa externa en diciembre, encima de esta numeración.
 
+- **Revisión de una gestoría (5/10)**, todo aplicado:
+  - Anulación = rectificativa: la venta cuenta en su mes y la rectificativa
+    resta en el suyo (`geAjustarAnulaciones`), nunca se reescribe un
+    trimestre presentado.
+  - Gasto fijo periódico: el GASTO se reparte, el IVA va entero al mes de la
+    factura (`mesPago`, `gfPagaEnMes`). `fijosLog` guarda la foto de los
+    gastos (`items`): libro de gastos y 347 usan la de ESE mes.
+  - 347 con gastos fijos (proveedor + NIF) y clientes con factura completa.
+    202: abril, octubre y diciembre.
+  - Módulos: año que se mira; IVA de inversiones DESPUÉS de la cuota
+    mínima; minoración por empleo × todos los asalariados.
+  - Existencias (`DB.ge.existencias`, foto automática del stock o recuento
+    a mano) → variación en la Cuenta de Resultados.
+  - Plataformas: `isp` (factura desde la UE, inversión del sujeto pasivo) y
+    `facturaReal` (no estimar la comisión).
+  - Autónomo: simplificada/normal, reducción art. 32.2.3, deducción del 130.
+    Sociedad sin tipo puesto → el legal; cooperativa 20%.
+  - Obras según años de contrato, vehículo con IVA al 50%, tope 25.000 €.
+  - Otros ingresos (subvención, máquinas, alquiler de espacio), autoconsumo
+    del titular (merma «Consumo propio»), comidas del personal, vales regalo
+    (univalente/polivalente) y renta atribuida de la CB (184).
+  - NO hecho a propósito: bases mínima/máxima y cotizaciones especiales de
+    nómina (cifras de 2026 sin confirmar; la nómina real la hace el gestor),
+    dividendos/123.
+
 Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 
 ## El módulo de I+D (`js/idr.js`)
