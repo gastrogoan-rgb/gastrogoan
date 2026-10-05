@@ -4468,7 +4468,7 @@ function ensurePlan360Program(){
   if(!DB.business.plan360Cierre){
     DB.business.plan360Cierre = {
       kpis: {}, mejorasVisibles: '', queVigilar: '', siguienteNivel: '',
-      mantenimiento: {precio: '99€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
+      mantenimiento: {precio: '75€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
     };
   }
   saveDB();

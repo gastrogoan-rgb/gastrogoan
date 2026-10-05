@@ -4239,7 +4239,7 @@ const PLAN360_ESTADO_FINAL_COLOR = {cumplido: 'var(--green)', parcial: 'var(--am
 function plan360FreshCierre(){
   return {
     kpis: {}, mejorasVisibles: '', queVigilar: '', siguienteNivel: '',
-    mantenimiento: {precio: '99€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
+    mantenimiento: {precio: '75€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
   };
 }
 const PLAN360_CIERRE_KPIS = [
@@ -4330,7 +4330,7 @@ function plan360CierreHtml(){
         <div style="font-weight:600;margin-bottom:8px">Plan de Mantenimiento GastroGoan</div>
         <p class="muted" style="margin:0 0 8px;font-size:13px">WhatsApp de apoyo · videollamada cada 2 semanas · apoyo presencial a precio reducido.</p>
         <div class="field" style="margin-bottom:8px;max-width:160px"><label>Precio</label>
-          <input value="${esc(m.precio || '99€/mes')}" onchange="guardarCierreMantenimientoPrecio(this.value)">
+          <input value="${esc(m.precio && m.precio !== '99€/mes' ? m.precio : '75€/mes')}" onchange="guardarCierreMantenimientoPrecio(this.value)">
         </div>
         ${m.respuesta ? `
           <div class="card" style="background:${m.respuesta==='acepta'?'var(--green-l)':'var(--amber-l)'};border-color:${m.respuesta==='acepta'?'var(--green)':'var(--amber)'}">

@@ -5450,7 +5450,7 @@ function plan360CierreHtml(){
       <div class="card" style="background:var(--ink);color:#fff">
         <div style="font-weight:700;margin-bottom:6px"><i class="ti ti-rocket"></i> ${escapeHtml(t('plan360.maintenancePlan'))}</div>
         <p style="margin:0 0 10px;font-size:13.5px;opacity:.9">${escapeHtml(t('plan360.maintenanceIncludes'))}</p>
-        <div style="font-size:22px;font-weight:800;margin-bottom:12px">${escapeHtml(m.precio || '99€/mes')}</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:12px">${escapeHtml(m.precio && m.precio !== '99€/mes' ? m.precio : '75€/mes')}</div>
         ${m.respuesta === 'acepta' ? `<div style="background:rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:13.5px">
             ✓ ${escapeHtml(t('plan360.maintenanceAccepted'))} <strong>${escapeHtml(m.firmaNombre)}</strong> — ${escapeHtml(new Date(m.firmaFecha).toLocaleDateString(localeActual()))}
           </div>`
