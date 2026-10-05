@@ -68,9 +68,10 @@ function snapshotGeFijosNeto(){
   const irpfMensual = geTotalIrpfMensual();
   const ret115 = geTotalRetencionMensual('115');
   const retProf111 = geTotalRetencionMensual('111');
+  const retribTitular = geTotalRetribTitular();
   const existing = DB.ge.fijosLog.find(e => e.fecha === today);
-  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; existing.irpfMensual = irpfMensual; existing.ret115 = ret115; existing.retProf111 = retProf111; }
-  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto, irpfMensual, ret115, retProf111});
+  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; existing.irpfMensual = irpfMensual; existing.ret115 = ret115; existing.retProf111 = retProf111; existing.retribTitular = retribTitular; }
+  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto, irpfMensual, ret115, retProf111, retribTitular});
 }
 // Valor del histórico de gastos fijos "vigente" a fecha de un mes concreto:
 // el último punto anterior o igual al último día de ese mes. Si no hay
@@ -250,7 +251,31 @@ function geVentasIvaGroupsMes(year, month){
       groups[rate].iva += grossLine - base;
     });
   });
+  geAjustarSenalesIva(groups, mesStr);
   return groups;
+}
+// Señales de reserva (auditoría contable, 5/10): un anticipo tributa
+// cuando se COBRA (art. 75.Dos LIVA), no el día de la cena. Se suma al 10%
+// de la hostelería en el mes del cobro, y la venta final descuenta ese
+// mismo importe en el suyo — si no, se pagaba entero el mes de la cena.
+// Solo las cobradas desde SENAL_IVA_DESDE: las anteriores ya tributaron en
+// su venta final con el criterio viejo y no se tocan. La usan GE (Cuenta
+// de Resultados, IVA) y el Panel, para que den la MISMA cifra.
+const SENAL_IVA_DESDE = '2026-10-05';
+function geAjustarSenalesIva(groups, mesStr){
+  const add = (gross, sign) => {
+    if(!(gross > 0)) return;
+    if(!groups[10]) groups[10] = {base:0, iva:0};
+    const net = gross / 1.10;
+    groups[10].base += sign*net;
+    groups[10].iva += sign*(gross - net);
+  };
+  (DB.reservations||[]).forEach(r => {
+    const f = r.depositPagoFecha ? diaLocalDe(r.depositPagoFecha) : '';
+    if(r.depositConfirmed && !r.depositNeedsRefund && f >= SENAL_IVA_DESDE && f.startsWith(mesStr)) add(parseFloat(r.depositPagoImporte)||0, 1);
+  });
+  activeSales().filter(v => (v.date||'').startsWith(mesStr) && v.senal > 0 && v.senalPagoFecha && diaLocalDe(v.senalPagoFecha) >= SENAL_IVA_DESDE)
+    .forEach(v => add(parseFloat(v.senal)||0, -1));
 }
 function geFacturacionNetaMes(year, month){
   return Object.values(geVentasIvaGroupsMes(year, month)).reduce((s,g)=>s+g.base, 0);
@@ -278,10 +303,197 @@ function geCapexCuotaMes(year, month){
     return s + (elapsed>=0 && elapsed<cuotas ? parseFloat(c.cuotaMensual||0) : 0);
   }, 0);
 }
-// Resultado antes de impuestos de un mes: facturación neta menos todos los
-// gastos netos — misma fórmula que GE → Resultado/CDR (resultadoAntesImpMes).
+/* ============================================================
+   MOTOR FISCAL (auditoría contable, 5/10)
+   ============================================================
+   La Cuenta de Resultados tiene que dar lo que diría el gestor, y eso
+   depende de la FORMA del negocio (Mi Negocio → forma jurídica y régimen).
+   Aquí vive todo lo que cambia según esa forma, para que la Cuenta de
+   Resultados, la Tesorería y el Panel calculen exactamente lo mismo:
+
+   - El sueldo del titular: en un autónomo o una comunidad de bienes NO es
+     gasto (el titular tributa por todo el beneficio; lo que se "paga" es
+     una retirada). En una sociedad sí, porque es una nómina de verdad. La
+     cuota de autónomos sí es gasto en los dos casos.
+   - Las inversiones: el gasto es la AMORTIZACIÓN (lo que pierde de valor
+     cada año, con los coeficientes oficiales) más los INTERESES del
+     préstamo. La parte de la cuota que devuelve lo prestado no es gasto:
+     es caja, y va en Tesorería. Antes se restaba la cuota entera, y lo
+     pagado al contado no se restaba nunca.
+   - El impuesto: se calcula sobre el AÑO, no mes a mes. Un mes con
+     pérdidas compensa uno con beneficio, igual que en la declaración.
+     Sociedad: su tipo sobre la base del año (menos las pérdidas de años
+     anteriores). Autónomo/CB: la escala del IRPF por tramos, con el mínimo
+     personal y el 5% de gastos de difícil justificación. */
+function fiscalPerfil(){
+  const b = DB.business || {};
+  const forma = b.formaJuridica || '';
+  return {
+    forma,
+    modulos: forma === 'autonomo' && b.regimenFiscal === 'modulos',
+    // Sin forma elegida se trata como sociedad: es lo que hacía la app
+    // hasta ahora (un % plano editable) y no inventa un IRPF que nadie ha
+    // confirmado.
+    personaFisica: forma === 'autonomo' || forma === 'cb',
+  };
+}
+
+// --- Sueldo del titular ---------------------------------------------------
+function gfEsRetribucionTitular(g){
+  if(!g || g.categoria !== 'PERSONAL') return false;
+  if(g.esTitular != null) return !!g.esTitular;
+  return (g.nombre||'').toUpperCase() === 'RETRIBUCIÓN EMPRESARIO';
+}
+function geTotalRetribTitular(){
+  return (DB.ge.fijos||[]).filter(gfEsRetribucionTitular).reduce((s,g)=>s+gfMonthlyImporte(g),0);
+}
+function geRetribTitularForMonth(year, month){
+  const v = geFijosLogValueForMonth(year, month, 'retribTitular');
+  return v==null ? geTotalRetribTitular() : v;
+}
+// Gastos fijos que SÍ son gasto fiscal ese mes.
+function geFijosDeduciblesForMonth(year, month){
+  const total = geTotalFijosNetoForMonth(year, month);
+  return fiscalPerfil().personaFisica ? total - geRetribTitularForMonth(year, month) : total;
+}
+function gePersonalDeducibleForMonth(year, month){
+  const per = geTotalPersonalNetoForMonth(year, month);
+  return fiscalPerfil().personaFisica ? per - geRetribTitularForMonth(year, month) : per;
+}
+
+// --- Amortización ---------------------------------------------------------
+// Coeficientes máximos: tabla del Impuesto de Sociedades (art. 12.1.a LIS)
+// y tabla simplificada de estimación directa para autónomos (Orden de 27
+// de marzo de 1998). Las dos se parecen, pero no son iguales.
+const AMORT_TIPOS = {
+  obras:       {is:10, ed:10},   // obras e instalaciones del local
+  mobiliario:  {is:10, ed:10},   // mesas, sillas, barra, decoración
+  maquinaria:  {is:12, ed:12},   // cocina, cámaras, cafetera, lavavajillas
+  informatica: {is:25, ed:26},   // TPV, ordenador, tablet, impresora
+  software:    {is:33, ed:26},
+  utiles:      {is:25, ed:30},   // menaje, herramientas
+  vehiculo:    {is:16, ed:16},
+};
+// Una inversión de hasta 300 € se puede llevar entera a gasto el año en
+// que se compra (art. 103 LIS para empresas de reducida dimensión; los
+// autónomos en estimación directa, por remisión del art. 30 LIRPF).
+const AMORT_ESCASO_VALOR = 300;
+function capexCoefAmort(c){
+  const tipo = AMORT_TIPOS[c.tipoAmort] || AMORT_TIPOS.mobiliario;
+  return fiscalPerfil().personaFisica ? tipo.ed : tipo.is;
+}
+function capexMesesDesdeCompra(c, year, month){
+  const [fy,fm] = (c.fecha||'').split('-').map(Number);
+  if(!fy || !fm) return null;
+  return (year*12+month) - (fy*12+(fm-1));
+}
+function capexAmortizacionMes(c, year, month){
+  const base = parseFloat(c.importe)||0;
+  const k = capexMesesDesdeCompra(c, year, month);
+  if(!(base > 0) || k == null || k < 0) return 0;
+  if(base <= AMORT_ESCASO_VALOR) return k === 0 ? base : 0;
+  const cuota = base * capexCoefAmort(c) / 100 / 12;
+  const yaAmortizado = Math.min(base, cuota * k);
+  return Math.max(0, Math.min(cuota, base - yaAmortizado));
+}
+function geAmortizacionMes(year, month){
+  return (DB.ge.capex||[]).reduce((s,c)=>s+capexAmortizacionMes(c, year, month), 0);
+}
+// --- Préstamos: intereses (gasto) y devolución (caja) ---------------------
+// Cuadro francés (cuota constante), que es como amortizan casi todos los
+// préstamos y leasings. El tipo de interés se deduce de lo que se financió,
+// la cuota y el número de cuotas. Si no se dice cuánto se financió, se da
+// por hecho el total de la factura con IVA, que es lo que paga el banco.
+function capexImporteFinanciado(c){
+  const v = parseFloat(c.importeFinanciado);
+  if(v > 0) return v;
+  return (parseFloat(c.importe)||0) * (1 + (parseFloat(c.iva)||0)/100);
+}
+function capexTipoMensual(c){
+  const P = capexImporteFinanciado(c), q = parseFloat(c.cuotaMensual)||0, n = parseInt(c.cuotas)||0;
+  if(!(P > 0) || !(q > 0) || n < 1 || q*n <= P + 0.005) return 0;
+  let lo = 0, hi = 1;
+  for(let i=0;i<80;i++){
+    const r = (lo+hi)/2;
+    const cuota = P * r / (1 - Math.pow(1+r, -n));
+    if(cuota > q) hi = r; else lo = r;
+  }
+  return (lo+hi)/2;
+}
+// {interes, principal} de la cuota del mes.
+function capexCuotaDesglose(c, year, month){
+  if(!c.financiado) return {interes:0, principal:0};
+  const k = capexMesesDesdeCompra(c, year, month);
+  const n = parseInt(c.cuotas)||0, q = parseFloat(c.cuotaMensual)||0;
+  if(k == null || k < 0 || k >= n || !(q > 0)) return {interes:0, principal:0};
+  const r = capexTipoMensual(c);
+  let saldo = capexImporteFinanciado(c);
+  for(let i=0;i<k;i++) saldo = saldo*(1+r) - q;
+  const interes = Math.max(0, saldo * r);
+  return {interes, principal: q - interes};
+}
+function geInteresesMes(year, month){
+  return (DB.ge.capex||[]).reduce((s,c)=>s+capexCuotaDesglose(c, year, month).interes, 0);
+}
+function geDevolucionPrestamosMes(year, month){
+  return (DB.ge.capex||[]).reduce((s,c)=>s+capexCuotaDesglose(c, year, month).principal, 0);
+}
+
+// Resultado antes de impuestos de un mes — misma fórmula que GE → Cuenta
+// de Resultados (resultadoAntesImpMes, js/hr.js), para que el Panel diga
+// lo mismo.
 function geResultadoAntesImpMes(year, month){
-  return geFacturacionNetaMes(year,month) - geTotalVariablesNetoMes(year,month) - geTotalFijosNetoForMonth(year,month) - geComisionesMes(year,month) - geCapexCuotaMes(year,month);
+  return geFacturacionNetaMes(year,month) - geTotalVariablesNetoMes(year,month) - geFijosDeduciblesForMonth(year,month)
+    - geComisionesMes(year,month) - geAmortizacionMes(year,month) - geInteresesMes(year,month);
+}
+
+// --- Impuesto sobre el beneficio -------------------------------------------
+// Escala general del IRPF (estatal + autonómica de referencia), 2026. Cada
+// comunidad autónoma ajusta su mitad: Madrid paga algo menos, Cataluña o
+// Valencia algo más. Es la que usa la gestoría para provisionar si no se
+// sabe nada más.
+const IRPF_ESCALA = [[12450,19],[20200,24],[35200,30],[60000,37],[300000,45],[Infinity,47]];
+const IRPF_MINIMO_PERSONAL = 5550;
+function cuotaIrpfEscala(base){
+  let cuota = 0, desde = 0;
+  for(const [hasta, pct] of IRPF_ESCALA){
+    if(base <= desde) break;
+    cuota += (Math.min(base, hasta) - desde) * pct/100;
+    desde = hasta;
+  }
+  return cuota;
+}
+// IRPF de una persona por el rendimiento de la actividad. Estimación
+// directa simplificada: 5% de gastos de difícil justificación, como mucho
+// 2.000 € al año (art. 30.2.4ª LIRPF). El mínimo personal se descuenta
+// como cuota, que es como lo hace la ley (art. 63 y 74 LIRPF).
+function irpfActividad(rendimiento, opts={}){
+  if(!(rendimiento > 0)) return 0;
+  const neto = opts.sinDificilJustificacion ? rendimiento : rendimiento - Math.min(2000, rendimiento*0.05);
+  return Math.max(0, cuotaIrpfEscala(neto) - cuotaIrpfEscala(IRPF_MINIMO_PERSONAL));
+}
+// Impuesto ANUAL según la forma del negocio, sobre una base anual.
+// `resultadoFn(m)` da el resultado antes de impuestos de cada mes; se pasa
+// desde fuera para que GE use sus propias cifras (con las señales, etc.).
+function impuestoAnual(baseAnual, opts={}){
+  const p = fiscalPerfil();
+  const b = DB.business || {};
+  if(p.forma === 'cb'){
+    const com = Array.isArray(b.comuneros) ? b.comuneros : [];
+    const suma = com.reduce((s,c)=>s+(parseFloat(c.pct)||0), 0);
+    if(!(suma > 0)) return 0;
+    // Cada comunero tributa por SU parte, con SU escala. Si alguno puso
+    // un tipo a mano (porque tiene otros ingresos y su gestor se lo dio),
+    // manda ese.
+    return com.reduce((s,c) => {
+      const parte = baseAnual * (parseFloat(c.pct)||0) / suma;
+      const manual = parseFloat(c.tipoIrpf);
+      return s + (manual > 0 ? Math.max(0, parte) * manual/100 : irpfActividad(parte));
+    }, 0);
+  }
+  if(p.personaFisica) return irpfActividad(baseAnual, opts);
+  const pct = (DB.ge.config && DB.ge.config.pctImpuestoBeneficio!=null) ? parseFloat(DB.ge.config.pctImpuestoBeneficio) : 25;
+  return Math.max(0, baseAnual) * pct/100;
 }
 function renderDashboardBarTrend(elId, trend, allowNegative){
   const maxVal = Math.max(...trend.map(t=>Math.abs(t.value)), 1);

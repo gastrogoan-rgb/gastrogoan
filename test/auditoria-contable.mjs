@@ -63,6 +63,84 @@ await caso('Señal: su IVA cuenta el mes del cobro y la venta de la cena lo desc
   return `oct ${r.oct.toFixed(2)} · nov ${r.nov.toFixed(2)}`;
 });
 
+// --- Motor fiscal: lo que diría el gestor ---------------------------------
+const base2025 = () => {
+  DB.sales = []; DB.reservations = []; DB.ge.capex = []; DB.ge.variables = []; DB.ge.fijosLog = [];
+  DB.ge.fijos = [];
+};
+const venta = (fecha, bruto) => ({id:'v'+fecha+bruto, date:fecha, total:bruto, items:[{name:'x', price:bruto, qty:1, ivaPct:10}]});
+
+await caso('Autónomo: su "sueldo" no es gasto, sale debajo del resultado; la cuota de autónomos sí resta', async () => {
+  const r = await page.evaluate((v) => {
+    DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'directa';
+    DB.sales = [{id:'a', date:'2025-03-10', total:11000, items:[{name:'x', price:11000, qty:1, ivaPct:10}]}];
+    DB.reservations = []; DB.ge.capex = []; DB.ge.fijosLog = [];
+    DB.ge.fijos = [
+      {id:1, nombre:'RETRIBUCIÓN EMPRESARIO', importe:2000, categoria:'PERSONAL', periodicidadMeses:1},
+      {id:2, nombre:'CUOTA AUTÓNOMOS (RETA)', importe:300, categoria:'PERSONAL', periodicidadMeses:1},
+    ];
+    return GE.resultadoAntesImpMes(2, 2025);
+  });
+  assert.equal(Math.round(r), 10000 - 300, 'en un autónomo solo resta la cuota: '+r);
+});
+
+await caso('Sociedad: el sueldo del administrador sí es gasto', async () => {
+  const r = await page.evaluate(() => { DB.business.formaJuridica = 'sociedad'; return GE.resultadoAntesImpMes(2, 2025); });
+  assert.equal(Math.round(r), 10000 - 2300);
+});
+
+await caso('IRPF por tramos: 30.000 € de beneficio → 5.661 € (5% de difícil justificación y mínimo personal)', async () => {
+  const r = await page.evaluate(() => Math.round(irpfActividad(30000)));
+  assert.equal(r, 5661);
+});
+
+await caso('El impuesto va por AÑO: +5.000 en julio y −3.000 en enero pagan por 2.000, no por 5.000', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'sociedad'; DB.ge.config.pctImpuestoBeneficio = 25;
+    DB.ge.fijos = []; DB.ge.fijosLog = []; DB.ge.capex = [];
+    DB.ge.fijos = [{id:9, nombre:'ALQUILER', importe:0, categoria:'LOCAL', periodicidadMeses:1, iva:21}];
+    DB.ge.variables = [{id:1, mes:0, año:2025, importe:3000, iva:10, concepto:'x', categoria:'OTROS'}];
+    DB.sales = [{id:'j', date:'2025-07-10', total:5500, items:[{name:'x', price:5500, qty:1, ivaPct:10}]}];
+    let total = 0; for(let m=0;m<12;m++) total += GE.impuestoMes(m, 2025);
+    return total;
+  });
+  assert.equal(Math.round(r), 500, 'impuesto del año: '+r);
+});
+
+await caso('Inversiones: la amortización es el gasto (12% al año en maquinaria) y lo de ≤300 € va entero', async () => {
+  const r = await page.evaluate(() => {
+    DB.ge.capex = [{id:1, descripcion:'HORNO', importe:12000, iva:21, fecha:'2025-01-15', tipoAmort:'maquinaria'},
+                   {id:2, descripcion:'BATIDORA', importe:250, iva:21, fecha:'2025-02-03', tipoAmort:'utiles'}];
+    return {ene: geAmortizacionMes(2025,0), feb: geAmortizacionMes(2025,1), mar: geAmortizacionMes(2025,2)};
+  });
+  assert.equal(Math.round(r.ene), 120); assert.equal(Math.round(r.feb), 370); assert.equal(Math.round(r.mar), 120);
+});
+
+await caso('Préstamo: solo los intereses son gasto; lo devuelto suma exactamente lo financiado', async () => {
+  const r = await page.evaluate(() => {
+    DB.ge.capex = [{id:1, descripcion:'COCINA', importe:10000, iva:0, fecha:'2025-01-01', tipoAmort:'maquinaria', financiado:true, cuotas:12, cuotaMensual:880}];
+    let i=0, p=0; for(let m=0;m<12;m++){ i += geInteresesMes(2025,m); p += geDevolucionPrestamosMes(2025,m); }
+    return {i, p};
+  });
+  assert.equal(Math.round(r.i), 560); assert.equal(Math.round(r.p), 10000);
+});
+
+await caso('Nómina de 14 pagas: el coste de cada mes es el bruto × 14/12 más la SS', async () => {
+  const r = await page.evaluate(() => GE.calcNomina(1000, 0, 0, 30, 14));
+  assert.equal(Math.round(r.total*100)/100, Math.round(1000*14/12*1.30*100)/100);
+});
+
+await caso('Autónomo: pago del 130 = 20% del beneficio acumulado menos lo ya pagado', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'directa';
+    DB.ge.capex = []; DB.ge.variables = []; DB.ge.fijos = []; DB.ge.fijosLog = [];
+    DB.sales = [{id:'1', date:'2025-02-10', total:11000, items:[{name:'x', price:11000, qty:1, ivaPct:10}]},
+                {id:'2', date:'2025-05-10', total:5500, items:[{name:'x', price:5500, qty:1, ivaPct:10}]}];
+    return {t1: GE.pagoACuentaTrimestre(2, 2025), t2: GE.pagoACuentaTrimestre(5, 2025)};
+  });
+  assert.equal(r.t1.modelo, '130'); assert.equal(Math.round(r.t1.importe), 2000); assert.equal(Math.round(r.t2.importe), 1000);
+});
+
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 
 await browser.close();
