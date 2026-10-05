@@ -3223,44 +3223,351 @@ const GE = (function(){
     downloadCSV(tabla(), `${t('hr.libro.file.'+tipo)}-${nombre}-${sufijo}.csv`);
     showToast(t('msg.reportDownloaded'));
   }
+  /* ============================================================
+     PAQUETE PARA EL GESTOR (5/10)
+     ============================================================
+     Lo que un gestor necesita para trabajar sin teclear nada:
+     - el PERIODO que él pide (mes, trimestre, año o unas fechas);
+     - un Excel con una hoja por libro (cifras como números) y los mismos
+       libros en CSV, para importarlos en su programa;
+     - los libros con las columnas de los LIBROS REGISTRO de la AEAT
+       (tipo de factura, serie, número, NIF, base, tipo, cuota…);
+     - las FOTOS de las facturas de ese periodo, cada una con un nombre que
+       dice qué es y enlazada desde su línea del libro;
+     - un LÉEME que explica qué es cada cosa y qué criterio se ha seguido.
+     Todo sale de las mismas funciones que la Cuenta de Resultados. */
+  function periodoExport(){
+    const tipo = document.getElementById('pg-tipo').value;
+    const año = parseInt(document.getElementById('pg-anyo').value) || currentYear();
+    const dd = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const finMes = (y,m) => dd(y, m, new Date(y, m+1, 0).getDate());
+    if(tipo === 'mes'){ const m = parseInt(document.getElementById('pg-mes').value); return {desde: dd(año,m,1), hasta: finMes(año,m), etiqueta: `${año}-${String(m+1).padStart(2,'0')}`, nombre: `${getMeses()[m]} ${año}`}; }
+    if(tipo === 'trimestre'){ const q = parseInt(document.getElementById('pg-trim').value); return {desde: dd(año,q*3,1), hasta: finMes(año,q*3+2), etiqueta: `${año}-${q+1}T`, nombre: `${q+1}T ${año}`}; }
+    if(tipo === 'año') return {desde: dd(año,0,1), hasta: finMes(año,11), etiqueta: String(año), nombre: String(año)};
+    const desde = document.getElementById('pg-desde').value, hasta = document.getElementById('pg-hasta').value;
+    if(!desde || !hasta || desde > hasta) return null;
+    return {desde, hasta, etiqueta: `${desde}_${hasta}`, nombre: `${desde} – ${hasta}`};
+  }
+  function mesesDelPeriodo(p){
+    const out = [];
+    let y = parseInt(p.desde.slice(0,4)), m = parseInt(p.desde.slice(5,7))-1;
+    const yF = parseInt(p.hasta.slice(0,4)), mF = parseInt(p.hasta.slice(5,7))-1;
+    while(y < yF || (y === yF && m <= mF)){ out.push({y, m}); m++; if(m > 11){ m = 0; y++; } }
+    return out;
+  }
+  const enP = (p, f) => !!f && f >= p.desde && f <= p.hasta;
+  const trimestreDe = f => `${Math.floor((parseInt(String(f).slice(5,7))-1)/3)+1}T`;
+  const limpiarNombre = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);
+  // Base e IVA de UNA venta por tipo, con su descuento.
+  function ivaPorTipoVenta(v){
+    const out = {};
+    const desc = parseFloat(v.descuentoPct)||0, fb = ivaVentasPct();
+    (v.items||[]).forEach(l => {
+      const gross = (parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-desc/100);
+      if(!gross) return;
+      const r = l.ivaPct == null ? fb : parseFloat(l.ivaPct);
+      if(!out[r]) out[r] = {base:0, iva:0};
+      out[r].base += gross/(1+r/100); out[r].iva += gross - gross/(1+r/100);
+    });
+    return out;
+  }
+  const CAB_EMITIDAS = () => [t('pg.c.ejercicio'), t('pg.c.periodo'), t('pg.c.fecha'), t('pg.c.tipoFra'), t('pg.c.serie'), t('pg.c.numDesde'), t('pg.c.numHasta'), t('pg.c.concepto'), t('pg.c.nifDest'), t('pg.c.nombreDest'), t('hr.libro.base'), t('hr.libro.tipoIva'), t('hr.libro.cuota'), t('hr.libro.total'), t('pg.c.nTickets')];
+  // Facturas EMITIDAS. Los tickets van en asiento resumen por día, serie y
+  // tipo (F2, art. 63.4 RIVA); las facturas completas, una a una con el
+  // cliente (F1); las rectificativas, una a una en su fecha (R5).
+  function hojaEmitidas(p){
+    const filas = [];
+    const resumen = {};   // fecha|serie|tipo
+    const push = (fecha, tipoFra, serie, desde, hasta, concepto, nif, nombre, base, rate, iva, n) =>
+      filas.push([parseInt(fecha.slice(0,4)), trimestreDe(fecha), fecha, tipoFra, serie, desde, hasta, concepto, nif, nombre, n2(base), rate+'%', n2(iva), n2(base+iva), n]);
+    (DB.sales||[]).forEach(v => {
+      if(!v.date) return;
+      const anuladaVieja = v.status === 'anulada' && !v.rectificativa;
+      if(anuladaVieja) return;
+      if(enP(p, v.date)){
+        const grupos = ivaPorTipoVenta(v);
+        // La señal ya tributó al cobrarla: se descuenta del día de la cena.
+        if(v.senal > 0 && v.senalPagoFecha && diaLocalDe(v.senalPagoFecha) >= SENAL_IVA_DESDE){
+          const g = grupos[10] = grupos[10] || {base:0, iva:0};
+          g.base -= v.senal/1.1; g.iva -= v.senal - v.senal/1.1;
+        }
+        if(v.facturaCompleta){
+          const f = v.facturaCompleta;
+          const [serie, num] = String(f.num).split('-');
+          Object.entries(grupos).forEach(([r,g]) => push(v.date, 'F1', serie, num, '', t('pg.concepto.completa').replace('${t}', v.ticketNum||''), f.nif, f.nombre, g.base, r, g.iva, 1));
+        } else {
+          const [serie, num] = String(v.ticketNum || v.facturaNum || '-').split('-');
+          Object.entries(grupos).forEach(([r,g]) => {
+            const k = `${v.date}|${serie}|${r}`;
+            const e = resumen[k] = resumen[k] || {fecha:v.date, serie, r, base:0, iva:0, nums:[], n:0};
+            e.base += g.base; e.iva += g.iva; e.n++; if(num) e.nums.push(num);
+          });
+        }
+      }
+      if(v.rectificativa && enP(p, v.rectificativa.fecha)){
+        const [serie, num] = String(v.rectificativa.num).split('-');
+        Object.entries(ivaPorTipoVenta(v)).forEach(([r,g]) => push(v.rectificativa.fecha, 'R5', serie, num, '', t('pg.concepto.rect').replace('${n}', v.rectificativa.rectifica), (v.facturaCompleta||{}).nif||'', (v.facturaCompleta||{}).nombre||'', -g.base, r, -g.iva, 1));
+      }
+    });
+    Object.values(resumen).forEach(e => {
+      const nums = e.nums.sort();
+      push(e.fecha, 'F2', e.serie, nums[0]||'', nums.length > 1 ? nums[nums.length-1] : '', t('pg.concepto.resumen'), '', '', e.base, e.r, e.iva, e.n);
+    });
+    // Señales cobradas (anticipos), otros ingresos y autoconsumo.
+    (DB.reservations||[]).forEach(r => {
+      const f = r.depositPagoFecha ? diaLocalDe(r.depositPagoFecha) : '';
+      if(r.depositConfirmed && !r.depositNeedsRefund && f >= SENAL_IVA_DESDE && enP(p, f)){
+        const tot = parseFloat(r.depositPagoImporte)||0;
+        push(f, 'F2', '', '', '', t('pg.concepto.senal'), '', r.name||r.clienteNombre||'', tot/1.1, 10, tot - tot/1.1, 1);
+      }
+    });
+    (ge().otrosIngresos||[]).filter(o => enP(p, o.fecha)).forEach(o => {
+      const b = parseFloat(o.base)||0, pct = parseFloat(o.iva)||0;
+      push(o.fecha, o.tipo === 'subvencion' ? '—' : 'F1', '', '', '', `${t('hr.oi.tipo.'+o.tipo)}${o.concepto?' · '+o.concepto:''}`, '', '', b, pct, b*pct/100, 1);
+    });
+    (ge().vales||[]).filter(v => v.tipo === 'univalente').forEach(v => {
+      const tot = parseFloat(v.importe)||0, pct = parseFloat(v.iva)||0, b = tot/(1+pct/100);
+      if(enP(p, v.fecha)) push(v.fecha, 'F2', '', v.codigo||'', '', t('pg.concepto.vale'), '', '', b, pct, tot-b, 1);
+      if(enP(p, v.canjeFecha)) push(v.canjeFecha, '—', '', v.codigo||'', '', t('pg.concepto.valeCanje'), '', '', -b, pct, -(tot-b), 1);
+    });
+    mesesDelPeriodo(p).forEach(({y,m}) => {
+      const o = geOtrosIngresosMes(y, m);
+      const fin = `${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y, m+1, 0).getDate()).padStart(2,'0')}`;
+      if(o.autoconsumo > 0.005 && enP(p, fin)) push(fin, '—', '', '', '', t('hr.oi.autoconsumo'), '', '', o.autoconsumo, AUTOCONSUMO_IVA, o.autoconsumoIva, 1);
+    });
+    filas.sort((a,b) => String(a[2]).localeCompare(String(b[2])) || String(a[4]).localeCompare(String(b[4])));
+    const tot = filas.reduce((s,f)=>({b:s.b+f[10], i:s.i+f[12]}), {b:0,i:0});
+    return {nombre: t('pg.h.emitidas'), cabecera: 2, filas: [[t('pg.h.emitidas')+' · '+p.nombre], [], CAB_EMITIDAS(), ...filas, [], [t('hr.libro.totalAño'), '', '', '', '', '', '', '', '', '', tot.b, '', tot.i, tot.b+tot.i]]};
+  }
+  // Facturas RECIBIDAS: compras, gastos fijos (en el mes de su factura),
+  // comisiones de plataformas e inversiones. Cada línea dice si hay foto y
+  // cómo se llama el archivo dentro del paquete.
+  function hojaRecibidas(p, fotos){
+    const filas = [];
+    const pf = fiscalPerfil().personaFisica;
+    const foto = (facturaId, fecha, nombre, num, carpeta) => {
+      if(!facturaId || !facturaAdjunta(facturaId)) return '';
+      if(fotos.has(facturaId)) return fotos.get(facturaId).ruta;
+      const f = facturaAdjunta(facturaId);
+      const ext = f.dataUrl.startsWith('data:image') ? 'jpg' : (((f.name||'').match(/\.([a-z0-9]+)$/i)||[])[1] || 'pdf');
+      const ruta = `facturas/${carpeta}/${fecha}_${limpiarNombre(nombre)||'factura'}${num?'_'+limpiarNombre(num):''}_${fotos.size+1}.${ext}`;
+      fotos.set(facturaId, {ruta, dataUrl: f.dataUrl});
+      return ruta;
+    };
+    const push = (fecha, num, nif, nombre, concepto, base, pct, cuota, deducible, ret, inversion, isp, archivo) =>
+      filas.push([parseInt(fecha.slice(0,4)), trimestreDe(fecha), fecha, num, nif, nombre, concepto, n2(base), pct+'%', n2(cuota), n2(deducible), n2(ret), n2(base+cuota-ret), inversion ? 'S' : 'N', isp ? 'S' : 'N', archivo]);
+    variablesActivos().filter(v => enP(p, v.fecha)).forEach(v => {
+      const base = parseFloat(v.importe)||0, pct = parseFloat(v.iva)||0;
+      push(v.fecha, v.numFactura||'', v.nifProveedor || nifDeProveedor(v.proveedor), v.proveedor||'', variableCategoryLabel(v.categoria), base, pct, base*pct/100, base*pct/100, 0, false, false, foto(v.facturaId, v.fecha, v.proveedor, v.numFactura, 'recibidas'));
+    });
+    mesesDelPeriodo(p).forEach(({y,m}) => {
+      const fin = `${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y, m+1, 0).getDate()).padStart(2,'0')}`;
+      (geFijosItemsForMonth(y, m) || gfItemsActuales()).forEach(g => {
+        if(g.c === 'PERSONAL' || !gfPagaEnMes(g, y, m)) return;
+        const base = parseFloat(g.importe)||0, pct = parseFloat(g.iva)||0;
+        if(!(base > 0)) return;
+        const r = GF_RETENCIONES[g.retencion];
+        const actual = fijos().find(x => x.id === g.id);
+        const fecha = g.periodicidadMeses > 1 ? `${y}-${String(m+1).padStart(2,'0')}-01` : fin;
+        push(fecha, '', g.nifProveedor||'', g.proveedor||'', gfConceptLabel(g.nombre), base, pct, base*pct/100, base*pct/100, r ? base*r.pct/100 : 0, false, false, actual ? foto(actual.facturaId, fecha, g.proveedor||g.nombre, '', 'recibidas') : '');
+      });
+      // Comisiones de plataformas (estimadas venta a venta).
+      const mesStr = `${y}-${String(m+1).padStart(2,'0')}`;
+      const porPlat = {};
+      activeSales().filter(v => (v.date||'').startsWith(mesStr) && v.plataforma && !v.plataforma.facturaReal && v.comisionPlataforma).forEach(v => {
+        const k = v.plataforma.nombre || '—';
+        const e = porPlat[k] = porPlat[k] || {base:0, pct: parseFloat(v.plataforma.ivaPct)||0, isp: !!v.plataforma.isp};
+        e.base += comisionPlataformaNeta(v);
+      });
+      Object.entries(porPlat).forEach(([nombre, e]) => {
+        if(!enP(p, fin)) return;
+        const cuota = e.isp ? e.base*0.21 : e.base*e.pct/100;
+        push(fin, '', '', nombre, t('pg.concepto.comision'), e.base, e.isp ? 21 : e.pct, cuota, cuota, 0, false, e.isp, '');
+      });
+    });
+    capex().filter(c => enP(p, c.fecha)).forEach(c => {
+      const base = parseFloat(c.importe)||0, pct = parseFloat(c.iva)||0, cuota = base*pct/100;
+      push(c.fecha, c.numFactura||'', c.nifProveedor||'', c.proveedor||'', c.descripcion||'', base, pct, cuota, cuota*capexIvaDeduciblePct(c), 0, true, false, foto(c.facturaId, c.fecha, c.descripcion, '', 'inversiones'));
+    });
+    filas.sort((a,b) => String(a[2]).localeCompare(String(b[2])));
+    const tot = filas.reduce((s,f)=>({b:s.b+f[7], c:s.c+f[9], d:s.d+f[10], r:s.r+f[11]}), {b:0,c:0,d:0,r:0});
+    const cab = [t('pg.c.ejercicio'), t('pg.c.periodo'), t('pg.c.fecha'), t('hr.libro.numFactura'), t('pg.c.nifEmisor'), t('pg.c.nombreEmisor'), t('hr.libro.concepto'), t('hr.libro.base'), t('hr.libro.tipoIva'), t('hr.libro.cuota'), t('pg.c.deducible'), t('hr.libro.retencion'), t('hr.libro.total'), t('pg.c.inversion'), t('pg.c.isp'), t('pg.c.archivo')];
+    return {nombre: t('pg.h.recibidas'), cabecera: 2, filas: [[t('pg.h.recibidas')+' · '+p.nombre], [], cab, ...filas, [], [t('hr.libro.totalAño'), '', '', '', '', '', '', tot.b, '', tot.c, tot.d, tot.r]]};
+  }
+  // Nóminas y Seguridad Social del periodo, por concepto y mes.
+  function hojaPersonal(p){
+    const pf = fiscalPerfil().personaFisica;
+    const filas = [];
+    mesesDelPeriodo(p).forEach(({y,m}) => {
+      (geFijosItemsForMonth(y, m) || gfItemsActuales()).filter(g => g.c === 'PERSONAL').forEach(g => {
+        const act = fijos().find(x => x.id === g.id) || {};
+        const coste = gfMonthlyImporte(g);
+        filas.push([`${y}-${String(m+1).padStart(2,'0')}`, gfConceptLabel(g.nombre), g.titular ? (pf ? t('pg.titularNoGasto') : t('pg.titularNomina')) : '', act.sueldoBruto ? act.sueldoBruto * (act.pagas||12)/12 : '', act.ssEmpresa || '', act.irpfMensual || '', coste]);
+      });
+      filas.push([`${y}-${String(m+1).padStart(2,'0')}`, t('hr.cdr.irpfToDeposit'), '', '', '', geModelo111ForMonth(y, m), '']);
+    });
+    return {nombre: t('pg.h.personal'), cabecera: 2, filas: [[t('pg.h.personal')+' · '+p.nombre], [], [t('common.month'), t('hr.libro.concepto'), '', t('pg.c.brutoMes'), t('hr.gf.companySs'), t('hr.gf.irpfWithheld'), t('hr.gf.totalCompanyCost')], ...filas]};
+  }
+  // Cuenta de resultados del periodo (misma estructura que en pantalla).
+  function hojaResultados(p){
+    const ms = mesesDelPeriodo(p);
+    const S = f => ms.reduce((s,{y,m}) => s + f(m, y), 0);
+    const fac = S((m,y)=>facturacionNetaMes(m,y)), oi = S((m,y)=>geOtrosIngresosNetoMes(y,m));
+    const compras = S((m,y)=>totalVariablesNetoMes(m,y)), ve = S((m,y)=>geVariacionExistenciasMes(y,m));
+    const pers = S((m,y)=>gePersonalDeducibleForMonth(y,m)), otros = S((m,y)=>geTotalGFNetoForMonth(y,m)), com = S((m,y)=>comisionesMes(m,y));
+    const amort = S((m,y)=>geAmortizacionMes(y,m)), inter = S((m,y)=>geInteresesMes(y,m));
+    const ebitda = fac + oi - compras - ve - pers - otros - com, bai = ebitda - amort - inter, imp = S((m,y)=>impuestoMes(m,y));
+    const L = (k, v) => [t(k), v];
+    return {nombre: t('pg.h.resultados'), cabecera: 2, filas: [[t('pg.h.resultados')+' · '+p.nombre], [], [t('hr.lbl.concept'), '€'],
+      L('hr.cdr.netRevenue', fac), L('hr.cdr.otherIncome', oi), L('hr.lbl.variableExpensesNoVat', -compras), L('hr.cdr.stockChange', -ve),
+      L('hr.cdr.personal', -pers), L('hr.cdr.otherOperating', -otros), L('hr.lbl.deliveryCommissions', -com), L('hr.res.operatingEbitda', ebitda),
+      L('hr.cdr.depreciation', -amort), L('hr.cdr.operatingResult', ebitda - amort), L('hr.cdr.financialExpenses', -inter),
+      L('hr.cdr.resultBeforeTax', bai), [t('hr.cdr.profitTax')+' ('+t('pg.provision')+')', -imp], L('hr.cdr.netResult', bai - imp)]};
+  }
+  // Impuestos del periodo por trimestre: lo que el gestor coteja con sus
+  // modelos. Si el periodo es el año entero, también el resumen anual (347…).
+  function hojaImpuestos(p){
+    const ms = mesesDelPeriodo(p);
+    const qs = [...new Set(ms.map(({y,m}) => `${y}-${Math.floor(m/3)+1}T`))];
+    const porQ = f => qs.map(q => ms.filter(({y,m}) => `${y}-${Math.floor(m/3)+1}T` === q).reduce((s,{y,m}) => s + f(m,y), 0));
+    const fila = (lbl, f) => { const v = porQ(f); return [lbl, ...v, v.reduce((a,b)=>a+b,0)]; };
+    const filas = [
+      fila(t('hr.libro.ivaRepercutido'), (m,y)=>ivaVentasMes(m,y)+geOtrosIngresosIvaMes(y,m)),
+      fila(t('hr.libro.ivaSoportado'), (m,y)=>ivaSoportadoComprasMes(m,y)+ivaSoportadoFijosMes(m,y)+ivaSoportadoCapexMes(m,y)+ivaSoportadoComisionesMes(m,y)),
+      fila(t('hr.libro.res303'), (m,y)=>ivaLiquidarMes(m,y)),
+      fila(t('hr.libro.res111'), (m,y)=>geModelo111ForMonth(y,m)),
+      fila(t('hr.libro.res115'), (m,y)=>geRetencionForMonth(y,m,'115')),
+      fila(t('hr.libro.res123'), (m,y)=>retDividendosMes(m,y)),
+    ];
+    const pcs = qs.map(q => { const [y, n] = [parseInt(q), parseInt(q.slice(5))]; return pagoACuentaTrimestre((n-1)*3+2, y); });
+    const modelo = (pcs.find(x=>x)||{}).modelo;
+    if(modelo){ const v = pcs.map(x => x ? x.importe : 0); filas.push([t('hr.te.pagoCuenta.'+modelo), ...v, v.reduce((a,b)=>a+b,0)]); }
+    return {nombre: t('pg.h.impuestos'), cabecera: 2, filas: [[t('pg.h.impuestos')+' · '+p.nombre], [], ['', ...qs, t('hr.lbl.yearAbbrev')], ...filas.filter(f => Math.abs(f[f.length-1]) > 0.005 || f === filas[2])]};
+  }
+  function hojaJornada(p){
+    const hora = iso => iso ? new Date(iso).toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'}) : '';
+    const filas = (DB.fichajes||[]).filter(f => enP(p, f.fecha)).sort((a,b)=>(a.fecha+a.entrada).localeCompare(b.fecha+b.entrada)).map(f => {
+      const e = (DB.employees||[]).find(x => x.id === f.employeeId);
+      return [f.fecha, e ? e.name : (f.empleadoNombre||''), e ? (e.dni||e.nif||'') : (f.empleadoDni||''), hora(f.entrada), hora(f.salida), Math.round(fichajeHoras(f)*100)/100, f.editado ? t('hr.libro.editadoDe').replace('${orig}', [hora(f.original&&f.original.entrada), hora(f.original&&f.original.salida)].join('–')) : ''];
+    });
+    return {nombre: t('hr.libro.jornada'), cabecera: 2, filas: [[t('hr.libro.jornada')+' · '+p.nombre], [], [t('common.date'), t('hr.libro.empleado'), t('hr.libro.dni'), t('hr.libro.entrada'), t('hr.libro.salida'), t('hr.libro.horas'), t('hr.libro.editado')], ...filas]};
+  }
+  function csvDeFilas(filas){
+    const cel = v => {
+      if(typeof v === 'number') return (Math.round(v*100)/100).toFixed(2).replace('.', ',');
+      const s = String(v ?? '');
+      return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    };
+    return '﻿' + filas.map(r => (r||[]).map(cel).join(';')).join('\r\n');
+  }
+  async function construirPaqueteGestor(){
+    const p = periodoExport();
+    if(!p){ showToast(t('pg.periodoMal')); return null; }
+    const incl = id => { const el = document.getElementById(id); return !el || el.checked; };
+    const b = DB.business || {};
+    const fotos = new Map();
+    const hojas = [];
+    if(incl('pg-i-emitidas')) hojas.push(hojaEmitidas(p));
+    if(incl('pg-i-recibidas')) hojas.push(hojaRecibidas(p, incl('pg-i-fotos') ? fotos : new Map()));
+    if(incl('pg-i-resultados')) hojas.push(hojaResultados(p));
+    if(incl('pg-i-impuestos')){
+      hojas.push(hojaImpuestos(p));
+      const y0 = parseInt(p.desde.slice(0,4));
+      if(p.desde === `${y0}-01-01` && p.hasta === `${y0}-12-31`) hojas.push({nombre: t('hr.libro.resumen'), cabecera: 2, filas: resumenAño(y0)});
+    }
+    if(incl('pg-i-bienes')) hojas.push({nombre: t('hr.libro.bienes'), cabecera: 2, filas: libroBienesInversion(parseInt(p.hasta.slice(0,4)))});
+    if(incl('pg-i-personal')) hojas.push(hojaPersonal(p));
+    if(incl('pg-i-jornada')) hojas.push(hojaJornada(p));
+    if(!hojas.length){ showToast(t('pg.nada')); return null; }
+    // Facturas sueltas sin asignar todavía: van aparte, para que no se pierdan.
+    if(incl('pg-i-fotos')) (DB.facturasSueltas||[]).forEach((id, i) => {
+      const f = facturaAdjunta(id);
+      if(!f || fotos.has(id)) return;
+      const ext = f.dataUrl.startsWith('data:image') ? 'jpg' : (((f.name||'').match(/\.([a-z0-9]+)$/i)||[])[1] || 'pdf');
+      fotos.set(id, {ruta: `facturas/sin_asignar/${limpiarNombre(f.name)||'factura'}_${i+1}.${ext}`, dataUrl: f.dataUrl});
+    });
+    const neg = limpiarNombre(b.name) || 'negocio';
+    const archivos = [];
+    const xlsx = new Uint8Array(await construirXlsx(hojas).arrayBuffer());
+    archivos.push({name: `contabilidad_${neg}_${p.etiqueta}.xlsx`, bytes: xlsx});
+    hojas.forEach((h,i) => archivos.push({name: `csv/${String(i+1).padStart(2,'0')}_${limpiarNombre(h.nombre)}.csv`, bytes: new TextEncoder().encode(csvDeFilas(h.filas))}));
+    fotos.forEach(f => archivos.push({name: f.ruta, bytes: dataUrlToBytes(f.dataUrl)}));
+    const forma = {autonomo: t('mn.fiscal.autonomo'), cb: t('mn.fiscal.cb'), sociedad: t('mn.fiscal.sociedad'), cooperativa: t('mn.fiscal.cooperativa')}[b.formaJuridica] || '—';
+    const leeme = t('pg.leeme')
+      .replace('${negocio}', b.name||'').replace('${nif}', b.cif||'—').replace('${periodo}', p.nombre)
+      .replace('${desde}', p.desde).replace('${hasta}', p.hasta)
+      .replace('${forma}', forma + (b.regimenFiscal ? ' · ' + b.regimenFiscal : ''))
+      .replace('${fotos}', String(fotos.size)).replace('${fecha}', new Date().toLocaleString(localeActual()));
+    archivos.push({name: 'LEEME.txt', bytes: new TextEncoder().encode('﻿' + leeme)});
+    return {blob: construirZip(archivos), nombre: `gestor_${neg}_${p.etiqueta}.zip`, p, fotos: fotos.size};
+  }
+  async function descargarPaqueteGestor(){
+    const r = await construirPaqueteGestor();
+    if(!r) return;
+    await guardarArchivo(r.blob, r.nombre);
+    showToast(t('pg.ok').replace('${n}', r.fotos));
+  }
+  // Compartir: en el móvil abre WhatsApp, Gmail… con el ZIP ADJUNTO. Donde
+  // el navegador no sabe compartir archivos, se descarga y se abre el correo
+  // al gestor ya escrito, recordando adjuntarlo.
+  async function compartirPaqueteGestor(){
+    const r = await construirPaqueteGestor();
+    if(!r) return;
+    const b = DB.business || {};
+    const email = (document.getElementById('pg-email').value||'').trim();
+    if(email){ b.gestorEmail = email; saveDB(); }
+    const asunto = t('pg.asunto').replace('${negocio}', b.name||'').replace('${periodo}', r.p.nombre);
+    try{
+      const file = new File([r.blob], r.nombre, {type:'application/zip'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title: asunto, text: t('pg.cuerpo').replace('${periodo}', r.p.nombre)});
+        return;
+      }
+    }catch(e){ if(e && e.name === 'AbortError') return; }
+    await guardarArchivo(r.blob, r.nombre);
+    if(email) window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(t('pg.cuerpoMail').replace('${periodo}', r.p.nombre).replace('${archivo}', r.nombre))}`;
+    showToast(t('pg.descargadoAdjunta'));
+  }
+  function pgTipoCambia(){
+    const tipo = document.getElementById('pg-tipo').value;
+    document.getElementById('pg-mes-f').style.display = tipo === 'mes' ? '' : 'none';
+    document.getElementById('pg-trim-f').style.display = tipo === 'trimestre' ? '' : 'none';
+    document.getElementById('pg-anyo-f').style.display = tipo === 'rango' ? 'none' : '';
+    document.getElementById('pg-rango').style.display = tipo === 'rango' ? '' : 'none';
+  }
   function openExportModal(){
     const now = new Date();
+    const chk = (id, lbl) => `<label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;min-height:32px"><input type="checkbox" id="${id}" checked style="width:18px;height:18px;flex:none"> <span>${lbl}</span></label>`;
     openModal(`
-      <div class="modal-header"><h3><i class="ti ti-file-export"></i> ${t('hr.export.title')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-      <p style="font-size:13px;color:var(--muted)">${t('hr.export.description')}</p>
+      <div class="modal-header"><h3><i class="ti ti-briefcase"></i> ${t('pg.title')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">${t('pg.desc')}</p>
       <div class="field-row">
-        <div class="field">
-          <label>${t('common.month')}</label>
-          <select id="exp-mes">${getMeses().map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('')}</select>
-        </div>
-        <div class="field">
-          <label>${t('common.year')}</label>
-          <input type="number" id="exp-anyo" value="${now.getFullYear()}" min="2000" max="2100">
-        </div>
+        <div class="field"><label>${t('pg.periodo')}</label><select id="pg-tipo" onchange="GE.pgTipoCambia()">
+          <option value="mes">${t('pg.t.mes')}</option><option value="trimestre" selected>${t('pg.t.trimestre')}</option>
+          <option value="año">${t('pg.t.año')}</option><option value="rango">${t('pg.t.rango')}</option>
+        </select></div>
+        <div class="field" id="pg-anyo-f"><label>${t('common.year')}</label><input type="number" id="pg-anyo" value="${now.getFullYear()}" min="2000" max="2100"></div>
+        <div class="field" id="pg-mes-f" style="display:none"><label>${t('common.month')}</label><select id="pg-mes">${getMeses().map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('')}</select></div>
+        <div class="field" id="pg-trim-f"><label>${t('pg.t.trimestre')}</label><select id="pg-trim">${[0,1,2,3].map(q=>`<option value="${q}" ${q===Math.floor(now.getMonth()/3)?'selected':''}>${q+1}T</option>`).join('')}</select></div>
       </div>
+      <div class="field-row" id="pg-rango" style="display:none">
+        <div class="field"><label>${t('pg.desde')}</label><input type="date" id="pg-desde"></div>
+        <div class="field"><label>${t('pg.hasta')}</label><input type="date" id="pg-hasta"></div>
+      </div>
+      <div class="field"><label>${t('pg.incluye')}</label>
+        ${chk('pg-i-emitidas', t('pg.h.emitidas'))}${chk('pg-i-recibidas', t('pg.h.recibidas'))}${chk('pg-i-fotos', t('pg.i.fotos'))}
+        ${chk('pg-i-impuestos', t('pg.h.impuestos'))}${chk('pg-i-resultados', t('pg.h.resultados'))}${chk('pg-i-bienes', t('hr.libro.bienes'))}
+        ${chk('pg-i-personal', t('pg.h.personal'))}${chk('pg-i-jornada', t('hr.libro.jornada'))}
+      </div>
+      <p class="txt-xs" style="color:var(--muted);margin:0 0 10px"><i class="ti ti-file-zip"></i> ${t('pg.formato')}</p>
       <div class="field">
         <label>${t('hr.export.accountantEmail')}</label>
-        <input type="email" id="exp-email" value="${escapeHtml((DB.business||{}).gestorEmail||'')}" placeholder="gestoria@ejemplo.com">
-        <small style="color:var(--muted)">${t('hr.export.emailHint')}</small>
+        <input type="email" id="pg-email" value="${escapeHtml((DB.business||{}).gestorEmail||'')}" placeholder="gestoria@ejemplo.com">
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="flex-wrap:wrap">
         <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-        <button class="btn btn-primary" onclick="GE.exportMonth()"><i class="ti ti-download"></i> ${t('hr.export.downloadCsv')}</button>
-        <button class="btn btn-primary" onclick="GE.emailMonth()"><i class="ti ti-mail"></i> ${t('hr.export.sendToAccountant')}</button>
-        <button class="btn" onclick="GE.copyMonthSummary()"><i class="ti ti-copy"></i> ${t('hr.export.copySummary')}</button>
-        <button class="btn" onclick="GE.downloadMonthInvoices()"><i class="ti ti-file-zip"></i> ${t('factura.zip.btn')}</button>
-      </div>
-      <p style="font-size:11.5px;color:var(--muted);margin:10px 0 0"><i class="ti ti-info-circle"></i> ${t('factura.zip.hint')}</p>
-      <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
-        <h4 style="margin:0 0 4px">${t('hr.libro.title')}</h4>
-        <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${t('hr.libro.desc')}</p>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('ingresos')"><i class="ti ti-file-spreadsheet"></i> ${t('hr.libro.ingresos')}</button>
-          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('gastos')"><i class="ti ti-file-spreadsheet"></i> ${t('hr.libro.gastos')}</button>
-          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('bienes')"><i class="ti ti-file-spreadsheet"></i> ${t('hr.libro.bienes')}</button>
-          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('resumen')"><i class="ti ti-file-spreadsheet"></i> ${t('hr.libro.resumen')}</button>
-          <button class="btn btn-sm" onclick="GE.descargarLibroGestor('jornada')"><i class="ti ti-clock"></i> ${t('hr.libro.jornada')}</button>
-        </div>
+        <button class="btn" onclick="GE.descargarPaqueteGestor()"><i class="ti ti-download"></i> ${t('pg.descargar')}</button>
+        <button class="btn btn-primary" onclick="GE.compartirPaqueteGestor()"><i class="ti ti-send"></i> ${t('pg.enviar')}</button>
       </div>
     `);
   }
@@ -3633,7 +3940,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

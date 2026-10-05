@@ -10355,6 +10355,50 @@ function construirZip(archivos){
   end.setUint32(12, centralSize, true); end.setUint32(16, centralStart, true); end.setUint16(20, 0, true);
   return new Blob([...localParts, ...centralParts, new Uint8Array(end.buffer)], {type:'application/zip'});
 }
+// Excel (.xlsx) de verdad, sin librerías: un .xlsx es un ZIP con unos
+// pocos XML dentro. Para el gestor es mucho más útil que un CSV suelto: un
+// solo fichero, una hoja por libro, cifras como NÚMEROS (suma, filtra y
+// hace tablas dinámicas sin limpiar nada) y la cabecera en negrita.
+// hojas: [{nombre, filas: [[celda…]], cabecera: índice de la fila de títulos}]
+function construirXlsx(hojas){
+  const esc = v => String(v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const col = n => { let s = ''; n++; while(n > 0){ const r = (n-1) % 26; s = String.fromCharCode(65+r) + s; n = Math.floor((n-1)/26); } return s; };
+  const enc = txt => new TextEncoder().encode(txt);
+  const XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  const RNS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const usados = new Set();
+  const nombres = hojas.map((h,i) => {
+    let n = String(h.nombre||('Hoja'+(i+1))).replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,31) || ('Hoja'+(i+1));
+    while(usados.has(n.toLowerCase())) n = n.slice(0,28) + '_' + i;
+    usados.add(n.toLowerCase());
+    return n;
+  });
+  const archivos = [];
+  archivos.push({name:'[Content_Types].xml', bytes: enc(XML + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + hojas.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('') + '</Types>')});
+  archivos.push({name:'_rels/.rels', bytes: enc(XML + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')});
+  archivos.push({name:'xl/workbook.xml', bytes: enc(XML + `<workbook xmlns="${NS}" xmlns:r="${RNS}"><sheets>` + nombres.map((n,i)=>`<sheet name="${esc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('') + '</sheets></workbook>')});
+  archivos.push({name:'xl/_rels/workbook.xml.rels', bytes: enc(XML + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + hojas.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('') + `<Relationship Id="rId${hojas.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`)});
+  // Estilos: 0 normal · 1 negrita (cabecera) · 2 número con 2 decimales.
+  archivos.push({name:'xl/styles.xml', bytes: enc(XML + `<styleSheet xmlns="${NS}"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>`)});
+  hojas.forEach((h,i) => {
+    const filas = h.filas || [];
+    const nCols = filas.reduce((m,f)=>Math.max(m, (f||[]).length), 1);
+    const rowsXml = filas.map((f, r) => {
+      const negrita = r === h.cabecera || (h.titulo !== false && r === 0);
+      const celdas = (f||[]).map((v, c) => {
+        const ref = col(c) + (r+1);
+        if(v === null || v === undefined || v === '') return '';
+        if(typeof v === 'number' && isFinite(v)) return `<c r="${ref}"${negrita?' s="1"':' s="2"'}><v>${Math.round(v*100)/100}</v></c>`;
+        return `<c r="${ref}" t="inlineStr"${negrita?' s="1"':''}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+      }).join('');
+      return `<row r="${r+1}">${celdas}</row>`;
+    }).join('');
+    const cols = `<cols><col min="1" max="${nCols}" width="18" customWidth="1"/></cols>`;
+    archivos.push({name:`xl/worksheets/sheet${i+1}.xml`, bytes: enc(XML + `<worksheet xmlns="${NS}">${cols}<sheetData>${rowsXml}</sheetData></worksheet>`)});
+  });
+  return construirZip(archivos);
+}
 function saveDB(){
   const guardado = idbSet(DB_KEY, DB).catch(e => {
     console.error('Error guardando datos', e);

@@ -43,38 +43,28 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('Informe al gestor: la fila de CAPEX del resumen coincide con lo que resta a Resultado del mes (antes: mostraba el total comprado)', async () => {
+// 5/10: la exportación al gestor es ahora el paquete por periodo, y la
+// Cuenta de Resultados resta la AMORTIZACIÓN e intereses de las inversiones
+// (no la cuota del préstamo, que es caja). La hoja de resultados del
+// paquete tiene que dar EXACTAMENTE lo mismo que la pantalla.
+await caso('Paquete al gestor: la hoja de resultados del mes cuadra con la Cuenta de Resultados (con inversiones)', async () => {
   const r = await page.evaluate(()=>{
     const y = new Date().getFullYear(), m = new Date().getMonth();
     const mesStr = `${y}-${String(m+1).padStart(2,'0')}`;
     DB.sales = [{id: genId(), date: `${mesStr}-05`, total: 1100, propina:0, subtotal:1100, tipo:'mesa', items:[{name:'Menú', qty:10, price:110, ivaPct:10}], status:'pagada', metodoPago:'Tarjeta'}];
-    DB.ge.fijos = []; DB.ge.variables = [];
-    // Una compra CAPEX al contado de 3000€ (no financiada) y otra financiada
-    // a 24 cuotas de 100€/mes empezando este mismo mes.
+    DB.ge.fijos = []; DB.ge.variables = []; DB.ge.fijosLog = [];
     DB.ge.capex = [
-      {id: genId(), descripcion:'Horno (contado)', importe:3000, iva:21, fecha:`${mesStr}-02`, financiado:false},
-      {id: genId(), descripcion:'Cámara (financiada)', importe:2400, iva:21, fecha:`${mesStr}-01`, financiado:true, cuotaMensual:100, cuotas:24},
+      {id: genId(), descripcion:'Horno (contado)', importe:3000, iva:21, fecha:`${mesStr}-02`, financiado:false, tipoAmort:'maquinaria'},
+      {id: genId(), descripcion:'Cámara (financiada)', importe:2400, iva:21, fecha:`${mesStr}-01`, financiado:true, cuotaMensual:130, cuotas:24, tipoAmort:'maquinaria'},
     ];
     saveDB();
-    let capturedRows = null;
-    const origDownload = window.downloadCSV;
-    window.downloadCSV = (rows) => { capturedRows = rows; };
-    GE.openExportModal();
-    document.getElementById('exp-mes').value = String(m);
-    document.getElementById('exp-anyo').value = String(y);
-    GE.exportMonth();
-    window.downloadCSV = origDownload;
-    const flat = capturedRows.map(r => r.join('|'));
-    const capexQuotaRow = flat.find(r => /Cuota CAPEX financiado/.test(r));
-    const resultRow = flat.find(r => /Resultado del mes/.test(r));
-    return {capexQuotaRow, resultRow};
+    const fin = new Date(y, m+1, 0).getDate();
+    const h = GE.hojaResultados({desde:`${mesStr}-01`, hasta:`${mesStr}-${String(fin).padStart(2,'0')}`, nombre:'mes'});
+    const bai = h.filas.find(f => /antes de impuestos/i.test(f[0]));
+    return {bai: bai && bai[1], cdr: GE.resultadoAntesImpMes(m, y), amort: geAmortizacionMes(y, m)};
   });
-  assert.ok(r.capexQuotaRow, 'debe existir la fila de cuota CAPEX: ' + JSON.stringify(r));
-  const capexQuota = parseFloat(r.capexQuotaRow.split('|').pop().replace(',', '.'));
-  const resultado = parseFloat(r.resultRow.split('|').pop().replace(',', '.'));
-  assert.ok(Math.abs(capexQuota - 100) < 0.01, 'la cuota CAPEX debe ser la mensual financiada (100€), no el total comprado: ' + r.capexQuotaRow);
-  // Ingresos netos ~1000€ (1100 con 10% IVA) - cuota CAPEX 100€ = ~900€.
-  assert.ok(Math.abs(resultado - 900) < 1, `Resultado del mes debe cuadrar con la cuota CAPEX mostrada (esperado ~900€, salió ${resultado})`);
+  assert.ok(Math.abs(r.bai - r.cdr) < 0.01, `la hoja (${r.bai}) no cuadra con la pantalla (${r.cdr})`);
+  assert.ok(Math.abs(r.amort - 54) < 0.01, 'amortización del mes: (3000 + 2400) × 12% / 12 = 54 €, salió '+r.amort);
 });
 
 await caso('requestCancelSale bloquea anular una venta de un mes ya cerrado en Gestión Económica, avisando con un toast', async () => {

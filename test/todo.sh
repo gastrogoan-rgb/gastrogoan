@@ -136,6 +136,7 @@ lanzar; node test/modulos.mjs > "$SALIDA/modulos.txt" 2>&1 & P94=$!
 lanzar; node test/facturas.mjs > "$SALIDA/facturas.txt" 2>&1 & P95=$!
 lanzar; node test/dispositivo-nuevo.mjs > "$SALIDA/dispositivo-nuevo.txt" 2>&1 & P96=$!
 lanzar; node test/auditoria-contable.mjs > "$SALIDA/auditoria-contable.txt" 2>&1 & P97=$!
+lanzar; node test/paquete-gestor.mjs > "$SALIDA/paquete-gestor.txt" 2>&1 & P98=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -258,5 +259,6 @@ espera $P94 "Módulos: previsión de IRPF/IVA verificada contra la Orden HAC/142
 espera $P95 "Facturas adjuntas: foto o PDF en Gastos Fijos/Variables y facturas sueltas, comprimidas" "$SALIDA/facturas.txt" "casos pasaron"
 espera $P96 "Móvil nuevo: una cuenta con negocios en la nube ve su lista, no pide activar licencia" "$SALIDA/dispositivo-nuevo.txt" "casos pasaron"
 espera $P97 "Auditoría contable: retención 115/111, envío al 10%, IVA de la señal al cobrarla" "$SALIDA/auditoria-contable.txt" "casos pasaron"
+espera $P98 "Paquete para el gestor: periodo, Excel + CSV con columnas de libro registro, fotos de facturas y LÉEME" "$SALIDA/paquete-gestor.txt" "casos pasaron"
 
 exit $FALLOS
