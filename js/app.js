@@ -8135,7 +8135,7 @@ function renderTicketConfigCard(){
           <input type="checkbox" id="tk-web" ${tc.mostrarWeb?'checked':''} style="width:18px;height:18px"> ${t('mn.ticket.showWeb')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-nif" ${tc.mostrarNif!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.ticket.showTaxId')}
+          <input type="checkbox" id="tk-nif" checked disabled title="${t('factura.completa.desc')}" style="width:18px;height:18px"> ${t('mn.ticket.showTaxId')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:${(DB.business&&DB.business.gmaps)?'pointer':'default'};${(DB.business&&DB.business.gmaps)?'':'opacity:.5'}">
           <input type="checkbox" id="tk-review-qr" ${tc.mostrarResenaQr!==false?'checked':''} ${(DB.business&&DB.business.gmaps)?'':'disabled'} style="width:18px;height:18px"> ${t('mn.ticket.showReviewQr')}

@@ -182,6 +182,37 @@ await caso('347: sale el proveedor de más de 3.005,06 € con su NIF; el peque�
   assert.ok(r.makro, 'MAKRO no sale'); assert.equal(r.makro[1], 'A28647451'); assert.equal(r.makro[6], 3300); assert.ok(!r.pepe);
 });
 
+// --- Facturación: numeración, factura completa, rectificativa -----------
+await caso('Cada ticket lleva número correlativo de su serie; la anulación emite rectificativa', async () => {
+  const r = await page.evaluate(() => {
+    DB.sales = [];
+    const a = {id:1, date:'2026-10-05', total:10, items:[]}, b = {id:2, date:'2026-10-05', total:20, items:[]};
+    numerarTicket(a); numerarTicket(b); DB.sales.push(a, b);
+    emitirRectificativa(b, 'error de cobro');
+    return {a:a.ticketNum, b:b.ticketNum, r:b.rectificativa, txt: buildTicketText(b, {rectificativa:true})};
+  });
+  const [sa, na] = r.a.split('-'), [sb, nb] = r.b.split('-');
+  assert.match(r.a, /^T26[A-Z0-9]{3}-\d{6}$/); assert.equal(sa, sb); assert.equal(+nb, +na + 1);
+  assert.match(r.r.num, /^R26/); assert.equal(r.r.rectifica, r.b);
+  assert.ok(r.txt.includes(r.r.num) && r.txt.includes(r.b), 'la rectificativa impresa no dice su número y a cuál rectifica');
+});
+
+await caso('Factura completa: pide los datos del cliente, va en serie F y dice a qué ticket sustituye', async () => {
+  const r = await page.evaluate(() => {
+    const s = {id:3, date:'2026-10-05', total:30, items:[{name:'x', price:30, qty:1, ivaPct:10}]};
+    numerarTicket(s); DB.sales.push(s);
+    window.printTicket = () => {};
+    printInvoice(3);
+    document.getElementById('fc-nombre').value = 'Talleres Ruiz SL';
+    document.getElementById('fc-nif').value = 'b12345678';
+    document.getElementById('fc-dir').value = 'C/ Mayor 1, Girona';
+    emitirFacturaCompleta(3);
+    return {f: s.facturaCompleta, t: s.ticketNum, txt: buildTicketText(s, {factura:true})};
+  });
+  assert.match(r.f.num, /^F26/); assert.equal(r.f.nif, 'B12345678'); assert.equal(r.f.sustituye, r.t);
+  assert.ok(r.txt.includes('Talleres Ruiz SL') && r.txt.includes(r.t));
+});
+
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 
 await browser.close();
