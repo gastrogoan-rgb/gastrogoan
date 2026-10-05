@@ -267,7 +267,7 @@ await caso('347: entra la luz (gasto fijo) y el cliente con facturas completas; 
   assert.ok(r.pc, 'no sale el 202'); assert.equal(r.pc[1], 0); assert.equal(r.pc[3], 0); assert.equal(Math.round(r.pc[4] / r.pc[2]), 2, 'diciembre y octubre: dos pagos en T4');
 });
 
-await caso('Módulos: el IVA de una inversión se recupera aunque haya cuota mínima; minoración por TODOS los asalariados', async () => {
+await caso('Módulos: el IVA de una inversión se recupera aunque haya cuota mínima; minoración por tramos del BOE', async () => {
   await limpio();
   const r = await page.evaluate(() => {
     DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'modulos';
@@ -278,7 +278,8 @@ await caso('Módulos: el IVA de una inversión se recupera aunque haya cuota mí
     return {sin, con: con.ivaAnual, min: con.minoracionEmpleo};
   });
   assert.equal(Math.round(r.sin - r.con), 2100, 'el IVA de la inversión no se descuenta entero');
-  assert.equal(Math.round(r.min), Math.round(0.20 * 4 * 1448.68));
+  // BOE: 4 personas por tramos = 1×0,10 + 2×0,15 + 1×0,20 = 0,60
+  assert.equal(Math.round(r.min), Math.round(0.60 * 1448.68));
 });
 
 await caso('Existencias: acabar el mes con más género en el almacén baja el gasto del mes', async () => {
@@ -321,6 +322,16 @@ await caso('Otros ingresos: una subvención suma al resultado sin IVA; el autoco
     return {res: GE.resultadoAntesImpMes(5, 2025), iva: GE.ivaLiquidarMes(5, 2025)};
   });
   assert.equal(Math.round(r.res), 3150); assert.equal(Math.round(r.iva*100)/100, 26);
+});
+
+await caso('Vale univalente: IVA al venderlo y se resta al canjearlo; el polivalente no toca el IVA', async () => {
+  await limpio();
+  const r = await page.evaluate(() => {
+    DB.ge.vales = [{id:1, fecha:'2025-11-20', tipo:'univalente', importe:110, iva:10, canjeFecha:'2026-01-15'},
+                   {id:2, fecha:'2025-11-21', tipo:'polivalente', importe:50, iva:0, canjeFecha:null}];
+    return {nov: geOtrosIngresosIvaMes(2025,10), ene: geOtrosIngresosIvaMes(2026,0), pend: geValesPendientes()};
+  });
+  assert.equal(Math.round(r.nov*100)/100, 10); assert.equal(Math.round(r.ene*100)/100, -10); assert.equal(r.pend, 50);
 });
 
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });

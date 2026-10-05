@@ -3,8 +3,12 @@
 // el motor reproduce EXACTAMENTE la fórmula oficial (Fases 1-4 del anexo),
 // con el ejemplo trabajado a mano en la conversación que lo pidió:
 // bar 673.2, 2 asalariados, el titular trabaja, 15 kW, 10 mesas, 6 m de
-// barra, 1.500 € de amortización → 15.723,27 € de rendimiento anual,
-// 628,93 €/trimestre (4%, por tener más de 1 asalariado).
+// barra, 1.500 € de amortización → 15.567,10 € de rendimiento anual,
+// 622,68 €/trimestre (4%, por tener más de 1 asalariado).
+// 5/10: la minoración por empleo va POR TRAMOS (texto del BOE, fase 2.ª
+// a): 2 personas = 1×0,10 + 1×0,15 = 0,25 × 1.643,93. Antes se aplicaba
+// un solo 0,15 y salían 15.723,27 € (mal):
+//   18.297,40 previo − 410,98 empleo − 1.500 amortización = 16.386,42 × 0,95.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -47,8 +51,8 @@ await caso('Bar (673.2) con 2 asalariados, titular trabajando: coincide con el c
     return GE.calcModulos();
   });
   assert.equal(r.asalariados, 2, 'cuenta los 3 empleados en vez de los 2 activos');
-  assert.ok(Math.abs(r.rendimientoAnual - 15723.27) < 0.5, 'rendimientoAnual='+r.rendimientoAnual);
-  assert.ok(Math.abs(r.pagoTrimestralIrpf - 628.93) < 0.5, 'pagoTrimestralIrpf='+r.pagoTrimestralIrpf);
+  assert.ok(Math.abs(r.rendimientoAnual - 15567.10) < 0.5, 'rendimientoAnual='+r.rendimientoAnual);
+  assert.ok(Math.abs(r.pagoTrimestralIrpf - 622.68) < 0.5, 'pagoTrimestralIrpf='+r.pagoTrimestralIrpf);
   assert.equal(r.pctPago, 0.04, 'con 2 asalariados el pago fraccionado debe ser el 4%, no '+(r.pctPago*100)+'%');
   return `rendimiento=${r.rendimientoAnual.toFixed(2)} · trimestral=${r.pagoTrimestralIrpf.toFixed(2)}`;
 });

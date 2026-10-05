@@ -565,14 +565,25 @@ const GE = (function(){
     // Fase 2: minoración por incentivos al empleo (tabla de tramos sobre
     // las unidades de personal asalariado) y por amortización (importe
     // real, lo mete el propio negocio — la app no inventa un coeficiente).
+    // Orden HAC/1425/2025, Anexo II, fase 2.ª a), comprobado con el texto
+    // del BOE: los coeficientes van POR TRAMOS de unidades, como una escala
+    // (hasta 1: 0,10; de 1,01 a 3: 0,15; de 3,01 a 5: 0,20; de 5,01 a 8:
+    // 0,25; más de 8: 0,30). Si la plantilla creció respecto al año
+    // anterior, la diferencia lleva 0,40 y no entra en la escala. La suma
+    // de coeficientes se multiplica UNA vez por el rendimiento por unidad
+    // del módulo «personal asalariado». (Se aplicaba un solo coeficiente al
+    // total, y después n × coeficiente: las dos versiones daban mal.)
     const TRAMOS_EMPLEO = [[1,0.10],[3,0.15],[5,0.20],[8,0.25],[Infinity,0.30]];
-    let coefEmpleo = 0;
-    for(const [limite,coef] of TRAMOS_EMPLEO){ if(asalariados<=limite){ coefEmpleo=coef; break; } }
-    // El coeficiente se aplica al rendimiento de TODO el personal asalariado
-    // (unidades × módulo), no al valor de una sola persona (Orden de
-    // módulos, instrucciones, fase 2). Antes, con 4 empleados, la minoración
-    // salía cuatro veces más pequeña.
-    const minoracionEmpleo = coefEmpleo * asalariados * ep.irpf.asalariado;
+    const anterior = mc.asalariadosAnterior != null && mc.asalariadosAnterior !== '' ? Math.max(0, parseFloat(mc.asalariadosAnterior)||0) : null;
+    const incremento = anterior != null ? Math.max(0, asalariados - anterior) : 0;
+    const enEscala = asalariados - incremento;
+    let coefEmpleo = incremento * 0.40, desde = 0;
+    for(const [hasta, c] of TRAMOS_EMPLEO){
+      if(enEscala <= desde) break;
+      coefEmpleo += (Math.min(enEscala, hasta) - desde) * c;
+      desde = hasta;
+    }
+    const minoracionEmpleo = coefEmpleo * ep.irpf.asalariado;
     const amortizacion = Math.max(0, parseFloat(mc.amortizacionAnual) || 0);
     let minorado = Math.max(0, previoIrpf - minoracionEmpleo - amortizacion);
 
@@ -1125,6 +1136,7 @@ const GE = (function(){
     }
 
     renderOtrosIngresos();
+    renderVales();
     const depositosMes = ventasDepositosForMonth(ventasMonth, ventasYear);
     document.getElementById('ventas-depositos-note').innerHTML = depositosMes > 0.001 ? `
       <p style="font-size:12px;color:var(--muted);margin:8px 0 0"><i class="ti ti-cash-banknote"></i> ${t('ge.ventas.depositsNote').replace('${amount}', fmtMoney(depositosMes))}</p>
@@ -1485,6 +1497,63 @@ const GE = (function(){
         ${auto > 0.005 ? `<tr><td>—</td><td>${t('hr.oi.autoconsumo')}</td><td>${fmtMoney(auto)}</td><td>${AUTOCONSUMO_IVA}%</td><td></td></tr>` : ''}
       </tbody></table></div>` : `<p class="txt-xs" style="color:var(--muted);margin:0">${t('hr.oi.empty')}</p>`}
     </div>`;
+  }
+  function renderVales(){
+    const box = document.getElementById('ventas-vales');
+    if(!box) return;
+    const lista = (ge().vales||[]).slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+    const pend = lista.filter(v=>!v.canjeFecha);
+    box.innerHTML = `<div class="vis-section" style="margin-top:14px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <h4 style="margin:0;flex:1">${t('hr.vale.title')}</h4>
+        <button class="btn btn-sm" onclick="GE.nuevoVale()"><i class="ti ti-gift"></i> ${t('hr.vale.add')}</button>
+      </div>
+      <p class="txt-xs" style="color:var(--muted);margin:0 0 8px">${t('hr.vale.desc').replace('${n}', pend.length).replace('${total}', fmtMoney(geValesPendientes()))}</p>
+      ${pend.length ? `<div class="table-wrap"><table><tbody>${pend.map(v => `<tr>
+        <td>${escapeHtml(v.fecha)}</td><td>${escapeHtml(v.codigo||'')}</td><td>${escapeHtml(t('hr.vale.tipo.'+v.tipo))}${v.tipo==='univalente'?' · '+(parseFloat(v.iva)||0)+'%':''}</td>
+        <td>${fmtMoney(parseFloat(v.importe)||0)}</td>
+        <td><button class="btn btn-sm" onclick="GE.canjearVale(${v.id})">${t('hr.vale.canjear')}</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+    </div>`;
+  }
+  function nuevoVale(){
+    openModal(`
+      <div class="modal-header"><h3>${t('hr.vale.add')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="field"><label>${t('hr.oi.tipoLbl')}</label><select id="vl-tipo" onchange="document.getElementById('vl-iva-row').style.display=this.value==='univalente'?'':'none'">
+        <option value="polivalente">${t('hr.vale.tipo.polivalente')}</option>
+        <option value="univalente">${t('hr.vale.tipo.univalente')}</option>
+      </select><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.vale.tipoHint')}</div></div>
+      <div class="field-row">
+        <div class="field"><label>${t('hr.vale.codigo')}</label><input type="text" id="vl-codigo"></div>
+        <div class="field"><label>${t('common.date')}</label><input type="date" id="vl-fecha" value="${todayStr()}"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>${t('hr.vale.importe')}</label><input type="number" id="vl-importe" min="0" step="0.01"></div>
+        <div class="field" id="vl-iva-row" style="display:none"><label>${t('hr.libro.tipoIva')}</label><input type="number" id="vl-iva" min="0" max="21" step="1" value="10"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="GE.guardarVale()">${t('common.save')}</button>
+      </div>`);
+  }
+  function guardarVale(){
+    const importe = parseFloat(document.getElementById('vl-importe').value);
+    const fecha = document.getElementById('vl-fecha').value;
+    if(!(importe > 0)){ showToast(t('msg.enterAmount')); return; }
+    if(!fecha){ showToast(t('msg.chooseDateForExpense')); return; }
+    if(isDateClosed(fecha)){ showToast(t('hr.te.monthClosedError')); return; }
+    const tipo = document.getElementById('vl-tipo').value;
+    ge().vales = ge().vales || [];
+    ge().vales.push({id: genId(), fecha, tipo, codigo: document.getElementById('vl-codigo').value.trim(), importe,
+      iva: tipo === 'univalente' ? (parseFloat(document.getElementById('vl-iva').value)||0) : 0, canjeFecha: null});
+    saveDB(); closeModal(); renderVentas();
+  }
+  async function canjearVale(id){
+    const v = (ge().vales||[]).find(x=>x.id===id);
+    if(!v || v.canjeFecha) return;
+    if(isDateClosed(todayStr())){ showToast(t('hr.te.monthClosedError')); return; }
+    if(!(await confirmModal(t('hr.vale.confirmCanje')))) return;
+    v.canjeFecha = todayStr();
+    saveDB(); renderVentas();
   }
   function nuevoOtroIngreso(){
     openModal(`
@@ -2104,6 +2173,11 @@ const GE = (function(){
           <label>${t('hr.modulos.personalAsalariado')}</label>
           <input type="number" id="mod-personal" min="0" step="1" placeholder="${(DB.employees||[]).filter(e=>e.active!==false).length}" value="${mc.personalOverride!=null?mc.personalOverride:''}" onchange="GE.saveModulosField('personalOverride', this.value)">
           <small style="color:var(--muted)">${t('hr.modulos.personalHint')}</small>
+        </div>
+        <div class="field">
+          <label>${t('hr.modulos.asalariadosAnterior')}</label>
+          <input type="number" id="mod-personal-ant" min="0" step="0.5" value="${mc.asalariadosAnterior!=null?mc.asalariadosAnterior:''}" onchange="GE.saveModulosField('asalariadosAnterior', this.value)">
+          <small style="color:var(--muted)">${t('hr.modulos.asalariadosAnteriorHint')}</small>
         </div>
         <div class="field">
           <label>${t('hr.modulos.amortizacion')}</label>
@@ -3007,6 +3081,16 @@ const GE = (function(){
       rows.push([t('hr.te.pagoCuenta.'+modelo), ...imp.map(n2), n2(imp.reduce((a,b)=>a+b,0))]);
     }
     rows.push([t('hr.cdr.resultBeforeTax'), ...porQ(m=>resultadoAntesImpMes(m,año))]);
+    // Comunidad de bienes: la renta se atribuye a cada comunero según su %
+    // (arts. 87-89 LIRPF) y la comunidad lo informa en el modelo 184.
+    if(fiscalPerfil().forma === 'cb'){
+      const com = Array.isArray((DB.business||{}).comuneros) ? DB.business.comuneros : [];
+      const suma = com.reduce((s,c)=>s+(parseFloat(c.pct)||0), 0);
+      if(suma > 0){
+        rows.push([], [t('hr.libro.res184')]);
+        com.forEach(c => rows.push([`${c.nombre || '—'} (${parseFloat(c.pct)||0}%)`, ...porQ(m=>resultadoAntesImpMes(m,año)*(parseFloat(c.pct)||0)/suma)]));
+      }
+    }
     // 347: operaciones con un mismo proveedor de más de 3.005,06 € en el año,
     // IVA incluido, con su reparto por trimestres. Quedan fuera las que ya
     // llevan retención (el alquiler va en el 180).
@@ -3473,7 +3557,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, editarExistencias, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, editarExistencias, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

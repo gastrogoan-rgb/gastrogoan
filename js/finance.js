@@ -542,9 +542,32 @@ function geDevolucionPrestamosMes(year, month){
 // venta a precio de coste (arts. 9.1 y 79.Tres LIVA; art. 28.3 LIRPF).
 const OTROS_INGRESOS_TIPOS = {subvencion:0, maquinas:21, alquiler:21, otro:null};
 const AUTOCONSUMO_IVA = 10;
+// VALES REGALO (art. 75.Dos bis LIVA):
+//  · POLIVALENTE (un importe en euros para gastar en lo que quieran): al
+//    venderlo NO hay IVA ni ingreso — es dinero cobrado por adelantado. La
+//    comida se cobra con el vale en el TPV y ESA venta lleva su IVA normal.
+//    Aquí solo se lleva la cuenta de lo pendiente de canjear.
+//  · UNIVALENTE (algo concreto con su IVA ya sabido: "menú degustación para
+//    dos"): el IVA se devenga AL VENDERLO. Cuando se canjea, la venta del
+//    TPV vuelve a contar la comida, así que ese mes se resta lo del vale
+//    (igual que la señal de una reserva).
+function geValesUnivalentesMes(mesStr){
+  let base = 0, iva = 0;
+  (DB.ge.vales||[]).forEach(v => {
+    if(v.tipo !== 'univalente') return;
+    const total = parseFloat(v.importe)||0, pct = parseFloat(v.iva)||0, b = total/(1+pct/100);
+    if((v.fecha||'').startsWith(mesStr)){ base += b; iva += total - b; }
+    if((v.canjeFecha||'').startsWith(mesStr)){ base -= b; iva -= total - b; }
+  });
+  return {base, iva};
+}
+function geValesPendientes(){
+  return (DB.ge.vales||[]).filter(v => !v.canjeFecha).reduce((s,v)=>s+(parseFloat(v.importe)||0), 0);
+}
 function geOtrosIngresosMes(year, month){
   const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
-  let base = 0, iva = 0;
+  const vu = geValesUnivalentesMes(mesStr);
+  let base = vu.base, iva = vu.iva;
   (DB.ge.otrosIngresos||[]).forEach(o => {
     if(!(o.fecha||'').startsWith(mesStr)) return;
     const b = parseFloat(o.base)||0;
