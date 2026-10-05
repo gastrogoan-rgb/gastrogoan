@@ -297,6 +297,7 @@ function registerPlatformSettlementSale(plat, totalBruto, closureHasta){
   const comision = sale.total * (comisionPct/100) * (1 + platIvaPct/100);
   sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct: platIvaPct, comisionSobreEnvio};
   sale.comisionPlataforma = roundMoney(comision);
+  if(typeof numerarTicket === 'function') numerarTicket(sale);
   DB.sales.push(sale);
   enqueueVerifactuSubmission(sale);
   return sale;

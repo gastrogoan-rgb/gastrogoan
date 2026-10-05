@@ -478,8 +478,13 @@ impuestos → impuesto → resultado del ejercicio.
   años, art. 34.9 ET); un fichaje corregido guarda la hora original.
 - **Web de reservas**: aviso de privacidad con responsable, NIF (si el dueño
   lo publica en Mi Negocio → `legalPublico`), base legal y AEPD.
-- Facturas: numeración de todos los tickets, factura completa con datos del
-  cliente y rectificativas entran con VeriFactu (diciembre).
+- **Facturas (RD 1619/2012)**: TODO ticket es factura simplificada con
+  número, en una serie POR APARATO (`serieDispositivo`, art. 6.2) para que
+  dos tablets sin conexión nunca repitan: `T26K4P-000123` (ticket),
+  `F…` (factura completa con nombre/NIF/domicilio del cliente, dice a qué
+  ticket sustituye), `R…` (rectificativa al anular una venta cobrada). El
+  NIF del negocio sale siempre en el ticket (obligatorio). VeriFactu lo
+  hará una empresa externa en diciembre, encima de esta numeración.
 
 Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 

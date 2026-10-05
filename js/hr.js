@@ -2729,7 +2729,7 @@ const GE = (function(){
       if(!out[dia][rate]) out[dia][rate] = {base:0, iva:0, n:0, nums:[]};
       const g = out[dia][rate], net = gross/(1+rate/100);
       g.base += net; g.iva += gross - net;
-      if(venta){ g.n++; if(venta.facturaNum) g.nums.push(venta.facturaNum); }
+      if(venta){ g.n++; const num = venta.ticketNum || venta.facturaNum; if(num) g.nums.push(num); }
     };
     const fallback = ivaVentasPct();
     activeSales().filter(v => (v.date||'').startsWith(año+'-')).forEach(v => {
@@ -2749,6 +2749,21 @@ const GE = (function(){
       const f = r.depositPagoFecha ? diaLocalDe(r.depositPagoFecha) : '';
       if(r.depositConfirmed && !r.depositNeedsRefund && f >= SENAL_IVA_DESDE && f.startsWith(año+'-')) add(f, 10, parseFloat(r.depositPagoImporte)||0, null);
     });
+    // Una venta anulada con su rectificativa: el ticket se queda en el libro
+    // el día que se emitió, y la rectificativa lo resta el día que se anuló.
+    // Así el libro tiene TODOS los números de la serie, sin huecos.
+    (DB.sales||[]).filter(v => v.status === 'anulada' && v.rectificativa).forEach(v => {
+      const desc = parseFloat(v.descuentoPct)||0;
+      (v.items||[]).forEach(l => {
+        const gross = (parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-desc/100);
+        if(gross <= 0) return;
+        const rate = l.ivaPct == null ? fallback : l.ivaPct;
+        if((v.date||'').startsWith(año+'-')) add(v.date, rate, gross, null);
+        if((v.rectificativa.fecha||'').startsWith(año+'-')) add(v.rectificativa.fecha, rate, -gross, null);
+      });
+      if((v.date||'').startsWith(año+'-') && v.ticketNum){ const d = out[v.date]; const k = d && Object.keys(d)[0]; if(k) d[k].nums.push(v.ticketNum); }
+      if((v.rectificativa.fecha||'').startsWith(año+'-')){ const d = out[v.rectificativa.fecha]; const k = d && Object.keys(d)[0]; if(k) d[k].nums.push(v.rectificativa.num); }
+    });
     return out;
   }
   function libroIngresos(año){
@@ -2758,8 +2773,11 @@ const GE = (function(){
     let tb=0, ti=0;
     Object.keys(dias).sort().forEach(d => Object.keys(dias[d]).sort((a,b)=>b-a).forEach(rate => {
       const g = dias[d][rate];
-      const nums = g.nums.slice().sort();
-      rows.push([d, g.n, nums.length ? (nums[0]+(nums.length>1?' – '+nums[nums.length-1]:'')) : '', n2(g.base), rate+'%', n2(g.iva), n2(g.base+g.iva)]);
+      // Un rango por serie (tickets, facturas completas, rectificativas).
+      const porSerie = {};
+      g.nums.forEach(x => { const k = String(x).split('-')[0]; (porSerie[k] = porSerie[k] || []).push(x); });
+      const rangos = Object.keys(porSerie).sort().map(k => { const l = porSerie[k].sort(); return l[0] + (l.length > 1 ? ' – ' + l[l.length-1] : ''); }).join('; ');
+      rows.push([d, g.n, rangos, n2(g.base), rate+'%', n2(g.iva), n2(g.base+g.iva)]);
       tb += g.base; ti += g.iva;
     }));
     rows.push([], [t('hr.libro.totalAño'), '', '', n2(tb), '', n2(ti), n2(tb+ti)]);

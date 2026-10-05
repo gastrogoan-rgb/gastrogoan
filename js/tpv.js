@@ -4147,6 +4147,7 @@ function reallyCancelSale(saleId, pin){
   }
   sale.status = 'anulada';
   sale.anuladaAt = new Date().toISOString();
+  emitirRectificativa(sale, t('msg.saleVoidedAfterCharge'));
   const loggedEmployeeId = loggedInEmployeeId();
   const responsable = loggedEmployeeId != null ? DB.employees.find(e => e.id === loggedEmployeeId) : null;
   // Sin empleado fichado, es el propio dueño quien anula — antes se quedaba
@@ -4619,6 +4620,7 @@ function apuntarVentaPagoOnline(order){
     items: buildSaleItemsForOrder(order), pagoOnlineAnticipado: true};
   applyDeliveryCommission(order, sale);
   if(!Array.isArray(DB.sales)) DB.sales = [];
+  numerarTicket(sale);
   DB.sales.push(sale);
   if(typeof enqueueVerifactuSubmission === 'function') enqueueVerifactuSubmission(sale);
   if(order.clientId && typeof registerClientVisit === 'function') registerClientVisit(order.clientId);
@@ -4634,6 +4636,7 @@ function anularVentaPagoOnline(order){
   sale.status = 'anulada';
   sale.anuladaAt = new Date().toISOString();
   sale.anuladaMotivo = t('msg.saleVoidedOnlineRefund');
+  emitirRectificativa(sale, t('msg.saleVoidedOnlineRefund'));
   if(sale.clientId){ const c = (DB.clients || []).find(x => x.id === sale.clientId); if(c) c.points = Math.max(0, (c.points || 0) - 1); }
   showToast(t('msg.saleVoidedOnlineRefund'));
 }
@@ -4744,6 +4747,7 @@ function finalizeCharge(orderId, opts){
   const saleDate = (order.pagado && order.pagoFecha && amountDue <= 0.001) ? diaLocalDe(order.pagoFecha) : todayStr();
   const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   estamparSenalEnVenta(order, sale);
+  numerarTicket(sale);
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
@@ -5147,6 +5151,7 @@ function finalizeSplitOrder(orderId){
     pagos, items: buildSaleItemsForOrder(order)
   };
   estamparSenalEnVenta(order, sale);
+  numerarTicket(sale);
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
   enqueueVerifactuSubmission(sale);
@@ -5384,7 +5389,7 @@ function openTodaySalesModal(){
             <td>${fmtMoney(s.total)}</td>
             <td class="owner-strict" style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</td>
             <td>${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
-            <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}),{duplicado:true})"><i class="ti ti-printer"></i></button>${thermalPrintingSupported() ? `<button class="btn btn-sm btn-icon" title="${t('thermal.hint')}" onclick="printToThermalPrinter(buildTicketText(DB.sales.find(x=>x.id===${s.id}),{duplicado:true}))"><i class="ti ti-device-usb"></i></button>` : ''}</td>
+            <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}),{duplicado:true})"><i class="ti ti-printer"></i></button>${s.status==='anulada' ? (s.rectificativa ? `<button class="btn btn-sm btn-icon" title="${t('factura.rect.btn')}" onclick="printRectificativa(${s.id})"><i class="ti ti-receipt-refund"></i></button>` : '') : `<button class="btn btn-sm btn-icon" title="${t('ticket.invoiceBtn')}" onclick="closeModal();printInvoice(${s.id})"><i class="ti ti-file-invoice"></i></button>`}${thermalPrintingSupported() ? `<button class="btn btn-sm btn-icon" title="${t('thermal.hint')}" onclick="printToThermalPrinter(buildTicketText(DB.sales.find(x=>x.id===${s.id}),{duplicado:true}))"><i class="ti ti-device-usb"></i></button>` : ''}</td>
           </tr>`;
         }).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noSalesToday')}</div></td></tr>`}</tbody>
       </table>
@@ -5768,15 +5773,34 @@ function buildTicketHeaderLines(){
   if(tc.mostrarDireccion !== false && b.address) lines.push(b.address);
   if(tc.mostrarTelefono !== false && b.phone) lines.push(t('ticket.phone').replace('${phone}', b.phone));
   if(tc.mostrarWeb && b.web) lines.push(b.web);
-  if(tc.mostrarNif !== false && b.cif) lines.push(t('ticket.taxIdLabel').replace('${cif}', b.cif));
+  // El NIF del que expide es obligatorio también en el ticket (factura
+  // simplificada, art. 7.1.c RD 1619/2012): ya no se puede ocultar.
+  if(b.cif) lines.push(t('ticket.taxIdLabel').replace('${cif}', b.cif));
   return lines;
 }
 
+// Qué documento es y su número: factura completa (con el cliente y a qué
+// ticket sustituye), rectificativa (a cuál rectifica y por qué) o, por
+// defecto, factura simplificada. Las ventas de antes de la numeración
+// conservan su "factura" antigua si la tenían.
+function docFiscalLineas(sale, opts={}){
+  if(opts.rectificativa && sale.rectificativa){
+    const r = sale.rectificativa;
+    return [t('factura.rect.titulo').replace('${num}', r.num), t('factura.rect.rectifica').replace('${num}', r.rectifica), ...(r.motivo ? [t('factura.rect.motivo').replace('${motivo}', r.motivo)] : []), t('factura.rect.importe').replace('${total}', fmtMoney(-sale.total))];
+  }
+  if(opts.factura && sale.facturaCompleta){
+    const f = sale.facturaCompleta;
+    return [t('factura.completa.numero').replace('${num}', f.num), `${f.nombre} · ${f.nif}`, f.direccion, ...(f.sustituye ? [t('factura.completa.sustituye').replace('${num}', f.sustituye)] : [])];
+  }
+  if(opts.factura && sale.facturaNum) return [t('ticket.invoiceNumber') + ' ' + sale.facturaNum];
+  if(sale.ticketNum) return [t('factura.simplificada').replace('${num}', sale.ticketNum)];
+  return [];
+}
 function buildTicketText(sale, opts={}){
   const tc = (DB.business && DB.business.ticket) || {};
   const lines = [...buildTicketHeaderLines()];
   if(opts.duplicado) lines.push(t('ticket.duplicateLabel'));
-  if(opts.factura) lines.push(t('ticket.invoiceNumber') + ' ' + sale.facturaNum);
+  lines.push(...docFiscalLineas(sale, opts));
   lines.push(sale.date);
   lines.push(`${sale.tipo==='mesa'?t('label.table'):sale.express?t('label.expressOrder'):sale.tipo==='delivery'?t('label.delivery'):t('label.takeAway')}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
   lines.push('------------------------------');
@@ -5850,7 +5874,7 @@ function buildTicketHtml(sale, opts={}){
   if(tc.mostrarDireccion !== false && b.address) metaLines.push(escapeHtml(b.address));
   if(tc.mostrarTelefono !== false && b.phone) metaLines.push(t('ticket.phone').replace('${phone}', escapeHtml(b.phone)));
   if(tc.mostrarWeb && b.web) metaLines.push(escapeHtml(b.web));
-  if(tc.mostrarNif !== false && b.cif) metaLines.push(t('ticket.taxIdLabel').replace('${cif}', escapeHtml(b.cif)));
+  if(b.cif) metaLines.push(t('ticket.taxIdLabel').replace('${cif}', escapeHtml(b.cif)));
 
   const tipoLabel = sale.tipo==='mesa'?t('label.table'):sale.express?t('label.expressOrder'):sale.tipo==='delivery'?t('label.delivery'):t('label.takeAway');
 
@@ -5906,7 +5930,7 @@ function buildTicketHtml(sale, opts={}){
       <div style="text-align:center;font-weight:700;font-size:16px;color:${accent}">${escapeHtml(b.name || 'GastroGoan')}</div>
       ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#B8860B;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
       ${metaLines.length ? `<div style="text-align:center;font-size:11px;color:#666;line-height:1.5;margin-top:2px">${metaLines.join('<br>')}</div>` : ''}
-      ${opts.factura ? `<div style="text-align:center;font-size:12px;font-weight:700;margin-top:8px">${t('ticket.invoiceNumber')} ${escapeHtml(sale.facturaNum||'')}</div>` : ''}
+      ${(() => { const l = docFiscalLineas(sale, opts); return l.length ? `<div style="text-align:center;font-size:12px;margin-top:8px;line-height:1.5"><strong>${escapeHtml(l[0])}</strong>${l.slice(1).map(x=>'<br>'+escapeHtml(x)).join('')}</div>` : ''; })()}
       <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
       <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#555">
         <span>${escapeHtml(sale.date||'')}</span>
@@ -5956,23 +5980,110 @@ function printTicket(sale, opts={}){
   win.document.close();
 }
 
+/* ============================================================
+   NUMERACIÓN DE FACTURAS (RD 1619/2012, Reglamento de facturación)
+   ============================================================
+   Todo ticket es una FACTURA SIMPLIFICADA y tiene que llevar número
+   correlativo dentro de su serie (art. 7). Antes solo se numeraba el que
+   pedía "Factura", y además con un contador compartido entre aparatos que
+   podía repetir número si dos tablets facturaban a la vez sin sincronizar.
+
+   Ahora cada APARATO tiene su propia serie (está permitido usar series
+   distintas por punto de venta, art. 6.2), así dos tablets nunca pueden
+   dar el mismo número aunque trabajen sin conexión:
+     T26K4P-000123  → factura simplificada (ticket)
+     F26K4P-000007  → factura completa, con los datos del cliente
+     R26K4P-000002  → factura rectificativa (anulación)
+   El contador vive en el aparato y se cruza con las ventas que ya hay
+   (por si se reinstala): nunca baja, y nunca se salta un número. */
+function serieDispositivo(){
+  const KEY = 'gastrogoan_serie_disp';
+  let cod = null;
+  try{ cod = localStorage.getItem(KEY); }catch(e){}
+  if(cod && /^[A-Z0-9]{3}$/.test(cod)) return cod;
+  const usados = new Set();
+  (DB.sales||[]).forEach(v => [v.ticketNum, v.facturaCompleta && v.facturaCompleta.num, v.rectificativa && v.rectificativa.num]
+    .forEach(n => { if(n && /^[TFR]\d\d[A-Z0-9]{3}-/.test(n)) usados.add(n.slice(3,6)); }));
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  do{
+    const rnd = new Uint8Array(3);
+    (window.crypto || {}).getRandomValues ? crypto.getRandomValues(rnd) : rnd.forEach((_,i)=>rnd[i]=Math.floor(Math.random()*256));
+    cod = Array.from(rnd).map(x => abc[x % abc.length]).join('');
+  }while(usados.has(cod));
+  try{ localStorage.setItem(KEY, cod); }catch(e){}
+  return cod;
+}
+function siguienteNumeroFactura(tipo, fecha){
+  const serie = tipo + (fecha || todayStr()).slice(2,4) + serieDispositivo();
+  const tenant = (DB.license && DB.license.tenantId) || 'local';
+  const lsKey = 'gastrogoan_contador_' + tenant + '_' + serie;
+  let n = 0;
+  try{ n = parseInt(localStorage.getItem(lsKey)) || 0; }catch(e){}
+  (DB.sales||[]).forEach(v => [v.ticketNum, v.facturaCompleta && v.facturaCompleta.num, v.rectificativa && v.rectificativa.num].forEach(x => {
+    if(x && x.startsWith(serie + '-')) n = Math.max(n, parseInt(x.split('-')[1]) || 0);
+  }));
+  n++;
+  try{ localStorage.setItem(lsKey, String(n)); }catch(e){}
+  return serie + '-' + String(n).padStart(6, '0');
+}
+function numerarTicket(sale){
+  if(sale && !sale.ticketNum) sale.ticketNum = siguienteNumeroFactura('T', sale.date);
+}
+// Anular una venta YA cobrada no borra su factura: se emite una
+// rectificativa que la deja a cero (art. 15 RD 1619/2012), con su propia
+// serie, la referencia a la que rectifica y el motivo.
+function emitirRectificativa(sale, motivo){
+  if(!sale || sale.rectificativa) return;
+  sale.rectificativa = {
+    num: siguienteNumeroFactura('R', todayStr()), fecha: todayStr(),
+    rectifica: (sale.facturaCompleta && sale.facturaCompleta.num) || sale.ticketNum || sale.facturaNum || String(sale.id),
+    motivo: motivo || '',
+  };
+}
+function printRectificativa(saleId){
+  const sale = (DB.sales||[]).find(s => s.id === saleId);
+  if(sale && sale.rectificativa) printTicket(sale, {rectificativa:true});
+}
 // Asigna un número de factura secuencial (solo la primera vez) e imprime
 // una factura simplificada con desglose de IVA según la configuración del ticket.
+// "Factura": la FACTURA COMPLETA que pide un cliente empresa o
+// profesional. Necesita su nombre o razón social, NIF y domicilio (art. 6
+// RD 1619/2012), y como sustituye al ticket ya entregado, lo dice ("canje",
+// art. 15). Se numera en su propia serie (F) la primera vez; volver a
+// pedirla es una copia y se marca como tal.
 function printInvoice(saleId){
   const sale = DB.sales.find(s => s.id === saleId);
   if(!sale) return;
-  // Si ya tenía número de factura ANTES de entrar aquí, esto es una
-  // reimpresión de una factura ya emitida — se marca como tal para que no
-  // se pueda confundir con el original (mismo número, misma pinta, entregado
-  // dos veces sin ninguna marca visible de que la segunda es una copia).
-  const yaEmitida = !!sale.facturaNum;
-  if(!sale.facturaNum){
-    DB.business.facturaCounter = (DB.business.facturaCounter||0) + 1;
-    const year = (sale.date || todayStr()).slice(0,4);
-    sale.facturaNum = `${year}-${String(DB.business.facturaCounter).padStart(5,'0')}`;
-    saveDB();
-  }
-  printTicket(sale, {factura:true, duplicado: yaEmitida});
+  if(sale.facturaCompleta){ printTicket(sale, {factura:true, duplicado:true}); return; }
+  const cli = sale.clientId ? (DB.clients||[]).find(c => c.id === sale.clientId) : null;
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-file-invoice"></i> ${t('factura.completa.title')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 12px">${t('factura.completa.desc')}</p>
+    <div class="field"><label>${t('factura.completa.nombre')}</label><input type="text" id="fc-nombre" value="${escapeHtml((cli && (cli.razonSocial||cli.name)) || sale.clienteNombre || '')}"></div>
+    <div class="field-row">
+      <div class="field"><label>${t('hr.libro.nif')}</label><input type="text" id="fc-nif" value="${escapeHtml((cli && cli.nif) || '')}" placeholder="B12345678"></div>
+    </div>
+    <div class="field"><label>${t('factura.completa.direccion')}</label><input type="text" id="fc-dir" value="${escapeHtml((cli && (cli.direccionFiscal||cli.address)) || '')}"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="emitirFacturaCompleta(${saleId})"><i class="ti ti-printer"></i> ${t('factura.completa.emitir')}</button>
+    </div>
+  `);
+}
+function emitirFacturaCompleta(saleId){
+  const sale = DB.sales.find(s => s.id === saleId);
+  if(!sale || sale.facturaCompleta) return;
+  const nombre = document.getElementById('fc-nombre').value.trim();
+  const nif = document.getElementById('fc-nif').value.trim().toUpperCase();
+  const direccion = document.getElementById('fc-dir').value.trim();
+  if(!nombre || !nif || !direccion){ showToast(t('factura.completa.faltan')); return; }
+  sale.facturaCompleta = {num: siguienteNumeroFactura('F', todayStr()), fecha: todayStr(), nombre, nif, direccion, sustituye: sale.ticketNum || ''};
+  // Se recuerda en la ficha del cliente para la próxima vez.
+  const cli = sale.clientId ? (DB.clients||[]).find(c => c.id === sale.clientId) : null;
+  if(cli){ cli.nif = nif; cli.razonSocial = nombre; cli.direccionFiscal = direccion; }
+  saveDB();
+  closeModal();
+  printTicket(sale, {factura:true});
 }
 
 // Abre el cliente de correo del usuario con el ticket en el cuerpo del mensaje.
