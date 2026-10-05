@@ -8464,7 +8464,9 @@ function setLang(lang){
   try{ localStorage.setItem(LANG_LS, lang); }catch(e){}
   location.reload();
 }
-const LANG_FLAGS = {es:'🇪🇸', en:'🇬🇧', ca:'<svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><rect width="27" height="18" fill="#FCDD09"/><rect y="2" width="27" height="2" fill="#DA121A"/><rect y="6" width="27" height="2" fill="#DA121A"/><rect y="10" width="27" height="2" fill="#DA121A"/><rect y="14" width="27" height="2" fill="#DA121A"/></svg>'};
+// Banderas dibujadas, no emojis: Windows no tiene emojis de bandera y en
+// su lugar enseñaba las letras "ES" / "GB" (o nada). La catalana ya lo era.
+const LANG_FLAGS = {es:'<svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><rect width="27" height="18" fill="#AA151B"/><rect y="4.5" width="27" height="9" fill="#F1BF00"/></svg>', en:'<svg width="20" height="14" viewBox="0 0 60 30" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><clipPath id="gbc"><rect width="60" height="30"/></clipPath><g clip-path="url(#gbc)"><rect width="60" height="30" fill="#012169"/><path d="M0,0 60,30M60,0 0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 60,30M60,0 0,30" stroke="#C8102E" stroke-width="2"/><path d="M30,0V30M0,15H60" stroke="#fff" stroke-width="10"/><path d="M30,0V30M0,15H60" stroke="#C8102E" stroke-width="6"/></g></svg>', ca:'<svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><rect width="27" height="18" fill="#FCDD09"/><rect y="2" width="27" height="2" fill="#DA121A"/><rect y="6" width="27" height="2" fill="#DA121A"/><rect y="10" width="27" height="2" fill="#DA121A"/><rect y="14" width="27" height="2" fill="#DA121A"/></svg>'};
 const LANG_NAMES = {es:'Castellano', en:'English', ca:'Català'};
 function toggleLangMenu(ev){
   if(ev) ev.stopPropagation();
