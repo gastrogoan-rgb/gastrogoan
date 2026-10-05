@@ -142,12 +142,16 @@ await caso('Historial de Pedidos: entra por el mes en curso, con selector de añ
     await new Promise(r=>setTimeout(r,400));
     const anioAnterior = fechas();
     setPedidoHistorialYear(1);
-    return {inicial, pills, anioAnterior, guardados: DB.purchaseOrders.length};
+    return {inicial, pills, anioAnterior, guardados: DB.purchaseOrders.length, otroMes};
   });
   assert.equal(r.pills, 12, 'los doce meses, como en Gestión Económica: ' + JSON.stringify(r));
   // Del mes en curso solo el recibido de hoy; el recibido del año pasado, fuera.
   assert.ok(r.inicial.some(x=>/RECIBIDO/.test(x)), 'el recibido de este mes se ve: ' + JSON.stringify(r.inicial));
-  assert.ok(!r.inicial.some(x=>/-05 /.test(x) && /RECIBIDO/.test(x)), 'un recibido de otro mes no: ' + JSON.stringify(r.inicial));
+  // ⚠️ No basta con buscar "-05" al vuelo: hoy puede caer precisamente en
+  // día 5 del mes (pasó el 5/10/2026 y tumbó esto), y entonces el pedido de
+  // HOY también termina en "-05" — se compara con la fecha completa del
+  // "otro mes" de verdad, no con un sufijo que puede coincidir por casualidad.
+  assert.ok(!r.inicial.some(x=>x.includes(r.otroMes) && /RECIBIDO/.test(x)), 'un recibido de otro mes no: ' + JSON.stringify(r.inicial));
   // Pero un pedido ENVIADO sin recibir es trabajo pendiente: se ve siempre.
   assert.ok(r.inicial.some(x=>/ENVIADO/.test(x)), 'lo pendiente no desaparece al cambiar de mes: ' + JSON.stringify(r.inicial));
   assert.ok(r.anioAnterior.some(x=>/RECIBIDO/.test(x)), 'el año anterior sigue accesible: ' + JSON.stringify(r.anioAnterior));
