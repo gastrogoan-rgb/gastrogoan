@@ -505,7 +505,10 @@ function comoFirebase(v){
   }
   return v;
 }
-const esClavePlan360 = k => k.startsWith('plan360');
+// plan360Kpis lo escribe SOLO la app del negocio (sus indicadores del mes):
+// si el panel lo subiera con el resto, devolvería a la nube una copia vieja
+// y, al cambiar, cada recálculo parecería "el negocio ha tocado algo".
+const esClavePlan360 = k => k.startsWith('plan360') && k !== 'plan360Kpis';
 function plan360Huella(biz){
   const o = {};
   Object.keys(biz || {}).filter(esClavePlan360).forEach(k => { o[k] = biz[k]; });
@@ -2711,13 +2714,16 @@ Todos los entregables, metodologías, plantillas y materiales desarrollados perm
 Las partes se someten a lo establecido en el contrato de confidencialidad (RGPD) que forma parte integrante de este acuerdo, más abajo.
 
 8. Terminación anticipada
-El cliente podrá rescindir este contrato dentro de los tres meses que dura el programa, mediante notificación por escrito. En caso de rescisión voluntaria, deberá abonar a GastroGoan el importe restante del precio pactado, exigible en el plazo de treinta días desde la notificación.
+El cliente podrá rescindir este contrato durante las 4 semanas (28 días) que dura el programa, mediante notificación por escrito. En caso de rescisión voluntaria, deberá abonar a GastroGoan el importe restante del precio pactado, exigible en el plazo de treinta días desde la notificación.
 
 9. Resolución de conflictos
 En caso de discrepancias, las partes intentarán solucionarlas amistosamente; si no fuera posible, se someterán a mediación previa y, en última instancia, a los Juzgados y Tribunales de Barcelona.
 
 10. Legislación aplicable
 Ley española.
+
+11. Servicio de mantenimiento (opcional)
+Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Incluye cada mes cuatro contactos (dos por WhatsApp y dos por videollamada) con las entregas y tareas que el coach planifique para ese mes. Se contrata por meses naturales, se renueva automáticamente cada mes y se paga por adelantado. El cliente puede darse de baja en cualquier momento comunicándolo por escrito con al menos 15 días de antelación al inicio del mes siguiente; el mes en curso no se devuelve. Las cláusulas 4 a 10 y el acuerdo de confidencialidad se aplican también a este servicio.
 
 CONTRATO DE CONFIDENCIALIDAD (RGPD)
 
@@ -2747,7 +2753,8 @@ function plan360FillTemplate(text, c){
     .replace(/\{\{nif\}\}/g, (c && c.clienteNIF) || '________')
     .replace(/\{\{direccion\}\}/g, (c && c.clienteDireccion) || '________')
     .replace(/\{\{precio\}\}/g, (c && c.precio) || '________')
-    .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________');
+    .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________')
+    .replace(/\{\{precioMantenimiento\}\}/g, (c && c.precioMantenimiento) || '75 € al mes');
 }
 const PLAN360_DEFAULT_PROGRAM = [
   {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
@@ -4239,7 +4246,7 @@ const PLAN360_ESTADO_FINAL_COLOR = {cumplido: 'var(--green)', parcial: 'var(--am
 function plan360FreshCierre(){
   return {
     kpis: {}, mejorasVisibles: '', queVigilar: '', siguienteNivel: '',
-    mantenimiento: {precio: '99€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
+    mantenimiento: {precio: '75€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
   };
 }
 const PLAN360_CIERRE_KPIS = [
@@ -4284,6 +4291,7 @@ function plan360CierreHtml(){
       <div class="p360-week-label">Cierre y próximos pasos</div>
       <div class="card" style="margin-bottom:10px">
         <div style="font-weight:600;margin-bottom:8px">Los números: antes → hoy</div>
+        ${kpiCierreHtml()}
         ${notaMisterio !== null ? `<button class="btn btn-sm" style="margin-bottom:8px" onclick="plan360CierreUsarNotaMisterio(${notaMisterio})">Usar la nota del cliente misterioso (${notaMisterio}) como "antes"</button>` : ''}
         <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center">
           <div></div><div style="font-size:11px;color:var(--muted);text-align:center">Antes</div><div style="font-size:11px;color:var(--muted);text-align:center">Hoy</div>
@@ -4330,7 +4338,7 @@ function plan360CierreHtml(){
         <div style="font-weight:600;margin-bottom:8px">Plan de Mantenimiento GastroGoan</div>
         <p class="muted" style="margin:0 0 8px;font-size:13px">WhatsApp de apoyo · videollamada cada 2 semanas · apoyo presencial a precio reducido.</p>
         <div class="field" style="margin-bottom:8px;max-width:160px"><label>Precio</label>
-          <input value="${esc(m.precio || '99€/mes')}" onchange="guardarCierreMantenimientoPrecio(this.value)">
+          <input value="${esc(m.precio && m.precio !== '99€/mes' ? m.precio : '75€/mes')}" onchange="guardarCierreMantenimientoPrecio(this.value)">
         </div>
         ${m.respuesta ? `
           <div class="card" style="background:${m.respuesta==='acepta'?'var(--green-l)':'var(--amber-l)'};border-color:${m.respuesta==='acepta'?'var(--green)':'var(--amber)'}">
@@ -4421,6 +4429,17 @@ const MANT_GADGETS = [
   ['entrega', 'entrega', 'ti-tools-kitchen-2', 'Revisión de la carta (trimestral)', 'Matriz de ingeniería de carta: qué quitar, qué subir de precio y qué destacar.', TRIM],
   ['entrega', 'entrega', 'ti-file-certificate', 'Revisión de contratos (anual)', 'Luz, gas, seguros, datáfono, cervecera.', [1]],
   ['entrega', 'entrega', 'ti-info-circle', 'Aviso o información importante', ''],
+  // 6/10, revisión de un consultor: lo que hace que el cliente vea cada mes
+  // que el mantenimiento le compensa. Todo opcional: el coach lo pone el día
+  // que quiere, el mes sale vacío.
+  ['entrega', 'entrega', 'ti-target-arrow', 'El objetivo del mes', 'UNO solo, con su cifra y cómo se va a medir. Se repasa en la videollamada de cierre.'],
+  ['entrega', 'entrega', 'ti-alert-triangle', 'Tres alertas del mes', 'El proveedor que más ha subido, el plato que más margen ha perdido y el día más flojo, con qué hacer en cada caso.'],
+  ['entrega', 'entrega', 'ti-trending-up', 'Marcador: lo conseguido desde que empezamos', 'Food cost, personal, ventas y reseñas del Día 1 frente a hoy, traducido a euros al mes.', TRIM],
+  ['entrega', 'entrega', 'ti-certificate', 'Informe del año', 'Todo lo conseguido desde el Día 1, el año frente al anterior y los 3 objetivos del año que empieza.', [1]],
+  ['entrega', 'entrega', 'ti-sun', 'Carta de verano', 'Qué entra, qué sale y a qué precio, escandallada, para la terraza y el calor.', [4, 5]],
+  ['entrega', 'entrega', 'ti-leaf', 'Carta de otoño e invierno', 'Platos de cuchara y producto de temporada, escandallados.', [9, 10]],
+  ['entrega', 'entrega', 'ti-briefcase', 'Menús de empresa y grupos', 'Dos o tres menús cerrados con precio por persona, para la vuelta y para Navidad.', [9, 10]],
+  ['entrega', 'entrega', 'ti-phone-call', 'Llamada al cliente parado', 'Si lleva dos semanas sin marcar tareas: llamar, entender por qué y reajustar el mes.'],
 
   ['tarea', 'equipo', 'ti-users', 'Briefing con el personal', 'Tema del día:'],
   ['tarea', 'equipo', 'ti-school', 'Leer la formación del mes en el briefing', ''],
@@ -4429,6 +4448,7 @@ const MANT_GADGETS = [
   ['tarea', 'equipo', 'ti-beach', 'Revisar las vacaciones pendientes del equipo', ''],
   ['tarea', 'equipo', 'ti-calendar-off', 'Cerrar las vacaciones del equipo con 3 meses de margen', '', [3, 9]],
   ['tarea', 'equipo', 'ti-user-plus', 'Contratar el refuerzo de verano', 'En abril, no en junio cuando ya no queda nadie.', [4]],
+  ['tarea', 'equipo', 'ti-calendar-time', 'Cuadrante de diciembre', 'Cenas de empresa, festivos y vacaciones del equipo, cerrado en noviembre.', [11]],
   ['tarea', 'equipo', 'ti-heart-handshake', 'Charla uno a uno con un empleado', ''],
   ['tarea', 'equipo', 'ti-mood-smile', 'Preguntar a cada empleado «¿qué cambiarías?»', 'Una pregunta y nada más. Apunta las respuestas.'],
   ['tarea', 'equipo', 'ti-clock', 'Revisar quién lleva más horas extra', 'Es el siguiente que se va.'],
@@ -4781,6 +4801,7 @@ function renderMantPage(clave){
       <strong style="flex:1;text-align:center;font-size:16px">${esc(nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1))}</strong>
       <button class="btn btn-sm" onclick="mantMoverMes(1)"><i class="ti ti-chevron-right"></i></button>
     </div>
+    ${kpiInformeHtml(kpiClaveMes(mantMesActivo, mantMesActivo === mantMesClave(new Date()) ? -1 : 0))}
     ${mes ? `<div class="muted" style="font-size:13px;margin-bottom:10px">${hechos} de ${total} hechas este mes.</div>` : `
       <div class="card" style="margin-bottom:12px">
         <p style="margin:0 0 8px">Este mes está vacío.</p>
@@ -4975,6 +4996,156 @@ function mantLunesDeHoy(){
 }
 // Qué hay de un negocio: lo de esta semana, lo atrasado y lo que ha
 // contestado sin que lo hayas visto. Función pura, para poder probarla.
+/* ============================================================
+   NÚMEROS DEL NEGOCIO (6/10)
+   ============================================================
+   La app de cada negocio deja cada mes un resumen de indicadores en
+   business.plan360Kpis (lo calcula con las mismas funciones que su Cuenta
+   de Resultados). Aquí se usan para que el coach no trabaje a ciegas: el
+   informe del mes sale hecho, con alertas y listo para WhatsApp, y el
+   cierre compara el Día 1 con hoy sin teclear nada. */
+const KPI_FILAS = [
+  {k:'netas', lbl:'Ventas sin IVA', fmt:'eur', mejor:'sube'},
+  {k:'tickets', lbl:'Tickets', fmt:'num', mejor:'sube'},
+  {k:'ticketMedio', lbl:'Ticket medio', fmt:'eur', mejor:'sube'},
+  {k:'foodCostPct', lbl:'Food cost', fmt:'pct', mejor:'baja'},
+  {k:'personalPct', lbl:'Personal sobre ventas', fmt:'pct', mejor:'baja'},
+  {k:'resultado', lbl:'Resultado antes de impuestos', fmt:'eur', mejor:'sube'},
+  {k:'puntoEquilibrio', lbl:'Punto de equilibrio (ventas)', fmt:'eur', mejor:'baja'},
+  {k:'mermasPct', lbl:'Mermas sobre compras', fmt:'pct', mejor:'baja'},
+  {k:'nps', lbl:'Valoración de clientes (/10)', fmt:'num1', mejor:'sube'},
+];
+function kpiFmt(v, fmt){
+  if(v == null || isNaN(v)) return '—';
+  if(fmt === 'eur') return Number(v).toLocaleString('es-ES', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' €';
+  if(fmt === 'pct') return Number(v).toLocaleString('es-ES', {maximumFractionDigits:1}) + ' %';
+  if(fmt === 'num1') return Number(v).toLocaleString('es-ES', {maximumFractionDigits:1});
+  return Number(v).toLocaleString('es-ES');
+}
+// Diferencia con su color: verde si va a mejor, rojo si va a peor.
+function kpiDelta(act, ant, fila){
+  if(act == null || ant == null || isNaN(act) || isNaN(ant)) return '';
+  const d = act - ant;
+  if(Math.abs(d) < 0.05) return '<span class="muted" style="font-size:12px">=</span>';
+  const bien = fila.mejor === 'sube' ? d > 0 : d < 0;
+  const txt = fila.fmt === 'pct' ? (d > 0 ? '+' : '') + d.toLocaleString('es-ES', {maximumFractionDigits:1}) + ' pt'
+    : fila.fmt === 'eur' ? (d > 0 ? '+' : '') + Math.round(d).toLocaleString('es-ES') + ' €'
+    : (d > 0 ? '+' : '') + d.toLocaleString('es-ES', {maximumFractionDigits:1});
+  return `<span style="font-size:12px;font-weight:600;color:${bien ? 'var(--green)' : 'var(--red)'}">${txt}</span>`;
+}
+function kpiClaveMes(clave, delta){
+  const [y, m] = clave.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+const KPI_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+function kpiAlertas(k){
+  const a = (k && k.alertas) || {};
+  const out = [];
+  if(a.subida) out.push(`Precio que más ha subido: ${a.subida.producto}${a.subida.proveedor ? ' (' + a.subida.proveedor + ')' : ''}, +${String(a.subida.pct).replace('.', ',')} %.`);
+  if(a.peorPlato) out.push(`Plato con peor food cost: ${a.peorPlato.plato}, ${String(a.peorPlato.fc).replace('.', ',')} % (${a.peorPlato.unidades} vendidos).`);
+  if(a.diaFlojo) out.push(`Día más flojo: el ${KPI_DIAS[a.diaFlojo.dia]}, ${kpiFmt(a.diaFlojo.media, 'eur')} de media.`);
+  return out;
+}
+function kpiNombreMes(clave){
+  const [y, m] = clave.split('-').map(Number);
+  const s = new Date(y, m - 1, 1).toLocaleDateString('es-ES', {month: 'long', year: 'numeric'});
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function kpiInformeTexto(clave){
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const k = (K.meses || {})[clave];
+  if(!k) return '';
+  const ant = (K.meses || {})[kpiClaveMes(clave, -1)];
+  const lineas = [`*Tus números de ${kpiNombreMes(clave).toLowerCase()}*`];
+  KPI_FILAS.forEach(f => {
+    if(k[f.k] == null) return;
+    let l = `• ${f.lbl}: ${kpiFmt(k[f.k], f.fmt)}`;
+    if(ant && ant[f.k] != null){
+      const d = k[f.k] - ant[f.k];
+      if(Math.abs(d) >= 0.05) l += ` (${d > 0 ? '+' : ''}${f.fmt === 'pct' ? d.toLocaleString('es-ES', {maximumFractionDigits:1}) + ' pt' : f.fmt === 'eur' ? Math.round(d).toLocaleString('es-ES') + ' €' : d.toLocaleString('es-ES', {maximumFractionDigits:1})} frente al mes anterior)`;
+    }
+    lineas.push(l);
+  });
+  if(k.puntoEquilibrio != null && k.netas != null) lineas.push(`• ${k.netas >= k.puntoEquilibrio ? 'Por encima' : 'Por debajo'} del punto de equilibrio en ${kpiFmt(Math.abs(k.netas - k.puntoEquilibrio), 'eur')}.`);
+  const al = kpiAlertas(k);
+  if(al.length){ lineas.push('', '*Alertas*'); al.forEach(x => lineas.push('• ' + x)); }
+  return lineas.join('\n');
+}
+function kpiInformeHtml(clave){
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const k = (K.meses || {})[clave];
+  if(!k) return `<div class="card" style="margin-bottom:12px"><div style="font-weight:700;margin-bottom:4px"><i class="ti ti-chart-bar"></i> Números del mes</div>
+    <p class="muted" style="font-size:13px;margin:0">Todavía no hay números de este mes. Aparecen solos cuando el negocio abre su app (se calculan allí con sus ventas, compras y gastos).</p></div>`;
+  const ant = (K.meses || {})[kpiClaveMes(clave, -1)];
+  const haceUnAño = (K.meses || {})[kpiClaveMes(clave, -12)];
+  const enCurso = clave === mantMesClave(new Date());
+  const al = kpiAlertas(k);
+  const lunes = mantLunesDelMes(mantMesActivo || clave);
+  return `<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <strong style="flex:1;min-width:180px"><i class="ti ti-chart-bar"></i> Números de ${esc(kpiNombreMes(clave).toLowerCase())}${enCurso ? ' (en curso)' : ''}</strong>
+      <span class="muted" style="font-size:12px">Calculado en su app${K.ts ? ' el ' + esc(new Date(K.ts).toLocaleString('es-ES', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})) : ''}</span>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:420px">
+      <tr style="color:var(--muted);font-size:12px"><td></td><td style="text-align:right;padding:4px 6px">Este mes</td><td style="text-align:right;padding:4px 6px">Mes anterior</td>${haceUnAño ? '<td style="text-align:right;padding:4px 6px">Hace un año</td>' : ''}</tr>
+      ${KPI_FILAS.filter(f => k[f.k] != null).map(f => `<tr style="border-top:1px solid var(--border)">
+        <td style="padding:6px 6px 6px 0">${esc(f.lbl)}</td>
+        <td style="text-align:right;padding:6px;font-weight:700;white-space:nowrap">${kpiFmt(k[f.k], f.fmt)}</td>
+        <td style="text-align:right;padding:6px;white-space:nowrap">${ant ? kpiFmt(ant[f.k], f.fmt) + ' ' + kpiDelta(k[f.k], ant[f.k], f) : '—'}</td>
+        ${haceUnAño ? `<td style="text-align:right;padding:6px;white-space:nowrap">${kpiFmt(haceUnAño[f.k], f.fmt)} ${kpiDelta(k[f.k], haceUnAño[f.k], f)}</td>` : ''}
+      </tr>`).join('')}
+    </table></div>
+    ${k.puntoEquilibrio != null ? `<p style="font-size:13px;margin:8px 0 0">${k.netas >= k.puntoEquilibrio ? '<span style="color:var(--green);font-weight:600">Por encima</span>' : '<span style="color:var(--red);font-weight:600">Por debajo</span>'} del punto de equilibrio en ${kpiFmt(Math.abs(k.netas - k.puntoEquilibrio), 'eur')}.</p>` : ''}
+    ${k.canal && (k.canal.delivery || k.canal.takeaway) ? `<p class="muted" style="font-size:12.5px;margin:4px 0 0">Por canal: sala ${kpiFmt(k.canal.mesa,'eur')} · para llevar ${kpiFmt(k.canal.takeaway,'eur')} · delivery ${kpiFmt(k.canal.delivery,'eur')}${k.comisiones ? ` (comisiones ${kpiFmt(k.comisiones,'eur')})` : ''}</p>` : ''}
+    ${al.length ? `<div style="margin-top:10px;padding:8px 10px;background:var(--amber-l);border-radius:8px;font-size:13px"><strong><i class="ti ti-alert-triangle"></i> Alertas</strong>${al.map(x => `<div>• ${esc(x)}</div>`).join('')}</div>` : ''}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center">
+      <button class="btn btn-sm" onclick="kpiCopiarInforme('${clave}')"><i class="ti ti-brand-whatsapp"></i> Copiar para WhatsApp</button>
+      <select id="kpi-informe-sem" style="width:auto;flex:none">${lunes.map((f, i) => `<option value="s${i + 1}">${i + 1}º lunes</option>`).join('')}</select>
+      <button class="btn btn-sm" onclick="kpiMeterInforme('${clave}')"><i class="ti ti-plus"></i> Añadir al mes como «Reporte del mes»</button>
+    </div>
+  </div>`;
+}
+async function kpiCopiarInforme(clave){
+  const txt = kpiInformeTexto(clave);
+  try{ await navigator.clipboard.writeText(txt); alert('Copiado. Pégalo en el WhatsApp del negocio.'); }
+  catch(e){ prompt('Cópialo de aquí:', txt); }
+}
+function kpiMeterInforme(clave){
+  const sel = document.getElementById('kpi-informe-sem');
+  const txt = kpiInformeTexto(clave);
+  if(!txt || !sel) return;
+  mantMeter(mantSemana(mantMes(mantMesActivo, true), sel.value), {tipo:'entrega', titulo:'Reporte del mes', detalle: txt, icono:'ti-report-money'});
+  mantGuardarYPintar();
+}
+// Cierre: el Día 1 frente al último mes con datos, sin teclear.
+function kpiCierreHtml(){
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const claves = Object.keys(K.meses || {}).sort();
+  const ult = claves.length ? K.meses[claves[claves.length - 1]] : null;
+  if(!K.dia1 || !ult) return `<p class="muted" style="font-size:12.5px;margin:0 0 8px">Cuando el negocio abra su app con el Plan 360 en marcha, aquí saldrán sus números del Día 1 y de hoy, sin teclearlos.</p>`;
+  const f = KPI_FILAS.filter(x => K.dia1[x.k] != null || ult[x.k] != null);
+  return `<div style="font-size:12.5px;margin-bottom:8px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:360px">
+      <tr style="color:var(--muted);font-size:12px"><td>Datos de su app</td><td style="text-align:right">Día 1 (${esc(kpiNombreMes(K.dia1.mes))})</td><td style="text-align:right">Hoy (${esc(kpiNombreMes(claves[claves.length - 1]))})</td></tr>
+      ${f.map(x => `<tr style="border-top:1px solid var(--border)"><td style="padding:4px 0">${esc(x.lbl)}</td><td style="text-align:right">${kpiFmt(K.dia1[x.k], x.fmt)}</td><td style="text-align:right">${kpiFmt(ult[x.k], x.fmt)} ${kpiDelta(ult[x.k], K.dia1[x.k], x)}</td></tr>`).join('')}
+    </table></div>
+    <button class="btn btn-sm" style="margin-bottom:8px" onclick="kpiRellenarCierre()"><i class="ti ti-arrow-down"></i> Pasar estos números a «antes → hoy»</button>`;
+}
+function kpiRellenarCierre(){
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const claves = Object.keys(K.meses || {}).sort();
+  const ult = claves.length ? K.meses[claves[claves.length - 1]] : null;
+  if(!K.dia1 || !ult) return;
+  if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
+  const c = remoteBiz.plan360Cierre;
+  const pon = (key, a, h, fmt) => { const v = plan360CierreKpi(c, key); if(a != null) v.antes = kpiFmt(a, fmt); if(h != null) v.hoy = kpiFmt(h, fmt); };
+  pon('ticketMedio', K.dia1.ticketMedio, ult.ticketMedio, 'eur');
+  pon('foodCostPct', K.dia1.foodCostPct, ult.foodCostPct, 'pct');
+  pon('costePersonalPct', K.dia1.personalPct, ult.personalPct, 'pct');
+  pon('ventasMensuales', K.dia1.netas, ult.netas, 'eur');
+  saveRemoteBiz();
+  renderClientGrid();
+}
 function mantResumenNegocio(mant, hoyStr, vistoTs){
   const lunesHoy = (() => { const [y, m, d] = hoyStr.split('-').map(Number); const f = new Date(y, m - 1, d); f.setDate(f.getDate() - ((f.getDay() + 6) % 7)); return f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0'); })();
   const finSemana = addDaysStr(lunesHoy, 7);
@@ -4996,6 +5167,8 @@ function mantResumenNegocio(mant, hoyStr, vistoTs){
         if(esta && !it.hecho) (it.tipo === 'tarea' ? r.suyas : r.tuyas).push(it.titulo);
         if(!esta && f < lunesHoy && !it.hecho) r.atrasadas.push(it.titulo);
         if(it.respuesta && (it.respuestaEn || 0) > (vistoTs || 0)) r.respuestas.push(it.titulo);
+        if(it.tipo === 'tarea' && it.hechoEn) r.ultimaMarca = Math.max(r.ultimaMarca || 0, it.hechoEn);
+        if(it.tipo === 'tarea') r.tareasTotal = (r.tareasTotal || 0) + 1;
       });
     });
   });
@@ -5013,8 +5186,9 @@ async function mantLeerDeUnNegocio(e){
   const db = bizApp.database();
   db.goOnline();
   try {
-    const snap = await db.ref('gastrogoan/tenants/' + e.tenantId + '/db/business/plan360Mant').once('value');
-    return {mant: snap.val()};
+    const base = 'gastrogoan/tenants/' + e.tenantId + '/db/business/';
+    const [snap, kp] = await Promise.all([db.ref(base + 'plan360Mant').once('value'), db.ref(base + 'plan360Kpis').once('value')]);
+    return {mant: snap.val(), kpis: kp.val()};
   } finally {
     // Si no es el negocio que tienes abierto, se suelta la conexión.
     if(currentTenantId !== e.tenantId) db.goOffline();
@@ -5032,7 +5206,7 @@ async function renderMiSemana(){
     try {
       const lectura = await Promise.race([mantLeerDeUnNegocio(c), new Promise((_, no) => setTimeout(() => no(new Error('tiempo')), 12000))]);
       if(lectura.sinNube || !lectura.mant) return null;   // sin mantenimiento: no sale
-      return Object.assign({}, c, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)));
+      return Object.assign({}, c, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)), {kpis: lectura.kpis});
     } catch(err){
       console.warn('Mi semana: no se pudo leer', c.name, err);
       return Object.assign({}, c, {error: true});
@@ -5066,6 +5240,25 @@ async function renderMiSemana(){
         ${f.suyas.length ? `<div style="font-size:13px"><span style="color:#86600F;font-weight:600">Negocio:</span> ${lista(f.suyas, 3)}</div>` : ''}
         ${f.atrasadas.length ? `<div style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${f.atrasadas.length} sin hacer de semanas pasadas: ${lista(f.atrasadas, 2)}</div>` : ''}
         ${f.respuestas.length ? `<div style="font-size:13px;color:var(--olive)"><i class="ti ti-message-circle"></i> Te ha contestado en: ${lista(f.respuestas, 2)}</div>` : ''}
+        ${(() => {
+          // Cliente parado: tiene tareas puestas y lleva 14 días sin marcar ninguna.
+          const dias = f.ultimaMarca ? Math.floor((Date.now() - f.ultimaMarca) / 86400000) : null;
+          return f.tareasTotal && f.atrasadas.length && (dias === null || dias >= 14) ? `<div style="font-size:13px;color:var(--red);font-weight:600"><i class="ti ti-phone-call"></i> ${dias === null ? 'No ha marcado ninguna tarea todavía' : 'Lleva ' + dias + ' días sin marcar nada'}: llámale.</div>` : '';
+        })()}
+        ${(() => {
+          const K = f.kpis || {};
+          const cl = Object.keys(K.meses || {}).sort();
+          const hoyClave = mantMesClave(new Date());
+          const clave = cl.filter(x => x < hoyClave).pop();
+          const k = clave && K.meses[clave];
+          if(!k) return '';
+          const ant = K.meses[kpiClaveMes(clave, -1)];
+          const chip = (lbl, v, fmt, fila) => `<span style="white-space:nowrap">${lbl} <strong>${kpiFmt(v, fmt)}</strong> ${ant ? kpiDelta(v, ant[fila.k], fila) : ''}</span>`;
+          const F = x => KPI_FILAS.find(y => y.k === x);
+          return `<div style="font-size:12.5px;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;color:var(--body)"><span class="muted">${esc(kpiNombreMes(clave))}:</span>
+            ${chip('Ventas', k.netas, 'eur', F('netas'))}${k.foodCostPct != null ? chip('Food cost', k.foodCostPct, 'pct', F('foodCostPct')) : ''}${k.personalPct != null ? chip('Personal', k.personalPct, 'pct', F('personalPct')) : ''}
+            ${k.puntoEquilibrio != null ? `<span style="color:${k.netas >= k.puntoEquilibrio ? 'var(--green)' : 'var(--red)'}">${k.netas >= k.puntoEquilibrio ? 'sobre' : 'bajo'} el punto de equilibrio</span>` : ''}</div>`;
+        })()}
         ${!f.tuyas.length && !f.suyas.length && !f.atrasadas.length && !f.respuestas.length ? `<div class="muted" style="font-size:13px"><i class="ti ti-circle-check"></i> Todo al día${f.hechasSemana ? ` · ${f.hechasSemana} hechas esta semana` : ''}.</div>` : ''}
       </div>`).join('')}
   `;
@@ -8217,6 +8410,34 @@ const PLAN360_CONTENT_BANK = [
   {categoria: 'Cliente', titulo: 'Mapa del recorrido del cliente', descripcion: 'Dibuja, aunque sea a mano, todos los puntos de contacto del cliente desde que ve el negocio hasta que se va, y marca los 2 peores momentos.', metrica: 'Nº de puntos de fricción detectados'},
   {categoria: 'Cliente', titulo: 'Programa de clientes recurrentes', descripcion: 'Diseña algo simple (tarjeta de sellos, descuento a la 5ª visita...) para premiar a quien repite.', metrica: 'Nº de clientes recurrentes identificados'},
   {categoria: 'Cliente', titulo: 'Revisar quejas de los últimos 3 meses', descripcion: 'Lee todas las quejas o reseñas negativas de los últimos 3 meses y saca el patrón más repetido.', metrica: 'Patrón principal identificado'},
+  {categoria: 'Números', titulo: 'Punto de equilibrio del mes', descripcion: 'En Gestión Económica → Punto de equilibrio: cuánto hay que vender al mes y al día para no perder. Apúntalo en la pizarra de la oficina.', metrica: '€ de ventas diarias necesarias'},
+  {categoria: 'Números', titulo: 'Cierre de caja todos los días', descripcion: 'Cuadrar la caja al cerrar, con la app, todos los días de la semana. Anotar cada descuadre y su motivo.', metrica: 'Nº de días con descuadre'},
+  {categoria: 'Números', titulo: 'Inventario inicial valorado', descripcion: 'Contar cámara, almacén y bodega y anotarlo en la app (Gastos Variables → Recuento). Es la foto de partida para medir el consumo real.', metrica: '€ de existencias a coste'},
+  {categoria: 'Números', titulo: 'Cuenta de resultados del mes pasado', descripcion: 'Repasar con el coach la Cuenta de Resultados: qué parte de cada euro vendido se va en compras, personal y fijos.', metrica: '% de resultado sobre ventas'},
+  {categoria: 'Números', titulo: 'Tesorería de las próximas 13 semanas', descripcion: 'Listar lo que entra y sale cada semana: nóminas, alquiler, IVA del trimestre, seguro anual, proveedores. Detectar la semana en rojo antes de que llegue.', metrica: 'Semanas con saldo negativo previsto'},
+  {categoria: 'Números', titulo: 'Apartar el dinero de Hacienda', descripcion: 'Abrir una cuenta o un sobre aparte y meter cada semana el IVA y las retenciones que marca Tesorería.', metrica: '€ apartados frente a lo que toca'},
+  {categoria: 'Carta', titulo: 'Ingeniería de carta', descripcion: 'Con Análisis de platos de la app: clasificar cada plato por lo que vende y lo que deja (estrella, caballo, puzle, perro) y decidir qué se queda.', metrica: 'Nº de platos en cada grupo'},
+  {categoria: 'Carta', titulo: 'Recortar la carta', descripcion: 'Quitar los platos que ni venden ni dejan margen. Menos platos: menos mermas, menos stock y una cocina más rápida.', metrica: 'Nº de platos de la carta'},
+  {categoria: 'Carta', titulo: 'Ajustar precios con el escandallo', descripcion: 'Subir el precio de los platos que están por encima del food cost objetivo o rehacer la receta.', metrica: 'Food cost teórico de la carta'},
+  {categoria: 'Carta', titulo: 'Escandallos de los 20 más vendidos', descripcion: 'Ficha técnica con gramajes y coste de los 20 platos que más se venden, con el precio de proveedor de hoy.', metrica: '% de ventas con escandallo hecho'},
+  {categoria: 'Compras', titulo: 'Revisar los 5 proveedores principales', descripcion: 'Cuánto se les compra al mes, cuánto han subido en el año y qué condiciones dan (plazo, portes, mínimos).', metrica: '% de subida de precios en el año'},
+  {categoria: 'Compras', titulo: 'Dos presupuestos al proveedor más caro', descripcion: 'Pedir precio de la misma lista de productos a dos proveedores alternativos y comparar.', metrica: '€ al mes de ahorro posible'},
+  {categoria: 'Compras', titulo: 'Pedidos con mínimos y máximos', descripcion: 'Fijar en la app el stock mínimo de los 30 productos más usados y pedir solo cuando se llega a él.', metrica: 'Nº de roturas de stock al mes'},
+  {categoria: 'Personal', titulo: 'Coste de personal sobre ventas', descripcion: 'Gestión Económica → Gastos fijos: comparar el coste de personal con las ventas. En un bar pequeño, sano por debajo del 35 %.', metrica: '% de personal sobre ventas'},
+  {categoria: 'Personal', titulo: 'Ventas por hora trabajada', descripcion: 'Ventas de la semana entre horas fichadas. Comparar por franjas para ver dónde sobra o falta gente.', metrica: '€ vendidos por hora trabajada'},
+  {categoria: 'Personal', titulo: 'Cuadrante según la demanda', descripcion: 'Ajustar los turnos a las horas punta reales (Análisis de ventas → por hora), no a la costumbre.', metrica: 'Horas de personal en franjas flojas'},
+  {categoria: 'Personal', titulo: 'Briefing de 5 minutos antes del servicio', descripcion: 'Cada día: reservas, platos del día, lo que hay que empujar y lo que falta. Siempre a la misma hora.', metrica: 'Nº de días con briefing'},
+  {categoria: 'Personal', titulo: 'Alérgenos: que todo el equipo sepa responder', descripcion: 'Repaso con la carta de alérgenos de la app y prueba rápida a cada persona de sala.', metrica: '% del equipo que responde bien'},
+  {categoria: 'Sala', titulo: 'Tiempos de servicio', descripcion: 'Medir cuánto se tarda en tomar nota, en servir el primero y en cobrar, en un servicio de mediodía y otro de noche.', metrica: 'Minutos de cada tramo'},
+  {categoria: 'Sala', titulo: 'Experiencia del cliente: cliente misterioso', descripcion: 'Repetir el cliente misterioso del Día 1 y comparar punto por punto.', metrica: 'Puntuación frente al Día 1'},
+  {categoria: 'Marketing', titulo: 'Ficha de Google al 100 %', descripcion: 'Horario, fotos recientes, carta, enlace de reservas y respuestas a todas las reseñas.', metrica: 'Nota y nº de reseñas'},
+  {categoria: 'Marketing', titulo: 'Sistema para pedir reseñas', descripcion: 'QR de reseñas en la cuenta y una frase del equipo al despedir a las mesas contentas.', metrica: 'Reseñas nuevas al mes'},
+  {categoria: 'Marketing', titulo: 'Campaña para el día flojo', descripcion: 'Una oferta concreta para el día que menos se vende (Análisis de ventas → por día) y medir el resultado.', metrica: 'Ventas del día flojo frente a antes'},
+  {categoria: 'Marketing', titulo: 'Base de clientes', descripcion: 'Recoger teléfono o email con permiso (reservas, programa de fidelidad) para poder avisarles.', metrica: 'Nº de clientes con contacto'},
+  {categoria: 'Marketing', titulo: 'Reactivar a los clientes en riesgo', descripcion: 'Mensaje a los habituales que llevan tiempo sin venir (Clientes → en riesgo).', metrica: '% que vuelve en 30 días'},
+  {categoria: 'Delivery', titulo: 'Margen real del delivery', descripcion: 'Lo que se queda la plataforma más el envase frente al precio del plato. Subir precios de la carta de delivery si no deja margen.', metrica: 'Margen por pedido de delivery'},
+  {categoria: 'Delivery', titulo: 'Empujar el pedido directo', descripcion: 'Pedido online propio (sin comisión) en la bolsa, en redes y en la ficha de Google.', metrica: '% de pedidos directos frente a plataforma'},
+  {categoria: 'Finanzas', titulo: 'Plan de 90 días', descripcion: 'Las tres prioridades de los próximos tres meses, con responsable, fecha y cifra.', metrica: 'Nº de acciones cumplidas a los 90 días'},
   {categoria: 'Cliente', titulo: 'Mistery check interno', descripcion: 'Que alguien del equipo (o el propio dueño) viva la experiencia como cliente un día y anote 3 cosas a mejorar.', metrica: 'Nº de mejoras detectadas'},
 ];
 function plan360BancoCategorias(){

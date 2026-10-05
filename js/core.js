@@ -4219,13 +4219,16 @@ Todos los entregables, metodologías, plantillas y materiales desarrollados perm
 Las partes se someten a lo establecido en el contrato de confidencialidad (RGPD) que forma parte integrante de este acuerdo, más abajo.
 
 8. Terminación anticipada
-El cliente podrá rescindir este contrato dentro de los tres meses que dura el programa, mediante notificación por escrito. En caso de rescisión voluntaria, deberá abonar a GastroGoan el importe restante del precio pactado, exigible en el plazo de treinta días desde la notificación.
+El cliente podrá rescindir este contrato durante las 4 semanas (28 días) que dura el programa, mediante notificación por escrito. En caso de rescisión voluntaria, deberá abonar a GastroGoan el importe restante del precio pactado, exigible en el plazo de treinta días desde la notificación.
 
 9. Resolución de conflictos
 En caso de discrepancias, las partes intentarán solucionarlas amistosamente; si no fuera posible, se someterán a mediación previa y, en última instancia, a los Juzgados y Tribunales de Barcelona.
 
 10. Legislación aplicable
 Ley española.
+
+11. Servicio de mantenimiento (opcional)
+Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Incluye cada mes cuatro contactos (dos por WhatsApp y dos por videollamada) con las entregas y tareas que el coach planifique para ese mes. Se contrata por meses naturales, se renueva automáticamente cada mes y se paga por adelantado. El cliente puede darse de baja en cualquier momento comunicándolo por escrito con al menos 15 días de antelación al inicio del mes siguiente; el mes en curso no se devuelve. Las cláusulas 4 a 10 y el acuerdo de confidencialidad se aplican también a este servicio.
 
 CONTRATO DE CONFIDENCIALIDAD (RGPD)
 
@@ -4255,7 +4258,8 @@ function plan360FillTemplate(text, c){
     .replace(/\{\{nif\}\}/g, (c && c.clienteNIF) || '________')
     .replace(/\{\{direccion\}\}/g, (c && c.clienteDireccion) || '________')
     .replace(/\{\{precio\}\}/g, (c && c.precio) || '________')
-    .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________');
+    .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________')
+    .replace(/\{\{precioMantenimiento\}\}/g, (c && c.precioMantenimiento) || '75 € al mes');
 }
 // Reunión inicial con el hostelero: la mitad "lo que el cliente siente y ve
 // de su negocio", complementaria al cliente misterioso ("lo que el coach
@@ -4468,7 +4472,7 @@ function ensurePlan360Program(){
   if(!DB.business.plan360Cierre){
     DB.business.plan360Cierre = {
       kpis: {}, mejorasVisibles: '', queVigilar: '', siguienteNivel: '',
-      mantenimiento: {precio: '99€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
+      mantenimiento: {precio: '75€/mes', respuesta: null, volverAHablarFecha: '', firmaNombre: '', firmaFecha: null},
     };
   }
   saveDB();
