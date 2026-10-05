@@ -32,6 +32,26 @@ function geTotalPersonalNeto(){
 function geTotalIrpfMensual(){
   return (DB.ge.fijos||[]).filter(g=>g.categoria==='PERSONAL' && g.autoCalc).reduce((s,g)=>s+(parseFloat(g.irpfMensual)||0),0);
 }
+// Retenciones que el negocio practica en sus gastos fijos y ADELANTA a
+// Hacienda (auditoría contable, 5/10): el alquiler del local (19%, Modelo
+// 115) y las facturas de profesionales — gestoría, asesor, abogado — (15%,
+// o 7% los tres primeros años del profesional; van al Modelo 111 junto a
+// las de las nóminas). No son un gasto más: el negocio paga al casero la
+// base + IVA − retención, y esa retención la ingresa él cada trimestre.
+// El coste del negocio no cambia; lo que cambia es A QUIÉN se paga y CUÁNDO.
+const GF_RETENCIONES = {
+  '115_19': {pct:19, modelo:'115'},
+  '111_15': {pct:15, modelo:'111'},
+  '111_7':  {pct:7,  modelo:'111'},
+};
+function gfRetencionMensual(g){
+  const r = GF_RETENCIONES[g && g.retencion];
+  if(!r || g.categoria === 'PERSONAL') return 0;
+  return gfMonthlyImporte(g) * r.pct / 100;
+}
+function geTotalRetencionMensual(modelo){
+  return (DB.ge.fijos||[]).filter(g => (GF_RETENCIONES[g.retencion]||{}).modelo === modelo).reduce((s,g)=>s+gfRetencionMensual(g),0);
+}
 // Registra un punto en el histórico de gastos fijos (uno por día como
 // máximo: si ya se tocó algo hoy, se sobrescribe con el valor final del
 // día en vez de acumular varias entradas). Se llama tras cada alta/edición/
@@ -46,9 +66,11 @@ function snapshotGeFijosNeto(){
   const personalNeto = geTotalPersonalNeto();
   const gfNeto = totalNeto - personalNeto;
   const irpfMensual = geTotalIrpfMensual();
+  const ret115 = geTotalRetencionMensual('115');
+  const retProf111 = geTotalRetencionMensual('111');
   const existing = DB.ge.fijosLog.find(e => e.fecha === today);
-  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; existing.irpfMensual = irpfMensual; }
-  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto, irpfMensual});
+  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; existing.irpfMensual = irpfMensual; existing.ret115 = ret115; existing.retProf111 = retProf111; }
+  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto, irpfMensual, ret115, retProf111});
 }
 // Valor del histórico de gastos fijos "vigente" a fecha de un mes concreto:
 // el último punto anterior o igual al último día de ese mes. Si no hay
@@ -111,6 +133,17 @@ function geTotalGFNetoForMonth(year, month){
 function geIrpfMensualForMonth(year, month){
   const v = geFijosLogValueForMonth(year, month, 'irpfMensual');
   return v==null ? geTotalIrpfMensual() : v;
+}
+// Mismo criterio de histórico para las retenciones de los gastos fijos. Un
+// punto del histórico anterior a esta función no tiene el campo: entonces
+// se usa la configuración actual (igual que el resto de fallbacks).
+function geRetencionForMonth(year, month, modelo){
+  const v = geFijosLogValueForMonth(year, month, modelo==='115' ? 'ret115' : 'retProf111');
+  return v==null ? geTotalRetencionMensual(modelo) : v;
+}
+// Todo lo que va al Modelo 111 ese mes: nóminas + profesionales.
+function geModelo111ForMonth(year, month){
+  return geIrpfMensualForMonth(year, month) + geRetencionForMonth(year, month, '111');
 }
 // True si TODO el año consultado es anterior al primer punto del histórico
 // (es decir, no tenemos ningún dato real de cómo eran los gastos fijos en

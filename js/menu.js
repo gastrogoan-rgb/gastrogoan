@@ -893,6 +893,7 @@ function addCartaPlato(secId, platoId){
     <div class="field" style="margin-top:-8px">
       <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="new-carta-plato-precio-final">${fmtMoney(p ? p.precio||0 : 0)}</strong></span>
     </div>
+    <div class="txt-xs" style="color:var(--muted);margin-top:-6px;margin-bottom:10px">${t('label.ivaPlatoHint')}</div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmAddCartaPlato(${secId}${p ? ',' + p.id : ''})">${p ? t('common.save') : t('common.add')}</button>

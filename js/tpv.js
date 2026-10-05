@@ -3678,7 +3678,9 @@ function buildSaleItemsForOrder(order){
     return {...l, ivaPct: resolveLineIvaPct(l), costeUnitario: r ? recipeCost(r) : null, ...(menuSelections ? {menuSelections} : {})};
   });
   if(order.costeEnvio > 0){
-    items.push({name: t('label.shippingLineItem'), price: order.costeEnvio, qty: 1, ivaPct: 21, bebida: false, isShipping: true});
+    // El envío es una prestación ACCESORIA a la comida (art. 79.Dos LIVA): sigue
+    // el tipo de lo principal, el 10% de la hostelería — no el 21% general.
+    items.push({name: t('label.shippingLineItem'), price: order.costeEnvio, qty: 1, ivaPct: 10, bebida: false, isShipping: true});
   }
   return items;
 }
@@ -4741,6 +4743,7 @@ function finalizeCharge(orderId, opts){
   // Ventas, mientras la comisión sí (1/10).
   const saleDate = (order.pagado && order.pagoFecha && amountDue <= 0.001) ? diaLocalDe(order.pagoFecha) : todayStr();
   const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
+  estamparSenalEnVenta(order, sale);
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
@@ -4821,6 +4824,16 @@ function generateEqualSplit(orderId){
   renderPaymentModal(orderId);
 }
 
+// La señal ya tributó el día que se cobró (ver ventasIvaGroups, js/hr.js):
+// la venta final se lleva apuntado cuánto y cuándo, para descontar ESE IVA
+// del mes de la cena en vez de pagarlo dos veces.
+function estamparSenalEnVenta(order, sale){
+  if(!(order.depositAmount > 0) || !order.reservationId) return;
+  const r = (DB.reservations||[]).find(x => x.id === order.reservationId);
+  sale.reservationId = order.reservationId;
+  sale.senal = order.depositAmount;
+  sale.senalPagoFecha = (r && r.depositPagoFecha) || null;
+}
 // Lo que ya se pagó online (señal de reserva, líneas/propina pagadas por
 // móvil — ver orderAmountPaidOnline) no se les puede volver a cobrar a los
 // comensales al dividir cuenta: sin esto, cada comensal pagaba sobre el
@@ -5133,6 +5146,7 @@ function finalizeSplitOrder(orderId){
     metodoPago: metodos.length===1?metodos[0]:'Dividido',
     pagos, items: buildSaleItemsForOrder(order)
   };
+  estamparSenalEnVenta(order, sale);
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
   enqueueVerifactuSubmission(sale);
@@ -5496,7 +5510,7 @@ function fiscalLineIvaPct(line){
 // Agrupa una venta por tipo de IVA real de cada línea (con el descuento de
 // la venta prorrateado), para declarar un desglose correcto a Hacienda en
 // vez de un único tipo para todo el ticket — imprescindible en cuanto se
-// mezclan platos con distinto IVA (ej. comida al 10% y una copa al 21%).
+// mezclan platos con distinto IVA (ej. comida al 10% y un refresco para llevar al 21%; en sala, la copa también va al 10%).
 function saleIvaGroupsForFiscal(sale){
   const descPct = parseFloat(sale.descuentoPct)||0;
   const rates = {};
@@ -5788,7 +5802,7 @@ function buildTicketText(sale, opts={}){
   if(sale.propina) lines.push(`${t('label.tip')}: ${fmtMoney(sale.propina)}`);
   // Un desglose por cada tipo de IVA real presente en la venta (no un único
   // % adivinado para todo el ticket): si se mezclan platos con distinto IVA
-  // (ej. comida al 10% y una copa al 21%), cada tipo sale por separado.
+  // (ej. comida al 10% y un refresco para llevar al 21%; en sala, la copa también va al 10%), cada tipo sale por separado.
   const ivaGroups = saleIvaGroupsForFiscal(sale);
   ivaGroups.forEach(g => {
     lines.push(`${t('ticket.taxBase')} (${g.ivaPct}%): ${fmtMoney(g.base)}`);
