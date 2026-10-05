@@ -4460,7 +4460,7 @@ function ensurePlan360Program(){
   }
   if(!DB.business.plan360Contract){
     DB.business.plan360Contract = {
-      clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '', formaPago: '',
+      clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '950 €', formaPago: 'Un pago al firmar, o dos de 475 € (al firmar y el día 15)',
       signedName: '', signedDNI: '', signedAt: null,
     };
   }

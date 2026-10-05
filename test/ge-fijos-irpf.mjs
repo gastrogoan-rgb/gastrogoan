@@ -97,6 +97,9 @@ await caso('Tras guardar, el IRPF retenido del mes aparece como KPI aparte en Ga
   // La ficha ya se guardó en el caso anterior (con periodicidadMeses
   // forzado a 1) — aquí solo se comprueba que el KPI de la lista refleja
   // ese IRPF real.
+  // Las cifras de la cabecera se animan 600 ms (animateKpiNumbers): leerlas
+  // antes da un número a medio camino ("25,56 €" camino de "2.331,85 €").
+  await new Promise(res => setTimeout(res, 1200));
   const r = await page.evaluate(()=>document.getElementById('gf-kpis').textContent);
   assert.ok(r.toLowerCase().includes('irpf retenido'), 'debe verse el KPI "IRPF retenido": ' + r);
   assert.ok(r.includes('267,01'), 'el importe del KPI debe ser el IRPF real retenido este mes: ' + r);
