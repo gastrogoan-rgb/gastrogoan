@@ -5397,6 +5397,36 @@ function plan360AccionesPorNivel(){
     return {nivel, total: deEseNivel.length, hechas: deEseNivel.filter(tk => tk.status === 'hecha').length};
   });
 }
+// Balance del mes de trabajo: lo conseguido y lo que falta, en dos
+// columnas. Lo que falta es justo lo que se sigue en el mantenimiento, y
+// así se presenta: no como un extra, sino como la continuación.
+function plan360Balance(objetivos){
+  const trabajo = (DB.business.plan360Program || []).filter(x => x.phase === 'trabajo');
+  const tareas = trabajo.reduce((arr, d) => arr.concat((d.tasks || []).filter(tk => tk && tk.title)), []);
+  return {
+    conseguidos: objetivos.filter(o => o.estadoFinal === 'cumplido'),
+    pendientes: objetivos.filter(o => o.estadoFinal !== 'cumplido'),
+    hechas: tareas.filter(tk => tk.status === 'hecha').length,
+    total: tareas.length,
+    sinHacer: tareas.filter(tk => tk.status !== 'hecha').map(tk => tk.title),
+  };
+}
+function plan360BalanceHtml(objetivos){
+  const b = plan360Balance(objetivos);
+  if(!objetivos.length && !b.total) return '';
+  const lista = (arr, n) => arr.slice(0, n).map(x => `<li>${escapeHtml(x)}</li>`).join('') + (arr.length > n ? `<li class="muted">${escapeHtml(t('plan360.bal.yMas').replace('${n}', arr.length - n))}</li>` : '');
+  return `<div class="card" style="margin-bottom:10px">
+    <div style="font-weight:700;margin-bottom:8px">${escapeHtml(t('plan360.bal.titulo'))}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+      <div><div style="font-weight:600;color:var(--green);margin-bottom:4px"><i class="ti ti-circle-check"></i> ${escapeHtml(t('plan360.bal.conseguido'))}</div>
+        <div style="font-size:13px;margin-bottom:4px">${escapeHtml(t('plan360.bal.tareas').replace('${n}', b.hechas).replace('${t}', b.total))}</div>
+        ${b.conseguidos.length ? `<ul style="margin:0;padding-left:18px;font-size:13px">${lista(b.conseguidos.map(o => o.titulo), 6)}</ul>` : ''}</div>
+      <div><div style="font-weight:600;color:var(--amber-dark);margin-bottom:4px"><i class="ti ti-target-arrow"></i> ${escapeHtml(t('plan360.bal.falta'))}</div>
+        ${b.pendientes.length || b.sinHacer.length ? `<ul style="margin:0;padding-left:18px;font-size:13px">${lista([...b.pendientes.map(o => o.titulo), ...b.sinHacer], 6)}</ul>
+        <div class="txt-xs" style="color:var(--muted);margin-top:6px">${escapeHtml(t('plan360.bal.seguimos'))}</div>` : `<div style="font-size:13px">${escapeHtml(t('plan360.bal.todo'))}</div>`}</div>
+    </div>
+  </div>`;
+}
 function plan360CierreHtml(){
   const dia2 = (DB.business.plan360Program || []).find(x => x.day === 2);
   const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
@@ -5417,6 +5447,7 @@ function plan360CierreHtml(){
   return `
     <div class="p360-week">
       <div class="p360-week-label">${escapeHtml(t('plan360.closing'))}</div>
+      ${plan360BalanceHtml(objetivos)}
       ${hayKpis ? `<div class="card" style="margin-bottom:10px">
         <div style="font-weight:600;margin-bottom:8px">${escapeHtml(t('plan360.kpisTitle'))}</div>
         <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center">

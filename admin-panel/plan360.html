@@ -4101,7 +4101,7 @@ function ensureRemotePlan360(){
   if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
   if(!remoteBiz.plan360Contract){
     remoteBiz.plan360Contract = {
-      clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '', formaPago: '',
+      clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '950 €', formaPago: 'Un pago al firmar, o dos de 475 € (al firmar y el día 15)',
       signedName: '', signedDNI: '', signedAt: null,
     };
   }
@@ -4289,6 +4289,23 @@ function plan360CierreHtml(){
   return `
     <div class="p360-week">
       <div class="p360-week-label">Cierre y próximos pasos</div>
+      ${(() => {
+        // Balance del mes: lo conseguido y lo que falta (que es lo que se
+        // presenta como el trabajo del mantenimiento).
+        const trabajo = (remoteBiz.plan360Program || []).filter(x => x.phase === 'trabajo');
+        const tareas = trabajo.reduce((arr, d) => arr.concat((d.tasks || []).filter(tk => tk && tk.title)), []);
+        const hechas = tareas.filter(tk => tk.status === 'hecha').length;
+        const cons = objetivos.filter(o => o.estadoFinal === 'cumplido').map(o => o.titulo);
+        const falta = [...objetivos.filter(o => o.estadoFinal !== 'cumplido').map(o => o.titulo), ...tareas.filter(tk => tk.status !== 'hecha').map(tk => tk.title)];
+        if(!objetivos.length && !tareas.length) return '';
+        const li = (arr) => arr.slice(0, 8).map(x => '<li>' + esc(x) + '</li>').join('') + (arr.length > 8 ? '<li class="muted">y ' + (arr.length - 8) + ' más</li>' : '');
+        return `<div class="card" style="margin-bottom:10px">
+          <div style="font-weight:600;margin-bottom:8px">Balance del mes</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;font-size:13px">
+            <div><div style="font-weight:600;color:var(--green)">Conseguido</div><div>${hechas} de ${tareas.length} acciones hechas</div>${cons.length ? '<ul style="margin:4px 0 0;padding-left:18px">' + li(cons) + '</ul>' : ''}</div>
+            <div><div style="font-weight:600;color:#86600F">Falta (lo que sigue en el mantenimiento)</div>${falta.length ? '<ul style="margin:4px 0 0;padding-left:18px">' + li(falta) + '</ul>' : '<div>Nada pendiente.</div>'}</div>
+          </div></div>`;
+      })()}
       <div class="card" style="margin-bottom:10px">
         <div style="font-weight:600;margin-bottom:8px">Los números: antes → hoy</div>
         ${kpiCierreHtml()}
