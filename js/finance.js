@@ -101,11 +101,39 @@ function geIsDateClosed(fechaStr){
   const key = `${y}-${String(m).padStart(2,'0')}`;
   return (DB.ge.cierres||[]).includes(key);
 }
+// ¿Tiene sentido contar gastos fijos en este mes? No en uno que aún no ha
+// llegado, ni en uno anterior al primer dato del negocio en la app (venta,
+// compra, inversión o el primer gasto fijo apuntado). Antes, un negocio que
+// empezó a usar la app en julio veía de enero a junio meses de pérdidas
+// hechos solo de alquiler y nóminas, y también noviembre y diciembre: el
+// año entero salía en rojo. La caché vive lo que dura un pintado.
+let geInicioCache = null;
+function geInicioActividad(){
+  if(geInicioCache) return geInicioCache.v;
+  let min = null;
+  const ver = f => { if(f && /^\d{4}-\d{2}/.test(f) && (!min || f < min)) min = f.slice(0,10); };
+  (DB.sales||[]).forEach(v => ver(v.date));
+  (DB.ge.variables||[]).forEach(v => ver(v.fecha));
+  (DB.ge.capex||[]).forEach(c => ver(c.fecha));
+  (DB.ge.fijosLog||[]).forEach(e => ver(e.fecha));
+  geInicioCache = {v: min};
+  setTimeout(() => { geInicioCache = null; }, 0);
+  return min;
+}
+function geMesConActividad(year, month){
+  const hoy = new Date();
+  if(year*12 + month > hoy.getFullYear()*12 + hoy.getMonth()) return false;
+  const inicio = geInicioActividad();
+  if(!inicio) return true;
+  return `${year}-${String(month+1).padStart(2,'0')}` >= inicio.slice(0,7);
+}
 function geTotalFijosNetoForMonth(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'totalNeto');
   return v==null ? geTotalFijosNeto() : v;
 }
 function geTotalFijosGrossForMonth(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'totalGross');
   return v==null ? geTotalFijos() : v;
 }
@@ -119,6 +147,7 @@ function geTotalFijosGrossForMonth(year, month){
 // histórico). Un punto del histórico de antes de esto no tiene items: se
 // mantiene el cálculo antiguo para no mover meses ya cerrados.
 function geIvaSoportadoFijosForMonth(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   const items = geFijosItemsForMonth(year, month);
   if(!items) return geTotalFijosGrossForMonth(year, month) - geTotalFijosNetoForMonth(year, month);
   return items.reduce((s,it) => {
@@ -138,6 +167,7 @@ function gfItemsActuales(){
 }
 // null = hay histórico pero ese punto es anterior a las fotos (usar lo viejo).
 function geFijosItemsForMonth(year, month){
+  if(!geMesConActividad(year, month)) return [];
   const log = DB.ge.fijosLog || [];
   if(!log.length) return gfItemsActuales();
   const v = geFijosLogValueForMonth(year, month, 'items');
@@ -161,10 +191,12 @@ function gfPagaEnMes(g, year, month){
 // desglose (personalNeto/gfNeto) no tienen estos campos: en ese caso se cae
 // en la configuración actual, igual que el resto de fallbacks del histórico.
 function geTotalPersonalNetoForMonth(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'personalNeto');
   return v==null ? geTotalPersonalNeto() : v;
 }
 function geTotalGFNetoForMonth(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'gfNeto');
   return v==null ? (geTotalFijosNeto() - geTotalPersonalNeto()) : v;
 }
@@ -173,6 +205,7 @@ function geTotalGFNetoForMonth(year, month){
 // mes pasado (y el mismo fallback a la configuración actual si aún no hay
 // histórico para esa fecha).
 function geIrpfMensualForMonth(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'irpfMensual');
   return v==null ? geTotalIrpfMensual() : v;
 }
@@ -180,6 +213,7 @@ function geIrpfMensualForMonth(year, month){
 // punto del histórico anterior a esta función no tiene el campo: entonces
 // se usa la configuración actual (igual que el resto de fallbacks).
 function geRetencionForMonth(year, month, modelo){
+  if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, modelo==='115' ? 'ret115' : 'retProf111');
   return v==null ? geTotalRetencionMensual(modelo) : v;
 }
@@ -413,6 +447,7 @@ function geTotalRetribTitular(){
   return (DB.ge.fijos||[]).filter(gfEsRetribucionTitular).reduce((s,g)=>s+gfMonthlyImporte(g),0);
 }
 function geRetribTitularForMonth(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'retribTitular');
   return v==null ? geTotalRetribTitular() : v;
 }
@@ -486,6 +521,7 @@ function capexAmortizacionMes(c, year, month){
   return Math.max(0, Math.min(cuota, base - yaAmortizado));
 }
 function geAmortizacionMes(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   return (DB.ge.capex||[]).reduce((s,c)=>s+capexAmortizacionMes(c, year, month), 0);
 }
 // --- Préstamos: intereses (gasto) y devolución (caja) ---------------------
@@ -522,6 +558,7 @@ function capexCuotaDesglose(c, year, month){
   return {interes, principal: q - interes};
 }
 function geInteresesMes(year, month){
+  if(!geMesConActividad(year, month)) return 0;
   return (DB.ge.capex||[]).reduce((s,c)=>s+capexCuotaDesglose(c, year, month).interes, 0);
 }
 function geDevolucionPrestamosMes(year, month){

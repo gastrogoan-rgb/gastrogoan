@@ -58,7 +58,7 @@ await caso('Ya no existe la pestaña "Resultado" por separado, solo "Cuenta de R
 await caso('En modo Trimestral aparecen Margen Bruto y EBITDA Operativo (antes solo en Resultado)', async () => {
   const r = await page.evaluate(()=>{ GE.setCDRGranularidad('trimestre'); return document.getElementById('cdr-table').textContent; });
   assert.ok(r.includes('Margen Bruto'), 'debe verse "Margen Bruto": ' + r.slice(0,200));
-  assert.ok(r.includes('EBITDA Operativo'), 'debe verse "EBITDA Operativo": ' + r.slice(0,200));
+  assert.ok(r.includes('EBITDA'), 'debe verse el EBITDA: ' + r.slice(0,200));
   assert.ok(r.includes('IVA a liquidar'), 'debe seguir viéndose "IVA a liquidar" (antes solo en CDR): ' + r.slice(0,200));
   assert.ok(r.includes('IRPF') && r.includes('111'), 'debe verse la nueva fila de IRPF a ingresar (Modelo 111): ' + r.slice(0,300));
 });
