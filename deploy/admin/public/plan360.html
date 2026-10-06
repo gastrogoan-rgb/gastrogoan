@@ -412,7 +412,11 @@ async function openClient(tenantId, name){
       // Si el coach está dentro de un día, un documento o el team building,
       // redibujar el calendario le sacaba de ahí y perdía lo que llevaba
       // escrito. Solo se redibuja si está en el calendario; si no, se avisa.
-      if(primeraCarga || document.getElementById('p360-coach-calendario')) renderClientGrid();
+      // Al abrir el cliente se entra en el servicio que tiene activo: un
+      // cliente de mantenimiento no tiene nada que hacer en el calendario
+      // del 360.
+      if(primeraCarga && p360Fase(remoteBiz) === 'mant'){ mantMesActivo = null; renderMantPage(); }
+      else if(primeraCarga || document.getElementById('p360-coach-calendario')) renderClientGrid();
       else avisoCambiosDelNegocio();
     }, err => {
       console.error(err);
@@ -4203,6 +4207,7 @@ function renderClientGrid(){
     </div>`;
   };
   document.getElementById('client-grid').innerHTML = `<span id="p360-coach-calendario" hidden></span>
+    ${p360PestanasHtml('360')}
     <div class="p360-toprow">
       <div class="p360-card" onclick="renderIntakePage()">
         <i class="ti ti-clipboard-text"></i>
@@ -4211,10 +4216,6 @@ function renderClientGrid(){
       <div class="p360-card" onclick="renderDocsPage()">
         <i class="ti ti-folder"></i>
         <div><h3>Recursos</h3><p>Identidad de marca, playbooks y demás documentos del programa</p></div>
-      </div>
-      <div class="p360-card" onclick="renderMantPage()">
-        <i class="ti ti-calendar-repeat"></i>
-        <div><h3>Mantenimiento</h3><p>Tu mes con este negocio: los cuatro lunes, lo que le entregas y sus tareas</p></div>
       </div>
     </div>
     <div class="card p360-summary-bar" onclick="renderSummaryPage()">
@@ -4812,6 +4813,7 @@ function renderMantPage(clave){
     </div>`;
   };
   document.getElementById('client-grid').innerHTML = `
+    ${p360PestanasHtml('mant')}
     ${plan360PageHeader('Mantenimiento', 'Tu mes con este negocio. Lo que marques como «Su tarea» lo ve en su app, en Plan 360, y lo marca el negocio.')}
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
       <button class="btn btn-sm" onclick="mantMoverMes(-1)"><i class="ti ti-chevron-left"></i></button>
@@ -4819,7 +4821,7 @@ function renderMantPage(clave){
       <button class="btn btn-sm" onclick="mantMoverMes(1)"><i class="ti ti-chevron-right"></i></button>
     </div>
     ${kpiInformeHtml(kpiClaveMes(mantMesActivo, mantMesActivo === mantMesClave(new Date()) ? -1 : 0))}
-    ${mes ? `<div class="muted" style="font-size:13px;margin-bottom:10px">${hechos} de ${total} hechas este mes.</div>` : `
+    ${total ? `<div class="muted" style="font-size:13px;margin-bottom:10px">${hechos} de ${total} hechas este mes.</div>` : `
       <div class="card" style="margin-bottom:12px">
         <p style="margin:0 0 8px">Este mes está vacío.</p>
         <button class="btn btn-primary btn-sm" onclick="mantAplicarPlantilla()">Rellenar con mi mes tipo</button>
@@ -4839,7 +4841,9 @@ function renderMantPage(clave){
         </div>`).join('')}
       </div>`;
     })()}
+    ${mantObjetivoHtml(mantMesActivo)}
     ${mes ? lunes.map(semanaHtml).join('') : ''}
+    ${mantCierreHtml(mantMesActivo)}
     ${mes ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
       <button class="btn btn-sm" onclick="mantGuardarComoPlantilla()"><i class="ti ti-template"></i> Guardar este mes como mi plantilla</button>
       <button class="btn btn-sm" onclick="mantRestaurarPlantilla()">Volver al mes tipo de fábrica</button>
@@ -5163,6 +5167,135 @@ function kpiRellenarCierre(){
   saveRemoteBiz();
   renderClientGrid();
 }
+/* ============================================================
+   PLAN 360 Y MANTENIMIENTO: DOS SERVICIOS, BIEN SEPARADOS (6/10)
+   ============================================================
+   Son dos cosas distintas que se hacen de forma distinta: el Plan 360 es
+   un programa de 28 días con su calendario y su cierre; el mantenimiento,
+   meses de cuatro lunes. Antes el cliente se abría siempre en el
+   calendario del 360 y el mantenimiento era una tarjeta más; la lista no
+   decía quién estaba en qué. Ahora cada cliente tiene un SERVICIO ACTIVO
+   (plan360Servicio.fase, lo puede fijar el coach; si no, se deduce) y el
+   panel separa todo por servicio: la lista, la agenda y las pestañas. */
+const P360_FASES = {
+  '360': {label: 'Plan 360', color: '#2F6B3A'},
+  'mant': {label: 'Mantenimiento', color: '#4E5A63'},
+  'piensa': {label: 'Se lo piensa', color: '#86600F'},
+  'fin': {label: 'Sin servicio activo', color: '#716C65'},
+};
+function p360DiaDelPrograma(b){
+  if(!b || !b.plan360StartDate) return null;
+  const [y, m, d] = b.plan360StartDate.split('-').map(Number);
+  const ini = new Date(y, m - 1, d), hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  return Math.floor((hoy - ini) / 86400000) + 1;
+}
+function p360MantTieneMeses(b){
+  const meses = b && b.plan360Mant && b.plan360Mant.meses;
+  return !!(meses && typeof meses === 'object' && Object.keys(meses).length);
+}
+function p360Fase(b){
+  b = b || {};
+  const fijada = b.plan360Servicio && b.plan360Servicio.fase;
+  if(fijada && P360_FASES[fijada]) return fijada;
+  const m = (b.plan360Cierre && b.plan360Cierre.mantenimiento) || {};
+  if(m.respuesta === 'acepta') return 'mant';
+  const dia = p360DiaDelPrograma(b);
+  if(dia !== null && dia <= 28) return '360';
+  if(m.respuesta === 'piensa') return 'piensa';
+  if(p360MantTieneMeses(b)) return 'mant';
+  if(dia === null) return '360';   // aún no ha empezado: está para el 360
+  return 'fin';
+}
+function p360CambiarFase(fase){
+  if(!remoteBiz) return;
+  remoteBiz.plan360Servicio = Object.assign({}, remoteBiz.plan360Servicio || {}, {fase, cambiado: Date.now()});
+  if(fase === 'mant' && !remoteBiz.plan360Servicio.mantDesde) remoteBiz.plan360Servicio.mantDesde = mantMesClave(new Date());
+  saveRemoteBiz();
+  if(fase === 'mant') renderMantPage(); else renderClientGrid();
+}
+// Las dos pestañas, arriba de las dos páginas. El selector dice cuál es el
+// servicio activo (lo que manda en la lista y en la agenda).
+function p360PestanasHtml(activa){
+  const fase = p360Fase(remoteBiz);
+  const tab = (id, label, icono, onclick) => `<button class="btn ${activa === id ? 'btn-primary' : ''}" style="flex:1;min-width:140px" onclick="${onclick}"><i class="ti ${icono}"></i> ${label}</button>`;
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 12px">
+    ${tab('360', 'Plan 360', 'ti-calendar-event', 'renderClientGrid()')}
+    ${tab('mant', 'Mantenimiento', 'ti-calendar-repeat', 'renderMantPage()')}
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;flex:none">Servicio activo:
+      <select onchange="p360CambiarFase(this.value)" style="width:auto">
+        ${Object.keys(P360_FASES).map(k => `<option value="${k}" ${k === fase ? 'selected' : ''}>${P360_FASES[k].label}</option>`).join('')}
+      </select>
+    </label>
+  </div>`;
+}
+// --- Objetivo y cierre de cada mes de mantenimiento ---------------------
+// Lo que hace que el cliente vea cada mes que le compensa: un objetivo al
+// empezar y, al terminar, qué ha ido bien, qué no, los números y lo
+// siguiente. Los números y las tareas salen solos; tú escribes tres frases.
+function mantObjetivoHtml(clave){
+  const mes = mantMes(clave, false);
+  const obj = (mes && mes.objetivo) || '';
+  return `<div class="card" style="margin-bottom:12px">
+    <div style="font-weight:700;margin-bottom:4px"><i class="ti ti-target-arrow"></i> Objetivo de este mes</div>
+    <p class="muted" style="font-size:12px;margin:0 0 6px">Uno solo, con su cifra. Lo ve el negocio arriba de su mes y se evalúa en el cierre.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><input id="mant-objetivo" value="${esc(obj)}" placeholder="Ej.: food cost por debajo del 30 %" style="flex:1;min-width:200px">
+    <button class="btn btn-sm" onclick="mantGuardarObjetivo()">Guardar</button></div>
+  </div>`;
+}
+function mantGuardarObjetivo(){
+  const mes = mantMes(mantMesActivo, true);
+  mes.objetivo = (document.getElementById('mant-objetivo').value || '').trim();
+  mantGuardarYPintar();
+}
+function mantResumenTareas(mes){
+  const r = {tareas: 0, tareasHechas: 0, entregas: 0, entregasHechas: 0, pendientes: []};
+  Object.values((mes && mes.semanas) || {}).forEach(s => Object.values((s && s.items) || {}).forEach(it => {
+    if(!it || !it.titulo) return;
+    if(it.tipo === 'tarea'){ r.tareas++; if(it.hecho) r.tareasHechas++; else r.pendientes.push(it.titulo); }
+    else { r.entregas++; if(it.hecho) r.entregasHechas++; }
+  }));
+  return r;
+}
+function mantCierreHtml(clave){
+  const mes = mantMes(clave, false);
+  if(!mes) return '';
+  const c = mes.cierre || {};
+  const r = mantResumenTareas(mes);
+  const k = ((remoteBiz.plan360Kpis || {}).meses || {})[clave];
+  const ant = ((remoteBiz.plan360Kpis || {}).meses || {})[kpiClaveMes(clave, -1)];
+  const linea = (lbl, f) => k && k[f.k] != null ? `<span style="white-space:nowrap">${lbl} <strong>${kpiFmt(k[f.k], f.fmt)}</strong> ${ant ? kpiDelta(k[f.k], ant[f.k], f) : ''}</span>` : '';
+  const F = x => KPI_FILAS.find(y => y.k === x);
+  return `<div class="card" style="margin-top:12px;border-color:var(--ink)">
+    <div style="font-weight:700;margin-bottom:6px"><i class="ti ti-flag-check"></i> Cierre de ${esc(kpiNombreMes(clave).toLowerCase())}</div>
+    <div style="font-size:13px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <span>Tareas del negocio: <strong>${r.tareasHechas} de ${r.tareas}</strong></span>
+      <span>Tus entregas: <strong>${r.entregasHechas} de ${r.entregas}</strong></span>
+    </div>
+    ${k ? `<div style="font-size:13px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px">${linea('Ventas', F('netas'))}${linea('Food cost', F('foodCostPct'))}${linea('Personal', F('personalPct'))}${linea('Resultado', F('resultado'))}</div>` : '<p class="muted" style="font-size:12px;margin:0 0 6px">Los números de este mes salen cuando el negocio abre su app.</p>'}
+    ${r.pendientes.length ? `<div style="font-size:12.5px;color:#86600F;margin-bottom:8px">Sin hacer: ${r.pendientes.slice(0, 6).map(esc).join(' · ')}${r.pendientes.length > 6 ? ' y ' + (r.pendientes.length - 6) + ' más' : ''}</div>` : ''}
+    ${mes.objetivo ? `<div class="field" style="margin-bottom:8px"><label>¿Se ha cumplido el objetivo? «${esc(mes.objetivo)}»</label>
+      <select id="mant-c-obj" style="width:auto">${[['', 'Sin evaluar'], ['si', 'Cumplido'], ['parcial', 'A medias'], ['no', 'No cumplido']].map(([v, l]) => `<option value="${v}" ${(c.objetivo || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
+    <div class="field" style="margin-bottom:8px"><label>Lo que ha ido bien</label><textarea id="mant-c-bien" rows="2">${esc(c.bien || '')}</textarea></div>
+    <div class="field" style="margin-bottom:8px"><label>Lo que hay que mejorar</label><textarea id="mant-c-mal" rows="2">${esc(c.mal || '')}</textarea></div>
+    <div class="field" style="margin-bottom:8px"><label>Objetivo del mes que viene</label><input id="mant-c-sig" value="${esc(c.siguiente || '')}"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="mantGuardarCierre()">${c.ts ? 'Actualizar el cierre' : 'Cerrar el mes'}</button>
+      ${c.ts ? `<span class="muted" style="font-size:12px">Cerrado el ${esc(new Date(c.ts).toLocaleDateString('es-ES'))}: el negocio lo ve en su app.</span>` : '<span class="muted" style="font-size:12px">Al cerrarlo, el negocio lo ve en su app. El objetivo siguiente pasa solo al mes que viene.</span>'}
+    </div>
+  </div>`;
+}
+function mantGuardarCierre(){
+  const mes = mantMes(mantMesActivo, true);
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  mes.cierre = {bien: v('mant-c-bien'), mal: v('mant-c-mal'), siguiente: v('mant-c-sig'), objetivo: v('mant-c-obj'), ts: Date.now()};
+  // El objetivo siguiente se convierte en el objetivo del mes que viene,
+  // si ese mes aún no tiene uno.
+  if(mes.cierre.siguiente){
+    const sig = mantMes(kpiClaveMes(mantMesActivo, 1), true);
+    if(!sig.objetivo) sig.objetivo = mes.cierre.siguiente;
+  }
+  mantGuardarYPintar();
+}
 function mantResumenNegocio(mant, hoyStr, vistoTs){
   const lunesHoy = (() => { const [y, m, d] = hoyStr.split('-').map(Number); const f = new Date(y, m - 1, d); f.setDate(f.getDate() - ((f.getDay() + 6) % 7)); return f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0'); })();
   const finSemana = addDaysStr(lunesHoy, 7);
@@ -5203,51 +5336,20 @@ async function mantLeerDeUnNegocio(e){
   const db = bizApp.database();
   db.goOnline();
   try {
+    // Solo las piezas del Plan 360 que hacen falta para la agenda y la
+    // lista (nunca el negocio entero: ventas, carta… no se descargan).
     const base = 'gastrogoan/tenants/' + e.tenantId + '/db/business/';
-    const [snap, kp] = await Promise.all([db.ref(base + 'plan360Mant').once('value'), db.ref(base + 'plan360Kpis').once('value')]);
-    return {mant: snap.val(), kpis: kp.val()};
+    const claves = ['plan360Mant', 'plan360Kpis', 'plan360StartDate', 'plan360Cierre', 'plan360Servicio', 'plan360Program'];
+    const snaps = await Promise.all(claves.map(k => db.ref(base + k).once('value')));
+    const b = {}; claves.forEach((k, i) => { b[k] = snaps[i].val(); });
+    return {mant: b.plan360Mant, kpis: b.plan360Kpis, biz: b};
   } finally {
     // Si no es el negocio que tienes abierto, se suelta la conexión.
     if(currentTenantId !== e.tenantId) db.goOffline();
   }
 }
-async function renderMiSemana(){
-  const cont = document.getElementById('mi-semana');
-  if(!cont) return;
-  cont.innerHTML = '<div class="card"><span class="muted">Mirando la semana de cada negocio…</span></div>';
-  const snap = await getApp().database().ref('gastrogoan/coaching360').once('value');
-  const val = snap.val() || {};
-  const clientes = Object.keys(val).map(tenantId => ({tenantId, name: val[tenantId].name || '(sin nombre)'}));
-  const hoy = new Date(); const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
-  const filas = await Promise.all(clientes.map(async c => {
-    try {
-      const lectura = await Promise.race([mantLeerDeUnNegocio(c), new Promise((_, no) => setTimeout(() => no(new Error('tiempo')), 12000))]);
-      if(lectura.sinNube || !lectura.mant) return null;   // sin mantenimiento: no sale
-      return Object.assign({}, c, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)), {kpis: lectura.kpis});
-    } catch(err){
-      console.warn('Mi semana: no se pudo leer', c.name, err);
-      return Object.assign({}, c, {error: true});
-    }
-  }));
-  const conMant = filas.filter(Boolean);
-  if(!conMant.length){ cont.innerHTML = '<div class="card"><span class="muted">Ningún cliente tiene todavía un mes de mantenimiento preparado.</span></div>'; return; }
-  const tot = k => conMant.reduce((n, f) => n + ((f[k] && f[k].length) || 0), 0);
-  const whats = conMant.filter(f => f.canal === 'whatsapp').length, videos = conMant.filter(f => f.canal === 'video').length;
-  conMant.sort((a, b) => (b.atrasadas || []).length + (b.respuestas || []).length - (a.atrasadas || []).length - (a.respuestas || []).length);
-  const lista = (arr, n) => arr.slice(0, n).map(esc).join(' · ') + (arr.length > n ? ` y ${arr.length - n} más` : '');
-  cont.innerHTML = `
-    <div class="card" style="margin-bottom:10px">
-      <div style="font-weight:700;font-size:16px;margin-bottom:6px">Mi semana · ${conMant.length} ${conMant.length === 1 ? 'negocio' : 'negocios'}</div>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px">
-        <span><i class="ti ti-send"></i> ${tot('tuyas')} entregas tuyas</span>
-        <span><i class="ti ti-brand-whatsapp"></i> ${whats} por WhatsApp</span>
-        <span><i class="ti ti-video"></i> ${videos} videollamadas</span>
-        <span style="color:#86600F"><i class="ti ti-checkbox"></i> ${tot('suyas')} tareas suyas pendientes</span>
-        ${tot('atrasadas') ? `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${tot('atrasadas')} atrasadas</span>` : ''}
-        ${tot('respuestas') ? `<span style="color:var(--olive)"><i class="ti ti-message-circle"></i> ${tot('respuestas')} respuestas nuevas</span>` : ''}
-      </div>
-    </div>
-    ${conMant.map(f => f.error ? `<div class="card" style="margin-bottom:8px"><strong>${esc(f.name)}</strong> <span class="muted">— no se pudo leer su nube ahora mismo.</span></div>` : `
+function mantTarjetasHtml(conMant, lista){
+  return conMant.map(f => f.error ? `<div class="card" style="margin-bottom:8px"><strong>${esc(f.name)}</strong> <span class="muted">— no se pudo leer su nube ahora mismo.</span></div>` : `
       <div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="mantAbrirDesdeSemana(this.dataset.t, this.dataset.n)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
           <strong style="flex:1">${esc(f.name)}</strong>
@@ -5277,8 +5379,127 @@ async function renderMiSemana(){
             ${k.puntoEquilibrio != null ? `<span style="color:${k.netas >= k.puntoEquilibrio ? 'var(--green)' : 'var(--red)'}">${k.netas >= k.puntoEquilibrio ? 'sobre' : 'bajo'} el punto de equilibrio</span>` : ''}</div>`;
         })()}
         ${!f.tuyas.length && !f.suyas.length && !f.atrasadas.length && !f.respuestas.length ? `<div class="muted" style="font-size:13px"><i class="ti ti-circle-check"></i> Todo al día${f.hechasSemana ? ` · ${f.hechasSemana} hechas esta semana` : ''}.</div>` : ''}
+      </div>`).join('');
+}
+// «Mi agenda» (6/10): tu semana con TODOS los clientes, de los dos
+// servicios, día por día; y debajo, los clientes agrupados por servicio.
+// Sustituye a «Mi semana», que solo miraba el mantenimiento.
+function p360Fecha(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function p360FechaDiaPrograma(b, dia){
+  const [y, m, d] = b.plan360StartDate.split('-').map(Number);
+  return p360Fecha(new Date(y, m - 1, d + dia - 1));
+}
+function p360ResumenPrograma(b, hoyStr){
+  const prog = Array.isArray(b.plan360Program) ? b.plan360Program : [];
+  let hechas = 0, total = 0; const atrasadas = [];
+  prog.forEach(d => {
+    if(d.phase !== 'trabajo' || !Array.isArray(d.tasks)) return;
+    const f = b.plan360StartDate ? p360FechaDiaPrograma(b, d.day) : null;
+    d.tasks.forEach(tk => { if(!tk || !tk.title) return; total++; if(tk.status === 'hecha') hechas++; else if(f && f < hoyStr) atrasadas.push(tk.title); });
+  });
+  return {hechas, total, atrasadas};
+}
+// Los acontecimientos de un cliente en un día concreto.
+function p360EventosDia(f, fechaStr){
+  const b = f.biz || {}, out = [];
+  if(f.fase === '360' && b.plan360StartDate){
+    (Array.isArray(b.plan360Program) ? b.plan360Program : []).forEach(d => {
+      if(p360FechaDiaPrograma(b, d.day) !== fechaStr) return;
+      if(d.phase === 'presencial') out.push({i: 'ti-map-pin', t: 'Día ' + d.day + ' presencial'});
+      else if(d.reunion) out.push({i: d.reunion.tipo === 'presencial' ? 'ti-users' : 'ti-video', t: 'Reunión ' + (d.reunion.tipo === 'presencial' ? 'presencial' : 'online')});
+      if(d.day === 28) out.push({i: 'ti-flag-check', t: 'Cierre del Plan 360'});
+    });
+  }
+  if(f.fase === 'mant' && b.plan360Mant && b.plan360Mant.meses){
+    const clave = fechaStr.slice(0, 7), mes = b.plan360Mant.meses[clave];
+    if(mes && mes.semanas){
+      const lunes = mantLunesDelMes(clave);
+      Object.keys(mes.semanas).forEach(sk => {
+        const sem = mes.semanas[sk] || {};
+        if(lunes[Number(sk.slice(1)) - 1] === fechaStr) out.push({i: sem.canal === 'video' ? 'ti-video' : 'ti-brand-whatsapp', t: sem.canal === 'video' ? 'Videollamada' : 'WhatsApp'});
+        Object.values(sem.items || {}).forEach(it => { if(it && it.titulo && it.tipo !== 'tarea' && !it.hecho && mantFechaItem(clave, sk, it) === fechaStr) out.push({i: 'ti-send', t: it.titulo}); });
+      });
+    }
+  }
+  const m = (b.plan360Cierre && b.plan360Cierre.mantenimiento) || {};
+  if(f.fase === 'piensa' && m.volverAHablarFecha === fechaStr) out.push({i: 'ti-phone-call', t: 'Volver a hablar del mantenimiento'});
+  return out;
+}
+async function renderMiSemana(){
+  const cont = document.getElementById('mi-semana');
+  if(!cont) return;
+  cont.innerHTML = '<div class="card"><span class="muted">Preparando tu agenda con cada negocio…</span></div>';
+  const snap = await getApp().database().ref('gastrogoan/coaching360').once('value');
+  const val = snap.val() || {};
+  const clientes = Object.keys(val).map(tenantId => ({tenantId, name: val[tenantId].name || '(sin nombre)', lastActivityAt: val[tenantId].lastActivityAt || 0}));
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0); const hoyStr = p360Fecha(hoy);
+  const filas = await Promise.all(clientes.map(async c => {
+    try {
+      const lectura = await Promise.race([mantLeerDeUnNegocio(c), new Promise((_, no) => setTimeout(() => no(new Error('tiempo')), 12000))]);
+      if(lectura.sinNube) return Object.assign({}, c, {sinNube: true, fase: 'fin'});
+      const biz = lectura.biz || {};
+      const fase = p360Fase(biz);
+      const r = Object.assign({}, c, {biz, fase, kpis: lectura.kpis, dia: p360DiaDelPrograma(biz), prog: p360ResumenPrograma(biz, hoyStr)});
+      if(lectura.mant) Object.assign(r, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)));
+      return r;
+    } catch(err){
+      console.warn('Mi agenda: no se pudo leer', c.name, err);
+      return Object.assign({}, c, {error: true, fase: 'fin'});
+    }
+  }));
+  const por = k => filas.filter(f => f.fase === k && !f.error);
+  // La semana de lunes a domingo.
+  const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
+  const dias = Array.from({length: 7}, (_, i) => { const d = new Date(lunes); d.setDate(lunes.getDate() + i); return d; });
+  const agenda = dias.map(d => {
+    const fs = p360Fecha(d);
+    const ev = [];
+    filas.filter(f => !f.error).forEach(f => p360EventosDia(f, fs).forEach(e => ev.push(Object.assign({cliente: f.name, tenantId: f.tenantId, fase: f.fase}, e))));
+    return {d, fs, ev};
+  });
+  const nombreDia = d => { const s = d.toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric'}); return s.charAt(0).toUpperCase() + s.slice(1); };
+  const piensaEsteMes = por('piensa').filter(f => ((f.biz.plan360Cierre || {}).mantenimiento || {}).volverAHablarFecha);
+  cont.innerHTML = `
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-weight:700;font-size:16px;margin-bottom:6px">Mi agenda</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px">
+        <span style="color:${P360_FASES['360'].color}"><i class="ti ti-calendar-event"></i> ${por('360').length} en Plan 360</span>
+        <span style="color:${P360_FASES.mant.color}"><i class="ti ti-calendar-repeat"></i> ${por('mant').length} en mantenimiento</span>
+        ${piensaEsteMes.length ? `<span style="color:${P360_FASES.piensa.color}"><i class="ti ti-phone-call"></i> ${piensaEsteMes.length} se lo piensan</span>` : ''}
+        ${(() => { const n = por('mant').reduce((s, f) => s + ((f.atrasadas || []).length ? 1 : 0), 0); return n ? `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${n} con tareas atrasadas</span>` : ''; })()}
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-weight:700;margin-bottom:8px">Esta semana</div>
+      ${agenda.map(a => `<div style="display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--border);${a.fs === hoyStr ? 'background:var(--brand-cream);' : ''}">
+        <div style="width:64px;flex:none;font-weight:${a.fs === hoyStr ? '800' : '600'};font-size:13px">${esc(nombreDia(a.d))}</div>
+        <div style="flex:1;min-width:0;font-size:13px">${a.ev.length ? a.ev.map(e => `<div style="cursor:pointer" data-t="${esc(e.tenantId)}" data-n="${esc(e.cliente)}" onclick="${e.fase === 'mant' ? 'mantAbrirDesdeSemana' : 'openClient'}(this.dataset.t, this.dataset.n)"><i class="ti ${e.i}" style="color:${P360_FASES[e.fase].color}"></i> <strong>${esc(e.cliente)}</strong> · ${esc(e.t)}</div>`).join('') : '<span class="muted">—</span>'}</div>
       </div>`).join('')}
+    </div>
   `;
+  // La lista de clientes, agrupada por servicio.
+  const lista = (arr, n) => arr.slice(0, n).map(esc).join(' · ') + (arr.length > n ? ` y ${arr.length - n} más` : '');
+  const tarjeta360 = f => `<div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="openClient(this.dataset.t, this.dataset.n)">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">${esc(f.name)}</strong>
+        <span style="font-size:12px">${f.dia === null ? 'Sin fecha de inicio' : f.dia < 1 ? 'Empieza en ' + (1 - f.dia) + ' días' : 'Día ' + Math.min(f.dia, 28) + ' de 28'}</span></div>
+      <div style="font-size:13px">${f.prog.hechas} de ${f.prog.total} acciones hechas${f.biz.plan360StartDate ? ' · cierre el ' + esc(new Date(p360FechaDiaPrograma(f.biz, 28) + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'})) : ''}</div>
+      ${f.prog.atrasadas.length ? `<div style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${f.prog.atrasadas.length} atrasadas: ${lista(f.prog.atrasadas, 2)}</div>` : ''}
+    </div>`;
+  const tarjetaOtra = f => {
+    const m = ((f.biz || {}).plan360Cierre || {}).mantenimiento || {};
+    return `<div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="openClient(this.dataset.t, this.dataset.n)">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">${esc(f.name)}</strong>
+      ${f.error ? '<span class="muted" style="font-size:12px">No se pudo leer su nube ahora mismo</span>' : f.sinNube ? '<span class="muted" style="font-size:12px">Aún no ha conectado su nube</span>' : f.fase === 'piensa' && m.volverAHablarFecha ? `<span style="font-size:12px;color:${P360_FASES.piensa.color}">Volver a hablar el ${esc(new Date(m.volverAHablarFecha + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'}))}</span>` : ''}</div>
+    </div>`;
+  };
+  const grupo = (k, html) => html ? `<div style="font-weight:700;margin:14px 0 6px;color:${P360_FASES[k].color}">${P360_FASES[k].label}</div>${html}` : '';
+  const mantHtml = mantTarjetasHtml(por('mant'), lista);
+  document.getElementById('client-list').innerHTML =
+    grupo('360', por('360').map(tarjeta360).join('')) +
+    grupo('mant', mantHtml) +
+    grupo('piensa', por('piensa').map(tarjetaOtra).join('')) +
+    grupo('fin', filas.filter(f => f.fase === 'fin' || f.error).map(tarjetaOtra).join(''));
+  document.getElementById('client-list-empty').classList.toggle('hidden', filas.length > 0);
 }
 async function mantAbrirDesdeSemana(tenantId, name){
   try{ localStorage.setItem(mantVistoKey(tenantId), String(Date.now())); }catch(e){}
