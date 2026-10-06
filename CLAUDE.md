@@ -408,6 +408,22 @@ alguien encima.
   (solo admin). ⚠️ Necesita las reglas nuevas publicadas; sin ellas se
   guarda solo en el navegador y lo avisa.
 
+### Plan 360 y mantenimiento, separados (6/10)
+
+Son dos servicios distintos y el panel los trata así:
+- **Servicio activo** de cada cliente: `p360Fase(b)` → `360` | `mant` |
+  `piensa` | `fin`. Manda `plan360Servicio.fase` si existe (lo fija el coach
+  con el selector, o la app al aceptar el mantenimiento en el cierre); si no,
+  se deduce de la fecha de inicio, la respuesta del cierre y si hay meses.
+- El cliente se abre en su servicio activo, con dos pestañas arriba.
+- **«Mi agenda»** (antes «Mi semana»): lunes a domingo con los dos servicios
+  (días presenciales, reuniones, cierre del día 28, lunes de mantenimiento,
+  entregas, «volver a hablar») y la lista de clientes agrupada por servicio.
+  Lee solo seis claves `plan360*` de cada nube, nunca el negocio entero.
+- Cada mes de mantenimiento tiene **objetivo** (`mes.objetivo`) y **cierre**
+  (`mes.cierre = {bien, mal, siguiente, objetivo, ts}`); el siguiente pasa
+  solo a ser el objetivo del mes que viene. El negocio ve los dos en su app.
+
 ### Números del negocio para el coach (6/10)
 
 - La app calcula cada mes un resumen pequeño (`plan360KpisMes`, js/finance.js)

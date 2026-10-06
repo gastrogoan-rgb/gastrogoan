@@ -5511,6 +5511,8 @@ function plan360MantenimientoAceptar(){
   c.mantenimiento.respuesta = 'acepta';
   c.mantenimiento.firmaNombre = nombre;
   c.mantenimiento.firmaFecha = Date.now();
+  // El panel del coach lo pasa solo a «Mantenimiento» (6/10).
+  DB.business.plan360Servicio = {fase: 'mant', mantDesde: plan360MantClave(new Date()), cambiado: Date.now()};
   saveDB();
   plan360PingActivity();
   showToast(t('plan360.saved'));
@@ -5719,8 +5721,30 @@ function renderPlan360Mant(clave){
       <strong style="flex:1;text-align:center;font-size:16px">${escapeHtml(plan360Mayus(nombreMes))}</strong>
       <button class="btn btn-sm" onclick="plan360MantMover(1)" aria-label="${escapeHtml(t('plan360.mant.next'))}"><i class="ti ti-chevron-right"></i></button>
     </div>
+    ${mes && mes.objetivo ? `<div class="card" style="margin-bottom:10px"><div class="txt-xs" style="font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)"><i class="ti ti-target-arrow"></i> ${escapeHtml(t('plan360.mant.goal'))}</div><div style="font-weight:600;margin-top:2px">${escapeHtml(mes.objetivo)}</div></div>` : ''}
     ${cuerpo || `<div class="card"><p class="muted" style="margin:0">${escapeHtml(t('plan360.mant.empty'))}</p></div>`}
+    ${plan360MantCierreHtml(mes)}
   `;
+}
+// El cierre del mes que escribe el coach (6/10): qué ha ido bien, qué
+// hay que mejorar, si se cumplió el objetivo y el siguiente. Las cifras
+// salen de plan360Kpis, las mismas que ve el coach.
+function plan360MantCierreHtml(mes){
+  const c = mes && mes.cierre;
+  if(!c || !c.ts) return '';
+  const k = ((DB.business.plan360Kpis || {}).meses || {})[plan360MantMes];
+  const eur = n => Math.round(n).toLocaleString(localeActual()) + ' €';
+  const cifras = k ? [k.netas != null ? escapeHtml(t('plan360.mant.cSales')) + ': <strong>' + eur(k.netas) + '</strong>' : '', k.foodCostPct != null ? 'Food cost: <strong>' + k.foodCostPct + ' %</strong>' : '', k.resultado != null ? escapeHtml(t('plan360.mant.cResult')) + ': <strong>' + eur(k.resultado) + '</strong>' : ''].filter(Boolean).join(' · ') : '';
+  const obj = {si: 'plan360.mant.cGoalYes', parcial: 'plan360.mant.cGoalHalf', no: 'plan360.mant.cGoalNo'}[c.objetivo];
+  const bloque = (titulo, txt, color) => txt ? `<div style="margin-top:8px"><div class="txt-xs" style="font-weight:700;color:${color}">${escapeHtml(t(titulo))}</div><div style="white-space:pre-wrap">${escapeHtml(txt)}</div></div>` : '';
+  return `<div class="card" style="margin-top:12px;outline:2px solid var(--ink);outline-offset:-2px">
+    <strong><i class="ti ti-flag-check"></i> ${escapeHtml(t('plan360.mant.cTitle'))}</strong>
+    ${cifras ? `<div style="font-size:13px;margin-top:6px">${cifras}</div>` : ''}
+    ${obj && mes.objetivo ? `<div style="font-size:13px;margin-top:6px">${escapeHtml(t('plan360.mant.goal'))}: ${escapeHtml(mes.objetivo)} — <strong>${escapeHtml(t(obj))}</strong></div>` : ''}
+    ${bloque('plan360.mant.cGood', c.bien, 'var(--green)')}
+    ${bloque('plan360.mant.cBad', c.mal, 'var(--amber, #8A7440)')}
+    ${bloque('plan360.mant.cNext', c.siguiente, 'var(--ink)')}
+  </div>`;
 }
 function plan360MantMover(delta){
   const [y, m] = plan360MantMes.split('-').map(Number);
