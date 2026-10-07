@@ -67,9 +67,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-week-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .p360-day{background:#fff;border:1px solid var(--border);border-left:4px solid var(--border);padding:12px 10px;min-height:76px;cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:4px;justify-content:center}
 .p360-day:hover{background:var(--brand-cream)}
-.p360-day-weekday{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
+.p360-day-weekday{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
 .p360-day-date{font-size:15px;font-weight:700;overflow-wrap:break-word}
-.p360-day-tag{font-size:10.5px;color:var(--muted);margin-top:2px}
+.p360-day-tag{font-size:11px;color:var(--muted);margin-top:2px}
 .p360-day-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
 .p360-day-presencial{background:var(--ink);border-left-color:var(--ink);color:#fff}
 .p360-day-presencial .p360-day-weekday,.p360-day-presencial .p360-day-tag{color:#fff;opacity:.75}
@@ -202,7 +202,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dr-ficha-r:last-child{border-bottom:none}
 .dr-ficha-r span{padding:8px 12px;font-size:12px;font-weight:600;background:#F7F5F0;border-right:1px solid #E7E2D9;line-height:1.35}
 .dr-ficha-r i{display:block}
+/* Botones de solo icono (papelera, flechas de mes): sin texto medían 26 px de ancho. */
+.btn{min-width:36px}
 @media (max-width:600px){
+  /* El calendario de 28 días en un móvil (7/10): siete columnas de ~30 px
+     partían «28 sept» letra a letra en seis renglones. En cuatro columnas
+     cada día cabe con su fecha en dos líneas, y la semana se lee igual. */
+  .p360-week-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .p360-day{padding:10px 4px;min-height:64px}
+  .p360-day-date{overflow-wrap:normal}
   .dr-cal-h{padding:6px 0;letter-spacing:0;text-align:center}.dr-cal-d{min-height:44px;padding:4px}
   .dr-tabla-ancha thead{display:none}.dr-tabla-ancha tr{display:block;border-bottom:2px solid #1C1A17;padding:6px 0}.dr-tabla-ancha td{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #E7E2D9;padding:6px 4px;text-align:right}.dr-tabla-ancha td::before{content:attr(data-l);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#4A5D4E;font-weight:600;text-align:left}
   .dr-tarjetas[data-n]{grid-template-columns:1fr}.dr-tarjetas[data-n]>div:nth-child(n){grid-column:auto}
@@ -231,7 +239,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 <div id="panel" class="wrap hidden">
   <header>
     <div class="logo">GG</div>
-    <h1>Plan 360°<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#C9A15A;margin-top:4px">ARCHIVO PRIVADO</span></h1>
+    <h1>Plan 360°<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#C9A15A;margin-top:4px">ARCHIVO PRIVADO</span></h1>
     <div class="hd-btns">
       <a class="btn" href="index.html">← Panel</a>
       <button class="btn" onclick="ggAdminHardReload()">↻ Actualizar</button>
@@ -4346,13 +4354,13 @@ function plan360CierreHtml(){
         <div style="font-weight:600;margin-bottom:8px">Los números: antes → hoy</div>
         ${kpiCierreHtml()}
         ${notaMisterio !== null ? `<button class="btn btn-sm" style="margin-bottom:8px" onclick="plan360CierreUsarNotaMisterio(${notaMisterio})">Usar la nota del cliente misterioso (${notaMisterio}) como "antes"</button>` : ''}
-        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,90px) minmax(0,90px);gap:6px 8px;align-items:center">
           <div></div><div style="font-size:11px;color:var(--muted);text-align:center">Antes</div><div style="font-size:11px;color:var(--muted);text-align:center">Hoy</div>
           ${PLAN360_CIERRE_KPIS.map(k => {
             const v = plan360CierreKpi(cierre, k.key);
             return `<div style="font-size:13px">${esc(k.label)}</div>
-              <input value="${esc(v.antes)}" onchange="guardarCierreKpi('${k.key}','antes',this.value)" style="width:90px">
-              <input value="${esc(v.hoy)}" onchange="guardarCierreKpi('${k.key}','hoy',this.value)" style="width:90px">`;
+              <input value="${esc(v.antes)}" onchange="guardarCierreKpi('${k.key}','antes',this.value)" style="width:100%;min-width:0">
+              <input value="${esc(v.hoy)}" onchange="guardarCierreKpi('${k.key}','hoy',this.value)" style="width:100%;min-width:0">`;
           }).join('')}
         </div>
       </div>
@@ -4852,9 +4860,9 @@ function renderMantPage(clave){
     ${p360PestanasHtml('mant')}
     ${plan360PageHeader('Mantenimiento', 'Tu mes con este negocio. Lo que marques como «Su tarea» lo ve en su app, en Plan 360, y lo marca el negocio.')}
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
-      <button class="btn btn-sm" onclick="mantMoverMes(-1)"><i class="ti ti-chevron-left"></i></button>
+      <button class="btn btn-sm" onclick="mantMoverMes(-1)" style="min-width:44px" aria-label="Mes anterior"><i class="ti ti-chevron-left"></i></button>
       <strong style="flex:1;text-align:center;font-size:16px">${esc(nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1))}</strong>
-      <button class="btn btn-sm" onclick="mantMoverMes(1)"><i class="ti ti-chevron-right"></i></button>
+      <button class="btn btn-sm" onclick="mantMoverMes(1)" style="min-width:44px" aria-label="Mes siguiente"><i class="ti ti-chevron-right"></i></button>
     </div>
     ${kpiInformeHtml(kpiClaveMes(mantMesActivo, mantMesActivo === mantMesClave(new Date()) ? -1 : 0))}
     ${total ? `<div class="muted" style="font-size:13px;margin-bottom:10px">${hechos} de ${total} hechas este mes.</div>` : `
@@ -5267,8 +5275,8 @@ function p360PestanasHtml(activa){
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 12px">
     ${tab('360', 'Plan 360', 'ti-calendar-event', 'renderClientGrid()')}
     ${tab('mant', 'Mantenimiento', 'ti-calendar-repeat', 'renderMantPage()')}
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;flex:none">Servicio activo:
-      <select onchange="p360CambiarFase(this.value)" style="width:auto">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;flex:0 1 auto;min-width:0;max-width:100%">Servicio activo:
+      <select onchange="p360CambiarFase(this.value)" style="width:auto;min-width:0;max-width:100%">
         ${Object.keys(P360_FASES).map(k => `<option value="${k}" ${k === fase ? 'selected' : ''}>${P360_FASES[k].label}</option>`).join('')}
       </select>
     </label>

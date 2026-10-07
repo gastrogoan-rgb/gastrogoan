@@ -145,6 +145,7 @@ lanzar; node test/leer-facturas.mjs > "$SALIDA/leer-facturas.txt" 2>&1 & P103=$!
 lanzar; node test/qr-mesa.mjs > "$SALIDA/qr-mesa.txt" 2>&1 & P104=$!
 lanzar; node test/factura-pedido.mjs > "$SALIDA/factura-pedido.txt" 2>&1 & P111=$!
 lanzar; node test/preguntale.mjs > "$SALIDA/preguntale.txt" 2>&1 & P110=$!
+lanzar; node test/movil-nuevas.mjs > "$SALIDA/movil-nuevas.txt" 2>&1 & P112=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -276,5 +277,6 @@ espera $P103 "Leer facturas con foto: casa líneas, caza descuadres, gasto con n
 espera $P104 "Carta por QR en la mesa: token por mesa, precios de la carta, pago parcial no cierra, pago completo con factura" "$SALIDA/qr-mesa.txt" "casos pasaron"
 espera $P111 "Factura dentro del pedido: cuadre línea a línea, precios con historial, gasto sin duplicar, lo recibido no se pisa" "$SALIDA/factura-pedido.txt" "todos los casos de factura-pedido pasaron"
 espera $P110 "Pregúntale a tus números: clave de IA en Mi Negocio (solo en el aparato), cifras reales al modelo, empleado fuera, alta saltable" "$SALIDA/preguntale.txt" "todos los casos de pregúntale pasaron"
+espera $P112 "Pantallas nuevas en móvil (5 anchos): leer factura, cuadre del pedido, visión global, pregúntale, Mi Negocio, alta IA y web de la mesa" "$SALIDA/movil-nuevas.txt" "todos los casos de móvil nuevas pasaron"
 
 exit $FALLOS
