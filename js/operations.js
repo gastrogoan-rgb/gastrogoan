@@ -2594,7 +2594,7 @@ function leerFacturaAbrir(){
       <p id="lf-sin-clave" style="font-size:14px;line-height:1.5">${t('lf.noKeyBody')}</p>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-primary" id="lf-activar" onclick="idrConfigModal()"><i class="ti ti-key"></i> ${t('lf.noKeyBtn')}</button>
+        <button class="btn btn-primary" id="lf-activar" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('lf.noKeyBtn')}</button>
       </div>`);
     return;
   }
@@ -2944,7 +2944,7 @@ function pfAbrir(pedidoId){
     <div id="pf-cuerpo">
       <p style="font-size:14px;line-height:1.5">${t(hayIA ? 'pf.intro' : 'pf.introNoKey')}</p>
       ${hayIA ? '' : `<div id="pf-sin-clave" class="card" style="font-size:13px;line-height:1.5;padding:10px 12px">${t('lf.noKeyBody')}
-        <div><button class="btn btn-sm" style="min-height:44px;margin-top:6px" onclick="idrConfigModal()"><i class="ti ti-key"></i> ${t('lf.noKeyBtn')}</button></div></div>`}
+        <div><button class="btn btn-sm" style="min-height:44px;margin-top:6px" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('lf.noKeyBtn')}</button></div></div>`}
       <label class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer">
         <i class="ti ti-camera"></i> ${t('lf.pick')}
         <input type="file" id="pf-input" accept="image/*,application/pdf" style="display:none" onchange="pfArchivo(this)">

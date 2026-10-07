@@ -3123,7 +3123,7 @@ function renderIaConfigCard(){
   const usadas = idrGastoHoy();
   const pct = Math.min(100, Math.round(usadas / IDR_TOPE_DIA * 100));
   return `
-    <div class="card mn-grid-full" id="mn-ia">
+    <div class="card" id="mn-ia">
       <h3><i class="ti ti-sparkles"></i> ${t('ia.cfg.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin:0 0 10px">${t('ia.cfg.desc')}</p>
       <p style="font-size:13px;margin:0 0 10px"><strong>${idrHayIA() ? `<i class="ti ti-circle-check" style="color:#1F8A4C"></i> ${t('ia.cfg.on')}` : `<i class="ti ti-circle-dashed"></i> ${t('ia.cfg.off')}`}</strong></p>
