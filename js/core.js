@@ -1425,6 +1425,7 @@ function renderBusinessSelectScreenHtml(){
       <div class="bs-list" id="bs-list">
         ${renderBsGroups(slots)}
       </div>
+      ${puedeVerVisionGlobal() ? `<button class="btn" id="bs-vision-global" style="width:100%;min-height:44px;margin-bottom:8px;border:1px solid var(--olive);color:var(--olive)" onclick="openVisionGlobal()"><i class="ti ti-chart-bar"></i> ${t('bs.globalBtn')}</button>` : ''}
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
         <button class="btn" style="flex:1;border:1px solid var(--ink);color:var(--ink)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
@@ -1652,6 +1653,241 @@ function enterBusiness(slotId){
     return;
   }
   switchToBusiness(slotId);
+}
+
+/* ============================================================
+   VISIÓN GLOBAL DE MIS NEGOCIOS (selector de negocios)
+   Un dueño con varios locales quería verlos juntos sin ir entrando uno a
+   uno. Cada negocio vive en su propia IndexedDB y DB solo refleja el slot
+   activo, así que aquí se LEE cada base en solo lectura, sin cambiar de
+   slot y sin tocar ninguna:
+   - Solo los negocios de ESTA cuenta (slotsOfCurrentOwner), nunca los de
+     otro dueño que use el mismo aparato.
+   - Abrir la base sin crearla: si el aparato no la tiene (el negocio nunca
+     se abrió aquí), se aborta la creación y se dice tal cual, en vez de
+     inventar cifras a cero.
+   - Las cifras salen de las MISMAS funciones que la Cuenta de Resultados
+     (plan360KpisMes). Como dependen de DB global, se cambia DB un instante,
+     de forma SÍNCRONA (ningún otro código puede ejecutarse en medio) y con
+     saveDB/scheduleCloudSync bloqueados por si acaso.
+   ============================================================ */
+var vgLeyendoOtroNegocio = false;
+let vgPeriodo = 'mes';
+let vgSnapshots = null;   // [{slot, data|null}] — se leen una vez al abrir
+
+// Lee el DB guardado de un hueco SIN crear su base si no existe.
+function vgLeerSnapshot(slotId){
+  return new Promise(resolve => {
+    let creando = false;
+    let req;
+    try{ req = indexedDB.open(slotIdbName(slotId)); }catch(e){ resolve(null); return; }
+    req.onupgradeneeded = () => { creando = true; try{ req.transaction.abort(); }catch(e){} };
+    req.onerror = () => resolve(null);
+    req.onblocked = () => resolve(null);
+    req.onsuccess = () => {
+      const db = req.result;
+      if(creando || !db.objectStoreNames.contains(IDB_STORE)){ db.close(); resolve(null); return; }
+      try{
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const g = tx.objectStore(IDB_STORE).get(DB_KEY);
+        g.onsuccess = () => { db.close(); resolve(g.result || null); };
+        g.onerror = () => { db.close(); resolve(null); };
+      }catch(e){ db.close(); resolve(null); }
+    };
+  });
+}
+
+function vgNormalizar(data){
+  const d = Object.assign(defaultData(), data);
+  d.business = {...defaultData().business, ...(data.business||{})};
+  if(!d.ge) d.ge = defaultData().ge;
+  return d;
+}
+
+// Fechas [desde, hasta] del periodo, en 'AAAA-MM-DD'.
+function vgRango(periodo){
+  const hoy = new Date();
+  const h = dateStr(hoy);
+  if(periodo === 'hoy') return {desde: h, hasta: h};
+  if(periodo === 'semana'){
+    const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+    return {desde: dateStr(lunes), hasta: h};
+  }
+  if(periodo === 'mesAnterior'){
+    const a = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
+    const b = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    return {desde: dateStr(a), hasta: dateStr(b), mes: {y: a.getFullYear(), m: a.getMonth()}};
+  }
+  return {desde: dateStr(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), hasta: h, mes: {y: hoy.getFullYear(), m: hoy.getMonth()}};
+}
+
+// Calcula con el DB que haya cargado en ese momento. Un mes entero sale tal
+// cual de plan360KpisMes (lo mismo que la Cuenta de Resultados). Hoy y la
+// semana son trozos de mes: ventas y compras van en proporción a lo vendido
+// y los fijos (personal, gastos fijos, amortización) en proporción a los
+// días — por eso se marcan como estimados.
+function vgCalcular(periodo){
+  const r = vgRango(periodo);
+  const ventas = activeSales().filter(v => v.date >= r.desde && v.date <= r.hasta);
+  const brutaDe = v => (parseFloat(v.total)||0) - (parseFloat(v.propina)||0);
+  let netas = 0, compras = 0, personal = 0, resultado = 0, brutas = 0, tickets = 0;
+  if(r.mes){
+    const k = plan360KpisMes(r.mes.y, r.mes.m);
+    netas = k.netas; compras = k.compras; personal = k.personal; resultado = k.resultado; brutas = k.brutas; tickets = k.tickets;
+  } else {
+    const meses = {};
+    ventas.forEach(v => { const c = v.date.slice(0,7); meses[c] = (meses[c]||0) + brutaDe(v); });
+    // Días del rango por mes (los fijos del mes se reparten por días).
+    for(let d = new Date(r.desde+'T12:00:00'); dateStr(d) <= r.hasta; d.setDate(d.getDate()+1)){
+      const c = dateStr(d).slice(0,7); if(!(c in meses)) meses[c] = 0;
+    }
+    Object.entries(meses).forEach(([c, brutasRango]) => {
+      const [y, m] = c.split('-').map(Number);
+      const k = plan360KpisMes(y, m-1);
+      const dim = new Date(y, m, 0).getDate();
+      let dias = 0;
+      for(let d = new Date(r.desde+'T12:00:00'); dateStr(d) <= r.hasta; d.setDate(d.getDate()+1)) if(dateStr(d).startsWith(c)) dias++;
+      const parteVentas = k.brutas > 0 ? brutasRango / k.brutas : 0;
+      const parteDias = dias / dim;
+      const netasR = k.netas * parteVentas;
+      const comprasR = k.compras * parteVentas;
+      const comisR = k.comisiones * parteVentas;
+      // Lo que no es ni compras, ni comisiones: personal + fijos + amortización/intereses.
+      const restoFijos = k.netas - k.compras - k.comisiones - k.resultado;
+      netas += netasR; compras += comprasR; brutas += brutasRango;
+      personal += k.personal * parteDias;
+      resultado += netasR - comprasR - comisR - restoFijos * parteDias;
+    });
+    tickets = ventas.length;
+  }
+  const hoy = todayStr();
+  const reservasHoy = (DB.reservations||[]).filter(x => x.date === hoy && x.status !== 'cancelada' && x.status !== 'no_show');
+  const stockBajo = (DB.ingredients||[]).filter(i => { const s = DB.stock && DB.stock[i.id]; return s && (parseFloat(s.min)||0) > 0 && (parseFloat(s.qty)||0) < parseFloat(s.min); }).length;
+  return {
+    netas: r2(netas), brutas: r2(brutas), tickets, compras: r2(compras), personal: r2(personal), resultado: r2(resultado),
+    ticketMedio: tickets ? r2(brutas/tickets) : null,
+    foodCostPct: netas > 0 ? r1(compras/netas*100) : null,
+    personalPct: netas > 0 ? r1(personal/netas*100) : null,
+    resultadoPct: netas > 0 ? r1(resultado/netas*100) : null,
+    estimado: !r.mes,
+    reservasHoy: reservasHoy.length,
+    paxHoy: reservasHoy.reduce((s,x)=>s+(parseInt(x.pax||x.people||x.comensales)||0), 0),
+    stockBajo,
+  };
+}
+
+// Carga un DB ajeno un instante, calcula y deja el activo como estaba.
+function vgCalcularConDB(data, periodo){
+  const original = DB;
+  vgLeyendoOtroNegocio = true;
+  try{
+    DB = vgNormalizar(JSON.parse(JSON.stringify(data)));
+    geInicioCache = null;
+    return vgCalcular(periodo);
+  } finally {
+    DB = original;
+    geInicioCache = null;
+    vgLeyendoOtroNegocio = false;
+  }
+}
+
+function vgMisNegocios(){
+  if(!currentOwnerId()) return [];
+  return slotsOfCurrentOwner().filter(s => s.code);
+}
+function puedeVerVisionGlobal(){
+  const ses = getAccessSession();
+  return !!(ses && ses.type === 'owner') && vgMisNegocios().length >= 2;
+}
+
+async function openVisionGlobal(){
+  if(!puedeVerVisionGlobal()) return;
+  openModal(`<div class="modal-header"><h3><i class="ti ti-chart-bar"></i> ${t('bs.globalTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div><p class="txt-xs" style="color:var(--muted)">${t('common.loading')}</p>`, {xl:true});
+  const slots = vgMisNegocios();
+  vgSnapshots = [];
+  for(const slot of slots){
+    // El activo, desde memoria (lo más reciente); el resto, de su base.
+    const data = slot.id === ACTIVE_SLOT ? null : await vgLeerSnapshot(slot.id);
+    vgSnapshots.push({slot, data, activo: slot.id === ACTIVE_SLOT});
+  }
+  renderVisionGlobal();
+}
+
+function vgSetPeriodo(p){ vgPeriodo = p; renderVisionGlobal(); }
+
+function renderVisionGlobal(){
+  if(!vgSnapshots) return;
+  const filas = vgSnapshots.map(x => {
+    let k = null;
+    try{
+      if(x.activo) k = vgCalcular(vgPeriodo);
+      else if(x.data) k = vgCalcularConDB(x.data, vgPeriodo);
+    }catch(e){ console.error('Visión global: no se pudo calcular', x.slot.id, e); }
+    const nombre = (x.activo ? DB.business && DB.business.name : x.data && x.data.business && x.data.business.name) || x.slot.name || t('bs.defaultBusinessName');
+    return {slot: x.slot, nombre, k};
+  });
+  const conDatos = filas.filter(f => f.k);
+  const tot = conDatos.reduce((a,f) => { ['netas','brutas','tickets','compras','personal','resultado','reservasHoy','paxHoy','stockBajo'].forEach(c => a[c] += f.k[c]||0); return a; },
+    {netas:0, brutas:0, tickets:0, compras:0, personal:0, resultado:0, reservasHoy:0, paxHoy:0, stockBajo:0});
+  const pct = (a,b) => b > 0 ? r1(a/b*100) : null;
+  const fmtPct = v => v == null ? '—' : fmtNum(v) + '%';
+  const color = v => v == null ? '' : (v < 0 ? 'color:var(--red)' : 'color:var(--green)');
+  // Ranking por resultado; "el que peor va" = peor margen sobre ventas.
+  conDatos.sort((a,b) => b.k.resultado - a.k.resultado);
+  const sinDatos = filas.filter(f => !f.k);
+  let peor = null;
+  if(conDatos.length >= 2){
+    conDatos.forEach(f => { if(f.k.netas > 0 && (!peor || f.k.resultadoPct < peor.k.resultadoPct)) peor = f; });
+  }
+  const periodos = ['hoy','semana','mes','mesAnterior'];
+  const pestanas = periodos.map(p => `<button class="btn btn-sm ${p===vgPeriodo?'btn-primary':''}" style="min-height:44px" onclick="vgSetPeriodo('${p}')">${t('bs.globalPeriod.'+p)}</button>`).join('');
+  const celda = (lab, val, st) => `<div style="min-width:0"><div class="txt-xs" style="color:var(--muted)">${lab}</div><div style="font-weight:700;${st||''}">${val}</div></div>`;
+  const tarjeta = (f, i) => {
+    const k = f.k;
+    const parte = tot.netas > 0 ? Math.max(0, k.netas/tot.netas*100) : 0;
+    return `<div class="card vg-negocio" data-slot="${escapeHtml(f.slot.id)}" style="padding:12px;margin-bottom:10px;cursor:pointer;${f===peor?'border:1px solid var(--red)':''}" onclick="closeModal();enterBusiness('${escapeHtml(f.slot.id)}')">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px">
+        <strong style="overflow-wrap:anywhere">${i+1}. ${escapeHtml(f.nombre)}</strong>
+        <i class="ti ti-chevron-right" style="color:var(--muted)"></i>
+      </div>
+      ${f===peor ? `<div class="txt-xs" style="color:var(--red);margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${t('bs.globalWorst')}</div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px">
+        ${celda(t('bs.globalSales'), `<span class="vg-netas">${fmtMoney(k.netas)}</span>`)}
+        ${celda(t('bs.globalTickets'), k.tickets)}
+        ${celda(t('bs.globalAvgTicket'), k.ticketMedio == null ? '—' : fmtMoney(k.ticketMedio))}
+        ${celda(t('bs.globalFoodCost'), fmtPct(k.foodCostPct))}
+        ${celda(t('bs.globalStaff'), fmtPct(k.personalPct))}
+        ${celda(t('bs.globalResult'), fmtMoney(k.resultado), color(k.resultado))}
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;margin:10px 0 4px;overflow:hidden"><div style="height:100%;width:${parte.toFixed(1)}%;background:var(--olive)"></div></div>
+      <div class="txt-xs" style="color:var(--muted)">${t('bs.globalShare')}: ${fmtNum(r1(parte))}% · <i class="ti ti-calendar-event"></i> ${t('bs.globalBookingsToday')}: ${k.reservasHoy}${k.paxHoy?` (${k.paxHoy} pax)`:''} · <span style="${k.stockBajo?'color:var(--red)':''}"><i class="ti ti-package"></i> ${t('bs.globalLowStock')}: ${k.stockBajo}</span></div>
+    </div>`;
+  };
+  const totalHtml = `<div class="card" id="vg-total" style="padding:12px;margin-bottom:12px;background:var(--bg)">
+      <strong>${t('bs.globalTotal')}</strong>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px">
+        ${celda(t('bs.globalSales'), `<span id="vg-total-netas">${fmtMoney(r2(tot.netas))}</span>`)}
+        ${celda(t('bs.globalTickets'), tot.tickets)}
+        ${celda(t('bs.globalAvgTicket'), tot.tickets ? fmtMoney(r2(tot.brutas/tot.tickets)) : '—')}
+        ${celda(t('bs.globalFoodCost'), fmtPct(pct(tot.compras, tot.netas)))}
+        ${celda(t('bs.globalStaff'), fmtPct(pct(tot.personal, tot.netas)))}
+        ${celda(t('bs.globalResult'), fmtMoney(r2(tot.resultado)), color(tot.resultado))}
+      </div>
+      <div class="txt-xs" style="color:var(--muted);margin-top:6px"><i class="ti ti-calendar-event"></i> ${t('bs.globalBookingsToday')}: ${tot.reservasHoy} · <i class="ti ti-package"></i> ${t('bs.globalLowStock')}: ${tot.stockBajo}</div>
+    </div>`;
+  const sinHtml = sinDatos.map(f => `<div class="card vg-sin-datos" style="padding:12px;margin-bottom:10px;cursor:pointer" onclick="closeModal();enterBusiness('${escapeHtml(f.slot.id)}')">
+      <strong style="overflow-wrap:anywhere">${escapeHtml(f.nombre)}</strong>
+      <div class="txt-xs" style="color:var(--muted);margin-top:4px"><i class="ti ti-device-tablet"></i> ${t('bs.globalNoLocal')}</div>
+    </div>`).join('');
+  const estimado = conDatos.some(f => f.k.estimado);
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-chart-bar"></i> ${t('bs.globalTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${pestanas}</div>
+    ${totalHtml}
+    ${conDatos.map(tarjeta).join('')}
+    ${sinHtml}
+    <p class="txt-xs" style="color:var(--muted)">${t('bs.globalNote')}${estimado ? ' ' + t('bs.globalEstimated') : ''}</p>
+  `, {xl:true});
 }
 
 /* ============================================================
@@ -10404,6 +10640,11 @@ function construirXlsx(hojas){
   return construirZip(archivos);
 }
 function saveDB(){
+  // Mientras la Visión global calcula con el negocio de OTRO hueco cargado
+  // en DB (solo lectura, ver vgCalcularConDB), guardar escribiría ese
+  // negocio encima del activo. No debería pasar nunca; si alguna función
+  // de cálculo lo hiciera, aquí se para.
+  if(vgLeyendoOtroNegocio) return Promise.resolve();
   const guardado = idbSet(DB_KEY, DB).catch(e => {
     console.error('Error guardando datos', e);
     if(typeof showToast === 'function') showToast(t('msg.localSaveFailed'));
@@ -10445,6 +10686,7 @@ function pushAllToCloud(){
 }
 
 function scheduleCloudSync(){
+  if(vgLeyendoOtroNegocio) return;
   schedulePublicMirrorSync();
   if(!cloudRef) return;
   // Antes el badge solo decía "conectado/desconectado" del socket, sin
