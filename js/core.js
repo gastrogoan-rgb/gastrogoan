@@ -5039,7 +5039,7 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (!newData.exists() && data.child('_claimedAt').exists()))",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pedido_mesa' || newData.child('type').val() === 'pago_mesa')",
               "_claimedAt": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
                 ".validate": "newData.isNumber()"
@@ -5087,6 +5087,13 @@ const FIREBASE_RULES_JSON = `{
             "$token": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
               ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
+            }
+          },
+          "mesaQr": {
+            "$token": {
+              ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64",
+              ".validate": "newData.hasChildren(['mesa', 'updatedAt']) && newData.child('mesa').isString() && newData.child('mesa').val().length <= 60"
             }
           },
           "reservationLookup": {
@@ -6075,6 +6082,8 @@ const ARRAYS_CON_LAPIDA = new Set([
   // Un pago ya aplicado que «resucitara» desde otra tablet se volvería a
   // preguntar y podría acabar como pago sin pedido.
   'pagosTarjetaEsperados',
+  // Pedidos de la carta por QR: se purgan a las 24 h y no deben volver.
+  'pedidosMesaQr',
   /* ⚠️ `tpvOrders` también, y el comentario de "las comandas no se borran, se
      anulan" era falso: se borran al juntar dos mesas, al rechazar o cancelar
      un pedido online, al liberar una mesa vacía y al purgar las pagadas.
@@ -6252,7 +6261,7 @@ function mergeLapidas(local, remoto){
 }
 
 const MERGEABLE_ARRAYS = new Set([
-  'ingredients','recipes','fichas','menuItems','cartas','menus','pagosTarjetaEsperados',
+  'ingredients','recipes','fichas','menuItems','cartas','menus','pagosTarjetaEsperados','pedidosMesaQr',
   'purchaseOrders','providers','tables','tpvOrders','sales',
   'cashClosures','employees','turnos','fichajes','promos','horariosFijos',
   'cleaningTasks','clients','chatMessages','reservations',
@@ -6790,6 +6799,18 @@ async function comprobarEspejoEnNubePropia(){
       // aviso de que le faltaba, aunque la búsqueda de reserva no funcionara.
       await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').set(true);
       await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').remove();
+      // Carta por QR (7/10): su nodo `mesaQr` y los tipos 'pedido_mesa' y
+      // 'pago_mesa'. Solo se prueba si el negocio la tiene activada: a quien
+      // no la usa no se le pide pegar reglas nuevas por ella.
+      if(qrMesaConfig().activo){
+        const sondaMesa = base.child('mesaQr/_sonda_' + sondaId.padEnd(16, '_'));
+        await sondaMesa.set({mesa: '_prueba', updatedAt: Date.now()});
+        await sondaMesa.remove();
+        const sondaPedidoMesa = base.child('requests/_sondamesa_' + sondaId);
+        await sondaPedidoMesa.set({type: 'pedido_mesa', createdAt: Date.now(), _sonda: true});
+        await sondaPedidoMesa.child('_claimedAt').set(Date.now());
+        await sondaPedidoMesa.remove();
+      }
       reglasAntiguas = false;
     }catch(e2){
       console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
@@ -6798,6 +6819,7 @@ async function comprobarEspejoEnNubePropia(){
       // el oyente la ignora por el `_sonda`.
       try{ await base.child('requests/_sonda_' + sondaId).remove(); }catch(e3){}
       try{ await base.child('reservationLookup/_sonda_' + sondaId).remove(); }catch(e4){}
+      try{ await base.child('requests/_sondamesa_' + sondaId).remove(); }catch(e5){}
     }
     return true;
   }catch(e){
@@ -7237,6 +7259,8 @@ function aplicarPagoConfirmado(req){
       o.propinasPendientes = o.propinasPendientes.filter(p => p !== pendiente);
     }
   });
+  // Cuenta de una mesa pagada desde el QR (entera o una parte).
+  if(aplicarPagoMesaQr(req, importeConfirmado, registrarDescuadre)) pagoConfirmadoMatched = true;
   // Nada a lo que aplicar el pago: lo más probable es que el pedido se
   // rechazara/cancelara antes de que llegara la confirmación. Queda aquí,
   // visible, para que el negocio gestione el reembolso a mano.
@@ -7247,6 +7271,268 @@ function aplicarPagoConfirmado(req){
       if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(req.amount||0)));
     }
   }
+}
+
+/* ============================================================
+   CARTA POR QR EN LA MESA: pedir y pagar desde el móvil (7/10)
+
+   Cada mesa lleva su propio token (`table.qrToken`, 20 caracteres al azar)
+   y el QR abre la web pública con `?mesa=<token>`. NO el id de la mesa: el
+   id es 1, 2, 3… y con él cualquiera podía mandar pedidos a todas las
+   mesas del local desde casa. El token no está en el espejo público (allí
+   las mesas van sin él) y su nodo `mesaQr/{token}` solo se puede leer
+   sabiendo el token: las reglas no dejan listar el padre.
+
+   - El pedido entra como 'pedido_mesa' y pasa por la MISMA revisión de
+     precios que los pedidos online (revisarPreciosPedidoPublico). Lo que no
+     está en la carta no entra. Por defecto lo acepta el camarero; el negocio
+     puede hacer que entre directo en cocina.
+   - La cuenta que ve el comensal se publica en `mesaQr/{token}`: platos,
+     cantidades e importes. Nada de nombres, teléfonos ni notas.
+   - Pagar todo o una parte: 'pago_mesa' solo anuncia el cobro; lo que
+     cuenta es lo que confirma Stripe (comprobarPagosTarjeta). Pagar de
+     menos deja la mesa abierta con lo que falte; cuando lo confirmado
+     cubre la cuenta, la mesa se cobra sola como una venta normal, con su
+     ticket numerado (factura simplificada).
+   - Si se cobra de más (dos comensales pagando «todo» a la vez), lo que
+     sobra va a «Pagos sin pedido» para devolverlo: nunca se convierte en
+     propina por su cuenta.
+   - Rotar el token de una mesa invalida su QR viejo al instante.
+   ============================================================ */
+const QR_MESA_TOKEN_LEN = 20;
+function nuevoTokenMesaQr(){
+  const abc = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const c = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+  const bytes = c ? c.getRandomValues(new Uint8Array(QR_MESA_TOKEN_LEN)) : null;
+  let out = '';
+  // El primero, siempre una letra: así la web pública distingue un token de
+  // un id de mesa de los QR antiguos (que es solo un número).
+  for(let i = 0; i < QR_MESA_TOKEN_LEN; i++){
+    const v = bytes ? bytes[i] : Math.floor(Math.random() * 256);
+    out += i === 0 ? abc[v % 52] : abc[v % abc.length];
+  }
+  return out;
+}
+function qrMesaConfig(){
+  const q = (DB && DB.business && DB.business.qrMesa) || {};
+  return {activo: q.activo === true, aceptaCamarero: q.aceptaCamarero !== false};
+}
+function asegurarTokenMesa(tbl){
+  if(!tbl) return null;
+  if(typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) tbl.qrToken = nuevoTokenMesaQr();
+  return tbl.qrToken;
+}
+function mesaPorTokenQr(token){
+  if(typeof token !== 'string' || token.length < 16 || token.length > 64) return null;
+  return (DB.tables || []).find(tb => tb && tb.qrToken === token) || null;
+}
+function enlaceQrMesa(tbl){
+  const link = getPublicClientLink();
+  const token = asegurarTokenMesa(tbl);
+  return (link && token) ? link + '&mesa=' + encodeURIComponent(token) : '';
+}
+function redondeoQr(x){ return Math.round(((Number(x) || 0) + Number.EPSILON) * 100) / 100; }
+// Lo que vale la cuenta entera y lo que queda por pagar, con las mismas
+// piezas que la ventana de cobro (computeFinalTotal) pero sin leer nada de
+// la pantalla: aquí no hay ventana de cobro abierta.
+function cuentaMesaQr(order){
+  const desc = order.descuentoPct || 0;
+  const total = redondeoQr(orderTotal(order) * (1 - desc / 100) + (order.propina || 0) + (order.propinaPagadaOnline || 0));
+  const pagado = redondeoQr(orderAmountPaidOnline(order));
+  return {total, pagado, pendiente: Math.max(0, redondeoQr(total - pagado))};
+}
+// Lo que se publica de una mesa: SOLO platos e importes. Ni el nombre del
+// comensal, ni quién pagó qué, ni las notas (pueden llevar alergias).
+function cuentaPublicaMesa(tbl){
+  const base = {mesa: String(tbl.name || '').slice(0, 60), updatedAt: new Date().toISOString()};
+  const order = typeof getOpenOrderForTable === 'function' ? getOpenOrderForTable(tbl.id) : null;
+  if(!order || !(order.items || []).length) return Object.assign(base, {abierta: false, total: 0, pagado: 0, pendiente: 0});
+  const agrupadas = {};
+  order.items.forEach(l => {
+    const clave = String(l.name || '') + '|' + (Number(l.price) || 0);
+    if(!agrupadas[clave]) agrupadas[clave] = {n: String(l.name || '').slice(0, 80), q: 0, p: Number(l.price) || 0};
+    agrupadas[clave].q += Number(l.qty) || 0;
+  });
+  const c = cuentaMesaQr(order);
+  const enCurso = redondeoQr((order.pagosMesaQrPendientes || []).reduce((s, p) => s + (Number(p && p.importe) || 0), 0));
+  return Object.assign(base, {abierta: true, lineas: Object.values(agrupadas).filter(l => l.q > 0), descuentoPct: order.descuentoPct || 0,
+    total: c.total, pagado: c.pagado, pendiente: c.pendiente, enCurso});
+}
+// Publica la cuenta de cada mesa con QR, solo si ha cambiado (la firma no
+// lleva la hora: si no, se reescribirían todas en cada guardado).
+let mesaQrPublicado = {};
+function publicarMesasQr(app, publicId){
+  const cfg = qrMesaConfig();
+  const nodo = token => app.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + token);
+  const vivos = new Set();
+  if(cfg.activo){
+    (DB.tables || []).forEach(tbl => {
+      if(!tbl || typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) return;
+      vivos.add(tbl.qrToken);
+      const data = cuentaPublicaMesa(tbl);
+      const firma = JSON.stringify(Object.assign({}, data, {updatedAt: 0}));
+      if(mesaQrPublicado[tbl.qrToken] === firma) return;
+      mesaQrPublicado[tbl.qrToken] = firma;
+      nodo(tbl.qrToken).set(sinIndefinidos(data)).catch(e => { delete mesaQrPublicado[tbl.qrToken]; console.error('No se pudo publicar la cuenta de la mesa', e); });
+    });
+  }
+  // Tokens que ya no valen (mesa rotada, borrada o QR desactivado).
+  Object.keys(mesaQrPublicado).forEach(token => {
+    if(vivos.has(token)) return;
+    delete mesaQrPublicado[token];
+    nodo(token).remove().catch(() => {});
+  });
+}
+function retirarTokenMesaPublicado(token){
+  if(!token || typeof firebase === 'undefined') return;
+  const publicId = getPublicId();
+  if(!publicId) return;
+  delete mesaQrPublicado[token];
+  getPublicMirrorApp().then(app => { if(app) app.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + token).remove().catch(() => {}); }).catch(() => {});
+}
+function seccionDelPlato(platoId){
+  for(const c of (DB.cartas || [])) for(const s of (c.secciones || [])){
+    if((s.platos || []).some(p => p && String(p.id) === String(platoId))) return s.id;
+  }
+  return null;
+}
+function purgarPedidosMesaQr(){
+  if(!Array.isArray(DB.pedidosMesaQr)) return;
+  const limite = Date.now() - 24 * 3600 * 1000;
+  DB.pedidosMesaQr = DB.pedidosMesaQr.filter(p => p && (p.estado === 'pendiente' || new Date(p.createdAt).getTime() > limite));
+}
+function recibirPedidoMesaQr(req){
+  const cfg = qrMesaConfig();
+  const tbl = mesaPorTokenQr(req.mesaToken);
+  // QR desactivado o token que no es de ninguna mesa (rotado, inventado):
+  // no entra nada. Se deja rastro para que el negocio lo vea si insisten.
+  if(!cfg.activo || !tbl){
+    if(typeof logAudit === 'function') logAudit('edit', t('qrMesa.audit.rechazado'));
+    return null;
+  }
+  const revisado = revisarPreciosPedidoPublico((req.items || []).slice(0, 60), 'mesa');
+  avisarPreciosCorregidos(revisado.correcciones, revisado.sinVerificar, t('qrMesa.quien').replace('${mesa}', tbl.name || ''));
+  // Lo que no está en la carta del negocio no se puede pedir desde la carta:
+  // sin plato no hay precio de confianza, así que esa línea no entra.
+  const items = revisado.lineas.filter(x => x.plato && x.plato.disponible !== false).map(({qty, price, mods, plato}) => {
+    const name = mods.length ? `${plato.nombre} (${mods.map(m => m.nombre).join(', ')})` : plato.nombre;
+    const linea = {platoId: plato.id, recipeId: plato.recipeId ?? null, name, price, qty, tanda: '', notas: '', modificadores: mods, origenQr: true};
+    const sec = seccionDelPlato(plato.id);
+    if(sec != null && typeof isSeccionBebida === 'function' && isSeccionBebida(sec)) linea.bebida = true;
+    return linea;
+  });
+  if(!items.length) return null;
+  if(!Array.isArray(DB.pedidosMesaQr)) DB.pedidosMesaQr = [];
+  purgarPedidosMesaQr();
+  const p = {id: genId(), tableId: tbl.id, mesaNombre: tbl.name || '', items,
+    notas: String(req.notas || '').slice(0, 300), clienteNombre: String(req.clienteNombre || '').slice(0, 60),
+    preciosCorregidos: revisado.correcciones.length ? revisado.correcciones : undefined,
+    estado: 'pendiente', createdAt: new Date().toISOString()};
+  DB.pedidosMesaQr.push(p);
+  if(!cfg.aceptaCamarero) aceptarPedidoMesaQr(p.id, true);
+  return p;
+}
+function pedidosMesaQrPendientes(tableId){
+  return (DB.pedidosMesaQr || []).filter(p => p && p.estado === 'pendiente' && (tableId === undefined || p.tableId === tableId));
+}
+// Aceptar = pasar las líneas a la comanda de la mesa (abriéndola si hace
+// falta) y marcharlas a cocina, igual que marcharComanda.
+function aceptarPedidoMesaQr(id, auto){
+  const p = (DB.pedidosMesaQr || []).find(x => x && x.id === id);
+  if(!p || p.estado !== 'pendiente') return null;
+  const tbl = (DB.tables || []).find(x => x.id === p.tableId);
+  if(!tbl){ p.estado = 'rechazado'; return null; }
+  const ahora = new Date().toISOString();
+  let order = getOpenOrderForTable(tbl.id);
+  if(!order){
+    order = {id: genId(), tableId: tbl.id, tipo: 'mesa', pax: 1, clienteNombre: p.clienteNombre || '', status: 'abierta', items: [], tandas: [], createdAt: ahora, origenQr: true};
+    DB.tpvOrders.push(order);
+  }
+  const fired = [];
+  p.items.forEach(src => {
+    const l = Object.assign({}, src, {estado: 'cocina', enviadoAt: ahora, marchada: src.qty});
+    if(p.notas && !fired.length) l.notas = p.notas;
+    order.items.push(l);
+    fired.push({qty: l.qty, name: l.name, notas: l.notas, bebida: l.bebida, platoId: l.platoId, recipeId: l.recipeId});
+    if(!l.bebida && typeof decrementDishStock === 'function') decrementDishStock(l.platoId, l.qty);
+    if(typeof decrementMenuStock === 'function') decrementMenuStock(order, l, l.qty);
+    if(typeof decrementMenuOptionStock === 'function') decrementMenuOptionStock(l, l.qty);
+  });
+  order.cerrada = false;
+  p.estado = 'aceptado';
+  p.orderId = order.id;
+  p.resueltoEn = ahora;
+  if(typeof printMarchadasIfEnabled === 'function'){ try{ printMarchadasIfEnabled(order, fired); }catch(e){ console.error(e); } }
+  if(!auto){
+    saveDB();
+    if(typeof flushCloudSync === 'function') flushCloudSync();
+    if(typeof renderTPV === 'function' && document.getElementById('tpv-content')) renderTPV();
+    showToast(t('qrMesa.msg.aceptado'));
+  }
+  return order;
+}
+function rechazarPedidoMesaQr(id){
+  const p = (DB.pedidosMesaQr || []).find(x => x && x.id === id);
+  if(!p || p.estado !== 'pendiente') return;
+  // Rechazar es cancelar: misma regla que todo lo demás (puedeCancelar
+  // avisa de quién puede hacerlo, no se queda callado).
+  if(typeof puedeCancelar === 'function' && !puedeCancelar()) return;
+  p.estado = 'rechazado';
+  p.resueltoEn = new Date().toISOString();
+  saveDB();
+  if(typeof renderTPV === 'function' && document.getElementById('tpv-content')) renderTPV();
+  showToast(t('qrMesa.msg.rechazado'));
+}
+// 'pago_mesa' solo ANUNCIA que alguien va a pagar: se apunta la referencia
+// para preguntar por ella. Lo que cuenta es lo que confirme Stripe.
+function recibirPagoMesaQr(req){
+  const ref = typeof req.clientRef === 'string' ? req.clientRef.slice(0, 120) : '';
+  if(!ref) return;
+  const importe = redondeoQr(Math.max(0, Math.min(100000, Number(req.importe) || 0)));
+  // Se espera SIEMPRE, aunque el token no cuadre: si el banco llega a cobrar,
+  // el dinero tiene que aparecer en algún sitio (Pagos sin pedido).
+  esperarPagoTarjeta(ref, importe);
+  const tbl = mesaPorTokenQr(req.mesaToken);
+  const order = tbl ? getOpenOrderForTable(tbl.id) : null;
+  if(!order) return;
+  if(!Array.isArray(order.pagosMesaQrPendientes)) order.pagosMesaQrPendientes = [];
+  if(!order.pagosMesaQrPendientes.some(x => x && x.ref === ref)) order.pagosMesaQrPendientes.push({ref, importe, desde: new Date().toISOString()});
+}
+function aplicarPagoMesaQr(req, importeConfirmado, registrarDescuadre){
+  const order = (DB.tpvOrders || []).find(o => o && Array.isArray(o.pagosMesaQrPendientes) && o.pagosMesaQrPendientes.some(p => p && p.ref === req.orderRef));
+  if(!order) return false;
+  const anunciado = order.pagosMesaQrPendientes.find(p => p && p.ref === req.orderRef);
+  order.pagosMesaQrPendientes = order.pagosMesaQrPendientes.filter(p => p && p.ref !== req.orderRef);
+  if(!Array.isArray(order.pagosMesaQr)) order.pagosMesaQr = [];
+  if(order.pagosMesaQr.some(p => p && p.ref === req.orderRef)) return true;   // ya aplicado
+  if(importeConfirmado + 0.02 < (Number(anunciado && anunciado.importe) || 0)) registrarDescuadre(order.id, Number(anunciado.importe) || 0);
+  const devolver = importe => {
+    if(!(importe > 0.01)) return;
+    if(!DB.unmatchedOnlinePayments) DB.unmatchedOnlinePayments = [];
+    DB.unmatchedOnlinePayments.push({id: genId(), orderRef: req.orderRef, amount: redondeoQr(importe), createdAt: req.createdAt || new Date().toISOString(), detectedAt: new Date().toISOString(), motivo: 'qrMesa'});
+    if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(importe)));
+  };
+  // La mesa se cobró en caja mientras este pago iba de camino: hay que devolverlo.
+  if(order.status === 'pagada'){ devolver(importeConfirmado); return true; }
+  const {pendiente} = cuentaMesaQr(order);
+  const aplica = redondeoQr(Math.min(importeConfirmado, pendiente));
+  if(aplica > 0) order.pagosMesaQr.push({ref: req.orderRef, importe: aplica, fecha: req.createdAt || new Date().toISOString()});
+  devolver(importeConfirmado - aplica);
+  if(typeof logAudit === 'function') logAudit('edit', t('qrMesa.audit.pago').replace('${importe}', fmtMoney(aplica)).replace('${mesa}', (DB.tables.find(x => x.id === order.tableId) || {}).name || ''));
+  // ¿Pagada entera? Se cobra sola: venta normal, método «Online», ticket
+  // numerado. Pagar de menos no llega aquí: queda abierta con lo que falta.
+  if(cuentaMesaQr(order).pendiente <= 0.01) cerrarMesaPagadaQr(order);
+  return true;
+}
+function cerrarMesaPagadaQr(order){
+  if(typeof finalizeCharge !== 'function') return null;
+  // Con la ventana de cobro abierta, finalizeCharge leería la propina de
+  // esa pantalla (que puede ser de otra mesa). Se deja marcada: al cobrarla
+  // el camarero verá que no queda nada por pagar.
+  if(document.getElementById('payment-tip')){ order.cuentaPagadaQr = true; return null; }
+  const sale = finalizeCharge(order.id, {auto: true});
+  if(sale) sale.pagadaPorQr = true;
+  return sale || null;
 }
 
 let publicRequestsListenerAttached = false;
@@ -7487,7 +7773,15 @@ function initPublicRequestsListener(){
           if(!DB.npsScores) DB.npsScores = [];
           DB.npsScores.push({id: genId(), score: Math.round(scoreNum*10)/10, comment: String(req.comment || '').slice(0, 2000), createdAt: new Date().toISOString()});
         }
+      }else if(req.type === 'pedido_mesa'){
+        // Carta por QR con token de mesa (ver recibirPedidoMesaQr).
+        if(recibirPedidoMesaQr(req)) notifyNewRequest = true;
+      }else if(req.type === 'pago_mesa'){
+        recibirPagoMesaQr(req);
       }else if(req.type === 'pedido' && req.tipo === 'mesa'){
+        // ⚠️ QR ANTIGUO (?mesa=<id de la mesa>). Se mantiene para no dejar
+        // sin servicio los QR ya impresos; los nuevos llevan token y entran
+        // como 'pedido_mesa', más arriba.
         // Auto-pedido desde la mesa: se añade directamente a la comanda de esa
         // mesa (si ya está abierta) o se abre una comanda nueva, sin pasar por
         // la bandeja de "pedidos pendientes".
@@ -7880,6 +8174,8 @@ const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   // Titular y NIF del aviso legal: los rellena el dueño a propósito en Mi
   // Negocio sabiendo que se publican (los exige la LSSI).
   'legalPublico',
+  // Carta por QR: solo dos interruptores ({activo, aceptaCamarero}).
+  'qrMesa',
 ];
 function negocioParaElEspejoPublico(){
   const b = DB.business || {};
@@ -7946,6 +8242,8 @@ function syncPublicMirror(){
         console.error('Error publicando el espejo público', e);
         if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
       });
+      // Cuenta de cada mesa con QR (carta por QR, ver publicarMesasQr).
+      try{ publicarMesasQr(app, publicId); }catch(e){ console.error('Error publicando las cuentas de mesa', e); }
       // aforoHold (js/reservagastrogoan.html) es un contador aparte que la
       // web pública usa para reservar de forma atómica sin pasarse del
       // aforo — pero nunca se decrementaba solo, así que cada reserva
@@ -9368,10 +9666,8 @@ function renderOnlineCard(){
   `;
 }
 
-// Genera un QR de auto-pedido por mesa (mismo enlace público + &mesa=ID) para
-// que el cliente pida directamente desde su mesa sin esperar al camarero.
-// Solo se muestra el nombre/etiqueta de cada mesa con un botón de descarga;
-// el QR no se muestra en pantalla (se genera al vuelo solo para la descarga).
+// Carta por QR en la mesa (7/10): un QR por mesa con su token (no el id),
+// y la configuración del servicio. Desactivado por defecto.
 function renderTableQrCard(){
   if((DB.business?.tiposServicio?.mesa === false) || !DB.tables.length) return '';
   if(!getTenantId()){
@@ -9392,46 +9688,128 @@ function renderTableQrCard(){
   }
   const link = getPublicClientLink();
   if(!link) return '';
-  // Un QR por cada mesa configurada en Mi Negocio, agrupados por zona. Se
-  // usan las mismas zonas/orden que el TPV (incluidas las zonas propias que
-  // el negocio haya creado en Operativa), en vez de una lista fija de
-  // interior/terraza/barra que dejaba las zonas personalizadas en "Otras".
+  const cfg = qrMesaConfig();
+  const ajustes = `
+    <label style="display:flex;align-items:flex-start;gap:8px;font-weight:600;cursor:pointer;min-height:44px">
+      <input type="checkbox" id="mn-qrmesa-activo" style="width:auto;margin-top:3px" ${cfg.activo ? 'checked' : ''} onchange="saveQrMesaConfig()">
+      <span>${t('qrMesa.mn.activar')}</span>
+    </label>
+    ${cfg.activo ? `
+    <div class="field" style="margin-top:6px">
+      <label for="mn-qrmesa-acepta">${t('qrMesa.mn.alLlegar')}</label>
+      <select id="mn-qrmesa-acepta" onchange="saveQrMesaConfig()">
+        <option value="camarero" ${cfg.aceptaCamarero ? 'selected' : ''}>${t('qrMesa.mn.aceptaCamarero')}</option>
+        <option value="cocina" ${!cfg.aceptaCamarero ? 'selected' : ''}>${t('qrMesa.mn.directoCocina')}</option>
+      </select>
+    </div>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px"><i class="ti ti-credit-card"></i> ${pagoOnlineActivo ? t('qrMesa.mn.conStripe') : t('qrMesa.mn.sinStripe')}</p>` : ''}`;
+  if(!cfg.activo){
+    return `
+      <div class="card" id="mn-card-qr-mesa">
+        <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('qrMesa.mn.desc')}</p>
+        ${ajustes}
+      </div>`;
+  }
+  // Un QR por cada mesa configurada, agrupados por zona (mismas zonas y
+  // orden que el TPV).
   const zonaKeys = [...getZonaOrder(), null];
   const zonasHtml = [...new Set(zonaKeys)].map(z => {
-    const tables = DB.tables.filter(t => (t.zona||null) === z);
+    const tables = DB.tables.filter(tb => (tb.zona||null) === z);
     if(!tables.length) return '';
     const label = z===null ? t('label.otherTables') : `<i class="ti ${zonaIconClass(z)}"></i> ${escapeHtml(zonaLabel(z))}`;
     return `
       <div style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${label} (${tables.length})</div>
+        <div class="txt-xs" style="font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${label} (${tables.length})</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${tables.map(t => `<button class="btn btn-sm" style="font-size:12px;padding:4px 10px" onclick="showTableQr(${t.id})"><i class="ti ti-qrcode"></i> ${escapeHtml(t.name)}</button>`).join('')}
+          ${tables.map(tb => `<button class="btn btn-sm" style="min-height:44px" onclick="showTableQr(${JSON.stringify(tb.id)})"><i class="ti ti-qrcode"></i> ${escapeHtml(tb.name)}</button>`).join('')}
         </div>
       </div>`;
   }).join('');
   return `
-    <div class="card">
+    <div class="card" id="mn-card-qr-mesa">
       <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.tableQr.desc').replace('${count}', DB.tables.length)}</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('qrMesa.mn.desc')}</p>
+      ${ajustes}
       ${zonasHtml}
+      <button class="btn btn-primary" style="min-height:44px" onclick="imprimirQrMesas()"><i class="ti ti-printer"></i> ${t('qrMesa.mn.imprimirTodos')}</button>
     </div>
   `;
 }
-
+function saveQrMesaConfig(){
+  const chk = document.getElementById('mn-qrmesa-activo');
+  const sel = document.getElementById('mn-qrmesa-acepta');
+  const antes = qrMesaConfig();
+  const activo = chk ? chk.checked : antes.activo;
+  DB.business.qrMesa = {activo, aceptaCamarero: sel ? sel.value !== 'cocina' : antes.aceptaCamarero};
+  // Al activarlo, cada mesa recibe su token (el QR impreso no cambia
+  // mientras no se rote a mano).
+  if(activo) (DB.tables || []).forEach(asegurarTokenMesa);
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  if(typeof renderMiNegocio === 'function') renderMiNegocio();
+  showToast(activo ? t('qrMesa.msg.activado') : t('qrMesa.msg.desactivado'));
+}
+function qrImagenUrl(texto, px){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=' + px + 'x' + px + '&data=' + encodeURIComponent(texto);
+}
 function showTableQr(tableId){
   const tbl = DB.tables.find(x => x.id === tableId);
-  const link = getPublicClientLink();
-  if(!tbl || !link) return;
-  const tLink = `${link}&mesa=${tbl.id}`;
-  const tQr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(tLink);
+  if(!tbl) return;
+  const hadToken = !!tbl.qrToken;
+  const tLink = enlaceQrMesa(tbl);
+  if(!tLink) return;
+  if(!hadToken) saveDB();
+  const tQr = qrImagenUrl(tLink, 240);
   openModal(`
     <div class="modal-header"><h3><i class="ti ti-qrcode"></i> ${escapeHtml(tbl.name)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div style="text-align:center">
-      <img src="${tQr}" alt="QR ${escapeHtml(tbl.name)}" style="width:240px;height:240px;border:1px solid var(--border);border-radius:8px">
+      <img src="${escapeHtml(tQr)}" alt="QR ${escapeHtml(tbl.name)}" style="width:240px;max-width:100%;height:auto;aspect-ratio:1;border:1px solid var(--border);border-radius:8px">
       <p style="font-size:13px;color:var(--muted);margin:10px 0">${t('mn.tableQr.scanHint').replace('${table}', `<strong>${escapeHtml(tbl.name)}</strong>`)}</p>
-      <a class="btn btn-primary" style="text-decoration:none;display:inline-flex" href="${tQr}" download="qr-${escapeHtml(tbl.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <a class="btn btn-primary" style="text-decoration:none;display:inline-flex;min-height:44px;align-items:center" href="${escapeHtml(tQr)}" download="qr-${escapeHtml(String(tbl.name||'').replace(/\s+/g,'-'))}.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
+        <button class="btn" style="min-height:44px" onclick="rotarTokenMesa(${JSON.stringify(tbl.id)})"><i class="ti ti-refresh"></i> ${t('qrMesa.mn.rotar')}</button>
+      </div>
+      <p class="txt-xs" style="color:var(--muted);margin-top:10px">${t('qrMesa.mn.rotarDesc')}</p>
     </div>
   `);
+}
+async function rotarTokenMesa(tableId){
+  const tbl = DB.tables.find(x => x.id === tableId);
+  if(!tbl) return;
+  if(!(await confirmModal(t('qrMesa.mn.rotarConfirm').replace('${mesa}', tbl.name || ''), {confirmLabel: t('qrMesa.mn.rotar')}))) return;
+  const viejo = tbl.qrToken;
+  tbl.qrToken = nuevoTokenMesaQr();
+  retirarTokenMesaPublicado(viejo);
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  showToast(t('qrMesa.msg.rotado'));
+  showTableQr(tableId);
+}
+// Hoja para imprimir con el QR de todas las mesas (uno por tarjeta, para
+// recortar). Sin scripts dentro: imprime el propio navegador al cargar.
+function imprimirQrMesas(){
+  const mesas = (DB.tables || []).filter(Boolean);
+  if(!mesas.length) return;
+  let cambiado = false;
+  const tarjetas = mesas.map(tb => {
+    if(!tb.qrToken) cambiado = true;
+    const enlace = enlaceQrMesa(tb);
+    return `<div class="q"><img src="${escapeHtml(qrImagenUrl(enlace, 300))}" alt=""><div class="n">${escapeHtml(tb.name || '')}</div><div class="h">${escapeHtml(t('qrMesa.print.pie'))}</div></div>`;
+  }).join('');
+  if(cambiado) saveDB();
+  const nombre = escapeHtml((DB.business && DB.business.name) || '');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${nombre} · QR</title><style>
+    body{font-family:'IBM Plex Sans',Arial,sans-serif;margin:0;padding:12mm;color:#1A1A1A}
+    .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8mm}
+    .q{border:1px dashed #999;padding:6mm;text-align:center;break-inside:avoid}
+    .q img{width:100%;max-width:55mm;aspect-ratio:1}
+    .n{font-size:18pt;font-weight:700;margin-top:3mm}.h{font-size:10pt;color:#555;margin-top:2mm}
+    h1{font-size:14pt;margin:0 0 6mm}
+  </style></head><body onload="setTimeout(function(){window.print()},600)"><h1>${nombre}</h1><div class="g">${tarjetas}</div></body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ showToast(t('qrMesa.msg.popup')); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 /* ============================================================
