@@ -1425,6 +1425,7 @@ function renderBusinessSelectScreenHtml(){
       <div class="bs-list" id="bs-list">
         ${renderBsGroups(slots)}
       </div>
+      ${puedeVerVisionGlobal() ? `<button class="btn" id="bs-vision-global" style="width:100%;min-height:44px;margin-bottom:8px;border:1px solid var(--olive);color:var(--olive)" onclick="openVisionGlobal()"><i class="ti ti-chart-bar"></i> ${t('bs.globalBtn')}</button>` : ''}
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
         <button class="btn" style="flex:1;border:1px solid var(--ink);color:var(--ink)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
@@ -1652,6 +1653,241 @@ function enterBusiness(slotId){
     return;
   }
   switchToBusiness(slotId);
+}
+
+/* ============================================================
+   VISIÓN GLOBAL DE MIS NEGOCIOS (selector de negocios)
+   Un dueño con varios locales quería verlos juntos sin ir entrando uno a
+   uno. Cada negocio vive en su propia IndexedDB y DB solo refleja el slot
+   activo, así que aquí se LEE cada base en solo lectura, sin cambiar de
+   slot y sin tocar ninguna:
+   - Solo los negocios de ESTA cuenta (slotsOfCurrentOwner), nunca los de
+     otro dueño que use el mismo aparato.
+   - Abrir la base sin crearla: si el aparato no la tiene (el negocio nunca
+     se abrió aquí), se aborta la creación y se dice tal cual, en vez de
+     inventar cifras a cero.
+   - Las cifras salen de las MISMAS funciones que la Cuenta de Resultados
+     (plan360KpisMes). Como dependen de DB global, se cambia DB un instante,
+     de forma SÍNCRONA (ningún otro código puede ejecutarse en medio) y con
+     saveDB/scheduleCloudSync bloqueados por si acaso.
+   ============================================================ */
+var vgLeyendoOtroNegocio = false;
+let vgPeriodo = 'mes';
+let vgSnapshots = null;   // [{slot, data|null}] — se leen una vez al abrir
+
+// Lee el DB guardado de un hueco SIN crear su base si no existe.
+function vgLeerSnapshot(slotId){
+  return new Promise(resolve => {
+    let creando = false;
+    let req;
+    try{ req = indexedDB.open(slotIdbName(slotId)); }catch(e){ resolve(null); return; }
+    req.onupgradeneeded = () => { creando = true; try{ req.transaction.abort(); }catch(e){} };
+    req.onerror = () => resolve(null);
+    req.onblocked = () => resolve(null);
+    req.onsuccess = () => {
+      const db = req.result;
+      if(creando || !db.objectStoreNames.contains(IDB_STORE)){ db.close(); resolve(null); return; }
+      try{
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const g = tx.objectStore(IDB_STORE).get(DB_KEY);
+        g.onsuccess = () => { db.close(); resolve(g.result || null); };
+        g.onerror = () => { db.close(); resolve(null); };
+      }catch(e){ db.close(); resolve(null); }
+    };
+  });
+}
+
+function vgNormalizar(data){
+  const d = Object.assign(defaultData(), data);
+  d.business = {...defaultData().business, ...(data.business||{})};
+  if(!d.ge) d.ge = defaultData().ge;
+  return d;
+}
+
+// Fechas [desde, hasta] del periodo, en 'AAAA-MM-DD'.
+function vgRango(periodo){
+  const hoy = new Date();
+  const h = dateStr(hoy);
+  if(periodo === 'hoy') return {desde: h, hasta: h};
+  if(periodo === 'semana'){
+    const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+    return {desde: dateStr(lunes), hasta: h};
+  }
+  if(periodo === 'mesAnterior'){
+    const a = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
+    const b = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    return {desde: dateStr(a), hasta: dateStr(b), mes: {y: a.getFullYear(), m: a.getMonth()}};
+  }
+  return {desde: dateStr(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), hasta: h, mes: {y: hoy.getFullYear(), m: hoy.getMonth()}};
+}
+
+// Calcula con el DB que haya cargado en ese momento. Un mes entero sale tal
+// cual de plan360KpisMes (lo mismo que la Cuenta de Resultados). Hoy y la
+// semana son trozos de mes: ventas y compras van en proporción a lo vendido
+// y los fijos (personal, gastos fijos, amortización) en proporción a los
+// días — por eso se marcan como estimados.
+function vgCalcular(periodo){
+  const r = vgRango(periodo);
+  const ventas = activeSales().filter(v => v.date >= r.desde && v.date <= r.hasta);
+  const brutaDe = v => (parseFloat(v.total)||0) - (parseFloat(v.propina)||0);
+  let netas = 0, compras = 0, personal = 0, resultado = 0, brutas = 0, tickets = 0;
+  if(r.mes){
+    const k = plan360KpisMes(r.mes.y, r.mes.m);
+    netas = k.netas; compras = k.compras; personal = k.personal; resultado = k.resultado; brutas = k.brutas; tickets = k.tickets;
+  } else {
+    const meses = {};
+    ventas.forEach(v => { const c = v.date.slice(0,7); meses[c] = (meses[c]||0) + brutaDe(v); });
+    // Días del rango por mes (los fijos del mes se reparten por días).
+    for(let d = new Date(r.desde+'T12:00:00'); dateStr(d) <= r.hasta; d.setDate(d.getDate()+1)){
+      const c = dateStr(d).slice(0,7); if(!(c in meses)) meses[c] = 0;
+    }
+    Object.entries(meses).forEach(([c, brutasRango]) => {
+      const [y, m] = c.split('-').map(Number);
+      const k = plan360KpisMes(y, m-1);
+      const dim = new Date(y, m, 0).getDate();
+      let dias = 0;
+      for(let d = new Date(r.desde+'T12:00:00'); dateStr(d) <= r.hasta; d.setDate(d.getDate()+1)) if(dateStr(d).startsWith(c)) dias++;
+      const parteVentas = k.brutas > 0 ? brutasRango / k.brutas : 0;
+      const parteDias = dias / dim;
+      const netasR = k.netas * parteVentas;
+      const comprasR = k.compras * parteVentas;
+      const comisR = k.comisiones * parteVentas;
+      // Lo que no es ni compras, ni comisiones: personal + fijos + amortización/intereses.
+      const restoFijos = k.netas - k.compras - k.comisiones - k.resultado;
+      netas += netasR; compras += comprasR; brutas += brutasRango;
+      personal += k.personal * parteDias;
+      resultado += netasR - comprasR - comisR - restoFijos * parteDias;
+    });
+    tickets = ventas.length;
+  }
+  const hoy = todayStr();
+  const reservasHoy = (DB.reservations||[]).filter(x => x.date === hoy && x.status !== 'cancelada' && x.status !== 'no_show');
+  const stockBajo = (DB.ingredients||[]).filter(i => { const s = DB.stock && DB.stock[i.id]; return s && (parseFloat(s.min)||0) > 0 && (parseFloat(s.qty)||0) < parseFloat(s.min); }).length;
+  return {
+    netas: r2(netas), brutas: r2(brutas), tickets, compras: r2(compras), personal: r2(personal), resultado: r2(resultado),
+    ticketMedio: tickets ? r2(brutas/tickets) : null,
+    foodCostPct: netas > 0 ? r1(compras/netas*100) : null,
+    personalPct: netas > 0 ? r1(personal/netas*100) : null,
+    resultadoPct: netas > 0 ? r1(resultado/netas*100) : null,
+    estimado: !r.mes,
+    reservasHoy: reservasHoy.length,
+    paxHoy: reservasHoy.reduce((s,x)=>s+(parseInt(x.pax||x.people||x.comensales)||0), 0),
+    stockBajo,
+  };
+}
+
+// Carga un DB ajeno un instante, calcula y deja el activo como estaba.
+function vgCalcularConDB(data, periodo){
+  const original = DB;
+  vgLeyendoOtroNegocio = true;
+  try{
+    DB = vgNormalizar(JSON.parse(JSON.stringify(data)));
+    geInicioCache = null;
+    return vgCalcular(periodo);
+  } finally {
+    DB = original;
+    geInicioCache = null;
+    vgLeyendoOtroNegocio = false;
+  }
+}
+
+function vgMisNegocios(){
+  if(!currentOwnerId()) return [];
+  return slotsOfCurrentOwner().filter(s => s.code);
+}
+function puedeVerVisionGlobal(){
+  const ses = getAccessSession();
+  return !!(ses && ses.type === 'owner') && vgMisNegocios().length >= 2;
+}
+
+async function openVisionGlobal(){
+  if(!puedeVerVisionGlobal()) return;
+  openModal(`<div class="modal-header"><h3><i class="ti ti-chart-bar"></i> ${t('bs.globalTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div><p class="txt-xs" style="color:var(--muted)">${t('common.loading')}</p>`, {xl:true});
+  const slots = vgMisNegocios();
+  vgSnapshots = [];
+  for(const slot of slots){
+    // El activo, desde memoria (lo más reciente); el resto, de su base.
+    const data = slot.id === ACTIVE_SLOT ? null : await vgLeerSnapshot(slot.id);
+    vgSnapshots.push({slot, data, activo: slot.id === ACTIVE_SLOT});
+  }
+  renderVisionGlobal();
+}
+
+function vgSetPeriodo(p){ vgPeriodo = p; renderVisionGlobal(); }
+
+function renderVisionGlobal(){
+  if(!vgSnapshots) return;
+  const filas = vgSnapshots.map(x => {
+    let k = null;
+    try{
+      if(x.activo) k = vgCalcular(vgPeriodo);
+      else if(x.data) k = vgCalcularConDB(x.data, vgPeriodo);
+    }catch(e){ console.error('Visión global: no se pudo calcular', x.slot.id, e); }
+    const nombre = (x.activo ? DB.business && DB.business.name : x.data && x.data.business && x.data.business.name) || x.slot.name || t('bs.defaultBusinessName');
+    return {slot: x.slot, nombre, k};
+  });
+  const conDatos = filas.filter(f => f.k);
+  const tot = conDatos.reduce((a,f) => { ['netas','brutas','tickets','compras','personal','resultado','reservasHoy','paxHoy','stockBajo'].forEach(c => a[c] += f.k[c]||0); return a; },
+    {netas:0, brutas:0, tickets:0, compras:0, personal:0, resultado:0, reservasHoy:0, paxHoy:0, stockBajo:0});
+  const pct = (a,b) => b > 0 ? r1(a/b*100) : null;
+  const fmtPct = v => v == null ? '—' : fmtNum(v) + '%';
+  const color = v => v == null ? '' : (v < 0 ? 'color:var(--red)' : 'color:var(--green)');
+  // Ranking por resultado; "el que peor va" = peor margen sobre ventas.
+  conDatos.sort((a,b) => b.k.resultado - a.k.resultado);
+  const sinDatos = filas.filter(f => !f.k);
+  let peor = null;
+  if(conDatos.length >= 2){
+    conDatos.forEach(f => { if(f.k.netas > 0 && (!peor || f.k.resultadoPct < peor.k.resultadoPct)) peor = f; });
+  }
+  const periodos = ['hoy','semana','mes','mesAnterior'];
+  const pestanas = periodos.map(p => `<button class="btn btn-sm ${p===vgPeriodo?'btn-primary':''}" style="min-height:44px" onclick="vgSetPeriodo('${p}')">${t('bs.globalPeriod.'+p)}</button>`).join('');
+  const celda = (lab, val, st) => `<div style="min-width:0"><div class="txt-xs" style="color:var(--muted)">${lab}</div><div style="font-weight:700;${st||''}">${val}</div></div>`;
+  const tarjeta = (f, i) => {
+    const k = f.k;
+    const parte = tot.netas > 0 ? Math.max(0, k.netas/tot.netas*100) : 0;
+    return `<div class="card vg-negocio" data-slot="${escapeHtml(f.slot.id)}" style="padding:12px;margin-bottom:10px;cursor:pointer;${f===peor?'border:1px solid var(--red)':''}" onclick="closeModal();enterBusiness('${escapeHtml(f.slot.id)}')">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px">
+        <strong style="overflow-wrap:anywhere">${i+1}. ${escapeHtml(f.nombre)}</strong>
+        <i class="ti ti-chevron-right" style="color:var(--muted)"></i>
+      </div>
+      ${f===peor ? `<div class="txt-xs" style="color:var(--red);margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${t('bs.globalWorst')}</div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px">
+        ${celda(t('bs.globalSales'), `<span class="vg-netas">${fmtMoney(k.netas)}</span>`)}
+        ${celda(t('bs.globalTickets'), k.tickets)}
+        ${celda(t('bs.globalAvgTicket'), k.ticketMedio == null ? '—' : fmtMoney(k.ticketMedio))}
+        ${celda(t('bs.globalFoodCost'), fmtPct(k.foodCostPct))}
+        ${celda(t('bs.globalStaff'), fmtPct(k.personalPct))}
+        ${celda(t('bs.globalResult'), fmtMoney(k.resultado), color(k.resultado))}
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;margin:10px 0 4px;overflow:hidden"><div style="height:100%;width:${parte.toFixed(1)}%;background:var(--olive)"></div></div>
+      <div class="txt-xs" style="color:var(--muted)">${t('bs.globalShare')}: ${fmtNum(r1(parte))}% · <i class="ti ti-calendar-event"></i> ${t('bs.globalBookingsToday')}: ${k.reservasHoy}${k.paxHoy?` (${k.paxHoy} pax)`:''} · <span style="${k.stockBajo?'color:var(--red)':''}"><i class="ti ti-package"></i> ${t('bs.globalLowStock')}: ${k.stockBajo}</span></div>
+    </div>`;
+  };
+  const totalHtml = `<div class="card" id="vg-total" style="padding:12px;margin-bottom:12px;background:var(--bg)">
+      <strong>${t('bs.globalTotal')}</strong>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px">
+        ${celda(t('bs.globalSales'), `<span id="vg-total-netas">${fmtMoney(r2(tot.netas))}</span>`)}
+        ${celda(t('bs.globalTickets'), tot.tickets)}
+        ${celda(t('bs.globalAvgTicket'), tot.tickets ? fmtMoney(r2(tot.brutas/tot.tickets)) : '—')}
+        ${celda(t('bs.globalFoodCost'), fmtPct(pct(tot.compras, tot.netas)))}
+        ${celda(t('bs.globalStaff'), fmtPct(pct(tot.personal, tot.netas)))}
+        ${celda(t('bs.globalResult'), fmtMoney(r2(tot.resultado)), color(tot.resultado))}
+      </div>
+      <div class="txt-xs" style="color:var(--muted);margin-top:6px"><i class="ti ti-calendar-event"></i> ${t('bs.globalBookingsToday')}: ${tot.reservasHoy} · <i class="ti ti-package"></i> ${t('bs.globalLowStock')}: ${tot.stockBajo}</div>
+    </div>`;
+  const sinHtml = sinDatos.map(f => `<div class="card vg-sin-datos" style="padding:12px;margin-bottom:10px;cursor:pointer" onclick="closeModal();enterBusiness('${escapeHtml(f.slot.id)}')">
+      <strong style="overflow-wrap:anywhere">${escapeHtml(f.nombre)}</strong>
+      <div class="txt-xs" style="color:var(--muted);margin-top:4px"><i class="ti ti-device-tablet"></i> ${t('bs.globalNoLocal')}</div>
+    </div>`).join('');
+  const estimado = conDatos.some(f => f.k.estimado);
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-chart-bar"></i> ${t('bs.globalTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${pestanas}</div>
+    ${totalHtml}
+    ${conDatos.map(tarjeta).join('')}
+    ${sinHtml}
+    <p class="txt-xs" style="color:var(--muted)">${t('bs.globalNote')}${estimado ? ' ' + t('bs.globalEstimated') : ''}</p>
+  `, {xl:true});
 }
 
 /* ============================================================
@@ -4803,7 +5039,7 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (!newData.exists() && data.child('_claimedAt').exists()))",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pedido_mesa' || newData.child('type').val() === 'pago_mesa')",
               "_claimedAt": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
                 ".validate": "newData.isNumber()"
@@ -4851,6 +5087,13 @@ const FIREBASE_RULES_JSON = `{
             "$token": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
               ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
+            }
+          },
+          "mesaQr": {
+            "$token": {
+              ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64",
+              ".validate": "newData.hasChildren(['mesa', 'updatedAt']) && newData.child('mesa').isString() && newData.child('mesa').val().length <= 60"
             }
           },
           "reservationLookup": {
@@ -4998,6 +5241,9 @@ const FIREBASE_GATE_STEPS = [
 let extConnPromptStep = 0;
 const EXT_CONN_PROMPT_STEPS = [
   {icon:'ti-credit-card', titleKey:'mn.pago.title', descKey:'mn.pago.desc', renderCard: () => renderPagoOnlineCard()},
+  // La clave de IA (js/idr.js): opcional como las demás, con su propio
+  // "Ahora no" dentro de la tarjeta además del botón de siempre.
+  {icon:'ti-sparkles', titleKey:'ia.cfg.title', alwaysKey:'ia.gate.alwaysThere', renderCard: () => renderIaGateCard()},
 ];
 function showExternalConnectionsPrompt(){
   extConnPromptStep = 0;
@@ -5021,7 +5267,7 @@ function renderExternalConnectionsPromptStep(){
         <h2 style="margin-bottom:4px">${t(step.titleKey)}</h2>
       </div>
       <div style="background:#F5F0E3;border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
-        <strong>${t('gate.extConn.optional')}</strong> ${t('gate.extConn.alwaysThere')}
+        <strong>${t('gate.extConn.optional')}</strong> ${t(step.alwaysKey || 'gate.extConn.alwaysThere')}
       </div>
       ${step.renderCard()}
       <button onclick="skipExternalConnectionsPromptStep()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:14px">
@@ -5839,6 +6085,8 @@ const ARRAYS_CON_LAPIDA = new Set([
   // Un pago ya aplicado que «resucitara» desde otra tablet se volvería a
   // preguntar y podría acabar como pago sin pedido.
   'pagosTarjetaEsperados',
+  // Pedidos de la carta por QR: se purgan a las 24 h y no deben volver.
+  'pedidosMesaQr',
   /* ⚠️ `tpvOrders` también, y el comentario de "las comandas no se borran, se
      anulan" era falso: se borran al juntar dos mesas, al rechazar o cancelar
      un pedido online, al liberar una mesa vacía y al purgar las pagadas.
@@ -6016,7 +6264,7 @@ function mergeLapidas(local, remoto){
 }
 
 const MERGEABLE_ARRAYS = new Set([
-  'ingredients','recipes','fichas','menuItems','cartas','menus','pagosTarjetaEsperados',
+  'ingredients','recipes','fichas','menuItems','cartas','menus','pagosTarjetaEsperados','pedidosMesaQr',
   'purchaseOrders','providers','tables','tpvOrders','sales',
   'cashClosures','employees','turnos','fichajes','promos','horariosFijos',
   'cleaningTasks','clients','chatMessages','reservations',
@@ -6554,6 +6802,18 @@ async function comprobarEspejoEnNubePropia(){
       // aviso de que le faltaba, aunque la búsqueda de reserva no funcionara.
       await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').set(true);
       await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').remove();
+      // Carta por QR (7/10): su nodo `mesaQr` y los tipos 'pedido_mesa' y
+      // 'pago_mesa'. Solo se prueba si el negocio la tiene activada: a quien
+      // no la usa no se le pide pegar reglas nuevas por ella.
+      if(qrMesaConfig().activo){
+        const sondaMesa = base.child('mesaQr/_sonda_' + sondaId.padEnd(16, '_'));
+        await sondaMesa.set({mesa: '_prueba', updatedAt: Date.now()});
+        await sondaMesa.remove();
+        const sondaPedidoMesa = base.child('requests/_sondamesa_' + sondaId);
+        await sondaPedidoMesa.set({type: 'pedido_mesa', createdAt: Date.now(), _sonda: true});
+        await sondaPedidoMesa.child('_claimedAt').set(Date.now());
+        await sondaPedidoMesa.remove();
+      }
       reglasAntiguas = false;
     }catch(e2){
       console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
@@ -6562,6 +6822,7 @@ async function comprobarEspejoEnNubePropia(){
       // el oyente la ignora por el `_sonda`.
       try{ await base.child('requests/_sonda_' + sondaId).remove(); }catch(e3){}
       try{ await base.child('reservationLookup/_sonda_' + sondaId).remove(); }catch(e4){}
+      try{ await base.child('requests/_sondamesa_' + sondaId).remove(); }catch(e5){}
     }
     return true;
   }catch(e){
@@ -7001,6 +7262,8 @@ function aplicarPagoConfirmado(req){
       o.propinasPendientes = o.propinasPendientes.filter(p => p !== pendiente);
     }
   });
+  // Cuenta de una mesa pagada desde el QR (entera o una parte).
+  if(aplicarPagoMesaQr(req, importeConfirmado, registrarDescuadre)) pagoConfirmadoMatched = true;
   // Nada a lo que aplicar el pago: lo más probable es que el pedido se
   // rechazara/cancelara antes de que llegara la confirmación. Queda aquí,
   // visible, para que el negocio gestione el reembolso a mano.
@@ -7011,6 +7274,269 @@ function aplicarPagoConfirmado(req){
       if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(req.amount||0)));
     }
   }
+}
+
+/* ============================================================
+   CARTA POR QR EN LA MESA: pedir y pagar desde el móvil (7/10)
+
+   Cada mesa lleva su propio token (`table.qrToken`, 20 caracteres al azar)
+   y el QR abre la web pública con `?mesa=<token>`. NO el id de la mesa: el
+   id es 1, 2, 3… y con él cualquiera podía mandar pedidos a todas las
+   mesas del local desde casa. El token no está en el espejo público (allí
+   las mesas van sin él) y su nodo `mesaQr/{token}` solo se puede leer
+   sabiendo el token: las reglas no dejan listar el padre.
+
+   - El pedido entra como 'pedido_mesa' y pasa por la MISMA revisión de
+     precios que los pedidos online (revisarPreciosPedidoPublico). Lo que no
+     está en la carta no entra. Por defecto lo acepta el camarero; el negocio
+     puede hacer que entre directo en cocina.
+   - La cuenta que ve el comensal se publica en `mesaQr/{token}`: platos,
+     cantidades e importes. Nada de nombres, teléfonos ni notas.
+   - Pagar todo o una parte: 'pago_mesa' solo anuncia el cobro; lo que
+     cuenta es lo que confirma Stripe (comprobarPagosTarjeta). Pagar de
+     menos deja la mesa abierta con lo que falte; cuando lo confirmado
+     cubre la cuenta, la mesa se cobra sola como una venta normal, con su
+     ticket numerado (factura simplificada).
+   - Si se cobra de más (dos comensales pagando «todo» a la vez), lo que
+     sobra va a «Pagos sin pedido» para devolverlo: nunca se convierte en
+     propina por su cuenta.
+   - Rotar el token de una mesa invalida su QR viejo al instante.
+   ============================================================ */
+const QR_MESA_TOKEN_LEN = 20;
+function nuevoTokenMesaQr(){
+  const abc = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const c = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+  const bytes = c ? c.getRandomValues(new Uint8Array(QR_MESA_TOKEN_LEN)) : null;
+  let out = '';
+  // El primero, siempre una letra: así la web pública distingue un token de
+  // un id de mesa de los QR antiguos (que es solo un número).
+  for(let i = 0; i < QR_MESA_TOKEN_LEN; i++){
+    const v = bytes ? bytes[i] : Math.floor(Math.random() * 256);
+    out += i === 0 ? abc[v % 52] : abc[v % abc.length];
+  }
+  return out;
+}
+function qrMesaConfig(){
+  const q = (DB && DB.business && DB.business.qrMesa) || {};
+  return {activo: q.activo === true, aceptaCamarero: q.aceptaCamarero !== false};
+}
+function asegurarTokenMesa(tbl){
+  if(!tbl) return null;
+  if(typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) tbl.qrToken = nuevoTokenMesaQr();
+  return tbl.qrToken;
+}
+function mesaPorTokenQr(token){
+  if(typeof token !== 'string' || token.length < 16 || token.length > 64) return null;
+  return (DB.tables || []).find(tb => tb && tb.qrToken === token) || null;
+}
+function enlaceQrMesa(tbl){
+  const link = getPublicClientLink();
+  const token = asegurarTokenMesa(tbl);
+  return (link && token) ? link + '&mesa=' + encodeURIComponent(token) : '';
+}
+function redondeoQr(x){ return Math.round(((Number(x) || 0) + Number.EPSILON) * 100) / 100; }
+// Lo que vale la cuenta entera y lo que queda por pagar, con las mismas
+// piezas que la ventana de cobro (computeFinalTotal) pero sin leer nada de
+// la pantalla: aquí no hay ventana de cobro abierta.
+function cuentaMesaQr(order){
+  const desc = order.descuentoPct || 0;
+  const total = redondeoQr(orderTotal(order) * (1 - desc / 100) + (order.propina || 0) + (order.propinaPagadaOnline || 0));
+  const pagado = redondeoQr(orderAmountPaidOnline(order));
+  return {total, pagado, pendiente: Math.max(0, redondeoQr(total - pagado))};
+}
+// Lo que se publica de una mesa: SOLO platos e importes. Ni el nombre del
+// comensal, ni quién pagó qué, ni las notas (pueden llevar alergias).
+function cuentaPublicaMesa(tbl){
+  const base = {mesa: String(tbl.name || '').slice(0, 60), updatedAt: new Date().toISOString()};
+  const order = typeof getOpenOrderForTable === 'function' ? getOpenOrderForTable(tbl.id) : null;
+  if(!order || !(order.items || []).length) return Object.assign(base, {abierta: false, total: 0, pagado: 0, pendiente: 0});
+  const agrupadas = {};
+  order.items.forEach(l => {
+    const clave = String(l.name || '') + '|' + (Number(l.price) || 0);
+    if(!agrupadas[clave]) agrupadas[clave] = {n: String(l.name || '').slice(0, 80), q: 0, p: Number(l.price) || 0};
+    agrupadas[clave].q += Number(l.qty) || 0;
+  });
+  const c = cuentaMesaQr(order);
+  const enCurso = redondeoQr((order.pagosMesaQrPendientes || []).reduce((s, p) => s + (Number(p && p.importe) || 0), 0));
+  return Object.assign(base, {abierta: true, lineas: Object.values(agrupadas).filter(l => l.q > 0), descuentoPct: order.descuentoPct || 0,
+    total: c.total, pagado: c.pagado, pendiente: c.pendiente, enCurso});
+}
+// Publica la cuenta de cada mesa con QR, solo si ha cambiado (la firma no
+// lleva la hora: si no, se reescribirían todas en cada guardado).
+let mesaQrPublicado = {};
+// Recibe la nube del ESPEJO (getPublicMirrorApp), nunca la plataforma.
+function publicarMesasQr(espejoApp, publicId){
+  const cfg = qrMesaConfig();
+  const nodo = token => espejoApp.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + token);
+  const vivos = new Set();
+  if(cfg.activo){
+    (DB.tables || []).forEach(tbl => {
+      if(!tbl || typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) return;
+      vivos.add(tbl.qrToken);
+      const data = cuentaPublicaMesa(tbl);
+      const firma = JSON.stringify(Object.assign({}, data, {updatedAt: 0}));
+      if(mesaQrPublicado[tbl.qrToken] === firma) return;
+      mesaQrPublicado[tbl.qrToken] = firma;
+      nodo(tbl.qrToken).set(sinIndefinidos(data)).catch(e => { delete mesaQrPublicado[tbl.qrToken]; console.error('No se pudo publicar la cuenta de la mesa', e); });
+    });
+  }
+  // Tokens que ya no valen (mesa rotada, borrada o QR desactivado).
+  Object.keys(mesaQrPublicado).forEach(token => {
+    if(vivos.has(token)) return;
+    delete mesaQrPublicado[token];
+    nodo(token).remove().catch(() => {});
+  });
+}
+function retirarTokenMesaPublicado(token){
+  if(!token || typeof firebase === 'undefined') return;
+  const publicId = getPublicId();
+  if(!publicId) return;
+  delete mesaQrPublicado[token];
+  getPublicMirrorApp().then(app => { if(app) app.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + token).remove().catch(() => {}); }).catch(() => {});
+}
+function seccionDelPlato(platoId){
+  for(const c of (DB.cartas || [])) for(const s of (c.secciones || [])){
+    if((s.platos || []).some(p => p && String(p.id) === String(platoId))) return s.id;
+  }
+  return null;
+}
+function purgarPedidosMesaQr(){
+  if(!Array.isArray(DB.pedidosMesaQr)) return;
+  const limite = Date.now() - 24 * 3600 * 1000;
+  DB.pedidosMesaQr = DB.pedidosMesaQr.filter(p => p && (p.estado === 'pendiente' || new Date(p.createdAt).getTime() > limite));
+}
+function recibirPedidoMesaQr(req){
+  const cfg = qrMesaConfig();
+  const tbl = mesaPorTokenQr(req.mesaToken);
+  // QR desactivado o token que no es de ninguna mesa (rotado, inventado):
+  // no entra nada. Se deja rastro para que el negocio lo vea si insisten.
+  if(!cfg.activo || !tbl){
+    if(typeof logAudit === 'function') logAudit('edit', t('qrMesa.audit.rechazado'));
+    return null;
+  }
+  const revisado = revisarPreciosPedidoPublico((req.items || []).slice(0, 60), 'mesa');
+  avisarPreciosCorregidos(revisado.correcciones, revisado.sinVerificar, t('qrMesa.quien').replace('${mesa}', tbl.name || ''));
+  // Lo que no está en la carta del negocio no se puede pedir desde la carta:
+  // sin plato no hay precio de confianza, así que esa línea no entra.
+  const items = revisado.lineas.filter(x => x.plato && x.plato.disponible !== false).map(({qty, price, mods, plato}) => {
+    const name = mods.length ? `${plato.nombre} (${mods.map(m => m.nombre).join(', ')})` : plato.nombre;
+    const linea = {platoId: plato.id, recipeId: plato.recipeId ?? null, name, price, qty, tanda: '', notas: '', modificadores: mods, origenQr: true};
+    const sec = seccionDelPlato(plato.id);
+    if(sec != null && typeof isSeccionBebida === 'function' && isSeccionBebida(sec)) linea.bebida = true;
+    return linea;
+  });
+  if(!items.length) return null;
+  if(!Array.isArray(DB.pedidosMesaQr)) DB.pedidosMesaQr = [];
+  purgarPedidosMesaQr();
+  const p = {id: genId(), tableId: tbl.id, mesaNombre: tbl.name || '', items,
+    notas: String(req.notas || '').slice(0, 300), clienteNombre: String(req.clienteNombre || '').slice(0, 60),
+    preciosCorregidos: revisado.correcciones.length ? revisado.correcciones : undefined,
+    estado: 'pendiente', createdAt: new Date().toISOString()};
+  DB.pedidosMesaQr.push(p);
+  if(!cfg.aceptaCamarero) aceptarPedidoMesaQr(p.id, true);
+  return p;
+}
+function pedidosMesaQrPendientes(tableId){
+  return (DB.pedidosMesaQr || []).filter(p => p && p.estado === 'pendiente' && (tableId === undefined || p.tableId === tableId));
+}
+// Aceptar = pasar las líneas a la comanda de la mesa (abriéndola si hace
+// falta) y marcharlas a cocina, igual que marcharComanda.
+function aceptarPedidoMesaQr(id, auto){
+  const p = (DB.pedidosMesaQr || []).find(x => x && x.id === id);
+  if(!p || p.estado !== 'pendiente') return null;
+  const tbl = (DB.tables || []).find(x => x.id === p.tableId);
+  if(!tbl){ p.estado = 'rechazado'; return null; }
+  const ahora = new Date().toISOString();
+  let order = getOpenOrderForTable(tbl.id);
+  if(!order){
+    order = {id: genId(), tableId: tbl.id, tipo: 'mesa', pax: 1, clienteNombre: p.clienteNombre || '', status: 'abierta', items: [], tandas: [], createdAt: ahora, origenQr: true};
+    DB.tpvOrders.push(order);
+  }
+  const fired = [];
+  p.items.forEach(src => {
+    const l = Object.assign({}, src, {estado: 'cocina', enviadoAt: ahora, marchada: src.qty});
+    if(p.notas && !fired.length) l.notas = p.notas;
+    order.items.push(l);
+    fired.push({qty: l.qty, name: l.name, notas: l.notas, bebida: l.bebida, platoId: l.platoId, recipeId: l.recipeId});
+    if(!l.bebida && typeof decrementDishStock === 'function') decrementDishStock(l.platoId, l.qty);
+    if(typeof decrementMenuStock === 'function') decrementMenuStock(order, l, l.qty);
+    if(typeof decrementMenuOptionStock === 'function') decrementMenuOptionStock(l, l.qty);
+  });
+  order.cerrada = false;
+  p.estado = 'aceptado';
+  p.orderId = order.id;
+  p.resueltoEn = ahora;
+  if(typeof printMarchadasIfEnabled === 'function'){ try{ printMarchadasIfEnabled(order, fired); }catch(e){ console.error(e); } }
+  if(!auto){
+    saveDB();
+    if(typeof flushCloudSync === 'function') flushCloudSync();
+    if(typeof renderTPV === 'function' && document.getElementById('tpv-content')) renderTPV();
+    showToast(t('qrMesa.msg.aceptado'));
+  }
+  return order;
+}
+function rechazarPedidoMesaQr(id){
+  const p = (DB.pedidosMesaQr || []).find(x => x && x.id === id);
+  if(!p || p.estado !== 'pendiente') return;
+  // Rechazar es cancelar: misma regla que todo lo demás (puedeCancelar
+  // avisa de quién puede hacerlo, no se queda callado).
+  if(typeof puedeCancelar === 'function' && !puedeCancelar()) return;
+  p.estado = 'rechazado';
+  p.resueltoEn = new Date().toISOString();
+  saveDB();
+  if(typeof renderTPV === 'function' && document.getElementById('tpv-content')) renderTPV();
+  showToast(t('qrMesa.msg.rechazado'));
+}
+// 'pago_mesa' solo ANUNCIA que alguien va a pagar: se apunta la referencia
+// para preguntar por ella. Lo que cuenta es lo que confirme Stripe.
+function recibirPagoMesaQr(req){
+  const ref = typeof req.clientRef === 'string' ? req.clientRef.slice(0, 120) : '';
+  if(!ref) return;
+  const importe = redondeoQr(Math.max(0, Math.min(100000, Number(req.importe) || 0)));
+  // Se espera SIEMPRE, aunque el token no cuadre: si el banco llega a cobrar,
+  // el dinero tiene que aparecer en algún sitio (Pagos sin pedido).
+  esperarPagoTarjeta(ref, importe);
+  const tbl = mesaPorTokenQr(req.mesaToken);
+  const order = tbl ? getOpenOrderForTable(tbl.id) : null;
+  if(!order) return;
+  if(!Array.isArray(order.pagosMesaQrPendientes)) order.pagosMesaQrPendientes = [];
+  if(!order.pagosMesaQrPendientes.some(x => x && x.ref === ref)) order.pagosMesaQrPendientes.push({ref, importe, desde: new Date().toISOString()});
+}
+function aplicarPagoMesaQr(req, importeConfirmado, registrarDescuadre){
+  const order = (DB.tpvOrders || []).find(o => o && Array.isArray(o.pagosMesaQrPendientes) && o.pagosMesaQrPendientes.some(p => p && p.ref === req.orderRef));
+  if(!order) return false;
+  const anunciado = order.pagosMesaQrPendientes.find(p => p && p.ref === req.orderRef);
+  order.pagosMesaQrPendientes = order.pagosMesaQrPendientes.filter(p => p && p.ref !== req.orderRef);
+  if(!Array.isArray(order.pagosMesaQr)) order.pagosMesaQr = [];
+  if(order.pagosMesaQr.some(p => p && p.ref === req.orderRef)) return true;   // ya aplicado
+  if(importeConfirmado + 0.02 < (Number(anunciado && anunciado.importe) || 0)) registrarDescuadre(order.id, Number(anunciado.importe) || 0);
+  const devolver = importe => {
+    if(!(importe > 0.01)) return;
+    if(!DB.unmatchedOnlinePayments) DB.unmatchedOnlinePayments = [];
+    DB.unmatchedOnlinePayments.push({id: genId(), orderRef: req.orderRef, amount: redondeoQr(importe), createdAt: req.createdAt || new Date().toISOString(), detectedAt: new Date().toISOString(), motivo: 'qrMesa'});
+    if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(importe)));
+  };
+  // La mesa se cobró en caja mientras este pago iba de camino: hay que devolverlo.
+  if(order.status === 'pagada'){ devolver(importeConfirmado); return true; }
+  const {pendiente} = cuentaMesaQr(order);
+  const aplica = redondeoQr(Math.min(importeConfirmado, pendiente));
+  if(aplica > 0) order.pagosMesaQr.push({ref: req.orderRef, importe: aplica, fecha: req.createdAt || new Date().toISOString()});
+  devolver(importeConfirmado - aplica);
+  if(typeof logAudit === 'function') logAudit('edit', t('qrMesa.audit.pago').replace('${importe}', fmtMoney(aplica)).replace('${mesa}', (DB.tables.find(x => x.id === order.tableId) || {}).name || ''));
+  // ¿Pagada entera? Se cobra sola: venta normal, método «Online», ticket
+  // numerado. Pagar de menos no llega aquí: queda abierta con lo que falta.
+  if(cuentaMesaQr(order).pendiente <= 0.01) cerrarMesaPagadaQr(order);
+  return true;
+}
+function cerrarMesaPagadaQr(order){
+  if(typeof finalizeCharge !== 'function') return null;
+  // Con la ventana de cobro abierta, finalizeCharge leería la propina de
+  // esa pantalla (que puede ser de otra mesa). Se deja marcada: al cobrarla
+  // el camarero verá que no queda nada por pagar.
+  if(document.getElementById('payment-tip')){ order.cuentaPagadaQr = true; return null; }
+  const sale = finalizeCharge(order.id, {auto: true});
+  if(sale) sale.pagadaPorQr = true;
+  return sale || null;
 }
 
 let publicRequestsListenerAttached = false;
@@ -7251,7 +7777,15 @@ function initPublicRequestsListener(){
           if(!DB.npsScores) DB.npsScores = [];
           DB.npsScores.push({id: genId(), score: Math.round(scoreNum*10)/10, comment: String(req.comment || '').slice(0, 2000), createdAt: new Date().toISOString()});
         }
+      }else if(req.type === 'pedido_mesa'){
+        // Carta por QR con token de mesa (ver recibirPedidoMesaQr).
+        if(recibirPedidoMesaQr(req)) notifyNewRequest = true;
+      }else if(req.type === 'pago_mesa'){
+        recibirPagoMesaQr(req);
       }else if(req.type === 'pedido' && req.tipo === 'mesa'){
+        // ⚠️ QR ANTIGUO (?mesa=<id de la mesa>). Se mantiene para no dejar
+        // sin servicio los QR ya impresos; los nuevos llevan token y entran
+        // como 'pedido_mesa', más arriba.
         // Auto-pedido desde la mesa: se añade directamente a la comanda de esa
         // mesa (si ya está abierta) o se abre una comanda nueva, sin pasar por
         // la bandeja de "pedidos pendientes".
@@ -7644,6 +8178,8 @@ const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   // Titular y NIF del aviso legal: los rellena el dueño a propósito en Mi
   // Negocio sabiendo que se publican (los exige la LSSI).
   'legalPublico',
+  // Carta por QR: solo dos interruptores ({activo, aceptaCamarero}).
+  'qrMesa',
 ];
 function negocioParaElEspejoPublico(){
   const b = DB.business || {};
@@ -7710,6 +8246,8 @@ function syncPublicMirror(){
         console.error('Error publicando el espejo público', e);
         if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
       });
+      // Cuenta de cada mesa con QR (carta por QR, ver publicarMesasQr).
+      try{ publicarMesasQr(app, publicId); }catch(e){ console.error('Error publicando las cuentas de mesa', e); }
       // aforoHold (js/reservagastrogoan.html) es un contador aparte que la
       // web pública usa para reservar de forma atómica sin pasarse del
       // aforo — pero nunca se decrementaba solo, así que cada reserva
@@ -9132,10 +9670,8 @@ function renderOnlineCard(){
   `;
 }
 
-// Genera un QR de auto-pedido por mesa (mismo enlace público + &mesa=ID) para
-// que el cliente pida directamente desde su mesa sin esperar al camarero.
-// Solo se muestra el nombre/etiqueta de cada mesa con un botón de descarga;
-// el QR no se muestra en pantalla (se genera al vuelo solo para la descarga).
+// Carta por QR en la mesa (7/10): un QR por mesa con su token (no el id),
+// y la configuración del servicio. Desactivado por defecto.
 function renderTableQrCard(){
   if((DB.business?.tiposServicio?.mesa === false) || !DB.tables.length) return '';
   if(!getTenantId()){
@@ -9156,46 +9692,128 @@ function renderTableQrCard(){
   }
   const link = getPublicClientLink();
   if(!link) return '';
-  // Un QR por cada mesa configurada en Mi Negocio, agrupados por zona. Se
-  // usan las mismas zonas/orden que el TPV (incluidas las zonas propias que
-  // el negocio haya creado en Operativa), en vez de una lista fija de
-  // interior/terraza/barra que dejaba las zonas personalizadas en "Otras".
+  const cfg = qrMesaConfig();
+  const ajustes = `
+    <label style="display:flex;align-items:flex-start;gap:8px;font-weight:600;cursor:pointer;min-height:44px">
+      <input type="checkbox" id="mn-qrmesa-activo" style="width:auto;margin-top:3px" ${cfg.activo ? 'checked' : ''} onchange="saveQrMesaConfig()">
+      <span>${t('qrMesa.mn.activar')}</span>
+    </label>
+    ${cfg.activo ? `
+    <div class="field" style="margin-top:6px">
+      <label for="mn-qrmesa-acepta">${t('qrMesa.mn.alLlegar')}</label>
+      <select id="mn-qrmesa-acepta" onchange="saveQrMesaConfig()">
+        <option value="camarero" ${cfg.aceptaCamarero ? 'selected' : ''}>${t('qrMesa.mn.aceptaCamarero')}</option>
+        <option value="cocina" ${!cfg.aceptaCamarero ? 'selected' : ''}>${t('qrMesa.mn.directoCocina')}</option>
+      </select>
+    </div>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px"><i class="ti ti-credit-card"></i> ${pagoOnlineActivo ? t('qrMesa.mn.conStripe') : t('qrMesa.mn.sinStripe')}</p>` : ''}`;
+  if(!cfg.activo){
+    return `
+      <div class="card" id="mn-card-qr-mesa">
+        <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('qrMesa.mn.desc')}</p>
+        ${ajustes}
+      </div>`;
+  }
+  // Un QR por cada mesa configurada, agrupados por zona (mismas zonas y
+  // orden que el TPV).
   const zonaKeys = [...getZonaOrder(), null];
   const zonasHtml = [...new Set(zonaKeys)].map(z => {
-    const tables = DB.tables.filter(t => (t.zona||null) === z);
+    const tables = DB.tables.filter(tb => (tb.zona||null) === z);
     if(!tables.length) return '';
     const label = z===null ? t('label.otherTables') : `<i class="ti ${zonaIconClass(z)}"></i> ${escapeHtml(zonaLabel(z))}`;
     return `
       <div style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${label} (${tables.length})</div>
+        <div class="txt-xs" style="font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${label} (${tables.length})</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${tables.map(t => `<button class="btn btn-sm" style="font-size:12px;padding:4px 10px" onclick="showTableQr(${t.id})"><i class="ti ti-qrcode"></i> ${escapeHtml(t.name)}</button>`).join('')}
+          ${tables.map(tb => `<button class="btn btn-sm" style="min-height:44px" onclick="showTableQr(${JSON.stringify(tb.id)})"><i class="ti ti-qrcode"></i> ${escapeHtml(tb.name)}</button>`).join('')}
         </div>
       </div>`;
   }).join('');
   return `
-    <div class="card">
+    <div class="card" id="mn-card-qr-mesa">
       <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.tableQr.desc').replace('${count}', DB.tables.length)}</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('qrMesa.mn.desc')}</p>
+      ${ajustes}
       ${zonasHtml}
+      <button class="btn btn-primary" style="min-height:44px" onclick="imprimirQrMesas()"><i class="ti ti-printer"></i> ${t('qrMesa.mn.imprimirTodos')}</button>
     </div>
   `;
 }
-
+function saveQrMesaConfig(){
+  const chk = document.getElementById('mn-qrmesa-activo');
+  const sel = document.getElementById('mn-qrmesa-acepta');
+  const antes = qrMesaConfig();
+  const activo = chk ? chk.checked : antes.activo;
+  DB.business.qrMesa = {activo, aceptaCamarero: sel ? sel.value !== 'cocina' : antes.aceptaCamarero};
+  // Al activarlo, cada mesa recibe su token (el QR impreso no cambia
+  // mientras no se rote a mano).
+  if(activo) (DB.tables || []).forEach(asegurarTokenMesa);
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  if(typeof renderMiNegocio === 'function') renderMiNegocio();
+  showToast(activo ? t('qrMesa.msg.activado') : t('qrMesa.msg.desactivado'));
+}
+function qrImagenUrl(texto, px){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=' + px + 'x' + px + '&data=' + encodeURIComponent(texto);
+}
 function showTableQr(tableId){
   const tbl = DB.tables.find(x => x.id === tableId);
-  const link = getPublicClientLink();
-  if(!tbl || !link) return;
-  const tLink = `${link}&mesa=${tbl.id}`;
-  const tQr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(tLink);
+  if(!tbl) return;
+  const hadToken = !!tbl.qrToken;
+  const tLink = enlaceQrMesa(tbl);
+  if(!tLink) return;
+  if(!hadToken) saveDB();
+  const tQr = qrImagenUrl(tLink, 240);
   openModal(`
     <div class="modal-header"><h3><i class="ti ti-qrcode"></i> ${escapeHtml(tbl.name)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div style="text-align:center">
-      <img src="${tQr}" alt="QR ${escapeHtml(tbl.name)}" style="width:240px;height:240px;border:1px solid var(--border);border-radius:8px">
+      <img src="${escapeHtml(tQr)}" alt="QR ${escapeHtml(tbl.name)}" style="width:240px;max-width:100%;height:auto;aspect-ratio:1;border:1px solid var(--border);border-radius:8px">
       <p style="font-size:13px;color:var(--muted);margin:10px 0">${t('mn.tableQr.scanHint').replace('${table}', `<strong>${escapeHtml(tbl.name)}</strong>`)}</p>
-      <a class="btn btn-primary" style="text-decoration:none;display:inline-flex" href="${tQr}" download="qr-${escapeHtml(tbl.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <a class="btn btn-primary" style="text-decoration:none;display:inline-flex;min-height:44px;align-items:center" href="${escapeHtml(tQr)}" download="qr-${escapeHtml(String(tbl.name||'').replace(/\s+/g,'-'))}.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
+        <button class="btn" style="min-height:44px" onclick="rotarTokenMesa(${JSON.stringify(tbl.id)})"><i class="ti ti-refresh"></i> ${t('qrMesa.mn.rotar')}</button>
+      </div>
+      <p class="txt-xs" style="color:var(--muted);margin-top:10px">${t('qrMesa.mn.rotarDesc')}</p>
     </div>
   `);
+}
+async function rotarTokenMesa(tableId){
+  const tbl = DB.tables.find(x => x.id === tableId);
+  if(!tbl) return;
+  if(!(await confirmModal(t('qrMesa.mn.rotarConfirm').replace('${mesa}', tbl.name || ''), {confirmLabel: t('qrMesa.mn.rotar')}))) return;
+  const viejo = tbl.qrToken;
+  tbl.qrToken = nuevoTokenMesaQr();
+  retirarTokenMesaPublicado(viejo);
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  showToast(t('qrMesa.msg.rotado'));
+  showTableQr(tableId);
+}
+// Hoja para imprimir con el QR de todas las mesas (uno por tarjeta, para
+// recortar). Sin scripts dentro: imprime el propio navegador al cargar.
+function imprimirQrMesas(){
+  const mesas = (DB.tables || []).filter(Boolean);
+  if(!mesas.length) return;
+  let cambiado = false;
+  const tarjetas = mesas.map(tb => {
+    if(!tb.qrToken) cambiado = true;
+    const enlace = enlaceQrMesa(tb);
+    return `<div class="q"><img src="${escapeHtml(qrImagenUrl(enlace, 300))}" alt=""><div class="n">${escapeHtml(tb.name || '')}</div><div class="h">${escapeHtml(t('qrMesa.print.pie'))}</div></div>`;
+  }).join('');
+  if(cambiado) saveDB();
+  const nombre = escapeHtml((DB.business && DB.business.name) || '');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${nombre} · QR</title><style>
+    body{font-family:'IBM Plex Sans',Arial,sans-serif;margin:0;padding:12mm;color:#1A1A1A}
+    .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8mm}
+    .q{border:1px dashed #999;padding:6mm;text-align:center;break-inside:avoid}
+    .q img{width:100%;max-width:55mm;aspect-ratio:1}
+    .n{font-size:18pt;font-weight:700;margin-top:3mm}.h{font-size:10pt;color:#555;margin-top:2mm}
+    h1{font-size:14pt;margin:0 0 6mm}
+  </style></head><body onload="setTimeout(function(){window.print()},600)"><h1>${nombre}</h1><div class="g">${tarjetas}</div></body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ showToast(t('qrMesa.msg.popup')); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 /* ============================================================
@@ -9574,8 +10192,22 @@ async function loadPagoOnlineStatus(){
 function copiarWebParaStripe(btn){
   const url = getPublicClientLinkPretty();
   const hecho = () => { if(btn) btn.innerHTML = '<i class="ti ti-check"></i> ' + escapeHtml(t('mn.pago.webCopied')); };
-  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(hecho).catch(() => prompt(t('mn.pago.webTitle'), url));
-  else prompt(t('mn.pago.webTitle'), url);
+  // Sin portapapeles (http, iframes, Safari antiguo) antes salía el prompt()
+  // nativo, gris y fuera de lugar. Tampoco vale promptText(): hay un solo
+  // modal y sustituiría a la guía de Stripe, con su botón para continuar.
+  // Se deja el enlace SELECCIONADO ahí mismo y se dice cómo copiarlo.
+  const aMano = () => {
+    const code = btn && btn.parentElement ? btn.parentElement.querySelector('code') : null;
+    if(code){
+      try{
+        const r = document.createRange(); r.selectNodeContents(code);
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      }catch(e){}
+    }
+    if(btn) btn.innerHTML = '<i class="ti ti-copy"></i> ' + escapeHtml(t('mn.pago.webCopyManual'));
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(hecho).catch(aMano);
+  else aMano();
 }
 function conectarStripe(){
   const webParaStripe = (typeof getPublicClientLinkPretty === 'function') ? getPublicClientLinkPretty() : '';
@@ -10404,6 +11036,11 @@ function construirXlsx(hojas){
   return construirZip(archivos);
 }
 function saveDB(){
+  // Mientras la Visión global calcula con el negocio de OTRO hueco cargado
+  // en DB (solo lectura, ver vgCalcularConDB), guardar escribiría ese
+  // negocio encima del activo. No debería pasar nunca; si alguna función
+  // de cálculo lo hiciera, aquí se para.
+  if(vgLeyendoOtroNegocio) return Promise.resolve();
   const guardado = idbSet(DB_KEY, DB).catch(e => {
     console.error('Error guardando datos', e);
     if(typeof showToast === 'function') showToast(t('msg.localSaveFailed'));
@@ -10445,6 +11082,7 @@ function pushAllToCloud(){
 }
 
 function scheduleCloudSync(){
+  if(vgLeyendoOtroNegocio) return;
   schedulePublicMirrorSync();
   if(!cloudRef) return;
   // Antes el badge solo decía "conectado/desconectado" del socket, sin
@@ -10862,8 +11500,11 @@ const CASH_DRAWER_KICK = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
 async function openCashDrawer(opts){
   const o = opts || {};
   const key = o.printerId || 'ticket';
-  if(!thermalPrintingSupported()){
-    if(!o.silent) showToast(t('thermal.notSupported'));
+  // Con impresión por navegador la app no tiene línea directa con la
+  // impresora: el pulso del cajón no se puede mandar. Se dice claro en vez
+  // de abrir un selector Bluetooth que este puesto no usa.
+  if(!thermalPrintingSupported() || getPrintMode(key) === 'browser'){
+    if(!o.silent) showToast(t('print.drawerBrowser'));
     return false;
   }
   if(!thermalPrinterCharacteristics.has(key)){
@@ -10902,20 +11543,125 @@ async function openCashDrawerManually(){
   showToast(t('drawer.opened'));
 }
 
-async function printToThermalPrinter(text, printerId){
+/* ============================================================
+   MODO DE IMPRESIÓN: BLUETOOTH O NAVEGADOR
+   Hasta ahora la única impresión directa era Web Bluetooth, que NO existe
+   en Safari (iPhone, iPad) ni en Firefox. En un iPad —el TPV más habitual
+   en hostelería— el botón de la térmica ni siquiera salía, y las
+   impresoras de red, USB o AirPrint (la mayoría de las de cocina) no
+   tenían forma de recibir un ticket con su formato. El modo "navegador"
+   manda el MISMO texto a la impresión del sistema, en una página del ancho
+   del rollo (@page 80/58 mm): vale para cualquier impresora instalada.
+   El modo se guarda por APARATO (localStorage), no en DB.business: el
+   Bluetooth depende del navegador de cada tablet, así que el iPad de la
+   barra y el Android de cocina pueden necesitar modos distintos.
+   ============================================================ */
+function printModeStorageKey(printerId){ return 'gg_print_mode_' + (printerId || 'ticket'); }
+function getPrintMode(printerId){
+  // Sin Bluetooth en este navegador no hay elección posible: devolver
+  // 'bluetooth' aquí solo serviría para fallar en cada ticket.
+  if(!thermalPrintingSupported()) return 'browser';
+  let m = '';
+  try{ m = localStorage.getItem(printModeStorageKey(printerId)) || ''; }catch(e){}
+  return m === 'browser' ? 'browser' : 'bluetooth';
+}
+function setPrintMode(printerId, mode){
+  try{ localStorage.setItem(printModeStorageKey(printerId), mode === 'browser' ? 'browser' : 'bluetooth'); }catch(e){}
+  if(typeof renderMiNegocio === 'function' && document.getElementById('minegocio-content')) renderMiNegocio();
+}
+// Ancho del rollo del ticket de cliente (las impresoras de comanda ya
+// guardan el suyo en anchoTicket). También por aparato: cada puesto tiene
+// su impresora.
+function getTicketPaperWidth(){
+  let w = '';
+  try{ w = localStorage.getItem('gg_print_width_ticket') || ''; }catch(e){}
+  return w === '58' ? 58 : 80;
+}
+function setTicketPaperWidth(w){
+  try{ localStorage.setItem('gg_print_width_ticket', String(w) === '58' ? '58' : '80'); }catch(e){}
+}
+// Documento de impresión de rollo. Se construye aparte (y no dentro de
+// printViaBrowser) para poder comprobarlo en las pruebas sin imprimir.
+// Con opts.html el contenido ya viene escapado; si es texto plano, se
+// escapa aquí (el ticket lleva nombres de platos y clientes).
+// ⚠️ size:80mm auto — sin "auto" el navegador pagina el ticket en hojas del
+// alto de un A4 y la impresora corta el papel a mitad de la cuenta.
+function buildRollPrintHtml(contenido, anchoMm, titulo, opts){
+  const ancho = anchoMm == 58 ? 58 : 80;
+  // Área imprimible real: los cabezales de 80 mm imprimen ~72 mm y los de
+  // 58 mm ~48 mm. Usar el ancho del papel entero cortaba la última columna
+  // (los precios) en las impresoras más estrictas.
+  const util = ancho == 58 ? 48 : 72;
+  const cuerpo = (opts && opts.html) ? contenido : `<pre>${escapeHtml(contenido)}</pre>`;
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(titulo || '')}</title>
+<style>
+@page{size:${ancho}mm auto;margin:0}
+html,body{margin:0;padding:0;background:#fff;color:#000}
+body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+</style></head><body>${cuerpo}</body></html>`;
+}
+// Imprime en un iframe oculto en vez de window.open: las ventanas nuevas
+// las bloquea el navegador cuando la impresión llega después de un await
+// (p.ej. tras fallar el Bluetooth), y en iPad abren una pestaña de la que
+// el camarero no sabe volver. El iframe imprime sobre la propia app.
+function printViaBrowser(contenido, anchoMm, titulo, opts){
+  const html = buildRollPrintHtml(contenido, anchoMm, titulo, opts);
+  try{
+    const viejo = document.getElementById('gg-print-frame');
+    if(viejo) viejo.remove();
+    const fr = document.createElement('iframe');
+    fr.id = 'gg-print-frame';
+    fr.setAttribute('aria-hidden', 'true');
+    fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    document.body.appendChild(fr);
+    const d = fr.contentWindow.document;
+    d.open(); d.write(html); d.close();
+    // Un respiro para que el iframe pinte antes de pedir el diálogo: Safari
+    // imprimía una página en blanco si se llamaba a print() al instante.
+    setTimeout(() => {
+      try{ fr.contentWindow.focus(); fr.contentWindow.print(); }
+      catch(e){ console.error('Error imprimiendo con el navegador', e); showToast(t('thermal.printFailed')); }
+    }, 250);
+    return true;
+  }catch(e){
+    console.error('Error preparando la impresión del navegador', e);
+    showToast(t('thermal.printFailed'));
+    return false;
+  }
+}
+
+/* Punto ÚNICO por el que pasa toda impresión de ticket o comanda en rollo.
+   Usa el modo configurado en este aparato para esa impresora y, si el
+   Bluetooth falla (apagada, fuera de alcance, selector cancelado), cae a la
+   impresión del navegador AVISANDO: un ticket que no sale en silencio es
+   peor que un ticket que sale por otro camino.
+   opts.ancho = 58|80 (por defecto, el del ticket de cliente de este aparato)
+   opts.html  = cuerpo HTML ya escapado para la versión de navegador (la
+                comanda lo usa para destacar los alérgenos en un recuadro).
+   opts.noPrompt = no abrir el selector Bluetooth si no hay conexión (las
+                comandas salen solas al marchar: abrir un selector ahí, sin
+                gesto del usuario, falla y además interrumpe). */
+async function printToThermalPrinter(text, printerId, opts){
+  const o = opts || {};
   const key = printerId || 'ticket';
-  if(!thermalPrintingSupported()){ showToast(t('thermal.notSupported')); return; }
+  const ancho = o.ancho || (key === 'ticket' ? getTicketPaperWidth() : 80);
+  const porNavegador = () => printViaBrowser(o.html || text, ancho, o.titulo || '', {html: !!o.html});
+  if(getPrintMode(key) === 'browser') return porNavegador();
+  const caer = () => { showToast(t('print.fallbackBrowser')); return porNavegador(); };
   if(!thermalPrinterCharacteristics.has(key)){
+    if(o.noPrompt) return caer();
     const connected = await connectThermalPrinter(key);
-    if(!connected) return;
+    if(!connected) return caer();
   }
   try{
     await writeThermalChunks(thermalPrinterCharacteristics.get(key), textToEscPos(text));
     showToast(t('thermal.printedOk'));
+    return true;
   }catch(e){
     console.error('Error imprimiendo en la impresora térmica', e);
     thermalPrinterCharacteristics.delete(key); // puede que se haya desconectado; forzar reconectar la próxima vez
-    showToast(t('thermal.printFailed'));
+    return caer();
   }
 }
 

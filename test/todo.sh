@@ -139,6 +139,12 @@ lanzar; node test/auditoria-contable.mjs > "$SALIDA/auditoria-contable.txt" 2>&1
 lanzar; node test/paquete-gestor.mjs > "$SALIDA/paquete-gestor.txt" 2>&1 & P98=$!
 lanzar; node test/kpis-coach.mjs > "$SALIDA/kpis-coach.txt" 2>&1 & P99=$!
 lanzar; node test/plan360-fases.mjs > "$SALIDA/plan360-fases.txt" 2>&1 & P100=$!
+lanzar; node test/vision-global.mjs > "$SALIDA/vision-global.txt" 2>&1 & P101=$!
+lanzar; node test/impresion.mjs > "$SALIDA/impresion.txt" 2>&1 & P102=$!
+lanzar; node test/leer-facturas.mjs > "$SALIDA/leer-facturas.txt" 2>&1 & P103=$!
+lanzar; node test/qr-mesa.mjs > "$SALIDA/qr-mesa.txt" 2>&1 & P104=$!
+lanzar; node test/factura-pedido.mjs > "$SALIDA/factura-pedido.txt" 2>&1 & P111=$!
+lanzar; node test/preguntale.mjs > "$SALIDA/preguntale.txt" 2>&1 & P110=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -264,5 +270,11 @@ espera $P97 "Auditoría contable: retención 115/111, envío al 10%, IVA de la s
 espera $P98 "Paquete para el gestor: periodo, Excel + CSV con columnas de libro registro, fotos de facturas y LÉEME" "$SALIDA/paquete-gestor.txt" "casos pasaron"
 espera $P99 "Números para el coach: indicadores del mes, foto del Día 1, marcador en euros e informe para WhatsApp" "$SALIDA/kpis-coach.txt" "casos pasaron"
 espera $P100 "Plan 360 y mantenimiento separados: servicio activo de cada cliente y agenda del coach" "$SALIDA/plan360-fases.txt" "casos pasaron"
+espera $P101 "Visión global de mis negocios: suma bien, nunca el ajeno, sin tocar el slot activo ni ninguna IndexedDB" "$SALIDA/vision-global.txt" "todos los casos pasaron"
+espera $P102 "Impresión sin Bluetooth: Navegador/AirPrint en rollo de 80/58 mm, datos escapados y caída avisada" "$SALIDA/impresion.txt" "todos los casos de impresión pasaron"
+espera $P103 "Leer facturas con foto: casa líneas, caza descuadres, gasto con nº de factura, precio con historial y stock opcional" "$SALIDA/leer-facturas.txt" "casos pasaron"
+espera $P104 "Carta por QR en la mesa: token por mesa, precios de la carta, pago parcial no cierra, pago completo con factura" "$SALIDA/qr-mesa.txt" "casos pasaron"
+espera $P111 "Factura dentro del pedido: cuadre línea a línea, precios con historial, gasto sin duplicar, lo recibido no se pisa" "$SALIDA/factura-pedido.txt" "todos los casos de factura-pedido pasaron"
+espera $P110 "Pregúntale a tus números: clave de IA en Mi Negocio (solo en el aparato), cifras reales al modelo, empleado fuera, alta saltable" "$SALIDA/preguntale.txt" "todos los casos de pregúntale pasaron"
 
 exit $FALLOS

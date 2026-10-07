@@ -1513,6 +1513,7 @@ function renderPedidoDetail(){
           <small style="color:var(--muted)">${t('albaran.attachHint')}</small>
         </div>
       </div>
+      ${pfTarjetaHtml(o)}
       ` : ''}
 
       <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
@@ -1734,6 +1735,13 @@ function consumoMensualCompras(ingredientId){
     if(o.estado !== 'RECIBIDO' || (o.date || '') < desde) return;
     (o.items || []).forEach(l => { if(l.ingredientId === ingredientId) total += Number(l.cantidadRecibida) || 0; });
   });
+  // Compras apuntadas leyendo una factura suelta (sin pedido detrás). Las
+  // facturas adjuntadas a un pedido NO se suman aquí: su cantidad ya cuenta
+  // por el pedido, y contarla dos veces doblaría el impacto.
+  ((DB.ge && DB.ge.variables) || []).forEach(v => {
+    if(v.pedidoId || !Array.isArray(v.compras) || (v.fecha || '') < desde) return;
+    v.compras.forEach(c => { if(c && c.ingredientId === ingredientId) total += Number(c.qty) || 0; });
+  });
   return total / 3;
 }
 // Subidas del periodo por producto: del primer precio al último (varias
@@ -1785,6 +1793,9 @@ function openSubidasPrecioModal(){
 // Al recibir un pedido, registra su coste en Gastos Variables (Gestión Económica), agrupado por categoría
 function registerPedidoComoGastoVariable(o){
   if(o.gvCreated) return;
+  // Con la factura ya cuadrada, el gasto es el de la factura (lo que de
+  // verdad se paga), no la estimación con los precios de la Mega Lista.
+  if(pfFacturaLeida(o)){ pfGastoDesdeFactura(o, []); o.gvCreated = true; return; }
   // Se agrupa por categoría Y por tipo de IVA del ingrediente (ya no por un
   // único IVA de proveedor): dos ingredientes de la misma categoría pero con
   // IVA distinto (ej. dos bebidas, una al 10% y otra al 21%) generan dos
@@ -1819,7 +1830,7 @@ function registerPedidoComoGastoVariable(o){
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: cat, proveedor: o.supplier, importe: Math.round(base*100)/100,
       fecha, pedidoId: o.id, auto: true,
-      fechaPago, pagada: false
+      fechaPago, pagada: false, ...pfDatosFactura(o)
     };
     if(iva != null) rec.iva = iva;
     DB.ge.variables.push(rec);
@@ -1832,7 +1843,7 @@ function registerPedidoComoGastoVariable(o){
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: 'OTROS', proveedor: o.supplier, importe: Math.round(envio*100)/100,
       fecha, pedidoId: o.id, auto: true,
-      fechaPago, pagada: false
+      fechaPago, pagada: false, ...pfDatosFactura(o)
     });
   }
   o.gvCreated = true;
@@ -2412,3 +2423,775 @@ function reallyRevertPedidoRecepcion(id, pin){
   showToast(t('msg.receptionReverted'));
 }
 
+/* ============== Leer facturas de proveedor con foto o PDF (7/10) ==============
+   Apuntar una factura de 30 líneas a mano es justo lo que nadie hace un
+   viernes, así que los precios de la Mega Lista se quedaban viejos y el
+   food cost mentía. Ahora se hace una foto y el asistente del I+D (la misma
+   llamada, la misma clave del negocio, el mismo tope diario: a GastroGoan no
+   le cuesta nada) devuelve la factura en JSON.
+   Pero la app NO se fía del modelo:
+   - comprueba ella misma que las líneas sumen la base, que base + IVA dé el
+     total y que cada cuota sea su porcentaje, y marca lo que no cuadra;
+   - nada se guarda sin pasar por la pantalla de revisión, donde cada línea
+     se casa con un producto de la Mega Lista (y ese casamiento se recuerda
+     por proveedor + descripción, porque el mismo proveedor escribe siempre
+     igual sus artículos);
+   - al guardar se engancha a lo que ya existe: el gasto va a Gastos
+     Variables con nº de factura, NIF y la foto como factura adjunta
+     (guardarFacturaAdjunta), los precios pasan por aplicarPrecioAlbaran
+     (historial y aviso de subidas) y el stock, si se marca, entra igual que
+     al recibir un pedido (logStockAdjustment 'purchase'). */
+const LF_TOLERANCIA = 0.02; // céntimos de redondeo por línea o por cuota
+let lfEstado = null;
+
+const LF_SISTEMA = `Eres un lector de facturas y albaranes de proveedores de hostelería en España.
+Devuelve SOLO un objeto JSON, sin texto alrededor ni bloques de código, con esta forma exacta:
+{"proveedor":"", "nif":"", "numFactura":"", "fecha":"AAAA-MM-DD",
+ "lineas":[{"descripcion":"", "cantidad":0, "unidad":"kg|g|L|ml|ud|caja|...", "precioUnitario":0, "descuento":0, "ivaPct":10, "total":0}],
+ "base":0, "ivas":[{"pct":10, "base":0, "cuota":0}], "total":0}
+Reglas:
+- Copia las cifras TAL COMO aparecen en el documento; no las corrijas ni las recalcules aunque no cuadren.
+- "total" de cada línea es su importe SIN IVA después del descuento. "descuento" es un porcentaje (0 si no hay).
+- "base" es la base imponible total; "total" es el importe final con IVA.
+- Números con punto decimal, sin símbolo de moneda. Si un dato no aparece, usa "" o 0.
+- "proveedor" y "nif" son los del EMISOR de la factura, nunca los del cliente.`;
+
+function lfNum(v){
+  if(typeof v === 'number') return isFinite(v) ? v : 0;
+  // El modelo a veces devuelve "1.234,56" a la española pese a las reglas.
+  let s = String(v == null ? '' : v).replace(/[€\s]/g, '');
+  if(/,\d{1,4}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s);
+  return isFinite(n) ? n : 0;
+}
+const lfR2 = v => Math.round(v * 100) / 100;
+// Clave del casamiento proveedor+descripción: sin acentos ni signos, y sin
+// . # $ / [ ] porque viaja a Firebase dentro de DB.ge.config.
+function lfNorm(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function lfClaveCasamiento(proveedor, desc){
+  return (lfNorm(proveedor) + '|' + lfNorm(desc)).replace(/ /g, '_').slice(0, 140);
+}
+function lfCasamientos(){
+  if(!DB.ge.config) DB.ge.config = {};
+  if(!DB.ge.config.casamientosFactura) DB.ge.config.casamientosFactura = {};
+  return DB.ge.config.casamientosFactura;
+}
+// Sugerencia por nombre: primero lo recordado de la última factura de ese
+// proveedor; si no, el producto cuyo nombre más se parezca.
+function lfSugerirIngrediente(proveedor, desc){
+  const rec = lfCasamientos()[lfClaveCasamiento(proveedor, desc)];
+  if(rec != null && getIngredient(rec)) return {id: rec, como: 'recordado'};
+  const d = lfNorm(desc);
+  if(!d) return null;
+  const tokens = d.split(' ').filter(x => x.length >= 3);
+  let mejor = null, mejorScore = 0;
+  (DB.ingredients || []).forEach(ing => {
+    const n = lfNorm(ing.name);
+    if(!n) return;
+    let score = 0;
+    if(n === d) score = 1000;
+    else if(n.length > 3 && (' ' + d + ' ').includes(' ' + n + ' ')) score = 100 + n.length;
+    else {
+      const nt = n.split(' ');
+      score = tokens.filter(tk => nt.some(w => w === tk || (w.length >= 4 && tk.startsWith(w)) || (tk.length >= 4 && w.startsWith(tk)))).length * 10;
+    }
+    if(score > mejorScore){ mejorScore = score; mejor = ing; }
+  });
+  return mejorScore >= 10 ? {id: mejor.id, como: 'nombre'} : null;
+}
+function lfUnidadesConvertibles(a, b){
+  const x = idrNormalizaUnidad(a), y = idrNormalizaUnidad(b);
+  if(!x || !y) return false;
+  if(x === y) return true;
+  return !!(IDR_FAMILIA[x] && IDR_FAMILIA[y] && IDR_FAMILIA[x] === IDR_FAMILIA[y]);
+}
+// Recalcula lo que depende del producto casado: cuánto entra en SU unidad
+// y a cuánto sale esa unidad (importe de la línea / cantidad que entra).
+function lfRecalcularLinea(l){
+  const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
+  l.unidadRara = false;
+  if(!ing){ l.qtyIng = 0; l.precioIng = 0; return; }
+  if(!l.qtyManual){
+    l.unidadRara = !lfUnidadesConvertibles(l.unidad, ing.unit);
+    l.qtyIng = idrConvertirCantidad(l.cantidad, l.unidad, ing.unit);
+  }
+  l.precioIng = l.qtyIng > 0 ? Math.round(l.total / l.qtyIng * 10000) / 10000 : 0;
+}
+
+/* Lo que la app comprueba por su cuenta. Devuelve los fallos por línea y
+   los de la factura entera; nunca corrige: enseña. */
+function lfValidar(f){
+  const lineas = {}, global = [];
+  f.lineas.forEach((l, i) => {
+    if(!l.cantidad || !l.precioUnitario) return; // sin precio unitario no hay nada que comprobar
+    const esperado = lfR2(l.cantidad * l.precioUnitario * (1 - (l.descuento || 0) / 100));
+    if(Math.abs(esperado - l.total) > LF_TOLERANCIA){
+      lineas[i] = t('lf.err.line').replace('${c}', fmtNum(l.cantidad, 3)).replace('${p}', fmtMoney(l.precioUnitario))
+        .replace('${e}', fmtMoney(esperado)).replace('${t}', fmtMoney(l.total));
+    }
+  });
+  const suma = lfR2(f.lineas.reduce((s, l) => s + l.total, 0));
+  // La tolerancia crece con las líneas: cada una puede venir redondeada.
+  const tolSuma = Math.max(LF_TOLERANCIA, 0.01 * f.lineas.length);
+  if(f.base && Math.abs(suma - f.base) > tolSuma){
+    global.push(t('lf.err.base').replace('${s}', fmtMoney(suma)).replace('${b}', fmtMoney(f.base)));
+  }
+  (f.ivas || []).forEach(iv => {
+    if(!iv.base) return;
+    const e = lfR2(iv.base * iv.pct / 100);
+    if(Math.abs(e - iv.cuota) > LF_TOLERANCIA){
+      global.push(t('lf.err.iva').replace(/\$\{p\}/g, fmtNum(iv.pct, 0)).replace('${b}', fmtMoney(iv.base)).replace('${e}', fmtMoney(e)).replace('${c}', fmtMoney(iv.cuota)));
+    }
+  });
+  const cuotas = (f.ivas || []).length ? f.ivas.reduce((s, iv) => s + iv.cuota, 0) : lfCuotasDeLineas(f).cuota;
+  const base = f.base || suma;
+  if(f.total && Math.abs(lfR2(base + cuotas) - f.total) > tolSuma){
+    global.push(t('lf.err.total').replace('${s}', fmtMoney(lfR2(base + cuotas))).replace('${t}', fmtMoney(f.total)));
+  }
+  return {lineas, global, ok: !global.length && !Object.keys(lineas).length};
+}
+function lfCuotasDeLineas(f){
+  let base = 0, cuota = 0;
+  f.lineas.forEach(l => { base += l.total; cuota += l.total * (l.ivaPct || 0) / 100; });
+  return {base: lfR2(base), cuota: lfR2(cuota)};
+}
+
+function lfNormalizar(j){
+  const lineas = (Array.isArray(j.lineas) ? j.lineas : []).map(x => ({
+    descripcion: String(x.descripcion || '').trim(), cantidad: lfNum(x.cantidad), unidad: String(x.unidad || '').trim(),
+    precioUnitario: lfNum(x.precioUnitario), descuento: lfNum(x.descuento), ivaPct: lfNum(x.ivaPct), total: lfR2(lfNum(x.total)),
+  })).filter(l => l.descripcion || l.total);
+  // Sin importe de línea pero con cantidad y precio: se calcula (y no se
+  // marca como descuadre, porque no hay dos cifras que comparar).
+  lineas.forEach(l => { if(!l.total && l.cantidad && l.precioUnitario) l.total = lfR2(l.cantidad * l.precioUnitario * (1 - l.descuento / 100)); });
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(j.fecha || '')) ? j.fecha : todayStr();
+  return {
+    proveedor: String(j.proveedor || '').trim(), nif: String(j.nif || '').trim().toUpperCase(),
+    numFactura: String(j.numFactura || '').trim(), fecha,
+    lineas, base: lfR2(lfNum(j.base)), total: lfR2(lfNum(j.total)),
+    ivas: (Array.isArray(j.ivas) ? j.ivas : []).map(iv => ({pct: lfNum(iv.pct), base: lfR2(lfNum(iv.base)), cuota: lfR2(lfNum(iv.cuota))})).filter(iv => iv.base || iv.cuota),
+  };
+}
+function lfCasarLineas(f){
+  f.lineas.forEach(l => {
+    const s = lfSugerirIngrediente(f.proveedor, l.descripcion);
+    l.ingredientId = s ? s.id : null;
+    l.como = s ? s.como : '';
+    l.actualizarPrecio = true;
+    lfRecalcularLinea(l);
+  });
+}
+
+function leerFacturaAbrir(){
+  // Gestión ya es solo del propietario, pero el guard avisa en vez de callar:
+  // un permiso negado en silencio se lee como una app rota.
+  if(typeof isOwnerSession === 'function' && !isOwnerSession()){ showToast(t('lf.ownerOnly'), 6000); return; }
+  if(!idrHayIA()){
+    openModal(`
+      <div class="modal-header"><h3><i class="ti ti-key"></i> ${t('lf.noKeyTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <p id="lf-sin-clave" style="font-size:14px;line-height:1.5">${t('lf.noKeyBody')}</p>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" id="lf-activar" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('lf.noKeyBtn')}</button>
+      </div>`);
+    return;
+  }
+  lfEstado = null;
+  lfAbrirVentana(`
+      <p style="font-size:14px;line-height:1.5">${t('lf.intro')}</p>
+      <label class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer">
+        <i class="ti ti-camera"></i> ${t('lf.pick')}
+        <input type="file" id="lf-input" accept="image/*,application/pdf" style="display:none" onchange="leerFacturaArchivo(this)">
+      </label>`);
+}
+function lfAbrirVentana(contenido){
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-scan"></i> ${t('lf.title')}</h3><button class="modal-close" onclick="lfCancelar()">&times;</button></div>
+    <div id="lf-cuerpo">${contenido || ''}</div>`);
+}
+
+async function leerFacturaArchivo(input){
+  const file = input && input.files && input.files[0];
+  if(!file) return;
+  // Se guarda YA como factura adjunta (comprimida si es foto): es la misma
+  // imagen que se envía al asistente y la que quedará con el gasto.
+  const facturaId = await guardarFacturaAdjunta(file);
+  if(!facturaId){ input.value = ''; return; }
+  const adj = facturaAdjunta(facturaId);
+  const m = /^data:([^;]+);base64,(.*)$/.exec((adj && adj.dataUrl) || '');
+  if(!m){ borrarFacturaAdjunta(facturaId); showToast(t('lf.unreadable')); return; }
+  lfEstado = {facturaId};
+  const cuerpo = document.getElementById('lf-cuerpo');
+  if(cuerpo) cuerpo.innerHTML = `<p style="display:flex;align-items:center;gap:8px;font-size:14px"><i class="ti ti-loader-2"></i> ${t('lf.reading')}</p>`;
+  let r;
+  try{
+    r = await llmChat(LF_SISTEMA, [{role:'user', content:'Lee esta factura y devuelve el JSON.'}],
+      {archivo: {mime: m[1], datos: m[2]}, temperatura: 0, maxTokens: 4000, esperaMs: 90000});
+  }catch(e){ r = {ok:false, motivo:'excepcion', detalle: String((e && e.message) || e)}; }
+  if(!lfEstado || lfEstado.facturaId !== facturaId) return; // se cerró mientras pensaba
+  const j = r.ok ? idrExtraerJson(r.texto) : null;
+  if(!r.ok || !j || typeof j !== 'object'){
+    if(cuerpo) cuerpo.innerHTML = `<p id="lf-error" style="font-size:14px;color:var(--red)">${escapeHtml(r.ok ? t('lf.unreadable') : idrMensajeError(r))}</p>
+      <label class="btn" style="display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer"><i class="ti ti-camera"></i> ${t('lf.pick')}
+      <input type="file" accept="image/*,application/pdf" style="display:none" onchange="lfReintentar(this)"></label>`;
+    return;
+  }
+  const f = lfNormalizar(j);
+  if(!f.nif && f.proveedor && typeof GE !== 'undefined') f.nif = GE.nifDeProveedor(f.proveedor.toUpperCase());
+  lfCasarLineas(f);
+  lfEstado = Object.assign({facturaId, stock: false}, f);
+  lfPintarRevision();
+}
+function lfReintentar(input){
+  if(lfEstado && lfEstado.facturaId) borrarFacturaAdjunta(lfEstado.facturaId);
+  lfEstado = null;
+  leerFacturaArchivo(input);
+}
+function lfCancelar(){
+  // La foto se guardó al leerla: si no se llega a guardar la compra, fuera,
+  // para no dejar adjuntos huérfanos pesando en la base.
+  if(lfEstado && lfEstado.facturaId) borrarFacturaAdjunta(lfEstado.facturaId);
+  lfEstado = null;
+  closeModal();
+}
+
+function lfPintarRevision(){
+  const f = lfEstado;
+  const cuerpo = document.getElementById('lf-cuerpo');
+  if(!f || !cuerpo) return;
+  const v = lfValidar(f);
+  const ings = (DB.ingredients || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const q = lfCuotasDeLineas(f);
+  const inp = (campo, i, val, tipo) => `<input type="${tipo || 'number'}" ${tipo ? '' : 'step="any" inputmode="decimal"'} data-campo="${campo}" value="${escapeHtml(String(val))}" style="width:100%;min-height:44px" onchange="lfCambiarLinea(${i},'${campo}',this.value)">`;
+  cuerpo.innerHTML = `
+    <h4 style="margin:0 0 8px">${t('lf.review')}</h4>
+    <div class="field-row">
+      <div class="field"><label>${t('common.supplier')}</label><input type="text" id="lf-prov" value="${escapeHtml(f.proveedor)}" onchange="lfCambiarCabecera('proveedor',this.value)"></div>
+      <div class="field"><label>${t('hr.gv.nifProveedor')}</label><input type="text" id="lf-nif" value="${escapeHtml(f.nif)}" onchange="lfCambiarCabecera('nif',this.value)"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>${t('hr.gv.numFactura')}</label><input type="text" id="lf-num" value="${escapeHtml(f.numFactura)}" onchange="lfCambiarCabecera('numFactura',this.value)"></div>
+      <div class="field"><label>${t('common.date')}</label><input type="date" id="lf-fecha" value="${escapeHtml(f.fecha)}" onchange="lfCambiarCabecera('fecha',this.value)"></div>
+    </div>
+    <div id="lf-validacion" class="card" style="margin:8px 0;padding:10px 12px;border-left:4px solid ${v.global.length ? 'var(--red)' : '#2e7d32'}">
+      ${v.global.length ? v.global.map(x => `<div class="lf-descuadre" style="color:var(--red);font-size:13px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(x)}</div>`).join('')
+        : `<div style="font-size:13px;color:#2e7d32"><i class="ti ti-circle-check"></i> ${t('lf.ok')}</div>`}
+    </div>
+    <h4 style="margin:12px 0 6px">${t('lf.lines')}</h4>
+    ${f.lineas.map((l, i) => {
+      const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
+      const antes = ing ? Number(ing.price) || 0 : 0;
+      const pct = (ing && antes && l.precioIng) ? Math.round((l.precioIng - antes) / antes * 1000) / 10 : 0;
+      return `<div class="card lf-linea" data-idx="${i}" style="margin-bottom:8px;padding:10px 12px;${v.lineas[i] ? 'border-left:4px solid var(--red)' : ''}">
+        <div class="field"><label>${t('lf.desc')}</label>${inp('descripcion', i, l.descripcion, 'text')}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px">
+          <div class="field"><label>${t('lf.qty')}</label>${inp('cantidad', i, l.cantidad)}</div>
+          <div class="field"><label>${t('lf.unit')}</label>${inp('unidad', i, l.unidad, 'text')}</div>
+          <div class="field"><label>${t('lf.price')}</label>${inp('precioUnitario', i, l.precioUnitario)}</div>
+          <div class="field"><label>${t('lf.discount')}</label>${inp('descuento', i, l.descuento)}</div>
+          <div class="field"><label>${t('lf.vat')}</label>${inp('ivaPct', i, l.ivaPct)}</div>
+          <div class="field"><label>${t('lf.total')}</label>${inp('total', i, l.total)}</div>
+        </div>
+        ${v.lineas[i] ? `<div class="lf-err-linea" style="color:var(--red);font-size:13px;margin:4px 0"><i class="ti ti-alert-triangle"></i> ${escapeHtml(v.lineas[i])}</div>` : ''}
+        <div class="field"><label>${t('lf.ingredient')}</label>
+          <select class="lf-ing" style="width:100%;min-height:44px" onchange="lfCambiarLinea(${i},'ingredientId',this.value)">
+            <option value="">${t('lf.noIngredient')}</option>
+            ${ings.map(x => `<option value="${escapeHtml(String(x.id))}" ${String(x.id) === String(l.ingredientId) ? 'selected' : ''}>${escapeHtml(x.name)} (${escapeHtml(x.unit || '')})</option>`).join('')}
+          </select>
+          ${l.como ? `<div class="txt-xs lf-como" style="color:var(--muted);margin-top:2px">${t(l.como === 'recordado' ? 'lf.remembered' : 'lf.suggested')}</div>` : ''}
+        </div>
+        ${ing ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;align-items:end">
+          <div class="field"><label>${escapeHtml(t('lf.qtyIng').replace('${u}', ing.unit || ''))}</label>${inp('qtyIng', i, l.qtyIng)}</div>
+          <div class="field"><label>${escapeHtml(t('lf.newPrice').replace('${u}', ing.unit || ''))}</label>
+            <div style="min-height:44px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span>${antes ? fmtMoney(antes) + ' → ' : ''}<strong>${fmtMoney(l.precioIng)}</strong></span>
+              ${pct > 0 ? `<span class="lf-subida" style="color:var(--red);font-weight:700;white-space:nowrap"><i class="ti ti-trending-up"></i> ${escapeHtml(t('lf.rise').replace('${p}', fmtNum(pct, 1)))}</span>` : ''}
+              ${pct < 0 ? `<span style="color:#2e7d32;font-weight:700;white-space:nowrap">${escapeHtml(t('lf.drop').replace('${p}', fmtNum(-pct, 1)))}</span>` : ''}
+            </div></div>
+        </div>
+        ${l.unidadRara ? `<div style="color:var(--red);font-size:13px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('lf.unitCheck').replace('${a}', l.unidad || '?').replace('${b}', ing.unit || '?'))}</div>` : ''}
+        ${antes && Math.abs(l.precioIng - antes) > 0.0001 ? `<label style="display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px"><input type="checkbox" ${l.actualizarPrecio ? 'checked' : ''} onchange="lfCambiarLinea(${i},'actualizarPrecio',this.checked)"> ${t('lf.updatePrice')}</label>` : ''}` : ''}
+      </div>`;
+    }).join('')}
+    <button class="btn btn-sm" style="min-height:44px" onclick="lfAnadirLinea()"><i class="ti ti-plus"></i> ${t('lf.addLine')}</button>
+    <label style="display:flex;align-items:center;gap:8px;min-height:44px;margin-top:10px;font-size:14px"><input type="checkbox" id="lf-stock" ${f.stock ? 'checked' : ''} onchange="lfEstado.stock=this.checked"> ${t('lf.stock')}</label>
+    <div style="font-weight:700;margin-top:6px">${escapeHtml(t('lf.summary').replace('${b}', fmtMoney(q.base)).replace('${i}', fmtMoney(q.cuota)).replace('${t}', fmtMoney(q.base + q.cuota)))}</div>
+    <div class="modal-footer">
+      <button class="btn" onclick="lfCancelar()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" id="lf-guardar" onclick="lfGuardar()"><i class="ti ti-device-floppy"></i> ${t('lf.save')}</button>
+    </div>`;
+}
+function lfCambiarCabecera(campo, valor){
+  if(!lfEstado) return;
+  lfEstado[campo] = campo === 'nif' ? String(valor).trim().toUpperCase() : String(valor).trim();
+  // Otro proveedor puede tener otros casamientos recordados: solo se
+  // re-sugiere en las líneas que aún no tienen producto.
+  if(campo === 'proveedor') lfEstado.lineas.forEach(l => {
+    if(l.ingredientId != null) return;
+    const s = lfSugerirIngrediente(lfEstado.proveedor, l.descripcion);
+    if(s){ l.ingredientId = s.id; l.como = s.como; lfRecalcularLinea(l); }
+  });
+  withScrollPreserved(() => lfPintarRevision());
+}
+function lfCambiarLinea(i, campo, valor){
+  const l = lfEstado && lfEstado.lineas[i];
+  if(!l) return;
+  if(campo === 'descripcion' || campo === 'unidad'){ l[campo] = String(valor).trim(); if(campo === 'unidad') l.qtyManual = false; }
+  else if(campo === 'ingredientId'){
+    // Los ids de la Mega Lista son números; el <select> los devuelve como texto.
+    const ing = valor ? (DB.ingredients || []).find(x => String(x.id) === String(valor)) : null;
+    l.ingredientId = ing ? ing.id : null; l.como = ''; l.qtyManual = false;
+  }
+  else if(campo === 'actualizarPrecio') l.actualizarPrecio = !!valor;
+  else if(campo === 'qtyIng'){ l.qtyIng = lfNum(valor); l.qtyManual = true; }
+  else { l[campo] = campo === 'total' ? lfR2(lfNum(valor)) : lfNum(valor); if(campo === 'cantidad') l.qtyManual = false; }
+  lfRecalcularLinea(l);
+  withScrollPreserved(() => lfPintarRevision());
+}
+function lfAnadirLinea(){
+  if(!lfEstado) return;
+  lfEstado.lineas.push({descripcion:'', cantidad:0, unidad:'', precioUnitario:0, descuento:0, ivaPct:10, total:0, ingredientId:null, como:'', actualizarPrecio:true});
+  withScrollPreserved(() => lfPintarRevision());
+}
+
+async function lfGuardar(){
+  const f = lfEstado;
+  if(!f) return;
+  if(typeof isOwnerSession === 'function' && !isOwnerSession()){ showToast(t('lf.ownerOnly'), 6000); return; }
+  const proveedor = (f.proveedor || '').trim().toUpperCase();
+  if(!proveedor){ showToast(t('lf.needSupplier')); return; }
+  if(!f.fecha){ showToast(t('lf.needDate')); return; }
+  const lineas = f.lineas.filter(l => l.total > 0);
+  if(!lineas.length){ showToast(t('lf.noLines')); return; }
+  if(GE.isDateClosed(f.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
+  // confirmModal usa la misma ventana que la revisión: si dice que no,
+  // se vuelve a la revisión tal cual estaba, con lo ya corregido.
+  if(!lfValidar(f).ok && !(await confirmModal(t('lf.confirmDescuadre')))){
+    if(lfEstado === f){ lfAbrirVentana(); lfPintarRevision(); }
+    return;
+  }
+  if(lfEstado !== f) return;
+
+  // 1) El gasto, agrupado por categoría y tipo de IVA (mismo criterio que
+  //    registerPedidoComoGastoVariable: el IVA de cada grupo es el real).
+  const grupos = {};
+  lineas.forEach(l => {
+    const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
+    const cat = gvCategoryForIngredient(ing);
+    const k = cat + '|' + (l.ivaPct || 0);
+    const g = (grupos[k] = grupos[k] || {cat, iva: l.ivaPct || 0, base: 0, compras: []});
+    g.base += l.total;
+    // Lo que entra de cada producto viaja con el gasto: sin esto, una compra
+    // apuntada por factura (sin pedido) no existía para el «impacto al mes»
+    // de las subidas, que solo miraba los pedidos recibidos.
+    if(ing && l.qtyIng > 0) g.compras.push({ingredientId: ing.id, qty: l.qtyIng});
+  });
+  const [fy, fm] = f.fecha.split('-').map(Number);
+  const fechaPago = dateStr(new Date(new Date(f.fecha).getTime() + 30 * 86400000));
+  if(!Array.isArray(DB.ge.variables)) DB.ge.variables = [];
+  Object.values(grupos).forEach(g => {
+    DB.ge.variables.push({
+      id: genId(), mes: fm - 1, año: fy, categoria: g.cat, proveedor, importe: lfR2(g.base), iva: g.iva,
+      fecha: f.fecha, numFactura: f.numFactura || '', nifProveedor: f.nif || '',
+      facturaId: f.facturaId || null, fechaPago, pagada: false, origen: 'factura-foto',
+      ...(g.compras.length ? {compras: g.compras} : {}),
+    });
+  });
+  if(f.nif){
+    if(!DB.ge.config) DB.ge.config = {};
+    DB.ge.config.nifProveedores = DB.ge.config.nifProveedores || {};
+    DB.ge.config.nifProveedores[proveedor] = f.nif;
+  }
+
+  // 2) Casamientos, precios (con historial) y, si se pidió, stock.
+  const cas = lfCasamientos();
+  let precios = 0, stockTocado = false;
+  lineas.forEach(l => {
+    const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
+    if(!ing) return;
+    if(l.descripcion) cas[lfClaveCasamiento(proveedor, l.descripcion)] = ing.id;
+    if(l.actualizarPrecio && l.precioIng > 0 && Math.abs(l.precioIng - (Number(ing.price) || 0)) > 0.0001){
+      // Producto sin precio todavía: registrarCambioPrecio no anota nada
+      // (no hay con qué comparar) y aquí simplemente se le pone.
+      aplicarPrecioAlbaran(ing, l.precioIng, proveedor);
+      precios++;
+    }
+    if(f.stock && l.qtyIng > 0){
+      const s = getStockEntry(ing.id);
+      const before = s.qty || 0;
+      s.qty = Math.round((before + l.qtyIng) * 10000) / 10000;
+      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', ing.id, ing.name, before, s.qty, 'purchase');
+      stockTocado = true;
+    }
+  });
+  if(typeof logAudit === 'function') logAudit('stock_received', `${proveedor} ${f.numFactura || ''} ${fmtMoney(lineas.reduce((s, l) => s + l.total, 0))}`.trim());
+  lfEstado = null; // la foto ya es del gasto: que cerrar no la borre
+  saveDB();
+  closeModal();
+  if(stockTocado && typeof renderStock === 'function'){ try{ renderStock(); }catch(e){} }
+  try{ GE.renderVariables(); }catch(e){}
+  showToast(t('lf.saved').replace('${n}', precios));
+}
+
+/* ============== La factura dentro del pedido a proveedor (7/10) ==============
+   El pedido decía qué se pidió y qué llegó; la factura, qué se cobra. Iban
+   por caminos distintos (la factura, como mucho, al cajón de Gastos
+   Variables) y nadie comparaba una con otro: un kilo de más facturado o una
+   subida de 30 céntimos pasaban sin que nadie los viera. Ahora la factura se
+   adjunta AL pedido y se cuadra contra él línea a línea.
+   - Se lee con la misma lectura que «Leer factura con foto» (LF_SISTEMA,
+     lfNormalizar, casamientos recordados): una sola forma de leer facturas.
+   - «Nada registrado se modifica»: en un pedido recibido NO se pisan las
+     cantidades recibidas. Las diferencias se ANOTAN en o.factura.cuadre, y el
+     stock solo se corrige si el usuario lo pide, con un ajuste explícito
+     que queda en el registro de stock.
+   - Los precios pasan por aplicarPrecioAlbaran (historial y aviso de
+     subidas), igual que al recibir, así el «impacto al mes» también cuenta.
+   - El gasto no se duplica: si el pedido ya lo generó, se rehace con los
+     importes de la factura en el mismo sitio (mismo mes, mismo estado de
+     pago) y con nº, NIF y adjunto; si el mes está cerrado, solo se le
+     enganchan los datos. Si aún no hay gasto, nace de la factura.
+   - Sin clave de IA se adjunta igual (nº, fecha, NIF a mano) y se explica
+     cómo activar la lectura. */
+let pfEstado = null;
+
+function pfFacturaLeida(o){
+  return !!(o && o.factura && o.factura.leida && o.factura.confirmada && Array.isArray(o.factura.lineas) && o.factura.lineas.length);
+}
+// Lo que se engancha a cada línea de gasto del pedido para que el libro de
+// gastos y el paquete del gestor citen la factura real.
+function pfDatosFactura(o){
+  const fa = o && o.factura;
+  if(!fa) return {};
+  const r = {};
+  if(fa.numFactura) r.numFactura = fa.numFactura;
+  if(fa.nif) r.nifProveedor = fa.nif;
+  if(fa.facturaId) r.facturaId = fa.facturaId;
+  return r;
+}
+// Rehace (o crea) el gasto del pedido con los importes de la factura.
+// `previos` son las líneas que el pedido ya tenía: se conservan su fecha
+// (el mes al que se imputó) y si estaba pagado.
+function pfGastoDesdeFactura(o, previos){
+  const fa = o.factura;
+  const grupos = {};
+  fa.lineas.forEach(l => {
+    if(!(l.total > 0)) return;
+    const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
+    const cat = gvCategoryForIngredient(ing);
+    const k = cat + '|' + (l.ivaPct || 0);
+    (grupos[k] = grupos[k] || {cat, iva: l.ivaPct || 0, base: 0}).base += l.total;
+  });
+  const base = previos[0] || null;
+  const fecha = base ? base.fecha : todayStr();
+  const d = new Date(fecha);
+  const fechaPago = base && base.fechaPago ? base.fechaPago : dateStr(new Date(d.getTime() + 30 * 86400000));
+  const pagada = previos.length > 0 && previos.every(v => v.pagada);
+  if(!Array.isArray(DB.ge.variables)) DB.ge.variables = [];
+  DB.ge.variables = DB.ge.variables.filter(v => v.pedidoId !== o.id);
+  Object.values(grupos).forEach(g => {
+    DB.ge.variables.push({
+      id: genId(), mes: base ? base.mes : d.getMonth(), año: base ? base.año : d.getFullYear(),
+      categoria: g.cat, proveedor: o.supplier, importe: lfR2(g.base), iva: g.iva,
+      fecha, pedidoId: o.id, auto: true, fechaPago, pagada, origen: 'factura-pedido', ...pfDatosFactura(o),
+    });
+  });
+}
+
+function pfTarjetaHtml(o){
+  const fa = o.factura;
+  if(!fa){
+    return `<div class="card owner-strict" id="pf-tarjeta" style="margin-bottom:10px">
+      <h3><i class="ti ti-file-invoice"></i> ${t('pf.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${t('pf.help')}</p>
+      <button class="btn btn-primary" id="pf-adjuntar" style="min-height:44px" onclick="pfAbrir(${o.id})"><i class="ti ti-paperclip"></i> ${t('pf.attach')}</button>
+    </div>`;
+  }
+  const adj = facturaAdjunta(fa.facturaId);
+  const cuadre = Array.isArray(fa.cuadre) ? fa.cuadre : [];
+  const difs = cuadre.filter(c => c.tipo !== 'igual');
+  return `<div class="card" id="pf-tarjeta" style="margin-bottom:10px">
+    <h3><i class="ti ti-file-invoice"></i> ${t('pf.title')}</h3>
+    <div style="font-size:13px;display:flex;gap:6px 14px;flex-wrap:wrap">
+      <span><span style="color:var(--muted)">${t('hr.gv.numFactura')}:</span> <strong id="pf-num">${escapeHtml(fa.numFactura || '—')}</strong></span>
+      <span><span style="color:var(--muted)">${t('common.date')}:</span> <strong>${escapeHtml(fa.fecha || '—')}</strong></span>
+      <span><span style="color:var(--muted)">${t('hr.gv.nifProveedor')}:</span> <strong>${escapeHtml(fa.nif || '—')}</strong></span>
+      ${fa.total ? `<span><span style="color:var(--muted)">${t('common.total')}:</span> <strong>${fmtMoney(fa.total)}</strong></span>` : ''}
+    </div>
+    ${adj ? `<div style="margin-top:8px">${adj.dataUrl.startsWith('data:image')
+      ? `<img src="${adj.dataUrl}" alt="" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src,'_blank')">`
+      : `<a href="${adj.dataUrl}" download="${escapeHtml(adj.name || 'factura.pdf')}" class="btn btn-sm" style="min-height:44px"><i class="ti ti-file-text"></i> ${escapeHtml(adj.name || 'factura.pdf')}</a>`}</div>` : ''}
+    ${!fa.leida ? `<p class="txt-xs" style="color:var(--muted);margin:8px 0 0">${t('pf.notRead')}</p>`
+      : `<div id="pf-difs" style="margin-top:8px;font-size:13px">${difs.length
+        ? difs.map(c => `<div class="pf-dif" style="color:${c.tipo === 'sube' || c.tipo === 'baja' ? '#8a5a00' : 'var(--red)'}"><i class="ti ti-alert-triangle"></i> ${escapeHtml(pfTextoFila(c))}</div>`).join('')
+        : `<div style="color:#2e7d32"><i class="ti ti-circle-check"></i> ${t('pf.allMatch')}</div>`}
+        ${fa.ajusteStock ? `<div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('pf.stockAdjusted')}</div>` : ''}</div>`}
+  </div>`;
+}
+
+function pfAbrir(pedidoId){
+  // Adjuntar la factura cambia precios y el gasto: es cosa del propietario,
+  // y se dice (un permiso negado en silencio se lee como una app rota).
+  if(typeof isOwnerSession === 'function' && !isOwnerSession()){ showToast(t('pf.ownerOnly'), 6000); return; }
+  const o = getPurchaseOrder(pedidoId);
+  if(!o) return;
+  pfEstado = {pedidoId};
+  const hayIA = typeof idrHayIA === 'function' && idrHayIA();
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-file-invoice"></i> ${t('pf.title')}</h3><button class="modal-close" onclick="pfCancelar()">&times;</button></div>
+    <div id="pf-cuerpo">
+      <p style="font-size:14px;line-height:1.5">${t(hayIA ? 'pf.intro' : 'pf.introNoKey')}</p>
+      ${hayIA ? '' : `<div id="pf-sin-clave" class="card" style="font-size:13px;line-height:1.5;padding:10px 12px">${t('lf.noKeyBody')}
+        <div><button class="btn btn-sm" style="min-height:44px;margin-top:6px" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('lf.noKeyBtn')}</button></div></div>`}
+      <label class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer">
+        <i class="ti ti-camera"></i> ${t('lf.pick')}
+        <input type="file" id="pf-input" accept="image/*,application/pdf" style="display:none" onchange="pfArchivo(this)">
+      </label>
+    </div>`);
+}
+function pfCancelar(){
+  if(pfEstado && pfEstado.facturaId) borrarFacturaAdjunta(pfEstado.facturaId);
+  pfEstado = null;
+  closeModal();
+}
+
+async function pfArchivo(input){
+  const file = input && input.files && input.files[0];
+  if(!file || !pfEstado) return;
+  const o = getPurchaseOrder(pfEstado.pedidoId);
+  if(!o) return;
+  const facturaId = await guardarFacturaAdjunta(file);
+  if(!facturaId){ input.value = ''; return; }
+  const pedidoId = o.id;
+  const nifConocido = typeof GE !== 'undefined' && GE.nifDeProveedor ? (GE.nifDeProveedor(String(o.supplier || '').toUpperCase()) || '') : '';
+  pfEstado = {pedidoId, facturaId, leida: false, numFactura: '', fecha: todayStr(), nif: nifConocido, lineas: []};
+  const cuerpo = document.getElementById('pf-cuerpo');
+  const hayIA = typeof idrHayIA === 'function' && idrHayIA();
+  const adj = facturaAdjunta(facturaId);
+  const m = /^data:([^;]+);base64,(.*)$/.exec((adj && adj.dataUrl) || '');
+  if(!hayIA || !m){ pfPintarManual(); return; }
+  if(cuerpo) cuerpo.innerHTML = `<p style="display:flex;align-items:center;gap:8px;font-size:14px"><i class="ti ti-loader-2"></i> ${t('lf.reading')}</p>`;
+  let r;
+  try{
+    r = await llmChat(LF_SISTEMA, [{role:'user', content:'Lee esta factura y devuelve el JSON.'}],
+      {archivo: {mime: m[1], datos: m[2]}, temperatura: 0, maxTokens: 4000, esperaMs: 90000});
+  }catch(e){ r = {ok:false, motivo:'excepcion', detalle: String((e && e.message) || e)}; }
+  if(!pfEstado || pfEstado.facturaId !== facturaId) return; // se cerró mientras pensaba
+  const j = r.ok ? idrExtraerJson(r.texto) : null;
+  if(!r.ok || !j || typeof j !== 'object'){
+    // Sin lectura no se pierde la factura: se adjunta a mano, avisando.
+    pfEstado.error = r.ok ? t('lf.unreadable') : idrMensajeError(r);
+    pfPintarManual();
+    return;
+  }
+  const f = lfNormalizar(j);
+  // El proveedor es el del pedido: los casamientos recordados son suyos.
+  f.proveedor = o.supplier || f.proveedor;
+  lfCasarLineas(f);
+  Object.assign(pfEstado, {leida: true, numFactura: f.numFactura, fecha: f.fecha, nif: f.nif || nifConocido,
+    lineas: f.lineas, base: f.base, ivas: f.ivas, total: f.total, proveedor: f.proveedor, ajustarStock: false});
+  pfPintarCuadre();
+}
+
+function pfCabeceraHtml(e){
+  return `<div class="field-row">
+      <div class="field"><label>${t('hr.gv.numFactura')}</label><input type="text" id="pf-f-num" value="${escapeHtml(e.numFactura || '')}" onchange="pfEstado.numFactura=this.value.trim()"></div>
+      <div class="field"><label>${t('common.date')}</label><input type="date" id="pf-f-fecha" value="${escapeHtml(e.fecha || '')}" onchange="pfEstado.fecha=this.value"></div>
+    </div>
+    <div class="field"><label>${t('hr.gv.nifProveedor')}</label><input type="text" id="pf-f-nif" value="${escapeHtml(e.nif || '')}" onchange="pfEstado.nif=this.value.trim().toUpperCase()"></div>`;
+}
+function pfPintarManual(){
+  const e = pfEstado, cuerpo = document.getElementById('pf-cuerpo');
+  if(!e || !cuerpo) return;
+  cuerpo.innerHTML = `
+    ${e.error ? `<p id="pf-error" style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(e.error)}</p>` : ''}
+    <p id="pf-manual" style="font-size:13px;color:var(--muted)">${t('pf.manual')}</p>
+    ${pfCabeceraHtml(e)}
+    <div class="modal-footer">
+      <button class="btn" onclick="pfCancelar()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" id="pf-confirmar" onclick="pfConfirmar()"><i class="ti ti-device-floppy"></i> ${t('pf.saveAttach')}</button>
+    </div>`;
+}
+
+// Cuadra la factura contra el pedido. Para un pedido recibido se compara con
+// lo RECIBIDO (lo que entró en stock); si no, con lo pedido.
+function pfCuadre(o, e){
+  const recibido = o.estado === 'RECIBIDO';
+  const porIng = {}, sobran = [];
+  e.lineas.forEach(l => {
+    if(!(l.total > 0) && !l.cantidad) return;
+    if(l.ingredientId == null || !(o.items || []).some(it => it.ingredientId === l.ingredientId)){ sobran.push(l); return; }
+    const g = porIng[l.ingredientId] || (porIng[l.ingredientId] = {qty: 0, total: 0, lineas: []});
+    g.qty += Number(l.qtyIng) || 0; g.total += Number(l.total) || 0; g.lineas.push(l);
+  });
+  const filas = [];
+  (o.items || []).forEach(it => {
+    const ing = getIngredient(it.ingredientId);
+    const nombre = ing ? ing.name : '—', unidad = ing ? (ing.unit || '') : '';
+    const qtyPedido = recibido ? (it.cantidadRecibida != null ? Number(it.cantidadRecibida) : 0) : (Number(it.cantidad) || 0);
+    const g = porIng[it.ingredientId];
+    if(!g){
+      if(qtyPedido > 0) filas.push({tipo: 'falta', ingredientId: it.ingredientId, nombre, unidad, qtyPedido, qtyFactura: 0});
+      return;
+    }
+    const qtyFactura = Math.round(g.qty * 10000) / 10000;
+    const precioFactura = qtyFactura > 0 ? Math.round(g.total / qtyFactura * 10000) / 10000 : 0;
+    const precioAntes = ing ? Number(ing.price) || 0 : 0;
+    const pct = precioAntes && precioFactura ? Math.round((precioFactura - precioAntes) / precioAntes * 1000) / 10 : 0;
+    const fila = {ingredientId: it.ingredientId, nombre, unidad, qtyPedido, qtyFactura, precioAntes, precioFactura, pct,
+      actualizarPrecio: g.lineas.every(l => l.actualizarPrecio !== false)};
+    // Una fila puede traer cantidad distinta Y cambio de precio a la vez.
+    fila.cambiaPrecio = !!(precioAntes && precioFactura && Math.abs(precioFactura - precioAntes) > 0.0001);
+    if(Math.abs(qtyFactura - qtyPedido) > 0.001) fila.tipo = 'cantidad';
+    else if(fila.cambiaPrecio) fila.tipo = precioFactura > precioAntes ? 'sube' : 'baja';
+    else fila.tipo = 'igual';
+    filas.push(fila);
+  });
+  sobran.forEach(l => {
+    const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
+    filas.push({tipo: 'sobra', ingredientId: ing ? ing.id : null, nombre: ing ? ing.name : (l.descripcion || '—'),
+      unidad: ing ? (ing.unit || '') : (l.unidad || ''), qtyPedido: 0, qtyFactura: ing ? l.qtyIng : l.cantidad, importe: l.total});
+  });
+  const q = lfCuotasDeLineas(e);
+  const totalFactura = e.total || lfR2(q.base + q.cuota);
+  return {filas, totalPedido: lfR2(pedidoTotalConIva(o)), totalFactura, recibido};
+}
+function pfTextoPrecio(c){
+  return t('pf.row.' + (c.precioFactura > c.precioAntes ? 'sube' : 'baja')).replace('${a}', fmtMoney(c.precioAntes))
+    .replace('${b}', fmtMoney(c.precioFactura)).replace('${p}', fmtNum(Math.abs(c.pct), 1));
+}
+function pfTextoFila(c){
+  const u = c.unidad || '';
+  const q = n => fmtNum(n || 0, 3) + (u ? ' ' + u : '');
+  if(c.tipo === 'falta') return t('pf.row.falta').replace('${q}', q(c.qtyPedido));
+  if(c.tipo === 'sobra') return t('pf.row.sobra').replace('${q}', q(c.qtyFactura));
+  if(c.tipo === 'cantidad') return t('pf.row.cantidad').replace('${p}', q(c.qtyPedido)).replace('${f}', q(c.qtyFactura));
+  if(c.tipo === 'sube' || c.tipo === 'baja') return pfTextoPrecio(c);
+  return t('pf.row.igual');
+}
+
+function pfPintarCuadre(){
+  const e = pfEstado, cuerpo = document.getElementById('pf-cuerpo');
+  if(!e || !cuerpo) return;
+  const o = getPurchaseOrder(e.pedidoId);
+  if(!o) return;
+  const c = pfCuadre(o, e);
+  const color = {igual: '#2e7d32', sube: '#e0a100', baja: '#e0a100', cantidad: 'var(--red)', falta: 'var(--red)', sobra: 'var(--red)'};
+  const badge = {igual: 'badge-green', sube: 'badge-amber', baja: 'badge-amber', cantidad: 'badge-red', falta: 'badge-red', sobra: 'badge-red'};
+  const hayCantidad = c.recibido && c.filas.some(f => f.tipo === 'cantidad' && f.ingredientId != null);
+  const v = lfValidar(e);
+  const difTotal = lfR2(c.totalFactura - c.totalPedido);
+  cuerpo.innerHTML = `
+    <h4 style="margin:0 0 8px">${t('pf.review')}</h4>
+    ${pfCabeceraHtml(e)}
+    ${v.global.length ? `<div class="card" style="margin:8px 0;padding:10px 12px;border-left:4px solid var(--red)">${v.global.map(x => `<div style="color:var(--red);font-size:13px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(x)}</div>`).join('')}</div>` : ''}
+    <p class="txt-xs" style="color:var(--muted);margin:6px 0">${t(c.recibido ? 'pf.vsReceived' : 'pf.vsOrdered')}</p>
+    ${c.filas.map(f => `<div class="card pf-fila pf-${f.tipo}" data-ing="${escapeHtml(String(f.ingredientId == null ? '' : f.ingredientId))}" style="margin-bottom:6px;padding:8px 12px;border-left:4px solid ${color[f.tipo]}">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline">
+        <strong>${escapeHtml(f.nombre)}</strong>
+        <span class="badge ${badge[f.tipo]}">${t('pf.tag.' + f.tipo)}${(f.tipo === 'sube' || f.tipo === 'baja') ? ' ' + (f.pct > 0 ? '+' : '−') + fmtNum(Math.abs(f.pct), 1) + ' %' : ''}</span>
+      </div>
+      <div style="font-size:13px;margin-top:2px">${escapeHtml(pfTextoFila(f))}</div>
+      ${f.cambiaPrecio && f.tipo === 'cantidad' ? `<div style="font-size:13px;color:#8a5a00">${escapeHtml(pfTextoPrecio(f))}</div>` : ''}
+      ${f.cambiaPrecio ? `<label style="display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px"><input type="checkbox" class="pf-precio" ${f.actualizarPrecio ? 'checked' : ''} onchange="pfMarcarPrecio(${escapeHtml(JSON.stringify(f.ingredientId))}, this.checked)"> ${t('lf.updatePrice')}</label>` : ''}
+    </div>`).join('')}
+    <div class="card" id="pf-totales" style="margin:8px 0;padding:10px 12px;border-left:4px solid ${Math.abs(difTotal) <= 0.05 ? '#2e7d32' : 'var(--red)'}">
+      <div style="font-size:14px">${escapeHtml(t('pf.totals').replace('${p}', fmtMoney(c.totalPedido)).replace('${f}', fmtMoney(c.totalFactura)))}</div>
+      ${Math.abs(difTotal) > 0.05 ? `<div style="font-weight:700;color:var(--red)">${escapeHtml(t('pf.totalDiff').replace('${d}', (difTotal > 0 ? '+' : '−') + fmtMoney(Math.abs(difTotal))))}</div>` : ''}
+    </div>
+    ${hayCantidad ? `<label style="display:flex;align-items:flex-start;gap:8px;min-height:44px;font-size:13px"><input type="checkbox" id="pf-ajuste" ${e.ajustarStock ? 'checked' : ''} onchange="pfEstado.ajustarStock=this.checked" style="margin-top:3px"> ${t('pf.adjustStock')}</label>` : ''}
+    <p class="txt-xs" style="color:var(--muted)">${t(o.gvCreated ? 'pf.expenseLinked' : (c.recibido ? 'pf.expenseNew' : 'pf.expenseOnReceive'))}</p>
+    <div class="modal-footer">
+      <button class="btn" onclick="pfCancelar()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" id="pf-confirmar" onclick="pfConfirmar()"><i class="ti ti-check"></i> ${t('pf.confirm')}</button>
+    </div>`;
+}
+function pfMarcarPrecio(ingredientId, valor){
+  if(!pfEstado) return;
+  pfEstado.lineas.forEach(l => { if(l.ingredientId === ingredientId) l.actualizarPrecio = !!valor; });
+}
+
+function pfConfirmar(){
+  const e = pfEstado;
+  if(!e) return;
+  if(typeof isOwnerSession === 'function' && !isOwnerSession()){ showToast(t('pf.ownerOnly'), 6000); return; }
+  const o = getPurchaseOrder(e.pedidoId);
+  if(!o){ pfCancelar(); return; }
+  if(!e.fecha){ showToast(t('lf.needDate')); return; }
+  const fa = {facturaId: e.facturaId, numFactura: e.numFactura || '', fecha: e.fecha, nif: e.nif || '',
+    leida: !!e.leida, ts: new Date().toISOString(), actor: (typeof currentActorName === 'function') ? currentActorName() : ''};
+  let precios = 0;
+  if(e.leida){
+    const c = pfCuadre(o, e);
+    fa.lineas = e.lineas.filter(l => l.total > 0).map(l => ({descripcion: l.descripcion || '', ingredientId: l.ingredientId != null ? l.ingredientId : null,
+      qtyIng: Number(l.qtyIng) || 0, total: l.total, ivaPct: l.ivaPct || 0}));
+    fa.base = lfCuotasDeLineas(e).base; fa.total = c.totalFactura; fa.totalPedido = c.totalPedido;
+    // Las diferencias se ANOTAN tal como estaban al confirmar: es el papel
+    // que se enseña al proveedor para reclamar, no un cálculo que cambie
+    // cuando luego se mueva el precio de la Mega Lista.
+    fa.cuadre = c.filas.map(f => {
+      const r = {tipo: f.tipo, nombre: f.nombre, unidad: f.unidad, qtyPedido: f.qtyPedido, qtyFactura: f.qtyFactura || 0};
+      if(f.ingredientId != null) r.ingredientId = f.ingredientId;
+      if(f.precioAntes != null){ r.precioAntes = f.precioAntes; r.precioFactura = f.precioFactura; r.pct = f.pct; }
+      return r;
+    });
+    fa.confirmada = true;
+    // 1) Precios: subidas Y bajadas, por la misma puerta que la recepción.
+    const cas = lfCasamientos();
+    e.lineas.forEach(l => { if(l.ingredientId != null && l.descripcion) cas[lfClaveCasamiento(o.supplier, l.descripcion)] = l.ingredientId; });
+    c.filas.forEach(f => {
+      if(!f.cambiaPrecio || !f.actualizarPrecio) return;
+      const ing = getIngredient(f.ingredientId);
+      if(!ing) return;
+      aplicarPrecioAlbaran(ing, f.precioFactura, o.supplier);
+      precios++;
+    });
+    // 2) Stock: SOLO si se pidió, y como ajuste aparte. cantidadRecibida no
+    //    se toca: lo que se registró al recibir sigue siendo lo registrado.
+    if(e.ajustarStock && c.recibido){
+      const ajustes = [];
+      c.filas.forEach(f => {
+        if(f.tipo !== 'cantidad' || f.ingredientId == null) return;
+        const ing = getIngredient(f.ingredientId);
+        if(!ing) return;
+        const s = getStockEntry(f.ingredientId);
+        const before = s.qty || 0;
+        const delta = Math.round((f.qtyFactura - f.qtyPedido) * 10000) / 10000;
+        s.qty = Math.max(0, Math.round((before + delta) * 10000) / 10000);
+        // 'purchase' y no 'manual': es una corrección de la compra, no una
+        // merma, y no debe inflar el informe de mermas.
+        logStockAdjustment('ing', f.ingredientId, ing.name, before, s.qty, 'purchase');
+        ajustes.push({ingredientId: f.ingredientId, delta});
+      });
+      if(ajustes.length) fa.ajusteStock = ajustes;
+    }
+  }
+  o.factura = fa;
+  if(fa.nif){
+    if(!DB.ge.config) DB.ge.config = {};
+    DB.ge.config.nifProveedores = DB.ge.config.nifProveedores || {};
+    DB.ge.config.nifProveedores[String(o.supplier || '').toUpperCase()] = fa.nif;
+  }
+  // 3) El gasto, sin duplicar.
+  const previos = ((DB.ge && DB.ge.variables) || []).filter(v => v.pedidoId === o.id);
+  if(previos.length){
+    const cerrado = typeof GE !== 'undefined' && GE.isDateClosed && GE.isDateClosed(previos[0].fecha);
+    if(pfFacturaLeida(o) && !cerrado) pfGastoDesdeFactura(o, previos);
+    else previos.forEach(v => Object.assign(v, pfDatosFactura(o)));
+  } else if(o.estado === 'RECIBIDO' && pfFacturaLeida(o)){
+    pfGastoDesdeFactura(o, []);
+    o.gvCreated = true;
+  }
+  // Un pedido aún sin recibir: el gasto nacerá al recibirlo, ya con la
+  // factura (registerPedidoComoGastoVariable la usa). Crearlo ahora lo
+  // duplicaría en la recepción.
+  if(typeof logAudit === 'function') logAudit('stock_received', `${o.supplier || ''} ${fa.numFactura}`.trim());
+  pfEstado = null; // la foto ya es del pedido: que cerrar no la borre
+  saveDB();
+  closeModal();
+  if(fa.ajusteStock && typeof renderStock === 'function'){ try{ renderStock(); }catch(err){} }
+  if(pedidoDetailId === o.id){ try{ renderPedidoDetail(); }catch(err){} }
+  showToast(t('pf.saved').replace('${n}', precios));
+}

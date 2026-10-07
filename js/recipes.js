@@ -486,7 +486,7 @@ function renderRecipeModal(id, r){
     const discontinued = ingRef && ingRef.activo === false;
     return `
       <tr>
-        <td>${label ? escapeHtml(label.name) + (line.type==='base'?` <span style="font-size:11px;color:var(--muted)">(${t('label.baseShort2Lower')})</span>`:'') + (discontinued?` <span class="badge badge-gray" style="font-size:9px" title="${t('msg.ingredientDiscontinuedHint')}">${t('label.discontinued')}</span>`:'') : '—'}</td>
+        <td>${label ? escapeHtml(label.name) + (line.type==='base'?` <span style="font-size:11px;color:var(--muted)">(${t('label.baseShort2Lower')})</span>`:'') + (discontinued?` <span class="badge badge-gray txt-xs" title="${t('msg.ingredientDiscontinuedHint')}">${t('label.discontinued')}</span>`:'') : '—'}</td>
         <td><input type="number" value="${line.qty}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineQty(${idx}, this.value, ${id||'null'})"></td>
         <td>${label ? escapeHtml(label.unit) : ''}</td>
         <td><input type="number" value="${line.merma||0}" step="1" min="0" max="99" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineMerma(${idx}, this.value, ${id||'null'})"></td>

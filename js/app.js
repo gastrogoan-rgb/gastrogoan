@@ -517,7 +517,7 @@ function limpiezaTareaRowHtml(tarea, checks, monthKey){
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:${canToggle?'pointer':'not-allowed'}" onclick="event.stopPropagation()" title="${doneTitle}">
         <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${tarea.id},this.checked)">
         <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(tarea.area)}</span>
-        ${tarea.tipo==='puntual' ? `<span class="badge" style="font-size:9.5px;padding:1px 5px" title="${t('limpieza.recurrenceOnce')}"><i class="ti ti-calendar-event"></i></span>` : ''}
+        ${tarea.tipo==='puntual' ? `<span class="badge txt-xs" style="padding:1px 5px" title="${t('limpieza.recurrenceOnce')}"><i class="ti ti-calendar-event"></i></span>` : ''}
       </label>
       ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:22px;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
     </div>
@@ -1935,8 +1935,8 @@ function renderClientes(){
 
   const rows = items.map(c => {
     const stats = getStats(c);
-    const segmentBadge = stats.isNew ? `<span class="badge badge-blue" style="font-size:9px" title="${t('label.newClientHint')}">${t('badge.new')}</span>`
-      : stats.atRisk ? `<span class="badge badge-amber" style="font-size:9px" title="${t('label.atRiskClientHint')}">${t('badge.atRisk')}</span>` : '';
+    const segmentBadge = stats.isNew ? `<span class="badge badge-blue txt-xs" title="${t('label.newClientHint')}">${t('badge.new')}</span>`
+      : stats.atRisk ? `<span class="badge badge-amber txt-xs" title="${t('label.atRiskClientHint')}">${t('badge.atRisk')}</span>` : '';
     const points = c.points||0;
     let loyaltyCls, loyaltyBtn;
     if(points >= 10){
@@ -1951,7 +1951,7 @@ function renderClientes(){
 
   tbody.innerHTML = rows.map(({c, stats, segmentBadge, points, loyaltyCls, loyaltyBtn}) => `
     <tr>
-      <td data-label="${t('common.name')}"><strong>${escapeHtml(c.name)}</strong> ${segmentBadge}${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray" style="font-size:9px" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
+      <td data-label="${t('common.name')}"><strong>${escapeHtml(c.name)}</strong> ${segmentBadge}${c.noShows ? ` <span class="badge badge-red txt-xs" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray txt-xs" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
       <td data-label="${t('label.contact')}">
         ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
         ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
@@ -2522,10 +2522,10 @@ function openClientHistoryModal(id){
         <tbody>${timeline.map(entry => {
           if(entry.type === 'sale'){
             const s = entry.data;
-            return `<tr><td>${escapeHtml(s.date)} <span class="badge badge-blue" style="font-size:9px">${t('label.orderTag')}</span></td><td class="wrap">${(s.items||[]).map(it=>`${it.qty}× ${escapeHtml(it.name)}`).join(', ')}</td><td>${fmtMoney(s.total)}</td></tr>`;
+            return `<tr><td>${escapeHtml(s.date)} <span class="badge badge-blue txt-xs">${t('label.orderTag')}</span></td><td class="wrap">${(s.items||[]).map(it=>`${it.qty}× ${escapeHtml(it.name)}`).join(', ')}</td><td>${fmtMoney(s.total)}</td></tr>`;
           }
           const r = entry.data;
-          return `<tr style="cursor:pointer" onclick="closeModal();navigate('reservas');goToReservasDia('${r.date}')"><td>${escapeHtml(r.date)} <span class="badge badge-gray" style="font-size:9px">${t('label.reservationTag')}</span></td><td class="wrap">${escapeHtml(r.time||'')} · ${r.people} ${t('common.persAbbr')} · ${reservationStatusBadge(r.status, r.llegada)}</td><td>—</td></tr>`;
+          return `<tr style="cursor:pointer" onclick="closeModal();navigate('reservas');goToReservasDia('${r.date}')"><td>${escapeHtml(r.date)} <span class="badge badge-gray txt-xs">${t('label.reservationTag')}</span></td><td class="wrap">${escapeHtml(r.time||'')} · ${r.people} ${t('common.persAbbr')} · ${reservationStatusBadge(r.status, r.llegada)}</td><td>—</td></tr>`;
         }).join('')}</tbody>
       </table>
     </div>` : `<div class="empty"><i class="ti ti-receipt"></i>${t('empty.noOrderHistory')}</div>`}
@@ -6878,6 +6878,7 @@ function renderMiNegocio(){
 
     ${renderExternalConnectionsCard()}
 
+
     <div class="card mn-grid-full">
       <h3><i class="ti ti-building-store"></i> ${t('mn.business.title')}</h3>
 
@@ -7146,6 +7147,8 @@ function renderMiNegocio(){
     ${renderTableQrCard()}
 
     ${renderComandaPrintCard()}
+
+    ${renderIaConfigCard()}
 
     ${renderOnlineCard()}
 
@@ -8252,27 +8255,26 @@ function renderTicketConfigCard(){
         <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="previewTicketConfig()"><i class="ti ti-eye"></i> ${t('mn.ticket.preview')}</button>
       </div>
-      ${thermalPrintingSupported() ? `
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-device-usb"></i> ${t('thermal.sectionTitle')}</p>
-      <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('thermal.sectionDesc')}</p>
-      <button class="btn btn-sm" onclick="connectThermalPrinter()"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>
+    </div>
+    <!-- Impresora y cajón en su propia tarjeta: dentro del ticket la hacían
+         tan larga que descuadraba las dos columnas de Mi Negocio. -->
+    <div class="card">
+      <h3 style="color:var(--ink)"><i class="ti ti-printer"></i> ${t('print.sectionTitle')}</h3>
+      ${renderPrintModeConfig('ticket', {ancho: true})}
+      ${getPrintMode('ticket') === 'bluetooth' ? `
+      <p style="font-size:12.5px;color:var(--muted);margin:10px 0">${t('thermal.sectionDesc')}</p>
+      <button class="btn btn-sm" onclick="connectThermalPrinter()"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>` : ''}
 
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-cash"></i> ${t('drawer.sectionTitle')}</p>
+      ${getPrintMode('ticket') === 'bluetooth' ? `
       <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('drawer.sectionDesc')}</p>
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:13px;cursor:pointer;margin-bottom:10px">
         <input type="checkbox" id="mn-cash-drawer" ${DB.business.cashDrawerOnSale?'checked':''} onchange="saveCashDrawerSetting(this.checked)" style="width:auto;margin-top:2px">
         <span>${t('drawer.enableLabel')}</span>
       </label>
       ${DB.business.cashDrawerOnSale ? `<button class="btn btn-sm" onclick="openCashDrawerManually()"><i class="ti ti-cash"></i> ${t('drawer.testBtn')}</button>` : ''}
-      ` : `
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <p style="font-size:12.5px;color:var(--muted)"><i class="ti ti-device-usb-off"></i> ${t('thermal.notSupportedHint')}</p>
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-cash"></i> ${t('drawer.sectionTitle')}</p>
-      <p style="font-size:12.5px;color:var(--muted)">${t('drawer.driverFallbackHint')}</p>
-      `}
+      ` : `<div class="manual-warning" id="print-drawer-browser"><i class="ti ti-alert-triangle"></i> ${t('print.drawerBrowser')}</div>`}
     </div>
   `;
 }
@@ -8510,8 +8512,9 @@ function renderComandaPrintCard(){
             </select>
             <button class="btn btn-sm" onclick="testComandaPrint('${p.id}')"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
             <button class="btn btn-sm btn-icon btn-danger" onclick="deleteComandaPrinter('${p.id}')"><i class="ti ti-trash"></i></button>
-            ${thermalPrintingSupported() ? `
-            <div style="width:100%;display:flex;align-items:center;gap:8px;margin-top:2px;padding-top:6px;border-top:1px dashed var(--border)">
+            <div style="width:100%;margin-top:2px;padding-top:6px;border-top:1px dashed var(--border)">${renderPrintModeConfig(p.id, {compacto: true})}</div>
+            ${getPrintMode(p.id) === 'bluetooth' ? `
+            <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <i class="ti ti-bluetooth" style="color:${pairedName?'var(--ink)':'var(--muted)'}"></i>
               ${pairedName
                 ? `<span style="font-size:12px;color:var(--muted);flex:1"><strong>${escapeHtml(pairedName)}</strong> ${t('thermal.pairedHint')}</span>
@@ -8525,10 +8528,43 @@ function renderComandaPrintCard(){
         : `<div class="empty" style="padding:12px 16px">${t('mn.comandas.empty')}</div>`}
       </div>
       <button class="btn btn-sm" onclick="addComandaPrinter()"><i class="ti ti-plus"></i> ${t('mn.comandas.addPrinter')}</button>
-      ${!thermalPrintingSupported() ? `<p style="font-size:12.5px;color:var(--muted);margin-top:10px"><i class="ti ti-device-usb-off"></i> ${t('thermal.notSupportedHint')}</p>` : ''}
+      ${thermalPrintingSupported() ? '' : `<div style="margin-top:10px">${renderNoBluetoothWarning()}</div>`}
       ` : ''}
     </div>
   `;
+}
+// Aviso de "este navegador no tiene Bluetooth". Antes era una línea gris
+// que nadie leía, y en un iPad el hostelero solo veía que el botón de la
+// térmica no estaba. Ahora dice QUÉ pasa y QUÉ hacer, con el color de aviso.
+function renderNoBluetoothWarning(){
+  return `<div class="manual-warning" id="print-no-bt-warning" role="note">
+    <strong><i class="ti ti-bluetooth-off"></i> ${t('print.noBtTitle')}</strong><br>${t('print.noBtBody')}
+  </div>`;
+}
+// Selector de modo (y, para el ticket de cliente, ancho del rollo) de una
+// impresora en ESTE aparato. Sin Bluetooth, la opción sale desactivada y
+// el aviso explica por qué, en vez de esconderla y dejar la duda.
+function renderPrintModeConfig(printerId, opts){
+  const o = opts || {};
+  const bt = thermalPrintingSupported();
+  const modo = getPrintMode(printerId);
+  const idJs = String(printerId).replace(/[^\w-]/g, '');
+  const anchoSel = o.ancho ? `<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600">${t('print.widthLabel')}
+      <select id="print-width-${idJs}" onchange="setTicketPaperWidth(this.value)" style="max-width:220px">
+        <option value="80" ${getTicketPaperWidth()!==58?'selected':''}>80 mm (${t('mn.comandas.standard')})</option>
+        <option value="58" ${getTicketPaperWidth()===58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
+      </select></label>` : '';
+  return `${(!bt && !o.compacto) ? renderNoBluetoothWarning() : ''}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;flex:1;min-width:200px">${t('print.modeLabel')}
+        <select id="print-mode-${idJs}" onchange="setPrintMode('${idJs}', this.value)">
+          <option value="browser" ${modo==='browser'?'selected':''}>${t('print.modeBrowser')}</option>
+          <option value="bluetooth" ${modo==='bluetooth'?'selected':''} ${bt?'':'disabled'}>${t('print.modeBluetooth')}${bt?'':' — '+t('print.notAvailable')}</option>
+        </select>
+      </label>
+      ${anchoSel}
+    </div>
+    ${o.compacto ? '' : `<p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">${modo==='browser' ? t('print.browserDesc') + ' ' : ''}${t('print.perDeviceHint')}</p>`}`;
 }
 // Envoltorio del "Olvidar" de cada impresora de comandas: además de borrar
 // la conexión guardada, repinta para que el botón vuelva a "Conectar".
@@ -8603,29 +8639,29 @@ function buildComandaText(destino, titulo, lineas, alergenos, anchoTicket){
 // diálogo de impresión del navegador; si no, se abre la ventana de siempre.
 function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos, printerId){
   if(!lineas || !lineas.length) return;
-  if(printerId && thermalPrintingSupported() && getThermalPrinterName(printerId)){
-    printToThermalPrinter(buildComandaText(destino, titulo, lineas, alergenos, anchoTicket), printerId);
-    return;
-  }
-  const ancho = anchoTicket || 80;
-  const widthPx = ancho == 58 ? 200 : 280;
+  const ancho = anchoTicket == 58 ? 58 : 80;
   const hora = new Date().toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
-  const filas = lineas.map(l => `<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-bottom:3px"><span>${escapeHtml(l.qty)}× ${escapeHtml(l.name)}</span></div>${l.notas?`<div style="font-size:12px;margin:0 0 4px 10px">▸ ${escapeHtml(l.notas)}</div>`:''}`).join('');
+  const filas = lineas.map(l => `<div style="font-size:15px;font-weight:700;margin-bottom:3px">${escapeHtml(l.qty)}× ${escapeHtml(l.name)}</div>${l.notas?`<div style="font-size:12px;margin:0 0 4px 10px">▸ ${escapeHtml(l.notas)}</div>`:''}`).join('');
   // Alérgenos de la mesa (independiente de cualquier cliente vinculado): se
   // imprime destacado arriba del todo, en grande, para que no pase
   // desapercibido entre las líneas del pedido.
   const alergenosHtml = alergenos ? `<div style="border:2px solid #000;padding:4px 6px;margin-bottom:6px;font-weight:700;font-size:14px;text-align:center">⚠ ${escapeHtml(alergenos)}</div>` : '';
-  const win = window.open('', '_blank', `width=${widthPx+40},height=520`);
-  if(!win) return;
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(titulo)}</title></head>
-    <body style="font-family:monospace;width:${widthPx}px;padding:8px;margin:0">
-      <div style="text-align:center;font-weight:700;font-size:16px;border-bottom:1px dashed #000;padding-bottom:4px;margin-bottom:6px">${escapeHtml(destino)}</div>
-      <div style="font-size:13px;margin-bottom:6px">${escapeHtml(titulo)} · ${hora}</div>
+  const cuerpo = `<div style="text-align:center;font-weight:700;font-size:16px;border-bottom:1px dashed #000;padding-bottom:4px;margin-bottom:6px">${escapeHtml(destino)}</div>
+      <div style="font-size:13px;margin-bottom:6px">${escapeHtml(titulo)} · ${escapeHtml(hora)}</div>
       ${alergenosHtml}
-      ${filas}
-      <script>window.onload=function(){window.print();}<\/script>
-    </body></html>`);
-  win.document.close();
+      ${filas}`;
+  // Bluetooth solo si este puesto lo tiene elegido Y hay una impresora
+  // emparejada: sin emparejar, la comanda sale por el navegador como
+  // siempre, en vez de abrir un selector de dispositivos en mitad del
+  // servicio. Todo lo demás (iPad, Firefox, impresora de red/USB/AirPrint)
+  // va por el navegador con el formato de rollo (@page 80/58 mm).
+  const id = printerId || 'comanda';
+  const usarBt = printerId && getPrintMode(printerId) === 'bluetooth' && getThermalPrinterName(printerId);
+  if(usarBt){
+    printToThermalPrinter(buildComandaText(destino, titulo, lineas, alergenos, ancho), id, {ancho, html: cuerpo, titulo});
+    return;
+  }
+  printViaBrowser(cuerpo, ancho, titulo, {html: true});
 }
 function testComandaPrint(printerId){
   const sample = [{qty:2, name:'Ejemplo de plato', notas:'sin sal', bebida:false}, {qty:1, name:'Ejemplo de bebida', bebida:true}];

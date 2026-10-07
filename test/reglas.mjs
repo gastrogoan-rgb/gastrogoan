@@ -55,7 +55,7 @@ caso('El asistente no cita números de paso', () => {
   return 'se nombra el paso, no se numera';
 });
 
-const TIPOS = ['reserva','pedido','nps_response','reserva_cancelar','reserva_modificar'];
+const TIPOS = ['reserva','pedido','nps_response','reserva_cancelar','reserva_modificar','pedido_mesa','pago_mesa'];
 caso('Un cliente NO puede declarar pagado su propio pedido', () => {
   /* ⚠️ `pago_confirmado` NO puede estar en la lista blanca del buzón público.
      Ese buzón tiene que estar abierto para que cualquier comensal reserve, así
@@ -191,6 +191,24 @@ caso('publicLookup no se puede secuestrar: solo el dueño del negocio (o el admi
   return 'creación y reintento sí, secuestro no';
 });
 
+caso('Carta por QR: la cuenta de una mesa solo se lee sabiendo su token', () => {
+  /* El token de la mesa es lo que impide pedir a todas las mesas del local
+     desde casa. Si `mesaQr` se pudiera leer entero, bastaría listarlo para
+     tener los tokens de todas. La lectura va SOLO en `$token`, nunca en el
+     padre, y el token tiene que ser largo. */
+  [negocio, plataforma, incrustadas, database].forEach(reglas => {
+    const r = JSON.parse(reglas);
+    const pub = r.rules.gastrogoan.public.$publicId;
+    assert.ok(pub.mesaQr, 'falta el nodo mesaQr');
+    assert.equal(pub.mesaQr['.read'], undefined, 'mesaQr se puede listar entero');
+    assert.equal(pub.mesaQr['.write'], undefined, 'mesaQr se puede reescribir entero');
+    const tk = pub.mesaQr.$token;
+    assert.ok(tk['.read'].includes('$token.length >= 16') && tk['.write'].includes('$token.length >= 16'), 'el token de mesa admite tokens cortos');
+    assert.ok(tk['.validate'].includes("'mesa'"), 'la cuenta de la mesa no exige su forma');
+  });
+  return 'por token, nunca el padre';
+});
+
 console.log('\n' + '═'.repeat(64));
-console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 12 casos pasaron`);
+console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 13 casos pasaron`);
 process.exit(fallos ? 1 : 0);
