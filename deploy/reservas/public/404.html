@@ -189,9 +189,10 @@
   .menu-item:last-child{border-bottom:none;}
   .menu-item .name{font-weight:600;font-size:15px;color:var(--ink);}
   .menu-item .price{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--muted);}
-  .qty-ctl{display:flex;align-items:center;gap:10px;}
+  .qty-ctl{display:flex;align-items:center;gap:8px;}
   .qty-ctl button{
-    width:34px;height:34px;border-radius:0;border:1px solid var(--border);
+    /* 44 px: el comensal pulsa con el dedo, de pie o con el plato al lado (eran 34). */
+    width:44px;height:44px;border-radius:0;border:1px solid var(--border);
     background:var(--surface);font-size:17px;font-weight:600;cursor:pointer;color:var(--ink);
     transition:border-color .15s,background-color .15s,transform .1s;
   }
