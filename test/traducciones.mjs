@@ -75,6 +75,9 @@ const ACEPTADAS = new Set([
   'https://maps.app.goo.gl/...','https://...','service_xxxxxxx','template_xxxxxxx',
   'user_xxxxxxxxxxxxxxxx','Logo','Instagram','Facebook','TikTok','Terminal',
   'Service ID','Public Key',
+  // Mi Negocio → Asistente de IA: el modelo por defecto (ejemplo del campo)
+  // y la dirección donde se saca la clave; son nombres propios, no texto.
+  'gemini-3.6-flash','https://aistudio.google.com/apikey',
   // términos que en hostelería y contabilidad se dicen igual en los tres
   'CAPEX','TOTAL CAPEX','AUTO','Take Away','Delivery','Total h.',
   // abreviaturas de mes que coinciden en es/ca/en (las que no, ya se traducen)

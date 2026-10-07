@@ -7,9 +7,9 @@
      DB.business: ese bloque se sincroniza con la Firebase del negocio y
      su propio personal podría leerla. Mismo criterio que se tomó con el
      idioma cuando el selector no funcionaba.
-   - Se pide DENTRO del módulo, nunca en el alta: el alta es el punto
-     donde un cliente se atasca y llama, y quien no use I+D no debe
-     enterarse siquiera de que esto existe.
+   - Desde el 7/10 se configura en Mi Negocio → Asistente de IA (ver
+     renderIaConfigCard, al final) porque ya no la usa solo el I+D. En el
+     alta se OFRECE como paso opcional y saltable; nunca se exige.
    - Una capa fina delante del proveedor (llmChat) para que sea un ajuste
      y no una decisión de por vida.
    - Sin IA el módulo SIGUE: lo ya creado se ve, se edita y se imprime.
@@ -323,7 +323,13 @@ async function idrProbarConexion(){
   const k = idrValorCampo('idr-clave');
   const m = idrValorCampo('idr-modelo');
   if(p === null || k === null){ if(btn){ btn.disabled = false; } return; }
-  if(!(k||'').trim()){ showToast(t('idr.keyRequired')); idrConfigModal(); return; }
+  // Sin clave se avisa y se devuelve el botón, sin reabrir nada: desde Mi
+  // Negocio, reabrir la ventana antigua dejaba dos juegos de campos.
+  if(!(k||'').trim()){
+    showToast(t('idr.keyRequired'));
+    if(btn){ btn.disabled = false; btn.innerHTML = `<i class="ti ti-plug-connected"></i> ${t('idr.test')}`; }
+    return;
+  }
   // Se guarda antes de probar: si funciona, ya queda puesta.
   idrGuardarConfig(p, k, m);
   const r = await llmChat('Responde solo con la palabra OK.', [{role:'user', content:'Di OK'}], {maxTokens: 20});
@@ -837,14 +843,14 @@ function renderIdrInterno(){
         <h2>${t('view.idr.title')}</h2>
         <p class="view-sub">${t('view.idr.subtitle')}</p>
       </div>
-      <button class="btn btn-sm" onclick="idrConfigModal()"><i class="ti ti-settings"></i> ${t('idr.assistant')}</button>
+      <button class="btn btn-sm owner-strict" onclick="irAConfigIA()"><i class="ti ti-settings"></i> ${t('idr.assistant')}</button>
     </div>
 
     ${!iaOk ? `
       <div class="card" style="border-left:4px solid var(--ink)">
         <h3><i class="ti ti-sparkles"></i> ${t('idr.noAssistantTitle')}</h3>
         <p style="font-size:13px;color:var(--muted)">${t('idr.noAssistantBody')}</p>
-        <button class="btn btn-primary btn-sm" onclick="idrConfigModal()"><i class="ti ti-key"></i> ${t('idr.setUpAssistant')}</button>
+        <button class="btn btn-primary btn-sm" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('idr.setUpAssistant')}</button>
       </div>` : ''}
 
     <div class="card ${adnOk?'':'owner-only'}" style="${adnOk?'':'border-left:4px solid var(--ink)'}">
@@ -2419,13 +2425,17 @@ function idrImprimir(id){
 }
 
 /* ============================================================
-   CONFIGURACIÓN DEL ASISTENTE
+   CONFIGURACIÓN DEL ASISTENTE (ventana antigua)
    ============================================================
-   Se pide AQUÍ y no en el alta a propósito: el alta es el punto donde un
-   cliente se atasca y llama, y quien no use I+D no debe encontrarse un
-   paso más. */
+   La pantalla buena es la de Mi Negocio (renderIaConfigCard). Esta ventana
+   se conserva porque las pruebas del I+D la usan y comparte las funciones
+   de probar conexión y buscar modelos. */
 
 function idrConfigModal(){
+  // La sección de Mi Negocio usa los MISMOS id (idr-prov, idr-clave…). Si
+  // sigue pintada debajo, getElementById cogería sus campos y no los de la
+  // ventana: se vacía y se repinta la próxima vez que se entre.
+  document.getElementById('mn-ia-campos')?.replaceChildren();
   const cfg = idrConfig() || {proveedor:'google', clave:'', modelo:''};
   const opts = Object.keys(IDR_PROVEEDORES).map(k =>
     `<option value="${k}"${k===cfg.proveedor?' selected':''}>${escapeHtml(gl(IDR_PROVEEDORES[k].l))}</option>`).join('');
@@ -3059,4 +3069,275 @@ function idrValidarConjunto(recetas, opciones){
   }
 
   return problemas;
+}
+
+/* ============================================================
+   ASISTENTE DE IA — su sitio es Mi Negocio (7/10)
+   ============================================================
+   La clave dejó de ser cosa solo del I+D: ahora también la usan "Pregúntale
+   a tus números" y la lectura de facturas. Tenerla escondida dentro de un
+   módulo obligaba al hostelero a saber que existía el I+D para poder usar
+   lo demás. Se configura en UN sitio, Mi Negocio (solo propietario), y
+   cualquier botón de "configurar" lleva ahí.
+
+   ⚠️ Sigue guardándose donde siempre (localStorage, idrKeyLS, por aparato y
+   por negocio) y NUNCA en DB.business: ese bloque viaja a la nube del
+   negocio y cualquier empleado podría leerla. Los campos llevan los mismos
+   id que la ventana antigua (idr-prov, idr-clave…) para que probar la
+   conexión y buscar modelos sean exactamente las mismas funciones. */
+function iaEsPropietario(){
+  return typeof isGestionLocked === 'function' ? !isGestionLocked('minegocio') : true;
+}
+// Desde I+D, Leer factura o el chat de números: lleva a la sección. Un
+// empleado no puede entrar en Mi Negocio, y un botón que no hace nada se lee
+// como app rota: se le dice qué pasa y quién puede hacerlo.
+function irAConfigIA(){
+  if(!iaEsPropietario()){ showToast(t('ia.cfg.ownerOnly')); return; }
+  if(typeof closeModal === 'function') closeModal();
+  navigate('minegocio');
+  setTimeout(() => { if(typeof irAApartadoMiNegocio === 'function') irAApartadoMiNegocio('mn-ia'); }, 60);
+}
+function renderIaConfigCard(){
+  const cfg = idrConfig() || {proveedor:'google', clave:'', modelo:''};
+  const def = IDR_PROVEEDORES[cfg.proveedor] || IDR_PROVEEDORES.google;
+  const opts = Object.keys(IDR_PROVEEDORES).map(k =>
+    `<option value="${k}"${k===cfg.proveedor?' selected':''}>${escapeHtml(gl(IDR_PROVEEDORES[k].l))}</option>`).join('');
+  const usadas = idrGastoHoy();
+  const pct = Math.min(100, Math.round(usadas / IDR_TOPE_DIA * 100));
+  return `
+    <div class="card mn-grid-full" id="mn-ia">
+      <h3><i class="ti ti-sparkles"></i> ${t('ia.cfg.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 10px">${t('ia.cfg.desc')}</p>
+      <p style="font-size:13px;margin:0 0 10px"><strong>${idrHayIA() ? `<i class="ti ti-circle-check" style="color:#1F8A4C"></i> ${t('ia.cfg.on')}` : `<i class="ti ti-circle-dashed"></i> ${t('ia.cfg.off')}`}</strong></p>
+      <div id="mn-ia-campos">
+        <div class="field-row">
+          <div class="field">
+            <label>${t('idr.provider')}</label>
+            <select id="idr-prov" onchange="idrConfigModalRefrescar()">${opts}</select>
+          </div>
+          <div class="field">
+            <label>${t('idr.model')}</label>
+            <div id="idr-modelo-campo"><input type="text" id="idr-modelo" value="${escapeHtml(cfg.modelo||'')}" placeholder="${escapeHtml(def.modeloPorDefecto)}"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>${t('idr.key')}</label>
+          <input type="password" id="idr-clave" value="${escapeHtml(cfg.clave||'')}" placeholder="${t('idr.keyPh')}" autocomplete="off">
+          <p style="font-size:12px;color:var(--muted);margin:6px 0 0" id="idr-ayuda">${t('idr.keyWhere')} <strong>${escapeHtml(def.ayuda)}</strong></p>
+        </div>
+        <details style="margin:8px 0">
+          <summary style="font-size:13px;cursor:pointer;font-weight:600">${t('ia.cfg.howGoogle')}</summary>
+          <ol style="font-size:13px;line-height:1.6;margin:8px 0 0 18px;padding:0">
+            <li>${t('ia.cfg.step1')}</li><li>${t('ia.cfg.step2')}</li><li>${t('ia.cfg.step3')}</li><li>${t('ia.cfg.step4')}</li>
+          </ol>
+        </details>
+        <div style="border-left:4px solid var(--ink);background:var(--brand-cream);border-radius:8px;padding:10px 12px;margin:10px 0">
+          <p style="font-size:12.5px;margin:0">${t('ia.cfg.whyLocal')}</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="mn-ia-guardar" onclick="iaGuardarDesdeNegocio()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+          <button class="btn btn-sm" id="idr-probar" onclick="idrProbarConexion()"><i class="ti ti-plug-connected"></i> ${t('idr.test')}</button>
+          <button class="btn btn-sm" id="idr-modelos" onclick="idrCargarModelos()"><i class="ti ti-list"></i> ${t('idr.listModels')}</button>
+          ${idrHayIA() ? `<button class="btn btn-sm btn-danger" onclick="iaBorrarDesdeNegocio()"><i class="ti ti-trash"></i> ${t('common.delete')}</button>` : ''}
+        </div>
+        <div id="idr-test-res" style="font-size:13px;margin-top:8px"></div>
+      </div>
+      <p style="font-size:12.5px;margin:12px 0 4px" id="mn-ia-consumo">${t('idr.callsToday').replace('${n}', usadas).replace('${tope}', IDR_TOPE_DIA)}</p>
+      <div style="height:8px;border-radius:4px;background:var(--border);overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--ink)"></div></div>
+      <p class="txt-xs" style="color:var(--muted);margin:6px 0 0">${t('ia.cfg.limitWhy')}</p>
+    </div>`;
+}
+function iaGuardarDesdeNegocio(){
+  const p = idrValorCampo('idr-prov'), k = idrValorCampo('idr-clave'), m = idrValorCampo('idr-modelo');
+  if(p === null || k === null) return;
+  if(!(k||'').trim()){ showToast(t('idr.keyRequired')); return; }
+  idrGuardarConfig(p, k, m);
+  if(typeof renderMiNegocio === 'function') renderMiNegocio();
+  showToast(t('idr.keySaved'));
+}
+function iaBorrarDesdeNegocio(){
+  idrBorrarConfig();
+  if(typeof renderMiNegocio === 'function') renderMiNegocio();
+  showToast(t('idr.keyRemoved'));
+}
+
+/* ── Paso opcional del alta ──
+   El criterio de antes ("nunca en el alta") era bueno para el I+D solo. Con
+   tres herramientas que la usan, quien no la ponga al empezar no descubre
+   ninguna. Va como paso OPCIONAL de las conexiones externas, con "Ahora no"
+   siempre a mano: el alta sigue sin poder atascarse aquí. */
+function renderIaGateCard(){
+  if(idrHayIA()) return `<p style="font-size:13px"><i class="ti ti-circle-check" style="color:#1F8A4C"></i> ${t('ia.cfg.on')}</p>`;
+  const opts = Object.keys(IDR_PROVEEDORES).map(k => `<option value="${k}">${escapeHtml(gl(IDR_PROVEEDORES[k].l))}</option>`).join('');
+  return `
+    <p style="font-size:13px;line-height:1.5;margin:0 0 10px">${t('ia.gate.desc')}</p>
+    <ul style="font-size:13px;line-height:1.6;margin:0 0 12px 18px;padding:0">
+      <li>${t('ia.gate.use1')}</li><li>${t('ia.gate.use2')}</li><li>${t('ia.gate.use3')}</li>
+    </ul>
+    <div class="field"><label>${t('idr.provider')}</label><select id="iag-prov">${opts}</select></div>
+    <div class="field"><label>${t('idr.key')}</label><input type="password" id="iag-clave" placeholder="${t('idr.keyPh')}" autocomplete="off">
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('ia.gate.free')} <strong>${escapeHtml(IDR_PROVEEDORES.google.ayuda)}</strong></p></div>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('ia.cfg.whyLocal')}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" id="iag-guardar" onclick="iaGateGuardar()"><i class="ti ti-device-floppy"></i> ${t('ia.gate.save')}</button>
+      <button class="btn" id="iag-ahora-no" onclick="skipExternalConnectionsPromptStep()">${t('ia.gate.notNow')}</button>
+    </div>`;
+}
+function iaGateGuardar(){
+  const p = idrValorCampo('iag-prov'), k = idrValorCampo('iag-clave');
+  if(p === null || k === null) return;
+  if(!(k||'').trim()){ showToast(t('idr.keyRequired')); return; }
+  idrGuardarConfig(p, k, '');
+  showToast(t('idr.keySaved'));
+  skipExternalConnectionsPromptStep();
+}
+
+/* ============================================================
+   PREGÚNTALE A TUS NÚMEROS
+   ============================================================
+   ⚠️ El modelo NO calcula ni inventa: la app hace las cuentas con las mismas
+   funciones de la Cuenta de Resultados (plan360KpisMes) y le pasa un resumen
+   pequeño. Él solo lee y explica. Un número inventado en esta pantalla es
+   peor que no tenerla: el dueño decide con él.
+
+   La conversación vive SOLO en memoria: son las cuentas del negocio y no
+   tienen por qué quedarse escritas en ningún sitio, ni en la nube ni en el
+   aparato. */
+let iaNumHist = [];
+let iaNumPensando = false;
+
+function iaNumContexto(){
+  const hoy = new Date();
+  const out = {hoy: todayStr(), negocio: (DB.business && DB.business.name) || '', moneda: 'EUR'};
+  // Últimos 4 meses con el mismo cálculo que la Cuenta de Resultados.
+  out.meses = {};
+  for(let i = 3; i >= 0; i--){
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    try{ out.meses[k] = plan360KpisMes(d.getFullYear(), d.getMonth()); }catch(e){ out.meses[k] = null; }
+  }
+  out.mesEnCurso = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')} (incompleto, hasta hoy)`;
+  // Ventas de los últimos 90 días: por plato, canal, día de la semana y hora.
+  const desde = dateStr(new Date(hoy.getTime() - 90*86400000));
+  const ventas = activeSales().filter(s => (s.date||'') >= desde);
+  const platos = {}, dias = {}, horas = {}, canal = {};
+  const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  ventas.forEach(s => {
+    const total = (parseFloat(s.total)||0) - (parseFloat(s.propina)||0);
+    const dn = DIAS[new Date((s.date||'') + 'T12:00:00').getDay()];
+    if(dn) dias[dn] = r2((dias[dn]||0) + total);
+    const h = String(s.time || s.hora || (s.createdAt ? new Date(s.createdAt).toTimeString() : '')).slice(0,2);
+    if(/^\d\d$/.test(h)) horas[h+'h'] = r2((horas[h+'h']||0) + total);
+    const c = s.tipo === 'delivery' ? 'delivery' : s.tipo === 'takeaway' ? 'takeaway' : 'mesa';
+    canal[c] = r2((canal[c]||0) + total);
+    (s.items||[]).forEach(l => {
+      if(!l || !l.name || l.isShipping) return;
+      const p = platos[l.name] = platos[l.name] || {uds:0, ventas:0};
+      p.uds += parseFloat(l.qty)||0; p.ventas = r2(p.ventas + (parseFloat(l.price)||0)*(parseFloat(l.qty)||0));
+    });
+  });
+  out.ventas90dias = {
+    tickets: ventas.length,
+    platosMasVendidos: Object.entries(platos).sort((a,b)=>b[1].ventas-a[1].ventas).slice(0,15).map(([n,p])=>({plato:n, uds:p.uds, ventas:p.ventas})),
+    porCanal: canal, porDiaSemana: dias, porHora: horas,
+  };
+  // Food cost por plato con su escandallo (coste actual sobre precio sin IVA).
+  out.foodCostPlatos = (DB.recipes||[]).map(r => {
+    const pct = recipeFoodCostPct(r);
+    if(!isFinite(pct)) return null;
+    return {plato: r.name, pvp: r2(r.price), coste: r2(recipeCost(r)), foodCostPct: r1(pct)};
+  }).filter(Boolean).sort((a,b)=>b.foodCostPct-a.foodCostPct).slice(0,25);
+  // Subidas y bajadas de precio de proveedores (90 días): de aquí sale
+  // "qué platos han perdido margen" sin que el modelo tenga que suponer.
+  out.cambiosPrecio = (DB.preciosHistorial||[]).filter(h => (h.fecha||'') >= desde)
+    .sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct)).slice(0,20)
+    .map(h => ({fecha:h.fecha, producto:h.nombre, proveedor:h.proveedor||'', antes:h.antes, despues:h.despues, pct:h.pct, unidad:h.unidad||''}));
+  // Gastos variables por categoría y mes (los mismos cuatro meses).
+  const gastos = {};
+  gastosVariablesActivos().forEach(v => {
+    const k = `${v.año}-${String(parseInt(v.mes)+1).padStart(2,'0')}`;
+    if(!Object.prototype.hasOwnProperty.call(out.meses, k)) return;
+    const g = gastos[k] = gastos[k] || {};
+    const cat = v.categoria || 'OTROS';
+    g[cat] = r2((g[cat]||0) + (parseFloat(v.importe)||0));
+  });
+  out.gastosVariablesPorCategoria = gastos;
+  out.mermas90dias = (DB.mermas||[]).filter(m => (m.fecha||'') >= desde).reduce((acc, m) => {
+    const k = m.name || '?'; acc[k] = r2((acc[k]||0) + (parseFloat(m.coste)||0)); return acc;
+  }, {});
+  out.personal = {empleados: (DB.employees||[]).length};
+  const en7 = dateStr(new Date(hoy.getTime()+7*86400000));
+  const proximas = (DB.reservations||[]).filter(r => r.date >= todayStr() && r.date <= en7 && (r.status==='confirmada'||r.status==='pendiente'));
+  out.reservasProximos7dias = {reservas: proximas.length, comensales: proximas.reduce((s,r)=>s+(parseInt(r.people)||0),0)};
+  out.stockBajo = (DB.ingredients||[]).filter(ing => ing.activo !== false && getStockEntry(ing.id).qty < getStockEntry(ing.id).min)
+    .slice(0,20).map(ing => ({producto: ing.name, hay: getStockEntry(ing.id).qty, minimo: getStockEntry(ing.id).min, unidad: ing.unit||''}));
+  return out;
+}
+function iaNumSistema(){
+  const idioma = {es:'castellano', ca:'catalán', en:'inglés (English)'}[getLang()] || 'castellano';
+  return `Eres el analista de números de un restaurante. Contestas a su dueño.
+REGLAS QUE NO SE SALTAN:
+- Usa SOLO las cifras del bloque DATOS. No inventes ni estimes cifras que no estén.
+- Si te preguntan algo que no está en DATOS, dilo claramente (que ese dato no está en la app) y di qué tendría que registrar para tenerlo.
+- Cita las cifras concretas (con €, % y el mes) en las que apoyas lo que dices.
+- Responde en ${idioma}, breve: 3-6 frases o una lista corta. Sin introducciones.
+- El mes en curso está incompleto: no lo compares con un mes entero sin avisarlo.
+- "netas" = ventas sin IVA; foodCostPct = coste / ventas sin IVA.
+DATOS (calculados por la app):
+${JSON.stringify(iaNumContexto())}`;
+}
+function abrirPreguntaNumeros(){
+  if(!iaEsPropietario()){ showToast(t('ia.num.ownerOnly')); return; }
+  if(!idrHayIA()){
+    openModal(`
+      <div class="modal-header"><h3><i class="ti ti-message-chatbot"></i> ${t('ia.num.title')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <p style="font-size:13px" id="ia-num-sinclave">${t('ia.num.noKey')}</p>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" id="ia-num-ir-config" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('ia.num.goConfig')}</button>
+      </div>`);
+    return;
+  }
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-message-chatbot"></i> ${t('ia.num.title')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">${t('ia.num.desc')}</p>
+    <div id="ia-num-hilo" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;margin-bottom:10px"></div>
+    <div id="ia-num-sugeridas" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      ${['ia.num.q1','ia.num.q2','ia.num.q3'].map(k => `<button class="btn btn-sm" onclick="iaNumEnviar(t('${k}'))">${t(k)}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="ia-num-input" style="flex:1;min-width:0" placeholder="${t('ia.num.ph')}" onkeydown="if(event.key==='Enter'){iaNumEnviar(this.value)}">
+      <button class="btn btn-primary" id="ia-num-enviar" onclick="iaNumEnviar(document.getElementById('ia-num-input').value)" aria-label="${t('ia.num.send')}"><i class="ti ti-send"></i></button>
+    </div>
+    <p class="txt-xs" style="color:var(--muted);margin:8px 0 0">${t('ia.num.privacy')}</p>`);
+  iaNumPintar();
+}
+function iaNumPintar(){
+  const hilo = document.getElementById('ia-num-hilo');
+  if(!hilo) return;
+  hilo.innerHTML = iaNumHist.map(m => {
+    const estilo = m.role === 'user' ? 'background:var(--ink);color:#fff' : m.error ? 'background:#FDECEC;color:var(--red)' : 'background:#F1EFE9;color:var(--ink)';
+    return `<div class="ia-num-msg ia-num-${m.role}" style="align-self:${m.role==='user'?'flex-end':'flex-start'};max-width:88%;padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word;${estilo}">${escapeHtml(m.content)}</div>`;
+  }).join('') + (iaNumPensando ? `<div style="align-self:flex-start;font-size:13px;color:var(--muted)"><i class="ti ti-loader"></i> ${t('ia.num.thinking')}</div>` : '');
+  hilo.scrollTop = hilo.scrollHeight;
+  const b = document.getElementById('ia-num-enviar'); if(b) b.disabled = iaNumPensando;
+}
+async function iaNumEnviar(texto){
+  const q = String(texto||'').trim();
+  if(!q || iaNumPensando) return;
+  const inp = document.getElementById('ia-num-input'); if(inp) inp.value = '';
+  iaNumHist.push({role:'user', content:q});
+  iaNumPensando = true; iaNumPintar();
+  let r;
+  try{
+    // Solo los últimos turnos y sin los avisos de error: los datos van
+    // enteros en las instrucciones, no hace falta arrastrar más.
+    const mensajes = iaNumHist.filter(m => !m.error).slice(-10).map(m => ({role:m.role, content:m.content}));
+    r = await llmChat(iaNumSistema(), mensajes, {maxTokens: 1500});
+  }catch(e){ r = {ok:false, motivo:'excepcion', detalle:String(e && e.message || e)}; }
+  iaNumPensando = false;
+  // Un turno no puede terminar sin respuesta en el hilo (misma regla que I+D).
+  if(r && r.ok) iaNumHist.push({role:'assistant', content:r.texto});
+  else iaNumHist.push({role:'assistant', content:idrMensajeError(r), error:true});
+  iaNumPintar();
 }
