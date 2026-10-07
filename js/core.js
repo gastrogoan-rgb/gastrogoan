@@ -5241,6 +5241,9 @@ const FIREBASE_GATE_STEPS = [
 let extConnPromptStep = 0;
 const EXT_CONN_PROMPT_STEPS = [
   {icon:'ti-credit-card', titleKey:'mn.pago.title', descKey:'mn.pago.desc', renderCard: () => renderPagoOnlineCard()},
+  // La clave de IA (js/idr.js): opcional como las demás, con su propio
+  // "Ahora no" dentro de la tarjeta además del botón de siempre.
+  {icon:'ti-sparkles', titleKey:'ia.cfg.title', alwaysKey:'ia.gate.alwaysThere', renderCard: () => renderIaGateCard()},
 ];
 function showExternalConnectionsPrompt(){
   extConnPromptStep = 0;
@@ -5264,7 +5267,7 @@ function renderExternalConnectionsPromptStep(){
         <h2 style="margin-bottom:4px">${t(step.titleKey)}</h2>
       </div>
       <div style="background:#F5F0E3;border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
-        <strong>${t('gate.extConn.optional')}</strong> ${t('gate.extConn.alwaysThere')}
+        <strong>${t('gate.extConn.optional')}</strong> ${t(step.alwaysKey || 'gate.extConn.alwaysThere')}
       </div>
       ${step.renderCard()}
       <button onclick="skipExternalConnectionsPromptStep()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:14px">

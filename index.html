@@ -114,6 +114,9 @@
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title" data-i18n="view.dashboard.title">Panel de Control</div>
       <div class="view-subtitle" data-i18n="view.dashboard.subtitle">Resumen general de tu negocio</div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-primary" id="dash-preguntale" onclick="abrirPreguntaNumeros()"><i class="ti ti-message-chatbot"></i> <span data-i18n="ia.num.title">Pregúntale a tus números</span></button>
+      </div>
 
       <div class="card" style="margin-top:16px">
         <h3 data-i18n="title.todayAttention"><i class="ti ti-bell"></i> Hoy — Atención</h3>
@@ -484,6 +487,7 @@
 
       <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-send"></i> <span data-i18n="pg.title">Enviar al gestor</span></button>
+        <button class="btn btn-sm" id="ge-preguntale" onclick="abrirPreguntaNumeros()"><i class="ti ti-message-chatbot"></i> <span data-i18n="ia.num.title">Pregúntale a tus números</span></button>
       </div>
       <div id="ge-checklist"></div>
 
