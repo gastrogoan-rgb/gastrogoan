@@ -143,6 +143,7 @@ lanzar; node test/vision-global.mjs > "$SALIDA/vision-global.txt" 2>&1 & P101=$!
 lanzar; node test/impresion.mjs > "$SALIDA/impresion.txt" 2>&1 & P102=$!
 lanzar; node test/leer-facturas.mjs > "$SALIDA/leer-facturas.txt" 2>&1 & P103=$!
 lanzar; node test/qr-mesa.mjs > "$SALIDA/qr-mesa.txt" 2>&1 & P104=$!
+lanzar; node test/factura-pedido.mjs > "$SALIDA/factura-pedido.txt" 2>&1 & P111=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -272,5 +273,6 @@ espera $P101 "Visión global de mis negocios: suma bien, nunca el ajeno, sin toc
 espera $P102 "Impresión sin Bluetooth: Navegador/AirPrint en rollo de 80/58 mm, datos escapados y caída avisada" "$SALIDA/impresion.txt" "todos los casos de impresión pasaron"
 espera $P103 "Leer facturas con foto: casa líneas, caza descuadres, gasto con nº de factura, precio con historial y stock opcional" "$SALIDA/leer-facturas.txt" "casos pasaron"
 espera $P104 "Carta por QR en la mesa: token por mesa, precios de la carta, pago parcial no cierra, pago completo con factura" "$SALIDA/qr-mesa.txt" "casos pasaron"
+espera $P111 "Factura dentro del pedido: cuadre línea a línea, precios con historial, gasto sin duplicar, lo recibido no se pisa" "$SALIDA/factura-pedido.txt" "todos los casos de factura-pedido pasaron"
 
 exit $FALLOS
