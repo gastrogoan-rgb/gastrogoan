@@ -82,7 +82,7 @@ await browser.close();
 await caso('Panel: el informe del mes sale con cifras, comparación y alertas, listo para WhatsApp', async () => {
   const html = fs.readFileSync(new URL('../admin-panel/plan360.html', import.meta.url), 'utf8');
   const ini = html.indexOf('const KPI_FILAS'), fin = html.indexOf('function mantResumenNegocio');
-  const ctx = {remoteBiz: {plan360Kpis: r.K}, console};
+  const ctx = {remoteBiz: {plan360Kpis: r.K}, console, mantMesClave: d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')};
   vm.createContext(ctx);
   vm.runInContext(html.slice(ini, fin) + '; this.kpiInformeTexto = kpiInformeTexto; this.kpiCierreHtml = kpiCierreHtml;', ctx);
   ctx.esc = s => String(s);
