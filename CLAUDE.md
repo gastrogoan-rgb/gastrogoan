@@ -584,6 +584,28 @@ impuestos → impuesto → resultado del ejercicio.
 
 Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 
+## Lo de la tanda del 7/10 (frente a la competencia: Alexia Rest y compañía)
+
+- **Impresión sin Bluetooth**: modo Navegador/AirPrint (iframe con `@page`
+  80/58 mm) por impresora y por aparato (localStorage); caída avisada si el
+  Bluetooth falla. Tarjeta propia en Mi Negocio. Prueba `test/impresion.mjs`.
+- **Leer factura con foto/PDF** (Gastos Variables, `lf.*`) y **factura dentro
+  del pedido** (`pf.*`, `o.factura`): la IA del negocio lee, la app CUADRA
+  (sumas, IVA, línea a línea contra el pedido) y nada se guarda sin revisión.
+  Precios por `aplicarPrecioAlbaran` (historial y aviso). Lo recibido no se
+  pisa: las diferencias se anotan. Pruebas `leer-facturas.mjs`, `factura-pedido.mjs`.
+- **Carta por QR en la mesa** (`pedido_mesa`, `pago_mesa`, `mesaQr/{token}`):
+  token por mesa rotable, precios de la carta propia, pago parcial no cierra.
+  Desactivado por defecto. ⚠️ Necesita las reglas nuevas en la nube del
+  negocio que lo active (y las de la plataforma). Prueba `qr-mesa.mjs`.
+- **Visión global de mis negocios** (selector): lee los slots propios en solo
+  lectura, sin cambiar el activo ni disparar guardados. `vision-global.mjs`.
+- **Asistente de IA en Mi Negocio** (la clave sigue en localStorage, nunca en
+  la nube), paso opcional en el alta y **«Pregúntale a tus números»**: la app
+  calcula, el modelo solo explica. `preguntale.mjs`.
+- ⚠️ Mi Negocio va en dos columnas: una tarjeta `mn-grid-full` o mal colocada
+  deja huecos y tumba `revision-12-09.mjs`.
+
 ## El módulo de I+D (`js/idr.js`)
 
 Un asistente de cocina que crea **elaboraciones base, platos, menús y cartas**

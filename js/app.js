@@ -6878,7 +6878,6 @@ function renderMiNegocio(){
 
     ${renderExternalConnectionsCard()}
 
-    ${renderIaConfigCard()}
 
     <div class="card mn-grid-full">
       <h3><i class="ti ti-building-store"></i> ${t('mn.business.title')}</h3>
@@ -7148,6 +7147,8 @@ function renderMiNegocio(){
     ${renderTableQrCard()}
 
     ${renderComandaPrintCard()}
+
+    ${renderIaConfigCard()}
 
     ${renderOnlineCard()}
 
