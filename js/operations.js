@@ -1513,6 +1513,7 @@ function renderPedidoDetail(){
           <small style="color:var(--muted)">${t('albaran.attachHint')}</small>
         </div>
       </div>
+      ${pfTarjetaHtml(o)}
       ` : ''}
 
       <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
@@ -1734,6 +1735,13 @@ function consumoMensualCompras(ingredientId){
     if(o.estado !== 'RECIBIDO' || (o.date || '') < desde) return;
     (o.items || []).forEach(l => { if(l.ingredientId === ingredientId) total += Number(l.cantidadRecibida) || 0; });
   });
+  // Compras apuntadas leyendo una factura suelta (sin pedido detrás). Las
+  // facturas adjuntadas a un pedido NO se suman aquí: su cantidad ya cuenta
+  // por el pedido, y contarla dos veces doblaría el impacto.
+  ((DB.ge && DB.ge.variables) || []).forEach(v => {
+    if(v.pedidoId || !Array.isArray(v.compras) || (v.fecha || '') < desde) return;
+    v.compras.forEach(c => { if(c && c.ingredientId === ingredientId) total += Number(c.qty) || 0; });
+  });
   return total / 3;
 }
 // Subidas del periodo por producto: del primer precio al último (varias
@@ -1785,6 +1793,9 @@ function openSubidasPrecioModal(){
 // Al recibir un pedido, registra su coste en Gastos Variables (Gestión Económica), agrupado por categoría
 function registerPedidoComoGastoVariable(o){
   if(o.gvCreated) return;
+  // Con la factura ya cuadrada, el gasto es el de la factura (lo que de
+  // verdad se paga), no la estimación con los precios de la Mega Lista.
+  if(pfFacturaLeida(o)){ pfGastoDesdeFactura(o, []); o.gvCreated = true; return; }
   // Se agrupa por categoría Y por tipo de IVA del ingrediente (ya no por un
   // único IVA de proveedor): dos ingredientes de la misma categoría pero con
   // IVA distinto (ej. dos bebidas, una al 10% y otra al 21%) generan dos
@@ -1819,7 +1830,7 @@ function registerPedidoComoGastoVariable(o){
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: cat, proveedor: o.supplier, importe: Math.round(base*100)/100,
       fecha, pedidoId: o.id, auto: true,
-      fechaPago, pagada: false
+      fechaPago, pagada: false, ...pfDatosFactura(o)
     };
     if(iva != null) rec.iva = iva;
     DB.ge.variables.push(rec);
@@ -1832,7 +1843,7 @@ function registerPedidoComoGastoVariable(o){
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: 'OTROS', proveedor: o.supplier, importe: Math.round(envio*100)/100,
       fecha, pedidoId: o.id, auto: true,
-      fechaPago, pagada: false
+      fechaPago, pagada: false, ...pfDatosFactura(o)
     });
   }
   o.gvCreated = true;
@@ -2770,7 +2781,12 @@ async function lfGuardar(){
     const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
     const cat = gvCategoryForIngredient(ing);
     const k = cat + '|' + (l.ivaPct || 0);
-    (grupos[k] = grupos[k] || {cat, iva: l.ivaPct || 0, base: 0}).base += l.total;
+    const g = (grupos[k] = grupos[k] || {cat, iva: l.ivaPct || 0, base: 0, compras: []});
+    g.base += l.total;
+    // Lo que entra de cada producto viaja con el gasto: sin esto, una compra
+    // apuntada por factura (sin pedido) no existía para el «impacto al mes»
+    // de las subidas, que solo miraba los pedidos recibidos.
+    if(ing && l.qtyIng > 0) g.compras.push({ingredientId: ing.id, qty: l.qtyIng});
   });
   const [fy, fm] = f.fecha.split('-').map(Number);
   const fechaPago = dateStr(new Date(new Date(f.fecha).getTime() + 30 * 86400000));
@@ -2780,6 +2796,7 @@ async function lfGuardar(){
       id: genId(), mes: fm - 1, año: fy, categoria: g.cat, proveedor, importe: lfR2(g.base), iva: g.iva,
       fecha: f.fecha, numFactura: f.numFactura || '', nifProveedor: f.nif || '',
       facturaId: f.facturaId || null, fechaPago, pagada: false, origen: 'factura-foto',
+      ...(g.compras.length ? {compras: g.compras} : {}),
     });
   });
   if(f.nif){
@@ -2816,4 +2833,365 @@ async function lfGuardar(){
   if(stockTocado && typeof renderStock === 'function'){ try{ renderStock(); }catch(e){} }
   try{ GE.renderVariables(); }catch(e){}
   showToast(t('lf.saved').replace('${n}', precios));
+}
+
+/* ============== La factura dentro del pedido a proveedor (7/10) ==============
+   El pedido decía qué se pidió y qué llegó; la factura, qué se cobra. Iban
+   por caminos distintos (la factura, como mucho, al cajón de Gastos
+   Variables) y nadie comparaba una con otro: un kilo de más facturado o una
+   subida de 30 céntimos pasaban sin que nadie los viera. Ahora la factura se
+   adjunta AL pedido y se cuadra contra él línea a línea.
+   - Se lee con la misma lectura que «Leer factura con foto» (LF_SISTEMA,
+     lfNormalizar, casamientos recordados): una sola forma de leer facturas.
+   - «Nada registrado se modifica»: en un pedido recibido NO se pisan las
+     cantidades recibidas. Las diferencias se ANOTAN en o.factura.cuadre, y el
+     stock solo se corrige si el usuario lo pide, con un ajuste explícito
+     que queda en el registro de stock.
+   - Los precios pasan por aplicarPrecioAlbaran (historial y aviso de
+     subidas), igual que al recibir, así el «impacto al mes» también cuenta.
+   - El gasto no se duplica: si el pedido ya lo generó, se rehace con los
+     importes de la factura en el mismo sitio (mismo mes, mismo estado de
+     pago) y con nº, NIF y adjunto; si el mes está cerrado, solo se le
+     enganchan los datos. Si aún no hay gasto, nace de la factura.
+   - Sin clave de IA se adjunta igual (nº, fecha, NIF a mano) y se explica
+     cómo activar la lectura. */
+let pfEstado = null;
+
+function pfFacturaLeida(o){
+  return !!(o && o.factura && o.factura.leida && o.factura.confirmada && Array.isArray(o.factura.lineas) && o.factura.lineas.length);
+}
+// Lo que se engancha a cada línea de gasto del pedido para que el libro de
+// gastos y el paquete del gestor citen la factura real.
+function pfDatosFactura(o){
+  const fa = o && o.factura;
+  if(!fa) return {};
+  const r = {};
+  if(fa.numFactura) r.numFactura = fa.numFactura;
+  if(fa.nif) r.nifProveedor = fa.nif;
+  if(fa.facturaId) r.facturaId = fa.facturaId;
+  return r;
+}
+// Rehace (o crea) el gasto del pedido con los importes de la factura.
+// `previos` son las líneas que el pedido ya tenía: se conservan su fecha
+// (el mes al que se imputó) y si estaba pagado.
+function pfGastoDesdeFactura(o, previos){
+  const fa = o.factura;
+  const grupos = {};
+  fa.lineas.forEach(l => {
+    if(!(l.total > 0)) return;
+    const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
+    const cat = gvCategoryForIngredient(ing);
+    const k = cat + '|' + (l.ivaPct || 0);
+    (grupos[k] = grupos[k] || {cat, iva: l.ivaPct || 0, base: 0}).base += l.total;
+  });
+  const base = previos[0] || null;
+  const fecha = base ? base.fecha : todayStr();
+  const d = new Date(fecha);
+  const fechaPago = base && base.fechaPago ? base.fechaPago : dateStr(new Date(d.getTime() + 30 * 86400000));
+  const pagada = previos.length > 0 && previos.every(v => v.pagada);
+  if(!Array.isArray(DB.ge.variables)) DB.ge.variables = [];
+  DB.ge.variables = DB.ge.variables.filter(v => v.pedidoId !== o.id);
+  Object.values(grupos).forEach(g => {
+    DB.ge.variables.push({
+      id: genId(), mes: base ? base.mes : d.getMonth(), año: base ? base.año : d.getFullYear(),
+      categoria: g.cat, proveedor: o.supplier, importe: lfR2(g.base), iva: g.iva,
+      fecha, pedidoId: o.id, auto: true, fechaPago, pagada, origen: 'factura-pedido', ...pfDatosFactura(o),
+    });
+  });
+}
+
+function pfTarjetaHtml(o){
+  const fa = o.factura;
+  if(!fa){
+    return `<div class="card owner-strict" id="pf-tarjeta" style="margin-bottom:10px">
+      <h3><i class="ti ti-file-invoice"></i> ${t('pf.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${t('pf.help')}</p>
+      <button class="btn btn-primary" id="pf-adjuntar" style="min-height:44px" onclick="pfAbrir(${o.id})"><i class="ti ti-paperclip"></i> ${t('pf.attach')}</button>
+    </div>`;
+  }
+  const adj = facturaAdjunta(fa.facturaId);
+  const cuadre = Array.isArray(fa.cuadre) ? fa.cuadre : [];
+  const difs = cuadre.filter(c => c.tipo !== 'igual');
+  return `<div class="card" id="pf-tarjeta" style="margin-bottom:10px">
+    <h3><i class="ti ti-file-invoice"></i> ${t('pf.title')}</h3>
+    <div style="font-size:13px;display:flex;gap:6px 14px;flex-wrap:wrap">
+      <span><span style="color:var(--muted)">${t('hr.gv.numFactura')}:</span> <strong id="pf-num">${escapeHtml(fa.numFactura || '—')}</strong></span>
+      <span><span style="color:var(--muted)">${t('common.date')}:</span> <strong>${escapeHtml(fa.fecha || '—')}</strong></span>
+      <span><span style="color:var(--muted)">${t('hr.gv.nifProveedor')}:</span> <strong>${escapeHtml(fa.nif || '—')}</strong></span>
+      ${fa.total ? `<span><span style="color:var(--muted)">${t('common.total')}:</span> <strong>${fmtMoney(fa.total)}</strong></span>` : ''}
+    </div>
+    ${adj ? `<div style="margin-top:8px">${adj.dataUrl.startsWith('data:image')
+      ? `<img src="${adj.dataUrl}" alt="" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src,'_blank')">`
+      : `<a href="${adj.dataUrl}" download="${escapeHtml(adj.name || 'factura.pdf')}" class="btn btn-sm" style="min-height:44px"><i class="ti ti-file-text"></i> ${escapeHtml(adj.name || 'factura.pdf')}</a>`}</div>` : ''}
+    ${!fa.leida ? `<p class="txt-xs" style="color:var(--muted);margin:8px 0 0">${t('pf.notRead')}</p>`
+      : `<div id="pf-difs" style="margin-top:8px;font-size:13px">${difs.length
+        ? difs.map(c => `<div class="pf-dif" style="color:${c.tipo === 'sube' || c.tipo === 'baja' ? '#8a5a00' : 'var(--red)'}"><i class="ti ti-alert-triangle"></i> ${escapeHtml(pfTextoFila(c))}</div>`).join('')
+        : `<div style="color:#2e7d32"><i class="ti ti-circle-check"></i> ${t('pf.allMatch')}</div>`}
+        ${fa.ajusteStock ? `<div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('pf.stockAdjusted')}</div>` : ''}</div>`}
+  </div>`;
+}
+
+function pfAbrir(pedidoId){
+  // Adjuntar la factura cambia precios y el gasto: es cosa del propietario,
+  // y se dice (un permiso negado en silencio se lee como una app rota).
+  if(typeof isOwnerSession === 'function' && !isOwnerSession()){ showToast(t('pf.ownerOnly'), 6000); return; }
+  const o = getPurchaseOrder(pedidoId);
+  if(!o) return;
+  pfEstado = {pedidoId};
+  const hayIA = typeof idrHayIA === 'function' && idrHayIA();
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-file-invoice"></i> ${t('pf.title')}</h3><button class="modal-close" onclick="pfCancelar()">&times;</button></div>
+    <div id="pf-cuerpo">
+      <p style="font-size:14px;line-height:1.5">${t(hayIA ? 'pf.intro' : 'pf.introNoKey')}</p>
+      ${hayIA ? '' : `<div id="pf-sin-clave" class="card" style="font-size:13px;line-height:1.5;padding:10px 12px">${t('lf.noKeyBody')}
+        <div><button class="btn btn-sm" style="min-height:44px;margin-top:6px" onclick="idrConfigModal()"><i class="ti ti-key"></i> ${t('lf.noKeyBtn')}</button></div></div>`}
+      <label class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer">
+        <i class="ti ti-camera"></i> ${t('lf.pick')}
+        <input type="file" id="pf-input" accept="image/*,application/pdf" style="display:none" onchange="pfArchivo(this)">
+      </label>
+    </div>`);
+}
+function pfCancelar(){
+  if(pfEstado && pfEstado.facturaId) borrarFacturaAdjunta(pfEstado.facturaId);
+  pfEstado = null;
+  closeModal();
+}
+
+async function pfArchivo(input){
+  const file = input && input.files && input.files[0];
+  if(!file || !pfEstado) return;
+  const o = getPurchaseOrder(pfEstado.pedidoId);
+  if(!o) return;
+  const facturaId = await guardarFacturaAdjunta(file);
+  if(!facturaId){ input.value = ''; return; }
+  const pedidoId = o.id;
+  const nifConocido = typeof GE !== 'undefined' && GE.nifDeProveedor ? (GE.nifDeProveedor(String(o.supplier || '').toUpperCase()) || '') : '';
+  pfEstado = {pedidoId, facturaId, leida: false, numFactura: '', fecha: todayStr(), nif: nifConocido, lineas: []};
+  const cuerpo = document.getElementById('pf-cuerpo');
+  const hayIA = typeof idrHayIA === 'function' && idrHayIA();
+  const adj = facturaAdjunta(facturaId);
+  const m = /^data:([^;]+);base64,(.*)$/.exec((adj && adj.dataUrl) || '');
+  if(!hayIA || !m){ pfPintarManual(); return; }
+  if(cuerpo) cuerpo.innerHTML = `<p style="display:flex;align-items:center;gap:8px;font-size:14px"><i class="ti ti-loader-2"></i> ${t('lf.reading')}</p>`;
+  let r;
+  try{
+    r = await llmChat(LF_SISTEMA, [{role:'user', content:'Lee esta factura y devuelve el JSON.'}],
+      {archivo: {mime: m[1], datos: m[2]}, temperatura: 0, maxTokens: 4000, esperaMs: 90000});
+  }catch(e){ r = {ok:false, motivo:'excepcion', detalle: String((e && e.message) || e)}; }
+  if(!pfEstado || pfEstado.facturaId !== facturaId) return; // se cerró mientras pensaba
+  const j = r.ok ? idrExtraerJson(r.texto) : null;
+  if(!r.ok || !j || typeof j !== 'object'){
+    // Sin lectura no se pierde la factura: se adjunta a mano, avisando.
+    pfEstado.error = r.ok ? t('lf.unreadable') : idrMensajeError(r);
+    pfPintarManual();
+    return;
+  }
+  const f = lfNormalizar(j);
+  // El proveedor es el del pedido: los casamientos recordados son suyos.
+  f.proveedor = o.supplier || f.proveedor;
+  lfCasarLineas(f);
+  Object.assign(pfEstado, {leida: true, numFactura: f.numFactura, fecha: f.fecha, nif: f.nif || nifConocido,
+    lineas: f.lineas, base: f.base, ivas: f.ivas, total: f.total, proveedor: f.proveedor, ajustarStock: false});
+  pfPintarCuadre();
+}
+
+function pfCabeceraHtml(e){
+  return `<div class="field-row">
+      <div class="field"><label>${t('hr.gv.numFactura')}</label><input type="text" id="pf-f-num" value="${escapeHtml(e.numFactura || '')}" onchange="pfEstado.numFactura=this.value.trim()"></div>
+      <div class="field"><label>${t('common.date')}</label><input type="date" id="pf-f-fecha" value="${escapeHtml(e.fecha || '')}" onchange="pfEstado.fecha=this.value"></div>
+    </div>
+    <div class="field"><label>${t('hr.gv.nifProveedor')}</label><input type="text" id="pf-f-nif" value="${escapeHtml(e.nif || '')}" onchange="pfEstado.nif=this.value.trim().toUpperCase()"></div>`;
+}
+function pfPintarManual(){
+  const e = pfEstado, cuerpo = document.getElementById('pf-cuerpo');
+  if(!e || !cuerpo) return;
+  cuerpo.innerHTML = `
+    ${e.error ? `<p id="pf-error" style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(e.error)}</p>` : ''}
+    <p id="pf-manual" style="font-size:13px;color:var(--muted)">${t('pf.manual')}</p>
+    ${pfCabeceraHtml(e)}
+    <div class="modal-footer">
+      <button class="btn" onclick="pfCancelar()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" id="pf-confirmar" onclick="pfConfirmar()"><i class="ti ti-device-floppy"></i> ${t('pf.saveAttach')}</button>
+    </div>`;
+}
+
+// Cuadra la factura contra el pedido. Para un pedido recibido se compara con
+// lo RECIBIDO (lo que entró en stock); si no, con lo pedido.
+function pfCuadre(o, e){
+  const recibido = o.estado === 'RECIBIDO';
+  const porIng = {}, sobran = [];
+  e.lineas.forEach(l => {
+    if(!(l.total > 0) && !l.cantidad) return;
+    if(l.ingredientId == null || !(o.items || []).some(it => it.ingredientId === l.ingredientId)){ sobran.push(l); return; }
+    const g = porIng[l.ingredientId] || (porIng[l.ingredientId] = {qty: 0, total: 0, lineas: []});
+    g.qty += Number(l.qtyIng) || 0; g.total += Number(l.total) || 0; g.lineas.push(l);
+  });
+  const filas = [];
+  (o.items || []).forEach(it => {
+    const ing = getIngredient(it.ingredientId);
+    const nombre = ing ? ing.name : '—', unidad = ing ? (ing.unit || '') : '';
+    const qtyPedido = recibido ? (it.cantidadRecibida != null ? Number(it.cantidadRecibida) : 0) : (Number(it.cantidad) || 0);
+    const g = porIng[it.ingredientId];
+    if(!g){
+      if(qtyPedido > 0) filas.push({tipo: 'falta', ingredientId: it.ingredientId, nombre, unidad, qtyPedido, qtyFactura: 0});
+      return;
+    }
+    const qtyFactura = Math.round(g.qty * 10000) / 10000;
+    const precioFactura = qtyFactura > 0 ? Math.round(g.total / qtyFactura * 10000) / 10000 : 0;
+    const precioAntes = ing ? Number(ing.price) || 0 : 0;
+    const pct = precioAntes && precioFactura ? Math.round((precioFactura - precioAntes) / precioAntes * 1000) / 10 : 0;
+    const fila = {ingredientId: it.ingredientId, nombre, unidad, qtyPedido, qtyFactura, precioAntes, precioFactura, pct,
+      actualizarPrecio: g.lineas.every(l => l.actualizarPrecio !== false)};
+    // Una fila puede traer cantidad distinta Y cambio de precio a la vez.
+    fila.cambiaPrecio = !!(precioAntes && precioFactura && Math.abs(precioFactura - precioAntes) > 0.0001);
+    if(Math.abs(qtyFactura - qtyPedido) > 0.001) fila.tipo = 'cantidad';
+    else if(fila.cambiaPrecio) fila.tipo = precioFactura > precioAntes ? 'sube' : 'baja';
+    else fila.tipo = 'igual';
+    filas.push(fila);
+  });
+  sobran.forEach(l => {
+    const ing = l.ingredientId != null ? getIngredient(l.ingredientId) : null;
+    filas.push({tipo: 'sobra', ingredientId: ing ? ing.id : null, nombre: ing ? ing.name : (l.descripcion || '—'),
+      unidad: ing ? (ing.unit || '') : (l.unidad || ''), qtyPedido: 0, qtyFactura: ing ? l.qtyIng : l.cantidad, importe: l.total});
+  });
+  const q = lfCuotasDeLineas(e);
+  const totalFactura = e.total || lfR2(q.base + q.cuota);
+  return {filas, totalPedido: lfR2(pedidoTotalConIva(o)), totalFactura, recibido};
+}
+function pfTextoPrecio(c){
+  return t('pf.row.' + (c.precioFactura > c.precioAntes ? 'sube' : 'baja')).replace('${a}', fmtMoney(c.precioAntes))
+    .replace('${b}', fmtMoney(c.precioFactura)).replace('${p}', fmtNum(Math.abs(c.pct), 1));
+}
+function pfTextoFila(c){
+  const u = c.unidad || '';
+  const q = n => fmtNum(n || 0, 3) + (u ? ' ' + u : '');
+  if(c.tipo === 'falta') return t('pf.row.falta').replace('${q}', q(c.qtyPedido));
+  if(c.tipo === 'sobra') return t('pf.row.sobra').replace('${q}', q(c.qtyFactura));
+  if(c.tipo === 'cantidad') return t('pf.row.cantidad').replace('${p}', q(c.qtyPedido)).replace('${f}', q(c.qtyFactura));
+  if(c.tipo === 'sube' || c.tipo === 'baja') return pfTextoPrecio(c);
+  return t('pf.row.igual');
+}
+
+function pfPintarCuadre(){
+  const e = pfEstado, cuerpo = document.getElementById('pf-cuerpo');
+  if(!e || !cuerpo) return;
+  const o = getPurchaseOrder(e.pedidoId);
+  if(!o) return;
+  const c = pfCuadre(o, e);
+  const color = {igual: '#2e7d32', sube: '#e0a100', baja: '#e0a100', cantidad: 'var(--red)', falta: 'var(--red)', sobra: 'var(--red)'};
+  const badge = {igual: 'badge-green', sube: 'badge-amber', baja: 'badge-amber', cantidad: 'badge-red', falta: 'badge-red', sobra: 'badge-red'};
+  const hayCantidad = c.recibido && c.filas.some(f => f.tipo === 'cantidad' && f.ingredientId != null);
+  const v = lfValidar(e);
+  const difTotal = lfR2(c.totalFactura - c.totalPedido);
+  cuerpo.innerHTML = `
+    <h4 style="margin:0 0 8px">${t('pf.review')}</h4>
+    ${pfCabeceraHtml(e)}
+    ${v.global.length ? `<div class="card" style="margin:8px 0;padding:10px 12px;border-left:4px solid var(--red)">${v.global.map(x => `<div style="color:var(--red);font-size:13px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(x)}</div>`).join('')}</div>` : ''}
+    <p class="txt-xs" style="color:var(--muted);margin:6px 0">${t(c.recibido ? 'pf.vsReceived' : 'pf.vsOrdered')}</p>
+    ${c.filas.map(f => `<div class="card pf-fila pf-${f.tipo}" data-ing="${escapeHtml(String(f.ingredientId == null ? '' : f.ingredientId))}" style="margin-bottom:6px;padding:8px 12px;border-left:4px solid ${color[f.tipo]}">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline">
+        <strong>${escapeHtml(f.nombre)}</strong>
+        <span class="badge ${badge[f.tipo]}">${t('pf.tag.' + f.tipo)}${(f.tipo === 'sube' || f.tipo === 'baja') ? ' ' + (f.pct > 0 ? '+' : '−') + fmtNum(Math.abs(f.pct), 1) + ' %' : ''}</span>
+      </div>
+      <div style="font-size:13px;margin-top:2px">${escapeHtml(pfTextoFila(f))}</div>
+      ${f.cambiaPrecio && f.tipo === 'cantidad' ? `<div style="font-size:13px;color:#8a5a00">${escapeHtml(pfTextoPrecio(f))}</div>` : ''}
+      ${f.cambiaPrecio ? `<label style="display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px"><input type="checkbox" class="pf-precio" ${f.actualizarPrecio ? 'checked' : ''} onchange="pfMarcarPrecio(${escapeHtml(JSON.stringify(f.ingredientId))}, this.checked)"> ${t('lf.updatePrice')}</label>` : ''}
+    </div>`).join('')}
+    <div class="card" id="pf-totales" style="margin:8px 0;padding:10px 12px;border-left:4px solid ${Math.abs(difTotal) <= 0.05 ? '#2e7d32' : 'var(--red)'}">
+      <div style="font-size:14px">${escapeHtml(t('pf.totals').replace('${p}', fmtMoney(c.totalPedido)).replace('${f}', fmtMoney(c.totalFactura)))}</div>
+      ${Math.abs(difTotal) > 0.05 ? `<div style="font-weight:700;color:var(--red)">${escapeHtml(t('pf.totalDiff').replace('${d}', (difTotal > 0 ? '+' : '−') + fmtMoney(Math.abs(difTotal))))}</div>` : ''}
+    </div>
+    ${hayCantidad ? `<label style="display:flex;align-items:flex-start;gap:8px;min-height:44px;font-size:13px"><input type="checkbox" id="pf-ajuste" ${e.ajustarStock ? 'checked' : ''} onchange="pfEstado.ajustarStock=this.checked" style="margin-top:3px"> ${t('pf.adjustStock')}</label>` : ''}
+    <p class="txt-xs" style="color:var(--muted)">${t(o.gvCreated ? 'pf.expenseLinked' : (c.recibido ? 'pf.expenseNew' : 'pf.expenseOnReceive'))}</p>
+    <div class="modal-footer">
+      <button class="btn" onclick="pfCancelar()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" id="pf-confirmar" onclick="pfConfirmar()"><i class="ti ti-check"></i> ${t('pf.confirm')}</button>
+    </div>`;
+}
+function pfMarcarPrecio(ingredientId, valor){
+  if(!pfEstado) return;
+  pfEstado.lineas.forEach(l => { if(l.ingredientId === ingredientId) l.actualizarPrecio = !!valor; });
+}
+
+function pfConfirmar(){
+  const e = pfEstado;
+  if(!e) return;
+  if(typeof isOwnerSession === 'function' && !isOwnerSession()){ showToast(t('pf.ownerOnly'), 6000); return; }
+  const o = getPurchaseOrder(e.pedidoId);
+  if(!o){ pfCancelar(); return; }
+  if(!e.fecha){ showToast(t('lf.needDate')); return; }
+  const fa = {facturaId: e.facturaId, numFactura: e.numFactura || '', fecha: e.fecha, nif: e.nif || '',
+    leida: !!e.leida, ts: new Date().toISOString(), actor: (typeof currentActorName === 'function') ? currentActorName() : ''};
+  let precios = 0;
+  if(e.leida){
+    const c = pfCuadre(o, e);
+    fa.lineas = e.lineas.filter(l => l.total > 0).map(l => ({descripcion: l.descripcion || '', ingredientId: l.ingredientId != null ? l.ingredientId : null,
+      qtyIng: Number(l.qtyIng) || 0, total: l.total, ivaPct: l.ivaPct || 0}));
+    fa.base = lfCuotasDeLineas(e).base; fa.total = c.totalFactura; fa.totalPedido = c.totalPedido;
+    // Las diferencias se ANOTAN tal como estaban al confirmar: es el papel
+    // que se enseña al proveedor para reclamar, no un cálculo que cambie
+    // cuando luego se mueva el precio de la Mega Lista.
+    fa.cuadre = c.filas.map(f => {
+      const r = {tipo: f.tipo, nombre: f.nombre, unidad: f.unidad, qtyPedido: f.qtyPedido, qtyFactura: f.qtyFactura || 0};
+      if(f.ingredientId != null) r.ingredientId = f.ingredientId;
+      if(f.precioAntes != null){ r.precioAntes = f.precioAntes; r.precioFactura = f.precioFactura; r.pct = f.pct; }
+      return r;
+    });
+    fa.confirmada = true;
+    // 1) Precios: subidas Y bajadas, por la misma puerta que la recepción.
+    const cas = lfCasamientos();
+    e.lineas.forEach(l => { if(l.ingredientId != null && l.descripcion) cas[lfClaveCasamiento(o.supplier, l.descripcion)] = l.ingredientId; });
+    c.filas.forEach(f => {
+      if(!f.cambiaPrecio || !f.actualizarPrecio) return;
+      const ing = getIngredient(f.ingredientId);
+      if(!ing) return;
+      aplicarPrecioAlbaran(ing, f.precioFactura, o.supplier);
+      precios++;
+    });
+    // 2) Stock: SOLO si se pidió, y como ajuste aparte. cantidadRecibida no
+    //    se toca: lo que se registró al recibir sigue siendo lo registrado.
+    if(e.ajustarStock && c.recibido){
+      const ajustes = [];
+      c.filas.forEach(f => {
+        if(f.tipo !== 'cantidad' || f.ingredientId == null) return;
+        const ing = getIngredient(f.ingredientId);
+        if(!ing) return;
+        const s = getStockEntry(f.ingredientId);
+        const before = s.qty || 0;
+        const delta = Math.round((f.qtyFactura - f.qtyPedido) * 10000) / 10000;
+        s.qty = Math.max(0, Math.round((before + delta) * 10000) / 10000);
+        // 'purchase' y no 'manual': es una corrección de la compra, no una
+        // merma, y no debe inflar el informe de mermas.
+        logStockAdjustment('ing', f.ingredientId, ing.name, before, s.qty, 'purchase');
+        ajustes.push({ingredientId: f.ingredientId, delta});
+      });
+      if(ajustes.length) fa.ajusteStock = ajustes;
+    }
+  }
+  o.factura = fa;
+  if(fa.nif){
+    if(!DB.ge.config) DB.ge.config = {};
+    DB.ge.config.nifProveedores = DB.ge.config.nifProveedores || {};
+    DB.ge.config.nifProveedores[String(o.supplier || '').toUpperCase()] = fa.nif;
+  }
+  // 3) El gasto, sin duplicar.
+  const previos = ((DB.ge && DB.ge.variables) || []).filter(v => v.pedidoId === o.id);
+  if(previos.length){
+    const cerrado = typeof GE !== 'undefined' && GE.isDateClosed && GE.isDateClosed(previos[0].fecha);
+    if(pfFacturaLeida(o) && !cerrado) pfGastoDesdeFactura(o, previos);
+    else previos.forEach(v => Object.assign(v, pfDatosFactura(o)));
+  } else if(o.estado === 'RECIBIDO' && pfFacturaLeida(o)){
+    pfGastoDesdeFactura(o, []);
+    o.gvCreated = true;
+  }
+  // Un pedido aún sin recibir: el gasto nacerá al recibirlo, ya con la
+  // factura (registerPedidoComoGastoVariable la usa). Crearlo ahora lo
+  // duplicaría en la recepción.
+  if(typeof logAudit === 'function') logAudit('stock_received', `${o.supplier || ''} ${fa.numFactura}`.trim());
+  pfEstado = null; // la foto ya es del pedido: que cerrar no la borre
+  saveDB();
+  closeModal();
+  if(fa.ajusteStock && typeof renderStock === 'function'){ try{ renderStock(); }catch(err){} }
+  if(pedidoDetailId === o.id){ try{ renderPedidoDetail(); }catch(err){} }
+  showToast(t('pf.saved').replace('${n}', precios));
 }
