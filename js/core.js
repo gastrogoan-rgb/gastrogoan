@@ -9810,8 +9810,22 @@ async function loadPagoOnlineStatus(){
 function copiarWebParaStripe(btn){
   const url = getPublicClientLinkPretty();
   const hecho = () => { if(btn) btn.innerHTML = '<i class="ti ti-check"></i> ' + escapeHtml(t('mn.pago.webCopied')); };
-  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(hecho).catch(() => prompt(t('mn.pago.webTitle'), url));
-  else prompt(t('mn.pago.webTitle'), url);
+  // Sin portapapeles (http, iframes, Safari antiguo) antes salía el prompt()
+  // nativo, gris y fuera de lugar. Tampoco vale promptText(): hay un solo
+  // modal y sustituiría a la guía de Stripe, con su botón para continuar.
+  // Se deja el enlace SELECCIONADO ahí mismo y se dice cómo copiarlo.
+  const aMano = () => {
+    const code = btn && btn.parentElement ? btn.parentElement.querySelector('code') : null;
+    if(code){
+      try{
+        const r = document.createRange(); r.selectNodeContents(code);
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      }catch(e){}
+    }
+    if(btn) btn.innerHTML = '<i class="ti ti-copy"></i> ' + escapeHtml(t('mn.pago.webCopyManual'));
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(hecho).catch(aMano);
+  else aMano();
 }
 function conectarStripe(){
   const webParaStripe = (typeof getPublicClientLinkPretty === 'function') ? getPublicClientLinkPretty() : '';
@@ -11104,8 +11118,11 @@ const CASH_DRAWER_KICK = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
 async function openCashDrawer(opts){
   const o = opts || {};
   const key = o.printerId || 'ticket';
-  if(!thermalPrintingSupported()){
-    if(!o.silent) showToast(t('thermal.notSupported'));
+  // Con impresión por navegador la app no tiene línea directa con la
+  // impresora: el pulso del cajón no se puede mandar. Se dice claro en vez
+  // de abrir un selector Bluetooth que este puesto no usa.
+  if(!thermalPrintingSupported() || getPrintMode(key) === 'browser'){
+    if(!o.silent) showToast(t('print.drawerBrowser'));
     return false;
   }
   if(!thermalPrinterCharacteristics.has(key)){
@@ -11144,20 +11161,125 @@ async function openCashDrawerManually(){
   showToast(t('drawer.opened'));
 }
 
-async function printToThermalPrinter(text, printerId){
+/* ============================================================
+   MODO DE IMPRESIÓN: BLUETOOTH O NAVEGADOR
+   Hasta ahora la única impresión directa era Web Bluetooth, que NO existe
+   en Safari (iPhone, iPad) ni en Firefox. En un iPad —el TPV más habitual
+   en hostelería— el botón de la térmica ni siquiera salía, y las
+   impresoras de red, USB o AirPrint (la mayoría de las de cocina) no
+   tenían forma de recibir un ticket con su formato. El modo "navegador"
+   manda el MISMO texto a la impresión del sistema, en una página del ancho
+   del rollo (@page 80/58 mm): vale para cualquier impresora instalada.
+   El modo se guarda por APARATO (localStorage), no en DB.business: el
+   Bluetooth depende del navegador de cada tablet, así que el iPad de la
+   barra y el Android de cocina pueden necesitar modos distintos.
+   ============================================================ */
+function printModeStorageKey(printerId){ return 'gg_print_mode_' + (printerId || 'ticket'); }
+function getPrintMode(printerId){
+  // Sin Bluetooth en este navegador no hay elección posible: devolver
+  // 'bluetooth' aquí solo serviría para fallar en cada ticket.
+  if(!thermalPrintingSupported()) return 'browser';
+  let m = '';
+  try{ m = localStorage.getItem(printModeStorageKey(printerId)) || ''; }catch(e){}
+  return m === 'browser' ? 'browser' : 'bluetooth';
+}
+function setPrintMode(printerId, mode){
+  try{ localStorage.setItem(printModeStorageKey(printerId), mode === 'browser' ? 'browser' : 'bluetooth'); }catch(e){}
+  if(typeof renderMiNegocio === 'function' && document.getElementById('minegocio-content')) renderMiNegocio();
+}
+// Ancho del rollo del ticket de cliente (las impresoras de comanda ya
+// guardan el suyo en anchoTicket). También por aparato: cada puesto tiene
+// su impresora.
+function getTicketPaperWidth(){
+  let w = '';
+  try{ w = localStorage.getItem('gg_print_width_ticket') || ''; }catch(e){}
+  return w === '58' ? 58 : 80;
+}
+function setTicketPaperWidth(w){
+  try{ localStorage.setItem('gg_print_width_ticket', String(w) === '58' ? '58' : '80'); }catch(e){}
+}
+// Documento de impresión de rollo. Se construye aparte (y no dentro de
+// printViaBrowser) para poder comprobarlo en las pruebas sin imprimir.
+// Con opts.html el contenido ya viene escapado; si es texto plano, se
+// escapa aquí (el ticket lleva nombres de platos y clientes).
+// ⚠️ size:80mm auto — sin "auto" el navegador pagina el ticket en hojas del
+// alto de un A4 y la impresora corta el papel a mitad de la cuenta.
+function buildRollPrintHtml(contenido, anchoMm, titulo, opts){
+  const ancho = anchoMm == 58 ? 58 : 80;
+  // Área imprimible real: los cabezales de 80 mm imprimen ~72 mm y los de
+  // 58 mm ~48 mm. Usar el ancho del papel entero cortaba la última columna
+  // (los precios) en las impresoras más estrictas.
+  const util = ancho == 58 ? 48 : 72;
+  const cuerpo = (opts && opts.html) ? contenido : `<pre>${escapeHtml(contenido)}</pre>`;
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(titulo || '')}</title>
+<style>
+@page{size:${ancho}mm auto;margin:0}
+html,body{margin:0;padding:0;background:#fff;color:#000}
+body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+</style></head><body>${cuerpo}</body></html>`;
+}
+// Imprime en un iframe oculto en vez de window.open: las ventanas nuevas
+// las bloquea el navegador cuando la impresión llega después de un await
+// (p.ej. tras fallar el Bluetooth), y en iPad abren una pestaña de la que
+// el camarero no sabe volver. El iframe imprime sobre la propia app.
+function printViaBrowser(contenido, anchoMm, titulo, opts){
+  const html = buildRollPrintHtml(contenido, anchoMm, titulo, opts);
+  try{
+    const viejo = document.getElementById('gg-print-frame');
+    if(viejo) viejo.remove();
+    const fr = document.createElement('iframe');
+    fr.id = 'gg-print-frame';
+    fr.setAttribute('aria-hidden', 'true');
+    fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    document.body.appendChild(fr);
+    const d = fr.contentWindow.document;
+    d.open(); d.write(html); d.close();
+    // Un respiro para que el iframe pinte antes de pedir el diálogo: Safari
+    // imprimía una página en blanco si se llamaba a print() al instante.
+    setTimeout(() => {
+      try{ fr.contentWindow.focus(); fr.contentWindow.print(); }
+      catch(e){ console.error('Error imprimiendo con el navegador', e); showToast(t('thermal.printFailed')); }
+    }, 250);
+    return true;
+  }catch(e){
+    console.error('Error preparando la impresión del navegador', e);
+    showToast(t('thermal.printFailed'));
+    return false;
+  }
+}
+
+/* Punto ÚNICO por el que pasa toda impresión de ticket o comanda en rollo.
+   Usa el modo configurado en este aparato para esa impresora y, si el
+   Bluetooth falla (apagada, fuera de alcance, selector cancelado), cae a la
+   impresión del navegador AVISANDO: un ticket que no sale en silencio es
+   peor que un ticket que sale por otro camino.
+   opts.ancho = 58|80 (por defecto, el del ticket de cliente de este aparato)
+   opts.html  = cuerpo HTML ya escapado para la versión de navegador (la
+                comanda lo usa para destacar los alérgenos en un recuadro).
+   opts.noPrompt = no abrir el selector Bluetooth si no hay conexión (las
+                comandas salen solas al marchar: abrir un selector ahí, sin
+                gesto del usuario, falla y además interrumpe). */
+async function printToThermalPrinter(text, printerId, opts){
+  const o = opts || {};
   const key = printerId || 'ticket';
-  if(!thermalPrintingSupported()){ showToast(t('thermal.notSupported')); return; }
+  const ancho = o.ancho || (key === 'ticket' ? getTicketPaperWidth() : 80);
+  const porNavegador = () => printViaBrowser(o.html || text, ancho, o.titulo || '', {html: !!o.html});
+  if(getPrintMode(key) === 'browser') return porNavegador();
+  const caer = () => { showToast(t('print.fallbackBrowser')); return porNavegador(); };
   if(!thermalPrinterCharacteristics.has(key)){
+    if(o.noPrompt) return caer();
     const connected = await connectThermalPrinter(key);
-    if(!connected) return;
+    if(!connected) return caer();
   }
   try{
     await writeThermalChunks(thermalPrinterCharacteristics.get(key), textToEscPos(text));
     showToast(t('thermal.printedOk'));
+    return true;
   }catch(e){
     console.error('Error imprimiendo en la impresora térmica', e);
     thermalPrinterCharacteristics.delete(key); // puede que se haya desconectado; forzar reconectar la próxima vez
-    showToast(t('thermal.printFailed'));
+    return caer();
   }
 }
 
