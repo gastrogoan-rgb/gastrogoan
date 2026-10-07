@@ -53,10 +53,16 @@ const IDR_PROVEEDORES = {
     // Verificado: responde a la llamada directa desde el navegador.
     url: (m, k) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(k)}`,
     cabeceras: () => ({'content-type':'application/json'}),
-    cuerpo: (sistema, mensajes, maxTokens) => ({
+    // `archivo` (opcional, {mime, datos} en base64): una foto o un PDF que
+    // viaja pegado al ÚLTIMO mensaje del usuario. Lo usa la lectura de
+    // facturas de proveedor (js/operations.js); Gemini admite los dos.
+    cuerpo: (sistema, mensajes, maxTokens, modelo, archivo, temperatura) => ({
       systemInstruction: {parts:[{text: sistema}]},
-      contents: mensajes.map(m => ({role: m.role === 'assistant' ? 'model' : 'user', parts:[{text: m.content}]})),
-      generationConfig: {maxOutputTokens: maxTokens, temperature: 0.8},
+      contents: mensajes.map((m, i) => ({role: m.role === 'assistant' ? 'model' : 'user',
+        parts: (archivo && i === mensajes.length - 1)
+          ? [{inlineData: {mimeType: archivo.mime, data: archivo.datos}}, {text: m.content}]
+          : [{text: m.content}]})),
+      generationConfig: {maxOutputTokens: maxTokens, temperature: temperatura != null ? temperatura : 0.8},
     }),
     extraer: j => {
       const c = j && j.candidates && j.candidates[0];
@@ -77,10 +83,20 @@ const IDR_PROVEEDORES = {
       'anthropic-version':'2023-06-01',
       'anthropic-dangerous-direct-browser-access':'true',
     }),
-    cuerpo: (sistema, mensajes, maxTokens, modelo) => ({
-      model: modelo, max_tokens: maxTokens, system: sistema,
-      messages: mensajes.map(m => ({role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content})),
-    }),
+    // Claude separa la foto (bloque `image`) del PDF (bloque `document`).
+    cuerpo: (sistema, mensajes, maxTokens, modelo, archivo, temperatura) => {
+      const c = {
+        model: modelo, max_tokens: maxTokens, system: sistema,
+        messages: mensajes.map((m, i) => ({role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: (archivo && i === mensajes.length - 1)
+            ? [{type: archivo.mime === 'application/pdf' ? 'document' : 'image',
+                source: {type:'base64', media_type: archivo.mime, data: archivo.datos}},
+               {type:'text', text: m.content}]
+            : m.content})),
+      };
+      if(temperatura != null) c.temperature = temperatura;
+      return c;
+    },
     extraer: j => ((j && j.content) || []).map(p => p.text||'').join('').trim(),
     motivoCorte: j => (j && j.stop_reason) || '',
     listaModelos: () => 'https://api.anthropic.com/v1/models',
@@ -145,12 +161,14 @@ async function llmChat(sistema, mensajes, opciones){
   // boton en "Pensando..." para siempre, sin error ni aviso. Desde fuera
   // parece que el boton no hace nada, que es justo lo que reporto el dueño.
   const corte = new AbortController();
-  const reloj = setTimeout(() => corte.abort(), IDR_ESPERA_MAX_MS);
+  // Leer una factura entera en foto tarda más que una frase de chat: quien
+  // llama puede pedir más espera (o.esperaMs).
+  const reloj = setTimeout(() => corte.abort(), o.esperaMs || IDR_ESPERA_MAX_MS);
   try{
     res = await fetch(def.url(modelo, cfg.clave), {
       method:'POST',
       headers: def.cabeceras(cfg.clave),
-      body: JSON.stringify(def.cuerpo(sistema, mensajes, maxTokens, modelo)),
+      body: JSON.stringify(def.cuerpo(sistema, mensajes, maxTokens, modelo, o.archivo, o.temperatura)),
       signal: corte.signal,
     });
   }catch(e){

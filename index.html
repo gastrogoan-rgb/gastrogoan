@@ -564,7 +564,8 @@
         </div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 id="gv-sec-title">Compras del mes</h4>
-            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> <span data-i18n="btn.addExtraPurchase">Añadir compra extra</span></button></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" id="lf-abrir" onclick="leerFacturaAbrir()"><i class="ti ti-scan"></i> <span data-i18n="lf.btn">Leer factura con foto</span></button>
+            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> <span data-i18n="btn.addExtraPurchase">Añadir compra extra</span></button></div></div>
           <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
             <input type="text" class="search-input" id="gv-search" data-i18n-ph="hr.gv.searchPlaceholder" placeholder="Buscar por proveedor o categoría..." oninput="GE.setGVSearch(this.value)">
           </div>
