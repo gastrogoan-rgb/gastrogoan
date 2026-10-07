@@ -139,6 +139,7 @@ lanzar; node test/auditoria-contable.mjs > "$SALIDA/auditoria-contable.txt" 2>&1
 lanzar; node test/paquete-gestor.mjs > "$SALIDA/paquete-gestor.txt" 2>&1 & P98=$!
 lanzar; node test/kpis-coach.mjs > "$SALIDA/kpis-coach.txt" 2>&1 & P99=$!
 lanzar; node test/plan360-fases.mjs > "$SALIDA/plan360-fases.txt" 2>&1 & P100=$!
+lanzar; node test/impresion.mjs > "$SALIDA/impresion.txt" 2>&1 & P101=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -264,5 +265,6 @@ espera $P97 "Auditoría contable: retención 115/111, envío al 10%, IVA de la s
 espera $P98 "Paquete para el gestor: periodo, Excel + CSV con columnas de libro registro, fotos de facturas y LÉEME" "$SALIDA/paquete-gestor.txt" "casos pasaron"
 espera $P99 "Números para el coach: indicadores del mes, foto del Día 1, marcador en euros e informe para WhatsApp" "$SALIDA/kpis-coach.txt" "casos pasaron"
 espera $P100 "Plan 360 y mantenimiento separados: servicio activo de cada cliente y agenda del coach" "$SALIDA/plan360-fases.txt" "casos pasaron"
+espera $P101 "Impresión sin Bluetooth: Navegador/AirPrint en rollo de 80/58 mm, datos escapados y caída avisada" "$SALIDA/impresion.txt" "todos los casos de impresión pasaron"
 
 exit $FALLOS
