@@ -26,7 +26,7 @@
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (!newData.exists() && data.child('_claimedAt').exists()))",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pedido_mesa' || newData.child('type').val() === 'pago_mesa')",
               "_claimedAt": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
                 ".validate": "newData.isNumber()"
@@ -74,6 +74,13 @@
             "$token": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 12",
               ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
+            }
+          },
+          "mesaQr": {
+            "$token": {
+              ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64",
+              ".validate": "newData.hasChildren(['mesa', 'updatedAt']) && newData.child('mesa').isString() && newData.child('mesa').val().length <= 60"
             }
           },
           "reservationLookup": {

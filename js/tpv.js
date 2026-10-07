@@ -797,6 +797,7 @@ function renderMesaCard(table){
   return `
     <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'} ${phaseClass}${upcomingRes?' mesa-reserved-soon':''}${mesaFria?' mesa-fria':''}${chaosBlink}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
       <div class="mesa-icons-row">
+        ${(typeof pedidosMesaQrPendientes === 'function' && pedidosMesaQrPendientes(table.id).length) ? `<span class="mesa-mini-badge" style="background:var(--ink);color:#fff" title="${escapeHtml(t('qrMesa.tpv.titulo'))}"><i class="ti ti-qrcode"></i></span>` : ''}
         ${mesaFria ? `<span class="mesa-mini-badge" style="background:var(--blue,#4E5A63);color:#fff" title="${t('tpv.mesaFria.hint')}"><i class="ti ti-snowflake"></i></span>` : ''}
         ${hayNuevos ? `<span class="mesa-mini-badge" title="${t('label.newItemsFromClient')}"><i class="ti ti-bell-ringing"></i></span>` : ''}
         ${order && order.pagado ? `<span class="mesa-mini-badge" title="${t('label.paidOnline')}"><i class="ti ti-credit-card"></i></span>` : ''}
@@ -1182,9 +1183,38 @@ function renderTPV(){
     ${renderTpvCartaSelector()}
     ${renderTpvMenuSelector()}
     ${renderLastCallBanner()}
+    ${renderQrMesaPendientes()}
     <div id="tpv-mesas-section">${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}</div>
     <div id="tpv-togo-section">${renderTpvToGo(tiposServicio)}</div>
   `;
+}
+
+// Pedidos llegados por la carta QR de una mesa que esperan a que sala los
+// acepte (si el negocio no los manda directo a cocina). Arriba del todo:
+// el comensal está esperando, no puede quedar escondido en una pestaña.
+function renderQrMesaPendientes(){
+  const lista = (typeof pedidosMesaQrPendientes === 'function') ? pedidosMesaQrPendientes() : [];
+  if(!lista.length) return '';
+  return `
+    <h3 style="margin-top:16px"><i class="ti ti-qrcode"></i> ${t('qrMesa.tpv.titulo')} <span class="badge badge-amber">${lista.length}</span></h3>
+    <div class="grid grid-4" id="tpv-qr-mesa-pendientes">
+      ${lista.map(p => `
+        <div class="card" style="border:2px solid var(--ink)">
+          <h3 style="justify-content:space-between;font-size:14px">
+            <span><i class="ti ti-armchair"></i> ${escapeHtml(p.mesaNombre || '')}</span>
+            <span class="badge badge-amber">${t('badge.newF')}</span>
+          </h3>
+          ${p.clienteNombre ? `<div class="txt-xs" style="color:var(--muted)">${escapeHtml(p.clienteNombre)}</div>` : ''}
+          <div style="margin:8px 0;font-size:13px">${(p.items || []).map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}</div>
+          ${p.notas ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px"><i class="ti ti-note"></i> ${escapeHtml(p.notas)}</div>` : ''}
+          ${p.preciosCorregidos ? `<div class="txt-xs" style="color:var(--ink);margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${t('qrMesa.tpv.preciosCorregidos')}</div>` : ''}
+          <div style="font-weight:700;font-size:16px;margin-bottom:8px">${fmtMoney((p.items || []).reduce((s, l) => s + l.price * l.qty, 0))}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-primary" style="flex:1;min-height:44px" onclick="aceptarPedidoMesaQr(${JSON.stringify(p.id)})"><i class="ti ti-check"></i> ${t('qrMesa.tpv.aceptar')}</button>
+            <button class="btn btn-sm btn-danger" style="flex:1;min-height:44px" onclick="rechazarPedidoMesaQr(${JSON.stringify(p.id)})"><i class="ti ti-x"></i> ${t('common.reject')}</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
 }
 
 // "Modo caos": en vez de las mesas agrupadas por zona, una única lista con
@@ -1635,7 +1665,10 @@ function orderAmountPaidOnline(order){
   // order.depositAmount: señal de la reserva vinculada, ya cobrada aparte
   // (ver confirmOpenTableOrder) — se resta igual que lo pagado por móvil,
   // para que el cliente no la pague dos veces al cobrar la mesa.
-  return itemsPaid + (order.propinaPagadaOnline || 0) + (order.depositAmount || 0);
+  // Lo pagado desde la carta por QR (cuenta de la mesa, todo o una parte),
+  // solo lo ya confirmado por Stripe (ver aplicarPagoMesaQr, js/core.js).
+  const qr = (order.pagosMesaQr || []).reduce((s, p) => s + (Number(p && p.importe) || 0), 0);
+  return itemsPaid + qr + (order.propinaPagadaOnline || 0) + (order.depositAmount || 0);
 }
 
 // Coste real de ingredientes de todo lo vendido en un pedido/venta, a
