@@ -8252,8 +8252,11 @@ function renderTicketConfigCard(){
         <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="previewTicketConfig()"><i class="ti ti-eye"></i> ${t('mn.ticket.preview')}</button>
       </div>
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-printer"></i> ${t('print.sectionTitle')}</p>
+    </div>
+    <!-- Impresora y cajón en su propia tarjeta: dentro del ticket la hacían
+         tan larga que descuadraba las dos columnas de Mi Negocio. -->
+    <div class="card">
+      <h3 style="color:var(--ink)"><i class="ti ti-printer"></i> ${t('print.sectionTitle')}</h3>
       ${renderPrintModeConfig('ticket', {ancho: true})}
       ${getPrintMode('ticket') === 'bluetooth' ? `
       <p style="font-size:12.5px;color:var(--muted);margin:10px 0">${t('thermal.sectionDesc')}</p>

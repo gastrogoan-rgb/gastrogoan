@@ -316,6 +316,12 @@ const FIREBASE_CONFIG = {
 
 let publicId = null;
 let tableIdFromUrl = null;
+// Carta por QR (7/10): el QR nuevo trae un TOKEN de mesa, no su id. Los QR
+// antiguos (?mesa=<id>) siguen yendo por el autopedido de siempre.
+let qrMesaToken = null;
+let qrMesaCuenta = undefined;      // undefined: cargando · null: QR no válido
+let qrMesaListener = false;
+let qrMesaAviso = '';
 let trackToken = null;
 let trackListenerAttached = false;
 // Último dato recibido, para poder REPINTAR al cambiar de idioma sin volver
@@ -423,6 +429,7 @@ const I18N = {
     'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Enviar pedido',
     'order.mesa.payWhen':'¿Cuándo pagas?','order.mesa.payLater':'Añadir a la cuenta de la mesa','order.mesa.payLaterDesc':'Se paga al final, junto con el resto de la mesa','order.mesa.payNow':'Pagar ahora con tarjeta','order.mesa.payNowDesc':'Pagas solo lo tuyo ahora mismo, sin esperar al resto de la mesa',
     'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
+    'mesaqr.titulo':'%s','mesaqr.intro':'Mira la carta, pide y paga desde aquí. Tu pedido llega a tu mesa.','mesaqr.inactivo':'Este restaurante no tiene activado el pedido desde la mesa. Llama al camarero.','mesaqr.invalido':'Este código QR ya no es válido. Pide al camarero el nuevo.','mesaqr.cargando':'Cargando tu mesa…','mesaqr.submit':'Enviar pedido a mi mesa','mesaqr.ok':'Pedido enviado. El camarero lo confirmará en un momento.','mesaqr.okDirecto':'Pedido enviado a cocina. ¡Gracias!','mesaqr.cuenta':'La cuenta de la mesa','mesaqr.cuentaVacia':'Todavía no hay nada en la cuenta de esta mesa.','mesaqr.total':'Total','mesaqr.pagado':'Ya pagado','mesaqr.pendiente':'Queda por pagar','mesaqr.enCurso':'Pago en curso: %s','mesaqr.pagarTodo':'Pagar todo (%s)','mesaqr.pagarParte':'Pagar una parte','mesaqr.parteImporte':'Importe a pagar (€)','mesaqr.pagarParteBtn':'Pagar esta parte','mesaqr.dividir':'Dividir entre','mesaqr.importeMal':'Escribe un importe entre 0,50 € y lo que queda por pagar.','mesaqr.sinPago':'Para pagar, pide la cuenta al camarero.','mesaqr.pagada':'Cuenta pagada. ¡Gracias!','mesaqr.pagoOk':'Pago recibido. La cuenta se actualizará en unos segundos.','mesaqr.descripcionPago':'Cuenta de %s',
     'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
     'cart.shipping.free':'Gratis','cart.shipping.freeHint':'Añade %s más y el envío te sale gratis',
     'cart.tip.label':'¿Añadir propina?','cart.tip.none':'Sin propina','cart.tip.other':'Otro','cart.tip.otherPlaceholder':'Importe en €','cart.tip.line':'Propina',
@@ -511,6 +518,7 @@ const I18N = {
     'order.submit.mesa':'Send order to kitchen','order.submit':'Send order',
     'order.mesa.payWhen':'When do you pay?','order.mesa.payLater':'Add to the table bill','order.mesa.payLaterDesc':'Pay at the end, together with the rest of the table','order.mesa.payNow':'Pay now by card','order.mesa.payNowDesc':'Pay just your part right now, without waiting for the rest of the table',
     'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
+    'mesaqr.titulo':'%s','mesaqr.intro':'See the menu, order and pay from here. Your order goes to your table.','mesaqr.inactivo':'This restaurant does not take orders from the table. Please call the waiter.','mesaqr.invalido':'This QR code is no longer valid. Ask the waiter for the new one.','mesaqr.cargando':'Loading your table…','mesaqr.submit':'Send order to my table','mesaqr.ok':'Order sent. The waiter will confirm it in a moment.','mesaqr.okDirecto':'Order sent to the kitchen. Thank you!','mesaqr.cuenta':'Table bill','mesaqr.cuentaVacia':'There is nothing on this table\'s bill yet.','mesaqr.total':'Total','mesaqr.pagado':'Already paid','mesaqr.pendiente':'Left to pay','mesaqr.enCurso':'Payment in progress: %s','mesaqr.pagarTodo':'Pay it all (%s)','mesaqr.pagarParte':'Pay a share','mesaqr.parteImporte':'Amount to pay (€)','mesaqr.pagarParteBtn':'Pay this share','mesaqr.dividir':'Split between','mesaqr.importeMal':'Enter an amount between €0.50 and what is left to pay.','mesaqr.sinPago':'To pay, ask the waiter for the bill.','mesaqr.pagada':'Bill paid. Thank you!','mesaqr.pagoOk':'Payment received. The bill will update in a few seconds.','mesaqr.descripcionPago':'Bill for %s',
     'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
     'cart.shipping.free':'Free','cart.shipping.freeHint':'Add %s more and delivery is free',
     'cart.tip.label':'Add a tip?','cart.tip.none':'No tip','cart.tip.other':'Other','cart.tip.otherPlaceholder':'Amount in €','cart.tip.line':'Tip',
@@ -599,6 +607,7 @@ const I18N = {
     'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Enviar comanda',
     'order.mesa.payWhen':'Quan pagues?','order.mesa.payLater':'Afegir al compte de la taula','order.mesa.payLaterDesc':'Es paga al final, junt amb la resta de la taula','order.mesa.payNow':'Pagar ara amb targeta','order.mesa.payNowDesc':'Pagues només el teu ara mateix, sense esperar la resta de la taula',
     'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
+    'mesaqr.titulo':'%s','mesaqr.intro':'Mira la carta, demana i paga des d\'aquí. La comanda arriba a la teva taula.','mesaqr.inactivo':'Aquest restaurant no té activada la comanda des de la taula. Truca al cambrer.','mesaqr.invalido':'Aquest codi QR ja no és vàlid. Demana el nou al cambrer.','mesaqr.cargando':'Carregant la teva taula…','mesaqr.submit':'Enviar comanda a la meva taula','mesaqr.ok':'Comanda enviada. El cambrer la confirmarà en un moment.','mesaqr.okDirecto':'Comanda enviada a cuina. Gràcies!','mesaqr.cuenta':'El compte de la taula','mesaqr.cuentaVacia':'Encara no hi ha res al compte d\'aquesta taula.','mesaqr.total':'Total','mesaqr.pagado':'Ja pagat','mesaqr.pendiente':'Queda per pagar','mesaqr.enCurso':'Pagament en curs: %s','mesaqr.pagarTodo':'Pagar-ho tot (%s)','mesaqr.pagarParte':'Pagar una part','mesaqr.parteImporte':'Import a pagar (€)','mesaqr.pagarParteBtn':'Pagar aquesta part','mesaqr.dividir':'Dividir entre','mesaqr.importeMal':'Escriu un import entre 0,50 € i el que queda per pagar.','mesaqr.sinPago':'Per pagar, demana el compte al cambrer.','mesaqr.pagada':'Compte pagat. Gràcies!','mesaqr.pagoOk':'Pagament rebut. El compte s\'actualitzarà en uns segons.','mesaqr.descripcionPago':'Compte de %s',
     'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
     'cart.shipping.free':'Gratis','cart.shipping.freeHint':'Afegeix %s més i l\'enviament et surt gratis',
     'cart.tip.label':'Vols afegir propina?','cart.tip.none':'Sense propina','cart.tip.other':'Altre','cart.tip.otherPlaceholder':'Import en €','cart.tip.line':'Propina',
@@ -963,6 +972,8 @@ function init(){
   publicId = getPublicIdFromUrl();
   const slug = getSlugFromUrl();
   tableIdFromUrl = getTableIdFromUrl();
+  // Un token lleva letras y mide 16+; un id de mesa es solo un número.
+  qrMesaToken = (tableIdFromUrl && /^(?=.*[A-Za-z])[A-Za-z0-9]{16,64}$/.test(tableIdFromUrl)) ? tableIdFromUrl : null;
   trackToken = getTrackTokenFromUrl();
   resToken = getResTokenFromUrl();
   if(!publicId && !slug){ showError('error.enlace'); return; }
@@ -975,7 +986,7 @@ function init(){
   // anterior en el historial es la página de pago de Stripe).
   // El botón vuelve a la MISMA página pero sin ese parámetro, para poder
   // seguir navegando con normalidad.
-  const backToSiteUrl = location.href.split('?')[0] + (publicId ? `?neg=${encodeURIComponent(publicId)}` : (slug ? `?n=${encodeURIComponent(slug)}` : ''));
+  const backToSiteUrl = location.href.split('?')[0] + (publicId ? `?neg=${encodeURIComponent(publicId)}` : (slug ? `?n=${encodeURIComponent(slug)}` : '')) + (qrMesaToken ? '&mesa=' + encodeURIComponent(qrMesaToken) : '');
   if(pago === 'ok' && (trackToken || resToken)){
     // Vuelta del banco con seguimiento: se quita «pago=ok» de la dirección
     // (si no, al recargar o compartir el enlace saldría siempre este aviso) y
@@ -984,6 +995,11 @@ function init(){
     avisoPagoHecho = t(resToken ? 'pago.ok.bannerRes' : 'pago.ok.banner');
     trackRecienEnviadoHasta = Date.now() + 15 * 60 * 1000;
     mostrarAvisoPagoHecho();
+  }else if(pago === 'ok' && qrMesaToken){
+    // Vuelta del banco tras pagar la cuenta de la mesa: se vuelve a la mesa,
+    // donde la cuenta se actualiza sola en cuanto el banco lo confirma.
+    try{ const u = new URL(location.href); u.searchParams.delete('pago'); history.replaceState(null, '', u.toString()); }catch(e){}
+    qrMesaAviso = t('mesaqr.pagoOk');
   }else if(pago === 'ok'){
     document.getElementById('app').innerHTML = `
       <div class="success">
@@ -3250,7 +3266,7 @@ function renderCartSummary(){
     <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
     ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
     ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
-    ${tipSelectorHtml()}
+    ${qrMesaToken && currentTab === 'mesa' ? '' : tipSelectorHtml()}
   `;
 }
 
@@ -3505,7 +3521,7 @@ function payWithCard(req, amount, description, refField, submitBtnId){
   const ref = req[refField] || genClientRef();
   req[refField] = ref;
 
-  const base = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
+  const base = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + (req.mesaToken ? '&mesa=' + encodeURIComponent(req.mesaToken) : '');
   // Al volver del banco, el cliente entra DIRECTO en el seguimiento de su
   // pedido o en «Gestionar mi reserva», igual que si hubiera pagado en
   // efectivo. Antes caía en una pantalla fija sin enlace a nada que decía
@@ -3606,6 +3622,7 @@ function setPaySubmitEnabled(enabled, submitBtnId){
 
 /* ============ PEDIDO EN MESA (auto-pedido) ============ */
 function renderMesaOrderForm(){
+  if(qrMesaToken){ renderMesaQrForm(); return; }
   const box = document.getElementById('tab-content');
   const cartas = getActiveCartasConPlatos();
 
@@ -3667,6 +3684,159 @@ function renderMesaOrderForm(){
     </div>
   `;
   renderCartSummary();
+}
+
+/* ============ CARTA POR QR EN LA MESA (7/10) ============
+   La mesa llega por su token. Se lee SOLO el nodo de esa mesa
+   (mesaQr/{token}): su nombre y su cuenta, sin datos de nadie. El pedido
+   sale como 'pedido_mesa' y los precios los vuelve a poner el negocio con
+   su carta; el pago, como 'pago_mesa', y solo cuenta lo que confirme Stripe. */
+function engancharCuentaMesaQr(){
+  if(qrMesaListener || !qrMesaToken) return;
+  qrMesaListener = true;
+  db.ref('gastrogoan/public/' + publicId + '/mesaQr/' + qrMesaToken).on('value', snap => {
+    const antes = qrMesaCuenta;
+    qrMesaCuenta = snap.val() || null;
+    // Primera respuesta (o QR que deja de valer o vuelve): se pinta todo.
+    // Después, solo la cuenta, para no borrar lo que el comensal pide.
+    if(antes === undefined || antes === null || !qrMesaCuenta){ if(currentTab === 'mesa') renderMesaQrForm(); }
+    else pintarCuentaMesaQr();
+  }, () => { qrMesaCuenta = null; if(currentTab === 'mesa') renderMesaQrForm(); });
+}
+function qrMesaActivo(){ return !!(DB.business && DB.business.qrMesa && DB.business.qrMesa.activo); }
+function renderMesaQrForm(){
+  const box = document.getElementById('tab-content');
+  if(!box) return;
+  cartTipPct = 0; cartTipCustom = 0;
+  if(!qrMesaActivo()){ box.innerHTML = `<div class="card"><div class="empty">${t('mesaqr.inactivo')}</div></div>`; return; }
+  engancharCuentaMesaQr();
+  if(qrMesaCuenta === undefined){ box.innerHTML = `<div class="card"><div class="empty"><div class="spinner"></div>${t('mesaqr.cargando')}</div></div>`; return; }
+  if(qrMesaCuenta === null){ box.innerHTML = `<div class="card"><div class="empty">${t('mesaqr.invalido')}</div></div>`; return; }
+  const cartas = getActiveCartasConPlatos();
+  const hayCarta = cartas.length || getActiveMenusPublic().length;
+  box.innerHTML = `
+    ${qrMesaAviso ? `<div class="card" role="status" id="mesaqr-aviso" style="border:2px solid var(--green)"><strong>${escapeHtml(qrMesaAviso)}</strong></div>` : ''}
+    <div class="card">
+      <h2>${escapeHtml(t('mesaqr.titulo').replace('%s', qrMesaCuenta.mesa || ''))}</h2>
+      <p style="font-size:13px;color:var(--muted);margin-top:-6px">${t('mesaqr.intro')}</p>
+      ${hayCarta ? buildMenuHtml(cartas) : `<div class="empty">${t('carta.empty.mesa')}</div>`}
+    </div>
+    ${hayCarta ? `
+    <div class="card" id="cart-summary"></div>
+    <div class="card">
+      <div class="field">
+        <label for="m-name">${t('order.nombre')}</label>
+        <input type="text" id="m-name" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="m-notes">${t('order.notas')}</label>
+        <textarea id="m-notes" maxlength="300" placeholder="${t('order.notas.placeholder')}"></textarea>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
+        <input type="checkbox" id="o-privacy-consent" class="consent-check">
+        <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
+      </label>
+      <button class="btn btn-primary" id="o-submit" onclick="submitMesaQrOrder()">${t('mesaqr.submit')}</button>
+    </div>` : ''}
+    <div class="card" id="mesaqr-cuenta"></div>
+  `;
+  qrMesaAviso = '';
+  if(hayCarta) renderCartSummary();
+  pintarCuentaMesaQr();
+}
+function pintarCuentaMesaQr(){
+  const box = document.getElementById('mesaqr-cuenta');
+  if(!box || !qrMesaCuenta) return;
+  const c = qrMesaCuenta;
+  const lineas = Array.isArray(c.lineas) ? c.lineas : Object.values(c.lineas || {});
+  if(!c.abierta || !lineas.length){
+    box.innerHTML = `<h2>${t('mesaqr.cuenta')}</h2><div class="empty">${t('mesaqr.cuentaVacia')}</div>`;
+    return;
+  }
+  const fila = (izq, der, fuerte) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--border);${fuerte ? 'font-weight:700;color:var(--ink)' : ''}"><span>${izq}</span><span class="mono" style="white-space:nowrap">${der}</span></div>`;
+  const pendiente = Number(c.pendiente) || 0;
+  let pago = '';
+  if(pendiente <= 0.009){
+    pago = `<p style="margin:12px 0 0;font-weight:700">✅ ${t('mesaqr.pagada')}</p>`;
+  }else if(!pagoOnlineActivo){
+    pago = `<p style="margin:12px 0 0;font-size:13.5px;color:var(--muted)">${t('mesaqr.sinPago')}</p>`;
+  }else{
+    const parte = Math.max(0.5, Math.ceil(pendiente / 2 * 100) / 100);
+    pago = `
+      <button class="btn btn-primary" id="mq-pagar-todo" style="margin-top:12px" onclick="pagarCuentaMesaQr('todo')">${escapeHtml(t('mesaqr.pagarTodo').replace('%s', fmtMoney(pendiente)))}</button>
+      <div class="field" style="margin-top:14px">
+        <label for="mq-importe">${t('mesaqr.pagarParte')}</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+          <span style="font-size:13px;color:var(--muted)">${t('mesaqr.dividir')}</span>
+          ${[2,3,4,5,6].map(n => `<button type="button" class="btn btn-sm" style="flex:1;min-width:44px;min-height:44px" onclick="dividirCuentaMesaQr(${n})">${n}</button>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="number" id="mq-importe" inputmode="decimal" min="0.5" step="0.01" max="${pendiente.toFixed(2)}" value="${parte.toFixed(2)}" style="flex:1;min-width:120px" aria-label="${escapeHtml(t('mesaqr.parteImporte'))}">
+          <button class="btn" id="mq-pagar-parte" style="flex:1;min-width:120px;min-height:44px" onclick="pagarCuentaMesaQr('parte')">${t('mesaqr.pagarParteBtn')}</button>
+        </div>
+      </div>`;
+  }
+  box.innerHTML = `
+    <h2>${t('mesaqr.cuenta')}</h2>
+    ${lineas.map(l => fila(`${Number(l.q) || 0} × ${escapeHtml(l.n || '')}`, fmtMoney((Number(l.p) || 0) * (Number(l.q) || 0)))).join('')}
+    ${fila(t('mesaqr.total'), fmtMoney(Number(c.total) || 0), true)}
+    ${(Number(c.pagado) || 0) > 0 ? fila(t('mesaqr.pagado'), fmtMoney(Number(c.pagado) || 0)) : ''}
+    ${fila(t('mesaqr.pendiente'), fmtMoney(pendiente), true)}
+    ${(Number(c.enCurso) || 0) > 0 ? `<p style="font-size:13px;color:var(--muted);margin:8px 0 0">${escapeHtml(t('mesaqr.enCurso').replace('%s', fmtMoney(Number(c.enCurso))))}</p>` : ''}
+    ${pago}`;
+}
+function dividirCuentaMesaQr(n){
+  const el = document.getElementById('mq-importe');
+  const pendiente = Number(qrMesaCuenta && qrMesaCuenta.pendiente) || 0;
+  if(el && n > 0) el.value = Math.max(0.5, Math.ceil(pendiente / n * 100) / 100).toFixed(2);
+}
+function pagarCuentaMesaQr(modo){
+  if(submittingRequest || !qrMesaCuenta) return;
+  const pendiente = Math.round((Number(qrMesaCuenta.pendiente) || 0) * 100) / 100;
+  let importe = pendiente;
+  if(modo === 'parte'){
+    const el = document.getElementById('mq-importe');
+    importe = Math.round((parseFloat(el && el.value) || 0) * 100) / 100;
+  }
+  // Stripe no cobra menos de 0,50 €; y más de lo que queda no tiene sentido.
+  if(!(importe >= 0.5) || importe > pendiente + 0.001){ showInlineError(t('mesaqr.importeMal')); return; }
+  submittingRequest = true;
+  const btnId = modo === 'parte' ? 'mq-pagar-parte' : 'mq-pagar-todo';
+  setBtnLoading(btnId, true);
+  const req = {type: 'pago_mesa', mesaToken: qrMesaToken, importe, createdAt: new Date().toISOString()};
+  payWithCard(req, importe, t('mesaqr.descripcionPago').replace('%s', qrMesaCuenta.mesa || ''), 'clientRef', btnId);
+}
+function submitMesaQrOrder(){
+  if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
+  if(submittingRequest) return;
+  if(!document.getElementById('o-privacy-consent').checked){ showInlineError(t('privacy.mustAccept')); return; }
+  submittingRequest = true;
+  setBtnLoading('o-submit', true);
+  const req = {
+    type: 'pedido_mesa', mesaToken: qrMesaToken,
+    clienteNombre: document.getElementById('m-name').value.trim().slice(0, 60),
+    notas: document.getElementById('m-notes').value.trim().slice(0, 300),
+    // El precio que viaja es solo lo que vio el comensal: la app del negocio
+    // lo vuelve a poner con su carta (revisarPreciosPedidoPublico).
+    items: cart.map(l => ({platoId: l.recipeId, name: l.name, price: l.price, qty: l.qty, modificadores: l.modificadores || undefined})),
+    total: cart.reduce((s, l) => s + l.price * l.qty, 0),
+    createdAt: new Date().toISOString()
+  };
+  // JSON ida y vuelta: Firebase rechaza un `undefined` en cualquier rincón.
+  db.ref('gastrogoan/public/' + publicId + '/requests').push(JSON.parse(JSON.stringify(req))).then(() => {
+    submittingRequest = false;
+    cart = [];
+    const directo = DB.business && DB.business.qrMesa && DB.business.qrMesa.aceptaCamarero === false;
+    qrMesaAviso = t(directo ? 'mesaqr.okDirecto' : 'mesaqr.ok');
+    renderMesaQrForm();
+    const av = document.getElementById('mesaqr-aviso');
+    if(av && av.scrollIntoView) av.scrollIntoView({block: 'start'});
+  }).catch(e => {
+    console.error(e);
+    showInlineError(t('error.envio'));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+  });
 }
 
 function submitMesaOrder(){

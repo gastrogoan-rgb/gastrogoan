@@ -1100,7 +1100,7 @@ td.wrap{white-space:normal}
 .manual-tip{background:var(--brand-cream);border-left:3px solid var(--ink);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--ink);display:block;overflow-wrap:break-word}
 .manual-tip>i:first-child{float:left;margin-right:8px}
 /* Mismo caso que .manual-tip: block + icono flotado, no flex. */
-.manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#8A7440;display:block;overflow-wrap:break-word}
+.manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#6B5A2E;display:block;overflow-wrap:break-word}
 .manual-warning>i:first-child{float:left;margin-right:8px}
 .manual-tip i,.manual-warning i{flex-shrink:0;margin-top:2px;font-size:15px}
 .manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px;display:block;overflow-x:auto}

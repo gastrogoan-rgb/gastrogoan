@@ -7361,9 +7361,10 @@ function cuentaPublicaMesa(tbl){
 // Publica la cuenta de cada mesa con QR, solo si ha cambiado (la firma no
 // lleva la hora: si no, se reescribirían todas en cada guardado).
 let mesaQrPublicado = {};
-function publicarMesasQr(app, publicId){
+// Recibe la nube del ESPEJO (getPublicMirrorApp), nunca la plataforma.
+function publicarMesasQr(espejoApp, publicId){
   const cfg = qrMesaConfig();
-  const nodo = token => app.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + token);
+  const nodo = token => espejoApp.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + token);
   const vivos = new Set();
   if(cfg.activo){
     (DB.tables || []).forEach(tbl => {
