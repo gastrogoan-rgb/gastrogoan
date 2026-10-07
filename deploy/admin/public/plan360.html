@@ -522,7 +522,10 @@ function plan360Huella(biz){
 function avisoCambiosDelNegocio(){
   const st = document.getElementById('client-status');
   if(!st) return;
-  st.innerHTML = 'El negocio ha hecho cambios en su Plan 360. <button class="btn btn-sm" onclick="renderClientGrid()">Ver calendario actualizado</button>';
+  // Si el coach está en el mantenimiento, el botón le deja ahí (no le saca al calendario).
+  st.innerHTML = document.querySelector('.mant-semana')
+    ? 'El negocio ha marcado o contestado algo en su mantenimiento. <button class="btn btn-sm" onclick="renderMantPage()">Ver el mes actualizado</button>'
+    : 'El negocio ha hecho cambios en su Plan 360. <button class="btn btn-sm" onclick="renderClientGrid()">Ver calendario actualizado</button>';
 }
 function saveRemoteBiz(){
   if(!currentBizRef || !remoteBiz) return;
@@ -4736,7 +4739,8 @@ function mantMes(clave, crear){
   return mes;
 }
 function mantSemana(mes, sk){
-  if(!mes.semanas[sk]) mes.semanas[sk] = {canal: 'whatsapp', items: {}};
+  // El mismo canal que enseña la pantalla: 2º y 4º lunes, videollamada.
+  if(!mes.semanas[sk]) mes.semanas[sk] = {canal: Number(sk.slice(1)) % 2 === 0 ? 'video' : 'whatsapp', items: {}};
   if(!mes.semanas[sk].items || typeof mes.semanas[sk].items !== 'object') mes.semanas[sk].items = {};
   return mes.semanas[sk];
 }
@@ -4756,7 +4760,7 @@ function renderMantPage(clave){
   const lunes = mantLunesDelMes(mantMesActivo);
   const [y, m] = mantMesActivo.split('-').map(Number);
   const nombreMes = new Date(y, m - 1, 1).toLocaleDateString('es-ES', {month: 'long', year: 'numeric'});
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = p360Fecha(new Date());   // hora local: toISOString daba el día de ayer de 00:00 a 02:00
   let total = 0, hechos = 0;
   if(mes) Object.values(mes.semanas).forEach(s => Object.values((s && s.items) || {}).forEach(it => { total++; if(it && it.hecho) hechos++; }));
   const semanaHtml = (fecha, i) => {
@@ -5142,8 +5146,11 @@ function kpiMeterInforme(clave){
 // Cierre: el Día 1 frente al último mes con datos, sin teclear.
 function kpiCierreHtml(){
   const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
-  const claves = Object.keys(K.meses || {}).sort();
+  // El último mes COMPLETO: el mes en curso va a medias y compararlo con
+  // un mes entero decía que el negocio vendía la mitad.
+  const claves = Object.keys(K.meses || {}).sort().filter(c => c < mantMesClave(new Date()) && (!K.dia1 || c !== K.dia1.mes));
   const ult = claves.length ? K.meses[claves[claves.length - 1]] : null;
+  if(K.dia1 && !ult) return `<p class="muted" style="font-size:12.5px;margin:0 0 8px">Aún no hay un mes completo después del Día 1 con el que comparar. Sale solo en cuanto termine el primero.</p>`;
   if(!K.dia1 || !ult) return `<p class="muted" style="font-size:12.5px;margin:0 0 8px">Cuando el negocio abra su app con el Plan 360 en marcha, aquí saldrán sus números del Día 1 y de hoy, sin teclearlos.</p>`;
   const f = KPI_FILAS.filter(x => K.dia1[x.k] != null || ult[x.k] != null);
   return `<div style="font-size:12.5px;margin-bottom:8px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:360px">
@@ -5154,7 +5161,9 @@ function kpiCierreHtml(){
 }
 function kpiRellenarCierre(){
   const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
-  const claves = Object.keys(K.meses || {}).sort();
+  // El último mes COMPLETO: el mes en curso va a medias y compararlo con
+  // un mes entero decía que el negocio vendía la mitad.
+  const claves = Object.keys(K.meses || {}).sort().filter(c => c < mantMesClave(new Date()) && (!K.dia1 || c !== K.dia1.mes));
   const ult = claves.length ? K.meses[claves[claves.length - 1]] : null;
   if(!K.dia1 || !ult) return;
   if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
@@ -5195,9 +5204,13 @@ function p360MantTieneMeses(b){
 }
 function p360Fase(b){
   b = b || {};
-  const fijada = b.plan360Servicio && b.plan360Servicio.fase;
-  if(fijada && P360_FASES[fijada]) return fijada;
   const m = (b.plan360Cierre && b.plan360Cierre.mantenimiento) || {};
+  const sv = b.plan360Servicio || {}, fijada = sv.fase;
+  // La fase fijada a mano manda, salvo que el negocio haya contestado
+  // DESPUÉS en el cierre, o que sea «Plan 360» con los 28 días ya pasados.
+  const respondido = m.respondidoEn || m.firmaFecha || 0;
+  const diaF = p360DiaDelPrograma(b);
+  if(fijada && P360_FASES[fijada] && !(respondido > (sv.cambiado || 0)) && !(fijada === '360' && diaF !== null && diaF > 28)) return fijada;
   if(m.respuesta === 'acepta') return 'mant';
   const dia = p360DiaDelPrograma(b);
   if(dia !== null && dia <= 28) return '360';
@@ -5349,7 +5362,7 @@ async function mantLeerDeUnNegocio(e){
   }
 }
 function mantTarjetasHtml(conMant, lista){
-  return conMant.map(f => f.error ? `<div class="card" style="margin-bottom:8px"><strong>${esc(f.name)}</strong> <span class="muted">— no se pudo leer su nube ahora mismo.</span></div>` : `
+  return conMant.map(f => `
       <div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="mantAbrirDesdeSemana(this.dataset.t, this.dataset.n)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
           <strong style="flex:1">${esc(f.name)}</strong>
@@ -5393,7 +5406,7 @@ function p360ResumenPrograma(b, hoyStr){
   const prog = Array.isArray(b.plan360Program) ? b.plan360Program : [];
   let hechas = 0, total = 0; const atrasadas = [];
   prog.forEach(d => {
-    if(d.phase !== 'trabajo' || !Array.isArray(d.tasks)) return;
+    if(!d || d.phase !== 'trabajo' || !Array.isArray(d.tasks)) return;
     const f = b.plan360StartDate ? p360FechaDiaPrograma(b, d.day) : null;
     d.tasks.forEach(tk => { if(!tk || !tk.title) return; total++; if(tk.status === 'hecha') hechas++; else if(f && f < hoyStr) atrasadas.push(tk.title); });
   });
@@ -5404,6 +5417,7 @@ function p360EventosDia(f, fechaStr){
   const b = f.biz || {}, out = [];
   if(f.fase === '360' && b.plan360StartDate){
     (Array.isArray(b.plan360Program) ? b.plan360Program : []).forEach(d => {
+      if(!d) return;
       if(p360FechaDiaPrograma(b, d.day) !== fechaStr) return;
       if(d.phase === 'presencial') out.push({i: 'ti-map-pin', t: 'Día ' + d.day + ' presencial'});
       else if(d.reunion) out.push({i: d.reunion.tipo === 'presencial' ? 'ti-users' : 'ti-video', t: 'Reunión ' + (d.reunion.tipo === 'presencial' ? 'presencial' : 'online')});
@@ -5417,9 +5431,27 @@ function p360EventosDia(f, fechaStr){
       Object.keys(mes.semanas).forEach(sk => {
         const sem = mes.semanas[sk] || {};
         if(lunes[Number(sk.slice(1)) - 1] === fechaStr) out.push({i: sem.canal === 'video' ? 'ti-video' : 'ti-brand-whatsapp', t: sem.canal === 'video' ? 'Videollamada' : 'WhatsApp'});
-        Object.values(sem.items || {}).forEach(it => { if(it && it.titulo && it.tipo !== 'tarea' && !it.hecho && mantFechaItem(clave, sk, it) === fechaStr) out.push({i: 'ti-send', t: it.titulo}); });
       });
     }
+    // Las entregas, también las del 5º lunes que caen ya en el mes siguiente.
+    [clave, kpiClaveMes(clave, -1)].forEach(c => {
+      const ms = b.plan360Mant.meses[c];
+      Object.keys((ms && ms.semanas) || {}).forEach(sk => Object.values((ms.semanas[sk] || {}).items || {}).forEach(it => {
+        if(it && it.titulo && it.tipo !== 'tarea' && !it.hecho && mantFechaItem(c, sk, it) === fechaStr) out.push({i: 'ti-send', t: it.titulo});
+      }));
+    });
+  }
+  // Lo que NO puede depender de la memoria del coach: sale hoy.
+  if(fechaStr === f.hoyStr){
+    const meses = (b.plan360Mant && b.plan360Mant.meses) || {};
+    const claveHoy = fechaStr.slice(0, 7), mesHoy = meses[claveHoy];
+    if(f.fase === 'mant' && !(mesHoy && mesHoy.semanas && Object.keys(mesHoy.semanas).length)) out.push({i: 'ti-calendar-plus', t: 'Mes sin preparar: «Rellenar con mi mes tipo»', alerta: true});
+    const mAnt = meses[kpiClaveMes(claveHoy, -1)];
+    if(f.fase === 'mant' && mAnt && mAnt.semanas && !(mAnt.cierre && mAnt.cierre.ts)) out.push({i: 'ti-flag-check', t: 'Cerrar el mes de ' + kpiNombreMes(kpiClaveMes(claveHoy, -1)).toLowerCase(), alerta: true});
+    const mc = (b.plan360Cierre && b.plan360Cierre.mantenimiento) || {};
+    const dia = p360DiaDelPrograma(b);
+    if(dia !== null && dia > 28 && !mc.respuesta && f.fase !== 'mant') out.push({i: 'ti-alert-triangle', t: 'Plan 360 terminado sin respuesta al mantenimiento', alerta: true});
+    if(f.fase === 'piensa' && mc.volverAHablarFecha && mc.volverAHablarFecha < fechaStr) out.push({i: 'ti-phone-call', t: 'Vencido: volver a hablar del mantenimiento', alerta: true});
   }
   const m = (b.plan360Cierre && b.plan360Cierre.mantenimiento) || {};
   if(f.fase === 'piensa' && m.volverAHablarFecha === fechaStr) out.push({i: 'ti-phone-call', t: 'Volver a hablar del mantenimiento'});
@@ -5439,7 +5471,7 @@ async function renderMiSemana(){
       if(lectura.sinNube) return Object.assign({}, c, {sinNube: true, fase: 'fin'});
       const biz = lectura.biz || {};
       const fase = p360Fase(biz);
-      const r = Object.assign({}, c, {biz, fase, kpis: lectura.kpis, dia: p360DiaDelPrograma(biz), prog: p360ResumenPrograma(biz, hoyStr)});
+      const r = Object.assign({}, c, {biz, fase, hoyStr, kpis: lectura.kpis, dia: p360DiaDelPrograma(biz), prog: p360ResumenPrograma(biz, hoyStr)});
       if(lectura.mant) Object.assign(r, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)));
       return r;
     } catch(err){
@@ -5473,7 +5505,7 @@ async function renderMiSemana(){
       <div style="font-weight:700;margin-bottom:8px">Esta semana</div>
       ${agenda.map(a => `<div style="display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--border);${a.fs === hoyStr ? 'background:var(--brand-cream);' : ''}">
         <div style="width:64px;flex:none;font-weight:${a.fs === hoyStr ? '800' : '600'};font-size:13px">${esc(nombreDia(a.d))}</div>
-        <div style="flex:1;min-width:0;font-size:13px">${a.ev.length ? a.ev.map(e => `<div style="cursor:pointer" data-t="${esc(e.tenantId)}" data-n="${esc(e.cliente)}" onclick="${e.fase === 'mant' ? 'mantAbrirDesdeSemana' : 'openClient'}(this.dataset.t, this.dataset.n)"><i class="ti ${e.i}" style="color:${P360_FASES[e.fase].color}"></i> <strong>${esc(e.cliente)}</strong> · ${esc(e.t)}</div>`).join('') : '<span class="muted">—</span>'}</div>
+        <div style="flex:1;min-width:0;font-size:13px">${a.ev.length ? a.ev.map(e => `<div style="cursor:pointer" data-t="${esc(e.tenantId)}" data-n="${esc(e.cliente)}" onclick="${e.fase === 'mant' ? 'mantAbrirDesdeSemana' : 'openClient'}(this.dataset.t, this.dataset.n)"><i class="ti ${e.i}" style="color:${e.alerta ? 'var(--red)' : P360_FASES[e.fase].color}"></i> <strong>${esc(e.cliente)}</strong> · ${esc(e.t)}</div>`).join('') : '<span class="muted">—</span>'}</div>
       </div>`).join('')}
     </div>
   `;
@@ -5489,7 +5521,7 @@ async function renderMiSemana(){
     const m = ((f.biz || {}).plan360Cierre || {}).mantenimiento || {};
     return `<div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="openClient(this.dataset.t, this.dataset.n)">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">${esc(f.name)}</strong>
-      ${f.error ? '<span class="muted" style="font-size:12px">No se pudo leer su nube ahora mismo</span>' : f.sinNube ? '<span class="muted" style="font-size:12px">Aún no ha conectado su nube</span>' : f.fase === 'piensa' && m.volverAHablarFecha ? `<span style="font-size:12px;color:${P360_FASES.piensa.color}">Volver a hablar el ${esc(new Date(m.volverAHablarFecha + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'}))}</span>` : ''}</div>
+      ${f.error ? '<span class="muted" style="font-size:12px">No se pudo leer su nube ahora mismo</span>' : f.sinNube ? '<span class="muted" style="font-size:12px">Aún no ha conectado su nube</span>' : f.fase === 'piensa' && m.volverAHablarFecha ? `<span style="font-size:12px;color:${m.volverAHablarFecha < p360Fecha(new Date()) ? 'var(--red)' : P360_FASES.piensa.color}">Volver a hablar el ${esc(new Date(m.volverAHablarFecha + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'}))}</span>` : ''}</div>
     </div>`;
   };
   const grupo = (k, html) => html ? `<div style="font-weight:700;margin:14px 0 6px;color:${P360_FASES[k].color}">${P360_FASES[k].label}</div>${html}` : '';

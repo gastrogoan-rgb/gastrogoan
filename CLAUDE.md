@@ -423,6 +423,12 @@ Son dos servicios distintos y el panel los trata así:
 - Cada mes de mantenimiento tiene **objetivo** (`mes.objetivo`) y **cierre**
   (`mes.cierre = {bien, mal, siguiente, objetivo, ts}`); el siguiente pasa
   solo a ser el objetivo del mes que viene. El negocio ve los dos en su app.
+- La agenda pinta HOY lo que no puede depender de la memoria: mes de
+  mantenimiento sin preparar, mes anterior sin cerrar, Plan 360 terminado
+  sin respuesta y «volver a hablar» vencido. Una fase fijada a mano cede si
+  el negocio contesta después (`respondidoEn`) o si es «360» pasado el día 28.
+- El cierre compara el Día 1 con el último mes COMPLETO, nunca el mes en curso.
+- Prueba: `test/plan360-fases.mjs`.
 
 ### Números del negocio para el coach (6/10)
 

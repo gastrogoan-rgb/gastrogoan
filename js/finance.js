@@ -841,8 +841,10 @@ function plan360ActualizarKpis(forzar){
       if(kp.netas > 0) k.dia1 = Object.assign({mes: clave}, kp);
     }
     // Lo que el negocio NO ve como "cambio": la hora del cálculo va aparte.
-    const sinTs = JSON.stringify(Object.assign({}, k, {ts: undefined}));
-    if(sinTs === JSON.stringify(Object.assign({}, JSON.parse(prev) || {}, {ts: undefined}))) return;
+    // Se compara como lo guarda Firebase (sin null, claves ordenadas): si no,
+    // lo que vuelve de la nube parece siempre distinto y se sube cada 10 min.
+    const comoNube = o => { const lim = x => x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((a, kk) => { const v = lim(x[kk]); if(v !== null && v !== undefined && kk !== 'ts') a[kk] = v; return a; }, {}) : x; return JSON.stringify(lim(o)); };
+    if(comoNube(k) === comoNube(JSON.parse(prev) || {})) return;
     k.ts = new Date().toISOString();
     b.plan360Kpis = k;
     saveDB();

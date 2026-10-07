@@ -5286,7 +5286,12 @@ function plan360HeroHtml(diaHoy, hechos, totalTareas){
     <div class="p360-hero-bar"><div class="p360-hero-bar-fill" style="width:${pct}%"></div></div>
   </div>`;
 }
+let plan360MantAutoAbierto = false;
 function renderPlan360Grid(){
+  // En mantenimiento, lo que toca es su mes, no el calendario de 28 días
+  // (que sigue a un clic, como histórico). Solo la primera vez por sesión.
+  if(!plan360MantAutoAbierto && (DB.business.plan360Servicio || {}).fase === 'mant'){ plan360MantAutoAbierto = true; renderPlan360Mant(); return; }
+  plan360MantAutoAbierto = true;
   const prog = DB.business.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
   const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.status === 'hecha').length, 0);
@@ -5511,6 +5516,7 @@ function plan360MantenimientoAceptar(){
   c.mantenimiento.respuesta = 'acepta';
   c.mantenimiento.firmaNombre = nombre;
   c.mantenimiento.firmaFecha = Date.now();
+  c.mantenimiento.respondidoEn = Date.now();
   // El panel del coach lo pasa solo a «Mantenimiento» (6/10).
   DB.business.plan360Servicio = {fase: 'mant', mantDesde: plan360MantClave(new Date()), cambiado: Date.now()};
   saveDB();
@@ -5526,6 +5532,7 @@ function plan360MantenimientoPensar(){
   // Sin fecha salía «Volvemos a hablar el: —» y el coach no se enteraba.
   if(!fecha){ showToast(t('plan360.maintenanceDateMissing')); return; }
   c.mantenimiento.respuesta = 'piensa';
+  c.mantenimiento.respondidoEn = Date.now();
   c.mantenimiento.volverAHablarFecha = fecha;
   saveDB();
   plan360PingActivity();
@@ -5734,7 +5741,8 @@ function plan360MantCierreHtml(mes){
   if(!c || !c.ts) return '';
   const k = ((DB.business.plan360Kpis || {}).meses || {})[plan360MantMes];
   const eur = n => Math.round(n).toLocaleString(localeActual()) + ' €';
-  const cifras = k ? [k.netas != null ? escapeHtml(t('plan360.mant.cSales')) + ': <strong>' + eur(k.netas) + '</strong>' : '', k.foodCostPct != null ? 'Food cost: <strong>' + k.foodCostPct + ' %</strong>' : '', k.resultado != null ? escapeHtml(t('plan360.mant.cResult')) + ': <strong>' + eur(k.resultado) + '</strong>' : ''].filter(Boolean).join(' · ') : '';
+  const pct = n => n.toLocaleString(localeActual(), {maximumFractionDigits: 1}) + ' %';
+  const cifras = k ? [k.netas != null ? escapeHtml(t('plan360.mant.cSales')) + ': <strong>' + eur(k.netas) + '</strong>' : '', k.foodCostPct != null ? escapeHtml(t('plan360.mant.cFoodCost')) + ': <strong>' + pct(k.foodCostPct) + '</strong>' : '', k.resultado != null ? escapeHtml(t('plan360.mant.cResult')) + ': <strong>' + eur(k.resultado) + '</strong>' : ''].filter(Boolean).join(' · ') : '';
   const obj = {si: 'plan360.mant.cGoalYes', parcial: 'plan360.mant.cGoalHalf', no: 'plan360.mant.cGoalNo'}[c.objetivo];
   const bloque = (titulo, txt, color) => txt ? `<div style="margin-top:8px"><div class="txt-xs" style="font-weight:700;color:${color}">${escapeHtml(t(titulo))}</div><div style="white-space:pre-wrap">${escapeHtml(txt)}</div></div>` : '';
   return `<div class="card" style="margin-top:12px;outline:2px solid var(--ink);outline-offset:-2px">
