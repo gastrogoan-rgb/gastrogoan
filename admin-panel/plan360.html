@@ -404,6 +404,7 @@ async function openClient(tenantId, name){
       const primeraCarga = lastPushedJson === null;
       lastPushedJson = huella;
       remoteBiz = val || {};
+      mantBase = JSON.parse(JSON.stringify(remoteBiz.plan360Mant || {}));
       ensureRemotePlan360();
       intentarMigrarReunionPersonal();
       migrarLibroPdfANodo();
@@ -445,7 +446,7 @@ async function openClient(tenantId, name){
 function closeClient(){
   if(currentBizRef) currentBizRef.off();
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
-  currentBizRef = null; currentTenantId = null; remoteBiz = null;
+  currentBizRef = null; currentTenantId = null; remoteBiz = null; mantBase = null;
   currentCoachPrivateRef = null; coachPrivate = null;
   currentLibroPdfRef = null; libroPdfCache = null;
   document.getElementById('view-client').classList.add('hidden');
@@ -527,6 +528,28 @@ function avisoCambiosDelNegocio(){
     ? 'El negocio ha marcado o contestado algo en su mantenimiento. <button class="btn btn-sm" onclick="renderMantPage()">Ver el mes actualizado</button>'
     : 'El negocio ha hecho cambios en su Plan 360. <button class="btn btn-sm" onclick="renderClientGrid()">Ver calendario actualizado</button>';
 }
+let mantBase = null;   // plan360Mant tal y como está en la nube (lo último leído o subido)
+// Rutas que cambian entre dos versiones de plan360Mant, bajando hasta cada
+// elemento (meses → semanas → items). Lo que desaparece va a null.
+const MANT_NIVELES = ['meses', null, 'semanas', null, 'items', null];
+function mantDiferencias(antes, ahora, ruta, nivel){
+  nivel = nivel || 0;
+  const out = {};
+  const esObj = x => x && typeof x === 'object' && !Array.isArray(x);
+  if(nivel >= MANT_NIVELES.length || !esObj(antes) || !esObj(ahora)){
+    if(stableJson(antes === undefined ? null : antes) !== stableJson(ahora === undefined ? null : ahora)) out[ruta] = ahora === undefined ? null : ahora;
+    return out;
+  }
+  const claves = new Set([...Object.keys(antes), ...Object.keys(ahora)]);
+  claves.forEach(k => {
+    const baja = MANT_NIVELES[nivel] === null || MANT_NIVELES[nivel] === k;
+    const sub = ruta + '/' + k;
+    if(!(k in ahora)) out[sub] = null;
+    else if(baja) Object.assign(out, mantDiferencias(antes[k], ahora[k], sub, nivel + (MANT_NIVELES[nivel] === null || MANT_NIVELES[nivel] === k ? 1 : 0)));
+    else if(stableJson(antes[k]) !== stableJson(ahora[k])) out[sub] = ahora[k];
+  });
+  return out;
+}
 function saveRemoteBiz(){
   if(!currentBizRef || !remoteBiz) return;
   const limpio = sinIndefinidos(remoteBiz);
@@ -537,6 +560,15 @@ function saveRemoteBiz(){
   // configuración), el guardado del coach lo borraba.
   const cambios = {};
   Object.keys(limpio).filter(esClavePlan360).forEach(k => { cambios[k] = limpio[k]; });
+  // El mantenimiento lo tocan los dos a la vez (el coach añade y entrega,
+  // el negocio marca y contesta): se sube solo lo que ha cambiado el coach,
+  // elemento a elemento. Mandarlo entero borraba el tick o la respuesta que
+  // el negocio hubiera puesto entre la última lectura y este guardado.
+  if(mantBase && cambios.plan360Mant){
+    delete cambios.plan360Mant;
+    Object.assign(cambios, mantDiferencias(mantBase, limpio.plan360Mant || {}, 'plan360Mant'));
+  }
+  mantBase = JSON.parse(JSON.stringify(limpio.plan360Mant || {}));
   currentBizRef.update(cambios).catch(e => {
     console.error('Error guardando en la nube del negocio', e);
     alert('No se pudo guardar en la nube: ' + (e.message || e.code || 'error'));
@@ -4845,6 +4877,7 @@ function renderMantPage(clave){
         </div>`).join('')}
       </div>`;
     })()}
+    ${mantCuotaHtml(mantMesActivo)}
     ${mantObjetivoHtml(mantMesActivo)}
     ${mes ? lunes.map(semanaHtml).join('') : ''}
     ${mantCierreHtml(mantMesActivo)}
@@ -5245,6 +5278,48 @@ function p360PestanasHtml(activa){
 // Lo que hace que el cliente vea cada mes que le compensa: un objetivo al
 // empezar y, al terminar, qué ha ido bien, qué no, los números y lo
 // siguiente. Los números y las tareas salen solos; tú escribes tres frases.
+// --- Cuota, renovación y baja (7/10) --------------------------------------
+// Lo que facturas por el mantenimiento tiene que quedar en algún sitio: si
+// cada mes está cobrado, hasta cuándo está contratado y si se ha dado de
+// baja. Vive en plan360Servicio (la app no lo pinta: es cosa del coach).
+const MANT_CUOTA = 75;   // € + IVA al mes (precio fijado el 6/10)
+function mantServicio(){ remoteBiz.plan360Servicio = remoteBiz.plan360Servicio || {}; return remoteBiz.plan360Servicio; }
+function mantCuotaHtml(clave){
+  const sv = remoteBiz.plan360Servicio || {};
+  const cobro = (sv.cobros || {})[clave];
+  const importe = sv.cuota || MANT_CUOTA;
+  return `<div class="card" style="margin-bottom:12px">
+    <div style="font-weight:700;margin-bottom:6px"><i class="ti ti-receipt"></i> Cuota y renovación</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:14px">
+      <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${cobro ? 'checked' : ''} onchange="mantMarcarCobro(this.checked)" style="width:20px;height:20px"> Cobrado ${esc(kpiNombreMes(clave).toLowerCase())}</label>
+      <label style="display:flex;align-items:center;gap:6px">Cuota <input type="number" min="0" step="1" value="${importe}" onchange="mantGuardarCuota(this.value)" style="width:80px"> € + IVA</label>
+      <label style="display:flex;align-items:center;gap:6px">Contratado hasta <input type="month" value="${esc(sv.mantHasta || '')}" onchange="mantGuardarHasta(this.value)" style="width:auto"></label>
+    </div>
+    ${cobro ? `<div class="muted" style="font-size:12px;margin-top:4px">Cobrado el ${esc(new Date(cobro.ts).toLocaleDateString('es-ES'))}: ${cobro.importe} € + IVA.</div>` : ''}
+    <div style="margin-top:8px">${sv.baja ? `<span style="color:var(--red);font-size:13px">De baja desde el ${esc(new Date(sv.baja.ts).toLocaleDateString('es-ES'))}${sv.baja.motivo ? ' — ' + esc(sv.baja.motivo) : ''}</span> <button class="btn btn-sm" onclick="mantDeshacerBaja()">Reactivar</button>` : `<button class="btn btn-sm" onclick="mantDarDeBaja()"><i class="ti ti-user-off"></i> Dar de baja del mantenimiento</button>`}</div>
+  </div>`;
+}
+function mantMarcarCobro(si){
+  const sv = mantServicio(); sv.cobros = sv.cobros || {};
+  if(si) sv.cobros[mantMesActivo] = {ts: Date.now(), importe: Number(sv.cuota || MANT_CUOTA)};
+  else delete sv.cobros[mantMesActivo];
+  mantGuardarYPintar();
+}
+function mantGuardarCuota(v){ const n = Number(v); if(!(n >= 0)) return; mantServicio().cuota = n; saveRemoteBiz(); }
+function mantGuardarHasta(v){ const sv = mantServicio(); if(/^\d{4}-\d{2}$/.test(v)) sv.mantHasta = v; else delete sv.mantHasta; mantGuardarYPintar(); }
+function mantDarDeBaja(){
+  const motivo = prompt('¿Por qué se da de baja? (opcional, solo lo ves tú)');
+  if(motivo === null) return;
+  const sv = mantServicio();
+  sv.baja = {ts: Date.now(), motivo: motivo.trim()};
+  sv.fase = 'fin'; sv.cambiado = Date.now();
+  mantGuardarYPintar();
+}
+function mantDeshacerBaja(){
+  const sv = mantServicio();
+  delete sv.baja; sv.fase = 'mant'; sv.cambiado = Date.now();
+  mantGuardarYPintar();
+}
 function mantObjetivoHtml(clave){
   const mes = mantMes(clave, false);
   const obj = (mes && mes.objetivo) || '';
@@ -5448,6 +5523,10 @@ function p360EventosDia(f, fechaStr){
     if(f.fase === 'mant' && !(mesHoy && mesHoy.semanas && Object.keys(mesHoy.semanas).length)) out.push({i: 'ti-calendar-plus', t: 'Mes sin preparar: «Rellenar con mi mes tipo»', alerta: true});
     const mAnt = meses[kpiClaveMes(claveHoy, -1)];
     if(f.fase === 'mant' && mAnt && mAnt.semanas && !(mAnt.cierre && mAnt.cierre.ts)) out.push({i: 'ti-flag-check', t: 'Cerrar el mes de ' + kpiNombreMes(kpiClaveMes(claveHoy, -1)).toLowerCase(), alerta: true});
+    const sv = b.plan360Servicio || {};
+    // El día 5 en adelante, si el mes no está cobrado.
+    if(f.fase === 'mant' && Number(fechaStr.slice(8)) >= 5 && !((sv.cobros || {})[claveHoy])) out.push({i: 'ti-receipt', t: 'Cuota de ' + kpiNombreMes(claveHoy).toLowerCase() + ' sin cobrar', alerta: true});
+    if(f.fase === 'mant' && sv.mantHasta && sv.mantHasta <= claveHoy) out.push({i: 'ti-refresh', t: sv.mantHasta < claveHoy ? 'Contrato vencido: hablar de la renovación' : 'Renueva este mes', alerta: true});
     const mc = (b.plan360Cierre && b.plan360Cierre.mantenimiento) || {};
     const dia = p360DiaDelPrograma(b);
     if(dia !== null && dia > 28 && !mc.respuesta && f.fase !== 'mant') out.push({i: 'ti-alert-triangle', t: 'Plan 360 terminado sin respuesta al mantenimiento', alerta: true});
@@ -5497,6 +5576,7 @@ async function renderMiSemana(){
       <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px">
         <span style="color:${P360_FASES['360'].color}"><i class="ti ti-calendar-event"></i> ${por('360').length} en Plan 360</span>
         <span style="color:${P360_FASES.mant.color}"><i class="ti ti-calendar-repeat"></i> ${por('mant').length} en mantenimiento</span>
+        ${(() => { const clave = hoyStr.slice(0, 7); let cob = 0, pend = 0; por('mant').forEach(f => { const sv = f.biz.plan360Servicio || {}; const c = (sv.cobros || {})[clave]; if(c) cob += Number(c.importe) || 0; else pend += Number(sv.cuota || MANT_CUOTA); }); return por('mant').length ? `<span><i class="ti ti-receipt"></i> Cobrado este mes: <strong>${cob} €</strong>${pend ? ` · pendiente ${pend} €` : ''} (+ IVA)</span>` : ''; })()}
         ${piensaEsteMes.length ? `<span style="color:${P360_FASES.piensa.color}"><i class="ti ti-phone-call"></i> ${piensaEsteMes.length} se lo piensan</span>` : ''}
         ${(() => { const n = por('mant').reduce((s, f) => s + ((f.atrasadas || []).length ? 1 : 0), 0); return n ? `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${n} con tareas atrasadas</span>` : ''; })()}
       </div>

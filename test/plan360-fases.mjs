@@ -21,6 +21,10 @@ vm.runInContext([
   trozo('function mantFechaItem', '\nfunction'),
   trozo('const P360_FASES', 'function p360CambiarFase'),
   trozo('function p360Fecha(', 'async function renderMiSemana'),
+  trozo('function stableJson', '\nfunction'),
+  trozo('const MANT_NIVELES', 'function saveRemoteBiz'),
+  'const MANT_CUOTA = 75;',
+  'this.mantDiferencias = mantDiferencias;',
   'this.p360Fase = p360Fase; this.p360EventosDia = p360EventosDia; this.p360Fecha = p360Fecha;',
 ].join('\n'), ctx);
 const hace = n => { const d = new Date(); d.setDate(d.getDate() - n); return ctx.p360Fecha(d); };
@@ -44,6 +48,24 @@ caso('«Volver a hablar» vencido sale hoy en rojo', () => {
 caso('Mantenimiento sin el mes preparado: aviso hoy', () => {
   const ev = ctx.p360EventosDia({fase: 'mant', hoyStr: hoy, biz: {plan360Mant: {meses: {}}}}, hoy);
   assert.ok(ev.some(e => /sin preparar/.test(e.t)));
+});
+caso('El coach sube solo el elemento que ha tocado: el tick del negocio no se pisa', () => {
+  const antes = {meses: {'2026-10': {objetivo: 'a', semanas: {s1: {canal: 'whatsapp', items: {x: {titulo: 'X'}, y: {titulo: 'Y'}}}}}}};
+  const ahora = JSON.parse(JSON.stringify(antes));
+  ahora.meses['2026-10'].semanas.s1.items.x.hecho = true;
+  delete ahora.meses['2026-10'].semanas.s1.items.y;
+  ahora.meses['2026-10'].objetivo = 'b';
+  const d = ctx.mantDiferencias(antes, ahora, 'plan360Mant');
+  assert.deepEqual(Object.keys(d).sort(), ['plan360Mant/meses/2026-10/objetivo', 'plan360Mant/meses/2026-10/semanas/s1/items/x', 'plan360Mant/meses/2026-10/semanas/s1/items/y']);
+  assert.equal(d['plan360Mant/meses/2026-10/semanas/s1/items/y'], null);
+});
+caso('Cuota sin cobrar a partir del día 5, y aviso de renovación', () => {
+  const d = new Date(); d.setDate(10); const f = ctx.p360Fecha(d), clave = f.slice(0, 7);
+  const ev = ctx.p360EventosDia({fase: 'mant', hoyStr: f, biz: {plan360Servicio: {fase: 'mant', mantHasta: clave}, plan360Mant: {meses: {[clave]: {semanas: {s1: {items: {}}}}}}}}, f);
+  assert.ok(ev.some(e => /sin cobrar/.test(e.t)), 'falta el cobro');
+  assert.ok(ev.some(e => /Renueva/.test(e.t)), 'falta la renovación');
+  const ev2 = ctx.p360EventosDia({fase: 'mant', hoyStr: f, biz: {plan360Servicio: {fase: 'mant', cobros: {[clave]: {ts: 1, importe: 75}}}, plan360Mant: {meses: {[clave]: {semanas: {s1: {items: {}}}}}}}}, f);
+  assert.ok(!ev2.some(e => /sin cobrar/.test(e.t)));
 });
 console.log('\n' + '═'.repeat(64) + '\n' + (fallos ? `❌ ${fallos} fallaron` : `✅ los ${ok} casos pasaron`));
 process.exit(fallos ? 1 : 0);

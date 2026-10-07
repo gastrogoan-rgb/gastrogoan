@@ -428,6 +428,13 @@ Son dos servicios distintos y el panel los trata así:
   sin respuesta y «volver a hablar» vencido. Una fase fijada a mano cede si
   el negocio contesta después (`respondidoEn`) o si es «360» pasado el día 28.
 - El cierre compara el Día 1 con el último mes COMPLETO, nunca el mes en curso.
+- **Cuota, renovación y baja** (7/10) en `plan360Servicio`: `cobros['AAAA-MM']
+  = {ts, importe}`, `cuota` (75 por defecto), `mantHasta` y `baja`. La agenda
+  avisa de la cuota sin cobrar desde el día 5 y de la renovación, y suma lo
+  cobrado y lo pendiente del mes. La app solo FUSIONA en `plan360Servicio`.
+- ⚠️ **El coach sube `plan360Mant` por diferencias, elemento a elemento**
+  (`mantDiferencias` contra `mantBase`, lo último leído o subido). Mandarlo
+  entero borraba el tick o la respuesta que el negocio pusiera entre medias.
 - Prueba: `test/plan360-fases.mjs`.
 
 ### Números del negocio para el coach (6/10)

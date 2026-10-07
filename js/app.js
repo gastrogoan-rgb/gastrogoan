@@ -5518,7 +5518,7 @@ function plan360MantenimientoAceptar(){
   c.mantenimiento.firmaFecha = Date.now();
   c.mantenimiento.respondidoEn = Date.now();
   // El panel del coach lo pasa solo a «Mantenimiento» (6/10).
-  DB.business.plan360Servicio = {fase: 'mant', mantDesde: plan360MantClave(new Date()), cambiado: Date.now()};
+  DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {fase: 'mant', mantDesde: plan360MantClave(new Date()), cambiado: Date.now()});   // fusionar: ahí van también los cobros del coach
   saveDB();
   plan360PingActivity();
   showToast(t('plan360.saved'));
