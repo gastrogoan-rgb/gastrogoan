@@ -316,7 +316,7 @@ const GE = (function(){
     // En módulos el IVA no sale de lo vendido y comprado: es la cuota del
     // régimen simplificado (cuota de los módulos − IVA soportado), que se
     // paga por trimestres. Se reparte por meses para la Cuenta de Resultados.
-    if(modulosAplica()){ const r = calcularModulos(año); if(r) return geMesConActividad(año, mes) ? r.ivaAnual/12 : 0; }
+    if(modulosAplica()){ const r = calcularModulos(año); if(r) return geMesConActividad(año, mes) ? r.ivaQ[Math.floor(mes/3)]/3 : 0; }
     // Otros ingresos (máquinas, alquiler de espacio…) y el autoconsumo del
     // titular también llevan IVA repercutido.
     return ivaVentasMes(mes,año) + geOtrosIngresosIvaMes(año,mes) - ivaSoportadoComprasMes(mes,año) - ivaSoportadoCapexMes(mes,año) - ivaSoportadoFijosMes(mes,año) - ivaSoportadoComisionesMes(mes,año);
@@ -414,7 +414,7 @@ const GE = (function(){
         return r && r.rendimientoAnual > 0 ? irpfModulosAnual() / r.rendimientoAnual : 0;
       }
       const base = Math.max(0, baseAnualEstimada(año) - perdidasCompensables(año));
-      const opts = {pctDefecto: pctDefectoSociedad()};
+      const opts = optsImpuesto(año);
       return base > 0 ? impuestoAnual(base, opts) / base : (fiscalPerfil().personaFisica ? 0 : impuestoAnual(1, opts));
     });
   }
@@ -432,8 +432,19 @@ const GE = (function(){
   // Tipo de sociedad cuando el dueño no ha puesto ninguno: el que le
   // corresponde por ley según su tamaño y antigüedad, no un 25% plano que
   // casi ninguna SL pequeña paga. Cooperativa protegida: 20% (Ley 20/1990).
+  // Lo que el impuesto de sociedades necesita saber del año que se mira.
+  function optsImpuesto(año){
+    const b = DB.business || {};
+    let incn = parseFloat(b.incnAnterior);
+    if(!(incn >= 0)){
+      incn = 0; for(let m=0;m<12;m++) incn += facturacionNetaMes(m, año-1);
+      if(!(incn > 0)) incn = null;
+    }
+    const alta = parseInt(b.anyo) || null;
+    return {pctDefecto: pctDefectoSociedad(), año, incnAnterior: incn, nuevaCreacion: !!(alta && (año - alta) <= 1)};
+  }
   function pctDefectoSociedad(){
-    if(fiscalPerfil().forma === 'cooperativa') return 20;
+    if(fiscalPerfil().forma === 'cooperativa') return 20;   // solo es la sugerencia del campo; el cálculo real va por impuestoCooperativa
     return memo('sug', () => sugerenciaImpuestoSociedad().pct);
   }
   // Pago a cuenta del trimestre del mes visto, según la forma:
@@ -450,7 +461,7 @@ const GE = (function(){
     const q = Math.floor(mes/3);
     if(modulosAplica()){
       const r = calcularModulos();
-      return r ? {modelo:'131', importe:r.pagoTrimestralIrpf} : null;
+      return r ? {modelo:'131', importe:r.pago131Q[q]} : null;
     }
     if(p.personaFisica){
       const meses = baseMesesAño(año);
@@ -467,8 +478,12 @@ const GE = (function(){
       const acum = meses.slice(0, mes+1).reduce((s,v)=>s+v,0);
       return {modelo:'130', importe: Math.max(0, acum*0.20 - dedTrim*(q+1) - pagado)};
     }
-    const baseAnt = Math.max(0, baseMesesAño(año-1).reduce((s,v)=>s+v,0) - perdidasCompensables(año-1));
-    const cuota = impuestoAnual(baseAnt);
+    // El 202 de abril se calcula sobre el último impuesto YA presentado (el de
+    // N-2, porque el de N-1 no se presenta hasta julio); octubre y diciembre,
+    // sobre el de N-1 (art. 40.2 LIS).
+    const añoBase = q === 1 ? año-2 : año-1;
+    const baseAnt = Math.max(0, baseMesesAño(añoBase).reduce((s,v)=>s+v,0) - perdidasCompensables(añoBase));
+    const cuota = impuestoAnual(baseAnt, optsImpuesto(añoBase));
     // Abril (T2) un pago; octubre y diciembre (T4) dos. T1 y T3, ninguno.
     const pagos = {1:1, 3:2}[q] || 0;
     return (cuota > 0 && pagos) ? {modelo:'202', importe: cuota*0.18*pagos} : null;
@@ -495,13 +510,14 @@ const GE = (function(){
     if(facturacionAnterior > 0 && facturacionAnterior < 1000000){
       let anual = 0;
       for(let m=0;m<12;m++) anual += resultadoAntesImpMes(m, anioActual);
-      if(anual <= 0) return {pct: 19, motivo: t('hr.res.motivoMicro')};
-      const tramo1 = Math.min(anual, 50000) * 0.19;
-      const tramo2 = Math.max(0, anual-50000) * 0.21;
+      const Ti = tiposIsAño(anioActual);
+      if(anual <= 0) return {pct: Ti.micro[0], motivo: t('hr.res.motivoMicro')};
+      const tramo1 = Math.min(anual, 50000) * Ti.micro[0]/100;
+      const tramo2 = Math.max(0, anual-50000) * Ti.micro[1]/100;
       return {pct: Math.round((tramo1+tramo2)/anual*100*100)/100, motivo: t('hr.res.motivoMicro')};
     }
     if(facturacionAnterior >= 1000000 && facturacionAnterior <= 10000000){
-      return {pct: 23, motivo: t('hr.res.motivoReducida')};
+      return {pct: tiposIsAño(anioActual).erd, motivo: t('hr.res.motivoReducida')};
     }
     return {pct: 25, motivo: t('hr.res.motivoGeneral')};
   }
@@ -524,20 +540,23 @@ const GE = (function(){
   // módulos, cada una con su propio valor en euros.
   const MODULOS_EPIGRAFES = {
     '671.4': { nombre:'Restaurantes de dos tenedores',
-      irpf:{asalariado:3709.88, noAsalariado:17434.55, kw:201.55, mesa:585.77},
-      iva:{empleado:2993.81, kw:150.57, mesa:168.29}, excesoIrpf:51617.08, cuotaMinimaIvaPct:13 },
+      irpf:{asalariado:3709.88, noAsalariado:17434.55, kw:201.55, mesa:585.77, maqA:1077.06, maqB:3810.65},
+      iva:{empleado:2993.81, kw:150.57, mesa:168.29, maqA:239.15, maqB:841.46}, excesoIrpf:51617.08, cuotaMinimaIvaPct:13, ingresoPct:4 },
     '671.5': { nombre:'Restaurantes de un tenedor',
-      irpf:{asalariado:3602.80, noAsalariado:16174.82, kw:125.97, mesa:220.45},
-      iva:{empleado:2400.36, kw:70.86, mesa:124.00}, excesoIrpf:38081.38, cuotaMinimaIvaPct:20 },
+      irpf:{asalariado:3602.80, noAsalariado:16174.82, kw:125.97, mesa:220.45, maqA:1077.06, maqB:3810.65},
+      iva:{empleado:2400.36, kw:70.86, mesa:124.00, maqA:239.15, maqB:841.46}, excesoIrpf:38081.38, cuotaMinimaIvaPct:20, ingresoPct:6 },
     '672': { nombre:'Cafeterías',
-      irpf:{asalariado:1448.68, noAsalariado:13743.56, kw:478.69, mesa:377.92},
-      iva:{empleado:2356.07, kw:124.00, mesa:70.86}, excesoIrpf:39070.26, cuotaMinimaIvaPct:13 },
+      irpf:{asalariado:1448.68, noAsalariado:13743.56, kw:478.69, mesa:377.92, maqA:957.39, maqB:3747.67},
+      iva:{empleado:2356.07, kw:124.00, mesa:70.86, maqA:221.43, maqB:832.60}, excesoIrpf:39070.26, cuotaMinimaIvaPct:13, ingresoPct:4 },
     '673.1': { nombre:'Cafés y bares de categoría especial',
-      irpf:{asalariado:4056.30, noAsalariado:15538.66, kw:321.23, mesa:233.04, barra:371.62},
-      iva:{empleado:3294.97, kw:69.09, mesa:60.23, barra:77.95}, excesoIrpf:30586.03, cuotaMinimaIvaPct:6 },
+      irpf:{asalariado:4056.30, noAsalariado:15538.66, kw:321.23, mesa:233.04, barra:371.62, maqA:957.39, maqB:2903.66},
+      iva:{empleado:3294.97, kw:69.09, mesa:60.23, barra:77.95, maqA:221.43, maqB:655.45}, excesoIrpf:30586.03, cuotaMinimaIvaPct:6, ingresoPct:2 },
     '673.2': { nombre:'Otros cafés y bares',
-      irpf:{asalariado:1643.93, noAsalariado:11413.08, kw:94.48, mesa:119.67, barra:163.76},
-      iva:{empleado:2577.52, kw:47.83, mesa:56.69, barra:62.89}, excesoIrpf:19084.78, cuotaMinimaIvaPct:6 },
+      irpf:{asalariado:1643.93, noAsalariado:11413.08, kw:94.48, mesa:119.67, barra:163.76, maqA:806.23, maqB:2947.75},
+      iva:{empleado:2577.52, kw:47.83, mesa:56.69, barra:62.89, maqA:177.15, maqB:655.45}, excesoIrpf:19084.78, cuotaMinimaIvaPct:6, ingresoPct:2 },
+    '676': { nombre:'Chocolaterías, heladerías y horchaterías',
+      irpf:{asalariado:2418.67, noAsalariado:20016.97, kw:541.68, mesa:220.45, maqA:806.23, maqB:0},
+      iva:{empleado:3817.55, kw:141.72, mesa:46.05, maqA:177.15, maqB:0}, excesoIrpf:25528.25, cuotaMinimaIvaPct:20, ingresoPct:6 },
   };
   function modulosConfig(){
     const c = config();
@@ -559,14 +578,22 @@ const GE = (function(){
     const ep = MODULOS_EPIGRAFES[mc.epigrafe];
     if(!ep) return null;
     const asalariados = modulosPersonalAsalariado();
-    const noAsalariado = mc.titularTrabaja ? 1 : 0;
-    const kw = parseFloat(mc.kw) || 0;
-    const mesas = parseFloat(mc.mesas) || 0;
-    const barra = parseFloat(mc.barra) || 0;
+    // Temporada (Orden, instrucciones del Anexo II): potencia, mesas y barra se
+    // computan por días de apertura / 365 y el titular por horas / 1.800 (por
+    // defecto 8 h al día). Sin esto un negocio de 4 meses tributaba como uno anual.
+    const diasT = (mc.temporadaDias > 0 && mc.temporadaDias <= 180) ? parseFloat(mc.temporadaDias) : 0;
+    const fT = diasT ? diasT/365 : 1;
+    const horasTitular = parseFloat(mc.horasTitular) > 0 ? parseFloat(mc.horasTitular) : 8;
+    const noAsalariado = mc.titularTrabaja ? (diasT ? Math.min(1, horasTitular * diasT / 1800) : 1) : 0;
+    const kw = (parseFloat(mc.kw) || 0) * fT;
+    const mesas = (parseFloat(mc.mesas) || 0) * fT;
+    const barra = (parseFloat(mc.barra) || 0) * fT;
+    const maqA = Math.max(0, parseFloat(mc.maqA) || 0), maqB = Math.max(0, parseFloat(mc.maqB) || 0);
 
     // Fase 1: rendimiento neto previo.
     let previoIrpf = asalariados*ep.irpf.asalariado + noAsalariado*ep.irpf.noAsalariado + kw*ep.irpf.kw + mesas*ep.irpf.mesa;
     if(ep.irpf.barra) previoIrpf += barra*ep.irpf.barra;
+    previoIrpf += maqA*(ep.irpf.maqA||0) + maqB*(ep.irpf.maqB||0);
 
     // Fase 2: minoración por incentivos al empleo (tabla de tramos sobre
     // las unidades de personal asalariado) y por amortización (importe
@@ -598,16 +625,21 @@ const GE = (function(){
     // de exceso solo si el rendimiento minorado supera el umbral de este
     // epígrafe).
     let indiceAplicado = null;
-    if(mc.temporadaDias > 0 && mc.temporadaDias <= 180){
-      const dias = parseFloat(mc.temporadaDias);
-      const idx = dias<=60 ? 1.50 : dias<=120 ? 1.35 : 1.25;
+    // Índice de pequeña dimensión (0,70-0,90 según habitantes y plantilla): lo
+    // escribe el dueño con su gestor; se aplica antes del de temporada o inicio.
+    const idxPequena = parseFloat(mc.indicePequena);
+    const pequena = idxPequena > 0 && idxPequena < 1;
+    if(pequena) minorado *= idxPequena;
+    const idxTemporada = diasT ? (diasT<=60 ? 1.50 : diasT<=120 ? 1.35 : 1.25) : 1;
+    if(diasT){
+      const idx = idxTemporada;
       minorado *= idx; indiceAplicado = {tipo:'temporada', valor:idx};
     } else if(parseInt(mc.anioInicio) === MODULOS_ANIO || parseInt(mc.anioInicio) === MODULOS_ANIO-1){
       // La pantalla guarda el año como texto: con === estricto el índice de inicio nunca se aplicaba.
       const idx = parseInt(mc.anioInicio) === MODULOS_ANIO ? 0.80 : 0.90;
       minorado *= idx; indiceAplicado = {tipo:'inicio', valor:idx};
     }
-    if(minorado > ep.excesoIrpf){
+    if(!pequena && minorado > ep.excesoIrpf){
       const exceso = (minorado - ep.excesoIrpf) * 0.30;
       minorado += exceso;
     }
@@ -618,6 +650,16 @@ const GE = (function(){
     // Pago fraccionado trimestral (Modelo 131): 4% / 3% (≤1 asalariado) / 2% (ninguno).
     const pctPago = asalariados===0 ? 0.02 : asalariados<=1 ? 0.03 : 0.04;
     const pagoTrimestralIrpf = rendimientoAnual * pctPago;
+    // Días de apertura de cada trimestre (temporada desde el 1 del mes de inicio).
+    let diasQ = [91, 91, 92, 92];
+    if(diasT){
+      const ini = Math.min(11, Math.max(0, (parseInt(mc.temporadaMesInicio) || 6) - 1));
+      const dm = m => new Date(año, m+1, 0).getDate();
+      diasQ = [0,0,0,0]; let rest = diasT;
+      for(let k=0; k<12 && rest>0; k++){ const m=(ini+k)%12, d=Math.min(rest, dm(m)); diasQ[Math.floor(m/3)] += d; rest -= d; }
+    }
+    // 131: igual cada trimestre todo el año; en temporada, solo por los días abiertos.
+    const pago131Q = diasT ? diasQ.map(d => rendimientoAnual * pctPago * d / diasT) : [0,1,2,3].map(()=>pagoTrimestralIrpf);
 
     // IVA simplificado: su propia tabla (cuota devengada, no rendimiento),
     // con el 1% de "difícil justificación" y el IVA soportado REAL de las
@@ -625,6 +667,7 @@ const GE = (function(){
     // con el suelo de la "cuota mínima" que fija cada epígrafe.
     let cuotaDevengada = asalariados*ep.iva.empleado + noAsalariado*ep.iva.empleado + kw*ep.iva.kw + mesas*ep.iva.mesa;
     if(ep.iva.barra) cuotaDevengada += barra*ep.iva.barra;
+    cuotaDevengada += maqA*(ep.iva.maqA||0) + maqB*(ep.iva.maqB||0);
     const dificilJustif = cuotaDevengada * 0.01;
     // IVA soportado corriente (compras y gastos) del año que se mira; el de
     // las INVERSIONES se deduce aparte, DESPUÉS de la cuota mínima (art. 123
@@ -635,13 +678,19 @@ const GE = (function(){
       ivaSoportadoAnual += ivaSoportadoComprasMes(m, año) + ivaSoportadoFijosMes(m, año);
       ivaActivosFijos += ivaSoportadoCapexMes(m, año);
     }
-    const cuotaMinima = cuotaDevengada * (ep.cuotaMinimaIvaPct/100);
-    const ivaAnual = Math.max(cuotaMinima, cuotaDevengada - dificilJustif - ivaSoportadoAnual) - ivaActivosFijos;
+    // En temporada la cuota derivada y la mínima se multiplican por el índice (1,50/1,35/1,25).
+    const cuotaMinima = cuotaDevengada * (ep.cuotaMinimaIvaPct/100) * idxTemporada;
+    const ivaAnual = Math.max(cuotaMinima, (cuotaDevengada - dificilJustif - ivaSoportadoAnual) * idxTemporada) - ivaActivosFijos;
+    // 303 por trimestre: 1T-3T ingreso a cuenta = % del epígrafe × cuota devengada (en
+    // temporada, por los días abiertos del trimestre × índice); el 4T liquida el resto.
+    const pctCta = (ep.ingresoPct || 2) / 100;
+    const ivaQ = [0,1,2].map(q => diasT ? cuotaDevengada / diasT * diasQ[q] * pctCta * idxTemporada : cuotaDevengada * pctCta);
+    ivaQ.push(ivaAnual - ivaQ.reduce((s,v)=>s+v, 0));
 
     return {
       epigrafe: mc.epigrafe, nombreEpigrafe: ep.nombre, asalariados, noAsalariado, kw, mesas, barra,
       previoIrpf, minoracionEmpleo, amortizacion, indiceAplicado, rendimientoAnual,
-      pctPago, pagoTrimestralIrpf,
+      pctPago, pagoTrimestralIrpf, pago131Q, ivaQ, maqA, maqB,
       cuotaDevengada, dificilJustif, ivaSoportadoAnual, ivaActivosFijos, cuotaMinima, ivaAnual, ivaTrimestral: ivaAnual/4,
     };
   }
@@ -841,6 +890,11 @@ const GE = (function(){
       </label>
       <div id="gf-autocalc-fields" style="display:${autoCalc?'block':'none'}">
         <div class="field-row">
+          <div class="field"><label>${t('hr.gf.brutoAnual')}</label><input type="number" id="gf-f-brutoanual" min="0" step="1" value="${g.brutoAnual||''}" oninput="GE.recalcGFAuto()"></div>
+          <div class="field"><label>${t('hr.gf.hijosTrab')}</label><input type="number" id="gf-f-hijos" min="0" step="1" value="${g.hijosTrab||''}" oninput="GE.recalcGFAuto()"></div>
+        </div>
+        <div class="txt-xs" style="color:var(--muted);margin:-4px 0 10px">${t('hr.gf.brutoAnualHint')}</div>
+        <div class="field-row">
           <div class="field"><label>${t('hr.gf.netMonthlySalary')}</label><input type="number" id="gf-f-neto" min="0" step="0.01" value="${g.sueldoNeto||''}" oninput="GE.recalcGFAuto()"></div>
           <div class="field"><label>${t('hr.gf.irpfPct')}</label><input type="number" id="gf-f-irpfpct" min="0" max="99" step="0.1" value="${irpfPctVal}" oninput="GE.recalcGFAuto()"></div>
         </div>
@@ -848,7 +902,10 @@ const GE = (function(){
           <div class="field"><label>${t('hr.gf.contrato')}</label><select id="gf-f-contrato" onchange="GE.gfContratoCambia()">
             <option value="indefinido" ${(g.contrato||'indefinido')==='indefinido'?'selected':''}>${t('hr.gf.contratoIndef')}</option>
             <option value="temporal" ${g.contrato==='temporal'?'selected':''}>${t('hr.gf.contratoTemp')}</option>
+            <option value="discontinuo" ${g.contrato==='discontinuo'?'selected':''}>${t('hr.gf.contratoDisc')}</option>
+            ${fiscalPerfil().forma === 'sociedad' ? `<option value="administrador" ${g.contrato==='administrador'?'selected':''}>${t('hr.gf.contratoAdmin')}</option>` : ''}
           </select></div>
+          <div class="field"><label>${t('hr.gf.mesesActivos')}</label><input type="number" id="gf-f-mesesact" min="1" max="12" step="1" value="${g.mesesActivos||''}" oninput="GE.recalcGFAuto()"></div>
           <div class="field"><label>${t('hr.gf.grupo')}</label><select id="gf-f-grupo" onchange="GE.recalcGFAuto()">
             ${[1,2,3,4,5,6,7,8,9,10,11].map(n=>`<option value="${n}" ${parseInt(g.grupo||7)===n?'selected':''}>${n}</option>`).join('')}
           </select></div>
@@ -947,6 +1004,10 @@ const GE = (function(){
   const SS_2026 = {
     indefinido: {empresa:32.15, trabajador:6.50},
     temporal:   {empresa:33.35, trabajador:6.55},
+    // Socio-administrador de una SL con control efectivo: no cotiza como asalariado
+    // (va en el RETA, cuota de autónomos aparte como gasto fijo) y su retención es
+    // del 35 % (19 % si la sociedad facturó menos de 100.000 € el año anterior).
+    administrador: {empresa:0, trabajador:0},
   };
   // Salario mínimo interprofesional 2026 a jornada completa: 1.221 €/mes en
   // 14 pagas. ⚠️ Revisar cada año (lo fija un real decreto, normalmente en
@@ -957,6 +1018,10 @@ const GE = (function(){
     const c = SS_2026[document.getElementById('gf-f-contrato').value] || SS_2026.indefinido;
     document.getElementById('gf-f-sspct').value = c.empresa;
     document.getElementById('gf-f-sstrabpct').value = c.trabajador;
+    if(document.getElementById('gf-f-contrato').value === 'administrador'){
+      let fact = 0; for(let m=0;m<12;m++) fact += facturacionNetaMes(m, currentYear()-1);
+      document.getElementById('gf-f-irpfpct').value = (fact > 0 && fact < 100000) ? 19 : 35;
+    }
     recalcGFAuto();
   }
   // Con 14 pagas, el neto que se escribe es el de CADA paga, y las dos
@@ -996,22 +1061,69 @@ const GE = (function(){
     const ssEmpresa = base * ssPct/100 + solidaridad + cortos;
     return {bruto, brutoMes, base, ssEmpresa, irpfMensual: brutoMes * irpfPct/100, total: brutoMes + ssEmpresa};
   }
+  // Retención de IRPF de un trabajador por el algoritmo oficial de la AEAT 2026
+  // (versión de 10/09/2026), sin discapacidad, pensiones ni movilidad. Trabajador
+  // soltero o sin cónyuge a cargo (situación 3) por defecto. Devuelve el tipo en %.
+  const RET_ESCALA = [[12450,19],[20200,24],[35200,30],[60000,37],[300000,45],[Infinity,47]];
+  const RET_LIMITE_EXCL = [15876, 16342, 16867];      // situación 3: 0 / 1 / 2+ hijos
+  function retencionIrpfTrabajador(retrib, cotizTrab, o={}){
+    if(!(retrib > 0)) return 0;
+    const hijos = Math.max(0, parseInt(o.hijos) || 0);
+    const limite = RET_LIMITE_EXCL[Math.min(2, hijos)];
+    if(retrib <= limite) return 0;
+    const rnt = retrib - cotizTrab;
+    let red = 0;
+    if(rnt <= 14852) red = 7302;
+    else if(rnt <= 17673.52) red = 7302 - 1.75 * (rnt - 14852);
+    else if(rnt <= 19747.50) red = 2364.34 - 1.14 * (rnt - 17673.52);
+    const base = Math.max(0, rnt - 2000 - Math.max(0, red));
+    const escala = b => { let c = 0, d = 0; for(const [h, p] of RET_ESCALA){ if(b <= d) break; c += (Math.min(b, h) - d) * p/100; d = h; } return c; };
+    const minimo = 5550 + [2400, 2700, 4000].slice(0, hijos).reduce((s,v)=>s+v, 0) + Math.max(0, hijos - 3) * 4500;
+    let cuota = Math.max(0, escala(base) - escala(minimo));
+    if(retrib <= 35200) cuota = Math.min(cuota, 0.43 * (retrib - limite));
+    let tipo = Math.floor(cuota / retrib * 10000) / 100;
+    if(o.temporal) tipo = Math.max(2, tipo);   // contrato < 1 año: mínimo 2 % (art. 86.2 RIRPF)
+    return tipo;
+  }
+  // Fijo discontinuo: solo cuesta los meses de actividad (cotiza y cobra en esos meses).
+  // El gasto se reparte en 12 para que el coste del AÑO sea el real.
+  function factorDiscontinuo(){
+    const c = (document.getElementById('gf-f-contrato')||{}).value;
+    const n = parseInt((document.getElementById('gf-f-mesesact')||{}).value);
+    return (c === 'discontinuo' && n >= 1 && n < 12) ? n/12 : 1;
+  }
   function nominaOpts(){
     const v = id => { const el = document.getElementById(id); return el ? el.value : ''; };
     return {grupo: v('gf-f-grupo'), jornada: v('gf-f-jornada'), contratosCortos: v('gf-f-cortos')};
   }
+  // Con el bruto anual de tablas escrito, el neto y la retención SE CALCULAN (la
+  // nómina real parte del salario de convenio, no del neto): se rellenan los dos
+  // campos de siempre para que todo lo demás (coste, SS, 111) siga igual.
+  function nominaDesdeBruto(){
+    const B = parseFloat((document.getElementById('gf-f-brutoanual')||{}).value) || 0;
+    if(!(B > 0)) return;
+    const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
+    const pagas = parseInt((document.getElementById('gf-f-pagas')||{}).value) || 12;
+    const temporal = (document.getElementById('gf-f-contrato')||{}).value === 'temporal';
+    const ssTrab = B * ssTrabPct / 100;
+    const tipo = retencionIrpfTrabajador(B, ssTrab, {hijos: (document.getElementById('gf-f-hijos')||{}).value, temporal});
+    document.getElementById('gf-f-irpfpct').value = tipo;
+    document.getElementById('gf-f-neto').value = ((B - ssTrab - B * tipo / 100) / pagas).toFixed(2);
+  }
   function recalcGFAuto(){
+    nominaDesdeBruto();
     const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
     const irpfPct = parseFloat(document.getElementById('gf-f-irpfpct').value) || 0;
     const ssTrabPct = parseFloat(document.getElementById('gf-f-sstrabpct').value) || 0;
     const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
     const pagasEl = document.getElementById('gf-f-pagas');
     const {bruto, ssEmpresa, irpfMensual, total} = calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagasEl ? parseInt(pagasEl.value) : 12, nominaOpts());
+    const fd = factorDiscontinuo();
     document.getElementById('gf-auto-bruto').textContent = fmtMoney(bruto);
-    document.getElementById('gf-auto-ss').textContent = fmtMoney(ssEmpresa);
-    document.getElementById('gf-auto-irpf').textContent = fmtMoney(irpfMensual);
-    document.getElementById('gf-auto-total').textContent = fmtMoney(total);
-    document.getElementById('gf-f-importe').value = total.toFixed(2);
+    document.getElementById('gf-auto-ss').textContent = fmtMoney(ssEmpresa * fd);
+    document.getElementById('gf-auto-irpf').textContent = fmtMoney(irpfMensual * fd);
+    document.getElementById('gf-auto-total').textContent = fmtMoney(total * fd);
+    document.getElementById('gf-f-importe').value = (total * fd).toFixed(2);
     // Aviso, no bloqueo: a tiempo parcial es legal cobrar menos.
     const smiEl = document.getElementById('gf-auto-smi');
     if(smiEl){
@@ -1069,12 +1181,16 @@ const GE = (function(){
       data.pagas = pagas;
       data.contrato = document.getElementById('gf-f-contrato').value;
       data.sueldoNeto = neto;
+      data.brutoAnual = parseFloat((document.getElementById('gf-f-brutoanual')||{}).value) || null;
+      data.hijosTrab = parseInt((document.getElementById('gf-f-hijos')||{}).value) || null;
       data.irpfPct = irpfPct;
       data.ssTrabPct = ssTrabPct;
       data.ssPct = ssPct;
       data.sueldoBruto = bruto;
-      data.ssEmpresa = nom.ssEmpresa;
-      data.irpfMensual = nom.irpfMensual;
+      const fd = factorDiscontinuo();
+      data.mesesActivos = fd < 1 ? parseInt(document.getElementById('gf-f-mesesact').value) : null;
+      data.ssEmpresa = nom.ssEmpresa * fd;
+      data.irpfMensual = nom.irpfMensual * fd;
     }else{
       data.autoCalc = false;
       delete data.sueldoNeto; delete data.irpfPct; delete data.ssTrabPct; delete data.retPct; delete data.ssPct; delete data.sueldoBruto; delete data.ssEmpresa; delete data.irpfMensual;
@@ -2341,6 +2457,15 @@ const GE = (function(){
           <input type="number" id="mod-amort" min="0" step="0.01" value="${mc.amortizacionAnual||''}" onchange="GE.saveModulosField('amortizacionAnual', this.value)">
         </div>
         <div class="field-row">
+          <div class="field"><label>${t('hr.modulos.maqA')}</label><input type="number" id="mod-maqa" min="0" step="1" value="${mc.maqA||''}" onchange="GE.saveModulosField('maqA', this.value)"></div>
+          <div class="field"><label>${t('hr.modulos.maqB')}</label><input type="number" id="mod-maqb" min="0" step="1" value="${mc.maqB||''}" onchange="GE.saveModulosField('maqB', this.value)"></div>
+          <div class="field"><label>${t('hr.modulos.indicePequena')}</label><input type="number" id="mod-pequena" min="0.5" max="1" step="0.01" value="${mc.indicePequena||''}" onchange="GE.saveModulosField('indicePequena', this.value)"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>${t('hr.modulos.temporadaMes')}</label><input type="number" id="mod-tmes" min="1" max="12" step="1" value="${mc.temporadaMesInicio||''}" onchange="GE.saveModulosField('temporadaMesInicio', this.value)"></div>
+          <div class="field"><label>${t('hr.modulos.horasTitular')}</label><input type="number" id="mod-horas" min="1" max="16" step="0.5" value="${mc.horasTitular||''}" onchange="GE.saveModulosField('horasTitular', this.value)"></div>
+        </div>
+        <div class="field-row">
           <div class="field"><label>${t('hr.modulos.temporadaDias')}</label><input type="number" id="mod-temporada" min="0" max="180" step="1" value="${mc.temporadaDias||''}" onchange="GE.saveModulosField('temporadaDias', this.value)"></div>
           <div class="field"><label>${t('hr.modulos.anioInicio')}</label><input type="number" id="mod-inicio" min="2000" max="2100" step="1" value="${mc.anioInicio||''}" onchange="GE.saveModulosField('anioInicio', this.value)"></div>
         </div>
@@ -2485,6 +2610,7 @@ const GE = (function(){
       <div class="field"><label>${t('hr.capex.tipoAmort')}</label><select id="cx-f-tipo">
         ${Object.keys(AMORT_TIPOS).map(k=>`<option value="${k}" ${(c.tipoAmort||'mobiliario')===k?'selected':''}>${t('hr.capex.tipo.'+k)} · ${fiscalPerfil().personaFisica?AMORT_TIPOS[k].ed:AMORT_TIPOS[k].is}%</option>`).join('')}
       </select><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.capex.tipoAmortHint')}</div></div>
+      ${fiscalPerfil().personaFisica ? `<label style="display:flex;align-items:flex-start;gap:8px;min-height:44px;font-size:13px;cursor:pointer;margin-bottom:8px"><input type="checkbox" id="cx-f-turismo" ${c.turismoMixto?'checked':''} style="width:auto;margin-top:3px"><span>${t('hr.capex.turismoMixto')}</span></label>` : ''}
       <div class="field"><label>${t('hr.capex.añosContrato')}</label><input type="number" id="cx-f-anos" min="0" step="0.5" value="${c.añosContrato||''}"><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.capex.añosContratoHint')}</div></div>
       <div class="field" style="display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="cx-f-financiado" style="width:auto" ${c.financiado?'checked':''} onchange="GE.toggleCapexFinanciado()">
@@ -2528,6 +2654,7 @@ const GE = (function(){
       cuotaMensual,
       cuotas,
       tipoAmort: document.getElementById('cx-f-tipo').value,
+      turismoMixto: !!(document.getElementById('cx-f-turismo')||{}).checked,
       añosContrato: parseFloat(document.getElementById('cx-f-anos').value) || null,
       importeFinanciado: financiado ? (parseFloat(document.getElementById('cx-f-financiadoimp').value)||null) : null,
     };
@@ -4098,7 +4225,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

@@ -30,7 +30,9 @@ function geTotalPersonalNeto(){
 // (ya va dentro del bruto), solo dinero que el negocio retiene y adelanta
 // por el empleado.
 function geTotalIrpfMensual(){
-  return (DB.ge.fijos||[]).filter(g=>g.categoria==='PERSONAL' && g.autoCalc).reduce((s,g)=>s+(parseFloat(g.irpfMensual)||0),0);
+  // El «sueldo» del titular autónomo o comunero no es una nómina: no lleva retención ni va al 111.
+  const pf = fiscalPerfil().personaFisica;
+  return (DB.ge.fijos||[]).filter(g=>g.categoria==='PERSONAL' && g.autoCalc && !(pf && gfEsRetribucionTitular(g))).reduce((s,g)=>s+(parseFloat(g.irpfMensual)||0),0);
 }
 // Retenciones que el negocio practica en sus gastos fijos y ADELANTA a
 // Hacienda (auditoría contable, 5/10): el alquiler del local (19%, Modelo
@@ -514,6 +516,9 @@ function capexMesesDesdeCompra(c, year, month){
   return (year*12+month) - (fy*12+(fm-1));
 }
 function capexAmortizacionMes(c, year, month){
+  // Un turismo de uso mixto no es elemento afecto en el IRPF (art. 22.2 RIRPF): ni amortización
+  // ni gasto. El IVA al 50 % del vehículo sí se deduce, y eso va por otro lado.
+  if(c.turismoMixto && fiscalPerfil().personaFisica) return 0;
   const base = capexBaseAmortizable(c);
   const k = capexMesesDesdeCompra(c, year, month);
   if(!(base > 0) || k == null || k < 0) return 0;
@@ -708,11 +713,45 @@ function irpfActividad(rendimiento, opts={}){
   // (hasta 100.000 €) el primer año con beneficio y el siguiente. Solo si el
   // dueño lo marca: la app no sabe si antes ya ejerció otra actividad.
   if(!opts.sinDificilJustificacion && (DB.business||{}).inicioActividad20) neto -= Math.min(neto, 100000) * 0.20;
-  return Math.max(0, cuotaIrpfEscala(neto) - cuotaIrpfEscala(IRPF_MINIMO_PERSONAL));
+  // Otras rentas del titular (p. ej. un sueldo en otra empresa) suben el tramo
+  // al que tributa la actividad; los hijos aumentan el mínimo familiar (art. 58
+  // LIRPF: 2.400, 2.700, 4.000 y 4.500 el cuarto y siguientes).
+  const bz = DB.business || {};
+  const otras = Math.max(0, parseFloat(opts.otrasRentas != null ? opts.otrasRentas : bz.otrasRentasTitular) || 0);
+  const hijos = Math.max(0, parseInt(opts.hijos != null ? opts.hijos : bz.hijosTitular) || 0);
+  const minimo = IRPF_MINIMO_PERSONAL + [2400, 2700, 4000].slice(0, hijos).reduce((s,v)=>s+v, 0) + Math.max(0, hijos - 3) * 4500;
+  const cuotaMin = cuotaIrpfEscala(minimo);
+  return Math.max(0, cuotaIrpfEscala(otras + neto) - cuotaMin) - Math.max(0, cuotaIrpfEscala(otras) - cuotaMin);
 }
 // Impuesto ANUAL según la forma del negocio, sobre una base anual.
 // `resultadoFn(m)` da el resultado antes de impuestos de cada mes; se pasa
 // desde fuera para que GE use sus propias cifras (con las señales, etc.).
+// Tipos del Impuesto de Sociedades por año (Ley 7/2024, calendario 2025-2029):
+// los de 2026 no valen para 2027. Fuente: Manual práctico de Sociedades, AEAT.
+// 2028 en adelante se trata como 2027 hasta verificarlo. ⚠️ Revisar cada año.
+const TIPOS_IS = {
+  2026: {micro:[19,21], erd:23, coopMicro:[16,18], coopErd:20, nueva:15, coopNueva:12},
+  2027: {micro:[17,20], erd:22, coopMicro:[14,17], coopErd:19, nueva:15, coopNueva:12},
+};
+function tiposIsAño(a){ return TIPOS_IS[a] || (a >= 2027 ? TIPOS_IS[2027] : TIPOS_IS[2026]); }
+// Cooperativa (Ley 20/1990): el excedente se minora con la dotación al FEP y el
+// 50 % de la del FRO; sobre esa base, tipo micro (INCN anterior < 1 M€), de
+// reducida dimensión o de nueva creación; y si es ESPECIALMENTE protegida,
+// bonificación del 50 % de la cuota. Solo resultados cooperativos: lo
+// extracooperativo lo ajusta el gestor.
+function impuestoCooperativa(excedente, opts={}){
+  const b = DB.business || {};
+  if(!(excedente > 0)) return 0;
+  const pct = (v, def) => { const n = parseFloat(v); return n >= 0 ? n : def; };
+  const fep = excedente * pct(b.coopFep, 5) / 100, fro = excedente * pct(b.coopFro, 20) / 100;
+  const base = Math.max(0, excedente - fep - fro / 2);
+  const T = tiposIsAño(opts.año || new Date().getFullYear());
+  let cuota;
+  if(opts.nuevaCreacion) cuota = base * T.coopNueva / 100;
+  else if(opts.incnAnterior != null && opts.incnAnterior >= 1000000) cuota = base * T.coopErd / 100;
+  else cuota = Math.min(base, 50000) * T.coopMicro[0] / 100 + Math.max(0, base - 50000) * T.coopMicro[1] / 100;
+  return b.coopTipo === 'especial' ? cuota / 2 : cuota;
+}
 function impuestoAnual(baseAnual, opts={}){
   const p = fiscalPerfil();
   const b = DB.business || {};
@@ -726,7 +765,7 @@ function impuestoAnual(baseAnual, opts={}){
     return com.reduce((s,c) => {
       const parte = baseAnual * (parseFloat(c.pct)||0) / suma;
       const manual = parseFloat(c.tipoIrpf);
-      return s + (manual > 0 ? Math.max(0, parte) * manual/100 : irpfActividad(parte));
+      return s + (manual > 0 ? Math.max(0, parte) * manual/100 : irpfActividad(parte, {otrasRentas: parseFloat(c.otrasRentas)||0, hijos: parseInt(c.hijos)||0}));
     }, 0);
   }
   if(p.personaFisica) return irpfActividad(baseAnual, opts);
@@ -734,6 +773,7 @@ function impuestoAnual(baseAnual, opts={}){
   // GE con opts.pctDefecto: 15% nueva creación, 19/21% micro, 23% reducida
   // dimensión; cooperativa fiscalmente protegida, 20%).
   const cfg = (DB.ge.config || {}).pctImpuestoBeneficio;
+  if(p.forma === 'cooperativa' && cfg == null) return impuestoCooperativa(baseAnual, opts);
   const pct = cfg != null ? parseFloat(cfg) : (opts.pctDefecto != null ? opts.pctDefecto : (p.forma === 'cooperativa' ? 20 : 25));
   return Math.max(0, baseAnual) * pct/100;
 }

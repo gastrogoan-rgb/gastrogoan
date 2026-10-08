@@ -6963,6 +6963,23 @@ function renderMiNegocio(){
       ${b.formaJuridica==='sociedad' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.sociedadHint')}</p>` : ''}
       ${b.formaJuridica==='cooperativa' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.cooperativaHint')}</p>` : ''}
       ${b.formaJuridica==='cb' ? renderComunerosHtml(b) : ''}
+      ${(b.formaJuridica==='autonomo' || b.formaJuridica==='cb') ? `<div class="grid-2" style="gap:10px;margin-bottom:6px">
+        <div class="field"><label for="mn-otras-rentas">${t('mn.fiscal.otrasRentas')}</label><input type="number" id="mn-otras-rentas" min="0" step="1" value="${escapeHtml(String(b.otrasRentasTitular||''))}" onchange="saveBusiness(true)" ></div>
+        <div class="field"><label for="mn-hijos">${t('mn.fiscal.hijos')}</label><input type="number" id="mn-hijos" min="0" step="1" value="${escapeHtml(String(b.hijosTitular||''))}" onchange="saveBusiness(true)" ></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:-2px 0 10px">${t('mn.fiscal.otrasRentasHint')}</p>` : ''}
+      ${(b.formaJuridica==='sociedad' || b.formaJuridica==='cooperativa') ? `<div class="grid-2" style="gap:10px;margin-bottom:6px">
+        <div class="field"><label for="mn-incn-anterior">${t('mn.fiscal.incnAnterior')}</label><input type="number" id="mn-incn-anterior" min="0" step="1" value="${escapeHtml(String(b.incnAnterior!=null?b.incnAnterior:''))}" onchange="saveBusiness(true)" ></div>
+      </div>` : ''}
+      ${b.formaJuridica==='cooperativa' ? `<div class="grid-2" style="gap:10px;margin-bottom:6px">
+        <div class="field"><label for="mn-coop-tipo">${t('mn.fiscal.coopTipo')}</label>
+          <select id="mn-coop-tipo" onchange="saveBusiness(true)">
+            <option value="protegida" ${b.coopTipo!=='especial'?'selected':''}>${t('mn.fiscal.coopProtegida')}</option>
+            <option value="especial" ${b.coopTipo==='especial'?'selected':''}>${t('mn.fiscal.coopEspecial')}</option>
+          </select></div>
+        <div class="field"><label for="mn-coop-fro">${t('mn.fiscal.coopFro')}</label><input type="number" id="mn-coop-fro" min="0" step="1" value="${escapeHtml(String(b.coopFro!=null?b.coopFro:20))}" onchange="saveBusiness(true)" ></div>
+        <div class="field"><label for="mn-coop-fep">${t('mn.fiscal.coopFep')}</label><input type="number" id="mn-coop-fep" min="0" step="1" value="${escapeHtml(String(b.coopFep!=null?b.coopFep:5))}" onchange="saveBusiness(true)" ></div>
+      </div>` : ''}
 
       <h4><i class="ti ti-notes"></i> ${t('mn.business.description')}</h4>
       <div class="field">
@@ -7896,6 +7913,13 @@ async function saveBusiness(silent){
   if(el('mn-regimen-fiscal')) DB.business.regimenFiscal = el('mn-regimen-fiscal').value;
   if(el('mn-modalidad-directa')) DB.business.modalidadDirecta = el('mn-modalidad-directa').value;
   if(el('mn-inicio-actividad')) DB.business.inicioActividad20 = el('mn-inicio-actividad').checked;
+  const num = id => { const v = el(id) && el(id).value.trim(); return v === '' || v == null ? null : Math.max(0, parseFloat(v)); };
+  if(el('mn-otras-rentas')) DB.business.otrasRentasTitular = num('mn-otras-rentas');
+  if(el('mn-hijos')) DB.business.hijosTitular = num('mn-hijos');
+  if(el('mn-incn-anterior')) DB.business.incnAnterior = num('mn-incn-anterior');
+  if(el('mn-coop-tipo')) DB.business.coopTipo = el('mn-coop-tipo').value;
+  if(el('mn-coop-fro')) DB.business.coopFro = num('mn-coop-fro');
+  if(el('mn-coop-fep')) DB.business.coopFep = num('mn-coop-fep');
   if(el('mn-anyo')) DB.business.anyo = el('mn-anyo').value.trim();
   if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
   if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
