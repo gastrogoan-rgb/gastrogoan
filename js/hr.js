@@ -602,8 +602,9 @@ const GE = (function(){
       const dias = parseFloat(mc.temporadaDias);
       const idx = dias<=60 ? 1.50 : dias<=120 ? 1.35 : 1.25;
       minorado *= idx; indiceAplicado = {tipo:'temporada', valor:idx};
-    } else if(mc.anioInicio === MODULOS_ANIO || mc.anioInicio === MODULOS_ANIO-1){
-      const idx = mc.anioInicio === MODULOS_ANIO ? 0.80 : 0.90;
+    } else if(parseInt(mc.anioInicio) === MODULOS_ANIO || parseInt(mc.anioInicio) === MODULOS_ANIO-1){
+      // La pantalla guarda el año como texto: con === estricto el índice de inicio nunca se aplicaba.
+      const idx = parseInt(mc.anioInicio) === MODULOS_ANIO ? 0.80 : 0.90;
       minorado *= idx; indiceAplicado = {tipo:'inicio', valor:idx};
     }
     if(minorado > ep.excesoIrpf){
@@ -2776,13 +2777,15 @@ const GE = (function(){
     const mesesQ = [q*3, q*3+1, q*3+2];
     const sumQ = f => mesesQ.reduce((s,m) => s + f(m), 0);
     const vence = q < 3 ? `20/${String((q+1)*3+1).padStart(2,'0')}/${y}` : `30/01/${y+1}`;
+    // El 303 del 4T vence el 30/01, pero 111, 115 y 123 vencen el 20/01 (presentarlos después lleva recargo).
+    const venceRet = q < 3 ? vence : `20/01/${y+1}`;
     const p = fiscalPerfil();
     const filas = [];
     const iva = sumQ(m => ivaLiquidarMes(m, y));
     filas.push({mod:'303', txt:t('cal.303'), imp: iva, vence});
-    const r111 = sumQ(m => geModelo111ForMonth(y, m)); if(r111 > 0.005) filas.push({mod:'111', txt:t('cal.111'), imp:r111, vence});
-    const r115 = sumQ(m => geRetencionForMonth(y, m, '115')); if(r115 > 0.005) filas.push({mod:'115', txt:t('cal.115'), imp:r115, vence});
-    const r123 = sumQ(m => retDividendosMes(m, y)); if(r123 > 0.005) filas.push({mod:'123', txt:t('cal.123'), imp:r123, vence});
+    const r111 = sumQ(m => geModelo111ForMonth(y, m)); if(r111 > 0.005) filas.push({mod:'111', txt:t('cal.111'), imp:r111, vence:venceRet});
+    const r115 = sumQ(m => geRetencionForMonth(y, m, '115')); if(r115 > 0.005) filas.push({mod:'115', txt:t('cal.115'), imp:r115, vence:venceRet});
+    const r123 = sumQ(m => retDividendosMes(m, y)); if(r123 > 0.005) filas.push({mod:'123', txt:t('cal.123'), imp:r123, vence:venceRet});
     const pc = pagoACuentaTrimestre(q*3+2, y);
     if(pc && pc.importe > 0.005){
       const v202 = q === 1 ? `20/04/${y}` : q === 3 ? `20/10/${y} · 20/12/${y}` : '';
