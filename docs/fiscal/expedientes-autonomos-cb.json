@@ -1,0 +1,1238 @@
+{
+ "version": 1,
+ "generado": "2026-10-08",
+ "supuestos": [
+  "Importes en euros; ventas y compras en BASE (sin IVA). Ventas de restauración al 10 %.",
+  "Escala IRPF: la combinada de referencia del motor (19/24/30/37/45/47) para aislar errores de lógica; la diferencia por comunidad autónoma se trata aparte.",
+  "Cuota íntegra = escala(base) − escala(mínimo personal y familiar) (arts. 56, 63 y 74 LIRPF).",
+  "Gestor: 130 descontando el 5 % de difícil justificación en simplificada (criterio habitual de las instrucciones del modelo). App: sin él.",
+  "Resultados \"app\" = reproducción en Python de las fórmulas de js/finance.js y js/hr.js con los mismos datos; al convertirlo en prueba, comparar contra la app real.",
+  "Compras con fecha y factura dentro de cada mes; inversiones el día 1 del mes (la app amortiza el mes de compra entero).",
+  "iva303 = resultado del trimestre; iva303Liquidacion = lo que se ingresa tras compensar cuotas de trimestres anteriores (art. 99.Cinco LIVA). La app hoy enseña el resultado bruto de cada trimestre como si fuera a ingresar o a favor."
+ ],
+ "expedientes": [
+  {
+   "entrada": {
+    "id": "A1-bar-autonomo-EDS",
+    "forma": "autonomo",
+    "regimen": "directa",
+    "modalidad": "simplificada",
+    "ejercicio": 2026,
+    "descripcion": "Bar de barrio, titular soltero de 45 años sin otras rentas, en el negocio desde 2015. 1 empleado indefinido. Escala autonómica supuesta = la de referencia del motor.",
+    "ventasBase": [
+     11868.13,
+     12362.64,
+     13846.15,
+     14835.16,
+     15824.18,
+     16813.19,
+     18791.21,
+     17802.2,
+     15329.67,
+     14835.16,
+     13846.15,
+     13846.16
+    ],
+    "comprasBase": [
+     3797.8,
+     3956.04,
+     4430.77,
+     4747.25,
+     5063.74,
+     5380.22,
+     6013.19,
+     5696.7,
+     4905.49,
+     4747.25,
+     4430.77,
+     4430.77
+    ],
+    "comprasMixIva": [
+     [
+      0.7,
+      10
+     ],
+     [
+      0.3,
+      21
+     ]
+    ],
+    "fijos": [
+     {
+      "nombre": "Alquiler local",
+      "mensual": 1500,
+      "iva": 21,
+      "ret": "115"
+     },
+     {
+      "nombre": "Luz y gas",
+      "mensual": 650,
+      "iva": 21
+     },
+     {
+      "nombre": "Agua",
+      "mensual": 90,
+      "iva": 10
+     },
+     {
+      "nombre": "Teléfono",
+      "mensual": 50,
+      "iva": 21
+     },
+     {
+      "nombre": "Gestoría",
+      "mensual": 120,
+      "iva": 21,
+      "ret": "111"
+     },
+     {
+      "nombre": "Seguro",
+      "mensual": 70,
+      "iva": 0
+     },
+     {
+      "nombre": "Limpieza y mantenimiento",
+      "mensual": 100,
+      "iva": 21
+     },
+     {
+      "nombre": "CUOTA AUTÓNOMOS (RETA)",
+      "mensual": 380,
+      "iva": 0,
+      "categoria": "PERSONAL"
+     },
+     {
+      "nombre": "RETRIBUCIÓN EMPRESARIO",
+      "mensual": 2000,
+      "titular": true,
+      "categoria": "PERSONAL"
+     }
+    ],
+    "personal": {
+     "empleados": 1,
+     "brutoAnual": 22400,
+     "ssEmpresaAnual": 7201.6,
+     "retencionAnual": 1792,
+     "nota": "1.600 € x 14 pagas, indefinido, SS empresa 32,15 % (SS_2026), retención 8 %"
+    },
+    "capex": [
+     {
+      "nombre": "Cafetera y lavavajillas",
+      "tipo": "maquinaria",
+      "fecha": "2026-03-01",
+      "importe": 12000,
+      "iva": 21,
+      "financiado": 14520,
+      "cuotaMensual": 280,
+      "cuotas": 60
+     },
+     {
+      "nombre": "TPV y tablet",
+      "tipo": "informatica",
+      "fecha": "2026-03-01",
+      "importe": 900,
+      "iva": 21
+     },
+     {
+      "nombre": "Menaje",
+      "tipo": "utiles",
+      "fecha": "2026-05-01",
+      "importe": 250,
+      "iva": 21
+     }
+    ],
+    "rnAnterior": 30000,
+    "titular": {
+     "minimoPersonal": 5550,
+     "minimoFamiliar": 0
+    }
+   },
+   "esperado": {
+    "gestor": {
+     "cuentaResultados": {
+      "ventas": 180000.0,
+      "autoconsumo": 0,
+      "compras": 57599.99,
+      "fijos": 35520.0,
+      "personal": 29601.6,
+      "amortizacion": 1645.0,
+      "intereses": 666.49,
+      "principal": 2133.51,
+      "resultado": 54966.92,
+      "iva": 1371.3,
+      "ivaRep": 18000.0,
+      "ivaSop": 16628.7,
+      "m111": 2008.0,
+      "m115": 3420.0
+     },
+     "iva303": [
+      -2073.46,
+      1122.72,
+      1430.86,
+      891.18
+     ],
+     "m111": [
+      502.0,
+      502.0,
+      502.0,
+      502.0
+     ],
+     "m115": [
+      855.0,
+      855.0,
+      855.0,
+      855.0
+     ],
+     "m130": [
+      1786.21,
+      2873.68,
+      3527.33,
+      2406.17
+     ],
+     "irpf": {
+      "rnPrevio": 54966.92,
+      "dificilJustificacion": 2000,
+      "reduccion32_3": 0.0,
+      "reduccion32_2_3": 0.0,
+      "compensacionPerdidas": 0.0,
+      "baseLiquidable": 52966.92,
+      "minimo": 5550,
+      "cuotaTotal": 14244.76,
+      "cuotaOtrasRentas": 0.0,
+      "irpfActividad": 14244.76
+     },
+     "cuotaDiferencial": 3651.37,
+     "iva303Liquidacion": [
+      {
+       "resultado": -2073.46,
+       "aIngresar": 0,
+       "aCompensar": 2073.46
+      },
+      {
+       "resultado": -950.74,
+       "aIngresar": 0,
+       "aCompensar": 950.74
+      },
+      {
+       "resultado": 480.12,
+       "aIngresar": 480.12,
+       "aDevolver": 0
+      },
+      {
+       "resultado": 891.18,
+       "aIngresar": 891.18,
+       "aDevolver": 0
+      }
+     ]
+    },
+    "app": {
+     "cuentaResultados": {
+      "ventas": 180000.0,
+      "autoconsumo": 0,
+      "compras": 57599.99,
+      "fijos": 35520.0,
+      "personal": 29601.6,
+      "amortizacion": 1645.0,
+      "intereses": 666.49,
+      "principal": 2133.51,
+      "resultado": 54966.92,
+      "iva": 1371.3,
+      "ivaRep": 18000.0,
+      "ivaSop": 16628.7,
+      "m111": 2008.0,
+      "m115": 3420.0
+     },
+     "iva303": [
+      -2073.46,
+      1122.72,
+      1430.86,
+      891.18
+     ],
+     "m111": [
+      502.0,
+      502.0,
+      502.0,
+      502.0
+     ],
+     "m115": [
+      855.0,
+      855.0,
+      855.0,
+      855.0
+     ],
+     "m130": [
+      1880.22,
+      3024.92,
+      3682.07,
+      2406.17
+     ],
+     "irpf": {
+      "irpfActividad": 14244.76
+     },
+     "cuotaDiferencial": 3251.38
+    },
+    "desviacionAppPct": {
+     "resultado": 0.0,
+     "iva303Anual": 0.0,
+     "m130Anual": 3.78,
+     "irpf": 0.0
+    },
+    "fueraDelMargen5": []
+   }
+  },
+  {
+   "entrada": {
+    "id": "A2-restaurante-autonomo-EDN",
+    "forma": "autonomo",
+    "regimen": "directa",
+    "modalidad": "normal",
+    "ejercicio": 2026,
+    "descripcion": "Restaurante que facturó 640.000 € en 2025 (> 600.000 €: EDN obligatoria en 2026, art. 28.1 RIRPF). Titular de 40 años, 2 hijos de 5 y 2 años con mínimo repartido al 50 % con el otro progenitor. Coche turismo de uso mixto; come en su propio restaurante (autoconsumo).",
+    "ventasBase": [
+     43516.48,
+     45329.67,
+     50769.23,
+     54395.6,
+     58021.98,
+     61648.35,
+     68901.1,
+     65274.73,
+     56208.79,
+     54395.6,
+     50769.23,
+     50769.24
+    ],
+    "comprasBase": [
+     13054.94,
+     13598.9,
+     15230.77,
+     16318.68,
+     17406.59,
+     18494.5,
+     20670.33,
+     19582.42,
+     16862.64,
+     16318.68,
+     15230.77,
+     15230.77
+    ],
+    "comprasMixIva": [
+     [
+      0.75,
+      10
+     ],
+     [
+      0.25,
+      21
+     ]
+    ],
+    "fijos": [
+     {
+      "nombre": "Alquiler local",
+      "mensual": 4000,
+      "iva": 21,
+      "ret": "115"
+     },
+     {
+      "nombre": "Suministros",
+      "mensual": 2200,
+      "iva": 21
+     },
+     {
+      "nombre": "Gestoría",
+      "mensual": 300,
+      "iva": 21,
+      "ret": "111"
+     },
+     {
+      "nombre": "Seguros",
+      "mensual": 150,
+      "iva": 0
+     },
+     {
+      "nombre": "Mantenimiento",
+      "mensual": 600,
+      "iva": 21
+     },
+     {
+      "nombre": "Marketing",
+      "mensual": 500,
+      "iva": 21
+     },
+     {
+      "nombre": "CUOTA AUTÓNOMOS (RETA)",
+      "mensual": 600,
+      "iva": 0,
+      "categoria": "PERSONAL"
+     },
+     {
+      "nombre": "RETRIBUCIÓN EMPRESARIO",
+      "mensual": 4000,
+      "titular": true,
+      "categoria": "PERSONAL"
+     }
+    ],
+    "personal": {
+     "empleados": 6,
+     "brutoAnual": 150000,
+     "ssEmpresaAnual": 48225,
+     "retencionAnual": 18000,
+     "nota": "SS empresa 32,15 %, retención media 12 %"
+    },
+    "capex": [
+     {
+      "nombre": "Cocina industrial",
+      "tipo": "maquinaria",
+      "fecha": "2026-02-01",
+      "importe": 40000,
+      "iva": 21,
+      "financiado": 48400,
+      "cuotaMensual": 700,
+      "cuotas": 84
+     },
+     {
+      "nombre": "Software de gestión y web",
+      "tipo": "software",
+      "fecha": "2026-02-01",
+      "importe": 3000,
+      "iva": 21
+     },
+     {
+      "nombre": "Ordenadores",
+      "tipo": "informatica",
+      "fecha": "2026-02-01",
+      "importe": 2400,
+      "iva": 21
+     },
+     {
+      "nombre": "Turismo (uso mixto)",
+      "tipo": "vehiculo",
+      "turismoUsoMixto": true,
+      "fecha": "2026-01-01",
+      "importe": 30000,
+      "iva": 21
+     }
+    ],
+    "autoconsumo": {
+     "costeMes": 200,
+     "valorMercadoMes": 600,
+     "nota": "merma \"Consumo propio\": 200 €/mes a coste; 600 €/mes a precio de carta sin IVA"
+    },
+    "rnAnterior": 85000,
+    "titular": {
+     "minimoPersonal": 5550,
+     "minimoFamiliar": 3950.0
+    }
+   },
+   "esperado": {
+    "gestor": {
+     "cuentaResultados": {
+      "ventas": 660000.0,
+      "autoconsumo": 7200,
+      "compras": 197999.99,
+      "fijos": 100200.0,
+      "personal": 198225.0,
+      "amortizacion": 5857.5,
+      "intereses": 2402.19,
+      "principal": 5297.81,
+      "resultado": 162515.32,
+      "iva": 9159.0,
+      "ivaRep": 66240.0,
+      "ivaSop": 57081.0,
+      "m111": 18540.0,
+      "m115": 9120.0
+     },
+     "iva303": [
+      -8790.75,
+      6020.57,
+      7028.25,
+      4900.93
+     ],
+     "m111": [
+      4635.0,
+      4635.0,
+      4635.0,
+      4635.0
+     ],
+     "m115": [
+      2280.0,
+      2280.0,
+      2280.0,
+      2280.0
+     ],
+     "m130": [
+      4680.47,
+      9354.7,
+      11643.41,
+      6824.49
+     ],
+     "irpf": {
+      "rnPrevio": 162515.32,
+      "dificilJustificacion": 0.0,
+      "reduccion32_3": 0.0,
+      "reduccion32_2_3": 0.0,
+      "compensacionPerdidas": 0.0,
+      "baseLiquidable": 162515.32,
+      "minimo": 9500.0,
+      "cuotaTotal": 62228.39,
+      "cuotaOtrasRentas": 0.0,
+      "irpfActividad": 62228.39
+     },
+     "cuotaDiferencial": 29725.32,
+     "iva303Liquidacion": [
+      {
+       "resultado": -8790.75,
+       "aIngresar": 0,
+       "aCompensar": 8790.75
+      },
+      {
+       "resultado": -2770.18,
+       "aIngresar": 0,
+       "aCompensar": 2770.18
+      },
+      {
+       "resultado": 4258.07,
+       "aIngresar": 4258.07,
+       "aDevolver": 0
+      },
+      {
+       "resultado": 4900.93,
+       "aIngresar": 4900.93,
+       "aDevolver": 0
+      }
+     ]
+    },
+    "app": {
+     "cuentaResultados": {
+      "ventas": 660000.0,
+      "autoconsumo": 2400,
+      "compras": 197999.99,
+      "fijos": 100200.0,
+      "personal": 198225.0,
+      "amortizacion": 10991.0,
+      "intereses": 2402.19,
+      "principal": 5297.81,
+      "resultado": 152581.82,
+      "iva": 9159.0,
+      "ivaRep": 66240.0,
+      "ivaSop": 57081.0,
+      "m111": 18540.0,
+      "m115": 9120.0
+     },
+     "iva303": [
+      -8790.75,
+      6020.57,
+      7028.25,
+      4900.93
+     ],
+     "m111": [
+      4635.0,
+      4635.0,
+      4635.0,
+      4635.0
+     ],
+     "m115": [
+      2280.0,
+      2280.0,
+      2280.0,
+      2280.0
+     ],
+     "m130": [
+      4181.47,
+      8858.8,
+      11147.51,
+      6328.59
+     ],
+     "irpf": {
+      "irpfActividad": 58508.82
+     },
+     "cuotaDiferencial": 27992.45
+    },
+    "desviacionAppPct": {
+     "resultado": -6.11,
+     "iva303Anual": 0.0,
+     "m130Anual": -6.11,
+     "irpf": -5.98
+    },
+    "fueraDelMargen5": [
+     "resultado",
+     "m130Anual",
+     "irpf"
+    ]
+   }
+  },
+  {
+   "entrada": {
+    "id": "CB1-restaurante-CB-2-socios",
+    "forma": "cb",
+    "regimen": "directa",
+    "modalidad": "simplificada",
+    "ejercicio": 2026,
+    "descripcion": "Restaurante en comunidad de bienes, 2 comuneros al 50 %. 2 empleados. Obra de adecuación del local alquilado (contrato 10 años) con préstamo. El comunero B cobra además un sueldo de 18.000 € brutos en otra empresa (en la app NO ha puesto tipo de IRPF a mano).",
+    "ventasBase": [
+     19780.22,
+     20604.4,
+     23076.92,
+     24725.27,
+     26373.63,
+     28021.98,
+     31318.68,
+     29670.33,
+     25549.45,
+     24725.27,
+     23076.92,
+     23076.93
+    ],
+    "comprasBase": [
+     6131.87,
+     6387.36,
+     7153.85,
+     7664.83,
+     8175.83,
+     8686.81,
+     9708.79,
+     9197.8,
+     7920.33,
+     7664.83,
+     7153.85,
+     7153.85
+    ],
+    "comprasMixIva": [
+     [
+      0.72,
+      10
+     ],
+     [
+      0.28,
+      21
+     ]
+    ],
+    "fijos": [
+     {
+      "nombre": "Alquiler local",
+      "mensual": 2200,
+      "iva": 21,
+      "ret": "115"
+     },
+     {
+      "nombre": "Suministros",
+      "mensual": 1000,
+      "iva": 21
+     },
+     {
+      "nombre": "Gestoría",
+      "mensual": 200,
+      "iva": 21,
+      "ret": "111"
+     },
+     {
+      "nombre": "Seguro",
+      "mensual": 100,
+      "iva": 0
+     },
+     {
+      "nombre": "Otros servicios",
+      "mensual": 300,
+      "iva": 21
+     },
+     {
+      "nombre": "CUOTA AUTÓNOMOS (RETA) x2 comuneros",
+      "mensual": 760,
+      "iva": 0,
+      "categoria": "PERSONAL"
+     },
+     {
+      "nombre": "RETRIBUCIÓN EMPRESARIO (retiradas comuneros)",
+      "mensual": 3600,
+      "titular": true,
+      "categoria": "PERSONAL"
+     }
+    ],
+    "personal": {
+     "empleados": 2,
+     "brutoAnual": 44800,
+     "ssEmpresaAnual": 14403.2,
+     "retencionAnual": 3584
+    },
+    "capex": [
+     {
+      "nombre": "Obra de adecuación del local",
+      "tipo": "obras",
+      "anosContrato": 10,
+      "fecha": "2026-01-01",
+      "importe": 30000,
+      "iva": 21,
+      "financiado": 36300,
+      "cuotaMensual": 650,
+      "cuotas": 60
+     }
+    ],
+    "rnAnteriorEntidad": 70000,
+    "comuneros": [
+     {
+      "nombre": "Comunero A",
+      "pct": 50,
+      "minimoPersonal": 5550,
+      "rnAnterior": 35000
+     },
+     {
+      "nombre": "Comunero B",
+      "pct": 50,
+      "minimoPersonal": 5550,
+      "rnAnterior": 35000,
+      "otrasRentasNetas": 14830,
+      "notaOtrasRentas": "sueldo 18.000 − SS trabajador 6,5 % (1.170) − otros gastos art. 19.2.f (2.000) = 14.830; sin reducción art. 20 (tiene más de 6.500 € de otras rentas)"
+     }
+    ]
+   },
+   "esperado": {
+    "gestor": {
+     "cuentaResultados": {
+      "ventas": 300000.0,
+      "autoconsumo": 0,
+      "compras": 93000.0,
+      "fijos": 54720.0,
+      "personal": 59203.2,
+      "amortizacion": 3000.0,
+      "intereses": 948.68,
+      "principal": 6851.32,
+      "resultado": 89128.12,
+      "iva": 2211.6,
+      "ivaRep": 30000.0,
+      "ivaSop": 27788.4,
+      "m111": 3944.0,
+      "m115": 5016.0
+     },
+     "iva303": [
+      -4858.08,
+      2372.89,
+      2813.88,
+      1882.91
+     ],
+     "m111": [
+      986.0,
+      986.0,
+      986.0,
+      986.0
+     ],
+     "m115": [
+      1254.0,
+      1254.0,
+      1254.0,
+      1254.0
+     ],
+     "comuneros": [
+      {
+       "nombre": "Comunero A",
+       "pct": 50,
+       "atribucion184": 44564.06,
+       "m130": [
+        1358.71,
+        2386.33,
+        2873.72,
+        1894.06
+       ],
+       "irpf": {
+        "rnPrevio": 44564.06,
+        "dificilJustificacion": 2000,
+        "reduccion32_3": 0.0,
+        "reduccion32_2_3": 0.0,
+        "compensacionPerdidas": 0,
+        "baseLiquidable": 42564.06,
+        "minimo": 5550,
+        "cuotaTotal": 10395.7,
+        "cuotaOtrasRentas": 0.0,
+        "irpfActividad": 10395.7
+       },
+       "cuotaDiferencial": 1882.88
+      },
+      {
+       "nombre": "Comunero B",
+       "pct": 50,
+       "atribucion184": 44564.06,
+       "m130": [
+        1358.71,
+        2386.33,
+        2873.72,
+        1894.06
+       ],
+       "irpf": {
+        "rnPrevio": 44564.06,
+        "dificilJustificacion": 2000,
+        "reduccion32_3": 0.0,
+        "reduccion32_2_3": 0.0,
+        "compensacionPerdidas": 0,
+        "baseLiquidable": 57394.06,
+        "minimo": 5550,
+        "cuotaTotal": 15882.8,
+        "cuotaOtrasRentas": 1882.2,
+        "irpfActividad": 14000.6
+       },
+       "cuotaDiferencial": 5487.78
+      }
+     ],
+     "irpfTotal": 24396.3,
+     "m130Total": [
+      2717.42,
+      4772.66,
+      5747.44,
+      3788.12
+     ],
+     "iva303Liquidacion": [
+      {
+       "resultado": -4858.08,
+       "aIngresar": 0,
+       "aCompensar": 4858.08
+      },
+      {
+       "resultado": -2485.19,
+       "aIngresar": 0,
+       "aCompensar": 2485.19
+      },
+      {
+       "resultado": 328.69,
+       "aIngresar": 328.69,
+       "aDevolver": 0
+      },
+      {
+       "resultado": 1882.91,
+       "aIngresar": 1882.91,
+       "aDevolver": 0
+      }
+     ]
+    },
+    "app": {
+     "cuentaResultados": {
+      "ventas": 300000.0,
+      "autoconsumo": 0,
+      "compras": 93000.0,
+      "fijos": 54720.0,
+      "personal": 59203.2,
+      "amortizacion": 3000.0,
+      "intereses": 948.68,
+      "principal": 6851.32,
+      "resultado": 89128.12,
+      "iva": 2211.6,
+      "ivaRep": 30000.0,
+      "ivaSop": 27788.4,
+      "m111": 3944.0,
+      "m115": 5016.0
+     },
+     "iva303": [
+      -4858.08,
+      2372.89,
+      2813.88,
+      1882.91
+     ],
+     "m111": [
+      986.0,
+      986.0,
+      986.0,
+      986.0
+     ],
+     "m115": [
+      1254.0,
+      1254.0,
+      1254.0,
+      1254.0
+     ],
+     "comuneros": [
+      {
+       "nombre": "Comunero A",
+       "pct": 50,
+       "atribucion184": 44564.06,
+       "irpfActividad": 10395.7
+      },
+      {
+       "nombre": "Comunero B",
+       "pct": 50,
+       "atribucion184": 44564.06,
+       "irpfActividad": 10395.7
+      }
+     ],
+     "irpfTotal": 20791.4,
+     "m130Total": [
+      2860.44,
+      5023.86,
+      6049.93,
+      3891.4
+     ]
+    },
+    "desviacionAppPct": {
+     "resultado": 0.0,
+     "iva303Anual": 0.0,
+     "m130Anual": 4.7,
+     "irpfTotal": -14.78,
+     "irpfPorComunero": [
+      0.0,
+      -25.75
+     ]
+    },
+    "fueraDelMargen5": [
+     "irpfTotal",
+     "irpfPorComunero"
+    ]
+   }
+  },
+  {
+   "entrada": {
+    "id": "CB2-cafeteria-CB-nueva-3-socios",
+    "forma": "cb",
+    "regimen": "directa",
+    "modalidad": "simplificada",
+    "ejercicio": 2026,
+    "descripcion": "Cafetería en CB dada de alta en marzo de 2025 (primera actividad de los tres comuneros). 2025 cerró con −12.000 € (en la app). 2026 es el primer año con rendimiento positivo: reducción del 20 % por inicio de actividad (art. 32.3 LIRPF) y compensación de la pérdida de 2025 (art. 48 LIRPF). Tarifa plana de RETA hasta febrero.",
+    "ventasBase": [
+     9890.11,
+     10302.2,
+     11538.46,
+     12362.64,
+     13186.81,
+     14010.99,
+     15659.34,
+     14835.16,
+     12774.73,
+     12362.64,
+     11538.46,
+     11538.46
+    ],
+    "comprasBase": [
+     2967.03,
+     3090.66,
+     3461.54,
+     3708.79,
+     3956.04,
+     4203.3,
+     4697.8,
+     4450.55,
+     3832.42,
+     3708.79,
+     3461.54,
+     3461.54
+    ],
+    "comprasMixIva": [
+     [
+      0.8,
+      10
+     ],
+     [
+      0.2,
+      21
+     ]
+    ],
+    "fijos": [
+     {
+      "nombre": "Alquiler local",
+      "mensual": 1200,
+      "iva": 21,
+      "ret": "115"
+     },
+     {
+      "nombre": "Suministros",
+      "mensual": 500,
+      "iva": 21
+     },
+     {
+      "nombre": "Gestoría",
+      "mensual": 100,
+      "iva": 21,
+      "ret": "111"
+     },
+     {
+      "nombre": "Seguro",
+      "mensual": 60,
+      "iva": 0
+     },
+     {
+      "nombre": "Otros servicios",
+      "mensual": 150,
+      "iva": 21
+     },
+     {
+      "nombre": "CUOTA AUTÓNOMOS (RETA) x3",
+      "mensual": [
+       270,
+       270,
+       900,
+       900,
+       900,
+       900,
+       900,
+       900,
+       900,
+       900,
+       900,
+       900
+      ],
+      "iva": 0,
+      "categoria": "PERSONAL"
+     }
+    ],
+    "personal": {
+     "empleados": 1,
+     "brutoAnual": 11200,
+     "ssEmpresaAnual": 3600.8,
+     "retencionAnual": 224,
+     "nota": "media jornada"
+    },
+    "capex": [
+     {
+      "nombre": "Maquinaria (comprada en 2025)",
+      "tipo": "maquinaria",
+      "fecha": "2025-03-01",
+      "importe": 15000,
+      "iva": 21
+     }
+    ],
+    "rnAnteriorEntidad": -12000,
+    "perdidasEnApp": 12000,
+    "comuneros": [
+     {
+      "nombre": "Comunero A",
+      "pct": 50,
+      "minimoPersonal": 5550,
+      "rnAnterior": -6000,
+      "inicioActividad": true,
+      "perdidasPendientes": 6000
+     },
+     {
+      "nombre": "Comunero B",
+      "pct": 30,
+      "minimoPersonal": 5550,
+      "rnAnterior": -3600,
+      "inicioActividad": true,
+      "perdidasPendientes": 3600
+     },
+     {
+      "nombre": "Comunero C",
+      "pct": 20,
+      "minimoPersonal": 5550,
+      "rnAnterior": -2400,
+      "inicioActividad": true,
+      "perdidasPendientes": 2400
+     }
+    ]
+   },
+   "esperado": {
+    "gestor": {
+     "cuentaResultados": {
+      "ventas": 150000.0,
+      "autoconsumo": 0,
+      "compras": 45000.0,
+      "fijos": 33660.0,
+      "personal": 14800.8,
+      "amortizacion": 1800.0,
+      "intereses": 0.0,
+      "principal": 0.0,
+      "resultado": 54739.2,
+      "iva": 4596.0,
+      "ivaRep": 15000.0,
+      "ivaSop": 10404.0,
+      "m111": 404.0,
+      "m115": 2736.0
+     },
+     "iva303": [
+      783.23,
+      1279.63,
+      1514.77,
+      1018.37
+     ],
+     "m111": [
+      101.0,
+      101.0,
+      101.0,
+      101.0
+     ],
+     "m115": [
+      684.0,
+      684.0,
+      684.0,
+      684.0
+     ],
+     "comuneros": [
+      {
+       "nombre": "Comunero A",
+       "pct": 50,
+       "atribucion184": 27369.6,
+       "m130": [
+        1006.18,
+        1407.15,
+        1653.78,
+        1133.11
+       ],
+       "irpf": {
+        "rnPrevio": 27369.6,
+        "dificilJustificacion": 1368.48,
+        "reduccion32_3": 5200.22,
+        "reduccion32_2_3": 0.0,
+        "compensacionPerdidas": 6000,
+        "baseLiquidable": 14800.9,
+        "minimo": 5550,
+        "cuotaTotal": 1875.22,
+        "cuotaOtrasRentas": 0.0,
+        "irpfActividad": 1875.22
+       },
+       "cuotaDiferencial": -3325.0
+      },
+      {
+       "nombre": "Comunero B",
+       "pct": 30,
+       "atribucion184": 16421.76,
+       "m130": [
+        603.71,
+        844.29,
+        992.27,
+        679.87
+       ],
+       "irpf": {
+        "rnPrevio": 16421.76,
+        "dificilJustificacion": 821.09,
+        "reduccion32_3": 3120.13,
+        "reduccion32_2_3": 0.0,
+        "compensacionPerdidas": 3600,
+        "baseLiquidable": 8880.54,
+        "minimo": 5550,
+        "cuotaTotal": 632.8,
+        "cuotaOtrasRentas": 0.0,
+        "irpfActividad": 632.8
+       },
+       "cuotaDiferencial": -2487.34
+      },
+      {
+       "nombre": "Comunero C",
+       "pct": 20,
+       "atribucion184": 10947.84,
+       "m130": [
+        402.47,
+        562.86,
+        661.51,
+        453.24
+       ],
+       "irpf": {
+        "rnPrevio": 10947.84,
+        "dificilJustificacion": 547.39,
+        "reduccion32_3": 2080.09,
+        "reduccion32_2_3": 1490.25,
+        "compensacionPerdidas": 2400,
+        "baseLiquidable": 4430.1,
+        "minimo": 5550,
+        "cuotaTotal": 0.0,
+        "cuotaOtrasRentas": 0.0,
+        "irpfActividad": 0.0
+       },
+       "cuotaDiferencial": -2080.08
+      }
+     ],
+     "irpfTotal": 2508.02,
+     "m130Total": [
+      2012.36,
+      2814.3,
+      3307.56,
+      2266.22
+     ],
+     "iva303Liquidacion": [
+      {
+       "resultado": 783.23,
+       "aIngresar": 783.23,
+       "aDevolver": 0
+      },
+      {
+       "resultado": 1279.63,
+       "aIngresar": 1279.63,
+       "aDevolver": 0
+      },
+      {
+       "resultado": 1514.77,
+       "aIngresar": 1514.77,
+       "aDevolver": 0
+      },
+      {
+       "resultado": 1018.37,
+       "aIngresar": 1018.37,
+       "aDevolver": 0
+      }
+     ]
+    },
+    "app": {
+     "cuentaResultados": {
+      "ventas": 150000.0,
+      "autoconsumo": 0,
+      "compras": 45000.0,
+      "fijos": 33660.0,
+      "personal": 14800.8,
+      "amortizacion": 1800.0,
+      "intereses": 0.0,
+      "principal": 0.0,
+      "resultado": 54739.2,
+      "iva": 4596.0,
+      "ivaRep": 15000.0,
+      "ivaSop": 10404.0,
+      "m111": 404.0,
+      "m115": 2736.0
+     },
+     "iva303": [
+      783.23,
+      1279.63,
+      1514.77,
+      1018.37
+     ],
+     "m111": [
+      101.0,
+      101.0,
+      101.0,
+      101.0
+     ],
+     "m115": [
+      684.0,
+      684.0,
+      684.0,
+      684.0
+     ],
+     "comuneros": [
+      {
+       "nombre": "Comunero A",
+       "pct": 50,
+       "atribucion184": 27369.6,
+       "irpfActividad": 3201.34
+      },
+      {
+       "nombre": "Comunero B",
+       "pct": 30,
+       "atribucion184": 16421.76,
+       "irpfActividad": 1259.83
+      },
+      {
+       "nombre": "Comunero C",
+       "pct": 20,
+       "atribucion184": 10947.84,
+       "irpfActividad": 189.85
+      }
+     ],
+     "irpfTotal": 4651.02,
+     "m130Total": [
+      2118.27,
+      2962.42,
+      3481.65,
+      2385.5
+     ]
+    },
+    "desviacionAppPct": {
+     "resultado": 0.0,
+     "iva303Anual": 0.0,
+     "m130Anual": 5.26,
+     "irpfTotal": 85.45,
+     "irpfPorComunero": [
+      70.72,
+      99.09,
+      null
+     ]
+    },
+    "fueraDelMargen5": [
+     "m130Anual",
+     "irpfTotal",
+     "irpfPorComunero"
+    ]
+   }
+  }
+ ]
+}

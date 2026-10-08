@@ -1,0 +1,1139 @@
+{
+ "version": "2026-10-08",
+ "alcance": "IVA, nóminas y retenciones — transversal a todas las formas jurídicas",
+ "parametros_2026": {
+  "seguridad_social": {
+   "fuente": "Orden PJC/297/2026 (BOE 31/03/2026, efectos 01/01/2026); RDL 2/2023 (MEI y solidaridad); DA 4ª Ley 42/2006 (tarifa AT/EP)",
+   "empresa": {
+    "indefinido": 32.15,
+    "temporal": 33.35,
+    "desglose": {
+     "cc": 23.6,
+     "desempleo_indef": 5.5,
+     "desempleo_temp": 6.7,
+     "fogasa": 0.2,
+     "fp": 0.6,
+     "mei": 0.75,
+     "at_ep_cnae56": 1.5
+    }
+   },
+   "trabajador": {
+    "indefinido": 6.5,
+    "temporal": 6.55,
+    "desglose": {
+     "cc": 4.7,
+     "desempleo_indef": 1.55,
+     "desempleo_temp": 1.6,
+     "fp": 0.1,
+     "mei": 0.15
+    }
+   },
+   "base_maxima": 5101.2,
+   "base_minima": {
+    "g1": 1989.3,
+    "g2": 1649.7,
+    "g3": 1435.2,
+    "g4_11": 1424.4,
+    "diaria_g8_11": 47.48
+   },
+   "solidaridad": [
+    {
+     "tramo": "hasta +10 % sobre base máx.",
+     "total": 1.15,
+     "empresa": 0.96,
+     "trabajador": 0.19
+    },
+    {
+     "tramo": "+10 % a +50 %",
+     "total": 1.25,
+     "empresa": 1.04,
+     "trabajador": 0.21
+    },
+    {
+     "tramo": "más de +50 %",
+     "total": 1.46,
+     "empresa": 1.22,
+     "trabajador": 0.24
+    }
+   ],
+   "contrato_menos_30_dias": 33.62,
+   "horas_extra": {
+    "fuerza_mayor": {
+     "empresa": 12.0,
+     "trabajador": 2.0
+    },
+    "resto": {
+     "empresa": 23.6,
+     "trabajador": 4.7
+    }
+   },
+   "smi": {
+    "mes_14_pagas": 1221.0,
+    "anual": 17094.0,
+    "fuente": "RD 126/2026"
+   }
+  },
+  "irpf_retenciones": {
+   "fuente": "Algoritmo AEAT 2026 (versión 10-09-2026), arts. 80-86 RIRPF",
+   "gastos_generales": 2000,
+   "reduccion_art20": {
+    "hasta_14852": 7302,
+    "de_14852_a_17673_52": "7302 - 1,75*(RNT-14852)",
+    "de_17673_52_a_19747_50": "2364,34 - 1,14*(RNT-17673,52)"
+   },
+   "minimo_personal": 5550,
+   "minimo_descendientes": [
+    2400,
+    2700,
+    4000,
+    4500
+   ],
+   "menor_3": 2800,
+   "limites_excluyentes": {
+    "sit1": {
+     "h1": 17644,
+     "h2": 18694
+    },
+    "sit2": {
+     "h0": 17197,
+     "h1": 18130,
+     "h2": 19262
+    },
+    "sit3": {
+     "h0": 15876,
+     "h1": 16342,
+     "h2": 16867
+    }
+   },
+   "limite_cuota_43": {
+    "aplica_si_retrib_hasta": 35200
+   },
+   "escala": [
+    [
+     0,
+     12450,
+     19
+    ],
+    [
+     12450,
+     20200,
+     24
+    ],
+    [
+     20200,
+     35200,
+     30
+    ],
+    [
+     35200,
+     60000,
+     37
+    ],
+    [
+     60000,
+     300000,
+     45
+    ],
+    [
+     300000,
+     null,
+     47
+    ]
+   ],
+   "tipo_minimo_contrato_inferior_anio": 2.0,
+   "tipo_minimo_relacion_especial": 15.0,
+   "administradores": {
+    "general": 35.0,
+    "entidad_inc_menor_100000": 19.0
+   },
+   "profesionales": {
+    "general": 15.0,
+    "inicio_3_anios": 7.0
+   },
+   "alquiler": 19.0,
+   "dividendos": 19.0
+  }
+ },
+ "nominas": [
+  {
+   "id": "N1",
+   "titulo": "Camarero/a indefinido, jornada completa, 14 pagas",
+   "entradas": {
+    "contrato": "indefinido",
+    "grupo_cotizacion": 8,
+    "jornada_pct": 100,
+    "pagas": 14,
+    "salario_base_tablas_mes": 1320.0,
+    "plus_transporte_mes": 50.0,
+    "situacion_familiar": 3,
+    "hijos": 0,
+    "cnae": "5610"
+   },
+   "base_cotizacion_mes": 1590.0,
+   "retribucion_anual": 19080.0,
+   "ss": {
+    "pct_empresa": 32.15,
+    "pct_trabajador": 6.5,
+    "empresa": 511.19,
+    "trabajador": 103.35,
+    "solidaridad_empresa": 0.0,
+    "solidaridad_trabajador": 0.0
+   },
+   "irpf": {
+    "tipo": 7.22,
+    "importe": 1377.58,
+    "rnt": 17839.8,
+    "red20": 2174.78,
+    "base": 13665.02,
+    "minperfa": 5550.0,
+    "cuota1": 2657.1,
+    "cuota2": 1054.5,
+    "limite43": 1377.72,
+    "cuota": 1377.72,
+    "tipo_minimo_2pct_aplicado": false,
+    "exento_por_limite": false
+   },
+   "nomina_ordinaria": {
+    "bruto": 1370.0,
+    "ss_trabajador": 103.35,
+    "irpf": 98.91,
+    "neto": 1167.74
+   },
+   "paga_extra": {
+    "bruto": 1320.0,
+    "ss_trabajador": 0,
+    "irpf": 95.3,
+    "neto": 1224.7
+   },
+   "ss_empresa_mes": 511.19,
+   "coste_empresa_anual": 25214.28,
+   "coste_empresa_mes_devengado": 2101.19,
+   "app": {
+    "A_neto_real_e_irpf_real": {
+     "bruto": 1353.43,
+     "brutoMes": 1579.0,
+     "base": 1579.0,
+     "ssEmpresa": 507.65,
+     "irpfMensual": 114.0,
+     "total": 2086.65
+    },
+    "B_neto_real_e_irpf_por_defecto_15": {
+     "bruto": 1487.57,
+     "brutoMes": 1735.49,
+     "base": 1735.49,
+     "ssEmpresa": 557.96,
+     "irpfMensual": 260.32,
+     "total": 2293.46
+    },
+    "coste_anual_real": 25214.28,
+    "coste_anual_app_A": 25039.8,
+    "coste_anual_app_B": 27521.52,
+    "desvio_coste_A_pct": -0.69,
+    "desvio_coste_B_pct": 9.15,
+    "irpf_111_real_anual": 1377.58,
+    "irpf_111_app_B_anual": 3123.84
+   }
+  },
+  {
+   "id": "N2",
+   "titulo": "Ayudante de cocina fijo discontinuo, 7 meses de actividad (abril-octubre)",
+   "entradas": {
+    "contrato": "fijo_discontinuo",
+    "cotiza_como": "indefinido",
+    "grupo_cotizacion": 9,
+    "jornada_pct": 100,
+    "pagas": "prorrateadas",
+    "salario_base_tablas_mes": 1250.0,
+    "meses_actividad": [
+     "04",
+     "05",
+     "06",
+     "07",
+     "08",
+     "09",
+     "10"
+    ],
+    "situacion_familiar": 3,
+    "hijos": 0,
+    "cnae": "5610"
+   },
+   "base_cotizacion_mes": 1458.33,
+   "retribucion_anual": 10208.33,
+   "ss": {
+    "pct_empresa": 32.15,
+    "pct_trabajador": 6.5,
+    "empresa": 468.85,
+    "trabajador": 94.79,
+    "solidaridad_empresa": 0.0,
+    "solidaridad_trabajador": 0.0
+   },
+   "irpf": {
+    "tipo": 0.0,
+    "importe": 0.0,
+    "exento_por_limite": true,
+    "limite": 15876
+   },
+   "nomina_ordinaria": {
+    "bruto": 1458.33,
+    "ss_trabajador": 94.79,
+    "irpf": 0.0,
+    "neto": 1363.54
+   },
+   "ss_empresa_mes": 468.85,
+   "coste_empresa_mes_activo": 1927.18,
+   "coste_empresa_anual": 13490.28,
+   "meses_inactivos_coste": 0.0,
+   "nota_bonificacion": "Si la actividad se alargara a febrero, marzo o noviembre: bonificación del 50 % de la cuota empresarial por CC, desempleo, FOGASA y FP (RDL 1/2023, fijos discontinuos de hostelería vinculada al turismo) = 218.02 €/mes.",
+   "app": {
+    "A_neto_real_e_irpf_real": {
+     "bruto": 1458.33,
+     "brutoMes": 1458.33,
+     "base": 1458.33,
+     "ssEmpresa": 468.85,
+     "irpfMensual": 0.0,
+     "total": 1927.19
+    },
+    "B_neto_real_e_irpf_por_defecto_15": {
+     "bruto": 1736.99,
+     "brutoMes": 1736.99,
+     "base": 1736.99,
+     "ssEmpresa": 558.44,
+     "irpfMensual": 260.55,
+     "total": 2295.44
+    },
+    "coste_anual_real": 13490.26,
+    "coste_anual_app_A": 23126.28,
+    "coste_anual_app_B": 27545.28,
+    "desvio_coste_A_pct": 71.43,
+    "desvio_coste_B_pct": 104.19,
+    "irpf_111_real_anual": 0.0,
+    "irpf_111_app_B_anual": 3126.6,
+    "nota": "La app no tiene meses de actividad: el gasto fijo cuenta los 12 meses salvo que el dueño lo borre y lo vuelva a crear."
+   }
+  },
+  {
+   "id": "N3",
+   "titulo": "Cocinero/a a tiempo parcial 20 h/semana (50 %), indefinido, 14 pagas",
+   "entradas": {
+    "contrato": "indefinido",
+    "grupo_cotizacion": 8,
+    "jornada_pct": 50,
+    "pagas": 14,
+    "salario_base_tablas_jornada_completa": 1450.0,
+    "situacion_familiar": 3,
+    "hijos": 0
+   },
+   "base_cotizacion_mes": 845.83,
+   "base_minima_parcial": 712.2,
+   "retribucion_anual": 10150.0,
+   "ss": {
+    "pct_empresa": 32.15,
+    "pct_trabajador": 6.5,
+    "empresa": 271.94,
+    "trabajador": 54.98,
+    "solidaridad_empresa": 0.0,
+    "solidaridad_trabajador": 0.0
+   },
+   "irpf": {
+    "tipo": 0.0,
+    "importe": 0.0,
+    "exento_por_limite": true,
+    "limite": 15876
+   },
+   "nomina_ordinaria": {
+    "bruto": 725.0,
+    "ss_trabajador": 54.98,
+    "irpf": 0.0,
+    "neto": 670.02
+   },
+   "paga_extra": {
+    "bruto": 725.0,
+    "ss_trabajador": 0,
+    "irpf": 0.0,
+    "neto": 725.0
+   },
+   "ss_empresa_mes": 271.94,
+   "coste_empresa_anual": 13413.28,
+   "coste_empresa_mes_devengado": 1117.77,
+   "app": {
+    "A_neto_real_e_irpf_real": {
+     "bruto": 716.6,
+     "brutoMes": 836.03,
+     "base": 836.03,
+     "ssEmpresa": 268.78,
+     "irpfMensual": 0.0,
+     "total": 1104.82
+    },
+    "B_neto_real_e_irpf_por_defecto_15": {
+     "bruto": 853.53,
+     "brutoMes": 995.78,
+     "base": 995.78,
+     "ssEmpresa": 320.14,
+     "irpfMensual": 149.37,
+     "total": 1315.93
+    },
+    "coste_anual_real": 13413.24,
+    "coste_anual_app_A": 13257.84,
+    "coste_anual_app_B": 15791.16,
+    "desvio_coste_A_pct": -1.16,
+    "desvio_coste_B_pct": 17.73,
+    "irpf_111_real_anual": 0.0,
+    "irpf_111_app_B_anual": 1792.44
+   }
+  },
+  {
+   "id": "N4",
+   "titulo": "Camarero/a temporal 3 meses (circunstancias de la producción), jornada completa",
+   "entradas": {
+    "contrato": "temporal",
+    "grupo_cotizacion": 8,
+    "jornada_pct": 100,
+    "pagas": "prorrateadas",
+    "salario_base_tablas_mes": 1320.0,
+    "meses": 3,
+    "situacion_familiar": 3,
+    "hijos": 0
+   },
+   "base_cotizacion_mes": 1540.0,
+   "retribucion_anual": 4620.0,
+   "ss": {
+    "pct_empresa": 33.35,
+    "pct_trabajador": 6.55,
+    "empresa": 513.59,
+    "trabajador": 100.87,
+    "solidaridad_empresa": 0.0,
+    "solidaridad_trabajador": 0.0
+   },
+   "irpf": {
+    "tipo": 0.0,
+    "importe": 0.0,
+    "exento_por_limite": true,
+    "limite": 15876
+   },
+   "nomina_ordinaria": {
+    "bruto": 1540.0,
+    "ss_trabajador": 100.87,
+    "irpf": 0.0,
+    "neto": 1439.13
+   },
+   "ss_empresa_mes": 513.59,
+   "indemnizacion_fin_contrato": 151.89,
+   "nota_indemnizacion": "12 días de salario por año trabajado (art. 49.1.c ET): exenta de IRPF (art. 7.e LIRPF) y fuera de la base de cotización (art. 147.2.c LGSS).",
+   "coste_empresa_total_contrato": 6312.66
+  },
+  {
+   "id": "N4b",
+   "titulo": "Variante: temporal 10 meses a 1.650 €/mes (para ver el tipo mínimo del 2 %)",
+   "entradas": {
+    "contrato": "temporal",
+    "grupo_cotizacion": 8,
+    "pagas": "prorrateadas",
+    "bruto_mes": 1650.0,
+    "meses": 10,
+    "situacion_familiar": 3,
+    "hijos": 0
+   },
+   "retribucion_anual": 16500.0,
+   "ss": {
+    "pct_empresa": 33.35,
+    "pct_trabajador": 6.55,
+    "empresa": 550.28,
+    "trabajador": 108.08,
+    "solidaridad_empresa": 0.0,
+    "solidaridad_trabajador": 0.0
+   },
+   "irpf": {
+    "tipo": 2.0,
+    "importe": 330.0,
+    "rnt": 15419.2,
+    "red20": 6309.4,
+    "base": 7109.8,
+    "minperfa": 5550.0,
+    "cuota1": 1350.86,
+    "cuota2": 1054.5,
+    "limite43": 268.32,
+    "cuota": 268.32,
+    "tipo_minimo_2pct_aplicado": true,
+    "exento_por_limite": false
+   },
+   "nomina_ordinaria": {
+    "bruto": 1650.0,
+    "ss_trabajador": 108.08,
+    "irpf": 33.0,
+    "neto": 1508.92
+   }
+  },
+  {
+   "id": "N5",
+   "titulo": "Jefe/a de cocina indefinido, 5.200 €/mes × 14 (por encima de la base máxima), 2 hijos al 50 %",
+   "entradas": {
+    "contrato": "indefinido",
+    "grupo_cotizacion": 3,
+    "jornada_pct": 100,
+    "pagas": 14,
+    "salario_mes": 5200.0,
+    "situacion_familiar": 3,
+    "hijos": 2,
+    "hijos_por_entero": false
+   },
+   "remuneracion_mes_con_prorrata": 6066.67,
+   "base_cotizacion_mes": 5101.2,
+   "exceso_sobre_base_maxima": 965.47,
+   "retribucion_anual": 72800.0,
+   "ss": {
+    "pct_empresa": 32.15,
+    "pct_trabajador": 6.5,
+    "empresa": 1649.67,
+    "trabajador": 333.5,
+    "solidaridad_empresa": 9.63,
+    "solidaridad_trabajador": 1.93
+   },
+   "irpf": {
+    "tipo": 26.67,
+    "importe": 19415.76,
+    "rnt": 68798.0,
+    "red20": 0.0,
+    "base": 66798.0,
+    "minperfa": 8100.0,
+    "cuota1": 20960.6,
+    "cuota2": 1539.0,
+    "limite43": null,
+    "cuota": 19421.6,
+    "tipo_minimo_2pct_aplicado": false,
+    "exento_por_limite": false
+   },
+   "nomina_ordinaria": {
+    "bruto": 5200.0,
+    "ss_trabajador": 333.5,
+    "irpf": 1386.84,
+    "neto": 3479.66
+   },
+   "paga_extra": {
+    "bruto": 5200.0,
+    "ss_trabajador": 0,
+    "irpf": 1386.84,
+    "neto": 3813.16
+   },
+   "ss_empresa_mes": 1649.67,
+   "coste_empresa_anual": 92596.04,
+   "coste_empresa_mes_devengado": 7716.34,
+   "app": {
+    "A_neto_real_e_irpf_real": {
+     "bruto": 5206.73,
+     "brutoMes": 6074.52,
+     "base": 5101.2,
+     "ssEmpresa": 1649.75,
+     "irpfMensual": 1620.08,
+     "total": 7724.27
+    },
+    "B_neto_real_e_irpf_por_defecto_15": {
+     "bruto": 4432.69,
+     "brutoMes": 5171.47,
+     "base": 5101.2,
+     "ssEmpresa": 1640.71,
+     "irpfMensual": 775.72,
+     "total": 6812.18
+    },
+    "coste_anual_real": 92596.08,
+    "coste_anual_app_A": 92691.24,
+    "coste_anual_app_B": 81746.16,
+    "desvio_coste_A_pct": 0.1,
+    "desvio_coste_B_pct": -11.72,
+    "irpf_111_real_anual": 19415.76,
+    "irpf_111_app_B_anual": 9308.64
+   }
+  },
+  {
+   "id": "N6",
+   "titulo": "Extra de 15 días (contrato temporal < 30 días), jornada completa",
+   "entradas": {
+    "contrato": "temporal",
+    "dias": 15,
+    "grupo_cotizacion": 8,
+    "salario_mes_con_prorrata": 1540.0,
+    "situacion_familiar": 3,
+    "hijos": 0
+   },
+   "salario_15_dias": 770.0,
+   "vacaciones_no_disfrutadas": 63.29,
+   "bruto_cotizable": 833.29,
+   "base_cotizacion": 833.29,
+   "base_minima_15_dias": 712.2,
+   "ss": {
+    "pct_empresa": 33.35,
+    "pct_trabajador": 6.55,
+    "empresa": 277.9,
+    "trabajador": 54.58,
+    "solidaridad_empresa": 0.0,
+    "solidaridad_trabajador": 0.0
+   },
+   "irpf": {
+    "tipo": 0.0,
+    "importe": 0.0,
+    "exento_por_limite": true,
+    "limite": 15876
+   },
+   "cotizacion_adicional_contrato_corto": 33.62,
+   "indemnizacion_fin_contrato": 24.97,
+   "liquidacion": {
+    "bruto": 833.29,
+    "ss_trabajador": 54.58,
+    "irpf": 0.0,
+    "indemnizacion": 24.97,
+    "neto": 803.68
+   },
+   "ss_empresa_total": 311.52,
+   "coste_empresa_total": 1169.78,
+   "nota": "Las vacaciones retribuidas y no disfrutadas se cotizan prolongando el alta por esos días (criterio TGSS); aquí se suman a la base del periodo, que da la misma cuota. Base mínima por días: 47,48 €/día (grupos 8-11)."
+  }
+ ],
+ "iva_trimestre": {
+  "id": "IVA-T3-2026",
+  "titulo": "Tercer trimestre 2026 de un restaurante con sala, para llevar con alcohol, delivery por plataforma y señales",
+  "periodo": "2026-T3",
+  "vence": "2026-10-20 (domiciliado: hasta el 2026-10-15)",
+  "repercutido": [
+   {
+    "concepto": "Sala: comida y bebida servida (incluye vino y copas)",
+    "importe_iva_incluido": 66000.0,
+    "tipo": 10,
+    "base": 60000.0,
+    "cuota": 6000.0,
+    "nota": "Servicio de restauración: todo al 10 % (art. 91.Uno.2.2º LIVA), alcohol incluido."
+   },
+   {
+    "concepto": "Para llevar: comida preparada",
+    "importe_iva_incluido": 8800.0,
+    "tipo": 10,
+    "base": 8000.0,
+    "cuota": 800.0,
+    "nota": "Entrega de bienes, productos alimenticios (art. 91.Uno.1.1º LIVA)."
+   },
+   {
+    "concepto": "Para llevar: cerveza y vino",
+    "importe_iva_incluido": 1210.0,
+    "tipo": 21,
+    "base": 1000.0,
+    "cuota": 210.0,
+    "nota": "Bebidas alcohólicas excluidas del 10 % como bienes."
+   },
+   {
+    "concepto": "Para llevar: refrescos con azúcar añadido",
+    "importe_iva_incluido": 605.0,
+    "tipo": 21,
+    "base": 500.0,
+    "cuota": 105.0,
+    "nota": "Excluidos del 10 % desde 2021 (Ley 11/2020)."
+   },
+   {
+    "concepto": "Para llevar: agua",
+    "importe_iva_incluido": 110.0,
+    "tipo": 10,
+    "base": 100.0,
+    "cuota": 10.0,
+    "nota": "Agua apta para alimentación: 10 %."
+   },
+   {
+    "concepto": "Delivery Glovo (venta del restaurante al cliente)",
+    "importe_iva_incluido": 11000.0,
+    "tipo": 10,
+    "base": 10000.0,
+    "cuota": 1000.0,
+    "nota": "El restaurante vende la comida; la plataforma cobra comisión aparte."
+   },
+   {
+    "concepto": "Delivery Uber Eats (venta del restaurante al cliente)",
+    "importe_iva_incluido": 5500.0,
+    "tipo": 10,
+    "base": 5000.0,
+    "cuota": 500.0,
+    "nota": ""
+   },
+   {
+    "concepto": "Envío con repartidor propio",
+    "importe_iva_incluido": 330.0,
+    "tipo": 10,
+    "base": 300.0,
+    "cuota": 30.0,
+    "nota": "Prestación accesoria a la comida: sigue su tipo (art. 79.Dos LIVA)."
+   },
+   {
+    "concepto": "Señales cobradas en el trimestre para cenas del trimestre siguiente",
+    "importe_iva_incluido": 2200.0,
+    "tipo": 10,
+    "base": 2000.0,
+    "cuota": 200.0,
+    "nota": "Devengo anticipado (art. 75.Dos LIVA)."
+   },
+   {
+    "concepto": "Señales cobradas el trimestre anterior por cenas de este (ya tributaron)",
+    "importe_iva_incluido": -1100.0,
+    "tipo": 10,
+    "base": -1000.0,
+    "cuota": -100.0,
+    "nota": "Se restan: la venta de la cena va entera en el TPV."
+   },
+   {
+    "concepto": "Vale univalente vendido (menú para dos)",
+    "importe_iva_incluido": 550.0,
+    "tipo": 10,
+    "base": 500.0,
+    "cuota": 50.0,
+    "nota": "Bono univalente: IVA al venderlo."
+   },
+   {
+    "concepto": "Vale univalente vendido el trimestre anterior y canjeado ahora",
+    "importe_iva_incluido": -330.0,
+    "tipo": 10,
+    "base": -300.0,
+    "cuota": -30.0,
+    "nota": "Se resta: el TPV vuelve a contar la comida."
+   },
+   {
+    "concepto": "Autoconsumo del titular (a coste, art. 79.Tres LIVA)",
+    "importe_iva_incluido": null,
+    "tipo": 10,
+    "base": 600.0,
+    "cuota": 60.0,
+    "nota": "Base = coste de adquisición. Para IRPF, a valor de mercado (art. 28.3 LIRPF)."
+   }
+  ],
+  "repercutido_por_tipo": {
+   "10": {
+    "base": 85200.0,
+    "cuota": 8520.0
+   },
+   "21": {
+    "base": 1500.0,
+    "cuota": 315.0
+   }
+  },
+  "no_sujeto": [
+   {
+    "concepto": "Propinas",
+    "importe": 1500.0,
+    "nota": "No forman parte de la contraprestación: fuera del IVA."
+   },
+   {
+    "concepto": "Vales polivalentes vendidos",
+    "importe": 1000.0,
+    "nota": "Sin IVA al venderlos: tributa la venta cuando se canjean."
+   }
+  ],
+  "isp": {
+   "concepto": "Comisión Uber Eats (factura desde Países Bajos, ISP)",
+   "base": 1375.0,
+   "tipo": 21,
+   "cuota": 288.75,
+   "nota": "Art. 84.Uno.2º LIVA: autorrepercusión (casillas 12/13) y deducción (28/29). Va en el 349 (clave I), no en el 347."
+  },
+  "soportado_corriente": [
+   {
+    "concepto": "Materia prima al 10 %",
+    "base": 18000.0,
+    "tipo": 10,
+    "cuota": 1800.0
+   },
+   {
+    "concepto": "Materia prima al 4 % (pan, leche, huevos, fruta, verdura, aceite de oliva)",
+    "base": 3000.0,
+    "tipo": 4,
+    "cuota": 120.0
+   },
+   {
+    "concepto": "Bebidas alcohólicas y refrescos al 21 %",
+    "base": 3000.0,
+    "tipo": 21,
+    "cuota": 630.0
+   },
+   {
+    "concepto": "Luz",
+    "base": 2400.0,
+    "tipo": 21,
+    "cuota": 504.0
+   },
+   {
+    "concepto": "Gas",
+    "base": 900.0,
+    "tipo": 21,
+    "cuota": 189.0
+   },
+   {
+    "concepto": "Agua",
+    "base": 300.0,
+    "tipo": 10,
+    "cuota": 30.0
+   },
+   {
+    "concepto": "Alquiler del local (retención 19 %)",
+    "base": 4500.0,
+    "tipo": 21,
+    "cuota": 945.0
+   },
+   {
+    "concepto": "Gestoría (retención 15 %)",
+    "base": 450.0,
+    "tipo": 21,
+    "cuota": 94.5
+   },
+   {
+    "concepto": "Envases para llevar",
+    "base": 600.0,
+    "tipo": 21,
+    "cuota": 126.0
+   },
+   {
+    "concepto": "Teléfono e internet",
+    "base": 150.0,
+    "tipo": 21,
+    "cuota": 31.5
+   },
+   {
+    "concepto": "Comisión Glovo (30 % sobre PVP con IVA, factura española)",
+    "base": 3300.0,
+    "tipo": 21,
+    "cuota": 693.0
+   }
+  ],
+  "soportado_inversion": {
+   "concepto": "Horno (bien de inversión)",
+   "base": 6000.0,
+   "tipo": 21,
+   "cuota": 1260.0
+  },
+  "casillas_303": {
+   "regimen_general_por_tipo": {
+    "10": {
+     "base": 85200.0,
+     "cuota": 8520.0
+    },
+    "21": {
+     "base": 1500.0,
+     "cuota": 315.0
+    }
+   },
+   "c12_13_isp": {
+    "base": 1375.0,
+    "cuota": 288.75
+   },
+   "total_devengado_c27": 9123.75,
+   "c28_29_corrientes": {
+    "base": 37975.0,
+    "cuota": 5451.75
+   },
+   "c30_31_inversion": {
+    "base": 6000.0,
+    "cuota": 1260.0
+   },
+   "total_deducir_c45": 6711.75,
+   "resultado_c46": 2412.0
+  },
+  "resultado_a_ingresar": 2412.0,
+  "retenciones_trimestre": {
+   "modelo_111_profesionales": 202.5,
+   "modelo_115_alquiler": 2565.0,
+   "nota": "Gastos mensuales: gestoría 450/mes y alquiler 4.500/mes → 3 meses. Las nóminas se suman al 111 aparte."
+  },
+  "error_app_si_bebidas_para_llevar_al_10": {
+   "iva_declarado_de_menos": 150.0,
+   "nota": "Un plato/bebida tiene un solo ivaPct; la misma cerveza vendida en sala (10 %) y para llevar (21 %) sale al 10 % en los dos canales."
+  },
+  "error_app_347": {
+   "nota": "Glovo: 4 trimestres × (3.300 + 693) = 15.972 € > 3.005,06 → debe ir en el 347 de la plataforma; la app no suma las comisiones estimadas al 347."
+  }
+ },
+ "calendario": [
+  {
+   "modelo": "303",
+   "periodo": "1T-3T 2026",
+   "vence": "20 del mes siguiente (2026-04-20, 2026-07-20, 2026-10-20)",
+   "domiciliacion": "hasta el 15",
+   "app": "20 del mes siguiente",
+   "estado": "CORRECTO"
+  },
+  {
+   "modelo": "303",
+   "periodo": "4T 2026",
+   "vence": "2027-02-01 (el 30/01/2027 es sábado)",
+   "domiciliacion": "hasta el 2027-01-25",
+   "app": "30/01/2027",
+   "estado": "CORRECTO (conservador)"
+  },
+  {
+   "modelo": "111, 115, 123",
+   "periodo": "4T 2026",
+   "vence": "2027-01-20",
+   "domiciliacion": "hasta el 2027-01-15",
+   "app": "30/01/2027",
+   "estado": "ERROR: 10 días tarde"
+  },
+  {
+   "modelo": "130 / 131",
+   "periodo": "4T 2026",
+   "vence": "2027-02-01 (30/01 sábado)",
+   "app": "30/01/2027",
+   "estado": "CORRECTO (conservador)"
+  },
+  {
+   "modelo": "390",
+   "periodo": "2026",
+   "vence": "2027-02-01 (30/01 sábado)",
+   "app": "30/01/2027",
+   "estado": "CORRECTO (conservador)"
+  },
+  {
+   "modelo": "190, 180, 184",
+   "periodo": "2026",
+   "vence": "2027-02-01 (plazo hasta el 31/01, que es domingo)",
+   "app": "30/01/2027",
+   "estado": "CORRECTO (conservador; el plazo legal es el 31)"
+  },
+  {
+   "modelo": "347",
+   "periodo": "2026",
+   "vence": "2027-03-01 (febrero; el 28/02/2027 es domingo)",
+   "app": "28/02/2027",
+   "estado": "CORRECTO (conservador)"
+  },
+  {
+   "modelo": "349",
+   "periodo": "trimestral si ≤ 50.000 €/trim.",
+   "vence": "20 del mes siguiente; 4T hasta el 30/01",
+   "app": "no existe",
+   "estado": "FALTA (si hay ISP intracomunitaria, p. ej. Uber Eats NL)"
+  },
+  {
+   "modelo": "202",
+   "periodo": "2026",
+   "vence": "1-20 abril, 1-20 octubre, 1-20 diciembre (2026-12-21, el 20 es domingo)",
+   "app": "20/04, 20/10, 20/12",
+   "estado": "CORRECTO (fechas); ERROR en la base del pago de abril (usa el IS de N-1; corresponde N-2)"
+  },
+  {
+   "modelo": "200",
+   "periodo": "2026",
+   "vence": "2027-07-26 (25/07 domingo)",
+   "app": "25/07/2027",
+   "estado": "CORRECTO (conservador)"
+  },
+  {
+   "modelo": "100",
+   "periodo": "2026",
+   "vence": "2027-06-30 (domiciliación hasta 2027-06-25)",
+   "app": "30/06/2027",
+   "estado": "CORRECTO"
+  }
+ ],
+ "hallazgos": [
+  {
+   "id": "H01",
+   "estado": "FALTA",
+   "area": "nómina",
+   "donde": "js/hr.js:822, 843-845, 979-981",
+   "titulo": "La nómina se calcula desde el NETO con un IRPF que escribe el dueño (15 % por defecto); no hay salario de tablas ni algoritmo de retenciones",
+   "impacto_eur": "Camarero (N1): coste +2.307 €/año (+9,2 %) y 111 +1.746 €/año; parcial (N3): +2.378 €/año (+17,7 %); jefe de cocina (N5): −10.850 €/año (−11,7 %) y 111 −10.107 €/año. Plantilla de 6: del orden de 10.000 €/año de desvío.",
+   "fuente": "Algoritmo AEAT 2026; arts. 80-86 RIRPF",
+   "prueba": "nominas[N1,N3,N5].app"
+  },
+  {
+   "id": "H02",
+   "estado": "FALTA",
+   "area": "nómina",
+   "donde": "js/hr.js:847-850, 1043; js/finance.js:236-238",
+   "titulo": "Fijo discontinuo sin meses de actividad: la nómina es un gasto fijo de 12 meses",
+   "impacto_eur": "N2: 23.126 € en la app frente a 13.490 € reales (+9.636 €/año por trabajador, +71 %)",
+   "fuente": "art. 16 ET; Orden PJC/297/2026",
+   "prueba": "nominas[N2].app"
+  },
+  {
+   "id": "H03",
+   "estado": "ERROR",
+   "area": "111",
+   "donde": "js/finance.js:32-34",
+   "titulo": "El 111 solo suma el IRPF de las nóminas con autocálculo; una nómina metida a mano aporta 0 € al 111 sin avisar",
+   "impacto_eur": "Todo el IRPF de esas nóminas (N1: 1.378 €/año por camarero) desaparece de Tesorería y del calendario",
+   "fuente": "art. 101 LIRPF; art. 108 RIRPF",
+   "prueba": "—"
+  },
+  {
+   "id": "H04",
+   "estado": "FALTA",
+   "area": "nómina",
+   "donde": "js/hr.js:831-836, 946-949",
+   "titulo": "Socio-administrador de una SL tratado como empleado del Régimen General (32,15 % + 6,50 %) y con retención libre; corresponde RETA (autónomo societario) y retención del 35 % (19 % si INCN < 100.000 €)",
+   "impacto_eur": "Con 2.500 €/mes: SS de la app ≈ 9.600 €/año frente a una cuota de autónomo societario de ≈ 4.500-5.500 €/año según tramo de rendimientos; retención infra-ingresada ≈ 1.200 €/año si se deja el 15 %",
+   "fuente": "art. 305.2.b LGSS; art. 101.2 LIRPF; art. 80.1.3º RIRPF",
+   "prueba": "—"
+  },
+  {
+   "id": "H05",
+   "estado": "FALTA",
+   "area": "nómina",
+   "donde": "js/finance.js:2512-2515",
+   "titulo": "Manutención en especie (comida del personal) no cotiza en la app; cotiza en la SS aunque esté exenta de IRPF",
+   "impacto_eur": "≈ 88 €/mes de comida por trabajador → 340 €/año de cuota empresarial y 69 €/año de cuota obrera por persona; ≈ 2.000 €/año con 6",
+   "fuente": "art. 147 LGSS; art. 42.3.a LIRPF y art. 45 RIRPF; convenio provincial",
+   "prueba": "—"
+  },
+  {
+   "id": "H06",
+   "estado": "FALTA",
+   "area": "nómina",
+   "donde": "js/hr.js:841-866",
+   "titulo": "Sin conceptos de convenio: plus de nocturnidad, transporte, horas extra (cotización adicional 23,60 + 4,70 / 12 + 2), propinas repartidas por nómina, 15 pagas",
+   "impacto_eur": "Variable; horas extra sin cotización adicional: 28,30 % de lo pagado en horas extra",
+   "fuente": "V ALEH; convenios provinciales; art. 149 LGSS",
+   "prueba": "—"
+  },
+  {
+   "id": "H07",
+   "estado": "ERROR",
+   "area": "IVA",
+   "donde": "js/tpv.js:3664-3679; js/i18n.js:2284",
+   "titulo": "El IVA va por plato, no por canal: la misma cerveza o refresco azucarado vendido para llevar o a domicilio sale al 10 % de sala en vez del 21 %",
+   "impacto_eur": "Trimestre de ejemplo: 150 € de IVA declarado de menos (600 €/año), más sanción del 50 % si lo detecta Hacienda",
+   "fuente": "art. 91.Uno.1.1º y 91.Uno.2.2º LIVA; Ley 11/2020",
+   "prueba": "iva_trimestre.error_app_si_bebidas_para_llevar_al_10"
+  },
+  {
+   "id": "H08",
+   "estado": "ERROR",
+   "area": "IRPF titular",
+   "donde": "js/finance.js:577-581, 613-614",
+   "titulo": "Autoconsumo del titular a coste también para el IRPF; en IRPF va a valor de mercado (en IVA sí es a coste)",
+   "impacto_eur": "Comida diaria de 4 € de coste y 12 € de PVP sin IVA: 2.400 €/año de rendimiento sin declarar, ≈ 700 €/año de IRPF",
+   "fuente": "art. 28.3 LIRPF; art. 79.Tres LIVA",
+   "prueba": "iva_trimestre.repercutido (autoconsumo)"
+  },
+  {
+   "id": "H09",
+   "estado": "FALTA",
+   "area": "nómina",
+   "donde": "js/hr.js:972-978",
+   "titulo": "Sin bonificación del 50 % de fijos discontinuos de hostelería en febrero, marzo y noviembre",
+   "impacto_eur": "218 €/mes por trabajador bonificable (N2) → hasta 654 €/año",
+   "fuente": "RDL 1/2023 (bonificaciones a fijos discontinuos en turismo, comercio y hostelería)",
+   "prueba": "nominas[N2].nota_bonificacion"
+  },
+  {
+   "id": "H10",
+   "estado": "FALTA",
+   "area": "nómina",
+   "donde": "js/hr.js:972-997",
+   "titulo": "Sin indemnización por fin de contrato temporal (12 días/año) ni vacaciones no disfrutadas en el coste",
+   "impacto_eur": "N4: 151,89 € por contrato de 3 meses; N6: 24,97 € + 63,29 € de vacaciones",
+   "fuente": "art. 49.1.c ET; art. 38 ET",
+   "prueba": "nominas[N4,N6]"
+  },
+  {
+   "id": "H11",
+   "estado": "ERROR",
+   "area": "calendario",
+   "donde": "js/hr.js:2778, 2783-2785",
+   "titulo": "111, 115 y 123 del 4T con plazo 30/01; el plazo es el 20/01",
+   "impacto_eur": "Recargo del 1 % (art. 27 LGT) si se presenta en esa ventana: ≈ 35 € con 3.500 € de retenciones",
+   "fuente": "Orden HAP/2194/2013 y calendario AEAT 2027",
+   "prueba": "calendario"
+  },
+  {
+   "id": "H12",
+   "estado": "FALTA",
+   "area": "modelos",
+   "donde": "js/hr.js:3277-3281",
+   "titulo": "Sin 349 ni aviso de alta en el ROI cuando hay ISP de una plataforma de la UE",
+   "impacto_eur": "Sanción por declaración informativa no presentada: 20 € por dato, mínimo 300 €",
+   "fuente": "art. 78 RIVA (RD 1624/1992); art. 198 LGT",
+   "prueba": "iva_trimestre.isp"
+  },
+  {
+   "id": "H13",
+   "estado": "ERROR",
+   "area": "347",
+   "donde": "js/hr.js:3315-3329",
+   "titulo": "El 347 no incluye las comisiones de plataformas españolas (Glovo) estimadas por venta",
+   "impacto_eur": "Glovo del ejemplo: 15.972 €/año sin declarar; sanción mínima ≈ 300 €",
+   "fuente": "arts. 31-35 RD 1065/2007; arts. 198-199 LGT",
+   "prueba": "iva_trimestre.error_app_347"
+  },
+  {
+   "id": "H14",
+   "estado": "ERROR",
+   "area": "111",
+   "donde": "js/hr.js:982, 996",
+   "titulo": "Con 14 pagas, el IRPF de las extras se reparte en 12 meses; el 111 de cada trimestre no coincide con lo retenido",
+   "impacto_eur": "0 € anual; N1: ±47,65 € por trimestre y camarero (N5: ±693 €)",
+   "fuente": "art. 78 RIRPF (exigibilidad)",
+   "prueba": "nominas[N1,N5].paga_extra"
+  },
+  {
+   "id": "H15",
+   "estado": "ERROR",
+   "area": "111",
+   "donde": "js/finance.js:32-34",
+   "titulo": "En persona física, si el titular tiene autocálculo, su \"IRPF\" entra en el 111",
+   "impacto_eur": "Lo que ponga el titular (p. ej. 15 % de 1.500 € = 2.700 €/año) aparece como retención que no existe",
+   "fuente": "art. 99 LIRPF (no hay retención a uno mismo)",
+   "prueba": "—"
+  },
+  {
+   "id": "H16",
+   "estado": "ERROR",
+   "area": "202",
+   "donde": "js/hr.js:470-474",
+   "titulo": "El 202 de abril se calcula con el IS de N-1; en abril el último vencido es el de N-2",
+   "impacto_eur": "Diferencia = 18 % × (cuota N-1 − cuota N-2)",
+   "fuente": "art. 40.2 LIS",
+   "prueba": "— (bloque de sociedades)"
+  },
+  {
+   "id": "H17",
+   "estado": "ERROR",
+   "area": "texto",
+   "donde": "js/i18n.js:2914 (y ca/en)",
+   "titulo": "mn.ticket.vatDescLong dice \"No hay un IVA distinto por plato\"; ya lo hay (line.ivaPct)",
+   "impacto_eur": "0 €; induce a cambiar el IVA general a mano",
+   "fuente": "—",
+   "prueba": "—"
+  },
+  {
+   "id": "H18",
+   "estado": "ERROR",
+   "area": "347",
+   "donde": "js/hr.js:3334-3338",
+   "titulo": "El 347 de clientes suma la propina (v.total)",
+   "impacto_eur": "Despreciable",
+   "fuente": "art. 33 RD 1065/2007",
+   "prueba": "—"
+  },
+  {
+   "id": "H19",
+   "estado": "FALTA",
+   "area": "nómina",
+   "donde": "js/hr.js:986-995",
+   "titulo": "La parte del trabajador de la cotización de solidaridad no se descuenta del neto",
+   "impacto_eur": "N5: 1,93 €/mes",
+   "fuente": "art. 19 bis LGSS",
+   "prueba": "nominas[N5].ss.solidaridad_trabajador"
+  },
+  {
+   "id": "H20",
+   "estado": "FALTA",
+   "area": "calendario",
+   "donde": "js/hr.js:2772-2807",
+   "titulo": "Sin fechas de domiciliación (día 15; 25/01 para el 303 del 4T) ni corrimiento a día hábil",
+   "impacto_eur": "0 € (el día que muestra la app no es tarde)",
+   "fuente": "Orden EHA/1658/2009 y órdenes de modelos",
+   "prueba": "calendario"
+  },
+  {
+   "id": "H21",
+   "estado": "FALTA",
+   "area": "modelos",
+   "donde": "js/hr.js:3271-3341",
+   "titulo": "Sin datos por perceptor para el 190 (NIF, clave, íntegro, retención, especie)",
+   "impacto_eur": "0 € directo; lo rehace el gestor",
+   "fuente": "Orden EHA/3127/2009 (modelo 190)",
+   "prueba": "—"
+  }
+ ]
+}

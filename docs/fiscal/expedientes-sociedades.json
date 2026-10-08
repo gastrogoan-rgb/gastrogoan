@@ -1,0 +1,575 @@
+{
+ "_meta": {
+  "descripcion": "Expedientes anuales de sociedades de hostelería calculados a mano (auditoría fiscal, 8/10/2026). Cifras en euros, base sin IVA salvo que se diga. Convertibles en prueba: entradas → DB de la app, esperado → lo que diría el gestor, app_hoy → lo que da la app hoy con la misma entrada.",
+  "convenciones": [
+   "Ejercicio = año natural",
+   "Ventas repartidas por igual entre meses de actividad",
+   "Préstamo francés con la primera cuota en el mes de compra (misma convención que capexCuotaDesglose)",
+   "Amortización desde el mes de compra (misma convención que capexAmortizacionMes)",
+   "SS empresa 32,15% (SS_2026.indefinido) sobre bruto, sin topes que muerdan",
+   "Tolerancia objetivo ±5% sobre la cuota líquida y sobre cada 202"
+  ],
+  "fuentes": [
+   "LIS 27/2014 art. 29.1 y DT 44ª (redacción Ley 7/2024); cuadro de tipos 2025-2028 del Manual práctico de Sociedades 2025 de la AEAT",
+   "LIS art. 25 (reserva de capitalización 20%, límite 25% si INCN<1M), art. 26 (BIN 70% con mínimo 1M), art. 40.2/40.3 (202), art. 15 (gastos no deducibles)",
+   "Instrucciones del modelo 202 (AEAT): base = cuota del último período con plazo de declaración vencido el día 1 del mes del pago",
+   "Ley 20/1990 arts. 16, 18, 19, 33 y 34 (cooperativas)",
+   "Ley 49/2002 art. 20 (deducción 40% donativos en IS)",
+   "LIRPF art. 101.2 y RIRPF art. 80.1.3º (35% administradores); LIRPF art. 101.4 / LIS art. 128.6 (19% dividendos)"
+  ]
+ },
+ "exp1_sl_600k": {
+  "entradas": {
+   "forma": "sociedad (SL, 2 socios 60/40, administrador socio 60% en RETA pagado por él)",
+   "ejercicio": 2026,
+   "incn_2025": 560000,
+   "ventas_netas": 600000,
+   "iva_ventas_pct": 10,
+   "compras_netas": 186000,
+   "iva_compras": "80% al 10%, 20% al 21%",
+   "existencias_ini": 8000,
+   "existencias_fin": 9500,
+   "sueldos_brutos_8_empleados": 168000,
+   "ss_empresa_pct": 32.15,
+   "irpf_empleados_pct_medio": 9,
+   "retribucion_administrador": 36000,
+   "estatutos_cargo_retribuido": true,
+   "retencion_administrador_pct": 35,
+   "alquiler_base": 36000,
+   "alquiler_retencion_pct": 19,
+   "suministros_base_21": 30000,
+   "otros_servicios_base_21": 12000,
+   "gestoria_base_21_sociedad": 3600,
+   "seguros_exentos": 3000,
+   "comisiones_bancarias": 4000,
+   "tasas_municipales": 1800,
+   "atenciones_clientes_iva_incl": 1200,
+   "multa": 600,
+   "donativo_ley_49_2002": 500,
+   "inversion": {
+    "fecha": "2026-02-01",
+    "importe": 60000,
+    "iva_pct": 21,
+    "tipoAmort": "maquinaria",
+    "financiado": true,
+    "importeFinanciado": 60000,
+    "tin": 5,
+    "cuotas": 60,
+    "cuotaMensual": 1132.27
+   },
+   "inmovilizado_anterior_amortizacion_anual": 4000,
+   "bases_negativas_pendientes_1_1_2026": 15000,
+   "origen_bin": "ejercicio 2025 (pérdidas de 15.000)",
+   "cuota_IS_2024": 6000,
+   "cuota_IS_2025": 0,
+   "retenciones_soportadas": 0
+  },
+  "esperado": {
+   "cuenta_resultados": {
+    "cifra_negocios": 600000.0,
+    "aprovisionamientos": -184500.0,
+    "personal": -258012.0,
+    "sueldos": 204000.0,
+    "ss_empresa": 54012.0,
+    "otros_gastos_explotacion": -92700.0,
+    "ebitda": 64788.0,
+    "amortizacion": -10600.0,
+    "resultado_explotacion": 54188.0,
+    "gastos_financieros": -2545.26,
+    "resultado_antes_impuestos": 51642.74,
+    "impuesto_sobre_beneficios": -6971.12,
+    "resultado_ejercicio": 44671.62
+   },
+   "is_200": {
+    "ajustes_positivos": {
+     "multa": 600,
+     "donativo": 500
+    },
+    "base_previa": 52742.74,
+    "compensacion_bin": 15000.0,
+    "reserva_capitalizacion": 0,
+    "base_imponible": 37742.74,
+    "tipo": "microempresa 2026: 19% hasta 50.000, 21% resto (DT 44ª LIS)",
+    "cuota_integra": 7171.12,
+    "deduccion_donativos_40": 200.0,
+    "cuota_liquida": 6971.12,
+    "pagos_fraccionados_2026": 1080.0,
+    "cuota_diferencial_julio_2027": 5891.12,
+    "bin_pendientes_fin": 0.0
+   },
+   "modelo_202_2026": {
+    "abril": 1080.0,
+    "octubre": 0.0,
+    "diciembre": 0.0,
+    "nota": "abril sale del IS 2024 (último con plazo vencido el 1 de abril), octubre y diciembre del IS 2025"
+   },
+   "modelo_202_2027": {
+    "abril": 0,
+    "octubre": 1254.8,
+    "diciembre": 1254.8
+   },
+   "prestamo": {
+    "cuota": 1132.27,
+    "intereses_2026": 2545.26,
+    "principal_2026": 9909.75,
+    "saldo_31_12": 50090.25
+   },
+   "iva_303": {
+    "repercutido_trim": [
+     15000.0,
+     15000.0,
+     15000.0,
+     15000.0
+    ],
+    "soportado_trim": [
+     22557.0,
+     9957.0,
+     9957.0,
+     9957.0
+    ],
+    "resultado_trim": [
+     -7557.0,
+     5043.0,
+     5043.0,
+     5043.0
+    ],
+    "a_ingresar_tras_compensar": [
+     0.0,
+     0.0,
+     2529.0,
+     5043.0
+    ],
+    "m390_resultado_anual": 7572.0
+   },
+   "m111_trim": [
+    6930.0,
+    6930.0,
+    6930.0,
+    6930.0
+   ],
+   "m115_trim": [
+    1710.0,
+    1710.0,
+    1710.0,
+    1710.0
+   ],
+   "m190_total": 27720.0,
+   "m180_total": 6840.0,
+   "m347": "proveedores >3.005,06 € IVA incl. (distribuidor de materia prima, suministros, reformista/maquinaria 72.600); el arrendador NO (va en el 180)"
+  },
+  "app_hoy": {
+   "sin_2025_en_la_app": {
+    "tipo": 25,
+    "motivo": "facturacionAnterior=0 → sugerenciaImpuestoSociedad() cae al 25% (hr.js:493-506); sin BIN (perdidasCompensables solo ve años con datos, hr.js:391-404); sin ajustes (multa, donativo) ni deducción",
+    "impuesto": 12910.69,
+    "diferencia_eur": 5939.57,
+    "diferencia_pct": 85.2,
+    "dentro_5pct": false
+   },
+   "con_2025_completo_en_la_app": {
+    "tipo_efectivo_pct": 19.06,
+    "impuesto": 6985.43,
+    "diferencia_eur": 14.31,
+    "diferencia_pct": 0.21,
+    "dentro_5pct": true,
+    "nota": "cuadra por casualidad: la multa (+600) y el donativo (deducción −200) casi se anulan"
+   },
+   "con_2025_y_nomina_admin_con_ss_empresa_por_defecto": {
+    "gasto_de_mas": 11574.0,
+    "impuesto": 4779.01,
+    "diferencia_pct": -31.45,
+    "dentro_5pct": false
+   },
+   "modelo_202_2026": {
+    "app": [
+     0,
+     0,
+     0
+    ],
+    "real": [
+     1080,
+     0,
+     0
+    ],
+    "nota": "la app toma el IS del año anterior (2025, con pérdidas) también para abril; abril corresponde al IS 2024"
+   },
+   "modelo_202_2027": {
+    "app_si_no_se_guardo_el_tipo": [
+     1648.92,
+     1648.92,
+     1648.92
+    ],
+    "app_si_se_guardo_19": [
+     1253.18,
+     1253.18,
+     1253.18
+    ],
+    "real": [
+     0,
+     1254.8,
+     1254.8
+    ],
+    "nota": "la app usa el IS 2026 también para abril (real: IS 2025 = 0) y, si el % no se guardó a mano, lo calcula al 25% porque pagoACuentaTrimestre llama a impuestoAnual sin pctDefecto (hr.js:471)"
+   }
+  }
+ },
+ "exp2_slu_micro_250k": {
+  "entradas": {
+   "forma": "sociedad (SLU, socio único administrador, cargo retribuido en estatutos, RETA pagado por el socio)",
+   "ejercicio": 2026,
+   "incn_2025": 240000,
+   "ventas_netas": 250000,
+   "compras_netas": 80000,
+   "iva_compras": "85% al 10%, 15% al 21%",
+   "existencias": "sin variación",
+   "sueldos_2_empleados": 38000,
+   "irpf_empleados_pct": 8,
+   "retribucion_administrador": 24000,
+   "retencion_administrador_pct": 35,
+   "alquiler_base": 21600,
+   "suministros_base_21": 15000,
+   "otros_servicios_base_21": 6000,
+   "gestoria_base_21": 2400,
+   "seguros": 1500,
+   "comisiones": 2000,
+   "tasas": 800,
+   "atenciones_clientes": 3000,
+   "inmovilizado_anterior_amortizacion_anual": 3000,
+   "compras_2026": [
+    {
+     "fecha": "2026-03-01",
+     "importe": 1200,
+     "iva": 21,
+     "tipoAmort": "informatica"
+    },
+    {
+     "fecha": "2026-03-01",
+     "importe": 750,
+     "iva": 21,
+     "tipoAmort": "utiles",
+     "nota": "3 piezas de 250 €: escaso valor"
+    }
+   ],
+   "is_2024": {
+    "base": 20000,
+    "tipo": 23,
+    "cuota": 4600
+   },
+   "is_2025": {
+    "base": 22500,
+    "tipo": "21% (micro 2025)",
+    "cuota": 4725,
+    "beneficio_despues_impuestos": 17775
+   },
+   "dividendo": {
+    "fecha": "2026-06-15",
+    "importe": 10000,
+    "socio": "persona física residente"
+   }
+  },
+  "esperado": {
+   "cuenta_resultados": {
+    "cifra_negocios": 250000,
+    "aprovisionamientos": -80000,
+    "personal": -74217.0,
+    "otros_gastos_explotacion": -52300.0,
+    "ebitda": 43483.0,
+    "amortizacion": -4000.0,
+    "resultado_antes_impuestos": 39483.0,
+    "impuesto_sobre_beneficios": -7301.32,
+    "resultado_ejercicio": 32181.68
+   },
+   "is_200": {
+    "ajuste_atenciones_exceso_1pct": 500.0,
+    "base_previa": 39983.0,
+    "incremento_fondos_propios": 7775.0,
+    "reserva_capitalizacion_20pct": 1555.0,
+    "base_imponible": 38428.0,
+    "cuota_integra_19": 7301.32,
+    "cuota_liquida": 7301.32,
+    "pagos_fraccionados": 2529.0,
+    "cuota_diferencial_julio_2027": 4772.32,
+    "reserva_indisponible_a_dotar": 1555.0
+   },
+   "modelo_202_2026": {
+    "abril": 828.0,
+    "octubre": 850.5,
+    "diciembre": 850.5
+   },
+   "modelo_123": {
+    "trimestre": "2T",
+    "vence": "20/07/2026",
+    "base": 10000,
+    "retencion": 1900,
+    "neto_socio": 8100
+   },
+   "iva_303": {
+    "repercutido_trim": [
+     6250.0,
+     6250.0,
+     6250.0,
+     6250.0
+    ],
+    "soportado_trim": [
+     5102.0,
+     4692.5,
+     4692.5,
+     4692.5
+    ],
+    "resultado_trim": [
+     1148.0,
+     1557.5,
+     1557.5,
+     1557.5
+    ],
+    "m390": 5820.5
+   },
+   "m111_trim": [
+    2860.0,
+    2860.0,
+    2860.0,
+    2860.0
+   ],
+   "m115_trim": [
+    1026.0,
+    1026.0,
+    1026.0,
+    1026.0
+   ]
+  },
+  "app_hoy": {
+   "impuesto": 7501.77,
+   "diferencia_eur": 200.45,
+   "diferencia_pct": 2.75,
+   "modelo_202_si_no_se_guardo_el_tipo": [
+    1012.5,
+    1012.5,
+    1012.5
+   ],
+   "modelo_202_si_se_guardo_19": [
+    769.5,
+    769.5,
+    769.5
+   ],
+   "modelo_202_real": [
+    828.0,
+    850.5,
+    850.5
+   ],
+   "dif_202_cfg_null_pct": 20.11,
+   "dif_202_cfg19_pct": -8.72,
+   "dentro_5pct": false,
+   "impuesto_dentro_5pct": true,
+   "nota": "IS anual dentro del ±5% (no ve el exceso de atenciones ni la reserva de capitalización, que se compensan a medias); el 202 queda fuera en los dos casos"
+  }
+ },
+ "exp3_cooperativa_ta_400k": {
+  "entradas": {
+   "forma": "cooperativa de trabajo asociado, 3 socios trabajadores en RETA (pagado por cada socio), especialmente protegida (arts. 7, 8 y 13 Ley 20/1990 cumplidos: 1 asalariado indefinido con <10 socios)",
+   "ejercicio": 2026,
+   "incn_2025": 380000,
+   "ventas_netas": 400000,
+   "compras_netas": 124000,
+   "anticipos_laborales_socios": 72000,
+   "irpf_anticipos_pct": 12,
+   "asalariado_bruto": 20000,
+   "irpf_asalariado_pct": 9,
+   "alquiler": 24000,
+   "suministros": 20000,
+   "otros_servicios": 8000,
+   "gestoria": 3000,
+   "seguros": 2000,
+   "comisiones": 2400,
+   "tasas": 1000,
+   "amortizacion": 5000,
+   "fro_pct": 20,
+   "fep_pct": 5,
+   "todo_resultado_cooperativo": true,
+   "cuota_liquida_IS_2024": 1700,
+   "cuota_liquida_IS_2025": 1900,
+   "retornos": "se paga en efectivo el 50% de lo disponible"
+  },
+  "esperado": {
+   "excedente_antes_fep_e_is": 112170.0,
+   "dotacion_fep_gasto": 5608.5,
+   "resultado_antes_impuestos": 106561.5,
+   "dotacion_fro": 22434.0,
+   "deducible_fro_50": 11217.0,
+   "base_imponible": 95344.5,
+   "tipo": "coop. fiscalmente protegida microempresa 2026: 16% hasta 50.000, 18% resto (art. 33 Ley 20/1990 tras Ley 7/2024, cuadro AEAT)",
+   "cuota_integra": 16162.01,
+   "bonificacion_50_especialmente_protegida": 8081.01,
+   "cuota_liquida": 8081.01,
+   "tipo_efectivo_sobre_excedente_pct": 7.2,
+   "pagos_fraccionados_2026": [
+    306.0,
+    342.0,
+    342.0
+   ],
+   "cuota_diferencial_julio_2027": 7091.01,
+   "disponible_para_retornos": 76046.5,
+   "retorno_pagado": 38023.25,
+   "retencion_123_19": 7224.42,
+   "m111_anual": 10440.0,
+   "m115_anual": 4560.0
+  },
+  "app_hoy": {
+   "tipo": 20,
+   "base": "excedente sin FEP ni FRO",
+   "impuesto": 22434.0,
+   "diferencia_eur": 14353.0,
+   "diferencia_pct": 177.61,
+   "impuesto_si_anticipos_con_ss_por_defecto": 17804.4,
+   "dentro_5pct": false,
+   "modelo_202": "impuestoAnual(base del año anterior) al 20% sin bonificación ni FRO/FEP: unas 3 veces el real (342 €)"
+  }
+ },
+ "exp4_sl_nueva_creacion": {
+  "entradas": {
+   "forma": "SL de nueva creación constituida el 1-3-2026 por dos socios 50/50 sin actividad previa propia ni vinculada (art. 29.1 LIS); administradores con cargo gratuito y sin sueldo el año 1",
+   "anyo_en_mi_negocio": 2026,
+   "año1": {
+    "periodo": "2026-03-01..2026-12-31",
+    "ventas": 300000,
+    "compras": 99000,
+    "existencias_fin": 5000,
+    "sueldos_6_empleados": 96000,
+    "irpf_pct": 8,
+    "alquiler": 25000,
+    "suministros": 18000,
+    "otros_servicios": 8000,
+    "publicidad_apertura": 6000,
+    "gestoria": 2500,
+    "seguros": 1500,
+    "comisiones": 2000,
+    "tasas_licencia": 3000,
+    "gastos_constitucion": 1200,
+    "inversiones": [
+     {
+      "fecha": "2026-03-01",
+      "importe": 80000,
+      "iva": 21,
+      "tipoAmort": "obras",
+      "añosContrato": 10
+     },
+     {
+      "fecha": "2026-03-01",
+      "importe": 40000,
+      "iva": 21,
+      "tipoAmort": "maquinaria"
+     }
+    ],
+    "prestamo": {
+     "importe": 100000,
+     "tin": 6,
+     "cuotas": 84,
+     "cuota": 1460.86
+    }
+   },
+   "año2": {
+    "periodo": "2027",
+    "ventas": 420000,
+    "compras": 134400,
+    "existencias": {
+     "ini": 5000,
+     "fin": 5500
+    },
+    "sueldos": 115200,
+    "alquiler": 30000,
+    "suministros": 22000,
+    "otros": 9000,
+    "publicidad": 3000,
+    "gestoria": 3000,
+    "seguros": 1800,
+    "comisiones": 2600,
+    "tasas": 1200
+   }
+  },
+  "esperado": {
+   "año1": {
+    "amortizacion": 10666.67,
+    "intereses": 4780.9,
+    "resultado_antes_impuestos": -3511.57,
+    "base_imponible": -3511.57,
+    "cuota": 0,
+    "bin_generada": 3511.57,
+    "iva_303": {
+     "repercutido": [
+      3000.0,
+      9000.0,
+      9000.0,
+      9000.0
+     ],
+     "soportado": [
+      27718.3,
+      7554.9,
+      7554.9,
+      7554.9
+     ],
+     "resultado": [
+      -24718.3,
+      1445.1,
+      1445.1,
+      1445.1
+     ],
+     "a_ingresar_tras_compensar": [
+      0.0,
+      0.0,
+      0.0,
+      -20383.0
+     ],
+     "nota": "1T a 3T negativo: se compensa; si en el 4T sigue negativo se pide devolución (o REDEME)"
+    },
+    "modelo_202": [
+     0,
+     0,
+     0
+    ],
+    "m111_anual": 7680.0,
+    "m115_anual": 4750.0
+   },
+   "año2": {
+    "amortizacion": 12800.0,
+    "intereses": 5071.42,
+    "resultado_antes_impuestos": 43391.78,
+    "compensacion_bin": 3511.57,
+    "base_imponible": 39880.21,
+    "tipo": "15% nueva creación (primer período con base positiva)",
+    "cuota": 5982.03,
+    "modelo_202_2027": [
+     0,
+     0,
+     0
+    ],
+    "modelo_202_2028": {
+     "abril": 0,
+     "octubre": 1076.77,
+     "diciembre": 1076.77
+    }
+   },
+   "año3_2028": "sigue al 15% (segundo período con base positiva)"
+  },
+  "app_hoy": {
+   "año1": "0 € (pérdidas) — correcto",
+   "año2": {
+    "tipo": 15,
+    "cuota": 5982.03,
+    "correcto": true
+   },
+   "año3_2028": {
+    "tipo_app": "17% / 20% (micro 2028)",
+    "tipo_real": 15,
+    "error_pct": 13.33
+   },
+   "modelo_202_abril_2028": {
+    "app": 1076.77,
+    "real": 0
+   },
+   "si_anyo_es_el_de_apertura_del_local": {
+    "anyo": 2010,
+    "tipo_app_2027": "micro 17%/20% (si hay ventas 2026 en la app) o 25% (si no)",
+    "tipo_real": 15
+   }
+  }
+ }
+}
