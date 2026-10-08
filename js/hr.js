@@ -2770,6 +2770,20 @@ const GE = (function(){
   // Trimestrales: del 1 al 20 del mes siguiente; el 4T, hasta el 30 de
   // enero, junto con los resúmenes anuales. El 202 va en abril, octubre y
   // diciembre; el Impuesto de Sociedades (200), en julio.
+  // Un trimestre con IVA negativo no se devuelve en el momento: se compensa
+  // con los siguientes del mismo año (art. 99.Cinco LIVA) y solo en el 4T se
+  // pide la devolución. Antes cada trimestre se pagaba por separado y la
+  // Tesorería mandaba pagar en el T2 lo que ya estaba compensado.
+  function iva303TrimestreAPagar(q, y){
+    let acarreo = 0, pago = 0;
+    for(let k=0; k<=q; k++){
+      acarreo += [0,1,2].reduce((s,i) => s + ivaLiquidarMes(k*3+i, y), 0);
+      pago = Math.max(0, acarreo);
+      if(k < 3 || acarreo > 0) acarreo -= pago;   // lo ya pagado no se arrastra; el negativo sí
+      else pago = acarreo;                          // 4T con saldo a favor: devolución
+    }
+    return pago;
+  }
   function renderCalendarioFiscal(){
     const box = document.getElementById('te-calendario');
     if(!box) return;
@@ -2781,7 +2795,7 @@ const GE = (function(){
     const venceRet = q < 3 ? vence : `20/01/${y+1}`;
     const p = fiscalPerfil();
     const filas = [];
-    const iva = sumQ(m => ivaLiquidarMes(m, y));
+    const iva = iva303TrimestreAPagar(q, y);
     filas.push({mod:'303', txt:t('cal.303'), imp: iva, vence});
     const r111 = sumQ(m => geModelo111ForMonth(y, m)); if(r111 > 0.005) filas.push({mod:'111', txt:t('cal.111'), imp:r111, vence:venceRet});
     const r115 = sumQ(m => geRetencionForMonth(y, m, '115')); if(r115 > 0.005) filas.push({mod:'115', txt:t('cal.115'), imp:r115, vence:venceRet});

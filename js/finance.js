@@ -480,7 +480,9 @@ const AMORT_TIPOS = {
 const AMORT_ESCASO_VALOR = 300;
 function capexCoefAmort(c){
   const tipo = AMORT_TIPOS[c.tipoAmort] || AMORT_TIPOS.mobiliario;
-  const coef = fiscalPerfil().personaFisica ? tipo.ed : tipo.is;
+  // La tabla de estimación directa SIMPLIFICADA es la de personas físicas; en la
+  // normal rige la del Impuesto de Sociedades (art. 30 RIRPF).
+  const coef = (fiscalPerfil().personaFisica && (DB.business||{}).modalidadDirecta !== 'normal') ? tipo.ed : tipo.is;
   // Obras en un local ALQUILADO: se amortizan en lo que dure el contrato
   // (prórrogas incluidas) si es menos que su vida útil (PGC, norma de
   // valoración 3ª.h). Un contrato de 5 años = 20% al año, no 10%.
@@ -702,6 +704,10 @@ function irpfActividad(rendimiento, opts={}){
   let neto = simplificada ? rendimiento - Math.min(2000, rendimiento*0.05) : rendimiento;
   // La reducción exige estimación DIRECTA (art. 32.2.3º.b): en módulos no.
   if(!opts.sinDificilJustificacion) neto = Math.max(0, neto - reduccionRendimientosBajos(neto));
+  // Inicio de actividad (art. 32.3 LIRPF): -20 % del rendimiento neto positivo
+  // (hasta 100.000 €) el primer año con beneficio y el siguiente. Solo si el
+  // dueño lo marca: la app no sabe si antes ya ejerció otra actividad.
+  if(!opts.sinDificilJustificacion && (DB.business||{}).inicioActividad20) neto -= Math.min(neto, 100000) * 0.20;
   return Math.max(0, cuotaIrpfEscala(neto) - cuotaIrpfEscala(IRPF_MINIMO_PERSONAL));
 }
 // Impuesto ANUAL según la forma del negocio, sobre una base anual.
