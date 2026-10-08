@@ -6954,7 +6954,11 @@ function renderMiNegocio(){
             <option value="simplificada" ${b.modalidadDirecta!=='normal'?'selected':''}>${t('mn.fiscal.simplificada')}</option>
             <option value="normal" ${b.modalidadDirecta==='normal'?'selected':''}>${t('mn.fiscal.normal')}</option>
           </select>
-        </div>` : ''}` : ''}
+        </div>
+        <label style="display:flex;align-items:flex-start;gap:8px;min-height:44px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="mn-inicio-actividad" ${b.inicioActividad20?'checked':''} onchange="saveBusiness(true)" style="width:auto;margin-top:3px">
+          <span>${t('mn.fiscal.inicioActividad')}</span>
+        </label>` : ''}` : ''}
       </div>
       ${b.formaJuridica==='sociedad' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.sociedadHint')}</p>` : ''}
       ${b.formaJuridica==='cooperativa' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.cooperativaHint')}</p>` : ''}
@@ -7891,6 +7895,7 @@ async function saveBusiness(silent){
   if(el('mn-forma-juridica')) DB.business.formaJuridica = el('mn-forma-juridica').value;
   if(el('mn-regimen-fiscal')) DB.business.regimenFiscal = el('mn-regimen-fiscal').value;
   if(el('mn-modalidad-directa')) DB.business.modalidadDirecta = el('mn-modalidad-directa').value;
+  if(el('mn-inicio-actividad')) DB.business.inicioActividad20 = el('mn-inicio-actividad').checked;
   if(el('mn-anyo')) DB.business.anyo = el('mn-anyo').value.trim();
   if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
   if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
