@@ -1,0 +1,838 @@
+{
+ "_meta": {
+  "fuente": "Orden HAC/1425/2025 (BOE-A-2025-25272), ejercicio 2026; cuentas hechas a mano con Python, ver docs/fiscal/modulos.md",
+  "tolerancia": {
+   "relativa": 0.05,
+   "absoluta_eur": 1.0,
+   "nota": "Pasa si |app-esperado| <= max(1 EUR, 5 % del esperado). El esperado oficial se calcula al céntimo."
+  },
+  "como_convertir_en_prueba": "Sembrar DB como test/modulos.mjs (formaJuridica autonomo, regimenFiscal modulos, DB.employees con 'empleados', DB.ge.config.modulos = entrada.config, DB.ge.variables con 'compras', DB.ge.capex con 'inversiones'); leer GE.calcModulos(2026), GE.pagoACuentaTrimestre(q*3+2,2026) y suma de GE.ivaLiquidarMes por trimestre. En el campo 'config_app' están los valores tal y como los guarda la pantalla (cadenas).",
+  "advertencia_harness": "GE.pctEfectivo() usa memo que no se limpia dentro de un mismo tick: leerlo en un page.evaluate por caso, o calcular irpfActividad(rendimiento,{sinDificilJustificacion:true}).",
+  "pendiente_de_codigo": "Las claves 'entrada.*' que la app aún no admite (maquinasB, diasTemporada, horas, pequenaDimension) son las que hay que añadir para que A y B puedan pasar."
+ },
+ "expedientes": {
+  "A_bar_673_2": {
+   "descripcion": "Bar 673.2: titular + 1 asalariado + 2 máquinas tipo B de terceros. Municipio > 5.000 hab., un local.",
+   "entrada": {
+    "epigrafe": "673.2",
+    "titularTrabaja": true,
+    "asalariados": 1.0,
+    "asalariadosAnterior": 1.0,
+    "kw": 10,
+    "mesas": 8,
+    "barraMetros": 7,
+    "maquinasA": 0,
+    "maquinasB": 2,
+    "amortizacionAnual": 1200,
+    "pequenaDimension": {
+     "personaFisica": true,
+     "unLocal": true,
+     "sinVehiculoPesado": true,
+     "habitantes": 6000
+    },
+    "compras": [
+     {
+      "base": 24000,
+      "ivaPct": 10
+     },
+     {
+      "base": 8000,
+      "ivaPct": 21
+     },
+     {
+      "base": 6000,
+      "ivaPct": 21
+     }
+    ],
+    "inversiones": [
+     {
+      "base": 1500,
+      "ivaPct": 21,
+      "fecha": "2026-05-10"
+     }
+    ]
+   },
+   "config_app": {
+    "epigrafe": "673.2",
+    "mesas": "8",
+    "kw": "10",
+    "barra": "7",
+    "titularTrabaja": true,
+    "amortizacionAnual": "1200",
+    "asalariadosAnterior": "1"
+   },
+   "empleados_app": 1,
+   "esperado": {
+    "irpf": {
+     "previo": 22000.99,
+     "coefEmpleo": 0.1,
+     "minoracionEmpleo": 164.39,
+     "minorado": 20636.6,
+     "indice": {
+      "tipo": "pequenaDimension",
+      "valor": 0.9,
+      "exceso": "no aplica (incompatible con b.1)"
+     },
+     "trasIndices": 18572.94,
+     "rendimientoNeto": 17644.29,
+     "pctPago131": 0.03,
+     "pago131PorTrimestre": [
+      529.33,
+      529.33,
+      529.33,
+      529.33
+     ],
+     "pago131Anual": 2117.32,
+     "irpfAnualEscala": 2557.63
+    },
+    "iva": {
+     "cuotaDevengada": 7837.99,
+     "ivaSoportadoCorriente": 5340.0,
+     "dificilJustificacion": 78.38,
+     "diferencia": 2419.61,
+     "cuotaMinima6pct": 470.28,
+     "cuotaDerivada": 2419.61,
+     "ivaActivosFijos": 315.0,
+     "ivaAnual": 2104.61,
+     "ingresoACuentaPct": 0.02,
+     "trimestral303": [
+      156.76,
+      -158.24,
+      156.76,
+      1949.33
+     ],
+     "modelo390": 2104.61
+    }
+   },
+   "app_hoy": {
+    "rendimientoNeto": 14004.04,
+    "pago131PorTrimestre": 420.12,
+    "irpfAnual": 1683.97,
+    "cuotaDevengada": 6527.09,
+    "ivaAnual": 806.82,
+    "trimestral303": [
+     201.7,
+     201.7,
+     201.7,
+     67.23
+    ],
+    "nota_303": "Q4 con un solo mes porque hoy es octubre (geMesConActividad)."
+   },
+   "desviaciones": [
+    {
+     "magnitud": "rendimientoNeto",
+     "esperado": 17644.29,
+     "app": 14004.04,
+     "pct": -20.6,
+     "causas": [
+      "F-1 máquinas B",
+      "F-2 pequeña dimensión"
+     ]
+    },
+    {
+     "magnitud": "irpfAnual",
+     "esperado": 2557.63,
+     "app": 1683.97,
+     "pct": -34.2,
+     "causas": [
+      "F-1",
+      "F-2"
+     ]
+    },
+    {
+     "magnitud": "ivaAnual",
+     "esperado": 2104.61,
+     "app": 806.82,
+     "pct": -61.7,
+     "causas": [
+      "F-1"
+     ]
+    },
+    {
+     "magnitud": "303 por trimestre",
+     "esperado": [
+      156.76,
+      -158.24,
+      156.76,
+      1949.33
+     ],
+     "app": [
+      201.7,
+      201.7,
+      201.7,
+      67.23
+     ],
+     "causas": [
+      "E-3"
+     ]
+    }
+   ],
+   "aislamiento": {
+    "sinMaquinasConB1": 12603.64,
+    "conMaquinasSinB1": 19604.77
+   }
+  },
+  "B_cafeteria_672_temporada": {
+   "descripcion": "Cafetería 672 de temporada (1/6 a 30/9 = 122 días; 30 en 2T y 92 en 3T), municipio de 1.800 hab., titular único sin asalariados, un local, sin vehículo.",
+   "entrada": {
+    "epigrafe": "672",
+    "titularTrabaja": true,
+    "horasDiariasTitular": 9,
+    "asalariados": 0,
+    "kw": 25,
+    "mesas": 24,
+    "barraMetros": 0,
+    "maquinasA": 0,
+    "maquinasB": 0,
+    "amortizacionAnual": 800,
+    "diasTemporada": 122,
+    "diasTemporadaPorTrimestre": [
+     0,
+     30,
+     92,
+     0
+    ],
+    "pequenaDimension": {
+     "personaFisica": true,
+     "unLocal": true,
+     "sinVehiculoPesado": true,
+     "habitantes": 1800
+    },
+    "compras": [
+     {
+      "base": 9000,
+      "ivaPct": 10
+     },
+     {
+      "base": 3000,
+      "ivaPct": 21
+     },
+     {
+      "base": 2000,
+      "ivaPct": 21
+     }
+    ],
+    "inversiones": []
+   },
+   "config_app": {
+    "epigrafe": "672",
+    "mesas": "24",
+    "kw": "25",
+    "titularTrabaja": true,
+    "amortizacionAnual": "800",
+    "temporadaDias": "122"
+   },
+   "empleados_app": 0,
+   "esperado": {
+    "unidades": {
+     "titular": 0.61,
+     "kw": 8.36,
+     "mesas": 8.02,
+     "formula": "horas/1800 para personal; kW y mesas x dias/365"
+    },
+    "irpf": {
+     "previo": 15416.34,
+     "minorado": 14616.34,
+     "indices": [
+      {
+       "tipo": "pequenaDimension",
+       "valor": 0.7,
+       "tras": 10231.44
+      },
+      {
+       "tipo": "temporada",
+       "valor": 1.25,
+       "tras": 12789.3
+      }
+     ],
+     "rendimientoNeto": 12149.83,
+     "rendimientoDiario": 99.59,
+     "pctPago131": 0.02,
+     "pago131PorTrimestre": [
+      0,
+      59.75,
+      183.24,
+      0
+     ],
+     "pago131Anual": 242.99,
+     "irpfAnualEscala": 1253.97
+    },
+    "iva": {
+     "cuotaDevengada": 3042.14,
+     "ivaSoportadoCorriente": 1950.0,
+     "dificilJustificacion": 30.42,
+     "diferencia": 1061.72,
+     "diferenciaConIndice1_25": 1327.15,
+     "cuotaMinima13pct": 395.48,
+     "cuotaMinimaConIndice": 494.35,
+     "cuotaDerivada": 1327.15,
+     "ivaAnual": 1327.15,
+     "cuotaDiaria": 24.94,
+     "ingresoACuentaPct": 0.04,
+     "trimestral303": [
+      0,
+      37.4,
+      114.7,
+      1175.05
+     ],
+     "modelo390": 1327.15,
+     "declaracionesAunqueCero": true
+    }
+   },
+   "app_hoy": {
+    "rendimientoNeto": 41322.97,
+    "pago131PorTrimestre": 826.46,
+    "irpfAnual": 9936.5,
+    "cuotaDevengada": 7156.71,
+    "ivaAnual": 5135.14,
+    "trimestral303": [
+     1283.79,
+     1283.79,
+     1283.79,
+     427.93
+    ],
+    "con_kw_y_mesas_prorrateados_a_mano": {
+     "rendimientoNeto": 23721.89,
+     "ivaAnual": 1971.4,
+     "nota": "titular sigue entero y falta b.1"
+    }
+   },
+   "desviaciones": [
+    {
+     "magnitud": "rendimientoNeto",
+     "esperado": 12149.83,
+     "app": 41322.97,
+     "pct": 240.1,
+     "causas": [
+      "E-1 sin prorrateo",
+      "F-2 b.1"
+     ]
+    },
+    {
+     "magnitud": "pago131Anual",
+     "esperado": 242.99,
+     "app": 3305.84,
+     "pct": 1260.4,
+     "causas": [
+      "E-1",
+      "E-4"
+     ]
+    },
+    {
+     "magnitud": "irpfAnual",
+     "esperado": 1253.97,
+     "app": 9936.5,
+     "pct": 692.4,
+     "causas": [
+      "E-1",
+      "F-2"
+     ]
+    },
+    {
+     "magnitud": "ivaAnual",
+     "esperado": 1327.15,
+     "app": 5135.14,
+     "pct": 286.9,
+     "causas": [
+      "E-1 (unidades enteras e IVA sin método de temporada)"
+     ]
+    }
+   ]
+  },
+  "C_restaurante_671_4": {
+   "descripcion": "Restaurante 671.4 (2 tenedores): titular + 3 empleados (2,5 unidades; año anterior 2,0), 35 kW, 20 mesas de 4 plazas, segundo año de actividad (alta 2025).",
+   "entrada": {
+    "epigrafe": "671.4",
+    "titularTrabaja": true,
+    "asalariados": 2.5,
+    "asalariadosAnterior": 2.0,
+    "kw": 35,
+    "mesas": 20,
+    "barraMetros": 0,
+    "maquinasA": 0,
+    "maquinasB": 0,
+    "amortizacionAnual": 4000,
+    "anioInicio": 2025,
+    "compras": [
+     {
+      "base": 70000,
+      "ivaPct": 10
+     },
+     {
+      "base": 15000,
+      "ivaPct": 21
+     },
+     {
+      "base": 18000,
+      "ivaPct": 21
+     }
+    ],
+    "inversiones": [
+     {
+      "base": 6000,
+      "ivaPct": 21,
+      "fecha": "2026-08-10"
+     }
+    ]
+   },
+   "config_app": {
+    "epigrafe": "671.4",
+    "mesas": "20",
+    "kw": "35",
+    "titularTrabaja": true,
+    "amortizacionAnual": "4000",
+    "asalariadosAnterior": "2",
+    "anioInicio": "2025",
+    "personalOverride": "2.5"
+   },
+   "empleados_app": 3,
+   "esperado": {
+    "irpf": {
+     "previo": 45478.9,
+     "coefEmpleo": 0.45,
+     "minoracionEmpleo": 1669.45,
+     "minorado": 39809.45,
+     "exceso": "no (umbral 51.617,08)",
+     "indice": {
+      "tipo": "inicio",
+      "valor": 0.9,
+      "tras": 35828.51
+     },
+     "rendimientoNeto": 34037.08,
+     "pctPago131": 0.04,
+     "pago131PorTrimestre": [
+      1361.48,
+      1361.48,
+      1361.48,
+      1361.48
+     ],
+     "pago131Anual": 5445.92,
+     "irpfAnualEscala": 7322.12
+    },
+    "iva": {
+     "cuotaDevengada": 19114.09,
+     "ivaSoportadoCorriente": 13930.0,
+     "dificilJustificacion": 191.14,
+     "diferencia": 4992.94,
+     "cuotaMinima13pct": 2484.83,
+     "cuotaDerivada": 4992.94,
+     "ivaActivosFijos": 1260.0,
+     "ivaAnual": 3732.94,
+     "ingresoACuentaPct": 0.04,
+     "trimestral303": [
+      764.56,
+      764.56,
+      -495.44,
+      2699.26
+     ],
+     "trimestral303_compensando_3T": [
+      764.56,
+      764.56,
+      0,
+      2203.82
+     ],
+     "modelo390": 3732.94
+    }
+   },
+   "app_hoy": {
+    "con_anioInicio_como_cadena (UI)": {
+     "rendimientoNeto": 37818.98,
+     "indice": null,
+     "pago131PorTrimestre": 1512.76,
+     "irpfAnual": 8640.02,
+     "ivaAnual": 3732.94,
+     "trimestral303": [
+      933.24,
+      933.24,
+      933.24,
+      311.08
+     ]
+    },
+    "con_anioInicio_numerico": {
+     "rendimientoNeto": 34037.08,
+     "indice": {
+      "tipo": "inicio",
+      "valor": 0.9
+     },
+     "pago131PorTrimestre": 1361.48,
+     "ivaAnual": 3732.94
+    }
+   },
+   "desviaciones": [
+    {
+     "magnitud": "rendimientoNeto",
+     "esperado": 34037.08,
+     "app": 37818.98,
+     "pct": 11.1,
+     "causas": [
+      "E-2 anioInicio guardado como cadena"
+     ]
+    },
+    {
+     "magnitud": "pago131PorTrimestre",
+     "esperado": 1361.48,
+     "app": 1512.76,
+     "pct": 11.1,
+     "causas": [
+      "E-2"
+     ]
+    },
+    {
+     "magnitud": "irpfAnual",
+     "esperado": 7322.12,
+     "app": 8640.02,
+     "pct": 18.0,
+     "causas": [
+      "E-2"
+     ]
+    },
+    {
+     "magnitud": "ivaAnual",
+     "esperado": 3732.94,
+     "app": 3732.94,
+     "pct": 0.0,
+     "causas": []
+    },
+    {
+     "magnitud": "303 por trimestre",
+     "esperado": [
+      764.56,
+      764.56,
+      -495.44,
+      2699.26
+     ],
+     "app": [
+      933.24,
+      933.24,
+      933.24,
+      311.08
+     ],
+     "causas": [
+      "E-3"
+     ]
+    }
+   ]
+  }
+ },
+ "cifras_boe_2026": {
+  "reduccion_general": 0.05,
+  "tramos_empleo": [
+   [
+    1,
+    0.1
+   ],
+   [
+    3,
+    0.15
+   ],
+   [
+    5,
+    0.2
+   ],
+   [
+    8,
+    0.25
+   ],
+   [
+    null,
+    0.3
+   ]
+  ],
+  "incremento_empleo": 0.4,
+  "pequena_dimension": {
+   "sin_asalariados": {
+    "hasta2000": 0.7,
+    "hasta5000": 0.75,
+    "mas5000": 0.8
+   },
+   "hasta_2_asalariados": 0.9
+  },
+  "temporada": {
+   "hasta60": 1.5,
+   "de61a120": 1.35,
+   "de121a180": 1.25
+  },
+  "exceso": 1.3,
+  "inicio": {
+   "primero": 0.8,
+   "segundo": 0.9,
+   "discapacidad": {
+    "primero": 0.6,
+    "segundo": 0.7
+   }
+  },
+  "pago131": {
+   "sinAsalariados": 0.02,
+   "hastaUnAsalariado": 0.03,
+   "masDeUno": 0.04
+  },
+  "iva_ingreso_a_cuenta_pct": {
+   "671.4": 0.04,
+   "671.5": 0.06,
+   "672": 0.04,
+   "673.1": 0.02,
+   "673.2": 0.02,
+   "675": 0.01,
+   "676": 0.06
+  },
+  "iva_cuota_minima_pct": {
+   "671.4": 0.13,
+   "671.5": 0.2,
+   "672": 0.13,
+   "673.1": 0.06,
+   "673.2": 0.06,
+   "675": 0.03,
+   "676": 0.2
+  },
+  "exceso_cuantias": {
+   "671.4": 51617.08,
+   "671.5": 38081.38,
+   "672": 39070.26,
+   "673.1": 30586.03,
+   "673.2": 19084.78,
+   "675": 16596.83,
+   "676": 25528.25
+  },
+  "irpf_por_unidad": {
+   "671.4": {
+    "asalariado": 3709.88,
+    "noAsalariado": 17434.55,
+    "kw": 201.55,
+    "mesa": 585.77,
+    "maquinaA": 1077.06,
+    "maquinaB": 3810.65
+   },
+   "671.5": {
+    "asalariado": 3602.8,
+    "noAsalariado": 16174.82,
+    "kw": 125.97,
+    "mesa": 220.45,
+    "maquinaA": 1077.06,
+    "maquinaB": 3810.65
+   },
+   "672": {
+    "asalariado": 1448.68,
+    "noAsalariado": 13743.56,
+    "kw": 478.69,
+    "mesa": 377.92,
+    "maquinaA": 957.39,
+    "maquinaB": 3747.67
+   },
+   "673.1": {
+    "asalariado": 4056.3,
+    "noAsalariado": 15538.66,
+    "kw": 321.23,
+    "mesa": 233.04,
+    "barra": 371.62,
+    "maquinaA": 957.39,
+    "maquinaB": 2903.66
+   },
+   "673.2": {
+    "asalariado": 1643.93,
+    "noAsalariado": 11413.08,
+    "kw": 94.48,
+    "mesa": 119.67,
+    "barra": 163.76,
+    "maquinaA": 806.23,
+    "maquinaB": 2947.75
+   },
+   "675": {
+    "asalariado": 2802.88,
+    "noAsalariado": 14461.6,
+    "kw": 107.07,
+    "m2": 26.45
+   },
+   "676": {
+    "asalariado": 2418.67,
+    "noAsalariado": 20016.97,
+    "kw": 541.68,
+    "mesa": 220.45,
+    "maquinaA": 806.23
+   }
+  },
+  "iva_por_unidad": {
+   "671.4": {
+    "empleado": 2993.81,
+    "kw": 150.57,
+    "mesa": 168.29,
+    "maquinaA": 239.15,
+    "maquinaB": 841.46,
+    "loteriaPorEuro": 0.21
+   },
+   "671.5": {
+    "empleado": 2400.36,
+    "kw": 70.86,
+    "mesa": 124.0,
+    "maquinaA": 239.15,
+    "maquinaB": 841.46,
+    "loteriaPorEuro": 0.21
+   },
+   "672": {
+    "empleado": 2356.07,
+    "kw": 124.0,
+    "mesa": 70.86,
+    "maquinaA": 221.43,
+    "maquinaB": 832.6,
+    "loteriaPorEuro": 0.21
+   },
+   "673.1": {
+    "empleado": 3294.97,
+    "kw": 69.09,
+    "mesa": 60.23,
+    "barra": 77.95,
+    "maquinaA": 221.43,
+    "maquinaB": 655.45,
+    "loteriaPorEuro": 0.21
+   },
+   "673.2": {
+    "empleado": 2577.52,
+    "kw": 47.83,
+    "mesa": 56.69,
+    "barra": 62.89,
+    "maquinaA": 177.15,
+    "maquinaB": 655.45,
+    "loteriaPorEuro": 0.21
+   },
+   "675": {
+    "empleado": 4357.86,
+    "kw": 50.48,
+    "m2": 4.06,
+    "loteriaPorEuro": 0.21
+   },
+   "676": {
+    "empleado": 3817.55,
+    "kw": 141.72,
+    "mesa": 46.05,
+    "maquinaA": 177.15,
+    "loteriaPorEuro": 0.21
+   }
+  },
+  "limites_exclusion_2026": {
+   "ingresos": 250000,
+   "facturadoAEmpresarios": 125000,
+   "compras": 250000,
+   "nota": "Prorrogados por nota de la AEAT tras no convalidarse los RDL 16/2025 y 2/2026; fuente secundaria"
+  }
+ },
+ "hallazgos_por_impacto_eur_anual": [
+  {
+   "id": "E-1",
+   "tipo": "ERROR",
+   "impacto_eur": 12490,
+   "caso": "B",
+   "resumen": "Temporada: unidades sin prorratear y IVA sin método de temporada"
+  },
+  {
+   "id": "F-1",
+   "tipo": "FALTA",
+   "impacto_eur": -2171,
+   "caso": "A",
+   "resumen": "Máquinas recreativas A/B (IRPF e IVA)"
+  },
+  {
+   "id": "E-2",
+   "tipo": "ERROR",
+   "impacto_eur": 1318,
+   "caso": "C",
+   "resumen": "anioInicio guardado como cadena: el índice de inicio nunca se aplica"
+  },
+  {
+   "id": "E-4",
+   "tipo": "ERROR",
+   "impacto_eur": 3063,
+   "caso": "B",
+   "resumen": "131 de temporada: igual importe los 4 trimestres (a cuenta)"
+  },
+  {
+   "id": "E-3",
+   "tipo": "ERROR",
+   "impacto_eur": 1766,
+   "caso": "C",
+   "resumen": "Calendario del 303: reparto /12 en vez de ingreso a cuenta; error de caja por trimestre, total anual correcto"
+  },
+  {
+   "id": "F-2",
+   "tipo": "FALTA",
+   "impacto_eur": 336,
+   "caso": "A",
+   "resumen": "Índice de pequeña dimensión (y desactivar exceso cuando aplique)"
+  },
+  {
+   "id": "F-4",
+   "tipo": "FALTA",
+   "impacto_eur": 1300,
+   "caso": "cualquiera con subvención de 5.000 EUR",
+   "resumen": "Subvenciones y otras percepciones (Anexo III §3)"
+  },
+  {
+   "id": "F-9",
+   "tipo": "FALTA",
+   "impacto_eur": 1700,
+   "caso": "restaurante que cuenta mesas de 2",
+   "resumen": "Mesa = 4 plazas, sin aviso"
+  },
+  {
+   "id": "F-7",
+   "tipo": "FALTA",
+   "impacto_eur": 400,
+   "caso": "rendimiento anterior <= 12.000",
+   "resumen": "Minoración del 131 art. 110.3.c RIRPF"
+  },
+  {
+   "id": "E-6",
+   "tipo": "ERROR (dudoso)",
+   "impacto_eur": 1400,
+   "caso": "rendimiento bajo",
+   "resumen": "Reducción 32.2.3º negada en módulos; cuantía por verificar"
+  },
+  {
+   "id": "F-3",
+   "tipo": "FALTA",
+   "impacto_eur": null,
+   "caso": "> 250.000 EUR",
+   "resumen": "Sin avisos de límites de exclusión (cambio de régimen)"
+  },
+  {
+   "id": "F-5",
+   "tipo": "FALTA",
+   "impacto_eur": null,
+   "caso": "676, 675",
+   "resumen": "Epígrafes no soportados"
+  },
+  {
+   "id": "F-6",
+   "tipo": "FALTA",
+   "impacto_eur": 1800,
+   "caso": "personal a tiempo parcial",
+   "resumen": "Cómputo del personal por horas, cónyuge, discapacidad"
+  },
+  {
+   "id": "F-8",
+   "tipo": "FALTA",
+   "impacto_eur": null,
+   "caso": "IVA no deducible",
+   "resumen": "Cuotas de hostelería/restauración/viajes y 123.Uno.B"
+  },
+  {
+   "id": "F-10",
+   "tipo": "FALTA",
+   "impacto_eur": null,
+   "caso": "cualquiera",
+   "resumen": "Amortización a mano, sin tabla del Anexo II"
+  },
+  {
+   "id": "F-11",
+   "tipo": "FALTA",
+   "impacto_eur": null,
+   "caso": "siniestro",
+   "resumen": "Gastos extraordinarios y reducción de módulos"
+  },
+  {
+   "id": "F-12",
+   "tipo": "FALTA",
+   "impacto_eur": null,
+   "caso": "alta/cese a mitad de año",
+   "resumen": "131/303 por trimestres completos y días"
+  }
+ ]
+}
