@@ -258,7 +258,9 @@ await caso('347: entra la luz (gasto fijo) y el cliente con facturas completas; 
   const r = await page.evaluate(() => {
     DB.ge.fijos = [{id:1, nombre:'ELECTRICIDAD', importe:300, iva:21, categoria:'FIJOS', periodicidadMeses:1, proveedor:'IBERDROLA', nifProveedor:'A95758389'}];
     DB.sales = [{id:2, date:'2025-05-02', total:4000, items:[{name:'x', price:4000, qty:1, ivaPct:10}], facturaCompleta:{num:'F25AAA-000001', fecha:'2025-05-02', nombre:'EVENTOS SL', nif:'B22222222', direccion:'x'}},
-                {id:3, date:'2024-06-01', total:110000, items:[{name:'x', price:110000, qty:1, ivaPct:10}]}];
+                {id:3, date:'2024-06-01', total:110000, items:[{name:'x', price:110000, qty:1, ivaPct:10}]},
+                // El 202 de abril va sobre el impuesto de N-2 (el de N-1 no se presenta hasta julio): art. 40.2 LIS.
+                {id:4, date:'2023-06-01', total:110000, items:[{name:'x', price:110000, qty:1, ivaPct:10}]}];
     const rows = GE.resumenAño(2025);
     const pc = rows.find(x => String(x[0]).includes('(202)'));
     return {luz: rows.find(x => x[0] === 'IBERDROLA'), cli: rows.find(x => x[0] === 'EVENTOS SL'), pc};
