@@ -606,6 +606,23 @@ Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 - ⚠️ Mi Negocio va en dos columnas: una tarjeta `mn-grid-full` o mal colocada
   deja huecos y tumba `revision-12-09.mjs`.
 
+## Seguridad rápida (9/10, tras una revisión externa)
+
+- **Cabeceras** en `deploy/{app,admin,reservas}/public/_headers` (nosniff, referrer, HSTS; la app y
+  el panel no se pueden incrustar; la web de reservas SÍ, porque el restaurante la puede meter en su
+  web). Falta la política de contenido (CSP): hay que afinarla con cuidado, la app lleva mucho código en el HTML.
+- **La clave de VeriFactu vive en el aparato** (`verifactuKeyLS`, localStorage), no en `DB.business`:
+  igual que la clave de la IA. Hay que ponerla en cada tablet que facture.
+- **PIN del PROPIETARIO: 6-12 letras o números** (antes 4 dígitos: 10.000 intentos bastaban, la ruta de la
+  cuenta se deriva de usuario + PIN y Firebase no limita intentos). El PIN de empleado sigue en 4 dígitos
+  (es local). Los PIN de 4 dígitos ya existentes siguen valiendo hasta que se cambien.
+- La cabecera muestra «Nube conectada · hace N s» (`lastSyncOkAt`): última subida confirmada.
+- `npm test` ya lanza TODA la batería (`npm run test:smoke` para solo el humo). Dependabot mensual.
+- ⚠️ **Pendiente grande**: todo es sesión ANÓNIMA, y `public/$id/requests` (reservas con nombre y
+  teléfono) se puede LEER con solo conocer el publicId. Arreglo previsto sin coste: que la app del negocio
+  entre con correo y contraseña de Firebase y que las reglas exijan `sign_in_provider != 'anonymous'` para
+  leer; la web pública queda anónima y solo escribe. Migrar a los negocios ya dados de alta con el emulador.
+
 ## El módulo de I+D (`js/idr.js`)
 
 Un asistente de cocina que crea **elaboraciones base, platos, menús y cartas**
