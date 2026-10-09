@@ -8338,7 +8338,7 @@ function previewTicketConfig(){
 // a su API al cerrar cada venta. Ver VERIFACTU_PROVIDERS (js/tpv.js) para la
 // lista de proveedores soportados y submitSaleToVerifactu() para el envío.
 function renderVerifactuConfigCard(){
-  const vf = (DB.business && DB.business.verifactu) || {enabled:false, provider:'', apiKey:''};
+  const vf = verifactuConfig();
   const pendingSales = (DB.sales||[]).filter(s => s.verifactu && s.verifactu.status === 'pending');
   const providerOptions = Object.keys(VERIFACTU_PROVIDERS).map(k =>
     `<option value="${k}" ${vf.provider===k?'selected':''}>${escapeHtml(VERIFACTU_PROVIDERS[k].label)}</option>`
@@ -8471,7 +8471,8 @@ function saveVerifactuConfig(){
   // La serie es POR DISPOSITIVO (localStorage), no se sincroniza entre
   // aparatos del mismo negocio — ver aviso en js/tpv.js sobre por qué.
   setVerifactuSerie(serie);
-  DB.business.verifactu = {...vfPrev, enabled, provider, apiKey, domain, lockedOnce: vfPrev.lockedOnce || enabled};
+  try{ localStorage.setItem(verifactuKeyLS(), apiKey); }catch(e){}
+  DB.business.verifactu = {...vfPrev, enabled, provider, apiKey:'', domain, lockedOnce: vfPrev.lockedOnce || enabled};
   saveDB();
   renderMiNegocio();
   showToast(t('msg.verifactuConfigSaved'));

@@ -371,7 +371,7 @@ async function confirmOwnerAccess(){
     if(!login || login.user !== ggOwnerUser(user)){ showErr('access.badCredentials'); return; }
     const newPin = await promptText(t('access.newPasswordPrompt'), '', {title: t('access.newPasswordPrompt'), icon: 'ti-lock'});
     if(!newPin || !newPin.trim()) return;
-    if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
+    if(!/^[0-9A-Za-z]{6,12}$/.test(newPin.trim())){ showToast(t('msg.ownerPinFormat')); return; }
     // Muda la cuenta igual que un cambio normal: quien olvidó su PIN lo
     // recupera desde cualquier aparato donde ya hubiera entrado, y el nuevo
     // le vale también en el resto.
@@ -1440,8 +1440,13 @@ function renderBusinessSelectScreenHtml(){
 }
 // El PIN que se entrega al crear la cuenta (6 caracteres, letras y números)
 // es difícil de recordar de memoria — por eso, en cuanto el propietario lo
-// cambia por el suyo, se le obliga a que sea un PIN numérico de 4 dígitos,
-// mucho más fácil de recordar y de teclear cada vez. El usuario no cambia.
+// cambia por el suyo, antes se le obligaba a un PIN de 4 dígitos. Con 4 dígitos
+// bastan 10.000 intentos para entrar en la cuenta de cualquiera cuyo nombre se
+// conozca (la ruta se deriva de usuario + PIN y Firebase no limita intentos), y
+// esa cuenta da la lista de códigos de TODOS sus negocios. Ahora 6-12 letras o
+// números; los PIN de 4 dígitos ya existentes siguen valiendo hasta que se cambien.
+// (El PIN de los EMPLEADOS sigue siendo de 4 dígitos: es local, no abre ninguna cuenta.)
+// El usuario no cambia.
 // duringSetup=true solo cuando se llama desde la configuración inicial: al
 // cerrar el modal hay que reanudar los asistentes que falten. Desde Mi
 // Negocio (cambio voluntario, con la app ya configurada) NO debe reanudar
@@ -1452,7 +1457,7 @@ function promptChangeOwnerPassword(duringSetup){
   const login = getOwnerLogin();
   if(!login) return;
   ownerPassPromptDuringSetup = !!duringSetup;
-  const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
+  const pinInputAttrs = `maxlength="12" autocomplete="new-password" placeholder="••••••" style="letter-spacing:6px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9A-Za-z]/g,'')"`;
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-key"></i> ${t('access.changePassword')}</h3>
@@ -1477,7 +1482,7 @@ function promptChangeOwnerPassword(duringSetup){
 async function confirmChangeOwnerPassword(){
   const p1 = document.getElementById('owner-new-pass-1').value.trim();
   const p2 = document.getElementById('owner-new-pass-2').value.trim();
-  if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pin4digits')); return; }
+  if(!/^[0-9A-Za-z]{6,12}$/.test(p1)){ showToast(t('msg.ownerPinFormat')); return; }
   if(p1 !== p2){ showToast(t('msg.pinNoMatch')); return; }
   // Cambiar el PIN muda la cuenta de sitio en la nube, así que tarda y puede
   // fallar por falta de conexión: sin deshabilitar el botón se puede pulsar
@@ -6403,6 +6408,15 @@ function syncErrorHintKey(){
   if(code.toUpperCase().includes('PERMISSION_DENIED')) return 'gate.cloudError.rules';
   return null;
 }
+// «Online» no dice si lo último llegó de verdad a la nube: se enseña cuándo fue la
+// última subida (o bloque recibido) confirmada. Sin eso, un socket abierto con las
+// reglas rechazando escrituras se parecía a una nube sana.
+let lastSyncOkAt = 0;
+function haceDesde(ms){
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  return s < 10 ? t('gate.syncNow') : s < 60 ? s + ' s' : s < 3600 ? Math.round(s/60) + ' min' : Math.round(s/3600) + ' h';
+}
+if(typeof setInterval === 'function') setInterval(() => { if(lastSyncBadgeState === 'online' && lastSyncOkAt) updateSyncBadge('online'); }, 15000);   // las pruebas cargan core.js sin navegador
 function updateSyncBadge(state){
   lastSyncBadgeState = state;
   const el = document.getElementById('sync-badge');
@@ -6415,7 +6429,9 @@ function updateSyncBadge(state){
   // nunca, así que era el elemento que más desbordaba la cabecera en
   // pantallas estrechas, obligando a hacer scroll horizontal para llegar a
   // los demás botones.
-  if(state === 'online'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}</span>`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
+  if(state === 'online'){
+    const conHora = lastSyncOkAt ? ' · ' + (Date.now() - lastSyncOkAt < 10000 ? t('gate.syncNow') : t('gate.syncAgo').replace('{t}', haceDesde(lastSyncOkAt))) : '';
+    el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}${conHora}</span>`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
   // 'pending': antes el badge solo distinguía conectado/desconectado, no si
   // los cambios que se acaban de hacer YA llegaron de verdad a la nube o
   // siguen en camino — con esto queda un estado visible intermedio, en vez
@@ -8686,7 +8702,13 @@ function avisarSiCobroDuplicado(ventas){
   }catch(e){ console.error('Error detectando cobro duplicado', e); }
 }
 
-/* ⚠️ EL NÚMERO DE FACTURA NO ESTÁ PROTEGIDO ENTRE DOS APARATOS.
+/* ✅ ACTUALIZADO (5/10): ya NO hay números repetidos entre aparatos. Cada aparato
+   numera en su propia serie (`serieDispositivo`, js/tpv.js; RD 1619/2012 art. 6.2),
+   así que dos tablets sin conexión nunca emiten el mismo número. Lo que sigue es el
+   comentario histórico del problema original; esta detección queda como red de
+   seguridad (misma serie en dos pestañas del mismo aparato, o datos antiguos).
+
+   ⚠️ (histórico) EL NÚMERO DE FACTURA NO ESTÁ PROTEGIDO ENTRE DOS APARATOS.
 
    `printInvoice` (js/tpv.js) lee `DB.business.facturaCounter`, le suma 1 y
    lo guarda, todo en local — sin ninguna transacción de Firebase, a
@@ -11158,6 +11180,7 @@ function marcarNubeAlDia(opciones){
   const hayPrueba = opciones && (opciones.trasSubirBien || opciones.trasProbarNube);
   if(lastSyncBadgeState === 'pending' || (hayPrueba && lastSyncBadgeState === 'error')){
     lastSyncErrorCode = null;
+    if(hayPrueba) lastSyncOkAt = Date.now();
     updateSyncBadge('online');
   }
 }
@@ -11187,6 +11210,7 @@ function flushCloudSync(){
     cloudRef.update(sinIndefinidos(updates)).then(() => {
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
       keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
+      lastSyncOkAt = Date.now();
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio
       // local (o el reintento de otro bloque sigue en curso), se queda en

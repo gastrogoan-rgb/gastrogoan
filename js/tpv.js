@@ -5524,8 +5524,23 @@ function nextVerifactuNumSerieFactura(){
 const VERIFACTU_RETRY_MS = 3 * 60 * 1000;
 let verifactuRetryTimer = null;
 
+// La clave del proveedor de facturación vive en ESTE aparato (localStorage), no en
+// DB.business: ese bloque se sincroniza con la nube del negocio y cualquier
+// empleado, o quien consiguiera leer esa nube, podría usarla fuera de la app. Mismo
+// criterio que la clave de la IA. Hay que ponerla en cada aparato que emita facturas.
+function verifactuKeyLS(){ return ACTIVE_SLOT === 'default' ? 'gastrogoan_vf_key' : 'gastrogoan_vf_key_' + ACTIVE_SLOT; }
 function verifactuConfig(){
-  return (DB.business && DB.business.verifactu) || {enabled:false, provider:'', apiKey:''};
+  const base = (DB.business && DB.business.verifactu) || {enabled:false, provider:'', apiKey:''};
+  let key = '';
+  try{
+    key = localStorage.getItem(verifactuKeyLS()) || '';
+    // Migración única: una clave guardada antes en la base sincronizada pasa al aparato y se borra de ahí.
+    if(base.apiKey){
+      if(!key){ key = base.apiKey; localStorage.setItem(verifactuKeyLS(), key); }
+      base.apiKey = ''; saveDB();
+    }
+  }catch(e){}
+  return {...base, apiKey: key};
 }
 
 // Se llama justo después de guardar cada venta. Si VeriFactu no está

@@ -487,7 +487,8 @@ await testAsync('FIX M3: el badge pasa a "pending" al programar un envío, y sol
   sandbox.document._syncBadgeEl.textContent = ''; // limpia para distinguir el próximo cambio
   await sandbox.flushCloudSync();
   await new Promise(r => setTimeout(r, 10));
-  assert.equal(sandbox.document._syncBadgeEl.textContent, '☁ gate.cloudConnectedShort',
+  // Desde el 9/10 el verde lleva además «· justo ahora» (última subida confirmada).
+  assert.ok(sandbox.document._syncBadgeEl.textContent.startsWith('☁ gate.cloudConnectedShort'),
     'tras confirmarse el envío y no quedar nada pendiente, debe volver a "conectado"');
   console.log('   → badge: pending mientras se envía → online solo tras confirmarse de verdad');
 });

@@ -1,0 +1,9 @@
+# Cabeceras de seguridad (Cloudflare Pages las lee de aquí). La app y el panel no
+# se pueden incrustar en otra web (clickjacking). Falta la politica de contenido
+# (CSP): la app lleva mucho codigo dentro del propio HTML y hay que afinarla
+# con cuidado antes de ponerla.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  X-Frame-Options: DENY
