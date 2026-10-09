@@ -44,7 +44,7 @@ jobs:
       # él, build.sh reventaba en el primer paso de CADA ejecución, ANTES de
       # llegar a correr una sola prueba — así que la batería nunca llegó a
       # ejecutarse aquí ni una vez, aunque en local sí pasara.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
