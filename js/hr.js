@@ -774,7 +774,7 @@ const GE = (function(){
         <div style="margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
             <span style="font-weight:600">${it.lbl}</span>
-            <span style="font-family:monospace">${fmtMoney(it.v)} · <span style="color:${it.pct>35?'var(--red)':'var(--ink)'}">${it.pct>999?'&gt;999':pct1(it.pct)}% ${t('hr.lbl.ofSales')}</span></span>
+            <span style="font-family:var(--mono)">${fmtMoney(it.v)} · <span style="color:${it.pct>35?'var(--red)':'var(--ink)'}">${it.pct>999?'&gt;999':pct1(it.pct)}% ${t('hr.lbl.ofSales')}</span></span>
           </div>
           <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
             <div style="height:100%;width:${Math.min(it.pct/50*100,100)}%;background:${it.color};border-radius:4px;transition:width .4s"></div>
@@ -813,7 +813,7 @@ const GE = (function(){
       return `
       <div class="ge-item" style="flex-wrap:wrap">
         <span style="flex:1;font-size:14px;font-weight:500;min-width:140px">${escapeHtml(g.nombre)}</span>
-        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(mensual)}${periodoMeses>1?'<span class="txt-xs" style="color:var(--muted);font-weight:400">/mes</span>':''}</span>
+        <span style="font-family:var(--mono);font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(mensual)}${periodoMeses>1?'<span class="txt-xs" style="color:var(--muted);font-weight:400">/mes</span>':''}</span>
         <button class="btn btn-sm btn-icon" onclick="GE.editGF(${g.id})"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGF(${g.id})"><i class="ti ti-trash"></i></button>
         ${detalles.length || g.notas ? `<div style="flex-basis:100%;font-size:11.5px;color:var(--muted)">${detalles.join(' · ')}${g.notas?`${detalles.length?' · ':''}<i class="ti ti-note"></i> ${escapeHtml(g.notas)}`:''}</div>` : ''}
@@ -1425,7 +1425,7 @@ const GE = (function(){
           return `<div class="ge-item" style="flex-wrap:wrap">
             <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray txt-xs" style="font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
             <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
-            <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
+            <span style="font-family:var(--mono);font-weight:700">${fmtMoney(total)}</span>
             <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 4px"><i class="ti ti-lock"></i></span>
             <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGVGroup('${ids}')"><i class="ti ti-ban"></i></button>
           </div>`;
@@ -1443,14 +1443,14 @@ const GE = (function(){
             <span style="flex:1;font-size:14px;min-width:140px;text-decoration:line-through">${escapeHtml(v.proveedor||'—')}</span>
             <span class="badge badge-red txt-xs" ><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>
             <span style="font-size:11.5px;color:var(--muted);flex:1;min-width:120px">${escapeHtml(v.anuladoMotivo||'')}</span>
-            <span style="font-family:monospace;text-decoration:line-through;color:var(--muted)">${fmtMoney(total)}</span>
+            <span style="font-family:var(--mono);text-decoration:line-through;color:var(--muted)">${fmtMoney(total)}</span>
           </div>`;
           }
           return `<div class="ge-item" style="flex-wrap:wrap">
           <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(v.proveedor||'—')}</span>
           <span style="font-size:12px;color:var(--muted);margin-right:4px">${escapeHtml(v.fecha||'')}</span>
           <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})</span>
-          <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
+          <span style="font-family:var(--mono);font-weight:700">${fmtMoney(total)}</span>
           ${v.facturaId && facturaAdjunta(v.facturaId) ? `<button class="btn btn-sm btn-icon" title="${t('factura.viewTitle')}" onclick="window.open('${facturaAdjunta(v.facturaId).dataUrl}','_blank')"><i class="ti ti-paperclip"></i></button>` : ''}
           <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGV(${v.id})"><i class="ti ti-ban"></i></button>
         </div>`; }).join('');
@@ -2843,7 +2843,7 @@ const GE = (function(){
           <span style="font-size:14px;font-weight:600">${r.lbl}</span>
           <span></span>
           <span></span>
-          <span style="text-align:right;font-family:monospace;font-weight:700;color:${r.color}">${fmtMoney(r.real)}</span>
+          <span style="text-align:right;font-family:var(--mono);font-weight:700;color:${r.color}">${fmtMoney(r.real)}</span>
           <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${r.hint || t('hr.te.setAsideQuarterly')}</span>
           <span style="text-align:center;font-size:16px"><i class="ti ${r.icon}"></i></span>
         </div>`;
@@ -2872,9 +2872,9 @@ const GE = (function(){
       return `<div class="te-row">
         <span style="font-size:14px;font-weight:600">${r.lbl}</span>
         <span style="text-align:right;font-weight:600;color:${r.color}">${(r.pct*100).toFixed(0)}%</span>
-        <span style="text-align:right;font-family:monospace">${fmtMoney(r.obj)}</span>
-        <span style="text-align:right;font-family:monospace;font-weight:700">${r.real?fmtMoney(r.real):'—'}</span>
-        <span style="text-align:right;font-family:monospace;font-weight:700;color:${diffColor}">${diffText}</span>
+        <span style="text-align:right;font-family:var(--mono)">${fmtMoney(r.obj)}</span>
+        <span style="text-align:right;font-family:var(--mono);font-weight:700">${r.real?fmtMoney(r.real):'—'}</span>
+        <span style="text-align:right;font-family:var(--mono);font-weight:700;color:${diffColor}">${diffText}</span>
         <span style="text-align:center;font-size:16px">${estado}</span>
       </div>
       <div class="te-bar-wrap"><div class="te-bar-fill" style="width:${Math.min(barPct,100)}%;background:${barColor}"></div></div>`;
@@ -2997,7 +2997,7 @@ const GE = (function(){
         return `
         <div class="ge-item">
           <span style="flex:1;font-size:14px;font-weight:500">${escapeHtml(x.g.nombre)}</span>
-          <span style="font-family:monospace;font-weight:700">${fmtMoney(base*(1+pct/100))}</span>
+          <span style="font-family:var(--mono);font-weight:700">${fmtMoney(base*(1+pct/100))}</span>
         </div>`;
       }).join('')}
     `;

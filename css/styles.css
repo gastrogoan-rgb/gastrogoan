@@ -2426,6 +2426,59 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .dr-ficha-r i{display:block}
 @media print{.dr-doc{box-shadow:none;border:none;max-width:none;margin:0}.dr-cap,.dr-paso,.dr-check,.dr-frases,.dr-regla{break-inside:avoid}}
 
+/* ═══════════════════════════════════════
+   DISEÑO 27/10: «NÓRDICO AFINADO» + «COMANDA»
+
+   Dos direcciones sobre la MISMA marca (tinta, oliva, crema; Schibsted Grotesk y
+   IBM Plex Mono). Propuestas: docs/diseno/README.md.
+   · Nórdico afinado (toda la app): esquinas rectas, líneas finas, cifras en
+     mono y alineadas, KPI en una sola franja, etiquetas en mono pequeñas.
+   · Comanda (donde se sirve: TPV, Comandas, Cocina, Sala y todo lo impreso):
+     tarjetas como tique térmico (borde dentado, separadores de puntos),
+     rotulación en mono mayúsculas.
+   Va ANTES de las reglas de móvil, que siguen mandando las últimas (13/09).
+   Los colores son los tres de siempre; aquí no se introduce ninguno nuevo,
+   para no tumbar test/contraste.mjs. ═══════════════════════════════════════ */
+:root{--mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;--rule:var(--ink)}
+
+/* --- Nórdico afinado: base --- */
+.btn{border-radius:2px;font-weight:600}
+input,select,textarea{border-radius:2px}
+.badge{border-radius:2px}
+.card{border-radius:0}
+.module-card,.folder-card{border-radius:0}
+.home-hero{border-radius:0 !important}
+.folder-card h2,.home-hero h1{letter-spacing:-.02em}
+.kpi .value,.kpi-mini .v,.kpi-value,td.num,.num,.money,.pr-num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .label,.kpi-mini .l{font-family:var(--mono);font-size:11px;letter-spacing:.08em;font-weight:500}
+.kpi .value{font-size:22px}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;font-weight:500;color:var(--muted);background:transparent;border-bottom:1px solid var(--ink)}
+td{font-variant-numeric:tabular-nums}
+.badge,.tag{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.02em}
+/* KPI: una sola franja con líneas de 1 px entre celdas (en vez de cajas sueltas) */
+.grid-4:has(> .kpi),.grid-3:has(> .kpi),.grid-2:has(> .kpi),.kpi-grid:has(> .kpi){gap:1px;background:var(--border);border:1px solid var(--border)}
+.grid-4 > .kpi,.grid-3 > .kpi,.grid-2 > .kpi,.kpi-grid > .kpi{border:0}
+/* Pestañas: la activa lleva raya de tinta */
+.ge-tab.active,.help-tab.active{color:var(--ink);border-bottom-color:var(--ink)}
+.module-card::before{height:2px}
+.module-card:hover{transform:none;box-shadow:none;border-color:var(--ink)}
+.module-card h3,.folder-top-title{letter-spacing:-.01em}
+
+/* --- Comanda: donde se sirve --- */
+#view-tpv .card,#view-comandascocina .card,#view-tpv .tpv-order-col,#view-comandascocina .tpv-order-col{position:relative}
+#view-tpv .card h3,#view-comandascocina .card h3{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding-bottom:8px;border-bottom:1px dashed #ABA59C}
+#view-tpv .card,#view-comandascocina .card{border-bottom:0;margin-bottom:22px}
+#view-tpv .card::after,#view-comandascocina .card::after{content:"";position:absolute;left:-1px;right:-1px;bottom:-6px;height:6px;
+  background:radial-gradient(circle at 5px 0,transparent 4px,var(--surface) 4.5px) 0 0/10px 6px repeat-x;filter:drop-shadow(0 1px 0 var(--border))}
+#view-tpv .tpv-order-col,#view-comandascocina .tpv-order-col{border-radius:0}
+#view-tpv td,#view-comandascocina td{border-bottom-style:dashed}
+.caos-cabecera{font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;font-size:13px}
+.caos-fila{border-width:1px;border-left-width:6px;border-style:solid}
+.caos-fila .caos-plato strong{letter-spacing:-.01em}
+/* Tiques en pantalla: papel con separadores de puntos */
+.ticket-preview,.ticket-paper,.tpv-ticket{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--border);padding:14px}
+.ticket-preview hr,.ticket-paper hr,.tpv-ticket hr{border:0;border-top:1px dashed #ABA59C;margin:10px 0}
+
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)
 

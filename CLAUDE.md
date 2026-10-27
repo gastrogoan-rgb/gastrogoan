@@ -606,6 +606,22 @@ Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 - ⚠️ Mi Negocio va en dos columnas: una tarjeta `mn-grid-full` o mal colocada
   deja huecos y tumba `revision-12-09.mjs`.
 
+## Diseño (27/10): «Nórdico afinado» + «Comanda»
+
+Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKBj1). Misma marca de siempre.
+- **Nórdico afinado (toda la app)**: capa al final de `css/styles.css`, justo antes de las reglas de móvil:
+  esquinas rectas, cifras y etiquetas en IBM Plex Mono (`--mono`), KPI en una sola franja (`:has(> .kpi)`),
+  cabeceras de tabla en mono. Todo `font-family:monospace` suelto se sustituyó por `var(--mono)`.
+- **Comanda (donde se sirve y lo impreso)**: en `#view-tpv` y `#view-comandascocina` las tarjetas son tique
+  (borde dentado, separadores de puntos, títulos en mono mayúsculas); la cuenta de la web de reservas
+  (`#cart-summary`) también. Impresos: tique/factura en IBM Plex Mono, informes (`printReportWindow`),
+  vale regalo, QR de mesa y contrato con Schibsted Grotesk + mono; acento por defecto el oliva (antes un
+  marrón que no era de la marca).
+- Pendiente: la web comercial (`deploy/web/public`) y los PDF/Excel generados fuera de la app (libro de marca,
+  documentos de venta), que ya usan la tipografía y la paleta de la marca.
+- ⚠️ Un entorno nuevo necesita `pip install fonttools brotli` (el build recorta los iconos) y un enlace
+  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` al Chromium disponible para las pruebas.
+
 ## Seguridad rápida (9/10, tras una revisión externa)
 
 - **Cabeceras** en `deploy/{app,admin,reservas}/public/_headers` (nosniff, referrer, HSTS; la app y

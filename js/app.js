@@ -2194,21 +2194,21 @@ function printGiftVoucher(id){
   const win = window.open('', '_blank', 'width=760,height=560');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   const bizName = (DB.business && DB.business.name) || 'GastroGoan';
-  const accent = (DB.business && DB.business.brandColor) || '#B8804B';
+  const accent = (DB.business && DB.business.brandColor) || '#4A5D4E';
   const logo = DB.business && DB.business.logo;
   const mainLabel = v.tipo === 'experiencia' ? escapeHtml(v.descripcion) : fmtMoney(v.importe);
   const dateStr = new Date(v.createdAt || Date.now()).toLocaleDateString(localeActual(), {day:'numeric', month:'long', year:'numeric'});
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.giftVouchers')} — ${escapeHtml(v.code)}</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
       *{box-sizing:border-box}
-      body{margin:0;padding:30px;background:#e9e6e0;font-family:'Inter',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{margin:0;padding:30px;background:#e9e6e0;font-family:'Schibsted Grotesk',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .voucher{
         position:relative;width:760px;max-width:100%;display:grid;grid-template-columns:1fr 208px;
         background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.16);
       }
       .v-main{
-        background:#181512;color:#f4efe7;padding:40px 44px;position:relative;
+        background:#1C1A17;color:#f4efe7;padding:40px 44px;position:relative;
       }
       .v-main::after{
         content:'';position:absolute;inset:0;pointer-events:none;
@@ -2218,8 +2218,8 @@ function printGiftVoucher(id){
       .v-logo{max-height:38px;max-width:150px}
       .v-biz{font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:${accent};font-weight:600}
       .v-kicker{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#a89f92;font-weight:600;margin-bottom:16px}
-      .v-main-amount{font-family:'Playfair Display',serif;font-size:56px;font-weight:700;color:${accent};line-height:1}
-      .v-main-exp{font-family:'Playfair Display',serif;font-style:italic;font-size:25px;color:#f4efe7;line-height:1.35;max-width:420px}
+      .v-main-amount{font-family:'IBM Plex Mono',monospace;font-size:52px;font-weight:600;letter-spacing:-.03em;color:${accent};line-height:1}
+      .v-main-exp{font-family:'Schibsted Grotesk',sans-serif;font-weight:700;letter-spacing:-.01em;font-size:25px;color:#f4efe7;line-height:1.35;max-width:420px}
       .v-for{font-size:13.5px;color:#a89f92;margin-top:20px;letter-spacing:.2px}
       .v-for strong{color:#fff;font-weight:600}
       .v-stub{
@@ -2232,9 +2232,9 @@ function printGiftVoucher(id){
       .v-stub::before{top:-11px}
       .v-stub::after{bottom:-11px}
       .v-stub-label{font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:#a89f92;font-weight:600;margin-bottom:6px}
-      .v-code{font-family:'Inter',monospace;font-size:18px;font-weight:700;letter-spacing:1.5px;color:#181512;word-break:break-all}
+      .v-code{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;letter-spacing:1.5px;color:#1C1A17;word-break:break-all}
       .v-barcode{display:flex;gap:2px;height:34px;align-items:flex-end;justify-content:center}
-      .v-barcode i{display:block;width:2px;background:#181512}
+      .v-barcode i{display:block;width:2px;background:#1C1A17}
       .v-date{font-size:11px;color:#8f8779;line-height:1.5}
       .v-note{font-size:9.5px;color:#a89f92;font-style:italic;max-width:150px;line-height:1.4}
       @media print{
@@ -5920,7 +5920,7 @@ function plan360PrintContract(){
   const win = window.open('', '_blank', 'width=700,height=800');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(t('plan360.contract'))}</title>
-    <style>@page{margin:16mm} body{font-family:sans-serif;white-space:pre-wrap;line-height:1.6;font-size:13px;padding:0 6px} .firma{margin-top:24px;padding:12px;border:1px solid #4A5D4E;background:#EDF1EC}</style>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;700&display=swap');@page{margin:16mm} body{font-family:'Schibsted Grotesk',Arial,sans-serif;white-space:pre-wrap;line-height:1.6;font-size:13px;padding:0 6px} .firma{margin-top:24px;padding:12px;border:1px solid #4A5D4E;background:#EDF1EC}</style>
     </head><body>${escapeHtml(texto)}
     <div class="firma">${escapeHtml(t('plan360.signedBy'))} ${escapeHtml(c.signedName)} (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}</div>
     <script>window.onload=function(){window.print();}<\/script>
@@ -8326,7 +8326,7 @@ function previewTicketConfig(){
   const text = buildTicketText(sampleSale);
   openModal(`
     <div class="modal-header"><h3><i class="ti ti-receipt"></i> ${t('mn.ticket.previewTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div style="background:#fff;color:#111;font-family:monospace;font-size:12.5px;white-space:pre-wrap;padding:16px;border:1px solid var(--border);border-radius:8px;max-width:320px;margin:0 auto">${escapeHtml(text)}</div>
+    <div style="background:#fff;color:#111;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;padding:16px;border:1px solid var(--border);border-radius:8px;max-width:320px;margin:0 auto">${escapeHtml(text)}</div>
     <div class="modal-footer"><button class="btn" onclick="closeModal()">${t('common.close')}</button></div>
   `);
 }
@@ -8376,17 +8376,17 @@ function renderVerifactuConfigCard(){
       </div>
       <div class="field">
         <label>${t('mn.verifactu.apiKey')}</label>
-        <input type="text" id="vf-apikey" value="${escapeHtml(vf.apiKey||'')}" placeholder="${t('ph.verifactuApiKey')}" style="font-family:monospace;font-size:12px">
+        <input type="text" id="vf-apikey" value="${escapeHtml(vf.apiKey||'')}" placeholder="${t('ph.verifactuApiKey')}" style="font-family:var(--mono);font-size:12px">
         <small style="color:var(--muted)">${t('mn.verifactu.apiKeyHint')}</small>
       </div>
       <div class="field" id="vf-domain-field" style="${vf.provider==='verifactuapi'?'':'display:none'}">
         <label>${t('mn.verifactu.domain')}</label>
-        <input type="text" id="vf-domain" value="${escapeHtml(vf.domain||'')}" placeholder="tunegocio.invo.cash" style="font-family:monospace;font-size:12px">
+        <input type="text" id="vf-domain" value="${escapeHtml(vf.domain||'')}" placeholder="tunegocio.invo.cash" style="font-family:var(--mono);font-size:12px">
         <small style="color:var(--muted)">${t('mn.verifactu.domainHint')}</small>
       </div>
       <div class="field">
         <label>${t('mn.verifactu.serie')}</label>
-        <input type="text" id="vf-serie" value="${escapeHtml(verifactuSerie())}" placeholder="T1" style="max-width:120px;font-family:monospace">
+        <input type="text" id="vf-serie" value="${escapeHtml(verifactuSerie())}" placeholder="T1" style="max-width:120px;font-family:var(--mono)">
         <small style="color:var(--muted)">${t('mn.verifactu.serieHint')}</small>
       </div>
       ${pendingSales.length ? `<p style="font-size:12.5px;color:var(--ink);cursor:pointer" onclick="openVerifactuPendingModal()"><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingCount').replace('${n}', pendingSales.length)} <span style="text-decoration:underline">${t('common.viewDetail')}</span></p>` : ''}
