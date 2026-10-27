@@ -2445,7 +2445,7 @@ function openUnmatchedPaymentsModal(){
           <tr>
             <td>${escapeHtml((p.createdAt||p.detectedAt||'').slice(0,16).replace('T',' '))}</td>
             <td style="font-weight:700">${fmtMoney(p.amount||0)}</td>
-            <td style="font-family:monospace;font-size:11px">${escapeHtml(p.orderRef||'—')}</td>
+            <td style="font-family:var(--mono);font-size:11px">${escapeHtml(p.orderRef||'—')}</td>
             <td><button class="btn btn-sm" onclick="dismissUnmatchedPayment(${p.id})"><i class="ti ti-check"></i> ${t('unmatchedPay.markResolved')}</button></td>
           </tr>
         `).join('')}</tbody>

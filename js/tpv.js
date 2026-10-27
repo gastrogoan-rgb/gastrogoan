@@ -2556,7 +2556,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
       return `
       <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px">
         <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green txt-xs"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green txt-xs" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber txt-xs" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--ink)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
-        <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--ink);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
+        <span style="font-family:var(--mono);font-weight:700;font-size:11px;color:var(--ink);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
         ${esPedidoSoloLectura(order) ? '' : `
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
@@ -5923,7 +5923,7 @@ function buildTicketText(sale, opts={}){
 function buildTicketHtml(sale, opts={}){
   const b = DB.business || {};
   const tc = b.ticket || {};
-  const accent = b.brandColor || '#B8804B';
+  const accent = b.brandColor || '#4A5D4E';
   const logoHtml = b.logo ? `<img src="${b.logo}" alt="" style="max-height:48px;max-width:200px;display:block;margin:0 auto 8px">` : '';
   const metaLines = [];
   if(tc.mostrarDireccion !== false && b.address) metaLines.push(escapeHtml(b.address));
@@ -5980,7 +5980,7 @@ function buildTicketHtml(sale, opts={}){
     : '';
 
   return `
-    <div style="width:300px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111">
+    <div style="width:300px;margin:0 auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;color:#1C1A17">
       ${logoHtml}
       <div style="text-align:center;font-weight:700;font-size:16px;color:${accent}">${escapeHtml(b.name || 'GastroGoan')}</div>
       ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#B8860B;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
@@ -6028,7 +6028,7 @@ function printTicket(sale, opts={}){
   // printComandaTicket: se deja que sea la propia ventana la que imprima,
   // en su window.onload, que sí espera a que todas las imágenes carguen.
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title>
-    <style>@page{margin:6mm} body{margin:0;padding:14px 0}</style>
+    <style>@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');@page{margin:6mm} body{margin:0;padding:14px 0}</style>
     </head><body>${html}
     <script>window.onload=function(){window.print();}<\/script>
     </body></html>`);

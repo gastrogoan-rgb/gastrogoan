@@ -279,6 +279,18 @@
     .tab-btn{min-width:80px;font-size:12px;padding:9px 8px;}
     .menu-item .name{font-size:13.5px;}
   }
+
+  /* DISEÑO 27/10 «Comanda»: la cuenta del cliente es un tique (borde dentado, separadores
+     de puntos, total en mono) y la carta se lee como una comanda. Mismos colores de siempre. */
+  #cart-summary{position:relative;border-bottom:0;margin-bottom:22px}
+  #cart-summary::after{content:"";position:absolute;left:-1px;right:-1px;bottom:-6px;height:6px;
+    background:radial-gradient(circle at 5px 0,transparent 4px,var(--surface) 4.5px) 0 0/10px 6px repeat-x;
+    filter:drop-shadow(0 1px 0 var(--border))}
+  #cart-summary .cart-line{border-bottom:1px dashed #D6D0C5}
+  #cart-summary .cart-line:last-of-type{border-bottom:0}
+  #cart-summary .cart-total{border-top:1px dashed var(--ink);text-transform:uppercase;letter-spacing:.04em}
+  .menu-item{border-bottom-style:dashed}
+  .menu-item .price{font-weight:600;color:var(--ink);letter-spacing:-.01em}
 </style>
 </head>
 <body>

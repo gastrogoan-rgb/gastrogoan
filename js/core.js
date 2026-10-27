@@ -4979,7 +4979,7 @@ function showActivationGate(){
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
       <div style="text-align:left">
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px"><i class="ti ti-key"></i> ${t('access.businessCode')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span></label>
-        <input id="license-code-input" type="text" maxlength="8" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase" onkeydown="if(event.key==='Enter')activateLicenseFromGate()">
+        <input id="license-code-input" type="text" maxlength="8" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:var(--mono);font-size:16px;letter-spacing:2px;text-transform:uppercase" onkeydown="if(event.key==='Enter')activateLicenseFromGate()">
         <div id="license-error" style="display:none;background:#F5EBE7;color:#8A4A3B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
         <button id="license-activate-btn" onclick="activateLicenseFromGate()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
       </div>
@@ -5188,17 +5188,17 @@ const FIREBASE_GATE_STEPS = [
    body:{
      es:`Vuelve a <strong>Realtime Database</strong> (menú "Base de datos y almacenamiento") y abre la pestaña <strong>"Reglas"</strong> (Rules), arriba del todo.<br><br>
         Borra todo el contenido del cuadro de texto y pega estas reglas (pulsa el botón para copiarlas):<br><br>
-        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--mono);font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
         <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar reglas</button><br><br>
         Por último, pulsa el botón <strong>"Publicar"</strong> (Publish) arriba a la derecha.`,
      ca:`Torna a <strong>Realtime Database</strong> (menú "Base de dades i emmagatzematge") i obre la pestanya <strong>"Regles"</strong> (Rules), a dalt de tot.<br><br>
         Esborra tot el contingut del quadre de text i enganxa aquestes regles (prem el botó per copiar-les):<br><br>
-        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--mono);font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
         <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar regles</button><br><br>
         Finalment, prem el botó <strong>"Publicar"</strong> (Publish) a dalt a la dreta.`,
      en:`Go back to <strong>Realtime Database</strong> ("Build" menu) and open the <strong>"Rules"</strong> tab, at the top.<br><br>
         Delete all the content in the text box and paste these rules (click the button to copy them):<br><br>
-        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--mono);font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
         <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copy rules</button><br><br>
         Finally, click the <strong>"Publish"</strong> button at the top right.`}},
   {title:{es:'Crea una "app web" y copia tus datos', ca:'Crea una "app web" i copia les teves dades', en:'Create a "web app" and copy your data'},
@@ -9674,7 +9674,7 @@ function renderOnlineCard(){
         </div>
       </div>
       <div class="field">
-        <textarea id="mn-public-link" rows="2" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
+        <textarea id="mn-public-link" rows="2" readonly style="font-family:var(--mono);font-size:11px" onclick="this.select()">${link}</textarea>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
@@ -9684,7 +9684,7 @@ function renderOnlineCard(){
         <label>${t('mn.online.slugLabel')}</label>
         <p style="font-size:12px;color:var(--muted);margin:-2px 0 8px">${t('mn.online.slugDesc')}</p>
         <div style="display:flex;gap:8px">
-          <input type="text" id="mn-public-slug" placeholder="mi-restaurante" value="${escapeHtml(b.publicSlug||'')}" style="flex:1;font-family:monospace" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+          <input type="text" id="mn-public-slug" placeholder="mi-restaurante" value="${escapeHtml(b.publicSlug||'')}" style="flex:1;font-family:var(--mono)" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
           <button class="btn btn-sm btn-primary" onclick="savePublicSlug()">${t('common.save')}</button>
         </div>
       </div>
@@ -9826,11 +9826,12 @@ function imprimirQrMesas(){
   if(cambiado) saveDB();
   const nombre = escapeHtml((DB.business && DB.business.name) || '');
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${nombre} · QR</title><style>
-    body{font-family:'IBM Plex Sans',Arial,sans-serif;margin:0;padding:12mm;color:#1A1A1A}
+    @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+    body{font-family:'Schibsted Grotesk',Arial,sans-serif;margin:0;padding:12mm;color:#1C1A17}
     .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8mm}
-    .q{border:1px dashed #999;padding:6mm;text-align:center;break-inside:avoid}
+    .q{border:1px dashed #ABA59C;padding:6mm;text-align:center;break-inside:avoid}
     .q img{width:100%;max-width:55mm;aspect-ratio:1}
-    .n{font-size:18pt;font-weight:700;margin-top:3mm}.h{font-size:10pt;color:#555;margin-top:2mm}
+    .n{font-family:'IBM Plex Mono',monospace;font-size:18pt;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-top:3mm}.h{font-size:10pt;color:#716C65;margin-top:2mm}
     h1{font-size:14pt;margin:0 0 6mm}
   </style></head><body onload="setTimeout(function(){window.print()},600)"><h1>${nombre}</h1><div class="g">${tarjetas}</div></body></html>`;
   const w = window.open('', '_blank');
@@ -10399,11 +10400,11 @@ function renderOwnFirebaseForm(){
   return `
     <div class="field" style="margin-bottom:8px">
       <label style="font-size:12px">${t('gate.apiKeyLabel')}</label>
-      <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" style="font-family:monospace;font-size:12px">
+      <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" style="font-family:var(--mono);font-size:12px">
     </div>
     <div class="field" style="margin-bottom:10px">
       <label style="font-size:12px">${t('gate.dbUrlLabel')}</label>
-      <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" style="font-family:monospace;font-size:12px">
+      <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" style="font-family:var(--mono);font-size:12px">
     </div>
     <button class="btn" style="width:100%;justify-content:center" onclick="saveOwnFirebaseConfig()"><i class="ti ti-cloud-cog"></i> ${t('gate.saveAndConnect')}</button>
   `;
@@ -10498,7 +10499,7 @@ function openCloudWizard(){
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:120px;height:120px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
       <div class="field" style="flex:1;min-width:180px;margin-bottom:0">
-        <textarea id="cloud-public-link" rows="3" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
+        <textarea id="cloud-public-link" rows="3" readonly style="font-family:var(--mono);font-size:11px" onclick="this.select()">${link}</textarea>
       </div>
     </div>
     <div style="display:flex;gap:8px">
@@ -11621,7 +11622,7 @@ function buildRollPrintHtml(contenido, anchoMm, titulo, opts){
 <style>
 @page{size:${ancho}mm auto;margin:0}
 html,body{margin:0;padding:0;background:#fff;color:#000}
-body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
+body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
 pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
 </style></head><body>${cuerpo}</body></html>`;
 }

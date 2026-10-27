@@ -718,8 +718,8 @@ function openSupplierIngredientsModal(providerId){
       ${ings.length ? ings.map(i => `
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(i.name)}</span>
-          <span style="font-family:monospace;color:var(--muted)">${escapeHtml(i.unit||'')}</span>
-          <span style="font-family:monospace;font-weight:600;margin-left:10px">${fmtMoney(i.price)}</span>
+          <span style="font-family:var(--mono);color:var(--muted)">${escapeHtml(i.unit||'')}</span>
+          <span style="font-family:var(--mono);font-weight:600;margin-left:10px">${fmtMoney(i.price)}</span>
         </div>
       `).join('') : `<div class="empty"><i class="ti ti-list"></i>${t('empty.suppliers')}</div>`}
     </div>
