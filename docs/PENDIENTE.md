@@ -16,3 +16,6 @@
 6. **Pruebas con aparatos reales**: imprimir un ticket desde un iPad, leer una factura con una clave de Google
    de verdad, un pedido por QR desde un móvil (las reglas de la plataforma ya están pegadas).
 7. **Vender** (sigue siendo lo único que falta de verdad).
+8. **Diseño de la web comercial** (`deploy/web/public`, gastrogoan.com): aplicar la dirección 1 «Nórdico afinado»
+   con detalles de la 2 «Comanda» (precios como tique, cifras en mono). Propuestas en
+   https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKBj1. Primero van la app y la web de reservas.
