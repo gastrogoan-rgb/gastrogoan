@@ -624,6 +624,12 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
   invierten (tinta/crema); la venta del día del Panel es el titular (`.dash-hero`, mono 84 px); pestañas y
   títulos de ventana en mono mayúsculas. ⚠️ `innerText` respeta `text-transform`: una prueba que busque un
   título de ventana debe comparar en minúsculas (pasó con aviso-cancelar-pedido.mjs).
+- **Iconos y selector de idioma (27/10)**: todos los iconos pasan por máscaras CSS de trazo fino (1,8; 1,1 en
+  módulos/carpetas) generadas por `tools/generar-iconos-gg.py` → `css/iconos-gg.css` (build.sh lo mete tras el
+  subconjunto de Tabler; un icono que no esté ahí sigue saliendo con la fuente). Los colores de JS/CSS/reservas se
+  llevaron a la paleta de marca y los del personal salen de `EMPLOYEE_COLOR_CHOICES`. El idioma ya no son banderas:
+  desplegable ES/CA/EN (`LANG_CODES`, `LANG_NAMES`; `toggleLangDd` en reservas). Paneles de admin con su capa compacta.
+  Prueba permanente: `test/diseno-total.mjs`. ⚠️ `innerText` devuelve MAYÚSCULAS donde hay `text-transform`: comparar en minúsculas.
 - Pendiente: la web comercial (`deploy/web/public`) y los PDF/Excel generados fuera de la app (libro de marca,
   documentos de venta), que ya usan la tipografía y la paleta de la marca.
 - ⚠️ Un entorno nuevo necesita `pip install fonttools brotli` (el build recorta los iconos) y un enlace

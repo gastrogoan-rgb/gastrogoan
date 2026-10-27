@@ -220,12 +220,12 @@ let accessScreenMode = 'choice'; // 'choice' | 'employee' | 'owner'
 // abrirla, no solo una vez dentro (en Mi Negocio).
 function renderAccessLangSwitcherHtml(){
   const current = getLang();
-  const langs = ['es','en','ca'];
   return `
     <div class="access-lang-switch">
-      ${langs.map(l => `
-        <button class="${l===current?'active':''}" onclick="setLang('${l}')" title="${LANG_NAMES[l]}">${LANG_FLAGS[l]}</button>
-      `).join('')}
+      <button class="lang-trigger" onclick="this.parentNode.classList.toggle('open');event.stopPropagation()" aria-haspopup="listbox"><span class="lang-code">${LANG_CODES[current]}</span><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+      <div class="lang-panel" role="listbox">
+        ${['es','ca','en'].map(l => `<button role="option" class="${l===current?'active':''}" onclick="setLang('${l}')"><span class="lang-code">${LANG_CODES[l]}</span><span class="lang-name">${LANG_NAMES[l]}</span></button>`).join('')}
+      </div>
     </div>`;
 }
 function renderAccessScreen(){

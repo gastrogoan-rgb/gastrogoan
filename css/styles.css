@@ -1881,15 +1881,6 @@ td.wrap{white-space:normal}
 /* 33×25 px. Es el PRIMER botón que toca alguien que abre la app —y el
    único que necesita quien no habla español, justo el que más va a fallar
    el toque. Se le da el mínimo de 44 px sin agrandar la bandera. */
-.access-lang-switch button{
-  border:1.5px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);
-  padding:6px 9px;cursor:pointer;font-size:15px;line-height:1;
-  display:flex;align-items:center;justify-content:center;
-  min-width:44px;min-height:44px;
-  transition:border-color .15s ease, background .15s ease;
-}
-.access-lang-switch button:hover{background:rgba(255,255,255,.16)}
-.access-lang-switch button.active{border-color:var(--olive-l);background:rgba(126,155,132,.22)}
 
 /* Bloque de marca (icono + nombre + eslogan), constante en las 3 pantallas */
 .access-wrap{position:relative;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:22px;margin:30px 0;animation:splash-pop .4s ease}
@@ -2611,6 +2602,26 @@ button,input,select,textarea,optgroup{font-family:inherit}
 td[style*="monospace"],td.pos{font-family:var(--mono) !important}
 .hero-badge,.pp-card{box-shadow:none !important}
 .mesa-card .mesa-name{font-size:13.5px !important;letter-spacing:-.03em}
+code,pre,kbd,samp{font-family:var(--mono)}
+[style*="box-shadow:0 14px 40px"]{box-shadow:none !important;border-top:3px solid var(--ink)}
+/* Los emoji que elige el hostelero para sus carpetas (categorías, secciones de carta) se ven en monocromo:
+   así ninguna carpeta rompe la paleta nórdica con un naranja o un verde chillón */
+.cat-icon-btn,button[onclick*="IconModal"],.emoji-mono{filter:grayscale(1) contrast(1.08)}
+/* Selector de idioma: panel desplegable ES · CA · EN, sin banderas */
+.lang-code{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.08em}
+.lang-panel{background:var(--surface);border:1px solid var(--ink);border-top-width:3px;min-width:170px;box-shadow:none}
+.lang-menu-item,.lang-panel > button{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border:0;border-bottom:1px solid var(--border);background:var(--surface);color:var(--ink);text-align:left;cursor:pointer;font-size:14px;min-height:44px}
+.lang-menu-item:last-child,.lang-panel > button:last-child{border-bottom:0}
+.lang-menu-item:hover,.lang-panel > button:hover{background:var(--ink);color:#F1EFE9}
+.lang-menu-item.active,.lang-panel > button.active{background:var(--brand-cream)}
+.lang-menu-item.active .lang-code,.lang-panel > button.active .lang-code{color:var(--olive)}
+.lang-menu-item:hover .lang-code,.lang-panel > button:hover .lang-code{color:#F1EFE9}
+.app-header #lang-btn .lang-code{color:#F1EFE9}
+.access-lang-switch{position:relative;display:flex;justify-content:flex-end}
+.access-lang-switch .lang-trigger{display:flex;align-items:center;gap:8px;padding:9px 12px;min-height:44px;background:transparent;border:1px solid rgba(255,255,255,.35);border-radius:2px;color:#F1EFE9;cursor:pointer}
+.access-lang-switch .lang-panel{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:5}
+.access-lang-switch.open .lang-panel{display:block}
+.access-lang-switch .lang-panel button.active{background:var(--brand-cream)}
 /* --- Avisos y semáforos del Panel de Control --- */
 .help-suggestion,.dash-chip{border-radius:2px}
 

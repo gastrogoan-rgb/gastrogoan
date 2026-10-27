@@ -9031,10 +9031,10 @@ function setLang(lang){
   try{ localStorage.setItem(LANG_LS, lang); }catch(e){}
   location.reload();
 }
-// Banderas dibujadas, no emojis: Windows no tiene emojis de bandera y en
-// su lugar enseñaba las letras "ES" / "GB" (o nada). La catalana ya lo era.
-const LANG_FLAGS = {es:'<svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><rect width="27" height="18" fill="#AA151B"/><rect y="4.5" width="27" height="9" fill="#F1BF00"/></svg>', en:'<svg width="20" height="14" viewBox="0 0 60 30" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><clipPath id="gbc"><rect width="60" height="30"/></clipPath><g clip-path="url(#gbc)"><rect width="60" height="30" fill="#012169"/><path d="M0,0 60,30M60,0 0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 60,30M60,0 0,30" stroke="#C8102E" stroke-width="2"/><path d="M30,0V30M0,15H60" stroke="#fff" stroke-width="10"/><path d="M30,0V30M0,15H60" stroke="#C8102E" stroke-width="6"/></g></svg>', ca:'<svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><rect width="27" height="18" fill="#FCDD09"/><rect y="2" width="27" height="2" fill="#DA121A"/><rect y="6" width="27" height="2" fill="#DA121A"/><rect y="10" width="27" height="2" fill="#DA121A"/><rect y="14" width="27" height="2" fill="#DA121A"/></svg>'};
-const LANG_NAMES = {es:'Castellano', en:'English', ca:'Català'};
+// Selector de idioma sin banderas (27/10): un panel desplegable con el código y el nombre (ES · Español). Más serio
+// y sirve igual en todos los sistemas (Windows ni siquiera tiene emoji de bandera).
+const LANG_CODES = {es:'ES', ca:'CA', en:'EN'};
+const LANG_NAMES = {es:'Español', en:'English', ca:'Català'};
 function toggleLangMenu(ev){
   if(ev) ev.stopPropagation();
   const menu = document.getElementById('lang-menu');
@@ -9043,25 +9043,26 @@ function toggleLangMenu(ev){
   const opening = menu.style.display === 'none';
   if(opening){
     menu.style.display = 'block';
+    btn.setAttribute('aria-expanded','true');
     const r = btn.getBoundingClientRect();
     menu.style.top = (r.bottom + 4) + 'px';
     menu.style.left = Math.max(4, r.right - menu.offsetWidth) + 'px';
     document.addEventListener('click', closeLangMenuOnce);
   }else{
     menu.style.display = 'none';
+    btn.setAttribute('aria-expanded','false');
   }
 }
 function closeLangMenuOnce(){
   const menu = document.getElementById('lang-menu');
   if(menu) menu.style.display = 'none';
+  const b = document.getElementById('lang-btn'); if(b) b.setAttribute('aria-expanded','false');
   document.removeEventListener('click', closeLangMenuOnce);
 }
 function syncLangButton(){
   const lang = getLang();
-  const flagEl = document.getElementById('lang-btn-flag');
-  const labelEl = document.getElementById('lang-btn-label');
-  if(flagEl) flagEl.innerHTML = LANG_FLAGS[lang] || LANG_FLAGS.es;
-  if(labelEl) labelEl.textContent = LANG_NAMES[lang] || LANG_NAMES.es;
+  const codeEl = document.getElementById('lang-btn-code');
+  if(codeEl) codeEl.textContent = LANG_CODES[lang] || LANG_CODES.es;
   document.querySelectorAll('.lang-menu-item').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });

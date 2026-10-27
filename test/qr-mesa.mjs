@@ -166,7 +166,7 @@ await caso('El comensal ve la carta con alérgenos y envía el pedido A SU MESA 
     return new Promise(ok => setTimeout(() => ok({txt, conPlatos, req: __empujados[__empujados.length - 1],
       aviso: !!document.getElementById('mesaqr-aviso'), carrito: cart.length}), 200));
   });
-  assert.ok(r.txt.includes('Mesa 1'), 'no sale el nombre de la mesa');
+  assert.ok(r.txt.toLowerCase().includes('mesa 1'), 'no sale el nombre de la mesa');
   assert.ok(/Gluten/.test(r.conPlatos), 'la carta no enseña los alérgenos');
   assert.equal(r.req.type, 'pedido_mesa');
   assert.equal(r.req.mesaToken, TOKEN);
