@@ -617,6 +617,13 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
   (`#cart-summary`) también. Impresos: tique/factura en IBM Plex Mono, informes (`printReportWindow`),
   vale regalo, QR de mesa y contrato con Schibsted Grotesk + mono; acento por defecto el oliva (antes un
   marrón que no era de la marca).
+- **Segunda pasada, la radical (27/10 noche)** — la primera era tan sutil que no se veía. Ahora, también en
+  `css/styles.css` (capa «SEGUNDA PASADA»): barra superior de TINTA con raya oliva; cada pantalla abre con
+  título grande + subtítulo mono mayúsculas + raya gruesa de tinta; toda `.card`/tabla/KPI lleva raya de
+  tinta arriba; botones con borde de tinta que se INVIERTEN al pasar; fichas del inicio y módulos que se
+  invierten (tinta/crema); la venta del día del Panel es el titular (`.dash-hero`, mono 84 px); pestañas y
+  títulos de ventana en mono mayúsculas. ⚠️ `innerText` respeta `text-transform`: una prueba que busque un
+  título de ventana debe comparar en minúsculas (pasó con aviso-cancelar-pedido.mjs).
 - Pendiente: la web comercial (`deploy/web/public`) y los PDF/Excel generados fuera de la app (libro de marca,
   documentos de venta), que ya usan la tipografía y la paleta de la marca.
 - ⚠️ Un entorno nuevo necesita `pip install fonttools brotli` (el build recorta los iconos) y un enlace
