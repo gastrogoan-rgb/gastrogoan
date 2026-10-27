@@ -12,7 +12,7 @@
   :root{
     --ink:#1C1A17; --olive:#4A5D4E; --olive-l:#7E9B84;
     --paper:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
-    /* Mismo cambio que en la app: #8A857C se quedaba en 3,67:1 sobre
+    /* Mismo cambio que en la app: #716C65 se quedaba en 3,67:1 sobre
        blanco, por debajo del 4,5:1 legible, y aquí lo llevan las etiquetas
        del formulario de reserva ("Nombre *", "Teléfono *"). Este es el
        formulario que rellena el cliente del restaurante: si no lo lee
@@ -2144,7 +2144,7 @@ function calPickSlot(dateStr, time){
   document.getElementById('r-time').value = time;
   renderReservaCalendar();
 }
-const CAL_DOT = {libre:'#4A5D4E', lleno:'#8A4A3B', cerrado:'#C8C2B4', pasado:'#E8E4D9'};
+const CAL_DOT = {libre:'#4A5D4E', lleno:'#8A4A3B', cerrado:'#D6D0C5', pasado:'#E7E2D9'};
 function calPickTable(id){ calSelectedTable = id; renderReservaCalendar(); }
 // Mesas entre las que elige el cliente al tocar una hora en verde.
 function selectorMesasHtml(people){
@@ -2380,7 +2380,7 @@ function updateDepositNoticeUi(){
   if(!box || !btn) return;
   const people = document.getElementById('r-people')?.value;
   const applies = depositAppliesForPeople(people);
-  box.innerHTML = applies ? `<div class="card" style="background:var(--bg-soft, #fff7ed);margin:10px 0;padding:10px 12px">
+  box.innerHTML = applies ? `<div class="card" style="background:var(--bg-soft, #F5F0E3);margin:10px 0;padding:10px 12px">
     <div style="font-size:13px;font-weight:600">💳 ${t('deposit.notice.title')}</div>
     <div style="font-size:12.5px;margin-top:4px">${t('deposit.notice.body').replace('${amount}', reservaDepositAmount())}</div>
     ${(DB.business.depositInstructions||'').trim() ? `<div style="font-size:12.5px;margin-top:6px;color:var(--muted)">${escapeHtml(DB.business.depositInstructions)}</div>` : ''}

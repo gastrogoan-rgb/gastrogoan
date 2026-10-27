@@ -1397,7 +1397,7 @@ function renderSalesHeatmap(){
               <td style="font-size:11px;color:var(--muted);font-weight:600;padding:4px;white-space:nowrap">${dl}</td>
               ${grid[di].map((v,hi) => {
                 const intensity = v/maxVal;
-                const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
+                const bg = v>0 ? `rgba(74,93,78,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
                 return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" class="txt-xs" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
               }).join('')}
             </tr>
