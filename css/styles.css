@@ -2479,6 +2479,130 @@ td{font-variant-numeric:tabular-nums}
 .ticket-preview,.ticket-paper,.tpv-ticket{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--border);padding:14px}
 .ticket-preview hr,.ticket-paper hr,.tpv-ticket hr{border:0;border-top:1px dashed #ABA59C;margin:10px 0}
 
+/* ═══════════════════════════════════════
+   DISEÑO 27/10 — SEGUNDA PASADA, LA RADICAL
+   «Nórdico afinado» + «Comanda» llevados a toda la app. La primera pasada
+   era demasiado sutil: la app ya era nórdica y apenas se notaba. Aquí el
+   lenguaje cambia de verdad y es el MISMO en todas partes:
+   · Barra superior de tinta (la «barra del mostrador» de la maqueta 2).
+   · Cada pantalla abre con un título grande, un subtítulo en mono mayúsculas
+     y una raya gruesa de tinta debajo.
+   · Toda ficha (.card) lleva raya de tinta arriba y rotulación en mono.
+   · Botón primario de tinta lleno; secundario con borde de tinta.
+   · Pestañas con raya gruesa; etiquetas en cuadro con borde.
+   · Cifras grandes en mono; hover que INVIERTE (tinta/crema) en vez de
+     levantarse.
+   Sin colores nuevos: tinta, oliva, crema y los semánticos de siempre.
+   ═══════════════════════════════════════ */
+:root{--ink-soft:#2A2723;--hair:#D6D0C5}
+
+/* --- Barra superior de tinta --- */
+.app-header{background:var(--ink);border-bottom:0;box-shadow:inset 0 -3px 0 var(--olive)}
+.app-header .btn{background:transparent;border:1px solid #4A463F;color:#F1EFE9;border-radius:2px;font-weight:600}
+.app-header .btn:hover{background:var(--ink-soft);border-color:#F1EFE9;filter:none}
+.app-header .hdr-icon-btn{border-color:#4A463F !important;background:transparent !important}
+.app-header .hdr-icon-btn:hover{background:var(--ink-soft) !important}
+.app-header .hdr-divider{background:#3A3732}
+.app-logo-text{color:#F1EFE9;letter-spacing:-.01em}
+.app-logo-sub{color:#ABA59C;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.app-logo-icon img{border-radius:2px}
+
+/* --- Cada pantalla abre igual: título grande, mono mayúsculas, raya gruesa --- */
+.view-title{font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.03em;line-height:1.05;margin-bottom:6px;color:var(--ink)}
+.view-subtitle{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  padding-bottom:14px;margin-bottom:22px;border-bottom:3px solid var(--ink)}
+.folder-top-title{font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.03em}
+.back-btn,.btn-back{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+
+/* --- Botones --- */
+.btn{border-color:var(--ink);letter-spacing:0}
+.btn:hover{background:var(--ink);color:#F1EFE9;filter:none;border-color:var(--ink)}
+.btn-primary,.btn.btn-primary{background:var(--ink);color:#F1EFE9;border-color:var(--ink)}
+.btn-primary:hover{background:var(--olive);border-color:var(--olive);color:#fff}
+.btn-light,.btn-secondary{border-color:var(--hair)}
+.btn-sm{font-size:13px}
+
+/* --- Fichas: raya de tinta arriba + rotulación en mono --- */
+.card{border:1px solid var(--hair);border-top:3px solid var(--ink);padding:20px;box-shadow:none}
+.card > h3:first-child,.card > .card-title{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink);padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid var(--hair)}
+.card-compact{border-top-width:2px}
+.module-card{border:1px solid var(--hair);border-top:3px solid var(--ink);padding:24px 22px;transition:background-color .15s,color .15s}
+.module-card h3{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.module-card p{color:var(--muted)}
+.module-card:hover{background:var(--ink);border-color:var(--ink)}
+.module-card:hover h3,.module-card:hover .module-icon,.module-card:hover .module-open{color:#F1EFE9}
+.module-card:hover p{color:#C9C2B6}
+.module-card::before{display:none}
+.module-icon{color:var(--olive);font-size:30px}
+.module-open{font-family:var(--mono);font-size:11px;letter-spacing:.03em;text-transform:uppercase;min-width:0}
+.module-card{min-width:0}
+
+/* --- Inicio: tres fichas de área grandes que se invierten al pasar --- */
+.folder-card{background:var(--surface);border:1px solid var(--hair);border-top:5px solid var(--ink);transition:background-color .15s,color .15s}
+.folder-card h2{font-size:30px;letter-spacing:-.03em}
+.folder-card:hover{background:var(--ink)}
+.folder-card:hover h2,.folder-card:hover .folder-icon{color:#F1EFE9}
+.folder-card:hover .folder-btn{background:var(--olive);border-color:var(--olive)}
+.folder-icon{color:var(--olive)}
+.folder-btn{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-radius:2px}
+.home-hero{background:var(--ink);padding:56px 28px 44px;box-shadow:inset 0 -3px 0 var(--olive)}
+.home-hero h1{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.035em}
+.home-hero p{font-family:var(--mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:#ABA59C}
+.home-hero .hero-badge{border-radius:2px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+
+/* --- Indicadores: la cifra manda --- */
+.kpi{padding:18px 20px}
+.kpi .value{font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1.1;color:var(--ink)}
+.kpi .label{color:var(--muted)}
+.kpi-mini{border-radius:0;border-color:var(--hair);padding:12px 14px}
+.kpi-mini .v{font-family:var(--mono);font-weight:600;font-size:20px;letter-spacing:-.02em}
+.grid-4:has(> .kpi),.grid-3:has(> .kpi),.grid-2:has(> .kpi),.kpi-grid:has(> .kpi){border:1px solid var(--hair);border-top:3px solid var(--ink);background:var(--hair)}
+
+/* --- Pestañas, etiquetas y tablas --- */
+.tabs{gap:0;border-bottom:3px solid var(--ink);padding-bottom:0}
+.tabs .tab{border:0;border-radius:0;padding:10px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:transparent}
+.tabs .tab.active,.tabs .tab[aria-selected="true"]{background:var(--ink);color:#F1EFE9}
+.ge-tab{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.ge-tab.active{border-bottom-width:3px}
+.badge{border:1px solid currentColor;background:transparent}
+.table-wrap{border-color:var(--hair);border-top:3px solid var(--ink)}
+th{padding:12px 14px;border-bottom:1px solid var(--ink)}
+td{border-bottom-color:var(--hair)}
+tbody tr:hover td{background:#FAF8F4}
+td:first-child{font-weight:600}
+
+/* --- Formularios y ventanas --- */
+input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-offset:0;border-color:var(--ink)}
+.field > label,.form-label{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.modal{border-radius:0;border-top:4px solid var(--ink)}
+.modal-header h3{font-family:var(--mono);font-size:14px;letter-spacing:.07em;text-transform:uppercase;font-weight:600}
+.modal-close{border-radius:2px}
+
+/* --- Comanda: mesas y comandas como papeles --- */
+.mesa-card{border-radius:0}
+.mesa-card .mesa-name{font-family:var(--mono);font-size:15px;font-weight:600;letter-spacing:-.02em}
+.mesa-card .mesa-total{font-family:var(--mono);font-size:15px;letter-spacing:-.03em;white-space:nowrap}
+.mesa-card.mesa-occupied{border-color:var(--ink)}
+.mesa-card.mesa-free{border:1px dashed var(--hair);border-top:4px dashed var(--hair)}
+.mesa-card.mesa-free:hover{background:var(--ink);border-color:var(--ink)}
+.mesa-card.mesa-free:hover .mesa-name,.mesa-card.mesa-free:hover .mesa-status-free,.mesa-card.mesa-free:hover .mesa-pax{color:#F1EFE9}
+
+
+/* Panel de Control: la venta del día es el titular */
+.dash-hero{padding:26px 28px 22px}
+.dash-hero-label{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.dash-hero-num{font-family:var(--mono);font-size:clamp(44px,8vw,84px);font-weight:600;letter-spacing:-.05em;line-height:1;margin:10px 0 14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.dash-hero-deltas{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.dash-hero-meta{display:flex;gap:0;border-top:1px dashed var(--hair);padding-top:14px}
+.dash-hero-meta div{display:flex;flex-direction:column;gap:2px;padding-right:32px;margin-right:32px;border-right:1px solid var(--hair)}
+.dash-hero-meta div:last-child{border-right:0;margin-right:0;padding-right:0}
+.dash-hero-meta span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dash-hero-meta strong{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
+.app-header #lang-btn{background:transparent !important;color:#F1EFE9}
+/* --- Avisos y semáforos del Panel de Control --- */
+.help-suggestion,.dash-chip{border-radius:2px}
+
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)
 

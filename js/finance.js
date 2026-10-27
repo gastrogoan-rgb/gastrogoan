@@ -1093,16 +1093,16 @@ function renderDashboard(){
       <div style="font-size:15px;color:var(--muted)">${t('dash.noSalesYet')}</div>
     </div>
   ` : `
-    <div class="card" style="text-align:center">
-      <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600">${t('dash.hero.salesToday')}</div>
-      <div style="font-size:44px;font-weight:800;margin:6px 0;line-height:1">${fmtMoney(todaySales)}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px">
+    <div class="card dash-hero">
+      <div class="dash-hero-label">${t('dash.hero.salesToday')}</div>
+      <div class="dash-hero-num">${fmtMoney(todaySales)}</div>
+      <div class="dash-hero-deltas">
         ${deltaBadge(deltaYesterday, t('dash.hero.vsYesterday'))}
         ${deltaBadge(deltaLastWeek, t('dash.hero.vsLastWeek'))}
       </div>
-      <div style="display:flex;gap:24px;justify-content:center;font-size:13px;color:var(--muted)">
-        <div>${t('dash.hero.ticketsToday')}: <strong style="color:var(--text)">${todayTicketCount}</strong></div>
-        <div>${t('dash.avgTicket')}: <strong style="color:var(--text)">${fmtMoney(todayAvgTicket)}</strong></div>
+      <div class="dash-hero-meta">
+        <div><span>${t('dash.hero.ticketsToday')}</span><strong>${todayTicketCount}</strong></div>
+        <div><span>${t('dash.avgTicket')}</span><strong>${fmtMoney(todayAvgTicket)}</strong></div>
       </div>
     </div>
   `;
