@@ -27,10 +27,10 @@ function printReportWindow(title, bodyHtml, opts={}){
       .pr-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:6px;padding-bottom:14px;border-bottom:2px solid #1C1A17}
       .pr-logo{max-height:38px;max-width:130px;object-fit:contain;flex:none}
       h1{font-size:23px;margin:0 0 3px;font-weight:800;letter-spacing:-.4px;color:#1C1A17}
-      .pr-subtitle{font-size:12.5px;color:#6b6660;margin-top:2px}
-      .pr-meta{font-size:12px;color:#57534d}
+      .pr-subtitle{font-size:12.5px;color:#716C65;margin-top:2px}
+      .pr-meta{font-size:12px;color:#716C65}
       h2{font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:${accent};font-weight:600;margin:26px 0 9px;padding-bottom:6px;border-bottom:1px dashed #ABA59C}
-      h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#161412}
+      h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#1C1A17}
       .pr-page p{margin:0 0 10px}
       .pr-page ul{margin:0 0 12px 18px}
       .pr-page ul li{margin-bottom:5px}
@@ -40,8 +40,8 @@ function printReportWindow(title, bodyHtml, opts={}){
       td{border-bottom:1px dashed #D6D0C5}
       .pr-num{text-align:right;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:500}
       .pr-total-row td{font-weight:800;border-top:2px solid #1c1a17;border-bottom:none;padding-top:10px;font-size:14.5px}
-      .pr-note{font-size:12px;color:#7a756d;font-style:italic;margin-top:6px}
-      .pr-empty{font-size:12px;color:#a19c93;font-style:italic;padding:8px 0}
+      .pr-note{font-size:12px;color:#716C65;font-style:italic;margin-top:6px}
+      .pr-empty{font-size:12px;color:#ABA59C;font-style:italic;padding:8px 0}
       .pr-divider{border-top:1px dashed #ABA59C;margin:16px 0}
       ul.pr-steps{padding-left:20px;margin:0}
       ul.pr-steps li{margin-bottom:7px}
@@ -49,8 +49,8 @@ function printReportWindow(title, bodyHtml, opts={}){
       .manual-step .sn{flex:none;width:22px;height:22px;border-radius:50%;background:${accent};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
       .manual-step .st{font-size:12.5px;line-height:1.5}
       .manual-tip,.manual-warning{background:#F5F0E3;border-left:3px solid ${accent};border-radius:0;padding:9px 13px;margin:12px 0;font-size:12px}
-      .manual-detail h4{font-size:13px;color:#57534d;text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px}
-      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #eae7e1;font-size:10px;color:#b3ada2}
+      .manual-detail h4{font-size:13px;color:#716C65;text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px}
+      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #E7E2D9;font-size:10px;color:#ABA59C}
       @media print{
         .pr-page{padding:0 4mm 10mm}
         @page{margin:15mm 14mm}
@@ -1576,7 +1576,7 @@ const FOLDERS = {
     ]
   },
   sala: {
-    icon:'ti-users', color:'var(--olive)',
+    icon:'ti-table', color:'var(--olive)',
     modules:[
       {id:'tpv', icon:'ti-device-desktop'},
       {id:'reservas', icon:'ti-calendar-event'},
@@ -1595,7 +1595,7 @@ const FOLDERS = {
     ]
   },
   gestion: {
-    icon:'ti-coin', color:'var(--ink)',
+    icon:'ti-chart-bar', color:'var(--ink)',
     modules:[
       {id:'manual', icon:'ti-book'},
       {id:'minegocio', icon:'ti-building-store'},

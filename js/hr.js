@@ -1355,7 +1355,7 @@ const GE = (function(){
     document.getElementById('ventas-dia-table').innerHTML = diaRows ? `
       <thead><tr><th>${t('hr.lbl.day')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
       <tbody>${diaRows}</tbody>
-      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}${propinaMes>0.001?`<div class="txt-xs" style="font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaMes)}</div>`:''}</td></tr></tfoot>
+      <tfoot><tr style="font-weight:700;background:var(--teal-l,#EDF1EC)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}${propinaMes>0.001?`<div class="txt-xs" style="font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaMes)}</div>`:''}</td></tr></tfoot>
       ` : `<tbody><tr><td colspan="4"><div class="empty">${t('ge.ventas.emptyMonth')}</div></td></tr></tbody>`;
     const notaPropinas = document.getElementById('ventas-propinas-note');
     if(notaPropinas){
@@ -4252,13 +4252,13 @@ const WEEK_DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','D
 const WEEK_DAY_KEYS = ['lun','mar','mie','jue','vie','sab','dom'];
 const SHIFT_TYPE_KEYS = {M:'shift.morning', T:'shift.afternoon', P:'shift.split', D:'shift.rest', V:'shift.vacation', B:'shift.leave', C:'shift.other'};
 const SHIFT_TYPES = {
-  get M(){ return {label:t('shift.morning'), bg:'#DBEAFE', tx:'#1E40AF'}; },
-  get T(){ return {label:t('shift.afternoon'), bg:'#FEF9C3', tx:'#854D0E'}; },
-  get P(){ return {label:t('shift.split'), bg:'#DCFCE7', tx:'#166534'}; },
-  get D(){ return {label:t('shift.rest'), bg:'#F3F4F6', tx:'#6B7280'}; },
-  get V(){ return {label:t('shift.vacation'), bg:'#FFF7ED', tx:'#9A3412'}; },
-  get B(){ return {label:t('shift.leave'), bg:'#FEE2E2', tx:'#991B1B'}; },
-  get C(){ return {label:t('shift.other'), bg:'#EDE9FE', tx:'#5B21B6'}; }
+  get M(){ return {label:t('shift.morning'), bg:'#ECEFF1', tx:'#4E5A63'}; },
+  get T(){ return {label:t('shift.afternoon'), bg:'#F5F0E3', tx:'#8A4A3B'}; },
+  get P(){ return {label:t('shift.split'), bg:'#EDF1EC', tx:'#2E363C'}; },
+  get D(){ return {label:t('shift.rest'), bg:'#FAF8F4', tx:'#716C65'}; },
+  get V(){ return {label:t('shift.vacation'), bg:'#F5F0E3', tx:'#8A4A3B'}; },
+  get B(){ return {label:t('shift.leave'), bg:'#F5EBE7', tx:'#8A4A3B'}; },
+  get C(){ return {label:t('shift.other'), bg:'#F1ECEF', tx:'#6E5A6B'}; }
 };
 
 let horariosTab = 'personal';
@@ -4452,7 +4452,7 @@ function renderHorariosDia(){
         <tr>
           <td>
             <span style="display:inline-flex;align-items:center;gap:6px">
-              <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+              <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#8A7440'};display:inline-block;flex-shrink:0"></span>
               <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
             </span>
           </td>
@@ -4471,7 +4471,7 @@ function renderHorariosDia(){
       <tr>
         <td>
           <span style="display:inline-flex;align-items:center;gap:6px">
-            <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+            <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#8A7440'};display:inline-block;flex-shrink:0"></span>
             <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
           </span>
         </td>
@@ -4578,7 +4578,7 @@ function renderHorariosSemana(){
     return `<tr>
       <td>
         <span style="display:inline-flex;align-items:center;gap:6px">
-          <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#8A7440'};display:inline-block;flex-shrink:0"></span>
           <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
         </span>
       </td>
@@ -4697,7 +4697,7 @@ function openTurnoModal(id, employeeId, fecha){
         </div>
       </div>
     </div>
-    <div id="turno-descanso-msg" style="display:${noHorario?'block':'none'};background:#F3F4F6;border-radius:8px;padding:12px;font-size:13px;color:var(--muted);text-align:center;margin-bottom:10px">
+    <div id="turno-descanso-msg" style="display:${noHorario?'block':'none'};background:#FAF8F4;border-radius:8px;padding:12px;font-size:13px;color:var(--muted);text-align:center;margin-bottom:10px">
       ${t('hr2.noScheduleThisDay')}
     </div>
     <div class="field">
@@ -5054,7 +5054,7 @@ function renderHorariosPersonal(){
     return `
     <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openEmployeePersonalCard(${e.id})">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+        <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#8A7440'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
           <strong style="display:block;overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(e.name)} ${medal?`<span title="${t('hr.podium.title')}">${medal}</span>`:''}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}${tenureText?` · ${tenureText}`:''}</div>
@@ -5437,14 +5437,21 @@ function applyBulkTurno(){
 // nativo cada vez) — cubre toda la rueda de color con tonos bien
 // diferenciados entre sí, no solo unos pocos básicos.
 const EMPLOYEE_COLOR_CHOICES = [
-  '#E74C3C','#C0392B','#DF7039','#E67E22','#F39C12','#F1C40F','#D4AC0D',
-  '#2ECC71','#27AE60','#1ABC9C','#16A085','#00B8A9','#3498DB','#2980B9',
-  '#5DADE2','#2E86C1','#5B6DCD','#6C5CE7','#8E44AD','#9B59B6','#AF7AC5',
-  '#E056A0','#EC7063','#C2185B','#795548','#6D4C41','#546E7A','#34495E',
-  '#95A5A6','#7F8C8D',
+  '#4A5D4E','#1C1A17','#7E9B84','#8A7440','#8A4A3B','#4E5A63','#2E363C','#6E5A6B',
+  '#6B8F71','#B59A5B','#A0746A','#7A8B99','#8E7B8B','#5C6B3A','#9C8F7A','#3D3A34',
 ];
+// Los colores de empleado antiguos (naranja, azul eléctrico, verde lima…) no son de la marca: al cargar se
+// llevan al tono de la paleta más cercano, para que ninguna ficha, turno o mesa rompa el diseño.
+function colorEmpleadoDeMarca(hex){
+  const m = /^#([0-9a-f]{6})$/i.exec(hex || ''); if(!m) return EMPLOYEE_COLOR_CHOICES[0];
+  if(EMPLOYEE_COLOR_CHOICES.includes(hex.toUpperCase())) return hex;
+  const v = parseInt(m[1], 16), r = v >> 16 & 255, g = v >> 8 & 255, b = v & 255;
+  let mejor = EMPLOYEE_COLOR_CHOICES[0], dmin = 1e9;
+  EMPLOYEE_COLOR_CHOICES.forEach(c => { const w = parseInt(c.slice(1), 16), d = (r-(w>>16&255))**2 + (g-(w>>8&255))**2 + (b-(w&255))**2; if(d < dmin){ dmin = d; mejor = c; } });
+  return mejor;
+}
 function openEmployeeModal(id){
-  const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#DF7039', area: currentArea()};
+  const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#8A7440', area: currentArea()};
   openModal(`
     <div class="modal-header">
       <h3>${id ? t('title.editEmployee') : t('title.newEmployee')}</h3>
@@ -5461,7 +5468,7 @@ function openEmployeeModal(id){
       </div>
       <div class="field">
         <label>${t('label.identifyingColor')}</label>
-        <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
+        <input type="color" id="emp-color" value="${e.color||'#8A7440'}" style="height:40px;padding:4px">
         <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-top:8px">
           ${EMPLOYEE_COLOR_CHOICES.map(c => `<span onclick="document.getElementById('emp-color').value='${c}'" title="${c}" style="width:100%;aspect-ratio:1;border-radius:50%;background:${c};cursor:pointer;border:1px solid rgba(0,0,0,.15);display:inline-block"></span>`).join('')}
         </div>
@@ -5847,7 +5854,7 @@ function openEmployeeFicharModal(employeeId){
   const asOwner = personalFicharAuthMethod === 'owner_session';
   openModal(`
     <div class="modal-header">
-      <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
+      <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#8A7440'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div style="text-align:center">
