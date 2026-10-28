@@ -4252,13 +4252,13 @@ const WEEK_DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','D
 const WEEK_DAY_KEYS = ['lun','mar','mie','jue','vie','sab','dom'];
 const SHIFT_TYPE_KEYS = {M:'shift.morning', T:'shift.afternoon', P:'shift.split', D:'shift.rest', V:'shift.vacation', B:'shift.leave', C:'shift.other'};
 const SHIFT_TYPES = {
-  get M(){ return {label:t('shift.morning'), bg:'#DBEAFE', tx:'#1E40AF'}; },
-  get T(){ return {label:t('shift.afternoon'), bg:'#FEF9C3', tx:'#854D0E'}; },
-  get P(){ return {label:t('shift.split'), bg:'#DCFCE7', tx:'#166534'}; },
-  get D(){ return {label:t('shift.rest'), bg:'#F3F4F6', tx:'#6B7280'}; },
-  get V(){ return {label:t('shift.vacation'), bg:'#FFF7ED', tx:'#9A3412'}; },
-  get B(){ return {label:t('shift.leave'), bg:'#FEE2E2', tx:'#991B1B'}; },
-  get C(){ return {label:t('shift.other'), bg:'#EDE9FE', tx:'#5B21B6'}; }
+  get M(){ return {label:t('shift.morning'), bg:'#ECEFF1', tx:'#2E363C'}; },
+  get T(){ return {label:t('shift.afternoon'), bg:'#F5F0E3', tx:'#6B5A2E'}; },
+  get P(){ return {label:t('shift.split'), bg:'#EDF1EC', tx:'#3D5243'}; },
+  get D(){ return {label:t('shift.rest'), bg:'#EFEDE8', tx:'#716C65'}; },
+  get V(){ return {label:t('shift.vacation'), bg:'#F1ECEF', tx:'#6E5A6B'}; },
+  get B(){ return {label:t('shift.leave'), bg:'#F5EBE7', tx:'#8A4A3B'}; },
+  get C(){ return {label:t('shift.other'), bg:'#E7E2D9', tx:'#3D3A34'}; }
 };
 
 let horariosTab = 'personal';
@@ -4623,16 +4623,17 @@ function printWeeklySchedule(){
       const turno = (DB.turnos||[]).find(x => x.employeeId===emp.id && x.fecha===ds);
       if(!turno) return '<td>—</td>';
       const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
-      return `<td>${turno.tipo}${turno.tipo!=='D'?` (${escapeHtml(turnoHorarioLabel(turno))})`:''} — ${escapeHtml(tipo.label)}</td>`;
+      // Dos líneas: la hora en mono (lo que se mira de lejos en la pared) y el tipo de turno debajo.
+      return `<td><span class="pr-num" style="display:block;text-align:left">${turno.tipo!=='D' ? escapeHtml(turnoHorarioLabel(turno)) : escapeHtml(tipo.label)}</span>${turno.tipo!=='D' ? `<span style="display:block;font-size:10.5px;color:#716C65">${escapeHtml(tipo.label)}</span>` : ''}</td>`;
     }).join('');
-    return `<tr><td><strong>${escapeHtml(emp.name)}</strong>${emp.rol?` <span style="color:#888">(${escapeHtml(emp.rol)})</span>`:''}</td>${cells}</tr>`;
+    return `<tr><td><strong>${escapeHtml(emp.name)}</strong>${emp.rol?` <span style="color:#716C65;font-size:11.5px;display:block">${escapeHtml(emp.rol)}</span>`:''}</td>${cells}</tr>`;
   }).join('');
   const body = `
     ${printReportHeaderHtml(t('btn.printSchedule'), label)}
     <table><thead><tr><th>${t('th.employee')}</th>${headerCells}</tr></thead>
     <tbody>${rows || `<tr><td colspan="8" class="pr-empty">${t('empty.employees')}</td></tr>`}</tbody></table>
   `;
-  printReportWindow(t('btn.printSchedule'), body, {winSize:'width=900,height=1000'});
+  printReportWindow(t('btn.printSchedule'), body, {winSize:'width=900,height=1000', landscape:true});
 }
 
 function openTurnoModal(id, employeeId, fecha){
@@ -5063,14 +5064,12 @@ function renderHorariosPersonal(){
         ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
       </div>
       ${w ? `
-      <div style="display:flex;justify-content:center;gap:16px;margin-bottom:10px;font-size:12.5px;color:var(--muted)">
+      <div class="emp-stats">
         <span style="white-space:nowrap">${t('hr.podium.sales')}: <strong style="color:var(--text);white-space:nowrap">${fmtMoney(w.total)}</strong></span>
         <span style="white-space:nowrap">${t('label.avgTicket')}: <strong style="color:var(--text);white-space:nowrap">${fmtMoney(w.count?w.total/w.count:0)}</strong></span>
       </div>` : ''}
-      <div style="text-align:center;margin-bottom:10px">
-        <span style="font-size:12px;font-weight:700;color:#fff;background:${isOwnerSession?'var(--ink)':'var(--ink)'};padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession?t('label.viewEmployeeFile'):t('label.clickToClockIn')}</span>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
+      <div class="emp-open-hint"><span><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession?t('label.viewEmployeeFile'):t('label.clickToClockIn')}</span></div>
+      <div class="emp-actions" onclick="event.stopPropagation()">
         <div class="actions-cell">
           <button class="btn btn-sm btn-icon" title="${t('btn.messages')}" onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
           <button class="btn btn-sm btn-icon" title="${t('title.workDistribution')}" onclick="navigate('distribucion');openDistEmployee(${e.id})"><i class="ti ti-clipboard-list"></i></button>

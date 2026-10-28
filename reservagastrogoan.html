@@ -84,13 +84,6 @@
   header h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.01em;}
   header .sub{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;color:#C9C2B6;margin-top:6px;}
   #lang-switcher{display:flex;justify-content:center;gap:6px;margin-top:10px;}
-  #lang-switcher button{
-    padding:4px 10px;border-radius:0;border:1px solid rgba(255,255,255,.3);
-    background:transparent;color:rgba(255,255,255,.7);font-size:11.5px;font-weight:600;cursor:pointer;
-    font-family:'IBM Plex Mono',monospace;transition:border-color .15s,color .15s,background-color .15s;
-  }
-  #lang-switcher button:hover{border-color:var(--olive-l);color:#fff;}
-  #lang-switcher button.active{background:var(--olive);color:#fff;border-color:var(--olive);}
   /* Aire abajo (1/10): el último botón («Volver a la carta») quedaba a 16 px
      del borde y en un móvil real lo tapaban la barra del navegador o la de
      gestos del sistema — parecía que no se podía bajar hasta él. */
@@ -279,6 +272,49 @@
     .tab-btn{min-width:80px;font-size:12px;padding:9px 8px;}
     .menu-item .name{font-size:13.5px;}
   }
+
+  /* ═══ PREMIUM (28/10) — misma lengua que la app: radio único pequeño, filetes en vez de cajas,
+     rotulación en mono, iconos de trazo fino en las pestañas (sin emoji) y selector ES · CA · EN. ═══ */
+  :root{--r-s:3px;--r-m:4px}
+  header{box-shadow:inset 0 -3px 0 var(--olive);padding-top:26px;padding-bottom:24px}
+  header h1{font-size:clamp(24px,5vw,32px);letter-spacing:-.03em;line-height:1.1}
+  header .sub{text-transform:uppercase;letter-spacing:.1em}
+  .card{border-radius:var(--r-m);border-color:var(--border)}
+  .btn{border-radius:var(--r-s);font-weight:600}
+  input,select,textarea,.field input,.field select,.field textarea{border-radius:var(--r-s)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-offset:0;border-color:var(--ink)}
+  a{color:var(--olive)} a:hover{color:var(--ink)}
+  input[type=checkbox],input[type=radio]{accent-color:var(--ink)}
+  .tabs{gap:0;border-bottom:1px solid var(--border);margin-bottom:18px}
+  .tab-btn{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--muted);flex:1 1 0;min-height:48px;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:-1px}
+  .tab-btn:hover{color:var(--ink);border-color:transparent;background:transparent}
+  .tab-btn.active{background:transparent;color:var(--ink);border-bottom-color:var(--ink)}
+  .tab-btn::before{content:"";width:18px;height:18px;flex:none;background:currentColor;-webkit-mask:var(--ti) center/contain no-repeat;mask:var(--ti) center/contain no-repeat}
+  .tab-mesa{--ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 10h16M6 10v9M18 10v9M8 6h8'/%3E%3C/svg%3E")}
+  .tab-reserva{--ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h3v3H8z'/%3E%3C/svg%3E")}
+  .tab-takeaway{--ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2'/%3E%3C/svg%3E")}
+  .tab-delivery{--ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='6' cy='17' r='2.5'/%3E%3Ccircle cx='18' cy='17' r='2.5'/%3E%3Cpath d='M8.5 17h7M15 17l-2-9h-3M18 14.5l-1.5-6.5H14'/%3E%3C/svg%3E")}
+  .tab-mesa-qr{--ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M7 3h10v18H7zM11 18h2'/%3E%3C/svg%3E")}
+  .menu-item .price{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .menu-item .name{letter-spacing:-.01em}
+  .menu-folder-card .icon{filter:saturate(.35)}
+  .menu-folder-card{border-radius:var(--r-m)}
+  /* Selector de idioma: panel desplegable ES · CA · EN, sin banderas ni botones sueltos */
+  #lang-switcher{margin-top:12px}
+  .lang-dd{position:relative;display:inline-block}
+  .lang-dd .lang-trigger{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;min-height:40px;background:transparent;border:1px solid rgba(255,255,255,.4);color:#F1EFE9;cursor:pointer;font-family:'IBM Plex Mono',monospace;border-radius:0}
+  .lang-dd .lang-trigger:hover{border-color:#fff}
+  .lang-code{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;letter-spacing:.08em}
+  .lang-chev{width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px)}
+  .lang-dd .lang-panel{display:none;position:absolute;left:50%;transform:translateX(-50%);top:calc(100% + 6px);z-index:30;min-width:170px;background:var(--surface);border:1px solid var(--ink);border-top-width:3px;text-align:left}
+  .lang-dd.open .lang-panel{display:block}
+  .lang-dd .lang-panel button{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:10px 14px;border:0;border-bottom:1px solid var(--border);background:var(--surface);color:var(--ink);cursor:pointer;font-size:14px;font-family:inherit;border-radius:0}
+  .lang-dd .lang-panel button:last-child{border-bottom:0}
+  .lang-dd .lang-panel button:hover{background:var(--ink);color:#F1EFE9}
+  .lang-dd .lang-panel button.active{background:var(--cream,#F1EFE9)}
+  .lang-dd .lang-panel button.active .lang-code{color:var(--olive)}
+  #lang-switcher{margin-top:14px}
+  @media (max-width:520px){.tab-btn{flex-direction:column;flex-wrap:nowrap;gap:5px;font-size:11px;letter-spacing:.04em;padding:9px 4px;min-width:0;line-height:1.2}}
 </style>
 </head>
 <body>
@@ -688,9 +724,15 @@ function setLang(lang){
 function renderLangSwitcher(){
   const box = document.getElementById('lang-switcher');
   if(!box) return;
-  box.innerHTML = Object.keys(LANGS).map(l =>
-    `<button class="${l===currentLang?'active':''}" onclick="setLang('${l}')">${LANGS[l]}</button>`
-  ).join('');
+  const NOMBRES = {es:'Español', ca:'Català', en:'English'};
+  box.innerHTML = `<div class="lang-dd"><button type="button" class="lang-trigger" aria-haspopup="listbox" aria-expanded="false" onclick="toggleLangDd(event)"><span class="lang-code">${String(currentLang).toUpperCase()}</span><span class="lang-chev" aria-hidden="true"></span></button>
+    <div class="lang-panel" role="listbox">${Object.keys(LANGS).map(l => `<button type="button" role="option" class="${l===currentLang?'active':''}" onclick="setLang('${l}')"><span class="lang-code">${l.toUpperCase()}</span><span>${NOMBRES[l]||l}</span></button>`).join('')}</div></div>`;
+}
+function toggleLangDd(ev){
+  ev.stopPropagation();
+  const dd = ev.currentTarget.closest('.lang-dd'); const abierto = dd.classList.toggle('open');
+  ev.currentTarget.setAttribute('aria-expanded', abierto);
+  if(abierto) document.addEventListener('click', () => dd.classList.remove('open'), {once:true});
 }
 
 // Devuelve el nombre de una sección/plato de la carta traducido al idioma
@@ -1427,7 +1469,7 @@ function computeTabs(){
   return tabs;
 }
 function renderTabButtonsHtml(tabs){
-  return tabs.map(t2 => `<button class="tab-btn ${currentTab===t2.id?'active':''}" role="tab" aria-selected="${currentTab===t2.id}" onclick="setTab('${t2.id}')">${t2.label}</button>`).join('');
+  return tabs.map(t2 => `<button class="tab-btn tab-${String(t2.id).replace(/[^a-z]/gi,'-')} ${currentTab===t2.id?'active':''}" role="tab" aria-selected="${currentTab===t2.id}" onclick="setTab('${t2.id}')">${String(t2.label).replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u,'')}</button>`).join('');
 }
 // Cambiar de idioma repintaba el contenido de la pestaña activa pero no los
 // propios títulos de las pestañas — se quedaban congelados en el idioma

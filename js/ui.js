@@ -22,7 +22,7 @@ function printReportWindow(title, bodyHtml, opts={}){
       @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
       *{box-sizing:border-box}
       body{font-family:'Schibsted Grotesk',Arial,Helvetica,sans-serif;color:#1C1A17;margin:0;padding:0;font-size:13px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      .pr-page{max-width:720px;margin:0 auto;padding:26px 6px 30px}
+      .pr-page{max-width:${opts.landscape ? '1000px' : '720px'};margin:0 auto;padding:26px 6px 30px}
       .pr-letterhead{display:flex;justify-content:space-between;align-items:baseline;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10.5px;color:#716C65;text-transform:uppercase;letter-spacing:.09em;margin-bottom:22px;padding-bottom:10px;border-bottom:1px solid #E7E2D9}
       .pr-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:6px;padding-bottom:14px;border-bottom:2px solid #1C1A17}
       .pr-logo{max-height:38px;max-width:130px;object-fit:contain;flex:none}
@@ -55,7 +55,7 @@ function printReportWindow(title, bodyHtml, opts={}){
       .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:#716C65;letter-spacing:.04em}
       @media print{
         .pr-page{padding:0 4mm 10mm}
-        @page{margin:15mm 14mm 18mm;@bottom-right{content:counter(page) " / " counter(pages);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#716C65}}
+        @page{${opts.landscape ? 'size:A4 landscape;' : ''}margin:15mm 14mm 18mm;@bottom-right{content:counter(page) " / " counter(pages);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#716C65}}
       }
     </style>
     </head><body>
