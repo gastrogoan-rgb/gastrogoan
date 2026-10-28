@@ -228,7 +228,7 @@ function renderAccessLangSwitcherHtml(){
       </div>
     </div>`;
 }
-document.addEventListener('click', () => document.querySelector('.access-lang-switch.open')?.classList.remove('open'));
+if(typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', () => document.querySelector('.access-lang-switch.open')?.classList.remove('open'));   // las pruebas cargan core.js sin navegador
 function renderAccessScreen(){
   const screen = document.getElementById('access-select-screen');
   if(!screen) return;
