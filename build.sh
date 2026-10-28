@@ -28,6 +28,7 @@ echo "🔧 Construyendo index.html..."
 echo "✂️  Recortando la fuente de iconos..."
 python3 tools/recortar-iconos.py build/tabler-icons.subset.css
 CSS_ICONS=$(cat build/tabler-icons.subset.css)
+CSS_GG=$(cat css/iconos-gg.css)   # los mismos iconos con trazo fino (tools/generar-iconos-tabler.py): van DESPUÉS de la fuente, que sustituyen
 CSS_FONTS=$(cat css/fonts.css)
 CSS_APP=$(cat css/styles.css)
 
@@ -46,6 +47,7 @@ done
   # Inline CSS (iconos + fuentes + estilos)
   echo "<style>"
   echo "$CSS_ICONS"
+  echo "$CSS_GG"
   echo "$CSS_FONTS"
   echo "$CSS_APP"
   echo "</style>"

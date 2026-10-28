@@ -315,6 +315,17 @@
   .lang-dd .lang-panel button.active .lang-code{color:var(--olive)}
   #lang-switcher{margin-top:14px}
   @media (max-width:520px){.tab-btn{flex-direction:column;flex-wrap:nowrap;gap:5px;font-size:11px;letter-spacing:.04em;padding:9px 4px;min-width:0;line-height:1.2}}
+
+  /* Iconos finos en la cabecera y los avisos de éxito (antes emoji de colores) */
+  header .sub{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px}
+  .hi{display:inline-flex;align-items:center;gap:7px}
+  .hi::before{content:"";width:15px;height:15px;flex:none;background:currentColor;-webkit-mask:var(--hi) center/contain no-repeat;mask:var(--hi) center/contain no-repeat;opacity:.85}
+  .hi-pin{--hi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10z'/%3E%3Ccircle cx='12' cy='11' r='2.2'/%3E%3C/svg%3E")}
+  .hi-clock{--hi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E")}
+  .hi-phone{--hi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z'/%3E%3C/svg%3E")}
+  .ok-icon{width:44px;height:44px;margin:0 auto 10px;background:var(--olive);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 12.5l2.5 2.5 4.5-5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 12.5l2.5 2.5 4.5-5'/%3E%3C/svg%3E") center/contain no-repeat;font-size:0}
+  .hi-warn{--hi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 4 21 20H3z'/%3E%3Cpath d='M12 10v4M12 17v.5'/%3E%3C/svg%3E")}
+  .warn-icon{width:44px;height:44px;margin:0 auto 10px;background:var(--amber);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 4 21 20H3z'/%3E%3Cpath d='M12 10v4M12 17v.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 4 21 20H3z'/%3E%3Cpath d='M12 10v4M12 17v.5'/%3E%3C/svg%3E") center/contain no-repeat;font-size:0}
 </style>
 </head>
 <body>
@@ -488,8 +499,8 @@ const I18N = {
     'error.pedido.min':'El pedido mínimo es de %s. Añade más platos para continuar.',
     'error.envio':'No se ha podido enviar. Comprueba tu conexión e inténtalo de nuevo.',
     'error.zona':'Lo sentimos, tu dirección está fuera de la zona de entrega del restaurante.',
-    'error.pedidosPausados.title':'Cocina a tope ahora mismo 🙏','error.pedidosPausados.body':'De momento no podemos aceptar nuevos encargos para llevar ni a domicilio. Vuelve a intentarlo en unos minutos — ¡gracias por tu paciencia!',
-    'error.saturacion.title':'¡Estamos teniendo mucho movimiento! 🙏','error.saturacion.body':'En este momento hay más gente de la habitual viendo la carta de este restaurante. Vuelve a intentarlo en unos minutos.','common.retry':'Reintentar',
+    'error.pedidosPausados.title':'Cocina a tope ahora mismo','error.pedidosPausados.body':'De momento no podemos aceptar nuevos encargos para llevar ni a domicilio. Vuelve a intentarlo en unos minutos — ¡gracias por tu paciencia!',
+    'error.saturacion.title':'¡Estamos teniendo mucho movimiento!','error.saturacion.body':'En este momento hay más gente de la habitual viendo la carta de este restaurante. Vuelve a intentarlo en unos minutos.','common.retry':'Reintentar',
     'error.antelacion':'Con la antelación mínima de %d minutos, lo antes que puedes elegir hoy es a las %s.',
     'error.conexion':'No se ha podido conectar con el restaurante','error.carga':'No se ha podido cargar la información del restaurante','error.enlace':'Enlace no válido o incompleto',
     'error.enlace.sub':'Pide al restaurante que te envíe un enlace válido.',
@@ -577,8 +588,8 @@ const I18N = {
     'error.pedido.min':'Minimum order is %s. Add more dishes to continue.',
     'error.envio':'Could not send. Check your connection and try again.',
     'error.zona':'Sorry, your address is outside the delivery area.',
-    'error.pedidosPausados.title':'Kitchen is slammed right now 🙏','error.pedidosPausados.body':'We can\'t take new takeaway or delivery orders at the moment. Please try again in a few minutes — thanks for your patience!',
-    'error.saturacion.title':'We\'re seeing a lot of traffic! 🙏','error.saturacion.body':'Right now more people than usual are viewing this restaurant\'s menu. Please try again in a few minutes.','common.retry':'Retry',
+    'error.pedidosPausados.title':'Kitchen is slammed right now','error.pedidosPausados.body':'We can\'t take new takeaway or delivery orders at the moment. Please try again in a few minutes — thanks for your patience!',
+    'error.saturacion.title':'We\'re seeing a lot of traffic!','error.saturacion.body':'Right now more people than usual are viewing this restaurant\'s menu. Please try again in a few minutes.','common.retry':'Retry',
     'error.antelacion':'With a minimum lead time of %d minutes, the earliest you can choose today is %s.',
     'error.conexion':'Could not connect to the restaurant','error.carga':'Could not load restaurant information','error.enlace':'Invalid or incomplete link',
     'error.enlace.sub':'Ask the restaurant for a valid link.',
@@ -666,8 +677,8 @@ const I18N = {
     'error.pedido.min':'Comanda mínima de %s. Afegeix més plats per continuar.',
     'error.envio':'No s\'ha pogut enviar. Comprova la connexió i torna-ho a provar.',
     'error.zona':'Ho sentim, la teva adreça està fora de la zona d\'entrega del restaurant.',
-    'error.pedidosPausados.title':'Cuina a tope ara mateix 🙏','error.pedidosPausados.body':'De moment no podem acceptar nous encàrrecs per emportar ni a domicili. Torna-ho a provar d\'aquí a uns minuts — gràcies per la paciència!',
-    'error.saturacion.title':'Estem tenint molt moviment! 🙏','error.saturacion.body':'En aquest moment hi ha més gent de l\'habitual veient la carta d\'aquest restaurant. Torna-ho a provar d\'aquí a uns minuts.','common.retry':'Reintentar',
+    'error.pedidosPausados.title':'Cuina a tope ara mateix','error.pedidosPausados.body':'De moment no podem acceptar nous encàrrecs per emportar ni a domicili. Torna-ho a provar d\'aquí a uns minuts — gràcies per la paciència!',
+    'error.saturacion.title':'Estem tenint molt moviment!','error.saturacion.body':'En aquest moment hi ha més gent de l\'habitual veient la carta d\'aquest restaurant. Torna-ho a provar d\'aquí a uns minuts.','common.retry':'Reintentar',
     'error.antelacion':'Amb una antelació mínima de %d minuts, el més aviat que pots triar avui és a les %s.',
     'error.conexion':'No s\'ha pogut connectar amb el restaurant','error.carga':'No s\'ha pogut carregar la informació del restaurant','error.enlace':'Enllaç no vàlid o incomplet',
     'error.enlace.sub':'Demana al restaurant que t\'enviï un enllaç vàlid.',
@@ -956,7 +967,7 @@ function showInlineError(msg){
   box = document.createElement('div');
   box.id = 'inline-alert';
   box.setAttribute('role', 'alert');
-  box.innerHTML = `<span>⚠️ ${escapeHtml(msg)}</span><button onclick="this.parentElement.remove()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>`;
+  box.innerHTML = `<span class="hi hi-warn">${escapeHtml(msg)}</span><button onclick="this.parentElement.remove()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>`;
   document.body.appendChild(box);
   clearTimeout(showInlineError._t);
   showInlineError._t = setTimeout(()=>{ box.remove(); }, 8000);
@@ -1003,7 +1014,7 @@ function showError(key, detalle){
        </details>` : '';
   document.getElementById('app').innerHTML = `
     <div class="error-box">
-      <div class="icon">⚠️</div>
+      <div class="icon warn-icon" aria-hidden="true"></div>
       <h2>${escapeHtml(t(key))}</h2>
       <p style="font-size:13px;color:var(--muted)">${t('error.enlace.sub')}</p>
       ${traza}
@@ -1046,7 +1057,7 @@ function init(){
   }else if(pago === 'ok'){
     document.getElementById('app').innerHTML = `
       <div class="success">
-        <div class="icon">✅</div>
+        <div class="icon ok-icon" aria-hidden="true"></div>
         <h2>${t('pago.ok.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('pago.ok.msg')}</p>
         <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otraPedido')}</button>
@@ -1057,7 +1068,7 @@ function init(){
   if(pago === 'ko'){
     document.getElementById('app').innerHTML = `
       <div class="error-box">
-        <div class="icon">⚠️</div>
+        <div class="icon warn-icon" aria-hidden="true"></div>
         <h2>${t('pago.ko.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('pago.ko.msg')}</p>
         <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otraPedido')}</button>
@@ -1335,7 +1346,7 @@ function renderBranchSelector(business, sucursales){
       <div style="display:flex;flex-direction:column;gap:10px">
         ${sucursales.map(s => `
           <a href="${escapeHtml(base)}?neg=${escapeHtml(s.publicId)}&local=1" class="btn btn-primary" style="text-decoration:none">
-            📍 ${escapeHtml(s.name)}
+            ${escapeHtml(s.name)}
           </a>
         `).join('')}
       </div>
@@ -1370,10 +1381,10 @@ function renderHeader(){
     document.documentElement.style.setProperty('--olive-l', b.brandColor);
   }
   const parts = [];
-  if(b.address) parts.push('📍 ' + b.address);
-  if(b.schedule) parts.push('🕐 ' + b.schedule);
-  if(b.phone) parts.push('📞 ' + b.phone);
-  document.getElementById('biz-info').textContent = parts.join('  ·  ');
+  if(b.address) parts.push(['pin', b.address]);
+  if(b.schedule) parts.push(['clock', b.schedule]);
+  if(b.phone) parts.push(['phone', b.phone]);
+  document.getElementById('biz-info').innerHTML = parts.map(([k, v]) => `<span class="hi hi-${k}">${escapeHtml(v)}</span>`).join('');
   renderLangSwitcher();
 }
 
@@ -2646,7 +2657,7 @@ function allergenLabel(name){
 function dishAllergensHtml(platoId){
   const list = (DB.allergens||{})[platoId];
   if(!list || !list.length) return '';
-  return `<div style="font-size:11px;color:var(--muted);margin-top:2px" title="${escapeHtml(t('allergens.title'))}">⚠️ ${list.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>`;
+  return `<div style="font-size:11px;color:var(--muted);margin-top:2px" title="${escapeHtml(t('allergens.title'))}"><span class="hi hi-warn">${list.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</span></div>`;
 }
 // Navegación de la carta por carpetas: se entra en una familia (Entrantes,
 // Principales...), se ve solo lo suyo, y "Volver" regresa al índice — como
@@ -3327,7 +3338,7 @@ function etaHintHtml(){
   const carga = DB.cocinaCargaActiva || 0;
   const eta = Math.min(base + carga * extra, max || (base + carga * extra));
   const label = currentTab === 'delivery' ? t('cart.etaDelivery') : t('cart.etaTakeaway');
-  return `<p style="font-size:13px;color:var(--muted);margin-top:8px">🕐 ${label.replace('%d', eta)}</p>`;
+  return `<p class="hi hi-clock" style="font-size:13px;color:var(--muted);margin-top:8px">${label.replace('%d', eta)}</p>`;
 }
 
 async function submitOrder(){
@@ -3800,7 +3811,7 @@ function pintarCuentaMesaQr(){
   const pendiente = Number(c.pendiente) || 0;
   let pago = '';
   if(pendiente <= 0.009){
-    pago = `<p style="margin:12px 0 0;font-weight:700">✅ ${t('mesaqr.pagada')}</p>`;
+    pago = `<p style="margin:12px 0 0;font-weight:700">${t('mesaqr.pagada')}</p>`;
   }else if(!pagoOnlineActivo){
     pago = `<p style="margin:12px 0 0;font-size:13.5px;color:var(--muted)">${t('mesaqr.sinPago')}</p>`;
   }else{
@@ -3960,7 +3971,7 @@ function shareTrackUrl(url, isReserva, btnEl){
   const avisarCopiado = () => {
     if(!btnEl) return;
     if(btnEl.dataset.originalText === undefined) btnEl.dataset.originalText = btnEl.textContent;
-    btnEl.textContent = '✅ ' + t('success.linkCopied');
+    btnEl.textContent = t('success.linkCopied');
     clearTimeout(btnEl._shareResetT);
     btnEl._shareResetT = setTimeout(()=>{ btnEl.textContent = btnEl.dataset.originalText; }, 2500);
   };
@@ -4000,7 +4011,7 @@ function sendRequest(req, successMsg){
     const phone = (DB.business||{}).phone;
     document.getElementById('app').innerHTML = `
       <div class="success">
-        <div class="icon">✅</div>
+        <div class="icon ok-icon" aria-hidden="true"></div>
         <h2>${escapeHtml(successMsg)}</h2>
         ${phone ? `<p style="font-size:13px;color:var(--muted);margin-top:8px">${t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`)}</p>` : ''}
         <button class="btn" style="margin-top:16px" onclick="location.reload()">${t(req.type === 'reserva' ? 'success.otraReserva' : 'success.otraPedido')}</button>

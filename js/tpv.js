@@ -1477,7 +1477,7 @@ function openOrderNotifyModal(nombre, telefono, email, tipo){
       <textarea id="order-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendOrderNotifyEmail()" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -2382,7 +2382,7 @@ function dishInfoIngredientLinesHtml(recipe, visited){
     const tiene = alergenos.length > 0;
     return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:13px;${tiene?'font-weight:700':''}">
       <span>${escapeHtml(ing.name)}</span>
-      ${tiene ? `<span style="color:var(--red,#c0392b)">${alergenos.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</span>` : ''}
+      ${tiene ? `<span style="color:var(--red,#8A4A3B)">${alergenos.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -2401,8 +2401,8 @@ function renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs)
       <h3><i class="ti ti-info-circle"></i> ${escapeHtml(titulo)}</h3>
       <button class="modal-close" onclick="${escapeHtml(cerrar)}">&times;</button>
     </div>
-    ${allergens.length ? `<div style="border:2px solid var(--red,#c0392b);border-radius:8px;padding:8px 10px;margin-bottom:12px">
-      <div style="font-weight:700;color:var(--red,#c0392b);font-size:13px"><i class="ti ti-alert-triangle"></i> ${t('label.allergensPresent')}</div>
+    ${allergens.length ? `<div style="border:2px solid var(--red,#8A4A3B);border-radius:8px;padding:8px 10px;margin-bottom:12px">
+      <div style="font-weight:700;color:var(--red,#8A4A3B);font-size:13px"><i class="ti ti-alert-triangle"></i> ${t('label.allergensPresent')}</div>
       <div style="font-size:13px;margin-top:2px">${allergens.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>
     </div>` : `<div class="empty" style="padding:10px;margin-bottom:8px">${t('label.noAllergensDetected')}</div>`}
     ${recipe ? `<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px">${t('label.ingredients')}</div>
@@ -2960,7 +2960,7 @@ function minutesSince(iso){
 // Badge de urgencia: amarillo a partir de 5 min, naranja a partir de 10, rojo a partir de 15
 function urgencyBadge(mins){
   if(mins >= 15) return `<span class="badge badge-red"><i class="ti ti-clock"></i> ${mins} min</span>`;
-  if(mins >= 10) return `<span class="badge" style="background:#ffe0c2;color:#b35900"><i class="ti ti-clock"></i> ${mins} min</span>`;
+  if(mins >= 10) return `<span class="badge" style="background:#ffe0c2;color:#8A7440"><i class="ti ti-clock"></i> ${mins} min</span>`;
   if(mins >= 5) return `<span class="badge badge-amber"><i class="ti ti-clock"></i> ${mins} min</span>`;
   return `<span class="badge badge-gray"><i class="ti ti-clock"></i> ${mins} min</span>`;
 }
@@ -5983,7 +5983,7 @@ function buildTicketHtml(sale, opts={}){
     <div style="width:300px;margin:0 auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#111">
       ${logoHtml}
       <div style="text-align:center;font-weight:700;font-size:16px;color:${accent}">${escapeHtml(b.name || 'GastroGoan')}</div>
-      ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#B8860B;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
+      ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#8A7440;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
       ${metaLines.length ? `<div style="text-align:center;font-size:11px;color:#666;line-height:1.5;margin-top:2px">${metaLines.join('<br>')}</div>` : ''}
       ${(() => { const l = docFiscalLineas(sale, opts); return l.length ? `<div style="text-align:center;font-size:12px;margin-top:8px;line-height:1.5"><strong>${escapeHtml(l[0])}</strong>${l.slice(1).map(x=>'<br>'+escapeHtml(x)).join('')}</div>` : ''; })()}
       <div style="border-top:1px dashed #bbb;margin:10px 0"></div>

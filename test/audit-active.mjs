@@ -482,13 +482,13 @@ await testAsync('FIX M3: el badge pasa a "pending" al programar un envío, y sol
   sandbox.__setLastSyncedSnapshot({ingredients: JSON.stringify([])});
   sandbox.__setCloudRef({ update: async () => {} }); // éxito inmediato
   sandbox.scheduleCloudSync();
-  assert.equal(sandbox.document._syncBadgeEl.textContent, '☁ gate.cloudPending',
+  assert.equal(sandbox.document._syncBadgeEl.textContent, ' gate.cloudPending',
     'nada más programar el envío, el badge debe mostrar el estado intermedio, no "conectado" sin más');
   sandbox.document._syncBadgeEl.textContent = ''; // limpia para distinguir el próximo cambio
   await sandbox.flushCloudSync();
   await new Promise(r => setTimeout(r, 10));
   // Desde el 9/10 el verde lleva además «· justo ahora» (última subida confirmada).
-  assert.ok(sandbox.document._syncBadgeEl.textContent.startsWith('☁ gate.cloudConnectedShort'),
+  assert.ok(sandbox.document._syncBadgeEl.textContent.startsWith(' gate.cloudConnectedShort'),
     'tras confirmarse el envío y no quedar nada pendiente, debe volver a "conectado"');
   console.log('   → badge: pending mientras se envía → online solo tras confirmarse de verdad');
 });
