@@ -1867,9 +1867,13 @@ td.wrap{white-space:normal}
 #access-select-screen{
   position:fixed;inset:0;z-index:9999;
   display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(circle at 50% -10%,rgba(126,155,132,.35),transparent 60%),linear-gradient(160deg,#1C1A17 0%,#211F1A 100%);
+  background:radial-gradient(ellipse 70% 55% at 50% 0%,rgba(126,155,132,.38),transparent 70%),
+    radial-gradient(ellipse 60% 40% at 50% 110%,rgba(126,155,132,.16),transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px) 0 0/44px 44px,
+    linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px) 0 0/44px 44px,
+    linear-gradient(160deg,#1C1A17 0%,#211F1A 100%);
   transition:opacity .35s ease, visibility .35s ease;
-  padding:16px;overflow:auto;
+  padding:72px 20px 32px;overflow:auto;
 }
 #access-select-screen.hide{opacity:0;visibility:hidden;pointer-events:none}
 
@@ -1877,42 +1881,46 @@ td.wrap{white-space:normal}
    (no position:fixed) para que nunca se solape con el logo: en pantallas
    estrechas, el logo centrado y el selector fijo a la derecha caían en la
    misma franja vertical y se pisaban. */
-.access-lang-switch{width:100%;display:flex;justify-content:flex-end;gap:6px}
-/* 33×25 px. Es el PRIMER botón que toca alguien que abre la app —y el
-   único que necesita quien no habla español, justo el que más va a fallar
-   el toque. Se le da el mínimo de 44 px sin agrandar la bandera. */
-.access-lang-switch button{
-  border:1.5px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);
-  padding:6px 9px;cursor:pointer;font-size:15px;line-height:1;
-  display:flex;align-items:center;justify-content:center;
-  min-width:44px;min-height:44px;
-  transition:border-color .15s ease, background .15s ease;
-}
-.access-lang-switch button:hover{background:rgba(255,255,255,.16)}
-.access-lang-switch button.active{border-color:var(--olive-l);background:rgba(126,155,132,.22)}
+/* Selector de idioma: código + nombre, sin banderas. Arriba a la derecha de la
+   pantalla (fijo), así nunca se pisa con la marca centrada. */
+.lang-code{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:600;font-size:12.5px;letter-spacing:.08em}
+.lang-panel{background:#fff;border:1px solid var(--ink);border-top:3px solid var(--ink);min-width:172px;box-shadow:0 10px 30px rgba(0,0,0,.18);overflow:hidden}
+.lang-panel > button,.lang-menu-item{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:10px 14px;border:0;border-bottom:1px solid var(--border);background:#fff;color:var(--ink);text-align:left;cursor:pointer;font-size:14px;font-family:inherit}
+.lang-panel > button:last-child,.lang-menu-item:last-child{border-bottom:0}
+.lang-panel > button:hover,.lang-menu-item:hover{background:var(--ink);color:#F1EFE9}
+.lang-panel > button.active,.lang-menu-item.active{background:var(--brand-cream,#F1EFE9);font-weight:700}
+.lang-panel > button.active .lang-code,.lang-menu-item.active .lang-code{color:var(--olive)}
+.lang-panel > button:hover .lang-code,.lang-menu-item:hover .lang-code{color:#F1EFE9}
+.access-lang-switch{position:fixed;top:16px;right:16px;z-index:3}
+.access-lang-switch .lang-trigger{display:flex;align-items:center;gap:8px;min-height:44px;padding:9px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.35);color:#F1EFE9;cursor:pointer;transition:background .15s,border-color .15s}
+.access-lang-switch .lang-trigger:hover,.access-lang-switch.open .lang-trigger{background:rgba(255,255,255,.14);border-color:#C3D4C8}
+.access-lang-switch .lang-trigger .ti{font-size:14px;transition:transform .2s}
+.access-lang-switch.open .lang-trigger .ti{transform:rotate(180deg)}
+.access-lang-switch .lang-panel{display:none;position:absolute;right:0;top:calc(100% + 6px)}
+.access-lang-switch.open .lang-panel{display:block;animation:splash-pop .16s ease}
 
 /* Bloque de marca (icono + nombre + eslogan), constante en las 3 pantallas */
-.access-wrap{position:relative;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:22px;margin:30px 0;animation:splash-pop .4s ease}
-.access-brand{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:#fff}
+.access-wrap{position:relative;width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:34px;margin:auto 0;animation:splash-pop .5s ease}
+.access-brand{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;color:#fff}
 .access-icon{
-  width:60px;height:60px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);
-  display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;
+  width:96px;height:96px;padding:10px;background:#fff;border:1px solid rgba(255,255,255,.28);box-shadow:0 0 0 8px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.35);
+  display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;margin-bottom:6px;
 }
 .access-kicker{
   font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
   color:#C3D4C8;background:rgba(126,155,132,.20);border:1px solid rgba(126,155,132,.55);padding:5px 12px;
 }
-.access-brand h1{font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:26px;font-weight:800;letter-spacing:-.02em;color:#fff;margin:0}
+.access-brand h1{font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:clamp(34px,6vw,46px);font-weight:800;letter-spacing:-.03em;color:#fff;margin:0;line-height:1}
 
 /* Tarjeta blanca con el contenido de cada pantalla (elección / formularios) */
-.access-card{position:relative;width:100%;background:#fff;border:1px solid rgba(0,0,0,.06);padding:28px 26px}
+.access-card{position:relative;width:100%;background:#fff;border:1px solid rgba(0,0,0,.06);border-top:4px solid var(--olive);padding:28px 26px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
 .access-card-title{font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:18px;font-weight:800;letter-spacing:-.01em;color:var(--text);margin:0 0 6px;padding-right:26px}
 .access-card-lead{font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.5}
 
 /* Pantalla de elección: dos botones grandes con icono */
 .access-choice-list{display:flex;flex-direction:column;gap:10px}
 .access-choice-btn{
-  display:flex;align-items:center;gap:14px;padding:16px 18px;width:100%;
+  display:flex;align-items:center;gap:16px;padding:20px 22px;width:100%;min-height:76px;
   cursor:pointer;text-align:left;font-family:inherit;
   transition:transform .15s ease, border-color .15s ease, background .15s ease;
 }

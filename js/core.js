@@ -220,24 +220,25 @@ let accessScreenMode = 'choice'; // 'choice' | 'employee' | 'owner'
 // abrirla, no solo una vez dentro (en Mi Negocio).
 function renderAccessLangSwitcherHtml(){
   const current = getLang();
-  const langs = ['es','en','ca'];
   return `
     <div class="access-lang-switch">
-      ${langs.map(l => `
-        <button class="${l===current?'active':''}" onclick="setLang('${l}')" title="${LANG_NAMES[l]}">${LANG_FLAGS[l]}</button>
-      `).join('')}
+      <button type="button" class="lang-trigger" aria-haspopup="listbox" onclick="this.parentNode.classList.toggle('open');event.stopPropagation()"><span class="lang-code">${LANG_CODES[current]}</span><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+      <div class="lang-panel" role="listbox">
+        ${['es','ca','en'].map(l => `<button type="button" role="option" class="${l===current?'active':''}" onclick="setLang('${l}')"><span class="lang-code">${LANG_CODES[l]}</span><span class="lang-name">${LANG_NAMES[l]}</span></button>`).join('')}
+      </div>
     </div>`;
 }
+document.addEventListener('click', () => document.querySelector('.access-lang-switch.open')?.classList.remove('open'));
 function renderAccessScreen(){
   const screen = document.getElementById('access-select-screen');
   if(!screen) return;
   screen.innerHTML = `
+    ${renderAccessLangSwitcherHtml()}
     <div class="access-wrap">
-      ${renderAccessLangSwitcherHtml()}
       <div class="access-brand">
         <div class="access-icon"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain"></div>
-        <span class="access-kicker">${t('access.kicker')}</span>
         <h1>GastroGoan</h1>
+        <span class="access-kicker">${t('access.kicker')}</span>
       </div>
       ${renderAccessSelectScreenHtml()}
     </div>`;
@@ -260,13 +261,13 @@ function renderAccessSelectScreenHtml(){
   return `
     <div class="access-card">
       <div class="access-choice-list">
-        <button class="access-choice-btn primary" onclick="setAccessScreenMode('employee')">
-          <span class="aci"><i class="ti ti-users"></i></span>
-          <span class="act"><b>${t('access.employeeBtn')}</b><small>${t('access.employeeHint')}</small></span>
-        </button>
-        <button class="access-choice-btn secondary" onclick="setAccessScreenMode('owner')">
+        <button class="access-choice-btn primary" onclick="setAccessScreenMode('owner')">
           <span class="aci"><i class="ti ti-user-shield"></i></span>
           <span class="act"><b>${t('access.ownerBtn')}</b><small>${t('access.ownerHint')}</small></span>
+        </button>
+        <button class="access-choice-btn secondary" onclick="setAccessScreenMode('employee')">
+          <span class="aci"><i class="ti ti-users"></i></span>
+          <span class="act"><b>${t('access.employeeBtn')}</b><small>${t('access.employeeHint')}</small></span>
         </button>
       </div>
     </div>
