@@ -242,8 +242,17 @@ function renderAccessScreen(){
       </div>
       ${renderAccessSelectScreenHtml()}
     </div>
-    ${accessScreenMode === 'choice' ? `<div class="access-foot"><span>${escapeHtml(new Date().toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'}))}</span><span class="access-foot-dot" aria-hidden="true"></span><span>${escapeHtml(gl({es:'Buen servicio', ca:'Bon servei', en:'Have a good service'}))}</span></div>` : ''}`;
+    ${accessScreenMode === 'choice' ? accesoFraseYFechaHtml() : ''}`;
   screen.classList.remove('hide');
+}
+// La frase del día (js/frases.js) y la fecha, al pie del acceso. Una frase distinta cada día
+// del año; si lleva autor es porque está comprobada en una fuente, nunca inventada.
+function accesoFraseYFechaHtml(){
+  const hoy = new Date();
+  const f = (typeof fraseDelDia === 'function') ? fraseDelDia(hoy) : null;
+  const texto = f ? (f[getLang()] || f.es) : '';
+  return `${texto ? `<figure class="access-quote"><blockquote>«${escapeHtml(texto)}»</blockquote>${f.a ? `<figcaption>${escapeHtml(f.a)}</figcaption>` : ''}</figure>` : ''}
+    <div class="access-foot"><span class="access-foot-dot" aria-hidden="true"></span><span>${escapeHtml(hoy.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'}))}</span></div>`;
 }
 function showAccessSelectScreen(){
   accessScreenMode = 'choice';

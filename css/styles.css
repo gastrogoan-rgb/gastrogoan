@@ -2784,6 +2784,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .bs-footbtn:active{transform:scale(.98)}
 .bs-footbtn:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 
+/* Frase del día entre el acceso y la fecha: letra grande y fina, autor en mono */
+.access-quote{position:relative;z-index:1;max-width:560px;margin:34px auto 0;padding:0 20px;text-align:center}
+.access-quote blockquote{margin:0;font-size:clamp(17px,2vw,21px);font-weight:400;line-height:1.45;letter-spacing:-.01em;color:#E7E2D9;text-wrap:balance}
+.access-quote figcaption{margin-top:12px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7E9B84}
+.access-quote figcaption::before{content:"— "}
+#access-select-screen .access-foot{margin-top:22px}
+@media (prefers-reduced-motion:no-preference){#access-select-screen:not(.hide) .access-quote{animation:gg-rise .6s .34s cubic-bezier(.2,.7,.2,1) backwards}}
+
 /* --- PANEL: avisos que importan delante, el resto en una línea --- */
 .toolbar select{min-width:215px}
 .att-list{display:flex;flex-wrap:wrap;gap:8px}
