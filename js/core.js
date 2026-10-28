@@ -241,7 +241,8 @@ function renderAccessScreen(){
         <span class="access-kicker">${t('access.kicker')}</span>
       </div>
       ${renderAccessSelectScreenHtml()}
-    </div>`;
+    </div>
+    ${accessScreenMode === 'choice' ? `<div class="access-foot"><span>${escapeHtml(new Date().toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'}))}</span><span class="access-foot-dot" aria-hidden="true"></span><span>${escapeHtml(gl({es:'Buen servicio', ca:'Bon servei', en:'Have a good service'}))}</span></div>` : ''}`;
   screen.classList.remove('hide');
 }
 function showAccessSelectScreen(){
@@ -264,10 +265,12 @@ function renderAccessSelectScreenHtml(){
         <button class="access-choice-btn primary" onclick="setAccessScreenMode('owner')">
           <span class="aci"><i class="ti ti-user-shield"></i></span>
           <span class="act"><b>${t('access.ownerBtn')}</b><small>${t('access.ownerHint')}</small></span>
+          <i class="ti ti-arrow-right acc-go" aria-hidden="true"></i>
         </button>
         <button class="access-choice-btn secondary" onclick="setAccessScreenMode('employee')">
           <span class="aci"><i class="ti ti-users"></i></span>
           <span class="act"><b>${t('access.employeeBtn')}</b><small>${t('access.employeeHint')}</small></span>
+          <i class="ti ti-arrow-right acc-go" aria-hidden="true"></i>
         </button>
       </div>
     </div>

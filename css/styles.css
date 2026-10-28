@@ -2692,6 +2692,26 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .splash-sub::after{content:"";display:block;width:168px;height:2px;margin:20px auto 0;background:linear-gradient(#7E9B84,#7E9B84) -64px 0/64px 100% no-repeat,rgba(255,255,255,.14);animation:splash-bar 1.3s cubic-bezier(.4,0,.2,1) infinite}
 @keyframes splash-bar{from{background-position:-64px 0,0 0}to{background-position:168px 0,0 0}}
 
+/* --- Acceso: el toque. Entrada escalonada, flecha que avanza al pasar y, abajo, el saludo de cocina
+   antes de abrir: la fecha y «Buen servicio». --- */
+#access-select-screen{flex-direction:column}
+.access-choice-btn{position:relative}
+.access-choice-btn .act{flex:1}
+.acc-go{font-size:18px;opacity:.45;transition:transform .2s cubic-bezier(.2,.7,.2,1),opacity .2s}
+.access-choice-btn:hover .acc-go{transform:translateX(4px);opacity:1}
+.access-foot{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-top:28px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ABA59C}
+.access-foot-dot{width:5px;height:5px;border-radius:50%;background:#7E9B84}
+@media (prefers-reduced-motion:no-preference){
+  #access-select-screen:not(.hide) .access-lang-switch{animation:gg-rise .5s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-icon{animation:gg-rise .5s .06s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-brand h1{animation:gg-rise .5s .12s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-kicker{animation:gg-rise .5s .18s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-card{animation:gg-rise .55s .26s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-foot{animation:gg-rise .5s .4s cubic-bezier(.2,.7,.2,1) backwards}
+  .access-foot-dot{animation:acc-latido 2.4s ease-in-out infinite}
+}
+@keyframes acc-latido{0%,100%{opacity:1}50%{opacity:.35}}
+
 /* --- PANEL: avisos que importan delante, el resto en una línea --- */
 .toolbar select{min-width:215px}
 .att-list{display:flex;flex-wrap:wrap;gap:8px}
