@@ -519,7 +519,7 @@ function limpiezaTareaRowHtml(tarea, checks, monthKey){
         <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(tarea.area)}</span>
         ${tarea.tipo==='puntual' ? `<span class="badge txt-xs" style="padding:1px 5px" title="${t('limpieza.recurrenceOnce')}"><i class="ti ti-calendar-event"></i></span>` : ''}
       </label>
-      ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:22px;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#8A7440'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
+      ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:22px;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
     </div>
   `;
 }
@@ -1309,7 +1309,7 @@ function renderDistList(){
     return `
       <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openDistEmployee(${emp.id})">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#8A7440'};display:inline-block;flex-shrink:0"></span>
+          <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
           <strong style="flex:1">${escapeHtml(emp.name)}</strong>
           ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : ''}
           <button class="btn btn-sm btn-icon" title="${t('label.viewEmployeeFile')}" onclick="event.stopPropagation();openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i></button>
@@ -1549,7 +1549,7 @@ function renderDistDetail(){
     <div class="toolbar">
       <div class="left">
         ${myEmployeeId == null ? `<button class="btn btn-sm btn-icon" onclick="backToDistList()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>` : ''}
-        <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#8A7440'};display:inline-block"></span>
+        <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block"></span>
         <strong>${escapeHtml(emp.name)}</strong>
         <span style="font-size:12px;color:var(--muted)">${escapeHtml(emp.rol||'')}</span>
       </div>
@@ -2194,21 +2194,21 @@ function printGiftVoucher(id){
   const win = window.open('', '_blank', 'width=760,height=560');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   const bizName = (DB.business && DB.business.name) || 'GastroGoan';
-  const accent = (DB.business && DB.business.brandColor) || '#4A5D4E';
+  const accent = (DB.business && DB.business.brandColor) || '#B8804B';
   const logo = DB.business && DB.business.logo;
   const mainLabel = v.tipo === 'experiencia' ? escapeHtml(v.descripcion) : fmtMoney(v.importe);
   const dateStr = new Date(v.createdAt || Date.now()).toLocaleDateString(localeActual(), {day:'numeric', month:'long', year:'numeric'});
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.giftVouchers')} — ${escapeHtml(v.code)}</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
       *{box-sizing:border-box}
-      body{margin:0;padding:30px;background:#E7E2D9;font-family:'Schibsted Grotesk',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{margin:0;padding:30px;background:#e9e6e0;font-family:'Inter',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .voucher{
         position:relative;width:760px;max-width:100%;display:grid;grid-template-columns:1fr 208px;
         background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.16);
       }
       .v-main{
-        background:#1C1A17;color:#F1EFE9;padding:40px 44px;position:relative;
+        background:#181512;color:#f4efe7;padding:40px 44px;position:relative;
       }
       .v-main::after{
         content:'';position:absolute;inset:0;pointer-events:none;
@@ -2217,26 +2217,26 @@ function printGiftVoucher(id){
       .v-brand{display:flex;align-items:center;gap:12px;margin-bottom:34px}
       .v-logo{max-height:38px;max-width:150px}
       .v-biz{font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:${accent};font-weight:600}
-      .v-kicker{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#ABA59C;font-weight:600;margin-bottom:16px}
-      .v-main-amount{font-family:'IBM Plex Mono',monospace;font-size:52px;font-weight:600;letter-spacing:-.03em;color:${accent};line-height:1}
-      .v-main-exp{font-family:'Schibsted Grotesk',sans-serif;font-weight:700;letter-spacing:-.01em;font-size:25px;color:#F1EFE9;line-height:1.35;max-width:420px}
-      .v-for{font-size:13.5px;color:#ABA59C;margin-top:20px;letter-spacing:.2px}
+      .v-kicker{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#a89f92;font-weight:600;margin-bottom:16px}
+      .v-main-amount{font-family:'Playfair Display',serif;font-size:56px;font-weight:700;color:${accent};line-height:1}
+      .v-main-exp{font-family:'Playfair Display',serif;font-style:italic;font-size:25px;color:#f4efe7;line-height:1.35;max-width:420px}
+      .v-for{font-size:13.5px;color:#a89f92;margin-top:20px;letter-spacing:.2px}
       .v-for strong{color:#fff;font-weight:600}
       .v-stub{
-        background:#F1EFE9;padding:32px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-        text-align:center;position:relative;border-left:2px dashed #7E9B84;gap:22px;
+        background:#f6f3ee;padding:32px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        text-align:center;position:relative;border-left:2px dashed #d8d2c6;gap:22px;
       }
       .v-stub::before, .v-stub::after{
-        content:'';position:absolute;left:-11px;width:22px;height:22px;border-radius:50%;background:#E7E2D9;
+        content:'';position:absolute;left:-11px;width:22px;height:22px;border-radius:50%;background:#e9e6e0;
       }
       .v-stub::before{top:-11px}
       .v-stub::after{bottom:-11px}
-      .v-stub-label{font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:#ABA59C;font-weight:600;margin-bottom:6px}
-      .v-code{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;letter-spacing:1.5px;color:#1C1A17;word-break:break-all}
+      .v-stub-label{font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:#a89f92;font-weight:600;margin-bottom:6px}
+      .v-code{font-family:'Inter',monospace;font-size:18px;font-weight:700;letter-spacing:1.5px;color:#181512;word-break:break-all}
       .v-barcode{display:flex;gap:2px;height:34px;align-items:flex-end;justify-content:center}
-      .v-barcode i{display:block;width:2px;background:#1C1A17}
-      .v-date{font-size:11px;color:#716C65;line-height:1.5}
-      .v-note{font-size:9.5px;color:#ABA59C;font-style:italic;max-width:150px;line-height:1.4}
+      .v-barcode i{display:block;width:2px;background:#181512}
+      .v-date{font-size:11px;color:#8f8779;line-height:1.5}
+      .v-note{font-size:9.5px;color:#a89f92;font-style:italic;max-width:150px;line-height:1.4}
       @media print{
         body{background:#fff;padding:0;min-height:auto}
         .voucher{box-shadow:none;border:1px solid #ddd}
@@ -2550,7 +2550,7 @@ function openRewardModal(id){
     </div>
     <p style="font-size:13.5px;line-height:1.6">${t('reward.reached10pts').replace('${name}', `<strong>${escapeHtml(c.name)}</strong>`)}</p>
     ${suggestion ? `
-    <div style="background:var(--cream,#F5F0E3);border-left:3px solid var(--ink);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;line-height:1.5">
+    <div style="background:var(--cream,#FBF3EA);border-left:3px solid var(--ink);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;line-height:1.5">
       <i class="ti ti-sparkles"></i> ${t('reward.suggestion').replace('${fav}', `<strong>${escapeHtml(fav)}</strong>`).replace('${suggestion}', `<strong>"${escapeHtml(suggestion)}"</strong>`)}
     </div>` : ''}
     <div class="field">
@@ -2608,7 +2608,7 @@ function openRewardNotifyModal(id, reward){
       <textarea id="reward-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3673,7 +3673,7 @@ function openReservationReminderModal(id){
       <textarea id="reservation-reminder-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3735,7 +3735,7 @@ function openReservationNotifyChangeModal(id, tipo){
       <textarea id="reservation-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendReservationNotifyWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendReservationNotifyWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationNotifyEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3792,7 +3792,7 @@ function renderReservasRemindersDue(){
         <div class="card">
           <h3 style="justify-content:space-between;font-size:14px"><span>${escapeHtml(name)}</span></h3>
           <div style="font-size:13px"><i class="ti ti-clock"></i> ${escapeHtml(r.time||'')} · <i class="ti ti-users"></i> ${r.people}</div>
-          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
+          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#188842;color:#fff;border-color:#188842" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
         </div>`;
       }).join('')}
     </div>
@@ -3965,7 +3965,7 @@ function renderPromoSemana(){
     return `
       <td style="vertical-align:top;min-width:140px">
         ${items.map(p => `
-          <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--bg-2,#F5F0E3);color:var(--ink);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${p.recurrence==='weekly'?'<i class="ti ti-repeat" style="font-size:11px"></i>':''}${escapeHtml(p.titulo)}</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--bg-2,#fdf1e7);color:var(--ink);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${p.recurrence==='weekly'?'<i class="ti ti-repeat" style="font-size:11px"></i>':''}${escapeHtml(p.titulo)}</div>
         `).join('')}
         <span class="owner-only" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openPromoModal(null, '${ds}')">+</span>
       </td>
@@ -4621,7 +4621,7 @@ function renderPromoClientes(){
            derecha de la tarjeta (lo vio el dueño el 12/09). Un botón no se
            encoge por debajo de su contenido si no se le dice. -->
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" style="flex:1 1 120px;min-width:0;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn btn-sm" style="flex:1 1 120px;min-width:0;background:#188842;color:#fff;border-color:#188842" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn btn-sm" style="flex:1 1 90px;min-width:0" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
       </div>
       <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?t('promo.clients.alreadyRegisteredToday'):t('promo.clients.registerAsAction')}</button>
@@ -4700,7 +4700,7 @@ function openClientMessageModal(clientId, templateKey){
       <textarea id="promo-msg-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr((PROMO_MESSAGE_SUBJECTS[templateKey]&&PROMO_MESSAGE_SUBJECTS[templateKey]())||'')}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -4796,7 +4796,7 @@ function openPromoModal(id, fecha, prefill){
             <option value="">${t('label.selectDish')}</option>
             ${dishNames.map(n => `<option value="${escapeHtml(n)}" ${p.menuItemName===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}
           </select>
-          ${p.menuItemName && !p.menuItemPlatoId ? `<small style="color:var(--amber,#8A7440)">${t('promo.modal.dishLinkedByNameHint')}</small>` : ''}
+          ${p.menuItemName && !p.menuItemPlatoId ? `<small style="color:var(--amber,#B8860B)">${t('promo.modal.dishLinkedByNameHint')}</small>` : ''}
         </div>
         <div class="field">
           <label>${t('promo.modal.discountPct')}</label>
@@ -5657,7 +5657,7 @@ function plan360MarcadorEurosHtml(){
     ${m.filas.map(f => `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:2px 0;font-size:13.5px">
       <span style="flex:1;min-width:120px">${escapeHtml(t('plan360.k.'+f.k))}</span>
       <span style="font-variant-numeric:tabular-nums">${fmt(f.k, f.antes)} → <strong>${fmt(f.k, f.hoy)}</strong></span>
-      ${f.euros != null && Math.abs(f.euros) >= 1 ? `<span class="txt-xs" style="font-weight:700;color:${f.euros > 0 ? '#EDF1EC' : '#F5EBE7'}">${f.euros > 0 ? '+' : '−'}${fmtMoney(Math.abs(f.euros))} ${escapeHtml(t('plan360.k.alMes'))}</span>` : ''}
+      ${f.euros != null && Math.abs(f.euros) >= 1 ? `<span class="txt-xs" style="font-weight:700;color:${f.euros > 0 ? '#BFD8C3' : '#F2B8A8'}">${f.euros > 0 ? '+' : '−'}${fmtMoney(Math.abs(f.euros))} ${escapeHtml(t('plan360.k.alMes'))}</span>` : ''}
     </div>`).join('')}
   </div>`;
 }
@@ -5920,7 +5920,7 @@ function plan360PrintContract(){
   const win = window.open('', '_blank', 'width=700,height=800');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(t('plan360.contract'))}</title>
-    <style>@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;700&display=swap');@page{margin:16mm} body{font-family:'Schibsted Grotesk',Arial,sans-serif;white-space:pre-wrap;line-height:1.6;font-size:13px;padding:0 6px} .firma{margin-top:24px;padding:12px;border:1px solid #4A5D4E;background:#EDF1EC}</style>
+    <style>@page{margin:16mm} body{font-family:sans-serif;white-space:pre-wrap;line-height:1.6;font-size:13px;padding:0 6px} .firma{margin-top:24px;padding:12px;border:1px solid #4A5D4E;background:#EDF1EC}</style>
     </head><body>${escapeHtml(texto)}
     <div class="firma">${escapeHtml(t('plan360.signedBy'))} ${escapeHtml(c.signedName)} (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}</div>
     <script>window.onload=function(){window.print();}<\/script>
@@ -6254,12 +6254,12 @@ function renderPlan360TeamBuilding(day){
       <div style="display:flex;align-items:center;justify-content:center;gap:16px">
         <div style="flex:1">
           <div style="font-weight:700">${escapeHtml(tb.equipoA)}</div>
-          <div style="font-size:42px;font-weight:800;${ganaA ? 'color:#8A7440' : ''}">${totalA}</div>
+          <div style="font-size:42px;font-weight:800;${ganaA ? 'color:#F0A868' : ''}">${totalA}</div>
         </div>
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1">
           <div style="font-weight:700">${escapeHtml(tb.equipoB)}</div>
-          <div style="font-size:42px;font-weight:800;${ganaB ? 'color:#8A7440' : ''}">${totalB}</div>
+          <div style="font-size:42px;font-weight:800;${ganaB ? 'color:#F0A868' : ''}">${totalB}</div>
         </div>
       </div>
       <div style="margin-top:12px;font-size:16px">${empate ? '🤝 ' + escapeHtml(t('plan360.tbTie')) : '🏆 ' + escapeHtml(nombreGanador)}</div>
@@ -6848,7 +6848,7 @@ function renderMiNegocio(){
   };
   document.getElementById('minegocio-content').innerHTML = `
     <div class="mn-grid">
-    <div class="card" style="border:2px solid var(--ink);background:var(--teal-l, #EDF1EC)">
+    <div class="card" style="border:2px solid var(--ink);background:var(--teal-l, #eef7f6)">
       <h3 style="color:var(--ink)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
       <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
@@ -8087,7 +8087,7 @@ function renderDeliveryPlatformsCard(){
         ${couriers.length ? couriers.map(c=>`
           <div class="ge-item">
             <span style="flex:1;font-size:14px;font-weight:600">${escapeHtml(c.nombre)}</span>
-            ${c.telefono ? `<a class="btn btn-sm btn-icon" style="color:#4A5D4E" href="https://wa.me/${c.telefono.replace(/[^0-9]/g,'')}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
+            ${c.telefono ? `<a class="btn btn-sm btn-icon" style="color:#188842" href="https://wa.me/${c.telefono.replace(/[^0-9]/g,'')}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
             <button class="btn btn-sm btn-icon" onclick="editOwnCourier(${c.id})"><i class="ti ti-edit"></i></button>
             <button class="btn btn-sm btn-icon btn-danger" onclick="deleteOwnCourier(${c.id})"><i class="ti ti-trash"></i></button>
           </div>`).join('')
@@ -8326,7 +8326,7 @@ function previewTicketConfig(){
   const text = buildTicketText(sampleSale);
   openModal(`
     <div class="modal-header"><h3><i class="ti ti-receipt"></i> ${t('mn.ticket.previewTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div style="background:#fff;color:#111;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;padding:16px;border:1px solid var(--border);border-radius:8px;max-width:320px;margin:0 auto">${escapeHtml(text)}</div>
+    <div style="background:#fff;color:#111;font-family:monospace;font-size:12.5px;white-space:pre-wrap;padding:16px;border:1px solid var(--border);border-radius:8px;max-width:320px;margin:0 auto">${escapeHtml(text)}</div>
     <div class="modal-footer"><button class="btn" onclick="closeModal()">${t('common.close')}</button></div>
   `);
 }
@@ -8376,17 +8376,17 @@ function renderVerifactuConfigCard(){
       </div>
       <div class="field">
         <label>${t('mn.verifactu.apiKey')}</label>
-        <input type="text" id="vf-apikey" value="${escapeHtml(vf.apiKey||'')}" placeholder="${t('ph.verifactuApiKey')}" style="font-family:var(--mono);font-size:12px">
+        <input type="text" id="vf-apikey" value="${escapeHtml(vf.apiKey||'')}" placeholder="${t('ph.verifactuApiKey')}" style="font-family:monospace;font-size:12px">
         <small style="color:var(--muted)">${t('mn.verifactu.apiKeyHint')}</small>
       </div>
       <div class="field" id="vf-domain-field" style="${vf.provider==='verifactuapi'?'':'display:none'}">
         <label>${t('mn.verifactu.domain')}</label>
-        <input type="text" id="vf-domain" value="${escapeHtml(vf.domain||'')}" placeholder="tunegocio.invo.cash" style="font-family:var(--mono);font-size:12px">
+        <input type="text" id="vf-domain" value="${escapeHtml(vf.domain||'')}" placeholder="tunegocio.invo.cash" style="font-family:monospace;font-size:12px">
         <small style="color:var(--muted)">${t('mn.verifactu.domainHint')}</small>
       </div>
       <div class="field">
         <label>${t('mn.verifactu.serie')}</label>
-        <input type="text" id="vf-serie" value="${escapeHtml(verifactuSerie())}" placeholder="T1" style="max-width:120px;font-family:var(--mono)">
+        <input type="text" id="vf-serie" value="${escapeHtml(verifactuSerie())}" placeholder="T1" style="max-width:120px;font-family:monospace">
         <small style="color:var(--muted)">${t('mn.verifactu.serieHint')}</small>
       </div>
       ${pendingSales.length ? `<p style="font-size:12.5px;color:var(--ink);cursor:pointer" onclick="openVerifactuPendingModal()"><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingCount').replace('${n}', pendingSales.length)} <span style="text-decoration:underline">${t('common.viewDetail')}</span></p>` : ''}

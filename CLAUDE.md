@@ -606,7 +606,10 @@ Prueba: `test/auditoria-contable.mjs`, con las cuentas hechas a mano.
 - ⚠️ Mi Negocio va en dos columnas: una tarjeta `mn-grid-full` o mal colocada
   deja huecos y tumba `revision-12-09.mjs`.
 
-## Diseño (27/10): «Nórdico afinado» + «Comanda»
+## Diseño (27/10): «Nórdico afinado» + «Comanda» — REVERTIDO el 28/10
+
+⚠️ **El dueño pidió volver a la app original (la del 9/10).** El rediseño entero (iconos finos, menú lateral, movimiento, selector de idioma, `test/diseno-total.mjs`) vive en la rama `diseno-nordico-comanda`. Los cambios de diseño se harán a partir de ahora uno a uno, guiados por el dueño, y se publican cada 3-4. Lo de abajo describe lo que había en esa rama.
+
 
 Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKBj1). Misma marca de siempre.
 - **Nórdico afinado (toda la app)**: capa al final de `css/styles.css`, justo antes de las reglas de móvil:

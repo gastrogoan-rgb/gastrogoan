@@ -91,7 +91,7 @@ a{color:var(--text)}a:hover{color:var(--olive)}
 .hdr-icon-btn{background:#1C1A17 !important;border-color:#1C1A17 !important;color:#fff !important}
 .hdr-icon-btn:hover{background:var(--olive) !important}
 .app-header #lock-btn{margin-left:auto}
-.lang-menu-item:hover{background:var(--brand-cream, #F5F0E3)}
+.lang-menu-item:hover{background:var(--brand-cream, #F5EFE6)}
 .lang-menu-item.active{font-weight:700}
 body:not(.edit-unlocked) .owner-only{display:none !important}
 /* .owner-strict: a diferencia de .owner-only (visible también para un
@@ -138,7 +138,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 /* ===== Home (selección de área) ===== */
 #view-home.active{display:flex;flex-direction:column;min-height:100%}
 .home-hero{
-  background:linear-gradient(135deg,var(--ink) 0%,#1C1A17 100%);
+  background:linear-gradient(135deg,var(--ink) 0%,#1A1A1A 100%);
   padding:48px 28px 36px;text-align:center;
   margin:-22px -22px 0;border-radius:0 0 24px 24px;
 }
@@ -164,9 +164,9 @@ body:not(.owner-session) .owner-strict{display:none !important}
 }
 .folder-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.3)}
 .folder-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--folder-color, var(--ink))}
-.folder-card.folder-cocina{background:linear-gradient(140deg,#1C1A17,#1C1A17)}
-.folder-card.folder-sala{background:linear-gradient(140deg,#1C1A17,#1C1A17)}
-.folder-card.folder-gestion{background:linear-gradient(140deg,#1C1A17,#1C1A17)}
+.folder-card.folder-cocina{background:linear-gradient(140deg,#1A1A1A,#2A1500)}
+.folder-card.folder-sala{background:linear-gradient(140deg,#0A0A1A,#1A1A1A)}
+.folder-card.folder-gestion{background:linear-gradient(140deg,#150A00,#2A1200)}
 .folder-icon{font-size:64px;display:block;line-height:1}
 .folder-card h2{font-size:28px;font-weight:800;color:#fff;margin:0}
 .folder-card p,.folder-chips{display:none}
@@ -375,7 +375,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .mesa-card .mesa-elapsed{display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:700}
 .mesa-card .mesa-elapsed .ti{font-size:11px}
 .mesa-card .mesa-elapsed-normal{color:var(--muted)}
-.mesa-card .mesa-elapsed-warn{color:var(--amber-dark, #8A7440)}
+.mesa-card .mesa-elapsed-warn{color:var(--amber-dark, #b35900)}
 .mesa-card .mesa-elapsed-urgent{color:var(--red)}
 .mesa-card.mesa-fria{border:2px solid var(--blue,#4E5A63)}
 .mesa-card.mesa-blink-urgent{animation:mesa-blink 1s ease-in-out infinite}
@@ -644,7 +644,7 @@ td.wrap{white-space:normal}
 .alg-pill.on{background:var(--red-l);color:var(--red);border-color:var(--red)}
 .alg-grid{display:flex;flex-wrap:wrap;gap:6px}
 .ingredients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
-.ingredient-pill{background:var(--bg-soft,#ECEFF1);border-radius:8px;padding:8px 12px;font-size:13px}
+.ingredient-pill{background:var(--bg-soft,#f4f5f7);border-radius:8px;padding:8px 12px;font-size:13px}
 .step-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
 .step-num{width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px}
 
@@ -1122,10 +1122,10 @@ td.wrap{white-space:normal}
 
 .ge-input-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
 .ge-input-row label{flex:1;font-size:14px;font-weight:500}
-.ge-input-row input{width:120px;text-align:right;font-size:14px;font-family:var(--mono)}
+.ge-input-row input{width:120px;text-align:right;font-size:14px;font-family:monospace}
 .ge-pe-result{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
 .ge-pe-result .pe-lbl{font-size:14px;color:var(--muted)}
-.ge-pe-result .pe-val{font-size:18px;font-weight:700;font-family:var(--mono)}
+.ge-pe-result .pe-val{font-size:18px;font-weight:700;font-family:monospace}
 
 /* minmax(0,1fr): sin esto la columna de la rejilla se dimensiona al
    contenido de la tabla, así que la rejilla nunca encogía y el
@@ -1136,7 +1136,7 @@ td.wrap{white-space:normal}
 .ge-grid table{width:100%;border-collapse:collapse;font-size:13px}
 .ge-grid th{padding:8px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-align:right;white-space:nowrap}
 .ge-grid th:first-child{text-align:left;min-width:160px}
-.ge-grid td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);font-size:13px;white-space:nowrap}
+.ge-grid td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:monospace;font-size:13px;white-space:nowrap}
 .ge-grid td:has(.empty),.ge-grid .empty{white-space:normal;text-align:left;font-family:inherit}
 .ge-grid td:first-child{text-align:left;font-family:inherit;font-weight:600;background:var(--brand-cream);border-left:3px solid var(--ink)}
 .ge-grid tr:last-child td{border-bottom:none}
@@ -1145,7 +1145,7 @@ td.wrap{white-space:normal}
 .ge-grid td.pos{color:var(--green)}
 .ge-grid td.neg{color:var(--red)}
 .ge-grid tr.total td.pos{color:var(--green)}
-.ge-grid tr.total td.neg{color:#7E9B84}
+.ge-grid tr.total td.neg{color:#ff8a8a}
 /* Cuenta de Resultados: con 12 meses + 4 trimestres + año, la tabla es
    ancha y hay que desplazarla — sin el concepto fijo, al llegar a las
    columnas de la derecha no se sabe ya qué fila se está mirando. Solo aquí
@@ -1859,7 +1859,7 @@ td.wrap{white-space:normal}
 #business-select-screen{
   position:fixed;inset:0;z-index:9998;
   display:flex;align-items:center;justify-content:center;
-  background:var(--bg, #FAF8F4);
+  background:var(--bg, #f6f7fb);
   transition:opacity .35s ease, visibility .35s ease;
   padding:16px;
 }
@@ -1867,7 +1867,7 @@ td.wrap{white-space:normal}
 #access-select-screen{
   position:fixed;inset:0;z-index:9999;
   display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(circle at 50% -10%,rgba(126,155,132,.35),transparent 60%),linear-gradient(160deg,#1C1A17 0%,#1C1A17 100%);
+  background:radial-gradient(circle at 50% -10%,rgba(126,155,132,.35),transparent 60%),linear-gradient(160deg,#1C1A17 0%,#211F1A 100%);
   transition:opacity .35s ease, visibility .35s ease;
   padding:16px;overflow:auto;
 }
@@ -1881,6 +1881,15 @@ td.wrap{white-space:normal}
 /* 33×25 px. Es el PRIMER botón que toca alguien que abre la app —y el
    único que necesita quien no habla español, justo el que más va a fallar
    el toque. Se le da el mínimo de 44 px sin agrandar la bandera. */
+.access-lang-switch button{
+  border:1.5px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);
+  padding:6px 9px;cursor:pointer;font-size:15px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  min-width:44px;min-height:44px;
+  transition:border-color .15s ease, background .15s ease;
+}
+.access-lang-switch button:hover{background:rgba(255,255,255,.16)}
+.access-lang-switch button.active{border-color:var(--olive-l);background:rgba(126,155,132,.22)}
 
 /* Bloque de marca (icono + nombre + eslogan), constante en las 3 pantallas */
 .access-wrap{position:relative;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:22px;margin:30px 0;animation:splash-pop .4s ease}
@@ -1993,7 +2002,7 @@ td.wrap{white-space:normal}
 .btn-primary{background:#1C1A17;border-color:#1C1A17;color:#FAF8F4}
 .btn-primary:hover{background:var(--olive);border-color:var(--olive);filter:none}
 .btn-danger{background:#8A4A3B;border-color:#8A4A3B;color:#FFFFFF}
-.btn-danger:hover{background:#8A4A3B;border-color:#8A4A3B;filter:none}
+.btn-danger:hover{background:#743d31;border-color:#743d31;filter:none}
 .view-toggle .btn.active{background:#1C1A17;color:#FAF8F4;border-color:#1C1A17}
 
 /* ===== Tablas ===== */
@@ -2021,7 +2030,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 
 /* ===== Home / carpetas: superficies planas bordeadas ===== */
 .home-hero{
-  background:radial-gradient(circle at 50% -30%,rgba(126,155,132,.30),transparent 60%),linear-gradient(160deg,#1C1A17 0%,#1C1A17 100%);
+  background:radial-gradient(circle at 50% -30%,rgba(126,155,132,.30),transparent 60%),linear-gradient(160deg,#1C1A17 0%,#211F1A 100%);
   border-radius:0 0 28px 28px !important;
   border-bottom:1px solid rgba(126,155,132,.22);
 }
@@ -2193,7 +2202,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .pp-texto small{display:block;font-size:12px;color:var(--muted);line-height:1.45;margin-top:2px}
 .pp-dato{font-weight:700;color:var(--ink)}
 /* Lo hecho se apaga: ya no pide nada, solo confirma. */
-.pp-hecho .pp-marca{color:var(--green,#4A5D4E)}
+.pp-hecho .pp-marca{color:var(--green,#1F8A4C)}
 .pp-hecho .pp-texto strong{color:var(--muted);font-weight:500}
 .pp-opcional .pp-marca{font-size:18px}
 .pp-mas{margin-top:14px;border-top:1px solid var(--border);padding-top:10px}
@@ -2287,7 +2296,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
    cumplidos — lo primero que se ve al entrar en Plan 360º. Los números
    en mono, como el resto de cifras de la app (marcador, KPIs, resumen). */
 .p360-hero{background:var(--ink);color:#fff;padding:20px 18px;margin-bottom:16px;border-top:3px solid var(--olive)}
-.p360-hero-title{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--olive-l,#D6D0C5);font-weight:700;margin-bottom:4px}
+.p360-hero-title{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--olive-l,#B9CCBC);font-weight:700;margin-bottom:4px}
 .p360-hero-sub{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:16px}
 .p360-hero-stats{display:flex;gap:0;flex-wrap:wrap}
 .p360-hero-stat{flex:1;min-width:90px;padding-right:14px;border-right:1px solid rgba(255,255,255,.18)}
@@ -2333,27 +2342,27 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .merma-motivo:has(input:checked){border-color:var(--text);background:#F1EFE9}
 .dr-doc{max-width:794px;margin:14px auto 0;background:#fff;border:1px solid #E7E2D9;box-shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px rgba(28,26,23,.06);color:#1C1A17;font-family:'Schibsted Grotesk',system-ui,sans-serif}
 .dr-portada{background:#1C1A17;color:#FAF8F4;padding:44px 44px 36px;border-left:8px solid #4A5D4E}
-.dr-portada-e{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#ABA59C;margin-bottom:28px}
+.dr-portada-e{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9DB0A2;margin-bottom:28px}
 .dr-portada-t{font-size:44px;font-weight:700;line-height:1;letter-spacing:-.03em}
-.dr-portada-s{font-size:15px;color:#D6D0C5;margin-top:14px;max-width:520px;line-height:1.5}
-.dr-portada-n{margin-top:26px;padding-top:14px;border-top:1px solid #3D3A34;font-size:17px;font-weight:600}
+.dr-portada-s{font-size:15px;color:#C9C4BA;margin-top:14px;max-width:520px;line-height:1.5}
+.dr-portada-n{margin-top:26px;padding-top:14px;border-top:1px solid #34312A;font-size:17px;font-weight:600}
 .dr-cuerpo{padding:8px 44px 20px}
 .dr-cap{position:relative;overflow:hidden;margin:34px -44px 20px;padding:26px 44px 22px;background:#F1EFE9;border-top:2px solid #1C1A17}
-.dr-cap-n{position:absolute;right:28px;top:-14px;font-size:120px;font-weight:700;line-height:1;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1.5px #D6D0C5}
+.dr-cap-n{position:absolute;right:28px;top:-14px;font-size:120px;font-weight:700;line-height:1;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1.5px #CFC8BA}
 .dr-cap-e{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#4A5D4E;font-weight:600;position:relative}
 .dr-cap-t{font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:4px;position:relative}
 .dr-cap-s{font-size:13px;color:#716C65;margin-top:4px;position:relative}
 .dr-p{font-size:14px;line-height:1.65;color:#3D3A34;margin:0 0 14px}
 .dr-h{font-size:14.5px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:2px solid #1C1A17}
 .dr-regla{background:#1C1A17;color:#FAF8F4;padding:16px 20px;margin:16px 0;font-size:14.5px;font-weight:600;line-height:1.45}
-.dr-regla span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7E9B84;margin-bottom:6px;font-weight:500}
+.dr-regla span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A95C;margin-bottom:6px;font-weight:500}
 .dr-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:14px 0}
 .dr-campo{border-left:3px solid #4A5D4E;background:#F7F5F0;padding:10px 14px;margin:12px 0}
 .dr-campos .dr-campo{margin:0}
 .dr-campo-l{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-bottom:6px}
 .dr-campo-v{font-size:14px;line-height:1.55;color:#1C1A17}
 .dr-campo-g .dr-campo-v{font-size:18px;font-weight:600;line-height:1.4}
-.dr-campo textarea{width:100%;box-sizing:border-box;border:1px dashed #ABA59C;background:#fff;padding:8px 10px;font:inherit;font-size:13.5px;resize:vertical;border-radius:0}
+.dr-campo textarea{width:100%;box-sizing:border-box;border:1px dashed #9FAE9F;background:#fff;padding:8px 10px;font:inherit;font-size:13.5px;resize:vertical;border-radius:0}
 .dr-pasos{border-top:1px solid #1C1A17}
 .dr-paso{display:grid;grid-template-columns:52px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid #E7E2D9}
 .dr-paso-n{font-size:26px;font-weight:700;color:#4A5D4E;letter-spacing:-.02em;line-height:1}
@@ -2377,16 +2386,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .dr-lista>div{display:grid;grid-template-columns:26px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid #E7E2D9;font-size:13.5px;line-height:1.45;color:#3D3A34}
 .dr-lista span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4A5D4E;font-weight:600}
 .dr-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #1C1A17;border-left:1px solid #1C1A17;margin:10px 0 14px}.dr-cal-h{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:8px;border-right:1px solid #1C1A17}.dr-cal-d{min-height:72px;border-right:1px solid #1C1A17;border-bottom:1px solid #1C1A17;padding:6px 8px;font-size:12px;font-weight:600;color:#4A5D4E}
-.dr-inv-rojo{background:#8A4A3B}.dr-inv-amarillo{background:#8A7440}.dr-inv-verde{background:#4A5D4E}
+.dr-inv-rojo{background:#A63D2F}.dr-inv-amarillo{background:#D09A2C}.dr-inv-verde{background:#4F8A5B}
 .dr-inv-bar{position:relative;display:flex;height:22px;background:#F1EFE9;margin:28px 0 10px}.dr-inv-bar i{display:block;height:100%}
 .dr-inv-bar b{position:absolute;top:-8px;bottom:-8px;width:2px;background:#1C1A17}.dr-inv-bar b span{position:absolute;top:-20px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;white-space:nowrap;color:#1C1A17}
 .dr-inv-ley{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:#3D3A34;margin-bottom:16px}.dr-inv-ley i{display:inline-block;width:10px;height:10px;margin-right:6px}
-.dr-inv-n{border-left:6px solid #D6D0C5;margin:14px 0 18px;background:#fff;border-top:1px solid #E7E2D9;border-right:1px solid #E7E2D9;border-bottom:1px solid #E7E2D9}.dr-inv-n-rojo{border-left-color:#8A4A3B}.dr-inv-n-amarillo{border-left-color:#8A7440}.dr-inv-n-verde{border-left-color:#4A5D4E}
-.dr-inv-nh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px}.dr-inv-n-rojo .dr-inv-nh{background:#F5EBE7}.dr-inv-n-amarillo .dr-inv-nh{background:#F5F0E3}.dr-inv-n-verde .dr-inv-nh{background:#E7E2D9}
+.dr-inv-n{border-left:6px solid #CFC8BA;margin:14px 0 18px;background:#fff;border-top:1px solid #E7E2D9;border-right:1px solid #E7E2D9;border-bottom:1px solid #E7E2D9}.dr-inv-n-rojo{border-left-color:#A63D2F}.dr-inv-n-amarillo{border-left-color:#C08A1E}.dr-inv-n-verde{border-left-color:#3F7A4A}
+.dr-inv-nh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px}.dr-inv-n-rojo .dr-inv-nh{background:#F6E1DC}.dr-inv-n-amarillo .dr-inv-nh{background:#F7EBD0}.dr-inv-n-verde .dr-inv-nh{background:#DFEBDF}
 .dr-inv-nh b{font-size:15px}.dr-inv-nh em{font-style:normal;font-size:12.5px;color:#3D3A34;flex:1;min-width:160px}.dr-inv-nh strong{font-size:15px;margin-left:auto;white-space:nowrap}
 .dr-inv-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;flex:none}
 .dr-inv-it{display:grid;grid-template-columns:1fr auto;gap:3px 14px;padding:10px 14px;border-top:1px solid #E7E2D9}
-.dr-inv-it-t{font-size:14px;line-height:1.4}.dr-inv-it-t b{font-weight:600}.dr-inv-z{display:inline-block;margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#4A5D4E;border:1px solid #D6D0C5;padding:0 6px}
+.dr-inv-it-t{font-size:14px;line-height:1.4}.dr-inv-it-t b{font-weight:600}.dr-inv-z{display:inline-block;margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#4A5D4E;border:1px solid #CFC8BA;padding:0 6px}
 .dr-inv-it-p{grid-column:1;font-size:13px;color:#3D3A34;line-height:1.45}
 .dr-inv-it-c{grid-column:2;grid-row:1/span 2;align-self:center;font-weight:700;font-size:15px;white-space:nowrap}
 .dr-inv-res td:last-child{text-align:right;white-space:nowrap}.dr-inv-tot td{font-weight:700;border-top:2px solid #1C1A17}
@@ -2407,8 +2416,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .dr-tarjetas[data-n="5"]{grid-template-columns:repeat(6,1fr)}.dr-tarjetas[data-n="5"]>div{grid-column:span 2}.dr-tarjetas[data-n="5"]>div:nth-child(n+4){grid-column:span 3}
 .dr-embudo{margin:14px 0}
 .dr-embudo-f{background:#4A5D4E;color:#fff;padding:12px 16px;margin-bottom:4px;font-size:13px;line-height:1.4}
-.dr-embudo-f:nth-child(2){background:#3D3A34}.dr-embudo-f:nth-child(3){background:#1C1A17}
-.dr-embudo-f span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#D6D0C5;margin-bottom:3px}
+.dr-embudo-f:nth-child(2){background:#3A4A3E}.dr-embudo-f:nth-child(3){background:#1C1A17}
+.dr-embudo-f span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#C9D3C6;margin-bottom:3px}
 .dr-embudo-f b{display:block;font-size:14.5px;margin-bottom:2px}
 .dr-ficha{border:2px solid #1C1A17;margin:12px 0 16px;background:#fff}
 .dr-ficha-r{display:grid;grid-template-columns:minmax(150px,38%) 1fr;border-bottom:1px solid #E7E2D9;min-height:34px}
@@ -2416,214 +2425,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .dr-ficha-r span{padding:8px 12px;font-size:12px;font-weight:600;background:#F7F5F0;border-right:1px solid #E7E2D9;line-height:1.35}
 .dr-ficha-r i{display:block}
 @media print{.dr-doc{box-shadow:none;border:none;max-width:none;margin:0}.dr-cap,.dr-paso,.dr-check,.dr-frases,.dr-regla{break-inside:avoid}}
-
-/* ═══════════════════════════════════════
-   DISEÑO 27/10: «NÓRDICO AFINADO» + «COMANDA»
-
-   Dos direcciones sobre la MISMA marca (tinta, oliva, crema; Schibsted Grotesk y
-   IBM Plex Mono). Propuestas: docs/diseno/README.md.
-   · Nórdico afinado (toda la app): esquinas rectas, líneas finas, cifras en
-     mono y alineadas, KPI en una sola franja, etiquetas en mono pequeñas.
-   · Comanda (donde se sirve: TPV, Comandas, Cocina, Sala y todo lo impreso):
-     tarjetas como tique térmico (borde dentado, separadores de puntos),
-     rotulación en mono mayúsculas.
-   Va ANTES de las reglas de móvil, que siguen mandando las últimas (13/09).
-   Los colores son los tres de siempre; aquí no se introduce ninguno nuevo,
-   para no tumbar test/contraste.mjs. ═══════════════════════════════════════ */
-:root{--mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;--rule:var(--ink)}
-
-/* --- Nórdico afinado: base --- */
-.btn{border-radius:2px;font-weight:600}
-input,select,textarea{border-radius:2px}
-.badge{border-radius:2px}
-.card{border-radius:0}
-.module-card,.folder-card{border-radius:0}
-.home-hero{border-radius:0 !important}
-.folder-card h2,.home-hero h1{letter-spacing:-.02em}
-.kpi .value,.kpi-mini .v,.kpi-value,td.num,.num,.money,.pr-num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.kpi .label,.kpi-mini .l{font-family:var(--mono);font-size:11px;letter-spacing:.08em;font-weight:500}
-.kpi .value{font-size:22px}
-th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;font-weight:500;color:var(--muted);background:transparent;border-bottom:1px solid var(--ink)}
-td{font-variant-numeric:tabular-nums}
-.badge,.tag{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.02em}
-/* KPI: una sola franja con líneas de 1 px entre celdas (en vez de cajas sueltas) */
-.grid-4:has(> .kpi),.grid-3:has(> .kpi),.grid-2:has(> .kpi),.kpi-grid:has(> .kpi){gap:1px;background:var(--border);border:1px solid var(--border)}
-.grid-4 > .kpi,.grid-3 > .kpi,.grid-2 > .kpi,.kpi-grid > .kpi{border:0}
-/* Pestañas: la activa lleva raya de tinta */
-.ge-tab.active,.help-tab.active{color:var(--ink);border-bottom-color:var(--ink)}
-.module-card::before{height:2px}
-.module-card:hover{transform:none;box-shadow:none;border-color:var(--ink)}
-.module-card h3,.folder-top-title{letter-spacing:-.01em}
-
-/* --- Comanda: donde se sirve --- */
-#view-tpv .card,#view-comandascocina .card,#view-tpv .tpv-order-col,#view-comandascocina .tpv-order-col{position:relative}
-#view-tpv .card h3,#view-comandascocina .card h3{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding-bottom:8px;border-bottom:1px dashed #ABA59C}
-#view-tpv .card,#view-comandascocina .card{border-bottom:0;margin-bottom:22px}
-#view-tpv .card::after,#view-comandascocina .card::after{content:"";position:absolute;left:-1px;right:-1px;bottom:-6px;height:6px;
-  background:radial-gradient(circle at 5px 0,transparent 4px,var(--surface) 4.5px) 0 0/10px 6px repeat-x;filter:drop-shadow(0 1px 0 var(--border))}
-#view-tpv .tpv-order-col,#view-comandascocina .tpv-order-col{border-radius:0}
-#view-tpv td,#view-comandascocina td{border-bottom-style:dashed}
-.caos-cabecera{font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;font-size:13px}
-.caos-fila{border-width:1px;border-left-width:6px;border-style:solid}
-.caos-fila .caos-plato strong{letter-spacing:-.01em}
-/* Tiques en pantalla: papel con separadores de puntos */
-.ticket-preview,.ticket-paper,.tpv-ticket{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--border);padding:14px}
-.ticket-preview hr,.ticket-paper hr,.tpv-ticket hr{border:0;border-top:1px dashed #ABA59C;margin:10px 0}
-
-/* ═══════════════════════════════════════
-   DISEÑO 27/10 — SEGUNDA PASADA, LA RADICAL
-   «Nórdico afinado» + «Comanda» llevados a toda la app. La primera pasada
-   era demasiado sutil: la app ya era nórdica y apenas se notaba. Aquí el
-   lenguaje cambia de verdad y es el MISMO en todas partes:
-   · Barra superior de tinta (la «barra del mostrador» de la maqueta 2).
-   · Cada pantalla abre con un título grande, un subtítulo en mono mayúsculas
-     y una raya gruesa de tinta debajo.
-   · Toda ficha (.card) lleva raya de tinta arriba y rotulación en mono.
-   · Botón primario de tinta lleno; secundario con borde de tinta.
-   · Pestañas con raya gruesa; etiquetas en cuadro con borde.
-   · Cifras grandes en mono; hover que INVIERTE (tinta/crema) en vez de
-     levantarse.
-   Sin colores nuevos: tinta, oliva, crema y los semánticos de siempre.
-   ═══════════════════════════════════════ */
-:root{--ink-soft:#2A2723;--hair:#D6D0C5}
-
-/* --- Barra superior de tinta --- */
-.app-header{background:var(--ink);border-bottom:0;box-shadow:inset 0 -3px 0 var(--olive)}
-.app-header .btn{background:transparent;border:1px solid #4A463F;color:#F1EFE9;border-radius:2px;font-weight:600}
-.app-header .btn:hover{background:var(--ink-soft);border-color:#F1EFE9;filter:none}
-.app-header .hdr-icon-btn{border-color:#4A463F !important;background:transparent !important}
-.app-header .hdr-icon-btn:hover{background:var(--ink-soft) !important}
-.app-header .hdr-divider{background:#3A3732}
-.app-logo-text{color:#F1EFE9;letter-spacing:-.01em}
-.app-logo-sub{color:#ABA59C;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
-.app-logo-icon img{border-radius:2px}
-
-/* --- Cada pantalla abre igual: título grande, mono mayúsculas, raya gruesa --- */
-.view-title{font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.03em;line-height:1.05;margin-bottom:6px;color:var(--ink)}
-.view-subtitle{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
-  padding-bottom:14px;margin-bottom:22px;border-bottom:3px solid var(--ink)}
-.folder-top-title{font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.03em}
-.back-btn,.btn-back{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
-
-/* --- Botones --- */
-.btn{border-color:var(--ink);letter-spacing:0}
-.btn:hover{background:var(--ink);color:#F1EFE9;filter:none;border-color:var(--ink)}
-.btn-primary,.btn.btn-primary{background:var(--ink);color:#F1EFE9;border-color:var(--ink)}
-.btn-primary:hover{background:var(--olive);border-color:var(--olive);color:#fff}
-.btn-light,.btn-secondary{border-color:var(--hair)}
-.btn-sm{font-size:13px}
-
-/* --- Fichas: raya de tinta arriba + rotulación en mono --- */
-.card{border:1px solid var(--hair);border-top:3px solid var(--ink);padding:20px;box-shadow:none}
-.card > h3:first-child,.card > .card-title{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--ink);padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid var(--hair)}
-.card-compact{border-top-width:2px}
-.module-card{border:1px solid var(--hair);border-top:3px solid var(--ink);padding:24px 22px;transition:background-color .15s,color .15s}
-.module-card h3{font-size:18px;font-weight:800;letter-spacing:-.02em}
-.module-card p{color:var(--muted)}
-.module-card:hover{background:var(--ink);border-color:var(--ink)}
-.module-card:hover h3,.module-card:hover .module-icon,.module-card:hover .module-open{color:#F1EFE9}
-.module-card:hover p{color:#C9C2B6}
-.module-card::before{display:none}
-.module-icon{color:var(--olive);font-size:30px}
-.module-open{font-family:var(--mono);font-size:11px;letter-spacing:.03em;text-transform:uppercase;min-width:0}
-.module-card{min-width:0}
-
-/* --- Inicio: tres fichas de área grandes que se invierten al pasar --- */
-.folder-card{background:var(--surface);border:1px solid var(--hair);border-top:5px solid var(--ink);transition:background-color .15s,color .15s}
-.folder-card h2{font-size:30px;letter-spacing:-.03em}
-.folder-card:hover{background:var(--ink)}
-.folder-card:hover h2,.folder-card:hover .folder-icon{color:#F1EFE9}
-.folder-card:hover .folder-btn{background:var(--olive);border-color:var(--olive)}
-.folder-icon{color:var(--olive)}
-.folder-btn{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-radius:2px}
-.home-hero{background:var(--ink);padding:56px 28px 44px;box-shadow:inset 0 -3px 0 var(--olive)}
-.home-hero h1{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.035em}
-.home-hero p{font-family:var(--mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:#ABA59C}
-.home-hero .hero-badge{border-radius:2px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
-
-/* --- Indicadores: la cifra manda --- */
-.kpi{padding:18px 20px}
-.kpi .value{font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1.1;color:var(--ink)}
-.kpi .label{color:var(--muted)}
-.kpi-mini{border-radius:0;border-color:var(--hair);padding:12px 14px}
-.kpi-mini .v{font-family:var(--mono);font-weight:600;font-size:20px;letter-spacing:-.02em}
-.grid-4:has(> .kpi),.grid-3:has(> .kpi),.grid-2:has(> .kpi),.kpi-grid:has(> .kpi){border:1px solid var(--hair);border-top:3px solid var(--ink);background:var(--hair)}
-
-/* --- Pestañas, etiquetas y tablas --- */
-.tabs{gap:0;border-bottom:3px solid var(--ink);padding-bottom:0}
-.tabs .tab{border:0;border-radius:0;padding:10px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:transparent}
-.tabs .tab.active,.tabs .tab[aria-selected="true"]{background:var(--ink);color:#F1EFE9}
-.ge-tab{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
-.ge-tab.active{border-bottom-width:3px}
-.badge{border:1px solid currentColor;background:transparent}
-.table-wrap{border-color:var(--hair);border-top:3px solid var(--ink)}
-th{padding:12px 14px;border-bottom:1px solid var(--ink)}
-td{border-bottom-color:var(--hair)}
-tbody tr:hover td{background:#FAF8F4}
-td:first-child{font-weight:600}
-
-/* --- Formularios y ventanas --- */
-input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-offset:0;border-color:var(--ink)}
-.field > label,.form-label{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
-.modal{border-radius:0;border-top:4px solid var(--ink)}
-.modal-header h3{font-family:var(--mono);font-size:14px;letter-spacing:.07em;text-transform:uppercase;font-weight:600}
-.modal-close{border-radius:2px}
-
-/* --- Comanda: mesas y comandas como papeles --- */
-.mesa-card{border-radius:0}
-.mesa-card .mesa-name{font-family:var(--mono);font-size:15px;font-weight:600;letter-spacing:-.02em}
-.mesa-card .mesa-total{font-family:var(--mono);font-size:15px;letter-spacing:-.03em;white-space:nowrap}
-.mesa-card.mesa-occupied{border-color:var(--ink)}
-.mesa-card.mesa-free{border:1px dashed var(--hair);border-top:4px dashed var(--hair)}
-.mesa-card.mesa-free:hover{background:var(--ink);border-color:var(--ink)}
-.mesa-card.mesa-free:hover .mesa-name,.mesa-card.mesa-free:hover .mesa-status-free,.mesa-card.mesa-free:hover .mesa-pax{color:#F1EFE9}
-
-
-/* Panel de Control: la venta del día es el titular */
-.dash-hero{padding:26px 28px 22px}
-.dash-hero-label{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500}
-.dash-hero-num{font-family:var(--mono);font-size:clamp(44px,8vw,84px);font-weight:600;letter-spacing:-.05em;line-height:1;margin:10px 0 14px;color:var(--ink);font-variant-numeric:tabular-nums}
-.dash-hero-deltas{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.dash-hero-meta{display:flex;gap:0;border-top:1px dashed var(--hair);padding-top:14px}
-.dash-hero-meta div{display:flex;flex-direction:column;gap:2px;padding-right:32px;margin-right:32px;border-right:1px solid var(--hair)}
-.dash-hero-meta div:last-child{border-right:0;margin-right:0;padding-right:0}
-.dash-hero-meta span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.dash-hero-meta strong{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
-.app-header #lang-btn{background:transparent !important;color:#F1EFE9}
-/* --- Iconos: celdas cuadradas, como las marcas de una comanda; en los grandes, el trazo FINO --- */
-.module-icon{display:inline-grid;place-items:center;width:52px;height:52px;border:1px solid var(--ink);color:var(--ink);font-size:26px;margin-bottom:14px;background:var(--surface);transition:background-color .15s,color .15s,border-color .15s}
-.module-card:hover .module-icon{background:var(--olive);border-color:var(--olive);color:#fff}
-.folder-icon{display:inline-grid;place-items:center;width:84px;height:84px;border:2px solid var(--ink);font-size:44px;color:var(--ink)}
-.folder-card:hover .folder-icon{border-color:#F1EFE9;color:#F1EFE9}
-.module-icon::before,.folder-icon .ti::before,.folder-top-title .ti::before{-webkit-mask-image:var(--gg-mf,var(--gg-m));mask-image:var(--gg-mf,var(--gg-m))}
-/* Los controles de formulario NO heredan la tipografía: salían en Arial. Ahora todo es Schibsted */
-button,input,select,textarea,optgroup{font-family:inherit}
-td[style*="monospace"],td.pos{font-family:var(--mono) !important}
-.hero-badge,.pp-card{box-shadow:none !important}
-.mesa-card .mesa-name{font-size:13.5px !important;letter-spacing:-.03em}
-code,pre,kbd,samp{font-family:var(--mono)}
-[style*="box-shadow:0 14px 40px"]{box-shadow:none !important;border-top:3px solid var(--ink)}
-/* Los emoji que elige el hostelero para sus carpetas (categorías, secciones de carta) se ven en monocromo:
-   así ninguna carpeta rompe la paleta nórdica con un naranja o un verde chillón */
-.cat-icon-btn,button[onclick*="IconModal"],.emoji-mono{filter:grayscale(1) contrast(1.08)}
-/* Selector de idioma: panel desplegable ES · CA · EN, sin banderas */
-.lang-code{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.08em}
-.lang-panel{background:var(--surface);border:1px solid var(--ink);border-top-width:3px;min-width:170px;box-shadow:none}
-.lang-menu-item,.lang-panel > button{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border:0;border-bottom:1px solid var(--border);background:var(--surface);color:var(--ink);text-align:left;cursor:pointer;font-size:14px;min-height:44px}
-.lang-menu-item:last-child,.lang-panel > button:last-child{border-bottom:0}
-.lang-menu-item:hover,.lang-panel > button:hover{background:var(--ink);color:#F1EFE9}
-.lang-menu-item.active,.lang-panel > button.active{background:var(--brand-cream)}
-.lang-menu-item.active .lang-code,.lang-panel > button.active .lang-code{color:var(--olive)}
-.lang-menu-item:hover .lang-code,.lang-panel > button:hover .lang-code{color:#F1EFE9}
-.app-header #lang-btn .lang-code{color:#F1EFE9}
-.access-lang-switch{position:relative;display:flex;justify-content:flex-end}
-.access-lang-switch .lang-trigger{display:flex;align-items:center;gap:8px;padding:9px 12px;min-height:44px;background:transparent;border:1px solid rgba(255,255,255,.35);border-radius:2px;color:#F1EFE9;cursor:pointer}
-.access-lang-switch .lang-panel{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:5}
-.access-lang-switch.open .lang-panel{display:block}
-.access-lang-switch .lang-panel button.active{background:var(--brand-cream)}
-/* --- Avisos y semáforos del Panel de Control --- */
-.help-suggestion,.dash-chip{border-radius:2px}
 
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)

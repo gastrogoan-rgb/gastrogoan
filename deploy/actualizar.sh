@@ -26,5 +26,5 @@ rm -rf deploy/app/public/fonts && cp -r fonts deploy/app/public/fonts
 cp -f admin-panel/*.html deploy/admin/public/
 rm -rf deploy/admin/public/fonts && cp -r fonts deploy/admin/public/fonts
 mkdir -p deploy/admin/public/css
-cp -f css/tabler-icons.min.css css/iconos-gg.css deploy/admin/public/css/
+cp -f css/tabler-icons.min.css deploy/admin/public/css/
 echo "OK: deploy/ actualizado. Ahora commit y push."

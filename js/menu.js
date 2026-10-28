@@ -530,7 +530,7 @@ function renderCartaSecciones(){
                cambiar el precio — por eso aquí el propio precio es clicable
                (y abre el mismo modal de alta). El de una receta vinculada
                sigue siendo de solo lectura: se gestiona desde Escandallo. -->
-          <span class="carta-plato-price" style="font-family:var(--mono);font-weight:600;margin-right:10px;${p.recipeId ? '' : 'cursor:pointer;text-decoration:underline dotted'}" ${p.recipeId ? '' : `onclick="addCartaPlato(${sec.id},${p.id})" title="${t('title.editPrice')}"`}>${fmtMoney(p.precio)}</span>
+          <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px;${p.recipeId ? '' : 'cursor:pointer;text-decoration:underline dotted'}" ${p.recipeId ? '' : `onclick="addCartaPlato(${sec.id},${p.id})" title="${t('title.editPrice')}"`}>${fmtMoney(p.precio)}</span>
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           ${!p.recipeId ? `<button class="btn btn-sm ${(p.allergensManual||[]).length?'btn-danger':''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${(p.allergensManual||[]).length ? ` (${p.allergensManual.length})` : ''}</button>` : ''}
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
@@ -957,7 +957,7 @@ function renderPlatoModsModalHtml(secId, platoId){
       ${mods.length ? mods.map(m => `
         <div class="ge-item">
           <span style="flex:1">${escapeHtml(tItem(m))}</span>
-          <span style="font-family:var(--mono);font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
+          <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
           <button class="btn btn-sm btn-icon" onclick="startEditPlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removePlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
@@ -1110,7 +1110,7 @@ function renderImportEscList(){
     return `<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);${done?'opacity:.5':''}">
       <input type="checkbox" value="${r.id}" ${done?'disabled checked':(importEscChecked.has(r.id)?'checked':'')} style="width:auto">
       <span style="flex:1">${escapeHtml(r.name)}</span>
-      <span style="font-family:var(--mono);color:var(--ink);font-weight:600">${fmtMoney(r.price)}</span>
+      <span style="font-family:monospace;color:var(--ink);font-weight:600">${fmtMoney(r.price)}</span>
     </label>`;
   }).join('') : `<div class="empty" style="padding:16px 4px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
   const allBox = document.getElementById('import-esc-all');
@@ -1220,7 +1220,7 @@ function renderMenuList(){
             const ngrupos = (m.grupos||[]).length;
             return `<tr>
               <td><strong>${escapeHtml(tItem(m))}</strong>${(DB.activeMenuIds||[]).includes(m.id)?` <span class="badge badge-green">${t('badge.activeInPosM')}</span>`:''}</td>
-              <td style="font-family:var(--mono);font-weight:600">${fmtMoney(m.precio)}</td>
+              <td style="font-family:monospace;font-weight:600">${fmtMoney(m.precio)}</td>
               <td>${renderItemScheduleHtml(m)}</td>
               <td>${ngrupos}</td>
               <td class="actions-cell">
@@ -1401,7 +1401,7 @@ function renderMenuGrupos(){
         <div class="ge-item">
           <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
           <span style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameOption')}" onclick="renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
-          ${o.suplemento ? `<span style="font-family:var(--mono);font-weight:600;margin-right:10px;color:var(--ink)">+${fmtMoney(o.suplemento)}</span>` : ''}
+          ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--ink)">+${fmtMoney(o.suplemento)}</span>` : ''}
           <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${o.disponible===false?'btn-danger':''}" onclick="toggleMenuOpcionDisponible(${g.id},${o.id})">${o.disponible===false?t('common.unavailable'):t('common.available')}</button>
           <button class="btn btn-sm ${o.stock!=null && o.stock<=0?'btn-danger':''}" style="${o.stock!=null && o.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setMenuOpcionStock(${g.id},${o.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${o.stock!=null ? t('label.portionsLeft').replace('${n}', o.stock) : t('btn.limitPortions')}</button>
@@ -1612,7 +1612,7 @@ function renderMenuOpcionModsModalHtml(grupoId, opcionId){
       ${mods.length ? mods.map(m => `
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(m.nombre)}</span>
-          <span style="font-family:var(--mono);font-weight:600;margin-right:10px;color:var(--ink)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
+          <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--ink)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
           <button class="btn btn-sm btn-icon" onclick="startEditMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
