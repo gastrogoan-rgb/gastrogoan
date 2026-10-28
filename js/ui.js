@@ -10,7 +10,7 @@
 function printReportWindow(title, bodyHtml, opts={}){
   const win = window.open('', '_blank', opts.winSize || 'width=760,height=860');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  const accent = (DB.business && DB.business.brandColor) || '#B8804B';
+  const accent = (DB.business && DB.business.brandColor) || '#4A5D4E';
   const fechaGen = new Date().toLocaleString(localeActual(), {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
   // Es un documento INTERNO del propio negocio (para un proveedor, un
   // empleado o una inspección) — no lleva nada de marca GastroGoan, el
@@ -19,41 +19,43 @@ function printReportWindow(title, bodyHtml, opts={}){
   // franja de color a modo de "plantilla de SaaS".
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
       *{box-sizing:border-box}
-      body{font-family:'Inter',Arial,Helvetica,sans-serif;color:#232019;margin:0;padding:0;font-size:13px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{font-family:'Schibsted Grotesk',Arial,Helvetica,sans-serif;color:#1C1A17;margin:0;padding:0;font-size:13px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .pr-page{max-width:720px;margin:0 auto;padding:26px 6px 30px}
-      .pr-letterhead{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;color:#8a857c;text-transform:uppercase;letter-spacing:1.1px;margin-bottom:22px}
-      .pr-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:6px;padding-bottom:14px;border-bottom:2px solid ${accent}}
+      .pr-letterhead{display:flex;justify-content:space-between;align-items:baseline;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10.5px;color:#716C65;text-transform:uppercase;letter-spacing:.09em;margin-bottom:22px;padding-bottom:10px;border-bottom:1px solid #E7E2D9}
+      .pr-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:6px;padding-bottom:14px;border-bottom:2px solid #1C1A17}
       .pr-logo{max-height:38px;max-width:130px;object-fit:contain;flex:none}
-      h1{font-size:23px;margin:0 0 3px;font-weight:800;letter-spacing:-.3px;color:#161412}
-      .pr-subtitle{font-size:12.5px;color:#6b6660;margin-top:2px}
-      .pr-meta{font-size:12px;color:#57534d}
-      h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.7px;color:${accent};font-weight:700;margin:26px 0 9px;padding-bottom:5px;border-bottom:1px solid #eae7e1}
-      h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#161412}
+      h1{font-size:28px;margin:0 0 4px;font-weight:700;letter-spacing:-.03em;line-height:1.1;color:#1C1A17}
+      .pr-subtitle{font-size:13px;color:#716C65;margin-top:2px}
+      .pr-meta{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:#716C65;letter-spacing:.03em}
+      h2{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${accent};font-weight:600;margin:26px 0 9px;padding-bottom:6px;border-bottom:1px solid #E7E2D9;break-after:avoid}
+      h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#1C1A17;letter-spacing:-.01em;break-after:avoid}
       .pr-page p{margin:0 0 10px}
       .pr-page ul{margin:0 0 12px 18px}
       .pr-page ul li{margin-bottom:5px}
       table{width:100%;border-collapse:collapse;margin-bottom:8px}
-      th,td{padding:7px 4px;text-align:left;font-size:12.5px;vertical-align:top}
-      th{font-weight:700;border-bottom:1.5px solid #ddd9d2;text-transform:uppercase;font-size:10px;color:#8a857c;letter-spacing:.4px}
-      td{border-bottom:1px solid #f0eee9}
-      .pr-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500}
-      .pr-total-row td{font-weight:800;border-top:2px solid #1c1a17;border-bottom:none;padding-top:10px;font-size:14.5px}
-      .pr-note{font-size:12px;color:#7a756d;font-style:italic;margin-top:6px}
-      .pr-empty{font-size:12px;color:#a19c93;font-style:italic;padding:8px 0}
-      .pr-divider{border-top:1px dashed #d8d4cc;margin:16px 0}
+      tr{break-inside:avoid}
+      thead{display:table-header-group}
+      th,td{padding:8px 6px;text-align:left;font-size:12.5px;vertical-align:top}
+      th{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;border-bottom:1px solid #1C1A17;text-transform:uppercase;font-size:10px;color:#716C65;letter-spacing:.07em}
+      td{border-bottom:1px solid #EFEBE3}
+      .pr-num{text-align:right;white-space:nowrap;font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:500}
+      .pr-total-row td{font-weight:700;border-top:2px solid #1C1A17;border-bottom:none;padding-top:11px;font-size:14px}
+      .pr-note{font-size:12px;color:#716C65;margin-top:6px}
+      .pr-empty{font-size:12px;color:#716C65;padding:8px 0}
+      .pr-divider{border-top:1px dashed #D5CFC4;margin:16px 0}
       ul.pr-steps{padding-left:20px;margin:0}
       ul.pr-steps li{margin-bottom:7px}
-      .manual-step{display:flex;gap:10px;margin-bottom:8px}
-      .manual-step .sn{flex:none;width:22px;height:22px;border-radius:50%;background:${accent};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+      .manual-step{display:flex;gap:10px;margin-bottom:8px;break-inside:avoid}
+      .manual-step .sn{flex:none;width:22px;height:22px;border-radius:50%;background:${accent};color:#fff;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:600}
       .manual-step .st{font-size:12.5px;line-height:1.5}
-      .manual-tip,.manual-warning{background:#faf6ee;border-left:3px solid ${accent};border-radius:0 6px 6px 0;padding:9px 13px;margin:12px 0;font-size:12px}
-      .manual-detail h4{font-size:13px;color:#57534d;text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px}
-      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #eae7e1;font-size:10px;color:#b3ada2}
+      .manual-tip,.manual-warning{background:#FAF8F4;border-left:3px solid ${accent};border-radius:0 3px 3px 0;padding:9px 13px;margin:12px 0;font-size:12px;break-inside:avoid}
+      .manual-detail h4{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:#716C65;text-transform:uppercase;letter-spacing:.07em;margin:20px 0 8px}
+      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:#716C65;letter-spacing:.04em}
       @media print{
         .pr-page{padding:0 4mm 10mm}
-        @page{margin:15mm 14mm}
+        @page{margin:15mm 14mm 18mm;@bottom-right{content:counter(page) " / " counter(pages);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#716C65}}
       }
     </style>
     </head><body>
@@ -1968,18 +1970,51 @@ function renderView(view){
 }
 
 function renderHome(){
-  document.querySelector('#view-home .hero-badge').innerHTML = `<i class="ti ti-star"></i> ${escapeHtml(t('home.heroBadge'))}`;
-  document.querySelector('#view-home .home-hero h1').textContent = t('home.title');
-  document.querySelector('#view-home .home-hero p').textContent = t('home.subtitle');
+  // El inicio no es un menú: dice QUÉ negocio es, qué día, cómo va hoy y qué
+  // herramientas hay en cada área. Las cifras salen de los mismos datos que el
+  // Panel de Control (no se calcula nada aparte) y solo las ve el propietario.
+  const nombre = (DB.business && DB.business.name || '').trim();
+  const hoy = new Date();
+  const fecha = hoy.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'});
+  const eyebrow = document.getElementById('home-date');
+  if(eyebrow) eyebrow.textContent = nombre ? nombre + ' · ' + fecha : fecha;
+  document.getElementById('home-title').textContent = t('home.title');
+  document.querySelector('#view-home .home-sub').textContent = t('home.subtitle');
   const sello = document.getElementById('home-version');
   if(sello) sello.textContent = t('idr.version').replace('${v}', (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '—'));
-  document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
-    <div class="folder-card folder-${key}" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
-      <span class="folder-icon"><i class="ti ${f.icon}"></i></span>
+
+  const pulso = document.getElementById('home-pulse');
+  const sesion = getAccessSession();
+  if(pulso){
+    if(sesion && sesion.type === 'owner'){
+      const dia = todayStr();
+      const ventasHoy = activeSales().filter(s => s.date === dia);
+      const total = ventasHoy.reduce((a, x) => a + x.total, 0);
+      const abiertas = DB.tpvOrders.filter(o => o.status === 'abierta').length;
+      const porLlegar = DB.reservations.filter(r => r.date === dia && !r.llegada && (r.status === 'confirmada' || r.status === 'pendiente')).length;
+      const celda = (etq, val, nota) => `<div class="pulse-cell"><span class="pulse-lbl">${escapeHtml(etq)}</span><span class="pulse-val">${escapeHtml(val)}</span><span class="pulse-note">${escapeHtml(nota || '')}</span></div>`;
+      pulso.innerHTML =
+        celda(t('home.m.sales'), fmtMoney(total), ventasHoy.length + ' ' + t('home.m.tickets')) +
+        celda(t('home.m.open'), String(abiertas), t('home.m.openNote')) +
+        celda(t('home.m.res'), String(porLlegar), t('home.m.resNote'));
+      pulso.style.display = '';
+    }else{
+      pulso.innerHTML = ''; pulso.style.display = 'none';
+    }
+  }
+
+  document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => {
+    const nombres = f.modules.map(m => t(`module.${key}.${m.id}.name`));
+    const visibles = nombres.slice(0, 5).map(n => `<li>${escapeHtml(n)}</li>`).join('');
+    const resto = nombres.length > 5 ? `<li class="area-more">+${nombres.length - 5}</li>` : '';
+    return `
+    <button type="button" class="folder-card folder-${key}" onclick="openFolder('${key}')">
+      <span class="area-top"><span class="folder-icon"><i class="ti ${f.icon}"></i></span><i class="ti ti-arrow-up-right area-go" aria-hidden="true"></i></span>
       <h2>${escapeHtml(t(`folder.${key}.title`))}</h2>
-      <div class="folder-btn"><i class="ti ti-arrow-right"></i> ${escapeHtml(t('common.enter'))}</div>
-    </div>
-  `).join('');
+      <span class="area-sub">${escapeHtml(t(`folder.${key}.subtitle`))}</span>
+      <ul class="area-tools">${visibles}${resto}</ul>
+    </button>`;
+  }).join('');
   // Se pinta DESPUÉS de las carpetas: si algo fallara aquí, el inicio ya está
   // dibujado y el cliente puede seguir trabajando igual.
   if(typeof renderPuestaAPunto === 'function') renderPuestaAPunto();

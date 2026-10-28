@@ -228,7 +228,7 @@ function renderAccessLangSwitcherHtml(){
       </div>
     </div>`;
 }
-document.addEventListener('click', () => document.querySelector('.access-lang-switch.open')?.classList.remove('open'));
+if(typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', () => document.querySelector('.access-lang-switch.open')?.classList.remove('open'));   // las pruebas cargan core.js sin navegador
 function renderAccessScreen(){
   const screen = document.getElementById('access-select-screen');
   if(!screen) return;
@@ -6424,6 +6424,8 @@ function updateSyncBadge(state){
   if(!el) return;
   if(state === 'local'){ el.style.display = 'none'; return; }
   el.style.display = 'inline-block';
+  // El color lo pone el CSS según data-state (paleta de la marca), no JS.
+  const marcarEstado = st => { if(el.dataset) el.dataset.state = st; el.style.background = ''; el.style.color = ''; };
   // El texto va en un <span class="hdr-text"> para que, igual que el resto
   // de botones de la cabecera, se oculte solo en móvil (queda solo el
   // icono ☁) — antes era texto suelto con textContent y no se acortaba
@@ -6432,15 +6434,15 @@ function updateSyncBadge(state){
   // los demás botones.
   if(state === 'online'){
     const conHora = lastSyncOkAt ? ' · ' + (Date.now() - lastSyncOkAt < 10000 ? t('gate.syncNow') : t('gate.syncAgo').replace('{t}', haceDesde(lastSyncOkAt))) : '';
-    el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}${conHora}</span>`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
+    el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}${conHora}</span>`; marcarEstado('online'); }
   // 'pending': antes el badge solo distinguía conectado/desconectado, no si
   // los cambios que se acaban de hacer YA llegaron de verdad a la nube o
   // siguen en camino — con esto queda un estado visible intermedio, en vez
   // de que "conectado" dé a entender (sin garantizarlo) que todo ya está
   // guardado.
-  else if(state === 'pending'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudPending')}</span>`; el.style.background = '#2E6FBA'; el.style.color = '#FFFFFF'; }
-  else if(state === 'offline'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.offline')}</span>`; el.style.background = '#B8860B'; el.style.color = '#FFFFFF'; }
-  else { el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudError')}</span>`; el.style.background = '#C0392B'; el.style.color = '#FFFFFF'; }
+  else if(state === 'pending'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudPending')}</span>`; marcarEstado('pending'); }
+  else if(state === 'offline'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.offline')}</span>`; marcarEstado('offline'); }
+  else { el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudError')}</span>`; marcarEstado('error'); }
 }
 
 function refreshAfterRemoteChange(){
@@ -11038,23 +11040,43 @@ function construirXlsx(hojas){
   archivos.push({name:'_rels/.rels', bytes: enc(XML + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')});
   archivos.push({name:'xl/workbook.xml', bytes: enc(XML + `<workbook xmlns="${NS}" xmlns:r="${RNS}"><sheets>` + nombres.map((n,i)=>`<sheet name="${esc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('') + '</sheets></workbook>')});
   archivos.push({name:'xl/_rels/workbook.xml.rels', bytes: enc(XML + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + hojas.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('') + `<Relationship Id="rId${hojas.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`)});
-  // Estilos: 0 normal · 1 negrita (cabecera) · 2 número con 2 decimales.
-  archivos.push({name:'xl/styles.xml', bytes: enc(XML + `<styleSheet xmlns="${NS}"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>`)});
+  // Estilos: 0 normal · 1 cabecera de tabla (negrita, fondo crema, filete) ·
+  // 2 número con 2 decimales · 3 cabecera numérica (a la derecha) · 4 título de la hoja.
+  archivos.push({name:'xl/styles.xml', bytes: enc(XML + `<styleSheet xmlns="${NS}"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF1EFE9"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FF1C1A17"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`)});
   hojas.forEach((h,i) => {
     const filas = h.filas || [];
     const nCols = filas.reduce((m,f)=>Math.max(m, (f||[]).length), 1);
+    const hayCab = typeof h.cabecera === 'number';
+    const esTitulo = r => h.titulo !== false && r === 0 && h.cabecera !== 0;
     const rowsXml = filas.map((f, r) => {
-      const negrita = r === h.cabecera || (h.titulo !== false && r === 0);
+      const esCab = r === h.cabecera;
       const celdas = (f||[]).map((v, c) => {
         const ref = col(c) + (r+1);
         if(v === null || v === undefined || v === '') return '';
-        if(typeof v === 'number' && isFinite(v)) return `<c r="${ref}"${negrita?' s="1"':' s="2"'}><v>${Math.round(v*100)/100}</v></c>`;
-        return `<c r="${ref}" t="inlineStr"${negrita?' s="1"':''}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+        if(typeof v === 'number' && isFinite(v)) return `<c r="${ref}" s="${esCab ? 3 : esTitulo(r) ? 4 : 2}"><v>${Math.round(v*100)/100}</v></c>`;
+        return `<c r="${ref}" t="inlineStr"${esCab ? ' s="1"' : esTitulo(r) ? ' s="4"' : ''}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
       }).join('');
-      return `<row r="${r+1}">${celdas}</row>`;
+      return `<row r="${r+1}"${esCab ? ' ht="22" customHeight="1"' : ''}>${celdas}</row>`;
     }).join('');
-    const cols = `<cols><col min="1" max="${nCols}" width="18" customWidth="1"/></cols>`;
-    archivos.push({name:`xl/worksheets/sheet${i+1}.xml`, bytes: enc(XML + `<worksheet xmlns="${NS}">${cols}<sheetData>${rowsXml}</sheetData></worksheet>`)});
+    // Ancho de cada columna según lo que lleva de verdad (6-46 caracteres):
+    // antes todas medían lo mismo y los conceptos largos salían cortados.
+    const anchos = Array.from({length:nCols}, () => 8);
+    filas.forEach((f, r) => { if(esTitulo(r)) return; (f||[]).forEach((v, c) => {
+      if(v === null || v === undefined || v === '') return;
+      const largo = typeof v === 'number' ? v.toFixed(2).length + 2 : String(v).length + 2;
+      if(largo > anchos[c]) anchos[c] = largo;
+    }); });
+    const cols = '<cols>' + anchos.map((w, c) => `<col min="${c+1}" max="${c+1}" width="${Math.max(10, Math.min(46, w))}" customWidth="1"/>`).join('') + '</cols>';
+    // Cabecera fija al desplazarse, y filtro sobre el bloque de datos (hasta la
+    // primera fila vacía: los totales de debajo quedan fuera para que ordenar no los mezcle).
+    let vista = '', filtro = '';
+    if(hayCab){
+      vista = `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${h.cabecera+1}" topLeftCell="A${h.cabecera+2}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`;
+      let fin = h.cabecera + 1;
+      while(fin < filas.length && filas[fin] && filas[fin].some(v => v !== '' && v !== null && v !== undefined)) fin++;
+      if(fin > h.cabecera + 1) filtro = `<autoFilter ref="A${h.cabecera+1}:${col(nCols-1)}${fin}"/>`;
+    }
+    archivos.push({name:`xl/worksheets/sheet${i+1}.xml`, bytes: enc(XML + `<worksheet xmlns="${NS}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>${vista}${cols}<sheetData>${rowsXml}</sheetData>${filtro}<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`)});
   });
   return construirZip(archivos);
 }
