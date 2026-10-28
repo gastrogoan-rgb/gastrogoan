@@ -1370,7 +1370,7 @@ function renderBusinessSelectScreenHtml(){
              lista de negocios está vacía, así que no hay ninguna a la que ir,
              y la pantalla no tiene aspa ni botón de volver. Quien entraba con
              la cuenta equivocada solo podía salir recargando la página. -->
-        <div class="bs-foot bs-foot-solo"><button type="button" class="bs-link" onclick="exitToAccessScreen()">${t('bs.exitAccount')} <i class="ti ti-logout"></i></button></div>
+        <div class="bs-foot bs-foot-solo"><button type="button" class="bs-footbtn" onclick="exitToAccessScreen()"><i class="ti ti-logout" aria-hidden="true"></i><span>${t('bs.exitAccount')}</span></button></div>
       </div>
     `;
   }
@@ -1426,8 +1426,9 @@ function renderBusinessSelectScreenHtml(){
         <span class="bs-sub">${escapeHtml(gl({es:'Elige con qué negocio vas a trabajar', ca:'Tria amb quin negoci treballaràs', en:'Choose the business you will work on'}))}</span>
       </div>
       ${avisoDuplicado}
-      ${showSearch ? `<input id="bs-search" type="search" placeholder="${t('bs.searchPh')}" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:2px" oninput="filterBusinessSlots(this.value)" autofocus>` : ''}
-      <div class="bs-list" id="bs-list">
+      ${slots.length > 1 ? `<div class="bs-listhead"><span class="bs-count">${slots.length} ${escapeHtml(gl({es:'negocios', ca:'negocis', en:'businesses'}))}</span>${showSearch ? `<span class="bs-count-hint">${escapeHtml(gl({es:'Desliza para ver todos', ca:'Llisca per veure-ho tot', en:'Scroll to see them all'}))}</span>` : ''}</div>` : ''}
+      ${showSearch ? `<label class="bs-search"><i class="ti ti-search" aria-hidden="true"></i><input id="bs-search" type="search" placeholder="${t('bs.searchPh')}" oninput="filterBusinessSlots(this.value)" autofocus></label>` : ''}
+      <div class="bs-list${showSearch ? ' bs-list-scroll' : ''}" id="bs-list">
         ${renderBsGroups(slots)}
       </div>
       ${puedeVerVisionGlobal() ? `<button class="btn" id="bs-vision-global" style="width:100%;min-height:44px;margin-bottom:8px;border:1px solid var(--olive);color:var(--olive)" onclick="openVisionGlobal()"><i class="ti ti-chart-bar"></i> ${t('bs.globalBtn')}</button>` : ''}
@@ -1437,8 +1438,8 @@ function renderBusinessSelectScreenHtml(){
       </div>
       <a class="bs-buy" href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
       <div class="bs-foot">
-        <button type="button" class="bs-link" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('bs.changePassword')}</button>
-        <button type="button" class="bs-link" onclick="exitToAccessScreen()">${t('bs.exitAccount')} <i class="ti ti-logout"></i></button>
+        <button type="button" class="bs-footbtn" onclick="promptChangeOwnerPassword()"><i class="ti ti-key" aria-hidden="true"></i><span>${t('bs.changePassword')}</span></button>
+        <button type="button" class="bs-footbtn" onclick="exitToAccessScreen()"><i class="ti ti-logout" aria-hidden="true"></i><span>${t('bs.exitAccount')}</span></button>
       </div>
     </div>
   `;
