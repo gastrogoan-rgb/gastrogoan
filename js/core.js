@@ -1370,7 +1370,7 @@ function renderBusinessSelectScreenHtml(){
              lista de negocios está vacía, así que no hay ninguna a la que ir,
              y la pantalla no tiene aspa ni botón de volver. Quien entraba con
              la cuenta equivocada solo podía salir recargando la página. -->
-        <button class="btn" style="width:100%;margin-top:14px;background:none;border:none;color:var(--muted);min-height:44px;padding:12px;flex:0 0 auto" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>
+        <div class="bs-foot bs-foot-solo"><button type="button" class="bs-link" onclick="exitToAccessScreen()">${t('bs.exitAccount')} <i class="ti ti-logout"></i></button></div>
       </div>
     `;
   }
@@ -1423,6 +1423,7 @@ function renderBusinessSelectScreenHtml(){
       <div class="bs-title">
         <div class="splash-icon" style="position:static"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain;border-radius:14px"></div>
         ${t('bs.title')}
+        <span class="bs-sub">${escapeHtml(gl({es:'Elige con qué negocio vas a trabajar', ca:'Tria amb quin negoci treballaràs', en:'Choose the business you will work on'}))}</span>
       </div>
       ${avisoDuplicado}
       ${showSearch ? `<input id="bs-search" type="search" placeholder="${t('bs.searchPh')}" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:2px" oninput="filterBusinessSlots(this.value)" autofocus>` : ''}
@@ -1430,14 +1431,14 @@ function renderBusinessSelectScreenHtml(){
         ${renderBsGroups(slots)}
       </div>
       ${puedeVerVisionGlobal() ? `<button class="btn" id="bs-vision-global" style="width:100%;min-height:44px;margin-bottom:8px;border:1px solid var(--olive);color:var(--olive)" onclick="openVisionGlobal()"><i class="ti ti-chart-bar"></i> ${t('bs.globalBtn')}</button>` : ''}
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
-        <button class="btn" style="flex:1;border:1px solid var(--ink);color:var(--ink)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
+      <div class="bs-actions">
+        <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
+        <button class="btn" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
-      <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn" style="flex:1;min-width:150px;min-height:44px;background:none;border:none;color:var(--muted)" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('bs.changePassword')}</button>
-        <button class="btn" style="flex:1;min-width:150px;min-height:44px;background:none;border:none;color:var(--muted)" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>
+      <a class="bs-buy" href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+      <div class="bs-foot">
+        <button type="button" class="bs-link" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('bs.changePassword')}</button>
+        <button type="button" class="bs-link" onclick="exitToAccessScreen()">${t('bs.exitAccount')} <i class="ti ti-logout"></i></button>
       </div>
     </div>
   `;
