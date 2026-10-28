@@ -2586,7 +2586,7 @@ button,input,select,textarea{font-family:inherit}
 code,pre,kbd,samp{font-family:var(--mono)}
 
 /* --- ENTRADA: carga, negocios y asistentes de alta comparten la pantalla de acceso --- */
-:root{--entry-bg:radial-gradient(ellipse 70% 55% at 50% 0%,rgba(126,155,132,.38),transparent 70%),radial-gradient(ellipse 60% 40% at 50% 110%,rgba(126,155,132,.16),transparent 70%),linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(160deg,#1C1A17 0%,#211F1A 100%)}
+:root{--entry-bg:#1C1A17}
 #app-splash{background:var(--entry-bg)}
 .splash-box{gap:12px}
 .splash-icon{width:76px;height:76px;padding:8px;background:#fff;box-shadow:0 0 0 8px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.35);animation:none}
@@ -2678,6 +2678,23 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .p360-txt-ul{list-style:none;margin:0 0 10px;padding:0}
 .p360-txt-ul li{padding-left:20px;position:relative;margin-bottom:5px}
 .p360-txt-ul li::before{content:"";position:absolute;left:2px;top:.78em;width:9px;height:1px;background:var(--olive)}
+
+/* ═══ ENTRADA (28/10, v2): sin cuadrícula ni resplandores ═══
+   Fondo liso de tinta, una raya oliva arriba (la misma que la cabecera de la app) y la «gg» de la
+   marca, enorme y recortada abajo a la izquierda, en oliva casi invisible. Es tipografía, no decoración
+   genérica: el logo hecho paisaje. */
+#access-select-screen{background:var(--entry-bg)}
+#app-splash::before,#access-select-screen::before,#business-select-screen::before,#license-gate::before,#firebase-gate::before,#netlify-gate::before,#extconn-gate::before,#revoked-gate::before{
+  content:"gg";position:fixed;left:-6vmin;bottom:-26vmin;font-family:'Schibsted Grotesk',system-ui,sans-serif;font-weight:800;font-size:78vmin;line-height:1;letter-spacing:-.09em;color:#4A5D4E;opacity:.14;pointer-events:none;user-select:none;z-index:0}
+#app-splash::after,#access-select-screen::after,#business-select-screen::after,#license-gate::after,#firebase-gate::after,#netlify-gate::after,#extconn-gate::after,#revoked-gate::after{
+  content:"";position:fixed;left:0;right:0;top:0;height:3px;background:#4A5D4E;pointer-events:none;z-index:2}
+#app-splash > *,#access-select-screen > *,#business-select-screen > *,#license-gate > *,#firebase-gate > *,#netlify-gate > *,#extconn-gate > *,#revoked-gate > *{position:relative;z-index:1}
+.access-wrap,.bs-box{position:relative;z-index:1}
+#license-gate > div,#firebase-gate > div,#netlify-gate > div,#extconn-gate > div,#revoked-gate > div,#business-select-screen .bs-box,.access-card{box-shadow:none !important}
+.access-icon{box-shadow:none;border:0;background:#fff}
+.splash-icon{box-shadow:none}
+.splash-sub::after{content:"";display:block;width:168px;height:2px;margin:20px auto 0;background:linear-gradient(#7E9B84,#7E9B84) -64px 0/64px 100% no-repeat,rgba(255,255,255,.14);animation:splash-bar 1.3s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes splash-bar{from{background-position:-64px 0,0 0}to{background-position:168px 0,0 0}}
 
 /* --- PANEL: avisos que importan delante, el resto en una línea --- */
 .toolbar select{min-width:215px}
