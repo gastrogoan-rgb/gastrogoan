@@ -2630,12 +2630,16 @@ code,pre,kbd,samp{font-family:var(--mono)}
 .view-header .view-sub{font-size:14px;line-height:1.5;color:var(--muted);margin:0;max-width:64ch}
 
 /* --- Campos: un solo aspecto --- */
-input[type="text"],input[type="number"],input[type="search"],input[type="tel"],input[type="email"],input[type="date"],input[type="password"],select,textarea{border-color:#D5CFC4;border-radius:var(--r-s);font-size:14px;padding:8px 12px}
+input[type="text"],input[type="number"],input[type="search"],input[type="tel"],input[type="email"],input[type="date"],input[type="password"],select,textarea,.field input,.field select,.field textarea{border-color:#D5CFC4;border-radius:var(--r-s)}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-offset:0;border-color:var(--ink)}
 .search-input{font-size:14px}
+/* Con ratón, letra de trabajo (14 px). En táctil se queda en 16: por debajo iOS hace zoom al enfocar. */
+@media (min-width:1025px){input[type="text"],input[type="number"],input[type="search"],input[type="tel"],input[type="email"],input[type="date"],input[type="password"],select,textarea,.field input,.field select,.field textarea{font-size:14px}
+.field input,.field select{padding:9px 12px;min-height:44px}}
 @media (min-width:1025px){input[type="text"],input[type="number"],input[type="search"],input[type="tel"],input[type="email"],input[type="date"],input[type="password"],select{min-height:40px}}
 
 /* --- PANEL: avisos que importan delante, el resto en una línea --- */
+.toolbar select{min-width:215px}
 .att-list{display:flex;flex-wrap:wrap;gap:8px}
 .att-chip{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:0 14px 0 12px;background:#fff;border:1px solid #D5CFC4;border-radius:var(--r-s);font-family:inherit;color:var(--ink);cursor:pointer;transition:border-color .15s,background-color .15s}
 .att-chip .ti{font-size:18px;color:var(--muted)}
