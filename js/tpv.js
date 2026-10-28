@@ -5923,7 +5923,7 @@ function buildTicketText(sale, opts={}){
 function buildTicketHtml(sale, opts={}){
   const b = DB.business || {};
   const tc = b.ticket || {};
-  const accent = b.brandColor || '#B8804B';
+  const accent = b.brandColor || '#4A5D4E';
   const logoHtml = b.logo ? `<img src="${b.logo}" alt="" style="max-height:48px;max-width:200px;display:block;margin:0 auto 8px">` : '';
   const metaLines = [];
   if(tc.mostrarDireccion !== false && b.address) metaLines.push(escapeHtml(b.address));
