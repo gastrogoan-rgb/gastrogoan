@@ -2181,7 +2181,7 @@ function orderAllergyWarningHtml(order){
   (order.items||[]).forEach(l => lineAllergens(l).forEach(a => dishAllergenSet.add(allergenLabel(a))));
   if(dishAllergenSet.size) texts.push(Array.from(dishAllergenSet).join(', '));
   if(!texts.length) return '';
-  return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:#fff;background:var(--red,#c0392b);border-radius:6px;padding:6px 8px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
+  return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:var(--red,#8A4A3B);background:var(--red-l,#F5EBE7);border:1px solid #E3C8BF;border-left:3px solid var(--red,#8A4A3B);border-radius:3px;padding:7px 9px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
 }
 
 function renderTableOrderModal(orderId){
@@ -5980,7 +5980,7 @@ function buildTicketHtml(sale, opts={}){
     : '';
 
   return `
-    <div style="width:300px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111">
+    <div style="width:300px;margin:0 auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#111">
       ${logoHtml}
       <div style="text-align:center;font-weight:700;font-size:16px;color:${accent}">${escapeHtml(b.name || 'GastroGoan')}</div>
       ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#B8860B;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}

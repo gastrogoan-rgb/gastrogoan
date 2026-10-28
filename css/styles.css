@@ -2544,7 +2544,7 @@ input,select,textarea{border-radius:var(--r-s)}
 .area-tools .area-more{font-family:var(--mono);color:var(--muted)}
 
 /* --- Títulos de sección dentro de una pantalla --- */
-.view .card > h3:first-child{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin-bottom:14px}
+.view .card:not(.card-compact) > h3:first-child{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:14px}
 
 /* --- ÁREA (Cocina/Sala/Gestión): un índice de herramientas, no doce fichas iguales ---
    Dos columnas de filas con filete: icono, nombre y una línea de lo que hace.
@@ -2573,7 +2573,75 @@ input,select,textarea{border-radius:var(--r-s)}
 .mesa-card .mesa-name{font-size:15px;font-weight:700;letter-spacing:-.01em}
 .mesa-card .mesa-total{font-family:var(--mono);font-size:17px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
 
+/* --- Radio único en TODA la app, también el escrito a mano en el JS ---
+   Había 6, 8, 9, 10, 12, 14, 16 y 18 px mezclados en cientos de style="…". Se
+   reducen a los dos del sistema; círculos (50%) y píldoras (999px) no se tocan. */
+[style*="border-radius:5px"],[style*="border-radius:6px"],[style*="border-radius:7px"],[style*="border-radius:8px"],[style*="border-radius:9px"],[style*="border-radius:10px"],
+[style*="border-radius: 6px"],[style*="border-radius: 8px"],[style*="border-radius: 10px"]{border-radius:var(--r-s) !important}
+[style*="border-radius:12px"],[style*="border-radius:14px"],[style*="border-radius:16px"],[style*="border-radius:18px"],[style*="border-radius:20px"],
+[style*="border-radius: 12px"],[style*="border-radius: 14px"],[style*="border-radius: 16px"]{border-radius:var(--r-m) !important}
+[style*="font-family:monospace"],[style*="font-family: monospace"]{font-family:var(--mono) !important}
+button,input,select,textarea{font-family:inherit}
+code,pre,kbd,samp{font-family:var(--mono)}
+
+/* --- ENTRADA: carga, negocios y asistentes de alta comparten la pantalla de acceso --- */
+:root{--entry-bg:radial-gradient(ellipse 70% 55% at 50% 0%,rgba(126,155,132,.38),transparent 70%),radial-gradient(ellipse 60% 40% at 50% 110%,rgba(126,155,132,.16),transparent 70%),linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(160deg,#1C1A17 0%,#211F1A 100%)}
+#app-splash{background:var(--entry-bg)}
+.splash-box{gap:12px}
+.splash-icon{width:76px;height:76px;padding:8px;background:#fff;box-shadow:0 0 0 8px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.35);animation:none}
+.splash-icon img{width:100%;height:100%;object-fit:contain;display:block}
+.splash-title{font-size:clamp(30px,5vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1;margin-top:10px}
+.splash-sub{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.splash-sub::after{content:"";display:block;width:120px;height:2px;margin:16px auto 0;background:linear-gradient(90deg,transparent,var(--olive-l),transparent);background-size:200% 100%;animation:splash-line 1.4s ease-in-out infinite}
+@keyframes splash-line{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.splash-sub::after{animation:none}}
+
+#business-select-screen{background:var(--entry-bg);padding:28px 20px;overflow:auto}
+#business-select-screen .bs-box{background:#fff;border:1px solid rgba(0,0,0,.06);border-top:4px solid var(--olive);border-radius:var(--r-m);padding:28px 26px;max-width:480px;margin:auto 0;box-shadow:0 24px 60px rgba(0,0,0,.35) !important}
+.bs-title{font-size:22px;letter-spacing:-.02em}
+.bs-item,.bs-group-header{border-radius:var(--r-s);padding:14px 16px}
+.bs-group-children{border-bottom-left-radius:var(--r-s);border-bottom-right-radius:var(--r-s)}
+
+/* Asistentes de alta (licencia, nube, hosting, conexiones, licencia revocada) */
+#license-gate,#firebase-gate,#netlify-gate,#extconn-gate,#revoked-gate{background:var(--entry-bg) !important}
+#license-gate > div,#firebase-gate > div,#netlify-gate > div,#extconn-gate > div,#revoked-gate > div{border-radius:var(--r-m) !important;border-top:4px solid var(--olive);box-shadow:0 24px 60px rgba(0,0,0,.35) !important}
+#license-gate h2,#firebase-gate h2,#netlify-gate h2,#extconn-gate h2,#revoked-gate h2{font-size:26px;letter-spacing:-.025em;font-weight:800}
+#license-gate [style*="width:54px"],#firebase-gate [style*="width:54px"],#netlify-gate [style*="width:54px"],#extconn-gate [style*="width:54px"],#revoked-gate [style*="width:54px"]{border-radius:var(--r-s) !important}
+#license-gate button[onclick*="backToBusiness"],#license-gate button[onclick*="exitSetupGateToLogin"],#firebase-gate button[onclick*="backToBusiness"],#firebase-gate button[onclick*="exitSetupGateToLogin"],#netlify-gate button[onclick*="backToBusiness"],#netlify-gate button[onclick*="exitSetupGateToLogin"],#extconn-gate button[onclick*="backToBusiness"],#extconn-gate button[onclick*="exitSetupGateToLogin"]{font-family:var(--mono) !important;font-size:11.5px !important;letter-spacing:.06em;text-transform:uppercase;font-weight:500 !important}
+
+/* --- Botones: tamaño de trabajo (14 px), no de cartel --- */
+.btn{font-size:14px;min-height:44px;padding:10px 18px}
+.btn-sm{font-size:13px;min-height:36px;padding:7px 12px}
+.btn-icon,.btn.btn-icon{padding:7px 9px}
+@media (pointer:fine){.btn-icon,.btn.btn-icon{min-height:38px;min-width:38px}}
+.btn-danger,.btn.btn-danger{background:#fff;border-color:#E3C8BF;color:var(--red)}
+.btn-danger:hover,.btn.btn-danger:hover{background:var(--red);border-color:var(--red);color:#fff}
+
+/* --- Personal: tarjeta de equipo alineada a la izquierda, acciones en su fila --- */
+.grid-personal{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.emp-actions .actions-cell{gap:6px;flex-wrap:wrap}
+/* Emojis de categoría: apagados para que no griten junto a la paleta */
+.cat-icon-btn{filter:saturate(.4)}
+.emp-stats{display:flex;flex-wrap:wrap;gap:4px 18px;margin-bottom:12px;font-size:12.5px;color:var(--muted)}
+.emp-open-hint{margin-bottom:12px;font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--olive)}
+.emp-actions{display:flex;justify-content:flex-start;gap:8px;border-top:1px solid var(--hair);padding-top:12px}
+
+/* --- Cabeceras de módulo que traen su propio .view-header (I+D, Plan 360…) --- */
+.view-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px}
+.view-header h2{font-size:clamp(26px,2.6vw,32px);font-weight:700;letter-spacing:-.028em;line-height:1.1;color:var(--ink);margin:0 0 6px}
+.view-header .view-sub{font-size:14px;line-height:1.5;color:var(--muted);margin:0;max-width:64ch}
+
+/* --- Campos: un solo aspecto --- */
+input[type="text"],input[type="number"],input[type="search"],input[type="tel"],input[type="email"],input[type="date"],input[type="password"],select,textarea,.field input,.field select,.field textarea{border-color:#D5CFC4;border-radius:var(--r-s)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-offset:0;border-color:var(--ink)}
+.search-input{font-size:14px}
+/* Con ratón, letra de trabajo (14 px). En táctil se queda en 16: por debajo iOS hace zoom al enfocar. */
+@media (min-width:1025px){.field input,.field select,.field textarea{font-size:14px}
+.field input,.field select{padding:9px 12px;min-height:44px}}
+@media (min-width:1025px){input[type="text"],input[type="number"],input[type="search"],input[type="tel"],input[type="email"],input[type="date"],input[type="password"],select{min-height:40px}}
+
 /* --- PANEL: avisos que importan delante, el resto en una línea --- */
+.toolbar select{min-width:215px}
 .att-list{display:flex;flex-wrap:wrap;gap:8px}
 .att-chip{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:0 14px 0 12px;background:#fff;border:1px solid #D5CFC4;border-radius:var(--r-s);font-family:inherit;color:var(--ink);cursor:pointer;transition:border-color .15s,background-color .15s}
 .att-chip .ti{font-size:18px;color:var(--muted)}
