@@ -220,12 +220,12 @@ let accessScreenMode = 'choice'; // 'choice' | 'employee' | 'owner'
 // abrirla, no solo una vez dentro (en Mi Negocio).
 function renderAccessLangSwitcherHtml(){
   const current = getLang();
+  const langs = ['es','en','ca'];
   return `
     <div class="access-lang-switch">
-      <button class="lang-trigger" onclick="this.parentNode.classList.toggle('open');event.stopPropagation()" aria-haspopup="listbox"><span class="lang-code">${LANG_CODES[current]}</span><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
-      <div class="lang-panel" role="listbox">
-        ${['es','ca','en'].map(l => `<button role="option" class="${l===current?'active':''}" onclick="setLang('${l}')"><span class="lang-code">${LANG_CODES[l]}</span><span class="lang-name">${LANG_NAMES[l]}</span></button>`).join('')}
-      </div>
+      ${langs.map(l => `
+        <button class="${l===current?'active':''}" onclick="setLang('${l}')" title="${LANG_NAMES[l]}">${LANG_FLAGS[l]}</button>
+      `).join('')}
     </div>`;
 }
 function renderAccessScreen(){
@@ -4316,7 +4316,7 @@ function plan360InversionesHtml(d, esc, negocio){
       <div class="dr-datos">
         <div class="dr-dato"><div class="dr-dato-v">${plan360InvEuros(total)}</div><div class="dr-dato-l">inversión total necesaria</div></div>
         <div class="dr-dato"><div class="dr-dato-v">${presu ? plan360InvEuros(presu) : '—'}</div><div class="dr-dato-l">presupuesto máximo que asume el negocio</div></div>
-        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? 'diferencia' : dif < 0 ? 'de exceso sobre el presupuesto' : 'de margen dentro del presupuesto'}</div></div>
+        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? 'diferencia' : dif < 0 ? 'de exceso sobre el presupuesto' : 'de margen dentro del presupuesto'}</div></div>
         <div class="dr-dato"><div class="dr-dato-v">${items.length}</div><div class="dr-dato-l">inversiones detectadas</div></div>
       </div>
       ${total ? barra : ''}
@@ -4329,7 +4329,7 @@ function plan360InversionesHtml(d, esc, negocio){
         ${PLAN360_INV_NIVELES.map(n => `<tr><td><span class="dr-inv-dot dr-inv-${n.color}"></span>Subtotal ${n.nombre}</td><td>${plan360InvEuros(sub[n.id])}</td></tr>`).join('')}
         <tr class="dr-inv-tot"><td>Inversión total necesaria</td><td>${plan360InvEuros(total)}</td></tr>
         <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
-        <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
+        <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
       </tbody></table></div>
       <div class="dr-regla"><span>★ Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
       ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
@@ -4979,7 +4979,7 @@ function showActivationGate(){
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
       <div style="text-align:left">
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px"><i class="ti ti-key"></i> ${t('access.businessCode')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span></label>
-        <input id="license-code-input" type="text" maxlength="8" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:var(--mono);font-size:16px;letter-spacing:2px;text-transform:uppercase" onkeydown="if(event.key==='Enter')activateLicenseFromGate()">
+        <input id="license-code-input" type="text" maxlength="8" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase" onkeydown="if(event.key==='Enter')activateLicenseFromGate()">
         <div id="license-error" style="display:none;background:#F5EBE7;color:#8A4A3B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
         <button id="license-activate-btn" onclick="activateLicenseFromGate()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
       </div>
@@ -5188,17 +5188,17 @@ const FIREBASE_GATE_STEPS = [
    body:{
      es:`Vuelve a <strong>Realtime Database</strong> (menú "Base de datos y almacenamiento") y abre la pestaña <strong>"Reglas"</strong> (Rules), arriba del todo.<br><br>
         Borra todo el contenido del cuadro de texto y pega estas reglas (pulsa el botón para copiarlas):<br><br>
-        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--mono);font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
         <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar reglas</button><br><br>
         Por último, pulsa el botón <strong>"Publicar"</strong> (Publish) arriba a la derecha.`,
      ca:`Torna a <strong>Realtime Database</strong> (menú "Base de dades i emmagatzematge") i obre la pestanya <strong>"Regles"</strong> (Rules), a dalt de tot.<br><br>
         Esborra tot el contingut del quadre de text i enganxa aquestes regles (prem el botó per copiar-les):<br><br>
-        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--mono);font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
         <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar regles</button><br><br>
         Finalment, prem el botó <strong>"Publicar"</strong> (Publish) a dalt a la dreta.`,
      en:`Go back to <strong>Realtime Database</strong> ("Build" menu) and open the <strong>"Rules"</strong> tab, at the top.<br><br>
         Delete all the content in the text box and paste these rules (click the button to copy them):<br><br>
-        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--mono);font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
         <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copy rules</button><br><br>
         Finally, click the <strong>"Publish"</strong> button at the top right.`}},
   {title:{es:'Crea una "app web" y copia tus datos', ca:'Crea una "app web" i copia les teves dades', en:'Create a "web app" and copy your data'},
@@ -5267,7 +5267,7 @@ function renderExternalConnectionsPromptStep(){
   g.innerHTML = `
     <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
       <div style="text-align:center;margin-bottom:18px">
-        <div style="width:54px;height:54px;border-radius:14px;background:var(--teal,#4A5D4E);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ${step.icon}"></i></div>
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--teal,#2a8f88);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ${step.icon}"></i></div>
         <p style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">${t('gate.extConn.stepLabel').replace('${n}', extConnPromptStep+1).replace('${total}', EXT_CONN_PROMPT_STEPS.length)}</p>
         <h2 style="margin-bottom:4px">${t(step.titleKey)}</h2>
       </div>
@@ -5324,7 +5324,7 @@ function showFirebaseSetupGate(){
       <div style="background:#F5F0E3;border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
         ${t('gate.cloudIntro')}
       </div>
-      <div style="background:var(--teal-l,#EDF1EC);border-left:4px solid var(--teal,#4A5D4E);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.6;margin-bottom:18px;text-align:left">
+      <div style="background:var(--teal-l,#eef7f6);border-left:4px solid var(--teal,#2a8f88);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.6;margin-bottom:18px;text-align:left">
         <strong><i class="ti ti-plug-connected"></i> ${t('gate.externalConnections.title')}</strong><br>
         ${t('gate.externalConnections.body')}
       </div>`;
@@ -6431,15 +6431,15 @@ function updateSyncBadge(state){
   // los demás botones.
   if(state === 'online'){
     const conHora = lastSyncOkAt ? ' · ' + (Date.now() - lastSyncOkAt < 10000 ? t('gate.syncNow') : t('gate.syncAgo').replace('{t}', haceDesde(lastSyncOkAt))) : '';
-    el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}${conHora}</span>`; el.style.background = '#4A5D4E'; el.style.color = '#FFFFFF'; }
+    el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}${conHora}</span>`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
   // 'pending': antes el badge solo distinguía conectado/desconectado, no si
   // los cambios que se acaban de hacer YA llegaron de verdad a la nube o
   // siguen en camino — con esto queda un estado visible intermedio, en vez
   // de que "conectado" dé a entender (sin garantizarlo) que todo ya está
   // guardado.
-  else if(state === 'pending'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudPending')}</span>`; el.style.background = '#4E5A63'; el.style.color = '#FFFFFF'; }
-  else if(state === 'offline'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.offline')}</span>`; el.style.background = '#8A7440'; el.style.color = '#FFFFFF'; }
-  else { el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudError')}</span>`; el.style.background = '#8A4A3B'; el.style.color = '#FFFFFF'; }
+  else if(state === 'pending'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudPending')}</span>`; el.style.background = '#2E6FBA'; el.style.color = '#FFFFFF'; }
+  else if(state === 'offline'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.offline')}</span>`; el.style.background = '#B8860B'; el.style.color = '#FFFFFF'; }
+  else { el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudError')}</span>`; el.style.background = '#C0392B'; el.style.color = '#FFFFFF'; }
 }
 
 function refreshAfterRemoteChange(){
@@ -6990,7 +6990,7 @@ function renderModuleBadges(){
         if(!badge){
           badge = document.createElement('span');
           badge.className = 'module-new-badge';
-          badge.style.cssText = 'position:absolute;top:8px;right:8px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--red,#8A4A3B);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 0 0 2px var(--surface,#fff)';
+          badge.style.cssText = 'position:absolute;top:8px;right:8px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--red,#e5484d);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 0 0 2px var(--surface,#fff)';
           card.style.position = card.style.position || 'relative';
           card.appendChild(badge);
         }
@@ -9674,17 +9674,17 @@ function renderOnlineCard(){
         </div>
       </div>
       <div class="field">
-        <textarea id="mn-public-link" rows="2" readonly style="font-family:var(--mono);font-size:11px" onclick="this.select()">${link}</textarea>
+        <textarea id="mn-public-link" rows="2" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
-        <a class="btn btn-sm" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        <a class="btn btn-sm" style="flex:1;background:#188842;color:#fff;border-color:#188842;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
       </div>
       <div class="field" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
         <label>${t('mn.online.slugLabel')}</label>
         <p style="font-size:12px;color:var(--muted);margin:-2px 0 8px">${t('mn.online.slugDesc')}</p>
         <div style="display:flex;gap:8px">
-          <input type="text" id="mn-public-slug" placeholder="mi-restaurante" value="${escapeHtml(b.publicSlug||'')}" style="flex:1;font-family:var(--mono)" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+          <input type="text" id="mn-public-slug" placeholder="mi-restaurante" value="${escapeHtml(b.publicSlug||'')}" style="flex:1;font-family:monospace" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
           <button class="btn btn-sm btn-primary" onclick="savePublicSlug()">${t('common.save')}</button>
         </div>
       </div>
@@ -9826,12 +9826,11 @@ function imprimirQrMesas(){
   if(cambiado) saveDB();
   const nombre = escapeHtml((DB.business && DB.business.name) || '');
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${nombre} · QR</title><style>
-    @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
-    body{font-family:'Schibsted Grotesk',Arial,sans-serif;margin:0;padding:12mm;color:#1C1A17}
+    body{font-family:'IBM Plex Sans',Arial,sans-serif;margin:0;padding:12mm;color:#1A1A1A}
     .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8mm}
-    .q{border:1px dashed #ABA59C;padding:6mm;text-align:center;break-inside:avoid}
+    .q{border:1px dashed #999;padding:6mm;text-align:center;break-inside:avoid}
     .q img{width:100%;max-width:55mm;aspect-ratio:1}
-    .n{font-family:'IBM Plex Mono',monospace;font-size:18pt;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-top:3mm}.h{font-size:10pt;color:#716C65;margin-top:2mm}
+    .n{font-size:18pt;font-weight:700;margin-top:3mm}.h{font-size:10pt;color:#555;margin-top:2mm}
     h1{font-size:14pt;margin:0 0 6mm}
   </style></head><body onload="setTimeout(function(){window.print()},600)"><h1>${nombre}</h1><div class="g">${tarjetas}</div></body></html>`;
   const w = window.open('', '_blank');
@@ -10400,11 +10399,11 @@ function renderOwnFirebaseForm(){
   return `
     <div class="field" style="margin-bottom:8px">
       <label style="font-size:12px">${t('gate.apiKeyLabel')}</label>
-      <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" style="font-family:var(--mono);font-size:12px">
+      <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" style="font-family:monospace;font-size:12px">
     </div>
     <div class="field" style="margin-bottom:10px">
       <label style="font-size:12px">${t('gate.dbUrlLabel')}</label>
-      <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" style="font-family:var(--mono);font-size:12px">
+      <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" style="font-family:monospace;font-size:12px">
     </div>
     <button class="btn" style="width:100%;justify-content:center" onclick="saveOwnFirebaseConfig()"><i class="ti ti-cloud-cog"></i> ${t('gate.saveAndConnect')}</button>
   `;
@@ -10454,7 +10453,7 @@ function openCloudWizard(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
-    ${reglasAntiguas ? `<div style="background:var(--amber-l,#F5F0E3);border-left:3px solid var(--amber,#8A7440);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
+    ${reglasAntiguas ? `<div style="background:var(--amber-l,#FDF3E0);border-left:3px solid var(--amber,#D98F3F);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
       <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${
         /* Dos casos MUY distintos y no se pueden contar igual:
            · el espejo no funciona (reglas viejas de verdad): sus reservas
@@ -10464,7 +10463,7 @@ function openCloudWizard(){
         espejoEnNubePropia === false ? t('gate.oldRulesBody') : t('gate.oldRulesBodyMenor')}
       <div style="margin-top:10px"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
     </div>` : ''}
-    ${saturacionPublicaReciente ? `<div style="background:var(--amber-l,#F5F0E3);border-left:3px solid var(--amber,#8A7440);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
+    ${saturacionPublicaReciente ? `<div style="background:var(--amber-l,#FDF3E0);border-left:3px solid var(--amber,#D98F3F);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
       <strong><i class="ti ti-users"></i> ${t('gate.saturationTitle')}</strong><br>${t('gate.saturationBody')}
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
         <a class="btn btn-sm" href="https://firebase.google.com/pricing" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('gate.saturationLink')}</a>
@@ -10499,12 +10498,12 @@ function openCloudWizard(){
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:120px;height:120px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
       <div class="field" style="flex:1;min-width:180px;margin-bottom:0">
-        <textarea id="cloud-public-link" rows="3" readonly style="font-family:var(--mono);font-size:11px" onclick="this.select()">${link}</textarea>
+        <textarea id="cloud-public-link" rows="3" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
       </div>
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn" style="flex:1" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
-      <a class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+      <a class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
     <details${lastSyncErrorCode ? ' open' : ''}>
@@ -10700,7 +10699,6 @@ function defaultData(){
 let DB = defaultData();
 let dbLoadFailedFlag = false;
 const dbReadyPromise = loadDB().then(d => {
-  try{ (d && d.employees || []).forEach(e => { if(e && typeof e.color === 'string' && typeof colorEmpleadoDeMarca === 'function') e.color = colorEmpleadoDeMarca(e.color); }); }catch(err){}
   DB = d;
   if(dbLoadFailedFlag){
     // El aviso se dispara aparte (no bloquea la carga de DB) y esperando a
@@ -11623,7 +11621,7 @@ function buildRollPrintHtml(contenido, anchoMm, titulo, opts){
 <style>
 @page{size:${ancho}mm auto;margin:0}
 html,body{margin:0;padding:0;background:#fff;color:#000}
-body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
+body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
 pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
 </style></head><body>${cuerpo}</body></html>`;
 }

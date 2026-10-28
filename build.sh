@@ -30,7 +30,6 @@ python3 tools/recortar-iconos.py build/tabler-icons.subset.css
 CSS_ICONS=$(cat build/tabler-icons.subset.css)
 CSS_FONTS=$(cat css/fonts.css)
 CSS_APP=$(cat css/styles.css)
-CSS_GG=$(cat css/iconos-gg.css)   # iconos propios (tools/generar-iconos-gg.py): van DESPUÉS de la fuente, que sustituyen
 
 # Read all JS in order
 JS=""
@@ -47,7 +46,6 @@ done
   # Inline CSS (iconos + fuentes + estilos)
   echo "<style>"
   echo "$CSS_ICONS"
-  echo "$CSS_GG"
   echo "$CSS_FONTS"
   echo "$CSS_APP"
   echo "</style>"

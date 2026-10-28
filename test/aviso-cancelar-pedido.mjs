@@ -66,7 +66,7 @@ await caso('Al cancelar un pedido con teléfono y email, se abre el aviso manual
     const wa = [...modal.querySelectorAll('button')].find(b => b.textContent.includes('WhatsApp'));
     const email = [...modal.querySelectorAll('button')].find(b => b.textContent.includes('Email'));
     return {
-      abierto: modal.innerText.toLowerCase().includes('avisar al cliente'),   // los títulos de ventana van en mayúsculas por CSS (innerText las respeta)
+      abierto: modal.innerText.includes('Avisar al cliente'),
       waHabilitado: wa && !wa.disabled,
       emailHabilitado: email && !email.disabled,
       textoIncluyeNombre: document.getElementById('order-notify-text')?.value.includes('María'),

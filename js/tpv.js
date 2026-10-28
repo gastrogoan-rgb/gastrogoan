@@ -681,7 +681,7 @@ function mesaWaiterChipHtml(camareroId, openedByOwner){
   const firstName = (emp.name||'').trim().split(/\s+/)[0];
   return `
     <span class="mesa-waiter-chip" title="${escapeHtml(t('label.waiter'))}: ${escapeHtml(emp.name)}">
-      <span class="mesa-waiter-avatar" style="background:${emp.color||'#8A7440'}">${escapeHtml(initial)}</span>
+      <span class="mesa-waiter-avatar" style="background:${emp.color||'#DF7039'}">${escapeHtml(initial)}</span>
       ${escapeHtml(firstName)}
     </span>
   `;
@@ -698,7 +698,7 @@ function mesaRepartidorChipHtml(repartidorId, repartidorCourierId){
   if(repartidorId){
     const emp = DB.employees.find(e => e.id === repartidorId);
     if(!emp) return '';
-    name = emp.name; color = emp.color || '#8A7440';
+    name = emp.name; color = emp.color || '#DF7039';
   } else if(repartidorCourierId){
     const courier = (DB.business && DB.business.ownCouriers || []).find(c => c.id === repartidorCourierId);
     if(!courier) return '';
@@ -1477,7 +1477,7 @@ function openOrderNotifyModal(nombre, telefono, email, tipo){
       <textarea id="order-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendOrderNotifyEmail()" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -2181,7 +2181,7 @@ function orderAllergyWarningHtml(order){
   (order.items||[]).forEach(l => lineAllergens(l).forEach(a => dishAllergenSet.add(allergenLabel(a))));
   if(dishAllergenSet.size) texts.push(Array.from(dishAllergenSet).join(', '));
   if(!texts.length) return '';
-  return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:#fff;background:var(--red,#8A4A3B);border-radius:6px;padding:6px 8px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
+  return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:#fff;background:var(--red,#c0392b);border-radius:6px;padding:6px 8px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
 }
 
 function renderTableOrderModal(orderId){
@@ -2382,7 +2382,7 @@ function dishInfoIngredientLinesHtml(recipe, visited){
     const tiene = alergenos.length > 0;
     return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:13px;${tiene?'font-weight:700':''}">
       <span>${escapeHtml(ing.name)}</span>
-      ${tiene ? `<span style="color:var(--red,#8A4A3B)">${alergenos.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</span>` : ''}
+      ${tiene ? `<span style="color:var(--red,#c0392b)">${alergenos.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -2401,8 +2401,8 @@ function renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs)
       <h3><i class="ti ti-info-circle"></i> ${escapeHtml(titulo)}</h3>
       <button class="modal-close" onclick="${escapeHtml(cerrar)}">&times;</button>
     </div>
-    ${allergens.length ? `<div style="border:2px solid var(--red,#8A4A3B);border-radius:8px;padding:8px 10px;margin-bottom:12px">
-      <div style="font-weight:700;color:var(--red,#8A4A3B);font-size:13px"><i class="ti ti-alert-triangle"></i> ${t('label.allergensPresent')}</div>
+    ${allergens.length ? `<div style="border:2px solid var(--red,#c0392b);border-radius:8px;padding:8px 10px;margin-bottom:12px">
+      <div style="font-weight:700;color:var(--red,#c0392b);font-size:13px"><i class="ti ti-alert-triangle"></i> ${t('label.allergensPresent')}</div>
       <div style="font-size:13px;margin-top:2px">${allergens.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>
     </div>` : `<div class="empty" style="padding:10px;margin-bottom:8px">${t('label.noAllergensDetected')}</div>`}
     ${recipe ? `<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px">${t('label.ingredients')}</div>
@@ -2556,7 +2556,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
       return `
       <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px">
         <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green txt-xs"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green txt-xs" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber txt-xs" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--ink)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
-        <span style="font-family:var(--mono);font-weight:700;font-size:11px;color:var(--ink);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
+        <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--ink);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
         ${esPedidoSoloLectura(order) ? '' : `
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
@@ -2960,7 +2960,7 @@ function minutesSince(iso){
 // Badge de urgencia: amarillo a partir de 5 min, naranja a partir de 10, rojo a partir de 15
 function urgencyBadge(mins){
   if(mins >= 15) return `<span class="badge badge-red"><i class="ti ti-clock"></i> ${mins} min</span>`;
-  if(mins >= 10) return `<span class="badge" style="background:#F5F0E3;color:#8A7440"><i class="ti ti-clock"></i> ${mins} min</span>`;
+  if(mins >= 10) return `<span class="badge" style="background:#ffe0c2;color:#b35900"><i class="ti ti-clock"></i> ${mins} min</span>`;
   if(mins >= 5) return `<span class="badge badge-amber"><i class="ti ti-clock"></i> ${mins} min</span>`;
   return `<span class="badge badge-gray"><i class="ti ti-clock"></i> ${mins} min</span>`;
 }
@@ -3526,7 +3526,7 @@ function renderComandasCocina(){
       ${bloques.map((bloque, i) => `
         <div style="${i>0 ? 'margin-top:10px;padding-top:10px;border-top:2px solid var(--border)' : ''}">
           ${bloque.nombre ? `<div style="font-weight:700;font-size:12.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px">
-            <i class="ti ${bloque.tipo==='menu'?'ti-list-details':'ti-tools-kitchen-2'}" style="color:${bloque.tipo==='menu'?'var(--purple,#6E5A6B)':'var(--blue,#4E5A63)'}"></i>
+            <i class="ti ${bloque.tipo==='menu'?'ti-list-details':'ti-tools-kitchen-2'}" style="color:${bloque.tipo==='menu'?'var(--purple,#7C3AED)':'var(--blue,#4E5A63)'}"></i>
             ${escapeHtml(bloque.nombre)}
           </div>` : ''}
           ${renderBloqueLineas(bloque, unBloqueUnaTandaSinNombre && i===0)}
@@ -5923,7 +5923,7 @@ function buildTicketText(sale, opts={}){
 function buildTicketHtml(sale, opts={}){
   const b = DB.business || {};
   const tc = b.ticket || {};
-  const accent = b.brandColor || '#4A5D4E';
+  const accent = b.brandColor || '#B8804B';
   const logoHtml = b.logo ? `<img src="${b.logo}" alt="" style="max-height:48px;max-width:200px;display:block;margin:0 auto 8px">` : '';
   const metaLines = [];
   if(tc.mostrarDireccion !== false && b.address) metaLines.push(escapeHtml(b.address));
@@ -5962,7 +5962,7 @@ function buildTicketHtml(sale, opts={}){
   const verifactuHtml = sale.verifactu && sale.verifactu.status === 'sent'
     ? `<div style="text-align:center;font-size:11px;font-weight:700;letter-spacing:.5px;margin-top:10px">VERI*FACTU</div>`
     : (DB.business && DB.business.verifactu && DB.business.verifactu.enabled
-      ? `<div style="text-align:center;font-size:11px;color:#8A7440;margin-top:10px">${t('ticket.verifactuPending')}</div>` : '');
+      ? `<div style="text-align:center;font-size:11px;color:#a15c00;margin-top:10px">${t('ticket.verifactuPending')}</div>` : '');
   const qrHtml = (sale.verifactu && sale.verifactu.status === 'sent' && sale.verifactu.qrData)
     ? `<div style="text-align:center;margin-top:10px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(sale.verifactu.qrData)}" style="width:120px;height:120px"></div>`
     : '';
@@ -5980,10 +5980,10 @@ function buildTicketHtml(sale, opts={}){
     : '';
 
   return `
-    <div style="width:300px;margin:0 auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;color:#1C1A17">
+    <div style="width:300px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111">
       ${logoHtml}
       <div style="text-align:center;font-weight:700;font-size:16px;color:${accent}">${escapeHtml(b.name || 'GastroGoan')}</div>
-      ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#8A7440;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
+      ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#B8860B;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
       ${metaLines.length ? `<div style="text-align:center;font-size:11px;color:#666;line-height:1.5;margin-top:2px">${metaLines.join('<br>')}</div>` : ''}
       ${(() => { const l = docFiscalLineas(sale, opts); return l.length ? `<div style="text-align:center;font-size:12px;margin-top:8px;line-height:1.5"><strong>${escapeHtml(l[0])}</strong>${l.slice(1).map(x=>'<br>'+escapeHtml(x)).join('')}</div>` : ''; })()}
       <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
@@ -6028,7 +6028,7 @@ function printTicket(sale, opts={}){
   // printComandaTicket: se deja que sea la propia ventana la que imprima,
   // en su window.onload, que sí espera a que todas las imágenes carguen.
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title>
-    <style>@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');@page{margin:6mm} body{margin:0;padding:14px 0}</style>
+    <style>@page{margin:6mm} body{margin:0;padding:14px 0}</style>
     </head><body>${html}
     <script>window.onload=function(){window.print();}<\/script>
     </body></html>`);

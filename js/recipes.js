@@ -406,7 +406,7 @@ function renderEscandalloFull(r){
     const pctClass = r.isBase ? 'gray' : !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
     const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? t('label.noSalePrice') : `${pct.toFixed(1)}% FC`;
     const circularWarning = recipeHasCircularReference(r)
-      ? `<div class="card" style="background:var(--red-light,#F5EBE7);border-left:3px solid var(--red);margin-bottom:12px;padding:10px 14px;font-size:13px"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> ${t('escandallo.circularWarning')}</div>`
+      ? `<div class="card" style="background:var(--red-light,#FBEAEA);border-left:3px solid var(--red);margin-bottom:12px;padding:10px 14px;font-size:13px"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> ${t('escandallo.circularWarning')}</div>`
       : '';
 
     const lines = (r.ingredients||[]).map(line => {
@@ -442,7 +442,7 @@ function renderEscandalloFull(r){
           const deliveryPrice = (r.price||0) + r.deliverySupplement;
           const deliveryBase = r.ivaPct!=null ? deliveryPrice/(1+r.ivaPct/100) : deliveryPrice;
           const deliveryPct = deliveryBase>0 ? (cost/deliveryBase*100) : null;
-          return `<div class="card" style="background:var(--bg-2,#FAF8F4);margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          return `<div class="card" style="background:var(--bg-2,#F7F6F2);margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <strong style="font-size:13px"><i class="ti ti-moped"></i> ${t('label.priceDelivery')}</strong>
             <span>${fmtMoney(deliveryPrice)} <span style="color:var(--muted)">(+${fmtMoney(r.deliverySupplement)})</span></span>
             ${deliveryPct!=null ? `<span class="badge badge-${deliveryPct>35?'red':deliveryPct>28?'amber':'green'}">${deliveryPct.toFixed(1)}% FC</span>` : ''}
@@ -556,7 +556,7 @@ function renderRecipeModal(id, r){
         </select>
       </div>
     </div>
-    ${!r.isBase ? `<div style="display:flex;align-items:center;gap:8px;background:var(--brand-cream);border-radius:8px;padding:8px 12px;margin:-6px 0 12px;font-size:12.5px;color:#8A4A3B">
+    ${!r.isBase ? `<div style="display:flex;align-items:center;gap:8px;background:var(--brand-cream);border-radius:8px;padding:8px 12px;margin:-6px 0 12px;font-size:12.5px;color:#7a5c1e">
       <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0"></i>
       ${t('msg.escandalloForOnePerson')}
     </div>` : ''}
@@ -649,7 +649,7 @@ function filterRecipeIngredientResults(id){
         ${m.type==='base' ? `<i class="ti ${area==='sala'?'ti-flask':'ti-soup'}"></i> ` : ''}${escapeHtml(m.name)} <span style="color:var(--muted)">(${m.type==='base'?`${t('label.baseShort')} — ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}`:escapeHtml(m.unit)})</span>
       </div>
     `;
-    const sectionHeader = label => `<div style="padding:5px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--bg-soft,#ECEFF1)">${label}</div>`;
+    const sectionHeader = label => `<div style="padding:5px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--bg-soft,#f4f5f7)">${label}</div>`;
     results.innerHTML =
       (baseLimited.length ? sectionHeader(t('label.elaborations')) + baseLimited.map(renderItem).join('') : '') +
       (ingLimited.length ? sectionHeader(t('label.ingredients')) + ingLimited.map(renderItem).join('') : '');
@@ -2043,7 +2043,7 @@ function printFicha(id){
   const displayName = liveRecipe ? liveRecipe.name : f.name;
   const fichaAllergens = getFichaAllergens(f);
   const algs = fichaAllergens.length
-    ? fichaAllergens.map(a=>`<span style="background:#F5EBE7;color:#8A4A3B;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(allergenLabel(a))}</span>`).join('')
+    ? fichaAllergens.map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(allergenLabel(a))}</span>`).join('')
     : t('label.none');
   const baseComensales = getFichaBaseComensales(f);
   const produccion = f.produccion || baseComensales;
@@ -2065,7 +2065,7 @@ function printFicha(id){
   ].filter(Boolean).join('');
   const body = `
     ${printReportHeaderHtml(displayName)}
-    ${metaChips ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px">${metaChips.replace(/<span>/g,'<span style="background:#FAF8F4;padding:4px 10px;border-radius:4px;font-size:11.5px;color:#555">')}</div>` : ''}
+    ${metaChips ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px">${metaChips.replace(/<span>/g,'<span style="background:#f5f5f3;padding:4px 10px;border-radius:4px;font-size:11.5px;color:#555">')}</div>` : ''}
     ${isBaseElaboration ? '' : (f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:100mm;border-radius:8px;display:block;margin:0 0 18px;object-fit:cover">` : '')}
     <h2>${t('label.ingredients')}</h2><ul class="pr-steps">${ings || `<li class="pr-empty">${t('empty.noIngredients')}</li>`}</ul>
     <h2>${t('label.prepMethod')}</h2>${steps || `<p class="pr-empty">${t('label.notSpecified')}</p>`}

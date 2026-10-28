@@ -12,7 +12,6 @@
      (no se reparte a los 5.000 negocios), así que no hace falta el
      recorte de build.sh: se enlaza el juego completo tal cual. -->
 <link rel="stylesheet" href="css/tabler-icons.min.css">
-<link rel="stylesheet" href="css/iconos-gg.css">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
@@ -121,27 +120,27 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
    <style> propio de admin-panel/plan360.html. Sin esquinas redondeadas. */
 .dr-doc{max-width:794px;margin:14px auto 0;background:#fff;border:1px solid #E7E2D9;box-shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px rgba(28,26,23,.06);color:#1C1A17;font-family:'Schibsted Grotesk',system-ui,sans-serif}
 .dr-portada{background:#1C1A17;color:#FAF8F4;padding:44px 44px 36px;border-left:8px solid #4A5D4E}
-.dr-portada-e{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#ABA59C;margin-bottom:28px}
+.dr-portada-e{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9DB0A2;margin-bottom:28px}
 .dr-portada-t{font-size:44px;font-weight:700;line-height:1;letter-spacing:-.03em}
-.dr-portada-s{font-size:15px;color:#D6D0C5;margin-top:14px;max-width:520px;line-height:1.5}
-.dr-portada-n{margin-top:26px;padding-top:14px;border-top:1px solid #3D3A34;font-size:17px;font-weight:600}
+.dr-portada-s{font-size:15px;color:#C9C4BA;margin-top:14px;max-width:520px;line-height:1.5}
+.dr-portada-n{margin-top:26px;padding-top:14px;border-top:1px solid #34312A;font-size:17px;font-weight:600}
 .dr-cuerpo{padding:8px 44px 20px}
 .dr-cap{position:relative;overflow:hidden;margin:34px -44px 20px;padding:26px 44px 22px;background:#F1EFE9;border-top:2px solid #1C1A17}
-.dr-cap-n{position:absolute;right:28px;top:-14px;font-size:120px;font-weight:700;line-height:1;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1.5px #D6D0C5}
+.dr-cap-n{position:absolute;right:28px;top:-14px;font-size:120px;font-weight:700;line-height:1;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1.5px #CFC8BA}
 .dr-cap-e{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#4A5D4E;font-weight:600;position:relative}
 .dr-cap-t{font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:4px;position:relative}
 .dr-cap-s{font-size:13px;color:#716C65;margin-top:4px;position:relative}
 .dr-p{font-size:14px;line-height:1.65;color:#3D3A34;margin:0 0 14px}
 .dr-h{font-size:14.5px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:2px solid #1C1A17}
 .dr-regla{background:#1C1A17;color:#FAF8F4;padding:16px 20px;margin:16px 0;font-size:14.5px;font-weight:600;line-height:1.45}
-.dr-regla span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7E9B84;margin-bottom:6px;font-weight:500}
+.dr-regla span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A95C;margin-bottom:6px;font-weight:500}
 .dr-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:14px 0}
 .dr-campo{border-left:3px solid #4A5D4E;background:#F7F5F0;padding:10px 14px;margin:12px 0}
 .dr-campos .dr-campo{margin:0}
 .dr-campo-l{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4A5D4E;font-weight:600;margin-bottom:6px}
 .dr-campo-v{font-size:14px;line-height:1.55;color:#1C1A17}
 .dr-campo-g .dr-campo-v{font-size:18px;font-weight:600;line-height:1.4}
-.dr-campo textarea{width:100%;box-sizing:border-box;border:1px dashed #ABA59C;background:#fff;padding:8px 10px;font:inherit;font-size:13.5px;resize:vertical;border-radius:0}
+.dr-campo textarea{width:100%;box-sizing:border-box;border:1px dashed #9FAE9F;background:#fff;padding:8px 10px;font:inherit;font-size:13.5px;resize:vertical;border-radius:0}
 .dr-pasos{border-top:1px solid #1C1A17}
 .dr-paso{display:grid;grid-template-columns:52px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid #E7E2D9}
 .dr-paso-n{font-size:26px;font-weight:700;color:#4A5D4E;letter-spacing:-.02em;line-height:1}
@@ -165,16 +164,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dr-lista>div{display:grid;grid-template-columns:26px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid #E7E2D9;font-size:13.5px;line-height:1.45;color:#3D3A34}
 .dr-lista span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4A5D4E;font-weight:600}
 .dr-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #1C1A17;border-left:1px solid #1C1A17;margin:10px 0 14px}.dr-cal-h{background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:8px;border-right:1px solid #1C1A17}.dr-cal-d{min-height:72px;border-right:1px solid #1C1A17;border-bottom:1px solid #1C1A17;padding:6px 8px;font-size:12px;font-weight:600;color:#4A5D4E}
-.dr-inv-rojo{background:#8A4A3B}.dr-inv-amarillo{background:#8A7440}.dr-inv-verde{background:#4A5D4E}
+.dr-inv-rojo{background:#A63D2F}.dr-inv-amarillo{background:#D09A2C}.dr-inv-verde{background:#4F8A5B}
 .dr-inv-bar{position:relative;display:flex;height:22px;background:#F1EFE9;margin:28px 0 10px}.dr-inv-bar i{display:block;height:100%}
 .dr-inv-bar b{position:absolute;top:-8px;bottom:-8px;width:2px;background:#1C1A17}.dr-inv-bar b span{position:absolute;top:-20px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;white-space:nowrap;color:#1C1A17}
 .dr-inv-ley{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:#3D3A34;margin-bottom:16px}.dr-inv-ley i{display:inline-block;width:10px;height:10px;margin-right:6px}
-.dr-inv-n{border-left:6px solid #D6D0C5;margin:14px 0 18px;background:#fff;border-top:1px solid #E7E2D9;border-right:1px solid #E7E2D9;border-bottom:1px solid #E7E2D9}.dr-inv-n-rojo{border-left-color:#8A4A3B}.dr-inv-n-amarillo{border-left-color:#8A7440}.dr-inv-n-verde{border-left-color:#4A5D4E}
-.dr-inv-nh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px}.dr-inv-n-rojo .dr-inv-nh{background:#F5EBE7}.dr-inv-n-amarillo .dr-inv-nh{background:#F5F0E3}.dr-inv-n-verde .dr-inv-nh{background:#E7E2D9}
+.dr-inv-n{border-left:6px solid #CFC8BA;margin:14px 0 18px;background:#fff;border-top:1px solid #E7E2D9;border-right:1px solid #E7E2D9;border-bottom:1px solid #E7E2D9}.dr-inv-n-rojo{border-left-color:#A63D2F}.dr-inv-n-amarillo{border-left-color:#C08A1E}.dr-inv-n-verde{border-left-color:#3F7A4A}
+.dr-inv-nh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px}.dr-inv-n-rojo .dr-inv-nh{background:#F6E1DC}.dr-inv-n-amarillo .dr-inv-nh{background:#F7EBD0}.dr-inv-n-verde .dr-inv-nh{background:#DFEBDF}
 .dr-inv-nh b{font-size:15px}.dr-inv-nh em{font-style:normal;font-size:12.5px;color:#3D3A34;flex:1;min-width:160px}.dr-inv-nh strong{font-size:15px;margin-left:auto;white-space:nowrap}
 .dr-inv-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;flex:none}
 .dr-inv-it{display:grid;grid-template-columns:1fr auto;gap:3px 14px;padding:10px 14px;border-top:1px solid #E7E2D9}
-.dr-inv-it-t{font-size:14px;line-height:1.4}.dr-inv-it-t b{font-weight:600}.dr-inv-z{display:inline-block;margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#4A5D4E;border:1px solid #D6D0C5;padding:0 6px}
+.dr-inv-it-t{font-size:14px;line-height:1.4}.dr-inv-it-t b{font-weight:600}.dr-inv-z{display:inline-block;margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#4A5D4E;border:1px solid #CFC8BA;padding:0 6px}
 .dr-inv-it-p{grid-column:1;font-size:13px;color:#3D3A34;line-height:1.45}
 .dr-inv-it-c{grid-column:2;grid-row:1/span 2;align-self:center;font-weight:700;font-size:15px;white-space:nowrap}
 .dr-inv-res td:last-child{text-align:right;white-space:nowrap}.dr-inv-tot td{font-weight:700;border-top:2px solid #1C1A17}
@@ -195,8 +194,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dr-tarjetas[data-n="5"]{grid-template-columns:repeat(6,1fr)}.dr-tarjetas[data-n="5"]>div{grid-column:span 2}.dr-tarjetas[data-n="5"]>div:nth-child(n+4){grid-column:span 3}
 .dr-embudo{margin:14px 0}
 .dr-embudo-f{background:#4A5D4E;color:#fff;padding:12px 16px;margin-bottom:4px;font-size:13px;line-height:1.4}
-.dr-embudo-f:nth-child(2){background:#3D3A34}.dr-embudo-f:nth-child(3){background:#1C1A17}
-.dr-embudo-f span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#D6D0C5;margin-bottom:3px}
+.dr-embudo-f:nth-child(2){background:#3A4A3E}.dr-embudo-f:nth-child(3){background:#1C1A17}
+.dr-embudo-f span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#C9D3C6;margin-bottom:3px}
 .dr-embudo-f b{display:block;font-size:14.5px;margin-bottom:2px}
 .dr-ficha{border:2px solid #1C1A17;margin:12px 0 16px;background:#fff}
 .dr-ficha-r{display:grid;grid-template-columns:minmax(150px,38%) 1fr;border-bottom:1px solid #E7E2D9;min-height:34px}
@@ -220,19 +219,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
   .dr-pie{padding:12px 18px}.dr-paso{grid-template-columns:40px 1fr;gap:10px}
 }
 @media print{.dr-doc{box-shadow:none;border:none;max-width:none;margin:0}.dr-cap,.dr-paso,.dr-check,.dr-frases,.dr-regla{break-inside:avoid}}
-
-/* DISEÑO 27/10 «Nórdico afinado» + «Comanda» (mismo lenguaje que la app): raya oliva bajo la barra, fichas con raya de
-   tinta, rotulación en mono, botones que se invierten, controles con la tipografía de la marca. */
-:root{--mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace}
-header{box-shadow:inset 0 -3px 0 var(--olive)}
-.card{border-top:3px solid var(--ink)}
-button,input,select,textarea{font-family:inherit}
-.btn:not(.btn-primary):not(.btn-danger):hover{background:var(--ink);color:#F1EFE9;border-color:var(--ink)}
-th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
-.field label,label.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
-h1,h2{letter-spacing:-.02em}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-offset:0}
-code,pre{font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -253,7 +239,7 @@ code,pre{font-family:var(--mono)}
 <div id="panel" class="wrap hidden">
   <header>
     <div class="logo">GG</div>
-    <h1>Plan 360°<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#8A7440;margin-top:4px">ARCHIVO PRIVADO</span></h1>
+    <h1>Plan 360°<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#C9A15A;margin-top:4px">ARCHIVO PRIVADO</span></h1>
     <div class="hd-btns">
       <a class="btn" href="index.html">← Panel</a>
       <button class="btn" onclick="ggAdminHardReload()">↻ Actualizar</button>
@@ -2638,7 +2624,7 @@ function plan360InversionesHtml(d, esc, negocio){
       <div class="dr-datos">
         <div class="dr-dato"><div class="dr-dato-v">${plan360InvEuros(total)}</div><div class="dr-dato-l">inversión total necesaria</div></div>
         <div class="dr-dato"><div class="dr-dato-v">${presu ? plan360InvEuros(presu) : '—'}</div><div class="dr-dato-l">presupuesto máximo que asume el negocio</div></div>
-        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? 'diferencia' : dif < 0 ? 'de exceso sobre el presupuesto' : 'de margen dentro del presupuesto'}</div></div>
+        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? 'diferencia' : dif < 0 ? 'de exceso sobre el presupuesto' : 'de margen dentro del presupuesto'}</div></div>
         <div class="dr-dato"><div class="dr-dato-v">${items.length}</div><div class="dr-dato-l">inversiones detectadas</div></div>
       </div>
       ${total ? barra : ''}
@@ -2651,7 +2637,7 @@ function plan360InversionesHtml(d, esc, negocio){
         ${PLAN360_INV_NIVELES.map(n => `<tr><td><span class="dr-inv-dot dr-inv-${n.color}"></span>Subtotal ${n.nombre}</td><td>${plan360InvEuros(sub[n.id])}</td></tr>`).join('')}
         <tr class="dr-inv-tot"><td>Inversión total necesaria</td><td>${plan360InvEuros(total)}</td></tr>
         <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
-        <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
+        <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
       </tbody></table></div>
       <div class="dr-regla"><span>★ Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
       ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
@@ -4361,7 +4347,7 @@ function plan360CierreHtml(){
           <div style="font-weight:600;margin-bottom:8px">Balance del mes</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;font-size:13px">
             <div><div style="font-weight:600;color:var(--green)">Conseguido</div><div>${hechas} de ${tareas.length} acciones hechas</div>${cons.length ? '<ul style="margin:4px 0 0;padding-left:18px">' + li(cons) + '</ul>' : ''}</div>
-            <div><div style="font-weight:600;color:#8A4A3B">Falta (lo que sigue en el mantenimiento)</div>${falta.length ? '<ul style="margin:4px 0 0;padding-left:18px">' + li(falta) + '</ul>' : '<div>Nada pendiente.</div>'}</div>
+            <div><div style="font-weight:600;color:#86600F">Falta (lo que sigue en el mantenimiento)</div>${falta.length ? '<ul style="margin:4px 0 0;padding-left:18px">' + li(falta) + '</ul>' : '<div>Nada pendiente.</div>'}</div>
           </div></div>`;
       })()}
       <div class="card" style="margin-bottom:10px">
@@ -4826,7 +4812,7 @@ function renderMantPage(clave){
     return `<div class="card mant-semana" style="margin-bottom:10px;${fecha <= hoy && hoy < addDaysStr(fecha, 7) ? 'outline:2px solid var(--ink);outline-offset:-2px' : ''}">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <strong style="flex:1;min-width:160px">${i + 1}º lunes · ${esc(mantFechaCorta(fecha))}</strong>
-        <span style="display:flex;gap:4px;flex-wrap:wrap">${items.map(it => `<i class="ti ${mantIcono(it)}" title="${esc(it.titulo || '')}" style="font-size:18px;color:${it.hecho ? 'var(--muted)' : it.tipo === 'tarea' ? '#8A4A3B' : '#4A5D4E'}"></i>`).join('')}</span>
+        <span style="display:flex;gap:4px;flex-wrap:wrap">${items.map(it => `<i class="ti ${mantIcono(it)}" title="${esc(it.titulo || '')}" style="font-size:18px;color:${it.hecho ? 'var(--muted)' : it.tipo === 'tarea' ? '#86600F' : '#2F6B3A'}"></i>`).join('')}</span>
         <select onchange="mantCambiarCanal('${sk}', this.value)" style="width:auto;flex:none">
           ${Object.keys(MANT_CANAL).map(c => `<option value="${c}" ${c === canal ? 'selected' : ''}>${MANT_CANAL[c].label}</option>`).join('')}
         </select>
@@ -4836,8 +4822,8 @@ function renderMantPage(clave){
           <input type="checkbox" ${it.hecho ? 'checked' : ''} onchange="mantMarcar('${sk}','${it.id}',this.checked)" style="width:20px;height:20px;flex:none;margin-top:2px" title="${it.tipo === 'tarea' ? 'Hecha por el negocio' : 'Entregado'}">
           <div style="flex:1;min-width:0">
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <i class="ti ${mantIcono(it)}" style="font-size:20px;color:${it.tipo === 'tarea' ? '#8A4A3B' : '#4A5D4E'}"></i>
-              <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;${it.tipo === 'tarea' ? 'background:var(--amber-l);color:#8A4A3B' : 'background:var(--green-l);color:#4A5D4E'}">${it.tipo === 'tarea' ? 'Su tarea' : 'Tu entrega'}</span>
+              <i class="ti ${mantIcono(it)}" style="font-size:20px;color:${it.tipo === 'tarea' ? '#86600F' : '#2F6B3A'}"></i>
+              <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;${it.tipo === 'tarea' ? 'background:var(--amber-l);color:#86600F' : 'background:var(--green-l);color:#2F6B3A'}">${it.tipo === 'tarea' ? 'Su tarea' : 'Tu entrega'}</span>
               <input value="${esc(it.titulo || '')}" onchange="mantEditar('${sk}','${it.id}','titulo',this.value)" style="flex:1;min-width:140px;font-weight:600;${it.hecho ? 'text-decoration:line-through;opacity:.7' : ''}">
             </div>
             <textarea rows="2" placeholder="${it.tipo === 'tarea' ? 'Instrucciones para el negocio (opcional)' : 'Lo que le entregas: el texto del reporte, el enlace de la llamada… (opcional)'}" onchange="mantEditar('${sk}','${it.id}','detalle',this.value)" style="margin-top:6px;font-size:13px">${esc(it.detalle || '')}</textarea>
@@ -5242,9 +5228,9 @@ function kpiRellenarCierre(){
    (plan360Servicio.fase, lo puede fijar el coach; si no, se deduce) y el
    panel separa todo por servicio: la lista, la agenda y las pestañas. */
 const P360_FASES = {
-  '360': {label: 'Plan 360', color: '#4A5D4E'},
+  '360': {label: 'Plan 360', color: '#2F6B3A'},
   'mant': {label: 'Mantenimiento', color: '#4E5A63'},
-  'piensa': {label: 'Se lo piensa', color: '#8A4A3B'},
+  'piensa': {label: 'Se lo piensa', color: '#86600F'},
   'fin': {label: 'Sin servicio activo', color: '#716C65'},
 };
 function p360DiaDelPrograma(b){
@@ -5382,7 +5368,7 @@ function mantCierreHtml(clave){
       <span>Tus entregas: <strong>${r.entregasHechas} de ${r.entregas}</strong></span>
     </div>
     ${k ? `<div style="font-size:13px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px">${linea('Ventas', F('netas'))}${linea('Food cost', F('foodCostPct'))}${linea('Personal', F('personalPct'))}${linea('Resultado', F('resultado'))}</div>` : '<p class="muted" style="font-size:12px;margin:0 0 6px">Los números de este mes salen cuando el negocio abre su app.</p>'}
-    ${r.pendientes.length ? `<div style="font-size:12.5px;color:#8A4A3B;margin-bottom:8px">Sin hacer: ${r.pendientes.slice(0, 6).map(esc).join(' · ')}${r.pendientes.length > 6 ? ' y ' + (r.pendientes.length - 6) + ' más' : ''}</div>` : ''}
+    ${r.pendientes.length ? `<div style="font-size:12.5px;color:#86600F;margin-bottom:8px">Sin hacer: ${r.pendientes.slice(0, 6).map(esc).join(' · ')}${r.pendientes.length > 6 ? ' y ' + (r.pendientes.length - 6) + ' más' : ''}</div>` : ''}
     ${mes.objetivo ? `<div class="field" style="margin-bottom:8px"><label>¿Se ha cumplido el objetivo? «${esc(mes.objetivo)}»</label>
       <select id="mant-c-obj" style="width:auto">${[['', 'Sin evaluar'], ['si', 'Cumplido'], ['parcial', 'A medias'], ['no', 'No cumplido']].map(([v, l]) => `<option value="${v}" ${(c.objetivo || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
     <div class="field" style="margin-bottom:8px"><label>Lo que ha ido bien</label><textarea id="mant-c-bien" rows="2">${esc(c.bien || '')}</textarea></div>
@@ -5465,8 +5451,8 @@ function mantTarjetasHtml(conMant, lista){
           <strong style="flex:1">${esc(f.name)}</strong>
           ${f.canal ? `<span style="font-size:12px"><i class="ti ${f.canal === 'video' ? 'ti-video' : 'ti-brand-whatsapp'}"></i> ${f.canal === 'video' ? 'Videollamada' : 'WhatsApp'}</span>` : '<span class="muted" style="font-size:12px">Sin plan esta semana</span>'}
         </div>
-        ${f.tuyas.length ? `<div style="font-size:13px"><span style="color:#4A5D4E;font-weight:600">Tú:</span> ${lista(f.tuyas, 3)}</div>` : ''}
-        ${f.suyas.length ? `<div style="font-size:13px"><span style="color:#8A4A3B;font-weight:600">Negocio:</span> ${lista(f.suyas, 3)}</div>` : ''}
+        ${f.tuyas.length ? `<div style="font-size:13px"><span style="color:#2F6B3A;font-weight:600">Tú:</span> ${lista(f.tuyas, 3)}</div>` : ''}
+        ${f.suyas.length ? `<div style="font-size:13px"><span style="color:#86600F;font-weight:600">Negocio:</span> ${lista(f.suyas, 3)}</div>` : ''}
         ${f.atrasadas.length ? `<div style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${f.atrasadas.length} sin hacer de semanas pasadas: ${lista(f.atrasadas, 2)}</div>` : ''}
         ${f.respuestas.length ? `<div style="font-size:13px;color:var(--olive)"><i class="ti ti-message-circle"></i> Te ha contestado en: ${lista(f.respuestas, 2)}</div>` : ''}
         ${(() => {
@@ -6208,8 +6194,8 @@ function plan360ConstruirHtmlLibroMarcaPdf(negocio, imagenesDeArea, nombreNegoci
     .lm-cover{background:#1C1A17;color:#FAF8F4;min-height:257mm;padding:20mm 14mm;position:relative;page-break-after:always}
     .lm-cover-rail{position:absolute;top:0;left:0;width:8px;height:100%;background:#4A5D4E}
     .lm-cover-title{font-size:52px;font-weight:800;line-height:1.03;letter-spacing:-.01em;margin:60px 0 18px}
-    .lm-cover-lede{font-size:15px;color:#D6D0C5;max-width:480px;line-height:1.55}
-    .lm-idx{display:grid;grid-template-columns:1fr 1fr;column-gap:32px;row-gap:9px;margin-top:50px;padding-top:24px;border-top:1px solid #3D3A34}
+    .lm-cover-lede{font-size:15px;color:#C9C4BA;max-width:480px;line-height:1.55}
+    .lm-idx{display:grid;grid-template-columns:1fr 1fr;column-gap:32px;row-gap:9px;margin-top:50px;padding-top:24px;border-top:1px solid #3A362F}
     .lm-idx-item{display:flex;gap:10px;align-items:baseline;font-size:14px}
     .lm-idx-num{font-family:'IBM Plex Mono',monospace;color:#4A5D4E;font-size:12px;width:22px}
     .lm-cover-foot{position:absolute;bottom:20mm;left:14mm;right:14mm;display:flex;justify-content:space-between;align-items:flex-end}
@@ -6220,11 +6206,11 @@ function plan360ConstruirHtmlLibroMarcaPdf(negocio, imagenesDeArea, nombreNegoci
     .lm-subtitle{font-size:13px;color:#716C65;margin-top:4px}
     .lm-sub{position:relative;z-index:1;page-break-inside:avoid}
     .lm-bloque{margin-bottom:16px;page-break-inside:avoid}
-    .lm-q{font-size:11.5px;color:#716C65;font-style:italic;margin-bottom:4px;line-height:1.4}
+    .lm-q{font-size:11.5px;color:#8B8579;font-style:italic;margin-bottom:4px;line-height:1.4}
     .lm-p{font-size:13.5px;line-height:1.6;color:#3D3A34}
     .lm-corta{display:flex;flex-direction:column;gap:2px}
     .lm-corta-valor{font-size:19px;font-weight:700;color:#1C1A17}
-    .lm-corta-label{font-size:11px;color:#716C65}
+    .lm-corta-label{font-size:11px;color:#8B8579}
     .lm-lista{display:flex;flex-direction:column;gap:6px}
     .lm-lista-item{display:flex;gap:9px;align-items:baseline;font-size:13.5px;color:#3D3A34}
     .lm-lista-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4A5D4E;font-weight:600;width:18px;flex:none}
@@ -6234,20 +6220,20 @@ function plan360ConstruirHtmlLibroMarcaPdf(negocio, imagenesDeArea, nombreNegoci
     .lm-dafo-cuad:nth-child(n+3){border-bottom:none}
     .lm-dafo-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
     .lm-dafo-item{font-size:12.5px;color:#3D3A34;line-height:1.5;margin-bottom:4px}
-    .lm-dafo-item.lm-muted{color:#ABA59C}
+    .lm-dafo-item.lm-muted{color:#B5AE9F}
     .lm-mood{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
     .lm-mood img{width:100px;height:100px;object-fit:cover;border:1px solid #E7E2D9}
   </style>
   </head><body>
   <section class="lm-cover">
     <div class="lm-cover-rail"></div>
-    <div class="lm-eyebrow" style="color:#ABA59C">GASTROGOAN · PLAN 360°</div>
+    <div class="lm-eyebrow" style="color:#9DB0A2">GASTROGOAN · PLAN 360°</div>
     <div class="lm-cover-title">Libro de<br>marca</div>
     <div class="lm-cover-lede">El retrato completo de tu negocio — misión, identidad, cocina, sala, equipo, números y captación — en un único documento.</div>
     <div class="lm-idx">${indice}</div>
     <div class="lm-cover-foot">
-      <div><div style="font-size:20px;font-weight:700">${esc(nombreNegocio)}</div><div style="font-size:12px;color:#716C65;margin-top:2px">${esc(fecha)}</div></div>
-      <div class="lm-eyebrow" style="color:#716C65;text-align:right">Elaborado junto a<br>tu coach GastroGoan</div>
+      <div><div style="font-size:20px;font-weight:700">${esc(nombreNegocio)}</div><div style="font-size:12px;color:#8B8579;margin-top:2px">${esc(fecha)}</div></div>
+      <div class="lm-eyebrow" style="color:#5C5749;text-align:right">Elaborado junto a<br>tu coach GastroGoan</div>
     </div>
   </section>
   ${paginasAreas}
@@ -6830,9 +6816,9 @@ function renderInversionesPage(day){
     </div>
     ${PLAN360_INV_NIVELES.map(n => {
       const idx = d.inversiones.map((x, i) => [x, i]).filter(([x]) => (x.nivel || 'esencial') === n.id);
-      const color = {rojo: '#8A4A3B', amarillo: '#8A7440', verde: '#4A5D4E'}[n.color];
+      const color = {rojo: '#A63D2F', amarillo: '#C08A1E', verde: '#3F7A4A'}[n.color];
       // El ámbar del borde no llega a 4,5:1 como texto: el título va más oscuro.
-      const colorTexto = {rojo: '#8A4A3B', amarillo: '#8A4A3B', verde: '#4A5D4E'}[n.color];
+      const colorTexto = {rojo: '#A63D2F', amarillo: '#86600F', verde: '#3F7A4A'}[n.color];
       return `<div class="card" style="margin-top:14px;border-left:6px solid ${color}">
         <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><strong style="color:${colorTexto}">${n.nombre}</strong><span class="muted" style="font-size:13px">${esc(n.resumen)}</span></div>
         <p class="muted" style="font-size:12.5px;margin:4px 0 10px">${esc(n.ejemplo)}</p>
@@ -7222,17 +7208,17 @@ function marcarTeamBuildingHecha(day){
    primero — exactamente el mismo criterio que ya usa el resto de
    pruebas (el coach arbitra en vivo, no hace falta un buzzer). */
 const PLAN360_TB_DIFICULTAD_LABEL = {facil: 'Fácil', media: 'Media', dificil: 'Difícil'};
-const PLAN360_TB_DIFICULTAD_COLOR = {facil: 'var(--green)', media: 'var(--amber, #8A7440)', dificil: 'var(--red)'};
+const PLAN360_TB_DIFICULTAD_COLOR = {facil: 'var(--green)', media: 'var(--amber, #c98a1f)', dificil: 'var(--red)'};
 // Los 4 colores + forma de Kahoot de verdad (rojo triángulo, azul rombo,
 // amarillo círculo, verde cuadrado) — así las opciones se pueden nombrar
 // a voces ("¡la roja!", "¡el rombo azul!") sin tener que leer el texto
 // entero, que es justo el punto de ese diseño y lo que lo hace sentir
 // como el juego real y no cuatro cajas blancas con un borde.
 const PLAN360_TB_FORMAS = [
-  {color: '#8A4A3B', icon: 'ti-triangle'},
-  {color: '#7E9B84', icon: 'ti-diamond'},
-  {color: '#8A7440', icon: 'ti-circle'},
-  {color: '#4E5A63', icon: 'ti-square'},
+  {color: '#E53E3E', icon: 'ti-triangle'},
+  {color: '#3182CE', icon: 'ti-diamond'},
+  {color: '#D69E2E', icon: 'ti-circle'},
+  {color: '#38A169', icon: 'ti-square'},
 ];
 let tbTimerHandle = null;
 let tbTimerRestante = 0;
@@ -7414,12 +7400,12 @@ function tbRenderKahootResultado(box, day, tb){
       <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
         <div style="flex:1">
           <div style="font-weight:700">${esc(tb.equipoA)}</div>
-          <div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#8A7440)':''}">${k.puntos.A}</div>
+          <div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${k.puntos.A}</div>
         </div>
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1">
           <div style="font-weight:700">${esc(tb.equipoB)}</div>
-          <div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#8A7440)':''}">${k.puntos.B}</div>
+          <div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${k.puntos.B}</div>
         </div>
       </div>
       <div style="margin-top:12px;font-size:16px">${empate ? '🤝 Empate en el Test' : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana el Test`}</div>
@@ -7582,7 +7568,7 @@ function tbRenderBanco(day, tb, sen){
         <strong>Prueba 2 — ${esc(sen.label)}</strong>
       </div>
       <p class="muted" style="margin-bottom:14px">${esc(PLAN360_TB_BANCO_HINT[sen.id] || '')}</p>
-      ${sen.necesitaAudio ? `<p style="font-size:12px;color:var(--amber,#8A7440);margin:-6px 0 14px"><i class="ti ti-alert-triangle"></i> Los sonidos subidos son solo de esta sesión: si refrescas la página hay que volver a subirlos.</p>` : ''}
+      ${sen.necesitaAudio ? `<p style="font-size:12px;color:var(--amber,#c98a1f);margin:-6px 0 14px"><i class="ti ti-alert-triangle"></i> Los sonidos subidos son solo de esta sesión: si refrescas la página hay que volver a subirlos.</p>` : ''}
       ${banco.items.map((it, idx) => `
         <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border);flex-wrap:wrap">
           ${sen.necesitaAudio ? (it.url
@@ -7621,9 +7607,9 @@ function tbRenderBancoResultado(day, tb, sen, banco){
     <div class="card" style="background:var(--ink);color:#fff;text-align:center;padding:28px 16px">
       <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999)">Resultado de ${esc(sen.label)}</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
-        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoA)}</div><div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#8A7440)':''}">${totalA}</div></div>
+        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoA)}</div><div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${totalA}</div></div>
         <div style="opacity:.5;font-size:20px">—</div>
-        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#8A7440)':''}">${totalB}</div></div>
+        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div></div>
       </div>
       <div style="margin-top:12px;font-size:16px">${empate ? `🤝 Empate en ${esc(sen.label)}` : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana ${esc(sen.label)}`}</div>
     </div>
@@ -7843,7 +7829,7 @@ function tbRenderVistaJugando(day, tb, v){
           ${grid.map((fila, f) => fila.map((letra, c) => {
             const enc = celdaEncontrada(f, c);
             const sel = tbSopaSel && tbSopaSel.f === f && tbSopaSel.c === c;
-            const bg = enc ? (enc.equipo === 'A' ? '#ECEFF1' : '#F5F0E3') : (sel ? 'var(--ink)' : '#fff');
+            const bg = enc ? (enc.equipo === 'A' ? '#DCEEFF' : '#FFE3D6') : (sel ? 'var(--ink)' : '#fff');
             const color = sel ? '#fff' : (enc ? 'var(--ink)' : 'inherit');
             return `<div onclick="tbSopaClick(${day},${f},${c})" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${bg};color:${color};border-radius:3px;cursor:pointer;font-size:clamp(9px,2.4vw,16px)">${letra}</div>`;
           }).join('')).join('')}
@@ -7875,9 +7861,9 @@ function tbRenderVistaResultado(day, tb, v){
     <div class="card" style="background:var(--ink);color:#fff;text-align:center;padding:28px 16px">
       <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999)">Resultado de Vista</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
-        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoA)}</div><div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#8A7440)':''}">${totalA}</div></div>
+        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoA)}</div><div style="font-size:44px;font-weight:800;${ganaA?'color:var(--brand-orange,#F0A868)':''}">${totalA}</div></div>
         <div style="opacity:.5;font-size:20px">—</div>
-        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#8A7440)':''}">${totalB}</div></div>
+        <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div></div>
       </div>
       <div style="margin-top:12px;font-size:16px">${empate ? '🤝 Empate en Vista' : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana Vista`}</div>
     </div>
@@ -8062,7 +8048,7 @@ function tbRenderCreatividadPreparando(box, day, tb){
       <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Comprando, preparando y emplatando…</div>
       <div id="tb-creat-num" style="font-size:56px;font-weight:800;font-variant-numeric:tabular-nums">${tbCreatFormatoTiempo(c.tiempoMin * 60)}</div>
       <div style="height:10px;border-radius:6px;background:var(--border);margin:14px 0;overflow:hidden">
-        <div id="tb-creat-barra" style="height:100%;width:100%;background:var(--brand-orange,#8A7440);transition:width 1s linear"></div>
+        <div id="tb-creat-barra" style="height:100%;width:100%;background:var(--brand-orange,#F0A868);transition:width 1s linear"></div>
       </div>
       <p class="muted" style="margin:0">Presupuesto ${c.presupuesto}€ por equipo · ${esc(c.brief)}</p>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">
@@ -8089,7 +8075,7 @@ function tbCreatividadArrancarReloj(day){
     const restante = totalSeg - (Date.now() - c.inicioAt) / 1000;
     const num = document.getElementById('tb-creat-num');
     const barra = document.getElementById('tb-creat-barra');
-    if(num){ num.textContent = tbCreatFormatoTiempo(restante); num.style.color = restante <= 0 ? 'var(--red,#8A4A3B)' : ''; }
+    if(num){ num.textContent = tbCreatFormatoTiempo(restante); num.style.color = restante <= 0 ? 'var(--red,#E53E3E)' : ''; }
     if(barra) barra.style.width = Math.max(0, Math.min(100, (restante / totalSeg) * 100)) + '%';
   };
   tick();
@@ -8118,7 +8104,7 @@ function tbRenderCreatividadEvaluando(box, day, tb){
     <div class="card">
       <strong>Presentación y evaluación</strong>
       <p class="muted" style="margin:6px 0 14px">Cada equipo presenta su plato. Sube una foto y puntúa del 0 al 10 en cada criterio — el de más nota se lleva los ${c.puntosPrueba} puntos de la prueba.</p>
-      <p style="font-size:12px;color:var(--amber,#8A7440);margin:-6px 0 14px"><i class="ti ti-alert-triangle"></i> Las fotos son solo de esta sesión: si refrescas la página antes del marcador final, hay que volver a subirlas.</p>
+      <p style="font-size:12px;color:var(--amber,#c98a1f);margin:-6px 0 14px"><i class="ti ti-alert-triangle"></i> Las fotos son solo de esta sesión: si refrescas la página antes del marcador final, hay que volver a subirlas.</p>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">
         ${tbCreatividadFotoBox(day, 'A', tb.equipoA, c.fotoA)}
         ${tbCreatividadFotoBox(day, 'B', tb.equipoB, c.fotoB)}
@@ -8223,13 +8209,13 @@ function tbRenderCreatividadResultado(box, day, tb){
       <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
         <div style="flex:1;${ganaA ? 'transform:scale(1.08)' : ''}">
           <div style="font-weight:700">${esc(tb.equipoA)}${ganaA ? ' 🏆' : ''}</div>
-          <div style="font-size:44px;font-weight:800;${ganaA ? 'color:var(--brand-orange,#8A7440)' : ''}">${subA}</div>
+          <div style="font-size:44px;font-weight:800;${ganaA ? 'color:var(--brand-orange,#F0A868)' : ''}">${subA}</div>
           <div style="font-size:12px;opacity:.7">${c.puntos.A} pto${c.puntos.A === 1 ? '' : 's'} de la prueba</div>
         </div>
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1;${ganaB ? 'transform:scale(1.08)' : ''}">
           <div style="font-weight:700">${esc(tb.equipoB)}${ganaB ? ' 🏆' : ''}</div>
-          <div style="font-size:44px;font-weight:800;${ganaB ? 'color:var(--brand-orange,#8A7440)' : ''}">${subB}</div>
+          <div style="font-size:44px;font-weight:800;${ganaB ? 'color:var(--brand-orange,#F0A868)' : ''}">${subB}</div>
           <div style="font-size:12px;opacity:.7">${c.puntos.B} pto${c.puntos.B === 1 ? '' : 's'} de la prueba</div>
         </div>
       </div>
@@ -8238,8 +8224,8 @@ function tbRenderCreatividadResultado(box, day, tb){
     ${(c.fotoA || c.fotoB) ? `
     <div class="card">
       <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
-        ${c.fotoA ? `<div style="text-align:center"><img src="${esc(c.fotoA)}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;border:${ganaA ? '3px solid var(--brand-orange,#8A7440)' : '1px solid var(--border)'}"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoA)}</div></div>` : ''}
-        ${c.fotoB ? `<div style="text-align:center"><img src="${esc(c.fotoB)}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;border:${ganaB ? '3px solid var(--brand-orange,#8A7440)' : '1px solid var(--border)'}"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoB)}</div></div>` : ''}
+        ${c.fotoA ? `<div style="text-align:center"><img src="${esc(c.fotoA)}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;border:${ganaA ? '3px solid var(--brand-orange,#F0A868)' : '1px solid var(--border)'}"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoA)}</div></div>` : ''}
+        ${c.fotoB ? `<div style="text-align:center"><img src="${esc(c.fotoB)}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;border:${ganaB ? '3px solid var(--brand-orange,#F0A868)' : '1px solid var(--border)'}"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoB)}</div></div>` : ''}
       </div>
     </div>` : ''}
     <button class="btn btn-sm" onclick="tbCreatividadRepetir(${day})">↺ Repetir Creatividad desde el principio</button>
@@ -8331,8 +8317,8 @@ function tbMostrarGanadorFinal(day){
   const elB = document.getElementById('tb-final-totalB');
   const elG = document.getElementById('tb-final-ganador');
   const btn = document.getElementById('tb-final-btn-ganador');
-  if(elA && ganaA) elA.style.color = 'var(--brand-orange,#8A7440)';
-  if(elB && ganaB) elB.style.color = 'var(--brand-orange,#8A7440)';
+  if(elA && ganaA) elA.style.color = 'var(--brand-orange,#F0A868)';
+  if(elB && ganaB) elB.style.color = 'var(--brand-orange,#F0A868)';
   if(elG) elG.textContent = `🏆 Gana ${ganaA ? tb.equipoA : tb.equipoB}`;
   if(btn) btn.style.display = 'none';
   tbAcorde();
@@ -8359,7 +8345,7 @@ function tbRevelarPremio(ganador, premio, foto){
   if(!ganador) return;
   const overlay = document.createElement('div');
   overlay.id = 'tb-revelado';
-  overlay.style.cssText = 'position:fixed;inset:0;background:#1C1A17;color:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;font-family:inherit;animation:tbFadeIn .4s ease;overflow:auto';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#0A0A0A;color:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;font-family:inherit;animation:tbFadeIn .4s ease;overflow:auto';
   overlay.innerHTML = `
     <style>
       @keyframes tbFadeIn{from{opacity:0}to{opacity:1}}
@@ -8372,11 +8358,11 @@ function tbRevelarPremio(ganador, premio, foto){
     <div id="tb-rev-suspense" style="font-size:16px;letter-spacing:3px;text-transform:uppercase;color:var(--muted,#999);animation:tbPulso 1s infinite">Calculando resultados…</div>
     <div id="tb-rev-final" style="display:none">
       <div style="font-size:64px;animation:tbFlota 2s ease-in-out infinite">🏆</div>
-      <div style="font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--brand-orange,#8A7440);margin-top:10px">¡Habéis ganado!</div>
+      <div style="font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--brand-orange,#F0A868);margin-top:10px">¡Habéis ganado!</div>
       <div style="font-size:44px;font-weight:800;margin-top:6px">${esc(ganador)}</div>
-      ${foto ? `<img src="${esc(foto)}" style="width:140px;height:140px;object-fit:cover;border-radius:14px;margin-top:18px;border:3px solid var(--brand-orange,#8A7440)">` : ''}
+      ${foto ? `<img src="${esc(foto)}" style="width:140px;height:140px;object-fit:cover;border-radius:14px;margin-top:18px;border:3px solid var(--brand-orange,#F0A868)">` : ''}
       ${premio ? `<div style="margin-top:24px;padding:16px 24px;border:1px solid rgba(255,255,255,.25);border-radius:12px;font-size:18px;max-width:460px">${esc(premio)}</div>` : ''}
-      <button onclick="document.getElementById('tb-revelado').remove()" style="margin-top:32px;background:#fff;color:#1C1A17;border:none;padding:12px 26px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">Cerrar</button>
+      <button onclick="document.getElementById('tb-revelado').remove()" style="margin-top:32px;background:#fff;color:#0A0A0A;border:none;padding:12px 26px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">Cerrar</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -8388,7 +8374,7 @@ function tbRevelarPremio(ganador, premio, foto){
     tbAcorde();
     // Un puñado de confeti CSS, nada de librerías: cuadraditos de color
     // cayendo desde arriba, cada uno con su propio retraso y deriva.
-    const colores = ['#8A7440', '#8A4A3B', '#7E9B84', '#4E5A63', '#8A7440'];
+    const colores = ['#F0A868', '#E53E3E', '#3182CE', '#38A169', '#D69E2E'];
     const capa = document.getElementById('tb-rev-confeti');
     for(let i = 0; i < 40; i++){
       const pieza = document.createElement('div');

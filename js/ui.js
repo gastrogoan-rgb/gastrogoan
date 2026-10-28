@@ -10,7 +10,7 @@
 function printReportWindow(title, bodyHtml, opts={}){
   const win = window.open('', '_blank', opts.winSize || 'width=760,height=860');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  const accent = (DB.business && DB.business.brandColor) || '#4A5D4E';   // oliva de la marca (antes un marrón que no era de GastroGoan)
+  const accent = (DB.business && DB.business.brandColor) || '#B8804B';
   const fechaGen = new Date().toLocaleString(localeActual(), {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
   // Es un documento INTERNO del propio negocio (para un proveedor, un
   // empleado o una inspección) — no lleva nada de marca GastroGoan, el
@@ -19,38 +19,38 @@ function printReportWindow(title, bodyHtml, opts={}){
   // franja de color a modo de "plantilla de SaaS".
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
       *{box-sizing:border-box}
-      body{font-family:'Schibsted Grotesk',Arial,Helvetica,sans-serif;color:#1C1A17;margin:0;padding:0;font-size:13px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{font-family:'Inter',Arial,Helvetica,sans-serif;color:#232019;margin:0;padding:0;font-size:13px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .pr-page{max-width:720px;margin:0 auto;padding:26px 6px 30px}
-      .pr-letterhead{display:flex;justify-content:space-between;align-items:baseline;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#716C65;text-transform:uppercase;letter-spacing:1.1px;margin-bottom:22px}
-      .pr-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:6px;padding-bottom:14px;border-bottom:2px solid #1C1A17}
+      .pr-letterhead{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;color:#8a857c;text-transform:uppercase;letter-spacing:1.1px;margin-bottom:22px}
+      .pr-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:6px;padding-bottom:14px;border-bottom:2px solid ${accent}}
       .pr-logo{max-height:38px;max-width:130px;object-fit:contain;flex:none}
-      h1{font-size:23px;margin:0 0 3px;font-weight:800;letter-spacing:-.4px;color:#1C1A17}
-      .pr-subtitle{font-size:12.5px;color:#716C65;margin-top:2px}
-      .pr-meta{font-size:12px;color:#716C65}
-      h2{font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:${accent};font-weight:600;margin:26px 0 9px;padding-bottom:6px;border-bottom:1px dashed #ABA59C}
-      h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#1C1A17}
+      h1{font-size:23px;margin:0 0 3px;font-weight:800;letter-spacing:-.3px;color:#161412}
+      .pr-subtitle{font-size:12.5px;color:#6b6660;margin-top:2px}
+      .pr-meta{font-size:12px;color:#57534d}
+      h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.7px;color:${accent};font-weight:700;margin:26px 0 9px;padding-bottom:5px;border-bottom:1px solid #eae7e1}
+      h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#161412}
       .pr-page p{margin:0 0 10px}
       .pr-page ul{margin:0 0 12px 18px}
       .pr-page ul li{margin-bottom:5px}
       table{width:100%;border-collapse:collapse;margin-bottom:8px}
       th,td{padding:7px 4px;text-align:left;font-size:12.5px;vertical-align:top}
-      th{font-family:'IBM Plex Mono',monospace;font-weight:500;border-bottom:1px solid #1C1A17;text-transform:uppercase;font-size:10px;color:#716C65;letter-spacing:.6px}
-      td{border-bottom:1px dashed #D6D0C5}
-      .pr-num{text-align:right;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:500}
+      th{font-weight:700;border-bottom:1.5px solid #ddd9d2;text-transform:uppercase;font-size:10px;color:#8a857c;letter-spacing:.4px}
+      td{border-bottom:1px solid #f0eee9}
+      .pr-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500}
       .pr-total-row td{font-weight:800;border-top:2px solid #1c1a17;border-bottom:none;padding-top:10px;font-size:14.5px}
-      .pr-note{font-size:12px;color:#716C65;font-style:italic;margin-top:6px}
-      .pr-empty{font-size:12px;color:#ABA59C;font-style:italic;padding:8px 0}
-      .pr-divider{border-top:1px dashed #ABA59C;margin:16px 0}
+      .pr-note{font-size:12px;color:#7a756d;font-style:italic;margin-top:6px}
+      .pr-empty{font-size:12px;color:#a19c93;font-style:italic;padding:8px 0}
+      .pr-divider{border-top:1px dashed #d8d4cc;margin:16px 0}
       ul.pr-steps{padding-left:20px;margin:0}
       ul.pr-steps li{margin-bottom:7px}
       .manual-step{display:flex;gap:10px;margin-bottom:8px}
       .manual-step .sn{flex:none;width:22px;height:22px;border-radius:50%;background:${accent};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
       .manual-step .st{font-size:12.5px;line-height:1.5}
-      .manual-tip,.manual-warning{background:#F5F0E3;border-left:3px solid ${accent};border-radius:0;padding:9px 13px;margin:12px 0;font-size:12px}
-      .manual-detail h4{font-size:13px;color:#716C65;text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px}
-      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #E7E2D9;font-size:10px;color:#ABA59C}
+      .manual-tip,.manual-warning{background:#faf6ee;border-left:3px solid ${accent};border-radius:0 6px 6px 0;padding:9px 13px;margin:12px 0;font-size:12px}
+      .manual-detail h4{font-size:13px;color:#57534d;text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px}
+      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #eae7e1;font-size:10px;color:#b3ada2}
       @media print{
         .pr-page{padding:0 4mm 10mm}
         @page{margin:15mm 14mm}
@@ -1576,7 +1576,7 @@ const FOLDERS = {
     ]
   },
   sala: {
-    icon:'ti-table', color:'var(--olive)',
+    icon:'ti-users', color:'var(--olive)',
     modules:[
       {id:'tpv', icon:'ti-device-desktop'},
       {id:'reservas', icon:'ti-calendar-event'},
@@ -1595,7 +1595,7 @@ const FOLDERS = {
     ]
   },
   gestion: {
-    icon:'ti-chart-bar', color:'var(--ink)',
+    icon:'ti-coin', color:'var(--ink)',
     modules:[
       {id:'manual', icon:'ti-book'},
       {id:'minegocio', icon:'ti-building-store'},
@@ -1637,34 +1637,6 @@ function rememberLastArea(key){
     lastArea = key;
     localStorage.setItem('gg_last_area', key);
   }
-}
-
-
-/* ============== Menú lateral (escritorio) ============== */
-// Es el menú de las maquetas «Nórdico afinado» y «Comanda»: siempre a la vista,
-// con el sitio donde estás marcado. En móvil no existe (la cabecera de siempre).
-function renderSideNav(){
-  const nav = document.getElementById('side-nav');
-  if(!nav) return;
-  const session = getAccessSession();
-  const owner = !!(session && session.type === 'owner');
-  const emp = session && session.type === 'employee';
-  const view = (document.querySelector('.view.active')?.id || '').replace('view-','');
-  const folder = typeof currentFolder !== 'undefined' ? currentFolder : null;
-  const items = [];
-  if(!emp) items.push({k:'home', icon:'ti-layout-dashboard', label:t('nav.inicio') !== 'nav.inicio' ? t('nav.inicio') : 'Inicio', go:"goHome()", on: view==='home'});
-  if(owner) items.push({k:'dashboard', icon:'ti-chart-bar', label:t('module.gestion.dashboard.name'), go:"navigate('dashboard')", on: view==='dashboard'});
-  const area = emp ? session.area : null;
-  if(!emp || area==='sala') items.push({k:'sala', icon:'ti-table', label:t('folder.sala.title'), go:"openFolder('sala')", on: folder==='sala' && view!=='dashboard' && !['carta','pedidos'].includes(view)});
-  if(!emp || area==='cocina') items.push({k:'cocina', icon:'ti-tools-kitchen-2', label:t('folder.cocina.title'), go:"openFolder('cocina')", on: folder==='cocina' && view!=='dashboard' && !['carta','pedidos'].includes(view)});
-  if(owner){
-    items.push({k:'carta', icon:'ti-glass-cocktail', label:gl({es:'Carta',ca:'Carta',en:'Menu'}), go:"navigate('carta')", on: view==='carta'});
-    items.push({k:'pedidos', icon:'ti-shopping-cart', label:gl({es:'Compras',ca:'Compres',en:'Purchasing'}), go:"navigate('pedidos')", on: view==='pedidos'});
-    items.push({k:'economia', icon:'ti-coin', label:t('module.gestion.economia.name'), go:"navigate('economia')", on: view==='economia'});
-    items.push({k:'minegocio', icon:'ti-building-store', label:t('module.gestion.minegocio.name'), go:"navigate('minegocio')", on: view==='minegocio'});
-  }
-  nav.innerHTML = `<div class="side-brand"><span class="side-gg">gg</span><span class="side-name">GastroGoan</span></div>` +
-    items.map(i => `<button type="button" class="side-item${i.on?' active':''}" onclick="${i.go}"${i.on?' aria-current="page"':''}><i class="ti ${i.icon}" aria-hidden="true"></i><span>${escapeHtml(i.label)}</span></button>`).join('');
 }
 
 /* ============== Navigation ============== */
@@ -1733,7 +1705,6 @@ function lockEditMode(){
 // equipo. .owner-strict (gobernado por esta clase) solo se muestra en una
 // sesión de propietario de verdad.
 function applyOwnerSessionEditRights(){
-  setTimeout(renderSideNav, 0);
   editUnlocked = true;
   document.body.classList.add('edit-unlocked', 'owner-session');
 }
@@ -1745,7 +1716,6 @@ function applyOwnerSessionEditRights(){
 // si no, se queda en vista de solo consulta, sin ningún control para
 // cambiarlo. Se llama al iniciar sesión de empleado y al reanudarla.
 function applyEmployeeSessionEditRights(employeeId){
-  setTimeout(renderSideNav, 0);
   document.body.classList.remove('owner-session');
   const emp = (DB.employees||[]).find(e => e.id === employeeId);
   if(emp && emp.canUnlockEdit){
@@ -1944,7 +1914,6 @@ function navigate(view){
 
   renderView(view);
   location.hash = view;
-  renderSideNav();
 }
 
 // Gestión (Gestión Económica, Mi Negocio) es exclusiva del propietario: una

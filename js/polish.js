@@ -163,7 +163,7 @@ function mostrarAvisoVersionNueva(build){
     // ocupan toda la ventana: si el aviso de actualizar queda debajo de una
     // de ellas, ese aparato no se puede actualizar nunca — que es justo lo
     // que pasó con la pantalla de licencia desactivada.
-    'z-index:100002', 'background:var(--brand-orange,#8A7440)', 'color:#fff',
+    'z-index:100002', 'background:var(--brand-orange,#D97C3F)', 'color:#fff',
     'padding:14px 18px', 'border-radius:12px',
     'box-shadow:0 6px 24px rgba(0,0,0,.28)',
     'display:flex', 'align-items:center', 'justify-content:center',
@@ -172,7 +172,7 @@ function mostrarAvisoVersionNueva(build){
   ].join(';');
   barra.innerHTML = `<span style="flex:1 1 240px;min-width:0"><i class="ti ti-download"></i> ${t('app.newVersion').replace('${fecha}', escapeHtml(build))}</span>`
     + `<span style="display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto">`
-    + `<button class="btn" style="background:#fff;color:var(--brand-orange,#8A7440);border:none;min-height:44px;padding:10px 18px;font-weight:700;white-space:nowrap" onclick="aplicarVersionNueva()">${t('app.newVersionBtn')}</button>`
+    + `<button class="btn" style="background:#fff;color:var(--brand-orange,#D97C3F);border:none;min-height:44px;padding:10px 18px;font-weight:700;white-space:nowrap" onclick="aplicarVersionNueva()">${t('app.newVersionBtn')}</button>`
     + `<button class="btn" style="background:none;border:1px solid rgba(255,255,255,.6);color:#fff;min-height:44px;padding:10px 14px;white-space:nowrap" onclick="document.getElementById('gg-version-nueva').remove()">${t('app.newVersionLater')}</button>`
     + `</span>`;
   document.body.appendChild(barra);

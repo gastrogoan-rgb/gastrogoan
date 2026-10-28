@@ -1093,16 +1093,16 @@ function renderDashboard(){
       <div style="font-size:15px;color:var(--muted)">${t('dash.noSalesYet')}</div>
     </div>
   ` : `
-    <div class="card dash-hero">
-      <div class="dash-hero-label">${t('dash.hero.salesToday')}</div>
-      <div class="dash-hero-num">${fmtMoney(todaySales)}</div>
-      <div class="dash-hero-deltas">
+    <div class="card" style="text-align:center">
+      <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600">${t('dash.hero.salesToday')}</div>
+      <div style="font-size:44px;font-weight:800;margin:6px 0;line-height:1">${fmtMoney(todaySales)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px">
         ${deltaBadge(deltaYesterday, t('dash.hero.vsYesterday'))}
         ${deltaBadge(deltaLastWeek, t('dash.hero.vsLastWeek'))}
       </div>
-      <div class="dash-hero-meta">
-        <div><span>${t('dash.hero.ticketsToday')}</span><strong>${todayTicketCount}</strong></div>
-        <div><span>${t('dash.avgTicket')}</span><strong>${fmtMoney(todayAvgTicket)}</strong></div>
+      <div style="display:flex;gap:24px;justify-content:center;font-size:13px;color:var(--muted)">
+        <div>${t('dash.hero.ticketsToday')}: <strong style="color:var(--text)">${todayTicketCount}</strong></div>
+        <div>${t('dash.avgTicket')}: <strong style="color:var(--text)">${fmtMoney(todayAvgTicket)}</strong></div>
       </div>
     </div>
   `;
@@ -1397,7 +1397,7 @@ function renderSalesHeatmap(){
               <td style="font-size:11px;color:var(--muted);font-weight:600;padding:4px;white-space:nowrap">${dl}</td>
               ${grid[di].map((v,hi) => {
                 const intensity = v/maxVal;
-                const bg = v>0 ? `rgba(74,93,78,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
+                const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
                 return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" class="txt-xs" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
               }).join('')}
             </tr>
@@ -2445,7 +2445,7 @@ function openUnmatchedPaymentsModal(){
           <tr>
             <td>${escapeHtml((p.createdAt||p.detectedAt||'').slice(0,16).replace('T',' '))}</td>
             <td style="font-weight:700">${fmtMoney(p.amount||0)}</td>
-            <td style="font-family:var(--mono);font-size:11px">${escapeHtml(p.orderRef||'—')}</td>
+            <td style="font-family:monospace;font-size:11px">${escapeHtml(p.orderRef||'—')}</td>
             <td><button class="btn btn-sm" onclick="dismissUnmatchedPayment(${p.id})"><i class="ti ti-check"></i> ${t('unmatchedPay.markResolved')}</button></td>
           </tr>
         `).join('')}</tbody>

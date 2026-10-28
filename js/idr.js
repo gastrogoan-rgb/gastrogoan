@@ -329,7 +329,7 @@ async function idrCargarModelosInterno(){
     campo.innerHTML = `<select id="idr-modelo">${modelos.map(m =>
       `<option value="${escapeHtml(m)}"${m===actual?' selected':''}>${escapeHtml(m)}</option>`).join('')}</select>`;
   }
-  if(res) res.innerHTML = `<span style="color:#4A5D4E"><i class="ti ti-check"></i> ${escapeHtml(t('idr.modelsOk').replace('${n}', modelos.length))}</span>`;
+  if(res) res.innerHTML = `<span style="color:#1F8A4C"><i class="ti ti-check"></i> ${escapeHtml(t('idr.modelsOk').replace('${n}', modelos.length))}</span>`;
 }
 
 // Comprueba la clave de verdad, con la llamada más pequeña posible, y dice
@@ -353,7 +353,7 @@ async function idrProbarConexion(){
   const r = await llmChat('Responde solo con la palabra OK.', [{role:'user', content:'Di OK'}], {maxTokens: 20});
   const res = document.getElementById('idr-test-res');
   if(r.ok){
-    if(res) res.innerHTML = `<span style="color:#4A5D4E"><i class="ti ti-check"></i> ${escapeHtml(t('idr.testOk'))}</span>`;
+    if(res) res.innerHTML = `<span style="color:#1F8A4C"><i class="ti ti-check"></i> ${escapeHtml(t('idr.testOk'))}</span>`;
   } else {
     const msg = idrMensajeError(r);
     if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(msg)}</span>`
@@ -1284,7 +1284,7 @@ function renderIdrCreacion(box){
           <div class="card" style="border-left:4px solid var(--red)">
             <h3 style="font-size:14px"><i class="ti ti-alert-triangle"></i> ${t('idr.checksFailed')}</h3>
             <ul style="margin:4px 0 0;padding-left:18px;font-size:13px">${c.avisos.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>
-          </div>` : `<p style="font-size:12.5px;color:#4A5D4E"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>`}
+          </div>` : `<p style="font-size:12.5px;color:#1F8A4C"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>`}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
           ${c.recipeId ? `<button class="btn btn-primary" onclick="idrVerLaFicha(${c.id})"><i class="ti ti-file-text"></i> ${t('idr.seeSheet')}</button>` : ''}
           ${c.recipeId ? `<button class="owner-only btn" onclick="idrHablarDelCoste(${c.id})"><i class="ti ti-coin"></i> ${t('idr.adjustCost')}</button>` : ''}
@@ -1334,7 +1334,7 @@ function renderIdrCreacion(box){
                  <button class="owner-only btn btn-primary" onclick="idrProponerPlatos(${c.id})"><i class="ti ti-sparkles"></i> ${t('idr.proposeNew')}</button>`}
             <span style="font-size:12px;color:var(--muted)">${t('idr.callsLeft').replace('${n}', idrQuedanLlamadas())}</span>
           </div>
-          ${c.listo ? `<p style="font-size:12.5px;color:#4A5D4E;margin:8px 0 0"><i class="ti ti-check"></i> ${t('idr.readyToCreate')}</p>`
+          ${c.listo ? `<p style="font-size:12.5px;color:#1F8A4C;margin:8px 0 0"><i class="ti ti-check"></i> ${t('idr.readyToCreate')}</p>`
                     : `<p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">${t('idr.keepTalking')}</p>`}
         `}
       </div>
@@ -2196,7 +2196,7 @@ function idrPintarSelectorPlatos(id){
       <div class="card card-compact">
         <h3 style="font-size:14px;justify-content:space-between">
           <span>${escapeHtml(b.nombre)}</span>
-          <span style="font-size:12px;color:${elegidos.length === b.n ? '#4A5D4E' : 'var(--muted)'}">${elegidos.length}/${b.n}</span>
+          <span style="font-size:12px;color:${elegidos.length === b.n ? '#1F8A4C' : 'var(--muted)'}">${elegidos.length}/${b.n}</span>
         </h3>
         <div style="max-height:150px;overflow:auto">
           ${platos.map(p => `
@@ -3126,7 +3126,7 @@ function renderIaConfigCard(){
     <div class="card" id="mn-ia">
       <h3><i class="ti ti-sparkles"></i> ${t('ia.cfg.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin:0 0 10px">${t('ia.cfg.desc')}</p>
-      <p style="font-size:13px;margin:0 0 10px"><strong>${idrHayIA() ? `<i class="ti ti-circle-check" style="color:#4A5D4E"></i> ${t('ia.cfg.on')}` : `<i class="ti ti-circle-dashed"></i> ${t('ia.cfg.off')}`}</strong></p>
+      <p style="font-size:13px;margin:0 0 10px"><strong>${idrHayIA() ? `<i class="ti ti-circle-check" style="color:#1F8A4C"></i> ${t('ia.cfg.on')}` : `<i class="ti ti-circle-dashed"></i> ${t('ia.cfg.off')}`}</strong></p>
       <div id="mn-ia-campos">
         <div class="field-row">
           <div class="field">
@@ -3185,7 +3185,7 @@ function iaBorrarDesdeNegocio(){
    ninguna. Va como paso OPCIONAL de las conexiones externas, con "Ahora no"
    siempre a mano: el alta sigue sin poder atascarse aquí. */
 function renderIaGateCard(){
-  if(idrHayIA()) return `<p style="font-size:13px"><i class="ti ti-circle-check" style="color:#4A5D4E"></i> ${t('ia.cfg.on')}</p>`;
+  if(idrHayIA()) return `<p style="font-size:13px"><i class="ti ti-circle-check" style="color:#1F8A4C"></i> ${t('ia.cfg.on')}</p>`;
   const opts = Object.keys(IDR_PROVEEDORES).map(k => `<option value="${k}">${escapeHtml(gl(IDR_PROVEEDORES[k].l))}</option>`).join('');
   return `
     <p style="font-size:13px;line-height:1.5;margin:0 0 10px">${t('ia.gate.desc')}</p>
@@ -3334,7 +3334,7 @@ function iaNumPintar(){
   const hilo = document.getElementById('ia-num-hilo');
   if(!hilo) return;
   hilo.innerHTML = iaNumHist.map(m => {
-    const estilo = m.role === 'user' ? 'background:var(--ink);color:#fff' : m.error ? 'background:#F5EBE7;color:var(--red)' : 'background:#F1EFE9;color:var(--ink)';
+    const estilo = m.role === 'user' ? 'background:var(--ink);color:#fff' : m.error ? 'background:#FDECEC;color:var(--red)' : 'background:#F1EFE9;color:var(--ink)';
     return `<div class="ia-num-msg ia-num-${m.role}" style="align-self:${m.role==='user'?'flex-end':'flex-start'};max-width:88%;padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word;${estilo}">${escapeHtml(m.content)}</div>`;
   }).join('') + (iaNumPensando ? `<div style="align-self:flex-start;font-size:13px;color:var(--muted)"><i class="ti ti-loader"></i> ${t('ia.num.thinking')}</div>` : '');
   hilo.scrollTop = hilo.scrollHeight;
