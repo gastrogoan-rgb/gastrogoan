@@ -303,7 +303,7 @@ function renderLimpiezaManos(){
       </div>
       <div>
         <div class="card">
-          <h3>⏰ ${t('title.whenToWashHands')}</h3>
+          <h3><i class="ti ti-clock"></i> ${t('title.whenToWashHands')}</h3>
           <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:2">
             <li>${t('li.startingWork')}</li>
             <li>${t('li.afterHandlingWaste')}</li>
@@ -2202,13 +2202,13 @@ function printGiftVoucher(id){
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
       *{box-sizing:border-box}
-      body{margin:0;padding:30px;background:#e9e6e0;font-family:'Schibsted Grotesk',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{margin:0;padding:30px;background:#F1EFE9;font-family:'Schibsted Grotesk',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .voucher{
         position:relative;width:760px;max-width:100%;display:grid;grid-template-columns:1fr 208px;
         background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.16);
       }
       .v-main{
-        background:#181512;color:#f4efe7;padding:40px 44px;position:relative;
+        background:#1C1A17;color:#F1EFE9;padding:40px 44px;position:relative;
       }
       .v-main::after{
         content:'';position:absolute;inset:0;pointer-events:none;
@@ -2223,11 +2223,11 @@ function printGiftVoucher(id){
       .v-for{font-size:13.5px;color:#a89f92;margin-top:20px;letter-spacing:.2px}
       .v-for strong{color:#fff;font-weight:600}
       .v-stub{
-        background:#f6f3ee;padding:32px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        background:#FAF8F4;padding:32px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;
         text-align:center;position:relative;border-left:2px dashed #d8d2c6;gap:22px;
       }
       .v-stub::before, .v-stub::after{
-        content:'';position:absolute;left:-11px;width:22px;height:22px;border-radius:50%;background:#e9e6e0;
+        content:'';position:absolute;left:-11px;width:22px;height:22px;border-radius:50%;background:#F1EFE9;
       }
       .v-stub::before{top:-11px}
       .v-stub::after{bottom:-11px}
@@ -2550,7 +2550,7 @@ function openRewardModal(id){
     </div>
     <p style="font-size:13.5px;line-height:1.6">${t('reward.reached10pts').replace('${name}', `<strong>${escapeHtml(c.name)}</strong>`)}</p>
     ${suggestion ? `
-    <div style="background:var(--cream,#FBF3EA);border-left:3px solid var(--ink);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;line-height:1.5">
+    <div style="background:var(--cream,#F5F0E3);border-left:3px solid var(--ink);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;line-height:1.5">
       <i class="ti ti-sparkles"></i> ${t('reward.suggestion').replace('${fav}', `<strong>${escapeHtml(fav)}</strong>`).replace('${suggestion}', `<strong>"${escapeHtml(suggestion)}"</strong>`)}
     </div>` : ''}
     <div class="field">
@@ -2608,7 +2608,7 @@ function openRewardNotifyModal(id, reward){
       <textarea id="reward-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3673,7 +3673,7 @@ function openReservationReminderModal(id){
       <textarea id="reservation-reminder-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3735,7 +3735,7 @@ function openReservationNotifyChangeModal(id, tipo){
       <textarea id="reservation-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendReservationNotifyWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendReservationNotifyWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationNotifyEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3792,7 +3792,7 @@ function renderReservasRemindersDue(){
         <div class="card">
           <h3 style="justify-content:space-between;font-size:14px"><span>${escapeHtml(name)}</span></h3>
           <div style="font-size:13px"><i class="ti ti-clock"></i> ${escapeHtml(r.time||'')} · <i class="ti ti-users"></i> ${r.people}</div>
-          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#188842;color:#fff;border-color:#188842" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
+          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
         </div>`;
       }).join('')}
     </div>
@@ -3965,7 +3965,7 @@ function renderPromoSemana(){
     return `
       <td style="vertical-align:top;min-width:140px">
         ${items.map(p => `
-          <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--bg-2,#fdf1e7);color:var(--ink);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${p.recurrence==='weekly'?'<i class="ti ti-repeat" style="font-size:11px"></i>':''}${escapeHtml(p.titulo)}</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--bg-2,#F5F0E3);color:var(--ink);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${p.recurrence==='weekly'?'<i class="ti ti-repeat" style="font-size:11px"></i>':''}${escapeHtml(p.titulo)}</div>
         `).join('')}
         <span class="owner-only" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openPromoModal(null, '${ds}')">+</span>
       </td>
@@ -4621,7 +4621,7 @@ function renderPromoClientes(){
            derecha de la tarjeta (lo vio el dueño el 12/09). Un botón no se
            encoge por debajo de su contenido si no se le dice. -->
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" style="flex:1 1 120px;min-width:0;background:#188842;color:#fff;border-color:#188842" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn btn-sm" style="flex:1 1 120px;min-width:0;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn btn-sm" style="flex:1 1 90px;min-width:0" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
       </div>
       <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?t('promo.clients.alreadyRegisteredToday'):t('promo.clients.registerAsAction')}</button>
@@ -4700,7 +4700,7 @@ function openClientMessageModal(clientId, templateKey){
       <textarea id="promo-msg-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr((PROMO_MESSAGE_SUBJECTS[templateKey]&&PROMO_MESSAGE_SUBJECTS[templateKey]())||'')}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -4796,7 +4796,7 @@ function openPromoModal(id, fecha, prefill){
             <option value="">${t('label.selectDish')}</option>
             ${dishNames.map(n => `<option value="${escapeHtml(n)}" ${p.menuItemName===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}
           </select>
-          ${p.menuItemName && !p.menuItemPlatoId ? `<small style="color:var(--amber,#B8860B)">${t('promo.modal.dishLinkedByNameHint')}</small>` : ''}
+          ${p.menuItemName && !p.menuItemPlatoId ? `<small style="color:var(--amber,#8A7440)">${t('promo.modal.dishLinkedByNameHint')}</small>` : ''}
         </div>
         <div class="field">
           <label>${t('promo.modal.discountPct')}</label>
@@ -5173,6 +5173,23 @@ function renderPlan360(){
   if(!DB.business.plan360WelcomeShown){ renderPlan360Welcome(false); return; }
   renderPlan360Grid();
 }
+// Un texto plano (carta de bienvenida, contrato) con la jerarquía que ya trae: las líneas en
+// MAYÚSCULAS son títulos de apartado y las que empiezan por «—» son puntos de lista.
+// Se compone al pintar; el texto guardado y firmado no cambia ni un carácter.
+function plan360TextoHtml(texto){
+  let html = '', lista = false;
+  const cierra = () => { if(lista){ html += '</ul>'; lista = false; } };
+  String(texto || '').split('\n').forEach(l => {
+    const x = l.trim();
+    if(!x){ cierra(); return; }
+    if(/^[—–-]\s/.test(x)){ if(!lista){ html += '<ul class="p360-txt-ul">'; lista = true; } html += `<li>${escapeHtml(x.replace(/^[—–-]\s*/, ''))}</li>`; return; }
+    cierra();
+    if(x.length >= 6 && x === x.toUpperCase() && !/[a-záéíóúñ]/.test(x) && /[A-ZÁÉÍÓÚÑ]/.test(x)){ html += `<h4 class="p360-txt-h">${escapeHtml(x)}</h4>`; return; }
+    html += `<p>${escapeHtml(x)}</p>`;
+  });
+  cierra();
+  return html;
+}
 // La carta se ve entera una vez, sola, la primera vez que se entra — y
 // queda siempre accesible después desde Documentación inicial (fromIntake).
 function renderPlan360Welcome(fromIntake){
@@ -5181,7 +5198,7 @@ function renderPlan360Welcome(fromIntake){
   const volver = fromIntake ? `<button class="btn btn-sm btn-back" onclick="renderPlan360Intake()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>` : '';
   document.getElementById('plan360-content').innerHTML = `
     ${volver}
-    <div class="card" style="margin-top:${fromIntake ? '10' : '0'}px;white-space:pre-wrap;font-size:14px;line-height:1.6">${escapeHtml(texto)}</div>
+    <div class="card p360-txt" style="margin-top:${fromIntake ? '10' : '0'}px">${plan360TextoHtml(texto)}</div>
     ${fromIntake ? '' : `<button class="btn btn-primary" style="margin-top:14px" onclick="plan360ConfirmWelcome()">${escapeHtml(t('plan360.welcomeContinue'))}</button>`}
   `;
 }
@@ -5657,7 +5674,7 @@ function plan360MarcadorEurosHtml(){
     ${m.filas.map(f => `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:2px 0;font-size:13.5px">
       <span style="flex:1;min-width:120px">${escapeHtml(t('plan360.k.'+f.k))}</span>
       <span style="font-variant-numeric:tabular-nums">${fmt(f.k, f.antes)} → <strong>${fmt(f.k, f.hoy)}</strong></span>
-      ${f.euros != null && Math.abs(f.euros) >= 1 ? `<span class="txt-xs" style="font-weight:700;color:${f.euros > 0 ? '#BFD8C3' : '#F2B8A8'}">${f.euros > 0 ? '+' : '−'}${fmtMoney(Math.abs(f.euros))} ${escapeHtml(t('plan360.k.alMes'))}</span>` : ''}
+      ${f.euros != null && Math.abs(f.euros) >= 1 ? `<span class="txt-xs" style="font-weight:700;color:${f.euros > 0 ? '#C9D6CC' : '#E3C8BF'}">${f.euros > 0 ? '+' : '−'}${fmtMoney(Math.abs(f.euros))} ${escapeHtml(t('plan360.k.alMes'))}</span>` : ''}
     </div>`).join('')}
   </div>`;
 }
@@ -5875,7 +5892,7 @@ function plan360ContractSectionHtml(){
   const texto = (c.signedAt && c.signedText) || plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   if(c.signedAt){
     return `<div class="card" style="margin-top:14px">
-      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:10px">${escapeHtml(texto)}</div>
+      <div class="p360-txt p360-txt-box" style="margin-bottom:10px">${plan360TextoHtml(texto)}</div>
       <div class="card" style="background:var(--green-l);border-color:var(--green)">
         <i class="ti ti-circle-check" style="color:var(--green)"></i>
         ${escapeHtml(t('plan360.signedBy'))} <strong>${escapeHtml(c.signedName)}</strong> (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}
@@ -5899,7 +5916,7 @@ function plan360ContractSectionHtml(){
     </div>
     <p class="view-subtitle" style="margin:-4px 0 10px">${escapeHtml(t('plan360.priceLockedHint'))}</p>
     <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Contract()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
-    <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:14px">${escapeHtml(texto)}</div>
+    <div class="p360-txt p360-txt-box" style="margin-bottom:14px">${plan360TextoHtml(texto)}</div>
     ${!listoParaFirmar ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.signBlockedNoPrice'))}</div>` : ''}
     <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
@@ -6254,15 +6271,15 @@ function renderPlan360TeamBuilding(day){
       <div style="display:flex;align-items:center;justify-content:center;gap:16px">
         <div style="flex:1">
           <div style="font-weight:700">${escapeHtml(tb.equipoA)}</div>
-          <div style="font-size:42px;font-weight:800;${ganaA ? 'color:#F0A868' : ''}">${totalA}</div>
+          <div style="font-size:42px;font-weight:800;${ganaA ? 'color:#8A7440' : ''}">${totalA}</div>
         </div>
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1">
           <div style="font-weight:700">${escapeHtml(tb.equipoB)}</div>
-          <div style="font-size:42px;font-weight:800;${ganaB ? 'color:#F0A868' : ''}">${totalB}</div>
+          <div style="font-size:42px;font-weight:800;${ganaB ? 'color:#8A7440' : ''}">${totalB}</div>
         </div>
       </div>
-      <div style="margin-top:12px;font-size:16px">${empate ? '🤝 ' + escapeHtml(t('plan360.tbTie')) : '🏆 ' + escapeHtml(nombreGanador)}</div>
+      <div style="margin-top:12px;font-size:16px">${empate ? '<i class="ti ti-heart-handshake"></i> ' + escapeHtml(t('plan360.tbTie')) : '<i class="ti ti-trophy"></i> ' + escapeHtml(nombreGanador)}</div>
     </div>
     ${tb.premio ? `
     <div class="card" style="margin-top:14px">
@@ -6848,7 +6865,7 @@ function renderMiNegocio(){
   };
   document.getElementById('minegocio-content').innerHTML = `
     <div class="mn-grid">
-    <div class="card" style="border:2px solid var(--ink);background:var(--teal-l, #eef7f6)">
+    <div class="card" style="border:2px solid var(--ink);background:var(--teal-l, #EDF1EC)">
       <h3 style="color:var(--ink)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
       <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
@@ -8087,7 +8104,7 @@ function renderDeliveryPlatformsCard(){
         ${couriers.length ? couriers.map(c=>`
           <div class="ge-item">
             <span style="flex:1;font-size:14px;font-weight:600">${escapeHtml(c.nombre)}</span>
-            ${c.telefono ? `<a class="btn btn-sm btn-icon" style="color:#188842" href="https://wa.me/${c.telefono.replace(/[^0-9]/g,'')}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
+            ${c.telefono ? `<a class="btn btn-sm btn-icon" style="color:#4A5D4E" href="https://wa.me/${c.telefono.replace(/[^0-9]/g,'')}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
             <button class="btn btn-sm btn-icon" onclick="editOwnCourier(${c.id})"><i class="ti ti-edit"></i></button>
             <button class="btn btn-sm btn-icon btn-danger" onclick="deleteOwnCourier(${c.id})"><i class="ti ti-trash"></i></button>
           </div>`).join('')
@@ -9086,9 +9103,9 @@ const MANUAL_CHAPTERS = [
     <p>El resultado se colorea como semáforo para que lo veas de un vistazo:</p>
     <table>
       <tr><th>Color</th><th>Food cost</th><th>Qué significa</th></tr>
-      <tr><td>🟢 Verde</td><td>menor del 30%</td><td>Margen saludable, plato muy rentable</td></tr>
-      <tr><td>🟡 Ámbar</td><td>entre 30% y 35%</td><td>Margen aceptable, vigílalo</td></tr>
-      <tr><td>🔴 Rojo</td><td>mayor del 35%</td><td>Margen ajustado o negativo — revisa precio, ración o proveedor</td></tr>
+      <tr><td><span class="sem sem-g"></span> Verde</td><td>menor del 30%</td><td>Margen saludable, plato muy rentable</td></tr>
+      <tr><td><span class="sem sem-a"></span> Ámbar</td><td>entre 30% y 35%</td><td>Margen aceptable, vigílalo</td></tr>
+      <tr><td><span class="sem sem-r"></span> Rojo</td><td>mayor del 35%</td><td>Margen ajustado o negativo — revisa precio, ración o proveedor</td></tr>
     </table>
     <h4>Qué hacer cuando un plato sale en rojo</h4>
     <ul>
@@ -9124,9 +9141,9 @@ const MANUAL_CHAPTERS = [
     <p>El resultat es pinta com un semàfor perquè el vegis d'un cop d'ull:</p>
     <table>
       <tr><th>Color</th><th>Food cost</th><th>Què significa</th></tr>
-      <tr><td>🟢 Verd</td><td>menys del 30%</td><td>Marge saludable, plat molt rendible</td></tr>
-      <tr><td>🟡 Ambre</td><td>entre 30% i 35%</td><td>Marge acceptable, vigila'l</td></tr>
-      <tr><td>🔴 Vermell</td><td>més del 35%</td><td>Marge ajustat o negatiu — revisa preu, ració o proveïdor</td></tr>
+      <tr><td><span class="sem sem-g"></span> Verd</td><td>menys del 30%</td><td>Marge saludable, plat molt rendible</td></tr>
+      <tr><td><span class="sem sem-a"></span> Ambre</td><td>entre 30% i 35%</td><td>Marge acceptable, vigila'l</td></tr>
+      <tr><td><span class="sem sem-r"></span> Vermell</td><td>més del 35%</td><td>Marge ajustat o negatiu — revisa preu, ració o proveïdor</td></tr>
     </table>
     <h4>Què fer quan un plat surt en vermell</h4>
     <ul>
@@ -9162,9 +9179,9 @@ const MANUAL_CHAPTERS = [
     <p>The result is colour-coded like a traffic light so you can see it at a glance:</p>
     <table>
       <tr><th>Colour</th><th>Food cost</th><th>What it means</th></tr>
-      <tr><td>🟢 Green</td><td>under 30%</td><td>Healthy margin, very profitable dish</td></tr>
-      <tr><td>🟡 Amber</td><td>between 30% and 35%</td><td>Acceptable margin, keep an eye on it</td></tr>
-      <tr><td>🔴 Red</td><td>over 35%</td><td>Tight or negative margin — review price, portion size or supplier</td></tr>
+      <tr><td><span class="sem sem-g"></span> Green</td><td>under 30%</td><td>Healthy margin, very profitable dish</td></tr>
+      <tr><td><span class="sem sem-a"></span> Amber</td><td>between 30% and 35%</td><td>Acceptable margin, keep an eye on it</td></tr>
+      <tr><td><span class="sem sem-r"></span> Red</td><td>over 35%</td><td>Tight or negative margin — review price, portion size or supplier</td></tr>
     </table>
     <h4>What to do when a dish shows red</h4>
     <ul>
@@ -9860,9 +9877,9 @@ const MANUAL_CHAPTERS = [
     <p>Cada cliente lleva un indicador de color según su frecuencia de visita reciente:</p>
     <table>
       <tr><th>Color</th><th>Significado</th><th>Qué hacer</th></tr>
-      <tr><td>🟢 Verde</td><td>Cliente activo, viene con normalidad</td><td>Nada especial, mantén el buen servicio</td></tr>
-      <tr><td>🟡 Ámbar</td><td>Cliente en riesgo, tarda más de lo habitual en volver</td><td>Una llamada, un mensaje o una oferta personalizada puede recuperarlo</td></tr>
-      <tr><td>🔴 Rojo</td><td>Cliente inactivo, hace mucho que no viene</td><td>Campaña de reactivación: descuento de bienvenida, novedades de carta...</td></tr>
+      <tr><td><span class="sem sem-g"></span> Verde</td><td>Cliente activo, viene con normalidad</td><td>Nada especial, mantén el buen servicio</td></tr>
+      <tr><td><span class="sem sem-a"></span> Ámbar</td><td>Cliente en riesgo, tarda más de lo habitual en volver</td><td>Una llamada, un mensaje o una oferta personalizada puede recuperarlo</td></tr>
+      <tr><td><span class="sem sem-r"></span> Rojo</td><td>Cliente inactivo, hace mucho que no viene</td><td>Campaña de reactivación: descuento de bienvenida, novedades de carta...</td></tr>
     </table>
 
     <h4>Contactar directamente</h4>
@@ -9892,9 +9909,9 @@ const MANUAL_CHAPTERS = [
     <p>Cada client porta un indicador de color segons la seva freqüència de visita recent:</p>
     <table>
       <tr><th>Color</th><th>Significat</th><th>Què fer</th></tr>
-      <tr><td>🟢 Verd</td><td>Client actiu, ve amb normalitat</td><td>Res d'especial, mantén el bon servei</td></tr>
-      <tr><td>🟡 Ambre</td><td>Client en risc, triga més del que és habitual a tornar</td><td>Una trucada, un missatge o una oferta personalitzada el pot recuperar</td></tr>
-      <tr><td>🔴 Vermell</td><td>Client inactiu, fa temps que no ve</td><td>Campanya de reactivació: descompte de benvinguda, novetats de carta...</td></tr>
+      <tr><td><span class="sem sem-g"></span> Verd</td><td>Client actiu, ve amb normalitat</td><td>Res d'especial, mantén el bon servei</td></tr>
+      <tr><td><span class="sem sem-a"></span> Ambre</td><td>Client en risc, triga més del que és habitual a tornar</td><td>Una trucada, un missatge o una oferta personalitzada el pot recuperar</td></tr>
+      <tr><td><span class="sem sem-r"></span> Vermell</td><td>Client inactiu, fa temps que no ve</td><td>Campanya de reactivació: descompte de benvinguda, novetats de carta...</td></tr>
     </table>
 
     <h4>Contactar directament</h4>
@@ -9924,9 +9941,9 @@ const MANUAL_CHAPTERS = [
     <p>Each customer carries a colour indicator based on how recently they've been visiting:</p>
     <table>
       <tr><th>Colour</th><th>Meaning</th><th>What to do</th></tr>
-      <tr><td>🟢 Green</td><td>Active customer, visiting as usual</td><td>Nothing special, keep up the good service</td></tr>
-      <tr><td>🟡 Amber</td><td>At-risk customer, taking longer than usual to come back</td><td>A call, a message or a personalised offer might win them back</td></tr>
-      <tr><td>🔴 Red</td><td>Inactive customer, hasn't visited in a long time</td><td>Reactivation campaign: welcome-back discount, menu news...</td></tr>
+      <tr><td><span class="sem sem-g"></span> Green</td><td>Active customer, visiting as usual</td><td>Nothing special, keep up the good service</td></tr>
+      <tr><td><span class="sem sem-a"></span> Amber</td><td>At-risk customer, taking longer than usual to come back</td><td>A call, a message or a personalised offer might win them back</td></tr>
+      <tr><td><span class="sem sem-r"></span> Red</td><td>Inactive customer, hasn't visited in a long time</td><td>Reactivation campaign: welcome-back discount, menu news...</td></tr>
     </table>
 
     <h4>Contacting directly</h4>
@@ -9961,9 +9978,9 @@ const MANUAL_CHAPTERS = [
     <p>Si en Mi Negocio configuraste el <strong>Aforo (plazas por turno)</strong>, la vista del día muestra para cada turno cuántas personas hay reservadas frente al máximo:</p>
     <table>
       <tr><th>Color</th><th>Situación</th></tr>
-      <tr><td>🟢 Verde</td><td>Hay sitio de sobra</td></tr>
-      <tr><td>🟡 Ámbar</td><td>El turno está cerca de completarse</td></tr>
-      <tr><td>🔴 Rojo</td><td>El turno está completo</td></tr>
+      <tr><td><span class="sem sem-g"></span> Verde</td><td>Hay sitio de sobra</td></tr>
+      <tr><td><span class="sem sem-a"></span> Ámbar</td><td>El turno está cerca de completarse</td></tr>
+      <tr><td><span class="sem sem-r"></span> Rojo</td><td>El turno está completo</td></tr>
     </table>
     <p>Si al crear o confirmar una reserva se supera el aforo, la app te avisa con los números exactos (por ejemplo "ya hay 38 de 40 plazas, esta reserva añade 6") y te da a elegir entre <strong>confirmarla igualmente</strong> (si puedes habilitar mesas extra), <strong>ponerla en lista de espera</strong> (no cuenta para el aforo, y tiene su propio botón para confirmarla en cuanto haya sitio) o cancelarla.</p>
     <p>Una reserva confirmada se puede <strong>cancelar</strong> (queda registrada como "cancelada", no desaparece sin más) en vez de solo borrarla, y si un cliente ya ha fallado antes, al elegirlo en el desplegable del formulario verás un aviso con el número de no-shows anteriores. Al marcar la "llegada" de una reserva (tanto desde aquí como desde el TPV) puedes confirmar o corregir en qué mesa se ha sentado el grupo, por si al final se organizó en una distinta a la reservada.</p>
@@ -10002,9 +10019,9 @@ const MANUAL_CHAPTERS = [
     <p>Si a El Meu Negoci vas configurar l'<strong>Aforament (places per torn)</strong>, la vista del dia mostra per a cada torn quantes persones hi ha reservades enfront del màxim:</p>
     <table>
       <tr><th>Color</th><th>Situació</th></tr>
-      <tr><td>🟢 Verd</td><td>Hi ha lloc de sobra</td></tr>
-      <tr><td>🟡 Ambre</td><td>El torn està a prop de completar-se</td></tr>
-      <tr><td>🔴 Vermell</td><td>El torn està complet</td></tr>
+      <tr><td><span class="sem sem-g"></span> Verd</td><td>Hi ha lloc de sobra</td></tr>
+      <tr><td><span class="sem sem-a"></span> Ambre</td><td>El torn està a prop de completar-se</td></tr>
+      <tr><td><span class="sem sem-r"></span> Vermell</td><td>El torn està complet</td></tr>
     </table>
     <p>Si en crear o confirmar una reserva se supera l'aforament, l'app t'avisa amb els números exactes (per exemple "ja hi ha 38 de 40 places, aquesta reserva n'afegeix 6") i et deixa triar entre <strong>confirmar-la igualment</strong> (si pots habilitar taules extra), <strong>posar-la en llista d'espera</strong> (no compta per a l'aforament, i té el seu propi botó per confirmar-la quan hi hagi lloc) o cancel·lar-la.</p>
     <p>Una reserva confirmada es pot <strong>cancel·lar</strong> (queda registrada com a "cancel·lada", no desapareix sense més) en comptes de només esborrar-la, i si un client ja ha fallat abans, en triar-lo al desplegable del formulari veuràs un avís amb el nombre de no-shows anteriors. En marcar l'"arribada" d'una reserva (tant des d'aquí com des del TPV) pots confirmar o corregir a quina taula s'ha assegut el grup, per si al final es va organitzar en una de diferent a la reservada.</p>
@@ -10043,9 +10060,9 @@ const MANUAL_CHAPTERS = [
     <p>If you set up <strong>Capacity (seats per slot)</strong> in My Business, the day view shows, for each slot, how many people are booked against the maximum:</p>
     <table>
       <tr><th>Colour</th><th>Situation</th></tr>
-      <tr><td>🟢 Green</td><td>Plenty of room</td></tr>
-      <tr><td>🟡 Amber</td><td>The slot is close to full</td></tr>
-      <tr><td>🔴 Red</td><td>The slot is full</td></tr>
+      <tr><td><span class="sem sem-g"></span> Green</td><td>Plenty of room</td></tr>
+      <tr><td><span class="sem sem-a"></span> Amber</td><td>The slot is close to full</td></tr>
+      <tr><td><span class="sem sem-r"></span> Red</td><td>The slot is full</td></tr>
     </table>
     <p>If creating or confirming a reservation would exceed capacity, the app warns you with the exact numbers (for example "already 38 of 40 seats, this reservation adds 6") and lets you choose between <strong>confirming it anyway</strong> (if you can open up extra tables), <strong>adding it to the waitlist</strong> (doesn't count towards capacity, with its own button to confirm it once there's room) or cancelling it.</p>
     <p>A confirmed reservation can be <strong>cancelled</strong> (it's kept on record as "cancelled", not just deleted) instead of only being deleted, and if a client has failed to show up before, picking them from the form's dropdown shows a warning with their previous no-show count. Marking a reservation as "arrived" (from here or from the POS) lets you confirm or correct which table the group actually sat at, in case it ended up being a different one than booked.</p>
@@ -10440,15 +10457,15 @@ const MANUAL_CHAPTERS = [
     <p>El Panel de Control es la primera pantalla que deberías mirar cada día. No introduces nada aquí: simplemente reúne y resume datos de todos los demás módulos (TPV, Gestión Económica, Stock, Reservas, Fichas Técnicas...) para darte, de un vistazo, el estado de salud de tu negocio. Si solo tuvieras un minuto al día para "mirar" la app, sería este.</p>
 
     <h4>Qué encontrarás y cómo interpretarlo</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">💰 <strong>Ventas hoy / últimos 7 días / mes en curso</strong> — el ritmo de facturación en tiempo real, en tres cifras.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">📈 <strong>Comparación de ventas del año</strong> — gráfico con la facturación de cada uno de los últimos 12 meses. Te ayuda a detectar estacionalidad (meses fuertes y flojos) y a ver la evolución de tu negocio mes a mes.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">🧾 <strong>Gastos hoy / últimos 7 días / mes en curso</strong> — incluye las compras registradas con fecha en Gestión Económica (gastos variables) más una parte proporcional de tus gastos fijos mensuales (alquiler, personal, suministros...), repartida día a día. Así puedes ver cuánto te está costando el negocio al mismo ritmo que ves las ventas.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">📊 <strong>Comparación de gastos del año</strong> — gráfico con el total de gastos (fijos + variables) de cada uno de los últimos 12 meses, para comparar con el gráfico de ventas y ver si tus costes crecen al mismo ritmo que tu facturación.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">📋 <strong>Resultado del mes (P&amp;L)</strong> — facturación, gastos variables, gastos fijos y resultado (beneficio o pérdida) del mes en curso, más el <strong>margen sobre ventas</strong> y el <strong>% Food Cost medio</strong> frente a tu objetivo. Si el resultado está en rojo a mitad de mes no es necesariamente malo, pero conviene vigilar la evolución.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">📉 <strong>Comparación del resultado mensual del año</strong> — gráfico con el resultado (ventas menos gastos) de cada uno de los últimos 12 meses. Las barras en rojo señalan los meses con pérdidas y las naranjas los meses con beneficio, para ver de un vistazo la rentabilidad real mes a mes.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">🥧 <strong>Análisis de ventas (últimos 30 días)</strong> — ticket medio, número de ventas, platos/bebidas más vendidos, platos/bebidas de mayor margen bruto y la distribución de ventas por hora del día. Te dice qué está funcionando ahora mismo y a qué horas se concentra tu facturación.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">⚖️ <strong>Punto de equilibrio</strong> — compara los cubiertos/ventas reales del mes con el mínimo que calculaste en Gestión Económica. Si vas por debajo del objetivo, este es el primer aviso para reaccionar antes de que acabe el mes.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🍽️ <strong>Análisis de Platos</strong> — ranking de los platos y bebidas más y menos vendidos, y más y menos rentables, por el periodo que elijas. Cruza esta información con el Escandallo: un plato o bebida que vende mucho pero deja poco margen es candidato a subir de precio o rediseñar; uno que vende poco y deja mucho margen es candidato a promocionar más.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Ventas hoy / últimos 7 días / mes en curso</strong> — el ritmo de facturación en tiempo real, en tres cifras.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Comparación de ventas del año</strong> — gráfico con la facturación de cada uno de los últimos 12 meses. Te ayuda a detectar estacionalidad (meses fuertes y flojos) y a ver la evolución de tu negocio mes a mes.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Gastos hoy / últimos 7 días / mes en curso</strong> — incluye las compras registradas con fecha en Gestión Económica (gastos variables) más una parte proporcional de tus gastos fijos mensuales (alquiler, personal, suministros...), repartida día a día. Así puedes ver cuánto te está costando el negocio al mismo ritmo que ves las ventas.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Comparación de gastos del año</strong> — gráfico con el total de gastos (fijos + variables) de cada uno de los últimos 12 meses, para comparar con el gráfico de ventas y ver si tus costes crecen al mismo ritmo que tu facturación.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Resultado del mes (P&amp;L)</strong> — facturación, gastos variables, gastos fijos y resultado (beneficio o pérdida) del mes en curso, más el <strong>margen sobre ventas</strong> y el <strong>% Food Cost medio</strong> frente a tu objetivo. Si el resultado está en rojo a mitad de mes no es necesariamente malo, pero conviene vigilar la evolución.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Comparación del resultado mensual del año</strong> — gráfico con el resultado (ventas menos gastos) de cada uno de los últimos 12 meses. Las barras en rojo señalan los meses con pérdidas y las naranjas los meses con beneficio, para ver de un vistazo la rentabilidad real mes a mes.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Análisis de ventas (últimos 30 días)</strong> — ticket medio, número de ventas, platos/bebidas más vendidos, platos/bebidas de mayor margen bruto y la distribución de ventas por hora del día. Te dice qué está funcionando ahora mismo y a qué horas se concentra tu facturación.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Punto de equilibrio</strong> — compara los cubiertos/ventas reales del mes con el mínimo que calculaste en Gestión Económica. Si vas por debajo del objetivo, este es el primer aviso para reaccionar antes de que acabe el mes.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>Análisis de Platos</strong> — ranking de los platos y bebidas más y menos vendidos, y más y menos rentables, por el periodo que elijas. Cruza esta información con el Escandallo: un plato o bebida que vende mucho pero deja poco margen es candidato a subir de precio o rediseñar; uno que vende poco y deja mucho margen es candidato a promocionar más.</div></div>
 
     <h4>Rutina recomendada</h4>
     <p>Cada mañana, antes de abrir:</p>
@@ -10462,15 +10479,15 @@ const MANUAL_CHAPTERS = [
     <p>El Panell de Control és la primera pantalla que hauries de mirar cada dia. No hi introdueixes res: simplement reuneix i resumeix dades de tots els altres mòduls (TPV, Gestió Econòmica, Estoc, Reserves, Fitxes Tècniques...) per donar-te, d'un cop d'ull, l'estat de salut del teu negoci. Si només tinguessis un minut al dia per "mirar" l'app, seria aquest.</p>
 
     <h4>Què hi trobaràs i com interpretar-ho</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">💰 <strong>Vendes avui / últims 7 dies / mes en curs</strong> — el ritme de facturació en temps real, en tres xifres.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">📈 <strong>Comparació de vendes de l'any</strong> — gràfic amb la facturació de cadascun dels últims 12 mesos. T'ajuda a detectar estacionalitat (mesos forts i fluixos) i a veure l'evolució del teu negoci mes a mes.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">🧾 <strong>Despeses avui / últims 7 dies / mes en curs</strong> — inclou les compres registrades amb data a Gestió Econòmica (despeses variables) més una part proporcional de les teves despeses fixes mensuals (lloguer, personal, subministraments...), repartida dia a dia. Així pots veure quant et costa el negoci al mateix ritme que veus les vendes.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">📊 <strong>Comparació de despeses de l'any</strong> — gràfic amb el total de despeses (fixes + variables) de cadascun dels últims 12 mesos, per comparar amb el gràfic de vendes i veure si els teus costos creixen al mateix ritme que la teva facturació.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">📋 <strong>Resultat del mes (P&amp;L)</strong> — facturació, despeses variables, despeses fixes i resultat (benefici o pèrdua) del mes en curs, més el <strong>marge sobre vendes</strong> i el <strong>% Food Cost mitjà</strong> respecte al teu objectiu. Si el resultat està en vermell a mitja mes no és necessàriament dolent, però convé vigilar l'evolució.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">📉 <strong>Comparació del resultat mensual de l'any</strong> — gràfic amb el resultat (vendes menys despeses) de cadascun dels últims 12 mesos. Les barres en vermell assenyalen els mesos amb pèrdues i les taronges els mesos amb benefici, per veure d'un cop d'ull la rendibilitat real mes a mes.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">🥧 <strong>Anàlisi de vendes (últims 30 dies)</strong> — tiquet mitjà, nombre de vendes, plats/begudes més venuts, plats/begudes de més marge brut i la distribució de vendes per hora del dia. Et diu què funciona ara mateix i a quines hores es concentra la teva facturació.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">⚖️ <strong>Punt d'equilibri</strong> — compara els comensals/vendes reals del mes amb el mínim que vas calcular a Gestió Econòmica. Si vas per sota de l'objectiu, aquest és el primer avís per reaccionar abans que acabi el mes.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🍽️ <strong>Anàlisi de Plats</strong> — rànquing dels plats i begudes més i menys venuts, i més i menys rendibles, pel període que triïs. Creua aquesta informació amb l'Escandall: un plat o beguda que ven molt però deixa poc marge és candidat a pujar de preu o redissenyar; un que ven poc i deixa molt marge és candidat a promocionar més.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Vendes avui / últims 7 dies / mes en curs</strong> — el ritme de facturació en temps real, en tres xifres.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Comparació de vendes de l'any</strong> — gràfic amb la facturació de cadascun dels últims 12 mesos. T'ajuda a detectar estacionalitat (mesos forts i fluixos) i a veure l'evolució del teu negoci mes a mes.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Despeses avui / últims 7 dies / mes en curs</strong> — inclou les compres registrades amb data a Gestió Econòmica (despeses variables) més una part proporcional de les teves despeses fixes mensuals (lloguer, personal, subministraments...), repartida dia a dia. Així pots veure quant et costa el negoci al mateix ritme que veus les vendes.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Comparació de despeses de l'any</strong> — gràfic amb el total de despeses (fixes + variables) de cadascun dels últims 12 mesos, per comparar amb el gràfic de vendes i veure si els teus costos creixen al mateix ritme que la teva facturació.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Resultat del mes (P&amp;L)</strong> — facturació, despeses variables, despeses fixes i resultat (benefici o pèrdua) del mes en curs, més el <strong>marge sobre vendes</strong> i el <strong>% Food Cost mitjà</strong> respecte al teu objectiu. Si el resultat està en vermell a mitja mes no és necessàriament dolent, però convé vigilar l'evolució.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Comparació del resultat mensual de l'any</strong> — gràfic amb el resultat (vendes menys despeses) de cadascun dels últims 12 mesos. Les barres en vermell assenyalen els mesos amb pèrdues i les taronges els mesos amb benefici, per veure d'un cop d'ull la rendibilitat real mes a mes.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Anàlisi de vendes (últims 30 dies)</strong> — tiquet mitjà, nombre de vendes, plats/begudes més venuts, plats/begudes de més marge brut i la distribució de vendes per hora del dia. Et diu què funciona ara mateix i a quines hores es concentra la teva facturació.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Punt d'equilibri</strong> — compara els comensals/vendes reals del mes amb el mínim que vas calcular a Gestió Econòmica. Si vas per sota de l'objectiu, aquest és el primer avís per reaccionar abans que acabi el mes.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>Anàlisi de Plats</strong> — rànquing dels plats i begudes més i menys venuts, i més i menys rendibles, pel període que triïs. Creua aquesta informació amb l'Escandall: un plat o beguda que ven molt però deixa poc marge és candidat a pujar de preu o redissenyar; un que ven poc i deixa molt marge és candidat a promocionar més.</div></div>
 
     <h4>Rutina recomanada</h4>
     <p>Cada matí, abans d'obrir:</p>
@@ -10484,15 +10501,15 @@ const MANUAL_CHAPTERS = [
     <p>The Dashboard is the first screen you should check every day. You don't enter anything here: it simply gathers and summarises data from every other module (POS, Financial Management, Stock, Reservations, Technical Sheets...) to give you, at a glance, your business's health status. If you only had one minute a day to "look at" the app, this would be it.</p>
 
     <h4>What you'll find and how to read it</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">💰 <strong>Sales today / last 7 days / current month</strong> — your real-time revenue pace, in three figures.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">📈 <strong>Yearly sales comparison</strong> — a chart with revenue for each of the last 12 months. It helps you spot seasonality (strong and weak months) and see your business's month-by-month trend.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">🧾 <strong>Costs today / last 7 days / current month</strong> — includes purchases logged with a date in Financial Management (variable costs) plus a proportional share of your monthly fixed costs (rent, staff, utilities...), spread out day by day. This lets you see what the business is costing you at the same pace as sales.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">📊 <strong>Yearly cost comparison</strong> — a chart with total costs (fixed + variable) for each of the last 12 months, to compare with the sales chart and see whether your costs are growing at the same pace as revenue.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">📋 <strong>Result for the month (P&amp;L)</strong> — revenue, variable costs, fixed costs and result (profit or loss) for the current month, plus the <strong>margin on sales</strong> and the <strong>average Food Cost %</strong> against your target. Being in the red mid-month isn't necessarily bad, but the trend is worth watching.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">📉 <strong>Yearly monthly result comparison</strong> — a chart with the result (sales minus costs) for each of the last 12 months. Red bars flag loss-making months and orange bars profitable ones, so you can see real month-by-month profitability at a glance.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">🥧 <strong>Sales analysis (last 30 days)</strong> — average ticket, number of sales, best-selling dishes/drinks, highest gross-margin dishes/drinks, and the distribution of sales by hour of day. It tells you what's working right now and at what times your revenue is concentrated.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">⚖️ <strong>Break-even point</strong> — compares this month's real covers/sales with the minimum you calculated in Financial Management. If you're below target, this is your first warning to react before the month ends.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🍽️ <strong>Dish Analysis</strong> — ranking of your best and worst-selling, and most and least profitable, dishes and drinks over whatever period you choose. Cross-reference this with Costing: a dish or drink that sells a lot but leaves little margin is a candidate for a price rise or a redesign; one that sells little but leaves a big margin is a candidate to promote more.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Sales today / last 7 days / current month</strong> — your real-time revenue pace, in three figures.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Yearly sales comparison</strong> — a chart with revenue for each of the last 12 months. It helps you spot seasonality (strong and weak months) and see your business's month-by-month trend.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Costs today / last 7 days / current month</strong> — includes purchases logged with a date in Financial Management (variable costs) plus a proportional share of your monthly fixed costs (rent, staff, utilities...), spread out day by day. This lets you see what the business is costing you at the same pace as sales.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Yearly cost comparison</strong> — a chart with total costs (fixed + variable) for each of the last 12 months, to compare with the sales chart and see whether your costs are growing at the same pace as revenue.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Result for the month (P&amp;L)</strong> — revenue, variable costs, fixed costs and result (profit or loss) for the current month, plus the <strong>margin on sales</strong> and the <strong>average Food Cost %</strong> against your target. Being in the red mid-month isn't necessarily bad, but the trend is worth watching.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Yearly monthly result comparison</strong> — a chart with the result (sales minus costs) for each of the last 12 months. Red bars flag loss-making months and orange bars profitable ones, so you can see real month-by-month profitability at a glance.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Sales analysis (last 30 days)</strong> — average ticket, number of sales, best-selling dishes/drinks, highest gross-margin dishes/drinks, and the distribution of sales by hour of day. It tells you what's working right now and at what times your revenue is concentrated.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Break-even point</strong> — compares this month's real covers/sales with the minimum you calculated in Financial Management. If you're below target, this is your first warning to react before the month ends.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>Dish Analysis</strong> — ranking of your best and worst-selling, and most and least profitable, dishes and drinks over whatever period you choose. Cross-reference this with Costing: a dish or drink that sells a lot but leaves little margin is a candidate for a price rise or a redesign; one that sells little but leaves a big margin is a candidate to promote more.</div></div>
 
     <h4>Recommended routine</h4>
     <p>Every morning, before opening:</p>
@@ -10507,28 +10524,28 @@ const MANUAL_CHAPTERS = [
     title:{es:'<i class="ti ti-building-store"></i> Mi Negocio', ca:'<i class="ti ti-building-store"></i> El Meu Negoci', en:'<i class="ti ti-building-store"></i> My Business'},
     content:{es:`<h3>Datos del establecimiento</h3>
     <p>Esta sección reúne toda la configuración de tu negocio, organizada en tarjetas. El orden actual es:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st">🔑 <strong>Código de negocio</strong> — el código de 8 caracteres de tu licencia para este local, con el que se dan de alta empleados en dispositivos nuevos.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">🔒 <strong>PIN del negocio</strong> — cámbialo aquí; se pide para confirmar acciones delicadas (anular una venta, borrar un empleado...), no para entrar en Gestión.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">🔗 <strong>Conexiones externas</strong> — vincula servicios externos que uses (según lo que tengas activado).</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">🏢 <strong>Datos del negocio</strong> — identidad (logo, nombre, propietario, tipo, año), descripción, contacto y redes sociales. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">🏬 <strong>Operativa</strong> — aforo por turno y tus zonas de mesas, con el nombre y la cantidad que tú definas.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">🔁 <strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">📅 <strong>Horario de apertura</strong> — horario general del negocio, configurable día por día.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">🧾 <strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🔳 <strong>QR de mesa</strong> — un botón con QR por cada mesa configurada.</div></div>
-    <div class="manual-step"><div class="sn">10</div><div class="st">🖨️ <strong>Comandas de cocina y sala</strong> — pantalla o vale impreso al marchar.</div></div>
-    <div class="manual-step"><div class="sn">11</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — activa/desactiva, y enlace/QR para que tus clientes reserven o pidan desde el móvil.</div></div>
-    <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
-    <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Plataformas de delivery</strong> — Glovo, Uber Eats, Just Eat... con su comisión.</div></div>
-    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>Pago online (Stripe)</strong> — cobro con tarjeta en la web de reservas.</div></div>
-    <div class="manual-step"><div class="sn">15</div><div class="st">✉️ <strong>Confirmación por email</strong> — envío automático al cliente.</div></div>
-    <div class="manual-step"><div class="sn">16</div><div class="st">🧮 <strong>VeriFactu</strong> — configuración fiscal de facturación verificable.</div></div>
-    <div class="manual-step"><div class="sn">17</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad, papelera, archivado y <strong>Registro de actividad</strong> (quién hizo qué, útil con varios encargados).</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Código de negocio</strong> — el código de 8 caracteres de tu licencia para este local, con el que se dan de alta empleados en dispositivos nuevos.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>PIN del negocio</strong> — cámbialo aquí; se pide para confirmar acciones delicadas (anular una venta, borrar un empleado...), no para entrar en Gestión.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Conexiones externas</strong> — vincula servicios externos que uses (según lo que tengas activado).</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Datos del negocio</strong> — identidad (logo, nombre, propietario, tipo, año), descripción, contacto y redes sociales. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Operativa</strong> — aforo por turno y tus zonas de mesas, con el nombre y la cantidad que tú definas.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Horario de apertura</strong> — horario general del negocio, configurable día por día.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>QR de mesa</strong> — un botón con QR por cada mesa configurada.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Comandas de cocina y sala</strong> — pantalla o vale impreso al marchar.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Reserva y pedidos online</strong> — activa/desactiva, y enlace/QR para que tus clientes reserven o pidan desde el móvil.</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st"><strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
+    <div class="manual-step"><div class="sn">13</div><div class="st"><strong>Plataformas de delivery</strong> — Glovo, Uber Eats, Just Eat... con su comisión.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st"><strong>Pago online (Stripe)</strong> — cobro con tarjeta en la web de reservas.</div></div>
+    <div class="manual-step"><div class="sn">15</div><div class="st"><strong>Confirmación por email</strong> — envío automático al cliente.</div></div>
+    <div class="manual-step"><div class="sn">16</div><div class="st"><strong>VeriFactu</strong> — configuración fiscal de facturación verificable.</div></div>
+    <div class="manual-step"><div class="sn">17</div><div class="st"><strong>Mantenimiento de datos</strong> — copias de seguridad, papelera, archivado y <strong>Registro de actividad</strong> (quién hizo qué, útil con varios encargados).</div></div>
 
-    <h4>🔒 PIN del negocio</h4>
+    <h4>PIN del negocio</h4>
     <p><strong>Gestión Económica y Mi Negocio son exclusivos del propietario</strong> — no hay ningún PIN alternativo para entrar ahí, un empleado simplemente no tiene acceso. El PIN que se cambia aquí es distinto: es el <strong>PIN del negocio</strong>, que se pide para confirmar acciones delicadas del día a día (anular una venta ya cobrada, borrar un empleado...), como último candado antes de una acción que no se puede deshacer sola.</p>
 
-    <h4>🏢 Datos del negocio</h4>
+    <h4>Datos del negocio</h4>
     <p>Es la tarjeta principal con toda la información de identidad y contacto, dividida en cuatro bloques:</p>
     <ul>
       <li><strong>Identidad</strong> — logo, nombre del negocio, <strong>propietario</strong>, tipo de negocio y año de apertura.</li>
@@ -10538,7 +10555,7 @@ const MANUAL_CHAPTERS = [
     </ul>
     <p>Al final de esta tarjeta está el botón <strong>Guardar todo</strong>, que guarda los cambios de <em>todas</em> las tarjetas de Mi Negocio a la vez.</p>
 
-    <h4>🏬 Operativa</h4>
+    <h4>Operativa</h4>
     <p>Aquí defines la capacidad y distribución física de tu local:</p>
     <ul>
       <li><strong>Aforo (plazas por turno)</strong> — número máximo de comensales que puedes atender en cada turno de comida/cena. Se usa en Reservas para avisarte si un turno se llena.</li>
@@ -10546,20 +10563,20 @@ const MANUAL_CHAPTERS = [
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i><strong>Crear zona con mesas</strong>: escribe el nombre de la zona y cuántas mesas tiene, y se crean todas de golpe. Después, en la lista <strong>"Mesas configuradas"</strong> de más abajo puedes <strong>ponerle a cada mesa el nombre o número que quieras</strong>, cambiarle la zona, o añadir/eliminar mesas una a una. Esas mesas son exactamente las que aparecen en el TPV, en las reservas y en los QR de mesa (un QR por mesa).</div>
 
-    <h4>💵 Cajón portamonedas</h4>
+    <h4>Cajón portamonedas</h4>
     <p>Lo primero que conviene saber, porque casi todo el mundo lo entiende al revés: <strong>el cajón no se conecta al ordenador ni a la tablet</strong>. Va enchufado a la <strong>impresora de tickets</strong> con un cable RJ11 (parecido al del teléfono fijo), y es la impresora la que lo abre mandándole un pulso eléctrico. Por eso no necesitas ningún aparato ni cable adicional: si puedes imprimir, puedes abrir el cajón.</p>
     <p>Tienes dos formas de conseguirlo, y puedes usar la que mejor te encaje:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Desde la app</strong> (recomendado si usas Chrome o Edge en Android o en ordenador) — conecta la impresora térmica por Bluetooth en esta misma pantalla y marca la casilla <strong>"Abrir el cajón automáticamente al cobrar"</strong>. El cajón se abrirá en cada cobro, sea en efectivo, tarjeta o mixto. Además te aparece un botón <strong>"Abrir cajón"</strong> en el TPV para abrirlo sin cobrar (por ejemplo, para dar cambio a un cliente): esas aperturas manuales <strong>quedan registradas en el Registro de actividad</strong>, con quién y cuándo, que es justo lo que querrás mirar si algún día no cuadra la caja.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Desde el driver de la impresora</strong> (funciona en cualquier dispositivo, también iPad y iPhone) — en las propiedades de la impresora de tu sistema hay una casilla del tipo "abrir cajón al imprimir". Al marcarla, el cajón se abre con cada ticket que salga, venga de donde venga. No requiere tocar nada en la app.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>La opción 1 usa Bluetooth desde el navegador, que <strong>solo funciona en Chrome y Edge</strong> (en Android o en ordenador). <strong>En iPhone y iPad no está disponible</strong>: si tu TPV es un iPad, usa la opción 2.</div>
 
-    <h4>🖨️ Comandas de cocina y sala</h4>
+    <h4>Comandas de cocina y sala</h4>
     <p>Elige cómo recibe el equipo las comandas al marchar: <strong>verlas en pantalla</strong> (la pantalla de Cocina/Sala) o <strong>imprimir un vale</strong> automáticamente (un vale de cocina con la comida y otro de sala/barra con las bebidas). Si eliges imprimir, indica el ancho del papel (58 u 80 mm) y usa "Imprimir vale de prueba". La impresora concreta se elige en el cuadro de impresión del navegador/sistema; si tienes una impresora térmica de tickets, configúrala como impresora del dispositivo.</p>
 
-    <h4>🔁 Tipos de servicio</h4>
+    <h4>Tipos de servicio</h4>
     <p>Activa o desactiva con las casillas los servicios que ofreces: <strong>Mesa/Sala</strong>, <strong>Take Away</strong> y <strong>Delivery</strong>. Esto controla qué botones y opciones aparecen en el TPV y en la página de pedidos online (por ejemplo, si desactivas Delivery, tus clientes ya no podrán elegir esa opción al pedir desde el móvil). <strong>Cada cambio se guarda al instante</strong> al marcar/desmarcar (debe quedar al menos un servicio activo).</p>
 
-    <h4>📅 Horario de apertura</h4>
+    <h4>Horario de apertura</h4>
     <p>Es el horario general de tu negocio, configurado <strong>día por día</strong> porque no todos los días tienen por qué ser iguales. Para cada día de la semana (<strong>Lunes a Domingo</strong>), primero decides si ese día abres (casilla) y luego eliges el <strong>modo de horario</strong>:</p>
     <ul>
       <li><strong>Horario seguido</strong> — un único tramo (apertura y cierre), por ejemplo si tu local abre sin descanso de 12:00 a 00:00.</li>
@@ -10573,39 +10590,39 @@ const MANUAL_CHAPTERS = [
     </ul>
     <p>Dentro de cada franja horaria, la <strong>carta concreta</strong> que verán tus clientes (tanto en el TPV como en los pedidos online) es la que tengas marcada como <strong>disponible</strong> en cada momento desde la sección <strong>Carta</strong> — ahí decides qué platos y cartas están activos en cada horario, sin tener que repetir esa configuración aquí.</p>
 
-    <h4>🛵 Plataformas de delivery y repartidores propios</h4>
+    <h4>Plataformas de delivery y repartidores propios</h4>
     <p>Si trabajas con apps como Glovo, Uber Eats o Just Eat, añádelas en <strong>Plataformas de delivery</strong> con la comisión que te cobran: así, cuando registres una venta de delivery a través de esa plataforma, esa comisión se restará automáticamente como gasto en Gestión Económica.</p>
     <p>Si además (o en su lugar) repartes los pedidos a domicilio con tu <strong>propio personal</strong>, usa la sección <strong>Repartidores propios</strong> para anotar a tus repartidores (nombre y teléfono). Tendrás un acceso directo por <strong>WhatsApp</strong> para localizarlos rápido y coordinar quién lleva cada pedido.</p>
 
-    <h4>📱 Reserva y pedidos online</h4>
+    <h4>Reserva y pedidos online</h4>
     <p>Con la licencia y la nube activadas, esta tarjeta te da el <strong>enlace público</strong> y el <strong>código QR</strong> general de tu negocio para que los clientes reserven mesa o pidan take away/delivery desde el móvil.</p>
 
-    <h4>🔳 QR auto pedido</h4>
+    <h4>QR auto pedido</h4>
     <p>Muestra un botón pequeño por cada <strong>mesa</strong> que hayas configurado en Operativa (interior, exterior/terraza y barra). Al pulsar sobre el nombre de una mesa (ej. "Mesa 3 (Interior)" o "Barra 1") se abre su <strong>código QR</strong>, listo para descargar e imprimir. Cuando un cliente lo escanea desde esa mesa, el pedido que haga llegará directamente asignado a ese número de mesa en el TPV, sin pasar por la bandeja de pedidos pendientes.</p>`,
     ca:`<h3>Dades de l'establiment</h3>
     <p>Aquesta secció reuneix tota la configuració del teu negoci, organitzada en targetes. L'ordre actual és:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st">🔑 <strong>Codi de negoci</strong> — el codi de 8 caràcters de la teva llicència per a aquest local, amb el qual es donen d'alta empleats en dispositius nous.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">🔒 <strong>PIN del negoci</strong> — canvia'l aquí; es demana per confirmar accions delicades (anul·lar una venda, esborrar un empleat...), no per entrar a Gestió.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">🔗 <strong>Connexions externes</strong> — vincula serveis externs que facis servir.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">🏢 <strong>Dades del negoci</strong> — identitat (logo, nom, propietari, tipus, any), descripció, contacte i xarxes socials. Aquí hi ha el botó <strong>Desar-ho tot</strong>, que desa les dades de totes les targetes d'aquesta pantalla de cop.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">🏬 <strong>Operativa</strong> — aforament per torn i les teves zones de taules, amb el nom i la quantitat que tu defineixis.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">🔁 <strong>Tipus de servei</strong> — activa/desactiva Taula, Take Away i Delivery.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">📅 <strong>Horari d'obertura</strong> — horari general del negoci, configurable dia per dia.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">🧾 <strong>Configuració del tiquet</strong> — dades que apareixen impreses als tiquets.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🔳 <strong>QR de taula</strong> — un botó amb QR per cada taula configurada.</div></div>
-    <div class="manual-step"><div class="sn">10</div><div class="st">🖨️ <strong>Comandes de cuina i sala</strong> — pantalla o val imprès en marxar.</div></div>
-    <div class="manual-step"><div class="sn">11</div><div class="st">📱 <strong>Reserva i comandes en línia</strong> — activa/desactiva, i enllaç/QR perquè els teus clients reservin o demanin des del mòbil.</div></div>
-    <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Comandes per emportar/domicili</strong> — antelació, cost d'enviament i zona de repartiment.</div></div>
-    <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Plataformes de delivery</strong> — Glovo, Uber Eats, Just Eat... amb la seva comissió.</div></div>
-    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>Pagament en línia (Stripe)</strong> — cobrament amb targeta a la web de reserves.</div></div>
-    <div class="manual-step"><div class="sn">15</div><div class="st">✉️ <strong>Confirmació per email</strong> — enviament automàtic al client.</div></div>
-    <div class="manual-step"><div class="sn">16</div><div class="st">🧮 <strong>VeriFactu</strong> — configuració fiscal de facturació verificable.</div></div>
-    <div class="manual-step"><div class="sn">17</div><div class="st">🗄️ <strong>Manteniment de dades</strong> — còpies de seguretat, paperera, arxivament i <strong>Registre d'activitat</strong>.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Codi de negoci</strong> — el codi de 8 caràcters de la teva llicència per a aquest local, amb el qual es donen d'alta empleats en dispositius nous.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>PIN del negoci</strong> — canvia'l aquí; es demana per confirmar accions delicades (anul·lar una venda, esborrar un empleat...), no per entrar a Gestió.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Connexions externes</strong> — vincula serveis externs que facis servir.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Dades del negoci</strong> — identitat (logo, nom, propietari, tipus, any), descripció, contacte i xarxes socials. Aquí hi ha el botó <strong>Desar-ho tot</strong>, que desa les dades de totes les targetes d'aquesta pantalla de cop.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Operativa</strong> — aforament per torn i les teves zones de taules, amb el nom i la quantitat que tu defineixis.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Tipus de servei</strong> — activa/desactiva Taula, Take Away i Delivery.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Horari d'obertura</strong> — horari general del negoci, configurable dia per dia.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Configuració del tiquet</strong> — dades que apareixen impreses als tiquets.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>QR de taula</strong> — un botó amb QR per cada taula configurada.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Comandes de cuina i sala</strong> — pantalla o val imprès en marxar.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Reserva i comandes en línia</strong> — activa/desactiva, i enllaç/QR perquè els teus clients reservin o demanin des del mòbil.</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st"><strong>Comandes per emportar/domicili</strong> — antelació, cost d'enviament i zona de repartiment.</div></div>
+    <div class="manual-step"><div class="sn">13</div><div class="st"><strong>Plataformes de delivery</strong> — Glovo, Uber Eats, Just Eat... amb la seva comissió.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st"><strong>Pagament en línia (Stripe)</strong> — cobrament amb targeta a la web de reserves.</div></div>
+    <div class="manual-step"><div class="sn">15</div><div class="st"><strong>Confirmació per email</strong> — enviament automàtic al client.</div></div>
+    <div class="manual-step"><div class="sn">16</div><div class="st"><strong>VeriFactu</strong> — configuració fiscal de facturació verificable.</div></div>
+    <div class="manual-step"><div class="sn">17</div><div class="st"><strong>Manteniment de dades</strong> — còpies de seguretat, paperera, arxivament i <strong>Registre d'activitat</strong>.</div></div>
 
-    <h4>🔒 PIN del negoci</h4>
+    <h4>PIN del negoci</h4>
     <p><strong>Gestió Econòmica i El Meu Negoci són exclusius del propietari</strong> — no hi ha cap PIN alternatiu per entrar-hi. El PIN que es canvia aquí és el <strong>PIN del negoci</strong>, que es demana per confirmar accions delicades del dia a dia (anul·lar una venda ja cobrada, esborrar un empleat...).</p>
 
-    <h4>🏢 Dades del negoci</h4>
+    <h4>Dades del negoci</h4>
     <p>És la targeta principal amb tota la informació d'identitat i contacte, dividida en quatre blocs:</p>
     <ul>
       <li><strong>Identitat</strong> — logo, nom del negoci, <strong>propietari</strong>, tipus de negoci i any d'obertura.</li>
@@ -10615,7 +10632,7 @@ const MANUAL_CHAPTERS = [
     </ul>
     <p>Al final d'aquesta targeta hi ha el botó <strong>Desar-ho tot</strong>, que desa els canvis de <em>totes</em> les targetes d'El Meu Negoci de cop.</p>
 
-    <h4>🏬 Operativa</h4>
+    <h4>Operativa</h4>
     <p>Aquí defineixes la capacitat i distribució física del teu local:</p>
     <ul>
       <li><strong>Aforament (places per torn)</strong> — nombre màxim de comensals que pots atendre en cada torn de dinar/sopar. S'utilitza a Reserves per avisar-te si un torn s'omple.</li>
@@ -10623,20 +10640,20 @@ const MANUAL_CHAPTERS = [
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i><strong>Crear zona amb taules</strong>: escriu el nom de la zona i quantes taules té, i es creen totes de cop. Després, a la llista <strong>"Taules configurades"</strong> de més avall pots <strong>posar a cada taula el nom o número que vulguis</strong>, canviar-li la zona, o afegir/eliminar taules una a una. Aquestes taules són exactament les que apareixen al TPV, a les reserves i als QR de taula (un QR per taula).</div>
 
-    <h4>💵 Calaix portamonedes</h4>
+    <h4>Calaix portamonedes</h4>
     <p>El primer que convé saber, perquè gairebé tothom ho entén al revés: <strong>el calaix no es connecta a l'ordinador ni a la tauleta</strong>. Va endollat a la <strong>impressora de tiquets</strong> amb un cable RJ11 (semblant al del telèfon fix), i és la impressora qui l'obre enviant-li un pols elèctric. Per això no necessites cap aparell ni cable addicional: si pots imprimir, pots obrir el calaix.</p>
     <p>Tens dues maneres d'aconseguir-ho, i pots fer servir la que millor t'encaixi:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Des de l'app</strong> (recomanat si fas servir Chrome o Edge a Android o a l'ordinador) — connecta la impressora tèrmica per Bluetooth en aquesta mateixa pantalla i marca la casella <strong>"Obrir el calaix automàticament en cobrar"</strong>. El calaix s'obrirà en cada cobrament, sigui en efectiu, targeta o mixt. A més t'apareix un botó <strong>"Obrir calaix"</strong> al TPV per obrir-lo sense cobrar (per exemple, per donar canvi a un client): aquestes obertures manuals <strong>queden registrades al Registre d'activitat</strong>, amb qui i quan, que és just el que voldràs mirar si algun dia no quadra la caixa.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Des del driver de la impressora</strong> (funciona en qualsevol dispositiu, també iPad i iPhone) — a les propietats de la impressora del teu sistema hi ha una casella del tipus "obrir calaix en imprimir". En marcar-la, el calaix s'obre amb cada tiquet que surti, vingui d'on vingui. No requereix tocar res a l'app.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>L'opció 1 fa servir Bluetooth des del navegador, que <strong>només funciona a Chrome i Edge</strong> (a Android o a l'ordinador). <strong>A iPhone i iPad no està disponible</strong>: si el teu TPV és un iPad, fes servir l'opció 2.</div>
 
-    <h4>🖨️ Comandes de cuina i sala</h4>
+    <h4>Comandes de cuina i sala</h4>
     <p>Tria com rep l'equip les comandes en marxar: <strong>veure-les en pantalla</strong> (la pantalla de Cuina/Sala) o <strong>imprimir un val</strong> automàticament (un val de cuina amb el menjar i un altre de sala/barra amb les begudes). Si tries imprimir, indica l'amplada del paper (58 o 80 mm) i fes servir "Imprimir val de prova". La impressora concreta es tria al quadre d'impressió del navegador/sistema; si tens una impressora tèrmica de tiquets, configura-la com a impressora del dispositiu.</p>
 
-    <h4>🔁 Tipus de servei</h4>
+    <h4>Tipus de servei</h4>
     <p>Activa o desactiva amb les caselles els serveis que ofereixes: <strong>Taula/Sala</strong>, <strong>Take Away</strong> i <strong>Delivery</strong>. Això controla quins botons i opcions apareixen al TPV i a la pàgina de comandes en línia (per exemple, si desactives Delivery, els teus clients ja no podran triar aquesta opció en demanar des del mòbil). <strong>Cada canvi es desa a l'instant</strong> en marcar/desmarcar (n'ha de quedar almenys un d'actiu).</p>
 
-    <h4>📅 Horari d'obertura</h4>
+    <h4>Horari d'obertura</h4>
     <p>És l'horari general del teu negoci, configurat <strong>dia per dia</strong> perquè no tots els dies han de ser iguals. Per a cada dia de la setmana (<strong>Dilluns a Diumenge</strong>), primer decideixes si aquell dia obres (casella) i després tries el <strong>mode d'horari</strong>:</p>
     <ul>
       <li><strong>Horari seguit</strong> — un únic tram (obertura i tancament), per exemple si el teu local obre sense descans de 12:00 a 00:00.</li>
@@ -10650,39 +10667,39 @@ const MANUAL_CHAPTERS = [
     </ul>
     <p>Dins de cada franja horària, la <strong>carta concreta</strong> que veuran els teus clients (tant al TPV com a les comandes en línia) és la que tinguis marcada com a <strong>disponible</strong> en cada moment des de la secció <strong>Carta</strong> — allà decideixes quins plats i cartes estan actius en cada horari, sense haver de repetir aquesta configuració aquí.</p>
 
-    <h4>🛵 Plataformes de delivery i repartidors propis</h4>
+    <h4>Plataformes de delivery i repartidors propis</h4>
     <p>Si treballes amb apps com Glovo, Uber Eats o Just Eat, afegeix-les a <strong>Plataformes de delivery</strong> amb la comissió que et cobren: així, quan registris una venda de delivery a través d'aquella plataforma, aquella comissió es restarà automàticament com a despesa a Gestió Econòmica.</p>
     <p>Si a més (o en lloc d'això) reparteixes les comandes a domicili amb el teu <strong>propi personal</strong>, fes servir la secció <strong>Repartidors propis</strong> per anotar els teus repartidors (nom i telèfon). Tindràs un accés directe per <strong>WhatsApp</strong> per localitzar-los ràpid i coordinar qui porta cada comanda.</p>
 
-    <h4>📱 Reserva i comandes en línia</h4>
+    <h4>Reserva i comandes en línia</h4>
     <p>Amb la llicència i el núvol activats, aquesta targeta et dona l'<strong>enllaç públic</strong> i el <strong>codi QR</strong> general del teu negoci perquè els clients reservin taula o demanin take away/delivery des del mòbil.</p>
 
-    <h4>🔳 QR autocomanda</h4>
+    <h4>QR autocomanda</h4>
     <p>Mostra un botó petit per cada <strong>taula</strong> que hagis configurat a Operativa (interior, exterior/terrassa i barra). En prémer sobre el nom d'una taula (ex. "Taula 3 (Interior)" o "Barra 1") s'obre el seu <strong>codi QR</strong>, a punt per descarregar i imprimir. Quan un client l'escaneja des d'aquella taula, la comanda que faci arribarà directament assignada a aquell número de taula al TPV, sense passar per la safata de comandes pendents.</p>`,
     en:`<h3>Business details</h3>
     <p>This section brings together your entire business configuration, organised into cards. The current order is:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st">🔑 <strong>Business code</strong> — the 8-character code for this location's licence, used to register employees on new devices.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">🔒 <strong>Business PIN</strong> — change it here; it's asked for to confirm sensitive actions (voiding a sale, deleting an employee...), not to get into Management.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">🔗 <strong>External connections</strong> — link any external services you use.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">🏢 <strong>Business details</strong> — identity (logo, name, owner, type, year), description, contact and social media. This is where the <strong>Save all</strong> button lives, which saves every card on this screen at once.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">🏬 <strong>Operations</strong> — capacity per time slot and your own table zones, with whatever name and count you define.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">🔁 <strong>Service types</strong> — enable/disable Table, Take Away and Delivery.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">📅 <strong>Opening hours</strong> — the business's general schedule, configurable day by day.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">🧾 <strong>Receipt settings</strong> — the details printed on receipts.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🔳 <strong>Table QR</strong> — one QR button per configured table.</div></div>
-    <div class="manual-step"><div class="sn">10</div><div class="st">🖨️ <strong>Kitchen and floor tickets</strong> — on-screen or printed ticket when fired.</div></div>
-    <div class="manual-step"><div class="sn">11</div><div class="st">📱 <strong>Reservations and online ordering</strong> — enable/disable, plus the link and QR code for customers to book or order from their phone.</div></div>
-    <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Take away/delivery orders</strong> — lead time, delivery fee and delivery zone.</div></div>
-    <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Delivery platforms</strong> — Glovo, Uber Eats, Just Eat... with their commission.</div></div>
-    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>Online payment (Stripe)</strong> — card payment on the booking site.</div></div>
-    <div class="manual-step"><div class="sn">15</div><div class="st">✉️ <strong>Email confirmation</strong> — automatic email to the customer.</div></div>
-    <div class="manual-step"><div class="sn">16</div><div class="st">🧮 <strong>VeriFactu</strong> — verifiable invoicing tax settings.</div></div>
-    <div class="manual-step"><div class="sn">17</div><div class="st">🗄️ <strong>Data maintenance</strong> — backups, trash, archiving and the <strong>Activity log</strong>.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Business code</strong> — the 8-character code for this location's licence, used to register employees on new devices.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Business PIN</strong> — change it here; it's asked for to confirm sensitive actions (voiding a sale, deleting an employee...), not to get into Management.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>External connections</strong> — link any external services you use.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Business details</strong> — identity (logo, name, owner, type, year), description, contact and social media. This is where the <strong>Save all</strong> button lives, which saves every card on this screen at once.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Operations</strong> — capacity per time slot and your own table zones, with whatever name and count you define.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Service types</strong> — enable/disable Table, Take Away and Delivery.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Opening hours</strong> — the business's general schedule, configurable day by day.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Receipt settings</strong> — the details printed on receipts.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>Table QR</strong> — one QR button per configured table.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Kitchen and floor tickets</strong> — on-screen or printed ticket when fired.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Reservations and online ordering</strong> — enable/disable, plus the link and QR code for customers to book or order from their phone.</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st"><strong>Take away/delivery orders</strong> — lead time, delivery fee and delivery zone.</div></div>
+    <div class="manual-step"><div class="sn">13</div><div class="st"><strong>Delivery platforms</strong> — Glovo, Uber Eats, Just Eat... with their commission.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st"><strong>Online payment (Stripe)</strong> — card payment on the booking site.</div></div>
+    <div class="manual-step"><div class="sn">15</div><div class="st"><strong>Email confirmation</strong> — automatic email to the customer.</div></div>
+    <div class="manual-step"><div class="sn">16</div><div class="st"><strong>VeriFactu</strong> — verifiable invoicing tax settings.</div></div>
+    <div class="manual-step"><div class="sn">17</div><div class="st"><strong>Data maintenance</strong> — backups, trash, archiving and the <strong>Activity log</strong>.</div></div>
 
-    <h4>🔒 Business PIN</h4>
+    <h4>Business PIN</h4>
     <p><strong>Financial Management and My Business are owner-only</strong> — there's no alternative PIN to get in. The PIN you change here is the <strong>business PIN</strong>, asked for to confirm sensitive day-to-day actions (voiding an already-charged sale, deleting an employee...).</p>
 
-    <h4>🏢 Business details</h4>
+    <h4>Business details</h4>
     <p>This is the main card with all your identity and contact information, split into four blocks:</p>
     <ul>
       <li><strong>Identity</strong> — logo, business name, <strong>owner</strong>, business type and year opened.</li>
@@ -10692,7 +10709,7 @@ const MANUAL_CHAPTERS = [
     </ul>
     <p>At the bottom of this card is the <strong>Save all</strong> button, which saves changes across <em>every</em> card in My Business at once.</p>
 
-    <h4>🏬 Operations</h4>
+    <h4>Operations</h4>
     <p>Here you define your venue's physical capacity and layout:</p>
     <ul>
       <li><strong>Capacity (seats per slot)</strong> — the maximum number of guests you can serve in each lunch/dinner slot. Used in Reservations to warn you when a slot is filling up.</li>
@@ -10700,20 +10717,20 @@ const MANUAL_CHAPTERS = [
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i><strong>Create zone with tables</strong>: type the zone's name and how many tables it has, and they're all created at once. Afterwards, in the <strong>"Configured tables"</strong> list below, you can <strong>give each table whatever name or number you like</strong>, change its zone, or add/remove tables one by one. These tables are exactly the ones that show up in the POS, in reservations and on the table QR codes (one QR per table).</div>
 
-    <h4>💵 Cash drawer</h4>
+    <h4>Cash drawer</h4>
     <p>The first thing worth knowing, because almost everyone gets it backwards: <strong>the drawer doesn't connect to the computer or tablet</strong>. It plugs into the <strong>receipt printer</strong> with an RJ11 cable (like a landline phone cable), and the printer is what opens it by sending an electrical pulse. That's why you don't need any extra device or cable: if you can print, you can open the drawer.</p>
     <p>There are two ways to set it up, and you can use whichever suits you:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st"><strong>From the app</strong> (recommended if you use Chrome or Edge on Android or desktop) — connect the thermal printer over Bluetooth on this same screen and tick <strong>"Open the drawer automatically on every charge"</strong>. The drawer will open on every charge, whether cash, card or mixed. You also get an <strong>"Open drawer"</strong> button in the POS to open it without charging (to give change, for instance): those manual openings <strong>are recorded in the Activity log</strong>, with who and when — exactly what you'll want to check if the till ever doesn't add up.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st"><strong>From the printer driver</strong> (works on any device, including iPad and iPhone) — your system's printer properties have an option along the lines of "open cash drawer when printing". Tick it and the drawer opens with every receipt printed, whatever produced it. No app settings involved.</div></div>
     <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Option 1 uses Bluetooth from the browser, which <strong>only works in Chrome and Edge</strong> (on Android or desktop). <strong>It is not available on iPhone or iPad</strong>: if your POS is an iPad, use option 2.</div>
 
-    <h4>🖨️ Kitchen and floor tickets</h4>
+    <h4>Kitchen and floor tickets</h4>
     <p>Choose how the team receives orders when fired: <strong>viewing them on screen</strong> (the Kitchen/Floor screen) or <strong>automatically printing a ticket</strong> (one kitchen ticket with the food and a separate floor/bar ticket with the drinks). If you choose printing, set the paper width (58 or 80 mm) and use "Print test ticket". The specific printer is chosen in your browser/system's print dialog; if you have a thermal receipt printer, set it up as your device's printer.</p>
 
-    <h4>🔁 Service types</h4>
+    <h4>Service types</h4>
     <p>Enable or disable, with the checkboxes, the services you offer: <strong>Table/Floor</strong>, <strong>Take Away</strong> and <strong>Delivery</strong>. This controls which buttons and options show up in the POS and on the online ordering page (for example, if you disable Delivery, your customers will no longer be able to choose that option when ordering from their phone). <strong>Every change saves instantly</strong> as you check/uncheck (at least one service must stay active).</p>
 
-    <h4>📅 Opening hours</h4>
+    <h4>Opening hours</h4>
     <p>This is your business's general schedule, configured <strong>day by day</strong> because not every day has to be the same. For each day of the week (<strong>Monday to Sunday</strong>), you first decide whether you open that day (checkbox) and then choose the <strong>schedule mode</strong>:</p>
     <ul>
       <li><strong>Continuous hours</strong> — a single block (opening and closing), for example if your venue runs non-stop from 12:00 to midnight.</li>
@@ -10727,14 +10744,14 @@ const MANUAL_CHAPTERS = [
     </ul>
     <p>Within each time slot, the <strong>specific menu</strong> your customers see (both in the POS and in online orders) is whichever one you have marked as <strong>available</strong> at that moment from the <strong>Menu</strong> section — that's where you decide which dishes and menus are active at each time, without having to repeat that setup here.</p>
 
-    <h4>🛵 Delivery platforms and in-house couriers</h4>
+    <h4>Delivery platforms and in-house couriers</h4>
     <p>If you work with apps like Glovo, Uber Eats or Just Eat, add them under <strong>Delivery platforms</strong> with the commission they charge you: that way, when you log a delivery sale through that platform, the commission is automatically deducted as an expense in Financial Management.</p>
     <p>If you also (or instead) deliver orders with your <strong>own staff</strong>, use the <strong>In-house couriers</strong> section to note down your delivery riders (name and phone). You'll get a direct <strong>WhatsApp</strong> link to reach them quickly and coordinate who's carrying each order.</p>
 
-    <h4>📱 Reservations and online ordering</h4>
+    <h4>Reservations and online ordering</h4>
     <p>With the licence and cloud enabled, this card gives you your business's general <strong>public link</strong> and <strong>QR code</strong> so customers can book a table or order take away/delivery from their phone.</p>
 
-    <h4>🔳 Table self-order QR</h4>
+    <h4>Table self-order QR</h4>
     <p>Shows a small button for every <strong>table</strong> you've set up in Operations (indoor, outdoor/terrace and bar). Tapping a table's name (e.g. "Table 3 (Indoor)" or "Bar 1") opens its <strong>QR code</strong>, ready to download and print. When a customer scans it from that table, whatever they order arrives in the POS directly assigned to that table number, without going through the pending-orders tray.</p>`},
   },
   {

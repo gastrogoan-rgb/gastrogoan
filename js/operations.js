@@ -1402,10 +1402,10 @@ function renderPedidoDetail(){
   const itemsHtml = (o.items||[]).map((line, idx) => {
     const ing = getIngredient(line.ingredientId);
     const state = line.recibidoCheck; // true=OK, false=problema, undefined=sin revisar
-    const rowAccent = !showRecepcion ? 'var(--border)' : (state===true ? '#2e7d32' : state===false ? 'var(--red)' : 'var(--border)');
+    const rowAccent = !showRecepcion ? 'var(--border)' : (state===true ? '#4A5D4E' : state===false ? 'var(--red)' : 'var(--border)');
     return `
       <div class="list-row" style="padding:6px 10px;flex-wrap:wrap;border-left:3px solid ${rowAccent}">
-        <div class="list-row-name"><span style="${state===true ? 'text-decoration:underline;text-decoration-color:#2e7d32;text-decoration-thickness:2px' : ''}${state===false ? 'color:var(--red)' : ''}">${ing ? escapeHtml(ing.name) : '—'}</span></div>
+        <div class="list-row-name"><span style="${state===true ? 'text-decoration:underline;text-decoration-color:#4A5D4E;text-decoration-thickness:2px' : ''}${state===false ? 'color:var(--red)' : ''}">${ing ? escapeHtml(ing.name) : '—'}</span></div>
         <span style="font-size:11.5px;color:var(--muted)">${t('label.ordered')}</span>
         ${editUnlocked
           ? `<input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)">`
@@ -1413,7 +1413,7 @@ function renderPedidoDetail(){
         <span style="font-size:12px;color:var(--muted);min-width:22px">${ing ? escapeHtml(ing.unit) : ''}</span>
         ${showRecepcion ? `
         <div style="display:flex;gap:6px">
-          <button type="button" title="${t('label.arrived')}" ${canEditChecklist?'':'disabled'} onclick="toggleRecepcionCheck(${idx}, true)" style="width:30px;height:30px;border-radius:6px;cursor:${canEditChecklist?'pointer':'default'};display:flex;align-items:center;justify-content:center;border:1px solid ${state===true?'#2e7d32':'var(--border)'};background:${state===true?'#2e7d32':'#fff'};color:${state===true?'#fff':'#2e7d32'}"><i class="ti ti-check" style="font-size:16px"></i></button>
+          <button type="button" title="${t('label.arrived')}" ${canEditChecklist?'':'disabled'} onclick="toggleRecepcionCheck(${idx}, true)" style="width:30px;height:30px;border-radius:6px;cursor:${canEditChecklist?'pointer':'default'};display:flex;align-items:center;justify-content:center;border:1px solid ${state===true?'#4A5D4E':'var(--border)'};background:${state===true?'#4A5D4E':'#fff'};color:${state===true?'#fff':'#4A5D4E'}"><i class="ti ti-check" style="font-size:16px"></i></button>
           <button type="button" title="${t('label.notArrived')}" ${canEditChecklist?'':'disabled'} onclick="toggleRecepcionCheck(${idx}, false)" style="width:30px;height:30px;border-radius:6px;cursor:${canEditChecklist?'pointer':'default'};display:flex;align-items:center;justify-content:center;border:1px solid ${state===false?'var(--red)':'var(--border)'};background:${state===false?'var(--red)':'#fff'};color:${state===false?'#fff':'var(--red)'}"><i class="ti ti-x" style="font-size:16px"></i></button>
         </div>
         ${ing && !isRecibido && canEditChecklist ? (() => {
@@ -1520,7 +1520,7 @@ function renderPedidoDetail(){
         ${o.estado==='BORRADOR' ? `<button class="btn btn-primary" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> ${t('btn.markSent')}</button>` : ''}
         ${o.estado==='ENVIADO' ? `<button class="btn btn-primary" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> ${t('btn.markReceived')}</button>` : ''}
         ${o.estado==='RECIBIDO' ? `<button class="owner-only btn" onclick="revertPedidoRecepcion(${o.id})"><i class="ti ti-arrow-back-up"></i> ${t('btn.revertReception')}</button>` : ''}
-        <button class="btn" style="background:#188842;color:#fff;border-color:#188842" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn" style="background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         <button class="owner-only btn" onclick="duplicateOrder(${o.id})"><i class="ti ti-copy"></i> ${t('btn.duplicateOrder')}</button>
@@ -2092,7 +2092,7 @@ function updateOrderItemSearch(val){
 function orderFormButtonsHtml(){
   return `
     <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-    <button class="btn" style="background:#188842;color:#fff;border-color:#188842" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendByWhatsapp')}</button>
+    <button class="btn" style="background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendByWhatsapp')}</button>
     <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> ${t('btn.sendByEmail')}</button>
   `;
 }
@@ -2675,9 +2675,9 @@ function lfPintarRevision(){
       <div class="field"><label>${t('hr.gv.numFactura')}</label><input type="text" id="lf-num" value="${escapeHtml(f.numFactura)}" onchange="lfCambiarCabecera('numFactura',this.value)"></div>
       <div class="field"><label>${t('common.date')}</label><input type="date" id="lf-fecha" value="${escapeHtml(f.fecha)}" onchange="lfCambiarCabecera('fecha',this.value)"></div>
     </div>
-    <div id="lf-validacion" class="card" style="margin:8px 0;padding:10px 12px;border-left:4px solid ${v.global.length ? 'var(--red)' : '#2e7d32'}">
+    <div id="lf-validacion" class="card" style="margin:8px 0;padding:10px 12px;border-left:4px solid ${v.global.length ? 'var(--red)' : '#4A5D4E'}">
       ${v.global.length ? v.global.map(x => `<div class="lf-descuadre" style="color:var(--red);font-size:13px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(x)}</div>`).join('')
-        : `<div style="font-size:13px;color:#2e7d32"><i class="ti ti-circle-check"></i> ${t('lf.ok')}</div>`}
+        : `<div style="font-size:13px;color:#4A5D4E"><i class="ti ti-circle-check"></i> ${t('lf.ok')}</div>`}
     </div>
     <h4 style="margin:12px 0 6px">${t('lf.lines')}</h4>
     ${f.lineas.map((l, i) => {
@@ -2708,7 +2708,7 @@ function lfPintarRevision(){
             <div style="min-height:44px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <span>${antes ? fmtMoney(antes) + ' → ' : ''}<strong>${fmtMoney(l.precioIng)}</strong></span>
               ${pct > 0 ? `<span class="lf-subida" style="color:var(--red);font-weight:700;white-space:nowrap"><i class="ti ti-trending-up"></i> ${escapeHtml(t('lf.rise').replace('${p}', fmtNum(pct, 1)))}</span>` : ''}
-              ${pct < 0 ? `<span style="color:#2e7d32;font-weight:700;white-space:nowrap">${escapeHtml(t('lf.drop').replace('${p}', fmtNum(-pct, 1)))}</span>` : ''}
+              ${pct < 0 ? `<span style="color:#4A5D4E;font-weight:700;white-space:nowrap">${escapeHtml(t('lf.drop').replace('${p}', fmtNum(-pct, 1)))}</span>` : ''}
             </div></div>
         </div>
         ${l.unidadRara ? `<div style="color:var(--red);font-size:13px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('lf.unitCheck').replace('${a}', l.unidad || '?').replace('${b}', ing.unit || '?'))}</div>` : ''}
@@ -2925,8 +2925,8 @@ function pfTarjetaHtml(o){
       : `<a href="${adj.dataUrl}" download="${escapeHtml(adj.name || 'factura.pdf')}" class="btn btn-sm" style="min-height:44px"><i class="ti ti-file-text"></i> ${escapeHtml(adj.name || 'factura.pdf')}</a>`}</div>` : ''}
     ${!fa.leida ? `<p class="txt-xs" style="color:var(--muted);margin:8px 0 0">${t('pf.notRead')}</p>`
       : `<div id="pf-difs" style="margin-top:8px;font-size:13px">${difs.length
-        ? difs.map(c => `<div class="pf-dif" style="color:${c.tipo === 'sube' || c.tipo === 'baja' ? '#8a5a00' : 'var(--red)'}"><i class="ti ti-alert-triangle"></i> ${escapeHtml(pfTextoFila(c))}</div>`).join('')
-        : `<div style="color:#2e7d32"><i class="ti ti-circle-check"></i> ${t('pf.allMatch')}</div>`}
+        ? difs.map(c => `<div class="pf-dif" style="color:${c.tipo === 'sube' || c.tipo === 'baja' ? '#8A7440' : 'var(--red)'}"><i class="ti ti-alert-triangle"></i> ${escapeHtml(pfTextoFila(c))}</div>`).join('')
+        : `<div style="color:#4A5D4E"><i class="ti ti-circle-check"></i> ${t('pf.allMatch')}</div>`}
         ${fa.ajusteStock ? `<div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('pf.stockAdjusted')}</div>` : ''}</div>`}
   </div>`;
 }
@@ -3078,7 +3078,7 @@ function pfPintarCuadre(){
   const o = getPurchaseOrder(e.pedidoId);
   if(!o) return;
   const c = pfCuadre(o, e);
-  const color = {igual: '#2e7d32', sube: '#e0a100', baja: '#e0a100', cantidad: 'var(--red)', falta: 'var(--red)', sobra: 'var(--red)'};
+  const color = {igual: '#4A5D4E', sube: '#8A7440', baja: '#8A7440', cantidad: 'var(--red)', falta: 'var(--red)', sobra: 'var(--red)'};
   const badge = {igual: 'badge-green', sube: 'badge-amber', baja: 'badge-amber', cantidad: 'badge-red', falta: 'badge-red', sobra: 'badge-red'};
   const hayCantidad = c.recibido && c.filas.some(f => f.tipo === 'cantidad' && f.ingredientId != null);
   const v = lfValidar(e);
@@ -3094,10 +3094,10 @@ function pfPintarCuadre(){
         <span class="badge ${badge[f.tipo]}">${t('pf.tag.' + f.tipo)}${(f.tipo === 'sube' || f.tipo === 'baja') ? ' ' + (f.pct > 0 ? '+' : '−') + fmtNum(Math.abs(f.pct), 1) + ' %' : ''}</span>
       </div>
       <div style="font-size:13px;margin-top:2px">${escapeHtml(pfTextoFila(f))}</div>
-      ${f.cambiaPrecio && f.tipo === 'cantidad' ? `<div style="font-size:13px;color:#8a5a00">${escapeHtml(pfTextoPrecio(f))}</div>` : ''}
+      ${f.cambiaPrecio && f.tipo === 'cantidad' ? `<div style="font-size:13px;color:#8A7440">${escapeHtml(pfTextoPrecio(f))}</div>` : ''}
       ${f.cambiaPrecio ? `<label style="display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px"><input type="checkbox" class="pf-precio" ${f.actualizarPrecio ? 'checked' : ''} onchange="pfMarcarPrecio(${escapeHtml(JSON.stringify(f.ingredientId))}, this.checked)"> ${t('lf.updatePrice')}</label>` : ''}
     </div>`).join('')}
-    <div class="card" id="pf-totales" style="margin:8px 0;padding:10px 12px;border-left:4px solid ${Math.abs(difTotal) <= 0.05 ? '#2e7d32' : 'var(--red)'}">
+    <div class="card" id="pf-totales" style="margin:8px 0;padding:10px 12px;border-left:4px solid ${Math.abs(difTotal) <= 0.05 ? '#4A5D4E' : 'var(--red)'}">
       <div style="font-size:14px">${escapeHtml(t('pf.totals').replace('${p}', fmtMoney(c.totalPedido)).replace('${f}', fmtMoney(c.totalFactura)))}</div>
       ${Math.abs(difTotal) > 0.05 ? `<div style="font-weight:700;color:var(--red)">${escapeHtml(t('pf.totalDiff').replace('${d}', (difTotal > 0 ? '+' : '−') + fmtMoney(Math.abs(difTotal))))}</div>` : ''}
     </div>

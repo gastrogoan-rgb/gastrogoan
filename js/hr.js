@@ -3267,7 +3267,7 @@ const GE = (function(){
     const sinVentas = DB.recipes.filter(r => !r.isBase && !soldRecipeIds.has(r.id));
     document.getElementById('platos-sin-ventas').innerHTML = sinVentas.length
       ? `<div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px">${sinVentas.map(r=>`<span class="badge badge-gray">${escapeHtml(r.name)}</span>`).join('')}</div>`
-      : `<div class="empty" style="padding:12px 16px">${t('hr.platos.allSoldThisPeriod')} 🎉</div>`;
+      : `<div class="empty" style="padding:12px 16px">${t('hr.platos.allSoldThisPeriod')}</div>`;
   }
 
   /* -- EXPORTAR CONTABILIDAD PARA EL GESTOR -- */
@@ -4962,12 +4962,12 @@ function renderTeamPulseHtml(){
   });
   if(moodThisWeek.length){
     const avg = moodThisWeek.reduce((s,c)=>s+c.value,0) / moodThisWeek.length;
-    const faces = ['😞','🙁','😐','🙂','😄'];
+    const faces = ['<i class="ti ti-mood-cry"></i>','<i class="ti ti-mood-sad"></i>','<i class="ti ti-mood-empty"></i>','<i class="ti ti-mood-smile"></i>','<i class="ti ti-mood-happy"></i>'];
     parts.push(`
       <div class="card owner-strict" style="margin-bottom:10px">
         <h4 style="margin-bottom:4px"><i class="ti ti-mood-smile"></i> ${t('hr.moodPulse.title')}</h4>
         <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:28px">${faces[Math.round(avg)-1]||'😐'}</span>
+          <span style="font-size:28px">${faces[Math.round(avg)-1]||faces[2]}</span>
           <span style="font-size:13px;color:var(--muted)">${t('hr.moodPulse.desc').replace('${n}', moodThisWeek.length).replace('${avg}', avg.toFixed(1))}</span>
         </div>
       </div>`);
@@ -5032,7 +5032,7 @@ function renderHorariosPersonal(){
   // empezar el mes siguiente vuelve a partir de cero.
   let medalByEmpId = null;
   if(isSala){
-    const medals = ['🥇','🥈','🥉'];
+    const medals = ['<i class="ti ti-medal-2" style="color:#8A7440"></i>','<i class="ti ti-medal-2" style="color:#716C65"></i>','<i class="ti ti-medal-2" style="color:#8A4A3B"></i>'];
     // Sobre allEmps (todo el equipo), no sobre emps (lo que se ve en
     // pantalla) — si no, la vista de un solo empleado (la suya propia) le
     // pondría siempre 🥇 sea cual sea su facturación real.
@@ -5443,7 +5443,7 @@ const EMPLOYEE_COLOR_CHOICES = [
   '#95A5A6','#7F8C8D',
 ];
 function openEmployeeModal(id){
-  const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#DF7039', area: currentArea()};
+  const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#8A7440', area: currentArea()};
   openModal(`
     <div class="modal-header">
       <h3>${id ? t('title.editEmployee') : t('title.newEmployee')}</h3>
@@ -5797,7 +5797,7 @@ function hasAnsweredMoodThisWeek(employeeId){
 function promptMoodCheckin(employeeId){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
-  const faces = ['😞','🙁','😐','🙂','😄'];
+  const faces = ['<i class="ti ti-mood-cry"></i>','<i class="ti ti-mood-sad"></i>','<i class="ti ti-mood-empty"></i>','<i class="ti ti-mood-smile"></i>','<i class="ti ti-mood-happy"></i>'];
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-mood-smile"></i> ${t('mood.title')}</h3>
