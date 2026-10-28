@@ -319,6 +319,30 @@
   .lang-dd .lang-panel button:hover{background:var(--ink);color:#F1EFE9}
   .lang-dd .lang-panel button.active{background:var(--cream,#F1EFE9)}
   .lang-dd .lang-panel button.active .lang-code{color:var(--olive)}
+
+  /* MOVIMIENTO (28/10): entradas escalonadas y respuesta al toque; apagado con reduced-motion */
+  @keyframes gg-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes gg-pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:no-preference){
+    header h1,header .logo{animation:gg-rise .5s cubic-bezier(.2,.7,.2,1) backwards}
+    .card{animation:gg-rise .45s .08s cubic-bezier(.2,.7,.2,1) backwards}
+    .menu-item{animation:gg-rise .35s cubic-bezier(.2,.7,.2,1) backwards}
+    .menu-item:nth-child(2){animation-delay:.05s}.menu-item:nth-child(3){animation-delay:.1s}
+    .menu-item:nth-child(4){animation-delay:.15s}.menu-item:nth-child(n+5){animation-delay:.2s}
+    .menu-folder-card{animation:gg-pop .35s cubic-bezier(.2,.7,.2,1) backwards;transition:transform .2s cubic-bezier(.2,.7,.2,1),background-color .15s,color .15s,border-color .15s}
+    .menu-folder-card:hover{transform:translateY(-3px)}
+    .menu-folder-card:active{transform:scale(.97)}
+    .menu-folder-card .icon{transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+    .menu-folder-card:hover .icon{transform:scale(1.12) rotate(-4deg)}
+    .btn,.tab-btn,.qty-ctl button{transition:transform .14s cubic-bezier(.2,.7,.2,1),background-color .15s,color .15s,border-color .15s}
+    .btn:active,.tab-btn:active,.qty-ctl button:active{transform:scale(.95)}
+    .btn:hover{transform:translateY(-1px)}
+    .tab-btn.active{animation:gg-pop .25s ease backwards}
+    .cart-line{animation:gg-rise .25s ease backwards}
+    .lang-panel{transform-origin:top right;animation:gg-pop .16s ease backwards}
+    input:focus,select:focus,textarea:focus{box-shadow:0 0 0 4px rgba(74,93,78,.14)}
+    input,select,textarea{transition:border-color .15s,box-shadow .2s}
+  }
 </style>
 </head>
 <body>

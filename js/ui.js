@@ -1639,6 +1639,34 @@ function rememberLastArea(key){
   }
 }
 
+
+/* ============== Menú lateral (escritorio) ============== */
+// Es el menú de las maquetas «Nórdico afinado» y «Comanda»: siempre a la vista,
+// con el sitio donde estás marcado. En móvil no existe (la cabecera de siempre).
+function renderSideNav(){
+  const nav = document.getElementById('side-nav');
+  if(!nav) return;
+  const session = getAccessSession();
+  const owner = !!(session && session.type === 'owner');
+  const emp = session && session.type === 'employee';
+  const view = (document.querySelector('.view.active')?.id || '').replace('view-','');
+  const folder = typeof currentFolder !== 'undefined' ? currentFolder : null;
+  const items = [];
+  if(!emp) items.push({k:'home', icon:'ti-layout-dashboard', label:t('nav.inicio') !== 'nav.inicio' ? t('nav.inicio') : 'Inicio', go:"goHome()", on: view==='home'});
+  if(owner) items.push({k:'dashboard', icon:'ti-chart-bar', label:t('module.gestion.dashboard.name'), go:"navigate('dashboard')", on: view==='dashboard'});
+  const area = emp ? session.area : null;
+  if(!emp || area==='sala') items.push({k:'sala', icon:'ti-table', label:t('folder.sala.title'), go:"openFolder('sala')", on: folder==='sala' && view!=='dashboard' && !['carta','pedidos'].includes(view)});
+  if(!emp || area==='cocina') items.push({k:'cocina', icon:'ti-tools-kitchen-2', label:t('folder.cocina.title'), go:"openFolder('cocina')", on: folder==='cocina' && view!=='dashboard' && !['carta','pedidos'].includes(view)});
+  if(owner){
+    items.push({k:'carta', icon:'ti-glass-cocktail', label:gl({es:'Carta',ca:'Carta',en:'Menu'}), go:"navigate('carta')", on: view==='carta'});
+    items.push({k:'pedidos', icon:'ti-shopping-cart', label:gl({es:'Compras',ca:'Compres',en:'Purchasing'}), go:"navigate('pedidos')", on: view==='pedidos'});
+    items.push({k:'economia', icon:'ti-coin', label:t('module.gestion.economia.name'), go:"navigate('economia')", on: view==='economia'});
+    items.push({k:'minegocio', icon:'ti-building-store', label:t('module.gestion.minegocio.name'), go:"navigate('minegocio')", on: view==='minegocio'});
+  }
+  nav.innerHTML = `<div class="side-brand"><span class="side-gg">gg</span><span class="side-name">GastroGoan</span></div>` +
+    items.map(i => `<button type="button" class="side-item${i.on?' active':''}" onclick="${i.go}"${i.on?' aria-current="page"':''}><i class="ti ${i.icon}" aria-hidden="true"></i><span>${escapeHtml(i.label)}</span></button>`).join('');
+}
+
 /* ============== Navigation ============== */
 function goHome(){
   const session = getAccessSession();
@@ -1705,6 +1733,7 @@ function lockEditMode(){
 // equipo. .owner-strict (gobernado por esta clase) solo se muestra en una
 // sesión de propietario de verdad.
 function applyOwnerSessionEditRights(){
+  setTimeout(renderSideNav, 0);
   editUnlocked = true;
   document.body.classList.add('edit-unlocked', 'owner-session');
 }
@@ -1716,6 +1745,7 @@ function applyOwnerSessionEditRights(){
 // si no, se queda en vista de solo consulta, sin ningún control para
 // cambiarlo. Se llama al iniciar sesión de empleado y al reanudarla.
 function applyEmployeeSessionEditRights(employeeId){
+  setTimeout(renderSideNav, 0);
   document.body.classList.remove('owner-session');
   const emp = (DB.employees||[]).find(e => e.id === employeeId);
   if(emp && emp.canUnlockEdit){
@@ -1914,6 +1944,7 @@ function navigate(view){
 
   renderView(view);
   location.hash = view;
+  renderSideNav();
 }
 
 // Gestión (Gestión Económica, Mi Negocio) es exclusiva del propietario: una

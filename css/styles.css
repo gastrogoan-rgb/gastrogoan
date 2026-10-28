@@ -2625,6 +2625,100 @@ code,pre,kbd,samp{font-family:var(--mono)}
 /* --- Avisos y semáforos del Panel de Control --- */
 .help-suggestion,.dash-chip{border-radius:2px}
 
+/* ═══════════════════════════════════════
+   MOVIMIENTO E INTERACCIÓN (28/10)
+   Entradas escalonadas, respuesta al toque y microanimaciones. Solo
+   transform/opacity (no mueven el diseño, no tumban test/movil.mjs) y todo
+   queda apagado con prefers-reduced-motion. Las entradas usan fill-mode
+   «backwards»: en reposo la pieza ya está en su sitio y visible.
+   ═══════════════════════════════════════ */
+@keyframes gg-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes gg-pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+@keyframes gg-slide-r{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes gg-line{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes gg-ring{0%{box-shadow:0 0 0 0 rgba(74,93,78,.5)}100%{box-shadow:0 0 0 10px rgba(74,93,78,0)}}
+@media (prefers-reduced-motion:no-preference){
+  /* Cada pantalla entra por capas: título, raya, y luego las piezas una a una */
+  .content .view.active .view-title{animation:gg-rise .4s cubic-bezier(.2,.7,.2,1) backwards}
+  .content .view.active .view-subtitle{animation:gg-rise .4s .06s cubic-bezier(.2,.7,.2,1) backwards}
+  .content .view.active :is(.card,.kpi,.kpi-mini,.module-card,.folder-card,.mesa-card,.table-wrap,.dash-hero){animation:gg-rise .45s cubic-bezier(.2,.7,.2,1) backwards}
+  .content .view.active :is(.card,.kpi,.module-card,.folder-card,.mesa-card):nth-child(1){animation-delay:.08s}
+  .content .view.active :is(.card,.kpi,.module-card,.folder-card,.mesa-card):nth-child(2){animation-delay:.14s}
+  .content .view.active :is(.card,.kpi,.module-card,.folder-card,.mesa-card):nth-child(3){animation-delay:.20s}
+  .content .view.active :is(.card,.kpi,.module-card,.folder-card,.mesa-card):nth-child(4){animation-delay:.26s}
+  .content .view.active :is(.card,.kpi,.module-card,.folder-card,.mesa-card):nth-child(5){animation-delay:.31s}
+  .content .view.active :is(.card,.kpi,.module-card,.folder-card,.mesa-card):nth-child(n+6){animation-delay:.36s}
+  .home-hero h1{animation:gg-rise .5s cubic-bezier(.2,.7,.2,1) backwards}
+  .home-hero p,.home-hero .hero-badge{animation:gg-rise .5s .1s cubic-bezier(.2,.7,.2,1) backwards}
+  .tabs .tab,.ge-tab{transition:background-color .18s,color .18s,border-color .18s,transform .12s}
+  .ge-tab-panel.active,.tab-panel.active{animation:gg-rise .3s cubic-bezier(.2,.7,.2,1) backwards}
+
+  /* Respuesta al toque: todo lo pulsable se hunde un poco, y vuelve */
+  .btn,.module-card,.folder-card,.mesa-card,.hdr-icon-btn,.tab,.ge-tab,.access-choice-btn,.lang-menu-item{transition:transform .14s cubic-bezier(.2,.7,.2,1),background-color .15s,color .15s,border-color .15s,box-shadow .15s}
+  .btn:active,.hdr-icon-btn:active,.tab:active,.ge-tab:active,.access-choice-btn:active{transform:scale(.96)}
+  .module-card:active,.folder-card:active,.mesa-card:active{transform:scale(.985)}
+  .btn:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+  /* Tarjetas: se elevan, el icono se asienta y la flecha avanza */
+  .module-card:hover,.folder-card:hover,.mesa-card:hover{transform:translateY(-3px)}
+  .module-icon,.folder-icon{transition:transform .25s cubic-bezier(.2,.7,.2,1),color .15s,background-color .15s}
+  .module-card:hover .module-icon,.folder-card:hover .folder-icon{transform:scale(1.08) rotate(-3deg)}
+  .module-open .ti,.folder-btn .ti{transition:transform .2s}
+  .module-card:hover .module-open .ti,.folder-card:hover .folder-btn .ti{transform:translateX(5px)}
+  .kpi,.kpi-mini{transition:background-color .2s,transform .2s}
+  .kpi:hover,.kpi-mini:hover{transform:translateY(-2px)}
+  tbody tr{transition:background-color .15s}
+  tbody tr:hover td{transition:background-color .15s}
+  .badge{transition:transform .15s}
+  .btn .ti{transition:transform .2s}
+  .btn:hover .ti-plus,.btn:hover .ti-arrow-right,.btn:hover .ti-chevron-right{transform:translateX(2px) scale(1.1)}
+  .btn:hover .ti-refresh,.btn:hover .ti-rotate{transform:rotate(90deg)}
+
+  /* Ventanas, avisos y menús */
+  .modal{animation:gg-pop .26s cubic-bezier(.2,.7,.2,1) backwards}
+  .modal-overlay,.modal-backdrop{animation:modalFadeIn .2s ease backwards}
+  #toast,.toast{animation:gg-slide-r .3s cubic-bezier(.2,.7,.2,1) backwards}
+  .lang-panel{transform-origin:top right;animation:gg-pop .16s ease backwards}
+  .sync-badge,#sync-status{transition:background-color .3s,color .3s}
+  .dash-hero .num,.dash-hero-num{animation:gg-rise .6s .1s cubic-bezier(.2,.7,.2,1) backwards}
+  input,select,textarea{transition:border-color .15s,box-shadow .2s,outline-color .15s}
+  input:focus,select:focus,textarea:focus{box-shadow:0 0 0 4px rgba(74,93,78,.14)}
+  .app-header{transition:box-shadow .3s}
+  .help-suggestion,.dash-chip{animation:gg-pop .35s .2s cubic-bezier(.2,.7,.2,1) backwards}
+}
+
+/* ═══════════════════════════════════════
+   MENÚ LATERAL (28/10): lo que enseñaban las maquetas 1 y 2 y la primera
+   tanda no hizo. Barra de tinta a la izquierda, rotulación en mono, el sitio
+   actual en crema. Solo escritorio (≥1100 px); en móvil sigue la cabecera.
+   ═══════════════════════════════════════ */
+.side-nav{display:none}
+/* fondo crema con fichas blancas, como en la maqueta «Comanda» */
+.content{background:#F1EFE9}
+@media (min-width:1100px){
+  body{padding-left:236px}
+  .side-nav{display:flex;flex-direction:column;gap:2px;position:fixed;left:0;top:0;bottom:0;width:236px;background:var(--ink);padding:22px 14px;z-index:60;overflow-y:auto;box-shadow:inset -3px 0 0 var(--olive)}
+  .side-brand{display:flex;align-items:center;gap:10px;color:#F1EFE9;padding:2px 8px 26px;font-family:var(--mono);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:14px}
+  .side-gg{font-family:var(--mono);font-weight:700;color:#8FA593;font-size:18px;letter-spacing:-.02em}
+  .side-item{display:flex;align-items:center;gap:14px;width:100%;min-height:48px;padding:10px 14px;background:transparent;border:0;border-left:3px solid transparent;color:#C9C2B6;font-family:var(--mono);font-size:12.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;text-align:left;cursor:pointer;transition:background-color .15s,color .15s,padding-left .18s,border-color .15s}
+  .side-item .ti{font-size:20px;flex:none;color:#ABA59C;transition:color .15s,transform .2s}
+  .side-item:hover{background:#2A2723;color:#F1EFE9;padding-left:18px}
+  .side-item:hover .ti{color:#F1EFE9;transform:scale(1.1)}
+  .side-item.active{background:#F1EFE9;color:var(--ink);border-left-color:var(--olive);font-weight:600}
+  .side-item.active .ti{color:var(--olive)}
+  .side-item:focus-visible{outline:2px solid #8FA593;outline-offset:-2px}
+  /* la marca vive en el menú: la cabecera queda como barra de utilidades */
+  .app-header .app-logo{display:none}
+  .app-header{justify-content:flex-end}
+}
+@media (min-width:1100px) and (prefers-reduced-motion:no-preference){
+  .side-nav{animation:gg-slide-l .4s cubic-bezier(.2,.7,.2,1) backwards}
+  .side-item{animation:gg-rise .4s cubic-bezier(.2,.7,.2,1) backwards}
+  .side-item:nth-child(2){animation-delay:.05s}.side-item:nth-child(3){animation-delay:.1s}.side-item:nth-child(4){animation-delay:.15s}
+  .side-item:nth-child(5){animation-delay:.2s}.side-item:nth-child(6){animation-delay:.25s}.side-item:nth-child(n+7){animation-delay:.3s}
+}
+@keyframes gg-slide-l{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)
 
