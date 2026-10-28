@@ -2586,7 +2586,7 @@ button,input,select,textarea{font-family:inherit}
 code,pre,kbd,samp{font-family:var(--mono)}
 
 /* --- ENTRADA: carga, negocios y asistentes de alta comparten la pantalla de acceso --- */
-:root{--entry-bg:linear-gradient(180deg,#1C1A17 0%,#24221D 100%)}
+:root{--entry-bg:radial-gradient(ellipse 46% 52% at 50% -8%,rgba(241,232,210,.13),rgba(241,232,210,.04) 45%,transparent 72%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/220px 220px,linear-gradient(180deg,#1C1A17,#24221D)}
 #app-splash{background:var(--entry-bg)}
 .splash-box{gap:12px}
 .splash-icon{width:76px;height:76px;padding:8px;background:#fff;box-shadow:0 0 0 8px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.35);animation:none}
@@ -2711,6 +2711,24 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
   .access-foot-dot{animation:acc-latido 2.4s ease-in-out infinite}
 }
 @keyframes acc-latido{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* Fondo de entrada (D): la luz cálida de la lámpara sobre el pase y un grano finísimo de papel.
+   Lo usan la carga, el acceso, el selector de negocios y los asistentes de alta. */
+#app-splash,#access-select-screen,#business-select-screen{background:var(--entry-bg)}
+
+/* Entradas: propietarios en el verde de la marca; las dos responden al pasar y al pulsar */
+.access-choice-btn{transition:transform .22s cubic-bezier(.2,.7,.2,1),background-color .2s,border-color .2s,box-shadow .22s,color .2s}
+.access-choice-btn .aci{transition:background-color .2s,color .2s,transform .25s cubic-bezier(.2,.7,.2,1)}
+.access-choice-btn.primary{background:var(--olive);border-color:var(--olive);color:#fff}
+.access-choice-btn.primary .aci{background:rgba(255,255,255,.16);color:#fff}
+.access-choice-btn.primary:hover{background:#3F5143;border-color:#3F5143}
+.access-choice-btn.secondary:hover{background:#FAF8F4;border-color:var(--ink)}
+.access-choice-btn.secondary:hover .aci{background:var(--olive);color:#fff}
+.access-choice-btn:hover{transform:translateY(-3px);box-shadow:0 12px 24px -14px rgba(28,26,23,.55)}
+.access-choice-btn:hover .aci{transform:scale(1.06)}
+.access-choice-btn:active{transform:translateY(0) scale(.985);box-shadow:0 2px 6px -4px rgba(28,26,23,.5);transition-duration:.08s}
+.access-choice-btn:focus-visible{outline:2px solid var(--olive);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.access-choice-btn,.access-choice-btn:hover,.access-choice-btn:active{transform:none}}
 
 /* --- PANEL: avisos que importan delante, el resto en una línea --- */
 .toolbar select{min-width:215px}
