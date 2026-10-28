@@ -2586,7 +2586,7 @@ button,input,select,textarea{font-family:inherit}
 code,pre,kbd,samp{font-family:var(--mono)}
 
 /* --- ENTRADA: carga, negocios y asistentes de alta comparten la pantalla de acceso --- */
-:root{--entry-bg:#1C1A17}
+:root{--entry-bg:linear-gradient(180deg,#1C1A17 0%,#24221D 100%)}
 #app-splash{background:var(--entry-bg)}
 .splash-box{gap:12px}
 .splash-icon{width:76px;height:76px;padding:8px;background:#fff;box-shadow:0 0 0 8px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.35);animation:none}
@@ -2684,10 +2684,6 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
    marca, enorme y recortada abajo a la izquierda, en oliva casi invisible. Es tipografía, no decoración
    genérica: el logo hecho paisaje. */
 #access-select-screen{background:var(--entry-bg)}
-#app-splash::before,#access-select-screen::before,#business-select-screen::before,#license-gate::before,#firebase-gate::before,#netlify-gate::before,#extconn-gate::before,#revoked-gate::before{
-  content:"gg";position:fixed;left:-6vmin;bottom:-26vmin;font-family:'Schibsted Grotesk',system-ui,sans-serif;font-weight:800;font-size:78vmin;line-height:1;letter-spacing:-.09em;color:#4A5D4E;opacity:.14;pointer-events:none;user-select:none;z-index:0}
-#app-splash::after,#access-select-screen::after,#business-select-screen::after,#license-gate::after,#firebase-gate::after,#netlify-gate::after,#extconn-gate::after,#revoked-gate::after{
-  content:"";position:fixed;left:0;right:0;top:0;height:3px;background:#4A5D4E;pointer-events:none;z-index:2}
 #app-splash > *,#access-select-screen > *,#business-select-screen > *,#license-gate > *,#firebase-gate > *,#netlify-gate > *,#extconn-gate > *,#revoked-gate > *{position:relative;z-index:1}
 .access-wrap,.bs-box{position:relative;z-index:1}
 #license-gate > div,#firebase-gate > div,#netlify-gate > div,#extconn-gate > div,#revoked-gate > div,#business-select-screen .bs-box,.access-card{box-shadow:none !important}
