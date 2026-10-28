@@ -233,7 +233,7 @@ function renderAccessScreen(){
   const screen = document.getElementById('access-select-screen');
   if(!screen) return;
   screen.innerHTML = `
-    <div class="access-wrap">
+    <div class="access-wrap${accessScreenMode === 'choice' ? '' : ' access-form-mode'}">
       ${renderAccessLangSwitcherHtml()}
       <div class="access-brand">
         <div class="access-icon"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain"></div>
