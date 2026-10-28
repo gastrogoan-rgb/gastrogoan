@@ -1844,14 +1844,14 @@ td.wrap{white-space:normal}
   transition:opacity .5s ease, visibility .5s ease;
 }
 #app-splash.hide{opacity:0;visibility:hidden;pointer-events:none}
-.splash-box{display:flex;flex-direction:column;align-items:center;gap:14px;color:#fff;animation:splash-pop .6s ease}
+.splash-box{box-sizing:border-box;width:100%;max-width:420px;padding:0 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;color:#fff;animation:splash-pop .6s ease}
 .splash-icon{
   width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.18);
   display:flex;align-items:center;justify-content:center;font-size:36px;
   animation:splash-bounce 1.4s ease-in-out infinite;
 }
 .splash-title{font-size:22px;font-weight:800;letter-spacing:.5px}
-.splash-sub{font-size:13px;opacity:.85}
+.splash-sub{font-size:13px;opacity:.85;text-align:center;line-height:1.4;overflow-wrap:break-word}
 @keyframes splash-pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 @keyframes splash-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 
