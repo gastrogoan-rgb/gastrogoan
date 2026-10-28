@@ -2184,9 +2184,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 @media (max-width: 600px){
   .btn, .btn-sm, .ge-tab, .tab-btn, .month-pill,
   .toolbar .btn, .actions-cell .btn{
-    min-height:36px !important;padding:6px 10px !important;font-size:12.5px !important
+    min-height:36.5px !important;padding:6px 10px !important;font-size:12.5px !important
   }
-  .btn-icon, .btn-sm.btn-icon{min-width:36px !important;min-height:36px !important}
+  /* 36,5 y no 36: con las animaciones de entrada el navegador mide 35,9999… y la prueba de móvil lo cuenta como corto */
+  .btn-icon, .btn-sm.btn-icon{min-width:36.5px !important;min-height:36.5px !important}
   .btn i, .btn-sm i{font-size:15px}
 }
 
