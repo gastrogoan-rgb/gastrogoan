@@ -1968,18 +1968,51 @@ function renderView(view){
 }
 
 function renderHome(){
-  document.querySelector('#view-home .hero-badge').innerHTML = `<i class="ti ti-star"></i> ${escapeHtml(t('home.heroBadge'))}`;
-  document.querySelector('#view-home .home-hero h1').textContent = t('home.title');
-  document.querySelector('#view-home .home-hero p').textContent = t('home.subtitle');
+  // El inicio no es un menú: dice QUÉ negocio es, qué día, cómo va hoy y qué
+  // herramientas hay en cada área. Las cifras salen de los mismos datos que el
+  // Panel de Control (no se calcula nada aparte) y solo las ve el propietario.
+  const nombre = (DB.business && DB.business.name || '').trim();
+  const hoy = new Date();
+  const fecha = hoy.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'});
+  const eyebrow = document.getElementById('home-date');
+  if(eyebrow) eyebrow.textContent = nombre ? nombre + ' · ' + fecha : fecha;
+  document.getElementById('home-title').textContent = t('home.title');
+  document.querySelector('#view-home .home-sub').textContent = t('home.subtitle');
   const sello = document.getElementById('home-version');
   if(sello) sello.textContent = t('idr.version').replace('${v}', (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '—'));
-  document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
-    <div class="folder-card folder-${key}" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
-      <span class="folder-icon"><i class="ti ${f.icon}"></i></span>
+
+  const pulso = document.getElementById('home-pulse');
+  const sesion = getAccessSession();
+  if(pulso){
+    if(sesion && sesion.type === 'owner'){
+      const dia = todayStr();
+      const ventasHoy = activeSales().filter(s => s.date === dia);
+      const total = ventasHoy.reduce((a, x) => a + x.total, 0);
+      const abiertas = DB.tpvOrders.filter(o => o.status === 'abierta').length;
+      const porLlegar = DB.reservations.filter(r => r.date === dia && !r.llegada && (r.status === 'confirmada' || r.status === 'pendiente')).length;
+      const celda = (etq, val, nota) => `<div class="pulse-cell"><span class="pulse-lbl">${escapeHtml(etq)}</span><span class="pulse-val">${escapeHtml(val)}</span><span class="pulse-note">${escapeHtml(nota || '')}</span></div>`;
+      pulso.innerHTML =
+        celda(t('home.m.sales'), fmtMoney(total), ventasHoy.length + ' ' + t('home.m.tickets')) +
+        celda(t('home.m.open'), String(abiertas), t('home.m.openNote')) +
+        celda(t('home.m.res'), String(porLlegar), t('home.m.resNote'));
+      pulso.style.display = '';
+    }else{
+      pulso.innerHTML = ''; pulso.style.display = 'none';
+    }
+  }
+
+  document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => {
+    const nombres = f.modules.map(m => t(`module.${key}.${m.id}.name`));
+    const visibles = nombres.slice(0, 5).map(n => `<li>${escapeHtml(n)}</li>`).join('');
+    const resto = nombres.length > 5 ? `<li class="area-more">+${nombres.length - 5}</li>` : '';
+    return `
+    <button type="button" class="folder-card folder-${key}" onclick="openFolder('${key}')">
+      <span class="area-top"><span class="folder-icon"><i class="ti ${f.icon}"></i></span><i class="ti ti-arrow-up-right area-go" aria-hidden="true"></i></span>
       <h2>${escapeHtml(t(`folder.${key}.title`))}</h2>
-      <div class="folder-btn"><i class="ti ti-arrow-right"></i> ${escapeHtml(t('common.enter'))}</div>
-    </div>
-  `).join('');
+      <span class="area-sub">${escapeHtml(t(`folder.${key}.subtitle`))}</span>
+      <ul class="area-tools">${visibles}${resto}</ul>
+    </button>`;
+  }).join('');
   // Se pinta DESPUÉS de las carpetas: si algo fallara aquí, el inicio ya está
   // dibujado y el cliente puede seguir trabajando igual.
   if(typeof renderPuestaAPunto === 'function') renderPuestaAPunto();

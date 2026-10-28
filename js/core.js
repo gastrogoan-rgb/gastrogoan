@@ -6424,6 +6424,8 @@ function updateSyncBadge(state){
   if(!el) return;
   if(state === 'local'){ el.style.display = 'none'; return; }
   el.style.display = 'inline-block';
+  // El color lo pone el CSS según data-state (paleta de la marca), no JS.
+  const marcarEstado = st => { if(el.dataset) el.dataset.state = st; el.style.background = ''; el.style.color = ''; };
   // El texto va en un <span class="hdr-text"> para que, igual que el resto
   // de botones de la cabecera, se oculte solo en móvil (queda solo el
   // icono ☁) — antes era texto suelto con textContent y no se acortaba
@@ -6432,15 +6434,15 @@ function updateSyncBadge(state){
   // los demás botones.
   if(state === 'online'){
     const conHora = lastSyncOkAt ? ' · ' + (Date.now() - lastSyncOkAt < 10000 ? t('gate.syncNow') : t('gate.syncAgo').replace('{t}', haceDesde(lastSyncOkAt))) : '';
-    el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}${conHora}</span>`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
+    el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}${conHora}</span>`; marcarEstado('online'); }
   // 'pending': antes el badge solo distinguía conectado/desconectado, no si
   // los cambios que se acaban de hacer YA llegaron de verdad a la nube o
   // siguen en camino — con esto queda un estado visible intermedio, en vez
   // de que "conectado" dé a entender (sin garantizarlo) que todo ya está
   // guardado.
-  else if(state === 'pending'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudPending')}</span>`; el.style.background = '#2E6FBA'; el.style.color = '#FFFFFF'; }
-  else if(state === 'offline'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.offline')}</span>`; el.style.background = '#B8860B'; el.style.color = '#FFFFFF'; }
-  else { el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudError')}</span>`; el.style.background = '#C0392B'; el.style.color = '#FFFFFF'; }
+  else if(state === 'pending'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudPending')}</span>`; marcarEstado('pending'); }
+  else if(state === 'offline'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.offline')}</span>`; marcarEstado('offline'); }
+  else { el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudError')}</span>`; marcarEstado('error'); }
 }
 
 function refreshAfterRemoteChange(){

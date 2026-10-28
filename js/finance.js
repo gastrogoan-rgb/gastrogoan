@@ -1054,17 +1054,21 @@ function renderDashboard(){
     {count: tomorrowReservations, icon:'ti-calendar-plus', label: t('dash.att.tomorrowReservations'), onclick: `navigate('reservas'); goToReservasDia('${tomorrowDate}')`},
   ];
   const anyAttention = attentionItems.some(i => i.count > 0);
+  // Lo que pide atención va delante, con su cifra; lo que está a cero no se
+  // esconde (sigue siendo un acceso directo) pero baja a una línea tranquila.
+  // Antes eran 13 píldoras del mismo peso y las dos o tres que importaban se
+  // perdían entre las grises.
+  const chipAtencion = i => `
+        <button type="button" class="att-chip${i.warn ? ' att-warn' : ''}" onclick="${i.onclick}">
+          <i class="ti ${i.icon}" aria-hidden="true"></i>
+          <strong>${i.count}</strong>
+          <span>${i.label}</span>
+        </button>`;
+  const conAviso = attentionItems.filter(i => i.count > 0);
+  const aCero = attentionItems.filter(i => i.count === 0);
   document.getElementById('dashboard-attention').innerHTML = `
-    <div style="display:flex;flex-wrap:wrap;gap:10px">
-      ${attentionItems.map(i => `
-        <div onclick="${i.onclick}" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);${i.count===0?'opacity:.45':''}${i.count>0 && i.warn?';border-color:var(--red);color:var(--red)':''}">
-          <i class="ti ${i.icon}" style="font-size:18px"></i>
-          <strong style="font-size:16px">${i.count}</strong>
-          <span style="font-size:12.5px;color:${i.count>0 && i.warn?'var(--red)':'var(--muted)'}">${i.label}</span>
-        </div>
-      `).join('')}
-    </div>
-    ${anyAttention ? '' : `<div style="font-size:12.5px;color:var(--muted);margin-top:4px">${t('dash.att.allQuiet')}</div>`}
+    ${conAviso.length ? `<div class="att-list">${conAviso.map(chipAtencion).join('')}</div>` : `<div class="att-quiet-msg">${t('dash.att.allQuiet')}</div>`}
+    ${aCero.length ? `<div class="att-zero">${aCero.map(i => `<button type="button" class="att-link" onclick="${i.onclick}"><i class="ti ${i.icon}" aria-hidden="true"></i>${i.label}</button>`).join('')}</div>` : ''}
   `;
 
   /* ---------- Hero: venta de hoy + comparativas ---------- */
@@ -1093,17 +1097,19 @@ function renderDashboard(){
       <div style="font-size:15px;color:var(--muted)">${t('dash.noSalesYet')}</div>
     </div>
   ` : `
-    <div class="card" style="text-align:center">
-      <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600">${t('dash.hero.salesToday')}</div>
-      <div style="font-size:44px;font-weight:800;margin:6px 0;line-height:1">${fmtMoney(todaySales)}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px">
-        ${deltaBadge(deltaYesterday, t('dash.hero.vsYesterday'))}
-        ${deltaBadge(deltaLastWeek, t('dash.hero.vsLastWeek'))}
+    <div class="dash-hero">
+      <div class="dash-hero-main">
+        <div class="dash-hero-lbl">${t('dash.hero.salesToday')}</div>
+        <div class="dash-hero-num">${fmtMoney(todaySales)}</div>
+        <div class="dash-hero-deltas">
+          ${deltaBadge(deltaYesterday, t('dash.hero.vsYesterday'))}
+          ${deltaBadge(deltaLastWeek, t('dash.hero.vsLastWeek'))}
+        </div>
       </div>
-      <div style="display:flex;gap:24px;justify-content:center;font-size:13px;color:var(--muted)">
-        <div>${t('dash.hero.ticketsToday')}: <strong style="color:var(--text)">${todayTicketCount}</strong></div>
-        <div>${t('dash.avgTicket')}: <strong style="color:var(--text)">${fmtMoney(todayAvgTicket)}</strong></div>
-      </div>
+      <dl class="dash-hero-side">
+        <div><dt>${t('dash.hero.ticketsToday')}</dt><dd>${todayTicketCount}</dd></div>
+        <div><dt>${t('dash.avgTicket')}</dt><dd>${fmtMoney(todayAvgTicket)}</dd></div>
+      </dl>
     </div>
   `;
 
