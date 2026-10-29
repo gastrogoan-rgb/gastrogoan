@@ -2804,6 +2804,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
   .access-icon{width:76px;height:76px}.access-brand h1{font-size:40px}
   .access-card{padding:22px 26px}.access-cita{padding-bottom:24px}
 }
+/* Logo y nombre en la misma fila, «Kit de gestión gastronómica» debajo (pedido el 29/10). El logo
+   se iguala a la altura del nombre; sin el borde-halo, que a ese tamaño ensuciaba la fila. */
+.access-brand-row{display:flex;align-items:center;justify-content:center;gap:16px}
+.access-brand-row .access-icon{width:64px;height:64px;padding:6px;margin:0;box-shadow:none}
+@media (min-height:641px) and (max-height:760px){.access-brand-row .access-icon{width:56px;height:56px}}
+@media (max-height:640px){.access-brand-row .access-icon{width:44px;height:44px;padding:4px}.access-brand-row{gap:12px}}
+@media (max-width:400px){.access-brand-row .access-icon{width:50px;height:50px;padding:5px}.access-brand-row{gap:12px}.access-brand h1{font-size:36px}}
 /* Idioma más discreto (pedido el 29/10): la caja se ve pequeña, pero la zona
    que se puede pulsar sigue midiendo 44 px gracias al ::after. */
 .access-lang-switch .lang-trigger{position:relative;min-height:30px;padding:4px 9px;gap:5px;font-size:12px}
