@@ -2792,6 +2792,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 #access-select-screen .access-foot{margin-top:22px}
 @media (prefers-reduced-motion:no-preference){#access-select-screen:not(.hide) .access-quote{animation:gg-rise .6s .34s cubic-bezier(.2,.7,.2,1) backwards}}
 
+/* Selector: la fila del negocio se lleva el ancho (el nombre no puede quedar en una franja estrecha)
+   y la tarjeta entra con un fundido, sin escalar: escalada, los botones medían menos de 44 px al aparecer. */
+#business-select-screen .bs-item > div:first-child,#business-select-screen .bs-group-header > div:first-child{flex:1 1 auto;min-width:0}
+#business-select-screen .bs-box{animation:bs-fundido .35s ease}
+/* «(independiente)» no aporta y le robaba al nombre la mitad de la fila */
+#business-select-screen .bs-item-tag{display:none}
+@keyframes bs-fundido{from{opacity:0}to{opacity:1}}
+
 /* --- PANEL: avisos que importan delante, el resto en una línea --- */
 .toolbar select{min-width:215px}
 .att-list{display:flex;flex-wrap:wrap;gap:8px}
