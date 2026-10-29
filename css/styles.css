@@ -2792,6 +2792,24 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .access-cita q{display:block;font-family:"Schibsted Grotesk",system-ui,sans-serif;font-size:17px;font-weight:400;line-height:1.5;color:#F1EFE9;quotes:"«" "»";text-wrap:balance}
 .access-cita cite{font-family:var(--mono);font-style:normal;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:#9DB3A1}
 .access-cita cite::before{content:"— "}
+.access-cita{padding-bottom:36px}
+/* Centrado con justify-content, si la pantalla es baja (tablet apaisada con la barra del navegador,
+   ~640 px) lo que sobra se cortaba POR ARRIBA y el idioma quedaba fuera. Con margin:auto en
+   .access-wrap se centra igual cuando cabe y, cuando no, se desplaza en vez de cortarse. */
+#access-select-screen{justify-content:flex-start;overflow-y:auto}
+/* Tablet apaisada (640-760 px de alto útil): un poco más compacto para que la frase se lea sin
+   desplazar. Por debajo de 640 manda la regla compacta de siempre. */
+@media (min-height:641px) and (max-height:760px){
+  .access-wrap{gap:20px}.access-brand{gap:10px}.access-lang-switch{margin-bottom:0}
+  .access-icon{width:76px;height:76px}.access-brand h1{font-size:40px}
+  .access-card{padding:22px 26px}.access-cita{padding-bottom:24px}
+}
+/* Idioma más discreto (pedido el 29/10): la caja se ve pequeña, pero la zona
+   que se puede pulsar sigue midiendo 44 px gracias al ::after. */
+.access-lang-switch .lang-trigger{position:relative;min-height:30px;padding:4px 9px;gap:5px;font-size:12px}
+.access-lang-switch .lang-trigger .lang-code{font-size:12px}
+.access-lang-switch .lang-trigger .ti{font-size:11px}
+.access-lang-switch .lang-trigger::after{content:"";position:absolute;inset:-7px -4px}
 @media (max-height:640px){.access-cita{margin-top:6px;gap:6px}.access-cita q{font-size:15px}}
 
 /* Selector: la fila del negocio se lleva el ancho (el nombre no puede quedar en una franja estrecha)
