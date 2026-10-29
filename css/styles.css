@@ -2821,6 +2821,34 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 #access-select-screen .gg-wordmark{font-weight:400;letter-spacing:-.03em}
 #access-select-screen .gg-wordmark b{font-weight:600}
 #access-select-screen .gg-wordmark span{color:#8FA593}
+
+/* Movimiento de la entrada (29/10, «algo que quede pro»). Todo lento y corto de recorrido: que se
+   note que la pantalla está viva, no que se mueve. Nada de esto toca tamaños (los botones miden lo
+   mismo en cada fotograma: cuentas.mjs los mide) y todo se apaga con «reducir movimiento». */
+.access-choice-btn.primary{overflow:hidden}
+.access-choice-btn.primary::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.16) 50%,transparent 65%);transform:translateX(-110%)}
+#access-select-screen::before,#business-select-screen::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 55% 42% at 50% 0%,rgba(255,224,170,.09),transparent 70%)}
+@media (prefers-reduced-motion:no-preference){
+  /* Las gg flotan, como en la carga y el selector (splash-bounce), pero más despacio */
+  #access-select-screen:not(.hide) .access-icon{animation:gg-rise .5s .06s cubic-bezier(.2,.7,.2,1) backwards,gg-flotar 3.6s 1.2s ease-in-out infinite}
+  #business-select-screen .bs-title .splash-icon{animation:gg-flotar 3.6s ease-in-out infinite}
+  /* La frase llega la última, cuando ya está todo en su sitio */
+  #access-select-screen:not(.hide) .access-cita{animation:gg-rise .7s .5s cubic-bezier(.2,.7,.2,1) backwards}
+  /* Un brillo cruza el botón de propietarios al pasar por encima */
+  .access-choice-btn.primary:hover::after{transition:transform .7s cubic-bezier(.2,.7,.2,1);transform:translateX(110%)}
+  /* La luz de la lámpara «respira» muy despacio */
+  #access-select-screen::before,#business-select-screen::before{animation:gg-lampara 8s ease-in-out infinite}
+  /* Los negocios del selector entran uno detrás de otro */
+  #business-select-screen .bs-item{animation:gg-rise .4s cubic-bezier(.2,.7,.2,1) backwards}
+  #business-select-screen .bs-item:nth-child(2){animation-delay:.05s}
+  #business-select-screen .bs-item:nth-child(3){animation-delay:.1s}
+  #business-select-screen .bs-item:nth-child(4){animation-delay:.15s}
+  #business-select-screen .bs-item:nth-child(n+5){animation-delay:.2s}
+}
+@keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes gg-lampara{0%,100%{opacity:.55}50%{opacity:1}}
 @media (min-height:641px) and (max-height:760px){#access-select-screen{--bh:40px}}
 @media (max-height:640px){#access-select-screen{--bh:30px;--bgap:6px}}
 @media (max-width:400px){#access-select-screen{--bh:32px;--bgap:7px;--bkit:24px}.access-brand-row{gap:12px}
