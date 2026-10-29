@@ -3345,10 +3345,63 @@ function cycleRondaEstado(orderId, idxsTxt){
 }
 function nivelEspera(mins){ return mins >= 15 ? 'r' : mins >= 5 ? 'a' : ''; }
 
+/* LO QUE ESPERA EN EL PASE (29/10): platos ya listos que sala todavía no ha recogido. Es comida que se enfría
+   y, hasta ahora, desaparecía de esta pantalla en cuanto cocina la marcaba como lista. Se enseña por mesa, con
+   cuánto lleva esperando (ámbar a los 3 min, rojo a los 6) y un botón para avisar a sala sin escribir nada. */
+function lineasEnPase(allOrders){
+  const porPedido = new Map();
+  allOrders.forEach(order => (order.items||[]).forEach(line => {
+    if(line.bebida || line.estado !== 'entregado' || line.recogidoAt) return;
+    const desde = line.entregadoAt ? new Date(line.entregadoAt).getTime() : Date.now();
+    if(!porPedido.has(order.id)) porPedido.set(order.id, {order, lineas: [], desde});
+    const g = porPedido.get(order.id);
+    g.lineas.push(line); g.desde = Math.min(g.desde, desde);
+  }));
+  return [...porPedido.values()].sort((a, b) => a.desde - b.desde);
+}
+function paseHtml(allOrders){
+  const grupos = lineasEnPase(allOrders);
+  if(!grupos.length) return '';
+  const total = grupos.reduce((a, g) => a + g.lineas.length, 0);
+  const filas = grupos.map(({order, lineas, desde}) => {
+    const mins = Math.max(0, Math.round((Date.now() - desde) / 60000));
+    const nivel = mins >= 6 ? 'r' : mins >= 3 ? 'a' : '';
+    const { titulo } = ticketTituloMeta(order);
+    const avisado = order.paseAvisadoAt && (Date.now() - new Date(order.paseAvisadoAt).getTime()) < 3 * 60000;
+    return `
+      <div class="cz-pase-it ${nivel}">
+        <div class="cz-pase-txt"><strong>${escapeHtml(titulo)}</strong><span>${lineas.map(l => `${fmtNum(l.qty)}× ${escapeHtml(l.name)}`).join(' · ')}</span></div>
+        <b class="cz-pase-min">${mins}'</b>
+        <button type="button" class="btn btn-sm btn-fino${avisado ? ' is-on' : ''}" ${avisado ? 'disabled' : ''} onclick="avisarPase(${order.id})"><i class="ti ${avisado ? 'ti-check' : 'ti-bell-ringing'}"></i> ${avisado ? gl({es:'Avisado', ca:'Avisat', en:'Alerted'}) : gl({es:'Avisar', ca:'Avisar', en:'Alert'})}</button>
+      </div>`;
+  }).join('');
+  return `
+    <div class="cz-pase">
+      <div class="cz-pase-cab"><span><i class="ti ti-bell-ringing"></i> ${gl({es:'En el pase', ca:'Al pas', en:'At the pass'})}</span><small>${total} ${gl({es:total===1?'plato esperando a sala':'platos esperando a sala', ca:total===1?'plat esperant la sala':'plats esperant la sala', en:'waiting for the floor'})}</small></div>
+      ${filas}
+    </div>`;
+}
+function avisarPase(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const { titulo } = ticketTituloMeta(order);
+  const authorId = getChatAuthor();
+  const autor = getChatAuthorName(authorId);
+  const texto = `🍳 ${titulo}: ${gl({es:'listo en el pase, venid a recogerlo', ca:'llest al pas, veniu a recollir-ho', en:'ready at the pass, come and collect'})}`;
+  DB.chatMessages.push({id: genId(), channel: 'sala', authorId, authorName: autor, text: texto, ts: new Date().toISOString(), urgent: true});
+  order.paseAvisadoAt = new Date().toISOString();
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  if(typeof sendPushToAll === 'function') sendPushToAll('🍳 ' + autor, texto);
+  showToast(gl({es:'Sala avisada', ca:'Sala avisada', en:'Dining room alerted'}));
+  renderComandasCocina();
+}
+
 function renderChaosCocinaHtml(allOrders){
   const pendientes = lineasPendientesCocina(allOrders);
+  const pase = paseHtml(allOrders);
   if(!pendientes.length){
-    return `<div class="empty"><i class="ti ti-mood-smile"></i>${t('kitchen.chaos.empty')}</div>`;
+    return pase + `<div class="empty"><i class="ti ti-mood-smile"></i>${t('kitchen.chaos.empty')}</div>`;
   }
   const porPedido = new Map();
   pendientes.forEach(x => { if(!porPedido.has(x.order.id)) porPedido.set(x.order.id, {order: x.order, lineas: []}); porPedido.get(x.order.id).lineas.push(x); });
@@ -3386,7 +3439,7 @@ function renderChaosCocinaHtml(allOrders){
         </div>
         ${g.prep ? `<span class="kt-st p">${fmtNum(g.prep)} ${gl({es:'en preparación', ca:'en preparació', en:'preparing'})}</span>` : ''}
       </div>`).join('');
-    return cabecera + vistas + `<div class="cz-lista">${filas}</div>`;
+    return cabecera + pase + vistas + `<div class="cz-lista">${filas}</div>`;
   }
 
   const tarjetas = mesas.map(({order, lineas}) => {
@@ -3444,7 +3497,7 @@ function renderChaosCocinaHtml(allOrders){
         <div class="kt-ev"><button type="button" class="btn btn-sm btn-fino" onclick="openIncidenciaModal(${order.id}, 'cocina')"><i class="ti ti-alert-triangle"></i> ${gl({es:'Incidencia en esta comanda', ca:'Incidència en aquesta comanda', en:'Incident on this order'})}</button></div>
       </div>`;
   }).join('');
-  return cabecera + vistas + `<div class="cz-grid">${tarjetas}</div>`;
+  return cabecera + pase + vistas + `<div class="cz-grid">${tarjetas}</div>`;
 }
 
 function renderComandasCocina(){
@@ -3513,21 +3566,23 @@ function renderComandasCocina(){
       // confirmado que se lo ha llevado — si no, cocina ve "Entregado" y
       // asume que ya está en la mesa cuando puede seguir esperando en el pase.
       const allPicked = lines.every(l => l.recogidoAt);
-      const closedBadge = allPicked
-        ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-        : `<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</span>`;
+      const { titulo, meta } = ticketTituloMeta(order);
+      const estado = allPicked
+        ? `<div class="kt-ok"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</div>`
+        : `<div class="kt-ok"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</div>`;
       return `
-      <div class="card kds-ticket" style="overflow-y:auto;display:flex;flex-direction:column">
-        <div class="kds-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-          <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
-          ${closedBadge}
+      <div class="kt kt-cerrada" data-orden="${order.id}">
+        <div class="kt-bar"></div>
+        <div class="kt-h">
+          <div><div class="kt-mesa">${escapeHtml(titulo)}</div><div class="kt-meta">${meta.map(escapeHtml).join(' · ')}</div></div>
+          <div class="kt-tm">${maxMs ? escapeHtml(timeAgo(new Date(maxMs).toISOString())) : ''}</div>
         </div>
-        <div class="kds-body">
-          ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
-          ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
-        </div>
-      </div>
-    `;}).join('')}</div>`);
+        <div class="kt-bl"><div class="kt-cu" style="grid-template-columns:minmax(0,1fr)"><div>
+          ${lines.map(line => { const fam = familiaDeLinea(line, line.tanda); return `<div class="kt-pl hecho"><span class="q">${fmtNum(line.qty)}×</span><span class="n">${escapeHtml(line.name)}</span>${fam ? `<span class="fam">${escapeHtml(fam)}</span>` : ''}</div>`; }).join('')}
+        </div></div></div>
+        <div class="kt-act">${estado}</div>
+      </div>`;
+    }).join('')}</div>`);
     return;
   }
 
@@ -3613,6 +3668,24 @@ function ticketAlergiaTextos(order){
   (order.items||[]).forEach(l => lineAllergens(l).forEach(a => set.add(allergenLabel(a))));
   if(set.size) texts.push(Array.from(set).join(', '));
   return texts;
+}
+// Título grande y línea pequeña de un pedido, igual en todas las pantallas de cocina.
+function ticketTituloMeta(order){
+  const table = order.tableId ? (DB.tables||[]).find(x => x.id === order.tableId) : null;
+  const titulo = table ? orderTableDisplayName(order, table) : togoOrderLabel(order);
+  const meta = [];
+  if(table){
+    meta.push(gl({es:'Sala', ca:'Sala', en:'Dining room'}));
+    if(order.pax) meta.push(`${order.pax} ${t('common.persAbbr')}`);
+    const emp = order.camareroId ? (DB.employees||[]).find(e => e.id === order.camareroId) : null;
+    if(emp) meta.push((emp.name||'').trim().split(/\s+/)[0]);
+    else if(order.openedByOwner) meta.push(t('label.owner'));
+  }else{
+    if(order.origenOnline) meta.push('Online');
+    if(order.clienteNombre) meta.push(order.clienteNombre);
+    if(order.time) meta.push(gl({es:'a las ', ca:'a les ', en:'at '}) + order.time);
+  }
+  return {titulo, meta};
 }
 function ticketCocinaHtml(order, allLines){
   const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
