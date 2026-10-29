@@ -3062,14 +3062,21 @@ function cycleGroupEstado(orderId, tanda){
       if(line.estado === 'cocina' || line.estado === 'preparando') idxsAfectados.push(idx);
     }
   });
-  if(!idxsAfectados.length) return;
-  pushKitchenUndo(orderId, idxsAfectados);
+  avanzarLineasCocina(orderId, idxsAfectados);
+}
+// Avanza un paso un grupo concreto de platos de un pedido (los de una tanda entera, o los de una «ronda»
+// del modo caos): en espera → en preparación → listo en el pase. Todo el camino de guardar, deshacer,
+// sincronizar y repintar vive aquí, para que los dos botones hagan EXACTAMENTE lo mismo.
+function avanzarLineasCocina(orderId, idxs){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !idxs || !idxs.length) return;
+  pushKitchenUndo(orderId, idxs);
   let changed = false;
-  (order.items||[]).forEach(line => {
-    if((line.tanda||'') === tanda){
-      if(line.estado === 'cocina'){ line.estado = 'preparando'; line.preparandoAt = new Date().toISOString(); changed = true; }
-      else if(line.estado === 'preparando'){ line.estado = 'entregado'; line.entregadoAt = new Date().toISOString(); changed = true; }
-    }
+  idxs.forEach(idx => {
+    const line = order.items[idx];
+    if(!line) return;
+    if(line.estado === 'cocina'){ line.estado = 'preparando'; line.preparandoAt = new Date().toISOString(); changed = true; }
+    else if(line.estado === 'preparando'){ line.estado = 'entregado'; line.entregadoAt = new Date().toISOString(); changed = true; }
   });
   if(!changed) return;
   checkComandaCierre(order);
@@ -3303,40 +3310,141 @@ function lineasPendientesCocina(allOrders){
       fuera.push({order, line, idx, enviado, mins: Math.max(0, Math.round((Date.now()-enviado)/60000))});
     });
   });
-  // El que más lleva esperando, primero. Es TODO el criterio de este modo.
+  // El que más lleva esperando, primero.
   fuera.sort((a,b) => a.enviado - b.enviado);
   return fuera;
 }
+
+/* MODO CAOS, REPENSADO (29/10): POR MESAS.
+   La primera versión era una lista plana de platos por espera. En un servicio real eso rompe a la mesa: sus
+   platos quedaban esparcidos por la lista, y si pedía en dos momentos (entrantes ahora, una ración más a los
+   diez minutos) parecían pedidos sin relación. Ahora cada mesa es UNA tarjeta, ordenadas por lo que más lleva
+   esperando su plato más antiguo (el criterio de siempre), y dentro de ella lo pendiente va en «rondas»: lo que
+   se marchó junto, con su propia hora, su estado y su botón. «Por plato» suma lo mismo por plato (6 croquetas
+   entre cuatro mesas): para cocinar por tandas, solo para mirar. */
+let chaosVista = 'mesas';
+function setChaosVista(v){
+  chaosVista = v === 'plato' ? 'plato' : 'mesas';
+  renderComandasCocina();
+}
+// Las líneas pendientes de UN pedido se agrupan en rondas: misma tanda y marchadas con menos de 90 s de
+// diferencia (un solo toque de «marchar» las deja con segundos de diferencia, nunca con minutos).
+function rondasDePedido(lineas){
+  const orden = [...lineas].sort((a, b) => a.enviado - b.enviado);
+  const rondas = [];
+  orden.forEach(x => {
+    const tanda = x.line.tanda || '';
+    const r = rondas.find(q => q.tanda === tanda && Math.abs(x.enviado - q.inicio) <= 90000);
+    if(r) r.lineas.push(x);
+    else rondas.push({tanda, inicio: x.enviado, lineas: [x]});
+  });
+  return rondas;
+}
+function cycleRondaEstado(orderId, idxsTxt){
+  avanzarLineasCocina(orderId, String(idxsTxt).split(',').map(Number).filter(n => !isNaN(n)));
+}
+function nivelEspera(mins){ return mins >= 15 ? 'r' : mins >= 5 ? 'a' : ''; }
 
 function renderChaosCocinaHtml(allOrders){
   const pendientes = lineasPendientesCocina(allOrders);
   if(!pendientes.length){
     return `<div class="empty"><i class="ti ti-mood-smile"></i>${t('kitchen.chaos.empty')}</div>`;
   }
-  const filas = pendientes.map(({order, line, idx, mins}) => {
-    const urgente = mins >= 15;
-    const aviso = orderAllergyWarningHtml(order);
-    const boton = line.estado === 'cocina'
-      ? `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);flex:none" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.startCooking')}</button>`
-      : `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);flex:none" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
-    return `
-      <div class="caos-fila${urgente ? ' caos-urgente' : ''}">
-        <div class="caos-reloj">${mins}'</div>
-        <div class="caos-plato">
-          <strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-          <div class="caos-donde">${escapeHtml(comandaOrderTitle(order))}${line.tanda ? ` · ${escapeHtml(line.tanda)}` : ''}</div>
-          ${line.notas ? `<div class="caos-nota"><i class="ti ti-message-2"></i> ${escapeHtml(line.notas)}</div>` : ''}
-          ${aviso ? `<div class="caos-alergia">${aviso}</div>` : ''}
+  const porPedido = new Map();
+  pendientes.forEach(x => { if(!porPedido.has(x.order.id)) porPedido.set(x.order.id, {order: x.order, lineas: []}); porPedido.get(x.order.id).lineas.push(x); });
+  const mesas = [...porPedido.values()].sort((a, b) => Math.min(...a.lineas.map(x => x.enviado)) - Math.min(...b.lineas.map(x => x.enviado)));
+  const platos = pendientes.length;
+
+  const vistas = `
+    <div class="cz-vistas">
+      <button type="button" class="btn btn-sm btn-fino ${chaosVista==='mesas'?'is-on':''}" onclick="setChaosVista('mesas')"><i class="ti ti-layout-list"></i> ${gl({es:'Por mesas', ca:'Per taules', en:'By table'})}</button>
+      <button type="button" class="btn btn-sm btn-fino ${chaosVista==='plato'?'is-on':''}" onclick="setChaosVista('plato')"><i class="ti ti-chart-bar"></i> ${gl({es:'Por plato', ca:'Per plat', en:'By dish'})}</button>
+    </div>`;
+  const cabecera = `
+    <div class="cz-cab">
+      <span><i class="ti ti-flame"></i> ${t('kitchen.chaos.title')}</span>
+      <span class="cz-cuenta">${mesas.length} ${gl({es:mesas.length===1?'mesa':'mesas', ca:mesas.length===1?'taula':'taules', en:mesas.length===1?'table':'tables'})} · ${platos} ${platos === 1 ? t('kitchen.chaos.dish') : t('kitchen.chaos.dishes')}</span>
+    </div>`;
+
+  if(chaosVista === 'plato'){
+    const grupos = new Map();
+    pendientes.forEach(x => {
+      const k = (x.line.name || '').trim();
+      if(!grupos.has(k)) grupos.set(k, {nombre: k, qty: 0, prep: 0, primero: x.enviado, donde: [], fam: familiaDeLinea(x.line, x.line.tanda)});
+      const g = grupos.get(k);
+      const q = Number(x.line.qty) || 1;
+      g.qty += q; if(x.line.estado === 'preparando') g.prep += q;
+      g.donde.push({titulo: comandaOrderTitle(x.order).split(' · ')[0], qty: q, mins: x.mins});
+    });
+    const filas = [...grupos.values()].sort((a, b) => a.primero - b.primero).map(g => `
+      <div class="cz-plato-fila">
+        <div class="cz-cant">${fmtNum(g.qty)}<small>×</small></div>
+        <div class="cz-plato-txt">
+          <strong>${escapeHtml(g.nombre)}</strong>
+          ${g.fam ? `<span class="cz-fam">${escapeHtml(g.fam)}</span>` : ''}
+          <div class="cz-donde">${g.donde.map(d => `<span class="cz-chip ${nivelEspera(d.mins)}">${escapeHtml(d.titulo)}${d.qty > 1 ? ' ×' + fmtNum(d.qty) : ''} · ${d.mins}'</span>`).join('')}</div>
         </div>
-        ${boton}
+        ${g.prep ? `<span class="kt-st p">${fmtNum(g.prep)} ${gl({es:'en preparación', ca:'en preparació', en:'preparing'})}</span>` : ''}
+      </div>`).join('');
+    return cabecera + vistas + `<div class="cz-lista">${filas}</div>`;
+  }
+
+  const tarjetas = mesas.map(({order, lineas}) => {
+    const masViejo = Math.min(...lineas.map(x => x.enviado));
+    const mins = Math.max(0, Math.round((Date.now() - masViejo) / 60000));
+    const nivel = nivelEspera(mins);
+    const table = order.tableId ? (DB.tables||[]).find(x => x.id === order.tableId) : null;
+    const titulo = table ? orderTableDisplayName(order, table) : togoOrderLabel(order);
+    const meta = [];
+    if(table){
+      if(order.pax) meta.push(`${order.pax} ${t('common.persAbbr')}`);
+      const emp = order.camareroId ? (DB.employees||[]).find(e => e.id === order.camareroId) : null;
+      if(emp) meta.push((emp.name||'').trim().split(/\s+/)[0]);
+    }else{
+      if(order.clienteNombre) meta.push(order.clienteNombre);
+      if(order.time) meta.push(gl({es:'a las ', ca:'a les ', en:'at '}) + order.time);
+    }
+    const alergias = ticketAlergiaTextos(order);
+    const rondas = rondasDePedido(lineas);
+    const sinMarchar = (order.items||[]).filter(l => !l.bebida && !l.estado);
+    const rondasHtml = rondas.map(r => {
+      const rMins = Math.max(0, Math.round((Date.now() - r.inicio) / 60000));
+      const hay = r.lineas.some(x => x.line.estado === 'cocina');
+      const idxs = r.lineas.map(x => x.idx).join(',');
+      const hora = new Date(r.inicio).toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
+      const nom = r.tanda || (rondas.length > 1 ? gl({es:'Pedido de las ', ca:'Comanda de les ', en:'Order from '}) + hora : gl({es:'Todo junto', ca:'Tot junt', en:'All together'}));
+      const cls = hay ? 'nuevo' : 'prep';
+      return `
+        <div class="kt-cu ${cls} cz-ronda">
+          <div class="kt-rail"><span class="kt-dot p"></span></div>
+          <div>
+            <div class="kt-cn"><b>${escapeHtml(nom)}</b><span class="cz-hora ${nivelEspera(rMins)}">${rMins}'</span></div>
+            ${r.lineas.map(({line}) => {
+              const fam = familiaDeLinea(line, r.tanda);
+              return `<div class="kt-pl"><span class="q">${fmtNum(line.qty)}×</span><span class="n">${escapeHtml(line.name)}${line.estado === 'preparando' ? ' <i class="ti ti-flame kt-fuego"></i>' : ''}</span>${fam ? `<span class="fam">${escapeHtml(fam)}</span>` : ''}</div>
+                ${line.notas && !/^Menú: /.test(line.notas) ? `<div class="kt-nt">${escapeHtml(line.notas)}</div>` : ''}`;
+            }).join('')}
+            <button type="button" class="kt-big cz-btn${hay ? ' k' : ''}" onclick="cycleRondaEstado(${order.id}, '${idxs}')">${hay
+              ? gl({es:'Empezar', ca:'Començar', en:'Start'})
+              : gl({es:'Listo ▸ pase', ca:'Llest ▸ pas', en:'Ready ▸ pass'})}</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="kt cz-mesa" data-orden="${order.id}">
+        <div class="kt-bar ${nivel}"></div>
+        <div class="kt-h">
+          <div><div class="kt-mesa">${escapeHtml(titulo)}</div><div class="kt-meta">${meta.map(escapeHtml).join(' · ')}</div></div>
+          <div class="kt-tm ${nivel}">${mins}'<small>${gl({es:'esperando', ca:'esperant', en:'waiting'})}</small></div>
+        </div>
+        ${alergias.length ? `<div class="kt-alergia"><i class="ti ti-alert-triangle"></i><div><small>${gl({es:'Alergias', ca:'Al·lèrgies', en:'Allergies'})}</small>${escapeHtml(alergias.join(' · '))}</div></div>` : ''}
+        ${incidenciaFranjaHtml(order, 'cocina')}
+        <div class="cz-rondas">${rondasHtml}</div>
+        ${sinMarchar.length ? `<div class="cz-pendiente"><i class="ti ti-clock-pause"></i> ${sinMarchar.length} ${gl({es:sinMarchar.length===1?'plato sin marchar':'platos sin marchar', ca:sinMarchar.length===1?'plat sense marxar':'plats sense marxar', en:'not fired yet'})}</div>` : ''}
+        <div class="kt-ev"><button type="button" class="btn btn-sm btn-fino" onclick="openIncidenciaModal(${order.id}, 'cocina')"><i class="ti ti-alert-triangle"></i> ${gl({es:'Incidencia en esta comanda', ca:'Incidència en aquesta comanda', en:'Incident on this order'})}</button></div>
       </div>`;
   }).join('');
-  return `
-    <div class="caos-cabecera">
-      <span><i class="ti ti-flame"></i> ${t('kitchen.chaos.title')}</span>
-      <span class="caos-cuenta">${pendientes.length} ${pendientes.length === 1 ? t('kitchen.chaos.dish') : t('kitchen.chaos.dishes')}</span>
-    </div>
-    <div class="caos-lista">${filas}</div>`;
+  return cabecera + vistas + `<div class="cz-grid">${tarjetas}</div>`;
 }
 
 function renderComandasCocina(){
