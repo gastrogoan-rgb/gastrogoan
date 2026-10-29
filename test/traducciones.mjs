@@ -86,6 +86,8 @@ const ACEPTADAS = new Set([
   '12h','15h','18h','21h','8-12h','12-16h','16-20h','20-24h','8.0h',
   // el manual: un nombre de aparato y el código maestro
   'iPhone/iPad (Safari):','GGGG',
+  // el logotipo de la barra superior va en dos tramos («gastro» + «goan»): es la marca, no texto
+  'gastro','goan',
 ]);
 
 const esRuido = s =>

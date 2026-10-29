@@ -649,6 +649,10 @@ Cambios guiados pantalla a pantalla por el dueño, partiendo SIEMPRE de la base 
   Movimiento (todo con «reducir movimiento» apagado): las gg flotan (`gg-flotar`, también en el selector), la
   frase entra la última, brillo al pasar por Propietarios, luz de lámpara que respira y negocios escalonados. Propietarios en el verde de la marca; «Acceso Empleados · Áreas de cocina y sala»; respuesta
   al pasar y al pulsar; al pie, la **frase del día** y la fecha.
+- **Barra superior de la app** (29/10): sin «Kit de gestión»; el logo gg + el nombre del negocio (o el logotipo
+  «gastrogoan.» si no hay) quedan solos. TODOS los botones (idioma, Negocios, Actualizar, Ayuda, Cerrar sesión)
+  con el aspecto del selector de idioma (caja con filete, mono, blanco); el de chat, en verde de la marca.
+  Las medidas mínimas de toque de móvil no se tocan. La prueba de traducciones acepta «gastro» y «goan» (la marca).
 - **Selector de negocios**: no hay tope de negocios por cuenta. Hasta 5 se ven todos; desde 6, buscador y
   lista con desplazamiento propio. Cambiar contraseña / Salir como botones (`.bs-footbtn`).
 - **Frase del día** (`js/frases.js`, en build.sh tras i18n.js), fija bajo la tarjeta de acceso, sin caja:

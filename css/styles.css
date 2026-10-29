@@ -2475,6 +2475,29 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .app-header .hdr-icon-btn.active,.app-header #chat-fab[aria-pressed="true"]{background:var(--ink) !important;color:#fff}
 .app-header .hdr-divider{background:var(--hair)}
 
+/* Barra superior (29/10): sin «Kit de gestión» (el logo y el nombre quedan solos, centrados en la barra) y
+   todos los botones con el aspecto del selector de idioma: caja con filete, letra mono, fondo blanco.
+   El del chat es el único en verde de la marca. Las medidas mínimas de toque de móvil NO se tocan. */
+.app-header .app-logo{align-items:center;gap:12px}
+.app-header .app-logo-text{font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:19px;font-weight:400;letter-spacing:-.03em;line-height:1;color:var(--ink)}
+.app-header .app-logo-text b{font-weight:600}
+.app-header .app-logo-text.es-negocio{font-weight:600;font-size:17px;letter-spacing:-.02em}
+.app-header .app-logo-text .gg-punto{color:var(--olive)}
+.app-header .btn,.app-header #lang-btn{background:#fff !important;border:1px solid var(--hair) !important;border-radius:var(--r-s);
+  font-family:var(--mono);font-weight:600;letter-spacing:.06em;font-size:12px;color:var(--ink);
+  transition:background-color .18s,border-color .18s,color .18s,transform .18s}
+@media (min-width:761px){.app-header .btn{font-size:12px;min-height:40px;padding:0 14px}}
+.app-header .btn .ti{color:var(--ink)}
+.app-header .btn:hover{background:var(--brand-cream) !important;border-color:var(--olive) !important}
+.app-header .btn:hover .ti{color:var(--olive)}
+.app-header .btn:active{transform:translateY(1px)}
+.app-header .btn:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.app-header #chat-fab,.app-header #chat-fab.hdr-icon-btn{background:var(--olive) !important;border-color:var(--olive) !important;color:#fff !important}
+.app-header #chat-fab .ti{color:#fff}
+.app-header #chat-fab:hover{background:#3C4D40 !important;border-color:#3C4D40 !important}
+.app-header #chat-fab:hover .ti{color:#fff}
+.app-header #chat-fab[aria-pressed="true"]{background:#3C4D40 !important}
+
 /* Estado de la nube: un punto y una palabra, en los colores de la marca */
 #sync-badge{display:inline-flex !important;align-items:center;gap:7px;border-radius:var(--r-s) !important;border:1px solid var(--hair);background:transparent;color:var(--body);font-family:var(--mono);font-size:11px !important;font-weight:500 !important;letter-spacing:.04em;padding:6px 10px !important;margin-right:6px !important;line-height:1.2;min-height:36px}
 #sync-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
