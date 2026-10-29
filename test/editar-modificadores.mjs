@@ -56,8 +56,8 @@ await caso('Editar el extra de un plato de Carta cambia su nombre y precio de ve
   assert.ok(r.sameId, 'debe seguir siendo el MISMO modificador (mismo id), no uno nuevo: ' + JSON.stringify(r));
 });
 
-await caso('El botón de editar (lápiz) se ve junto a cada extra existente', async () => {
-  const tieneLapiz = await page.evaluate(()=> !!document.querySelector('.modal-box, #modal-box')?.querySelector('.ti-pencil') || !!document.querySelector('#modal-overlay .ti-pencil'));
+await caso('Cada extra existente tiene su menú de tres puntos con la opción de editar', async () => {
+  const tieneLapiz = await page.evaluate(()=> [...document.querySelectorAll('#modal-box [data-acc]')].some(b => JSON.parse(b.dataset.acc).some(a => /startEdit/.test(a.fn))));
   assert.ok(tieneLapiz, 'debe verse el icono de editar en el modal de extras');
   await page.evaluate(()=> closeModal());
 });

@@ -482,7 +482,8 @@ caso('Un plato manual (sin receta) se puede editar el precio después de crearlo
   // plato sin escandallar) se podía crear con un precio, pero no había
   // NINGÚN sitio donde cambiárselo después.
   assert.ok(/function addCartaPlato\(secId, ?platoId\)/.test(menu), 'addCartaPlato ya no admite platoId para reutilizarse como editor');
-  assert.ok(menu.includes("onclick=\"addCartaPlato(${sec.id},${p.id})\" title=\"${t('title.editPrice')}\""), 'el precio de un plato sin receta ya no es clicable para editarlo');
+  assert.ok(menu.includes("addCartaPlato(${sec.id},${p.id})\" title=\"${t('title.editPrice')}\""), 'el precio de un plato sin receta ya no es clicable para editarlo');
+  assert.ok(menu.includes("fn: p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`"), 'el menú de tres puntos del plato debe ofrecer editarlo');
   assert.ok(/if\(platoId\)\{[\s\S]{0,200}p\.precio = precio;/.test(menu), 'confirmAddCartaPlato no actualiza el plato existente al editar');
 });
 
