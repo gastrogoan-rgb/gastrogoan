@@ -2986,6 +2986,30 @@ input,select,textarea{border-radius:var(--r-s)}
 .pv-art-u{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .pv-art-p{font-family:var(--mono);font-size:13px;font-weight:600;min-width:72px;text-align:right}
 .pv-envio .field{flex:1;min-width:0}
+.pv-tipos{display:flex;flex-wrap:wrap;gap:2px 8px;margin:0 0 12px}
+.pv-tipos:empty{display:none}
+.pv-nom-txt{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
+.pv-nom{min-width:0}
+.pv-tipo{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--olive);background:var(--brand-cream);border:1px solid var(--hair);border-radius:3px;padding:2px 7px;line-height:1.3;align-self:center;margin-left:2px}
+.pv-ped-resumen{font-family:var(--mono);font-size:12px;letter-spacing:.03em;color:var(--muted);margin:0 0 10px}
+.pv-peds{max-height:58vh;overflow-y:auto;border-top:1px solid var(--hair)}
+.pv-ped{border-bottom:1px solid var(--hair)}
+.pv-ped summary{display:flex;align-items:center;gap:10px;min-height:48px;cursor:pointer;list-style:none;padding:0 2px}
+.pv-ped summary::-webkit-details-marker{display:none}
+.pv-ped summary:hover{background:var(--brand-cream)}
+.pv-ped summary:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
+.pv-ped-f{font-family:var(--mono);font-size:13px;font-weight:600;flex:none}
+.pv-ped-n{flex:1;min-width:0;font-size:13px;color:var(--muted);text-align:right}
+.pv-ped-t{font-family:var(--mono);font-size:13px;font-weight:600;min-width:78px;text-align:right}
+.pv-ped-flecha{font-size:16px;color:var(--muted);transition:transform .18s;flex:none}
+.pv-ped[open] .pv-ped-flecha{transform:rotate(180deg)}
+.pv-ped[open] summary{background:var(--brand-cream)}
+.pv-ped-lineas{padding:4px 4px 10px 12px;background:var(--brand-cream)}
+.pv-ped-linea{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13px;border-bottom:1px dashed var(--hair)}
+.pv-ped-linea:last-child{border-bottom:0}
+.pv-ped-q{font-family:var(--mono);font-size:12px;white-space:nowrap}
+.pv-ped-rec{color:#8A5A0F}
+@media (max-width:600px){.pv-ped summary{flex-wrap:wrap;row-gap:0;padding:6px 2px}.pv-ped-n{flex:1 1 0;text-align:left}.pv-ped-flecha{margin-left:auto}}
 .pv-dias{display:flex;flex-wrap:wrap;gap:6px}
 /* Menú de tres puntos (norma 30/10): editar y borrar viven dentro de «⋯». Ver ggMenuAcciones en js/ui.js */
 .mn-btn{min-width:40px;padding:0 10px}

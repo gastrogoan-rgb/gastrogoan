@@ -650,6 +650,17 @@ function openTipsSplitModal(closureId){
    PROVEEDORES — Contactos y condiciones de compra
    ============================================================ */
 let providerSearchQuery = '';
+// Tipo de proveedor («Lácteos», «Carnes», «Pescados y Marisco»…): sale de las mismas categorías de la Mega Lista, más
+// las que el negocio escriba. Se guarda el nombre (clave estable) y se traduce al mostrarlo.
+let providerTipoFiltro = null;   // null = todos · '' = sin tipo · un nombre = ese tipo
+function providerTiposDisponibles(){
+  const enUso = DB.ingredients.filter(i => (i.area||'cocina') === currentArea()).map(i => i.category).filter(Boolean);
+  const base = [...ingredientCategories(), ...(DB.ingredientCategories || []), ...enUso];
+  const propios = DB.providers.filter(p => (p.area||'cocina') === currentArea()).map(p => p.tipo).filter(Boolean);
+  return [...new Set([...base, ...propios])];
+}
+function providerTipoLabel(tipo){ return tipo ? ingredientCategoryLabel(tipo) : ''; }
+function setProviderTipoFiltro(tipo){ providerTipoFiltro = (providerTipoFiltro === tipo ? null : tipo); renderProveedores(); }
 function setProviderSearchQuery(val){
   providerSearchQuery = val;
   const el = document.getElementById('proveedores-search-input');
@@ -665,18 +676,30 @@ function ingredientsForSupplier(nombre){
 }
 function renderProveedores(){
   const box = document.getElementById('proveedores-list');
+  const filtros = document.getElementById('proveedores-tipos');
   const q = providerSearchQuery.trim().toLowerCase();
-  let providers = DB.providers.filter(p => (p.area||'cocina') === currentArea());
-  if(q) providers = providers.filter(p => p.nombre.toLowerCase().includes(q) || (p.contacto||'').toLowerCase().includes(q) || (p.dir||'').toLowerCase().includes(q) || (p.tel||'').includes(q));
+  const delArea = DB.providers.filter(p => (p.area||'cocina') === currentArea());
+  // Los tipos que de verdad se usan, con su recuento, para filtrar de un toque.
+  if(filtros){
+    const cuenta = {}; let sinTipo = 0;
+    delArea.forEach(p => { if(p.tipo) cuenta[p.tipo] = (cuenta[p.tipo]||0) + 1; else sinTipo++; });
+    const tipos = Object.keys(cuenta).sort((a,b) => providerTipoLabel(a).localeCompare(providerTipoLabel(b)));
+    if(providerTipoFiltro !== null && !(providerTipoFiltro === '' ? sinTipo : cuenta[providerTipoFiltro])) providerTipoFiltro = null;
+    const chip = (valor, texto, n) => `<button type="button" class="btn btn-sm btn-fino${providerTipoFiltro === valor ? ' is-on' : ''}" aria-pressed="${providerTipoFiltro === valor}" onclick="setProviderTipoFiltro('${escapeJsAttr(valor)}')">${escapeHtml(texto)} <span class="ml-n">${n}</span></button>`;
+    filtros.innerHTML = tipos.length ? tipos.map(x => chip(x, providerTipoLabel(x), cuenta[x])).join('') + (sinTipo ? chip('', gl({es:'Sin tipo', ca:'Sense tipus', en:'No type'}), sinTipo) : '') : '';
+  }
+  let providers = delArea;
+  if(providerTipoFiltro !== null) providers = providers.filter(p => (p.tipo || '') === providerTipoFiltro);
+  if(q) providers = providers.filter(p => p.nombre.toLowerCase().includes(q) || (p.contacto||'').toLowerCase().includes(q) || (p.dir||'').toLowerCase().includes(q) || (p.tel||'').includes(q) || providerTipoLabel(p.tipo).toLowerCase().includes(q));
   if(!providers.length){
-    box.innerHTML = `<div class="empty pv-vacio"><i class="ti ti-building-factory-2"></i>${q ? t('empty.noSearchResults') : t('empty.suppliers')}</div>`;
+    box.innerHTML = `<div class="empty pv-vacio"><i class="ti ti-building-factory-2"></i>${q || providerTipoFiltro !== null ? t('empty.noSearchResults') : t('empty.suppliers')}</div>`;
     return;
   }
-  // La tarjeta solo dice QUIÉN es: el nombre y tres botones (ficha, editar, eliminar).
-  // Todo lo demás vive en la ficha, para que con muchos proveedores la lista se lea de un vistazo.
+  // La tarjeta solo dice QUIÉN es: el nombre (con su tipo al lado) y los botones. Todo lo demás vive en la ficha,
+  // para que con muchos proveedores la lista se lea de un vistazo.
   box.innerHTML = providers.map(p => `
     <div class="pv-card">
-      <div class="pv-nombre"><i class="ti ti-building-factory-2"></i><span>${escapeHtml(p.nombre)}</span></div>
+      <div class="pv-nombre"><i class="ti ti-building-factory-2"></i><div class="pv-nom-txt"><span class="pv-nom">${escapeHtml(p.nombre)}</span>${p.tipo ? `<span class="pv-tipo">${escapeHtml(providerTipoLabel(p.tipo))}</span>` : ''}</div></div>
       <div class="pv-acc">
         <button type="button" class="btn btn-fino" title="${escapeHtml(t('prov.info'))}" aria-label="${escapeHtml(t('prov.info'))}" onclick="openProviderInfoModal(${p.id})"><i class="ti ti-info-circle"></i></button>
         ${ggMenuAcciones([
@@ -700,6 +723,7 @@ function openProviderInfoModal(id){
     </div>`;
   const dias = getProviderDiasEntrega(p);
   const filas = [
+    p.tipo ? fila('ti-tag', gl({es:'Tipo', ca:'Tipus', en:'Type'}), escapeHtml(providerTipoLabel(p.tipo))) : '',
     p.contacto ? fila('ti-user', t('label.contactPerson'), escapeHtml(p.contacto)) : '',
     p.tel ? fila('ti-phone', t('common.phone'), `<a href="tel:${escapeHtml(p.tel)}">${escapeHtml(p.tel)}</a>${whatsappDeTelefono(p.tel) ? ` · <a href="https://wa.me/${whatsappDeTelefono(p.tel)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}`) : '',
     p.email ? fila('ti-mail', t('common.email'), `<a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a>`) : '',
@@ -722,11 +746,59 @@ function openProviderInfoModal(id){
       ${ings.length
         ? `<button type="button" class="btn btn-sm btn-fino" onclick="openSupplierIngredientsModal(${p.id})"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
         : `<span class="pv-cero"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (0)</span>`}
-      <button type="button" class="btn btn-sm btn-fino" onclick="closeModal();viewSupplierOrderHistory('${escapeJsAttr(p.nombre)}')"><i class="ti ti-history"></i> ${t('tab.orderHistory')}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="openSupplierOrdersModal(${p.id})"><i class="ti ti-history"></i> ${t('tab.orderHistory')} (${pedidosDeProveedor(p.nombre).length})</button>
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
       <button type="button" class="owner-only btn btn-fino is-on" onclick="openProviderModal(${p.id})"><i class="ti ti-pencil"></i> ${t('common.edit')}</button>
+    </div>
+  `);
+}
+// Los pedidos hechos a un proveedor, de más nuevo a más viejo (solo los del área abierta).
+function pedidosDeProveedor(nombre){
+  const clave = String(nombre||'').trim().toLowerCase();
+  return (DB.purchaseOrders || [])
+    .filter(o => (o.area||'cocina') === currentArea() && String(o.supplier||'').trim().toLowerCase() === clave)
+    .slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')) || (b.id||0) - (a.id||0));
+}
+// El historial se ve AQUÍ, sin salir de la ficha: antes saltaba a Pedidos y volver era un rodeo. Cada pedido se
+// despliega para ver sus líneas; «Abrir en Pedidos» sigue ahí para quien quiera gestionarlos.
+function openSupplierOrdersModal(providerId){
+  const p = DB.providers.find(x => x.id === providerId);
+  if(!p) return;
+  const pedidos = pedidosDeProveedor(p.nombre);
+  const recibidos = pedidos.filter(o => o.estado === 'RECIBIDO');
+  const totalRecibido = recibidos.reduce((s, o) => s + pedidoTotalConIva(o), 0);
+  const filas = pedidos.map(o => {
+    const lineas = (o.items||[]).map(line => {
+      const ing = getIngredient(line.ingredientId);
+      if(!ing) return '';
+      const rec = o.estado === 'RECIBIDO' && line.cantidadRecibida != null && line.cantidadRecibida !== line.cantidad
+        ? ` <span class="pv-ped-rec">(${gl({es:'llegó', ca:'va arribar', en:'received'})} ${fmtNum(line.cantidadRecibida)})</span>` : '';
+      return `<div class="pv-ped-linea"><span>${escapeHtml(ing.name)}</span><span class="pv-ped-q">${fmtNum(line.cantidad)} ${escapeHtml(ing.unit)}${rec}</span></div>`;
+    }).join('');
+    return `
+      <details class="pv-ped">
+        <summary>
+          <span class="pv-ped-f">${escapeHtml(o.date || '')}</span>
+          <span class="badge ${PEDIDO_BADGE[o.estado] || 'badge-gray'}">${escapeHtml(pedidoEstadoLabel(o.estado))}</span>
+          <span class="pv-ped-n">${(o.items||[]).length} ${gl({es:(o.items||[]).length === 1 ? 'artículo' : 'artículos', ca:(o.items||[]).length === 1 ? 'article' : 'articles', en:(o.items||[]).length === 1 ? 'item' : 'items'})}</span>
+          <span class="pv-ped-t">${fmtMoney(pedidoTotalConIva(o))}</span>
+          <i class="ti ti-chevron-down pv-ped-flecha"></i>
+        </summary>
+        <div class="pv-ped-lineas">${lineas || `<div class="pv-ped-linea"><span>—</span></div>`}</div>
+      </details>`;
+  }).join('');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-history"></i> ${escapeHtml(p.nombre)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${pedidos.length ? `<p class="pv-ped-resumen">${pedidos.length} ${gl({es:pedidos.length === 1 ? 'pedido' : 'pedidos', ca:pedidos.length === 1 ? 'comanda' : 'comandes', en:pedidos.length === 1 ? 'order' : 'orders'})}${recibidos.length ? ` · ${fmtMoney(totalRecibido)} ${gl({es:'recibidos (con IVA)', ca:'rebuts (amb IVA)', en:'received (incl. VAT)'})}` : ''}</p>` : ''}
+    <div class="pv-peds">${filas || `<div class="empty"><i class="ti ti-history"></i>${gl({es:'Todavía no hay pedidos a este proveedor.', ca:'Encara no hi ha comandes a aquest proveïdor.', en:'No orders to this supplier yet.'})}</div>`}</div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-fino" onclick="openProviderInfoModal(${p.id})"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal();viewSupplierOrderHistory('${escapeJsAttr(p.nombre)}')"><i class="ti ti-external-link"></i> ${gl({es:'Abrir en Pedidos', ca:'Obrir a Comandes', en:'Open in Orders'})}</button>
     </div>
   `);
 }
@@ -798,6 +870,15 @@ function openProviderModal(id){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field"><label>${t('common.name')}</label><input type="text" id="prov-nombre" value="${escapeHtml(p.nombre)}" placeholder="${t('ph.egSupplierName')}"></div>
+    <div class="field">
+      <label for="prov-tipo">${gl({es:'Tipo de proveedor', ca:'Tipus de proveïdor', en:'Supplier type'})}</label>
+      <select id="prov-tipo" onchange="onProviderTipoChange()">
+        <option value="" ${!p.tipo ? 'selected' : ''}>${gl({es:'Sin tipo', ca:'Sense tipus', en:'No type'})}</option>
+        ${providerTiposDisponibles().map(x => `<option value="${escapeHtml(x)}" ${p.tipo === x ? 'selected' : ''}>${escapeHtml(providerTipoLabel(x))}</option>`).join('')}
+        <option value="__nuevo__">+ ${gl({es:'Otro tipo…', ca:'Un altre tipus…', en:'Another type…'})}</option>
+      </select>
+      <input type="text" id="prov-tipo-nuevo" maxlength="30" style="display:none;margin-top:8px" placeholder="${escapeHtml(gl({es:'Ej. Menaje, Congelados, Vinos…', ca:'Ex. Parament, Congelats, Vins…', en:'E.g. Tableware, Frozen, Wines…'}))}">
+    </div>
     <div class="field-row">
       <div class="field"><label>${t('label.contactPerson')}</label><input type="text" id="prov-contacto" value="${escapeHtml(p.contacto)}"></div>
       <div class="field"><label>${t('label.paymentMethod')}</label>
@@ -850,6 +931,12 @@ function openProviderModal(id){
   `);
 }
 
+function onProviderTipoChange(){
+  const nuevo = document.getElementById('prov-tipo').value === '__nuevo__';
+  const inp = document.getElementById('prov-tipo-nuevo');
+  inp.style.display = nuevo ? '' : 'none';
+  if(nuevo) inp.focus();
+}
 function toggleProviderEnvioFields(){
   const tipo = document.getElementById('prov-envio-tipo').value;
   document.getElementById('prov-envio-fields').style.display = tipo ? 'flex' : 'none';
@@ -866,8 +953,11 @@ async function saveProvider(id){
   // (no bloqueante) si ya existe otro con el mismo nombre.
   const dupe = DB.providers.find(p => p.id !== id && (p.area||'cocina')===currentArea() && p.nombre.trim().toLowerCase() === nombre.toLowerCase());
   if(dupe && !(await confirmModal(t('msg.confirmDuplicateSupplier').replace('${name}', dupe.nombre)))) return;
+  let tipo = document.getElementById('prov-tipo').value;
+  if(tipo === '__nuevo__') tipo = document.getElementById('prov-tipo-nuevo').value.trim();
   const data = {
     nombre,
+    tipo,
     contacto: document.getElementById('prov-contacto').value.trim(),
     pago: document.getElementById('prov-pago').value,
     tel: document.getElementById('prov-tel').value.trim(),
