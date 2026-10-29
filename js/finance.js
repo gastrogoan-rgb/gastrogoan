@@ -1455,19 +1455,22 @@ function populateProviderFilter(){
   sel.value = current;
 }
 
-// Orden de la tabla de Mega Lista: clic en una cabecera ordena por esa
-// columna, un segundo clic invierte el sentido.
+// Orden de la lista de Mega Lista: clic en una cabecera ordena por esa
+// columna, un segundo clic invierte el sentido. En móvil no hay cabecera y
+// lo hace el desplegable «Ordenar».
 let megalistaSortKey = 'name';
 let megalistaSortDir = 1;
+// «Por revisar»: '' (todo) | 'precio' | 'iva' | 'proveedor'. El catálogo base siembra 275 artículos sin precio
+// ni IVA, y buscar a ojo cuáles faltan por rellenar es justo lo que nadie hace.
+let megalistaRevisar = '';
 const MEGALISTA_COLUMNS = [
-  {key:'name', label:t('megalista.colIngredient')},
-  {key:'category', label:t('common.category')},
-  {key:'supplier', label:t('common.supplier')},
-  {key:'unit', label:t('common.unit')},
-  {key:'price', label:t('megalista.colPurchase')},
-  {key:'iva', label:t('megalista.colIva')},
-  {key:null, label:t('label.allergens')},
-  {key:null, label:''}
+  {key:'name', label:() => t('megalista.colIngredient')},
+  {key:'supplier', label:() => t('common.supplier')},
+  // El precio va SIEMPRE sin IVA (es el que usa el escandallo); el IVA que lleva el producto, justo al lado.
+  {key:'price', label:() => gl({es:'Compra (sin IVA)', ca:'Compra (sense IVA)', en:'Purchase (excl. VAT)'})},
+  {key:'iva', label:() => t('megalista.colIva')},
+  {key:null, label:() => t('label.allergens')},
+  {key:null, label:() => ''}
 ];
 function setMegalistaSort(key){
   if(!key) return;
@@ -1475,6 +1478,8 @@ function setMegalistaSort(key){
   else { megalistaSortKey = key; megalistaSortDir = 1; }
   renderMegalista();
 }
+function setMegalistaSortDesdeLista(key){ megalistaSortKey = key; megalistaSortDir = 1; renderMegalista(); }
+function setMegalistaRevisar(clave){ megalistaRevisar = (megalistaRevisar === clave ? '' : clave); renderMegalista(); }
 function megalistaSortItems(items){
   return items.slice().sort((a,b) => {
     let av, bv;
@@ -1495,36 +1500,53 @@ function megalistaSortItems(items){
     return ((av||0) - (bv||0)) * megalistaSortDir;
   });
 }
+// Lo que le falta a un ingrediente para que sus números valgan: precio, IVA y proveedor.
+function megalistaFaltas(ing){
+  const pack = ing.packPrice != null ? ing.packPrice : ing.price;
+  return {precio: !(pack > 0), iva: ing.iva == null, proveedor: !String(ing.supplier || '').trim()};
+}
+function megalistaPuedeEditar(){ return isOwnerSession() || editUnlocked; }
+
+function megalistaFilaHtml(ing){
+  const f = megalistaFaltas(ing);
+  const pack = ing.packPrice != null ? ing.packPrice : ing.price;
+  const puede = megalistaPuedeEditar();
+  const compra = f.precio
+    ? `<span class="ml-falta">${gl({es:'Sin precio', ca:'Sense preu', en:'No price'})}</span>`
+    : `<span class="ml-pack">${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(pack)}</span><span class="ml-ud">${fmtNum(ing.price, 4)} €/${escapeHtml(ing.unit)}</span>`;
+  const ales = (ing.allergens||[]).map(a => `<span class="ml-al">${escapeHtml(allergenLabel(a))}</span>`).join('');
+  return `
+    <div class="ml-fila plegable${ing.activo===false ? ' is-baja' : ''}${ggPlegableAbierta('ml-' + ing.id) ? ' is-abierta' : ''}" data-pl="ml-${ing.id}" onclick="ggTogglePlegable(event, this)">
+      <div class="ml-c ml-nom"><b>${escapeHtml(ing.name)}${(f.iva || f.proveedor) && !f.precio ? `<span class="ml-punto" title="${escapeHtml(gl({es:'Falta el IVA o el proveedor', ca:'Falta l\'IVA o el proveïdor', en:'VAT or supplier missing'}))}"></span>` : ''}</b><span class="ml-cat">${escapeHtml(ing.category ? ingredientCategoryLabel(ing.category) : t('label.noCategory'))}</span></div>
+      <button type="button" class="pl-chev" aria-expanded="${ggPlegableAbierta('ml-' + ing.id)}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
+      <div class="ml-c ml-prov pl-extra" data-et="${escapeHtml(t('common.supplier'))}">${f.proveedor ? `<span class="ml-falta">${gl({es:'Sin proveedor', ca:'Sense proveïdor', en:'No supplier'})}</span>` : escapeHtml(ing.supplier)}</div>
+      <div class="ml-c ml-compra" data-et="${escapeHtml(gl({es:'Compra (sin IVA)', ca:'Compra (sense IVA)', en:'Purchase (excl. VAT)'}))}">${compra}</div>
+      <div class="ml-c ml-iva pl-extra" data-et="${escapeHtml(t('megalista.colIva'))}">
+        <select class="ml-iva-sel${f.iva ? ' is-falta' : ''}" onchange="updateIngredientIva(${ing.id}, this.value, this)" title="${escapeHtml(t('label.ivaSoportado'))}" aria-label="${escapeHtml(t('megalista.colIva') + ': ' + ing.name)}"${puede ? '' : ' disabled'}>
+          <option value="" ${f.iva ? 'selected' : ''} disabled>${gl({es:'Elige', ca:'Tria', en:'Choose'})}</option>
+          ${[21,10,4,0].map(pct => `<option value="${pct}" ${ing.iva===pct ? 'selected' : ''}>${pct}%</option>`).join('')}
+        </select>
+      </div>
+      <div class="ml-c ml-ale pl-extra${ales ? '' : ' is-vacio'}" data-et="${escapeHtml(t('label.allergens'))}">${ales || '<span class="ml-nada">—</span>'}</div>
+      <div class="ml-c ml-acc pl-extra">
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openIngredientModal(${ing.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteIngredient(${ing.id})`, peligro:true, owner:true}
+        ])}
+      </div>
+    </div>`;
+}
 function renderMegalistaTable(items){
-  const theadHtml = MEGALISTA_COLUMNS.map(c => {
-    if(!c.key) return `<th>${c.label}</th>`;
-    const active = megalistaSortKey === c.key;
-    const arrow = active ? (megalistaSortDir === 1 ? ' <i class="ti ti-arrow-up"></i>' : ' <i class="ti ti-arrow-down"></i>') : '';
-    return `<th style="cursor:pointer;white-space:nowrap" onclick="setMegalistaSort('${c.key}')">${c.label}${arrow}</th>`;
+  const cab = MEGALISTA_COLUMNS.map(c => {
+    if(!c.key) return `<span class="ml-th">${c.label()}</span>`;
+    const activa = megalistaSortKey === c.key;
+    const flecha = activa ? ` <i class="ti ti-arrow-${megalistaSortDir === 1 ? 'up' : 'down'}"></i>` : '';
+    return `<button type="button" class="ml-th is-orden${activa ? ' is-on' : ''}" aria-sort="${activa ? (megalistaSortDir === 1 ? 'ascending' : 'descending') : 'none'}" onclick="setMegalistaSort('${c.key}')">${c.label()}${flecha}</button>`;
   }).join('');
-  const rowsHtml = !items.length
-    ? `<tr><td colspan="8"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`
-    : items.map(ing => `
-      <tr style="${ing.activo===false?'opacity:.55':''}">
-        <td><strong>${escapeHtml(ing.name)}</strong></td>
-        <td><span class="badge badge-gray">${escapeHtml(ing.category?ingredientCategoryLabel(ing.category):'—')}</span></td>
-        <td>${escapeHtml(ing.supplier||'—')}</td>
-        <td>${escapeHtml(ing.unit)}</td>
-        <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
-        <td>
-          <select onchange="updateIngredientIva(${ing.id}, this.value)" style="font-size:12px;padding:3px 4px;${ing.iva==null?'border-color:var(--red);color:var(--red)':''}" title="${t('label.ivaSoportado')}">
-            <option value="" ${ing.iva==null?'selected':''} disabled>${t('label.chooseIva')}</option>
-            ${[21,10,4,0].map(pct => `<option value="${pct}" ${ing.iva===pct?'selected':''}>${pct}%</option>`).join('')}
-          </select>
-        </td>
-        <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(allergenLabel(a))}</span>`).join(' ') || '—'}</td>
-        <td class="actions-cell">
-          <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
-        </td>
-      </tr>
-    `).join('');
-  return `<div class="table-wrap"><table><thead><tr>${theadHtml}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+  const filas = !items.length
+    ? `<div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div>`
+    : items.map(megalistaFilaHtml).join('');
+  return `<div class="ml-lista"><div class="ml-cab">${cab}</div>${filas}</div>`;
 }
 
 // Carpeta de categoría actualmente abierta en Mega Lista (null = vista de carpetas)
@@ -1532,60 +1554,139 @@ let megalistaFolder = null;
 function openMegalistaFolder(cat){ megalistaFolder = cat; renderMegalista(); }
 function backToMegalistaFolders(){ megalistaFolder = null; renderMegalista(); }
 
+// Una carpeta sin categoría no es una carpeta de verdad (no se puede renombrar ni borrar): se agrupa aparte.
+const MEGALISTA_SIN_CARPETA = '__none__';
+// Icono de trazo de las carpetas que trae de fábrica el catálogo base (cocina y sala). Sin esto, "Aceites",
+// "Arroces" y "Pastas" caían todos en el mismo cuenco al adivinarlo por el nombre.
+const MEGALISTA_ICONOS_BASE = {
+  'Verduras':'zanahoria', 'Frutas':'manzana', 'Carnes':'ternera', 'Pescados y Marisco':'pescado', 'Huevos':'huevo',
+  'Lácteos':'leche', 'Panes y Bollería':'pan', 'Pastas':'cuenco-palillos', 'Arroces':'grano', 'Legumbres':'judias',
+  'Aceites y Vinagres':'frasco', 'Condimentos y Especias':'sal', 'Despensa':'cesta', 'Conservas':'conserva',
+  'Embutidos y Fiambres':'jamon', 'Congelados':'nevera',
+  'Vinos Blancos':'copa-champagne', 'Vinos Tintos':'copa-vino', 'Vinos Rosados':'copa-vino-2', 'Cavas y Espumosos':'botella-vino',
+  'Vermús y Aperitivos':'martini', 'Cervezas':'cerveza', 'Licores y Destilados':'botella', 'Refrescos':'refresco', 'Zumos':'naranja',
+  'Aguas':'agua', 'Café e Infusiones':'cafe', 'Leches y Batidos':'batido', 'Hielo y Guarniciones':'nevera', 'Despensa Sala':'bolsa'
+};
+function megalistaIconoCarpeta(cat){
+  if(cat === MEGALISTA_SIN_CARPETA) return '<i class="ti ti-folder"></i>';
+  const guardado = (DB.categoryIcons && DB.categoryIcons.ingredient && DB.categoryIcons.ingredient[cat]) || '';
+  // Un emoji guardado es el que sembró el catálogo (o uno elegido en la versión antigua): si la carpeta es de fábrica,
+  // manda el icono de trazo de arriba; si no lo es, se adivina por el nombre.
+  const valor = (guardado && guardado.startsWith('ic:')) ? guardado : (MEGALISTA_ICONOS_BASE[cat] ? 'ic:' + MEGALISTA_ICONOS_BASE[cat] : guardado);
+  return iconoSeccionHtml(valor, ingredientCategoryLabel(cat), 26) || '<i class="ti ti-folder"></i>';
+}
+function megalistaResumenHtml(areaItems){
+  const n = {precio:0, iva:0, proveedor:0};
+  areaItems.forEach(i => { const f = megalistaFaltas(i); if(f.precio) n.precio++; if(f.iva) n.iva++; if(f.proveedor) n.proveedor++; });
+  const chip = (clave, etiqueta) => n[clave] ? `<button type="button" class="btn btn-sm btn-fino${megalistaRevisar === clave ? ' is-on' : ''}" aria-pressed="${megalistaRevisar === clave}" onclick="setMegalistaRevisar('${clave}')">${etiqueta} <span class="ml-n">${n[clave]}</span></button>` : '';
+  const chips = chip('precio', gl({es:'Sin precio', ca:'Sense preu', en:'No price'}))
+    + chip('iva', gl({es:'Sin IVA', ca:'Sense IVA', en:'No VAT'}))
+    + chip('proveedor', gl({es:'Sin proveedor', ca:'Sense proveïdor', en:'No supplier'}));
+  if(!chips) return `<div class="ml-resumen is-ok"><i class="ti ti-circle-check"></i> ${gl({es:'Todo con precio, IVA y proveedor', ca:'Tot amb preu, IVA i proveïdor', en:'Everything has a price, VAT and a supplier'})}</div>`;
+  return `<div class="ml-resumen"><span class="ml-resumen-et">${gl({es:'Por revisar', ca:'Per revisar', en:'To review'})}</span>${chips}</div>`;
+}
+
 function renderMegalista(){
   maybeShowCategoryIconHint();
   populateProviderFilter();
   const search = document.getElementById('megalista-search').value.toLowerCase();
   const prov = document.getElementById('megalista-filter-prov').value;
   const box = document.getElementById('megalista-content');
+  const ordenSel = document.getElementById('megalista-orden');
+  if(ordenSel) ordenSel.value = megalistaSortKey;
 
     // Se quitó el filtro "Mostrar descatalogados": ya no existía forma de
     // marcar un ingrediente como descatalogado, así que era un filtro para un
     // estado que no se podía crear. A propósito NO se filtra por i.activo: si
     // algún ingrediente quedó marcado de antes, sin la casilla para mostrarlo
     // se habría vuelto invisible para siempre.
-  const items = DB.ingredients.filter(i => {
-    const matchArea = (i.area||'cocina') === currentArea();
-    const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search);
+  const areaItems = DB.ingredients.filter(i => (i.area||'cocina') === currentArea());
+  const resumen = document.getElementById('megalista-resumen');
+  if(resumen) resumen.innerHTML = areaItems.length ? megalistaResumenHtml(areaItems) : '';
+  // Si lo que se filtraba ya está todo arreglado, el filtro deja de tener sentido.
+  if(megalistaRevisar && !areaItems.some(i => megalistaFaltas(i)[megalistaRevisar])) megalistaRevisar = '';
+  const items = areaItems.filter(i => {
+    const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search)
+      || (i.category ? ingredientCategoryLabel(i.category) : '').toLowerCase().includes(search);
     const matchProv = !prov || (i.supplier||'') === prov;
-    return matchArea && matchSearch && matchProv;
+    const matchRev = !megalistaRevisar || megalistaFaltas(i)[megalistaRevisar];
+    return matchSearch && matchProv && matchRev;
   });
 
   if(!items.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-list-details"></i>${(search || prov || megalistaRevisar) && areaItems.length ? t('empty.noSearchResults') : t('empty.ingredients')}</div>`;
     return;
   }
 
-  const searching = !!(search || prov);
-  if(searching){
-    box.innerHTML = renderMegalistaTable(megalistaSortItems(items));
+  const filtrando = !!(search || prov || megalistaRevisar);
+  if(filtrando){
+    box.innerHTML = `<div class="ml-cuenta">${items.length === 1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', items.length)}</div>` + renderMegalistaTable(megalistaSortItems(items));
     return;
   }
 
   const byCat = {};
-  items.forEach(i => { const c = i.category || t('label.noCategory'); (byCat[c] = byCat[c] || []).push(i); });
-  const cats = Object.keys(byCat).sort((a,b) => a.localeCompare(b));
+  items.forEach(i => { const c = i.category || MEGALISTA_SIN_CARPETA; (byCat[c] = byCat[c] || []).push(i); });
+  const cats = Object.keys(byCat).sort((a,b) => (a === MEGALISTA_SIN_CARPETA) - (b === MEGALISTA_SIN_CARPETA) || ingredientCategoryLabel(a).localeCompare(ingredientCategoryLabel(b)));
+  const nombreDe = c => c === MEGALISTA_SIN_CARPETA ? t('label.noCategory') : ingredientCategoryLabel(c);
 
   if(megalistaFolder === null){
-    box.innerHTML = `<div class="grid grid-compact">${cats.map(cat => {
-      const safeCat = cat.replace(/'/g,"\\'");
+    box.innerHTML = `<div class="ml-carpetas">${cats.map(cat => {
+      const k = escapeJsAttr(cat);
+      const pend = byCat[cat].filter(i => { const f = megalistaFaltas(i); return f.precio || f.iva || f.proveedor; }).length;
+      const real = cat !== MEGALISTA_SIN_CARPETA;
       return `
-      <div class="card card-compact" style="cursor:pointer" onclick="openMegalistaFolder('${safeCat}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start">
-          <span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
-          <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>
-          ${botonesDeCarpeta(cat, 'ingredient')}
-        </h3>
-        <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
-      </div>
-    `;}).join('')}</div>`;
+      <div class="ml-carpeta" role="button" tabindex="0" onclick="openMegalistaFolder('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMegalistaFolder('${k}')}">
+        ${real
+          ? `<span class="cat-icon-btn ml-ico" role="button" title="${escapeHtml(t('title.chooseFolderIcon'))}" aria-label="${escapeHtml(t('title.chooseFolderIcon'))}" onclick="event.stopPropagation();openCategoryIconModal('${k}','${k}','renderMegalista','ingredient')">${megalistaIconoCarpeta(cat)}</span>`
+          : `<span class="ml-ico">${megalistaIconoCarpeta(cat)}</span>`}
+        <div class="ml-carpeta-txt">
+          <div class="ml-carpeta-nom">${escapeHtml(nombreDe(cat))}</div>
+          <div class="ml-carpeta-meta">${byCat[cat].length === 1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
+          ${pend ? `<div class="ml-carpeta-pend">${gl({es:'por revisar', ca:'per revisar', en:'to review'})}: ${pend}</div>` : ''}
+        </div>
+        ${real ? botonesDeCarpeta(cat, 'ingredient') : ''}
+      </div>`;
+    }).join('')}</div>`;
     return;
   }
 
   const folderItems = byCat[megalistaFolder];
   if(!folderItems || !folderItems.length){ megalistaFolder = null; renderMegalista(); return; }
-  const backBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToMegalistaFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>`;
-  box.innerHTML = backBtn + renderMegalistaTable(megalistaSortItems(folderItems));
+  const lote = megalistaPuedeEditar() ? `
+    <div class="ml-lote">
+      <label for="ml-iva-lote">${gl({es:'IVA de toda la carpeta', ca:'IVA de tota la carpeta', en:'VAT for the whole folder'})}</label>
+      <select id="ml-iva-lote">${[10,21,4,0].map(pct => `<option value="${pct}">${pct}%</option>`).join('')}</select>
+      <button type="button" class="btn btn-sm btn-fino" onclick="aplicarIvaCarpeta()">${gl({es:'Aplicar', ca:'Aplicar', en:'Apply'})}</button>
+    </div>` : '';
+  box.innerHTML = `
+    <div class="ml-ruta">
+      <button type="button" class="btn btn-sm btn-fino" onclick="backToMegalistaFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>
+      <div class="ml-ruta-nom">${escapeHtml(nombreDe(megalistaFolder))}<span>${folderItems.length === 1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', folderItems.length)}</span></div>
+      ${lote}
+    </div>` + renderMegalistaTable(megalistaSortItems(folderItems));
+}
+
+// Pone el mismo IVA a todos los ingredientes de la carpeta abierta: el catálogo base llega sin IVA y casi todo
+// lo de una misma carpeta lleva el mismo tipo, así que uno a uno son 20 desplegables seguidos.
+async function aplicarIvaCarpeta(){
+  if(!megalistaPuedeEditar()) return;
+  const sel = document.getElementById('ml-iva-lote');
+  if(!sel || megalistaFolder === null) return;
+  const pct = parseFloat(sel.value);
+  const clave = megalistaFolder === MEGALISTA_SIN_CARPETA ? '' : megalistaFolder;
+  const dentro = DB.ingredients.filter(i => (i.area||'cocina') === currentArea() && (i.category || '') === clave);
+  if(!dentro.length) return;
+  const distintos = dentro.filter(i => i.iva != null && i.iva !== pct).length;
+  const msg = gl({
+    es:`${dentro.length} ingredientes pasarán a IVA ${pct}%.` + (distintos ? ` ${distintos} de ellos tenían otro tipo y se cambiará.` : ''),
+    ca:`${dentro.length} ingredients passaran a IVA ${pct}%.` + (distintos ? ` ${distintos} tenien un altre tipus i es canviarà.` : ''),
+    en:`${dentro.length} ingredients will be set to ${pct}% VAT.` + (distintos ? ` ${distintos} had a different rate and will change.` : '')
+  });
+  if(!(await confirmModal(msg))) return;
+  dentro.forEach(i => { i.iva = pct; });
+  saveDB();
+  renderMegalista();
+  showToast(gl({es:'IVA actualizado', ca:'IVA actualitzat', en:'VAT updated'}));
 }
 
 // Catálogo de materia prima básica de cocina, para no obligar a un negocio
@@ -1794,20 +1895,22 @@ function openIngredientModal(id, overrideState){
         <h3>${t('msg.needSupplier')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p style="font-size:13.5px;line-height:1.6">${t('msg.needSupplierDesc')}</p>
+      <p class="ml-intro">${t('msg.needSupplierDesc')}</p>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-primary" onclick="closeModal();openProviderModal()"><i class="ti ti-building-factory-2"></i> ${t('btn.newSupplier')}</button>
+        <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+        <button type="button" class="btn btn-fino is-on" onclick="closeModal();openProviderModal()"><i class="ti ti-building-factory-2"></i> ${t('btn.newSupplier')}</button>
       </div>
     `);
     return;
   }
   const ing = overrideState || (id ? getIngredient(id) : {name:'',category:ingredientCategories()[0],supplier:areaProviders[0].nombre,unit:currentArea()==='sala'?'ml':'g',price:0,packQty:1000,packPrice:0,allergens:[],area:currentArea()});
   const allergenChecks = ALLERGENS.map(a => `
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin-bottom:4px">
-      <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''} style="width:auto"> ${escapeHtml(allergenLabel(a))}
+    <label class="ml-alc">
+      <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''}>
+      <span>${escapeHtml(allergenLabel(a))}</span>
     </label>
   `).join('');
+  const ivaActual = ing.iva != null && ing.iva !== '' ? Number(ing.iva) : null;
 
   openModal(`
     <div class="modal-header">
@@ -1828,29 +1931,40 @@ function openIngredientModal(id, overrideState){
         </select>
       </div>
       <div class="field">
-        <label>${t('common.unit')}</label>
-        <select id="ing-unit" onchange="updateIngPackPrice()">
-          ${UNITS.map(u=>`<option value="${u}" ${ing.unit===u?'selected':''}>${u}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
         <label>${t('common.supplier')}</label>
         <select id="ing-supplier">
           ${areaProviders.map(p=>`<option value="${escapeHtml(p.nombre)}" ${ing.supplier===p.nombre?'selected':''}>${escapeHtml(p.nombre)}</option>`).join('')}
         </select>
       </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label id="ing-pack-qty-label">${t('megalista.purchaseQtyLabel').replace('${unit}', escapeHtml(ing.unit)).replace('${hint}', ingPackQtyHint(ing.unit))}</label>
-        <input type="number" id="ing-pack-qty" value="${ing.packQty!=null?ing.packQty:1000}" step="0.01" min="0.01" oninput="updateIngPackPrice()">
+    <div class="ml-bloque">
+      <div class="ml-bloque-tit">${gl({es:'Cómo lo compras', ca:'Com ho compres', en:'How you buy it'})}</div>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('common.unit')}</label>
+          <select id="ing-unit" onchange="updateIngPackPrice()">
+            ${UNITS.map(u=>`<option value="${u}" ${ing.unit===u?'selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label id="ing-pack-qty-label">${t('megalista.purchaseQtyLabel').replace('${unit}', escapeHtml(ing.unit)).replace('${hint}', ingPackQtyHint(ing.unit))}</label>
+          <input type="number" id="ing-pack-qty" value="${ing.packQty!=null?ing.packQty:1000}" step="0.01" min="0.01" oninput="updateIngPackPrice()">
+        </div>
       </div>
-      <div class="field">
-        <label>${t('label.purchasePrice')}</label>
-        <input type="number" id="ing-pack-price" value="${ing.packPrice!=null?ing.packPrice:ing.price}" step="0.01" min="0" oninput="updateIngPackPrice()">
+      <div class="field-row">
+        <div class="field">
+          <label for="ing-pack-price">${gl({es:'Precio de compra (sin IVA)', ca:'Preu de compra (sense IVA)', en:'Purchase price (excl. VAT)'})}</label>
+          <input type="number" id="ing-pack-price" value="${ing.packPrice!=null?ing.packPrice:ing.price}" step="0.01" min="0" oninput="updateIngPackPrice()">
+        </div>
+        <div class="field">
+          <label for="ing-iva">${t('megalista.colIva')}</label>
+          <select id="ing-iva" onchange="updateIngPackPrice()" title="${escapeHtml(t('label.ivaSoportado'))}">
+            <option value="" ${ivaActual==null?'selected':''}>${t('label.chooseIva')}</option>
+            ${[21,10,4,0].map(pct => `<option value="${pct}" ${ivaActual===pct?'selected':''}>${pct}%</option>`).join('')}
+          </select>
+        </div>
       </div>
+      <div class="ml-calculo" id="ing-calculo" aria-live="polite"></div>
     </div>
     ${(() => {
       // Los últimos cambios de precio de ESTE producto, para ver de un
@@ -1858,23 +1972,24 @@ function openIngredientModal(id, overrideState){
       const hist = (DB.preciosHistorial || []).filter(h => ing.id && h.ingredientId === ing.id).slice(-5).reverse();
       if(!hist.length) return '';
       return `<div class="field"><label>${escapeHtml(t('precios.historial'))}</label>
-        ${hist.map(h => `<div style="display:flex;gap:8px;font-size:13px;padding:3px 0;border-bottom:1px solid var(--border)">
-          <span style="color:var(--muted);flex:none">${escapeHtml(h.fecha)}</span>
-          <span style="flex:1">${fmtMoney(h.antes)} → ${fmtMoney(h.despues)}/${escapeHtml(h.unidad || '')}</span>
-          <strong style="color:${h.despues > h.antes ? 'var(--red)' : 'var(--green)'};white-space:nowrap">${h.despues > h.antes ? '+' : ''}${fmtNum(h.pct, 1)} %</strong>
-        </div>`).join('')}</div>`;
+        <div class="ml-hist">${hist.map(h => `<div class="ml-hist-fila">
+          <span class="ml-hist-f">${escapeHtml(h.fecha)}</span>
+          <span class="ml-hist-p">${fmtMoney(h.antes)} → ${fmtMoney(h.despues)}/${escapeHtml(h.unidad || '')}</span>
+          <strong class="${h.despues > h.antes ? 'sube' : 'baja'}">${h.despues > h.antes ? '+' : ''}${fmtNum(h.pct, 1)} %</strong>
+        </div>`).join('')}</div></div>`;
     })()}
     <div class="field">
       <label>${t('label.allergens')}</label>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:4px">
+      <div class="ml-alergenos">
         ${allergenChecks}
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="saveIngredient(${id||'null'})">${t('common.save')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="saveIngredient(${id||'null'})">${t('common.save')}</button>
     </div>
   `);
+  updateIngPackPrice();
 }
 
 // Ejemplo aclaratorio para la cantidad por compra, según la unidad elegida
@@ -1888,6 +2003,17 @@ function ingPackQtyHint(unit){
 function updateIngPackPrice(){
   const unit = document.getElementById('ing-unit').value;
   document.getElementById('ing-pack-qty-label').textContent = t('megalista.purchaseQtyLabel').replace('${unit}', unit).replace('${hint}', ingPackQtyHint(unit));
+  // Lo que va a valer de verdad: el coste por unidad (con el que se escandalla) y lo que se paga con IVA.
+  const calc = document.getElementById('ing-calculo');
+  if(!calc) return;
+  const qty = parseFloat(document.getElementById('ing-pack-qty').value) || 0;
+  const precio = parseFloat(document.getElementById('ing-pack-price').value) || 0;
+  const iva = document.getElementById('ing-iva').value;
+  if(!(qty > 0) || !(precio > 0)){ calc.innerHTML = ''; return; }
+  const partes = [`${gl({es:'Cuesta', ca:'Costa', en:'Costs'})} <b>${fmtNum(precio / qty, 4)} €/${escapeHtml(unit)}</b>`];
+  if(iva !== '') partes.push(`${gl({es:'Con IVA', ca:'Amb IVA', en:'With VAT'})} <b>${fmtMoney(precio * (1 + parseFloat(iva) / 100))}</b>`);
+  else partes.push(`<span class="ml-falta">${gl({es:'Falta elegir el IVA', ca:'Falta triar l\'IVA', en:'Choose the VAT rate'})}</span>`);
+  calc.innerHTML = partes.join(' · ');
 }
 
 let ingredientFormStateBeforeCategory = null;
@@ -1901,6 +2027,7 @@ function currentIngredientFormState(id){
     supplier: document.getElementById('ing-supplier').value,
     packQty: document.getElementById('ing-pack-qty').value,
     packPrice: document.getElementById('ing-pack-price').value,
+    iva: document.getElementById('ing-iva').value,
     price: ing.price,
     allergens,
     area: ing.area || currentArea()
@@ -1920,8 +2047,8 @@ function onIngredientCategoryChange(id){
         <input type="text" id="new-ingredient-category-name" placeholder="${currentArea()==='sala' ? t('ph.categoryNameSala') : t('ph.categoryName')}">
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="cancelNewIngredientCategory(${id||'null'})">${t('common.cancel')}</button>
-        <button class="btn btn-primary" onclick="confirmNewIngredientCategory(${id||'null'})">${t('common.save')}</button>
+        <button type="button" class="btn btn-fino" onclick="cancelNewIngredientCategory(${id||'null'})">${t('common.cancel')}</button>
+        <button type="button" class="btn btn-fino is-on" onclick="confirmNewIngredientCategory(${id||'null'})">${t('common.save')}</button>
       </div>
     `);
     setTimeout(()=>document.getElementById('new-ingredient-category-name')?.focus(), 50);
@@ -2050,6 +2177,8 @@ async function saveIngredient(id){
   if(packQty < 0 || packPrice < 0){ showToast(t('msg.invalidPrice')); return; }
   const price = packQty > 0 ? packPrice / packQty : 0;
   const allergens = Array.from(document.querySelectorAll('#modal-box input[type="checkbox"]:checked')).map(c=>c.value);
+  // Sin elegir, el IVA se queda como estaba (o sin definir, y la lista lo marca para revisar): nunca se inventa uno.
+  const ivaElegido = document.getElementById('ing-iva') ? document.getElementById('ing-iva').value : '';
 
   // Aviso (no bloqueante) de posible ingrediente duplicado: mismo nombre en
   // la misma área, dado de alta quizás con otro proveedor sin darse cuenta
@@ -2063,9 +2192,12 @@ async function saveIngredient(id){
     if(!ing) return;
     registrarCambioPrecio(ing, price, 'megalista', supplier);
     Object.assign(ing, {name, category, unit, supplier, price, packQty, packPrice, allergens});
+    if(ivaElegido !== '') ing.iva = parseFloat(ivaElegido);
   }else{
     const newId = genId();
-    DB.ingredients.push({id:newId, name, category, unit, supplier, price, packQty, packPrice, allergens, area: currentArea()});
+    const nuevo = {id:newId, name, category, unit, supplier, price, packQty, packPrice, allergens, area: currentArea()};
+    if(ivaElegido !== '') nuevo.iva = parseFloat(ivaElegido);
+    DB.ingredients.push(nuevo);
     getStockEntry(newId);
   }
   saveDB();
@@ -2079,11 +2211,17 @@ async function saveIngredient(id){
 // proveedor puede venderte productos con tipos de IVA distintos (ej. una
 // tienda de bebidas que vende agua al 10% y vino al 21%), así que el tipo
 // tiene que ir ligado al producto, no a quién te lo vende.
-function updateIngredientIva(id, val){
+function updateIngredientIva(id, val, selectEl){
+  if(!isOwnerSession() && !editUnlocked) return;
   const ing = DB.ingredients.find(i=>i.id===id);
   if(!ing) return;
   ing.iva = parseFloat(val);
   saveDB();
+  // Sin repintar la lista (se perdería el foco y la fila saltaría de sitio si se ordena por IVA):
+  // solo se quita el rojo del desplegable y se ponen al día los contadores de «por revisar».
+  if(selectEl) selectEl.classList.remove('is-falta');
+  const resumen = document.getElementById('megalista-resumen');
+  if(resumen) resumen.innerHTML = megalistaResumenHtml(DB.ingredients.filter(i => (i.area||'cocina') === currentArea()));
 }
 
 // Recetas (Escandallo) que usan un ingrediente, para avisar antes de
@@ -2108,13 +2246,13 @@ function deleteIngredient(id){
         <h3><i class="ti ti-alert-triangle"></i> ${t('title.ingredientInUse')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p style="font-size:13px">${t('msg.ingredientInPendingOrderWarning').replace('${name}', escapeHtml(ing?ing.name:'')).replace('${count}', usedInOrders.length)}</p>
-      <div style="max-height:200px;overflow-y:auto;margin:10px 0;border:1px solid var(--border);border-radius:8px">
-        ${usedInOrders.map(o=>`<div class="ge-item"><span style="flex:1;font-weight:600">${escapeHtml(o.supplier)} — ${escapeHtml(o.date||'')}</span></div>`).join('')}
+      <p class="ml-intro">${t('msg.ingredientInPendingOrderWarning').replace('${name}', escapeHtml(ing?ing.name:'')).replace('${count}', usedInOrders.length)}</p>
+      <div class="ml-uso">
+        ${usedInOrders.map(o=>`<div class="ml-uso-fila">${escapeHtml(o.supplier)} — ${escapeHtml(o.date||'')}</div>`).join('')}
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-danger" onclick="confirmDeleteIngredient(${id})">${t('btn.deleteAnyway')}</button>
+        <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+        <button type="button" class="btn btn-fino is-off" onclick="confirmDeleteIngredient(${id})">${t('btn.deleteAnyway')}</button>
       </div>
     `);
     return;
@@ -2125,13 +2263,13 @@ function deleteIngredient(id){
         <h3><i class="ti ti-alert-triangle"></i> ${t('title.ingredientInUse')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p style="font-size:13px">${t('msg.ingredientInUseWarning').replace('${name}', escapeHtml(ing?ing.name:'')).replace('${count}', usedIn.length)}</p>
-      <div style="max-height:200px;overflow-y:auto;margin:10px 0;border:1px solid var(--border);border-radius:8px">
-        ${usedIn.map(r=>`<div class="ge-item"><span style="flex:1;font-weight:600">${escapeHtml(r.name)}</span></div>`).join('')}
+      <p class="ml-intro">${t('msg.ingredientInUseWarning').replace('${name}', escapeHtml(ing?ing.name:'')).replace('${count}', usedIn.length)}</p>
+      <div class="ml-uso">
+        ${usedIn.map(r=>`<div class="ml-uso-fila">${escapeHtml(r.name)}</div>`).join('')}
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-danger" onclick="confirmDeleteIngredient(${id})">${t('btn.deleteAnyway')}</button>
+        <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+        <button type="button" class="btn btn-fino is-off" onclick="confirmDeleteIngredient(${id})">${t('btn.deleteAnyway')}</button>
       </div>
     `);
     return;

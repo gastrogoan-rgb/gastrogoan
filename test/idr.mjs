@@ -376,7 +376,7 @@ await caso('El cuaderno se organiza en carpetas y filtra por tipo', async ()=>{
     const a3 = idrNuevaCreacion('plato'); a3.titulo = 'Suelto';
     saveDB();
     navigate('idr'); renderIdr();
-    const cuenta = () => document.querySelectorAll('#view-idr .card-compact').length;
+    const cuenta = () => document.querySelectorAll('#view-idr .idr-trabajo').length;
     const todo = cuenta();
     idrVerCarpeta(555); const enCarpeta = cuenta();
     idrFiltrar('plato');  const soloPlatos = cuenta();

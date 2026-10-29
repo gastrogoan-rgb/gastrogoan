@@ -431,78 +431,14 @@ function setTpvOrderMobilePane(pane, orderId){
 // Así "Carnes" puede tener un icono distinto en cada lado si el negocio quiere,
 // pero se mantiene coherente entre los dos apartados que comparten esa misma
 // taxonomía. Sin icono elegido, se usa 📁 por defecto.
-// Lista amplia a propósito (carnes, pescados/marisco, verduras, frutas,
-// lácteos, panadería, especias, postres, bebidas con y sin alcohol, platos
-// preparados, utensilios...) para que cualquier categoría de negocio
-// encuentre un icono que le encaje, no solo lo más habitual.
-const CATEGORY_ICON_CHOICES = [
-  // Carnes
-  '🥩','🍗','🍖','🥓','🌭','🍤','🍢','🫘',
-  // Pescados y marisco
-  '🐟','🐠','🐡','🦐','🦀','🦞','🐙','🦑','🍣','🐚',
-  // Verduras y hortalizas
-  '🥬','🥦','🥒','🌽','🥕','🍅','🍆','🧄','🧅','🥔','🫑','🌶️','🍄','🍠','🥑',
-  // Frutas
-  '🍎','🍏','🍌','🍇','🍓','🍉','🍊','🍋','🍑','🍒','🍍','🥝','🥭','🍐','🥥','🍈','🫐','🌰','🥜',
-  // Lácteos y huevos
-  '🥛','🧀','🧈','🥚',
-  // Pan, cereales, arroces y pasta
-  '🍞','🥐','🥖','🥨','🥯','🌾','🍚','🍙','🍝','🍜','🫓','🧇','🥞',
-  // Especias, condimentos y conservas
-  '🧂','🌿','🍯','🫒','🥫','🫗',
-  // Postres y dulces
-  '🍰','🎂','🧁','🍪','🍩','🍫','🍬','🍮','🍦','🍨','🍧','🥧','🍡','🥮',
-  // Bebidas sin alcohol
-  '🥤','☕','🍵','🧃','🧋','🍶',
-  // Bebidas con alcohol
-  '🍷','🍺','🍻','🥂','🍸','🍹','🥃','🍾',
-  // Platos preparados
-  '🍕','🍔','🌮','🌯','🥙','🍟','🥪','🍳','🥘','🍲','🥟','🍛','🍱','🫔','🧆','🍿',
-  // Otros / utensilios
-  '📦','🔪','🍽️','🥄','🍴','🧊','🥗',
-];
-/* En SALA el mundo es otro: una carpeta de Escandallo, Fichas, Stock o Mega
-   Lista de barra es "Vinos tintos", "Ginebras", "Cafés" o "Guarniciones",
-   no "Carnes". Antes se ofrecía la misma lista que en cocina, con más de
-   cien iconos de comida y apenas catorce de bebida al final: había que
-   bajar hasta el fondo para encontrar algo que encajara.
-   Aquí va primero todo el mundo de la bebida y, detrás, la comida —que en
-   una barra también hace falta: tapas, encurtidos, tostas. */
-const CATEGORY_ICON_CHOICES_SALA = [
-  // Vino
-  '🍷','🍇','🏺','🛢️','🫗',
-  // Espumosos y cava
-  '🍾','🥂',
-  // Cerveza
-  '🍺','🍻','🌾',
-  // Destilados y licores
-  '🥃','⚗️','🫙','🍶',
-  // Coctelería
-  '🍸','🍹','🧉','🧊',
-  // Café
-  '☕','🫘',
-  // Té e infusiones
-  '🍵','🫖','🌿',
-  // Sin alcohol
-  '🥤','🧃','🧋','🥛','🧊','🍼',
-  // Guarniciones y cítricos de barra
-  '🍋','🍊','🍒','🥒','🫒','🍓','🍍','🥭','🥥','🍑','🫐','🌶️','🍏','🥕',
-  // Azúcares, siropes y condimentos
-  '🍯','🧂','🍬','🧁',
-  // Cristalería, hielo y servicio
-  '🍽️','🥄','🥢','🧻','❄️','🔥',
-  // Para picar en barra
-  '🧀','🥖','🍞','🥓','🥜','🌰','🍿','🥪','🍕','🥗','🍫',
-  // Otros
-  '📦','🔪','🧴','🧾',
-];
-// El catálogo que toca según dónde se esté: en sala manda la bebida.
-function categoryIconChoices(){
-  return (typeof currentArea === 'function' && currentArea() === 'sala')
-    ? CATEGORY_ICON_CHOICES_SALA : CATEGORY_ICON_CHOICES;
-}
+// Los iconos que se pueden elegir son los del catálogo de comida de trazo (iconoSelectorHtml, js/menu.js): en Sala
+// salen primero los de bebida. Lo guardado antes como emoji se sigue viendo igual.
 function getCategoryIcon(key, ns){
-  return (DB.categoryIcons && DB.categoryIcons[ns] && DB.categoryIcons[ns][key]) || '📁';
+  const v = (DB.categoryIcons && DB.categoryIcons[ns] && DB.categoryIcons[ns][key]) || '';
+  // «ic:<clave>» es un icono del catálogo de trazo (se pinta como dibujo); lo antiguo es un emoji y se ve igual que siempre.
+  if(v === 'ic:none') return '';
+  if(v.startsWith('ic:')) return iconoSeccionHtml(v, key, 24) || '📁';
+  return v || '📁';
 }
 // Aviso de una sola vez (por negocio) para que se sepa que el icono de cada
 // carpeta se puede cambiar — hoy el único indicio era el cursor y un title
@@ -517,21 +453,18 @@ function maybeShowCategoryIconHint(){
   showToast(t('msg.categoryIconHint'), 6000);
 }
 function openCategoryIconModal(key, label, reRenderFn, ns){
-  const safeKey = key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  const safeReRender = reRenderFn.replace(/'/g,"\\'");
+  const k = escapeJsAttr(key), re = escapeJsAttr(reRenderFn);
+  const actual = (DB.categoryIcons && DB.categoryIcons[ns] && DB.categoryIcons[ns][key]) || '';
   openModal(`
     <div class="modal-header">
       <h3>${t('title.chooseFolderIcon')}: ${escapeHtml(label)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px">
-      ${categoryIconChoices().map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCategoryIcon('${safeKey}','${e}','${safeReRender}','${ns}')">${e}</button>`).join('')}
-    </div>
+    ${iconoSelectorHtml(actual, v => `setCategoryIcon('${k}','${v}','${re}','${ns}')`)}
     <div class="modal-footer">
-      <button class="btn" onclick="setCategoryIcon('${safeKey}','','${safeReRender}','${ns}')">${t('btn.removeIcon')}</button>
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
     </div>
-  `);
+  `, {xl:true});
 }
 function setCategoryIcon(key, emoji, reRenderFn, ns){
   if(!DB.categoryIcons) DB.categoryIcons = {recipe:{}, ingredient:{}};

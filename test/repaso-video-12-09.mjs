@@ -105,18 +105,21 @@ await caso('Comandas Cocina: cada ticket se distingue del de al lado', async () 
     saveDB();
     currentFolder = 'cocina'; navigate('comandascocina');
     await new Promise(r=>setTimeout(r,500));
-    const tickets = [...document.querySelectorAll('.kds-ticket')];
+    const tickets = [...document.querySelectorAll('#view-comandascocina .kt[data-orden]')];
     if(!tickets.length) return {tickets: 0};
     const cs = getComputedStyle(tickets[0]);
     return {
       tickets: tickets.length,
       borde: parseFloat(cs.borderTopWidth),
-      cabeceras: document.querySelectorAll('.kds-ticket > .kds-head').length,
+      cabeceras: document.querySelectorAll('#view-comandascocina .kt[data-orden] > .kt-h').length,
+      fondo: cs.backgroundColor,
     };
   });
   assert.equal(r.tickets, 3, 'los tres pedidos deben verse: ' + JSON.stringify(r));
-  // Un borde de 1 px del mismo gris que todo lo demás era justo el problema.
-  assert.ok(r.borde >= 2, 'el borde del ticket tiene que marcarse: ' + JSON.stringify(r));
+  // En el diseño nuevo cada ticket es una tarjeta blanca con filete sobre el fondo crema (antes, borde de 2 px):
+  // lo que importa es que se separe del de al lado, no el grosor.
+  assert.ok(r.borde >= 1, 'el ticket tiene que llevar su borde: ' + JSON.stringify(r));
+  assert.equal(r.fondo, 'rgb(255, 255, 255)', 'el ticket va en blanco sobre el crema de la página: ' + JSON.stringify(r));
   assert.equal(r.cabeceras, 3, 'cada ticket lleva su cabecera con fondo: ' + JSON.stringify(r));
 });
 

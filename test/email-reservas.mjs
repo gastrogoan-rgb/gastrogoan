@@ -447,7 +447,9 @@ caso('Una reserva que cabe en una mesa libre se confirma sola, aunque la mesa se
 
 caso('Pedidos online (1/10): entran solos, el cliente ve «listo» al tocar el grupo en cocina, y para llevar no hay «recogido»', () => {
   assert.ok(tpv.includes('if(anyMismatch && order.pagado && !auto)'), 'un pedido pagado con algún desajuste vuelve a quedarse sin aceptar en automático');
-  const m = tpv.match(/function cycleGroupEstado[\s\S]*?\n\}/);
+  // El camino de guardar y publicar vive en avanzarLineasCocina (lo comparten el botón del ticket y el del modo caos).
+  assert.ok(/function cycleGroupEstado[\s\S]*?avanzarLineasCocina\(/.test(tpv), 'cycleGroupEstado ya no pasa por avanzarLineasCocina');
+  const m = tpv.match(/function avanzarLineasCocina[\s\S]*?\n\}/);
   assert.ok(m && m[0].includes('syncOrderStatusForPublic(order)'), 'avanzar un grupo en cocina no publica el estado al cliente');
   assert.ok(publica.includes("if(!esDelivery && status === 'entregado') status = 'listo';"), 'el seguimiento de un pedido para llevar vuelve a tener el paso «recogido»');
 });
@@ -480,7 +482,8 @@ caso('Un plato manual (sin receta) se puede editar el precio después de crearlo
   // plato sin escandallar) se podía crear con un precio, pero no había
   // NINGÚN sitio donde cambiárselo después.
   assert.ok(/function addCartaPlato\(secId, ?platoId\)/.test(menu), 'addCartaPlato ya no admite platoId para reutilizarse como editor');
-  assert.ok(menu.includes("onclick=\"addCartaPlato(${sec.id},${p.id})\" title=\"${t('title.editPrice')}\""), 'el precio de un plato sin receta ya no es clicable para editarlo');
+  assert.ok(menu.includes("addCartaPlato(${sec.id},${p.id})\" title=\"${t('title.editPrice')}\""), 'el precio de un plato sin receta ya no es clicable para editarlo');
+  assert.ok(menu.includes("fn: p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`"), 'el menú de tres puntos del plato debe ofrecer editarlo');
   assert.ok(/if\(platoId\)\{[\s\S]{0,200}p\.precio = precio;/.test(menu), 'confirmAddCartaPlato no actualiza el plato existente al editar');
 });
 

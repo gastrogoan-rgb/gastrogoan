@@ -669,41 +669,66 @@ function renderProveedores(){
   let providers = DB.providers.filter(p => (p.area||'cocina') === currentArea());
   if(q) providers = providers.filter(p => p.nombre.toLowerCase().includes(q) || (p.contacto||'').toLowerCase().includes(q) || (p.dir||'').toLowerCase().includes(q) || (p.tel||'').includes(q));
   if(!providers.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-building-factory-2"></i>${q ? t('empty.noSearchResults') : t('empty.suppliers')}</div>`;
+    box.innerHTML = `<div class="empty pv-vacio"><i class="ti ti-building-factory-2"></i>${q ? t('empty.noSearchResults') : t('empty.suppliers')}</div>`;
     return;
   }
-  box.innerHTML = providers.map(p => {
-    const ings = ingredientsForSupplier(p.nombre);
-    return `
-    <div class="card">
-      <h3 style="justify-content:space-between">
-        <span><i class="ti ti-building-factory-2"></i> ${escapeHtml(p.nombre)}</span>
-        <span class="actions-cell">
-          <button class="owner-only btn btn-sm btn-icon" onclick="openProviderModal(${p.id})"><i class="ti ti-edit"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteProvider(${p.id})"><i class="ti ti-trash"></i></button>
-        </span>
-      </h3>
-      ${p.contacto ? `<div><i class="ti ti-user"></i> ${escapeHtml(p.contacto)}</div>` : ''}
-      ${p.tel ? `<div><i class="ti ti-phone"></i> <a href="tel:${escapeHtml(p.tel)}">${escapeHtml(p.tel)}</a> · <a href="https://wa.me/${escapeHtml(p.tel.replace(/\D/g,''))}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
-      ${p.email ? `<div><i class="ti ti-mail"></i> <a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a></div>` : ''}
-      ${getProviderDiasEntrega(p).length ? `<div><i class="ti ti-truck-delivery"></i> ${t('label.delivery')}: ${getProviderDiasEntrega(p).map(d=>escapeHtml(weekDayLabelFromStored(d))).join(', ')}${p.horaEntrega?` · ${escapeHtml(p.horaEntrega)}${t('label.hoursApprox')}`:''}</div>` : ''}
-      ${p.envioTipo ? `<div><i class="ti ti-cash"></i> ${t('label.shipping')}: ${
-        p.envioTipo === 'fijo'
-          ? `${fmtMoney(p.envioCoste||0)} ${t('label.shippingFixedTag')}`
-          : `${t('label.shippingFreeFrom')} ${fmtMoney(p.envioMinimo||0)} (${t('label.shippingOtherwise')} ${fmtMoney(p.envioCoste||0)})`
-      }</div>` : ''}
-      ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
-      ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
-      ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
-      ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
-      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-        ${ings.length
-          ? `<button class="btn btn-sm" onclick="openSupplierIngredientsModal(${p.id})"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
-          : `<span style="color:var(--muted);font-size:13px"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (0)</span>`}
-        <button class="btn btn-sm" onclick="viewSupplierOrderHistory('${escapeJsAttr(p.nombre)}')"><i class="ti ti-history"></i> ${t('tab.orderHistory')}</button>
+  // La tarjeta solo dice QUIÉN es: el nombre y tres botones (ficha, editar, eliminar).
+  // Todo lo demás vive en la ficha, para que con muchos proveedores la lista se lea de un vistazo.
+  box.innerHTML = providers.map(p => `
+    <div class="pv-card">
+      <div class="pv-nombre"><i class="ti ti-building-factory-2"></i><span>${escapeHtml(p.nombre)}</span></div>
+      <div class="pv-acc">
+        <button type="button" class="btn btn-fino" title="${escapeHtml(t('prov.info'))}" aria-label="${escapeHtml(t('prov.info'))}" onclick="openProviderInfoModal(${p.id})"><i class="ti ti-info-circle"></i></button>
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openProviderModal(${p.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteProvider(${p.id})`, peligro:true, owner:true}
+        ])}
       </div>
     </div>
-  `;}).join('');
+  `).join('');
+}
+
+// La ficha: lo que antes se pintaba entero en la tarjeta. Solo salen las filas que tienen dato.
+function openProviderInfoModal(id){
+  const p = DB.providers.find(x => x.id === id);
+  if(!p) return;
+  const ings = ingredientsForSupplier(p.nombre);
+  const fila = (icono, etiqueta, html) => `
+    <div class="pv-fila">
+      <div class="pv-et"><i class="ti ${icono}"></i> ${etiqueta}</div>
+      <div class="pv-val">${html}</div>
+    </div>`;
+  const dias = getProviderDiasEntrega(p);
+  const filas = [
+    p.contacto ? fila('ti-user', t('label.contactPerson'), escapeHtml(p.contacto)) : '',
+    p.tel ? fila('ti-phone', t('common.phone'), `<a href="tel:${escapeHtml(p.tel)}">${escapeHtml(p.tel)}</a>${whatsappDeTelefono(p.tel) ? ` · <a href="https://wa.me/${whatsappDeTelefono(p.tel)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}`) : '',
+    p.email ? fila('ti-mail', t('common.email'), `<a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a>`) : '',
+    dias.length ? fila('ti-truck-delivery', t('label.delivery'), `${dias.map(d=>escapeHtml(weekDayLabelFromStored(d))).join(', ')}${p.horaEntrega ? ` · ${escapeHtml(p.horaEntrega)} ${t('label.hoursApprox')}` : ''}`) : '',
+    p.envioTipo ? fila('ti-cash', t('label.shipping'), p.envioTipo === 'fijo'
+      ? `${fmtMoney(p.envioCoste||0)} ${t('label.shippingFixedTag')}`
+      : `${t('label.shippingFreeFrom')} ${fmtMoney(p.envioMinimo||0)} (${t('label.shippingOtherwise')} ${fmtMoney(p.envioCoste||0)})`) : '',
+    p.dir ? fila('ti-map-pin', t('common.address'), escapeHtml(p.dir)) : '',
+    p.iban ? fila('ti-credit-card', 'IBAN', `<span class="pv-mono">${escapeHtml(p.iban)}</span>`) : '',
+    p.pago ? fila('ti-wallet', t('label.paymentMethod'), escapeHtml(paymentMethodLabel(p.pago))) : '',
+    p.notas ? fila('ti-notes', t('common.notes'), `<span class="pv-notas">${escapeHtml(p.notas)}</span>`) : '',
+  ].join('');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-building-factory-2"></i> ${escapeHtml(p.nombre)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${filas ? `<div class="pv-ficha">${filas}</div>` : `<p class="pv-sin-datos">${t('prov.sinDatos')}</p>`}
+    <div class="pv-enlaces">
+      ${ings.length
+        ? `<button type="button" class="btn btn-sm btn-fino" onclick="openSupplierIngredientsModal(${p.id})"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
+        : `<span class="pv-cero"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (0)</span>`}
+      <button type="button" class="btn btn-sm btn-fino" onclick="closeModal();viewSupplierOrderHistory('${escapeJsAttr(p.nombre)}')"><i class="ti ti-history"></i> ${t('tab.orderHistory')}</button>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
+      <button type="button" class="owner-only btn btn-fino is-on" onclick="openProviderModal(${p.id})"><i class="ti ti-pencil"></i> ${t('common.edit')}</button>
+    </div>
+  `);
 }
 function openSupplierIngredientsModal(providerId){
   const p = DB.providers.find(x=>x.id===providerId);
@@ -714,19 +739,39 @@ function openSupplierIngredientsModal(providerId){
       <h3><i class="ti ti-list"></i> ${escapeHtml(p.nombre)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div style="max-height:60vh;overflow-y:auto">
+    <div class="pv-arts">
       ${ings.length ? ings.map(i => `
-        <div class="ge-item">
-          <span style="flex:1;font-weight:600">${escapeHtml(i.name)}</span>
-          <span style="font-family:monospace;color:var(--muted)">${escapeHtml(i.unit||'')}</span>
-          <span style="font-family:monospace;font-weight:600;margin-left:10px">${fmtMoney(i.price)}</span>
+        <div class="pv-art">
+          <span class="pv-art-n">${escapeHtml(i.name)}</span>
+          <span class="pv-art-u">${escapeHtml(i.unit||'')}</span>
+          <span class="pv-art-p">${fmtMoney(i.price)}</span>
         </div>
       `).join('') : `<div class="empty"><i class="ti ti-list"></i>${t('empty.suppliers')}</div>`}
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+      <button type="button" class="btn btn-fino" onclick="openProviderInfoModal(${p.id})"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
     </div>
   `);
+}
+
+// WhatsApp solo existe en móviles: un fijo (8xx/9xx en España) abría una conversación que nunca llega a nadie.
+// Devuelve el número listo para wa.me (con prefijo de país) o '' si no es un móvil. Los españoles se reconocen por
+// empezar en 6 o 7; un número de otro país no se puede juzgar desde aquí, así que se deja pasar.
+function whatsappDeTelefono(tel){
+  let n = String(tel||'').trim().replace(/[^\d+]/g,'');
+  if(n.startsWith('00')) n = '+' + n.slice(2);
+  const digitos = n.replace(/\D/g,'');
+  let nacional = '';
+  if(n.startsWith('+')){
+    if(!digitos.startsWith('34')) return digitos.length >= 8 ? digitos : '';
+    nacional = digitos.slice(2);
+  }else if(digitos.length === 11 && digitos.startsWith('34')){
+    nacional = digitos.slice(2);
+  }else{
+    nacional = digitos;
+  }
+  return /^[67]\d{8}$/.test(nacional) ? '34' + nacional : '';
 }
 
 // La forma de pago se guarda siempre en español (es el valor interno/histórico);
@@ -767,11 +812,11 @@ function openProviderModal(id){
     </div>
     <div class="field">
       <label>${t('label.usualDeliveryDays')}</label>
-      <div style="display:flex;flex-wrap:wrap;gap:10px">
+      <div class="pv-dias">
         ${WEEK_DAYS.map((d,i)=>`
-          <label style="display:flex;align-items:center;gap:4px;font-weight:400;font-size:13px">
-            <input type="checkbox" id="prov-dia-entrega-${i}" value="${escapeHtml(d)}" ${diasEntrega.includes(d)?'checked':''} style="width:auto">
-            ${weekDayFull(i)}
+          <label class="pv-dia" title="${escapeHtml(weekDayFull(i))}">
+            <input type="checkbox" id="prov-dia-entrega-${i}" value="${escapeHtml(d)}" ${diasEntrega.includes(d)?'checked':''}>
+            <span>${escapeHtml(weekDayShort(i))}</span>
           </label>
         `).join('')}
       </div>
@@ -785,7 +830,7 @@ function openProviderModal(id){
         <option value="minimo" ${p.envioTipo==='minimo'?'selected':''}>${t('label.shippingMinimum')}</option>
       </select>
     </div>
-    <div id="prov-envio-fields" class="field-row" style="display:${p.envioTipo?'flex':'none'}">
+    <div id="prov-envio-fields" class="field-row pv-envio" style="display:${p.envioTipo?'flex':'none'}">
       <div class="field" id="prov-envio-minimo-field" style="display:${p.envioTipo==='minimo'?'block':'none'}">
         <label>${t('label.shippingMinAmount')}</label>
         <input type="number" id="prov-envio-minimo" min="0" step="0.01" value="${p.envioMinimo||''}">
@@ -799,8 +844,8 @@ function openProviderModal(id){
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
     <div class="field"><label>${t('common.notes')}</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="saveProvider(${id||'null'})">${t('common.save')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="saveProvider(${id||'null'})">${t('common.save')}</button>
     </div>
   `);
 }
@@ -1520,7 +1565,7 @@ function renderPedidoDetail(){
         ${o.estado==='BORRADOR' ? `<button class="btn btn-primary" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> ${t('btn.markSent')}</button>` : ''}
         ${o.estado==='ENVIADO' ? `<button class="btn btn-primary" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> ${t('btn.markReceived')}</button>` : ''}
         ${o.estado==='RECIBIDO' ? `<button class="owner-only btn" onclick="revertPedidoRecepcion(${o.id})"><i class="ti ti-arrow-back-up"></i> ${t('btn.revertReception')}</button>` : ''}
-        <button class="btn" style="background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        ${(() => { const pv = getProviderByName(o.supplier); return !pv || !pv.tel || whatsappDeTelefono(pv.tel) ? `<button class="btn" style="background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>` : ''; })()}
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         <button class="owner-only btn" onclick="duplicateOrder(${o.id})"><i class="ti ti-copy"></i> ${t('btn.duplicateOrder')}</button>
@@ -1915,8 +1960,9 @@ function sendPedidoWhatsapp(order){
   const o = order || getPurchaseOrder(pedidoDetailId);
   if(!o) return;
   const prov = getProviderByName(o.supplier);
-  const tel = prov && prov.tel ? prov.tel.replace(/\D/g,'') : '';
-  if(!tel){ showToast(t('msg.supplierMissingPhone')); return; }
+  if(!(prov && prov.tel)){ showToast(t('msg.supplierMissingPhone')); return; }
+  const tel = whatsappDeTelefono(prov.tel);
+  if(!tel){ showToast(t('msg.supplierLandline'), 4500); return; }
   const txt = encodeURIComponent(pedidoTexto(o));
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
   markPedidoSentIfDraft(o);
@@ -2327,6 +2373,7 @@ async function sendNewPedido(method){
   if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return; }
   const prov = getProviderByName(orderModalSupplier);
   if(method === 'whatsapp' && !(prov && prov.tel)){ showToast(t('msg.supplierMissingPhone')); return; }
+  if(method === 'whatsapp' && !whatsappDeTelefono(prov.tel)){ showToast(t('msg.supplierLandline'), 4500); return; }
   if(method === 'email' && !(prov && prov.email)){ showToast(t('msg.supplierMissingEmail')); return; }
   const order = await buildNewPedido();
   if(!order) return;

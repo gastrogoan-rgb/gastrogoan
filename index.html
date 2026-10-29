@@ -222,16 +222,24 @@
       <div class="view-title" data-i18n="view.megalista.title">Mega Lista</div>
       <div class="view-subtitle" data-i18n="view.megalista.subtitle">Gestión de ingredientes y proveedores</div>
 
-      <div class="toolbar">
+      <div class="toolbar ml-barra">
         <div class="left">
-          <input type="text" class="search-input" id="megalista-search" data-i18n-ph="ph.searchIngredient" placeholder="Buscar ingrediente..." oninput="renderMegalista()">
-          <select id="megalista-filter-prov" onchange="renderMegalista()">
+          <input type="text" class="search-input ml-buscar" id="megalista-search" data-i18n-ph="ph.searchIngredient" placeholder="Buscar ingrediente..." oninput="renderMegalista()">
+          <select id="megalista-filter-prov" class="ml-filtro" onchange="renderMegalista()" aria-label="Proveedor">
             <option value="" data-i18n="megalista.allProviders">Todos los proveedores</option>
           </select>
+          <select id="megalista-orden" class="ml-filtro ml-orden" onchange="setMegalistaSortDesdeLista(this.value)" aria-label="Ordenar">
+            <option value="name" data-i18n="megalista.colIngredient">Ingrediente</option>
+            <option value="category" data-i18n="common.category">Categoría</option>
+            <option value="supplier" data-i18n="common.supplier">Proveedor</option>
+            <option value="price" data-i18n="megalista.colPurchase">Compra</option>
+            <option value="iva" data-i18n="megalista.colIva">IVA</option>
+          </select>
         </div>
-        <button class="owner-only btn btn-primary" onclick="openIngredientModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newIngredient">Nuevo Ingrediente</span></button>
+        <button class="owner-only btn btn-fino is-on" onclick="openIngredientModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newIngredient">Nuevo Ingrediente</span></button>
       </div>
 
+      <div id="megalista-resumen"></div>
       <div id="megalista-content"></div>
     </section>
 
@@ -241,16 +249,14 @@
       <div class="view-title" data-i18n="view.proveedores.title">Proveedores</div>
       <div class="view-subtitle" data-i18n="view.proveedores.subtitle">Contactos y condiciones de compra</div>
 
-      <div class="toolbar">
-        <div class="left"></div>
-        <button class="owner-only btn btn-primary" onclick="openProviderModal()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSupplier">Nuevo Proveedor</span></button>
+      <div class="toolbar pv-barra">
+        <div class="left">
+          <input type="text" id="proveedores-search-input" class="pv-buscar" data-i18n-ph="ph.searchSupplier" placeholder="Buscar proveedor..." oninput="setProviderSearchQuery(this.value)">
+        </div>
+        <button class="owner-only btn btn-fino is-on" onclick="openProviderModal()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSupplier">Nuevo Proveedor</span></button>
       </div>
 
-      <div class="field" style="max-width:320px">
-        <input type="text" id="proveedores-search-input" data-i18n-ph="ph.searchSupplier" placeholder="Buscar proveedor..." oninput="setProviderSearchQuery(this.value)">
-      </div>
-
-      <div class="grid grid-2" id="proveedores-list"></div>
+      <div class="pv-grid" id="proveedores-list"></div>
     </section>
 
     <!-- ========== ESCANDALLO ========== -->

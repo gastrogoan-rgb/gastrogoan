@@ -1888,7 +1888,104 @@ window.addEventListener('resize', () => {
    convierte lo que se pinte dentro: `.btn-primary` pasa a verde de marca (`is-on`), `.btn-danger` a rojo suave
    (`is-off`), y los botones de solo icono llevan su nombre accesible. Para pasar OTRA pantalla basta con añadir
    su selector a GG_FINO_CONTENEDORES. `.btn-back` (el «Volver») se queda como está. */
-const GG_FINO_CONTENEDORES = ['#view-idr', '#modal-box:has(.idr-modal)'];
+/* ── Menú de tres puntos (norma 30/10) ──
+   Editar y borrar no van como dos botones sueltos en cada fila: van dentro de un botón «⋯» que despliega el menú.
+   `acciones` = [{icono, texto, fn, peligro, owner}] donde `fn` es el código que se ejecuta (como un onclick) y
+   `owner` marca las que solo ve quien puede editar; si TODAS lo son, el propio botón desaparece para los demás.
+   El menú es uno solo, flotante y fuera de la fila: así no lo recorta ningún contenedor con overflow. */
+let ggMenuAbierto = null;
+function ggMenuAcciones(acciones, opts){
+  opts = opts || {};
+  const lista = (acciones || []).filter(Boolean);
+  if(!lista.length) return '';
+  const etiqueta = opts.etiqueta || gl({es:'Más acciones', ca:'Més accions', en:'More actions'});
+  const soloOwner = lista.every(a => a.owner);
+  return `<button type="button" class="${opts.clase || 'btn btn-fino mn-btn'}${soloOwner ? ' owner-only' : ''}" aria-haspopup="menu" aria-expanded="false" title="${escapeHtml(etiqueta)}" aria-label="${escapeHtml(etiqueta)}" data-acc="${escapeHtml(JSON.stringify(lista))}" onclick="event.stopPropagation();ggAbrirMenuAcciones(this, event)"><i class="ti ${opts.icono || 'ti-dots'}"></i></button>`;
+}
+function ggCerrarMenuAcciones(devolverFoco){
+  if(!ggMenuAbierto) return;
+  const {btn, menu} = ggMenuAbierto;
+  ggMenuAbierto = null;
+  menu.remove();
+  if(btn && btn.isConnected){ btn.setAttribute('aria-expanded', 'false'); if(devolverFoco) btn.focus(); }
+}
+function ggAbrirMenuAcciones(btn, ev){
+  const yaAbierto = ggMenuAbierto && ggMenuAbierto.btn === btn;
+  ggCerrarMenuAcciones();
+  if(yaAbierto) return;
+  let acciones;
+  try{ acciones = JSON.parse(btn.dataset.acc || '[]'); }catch(e){ return; }
+  if(!acciones.length) return;
+  const menu = document.createElement('div');
+  menu.className = 'mn-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = acciones.map(a => `<button type="button" role="menuitem" class="mn-item${a.peligro ? ' is-off' : ''}${a.owner ? ' owner-only' : ''}" onclick="${escapeHtml('ggCerrarMenuAcciones();' + a.fn)}"><i class="ti ${escapeHtml(a.icono || '')}"></i><span>${escapeHtml(a.texto)}</span></button>`).join('');
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect();
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  // Alineado al borde derecho del botón; si no cabe a su izquierda, al borde izquierdo.
+  let left = r.right - mw;
+  if(left < 8) left = r.left;
+  left = Math.min(Math.max(8, left), window.innerWidth - mw - 8);
+  let top = r.bottom + 4;
+  if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);   // sin sitio debajo, se abre hacia arriba
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+  btn.setAttribute('aria-expanded', 'true');
+  ggMenuAbierto = {btn, menu};
+  // Con teclado (Enter o espacio llegan con detail 0) se entra en la primera acción; con ratón o dedo, sin aro de foco.
+  menu.tabIndex = -1;
+  const primero = menu.querySelector('.mn-item');
+  if(primero && (!ev || ev.detail === 0)) primero.focus(); else menu.focus();
+}
+if(typeof document !== 'undefined'){
+  // Un toque fuera lo cierra; el propio botón decide si abre o cierra (por eso se le deja pasar).
+  document.addEventListener('click', e => {
+    if(ggMenuAbierto && !ggMenuAbierto.menu.contains(e.target) && !(e.target.closest && e.target.closest('[data-acc]'))) ggCerrarMenuAcciones();
+  }, true);
+  document.addEventListener('keydown', e => {
+    if(!ggMenuAbierto) return;
+    const items = [...ggMenuAbierto.menu.querySelectorAll('.mn-item')].filter(i => i.offsetParent !== null);
+    const i = items.indexOf(document.activeElement);
+    if(e.key === 'Escape'){ e.preventDefault(); ggCerrarMenuAcciones(true); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); (items[i + 1] || items[0]).focus(); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); (items[i - 1] || items[items.length - 1]).focus(); }
+    else if(e.key === 'Tab') ggCerrarMenuAcciones();
+  });
+  window.addEventListener('resize', () => ggCerrarMenuAcciones());
+  window.addEventListener('scroll', () => ggCerrarMenuAcciones(), true);
+}
+
+/* ── Filas plegables en móvil ──
+   En un móvil una fila con nombre, precio, proveedor, IVA, alérgenos y botones es un muro de texto. La norma: se ve
+   lo que identifica (nombre y precio) y el resto cuelga de un toque. En PC todo sigue a la vista.
+   Marcado: la fila lleva `plegable` y un `data-pl` único; lo que se esconde, `pl-extra`; y un botón `pl-chev`.
+   El estado se guarda aparte para que sobreviva a repintar la lista. */
+const ggPlegablesAbiertos = new Set();
+function ggEsMovilPlegable(){ return window.matchMedia('(max-width: 760px)').matches; }
+function ggTogglePlegable(ev, fila){
+  if(!fila || !ggEsMovilPlegable()) return;
+  // Un toque dentro de un control (el IVA, un botón, un enlace) es del control, no de la fila.
+  if(ev && ev.target && ev.target.closest && ev.target.closest('select,input,textarea,a,label,button:not(.pl-chev)')) return;
+  const abierta = !fila.classList.contains('is-abierta');
+  fila.classList.toggle('is-abierta', abierta);
+  const clave = fila.dataset.pl;
+  if(clave){ if(abierta) ggPlegablesAbiertos.add(clave); else ggPlegablesAbiertos.delete(clave); }
+  const chev = fila.querySelector('.pl-chev');
+  if(chev) chev.setAttribute('aria-expanded', abierta ? 'true' : 'false');
+}
+// El nombre y el precio de una fila se pulsan para editarlos; con la fila plegada en móvil, ese primer toque la abre.
+function ggSiPlegada(ev, el){
+  const fila = el && el.closest ? el.closest('.plegable') : null;
+  if(!fila || !ggEsMovilPlegable() || fila.classList.contains('is-abierta')) return false;
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  ggTogglePlegable(null, fila);
+  return true;
+}
+function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
+
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista'];   // pantallas que ya tienen el diseño nuevo
+const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;
   raiz.querySelectorAll('.btn:not(.btn-fino):not(.btn-back)').forEach(b => {
@@ -2111,6 +2208,9 @@ function renderFolder(){
 function openModal(html, opts){
   const box = document.getElementById('modal-box');
   box.innerHTML = html;
+  // Una ventana abierta desde una pantalla con el diseño nuevo (o hecha para ella) lo lleva también.
+  const activa = document.querySelector('.view.active');
+  box.classList.toggle('ds-nuevo', (activa && GG_VISTAS_NUEVAS.includes(activa.id)) || /class="idr-modal"/.test(html));
   box.classList.toggle('modal-xl', !!(opts && opts.xl));
   box.classList.toggle('modal-order', !!(opts && opts.order));
   wrapModalBody(box);

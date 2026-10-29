@@ -30,6 +30,15 @@ function ocBtnRaciones(stock, onclick){
   const cls = stock != null && stock <= 0 ? ' is-off' : (stock != null ? ' is-lim' : '');
   return `<button type="button" class="btn btn-sm btn-fino${cls}" onclick="${onclick}" title="${escapeHtml(t('title.limitPortions'))}"><i class="ti ${stock == null ? 'ti-infinity' : 'ti-stack-2'}"></i> ${escapeHtml(ocRacionesTexto(stock))}</button>`;
 }
+// Lo único del estado que se ve con la fila plegada (móvil): agotado o con límite de raciones.
+function ocEstadoPlegado(agotado, stock){
+  if(agotado || (stock != null && stock <= 0)) return `<span class="oc-estado is-off">${gl({es:'Agotado', ca:'Esgotat', en:'Sold out'})}</span>`;
+  if(stock != null) return `<span class="oc-estado is-lim">${escapeHtml(ocRacionesTexto(stock))}</span>`;
+  return '';
+}
+function ocChevHtml(){
+  return `<button type="button" class="pl-chev" aria-expanded="false" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>`;
+}
 function ocBtnExtras(n, onclick){
   return `<button type="button" class="btn btn-sm btn-fino" onclick="${onclick}"><i class="ti ti-adjustments"></i> ${t('title.extras')}${n ? ` (${n})` : ''}</button>`;
 }
@@ -336,8 +345,10 @@ function renderCartaList(){
       </div>
       ${renderItemScheduleHtml(c)}
       <div class="oc-acc">
-        <button type="button" class="owner-only btn btn-sm btn-fino" onclick="openCarta(${c.id})"><i class="ti ti-edit"></i> ${gl({es:'Editar', ca:'Editar', en:'Edit'})}</button>
-        <button type="button" class="owner-only btn btn-sm btn-fino is-off" onclick="deleteCarta(${c.id})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openCarta(${c.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteCarta(${c.id})`, peligro:true, owner:true}
+        ])}
       </div>
     </article>`;
   }).join('')}</div>`;
@@ -658,8 +669,10 @@ function renderCartaSecciones(){
         <div class="oc-sec-acc">
           <button type="button" class="btn btn-sm btn-fino is-on" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${bebidas ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
           <button type="button" class="btn btn-sm btn-fino" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
-          <button type="button" class="owner-only btn btn-sm btn-fino" title="${t('title.renameSection')}" aria-label="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
-          <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-pencil', texto:t('title.renameSection'), fn:`renameCartaSeccion(${sec.id})`, owner:true},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`removeCartaSection(${sec.id})`, peligro:true, owner:true}
+          ])}
         </div>
       </div>
       ${visiblePlatos.length ? visiblePlatos.map(p => {
@@ -684,22 +697,27 @@ function renderCartaSecciones(){
         const agotado = p.disponible === false;
         const nAler = (p.allergensManual||[]).length;
         return `
-        <div class="oc-plato${agotado ? ' agotado' : ''}">
-          <div class="oc-mover">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
+        <div class="oc-plato plegable${agotado ? ' agotado' : ''}${ggPlegableAbierta('cp-' + sec.id + '-' + p.id) ? ' is-abierta' : ''}" data-pl="cp-${sec.id}-${p.id}" onclick="ggTogglePlegable(event, this)">
+          <div class="oc-mover pl-extra">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
           <div class="oc-plato-nom">
-            <span class="carta-plato-name" title="${p.recipeId ? t('title.renameDish') : t('title.editPrice')}" onclick="${p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`}">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only"></i></span>
+            <span class="carta-plato-name" title="${p.recipeId ? t('title.renameDish') : t('title.editPrice')}" onclick="if(ggSiPlegada(event,this))return;${p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`}">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only"></i></span>
             ${marginDot}
+            ${ocEstadoPlegado(agotado, p.stock)}
           </div>
           <!-- Un plato SIN receta vinculada no tiene "Escandallo" donde ir a cambiar el precio — por eso aquí el
                propio precio es clicable (y abre el mismo modal de alta). El de una receta vinculada sigue siendo de
                solo lectura: se gestiona desde Escandallo. -->
-          <span class="carta-plato-price oc-precio${p.recipeId ? '' : ' editable'}" ${p.recipeId ? '' : `onclick="addCartaPlato(${sec.id},${p.id})" title="${t('title.editPrice')}"`}>${fmtMoney(p.precio)}</span>
-          <div class="oc-ctrl">
+          <span class="carta-plato-price oc-precio${p.recipeId ? '' : ' editable'}" ${p.recipeId ? '' : `onclick="if(ggSiPlegada(event,this))return;addCartaPlato(${sec.id},${p.id})" title="${t('title.editPrice')}"`}>${fmtMoney(p.precio)}</span>
+          ${ocChevHtml()}
+          <div class="oc-ctrl pl-extra">
             ${ocBtnDisponible(agotado, `toggleCartaPlato(${sec.id},${p.id})`)}
             ${ocBtnRaciones(p.stock, `setCartaPlatoStock(${sec.id},${p.id})`)}
             ${ocBtnExtras((p.modificadores||[]).length, `openPlatoModsModal(${sec.id},${p.id})`)}
             ${!p.recipeId ? `<button type="button" class="btn btn-sm btn-fino${nAler ? ' is-off' : ''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}" aria-label="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${nAler ? ` ${nAler}` : ''}</button>` : ''}
-            <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-trash"></i></button>
+            ${ggMenuAcciones([
+              {icono:'ti-pencil', texto:t('common.edit'), fn: p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`, owner:true},
+              {icono:'ti-trash', texto:t('common.delete'), fn:`removeCartaPlato(${sec.id},${p.id})`, peligro:true, owner:true}
+            ])}
           </div>
         </div>`;
       }).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : (bebidas ? t('empty.sectionDrinks') : t('empty.sectionDishes'))}</div>`}
@@ -724,34 +742,40 @@ function cartaSectionIconGrupos(){
 function cartaSectionFallbackIcon(name){
   return iconoComidaPorNombre(name);
 }
-function openCartaSectionIconModal(secId){
-  const sec = cartaEdit.secciones.find(s=>s.id===secId);
-  if(!sec) return;
+// El selector de iconos, con buscador, en grupos y con «Sin icono» / «Automático». Lo comparten la carta y las
+// carpetas de Mega Lista: `accion(valor)` devuelve el onclick de cada botón.
+function iconoSelectorHtml(actual, accion){
   const lang = getLang();
-  const actual = sec.icono || '';
-  const boton = (valor, html, titulo, extra) => `<button type="button" class="ico-btn${actual === valor ? ' is-on' : ''}" data-n="${escapeHtml(iconoNombreNormal(extra||titulo))}" title="${escapeHtml(titulo)}" aria-label="${escapeHtml(titulo)}" onclick="setCartaSectionIcon(${sec.id},'${valor}')">${html}</button>`;
+  const boton = (valor, html, titulo, extra) => { const alPulsar = accion('ic:' + valor); return `<button type="button" class="ico-btn${actual === 'ic:' + valor ? ' is-on' : ''}" data-n="${escapeHtml(iconoNombreNormal(extra||titulo))}" title="${escapeHtml(titulo)}" aria-label="${escapeHtml(titulo)}" onclick="${alPulsar}">${html}</button>`; };
   const nombres = {es:0, ca:1, en:2};
   const grupos = cartaSectionIconGrupos().map(g => {
     const info = ICONOS_COMIDA_GRUPOS.find(x => x[0] === g);
     const items = Object.entries(ICONOS_COMIDA).filter(([, v]) => v[4] === g);
     return `<div class="ico-grupo"><h5>${escapeHtml(info[1 + (nombres[lang] ?? 0)])}</h5><div class="ico-grid">${
-      items.map(([k, v]) => boton('ic:' + k, iconoComidaSvg(k, 28), iconoComidaNombre(k, lang), v[1] + ' ' + v[2] + ' ' + v[3] + ' ' + k)).join('')
+      items.map(([k, v]) => boton(k, iconoComidaSvg(k, 28), iconoComidaNombre(k, lang), v[1] + ' ' + v[2] + ' ' + v[3] + ' ' + k)).join('')
     }</div></div>`;
   }).join('');
+  const sinIcono = accion('ic:none'), automatico = accion('');
+  return `
+    <div class="ico-cab">
+      <div class="oc-buscar" style="margin:0"><i class="ti ti-search"></i><input type="text" id="ico-buscar" placeholder="${escapeHtml(gl({es:'Buscar icono: pizza, vino, postre…', ca:'Cercar icona: pizza, vi, postres…', en:'Search icon: pizza, wine, dessert…'}))}" oninput="filtrarIconosComida(this.value)"></div>
+      <div class="ico-especiales">
+        <button type="button" class="btn btn-sm btn-fino${actual === 'ic:none' ? ' is-on' : ''}" onclick="${sinIcono}"><i class="ti ti-ban"></i> ${gl({es:'Sin icono', ca:'Sense icona', en:'No icon'})}</button>
+        <button type="button" class="btn btn-sm btn-fino${actual === '' ? ' is-on' : ''}" onclick="${automatico}" title="${escapeHtml(gl({es:'Se elige solo según el nombre', ca:'S\'escull sola segons el nom', en:'Picked automatically from the name'}))}"><i class="ti ti-wand"></i> ${gl({es:'Automático', ca:'Automàtic', en:'Automatic'})}</button>
+      </div>
+    </div>
+    <div class="ico-lista" id="ico-lista">${grupos}</div>`;
+}
+function openCartaSectionIconModal(secId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  if(!sec) return;
   openModal(`
     <div class="modal-header">
       <h3>${t('title.chooseFolderIcon')}: ${escapeHtml(tItem(sec))}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p class="inc-ayuda">${t('carta.sectionIconHint')}</p>
-    <div class="ico-cab">
-      <div class="oc-buscar" style="margin:0"><i class="ti ti-search"></i><input type="text" id="ico-buscar" placeholder="${escapeHtml(gl({es:'Buscar icono: pizza, vino, postre…', ca:'Cercar icona: pizza, vi, postres…', en:'Search icon: pizza, wine, dessert…'}))}" oninput="filtrarIconosComida(this.value)"></div>
-      <div class="ico-especiales">
-        <button type="button" class="btn btn-sm btn-fino${actual === 'ic:none' ? ' is-on' : ''}" onclick="setCartaSectionIcon(${sec.id},'ic:none')"><i class="ti ti-ban"></i> ${gl({es:'Sin icono', ca:'Sense icona', en:'No icon'})}</button>
-        <button type="button" class="btn btn-sm btn-fino${actual === '' ? ' is-on' : ''}" onclick="setCartaSectionIcon(${sec.id},'')" title="${escapeHtml(gl({es:'Se elige solo según el nombre de la sección', ca:'S\'escull sola segons el nom de la secció', en:'Picked automatically from the section name'}))}"><i class="ti ti-wand"></i> ${gl({es:'Automático', ca:'Automàtic', en:'Automatic'})}</button>
-      </div>
-    </div>
-    <div class="ico-lista" id="ico-lista">${grupos}</div>
+    ${iconoSelectorHtml(sec.icono || '', v => `setCartaSectionIcon(${sec.id},'${v}')`)}
     <div class="modal-footer">
       <button class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
     </div>
@@ -1046,8 +1070,10 @@ function renderPlatoModsModalHtml(secId, platoId){
         <div class="ge-item">
           <span style="flex:1">${escapeHtml(tItem(m))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
-          <button class="btn btn-sm btn-icon" onclick="startEditPlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removePlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-x"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-pencil', texto:t('common.edit'), fn:`startEditPlatoMod(${secId},${platoId},${m.id})`},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`removePlatoMod(${secId},${platoId},${m.id})`, peligro:true}
+          ])}
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
@@ -1311,8 +1337,10 @@ function renderMenuList(){
       <div class="oc-acc">
         ${ocBtnDisponible(m.disponible===false, `toggleMenuDisponible(${m.id})`)}
         ${ocBtnRaciones(m.stock, `setMenuStock(${m.id})`)}
-        <button type="button" class="owner-only btn btn-sm btn-fino" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i> ${gl({es:'Editar', ca:'Editar', en:'Edit'})}</button>
-        <button type="button" class="owner-only btn btn-sm btn-fino is-off" onclick="deleteMenu(${m.id})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openMenu(${m.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteMenu(${m.id})`, peligro:true, owner:true}
+        ])}
       </div>
     </article>`;
   }).join('')}</div>`;
@@ -1477,23 +1505,29 @@ function renderMenuGrupos(){
         <div class="oc-sec-acc">
           <label class="oc-check"><input type="checkbox" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> ${t('label.sala')}</label>
           <button type="button" class="btn btn-sm btn-fino is-on" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> ${t('btn.newOption')}</button>
-          <button type="button" class="owner-only btn btn-sm btn-fino" title="${t('title.renameGroup')}" aria-label="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
-          <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-pencil', texto:t('title.renameGroup'), fn:`renameMenuGrupo(${g.id})`, owner:true},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`removeMenuGrupo(${g.id})`, peligro:true, owner:true}
+          ])}
         </div>
       </div>
       ${visibleOpciones.length ? visibleOpciones.map(o => {
         const oi = opciones.indexOf(o);
         const agotado = o.disponible === false;
         return `
-        <div class="oc-plato${agotado ? ' agotado' : ''}">
-          <div class="oc-mover">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
-          <div class="oc-plato-nom"><span class="carta-plato-name" title="${t('title.renameOption')}" onclick="renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only"></i></span></div>
+        <div class="oc-plato plegable${agotado ? ' agotado' : ''}${ggPlegableAbierta('mo-' + g.id + '-' + o.id) ? ' is-abierta' : ''}" data-pl="mo-${g.id}-${o.id}" onclick="ggTogglePlegable(event, this)">
+          <div class="oc-mover pl-extra">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
+          <div class="oc-plato-nom"><span class="carta-plato-name" title="${t('title.renameOption')}" onclick="if(ggSiPlegada(event,this))return;renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only"></i></span>${ocEstadoPlegado(agotado, o.stock)}</div>
           ${o.suplemento ? `<span class="oc-precio">+${fmtMoney(o.suplemento)}</span>` : '<span class="oc-precio"></span>'}
-          <div class="oc-ctrl">
+          ${ocChevHtml()}
+          <div class="oc-ctrl pl-extra">
             ${ocBtnDisponible(agotado, `toggleMenuOpcionDisponible(${g.id},${o.id})`)}
             ${ocBtnRaciones(o.stock, `setMenuOpcionStock(${g.id},${o.id})`)}
             ${ocBtnExtras((o.modificadores||[]).length, `openMenuOpcionModsModal(${g.id},${o.id})`)}
-            <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-trash"></i></button>
+            ${ggMenuAcciones([
+              {icono:'ti-pencil', texto:t('common.edit'), fn:`renameMenuOpcion(${g.id},${o.id})`, owner:true},
+              {icono:'ti-trash', texto:t('common.delete'), fn:`removeMenuOpcion(${g.id},${o.id})`, peligro:true, owner:true}
+            ])}
           </div>
         </div>`;
       }).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : t('empty.groupOptions')}</div>`}
@@ -1701,8 +1735,10 @@ function renderMenuOpcionModsModalHtml(grupoId, opcionId){
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(m.nombre)}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--ink)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
-          <button class="btn btn-sm btn-icon" onclick="startEditMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-pencil', texto:t('common.edit'), fn:`startEditMenuOpcionMod(${grupoId},${opcionId},${m.id})`},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`removeMenuOpcionMod(${grupoId},${opcionId},${m.id})`, peligro:true}
+          ])}
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
