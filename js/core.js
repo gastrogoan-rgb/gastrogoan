@@ -236,9 +236,13 @@ function renderAccessScreen(){
     <div class="access-wrap${accessScreenMode === 'choice' ? '' : ' access-form-mode'}">
       ${renderAccessLangSwitcherHtml()}
       <div class="access-brand">
-        <div class="access-icon"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain"></div>
-        <h1>GastroGoan</h1>
-        <span class="access-kicker">${t('access.kicker')}</span>
+        <div class="access-brand-row">
+          <div class="access-icon"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain"></div>
+          <div class="access-brand-text">
+            <h1 class="gg-wordmark" aria-label="GastroGoan">gastro<b>goan</b><span>.</span></h1>
+            <span class="access-kicker">${t('access.kicker')}</span>
+          </div>
+        </div>
       </div>
       ${renderAccessSelectScreenHtml()}
       ${accessScreenMode === 'choice' ? accesoFraseYFechaHtml() : ''}

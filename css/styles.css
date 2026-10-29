@@ -2804,6 +2804,27 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
   .access-icon{width:76px;height:76px}.access-brand h1{font-size:40px}
   .access-card{padding:22px 26px}.access-cita{padding-bottom:24px}
 }
+/* Logo a la izquierda, del alto de los dos renglones; a su derecha «GastroGoan» y debajo «Kit de
+   gestión gastronómica», alineados a la izquierda (pedido el 29/10). El logo se estira a la altura
+   del bloque de texto, así queda centrado entre ambos. */
+/* El logo mide EXACTAMENTE lo que el bloque de texto (nombre + hueco + kit), así queda alineado
+   arriba con «GastroGoan» y abajo con el kit. --bh es el tamaño del nombre en cada pantalla. */
+#access-select-screen{--bh:clamp(34px,6vw,46px);--bgap:10px;--bkit:26px}
+.access-brand-row{display:flex;align-items:center;justify-content:center;gap:16px}
+.access-brand-text{display:flex;flex-direction:column;align-items:stretch;gap:var(--bgap);text-align:left}
+#access-select-screen .access-brand h1{font-size:var(--bh)}
+.access-brand-text .access-kicker{white-space:nowrap;text-align:center;line-height:14px;height:var(--bkit);box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.access-brand-row .access-icon{flex:0 0 auto;box-sizing:border-box;width:calc(var(--bh) + var(--bgap) + var(--bkit));height:calc(var(--bh) + var(--bgap) + var(--bkit));padding:6px;margin:0;box-shadow:none}
+#access-select-screen .access-brand{margin-bottom:6px}
+/* El logotipo ORIGINAL de la marca, el de gastrogoan.com: «gastro» normal, «goan» seminegrita y el
+   punto en verde (más claro que en la web, que va sobre fondo crema; aquí va sobre tinta). */
+#access-select-screen .gg-wordmark{font-weight:400;letter-spacing:-.03em}
+#access-select-screen .gg-wordmark b{font-weight:600}
+#access-select-screen .gg-wordmark span{color:#8FA593}
+@media (min-height:641px) and (max-height:760px){#access-select-screen{--bh:40px}}
+@media (max-height:640px){#access-select-screen{--bh:30px;--bgap:6px}}
+@media (max-width:400px){#access-select-screen{--bh:32px;--bgap:7px;--bkit:24px}.access-brand-row{gap:12px}
+  .access-brand-text .access-kicker{letter-spacing:.06em;padding:0 8px}}
 /* Idioma más discreto (pedido el 29/10): la caja se ve pequeña, pero la zona
    que se puede pulsar sigue midiendo 44 px gracias al ::after. */
 .access-lang-switch .lang-trigger{position:relative;min-height:30px;padding:4px 9px;gap:5px;font-size:12px}

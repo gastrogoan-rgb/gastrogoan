@@ -644,7 +644,8 @@ Cambios guiados pantalla a pantalla por el dueño, partiendo SIEMPRE de la base 
 (lo dijo claro: «mejora la base, no la cambies»; un rediseño a dos mitades se descartó al momento).
 - **Fondo de entrada** (`--entry-bg`, css/styles.css): luz cálida desde arriba + grano finísimo de papel,
   sin cuadrícula ni resplandores (la cuadrícula «se veía a km que era IA»). Carga, acceso, selector y asistentes.
-- **Acceso**: Propietarios en el verde de la marca; «Acceso Empleados · Áreas de cocina y sala»; respuesta
+- **Acceso**: logo gg a la izquierda, del alto exacto de nombre + kit (`--bh`, `--bgap`, `--bkit`); el nombre es el
+  logotipo ORIGINAL de gastrogoan.com (`.gg-wordmark`: «gastro» 400, «goan» 600, punto verde). Propietarios en el verde de la marca; «Acceso Empleados · Áreas de cocina y sala»; respuesta
   al pasar y al pulsar; al pie, la **frase del día** y la fecha.
 - **Selector de negocios**: no hay tope de negocios por cuenta. Hasta 5 se ven todos; desde 6, buscador y
   lista con desplazamiento propio. Cambiar contraseña / Salir como botones (`.bs-footbtn`).
