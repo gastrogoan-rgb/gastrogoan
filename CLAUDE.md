@@ -638,6 +638,21 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
 - ⚠️ Un entorno nuevo necesita `pip install fonttools brotli` (el build recorta los iconos) y un enlace
   `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` al Chromium disponible para las pruebas.
 
+## Entrada, selector y frase del día (28-29/10)
+
+Cambios guiados pantalla a pantalla por el dueño, partiendo SIEMPRE de la base que ya tenía aprobada
+(lo dijo claro: «mejora la base, no la cambies»; un rediseño a dos mitades se descartó al momento).
+- **Fondo de entrada** (`--entry-bg`, css/styles.css): luz cálida desde arriba + grano finísimo de papel,
+  sin cuadrícula ni resplandores (la cuadrícula «se veía a km que era IA»). Carga, acceso, selector y asistentes.
+- **Acceso**: Propietarios en el verde de la marca; «Acceso Empleados · Áreas de cocina y sala»; respuesta
+  al pasar y al pulsar; al pie, la **frase del día** y la fecha.
+- **Selector de negocios**: no hay tope de negocios por cuenta. Hasta 5 se ven todos; desde 6, buscador y
+  lista con desplazamiento propio. Cambiar contraseña / Salir como botones (`.bs-footbtn`).
+- **Frase del día** (`js/frases.js`, en build.sh tras i18n.js): 365, una por día del año
+  (`fraseDelDia`), en es/ca/en. 75 comprobadas en Wikiquote con su fuente, 163 aportadas por el dueño
+  (`f: 'aportada por GastroGoan'`) y 127 de oficio sin firma. ⚠️ No añadir frases con nombre de un chef
+  sin fuente: una cita inventada con nombre y apellido en una app que se vende es un riesgo de imagen.
+
 ## Seguridad rápida (9/10, tras una revisión externa)
 
 - **Cabeceras** en `deploy/{app,admin,reservas}/public/_headers` (nosniff, referrer, HSTS; la app y

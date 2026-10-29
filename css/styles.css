@@ -2586,7 +2586,7 @@ button,input,select,textarea{font-family:inherit}
 code,pre,kbd,samp{font-family:var(--mono)}
 
 /* --- ENTRADA: carga, negocios y asistentes de alta comparten la pantalla de acceso --- */
-:root{--entry-bg:radial-gradient(ellipse 70% 55% at 50% 0%,rgba(126,155,132,.38),transparent 70%),radial-gradient(ellipse 60% 40% at 50% 110%,rgba(126,155,132,.16),transparent 70%),linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(160deg,#1C1A17 0%,#211F1A 100%)}
+:root{--entry-bg:radial-gradient(ellipse 46% 52% at 50% -8%,rgba(241,232,210,.13),rgba(241,232,210,.04) 45%,transparent 72%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/220px 220px,linear-gradient(180deg,#1C1A17,#24221D)}
 #app-splash{background:var(--entry-bg)}
 .splash-box{gap:12px}
 .splash-icon{width:76px;height:76px;padding:8px;background:#fff;box-shadow:0 0 0 8px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.35);animation:none}
@@ -2678,6 +2678,127 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .p360-txt-ul{list-style:none;margin:0 0 10px;padding:0}
 .p360-txt-ul li{padding-left:20px;position:relative;margin-bottom:5px}
 .p360-txt-ul li::before{content:"";position:absolute;left:2px;top:.78em;width:9px;height:1px;background:var(--olive)}
+
+/* ═══ ENTRADA (28/10, v2): sin cuadrícula ni resplandores ═══
+   Fondo liso de tinta, una raya oliva arriba (la misma que la cabecera de la app) y la «gg» de la
+   marca, enorme y recortada abajo a la izquierda, en oliva casi invisible. Es tipografía, no decoración
+   genérica: el logo hecho paisaje. */
+#access-select-screen{background:var(--entry-bg)}
+#app-splash > *,#access-select-screen > *,#business-select-screen > *,#license-gate > *,#firebase-gate > *,#netlify-gate > *,#extconn-gate > *,#revoked-gate > *{position:relative;z-index:1}
+.access-wrap,.bs-box{position:relative;z-index:1}
+#license-gate > div,#firebase-gate > div,#netlify-gate > div,#extconn-gate > div,#revoked-gate > div,#business-select-screen .bs-box,.access-card{box-shadow:none !important}
+.access-icon{box-shadow:none;border:0;background:#fff}
+.splash-icon{box-shadow:none}
+.splash-sub::after{content:"";display:block;width:168px;height:2px;margin:20px auto 0;background:linear-gradient(#7E9B84,#7E9B84) -64px 0/64px 100% no-repeat,rgba(255,255,255,.14);animation:splash-bar 1.3s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes splash-bar{from{background-position:-64px 0,0 0}to{background-position:168px 0,0 0}}
+
+/* --- Acceso: el toque. Entrada escalonada, flecha que avanza al pasar y, abajo, el saludo de cocina
+   antes de abrir: la fecha y «Buen servicio». --- */
+#access-select-screen{flex-direction:column}
+.access-choice-btn{position:relative}
+.access-choice-btn .act{flex:1}
+.acc-go{font-size:18px;opacity:.45;transition:transform .2s cubic-bezier(.2,.7,.2,1),opacity .2s}
+.access-choice-btn:hover .acc-go{transform:translateX(4px);opacity:1}
+.access-foot{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-top:28px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ABA59C}
+.access-foot-dot{width:5px;height:5px;border-radius:50%;background:#7E9B84}
+@media (prefers-reduced-motion:no-preference){
+  #access-select-screen:not(.hide) .access-lang-switch{animation:gg-rise .5s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-icon{animation:gg-rise .5s .06s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-brand h1{animation:gg-rise .5s .12s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-kicker{animation:gg-rise .5s .18s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-card{animation:gg-rise .55s .26s cubic-bezier(.2,.7,.2,1) backwards}
+  #access-select-screen:not(.hide) .access-foot{animation:gg-rise .5s .4s cubic-bezier(.2,.7,.2,1) backwards}
+  .access-foot-dot{animation:acc-latido 2.4s ease-in-out infinite}
+}
+@keyframes acc-latido{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* Fondo de entrada (D): la luz cálida de la lámpara sobre el pase y un grano finísimo de papel.
+   Lo usan la carga, el acceso, el selector de negocios y los asistentes de alta. */
+#app-splash,#access-select-screen,#business-select-screen{background:var(--entry-bg)}
+
+/* Entradas: propietarios en el verde de la marca; las dos responden al pasar y al pulsar */
+.access-choice-btn{transition:transform .22s cubic-bezier(.2,.7,.2,1),background-color .2s,border-color .2s,box-shadow .22s,color .2s}
+.access-choice-btn .aci{transition:background-color .2s,color .2s,transform .25s cubic-bezier(.2,.7,.2,1)}
+.access-choice-btn.primary{background:var(--olive);border-color:var(--olive);color:#fff}
+.access-choice-btn.primary .aci{background:rgba(255,255,255,.16);color:#fff}
+.access-choice-btn.primary:hover{background:#3F5143;border-color:#3F5143}
+.access-choice-btn.secondary:hover{background:#FAF8F4;border-color:var(--ink)}
+.access-choice-btn.secondary:hover .aci{background:var(--olive);color:#fff}
+.access-choice-btn:hover{transform:translateY(-3px);box-shadow:0 12px 24px -14px rgba(28,26,23,.55)}
+.access-choice-btn:hover .aci{transform:scale(1.06)}
+.access-choice-btn:active{transform:translateY(0) scale(.985);box-shadow:0 2px 6px -4px rgba(28,26,23,.5);transition-duration:.08s}
+.access-choice-btn:focus-visible{outline:2px solid var(--olive);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.access-choice-btn,.access-choice-btn:hover,.access-choice-btn:active{transform:none}}
+
+/* --- Selector de negocios: misma base, mejor acabado --- */
+#business-select-screen .bs-box{padding:30px 28px 18px;gap:16px}
+.bs-title{gap:8px}
+.bs-title .splash-icon{width:52px;height:52px;margin-bottom:4px}
+.bs-sub{display:block;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.bs-list{gap:8px;margin-top:4px}
+.bs-item,.bs-group-header{background:#fff;border:1px solid var(--border);border-radius:var(--r-m);min-height:60px;padding:12px 14px;position:relative;
+  transition:transform .2s cubic-bezier(.2,.7,.2,1),border-color .2s,box-shadow .2s,background-color .2s}
+.bs-item > div:first-child > .ti,.bs-group-header > div:first-child > .ti{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;background:var(--brand-cream);border-radius:var(--r-s);font-size:18px;color:var(--olive);flex:none;transition:background-color .2s,color .2s}
+.bs-item-name{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.bs-item-tag{font-family:var(--mono);font-size:10.5px !important;letter-spacing:.08em;text-transform:uppercase}
+.bs-item .ti-chevron-right,.bs-group-header .ti-chevron-right{transition:transform .2s}
+.bs-item:hover,.bs-group-header:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:0 10px 22px -16px rgba(28,26,23,.6)}
+.bs-item:hover > div:first-child > .ti,.bs-group-header:hover > div:first-child > .ti{background:var(--olive);color:#fff}
+.bs-item:hover .ti-chevron-right{transform:translateX(3px);color:var(--ink) !important}
+.bs-item:active,.bs-group-header:active{transform:scale(.99);box-shadow:none}
+#business-select-screen .bs-item.active,#business-select-screen .bs-group-header.active{border:1px solid var(--olive);box-shadow:inset 3px 0 0 var(--olive)}
+#business-select-screen .bs-item .btn-danger,#business-select-screen .bs-group-header .btn-danger{background:transparent;border-color:transparent;color:var(--muted);opacity:.7}
+#business-select-screen .bs-item .btn-danger:hover,#business-select-screen .bs-group-header .btn-danger:hover{background:var(--red-l);border-color:#E3C8BF;color:var(--red);opacity:1}
+.bs-item .badge-amber,.bs-group-header .badge-amber{background:var(--green-l);color:var(--olive);border:1px solid #C9D3CB;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+.bs-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bs-actions .btn{min-height:46px}
+.bs-buy{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border:1px dashed #B8C4BA;color:var(--olive);font-weight:600;font-size:14px;text-decoration:none;border-radius:var(--r-s);transition:background-color .2s,border-color .2s}
+.bs-buy:hover{background:var(--green-l);border-color:var(--olive);color:var(--olive)}
+.bs-foot{display:flex;justify-content:space-between;gap:8px;margin-top:6px;padding-top:12px;border-top:1px solid var(--border)}
+.bs-foot-solo{justify-content:center}
+.bs-link{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 4px;background:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap;transition:color .15s}
+.bs-link .ti{font-size:15px}
+.bs-link:hover{color:var(--ink)}
+.bs-link:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+/* Selector: cuántos negocios hay, buscador y lista que no crece sin fin.
+   No hay tope de negocios por cuenta: hasta 5 se ven todos; a partir de 6 sale el buscador y la
+   lista se queda en ~5 filas con su propio desplazamiento (difuminada arriba y abajo para que se
+   note que sigue), así la tarjeta nunca empuja los botones fuera de la pantalla. */
+.bs-listhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:2px}
+.bs-count{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.bs-count-hint{font-size:12px;color:var(--muted)}
+.bs-search{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;background:#fff;border:1px solid #D5CFC4;border-radius:var(--r-s);cursor:text}
+.bs-search:focus-within{border-color:var(--ink);outline:2px solid var(--olive);outline-offset:0}
+.bs-search .ti{color:var(--muted);font-size:16px}
+.bs-search input{flex:1;min-width:0;border:0 !important;outline:0 !important;box-shadow:none !important;padding:8px 0 !important;min-height:0 !important;background:transparent;font-size:15px}
+#business-select-screen .bs-list{max-height:none;overflow:visible;padding:2px}
+#business-select-screen .bs-list.bs-list-scroll{max-height:min(46vh,372px);overflow-y:auto;padding:4px 6px 4px 2px;margin:0 -6px 0 -2px;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14px,#000 calc(100% - 18px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 14px,#000 calc(100% - 18px),transparent 100%)}
+.bs-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)}
+.bs-foot-solo{grid-template-columns:1fr}
+.bs-footbtn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:8px 12px;background:var(--brand-cream);border:1px solid transparent;border-radius:var(--r-s);font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;
+  transition:background-color .18s,border-color .18s,transform .18s cubic-bezier(.2,.7,.2,1)}
+.bs-footbtn .ti{font-size:17px;color:var(--olive);flex:none}
+.bs-footbtn:hover{background:#fff;border-color:var(--ink);transform:translateY(-1px)}
+.bs-footbtn:active{transform:scale(.98)}
+.bs-footbtn:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+/* Frase del día entre el acceso y la fecha: letra grande y fina, autor en mono */
+.access-quote{position:relative;z-index:1;max-width:560px;margin:34px auto 0;padding:0 20px;text-align:center}
+.access-quote blockquote{margin:0;font-size:clamp(17px,2vw,21px);font-weight:400;line-height:1.45;letter-spacing:-.01em;color:#E7E2D9;text-wrap:balance}
+.access-quote figcaption{margin-top:12px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7E9B84}
+.access-quote figcaption::before{content:"— "}
+#access-select-screen .access-foot{margin-top:22px}
+@media (prefers-reduced-motion:no-preference){#access-select-screen:not(.hide) .access-quote{animation:gg-rise .6s .34s cubic-bezier(.2,.7,.2,1) backwards}}
+
+/* Selector: la fila del negocio se lleva el ancho (el nombre no puede quedar en una franja estrecha)
+   y la tarjeta entra con un fundido, sin escalar: escalada, los botones medían menos de 44 px al aparecer. */
+#business-select-screen .bs-item > div:first-child,#business-select-screen .bs-group-header > div:first-child{flex:1 1 auto;min-width:0}
+#business-select-screen .bs-box{animation:bs-fundido .35s ease}
+/* «(independiente)» no aporta y le robaba al nombre la mitad de la fila */
+#business-select-screen .bs-item-tag{display:none}
+@keyframes bs-fundido{from{opacity:0}to{opacity:1}}
 
 /* --- PANEL: avisos que importan delante, el resto en una línea --- */
 .toolbar select{min-width:215px}
@@ -2899,3 +3020,6 @@ small{font-size:max(.8333em, 11px)}
   .grid-4 > .kpi:nth-child(n+3){border-top:1px solid var(--hair)}
   .grid-4 > .kpi:nth-child(3){border-left:0}
 }
+
+/* Selector de negocios en móvil estrecho: las dos acciones una debajo de otra */
+@media (max-width:420px){.bs-actions,.bs-foot{grid-template-columns:1fr}}
