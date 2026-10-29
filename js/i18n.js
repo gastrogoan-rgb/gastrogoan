@@ -167,7 +167,7 @@ function getStockEntry(ingredientId){
 const I18N = {
   es: {
     'home.heroBadge': 'Kit profesional de gestión hostelera',
-    'home.title': '¿Con qué área vamos a trabajar?',
+    'home.title': '¿Con qué área vamos a trabajar hoy?',
     'home.subtitle': 'Selecciona un área para acceder a sus herramientas',
     'home.m.sales': 'Ventas de hoy', 'home.m.tickets': 'tickets', 'home.m.open': 'Mesas abiertas', 'home.m.openNote': 'ahora mismo', 'home.m.res': 'Reservas por llegar', 'home.m.resNote': 'para hoy',
     'splash.loading': 'Cargando tu kit de gestión gastronómica…',
@@ -3104,7 +3104,7 @@ const I18N = {
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
-    'home.title': 'Amb quina àrea treballarem?',
+    'home.title': 'Amb quina àrea treballem avui?',
     'home.subtitle': 'Selecciona una àrea per accedir a les seves eines',
     'home.m.sales': 'Vendes d\'avui', 'home.m.tickets': 'tiquets', 'home.m.open': 'Taules obertes', 'home.m.openNote': 'ara mateix', 'home.m.res': 'Reserves per arribar', 'home.m.resNote': 'per a avui',
     'splash.loading': 'Carregant el teu kit de gestió gastronòmica…',
@@ -6041,7 +6041,7 @@ const I18N = {
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
-    'home.title': 'Which area shall we work on?',
+    'home.title': 'Which area are we working on today?',
     'home.subtitle': 'Select an area to access its tools',
     'home.m.sales': 'Sales today', 'home.m.tickets': 'tickets', 'home.m.open': 'Open tables', 'home.m.openNote': 'right now', 'home.m.res': 'Reservations due', 'home.m.resNote': 'for today',
     'splash.loading': 'Loading your gastronomic management kit…',

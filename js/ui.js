@@ -1561,7 +1561,7 @@ function sendDirectChatMessage(){
 /* ============== Áreas de trabajo ============== */
 const FOLDERS = {
   cocina: {
-    icon:'ti-tools-kitchen-2', color:'var(--ink)',
+    icon:'ti-chef-hat', color:'var(--ink)',
     modules:[
       {id:'comandascocina', icon:'ti-bell-ringing'},
       {id:'carta', icon:'ti-tools-kitchen-2'},
@@ -1578,7 +1578,7 @@ const FOLDERS = {
     ]
   },
   sala: {
-    icon:'ti-users', color:'var(--olive)',
+    icon:'ti-glass-full', color:'var(--olive)',
     modules:[
       {id:'tpv', icon:'ti-device-desktop'},
       {id:'reservas', icon:'ti-calendar-event'},
@@ -1597,7 +1597,7 @@ const FOLDERS = {
     ]
   },
   gestion: {
-    icon:'ti-coin', color:'var(--ink)',
+    icon:'ti-chart-histogram', color:'var(--ink)',
     modules:[
       {id:'manual', icon:'ti-book'},
       {id:'minegocio', icon:'ti-building-store'},
@@ -1970,51 +1970,23 @@ function renderView(view){
 }
 
 function renderHome(){
-  // El inicio no es un menú: dice QUÉ negocio es, qué día, cómo va hoy y qué
-  // herramientas hay en cada área. Las cifras salen de los mismos datos que el
-  // Panel de Control (no se calcula nada aparte) y solo las ve el propietario.
-  const nombre = (DB.business && DB.business.name || '').trim();
+  // El inicio es una puerta, no un cuadro de mandos: a la izquierda el día, a la derecha la pregunta y
+  // debajo tres áreas con solo su icono y su nombre. Las cifras del negocio viven en el Panel de Control.
   const hoy = new Date();
-  const fecha = hoy.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'});
-  const eyebrow = document.getElementById('home-date');
-  if(eyebrow) eyebrow.textContent = nombre ? nombre + ' · ' + fecha : fecha;
+  const loc = localeActual();
+  const dow = hoy.toLocaleDateString(loc, {weekday:'short'}).replace('.', '');
+  const mes = hoy.toLocaleDateString(loc, {month:'long'});
+  const fechaEl = document.getElementById('home-date');
+  if(fechaEl) fechaEl.innerHTML = `<span>${escapeHtml(dow)}</span><b>${hoy.getDate()}</b><span>${escapeHtml(mes)}</span>`;
   document.getElementById('home-title').textContent = t('home.title');
-  document.querySelector('#view-home .home-sub').textContent = t('home.subtitle');
   const sello = document.getElementById('home-version');
   if(sello) sello.textContent = t('idr.version').replace('${v}', (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '—'));
 
-  const pulso = document.getElementById('home-pulse');
-  const sesion = getAccessSession();
-  if(pulso){
-    if(sesion && sesion.type === 'owner'){
-      const dia = todayStr();
-      const ventasHoy = activeSales().filter(s => s.date === dia);
-      const total = ventasHoy.reduce((a, x) => a + x.total, 0);
-      const abiertas = DB.tpvOrders.filter(o => o.status === 'abierta').length;
-      const porLlegar = DB.reservations.filter(r => r.date === dia && !r.llegada && (r.status === 'confirmada' || r.status === 'pendiente')).length;
-      const celda = (etq, val, nota) => `<div class="pulse-cell"><span class="pulse-lbl">${escapeHtml(etq)}</span><span class="pulse-val">${escapeHtml(val)}</span><span class="pulse-note">${escapeHtml(nota || '')}</span></div>`;
-      pulso.innerHTML =
-        celda(t('home.m.sales'), fmtMoney(total), ventasHoy.length + ' ' + t('home.m.tickets')) +
-        celda(t('home.m.open'), String(abiertas), t('home.m.openNote')) +
-        celda(t('home.m.res'), String(porLlegar), t('home.m.resNote'));
-      pulso.style.display = '';
-    }else{
-      pulso.innerHTML = ''; pulso.style.display = 'none';
-    }
-  }
-
-  document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => {
-    const nombres = f.modules.map(m => t(`module.${key}.${m.id}.name`));
-    const visibles = nombres.slice(0, 5).map(n => `<li>${escapeHtml(n)}</li>`).join('');
-    const resto = nombres.length > 5 ? `<li class="area-more">+${nombres.length - 5}</li>` : '';
-    return `
+  document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
     <button type="button" class="folder-card folder-${key}" onclick="openFolder('${key}')">
-      <span class="area-top"><span class="folder-icon"><i class="ti ${f.icon}"></i></span><i class="ti ti-arrow-up-right area-go" aria-hidden="true"></i></span>
-      <h2>${escapeHtml(t(`folder.${key}.title`))}</h2>
-      <span class="area-sub">${escapeHtml(t(`folder.${key}.subtitle`))}</span>
-      <ul class="area-tools">${visibles}${resto}</ul>
-    </button>`;
-  }).join('');
+      <span class="area-icon"><i class="ti ${f.icon}"></i></span>
+      <span class="area-foot"><h2>${escapeHtml(t(`folder.${key}.title`))}</h2><i class="ti ti-arrow-right area-go" aria-hidden="true"></i></span>
+    </button>`).join('');
   // Se pinta DESPUÉS de las carpetas: si algo fallara aquí, el inicio ya está
   // dibujado y el cliente puede seguir trabajando igual.
   if(typeof renderPuestaAPunto === 'function') renderPuestaAPunto();
