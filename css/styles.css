@@ -2990,6 +2990,7 @@ input,select,textarea{border-radius:var(--r-s)}
 /* Menú de tres puntos (norma 30/10): editar y borrar viven dentro de «⋯». Ver ggMenuAcciones en js/ui.js */
 .mn-btn{min-width:40px;padding:0 10px}
 .mn-menu{position:fixed;z-index:200100;min-width:190px;max-width:calc(100vw - 16px);background:#fff;border:1px solid var(--hair);border-radius:3px;box-shadow:0 6px 22px rgba(28,26,23,.14);padding:4px}
+.mn-menu:focus{outline:none}
 .mn-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;background:none;border:0;border-radius:3px;font-family:inherit;font-size:14px;color:var(--ink);text-align:left;cursor:pointer}
 .mn-item .ti{font-size:16px;color:var(--muted);flex:none}
 .mn-item:hover,.mn-item:focus-visible{background:var(--brand-cream);outline:none}

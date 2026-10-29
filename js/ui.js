@@ -1900,7 +1900,7 @@ function ggMenuAcciones(acciones, opts){
   if(!lista.length) return '';
   const etiqueta = opts.etiqueta || gl({es:'Más acciones', ca:'Més accions', en:'More actions'});
   const soloOwner = lista.every(a => a.owner);
-  return `<button type="button" class="${opts.clase || 'btn btn-fino mn-btn'}${soloOwner ? ' owner-only' : ''}" aria-haspopup="menu" aria-expanded="false" title="${escapeHtml(etiqueta)}" aria-label="${escapeHtml(etiqueta)}" data-acc="${escapeHtml(JSON.stringify(lista))}" onclick="event.stopPropagation();ggAbrirMenuAcciones(this)"><i class="ti ${opts.icono || 'ti-dots'}"></i></button>`;
+  return `<button type="button" class="${opts.clase || 'btn btn-fino mn-btn'}${soloOwner ? ' owner-only' : ''}" aria-haspopup="menu" aria-expanded="false" title="${escapeHtml(etiqueta)}" aria-label="${escapeHtml(etiqueta)}" data-acc="${escapeHtml(JSON.stringify(lista))}" onclick="event.stopPropagation();ggAbrirMenuAcciones(this, event)"><i class="ti ${opts.icono || 'ti-dots'}"></i></button>`;
 }
 function ggCerrarMenuAcciones(devolverFoco){
   if(!ggMenuAbierto) return;
@@ -1909,7 +1909,7 @@ function ggCerrarMenuAcciones(devolverFoco){
   menu.remove();
   if(btn && btn.isConnected){ btn.setAttribute('aria-expanded', 'false'); if(devolverFoco) btn.focus(); }
 }
-function ggAbrirMenuAcciones(btn){
+function ggAbrirMenuAcciones(btn, ev){
   const yaAbierto = ggMenuAbierto && ggMenuAbierto.btn === btn;
   ggCerrarMenuAcciones();
   if(yaAbierto) return;
@@ -1923,15 +1923,20 @@ function ggAbrirMenuAcciones(btn){
   document.body.appendChild(menu);
   const r = btn.getBoundingClientRect();
   const mw = menu.offsetWidth, mh = menu.offsetHeight;
-  const left = Math.min(Math.max(8, r.right - mw), window.innerWidth - mw - 8);
+  // Alineado al borde derecho del botón; si no cabe a su izquierda, al borde izquierdo.
+  let left = r.right - mw;
+  if(left < 8) left = r.left;
+  left = Math.min(Math.max(8, left), window.innerWidth - mw - 8);
   let top = r.bottom + 4;
   if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);   // sin sitio debajo, se abre hacia arriba
   menu.style.left = left + 'px';
   menu.style.top = top + 'px';
   btn.setAttribute('aria-expanded', 'true');
   ggMenuAbierto = {btn, menu};
+  // Con teclado (Enter o espacio llegan con detail 0) se entra en la primera acción; con ratón o dedo, sin aro de foco.
+  menu.tabIndex = -1;
   const primero = menu.querySelector('.mn-item');
-  if(primero) primero.focus();
+  if(primero && (!ev || ev.detail === 0)) primero.focus(); else menu.focus();
 }
 if(typeof document !== 'undefined'){
   // Un toque fuera lo cierra; el propio botón decide si abre o cierra (por eso se le deja pasar).

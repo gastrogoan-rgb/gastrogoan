@@ -54,7 +54,7 @@ for(const ancho of [1280, 360]){
 
   await caso(`Proveedores: los tres puntos abren Editar y Eliminar; un toque fuera los cierra (${ancho}px)`, async () => {
     await kebab('.pv-card [data-acc]'); await esperar(150);
-    assert.deepEqual(await menuAbierto(page), ['Editar Proveedor', 'Eliminar']);
+    assert.deepEqual(await menuAbierto(page), ['Editar', 'Eliminar']);
     assert.equal(await q(() => document.querySelector('.pv-card [data-acc]').getAttribute('aria-expanded')), 'true');
     await q(() => document.querySelector('.view-title').click()); await esperar(150);
     assert.equal(await menuAbierto(page), null, 'cerrado al tocar fuera');
@@ -73,7 +73,7 @@ for(const ancho of [1280, 360]){
 
   await caso(`Teclado: se entra en el menú, las flechas se mueven y Enter ejecuta (${ancho}px)`, async () => {
     await kebab('.pv-card [data-acc]'); await esperar(100);
-    assert.equal(await q(() => document.activeElement.textContent.trim()), 'Editar Proveedor', 'el foco entra en la primera acción');
+    assert.equal(await q(() => document.activeElement.textContent.trim()), 'Editar', 'el foco entra en la primera acción');
     await page.keyboard.press('ArrowDown');
     assert.equal(await q(() => document.activeElement.textContent.trim()), 'Eliminar');
     await page.keyboard.press('ArrowUp');
@@ -136,7 +136,7 @@ for(const ancho of [1280, 360]){
   await caso(`Carpetas (Mega Lista y demás): sus tres puntos verticales renombran y borran (${ancho}px)`, async () => {
     await q(() => { backToMegalistaFolders(); }); await esperar(300);
     await kebab('.ml-carpeta [data-acc]'); await esperar(150);
-    assert.deepEqual(await menuAbierto(page), ['Renombrar categoría', 'Eliminar categoría']);
+    assert.deepEqual(await menuAbierto(page), ['Renombrar categoría', 'Borrar carpeta']);
     await page.keyboard.press('Escape');
   });
 
@@ -147,7 +147,7 @@ for(const ancho of [1280, 360]){
     await q(() => [...document.querySelectorAll('.mn-item')].find(i => /Editar/.test(i.textContent)).click()); await esperar(500);
     assert.ok(await q(() => !!cartaEdit), 'Editar abre la carta');
     await kebab('.oc-sec [data-acc]'); await esperar(150);
-    assert.deepEqual(await menuAbierto(page), ['Renombrar sección', 'Eliminar'], 'sección');
+    assert.deepEqual(await menuAbierto(page), ['Cambiar el nombre de la sección', 'Eliminar'], 'sección');
     await page.keyboard.press('Escape');
     if(ancho < 600) await q(() => document.querySelector('.oc-plato .pl-chev').click());
     await esperar(150);

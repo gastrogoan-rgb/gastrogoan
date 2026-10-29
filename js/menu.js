@@ -746,7 +746,7 @@ function cartaSectionFallbackIcon(name){
 // carpetas de Mega Lista: `accion(valor)` devuelve el onclick de cada botón.
 function iconoSelectorHtml(actual, accion){
   const lang = getLang();
-  const boton = (valor, html, titulo, extra) => `<button type="button" class="ico-btn${actual === 'ic:' + valor ? ' is-on' : ''}" data-n="${escapeHtml(iconoNombreNormal(extra||titulo))}" title="${escapeHtml(titulo)}" aria-label="${escapeHtml(titulo)}" onclick="${accion('ic:' + valor)}">${html}</button>`;
+  const boton = (valor, html, titulo, extra) => { const alPulsar = accion('ic:' + valor); return `<button type="button" class="ico-btn${actual === 'ic:' + valor ? ' is-on' : ''}" data-n="${escapeHtml(iconoNombreNormal(extra||titulo))}" title="${escapeHtml(titulo)}" aria-label="${escapeHtml(titulo)}" onclick="${alPulsar}">${html}</button>`; };
   const nombres = {es:0, ca:1, en:2};
   const grupos = cartaSectionIconGrupos().map(g => {
     const info = ICONOS_COMIDA_GRUPOS.find(x => x[0] === g);
@@ -755,12 +755,13 @@ function iconoSelectorHtml(actual, accion){
       items.map(([k, v]) => boton(k, iconoComidaSvg(k, 28), iconoComidaNombre(k, lang), v[1] + ' ' + v[2] + ' ' + v[3] + ' ' + k)).join('')
     }</div></div>`;
   }).join('');
+  const sinIcono = accion('ic:none'), automatico = accion('');
   return `
     <div class="ico-cab">
       <div class="oc-buscar" style="margin:0"><i class="ti ti-search"></i><input type="text" id="ico-buscar" placeholder="${escapeHtml(gl({es:'Buscar icono: pizza, vino, postre…', ca:'Cercar icona: pizza, vi, postres…', en:'Search icon: pizza, wine, dessert…'}))}" oninput="filtrarIconosComida(this.value)"></div>
       <div class="ico-especiales">
-        <button type="button" class="btn btn-sm btn-fino${actual === 'ic:none' ? ' is-on' : ''}" onclick="${accion('ic:none')}"><i class="ti ti-ban"></i> ${gl({es:'Sin icono', ca:'Sense icona', en:'No icon'})}</button>
-        <button type="button" class="btn btn-sm btn-fino${actual === '' ? ' is-on' : ''}" onclick="${accion('')}" title="${escapeHtml(gl({es:'Se elige solo según el nombre', ca:'S\'escull sola segons el nom', en:'Picked automatically from the name'}))}"><i class="ti ti-wand"></i> ${gl({es:'Automático', ca:'Automàtic', en:'Automatic'})}</button>
+        <button type="button" class="btn btn-sm btn-fino${actual === 'ic:none' ? ' is-on' : ''}" onclick="${sinIcono}"><i class="ti ti-ban"></i> ${gl({es:'Sin icono', ca:'Sense icona', en:'No icon'})}</button>
+        <button type="button" class="btn btn-sm btn-fino${actual === '' ? ' is-on' : ''}" onclick="${automatico}" title="${escapeHtml(gl({es:'Se elige solo según el nombre', ca:'S\'escull sola segons el nom', en:'Picked automatically from the name'}))}"><i class="ti ti-wand"></i> ${gl({es:'Automático', ca:'Automàtic', en:'Automatic'})}</button>
       </div>
     </div>
     <div class="ico-lista" id="ico-lista">${grupos}</div>`;
