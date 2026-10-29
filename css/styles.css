@@ -2658,9 +2658,9 @@ input,select,textarea{border-radius:var(--r-s)}
    `.is-on` es el estado marcado (pestaña activa, modo encendido): verde de la marca, como el chat.
    Para usarlo en una pantalla nueva basta con añadir `btn-fino` a un `.btn`. */
 .btn.btn-fino{position:relative;isolation:isolate;background:transparent !important;border:0 !important;box-shadow:none;
-  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.05em;color:var(--ink);padding:0 13px;gap:7px;min-height:40px;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.05em;color:var(--ink);padding:0 11px;gap:6px;min-height:40px;min-width:40px;
   transition:color .18s,transform .18s}
-.btn.btn-fino::before{content:"";position:absolute;left:0;right:0;top:50%;height:30px;margin-top:-15px;z-index:-1;background:#fff;
+.btn.btn-fino::before{content:"";position:absolute;left:0;right:0;top:50%;height:28px;margin-top:-14px;z-index:-1;background:#fff;
   border:1px solid var(--hair);border-radius:var(--r-s);transition:background-color .18s,border-color .18s}
 .btn.btn-fino .ti{font-size:14px;color:var(--ink);transition:color .18s}
 .btn.btn-fino:hover::before{background:var(--brand-cream);border-color:var(--olive)}
@@ -2941,6 +2941,41 @@ input,select,textarea{border-radius:var(--r-s)}
 .ia-num-envio{display:flex;gap:8px;align-items:center}
 .ia-num-envio input{flex:1;min-width:0}
 .ia-num-priv{color:var(--muted);margin:10px 0 0}
+/* Proveedores (30/10): la tarjeta dice quién es y nada más; la ficha vive en un modal */
+.pv-barra{align-items:center;gap:12px;margin-bottom:16px}
+.pv-buscar{min-width:260px;max-width:340px}
+.pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.pv-vacio{grid-column:1/-1}
+.pv-card{display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:16px 16px 10px}
+.pv-nombre{display:flex;align-items:flex-start;gap:9px;font-size:18px;font-weight:600;letter-spacing:-.02em;line-height:1.25;overflow-wrap:anywhere}
+.pv-nombre .ti{font-size:18px;color:var(--olive);margin-top:2px;flex:none}
+.pv-acc{display:flex;align-items:center;gap:2px 6px;flex-wrap:wrap;border-top:1px solid var(--hair);padding-top:6px;margin-top:auto}
+.pv-acc .btn.btn-fino{min-width:40px;padding:0 10px}
+.pv-ficha{border-top:1px solid var(--hair);margin-bottom:14px}
+.pv-fila{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 16px;padding:11px 0;border-bottom:1px solid var(--hair);align-items:baseline}
+.pv-et{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px}
+.pv-et .ti{font-size:14px}
+.pv-val{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.pv-val a{color:var(--olive);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.pv-mono{font-family:var(--mono);font-size:13px;letter-spacing:.02em}
+.pv-notas{color:var(--muted);white-space:pre-wrap}
+.pv-sin-datos{font-size:13px;color:var(--muted);margin:0 0 14px}
+.pv-enlaces{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;margin:0 0 4px}
+.pv-cero{font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--muted);display:inline-flex;align-items:center;gap:6px;min-height:40px}
+.pv-arts{max-height:60vh;overflow-y:auto;border-top:1px solid var(--hair)}
+.pv-art{display:flex;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--hair)}
+.pv-art-n{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.pv-art-u{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.pv-art-p{font-family:var(--mono);font-size:13px;font-weight:600;min-width:72px;text-align:right}
+.pv-envio .field{flex:1;min-width:0}
+.pv-dias{display:flex;flex-wrap:wrap;gap:6px}
+.pv-dia{position:relative;margin:0;cursor:pointer}
+.pv-dia input{position:absolute;opacity:0;width:100%;height:100%;inset:0;margin:0;cursor:pointer}
+.pv-dia span{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:40px;padding:0 10px;background:#fff;border:1px solid var(--hair);border-radius:var(--r-s);font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink);transition:background-color .18s,border-color .18s,color .18s}
+.pv-dia:hover span{background:var(--brand-cream);border-color:var(--olive)}
+.pv-dia input:checked + span{background:var(--olive);border-color:var(--olive);color:#fff}
+.pv-dia input:focus-visible + span{outline:2px solid var(--olive);outline-offset:2px}
+@media (max-width:600px){.pv-grid{grid-template-columns:1fr}.pv-buscar{min-width:0;max-width:none;width:100%}.pv-barra .left{flex:1;min-width:0}.pv-fila{grid-template-columns:1fr;gap:2px}}
 .idr-nota{border:1px solid var(--hair);background:var(--brand-cream);border-radius:3px;padding:12px 14px;margin:12px 0}
 .idr-nota.is-aviso{background:#FDF3F1;border-color:#E8C4C0}
 .idr-nota h4{margin:0 0 6px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
@@ -2989,7 +3024,7 @@ input,select,textarea{border-radius:var(--r-s)}
 .idr-msg.pensando > div{color:var(--muted);font-family:var(--mono);font-size:12px}
 /* ayuda para conseguir la clave */
 .idr-ayuda-link{font-size:13px;color:var(--muted);margin:8px 0 0}
-.idr-ayuda-link a{color:var(--olive);font-weight:600;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.idr-ayuda-link a{display:inline-block;padding:14px 0;margin:-14px 0;color:var(--olive);font-weight:600;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
 .idr-pasos{margin:8px 0}
 .idr-pasos summary{font-size:13px;cursor:pointer;font-weight:600;color:var(--ink)}
 .idr-pasos ol{font-size:13px;line-height:1.6;margin:8px 0 0 18px;padding:0}

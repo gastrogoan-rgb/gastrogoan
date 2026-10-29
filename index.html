@@ -241,16 +241,14 @@
       <div class="view-title" data-i18n="view.proveedores.title">Proveedores</div>
       <div class="view-subtitle" data-i18n="view.proveedores.subtitle">Contactos y condiciones de compra</div>
 
-      <div class="toolbar">
-        <div class="left"></div>
-        <button class="owner-only btn btn-primary" onclick="openProviderModal()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSupplier">Nuevo Proveedor</span></button>
+      <div class="toolbar pv-barra">
+        <div class="left">
+          <input type="text" id="proveedores-search-input" class="pv-buscar" data-i18n-ph="ph.searchSupplier" placeholder="Buscar proveedor..." oninput="setProviderSearchQuery(this.value)">
+        </div>
+        <button class="owner-only btn btn-fino is-on" onclick="openProviderModal()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSupplier">Nuevo Proveedor</span></button>
       </div>
 
-      <div class="field" style="max-width:320px">
-        <input type="text" id="proveedores-search-input" data-i18n-ph="ph.searchSupplier" placeholder="Buscar proveedor..." oninput="setProviderSearchQuery(this.value)">
-      </div>
-
-      <div class="grid grid-2" id="proveedores-list"></div>
+      <div class="pv-grid" id="proveedores-list"></div>
     </section>
 
     <!-- ========== ESCANDALLO ========== -->

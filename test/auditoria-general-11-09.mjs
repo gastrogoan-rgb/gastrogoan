@@ -98,8 +98,8 @@ await caso('Renombrar un plato de Carta sin permiso de edición avisa con un toa
 
 await caso('El botón de renombrar sección de Carta y grupo de Menú son ahora owner-only en el código fuente', async () => {
   const src = fs.readFileSync(new URL('../js/menu.js', import.meta.url), 'utf8');
-  assert.ok(/owner-only btn btn-sm btn-icon" title="\$\{t\('title\.renameSection'\)\}" onclick="renameCartaSeccion/.test(src), 'el botón de renombrar sección de Carta debe ser owner-only');
-  assert.ok(/owner-only btn btn-sm btn-icon" title="\$\{t\('title\.renameGroup'\)\}" onclick="renameMenuGrupo/.test(src), 'el botón de renombrar grupo de Menú debe ser owner-only');
+  assert.ok(/owner-only btn btn-sm (?:btn-icon|btn-fino)" title="\$\{t\('title\.renameSection'\)\}"[^>]*onclick="renameCartaSeccion/.test(src), 'el botón de renombrar sección de Carta debe ser owner-only');
+  assert.ok(/owner-only btn btn-sm (?:btn-icon|btn-fino)" title="\$\{t\('title\.renameGroup'\)\}"[^>]*onclick="renameMenuGrupo/.test(src), 'el botón de renombrar grupo de Menú debe ser owner-only');
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {

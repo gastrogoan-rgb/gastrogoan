@@ -43,7 +43,8 @@ for(const [vista,carpeta] of VISTAS){
     const lum = c => { const [r,g,b]=c.map(v=>{v/=255; return v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055,2.4);}); return 0.2126*r+0.7152*g+0.0722*b; };
     const parse = s => { const m=s.match(/rgba?\(([^)]+)\)/); if(!m) return null;
       const p=m[1].split(',').map(x=>parseFloat(x)); return {rgb:[p[0],p[1],p[2]], a:p.length>3?p[3]:1}; };
-    const fondoDe = e => { let n=e; while(n && n!==document.documentElement){ const b=parse(getComputedStyle(n).backgroundColor);
+    // El botón fino pinta su caja con ::before (el botón en sí es transparente): ese es su fondo de verdad.
+    const fondoDe = e => { let n=e; while(n && n!==document.documentElement){ const b=parse(n.classList.contains('btn-fino') ? getComputedStyle(n,'::before').backgroundColor : getComputedStyle(n).backgroundColor);
         if(b && b.a>0.5) return b.rgb; n=n.parentElement; } return [255,255,255]; };
     const out=[];
     document.querySelectorAll('#content *').forEach(e=>{

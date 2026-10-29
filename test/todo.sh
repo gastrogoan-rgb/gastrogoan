@@ -130,6 +130,7 @@ lanzar; node test/oferta.mjs > "$SALIDA/oferta.txt" 2>&1 & P122=$!
 lanzar; node test/iconos-comida.mjs > "$SALIDA/iconos-comida.txt" 2>&1 & P123=$!
 lanzar; node test/ia-proveedores.mjs > "$SALIDA/ia-proveedores.txt" 2>&1 & P124=$!
 lanzar; node test/subpantallas.mjs > "$SALIDA/subpantallas.txt" 2>&1 & P125=$!
+lanzar; node test/proveedores.mjs > "$SALIDA/proveedores.txt" 2>&1 & P126=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -290,5 +291,6 @@ espera $P122 "Oferta Gastronómica: horario semanal en una fila, aviso de cambio
 espera $P123 "Iconos de la carta: catálogo de comida de trazo, «Sin icono» primero, emoji antiguos que se siguen viendo, web pública idéntica" "$SALIDA/iconos-comida.txt" "casos pasaron"
 espera $P124 "IA: Gemini, Claude y ChatGPT con su petición y su respuesta exactas, errores traducidos y la prueba de conexión que no rompe lo que ya funciona" "$SALIDA/ia-proveedores.txt" "casos pasaron"
 espera $P125 "Sub-pantallas de Comandas, Oferta e I+D: cada modal y selector con botones finos, sin barras de acento viejas y sin desbordar (PC y 360)" "$SALIDA/subpantallas.txt" "casos pasaron"
+espera $P126 "Proveedores: tarjeta con nombre y tres botones, ficha completa, WhatsApp solo en móviles, editar, eliminar y buscar" "$SALIDA/proveedores.txt" "casos pasaron"
 
 exit $FALLOS

@@ -447,7 +447,9 @@ caso('Una reserva que cabe en una mesa libre se confirma sola, aunque la mesa se
 
 caso('Pedidos online (1/10): entran solos, el cliente ve «listo» al tocar el grupo en cocina, y para llevar no hay «recogido»', () => {
   assert.ok(tpv.includes('if(anyMismatch && order.pagado && !auto)'), 'un pedido pagado con algún desajuste vuelve a quedarse sin aceptar en automático');
-  const m = tpv.match(/function cycleGroupEstado[\s\S]*?\n\}/);
+  // El camino de guardar y publicar vive en avanzarLineasCocina (lo comparten el botón del ticket y el del modo caos).
+  assert.ok(/function cycleGroupEstado[\s\S]*?avanzarLineasCocina\(/.test(tpv), 'cycleGroupEstado ya no pasa por avanzarLineasCocina');
+  const m = tpv.match(/function avanzarLineasCocina[\s\S]*?\n\}/);
   assert.ok(m && m[0].includes('syncOrderStatusForPublic(order)'), 'avanzar un grupo en cocina no publica el estado al cliente');
   assert.ok(publica.includes("if(!esDelivery && status === 'entregado') status = 'listo';"), 'el seguimiento de un pedido para llevar vuelve a tener el paso «recogido»');
 });
