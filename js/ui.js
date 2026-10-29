@@ -1643,6 +1643,7 @@ function rememberLastArea(key){
 
 /* ============== Navigation ============== */
 function goHome(){
+  if(ggEditorSucio()){ ggGuardarSiHaceFalta(() => goHome()); return; }
   const session = getAccessSession();
   if(session && session.type === 'employee'){
     // Un empleado no tiene "Inicio": su única carpeta es su área de
@@ -1656,6 +1657,7 @@ function goHome(){
   navigate('home');
 }
 function openFolder(key){
+  if(ggEditorSucio()){ ggGuardarSiHaceFalta(() => openFolder(key)); return; }
   const session = getAccessSession();
   // Un empleado solo puede estar en su propia área — nunca en la otra.
   if(session && session.type === 'employee' && session.area) key = session.area;
@@ -1880,7 +1882,60 @@ window.addEventListener('resize', () => {
   document.querySelectorAll('.ge-tab-row, .mn-indice').forEach(updateTabRowFade);
 });
 
-function navigate(view){
+/* ═══ CAMBIOS SIN GUARDAR (29/10, pedido del dueño: «si hay algún cambio y se sale del lugar, que pregunte») ═══
+   Una pantalla con borrador (Carta, Menús…) se REGISTRA aquí diciendo si tiene cambios (`sucio`), cómo guardarlos
+   (`guardar`, devuelve true/false) y cómo tirarlos (`descartar`). Todo lo que saca al usuario de ahí —cambiar de
+   pantalla, volver al inicio, cerrar sesión, cambiar de negocio, recargar la pestaña— pasa por
+   `ggGuardarSiHaceFalta(accion)`: si no hay nada sin guardar, sigue; si lo hay, pregunta. Para añadir otra pantalla
+   basta con llamar a `ggRegistrarEditor`. */
+const ggEditores = {};
+function ggRegistrarEditor(id, ed){ ggEditores[id] = ed; }
+function ggEditorSucio(){
+  for(const id in ggEditores){ try{ if(ggEditores[id].sucio()) return ggEditores[id]; }catch(e){} }
+  return null;
+}
+let ggSalidaResolve = null;
+function ggPreguntarSalida(ed){
+  return new Promise(resolve => {
+    ggSalidaResolve = resolve;
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-device-floppy"></i> ${gl({es:'Hay cambios sin guardar', ca:'Hi ha canvis sense desar', en:'You have unsaved changes'})}</h3>
+        <button class="modal-close" onclick="ggRespondeSalida('seguir')">&times;</button>
+      </div>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 4px">${escapeHtml(ed.nombre ? ed.nombre() : '')}</p>
+      <p style="font-size:13.5px;line-height:1.5;color:var(--muted);margin:0">${gl({es:'Si sales ahora, se perderán. ¿Qué quieres hacer?', ca:'Si surts ara, es perdran. Què vols fer?', en:'If you leave now they will be lost. What would you like to do?'})}</p>
+      <div class="modal-footer">
+        <button class="btn btn-fino" onclick="ggRespondeSalida('seguir')"><i class="ti ti-pencil"></i> ${gl({es:'Seguir editando', ca:'Seguir editant', en:'Keep editing'})}</button>
+        <button class="btn btn-fino is-off" onclick="ggRespondeSalida('descartar')"><i class="ti ti-trash"></i> ${gl({es:'Descartar', ca:'Descartar', en:'Discard'})}</button>
+        <button class="btn btn-fino is-on" onclick="ggRespondeSalida('guardar')"><i class="ti ti-device-floppy"></i> ${gl({es:'Guardar y salir', ca:'Desar i sortir', en:'Save and leave'})}</button>
+      </div>`);
+  });
+}
+function ggRespondeSalida(r){
+  const f = ggSalidaResolve; ggSalidaResolve = null;
+  closeModal();
+  if(f) f(r);
+}
+async function ggGuardarSiHaceFalta(accion){
+  const ed = ggEditorSucio();
+  if(!ed) return accion();
+  const r = await ggPreguntarSalida(ed);
+  if(r === 'seguir') return;
+  if(r === 'guardar'){ const ok = await ed.guardar(); if(!ok) return; }
+  else ed.descartar();
+  return accion();
+}
+if(typeof window !== 'undefined' && window.addEventListener){
+  window.addEventListener('beforeunload', e => { if(ggEditorSucio()){ e.preventDefault(); e.returnValue = ''; } });
+}
+
+function navigate(view, forzado){
+  // Salir de una pantalla con cambios sin guardar: se pregunta antes (ver ggGuardarSiHaceFalta).
+  if(!forzado && ggEditorSucio()){
+    const actual = document.querySelector('.view.active');
+    if(!actual || actual.id !== 'view-' + view){ ggGuardarSiHaceFalta(() => navigate(view, true)); return; }
+  }
   if(view === 'home'){
     const session = getAccessSession();
     if(session && session.type === 'employee'){ goHome(); return; }

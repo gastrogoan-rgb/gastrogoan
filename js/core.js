@@ -1321,6 +1321,7 @@ function reallyRemoveBusinessSlot(slotId){
 // red de seguridad para el caso (raro) de llegar aquí sin sesión de
 // propietario activa.
 function requestSwitchBusinessPin(){
+  if(typeof ggEditorSucio === 'function' && ggEditorSucio()){ ggGuardarSiHaceFalta(() => requestSwitchBusinessPin()); return; }
   const session = getAccessSession();
   if(session && session.type === 'owner'){ showBusinessSelectScreen(); return; }
   if(!DB.business || !DB.business.pin){ showBusinessSelectScreen(); return; }
