@@ -251,7 +251,9 @@ function accesoFraseYFechaHtml(){
   const hoy = new Date();
   const f = (typeof fraseDelDia === 'function') ? fraseDelDia(hoy) : null;
   const texto = f ? (f[getLang()] || f.es) : '';
-  return `${texto ? `<figure class="access-quote"><blockquote>«${escapeHtml(texto)}»</blockquote>${f.a ? `<figcaption>${escapeHtml(f.a)}</figcaption>` : ''}</figure>` : ''}
+  // Siempre con pie, como un epígrafe: el chef si la frase es suya; si no, «Dicho de cocina» (nunca un nombre sin comprobar).
+  const autor = f && f.a ? f.a : gl({es:'Dicho de cocina', ca:'Dita de cuina', en:'Kitchen saying'});
+  return `${texto ? `<figure class="access-quote"><span class="access-quote-mark" aria-hidden="true">“</span><blockquote>${escapeHtml(texto)}</blockquote><figcaption>${escapeHtml(autor)}</figcaption></figure>` : ''}
     <div class="access-foot"><span class="access-foot-dot" aria-hidden="true"></span><span>${escapeHtml(hoy.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'}))}</span></div>`;
 }
 function showAccessSelectScreen(){
