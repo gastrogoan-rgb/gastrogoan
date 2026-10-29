@@ -50,17 +50,17 @@ for(const ancho of [1280, 360]){
   const page = await abrir(ancho);
   const tarjetas = () => page.evaluate(() => [...document.querySelectorAll('#proveedores-list .pv-card')].map(c => ({
     nombre: c.querySelector('.pv-nombre').textContent.trim(),
-    botones: [...c.querySelectorAll('button')].map(b => (b.getAttribute('onclick')||'').split('(')[0]),
+    botones: [...c.querySelectorAll('button')].map(b => b.dataset.acc ? 'menu:' + JSON.parse(b.dataset.acc).map(a => a.fn.split('(')[0]).join('+') : (b.getAttribute('onclick')||'').split('(')[0]),
     soloOwner: [...c.querySelectorAll('button')].map(b => b.classList.contains('owner-only')),
     texto: c.innerText.replace(/\s+/g,' ').trim(),
   })));
 
-  await caso(`La tarjeta lleva el nombre y tres botones: ficha, editar, eliminar (${ancho}px)`, async () => {
+  await caso(`La tarjeta lleva el nombre, la ficha (i) y un menú de tres puntos con editar y eliminar (${ancho}px)`, async () => {
     const t = await tarjetas();
     assert.equal(t.length, 3);
     for(const c of t){
-      assert.deepEqual(c.botones, ['openProviderInfoModal','openProviderModal','deleteProvider']);
-      assert.deepEqual(c.soloOwner, [false, true, true], 'la ficha la ve cualquiera; editar y eliminar, solo quien puede');
+      assert.deepEqual(c.botones, ['openProviderInfoModal','menu:openProviderModal+deleteProvider']);
+      assert.deepEqual(c.soloOwner, [false, true], 'la ficha la ve cualquiera; el menú de editar y eliminar, solo quien puede');
       assert.equal(c.texto, c.nombre, 'la tarjeta no debe llevar nada más que el nombre: ' + c.texto);
     }
   });

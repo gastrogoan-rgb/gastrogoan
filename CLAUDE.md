@@ -658,6 +658,14 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   las filas de plato/opción de Oferta. **Descartado a propósito**: los tickets de Comandas (es lo que se opera y no
   debe costar un toque más), las tarjetas de Proveedores (ya son nombre + tres botones). Al rediseñar una pantalla
   nueva, plantearse esto antes de maquetarla. Prueba: `test/plegables.mjs`.
+- **NORMA: editar y eliminar van dentro de un botón de tres puntos** (dicho por el dueño el 30/10). No se ponen dos
+  botones sueltos en cada fila: `ggMenuAcciones([{icono, texto, fn, peligro, owner}])` (js/ui.js) pinta el «⋯» y
+  `ggAbrirMenuAcciones` despliega UN menú flotante (fuera de la fila, para que ningún `overflow` lo recorte; se cierra con
+  un toque fuera, Escape o scroll; flechas y Enter; 44 px por acción). `owner:true` esconde la acción a quien no puede
+  editar, y si lo son todas desaparece el botón. Los demás botones de la fila (la `i` de la ficha, Disponible…) no se
+  tocan. Hecho en Proveedores, Mega Lista, Oferta (cartas, menús, secciones, grupos, platos, opciones y sus extras), I+D
+  (carpetas y trabajos) y las carpetas de Mega Lista/Stock/Escandallo/Fichas (`botonesDeCarpeta`). **Toda pantalla que se
+  rediseñe lo lleva.** Prueba: `test/menu-acciones.mjs`.
 - **Catálogo de iconos de comida** (181, trazo): `tools/iconos-comida-lista.txt` → `node tools/generar-iconos-comida.mjs`
   → `js/iconos-comida.js`; el uso (`iconoSeccionHtml`, `iconoSelectorHtml`) va en `js/iconos-comida-uso.js` y `menu.js`, y se
   copia a `reservagastrogoan.html`. Lo guardado: `ic:<clave>`, `ic:none` o un emoji antiguo (se sigue viendo).

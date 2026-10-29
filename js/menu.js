@@ -345,8 +345,10 @@ function renderCartaList(){
       </div>
       ${renderItemScheduleHtml(c)}
       <div class="oc-acc">
-        <button type="button" class="owner-only btn btn-sm btn-fino" onclick="openCarta(${c.id})"><i class="ti ti-edit"></i> ${gl({es:'Editar', ca:'Editar', en:'Edit'})}</button>
-        <button type="button" class="owner-only btn btn-sm btn-fino is-off" onclick="deleteCarta(${c.id})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openCarta(${c.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteCarta(${c.id})`, peligro:true, owner:true}
+        ])}
       </div>
     </article>`;
   }).join('')}</div>`;
@@ -667,8 +669,10 @@ function renderCartaSecciones(){
         <div class="oc-sec-acc">
           <button type="button" class="btn btn-sm btn-fino is-on" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${bebidas ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
           <button type="button" class="btn btn-sm btn-fino" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
-          <button type="button" class="owner-only btn btn-sm btn-fino" title="${t('title.renameSection')}" aria-label="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
-          <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-pencil', texto:t('title.renameSection'), fn:`renameCartaSeccion(${sec.id})`, owner:true},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`removeCartaSection(${sec.id})`, peligro:true, owner:true}
+          ])}
         </div>
       </div>
       ${visiblePlatos.length ? visiblePlatos.map(p => {
@@ -710,7 +714,10 @@ function renderCartaSecciones(){
             ${ocBtnRaciones(p.stock, `setCartaPlatoStock(${sec.id},${p.id})`)}
             ${ocBtnExtras((p.modificadores||[]).length, `openPlatoModsModal(${sec.id},${p.id})`)}
             ${!p.recipeId ? `<button type="button" class="btn btn-sm btn-fino${nAler ? ' is-off' : ''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}" aria-label="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${nAler ? ` ${nAler}` : ''}</button>` : ''}
-            <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-trash"></i></button>
+            ${ggMenuAcciones([
+              {icono:'ti-pencil', texto:t('common.edit'), fn: p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`, owner:true},
+              {icono:'ti-trash', texto:t('common.delete'), fn:`removeCartaPlato(${sec.id},${p.id})`, peligro:true, owner:true}
+            ])}
           </div>
         </div>`;
       }).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : (bebidas ? t('empty.sectionDrinks') : t('empty.sectionDishes'))}</div>`}
@@ -1062,8 +1069,10 @@ function renderPlatoModsModalHtml(secId, platoId){
         <div class="ge-item">
           <span style="flex:1">${escapeHtml(tItem(m))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
-          <button class="btn btn-sm btn-icon" onclick="startEditPlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removePlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-x"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-pencil', texto:t('common.edit'), fn:`startEditPlatoMod(${secId},${platoId},${m.id})`},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`removePlatoMod(${secId},${platoId},${m.id})`, peligro:true}
+          ])}
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
@@ -1327,8 +1336,10 @@ function renderMenuList(){
       <div class="oc-acc">
         ${ocBtnDisponible(m.disponible===false, `toggleMenuDisponible(${m.id})`)}
         ${ocBtnRaciones(m.stock, `setMenuStock(${m.id})`)}
-        <button type="button" class="owner-only btn btn-sm btn-fino" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i> ${gl({es:'Editar', ca:'Editar', en:'Edit'})}</button>
-        <button type="button" class="owner-only btn btn-sm btn-fino is-off" onclick="deleteMenu(${m.id})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openMenu(${m.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteMenu(${m.id})`, peligro:true, owner:true}
+        ])}
       </div>
     </article>`;
   }).join('')}</div>`;
@@ -1493,8 +1504,10 @@ function renderMenuGrupos(){
         <div class="oc-sec-acc">
           <label class="oc-check"><input type="checkbox" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> ${t('label.sala')}</label>
           <button type="button" class="btn btn-sm btn-fino is-on" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> ${t('btn.newOption')}</button>
-          <button type="button" class="owner-only btn btn-sm btn-fino" title="${t('title.renameGroup')}" aria-label="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
-          <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-pencil', texto:t('title.renameGroup'), fn:`renameMenuGrupo(${g.id})`, owner:true},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`removeMenuGrupo(${g.id})`, peligro:true, owner:true}
+          ])}
         </div>
       </div>
       ${visibleOpciones.length ? visibleOpciones.map(o => {
@@ -1510,7 +1523,10 @@ function renderMenuGrupos(){
             ${ocBtnDisponible(agotado, `toggleMenuOpcionDisponible(${g.id},${o.id})`)}
             ${ocBtnRaciones(o.stock, `setMenuOpcionStock(${g.id},${o.id})`)}
             ${ocBtnExtras((o.modificadores||[]).length, `openMenuOpcionModsModal(${g.id},${o.id})`)}
-            <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-trash"></i></button>
+            ${ggMenuAcciones([
+              {icono:'ti-pencil', texto:t('common.edit'), fn:`renameMenuOpcion(${g.id},${o.id})`, owner:true},
+              {icono:'ti-trash', texto:t('common.delete'), fn:`removeMenuOpcion(${g.id},${o.id})`, peligro:true, owner:true}
+            ])}
           </div>
         </div>`;
       }).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : t('empty.groupOptions')}</div>`}
@@ -1718,8 +1734,10 @@ function renderMenuOpcionModsModalHtml(grupoId, opcionId){
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(m.nombre)}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--ink)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
-          <button class="btn btn-sm btn-icon" onclick="startEditMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-pencil', texto:t('common.edit'), fn:`startEditMenuOpcionMod(${grupoId},${opcionId},${m.id})`},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`removeMenuOpcionMod(${grupoId},${opcionId},${m.id})`, peligro:true}
+          ])}
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>

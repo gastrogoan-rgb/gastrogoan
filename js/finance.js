@@ -1529,8 +1529,10 @@ function megalistaFilaHtml(ing){
       </div>
       <div class="ml-c ml-ale pl-extra${ales ? '' : ' is-vacio'}" data-et="${escapeHtml(t('label.allergens'))}">${ales || '<span class="ml-nada">—</span>'}</div>
       <div class="ml-c ml-acc pl-extra">
-        <button type="button" class="owner-only btn btn-fino" title="${escapeHtml(t('title.editIngredient'))}" aria-label="${escapeHtml(t('title.editIngredient'))}" onclick="openIngredientModal(${ing.id})"><i class="ti ti-pencil"></i></button>
-        <button type="button" class="owner-only btn btn-fino is-off" title="${escapeHtml(t('common.delete'))}" aria-label="${escapeHtml(t('common.delete'))}" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openIngredientModal(${ing.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteIngredient(${ing.id})`, peligro:true, owner:true}
+        ])}
       </div>
     </div>`;
 }

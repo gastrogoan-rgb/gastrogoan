@@ -133,6 +133,7 @@ lanzar; node test/subpantallas.mjs > "$SALIDA/subpantallas.txt" 2>&1 & P125=$!
 lanzar; node test/proveedores.mjs > "$SALIDA/proveedores.txt" 2>&1 & P126=$!
 lanzar; node test/megalista.mjs > "$SALIDA/megalista.txt" 2>&1 & P127=$!
 lanzar; node test/plegables.mjs > "$SALIDA/plegables.txt" 2>&1 & P128=$!
+lanzar; node test/menu-acciones.mjs > "$SALIDA/menu-acciones.txt" 2>&1 & P129=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -296,5 +297,6 @@ espera $P125 "Sub-pantallas de Comandas, Oferta e I+D: cada modal y selector con
 espera $P126 "Proveedores: tarjeta con nombre y tres botones, ficha completa, WhatsApp solo en móviles, editar, eliminar y buscar" "$SALIDA/proveedores.txt" "casos pasaron"
 espera $P127 "Mega Lista: carpetas con icono de trazo, precio sin IVA con el IVA al lado, por revisar, IVA en línea y por carpeta, formulario y selector de iconos" "$SALIDA/megalista.txt" "casos pasaron"
 espera $P128 "Norma de móvil: las filas densas de la carta y del menú se pliegan a nombre y precio, y en PC se ve todo" "$SALIDA/plegables.txt" "casos pasaron"
+espera $P129 "Menú de tres puntos: editar y eliminar dentro, con teclado, sin salirse de la pantalla y solo para quien puede" "$SALIDA/menu-acciones.txt" "casos pasaron"
 
 exit $FALLOS

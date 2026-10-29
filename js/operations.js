@@ -679,8 +679,10 @@ function renderProveedores(){
       <div class="pv-nombre"><i class="ti ti-building-factory-2"></i><span>${escapeHtml(p.nombre)}</span></div>
       <div class="pv-acc">
         <button type="button" class="btn btn-fino" title="${escapeHtml(t('prov.info'))}" aria-label="${escapeHtml(t('prov.info'))}" onclick="openProviderInfoModal(${p.id})"><i class="ti ti-info-circle"></i></button>
-        <button type="button" class="owner-only btn btn-fino" title="${escapeHtml(t('title.editSupplier'))}" aria-label="${escapeHtml(t('title.editSupplier'))}" onclick="openProviderModal(${p.id})"><i class="ti ti-pencil"></i></button>
-        <button type="button" class="owner-only btn btn-fino is-off" title="${escapeHtml(t('common.delete'))}" aria-label="${escapeHtml(t('common.delete'))}" onclick="deleteProvider(${p.id})"><i class="ti ti-trash"></i></button>
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openProviderModal(${p.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteProvider(${p.id})`, peligro:true, owner:true}
+        ])}
       </div>
     </div>
   `).join('');

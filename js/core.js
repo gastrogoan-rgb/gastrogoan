@@ -824,31 +824,12 @@ function confirmTextPrompt(){
    donde cae lo que no tiene ninguna. */
 function botonesDeCarpeta(clave, tipo){
   if(!clave || clave === '__none__') return '';
-  const c = String(clave).replace(/'/g, "\\'");
-  return `<button class="owner-only folder-act" title="${t('title.folderOptions')}"
-    onclick="event.stopPropagation();menuDeCarpeta('${c}','${tipo}')"><i class="ti ti-dots-vertical"></i></button>`;
-}
-
-function menuDeCarpeta(clave, tipo){
-  if(!clave) return;
+  const c = String(clave).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const esReceta = tipo === 'recipe';
-  const nombre = esReceta ? clave
-    : (typeof ingredientCategoryLabel === 'function' ? ingredientCategoryLabel(clave) : clave);
-  const c = String(clave).replace(/'/g, "\\'");
-  const renombrar = esReceta ? 'renameRecipeCategory' : 'renameIngredientCategory';
-  const borrar    = esReceta ? 'deleteRecipeCategory' : 'deleteIngredientCategory';
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-folder"></i> ${escapeHtml(nombre)}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn" style="justify-content:flex-start" onclick="closeModal();${renombrar}('${c}')">
-        <i class="ti ti-pencil"></i> ${t('title.renameCategory')}</button>
-      <button class="btn btn-danger" style="justify-content:flex-start" onclick="closeModal();${borrar}('${c}')">
-        <i class="ti ti-trash"></i> ${t('title.deleteCategory')}</button>
-    </div>
-  `);
+  return ggMenuAcciones([
+    {icono:'ti-pencil', texto:t('title.renameCategory'), fn:`${esReceta ? 'renameRecipeCategory' : 'renameIngredientCategory'}('${c}')`, owner:true},
+    {icono:'ti-trash', texto:t('title.deleteCategory'), fn:`${esReceta ? 'deleteRecipeCategory' : 'deleteIngredientCategory'}('${c}')`, peligro:true, owner:true}
+  ], {clase:'folder-act', icono:'ti-dots-vertical', etiqueta:t('title.folderOptions')});
 }
 
 /* Borrar una carpeta que TIENE cosas dentro no puede ser un sí o no.

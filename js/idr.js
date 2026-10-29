@@ -964,8 +964,10 @@ function renderIdrInterno(){
       ${sinClasificar ? chip(idrCarpetaActiva==='__sin', "idrVerCarpeta('__sin')", `<i class="ti ti-folder-off"></i> ${t('idr.unfiled')} (${sinClasificar})`) : ''}
       <button class="owner-only btn btn-sm btn-fino" onclick="idrNuevaCarpeta()"><i class="ti ti-folder-plus"></i> ${t('idr.newFolder')}</button>
       ${idrCarpetaActiva && idrCarpetaActiva !== '__sin' ? `
-        <button class="owner-only btn btn-sm btn-fino" onclick="idrRenombrarCarpeta(${idrCarpetaActiva})" title="${t('idr.renameFolder')}" aria-label="${t('idr.renameFolder')}"><i class="ti ti-edit"></i></button>
-        <button class="owner-only btn btn-sm btn-fino is-off" onclick="idrBorrarCarpeta(${idrCarpetaActiva})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>` : ''}
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('idr.renameFolder'), fn:`idrRenombrarCarpeta(${idrCarpetaActiva})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`idrBorrarCarpeta(${idrCarpetaActiva})`, peligro:true, owner:true}
+        ])}` : ''}
     </div>
     <div class="idr-filtros">
       ${[['', t('idr.allTypes')], ['plato', t('idr.newDish')], ['base', t('idr.newBase')], ['menu', t('idr.newMenu')], ['carta', t('idr.newCarta')]]
@@ -982,7 +984,7 @@ function renderIdrInterno(){
             ${idrCarpetas().map(f=>`<option value="${f.id}"${f.id===c.carpetaId?' selected':''}>${escapeHtml(f.nombre)}</option>`).join('')}
           </select>
           <button class="btn btn-sm btn-fino is-on" onclick="navIdr('creacion', ${c.id})"><i class="ti ti-arrow-right"></i> ${t('idr.continue')}</button>
-          <button class="owner-only btn btn-sm btn-fino is-off" onclick="idrBorrarCreacion(${c.id})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>
+          ${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`idrBorrarCreacion(${c.id})`, peligro:true, owner:true}])}
         </div>
       </article>
     `).join('') + `</div>` : `<div class="empty"><i class="ti ti-flask"></i>${todas.length ? t('idr.noneHere') : t('idr.noWorkYet')}</div>`}
