@@ -648,10 +648,12 @@ Cambios guiados pantalla a pantalla por el dueño, partiendo SIEMPRE de la base 
   al pasar y al pulsar; al pie, la **frase del día** y la fecha.
 - **Selector de negocios**: no hay tope de negocios por cuenta. Hasta 5 se ven todos; desde 6, buscador y
   lista con desplazamiento propio. Cambiar contraseña / Salir como botones (`.bs-footbtn`).
-- **Frase del día** (`js/frases.js`, en build.sh tras i18n.js): 365, una por día del año
-  (`fraseDelDia`), en es/ca/en. 75 comprobadas en Wikiquote con su fuente, 163 aportadas por el dueño
-  (`f: 'aportada por GastroGoan'`) y 127 de oficio sin firma. ⚠️ No añadir frases con nombre de un chef
-  sin fuente: una cita inventada con nombre y apellido en una app que se vende es un riesgo de imagen.
+- **Frase del día** (`js/frases.js`, en build.sh tras i18n.js), fija bajo la tarjeta de acceso, sin caja:
+  fecha, la frase (Schibsted) y el autor debajo (mono, verde). **TODAS llevan autor** (lo exigió el dueño:
+  «no me sirve que no tenga autor»): hoy son 238 (75 comprobadas en Wikiquote con su fuente, 163 aportadas
+  por el dueño) y se repiten en ciclo (`fraseDelDia`). Para llegar a 365 distintas faltan 127 CON autor.
+  ⚠️ No añadir frases con nombre de un chef sin fuente: una cita inventada en una app que se vende es un
+  riesgo de imagen. Nada de serifa: se probó y se descartó.
 
 ## Seguridad rápida (9/10, tras una revisión externa)
 
