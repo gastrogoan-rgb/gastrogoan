@@ -66,11 +66,11 @@ await caso('El botón está en Comandas Cocina y enciende el modo caos', async (
     const btn = [...document.querySelectorAll('#view-comandascocina button')]
       .find(b => /caos/i.test(b.innerText));
     if(!btn) return {sinBoton:true};
-    const ticketsAntes = document.querySelectorAll('.kds-ticket').length;
+    const ticketsAntes = document.querySelectorAll('.kt').length;
     btn.click();
     await new Promise(r=>setTimeout(r,400));
     return {ticketsAntes, filas: document.querySelectorAll('.caos-fila').length,
-      ticketsDespues: document.querySelectorAll('.kds-ticket').length};
+      ticketsDespues: document.querySelectorAll('.kt').length};
   });
   assert.ok(!r.sinBoton, 'tiene que haber un botón de modo caos');
   assert.ok(r.ticketsAntes > 0, 'antes se ven los tickets de siempre: ' + JSON.stringify(r));
@@ -142,7 +142,7 @@ await caso('Se puede volver a los tickets de siempre', async () => {
   const r = await page.evaluate(async ()=>{
     toggleChaosCocina();
     await new Promise(r=>setTimeout(r,400));
-    return {filas: document.querySelectorAll('.caos-fila').length, tickets: document.querySelectorAll('.kds-ticket').length};
+    return {filas: document.querySelectorAll('.caos-fila').length, tickets: document.querySelectorAll('.kt').length};
   });
   assert.equal(r.filas, 0, 'el modo caos se apaga: ' + JSON.stringify(r));
   assert.ok(r.tickets > 0, 'y vuelven los tickets: ' + JSON.stringify(r));

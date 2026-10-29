@@ -2724,6 +2724,123 @@ input,select,textarea{border-radius:var(--r-s)}
 /* sin la animación de entrada: se repinta cada 3 s y parpadeaba */
 #view-comandascocina .card,#view-comandascocina .kds-ticket,#view-comandascocina .grid-kds > *{animation:none !important}
 
+/* ═══ TICKETS DE COCINA (29/10) ═══ */
+.grid-kds{columns:340px;column-gap:16px}
+.grid-kds>*{margin-bottom:16px}
+.kt{background:#fff;border:1px solid var(--hair);border-radius:3px;overflow:hidden;position:relative;break-inside:avoid}
+.kt-bar{height:5px;background:var(--olive-l)}.kt-bar.a{background:#B7791F}.kt-bar.r{background:#B4432F}
+.kt-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 16px 10px}
+.kt-mesa{font-size:30px;font-weight:600;letter-spacing:-.035em;line-height:1;overflow-wrap:anywhere}
+.kt-meta{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
+.kt-tm{font-family:var(--mono);font-size:22px;font-weight:500;letter-spacing:-.03em;text-align:right;line-height:1;flex:0 0 auto}
+.kt-tm small{display:block;font-size:10px;font-weight:400;letter-spacing:.1em;color:var(--muted);margin-top:5px;text-transform:uppercase}
+.kt-tm.a{color:#B7791F}.kt-tm.r{color:#B4432F}
+.kt-alergia{margin:0 12px 10px;padding:9px 12px;background:#FBEDE9;border:1px solid #E5B3A8;border-radius:3px;color:#8A2E1E;font-size:13px;font-weight:600;display:flex;gap:10px;align-items:center}
+.kt-alergia .ti{font-size:20px;flex:0 0 auto}
+.kt-alergia small{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;opacity:.8}
+.kt-inc{display:flex;align-items:center;gap:10px;width:calc(100% - 24px);margin:0 12px 10px;padding:9px 12px;text-align:left;background:#FBF4E2;border:1px solid #E8CF9A;border-radius:3px;color:#7A5A12;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.kt-inc .ti{font-size:20px;flex:0 0 auto}
+.kt-inc span{flex:1;min-width:0;overflow-wrap:anywhere}
+.kt-inc small{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;opacity:.8}
+.kt-inc em{font:500 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;font-style:normal;flex:0 0 auto;border:1px solid currentColor;padding:2px 7px;border-radius:2px}
+.kt-inc.nuevo{background:#FBEDE9;border-color:#E5B3A8;color:#8A2E1E}
+.kt-inc.nuevo em{background:#8A2E1E;border-color:#8A2E1E;color:#fff}
+.kt-bl{margin:0 12px 10px;border:1px solid var(--hair);border-radius:3px;overflow:hidden}
+.kt-bh{display:flex;align-items:center;gap:8px;padding:7px 12px;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase}
+.kt-bh.c{background:var(--brand-cream);color:var(--ink)}.kt-bh.m{background:var(--olive);color:#fff}
+.kt-bh i{font-style:normal;opacity:.75;margin-left:auto}
+.kt-cu{display:grid;grid-template-columns:22px minmax(0,1fr);gap:0 10px;padding:10px 12px 8px;border-top:1px solid var(--hair)}
+.kt-rail{display:flex;flex-direction:column;align-items:center;padding-top:3px}
+.kt-dot{width:13px;height:13px;border-radius:50% !important;border:2px solid #C9C3B7;background:#fff;flex:0 0 auto}
+.kt-dot.p{border-color:#B7791F;background:#B7791F}.kt-dot.l{border-color:var(--olive);background:var(--olive)}
+.kt-dot.rec{background:#fff}
+.kt-line{width:2px;flex:1;background:var(--hair);margin-top:3px}
+.kt-cn{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+.kt-cn b{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.kt-st{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:2px;border:1px solid var(--hair);color:var(--muted);white-space:nowrap}
+.kt-st.p{background:#FBF1DC;border-color:#E8CF9A;color:#8A5A0F}.kt-st.l{background:#E7EEE8;border-color:#B9CABD;color:#2F4434}
+.kt-pl{display:flex;align-items:baseline;gap:8px;padding:4px 0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.kt-pl .q{font-family:var(--mono);font-size:15px;font-weight:500;min-width:26px;flex:0 0 auto}
+.kt-pl .n{min-width:0;overflow-wrap:anywhere}
+.kt-pl .fam{margin-left:auto;padding-left:8px;font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right}
+.kt-pl.avanza{cursor:pointer}.kt-pl.avanza:hover .n{text-decoration:underline;text-decoration-color:var(--olive-l);text-underline-offset:3px}
+.kt-pl.held{color:#9B958A;font-weight:500}
+.kt-pl.hecho .n{color:var(--muted);text-decoration:line-through}
+.kt-fuego{color:#B7791F;font-size:14px}
+.kt-nt{font-size:12.5px;color:#7A5A12;background:#FBF4E2;border-left:2px solid #B7791F;padding:3px 8px;margin:2px 0 4px 34px}
+.kt-cu.held .kt-cn b{color:#9B958A}
+.kt-cu.held{background:repeating-linear-gradient(135deg,transparent 0 7px,rgba(0,0,0,.018) 7px 14px)}
+.kt-act{display:flex;gap:8px;padding:2px 12px 10px}
+.kt-big{flex:1;min-height:52px;background:var(--olive);color:#fff;border:0;border-radius:3px;font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background-color .18s,transform .18s}
+.kt-big:hover{background:#3C4D40}.kt-big.k{background:var(--ink)}.kt-big.k:hover{background:#2A2824}.kt-big:active{transform:translateY(1px)}
+.kt-wait,.kt-ok{flex:1;display:flex;align-items:center;gap:8px;min-height:52px;padding:0 14px;border:1px dashed var(--hair);border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--muted)}
+.kt-ok{color:var(--olive);border-color:#B9CABD;background:#EEF3EF;border-style:solid}
+.kt-undo{flex:0 0 52px;min-height:52px;background:#fff;border:1px solid var(--hair);border-radius:3px;cursor:pointer;font-size:18px;color:var(--ink)}
+.kt-undo:hover{border-color:var(--olive);color:var(--olive)}
+.kt-ev{padding:0 12px 12px;display:flex}
+/* Lo MARCHADO (nuevo) y lo que se está PREPARANDO se ven y se mueven distinto (pedido del dueño, 29/10):
+   · Nuevo: el curso se tiñe de ámbar claro, su punto lanza un anillo que se expande («¡esto acaba de entrar!») y
+     la etiqueta respira. Pide que alguien lo empiece.
+   · En preparación: tinte más cálido, una franja que corre bajo el nombre del curso (como un fuego a medio hacer),
+     el punto late y la llama del plato parpadea. Dice «está en marcha».
+   Los movimientos son suaves y de poco recorrido y se apagan con «reducir movimiento». */
+.kt-cu.nuevo{background:#FFF9EA;box-shadow:inset 3px 0 0 #D9A441}
+.kt-cu.prep{background:#FFF1DD;box-shadow:inset 3px 0 0 #B7791F}
+.kt-cu.nuevo .kt-cn b,.kt-cu.prep .kt-cn b{font-size:13px}
+.kt-cu.nuevo .kt-pl,.kt-cu.prep .kt-pl{font-size:17px}
+.kt-dot{position:relative}
+.kt-cu.prep .kt-cn{position:relative;padding-bottom:7px;margin-bottom:3px}
+.kt-cu.prep .kt-cn::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,rgba(183,121,31,.18) 0%,rgba(183,121,31,.18) 100%)}
+@media (prefers-reduced-motion:no-preference){
+  .kt-cu.nuevo .kt-dot::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid #D9A441;animation:kt-anillo 1.8s ease-out infinite}
+  .kt-cu.nuevo .kt-st{animation:kt-respira 1.6s ease-in-out infinite}
+  .kt-cu.prep .kt-cn::after{background:linear-gradient(90deg,rgba(183,121,31,.18) 0%,#B7791F 45%,rgba(183,121,31,.18) 90%) 0 0/200% 100%;animation:kt-corre 2.2s linear infinite}
+  .kt-cu.prep .kt-dot{animation:kt-late 1.3s ease-in-out infinite}
+  .kt-fuego{display:inline-block;animation:kt-llama .9s ease-in-out infinite alternate;transform-origin:50% 100%}
+}
+@keyframes kt-anillo{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.4);opacity:0}}
+@keyframes kt-respira{0%,100%{opacity:1}50%{opacity:.55}}
+@keyframes kt-corre{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes kt-late{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+@keyframes kt-llama{from{transform:scale(1) rotate(-4deg);opacity:.85}to{transform:scale(1.18) rotate(4deg);opacity:1}}
+/* incidencias */
+.inc-ayuda{font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.5}
+.inc-tipos{display:flex;flex-wrap:wrap;gap:2px 6px;margin-bottom:10px}
+.inc-texto{width:100%;resize:vertical;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--hair);border-radius:3px;background:#fff;margin-top:6px}
+.inc-tipo{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A5A0F;background:#FBF1DC;border:1px solid #E8CF9A;padding:5px 10px;border-radius:3px;margin-bottom:10px}
+.inc-hilo{display:flex;flex-direction:column;gap:8px;margin-bottom:6px;max-height:40vh;overflow-y:auto}
+.inc-msg{max-width:86%;padding:9px 12px;border:1px solid var(--hair);border-radius:3px;background:#fff;font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+.inc-msg small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.inc-msg.mio{align-self:flex-end;background:var(--brand-cream)}
+/* Comandas Cocina en tablet y móvil (29/10) */
+@media (max-width:1100px){
+  .grid-kds{columns:310px;column-gap:12px}.grid-kds>*{margin-bottom:12px}
+  .kt-mesa{font-size:26px}.kt-h{padding:12px 14px 8px}.kt-pl{font-size:15px;padding:3px 0}
+  .kt-cu.nuevo .kt-pl,.kt-cu.prep .kt-pl{font-size:16px}
+  .kt-big,.kt-wait,.kt-ok{min-height:48px}.kt-undo{flex-basis:48px;min-height:48px}
+}
+@media (max-width:600px){
+  /* Dos filas de tres botones, con el icono arriba y el texto debajo */
+  .kds-toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px;align-items:stretch}
+  .kds-toolbar .kds-sep{display:none}
+  .kds-toolbar .btn.btn-fino{flex-direction:column;justify-content:center;gap:2px;min-height:46px;padding:4px 4px;white-space:normal;text-align:center;line-height:1.15;font-size:11px}
+  .kds-toolbar .btn.btn-fino::before{top:0;bottom:0;height:auto;margin-top:0}
+  .kds-toolbar .btn.btn-fino .ti{font-size:16px}
+  #view-comandascocina .view-subtitle{display:none}
+  #view-comandascocina .view-title{margin-bottom:8px}
+  #view-comandascocina .btn-back{margin-bottom:8px}
+  /* Los tickets se pasan con el dedo hacia el lado, de uno en uno: nada de un scroll vertical eterno.
+     El siguiente asoma por la derecha para que se vea que hay más. Si un ticket es largo, se desplaza dentro. */
+  .grid-kds{display:flex !important;columns:auto !important;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    margin:0 -10px;padding:0 10px 6px;align-items:flex-start}
+  .grid-kds>*{margin:0;flex:0 0 88%;scroll-snap-align:center}
+  .kt{max-height:calc(100dvh - 300px);min-height:300px;overflow-y:auto}
+  .kt-mesa{font-size:24px}
+}
+.mesa-inc-badge{background:#B4432F !important;color:#fff !important}
+.mesa-inc-badge.nuevo{animation:acc-latido 1.6s ease-in-out infinite}
+
 /* --- Títulos de sección dentro de una pantalla --- */
 .view .card:not(.card-compact) > h3:first-child{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:14px}
 

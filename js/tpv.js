@@ -798,6 +798,7 @@ function renderMesaCard(table){
     <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'} ${phaseClass}${upcomingRes?' mesa-reserved-soon':''}${mesaFria?' mesa-fria':''}${chaosBlink}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
       <div class="mesa-icons-row">
         ${(typeof pedidosMesaQrPendientes === 'function' && pedidosMesaQrPendientes(table.id).length) ? `<span class="mesa-mini-badge" style="background:var(--ink);color:#fff" title="${escapeHtml(t('qrMesa.tpv.titulo'))}"><i class="ti ti-qrcode"></i></span>` : ''}
+        ${(order && incidenciaAbierta(order)) ? `<span class="mesa-mini-badge mesa-inc-badge${incidenciaSinLeer(order,'sala')?' nuevo':''}" title="${escapeHtml(gl({es:'Incidencia en cocina', ca:'Incidència a cuina', en:'Kitchen incident'}))}"><i class="ti ti-alert-triangle"></i></span>` : ''}
         ${mesaFria ? `<span class="mesa-mini-badge" style="background:var(--blue,#4E5A63);color:#fff" title="${t('tpv.mesaFria.hint')}"><i class="ti ti-snowflake"></i></span>` : ''}
         ${hayNuevos ? `<span class="mesa-mini-badge" title="${t('label.newItemsFromClient')}"><i class="ti ti-bell-ringing"></i></span>` : ''}
         ${order && order.pagado ? `<span class="mesa-mini-badge" title="${t('label.paidOnline')}"><i class="ti ti-credit-card"></i></span>` : ''}
@@ -916,6 +917,7 @@ function renderTpvToGo(tiposServicio){
               <span class="badge ${isDelivery?'badge-blue':'badge-amber'}"><i class="ti ${isDelivery?'ti-moped':'ti-walk'}"></i> ${isDelivery?t('label.deliveryShort'):t('label.pickupOrder')}</span>
               ${o.time ? `<span class="badge"><i class="ti ti-clock"></i> ${escapeHtml(o.time)}</span>` : ''}
               ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
+              ${incidenciaAbierta(o) ? `<span class="badge badge-red"><i class="ti ti-alert-triangle"></i> ${gl({es:'Incidencia', ca:'Incidència', en:'Incident'})}</span>` : ''}
             </div>
             <strong class="togo-order-client">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</strong>
             ${o.clientRef && o.origenOnline ? `<div class="txt-xs" style="color:var(--muted);font-family:'IBM Plex Mono',monospace">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</div>` : ''}
@@ -2312,6 +2314,7 @@ function renderTableOrderModal(orderId){
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     ${renderOrderClientNotesHtml(order)}
+    ${incidenciaFranjaHtml(order, 'sala')}
     ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
     <!-- Pestañas de cartas/menús -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:6px">
@@ -3369,6 +3372,7 @@ function renderComandasCocina(){
     <div class="kds-toolbar">
       <button class="btn btn-sm btn-fino ${comandasCocinaTab==='activas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm btn-fino ${comandasCocinaTab==='cerradas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
+      <button class="btn btn-sm btn-fino" onclick="openAvisoSalaModal()"><i class="ti ti-bell-ringing"></i> ${gl({es:'Avisar a sala', ca:'Avisar la sala', en:'Alert dining room'})}</button>
       <span class="kds-sep" aria-hidden="true"></span>
       <button class="btn btn-sm btn-fino kds-toolbar-caos ${chaosCocina?'is-on':''}" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
       <button class="btn btn-sm btn-fino" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
@@ -3448,140 +3452,344 @@ function renderComandasCocina(){
     return;
   }
 
-  pintar(tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines}) => {
-    const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
-    const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
-    const mins = minutesSince(new Date(minMs).toISOString());
+  pintar(tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines}) => ticketCocinaHtml(order, allLines)).join('')}</div>`);
+}
 
-    // Botón compacto, pedido del dueño (9/09) para que tengan el mismo
-    // tamaño que "Sin marchar": mismo estilo que ya usa Sala para su propio
-    // resumen de tanda (renderTandaGroupCard) — min-height:auto en vez del
-    // mínimo táctil de 44px de .btn-sm. Se acepta la excepción aquí porque
-    // ya era el criterio aceptado en Sala para este mismo tipo de botón; en
-    // el resto de la app el mínimo de 44px se mantiene intacto.
-    const compactBtnStyle = 'flex:none;padding:4px 8px;font-size:11px;min-height:auto;';
-    const groupButtonHtml = g => {
-      const hasCocina = g.lines.some(({line}) => line.estado === 'cocina');
-      const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
-      // "Listo" (cocina ha terminado) y "Entregado" (sala ya lo ha recogido
-      // del pase) son cosas distintas para quien cocina: si al terminar un
-      // plato ve directamente "Entregado" sin que nadie de sala lo haya
-      // tocado, no sabe si de verdad ha llegado a la mesa o si sigue
-      // esperando en el pase. Por eso aquí se distingue con recogidoAt,
-      // igual que ya hace Sala en su propia pantalla (renderTandaGroupCard).
-      const allReady = g.lines.every(({line}) => line.estado === 'entregado');
-      const allPicked = allReady && g.lines.every(({line}) => line.recogidoAt);
-      if(allPicked) return `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
-      // Servido: cocina ya no tiene nada más que hacer con esto — el paso de
-      // "recogido" lo da SALA (marcarTandaRecogidaDesdeSala), nunca cocina.
-      if(allReady) return `<span class="badge badge-green" style="flex:none"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</span>`;
-      if(hasCocina) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
-      if(hasPreparando) return `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--ink);color:#fff;border-color:var(--ink)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
-      return '';
-    };
-    const renderLineaHtml = (bloque) => ({line, idx}) => {
-      // La nota es autogenerada al añadir el plato desde un menú ("Menú:
-      // X"): si el nombre ya se dice una vez en la cabecera del bloque,
-      // repetirla aquí sobra. Una nota escrita a mano por el camarero
-      // (cualquier otro texto) se sigue mostrando siempre.
-      const notaEsAutoDelBloque = bloque.tipo === 'menu' && bloque.nombre && line.notas === `Menú: ${bloque.nombre}`;
-      return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
-        <div style="flex:1;min-width:0;overflow-wrap:anywhere">
-          <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-          ${line.notas && !notaEsAutoDelBloque ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
-        </div>
-        ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
-        : line.estado==='cocina' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
-        : line.estado==='preparando' ? `<button class="btn btn-sm" style="${compactBtnStyle}background:var(--ink);color:#fff;border-color:var(--ink)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
-        : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-        : `<span class="badge badge-green" style="flex:none"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</span>`}
-      </div>
-    `;
-    };
-    // Dentro de un bloque (una carta o un menú) las líneas se siguen
-    // dividiendo por tanda (Primero/Segundos/Postres) si las hay, cada una
-    // con su propio botón de "Preparar todo" — el bloque solo agrupa DE
-    // QUÉ viene cada cosa, no sustituye a la tanda.
-    const renderBloqueLineas = (bloque, ocultarCabeceraDelUnicoGrupo) => {
-      const lineasBloque = bloque.lineas;
-      const tandaOrder = [...new Set(lineasBloque.map(({line}) => line.tanda || ''))];
-      const grupos = tandaOrder.map(tt => ({
-        tanda: tt,
-        lines: lineasBloque.filter(({line}) => (line.tanda||'') === tt)
-      })).filter(g => g.lines.length);
-      const soloUnGrupoSinNombre = grupos.length === 1 && !grupos[0].tanda;
-      return grupos.map(g => {
-        const esElGrupoYaMostrado = soloUnGrupoSinNombre && g === grupos[0] && ocultarCabeceraDelUnicoGrupo;
+/* ═══════════════ COMANDAS COCINA: TICKETS NUEVOS (29/10) ═══════════════
+   Pensados como los pensaría quien cocina: lo primero es qué mesa es y cuánto lleva esperando (barra de
+   color), después si hay alergia, y luego, separado en CARTA y MENÚ, cada CURSO con su estado (esperando
+   marchar → en cocina → listo en el pase) y la familia de cada plato. Abajo, UN botón grande que avanza el
+   curso en marcha, y la forma de hablar con sala: la incidencia de esa comanda. */
+// La familia de un plato de carta es su categoría (la sección donde está en la carta).
+function findCartaSeccionNombreForPlatoId(platoId){
+  if(platoId == null) return '';
+  for(const c of (DB.cartas||[])){
+    for(const s of (c.secciones||[])){
+      if((s.platos||[]).some(p => p.id === platoId)) return s.nombre || '';
+    }
+  }
+  return '';
+}
+function familiaDeLinea(line, tandaNombre){
+  if(line.menuId){
+    const m = (DB.menus||[]).find(x => x.id === line.menuId);
+    const g = m && (m.grupos||[]).find(x => x.id === line.grupoId);
+    const n = g ? (g.nombre || '') : '';
+    // en un menú el grupo suele llamarse igual que el curso: repetirlo sobra
+    return n && n.trim().toLowerCase() !== String(tandaNombre||'').trim().toLowerCase() ? n : '';
+  }
+  return findCartaSeccionNombreForPlatoId(line.platoId);
+}
+function estadoCursoCocina(lines){
+  const fired = lines.filter(l => l.estado);
+  const activas = fired.filter(l => l.estado === 'cocina' || l.estado === 'preparando');
+  if(activas.length){
+    return activas.some(l => l.estado === 'preparando')
+      ? {k:'prep', dot:'p', texto: gl({es:'En preparación', ca:'En preparació', en:'Preparing'}), activo:true}
+      : {k:'nuevo', dot:'p', texto: gl({es:'Nuevo', ca:'Nou', en:'New'}), activo:true};
+  }
+  if(!fired.length) return {k:'held', dot:'', texto: gl({es:'Esperando marchar', ca:'Esperant marxar', en:'Waiting to fire'}), activo:false};
+  const recogido = fired.every(l => l.recogidoAt);
+  return recogido
+    ? {k:'rec', dot:'l', texto: gl({es:'Recogido', ca:'Recollit', en:'Picked up'}), activo:false}
+    : {k:'listo', dot:'l', texto: gl({es:'Listo en el pase', ca:'Llest al pas', en:'Ready at the pass'}), activo:false};
+}
+function ticketAlergiaTextos(order){
+  const texts = [];
+  if(order.clientId){
+    const c = (DB.clients||[]).find(x => x.id === order.clientId);
+    if(c && c.allergies) texts.push(c.allergies);
+  }
+  if(order.tableAllergens) texts.push(order.tableAllergens);
+  const set = new Set();
+  (order.items||[]).forEach(l => lineAllergens(l).forEach(a => set.add(allergenLabel(a))));
+  if(set.size) texts.push(Array.from(set).join(', '));
+  return texts;
+}
+function ticketCocinaHtml(order, allLines){
+  const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
+  const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
+  const mins = minutesSince(new Date(minMs).toISOString());
+  const nivel = mins >= 15 ? 'r' : mins >= 5 ? 'a' : '';
+  const table = order.tableId ? (DB.tables||[]).find(x => x.id === order.tableId) : null;
+  const titulo = table ? orderTableDisplayName(order, table) : togoOrderLabel(order);
+  const meta = [];
+  if(table){
+    meta.push(gl({es:'Sala', ca:'Sala', en:'Dining room'}));
+    if(order.pax) meta.push(`${order.pax} ${t('common.persAbbr')}`);
+    const emp = order.camareroId ? (DB.employees||[]).find(e => e.id === order.camareroId) : null;
+    if(emp) meta.push((emp.name||'').trim().split(/\s+/)[0]);
+    else if(order.openedByOwner) meta.push(t('label.owner'));
+  }else{
+    if(order.origenOnline) meta.push('Online');
+    if(order.clienteNombre) meta.push(order.clienteNombre);
+    if(order.time) meta.push(gl({es:'a las ', ca:'a les ', en:'at '}) + order.time);
+  }
+  const alergias = ticketAlergiaTextos(order);
+  const alergiaHtml = alergias.length ? `
+    <div class="kt-alergia"><i class="ti ti-alert-triangle"></i><div><small>${gl({es:'Alergias', ca:'Al·lèrgies', en:'Allergies'})}</small>${escapeHtml(alergias.join(' · '))}</div></div>` : '';
+
+  // Bloques: primero la carta, después cada menú (misma norma que antes: cada cosa junta y bien separada).
+  const bloques = [];
+  allLines.forEach(item => {
+    const { line } = item;
+    let key, tipo, nombre;
+    if(line.menuId){
+      tipo = 'menu';
+      const m = (DB.menus||[]).find(x => x.id === line.menuId);
+      nombre = m ? m.nombre : null;
+      key = 'menu:' + line.menuId;
+    }else{
+      tipo = 'carta';
+      nombre = findCartaNombreForPlatoId(line.platoId);
+      key = 'carta:' + (nombre || '');
+    }
+    let bloque = bloques.find(b => b.key === key);
+    if(!bloque){ bloque = {key, tipo, nombre, lineas: []}; bloques.push(bloque); }
+    bloque.lineas.push(item);
+  });
+  bloques.sort((a, b) => (a.tipo==='carta'?0:1) - (b.tipo==='carta'?0:1));
+
+  // Cursos del pedido entero (una misma tanda puede estar en la carta y en el menú a la vez).
+  const tandas = [...new Set(allLines.map(({line}) => line.tanda || ''))];
+  const nombreCurso = tt => tt || gl({es:'Todo junto', ca:'Tot junt', en:'All together'});
+  const cursoActivo = tandas.find(tt => estadoCursoCocina(allLines.filter(({line}) => (line.tanda||'') === tt).map(x => x.line)).activo);
+
+  const bloqueHtml = bloque => {
+    const tt = [...new Set(bloque.lineas.map(({line}) => line.tanda || ''))];
+    const instancias = bloque.tipo === 'menu' ? new Set(bloque.lineas.map(({line}) => line.menuInstanceId).filter(Boolean)).size : 0;
+    const cursos = tt.map((tanda, i) => {
+      const lineas = bloque.lineas.filter(({line}) => (line.tanda||'') === tanda);
+      const est = estadoCursoCocina(lineas.map(x => x.line));
+      const filas = lineas.map(({line, idx}) => {
+        const fam = familiaDeLinea(line, tanda);
+        const avanza = line.estado === 'cocina' || line.estado === 'preparando';
+        const hecho = line.estado === 'entregado';
         return `
-        <div style="margin-bottom:6px;${esElGrupoYaMostrado ? '' : 'padding-top:6px;border-top:1px solid var(--border)'}">
-          ${esElGrupoYaMostrado ? '' : `
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-            ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--ink);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
-            ${groupButtonHtml(g)}
-          </div>`}
-          ${g.lines.map(renderLineaHtml(bloque)).join('')}
-        </div>`;
+          <div class="kt-pl${!line.estado ? ' held' : ''}${hecho ? ' hecho' : ''}${avanza ? ' avanza' : ''}"${avanza ? ` onclick="cycleLineEstado(${order.id}, ${idx})" title="${escapeHtml(gl({es:'Tocar para avanzar solo este plato', ca:'Toca per avançar només aquest plat', en:'Tap to advance just this dish'}))}"` : ''}>
+            <span class="q">${fmtNum(line.qty)}×</span><span class="n">${escapeHtml(line.name)}${line.estado === 'preparando' ? ' <i class="ti ti-flame kt-fuego"></i>' : ''}</span>${fam ? `<span class="fam">${escapeHtml(fam)}</span>` : ''}
+          </div>
+          ${line.notas && !(bloque.tipo === 'menu' && bloque.nombre && line.notas === `Menú: ${bloque.nombre}`) ? `<div class="kt-nt">${escapeHtml(line.notas)}</div>` : ''}`;
       }).join('');
-    };
-    // Lo que pedía el dueño (9/09, tercera vuelta): no basta con no repetir
-    // el nombre — hay que agrupar TODO lo de cada carta o menú junto, en
-    // bloques bien separados: primero la carta (con todas sus opciones),
-    // luego cada menú (con todas las suyas), en vez de mezclarlo todo por
-    // tandas sueltas donde el nombre podía acabar en cualquier sitio.
-    const bloques = [];
-    allLines.forEach(item => {
-      const { line } = item;
-      let key, tipo, nombre;
-      if(line.menuId){
-        tipo = 'menu';
-        const m = (DB.menus||[]).find(x => x.id === line.menuId);
-        nombre = m ? m.nombre : null;
-        key = 'menu:' + line.menuId;
-      }else{
-        tipo = 'carta';
-        nombre = findCartaNombreForPlatoId(line.platoId);
-        key = 'carta:' + (nombre || '');
-      }
-      let bloque = bloques.find(b => b.key === key);
-      if(!bloque){ bloque = {key, tipo, nombre, lineas: []}; bloques.push(bloque); }
-      bloque.lineas.push(item);
-    });
-    // Orden pedido: primero la(s) carta(s), después cada menú por separado.
-    bloques.sort((a,b) => (a.tipo==='carta'?0:1) - (b.tipo==='carta'?0:1));
-    // Si solo hay UN bloque sin nombre que decir (p.ej. todo suelto de una
-    // carta que no se pudo identificar) y ese bloque tiene una sola tanda
-    // sin nombre, el botón de "Preparar todo" sube junto al título del
-    // pedido — mismo criterio de siempre para no dejar una fila vacía.
-    const unBloqueUnaTandaSinNombre = bloques.length === 1 && !bloques[0].nombre
-      && [...new Set(bloques[0].lineas.map(({line}) => line.tanda || ''))].length === 1
-      && !bloques[0].lineas[0].line.tanda;
+      return `
+        <div class="kt-cu ${est.k}">
+          <div class="kt-rail"><span class="kt-dot ${est.dot}${est.k==='rec' ? ' rec' : ''}"></span>${i < tt.length - 1 ? '<span class="kt-line"></span>' : ''}</div>
+          <div>
+            <div class="kt-cn"><b>${escapeHtml(nombreCurso(tanda))}</b><span class="kt-st ${est.dot}">${est.texto}</span></div>
+            ${filas}
+          </div>
+        </div>`;
+    }).join('');
+    const etiqueta = bloque.tipo === 'menu' ? gl({es:'Menú', ca:'Menú', en:'Set menu'}) : gl({es:'Carta', ca:'Carta', en:'À la carte'});
     return `
-    <div class="card kds-ticket" style="overflow-y:auto;display:flex;flex-direction:column">
-      <div class="kds-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px;min-width:0">
-          <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          ${unBloqueUnaTandaSinNombre ? groupButtonHtml({tanda:'', lines: bloques[0].lineas}) : ''}
-          ${urgencyBadge(mins)}
-        </div>
+      <div class="kt-bl">
+        <div class="kt-bh ${bloque.tipo === 'menu' ? 'm' : 'c'}"><span>${etiqueta}${bloque.nombre ? ' · ' + escapeHtml(bloque.nombre) : ''}</span>${instancias > 1 ? `<i>${instancias} ${gl({es:'menús', ca:'menús', en:'menus'})}</i>` : ''}</div>
+        ${cursos}
+      </div>`;
+  };
+
+  // El botón grande: el curso que está en marcha. Si no hay ninguno, qué falta o que ya está todo.
+  const esLlevar = !order.tableId;
+  let accion = '';
+  if(cursoActivo !== undefined){
+    const lineasCurso = allLines.filter(({line}) => (line.tanda||'') === cursoActivo).map(x => x.line);
+    const hayNuevas = lineasCurso.some(l => l.estado === 'cocina');
+    const nom = nombreCurso(cursoActivo);
+    const texto = hayNuevas
+      ? `${gl({es:'Empezar', ca:'Començar', en:'Start'})} ${nom.toLowerCase()}`
+      : (esLlevar && tandas.length === 1
+          ? gl({es:'Pedido listo ▸ avisar', ca:'Comanda llesta ▸ avisar', en:'Order ready ▸ notify'})
+          : `${gl({es:'Listo', ca:'Llest', en:'Ready'})} · ${nom.toLowerCase()} ▸ ${gl({es:'pase', ca:'pas', en:'pass'})}`);
+    accion = `<button type="button" class="kt-big${hayNuevas ? ' k' : ''}" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(cursoActivo)}')">${texto}</button>`;
+  }else{
+    const pendiente = tandas.find(tt => estadoCursoCocina(allLines.filter(({line}) => (line.tanda||'') === tt).map(x => x.line)).k === 'held');
+    accion = pendiente !== undefined
+      ? `<div class="kt-wait"><i class="ti ti-clock-pause"></i> ${gl({es:'Esperando que sala marche', ca:'Esperant que la sala marxi', en:'Waiting for the floor to fire'})} ${escapeHtml(nombreCurso(pendiente).toLowerCase())}</div>`
+      : `<div class="kt-ok"><i class="ti ti-circle-check"></i> ${gl({es:'Todo listo en el pase', ca:'Tot llest al pas', en:'Everything ready at the pass'})}</div>`;
+  }
+  const inc = incidenciaAbierta(order);
+
+  return `
+    <div class="kt" data-orden="${order.id}">
+      <div class="kt-bar ${nivel}"></div>
+      <div class="kt-h">
+        <div><div class="kt-mesa">${escapeHtml(titulo)}</div><div class="kt-meta">${meta.map(escapeHtml).join(' · ')}</div></div>
+        <div class="kt-tm ${nivel}">${mins}'<small>${gl({es:'esperando', ca:'esperant', en:'waiting'})}</small></div>
       </div>
-      <div class="kds-body">
-      ${orderAllergyWarningHtml(order)}
-      ${bloques.map((bloque, i) => `
-        <div style="${i>0 ? 'margin-top:10px;padding-top:10px;border-top:2px solid var(--border)' : ''}">
-          ${bloque.nombre ? `<div style="font-weight:700;font-size:12.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px">
-            <i class="ti ${bloque.tipo==='menu'?'ti-list-details':'ti-tools-kitchen-2'}" style="color:${bloque.tipo==='menu'?'var(--purple,#7C3AED)':'var(--blue,#4E5A63)'}"></i>
-            ${escapeHtml(bloque.nombre)}
-          </div>` : ''}
-          ${renderBloqueLineas(bloque, unBloqueUnaTandaSinNombre && i===0)}
-        </div>
-      `).join('')}
-      </div>
+      ${alergiaHtml}
+      ${incidenciaFranjaHtml(order, 'cocina')}
+      ${bloques.map(bloqueHtml).join('')}
+      <div class="kt-act">${accion}<button type="button" class="kt-undo" onclick="undoLastKitchenAction()" title="${escapeHtml(t('kitchen.undo'))}" aria-label="${escapeHtml(t('kitchen.undo'))}"><i class="ti ti-arrow-back-up"></i></button></div>
+      <div class="kt-ev"><button type="button" class="btn btn-sm btn-fino${inc ? ' is-off' : ''}" onclick="openIncidenciaModal(${order.id}, 'cocina')"><i class="ti ti-alert-triangle"></i> ${inc ? gl({es:'Ver incidencia', ca:'Veure incidència', en:'View incident'}) : gl({es:'Incidencia en esta comanda', ca:'Incidència en aquesta comanda', en:'Incident on this order'})}</button></div>
+    </div>`;
+}
+
+/* ═══════════════ INCIDENCIAS: cocina y sala hablan de UNA comanda ═══════════════
+   Vive dentro del propio pedido (order.incidencias), así viaja con él por la nube y la ven los dos
+   lados sin ningún canal nuevo. Una incidencia abierta tiene un hilo de mensajes; cualquiera de los dos
+   lados responde y cualquiera la da por resuelta. `sinLeer` dice a quién le falta verla. */
+const INCIDENCIA_TIPOS = [
+  {k:'falta',   es:'Falta un producto',  ca:'Falta un producte',   en:'Missing product'},
+  {k:'retraso', es:'Retraso',            ca:'Retard',              en:'Delay'},
+  {k:'duda',    es:'Duda sobre el plato',ca:'Dubte sobre el plat', en:'Question about a dish'},
+  {k:'error',   es:'Error en la comanda',ca:'Error a la comanda',  en:'Order mistake'},
+  {k:'otro',    es:'Otra cosa',          ca:'Una altra cosa',      en:'Something else'}
+];
+let incidenciaTipoSel = 'falta';
+function incidenciaTipoLabel(k){ const x = INCIDENCIA_TIPOS.find(i => i.k === k) || INCIDENCIA_TIPOS[4]; return gl(x); }
+function incidenciaAbierta(order){ return ((order && order.incidencias) || []).find(i => i.estado === 'abierta') || null; }
+function incidenciaSinLeer(order, lado){ const i = incidenciaAbierta(order); return !!(i && i.sinLeer && i.sinLeer[lado]); }
+function incidenciaFranjaHtml(order, lado){
+  const i = incidenciaAbierta(order);
+  if(!i) return '';
+  const ult = (i.mensajes||[])[(i.mensajes||[]).length - 1];
+  const nuevo = !!(i.sinLeer && i.sinLeer[lado]);
+  return `
+    <button type="button" class="kt-inc${nuevo ? ' nuevo' : ''}" onclick="openIncidenciaModal(${order.id}, '${lado}')">
+      <i class="ti ti-alert-triangle"></i>
+      <span><small>${gl({es:'Incidencia', ca:'Incidència', en:'Incident'})} · ${escapeHtml(incidenciaTipoLabel(i.tipo))}</small>${ult ? escapeHtml(ult.texto) : ''}</span>
+      <em>${nuevo ? gl({es:'Nuevo', ca:'Nou', en:'New'}) : gl({es:'Abrir', ca:'Obrir', en:'Open'})}</em>
+    </button>`;
+}
+function incidenciaRefrescar(orderId){
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-comandascocina') renderComandasCocina();
+  else if(active && active.id === 'view-tpv') renderTPV();
+}
+function incidenciaAutor(lado){
+  let n = '';
+  try{ n = getChatAuthorName(getChatAuthor()) || ''; }catch(e){}
+  return n || (lado === 'cocina' ? gl({es:'Cocina', ca:'Cuina', en:'Kitchen'}) : gl({es:'Sala', ca:'Sala', en:'Dining room'}));
+}
+function openIncidenciaModal(orderId, lado){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order){ closeModal(); return; }
+  lado = lado === 'sala' ? 'sala' : 'cocina';
+  const otro = lado === 'cocina' ? gl({es:'sala', ca:'sala', en:'the floor'}) : gl({es:'cocina', ca:'cuina', en:'the kitchen'});
+  const table = order.tableId ? DB.tables.find(x => x.id === order.tableId) : null;
+  const titulo = table ? orderTableDisplayName(order, table) : togoOrderLabel(order);
+  const inc = incidenciaAbierta(order);
+  if(inc && inc.sinLeer && inc.sinLeer[lado]){ inc.sinLeer[lado] = false; incidenciaRefrescar(orderId); }
+  let cuerpo;
+  if(!inc){
+    cuerpo = `
+      <p class="inc-ayuda">${gl({es:'Cuéntaselo a', ca:'Explica-ho a', en:'Let'})} ${otro}${gl({es:': aparecerá marcado en esta comanda y podrán contestarte.', ca:': apareixerà marcat en aquesta comanda i et podran respondre.', en:' know: it will be flagged on this order and they can reply.'})}</p>
+      <div class="inc-tipos">${INCIDENCIA_TIPOS.map(x => `<button type="button" class="btn btn-sm btn-fino${incidenciaTipoSel === x.k ? ' is-on' : ''}" onclick="incidenciaTipoSel='${x.k}';openIncidenciaModal(${orderId}, '${lado}')">${escapeHtml(gl(x))}</button>`).join('')}</div>
+      <textarea id="inc-texto" class="inc-texto" rows="3" placeholder="${escapeHtml(gl({es:'Qué pasa (opcional)', ca:'Què passa (opcional)', en:"What's happening (optional)"}))}"></textarea>
+      <div class="modal-footer">
+        <button class="btn btn-fino" onclick="cerrarIncidencia(${orderId}, '${lado}')">${t('common.close')}</button>
+        <button class="btn btn-fino is-on" onclick="crearIncidencia(${orderId}, '${lado}')"><i class="ti ti-send"></i> ${gl({es:'Enviar a', ca:'Enviar a', en:'Send to'})} ${otro}</button>
+      </div>`;
+  }else{
+    const burbujas = (inc.mensajes||[]).map(m => `
+      <div class="inc-msg ${m.de === lado ? 'mio' : 'suyo'}"><small>${escapeHtml(m.autor || '')} · ${m.de === 'cocina' ? gl({es:'Cocina', ca:'Cuina', en:'Kitchen'}) : gl({es:'Sala', ca:'Sala', en:'Dining room'})} · ${escapeHtml(timeAgo(m.ts))}</small>${escapeHtml(m.texto)}</div>`).join('');
+    cuerpo = `
+      <div class="inc-tipo"><i class="ti ti-alert-triangle"></i> ${escapeHtml(incidenciaTipoLabel(inc.tipo))}</div>
+      <div class="inc-hilo">${burbujas}</div>
+      <textarea id="inc-texto" class="inc-texto" rows="2" placeholder="${escapeHtml(gl({es:'Escribe una respuesta…', ca:'Escriu una resposta…', en:'Write a reply…'}))}"></textarea>
+      <div class="modal-footer">
+        <button class="btn btn-fino" onclick="cerrarIncidencia(${orderId}, '${lado}')">${t('common.close')}</button>
+        <button class="btn btn-fino" onclick="resolverIncidencia(${orderId}, '${lado}')"><i class="ti ti-circle-check"></i> ${gl({es:'Marcar resuelta', ca:'Marcar resolta', en:'Mark resolved'})}</button>
+        <button class="btn btn-fino is-on" onclick="responderIncidencia(${orderId}, '${lado}')"><i class="ti ti-send"></i> ${gl({es:'Responder', ca:'Respondre', en:'Reply'})}</button>
+      </div>`;
+  }
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${gl({es:'Incidencia', ca:'Incidència', en:'Incident'})} · ${escapeHtml(titulo)}</h3>
+      <button class="modal-close" onclick="cerrarIncidencia(${orderId}, '${lado}')">&times;</button>
     </div>
-    `;
-  }).join('')}</div>`);
+    ${cuerpo}`);
+}
+// Sala abre la incidencia desde el modal de la mesa: al cerrarla vuelve a esa mesa, no a la nada.
+function cerrarIncidencia(orderId, lado){
+  if(lado === 'sala' && DB.tpvOrders.some(o => o.id === orderId)) renderTableOrderModal(orderId);
+  else closeModal();
+}
+function crearIncidencia(orderId, lado){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const texto = (document.getElementById('inc-texto')?.value || '').trim();
+  const otro = lado === 'cocina' ? 'sala' : 'cocina';
+  const tipoTxt = incidenciaTipoLabel(incidenciaTipoSel);
+  if(!order.incidencias) order.incidencias = [];
+  order.incidencias.push({
+    id: genId(), tipo: incidenciaTipoSel, estado: 'abierta', creadaAt: new Date().toISOString(),
+    mensajes: [{de: lado, autor: incidenciaAutor(lado), texto: texto || tipoTxt, ts: new Date().toISOString()}],
+    sinLeer: {cocina: lado !== 'cocina', sala: lado !== 'sala'}
+  });
+  // Además del aviso en la comanda, un mensaje urgente al canal del otro lado: así suena y llega el aviso
+  // del navegador igual que cualquier urgencia del chat, sin construir un canal nuevo.
+  try{
+    const table = order.tableId ? DB.tables.find(x => x.id === order.tableId) : null;
+    const titulo = table ? orderTableDisplayName(order, table) : togoOrderLabel(order);
+    const authorId = getChatAuthor();
+    const autor = getChatAuthorName(authorId);
+    const texto2 = `⚠ ${titulo}: ${tipoTxt}${texto ? ' — ' + texto : ''}`;
+    DB.chatMessages.push({id: genId(), channel: otro, authorId, authorName: autor, text: texto2, ts: new Date().toISOString(), urgent: true});
+    if(typeof sendPushToAll === 'function') sendPushToAll('⚠ ' + autor, texto2);
+  }catch(e){}
+  incidenciaRefrescar(orderId);
+  showToast(gl({es:'Incidencia enviada', ca:'Incidència enviada', en:'Incident sent'}));
+  openIncidenciaModal(orderId, lado);
+}
+function responderIncidencia(orderId, lado){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const inc = order && incidenciaAbierta(order);
+  const texto = (document.getElementById('inc-texto')?.value || '').trim();
+  if(!inc || !texto) return;
+  inc.mensajes.push({de: lado, autor: incidenciaAutor(lado), texto, ts: new Date().toISOString()});
+  inc.sinLeer = inc.sinLeer || {};
+  inc.sinLeer[lado === 'cocina' ? 'sala' : 'cocina'] = true;
+  inc.sinLeer[lado] = false;
+  incidenciaRefrescar(orderId);
+  openIncidenciaModal(orderId, lado);
+}
+function resolverIncidencia(orderId, lado){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const inc = order && incidenciaAbierta(order);
+  if(!inc) return;
+  inc.estado = 'resuelta'; inc.resueltaAt = new Date().toISOString(); inc.resueltaPor = lado;
+  incidenciaRefrescar(orderId);
+  cerrarIncidencia(orderId, lado);
+  showToast(gl({es:'Incidencia resuelta', ca:'Incidència resolta', en:'Incident resolved'}));
+}
+
+/* «Avisar a sala» de la barra: un mensaje rápido a TODA la sala, no a una comanda. Va al chat de sala como
+   urgente (suena y avisa), con frases hechas para no escribir en pleno servicio. */
+const AVISOS_SALA = [
+  {es:'Pase lleno: venid a recoger ya', ca:'Pas ple: veniu a recollir ja', en:'Pass is full: come and collect now'},
+  {es:'Cocina saturada: id más despacio con las comandas', ca:'Cuina saturada: aneu més a poc a poc amb les comandes', en:'Kitchen is slammed: slow down the orders'},
+  {es:'Se está acabando un producto: mirad Marcar agotado', ca:'S\'està acabant un producte: mireu Marcar esgotat', en:'Running out of something: check Mark as out'},
+  {es:'Necesito ayuda en el pase', ca:'Necessito ajuda al pas', en:'I need help at the pass'}
+];
+function openAvisoSalaModal(){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-bell-ringing"></i> ${gl({es:'Avisar a sala', ca:'Avisar la sala', en:'Alert the dining room'})}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="inc-ayuda">${gl({es:'Llega a todo el equipo de sala como aviso urgente. Para hablar de una mesa concreta usa «Incidencia» en su comanda.', ca:'Arriba a tot l\'equip de sala com a avís urgent. Per parlar d\'una taula concreta fes servir «Incidència» a la seva comanda.', en:'It reaches the whole floor team as an urgent alert. For a specific table use «Incident» on its order.'})}</p>
+    <div class="dishout-lista">${AVISOS_SALA.map((x, i) => `<button type="button" class="dishout-fila" onclick="enviarAvisoSala(${i})"><span class="dishout-ico"><i class="ti ti-send"></i></span><span class="dishout-txt"><strong>${escapeHtml(gl(x))}</strong></span></button>`).join('')}</div>
+    <textarea id="aviso-sala-texto" class="inc-texto" rows="2" placeholder="${escapeHtml(gl({es:'O escribe otro aviso…', ca:'O escriu un altre avís…', en:'Or write another alert…'}))}"></textarea>
+    <div class="modal-footer">
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
+      <button class="btn btn-fino is-on" onclick="enviarAvisoSala(-1)"><i class="ti ti-send"></i> ${gl({es:'Enviar', ca:'Enviar', en:'Send'})}</button>
+    </div>`);
+}
+function enviarAvisoSala(i){
+  const texto = i >= 0 ? gl(AVISOS_SALA[i]) : (document.getElementById('aviso-sala-texto')?.value || '').trim();
+  if(!texto) return;
+  const authorId = getChatAuthor();
+  const autor = getChatAuthorName(authorId);
+  const msg = '🍳 ' + texto;
+  DB.chatMessages.push({id: genId(), channel: 'sala', authorId, authorName: autor, text: msg, ts: new Date().toISOString(), urgent: true});
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  if(typeof sendPushToAll === 'function') sendPushToAll('🍳 ' + autor, texto);
+  closeModal();
+  showToast(gl({es:'Aviso enviado a sala', ca:'Avís enviat a la sala', en:'Alert sent to the dining room'}));
 }
 
 function findCartaPlato(secId, platoId){
