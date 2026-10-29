@@ -2901,6 +2901,24 @@ input,select,textarea{border-radius:var(--r-s)}
 .oc-mover .btn-icon:hover:not(:disabled),.oc-sec-tit > .btn-icon:hover:not(:disabled){border-color:var(--olive);color:var(--olive)}
 .oc-mover .btn-icon:disabled,.oc-sec-tit > .btn-icon:disabled{opacity:.3;background:transparent}
 .oc-mover{gap:4px}
+/* los botones de solo icono de Oferta (borrar, renombrar, alérgenos) nunca por debajo del mínimo de toque */
+.oc-sec-acc .btn-fino[aria-label],.oc-ctrl .btn-fino[aria-label],.oc-acc .btn-fino[aria-label]{min-width:40px;justify-content:center;padding-left:8px;padding-right:8px}
+/* Selector de iconos de la carta (catálogo de comida) */
+.ic-comida{display:inline-block;vertical-align:-4px;flex:0 0 auto}
+.ico-cab{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin-bottom:10px}
+.ico-cab .oc-buscar{flex:1 1 260px;max-width:none}
+.ico-especiales{display:flex;gap:2px 6px;flex-wrap:wrap}
+.ico-lista{max-height:52vh;overflow-y:auto;padding-right:4px}
+.ico-grupo{margin-bottom:12px}
+.ico-grupo[hidden]{display:none}
+.ico-grupo h5{margin:0 0 6px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ico-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px}
+.ico-btn{display:flex;align-items:center;justify-content:center;height:54px;background:#fff;border:1px solid var(--hair);border-radius:3px;color:var(--olive);cursor:pointer;transition:background-color .15s,border-color .15s,color .15s}
+.ico-btn[hidden]{display:none}
+.ico-btn:hover,.ico-btn:focus-visible{border-color:var(--olive);background:var(--brand-cream)}
+.ico-btn.is-on{background:var(--olive);border-color:var(--olive);color:#fff}
+.oc-icono svg{display:block;margin:auto;color:var(--olive)}
+@media (max-width:600px){.ico-grid{grid-template-columns:repeat(auto-fill,minmax(48px,1fr))}.ico-btn{height:48px}}
 /* incidencias */
 .inc-ayuda{font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.5}
 .inc-tipos{display:flex;flex-wrap:wrap;gap:2px 6px;margin-bottom:10px}

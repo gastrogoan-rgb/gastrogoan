@@ -1,0 +1,185 @@
+# grupo | clave | origen:nombre | es | ca | en
+# Cada fila es un icono del catálogo de secciones de la carta. Origen: t = Tabler Icons (MIT), l = Lucide (ISC).
+# Para añadir uno: una fila aquí y `node tools/generar-iconos-comida.mjs <carpeta-tabler> <carpeta-lucide>`.
+pan | pan | t:bread | Pan | Pa | Bread
+pan | baguette | t:baguette | Barra de pan | Barra de pa | Baguette
+pan | croissant | l:croissant | Croissant | Croissant | Croissant
+pan | queso | t:cheese | Queso | Formatge | Cheese
+pan | jamon | l:ham | Jamón, embutido | Pernil, embotit | Ham, cured meat
+pan | frutos-secos | t:nut | Frutos secos | Fruita seca | Nuts
+pan | palomitas | l:popcorn | Palomitas, snack | Crispetes, snack | Popcorn, snack
+pan | bocadillo | l:sandwich | Bocadillo, sándwich | Entrepà, sandvitx | Sandwich
+pan | hamburguesa | t:burger | Hamburguesa | Hamburguesa | Burger
+pan | hamburguesa-2 | l:hamburger | Hamburguesa (otra) | Hamburguesa (altra) | Burger (alt)
+pan | pizza | t:pizza | Pizza | Pizza | Pizza
+pan | pizza-2 | l:pizza | Pizza (otra) | Pizza (altra) | Pizza (alt)
+pan | empanadilla | t:dumpling | Empanadilla, dumpling | Empanadilla, dumpling | Dumpling
+pan | tapas | t:bowl | Tapas, ración | Tapes, ració | Tapas, sharing plate
+verdura | ensalada | t:salad | Ensalada | Amanida | Salad
+verdura | ensalada-2 | l:salad | Ensalada (otra) | Amanida (altra) | Salad (alt)
+verdura | hojas | l:leafy-green | Hojas verdes | Fulles verdes | Leafy greens
+verdura | zanahoria | t:carrot | Zanahoria | Pastanaga | Carrot
+verdura | zanahoria-2 | l:carrot | Zanahoria (otra) | Pastanaga (altra) | Carrot (alt)
+verdura | seta | t:mushroom | Setas | Bolets | Mushrooms
+verdura | pimiento | t:pepper | Pimiento, guindilla | Pebrot, bitxo | Pepper, chili
+verdura | aguacate | t:avocado | Aguacate | Alvocat | Avocado
+verdura | brote | l:sprout | Brotes | Brots | Sprouts
+verdura | planta | t:plant-2 | Huerta | Hort | Garden
+verdura | hoja | t:leaf | Hoja, hierbas | Fulla, herbes | Leaf, herbs
+verdura | vegano | l:vegan | Vegano | Vegà | Vegan
+verdura | semillero | t:seedling | Brote tierno | Brot tendre | Seedling
+verdura | trigo | t:wheat | Cereales | Cereals | Cereals
+verdura | trigo-2 | l:wheat | Trigo | Blat | Wheat
+verdura | sal | t:salt | Sal, condimentos | Sal, condiments | Salt, seasoning
+carne | carne | t:meat | Carne | Carn | Meat
+carne | ternera | l:beef | Ternera, chuletón | Vedella, xuletó | Beef, steak
+carne | muslo | l:drumstick | Pollo, aves | Pollastre, aus | Chicken, poultry
+carne | salchicha | t:sausage | Salchichas, butifarra | Salsitxes, botifarra | Sausages
+carne | parrilla | t:grill | Parrilla, brasa | Graella, brasa | Grill
+carne | parrilla-tenedor | t:grill-fork | A la brasa | A la brasa | Grilled
+carne | espatula | t:grill-spatula | Plancha | Planxa | Griddle
+carne | llama | t:flame | Fuego, al horno | Foc, al forn | Fire, roasted
+carne | hueso | t:bone | Hueso, caldo | Os, brou | Bone, broth
+pescado | pescado | t:fish | Pescado | Peix | Fish
+pescado | espina | t:fish-bone | Pescado (espina) | Peix (espina) | Fish bone
+pescado | pescado-2 | l:fish | Pescado (otro) | Peix (altre) | Fish (alt)
+pescado | pescado-3 | l:fish-symbol | Pescado (símbolo) | Peix (símbol) | Fish (symbol)
+pescado | gamba | l:shrimp | Gambas, marisco | Gambes, marisc | Shrimp, seafood
+pescado | concha | l:shell | Mejillones, almejas | Musclos, cloïsses | Mussels, clams
+pescado | caracol | l:snail | Caracoles | Cargols | Snails
+pescado | anzuelo | t:fish-hook | Pesca del día | Pesca del dia | Catch of the day
+pescado | cana | l:fishing-rod | Pescado fresco | Peix fresc | Fresh fish
+arroz | sopa | t:soup | Sopa, caldo | Sopa, brou | Soup
+arroz | sopa-2 | l:soup | Sopa (otra) | Sopa (altra) | Soup (alt)
+arroz | cazuela | l:cooking-pot | Guisos, cuchara | Guisats, cullera | Stews
+arroz | cuenco-palillos | t:bowl-chopsticks | Arroz, wok, fideos | Arròs, wok, fideus | Rice, noodles
+arroz | cuenco-cuchara | t:bowl-spoon | Cremas, potajes | Cremes, potatges | Creamy soups
+arroz | cocina | t:cooker | Cocina | Cuina | Cooker
+arroz | cubiertos | t:tools-kitchen-2 | Cubiertos | Coberts | Cutlery
+huevo | huevo | t:egg | Huevos | Ous | Eggs
+huevo | huevo-roto | t:egg-cracked | Huevo roto | Ou trencat | Cracked egg
+huevo | huevo-frito | t:egg-fried | Huevo frito | Ou ferrat | Fried egg
+huevo | huevos | t:eggs | Tortillas, huevos | Truites, ous | Omelettes, eggs
+huevo | huevo-2 | l:egg | Huevo (otro) | Ou (altre) | Egg (alt)
+huevo | huevo-frito-2 | l:egg-fried | Huevo frito (otro) | Ou ferrat (altre) | Fried egg (alt)
+huevo | leche | t:milk | Lácteos | Làctics | Dairy
+huevo | leche-2 | l:milk | Leche | Llet | Milk
+huevo | batido | t:milkshake | Batidos | Batuts | Milkshakes
+postre | tarta | t:cake | Tarta | Pastís | Cake
+postre | tarta-2 | l:cake | Tarta (otra) | Pastís (altre) | Cake (alt)
+postre | porcion | l:cake-slice | Porción de tarta | Porció de pastís | Slice of cake
+postre | brazo | t:cake-roll | Brazo de gitano | Braç de gitano | Swiss roll
+postre | cupcake | l:cupcake | Cupcake, magdalena | Cupcake, magdalena | Cupcake
+postre | donut | l:donut | Donut | Donut | Donut
+postre | galleta | t:cookie | Galletas | Galetes | Cookies
+postre | galleta-2 | l:cookie | Galleta (otra) | Galeta (altra) | Cookie (alt)
+postre | galleta-muneco | t:cookie-man | Galleta de jengibre | Galeta de gingebre | Gingerbread
+postre | helado | t:ice-cream | Helados | Gelats | Ice cream
+postre | helado-2 | t:ice-cream-2 | Helado (otro) | Gelat (altre) | Ice cream (alt)
+postre | helado-cono | l:ice-cream-cone | Helado de cucurucho | Gelat de cornet | Ice cream cone
+postre | helado-copa | l:ice-cream-bowl | Copa de helado | Copa de gelat | Ice cream sundae
+postre | polo | l:popsicle | Polos | Gelats de pal | Popsicle
+postre | chocolate | t:chocolate | Chocolate | Xocolata | Chocolate
+postre | caramelo | t:candy | Dulces | Dolços | Candy
+postre | caramelo-2 | l:candy | Caramelo | Caramel | Sweet
+postre | baston | l:candy-cane | Bastón de caramelo | Bastó de caramel | Candy cane
+postre | piruleta | t:lollipop | Piruleta | Piruleta | Lollipop
+postre | piruleta-2 | l:lollipop | Piruleta (otra) | Piruleta (altra) | Lollipop (alt)
+fruta | manzana | t:apple | Manzana | Poma | Apple
+fruta | manzana-2 | l:apple | Manzana (otra) | Poma (altra) | Apple (alt)
+fruta | platano | t:banana | Plátano | Plàtan | Banana
+fruta | platano-2 | l:banana | Plátano (otro) | Plàtan (altre) | Banana (alt)
+fruta | uvas | t:grape | Uvas | Raïm | Grapes
+fruta | uvas-2 | l:grape | Uvas (otras) | Raïm (altre) | Grapes (alt)
+fruta | cerezas | t:cherry | Cerezas | Cireres | Cherries
+fruta | cerezas-2 | l:cherry | Cerezas (otras) | Cireres (altres) | Cherries (alt)
+fruta | limon | t:lemon | Limón | Llimona | Lemon
+fruta | limon-2 | t:lemon-2 | Limón (otro) | Llimona (altra) | Lemon (alt)
+fruta | citricos | l:citrus | Cítricos, naranja | Cítrics, taronja | Citrus, orange
+fruta | melon | t:melon | Melón, sandía | Meló, síndria | Melon
+fruta | carambola | t:carambola | Fruta exótica | Fruita exòtica | Exotic fruit
+vino | copa-vino | l:wine | Vino | Vi | Wine
+vino | copa-champagne | t:glass-champagne | Cava, champán | Cava, xampany | Sparkling, champagne
+vino | botella-vino | l:bottle-wine | Botella de vino | Ampolla de vi | Wine bottle
+vino | anfora | l:amphora | Ánfora, vinos de autor | Àmfora, vins d'autor | Amphora
+vino | barrica | t:barrel | Barrica, crianza | Bóta, criança | Barrel, aged
+vino | copa | t:glass | Copa | Copa | Glass
+vino | copa-llena | t:glass-full | Copa llena | Copa plena | Full glass
+cerveza | cerveza | t:beer | Cerveza | Cervesa | Beer
+cerveza | cerveza-2 | l:beer | Cerveza (otra) | Cervesa (altra) | Beer (alt)
+cerveza | coctel | t:glass-cocktail | Cócteles | Còctels | Cocktails
+cerveza | martini | l:martini | Martini, vermut | Martini, vermut | Martini, vermouth
+cerveza | ginebra | t:glass-gin | Gin-tonic | Gin-tònic | Gin and tonic
+cerveza | botella | t:bottle | Botella, destilados | Ampolla, destil·lats | Bottle, spirits
+cerveza | jarra | t:mug | Jarra | Gerra | Mug
+cafe | cafe | t:coffee | Café | Cafè | Coffee
+cafe | cafe-2 | l:coffee | Café (otro) | Cafè (altre) | Coffee (alt)
+cafe | taza | t:cup | Taza | Tassa | Cup
+cafe | tetera | t:teapot | Té, infusiones | Te, infusions | Tea
+cafe | bubble-tea | t:bubble-tea | Bubble tea | Bubble tea | Bubble tea
+cafe | bubble-tea-2 | t:bubble-tea-2 | Bubble tea (otro) | Bubble tea (altre) | Bubble tea (alt)
+refresco | refresco | l:cup-soda | Refrescos | Refrescos | Soft drinks
+refresco | agua | l:glass-water | Agua | Aigua | Water
+refresco | licuadora | l:blender | Zumos, batidos | Sucs, batuts | Juices, smoothies
+servicio | gorro | t:chef-hat | Del chef, sugerencias | Del xef, suggeriments | Chef, specials
+servicio | cubiertos-cruz | l:utensils-crossed | Menú, carta | Menú, carta | Menu
+servicio | cubiertos-3 | t:tools-kitchen-3 | Platos | Plats | Dishes
+servicio | cubiertos-4 | t:tools-kitchen | Cubiertos (otros) | Coberts (altres) | Cutlery (alt)
+servicio | bandeja | l:hand-platter | Para compartir | Per compartir | To share
+servicio | campana | l:concierge-bell | Servicio, room service | Servei | Service
+servicio | michelin | t:michelin-star | Estrella, especial | Estrella, especial | Star, special
+servicio | batidor | t:whisk | Elaboración propia | Elaboració pròpia | Homemade
+servicio | cazo | t:ladle | Cazo, salsas | Cassó, salses | Ladle, sauces
+servicio | nevera | t:fridge | Frío, fresco | Fred, fresc | Cold, fresh
+servicio | microondas | t:microwave | Para llevar, recalentar | Per emportar | Takeaway
+servicio | bolsa | t:paper-bag | Para llevar | Per emportar | To go
+servicio | picnic | t:picnic-table | Terraza | Terrassa | Terrace
+# --- Tanda 2 (29/10): más iconos de la misma línea. Origen p = Phosphor Icons, peso «regular» (MIT) ---
+pan | cesta | p:basket | Cesta, para picar | Cistell, per picar | Basket, nibbles
+verdura | brocoli | l:broccoli | Brócoli | Bròquil | Broccoli
+verdura | aguacate-2 | l:avocado | Aguacate (otro) | Alvocat (altre) | Avocado (alt)
+verdura | pimiento-2 | p:pepper | Pimiento (otro) | Pebrot (altre) | Pepper (alt)
+verdura | planta-2 | p:plant | Planta aromática | Planta aromàtica | Herb plant
+verdura | granos | p:grains | Granos, legumbres | Grans, llegums | Grains, pulses
+verdura | judias | l:bean | Legumbres | Llegums | Pulses
+verdura | maceta | l:plant-pot | Aromáticas | Aromàtiques | Potted herbs
+verdura | granja | p:barn | Granja, de proximidad | Granja, de proximitat | Farm, local
+carne | beicon | l:bacon | Bacon, panceta | Cansalada, bacon | Bacon
+carne | vaca | p:cow | Vacuno | Boví | Beef cattle
+carne | cuchillo | p:knife | Corte, chuletón | Tall | Cut
+carne | horno | p:oven | Horno | Forn | Oven
+pescado | pescado-4 | p:fish-simple | Pescado (esquemático) | Peix (esquemàtic) | Fish (simple)
+pescado | pescado-5 | p:fish | Pescado (otro más) | Peix (un altre) | Fish (another)
+arroz | cuenco-comida | p:bowl-food | Bowl | Bowl | Bowl
+arroz | cuenco-vapor | p:bowl-steam | Plato caliente | Plat calent | Hot dish
+arroz | olla | p:cooking-pot | Olla | Olla | Pot
+arroz | conserva | p:jar | Conservas | Conserves | Preserves
+arroz | conserva-2 | p:jar-label | Conservas (otras) | Conserves (altres) | Preserves (alt)
+postre | postre-cuchara | l:dessert | Postre de cuchara | Postres de cullera | Spoon dessert
+postre | tarta-3 | p:cake | Tarta (otra más) | Pastís (un altre) | Cake (another)
+postre | helado-3 | p:ice-cream | Helado (otro más) | Gelat (un altre) | Ice cream (another)
+fruta | naranja | p:orange | Naranja | Taronja | Orange
+fruta | naranja-rodaja | p:orange-slice | Rodaja de naranja | Rodanxa de taronja | Orange slice
+fruta | cerezas-3 | p:cherries | Cerezas (otras más) | Cireres (unes altres) | Cherries (another)
+vino | champagne | p:champagne | Botella de cava | Ampolla de cava | Sparkling bottle
+vino | brandy | p:brandy | Brandy, coñac | Brandi, conyac | Brandy
+vino | copa-vino-2 | p:wine | Vino (otro) | Vi (altre) | Wine (alt)
+cerveza | cerveza-botella | p:beer-bottle | Cerveza de botella | Cervesa d'ampolla | Bottled beer
+cerveza | cerveza-jarra | p:beer-stein | Jarra de cerveza | Gerra de cervesa | Beer stein
+cerveza | pinta | p:pint-glass | Pinta | Pinta | Pint
+cerveza | lupulo | l:hop | Lúpulo, cervecera | Llúpol, cervesera | Hops, brewery
+cerveza | martini-2 | p:martini | Martini (otro) | Martini (altre) | Martini (alt)
+cafe | grano | p:coffee-bean | Café en grano | Cafè en gra | Coffee beans
+cafe | te-bolsa | p:tea-bag | Infusiones | Infusions | Tea bag
+cafe | cafe-3 | p:coffee | Café (otro más) | Cafè (un altre) | Coffee (another)
+refresco | lata | l:can-soda | Lata, refresco | Llauna | Can
+refresco | brick | l:carton | Brick, zumo | Brick, suc | Carton, juice
+servicio | bandeja-2 | p:tray | Bandeja | Safata | Tray
+servicio | compra | l:groceries | Producto de temporada | Producte de temporada | Seasonal produce
+servicio | mercado | l:shopping-basket | Del mercado | Del mercat | From the market
+servicio | cubiertos-5 | l:fork-knife | Tenedor y cuchillo | Forquilla i ganivet | Fork and knife
+servicio | cubiertos-6 | p:fork-knife | Cubiertos (otros más) | Coberts (uns altres) | Cutlery (another)
+servicio | gorro-2 | p:chef-hat | Gorro (otro) | Gorra (altra) | Chef hat (alt)
+servicio | probeta | l:beaker | Cocina de autor | Cuina d'autor | Signature cuisine
+servicio | llama-2 | p:flame | Fuego (otro) | Foc (altre) | Fire (alt)
+servicio | frasco | p:flask | Elaboraciones | Elaboracions | Preparations

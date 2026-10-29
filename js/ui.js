@@ -1903,7 +1903,7 @@ function ggPreguntarSalida(ed){
         <h3><i class="ti ti-device-floppy"></i> ${gl({es:'Hay cambios sin guardar', ca:'Hi ha canvis sense desar', en:'You have unsaved changes'})}</h3>
         <button class="modal-close" onclick="ggRespondeSalida('seguir')">&times;</button>
       </div>
-      <p style="font-size:14px;line-height:1.5;margin:0 0 4px">${escapeHtml(ed.nombre ? ed.nombre() : '')}</p>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 4px">${escapeHtml(ed && ed.nombre ? ed.nombre() : '')}</p>
       <p style="font-size:13.5px;line-height:1.5;color:var(--muted);margin:0">${gl({es:'Si sales ahora, se perderán. ¿Qué quieres hacer?', ca:'Si surts ara, es perdran. Què vols fer?', en:'If you leave now they will be lost. What would you like to do?'})}</p>
       <div class="modal-footer">
         <button class="btn btn-fino" onclick="ggRespondeSalida('seguir')"><i class="ti ti-pencil"></i> ${gl({es:'Seguir editando', ca:'Seguir editant', en:'Keep editing'})}</button>

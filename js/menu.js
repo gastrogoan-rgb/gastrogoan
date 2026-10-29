@@ -652,7 +652,7 @@ function renderCartaSecciones(){
           <!-- El icono de la sección es el que ve el cliente en la web de reservas y pedidos: allí cada sección
                es una carpeta, y este es su dibujo. Se elige a mano porque adivinarlo por el nombre nunca acierta
                del todo ("Cosas del chef", "La pizarra"). -->
-          <button type="button" class="oc-icono" title="${t('title.chooseFolderIcon')}" onclick="openCartaSectionIconModal(${sec.id})">${sec.icono || cartaSectionFallbackIcon(tItem(sec))}</button>
+          <button type="button" class="oc-icono" title="${t('title.chooseFolderIcon')}" aria-label="${t('title.chooseFolderIcon')}" onclick="openCartaSectionIconModal(${sec.id})">${iconoSeccionHtml(sec.icono, tItem(sec), 24) || '<i class="ti ti-ban" style="opacity:.35"></i>'}</button>
           <div style="min-width:0"><h4>${escapeHtml(tItem(sec))}</h4><span class="oc-sec-n">${platos.length} ${(bebidas ? t('label.drinksTh') : t('label.dishesTh')).toLowerCase()}${fuera ? ` · <b class="dishout-fuera">${fuera} ${gl({es:fuera===1?'agotado':'agotados', ca:fuera===1?'esgotat':'esgotats', en:'out'})}</b>` : ''}</span></div>
         </div>
         <div class="oc-sec-acc">
@@ -698,7 +698,7 @@ function renderCartaSecciones(){
             ${ocBtnDisponible(agotado, `toggleCartaPlato(${sec.id},${p.id})`)}
             ${ocBtnRaciones(p.stock, `setCartaPlatoStock(${sec.id},${p.id})`)}
             ${ocBtnExtras((p.modificadores||[]).length, `openPlatoModsModal(${sec.id},${p.id})`)}
-            ${!p.recipeId ? `<button type="button" class="btn btn-sm btn-fino${nAler ? ' is-off' : ''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${nAler ? ` ${nAler}` : ''}</button>` : ''}
+            ${!p.recipeId ? `<button type="button" class="btn btn-sm btn-fino${nAler ? ' is-off' : ''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}" aria-label="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${nAler ? ` ${nAler}` : ''}</button>` : ''}
             <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-trash"></i></button>
           </div>
         </div>`;
@@ -708,157 +708,67 @@ function renderCartaSecciones(){
   box.innerHTML = searchBox + (rows.trim() ? rows : `<div class="empty"><i class="ti ti-search"></i>${t('empty.noSearchResults')}</div>`);
 }
 /* ---- Icono de cada sección de la carta ----
-   Catálogo aparte del de CATEGORY_ICON_CHOICES (Escandallo/Mega Lista) a
-   propósito: aquel es de uso interno y puede permitirse dibujos simpáticos,
-   pero estos los ve el cliente final en la web del restaurante, así que se
-   dejan fuera los infantiles (golosinas, caritas, pescaditos de colores,
-   comida rápida) y se queda producto y servicio de mesa. */
-const CARTA_SECTION_ICON_CHOICES = [
-  // Para empezar
-  '🫒','🧀','🥖','🍞','🧈','🥯',
-  // Verdura y huerta
-  '🥗','🥬','🍅','🍆','🥒','🌽','🥕','🥔','🧄','🧅','🫑','🌶️','🍄','🥑','🌿',
-  // Cuchara y guisos
-  '🍲','🥘','🫕','🍛',
-  // Arroces y pasta
-  '🍚','🍝','🫓',
-  // Carnes
-  '🥩','🍖','🍗','🥓',
-  // Pescado y marisco
-  '🐟','🦐','🦞','🦑','🦪','🐚',
-  // Huevos
-  '🥚','🍳',
-  // Postres
-  '🍰','🍮','🍫','🥧','🍯',
-  // Fruta
-  '🍇','🍑','🍐','🍋','🍊','🍎','🍈','🫐','🍓','🥭','🍍',
-  // Vinos y espumosos
-  '🍷','🥂','🍾','🫗',
-  // Cerveza y destilados
-  '🍺','🍻','🥃','🍸',
-  // Café e infusiones
-  '☕','🍵',
-  // Sin alcohol
-  '🥤','🧃','🧊','🥛',
-  // Genéricos
-  '🍽️','🍴','🥄','🧂','📖',
-];
-/* Catálogo de una CARTA DE BEBIDAS. Lo ve el cliente final en la web de
-   pedidos, igual que el de comida, así que fuera infantiles: solo producto
-   y servicio. Una carta de bebidas se organiza por familias (tintos,
-   blancos, ginebras, cafés...) y con la lista de comida no había forma de
-   distinguir una sección de otra: todas acababan con el mismo 🍷. */
-const CARTA_SECTION_ICON_CHOICES_BEBIDA = [
-  // Vino
-  '🍷','🍇','🫗','🏺','🛢️',
-  // Espumosos
-  '🍾','🥂',
-  // Cerveza
-  '🍺','🍻','🌾',
-  // Vermut y aperitivos
-  '🧉','🫒',
-  // Destilados y licores
-  '🥃','⚗️','🍶','🫙',
-  // Coctelería
-  '🍸','🍹','🧊','🍋',
-  // Café
-  '☕','🫘',
-  // Té e infusiones
-  '🍵','🫖','🌿','🍯',
-  // Sin alcohol
-  '🥤','🧃','🧋','🥛','🍼',
-  // Zumos y fruta
-  '🍊','🍓','🍍','🥭','🥥','🍑','🫐','🍏',
-  // Servicio
-  '🍽️','🥄','❄️','📖',
-];
-// La carta de bebidas de sala tiene su propio catálogo; la de comida, el suyo.
-function cartaSectionIconChoices(){
-  const esBebida = (typeof cartaEdit !== 'undefined' && cartaEdit && typeof isBebidaCarta === 'function')
-    ? isBebidaCarta(cartaEdit)
-    : (typeof currentArea === 'function' && currentArea() === 'sala');
-  return esBebida ? CARTA_SECTION_ICON_CHOICES_BEBIDA : CARTA_SECTION_ICON_CHOICES;
+   Catálogo de iconos de COMIDA de trazo (js/iconos-comida.js): los ve el cliente final en la web de reservas y
+   pedidos, donde cada sección es una carpeta. Se elige a mano porque adivinarlo por el nombre nunca acierta del
+   todo ("Cosas del chef", "La pizarra"); si no se elige, se adivina (iconoComidaPorNombre) y se puede dejar la
+   sección SIN icono. Lo que se guarda en `sec.icono`: «ic:<clave>», «ic:none», o nada (= automático). */
+const ICONOS_GRUPOS_BEBIDA = ['vino', 'cerveza', 'cafe', 'refresco'];
+// Los grupos en el orden en que se enseñan: en Sala (carta de bebidas) primero los de bebida; en Cocina, al final.
+function cartaSectionIconGrupos(){
+  const todos = ICONOS_COMIDA_GRUPOS.map(g => g[0]);
+  const bebida = todos.filter(g => ICONOS_GRUPOS_BEBIDA.includes(g));
+  const comida = todos.filter(g => !ICONOS_GRUPOS_BEBIDA.includes(g));
+  return currentArea() === 'sala' ? [...bebida, ...comida] : [...comida, ...bebida];
 }
-// Respaldo mientras el hostelero no elija: se adivina por el nombre de la
-// sección. Gemelo del de reservagastrogoan.html — si se toca uno hay que
-// tocar el otro, para que lo que ve el dueño al editar sea exactamente lo
-// que verá su cliente en la web.
-const CARTA_SECTION_ICON_WORDS = [
-  ['entrante','entrant','starter','aperitivo','aperitiu','tapa','pica','appetizer'], '🫒',
-  ['ensalada','amanida','salad','verdura','vegetal','hortaliza','huerta','veggie'], '🥗',
-  ['sopa','crema','caldo','soup','brou','potaje','guiso','cuchara','estofado'], '🍲',
-  ['arroz','arroces','arros','paella','risotto','rice','fideua'], '🍚',
-  ['pasta','macarron','espagueti','spaghetti','lasan'], '🍝',
-  ['carne','carn','meat','ternera','vedella','cordero','xai','cerdo','porc','pollo','pollastre','chicken','beef','pork','lamb','brasa','parrilla','graella','grill'], '🥩',
-  ['pescado','peix','fish','marisco','marisc','seafood','bacalao','bacalla','pulpo','gamba','calamar'], '🐟',
-  ['huevo','egg','tortilla','truita','revuelto','ou'], '🍳',
-  ['queso','formatge','cheese','embutido','embotit','curado','charcuter'], '🧀',
-  ['pan','bread','coca','tosta','torrada','pa'], '🥖',
-  ['postre','dessert','dolc','dulce','sweet','tarta','pastel','pastis','cake'], '🍰',
-  ['fruta','fruita','fruit'], '🍇',
-  ['tinto','negre','red wine','crianza','reserva','rioja','ribera'], '🍷',
-  ['blanco','blanc','white wine','albarino','verdejo','godello'], '🥂',
-  ['rosado','rosat','rose'], '🍷',
-  ['cava','champ','espumos','escumos','sparkling','prosecco','burbuja'], '🍾',
-  ['ginebra','gin','tonic'], '🍸',
-  ['ron','rum','whisky','whiskey','bourbon','vodka','tequila','mezcal','brandy','conyac','cognac','aguardiente','orujo','destilado','destil'], '🥃',
-  ['vermut','vermouth','aperitiu','aperitivo','spritz'], '🧉',
-  ['sidra','cider'], '🍺',
-  ['te ','tes','the','tea','infusio','infusion','tisana','rooibos','manzanilla','poleo'], '🍵',
-  ['zumo','suc','juice','smoothie','batido','batut'], '🧃',
-  ['agua','aigua','water','mineral'], '🥤',
-  ['sin alcohol','sense alcohol','alcohol free','mocktail','0.0','0,0'], '🍹',
-  ['hielo','gel','ice','granizado'], '🧊',
-  ['licor','crema','chupito','xopet','shot'], '🫙',
-  ['carta de vinos','bodega','celler','vinoteca'], '🍇',
-  ['vino','wine','bodega','celler','cava','champ','espumoso','vi'], '🍷',
-  ['cerveza','cervesa','beer','birra','caña'], '🍺',
-  ['cocktail','coctel','copa','combinado','licor','destilado','gin','whisky','vermut','vermouth','spirit'], '🍸',
-  ['cafe','cafeteria','coffee','infusion','infusio','tea','te'], '☕',
-  ['refresco','refresc','zumo','suc','juice','agua','aigua','water','bebida','beguda','drink','batido','batut','smoothie'], '🥤',
-  ['desayuno','esmorzar','breakfast','brunch'], '🥯',
-];
-// Las palabras de tres letras o menos ('ou', 'pa', 'vi', 'te') solo valen
-// como palabra entera: buscándolas por dentro, "Pasta" y "Paella" salían
-// con un pan.
-function cartaSectionIconMatches(n, w){
-  const k = String(w).toLowerCase();
-  if(k.length > 3) return n.includes(k);
-  return new RegExp('(^|[^a-z0-9])' + k + '([^a-z0-9]|$)').test(n);
-}
+// Respaldo mientras el hostelero no elija: se adivina por el nombre de la sección (clave del catálogo).
 function cartaSectionFallbackIcon(name){
-  const n = String(name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  for(let i=0; i<CARTA_SECTION_ICON_WORDS.length; i+=2){
-    if(CARTA_SECTION_ICON_WORDS[i].some(w => cartaSectionIconMatches(n, w))) return CARTA_SECTION_ICON_WORDS[i+1];
-  }
-  return '🍽️';
+  return iconoComidaPorNombre(name);
 }
 function openCartaSectionIconModal(secId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   if(!sec) return;
+  const lang = getLang();
+  const actual = sec.icono || '';
+  const boton = (valor, html, titulo, extra) => `<button type="button" class="ico-btn${actual === valor ? ' is-on' : ''}" data-n="${escapeHtml(iconoNombreNormal(extra||titulo))}" title="${escapeHtml(titulo)}" aria-label="${escapeHtml(titulo)}" onclick="setCartaSectionIcon(${sec.id},'${valor}')">${html}</button>`;
+  const nombres = {es:0, ca:1, en:2};
+  const grupos = cartaSectionIconGrupos().map(g => {
+    const info = ICONOS_COMIDA_GRUPOS.find(x => x[0] === g);
+    const items = Object.entries(ICONOS_COMIDA).filter(([, v]) => v[4] === g);
+    return `<div class="ico-grupo"><h5>${escapeHtml(info[1 + (nombres[lang] ?? 0)])}</h5><div class="ico-grid">${
+      items.map(([k, v]) => boton('ic:' + k, iconoComidaSvg(k, 28), iconoComidaNombre(k, lang), v[1] + ' ' + v[2] + ' ' + v[3] + ' ' + k)).join('')
+    }</div></div>`;
+  }).join('');
   openModal(`
     <div class="modal-header">
       <h3>${t('title.chooseFolderIcon')}: ${escapeHtml(tItem(sec))}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 10px">${t('carta.sectionIconHint')}</p>
-    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:12px">
-      ${cartaSectionIconChoices().map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCartaSectionIcon(${sec.id},'${e}')">${e}</button>`).join('')}
+    <p class="inc-ayuda">${t('carta.sectionIconHint')}</p>
+    <div class="ico-cab">
+      <div class="oc-buscar" style="margin:0"><i class="ti ti-search"></i><input type="text" id="ico-buscar" placeholder="${escapeHtml(gl({es:'Buscar icono: pizza, vino, postre…', ca:'Cercar icona: pizza, vi, postres…', en:'Search icon: pizza, wine, dessert…'}))}" oninput="filtrarIconosComida(this.value)"></div>
+      <div class="ico-especiales">
+        <button type="button" class="btn btn-sm btn-fino${actual === 'ic:none' ? ' is-on' : ''}" onclick="setCartaSectionIcon(${sec.id},'ic:none')"><i class="ti ti-ban"></i> ${gl({es:'Sin icono', ca:'Sense icona', en:'No icon'})}</button>
+        <button type="button" class="btn btn-sm btn-fino${actual === '' ? ' is-on' : ''}" onclick="setCartaSectionIcon(${sec.id},'')" title="${escapeHtml(gl({es:'Se elige solo según el nombre de la sección', ca:'S\'escull sola segons el nom de la secció', en:'Picked automatically from the section name'}))}"><i class="ti ti-wand"></i> ${gl({es:'Automático', ca:'Automàtic', en:'Automatic'})}</button>
+      </div>
     </div>
+    <div class="ico-lista" id="ico-lista">${grupos}</div>
     <div class="modal-footer">
-      <button class="btn" onclick="setCartaSectionIcon(${sec.id},'')">${t('btn.removeIcon')}</button>
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
     </div>
-  `);
+  `, {xl:true});
 }
-function setCartaSectionIcon(secId, emoji){
+function filtrarIconosComida(q){
+  const n = iconoNombreNormal(q).trim();
+  document.querySelectorAll('#ico-lista .ico-btn').forEach(b => { b.hidden = !!n && !b.dataset.n.includes(n); });
+  document.querySelectorAll('#ico-lista .ico-grupo').forEach(g => { g.hidden = ![...g.querySelectorAll('.ico-btn')].some(b => !b.hidden); });
+}
+function setCartaSectionIcon(secId, valor){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   if(!sec) return;
-  if(emoji) sec.icono = emoji; else delete sec.icono;
+  if(valor) sec.icono = valor; else delete sec.icono;
   closeModal();
   renderCartaSecciones();
 }
-
 function moveCartaSection(index, dir){
   moveArrayItem(cartaEdit.secciones, index, dir);
   renderCartaSecciones();
