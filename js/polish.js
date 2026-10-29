@@ -192,7 +192,14 @@ async function aplicarVersionNueva(silencioso){
 
 // Al arrancar, sin prisa: lo primero es que la app esté usable.
 if(typeof window !== 'undefined'){
-  window.addEventListener('load', () => setTimeout(() => comprobarVersionPublicada(), 4000));
+  /* En la pantalla de entrada se pregunta SIEMPRE, sin esperar las 6 h: es el
+     momento perfecto para actualizar (nadie trabaja aún) y el botón
+     "Actualizar" de la cabecera no está ahí. Sin esto, el dueño veía la
+     entrada vieja medio día después de publicar el cambio (29/10). */
+  window.addEventListener('load', () => setTimeout(() => {
+    const entrada = document.getElementById('access-select-screen');
+    comprobarVersionPublicada(!!(entrada && !entrada.classList.contains('hide')));
+  }, 4000));
 }
 
 /* ────────────────────────────────────────────────────────────────────────
