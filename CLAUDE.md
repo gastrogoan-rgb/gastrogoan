@@ -638,6 +638,44 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
 - ⚠️ Un entorno nuevo necesita `pip install fonttools brotli` (el build recorta los iconos) y un enlace
   `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` al Chromium disponible para las pruebas.
 
+## Rediseño pantalla a pantalla (29-30/10): cómo se hace y qué hay hecho
+
+El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores y Mega Lista**.
+La orden de fondo, dicha tras ver que se tocaba solo la pantalla principal: **cuando se rediseña una pantalla se
+abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueba `test/subpantallas.mjs` lo exige).
+
+- **Botones**: `btn btn-fino` (caja visible de 28 px, zona de toque de 40-44), `is-on` verde, `is-off` rojo, `is-lim` ámbar.
+  Los hace solo `ggAfinarBotones` (js/ui.js) en cualquier vista listada en `GG_VISTAS_NUEVAS` y en los modales que
+  llevan `ds-nuevo`: **al migrar una pantalla se añade su `view-…` a esa lista**. `openModal` pone `ds-nuevo` si la vista
+  activa está en la lista o el HTML lleva `class="idr-modal"`. ⚠️ El botón fino pinta su caja con `::before`: una prueba
+  de contraste debe leer el fondo de ahí (`contraste.mjs` ya lo hace).
+- **Guarda de cambios sin guardar** (`ggRegistrarEditor`…): editores de carta y menú, y cualquier `navigate` los respeta.
+- **NORMA DE MÓVIL: lo denso se pliega** (dicho por el dueño el 30/10). Una fila con nombre, precio, proveedor, IVA,
+  alérgenos y botones es un muro de texto en 360 px: se ve **nombre y precio** y el resto cuelga de un toque.
+  Marcado: la fila lleva `plegable` + `data-pl` único, lo escondido `pl-extra`, y un `pl-chev` (`ggTogglePlegable`,
+  `ggSiPlegada`, `ggPlegableAbierta` en js/ui.js; el estado sobrevive a repintar). En PC todo sigue a la vista.
+  Un estado que importa (agotado, raciones, falta el IVA) se ve aunque la fila esté plegada. **Hecho en**: Mega Lista y
+  las filas de plato/opción de Oferta. **Descartado a propósito**: los tickets de Comandas (es lo que se opera y no
+  debe costar un toque más), las tarjetas de Proveedores (ya son nombre + tres botones). Al rediseñar una pantalla
+  nueva, plantearse esto antes de maquetarla. Prueba: `test/plegables.mjs`.
+- **Catálogo de iconos de comida** (181, trazo): `tools/iconos-comida-lista.txt` → `node tools/generar-iconos-comida.mjs`
+  → `js/iconos-comida.js`; el uso (`iconoSeccionHtml`, `iconoSelectorHtml`) va en `js/iconos-comida-uso.js` y `menu.js`, y se
+  copia a `reservagastrogoan.html`. Lo guardado: `ic:<clave>`, `ic:none` o un emoji antiguo (se sigue viendo).
+  `getCategoryIcon` devuelve el dibujo si es `ic:`; las carpetas de Mega Lista traen su icono de fábrica
+  (`MEGALISTA_ICONOS_BASE`). Un selector único para carta y carpetas.
+- **Oferta**: lo vivo (agotado, raciones) es estado de servicio y manda sobre el borrador al guardar (`ocCopiarVivo`).
+- **Comandas**: un vale nuevo cuando la mesa pide otra vez a los 8 min de que el actual tenga comida disparada; modo
+  caos por mesas; pase; incidencias; todo el camino de avanzar platos pasa por `avanzarLineasCocina`.
+- **I+D**: tres proveedores de IA (Gemini, Claude, ChatGPT) en la tabla `IDR_PROVEEDORES`; la clave sigue en
+  `localStorage`. Los tres aceptan el preflight CORS desde el dominio, pero **nunca se han probado con una clave real**.
+- **Proveedores**: la tarjeta es el nombre + ficha / editar / eliminar; todo lo demás vive en la ficha. **WhatsApp solo
+  con móviles** (`whatsappDeTelefono`: 6/7 en España, con prefijo 34 para `wa.me`; un fijo avisa y no abre nada).
+- **Mega Lista**: el precio de compra es **sin IVA** y el IVA va justo al lado (lista y formulario); «por revisar»
+  (sin precio / IVA / proveedor), IVA en línea y por carpeta, cálculo en vivo (coste por unidad y con IVA).
+- Pruebas que siguen el diseño nuevo: `oferta`, `vales-cocina`, `iconos-comida`, `ia-proveedores`, `subpantallas`,
+  `proveedores`, `megalista`, `plegables`. ⚠️ `acceso-alta.mjs` falla desde antes de estos cambios: el selector de idioma
+  «ES» de la entrada mide 44×26 px en móvil (diseño del 28/10, pendiente de decidir).
+
 ## Entrada, selector y frase del día (28-29/10)
 
 Cambios guiados pantalla a pantalla por el dueño, partiendo SIEMPRE de la base que ya tenía aprobada

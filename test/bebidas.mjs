@@ -384,30 +384,6 @@ await caso('La ficha de vino cabe en un móvil, sin desbordes ni botones diminut
   return '320, 390 y 768 px limpios';
 });
 
-/* ─── Iconos: sala vive en el mundo de la bebida ─── */
-await caso('En sala los iconos de carpeta son de bebida, no de carne', async ()=>{
-  const r = await page.evaluate(()=>{
-    currentArea = () => 'sala';
-    const sala = categoryIconChoices();
-    currentArea = () => 'cocina';
-    const cocina = categoryIconChoices();
-    // El mundo de la bebida completo: la uva, el tonel, la cebada y el
-    // alambique son tan de barra como la copa.
-    const bebida = ['🍷','🍸','🍺','☕','🍵','🥃','🍾','🥂','🧉','🍹','🧊','🫖','🫘','⚗️',
-                    '🍇','🏺','🛢️','🫗','🍻','🌾','🥤','🧃','🧋','🥛','🫙','🍶','🍼'];
-    const cuenta = l => bebida.filter(e => l.includes(e)).length;
-    // Cuántos de los 12 primeros (lo que se ve sin bajar) son de bebida
-    const arriba = sala.slice(0,12).filter(e => bebida.includes(e)).length;
-    return {distintas: sala !== cocina, nSala: sala.length, bebidaSala: cuenta(sala), arriba,
-            tieneCarne: sala.slice(0,20).includes('🥩')};
-  });
-  assert.ok(r.distintas, 'sala no puede ofrecer la misma lista que cocina');
-  assert.ok(r.bebidaSala >= 12, `pocos iconos de bebida: ${r.bebidaSala}`);
-  assert.ok(r.arriba >= 10, `los primeros deberían ser de bebida, hay ${r.arriba} de 12`);
-  assert.ok(!r.tieneCarne, 'la carne no debería estar entre los primeros de una barra');
-  return `${r.nSala} iconos, ${r.arriba}/12 de bebida arriba del todo`;
-});
-
 await caso('El selector de iconos de la carta enseña primero los de bebida en Sala y los de comida en Cocina', async ()=>{
   const r = await page.evaluate(()=>{
     currentArea = () => 'sala';   const sala = cartaSectionIconGrupos();

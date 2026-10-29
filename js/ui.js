@@ -1888,7 +1888,35 @@ window.addEventListener('resize', () => {
    convierte lo que se pinte dentro: `.btn-primary` pasa a verde de marca (`is-on`), `.btn-danger` a rojo suave
    (`is-off`), y los botones de solo icono llevan su nombre accesible. Para pasar OTRA pantalla basta con añadir
    su selector a GG_FINO_CONTENEDORES. `.btn-back` (el «Volver») se queda como está. */
-const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores'];   // pantallas que ya tienen el diseño nuevo
+/* ── Filas plegables en móvil ──
+   En un móvil una fila con nombre, precio, proveedor, IVA, alérgenos y botones es un muro de texto. La norma: se ve
+   lo que identifica (nombre y precio) y el resto cuelga de un toque. En PC todo sigue a la vista.
+   Marcado: la fila lleva `plegable` y un `data-pl` único; lo que se esconde, `pl-extra`; y un botón `pl-chev`.
+   El estado se guarda aparte para que sobreviva a repintar la lista. */
+const ggPlegablesAbiertos = new Set();
+function ggEsMovilPlegable(){ return window.matchMedia('(max-width: 760px)').matches; }
+function ggTogglePlegable(ev, fila){
+  if(!fila || !ggEsMovilPlegable()) return;
+  // Un toque dentro de un control (el IVA, un botón, un enlace) es del control, no de la fila.
+  if(ev && ev.target && ev.target.closest && ev.target.closest('select,input,textarea,a,label,button:not(.pl-chev)')) return;
+  const abierta = !fila.classList.contains('is-abierta');
+  fila.classList.toggle('is-abierta', abierta);
+  const clave = fila.dataset.pl;
+  if(clave){ if(abierta) ggPlegablesAbiertos.add(clave); else ggPlegablesAbiertos.delete(clave); }
+  const chev = fila.querySelector('.pl-chev');
+  if(chev) chev.setAttribute('aria-expanded', abierta ? 'true' : 'false');
+}
+// El nombre y el precio de una fila se pulsan para editarlos; con la fila plegada en móvil, ese primer toque la abre.
+function ggSiPlegada(ev, el){
+  const fila = el && el.closest ? el.closest('.plegable') : null;
+  if(!fila || !ggEsMovilPlegable() || fila.classList.contains('is-abierta')) return false;
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  ggTogglePlegable(null, fila);
+  return true;
+}
+function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
+
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;
