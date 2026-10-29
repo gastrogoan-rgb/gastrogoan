@@ -2647,7 +2647,7 @@ input,select,textarea{border-radius:var(--r-s)}
   .home-head{gap:18px;padding:26px 0 2px}
   .home-date{padding-right:18px;font-size:11px}
   .home-date b{font-size:40px}
-  .home-title{font-size:25px}
+  .home-title{font-size:29px}
   .folder-grid{grid-template-columns:1fr !important;gap:10px !important;padding:20px 0 6px !important}
   .folder-grid .folder-card,.folder-grid .folder-card.folder-cocina,.folder-grid .folder-card.folder-sala,.folder-grid .folder-card.folder-gestion{
     flex-direction:row;align-items:center;justify-content:flex-start;gap:18px;min-height:92px;padding:16px 18px;border-radius:var(--r-m)}
@@ -2656,8 +2656,9 @@ input,select,textarea{border-radius:var(--r-s)}
   .folder-grid .folder-card h2{font-size:24px}
 }
 @media (max-width:420px){
-  .home-head{gap:14px}.home-date{padding-right:14px}.home-date b{font-size:34px}.home-title{font-size:21px}
+  .home-head{gap:14px}.home-date{padding-right:14px}.home-date b{font-size:34px}.home-title{font-size:26px}
 }
+@media (max-width:340px){.home-title{font-size:23px}}
 
 /* --- Títulos de sección dentro de una pantalla --- */
 .view .card:not(.card-compact) > h3:first-child{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:14px}
