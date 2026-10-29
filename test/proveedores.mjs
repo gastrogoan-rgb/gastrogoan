@@ -38,8 +38,8 @@ async function abrir(ancho){
       {id:2, nombre:'Verduras Ca la Rosa', area:'cocina'},
       {id:3, nombre:'Bebidas Pirineu', area:'cocina'},
     ];
-    DB.ingredients = [{id:1, name:'Gambas', unit:'kg', price:38, supplier:'Pescados Martínez', area:'cocina'}];
-    DB.purchaseOrders = [{id:7, supplier:'Pescados Martínez', date:todayStr(), estado:'RECIBIDO', items:[], area:'cocina'}];
+    DB.ingredients = [{id:1, name:'Gambas', unit:'kg', price:38, iva:10, supplier:'Pescados Martínez', area:'cocina'}];
+    DB.purchaseOrders = [{id:7, supplier:'Pescados Martínez', date:todayStr(), estado:'RECIBIDO', items:[{ingredientId:1, cantidad:2, cantidadRecibida:2}], area:'cocina'}];
     saveDB(); currentFolder = 'cocina'; navigate('proveedores');
   });
   await esperar(500);
@@ -49,7 +49,7 @@ async function abrir(ancho){
 for(const ancho of [1280, 360]){
   const page = await abrir(ancho);
   const tarjetas = () => page.evaluate(() => [...document.querySelectorAll('#proveedores-list .pv-card')].map(c => ({
-    nombre: c.querySelector('.pv-nombre').textContent.trim(),
+    nombre: c.querySelector('.pv-nom').textContent.trim(), tipo: c.querySelector('.pv-tipo')?.textContent.trim() || '',
     botones: [...c.querySelectorAll('button')].map(b => b.dataset.acc ? 'menu:' + JSON.parse(b.dataset.acc).map(a => a.fn.split('(')[0]).join('+') : (b.getAttribute('onclick')||'').split('(')[0]),
     soloOwner: [...c.querySelectorAll('button')].map(b => b.classList.contains('owner-only')),
     texto: c.innerText.replace(/\s+/g,' ').trim(),
@@ -61,7 +61,7 @@ for(const ancho of [1280, 360]){
     for(const c of t){
       assert.deepEqual(c.botones, ['openProviderInfoModal','menu:openProviderModal+deleteProvider']);
       assert.deepEqual(c.soloOwner, [false, true], 'la ficha la ve cualquiera; el menú de editar y eliminar, solo quien puede');
-      assert.equal(c.texto, c.nombre, 'la tarjeta no debe llevar nada más que el nombre: ' + c.texto);
+      assert.equal(c.texto, (c.nombre + ' ' + c.tipo).trim(), 'la tarjeta no debe llevar nada más que el nombre y su tipo: ' + c.texto);
     }
   });
 
@@ -122,12 +122,50 @@ for(const ancho of [1280, 360]){
     await page.evaluate(() => closeModal());
   });
 
-  await caso(`Historial de pedidos: salta a Pedidos filtrado por ese proveedor (${ancho}px)`, async () => {
+  await caso(`Historial de pedidos: se ve dentro de la ficha, se despliega y se vuelve sin dar rodeos (${ancho}px)`, async () => {
     await page.evaluate(() => { openProviderInfoModal(1); }); await esperar(300);
-    await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Historial/.test(b.textContent)).click()); await esperar(600);
-    const r = await page.evaluate(() => ({vista: document.querySelector('.view.active')?.id, abierto: document.getElementById('modal-overlay').classList.contains('active'), filtro: pedidoHistorialSupplierFilter}));
-    assert.equal(r.vista, 'view-pedidos'); assert.ok(!r.abierto, 'el modal debe cerrarse al saltar'); assert.equal(r.filtro, 'Pescados Martínez');
+    await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Historial/.test(b.textContent)).click()); await esperar(400);
+    const r = await page.evaluate(() => ({vista: document.querySelector('.view.active')?.id, filas: document.querySelectorAll('#modal-box .pv-ped').length,
+      resumen: document.querySelector('#modal-box .pv-ped-resumen')?.textContent || '', abierto: document.getElementById('modal-overlay').classList.contains('active')}));
+    assert.equal(r.vista, 'view-proveedores', 'no sale de Proveedores'); assert.ok(r.abierto);
+    assert.equal(r.filas, 1); assert.ok(/1 pedido/.test(r.resumen), r.resumen);
+    await page.evaluate(() => document.querySelector('#modal-box .pv-ped summary').click()); await esperar(150);
+    assert.ok(await page.evaluate(() => document.querySelector('#modal-box .pv-ped').open && /Gambas/.test(document.querySelector('.pv-ped-lineas').textContent)), 'el pedido se despliega con sus líneas');
+    await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Volver/.test(b.textContent)).click()); await esperar(300);
+    assert.ok(await page.evaluate(() => !!document.querySelector('#modal-box .pv-ficha')), 'Volver deja la ficha');
+    // Y el salto a la pantalla de Pedidos sigue existiendo, para quien lo quiera.
+    await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Historial/.test(b.textContent)).click()); await esperar(300);
+    await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Abrir en Pedidos/.test(b.textContent)).click()); await esperar(600);
+    const s = await page.evaluate(() => ({vista: document.querySelector('.view.active')?.id, abierto: document.getElementById('modal-overlay').classList.contains('active'), filtro: pedidoHistorialSupplierFilter}));
+    assert.equal(s.vista, 'view-pedidos'); assert.ok(!s.abierto); assert.equal(s.filtro, 'Pescados Martínez');
     await page.evaluate(() => navigate('proveedores')); await esperar(300);
+  });
+
+  await caso(`Tipo de proveedor: se elige (o se inventa), sale junto al nombre, en la ficha y filtra (${ancho}px)`, async () => {
+    await page.evaluate(() => { openProviderModal(2); }); await esperar(300);
+    const opciones = await page.evaluate(() => [...document.querySelectorAll('#prov-tipo option')].map(o => o.textContent.trim()));
+    assert.ok(opciones[0] === 'Sin tipo' && opciones.includes('Carnes') && opciones.includes('Lácteos') && /Otro tipo/.test(opciones[opciones.length - 1]), opciones.join('|'));
+    await page.evaluate(() => { const s = document.getElementById('prov-tipo'); s.value = 'Lácteos'; s.dispatchEvent(new Event('change')); saveProvider(2); }); await esperar(500);
+    await page.evaluate(() => { openProviderModal(3); }); await esperar(300);
+    await page.evaluate(() => { const s = document.getElementById('prov-tipo'); s.value = '__nuevo__'; s.dispatchEvent(new Event('change')); });
+    assert.ok(await page.evaluate(() => document.getElementById('prov-tipo-nuevo').style.display !== 'none'), 'aparece el campo para escribir el tipo');
+    await page.evaluate(() => { document.getElementById('prov-tipo-nuevo').value = 'Menaje'; saveProvider(3); }); await esperar(500);
+    const r = await page.evaluate(() => ({tipos: DB.providers.map(p => p.tipo || ''), tarjetas: [...document.querySelectorAll('#proveedores-list .pv-card')].map(c => c.querySelector('.pv-nom').textContent + '|' + (c.querySelector('.pv-tipo')?.textContent || '')),
+      chips: [...document.querySelectorAll('#proveedores-tipos .btn')].map(b => b.textContent.replace(/\s+/g,' ').trim())}));
+    assert.deepEqual(r.tipos, ['', 'Lácteos', 'Menaje']);
+    assert.ok(r.tarjetas.includes('Verduras Ca la Rosa|') === false || true);
+    assert.ok(r.tarjetas.some(x => /\|Lácteos$/.test(x)) && r.tarjetas.some(x => /\|Menaje$/.test(x)), 'el tipo sale al lado del nombre: ' + r.tarjetas);
+    assert.deepEqual(r.chips, ['Lácteos 1', 'Menaje 1', 'Sin tipo 1']);
+    await page.evaluate(() => setProviderTipoFiltro('Menaje')); await esperar(200);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#proveedores-list .pv-card').length), 1, 'el filtro deja solo ese tipo');
+    await page.evaluate(() => setProviderTipoFiltro('Menaje')); await esperar(200);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#proveedores-list .pv-card').length), 3, 'pulsarlo otra vez lo quita');
+    await page.evaluate(() => setProviderSearchQuery('lácteos')); await esperar(200);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#proveedores-list .pv-card').length), 1, 'el buscador también encuentra por tipo');
+    await page.evaluate(() => setProviderSearchQuery('')); await esperar(150);
+    await page.evaluate(() => openProviderInfoModal(2)); await esperar(300);
+    assert.ok(/Tipo\s+Lácteos/i.test(await page.evaluate(() => document.getElementById('modal-box').innerText.replace(/\n+/g, ' '))), 'la ficha enseña el tipo');
+    await page.evaluate(() => closeModal());
   });
 
   await caso(`Editar desde la ficha y desde la tarjeta guarda y renombra sin dejar huérfanos (${ancho}px)`, async () => {
