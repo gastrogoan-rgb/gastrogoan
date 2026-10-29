@@ -1888,7 +1888,8 @@ window.addEventListener('resize', () => {
    convierte lo que se pinte dentro: `.btn-primary` pasa a verde de marca (`is-on`), `.btn-danger` a rojo suave
    (`is-off`), y los botones de solo icono llevan su nombre accesible. Para pasar OTRA pantalla basta con añadir
    su selector a GG_FINO_CONTENEDORES. `.btn-back` (el «Volver») se queda como está. */
-const GG_FINO_CONTENEDORES = ['#view-idr', '#modal-box:has(.idr-modal)'];
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina'];   // pantallas que ya tienen el diseño nuevo
+const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;
   raiz.querySelectorAll('.btn:not(.btn-fino):not(.btn-back)').forEach(b => {
@@ -2111,6 +2112,9 @@ function renderFolder(){
 function openModal(html, opts){
   const box = document.getElementById('modal-box');
   box.innerHTML = html;
+  // Una ventana abierta desde una pantalla con el diseño nuevo (o hecha para ella) lo lleva también.
+  const activa = document.querySelector('.view.active');
+  box.classList.toggle('ds-nuevo', (activa && GG_VISTAS_NUEVAS.includes(activa.id)) || /class="idr-modal"/.test(html));
   box.classList.toggle('modal-xl', !!(opts && opts.xl));
   box.classList.toggle('modal-order', !!(opts && opts.order));
   wrapModalBody(box);

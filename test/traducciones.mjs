@@ -86,6 +86,8 @@ const ACEPTADAS = new Set([
   '12h','15h','18h','21h','8-12h','12-16h','16-20h','20-24h','8.0h',
   // el manual: un nombre de aparato y el código maestro
   'iPhone/iPad (Safari):','GGGG',
+  // direcciones donde se saca la clave de cada proveedor de IA (se enseñan como enlace)
+  'aistudio.google.com/apikey','platform.openai.com/api-keys','console.anthropic.com/settings/keys',
   // el logotipo de la barra superior va en dos tramos («gastro» + «goan»): es la marca, no texto
   'gastro','goan',
 ]);

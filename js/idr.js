@@ -1321,30 +1321,30 @@ function renderIdrCreacion(box){
     ${hecho ? `
       <div class="card">
         <h3><i class="ti ti-flag-check"></i> ${t('idr.done')}</h3>
-        ${c.logica ? `<div class="card" style="border-left:4px solid var(--ink)"><h3 style="font-size:14px"><i class="ti ti-bulb"></i> ${t('idr.setLogic')}</h3><p style="font-size:13px;margin:0;white-space:pre-wrap">${escapeHtml(c.logica)}</p></div>` : ''}
+        ${c.logica ? `<div class="idr-nota"><h4><i class="ti ti-bulb"></i> ${t('idr.setLogic')}</h4><p style="white-space:pre-wrap">${escapeHtml(c.logica)}</p></div>` : ''}
         ${c.recipeId && getRecipe(c.recipeId) ? `<p style="font-size:13px">${escapeHtml(getRecipe(c.recipeId).name)} · <strong>${fmtMoney(recipeCost(getRecipe(c.recipeId)))}</strong></p>` : ''}
         ${(c.recipeIds||[]).length ? `<p style="font-size:13px">${t('idr.setDishes').replace('${n}', c.recipeIds.length)} · <strong>${fmtMoney((c.recipeIds||[]).reduce((s,rid)=>{const rr=getRecipe(rid);return s+(rr?recipeCost(rr):0);},0))}</strong></p>` : ''}
         ${(c.faltan||[]).length ? `<p style="font-size:12.5px;color:var(--muted)">${t('idr.missingIngredients')}: ${escapeHtml(c.faltan.join(' · '))}</p>` : ''}
         ${c.corregido ? `<p style="font-size:12.5px;color:var(--muted)"><i class="ti ti-wand"></i> ${t('idr.autoFixed')}</p>` : ''}
         ${c.nota ? `<p style="font-size:12.5px;color:var(--muted)">${escapeHtml(c.nota)}</p>` : ''}
         ${(c.avisos||[]).length ? `
-          <div class="card" style="border-left:4px solid var(--red)">
-            <h3 style="font-size:14px"><i class="ti ti-alert-triangle"></i> ${t('idr.checksFailed')}</h3>
-            <ul style="margin:4px 0 0;padding-left:18px;font-size:13px">${c.avisos.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>
+          <div class="idr-nota is-aviso">
+            <h4><i class="ti ti-alert-triangle"></i> ${t('idr.checksFailed')}</h4>
+            <ul>${c.avisos.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>
           </div>` : `<p style="font-size:12.5px;color:#4A5D4E"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>`}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-          ${c.recipeId ? `<button class="btn btn-primary" onclick="idrVerLaFicha(${c.id})"><i class="ti ti-file-text"></i> ${t('idr.seeSheet')}</button>` : ''}
+          ${c.recipeId ? `<button class="btn btn-fino is-on" onclick="idrVerLaFicha(${c.id})"><i class="ti ti-file-text"></i> ${t('idr.seeSheet')}</button>` : ''}
           ${c.recipeId ? `<button class="owner-only btn" onclick="idrHablarDelCoste(${c.id})"><i class="ti ti-coin"></i> ${t('idr.adjustCost')}</button>` : ''}
           ${c.recipeId ? `<button class="owner-only btn" onclick="idrVariante(${c.id})"><i class="ti ti-git-branch"></i> ${t('idr.makeVariant')}</button>` : ''}
-          <button class="btn" onclick="idrImprimir(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+          <button class="btn btn-fino" onclick="idrImprimir(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         </div>
       </div>` : ''}
 
     ${legado ? `
-      <div class="card" style="border-left:4px solid var(--ink)">
+      <div class="card">
         <h3><i class="ti ti-archive"></i> ${t('idr.legacyTitle')}</h3>
         <p style="font-size:13px;color:var(--muted)">${t('idr.legacyBody')}</p>
-        ${!hecho ? `<button class="owner-only btn btn-primary" onclick="idrCrearConjunto(${c.id})"><i class="ti ti-plus"></i> ${c.tipo==='menu' ? t('idr.createMenu') : t('idr.createCarta')}</button>` : ''}
+        ${!hecho ? `<button class="owner-only btn btn-fino is-on" onclick="idrCrearConjunto(${c.id})"><i class="ti ti-plus"></i> ${c.tipo==='menu' ? t('idr.createMenu') : t('idr.createCarta')}</button>` : ''}
       </div>
     ` : `
       <div class="card">
@@ -1369,7 +1369,7 @@ function renderIdrCreacion(box){
               onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();idrEnviar();}">${escapeHtml(c.borrador||'')}</textarea>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button class="btn btn-primary" id="idr-enviar" onclick="idrEnviar()"${idrPensando?' disabled':''}><i class="ti ti-send"></i> ${t('idr.send')}</button>
+            <button class="btn btn-fino is-on" id="idr-enviar" onclick="idrEnviar()"${idrPensando?' disabled':''}><i class="ti ti-send"></i> ${t('idr.send')}</button>
             ${c.tipo === 'plato'
               ? `<button class="owner-only btn ${c.listo?'btn-primary':''}" onclick="idrCrearPlatoReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createDish')}</button>`
               : c.tipo === 'base'
@@ -2240,31 +2240,33 @@ function idrPintarSelectorPlatos(id){
   const filas = bloques.map((b, i) => {
     const elegidos = idrSeleccionPlatos[i] || [];
     return `
-      <div class="card card-compact">
-        <h3 style="font-size:14px;justify-content:space-between">
-          <span>${escapeHtml(b.nombre)}</span>
-          <span style="font-size:12px;color:${elegidos.length === b.n ? '#4A5D4E' : 'var(--muted)'}">${elegidos.length}/${b.n}</span>
-        </h3>
-        <div style="max-height:150px;overflow:auto">
+      <div class="idr-pick">
+        <div class="idr-pick-cab">
+          <span class="idr-pick-nom">${escapeHtml(b.nombre)}</span>
+          <span class="idr-pick-cnt${elegidos.length === b.n ? ' is-ok' : ''}">${elegidos.length}/${b.n}</span>
+        </div>
+        <div class="idr-pick-lista">
           ${platos.map(p => `
-            <label style="display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;cursor:pointer">
+            <label class="idr-pick-fila">
               <input type="checkbox" ${elegidos.includes(p.id) ? 'checked' : ''} onchange="idrMarcarPlato(${id}, ${i}, ${p.id}, this.checked)">
-              <span>${escapeHtml(p.name)} <span style="color:var(--muted)">· ${fmtMoney(recipeCost(p))}</span></span>
+              <span class="idr-pick-plato">${escapeHtml(p.name)}</span>
+              <span class="idr-pick-precio">${fmtMoney(recipeCost(p))}</span>
             </label>`).join('')}
         </div>
       </div>`;
   }).join('');
   openModal(`
-    <div class="modal-head"><h3><i class="ti ti-checkbox"></i> ${t('idr.pickExisting')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--muted)">${t('idr.pickExistingHint')}</p>
-      <div class="grid grid-2">${filas}</div>
+    <div class="idr-modal"></div>
+    <div class="modal-header">
+      <h3><i class="ti ti-checkbox"></i> ${t('idr.pickExisting')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="idrMontarConLosElegidos(${id})"><i class="ti ti-check"></i> ${t('idr.pickDone')}</button>
-    </div>`);
+    <p class="idr-modal-intro">${t('idr.pickExistingHint')}</p>
+    <div class="idr-pick-grid">${filas}</div>
+    <div class="modal-footer">
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="idrMontarConLosElegidos(${id})"><i class="ti ti-check"></i> ${t('idr.pickDone')}</button>
+    </div>`, {xl:true});
 }
 
 function idrMarcarPlato(id, bloque, recipeId, marcado){
@@ -2510,7 +2512,7 @@ function idrConfigModal(){
       <h3>${t('idr.assistant')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted)">${t('idr.keyExplain')}</p>
+    <p class="idr-modal-intro">${t('idr.keyExplain')}</p>
     <div class="field-row">
       <div class="field">
         <label>${t('idr.provider')}</label>
@@ -2526,12 +2528,12 @@ function idrConfigModal(){
       <input type="password" id="idr-clave" value="${escapeHtml(cfg.clave||'')}" placeholder="${t('idr.keyPh')}" autocomplete="off">
       <div id="idr-ayuda">${idrAyudaHtml(cfg.proveedor)}</div>
     </div>
-    <div class="card" style="border-left:4px solid var(--ink);margin-top:10px">
-      <p style="font-size:12.5px;margin:0">${t('idr.keyWarning')}</p>
+    <div class="idr-nota">
+      <p>${t('idr.keyWarning')}</p>
     </div>
     <div style="margin-top:12px">
-      <button class="btn" id="idr-probar" onclick="idrProbarConexion()"><i class="ti ti-plug-connected"></i> ${t('idr.test')}</button>
-      <button class="btn" id="idr-modelos" onclick="idrCargarModelos()"><i class="ti ti-list"></i> ${t('idr.listModels')}</button>
+      <button class="btn btn-fino" id="idr-probar" onclick="idrProbarConexion()"><i class="ti ti-plug-connected"></i> ${t('idr.test')}</button>
+      <button class="btn btn-fino" id="idr-modelos" onclick="idrCargarModelos()"><i class="ti ti-list"></i> ${t('idr.listModels')}</button>
       <div id="idr-test-res" style="font-size:13px;margin-top:8px"></div>
     </div>
     <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.version').replace('${v}', (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '—'))}</p>
@@ -2539,8 +2541,8 @@ function idrConfigModal(){
     ${idrUltimoFallo ? `<details style="margin-top:8px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary><div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:140px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,400))}</div></details>` : ''}
     <div class="modal-footer">
       ${idrHayIA() ? `<button class="btn btn-danger" onclick="idrBorrarConfig();closeModal();renderIdr();showToast(t('idr.keyRemoved'))">${t('common.delete')}</button>` : ''}
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="idrGuardarDesdeModal()">${t('common.save')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="idrGuardarDesdeModal()">${t('common.save')}</button>
     </div>
   `);
 }
@@ -2596,11 +2598,11 @@ function idrAdnModal(){
       <h3><i class="ti ti-dna"></i> ${t('idr.dna')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted)">${t('idr.dnaExplain')}</p>
+    <p class="idr-modal-intro">${t('idr.dnaExplain')}</p>
     ${IDR_ADN_CAMPOS.map(campo).join('')}
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="idrGuardarAdn()">${t('common.save')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="idrGuardarAdn()">${t('common.save')}</button>
     </div>
   `, {xl:true});
 }
@@ -3192,19 +3194,19 @@ function renderIaConfigCard(){
           <input type="password" id="idr-clave" value="${escapeHtml(cfg.clave||'')}" placeholder="${t('idr.keyPh')}" autocomplete="off">
           <div id="idr-ayuda">${idrAyudaHtml(cfg.proveedor)}</div>
         </div>
-        <div style="border-left:4px solid var(--ink);background:var(--brand-cream);border-radius:8px;padding:10px 12px;margin:10px 0">
-          <p style="font-size:12.5px;margin:0">${t('ia.cfg.whyLocal')}</p>
+        <div class="idr-nota">
+          <p>${t('ia.cfg.whyLocal')}</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" id="mn-ia-guardar" onclick="iaGuardarDesdeNegocio()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
-          <button class="btn btn-sm" id="idr-probar" onclick="idrProbarConexion()"><i class="ti ti-plug-connected"></i> ${t('idr.test')}</button>
-          <button class="btn btn-sm" id="idr-modelos" onclick="idrCargarModelos()"><i class="ti ti-list"></i> ${t('idr.listModels')}</button>
-          ${idrHayIA() ? `<button class="btn btn-sm btn-danger" onclick="iaBorrarDesdeNegocio()"><i class="ti ti-trash"></i> ${t('common.delete')}</button>` : ''}
+          <button class="btn btn-sm btn-fino is-on" id="mn-ia-guardar" onclick="iaGuardarDesdeNegocio()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+          <button class="btn btn-sm btn-fino" id="idr-probar" onclick="idrProbarConexion()"><i class="ti ti-plug-connected"></i> ${t('idr.test')}</button>
+          <button class="btn btn-sm btn-fino" id="idr-modelos" onclick="idrCargarModelos()"><i class="ti ti-list"></i> ${t('idr.listModels')}</button>
+          ${idrHayIA() ? `<button class="btn btn-sm btn-fino is-off" onclick="iaBorrarDesdeNegocio()"><i class="ti ti-trash"></i> ${t('common.delete')}</button>` : ''}
         </div>
         <div id="idr-test-res" style="font-size:13px;margin-top:8px"></div>
       </div>
       <p style="font-size:12.5px;margin:12px 0 4px" id="mn-ia-consumo">${t('idr.callsToday').replace('${n}', usadas).replace('${tope}', IDR_TOPE_DIA)}</p>
-      <div style="height:8px;border-radius:4px;background:var(--border);overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--ink)"></div></div>
+      <div class="ia-medidor"><div style="width:${pct}%"></div></div>
       <p class="txt-xs" style="color:var(--muted);margin:6px 0 0">${t('ia.cfg.limitWhy')}</p>
     </div>`;
 }
@@ -3241,8 +3243,8 @@ function renderIaGateCard(){
       <div id="iag-ayuda">${idrAyudaHtml('google')}</div></div>
     <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('ia.cfg.whyLocal')}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary" id="iag-guardar" onclick="iaGateGuardar()"><i class="ti ti-device-floppy"></i> ${t('ia.gate.save')}</button>
-      <button class="btn" id="iag-ahora-no" onclick="skipExternalConnectionsPromptStep()">${t('ia.gate.notNow')}</button>
+      <button class="btn btn-fino is-on" id="iag-guardar" onclick="iaGateGuardar()"><i class="ti ti-device-floppy"></i> ${t('ia.gate.save')}</button>
+      <button class="btn btn-fino" id="iag-ahora-no" onclick="skipExternalConnectionsPromptStep()">${t('ia.gate.notNow')}</button>
     </div>`;
 }
 function iaGateGuardar(){
@@ -3352,35 +3354,36 @@ function abrirPreguntaNumeros(){
   if(!iaEsPropietario()){ showToast(t('ia.num.ownerOnly')); return; }
   if(!idrHayIA()){
     openModal(`
+      <div class="idr-modal"></div>
       <div class="modal-header"><h3><i class="ti ti-message-chatbot"></i> ${t('ia.num.title')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-      <p style="font-size:13px" id="ia-num-sinclave">${t('ia.num.noKey')}</p>
+      <p class="idr-modal-intro" id="ia-num-sinclave">${t('ia.num.noKey')}</p>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-primary" id="ia-num-ir-config" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('ia.num.goConfig')}</button>
+        <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-fino is-on" id="ia-num-ir-config" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('ia.num.goConfig')}</button>
       </div>`);
     return;
   }
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header"><h3><i class="ti ti-message-chatbot"></i> ${t('ia.num.title')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">${t('ia.num.desc')}</p>
-    <div id="ia-num-hilo" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;margin-bottom:10px"></div>
-    <div id="ia-num-sugeridas" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      ${['ia.num.q1','ia.num.q2','ia.num.q3'].map(k => `<button class="btn btn-sm" onclick="iaNumEnviar(t('${k}'))">${t(k)}</button>`).join('')}
+    <p class="idr-modal-intro">${t('ia.num.desc')}</p>
+    <div id="ia-num-hilo" class="ia-num-hilo"></div>
+    <div id="ia-num-sugeridas" class="ia-num-sug">
+      ${['ia.num.q1','ia.num.q2','ia.num.q3'].map(k => `<button class="btn btn-sm btn-fino" onclick="iaNumEnviar(t('${k}'))">${t(k)}</button>`).join('')}
     </div>
-    <div style="display:flex;gap:8px">
-      <input type="text" id="ia-num-input" style="flex:1;min-width:0" placeholder="${t('ia.num.ph')}" onkeydown="if(event.key==='Enter'){iaNumEnviar(this.value)}">
-      <button class="btn btn-primary" id="ia-num-enviar" onclick="iaNumEnviar(document.getElementById('ia-num-input').value)" aria-label="${t('ia.num.send')}"><i class="ti ti-send"></i></button>
+    <div class="ia-num-envio">
+      <input type="text" id="ia-num-input" placeholder="${t('ia.num.ph')}" onkeydown="if(event.key==='Enter'){iaNumEnviar(this.value)}">
+      <button class="btn btn-fino is-on" id="ia-num-enviar" onclick="iaNumEnviar(document.getElementById('ia-num-input').value)" aria-label="${t('ia.num.send')}"><i class="ti ti-send"></i></button>
     </div>
-    <p class="txt-xs" style="color:var(--muted);margin:8px 0 0">${t('ia.num.privacy')}</p>`);
+    <p class="txt-xs ia-num-priv">${t('ia.num.privacy')}</p>`);
   iaNumPintar();
 }
 function iaNumPintar(){
   const hilo = document.getElementById('ia-num-hilo');
   if(!hilo) return;
-  hilo.innerHTML = iaNumHist.map(m => {
-    const estilo = m.role === 'user' ? 'background:var(--ink);color:#fff' : m.error ? 'background:#FDECEC;color:var(--red)' : 'background:#F1EFE9;color:var(--ink)';
-    return `<div class="ia-num-msg ia-num-${m.role}" style="align-self:${m.role==='user'?'flex-end':'flex-start'};max-width:88%;padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word;${estilo}">${escapeHtml(m.content)}</div>`;
-  }).join('') + (iaNumPensando ? `<div style="align-self:flex-start;font-size:13px;color:var(--muted)"><i class="ti ti-loader"></i> ${t('ia.num.thinking')}</div>` : '');
+  hilo.innerHTML = iaNumHist.map(m =>
+    `<div class="idr-msg ${m.role === 'user' ? 'yo' : 'ia'} ia-num-${m.role}${m.error ? ' is-error' : ''}"><div>${escapeHtml(m.content)}</div></div>`
+  ).join('') + (iaNumPensando ? `<div class="idr-msg ia pensando"><div><i class="ti ti-loader"></i> ${t('ia.num.thinking')}</div></div>` : '');
   hilo.scrollTop = hilo.scrollHeight;
   const b = document.getElementById('ia-num-enviar'); if(b) b.disabled = iaNumPensando;
 }
