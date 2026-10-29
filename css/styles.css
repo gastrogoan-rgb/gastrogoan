@@ -2594,6 +2594,72 @@ input,select,textarea{border-radius:var(--r-s)}
 .area-tools li{white-space:nowrap}
 .area-tools .area-more{font-family:var(--mono);color:var(--muted)}
 
+/* ═══ INICIO (29/10): la puerta de entrada ═══
+   Cabecera «diario»: el día a la izquierda (mono, la cifra grande), un filete y la pregunta a la derecha en
+   Schibsted ligero, como el logotipo. Debajo, tres áreas que son solo icono y nombre: nada que leer, todo
+   que pulsar. Desde aquí los títulos de pantalla irán con el mismo peso ligero. */
+.home-head{display:flex;align-items:stretch;gap:28px;padding:48px 0 6px}
+.home-date{display:flex;flex-direction:column;justify-content:center;gap:5px;padding-right:28px;border-right:1px solid var(--hair);
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex:0 0 auto}
+.home-date b{font-size:clamp(44px,5vw,58px);font-weight:500;letter-spacing:-.05em;line-height:.95;color:var(--ink)}
+.home-title{align-self:center;margin:0;font-size:clamp(28px,3.6vw,44px);font-weight:300;letter-spacing:-.035em;line-height:1.08;color:var(--ink);text-wrap:balance}
+.home-title:empty{display:none}
+.folder-grid{gap:18px;padding:34px 0 8px}
+.folder-grid .folder-card,.folder-grid .folder-card.folder-cocina,.folder-grid .folder-card.folder-sala,.folder-grid .folder-card.folder-gestion{
+  position:relative;justify-content:space-between;min-height:clamp(220px,34vh,330px);padding:28px 28px 26px;overflow:hidden;
+  transition:background-color .25s,border-color .25s,color .25s,transform .25s cubic-bezier(.2,.7,.2,1)}
+/* el icono vive en un recuadro suave; al pasar, la tarjeta se invierte a tinta y el icono se enciende en verde */
+.area-icon{display:flex;align-items:center;justify-content:center;width:72px;height:72px;border:1px solid var(--hair);border-radius:var(--r-s);
+  background:var(--brand-cream);color:var(--olive);transition:background-color .25s,border-color .25s,color .25s}
+.folder-grid .folder-card .area-icon .ti{font-size:38px;line-height:1;color:inherit}
+.area-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;width:100%}
+.folder-grid .folder-card h2{font-size:32px;font-weight:500;letter-spacing:-.035em;line-height:1;margin:0;color:var(--ink);transition:color .25s}
+.folder-grid .folder-card .area-go{font-size:22px;color:var(--muted);flex:0 0 auto;margin-bottom:3px;transition:transform .25s cubic-bezier(.2,.7,.2,1),color .25s}
+/* Cada área con su color (pedido el 29/10): Cocina en blanco, Sala en el verde de la marca, Gestión en tinta.
+   Al pasar, todas se elevan un poco y la flecha avanza; solo cambia el matiz, nunca el tamaño. */
+.folder-grid .folder-card:hover,.folder-grid .folder-card:focus-visible{transform:translateY(-4px);box-shadow:0 18px 36px -18px rgba(28,26,23,.35)}
+.folder-grid .folder-card:hover .area-go,.folder-grid .folder-card:focus-visible .area-go{transform:translateX(5px)}
+/* Cocina · blanco */
+.folder-grid .folder-card.folder-cocina:hover{border-color:var(--ink)}
+.folder-grid .folder-card.folder-cocina:hover .area-go{color:var(--ink)}
+.folder-grid .folder-card.folder-cocina:hover .area-icon{background:var(--olive);border-color:var(--olive);color:#fff}
+/* Sala · verde */
+.folder-grid .folder-card.folder-sala{background:var(--olive);border-color:var(--olive)}
+.folder-grid .folder-card.folder-sala h2{color:#fff}
+.folder-grid .folder-card.folder-sala .area-icon{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);color:#fff}
+.folder-grid .folder-card.folder-sala .area-go{color:rgba(255,255,255,.75)}
+.folder-grid .folder-card.folder-sala:hover{background:#3C4D40;border-color:#3C4D40}
+.folder-grid .folder-card.folder-sala:hover .area-go{color:#fff}
+/* Gestión · tinta */
+.folder-grid .folder-card.folder-gestion{background:var(--ink);border-color:var(--ink)}
+.folder-grid .folder-card.folder-gestion h2{color:#FAF8F4}
+.folder-grid .folder-card.folder-gestion .area-icon{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16);color:var(--olive-l)}
+.folder-grid .folder-card.folder-gestion .area-go{color:rgba(250,248,244,.6)}
+.folder-grid .folder-card.folder-gestion:hover{background:#2A2824;border-color:#2A2824}
+.folder-grid .folder-card.folder-gestion:hover .area-go{color:var(--olive-l)}
+.folder-grid .folder-card:active{transform:scale(.985)}
+@media (max-width:900px){
+  .folder-grid .folder-card,.folder-grid .folder-card.folder-cocina,.folder-grid .folder-card.folder-sala,.folder-grid .folder-card.folder-gestion{min-height:190px;padding:22px 20px 20px}
+  .area-icon{width:60px;height:60px}.folder-grid .folder-card .area-icon .ti{font-size:32px}
+  .folder-grid .folder-card h2{font-size:26px}
+}
+@media (max-width:760px){
+  .home-head{gap:18px;padding:26px 0 2px}
+  .home-date{padding-right:18px;font-size:11px}
+  .home-date b{font-size:40px}
+  .home-title{font-size:29px}
+  .folder-grid{grid-template-columns:1fr !important;gap:10px !important;padding:20px 0 6px !important}
+  .folder-grid .folder-card,.folder-grid .folder-card.folder-cocina,.folder-grid .folder-card.folder-sala,.folder-grid .folder-card.folder-gestion{
+    flex-direction:row;align-items:center;justify-content:flex-start;gap:18px;min-height:92px;padding:16px 18px;border-radius:var(--r-m)}
+  .area-icon{width:56px;height:56px;flex:0 0 auto}.folder-grid .folder-card .area-icon .ti{font-size:30px}
+  .area-foot{align-items:center;flex:1 1 auto;min-width:0}
+  .folder-grid .folder-card h2{font-size:24px}
+}
+@media (max-width:420px){
+  .home-head{gap:14px}.home-date{padding-right:14px}.home-date b{font-size:34px}.home-title{font-size:26px}
+}
+@media (max-width:340px){.home-title{font-size:23px}}
+
 /* --- Títulos de sección dentro de una pantalla --- */
 .view .card:not(.card-compact) > h3:first-child{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:14px}
 
