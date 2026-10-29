@@ -1,7 +1,7 @@
 // Modo caos en Comandas Cocina (13/09, pedido del dueño): el hermano del de
 // Sala. En hora punta los tickets por pedido dejan de ayudar — el cocinero
 // no necesita saber de qué mesa es cada cosa, necesita saber qué saca AHORA.
-// Una sola lista con lo pendiente, el que más lleva esperando arriba.
+// Una tarjeta por mesa con lo pendiente (en rondas), la que más lleva esperando arriba (reescrito el 29/10).
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -66,20 +66,20 @@ await caso('El botón está en Comandas Cocina y enciende el modo caos', async (
     const btn = [...document.querySelectorAll('#view-comandascocina button')]
       .find(b => /caos/i.test(b.innerText));
     if(!btn) return {sinBoton:true};
-    const ticketsAntes = document.querySelectorAll('.kds-ticket').length;
+    const ticketsAntes = document.querySelectorAll('.kt:not(.cz-mesa)').length;
     btn.click();
     await new Promise(r=>setTimeout(r,400));
-    return {ticketsAntes, filas: document.querySelectorAll('.caos-fila').length,
-      ticketsDespues: document.querySelectorAll('.kds-ticket').length};
+    return {ticketsAntes, mesas: document.querySelectorAll('.cz-mesa').length,
+      ticketsDespues: document.querySelectorAll('.kt:not(.cz-mesa)').length};
   });
   assert.ok(!r.sinBoton, 'tiene que haber un botón de modo caos');
   assert.ok(r.ticketsAntes > 0, 'antes se ven los tickets de siempre: ' + JSON.stringify(r));
   assert.equal(r.ticketsDespues, 0, 'el modo caos sustituye a los tickets: ' + JSON.stringify(r));
-  assert.ok(r.filas > 0, 'y pinta la lista por orden de espera: ' + JSON.stringify(r));
+  assert.ok(r.mesas > 0, 'y pinta una tarjeta por mesa: ' + JSON.stringify(r));
 });
 
 await caso('Solo lo PENDIENTE de cocina: ni bebidas, ni entregado, ni sin marchar', async () => {
-  const platos = await page.evaluate(()=>[...document.querySelectorAll('.caos-fila .caos-plato strong')].map(e=>e.innerText));
+  const platos = await page.evaluate(()=>[...document.querySelectorAll('.cz-mesa .kt-pl .n')].map(e=>e.innerText.trim()));
   const texto = platos.join(' | ');
   assert.equal(platos.length, 4, 'cuatro platos pendientes: ' + texto);
   assert.ok(!/Cerveza/.test(texto), 'una bebida no es de cocina: ' + texto);
@@ -87,53 +87,95 @@ await caso('Solo lo PENDIENTE de cocina: ni bebidas, ni entregado, ni sin marcha
   assert.ok(!/Sin marchar/.test(texto), 'lo que no se ha marchado todavía no es de cocina: ' + texto);
 });
 
-await caso('El que más lleva esperando, arriba del todo', async () => {
-  const minutos = await page.evaluate(()=>[...document.querySelectorAll('.caos-fila .caos-reloj')].map(e=>parseInt(e.innerText,10)));
+await caso('Cada mesa es UNA tarjeta: sus platos no se reparten por la lista', async () => {
+  const r = await page.evaluate(()=>{
+    const tarjetas = [...document.querySelectorAll('.cz-mesa')];
+    const mesa1 = tarjetas.filter(c => c.querySelector('.kt-mesa').innerText.trim() === 'Mesa 1');
+    return {tarjetas: tarjetas.length, mesa1: mesa1.length, platosMesa1: mesa1[0] ? mesa1[0].innerText : ''};
+  });
+  assert.equal(r.tarjetas, 3, 'tres mesas con algo pendiente: ' + JSON.stringify(r));
+  assert.equal(r.mesa1, 1, 'la Mesa 1 sale una sola vez: ' + JSON.stringify(r));
+  assert.ok(/GG Classic/.test(r.platosMesa1) && /Patatas/.test(r.platosMesa1), 'con sus dos platos dentro: ' + r.platosMesa1);
+});
+
+await caso('La mesa que más lleva esperando, arriba del todo', async () => {
+  const minutos = await page.evaluate(()=>[...document.querySelectorAll('.cz-mesa .kt-tm')].map(e=>parseInt(e.innerText,10)));
   const ordenado = [...minutos].sort((a,b)=>b-a);
   assert.deepEqual(minutos, ordenado, 'tiene que ir de más a menos espera: ' + JSON.stringify(minutos));
-  assert.ok(minutos[0] >= 30, 'el primero es el de 31 minutos: ' + JSON.stringify(minutos));
+  assert.ok(minutos[0] >= 30, 'la primera es la de 31 minutos: ' + JSON.stringify(minutos));
 });
 
 await caso('Lo que pasa de 15 minutos se marca en rojo', async () => {
-  const r = await page.evaluate(()=>{
-    const filas = [...document.querySelectorAll('.caos-fila')];
-    return filas.map(f => ({mins: parseInt(f.querySelector('.caos-reloj').innerText,10), urgente: f.classList.contains('caos-urgente')}));
-  });
-  r.forEach(({mins, urgente}) => {
-    assert.equal(urgente, mins >= 15, `${mins} min debería ${mins>=15?'':'no '}estar marcado: ` + JSON.stringify(r));
+  const r = await page.evaluate(()=>[...document.querySelectorAll('.cz-mesa')].map(c => ({
+    mins: parseInt(c.querySelector('.kt-tm').innerText,10), rojo: c.querySelector('.kt-tm').classList.contains('r') && c.querySelector('.kt-bar').classList.contains('r')})));
+  r.forEach(({mins, rojo}) => {
+    assert.equal(rojo, mins >= 15, `${mins} min debería ${mins>=15?'':'no '}estar en rojo: ` + JSON.stringify(r));
   });
 });
 
 await caso('La nota del camarero y la mesa se siguen viendo', async () => {
   const r = await page.evaluate(()=>{
-    const fila = [...document.querySelectorAll('.caos-fila')].find(f => /Bacon/.test(f.innerText));
-    return fila ? fila.innerText : '';
+    const c = [...document.querySelectorAll('.cz-mesa')].find(f => /Bacon/.test(f.innerText));
+    return c ? c.innerText : '';
   });
   assert.ok(/sin cebolla/i.test(r), 'la nota del camarero no se puede perder: ' + r);
   assert.ok(/Mesa 2/.test(r), 'y de qué mesa es: ' + r);
 });
 
-await caso('Marcar un plato desde el modo caos vale para toda la app', async () => {
+await caso('Lo pedido en momentos distintos queda en rondas separadas DENTRO de la misma mesa', async () => {
   const r = await page.evaluate(async ()=>{
-    const fila = [...document.querySelectorAll('.caos-fila')].find(f => /Crispy Chicken/.test(f.innerText));
-    fila.querySelector('button').click();
+    const pedido = DB.tpvOrders.find(o => o.id === 902);
+    pedido.items.push({platoId:null, recipeId:null, name:'Segunda ronda', price:5, qty:1, tanda:'', notas:'', estado:'cocina',
+      enviadoAt:new Date(Date.now() - 3*60000).toISOString(), bebida:false, modificadores:[]});
+    saveDB(); renderComandasCocina();
+    await new Promise(r=>setTimeout(r,300));
+    const c = [...document.querySelectorAll('.cz-mesa')].find(f => f.querySelector('.kt-mesa').innerText.trim() === 'Mesa 2');
+    return {rondas: c.querySelectorAll('.cz-ronda').length, tarjetasMesa2: [...document.querySelectorAll('.cz-mesa')].filter(f => f.querySelector('.kt-mesa').innerText.trim() === 'Mesa 2').length,
+      botones: c.querySelectorAll('.cz-btn').length};
+  });
+  assert.equal(r.tarjetasMesa2, 1, 'sigue siendo una sola tarjeta: ' + JSON.stringify(r));
+  assert.equal(r.rondas, 2, 'pero con dos rondas, cada una con su hora: ' + JSON.stringify(r));
+  assert.equal(r.botones, 2, 'y cada ronda con su botón: ' + JSON.stringify(r));
+});
+
+await caso('«Por plato» suma las raciones de todas las mesas', async () => {
+  const r = await page.evaluate(async ()=>{
+    DB.tpvOrders.push({id:904, tableId:2, tipo:'mesa', pax:2, status:'abierta', createdAt:new Date().toISOString(), items:[
+      {platoId:null, recipeId:null, name:'GG Classic', price:12, qty:3, tanda:'', notas:'', estado:'cocina', enviadoAt:new Date(Date.now()-2*60000).toISOString(), bebida:false, modificadores:[]}]});
+    saveDB();
+    setChaosVista('plato');
+    await new Promise(r=>setTimeout(r,300));
+    const fila = [...document.querySelectorAll('.cz-plato-fila')].find(f => /GG Classic/.test(f.innerText));
+    const res = {cant: fila ? parseInt(fila.querySelector('.cz-cant').innerText,10) : 0, mesas: fila ? fila.querySelectorAll('.cz-chip').length : 0};
+    setChaosVista('mesas');
+    DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== 904);
+    saveDB(); renderComandasCocina();
+    return res;
+  });
+  assert.equal(r.cant, 4, '1 + 3 raciones de GG Classic entre dos mesas: ' + JSON.stringify(r));
+  assert.equal(r.mesas, 2, 'y dice en qué mesas está: ' + JSON.stringify(r));
+});
+
+await caso('Marcar desde el modo caos vale para toda la app', async () => {
+  const r = await page.evaluate(async ()=>{
+    const c = [...document.querySelectorAll('.cz-mesa')].find(f => /Crispy Chicken/.test(f.innerText));
+    c.querySelector('.cz-btn').click();
     await new Promise(r=>setTimeout(r,400));
     const pedido = DB.tpvOrders.find(o => o.id === 903);
-    return {estado: pedido.items[0].estado, sigueEnLista: !!document.querySelector('.caos-fila')};
+    return {estado: pedido.items[0].estado};
   });
   // 'cocina' (en espera) → 'preparando'. Es el mismo ciclo de la vista normal.
-  assert.equal(r.estado, 'preparando', 'el botón avanza el estado real del plato');
+  assert.equal(r.estado, 'preparando', 'el botón de la ronda avanza el estado real del plato');
 });
 
 await caso('Un plato listo sale de la lista, porque ya no está pendiente', async () => {
   const r = await page.evaluate(async ()=>{
-    // Dos toques más: preparando → entregado (listo para recoger).
     const pedido = DB.tpvOrders.find(o => o.id === 903);
     pedido.items[0].estado = 'entregado';
     saveDB();
     renderComandasCocina();
     await new Promise(r=>setTimeout(r,400));
-    return [...document.querySelectorAll('.caos-fila .caos-plato strong')].map(e=>e.innerText).join(' | ');
+    return [...document.querySelectorAll('.cz-mesa .kt-pl .n')].map(e=>e.innerText).join(' | ');
   });
   assert.ok(!/Crispy Chicken/.test(r), 'lo terminado ya no ocupa sitio: ' + r);
 });
@@ -142,9 +184,9 @@ await caso('Se puede volver a los tickets de siempre', async () => {
   const r = await page.evaluate(async ()=>{
     toggleChaosCocina();
     await new Promise(r=>setTimeout(r,400));
-    return {filas: document.querySelectorAll('.caos-fila').length, tickets: document.querySelectorAll('.kds-ticket').length};
+    return {mesas: document.querySelectorAll('.cz-mesa').length, tickets: document.querySelectorAll('.kt:not(.cz-mesa)').length};
   });
-  assert.equal(r.filas, 0, 'el modo caos se apaga: ' + JSON.stringify(r));
+  assert.equal(r.mesas, 0, 'el modo caos se apaga: ' + JSON.stringify(r));
   assert.ok(r.tickets > 0, 'y vuelven los tickets: ' + JSON.stringify(r));
 });
 

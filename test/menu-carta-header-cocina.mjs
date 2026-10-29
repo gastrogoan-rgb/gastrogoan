@@ -62,7 +62,7 @@ await caso('Con un solo menú (3 tandas) y una carta suelta, salen dos bloques b
     saveDB();
     navigate('comandascocina');
     const box = document.getElementById('comandascocina-content');
-    const card = [...box.querySelectorAll('.card')].find(c => c.textContent.includes('Mesa 7'));
+    const card = [...box.querySelectorAll('.kt')].find(c => c.textContent.includes('Mesa 7'));
     const html = card.innerHTML;
     const contar = (h, s) => h.split(s).length - 1;
     return {
@@ -98,7 +98,7 @@ await caso('Con DOS menús distintos mezclados, cada uno tiene su propio bloque 
     saveDB();
     navigate('comandascocina');
     const box = document.getElementById('comandascocina-content');
-    const card = [...box.querySelectorAll('.card')].find(c => c.textContent.includes('Mesa 8'));
+    const card = [...box.querySelectorAll('.kt')].find(c => c.textContent.includes('Mesa 8'));
     const html = card.innerHTML;
     const contar = (h, s) => h.split(s).length - 1;
     // Todo lo de "Menú del día" (cabecera + Ensalada + Bistec) debe quedar
