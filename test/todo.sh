@@ -128,6 +128,7 @@ lanzar; node test/endurecido-publico.mjs > "$SALIDA/endurecido.txt" 2>&1 & P86=$
 lanzar; node test/vales-cocina.mjs > "$SALIDA/vales-cocina.txt" 2>&1 & P121=$!
 lanzar; node test/oferta.mjs > "$SALIDA/oferta.txt" 2>&1 & P122=$!
 lanzar; node test/iconos-comida.mjs > "$SALIDA/iconos-comida.txt" 2>&1 & P123=$!
+lanzar; node test/ia-proveedores.mjs > "$SALIDA/ia-proveedores.txt" 2>&1 & P124=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -286,5 +287,6 @@ espera $P112 "Pantallas nuevas en móvil (5 anchos): leer factura, cuadre del pe
 espera $P121 "Cocina: un vale nuevo cada vez que la mesa pide otra vez, y la cabecera de la carta en verde como la del menú" "$SALIDA/vales-cocina.txt" "casos pasaron"
 espera $P122 "Oferta Gastronómica: horario semanal en una fila, aviso de cambios sin guardar, y raciones/agotado que mandan lo guardado" "$SALIDA/oferta.txt" "casos pasaron"
 espera $P123 "Iconos de la carta: catálogo de comida de trazo, «Sin icono» primero, emoji antiguos que se siguen viendo, web pública idéntica" "$SALIDA/iconos-comida.txt" "casos pasaron"
+espera $P124 "IA: Gemini, Claude y ChatGPT con su petición y su respuesta exactas, errores traducidos y la prueba de conexión que no rompe lo que ya funciona" "$SALIDA/ia-proveedores.txt" "casos pasaron"
 
 exit $FALLOS

@@ -71,10 +71,11 @@ const IDR_PROVEEDORES = {
     },
     motivoCorte: j => (j && j.candidates && j.candidates[0] && j.candidates[0].finishReason) || '',
     ayuda: 'https://aistudio.google.com/apikey',
+    pasos: null,   // los de Google viven en el diccionario (ia.cfg.step1…4)
   },
   anthropic: {
     l:{es:'Anthropic (Claude)',ca:'Anthropic (Claude)',en:'Anthropic (Claude)'},
-    modeloPorDefecto: 'claude-sonnet-4-5',
+    modeloPorDefecto: 'claude-sonnet-5-5',
     url: () => 'https://api.anthropic.com/v1/messages',
     // Sin esta cabecera el navegador NO deja pasar la llamada. Verificado.
     cabeceras: k => ({
@@ -103,8 +104,67 @@ const IDR_PROVEEDORES = {
     cabecerasLista: k => ({'x-api-key': k, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'}),
     extraerModelos: j => (j.data||[]).map(m => m.id).filter(Boolean),
     ayuda: 'https://console.anthropic.com/settings/keys',
+    pasos: {
+      es:['Entra en console.anthropic.com e inicia sesión (o crea la cuenta).','Abre «API Keys» y pulsa «Create Key».','Copia la clave (empieza por sk-ant-) y pégala aquí.','Añade saldo en «Billing»: la API se paga por uso y NO viene incluida en la suscripción Claude Pro.'],
+      ca:['Entra a console.anthropic.com i inicia sessió (o crea el compte).','Obre «API Keys» i prem «Create Key».','Copia la clau (comença per sk-ant-) i enganxa-la aquí.','Afegeix saldo a «Billing»: l\'API es paga per ús i NO ve inclosa a la subscripció Claude Pro.'],
+      en:['Go to console.anthropic.com and sign in (or create the account).','Open «API Keys» and press «Create Key».','Copy the key (it starts with sk-ant-) and paste it here.','Add credit under «Billing»: the API is pay-as-you-go and is NOT included in a Claude Pro subscription.'],
+    },
+  },
+  /* ChatGPT (OpenAI). Verificado (29/10): la API admite la llamada directa desde el navegador (responde a la
+     comprobación previa con la cabecera de permiso), así que no hace falta ningún servidor. Dos particularidades:
+     · los modelos «que razonan» (gpt-5, o3…) gastan parte del presupuesto pensando ANTES de escribir, así que se
+       les da más margen (ver cuerpo) y, si aun así se cortan, el reintento de llmChat lo triplica;
+     · no admiten fijar la temperatura (solo la de fábrica), así que no se manda. */
+  openai: {
+    l:{es:'OpenAI (ChatGPT)',ca:'OpenAI (ChatGPT)',en:'OpenAI (ChatGPT)'},
+    modeloPorDefecto: 'gpt-5-mini',
+    url: () => 'https://api.openai.com/v1/chat/completions',
+    cabeceras: k => ({'content-type':'application/json', 'authorization':'Bearer ' + k}),
+    // Foto: bloque `image_url` con la imagen en base64; PDF: bloque `file`.
+    cuerpo: (sistema, mensajes, maxTokens, modelo, archivo) => {
+      const razona = /^(gpt-5|o\d)/i.test(modelo || '');
+      return {
+        model: modelo,
+        max_completion_tokens: razona ? Math.max(maxTokens, 1500) : maxTokens,
+        messages: [{role:'system', content: sistema}].concat(mensajes.map((m, i) => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: (archivo && i === mensajes.length - 1)
+            ? [archivo.mime === 'application/pdf'
+                ? {type:'file', file:{filename:'documento.pdf', file_data:`data:application/pdf;base64,${archivo.datos}`}}
+                : {type:'image_url', image_url:{url:`data:${archivo.mime};base64,${archivo.datos}`}},
+               {type:'text', text: m.content}]
+            : m.content}))),
+      };
+    },
+    extraer: j => {
+      const m = j && j.choices && j.choices[0] && j.choices[0].message;
+      const c = m && m.content;
+      return (typeof c === 'string' ? c : Array.isArray(c) ? c.map(p => p.text || '').join('') : '').trim();
+    },
+    motivoCorte: j => (j && j.choices && j.choices[0] && j.choices[0].finish_reason) || '',
+    listaModelos: () => 'https://api.openai.com/v1/models',
+    cabecerasLista: k => ({'authorization':'Bearer ' + k}),
+    // La lista trae de todo (voz, imágenes, embeddings…): solo los de chat, los más nuevos y ligeros primero.
+    extraerModelos: j => (j.data||[]).map(m => m.id).filter(id => /^(gpt-|o\d|chatgpt-)/i.test(id)
+        && !/(embedding|tts|whisper|audio|realtime|transcribe|image|moderation|search|dall|instruct|codex|davinci|babbage|preview|vision|computer)/i.test(id))
+      .sort((a, b) => (/gpt-5/.test(b) - /gpt-5/.test(a)) || (/mini/.test(b) - /mini/.test(a)) || b.localeCompare(a)),
+    ayuda: 'https://platform.openai.com/api-keys',
+    pasos: {
+      es:['Entra en platform.openai.com e inicia sesión (o crea la cuenta).','Abre «API keys» y pulsa «Create new secret key».','Copia la clave (empieza por sk-) y pégala aquí.','Añade saldo en «Billing»: la API se paga por uso y NO viene incluida en ChatGPT Plus.'],
+      ca:['Entra a platform.openai.com i inicia sessió (o crea el compte).','Obre «API keys» i prem «Create new secret key».','Copia la clau (comença per sk-) i enganxa-la aquí.','Afegeix saldo a «Billing»: l\'API es paga per ús i NO ve inclosa a ChatGPT Plus.'],
+      en:['Go to platform.openai.com and sign in (or create the account).','Open «API keys» and press «Create new secret key».','Copy the key (it starts with sk-) and paste it here.','Add credit under «Billing»: the API is pay-as-you-go and is NOT included in ChatGPT Plus.'],
+    },
   },
 };
+// Cómo conseguir la clave de cada proveedor: enlace de verdad y los pasos. Se repinta al cambiar de proveedor.
+function idrAyudaHtml(p){
+  const def = IDR_PROVEEDORES[p] || IDR_PROVEEDORES.google;
+  const pasos = def.pasos ? (def.pasos[getLang()] || def.pasos.es)
+    : [t('ia.cfg.step1'), t('ia.cfg.step2'), t('ia.cfg.step3'), t('ia.cfg.step4')];
+  return `<p class="idr-ayuda-link">${t('idr.keyWhere')} <a href="${escapeHtml(def.ayuda)}" target="_blank" rel="noopener noreferrer">${escapeHtml(def.ayuda.replace('https://',''))}</a></p>
+    <details class="idr-pasos"><summary>${gl({es:'Cómo conseguir la clave, paso a paso', ca:'Com aconseguir la clau, pas a pas', en:'How to get the key, step by step'})}</summary>
+    <ol>${pasos.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol></details>`;
+}
 
 function idrConfig(){
   try{
@@ -348,9 +408,15 @@ async function idrProbarConexion(){
     if(btn){ btn.disabled = false; btn.innerHTML = `<i class="ti ti-plug-connected"></i> ${t('idr.test')}`; }
     return;
   }
-  // Se guarda antes de probar: si funciona, ya queda puesta.
+  // Para probar hay que guardar antes lo escrito. Pero si la prueba FALLA no puede quedarse una clave o un modelo
+  // malos puestos en lugar de lo que funcionaba: se devuelve lo anterior (antes un error de tecleo al probar
+  // dejaba el asistente roto sin que nadie lo hubiera pedido).
+  const previa = idrConfig();
   idrGuardarConfig(p, k, m);
   const r = await llmChat('Responde solo con la palabra OK.', [{role:'user', content:'Di OK'}], {maxTokens: 20});
+  if(!r.ok){
+    if(previa) idrGuardarConfig(previa.proveedor, previa.clave, previa.modelo); else idrBorrarConfig();
+  }
   const res = document.getElementById('idr-test-res');
   if(r.ok){
     if(res) res.innerHTML = `<span style="color:#4A5D4E"><i class="ti ti-check"></i> ${escapeHtml(t('idr.testOk'))}</span>`;
@@ -819,6 +885,15 @@ function navIdr(vista, id){
    aviso. Desde fuera es indistinguible de "los botones no hacen nada" — que
    es justo lo que reportó el dueño y lo que no había forma de diagnosticar.
    Ahora cualquier fallo al pintar se ve en pantalla y queda guardado. */
+// Cabecera de todas las pantallas de I+D: «Volver», título, subtítulo y, a la derecha, lo que haga falta.
+function idrCabecera(titulo, sub, volverA, extra){
+  return `
+    <button class="btn btn-sm btn-back" onclick="${volverA === 'inicio' ? "navIdr('inicio')" : "navigate('folder')"}"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+    <div class="idr-cab">
+      <div style="min-width:0"><div class="view-title">${titulo}</div><div class="view-subtitle">${sub}</div></div>
+      ${extra ? `<div class="idr-cab-acc">${extra}</div>` : ''}
+    </div>`;
+}
 function renderIdr(){
   try{ renderIdrInterno(); }
   catch(e){
@@ -840,6 +915,7 @@ function renderIdrInterno(){
 
   const adnOk = idrAdnRelleno();
   const iaOk = idrHayIA();
+  const cfg = idrConfig();
   const todas = idrCreaciones();
   const sinClasificar = todas.filter(x => !x.carpetaId).length;
   const creaciones = todas
@@ -847,80 +923,68 @@ function renderIdrInterno(){
     .filter(x => idrFiltroTipo ? x.tipo === idrFiltroTipo : true)
     .slice().sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
 
-  const burbuja = (tipo, icono, titulo, desc) => `
-    <div class="card" style="cursor:pointer;text-align:center;padding:22px 16px" onclick="idrEmpezar('${tipo}')">
-      <i class="ti ${icono}" style="font-size:34px;color:var(--ink)"></i>
-      <h3 style="justify-content:center;margin:10px 0 4px">${titulo}</h3>
-      <p style="font-size:12.5px;color:var(--muted);margin:0">${desc}</p>
-    </div>`;
+  // Cada «nuevo»: icono en su recuadro, nombre, una línea de lo que hace y la flecha. Mismo lenguaje que el inicio.
+  const nuevo = (tipo, icono, titulo, desc) => `
+    <button type="button" class="idr-nuevo" onclick="idrEmpezar('${tipo}')">
+      <span class="idr-nuevo-ico"><i class="ti ${icono}"></i></span>
+      <span class="idr-nuevo-txt"><strong>${titulo}</strong><small>${desc}</small></span>
+      <i class="ti ti-arrow-right idr-nuevo-go" aria-hidden="true"></i>
+    </button>`;
+  const chip = (activo, onclick, html) => `<button type="button" class="btn btn-sm btn-fino${activo ? ' is-on' : ''}" onclick="${onclick}">${html}</button>`;
 
   box.innerHTML = `
-    <div class="view-header">
-      <div>
-        <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
-        <h2>${t('view.idr.title')}</h2>
-        <p class="view-sub">${t('view.idr.subtitle')}</p>
-      </div>
-      <button class="btn btn-sm owner-strict" onclick="irAConfigIA()"><i class="ti ti-settings"></i> ${t('idr.assistant')}</button>
-    </div>
+    ${idrCabecera(t('view.idr.title'), t('view.idr.subtitle'), 'carpeta',
+      `<button class="btn btn-sm btn-fino owner-strict" onclick="irAConfigIA()"><i class="ti ti-settings"></i> ${t('idr.assistant')}${iaOk && cfg ? ` <span class="idr-prov">${escapeHtml(gl(IDR_PROVEEDORES[cfg.proveedor].l).replace(/ \(.*/, ''))}</span>` : ''}</button>`)}
 
     ${!iaOk ? `
-      <div class="card" style="border-left:4px solid var(--ink)">
-        <h3><i class="ti ti-sparkles"></i> ${t('idr.noAssistantTitle')}</h3>
-        <p style="font-size:13px;color:var(--muted)">${t('idr.noAssistantBody')}</p>
-        <button class="btn btn-primary btn-sm" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('idr.setUpAssistant')}</button>
-      </div>` : ''}
+      <aside class="idr-aviso">
+        <i class="ti ti-sparkles"></i>
+        <div><strong>${t('idr.noAssistantTitle')}</strong><p>${t('idr.noAssistantBody')}</p></div>
+        <button class="btn btn-sm btn-fino is-on" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('idr.setUpAssistant')}</button>
+      </aside>` : ''}
 
-    <div class="card ${adnOk?'':'owner-only'}" style="${adnOk?'':'border-left:4px solid var(--ink)'}">
-      <h3><i class="ti ti-dna"></i> ${t('idr.dna')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 10px">
-        ${adnOk ? escapeHtml(idrAdnResumen()) : t('idr.dnaEmpty')}
-      </p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-sm ${adnOk?'':'btn-primary'}" onclick="idrAdnModal()"><i class="ti ti-edit"></i> ${adnOk ? t('common.edit') : t('idr.fillDna')}</button>
-      </div>
+    <aside class="idr-adn${adnOk ? '' : ' falta'} ${adnOk ? '' : 'owner-only'}">
+      <i class="ti ti-dna"></i>
+      <div style="min-width:0"><small>${t('idr.dna')}</small><p>${adnOk ? escapeHtml(idrAdnResumen()) : t('idr.dnaEmpty')}</p></div>
+      <button class="btn btn-sm btn-fino${adnOk ? '' : ' is-on'}" onclick="idrAdnModal()"><i class="ti ti-edit"></i> ${adnOk ? t('common.edit') : t('idr.fillDna')}</button>
+    </aside>
+
+    <div class="idr-nuevos">
+      ${nuevo('base','ti-soup', t('idr.newBase'), t('idr.newBaseDesc'))}
+      ${nuevo('plato','ti-tools-kitchen-2', t('idr.newDish'), t('idr.newDishDesc'))}
+      ${nuevo('menu','ti-list-numbers', t('idr.newMenu'), t('idr.newMenuDesc'))}
+      ${nuevo('carta','ti-book', t('idr.newCarta'), t('idr.newCartaDesc'))}
     </div>
 
-    <div class="grid grid-2" style="margin-top:14px">
-      ${burbuja('base','ti-soup', t('idr.newBase'), t('idr.newBaseDesc'))}
-      ${burbuja('plato','ti-tools-kitchen-2', t('idr.newDish'), t('idr.newDishDesc'))}
-      ${burbuja('menu','ti-list-numbers', t('idr.newMenu'), t('idr.newMenuDesc'))}
-      ${burbuja('carta','ti-book', t('idr.newCarta'), t('idr.newCartaDesc'))}
-    </div>
+    <h3 class="idr-titulo">${t('idr.myWork')}</h3>
 
-    <h3 class="cat-heading">${t('idr.myWork')}</h3>
-
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <button class="btn btn-sm ${idrCarpetaActiva===null?'btn-primary':''}" onclick="idrVerCarpeta(null)"><i class="ti ti-stack"></i> ${t('idr.allWork')}</button>
-      ${idrCarpetas().map(f => `
-        <button class="btn btn-sm ${idrCarpetaActiva===f.id?'btn-primary':''}" onclick="idrVerCarpeta(${f.id})"><i class="ti ti-folder"></i> ${escapeHtml(f.nombre)} (${idrCreaciones().filter(x=>x.carpetaId===f.id).length})</button>
-      `).join('')}
-      ${sinClasificar ? `<button class="btn btn-sm ${idrCarpetaActiva==='__sin'?'btn-primary':''}" onclick="idrVerCarpeta('__sin')"><i class="ti ti-folder-off"></i> ${t('idr.unfiled')} (${sinClasificar})</button>` : ''}
-      <button class="owner-only btn btn-sm" onclick="idrNuevaCarpeta()"><i class="ti ti-folder-plus"></i> ${t('idr.newFolder')}</button>
+    <div class="idr-filtros">
+      ${chip(idrCarpetaActiva===null, 'idrVerCarpeta(null)', `<i class="ti ti-stack"></i> ${t('idr.allWork')}`)}
+      ${idrCarpetas().map(f => chip(idrCarpetaActiva===f.id, `idrVerCarpeta(${f.id})`, `<i class="ti ti-folder"></i> ${escapeHtml(f.nombre)} (${idrCreaciones().filter(x=>x.carpetaId===f.id).length})`)).join('')}
+      ${sinClasificar ? chip(idrCarpetaActiva==='__sin', "idrVerCarpeta('__sin')", `<i class="ti ti-folder-off"></i> ${t('idr.unfiled')} (${sinClasificar})`) : ''}
+      <button class="owner-only btn btn-sm btn-fino" onclick="idrNuevaCarpeta()"><i class="ti ti-folder-plus"></i> ${t('idr.newFolder')}</button>
       ${idrCarpetaActiva && idrCarpetaActiva !== '__sin' ? `
-        <button class="owner-only btn btn-sm btn-icon" onclick="idrRenombrarCarpeta(${idrCarpetaActiva})" title="${t('idr.renameFolder')}"><i class="ti ti-edit"></i></button>
-        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="idrBorrarCarpeta(${idrCarpetaActiva})" title="${t('common.delete')}"><i class="ti ti-trash"></i></button>` : ''}
+        <button class="owner-only btn btn-sm btn-fino" onclick="idrRenombrarCarpeta(${idrCarpetaActiva})" title="${t('idr.renameFolder')}" aria-label="${t('idr.renameFolder')}"><i class="ti ti-edit"></i></button>
+        <button class="owner-only btn btn-sm btn-fino is-off" onclick="idrBorrarCarpeta(${idrCarpetaActiva})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>` : ''}
     </div>
-
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <div class="idr-filtros">
       ${[['', t('idr.allTypes')], ['plato', t('idr.newDish')], ['base', t('idr.newBase')], ['menu', t('idr.newMenu')], ['carta', t('idr.newCarta')]]
-        .map(([v, l]) =>
-        `<button class="btn btn-sm ${idrFiltroTipo===v?'btn-primary':''}" onclick="idrFiltrar('${v}')">${escapeHtml(l)}</button>`).join('')}
+        .map(([v, l]) => chip(idrFiltroTipo===v, `idrFiltrar('${v}')`, escapeHtml(l))).join('')}
     </div>
 
-    ${creaciones.length ? `<div class="grid grid-2">` + creaciones.map(c => `
-      <div class="card card-compact" style="cursor:pointer" onclick="navIdr('creacion', ${c.id})">
-        <h3 style="justify-content:space-between"><span style="overflow:visible;white-space:normal"><i class="ti ${idrIconoTipo(c.tipo)}"></i> ${escapeHtml(c.titulo || t('idr.untitled'))}</span></h3>
-        <p style="font-size:12px;color:var(--muted);margin:2px 0 8px">${idrProgresoTexto(c)}</p>
-        <div class="actions-cell">
-          <button class="btn btn-sm" onclick="event.stopPropagation();navIdr('creacion', ${c.id})"><i class="ti ti-arrow-right"></i> ${t('idr.continue')}</button>
-          <select class="owner-only" style="max-width:150px" onclick="event.stopPropagation()" onchange="idrMoverA(${c.id}, this.value ? Number(this.value) : null)">
+    ${creaciones.length ? `<div class="idr-trabajos">` + creaciones.map(c => `
+      <article class="idr-trabajo" onclick="navIdr('creacion', ${c.id})">
+        <span class="idr-trabajo-ico"><i class="ti ${idrIconoTipo(c.tipo)}"></i></span>
+        <div class="idr-trabajo-txt"><strong>${escapeHtml(c.titulo || t('idr.untitled'))}</strong><small>${idrProgresoTexto(c)}</small></div>
+        <div class="idr-trabajo-acc" onclick="event.stopPropagation()">
+          <select class="owner-only" aria-label="${t('idr.unfiled')}" onchange="idrMoverA(${c.id}, this.value ? Number(this.value) : null)">
             <option value="">${t('idr.unfiled')}</option>
             ${idrCarpetas().map(f=>`<option value="${f.id}"${f.id===c.carpetaId?' selected':''}>${escapeHtml(f.nombre)}</option>`).join('')}
           </select>
-          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();idrBorrarCreacion(${c.id})"><i class="ti ti-trash"></i></button>
+          <button class="btn btn-sm btn-fino is-on" onclick="navIdr('creacion', ${c.id})"><i class="ti ti-arrow-right"></i> ${t('idr.continue')}</button>
+          <button class="owner-only btn btn-sm btn-fino is-off" onclick="idrBorrarCreacion(${c.id})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>
         </div>
-      </div>
+      </article>
     `).join('') + `</div>` : `<div class="empty"><i class="ti ti-flask"></i>${todas.length ? t('idr.noneHere') : t('idr.noWorkYet')}</div>`}
   `;
 }
@@ -1061,13 +1125,7 @@ function renderIdrEncargo(box, c){
   const bloques = Array.isArray(e.bloques) ? e.bloques : [];
 
   box.innerHTML = `
-    <div class="view-header">
-      <div>
-        <button class="btn btn-sm btn-back" onclick="navIdr('inicio')"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
-        <h2>${t('idr.briefTitle')}</h2>
-        <p class="view-sub">${t('idr.briefSub')}</p>
-      </div>
-    </div>
+    ${idrCabecera(t('idr.briefTitle'), t('idr.briefSub'), 'inicio')}
     <div class="card">
       <div class="grid grid-2">
         <div class="field">
@@ -1108,7 +1166,7 @@ function renderIdrEncargo(box, c){
       </div>` : ''}
 
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="idrGuardarEncargo(${c.id})"><i class="ti ti-arrow-right"></i> ${t('idr.briefStart')}</button>
+      <button class="btn btn-fino is-on" onclick="idrGuardarEncargo(${c.id})"><i class="ti ti-arrow-right"></i> ${t('idr.briefStart')}</button>
     </div>
   `;
 }
@@ -1252,22 +1310,11 @@ function renderIdrCreacion(box){
   const hechos = (c.pasos||[]).map((p, i) => (p && p.elegido && pasos[i])
     ? `<div class="list-row"><div class="list-row-name"><span><strong>${escapeHtml(gl(pasos[i].l))}:</strong> ${escapeHtml(p.elegido)}</span></div></div>` : '').join('');
 
-  const burbuja = (m) => m.r === 'yo'
-    ? `<div style="display:flex;justify-content:flex-end;margin:8px 0">
-         <div style="max-width:80%;background:var(--ink);color:#fff;padding:9px 12px;border-radius:14px 14px 3px 14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap">${escapeHtml(m.t)}</div>
-       </div>`
-    : `<div style="display:flex;justify-content:flex-start;margin:8px 0">
-         <div style="max-width:85%;background:#F1EFE9;padding:9px 12px;border-radius:14px 14px 14px 3px;font-size:13.5px;line-height:1.5;white-space:pre-wrap">${escapeHtml(m.t)}</div>
-       </div>`;
+  // La persona, en el verde de la marca y a la derecha; el asistente, en blanco con filete y a la izquierda.
+  const burbuja = (m) => `<div class="idr-msg ${m.r === 'yo' ? 'yo' : 'ia'}"><div>${escapeHtml(m.t)}</div></div>`;
 
   box.innerHTML = `
-    <div class="view-header">
-      <div>
-        <button class="btn btn-sm btn-back" onclick="navIdr('inicio')"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
-        <h2>${escapeHtml(c.titulo || (c.tipo === 'base' ? t('idr.newBase') : t('idr.newDish')))}</h2>
-        <p class="view-sub">${idrProgresoTexto(c)}</p>
-      </div>
-    </div>
+    ${idrCabecera(escapeHtml(c.titulo || (c.tipo === 'base' ? t('idr.newBase') : t('idr.newDish'))), idrProgresoTexto(c), 'inicio')}
 
     ${hechos ? `<div class="card"><h3><i class="ti ti-checks"></i> ${t('idr.decided')}</h3>${hechos}</div>` : ''}
 
@@ -1303,10 +1350,10 @@ function renderIdrCreacion(box){
       <div class="card">
         <h3><i class="ti ti-message-circle"></i> ${t('idr.conversation')}</h3>
 
-        <div id="idr-hilo" style="max-height:46vh;overflow:auto;padding:4px 2px">
+        <div id="idr-hilo" class="idr-hilo">
           ${burbuja({r:'ia', t: idrSaludo(c.tipo)})}
           ${hilo.map(burbuja).join('')}
-          ${idrPensando ? `<div style="display:flex;justify-content:flex-start;margin:8px 0"><div style="background:#F1EFE9;padding:9px 12px;border-radius:14px;font-size:13.5px;color:var(--muted)"><i class="ti ti-loader"></i> ${t('idr.thinking')}</div></div>` : ''}
+          ${idrPensando ? `<div class="idr-msg ia pensando"><div><i class="ti ti-loader"></i> ${t('idr.thinking')}</div></div>` : ''}
         </div>
 
         ${idrUltimoFallo ? `<div style="margin-top:10px;padding:8px 10px;border-left:3px solid var(--red);font-size:12.5px">
@@ -2458,6 +2505,7 @@ function idrConfigModal(){
   const opts = Object.keys(IDR_PROVEEDORES).map(k =>
     `<option value="${k}"${k===cfg.proveedor?' selected':''}>${escapeHtml(gl(IDR_PROVEEDORES[k].l))}</option>`).join('');
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
       <h3>${t('idr.assistant')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -2476,7 +2524,7 @@ function idrConfigModal(){
     <div class="field">
       <label>${t('idr.key')}</label>
       <input type="password" id="idr-clave" value="${escapeHtml(cfg.clave||'')}" placeholder="${t('idr.keyPh')}" autocomplete="off">
-      <p style="font-size:12px;color:var(--muted);margin:6px 0 0" id="idr-ayuda">${t('idr.keyWhere')} <strong>${escapeHtml(IDR_PROVEEDORES[cfg.proveedor].ayuda)}</strong></p>
+      <div id="idr-ayuda">${idrAyudaHtml(cfg.proveedor)}</div>
     </div>
     <div class="card" style="border-left:4px solid var(--ink);margin-top:10px">
       <p style="font-size:12.5px;margin:0">${t('idr.keyWarning')}</p>
@@ -2512,7 +2560,7 @@ function idrConfigModalRefrescar(){
   const res = document.getElementById('idr-test-res');
   if(res) res.innerHTML = `<span style="color:var(--muted)">${escapeHtml(t('idr.providerChanged'))}</span>`;
   const a = document.getElementById('idr-ayuda');
-  if(a) a.innerHTML = `${t('idr.keyWhere')} <strong>${escapeHtml(def.ayuda)}</strong>`;
+  if(a) a.innerHTML = idrAyudaHtml(p);
 }
 function idrGuardarDesdeModal(){
   const p = idrValorCampo('idr-prov');
@@ -2543,6 +2591,7 @@ function idrAdnModal(){
     return `<div class="field">${lab}<input type="text" id="${id}" value="${escapeHtml(v)}" placeholder="${escapeHtml(c.ph?gl(c.ph):'')}">${ayuda}</div>`;
   };
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
       <h3><i class="ti ti-dna"></i> ${t('idr.dna')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -3141,14 +3190,8 @@ function renderIaConfigCard(){
         <div class="field">
           <label>${t('idr.key')}</label>
           <input type="password" id="idr-clave" value="${escapeHtml(cfg.clave||'')}" placeholder="${t('idr.keyPh')}" autocomplete="off">
-          <p style="font-size:12px;color:var(--muted);margin:6px 0 0" id="idr-ayuda">${t('idr.keyWhere')} <strong>${escapeHtml(def.ayuda)}</strong></p>
+          <div id="idr-ayuda">${idrAyudaHtml(cfg.proveedor)}</div>
         </div>
-        <details style="margin:8px 0">
-          <summary style="font-size:13px;cursor:pointer;font-weight:600">${t('ia.cfg.howGoogle')}</summary>
-          <ol style="font-size:13px;line-height:1.6;margin:8px 0 0 18px;padding:0">
-            <li>${t('ia.cfg.step1')}</li><li>${t('ia.cfg.step2')}</li><li>${t('ia.cfg.step3')}</li><li>${t('ia.cfg.step4')}</li>
-          </ol>
-        </details>
         <div style="border-left:4px solid var(--ink);background:var(--brand-cream);border-radius:8px;padding:10px 12px;margin:10px 0">
           <p style="font-size:12.5px;margin:0">${t('ia.cfg.whyLocal')}</p>
         </div>
@@ -3192,9 +3235,10 @@ function renderIaGateCard(){
     <ul style="font-size:13px;line-height:1.6;margin:0 0 12px 18px;padding:0">
       <li>${t('ia.gate.use1')}</li><li>${t('ia.gate.use2')}</li><li>${t('ia.gate.use3')}</li>
     </ul>
-    <div class="field"><label>${t('idr.provider')}</label><select id="iag-prov">${opts}</select></div>
+    <div class="field"><label>${t('idr.provider')}</label><select id="iag-prov" onchange="document.getElementById('iag-ayuda').innerHTML = idrAyudaHtml(this.value)">${opts}</select></div>
     <div class="field"><label>${t('idr.key')}</label><input type="password" id="iag-clave" placeholder="${t('idr.keyPh')}" autocomplete="off">
-      <p style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('ia.gate.free')} <strong>${escapeHtml(IDR_PROVEEDORES.google.ayuda)}</strong></p></div>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('ia.gate.free')}</p>
+      <div id="iag-ayuda">${idrAyudaHtml('google')}</div></div>
     <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('ia.cfg.whyLocal')}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-primary" id="iag-guardar" onclick="iaGateGuardar()"><i class="ti ti-device-floppy"></i> ${t('ia.gate.save')}</button>
