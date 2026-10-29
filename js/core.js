@@ -239,7 +239,7 @@ function renderAccessScreen(){
         <div class="access-brand-row">
           <div class="access-icon"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain"></div>
           <div class="access-brand-text">
-            <h1>GastroGoan</h1>
+            <h1 class="gg-wordmark" aria-label="GastroGoan">gastro<b>goan</b><span>.</span></h1>
             <span class="access-kicker">${t('access.kicker')}</span>
           </div>
         </div>

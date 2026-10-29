@@ -2816,6 +2816,11 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .access-brand-text .access-kicker{white-space:nowrap;text-align:center;line-height:14px;height:var(--bkit);box-sizing:border-box;display:flex;align-items:center;justify-content:center}
 .access-brand-row .access-icon{flex:0 0 auto;box-sizing:border-box;width:calc(var(--bh) + var(--bgap) + var(--bkit));height:calc(var(--bh) + var(--bgap) + var(--bkit));padding:6px;margin:0;box-shadow:none}
 #access-select-screen .access-brand{margin-bottom:6px}
+/* El logotipo ORIGINAL de la marca, el de gastrogoan.com: «gastro» normal, «goan» seminegrita y el
+   punto en verde (más claro que en la web, que va sobre fondo crema; aquí va sobre tinta). */
+#access-select-screen .gg-wordmark{font-weight:400;letter-spacing:-.03em}
+#access-select-screen .gg-wordmark b{font-weight:600}
+#access-select-screen .gg-wordmark span{color:#8FA593}
 @media (min-height:641px) and (max-height:760px){#access-select-screen{--bh:40px}}
 @media (max-height:640px){#access-select-screen{--bh:30px;--bgap:6px}}
 @media (max-width:400px){#access-select-screen{--bh:32px;--bgap:7px;--bkit:24px}.access-brand-row{gap:12px}
