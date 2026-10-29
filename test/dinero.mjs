@@ -234,21 +234,19 @@ await caso('Las raciones limitadas de un plato se guardan y se agotan', async ()
   const r = await page.evaluate(()=>{
     cartaEdit = {id:3, nombre:'C', tipo:'GENERAL', dias:[0,1,2,3,4,5,6],
       secciones:[{id:4, nombre:'S', platos:[{id:5, nombre:'Plato', precio:10, disponible:true}]}]};
-    // Pregunta por una ventana: se contesta desde aquí, como haría el dueño.
-    window.renderCartaSecciones = window.renderCartaSecciones || (()=>{});
-    const responder = v => { window.promptText = async () => v; };
-    return (async ()=>{
-      responder('8');   await setCartaPlatoStock(4, 5);
-      const puesto = cartaEdit.secciones[0].platos[0].stock;
-      responder('');    await setCartaPlatoStock(4, 5);
-      const sinLimite = cartaEdit.secciones[0].platos[0].stock;
-      responder('8');   await setCartaPlatoStock(4, 5);
-      responder('-3');  await setCartaPlatoStock(4, 5);
-      const negativo = cartaEdit.secciones[0].platos[0].stock;
-      responder(null);  await setCartaPlatoStock(4, 5);   // cancelar
-      const trasCancelar = cartaEdit.secciones[0].platos[0].stock;
-      return {puesto, sinLimite, negativo, trasCancelar};
-    })();
+    // Ventana propia de raciones (ya no es una caja de texto suelta): se rellena y se acepta desde aquí.
+    const poner = v => { setCartaPlatoStock(4, 5); document.getElementById('raciones-n').value = v; confirmarRaciones(); };
+    const cancelar = () => { setCartaPlatoStock(4, 5); closeModal(); };
+    poner('8');
+    const puesto = cartaEdit.secciones[0].platos[0].stock;
+    poner('');
+    const sinLimite = cartaEdit.secciones[0].platos[0].stock;
+    poner('8');
+    poner('-3');                                   // inválido: se rechaza y se queda en 8
+    const negativo = cartaEdit.secciones[0].platos[0].stock;
+    cancelar();
+    const trasCancelar = cartaEdit.secciones[0].platos[0].stock;
+    return {puesto, sinLimite, negativo, trasCancelar};
   });
   assert.equal(r.puesto, 8, 'debería guardar las 8 raciones');
   assert.ok(r.sinLimite === undefined || r.sinLimite === null || r.sinLimite === '', 'vaciar debe quitar el límite');

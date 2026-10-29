@@ -1643,6 +1643,7 @@ function rememberLastArea(key){
 
 /* ============== Navigation ============== */
 function goHome(){
+  if(ggEditorSucio()){ ggGuardarSiHaceFalta(() => goHome()); return; }
   const session = getAccessSession();
   if(session && session.type === 'employee'){
     // Un empleado no tiene "Inicio": su única carpeta es su área de
@@ -1656,6 +1657,7 @@ function goHome(){
   navigate('home');
 }
 function openFolder(key){
+  if(ggEditorSucio()){ ggGuardarSiHaceFalta(() => openFolder(key)); return; }
   const session = getAccessSession();
   // Un empleado solo puede estar en su propia área — nunca en la otra.
   if(session && session.type === 'employee' && session.area) key = session.area;
@@ -1880,7 +1882,92 @@ window.addEventListener('resize', () => {
   document.querySelectorAll('.ge-tab-row, .mn-indice').forEach(updateTabRowFade);
 });
 
-function navigate(view){
+/* ═══ BOTONES: PANTALLAS CON EL DISEÑO NUEVO, SIN REESCRIBIR CADA BOTÓN (29/10) ═══
+   El botón fino (`btn-fino`) es el de la cabecera. Una pantalla vieja tiene cientos de `.btn` escritos a mano en
+   su JS; en vez de tocar uno a uno, se declara aquí qué contenedores ya van con el diseño nuevo y un vigilante
+   convierte lo que se pinte dentro: `.btn-primary` pasa a verde de marca (`is-on`), `.btn-danger` a rojo suave
+   (`is-off`), y los botones de solo icono llevan su nombre accesible. Para pasar OTRA pantalla basta con añadir
+   su selector a GG_FINO_CONTENEDORES. `.btn-back` (el «Volver») se queda como está. */
+const GG_FINO_CONTENEDORES = ['#view-idr', '#modal-box:has(.idr-modal)'];
+function ggAfinarBotones(raiz){
+  if(!raiz || !raiz.querySelectorAll) return;
+  raiz.querySelectorAll('.btn:not(.btn-fino):not(.btn-back)').forEach(b => {
+    b.classList.add('btn-fino');
+    if(b.classList.contains('btn-primary')) b.classList.add('is-on');
+    if(b.classList.contains('btn-danger')) b.classList.add('is-off');
+    if(!b.getAttribute('aria-label') && !(b.textContent || '').trim() && b.title) b.setAttribute('aria-label', b.title);
+  });
+}
+function ggAfinarTodo(){
+  GG_FINO_CONTENEDORES.forEach(sel => { const el = document.querySelector(sel); if(el) ggAfinarBotones(el); });
+}
+if(typeof document !== 'undefined' && typeof MutationObserver !== 'undefined'){
+  const arrancar = () => {
+    const vigilar = document.getElementById('content');
+    const modal = document.getElementById('modal-box');
+    const obs = new MutationObserver(() => ggAfinarTodo());
+    // Solo cuelgan hijos nuevos: cambiar una clase no vuelve a disparar nada (no hay bucle).
+    if(vigilar) obs.observe(vigilar, {childList:true, subtree:true});
+    if(modal) obs.observe(modal, {childList:true, subtree:true});
+    ggAfinarTodo();
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar();
+}
+
+/* ═══ CAMBIOS SIN GUARDAR (29/10, pedido del dueño: «si hay algún cambio y se sale del lugar, que pregunte») ═══
+   Una pantalla con borrador (Carta, Menús…) se REGISTRA aquí diciendo si tiene cambios (`sucio`), cómo guardarlos
+   (`guardar`, devuelve true/false) y cómo tirarlos (`descartar`). Todo lo que saca al usuario de ahí —cambiar de
+   pantalla, volver al inicio, cerrar sesión, cambiar de negocio, recargar la pestaña— pasa por
+   `ggGuardarSiHaceFalta(accion)`: si no hay nada sin guardar, sigue; si lo hay, pregunta. Para añadir otra pantalla
+   basta con llamar a `ggRegistrarEditor`. */
+const ggEditores = {};
+function ggRegistrarEditor(id, ed){ ggEditores[id] = ed; }
+function ggEditorSucio(){
+  for(const id in ggEditores){ try{ if(ggEditores[id].sucio()) return ggEditores[id]; }catch(e){} }
+  return null;
+}
+let ggSalidaResolve = null;
+function ggPreguntarSalida(ed){
+  return new Promise(resolve => {
+    ggSalidaResolve = resolve;
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-device-floppy"></i> ${gl({es:'Hay cambios sin guardar', ca:'Hi ha canvis sense desar', en:'You have unsaved changes'})}</h3>
+        <button class="modal-close" onclick="ggRespondeSalida('seguir')">&times;</button>
+      </div>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 4px">${escapeHtml(ed && ed.nombre ? ed.nombre() : '')}</p>
+      <p style="font-size:13.5px;line-height:1.5;color:var(--muted);margin:0">${gl({es:'Si sales ahora, se perderán. ¿Qué quieres hacer?', ca:'Si surts ara, es perdran. Què vols fer?', en:'If you leave now they will be lost. What would you like to do?'})}</p>
+      <div class="modal-footer">
+        <button class="btn btn-fino" onclick="ggRespondeSalida('seguir')"><i class="ti ti-pencil"></i> ${gl({es:'Seguir editando', ca:'Seguir editant', en:'Keep editing'})}</button>
+        <button class="btn btn-fino is-off" onclick="ggRespondeSalida('descartar')"><i class="ti ti-trash"></i> ${gl({es:'Descartar', ca:'Descartar', en:'Discard'})}</button>
+        <button class="btn btn-fino is-on" onclick="ggRespondeSalida('guardar')"><i class="ti ti-device-floppy"></i> ${gl({es:'Guardar y salir', ca:'Desar i sortir', en:'Save and leave'})}</button>
+      </div>`);
+  });
+}
+function ggRespondeSalida(r){
+  const f = ggSalidaResolve; ggSalidaResolve = null;
+  closeModal();
+  if(f) f(r);
+}
+async function ggGuardarSiHaceFalta(accion){
+  const ed = ggEditorSucio();
+  if(!ed) return accion();
+  const r = await ggPreguntarSalida(ed);
+  if(r === 'seguir') return;
+  if(r === 'guardar'){ const ok = await ed.guardar(); if(!ok) return; }
+  else ed.descartar();
+  return accion();
+}
+if(typeof window !== 'undefined' && window.addEventListener){
+  window.addEventListener('beforeunload', e => { if(ggEditorSucio()){ e.preventDefault(); e.returnValue = ''; } });
+}
+
+function navigate(view, forzado){
+  // Salir de una pantalla con cambios sin guardar: se pregunta antes (ver ggGuardarSiHaceFalta).
+  if(!forzado && ggEditorSucio()){
+    const actual = document.querySelector('.view.active');
+    if(!actual || actual.id !== 'view-' + view){ ggGuardarSiHaceFalta(() => navigate(view, true)); return; }
+  }
   if(view === 'home'){
     const session = getAccessSession();
     if(session && session.type === 'employee'){ goHome(); return; }

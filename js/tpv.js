@@ -424,19 +424,6 @@ function setTpvOrderMobilePane(pane, orderId){
   renderTableOrderModal(orderId);
 }
 
-// Emoji por defecto para una sección de carta sin icono propio asignado
-function guessSeccionEmoji(nombre){
-  const n = (nombre||'').toLowerCase();
-  if(/bebida|refresco|cerveza|vino|cava|cocktail|copa|cafe|café|infusi|licor/.test(n)) return '🥤';
-  if(/entrante|aperitivo|tapa|ensalada/.test(n)) return '🥗';
-  if(/primero|sopa|crema|arroz|pasta/.test(n)) return '🥣';
-  if(/segundo|carne|pescado|principal/.test(n)) return '🍖';
-  if(/postre|dulce/.test(n)) return '🍰';
-  if(/pizza/.test(n)) return '🍕';
-  if(/pan|bocadillo|sandwich/.test(n)) return '🥖';
-  return '🍽️';
-}
-
 // Icono elegido a mano por el cliente para una carpeta de categoría, guardado
 // por nombre de categoría en uno de dos espacios independientes:
 // - 'recipe': Escandallo y Fichas Técnicas (categorías de platos/elaboraciones)
@@ -2440,7 +2427,7 @@ function renderCartaSelectorInline(order, carta){
 
   if(seccionAbierta){
     const platos = (seccionAbierta.platos||[]).filter(p=>p.disponible!==false);
-    const icono = seccionAbierta.icono || guessSeccionEmoji(seccionAbierta.nombre);
+    const icono = iconoSeccionHtml(seccionAbierta.icono, seccionAbierta.nombre, 20);
     return `
       <button class="btn btn-sm" style="margin-bottom:10px" onclick="tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})"><i class="ti ti-arrow-left"></i> ${t('common.sections')}</button>
       <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(seccionAbierta))}</div>
@@ -2457,7 +2444,7 @@ function renderCartaSelectorInline(order, carta){
     <div style="display:flex;flex-wrap:wrap;gap:8px">
       ${secciones.map(sec => {
         const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
-        const icono = sec.icono || guessSeccionEmoji(sec.nombre);
+        const icono = iconoSeccionHtml(sec.icono, sec.nombre, 26);
         return `
         <button class="btn tpv-sec-card" style="flex:1;min-width:130px;flex-direction:column;gap:4px;padding:14px 10px;height:auto" onclick="tpvSelectedSeccionId=${sec.id};renderTableOrderModal(${order.id})">
           <span class="tpv-sec-icon" style="font-size:22px">${icono}</span>

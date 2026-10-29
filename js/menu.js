@@ -16,6 +16,82 @@ function reorderButtons(onUp, onDown, isFirst, isLast){
     + `<button class="btn btn-sm btn-icon" ${isLast?'disabled':''} onclick="${onDown}" title="${t('title.moveDown')}"><i class="ti ti-chevron-down"></i></button>`;
 }
 
+/* ═══ OFERTA GASTRONÓMICA: piezas compartidas (29/10) ═══ */
+function ocRacionesTexto(stock){
+  if(stock == null) return gl({es:'Sin límite', ca:'Sense límit', en:'No limit'});
+  if(stock <= 0) return gl({es:'Agotado', ca:'Esgotat', en:'Sold out'});
+  return `${stock} ${gl({es:stock === 1 ? 'ración' : 'raciones', ca:stock === 1 ? 'ració' : 'racions', en:stock === 1 ? 'portion' : 'portions'})}`;
+}
+// «Disponible / No disponible» y «Raciones», los dos mismos botones para platos, opciones de menú y menús.
+function ocBtnDisponible(agotado, onclick){
+  return `<button type="button" class="btn btn-sm btn-fino${agotado ? ' is-off' : ''}" onclick="${onclick}" title="${escapeHtml(t('label.markDishOutHelp'))}"><i class="ti ${agotado ? 'ti-flame-off' : 'ti-check'}"></i> ${agotado ? t('common.unavailable') : t('common.available')}</button>`;
+}
+function ocBtnRaciones(stock, onclick){
+  const cls = stock != null && stock <= 0 ? ' is-off' : (stock != null ? ' is-lim' : '');
+  return `<button type="button" class="btn btn-sm btn-fino${cls}" onclick="${onclick}" title="${escapeHtml(t('title.limitPortions'))}"><i class="ti ${stock == null ? 'ti-infinity' : 'ti-stack-2'}"></i> ${escapeHtml(ocRacionesTexto(stock))}</button>`;
+}
+function ocBtnExtras(n, onclick){
+  return `<button type="button" class="btn btn-sm btn-fino" onclick="${onclick}"><i class="ti ti-adjustments"></i> ${t('title.extras')}${n ? ` (${n})` : ''}</button>`;
+}
+// Quita lo que cambia SOLO con el servicio (platos agotados, raciones que quedan) para comparar un borrador con
+// su original: marcar un plato como agotado no es «un cambio sin guardar», ya queda guardado al momento.
+function ocSinVivos(secs, hijos){
+  return (secs||[]).map(x => Object.assign({}, x, {[hijos]: (x[hijos]||[]).map(p => { const c = Object.assign({}, p); delete c.disponible; delete c.stock; return c; })}));
+}
+/* Las raciones y el «agotado» son estado del SERVICIO: el TPV los cambia solo a cada venta. Por eso se aplican AL
+   MOMENTO sobre lo guardado (no esperan al botón Guardar) y, al guardar un borrador, siempre manda lo vivo: antes
+   un borrador abierto antes del servicio machacaba al guardar las raciones que las ventas habían ido restando. */
+function cartaVivoPlato(platoId){
+  for(const c of (DB.cartas||[])) for(const sec of (c.secciones||[])) for(const p of (sec.platos||[])) if(p.id === platoId) return p;
+  return null;
+}
+function menuVivoOpcion(menuId, grupoId, opcionId){
+  const m = (DB.menus||[]).find(x => x.id === menuId);
+  const g = m && (m.grupos||[]).find(x => x.id === grupoId);
+  return (g && (g.opciones||[]).find(x => x.id === opcionId)) || null;
+}
+function ocCopiarVivo(draft, vivo){
+  if(!vivo) return;
+  if(vivo.stock == null) delete draft.stock; else draft.stock = vivo.stock;
+  if(vivo.disponible === undefined) delete draft.disponible; else draft.disponible = vivo.disponible;
+}
+// Raciones: un número (o «sin límite») en una ventana propia, con atajos, en vez de una caja de texto suelta.
+let racionesCtx = null;
+function openRacionesModal(ctx, actual, nombre){
+  racionesCtx = ctx;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-stack-2"></i> ${t('title.limitPortions')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="inc-ayuda"><strong>${escapeHtml(nombre||'')}</strong><br>${gl({es:'Cuántas raciones quedan hoy. El TPV las va restando y, al llegar a 0, lo marca como agotado solo. No se reinician solas: mañana hay que volver a ponerlas.', ca:'Quantes racions queden avui. El TPV les va restant i, en arribar a 0, ho marca com a esgotat tot sol. No es reinicien soles: demà cal tornar-les a posar.', en:'How many portions are left today. The POS subtracts them and marks it sold out at 0. They do not reset by themselves: set them again tomorrow.'})}</p>
+    <div class="field"><input type="number" id="raciones-n" min="0" step="1" inputmode="numeric" value="${actual != null ? actual : ''}" placeholder="${escapeHtml(gl({es:'Sin límite', ca:'Sense límit', en:'No limit'}))}"></div>
+    <div class="inc-tipos">${[5,10,15,20,30,50].map(n => `<button type="button" class="btn btn-sm btn-fino" onclick="document.getElementById('raciones-n').value=${n}">${n}</button>`).join('')}<button type="button" class="btn btn-sm btn-fino" onclick="document.getElementById('raciones-n').value=''"><i class="ti ti-infinity"></i> ${gl({es:'Sin límite', ca:'Sense límit', en:'No limit'})}</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="confirmarRaciones()"><i class="ti ti-check"></i> ${t('common.save')}</button>
+    </div>`);
+  setTimeout(() => document.getElementById('raciones-n')?.focus(), 50);
+}
+function confirmarRaciones(){
+  const txt = (document.getElementById('raciones-n').value || '').trim();
+  let n = null;
+  if(txt !== ''){
+    n = parseInt(txt, 10);
+    if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
+  }
+  const c = racionesCtx; racionesCtx = null;
+  closeModal();
+  if(!c) return;
+  if(c.tipo === 'plato') aplicarRacionesPlato(c.secId, c.platoId, n);
+  else if(c.tipo === 'opcion') aplicarRacionesOpcion(c.grupoId, c.opcionId, n);
+  else if(c.tipo === 'menu') aplicarRacionesMenu(c.id, n);
+}
+function ocPonerRaciones(obj, n){
+  if(n == null) delete obj.stock;
+  else { obj.stock = n; obj.disponible = n > 0; }
+}
+
 function migrateCartas(){
   if((!DB.cartas || !DB.cartas.length) && DB.menuItems && DB.menuItems.length){
     const groups = {};
@@ -68,15 +144,26 @@ function groupScheduleDays(horario){
     days: idxs.length===7 ? t('common.allDays') : idxs.map(i=>weekDayShort(i)).join(', ')
   }));
 }
+// Las horas de un día en corto: «12–16» si son en punto, «12:30–16» si no.
+function horaCorta(h){
+  if(!h) return '';
+  const [hh, mm] = h.split(':');
+  return String(parseInt(hh, 10)) + (mm && mm !== '00' ? ':' + mm : '');
+}
+// El horario de una carta o menú como UNA tira de siete casillas (Lun … Dom), cada una con sus horas. Antes
+// eran tantas líneas como horarios distintos hubiera, y una carta con horario diferente cada día ocupaba siete
+// renglones y ensanchaba la fila de la lista. Un día sin horas concretas pone «Todo el día»; uno apagado, «—».
 function renderItemScheduleHtml(item){
-  const groups = groupScheduleDays(migrateItemHorario(item));
-  if(!groups) return `<span style="font-size:12px;color:var(--muted)">${t('empty.noActiveDays')}</span>`;
-  return `<div style="display:flex;flex-direction:column;gap:3px">${groups.map(({label, days})=>`
-    <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">
-      <span style="font-weight:600">${escapeHtml(days)}</span>
-      <span class="badge badge-gray" style="font-size:11.5px"><i class="ti ti-clock" style="margin-right:2px"></i>${escapeHtml(label)}</span>
-    </div>
-  `).join('')}</div>`;
+  const horario = migrateItemHorario(item);
+  if(horarioNuncaActivo(horario)) return `<span class="horsem-vacio"><i class="ti ti-calendar-off"></i> ${t('empty.noActiveDays')}</span>`;
+  return `<div class="horsem" role="list">${horario.map((d, i) => {
+    const on = d.activo !== false;
+    const fr = on ? (d.franjas||[]).filter(f => f.desde && f.hasta) : [];
+    const horas = !on ? '<span>—</span>'
+      : (fr.length ? fr.map(f => `<span>${escapeHtml(horaCorta(f.desde))}–${escapeHtml(horaCorta(f.hasta))}</span>`).join('')
+        : `<span class="todo">${gl({es:'Todo', ca:'Tot', en:'All'})}</span>`);
+    return `<div class="horsem-d${on ? '' : ' off'}" role="listitem" title="${escapeHtml(weekDayFull(i))}"><b>${escapeHtml(weekDayShort(i))}</b>${horas}</div>`;
+  }).join('')}</div>`;
 }
 // Versión en texto plano (sin HTML) del horario, para el resumen que se ve
 // en la cabecera colapsada del editor.
@@ -196,15 +283,15 @@ function renderOferta(){
   menusTabBtn.innerHTML = `<i class="ti ${isSala?'ti-glass-full':'ti-list-details'}"></i> ${isSala ? t('tab.maridajes') : t('tab.menus')}`;
   document.getElementById('oferta-carta-tab').style.display = ofertaTab==='carta' ? '' : 'none';
   document.getElementById('oferta-menus-tab').style.display = ofertaTab==='menus' ? '' : 'none';
-  document.getElementById('oferta-tab-carta').classList.toggle('btn-primary', ofertaTab==='carta');
-  document.getElementById('oferta-tab-menus').classList.toggle('btn-primary', ofertaTab==='menus');
+  document.getElementById('oferta-tab-carta').classList.toggle('is-on', ofertaTab==='carta');
+  document.getElementById('oferta-tab-menus').classList.toggle('is-on', ofertaTab==='menus');
   if(ofertaTab==='carta') renderCarta();
   else renderMenu();
 }
 function setOfertaTab(tab){
-  ofertaTab = tab;
-  renderOferta();
-  scrollContentToTop();
+  if(tab === ofertaTab) return;
+  // Cambiar de pestaña con un borrador a medias también es «salir»: se pregunta.
+  ggGuardarSiHaceFalta(() => { ofertaTab = tab; renderOferta(); scrollContentToTop(); });
 }
 
 function renderCarta(){
@@ -237,29 +324,23 @@ function renderCartaList(){
     box.innerHTML = `<div class="empty"><i class="ti ti-book-off"></i>${t('empty.cartas')}</div>`;
     return;
   }
-  box.innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('common.name')}</th><th>${t('label.schedule')}</th><th>${t('label.sections')}</th><th>${currentArea()==='sala' ? t('label.drinksTh') : t('label.dishesTh')}</th><th></th></tr></thead>
-        <tbody>
-          ${cartas.map(c => {
-            const nsec = (c.secciones||[]).length;
-            const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
-            return `<tr>
-              <td><strong>${escapeHtml(tItem(c))}</strong>${(DB.activeCartaIds||[]).includes(c.id)?` <span class="badge badge-green">${t('badge.activeInPos')}</span>`:''}</td>
-              <td>${renderItemScheduleHtml(c)}</td>
-              <td>${nsec}</td>
-              <td>${nplat}</td>
-              <td class="actions-cell">
-                <button class="owner-only btn btn-sm btn-icon" onclick="openCarta(${c.id})"><i class="ti ti-edit"></i></button>
-                <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteCarta(${c.id})"><i class="ti ti-trash"></i></button>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
+  const bebidas = currentArea()==='sala';
+  box.innerHTML = `<div class="oc-lista">${cartas.map(c => {
+    const nsec = (c.secciones||[]).length;
+    const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
+    return `
+    <article class="oc-item">
+      <div class="oc-quien">
+        <div class="oc-nombre">${escapeHtml(tItem(c))}${(DB.activeCartaIds||[]).includes(c.id) ? ` <span class="badge badge-green">${t('badge.activeInPos')}</span>` : ''}</div>
+        <div class="oc-meta">${nsec} ${t('label.sections').toLowerCase()} · ${nplat} ${(bebidas ? t('label.drinksTh') : t('label.dishesTh')).toLowerCase()}</div>
+      </div>
+      ${renderItemScheduleHtml(c)}
+      <div class="oc-acc">
+        <button type="button" class="owner-only btn btn-sm btn-fino" onclick="openCarta(${c.id})"><i class="ti ti-edit"></i> ${gl({es:'Editar', ca:'Editar', en:'Edit'})}</button>
+        <button type="button" class="owner-only btn btn-sm btn-fino is-off" onclick="deleteCarta(${c.id})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>
+      </div>
+    </article>`;
+  }).join('')}</div>`;
 }
 
 // Horario semanal por defecto para una carta/menú: activo todos los días, sin
@@ -285,35 +366,53 @@ function migrateItemHorario(item){
 // menús. Una tarjeta por día, con espacio suficiente para leer y tocar bien
 // las horas (antes las columnas eran tan estrechas que el propio campo de
 // hora cortaba el texto, p.ej. "11:0" en vez de "11:00").
+// El editor del horario: los siete días EN UNA FILA (Lun … Dom), cada día con su casilla y, debajo, la hora de
+// apertura y la de cierre apiladas (y una segunda franja si hace falta). En pantallas estrechas las casillas
+// pasan a la línea de abajo en vez de desbordar. Los ids (`prefix-hor-i-activo`, `…-j-desde/hasta`) NO cambian:
+// readScheduleFromForm() lee de ahí.
 function renderScheduleRows(prefix, horario){
-  // Los dos campos de hora llevaban un ancho fijo (112px cada uno): en un
-  // móvil estrecho (320-360px), con el padding de la tarjeta del día y el
-  // botón de quitar franja, la fila entera pasaba del ancho disponible y
-  // desbordaba en horizontal — no se veía en la auditoría visual automática
-  // porque esta sección empieza plegada y nadie la abría durante esa
-  // pasada. Con flex-wrap y anchos mínimos en vez de fijos, la fila
-  // encoge o pasa a dos líneas en vez de desbordar.
-  return `<div class="carta-schedule-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">${horario.map((d,i) => {
+  const dias = horario.map((d, i) => {
     const franjas = d.franjas && d.franjas.length ? d.franjas : [{desde:'', hasta:''}];
+    const on = d.activo !== false;
     return `
-    <div class="carta-schedule-day" style="padding:10px;border:1px solid var(--border);border-radius:8px;min-width:0;${d.activo===false?'opacity:.55':''}">
-      <label style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px">
-        <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i});updateScheduleSummary('${prefix}')" style="width:15px;height:15px;margin:0">
-        ${weekDayFull(i)}
+    <div class="hor-d${on ? '' : ' off'}" id="${prefix}-hor-${i}-card">
+      <label class="hor-tit">
+        <input type="checkbox" id="${prefix}-hor-${i}-activo" ${on ? 'checked' : ''} onchange="toggleScheduleDia('${prefix}',${i});updateScheduleSummary('${prefix}')">
+        <span>${escapeHtml(weekDayShort(i))}</span>
       </label>
-      <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:6px">
-        ${franjas.map((f,j) => `
-          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-            <input type="time" id="${prefix}-hor-${i}-${j}-desde" class="carta-schedule-time" value="${escapeHtml(f.desde||'')}" style="padding:4px 5px;font-size:13px;flex:1 1 88px;min-width:88px;max-width:112px;min-height:32px" onchange="updateScheduleSummary('${prefix}')">
-            <span style="color:var(--muted);font-size:12px">–</span>
-            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" class="carta-schedule-time" value="${escapeHtml(f.hasta||'')}" style="padding:4px 5px;font-size:13px;flex:1 1 88px;min-width:88px;max-width:112px;min-height:32px" onchange="updateScheduleSummary('${prefix}')">
-            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>` : ''}
-          </div>
-        `).join('')}
-        ${franjas.length < 2 ? `<button class="btn btn-sm" style="align-self:flex-start" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i> ${t('common.add')}</button>` : ''}
+      <div id="${prefix}-hor-${i}-rango" class="hor-rango" style="display:${on ? 'flex' : 'none'}">
+        ${franjas.map((f, j) => `
+          <div class="hor-fr">
+            <input type="time" id="${prefix}-hor-${i}-${j}-desde" class="carta-schedule-time" aria-label="${escapeHtml(weekDayFull(i))}: ${gl({es:'abre', ca:'obre', en:'opens'})}" value="${escapeHtml(f.desde||'')}" onchange="updateScheduleSummary('${prefix}')">
+            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" class="carta-schedule-time" aria-label="${escapeHtml(weekDayFull(i))}: ${gl({es:'cierra', ca:'tanca', en:'closes'})}" value="${escapeHtml(f.hasta||'')}" onchange="updateScheduleSummary('${prefix}')">
+            ${j > 0 ? `<button type="button" class="hor-quitar" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="${t('common.remove')}" aria-label="${t('common.remove')}"><i class="ti ti-x"></i></button>` : ''}
+          </div>`).join('')}
+        ${franjas.length < 2 ? `<button type="button" class="hor-mas" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i> ${gl({es:'Otra franja', ca:'Una altra franja', en:'Add slot'})}</button>` : ''}
       </div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="hor-acc">
+      <button type="button" class="btn btn-sm btn-fino" onclick="copiarHorarioDelLunes('${prefix}')"><i class="ti ti-copy"></i> ${gl({es:'Mismo horario que el lunes', ca:'Mateix horari que el dilluns', en:'Same hours as Monday'})}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="horarioTodoElDia('${prefix}')"><i class="ti ti-clock-off"></i> ${gl({es:'Sin horas: todo el día', ca:'Sense hores: tot el dia', en:'No hours: all day'})}</button>
     </div>
-  `}).join('')}</div><p style="font-size:11.5px;color:var(--muted);margin-top:8px">${t('common.emptyAllDay')}</p>`;
+    <div class="hor-sem">${dias}</div>
+    <p class="hor-pie">${t('common.emptyAllDay')}</p>`;
+}
+// Copia el lunes (activo + franjas) a los seis días de después.
+function copiarHorarioDelLunes(prefix){
+  const h = readScheduleFromForm(prefix);
+  const lunes = JSON.parse(JSON.stringify(h[0]));
+  const nuevo = h.map((d, i) => i === 0 ? d : JSON.parse(JSON.stringify(lunes)));
+  document.getElementById(`${prefix}-horario`).innerHTML = renderScheduleRows(prefix, nuevo);
+  updateScheduleSummary(prefix);
+  ofertaMarcarCambio(prefix);
+}
+function horarioTodoElDia(prefix){
+  const h = readScheduleFromForm(prefix).map(d => ({activo: d.activo, franjas: [{desde:'', hasta:''}]}));
+  document.getElementById(`${prefix}-horario`).innerHTML = renderScheduleRows(prefix, h);
+  updateScheduleSummary(prefix);
+  ofertaMarcarCambio(prefix);
 }
 
 // Bloque plegable que envuelve renderScheduleRows(): el horario no se ve
@@ -325,16 +424,16 @@ let scheduleSectionOpen = {}; // prefix -> bool
 function renderScheduleSection(prefix, horario, titleKey, hintKey){
   const open = !!scheduleSectionOpen[prefix];
   return `
-    <div class="card" style="padding:0;overflow:hidden">
-      <button type="button" onclick="toggleScheduleSection('${prefix}')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:none;border:none;cursor:pointer;text-align:left;color:inherit;font:inherit">
+    <div class="oc-hor">
+      <button type="button" class="oc-hor-cab" onclick="toggleScheduleSection('${prefix}')" aria-expanded="${open}">
         <div style="min-width:0">
-          <div style="font-weight:700;font-size:14px"><i class="ti ti-calendar-clock"></i> ${t(titleKey)}</div>
-          <div id="${prefix}-schedule-summary" style="font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(scheduleSummaryText(horario))}</div>
+          <div class="oc-hor-tit"><i class="ti ti-calendar-clock"></i> ${t(titleKey)}</div>
+          <div id="${prefix}-schedule-summary" class="oc-hor-res">${escapeHtml(scheduleSummaryText(horario))}</div>
         </div>
-        <i class="ti ${open?'ti-chevron-up':'ti-chevron-down'}" style="flex-shrink:0"></i>
+        <i class="ti ${open?'ti-chevron-up':'ti-chevron-down'}"></i>
       </button>
-      <div id="${prefix}-schedule-body" style="display:${open?'':'none'};padding:0 14px 14px">
-        <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">${t(hintKey)}</p>
+      <div id="${prefix}-schedule-body" style="display:${open?'':'none'};padding:4px 16px 16px">
+        <p class="hor-ayuda">${t(hintKey)}</p>
         <div id="${prefix}-horario">${renderScheduleRows(prefix, horario)}</div>
       </div>
     </div>
@@ -357,6 +456,8 @@ function updateScheduleSummary(prefix){
 function toggleScheduleDia(prefix, i){
   const on = document.getElementById(`${prefix}-hor-${i}-activo`).checked;
   document.getElementById(`${prefix}-hor-${i}-rango`).style.display = on ? 'flex' : 'none';
+  const card = document.getElementById(`${prefix}-hor-${i}-card`);
+  if(card) card.classList.toggle('off', !on);
 }
 function addScheduleFranja(prefix, i){
   const horario = readScheduleFromForm(prefix);
@@ -390,12 +491,29 @@ function readScheduleFromForm(prefix){
 function horarioNuncaActivo(horario){
   return !horario || !horario.length || horario.every(d => d && d.activo === false);
 }
+// Una franja a medias (solo la apertura, o solo el cierre) no se puede guardar: se leería como «todo el día» y
+// el dueño creería que la carta cierra a una hora que en realidad no hay. Devuelve el texto del problema o ''.
+function horarioIncompleto(horario){
+  for(let i = 0; i < horario.length; i++){
+    const d = horario[i];
+    if(!d || d.activo === false) continue;
+    for(const f of (d.franjas||[])){
+      if(!!f.desde !== !!f.hasta){
+        return gl({es:`El ${weekDayFull(i).toLowerCase()} tiene una franja a medias: pon la hora de apertura Y la de cierre, o déjala vacía.`,
+                   ca:`El ${weekDayFull(i).toLowerCase()} té una franja a mitges: posa l'hora d'obertura I la de tancament, o deixa-la buida.`,
+                   en:`${weekDayFull(i)} has a half-filled slot: set both opening and closing time, or leave it empty.`});
+      }
+    }
+  }
+  return '';
+}
 
 function newCarta(){
   // El área en que se crea la carta determina su tipo: en Sala es carta de
   // bebidas (no aparece en cocina); en Cocina es carta de comida.
   cartaEdit = {id: genId(), nombre:'', area: currentArea(), horario: defaultItemHorario(), secciones:[]};
   renderCarta();
+  cartaBase = cartaSnapshot(); ofertaMarcarCambio('carta');
 }
 function openCarta(id){
   const c = DB.cartas.find(x=>x.id===id);
@@ -406,10 +524,12 @@ function openCarta(id){
   cartaEdit.horario = migrateItemHorario(cartaEdit);
   cartaEdit.secciones.forEach(s => { if(!Array.isArray(s.platos)) s.platos = []; });
   renderCarta();
+  // La «foto» de partida se toma DESPUÉS de pintar: al pintar, los platos enlazados a una receta se ponen al día
+  // con su precio, y eso no es un cambio del dueño.
+  cartaBase = cartaSnapshot(); ofertaMarcarCambio('carta');
 }
 function backToCartaList(){
-  cartaEdit = null;
-  renderCarta();
+  ggGuardarSiHaceFalta(() => { cartaEdit = null; cartaBase = ''; renderCarta(); });
 }
 async function deleteCarta(id){
   if(!isOwnerSession() && !editUnlocked) return;
@@ -421,26 +541,77 @@ async function deleteCarta(id){
   showToast(t('msg.cartaDeleted'));
 }
 function saveCarta(){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked) return false;
   const nombre = document.getElementById('carta-f-nombre').value.trim();
-  if(!nombre){ showToast(t('msg.cartaNameRequired')); return; }
+  if(!nombre){ showToast(t('msg.cartaNameRequired')); return false; }
+  const horario = readScheduleFromForm('carta');
+  const malHorario = horarioIncompleto(horario);
+  if(malHorario){ showToast(malHorario); return false; }
   cartaEdit.nombre = nombre.toUpperCase();
   // Asegura el área: una carta editada en Sala es de bebidas, en Cocina de comida.
   if(!cartaEdit.area) cartaEdit.area = currentArea();
-  cartaEdit.horario = readScheduleFromForm('carta');
+  cartaEdit.horario = horario;
   delete cartaEdit.turno;
   delete cartaEdit.dias;
+  // Raciones y «agotado» mandan siempre desde lo guardado (ver ocCopiarVivo).
+  (cartaEdit.secciones||[]).forEach(sec => (sec.platos||[]).forEach(p => ocCopiarVivo(p, cartaVivoPlato(p.id))));
   const nuncaActiva = horarioNuncaActivo(cartaEdit.horario);
   const idx = DB.cartas.findIndex(c=>c.id===cartaEdit.id);
   if(idx>=0) DB.cartas[idx] = cartaEdit;
   else DB.cartas.push(cartaEdit);
   saveDB();
   autoTranslateCarta(cartaEdit).catch(()=>{});
-  cartaEdit = null;
+  cartaEdit = null; cartaBase = '';
   updateAutoActiveCarta(true);
   renderCarta();
   showToast(nuncaActiva ? t('msg.horarioNuncaActivo') : t('msg.cartaSaved'));
+  return true;
 }
+
+/* Cambios sin guardar de la carta y del menú: la «foto» del borrador al abrirlo (cartaBase/menuBase) frente a
+   cómo está ahora, leyendo también lo que hay escrito en el formulario (nombre, horario). */
+let cartaBase = '';
+let menuBase = '';
+function cartaSnapshot(){
+  if(!cartaEdit) return '';
+  const n = document.getElementById('carta-f-nombre');
+  let horario = cartaEdit.horario;
+  if(document.getElementById('carta-hor-0-activo')){ try{ horario = readScheduleFromForm('carta'); }catch(e){} }
+  return JSON.stringify({n: n ? n.value.trim() : cartaEdit.nombre, h: horario, s: ocSinVivos(cartaEdit.secciones, 'platos')});
+}
+function menuSnapshot(){
+  if(!menuEdit) return '';
+  const v = id => { const e = document.getElementById(id); return e ? e.value : ''; };
+  let horario = menuEdit.horario;
+  if(document.getElementById('menu-hor-0-activo')){ try{ horario = readScheduleFromForm('menu'); }catch(e){} }
+  return JSON.stringify({n: v('menu-f-nombre').trim(), pb: v('menu-f-precio-base'), iva: v('menu-f-iva'), h: horario, g: ocSinVivos(menuEdit.grupos, 'opciones'), b: menuEdit.grupos.map(g => !!g.bebida)});
+}
+function ofertaMarcarCambio(prefix){
+  const el = document.getElementById(prefix + '-sucio');
+  if(!el) return;
+  const sucio = prefix === 'carta' ? (cartaEdit && cartaSnapshot() !== cartaBase) : (menuEdit && menuSnapshot() !== menuBase);
+  el.hidden = !sucio;
+}
+if(typeof document !== 'undefined' && document.addEventListener){
+  ['input','change'].forEach(ev => document.addEventListener(ev, e => {
+    const t0 = e.target && e.target.closest ? e.target : null;
+    if(!t0) return;
+    if(t0.closest('#carta-editor-view')) ofertaMarcarCambio('carta');
+    else if(t0.closest('#menu-editor-view')) ofertaMarcarCambio('menu');
+  }));
+}
+ggRegistrarEditor('carta', {
+  sucio: () => !!cartaEdit && cartaSnapshot() !== cartaBase,
+  nombre: () => gl({es:'Carta: ', ca:'Carta: ', en:'Menu: '}) + ((cartaEdit && (document.getElementById('carta-f-nombre')?.value || cartaEdit.nombre)) || gl({es:'sin nombre', ca:'sense nom', en:'unnamed'})),
+  guardar: () => saveCarta(),
+  descartar: () => { cartaEdit = null; cartaBase = ''; renderCarta(); }
+});
+ggRegistrarEditor('menu', {
+  sucio: () => !!menuEdit && menuSnapshot() !== menuBase,
+  nombre: () => gl({es:'Menú: ', ca:'Menú: ', en:'Set menu: '}) + ((menuEdit && (document.getElementById('menu-f-nombre')?.value || menuEdit.nombre)) || gl({es:'sin nombre', ca:'sense nom', en:'unnamed'})),
+  guardar: () => saveMenu(),
+  descartar: () => { menuEdit = null; menuBase = ''; renderMenu(); }
+});
 
 function renderCartaEditor(){
   document.getElementById('carta-f-nombre').value = cartaEdit.nombre || '';
@@ -459,10 +630,9 @@ function setCartaSearchQuery(val){
 function renderCartaSecciones(){
   const box = document.getElementById('carta-secciones');
   const q = cartaSearchQuery.trim().toLowerCase();
+  const bebidas = currentArea()==='sala';
   const searchBox = `
-    <div class="field" style="margin-bottom:10px">
-      <input type="text" id="carta-search-input" placeholder="${currentArea()==='sala' ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)" style="max-width:320px">
-    </div>`;
+    <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="carta-search-input" placeholder="${bebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)"></div>`;
   if(!cartaEdit.secciones.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
     return;
@@ -473,228 +643,132 @@ function renderCartaSecciones(){
     const secMatches = !q || tItem(sec).toLowerCase().includes(q);
     const visiblePlatos = q && !secMatches ? platos.filter(p => tItem(p).toLowerCase().includes(q)) : platos;
     if(q && !secMatches && !visiblePlatos.length) return '';
+    const fuera = platos.filter(p => p.disponible === false).length;
     return `
-    <div class="ge-section">
-      <div class="ge-sec-head">
-        <div style="display:flex;align-items:center;gap:4px">
+    <section class="oc-sec">
+      <div class="oc-sec-cab">
+        <div class="oc-sec-tit">
           ${reorderButtons(`moveCartaSection(${si},-1)`, `moveCartaSection(${si},1)`, si===0, si===secciones.length-1)}
-          <!-- El icono de la sección es el que ve el cliente en la web de
-               reservas y pedidos: allí cada sección es una carpeta, y este
-               es su dibujo. Se elige a mano porque adivinarlo por el nombre
-               nunca acierta del todo ("Cosas del chef", "La pizarra"). -->
-          <button class="btn btn-sm btn-icon" style="font-size:18px;line-height:1" title="${t('title.chooseFolderIcon')}" onclick="openCartaSectionIconModal(${sec.id})">${sec.icono || cartaSectionFallbackIcon(tItem(sec))}</button>
-          <h4 style="margin:0">${escapeHtml(tItem(sec))}</h4>
+          <!-- El icono de la sección es el que ve el cliente en la web de reservas y pedidos: allí cada sección
+               es una carpeta, y este es su dibujo. Se elige a mano porque adivinarlo por el nombre nunca acierta
+               del todo ("Cosas del chef", "La pizarra"). -->
+          <button type="button" class="oc-icono" title="${t('title.chooseFolderIcon')}" aria-label="${t('title.chooseFolderIcon')}" onclick="openCartaSectionIconModal(${sec.id})">${iconoSeccionHtml(sec.icono, tItem(sec), 24) || '<i class="ti ti-ban" style="opacity:.35"></i>'}</button>
+          <div style="min-width:0"><h4>${escapeHtml(tItem(sec))}</h4><span class="oc-sec-n">${platos.length} ${(bebidas ? t('label.drinksTh') : t('label.dishesTh')).toLowerCase()}${fuera ? ` · <b class="dishout-fuera">${fuera} ${gl({es:fuera===1?'agotado':'agotados', ca:fuera===1?'esgotat':'esgotats', en:'out'})}</b>` : ''}</span></div>
         </div>
-        <div class="actions-cell">
-          <button class="owner-only btn btn-sm btn-icon" title="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
-          <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
+        <div class="oc-sec-acc">
+          <button type="button" class="btn btn-sm btn-fino is-on" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${bebidas ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
+          <button type="button" class="btn btn-sm btn-fino" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
+          <button type="button" class="owner-only btn btn-sm btn-fino" title="${t('title.renameSection')}" aria-label="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
+          <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
       ${visiblePlatos.length ? visiblePlatos.map(p => {
         const pi = platos.indexOf(p);
-        // El precio de venta se gestiona siempre desde el Escandallo — la
-        // Carta solo guarda una copia para no tener que recalcularla en
-        // cada render. Si el Escandallo cambió el precio desde que se
-        // importó, se sincroniza aquí solo (antes hacía falta pulsar
-        // "Actualizar precio" a mano cada vez).
+        // El precio de venta se gestiona siempre desde el Escandallo — la Carta solo guarda una copia para no
+        // tener que recalcularla en cada render. Si el Escandallo cambió el precio desde que se importó, se
+        // sincroniza aquí solo (antes hacía falta pulsar "Actualizar precio" a mano cada vez).
         const linkedRecipe = p.recipeId ? getRecipe(p.recipeId) : null;
         if(linkedRecipe && (linkedRecipe.price||0) !== (p.precio||0)){
           p.precio = linkedRecipe.price||0;
           p.precioBase = linkedRecipe.priceBase;
           p.ivaPct = linkedRecipe.ivaPct;
         }
-        // Mismo mecanismo que el precio de sala, para el suplemento delivery:
-        // si el Escandallo lo cambia (o lo quita), la Carta lo refleja aquí
-        // sin que haga falta re-importar el plato.
+        // Mismo mecanismo que el precio de sala, para el suplemento delivery.
         if(linkedRecipe && (linkedRecipe.deliverySupplement||null) !== (p.deliverySupplement||null)){
           p.deliverySupplement = linkedRecipe.deliverySupplement||null;
         }
-        // Semáforo de rentabilidad: mismos umbrales que en Escandallo (food
-        // cost sobre el precio de venta), para ver de un vistazo, sin salir
-        // de la Carta, qué platos tienen buen margen y cuáles lo están
-        // comiendo. Sin receta vinculada no hay coste que calcular.
+        // Semáforo de rentabilidad: mismos umbrales que en Escandallo (food cost sobre el precio de venta).
         const fcPct = linkedRecipe ? recipeFoodCostPct(linkedRecipe) : null;
         const marginDot = fcPct==null || !isFinite(fcPct) ? ''
           : `<span class="badge ${fcPct>35?'badge-red':fcPct>28?'badge-amber':'badge-green'}" style="flex:none" title="${t('carta.foodCostHint')}">${fcPct.toFixed(0)}% FC</span>`;
+        const agotado = p.disponible === false;
+        const nAler = (p.allergensManual||[]).length;
         return `
-        <div class="ge-item">
-          <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
-          ${marginDot}
-          <!-- Un solo nombre: el lápiz va dentro de .owner-only, así el que no
-               puede editar ve el nombre limpio y sin un botón que no le sirve.
-               La función guarda igualmente el permiso. -->
-          <span class="carta-plato-name" style="flex:1;font-weight:600;cursor:pointer" title="${p.recipeId ? t('title.renameDish') : t('title.editPrice')}" onclick="${p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`}">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
-          <!-- Un plato SIN receta vinculada no tiene "Escandallo" donde ir a
-               cambiar el precio — por eso aquí el propio precio es clicable
-               (y abre el mismo modal de alta). El de una receta vinculada
-               sigue siendo de solo lectura: se gestiona desde Escandallo. -->
-          <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px;${p.recipeId ? '' : 'cursor:pointer;text-decoration:underline dotted'}" ${p.recipeId ? '' : `onclick="addCartaPlato(${sec.id},${p.id})" title="${t('title.editPrice')}"`}>${fmtMoney(p.precio)}</span>
-          <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
-          ${!p.recipeId ? `<button class="btn btn-sm ${(p.allergensManual||[]).length?'btn-danger':''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${(p.allergensManual||[]).length ? ` (${p.allergensManual.length})` : ''}</button>` : ''}
-          <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
-          <button class="btn btn-sm ${p.stock!=null && p.stock<=0?'btn-danger':''}" style="${p.stock!=null && p.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setCartaPlatoStock(${sec.id},${p.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${p.stock!=null ? t('label.portionsLeft').replace('${n}', p.stock) : t('btn.limitPortions')}</button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
-        </div>
-      `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : (currentArea()==='sala' ? t('empty.sectionDrinks') : t('empty.sectionDishes'))}</div>`}
-    </div>
-  `;
+        <div class="oc-plato${agotado ? ' agotado' : ''}">
+          <div class="oc-mover">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
+          <div class="oc-plato-nom">
+            <span class="carta-plato-name" title="${p.recipeId ? t('title.renameDish') : t('title.editPrice')}" onclick="${p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`}">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only"></i></span>
+            ${marginDot}
+          </div>
+          <!-- Un plato SIN receta vinculada no tiene "Escandallo" donde ir a cambiar el precio — por eso aquí el
+               propio precio es clicable (y abre el mismo modal de alta). El de una receta vinculada sigue siendo de
+               solo lectura: se gestiona desde Escandallo. -->
+          <span class="carta-plato-price oc-precio${p.recipeId ? '' : ' editable'}" ${p.recipeId ? '' : `onclick="addCartaPlato(${sec.id},${p.id})" title="${t('title.editPrice')}"`}>${fmtMoney(p.precio)}</span>
+          <div class="oc-ctrl">
+            ${ocBtnDisponible(agotado, `toggleCartaPlato(${sec.id},${p.id})`)}
+            ${ocBtnRaciones(p.stock, `setCartaPlatoStock(${sec.id},${p.id})`)}
+            ${ocBtnExtras((p.modificadores||[]).length, `openPlatoModsModal(${sec.id},${p.id})`)}
+            ${!p.recipeId ? `<button type="button" class="btn btn-sm btn-fino${nAler ? ' is-off' : ''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}" aria-label="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${nAler ? ` ${nAler}` : ''}</button>` : ''}
+            <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>`;
+      }).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : (bebidas ? t('empty.sectionDrinks') : t('empty.sectionDishes'))}</div>`}
+    </section>`;
   }).join('');
   box.innerHTML = searchBox + (rows.trim() ? rows : `<div class="empty"><i class="ti ti-search"></i>${t('empty.noSearchResults')}</div>`);
 }
 /* ---- Icono de cada sección de la carta ----
-   Catálogo aparte del de CATEGORY_ICON_CHOICES (Escandallo/Mega Lista) a
-   propósito: aquel es de uso interno y puede permitirse dibujos simpáticos,
-   pero estos los ve el cliente final en la web del restaurante, así que se
-   dejan fuera los infantiles (golosinas, caritas, pescaditos de colores,
-   comida rápida) y se queda producto y servicio de mesa. */
-const CARTA_SECTION_ICON_CHOICES = [
-  // Para empezar
-  '🫒','🧀','🥖','🍞','🧈','🥯',
-  // Verdura y huerta
-  '🥗','🥬','🍅','🍆','🥒','🌽','🥕','🥔','🧄','🧅','🫑','🌶️','🍄','🥑','🌿',
-  // Cuchara y guisos
-  '🍲','🥘','🫕','🍛',
-  // Arroces y pasta
-  '🍚','🍝','🫓',
-  // Carnes
-  '🥩','🍖','🍗','🥓',
-  // Pescado y marisco
-  '🐟','🦐','🦞','🦑','🦪','🐚',
-  // Huevos
-  '🥚','🍳',
-  // Postres
-  '🍰','🍮','🍫','🥧','🍯',
-  // Fruta
-  '🍇','🍑','🍐','🍋','🍊','🍎','🍈','🫐','🍓','🥭','🍍',
-  // Vinos y espumosos
-  '🍷','🥂','🍾','🫗',
-  // Cerveza y destilados
-  '🍺','🍻','🥃','🍸',
-  // Café e infusiones
-  '☕','🍵',
-  // Sin alcohol
-  '🥤','🧃','🧊','🥛',
-  // Genéricos
-  '🍽️','🍴','🥄','🧂','📖',
-];
-/* Catálogo de una CARTA DE BEBIDAS. Lo ve el cliente final en la web de
-   pedidos, igual que el de comida, así que fuera infantiles: solo producto
-   y servicio. Una carta de bebidas se organiza por familias (tintos,
-   blancos, ginebras, cafés...) y con la lista de comida no había forma de
-   distinguir una sección de otra: todas acababan con el mismo 🍷. */
-const CARTA_SECTION_ICON_CHOICES_BEBIDA = [
-  // Vino
-  '🍷','🍇','🫗','🏺','🛢️',
-  // Espumosos
-  '🍾','🥂',
-  // Cerveza
-  '🍺','🍻','🌾',
-  // Vermut y aperitivos
-  '🧉','🫒',
-  // Destilados y licores
-  '🥃','⚗️','🍶','🫙',
-  // Coctelería
-  '🍸','🍹','🧊','🍋',
-  // Café
-  '☕','🫘',
-  // Té e infusiones
-  '🍵','🫖','🌿','🍯',
-  // Sin alcohol
-  '🥤','🧃','🧋','🥛','🍼',
-  // Zumos y fruta
-  '🍊','🍓','🍍','🥭','🥥','🍑','🫐','🍏',
-  // Servicio
-  '🍽️','🥄','❄️','📖',
-];
-// La carta de bebidas de sala tiene su propio catálogo; la de comida, el suyo.
-function cartaSectionIconChoices(){
-  const esBebida = (typeof cartaEdit !== 'undefined' && cartaEdit && typeof isBebidaCarta === 'function')
-    ? isBebidaCarta(cartaEdit)
-    : (typeof currentArea === 'function' && currentArea() === 'sala');
-  return esBebida ? CARTA_SECTION_ICON_CHOICES_BEBIDA : CARTA_SECTION_ICON_CHOICES;
+   Catálogo de iconos de COMIDA de trazo (js/iconos-comida.js): los ve el cliente final en la web de reservas y
+   pedidos, donde cada sección es una carpeta. Se elige a mano porque adivinarlo por el nombre nunca acierta del
+   todo ("Cosas del chef", "La pizarra"); si no se elige, se adivina (iconoComidaPorNombre) y se puede dejar la
+   sección SIN icono. Lo que se guarda en `sec.icono`: «ic:<clave>», «ic:none», o nada (= automático). */
+const ICONOS_GRUPOS_BEBIDA = ['vino', 'cerveza', 'cafe', 'refresco'];
+// Los grupos en el orden en que se enseñan: en Sala (carta de bebidas) primero los de bebida; en Cocina, al final.
+function cartaSectionIconGrupos(){
+  const todos = ICONOS_COMIDA_GRUPOS.map(g => g[0]);
+  const bebida = todos.filter(g => ICONOS_GRUPOS_BEBIDA.includes(g));
+  const comida = todos.filter(g => !ICONOS_GRUPOS_BEBIDA.includes(g));
+  return currentArea() === 'sala' ? [...bebida, ...comida] : [...comida, ...bebida];
 }
-// Respaldo mientras el hostelero no elija: se adivina por el nombre de la
-// sección. Gemelo del de reservagastrogoan.html — si se toca uno hay que
-// tocar el otro, para que lo que ve el dueño al editar sea exactamente lo
-// que verá su cliente en la web.
-const CARTA_SECTION_ICON_WORDS = [
-  ['entrante','entrant','starter','aperitivo','aperitiu','tapa','pica','appetizer'], '🫒',
-  ['ensalada','amanida','salad','verdura','vegetal','hortaliza','huerta','veggie'], '🥗',
-  ['sopa','crema','caldo','soup','brou','potaje','guiso','cuchara','estofado'], '🍲',
-  ['arroz','arroces','arros','paella','risotto','rice','fideua'], '🍚',
-  ['pasta','macarron','espagueti','spaghetti','lasan'], '🍝',
-  ['carne','carn','meat','ternera','vedella','cordero','xai','cerdo','porc','pollo','pollastre','chicken','beef','pork','lamb','brasa','parrilla','graella','grill'], '🥩',
-  ['pescado','peix','fish','marisco','marisc','seafood','bacalao','bacalla','pulpo','gamba','calamar'], '🐟',
-  ['huevo','egg','tortilla','truita','revuelto','ou'], '🍳',
-  ['queso','formatge','cheese','embutido','embotit','curado','charcuter'], '🧀',
-  ['pan','bread','coca','tosta','torrada','pa'], '🥖',
-  ['postre','dessert','dolc','dulce','sweet','tarta','pastel','pastis','cake'], '🍰',
-  ['fruta','fruita','fruit'], '🍇',
-  ['tinto','negre','red wine','crianza','reserva','rioja','ribera'], '🍷',
-  ['blanco','blanc','white wine','albarino','verdejo','godello'], '🥂',
-  ['rosado','rosat','rose'], '🍷',
-  ['cava','champ','espumos','escumos','sparkling','prosecco','burbuja'], '🍾',
-  ['ginebra','gin','tonic'], '🍸',
-  ['ron','rum','whisky','whiskey','bourbon','vodka','tequila','mezcal','brandy','conyac','cognac','aguardiente','orujo','destilado','destil'], '🥃',
-  ['vermut','vermouth','aperitiu','aperitivo','spritz'], '🧉',
-  ['sidra','cider'], '🍺',
-  ['te ','tes','the','tea','infusio','infusion','tisana','rooibos','manzanilla','poleo'], '🍵',
-  ['zumo','suc','juice','smoothie','batido','batut'], '🧃',
-  ['agua','aigua','water','mineral'], '🥤',
-  ['sin alcohol','sense alcohol','alcohol free','mocktail','0.0','0,0'], '🍹',
-  ['hielo','gel','ice','granizado'], '🧊',
-  ['licor','crema','chupito','xopet','shot'], '🫙',
-  ['carta de vinos','bodega','celler','vinoteca'], '🍇',
-  ['vino','wine','bodega','celler','cava','champ','espumoso','vi'], '🍷',
-  ['cerveza','cervesa','beer','birra','caña'], '🍺',
-  ['cocktail','coctel','copa','combinado','licor','destilado','gin','whisky','vermut','vermouth','spirit'], '🍸',
-  ['cafe','cafeteria','coffee','infusion','infusio','tea','te'], '☕',
-  ['refresco','refresc','zumo','suc','juice','agua','aigua','water','bebida','beguda','drink','batido','batut','smoothie'], '🥤',
-  ['desayuno','esmorzar','breakfast','brunch'], '🥯',
-];
-// Las palabras de tres letras o menos ('ou', 'pa', 'vi', 'te') solo valen
-// como palabra entera: buscándolas por dentro, "Pasta" y "Paella" salían
-// con un pan.
-function cartaSectionIconMatches(n, w){
-  const k = String(w).toLowerCase();
-  if(k.length > 3) return n.includes(k);
-  return new RegExp('(^|[^a-z0-9])' + k + '([^a-z0-9]|$)').test(n);
-}
+// Respaldo mientras el hostelero no elija: se adivina por el nombre de la sección (clave del catálogo).
 function cartaSectionFallbackIcon(name){
-  const n = String(name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  for(let i=0; i<CARTA_SECTION_ICON_WORDS.length; i+=2){
-    if(CARTA_SECTION_ICON_WORDS[i].some(w => cartaSectionIconMatches(n, w))) return CARTA_SECTION_ICON_WORDS[i+1];
-  }
-  return '🍽️';
+  return iconoComidaPorNombre(name);
 }
 function openCartaSectionIconModal(secId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   if(!sec) return;
+  const lang = getLang();
+  const actual = sec.icono || '';
+  const boton = (valor, html, titulo, extra) => `<button type="button" class="ico-btn${actual === valor ? ' is-on' : ''}" data-n="${escapeHtml(iconoNombreNormal(extra||titulo))}" title="${escapeHtml(titulo)}" aria-label="${escapeHtml(titulo)}" onclick="setCartaSectionIcon(${sec.id},'${valor}')">${html}</button>`;
+  const nombres = {es:0, ca:1, en:2};
+  const grupos = cartaSectionIconGrupos().map(g => {
+    const info = ICONOS_COMIDA_GRUPOS.find(x => x[0] === g);
+    const items = Object.entries(ICONOS_COMIDA).filter(([, v]) => v[4] === g);
+    return `<div class="ico-grupo"><h5>${escapeHtml(info[1 + (nombres[lang] ?? 0)])}</h5><div class="ico-grid">${
+      items.map(([k, v]) => boton('ic:' + k, iconoComidaSvg(k, 28), iconoComidaNombre(k, lang), v[1] + ' ' + v[2] + ' ' + v[3] + ' ' + k)).join('')
+    }</div></div>`;
+  }).join('');
   openModal(`
     <div class="modal-header">
       <h3>${t('title.chooseFolderIcon')}: ${escapeHtml(tItem(sec))}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 10px">${t('carta.sectionIconHint')}</p>
-    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:12px">
-      ${cartaSectionIconChoices().map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCartaSectionIcon(${sec.id},'${e}')">${e}</button>`).join('')}
+    <p class="inc-ayuda">${t('carta.sectionIconHint')}</p>
+    <div class="ico-cab">
+      <div class="oc-buscar" style="margin:0"><i class="ti ti-search"></i><input type="text" id="ico-buscar" placeholder="${escapeHtml(gl({es:'Buscar icono: pizza, vino, postre…', ca:'Cercar icona: pizza, vi, postres…', en:'Search icon: pizza, wine, dessert…'}))}" oninput="filtrarIconosComida(this.value)"></div>
+      <div class="ico-especiales">
+        <button type="button" class="btn btn-sm btn-fino${actual === 'ic:none' ? ' is-on' : ''}" onclick="setCartaSectionIcon(${sec.id},'ic:none')"><i class="ti ti-ban"></i> ${gl({es:'Sin icono', ca:'Sense icona', en:'No icon'})}</button>
+        <button type="button" class="btn btn-sm btn-fino${actual === '' ? ' is-on' : ''}" onclick="setCartaSectionIcon(${sec.id},'')" title="${escapeHtml(gl({es:'Se elige solo según el nombre de la sección', ca:'S\'escull sola segons el nom de la secció', en:'Picked automatically from the section name'}))}"><i class="ti ti-wand"></i> ${gl({es:'Automático', ca:'Automàtic', en:'Automatic'})}</button>
+      </div>
     </div>
+    <div class="ico-lista" id="ico-lista">${grupos}</div>
     <div class="modal-footer">
-      <button class="btn" onclick="setCartaSectionIcon(${sec.id},'')">${t('btn.removeIcon')}</button>
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
     </div>
-  `);
+  `, {xl:true});
 }
-function setCartaSectionIcon(secId, emoji){
+function filtrarIconosComida(q){
+  const n = iconoNombreNormal(q).trim();
+  document.querySelectorAll('#ico-lista .ico-btn').forEach(b => { b.hidden = !!n && !b.dataset.n.includes(n); });
+  document.querySelectorAll('#ico-lista .ico-grupo').forEach(g => { g.hidden = ![...g.querySelectorAll('.ico-btn')].some(b => !b.hidden); });
+}
+function setCartaSectionIcon(secId, valor){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   if(!sec) return;
-  if(emoji) sec.icono = emoji; else delete sec.icono;
+  if(valor) sec.icono = valor; else delete sec.icono;
   closeModal();
   renderCartaSecciones();
 }
-
 function moveCartaSection(index, dir){
   moveArrayItem(cartaEdit.secciones, index, dir);
   renderCartaSecciones();
@@ -717,8 +791,8 @@ function newCartaSection(){
       <input type="text" id="new-carta-section-name" placeholder="${t('ph.sectionName')}">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmNewCartaSection()">${t('common.add')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="confirmNewCartaSection()">${t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-carta-section-name')?.focus(), 50);
@@ -749,21 +823,23 @@ function toggleMenuOpcionDisponible(grupoId, opcionId){
   const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
   if(!o) return;
   o.disponible = o.disponible===false ? true : false;
+  const vivo = menuVivoOpcion(menuEdit.id, grupoId, opcionId);
+  if(vivo && vivo !== o){ vivo.disponible = o.disponible; saveDB(); }
   renderMenuGrupos();
 }
-async function setMenuOpcionStock(grupoId, opcionId){
+function setMenuOpcionStock(grupoId, opcionId){
   const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
   const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
   if(!o) return;
-  const current = o.stock!=null ? String(o.stock) : '';
-  const val = await promptText(t('msg.setStockPrompt'), current, {allowEmpty:true});
-  if(val === null) return;
-  const trimmed = val.trim();
-  if(trimmed === ''){ delete o.stock; renderMenuGrupos(); return; }
-  const n = parseInt(trimmed);
-  if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
-  o.stock = n;
-  o.disponible = n > 0;
+  openRacionesModal({tipo:'opcion', grupoId, opcionId}, o.stock != null ? o.stock : null, tItem(o));
+}
+function aplicarRacionesOpcion(grupoId, opcionId, n){
+  const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
+  if(!o) return;
+  ocPonerRaciones(o, n);
+  const vivo = menuVivoOpcion(menuEdit.id, grupoId, opcionId);
+  if(vivo && vivo !== o){ ocPonerRaciones(vivo, n); saveDB(); }
   renderMenuGrupos();
 }
 
@@ -825,6 +901,13 @@ function toggleCartaPlato(secId, platoId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   p.disponible = p.disponible===false ? true : false;
+  // Es estado del servicio: se aplica ya sobre lo guardado, sin esperar a «Guardar» (ver ocCopiarVivo).
+  const vivo = cartaVivoPlato(platoId);
+  if(vivo && vivo !== p){
+    vivo.disponible = p.disponible;
+    logAudit('availability', t(p.disponible===false ? 'audit.dishMarkedOut' : 'audit.dishMarkedAvailable').replace('${name}', tItem(p)));
+    saveDB();
+  }
   renderCartaSecciones();
 }
 // Raciones limitadas: p.stock es null/undefined si el plato no lleva
@@ -834,19 +917,24 @@ function toggleCartaPlato(secId, platoId){
 // llegar a 0 el plato pasa a "No disponible" sin que nadie tenga que
 // acordarse — no se resetea solo: cuando se agote un día, hay que volver a
 // aquí y ponerle de nuevo la cantidad para el día siguiente.
-async function setCartaPlatoStock(secId, platoId){
+// Raciones limitadas: p.stock es null/undefined si el plato no lleva control de cantidad (comportamiento normal,
+// disponible/no disponible a mano). Si se le pone un número, el TPV lo va descontando solo cada vez que se marcha
+// una unidad a cocina (ver decrementDishStock en tpv.js) y al llegar a 0 el plato pasa a "No disponible" sin que
+// nadie tenga que acordarse — no se resetea solo: cuando se agote un día, hay que volver a aquí y ponerle de nuevo
+// la cantidad para el día siguiente. Abre la ventana de raciones; aplicarRacionesPlato() hace el cambio.
+function setCartaPlatoStock(secId, platoId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec && sec.platos.find(x=>x.id===platoId);
   if(!p) return;
-  const current = p.stock!=null ? String(p.stock) : '';
-  const val = await promptText(t('msg.setStockPrompt'), current, {allowEmpty:true});
-  if(val === null) return;
-  const trimmed = val.trim();
-  if(trimmed === ''){ delete p.stock; renderCartaSecciones(); return; }
-  const n = parseInt(trimmed);
-  if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
-  p.stock = n;
-  p.disponible = n > 0;
+  openRacionesModal({tipo:'plato', secId, platoId}, p.stock != null ? p.stock : null, tItem(p));
+}
+function aplicarRacionesPlato(secId, platoId, n){
+  const sec = cartaEdit && cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec && sec.platos.find(x=>x.id===platoId);
+  if(!p) return;
+  ocPonerRaciones(p, n);
+  const vivo = cartaVivoPlato(platoId);
+  if(vivo && vivo !== p){ ocPonerRaciones(vivo, n); saveDB(); }
   renderCartaSecciones();
 }
 async function removeCartaPlato(secId, platoId){
@@ -895,8 +983,8 @@ function addCartaPlato(secId, platoId){
     </div>
     <div class="txt-xs" style="color:var(--muted);margin-top:-6px;margin-bottom:10px">${t('label.ivaPlatoHint')}</div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmAddCartaPlato(${secId}${p ? ',' + p.id : ''})">${p ? t('common.save') : t('common.add')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="confirmAddCartaPlato(${secId}${p ? ',' + p.id : ''})">${p ? t('common.save') : t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-carta-plato-nombre')?.focus(), 50);
@@ -1085,8 +1173,8 @@ function importFromEscandallo(secId){
     </div>
     <div id="import-esc-list" style="max-height:320px;overflow:auto"></div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmImportEsc(${secId})">${t('common.import')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="confirmImportEsc(${secId})">${t('common.import')}</button>
     </div>
   `);
   renderImportEscList();
@@ -1211,30 +1299,23 @@ function renderMenuList(){
     box.innerHTML = `<div class="empty"><i class="ti ${isSala?'ti-glass-full':'ti-list-details'}"></i>${isSala ? t('empty.maridajes') : t('empty.menus')}</div>`;
     return;
   }
-  box.innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('common.name')}</th><th>${t('common.price')}</th><th>${t('label.schedule')}</th><th>${t('label.groups')}</th><th></th></tr></thead>
-        <tbody>
-          ${menus.map(m => {
-            const ngrupos = (m.grupos||[]).length;
-            return `<tr>
-              <td><strong>${escapeHtml(tItem(m))}</strong>${(DB.activeMenuIds||[]).includes(m.id)?` <span class="badge badge-green">${t('badge.activeInPosM')}</span>`:''}</td>
-              <td style="font-family:monospace;font-weight:600">${fmtMoney(m.precio)}</td>
-              <td>${renderItemScheduleHtml(m)}</td>
-              <td>${ngrupos}</td>
-              <td class="actions-cell">
-                <button class="btn btn-sm ${m.disponible===false?'btn-danger':''}" onclick="toggleMenuDisponible(${m.id})">${m.disponible===false?t('common.unavailable'):t('common.available')}</button>
-                <button class="btn btn-sm ${m.stock!=null && m.stock<=0?'btn-danger':''}" style="${m.stock!=null && m.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setMenuStock(${m.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${m.stock!=null ? t('label.portionsLeft').replace('${n}', m.stock) : t('btn.limitPortions')}</button>
-                <button class="owner-only btn btn-sm btn-icon" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i></button>
-                <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMenu(${m.id})"><i class="ti ti-trash"></i></button>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
+  box.innerHTML = `<div class="oc-lista">${menus.map(m => {
+    const ngrupos = (m.grupos||[]).length;
+    return `
+    <article class="oc-item oc-item-menu">
+      <div class="oc-quien">
+        <div class="oc-nombre">${escapeHtml(tItem(m))}${(DB.activeMenuIds||[]).includes(m.id) ? ` <span class="badge badge-green">${t('badge.activeInPosM')}</span>` : ''}</div>
+        <div class="oc-meta"><span class="oc-precio-m">${fmtMoney(m.precio)}</span> · ${ngrupos} ${t('label.groups').toLowerCase()}</div>
+      </div>
+      ${renderItemScheduleHtml(m)}
+      <div class="oc-acc">
+        ${ocBtnDisponible(m.disponible===false, `toggleMenuDisponible(${m.id})`)}
+        ${ocBtnRaciones(m.stock, `setMenuStock(${m.id})`)}
+        <button type="button" class="owner-only btn btn-sm btn-fino" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i> ${gl({es:'Editar', ca:'Editar', en:'Edit'})}</button>
+        <button type="button" class="owner-only btn btn-sm btn-fino is-off" onclick="deleteMenu(${m.id})" title="${t('common.delete')}" aria-label="${t('common.delete')}"><i class="ti ti-trash"></i></button>
+      </div>
+    </article>`;
+  }).join('')}</div>`;
 }
 
 /* Disponible y raciones limitadas para el MENÚ entero, igual que para
@@ -1258,18 +1339,15 @@ function toggleMenuDisponible(id){
 // número = raciones que quedan. El TPV lo va descontando al marchar y al
 // llegar a 0 el menú pasa a "No disponible" solo. No se resetea cada día a
 // propósito: hay que volver aquí y ponerle la cantidad de mañana.
-async function setMenuStock(id){
+function setMenuStock(id){
   const m = DB.menus.find(x=>x.id===id);
   if(!m) return;
-  const current = m.stock!=null ? String(m.stock) : '';
-  const val = await promptText(t('msg.setStockPrompt'), current, {allowEmpty:true});
-  if(val === null) return;
-  const trimmed = val.trim();
-  if(trimmed === ''){ delete m.stock; saveDB(); renderMenu(); return; }
-  const n = parseInt(trimmed);
-  if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
-  m.stock = n;
-  m.disponible = n > 0;
+  openRacionesModal({tipo:'menu', id}, m.stock != null ? m.stock : null, tItem(m));
+}
+function aplicarRacionesMenu(id, n){
+  const m = DB.menus.find(x=>x.id===id);
+  if(!m) return;
+  ocPonerRaciones(m, n);
   saveDB();
   renderMenu();
 }
@@ -1277,6 +1355,7 @@ async function setMenuStock(id){
 function newMenu(){
   menuEdit = {id: genId(), nombre:'', precio:0, horario: defaultItemHorario(), grupos:[], desglosarPases:true, area: currentArea()};
   renderMenu();
+  menuBase = menuSnapshot(); ofertaMarcarCambio('menu');
 }
 function openMenu(id){
   const m = DB.menus.find(x=>x.id===id);
@@ -1286,10 +1365,10 @@ function openMenu(id){
   menuEdit.horario = migrateItemHorario(menuEdit);
   menuEdit.grupos.forEach(g => { if(!Array.isArray(g.opciones)) g.opciones = []; });
   renderMenu();
+  menuBase = menuSnapshot(); ofertaMarcarCambio('menu');
 }
 function backToMenuList(){
-  menuEdit = null;
-  renderMenu();
+  ggGuardarSiHaceFalta(() => { menuEdit = null; menuBase = ''; renderMenu(); });
 }
 async function deleteMenu(id){
   if(!(await confirmModal(t('msg.confirmDeleteMenu')))) return;
@@ -1307,36 +1386,44 @@ function updateMenuFinalPriceDisplay(){
 }
 function saveMenu(){
   const nombre = document.getElementById('menu-f-nombre').value.trim();
-  if(!nombre){ showToast(t('msg.menuNameRequired')); return; }
+  if(!nombre){ showToast(t('msg.menuNameRequired')); return false; }
   const precioBaseStr = document.getElementById('menu-f-precio-base').value;
   const precioBase = parseFloat((precioBaseStr||'').replace(',','.'));
-  if(isNaN(precioBase) || precioBase < 0){ showToast(t('msg.invalidPrice')); return; }
+  if(isNaN(precioBase) || precioBase < 0){ showToast(t('msg.invalidPrice')); return false; }
   const ivaRaw = document.getElementById('menu-f-iva').value;
-  if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
+  if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return false; }
   const ivaPct = parseFloat(ivaRaw);
   const precio = Math.round(precioBase * (1 + ivaPct/100) * 100) / 100;
-  if(!menuEdit.grupos.length){ showToast(t('msg.menuNeedsGroup')); return; }
+  if(!menuEdit.grupos.length){ showToast(t('msg.menuNeedsGroup')); return false; }
   for(const g of menuEdit.grupos){
-    if(!g.opciones.length){ showToast(t('msg.groupNeedsOneOption').replace('${name}', g.nombre)); return; }
+    if(!g.opciones.length){ showToast(t('msg.groupNeedsOneOption').replace('${name}', g.nombre)); return false; }
   }
+  const horario = readScheduleFromForm('menu');
+  const malHorario = horarioIncompleto(horario);
+  if(malHorario){ showToast(malHorario); return false; }
   menuEdit.nombre = nombre;
   menuEdit.precio = precio;
   menuEdit.precioBase = precioBase;
   menuEdit.ivaPct = ivaPct;
-  menuEdit.horario = readScheduleFromForm('menu');
+  menuEdit.horario = horario;
   delete menuEdit.turno;
   delete menuEdit.dias;
   menuEdit.desglosarPases = true;
+  // Raciones y «agotado» mandan siempre desde lo guardado (ver ocCopiarVivo): el menú entero y cada opción.
+  const vivoMenu = DB.menus.find(m => m.id === menuEdit.id);
+  if(vivoMenu) ocCopiarVivo(menuEdit, vivoMenu);
+  menuEdit.grupos.forEach(g => (g.opciones||[]).forEach(o => ocCopiarVivo(o, menuVivoOpcion(menuEdit.id, g.id, o.id))));
   const nuncaActivo = horarioNuncaActivo(menuEdit.horario);
   const idx = DB.menus.findIndex(m=>m.id===menuEdit.id);
   if(idx>=0) DB.menus[idx] = menuEdit;
   else DB.menus.push(menuEdit);
   saveDB();
   autoTranslateMenu(menuEdit).catch(()=>{});
-  menuEdit = null;
+  menuEdit = null; menuBase = '';
   updateAutoActiveMenu(true);
   renderMenu();
   showToast(nuncaActivo ? t('msg.horarioNuncaActivo') : t('msg.menuSaved'));
+  return true;
 }
 
 function renderMenuEditor(){
@@ -1364,13 +1451,11 @@ function setMenuSearchQuery(val){
 function renderMenuGrupos(){
   const box = document.getElementById('menu-grupos');
   const q = menuSearchQuery.trim().toLowerCase();
-  // En sala esto son menús de BEBIDA: buscar "plato" y proponer grupos de
-  // "Primero, Segundo, Postre" no tiene sentido en una carta de vinos.
+  // En sala esto son menús de BEBIDA: buscar "plato" y proponer grupos de "Primero, Segundo, Postre" no tiene
+  // sentido en una carta de vinos.
   const isBebidas = currentArea()==='sala';
   const searchBox = `
-    <div class="field" style="margin-bottom:10px">
-      <input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)" style="max-width:320px">
-    </div>`;
+    <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)"></div>`;
   if(!menuEdit.grupos.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${isBebidas ? t('empty.groups.sala') : t('empty.groups')}</div>`;
     return;
@@ -1381,35 +1466,38 @@ function renderMenuGrupos(){
     const grupoMatches = !q || g.nombre.toLowerCase().includes(q);
     const visibleOpciones = q && !grupoMatches ? opciones.filter(o => o.nombre.toLowerCase().includes(q)) : opciones;
     if(q && !grupoMatches && !visibleOpciones.length) return '';
+    const fuera = opciones.filter(o => o.disponible === false).length;
     return `
-    <div class="ge-section">
-      <div class="ge-sec-head">
-        <div style="display:flex;align-items:center;gap:4px">
+    <section class="oc-sec">
+      <div class="oc-sec-cab">
+        <div class="oc-sec-tit">
           ${reorderButtons(`moveMenuGrupo(${gi},-1)`, `moveMenuGrupo(${gi},1)`, gi===0, gi===grupos.length-1)}
-          <h4 style="margin:0">${escapeHtml(g.nombre)}${g.bebida ? ` <span style="font-size:11px;color:var(--muted);font-weight:400"><i class="ti ti-glass-full"></i> ${t('label.sala')}</span>` : ''}</h4>
+          <div style="min-width:0"><h4>${escapeHtml(g.nombre)}${g.bebida ? ` <span class="oc-sec-n"><i class="ti ti-glass-full"></i> ${t('label.sala')}</span>` : ''}</h4><span class="oc-sec-n">${opciones.length} ${gl({es:opciones.length===1?'opción':'opciones', ca:opciones.length===1?'opció':'opcions', en:opciones.length===1?'option':'options'})}${fuera ? ` · <b class="dishout-fuera">${fuera} ${gl({es:fuera===1?'agotada':'agotadas', ca:fuera===1?'esgotada':'esgotades', en:'out'})}</b>` : ''}</span></div>
         </div>
-        <div class="actions-cell">
-          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> ${t('label.bebidaGroup')}</label>
-          <button class="owner-only btn btn-sm btn-icon" title="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> ${t('btn.newOption')}</button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
+        <div class="oc-sec-acc">
+          <label class="oc-check"><input type="checkbox" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> ${t('label.sala')}</label>
+          <button type="button" class="btn btn-sm btn-fino is-on" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> ${t('btn.newOption')}</button>
+          <button type="button" class="owner-only btn btn-sm btn-fino" title="${t('title.renameGroup')}" aria-label="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
+          <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
       ${visibleOpciones.length ? visibleOpciones.map(o => {
         const oi = opciones.indexOf(o);
+        const agotado = o.disponible === false;
         return `
-        <div class="ge-item">
-          <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
-          <span style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameOption')}" onclick="renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
-          ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--ink)">+${fmtMoney(o.suplemento)}</span>` : ''}
-          <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
-          <button class="btn btn-sm ${o.disponible===false?'btn-danger':''}" onclick="toggleMenuOpcionDisponible(${g.id},${o.id})">${o.disponible===false?t('common.unavailable'):t('common.available')}</button>
-          <button class="btn btn-sm ${o.stock!=null && o.stock<=0?'btn-danger':''}" style="${o.stock!=null && o.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setMenuOpcionStock(${g.id},${o.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${o.stock!=null ? t('label.portionsLeft').replace('${n}', o.stock) : t('btn.limitPortions')}</button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
-        </div>
-      `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : t('empty.groupOptions')}</div>`}
-    </div>
-  `;
+        <div class="oc-plato${agotado ? ' agotado' : ''}">
+          <div class="oc-mover">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
+          <div class="oc-plato-nom"><span class="carta-plato-name" title="${t('title.renameOption')}" onclick="renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only"></i></span></div>
+          ${o.suplemento ? `<span class="oc-precio">+${fmtMoney(o.suplemento)}</span>` : '<span class="oc-precio"></span>'}
+          <div class="oc-ctrl">
+            ${ocBtnDisponible(agotado, `toggleMenuOpcionDisponible(${g.id},${o.id})`)}
+            ${ocBtnRaciones(o.stock, `setMenuOpcionStock(${g.id},${o.id})`)}
+            ${ocBtnExtras((o.modificadores||[]).length, `openMenuOpcionModsModal(${g.id},${o.id})`)}
+            <button type="button" class="owner-only btn btn-sm btn-fino is-off" aria-label="${t('common.delete')}" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>`;
+      }).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : t('empty.groupOptions')}</div>`}
+    </section>`;
   }).join('');
   box.innerHTML = searchBox + (rows.trim() ? rows : `<div class="empty"><i class="ti ti-search"></i>${t('empty.noSearchResults')}</div>`);
 }
@@ -1435,8 +1523,8 @@ function newMenuGrupo(){
       <input type="text" id="new-menu-grupo-name" placeholder="${t('ph.egMenuGroups')}">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmNewMenuGrupo()">${t('common.add')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="confirmNewMenuGrupo()">${t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-menu-grupo-name')?.focus(), 50);
@@ -1506,8 +1594,8 @@ function addMenuOpcion(grupoId){
         <input type="number" id="new-menu-opcion-suplemento" step="0.01" min="0" value="0">
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">${t('common.add')}</button>
+        <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-fino is-on" onclick="confirmAddMenuOpcion(${grupoId})">${t('common.add')}</button>
       </div>
     `);
     if(!bebidas.length) document.getElementById('new-menu-opcion-tipo').value = 'manual';
@@ -1542,8 +1630,8 @@ function addMenuOpcion(grupoId){
       <input type="number" id="new-menu-opcion-suplemento" step="0.01" min="0" value="0">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">${t('common.add')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="confirmAddMenuOpcion(${grupoId})">${t('common.add')}</button>
     </div>
   `);
   if(!areaRecipes.length) document.getElementById('new-menu-opcion-tipo').value = 'manual';

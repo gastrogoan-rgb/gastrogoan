@@ -7856,6 +7856,7 @@ function updateLogoutBtn(){
   if(bizBtn) bizBtn.style.display = (session && session.type === 'employee') ? 'none' : '';
 }
 async function logoutAccessSession(){
+  if(ggEditorSucio()){ return ggGuardarSiHaceFalta(() => logoutAccessSession()); }
   if(!(await confirmModal(t('msg.confirmLogout')))) return;
   clearAccessSession();
   areaUnlocked = {cocina:false, sala:false};

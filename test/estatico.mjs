@@ -23,7 +23,7 @@ function caso(nombre, fn){
 }
 
 // El mismo orden que usa build.sh: importa, porque decide quién gana.
-const ORDEN = ['core.js','i18n.js','frases.js','ui.js','finance.js','recipes.js','menu.js','tpv.js','operations.js','hr.js','idr.js','polish.js','app.js'];
+const ORDEN = ['core.js','i18n.js','frases.js','iconos-comida.js','iconos-comida-uso.js','ui.js','finance.js','recipes.js','menu.js','tpv.js','operations.js','hr.js','idr.js','polish.js','app.js'];
 const dir = new URL('../js/', import.meta.url);
 const ficheros = ORDEN.filter(f => readdirSync(dir).includes(f));
 const fuentes = {};
