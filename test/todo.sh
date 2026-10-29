@@ -125,6 +125,7 @@ lanzar; node test/cdr-periodo.mjs > "$SALIDA/cdrperiodo.txt" 2>&1 & P83=$!
 lanzar; node test/cliente-en-riesgo.mjs > "$SALIDA/clienteriesgo.txt" 2>&1 & P84=$!
 lanzar; node test/movil.mjs > "$SALIDA/movil.txt" 2>&1 & P85=$!
 lanzar; node test/endurecido-publico.mjs > "$SALIDA/endurecido.txt" 2>&1 & P86=$!
+lanzar; node test/vales-cocina.mjs > "$SALIDA/vales-cocina.txt" 2>&1 & P121=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -280,5 +281,6 @@ espera $P104 "Carta por QR en la mesa: token por mesa, precios de la carta, pago
 espera $P111 "Factura dentro del pedido: cuadre línea a línea, precios con historial, gasto sin duplicar, lo recibido no se pisa" "$SALIDA/factura-pedido.txt" "todos los casos de factura-pedido pasaron"
 espera $P110 "Pregúntale a tus números: clave de IA en Mi Negocio (solo en el aparato), cifras reales al modelo, empleado fuera, alta saltable" "$SALIDA/preguntale.txt" "todos los casos de pregúntale pasaron"
 espera $P112 "Pantallas nuevas en móvil (5 anchos): leer factura, cuadre del pedido, visión global, pregúntale, Mi Negocio, alta IA y web de la mesa" "$SALIDA/movil-nuevas.txt" "todos los casos de móvil nuevas pasaron"
+espera $P121 "Cocina: un vale nuevo cada vez que la mesa pide otra vez, y la cabecera de la carta en verde como la del menú" "$SALIDA/vales-cocina.txt" "casos pasaron"
 
 exit $FALLOS
