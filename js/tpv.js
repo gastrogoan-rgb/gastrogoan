@@ -1990,6 +1990,7 @@ function confirmAddMenuToOrder(orderId, menuId){
   // tarde, reassignMenuBasePrice() traspasa ese importe a otra línea hermana
   // en vez de perderlo, para no acabar sirviendo el resto del menú gratis.
   const menuInstanceId = genId();
+  const vale = valeParaNuevaLinea(order);
   order.tandas = order.tandas || [];
   selections.forEach((s, i) => {
     if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
@@ -2027,7 +2028,7 @@ function confirmAddMenuToOrder(orderId, menuId){
         menuId: m.id, grupoId: s.grupoId, opcionId: s.opcionId, recipeId: s.recipeId ?? null, platoId: null,
         name: lineName, price: linePrice,
         qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
-        modificadores: s.modificadores, menuInstanceId, menuBaseAmount: baseAmount
+        modificadores: s.modificadores, menuInstanceId, menuBaseAmount: baseAmount, vale
       };
       if(isBebida) line.bebida = true;
       order.items.push(line);
@@ -2082,6 +2083,21 @@ function renderOrderMarcharButtons(order){
 // Marcha automáticamente el primer grupo de comida con platos pendientes.
 // Las bebidas nunca pasan por aquí: ya tienen su propio estado desde que se
 // añaden (ver syncBebidaLineEstado), sin necesitar ningún "Marchar".
+/* UN VALE POR CADA VEZ QUE LA MESA PIDE (29/10, pedido del dueño: «si piden otra vez entra un vale nuevo»).
+   Cada línea lleva el número de vale en que se pidió. Un pedido nuevo abre vale cuando el actual ya tiene algo
+   marchado y han pasado más de 8 minutos desde lo último que se añadió: así, los platos que se van apuntando
+   en una misma toma de comanda (aunque el primero se marche solo) siguen en el mismo vale, y lo que se pide
+   cuando ya se está comiendo llega a cocina como un vale aparte. */
+const VALE_NUEVO_TRAS_MIN = 8;
+function valeParaNuevaLinea(order){
+  const ahora = Date.now();
+  const actual = order.valeActual || 1;
+  const ultima = order.ultimaAdicion ? new Date(order.ultimaAdicion).getTime() : 0;
+  const marchado = (order.items||[]).some(l => !l.bebida && (l.vale||1) === actual && l.estado);
+  if(marchado && ultima && (ahora - ultima) > VALE_NUEVO_TRAS_MIN * 60000) order.valeActual = actual + 1;
+  order.ultimaAdicion = new Date(ahora).toISOString();
+  return order.valeActual || 1;
+}
 function marcharValeCompleto(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -3053,12 +3069,12 @@ function markLineRecogida(orderId, idx){
 }
 
 // Click sobre el nombre de un grupo (tanda) en cocina: avanza el estado de todos sus platos a la vez
-function cycleGroupEstado(orderId, tanda){
+function cycleGroupEstado(orderId, tanda, vale){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   const idxsAfectados = [];
   (order.items||[]).forEach((line, idx) => {
-    if((line.tanda||'') === tanda){
+    if((line.tanda||'') === tanda && (vale == null || (line.vale||1) === Number(vale))){
       if(line.estado === 'cocina' || line.estado === 'preparando') idxsAfectados.push(idx);
     }
   });
@@ -3334,9 +3350,10 @@ function rondasDePedido(lineas){
   const rondas = [];
   orden.forEach(x => {
     const tanda = x.line.tanda || '';
-    const r = rondas.find(q => q.tanda === tanda && Math.abs(x.enviado - q.inicio) <= 90000);
+    const vale = x.line.vale || 1;
+    const r = rondas.find(q => q.tanda === tanda && q.vale === vale && Math.abs(x.enviado - q.inicio) <= 90000);
     if(r) r.lineas.push(x);
-    else rondas.push({tanda, inicio: x.enviado, lineas: [x]});
+    else rondas.push({tanda, vale, inicio: x.enviado, lineas: [x]});
   });
   return rondas;
 }
@@ -3595,12 +3612,18 @@ function renderComandasCocina(){
 
   allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
 
-  const tickets = allOrders
-    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado && !l.bebida))
-    .map(order => {
-      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !line.bebida);
-      return {order, allLines};
+  // Un ticket por VALE (cada vez que la mesa pide, entra un vale nuevo), no por pedido entero.
+  const tickets = [];
+  allOrders.filter(o => !o.cerrada).forEach(order => {
+    const todas = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !line.bebida);
+    const porVale = new Map();
+    todas.forEach(x => { const v = x.line.vale || 1; if(!porVale.has(v)) porVale.set(v, []); porVale.get(v).push(x); });
+    const vales = [...porVale.keys()].sort((a, b) => a - b);
+    vales.forEach(v => {
+      const allLines = porVale.get(v);
+      if(allLines.some(({line}) => line.estado)) tickets.push({order, allLines, vale: v, totalVales: vales.length});
     });
+  });
 
   tickets.sort((a,b) => {
     const envA = a.allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
@@ -3615,7 +3638,7 @@ function renderComandasCocina(){
     return;
   }
 
-  pintar(tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines}) => ticketCocinaHtml(order, allLines)).join('')}</div>`);
+  pintar(tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines, vale, totalVales}) => ticketCocinaHtml(order, allLines, vale, totalVales)).join('')}</div>`);
 }
 
 /* ═══════════════ COMANDAS COCINA: TICKETS NUEVOS (29/10) ═══════════════
@@ -3687,7 +3710,7 @@ function ticketTituloMeta(order){
   }
   return {titulo, meta};
 }
-function ticketCocinaHtml(order, allLines){
+function ticketCocinaHtml(order, allLines, vale, totalVales){
   const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
   const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
   const mins = minutesSince(new Date(minMs).toISOString());
@@ -3764,7 +3787,7 @@ function ticketCocinaHtml(order, allLines){
     const etiqueta = bloque.tipo === 'menu' ? gl({es:'Menú', ca:'Menú', en:'Set menu'}) : gl({es:'Carta', ca:'Carta', en:'À la carte'});
     return `
       <div class="kt-bl">
-        <div class="kt-bh ${bloque.tipo === 'menu' ? 'm' : 'c'}"><span>${etiqueta}${bloque.nombre ? ' · ' + escapeHtml(bloque.nombre) : ''}</span>${instancias > 1 ? `<i>${instancias} ${gl({es:'menús', ca:'menús', en:'menus'})}</i>` : ''}</div>
+        <div class="kt-bh ${bloque.tipo === 'menu' ? 'm' : 'c'}"><span><i class="ti ${bloque.tipo === 'menu' ? 'ti-list-details' : 'ti-book-2'}"></i> ${etiqueta}${bloque.nombre ? ' · ' + escapeHtml(bloque.nombre) : ''}</span>${instancias > 1 ? `<i>${instancias} ${gl({es:'menús', ca:'menús', en:'menus'})}</i>` : ''}</div>
         ${cursos}
       </div>`;
   };
@@ -3781,7 +3804,7 @@ function ticketCocinaHtml(order, allLines){
       : (esLlevar && tandas.length === 1
           ? gl({es:'Pedido listo ▸ avisar', ca:'Comanda llesta ▸ avisar', en:'Order ready ▸ notify'})
           : `${gl({es:'Listo', ca:'Llest', en:'Ready'})} · ${nom.toLowerCase()} ▸ ${gl({es:'pase', ca:'pas', en:'pass'})}`);
-    accion = `<button type="button" class="kt-big${hayNuevas ? ' k' : ''}" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(cursoActivo)}')">${texto}</button>`;
+    accion = `<button type="button" class="kt-big${hayNuevas ? ' k' : ''}" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(cursoActivo)}', ${vale||1})">${texto}</button>`;
   }else{
     const pendiente = tandas.find(tt => estadoCursoCocina(allLines.filter(({line}) => (line.tanda||'') === tt).map(x => x.line)).k === 'held');
     accion = pendiente !== undefined
@@ -3791,10 +3814,10 @@ function ticketCocinaHtml(order, allLines){
   const inc = incidenciaAbierta(order);
 
   return `
-    <div class="kt" data-orden="${order.id}">
+    <div class="kt" data-orden="${order.id}" data-vale="${vale||1}">
       <div class="kt-bar ${nivel}"></div>
       <div class="kt-h">
-        <div><div class="kt-mesa">${escapeHtml(titulo)}</div><div class="kt-meta">${meta.map(escapeHtml).join(' · ')}</div></div>
+        <div><div class="kt-mesa">${escapeHtml(titulo)}${totalVales > 1 ? ` <span class="kt-vale">${gl({es:'Vale', ca:'Val', en:'Slip'})} ${vale||1}</span>` : ''}</div><div class="kt-meta">${meta.map(escapeHtml).join(' · ')}</div></div>
         <div class="kt-tm ${nivel}">${mins}'<small>${gl({es:'esperando', ca:'esperant', en:'waiting'})}</small></div>
       </div>
       ${alergiaHtml}
@@ -4234,7 +4257,8 @@ function addOrderItem(orderId, secId, platoId){
   // Agrupar en una línea existente del mismo plato (x2, x3...). Si la línea ya
   // está marchada, solo agrupamos cuando esta adición también se marcha sola,
   // para no fusionarla con platos que aún están pendientes de marchar a mano.
-  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !(l.notas) && (l.tanda||'') === tanda && l.estado !== 'entregado' && (!l.marchada || autoSend));
+  const vale = valeParaNuevaLinea(order);
+  const existing = order.items.find(l => (l.vale||1) === vale && l.platoId === platoId && l.recipeId === p.recipeId && !(l.notas) && (l.tanda||'') === tanda && l.estado !== 'entregado' && (!l.marchada || autoSend));
   let line;
   if(existing){ existing.qty += 1; line = existing; }
   else{
@@ -4244,7 +4268,7 @@ function addOrderItem(orderId, secId, platoId){
        un solo undefined, así que una comanda así dejaba al negocio sin
        sincronizar. El saneado de core.js ya lo cubre; esto lo arregla también
        en el origen, para que el dato local sea correcto. */
-    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId ?? null, name: tItem(p), price: platoPriceForOrder(p, order), qty:1, tanda, notas:''};
+    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId ?? null, name: tItem(p), price: platoPriceForOrder(p, order), qty:1, tanda, notas:'', vale};
     if(isSeccionBebida(secId)) line.bebida = true;
     applyActivePromoToLine(line);
     order.items.push(line);
@@ -4315,7 +4339,8 @@ function confirmAddOrderItem(orderId, secId, platoId){
   const modKey = selectedMods.map(m=>m.id).sort().join(',');
   const normMods = (m) => JSON.stringify(m && m.length ? m.map(x=>x.nombre).sort() : []);
   const autoSend = order.tipo === 'takeaway' || (tanda||'') === ((order.tandas||[])[0]||'');
-  const existing = order.items.find(l => l.platoId === platoId && (l.tanda||'') === tanda && (l.notas||'') === notas && l.estado !== 'entregado' && (!l.marchada || autoSend) && normMods(l.modificadores) === normMods(selectedMods));
+  const vale = valeParaNuevaLinea(order);
+  const existing = order.items.find(l => (l.vale||1) === vale && l.platoId === platoId && (l.tanda||'') === tanda && (l.notas||'') === notas && l.estado !== 'entregado' && (!l.marchada || autoSend) && normMods(l.modificadores) === normMods(selectedMods));
   let line;
   if(existing){
     existing.qty += 1;
@@ -4323,7 +4348,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   } else {
     line = {
       lineId: genId(),
-      platoId: p.id, recipeId: p.recipeId ?? null, name, price: platoPriceForOrder(p, order) + extra, qty:1, tanda,
+      platoId: p.id, recipeId: p.recipeId ?? null, name, price: platoPriceForOrder(p, order) + extra, qty:1, tanda, vale,
       notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
     };
     if(isSeccionBebida(secId)) line.bebida = true;
