@@ -7831,10 +7831,11 @@ function renderHeader(){
   const icon = document.getElementById('app-logo-icon');
   icon.innerHTML = `<img src="${b.logo || GASTROGOAN_LOGO_URI}" alt="Logo">`;
   const text = document.getElementById('app-logo-text');
+  text.classList.toggle('es-negocio', !!b.name);
   if(b.name){
-    text.innerHTML = `${escapeHtml(b.name)}<span class="app-logo-sub" style="margin-left:8px">GastroGoan · ${t('hdr.subtitle')}</span>`;
+    text.textContent = b.name;
   }else{
-    text.innerHTML = `GastroGoan<span style="color:var(--olive);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">${t('hdr.subtitle')}</span>`;
+    text.innerHTML = `gastro<b>goan</b><span class="gg-punto">.</span>`;
   }
   syncLangButton();
   checkArchiveReminder();
