@@ -2784,15 +2784,15 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .bs-footbtn:active{transform:scale(.98)}
 .bs-footbtn:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 
-/* Frase del día: un epígrafe de libro. Comilla grande en verde, la cita en Cormorant Garamond
-   cursiva (la única serifa de la app, solo aquí) y el autor entre dos filetes. */
-.access-quote{position:relative;z-index:1;max-width:680px;margin:46px auto 0;padding:0 24px;text-align:center}
-.access-quote-mark{display:block;height:44px;font-family:"GG Cita",Georgia,serif;font-style:italic;font-size:110px;line-height:.9;color:#7E9B84}
-.access-quote blockquote{margin:0;font-family:"GG Cita",Georgia,"Times New Roman",serif;font-style:italic;font-weight:500;font-size:clamp(25px,3vw,38px);line-height:1.22;letter-spacing:-.005em;color:#F4EFE6;text-wrap:balance}
-.access-quote figcaption{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:22px;font-family:"Schibsted Grotesk",system-ui,sans-serif;font-size:11.5px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:#C9C2B6}
-.access-quote figcaption::before,.access-quote figcaption::after{content:"";width:32px;height:1px;background:#7E9B84;flex:none}
-#access-select-screen .access-foot{margin-top:22px}
-@media (prefers-reduced-motion:no-preference){#access-select-screen:not(.hide) .access-quote{animation:gg-rise .6s .34s cubic-bezier(.2,.7,.2,1) backwards}}
+/* Frase del día: fija bajo la tarjeta de acceso, sin caja. Misma letra que la app (Schibsted)
+   y el autor en mono, en el verde de la marca; una raya corta la separa. Sin serifa ni adornos. */
+.access-cita{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:480px;margin-top:-6px;text-align:center}
+.access-cita::before{content:"";width:28px;height:2px;background:#6F8A74;margin-bottom:4px}
+.access-cita-fecha{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9A948A}
+.access-cita q{display:block;font-family:"Schibsted Grotesk",system-ui,sans-serif;font-size:17px;font-weight:400;line-height:1.5;color:#F1EFE9;quotes:"«" "»";text-wrap:balance}
+.access-cita cite{font-family:var(--mono);font-style:normal;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:#9DB3A1}
+.access-cita cite::before{content:"— "}
+@media (max-height:640px){.access-cita{margin-top:6px;gap:6px}.access-cita q{font-size:15px}}
 
 /* Selector: la fila del negocio se lleva el ancho (el nombre no puede quedar en una franja estrecha)
    y la tarjeta entra con un fundido, sin escalar: escalada, los botones medían menos de 44 px al aparecer. */

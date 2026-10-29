@@ -241,20 +241,22 @@ function renderAccessScreen(){
         <span class="access-kicker">${t('access.kicker')}</span>
       </div>
       ${renderAccessSelectScreenHtml()}
-    </div>
-    ${accessScreenMode === 'choice' ? accesoFraseYFechaHtml() : ''}`;
+      ${accessScreenMode === 'choice' ? accesoFraseYFechaHtml() : ''}
+    </div>`;
   screen.classList.remove('hide');
 }
-// La frase del día (js/frases.js) y la fecha, al pie del acceso. Una frase distinta cada día
-// del año; si lleva autor es porque está comprobada en una fuente, nunca inventada.
+// La frase del día (js/frases.js) y la fecha, bajo la tarjeta de acceso. Todas llevan autor:
+// la frase arriba y quién la dijo debajo, como una cita de libro.
 function accesoFraseYFechaHtml(){
   const hoy = new Date();
   const f = (typeof fraseDelDia === 'function') ? fraseDelDia(hoy) : null;
-  const texto = f ? (f[getLang()] || f.es) : '';
-  // Siempre con pie, como un epígrafe: el chef si la frase es suya; si no, «Dicho de cocina» (nunca un nombre sin comprobar).
-  const autor = f && f.a ? f.a : gl({es:'Dicho de cocina', ca:'Dita de cuina', en:'Kitchen saying'});
-  return `${texto ? `<figure class="access-quote"><span class="access-quote-mark" aria-hidden="true">“</span><blockquote>${escapeHtml(texto)}</blockquote><figcaption>${escapeHtml(autor)}</figcaption></figure>` : ''}
-    <div class="access-foot"><span class="access-foot-dot" aria-hidden="true"></span><span>${escapeHtml(hoy.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'}))}</span></div>`;
+  const fecha = hoy.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'});
+  if(!f || !f.a) return `<div class="access-cita"><span class="access-cita-fecha">${escapeHtml(fecha)}</span></div>`;
+  return `<aside class="access-cita" aria-label="${escapeHtml(gl({es:'Frase del día', ca:'Frase del dia', en:'Quote of the day'}))}">
+      <span class="access-cita-fecha">${escapeHtml(fecha)}</span>
+      <q>${escapeHtml(f[getLang()] || f.es)}</q>
+      <cite>${escapeHtml(f.a)}</cite>
+    </aside>`;
 }
 function showAccessSelectScreen(){
   accessScreenMode = 'choice';
