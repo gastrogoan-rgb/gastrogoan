@@ -3151,7 +3151,17 @@ function quickToggleMenuAvailability(menuId){
   saveDB();
   renderMarkDishOutModal();
 }
+/* «Marcar agotado» en tres pasos (29/10, pedido del dueño): antes salían TODOS los platos del tirón, en una
+   lista larguísima. Ahora se entra por lo que se sirve (cartas y menús), luego por categoría y, dentro de
+   cada una, los platos con su interruptor. `dishOutNav` recuerda dónde se está para que, al marcar un
+   plato, el modal se repinte en el mismo sitio y no vuelva al principio. */
+let dishOutNav = {nivel:'raiz'};
 function openMarkDishOutModal(){
+  dishOutNav = {nivel:'raiz'};
+  renderMarkDishOutModal();
+}
+function dishOutIr(nivel, ids){
+  dishOutNav = Object.assign({nivel}, ids || {});
   renderMarkDishOutModal();
 }
 function renderMarkDishOutModal(){
@@ -3161,51 +3171,81 @@ function renderMarkDishOutModal(){
   // el filtro por área ya es suficiente, esa exclusión era innecesaria en
   // Cocina (sus cartas nunca son de bebidas) y rompía Sala del todo.
   const cartas = (DB.cartas||[]).filter(c => (c.area||'cocina')===area);
-  const rowsHtml = cartas.map(c => {
-    const secsHtml = (c.secciones||[]).filter(s => (s.platos||[]).length).map(sec => `
-      <div style="font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:700;text-transform:uppercase">${escapeHtml(sec.nombre)}</div>
-      ${sec.platos.map(p => `
-        <div class="list-row" style="padding:6px 10px">
-          <div class="list-row-name"><span>${escapeHtml(tItem(p))}</span></div>
-          <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="quickToggleDishAvailability(${c.id},${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
-        </div>
-      `).join('')}
-    `).join('');
-    return secsHtml ? `<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700">${escapeHtml(c.nombre)}</div>${secsHtml}</div>` : '';
-  }).join('');
+  const menus = (DB.menus||[]).filter(m => (m.area||'cocina')===area);
+  const nav = dishOutNav || {nivel:'raiz'};
+  const cuenta = lista => ({total: lista.length, fuera: lista.filter(x => x.disponible===false).length});
+  const resumen = c => c.total
+    ? `${c.total} ${gl({es:c.total===1?'plato':'platos', ca:c.total===1?'plat':'plats', en:c.total===1?'item':'items'})}${c.fuera ? ` · <b class="dishout-fuera">${c.fuera} ${gl({es:c.fuera===1?'agotado':'agotados', ca:c.fuera===1?'esgotat':'esgotats', en:'out'})}</b>` : ''}`
+    : gl({es:'Sin platos', ca:'Sense plats', en:'No items'});
+  const fila = (icono, nombre, c, onclick) => `
+    <button type="button" class="dishout-fila" onclick="${onclick}">
+      <span class="dishout-ico"><i class="ti ${icono}"></i></span>
+      <span class="dishout-txt"><strong>${escapeHtml(nombre)}</strong><small>${resumen(c)}</small></span>
+      <i class="ti ti-chevron-right dishout-go" aria-hidden="true"></i>
+    </button>`;
+  const interruptor = (agotado, onclick) => `<button type="button" class="btn btn-sm btn-fino ${agotado?'is-off':''}" onclick="${onclick}"><i class="ti ${agotado?'ti-flame-off':'ti-check'}"></i> ${agotado?t('common.unavailable'):t('common.available')}</button>`;
+  const filaPlato = (nombre, agotado, onclick) => `
+    <div class="dishout-plato${agotado?' is-off':''}"><span>${escapeHtml(nombre)}</span>${interruptor(agotado, onclick)}</div>`;
 
-  // Menús de precio cerrado del área actual: el menú entero arriba y debajo
-  // cada opción de cada grupo, que es lo que de verdad se agota a media
-  // comanda.
-  const menusHtml = (DB.menus||[]).filter(m => (m.area||'cocina') === area).map(m => {
-    const gruposHtml = (m.grupos||[]).filter(g => (g.opciones||[]).length).map(g => `
-      <div style="font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:700;text-transform:uppercase">${escapeHtml(tItem(g))}</div>
-      ${g.opciones.map(o => `
-        <div class="list-row" style="padding:6px 10px">
-          <div class="list-row-name"><span>${escapeHtml(tItem(o))}</span></div>
-          <button class="btn btn-sm ${o.disponible===false?'btn-danger':''}" onclick="quickToggleMenuOptionAvailability(${m.id},${g.id},${o.id})">${o.disponible===false?t('common.unavailable'):t('common.available')}</button>
-        </div>
-      `).join('')}
-    `).join('');
-    return `
-      <div style="margin-bottom:10px">
-        <div class="list-row" style="padding:6px 10px;background:var(--bg)">
-          <div class="list-row-name"><span style="font-size:13px;font-weight:700"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(m))}</span></div>
-          <button class="btn btn-sm ${m.disponible===false?'btn-danger':''}" onclick="quickToggleMenuAvailability(${m.id})">${m.disponible===false?t('common.unavailable'):t('common.available')}</button>
-        </div>
-        ${gruposHtml}
-      </div>`;
-  }).join('');
+  let titulo = t(area==='sala' ? 'title.markDishOutSala' : 'title.markDishOut');
+  let migas = '', atras = '', cuerpo = '', ayuda = `<p class="dishout-ayuda">${t('label.markDishOutHelp')}</p>`;
+
+  const carta = nav.cartaId != null ? cartas.find(c => c.id === nav.cartaId) : null;
+  const menu = nav.menuId != null ? menus.find(m => m.id === nav.menuId) : null;
+  const sec = carta && nav.secId != null ? (carta.secciones||[]).find(s => s.id === nav.secId) : null;
+  const grupo = menu && nav.grupoId != null ? (menu.grupos||[]).find(g => g.id === nav.grupoId) : null;
+
+  if(nav.nivel === 'plato' && carta && sec){
+    migas = `${escapeHtml(carta.nombre)} › ${escapeHtml(sec.nombre)}`;
+    atras = `dishOutIr('cat',{cartaId:${carta.id}})`;
+    cuerpo = (sec.platos||[]).map(p => filaPlato(tItem(p), p.disponible===false, `quickToggleDishAvailability(${carta.id},${sec.id},${p.id})`)).join('')
+      || `<div class="empty" style="padding:14px">${t('empty.noDishesToday')}</div>`;
+    ayuda = '';
+  }else if(nav.nivel === 'cat' && carta){
+    migas = escapeHtml(carta.nombre);
+    atras = `dishOutIr('raiz')`;
+    const secs = (carta.secciones||[]).filter(s => (s.platos||[]).length);
+    cuerpo = secs.map(s => fila('ti-folder', s.nombre, cuenta(s.platos), `dishOutIr('plato',{cartaId:${carta.id},secId:${s.id}})`)).join('')
+      || `<div class="empty" style="padding:14px">${t('empty.noDishesToday')}</div>`;
+    ayuda = '';
+  }else if(nav.nivel === 'opcion' && menu && grupo){
+    migas = `${escapeHtml(tItem(menu))} › ${escapeHtml(tItem(grupo))}`;
+    atras = `dishOutIr('grupo',{menuId:${menu.id}})`;
+    cuerpo = (grupo.opciones||[]).map(o => filaPlato(tItem(o), o.disponible===false, `quickToggleMenuOptionAvailability(${menu.id},${grupo.id},${o.id})`)).join('');
+    ayuda = '';
+  }else if(nav.nivel === 'grupo' && menu){
+    migas = escapeHtml(tItem(menu));
+    atras = `dishOutIr('raiz')`;
+    const grupos = (menu.grupos||[]).filter(g => (g.opciones||[]).length);
+    cuerpo = `<div class="dishout-plato dishout-menu${menu.disponible===false?' is-off':''}"><span><i class="ti ti-list-details"></i> ${gl({es:'Menú entero', ca:'Menú sencer', en:'Whole menu'})}</span>${interruptor(menu.disponible===false, `quickToggleMenuAvailability(${menu.id})`)}</div>`
+      + grupos.map(g => fila('ti-folder', tItem(g), cuenta(g.opciones), `dishOutIr('opcion',{menuId:${menu.id},grupoId:${g.id}})`)).join('');
+    ayuda = '';
+  }else{
+    // Raíz: lo que se sirve. Cartas primero, menús después.
+    const filasCartas = cartas.map(c => {
+      const platos = (c.secciones||[]).reduce((a, x) => a.concat(x.platos||[]), []);
+      return platos.length ? fila('ti-book-2', c.nombre, cuenta(platos), `dishOutIr('cat',{cartaId:${c.id}})`) : '';
+    }).join('');
+    const filasMenus = menus.map(m => {
+      const opciones = (m.grupos||[]).reduce((a, g) => a.concat(g.opciones||[]), []);
+      const c = cuenta(opciones); if(m.disponible===false) c.fuera = c.total;
+      return fila('ti-list-details', tItem(m), c, `dishOutIr('grupo',{menuId:${m.id}})`);
+    }).join('');
+    const etq = txt => `<div class="dishout-etq">${txt}</div>`;
+    cuerpo = (filasCartas ? etq(gl({es:'Cartas', ca:'Cartes', en:'Menus (à la carte)'})) + filasCartas : '')
+      + (filasMenus ? etq(gl({es:'Menús', ca:'Menús', en:'Set menus'})) + filasMenus : '');
+    if(!cuerpo) cuerpo = `<div class="empty" style="padding:14px">${t('empty.noDishesToday')}</div>`;
+  }
 
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-flame-off"></i> ${t(area==='sala' ? 'title.markDishOutSala' : 'title.markDishOut')}</h3>
+      <h3><i class="ti ti-flame-off"></i> ${titulo}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted)">${t('label.markDishOutHelp')}</p>
-    ${(rowsHtml + menusHtml) || `<div class="empty" style="padding:14px">${t('empty.noDishesToday')}</div>`}
+    ${atras ? `<div class="dishout-nav"><button type="button" class="btn btn-sm btn-fino" onclick="${atras}"><i class="ti ti-arrow-left"></i> ${gl({es:'Atrás', ca:'Enrere', en:'Back'})}</button><span class="dishout-migas">${migas}</span></div>` : ayuda}
+    <div class="dishout-lista">${cuerpo}</div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
     </div>
   `, {xl:true});
 }
@@ -3299,6 +3339,11 @@ function renderChaosCocinaHtml(allOrders){
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
+  /* Esta pantalla se repinta cada 3 s para que los minutos corran. Antes cada repintado SUSTITUÍA todo el
+     contenido, y como los tickets entran con una animación de aparición, cada 3 s la pantalla entera
+     «parpadeaba». Ahora solo se toca el DOM si el HTML ha cambiado de verdad (un minuto más, un plato
+     marcado, un pedido nuevo); si es idéntico no se hace nada. */
+  const pintar = html => { if(box.__ultimoHtml !== html){ box.innerHTML = html; box.__ultimoHtml = html; } };
 
   /* Red de seguridad, además de que acceptOnlineOrder ya no marcha las líneas
      de un pedido programado: un pedido para dentro de dos semanas no puede
@@ -3322,11 +3367,12 @@ function renderComandasCocina(){
 
   const tabsHtml = `
     <div class="kds-toolbar">
-      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
-      <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
-      <button class="btn btn-sm kds-toolbar-caos ${chaosCocina?'btn-danger':''}" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
-      <button class="btn btn-sm" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
-      <button class="btn btn-sm" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
+      <button class="btn btn-sm btn-fino ${comandasCocinaTab==='activas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
+      <button class="btn btn-sm btn-fino ${comandasCocinaTab==='cerradas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
+      <span class="kds-sep" aria-hidden="true"></span>
+      <button class="btn btn-sm btn-fino kds-toolbar-caos ${chaosCocina?'is-on':''}" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
+      <button class="btn btn-sm btn-fino" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
+      <button class="btn btn-sm btn-fino" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
     </div>
   `;
 
@@ -3344,11 +3390,11 @@ function renderComandasCocina(){
       .sort((a,b) => b.maxMs - a.maxMs);
 
     if(!closed.length){
-      box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-history"></i>${t('empty.noClosedOrders')}</div>`;
+      pintar(tabsHtml + `<div class="empty"><i class="ti ti-history"></i>${t('empty.noClosedOrders')}</div>`);
       return;
     }
 
-    box.innerHTML = tabsHtml + `<div class="grid grid-kds">${closed.map(({order, lines, maxMs}) => {
+    pintar(tabsHtml + `<div class="grid grid-kds">${closed.map(({order, lines, maxMs}) => {
       // El pedido sale de "Activas" en cuanto cocina termina su parte (eso no
       // cambia: aquí ya no hay nada más que cocinar). Pero el badge de esta
       // lista histórica no debe decir "Entregado" si sala todavía no ha
@@ -3369,14 +3415,14 @@ function renderComandasCocina(){
           ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
         </div>
       </div>
-    `;}).join('')}</div>`;
+    `;}).join('')}</div>`);
     return;
   }
 
   /* El modo caos sustituye a los tickets, pero solo en "Activas": en el
      histórico de cerradas no hay nada pendiente que ordenar por espera. */
   if(chaosCocina){
-    box.innerHTML = tabsHtml + renderChaosCocinaHtml(allOrders);
+    pintar(tabsHtml + renderChaosCocinaHtml(allOrders));
     return;
   }
 
@@ -3398,11 +3444,11 @@ function renderComandasCocina(){
   });
 
   if(!tickets.length){
-    box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-bell-ringing"></i>${t('empty.noPendingOrders')}</div>`;
+    pintar(tabsHtml + `<div class="empty"><i class="ti ti-bell-ringing"></i>${t('empty.noPendingOrders')}</div>`);
     return;
   }
 
-  box.innerHTML = tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines}) => {
+  pintar(tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines}) => {
     const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
     const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
     const mins = minutesSince(new Date(minMs).toISOString());
@@ -3535,7 +3581,7 @@ function renderComandasCocina(){
       </div>
     </div>
     `;
-  }).join('')}</div>`;
+  }).join('')}</div>`);
 }
 
 function findCartaPlato(secId, platoId){

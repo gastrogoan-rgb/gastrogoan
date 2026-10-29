@@ -249,7 +249,6 @@ body:not(.owner-session) .owner-strict{display:none !important}
   .caos-fila .caos-plato strong{font-size:17px}
 }
 .kds-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
-.kds-toolbar-caos{margin-left:auto}
 .kds-ticket{border:2px solid var(--text);box-shadow:0 3px 0 rgba(28,26,23,.10);padding:0;overflow:hidden}
 .kds-ticket>.kds-head{background:var(--brand-cream);border-bottom:2px solid var(--text);padding:10px 14px;margin:0}
 .kds-ticket>.kds-body{padding:12px 14px}
@@ -1494,7 +1493,6 @@ td.wrap{white-space:normal}
      línea. En móvil se quita ese margen y se centra todo: cada botón que
      no quepa salta de línea, pero siempre centrado como conjunto. */
   .kds-toolbar{justify-content:center}
-  .kds-toolbar-caos{margin-left:0}
 
   /* .te-kpis (Tesorería) se fuerza a 4 columnas iguales para tablet en el
      breakpoint de 800px, pero solo hay 3 KPIs — en un móvil (320-430px) esas
@@ -2673,6 +2671,58 @@ input,select,textarea{border-radius:var(--r-s)}
 @media (max-width:760px){#view-home .folder-grid .folder-card,#view-home .folder-grid .folder-card.folder-cocina,#view-home .folder-grid .folder-card.folder-sala,#view-home .folder-grid .folder-card.folder-gestion{max-height:168px}}
 #view-home #home-version{flex:0 0 auto;margin:0 !important;padding:6px 0 4px}
 @media (max-height:700px){.home-title{font-size:clamp(24px,3.2vw,36px)}.home-date b{font-size:clamp(36px,4vw,46px)}}
+
+/* ═══ BOTÓN FINO (29/10): el botón de la cabecera, para toda la app ═══
+   Pedido del dueño: «este y los futuros botones en general de la app los quiero como los de la cabecera».
+   Caja blanca de 30 px con filete, letra mono de 11 px, icono de 14 px. La caja se dibuja en ::before y el
+   botón conserva su alto táctil (40 px en PC, 44 px con el dedo), así que se ve fino y se pulsa bien.
+   `.is-on` es el estado marcado (pestaña activa, modo encendido): verde de la marca, como el chat.
+   Para usarlo en una pantalla nueva basta con añadir `btn-fino` a un `.btn`. */
+.btn.btn-fino{position:relative;isolation:isolate;background:transparent !important;border:0 !important;box-shadow:none;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.05em;color:var(--ink);padding:0 13px;gap:7px;min-height:40px;
+  transition:color .18s,transform .18s}
+.btn.btn-fino::before{content:"";position:absolute;left:0;right:0;top:50%;height:30px;margin-top:-15px;z-index:-1;background:#fff;
+  border:1px solid var(--hair);border-radius:var(--r-s);transition:background-color .18s,border-color .18s}
+.btn.btn-fino .ti{font-size:14px;color:var(--ink);transition:color .18s}
+.btn.btn-fino:hover::before{background:var(--brand-cream);border-color:var(--olive)}
+.btn.btn-fino:hover .ti{color:var(--olive)}
+.btn.btn-fino:active{transform:translateY(1px)}
+.btn.btn-fino:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.btn.btn-fino.is-on,.btn.btn-fino.is-on .ti{color:#fff}
+.btn.btn-fino.is-on::before,.btn.btn-fino.is-on:hover::before{background:var(--olive);border-color:var(--olive)}
+.btn.btn-fino.is-on:hover::before{background:#3C4D40;border-color:#3C4D40}
+.btn.btn-fino:disabled{opacity:.45;pointer-events:none}
+@media (pointer:coarse){.btn.btn-fino{min-height:44px}}
+.kds-toolbar{gap:2px 6px}
+.kds-sep{width:1px;height:22px;background:var(--hair);flex:0 0 auto;margin:0 4px}
+
+/* Marcar agotado: cartas/menús → categorías → platos (29/10) */
+.btn.btn-fino.is-off,.btn.btn-fino.is-off .ti{color:#8A3B2E}
+.btn.btn-fino.is-off::before,.btn.btn-fino.is-off:hover::before{background:#F7E9E6;border-color:#D9A79C}
+.dishout-ayuda{font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.5}
+.dishout-nav{display:flex;align-items:center;gap:12px;margin:0 0 10px}
+.dishout-migas{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);overflow-wrap:anywhere}
+.dishout-lista{display:flex;flex-direction:column;gap:8px}
+.dishout-etq{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 2px}
+.dishout-etq:first-child{margin-top:0}
+.dishout-fila{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:12px 14px;min-height:64px;background:#fff;border:1px solid var(--hair);
+  border-radius:var(--r-s);cursor:pointer;font-family:inherit;color:var(--ink);transition:border-color .18s,background-color .18s}
+.dishout-fila:hover,.dishout-fila:focus-visible{border-color:var(--olive);background:var(--brand-cream)}
+.dishout-ico{display:flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;background:var(--brand-cream);border-radius:var(--r-s);color:var(--olive);font-size:20px}
+.dishout-fila:hover .dishout-ico{background:#fff}
+.dishout-txt{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0}
+.dishout-txt strong{font-size:15px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.dishout-txt small{font-size:12px;color:var(--muted)}
+.dishout-fuera{color:#8A3B2E;font-weight:600}
+.dishout-go{color:var(--muted);font-size:18px;flex:0 0 auto;transition:transform .18s}
+.dishout-fila:hover .dishout-go{transform:translateX(3px);color:var(--olive)}
+.dishout-plato{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 8px 8px 14px;background:#fff;border:1px solid var(--hair);border-radius:var(--r-s);font-size:15px}
+.dishout-plato > span{min-width:0;overflow-wrap:anywhere}
+.dishout-plato.is-off > span{color:var(--muted);text-decoration:line-through}
+.dishout-plato.dishout-menu{background:var(--brand-cream);font-weight:600}
+.dishout-plato.dishout-menu.is-off > span{text-decoration:none}
+/* sin la animación de entrada: se repinta cada 3 s y parpadeaba */
+#view-comandascocina .card,#view-comandascocina .kds-ticket,#view-comandascocina .grid-kds > *{animation:none !important}
 
 /* --- Títulos de sección dentro de una pantalla --- */
 .view .card:not(.card-compact) > h3:first-child{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:14px}
