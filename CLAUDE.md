@@ -653,6 +653,11 @@ Cambios guiados pantalla a pantalla por el dueño, partiendo SIEMPRE de la base 
   «gastrogoan.» si no hay) quedan solos. TODOS los botones (idioma, Negocios, Actualizar, Ayuda, Cerrar sesión)
   con el aspecto del selector de idioma (caja con filete, mono, blanco); el de chat, en verde de la marca.
   Las medidas mínimas de toque de móvil no se tocan. La prueba de traducciones acepta «gastro» y «goan» (la marca).
+- **Inicio** (29/10): cabecera «diario» (día a la izquierda en mono, pregunta en Schibsted 300) y tres áreas SOLO con
+  icono y nombre: Cocina en blanco, Sala en verde, Gestión en tinta. Sin cifras (viven en el Panel). **Página fija,
+  sin scroll** en cualquier tamaño: las tarjetas se reparten el alto que sobra (tope 400 px, 168 en móvil) y el
+  sello de versión queda abajo. Se mide con scrollHeight de `#content`; el `padding-bottom` de 92 px del móvil
+  se anula aquí con `:has()` y `!important`.
 - **Selector de negocios**: no hay tope de negocios por cuenta. Hasta 5 se ven todos; desde 6, buscador y
   lista con desplazamiento propio. Cambiar contraseña / Salir como botones (`.bs-footbtn`).
 - **Frase del día** (`js/frases.js`, en build.sh tras i18n.js), fija bajo la tarjeta de acceso, sin caja:
