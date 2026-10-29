@@ -2498,6 +2498,33 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .app-header #chat-fab:hover .ti{color:#fff}
 .app-header #chat-fab[aria-pressed="true"]{background:#3C4D40 !important}
 
+/* Más fino (29/10, «en mi tablet la letra y los recuadros se ven muy grandes»): desde 761 px el botón sigue
+   midiendo lo que exige el dedo (44 px en táctil), pero lo que SE VE es una caja de 30 px con letra de 11 px.
+   La caja se dibuja en ::before, dentro del botón, así la zona de toque no se encoge. En móvil (<761 px) no
+   se toca: ahí los botones ya son solo icono. */
+@media (min-width:761px){
+  .app-header{gap:8px}
+  .app-header .btn,.app-header #lang-btn{position:relative;background:transparent !important;border:0 !important;
+    font-size:11px;letter-spacing:.05em;font-weight:500;padding:0 13px;gap:7px;min-height:40px}
+  .app-header .btn::before{content:"";position:absolute;inset:5px 0;z-index:0;background:#fff;border:1px solid var(--hair);
+    border-radius:var(--r-s);transition:background-color .18s,border-color .18s}
+  .app-header .btn > *{position:relative;z-index:1}
+  .app-header .btn .ti{font-size:14px}
+  .app-header .btn:hover{background:transparent !important}
+  .app-header .btn:hover::before{background:var(--brand-cream);border-color:var(--olive)}
+  .app-header #chat-fab,.app-header #chat-fab.hdr-icon-btn{background:transparent !important;border:0 !important}
+  .app-header #chat-fab::before{background:var(--olive);border-color:var(--olive)}
+  .app-header #chat-fab:hover{background:transparent !important}
+  .app-header #chat-fab:hover::before{background:#3C4D40;border-color:#3C4D40}
+  .app-header #chat-fab[aria-pressed="true"]{background:transparent !important}
+  .app-header #chat-fab[aria-pressed="true"]::before{background:#3C4D40}
+  .app-header .app-logo-text{font-size:17px}
+  .app-header .app-logo-text.es-negocio{font-size:15px}
+  .app-header .app-logo-icon{width:30px;height:30px}
+  /* el aviso de la nube, a la medida de los botones */
+  #sync-badge{border-radius:var(--r-s) !important;font-family:var(--mono);font-size:11px !important;font-weight:500 !important;letter-spacing:.04em;padding:6px 10px !important;margin-right:0 !important}
+}
+
 /* Estado de la nube: un punto y una palabra, en los colores de la marca */
 #sync-badge{display:inline-flex !important;align-items:center;gap:7px;border-radius:var(--r-s) !important;border:1px solid var(--hair);background:transparent;color:var(--body);font-family:var(--mono);font-size:11px !important;font-weight:500 !important;letter-spacing:.04em;padding:6px 10px !important;margin-right:6px !important;line-height:1.2;min-height:36px}
 #sync-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
