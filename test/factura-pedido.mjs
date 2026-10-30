@@ -117,11 +117,12 @@ async function crearPedido(recibir){
 }
 async function adjuntar(id){
   await page.evaluate(id => { openPedido(id); }, id);
-  await espera(100);
+  // Con la batería entera corriendo a la vez, 100 ms no siempre bastan: se espera a que estén de verdad.
+  await page.waitForSelector('#pf-adjuntar', {timeout: 8000}).catch(() => {});
   const boton = await page.$('#pf-adjuntar');
   if(!boton) throw new Error('no hay botón «Adjuntar factura» en el pedido');
   await boton.click();
-  await espera(150);
+  await page.waitForSelector('#pf-input', {timeout: 8000}).catch(() => {});
   const input = await page.$('#pf-input');
   await input.uploadFile(fotoPath);
 }
