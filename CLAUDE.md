@@ -694,6 +694,13 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   datos de contacto el botón se desactiva y dice por qué; «Guardar borrador» e imprimir (hoja con casillas de recibido y
   SIN precios). Cada pedido es una hoja (`renderPedidoDetail`): estado en tres pasos, líneas con ✓/✗, precio de albarán y
   nota (plegables en móvil), control APPCC, albarán y factura. Prueba: `test/pedidos.mjs`.
+- **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
+  cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
+  `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,
+  **qué le hace a cada plato** (`platosAfectadosPorPrecio`: coste con el precio de antes y de ahora, también por elaboraciones
+  base) y **el PVP que mantiene el food cost objetivo** (`geFoodCostObjPct`; coste ÷ objetivo, con IVA, a 10 céntimos).
+  «Aplicar» (`aplicarPvpSugerido`) lo propone y pide confirmación; nunca se cambia solo. También cambia el precio en las
+  cartas donde está el plato, para que el TPV no se quede con el viejo. Prueba: `test/cambios-precio.mjs`.
 - **Catálogo de iconos de comida** (224, trazo; 181 de comida y 43 de utensilios y equipo de cocina): `tools/iconos-comida-lista.txt` → `node tools/generar-iconos-comida.mjs <tabler> <lucide> <phosphor>` (hacen falta los tres paquetes npm descomprimidos)
   → `js/iconos-comida.js`; el uso (`iconoSeccionHtml`, `iconoSelectorHtml`) va en `js/iconos-comida-uso.js` y `menu.js`, y se
   copia a `reservagastrogoan.html`. Lo guardado: `ic:<clave>`, `ic:none` o un emoji antiguo (se sigue viendo).

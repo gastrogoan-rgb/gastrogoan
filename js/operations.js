@@ -1915,10 +1915,10 @@ function consumoMensualCompras(ingredientId){
   });
   return total / 3;
 }
-// Subidas del periodo por producto: del primer precio al último (varias
-// subidas seguidas del mismo producto cuentan como una), con su impacto al
-// mes y los platos cuyo escandallo lo usa.
-function subidasDePrecio(dias){
+// Cambios de precio del periodo por producto: del primer precio al último (varios cambios seguidos del mismo producto
+// cuentan como uno), con su impacto al mes y los platos cuyo escandallo lo usa. `sube` = true devuelve las subidas y false
+// las bajadas. En las bajadas, impactoMes sale NEGATIVO: es lo que se ahorra.
+function cambiosDePrecio(dias, sube){
   const desde = dateStr(new Date(Date.now() - dias * 86400000));
   const porIng = {};
   (DB.preciosHistorial || []).filter(h => h.fecha >= desde && (h.area || 'cocina') === currentArea())
@@ -1927,38 +1927,118 @@ function subidasDePrecio(dias){
       const g = porIng[h.ingredientId] || (porIng[h.ingredientId] = {ingredientId: h.ingredientId, nombre: h.nombre, unidad: h.unidad, proveedor: h.proveedor, antes: h.antes, despues: h.despues, fecha: h.fecha, origen: h.origen});
       g.despues = h.despues; g.fecha = h.fecha; g.proveedor = h.proveedor || g.proveedor; g.origen = h.origen;
     });
-  return Object.values(porIng).filter(g => g.despues > g.antes).map(g => {
+  return Object.values(porIng).filter(g => sube ? g.despues > g.antes : g.despues < g.antes).map(g => {
     const ing = getIngredient(g.ingredientId);
     const consumo = consumoMensualCompras(g.ingredientId);
     const platos = (DB.recipes || []).filter(r => (r.ingredients || []).some(l => l.type !== 'base' && l.ingredientId === g.ingredientId)).map(r => r.name);
     return {...g, nombre: ing ? ing.name : g.nombre, pct: Math.round((g.despues - g.antes) / g.antes * 1000) / 10,
       impactoMes: consumo ? (g.despues - g.antes) * consumo : null, platos};
-  }).sort((a, b) => (b.impactoMes || 0) - (a.impactoMes || 0) || b.pct - a.pct);
+  }).sort((a, b) => Math.abs(b.impactoMes || 0) - Math.abs(a.impactoMes || 0) || Math.abs(b.pct) - Math.abs(a.pct));
 }
+function subidasDePrecio(dias){ return cambiosDePrecio(dias, true); }
+function bajadasDePrecio(dias){ return cambiosDePrecio(dias, false); }
+
+/* Qué le pasa a CADA plato por un cambio de precio, y a qué precio de venta habría que ponerlo para mantener el food cost
+   objetivo. Se calcula con el escandallo de verdad (también cuenta lo que llega por una elaboración base): se mide el
+   coste con el precio de antes y con el de ahora, y la diferencia es lo que mueve ESE ingrediente. El PVP sugerido sale
+   de coste ÷ objetivo, con el IVA del plato, redondeado hacia arriba a 10 céntimos. Nunca se aplica solo: se propone. */
+function platosAfectadosPorPrecio(g){
+  const ing = getIngredient(g.ingredientId);
+  if(!ing) return [];
+  const objetivo = geFoodCostObjPct();
+  const actual = ing.price;
+  const costeCon = (r, precio) => { ing.price = precio; try{ return recipeCost(r); } finally { ing.price = actual; } };
+  return (DB.recipes || []).filter(r => !r.isBase && (r.area || 'cocina') === currentArea()).map(r => {
+    const costeAntes = costeCon(r, g.antes), costeAhora = costeCon(r, g.despues);
+    if(Math.abs(costeAhora - costeAntes) < 0.0001) return null;
+    const ivaPct = r.ivaPct != null ? r.ivaPct : 10;
+    const base = r.priceBase != null ? r.priceBase : (r.price ? r.price / (1 + ivaPct / 100) : 0);
+    const fcAntes = base > 0 ? costeAntes / base * 100 : null;
+    const fcAhora = base > 0 ? costeAhora / base * 100 : null;
+    // Con el objetivo ya superado se propone el precio que lo recupera; si sigue dentro, no hace falta tocar nada.
+    let sugerido = null;
+    if(fcAhora != null && fcAhora > objetivo + 0.05){
+      const conIva = costeAhora / (objetivo / 100) * (1 + ivaPct / 100);
+      sugerido = Math.ceil(conIva * 10 - 1e-9) / 10;
+      if(sugerido <= (r.price || 0) + 0.004) sugerido = null;
+    }
+    return {id: r.id, nombre: r.name, costeAntes, costeAhora, fcAntes, fcAhora, pvp: r.price || 0, ivaPct, sugerido, objetivo};
+  }).filter(Boolean).sort((a, b) => (b.fcAhora || 0) - (a.fcAhora || 0));
+}
+// Aplica un PVP sugerido a un plato: el mismo cálculo que al guardarlo en Escandallo (base sin IVA → precio con IVA) y
+// lo reparte a las cartas donde está puesto, para que el TPV no se quede con el precio viejo.
+async function aplicarPvpSugerido(recipeId, pvp){
+  if(!isOwnerSession() && !editUnlocked){ showToast(t('msg.needsEditPermission')); return; }
+  const r = getRecipe(recipeId);
+  if(!r) return;
+  const ivaPct = r.ivaPct != null ? r.ivaPct : 10;
+  const priceBase = Math.round(pvp / (1 + ivaPct / 100) * 100) / 100;
+  const price = Math.round(priceBase * (1 + ivaPct / 100) * 100) / 100;
+  const msg = gl({es:`«${r.name}»: de ${fmtMoney(r.price||0)} a ${fmtMoney(price)} (con IVA). Se cambia también en las cartas donde está.`, ca:`«${r.name}»: de ${fmtMoney(r.price||0)} a ${fmtMoney(price)} (amb IVA). Es canvia també a les cartes on és.`, en:`“${r.name}”: from ${fmtMoney(r.price||0)} to ${fmtMoney(price)} (incl. VAT). It also changes in the menus where it appears.`});
+  if(!(await confirmModal(msg))) return;
+  r.priceBase = priceBase; r.price = price; r.ivaPct = ivaPct;
+  (DB.cartas || []).forEach(c => (c.secciones || []).forEach(sec => (sec.platos || []).forEach(p => {
+    if(p.recipeId === recipeId){ p.precio = price; p.precioBase = priceBase; p.ivaPct = ivaPct; }
+  })));
+  if(typeof logAudit === 'function') logAudit('recipe_price', gl({es:`Precio de «${r.name}» ajustado por subida de coste`, ca:`Preu de «${r.name}» ajustat per pujada de cost`, en:`Price of “${r.name}” adjusted after a cost increase`}));
+  saveDB();
+  showToast(gl({es:'Precio de venta actualizado', ca:'Preu de venda actualitzat', en:'Sale price updated'}));
+  abrirCambiosPrecio(cambiosPrecioVista);
+}
+
+let cambiosPrecioVista = 'suben';
+function abrirCambiosPrecio(vista){
+  cambiosPrecioVista = vista === 'bajan' ? 'bajan' : 'suben';
+  openSubidasPrecioModal();
+}
+// La ventana de «Cambios de precio»: lo que ha subido (con lo que supone al mes y qué hacer con cada plato) y lo que ha bajado.
 function openSubidasPrecioModal(){
-  const lista = subidasDePrecio(30);
+  const sube = cambiosPrecioVista !== 'bajan';
+  const suben = subidasDePrecio(30), bajan = bajadasDePrecio(30);
+  const lista = sube ? suben : bajan;
   const total = lista.reduce((s, x) => s + (x.impactoMes || 0), 0);
+  const fc = v => v == null ? '—' : fmtPct1(v) + '%';
+  const platosHtml = x => {
+    const pl = platosAfectadosPorPrecio(x).slice(0, 8);
+    if(!pl.length) return '';
+    return `<div class="cp-platos">
+      <div class="cp-platos-tit">${t('precios.platos')}</div>
+      ${pl.map(p => {
+        const sobre = p.fcAhora != null && p.fcAhora > p.objetivo + 0.05;
+        return `<div class="cp-plato">
+          <div class="cp-plato-n"><b>${escapeHtml(p.nombre)}</b>
+            <span class="cp-fc${sobre ? ' alto' : ''}">${gl({es:'Food cost', ca:'Food cost', en:'Food cost'})} ${fc(p.fcAntes)} → <b>${fc(p.fcAhora)}</b></span></div>
+          ${sube && p.sugerido ? `<div class="cp-sug">
+              <span>${gl({es:'Para mantener el', ca:'Per mantenir el', en:'To keep'})} ${fmtNum(p.objetivo)}%: <b>${fmtMoney(p.pvp)} → ${fmtMoney(p.sugerido)}</b></span>
+              <button type="button" class="btn btn-sm btn-fino owner-only" onclick="aplicarPvpSugerido(${p.id}, ${p.sugerido})">${gl({es:'Aplicar', ca:'Aplicar', en:'Apply'})}</button>
+            </div>` : (sube ? `<span class="cp-ok"><i class="ti ti-circle-check"></i> ${gl({es:'Sigue dentro del objetivo', ca:'Segueix dins de l\'objectiu', en:'Still within target'})}</span>` : `<span class="cp-ok"><i class="ti ti-trending-down"></i> ${gl({es:'Mejora el margen', ca:'Millora el marge', en:'Margin improves'})}</span>`)}
+        </div>`;
+      }).join('')}
+    </div>`;
+  };
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
-      <h3><i class="ti ti-trending-up"></i> ${t('precios.titulo')}</h3>
+      <h3><i class="ti ti-chart-line"></i> ${gl({es:'Cambios de precio', ca:'Canvis de preu', en:'Price changes'})}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin:0 0 10px">${t('precios.explica')}</p>
-    ${lista.length ? `
-      ${total ? `<div class="card" style="margin-bottom:10px;border-left:4px solid var(--red)"><strong>${escapeHtml(t('precios.total').replace('${v}', fmtMoney(total)))}</strong></div>` : ''}
-      ${lista.map(x => `<div class="card" style="margin-bottom:8px;padding:10px 12px">
-        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
-          <strong>${escapeHtml(x.nombre)}</strong>
-          <span style="color:var(--red);font-weight:800;white-space:nowrap">+${fmtNum(x.pct, 1)} %</span>
-        </div>
-        <div style="font-size:13px;margin-top:2px">${fmtMoney(x.antes)} → <strong>${fmtMoney(x.despues)}</strong>/${escapeHtml(x.unidad || '')} · ${escapeHtml(x.proveedor || '—')} · ${escapeHtml(x.fecha)} · ${escapeHtml(t('precios.origen.' + (x.origen === 'albaran' ? 'albaran' : 'megalista')))}</div>
-        <div style="font-size:13px;margin-top:4px;${x.impactoMes ? 'font-weight:600' : 'color:var(--muted)'}">${x.impactoMes ? escapeHtml(t('precios.impacto').replace('${v}', fmtMoney(x.impactoMes))) : escapeHtml(t('precios.sinConsumo'))}</div>
-        ${x.platos.length ? `<div style="font-size:12.5px;color:var(--muted);margin-top:4px">${escapeHtml(t('precios.platos'))}: ${escapeHtml(x.platos.slice(0, 6).join(', '))}${x.platos.length > 6 ? '…' : ''}</div>` : ''}
-      </div>`).join('')}` : `<div class="empty"><i class="ti ti-circle-check"></i>${t('precios.vacio')}</div>`}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    <div class="cp-tabs">
+      <button type="button" class="btn btn-sm btn-fino${sube ? ' is-on' : ''}" onclick="abrirCambiosPrecio('suben')"><i class="ti ti-trending-up"></i> ${gl({es:'Suben', ca:'Pugen', en:'Rising'})} <span class="ml-n">${suben.length}</span></button>
+      <button type="button" class="btn btn-sm btn-fino${!sube ? ' is-on' : ''}" onclick="abrirCambiosPrecio('bajan')"><i class="ti ti-trending-down"></i> ${gl({es:'Bajan', ca:'Baixen', en:'Falling'})} <span class="ml-n">${bajan.length}</span></button>
     </div>
-  `);
+    <p class="ml-intro">${sube ? t('precios.explica') : gl({es:'Productos que te han salido más baratos en los últimos 30 días, y lo que te ahorras al mes con lo que sueles comprar.', ca:'Productes que t\'han sortit més barats els últims 30 dies, i el que t\'estalvies al mes amb el que sols comprar.', en:'Products that got cheaper in the last 30 days, and what you save each month at your usual volume.'})}</p>
+    ${lista.length ? `
+      ${total ? `<div class="cp-total ${sube ? 'sube' : 'baja'}"><b>${sube ? escapeHtml(t('precios.total').replace('${v}', fmtMoney(total))) : escapeHtml(gl({es:`Ahorras unos ${fmtMoney(Math.abs(total))} al mes`, ca:`Estalvies uns ${fmtMoney(Math.abs(total))} al mes`, en:`You save about ${fmtMoney(Math.abs(total))} a month`}))}</b></div>` : ''}
+      ${lista.map(x => `<section class="cp-card">
+        <div class="cp-cab"><b>${escapeHtml(x.nombre)}</b><span class="cp-pct ${sube ? 'sube' : 'baja'}">${x.pct > 0 ? '+' : '−'}${fmtNum(Math.abs(x.pct), 1)} %</span></div>
+        <div class="cp-precios">${fmtMoney(x.antes)} → <b>${fmtMoney(x.despues)}</b>/${escapeHtml(x.unidad || '')} · ${escapeHtml(x.proveedor || '—')} · ${escapeHtml(x.fecha || '')}</div>
+        <div class="cp-impacto${x.impactoMes ? ' con' : ''}">${x.impactoMes ? escapeHtml(sube ? t('precios.impacto').replace('${v}', fmtMoney(x.impactoMes)) : gl({es:`Ahorro: ${fmtMoney(Math.abs(x.impactoMes))} al mes`, ca:`Estalvi: ${fmtMoney(Math.abs(x.impactoMes))} al mes`, en:`Saving: ${fmtMoney(Math.abs(x.impactoMes))} a month`})) : escapeHtml(t('precios.sinConsumo'))}</div>
+        ${platosHtml(x)}
+      </section>`).join('')}` : `<div class="empty"><i class="ti ti-circle-check"></i>${sube ? t('precios.vacio') : gl({es:'Ningún precio ha bajado en los últimos 30 días.', ca:'Cap preu ha baixat els últims 30 dies.', en:'No price has dropped in the last 30 days.'})}</div>`}
+    <div class="modal-footer">
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `, {xl:true});
 }
 
 // Al recibir un pedido, registra su coste en Gastos Variables (Gestión Económica), agrupado por categoría

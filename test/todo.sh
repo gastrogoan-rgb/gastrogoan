@@ -137,6 +137,7 @@ lanzar; node test/menu-acciones.mjs > "$SALIDA/menu-acciones.txt" 2>&1 & P129=$!
 lanzar; node test/escandallo.mjs > "$SALIDA/escandallo.txt" 2>&1 & P130=$!
 lanzar; node test/fichas.mjs > "$SALIDA/fichas.txt" 2>&1 & P131=$!
 lanzar; node test/pedidos.mjs > "$SALIDA/pedidos.txt" 2>&1 & P132=$!
+lanzar; node test/cambios-precio.mjs > "$SALIDA/cambios-precio.txt" 2>&1 & P133=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -304,5 +305,6 @@ espera $P129 "Menú de tres puntos: editar y eliminar dentro, con teclado, sin s
 espera $P130 "Escandallo: carpetas, platos en tarjetas y la hoja única para crear, ver y editar (cálculo en vivo, guardar, descartar, elaboraciones, móvil)" "$SALIDA/escandallo.txt" "casos pasaron"
 espera $P131 "Fichas técnicas: la ficha como documento (paso a paso con tiempo, temperatura y ojo), una sola pantalla para crear y editar, producción que escala, solo lectura e impreso" "$SALIDA/fichas.txt" "casos pasaron"
 espera $P132 "Pedidos: realizar pedido como lista de la compra, déficit que descuenta lo que viene de camino, enviar e imprimir, historial con selector de periodo y la hoja de recepción" "$SALIDA/pedidos.txt" "casos pasaron"
+espera $P133 "Cambios de precio: subidas y bajadas, efecto en cada plato (también por elaboraciones base) y precio de venta sugerido para mantener el food cost" "$SALIDA/cambios-precio.txt" "casos pasaron"
 
 exit $FALLOS
