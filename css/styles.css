@@ -3027,6 +3027,30 @@ input,select,textarea{border-radius:var(--r-s)}
 .pe-mes.is-on em{color:#fff}
 .pe-pie{display:flex;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hair)}
 @media (max-width:760px){.pe-actual{min-width:0;flex:1}.pe-sel{display:flex;width:100%}}
+/* Cambios de precio (30/10): lo que sube, lo que baja y qué hacer con cada plato */
+.cp-tabs{display:flex;gap:2px 8px;margin:0 0 10px;flex-wrap:wrap}
+.cp-total{border:1px solid var(--hair);border-left-width:4px;background:#fff;padding:10px 14px;margin:0 0 12px;font-size:14px}
+.cp-total.sube{border-left-color:var(--red)}
+.cp-total.baja{border-left-color:var(--olive)}
+.cp-card{border:1px solid var(--hair);background:#fff;border-radius:3px;padding:12px 14px;margin:0 0 10px}
+.cp-cab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:15px}
+.cp-pct{font-family:var(--mono);font-weight:700;white-space:nowrap}
+.cp-pct.sube{color:var(--red)}
+.cp-pct.baja{color:var(--olive)}
+.cp-precios{font-size:13px;margin-top:3px}
+.cp-precios b{font-family:var(--mono)}
+.cp-impacto{font-size:13px;margin-top:4px;color:var(--muted)}
+.cp-impacto.con{color:var(--ink);font-weight:600}
+.cp-platos{margin-top:10px;border-top:1px solid var(--hair);padding-top:8px}
+.cp-platos-tit{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.cp-plato{display:flex;justify-content:space-between;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:7px 0;border-bottom:1px dashed var(--hair)}
+.cp-plato:last-child{border-bottom:0}
+.cp-plato-n{min-width:0;flex:1 1 200px;display:flex;flex-direction:column;gap:1px;font-size:14px}
+.cp-fc{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.cp-fc.alto,.cp-fc.alto b{color:#8A3B2E}
+.cp-sug{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;justify-content:flex-end}
+.cp-sug b{font-family:var(--mono)}
+.cp-ok{font-size:12.5px;color:var(--olive);display:inline-flex;gap:5px;align-items:center}
 /* Menú de tres puntos (norma 30/10): editar y borrar viven dentro de «⋯». Ver ggMenuAcciones en js/ui.js */
 .mn-btn{min-width:40px;padding:0 10px}
 .mn-menu{position:fixed;z-index:200100;min-width:190px;max-width:calc(100vw - 16px);background:#fff;border:1px solid var(--hair);border-radius:3px;box-shadow:0 6px 22px rgba(28,26,23,.14);padding:4px}
