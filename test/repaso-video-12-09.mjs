@@ -49,7 +49,7 @@ await caso('Al pedir a proveedor, cada artículo dice su precio, no solo el stoc
     sel.value = 'Proveedor Prueba';
     sel.dispatchEvent(new Event('change'));
     await new Promise(r=>setTimeout(r,400));
-    const f = document.querySelector('.list-row');
+    const f = document.querySelector('.pc-art');
     return f ? f.innerText : '';
   });
   assert.ok(/Aceite de girasol/.test(fila), 'debería listar el artículo del proveedor: ' + fila);
@@ -137,17 +137,21 @@ await caso('Historial de Pedidos: entra por el mes en curso, con selector de añ
     saveDB();
     navigate('pedidos'); pedidosTab = 'historial'; renderPedidos();
     await new Promise(r=>setTimeout(r,500));
-    const fechas = () => [...document.querySelectorAll('#pedido-results .card h3')].map(h=>h.innerText.replace(/\s+/g,' '));
+    const fechas = () => [...document.querySelectorAll('#pedido-results .pe-ped')].map(h=>h.innerText.replace(/\s+/g,' '));
     const inicial = fechas();
-    const pills = document.querySelectorAll('#pedidos-list .month-pill').length;
-    // Y se puede viajar al año anterior con la flecha del selector.
-    setPedidoHistorialYear(-1);
+    // El selector de periodo (desde el 30/10): un control, y al abrirlo, los doce meses.
+    document.querySelector('.pe-actual').click();
+    await new Promise(r=>setTimeout(r,200));
+    const pills = document.querySelectorAll('.pe-pop .pe-mes').length;
+    ggCerrarMenuAcciones();
+    // Y se puede viajar al año anterior con el propio selector.
+    setPedidoHistorialPeriodo(pedidoHistorialYear - 1, pedidoHistorialMonth);
     await new Promise(r=>setTimeout(r,400));
     const anioAnterior = fechas();
-    setPedidoHistorialYear(1);
+    setPedidoHistorialPeriodo(pedidoHistorialYear + 1, pedidoHistorialMonth);
     return {inicial, pills, anioAnterior, guardados: DB.purchaseOrders.length, otroMes};
   });
-  assert.equal(r.pills, 12, 'los doce meses, como en Gestión Económica: ' + JSON.stringify(r));
+  assert.equal(r.pills, 12, 'los doce meses en el selector de periodo: ' + JSON.stringify(r));
   // Del mes en curso solo el recibido de hoy; el recibido del año pasado, fuera.
   assert.ok(r.inicial.some(x=>/RECIBIDO/.test(x)), 'el recibido de este mes se ve: ' + JSON.stringify(r.inicial));
   // ⚠️ No basta con buscar "-05" al vuelo: hoy puede caer precisamente en
@@ -165,10 +169,12 @@ await caso('Un pedido recibido no se puede borrar, ni desde la consola', async (
   const r = await page.evaluate(async ()=>{
     navigate('pedidos'); pedidosTab = 'historial'; renderPedidos();
     await new Promise(r=>setTimeout(r,400));
-    const papelerasLista = document.querySelectorAll('#pedido-results .btn-danger').length;
+    // Una tarjeta de recibido no ofrece borrar en su menú de tres puntos (desde el 30/10 las acciones viven ahí).
+    const acciones = el => [...el.querySelectorAll('[data-acc]')].flatMap(b => JSON.parse(b.dataset.acc).map(a => a.texto + ' ' + a.fn));
+    const papelerasLista = [...document.querySelectorAll('#pedido-results .pe-recibido')].filter(c => acciones(c).some(a => /deleteOrder/.test(a))).length;
     openPedido(11);
     await new Promise(r=>setTimeout(r,400));
-    const botones = [...document.querySelectorAll('.actions-cell button')].map(b=>b.innerText.trim());
+    const botones = [...document.querySelectorAll('#pedidos-list .es-barra button')].map(b=>b.innerText.trim()).concat(acciones(document.getElementById('pedidos-list')));
     // La segunda barrera: llamarla a mano no puede borrarlo tampoco.
     reallyDeleteOrder(11);
     await new Promise(r=>setTimeout(r,200));
