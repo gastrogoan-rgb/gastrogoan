@@ -640,7 +640,7 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
 
 ## Rediseño pantalla a pantalla (29-30/10): cómo se hace y qué hay hecho
 
-El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo y Fichas Técnicas**.
+El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas y Pedidos**.
 La orden de fondo, dicha tras ver que se tocaba solo la pantalla principal: **cuando se rediseña una pantalla se
 abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueba `test/subpantallas.mjs` lo exige).
 
@@ -681,6 +681,19 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   `pasos` sigue siendo una lista de textos (I+D y lo antiguo la escriben así), así que quitar o mover un paso mueve los dos.
   Sin permiso de editar se ve como documento (sin campos). El impreso (`printFicha`) va a dos columnas con casillas para
   la mise en place y SIN iconos de fuente (la ventana de impresión no los carga). Prueba: `test/fichas.mjs`.
+- **Selector de periodo común** (30/10): `ggPeriodoHtml({anio, mes, cb, datos, anual})` (js/ui.js) es un solo control
+  «‹ octubre 2026 ▾ ›»: las flechas van de mes en mes y, al abrirlo, el año con sus doce meses y **cuántos registros hay
+  en cada uno** (`datos` = {'AAAA-MM': n}), más «todo el año» (`mes` null) y «este mes». Quien lo usa guarda `anio` y `mes`
+  y le pasa una función global `cb(anio, mes)` que repinta. Lo estrena el Historial de Pedidos; **es el que deben llevar
+  Gestión Económica y el resto de pantallas con año y mes** (hoy aún usan las doce píldoras `month-pill`).
+- **Pedidos** (30/10): «Realizar pedido» es una lista de la compra (`pc-art`: stock, precio y cantidad con − y +; filtros
+  «bajo mínimo» y «con cantidad»; resumen en vivo con envío y avisos), ya NO hay modal (`openOrderModal` abre la pestaña).
+  **«Sugerir por déficit»** (`sugerirPorDeficit`): falta = mínimo − stock − lo que ya viene de camino (pedidos ENVIADOS
+  sin recibir, `pcEnCamino`), redondeado hacia arriba al envase (`packQty`), y avisa de cuántos sugiere, cuántos ya vienen
+  y cuántos no tienen mínimo en Stock. Enviar por WhatsApp solo con móvil (`whatsappDeTelefono`), email con correo; sin
+  datos de contacto el botón se desactiva y dice por qué; «Guardar borrador» e imprimir (hoja con casillas de recibido y
+  SIN precios). Cada pedido es una hoja (`renderPedidoDetail`): estado en tres pasos, líneas con ✓/✗, precio de albarán y
+  nota (plegables en móvil), control APPCC, albarán y factura. Prueba: `test/pedidos.mjs`.
 - **Catálogo de iconos de comida** (224, trazo; 181 de comida y 43 de utensilios y equipo de cocina): `tools/iconos-comida-lista.txt` → `node tools/generar-iconos-comida.mjs <tabler> <lucide> <phosphor>` (hacen falta los tres paquetes npm descomprimidos)
   → `js/iconos-comida.js`; el uso (`iconoSeccionHtml`, `iconoSelectorHtml`) va en `js/iconos-comida-uso.js` y `menu.js`, y se
   copia a `reservagastrogoan.html`. Lo guardado: `ic:<clave>`, `ic:none` o un emoji antiguo (se sigue viendo).
@@ -696,7 +709,7 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
 - **Mega Lista**: el precio de compra es **sin IVA** y el IVA va justo al lado (lista y formulario); «por revisar»
   (sin precio / IVA / proveedor), IVA en línea y por carpeta, cálculo en vivo (coste por unidad y con IVA).
 - Pruebas que siguen el diseño nuevo: `oferta`, `vales-cocina`, `iconos-comida`, `ia-proveedores`, `subpantallas`,
-  `proveedores`, `megalista`, `plegables`, `menu-acciones`, `escandallo`, `fichas`. ⚠️ `acceso-alta.mjs` falla desde antes de estos cambios: el selector de idioma
+  `proveedores`, `megalista`, `plegables`, `menu-acciones`, `escandallo`, `fichas`, `pedidos`. ⚠️ `acceso-alta.mjs` falla desde antes de estos cambios: el selector de idioma
   «ES» de la entrada mide 44×26 px en móvil (diseño del 28/10, pendiente de decidir).
 
 ## Entrada, selector y frase del día (28-29/10)

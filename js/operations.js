@@ -1088,25 +1088,25 @@ function viewSupplierOrderHistory(nombre){
 function setPedidosTab(tab){
   pedidosTab = tab;
   pedidoDetailId = null;
-  if(tab === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; }
+  if(tab === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = ''; }
   if(tab === 'solicitar'){ solicitudLines = []; solicitudSearch = ''; }
   renderPedidos();
 }
 function updatePedidosTabsUI(){
   const c = document.getElementById('pedidos-tab-crear');
-  const s = document.getElementById('pedidos-tab-solicitar');
+  const sol = document.getElementById('pedidos-tab-solicitar');
   const h = document.getElementById('pedidos-tab-historial');
-  if(c) c.classList.toggle('btn-primary', pedidosTab === 'crear');
-  if(s){
+  if(c) c.classList.toggle('is-on', pedidosTab === 'crear');
+  if(sol){
     // "Pedir lo que falta" es para quien NO puede hacer un pedido real
     // (sin permiso de editar): al dueño o al gerente no les aporta nada,
     // ellos ya tienen "Realizar Pedido" — mostrárselo era ruido, y además
     // era donde se veían las propias solicitudes que le llegan a ÉL, que
     // ahora se ven directamente encima de "Realizar Pedido".
-    s.style.display = editUnlocked ? 'none' : '';
-    s.classList.toggle('btn-primary', pedidosTab === 'solicitar');
+    sol.style.display = editUnlocked ? 'none' : '';
+    sol.classList.toggle('is-on', pedidosTab === 'solicitar');
   }
-  if(h) h.classList.toggle('btn-primary', pedidosTab === 'historial');
+  if(h) h.classList.toggle('is-on', pedidosTab === 'historial');
 }
 
 function renderPedidos(){
@@ -1146,23 +1146,27 @@ function setPedidoHistorialSupplierFilter(val){
 }
 /* El historial pintaba TODOS los pedidos que ha habido nunca: con tres
    pedidos al día son mil tarjetas al año, y a los tres años la pantalla
-   tarda en abrirse. Ahora se entra por el mes en curso, con el mismo
-   selector de año y meses que Gestión Económica — no se borra nada, solo
-   se enseña un mes cada vez (decisión del dueño, 12/09). */
+   tarda en abrirse. Ahora se entra por el mes en curso — no se borra nada,
+   solo se enseña un periodo cada vez (decisión del dueño, 12/09). Desde el
+   30/10 el periodo se elige con el selector común (ggPeriodoHtml): un solo
+   control con flechas de mes y, al abrirlo, los doce meses con cuántos
+   pedidos hay en cada uno. `mes` null = el año entero. */
 let pedidoHistorialYear = new Date().getFullYear();
 let pedidoHistorialMonth = new Date().getMonth();
-function setPedidoHistorialYear(delta){
-  pedidoHistorialYear += delta;
+let pedidoHistorialEstado = '';          // '' = todos · 'BORRADOR' | 'ENVIADO' | 'RECIBIDO'
+function setPedidoHistorialPeriodo(anio, mes){
+  pedidoHistorialYear = anio;
+  pedidoHistorialMonth = mes;
   renderPedidoList();
 }
-function setPedidoHistorialMonth(i){
-  pedidoHistorialMonth = i;
+function setPedidoHistorialEstado(estado){
+  pedidoHistorialEstado = (pedidoHistorialEstado === estado ? '' : estado);
   renderPedidoList();
 }
-// Mes que se está mirando, como 'AAAA-MM' — los pedidos guardan la fecha
-// en ese mismo formato, así que basta con startsWith.
+// Periodo que se está mirando, como 'AAAA-MM' (o 'AAAA' si es el año entero): los pedidos guardan la fecha en ese
+// mismo formato, así que basta con startsWith.
 function pedidoHistorialMesStr(){
-  return `${pedidoHistorialYear}-${String(pedidoHistorialMonth+1).padStart(2,'0')}`;
+  return pedidoHistorialMonth == null ? String(pedidoHistorialYear) : `${pedidoHistorialYear}-${String(pedidoHistorialMonth+1).padStart(2,'0')}`;
 }
 // Como en el resto de listados (Proveedores, Stock, Mega Lista, Escandallo,
 // Fichas), solo se repinta la lista de tarjetas de resultados, nunca el
@@ -1186,17 +1190,8 @@ function renderPedidoList(){
   const counts = {BORRADOR:0, ENVIADO:0, RECIBIDO:0};
   allOrders.forEach(o => { if(counts[o.estado] !== undefined) counts[o.estado]++; });
 
-  const kpiHtml = `
-    <div class="grid grid-4" style="margin-bottom:14px">
-      <div class="kpi"><div class="label">${t('label.drafts')}</div><div class="value">${counts.BORRADOR}</div></div>
-      <div class="kpi warn"><div class="label">${t('label.sentOrders')}</div><div class="value">${counts.ENVIADO}</div></div>
-      <div class="kpi ok"><div class="label">${t('label.receivedOrders')}</div><div class="value">${counts.RECIBIDO}</div></div>
-      <div class="kpi"><div class="label">${t('common.total')}</div><div class="value">${allOrders.length}</div></div>
-    </div>
-  `;
-
   if(!allOrders.length){
-    box.innerHTML = kpiHtml + `<div class="empty"><i class="ti ti-shopping-cart"></i>${t('empty.noOrders')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-shopping-cart"></i>${t('empty.noOrders')}</div>`;
     return;
   }
 
@@ -1206,30 +1201,29 @@ function renderPedidoList(){
   // forma del fallo de Distribución del Trabajo: un dato suelto corrupto
   // que revienta al recorrer la lista. Se ordena a prueba de huecos.
   const suppliers = [...new Set(allOrders.map(o => o.supplier).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
-  // t('months.short'), no getMeses(): esa vive dentro del cierre de GE.
-  const mesesHtml = t('months.short').map((m,i)=>`
-    <div class="month-pill${i===pedidoHistorialMonth?' active':''}" onclick="setPedidoHistorialMonth(${i})">${m}</div>`).join('');
-  const filterHtml = `
-    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
-      <button class="btn btn-sm btn-icon" onclick="setPedidoHistorialYear(-1)"><i class="ti ti-chevron-left"></i></button>
-      <span style="font-size:16px;font-weight:700">${pedidoHistorialYear}</span>
-      <button class="btn btn-sm btn-icon" onclick="setPedidoHistorialYear(1)"><i class="ti ti-chevron-right"></i></button>
-    </div>
-    <div class="month-sel month-sel-centered" style="margin-bottom:12px">${mesesHtml}</div>
-    <div class="field-row filter-compact" style="margin-bottom:12px">
-      <div class="field" style="max-width:220px">
-        <input type="text" class="search-input" value="${escapeHtml(pedidoHistorialSearch)}" placeholder="${t('ph.searchOrder')}" oninput="setPedidoHistorialSearch(this.value)">
+  // Cuántos pedidos hay en cada mes: el selector los enseña para ir directo a donde hay algo.
+  const datos = {};
+  allOrders.forEach(o => { const k = String(o.date||'').slice(0,7); if(k) datos[k] = (datos[k]||0) + 1; });
+  const chip = (clave, etiqueta, n) => `<button type="button" class="btn btn-sm btn-fino${pedidoHistorialEstado === clave ? ' is-on' : ''}" aria-pressed="${pedidoHistorialEstado === clave}" onclick="setPedidoHistorialEstado('${clave}')">${etiqueta} <span class="ml-n">${n}</span></button>`;
+  box.innerHTML = `
+    <div class="pe-barra">
+      ${ggPeriodoHtml({anio: pedidoHistorialYear, mes: pedidoHistorialMonth, cb:'setPedidoHistorialPeriodo', datos, anual:true})}
+      <div class="pe-estados">
+        ${chip('BORRADOR', t('label.drafts'), counts.BORRADOR)}
+        ${chip('ENVIADO', t('label.sentOrders'), counts.ENVIADO)}
+        ${chip('RECIBIDO', t('label.receivedOrders'), counts.RECIBIDO)}
       </div>
-      <div class="field" style="max-width:280px">
-        <select id="pedido-historial-supplier-filter" onchange="setPedidoHistorialSupplierFilter(this.value)">
+    </div>
+    <div class="toolbar es-filtros pe-filtros">
+      <div class="left">
+        <input type="text" class="search-input es-buscar" value="${escapeHtml(pedidoHistorialSearch)}" placeholder="${t('ph.searchOrder')}" oninput="setPedidoHistorialSearch(this.value)">
+        <select id="pedido-historial-supplier-filter" class="es-filtro" onchange="setPedidoHistorialSupplierFilter(this.value)">
           <option value="">${t('label.allSuppliers')}</option>
           ${suppliers.map(s => `<option value="${escapeHtml(s)}" ${pedidoHistorialSupplierFilter===s?'selected':''}>${escapeHtml(s)}</option>`).join('')}
         </select>
       </div>
     </div>
-  `;
-
-  box.innerHTML = kpiHtml + filterHtml + `<div id="pedido-results"></div>`;
+    <div id="pedido-results"></div>`;
   renderPedidoResultsList();
 }
 
@@ -1242,24 +1236,21 @@ function renderPedidoSolicitudesPendientesHtml(){
   const pendientes = (DB.pedidoSolicitudes||[]).filter(s => s.status==='pending' && (s.area||'cocina')===currentArea());
   if(!pendientes.length) return '';
   return `
-    <div class="card" style="margin-bottom:14px;border:1px solid var(--amber)">
-      <h4 style="margin-bottom:8px"><i class="ti ti-clipboard-list"></i> ${t('pedido.pendingRequestsTitle')}</h4>
+    <section class="es-card pc-solicitudes">
+      <h3 class="es-tit"><i class="ti ti-clipboard-list"></i> ${t('pedido.pendingRequestsTitle')} <span class="ml-n">${pendientes.length}</span></h3>
       ${pendientes.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).map(s => {
         const emp = DB.employees.find(e=>e.id===s.employeeId);
         return `
-        <div style="font-size:13px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-            <strong>${escapeHtml(emp?emp.name:'?')}</strong>
-            <span style="color:var(--muted);font-size:12px">${fmtDateTime(new Date(s.createdAt))}</span>
-          </div>
-          <ul style="margin:6px 0 6px 18px;padding:0">
-            ${(s.items||[]).map(i => `<li>${escapeHtml(i.name)}${i.cantidad?` — <strong>${i.cantidad}</strong> ${escapeHtml(i.unit||'')}`:''}</li>`).join('')}
+        <div class="pc-sol">
+          <div class="pc-sol-cab"><b>${escapeHtml(emp?emp.name:'?')}</b><span>${fmtDateTime(new Date(s.createdAt))}</span></div>
+          <ul class="pc-sol-lista">
+            ${(s.items||[]).map(i => `<li>${escapeHtml(i.name)}${i.cantidad?` <b>${fmtNum(i.cantidad)} ${escapeHtml(i.unit||'')}</b>`:''}</li>`).join('')}
           </ul>
-          ${s.notas ? `<div style="color:var(--muted);margin-bottom:6px">${escapeHtml(s.notas)}</div>` : ''}
-          <button class="btn btn-sm" onclick="markPedidoSolicitudAtendida(${s.id})"><i class="ti ti-check"></i> ${t('pedido.markHandled')}</button>
+          ${s.notas ? `<div class="pc-sol-notas">${escapeHtml(s.notas)}</div>` : ''}
+          <button type="button" class="btn btn-sm btn-fino" onclick="markPedidoSolicitudAtendida(${s.id})"><i class="ti ti-check"></i> ${t('pedido.markHandled')}</button>
         </div>`;
       }).join('')}
-    </div>`;
+    </section>`;
 }
 // Se borra de verdad, no se marca "atendida" y se deja ahí: al empleado le
 // quedaba fija en "Tus solicitudes" para siempre aunque ya estuviera hecha,
@@ -1286,18 +1277,23 @@ function renderPedidoSolicitar(){
   // Lista/Escandallo/Fichas: si no, se pierde el foco al escribir letra a
   // letra.
   box.innerHTML = `
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">${t('pedido.requestDesc')}</p>
-    <div class="field">
-      <label>${t('pedido.searchToAdd')}</label>
-      <input type="text" class="search-input" id="solicitud-search-input" value="${escapeHtml(solicitudSearch)}" placeholder="${t('ph.searchArticle')}" oninput="updateSolicitudSearch(this.value)">
-    </div>
-    <div id="solicitud-matches"></div>
-    <div id="solicitud-cart"></div>
-    <div class="field">
-      <label>${t('pedido.notesLabel')}</label>
-      <textarea id="solicitud-notas" rows="2" placeholder="${t('ph.solicitudNotes')}"></textarea>
-    </div>
-    <button class="btn btn-primary" onclick="submitPedidoSolicitud()"><i class="ti ti-send"></i> ${t('pedido.sendRequestBtn')}</button>
+    <section class="es-card pc-solicitar">
+      <p class="es-nota"><i class="ti ti-info-circle"></i> ${t('pedido.requestDesc')}</p>
+      <div class="field">
+        <label for="solicitud-search-input">${t('pedido.searchToAdd')}</label>
+        <div class="es-anadir-buscar">
+          <i class="ti ti-search"></i>
+          <input type="text" class="search-input" id="solicitud-search-input" value="${escapeHtml(solicitudSearch)}" placeholder="${t('ph.searchArticle')}" oninput="updateSolicitudSearch(this.value)">
+        </div>
+      </div>
+      <div id="solicitud-matches"></div>
+      <div id="solicitud-cart"></div>
+      <div class="field">
+        <label for="solicitud-notas">${t('pedido.notesLabel')}</label>
+        <textarea id="solicitud-notas" rows="2" placeholder="${t('ph.solicitudNotes')}"></textarea>
+      </div>
+      <button type="button" class="btn btn-fino is-on" onclick="submitPedidoSolicitud()"><i class="ti ti-send"></i> ${t('pedido.sendRequestBtn')}</button>
+    </section>
     <div id="solicitud-mine"></div>
   `;
   renderSolicitudMatches();
@@ -1310,26 +1306,34 @@ function renderSolicitudMatches(){
   const area = currentArea();
   const search = solicitudSearch.toLowerCase();
   const matches = search ? DB.ingredients.filter(i => (i.area||'cocina')===area && i.activo!==false && i.name.toLowerCase().includes(search) && !solicitudLines.some(l=>l.ingredientId===i.id)).slice(0,12) : [];
-  box.innerHTML = matches.length ? `<div class="card" style="margin-bottom:12px">${matches.map(i => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
-        <span>${escapeHtml(i.name)}</span>
-        <button class="btn btn-sm" onclick="addSolicitudLine(${i.id})"><i class="ti ti-plus"></i> ${t('common.add')}</button>
+  box.innerHTML = matches.length ? `<div class="pc-res">${matches.map(i => `
+      <div class="pc-res-fila">
+        <span>${escapeHtml(i.name)} <small>${escapeHtml(i.unit||'')}</small></span>
+        <button type="button" class="btn btn-sm btn-fino" onclick="addSolicitudLine(${i.id})"><i class="ti ti-plus"></i> ${t('common.add')}</button>
       </div>`).join('')}</div>` : '';
 }
 function renderSolicitudCart(){
   const box = document.getElementById('solicitud-cart');
   if(!box) return;
-  box.innerHTML = solicitudLines.length ? `<div class="card" style="margin-bottom:12px">
+  box.innerHTML = solicitudLines.length ? `<div class="pc-cesta">
       ${solicitudLines.map((l,idx) => `
-        <div class="list-row" style="padding:6px 0">
-          <div class="list-row-name"><span>${escapeHtml(l.name)}</span></div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <input type="number" min="0" step="0.01" value="${l.cantidad}" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateSolicitudQty(${idx}, this.value)">
-            <span style="font-size:12px;color:var(--muted)">${escapeHtml(l.unit||'')}</span>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="removeSolicitudLine(${idx})"><i class="ti ti-x"></i></button>
+        <div class="pc-cesta-fila">
+          <span class="pc-cesta-nom">${escapeHtml(l.name)}</span>
+          <div class="pc-qty">
+            <button type="button" class="btn btn-fino" aria-label="−" onclick="stepSolicitudQty(${idx}, -1)"><i class="ti ti-minus"></i></button>
+            <input type="number" min="0" step="0.01" value="${l.cantidad}" aria-label="${t('common.qty')}" onchange="updateSolicitudQty(${idx}, this.value)">
+            <button type="button" class="btn btn-fino" aria-label="+" onclick="stepSolicitudQty(${idx}, 1)"><i class="ti ti-plus"></i></button>
+            <span class="pc-qty-u">${escapeHtml(l.unit||'')}</span>
           </div>
+          ${ggMenuAcciones([{icono:'ti-trash', texto:gl({es:'Quitar de la lista', ca:'Treure de la llista', en:'Remove from list'}), fn:`removeSolicitudLine(${idx})`, peligro:true}])}
         </div>`).join('')}
-    </div>` : `<div class="empty" style="padding:20px"><i class="ti ti-clipboard-list"></i>${t('pedido.noItemsYet')}</div>`;
+    </div>` : `<div class="empty"><i class="ti ti-clipboard-list"></i>${t('pedido.noItemsYet')}</div>`;
+}
+function stepSolicitudQty(idx, dir){
+  const l = solicitudLines[idx];
+  if(!l) return;
+  l.cantidad = Math.max(0, Math.round(((parseFloat(l.cantidad)||0) + dir) * 100) / 100);
+  renderSolicitudCart();
 }
 function renderSolicitudMine(){
   const box = document.getElementById('solicitud-mine');
@@ -1337,10 +1341,10 @@ function renderSolicitudMine(){
   const area = currentArea();
   const misSolicitudes = (DB.pedidoSolicitudes||[]).filter(s => (s.area||'cocina')===area && s.employeeId===loggedInEmployeeId()).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   box.innerHTML = misSolicitudes.length ? `
-    <div class="card" style="margin-top:16px">
-      <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-history"></i> ${t('pedido.myRequestsTitle')}</h4>
-      ${misSolicitudes.slice(0,5).map(s => `<div style="font-size:12.5px;margin-bottom:4px">${fmtDateTime(new Date(s.createdAt))} — ${(s.items||[]).length} ${t('noun.products')} — <strong>${s.status==='pending'?t('vacation.statusPending'):t('pedido.statusHandled')}</strong></div>`).join('')}
-    </div>` : '';
+    <section class="es-card" style="margin-top:16px">
+      <h3 class="es-tit"><i class="ti ti-history"></i> ${t('pedido.myRequestsTitle')}</h3>
+      ${misSolicitudes.slice(0,5).map(s => `<div class="pc-mia">${fmtDateTime(new Date(s.createdAt))} <span>${(s.items||[]).length} ${t('noun.products')}</span> <b>${s.status==='pending' ? t('vacation.statusPending') : t('pedido.statusHandled')}</b></div>`).join('')}
+    </section>` : '';
 }
 function updateSolicitudSearch(val){
   solicitudSearch = val;
@@ -1384,25 +1388,26 @@ function renderPedidoResultsList(){
   const box = document.getElementById('pedido-results');
   if(!box) return;
   const allOrders = DB.purchaseOrders.filter(o => (o.area||'cocina') === currentArea());
-  const mes = pedidoHistorialMesStr();
+  const periodo = pedidoHistorialMesStr();
   /* Un pedido en BORRADOR o ENVIADO no es historial: es trabajo a medias, y
      el que se envió el 30 y llega el 2 no puede desaparecer de la pantalla
-     al cambiar de mes. Por eso el mes solo filtra los RECIBIDOS; lo que
+     al cambiar de mes. Por eso el periodo solo filtra los RECIBIDOS; lo que
      sigue pendiente se ve siempre, se pidiera cuando se pidiera. */
-  const delMes = o => o.estado !== 'RECIBIDO' || String(o.date||'').startsWith(mes);
+  const delMes = o => o.estado !== 'RECIBIDO' || String(o.date||'').startsWith(periodo);
   const coincide = o =>
     (!pedidoHistorialSupplierFilter || o.supplier === pedidoHistorialSupplierFilter) &&
+    (!pedidoHistorialEstado || o.estado === pedidoHistorialEstado) &&
     pedidoMatchesSearch(o, pedidoHistorialSearch);
   const orders = allOrders.filter(o => delMes(o) && coincide(o));
   /* Buscar algo que está en otro mes no puede devolver "sin resultados" a
-     secas: se dice cuántos hay fuera del mes que se está mirando. Solo
+     secas: se dice cuántos hay fuera del periodo que se está mirando. Solo
      cuando se está buscando o filtrando de verdad — si no, el aviso saldría
      siempre (hay pedidos de otros meses casi por definición) y se acabaría
      leyendo como parte del decorado. */
-  const buscando = !!pedidoHistorialSearch || !!pedidoHistorialSupplierFilter;
+  const buscando = !!pedidoHistorialSearch || !!pedidoHistorialSupplierFilter || !!pedidoHistorialEstado;
   const fuera = buscando ? allOrders.filter(o => !delMes(o) && coincide(o)).length : 0;
   const avisoFuera = fuera
-    ? `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t(fuera===1 ? 'pedido.matchesOtherMonthsOne' : 'pedido.matchesOtherMonths').replace('${n}', fuera)}</div>`
+    ? `<div class="pe-aviso"><i class="ti ti-info-circle"></i> ${t(fuera===1 ? 'pedido.matchesOtherMonthsOne' : 'pedido.matchesOtherMonths').replace('${n}', fuera)}</div>`
     : '';
   if(!orders.length){
     box.innerHTML = avisoFuera + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
@@ -1410,36 +1415,43 @@ function renderPedidoResultsList(){
   }
 
   const totalFiltrado = orders.reduce((sum,o) => sum + pedidoTotalConIva(o), 0);
-  const totalHtml = avisoFuera + `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--ink)">${fmtMoney(totalFiltrado)}</strong></div>`;
-
   const sorted = orders.slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
-  box.innerHTML = totalHtml + sorted.map(o => {
-    const itemCount = (o.items||[]).length;
-    const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
-    const comp = getPedidoComprobacionMap()[o.comprobacion];
-    const dias = o.estado === 'ENVIADO' ? daysSincePedidoEnviado(o) : null;
-    const diasBadge = dias != null && dias > 0 ? `<span class="badge ${dias>=3?'badge-red':'badge-amber'}" style="margin-top:6px">${t('label.daysSinceSent').replace('${days}', dias)}</span>` : '';
-    return `
-      <div class="card" style="cursor:pointer" onclick="openPedido(${o.id})">
-        <h3 style="justify-content:space-between;gap:8px">
-          <span style="min-width:0;overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
-          <span style="display:flex;align-items:center;gap:6px;flex:none">
-            <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
-<!-- Un pedido RECIBIDO ya no se borra: sumó stock y generó un gasto real,
-                 y es el papel que justifica esa compra ante el gestor o una
-                 inspección. Si la recepción se marcó por error, la salida es
-                 "Deshacer recepción" dentro del pedido, que revierte stock y
-                 gasto dejando constancia (decisión del dueño, 12/09). -->
-          </span>
-        </h3>
-        <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')} · <strong>${fmtMoney(pedidoTotalConIva(o))}</strong>${o.estado==='RECIBIDO' && o.recibidoPor ? ` · ${t('label.receivedBy')}: ${escapeHtml(o.recibidoPor)}` : ''}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
-          ${diasBadge}
-        </div>
+  box.innerHTML = avisoFuera + `
+    <div class="pe-total"><span>${orders.length} ${gl({es:orders.length === 1 ? 'pedido' : 'pedidos', ca:orders.length === 1 ? 'comanda' : 'comandes', en:orders.length === 1 ? 'order' : 'orders'})}</span><span>${t('label.totalFiltered')}: <b>${fmtMoney(totalFiltrado)}</b></span></div>
+    <div class="es-platos pe-lista">${sorted.map(pedidoTarjetaHtml).join('')}</div>`;
+}
+
+// Una tarjeta por pedido: a quién, para cuándo, en qué punto está y cuánto es. Pulsarla abre su hoja.
+function pedidoTarjetaHtml(o){
+  const itemCount = (o.items||[]).length;
+  const comp = getPedidoComprobacionMap()[o.comprobacion];
+  const dias = o.estado === 'ENVIADO' ? daysSincePedidoEnviado(o) : null;
+  const k = (et, v) => `<span class="es-cifra"><i>${et}</i><b>${v}</b></span>`;
+  return `
+    <article class="es-plato pe-ped pe-${String(o.estado||'').toLowerCase()}" role="button" tabindex="0" onclick="openPedido(${o.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPedido(${o.id})}">
+      <div class="es-plato-cab">
+        <i class="ti ti-truck-delivery es-plato-ico"></i>
+        <div class="es-plato-nom">${escapeHtml(o.supplier || '—')}</div>
+        ${ggMenuAcciones([
+          {icono:'ti-file-text', texto:gl({es:'Abrir', ca:'Obrir', en:'Open'}), fn:`openPedido(${o.id})`},
+          {icono:'ti-copy', texto:t('btn.duplicateOrder'), fn:`duplicateOrder(${o.id})`, owner:true},
+          // Un pedido RECIBIDO ya no se borra: sumó stock y generó un gasto real, y es el papel que justifica esa compra
+          // ante el gestor o una inspección. Si la recepción se marcó por error, la salida es «Deshacer recepción»
+          // dentro del pedido (decisión del dueño, 12/09).
+          o.estado !== 'RECIBIDO' ? {icono:'ti-trash', texto:t('common.delete'), fn:`deleteOrder(${o.id})`, peligro:true, owner:true} : null
+        ].filter(Boolean))}
       </div>
-    `;
-  }).join('');
+      <div class="es-plato-insignias">
+        <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
+        ${dias != null && dias > 0 ? `<span class="badge ${dias>=3?'badge-red':'badge-amber'}">${t('label.daysSinceSent').replace('${days}', dias)}</span>` : ''}
+        ${comp ? `<span class="badge ${comp.cls}">${comp.label}</span>` : ''}
+      </div>
+      <div class="es-plato-cifras">
+        ${k(gl({es:'Entrega', ca:'Lliurament', en:'Delivery'}), escapeHtml(o.date || '—'))}
+        ${k(gl({es:'Artículos', ca:'Articles', en:'Items'}), itemCount)}
+        ${k(t('common.total'), fmtMoney(pedidoTotalConIva(o)))}
+      </div>
+    </article>`;
 }
 
 function openPedido(id){
@@ -1447,6 +1459,7 @@ function openPedido(id){
   pedidosTab = 'historial';
   updatePedidosTabsUI();
   renderPedidoDetail();
+  scrollContentToTop();
 }
 
 function backToPedidoList(){
@@ -1504,17 +1517,17 @@ function renderPedidoIvaBreakdownHtml(o, isRecibido){
   const totalIva = rates.reduce((s,r)=>s+groups[r]*r/100, 0);
   const envio = providerShippingCost(getProviderByName(o.supplier), pedidoOrderedBase(o));
   return `
-  <div style="padding:10px 12px;background:var(--bg);border-radius:8px;margin-bottom:10px;font-size:13px">
-    ${rates.map(r => `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:4px">
-      <div><span style="color:var(--muted)">${t('label.taxBase')} ${r}%:</span> <strong>${fmtMoney(groups[r])}</strong></div>
-      <div><span style="color:var(--muted)">${t('label.vat')}:</span> <strong>${fmtMoney(groups[r]*r/100)}</strong></div>
-    </div>`).join('')}
-    ${envio > 0 ? `<div style="margin-bottom:4px"><span style="color:var(--muted)">${t('label.shipping')}:</span> <strong>${fmtMoney(envio)}</strong></div>` : ''}
-    ${rates.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--muted)">${t('common.total')}:</span> <strong style="color:var(--ink)">${fmtMoney(totalBase+totalIva+envio)}</strong></div>` : ''}
-    ${missingIva ? `<div style="color:var(--red);margin-top:6px"><i class="ti ti-alert-triangle"></i> ${t('msg.someIngredientsMissingIva')}</div>` : ''}
+  <div class="pd-totales">
+    ${rates.map(r => `
+      <div><span>${t('label.taxBase')} ${r}%</span><b>${fmtMoney(groups[r])}</b></div>
+      <div><span>${t('label.vat')} ${r}%</span><b>${fmtMoney(groups[r]*r/100)}</b></div>`).join('')}
+    ${envio > 0 ? `<div><span>${t('label.shipping')}</span><b>${fmtMoney(envio)}</b></div>` : ''}
+    ${rates.length ? `<div class="pd-total"><span>${t('common.total')}</span><b>${fmtMoney(totalBase+totalIva+envio)}</b></div>` : ''}
+    ${missingIva ? `<p class="pd-falta"><i class="ti ti-alert-triangle"></i> ${t('msg.someIngredientsMissingIva')}</p>` : ''}
   </div>`;
 }
 
+const PEDIDO_PASOS = ['BORRADOR','ENVIADO','RECIBIDO'];
 function renderPedidoDetail(){
   const o = getPurchaseOrder(pedidoDetailId);
   const box = document.getElementById('pedidos-list');
@@ -1523,6 +1536,7 @@ function renderPedidoDetail(){
   const isRecibido = o.estado === 'RECIBIDO';
   const showRecepcion = o.estado === 'ENVIADO' || o.estado === 'RECIBIDO';
   const r = o.recepcion || {};
+  const items = o.items || [];
 
   // El checklist de recepción se ve en cuanto el pedido está Enviado (para
   // poder ir marcando mientras llega la mercancía), no solo tras marcarlo
@@ -1534,133 +1548,155 @@ function renderPedidoDetail(){
   // cuenta nada de esa línea para stock/gasto; no hace falta un número de
   // "cantidad recibida" aparte, la nota ya lo explica.
   const canEditChecklist = !isRecibido || editUnlocked;
-  const itemsHtml = (o.items||[]).map((line, idx) => {
+  const itemsHtml = items.map((line, idx) => {
     const ing = getIngredient(line.ingredientId);
     const state = line.recibidoCheck; // true=OK, false=problema, undefined=sin revisar
-    const rowAccent = !showRecepcion ? 'var(--border)' : (state===true ? '#4A5D4E' : state===false ? 'var(--red)' : 'var(--border)');
+    const pa = ing ? (line.precioAlbaran != null ? line.precioAlbaran : (ing.price || 0)) : 0;
+    const distinto = ing && line.precioAlbaran != null && Math.abs(line.precioAlbaran - (ing.price || 0)) > 0.0001;
     return `
-      <div class="list-row" style="padding:6px 10px;flex-wrap:wrap;border-left:3px solid ${rowAccent}">
-        <div class="list-row-name"><span style="${state===true ? 'text-decoration:underline;text-decoration-color:#4A5D4E;text-decoration-thickness:2px' : ''}${state===false ? 'color:var(--red)' : ''}">${ing ? escapeHtml(ing.name) : '—'}</span></div>
-        <span style="font-size:11.5px;color:var(--muted)">${t('label.ordered')}</span>
-        ${editUnlocked
-          ? `<input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)">`
-          : `<span style="width:70px;padding:3px 5px;font-size:13px;font-weight:600">${fmtNum(line.cantidad)}</span>`}
-        <span style="font-size:12px;color:var(--muted);min-width:22px">${ing ? escapeHtml(ing.unit) : ''}</span>
-        ${showRecepcion ? `
-        <div style="display:flex;gap:6px">
-          <button type="button" title="${t('label.arrived')}" ${canEditChecklist?'':'disabled'} onclick="toggleRecepcionCheck(${idx}, true)" style="width:30px;height:30px;border-radius:6px;cursor:${canEditChecklist?'pointer':'default'};display:flex;align-items:center;justify-content:center;border:1px solid ${state===true?'#4A5D4E':'var(--border)'};background:${state===true?'#4A5D4E':'#fff'};color:${state===true?'#fff':'#4A5D4E'}"><i class="ti ti-check" style="font-size:16px"></i></button>
-          <button type="button" title="${t('label.notArrived')}" ${canEditChecklist?'':'disabled'} onclick="toggleRecepcionCheck(${idx}, false)" style="width:30px;height:30px;border-radius:6px;cursor:${canEditChecklist?'pointer':'default'};display:flex;align-items:center;justify-content:center;border:1px solid ${state===false?'var(--red)':'var(--border)'};background:${state===false?'var(--red)':'#fff'};color:${state===false?'#fff':'var(--red)'}"><i class="ti ti-x" style="font-size:16px"></i></button>
+      <div class="pd-linea plegable${state === true ? ' ok' : state === false ? ' mal' : ''}${ggPlegableAbierta('pdl-' + idx) ? ' is-abierta' : ''}" data-pl="pdl-${idx}"${showRecepcion ? ' onclick="ggTogglePlegable(event, this)"' : ''}>
+        <div class="pd-l-nom"><b>${ing ? escapeHtml(ing.name) : '—'}</b>${ing && ing.activo === false ? ` <span class="badge badge-gray txt-xs">${t('label.discontinued')}</span>` : ''}</div>
+        <div class="pd-l-qty" data-et="${escapeHtml(t('label.ordered'))}">
+          ${editUnlocked
+            ? `<input type="number" class="es-in" value="${line.cantidad}" step="0.01" min="0" aria-label="${escapeHtml(t('label.ordered'))}" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)">`
+            : `<b class="pd-l-fija">${fmtNum(line.cantidad)}</b>`}
+          <span class="es-l-u">${ing ? escapeHtml(ing.unit) : ''}</span>
         </div>
-        ${ing && !isRecibido && canEditChecklist ? (() => {
-          const pa = line.precioAlbaran != null ? line.precioAlbaran : (ing.price || 0);
-          const distinto = line.precioAlbaran != null && Math.abs(line.precioAlbaran - (ing.price || 0)) > 0.0001;
-          return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)" title="${escapeHtml(t('precios.albaranHint'))}">${escapeHtml(t('precios.albaranLabel'))}
-            <input type="number" step="0.01" min="0" value="${pa}" style="width:80px;padding:3px 5px;border:1px solid ${distinto ? 'var(--red)' : 'var(--border)'};border-radius:6px;font-size:13px" onchange="updatePedidoLinePrecio(${idx}, this.value)">€/${escapeHtml(ing.unit)}
-            ${distinto ? `<span style="color:var(--red);font-weight:700">${line.precioAlbaran > (ing.price || 0) ? '▲' : '▼'} ${fmtNum(Math.abs((line.precioAlbaran - (ing.price || 0)) / (ing.price || 1) * 100), 1)} %</span>` : ''}</label>`;
-        })() : ''}
-        <input type="text" placeholder="${t('ph.receptionNote')}" value="${escapeHtml(line.notaRecepcion||'')}" style="flex:1;min-width:150px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px" ${canEditChecklist?'':'disabled'} onchange="updatePedidoLineNota(${idx}, this.value)">
-        ` : ''}
-      </div>
-    `;
+        ${showRecepcion ? `
+        <div class="pd-l-rec">
+          <button type="button" class="btn btn-fino pd-ck${state === true ? ' is-ok' : ''}" title="${escapeHtml(t('label.arrived'))}" aria-label="${escapeHtml(t('label.arrived'))}" aria-pressed="${state === true}" ${canEditChecklist ? '' : 'disabled'} onclick="event.stopPropagation();toggleRecepcionCheck(${idx}, true)"><i class="ti ti-check"></i></button>
+          <button type="button" class="btn btn-fino pd-ck${state === false ? ' is-mal' : ''}" title="${escapeHtml(t('label.notArrived'))}" aria-label="${escapeHtml(t('label.notArrived'))}" aria-pressed="${state === false}" ${canEditChecklist ? '' : 'disabled'} onclick="event.stopPropagation();toggleRecepcionCheck(${idx}, false)"><i class="ti ti-x"></i></button>
+        </div>
+        <button type="button" class="pl-chev" aria-expanded="${ggPlegableAbierta('pdl-' + idx)}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
+        <div class="pd-l-precio pl-extra" data-et="${escapeHtml(t('precios.albaranLabel'))}" title="${escapeHtml(t('precios.albaranHint'))}">
+          ${ing && !isRecibido && canEditChecklist ? `
+            <input type="number" class="es-in${distinto ? ' is-distinto' : ''}" step="0.01" min="0" value="${pa}" aria-label="${escapeHtml(t('precios.albaranLabel'))}" onchange="updatePedidoLinePrecio(${idx}, this.value)"><span class="es-l-u">€/${escapeHtml(ing.unit)}</span>
+            ${distinto ? `<span class="pd-delta">${line.precioAlbaran > (ing.price || 0) ? '▲' : '▼'} ${fmtNum(Math.abs((line.precioAlbaran - (ing.price || 0)) / (ing.price || 1) * 100), 1)} %</span>` : ''}`
+          : `<span class="es-pista">${ing ? fmtMoney(line.precioCompra != null ? line.precioCompra : (ing.price || 0)) + '/' + escapeHtml(ing.unit) : '—'}</span>`}
+        </div>
+        <div class="pd-l-nota pl-extra" data-et="${escapeHtml(t('ph.receptionNote'))}">
+          <input type="text" class="es-in" placeholder="${escapeHtml(t('ph.receptionNote'))}" aria-label="${escapeHtml(t('ph.receptionNote'))}" value="${escapeHtml(line.notaRecepcion||'')}" ${canEditChecklist ? '' : 'disabled'} onchange="updatePedidoLineNota(${idx}, this.value)">
+        </div>` : ''}
+      </div>`;
   }).join('');
 
+  const dias = o.estado==='ENVIADO' ? daysSincePedidoEnviado(o) : null;
+  const checkedCount = items.filter(l => l.recibidoCheck === true).length;
+  const comp = getPedidoComprobacionMap()[o.comprobacion || pedidoComprobacionAuto(o)];
+  const idx0 = PEDIDO_PASOS.indexOf(o.estado);
+  const pasos = PEDIDO_PASOS.map((e, i) => `<li class="${i < idx0 ? 'hecho' : i === idx0 ? 'actual' : ''}"><i class="ti ${i < idx0 || (i === idx0 && e === 'RECIBIDO') ? 'ti-circle-check' : i === idx0 ? 'ti-circle-dot' : 'ti-circle'}"></i><span>${pedidoEstadoLabel(e)}</span></li>`).join('');
+  const prov = getProviderByName(o.supplier);
+  const puedeWa = !prov || !prov.tel || whatsappDeTelefono(prov.tel);
+
   box.innerHTML = `
-    <button class="btn btn-sm" onclick="backToPedidoList()"><i class="ti ti-arrow-left"></i> ${t('btn.backToOrders')}</button>
-    <div class="card" style="margin-top:10px">
-      <h3 style="justify-content:space-between">
-        <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
-        <span style="display:flex;align-items:center;gap:6px">
-          ${(() => { const dias = o.estado==='ENVIADO' ? daysSincePedidoEnviado(o) : null; return dias!=null && dias>0 ? `<span class="badge ${dias>=3?'badge-red':'badge-amber'}">${t('label.daysSinceSent').replace('${days}', dias)}</span>` : ''; })()}
-          <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
-        </span>
-      </h3>
-      <div style="display:${showRecepcion ? 'flex' : 'grid'};flex-direction:column;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:10px">
-        ${itemsHtml || `<div class="empty" style="padding:10px">${t('empty.noItems')}</div>`}
+    <div class="es-barra">
+      <button type="button" class="btn btn-sm btn-fino" onclick="backToPedidoList()"><i class="ti ti-arrow-left"></i> ${t('btn.backToOrders')}</button>
+      <div class="es-barra-titulo">${t('label.purchaseOrder')}</div>
+      <div class="es-barra-der">
+        ${o.estado==='BORRADOR' ? `<button type="button" class="btn btn-fino is-on" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> ${t('btn.markSent')}</button>` : ''}
+        ${o.estado==='ENVIADO' ? `<button type="button" class="btn btn-fino is-on" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> ${t('btn.markReceived')}</button>` : ''}
+        ${puedeWa ? `<button type="button" class="btn btn-fino" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>` : ''}
+        <button type="button" class="btn btn-fino" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
+        <button type="button" class="btn btn-fino" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+        ${ggMenuAcciones([
+          {icono:'ti-copy', texto:t('btn.duplicateOrder'), fn:`duplicateOrder(${o.id})`, owner:true},
+          o.estado === 'RECIBIDO' ? {icono:'ti-arrow-back-up', texto:t('btn.revertReception'), fn:`revertPedidoRecepcion(${o.id})`, owner:true} : null,
+          o.estado !== 'RECIBIDO' ? {icono:'ti-trash', texto:t('common.delete'), fn:`deleteOrder(${o.id})`, peligro:true, owner:true} : null
+        ].filter(Boolean))}
       </div>
-      ${renderPedidoIvaBreakdownHtml(o, isRecibido)}
+    </div>
 
-      <div class="field">
-        <label>${t('common.notes')}</label>
-        <textarea id="pedido-notas" rows="2" onchange="updatePedidoNotas(this.value)">${escapeHtml(o.notas||'')}</textarea>
-      </div>
+    <div class="es-hoja lat-ultimo">
+      <div class="es-principal">
+        <section class="es-card pd-cab">
+          <div class="pd-cab-t">
+            <h2 class="pd-prov"><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)}</h2>
+            <div class="pd-fechas">
+              <span><i>${t('label.deliveryDate')}</i><b>${escapeHtml(o.date || '—')}</b></span>
+              ${o.enviadoEn ? `<span><i>${gl({es:'Enviado el', ca:'Enviat el', en:'Sent on'})}</i><b>${escapeHtml(o.enviadoEn)}</b></span>` : ''}
+              ${isRecibido && o.recibidoPor ? `<span><i>${t('label.receivedBy')}</i><b>${escapeHtml(o.recibidoPor)}</b></span>` : ''}
+            </div>
+          </div>
+          <ol class="pd-pasos" aria-label="${escapeHtml(gl({es:'Estado del pedido', ca:'Estat de la comanda', en:'Order status'}))}">${pasos}</ol>
+          ${dias != null && dias > 0 ? `<span class="badge ${dias>=3?'badge-red':'badge-amber'}">${t('label.daysSinceSent').replace('${days}', dias)}</span>` : ''}
+        </section>
 
-      ${showRecepcion ? `
-      <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
-        <h3><i class="ti ti-clipboard-check"></i> ${t('title.orderCheck')}</h3>
-        <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${t('label.orderCheckHelp')}</p>
-        ${(() => {
-          const items = o.items||[];
-          const checkedCount = items.filter(l => l.recibidoCheck === true).length;
-          const comp = getPedidoComprobacionMap()[o.comprobacion || pedidoComprobacionAuto(o)];
-          return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            ${comp ? `<span class="badge ${comp.cls}">${comp.label}</span>` : ''}
-            <span style="font-size:13px;color:var(--muted)">${checkedCount}/${items.length} ${t('label.itemsConfirmedArrived')}</span>
-            ${isRecibido && o.recibidoPor ? `<span style="font-size:13px;color:var(--muted)">· ${t('label.receivedBy')}: <strong>${escapeHtml(o.recibidoPor)}</strong></span>` : ''}
-          </div>`;
-        })()}
-      </div>
-      <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
-        <h3><i class="ti ti-clipboard-check"></i> ${t('title.receptionAppcc')}</h3>
-        <div class="field-row">
-          <div class="field"><label>${t('common.date')}</label><input type="date" id="rec-fecha" value="${r.fecha||todayStr()}"></div>
-          <div class="field"><label>${t('common.time')}</label><input type="time" id="rec-hora" value="${r.hora||''}"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>${t('label.tempC')}</label><input type="number" step="0.1" id="rec-temp" value="${r.temp!=null?r.temp:''}"></div>
-          <div class="field"><label>${t('label.productCondition')}</label>
-            <select id="rec-condicion">
-              <option value="OK" ${r.condicion==='OK'||!r.condicion?'selected':''}>${t('label.ok')}</option>
-              <option value="NO CONFORME" ${r.condicion==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
-            </select>
+        <section class="es-card">
+          <h3 class="es-tit">${gl({es:'Artículos', ca:'Articles', en:'Items'})} <span class="fi-para">${items.length}</span></h3>
+          ${showRecepcion ? `<p class="es-nota"><i class="ti ti-info-circle"></i> ${t('label.orderCheckHelp')}</p>` : ''}
+          <div class="pd-lineas${showRecepcion ? ' con-rec' : ''}">
+            ${showRecepcion ? `<div class="pd-lcab"><span>${t('label.ingredient')}</span><span>${t('label.ordered')}</span><span>${t('title.orderCheck')}</span><span>${t('precios.albaranLabel')}</span><span>${t('ph.receptionNote')}</span></div>` : ''}
+            ${itemsHtml || `<div class="empty es-vacio"><i class="ti ti-basket"></i>${t('empty.noItems')}</div>`}
           </div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>${t('label.expiryConsumeDate')}</label>
-            <select id="rec-caducidad">
-              <option value="OK" ${r.caducidad==='OK'||!r.caducidad?'selected':''}>${t('label.ok')}</option>
-              <option value="NO CONFORME" ${r.caducidad==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
-            </select>
+        </section>
+
+        ${showRecepcion ? `
+        <section class="es-card">
+          <h3 class="es-tit"><i class="ti ti-clipboard-check"></i> ${t('title.receptionAppcc')}</h3>
+          <div class="field-row">
+            <div class="field"><label for="rec-fecha">${t('common.date')}</label><input type="date" id="rec-fecha" value="${r.fecha||todayStr()}"></div>
+            <div class="field"><label for="rec-hora">${t('common.time')}</label><input type="time" id="rec-hora" value="${r.hora||''}"></div>
+            <div class="field"><label for="rec-temp">${t('label.tempC')}</label><input type="number" step="0.1" id="rec-temp" value="${r.temp!=null?r.temp:''}"></div>
           </div>
-          <div class="field"><label>${t('label.matchesDeliveryNote')}</label>
-            <select id="rec-albaran">
-              <option value="OK" ${r.albaran==='OK'||!r.albaran?'selected':''}>${t('label.ok')}</option>
-              <option value="NO CONFORME" ${r.albaran==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
-            </select>
+          <div class="field-row">
+            <div class="field"><label for="rec-condicion">${t('label.productCondition')}</label>
+              <select id="rec-condicion">
+                <option value="OK" ${r.condicion==='OK'||!r.condicion?'selected':''}>${t('label.ok')}</option>
+                <option value="NO CONFORME" ${r.condicion==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
+              </select>
+            </div>
+            <div class="field"><label for="rec-caducidad">${t('label.expiryConsumeDate')}</label>
+              <select id="rec-caducidad">
+                <option value="OK" ${r.caducidad==='OK'||!r.caducidad?'selected':''}>${t('label.ok')}</option>
+                <option value="NO CONFORME" ${r.caducidad==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
+              </select>
+            </div>
+            <div class="field"><label for="rec-albaran">${t('label.matchesDeliveryNote')}</label>
+              <select id="rec-albaran">
+                <option value="OK" ${r.albaran==='OK'||!r.albaran?'selected':''}>${t('label.ok')}</option>
+                <option value="NO CONFORME" ${r.albaran==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
+              </select>
+            </div>
           </div>
-        </div>
-        <div class="field">
-          <label>${t('label.responsible')}</label>
-          <input type="text" id="rec-resp" value="${escapeHtml(r.responsable||'')}">
-        </div>
-        <div class="field">
-          <label>${t('label.observations')}</label>
-          <textarea id="rec-obs" rows="2">${escapeHtml(r.obs||'')}</textarea>
-        </div>
-        <button class="btn btn-sm" onclick="savePedidoRecepcion()"><i class="ti ti-device-floppy"></i> ${t('btn.saveReception')}</button>
-        <div class="field" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-          <label>${t('albaran.attachLabel')}</label>
+          <div class="field-row">
+            <div class="field"><label for="rec-resp">${t('label.responsible')}</label><input type="text" id="rec-resp" value="${escapeHtml(r.responsable||'')}"></div>
+            <div class="field"><label for="rec-obs">${t('label.observations')}</label><textarea id="rec-obs" rows="2">${escapeHtml(r.obs||'')}</textarea></div>
+          </div>
+          <button type="button" class="btn btn-fino" onclick="savePedidoRecepcion()"><i class="ti ti-device-floppy"></i> ${t('btn.saveReception')}</button>
+        </section>
+
+        <section class="es-card">
+          <h3 class="es-tit"><i class="ti ti-paperclip"></i> ${t('albaran.attachLabel')}</h3>
           ${o.albaranFile ? `
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              ${o.albaranFile.dataUrl.startsWith('data:image') ? `<img src="${o.albaranFile.dataUrl}" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border)">` : `<a href="${o.albaranFile.dataUrl}" download="${escapeHtml(o.albaranFile.name)}" class="btn btn-sm"><i class="ti ti-file-text"></i> ${escapeHtml(o.albaranFile.name)}</a>`}
-              <button class="btn btn-sm btn-danger" onclick="removeAlbaranFile()"><i class="ti ti-trash"></i></button>
+            <div class="pd-albaran">
+              ${o.albaranFile.dataUrl.startsWith('data:image') ? `<img src="${o.albaranFile.dataUrl}" alt="">` : `<a href="${o.albaranFile.dataUrl}" download="${escapeHtml(o.albaranFile.name||'albaran')}"><i class="ti ti-file"></i> ${escapeHtml(o.albaranFile.name||'albarán')}</a>`}
+              ${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:'removeAlbaranFile()', peligro:true}])}
             </div>
           ` : `<input type="file" id="albaran-file-input" accept="image/*,application/pdf" onchange="handleAlbaranUpload(this)">`}
-          <small style="color:var(--muted)">${t('albaran.attachHint')}</small>
-        </div>
+          <small class="es-pista">${t('albaran.attachHint')}</small>
+        </section>
+        ${pfTarjetaHtml(o)}
+        ` : ''}
       </div>
-      ${pfTarjetaHtml(o)}
-      ` : ''}
 
-      <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
-        ${o.estado==='BORRADOR' ? `<button class="btn btn-primary" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> ${t('btn.markSent')}</button>` : ''}
-        ${o.estado==='ENVIADO' ? `<button class="btn btn-primary" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> ${t('btn.markReceived')}</button>` : ''}
-        ${o.estado==='RECIBIDO' ? `<button class="owner-only btn" onclick="revertPedidoRecepcion(${o.id})"><i class="ti ti-arrow-back-up"></i> ${t('btn.revertReception')}</button>` : ''}
-        ${(() => { const pv = getProviderByName(o.supplier); return !pv || !pv.tel || whatsappDeTelefono(pv.tel) ? `<button class="btn" style="background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>` : ''; })()}
-        <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
-        <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-        <button class="owner-only btn" onclick="duplicateOrder(${o.id})"><i class="ti ti-copy"></i> ${t('btn.duplicateOrder')}</button>
-        ${o.estado!=='RECIBIDO' ? `<button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>` : ''}
-      </div>
+      <aside class="es-lateral">
+        <section class="es-card">
+          <h3 class="es-tit">${t('common.total')}</h3>
+          <div class="es-kpis"><div class="es-kpi"><span class="es-kpi-et">${isRecibido ? t('label.receivedOrders') : t('label.purchaseOrder')}</span><b>${fmtMoney(pedidoTotalConIva(o))}</b></div></div>
+          ${renderPedidoIvaBreakdownHtml(o, isRecibido) || `<p class="es-pista">${t('empty.noArticlesYet')}</p>`}
+        </section>
+        ${showRecepcion ? `
+        <section class="es-card">
+          <h3 class="es-tit">${t('title.orderCheck')}</h3>
+          <div class="pd-prog"><b>${checkedCount}/${items.length}</b> <span>${t('label.itemsConfirmedArrived')}</span></div>
+          <div class="pd-barra"><i style="width:${items.length ? Math.round(checkedCount / items.length * 100) : 0}%"></i></div>
+          ${comp ? `<span class="badge ${comp.cls}">${comp.label}</span>` : ''}
+        </section>` : ''}
+        <section class="es-card">
+          <h3 class="es-tit">${t('common.notes')}</h3>
+          <textarea id="pedido-notas" rows="3" onchange="updatePedidoNotas(this.value)">${escapeHtml(o.notas||'')}</textarea>
+        </section>
+      </aside>
     </div>
   `;
 }
@@ -2033,12 +2069,17 @@ function changePedidoEstado(estado){
     : t('msg.orderMarkedSent'));
 }
 
+// El texto que se manda al proveedor (WhatsApp y correo): a quién, para cuándo y qué. Una línea por artículo, sin precios
+// (el proveedor ya los tiene) y con el nombre del negocio al final para que sepa de quién es.
 function pedidoTexto(o){
-  const rows = (o.items||[]).map(line => {
+  const prov = getProviderByName(o.supplier);
+  const rows = (o.items||[]).filter(line => (line.cantidad||0) > 0).map(line => {
     const ing = getIngredient(line.ingredientId);
     return ing ? `  • ${ing.name}: ${fmtNum(line.cantidad)} ${ing.unit}` : '';
-  }).join('\n');
-  return `🛒 ${t('label.orderTo')} ${o.supplier}\n${t('common.date')}: ${o.date}\n\n${rows}${o.notas ? '\n\n📝 '+o.notas : ''}`;
+  }).filter(Boolean).join('\n');
+  const hora = prov && prov.horaEntrega ? ` (${gl({es:'sobre las', ca:'cap a les', en:'around'})} ${prov.horaEntrega})` : '';
+  const negocio = (DB.business && DB.business.name) ? `\n\n${DB.business.name}` : '';
+  return `🛒 ${t('label.orderTo')} ${o.supplier}\n${t('label.deliveryDate')}: ${o.date}${hora}\n\n${rows}${o.notas ? '\n\n📝 '+o.notas : ''}${negocio}`;
 }
 
 // Si el proveedor no tiene teléfono/email guardado, antes se abría igualmente
@@ -2083,26 +2124,51 @@ function printPedido(){
   printReportWindow(t('label.purchaseOrder'), buildPedidoPrintHtml(o));
 }
 
-// Cuerpo compartido por printPedido() (pedido ya guardado) y
-// printPedidoBorrador() (pedido en curso, aún sin guardar).
+// El impreso del pedido: una hoja para el proveedor (o para tener en el muelle y marcar lo que llega). Arriba, a quién y
+// para cuándo; debajo, la tabla con cada artículo, su cantidad y una casilla para ir tachando al recibir. Sin precios.
+// Cuerpo compartido por printPedido() (pedido ya guardado) y printPedidoBorrador() (pedido en curso, aún sin guardar).
 function buildPedidoPrintHtml(o){
-  const rows = (o.items||[]).map(line => {
-    const ing = getIngredient(line.ingredientId);
-    if(!ing) return '';
-    return `<tr><td>${escapeHtml(ing.name)}</td><td class="pr-num">${fmtNum(line.cantidad)} ${escapeHtml(ing.unit)}</td></tr>`;
-  }).join('');
+  const prov = getProviderByName(o.supplier);
+  const lineas = (o.items||[]).map(line => ({line, ing: getIngredient(line.ingredientId)})).filter(x => x.ing && (x.line.cantidad||0) > 0);
+  const rows = lineas.map((x, i) => `<tr><td class="pp-n">${i+1}</td><td class="pp-a">${escapeHtml(x.ing.name)}</td><td class="pr-num pp-c">${fmtNum(x.line.cantidad)} <small>${escapeHtml(x.ing.unit)}</small></td><td class="pp-ck"><span></span></td></tr>`).join('');
+  const contacto = [prov && prov.contacto ? escapeHtml(prov.contacto) : '', prov && prov.tel ? escapeHtml(prov.tel) : '', prov && prov.email ? escapeHtml(prov.email) : ''].filter(Boolean).join(' · ');
+  const meta = [
+    [t('common.supplier'), `<b>${escapeHtml(o.supplier || '—')}</b>${contacto ? `<small>${contacto}</small>` : ''}`],
+    [t('label.deliveryDate'), `<b>${escapeHtml(o.date || '—')}</b>${prov && prov.horaEntrega ? `<small>${escapeHtml(prov.horaEntrega)} ${t('label.hoursApprox')}</small>` : ''}`],
+    [gl({es:'Artículos', ca:'Articles', en:'Items'}), `<b>${lineas.length}</b>`],
+  ].map(([et, v]) => `<div class="pp-meta"><span>${escapeHtml(et)}</span>${v}</div>`).join('');
   return `
-    ${printReportHeaderHtml(t('label.orderTo')+' '+o.supplier, `${t('common.date')}: ${escapeHtml(o.date||'')}`)}
-    <table><thead><tr><th>${t('common.item')}</th><th class="pr-num">${t('common.qty')}</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="2" class="pr-empty">${t('common.noResults')}</td></tr>`}</tbody></table>
-    ${o.notas ? `<div class="pr-divider"></div><div class="pr-meta"><strong>${t('common.notes')}:</strong> ${escapeHtml(o.notas)}</div>` : ''}
+    <style>
+      .pp-metas{display:flex;border:1px solid #1C1A17;margin:14px 0 20px}
+      .pp-meta{flex:1;padding:9px 12px;border-right:1px solid #1C1A17;min-width:0}
+      .pp-meta:last-child{border-right:0}
+      .pp-meta span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65}
+      .pp-meta b{display:block;font-size:15px;letter-spacing:-.01em}
+      .pp-meta small{display:block;font-size:11px;color:#716C65;margin-top:1px;overflow-wrap:anywhere}
+      table.pp-t{margin-top:4px}
+      .pp-t th{padding:7px 8px}
+      .pp-t td{padding:9px 8px;font-size:13.5px;border-bottom:1px solid #E7E2D9}
+      .pp-n{width:34px;font-family:'IBM Plex Mono',monospace;color:#716C65;font-size:11.5px}
+      .pp-c{width:120px;font-size:14px}
+      .pp-c small{font-size:11px;color:#716C65;font-weight:500}
+      .pp-ck{width:60px;text-align:center}
+      .pp-ck span{display:inline-block;width:13px;height:13px;border:1.4px solid #1C1A17}
+      .pp-notas{margin-top:20px;border:1px solid #1C1A17;padding:10px 14px;break-inside:avoid}
+      .pp-notas b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#716C65;margin-bottom:4px}
+    </style>
+    ${printReportHeaderHtml(t('label.orderTo')+' '+o.supplier)}
+    <div class="pp-metas">${meta}</div>
+    <table class="pp-t"><thead><tr><th>#</th><th>${t('common.item')}</th><th class="pr-num">${t('common.qty')}</th><th style="text-align:center">${gl({es:'Recibido', ca:'Rebut', en:'Received'})}</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="4" class="pr-empty">${t('common.noResults')}</td></tr>`}</tbody></table>
+    ${o.notas ? `<div class="pp-notas"><b>${t('common.notes')}</b>${escapeHtml(o.notas)}</div>` : ''}
   `;
 }
 
 let orderModalSupplier = '';
 let orderModalLines = [];
 let orderModalSearch = '';
-let orderFormInline = false; // true cuando el formulario se muestra en la pestaña (no en modal)
+let orderFormInline = true;   // el formulario ya no es un modal: vive siempre en la pestaña
+let orderFiltro = '';         // '' = todos · 'bajo' = por debajo del mínimo · 'con' = con cantidad
 // Si se acaba de elegir/cambiar el proveedor, la comprobación de fecha del
 // siguiente render debe avisar con un aviso visible (antes se corregía la
 // fecha en silencio en este caso, y el único indicio era que el campo de
@@ -2111,126 +2177,101 @@ let orderSupplierJustChanged = false;
 
 function openOrderModal(){
   if(!DB.ingredients.some(i => (i.area||'cocina') === currentArea())){ showToast(t('msg.addIngredientsFirst')); return; }
-  orderModalSupplier = '';
-  orderModalLines = [];
-  orderModalSearch = '';
-  renderOrderModal();
+  navigate('pedidos');
+  setPedidosTab('crear');
 }
 
-// Construye el cuerpo del formulario de pedido (campos + artículos + resumen),
-// compartido por la versión inline (pestaña Realizar Pedido) y el modal.
-function orderFormBodyHtml(){
-  const suppliers = pedidoSuppliers();
-  const supplierOptions = `<option value="">— ${t('label.selectSupplier')} —</option>` +
-    suppliers.map(s => `<option value="${escapeHtml(s)}" ${orderModalSupplier===s?'selected':''}>${escapeHtml(s)}</option>`).join('');
+// Lo que ya viene de camino: lo pedido en pedidos ENVIADOS que aún no se han recibido. Si no se descuenta, «pedir lo que
+// falta» pide dos veces lo mismo el día en que el camión todavía no ha llegado.
+function pcEnCamino(ingredientId){
+  return (DB.purchaseOrders||[])
+    .filter(o => o.estado === 'ENVIADO' && (o.area||'cocina') === currentArea())
+    .reduce((sum, o) => sum + (o.items||[]).filter(l => l.ingredientId === ingredientId).reduce((n, l) => n + (l.cantidad||0), 0), 0);
+}
+function pcBajoMinimo(ingredientId){
+  const s = getStockEntry(ingredientId);
+  return (s.min||0) > 0 && (s.qty||0) < s.min;
+}
+// El salto de los botones − y +: 1 en kg, L y unidades; en gramos y mililitros, el envase (o 100 si no lo hay).
+function pcPaso(ing){
+  if(['g','ml','cl'].includes(ing.unit)) return ing.packQty > 1 ? ing.packQty : 100;
+  return 1;
+}
+// Un precio por gramo (0,002 €) no cabe en dos decimales: por debajo de 10 céntimos se enseñan cuatro.
+const pcPrecio = n => (n > 0 && n < 0.1) ? fmtNum(n, 4) + ' €' : fmtMoney(n);
+// Ese ± puede dar 0,30000000004: se redondea a céntimos de unidad.
+const pcRedondea = n => Math.round(n * 100) / 100;
 
-  const dateField = document.getElementById('order-date');
-  const dateVal = dateField ? dateField.value : tomorrowStr();
-  const searchField = document.getElementById('order-item-search');
-  const searchVal = searchField ? searchField.value : orderModalSearch;
-  orderModalSearch = searchVal || '';
-
-  let itemsHtml = '';
-  if(orderModalSupplier){
-    const ings = DB.ingredients.filter(i => i.supplier === orderModalSupplier && (i.area||'cocina') === currentArea() && i.activo !== false);
-    if(!ings.length){
-      itemsHtml = `<div class="empty" style="padding:10px">${t('empty.supplierNoIngredients')}</div>`;
-    }else{
-      itemsHtml = `
-        <input type="text" class="search-input" id="order-item-search" placeholder="${t('ph.searchArticle')}" value="${escapeHtml(orderModalSearch)}" oninput="updateOrderItemSearch(this.value)" style="margin-bottom:8px;width:100%">
-        <div id="order-items-rows" style="max-height:480px;overflow:auto;margin-bottom:8px">
-          ${orderItemsRowsHtml()}
-        </div>
-        <button class="btn btn-sm" onclick="sugerirPorDeficit()"><i class="ti ti-bulb"></i> ${t('btn.suggestByStockDeficit')}</button>
-      `;
-    }
-  }
-
-  const html = `
-    <div class="field-row">
-      <div class="field">
-        <label>${t('common.supplier')}</label>
-        <select id="order-supplier" onchange="selectOrderSupplier(this.value)">${supplierOptions}</select>
-      </div>
-      <div class="field">
-        <label>${t('label.deliveryDate')}</label>
-        <input type="date" id="order-date" value="${dateVal || tomorrowStr()}" min="${tomorrowStr()}" onchange="validateOrderDate(this)">
-        <div id="order-date-hint" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
-      </div>
-    </div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap">
-      <div class="field" id="order-items-field" style="flex:2;min-width:280px">
-        <label>${t('label.supplierArticles')}</label>
-        ${itemsHtml || `<div class="empty" style="padding:10px">${t('empty.selectSupplierToLoadArticles')}</div>`}
-      </div>
-      <div class="field" style="flex:1;min-width:220px">
-        <label>${t('label.orderSummary')}</label>
-        <div id="order-summary" style="max-height:480px;overflow:auto">${orderSummaryHtml()}</div>
-      </div>
-    </div>
-  `;
-  return {dateVal, html};
+function pcProveedorHtml(prov){
+  if(!orderModalSupplier) return '';
+  if(!prov) return `<p class="es-nota"><i class="ti ti-info-circle"></i> ${gl({es:'Este proveedor no tiene ficha: añádela en Proveedores para ver sus días de reparto y poder enviarle el pedido.', ca:'Aquest proveïdor no té fitxa: afegeix-la a Proveïdors per veure els dies de repartiment i poder enviar-li la comanda.', en:'This supplier has no profile: add it under Suppliers to see their delivery days and send them the order.'})}</p>`;
+  const dias = getProviderDiasEntrega(prov);
+  const chips = WEEK_DAYS.map((d, i) => `<span class="pc-dia${dias.includes(d) ? ' on' : ''}" title="${escapeHtml(weekDayFull(i))}">${escapeHtml(weekDayShort(i))}</span>`).join('');
+  const wa = prov.tel ? (whatsappDeTelefono(prov.tel) ? 'ok' : 'fijo') : 'no';
+  const contacto = (ic, estado, texto) => `<span class="pc-contacto ${estado}"><i class="ti ${ic}"></i> ${texto}</span>`;
+  const envio = prov.envioTipo === 'fijo' ? `${fmtMoney(prov.envioCoste||0)} ${t('label.shippingFixedTag')}`
+    : prov.envioTipo === 'minimo' ? `${t('label.shippingFreeFrom')} ${fmtMoney(prov.envioMinimo||0)}` : '';
+  return `
+    <div class="pc-prov-info">
+      ${dias.length ? `<div class="pc-dias" aria-label="${escapeHtml(t('label.usualDeliveryDays'))}">${chips}${prov.horaEntrega ? `<span class="pc-hora"><i class="ti ti-clock"></i> ${escapeHtml(prov.horaEntrega)}</span>` : ''}</div>` : ''}
+      ${envio ? `<span class="pc-contacto"><i class="ti ti-truck-delivery"></i> ${t('label.shipping')}: ${envio}</span>` : ''}
+      ${contacto('ti-brand-whatsapp', wa, wa === 'ok' ? 'WhatsApp' : wa === 'fijo' ? gl({es:'WhatsApp: es un fijo', ca:'WhatsApp: és un fix', en:'WhatsApp: landline'}) : gl({es:'WhatsApp: sin teléfono', ca:'WhatsApp: sense telèfon', en:'WhatsApp: no phone'}))}
+      ${contacto('ti-mail', prov.email ? 'ok' : 'no', prov.email ? 'Email' : gl({es:'Email: sin correo', ca:'Email: sense correu', en:'Email: no address'}))}
+    </div>`;
 }
 
-// Filas de artículos que coinciden con la búsqueda actual (sin el propio
-// campo de búsqueda) — separado de orderFormBodyHtml() para poder
-// refrescar solo esto al escribir, sin recrear el input de búsqueda y que
-// pierda el foco en cada letra (por eso antes solo dejaba escribir de una
-// en una: cada tecla volvía a montar el formulario entero).
-// Con catálogos pequeños (proveedor de pocos artículos) no tiene sentido
-// obligar a escribir para verlos: se listan todos directamente. Solo con
-// catálogos grandes hace falta buscar para no abrumar con la lista entera.
-const ORDER_ITEMS_AUTOLIST_MAX = 8;
-function orderItemsRowsHtml(){
+function pcFilasHtml(){
   const search = orderModalSearch.toLowerCase();
-  // "Sugerir por déficit de stock" rellena cantidades directamente sobre
-  // orderModalLines sin pasar por el buscador — con más de 8 artículos, la
-  // lista se quedaba oculta tras el mensaje de "busca productos" y el
-  // resultado solo se veía en el resumen de la derecha, pareciendo que el
-  // botón no había hecho nada. Con alguna cantidad ya sugerida, se enseña
-  // la lista igualmente aunque el catálogo sea grande.
-  const hasSuggested = orderModalLines.some(l => l.cantidad > 0);
-  const showAll = !search && (orderModalLines.length <= ORDER_ITEMS_AUTOLIST_MAX || hasSuggested);
-  const rows = (!search && !showAll) ? '' : orderModalLines.filter(line => {
-    const ing = getIngredient(line.ingredientId);
-    return ing && (!search || ing.name.toLowerCase().includes(search));
-  }).map(line => {
-    const ing = getIngredient(line.ingredientId);
+  const filas = orderModalLines.map(line => ({line, ing: getIngredient(line.ingredientId)})).filter(x => x.ing)
+    .filter(x => !search || x.ing.name.toLowerCase().includes(search))
+    .filter(x => orderFiltro === 'bajo' ? pcBajoMinimo(x.ing.id) : orderFiltro === 'con' ? x.line.cantidad > 0 : true)
+    .sort((a, b) => a.ing.name.localeCompare(b.ing.name));
+  if(!filas.length) return `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${orderFiltro === 'bajo' ? gl({es:'Nada por debajo del mínimo.', ca:'Res per sota del mínim.', en:'Nothing below the minimum.'}) : t('common.noResults')}</div>`;
+  return filas.map(({line, ing}) => {
     const s = getStockEntry(ing.id);
+    const bajo = pcBajoMinimo(ing.id);
+    const camino = pcEnCamino(ing.id);
+    const paso = pcPaso(ing);
     return `
-      <div class="list-row">
-        <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
-        <span style="font-size:14px;font-weight:600;color:var(--muted)">${t('label.stock')}: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · ${t('label.minAbbrev')} ${fmtNum(s.min)}</span>
-        <!-- Al pedir, lo que decide la cantidad no es solo cuánto queda: es
-             a cuánto sale. Sin el precio delante había que salirse a Mega
-             Lista a mirarlo artículo por artículo (lo vio el dueño el 12/09). -->
-        <span style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap">${fmtMoney(ing.price||0)}/${escapeHtml(ing.unit)}</span>
-        <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="${t('common.qty')}" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
-        <span style="font-size:12px;color:var(--muted)">${escapeHtml(ing.unit)}</span>
-      </div>
-    `;
+      <div class="pc-art${line.cantidad > 0 ? ' con' : ''}${bajo ? ' bajo' : ''}" data-ing="${ing.id}">
+        <div class="pc-art-nom">
+          <b>${escapeHtml(ing.name)}</b>
+          <span class="pc-art-sub">
+            <span class="${bajo ? 'pc-bajo' : ''}">${t('label.stock')}: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)}${(s.min||0) > 0 ? ` · ${t('label.minAbbrev')} ${fmtNum(s.min)}` : ''}</span>
+            ${bajo ? `<em class="pc-tag">${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}</em>` : ''}
+            ${camino > 0 ? `<em class="pc-tag cam"><i class="ti ti-truck-delivery"></i> +${fmtNum(camino)} ${escapeHtml(ing.unit)} ${gl({es:'en camino', ca:'en camí', en:'on the way'})}</em>` : ''}
+          </span>
+        </div>
+        <div class="pc-art-pr"><!-- Al pedir, lo que decide la cantidad no es solo cuánto queda: es a cuánto sale. -->${ing.price ? `${pcPrecio(ing.price)}<small>/${escapeHtml(ing.unit)}</small>` : `<span class="ml-falta">${gl({es:'sin precio', ca:'sense preu', en:'no price'})}</span>`}</div>
+        <div class="pc-qty">
+          <button type="button" class="btn btn-fino" aria-label="−" onclick="ordenPaso(${ing.id}, -1)"><i class="ti ti-minus"></i></button>
+          <input type="number" id="oq-${ing.id}" value="${line.cantidad || ''}" step="${paso >= 1 ? 'any' : '0.01'}" min="0" placeholder="0" aria-label="${escapeHtml(ing.name)}: ${t('common.qty')}" oninput="updateOrderLineQty(${ing.id}, this.value)">
+          <button type="button" class="btn btn-fino" aria-label="+" onclick="ordenPaso(${ing.id}, 1)"><i class="ti ti-plus"></i></button>
+          <span class="pc-qty-u">${escapeHtml(ing.unit)}</span>
+        </div>
+      </div>`;
   }).join('');
-  const emptyMsg = (!search && !showAll)
-    ? `<div class="empty" style="padding:10px">${t('msg.searchSupplierProducts')}</div>`
-    : `<div class="empty" style="padding:10px">${t('common.noResults')}</div>`;
-  return rows || emptyMsg;
 }
-// Al escribir en el buscador de artículos, solo se refresca la lista de
-// filas de abajo — el input de búsqueda en sí no se toca, así conserva el
-// foco y la posición del cursor mientras se escribe seguido.
+// Alias con el nombre de siempre (lo usa el buscador y las pruebas).
+function orderItemsRowsHtml(){ return pcFilasHtml(); }
+
+// Al escribir en el buscador de artículos, solo se refresca la lista de filas de abajo — el input de búsqueda en sí no se
+// toca, así conserva el foco y la posición del cursor mientras se escribe seguido.
 function updateOrderItemSearch(val){
   orderModalSearch = val;
   const box = document.getElementById('order-items-rows');
-  if(box) box.innerHTML = orderItemsRowsHtml();
+  if(box) box.innerHTML = pcFilasHtml();
 }
-
-// Botones de acción del pedido (imprimir / enviar), compartidos por ambas vistas.
-function orderFormButtonsHtml(){
-  return `
-    <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-    <button class="btn" style="background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendByWhatsapp')}</button>
-    <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> ${t('btn.sendByEmail')}</button>
-  `;
+function setOrderFiltro(f){
+  orderFiltro = (orderFiltro === f ? '' : f);
+  refreshOrderForm();
+}
+function pcContadores(){
+  return {
+    todos: orderModalLines.length,
+    bajo: orderModalLines.filter(l => pcBajoMinimo(l.ingredientId)).length,
+    con: orderModalLines.filter(l => l.cantidad > 0).length
+  };
 }
 
 // Tras renderizar el formulario, restaura los valores de fecha y búsqueda.
@@ -2242,49 +2283,98 @@ function afterOrderFormRender(dateVal){
   const sEl = document.getElementById('order-item-search');
   if(sEl) sEl.value = orderModalSearch;
 }
-
-// Re-renderiza el formulario activo (inline en la pestaña, o el modal).
-function refreshOrderForm(){
-  if(orderFormInline) renderPedidoCrear();
-  else renderOrderModal();
+function refreshOrderForm(){ renderPedidoCrear(); }
+// Compat con el nombre antiguo del cuerpo del formulario (devuelve lo mismo que pinta la pestaña).
+function orderFormBodyHtml(){
+  const dateField = document.getElementById('order-date');
+  return {dateVal: dateField ? dateField.value : tomorrowStr(), html: ''};
 }
 
-// Versión inline del formulario, dentro de la pestaña "Realizar Pedido".
 function renderPedidoCrear(){
   orderFormInline = true;
   const box = document.getElementById('pedidos-list');
-  const {dateVal, html} = orderFormBodyHtml();
+  const dateField = document.getElementById('order-date');
+  const dateVal = dateField ? dateField.value : tomorrowStr();
+  const searchField = document.getElementById('order-item-search');
+  if(searchField) orderModalSearch = searchField.value;
+  const notasField = document.getElementById('order-notas');
+  const notas = notasField ? notasField.value : '';
+  const suppliers = pedidoSuppliers();
+  const prov = getProviderByName(orderModalSupplier);
+  const c = pcContadores();
+  const chip = (clave, etiqueta, n) => `<button type="button" class="btn btn-sm btn-fino${orderFiltro === clave ? ' is-on' : ''}" aria-pressed="${orderFiltro === clave}" onclick="setOrderFiltro('${clave}')">${etiqueta} <span class="ml-n">${n}</span></button>`;
+  const cuerpo = !orderModalSupplier
+    ? `<div class="empty pc-vacio"><i class="ti ti-truck-delivery"></i>${t('empty.selectSupplierToLoadArticles')}</div>`
+    : (!orderModalLines.length
+      ? `<div class="empty pc-vacio"><i class="ti ti-basket-off"></i>${t('empty.supplierNoIngredients')}</div>`
+      : `
+    <div class="es-hoja pc-cuerpo lat-ultimo">
+      <div class="es-principal">
+        <section class="es-card pc-arts">
+          <div class="pc-arts-cab">
+            <h3 class="es-tit">${t('label.supplierArticles')} <span class="fi-para">${c.todos}</span></h3>
+            <div class="pc-herr">
+              <button type="button" class="btn btn-sm btn-fino" onclick="sugerirPorDeficit()" title="${escapeHtml(gl({es:'Pone lo que falta para llegar al mínimo de Stock, descontando lo que ya viene de camino', ca:'Posa el que falta per arribar al mínim d\'Estoc, descomptant el que ja ve de camí', en:'Fills in what is missing to reach the Stock minimum, minus what is already on its way'}))}"><i class="ti ti-bulb"></i> ${t('btn.suggestByStockDeficit')}</button>
+              ${c.con ? `<button type="button" class="btn btn-sm btn-fino" onclick="limpiarPedidoEnCurso()"><i class="ti ti-eraser"></i> ${gl({es:'Vaciar', ca:'Buidar', en:'Clear'})}</button>` : ''}
+            </div>
+          </div>
+          <div class="pc-filtros">
+            <div class="es-anadir-buscar pc-buscar"><i class="ti ti-search"></i><input type="text" class="search-input" id="order-item-search" placeholder="${t('ph.searchArticle')}" value="${escapeHtml(orderModalSearch)}" oninput="updateOrderItemSearch(this.value)"></div>
+            <div class="pc-chips">${chip('', gl({es:'Todos', ca:'Tots', en:'All'}), c.todos)}${chip('bajo', gl({es:'Bajo mínimo', ca:'Sota el mínim', en:'Below minimum'}), c.bajo)}${chip('con', gl({es:'Con cantidad', ca:'Amb quantitat', en:'With quantity'}), c.con)}</div>
+          </div>
+          <div id="order-items-rows" class="pc-lista">${pcFilasHtml()}</div>
+        </section>
+      </div>
+      <aside class="es-lateral">
+        <section class="es-card pc-resumen">
+          <h3 class="es-tit">${t('label.orderSummary')}</h3>
+          <div id="order-summary">${orderSummaryHtml()}</div>
+          <div class="field pc-notas"><label for="order-notas">${t('common.notes')}</label><textarea id="order-notas" rows="2" placeholder="${escapeHtml(gl({es:'Para el proveedor: horario, avisos…', ca:'Per al proveïdor: horari, avisos…', en:'For the supplier: timing, notes…'}))}">${escapeHtml(notas)}</textarea></div>
+          <div id="order-acciones" class="pc-acciones">${pcAccionesHtml()}</div>
+        </section>
+      </aside>
+    </div>`);
   box.innerHTML = `
     ${renderPedidoSolicitudesPendientesHtml()}
-    <div class="card">
-      <h3><i class="ti ti-shopping-cart-plus"></i> ${t('title.makeOrder')}</h3>
-      ${html}
-      <div class="actions-cell" style="flex-wrap:wrap;gap:8px;margin-top:10px">
-        ${orderFormButtonsHtml()}
+    <section class="es-card pc-cab">
+      <div class="field-row pc-cab-campos">
+        <div class="field">
+          <label for="order-supplier">${t('common.supplier')}</label>
+          <select id="order-supplier" onchange="selectOrderSupplier(this.value)">
+            <option value="">— ${t('label.selectSupplier')} —</option>
+            ${suppliers.map(sp => `<option value="${escapeHtml(sp)}" ${orderModalSupplier===sp?'selected':''}>${escapeHtml(sp)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label for="order-date">${t('label.deliveryDate')}</label>
+          <input type="date" id="order-date" value="${dateVal || tomorrowStr()}" min="${tomorrowStr()}" onchange="validateOrderDate(this)">
+          <div id="order-date-hint" class="es-pista"></div>
+        </div>
       </div>
-    </div>
-  `;
+      ${pcProveedorHtml(prov)}
+    </section>
+    ${cuerpo}`;
   afterOrderFormRender(dateVal);
 }
 
-function renderOrderModal(){
-  orderFormInline = false;
-  const {dateVal, html} = orderFormBodyHtml();
-  openModal(`
-    <div class="modal-header">
-      <h3>${t('title.newOrder')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+function pcAccionesHtml(){
+  const prov = getProviderByName(orderModalSupplier);
+  const items = orderModalLines.filter(l => l.cantidad > 0).length;
+  const waOk = !!(prov && prov.tel && whatsappDeTelefono(prov.tel));
+  const mailOk = !!(prov && prov.email);
+  const sinItems = items === 0;
+  const motivo = sinItems ? gl({es:'Añade al menos un artículo.', ca:'Afegeix com a mínim un article.', en:'Add at least one item.'}) : '';
+  const btn = (clase, icono, texto, fn, ok, pista) => `<button type="button" class="btn btn-fino ${clase}" ${ok ? '' : 'disabled'} ${pista ? `title="${escapeHtml(pista)}"` : ''} onclick="${fn}"><i class="ti ${icono}"></i> ${texto}</button>`;
+  return `
+    ${btn('is-on', 'ti-brand-whatsapp', t('btn.sendByWhatsapp'), "sendNewPedido('whatsapp')", !sinItems && waOk, sinItems ? motivo : (!prov || !prov.tel ? t('msg.supplierMissingPhone') : !waOk ? t('msg.supplierLandline') : ''))}
+    ${btn('is-on', 'ti-mail', t('btn.sendByEmail'), "sendNewPedido('email')", !sinItems && mailOk, sinItems ? motivo : (!mailOk ? t('msg.supplierMissingEmail') : ''))}
+    <div class="pc-acciones-2">
+      ${btn('', 'ti-device-floppy', gl({es:'Guardar borrador', ca:'Desar esborrany', en:'Save draft'}), 'guardarBorradorPedido()', !sinItems, motivo)}
+      ${btn('', 'ti-printer', t('common.print'), 'printPedidoBorrador()', !sinItems, motivo)}
     </div>
-    ${html}
-    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      ${orderFormButtonsHtml()}
-    </div>
-  `, {xl:true});
-  afterOrderFormRender(dateVal);
+    ${sinItems || (waOk && mailOk) ? '' : `<p class="es-pista">${!waOk && !mailOk ? gl({es:'Este proveedor no tiene móvil ni correo guardados: imprime el pedido o guárdalo como borrador.', ca:'Aquest proveïdor no té mòbil ni correu: imprimeix la comanda o desa-la com a esborrany.', en:'This supplier has no mobile or email saved: print the order or save it as a draft.'}) : ''}</p>`}`;
 }
 
-// Resumen en vivo de los artículos con cantidad > 0 mientras se compone el pedido.
 /* Resumen del pedido con lo que va a costar cada línea y el total abajo.
    Antes solo se veían nombres y cantidades, así que había que enviar el
    pedido para enterarse del importe — y para un pedido grande eso es
@@ -2294,7 +2384,7 @@ function renderOrderModal(){
    el suyo, que puede ser distinto por producto. */
 function orderSummaryHtml(){
   const items = orderModalLines.filter(l => l.cantidad > 0);
-  if(!items.length) return `<div class="empty" style="padding:10px">${t('empty.noArticlesYet')}</div>`;
+  if(!items.length) return `<div class="empty es-vacio"><i class="ti ti-basket"></i>${t('empty.noArticlesYet')}</div>`;
   let base = 0, iva = 0, sinPrecio = 0;
   const filas = items.map(l => {
     const ing = getIngredient(l.ingredientId);
@@ -2306,18 +2396,17 @@ function orderSummaryHtml(){
     iva += importe * ivaPct / 100;
     if(!precio) sinPrecio++;
     return `
-      <div class="list-row" style="align-items:baseline">
-        <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
-        <span style="font-size:12px;color:var(--muted);white-space:nowrap">${fmtNum(l.cantidad)} ${escapeHtml(ing.unit)}${precio ? ` × ${fmtMoney(precio)}` : ''}</span>
-        <strong style="white-space:nowrap">${precio ? fmtMoney(importe) : '—'}</strong>
+      <div class="pc-res-linea">
+        <span class="pc-res-n">${escapeHtml(ing.name)}</span>
+        <span class="pc-res-q">${fmtNum(l.cantidad)} ${escapeHtml(ing.unit)}${precio ? ` × ${pcPrecio(precio)}` : ''}</span>
+        <b>${precio ? fmtMoney(importe) : '—'}</b>
       </div>`;
   }).join('');
 
   // Un ingrediente sin precio en la Mega Lista no puede sumar, y callarlo
   // daría un total que parece completo sin serlo.
   const aviso = sinPrecio
-    ? `<div style="font-size:11.5px;color:var(--amber,#8A7440);padding:6px 10px"><i class="ti ti-alert-triangle"></i> ${t('msg.orderItemsWithoutPrice').replace('${n}', sinPrecio)}</div>`
-    : '';
+    ? `<p class="pc-aviso"><i class="ti ti-alert-triangle"></i> ${t('msg.orderItemsWithoutPrice').replace('${n}', sinPrecio)}</p>` : '';
 
   // Si el proveedor cobra envío por no llegar a un mínimo, se avisa aquí
   // mismo mientras se compone el pedido — es el momento en que sirve de
@@ -2327,21 +2416,30 @@ function orderSummaryHtml(){
   let envioAviso = '';
   if(provider && provider.envioTipo === 'minimo'){
     envioAviso = envio > 0
-      ? `<div style="font-size:11.5px;color:var(--amber,#8A7440);padding:6px 10px"><i class="ti ti-truck-delivery"></i> ${t('msg.shippingMinimumNotReached').replace('${missing}', fmtMoney(Math.max(0,(provider.envioMinimo||0)-base))).replace('${min}', fmtMoney(provider.envioMinimo||0))}</div>`
-      : `<div style="font-size:11.5px;color:var(--olive);padding:6px 10px"><i class="ti ti-truck-delivery"></i> ${t('msg.shippingFreeReached').replace('${min}', fmtMoney(provider.envioMinimo||0))}</div>`;
+      ? `<p class="pc-aviso"><i class="ti ti-truck-delivery"></i> ${t('msg.shippingMinimumNotReached').replace('${missing}', fmtMoney(Math.max(0,(provider.envioMinimo||0)-base))).replace('${fee}', fmtMoney(provider.envioCoste||0)).replace('${min}', fmtMoney(provider.envioMinimo||0))}</p>`
+      : `<p class="pc-ok"><i class="ti ti-truck-delivery"></i> ${t('msg.shippingFreeReached').replace('${min}', fmtMoney(provider.envioMinimo||0))}</p>`;
   }
+  const pendiente = pendingOrderForSupplier(orderModalSupplier);
+  const pendAviso = pendiente ? `<p class="pc-aviso"><i class="ti ti-clock"></i> ${gl({es:`Ya hay un pedido a este proveedor (${escapeHtml(pendiente.date)}, ${escapeHtml(pedidoEstadoLabel(pendiente.estado))}) sin recibir.`, ca:`Ja hi ha una comanda a aquest proveïdor (${escapeHtml(pendiente.date)}, ${escapeHtml(pedidoEstadoLabel(pendiente.estado))}) sense rebre.`, en:`There is already an order to this supplier (${escapeHtml(pendiente.date)}, ${escapeHtml(pedidoEstadoLabel(pendiente.estado))}) not yet received.`})}</p>` : '';
 
-  return filas + aviso + envioAviso + `
-    <div style="border-top:1px solid var(--border);margin-top:6px;padding:8px 10px;font-size:13px">
-      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">${t('label.subtotal')}</span><span>${fmtMoney(base)}</span></div>
-      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">${t('label.vat')}</span><span>${fmtMoney(iva)}</span></div>
-      ${envio > 0 ? `<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">${t('label.shipping')}</span><span>${fmtMoney(envio)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:4px"><span>${t('common.total')}</span><span>${fmtMoney(base + iva + envio)}</span></div>
+  return `
+    <div class="pc-res-lineas">${filas}</div>
+    ${aviso}${envioAviso}${pendAviso}
+    <div class="pd-totales pc-totales">
+      <div><span>${t('label.subtotal')}</span><b>${fmtMoney(base)}</b></div>
+      <div><span>${t('label.vat')}</span><b>${fmtMoney(iva)}</b></div>
+      ${envio > 0 ? `<div><span>${t('label.shipping')}</span><b>${fmtMoney(envio)}</b></div>` : ''}
+      <div class="pd-total"><span>${t('common.total')}</span><b>${fmtMoney(base + iva + envio)}</b></div>
     </div>`;
 }
 function renderOrderSummary(){
   const box = document.getElementById('order-summary');
   if(box) box.innerHTML = orderSummaryHtml();
+  const acc = document.getElementById('order-acciones');
+  if(acc) acc.innerHTML = pcAccionesHtml();
+  // Contadores de los filtros y la vaciar: solo cambian cuando una cantidad pasa de/a cero.
+  const c = pcContadores();
+  document.querySelectorAll('.pc-chips .btn').forEach((b, i) => { const n = b.querySelector('.ml-n'); if(n) n.textContent = [c.todos, c.bajo, c.con][i]; });
 }
 
 // Comprueba que la fecha de entrega coincide con un día de entrega del proveedor.
@@ -2387,21 +2485,60 @@ function selectOrderSupplier(supplier){
   refreshOrderForm();
 }
 
+/* «Sugerir por déficit de stock» (revisado el 30/10). Pide lo que falta para llegar al mínimo de Stock, pero:
+   · descuenta lo que ya viene de camino (pedidos ENVIADOS sin recibir): si no, el mismo día en que el camión aún no ha
+     llegado se pedía otra vez lo mismo;
+   · redondea hacia arriba al envase (packQty de la Mega Lista: 1000 g = la bolsa de 1 kg), porque nadie pide 350 g
+     de una bolsa de kilo;
+   · dice qué ha hecho: cuántos artículos, y cuántos no se pueden juzgar por no tener mínimo en Stock. Antes el aviso
+     era siempre «cantidades sugeridas», aunque no hubiera sugerido nada. */
 async function sugerirPorDeficit(){
   const hasManualQty = orderModalLines.some(l => l.cantidad > 0);
   if(hasManualQty && !(await confirmModal(t('msg.confirmOverwriteQtyWithSuggestion')))) return;
+  let sugeridos = 0, sinMinimo = 0, yaVienen = 0;
   orderModalLines.forEach(line => {
+    const ing = getIngredient(line.ingredientId);
     const s = getStockEntry(line.ingredientId);
-    line.cantidad = Math.max(0, (s.min||0) - (s.qty||0));
+    const min = s.min || 0;
+    if(!(min > 0)){ sinMinimo++; line.cantidad = 0; return; }
+    const camino = pcEnCamino(line.ingredientId);
+    let falta = min - (s.qty || 0) - camino;
+    if(falta <= 0){ if(min - (s.qty || 0) > 0) yaVienen++; line.cantidad = 0; return; }
+    if(ing && ing.packQty > 1) falta = Math.ceil(falta / ing.packQty - 1e-9) * ing.packQty;
+    line.cantidad = pcRedondea(falta);
+    sugeridos++;
   });
   refreshOrderForm();
-  showToast(t('msg.suggestedQty'));
+  const extra = [
+    yaVienen ? gl({es:`${yaVienen} ya vienen de camino`, ca:`${yaVienen} ja vénen de camí`, en:`${yaVienen} already on the way`}) : '',
+    sinMinimo ? gl({es:`${sinMinimo} sin mínimo en Stock`, ca:`${sinMinimo} sense mínim a l'Estoc`, en:`${sinMinimo} with no Stock minimum`}) : ''
+  ].filter(Boolean).join(' · ');
+  showToast(sugeridos
+    ? gl({es:`${sugeridos} artículos sugeridos`, ca:`${sugeridos} articles suggerits`, en:`${sugeridos} items suggested`}) + (extra ? ' · ' + extra : '')
+    : gl({es:'Nada que pedir: todo está por encima del mínimo', ca:'Res a demanar: tot és per sobre del mínim', en:'Nothing to order: everything is above the minimum'}) + (extra ? ' · ' + extra : ''), 5000);
 }
 
 function updateOrderLineQty(ingredientId, value){
   const line = orderModalLines.find(l => l.ingredientId === ingredientId);
-  if(line) line.cantidad = parseFloat(value) || 0;
+  if(line) line.cantidad = Math.max(0, parseFloat(value) || 0);
+  const fila = document.querySelector(`.pc-art[data-ing="${ingredientId}"]`);
+  if(fila) fila.classList.toggle('con', !!(line && line.cantidad > 0));
   renderOrderSummary();
+}
+// Los botones − y +: un paso por pulsación, sin repintar la lista (se perdería el sitio en el que se estaba).
+function ordenPaso(ingredientId, dir){
+  const line = orderModalLines.find(l => l.ingredientId === ingredientId);
+  const ing = getIngredient(ingredientId);
+  if(!line || !ing) return;
+  line.cantidad = Math.max(0, pcRedondea((line.cantidad || 0) + dir * pcPaso(ing)));
+  const inp = document.getElementById('oq-' + ingredientId);
+  if(inp) inp.value = line.cantidad || '';
+  updateOrderLineQty(ingredientId, line.cantidad);
+}
+async function limpiarPedidoEnCurso(){
+  if(!(await confirmModal(gl({es:'¿Poner a cero todas las cantidades del pedido?', ca:'Posar a zero totes les quantitats de la comanda?', en:'Reset every quantity in the order to zero?'})))) return;
+  orderModalLines.forEach(l => { l.cantidad = 0; });
+  refreshOrderForm();
 }
 
 // Hay ya un pedido pendiente (no Recibido) para este proveedor? Sirve para
@@ -2440,7 +2577,8 @@ async function buildNewPedido(estado){
   const pending = pendingOrderForSupplier(orderModalSupplier);
   if(pending && !(await confirmModal(t('msg.confirmPendingOrderExists').replace('${date}', pending.date).replace('${status}', pedidoEstadoLabel(pending.estado))))) return null;
   const finalEstado = estado || 'ENVIADO';
-  const order = {id: genId(), supplier: orderModalSupplier, date, estado: finalEstado, items, notas:'', recepcion:null, comprobacion:'', area: currentArea()};
+  const notasEl = document.getElementById('order-notas');
+  const order = {id: genId(), supplier: orderModalSupplier, date, estado: finalEstado, items, notas: notasEl ? notasEl.value.trim() : '', recepcion:null, comprobacion:'', area: currentArea()};
   if(finalEstado === 'ENVIADO') order.enviadoEn = todayStr();
   DB.purchaseOrders.push(order);
   saveDB();
@@ -2455,8 +2593,19 @@ function printPedidoBorrador(){
   const items = orderModalLines.filter(l => l.cantidad > 0);
   if(!items.length){ showToast(t('msg.addAtLeastOneItem')); return; }
   const date = document.getElementById('order-date').value || todayStr();
-  const o = {supplier: orderModalSupplier, date, items, notas:''};
+  const notasEl = document.getElementById('order-notas');
+  const o = {supplier: orderModalSupplier, date, items, notas: notasEl ? notasEl.value.trim() : ''};
   printReportWindow(t('label.purchaseOrder'), buildPedidoPrintHtml(o));
+}
+
+// Guarda el pedido como borrador, sin enviarlo: para revisarlo con calma o terminarlo luego.
+async function guardarBorradorPedido(){
+  const order = await buildNewPedido('BORRADOR');
+  if(!order) return;
+  orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = '';
+  pedidosTab = 'historial';
+  showToast(gl({es:'Borrador guardado en el historial', ca:'Esborrany desat a l\'historial', en:'Draft saved in the history'}));
+  openPedido(order.id);
 }
 
 async function sendNewPedido(method){
@@ -2469,7 +2618,7 @@ async function sendNewPedido(method){
   if(!order) return;
   if(orderFormInline){
     // Vacía el formulario inline y pasa al historial para ver el pedido creado.
-    orderModalSupplier = ''; orderModalLines = []; orderModalSearch = '';
+    orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = '';
     pedidosTab = 'historial';
   }else{
     closeModal();

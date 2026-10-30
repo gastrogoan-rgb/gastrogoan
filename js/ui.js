@@ -1941,7 +1941,7 @@ function ggAbrirMenuAcciones(btn, ev){
 if(typeof document !== 'undefined'){
   // Un toque fuera lo cierra; el propio botón decide si abre o cierra (por eso se le deja pasar).
   document.addEventListener('click', e => {
-    if(ggMenuAbierto && !ggMenuAbierto.menu.contains(e.target) && !(e.target.closest && e.target.closest('[data-acc]'))) ggCerrarMenuAcciones();
+    if(ggMenuAbierto && !ggMenuAbierto.menu.contains(e.target) && !(e.target.closest && e.target.closest('[data-acc],.pe-sel'))) ggCerrarMenuAcciones();
   }, true);
   document.addEventListener('keydown', e => {
     if(!ggMenuAbierto) return;
@@ -1954,6 +1954,95 @@ if(typeof document !== 'undefined'){
   });
   window.addEventListener('resize', () => ggCerrarMenuAcciones());
   window.addEventListener('scroll', () => ggCerrarMenuAcciones(), true);
+}
+
+/* ── Selector de periodo (año y mes) — reutilizable (30/10) ──
+   Sustituye a la fila de doce píldoras con flechas de año: es un solo control —«‹  octubre 2026 ▾  ›»— que se mueve de
+   mes en mes con las flechas y, al abrirlo, enseña el año con sus doce meses y cuántos registros hay en cada uno (los
+   meses vacíos se ven apagados), más «todo el año». Quien lo use solo guarda `anio` y `mes` (0-11, o null = año entero)
+   y le da una función global `cb(anio, mes)` que repinta. `datos` = {'AAAA-MM': n}.
+   Uso:  ggPeriodoHtml({anio, mes, cb:'miFuncion', datos, anual:true}) */
+function ggPeriodoEtiqueta(anio, mes){
+  return mes == null ? String(anio) : `${t('months.full')[mes]} ${anio}`;
+}
+function ggPeriodoHtml(cfg){
+  const json = escapeHtml(JSON.stringify({anio: cfg.anio, mes: cfg.mes == null ? null : cfg.mes, cb: cfg.cb, datos: cfg.datos || {}, anual: cfg.anual !== false}));
+  return `<div class="pe-sel" data-cfg="${json}">
+    <button type="button" class="btn btn-fino pe-flecha" aria-label="${escapeHtml(gl({es:'Periodo anterior', ca:'Període anterior', en:'Previous period'}))}" onclick="ggPeriodoPaso(this, -1)"><i class="ti ti-chevron-left"></i></button>
+    <button type="button" class="btn btn-fino pe-actual" aria-haspopup="dialog" aria-expanded="false" onclick="ggPeriodoAbrir(this)"><i class="ti ti-calendar-month"></i><span>${escapeHtml(ggPeriodoEtiqueta(cfg.anio, cfg.mes))}</span><i class="ti ti-chevron-down"></i></button>
+    <button type="button" class="btn btn-fino pe-flecha" aria-label="${escapeHtml(gl({es:'Periodo siguiente', ca:'Període següent', en:'Next period'}))}" onclick="ggPeriodoPaso(this, 1)"><i class="ti ti-chevron-right"></i></button>
+  </div>`;
+}
+function ggPeriodoCfg(el){
+  const sel = el.closest ? el.closest('.pe-sel') : null;
+  try{ return sel ? JSON.parse(sel.dataset.cfg) : null; }catch(e){ return null; }
+}
+function ggPeriodoElegir(cfg, anio, mes){
+  ggCerrarMenuAcciones();
+  if(typeof window[cfg.cb] === 'function') window[cfg.cb](anio, mes);
+}
+// Las flechas avanzan un mes (o un año, si se mira el año entero).
+function ggPeriodoPaso(btn, dir){
+  const cfg = ggPeriodoCfg(btn);
+  if(!cfg) return;
+  ggCerrarMenuAcciones();
+  if(cfg.mes == null){ ggPeriodoElegir(cfg, cfg.anio + dir, null); return; }
+  let m = cfg.mes + dir, a = cfg.anio;
+  if(m < 0){ m = 11; a--; } else if(m > 11){ m = 0; a++; }
+  ggPeriodoElegir(cfg, a, m);
+}
+function ggPeriodoPopHtml(cfg, anioVista){
+  const cortos = t('months.short');
+  const hoy = new Date();
+  const celdas = cortos.map((nom, i) => {
+    const n = (cfg.datos || {})[`${anioVista}-${String(i + 1).padStart(2, '0')}`] || 0;
+    const on = cfg.mes === i && cfg.anio === anioVista;
+    const ahora = hoy.getFullYear() === anioVista && hoy.getMonth() === i;
+    return `<button type="button" class="pe-mes${on ? ' is-on' : ''}${n ? ' tiene' : ''}${ahora ? ' es-hoy' : ''}" onclick="ggPeriodoMes(${anioVista}, ${i})"><span>${escapeHtml(nom)}</span>${n ? `<em>${n}</em>` : ''}</button>`;
+  }).join('');
+  return `
+    <div class="pe-anio">
+      <button type="button" class="btn btn-fino" aria-label="${escapeHtml(gl({es:'Año anterior', ca:'Any anterior', en:'Previous year'}))}" onclick="ggPeriodoAnioVista(-1)"><i class="ti ti-chevron-left"></i></button>
+      <b>${anioVista}</b>
+      <button type="button" class="btn btn-fino" aria-label="${escapeHtml(gl({es:'Año siguiente', ca:'Any següent', en:'Next year'}))}" onclick="ggPeriodoAnioVista(1)"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <div class="pe-meses">${celdas}</div>
+    <div class="pe-pie">
+      ${cfg.anual ? `<button type="button" class="btn btn-sm btn-fino${cfg.mes == null && cfg.anio === anioVista ? ' is-on' : ''}" onclick="ggPeriodoMes(${anioVista}, null)"><i class="ti ti-calendar"></i> ${gl({es:'Todo el año', ca:'Tot l\'any', en:'Whole year'})}</button>` : '<span></span>'}
+      <button type="button" class="btn btn-sm btn-fino" onclick="ggPeriodoMes(${hoy.getFullYear()}, ${hoy.getMonth()})"><i class="ti ti-calendar-event"></i> ${gl({es:'Este mes', ca:'Aquest mes', en:'This month'})}</button>
+    </div>`;
+}
+let ggPeriodoVista = null;     // {cfg, anioVista} del selector abierto
+function ggPeriodoAbrir(btn){
+  const yaAbierto = ggMenuAbierto && ggMenuAbierto.btn === btn;
+  ggCerrarMenuAcciones();
+  if(yaAbierto) return;
+  const cfg = ggPeriodoCfg(btn);
+  if(!cfg) return;
+  ggPeriodoVista = {cfg, anioVista: cfg.anio};
+  const menu = document.createElement('div');
+  menu.className = 'mn-menu pe-pop';
+  menu.setAttribute('role', 'dialog');
+  menu.setAttribute('aria-label', gl({es:'Elegir periodo', ca:'Triar període', en:'Choose period'}));
+  menu.innerHTML = ggPeriodoPopHtml(cfg, cfg.anio);
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect();
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  let left = Math.min(Math.max(8, r.left), window.innerWidth - mw - 8);
+  let top = r.bottom + 4;
+  if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+  menu.style.left = left + 'px'; menu.style.top = top + 'px';
+  btn.setAttribute('aria-expanded', 'true');
+  ggMenuAbierto = {btn, menu};
+}
+function ggPeriodoAnioVista(dir){
+  if(!ggPeriodoVista || !ggMenuAbierto) return;
+  ggPeriodoVista.anioVista += dir;
+  ggMenuAbierto.menu.innerHTML = ggPeriodoPopHtml(ggPeriodoVista.cfg, ggPeriodoVista.anioVista);
+}
+function ggPeriodoMes(anio, mes){
+  if(!ggPeriodoVista) return;
+  ggPeriodoElegir(ggPeriodoVista.cfg, anio, mes);
 }
 
 /* ── Filas plegables en móvil ──
@@ -1984,7 +2073,7 @@ function ggSiPlegada(ev, el){
 }
 function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
 
-const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas'];   // pantallas que ya tienen el diseño nuevo
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;
