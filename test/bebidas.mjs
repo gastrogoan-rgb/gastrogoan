@@ -494,7 +494,7 @@ await caso('El manual tiene índice arriba y marca dónde estás', async ()=>{
 // zanahoria presidiendo la carta de vinos y el stock de la barra.
 await caso('Las pestañas de sala llevan iconos de bebida, no de cocina', async ()=>{
   const r = await page.evaluate(()=>{
-    cartaEdit = null; menuEdit = null;   // restos de casos anteriores: con un borrador abierto, navegar pregunta
+    cartaEdit = null; menuEdit = null; fichaHoja = false; fichaModalState = null; escandalloHoja = null;   // restos de casos anteriores: con un borrador abierto, navegar pregunta
     const icono = id => { const i = document.querySelector(`#${id} i.ti`); return i ? i.className.replace('ti ','') : null; };
     const mira = () => ({
       escPlatos: icono('escandallo-tab-platos'),

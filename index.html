@@ -225,10 +225,10 @@
       <div class="toolbar ml-barra">
         <div class="left">
           <input type="text" class="search-input ml-buscar" id="megalista-search" data-i18n-ph="ph.searchIngredient" placeholder="Buscar ingrediente..." oninput="renderMegalista()">
-          <select id="megalista-filter-prov" class="ml-filtro" onchange="renderMegalista()" aria-label="Proveedor">
+          <select id="megalista-filter-prov" class="ml-filtro" onchange="renderMegalista()">
             <option value="" data-i18n="megalista.allProviders">Todos los proveedores</option>
           </select>
-          <select id="megalista-orden" class="ml-filtro ml-orden" onchange="setMegalistaSortDesdeLista(this.value)" aria-label="Ordenar">
+          <select id="megalista-orden" class="ml-filtro ml-orden" onchange="setMegalistaSortDesdeLista(this.value)">
             <option value="name" data-i18n="megalista.colIngredient">Ingrediente</option>
             <option value="category" data-i18n="common.category">Categoría</option>
             <option value="supplier" data-i18n="common.supplier">Proveedor</option>
@@ -279,7 +279,7 @@
       <div class="toolbar es-filtros">
         <div class="left">
           <input type="text" class="search-input es-buscar" id="escandallo-search" data-i18n-ph="ph.searchDish" placeholder="Buscar plato..." oninput="renderEscandallo()">
-          <select id="escandallo-filter-cat" class="es-filtro" onchange="renderEscandallo()" aria-label="Categoría">
+          <select id="escandallo-filter-cat" class="es-filtro" onchange="renderEscandallo()">
             <option value="" data-i18n="filter.allCategories">Todas las categorías</option>
           </select>
         </div>
@@ -294,24 +294,22 @@
       <div class="view-title" data-i18n="view.fichas.title">Fichas Técnicas</div>
       <div class="view-subtitle" data-i18n="view.fichas.subtitle">Elaboración estándar y alérgenos</div>
 
-      <div class="toolbar" style="margin-bottom:4px">
+      <div class="toolbar es-tabs" style="margin-bottom:10px">
         <div class="left">
-          <button class="btn btn-sm" id="fichas-tab-platos" onclick="setFichasTab('platos')"><i class="ti ti-chef-hat"></i> <span data-i18n="tab.dishes">Platos</span></button>
-          <button class="btn btn-sm" id="fichas-tab-elaboraciones" onclick="setFichasTab('elaboraciones')"><i class="ti ti-soup"></i> <span data-i18n="tab.elaborations">Elaboraciones</span></button>
+          <button class="btn btn-sm btn-fino" id="fichas-tab-platos" onclick="setFichasTab('platos')"><i class="ti ti-chef-hat"></i> <span data-i18n="tab.dishes">Platos</span></button>
+          <button class="btn btn-sm btn-fino" id="fichas-tab-elaboraciones" onclick="setFichasTab('elaboraciones')"><i class="ti ti-soup"></i> <span data-i18n="tab.elaborations">Elaboraciones</span></button>
+        </div>
+        <div id="fichas-new-btns">
+          <button class="owner-only btn btn-fino is-on" onclick="openFichaModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newTechSheet">Nueva ficha técnica</span></button>
         </div>
       </div>
 
-      <div class="toolbar">
+      <div class="toolbar es-filtros">
         <div class="left">
-          <input type="text" class="search-input" id="fichas-search" data-i18n-ph="ph.searchTechSheet" placeholder="Buscar ficha técnica..." oninput="renderFichas()">
-          <select id="fichas-filter-cat" onchange="renderFichas()">
+          <input type="text" class="search-input es-buscar" id="fichas-search" data-i18n-ph="ph.searchTechSheet" placeholder="Buscar ficha técnica..." oninput="renderFichas()">
+          <select id="fichas-filter-cat" class="es-filtro" onchange="renderFichas()">
             <option value="" data-i18n="filter.allCategories">Todas las categorías</option>
           </select>
-          <div class="view-toggle">
-            <button class="btn btn-sm btn-icon" id="fichas-view-grid" onclick="setFichasView('grid')"><i class="ti ti-layout-grid"></i></button>
-            <button class="btn btn-sm btn-icon" id="fichas-view-list" onclick="setFichasView('list')"><i class="ti ti-list"></i></button>
-          </div>
-          <button class="btn btn-sm" onclick="renderFichas()"><i class="ti ti-refresh"></i> <span data-i18n="common.update">Actualizar</span></button>
         </div>
       </div>
       <div id="fichas-list"></div>

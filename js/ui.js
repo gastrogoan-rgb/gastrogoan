@@ -1984,7 +1984,7 @@ function ggSiPlegada(ev, el){
 }
 function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
 
-const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo'];   // pantallas que ya tienen el diseño nuevo
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;
@@ -2067,6 +2067,7 @@ function navigate(view, forzado){
   }
   // Una hoja de Escandallo abierta no sobrevive a salir de la pantalla: al volver se ve la lista, no un plato a medias.
   if(view !== 'escandallo' && typeof escandalloHoja !== 'undefined' && escandalloHoja){ escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; }
+  if(view !== 'fichas' && typeof fichaHoja !== 'undefined' && fichaHoja){ fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; }
   if(view === 'home'){
     const session = getAccessSession();
     if(session && session.type === 'employee'){ goHome(); return; }

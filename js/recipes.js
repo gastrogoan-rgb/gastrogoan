@@ -1496,17 +1496,11 @@ function getFichaAllergens(f){
   return Array.from(new Set([...(r?recipeComputedAllergens(r):[]), ...(f.allergens||[])]));
 }
 
-let fichasView = 'grid'; // 'grid' | 'list'
 let fichasTab = 'platos'; // 'platos' | 'elaboraciones'
-function setFichasView(mode){
-  fichasView = mode;
-  renderFichas();
-}
 function setFichasTab(tab){
-  fichasTab = tab;
-  fichasFolder = null;
-  renderFichas();
-  scrollContentToTop();
+  // Con una ficha a medias, cambiar de pestaña también pregunta.
+  const cambiar = () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; fichasTab = tab; fichasFolder = null; renderFichas(); scrollContentToTop(); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(cambiar); else cambiar();
 }
 
 // Carpeta de categoría actualmente abierta en Fichas Técnicas (null = vista de carpetas)
@@ -1517,6 +1511,7 @@ function openFichaFolder(catKey){
 }
 function backToFichaFolders(){
   fichasFolder = null;
+  fichaHoja = false;
   document.getElementById('fichas-search').value = '';
   renderFichas();
 }
@@ -1536,27 +1531,25 @@ function renderFichas(){
   const box = document.getElementById('fichas-list');
   let html = '';
 
-  document.getElementById('fichas-tab-platos').classList.toggle('active', !isElab);
-  document.getElementById('fichas-tab-elaboraciones').classList.toggle('active', isElab);
+  document.getElementById('view-fichas').classList.toggle('es-en-hoja', !!(fichaHoja && fichaModalState));
+  document.getElementById('fichas-tab-platos').classList.toggle('is-on', !isElab);
+  document.getElementById('fichas-tab-elaboraciones').classList.toggle('is-on', isElab);
   const fichasPlatosTabLabel = document.querySelector('#fichas-tab-platos [data-i18n]');
   if(fichasPlatosTabLabel) fichasPlatosTabLabel.textContent = currentArea()==='sala' ? t('tab.drinks') : t('tab.dishes');
   ajustaIconoPestana('fichas-tab-platos', iconoPestanaPlatos());
   ajustaIconoPestana('fichas-tab-elaboraciones', iconoPestanaElaboraciones());
 
-  document.getElementById('fichas-view-grid').classList.toggle('active', fichasView==='grid');
-  document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
+  // La ficha (ver más abajo) es la ÚNICA pantalla donde se crea, se lee y se edita.
+  if(fichaHoja && fichaModalState){ renderFichaModal(); return; }
 
   const searching = !!(search || cat);
-  const gridClass = fichasView==='list' ? '' : 'grid grid-compact';
-  const renderCard = r => fichasView==='list' ? renderFichaRow(r) : renderFichaCard(r);
+  const unidades = n => currentArea()==='sala' ? (n===1?t('label.oneDrink'):t('label.nDrinks').replace('${n}', n)) : (n===1?t('label.oneDish'):t('label.nDishes').replace('${n}', n));
 
   // Fichas sueltas (sin vincular a ningún plato de Escandallo, o vinculadas
   // a uno que ya no existe) que coinciden con la búsqueda actual — se
   // calcula ANTES de cualquier "no hay nada que enseñar" para no perderlas
   // de vista solo porque no haya ningún plato de Escandallo que además
-  // coincida con esa misma búsqueda (antes pasaba justo eso: una ficha
-  // suelta con un nombre que ningún escandallo comparte se quedaba
-  // invisible, aunque existiera).
+  // coincida con esa misma búsqueda.
   const orphanFichas = (!searching && fichasFolder !== null) ? [] : DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
 
   if(!areaRecipes.length){
@@ -1565,18 +1558,32 @@ function renderFichas(){
       return;
     }
   } else if(!searching && fichasFolder === null){
-    // Vista de carpetas por categoría
+    // Vista de carpetas por categoría (las mismas tarjetas que Escandallo y Mega Lista)
     const folders = getEscandalloFolders(areaRecipes);
-    box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
-      <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
-        <div style="font-size:12px;color:var(--muted)">${currentArea()==='sala' ? (group.length===1?t('label.oneDrink'):t('label.nDrinks').replace('${n}', group.length)) : (group.length===1?t('label.oneDish'):t('label.nDishes').replace('${n}', group.length))}</div>
-      </div>
-    `).join('')}</div>`;
+    box.innerHTML = `<div class="ml-carpetas">${folders.map(([key, label, group]) => {
+      const k = escapeJsAttr(key);
+      const real = key !== '__none__';
+      const guardado = (DB.categoryIcons && DB.categoryIcons.recipe && DB.categoryIcons.recipe[key]) || '';
+      const icono = (real && iconoSeccionHtml(guardado, label, 26)) || '<i class="ti ti-folder"></i>';
+      const sinFicha = group.filter(r => !DB.fichas.some(f => f.recipeId === r.id)).length;
+      return `
+      <div class="ml-carpeta" role="button" tabindex="0" onclick="openFichaFolder('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFichaFolder('${k}')}">
+        ${real
+          ? `<span class="cat-icon-btn ml-ico" role="button" title="${escapeHtml(t('title.chooseFolderIcon'))}" aria-label="${escapeHtml(t('title.chooseFolderIcon'))}" onclick="event.stopPropagation();openCategoryIconModal('${k}','${k}','renderFichas','recipe')">${icono}</span>`
+          : `<span class="ml-ico">${icono}</span>`}
+        <div class="ml-carpeta-txt">
+          <div class="ml-carpeta-nom">${escapeHtml(label)}</div>
+          <div class="ml-carpeta-meta">${unidades(group.length)}</div>
+          ${sinFicha ? `<div class="ml-carpeta-pend">${gl({es:'sin ficha', ca:'sense fitxa', en:'no sheet'})}: ${sinFicha}</div>` : ''}
+        </div>
+        ${real ? botonesDeCarpeta(key, 'recipe') : ''}
+      </div>`;
+    }).join('')}</div>${orphanFichas.length ? `<h3 class="es-grupo">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')} <span>${orphanFichas.length}</span></h3><div class="es-platos">${orphanFichas.map(fiTarjetaSueltaHtml).join('')}</div>` : ''}`;
     return;
   }
 
-  const backBtn = (!searching && fichasFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button>` : '';
+  const backBtn = (!searching && fichasFolder !== null)
+    ? `<div class="ml-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button><div class="ml-ruta-nom">${escapeHtml(fichasFolder === '__none__' ? t('label.noCategory') : fichasFolder)}</div></div>` : '';
 
   const visibleRecipes = (!searching && fichasFolder !== null)
     ? recipes.filter(r => (r.category || '__none__') === fichasFolder)
@@ -1590,77 +1597,69 @@ function renderFichas(){
   if(visibleRecipes.length){
     if(searching){
       html += groupRecipesByCategory(visibleRecipes).map(([catName, group]) => `
-        <h3 class="cat-heading">${escapeHtml(catName)}</h3>
-        <div class="${gridClass}">${group.map(renderCard).join('')}</div>
+        <h3 class="es-grupo">${escapeHtml(catName)} <span>${group.length}</span></h3>
+        <div class="es-platos">${group.map(fiTarjetaHtml).join('')}</div>
       `).join('');
     } else {
-      html += backBtn + `<div class="${gridClass}">${visibleRecipes.map(renderCard).join('')}</div>`;
+      html += backBtn + `<div class="es-platos">${visibleRecipes.map(fiTarjetaHtml).join('')}</div>`;
     }
   } else {
     html += backBtn;
   }
 
   if(orphanFichas.length){
-    html += `<h3 class="cat-heading">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')}</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
-      <div class="list-row" style="cursor:pointer" onclick="openFichaModal(${f.id})">
-        <div class="list-row-name">${fichaTipoIconoHtml(f)} <span>${escapeHtml(f.name)}</span></div>
-        ${fichaTipoBadgeHtml(f)}
-        <div class="actions-cell">
-          <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i></button>
-          <button class="owner-only btn btn-sm btn-icon" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-    ` : `
-      <div class="card card-compact" style="cursor:pointer" onclick="openFichaModal(${f.id})">
-        <h3 style="justify-content:space-between"><span style="overflow:visible;text-overflow:clip;white-space:normal">${fichaTipoIconoHtml(f)} ${escapeHtml(f.name)}</span></h3>
-        ${fichaTipoBadgeHtml(f)}
-        <div class="actions-cell">
-          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-          <button class="owner-only btn btn-sm" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
-        </div>
-      </div>
-    `).join('') + `</div>`;
+    html += `<h3 class="es-grupo">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')} <span>${orphanFichas.length}</span></h3><div class="es-platos">${orphanFichas.map(fiTarjetaSueltaHtml).join('')}</div>`;
   }
 
   box.innerHTML = html;
 }
 
-function renderFichaRow(r){
-  const ficha = DB.fichas.find(f => f.recipeId === r.id);
-  return `
-    <div class="list-row" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
-      <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(r.name)}</span></div>
-      ${ficha ? `<span class="badge badge-green">${t('label.linked')}</span>` : `<span class="badge badge-amber">${t('label.noTechSheet')}</span>`}
-      ${ficha ? `
-        <div class="actions-cell">
-          <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i></button>
-          <button class="owner-only btn btn-sm btn-icon" onclick="event.stopPropagation();duplicateFicha(${ficha.id})"><i class="ti ti-copy"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i></button>
-        </div>
-      ` : ''}
-    </div>
-  `;
+// Cuántos pasos tiene, cuánto tarda y cuántos alérgenos lleva: lo que se quiere saber sin abrirla.
+function fiResumenHtml(f){
+  const pasos = (f.pasos || []).filter(p => p && String(p).trim()).length;
+  const alg = getFichaAllergens(f).length;
+  const k = (et, v) => `<span class="es-cifra"><i>${et}</i><b>${v}</b></span>`;
+  return k(gl({es:'Pasos', ca:'Passos', en:'Steps'}), pasos || '—')
+    + k(gl({es:'Tiempo', ca:'Temps', en:'Time'}), f.tiempo ? f.tiempo + ' min' : '—')
+    + k(t('label.allergens'), alg || '—');
 }
-
-function renderFichaCard(r){
-  const ficha = DB.fichas.find(f => f.recipeId === r.id);
+function fiMenuHtml(f){
+  return ggMenuAcciones([
+    {icono:'ti-file-text', texto:gl({es:'Abrir', ca:'Obrir', en:'Open'}), fn:`openFichaModal(${f.id})`},
+    {icono:'ti-printer', texto:t('common.print'), fn:`printFicha(${f.id})`},
+    {icono:'ti-copy', texto:t('btn.duplicate'), fn:`duplicateFicha(${f.id})`, owner:true},
+    {icono:'ti-trash', texto:t('common.delete'), fn:`deleteFicha(${f.id})`, peligro:true, owner:true}
+  ]);
+}
+// La tarjeta de un plato del Escandallo: tenga o no ficha.
+function fiTarjetaHtml(r){
+  const f = DB.fichas.find(x => x.recipeId === r.id);
+  const abrir = f ? `openFichaModal(${f.id})` : `openFichaModal(null, ${r.id})`;
+  const sala = (r.area||'cocina') === 'sala';
+  const icono = r.isBase ? (sala ? 'ti-flask' : 'ti-soup') : (sala ? 'ti-glass-cocktail' : 'ti-chef-hat');
   return `
-    <div class="card card-compact" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
-      <h3 style="justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <span style="overflow:visible;text-overflow:clip;white-space:normal;flex:1;min-width:0"><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
-        ${ficha ? `<span class="badge badge-green" style="flex:none">${t('label.linked')}</span>` : `<span class="badge badge-amber" style="flex:none">${t('label.noTechSheet')}</span>`}
-      </h3>
-      ${ficha ? `
-        <div class="actions-cell">
-          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-          <button class="owner-only btn btn-sm" onclick="event.stopPropagation();duplicateFicha(${ficha.id})"><i class="ti ti-copy"></i></button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
-        </div>
-      ` : `<div style="font-size:12px;color:var(--muted)">${t('title.newTechSheet')}</div>`}
-    </div>
-  `;
+    <article class="es-plato" role="button" tabindex="0" onclick="${abrir}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${abrir}}">
+      <div class="es-plato-cab">
+        <i class="ti ${icono} es-plato-ico"></i>
+        <div class="es-plato-nom">${escapeHtml(r.name)}</div>
+        ${f ? fiMenuHtml(f) : ''}
+      </div>
+      <div class="es-plato-insignias">${f ? `<span class="badge badge-green">${t('label.linked')}</span>${f.bebidaTipo ? fichaTipoBadgeHtml(f) : ''}` : `<span class="badge badge-amber">${t('label.noTechSheet')}</span>`}</div>
+      <div class="es-plato-cifras">${f ? fiResumenHtml(f) : `<span class="es-pista">${t('title.newTechSheet')}</span>`}</div>
+    </article>`;
+}
+// Una ficha suelta (sin escandallo detrás).
+function fiTarjetaSueltaHtml(f){
+  return `
+    <article class="es-plato" role="button" tabindex="0" onclick="openFichaModal(${f.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFichaModal(${f.id})}">
+      <div class="es-plato-cab">
+        ${fichaTipoIconoHtml(f).replace('<i class="ti ', '<i class="es-plato-ico ti ')}
+        <div class="es-plato-nom">${escapeHtml(f.name)}</div>
+        ${fiMenuHtml(f)}
+      </div>
+      <div class="es-plato-insignias"><span class="badge badge-gray">${t('label.notLinked')}</span>${fichaTipoBadgeHtml(f)}</div>
+      <div class="es-plato-cifras">${fiResumenHtml(f)}</div>
+    </article>`;
 }
 
 // Devuelve las líneas de ingredientes (cantidad para 1 ración base, unidad y nombre)
@@ -1678,6 +1677,7 @@ function getFichaIngredientLines(f){
 }
 
 function openFichaModal(id, recipeId){
+  if(!isOwnerSession() && !editUnlocked && !id && !recipeId) return;
   if(id){
     const f = getFicha(id);
     // f puede no existir si se borró desde otro dispositivo mientras esta
@@ -1719,7 +1719,13 @@ function openFichaModal(id, recipeId){
   } else {
     fichaModalState = {id:null, name:'', recipeId:'', comensales:2, baseComensales:1, produccion:1, tiempo:'', temp: currentArea()==='sala' ? 'FRÍO' : 'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:'', bebidaTipo:'', bebida:{}};
   }
+  if(!Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet = [];
+  fichaHoja = true;
   renderFichaModal();
+  fichaHojaBase = fiFoto();
+  const activa = document.querySelector('.view.active');
+  if(!activa || activa.id !== 'view-fichas') navigate('fichas');
+  else scrollContentToTop();
 }
 
 function updateFichaProduccion(value){
@@ -1729,7 +1735,137 @@ function updateFichaProduccion(value){
     const ficha = getFicha(fichaModalState.id);
     if(ficha){ ficha.produccion = fichaModalState.produccion; saveDB(); }
   }
+  // Solo cambian las cantidades y el título de los ingredientes: no se repinta la hoja entera (se perdería el foco).
+  fiPintarIngredientes();
+}
+
+/* ============================================================
+   LA FICHA (30/10) — un documento para cocinar el plato, y la misma pantalla donde se crea y se edita.
+   Mismo planteamiento que la hoja de Escandallo: antes se abría en un modal. Ahora es una página con dos columnas
+   —los ingredientes (la mise en place, a la cantidad de lo que se va a producir) y el paso a paso— y el resto debajo.
+   Cada paso lleva, si hace falta, su tiempo, su temperatura y un «ojo» para el punto crítico: lo que separa una
+   receta que sale siempre igual de una que depende de quién la haga. Quien no puede editar la ve como un documento.
+   ============================================================ */
+let fichaHoja = false;           // hay una ficha abierta en la pantalla (id null = ficha nueva)
+let fichaHojaBase = '';          // foto de la ficha al abrirla o guardarla: lo que difiera son cambios sin guardar
+function fiFoto(){
+  if(!fichaHoja || !fichaModalState || !document.getElementById('fichas-list')) return '';
+  syncFichaModalFields();
+  const f = fichaModalState;
+  // La producción NO cuenta: se guarda al instante (es una escala de trabajo, no contenido de la ficha).
+  return JSON.stringify({n:f.name, c:f.comensales, t:f.tiempo, tp:f.temp, i:f.ingredients, p:f.pasos, d:f.pasosDet, a:f.allergens, pr:f.presentation, ph:f.photo ? f.photo.length : 0, bt:f.bebidaTipo, b:f.bebida});
+}
+function fiSucia(){ return !!(fichaHoja && fichaModalState) && fiFoto() !== fichaHojaBase; }
+function fiMarcarCambio(){ const el = document.getElementById('fi-sucio'); if(el) el.hidden = !fiSucia(); }
+if(typeof ggRegistrarEditor === 'function') ggRegistrarEditor('ficha', {
+  sucio: () => fiSucia(),
+  nombre: () => gl({es:'Ficha: ', ca:'Fitxa: ', en:'Sheet: '}) + ((fichaModalState && fichaModalState.name && fichaModalState.name.trim()) || gl({es:'sin nombre', ca:'sense nom', en:'unnamed'})),
+  guardar: () => saveFicha(),
+  descartar: () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; renderFichas(); }
+});
+if(typeof document !== 'undefined' && document.addEventListener){
+  ['input','change'].forEach(ev => document.addEventListener(ev, e => {
+    if(e.target && e.target.closest && e.target.closest('#view-fichas') && fichaHoja) fiMarcarCambio();
+  }));
+}
+
+// Lo que se enseña en las ingredientes y el título «para N raciones»: se repinta aparte para no tocar el resto.
+function fiPintarIngredientes(){
+  const f = fichaModalState;
+  if(!f) return;
+  const cont = document.getElementById('ficha-ingredients');
+  if(!cont) return;
+  cont.innerHTML = fiIngredientesHtml(f);
+  const tit = document.getElementById('fi-ing-tit');
+  if(tit) tit.innerHTML = fiTituloIngredientes(f);
+}
+function fiFactor(f){
+  const base = getFichaBaseComensales(f);
+  const produccion = f.produccion || base;
+  return {base, produccion, factor: (base && base > 0) ? (produccion / base) : 1};
+}
+function fiTituloIngredientes(f){
+  const {produccion} = fiFactor(f);
+  const sala = (f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || currentArea()) === 'sala';
+  const unidad = produccion === 1 ? (sala ? t('noun.drink') : t('noun.ration')) : (sala ? t('noun.drinks') : t('noun.rations'));
+  return `${t('label.ingredients')} <span class="fi-para">${gl({es:'para', ca:'per a', en:'for'})} ${fmtNum(produccion)} ${escapeHtml(unidad)}</span>`;
+}
+function fiIngredientesHtml(f){
+  const ro = !editUnlocked;
+  const {factor} = fiFactor(f);
+  if(f.recipeId){
+    const lineas = getFichaIngredientLines(f);
+    if(!lineas.length) return `<div class="empty es-vacio"><i class="ti ti-basket"></i>${t('empty.noIngredients')}</div>`;
+    return `<ul class="fi-ings">${lineas.map(l => `
+      <li><span class="fi-ing-q">${l.qty != null ? `${fmtNum(l.qty * factor)} <small>${escapeHtml(l.unit)}</small>` : '—'}</span><span class="fi-ing-n">${escapeHtml(l.name)}</span></li>`).join('')}</ul>
+      <p class="es-nota"><i class="ti ti-calculator"></i> ${gl({es:'Las cantidades salen del Escandallo y se ajustan solas a la producción.', ca:'Les quantitats surten de l\'Escandall i s\'ajusten soles a la producció.', en:'Quantities come from Costing and scale with the production.'})}</p>`;
+  }
+  const lista = (f.ingredients && f.ingredients.length) ? f.ingredients : [''];
+  if(ro) return `<ul class="fi-ings">${lista.filter(Boolean).map(s => `<li><span class="fi-ing-n">${escapeHtml(s)}</span></li>`).join('')}</ul>`;
+  return `<div class="fi-ings-edit">${lista.map((ing, idx) => `
+    <div class="fi-ing-fila">
+      <input type="text" value="${escapeHtml(ing)}" placeholder="${t('ph.egIngredientLine')}" oninput="updateFichaIngredientText(${idx}, this.value)">
+      ${lista.length > 1 ? ggMenuAcciones([{icono:'ti-trash', texto:gl({es:'Quitar ingrediente', ca:'Treure ingredient', en:'Remove ingredient'}), fn:`removeFichaIngredientText(${idx})`, peligro:true, owner:true}]) : ''}
+    </div>`).join('')}
+    <button type="button" class="owner-only btn btn-sm btn-fino" onclick="addFichaIngredientText()"><i class="ti ti-plus"></i> ${t('btn.addIngredient')}</button></div>`;
+}
+
+function fiPasosHtml(f){
+  const ro = !editUnlocked;
+  const pasos = (f.pasos && f.pasos.length) ? f.pasos : [''];
+  const det = f.pasosDet || [];
+  if(ro){
+    const llenos = pasos.map((p, i) => ({p, d: det[i] || {}, i})).filter(x => x.p && String(x.p).trim());
+    if(!llenos.length) return `<p class="es-pista">${t('label.notSpecified')}</p>`;
+    return `<ol class="fi-pasos">${llenos.map((x, n) => `
+      <li class="fi-paso">
+        <div class="fi-paso-n">${n + 1}</div>
+        <div class="fi-paso-c">
+          <p class="fi-paso-leer">${escapeHtml(x.p)}</p>
+          ${(x.d.min || x.d.temp) ? `<div class="fi-paso-chips">${x.d.min ? `<span class="fi-chip"><i class="ti ti-clock"></i> ${escapeHtml(String(x.d.min))} min</span>` : ''}${x.d.temp ? `<span class="fi-chip"><i class="ti ti-temperature"></i> ${escapeHtml(String(x.d.temp))}</span>` : ''}</div>` : ''}
+          ${x.d.aviso ? `<div class="fi-ojo"><b>${gl({es:'Ojo', ca:'Ull', en:'Watch out'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}
+        </div>
+      </li>`).join('')}</ol>`;
+  }
+  return `<ol class="fi-pasos">${pasos.map((p, idx) => {
+    const d = det[idx] || {};
+    return `
+    <li class="fi-paso">
+      <div class="fi-paso-n">${idx + 1}</div>
+      <div class="fi-paso-c">
+        <textarea class="fi-paso-txt" rows="2" placeholder="${t('ficha.stepPlaceholder')}" aria-label="${gl({es:'Paso', ca:'Pas', en:'Step'})} ${idx + 1}" oninput="updateFichaStep(${idx}, this.value);fiAutoAlto(this)">${escapeHtml(p)}</textarea>
+        <div class="fi-paso-det">
+          <label class="fi-det"><i class="ti ti-clock"></i><input type="number" min="0" step="1" value="${d.min || ''}" placeholder="min" aria-label="${gl({es:'Minutos', ca:'Minuts', en:'Minutes'})}" oninput="updateFichaPasoDet(${idx}, 'min', this.value)"></label>
+          <label class="fi-det"><i class="ti ti-temperature"></i><input type="text" value="${escapeHtml(d.temp || '')}" placeholder="180 °C" aria-label="${gl({es:'Temperatura', ca:'Temperatura', en:'Temperature'})}" oninput="updateFichaPasoDet(${idx}, 'temp', this.value)"></label>
+          <label class="fi-det fi-det-ojo"><i class="ti ti-alert-triangle"></i><input type="text" value="${escapeHtml(d.aviso || '')}" placeholder="${gl({es:'Ojo: punto crítico', ca:'Ull: punt crític', en:'Watch out: critical point'})}" aria-label="${gl({es:'Punto crítico', ca:'Punt crític', en:'Critical point'})}" oninput="updateFichaPasoDet(${idx}, 'aviso', this.value)"></label>
+        </div>
+      </div>
+      <div class="fi-paso-acc">${ggMenuAcciones([
+        idx > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:`moveFichaStep(${idx},-1)`, owner:true} : null,
+        idx < pasos.length - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:`moveFichaStep(${idx},1)`, owner:true} : null,
+        pasos.length > 1 ? {icono:'ti-trash', texto:gl({es:'Quitar paso', ca:'Treure pas', en:'Remove step'}), fn:`removeFichaStep(${idx})`, peligro:true, owner:true} : null
+      ].filter(Boolean))}</div>
+    </li>`;
+  }).join('')}</ol>
+  <button type="button" class="owner-only btn btn-fino" onclick="addFichaStep()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>`;
+}
+function fiAutoAlto(el){ el.style.height = 'auto'; el.style.height = Math.max(el.scrollHeight, 56) + 'px'; }
+function updateFichaPasoDet(idx, campo, valor){
+  const f = fichaModalState;
+  if(!Array.isArray(f.pasosDet)) f.pasosDet = [];
+  while(f.pasosDet.length <= idx) f.pasosDet.push({});
+  f.pasosDet[idx] = {...(f.pasosDet[idx] || {}), [campo]: valor};
+  fiMarcarCambio();
+}
+function moveFichaStep(idx, dir){
+  const f = fichaModalState, j = idx + dir;
+  if(j < 0 || j >= f.pasos.length) return;
+  syncFichaModalFields();
+  while(f.pasosDet.length < f.pasos.length) f.pasosDet.push({});
+  [f.pasos[idx], f.pasos[j]] = [f.pasos[j], f.pasos[idx]];
+  [f.pasosDet[idx], f.pasosDet[j]] = [f.pasosDet[j], f.pasosDet[idx]];
   renderFichaModal();
+  fiMarcarCambio();
 }
 
 function renderFichaModal(){
@@ -1747,37 +1883,10 @@ function renderFichaModal(){
   // Cuando la ficha está vinculada a un escandallo, el nombre/comensales vienen de
   // ahí y quedan bloqueados; una ficha sin vincular permite editarlos a mano.
   const lockedAttr = (ro || f.recipeId) ? 'disabled' : '';
+  if(!Array.isArray(f.pasosDet)) f.pasosDet = [];
 
-  const baseComensales = getFichaBaseComensales(f);
-  const produccion = f.produccion || baseComensales;
-  const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
-  const ingredientsHtml = f.recipeId ? getFichaIngredientLines(f).map(l => `
-    <div class="ingredient-pill">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</div>
-  `).join('') : `
-    <div style="width:100%">
-      ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).map((ing, idx) => `
-        <div class="step-row" style="margin-bottom:6px">
-          <input type="text" value="${escapeHtml(ing)}" placeholder="${t('ph.egIngredientLine')}" style="flex:1" oninput="updateFichaIngredientText(${idx}, this.value)" ${roAttr}>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredientText(${idx})" ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
-        </div>
-      `).join('')}
-      <button class="owner-only btn btn-sm" onclick="addFichaIngredientText()"><i class="ti ti-plus"></i> ${t('btn.addIngredient')}</button>
-    </div>
-  `;
+  const {produccion} = fiFactor(f);
 
-  const stepsHtml = f.pasos.map((p, idx) => `
-    <div class="step-row">
-      <div class="step-num">${idx+1}</div>
-      <textarea placeholder="${t('ficha.stepPlaceholder')}" style="flex:1" oninput="updateFichaStep(${idx}, this.value)" ${roAttr}>${escapeHtml(p)}</textarea>
-      <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaStep(${idx})" ${f.pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
-    </div>
-  `).join('');
-
-  // En vivo a partir de los ingredientes/bases ACTUALES (recipeComputedAllergens),
-  // no la foto fija r.allergens guardada en el último "Guardar" del escandallo —
-  // si no, editar un ingrediente después dejaba este modal mostrando alérgenos
-  // desactualizados aunque la impresión (getFichaAllergens, mismo cálculo en
-  // vivo) ya mostrara los correctos.
   // Ficha de bebida (solo sala): el tipo elegido decide qué campos se piden.
   // Una ficha de vino no pregunta por el tiempo de extracción del café.
   const bebidaHtml = !isSala ? '' : (() => {
@@ -1785,7 +1894,7 @@ function renderFichaModal(){
     const campoHtml = c => {
       const v = datos[c.k] !== undefined ? String(datos[c.k]) : '';
       const id = `bebida-${c.k}`;
-      const lab = `<label>${escapeHtml(gl(c.l))}${c.unidad?` <span style="color:var(--muted);font-weight:400">(${escapeHtml(c.unidad)})</span>`:''}</label>`;
+      const lab = `<label for="${id}">${escapeHtml(gl(c.l))}${c.unidad?` <span class="es-pista">(${escapeHtml(c.unidad)})</span>`:''}</label>`;
       if(c.tipo === 'sel'){
         // La opción vacía deja decir "todavía no lo sé" sin inventarse un valor.
         const opts = (c.opts||[]).some(o => o.v === '') ? c.opts : [{v:'', l:{es:'—',ca:'—',en:'—'}}, ...(c.opts||[])];
@@ -1815,104 +1924,125 @@ function renderFichaModal(){
     });
     if(fila.length) bloques.push(`<div class="field-row">${fila.join('')}</div>`);
     return `
-      <div class="field">
-        <label>${t('label.drinkType')}</label>
-        <select id="ficha-bebida-tipo" onchange="setFichaBebidaTipo(this.value)" ${roAttr}>
-          <option value="">${t('label.drinkTypeNone')}</option>
-          ${BEBIDA_TIPOS.map(x=>`<option value="${x.key}"${x.key===f.bebidaTipo?' selected':''}>${escapeHtml(gl(x.l))}</option>`).join('')}
-        </select>
-      </div>
-      ${f.bebidaTipo ? bloques.join('') : ''}
-    `;
+      <section class="es-card fi-ancho">
+        <h3 class="es-tit">${gl({es:'Datos de la bebida', ca:'Dades de la beguda', en:'Drink details'})}</h3>
+        <div class="field">
+          <label for="ficha-bebida-tipo">${t('label.drinkType')}</label>
+          <select id="ficha-bebida-tipo" onchange="setFichaBebidaTipo(this.value)" ${roAttr}>
+            <option value="">${t('label.drinkTypeNone')}</option>
+            ${BEBIDA_TIPOS.map(x=>`<option value="${x.key}"${x.key===f.bebidaTipo?' selected':''}>${escapeHtml(gl(x.l))}</option>`).join('')}
+          </select>
+        </div>
+        ${f.bebidaTipo ? bloques.join('') : ''}
+      </section>`;
   })();
 
+  // En vivo a partir de los ingredientes/bases ACTUALES (recipeComputedAllergens), no la foto fija guardada.
   const liveRecipeAllergens = recipeComputedAllergens(getFichaLiveRecipe(f));
   const allergenHtml = ALLERGEN_LIST.map(a => {
     const fromRecipe = liveRecipeAllergens.includes(a);
     const on = fromRecipe || (f.allergens||[]).includes(a);
     const clickable = !ro && !fromRecipe;
-    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?t('title.autoDetectedFromCosting'):''}">${escapeHtml(allergenLabel(a))}</div>`;
+    if(ro && !on) return '';
+    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')" role="button" tabindex="0"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?t('title.autoDetectedFromCosting'):''}">${escapeHtml(allergenLabel(a))}</div>`;
   }).join('');
 
-  openModal(`
-    <div class="modal-header">
-      <h3>${f.id ? (ro?t('title.viewTechSheet'):t('title.editTechSheet')) : t('title.newTechSheet')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+  const titulo = f.id ? (ro ? t('title.viewTechSheet') : t('title.editTechSheet')) : t('title.newTechSheet');
+  const metaCampo = (id, et, html) => `<div class="fi-meta-c"><label for="${id}">${et}</label>${html}</div>`;
+  const fotoHtml = isBaseElaboration ? '' : `
+    <div class="fi-foto">
+      ${f.photo ? `
+        <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" onclick="openFichaPhotoLightbox(this.src)">
+        ${ro ? '' : `<button type="button" class="btn btn-sm btn-fino is-off fi-foto-quitar" onclick="removeFichaPhoto()"><i class="ti ti-trash"></i> ${t('btn.removePhoto')}</button>`}
+      ` : (ro ? `<div class="fi-foto-vacia"><i class="ti ti-photo"></i></div>` : `
+        <label class="fi-foto-vacia fi-foto-subir">
+          <i class="ti ti-camera-plus"></i><span>${t('btn.uploadPlatingPhoto')}</span>
+          <input type="file" accept="image/*" style="display:none" onchange="handleFichaPhotoUpload(this)">
+        </label>`)}
+    </div>`;
+
+  document.getElementById('view-fichas').classList.add('es-en-hoja');
+  document.getElementById('fichas-list').innerHTML = `
+    <div class="es-barra">
+      <button type="button" class="btn btn-sm btn-fino" onclick="backToFichaList()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+      <div class="es-barra-titulo">${escapeHtml(titulo)}</div>
+      <div class="es-barra-der">
+        <span class="oc-sucio" id="fi-sucio" hidden><i class="ti ti-point-filled"></i> ${t('oferta.sucio')}</span>
+        <button type="button" class="btn btn-fino" onclick="fiImprimir()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+        ${ro ? '' : `<button type="button" class="owner-only btn btn-fino is-on" onclick="saveFicha()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>`}
+        ${f.id ? ggMenuAcciones([
+          {icono:'ti-copy', texto:t('btn.duplicate'), fn:`duplicateFicha(${f.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteFicha(${f.id})`, peligro:true, owner:true}
+        ]) : ''}
+      </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${isSala ? t('label.drinkName') : t('label.dishName')}</label>
-        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="${isSala ? t('ph.drinkName') : t('ph.dishName')}" ${lockedAttr}>
+
+    <section class="es-card fi-hero${isBaseElaboration ? ' sin-foto' : ''}">
+      ${fotoHtml}
+      <div class="fi-hero-txt">
+        <div class="field">
+          <label for="ficha-name">${isSala ? t('label.drinkName') : t('label.dishName')}</label>
+          <input type="text" id="ficha-name" class="es-nombre" value="${escapeHtml(f.name)}" placeholder="${isSala ? t('ph.drinkName') : t('ph.dishName')}" ${lockedAttr}>
+        </div>
+        <div class="fi-vinculo">
+          ${linkedRecipe
+            ? `<i class="ti ti-calculator"></i> ${t('label.fromCosting')}: <b>${escapeHtml(linkedRecipe.name)}</b> <button type="button" class="owner-only btn btn-sm btn-fino" onclick="fiVerEscandallo(${linkedRecipe.id})">${gl({es:'Ver escandallo', ca:'Veure escandall', en:'Open costing'})}</button>`
+            : `<i class="ti ti-unlink"></i> ${t('label.notLinked')}`}
+        </div>
+        <div class="fi-meta">
+          ${metaCampo('ficha-comensales', isSala ? t('label.servings') : t('label.diners'), `<input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${lockedAttr}>`)}
+          ${metaCampo('ficha-produccion', t('label.production'), `<input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" max="100000" onchange="updateFichaProduccion(this.value)">`)}
+          ${metaCampo('ficha-tiempo', t('label.prepTime') , `<input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0" ${roAttr}>`)}
+          ${isSala && f.bebidaTipo ? '' : metaCampo('ficha-temp', t('label.servingTemp'), `<select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(tv=>`<option value="${tv}"${tv===f.temp?' selected':''}>${fichaTempLabel(tv)}</option>`).join('')}</select>`)}
+        </div>
       </div>
-      <div class="field">
-        <label>${t('label.fromCosting')}</label>
-        ${linkedRecipe
-          ? `<div style="padding:10px 12px;border:1px solid var(--border);background:var(--bg);font-size:13px"><i class="ti ti-calculator"></i> ${escapeHtml(linkedRecipe.name)}</div>`
-          : `<div style="padding:10px 12px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--muted)">${t('label.notLinked')}</div>`}
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${isSala ? t('label.servings') : t('label.diners')}</label>
-        <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${lockedAttr}>
-      </div>
-      <div class="field">
-        <label>${t('label.production')}</label>
-        <input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" max="100000" onchange="updateFichaProduccion(this.value)">
-      </div>
-      <div class="field">
-        <label>${t('label.prepTime')}</label>
-        <input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0" ${roAttr}>
-      </div>
-      ${isSala && f.bebidaTipo ? '' : `
-      <div class="field">
-        <label>${t('label.servingTemp')}</label>
-        <select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(tv=>`<option value="${tv}"${tv===f.temp?' selected':''}>${fichaTempLabel(tv)}</option>`).join('')}</select>
-      </div>
-      `}
+    </section>
+
+    <div class="fi-cuerpo">
+      <section class="es-card fi-ingredientes">
+        <h3 class="es-tit" id="fi-ing-tit">${fiTituloIngredientes(f)}</h3>
+        <div id="ficha-ingredients">${fiIngredientesHtml(f)}</div>
+      </section>
+      <section class="es-card fi-elaboracion">
+        <h3 class="es-tit">${t('label.preparation')}</h3>
+        <div id="ficha-steps">${fiPasosHtml(f)}</div>
+      </section>
     </div>
 
     ${bebidaHtml}
 
-    <div class="field">
-      <label>${t('label.ingredients')}</label>
-      <div id="ficha-ingredients" class="ingredients-grid">${ingredientsHtml}</div>
-    </div>
-
-    <div class="field">
-      <label>${t('label.preparation')}</label>
-      <div id="ficha-steps">${stepsHtml}</div>
-      <button class="owner-only btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
-    </div>
-
     ${isBaseElaboration ? '' : `
-    <div class="field">
-      <label>${isSala ? t('label.serviceNotes') : t('label.plating')}</label>
-      <textarea id="ficha-presentation" placeholder="${isSala ? t('ph.serviceNotes') : t('ph.presentationNotes')}" ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
-      <div style="display:flex;align-items:flex-start;gap:12px;margin-top:8px;flex-wrap:wrap">
-        ${f.photo ? `
-          <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="width:260px;height:260px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in" onclick="openFichaPhotoLightbox('${escapeJsAttr(f.photo)}')" title="${t('title.clickToEnlarge')}">
-          ${ro ? '' : `<button class="btn btn-sm btn-danger" onclick="removeFichaPhoto()"><i class="ti ti-trash"></i> ${t('btn.removePhoto')}</button>`}
-        ` : (ro ? '' : `
-          <label class="btn btn-sm" style="cursor:pointer">
-            <i class="ti ti-camera-plus"></i> ${t('btn.uploadPlatingPhoto')}
-            <input type="file" accept="image/*" style="display:none" onchange="handleFichaPhotoUpload(this)">
-          </label>
-        `)}
-      </div>
-    </div>
-    `}
+    <section class="es-card fi-ancho">
+      <h3 class="es-tit">${isSala ? t('label.serviceNotes') : t('label.plating')}</h3>
+      ${ro ? `<p class="fi-leer">${escapeHtml(f.presentation || '') || `<span class="es-pista">${t('label.notSpecified')}</span>`}</p>`
+           : `<textarea id="ficha-presentation" rows="3" placeholder="${isSala ? t('ph.serviceNotes') : t('ph.presentationNotes')}">${escapeHtml(f.presentation||'')}</textarea>`}
+    </section>`}
 
-    <div class="field">
-      <label>${t('label.allergens')}</label>
-      <div class="alg-grid">${allergenHtml}</div>
-    </div>
+    <section class="es-card fi-ancho">
+      <h3 class="es-tit">${t('label.allergens')}</h3>
+      <div class="alg-grid">${allergenHtml || `<span class="es-pista">${t('label.none')}</span>`}</div>
+    </section>
+  `;
+  document.querySelectorAll('#ficha-steps .fi-paso-txt').forEach(fiAutoAlto);
+}
 
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${ro?t('common.close'):t('common.cancel')}</button>
-      <button class="owner-only btn btn-primary" onclick="saveFicha()">${t('common.save')}</button>
-    </div>
-  `, {xl:true});
+// Abrir la hoja desde donde sea: si no se está en Fichas, se va; y al volver se ve la lista, no una ficha a medias.
+function backToFichaList(){
+  const volver = () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; renderFichas(); scrollContentToTop(); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(volver); else volver();
+}
+function fiVerEscandallo(recipeId){
+  const ir = () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; navigate('escandallo', true); openRecipeModal(recipeId); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(ir); else ir();
+}
+// Imprimir lo que se está viendo: si hay cambios, se guardan antes (el papel sale de lo guardado).
+async function fiImprimir(){
+  if(fiSucia()){
+    if(!editUnlocked) return;
+    const ok = await saveFicha();
+    if(!ok) return;
+  }
+  if(fichaModalState && fichaModalState.id) printFicha(fichaModalState.id);
 }
 
 function syncFichaModalFields(){
@@ -1980,12 +2110,22 @@ function removeFichaIngredientText(idx){
 }
 
 function updateFichaStep(idx, value){ fichaModalState.pasos[idx] = value; }
-function addFichaStep(){ syncFichaModalFields(); fichaModalState.pasos.push(''); renderFichaModal(); }
+function addFichaStep(){
+  syncFichaModalFields();
+  fichaModalState.pasos.push('');
+  if(!Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet = [];
+  while(fichaModalState.pasosDet.length < fichaModalState.pasos.length) fichaModalState.pasosDet.push({});
+  renderFichaModal();
+  fiMarcarCambio();
+  const t0 = document.querySelectorAll('#ficha-steps .fi-paso-txt'); if(t0.length) t0[t0.length - 1].focus();
+}
 function removeFichaStep(idx){
   if(fichaModalState.pasos.length<=1) return;
   syncFichaModalFields();
   fichaModalState.pasos.splice(idx,1);
+  if(Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet.splice(idx,1);
   renderFichaModal();
+  fiMarcarCambio();
 }
 
 function handleFichaPhotoUpload(input){
@@ -2027,13 +2167,14 @@ function toggleFichaAllergen(a){
 }
 
 async function saveFicha(){
+  if(!isOwnerSession() && !editUnlocked) return false;
   syncFichaModalFields();
   const f = fichaModalState;
   const name = (f.name||'').trim();
-  if(!name){ showToast(t('msg.nameRequired')); return; }
+  if(!name){ showToast(t('msg.nameRequired')); const n0 = document.getElementById('ficha-name'); if(n0) n0.focus(); return false; }
   if(f.recipeId && DB.fichas.some(other => other.id !== f.id && other.recipeId === f.recipeId)){
     showToast(t('msg.recipeAlreadyHasTechSheet'));
-    return;
+    return false;
   }
   // Aviso (no bloqueante) de posible ficha duplicada, mismo criterio ya
   // usado en Escandallo/Clientes/Proveedores/Mega Lista — sin esto, era
@@ -2041,7 +2182,7 @@ async function saveFicha(){
   // y acabar con varias fichas huérfanas con el mismo nombre, imposibles
   // de distinguir en la lista de "sin vincular".
   const dupe = DB.fichas.find(other => other.id !== f.id && (other.area||'cocina')===currentArea() && other.name.trim().toLowerCase() === name.toLowerCase());
-  if(dupe && !(await confirmModal(t('msg.confirmDuplicateTechSheet').replace('${name}', dupe.name)))) return;
+  if(dupe && !(await confirmModal(t('msg.confirmDuplicateTechSheet').replace('${name}', dupe.name)))) return false;
   const data = {
     name,
     recipeId: f.recipeId || '',
@@ -2051,7 +2192,22 @@ async function saveFicha(){
     tiempo: f.tiempo ? Math.max(0, parseInt(f.tiempo)||0) : '',
     temp: f.temp || 'CALIENTE',
     ingredients: f.ingredients.filter(i => i && i.trim()),
-    pasos: f.pasos.filter(p => p && p.trim()),
+    // Los pasos vacíos se tiran con sus detalles (tiempo, temperatura, ojo) para que sigan alineados.
+    ...(() => {
+      const det = Array.isArray(f.pasosDet) ? f.pasosDet : [];
+      const pasos = [], pasosDet = [];
+      (f.pasos || []).forEach((p, i) => {
+        if(!p || !String(p).trim()) return;
+        pasos.push(p.trim());
+        const d = det[i] || {};
+        const limpio = {};
+        const min = parseInt(d.min); if(isFinite(min) && min > 0) limpio.min = min;
+        if(d.temp && String(d.temp).trim()) limpio.temp = String(d.temp).trim();
+        if(d.aviso && String(d.aviso).trim()) limpio.aviso = String(d.aviso).trim();
+        pasosDet.push(limpio);
+      });
+      return {pasos, pasosDet: pasosDet.some(d => Object.keys(d).length) ? pasosDet : []};
+    })(),
     allergens: f.allergens || [],
     presentation: (f.presentation||'').trim(),
     photo: f.photo || '',
@@ -2065,17 +2221,31 @@ async function saveFicha(){
       return out;
     })() : {}
   };
+  let guardada;
   if(f.id){
     const ficha = getFicha(f.id);
-    if(!ficha) return;
+    if(!ficha) return false;
     Object.assign(ficha, data);
+    guardada = ficha;
   } else {
-    DB.fichas.push({id: genId(), ...data, area: currentArea()});
+    guardada = {id: genId(), ...data, area: currentArea()};
+    DB.fichas.push(guardada);
   }
   saveDB();
-  closeModal();
-  renderFichas();
+  // Se queda en la ficha (ya con su id si era nueva): la lista queda a un toque en «Volver».
+  if(fichaHoja){
+    fichaModalState = JSON.parse(JSON.stringify(guardada));
+    if(!fichaModalState.ingredients || !fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
+    if(!fichaModalState.pasos || !fichaModalState.pasos.length) fichaModalState.pasos = [''];
+    if(!Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet = [];
+    if(!Array.isArray(fichaModalState.allergens)) fichaModalState.allergens = [];
+    if(!fichaModalState.bebida || typeof fichaModalState.bebida !== 'object') fichaModalState.bebida = {};
+    renderFichaModal();
+    fichaHojaBase = fiFoto();
+    fiMarcarCambio();
+  } else renderFichas();
   showToast(t('msg.techSheetSaved'));
+  return true;
 }
 
 async function deleteFicha(id){
@@ -2083,6 +2253,8 @@ async function deleteFicha(id){
   if(!(await confirmModal(t('msg.confirmDeleteTechSheet')))) return;
   DB.fichas = DB.fichas.filter(f => f.id !== id);
   saveDB();
+  // Si se borraba la ficha abierta, la hoja se cierra con ella (sin preguntar por cambios de algo que ya no existe).
+  if(fichaHoja && fichaModalState && fichaModalState.id === id){ fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; }
   renderFichas();
   showToast(t('msg.techSheetDeleted'));
 }
@@ -2106,8 +2278,10 @@ function duplicateFicha(id){
   copy.recipeId = '';
   DB.fichas.push(copy);
   saveDB();
-  renderFichas();
   showToast(t('msg.techSheetSaved'));
+  // Se abre la copia para renombrarla y ajustar lo que cambie (antes de saltar se pregunta por lo que hubiera a medias).
+  const abrir = () => { fichaHoja = false; fichaModalState = null; openFichaModal(copy.id); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(abrir); else abrir();
 }
 
 // El bloque de bebida del impreso. Los campos cortos van en dos columnas y
@@ -2142,6 +2316,10 @@ function bebidaImpresoHtml(f){
   `;
 }
 
+// El impreso de la ficha: un documento para tener en la mano mientras se cocina. Dos columnas —a la izquierda lo que hay
+// que sacar (la mise en place, con su casilla para ir marcando) y a la derecha el paso a paso, numerado y con su tiempo,
+// su temperatura y su «ojo»—, y debajo el emplatado y los alérgenos bien visibles. No lleva iconos de fuente (la ventana
+// de impresión no los carga): las etiquetas son texto.
 function printFicha(id){
   const f = getFicha(id);
   if(!f) return;
@@ -2151,37 +2329,78 @@ function printFicha(id){
   const liveRecipe = getFichaLiveRecipe(f);
   const displayName = liveRecipe ? liveRecipe.name : f.name;
   const fichaAllergens = getFichaAllergens(f);
-  const algs = fichaAllergens.length
-    ? fichaAllergens.map(a=>`<span style="background:#F5EBE7;color:#8A4A3B;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(allergenLabel(a))}</span>`).join('')
-    : t('label.none');
-  const baseComensales = getFichaBaseComensales(f);
-  const produccion = f.produccion || baseComensales;
-  const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
-  const ingredientLines = getFichaIngredientLines(f);
-  const ings = ingredientLines.map(l=>`<li style="margin:3px 0">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</li>`).join('');
+  const {produccion, factor} = fiFactor(f);
   const fArea = f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || 'cocina';
   const isBaseElaboration = !!(liveRecipe && liveRecipe.isBase);
-  const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px;display:flex;gap:10px"><strong style="flex-shrink:0;color:#999">${i+1}.</strong><span>${escapeHtml(p)}</span></div>`).join('');
-  const metaChips = [
-    produccion ? `<span><i class="ti ${fArea==='sala'?'ti-glass-cocktail':'ti-users'}"></i> ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>` : '',
-    f.tiempo ? `<span><i class="ti ti-clock"></i> ${f.tiempo} min</span>` : '',
-    // Con ficha de bebida manda la temperatura en grados: "FRÍO" no
-    // distingue un blanco a 8° de un tinto a 16°, que es justo lo que
-    // separa a quien sabe servir de quien no.
-    (f.bebidaTipo && bebidaDatos(f).tempServicio !== undefined)
-      ? `<span><i class="ti ti-temperature"></i> ${escapeHtml(String(bebidaDatos(f).tempServicio))} °C</span>`
-      : (f.temp ? `<span>${escapeHtml(fichaTempLabel(f.temp))}</span>` : '')
-  ].filter(Boolean).join('');
-  const body = `
-    ${printReportHeaderHtml(displayName)}
-    ${metaChips ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px">${metaChips.replace(/<span>/g,'<span style="background:#FAF8F4;padding:4px 10px;border-radius:4px;font-size:11.5px;color:#555">')}</div>` : ''}
-    ${isBaseElaboration ? '' : (f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:100mm;border-radius:8px;display:block;margin:0 0 18px;object-fit:cover">` : '')}
-    <h2>${t('label.ingredients')}</h2><ul class="pr-steps">${ings || `<li class="pr-empty">${t('empty.noIngredients')}</li>`}</ul>
-    <h2>${t('label.prepMethod')}</h2>${steps || `<p class="pr-empty">${t('label.notSpecified')}</p>`}
-    ${isBaseElaboration ? '' : `<h2>${fArea==='sala' ? t('label.serviceNotes') : t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>`}
-    ${bebidaImpresoHtml(f)}
-    <h2>${t('label.allergens')}</h2><div>${algs}</div>
-  `;
-  printReportWindow(displayName, body, {winSize:'width=800,height=1000'});
-}
+  const unidad = produccion === 1 ? (fArea==='sala' ? t('noun.drink') : t('noun.ration')) : (fArea==='sala' ? t('noun.drinks') : t('noun.rations'));
 
+  const ings = getFichaIngredientLines(f).map(l => `<li><span class="fp-chk"></span><span class="fp-q">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)}` : ''}</span><span class="fp-n">${escapeHtml(l.name)}</span></li>`).join('');
+  const det = Array.isArray(f.pasosDet) ? f.pasosDet : [];
+  const pasosPrint = (f.pasos || []).map((p, i) => ({p, d: det[i] || {}})).filter(x => x.p && String(x.p).trim());
+  const steps = pasosPrint.map((x, n) => `
+    <div class="fp-paso">
+      <div class="fp-n-paso">${n + 1}</div>
+      <div class="fp-paso-c">
+        <div class="fp-paso-t">${escapeHtml(x.p)}</div>
+        ${(x.d.min || x.d.temp) ? `<div class="fp-chips">${x.d.min ? `<span>${escapeHtml(String(x.d.min))} MIN</span>` : ''}${x.d.temp ? `<span>${escapeHtml(String(x.d.temp))}</span>` : ''}</div>` : ''}
+        ${x.d.aviso ? `<div class="fp-ojo"><b>${gl({es:'OJO', ca:'ULL', en:'WATCH OUT'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}
+      </div>
+    </div>`).join('');
+  const temp = (f.bebidaTipo && bebidaDatos(f).tempServicio !== undefined) ? `${escapeHtml(String(bebidaDatos(f).tempServicio))} °C` : (f.temp ? escapeHtml(fichaTempLabel(f.temp)) : '');
+  const meta = [
+    [fArea==='sala' ? t('label.servings') : gl({es:'Producción', ca:'Producció', en:'Production'}), `${fmtNum(produccion)} ${escapeHtml(unidad)}`],
+    f.tiempo ? [t('label.prepTime'), `${f.tiempo} min`] : null,
+    temp ? [t('label.servingTemp'), temp] : null,
+  ].filter(Boolean).map(([et, v]) => `<div class="fp-meta"><span>${escapeHtml(et)}</span><b>${v}</b></div>`).join('');
+  const algs = fichaAllergens.length
+    ? fichaAllergens.map(a => `<span class="fp-alg">${escapeHtml(allergenLabel(a))}</span>`).join('')
+    : `<span class="fp-sin">${t('label.none')}</span>`;
+  const subtitulo = [liveRecipe && liveRecipe.category ? escapeHtml(liveRecipe.category) : '', f.bebidaTipo && bebidaTipoDef(f.bebidaTipo) ? escapeHtml(gl(bebidaTipoDef(f.bebidaTipo).l).split(' (')[0]) : ''].filter(Boolean).join(' · ');
+  const body = `
+    <style>
+      .fp-metas{display:flex;gap:0;border:1px solid #1C1A17;margin:14px 0 20px}
+      .fp-meta{flex:1;padding:9px 12px;border-right:1px solid #1C1A17}
+      .fp-meta:last-child{border-right:0}
+      .fp-meta span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65}
+      .fp-meta b{font-size:16px;font-weight:700;letter-spacing:-.01em}
+      .fp-foto{width:100%;height:62mm;object-fit:cover;display:block;margin:0 0 18px}
+      .fp-cols{display:flex;gap:26px;align-items:flex-start}
+      .fp-izq{flex:0 0 38%}
+      .fp-der{flex:1;min-width:0}
+      .pr-page .fp-ings{list-style:none;margin:0;padding:0}
+      .fp-ings li{display:flex;gap:9px;align-items:baseline;padding:6px 0;border-bottom:1px solid #EFEBE3;break-inside:avoid}
+      .fp-chk{flex:none;width:11px;height:11px;border:1.4px solid #1C1A17;transform:translateY(1px)}
+      .fp-q{flex:none;min-width:62px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px}
+      .fp-n{flex:1}
+      .fp-paso{display:flex;gap:13px;margin:0 0 15px;break-inside:avoid}
+      .fp-n-paso{flex:none;width:28px;height:28px;background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center}
+      .fp-paso-c{flex:1;min-width:0}
+      .fp-paso-t{font-size:13.5px;line-height:1.55;white-space:pre-wrap}
+      .fp-chips{display:flex;gap:6px;margin-top:6px}
+      .fp-chips span{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.05em;border:1px solid #1C1A17;padding:2px 7px}
+      .fp-ojo{margin-top:7px;background:#FBF1DC;border-left:3px solid #C48A1C;padding:6px 10px;font-size:12px}
+      .fp-ojo b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;color:#8A5A0F;margin-right:6px}
+      .fp-alergenos{margin-top:22px;border:1.5px solid #1C1A17;padding:10px 14px;break-inside:avoid}
+      .fp-alergenos h2{margin-top:0;border:0}
+      .fp-alg{display:inline-block;background:#F7E9E6;color:#8A3B2E;border:1px solid #D9A79C;font-weight:700;font-size:11.5px;padding:3px 9px;margin:2px 4px 2px 0}
+      .fp-sin{color:#716C65}
+    </style>
+    ${printReportHeaderHtml(displayName, subtitulo)}
+    <div class="fp-metas">${meta}</div>
+    ${isBaseElaboration ? '' : (f.photo ? `<img class="fp-foto" src="${f.photo}" alt="${t('label.platingPhotoAlt')}">` : '')}
+    <div class="fp-cols">
+      <div class="fp-izq">
+        <h2>${t('label.ingredients')} · ${fmtNum(produccion)} ${escapeHtml(unidad)}</h2>
+        <ul class="fp-ings">${ings || `<li class="pr-empty">${t('empty.noIngredients')}</li>`}</ul>
+      </div>
+      <div class="fp-der">
+        <h2>${t('label.prepMethod')}</h2>
+        ${steps || `<p class="pr-empty">${t('label.notSpecified')}</p>`}
+      </div>
+    </div>
+    ${isBaseElaboration ? '' : `<h2>${fArea==='sala' ? t('label.serviceNotes') : t('label.plating')}</h2><p style="white-space:pre-wrap">${escapeHtml(f.presentation) || t('label.notSpecified')}</p>`}
+    ${bebidaImpresoHtml(f)}
+    <div class="fp-alergenos"><h2>${t('label.allergens')}</h2><div>${algs}</div></div>
+  `;
+  printReportWindow(displayName, body, {winSize:'width=860,height=1000'});
+}
