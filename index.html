@@ -436,27 +436,28 @@
       <div class="view-title" data-i18n="view.stock.title">Stock</div>
       <div class="view-subtitle" data-i18n="view.stock.subtitle">Inventario con alertas de mínimos</div>
 
-      <div class="grid grid-4" id="stock-kpis" style="margin-bottom:14px"></div>
+      <div class="st-resumen" id="stock-kpis"></div>
 
-      <div class="toolbar">
+      <div class="toolbar st-barra">
         <div class="left">
-          <input type="text" class="search-input" id="stock-search" data-i18n-ph="ph.searchStock" placeholder="Buscar en stock..." oninput="renderStock()">
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
-            <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> <span data-i18n="label.onlyAlerts">Solo alertas</span>
+          <input type="text" class="search-input st-buscar" id="stock-search" data-i18n-ph="ph.searchStock" placeholder="Buscar en stock..." oninput="renderStock()">
+          <label class="btn btn-sm btn-fino st-chip" id="stock-chip-alertas">
+            <input type="checkbox" id="stock-only-alerts" onchange="renderStock()"> <i class="ti ti-alert-triangle"></i> <span data-i18n="label.onlyAlerts">Solo alertas</span>
           </label>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="openMermaModal()"><i class="ti ti-trash-x"></i> <span data-i18n="merma.btn">Anotar merma</span></button>
-          <button class="owner-only btn" onclick="openMermasInformeModal()"><i class="ti ti-chart-bar"></i> <span data-i18n="merma.reportTitle">Mermas</span></button>
-          <button class="owner-only btn" onclick="openStockValueModal()"><i class="ti ti-report-money"></i> <span data-i18n="btn.stockValue">Valor del stock</span></button>
-          <button class="owner-only btn" onclick="openStockLogModal()"><i class="ti ti-history"></i> <span data-i18n="btn.stockLog">Historial</span></button>
+        <div class="st-acciones">
+          <button type="button" class="btn btn-fino" id="stock-pedir" style="display:none" onclick="stPedirLoQueFalta()"><i class="ti ti-shopping-cart"></i> <span data-i18n="tab.requestOrder">Pedir lo que falta</span></button>
+          <button type="button" class="btn btn-fino is-on" onclick="openMermaModal()"><i class="ti ti-trash-x"></i> <span data-i18n="merma.btn">Anotar merma</span></button>
+          <span id="stock-menu"></span>
         </div>
       </div>
 
-      <nav class="ge-tab-row">
-        <button class="ge-tab active" id="stock-tab-btn-ing" onclick="stockTab('ing')"><i class="ti ti-carrot"></i> <span data-i18n="label.ingredients">Ingredientes</span></button>
-        <button class="ge-tab" id="stock-tab-btn-elab" onclick="stockTab('elab')"><i class="ti ti-soup"></i> <span data-i18n="label.elaborations">Elaboraciones</span></button>
-      </nav>
+      <div class="toolbar es-tabs st-tabs">
+        <div class="left">
+          <button type="button" class="btn btn-sm btn-fino is-on" id="stock-tab-btn-ing" onclick="stockTab('ing')"><i class="ti ti-carrot"></i> <span data-i18n="label.ingredients">Ingredientes</span> <span class="st-n" id="stock-n-ing" hidden></span></button>
+          <button type="button" class="btn btn-sm btn-fino" id="stock-tab-btn-elab" onclick="stockTab('elab')"><i class="ti ti-soup"></i> <span data-i18n="label.elaborations">Elaboraciones</span> <span class="st-n" id="stock-n-elab" hidden></span></button>
+        </div>
+      </div>
 
       <div id="stock-tab-ing" class="ge-tab-panel active">
         <div id="stock-ing-groups"></div>

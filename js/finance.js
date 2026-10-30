@@ -2304,8 +2304,8 @@ function reallyDeleteIngredient(id, pin){
    STOCK
    ============================================================ */
 function stockTab(tab){
-  document.getElementById('stock-tab-btn-ing').classList.toggle('active', tab === 'ing');
-  document.getElementById('stock-tab-btn-elab').classList.toggle('active', tab === 'elab');
+  document.getElementById('stock-tab-btn-ing').classList.toggle('is-on', tab === 'ing');
+  document.getElementById('stock-tab-btn-elab').classList.toggle('is-on', tab === 'elab');
   document.getElementById('stock-tab-ing').classList.toggle('active', tab === 'ing');
   document.getElementById('stock-tab-elab').classList.toggle('active', tab === 'elab');
   scrollContentToTop();
@@ -2346,17 +2346,129 @@ function openStockValueModal(){
       <h3><i class="ti ti-report-money"></i> ${t('title.stockValue')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin-top:-4px">${t('msg.stockValueHint')}</p>
-    <div class="kpi" style="margin-bottom:14px">
-      <div class="label">${t('label.stockValueTotal')}</div>
-      <div class="value">${fmtMoney(b.total)}</div>
+    <p class="ml-intro">${t('msg.stockValueHint')}</p>
+    <div class="st-resumen st-resumen-modal">
+      <div class="st-cel st-cel-gr"><span class="st-cel-et">${t('label.stockValueTotal')}</span><span class="st-cel-v">${fmtMoney(b.total)}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${t('label.ingredients')}</span><span class="st-cel-v">${fmtMoney(b.ingTotal)}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${t('label.elaborations')}</span><span class="st-cel-v">${fmtMoney(b.elabTotal)}</span></div>
     </div>
-    <div class="field-row">
-      <div class="field"><label>${t('label.ingredients')}</label><div style="font-size:16px;font-weight:700">${fmtMoney(b.ingTotal)}</div></div>
-      <div class="field"><label>${t('label.elaborations')}</label><div style="font-size:16px;font-weight:700">${fmtMoney(b.elabTotal)}</div></div>
-    </div>
-    ${b.elabSinCoste ? `<p style="font-size:12px;color:var(--muted)">${t('msg.stockValueElabSinCoste').replace('${n}', b.elabSinCoste)}</p>` : ''}
+    ${b.elabSinCoste ? `<p class="pe-aviso"><i class="ti ti-info-circle"></i> ${t('msg.stockValueElabSinCoste').replace('${n}', b.elabSinCoste)}</p>` : ''}
   `);
+}
+
+/* ============== Stock, diseño nuevo (30/10) ==============
+   Una fila = un producto: nombre, estado, cantidad con − / + y, plegado en
+   móvil, el mínimo y el menú ⋯. Antes cada fila llevaba dos cajas de número,
+   un lápiz y una papelera, y todo teñido de rojo o verde: en una lista larga
+   no se distinguía qué pedía atención.
+   El − / + NO guarda en cada toque: si se pulsa cinco veces seguidas, el
+   Historial anotaría cinco ajustes de uno en uno. Se espera 0,7 s tras el
+   último toque y se guarda UNA vez (stPend). */
+const stPend = {};   // cantidades tocadas con − / + que aún no se han guardado: {clave: {val, timer}}
+const stClave = (tipo, id) => tipo + '-' + id;
+const stPasoDe = unit => ['g', 'ml', 'cl'].includes(unit) ? 100 : 1;
+function stGuardarPend(k, tipo, id){
+  const p = stPend[k];
+  if(!p) return;
+  delete stPend[k];
+  if(tipo === 'elab') updateElaboracionQty(id, p.val); else updateStockQty(id, p.val);
+}
+function stPaso(tipo, id, dir){
+  const k = stClave(tipo, id);
+  const e = tipo === 'elab' ? getElaboracion(id) : null;
+  const ing = tipo === 'ing' ? getIngredient(id) : null;
+  if(!e && !ing) return;
+  const actual = stPend[k] ? stPend[k].val : (tipo === 'elab' ? (e.qty || 0) : (getStockEntry(id).qty || 0));
+  const nuevo = Math.max(0, Math.round((actual + dir * stPasoDe((e || ing).unit)) * 100) / 100);
+  if(stPend[k]) clearTimeout(stPend[k].timer);
+  const inp = document.querySelector('[data-st="' + k + '"] .st-qty input');
+  if(inp) inp.value = nuevo;
+  stPend[k] = {val: nuevo, timer: setTimeout(() => stGuardarPend(k, tipo, id), 700)};
+}
+// Escribir la cantidad a mano guarda al momento y anula lo que hubiera pendiente de − / +.
+function stEscribir(tipo, id, valor){
+  const k = stClave(tipo, id);
+  if(stPend[k]){ clearTimeout(stPend[k].timer); delete stPend[k]; }
+  if(tipo === 'elab') updateElaboracionQty(id, valor); else updateStockQty(id, valor);
+}
+function stPedirLoQueFalta(){
+  navigate('pedidos');
+  setPedidosTab(editUnlocked ? 'crear' : 'solicitar');
+}
+function stSoloAlertas(){
+  const c = document.getElementById('stock-only-alerts');
+  if(!c) return;
+  c.checked = !c.checked;
+  renderStock();
+}
+
+function stFilaHtml(row){
+  /* ⚠️ Bajo mínimo es ESTRICTAMENTE menor, no "menor o igual". Lo pidió el
+     dueño y tiene razón: con el mínimo justo todavía TIENES tu mínimo, no
+     te falta nada, y pintarlo en rojo enseña a desconfiar del rojo. El mismo
+     criterio en el contador de alertas y en el filtro "solo alertas".
+     Sin mínimo puesto (min = 0) no se pinta nada: no hay nada que cumplir,
+     y teñirlo todo de verde quitaría valor al verde de verdad. */
+  const low = row.qty < row.min;
+  const ok = !low && row.min > 0;
+  const isElab = row.type === 'elab';
+  const fromEscandallo = isElab && !!row.recipeId;
+  const k = stClave(row.type, row.id);
+  const qty = stPend[k] ? stPend[k].val : row.qty;
+  const falta = low ? Math.round((row.min - row.qty) * 100) / 100 : 0;
+  const camino = !isElab && typeof pcEnCamino === 'function' ? pcEnCamino(row.id) : 0;
+  const abierta = ggPlegableAbierta('st-' + k);
+  const u = escapeHtml(row.unit);
+  const acciones = [
+    {icono:'ti-trash-x', texto:t('merma.btn'), fn:`openMermaModal('${row.type}:${row.id}')`},
+    {icono:'ti-history', texto:gl({es:'Historial de este producto', ca:'Historial d\'aquest producte', en:'History of this product'}), fn:`openStockLogModal('${row.type}',${row.id})`, owner:true},
+    !isElab ? {icono:'ti-list-details', texto:gl({es:'Ver en Mega Lista', ca:'Veure a Mega Llista', en:'See in Mega List'}), fn:`navigate('megalista');openIngredientModal(${row.id})`, owner:true} : null,
+    fromEscandallo ? {icono:currentArea() === 'sala' ? 'ti-glass-cocktail' : 'ti-chef-hat', texto:t('title.editCostingSheet'), fn:`navigate('escandallo');openRecipeModal(${row.recipeId})`, owner:true} : null,
+    isElab && !fromEscandallo ? {icono:'ti-pencil', texto:t('common.edit'), fn:`openElaboracionModal(${row.id})`, owner:true} : null,
+    isElab && !fromEscandallo ? {icono:'ti-trash', texto:t('common.delete'), fn:`deleteElaboracion(${row.id})`, peligro:true, owner:true} : null
+  ];
+  const tags = [
+    low ? `<em class="st-tag bajo">${gl({es:'Falta', ca:'Falten', en:'Short by'})} ${fmtNum(falta)} ${u}</em>` : '',
+    camino > 0 ? `<em class="st-tag cam"><i class="ti ti-truck-delivery"></i> +${fmtNum(camino)} ${u} ${gl({es:'en camino', ca:'en camí', en:'on the way'})}</em>` : '',
+    fromEscandallo ? `<em class="st-tag">${t('label.costingSheet')}</em>` : '',
+    !low && !(row.min > 0) ? `<span class="st-nada">${gl({es:'sin mínimo', ca:'sense mínim', en:'no minimum'})}</span>` : ''
+  ].filter(Boolean).join('');
+  return `
+    <div class="st-fila stock-row plegable${low ? ' is-bajo' : ok ? ' is-ok' : ''}${abierta ? ' is-abierta' : ''}" data-st="${k}" data-pl="st-${k}" onclick="ggTogglePlegable(event, this)">
+      <div class="st-nom"><b title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</b>${tags ? `<span class="st-sub">${tags}</span>` : ''}</div>
+      <button type="button" class="pl-chev" aria-expanded="${abierta}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
+      <div class="st-min pl-extra" data-et="${escapeHtml(t('label.minStock'))}">
+        <span class="st-lab">${t('label.minAbbrev')}</span>
+        <input type="number" value="${row.min}" step="0.01" min="0" ${editUnlocked ? '' : 'disabled'} aria-label="${escapeHtml(t('label.minStock') + ': ' + row.name)}"
+          onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
+        <span class="st-u">${u}</span>
+      </div>
+      <div class="st-qty">
+        <button type="button" class="btn btn-fino" aria-label="−" onclick="stPaso('${row.type}',${row.id},-1)"><i class="ti ti-minus"></i></button>
+        <input type="number" value="${qty}" step="0.01" min="0" aria-label="${escapeHtml(t('label.currentAbbrev') + ': ' + row.name)}" onchange="stEscribir('${row.type}',${row.id}, this.value)">
+        <button type="button" class="btn btn-fino" aria-label="+" onclick="stPaso('${row.type}',${row.id},1)"><i class="ti ti-plus"></i></button>
+        <span class="st-u">${u}</span>
+      </div>
+      <div class="st-acc pl-extra">${ggMenuAcciones(acciones)}</div>
+    </div>`;
+}
+
+function stListaHtml(filas){
+  // Lo que pide atención, arriba; dentro de cada grupo, por nombre.
+  const ordenadas = [...filas].sort((a, b) => ((b.qty < b.min) - (a.qty < a.min)) || a.name.localeCompare(b.name));
+  return `<div class="st-lista">${ordenadas.map(stFilaHtml).join('')}</div>`;
+}
+function stGrupoHtml(titulo, filas){
+  const bajos = filas.filter(r => r.qty < r.min).length;
+  return `<div class="st-grupo"><span>${escapeHtml(titulo)}</span><em>${filas.length}</em>${bajos ? `<strong>${bajos} ${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}</strong>` : ''}</div>` + stListaHtml(filas);
+}
+function stRutaHtml(volverFn, nombre, filas){
+  const bajos = filas.filter(r => r.qty < r.min).length;
+  return `
+    <div class="ml-ruta">
+      <button type="button" class="btn btn-sm btn-fino" onclick="${volverFn}()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>
+      <div class="ml-ruta-nom">${escapeHtml(nombre)}<span>${filas.length}${bajos ? ` · ${bajos} ${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}` : ''}</span></div>
+    </div>`;
 }
 
 function renderStock(){
@@ -2370,83 +2482,56 @@ function renderStock(){
   }
   const search = document.getElementById('stock-search').value.toLowerCase();
   const onlyAlerts = document.getElementById('stock-only-alerts').checked;
+  const chip = document.getElementById('stock-chip-alertas');
+  if(chip) chip.classList.toggle('is-off', onlyAlerts);
 
   // Un solo getStockEntry() por ingrediente (antes se llamaba una vez para
   // filtrar y otra para pintar la fila, el doble de trabajo en cada
-  // render — y esto se repinta en cada +/- que se pulsa).
-  let items = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && (!search || ing.name.toLowerCase().includes(search)))
+  // render — y esto se repinta en cada cambio de cantidad).
+  const items = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && (!search || ing.name.toLowerCase().includes(search)))
     .map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || t('label.noCategory'), ...getStockEntry(ing.id)}))
     .filter(row => onlyAlerts ? row.qty < row.min : true);
 
-  let elabs = (DB.elaboraciones||[]).filter(e => {
+  const elabs = (DB.elaboraciones||[]).filter(e => {
     const matchArea = (e.area||'cocina') === currentArea();
     const matchSearch = !search || e.name.toLowerCase().includes(search);
     const matchAlert = !onlyAlerts || (e.qty||0) < (e.min||0);
     return matchArea && matchSearch && matchAlert;
   }).map(e => ({type:'elab', id: e.id, recipeId: e.recipeId||null, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
 
-  // Totales de referencia: cuántos productos (Mega Lista) y elaboraciones
-  // (escandalladas o creadas a mano) hay en total en esta área, sin que la
-  // búsqueda ni el filtro "Solo alertas" afecten al recuento.
+  // Totales de referencia: no cambian con la búsqueda ni con "Solo alertas".
+  const activeArea = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && ing.activo !== false);
+  const allElabList = (DB.elaboraciones||[]).filter(e => (e.area||'cocina') === currentArea());
+  const lowIngCount = activeArea.filter(ing => { const s = getStockEntry(ing.id); return s.qty < s.min; }).length;
+  const lowElabCount = allElabList.filter(e => (e.qty||0) < (e.min||0)).length;
+  const lowTotal = lowIngCount + lowElabCount;
   const kpisBox = document.getElementById('stock-kpis');
   if(kpisBox){
-    const activeArea = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && ing.activo !== false);
-    const allIngCount = activeArea.length;
-    const allElabList = (DB.elaboraciones||[]).filter(e => (e.area||'cocina') === currentArea());
-    const lowIngCount = activeArea.filter(ing => { const s = getStockEntry(ing.id); return s.qty < s.min; }).length;
-    const lowElabCount = allElabList.filter(e => (e.qty||0) < (e.min||0)).length;
     kpisBox.innerHTML = `
-      <div class="kpi"><div class="label">${t('label.products')}</div><div class="value">${allIngCount}</div></div>
-      <div class="kpi"><div class="label">${t('label.elaborations')}</div><div class="value">${allElabList.length}</div></div>
-      <div class="kpi ${lowIngCount?'warn':''}"><div class="label">${t('label.productsBelowMin')}</div><div class="value">${lowIngCount}</div></div>
-      <div class="kpi ${lowElabCount?'warn':''}"><div class="label">${t('label.elaborationsBelowMin')}</div><div class="value">${lowElabCount}</div></div>
-    `;
+      <div class="st-cel"><span class="st-cel-et">${t('label.products')}</span><span class="st-cel-v">${activeArea.length}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${t('label.elaborations')}</span><span class="st-cel-v">${allElabList.length}</span></div>
+      <button type="button" class="st-cel st-cel-btn${lowTotal ? ' is-bajo' : ''}" aria-pressed="${onlyAlerts}" onclick="stSoloAlertas()" title="${escapeHtml(gl({es:'Ver solo lo que está bajo mínimo', ca:'Veure només el que és sota el mínim', en:'Show only what is below the minimum'}))}">
+        <span class="st-cel-et">${gl({es:'Bajo mínimo', ca:'Sota el mínim', en:'Below minimum'})}</span>
+        <span class="st-cel-v">${lowTotal}</span>
+        <span class="st-cel-s">${lowIngCount} ${gl({es:'productos', ca:'productes', en:'products'})} · ${lowElabCount} ${gl({es:'elaboraciones', ca:'elaboracions', en:'preparations'})}</span>
+      </button>
+      <button type="button" class="st-cel st-cel-btn owner-only" onclick="openStockValueModal()">
+        <span class="st-cel-et">${t('btn.stockValue')}</span>
+        <span class="st-cel-v">${fmtMoney(stockTotalValueBreakdown().total)}</span>
+      </button>`;
   }
+  const nIng = document.getElementById('stock-n-ing'), nElab = document.getElementById('stock-n-elab');
+  if(nIng){ nIng.textContent = lowIngCount || ''; nIng.hidden = !lowIngCount; }
+  if(nElab){ nElab.textContent = lowElabCount || ''; nElab.hidden = !lowElabCount; }
+  const pedir = document.getElementById('stock-pedir');
+  if(pedir) pedir.style.display = lowTotal ? '' : 'none';
+  const menu = document.getElementById('stock-menu');
+  if(menu) menu.innerHTML = ggMenuAcciones([
+    {icono:'ti-chart-bar', texto:t('merma.reportTitle'), fn:'openMermasInformeModal()', owner:true},
+    {icono:'ti-history', texto:t('btn.stockLog'), fn:'openStockLogModal()', owner:true}
+  ]);
 
-  const renderRow = row => {
-    /* ⚠️ Bajo mínimo es ESTRICTAMENTE menor, no "menor o igual". Lo pidió el
-       dueño y tiene razón: con el mínimo justo todavía TIENES tu mínimo, no
-       te falta nada, y pintarlo en rojo enseña a desconfiar del rojo.
-       El mismo criterio en el contador de alertas y en el filtro "solo
-       alertas" (ver arriba): si no, una fila en verde seguiría contando como
-       alerta y el número de arriba no cuadraría con lo que se ve. */
-    const low = row.qty < row.min;
-    const ok = !low && row.min > 0;
-    const isElab = row.type === 'elab';
-    const fromEscandallo = isElab && !!row.recipeId;
-    /* Antes el aviso de "bajo mínimo" era una pequeña etiqueta fácil de pasar
-       por alto en una lista larga: ahora se pinta el RECUADRO ENTERO, rojo si
-       falta y verde si está cubierto. Lo pidió así el dueño y probándolo se
-       ve por qué: con solo el número en verde hay que leer fila a fila, y con
-       el recuadro se recorre la lista de un vistazo.
-       Sin mínimo puesto (min = 0) no se pinta nada: ahí no hay nada que
-       cumplir, y teñirlo todo de verde quitaría valor al verde de verdad. */
-    return `
-      <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':ok?'background:var(--green-l);border:1px solid var(--green);border-radius:8px':''}">
-        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray txt-xs" >${t('label.costingSheet')}</span>` : ''}</div>
-        <div class="stock-row-values">
-          <span class="stock-row-field">
-            <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
-            <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
-              onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
-          </span>
-          <span class="stock-row-field">
-            <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':ok?'color:var(--green);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
-            <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':ok?'var(--green)':'var(--border)'};border-radius:6px;font-size:13px"
-              onchange="${isElab ? `updateElaboracionQty(${row.id}, this.value)` : `updateStockQty(${row.id}, this.value)`}">
-            <span style="font-size:12.5px;color:var(--muted)">${escapeHtml(row.unit)}</span>
-          </span>
-        </div>
-        <div class="actions-cell" style="gap:4px">
-          ${isElab && !fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
-          ${fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" title="${t('title.editCostingSheet')}" onclick="navigate('escandallo');openRecipeModal(${row.recipeId})"><i class="ti ${currentArea()==='sala'?'ti-glass-cocktail':'ti-chef-hat'}"></i></button>` : ''}
-        </div>
-      </div>
-    `;
-  };
-
-  /* Ingredientes: navegación carpetas (categoría) → nombres → detalle */
+  /* Ingredientes: carpetas (categoría) → productos */
   const groupsWrap = document.getElementById('stock-ing-groups');
   const searching = !!(search || onlyAlerts);
 
@@ -2459,51 +2544,46 @@ function renderStock(){
     if(ib === -1) return -1;
     return ia - ib;
   });
+  const vacio = (icono, texto, accion) => `<div class="empty es-vacio"><i class="ti ${icono}"></i>${texto}${accion || ''}</div>`;
 
   if(!items.length){
-    groupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>${t('empty.stock')}</div>`;
+    const hayProductos = DB.ingredients.some(ing => (ing.area||'cocina') === currentArea());
+    groupsWrap.innerHTML = hayProductos
+      ? vacio(onlyAlerts && !search ? 'ti-circle-check' : 'ti-search-off', onlyAlerts && !search ? gl({es:'Nada por debajo del mínimo. Todo en orden.', ca:'Res per sota del mínim. Tot en ordre.', en:'Nothing below the minimum. All good.'}) : t('empty.noSearchResults'))
+      : vacio('ti-package', t('empty.stock'), `<div><button type="button" class="btn btn-fino is-on owner-only" onclick="navigate('megalista')"><i class="ti ti-list-details"></i> ${t('view.megalista.title')}</button></div>`);
   } else if(searching){
-    // Con búsqueda o "solo alertas": resultados planos agrupados por categoría.
-    groupsWrap.innerHTML = cats.map(cat => `
-      <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(ingredientCategoryLabel(cat))}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:6px">
-        ${byCat[cat].map(renderRow).join('')}
-      </div>
-    `).join('');
+    groupsWrap.innerHTML = cats.map(cat => stGrupoHtml(ingredientCategoryLabel(cat), byCat[cat])).join('');
   } else if(stockFolder === null){
-    // Vista de carpetas por categoría.
-    groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
-      <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>${botonesDeCarpeta(cat, 'ingredient')}</h3>
-        <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
-      </div>
-    `).join('')}</div>`;
+    groupsWrap.innerHTML = `<div class="ml-carpetas">${cats.map(cat => {
+      const k = escapeJsAttr(cat);
+      const bajos = byCat[cat].filter(r => r.qty < r.min).length;
+      return `
+      <div class="ml-carpeta" role="button" tabindex="0" onclick="openStockFolder('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStockFolder('${k}')}">
+        <span class="cat-icon-btn ml-ico" role="button" title="${escapeHtml(t('title.chooseFolderIcon'))}" aria-label="${escapeHtml(t('title.chooseFolderIcon'))}" onclick="event.stopPropagation();openCategoryIconModal('${k}','${k}','renderStock','ingredient')">${megalistaIconoCarpeta(cat)}</span>
+        <div class="ml-carpeta-txt">
+          <div class="ml-carpeta-nom">${escapeHtml(ingredientCategoryLabel(cat))}</div>
+          <div class="ml-carpeta-meta">${byCat[cat].length === 1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
+          ${bajos ? `<div class="st-carp-baja">${bajos} ${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}</div>` : ''}
+        </div>
+        ${botonesDeCarpeta(cat, 'ingredient')}
+      </div>`;
+    }).join('')}</div>`;
   } else {
     const folderItems = byCat[stockFolder] || [];
-    const backFolders = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToStockFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>`;
-    if(!folderItems.length){
-      stockFolder = null; renderStock(); return;
-    }
-    // Carpeta abierta: todo a la vista de golpe (cantidad, mínimo, +/-, ajustar),
-    // sin tener que entrar a cada producto para verlo — mismo detalle que en
-    // los resultados de búsqueda, solo que ya filtrado por esta categoría.
-    groupsWrap.innerHTML = backFolders + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:6px">${folderItems.map(renderRow).join('')}</div>`;
+    if(!folderItems.length){ stockFolder = null; renderStock(); return; }
+    groupsWrap.innerHTML = stRutaHtml('backToStockFolders', ingredientCategoryLabel(stockFolder), folderItems) + stListaHtml(folderItems);
   }
 
   /* Elaboraciones — mismas carpetas por categoría que Escandallo → Elaboraciones
      (no las que "haya en stock ahora mismo"), para que sea consistente estén o
-     no todavía en stock, y siempre mostrando la vista de carpetas primero
-     (antes, si solo había una categoría con stock, se saltaba directo a la
-     lista plana sin ninguna carpeta a la vista). */
+     no todavía en stock, y siempre mostrando la vista de carpetas primero. */
   const elabGroupsWrap = document.getElementById('stock-elab-groups');
   const baseRecipes = DB.recipes.filter(r => r.isBase && (r.area||'cocina') === currentArea());
   const elabFolders = getEscandalloFolders(baseRecipes); // [[key, label, recipes], ...]
   const elabsByRecipeCat = {};
   elabs.forEach(e => {
     // Las elaboraciones que vienen de una receta base del Escandallo heredan
-    // su categoría; las creadas a mano desde Stock antes no tenían ninguna
-    // (siempre "Sin categoría") — ahora usan la que se les asigne en su
-    // propia ficha (elab.category), con las mismas categorías de receta.
+    // su categoría; las creadas a mano usan la que se les asigne en su ficha.
     const cat = e.recipeId ? ((DB.recipes.find(r=>r.id===e.recipeId)||{}).category || '__none__') : (e.category || '__none__');
     (elabsByRecipeCat[cat] = elabsByRecipeCat[cat] || []).push(e);
   });
@@ -2511,8 +2591,7 @@ function renderStock(){
     elabFolders.push(['__none__', t('label.noCategory'), []]);
   }
   // Una elaboración manual puede llevar una categoría que ninguna receta
-  // base usa todavía (getEscandalloFolders solo conoce las de baseRecipes):
-  // se añade igualmente para que su carpeta no quede invisible.
+  // base usa todavía: se añade igualmente para que su carpeta no quede invisible.
   Object.keys(elabsByRecipeCat).forEach(cat => {
     if(cat !== '__none__' && !elabFolders.some(([key]) => key === cat)){
       elabFolders.push([cat, cat, []]);
@@ -2520,31 +2599,34 @@ function renderStock(){
   });
 
   if(!elabs.length){
-    elabGroupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>${t('empty.elaborations')}</div>`;
+    elabGroupsWrap.innerHTML = vacio('ti-package', t('empty.elaborations'), `<div><button type="button" class="btn btn-fino is-on owner-only" onclick="navigate('escandallo')"><i class="ti ti-notebook"></i> ${t('view.escandallo.title')}</button></div>`);
   } else if(searching){
-    elabGroupsWrap.innerHTML = elabFolders.filter(([key]) => (elabsByRecipeCat[key]||[]).length).map(([key, label]) => `
-      <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(label)}</strong> <span style="font-size:12px;color:var(--muted)">(${elabsByRecipeCat[key].length})</span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:6px">
-        ${elabsByRecipeCat[key].map(renderRow).join('')}
-      </div>
-    `).join('');
+    elabGroupsWrap.innerHTML = elabFolders.filter(([key]) => (elabsByRecipeCat[key]||[]).length).map(([key, label]) => stGrupoHtml(label, elabsByRecipeCat[key])).join('');
   } else if(elabFolder === null){
-    elabGroupsWrap.innerHTML = `<div class="grid grid-compact">${elabFolders.map(([key, label]) => {
-      const n = (elabsByRecipeCat[key]||[]).length;
+    elabGroupsWrap.innerHTML = `<div class="ml-carpetas">${elabFolders.map(([key, label]) => {
+      const lista = elabsByRecipeCat[key] || [];
+      const k = escapeJsAttr(key), real = key !== '__none__';
+      const guardado = (DB.categoryIcons && DB.categoryIcons.recipe && DB.categoryIcons.recipe[key]) || '';
+      const icono = (real && iconoSeccionHtml(guardado, label, 26)) || '<i class="ti ti-folder"></i>';
+      const bajos = lista.filter(r => r.qty < r.min).length;
       return `
-      <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
-        <div style="font-size:12px;color:var(--muted)">${n===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', n)}</div>
+      <div class="ml-carpeta" role="button" tabindex="0" onclick="openElabFolder('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openElabFolder('${k}')}">
+        ${real
+          ? `<span class="cat-icon-btn ml-ico" role="button" title="${escapeHtml(t('title.chooseFolderIcon'))}" aria-label="${escapeHtml(t('title.chooseFolderIcon'))}" onclick="event.stopPropagation();openCategoryIconModal('${k}','${k}','renderStock','recipe')">${icono}</span>`
+          : `<span class="ml-ico">${icono}</span>`}
+        <div class="ml-carpeta-txt">
+          <div class="ml-carpeta-nom">${escapeHtml(label)}</div>
+          <div class="ml-carpeta-meta">${lista.length === 1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', lista.length)}</div>
+          ${bajos ? `<div class="st-carp-baja">${bajos} ${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}</div>` : ''}
+        </div>
+        ${real ? botonesDeCarpeta(key, 'recipe') : ''}
       </div>`;
     }).join('')}</div>`;
   } else {
     const folderElabs = elabsByRecipeCat[elabFolder] || [];
-    const backBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToElabFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>`;
-    // Carpeta abierta: todo a la vista de golpe, igual que Ingredientes — sin
-    // tener que entrar en cada elaboración para ver cantidad/mínimo/ajustar.
-    elabGroupsWrap.innerHTML = backBtn + (folderElabs.length
-      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:6px">${folderElabs.map(renderRow).join('')}</div>`
-      : `<div class="empty" style="padding:10px">${t('empty.elaborations')}</div>`);
+    const nombre = (elabFolders.find(([key]) => key === elabFolder) || [])[1] || t('label.noCategory');
+    elabGroupsWrap.innerHTML = stRutaHtml('backToElabFolders', nombre, folderElabs)
+      + (folderElabs.length ? stListaHtml(folderElabs) : vacio('ti-package', t('empty.elaborations')));
   }
 }
 
@@ -2673,11 +2755,13 @@ function logStockAdjustment(type, refId, name, before, after, source){
   }
 }
 
-function openStockLogModal(){
-  const log = [...(DB.stockLog||[])].filter(e => (e.area||'cocina')===currentArea()).reverse().slice(0, 100);
+function openStockLogModal(tipo, id){
+  // Desde la fila de un producto solo enseña los ajustes de ESE producto.
+  const log = [...(DB.stockLog||[])].filter(e => (e.area||'cocina')===currentArea() && (!tipo || (e.type === tipo && e.refId === id))).reverse().slice(0, 100);
+  const sujeto = tipo ? (tipo === 'elab' ? getElaboracion(id) : getIngredient(id)) : null;
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-history"></i> ${t('title.stockLog')}</h3>
+      <h3><i class="ti ti-history"></i> ${t('title.stockLog')}${sujeto ? ': ' + escapeHtml(sujeto.name) : ''}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="table-wrap">
@@ -2723,7 +2807,7 @@ function mermaCosteUnidad(tipo, id){
   const r = e && e.recipeId ? getRecipe(e.recipeId) : null;
   return r ? (recipeBaseCostPerUnit(r) || 0) : 0;
 }
-function openMermaModal(){
+function openMermaModal(sel){
   const {ings, elabs} = mermaProductos();
   const byCat = {};
   ings.forEach(i => { const c = i.category || t('label.noCategory'); (byCat[c] = byCat[c] || []).push(i); });
@@ -2754,6 +2838,11 @@ function openMermaModal(){
       <button class="btn btn-primary" onclick="guardarMerma()"><i class="ti ti-check"></i> ${t('merma.save')}</button>
     </div>
   `);
+  // Desde la fila de un producto llega ya elegido: solo falta la cantidad.
+  if(sel){
+    const p = document.getElementById('merma-prod');
+    if(p && [...p.options].some(o => o.value === sel)){ p.value = sel; mermaActualizar(); const q = document.getElementById('merma-qty'); if(q) q.focus(); }
+  }
 }
 function mermaLeer(){
   const v = (document.getElementById('merma-prod')||{}).value || '';
@@ -2844,20 +2933,20 @@ function openMermasInformeModal(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     ${lista.length ? `
-    <div class="grid grid-4" style="margin-bottom:14px">
-      <div class="kpi"><div class="label">${t('merma.thisWeek')}</div><div class="value" style="color:${flecha}">${fmtMoney(semana)}</div></div>
-      <div class="kpi"><div class="label">${t('merma.lastWeek')}</div><div class="value">${fmtMoney(pasada)}</div></div>
-      <div class="kpi"><div class="label">${t('merma.thisMonth')}</div><div class="value">${fmtMoney(suma(delMes))}</div></div>
-      <div class="kpi"><div class="label">${t('merma.yearPace')}</div><div class="value">${fmtMoney(ritmoAnual)}</div></div>
+    <div class="st-resumen st-resumen-modal">
+      <div class="st-cel"><span class="st-cel-et">${t('merma.thisWeek')}</span><span class="st-cel-v" style="color:${flecha}">${fmtMoney(semana)}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${t('merma.lastWeek')}</span><span class="st-cel-v">${fmtMoney(pasada)}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${t('merma.thisMonth')}</span><span class="st-cel-v">${fmtMoney(suma(delMes))}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${t('merma.yearPace')}</span><span class="st-cel-v">${fmtMoney(ritmoAnual)}</span></div>
     </div>
-    <div class="view-subtitle" style="margin-bottom:6px"><strong>${t('merma.topProducts')}</strong></div>
+    <div class="es-tit">${t('merma.topProducts')}</div>
     ${top.length ? `<div class="table-wrap"><table class="table-cards"><thead><tr><th>${t('merma.product')}</th><th>${t('merma.qtyShort')}</th><th>${t('merma.times')}</th><th>${t('label.total')}</th></tr></thead>
       <tbody>${top.map(g => `<tr><td data-label="${t('merma.product')}">${escapeHtml(g.n)}</td><td data-label="${t('merma.qtyShort')}">${fmtNum(g.qty)} ${escapeHtml(g.unit||'')}</td><td data-label="${t('merma.times')}">${g.veces}</td><td data-label="${t('label.total')}" style="font-weight:700">${fmtMoney(g.coste)}</td></tr>`).join('')}</tbody></table></div>`
       : `<div class="empty" style="padding:10px">${t('merma.noneMonth')}</div>`}
-    ${porMotivo.length ? `<div class="view-subtitle" style="margin:14px 0 6px"><strong>${t('merma.byReason')}</strong></div>
+    ${porMotivo.length ? `<div class="es-tit es-tit-2">${t('merma.byReason')}</div>
     <div class="table-wrap"><table class="table-cards"><thead><tr><th>${t('merma.reason')}</th><th>${t('merma.times')}</th><th>${t('label.total')}</th></tr></thead>
       <tbody>${porMotivo.map(g => `<tr><td data-label="${t('merma.reason')}">${escapeHtml(g.n)}</td><td data-label="${t('merma.times')}">${g.veces}</td><td data-label="${t('label.total')}" style="font-weight:700">${fmtMoney(g.coste)}</td></tr>`).join('')}</tbody></table></div>` : ''}
-    <div class="view-subtitle" style="margin:14px 0 6px"><strong>${t('merma.recent')}</strong></div>
+    <div class="es-tit es-tit-2">${t('merma.recent')}</div>
     <div class="table-wrap"><table class="table-cards"><thead><tr><th>${t('common.date')}</th><th>${t('merma.product')}</th><th>${t('merma.qtyShort')}</th><th>${t('merma.reason')}</th><th>${t('label.total')}</th><th>${t('common.responsible')}</th></tr></thead>
       <tbody>${ultimas.map(m => `<tr><td data-label="${t('common.date')}">${escapeHtml(m.fecha)} ${escapeHtml(m.hora||'')}</td><td data-label="${t('merma.product')}">${escapeHtml(m.name)}</td><td data-label="${t('merma.qtyShort')}">${fmtNum(m.qty)} ${escapeHtml(m.unit||'')}</td><td data-label="${t('merma.reason')}">${escapeHtml(mermaMotivoLabel(m))}</td><td data-label="${t('label.total')}">${m.coste ? fmtMoney(m.coste) : '—'}</td><td data-label="${t('common.responsible')}">${escapeHtml(m.actor||'—')}</td></tr>`).join('')}</tbody></table></div>
     ` : `<div class="empty"><i class="ti ti-trash-x"></i>${t('merma.none')}</div>`}
