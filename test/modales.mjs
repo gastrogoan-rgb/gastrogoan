@@ -34,8 +34,6 @@ await page.evaluate(()=>{
 const CASOS = [
   ['Nuevo ingrediente',   'megalista','cocina', 'openIngredientModal()'],
   ['Nuevo proveedor',     'proveedores','cocina','openProviderModal()'],
-  ['Nuevo plato',         'escandallo','cocina', 'openRecipeModal()'],
-  ['Nueva elaboración',   'escandallo','cocina', 'openRecipeModal(null, true)'],
   ['Ficha de empleado',   'horarios','cocina',   `openEmployeePersonalCard(${'DB.employees[0].id'})`],
   ['Comanda de mesa',     'tpv','sala',          'openTableOrder(1)'],
   ['Nueva reserva',       'reservas','sala',     'openReservationModal()'],

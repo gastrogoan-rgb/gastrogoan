@@ -36,7 +36,6 @@ await page.evaluate(()=>{ ['netlify-gate','license-gate','extconn-gate','firebas
 const CASOS = [
   ['Nuevo ingrediente','megalista','cocina','openIngredientModal()'],
   ['Nuevo proveedor','proveedores','cocina','openProviderModal()'],
-  ['Nuevo plato','escandallo','cocina','openRecipeModal()'],
   ['Nuevo cliente','clientes','sala','openClientModal()'],
   ['Nueva reserva','reservas','sala','openReservationModal()'],
 ];

@@ -65,6 +65,7 @@ const NOMBRES_GRUPO = {
   cafe: ['Café y té', 'Cafè i te', 'Coffee and tea'],
   refresco: ['Sin alcohol', 'Sense alcohol', 'Soft drinks'],
   servicio: ['Cocina y servicio', 'Cuina i servei', 'Kitchen and service'],
+  utensilios: ['Utensilios y equipo de cocina', 'Estris i equip de cuina', 'Kitchen tools and equipment'],
 };
 const q = s => JSON.stringify(s);
 let out = `/* ═══ CATÁLOGO DE ICONOS DE COMIDA (GENERADO — no editar a mano) ═══

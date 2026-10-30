@@ -266,21 +266,20 @@
       <div class="view-title" data-i18n="view.escandallo.title">Escandallo</div>
       <div class="view-subtitle" data-i18n="view.escandallo.subtitle">Cálculo automático de costes de platos</div>
 
-      <div class="toolbar" style="margin-bottom:4px">
+      <div class="toolbar es-tabs" style="margin-bottom:10px">
         <div class="left">
-          <button class="btn btn-sm" id="escandallo-tab-platos" onclick="setEscandalloTab('platos')"><i class="ti ti-chef-hat"></i> <span data-i18n="tab.dishes">Platos</span></button>
-          <button class="btn btn-sm" id="escandallo-tab-elaboraciones" onclick="setEscandalloTab('elaboraciones')"><i class="ti ti-soup"></i> <span data-i18n="tab.elaborations">Elaboraciones</span></button>
+          <button class="btn btn-sm btn-fino" id="escandallo-tab-platos" onclick="setEscandalloTab('platos')"><i class="ti ti-chef-hat"></i> <span data-i18n="tab.dishes">Platos</span></button>
+          <button class="btn btn-sm btn-fino" id="escandallo-tab-elaboraciones" onclick="setEscandalloTab('elaboraciones')"><i class="ti ti-soup"></i> <span data-i18n="tab.elaborations">Elaboraciones</span></button>
         </div>
-        <div style="display:flex;gap:8px" id="escandallo-new-btns">
-          <button class="owner-only btn" onclick="openRecipeModal(null, true)"><i class="ti ti-soup"></i> <span data-i18n="title.newElaboration">Nueva Elaboración</span></button>
-          <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newDish">Nuevo Plato</span></button>
+        <div id="escandallo-new-btns">
+          <button class="owner-only btn btn-fino is-on" onclick="openRecipeModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newDish">Nuevo Plato</span></button>
         </div>
       </div>
 
-      <div class="toolbar">
+      <div class="toolbar es-filtros">
         <div class="left">
-          <input type="text" class="search-input" id="escandallo-search" data-i18n-ph="ph.searchDish" placeholder="Buscar plato..." oninput="renderEscandallo()">
-          <select id="escandallo-filter-cat" onchange="renderEscandallo()">
+          <input type="text" class="search-input es-buscar" id="escandallo-search" data-i18n-ph="ph.searchDish" placeholder="Buscar plato..." oninput="renderEscandallo()">
+          <select id="escandallo-filter-cat" class="es-filtro" onchange="renderEscandallo()" aria-label="Categoría">
             <option value="" data-i18n="filter.allCategories">Todas las categorías</option>
           </select>
         </div>
