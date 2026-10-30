@@ -148,11 +148,9 @@ function ajustaIconoPestana(idBoton, icono){
 }
 
 function setEscandalloTab(tab){
-  escandalloTab = tab;
-  escandalloFolder = null;
-  escandalloRecipe = null;
-  renderEscandallo();
-  scrollContentToTop();
+  // Con una hoja a medias, cambiar de pestaña también pregunta (como salir de cualquier editor).
+  const cambiar = () => { escandalloHoja = null; escandalloTab = tab; escandalloFolder = null; escandalloRecipe = null; renderEscandallo(); scrollContentToTop(); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(cambiar); else cambiar();
 }
 
 // Carpeta de categoría actualmente abierta en Escandallo (null = vista de carpetas)
@@ -166,19 +164,19 @@ function openEscandalloFolder(catKey){
 function backToEscandalloFolders(){
   escandalloFolder = null;
   escandalloRecipe = null;
+  escandalloHoja = null;
   document.getElementById('escandallo-search').value = '';
   renderEscandallo();
 }
 // Abre la ficha completa de un plato dentro de la lista de nombres (tanto
 // si esa lista viene de una carpeta como de una búsqueda/filtro).
 function openEscandalloRecipe(id){
-  escandalloRecipe = id;
-  renderEscandallo();
+  openRecipeModal(id);
 }
-// Vuelve de la ficha completa a la lista de nombres.
+// Vuelve de la hoja a la lista (preguntando antes si hay cambios sin guardar).
 function backToEscandalloRecipes(){
-  escandalloRecipe = null;
-  renderEscandallo();
+  const volver = () => { escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; escandalloRecipe = null; renderEscandallo(); scrollContentToTop(); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(volver); else volver();
 }
 // Navega directo al Escandallo completo de un plato por nombre (usado desde
 // el Dashboard, mismo patrón que goToFichaForDish en js/app.js).
@@ -188,7 +186,9 @@ function goToEscandalloForDish(name){
   escandalloTab = r.isBase ? 'elaboraciones' : 'platos';
   escandalloFolder = r.category || '__none__';
   escandalloRecipe = r.id;
+  escandalloHoja = null;
   navigate('escandallo');
+  openRecipeModal(r.id);
 }
 
 // Agrupa los platos por categoría para la vista de carpetas, devolviendo
@@ -301,8 +301,11 @@ function renderEscandallo(){
     return matchSearch && matchCat;
   });
   const box = document.getElementById('escandallo-list');
-  document.getElementById('escandallo-tab-platos').classList.toggle('active', !isElab);
-  document.getElementById('escandallo-tab-elaboraciones').classList.toggle('active', isElab);
+  const vista = document.getElementById('view-escandallo');
+  // Con una hoja abierta (plato nuevo o existente) no hace falta ni la tira de pestañas ni el buscador.
+  vista.classList.toggle('es-en-hoja', !!escandalloHoja);
+  document.getElementById('escandallo-tab-platos').classList.toggle('is-on', !isElab);
+  document.getElementById('escandallo-tab-elaboraciones').classList.toggle('is-on', isElab);
   // La pestaña "Platos" pasa a llamarse "Bebidas" en Sala, igual que ya
   // pasa con el botón de "nuevo", el subtítulo y los mensajes vacíos de
   // esta misma vista — antes se quedaba fija en "Platos" también en Sala.
@@ -313,15 +316,16 @@ function renderEscandallo(){
 
   const newBtns = document.getElementById('escandallo-new-btns');
   if(newBtns){
-    if(isElab){
-      newBtns.innerHTML = `<button class="owner-only btn btn-primary" onclick="openRecipeModal(null, true)"><i class="ti ti-plus"></i> ${t('tab.newElaboration')}</button>`;
-    } else {
-      newBtns.innerHTML = `<button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('tab.newDrink') : t('tab.newDish')}</button>`;
-    }
+    newBtns.innerHTML = isElab
+      ? `<button class="owner-only btn btn-fino is-on" onclick="openRecipeModal(null, true)"><i class="ti ti-plus"></i> ${t('tab.newElaboration')}</button>`
+      : `<button class="owner-only btn btn-fino is-on" onclick="openRecipeModal()"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('tab.newDrink') : t('tab.newDish')}</button>`;
   }
 
   document.querySelector('#view-escandallo .view-subtitle').textContent = isElab ? t('tab.elaborationSubtitle') : (currentArea()==='sala' ? t('view.escandallo.subtitle.sala') : t('view.escandallo.subtitle'));
   document.getElementById('escandallo-search').placeholder = isElab ? t('ph.searchElaboration') : t('ph.searchDish');
+
+  // La hoja (ver más abajo) es la ÚNICA pantalla donde un plato se crea, se ve y se edita.
+  if(escandalloHoja){ esPintarHoja(); return; }
 
   if(!areaRecipes.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t(currentArea()==='sala' ? 'empty.elaborations.none.sala' : 'empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
@@ -329,21 +333,38 @@ function renderEscandallo(){
   }
 
   const searching = !!(search || cat);
+  const nombreDe = key => key === '__none__' ? t('label.noCategory') : key;
+  const unidades = n => currentArea()==='sala' ? (n===1 ? t('noun.drink') : t('noun.drinks')) : (n===1 ? t('noun.dish') : t('noun.dishes'));
 
   if(!searching && escandalloFolder === null){
-    // Vista de carpetas por categoría
+    // Vista de carpetas por categoría (mismas tarjetas que las de Mega Lista)
     const folders = getEscandalloFolders(areaRecipes);
-    box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
-      <div class="card card-compact" style="cursor:pointer" onclick="openEscandalloFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
-        <div style="font-size:12px;color:var(--muted)">${group.length} ${currentArea()==='sala' ? (group.length===1?t('noun.drink'):t('noun.drinks')) : (group.length===1?t('noun.dish'):t('noun.dishes'))}</div>
-      </div>
-    `).join('')}</div>`;
+    box.innerHTML = `<div class="ml-carpetas">${folders.map(([key, label, group]) => {
+      const k = escapeJsAttr(key);
+      const real = key !== '__none__';
+      const guardado = (DB.categoryIcons && DB.categoryIcons.recipe && DB.categoryIcons.recipe[key]) || '';
+      const icono = (real && iconoSeccionHtml(guardado, label, 26)) || '<i class="ti ti-folder"></i>';
+      const sinIngredientes = group.filter(r => !(r.ingredients||[]).length).length;
+      return `
+      <div class="ml-carpeta" role="button" tabindex="0" onclick="openEscandalloFolder('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openEscandalloFolder('${k}')}">
+        ${real
+          ? `<span class="cat-icon-btn ml-ico" role="button" title="${escapeHtml(t('title.chooseFolderIcon'))}" aria-label="${escapeHtml(t('title.chooseFolderIcon'))}" onclick="event.stopPropagation();openCategoryIconModal('${k}','${k}','renderEscandallo','recipe')">${icono}</span>`
+          : `<span class="ml-ico">${icono}</span>`}
+        <div class="ml-carpeta-txt">
+          <div class="ml-carpeta-nom">${escapeHtml(label)}</div>
+          <div class="ml-carpeta-meta">${group.length} ${unidades(group.length)}</div>
+          ${sinIngredientes ? `<div class="ml-carpeta-pend">${gl({es:'sin ingredientes', ca:'sense ingredients', en:'no ingredients'})}: ${sinIngredientes}</div>` : ''}
+        </div>
+        ${real ? botonesDeCarpeta(key, 'recipe') : ''}
+      </div>`;
+    }).join('')}</div>`;
     return;
   }
 
+  const backBtn = (!searching && escandalloFolder !== null)
+    ? `<div class="ml-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button><div class="ml-ruta-nom">${escapeHtml(nombreDe(escandalloFolder))}</div></div>` : '';
+
   if(!recipes.length){
-    const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button>` : '';
     box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
@@ -352,38 +373,54 @@ function renderEscandallo(){
     ? recipes.filter(r => (r.category || '__none__') === escandalloFolder)
     : recipes;
 
-  const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button>` : '';
-
   if(!visibleRecipes.length){
     box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
 
-  // Mismo comportamiento tanto si se llega buscando/filtrando por categoría
-  // como si se navega por carpeta: una lista compacta de solo nombres, y al
-  // pinchar uno se abre su ficha completa (coste/PVP/margen/ingredientes) —
-  // antes filtrar por categoría enseñaba directamente todas las fichas
-  // completas de golpe, distinto de cómo se veía entrando por carpeta.
-  const renderNameList = (recs) => `<div class="table-wrap"><table><tbody>${recs.map(r => `
-    <tr style="cursor:pointer" onclick="openEscandalloRecipe(${r.id})">
-      <td><strong><i class="ti ${r.isBase?((r.area||'cocina')==='sala'?'ti-flask':'ti-soup'):((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</td>
-      <td style="text-align:right;color:var(--muted)"><i class="ti ti-chevron-right"></i></td>
-    </tr>
-  `).join('')}</tbody></table></div>`;
-
-  if(escandalloRecipe !== null){
-    const sel = visibleRecipes.find(r => r.id === escandalloRecipe);
-    if(!sel){ escandalloRecipe = null; renderEscandallo(); return; }
-    const recBackBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloRecipes()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>`;
-    box.innerHTML = recBackBtn + renderEscandalloFull(sel);
-  } else if(searching){
+  if(searching){
     box.innerHTML = groupRecipesByCategory(visibleRecipes).map(([catName, group]) => `
-      <h3 class="cat-heading">${escapeHtml(catName)}</h3>
-      ${renderNameList(group)}
+      <h3 class="es-grupo">${escapeHtml(catName)} <span>${group.length}</span></h3>
+      <div class="es-platos">${group.map(esTarjetaHtml).join('')}</div>
     `).join('');
   } else {
-    box.innerHTML = backBtn + renderNameList(visibleRecipes);
+    box.innerHTML = backBtn + `<div class="es-platos">${visibleRecipes.map(esTarjetaHtml).join('')}</div>`;
   }
+}
+
+// Una tarjeta por plato: quién es, cómo va de food cost y lo que cuesta/vale. Pulsarla abre su hoja.
+function esTarjetaHtml(r){
+  const bd = recipeCostBreakdown(r);
+  const sala = (r.area||'cocina') === 'sala';
+  const pct = recipeFoodCostPct(r);
+  const icono = r.isBase ? (sala ? 'ti-flask' : 'ti-soup') : (sala ? 'ti-glass-cocktail' : 'ti-chef-hat');
+  const color = r.isBase || !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
+  const insignia = r.isBase
+    ? `<span class="badge badge-gray">${fmtMoney(recipeBaseCostPerUnit(r))}/${escapeHtml(r.baseUnit||'L')}</span>`
+    : `<span class="badge badge-${color}">${isFinite(pct) ? fmtPct1(pct) + '% FC' : t('label.noSalePrice')}</span>`;
+  const avisos = [
+    !(r.ingredients||[]).length ? gl({es:'sin ingredientes', ca:'sense ingredients', en:'no ingredients'}) : '',
+    !r.isBase && r.ivaPct == null ? gl({es:'sin IVA', ca:'sense IVA', en:'no VAT'}) : '',
+    recipeHasCircularReference(r) ? gl({es:'referencia circular', ca:'referència circular', en:'circular reference'}) : ''
+  ].filter(Boolean);
+  const k = (et, v) => `<span class="es-cifra"><i>${et}</i><b>${v}</b></span>`;
+  const cifras = r.isBase
+    ? k(t('label.totalCost'), fmtMoney(bd.total)) + k(t('label.yieldShort'), `${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}`)
+    : k(t('label.totalCost'), fmtMoney(bd.total)) + k(t('label.salePriceShort'), fmtMoney(r.price||0));
+  return `
+    <article class="es-plato" role="button" tabindex="0" onclick="openEscandalloRecipe(${r.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openEscandalloRecipe(${r.id})}">
+      <div class="es-plato-cab">
+        <i class="ti ${icono} es-plato-ico"></i>
+        <div class="es-plato-nom">${escapeHtml(r.name)}</div>
+        ${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`openEscandalloRecipe(${r.id})`, owner:true},
+          {icono:'ti-copy', texto:t('btn.duplicate'), fn:`duplicateRecipe(${r.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteRecipe(${r.id})`, peligro:true, owner:true}
+        ])}
+      </div>
+      <div class="es-plato-insignias">${insignia}${avisos.map(a => `<span class="es-aviso">${escapeHtml(a)}</span>`).join('')}</div>
+      <div class="es-plato-cifras">${cifras}</div>
+    </article>`;
 }
 
 function renderEscandalloLineLabel(line){
@@ -396,238 +433,302 @@ function renderEscandalloLineLabel(line){
 }
 
 
-function renderEscandalloFull(r){
-    const breakdown = recipeCostBreakdown(r);
-    const cost = breakdown.total;
-    const pct = recipeFoodCostPct(r);
-    const priceBaseForMargin = r.priceBase!=null ? r.priceBase : (r.ivaPct!=null ? r.price/(1+r.ivaPct/100) : (r.price||0));
-    const margin = priceBaseForMargin - cost;
-    const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
-    const pctClass = r.isBase ? 'gray' : !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
-    const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? t('label.noSalePrice') : `${pct.toFixed(1)}% FC`;
-    const circularWarning = recipeHasCircularReference(r)
-      ? `<div class="card" style="background:var(--red-light,#F5EBE7);border-left:3px solid var(--red);margin-bottom:12px;padding:10px 14px;font-size:13px"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> ${t('escandallo.circularWarning')}</div>`
-      : '';
+/* ============================================================
+   LA HOJA DE ESCANDALLO (30/10) — una sola pantalla para crear, ver y editar un plato.
+   Antes un plato nuevo se montaba en un modal estrecho y el existente se veía en una ficha ancha, con otro botón
+   para editarla: dos pantallas distintas para lo mismo. Ahora la ficha ancha ES el editor: todo se escribe en
+   ella, los números se recalculan mientras se teclea, y un único «Guardar» lo deja escrito.
+   Los ids (recipe-name, recipe-price-base…) son los de siempre: saveRecipe y currentRecipeFormState no cambian.
+   ============================================================ */
+let recipeModalLines = [];          // las líneas de la hoja abierta (se copian a la receta al guardar)
+let escandalloHoja = null;          // {id, isBase}: hay una hoja abierta (id null = plato nuevo)
+let escandalloHojaBase = '';        // foto de la hoja al abrirla o guardarla: lo que difiera son cambios sin guardar
 
-    const lines = (r.ingredients||[]).map(line => {
-      const label = renderEscandalloLineLabel(line);
-      if(!label) return '';
-      const lineCost = recipeIngredientCost(line);
-      const merma = line.merma||0;
-      const pctOfTotal = cost > 0 ? ((lineCost/cost)*100).toFixed(1) : '0.0';
-      return `<tr><td><strong>${escapeHtml(label.name)}</strong></td><td>${fmtNum(line.qty)} ${escapeHtml(label.unit)}</td><td>${merma>0?merma+'%':'—'}</td><td>${fmtMoney(lineCost)}</td><td style="color:var(--muted)">${pctOfTotal}%</td></tr>`;
-    }).join('');
-
-    return `
-      ${circularWarning}
-      <div class="card" style="max-width:100%">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?((r.area||'cocina')==='sala'?'ti-flask':'ti-soup'):((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t('label.baseElaborationTag')})</span>`:''}</h3>
-          <span class="badge badge-${pctClass}">${pctText}</span>
-        </div>
-        <div class="grid grid-4" style="margin-bottom:14px">
-          <div class="kpi"><div class="label">${t('label.totalCost')}</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
-          ${r.isBase ? `
-          <div class="kpi"><div class="label">${t('label.yieldShort')}</div><div class="value" style="font-size:18px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
-          <div class="kpi"><div class="label">${t('common.cost')}/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(perUnit)}</div></div>
-          ` : `
-          <div class="kpi"><div class="label">${t('label.salePriceShort')}</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
-          <div class="kpi"><div class="label">${t('label.margin')}</div><div class="value" style="font-size:18px;color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</div></div>
-          <div class="kpi"><div class="label">${t('label.foodCost')}</div><div class="value" style="font-size:18px">${isFinite(pct)?pct.toFixed(1)+'%':'—'}</div></div>
-          `}
-        </div>
-        ${r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.consumablesInline')}: ${r.consumiblesPct}%</div>` : ''}
-        ${!r.isBase ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t('msg.escandalloForOnePersonShort')}</div>` : ''}
-        ${!r.isBase && r.deliverySupplement ? (() => {
-          const deliveryPrice = (r.price||0) + r.deliverySupplement;
-          const deliveryBase = r.ivaPct!=null ? deliveryPrice/(1+r.ivaPct/100) : deliveryPrice;
-          const deliveryPct = deliveryBase>0 ? (cost/deliveryBase*100) : null;
-          return `<div class="card" style="background:var(--bg-2,#FAF8F4);margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-            <strong style="font-size:13px"><i class="ti ti-moped"></i> ${t('label.priceDelivery')}</strong>
-            <span>${fmtMoney(deliveryPrice)} <span style="color:var(--muted)">(+${fmtMoney(r.deliverySupplement)})</span></span>
-            ${deliveryPct!=null ? `<span class="badge badge-${deliveryPct>35?'red':deliveryPct>28?'amber':'green'}">${deliveryPct.toFixed(1)}% FC</span>` : ''}
-          </div>`;
-        })() : ''}
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>${t('label.ingredient')}</th><th>${t('common.qty')}</th><th>${t('th.merma')}</th><th>${t('common.cost')}</th><th>${t('hr.platos.pctOfTotal')}</th></tr></thead>
-            <tbody>${lines || `<tr><td colspan="5"><div class="empty" style="padding:14px">${t('empty.noIngredients')}</div></td></tr>`}</tbody>
-          </table>
-        </div>
-        <div class="actions-cell" style="margin-top:10px">
-          <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> ${t('common.edit')}</button>
-          <button class="owner-only btn btn-sm" onclick="duplicateRecipe(${r.id})"><i class="ti ti-copy"></i> ${t('btn.duplicate')}</button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
-        </div>
-      </div>
-    `;
+function esHojaFoto(){
+  if(!escandalloHoja || !document.getElementById('recipe-name')) return '';
+  const g = id => { const e = document.getElementById(id); return e ? e.value : ''; };
+  return JSON.stringify({n:g('recipe-name'), c:g('recipe-category'), pb:g('recipe-price-base'), i:g('recipe-iva'), d:g('recipe-delivery-supplement'),
+    co:g('recipe-consumibles'), y:g('recipe-base-yield'), u:g('recipe-base-unit'),
+    l:recipeModalLines.map(l => [l.type || 'ingredient', l.ingredientId || l.baseRecipeId, Number(l.qty) || 0, Number(l.merma) || 0])});
 }
+function esHojaSucia(){ return !!escandalloHoja && esHojaFoto() !== escandalloHojaBase; }
+function esMarcarCambio(){
+  const el = document.getElementById('es-sucio');
+  if(el) el.hidden = !esHojaSucia();
+}
+if(typeof ggRegistrarEditor === 'function') ggRegistrarEditor('escandallo', {
+  sucio: () => esHojaSucia(),
+  nombre: () => gl({es:'Plato: ', ca:'Plat: ', en:'Dish: '}) + ((document.getElementById('recipe-name') && document.getElementById('recipe-name').value.trim()) || gl({es:'sin nombre', ca:'sense nom', en:'unnamed'})),
+  guardar: () => saveRecipe(),
+  descartar: () => { escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; renderEscandallo(); }
+});
 
-let recipeModalLines = [];
-
+// Abre la hoja: de un plato que ya existe, o vacía para uno nuevo. Se llama igual que el modal de antes.
 function openRecipeModal(id, forceBase){
   if(!isOwnerSession() && !editUnlocked) return;
-  const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[], area: currentArea(), isBase:!!forceBase, baseYield:1, baseUnit:'L'};
-  recipeModalLines = (r.ingredients||[]).map(l => ({...l}));
+  const r = id ? getRecipe(id) : null;
+  if(id && !r) return;
   if(id && typeof logAudit === 'function') logAudit('recipe_view', t('audit.recipeViewed').replace('${name}', r.name||'?'));
-  renderRecipeModal(id, r);
+  const isBase = id ? !!r.isBase : !!forceBase;
+  escandalloTab = isBase ? 'elaboraciones' : 'platos';
+  escandalloHoja = {id: id || null, isBase};
+  recipeModalLines = (r && r.ingredients ? r.ingredients : []).map(l => ({...l}));
+  escandalloHojaNueva = id ? null : {name:'', priceBase:0, ivaPct:null, deliverySupplement:null, consumiblesPct:5, category:(escandalloFolder && escandalloFolder !== '__none__') ? escandalloFolder : '', baseYield:1, baseUnit:'L', isBase};
+  const alAbrir = () => { renderEscandallo(); scrollContentToTop(); };
+  const activa = document.querySelector('.view.active');
+  if(activa && activa.id === 'view-escandallo') alAbrir(); else navigate('escandallo');
 }
+let escandalloHojaNueva = null;     // los valores de partida de una hoja nueva (para no depender de una receta que aún no existe)
 
-function renderRecipeModal(id, r){
-  const breakdown = recipeCostBreakdown({...r, ingredients: recipeModalLines});
+// Compatibilidad: el resto del código sigue llamando a renderRecipeModal para repintar la hoja.
+function renderRecipeModal(id, r){ esPintarHoja(r); }
+
+function esHojaDatos(){
+  const id = escandalloHoja.id;
+  if(id){ const r = getRecipe(id); if(r) return r; }
+  return escandalloHojaNueva || {name:'', ingredients:[], isBase: escandalloHoja.isBase, consumiblesPct:5, baseYield:1, baseUnit:'L'};
+}
+// Un decimal y coma, como el resto de cifras de la app (toFixed pintaba «28.0%»).
+function fmtPct1(v){ return (Number(v) || 0).toLocaleString('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1}); }
+function esPrecioFinal(priceBase, ivaPct){ return ivaPct == null ? priceBase : priceBase * (1 + ivaPct/100); }
+
+function esPintarHoja(estado){
+  const box = document.getElementById('escandallo-list');
+  const id = escandalloHoja.id;
+  const r = estado || esHojaDatos();
+  const isBase = escandalloHoja.isBase;
   const area = r.area || currentArea();
   const isSala = area === 'sala';
-
+  const hasDelivery = !(DB.business && DB.business.tiposServicio && DB.business.tiposServicio.delivery === false);
   const areaIngredients = DB.ingredients.filter(i => (i.area||'cocina') === area);
+  const priceBase = r.priceBase != null ? r.priceBase : (r.price || 0);
+  const ivaPct = r.ivaPct != null ? r.ivaPct : null;
+  const titulo = isBase ? (id ? t('title.editElaboration') : t('title.newElaboration'))
+    : (id ? (isSala ? t('title.editDrink') : t('title.editDish')) : (isSala ? t('title.newDrink') : t('title.newDish')));
+  const k = (idKpi, et, v, extra) => `<div class="es-kpi"><span class="es-kpi-et">${et}</span><b id="${idKpi}"${extra || ''}>${v}</b></div>`;
+  box.innerHTML = `
+    <div class="es-barra">
+      <button type="button" class="btn btn-sm btn-fino" onclick="backToEscandalloRecipes()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+      <div class="es-barra-titulo">${escapeHtml(titulo)}</div>
+      <div class="es-barra-der">
+        <span class="oc-sucio" id="es-sucio" hidden><i class="ti ti-point-filled"></i> ${t('oferta.sucio')}</span>
+        <button type="button" class="btn btn-fino is-on" onclick="saveRecipe()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+        ${id ? ggMenuAcciones([
+          {icono:'ti-copy', texto:t('btn.duplicate'), fn:`duplicateRecipe(${id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteRecipe(${id})`, peligro:true, owner:true}
+        ]) : ''}
+      </div>
+    </div>
+    <div id="es-aviso-circular"></div>
+    <div class="es-hoja">
+      <div class="es-principal">
+        <section class="es-card es-cab">
+          <div class="field">
+            <label for="recipe-name">${isBase ? t('label.elaborationName') : (isSala ? t('label.drinkName') : t('label.dishName'))}</label>
+            <input type="text" id="recipe-name" class="es-nombre" value="${escapeHtml(r.name || '')}" placeholder="${isBase ? (isSala ? t('ph.elaborationNameSala') : t('ph.elaborationName')) : (isSala ? t('ph.drinkName') : t('ph.dishName'))}" oninput="esMarcarCambio()">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="recipe-category">${t('common.category')}</label>
+              <select id="recipe-category" onchange="onRecipeCategoryChange(${id||'null'});esMarcarCambio()">
+                <option value="">${t('label.noCategory')}</option>
+                ${areaRecipeCategories().map(c => { const cn = typeof c === 'object' ? c.name : c; return `<option value="${escapeHtml(cn)}" ${(r.category||'')===cn ? 'selected' : ''}>${escapeHtml(cn)}</option>`; }).join('')}
+                <option value="__new__">+ ${t('btn.newCategory')}...</option>
+              </select>
+            </div>
+            ${isBase ? `
+            <div class="field">
+              <label for="recipe-base-yield">${t('label.yield')}</label>
+              <input type="number" id="recipe-base-yield" value="${r.baseYield != null ? r.baseYield : 1}" step="0.01" min="0.01" oninput="esRecalcular()">
+            </div>
+            <div class="field">
+              <label for="recipe-base-unit">${t('common.unit')}</label>
+              <select id="recipe-base-unit" onchange="esRecalcular()">
+                ${BASE_UNITS.map(u => `<option value="${u}" ${(r.baseUnit||'L')===u ? 'selected' : ''}>${u}</option>`).join('')}
+              </select>
+            </div>` : ''}
+          </div>
+          ${isBase ? '' : `<p class="es-nota"><i class="ti ti-info-circle"></i> ${t('msg.escandalloForOnePerson')}</p>`}
+          <!-- El tipo (plato o elaboración base) lo decide el botón por el que se entró; ya no se vuelve a elegir aquí. -->
+          <input type="checkbox" id="recipe-is-base" style="display:none" ${isBase ? 'checked' : ''}>
+          <input type="hidden" id="recipe-comensales" value="1">
+        </section>
 
-  const linesHtml = recipeModalLines.map((line, idx) => {
-    const label = renderEscandalloLineLabel(line);
-    const ingRef = line.type !== 'base' ? getIngredient(line.ingredientId) : null;
-    const discontinued = ingRef && ingRef.activo === false;
-    return `
-      <tr>
-        <td>${label ? escapeHtml(label.name) + (line.type==='base'?` <span style="font-size:11px;color:var(--muted)">(${t('label.baseShort2Lower')})</span>`:'') + (discontinued?` <span class="badge badge-gray txt-xs" title="${t('msg.ingredientDiscontinuedHint')}">${t('label.discontinued')}</span>`:'') : '—'}</td>
-        <td><input type="number" value="${line.qty}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineQty(${idx}, this.value, ${id||'null'})"></td>
-        <td>${label ? escapeHtml(label.unit) : ''}</td>
-        <td><input type="number" value="${line.merma||0}" step="1" min="0" max="99" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineMerma(${idx}, this.value, ${id||'null'})"></td>
-        <td>${label ? fmtMoney(recipeIngredientCost(line)) : '—'}</td>
-        <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeRecipeLine(${idx}, ${id||'null'})"><i class="ti ti-x"></i></button></td>
-      </tr>
-    `;
-  }).join('');
+        <section class="es-card">
+          <h3 class="es-tit">${t('label.ingredients')}</h3>
+          <div class="es-lineas" id="es-lineas"></div>
+          ${areaIngredients.length || DB.recipes.some(b => b.isBase && (b.area||'cocina') === area) ? `
+          <div class="es-anadir">
+            <div class="es-anadir-buscar">
+              <i class="ti ti-search"></i>
+              <input type="text" id="recipe-add-ingredient-search" placeholder="${t('ph.searchIngredient')}" autocomplete="off" oninput="filterRecipeIngredientResults(${id||'null'})" onfocus="filterRecipeIngredientResults(${id||'null'})" onblur="setTimeout(()=>hideRecipeIngredientResults(${id||'null'}),150)">
+              <input type="hidden" id="recipe-add-ingredient">
+              <div id="recipe-add-ingredient-results" class="es-resultados" style="display:none"></div>
+            </div>
+            <input type="number" id="recipe-add-qty" class="es-anadir-qty" placeholder="${t('common.qty')}" aria-label="${t('common.qty')}" step="0.01" min="0" value="1">
+            <button type="button" class="btn btn-fino is-on" onclick="addRecipeLine(${id||'null'})"><i class="ti ti-plus"></i> ${t('common.add')}</button>
+          </div>` : `<p class="es-nota">${t('msg.addIngredientsToMegaListFirst')}</p>`}
+        </section>
+      </div>
 
-  openModal(`
-    <div class="modal-header">
-      <h3>${r.isBase ? (id ? t('title.editElaboration') : t('title.newElaboration')) : (id ? (isSala ? t('title.editDrink') : t('title.editDish')) : (isSala ? t('title.newDrink') : t('title.newDish')))}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${r.isBase ? t('label.elaborationName') : (isSala ? t('label.drinkName') : t('label.dishName'))}</label>
-        <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${r.isBase ? (isSala ? t('ph.elaborationNameSala') : t('ph.elaborationName')) : (isSala ? t('ph.drinkName') : t('ph.dishName'))}">
-      </div>
-    </div>
-    ${r.isBase ? '' : (() => {
-      const hasDelivery = !(DB.business && DB.business.tiposServicio && DB.business.tiposServicio.delivery === false);
-      return `
-    <div class="field-row">
-      <div class="field">
-        <label>${t('label.priceBaseNoVat')}</label>
-        <input type="number" id="recipe-price-base" value="${r.priceBase!=null?r.priceBase:(r.price||0)}" step="0.01" min="0" oninput="updateRecipeFinalPriceDisplay()">
-      </div>
-      <div class="field">
-        <label>${t('label.ivaTypeRepercutido')}</label>
-        <select id="recipe-iva" onchange="updateRecipeFinalPriceDisplay()" style="${r.ivaPct==null?'border-color:var(--red);color:var(--red)':''}">
-          <option value="" ${r.ivaPct==null?'selected':''} disabled>${t('label.chooseIva')}</option>
-          ${[21,10,4,0].map(pct => `<option value="${pct}" ${r.ivaPct===pct?'selected':''}>${pct}%</option>`).join('')}
-        </select>
-      </div>
-      ${hasDelivery ? `
-      <div class="field">
-        <label>${t('label.deliverySupplement')}</label>
-        <input type="number" id="recipe-delivery-supplement" value="${r.deliverySupplement!=null?r.deliverySupplement:''}" step="0.01" min="0" placeholder="0,00" oninput="updateRecipeFinalPriceDisplay()">
-      </div>
-      ` : ''}
-    </div>
-    <div class="field" style="margin-top:-8px">
-      <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="recipe-price-final-display">${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}</strong></span>
-      ${hasDelivery ? ` · ${t('label.priceDelivery')}: <strong id="recipe-price-delivery-final-display">${fmtMoney((r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0)) + (r.deliverySupplement||0))}</strong>` : ''}
-    </div>
-    ${hasDelivery ? `<div class="field" style="margin-top:-6px"><small style="color:var(--muted)">${t('label.deliverySupplementHint')}</small></div>` : ''}
-    `;
-    })()}
-    <div class="field-row">
-      ${r.isBase ? '' : `
-      <div class="field">
-        <label>${isSala ? t('label.servings') : t('label.diners')}</label>
-        <input type="number" id="recipe-comensales" value="1" step="1" min="1" disabled style="background:var(--bg);color:var(--muted)">
-      </div>
-      `}
-      <div class="field">
-        <label>${t('label.consumables')}</label>
-        <input type="number" id="recipe-consumibles" value="${r.consumiblesPct!=null?r.consumiblesPct:5}" step="0.5" min="0" max="99" oninput="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
-      </div>
-      <div class="field">
-        <label>${t('common.category')}</label>
-        <select id="recipe-category" onchange="onRecipeCategoryChange(${id||'null'})">
-          <option value="">${t('label.noCategory')}</option>
-          ${areaRecipeCategories().map(c=>{ const cn=typeof c==='object'?c.name:c; return `<option value="${escapeHtml(cn)}" ${(r.category||'')===cn?'selected':''}>${escapeHtml(cn)}</option>`; }).join('')}
-          <option value="__new__">+ ${t('btn.newCategory')}...</option>
-        </select>
-      </div>
-    </div>
-    ${!r.isBase ? `<div style="display:flex;align-items:center;gap:8px;background:var(--brand-cream);border-radius:8px;padding:8px 12px;margin:-6px 0 12px;font-size:12.5px;color:#8A7440">
-      <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0"></i>
-      ${t('msg.escandalloForOnePerson')}
-    </div>` : ''}
+      <aside class="es-lateral">
+        <section class="es-card es-resumen">
+          <h3 class="es-tit">${gl({es:'Números', ca:'Números', en:'Numbers'})}</h3>
+          <div class="es-kpis">
+            ${k('es-k-coste', t('label.totalCost'), '—')}
+            ${isBase ? `
+              ${k('es-k-rinde', t('label.yieldShort'), '—')}
+              ${k('es-k-ud', t('label.costPer') + ' ' + escapeHtml(r.baseUnit||'L'), '—')}
+            ` : `
+              ${k('es-k-pvp', t('label.salePriceShort'), '—')}
+              ${k('es-k-margen', t('label.margin'), '—')}
+              ${k('es-k-fc', t('label.foodCost'), '—')}
+            `}
+          </div>
+          <div class="es-desglose">
+            <div><span>${t('label.ingredientsCost')}</span><b id="es-d-ing">—</b></div>
+            <div class="es-d-cons"><span>${t('label.consumablesInline')}</span>
+              <span class="es-d-cons-in"><input type="number" id="recipe-consumibles" value="${r.consumiblesPct != null ? r.consumiblesPct : 5}" step="0.5" min="0" max="99" aria-label="${t('label.consumables')} %" oninput="esRecalcular()"><em>%</em></span>
+              <b id="es-d-cons">—</b></div>
+          </div>
+        </section>
 
-    <!-- El tipo (plato normal o elaboración base) ya lo decide el botón por
-    el que se entró a este formulario ("+ Nuevo Plato" o "+ Nueva
-    Elaboración", ver openRecipeModal(id, forceBase)) — antes había además
-    una casilla aquí dentro para volver a elegirlo, redundante con esos dos
-    botones y que solo confundía. -->
-    <input type="checkbox" id="recipe-is-base" style="display:none" ${r.isBase?'checked':''}>
-    ${r.isBase ? `
-    <div class="field-row">
-      <div class="field">
-        <label>${t('label.yield')}</label>
-        <input type="number" id="recipe-base-yield" value="${r.baseYield!=null?r.baseYield:1}" step="0.01" min="0.01" oninput="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
-      </div>
-      <div class="field">
-        <label>${t('common.unit')}</label>
-        <select id="recipe-base-unit" onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
-          ${BASE_UNITS.map(u=>`<option value="${u}" ${(r.baseUnit||'L')===u?'selected':''}>${u}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    ` : ''}
+        ${isBase ? '' : `
+        <section class="es-card">
+          <h3 class="es-tit">${gl({es:'Precio de venta', ca:'Preu de venda', en:'Sale price'})}</h3>
+          <div class="field-row">
+            <div class="field">
+              <label for="recipe-price-base">${t('label.priceBaseNoVat')}</label>
+              <input type="number" id="recipe-price-base" value="${priceBase}" step="0.01" min="0" oninput="esRecalcular()">
+            </div>
+            <div class="field">
+              <label for="recipe-iva">${t('label.ivaTypeRepercutido')}</label>
+              <select id="recipe-iva" class="es-iva${ivaPct == null ? ' is-falta' : ''}" onchange="esRecalcular()">
+                <option value="" ${ivaPct == null ? 'selected' : ''} disabled>${t('label.chooseIva')}</option>
+                ${[21,10,4,0].map(pct => `<option value="${pct}" ${ivaPct === pct ? 'selected' : ''}>${pct}%</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          ${hasDelivery ? `
+          <div class="field">
+            <label for="recipe-delivery-supplement">${t('label.deliverySupplement')}</label>
+            <input type="number" id="recipe-delivery-supplement" value="${r.deliverySupplement != null ? r.deliverySupplement : ''}" step="0.01" min="0" placeholder="0,00" oninput="esRecalcular()">
+            <small class="es-pista">${t('label.deliverySupplementHint')}</small>
+          </div>` : ''}
+          <div class="es-final">
+            <div><span>${t('label.finalPriceWithVat')}</span><b id="recipe-price-final-display">—</b></div>
+            ${hasDelivery ? `<div><span>${t('label.priceDelivery')}</span><b id="recipe-price-delivery-final-display">—</b></div>` : ''}
+          </div>
+        </section>`}
 
-    <div class="field">
-      <label>${t('label.ingredients')}</label>
-      <div class="table-wrap" style="margin-bottom:8px">
-        <table>
-          <thead><tr><th>${t('label.ingredient')}</th><th>${t('label.netQty')}</th><th>${t('th.unitAbbr')}</th><th>${t('th.mermaPct')}</th><th>${t('common.cost')}</th><th></th></tr></thead>
-          <tbody>${linesHtml || `<tr><td colspan="6"><div class="empty" style="padding:10px">${t('empty.addIngredients')}</div></td></tr>`}</tbody>
-        </table>
-      </div>
-      ${areaIngredients.length ? `
-      <div class="field-row">
-        <div class="field" style="margin-bottom:0;position:relative">
-          <input type="text" id="recipe-add-ingredient-search" placeholder="${t('ph.searchIngredient')}" autocomplete="off" oninput="filterRecipeIngredientResults(${id||'null'})" onfocus="filterRecipeIngredientResults(${id||'null'})" onblur="setTimeout(()=>hideRecipeIngredientResults(${id||'null'}), 150)">
-          <input type="hidden" id="recipe-add-ingredient">
-          <div id="recipe-add-ingredient-results" style="display:none;position:absolute;z-index:10;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;max-height:220px;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <input type="number" id="recipe-add-qty" placeholder="${t('common.qty')}" step="0.01" min="0" value="1">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <button class="btn" style="width:100%" onclick="addRecipeLine(${id||'null'})"><i class="ti ti-plus"></i> ${t('common.add')}</button>
-        </div>
-      </div>
-      ` : `<p style="font-size:13px;color:var(--muted)">${t('msg.addIngredientsToMegaListFirst')}</p>`}
+        <section class="es-card" id="es-extra"></section>
+      </aside>
     </div>
-
-    <div class="grid grid-3" style="margin-bottom:10px">
-      <div class="kpi"><div class="label">${t('label.ingredientsCost')}</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeIng)}</div></div>
-      <div class="kpi"><div class="label">${t('label.consumablesInline')}</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeCons)}</div></div>
-      <div class="kpi"><div class="label">${t('label.totalCost')}</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total)}</div></div>
-    </div>
-    ${r.isBase ? `
-    <div class="grid grid-2" style="margin-bottom:10px">
-      <div class="kpi ok"><div class="label">${t('label.costPer')} ${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total / (parseFloat(r.baseYield)||1))}</div></div>
-    </div>
-    ` : ''}
-
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="saveRecipe(${id||'null'})">${t('common.save')}</button>
-    </div>
-  `);
+  `;
+  esPintarLineas();
+  esRecalcular();
+  esPintarExtra();
+  if(!estado) escandalloHojaBase = esHojaFoto();
+  esMarcarCambio();
 }
 
+// «Alérgenos» (los que traen los ingredientes) y «Dónde se usa» (cartas, o platos que usan esta elaboración).
+function esPintarExtra(){
+  const cont = document.getElementById('es-extra');
+  if(!cont) return;
+  const id = escandalloHoja.id;
+  const alergenos = new Set();
+  recipeModalLines.forEach(line => {
+    const fuente = line.type === 'base' ? getRecipe(line.baseRecipeId) : getIngredient(line.ingredientId);
+    ((fuente && fuente.allergens) || []).forEach(a => alergenos.add(a));
+  });
+  const enCartas = id ? cartaPlatosUsingRecipe(id) : [];
+  const enPlatos = id && escandalloHoja.isBase ? recipesUsingBaseRecipe(id) : [];
+  cont.innerHTML = `
+    <h3 class="es-tit">${t('label.allergens')}</h3>
+    <div class="es-alergenos">${alergenos.size ? [...alergenos].map(a => `<span class="ml-al">${escapeHtml(allergenLabel(a))}</span>`).join('') : `<span class="es-pista">${gl({es:'Ninguno de los ingredientes declara alérgenos.', ca:'Cap dels ingredients declara al·lèrgens.', en:'None of the ingredients declare allergens.'})}</span>`}</div>
+    ${id ? `
+    <h3 class="es-tit es-tit-2">${gl({es:'Dónde se usa', ca:'On s\'usa', en:'Where it is used'})}</h3>
+    ${(enCartas.length || enPlatos.length) ? `<ul class="es-usos">
+      ${enCartas.map(h => `<li><i class="ti ti-book-2"></i> ${escapeHtml(h.carta.nombre)} · ${escapeHtml(h.seccion.nombre)}</li>`).join('')}
+      ${enPlatos.map(p => `<li><i class="ti ti-chef-hat"></i> ${escapeHtml(p.name)}</li>`).join('')}
+    </ul>` : `<span class="es-pista">${escandalloHoja.isBase ? gl({es:'Todavía no la usa ningún plato.', ca:'Encara no la fa servir cap plat.', en:'No dish uses it yet.'}) : gl({es:'Todavía no está en ninguna carta.', ca:'Encara no és a cap carta.', en:'Not on any menu yet.'})}</span>`}` : ''}
+  `;
+}
+
+function esPintarLineas(){
+  const cont = document.getElementById('es-lineas');
+  if(!cont) return;
+  if(!recipeModalLines.length){
+    cont.innerHTML = `<div class="empty es-vacio"><i class="ti ti-basket"></i>${t('empty.addIngredients')}</div>`;
+    return;
+  }
+  cont.innerHTML = `
+    <div class="es-lcab"><span>${t('label.ingredient')}</span><span>${t('label.netQty')}</span><span>${t('th.mermaPct')}</span><span>${t('common.cost')}</span><span>${t('hr.platos.pctOfTotal')}</span><span></span></div>
+    ${recipeModalLines.map((line, idx) => {
+      const label = renderEscandalloLineLabel(line);
+      const ingRef = line.type !== 'base' ? getIngredient(line.ingredientId) : null;
+      const baja = ingRef && ingRef.activo === false;
+      return `
+      <div class="es-linea plegable${ggPlegableAbierta('esl-' + idx) ? ' is-abierta' : ''}" data-pl="esl-${idx}" onclick="ggTogglePlegable(event, this)">
+        <div class="es-l-nom"><b>${label ? escapeHtml(label.name) : '—'}</b>${line.type === 'base' ? ` <small>(${t('label.baseShort2Lower')})</small>` : ''}${baja ? ` <span class="badge badge-gray txt-xs" title="${escapeHtml(t('msg.ingredientDiscontinued'))}">${t('label.discontinued')}</span>` : ''}</div>
+        <div class="es-l-qty" data-et="${escapeHtml(t('label.netQty'))}"><input type="number" class="es-in" value="${line.qty}" step="0.01" min="0" aria-label="${escapeHtml(t('label.netQty'))}" oninput="esLineaQty(${idx}, this.value)"><span class="es-l-u">${label ? escapeHtml(label.unit) : ''}</span></div>
+        <div class="es-l-coste" data-et="${escapeHtml(t('common.cost'))}"><b id="es-lc-${idx}">—</b></div>
+        <button type="button" class="pl-chev" aria-expanded="${ggPlegableAbierta('esl-' + idx)}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
+        <div class="es-l-merma pl-extra" data-et="${escapeHtml(t('th.mermaPct'))}"><input type="number" class="es-in" value="${line.merma||0}" step="1" min="0" max="99" aria-label="${escapeHtml(t('th.mermaPct'))}" oninput="esLineaMerma(${idx}, this.value)"></div>
+        <div class="es-l-pct pl-extra" data-et="${escapeHtml(t('hr.platos.pctOfTotal'))}"><span id="es-lp-${idx}">—</span></div>
+        <div class="es-l-acc pl-extra">${ggMenuAcciones([{icono:'ti-trash', texto:gl({es:'Quitar de la receta', ca:'Treure de la recepta', en:'Remove from recipe'}), fn:`removeRecipeLine(${idx})`, peligro:true}])}</div>
+      </div>`;
+    }).join('')}`;
+}
+
+// Todo lo que depende de lo escrito (coste, margen, food cost, precio final, coste de cada línea) en un solo sitio.
+// Se llama en cada tecla: solo toca textos, nunca repinta, así el cursor no se mueve.
+function esRecalcular(){
+  if(!escandalloHoja || !document.getElementById('recipe-name')) return;
+  const st = currentRecipeFormState(escandalloHoja.id);
+  const r = {...st, ingredients: recipeModalLines, isBase: escandalloHoja.isBase};
+  const bd = recipeCostBreakdown(r);
+  const set = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  set('es-k-coste', fmtMoney(bd.total));
+  set('es-d-ing', fmtMoney(bd.costeIng));
+  set('es-d-cons', fmtMoney(bd.costeCons));
+  recipeModalLines.forEach((line, i) => {
+    const c = recipeIngredientCost(line);
+    set('es-lc-' + i, fmtMoney(c));
+    set('es-lp-' + i, bd.total > 0 ? fmtPct1(c / bd.total * 100) + '%' : '0,0%');
+  });
+  if(escandalloHoja.isBase){
+    const rinde = parseFloat(r.baseYield) || 1;
+    set('es-k-rinde', `${fmtNum(rinde)} ${r.baseUnit || 'L'}`);
+    set('es-k-ud', fmtMoney(bd.total / rinde));
+  } else {
+    const base = r.priceBase || 0;
+    const iva = r.ivaPct;
+    const final = esPrecioFinal(base, iva);
+    const margen = base - bd.total;
+    const pct = base > 0 ? bd.total / base * 100 : Infinity;
+    set('es-k-pvp', fmtMoney(final));
+    const m = document.getElementById('es-k-margen');
+    if(m){ m.textContent = fmtMoney(margen); m.style.color = margen >= 0 ? 'var(--green)' : 'var(--red)'; }
+    const fc = document.getElementById('es-k-fc');
+    if(fc){
+      fc.textContent = isFinite(pct) ? fmtPct1(pct) + '%' : '—';
+      fc.style.color = !isFinite(pct) ? '' : pct > 35 ? 'var(--red)' : pct > 28 ? '#8A5A0F' : 'var(--green)';
+    }
+    updateRecipeFinalPriceDisplay();
+    const ivaEl = document.getElementById('recipe-iva');
+    if(ivaEl) ivaEl.classList.toggle('is-falta', ivaEl.value === '');
+  }
+  const av = document.getElementById('es-aviso-circular');
+  if(av) av.innerHTML = recipeHasCircularReference(r) ? `<div class="idr-nota is-aviso"><h4><i class="ti ti-alert-triangle"></i> ${gl({es:'Referencia circular', ca:'Referència circular', en:'Circular reference'})}</h4><p>${t('escandallo.circularWarning')}</p></div>` : '';
+  esMarcarCambio();
+}
+function esLineaQty(idx, v){ if(recipeModalLines[idx]){ recipeModalLines[idx].qty = parseFloat(v) || 0; esRecalcular(); } }
+function esLineaMerma(idx, v){ if(recipeModalLines[idx]){ recipeModalLines[idx].merma = parseFloat(v) || 0; esRecalcular(); } }
+
 function filterRecipeIngredientResults(id){
-  const r = id ? getRecipe(id) : null;
-  const area = (r && r.area) || currentArea();
+  const area = (escandalloHoja && esHojaDatos().area) || currentArea();
   const search = document.getElementById('recipe-add-ingredient-search').value.trim().toLowerCase();
   const results = document.getElementById('recipe-add-ingredient-results');
   const ingMatches = DB.ingredients
@@ -642,17 +743,17 @@ function filterRecipeIngredientResults(id){
   const baseLimited = baseMatches.slice(0, 15);
   const ingLimited = ingMatches.slice(0, 30);
   if(!baseLimited.length && !ingLimited.length){
-    results.innerHTML = `<div style="padding:8px 10px;font-size:13px;color:var(--muted)">${t('common.noResults')}</div>`;
+    results.innerHTML = `<div class="es-res-vacio">${t('common.noResults')}</div>`;
   } else {
     const renderItem = m => `
-      <div style="padding:8px 10px;font-size:13px;cursor:pointer" onmousedown="selectRecipeIngredientResult(${id||'null'}, '${m.type}', ${m.id})" onmouseover="this.style.background='var(--brand-cream)'" onmouseout="this.style.background=''">
-        ${m.type==='base' ? `<i class="ti ${area==='sala'?'ti-flask':'ti-soup'}"></i> ` : ''}${escapeHtml(m.name)} <span style="color:var(--muted)">(${m.type==='base'?`${t('label.baseShort')} — ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}`:escapeHtml(m.unit)})</span>
-      </div>
-    `;
-    const sectionHeader = label => `<div style="padding:5px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--bg-soft,#F1EFE9)">${label}</div>`;
+      <div class="es-res" onmousedown="selectRecipeIngredientResult(${id||'null'}, '${m.type}', ${m.id})">
+        <span>${m.type==='base' ? `<i class="ti ${area==='sala'?'ti-flask':'ti-soup'}"></i> ` : ''}${escapeHtml(m.name)}</span>
+        <small>${m.type==='base' ? `${t('label.baseShort')} · ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}` : escapeHtml(m.unit)}</small>
+      </div>`;
+    const cab = label => `<div class="es-res-cab">${label}</div>`;
     results.innerHTML =
-      (baseLimited.length ? sectionHeader(t('label.elaborations')) + baseLimited.map(renderItem).join('') : '') +
-      (ingLimited.length ? sectionHeader(t('label.ingredients')) + ingLimited.map(renderItem).join('') : '');
+      (baseLimited.length ? cab(t('label.elaborations')) + baseLimited.map(renderItem).join('') : '') +
+      (ingLimited.length ? cab(t('label.ingredients')) + ingLimited.map(renderItem).join('') : '');
   }
   results.style.display = 'block';
 }
@@ -665,6 +766,7 @@ function selectRecipeIngredientResult(id, type, refId){
   document.getElementById('recipe-add-ingredient').value = `${type}:${refId}`;
   document.getElementById('recipe-add-ingredient-search').value = name || '';
   hideRecipeIngredientResults(id);
+  const q = document.getElementById('recipe-add-qty'); if(q) q.focus();
 }
 
 function addRecipeLine(id){
@@ -682,21 +784,16 @@ function addRecipeLine(id){
     if(existing){ existing.qty += qty; }
     else { recipeModalLines.push({type:'ingredient', ingredientId: refId, qty, merma:0}); }
   }
-  renderRecipeModal(id, currentRecipeFormState(id));
+  document.getElementById('recipe-add-ingredient').value = '';
+  document.getElementById('recipe-add-ingredient-search').value = '';
+  esPintarLineas(); esRecalcular(); esPintarExtra();
+  const b = document.getElementById('recipe-add-ingredient-search'); if(b) b.focus();
 }
-function updateRecipeLineQty(idx, value, id){
-  const qty = parseFloat(value) || 0;
-  recipeModalLines[idx].qty = qty;
-  renderRecipeModal(id, currentRecipeFormState(id));
-}
-function updateRecipeLineMerma(idx, value, id){
-  const merma = parseFloat(value) || 0;
-  recipeModalLines[idx].merma = merma;
-  renderRecipeModal(id, currentRecipeFormState(id));
-}
-function removeRecipeLine(idx, id){
+function updateRecipeLineQty(idx, value){ esLineaQty(idx, value); }
+function updateRecipeLineMerma(idx, value){ esLineaMerma(idx, value); }
+function removeRecipeLine(idx){
   recipeModalLines.splice(idx,1);
-  renderRecipeModal(id, currentRecipeFormState(id));
+  esPintarLineas(); esRecalcular(); esPintarExtra();
 }
 let recipeFormStateBeforeCategory = null;
 function onRecipeCategoryChange(id){
@@ -713,18 +810,26 @@ function onRecipeCategoryChange(id){
         <input type="text" id="new-recipe-category-name" placeholder="${t('ph.categoryDish')}">
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="cancelNewRecipeCategory(${id||'null'})">${t('common.cancel')}</button>
-        <button class="btn btn-primary" onclick="confirmNewRecipeCategory(${id||'null'})">${t('common.add')}</button>
+        <button type="button" class="btn btn-fino" onclick="cancelNewRecipeCategory(${id||'null'})">${t('common.cancel')}</button>
+        <button type="button" class="btn btn-fino is-on" onclick="confirmNewRecipeCategory(${id||'null'})">${t('common.add')}</button>
       </div>
     `);
     setTimeout(()=>document.getElementById('new-recipe-category-name')?.focus(), 50);
   }
 }
+// Al elegir o cancelar una categoría nueva se repinta la hoja con lo que ya estaba escrito.
+function esRepintarConEstado(state){
+  closeModal();
+  const foto = escandalloHojaBase;
+  esPintarHoja({...esHojaDatos(), ...state, ingredients: recipeModalLines});
+  escandalloHojaBase = foto;       // es el mismo trabajo sin guardar, no una hoja nueva
+  esMarcarCambio();
+}
 function cancelNewRecipeCategory(id){
   const state = recipeFormStateBeforeCategory || currentRecipeFormState(id);
   state.category = '';
   recipeFormStateBeforeCategory = null;
-  renderRecipeModal(id, state);
+  esRepintarConEstado(state);
 }
 function confirmNewRecipeCategory(id){
   const name = document.getElementById('new-recipe-category-name').value;
@@ -740,11 +845,39 @@ function confirmNewRecipeCategory(id){
     state.category = '';
   }
   recipeFormStateBeforeCategory = null;
-  renderRecipeModal(id, state);
+  esRepintarConEstado(state);
 }
-// Actualiza en vivo el "precio final (IVA incluido)" mostrado bajo el precio
-// base y el tipo de IVA, sin volver a pintar todo el modal (evita perder el
-// foco mientras se escribe, igual que ya se hacía para el % de consumibles).
+// Lo que hay escrito ahora mismo en la hoja (o, donde no hay campo, lo guardado).
+function currentRecipeFormState(id){
+  const nameEl = document.getElementById('recipe-name');
+  const priceBaseEl = document.getElementById('recipe-price-base');
+  const ivaEl = document.getElementById('recipe-iva');
+  const consumiblesEl = document.getElementById('recipe-consumibles');
+  const categoryEl = document.getElementById('recipe-category');
+  const baseYieldEl = document.getElementById('recipe-base-yield');
+  const baseUnitEl = document.getElementById('recipe-base-unit');
+  const supplementEl = document.getElementById('recipe-delivery-supplement');
+  const r = id ? (getRecipe(id) || {}) : {};
+  const priceBase = priceBaseEl ? parseFloat(priceBaseEl.value)||0 : (r.priceBase!=null?r.priceBase:(r.price||0));
+  const ivaPct = ivaEl ? (ivaEl.value===''?null:parseFloat(ivaEl.value)) : (r.ivaPct!=null?r.ivaPct:null);
+  const sup = supplementEl ? parseFloat(supplementEl.value) : r.deliverySupplement;
+  return {
+    name: nameEl ? nameEl.value : (r.name||''),
+    priceBase,
+    ivaPct,
+    price: ivaPct!=null ? Math.round(priceBase*(1+ivaPct/100)*100)/100 : (r.price||0),
+    deliverySupplement: isFinite(sup) && sup > 0 ? sup : null,
+    comensales: 1,
+    consumiblesPct: consumiblesEl ? (parseFloat(consumiblesEl.value) || 0) : (r.consumiblesPct!=null?r.consumiblesPct:5),
+    category: categoryEl ? categoryEl.value : (r.category||''),
+    isBase: escandalloHoja ? escandalloHoja.isBase : !!r.isBase,
+    baseYield: baseYieldEl ? (parseFloat(baseYieldEl.value) || 1) : (r.baseYield!=null?r.baseYield:1),
+    baseUnit: baseUnitEl ? baseUnitEl.value : (r.baseUnit||'L'),
+    area: r.area || currentArea(),
+  };
+}
+// El «precio final con IVA» a partir de los dos campos de precio. Es la cuenta que comparten Carta, Menú y Escandallo
+// (test/dinero.mjs la comprueba con campos sueltos), así que no depende de que haya una hoja abierta.
 function updateRecipeFinalPriceDisplay(){
   const baseEl = document.getElementById('recipe-price-base');
   const ivaEl = document.getElementById('recipe-iva');
@@ -753,51 +886,18 @@ function updateRecipeFinalPriceDisplay(){
   const base = parseFloat(baseEl.value) || 0;
   const iva = ivaEl.value === '' ? 0 : parseFloat(ivaEl.value);
   display.textContent = fmtMoney(base * (1 + iva/100));
-  ivaEl.style.borderColor = ivaEl.value === '' ? 'var(--red)' : '';
-  ivaEl.style.color = ivaEl.value === '' ? 'var(--red)' : '';
-  // El PVP Delivery es el precio de sala (con IVA) + un suplemento fijo,
-  // igual que un extra/modificador (importe ya con IVA, sin desglose
-  // propio): no cambia de tipo de IVA, solo se le suma un importe al
-  // resultado final — se recalcula aquí al vuelo mientras se escribe.
   const supplementEl = document.getElementById('recipe-delivery-supplement');
   const deliveryDisplay = document.getElementById('recipe-price-delivery-final-display');
-  if(supplementEl && deliveryDisplay){
-    const supplement = parseFloat(supplementEl.value) || 0;
-    deliveryDisplay.textContent = fmtMoney(base * (1 + iva/100) + supplement);
-  }
-}
-function currentRecipeFormState(id){
-  const nameEl = document.getElementById('recipe-name');
-  const priceBaseEl = document.getElementById('recipe-price-base');
-  const ivaEl = document.getElementById('recipe-iva');
-  const comensalesEl = document.getElementById('recipe-comensales');
-  const consumiblesEl = document.getElementById('recipe-consumibles');
-  const categoryEl = document.getElementById('recipe-category');
-  const isBaseEl = document.getElementById('recipe-is-base');
-  const baseYieldEl = document.getElementById('recipe-base-yield');
-  const baseUnitEl = document.getElementById('recipe-base-unit');
-  const r = id ? getRecipe(id) : {};
-  const priceBase = priceBaseEl ? parseFloat(priceBaseEl.value)||0 : (r.priceBase!=null?r.priceBase:(r.price||0));
-  const ivaPct = ivaEl ? (ivaEl.value===''?null:parseFloat(ivaEl.value)) : (r.ivaPct!=null?r.ivaPct:null);
-  return {
-    name: nameEl ? nameEl.value : (r.name||''),
-    priceBase,
-    ivaPct,
-    price: ivaPct!=null ? Math.round(priceBase*(1+ivaPct/100)*100)/100 : (r.price||0),
-    comensales: (isBaseEl ? isBaseEl.checked : !!r.isBase) ? (comensalesEl ? comensalesEl.value : (r.comensales||2)) : 1,
-    consumiblesPct: consumiblesEl ? consumiblesEl.value : (r.consumiblesPct!=null?r.consumiblesPct:5),
-    category: categoryEl ? categoryEl.value : (r.category||''),
-    isBase: isBaseEl ? isBaseEl.checked : !!r.isBase,
-    baseYield: baseYieldEl ? baseYieldEl.value : (r.baseYield!=null?r.baseYield:1),
-    baseUnit: baseUnitEl ? baseUnitEl.value : (r.baseUnit||'L'),
-    area: r.area || currentArea(),
-  };
+  if(supplementEl && deliveryDisplay) deliveryDisplay.textContent = fmtMoney(base * (1 + iva/100) + (parseFloat(supplementEl.value) || 0));
 }
 
 async function saveRecipe(id){
-  if(!isOwnerSession() && !editUnlocked) return;
+  if(!isOwnerSession() && !editUnlocked) return false;
+  // Desde la hoja se llama sin id: manda el de la hoja abierta (un plato nuevo pasa a existir al primer guardado).
+  if(id === undefined && escandalloHoja) id = escandalloHoja.id;
+  id = id || null;
   const name = document.getElementById('recipe-name').value.trim();
-  if(!name){ showToast(t('msg.nameRequired')); return; }
+  if(!name){ showToast(t('msg.nameRequired')); document.getElementById('recipe-name').focus(); return false; }
   // Aviso (no bloqueante) de posible plato duplicado, mismo criterio ya
   // usado en Clientes/Proveedores/Mega Lista — fácil dar de alta "Ensalada
   // César" dos veces sin darse cuenta y que una de las dos fichas quede
@@ -805,7 +905,7 @@ async function saveRecipe(id){
   const isBaseEl = document.getElementById('recipe-is-base');
   const isBase = isBaseEl ? isBaseEl.checked : false;
   const dupe = DB.recipes.find(r => r.id !== id && (r.area||'cocina')===currentArea() && !!r.isBase===isBase && r.name.trim().toLowerCase() === name.toLowerCase());
-  if(dupe && !(await confirmModal(t('msg.confirmDuplicateRecipe').replace('${name}', dupe.name)))) return;
+  if(dupe && !(await confirmModal(t('msg.confirmDuplicateRecipe').replace('${name}', dupe.name)))) return false;
   // Una elaboración base no se vende directamente (no tiene precio de venta
   // ni IVA repercutido propios) — lo que interesa de ella es su coste total
   // y el coste por unidad de rendimiento, no un precio de venta.
@@ -813,7 +913,7 @@ async function saveRecipe(id){
   if(!isBase){
     priceBase = Math.max(0, parseFloat(document.getElementById('recipe-price-base').value) || 0);
     const ivaRaw = document.getElementById('recipe-iva').value;
-    if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
+    if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); document.getElementById('recipe-iva').focus(); return false; }
     ivaPct = parseFloat(ivaRaw);
     price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
     // Suplemento delivery: un importe fijo (ya con IVA, como un extra/
@@ -857,7 +957,7 @@ async function saveRecipe(id){
   let recipeId = id;
   if(id){
     const r = getRecipe(id);
-    if(!r) return;
+    if(!r) return false;
     // "Elaboración base" solo se decide al crear el plato/elaboración (el
     // checkbox está deshabilitado al editar uno existente) — así una
     // elaboración nunca puede acabar puesta a la venta como plato, ni
@@ -870,9 +970,15 @@ async function saveRecipe(id){
   syncElaboracionForRecipe(recipeId, isBase, name, baseUnit);
   ensureFichaForRecipe(recipeId);
   saveDB();
-  closeModal();
-  renderEscandallo();
+  // Se queda en la hoja (ya con su id, si era nueva): la lista queda a un toque en «Volver».
+  if(escandalloHoja){
+    escandalloHoja.id = recipeId;
+    escandalloHojaNueva = null;
+    recipeModalLines = (getRecipe(recipeId).ingredients || []).map(l => ({...l}));
+    esPintarHoja();
+  } else renderEscandallo();
   showToast(t('msg.dishSaved'));
+  return true;
 }
 
 /* Cada plato del Escandallo tiene su hoja de ficha técnica desde el momento
@@ -939,10 +1045,10 @@ function duplicateRecipe(id){
   DB.recipes.push(copy);
   syncElaboracionForRecipe(copy.id, copy.isBase, copy.name, copy.baseUnit);
   saveDB();
-  escandalloRecipe = null;
-  renderEscandallo();
   showToast(t('msg.dishDuplicated'));
-  openRecipeModal(copy.id);
+  // El menú «⋯» se puede abrir con otra hoja con cambios: antes de saltar a la copia se pregunta.
+  const abrir = () => { escandalloHoja = null; openRecipeModal(copy.id); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(abrir); else abrir();
 }
 
 // Secciones de carta donde este plato/receta está puesto a la venta ahora
@@ -980,25 +1086,26 @@ async function deleteRecipe(id){
   const dependentRecipes = recipesUsingBaseRecipe(id);
   if(cartaHits.length || dependentRecipes.length){
     openModal(`
+      <div class="idr-modal"></div>
       <div class="modal-header">
         <h3><i class="ti ti-alert-triangle"></i> ${t('title.dishInUse')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       ${cartaHits.length ? `
-        <p style="font-size:13px">${t('msg.dishInCartaWarning').replace('${name}', escapeHtml(r?r.name:''))}</p>
-        <div style="max-height:160px;overflow-y:auto;margin:6px 0 12px;border:1px solid var(--border);border-radius:8px">
-          ${cartaHits.map(h=>`<div class="ge-item"><span style="flex:1;font-weight:600">${escapeHtml(h.carta.nombre)}</span><span style="color:var(--muted)">${escapeHtml(h.seccion.nombre)}</span></div>`).join('')}
+        <p class="ml-intro">${t('msg.dishInCartaWarning').replace('${name}', escapeHtml(r?r.name:''))}</p>
+        <div class="ml-uso">
+          ${cartaHits.map(h=>`<div class="ml-uso-fila">${escapeHtml(h.carta.nombre)} <span class="es-pista">· ${escapeHtml(h.seccion.nombre)}</span></div>`).join('')}
         </div>
       ` : ''}
       ${dependentRecipes.length ? `
-        <p style="font-size:13px">${t('msg.baseRecipeInUseWarning').replace('${name}', escapeHtml(r?r.name:''))}</p>
-        <div style="max-height:160px;overflow-y:auto;margin:6px 0 12px;border:1px solid var(--border);border-radius:8px">
-          ${dependentRecipes.map(dr=>`<div class="ge-item"><span style="flex:1;font-weight:600">${escapeHtml(dr.name)}</span></div>`).join('')}
+        <p class="ml-intro">${t('msg.baseRecipeInUseWarning').replace('${name}', escapeHtml(r?r.name:''))}</p>
+        <div class="ml-uso">
+          ${dependentRecipes.map(dr=>`<div class="ml-uso-fila">${escapeHtml(dr.name)}</div>`).join('')}
         </div>
       ` : ''}
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-danger" onclick="confirmDeleteRecipe(${id})">${t('btn.deleteAnyway')}</button>
+        <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+        <button type="button" class="btn btn-fino is-off" onclick="confirmDeleteRecipe(${id})">${t('btn.deleteAnyway')}</button>
       </div>
     `);
     return;
@@ -1041,6 +1148,8 @@ function confirmDeleteRecipe(id){
   });
   saveDB();
   closeModal();
+  // Si se borraba el plato de la hoja abierta, la hoja se cierra con él (sin preguntar por cambios de algo que ya no existe).
+  if(escandalloHoja && escandalloHoja.id === id){ escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; }
   renderEscandallo();
   showToast(t('msg.dishDeleted'));
 }
@@ -1387,17 +1496,11 @@ function getFichaAllergens(f){
   return Array.from(new Set([...(r?recipeComputedAllergens(r):[]), ...(f.allergens||[])]));
 }
 
-let fichasView = 'grid'; // 'grid' | 'list'
 let fichasTab = 'platos'; // 'platos' | 'elaboraciones'
-function setFichasView(mode){
-  fichasView = mode;
-  renderFichas();
-}
 function setFichasTab(tab){
-  fichasTab = tab;
-  fichasFolder = null;
-  renderFichas();
-  scrollContentToTop();
+  // Con una ficha a medias, cambiar de pestaña también pregunta.
+  const cambiar = () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; fichasTab = tab; fichasFolder = null; renderFichas(); scrollContentToTop(); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(cambiar); else cambiar();
 }
 
 // Carpeta de categoría actualmente abierta en Fichas Técnicas (null = vista de carpetas)
@@ -1408,6 +1511,7 @@ function openFichaFolder(catKey){
 }
 function backToFichaFolders(){
   fichasFolder = null;
+  fichaHoja = false;
   document.getElementById('fichas-search').value = '';
   renderFichas();
 }
@@ -1427,27 +1531,25 @@ function renderFichas(){
   const box = document.getElementById('fichas-list');
   let html = '';
 
-  document.getElementById('fichas-tab-platos').classList.toggle('active', !isElab);
-  document.getElementById('fichas-tab-elaboraciones').classList.toggle('active', isElab);
+  document.getElementById('view-fichas').classList.toggle('es-en-hoja', !!(fichaHoja && fichaModalState));
+  document.getElementById('fichas-tab-platos').classList.toggle('is-on', !isElab);
+  document.getElementById('fichas-tab-elaboraciones').classList.toggle('is-on', isElab);
   const fichasPlatosTabLabel = document.querySelector('#fichas-tab-platos [data-i18n]');
   if(fichasPlatosTabLabel) fichasPlatosTabLabel.textContent = currentArea()==='sala' ? t('tab.drinks') : t('tab.dishes');
   ajustaIconoPestana('fichas-tab-platos', iconoPestanaPlatos());
   ajustaIconoPestana('fichas-tab-elaboraciones', iconoPestanaElaboraciones());
 
-  document.getElementById('fichas-view-grid').classList.toggle('active', fichasView==='grid');
-  document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
+  // La ficha (ver más abajo) es la ÚNICA pantalla donde se crea, se lee y se edita.
+  if(fichaHoja && fichaModalState){ renderFichaModal(); return; }
 
   const searching = !!(search || cat);
-  const gridClass = fichasView==='list' ? '' : 'grid grid-compact';
-  const renderCard = r => fichasView==='list' ? renderFichaRow(r) : renderFichaCard(r);
+  const unidades = n => currentArea()==='sala' ? (n===1?t('label.oneDrink'):t('label.nDrinks').replace('${n}', n)) : (n===1?t('label.oneDish'):t('label.nDishes').replace('${n}', n));
 
   // Fichas sueltas (sin vincular a ningún plato de Escandallo, o vinculadas
   // a uno que ya no existe) que coinciden con la búsqueda actual — se
   // calcula ANTES de cualquier "no hay nada que enseñar" para no perderlas
   // de vista solo porque no haya ningún plato de Escandallo que además
-  // coincida con esa misma búsqueda (antes pasaba justo eso: una ficha
-  // suelta con un nombre que ningún escandallo comparte se quedaba
-  // invisible, aunque existiera).
+  // coincida con esa misma búsqueda.
   const orphanFichas = (!searching && fichasFolder !== null) ? [] : DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
 
   if(!areaRecipes.length){
@@ -1456,18 +1558,32 @@ function renderFichas(){
       return;
     }
   } else if(!searching && fichasFolder === null){
-    // Vista de carpetas por categoría
+    // Vista de carpetas por categoría (las mismas tarjetas que Escandallo y Mega Lista)
     const folders = getEscandalloFolders(areaRecipes);
-    box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
-      <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
-        <div style="font-size:12px;color:var(--muted)">${currentArea()==='sala' ? (group.length===1?t('label.oneDrink'):t('label.nDrinks').replace('${n}', group.length)) : (group.length===1?t('label.oneDish'):t('label.nDishes').replace('${n}', group.length))}</div>
-      </div>
-    `).join('')}</div>`;
+    box.innerHTML = `<div class="ml-carpetas">${folders.map(([key, label, group]) => {
+      const k = escapeJsAttr(key);
+      const real = key !== '__none__';
+      const guardado = (DB.categoryIcons && DB.categoryIcons.recipe && DB.categoryIcons.recipe[key]) || '';
+      const icono = (real && iconoSeccionHtml(guardado, label, 26)) || '<i class="ti ti-folder"></i>';
+      const sinFicha = group.filter(r => !DB.fichas.some(f => f.recipeId === r.id)).length;
+      return `
+      <div class="ml-carpeta" role="button" tabindex="0" onclick="openFichaFolder('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFichaFolder('${k}')}">
+        ${real
+          ? `<span class="cat-icon-btn ml-ico" role="button" title="${escapeHtml(t('title.chooseFolderIcon'))}" aria-label="${escapeHtml(t('title.chooseFolderIcon'))}" onclick="event.stopPropagation();openCategoryIconModal('${k}','${k}','renderFichas','recipe')">${icono}</span>`
+          : `<span class="ml-ico">${icono}</span>`}
+        <div class="ml-carpeta-txt">
+          <div class="ml-carpeta-nom">${escapeHtml(label)}</div>
+          <div class="ml-carpeta-meta">${unidades(group.length)}</div>
+          ${sinFicha ? `<div class="ml-carpeta-pend">${gl({es:'sin ficha', ca:'sense fitxa', en:'no sheet'})}: ${sinFicha}</div>` : ''}
+        </div>
+        ${real ? botonesDeCarpeta(key, 'recipe') : ''}
+      </div>`;
+    }).join('')}</div>${orphanFichas.length ? `<h3 class="es-grupo">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')} <span>${orphanFichas.length}</span></h3><div class="es-platos">${orphanFichas.map(fiTarjetaSueltaHtml).join('')}</div>` : ''}`;
     return;
   }
 
-  const backBtn = (!searching && fichasFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button>` : '';
+  const backBtn = (!searching && fichasFolder !== null)
+    ? `<div class="ml-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button><div class="ml-ruta-nom">${escapeHtml(fichasFolder === '__none__' ? t('label.noCategory') : fichasFolder)}</div></div>` : '';
 
   const visibleRecipes = (!searching && fichasFolder !== null)
     ? recipes.filter(r => (r.category || '__none__') === fichasFolder)
@@ -1481,77 +1597,69 @@ function renderFichas(){
   if(visibleRecipes.length){
     if(searching){
       html += groupRecipesByCategory(visibleRecipes).map(([catName, group]) => `
-        <h3 class="cat-heading">${escapeHtml(catName)}</h3>
-        <div class="${gridClass}">${group.map(renderCard).join('')}</div>
+        <h3 class="es-grupo">${escapeHtml(catName)} <span>${group.length}</span></h3>
+        <div class="es-platos">${group.map(fiTarjetaHtml).join('')}</div>
       `).join('');
     } else {
-      html += backBtn + `<div class="${gridClass}">${visibleRecipes.map(renderCard).join('')}</div>`;
+      html += backBtn + `<div class="es-platos">${visibleRecipes.map(fiTarjetaHtml).join('')}</div>`;
     }
   } else {
     html += backBtn;
   }
 
   if(orphanFichas.length){
-    html += `<h3 class="cat-heading">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')}</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
-      <div class="list-row" style="cursor:pointer" onclick="openFichaModal(${f.id})">
-        <div class="list-row-name">${fichaTipoIconoHtml(f)} <span>${escapeHtml(f.name)}</span></div>
-        ${fichaTipoBadgeHtml(f)}
-        <div class="actions-cell">
-          <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i></button>
-          <button class="owner-only btn btn-sm btn-icon" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-    ` : `
-      <div class="card card-compact" style="cursor:pointer" onclick="openFichaModal(${f.id})">
-        <h3 style="justify-content:space-between"><span style="overflow:visible;text-overflow:clip;white-space:normal">${fichaTipoIconoHtml(f)} ${escapeHtml(f.name)}</span></h3>
-        ${fichaTipoBadgeHtml(f)}
-        <div class="actions-cell">
-          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-          <button class="owner-only btn btn-sm" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
-        </div>
-      </div>
-    `).join('') + `</div>`;
+    html += `<h3 class="es-grupo">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')} <span>${orphanFichas.length}</span></h3><div class="es-platos">${orphanFichas.map(fiTarjetaSueltaHtml).join('')}</div>`;
   }
 
   box.innerHTML = html;
 }
 
-function renderFichaRow(r){
-  const ficha = DB.fichas.find(f => f.recipeId === r.id);
-  return `
-    <div class="list-row" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
-      <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(r.name)}</span></div>
-      ${ficha ? `<span class="badge badge-green">${t('label.linked')}</span>` : `<span class="badge badge-amber">${t('label.noTechSheet')}</span>`}
-      ${ficha ? `
-        <div class="actions-cell">
-          <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i></button>
-          <button class="owner-only btn btn-sm btn-icon" onclick="event.stopPropagation();duplicateFicha(${ficha.id})"><i class="ti ti-copy"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i></button>
-        </div>
-      ` : ''}
-    </div>
-  `;
+// Cuántos pasos tiene, cuánto tarda y cuántos alérgenos lleva: lo que se quiere saber sin abrirla.
+function fiResumenHtml(f){
+  const pasos = (f.pasos || []).filter(p => p && String(p).trim()).length;
+  const alg = getFichaAllergens(f).length;
+  const k = (et, v) => `<span class="es-cifra"><i>${et}</i><b>${v}</b></span>`;
+  return k(gl({es:'Pasos', ca:'Passos', en:'Steps'}), pasos || '—')
+    + k(gl({es:'Tiempo', ca:'Temps', en:'Time'}), f.tiempo ? f.tiempo + ' min' : '—')
+    + k(t('label.allergens'), alg || '—');
 }
-
-function renderFichaCard(r){
-  const ficha = DB.fichas.find(f => f.recipeId === r.id);
+function fiMenuHtml(f){
+  return ggMenuAcciones([
+    {icono:'ti-file-text', texto:gl({es:'Abrir', ca:'Obrir', en:'Open'}), fn:`openFichaModal(${f.id})`},
+    {icono:'ti-printer', texto:t('common.print'), fn:`printFicha(${f.id})`},
+    {icono:'ti-copy', texto:t('btn.duplicate'), fn:`duplicateFicha(${f.id})`, owner:true},
+    {icono:'ti-trash', texto:t('common.delete'), fn:`deleteFicha(${f.id})`, peligro:true, owner:true}
+  ]);
+}
+// La tarjeta de un plato del Escandallo: tenga o no ficha.
+function fiTarjetaHtml(r){
+  const f = DB.fichas.find(x => x.recipeId === r.id);
+  const abrir = f ? `openFichaModal(${f.id})` : `openFichaModal(null, ${r.id})`;
+  const sala = (r.area||'cocina') === 'sala';
+  const icono = r.isBase ? (sala ? 'ti-flask' : 'ti-soup') : (sala ? 'ti-glass-cocktail' : 'ti-chef-hat');
   return `
-    <div class="card card-compact" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
-      <h3 style="justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <span style="overflow:visible;text-overflow:clip;white-space:normal;flex:1;min-width:0"><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
-        ${ficha ? `<span class="badge badge-green" style="flex:none">${t('label.linked')}</span>` : `<span class="badge badge-amber" style="flex:none">${t('label.noTechSheet')}</span>`}
-      </h3>
-      ${ficha ? `
-        <div class="actions-cell">
-          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-          <button class="owner-only btn btn-sm" onclick="event.stopPropagation();duplicateFicha(${ficha.id})"><i class="ti ti-copy"></i></button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
-        </div>
-      ` : `<div style="font-size:12px;color:var(--muted)">${t('title.newTechSheet')}</div>`}
-    </div>
-  `;
+    <article class="es-plato" role="button" tabindex="0" onclick="${abrir}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${abrir}}">
+      <div class="es-plato-cab">
+        <i class="ti ${icono} es-plato-ico"></i>
+        <div class="es-plato-nom">${escapeHtml(r.name)}</div>
+        ${f ? fiMenuHtml(f) : ''}
+      </div>
+      <div class="es-plato-insignias">${f ? `<span class="badge badge-green">${t('label.linked')}</span>${f.bebidaTipo ? fichaTipoBadgeHtml(f) : ''}` : `<span class="badge badge-amber">${t('label.noTechSheet')}</span>`}</div>
+      <div class="es-plato-cifras">${f ? fiResumenHtml(f) : `<span class="es-pista">${t('title.newTechSheet')}</span>`}</div>
+    </article>`;
+}
+// Una ficha suelta (sin escandallo detrás).
+function fiTarjetaSueltaHtml(f){
+  return `
+    <article class="es-plato" role="button" tabindex="0" onclick="openFichaModal(${f.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFichaModal(${f.id})}">
+      <div class="es-plato-cab">
+        ${fichaTipoIconoHtml(f).replace('<i class="ti ', '<i class="es-plato-ico ti ')}
+        <div class="es-plato-nom">${escapeHtml(f.name)}</div>
+        ${fiMenuHtml(f)}
+      </div>
+      <div class="es-plato-insignias"><span class="badge badge-gray">${t('label.notLinked')}</span>${fichaTipoBadgeHtml(f)}</div>
+      <div class="es-plato-cifras">${fiResumenHtml(f)}</div>
+    </article>`;
 }
 
 // Devuelve las líneas de ingredientes (cantidad para 1 ración base, unidad y nombre)
@@ -1569,6 +1677,7 @@ function getFichaIngredientLines(f){
 }
 
 function openFichaModal(id, recipeId){
+  if(!isOwnerSession() && !editUnlocked && !id && !recipeId) return;
   if(id){
     const f = getFicha(id);
     // f puede no existir si se borró desde otro dispositivo mientras esta
@@ -1610,7 +1719,13 @@ function openFichaModal(id, recipeId){
   } else {
     fichaModalState = {id:null, name:'', recipeId:'', comensales:2, baseComensales:1, produccion:1, tiempo:'', temp: currentArea()==='sala' ? 'FRÍO' : 'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:'', bebidaTipo:'', bebida:{}};
   }
+  if(!Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet = [];
+  fichaHoja = true;
   renderFichaModal();
+  fichaHojaBase = fiFoto();
+  const activa = document.querySelector('.view.active');
+  if(!activa || activa.id !== 'view-fichas') navigate('fichas');
+  else scrollContentToTop();
 }
 
 function updateFichaProduccion(value){
@@ -1620,7 +1735,137 @@ function updateFichaProduccion(value){
     const ficha = getFicha(fichaModalState.id);
     if(ficha){ ficha.produccion = fichaModalState.produccion; saveDB(); }
   }
+  // Solo cambian las cantidades y el título de los ingredientes: no se repinta la hoja entera (se perdería el foco).
+  fiPintarIngredientes();
+}
+
+/* ============================================================
+   LA FICHA (30/10) — un documento para cocinar el plato, y la misma pantalla donde se crea y se edita.
+   Mismo planteamiento que la hoja de Escandallo: antes se abría en un modal. Ahora es una página con dos columnas
+   —los ingredientes (la mise en place, a la cantidad de lo que se va a producir) y el paso a paso— y el resto debajo.
+   Cada paso lleva, si hace falta, su tiempo, su temperatura y un «ojo» para el punto crítico: lo que separa una
+   receta que sale siempre igual de una que depende de quién la haga. Quien no puede editar la ve como un documento.
+   ============================================================ */
+let fichaHoja = false;           // hay una ficha abierta en la pantalla (id null = ficha nueva)
+let fichaHojaBase = '';          // foto de la ficha al abrirla o guardarla: lo que difiera son cambios sin guardar
+function fiFoto(){
+  if(!fichaHoja || !fichaModalState || !document.getElementById('fichas-list')) return '';
+  syncFichaModalFields();
+  const f = fichaModalState;
+  // La producción NO cuenta: se guarda al instante (es una escala de trabajo, no contenido de la ficha).
+  return JSON.stringify({n:f.name, c:f.comensales, t:f.tiempo, tp:f.temp, i:f.ingredients, p:f.pasos, d:f.pasosDet, a:f.allergens, pr:f.presentation, ph:f.photo ? f.photo.length : 0, bt:f.bebidaTipo, b:f.bebida});
+}
+function fiSucia(){ return !!(fichaHoja && fichaModalState) && fiFoto() !== fichaHojaBase; }
+function fiMarcarCambio(){ const el = document.getElementById('fi-sucio'); if(el) el.hidden = !fiSucia(); }
+if(typeof ggRegistrarEditor === 'function') ggRegistrarEditor('ficha', {
+  sucio: () => fiSucia(),
+  nombre: () => gl({es:'Ficha: ', ca:'Fitxa: ', en:'Sheet: '}) + ((fichaModalState && fichaModalState.name && fichaModalState.name.trim()) || gl({es:'sin nombre', ca:'sense nom', en:'unnamed'})),
+  guardar: () => saveFicha(),
+  descartar: () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; renderFichas(); }
+});
+if(typeof document !== 'undefined' && document.addEventListener){
+  ['input','change'].forEach(ev => document.addEventListener(ev, e => {
+    if(e.target && e.target.closest && e.target.closest('#view-fichas') && fichaHoja) fiMarcarCambio();
+  }));
+}
+
+// Lo que se enseña en las ingredientes y el título «para N raciones»: se repinta aparte para no tocar el resto.
+function fiPintarIngredientes(){
+  const f = fichaModalState;
+  if(!f) return;
+  const cont = document.getElementById('ficha-ingredients');
+  if(!cont) return;
+  cont.innerHTML = fiIngredientesHtml(f);
+  const tit = document.getElementById('fi-ing-tit');
+  if(tit) tit.innerHTML = fiTituloIngredientes(f);
+}
+function fiFactor(f){
+  const base = getFichaBaseComensales(f);
+  const produccion = f.produccion || base;
+  return {base, produccion, factor: (base && base > 0) ? (produccion / base) : 1};
+}
+function fiTituloIngredientes(f){
+  const {produccion} = fiFactor(f);
+  const sala = (f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || currentArea()) === 'sala';
+  const unidad = produccion === 1 ? (sala ? t('noun.drink') : t('noun.ration')) : (sala ? t('noun.drinks') : t('noun.rations'));
+  return `${t('label.ingredients')} <span class="fi-para">${gl({es:'para', ca:'per a', en:'for'})} ${fmtNum(produccion)} ${escapeHtml(unidad)}</span>`;
+}
+function fiIngredientesHtml(f){
+  const ro = !editUnlocked;
+  const {factor} = fiFactor(f);
+  if(f.recipeId){
+    const lineas = getFichaIngredientLines(f);
+    if(!lineas.length) return `<div class="empty es-vacio"><i class="ti ti-basket"></i>${t('empty.noIngredients')}</div>`;
+    return `<ul class="fi-ings">${lineas.map(l => `
+      <li><span class="fi-ing-q">${l.qty != null ? `${fmtNum(l.qty * factor)} <small>${escapeHtml(l.unit)}</small>` : '—'}</span><span class="fi-ing-n">${escapeHtml(l.name)}</span></li>`).join('')}</ul>
+      <p class="es-nota"><i class="ti ti-calculator"></i> ${gl({es:'Las cantidades salen del Escandallo y se ajustan solas a la producción.', ca:'Les quantitats surten de l\'Escandall i s\'ajusten soles a la producció.', en:'Quantities come from Costing and scale with the production.'})}</p>`;
+  }
+  const lista = (f.ingredients && f.ingredients.length) ? f.ingredients : [''];
+  if(ro) return `<ul class="fi-ings">${lista.filter(Boolean).map(s => `<li><span class="fi-ing-n">${escapeHtml(s)}</span></li>`).join('')}</ul>`;
+  return `<div class="fi-ings-edit">${lista.map((ing, idx) => `
+    <div class="fi-ing-fila">
+      <input type="text" value="${escapeHtml(ing)}" placeholder="${t('ph.egIngredientLine')}" oninput="updateFichaIngredientText(${idx}, this.value)">
+      ${lista.length > 1 ? ggMenuAcciones([{icono:'ti-trash', texto:gl({es:'Quitar ingrediente', ca:'Treure ingredient', en:'Remove ingredient'}), fn:`removeFichaIngredientText(${idx})`, peligro:true, owner:true}]) : ''}
+    </div>`).join('')}
+    <button type="button" class="owner-only btn btn-sm btn-fino" onclick="addFichaIngredientText()"><i class="ti ti-plus"></i> ${t('btn.addIngredient')}</button></div>`;
+}
+
+function fiPasosHtml(f){
+  const ro = !editUnlocked;
+  const pasos = (f.pasos && f.pasos.length) ? f.pasos : [''];
+  const det = f.pasosDet || [];
+  if(ro){
+    const llenos = pasos.map((p, i) => ({p, d: det[i] || {}, i})).filter(x => x.p && String(x.p).trim());
+    if(!llenos.length) return `<p class="es-pista">${t('label.notSpecified')}</p>`;
+    return `<ol class="fi-pasos">${llenos.map((x, n) => `
+      <li class="fi-paso">
+        <div class="fi-paso-n">${n + 1}</div>
+        <div class="fi-paso-c">
+          <p class="fi-paso-leer">${escapeHtml(x.p)}</p>
+          ${(x.d.min || x.d.temp) ? `<div class="fi-paso-chips">${x.d.min ? `<span class="fi-chip"><i class="ti ti-clock"></i> ${escapeHtml(String(x.d.min))} min</span>` : ''}${x.d.temp ? `<span class="fi-chip"><i class="ti ti-temperature"></i> ${escapeHtml(String(x.d.temp))}</span>` : ''}</div>` : ''}
+          ${x.d.aviso ? `<div class="fi-ojo"><b>${gl({es:'Ojo', ca:'Ull', en:'Watch out'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}
+        </div>
+      </li>`).join('')}</ol>`;
+  }
+  return `<ol class="fi-pasos">${pasos.map((p, idx) => {
+    const d = det[idx] || {};
+    return `
+    <li class="fi-paso">
+      <div class="fi-paso-n">${idx + 1}</div>
+      <div class="fi-paso-c">
+        <textarea class="fi-paso-txt" rows="2" placeholder="${t('ficha.stepPlaceholder')}" aria-label="${gl({es:'Paso', ca:'Pas', en:'Step'})} ${idx + 1}" oninput="updateFichaStep(${idx}, this.value);fiAutoAlto(this)">${escapeHtml(p)}</textarea>
+        <div class="fi-paso-det">
+          <label class="fi-det"><i class="ti ti-clock"></i><input type="number" min="0" step="1" value="${d.min || ''}" placeholder="min" aria-label="${gl({es:'Minutos', ca:'Minuts', en:'Minutes'})}" oninput="updateFichaPasoDet(${idx}, 'min', this.value)"></label>
+          <label class="fi-det"><i class="ti ti-temperature"></i><input type="text" value="${escapeHtml(d.temp || '')}" placeholder="180 °C" aria-label="${gl({es:'Temperatura', ca:'Temperatura', en:'Temperature'})}" oninput="updateFichaPasoDet(${idx}, 'temp', this.value)"></label>
+          <label class="fi-det fi-det-ojo"><i class="ti ti-alert-triangle"></i><input type="text" value="${escapeHtml(d.aviso || '')}" placeholder="${gl({es:'Ojo: punto crítico', ca:'Ull: punt crític', en:'Watch out: critical point'})}" aria-label="${gl({es:'Punto crítico', ca:'Punt crític', en:'Critical point'})}" oninput="updateFichaPasoDet(${idx}, 'aviso', this.value)"></label>
+        </div>
+      </div>
+      <div class="fi-paso-acc">${ggMenuAcciones([
+        idx > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:`moveFichaStep(${idx},-1)`, owner:true} : null,
+        idx < pasos.length - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:`moveFichaStep(${idx},1)`, owner:true} : null,
+        pasos.length > 1 ? {icono:'ti-trash', texto:gl({es:'Quitar paso', ca:'Treure pas', en:'Remove step'}), fn:`removeFichaStep(${idx})`, peligro:true, owner:true} : null
+      ].filter(Boolean))}</div>
+    </li>`;
+  }).join('')}</ol>
+  <button type="button" class="owner-only btn btn-fino" onclick="addFichaStep()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>`;
+}
+function fiAutoAlto(el){ el.style.height = 'auto'; el.style.height = Math.max(el.scrollHeight, 56) + 'px'; }
+function updateFichaPasoDet(idx, campo, valor){
+  const f = fichaModalState;
+  if(!Array.isArray(f.pasosDet)) f.pasosDet = [];
+  while(f.pasosDet.length <= idx) f.pasosDet.push({});
+  f.pasosDet[idx] = {...(f.pasosDet[idx] || {}), [campo]: valor};
+  fiMarcarCambio();
+}
+function moveFichaStep(idx, dir){
+  const f = fichaModalState, j = idx + dir;
+  if(j < 0 || j >= f.pasos.length) return;
+  syncFichaModalFields();
+  while(f.pasosDet.length < f.pasos.length) f.pasosDet.push({});
+  [f.pasos[idx], f.pasos[j]] = [f.pasos[j], f.pasos[idx]];
+  [f.pasosDet[idx], f.pasosDet[j]] = [f.pasosDet[j], f.pasosDet[idx]];
   renderFichaModal();
+  fiMarcarCambio();
 }
 
 function renderFichaModal(){
@@ -1638,37 +1883,10 @@ function renderFichaModal(){
   // Cuando la ficha está vinculada a un escandallo, el nombre/comensales vienen de
   // ahí y quedan bloqueados; una ficha sin vincular permite editarlos a mano.
   const lockedAttr = (ro || f.recipeId) ? 'disabled' : '';
+  if(!Array.isArray(f.pasosDet)) f.pasosDet = [];
 
-  const baseComensales = getFichaBaseComensales(f);
-  const produccion = f.produccion || baseComensales;
-  const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
-  const ingredientsHtml = f.recipeId ? getFichaIngredientLines(f).map(l => `
-    <div class="ingredient-pill">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</div>
-  `).join('') : `
-    <div style="width:100%">
-      ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).map((ing, idx) => `
-        <div class="step-row" style="margin-bottom:6px">
-          <input type="text" value="${escapeHtml(ing)}" placeholder="${t('ph.egIngredientLine')}" style="flex:1" oninput="updateFichaIngredientText(${idx}, this.value)" ${roAttr}>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredientText(${idx})" ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
-        </div>
-      `).join('')}
-      <button class="owner-only btn btn-sm" onclick="addFichaIngredientText()"><i class="ti ti-plus"></i> ${t('btn.addIngredient')}</button>
-    </div>
-  `;
+  const {produccion} = fiFactor(f);
 
-  const stepsHtml = f.pasos.map((p, idx) => `
-    <div class="step-row">
-      <div class="step-num">${idx+1}</div>
-      <textarea placeholder="${t('ficha.stepPlaceholder')}" style="flex:1" oninput="updateFichaStep(${idx}, this.value)" ${roAttr}>${escapeHtml(p)}</textarea>
-      <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaStep(${idx})" ${f.pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
-    </div>
-  `).join('');
-
-  // En vivo a partir de los ingredientes/bases ACTUALES (recipeComputedAllergens),
-  // no la foto fija r.allergens guardada en el último "Guardar" del escandallo —
-  // si no, editar un ingrediente después dejaba este modal mostrando alérgenos
-  // desactualizados aunque la impresión (getFichaAllergens, mismo cálculo en
-  // vivo) ya mostrara los correctos.
   // Ficha de bebida (solo sala): el tipo elegido decide qué campos se piden.
   // Una ficha de vino no pregunta por el tiempo de extracción del café.
   const bebidaHtml = !isSala ? '' : (() => {
@@ -1676,7 +1894,7 @@ function renderFichaModal(){
     const campoHtml = c => {
       const v = datos[c.k] !== undefined ? String(datos[c.k]) : '';
       const id = `bebida-${c.k}`;
-      const lab = `<label>${escapeHtml(gl(c.l))}${c.unidad?` <span style="color:var(--muted);font-weight:400">(${escapeHtml(c.unidad)})</span>`:''}</label>`;
+      const lab = `<label for="${id}">${escapeHtml(gl(c.l))}${c.unidad?` <span class="es-pista">(${escapeHtml(c.unidad)})</span>`:''}</label>`;
       if(c.tipo === 'sel'){
         // La opción vacía deja decir "todavía no lo sé" sin inventarse un valor.
         const opts = (c.opts||[]).some(o => o.v === '') ? c.opts : [{v:'', l:{es:'—',ca:'—',en:'—'}}, ...(c.opts||[])];
@@ -1706,104 +1924,125 @@ function renderFichaModal(){
     });
     if(fila.length) bloques.push(`<div class="field-row">${fila.join('')}</div>`);
     return `
-      <div class="field">
-        <label>${t('label.drinkType')}</label>
-        <select id="ficha-bebida-tipo" onchange="setFichaBebidaTipo(this.value)" ${roAttr}>
-          <option value="">${t('label.drinkTypeNone')}</option>
-          ${BEBIDA_TIPOS.map(x=>`<option value="${x.key}"${x.key===f.bebidaTipo?' selected':''}>${escapeHtml(gl(x.l))}</option>`).join('')}
-        </select>
-      </div>
-      ${f.bebidaTipo ? bloques.join('') : ''}
-    `;
+      <section class="es-card fi-ancho">
+        <h3 class="es-tit">${gl({es:'Datos de la bebida', ca:'Dades de la beguda', en:'Drink details'})}</h3>
+        <div class="field">
+          <label for="ficha-bebida-tipo">${t('label.drinkType')}</label>
+          <select id="ficha-bebida-tipo" onchange="setFichaBebidaTipo(this.value)" ${roAttr}>
+            <option value="">${t('label.drinkTypeNone')}</option>
+            ${BEBIDA_TIPOS.map(x=>`<option value="${x.key}"${x.key===f.bebidaTipo?' selected':''}>${escapeHtml(gl(x.l))}</option>`).join('')}
+          </select>
+        </div>
+        ${f.bebidaTipo ? bloques.join('') : ''}
+      </section>`;
   })();
 
+  // En vivo a partir de los ingredientes/bases ACTUALES (recipeComputedAllergens), no la foto fija guardada.
   const liveRecipeAllergens = recipeComputedAllergens(getFichaLiveRecipe(f));
   const allergenHtml = ALLERGEN_LIST.map(a => {
     const fromRecipe = liveRecipeAllergens.includes(a);
     const on = fromRecipe || (f.allergens||[]).includes(a);
     const clickable = !ro && !fromRecipe;
-    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?t('title.autoDetectedFromCosting'):''}">${escapeHtml(allergenLabel(a))}</div>`;
+    if(ro && !on) return '';
+    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')" role="button" tabindex="0"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?t('title.autoDetectedFromCosting'):''}">${escapeHtml(allergenLabel(a))}</div>`;
   }).join('');
 
-  openModal(`
-    <div class="modal-header">
-      <h3>${f.id ? (ro?t('title.viewTechSheet'):t('title.editTechSheet')) : t('title.newTechSheet')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+  const titulo = f.id ? (ro ? t('title.viewTechSheet') : t('title.editTechSheet')) : t('title.newTechSheet');
+  const metaCampo = (id, et, html) => `<div class="fi-meta-c"><label for="${id}">${et}</label>${html}</div>`;
+  const fotoHtml = isBaseElaboration ? '' : `
+    <div class="fi-foto">
+      ${f.photo ? `
+        <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" onclick="openFichaPhotoLightbox(this.src)">
+        ${ro ? '' : `<button type="button" class="btn btn-sm btn-fino is-off fi-foto-quitar" onclick="removeFichaPhoto()"><i class="ti ti-trash"></i> ${t('btn.removePhoto')}</button>`}
+      ` : (ro ? `<div class="fi-foto-vacia"><i class="ti ti-photo"></i></div>` : `
+        <label class="fi-foto-vacia fi-foto-subir">
+          <i class="ti ti-camera-plus"></i><span>${t('btn.uploadPlatingPhoto')}</span>
+          <input type="file" accept="image/*" style="display:none" onchange="handleFichaPhotoUpload(this)">
+        </label>`)}
+    </div>`;
+
+  document.getElementById('view-fichas').classList.add('es-en-hoja');
+  document.getElementById('fichas-list').innerHTML = `
+    <div class="es-barra">
+      <button type="button" class="btn btn-sm btn-fino" onclick="backToFichaList()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+      <div class="es-barra-titulo">${escapeHtml(titulo)}</div>
+      <div class="es-barra-der">
+        <span class="oc-sucio" id="fi-sucio" hidden><i class="ti ti-point-filled"></i> ${t('oferta.sucio')}</span>
+        <button type="button" class="btn btn-fino" onclick="fiImprimir()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+        ${ro ? '' : `<button type="button" class="owner-only btn btn-fino is-on" onclick="saveFicha()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>`}
+        ${f.id ? ggMenuAcciones([
+          {icono:'ti-copy', texto:t('btn.duplicate'), fn:`duplicateFicha(${f.id})`, owner:true},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`deleteFicha(${f.id})`, peligro:true, owner:true}
+        ]) : ''}
+      </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${isSala ? t('label.drinkName') : t('label.dishName')}</label>
-        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="${isSala ? t('ph.drinkName') : t('ph.dishName')}" ${lockedAttr}>
+
+    <section class="es-card fi-hero${isBaseElaboration ? ' sin-foto' : ''}">
+      ${fotoHtml}
+      <div class="fi-hero-txt">
+        <div class="field">
+          <label for="ficha-name">${isSala ? t('label.drinkName') : t('label.dishName')}</label>
+          <input type="text" id="ficha-name" class="es-nombre" value="${escapeHtml(f.name)}" placeholder="${isSala ? t('ph.drinkName') : t('ph.dishName')}" ${lockedAttr}>
+        </div>
+        <div class="fi-vinculo">
+          ${linkedRecipe
+            ? `<i class="ti ti-calculator"></i> ${t('label.fromCosting')}: <b>${escapeHtml(linkedRecipe.name)}</b> <button type="button" class="owner-only btn btn-sm btn-fino" onclick="fiVerEscandallo(${linkedRecipe.id})">${gl({es:'Ver escandallo', ca:'Veure escandall', en:'Open costing'})}</button>`
+            : `<i class="ti ti-unlink"></i> ${t('label.notLinked')}`}
+        </div>
+        <div class="fi-meta">
+          ${metaCampo('ficha-comensales', isSala ? t('label.servings') : t('label.diners'), `<input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${lockedAttr}>`)}
+          ${metaCampo('ficha-produccion', t('label.production'), `<input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" max="100000" onchange="updateFichaProduccion(this.value)">`)}
+          ${metaCampo('ficha-tiempo', t('label.prepTime') , `<input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0" ${roAttr}>`)}
+          ${isSala && f.bebidaTipo ? '' : metaCampo('ficha-temp', t('label.servingTemp'), `<select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(tv=>`<option value="${tv}"${tv===f.temp?' selected':''}>${fichaTempLabel(tv)}</option>`).join('')}</select>`)}
+        </div>
       </div>
-      <div class="field">
-        <label>${t('label.fromCosting')}</label>
-        ${linkedRecipe
-          ? `<div style="padding:10px 12px;border:1px solid var(--border);background:var(--bg);font-size:13px"><i class="ti ti-calculator"></i> ${escapeHtml(linkedRecipe.name)}</div>`
-          : `<div style="padding:10px 12px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--muted)">${t('label.notLinked')}</div>`}
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${isSala ? t('label.servings') : t('label.diners')}</label>
-        <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${lockedAttr}>
-      </div>
-      <div class="field">
-        <label>${t('label.production')}</label>
-        <input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" max="100000" onchange="updateFichaProduccion(this.value)">
-      </div>
-      <div class="field">
-        <label>${t('label.prepTime')}</label>
-        <input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0" ${roAttr}>
-      </div>
-      ${isSala && f.bebidaTipo ? '' : `
-      <div class="field">
-        <label>${t('label.servingTemp')}</label>
-        <select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(tv=>`<option value="${tv}"${tv===f.temp?' selected':''}>${fichaTempLabel(tv)}</option>`).join('')}</select>
-      </div>
-      `}
+    </section>
+
+    <div class="fi-cuerpo">
+      <section class="es-card fi-ingredientes">
+        <h3 class="es-tit" id="fi-ing-tit">${fiTituloIngredientes(f)}</h3>
+        <div id="ficha-ingredients">${fiIngredientesHtml(f)}</div>
+      </section>
+      <section class="es-card fi-elaboracion">
+        <h3 class="es-tit">${t('label.preparation')}</h3>
+        <div id="ficha-steps">${fiPasosHtml(f)}</div>
+      </section>
     </div>
 
     ${bebidaHtml}
 
-    <div class="field">
-      <label>${t('label.ingredients')}</label>
-      <div id="ficha-ingredients" class="ingredients-grid">${ingredientsHtml}</div>
-    </div>
-
-    <div class="field">
-      <label>${t('label.preparation')}</label>
-      <div id="ficha-steps">${stepsHtml}</div>
-      <button class="owner-only btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
-    </div>
-
     ${isBaseElaboration ? '' : `
-    <div class="field">
-      <label>${isSala ? t('label.serviceNotes') : t('label.plating')}</label>
-      <textarea id="ficha-presentation" placeholder="${isSala ? t('ph.serviceNotes') : t('ph.presentationNotes')}" ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
-      <div style="display:flex;align-items:flex-start;gap:12px;margin-top:8px;flex-wrap:wrap">
-        ${f.photo ? `
-          <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="width:260px;height:260px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in" onclick="openFichaPhotoLightbox('${escapeJsAttr(f.photo)}')" title="${t('title.clickToEnlarge')}">
-          ${ro ? '' : `<button class="btn btn-sm btn-danger" onclick="removeFichaPhoto()"><i class="ti ti-trash"></i> ${t('btn.removePhoto')}</button>`}
-        ` : (ro ? '' : `
-          <label class="btn btn-sm" style="cursor:pointer">
-            <i class="ti ti-camera-plus"></i> ${t('btn.uploadPlatingPhoto')}
-            <input type="file" accept="image/*" style="display:none" onchange="handleFichaPhotoUpload(this)">
-          </label>
-        `)}
-      </div>
-    </div>
-    `}
+    <section class="es-card fi-ancho">
+      <h3 class="es-tit">${isSala ? t('label.serviceNotes') : t('label.plating')}</h3>
+      ${ro ? `<p class="fi-leer">${escapeHtml(f.presentation || '') || `<span class="es-pista">${t('label.notSpecified')}</span>`}</p>`
+           : `<textarea id="ficha-presentation" rows="3" placeholder="${isSala ? t('ph.serviceNotes') : t('ph.presentationNotes')}">${escapeHtml(f.presentation||'')}</textarea>`}
+    </section>`}
 
-    <div class="field">
-      <label>${t('label.allergens')}</label>
-      <div class="alg-grid">${allergenHtml}</div>
-    </div>
+    <section class="es-card fi-ancho">
+      <h3 class="es-tit">${t('label.allergens')}</h3>
+      <div class="alg-grid">${allergenHtml || `<span class="es-pista">${t('label.none')}</span>`}</div>
+    </section>
+  `;
+  document.querySelectorAll('#ficha-steps .fi-paso-txt').forEach(fiAutoAlto);
+}
 
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${ro?t('common.close'):t('common.cancel')}</button>
-      <button class="owner-only btn btn-primary" onclick="saveFicha()">${t('common.save')}</button>
-    </div>
-  `, {xl:true});
+// Abrir la hoja desde donde sea: si no se está en Fichas, se va; y al volver se ve la lista, no una ficha a medias.
+function backToFichaList(){
+  const volver = () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; renderFichas(); scrollContentToTop(); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(volver); else volver();
+}
+function fiVerEscandallo(recipeId){
+  const ir = () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; navigate('escandallo', true); openRecipeModal(recipeId); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(ir); else ir();
+}
+// Imprimir lo que se está viendo: si hay cambios, se guardan antes (el papel sale de lo guardado).
+async function fiImprimir(){
+  if(fiSucia()){
+    if(!editUnlocked) return;
+    const ok = await saveFicha();
+    if(!ok) return;
+  }
+  if(fichaModalState && fichaModalState.id) printFicha(fichaModalState.id);
 }
 
 function syncFichaModalFields(){
@@ -1871,12 +2110,22 @@ function removeFichaIngredientText(idx){
 }
 
 function updateFichaStep(idx, value){ fichaModalState.pasos[idx] = value; }
-function addFichaStep(){ syncFichaModalFields(); fichaModalState.pasos.push(''); renderFichaModal(); }
+function addFichaStep(){
+  syncFichaModalFields();
+  fichaModalState.pasos.push('');
+  if(!Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet = [];
+  while(fichaModalState.pasosDet.length < fichaModalState.pasos.length) fichaModalState.pasosDet.push({});
+  renderFichaModal();
+  fiMarcarCambio();
+  const t0 = document.querySelectorAll('#ficha-steps .fi-paso-txt'); if(t0.length) t0[t0.length - 1].focus();
+}
 function removeFichaStep(idx){
   if(fichaModalState.pasos.length<=1) return;
   syncFichaModalFields();
   fichaModalState.pasos.splice(idx,1);
+  if(Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet.splice(idx,1);
   renderFichaModal();
+  fiMarcarCambio();
 }
 
 function handleFichaPhotoUpload(input){
@@ -1918,13 +2167,14 @@ function toggleFichaAllergen(a){
 }
 
 async function saveFicha(){
+  if(!isOwnerSession() && !editUnlocked) return false;
   syncFichaModalFields();
   const f = fichaModalState;
   const name = (f.name||'').trim();
-  if(!name){ showToast(t('msg.nameRequired')); return; }
+  if(!name){ showToast(t('msg.nameRequired')); const n0 = document.getElementById('ficha-name'); if(n0) n0.focus(); return false; }
   if(f.recipeId && DB.fichas.some(other => other.id !== f.id && other.recipeId === f.recipeId)){
     showToast(t('msg.recipeAlreadyHasTechSheet'));
-    return;
+    return false;
   }
   // Aviso (no bloqueante) de posible ficha duplicada, mismo criterio ya
   // usado en Escandallo/Clientes/Proveedores/Mega Lista — sin esto, era
@@ -1932,7 +2182,7 @@ async function saveFicha(){
   // y acabar con varias fichas huérfanas con el mismo nombre, imposibles
   // de distinguir en la lista de "sin vincular".
   const dupe = DB.fichas.find(other => other.id !== f.id && (other.area||'cocina')===currentArea() && other.name.trim().toLowerCase() === name.toLowerCase());
-  if(dupe && !(await confirmModal(t('msg.confirmDuplicateTechSheet').replace('${name}', dupe.name)))) return;
+  if(dupe && !(await confirmModal(t('msg.confirmDuplicateTechSheet').replace('${name}', dupe.name)))) return false;
   const data = {
     name,
     recipeId: f.recipeId || '',
@@ -1942,7 +2192,22 @@ async function saveFicha(){
     tiempo: f.tiempo ? Math.max(0, parseInt(f.tiempo)||0) : '',
     temp: f.temp || 'CALIENTE',
     ingredients: f.ingredients.filter(i => i && i.trim()),
-    pasos: f.pasos.filter(p => p && p.trim()),
+    // Los pasos vacíos se tiran con sus detalles (tiempo, temperatura, ojo) para que sigan alineados.
+    ...(() => {
+      const det = Array.isArray(f.pasosDet) ? f.pasosDet : [];
+      const pasos = [], pasosDet = [];
+      (f.pasos || []).forEach((p, i) => {
+        if(!p || !String(p).trim()) return;
+        pasos.push(p.trim());
+        const d = det[i] || {};
+        const limpio = {};
+        const min = parseInt(d.min); if(isFinite(min) && min > 0) limpio.min = min;
+        if(d.temp && String(d.temp).trim()) limpio.temp = String(d.temp).trim();
+        if(d.aviso && String(d.aviso).trim()) limpio.aviso = String(d.aviso).trim();
+        pasosDet.push(limpio);
+      });
+      return {pasos, pasosDet: pasosDet.some(d => Object.keys(d).length) ? pasosDet : []};
+    })(),
     allergens: f.allergens || [],
     presentation: (f.presentation||'').trim(),
     photo: f.photo || '',
@@ -1956,17 +2221,31 @@ async function saveFicha(){
       return out;
     })() : {}
   };
+  let guardada;
   if(f.id){
     const ficha = getFicha(f.id);
-    if(!ficha) return;
+    if(!ficha) return false;
     Object.assign(ficha, data);
+    guardada = ficha;
   } else {
-    DB.fichas.push({id: genId(), ...data, area: currentArea()});
+    guardada = {id: genId(), ...data, area: currentArea()};
+    DB.fichas.push(guardada);
   }
   saveDB();
-  closeModal();
-  renderFichas();
+  // Se queda en la ficha (ya con su id si era nueva): la lista queda a un toque en «Volver».
+  if(fichaHoja){
+    fichaModalState = JSON.parse(JSON.stringify(guardada));
+    if(!fichaModalState.ingredients || !fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
+    if(!fichaModalState.pasos || !fichaModalState.pasos.length) fichaModalState.pasos = [''];
+    if(!Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet = [];
+    if(!Array.isArray(fichaModalState.allergens)) fichaModalState.allergens = [];
+    if(!fichaModalState.bebida || typeof fichaModalState.bebida !== 'object') fichaModalState.bebida = {};
+    renderFichaModal();
+    fichaHojaBase = fiFoto();
+    fiMarcarCambio();
+  } else renderFichas();
   showToast(t('msg.techSheetSaved'));
+  return true;
 }
 
 async function deleteFicha(id){
@@ -1974,6 +2253,8 @@ async function deleteFicha(id){
   if(!(await confirmModal(t('msg.confirmDeleteTechSheet')))) return;
   DB.fichas = DB.fichas.filter(f => f.id !== id);
   saveDB();
+  // Si se borraba la ficha abierta, la hoja se cierra con ella (sin preguntar por cambios de algo que ya no existe).
+  if(fichaHoja && fichaModalState && fichaModalState.id === id){ fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; }
   renderFichas();
   showToast(t('msg.techSheetDeleted'));
 }
@@ -1997,8 +2278,10 @@ function duplicateFicha(id){
   copy.recipeId = '';
   DB.fichas.push(copy);
   saveDB();
-  renderFichas();
   showToast(t('msg.techSheetSaved'));
+  // Se abre la copia para renombrarla y ajustar lo que cambie (antes de saltar se pregunta por lo que hubiera a medias).
+  const abrir = () => { fichaHoja = false; fichaModalState = null; openFichaModal(copy.id); };
+  if(ggEditorSucio()) ggGuardarSiHaceFalta(abrir); else abrir();
 }
 
 // El bloque de bebida del impreso. Los campos cortos van en dos columnas y
@@ -2033,6 +2316,10 @@ function bebidaImpresoHtml(f){
   `;
 }
 
+// El impreso de la ficha: un documento para tener en la mano mientras se cocina. Dos columnas —a la izquierda lo que hay
+// que sacar (la mise en place, con su casilla para ir marcando) y a la derecha el paso a paso, numerado y con su tiempo,
+// su temperatura y su «ojo»—, y debajo el emplatado y los alérgenos bien visibles. No lleva iconos de fuente (la ventana
+// de impresión no los carga): las etiquetas son texto.
 function printFicha(id){
   const f = getFicha(id);
   if(!f) return;
@@ -2042,37 +2329,78 @@ function printFicha(id){
   const liveRecipe = getFichaLiveRecipe(f);
   const displayName = liveRecipe ? liveRecipe.name : f.name;
   const fichaAllergens = getFichaAllergens(f);
-  const algs = fichaAllergens.length
-    ? fichaAllergens.map(a=>`<span style="background:#F5EBE7;color:#8A4A3B;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(allergenLabel(a))}</span>`).join('')
-    : t('label.none');
-  const baseComensales = getFichaBaseComensales(f);
-  const produccion = f.produccion || baseComensales;
-  const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
-  const ingredientLines = getFichaIngredientLines(f);
-  const ings = ingredientLines.map(l=>`<li style="margin:3px 0">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</li>`).join('');
+  const {produccion, factor} = fiFactor(f);
   const fArea = f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || 'cocina';
   const isBaseElaboration = !!(liveRecipe && liveRecipe.isBase);
-  const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px;display:flex;gap:10px"><strong style="flex-shrink:0;color:#999">${i+1}.</strong><span>${escapeHtml(p)}</span></div>`).join('');
-  const metaChips = [
-    produccion ? `<span><i class="ti ${fArea==='sala'?'ti-glass-cocktail':'ti-users'}"></i> ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>` : '',
-    f.tiempo ? `<span><i class="ti ti-clock"></i> ${f.tiempo} min</span>` : '',
-    // Con ficha de bebida manda la temperatura en grados: "FRÍO" no
-    // distingue un blanco a 8° de un tinto a 16°, que es justo lo que
-    // separa a quien sabe servir de quien no.
-    (f.bebidaTipo && bebidaDatos(f).tempServicio !== undefined)
-      ? `<span><i class="ti ti-temperature"></i> ${escapeHtml(String(bebidaDatos(f).tempServicio))} °C</span>`
-      : (f.temp ? `<span>${escapeHtml(fichaTempLabel(f.temp))}</span>` : '')
-  ].filter(Boolean).join('');
-  const body = `
-    ${printReportHeaderHtml(displayName)}
-    ${metaChips ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px">${metaChips.replace(/<span>/g,'<span style="background:#FAF8F4;padding:4px 10px;border-radius:4px;font-size:11.5px;color:#555">')}</div>` : ''}
-    ${isBaseElaboration ? '' : (f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:100mm;border-radius:8px;display:block;margin:0 0 18px;object-fit:cover">` : '')}
-    <h2>${t('label.ingredients')}</h2><ul class="pr-steps">${ings || `<li class="pr-empty">${t('empty.noIngredients')}</li>`}</ul>
-    <h2>${t('label.prepMethod')}</h2>${steps || `<p class="pr-empty">${t('label.notSpecified')}</p>`}
-    ${isBaseElaboration ? '' : `<h2>${fArea==='sala' ? t('label.serviceNotes') : t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>`}
-    ${bebidaImpresoHtml(f)}
-    <h2>${t('label.allergens')}</h2><div>${algs}</div>
-  `;
-  printReportWindow(displayName, body, {winSize:'width=800,height=1000'});
-}
+  const unidad = produccion === 1 ? (fArea==='sala' ? t('noun.drink') : t('noun.ration')) : (fArea==='sala' ? t('noun.drinks') : t('noun.rations'));
 
+  const ings = getFichaIngredientLines(f).map(l => `<li><span class="fp-chk"></span><span class="fp-q">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)}` : ''}</span><span class="fp-n">${escapeHtml(l.name)}</span></li>`).join('');
+  const det = Array.isArray(f.pasosDet) ? f.pasosDet : [];
+  const pasosPrint = (f.pasos || []).map((p, i) => ({p, d: det[i] || {}})).filter(x => x.p && String(x.p).trim());
+  const steps = pasosPrint.map((x, n) => `
+    <div class="fp-paso">
+      <div class="fp-n-paso">${n + 1}</div>
+      <div class="fp-paso-c">
+        <div class="fp-paso-t">${escapeHtml(x.p)}</div>
+        ${(x.d.min || x.d.temp) ? `<div class="fp-chips">${x.d.min ? `<span>${escapeHtml(String(x.d.min))} MIN</span>` : ''}${x.d.temp ? `<span>${escapeHtml(String(x.d.temp))}</span>` : ''}</div>` : ''}
+        ${x.d.aviso ? `<div class="fp-ojo"><b>${gl({es:'OJO', ca:'ULL', en:'WATCH OUT'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}
+      </div>
+    </div>`).join('');
+  const temp = (f.bebidaTipo && bebidaDatos(f).tempServicio !== undefined) ? `${escapeHtml(String(bebidaDatos(f).tempServicio))} °C` : (f.temp ? escapeHtml(fichaTempLabel(f.temp)) : '');
+  const meta = [
+    [fArea==='sala' ? t('label.servings') : gl({es:'Producción', ca:'Producció', en:'Production'}), `${fmtNum(produccion)} ${escapeHtml(unidad)}`],
+    f.tiempo ? [t('label.prepTime'), `${f.tiempo} min`] : null,
+    temp ? [t('label.servingTemp'), temp] : null,
+  ].filter(Boolean).map(([et, v]) => `<div class="fp-meta"><span>${escapeHtml(et)}</span><b>${v}</b></div>`).join('');
+  const algs = fichaAllergens.length
+    ? fichaAllergens.map(a => `<span class="fp-alg">${escapeHtml(allergenLabel(a))}</span>`).join('')
+    : `<span class="fp-sin">${t('label.none')}</span>`;
+  const subtitulo = [liveRecipe && liveRecipe.category ? escapeHtml(liveRecipe.category) : '', f.bebidaTipo && bebidaTipoDef(f.bebidaTipo) ? escapeHtml(gl(bebidaTipoDef(f.bebidaTipo).l).split(' (')[0]) : ''].filter(Boolean).join(' · ');
+  const body = `
+    <style>
+      .fp-metas{display:flex;gap:0;border:1px solid #1C1A17;margin:14px 0 20px}
+      .fp-meta{flex:1;padding:9px 12px;border-right:1px solid #1C1A17}
+      .fp-meta:last-child{border-right:0}
+      .fp-meta span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65}
+      .fp-meta b{font-size:16px;font-weight:700;letter-spacing:-.01em}
+      .fp-foto{width:100%;height:62mm;object-fit:cover;display:block;margin:0 0 18px}
+      .fp-cols{display:flex;gap:26px;align-items:flex-start}
+      .fp-izq{flex:0 0 38%}
+      .fp-der{flex:1;min-width:0}
+      .pr-page .fp-ings{list-style:none;margin:0;padding:0}
+      .fp-ings li{display:flex;gap:9px;align-items:baseline;padding:6px 0;border-bottom:1px solid #EFEBE3;break-inside:avoid}
+      .fp-chk{flex:none;width:11px;height:11px;border:1.4px solid #1C1A17;transform:translateY(1px)}
+      .fp-q{flex:none;min-width:62px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px}
+      .fp-n{flex:1}
+      .fp-paso{display:flex;gap:13px;margin:0 0 15px;break-inside:avoid}
+      .fp-n-paso{flex:none;width:28px;height:28px;background:#1C1A17;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center}
+      .fp-paso-c{flex:1;min-width:0}
+      .fp-paso-t{font-size:13.5px;line-height:1.55;white-space:pre-wrap}
+      .fp-chips{display:flex;gap:6px;margin-top:6px}
+      .fp-chips span{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.05em;border:1px solid #1C1A17;padding:2px 7px}
+      .fp-ojo{margin-top:7px;background:#FBF1DC;border-left:3px solid #C48A1C;padding:6px 10px;font-size:12px}
+      .fp-ojo b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;color:#8A5A0F;margin-right:6px}
+      .fp-alergenos{margin-top:22px;border:1.5px solid #1C1A17;padding:10px 14px;break-inside:avoid}
+      .fp-alergenos h2{margin-top:0;border:0}
+      .fp-alg{display:inline-block;background:#F7E9E6;color:#8A3B2E;border:1px solid #D9A79C;font-weight:700;font-size:11.5px;padding:3px 9px;margin:2px 4px 2px 0}
+      .fp-sin{color:#716C65}
+    </style>
+    ${printReportHeaderHtml(displayName, subtitulo)}
+    <div class="fp-metas">${meta}</div>
+    ${isBaseElaboration ? '' : (f.photo ? `<img class="fp-foto" src="${f.photo}" alt="${t('label.platingPhotoAlt')}">` : '')}
+    <div class="fp-cols">
+      <div class="fp-izq">
+        <h2>${t('label.ingredients')} · ${fmtNum(produccion)} ${escapeHtml(unidad)}</h2>
+        <ul class="fp-ings">${ings || `<li class="pr-empty">${t('empty.noIngredients')}</li>`}</ul>
+      </div>
+      <div class="fp-der">
+        <h2>${t('label.prepMethod')}</h2>
+        ${steps || `<p class="pr-empty">${t('label.notSpecified')}</p>`}
+      </div>
+    </div>
+    ${isBaseElaboration ? '' : `<h2>${fArea==='sala' ? t('label.serviceNotes') : t('label.plating')}</h2><p style="white-space:pre-wrap">${escapeHtml(f.presentation) || t('label.notSpecified')}</p>`}
+    ${bebidaImpresoHtml(f)}
+    <div class="fp-alergenos"><h2>${t('label.allergens')}</h2><div>${algs}</div></div>
+  `;
+  printReportWindow(displayName, body, {winSize:'width=860,height=1000'});
+}

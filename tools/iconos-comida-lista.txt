@@ -183,3 +183,46 @@ servicio | gorro-2 | p:chef-hat | Gorro (otro) | Gorra (altra) | Chef hat (alt)
 servicio | probeta | l:beaker | Cocina de autor | Cuina d'autor | Signature cuisine
 servicio | llama-2 | p:flame | Fuego (otro) | Foc (altre) | Fire (alt)
 servicio | frasco | p:flask | Elaboraciones | Elaboracions | Preparations
+utensilios | cuchillo-2 | p:knife | Cuchillo, corte | Ganivet, tall | Knife, cutting
+utensilios | olla-2 | l:cooking-pot | Olla, cocción | Olla, cocció | Pot, cooking
+utensilios | batidora | t:blender | Batidora, triturar | Batedora, triturar | Blender
+utensilios | balanza | t:scale | Balanza, pesar | Balança, pesar | Scale, weigh
+utensilios | balanza-2 | p:scales | Balanza (otra) | Balança (una altra) | Scales (alt)
+utensilios | peso | t:weight | Peso, pesaje | Pes, pesada | Weight
+utensilios | termometro | l:thermometer | Termómetro, temperatura | Termòmetre, temperatura | Thermometer, temperature
+utensilios | termometro-sol | l:thermometer-sun | Temperatura alta | Temperatura alta | High temperature
+utensilios | temporizador | l:timer | Temporizador, tiempos | Temporitzador, temps | Timer
+utensilios | cronometro | t:stopwatch | Cronómetro | Cronòmetre | Stopwatch
+utensilios | reloj-arena | t:hourglass | Reposo, tiempo | Repòs, temps | Resting time
+utensilios | despertador | l:alarm-clock | Aviso, alarma | Avís, alarma | Alarm
+utensilios | horno-2 | p:oven | Horno (otro) | Forn (un altre) | Oven (alt)
+utensilios | fogon | t:cooker | Fogones, placa | Fogons, placa | Hob, cooktop
+utensilios | parrilla-3 | t:grill | Parrilla, brasa | Graella, brasa | Grill, charcoal
+utensilios | extractor | l:air-vent | Campana extractora | Campana extractora | Extractor hood
+utensilios | enchufe | t:plug | Equipo eléctrico | Equip elèctric | Electrical equipment
+utensilios | rapido | l:zap | Rápido, exprés | Ràpid, exprés | Fast, express
+utensilios | pimienta | p:pepper | Pimienta, especias | Pebre, espècies | Pepper, spices
+utensilios | tarro | p:jar | Conserva casera, tarro | Conserva casolana, pot | Jar, preserves
+utensilios | botella-aceite | t:bottle | Botella, aceite | Ampolla, oli | Bottle, oil
+utensilios | cubo | t:bucket | Cubo, hielo | Galleda, gel | Bucket, ice
+utensilios | gota | t:droplet | Agua, líquido | Aigua, líquid | Water, liquid
+utensilios | copo | p:snowflake | Congelado, frío | Congelat, fred | Frozen, cold
+utensilios | caja | t:box | Caja, almacén | Caixa, magatzem | Box, storage
+utensilios | paquete | t:package | Pedido, recepción | Comanda, recepció | Order, delivery
+utensilios | paquetes | t:packages | Pedidos, almacén | Comandes, magatzem | Orders, storage
+utensilios | camion | t:truck-delivery | Reparto, proveedor | Repartiment, proveïdor | Delivery, supplier
+utensilios | gastronorm | t:container | Gastronorm, contenedor | Gastronorm, contenidor | Gastronorm, container
+utensilios | limpieza | t:spray | Limpieza, desinfección | Neteja, desinfecció | Cleaning, sanitising
+utensilios | escoba | l:broom | Barrer, limpieza | Escombrar, neteja | Sweep, cleaning
+utensilios | lavado | t:wash | Lavado | Rentat | Wash
+utensilios | basura | t:trash | Basura, merma | Brossa, minva | Waste, loss
+utensilios | reciclar | t:recycle | Reciclaje | Reciclatge | Recycling
+utensilios | calculadora | t:calculator | Escandallo, costes | Escandall, costos | Costing, costs
+utensilios | control | t:clipboard-check | Control, APPCC | Control, APPCC | Checklist, HACCP
+utensilios | lista | t:clipboard-list | Lista de tareas | Llista de tasques | Task list
+utensilios | libreta | p:notebook | Libreta, receta | Llibreta, recepta | Notebook, recipe
+utensilios | tique | t:receipt-2 | Ticket, factura | Tiquet, factura | Receipt, invoice
+utensilios | impresora | t:printer | Imprimir | Imprimir | Print
+utensilios | seguridad | t:shield-check | Seguridad alimentaria | Seguretat alimentària | Food safety
+utensilios | alergenos | t:hand-stop | Alérgenos, atención | Al·lèrgens, atenció | Allergens, caution
+utensilios | calidad | t:eye-check | Revisión, calidad | Revisió, qualitat | Check, quality
