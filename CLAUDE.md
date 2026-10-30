@@ -640,7 +640,7 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
 
 ## Rediseño pantalla a pantalla (29-30/10): cómo se hace y qué hay hecho
 
-El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas y Pedidos**.
+El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos y Stock**.
 La orden de fondo, dicha tras ver que se tocaba solo la pantalla principal: **cuando se rediseña una pantalla se
 abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueba `test/subpantallas.mjs` lo exige).
 
@@ -694,6 +694,15 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   datos de contacto el botón se desactiva y dice por qué; «Guardar borrador» e imprimir (hoja con casillas de recibido y
   SIN precios). Cada pedido es una hoja (`renderPedidoDetail`): estado en tres pasos, líneas con ✓/✗, precio de albarán y
   nota (plegables en móvil), control APPCC, albarán y factura. Prueba: `test/pedidos.mjs`.
+- **Stock** (30/10): una fila = un producto (`stFilaHtml`, js/finance.js): nombre con su estado («Falta 3 L», «en camino», «sin mínimo»),
+  cantidad con − / + y, plegados en móvil, el mínimo y el menú ⋯ (merma de ESE producto, su historial, Mega Lista / Escandallo, editar
+  y borrar una elaboración manual). **El − / + no guarda en cada toque**: espera 0,7 s tras el último y guarda UNA vez (`stPend`),
+  si no el Historial anotaba un ajuste por cada pulsación. Escribir la cantidad a mano guarda al momento (`stEscribir`) y anula lo
+  pendiente. Arriba, un resumen de cuatro cifras (productos, elaboraciones, **bajo mínimo** —pulsarlo filtra— y valor del stock, solo
+  propietario) y el número de alertas en cada pestaña. Las carpetas dicen cuántos están bajo mínimo y dentro lo que pide atención va
+  primero. «Pedir lo que falta» solo sale con alertas y lleva a Pedidos. Mermas (informe) e Historial viven en el ⋯ de la cabecera,
+  «Anotar merma» sigue a la vista. ⚠️ El orden de los `<input>` de cada fila es mínimo, cantidad (lo usa `stock-empleados.mjs`); la
+  posición visual la ponen las áreas de la rejilla. Un empleado sin edición cuenta existencias (− / +) pero no toca el mínimo. Prueba: `test/stock.mjs`.
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,
