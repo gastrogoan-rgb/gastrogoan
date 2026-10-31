@@ -4388,10 +4388,12 @@ function renderHorarios(){
   generarTurnosFijos();
   const box = document.getElementById('horarios-content');
   box.innerHTML = `
-    <nav class="ge-tab-row">
-      <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> ${t('label.staff')}</button>
-      <button class="ge-tab ${horariosTab==='calendario'?'active':''}" onclick="setHorariosTab('calendario')"><i class="ti ti-calendar"></i> ${t('label.calendar')}</button>
-    </nav>
+    <div class="toolbar es-tabs hr-tabs">
+      <div class="left">
+        <button type="button" class="btn btn-sm btn-fino ${horariosTab==='personal'?'is-on active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> ${t('label.staff')}</button>
+        <button type="button" class="btn btn-sm btn-fino ${horariosTab==='calendario'?'is-on active':''}" onclick="setHorariosTab('calendario')"><i class="ti ti-calendar"></i> ${t('label.calendar')}</button>
+      </div>
+    </div>
     <div id="horarios-tab-content"></div>
   `;
   renderHorariosTab();
@@ -4889,90 +4891,97 @@ let personalSearch = '';
 function setPersonalSearch(val){
   personalSearch = val.toLowerCase();
   renderHorariosPersonal();
+  // El repintado cambia el campo de sitio y se perdía el cursor tras cada letra.
+  const campo = document.querySelector('#horarios-tab-content .pr-barra .search-input');
+  if(campo){ campo.focus(); const n = campo.value.length; try{ campo.setSelectionRange(n, n); }catch(e){} }
+}
+
+// Iniciales para el avatar: primera letra del nombre y de su último apellido. El color del empleado va en el aro, no de fondo, para
+// que la letra se lea siempre (con 30 colores a elegir, ni el blanco ni el negro sirven sobre todos).
+function prIniciales(name){
+  const p = String(name||'').trim().split(/\s+/).filter(Boolean);
+  return ((p[0]||'?')[0] + (p.length > 1 ? p[p.length-1][0] : '')).toUpperCase();
 }
 
 // Ranking amistoso de ventas del mes (por camarero, a partir de camareroId
 // en cada venta) + termómetro de clima del equipo (media de las respuestas
 // de esta semana) — ambos solo para el propietario, con tono positivo, sin
 // mostrar a nadie "el peor", solo reconocer a los que más venden.
-function renderTeamPulseHtml(){
-  const parts = [];
-  const pendingSwaps = (DB.turnoSwapRequests||[]).filter(r => r.status==='pending_owner').filter(r => {
+// Las peticiones pendientes, los turnos larguísimos y el clima del equipo, ya calculados: el resumen de arriba y el bloque de «Requiere tu
+// atención» salen de los mismos datos, así el número de la cifra y las filas de debajo no pueden contarse distinto.
+function teamPulseData(){
+  const area = currentArea();
+  const swaps = (DB.turnoSwapRequests||[]).filter(r => r.status==='pending_owner').filter(r => {
     const from = DB.employees.find(e=>e.id===r.fromEmployeeId);
-    return from && (from.area||'cocina')===currentArea();
+    return from && (from.area||'cocina')===area;
   });
-  if(pendingSwaps.length){
-    parts.push(`
-      <div class="card owner-strict" style="margin-bottom:10px;border:1px solid var(--amber)">
-        <h4 style="margin-bottom:6px"><i class="ti ti-replace"></i> ${t('swap.ownerPendingTitle')}</h4>
-        ${pendingSwaps.map(r => {
-          const from = DB.employees.find(e=>e.id===r.fromEmployeeId);
-          const to = DB.employees.find(e=>e.id===r.toEmployeeId);
-          const turno = (DB.turnos||[]).find(x=>x.id===r.fromTurnoId);
-          return `<div style="font-size:12.5px;margin-bottom:6px">
-            ${t('swap.ownerPendingLine').replace('${from}', escapeHtml(from?from.name:'?')).replace('${to}', escapeHtml(to?to.name:'?')).replace('${date}', escapeHtml(turno?turno.fecha:'?'))}
-            <div style="display:flex;gap:6px;margin-top:4px">
-              <button class="btn btn-sm btn-primary" onclick="ownerApproveTurnoSwap(${r.id}, true)">${t('common.accept')}</button>
-              <button class="btn btn-sm" onclick="ownerApproveTurnoSwap(${r.id}, false)">${t('common.reject')}</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`);
-  }
-  const pendingVacations = (DB.vacationRequests||[]).filter(r => r.status==='pending').filter(r => {
+  const vacations = (DB.vacationRequests||[]).filter(r => r.status==='pending').filter(r => {
     const emp = DB.employees.find(e=>e.id===r.employeeId);
-    return emp && (emp.area||'cocina')===currentArea();
+    return emp && (emp.area||'cocina')===area;
   });
-  if(pendingVacations.length){
-    parts.push(`
-      <div class="card owner-strict" style="margin-bottom:10px;border:1px solid var(--amber)">
-        <h4 style="margin-bottom:6px"><i class="ti ti-beach"></i> ${t('vacation.ownerPendingTitle')}</h4>
-        ${pendingVacations.map(r => {
-          const emp = DB.employees.find(e=>e.id===r.employeeId);
-          const summary = vacationAllowanceSummary(r.employeeId);
-          return `<div style="font-size:12.5px;margin-bottom:6px">
-            ${t('vacation.ownerPendingLine').replace('${name}', escapeHtml(emp?emp.name:'?')).replace('${from}', escapeHtml(r.fromDate)).replace('${to}', escapeHtml(r.toDate))}
-            ${summary ? ` <span style="color:var(--muted)">${t('vacation.ownerPendingRemaining').replace('${remaining}', summary.remaining).replace('${total}', summary.total)}</span>` : ''}
-            ${r.notes ? `<div style="color:var(--muted)">${escapeHtml(r.notes)}</div>` : ''}
-            <div style="display:flex;gap:6px;margin-top:4px">
-              <button class="btn btn-sm btn-primary" onclick="ownerRespondVacationRequest(${r.id}, true)">${t('common.accept')}</button>
-              <button class="btn btn-sm" onclick="ownerRespondVacationRequest(${r.id}, false)">${t('common.reject')}</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`);
-  }
-  const longShifts = getLongShiftWarnings().filter(x => (x.employee.area||'cocina')===currentArea());
-  if(longShifts.length){
-    parts.push(`
-      <div class="card owner-strict" style="margin-bottom:10px;border:1px solid var(--red);background:var(--red-l)">
-        <h4 style="margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${t('hr.descanso.longShiftTitle')}</h4>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          ${longShifts.map(x => `<div style="font-size:13px">${escapeHtml(x.employee.name)} — ${x.horas.toFixed(1)}h ${t('hr.descanso.seguidas')}</div>`).join('')}
-        </div>
-      </div>`);
-  }
-  const wk = currentWeekKey();
+  const longShifts = getLongShiftWarnings().filter(x => (x.employee.area||'cocina')===area);
   // Solo los check-ins de esta área: cocina y sala son equipos distintos,
   // y mezclar su ánimo en una sola media no dice nada útil de ninguno de
   // los dos — antes se veía la del negocio entero en las dos pestañas.
-  const moodThisWeek = (DB.moodCheckins||[]).filter(c => c.weekKey===wk).filter(c => {
+  const wk = currentWeekKey();
+  const mood = (DB.moodCheckins||[]).filter(c => c.weekKey===wk).filter(c => {
     const emp = DB.employees.find(e => e.id===c.employeeId);
-    return (emp && (emp.area||'cocina')) === currentArea();
+    return (emp && (emp.area||'cocina')) === area;
   });
-  if(moodThisWeek.length){
-    const avg = moodThisWeek.reduce((s,c)=>s+c.value,0) / moodThisWeek.length;
-    const faces = ['<i class="ti ti-mood-cry"></i>','<i class="ti ti-mood-sad"></i>','<i class="ti ti-mood-empty"></i>','<i class="ti ti-mood-smile"></i>','<i class="ti ti-mood-happy"></i>'];
-    parts.push(`
-      <div class="card owner-strict" style="margin-bottom:10px">
-        <h4 style="margin-bottom:4px"><i class="ti ti-mood-smile"></i> ${t('hr.moodPulse.title')}</h4>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:28px">${faces[Math.round(avg)-1]||faces[2]}</span>
-          <span style="font-size:13px;color:var(--muted)">${t('hr.moodPulse.desc').replace('${n}', moodThisWeek.length).replace('${avg}', avg.toFixed(1))}</span>
-        </div>
-      </div>`);
-  }
-  return parts.join('');
+  const avg = mood.length ? mood.reduce((s,c)=>s+c.value,0) / mood.length : null;
+  return {swaps, vacations, longShifts, mood, avg};
+}
+const PR_CARAS = ['ti-mood-cry','ti-mood-sad','ti-mood-empty','ti-mood-smile','ti-mood-happy'];
+
+// Cuatro cifras arriba (mismo componente que el resumen de Stock): plantilla, quién está trabajando ahora, qué espera respuesta y cómo va el ánimo.
+function prResumenHtml(allEmps, pulse){
+  const activos = allEmps.filter(e => e.active !== false);
+  const ahora = activos.filter(e => getOpenFichaje(e.id)).length;
+  const pend = pulse.swaps.length + pulse.vacations.length;
+  const baja = allEmps.length - activos.length;
+  return `
+    <div class="st-resumen pr-resumen">
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'En plantilla', ca:'A la plantilla', en:'On the team'})}</span><span class="st-cel-v">${activos.length}</span>${baja ? `<span class="st-cel-s">${baja} ${gl({es:'de baja', ca:'de baixa', en:'inactive'})}</span>` : ''}</div>
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Trabajando ahora', ca:'Treballant ara', en:'Working now'})}</span><span class="st-cel-v">${ahora}</span><span class="st-cel-s">${gl({es:'con fichaje abierto', ca:'amb fitxatge obert', en:'clocked in'})}</span></div>
+      <button type="button" class="st-cel st-cel-btn owner-strict${pend ? ' is-bajo' : ''}" ${pend ? `onclick="document.getElementById('pr-atencion')?.scrollIntoView({behavior:'smooth',block:'start'})"` : 'disabled'}>
+        <span class="st-cel-et">${gl({es:'Esperan respuesta', ca:'Esperen resposta', en:'Waiting for you'})}</span><span class="st-cel-v">${pend}</span><span class="st-cel-s">${gl({es:'cambios de turno y vacaciones', ca:'canvis de torn i vacances', en:'shift swaps and time off'})}</span></button>
+      <div class="st-cel owner-strict"><span class="st-cel-et">${t('hr.moodPulse.title')}</span>
+        <span class="st-cel-v">${pulse.avg == null ? '—' : `<i class="ti ${PR_CARAS[Math.min(4, Math.max(0, Math.round(pulse.avg)-1))]}"></i> ${pulse.avg.toFixed(1)}`}</span>
+        <span class="st-cel-s">${pulse.avg == null ? gl({es:'sin respuestas esta semana', ca:'sense respostes aquesta setmana', en:'no answers this week'}) : pulse.mood.length + ' ' + (pulse.mood.length === 1 ? gl({es:'respuesta', ca:'resposta', en:'answer'}) : gl({es:'respuestas', ca:'respostes', en:'answers'}))}</span></div>
+    </div>`;
+}
+
+// Lo que necesita una decisión del propietario, en filas con sus botones. Si no hay nada, no sale nada: un bloque vacío enseña a no mirarlo.
+function prAtencionHtml(pulse){
+  const filas = [];
+  pulse.swaps.forEach(r => {
+    const from = DB.employees.find(e=>e.id===r.fromEmployeeId);
+    const to = DB.employees.find(e=>e.id===r.toEmployeeId);
+    const turno = (DB.turnos||[]).find(x=>x.id===r.fromTurnoId);
+    filas.push(`<div class="pr-aviso"><i class="ti ti-replace"></i>
+      <div class="pr-aviso-txt">${t('swap.ownerPendingLine').replace('${from}', escapeHtml(from?from.name:'?')).replace('${to}', escapeHtml(to?to.name:'?')).replace('${date}', escapeHtml(turno?turno.fecha:'?'))}</div>
+      <div class="pr-aviso-bt"><button type="button" class="btn btn-sm btn-fino is-on" onclick="ownerApproveTurnoSwap(${r.id}, true)">${t('common.accept')}</button><button type="button" class="btn btn-sm btn-fino" onclick="ownerApproveTurnoSwap(${r.id}, false)">${t('common.reject')}</button></div></div>`);
+  });
+  pulse.vacations.forEach(r => {
+    const emp = DB.employees.find(e=>e.id===r.employeeId);
+    const summary = vacationAllowanceSummary(r.employeeId);
+    filas.push(`<div class="pr-aviso"><i class="ti ti-beach"></i>
+      <div class="pr-aviso-txt">${t('vacation.ownerPendingLine').replace('${name}', escapeHtml(emp?emp.name:'?')).replace('${from}', escapeHtml(r.fromDate)).replace('${to}', escapeHtml(r.toDate))}
+        ${summary ? `<span class="pr-aviso-sub">${t('vacation.ownerPendingRemaining').replace('${remaining}', summary.remaining).replace('${total}', summary.total)}</span>` : ''}
+        ${r.notes ? `<span class="pr-aviso-sub">${escapeHtml(r.notes)}</span>` : ''}</div>
+      <div class="pr-aviso-bt"><button type="button" class="btn btn-sm btn-fino is-on" onclick="ownerRespondVacationRequest(${r.id}, true)">${t('common.accept')}</button><button type="button" class="btn btn-sm btn-fino" onclick="ownerRespondVacationRequest(${r.id}, false)">${t('common.reject')}</button></div></div>`);
+  });
+  pulse.longShifts.forEach(x => {
+    filas.push(`<div class="pr-aviso is-rojo"><i class="ti ti-alert-triangle"></i>
+      <div class="pr-aviso-txt"><strong>${escapeHtml(x.employee.name)}</strong> — ${x.horas.toFixed(1)}h ${t('hr.descanso.seguidas')}<span class="pr-aviso-sub">${t('hr.descanso.longShiftTitle')}</span></div></div>`);
+  });
+  if(!filas.length) return '';
+  return `<div class="pr-atencion owner-strict" id="pr-atencion"><div class="es-tit">${gl({es:'Requiere tu atención', ca:'Requereix la teva atenció', en:'Needs your attention'})}</div>${filas.join('')}</div>`;
+}
+// Compatibilidad con quien pidiera el bloque entero.
+function renderTeamPulseHtml(){
+  const pulse = teamPulseData();
+  return prResumenHtml(areaEmployees(), pulse) + prAtencionHtml(pulse);
 }
 
 // Antigüedad en texto legible (días/meses/años) — sustituye a las antiguas
@@ -5052,55 +5061,62 @@ function renderHorariosPersonal(){
     const w = monthSales ? (monthSales[String(e.id)] || {total:0, count:0}) : null;
     const medal = medalByEmpId ? medalByEmpId[String(e.id)] : null;
     const unreadMsgs = isOwnerSession ? directChatUnreadCount(e.id, true) : 0;
+    /* Los iconos sueltos no se explican solos: cada uno lleva su rótulo, que sale al pasar el ratón o al enfocarlo con el teclado
+       (data-tip, CSS al final) y es también su nombre accesible. Editar y eliminar van dentro del ⋯, como en el resto de pantallas. */
+    const ico = (icono, texto, extra) => `class="btn btn-fino pr-ico${extra||''}" data-tip="${escapeHtml(texto)}" aria-label="${escapeHtml(texto)}"`;
+    const wa = isOwnerSession && e.phone ? gl({es:'Enviar WhatsApp', ca:'Enviar WhatsApp', en:'Send WhatsApp'}) : '';
     return `
-    <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openEmployeePersonalCard(${e.id})">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-        <div style="min-width:0;flex:1">
-          <strong style="display:block;overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(e.name)} ${medal?`<span title="${t('hr.podium.title')}">${medal}</span>`:''}</strong>
-          <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}${tenureText?` · ${tenureText}`:''}</div>
+    <article class="pr-card${isInactive ? ' is-baja' : ''}${open ? ' is-turno' : ''}" tabindex="0" role="button" aria-label="${escapeHtml(e.name)}" onclick="openEmployeePersonalCard(${e.id})" onkeydown="if((event.key==='Enter'||event.key===' ') && event.target===this){event.preventDefault();openEmployeePersonalCard(${e.id})}">
+      <div class="pr-cab">
+        <span class="pr-av" style="--c:${escapeHtml(e.color||'#DF7039')}" aria-hidden="true">${escapeHtml(prIniciales(e.name))}</span>
+        <div class="pr-id">
+          <b class="pr-nom">${escapeHtml(e.name)}${medal ? ` <span class="pr-medalla" title="${t('hr.podium.title')}">${medal}</span>` : ''}</b>
+          <span class="pr-sub">${escapeHtml(e.rol||t('label.noRole'))}${tenureText ? ` · ${tenureText}` : ''}</span>
         </div>
-        ${unreadMsgs ? `<span class="badge badge-red" style="white-space:nowrap"><i class="ti ti-message"></i> ${unreadMsgs}</span>` : ''}
-        ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
+      </div>
+      <div class="pr-estados">
+        ${isInactive ? `<span class="pr-chip">${t('label.inactive')}</span>` : open ? `<span class="pr-chip ok"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="pr-chip off">${t('hr2.offDuty')}</span>`}
+        ${unreadMsgs ? `<span class="pr-chip msg"><i class="ti ti-message"></i> ${unreadMsgs}</span>` : ''}
       </div>
       ${w ? `
-      <div class="emp-stats">
-        <span style="white-space:nowrap">${t('hr.podium.sales')}: <strong style="color:var(--text);white-space:nowrap">${fmtMoney(w.total)}</strong></span>
-        <span style="white-space:nowrap">${t('label.avgTicket')}: <strong style="color:var(--text);white-space:nowrap">${fmtMoney(w.count?w.total/w.count:0)}</strong></span>
+      <div class="pr-ventas">
+        <span>${t('hr.podium.sales')} <b>${fmtMoney(w.total)}</b></span>
+        <span>${t('label.avgTicket')} <b>${fmtMoney(w.count?w.total/w.count:0)}</b></span>
       </div>` : ''}
-      <div class="emp-open-hint"><span><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession?t('label.viewEmployeeFile'):t('label.clickToClockIn')}</span></div>
-      <div class="emp-actions" onclick="event.stopPropagation()">
-        <div class="actions-cell">
-          <button class="btn btn-sm btn-icon" title="${t('btn.messages')}" onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
-          <button class="btn btn-sm btn-icon" title="${t('title.workDistribution')}" onclick="navigate('distribucion');openDistEmployee(${e.id})"><i class="ti ti-clipboard-list"></i></button>
-          ${isOwnerSession ? `
-          ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
-          ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
-          ` : ''}
-          <button class="owner-strict btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
-          <button class="owner-strict btn btn-sm btn-icon" title="${t('title.employeeSchedule')}" onclick="openEmployeeScheduleChooser(${e.id})"><i class="ti ti-calendar"></i></button>
-          <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
+      <div class="pr-pie">
+        <span class="pr-ver"><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession ? gl({es:'Ver ficha', ca:'Veure fitxa', en:'Open profile'}) : gl({es:'Fichar', ca:'Fitxar', en:'Clock in'})}</span>
+        <div class="pr-acc actions-cell" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
+          <button type="button" ${ico('ti-message', t('btn.messages'))} onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
+          <button type="button" ${ico('ti-clipboard-list', t('title.workDistribution'))} onclick="navigate('distribucion');openDistEmployee(${e.id})"><i class="ti ti-clipboard-list"></i></button>
+          ${wa ? `<a ${ico('ti-brand-whatsapp', wa)} href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
+          ${isOwnerSession && e.email ? `<a ${ico('ti-mail', t('title.sendEmail'))} href="mailto:${escapeJsAttr(e.email)}"><i class="ti ti-mail"></i></a>` : ''}
+          <button type="button" ${ico('ti-calendar', t('title.employeeSchedule'), ' owner-strict')} onclick="openEmployeeScheduleChooser(${e.id})"><i class="ti ti-calendar"></i></button>
+          ${ggMenuAcciones([
+            {icono:'ti-id-badge-2', texto:t('title.editEmployee'), fn:`openEmployeeModal(${e.id})`, estricto:true},
+            {icono:'ti-trash', texto:t('common.delete'), fn:`deleteEmployee(${e.id})`, peligro:true, estricto:true}
+          ], {clase:'btn btn-fino mn-btn pr-ico', tip:true, etiqueta:gl({es:'Editar ficha o eliminar', ca:'Editar la fitxa o eliminar', en:'Edit profile or delete'})})}
         </div>
       </div>
-    </div>
-  `;};
+    </article>`;
+  };
 
-  const listHtml = `<div class="grid grid-personal">${emps.map(cardHtml).join('')}</div>`;
+  const listHtml = `<div class="pr-grid">${emps.map(cardHtml).join('')}</div>`;
+  const pulse = isOwnerSession && myEmployeeId == null ? teamPulseData() : null;
 
   box.innerHTML = `
-    ${renderTeamPulseHtml()}
+    ${pulse ? prResumenHtml(allEmps, pulse) + prAtencionHtml(pulse) : ''}
     ${myEmployeeId == null ? `
-    <div class="toolbar">
+    <div class="toolbar pr-barra">
       <div class="left">
-        <input type="text" class="search-input" value="${escapeHtml(personalSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setPersonalSearch(this.value)">
+        <input type="text" class="search-input st-buscar" value="${escapeHtml(personalSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setPersonalSearch(this.value)">
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="owner-strict btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
-        <button class="owner-strict btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
+      <div class="pr-barra-bt">
+        <button type="button" class="owner-strict btn btn-fino" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
+        <button type="button" class="owner-strict btn btn-fino is-on" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
     ` : ''}
-    ${emps.length ? listHtml : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
+    ${emps.length ? listHtml : `<div class="empty es-vacio"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
   `;
 }
 
@@ -5164,25 +5180,23 @@ function openEmployeeScheduleChooser(employeeId){
   const emp = DB.employees.find(e => e.id===employeeId);
   if(!emp) return;
   const hf = horarioFijoDe(employeeId);
+  const opcion = (icono, titulo, desc, fn) => `
+    <button type="button" class="pr-eleccion" onclick="${fn}">
+      <span class="pr-eleccion-ico"><i class="ti ${icono}"></i></span>
+      <span class="pr-eleccion-txt"><b>${titulo}</b><small>${desc}</small></span>
+      <i class="ti ti-chevron-right pr-eleccion-flecha"></i>
+    </button>`;
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
       <h3><i class="ti ti-calendar"></i> ${escapeHtml(emp.name)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p class="muted" style="margin-bottom:14px">${hf ? t('msg.employeeHasFixedSchedule') : t('msg.employeeNoFixedSchedule')}</p>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();openHorarioFijoModal(${employeeId})">
-        <i class="ti ti-repeat" style="font-size:20px"></i>
-        <span><strong>${t('title.fixedSchedule')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserFixedDesc')}</span></span>
-      </button>
-      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();openBulkTurnoModal(${employeeId})">
-        <i class="ti ti-calendar-plus" style="font-size:20px"></i>
-        <span><strong>${t('title.assignShiftsByPeriod')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserPeriodDesc')}</span></span>
-      </button>
-      <button class="btn" style="justify-content:flex-start;align-items:flex-start;text-align:left;height:auto;padding:14px;gap:12px" onclick="closeModal();setHorariosTab('calendario')">
-        <i class="ti ti-calendar-event" style="font-size:20px"></i>
-        <span><strong>${t('hr2.chooserNoneTitle')}</strong><br><span style="font-weight:400;font-size:12.5px;color:var(--muted)">${t('hr2.chooserNoneDesc')}</span></span>
-      </button>
+    <p class="ml-intro">${hf ? t('msg.employeeHasFixedSchedule') : t('msg.employeeNoFixedSchedule')}</p>
+    <div class="pr-elecciones">
+      ${opcion('ti-repeat', t('title.fixedSchedule'), t('hr2.chooserFixedDesc'), `closeModal();openHorarioFijoModal(${employeeId})`)}
+      ${opcion('ti-calendar-plus', t('title.assignShiftsByPeriod'), t('hr2.chooserPeriodDesc'), `closeModal();openBulkTurnoModal(${employeeId})`)}
+      ${opcion('ti-calendar-event', t('hr2.chooserNoneTitle'), t('hr2.chooserNoneDesc'), `closeModal();setHorariosTab('calendario')`)}
     </div>
   `);
 }
@@ -5442,73 +5456,90 @@ const EMPLOYEE_COLOR_CHOICES = [
   '#E056A0','#EC7063','#C2185B','#795548','#6D4C41','#546E7A','#34495E',
   '#95A5A6','#7F8C8D',
 ];
+function prElegirColor(btn){
+  const c = btn.dataset.c;
+  const inp = document.getElementById('emp-color');
+  if(inp) inp.value = c;
+  document.querySelectorAll('#modal-box .pr-sw').forEach(b => b.classList.toggle('is-sel', b === btn));
+}
+function prColorTecleado(inp){
+  document.querySelectorAll('#modal-box .pr-sw').forEach(b => b.classList.toggle('is-sel', b.dataset.c.toLowerCase() === inp.value.toLowerCase()));
+}
 function openEmployeeModal(id){
   const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#8A7440', area: currentArea()};
+  const areaNombre = (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title');
+  const colorActual = (e.color||'#DF7039');
+  const opcion = (idCampo, marcado, titulo, ayuda, extra) => `
+    <label class="pr-opcion owner-strict">
+      <input type="checkbox" id="${idCampo}" ${marcado ? 'checked' : ''}>
+      <span><b>${titulo}</b>${ayuda ? `<small>${ayuda}</small>` : ''}</span>
+    </label>`;
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
-      <h3>${id ? t('title.editEmployee') : t('title.newEmployee')}</h3>
+      <h3>${id ? `<span class="pr-av pr-av-s" style="--c:${escapeHtml(colorActual)}">${escapeHtml(prIniciales(e.name))}</span> ` : ''}${id ? t('title.editEmployee') : t('title.newEmployee')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div class="field">
-      <label>${t('common.name')}</label>
-      <input type="text" id="emp-name" value="${escapeHtml(e.name)}" placeholder="${t('ph.employeeName')}">
-    </div>
-    <div class="field-row">
+
+    <div class="pr-sec">
+      <div class="es-tit">${gl({es:'Quién es', ca:'Qui és', en:'Who they are'})}</div>
       <div class="field">
-        <label>${t('label.role')}</label>
+        <label for="emp-name">${t('common.name')}</label>
+        <input type="text" id="emp-name" value="${escapeHtml(e.name)}" placeholder="${t('ph.employeeName')}">
+      </div>
+      <div class="field">
+        <label for="emp-rol">${t('label.role')}</label>
         <input type="text" id="emp-rol" value="${escapeHtml(e.rol||'')}" placeholder="${t('ph.roleExample')}">
       </div>
       <div class="field">
         <label>${t('label.identifyingColor')}</label>
-        <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
-        <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-top:8px">
-          ${EMPLOYEE_COLOR_CHOICES.map(c => `<span onclick="document.getElementById('emp-color').value='${c}'" title="${c}" style="width:100%;aspect-ratio:1;border-radius:50%;background:${c};cursor:pointer;border:1px solid rgba(0,0,0,.15);display:inline-block"></span>`).join('')}
+        <div class="pr-colores" role="group" aria-label="${escapeHtml(t('label.identifyingColor'))}">
+          ${EMPLOYEE_COLOR_CHOICES.map(c => `<button type="button" class="pr-sw${c.toLowerCase()===colorActual.toLowerCase() ? ' is-sel' : ''}" data-c="${c}" style="--c:${c}" aria-label="${c}" onclick="prElegirColor(this)"></button>`).join('')}
+        </div>
+        <div class="pr-otro-color"><input type="color" id="emp-color" value="${escapeHtml(colorActual)}" aria-label="${escapeHtml(gl({es:'Otro color', ca:'Un altre color', en:'Another colour'}))}" oninput="prColorTecleado(this)"> <span>${gl({es:'Otro color', ca:'Un altre color', en:'Another colour'})}</span></div>
+      </div>
+    </div>
+
+    <div class="pr-sec">
+      <div class="es-tit">${gl({es:'Cómo localizarle', ca:'Com localitzar-lo', en:'How to reach them'})}</div>
+      <div class="field-row">
+        <div class="field">
+          <label for="emp-phone">${t('common.phone')}</label>
+          <input type="tel" id="emp-phone" value="${escapeHtml(e.phone||'')}" placeholder="${t('ph.egPhone')}">
+        </div>
+        <div class="field">
+          <label for="emp-email">${t('common.email')}</label>
+          <input type="email" id="emp-email" value="${escapeHtml(e.email||'')}" placeholder="ejemplo@correo.com">
         </div>
       </div>
+      <p class="pr-ayuda">${t('msg.forCommentsOrDocs')}</p>
     </div>
-    <div class="field-row">
+
+    <div class="pr-sec owner-strict">
+      <div class="es-tit">${gl({es:'Vacaciones', ca:'Vacances', en:'Time off'})}</div>
       <div class="field">
-        <label>${t('common.phone')}</label>
-        <input type="tel" id="emp-phone" value="${escapeHtml(e.phone||'')}" placeholder="${t('ph.egPhone')}">
-      </div>
-      <div class="field">
-        <label>${t('common.email')}</label>
-        <input type="email" id="emp-email" value="${escapeHtml(e.email||'')}" placeholder="ejemplo@correo.com">
+        <label for="emp-vacation-days">${t('label.vacationDaysPerYear')}</label>
+        <input type="number" id="emp-vacation-days" min="0" step="1" placeholder="${t('ph.notSet')}" value="${e.vacationDaysPerYear!=null?e.vacationDaysPerYear:''}">
+        <p class="pr-ayuda">${t('msg.vacationDaysPerYearHelp')}</p>
       </div>
     </div>
-    <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">${t('msg.forCommentsOrDocs')}</p>
-    <div class="field owner-strict">
-      <label>${t('label.vacationDaysPerYear')}</label>
-      <input type="number" id="emp-vacation-days" min="0" step="1" placeholder="${t('ph.notSet')}" value="${e.vacationDaysPerYear!=null?e.vacationDaysPerYear:''}">
-      <p style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('msg.vacationDaysPerYearHelp')}</p>
+
+    <div class="pr-sec owner-strict">
+      <div class="es-tit">${gl({es:'Acceso y permisos', ca:'Accés i permisos', en:'Access and permissions'})}</div>
+      ${id ? opcion('emp-active', e.active!==false, t('label.employeeActive').replace('${area}', areaNombre), t('msg.employeeActiveDesc')) : ''}
+      ${opcion('emp-can-edit', e.canUnlockEdit, t('label.canUnlockEditMode').replace('${area}', areaNombre), t('msg.canUnlockEditModeDesc'))}
+      ${(e.area||currentArea())==='sala' ? opcion('emp-es-repartidor', e.esRepartidor, t('label.isDeliveryRider'), t('msg.isDeliveryRiderDesc')) : ''}
+      ${id ? `
+      <div class="pr-pin">
+        <div><b>${t('label.clockInPin')}</b><small>${e.pinChanged ? t('msg.employeeSetOwnPin') : t('msg.defaultPinExplainer')}</small></div>
+        <button type="button" class="btn btn-sm btn-fino" onclick="resetEmployeePin(${id})"><i class="ti ti-key"></i> ${t('btn.resetPinTo1234')}</button>
+      </div>` : ''}
     </div>
-    ${id ? `
-    <label class="owner-strict" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
-      <input type="checkbox" id="emp-active" ${e.active!==false?'checked':''} style="width:auto">
-      ${t('label.employeeActive').replace('${area}', (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title'))}
-    </label>
-    <p class="owner-strict" style="font-size:12px;color:var(--muted);margin:0 0 14px">${t('msg.employeeActiveDesc')}</p>` : ''}
-    <label class="owner-strict" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
-      <input type="checkbox" id="emp-can-edit" ${e.canUnlockEdit?'checked':''} style="width:auto">
-      ${t('label.canUnlockEditMode').replace('${area}', (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title'))}
-    </label>
-    <p class="owner-strict" style="font-size:12px;color:var(--muted);margin:-10px 0 6px">${t('msg.canUnlockEditModeDesc')}</p>
-    ${(e.area||currentArea())==='sala' ? `
-    <label class="owner-strict" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
-      <input type="checkbox" id="emp-es-repartidor" ${e.esRepartidor?'checked':''} style="width:auto">
-      ${t('label.isDeliveryRider')}
-    </label>
-    <p class="owner-strict" style="font-size:12px;color:var(--muted);margin:0 0 14px">${t('msg.isDeliveryRiderDesc')}</p>` : ''}
-    ${id ? `
-    <div class="field owner-strict">
-      <label>${t('label.clockInPin')}</label>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 6px">${e.pinChanged ? t('msg.employeeSetOwnPin') : t('msg.defaultPinExplainer')}</p>
-      <button class="btn btn-sm" onclick="resetEmployeePin(${id})"><i class="ti ti-key"></i> ${t('btn.resetPinTo1234')}</button>
-    </div>` : ''}
+
     <div class="modal-footer">
-      ${id ? `<button class="owner-strict btn btn-danger" onclick="deleteEmployee(${id})">${t("common.delete")}</button>` : ''}
-      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="saveEmployee(${id||'null'})">${t("common.save")}</button>
+      ${id ? `<button type="button" class="owner-strict btn btn-fino is-off" style="margin-right:auto" onclick="deleteEmployee(${id})"><i class="ti ti-trash"></i> ${t("common.delete")}</button>` : ''}
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t("common.cancel")}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="saveEmployee(${id||'null'})"><i class="ti ti-check"></i> ${t("common.save")}</button>
     </div>
   `);
 }
@@ -5844,36 +5875,41 @@ function openEmployeeFicharModal(employeeId){
   // negocio en vez del suyo propio SÍ se sigue pudiendo: es un atajo
   // distinto y deliberado para "se me olvidó mi PIN", no este caso.)
   const asOwner = personalFicharAuthMethod === 'owner_session';
+  const celda = (et, v, sub) => `<div class="st-cel"><span class="st-cel-et">${et}</span><span class="st-cel-v">${v}</span>${sub ? `<span class="st-cel-s">${sub}</span>` : ''}</div>`;
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
-      <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
+      <h3><span class="pr-av pr-av-s" style="--c:${escapeHtml(e.color||'#DF7039')}">${escapeHtml(prIniciales(e.name))}</span> ${escapeHtml(e.name)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div style="text-align:center">
-      ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="badge badge-gray">${t('hr2.offDuty')}</span>`}
+    <div class="pr-ficha">
+      <div class="pr-ficha-est">
+        ${open ? `<span class="pr-chip ok"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="pr-chip off">${t('hr2.offDuty')}</span>`}
+        <span class="pr-sub">${escapeHtml(e.rol||t('label.noRole'))}</span>
+      </div>
       ${asOwner ? '' : `
-      <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
-        <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="quickFichaje(${e.id}, 'entrada')"><i class="ti ti-login"></i> ${t('hr2.clockIn')}</button>
-        <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="quickFichaje(${e.id}, 'salida')"><i class="ti ti-logout"></i> ${t('hr2.clockOut')}</button>
+      <div class="pr-fichar">
+        <button type="button" class="btn btn-fino is-on" ${open?'disabled':''} onclick="quickFichaje(${e.id}, 'entrada')"><i class="ti ti-login"></i> ${t('hr2.clockIn')}</button>
+        <button type="button" class="btn btn-fino is-off" ${!open?'disabled':''} onclick="quickFichaje(${e.id}, 'salida')"><i class="ti ti-logout"></i> ${t('hr2.clockOut')}</button>
       </div>`}
-      <div style="margin-top:8px;font-size:12px;color:var(--muted)">${t('hr2.hoursThisWeek')}: <strong>${fmtDuracion(horasSemana)}</strong></div>
-      <div style="font-size:12px;color:var(--muted)">${t('hr2.hoursThisMonth')}: <strong>${fmtDuracion(horasMes)}</strong></div>
-      ${isSala ? `
-      <div style="margin-top:8px;font-size:12px;color:var(--muted)">${t('hr2.salesServedWeek')}: <strong>${ventasSemana.count}</strong> (${fmtMoney(ventasSemana.total)})</div>
-      <div style="font-size:12px;color:var(--muted)">${t('hr2.salesServedMonth')}: <strong>${ventasMes.count}</strong> (${fmtMoney(ventasMes.total)})</div>
-      ` : ''}
-      <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> ${t('hr2.viewLastClockIns')}</button>
+      <div class="st-resumen st-resumen-modal">
+        ${celda(t('hr2.hoursThisWeek'), fmtDuracion(horasSemana))}
+        ${celda(t('hr2.hoursThisMonth'), fmtDuracion(horasMes))}
+        ${isSala ? celda(t('hr2.salesServedWeek'), ventasSemana.count, fmtMoney(ventasSemana.total)) : ''}
+        ${isSala ? celda(t('hr2.salesServedMonth'), ventasMes.count, fmtMoney(ventasMes.total)) : ''}
+      </div>
+      <div class="pr-ficha-bt">
+        <button type="button" class="btn btn-sm btn-fino" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> ${t('hr2.viewLastClockIns')}</button>
         ${asOwner ? '' : `
-        <button class="btn btn-sm" onclick="openTurnoSwapRequestModal(${e.id})"><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</button>
-        <button class="btn btn-sm" onclick="openVacationRequestModal(${e.id})"><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</button>
+        <button type="button" class="btn btn-sm btn-fino" onclick="openTurnoSwapRequestModal(${e.id})"><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</button>
+        <button type="button" class="btn btn-sm btn-fino" onclick="openVacationRequestModal(${e.id})"><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</button>
         `}
       </div>
       ${asOwner ? '' : renderIncomingSwapRequestsHtml(e.id)}
       ${asOwner ? '' : renderMyVacationRequestsHtml(e.id)}
       ${asOwner ? '' : `
-      <div class="field" style="margin-top:12px;text-align:left">
-        <label>${t('handoff.label')}</label>
+      <div class="field" style="margin-top:14px">
+        <label for="handoff-note-input">${t('handoff.label')}</label>
         <textarea id="handoff-note-input" rows="2" placeholder="${t('handoff.placeholder')}" onchange="saveShiftHandoffNote('${(e.area||'cocina')}', this.value)">${escapeHtml(getShiftHandoffNote(e.area||'cocina'))}</textarea>
       </div>
       `}
@@ -5888,17 +5924,13 @@ function renderIncomingSwapRequestsHtml(employeeId){
   const pending = (DB.turnoSwapRequests||[]).filter(r => r.toEmployeeId===employeeId && r.status==='pending_peer');
   if(!pending.length) return '';
   return `
-    <div class="card" style="margin-top:12px;text-align:left;border:1px solid var(--amber)">
-      <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-replace"></i> ${t('swap.incomingTitle')}</h4>
+    <div class="pr-atencion"><div class="es-tit">${t('swap.incomingTitle')}</div>
       ${pending.map(r => {
         const from = DB.employees.find(x=>x.id===r.fromEmployeeId);
         const turno = (DB.turnos||[]).find(x=>x.id===r.fromTurnoId);
-        return `<div style="font-size:12.5px;margin-bottom:6px">
-          ${t('swap.incomingLine').replace('${name}', escapeHtml(from?from.name:'?')).replace('${date}', escapeHtml(turno?turno.fecha:'?'))}
-          <div style="display:flex;gap:6px;margin-top:4px">
-            <button class="btn btn-sm btn-primary" onclick="respondTurnoSwapRequest(${r.id}, true)">${t('common.accept')}</button>
-            <button class="btn btn-sm" onclick="respondTurnoSwapRequest(${r.id}, false)">${t('common.reject')}</button>
-          </div>
+        return `<div class="pr-aviso"><i class="ti ti-replace"></i>
+          <div class="pr-aviso-txt">${t('swap.incomingLine').replace('${name}', escapeHtml(from?from.name:'?')).replace('${date}', escapeHtml(turno?turno.fecha:'?'))}</div>
+          <div class="pr-aviso-bt"><button type="button" class="btn btn-sm btn-fino is-on" onclick="respondTurnoSwapRequest(${r.id}, true)">${t('common.accept')}</button><button type="button" class="btn btn-sm btn-fino" onclick="respondTurnoSwapRequest(${r.id}, false)">${t('common.reject')}</button></div>
         </div>`;
       }).join('')}
     </div>`;
@@ -6031,16 +6063,15 @@ function vacationAllowanceSummary(employeeId){
 function renderMyVacationRequestsHtml(employeeId){
   const mine = (DB.vacationRequests||[]).filter(r => r.employeeId===employeeId).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
   const summary = vacationAllowanceSummary(employeeId);
-  const summaryHtml = summary ? `<div style="font-size:12.5px;margin-bottom:6px">${t('vacation.remainingLine').replace('${remaining}', summary.remaining).replace('${total}', summary.total).replace('${used}', summary.used)}</div>` : '';
+  const summaryHtml = summary ? `<div class="pr-aviso-sub">${t('vacation.remainingLine').replace('${remaining}', summary.remaining).replace('${total}', summary.total).replace('${used}', summary.used)}</div>` : '';
   if(!mine.length && !summaryHtml) return '';
   const statusLabel = s => s==='pending' ? t('vacation.statusPending') : s==='approved' ? t('vacation.statusApproved') : t('vacation.statusRejected');
   return `
-    <div class="card" style="margin-top:12px;text-align:left">
-      <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-beach"></i> ${t('vacation.myRequestsTitle')}</h4>
+    <div class="pr-atencion"><div class="es-tit">${t('vacation.myRequestsTitle')}</div>
       ${summaryHtml}
-      ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:6px">
-        <span>${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></span>
-        ${r.status==='pending' ? `<button class="btn btn-sm btn-icon" title="${t('vacation.cancelRequest')}" onclick="cancelVacationRequest(${r.id}, ${employeeId})"><i class="ti ti-x"></i></button>` : ''}
+      ${mine.slice(0,5).map(r => `<div class="pr-aviso"><i class="ti ti-beach"></i>
+        <div class="pr-aviso-txt">${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></div>
+        ${r.status==='pending' ? `<div class="pr-aviso-bt"><button type="button" class="btn btn-sm btn-fino pr-ico" data-tip="${escapeHtml(t('vacation.cancelRequest'))}" aria-label="${escapeHtml(t('vacation.cancelRequest'))}" onclick="cancelVacationRequest(${r.id}, ${employeeId})"><i class="ti ti-x"></i></button></div>` : ''}
       </div>`).join('')}
     </div>`;
 }

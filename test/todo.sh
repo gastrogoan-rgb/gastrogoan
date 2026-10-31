@@ -139,6 +139,7 @@ lanzar; node test/fichas.mjs > "$SALIDA/fichas.txt" 2>&1 & P131=$!
 lanzar; node test/pedidos.mjs > "$SALIDA/pedidos.txt" 2>&1 & P132=$!
 lanzar; node test/cambios-precio.mjs > "$SALIDA/cambios-precio.txt" 2>&1 & P133=$!
 lanzar; node test/stock.mjs > "$SALIDA/stock.txt" 2>&1 & P134=$!
+lanzar; node test/personal.mjs > "$SALIDA/personal.txt" 2>&1 & P135=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -308,5 +309,6 @@ espera $P131 "Fichas técnicas: la ficha como documento (paso a paso con tiempo,
 espera $P132 "Pedidos: realizar pedido como lista de la compra, déficit que descuenta lo que viene de camino, enviar e imprimir, historial con selector de periodo y la hoja de recepción" "$SALIDA/pedidos.txt" "casos pasaron"
 espera $P133 "Cambios de precio: subidas y bajadas, efecto en cada plato (también por elaboraciones base) y precio de venta sugerido para mantener el food cost" "$SALIDA/cambios-precio.txt" "casos pasaron"
 espera $P134 "Stock: resumen, carpetas con alertas, filas con − / + que guardan una vez, mínimo y menú ⋯ plegados en móvil, merma e historial por producto y permisos" "$SALIDA/stock.txt" "casos pasaron"
+espera $P135 "Personal: resumen, avisos de decisión, tarjetas con rótulo en cada icono, editar y eliminar en el ⋯, formulario, ficha y selector de horario, y un empleado solo ve lo suyo" "$SALIDA/personal.txt" "casos pasaron"
 
 exit $FALLOS

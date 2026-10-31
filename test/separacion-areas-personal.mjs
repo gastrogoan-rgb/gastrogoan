@@ -124,7 +124,7 @@ await caso('Desde la tarjeta de Personal, el icono de Distribución del Trabajo 
     navigate('horarios');
     setHorariosTab('personal');
     const box = document.getElementById('horarios-tab-content');
-    const btn = [...box.querySelectorAll('.actions-cell button')].find(b => b.title && b.title.includes('Distribución'));
+    const btn = [...box.querySelectorAll('.actions-cell button')].find(b => (b.dataset.tip||'').includes('Distribución'));
     btn.click();
     return {
       vistaActiva: document.getElementById('view-distribucion').classList.contains('active'),

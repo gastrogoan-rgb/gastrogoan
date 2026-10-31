@@ -1899,8 +1899,9 @@ function ggMenuAcciones(acciones, opts){
   const lista = (acciones || []).filter(Boolean);
   if(!lista.length) return '';
   const etiqueta = opts.etiqueta || gl({es:'Más acciones', ca:'Més accions', en:'More actions'});
-  const soloOwner = lista.every(a => a.owner);
-  return `<button type="button" class="${opts.clase || 'btn btn-fino mn-btn'}${soloOwner ? ' owner-only' : ''}" aria-haspopup="menu" aria-expanded="false" title="${escapeHtml(etiqueta)}" aria-label="${escapeHtml(etiqueta)}" data-acc="${escapeHtml(JSON.stringify(lista))}" onclick="event.stopPropagation();ggAbrirMenuAcciones(this, event)"><i class="ti ${opts.icono || 'ti-dots'}"></i></button>`;
+  const soloOwner = lista.every(a => a.owner || a.estricto);
+  const soloEstricto = lista.every(a => a.estricto);
+  return `<button type="button" class="${opts.clase || 'btn btn-fino mn-btn'}${soloEstricto ? ' owner-strict' : soloOwner ? ' owner-only' : ''}" aria-haspopup="menu" aria-expanded="false" ${opts.tip ? `data-tip="${escapeHtml(etiqueta)}"` : `title="${escapeHtml(etiqueta)}"`} aria-label="${escapeHtml(etiqueta)}" data-acc="${escapeHtml(JSON.stringify(lista))}" onclick="event.stopPropagation();ggAbrirMenuAcciones(this, event)"><i class="ti ${opts.icono || 'ti-dots'}"></i></button>`;
 }
 function ggCerrarMenuAcciones(devolverFoco){
   if(!ggMenuAbierto) return;
@@ -1919,7 +1920,7 @@ function ggAbrirMenuAcciones(btn, ev){
   const menu = document.createElement('div');
   menu.className = 'mn-menu';
   menu.setAttribute('role', 'menu');
-  menu.innerHTML = acciones.map(a => `<button type="button" role="menuitem" class="mn-item${a.peligro ? ' is-off' : ''}${a.owner ? ' owner-only' : ''}" onclick="${escapeHtml('ggCerrarMenuAcciones();' + a.fn)}"><i class="ti ${escapeHtml(a.icono || '')}"></i><span>${escapeHtml(a.texto)}</span></button>`).join('');
+  menu.innerHTML = acciones.map(a => `<button type="button" role="menuitem" class="mn-item${a.peligro ? ' is-off' : ''}${a.estricto ? ' owner-strict' : a.owner ? ' owner-only' : ''}" onclick="${escapeHtml('ggCerrarMenuAcciones();' + a.fn)}"><i class="ti ${escapeHtml(a.icono || '')}"></i><span>${escapeHtml(a.texto)}</span></button>`).join('');
   document.body.appendChild(menu);
   const r = btn.getBoundingClientRect();
   const mw = menu.offsetWidth, mh = menu.offsetHeight;
@@ -2073,7 +2074,7 @@ function ggSiPlegada(ev, el){
 }
 function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
 
-const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock'];   // pantallas que ya tienen el diseño nuevo
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;

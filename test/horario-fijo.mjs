@@ -150,7 +150,7 @@ await caso('El modal de horario fijo pinta los 7 días de la semana con sus sele
 await caso('Solo 2 pestañas en Horarios (Personal y Calendario), con Día/Semana/Mes como interruptor dentro de Calendario', async () => {
   const r = await page.evaluate(() => {
     setHorariosTab('personal');
-    const tabsPersonal = [...document.querySelectorAll('#horarios-content .ge-tab-row .ge-tab')].map(b => b.textContent.trim());
+    const tabsPersonal = [...document.querySelectorAll('#horarios-content .hr-tabs .left button')].map(b => b.textContent.trim());
     setHorariosTab('calendario');
     const toggle = [...document.querySelectorAll('#horarios-content .view-toggle button')].map(b => b.textContent.trim());
     return {tabsPersonal, toggle};
