@@ -3533,8 +3533,8 @@ input,select,textarea{border-radius:var(--r-s)}
 .modal-header ~ .pr-sec:first-of-type{border-top:0;padding-top:4px}.idr-modal ~ .modal-header + .pr-sec{border-top:0;padding-top:4px}
 .pr-sec .es-tit{margin-bottom:10px}
 .pr-ayuda{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
-.pr-colores{display:grid;grid-template-columns:repeat(auto-fill,minmax(32px,1fr));gap:6px}
-.pr-sw{width:100%;aspect-ratio:1;min-height:32px;border-radius:3px;border:1px solid rgba(28,26,23,.2);background:var(--c);cursor:pointer;padding:0}
+.pr-colores{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px}
+.pr-sw{width:100%;aspect-ratio:1;min-height:40px;min-width:40px;border-radius:3px;border:1px solid rgba(28,26,23,.2);background:var(--c);cursor:pointer;padding:0}
 .pr-sw.is-sel{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--ink)}
 .pr-sw:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .pr-otro-color{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--muted)}
