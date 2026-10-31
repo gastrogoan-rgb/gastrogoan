@@ -655,7 +655,7 @@ let providerSearchQuery = '';
 let providerTipoFiltro = null;   // null = todos · '' = sin tipo · un nombre = ese tipo
 function providerTiposDisponibles(){
   const enUso = DB.ingredients.filter(i => (i.area||'cocina') === currentArea()).map(i => i.category).filter(Boolean);
-  const base = [...ingredientCategories(), ...(DB.ingredientCategories || []), ...enUso];
+  const base = [...ingredientCategories(), ...ingredientCategoriesPropias(), ...enUso];
   const propios = DB.providers.filter(p => (p.area||'cocina') === currentArea()).map(p => p.tipo).filter(Boolean);
   return [...new Set([...base, ...propios])];
 }

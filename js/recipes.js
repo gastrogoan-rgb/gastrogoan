@@ -317,12 +317,12 @@ function renderEscandallo(){
   const newBtns = document.getElementById('escandallo-new-btns');
   if(newBtns){
     newBtns.innerHTML = isElab
-      ? `<button class="owner-only btn btn-fino is-on" onclick="openRecipeModal(null, true)"><i class="ti ti-plus"></i> ${t('tab.newElaboration')}</button>`
+      ? `<button class="owner-only btn btn-fino is-on" onclick="openRecipeModal(null, true)"><i class="ti ti-plus"></i> ${tA('tab.newElaboration')}</button>`
       : `<button class="owner-only btn btn-fino is-on" onclick="openRecipeModal()"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('tab.newDrink') : t('tab.newDish')}</button>`;
   }
 
-  document.querySelector('#view-escandallo .view-subtitle').textContent = isElab ? t('tab.elaborationSubtitle') : (currentArea()==='sala' ? t('view.escandallo.subtitle.sala') : t('view.escandallo.subtitle'));
-  document.getElementById('escandallo-search').placeholder = isElab ? t('ph.searchElaboration') : t('ph.searchDish');
+  document.querySelector('#view-escandallo .view-subtitle').textContent = isElab ? tA('tab.elaborationSubtitle') : (currentArea()==='sala' ? t('view.escandallo.subtitle.sala') : t('view.escandallo.subtitle'));
+  document.getElementById('escandallo-search').placeholder = isElab ? tA('ph.searchElaboration') : t('ph.searchDish');
 
   // La hoja (ver más abajo) es la ÚNICA pantalla donde un plato se crea, se ve y se edita.
   if(escandalloHoja){ esPintarHoja(); return; }
@@ -548,7 +548,7 @@ function esPintarHoja(estado){
               </select>
             </div>` : ''}
           </div>
-          ${isBase ? '' : `<p class="es-nota"><i class="ti ti-info-circle"></i> ${t('msg.escandalloForOnePerson')}</p>`}
+          ${isBase ? '' : `<p class="es-nota"><i class="ti ti-info-circle"></i> ${tA('msg.escandalloForOnePerson')}</p>`}
           <!-- El tipo (plato o elaboración base) lo decide el botón por el que se entró; ya no se vuelve a elegir aquí. -->
           <input type="checkbox" id="recipe-is-base" style="display:none" ${isBase ? 'checked' : ''}>
           <input type="hidden" id="recipe-comensales" value="1">
@@ -582,7 +582,7 @@ function esPintarHoja(estado){
             ` : `
               ${k('es-k-pvp', t('label.salePriceShort'), '—')}
               ${k('es-k-margen', t('label.margin'), '—')}
-              ${k('es-k-fc', t('label.foodCost'), '—')}
+              ${k('es-k-fc', tA('label.foodCost'), '—')}
             `}
           </div>
           <div class="es-desglose">
@@ -752,7 +752,7 @@ function filterRecipeIngredientResults(id){
       </div>`;
     const cab = label => `<div class="es-res-cab">${label}</div>`;
     results.innerHTML =
-      (baseLimited.length ? cab(t('label.elaborations')) + baseLimited.map(renderItem).join('') : '') +
+      (baseLimited.length ? cab(tA('label.elaborations')) + baseLimited.map(renderItem).join('') : '') +
       (ingLimited.length ? cab(t('label.ingredients')) + ingLimited.map(renderItem).join('') : '');
   }
   results.style.display = 'block';

@@ -10544,6 +10544,18 @@ function ingredientCategoryLabel(name){
 function ingredientCategories(){
   return currentArea()==='sala' ? CATEGORIES_SALA : CATEGORIES_COCINA;
 }
+// Las categorías propias del negocio (DB.ingredientCategories) son UNA lista
+// para las dos áreas —incluida la que siembra el catálogo—, y se veía entera
+// en las dos: «Pescados y Marisco» como tipo de proveedor de la barra, y
+// «Vinos Blancos» o «Despensa Sala» en la cocina. Se enseñan solo las que
+// usa algún producto de esta área; una que nadie usa aún se ve en las dos
+// (no se sabe de quién es) y se afina sola en cuanto alguien la usa.
+function ingredientCategoriesPropias(){
+  const area = currentArea();
+  const usadas = {};
+  (DB.ingredients || []).forEach(i => { if(i.category){ (usadas[i.category] = usadas[i.category] || new Set()).add(i.area || 'cocina'); } });
+  return (DB.ingredientCategories || []).filter(c => !usadas[c] || usadas[c].has(area));
+}
 const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
 // Los 14 alérgenos de declaración obligatoria en la UE: el valor guardado
 // siempre es el nombre en español (clave estable de datos), pero se muestra

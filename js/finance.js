@@ -1465,7 +1465,7 @@ let megalistaSortDir = 1;
 // ni IVA, y buscar a ojo cuáles faltan por rellenar es justo lo que nadie hace.
 let megalistaRevisar = '';
 const MEGALISTA_COLUMNS = [
-  {key:'name', label:() => t('megalista.colIngredient')},
+  {key:'name', label:() => tA('megalista.colIngredient')},
   {key:'supplier', label:() => t('common.supplier')},
   // El precio va SIEMPRE sin IVA (es el que usa el escandallo); el IVA que lleva el producto, justo al lado.
   {key:'price', label:() => gl({es:'Compra (sin IVA)', ca:'Compra (sense IVA)', en:'Purchase (excl. VAT)'})},
@@ -1896,7 +1896,7 @@ function openIngredientModal(id, overrideState){
         <h3>${t('msg.needSupplier')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p class="ml-intro">${t('msg.needSupplierDesc')}</p>
+      <p class="ml-intro">${tA('msg.needSupplierDesc')}</p>
       <div class="modal-footer">
         <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
         <button type="button" class="btn btn-fino is-on" onclick="closeModal();openProviderModal()"><i class="ti ti-building-factory-2"></i> ${t('btn.newSupplier')}</button>
@@ -1915,7 +1915,7 @@ function openIngredientModal(id, overrideState){
 
   openModal(`
     <div class="modal-header">
-      <h3>${id ? t('title.editIngredient') : t('title.newIngredient')}</h3>
+      <h3>${id ? tA('title.editIngredient') : tA('title.newIngredient')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
@@ -1927,7 +1927,7 @@ function openIngredientModal(id, overrideState){
         <label>${t('common.category')}</label>
         <select id="ing-category" onchange="onIngredientCategoryChange(${id||'null'})">
           ${ingredientCategories().map(c=>`<option value="${c}" ${ing.category===c?'selected':''}>${escapeHtml(ingredientCategoryLabel(c))}</option>`).join('')}
-          ${DB.ingredientCategories.map(c=>`<option value="${escapeHtml(c)}" ${ing.category===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
+          ${[...new Set([...ingredientCategoriesPropias(), ...(ing.category && !ingredientCategories().includes(ing.category) ? [ing.category] : [])])].map(c=>`<option value="${escapeHtml(c)}" ${ing.category===c?'selected':''}>${escapeHtml(ingredientCategoryLabel(c))}</option>`).join('')}
           <option value="__new__">+ ${t('btn.newCategory')}...</option>
         </select>
       </div>
@@ -2350,7 +2350,7 @@ function openStockValueModal(){
     <div class="st-resumen st-resumen-modal">
       <div class="st-cel st-cel-gr"><span class="st-cel-et">${t('label.stockValueTotal')}</span><span class="st-cel-v">${fmtMoney(b.total)}</span></div>
       <div class="st-cel"><span class="st-cel-et">${t('label.ingredients')}</span><span class="st-cel-v">${fmtMoney(b.ingTotal)}</span></div>
-      <div class="st-cel"><span class="st-cel-et">${t('label.elaborations')}</span><span class="st-cel-v">${fmtMoney(b.elabTotal)}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${tA('label.elaborations')}</span><span class="st-cel-v">${fmtMoney(b.elabTotal)}</span></div>
     </div>
     ${b.elabSinCoste ? `<p class="pe-aviso"><i class="ti ti-info-circle"></i> ${t('msg.stockValueElabSinCoste').replace('${n}', b.elabSinCoste)}</p>` : ''}
   `);
@@ -2536,11 +2536,11 @@ function renderStock(){
   if(kpisBox){
     kpisBox.innerHTML = `
       <div class="st-cel"><span class="st-cel-et">${t('label.products')}</span><span class="st-cel-v">${activeArea.length}</span></div>
-      <div class="st-cel"><span class="st-cel-et">${t('label.elaborations')}</span><span class="st-cel-v">${allElabList.length}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${tA('label.elaborations')}</span><span class="st-cel-v">${allElabList.length}</span></div>
       <button type="button" class="st-cel st-cel-btn${lowTotal ? ' is-bajo' : ''}" aria-pressed="${onlyAlerts}" onclick="stSoloAlertas()" title="${escapeHtml(gl({es:'Ver solo lo que está bajo mínimo', ca:'Veure només el que és sota el mínim', en:'Show only what is below the minimum'}))}">
         <span class="st-cel-et">${gl({es:'Bajo mínimo', ca:'Sota el mínim', en:'Below minimum'})}</span>
         <span class="st-cel-v">${lowTotal}</span>
-        <span class="st-cel-s">${lowIngCount} ${gl({es:'productos', ca:'productes', en:'products'})} · ${lowElabCount} ${gl({es:'elaboraciones', ca:'elaboracions', en:'preparations'})}</span>
+        <span class="st-cel-s">${lowIngCount} ${lowIngCount === 1 ? gl({es:'producto', ca:'producte', en:'product'}) : gl({es:'productos', ca:'productes', en:'products'})} · ${lowElabCount} ${currentArea()==='sala' ? (lowElabCount === 1 ? gl({es:'preparación', ca:'preparació', en:'preparation'}) : gl({es:'preparaciones', ca:'preparacions', en:'preparations'})) : (lowElabCount === 1 ? gl({es:'elaboración', ca:'elaboració', en:'preparation'}) : gl({es:'elaboraciones', ca:'elaboracions', en:'preparations'}))}</span>
       </button>
       <button type="button" class="st-cel st-cel-btn owner-only" onclick="openStockValueModal()">
         <span class="st-cel-et">${t('btn.stockValue')}</span>
@@ -2643,7 +2643,7 @@ function renderStock(){
           : `<span class="ml-ico">${icono}</span>`}
         <div class="ml-carpeta-txt">
           <div class="ml-carpeta-nom">${escapeHtml(label)}</div>
-          <div class="ml-carpeta-meta">${lista.length === 1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', lista.length)}</div>
+          <div class="ml-carpeta-meta">${lista.length === 1 ? tA('label.oneElaboration') : tA('label.nElaborations').replace('${n}', lista.length)}</div>
           ${bajos ? `<div class="st-carp-baja">${bajos} ${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}</div>` : ''}
         </div>
         ${real ? botonesDeCarpeta(key, 'recipe') : ''}
@@ -2814,7 +2814,14 @@ function openStockLogModal(tipo, id){
 // consumoPropio = lo que se come o se lleva el titular (autoconsumo, tributa
 // como venta a coste); comidaPersonal = la comida del equipo (gasto de
 // personal; si es retribución en especie lo decide el convenio/gestor).
-const MERMA_MOTIVOS = ['caducado', 'malEstado', 'sobreproduccion', 'error', 'devolucion', 'consumoPropio', 'comidaPersonal', 'otro'];
+// Los motivos son CLAVES estables (el historial las guarda y el informe las
+// agrupa), así que cada área solo elige cuáles ofrece: en una barra no hay
+// «sobreproducción» pero sí la botella rota y la copa que se invita.
+const MERMA_MOTIVOS_TODOS = ['caducado', 'malEstado', 'sobreproduccion', 'rotura', 'invitacion', 'error', 'devolucion', 'consumoPropio', 'comidaPersonal', 'otro'];
+function mermaMotivos(){
+  const sala = currentArea() === 'sala';
+  return MERMA_MOTIVOS_TODOS.filter(m => sala ? m !== 'sobreproduccion' : (m !== 'rotura' && m !== 'invitacion'));
+}
 function mermaMotivoLabel(m){
   if(!m) return '—';
   if(m.motivo === 'otro') return m.motivoOtro || t('merma.r.otro');
@@ -2840,7 +2847,7 @@ function openMermaModal(sel){
   ings.forEach(i => { const c = i.category || t('label.noCategory'); (byCat[c] = byCat[c] || []).push(i); });
   const opts = Object.keys(byCat).sort((a,b) => a.localeCompare(b)).map(c =>
     `<optgroup label="${escapeHtml(ingredientCategoryLabel(c))}">${byCat[c].map(i => `<option value="ing:${i.id}">${escapeHtml(i.name)}</option>`).join('')}</optgroup>`).join('')
-    + (elabs.length ? `<optgroup label="${escapeHtml(t('label.elaborations'))}">${elabs.map(e => `<option value="elab:${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '');
+    + (elabs.length ? `<optgroup label="${escapeHtml(tA('label.elaborations'))}">${elabs.map(e => `<option value="elab:${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '');
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-trash-x"></i> ${t('merma.title')}</h3>
@@ -2856,7 +2863,7 @@ function openMermaModal(sel){
     </div>
     <div class="form-group">
       <label>${t('merma.reason')}</label>
-      <div class="merma-motivos">${MERMA_MOTIVOS.map(m => `<label class="merma-motivo"><input type="radio" name="merma-motivo" value="${m}" onchange="mermaActualizar()"> <span>${t('merma.r.' + m)}</span></label>`).join('')}</div>
+      <div class="merma-motivos">${mermaMotivos().map(m => `<label class="merma-motivo"><input type="radio" name="merma-motivo" value="${m}" onchange="mermaActualizar()"> <span>${t('merma.r.' + m)}</span></label>`).join('')}</div>
       <input type="text" id="merma-otro" maxlength="80" placeholder="${escapeHtml(t('merma.otherPh'))}" style="display:none;margin-top:8px">
     </div>
     <div class="txt-xs" id="merma-coste" style="color:var(--muted)">${t('merma.stockNote')}</div>

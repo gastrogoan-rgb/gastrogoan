@@ -521,6 +521,7 @@ const I18N = {
     'view.escandallo.subtitle.sala': 'Cálculo automático de costes de bebidas',
     'view.carta.title.sala': 'Oferta de Bebidas',
     'view.carta.subtitle.sala': 'Gestiona tu carta de bebidas · Vincula con Escandallo',
+    'view.megalista.subtitle.sala': 'Gestión de productos y proveedores', 'view.fichas.subtitle.sala': 'Preparación estándar de cada bebida y sus alérgenos', 'stock.tab.products': 'Ingredientes', 'stock.tab.products.sala': 'Productos', 'tab.elaborations.sala': 'Preparaciones', 'tab.newElaboration.sala': 'Nueva Preparación', 'tab.elaborationSubtitle.sala': 'Jarabes, infusiones, mezclas y bases para usar en tus bebidas', 'label.elaborations.sala': 'Preparaciones', 'ph.searchElaboration.sala': 'Buscar preparación...', 'title.newIngredient.sala': 'Nuevo Producto', 'title.editIngredient.sala': 'Editar Producto', 'megalista.colIngredient.sala': 'Producto', 'title.dishAllergensOverview.sala': 'Alérgenos por bebida', 'msg.dishAllergensOverviewDesc.sala': 'Se calculan automáticamente a partir de los productos dados de alta en cada ficha técnica (Escandallo).', 'empty.noDishesForAllergens.sala': 'No hay bebidas con ficha técnica todavía.', 'label.dishElaboration.sala': 'Bebida/Preparación', 'msg.escandalloForOnePerson.sala': 'Se calcula siempre para 1 copa o bebida porque cada venta descuenta del stock exactamente estas cantidades: si las pusieras pensando en varias copas, cada venta restaría de más y el coste/precio también saldría mal. Para una jarra o una tanda, usa la Ficha Técnica.', 'msg.escandalloForOnePersonShort.sala': 'Calculado para 1 copa o bebida', 'label.foodCost.sala': 'Coste de bebida', 'merma.r.rotura': 'Rotura de botella o cristalería', 'merma.r.invitacion': 'Invitación a un cliente', 'li.rawToCookedProduct.sala': 'Al pasar de recoger vasos sucios a preparar bebidas',
     'btn.newCarta': 'Nueva Carta', 'btn.newBeverageCarta': 'Nueva Carta de Bebidas',
     'days.full': ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
     'months.full': ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
@@ -821,6 +822,7 @@ const I18N = {
     'label.currentStock': 'Stock actual', 'label.minimumStock': 'Stock mínimo', 'label.changeMinimumStock': 'Cambiar stock mínimo',
     'btn.add1': 'Añadir 1', 'btn.remove1': 'Quitar 1', 'btn.adjustQty': 'Ajustar cantidad', 'btn.viewCostingSheet': 'Ver escandallo',
     'label.oneElaboration': '1 elaboración', 'label.nElaborations': '${n} elaboraciones', 'label.noCategory': 'Sin categoría',
+    'label.oneElaboration.sala': '1 preparación', 'label.nElaborations.sala': '${n} preparaciones',
     'common.print': 'Imprimir', 'common.copy': 'Copiar', 'common.unlock': 'Desbloquear',
     'common.continue': 'Continuar', 'common.update': 'Actualizar',
     'app.newVersion': 'Hay una versión nueva de GastroGoan (${fecha})',
@@ -1338,6 +1340,7 @@ const I18N = {
     'msg.cannotCancelSplitPaid': 'No se puede cancelar: ya hay partes cobradas. Termina de cobrar el resto o finaliza la cuenta.',
     'msg.needSupplier': 'Necesitas un proveedor',
     'msg.needSupplierDesc': 'Antes de añadir ingredientes, da de alta al menos un proveedor con sus datos de contacto.',
+    'msg.needSupplierDesc.sala': 'Antes de añadir productos, da de alta al menos un proveedor con sus datos de contacto.',
     'btn.newSupplier': 'Nuevo Proveedor',
     'label.minStock': 'Mínimo',
     'empty.ingredients': 'No hay ingredientes. Añade el primero.',
@@ -3460,6 +3463,7 @@ const I18N = {
     'view.escandallo.subtitle.sala': 'Càlcul automàtic de costos de begudes',
     'view.carta.title.sala': 'Oferta de Begudes',
     'view.carta.subtitle.sala': 'Gestiona la teva carta de begudes · Vincula amb l\'Escandall',
+    'view.megalista.subtitle.sala': 'Gestió de productes i proveïdors', 'view.fichas.subtitle.sala': 'Preparació estàndard de cada beguda i els seus al·lèrgens', 'stock.tab.products': 'Ingredients', 'stock.tab.products.sala': 'Productes', 'tab.elaborations.sala': 'Preparacions', 'tab.newElaboration.sala': 'Nova Preparació', 'tab.elaborationSubtitle.sala': 'Xarops, infusions, mescles i bases per fer servir en les teves begudes', 'label.elaborations.sala': 'Preparacions', 'ph.searchElaboration.sala': 'Cercar preparació...', 'title.newIngredient.sala': 'Nou Producte', 'title.editIngredient.sala': 'Editar Producte', 'megalista.colIngredient.sala': 'Producte', 'title.dishAllergensOverview.sala': 'Al·lèrgens per beguda', 'msg.dishAllergensOverviewDesc.sala': 'Es calculen automàticament a partir dels productes donats d\'alta a cada fitxa tècnica (Escandall).', 'empty.noDishesForAllergens.sala': 'Encara no hi ha begudes amb fitxa tècnica.', 'label.dishElaboration.sala': 'Beguda/Preparació', 'msg.escandalloForOnePerson.sala': 'Es calcula sempre per a 1 copa o beguda perquè cada venda resta de l\'estoc exactament aquestes quantitats: si les poséssis pensant en diverses copes, cada venda restaria de més i el cost/preu també sortiria malament. Per a una gerra o una tanda, fes servir la Fitxa Tècnica.', 'msg.escandalloForOnePersonShort.sala': 'Calculat per a 1 copa o beguda', 'label.foodCost.sala': 'Cost de beguda', 'merma.r.rotura': 'Trencament d\'ampolla o cristalleria', 'merma.r.invitacion': 'Invitació a un client', 'li.rawToCookedProduct.sala': 'En passar de recollir gots bruts a preparar begudes',
     'btn.newCarta': 'Nova Carta', 'btn.newBeverageCarta': 'Nova Carta de Begudes',
     'days.full': ['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
     'months.full': ['Gener','Febrer','Març','Abril','Maig','Juny','Juliol','Agost','Setembre','Octubre','Novembre','Desembre'],
@@ -3760,6 +3764,7 @@ const I18N = {
     'label.currentStock': 'Estoc actual', 'label.minimumStock': 'Estoc mínim', 'label.changeMinimumStock': 'Canviar estoc mínim',
     'btn.add1': 'Afegir 1', 'btn.remove1': 'Treure 1', 'btn.adjustQty': 'Ajustar quantitat', 'btn.viewCostingSheet': 'Veure escandall',
     'label.oneElaboration': '1 elaboració', 'label.nElaborations': '${n} elaboracions', 'label.noCategory': 'Sense categoria',
+    'label.oneElaboration.sala': '1 preparació', 'label.nElaborations.sala': '${n} preparacions',
     'common.print': 'Imprimir', 'common.copy': 'Copiar', 'common.unlock': 'Desbloquejar',
     'common.continue': 'Continuar', 'common.update': 'Actualitzar',
     'app.newVersion': 'Hi ha una versió nova de GastroGoan (${fecha})',
@@ -4274,6 +4279,7 @@ const I18N = {
     'msg.cannotCancelSplitPaid': 'No es pot cancel·lar: ja hi ha parts cobrades. Acaba de cobrar la resta o finalitza el compte.',
     'msg.needSupplier': 'Necessites un proveïdor',
     'msg.needSupplierDesc': "Abans d'afegir ingredients, dona d'alta almenys un proveïdor amb les seves dades de contacte.",
+    'msg.needSupplierDesc.sala': 'Abans d\'afegir productes, dona d\'alta almenys un proveïdor amb les seves dades de contacte.',
     'btn.newSupplier': 'Nou Proveïdor',
     'label.minStock': 'Mínim',
     'empty.ingredients': 'No hi ha ingredients. Afegeix el primer.',
@@ -6399,6 +6405,7 @@ const I18N = {
     'view.escandallo.subtitle.sala': 'Automatic drink cost calculation',
     'view.carta.title.sala': 'Beverage Offering',
     'view.carta.subtitle.sala': 'Manage your beverage menu · Link with Costing',
+    'view.megalista.subtitle.sala': 'Product and supplier management', 'view.fichas.subtitle.sala': 'Standard preparation of each drink and its allergens', 'stock.tab.products': 'Ingredients', 'stock.tab.products.sala': 'Products', 'tab.elaborations.sala': 'Preparations', 'tab.newElaboration.sala': 'New Preparation', 'tab.elaborationSubtitle.sala': 'Syrups, infusions, mixes and bases to use in your drinks', 'label.elaborations.sala': 'Preparations', 'ph.searchElaboration.sala': 'Search preparation...', 'title.newIngredient.sala': 'New Product', 'title.editIngredient.sala': 'Edit Product', 'megalista.colIngredient.sala': 'Product', 'title.dishAllergensOverview.sala': 'Allergens by drink', 'msg.dishAllergensOverviewDesc.sala': 'They are worked out automatically from the products entered in each technical sheet (Costing).', 'empty.noDishesForAllergens.sala': 'No drinks with a technical sheet yet.', 'label.dishElaboration.sala': 'Drink/Preparation', 'msg.escandalloForOnePerson.sala': 'It\'s always calculated for 1 glass or drink because each sale deducts exactly these quantities from stock: if you entered them for several glasses, every sale would over-deduct and the cost/price would also come out wrong. For a jug or a batch, use the Technical Sheet.', 'msg.escandalloForOnePersonShort.sala': 'Calculated for 1 glass or drink', 'label.foodCost.sala': 'Drink cost', 'merma.r.rotura': 'Broken bottle or glassware', 'merma.r.invitacion': 'Comp for a customer', 'li.rawToCookedProduct.sala': 'When moving from collecting dirty glasses to preparing drinks',
     'btn.newCarta': 'New Menu', 'btn.newBeverageCarta': 'New Beverage Menu',
     'days.full': ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
     'months.full': ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -6699,6 +6706,7 @@ const I18N = {
     'label.currentStock': 'Current stock', 'label.minimumStock': 'Minimum stock', 'label.changeMinimumStock': 'Change minimum stock',
     'btn.add1': 'Add 1', 'btn.remove1': 'Remove 1', 'btn.adjustQty': 'Adjust quantity', 'btn.viewCostingSheet': 'View costing sheet',
     'label.oneElaboration': '1 elaboration', 'label.nElaborations': '${n} elaborations', 'label.noCategory': 'No category',
+    'label.oneElaboration.sala': '1 preparation', 'label.nElaborations.sala': '${n} preparations',
     'common.print': 'Print', 'common.copy': 'Copy', 'common.unlock': 'Unlock',
     'common.continue': 'Continue', 'common.update': 'Refresh',
     'app.newVersion': 'There is a new version of GastroGoan (${fecha})',
@@ -7213,6 +7221,7 @@ const I18N = {
     'msg.cannotCancelSplitPaid': 'Cannot cancel: some parts are already charged. Finish charging the rest or complete the bill.',
     'msg.needSupplier': 'You need a supplier',
     'msg.needSupplierDesc': 'Before adding ingredients, please register at least one supplier with their contact details.',
+    'msg.needSupplierDesc.sala': 'Before adding products, register at least one supplier with their contact details.',
     'btn.newSupplier': 'New Supplier',
     'label.minStock': 'Minimum',
     'empty.ingredients': 'No ingredients yet. Add the first one.',
@@ -9077,6 +9086,33 @@ function t(key){
   const dict = I18N[lang] || I18N.es;
   if(dict[key] !== undefined) return dict[key];
   return I18N.es[key] !== undefined ? I18N.es[key] : key;
+}
+
+// Texto "según el área": en Sala se usa la variante `clave.sala` si existe y
+// en Cocina (o si no hay variante) la de siempre. Existe porque Sala nació
+// como copia de Cocina y hablaba de platos, ingredientes y raciones donde una
+// barra habla de bebidas, productos y copas. Solo para lo que se VE: un dato
+// guardado no se traduce ni se adapta (ver "El programa se guarda" en CLAUDE.md).
+function tA(key){
+  if(typeof currentArea === 'function' && currentArea() === 'sala'){
+    const dict = I18N[getLang()] || I18N.es;
+    if(dict[key + '.sala'] !== undefined) return dict[key + '.sala'];
+    if(I18N.es[key + '.sala'] !== undefined) return I18N.es[key + '.sala'];
+  }
+  return t(key);
+}
+// Pasa por los textos fijos del HTML de una vista (los `data-i18n`) y pone la
+// variante de Sala donde la hay. Solo toca los que TIENEN variante (los
+// marca), para no pisar un texto que otro código haya cambiado a propósito.
+function aplicarPalabrasDeArea(raiz){
+  const sala = typeof currentArea === 'function' && currentArea() === 'sala';
+  (raiz || document).querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const dict = I18N[getLang()] || I18N.es;
+    const tiene = dict[key + '.sala'] !== undefined || I18N.es[key + '.sala'] !== undefined;
+    if(sala && tiene) { el.textContent = tA(key); el.dataset.palabraSala = '1'; }
+    else if(el.dataset.palabraSala) { el.textContent = t(key); delete el.dataset.palabraSala; }
+  });
 }
 
 // Nombres de los días de la semana SOLO para mostrar en el idioma actual.
