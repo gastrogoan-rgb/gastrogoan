@@ -197,7 +197,7 @@ await caso('Las cuentas del negocio son las de un bistró que va bien', async ()
         gastos contra 181 € de ventas, con −13.371 € en rojo. */
   const r = await page.evaluate(()=>{
     const hoy = new Date();
-    const f = new Date(hoy); f.setMonth(f.getMonth() - 1);
+    const f = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);   // día 1: con setMonth, el 31 de octubre caía en «31 de septiembre» = 1 de octubre
     const año = f.getFullYear(), mes = f.getMonth();   // BASE 0, como la app
     const neta = geFacturacionNetaMes(año, mes);
     return {
