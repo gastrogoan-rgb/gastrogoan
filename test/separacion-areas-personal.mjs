@@ -59,7 +59,7 @@ await caso('El clima de cocina solo cuenta el check-in de cocina (5), no la medi
     setHorariosTab('personal');
     return document.getElementById('horarios-tab-content').innerText;
   });
-  assert.ok(texto.includes('Media de 1 respuesta(s): 5.0/5'), 'debe ser la media de cocina sola (1 respuesta, 5.0/5), no mezclada con sala: ' + texto.slice(0,300));
+  assert.ok(texto.includes('5.0') && /1 respuesta/.test(texto), 'debe ser la media de cocina sola (1 respuesta, 5.0/5), no mezclada con sala: ' + texto.slice(0,300));
 });
 
 await caso('El clima de sala solo cuenta el check-in de sala (1), no el de cocina', async () => {
@@ -69,7 +69,7 @@ await caso('El clima de sala solo cuenta el check-in de sala (1), no el de cocin
     setHorariosTab('personal');
     return document.getElementById('horarios-tab-content').innerText;
   });
-  assert.ok(texto.includes('Media de 1 respuesta(s): 1.0/5'), 'debe ser la media de sala sola (1 respuesta, 1.0/5), no mezclada con cocina: ' + texto.slice(0,300));
+  assert.ok(texto.includes('1.0') && /1 respuesta/.test(texto), 'debe ser la media de sala sola (1 respuesta, 1.0/5), no mezclada con cocina: ' + texto.slice(0,300));
 });
 
 await caso('El desplegable de "Horario fijo" en Cocina solo lista empleados de cocina', async () => {
@@ -124,7 +124,7 @@ await caso('Desde la tarjeta de Personal, el icono de Distribución del Trabajo 
     navigate('horarios');
     setHorariosTab('personal');
     const box = document.getElementById('horarios-tab-content');
-    const btn = [...box.querySelectorAll('.actions-cell button')].find(b => b.title && b.title.includes('Distribución'));
+    const btn = [...box.querySelectorAll('.actions-cell button')].find(b => (b.dataset.tip||'').includes('Distribución'));
     btn.click();
     return {
       vistaActiva: document.getElementById('view-distribucion').classList.contains('active'),

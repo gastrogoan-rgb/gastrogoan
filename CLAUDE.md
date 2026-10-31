@@ -640,7 +640,7 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
 
 ## Rediseño pantalla a pantalla (29-30/10): cómo se hace y qué hay hecho
 
-El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos y Stock**.
+El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos, Stock y Personal**.
 La orden de fondo, dicha tras ver que se tocaba solo la pantalla principal: **cuando se rediseña una pantalla se
 abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueba `test/subpantallas.mjs` lo exige).
 
@@ -705,6 +705,15 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   y **el mínimo va BLOQUEADO (gris, `readonly`) hasta pulsar el lápiz** (`stMinEditar`; Enter o salir lo guarda y vuelve a bloquear, Esc cancela);
   sin permiso de edición no hay lápiz sino un candado y el campo es `disabled`. ⚠️ El orden de los `<input>` de cada fila es mínimo, cantidad (lo usa `stock-empleados.mjs`); la
   posición visual la ponen `order` y las áreas de la rejilla. Un empleado sin edición cuenta existencias (− / +) pero no toca el mínimo. Prueba: `test/stock.mjs`.
+- **Personal** (31/10, pestaña «Personal» de Horarios, `renderHorariosPersonal`): arriba un resumen de cuatro cifras (plantilla, trabajando ahora,
+  esperan respuesta, clima) y «Requiere tu atención» con cada cambio de turno / vacaciones / jornada larga y sus botones (`teamPulseData`,
+  `prResumenHtml`, `prAtencionHtml`; solo propietario). Cada empleado es una tarjeta (`pr-card`): avatar con iniciales y aro del color del
+  empleado (el color va en el aro porque ni el blanco ni el negro se leen sobre los 30 colores), estado de fichaje y, al pie, iconos
+  de acción. ⚠️ **Todo icono suelto lleva su rótulo** (`data-tip`, CSS global `[data-tip]` al pasar el ratón o enfocar con teclado; sirve
+  también de `aria-label`; **sin `title` nativo**, que duplicaría el globo). En táctil no hay «pasar por encima»: ahí manda el `aria-label`. Editar ficha y
+  eliminar van en el ⋯ (`ggMenuAcciones` con `estricto:true` = `.owner-strict`, no `.owner-only`: un jefe de cocina con edición no gestiona a
+  un compañero). La ficha, el formulario (secciones, colores seleccionables, permisos como opciones) y el selector de horario siguen el diseño nuevo.
+  Prueba: `test/personal.mjs` (⚠️ para probar `:hover` en headless hay que lanzar Chromium con `--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4`).
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,
