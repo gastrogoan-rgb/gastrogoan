@@ -120,44 +120,59 @@ function getAllDishAllergens(){
   });
   return [...porNombre.values()].sort((a,b) => a.name.localeCompare(b.name));
 }
-let lpAlergBusca = '', lpAlergSin = '';
-function lpAlergFiltro(campo, v){
-  if(campo === 'q') lpAlergBusca = v.toLowerCase(); else lpAlergSin = v;
+let lpAlergBusca = '', lpAlergSel = [];
+function lpAlergToggle(nombre){
+  lpAlergSel = lpAlergSel.includes(nombre) ? lpAlergSel.filter(a => a !== nombre) : [...lpAlergSel, nombre];
   renderLimpiezaAlergenos();
-  if(campo === 'q'){ const c = document.getElementById('lp-alerg-q'); if(c){ c.focus(); const n = c.value.length; try{ c.setSelectionRange(n, n); }catch(e){} } }
+}
+function lpAlergLimpiar(){ lpAlergSel = []; lpAlergBusca = ''; renderLimpiezaAlergenos(); }
+function lpAlergBuscar(v){
+  lpAlergBusca = v.toLowerCase();
+  renderLimpiezaAlergenos();
+  const c = document.getElementById('lp-alerg-q'); if(c){ c.focus(); const n = c.value.length; try{ c.setSelectionRange(n, n); }catch(e){} }
 }
 function printAlergenos(){
-  const dishes = getAllDishAllergens();
+  const dishes = lpAlergFiltrados();
   const title = t('title.dishAllergensOverview');
-  const body = `${printReportHeaderHtml(title)}<table><thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead><tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td>${d.allergens.map(a => escapeHtml(a)).join(' · ')}</td></tr>`).join('')}</tbody></table>`;
+  const body = `${printReportHeaderHtml(title, lpAlergSel.length ? lpAlergSel.map(a => allergenLabel(a)).join(' · ') : '')}<table><thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead><tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td>${d.allergens.map(a => escapeHtml(allergenLabel(a))).join(' · ')}</td></tr>`).join('')}</tbody></table>`;
   printReportWindow(title, body);
+}
+// Platos que llevan ALGUNO de los alérgenos marcados (sin ninguno marcado, todos los de la lista).
+function lpAlergFiltrados(){
+  let dishes = getAllDishAllergens();
+  if(lpAlergBusca) dishes = dishes.filter(d => d.name.toLowerCase().includes(lpAlergBusca));
+  if(lpAlergSel.length) dishes = dishes.filter(d => d.allergens.some(a => lpAlergSel.includes(a)));
+  return dishes;
 }
 function renderLimpiezaAlergenos(){
   const box = document.getElementById('limpieza-tab-content');
   const todos = getAllDishAllergens();
-  const lista = [...new Set(todos.flatMap(d => d.allergens))].sort((a,b) => a.localeCompare(b));
-  if(lpAlergSin && !lista.includes(lpAlergSin)) lpAlergSin = '';
-  let dishes = todos;
-  if(lpAlergBusca) dishes = dishes.filter(d => d.name.toLowerCase().includes(lpAlergBusca));
-  if(lpAlergSin) dishes = dishes.filter(d => !d.allergens.includes(lpAlergSin));
+  const cuenta = {};
+  todos.forEach(d => d.allergens.forEach(a => { cuenta[a] = (cuenta[a]||0) + 1; }));
+  const lista = Object.keys(cuenta).sort((a,b) => allergenLabel(a).localeCompare(allergenLabel(b)));
+  lpAlergSel = lpAlergSel.filter(a => lista.includes(a));
+  const dishes = lpAlergFiltrados();
+  const filtrando = !!(lpAlergSel.length || lpAlergBusca);
   box.innerHTML = `
-    <div class="lp-barra">
-      <div class="lp-filtros">
-        <input type="text" class="search-input st-buscar" id="lp-alerg-q" value="${escapeHtml(lpAlergBusca)}" placeholder="${escapeHtml(gl({es:'Buscar plato…', ca:'Cercar plat…', en:'Search dish…'}))}" oninput="lpAlergFiltro('q', this.value)" aria-label="${escapeHtml(t('label.dishElaboration'))}">
-        <select id="lp-alerg-sin" onchange="lpAlergFiltro('sin', this.value)" aria-label="${escapeHtml(gl({es:'Platos sin un alérgeno', ca:'Plats sense un al·lergen', en:'Dishes without an allergen'}))}">
-          <option value="">${gl({es:'Todos los platos', ca:'Tots els plats', en:'All dishes'})}</option>
-          ${lista.map(a => `<option value="${escapeHtml(a)}"${lpAlergSin === a ? ' selected' : ''}>${gl({es:'Sin ', ca:'Sense ', en:'Without '})}${escapeHtml(allergenLabel(a))}</option>`).join('')}
-        </select>
+    <section class="lp-card lp-alerg-filtro">
+      <div class="lp-barra">
+        <div class="es-tit" style="margin:0">${gl({es:'Ver los platos que llevan…', ca:'Veure els plats que porten…', en:'Show the dishes that contain…'})}</div>
+        <div class="lp-filtros">
+          <input type="text" class="search-input st-buscar" id="lp-alerg-q" value="${escapeHtml(lpAlergBusca)}" placeholder="${escapeHtml(gl({es:'Buscar plato…', ca:'Cercar plat…', en:'Search dish…'}))}" oninput="lpAlergBuscar(this.value)" aria-label="${escapeHtml(t('label.dishElaboration'))}">
+          ${filtrando ? `<button type="button" class="btn btn-sm btn-fino" onclick="lpAlergLimpiar()"><i class="ti ti-x"></i> ${gl({es:'Quitar filtros', ca:'Treure filtres', en:'Clear filters'})}</button>` : ''}
+          <button type="button" class="btn btn-fino" onclick="printAlergenos()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+        </div>
       </div>
-      <button type="button" class="btn btn-fino" onclick="printAlergenos()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-    </div>
+      ${lista.length ? `<div class="lp-alerg-chips" role="group" aria-label="${escapeHtml(t('label.allergens'))}">${lista.map(a => `<button type="button" class="lp-alerg${lpAlergSel.includes(a) ? ' on' : ''}" aria-pressed="${lpAlergSel.includes(a)}" onclick="lpAlergToggle('${escapeJsAttr(a)}')">${escapeHtml(allergenLabel(a))}<span>${cuenta[a]}</span></button>`).join('')}</div>
+      ${lpAlergSel.length ? `<p class="pr-ayuda">${gl({es:'Se muestran los platos que llevan alguno de los alérgenos marcados.', ca:'Es mostren els plats que porten algun dels al·lèrgens marcats.', en:'Showing dishes that contain any of the selected allergens.'})}</p>` : ''}` : ''}
+    </section>
     <section class="lp-card">
       <h3 class="dp-h"><i class="ti ti-alert-triangle"></i> ${t('title.dishAllergensOverview')} <span class="dp-cuenta">${dishes.length}</span></h3>
       <p class="pr-ayuda">${t('msg.dishAllergensOverviewDesc')}</p>
       ${dishes.length ? `<div class="table-wrap"><table class="table-cards">
         <thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
-        <tbody>${dishes.map(d => `<tr><td data-label="${escapeHtml(t('label.dishElaboration'))}">${escapeHtml(d.name)}</td><td class="wrap" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
-      </table></div>` : `<div class="empty es-vacio">${lpAlergSin || lpAlergBusca ? t('common.noResults') : t('empty.noDishesForAllergens')}</div>`}
+        <tbody>${dishes.map(d => `<tr><td data-label="${escapeHtml(t('label.dishElaboration'))}">${escapeHtml(d.name)}</td><td class="wrap" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.map(a=>`<span class="badge badge-amber${lpAlergSel.includes(a) ? ' lp-marcado' : ''}">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
+      </table></div>` : `<div class="empty es-vacio">${filtrando ? t('common.noResults') : t('empty.noDishesForAllergens')}</div>`}
     </section>
   `;
 }
@@ -342,17 +357,19 @@ function renderLimpiezaTab(){
 function lpRefrescarResumen(){
   const r = document.querySelector('#limpieza-content .lp-resumen');
   if(r) r.outerHTML = lpResumenHtml();
+  lpAutoTodos();
 }
 
+/* Una casilla de texto que se estira hacia ABAJO cuando el texto es largo: antes un paso largo se «comía» por la derecha y no
+   se podía leer entero. Todas las cajas de texto libre de Limpieza son así (lpAuto las ajusta al escribir y al pintar). */
+function lpAuto(el){ el.style.height = 'auto'; el.style.height = Math.max(el.scrollHeight + 2, 44) + 'px'; }
+function lpAutoTodos(){ document.querySelectorAll('#limpieza-content textarea.lp-auto-alto').forEach(lpAuto); }
 // Un paso numerado de un protocolo: el texto se edita en su sitio (si hay permiso) y subir / bajar / quitar viven en el ⋯.
-function lpPasoHtml(i, total, texto, fnCambiar, fnMover, fnQuitar, largo){
-  const campo = largo
-    ? `<textarea class="lp-paso-txt" rows="2" oninput="${fnCambiar}" ${editUnlocked?'':'readonly'} aria-label="${escapeHtml(t('label.newStep') + ' ' + (i+1))}">${escapeHtml(texto)}</textarea>`
-    : `<input type="text" class="lp-paso-txt" value="${escapeHtml(texto)}" onchange="${fnCambiar}" ${editUnlocked?'':'readonly'} aria-label="${escapeHtml(t('label.newStep') + ' ' + (i+1))}">`;
+function lpPasoHtml(i, total, texto, fnCambiar, fnMover, fnQuitar){
   return `
     <div class="lp-paso">
       <span class="lp-num">${i+1}</span>
-      ${campo}
+      <textarea class="lp-paso-txt lp-auto-alto" rows="1" oninput="lpAuto(this);${fnCambiar}" ${editUnlocked?'':'readonly'} aria-label="${escapeHtml(t('label.newStep') + ' ' + (i+1))}">${escapeHtml(texto)}</textarea>
       ${ggMenuAcciones([
         i > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:fnMover(-1), estricto:true} : null,
         i < total - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:fnMover(1), estricto:true} : null,
@@ -373,7 +390,7 @@ function renderLimpiezaManos(){
             ${ggMenuAcciones([{icono:'ti-restore', texto:t('btn.resetToDefault'), fn:'resetManosPasos()', estricto:true}], {clase:'btn btn-fino mn-btn pr-ico', tip:true, etiqueta:gl({es:'Más opciones', ca:'Més opcions', en:'More options'})})}
           </div>
         </div>
-        ${pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateManosPaso(${i}, this.value)`, d => `moveManosPaso(${i},${d})`, `removeManosPaso(${i})`, true)).join('')}
+        ${pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateManosPaso(${i}, this.value)`, d => `moveManosPaso(${i},${d})`, `removeManosPaso(${i})`)).join('')}
         <button type="button" class="owner-strict btn btn-fino lp-anadir" onclick="addManosPaso()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
       </section>
       <div class="lp-lado">
@@ -395,6 +412,7 @@ function renderLimpiezaManos(){
       </div>
     </div>
   `;
+  lpAutoTodos();
 }
 function resetManosPasos(){ DB.limpieza.manosPasos[currentArea()] = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
 function moveManosPaso(i,dir){
@@ -415,6 +433,27 @@ async function removeManosPaso(i){
   // todo, obligando a bajar otra vez tras CADA dato introducido.
   withScrollPreserved(() => renderLimpiezaManos());
 }
+/* ============== Apertura y cierre como lista de comprobación (31/10) ==============
+   Cada paso se contesta Sí o No; hasta que no están TODOS contestados no se puede guardar. Se guarda lo que se contestó (y una nota
+   si hubo un «No»), no solo «se hizo»: en una inspección importa saber QUÉ no estaba bien. Las respuestas se quedan en este aparato
+   mientras se rellena (no se sincronizan a medias); al guardar pasan al registro de hoy. */
+let lpBorrador = {};   // {'cocina:apertura': {fecha, resp:{i:true|false}, nota:{i:texto}}}
+let lpEditandoPasos = {};  // {apertura:bool, cierre:bool}
+function lpBorradorDe(type){
+  const k = currentArea() + ':' + type;
+  const hoy = todayStr();
+  if(!lpBorrador[k] || lpBorrador[k].fecha !== hoy) lpBorrador[k] = {fecha: hoy, resp: {}, nota: {}};
+  return lpBorrador[k];
+}
+function lpBorradorReset(type){ delete lpBorrador[currentArea() + ':' + type]; }
+function lpCheckResp(type, i, valor){
+  const b = lpBorradorDe(type);
+  b.resp[i] = valor;
+  if(valor) delete b.nota[i];
+  withScrollPreserved(() => renderLimpiezaProtocolo());
+}
+function lpCheckNota(type, i, texto){ lpBorradorDe(type).nota[i] = texto; }
+function lpEditarPasos(type, si){ lpEditandoPasos[type] = !!si; lpBorradorReset(type); renderLimpiezaProtocolo(); }
 function renderLimpiezaProtocolo(){
   const box = document.getElementById('limpieza-tab-content');
   const hoy = todayStr();
@@ -424,29 +463,66 @@ function renderLimpiezaProtocolo(){
     const log = (DB.limpieza[logKey] || []).filter(e => (e.area||'cocina')===currentArea());
     const deHoy = log.find(e => e.fecha === hoy);
     const nombreDe = entry => entry.responsableNombre || (entry.responsableId ? (DB.employees.find(e=>e.id===entry.responsableId)||{}).name : null);
+    const editando = !!lpEditandoPasos[type] && editUnlocked;
+    const b = lpBorradorDe(type);
+    const contestados = pasos.filter((_, i) => b.resp[i] === true || b.resp[i] === false).length;
+    const noes = pasos.filter((_, i) => b.resp[i] === false).length;
+    const completo = pasos.length > 0 && contestados === pasos.length;
     // Los últimos tres días (es lo que se conserva): un punto verde por cada día que se registró.
     const dias = [2, 1, 0].map(n => { const ds = addDaysStr(hoy, -n); return {ds, hecho: log.some(e => e.fecha === ds)}; });
     const historial = [...log].reverse().slice(0, 5);
+    const resumenEntrada = e => (e.respuestas && e.respuestas.length) ? `${e.si} ${gl({es:'Sí', ca:'Sí', en:'Yes'})} · ${e.no} No` : '';
+    let lista;
+    if(editando){
+      lista = pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateProtocoloPaso('${type}',${i},this.value)`, d => `moveProtocoloPaso('${type}',${i},${d})`, `removeProtocoloPaso('${type}',${i})`)).join('')
+        + `<div class="lp-edicion-bt"><button type="button" class="owner-strict btn btn-fino" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button><button type="button" class="btn btn-fino is-on" onclick="lpEditarPasos('${type}', false)"><i class="ti ti-check"></i> ${gl({es:'Listo', ca:'Llest', en:'Done'})}</button></div>`;
+    } else if(deHoy){
+      // Ya registrado hoy: se ve lo que se contestó, sin posibilidad de repetirlo.
+      lista = (deHoy.respuestas && deHoy.respuestas.length ? deHoy.respuestas : pasos.map(texto => ({texto, ok: null}))).map((r, i) => `
+        <div class="lp-chk is-cerrado">
+          <span class="lp-num">${i+1}</span>
+          <div class="lp-chk-txt"><span>${escapeHtml(r.texto)}</span>${r.nota ? `<small class="lp-chk-nota"><i class="ti ti-note"></i> ${escapeHtml(r.nota)}</small>` : ''}</div>
+          ${r.ok === true ? `<span class="lp-resp si"><i class="ti ti-check"></i> ${gl({es:'Sí', ca:'Sí', en:'Yes'})}</span>` : r.ok === false ? `<span class="lp-resp no"><i class="ti ti-x"></i> No</span>` : ''}
+        </div>`).join('');
+    } else {
+      lista = pasos.map((p, i) => `
+        <div class="lp-chk${b.resp[i] === false ? ' es-no' : b.resp[i] === true ? ' es-si' : ''}">
+          <span class="lp-num">${i+1}</span>
+          <div class="lp-chk-txt"><span>${escapeHtml(p)}</span>
+            ${b.resp[i] === false ? `<textarea class="lp-chk-nota-in lp-auto-alto" rows="1" placeholder="${escapeHtml(gl({es:'¿Qué ha pasado? (opcional)', ca:'Què ha passat? (opcional)', en:'What happened? (optional)'}))}" oninput="lpAuto(this);lpCheckNota('${type}',${i},this.value)" aria-label="${escapeHtml(gl({es:'Qué ha pasado', ca:'Què ha passat', en:'What happened'}))}">${escapeHtml(b.nota[i] || '')}</textarea>` : ''}
+          </div>
+          <div class="lp-sino" role="group" aria-label="${escapeHtml(p)}">
+            <button type="button" class="lp-sn si${b.resp[i] === true ? ' on' : ''}" aria-pressed="${b.resp[i] === true}" onclick="lpCheckResp('${type}',${i},true)"><i class="ti ti-check"></i> ${gl({es:'Sí', ca:'Sí', en:'Yes'})}</button>
+            <button type="button" class="lp-sn no${b.resp[i] === false ? ' on' : ''}" aria-pressed="${b.resp[i] === false}" onclick="lpCheckResp('${type}',${i},false)"><i class="ti ti-x"></i> No</button>
+          </div>
+        </div>`).join('');
+    }
+    const pie = editando ? '' : deHoy
+      ? `<div class="lp-cumple-ok"><i class="ti ti-circle-check"></i> <span>${escapeHtml(deHoy.fecha)} · ${escapeHtml(deHoy.hora||'')}${nombreDe(deHoy) ? ` · ${escapeHtml(nombreDe(deHoy))}` : ''}${resumenEntrada(deHoy) ? ` · ${resumenEntrada(deHoy)}` : ''}</span></div>`
+      : `<div class="lp-guardar">
+           <div class="lp-progreso"><b>${contestados}</b> / ${pasos.length} ${gl({es:'contestados', ca:'contestats', en:'answered'})}${noes ? ` · <span class="lp-no-n">${noes} No</span>` : ''}</div>
+           <div class="dp-barra${completo ? ' ok' : ''}"><span style="width:${pasos.length ? Math.round(contestados / pasos.length * 100) : 0}%"></span></div>
+           <button type="button" class="btn btn-fino is-on" ${completo ? '' : 'disabled'} onclick="registerProtocoloCompliance('${type}')"><i class="ti ti-device-floppy"></i> ${gl({es:'Guardar registro de hoy', ca:'Desar el registre d\'avui', en:'Save today\'s log'})}</button>
+           ${completo ? '' : `<p class="pr-ayuda">${gl({es:'Contesta Sí o No en cada paso para poder guardar.', ca:'Contesta Sí o No a cada pas per poder desar.', en:'Answer Yes or No on every step to be able to save.'})}</p>`}
+         </div>`;
     return `
     <section class="lp-card">
       <div class="lp-card-cab">
         <h3 class="dp-h"><i class="ti ti-${icon}"></i> ${title}</h3>
         <div class="lp-card-bt">
+          ${editUnlocked && !editando ? `<button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Editar los pasos', ca:'Editar els passos', en:'Edit the steps'}))}" aria-label="${escapeHtml(gl({es:'Editar los pasos', ca:'Editar els passos', en:'Edit the steps'}))}" onclick="lpEditarPasos('${type}', true)"><i class="ti ti-pencil"></i></button>` : ''}
           <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('common.print'))}" aria-label="${escapeHtml(t('common.print'))}" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button>
           ${ggMenuAcciones([{icono:'ti-restore', texto:t('common.reset'), fn:`resetProtocoloPasos('${type}')`, estricto:true}], {clase:'btn btn-fino mn-btn pr-ico', tip:true, etiqueta:gl({es:'Más opciones', ca:'Més opcions', en:'More options'})})}
         </div>
       </div>
-      ${pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateProtocoloPaso('${type}',${i},this.value)`, d => `moveProtocoloPaso('${type}',${i},${d})`, `removeProtocoloPaso('${type}',${i})`, false)).join('')}
-      <button type="button" class="owner-strict btn btn-fino lp-anadir" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
+      ${lista}
+      ${pie}
       <div class="lp-cumple">
         <div class="es-tit">${t('title.dailyCompliance')}</div>
-        ${deHoy
-          ? `<div class="lp-cumple-ok"><i class="ti ti-circle-check"></i> <span>${escapeHtml(deHoy.fecha)} · ${escapeHtml(deHoy.hora||'')}${nombreDe(deHoy) ? ` · ${escapeHtml(nombreDe(deHoy))}` : ''}</span></div>`
-          : `<button type="button" class="btn btn-fino is-on" onclick="registerProtocoloCompliance('${type}')"><i class="ti ti-check"></i> ${t('btn.registerToday')}</button><p class="pr-ayuda">${t('msg.complianceRegistersYou')}</p>`}
         <div class="lp-dias" aria-label="${escapeHtml(gl({es:'Últimos tres días', ca:'Darrers tres dies', en:'Last three days'}))}">
           ${dias.map(d => `<span class="lp-dia${d.hecho ? ' ok' : ''}" title="${escapeHtml(d.ds)}"><i class="ti ${d.hecho ? 'ti-check' : 'ti-minus'}"></i>${escapeHtml(new Date(d.ds + 'T12:00:00').toLocaleDateString(localeActual(), {weekday:'short', day:'numeric'}))}</span>`).join('')}
         </div>
-        ${historial.length ? `<ul class="lp-historial">${historial.map(entry => `<li><span>${escapeHtml(entry.fecha)} · ${escapeHtml(entry.hora||'')}${nombreDe(entry) ? ` · ${escapeHtml(nombreDe(entry))}` : ''}</span>${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`deleteProtocoloComplianceEntry('${type}',${entry.id})`, peligro:true, estricto:true}], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}</li>`).join('')}</ul>` : `<p class="pr-ayuda">${t('empty.noComplianceLog')}</p>`}
+        ${historial.length ? `<ul class="lp-historial">${historial.map(entry => `<li><span>${escapeHtml(entry.fecha)} · ${escapeHtml(entry.hora||'')}${nombreDe(entry) ? ` · ${escapeHtml(nombreDe(entry))}` : ''}${resumenEntrada(entry) ? ` · <b>${resumenEntrada(entry)}</b>` : ''}</span>${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`deleteProtocoloComplianceEntry('${type}',${entry.id})`, peligro:true, estricto:true}], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}</li>`).join('')}</ul>` : `<p class="pr-ayuda">${t('empty.noComplianceLog')}</p>`}
       </div>
     </section>`;
   };
@@ -457,6 +533,7 @@ function _protocoloKey(type){ return type==='apertura' ? 'aperturaPasos' : 'cier
 function updateProtocoloPaso(type,i,val){ if(!editUnlocked) return; limpiezaProtocoloPasos(type)[i] = val; saveDB(); }
 function moveProtocoloPaso(type,i,dir){
   moveArrayItem(limpiezaProtocoloPasos(type), i, dir);
+  lpBorradorReset(type);
   saveDB();
   // Conserva la posición de la pantalla: sin esto, escribir un valor en
   // una lista larga repintaba la vista entera y te devolvía arriba del
@@ -474,14 +551,22 @@ function registerProtocoloCompliance(type){
     showToast(t('msg.complianceAlreadyToday').replace('${name}', already.responsableNombre || '?'));
     return;
   }
+  const pasos = limpiezaProtocoloPasos(type);
+  const b = lpBorradorDe(type);
+  // Nada se guarda a medias: cada paso tiene que estar contestado, y el aviso dice cuántos faltan.
+  const faltan = pasos.filter((_, i) => b.resp[i] !== true && b.resp[i] !== false).length;
+  if(faltan){ showToast(gl({es:'Faltan ' + faltan + ' pasos por contestar (Sí o No).', ca:'Falten ' + faltan + ' passos per contestar (Sí o No).', en:faltan + ' steps left to answer (Yes or No).'})); return; }
+  const respuestas = pasos.map((texto, i) => ({texto, ok: b.resp[i] === true, nota: b.resp[i] === false ? (b.nota[i] || '').trim() : ''}));
   const now = new Date();
   const authorId = getChatAuthor();
   DB.limpieza[logKey].push({
     id: genId(), fecha: todayStr(), hora: now.toTimeString().slice(0,5),
     responsableId: authorId==='owner' ? null : authorId,
     responsableNombre: getChatAuthorName(authorId),
-    area: currentArea()
+    area: currentArea(),
+    respuestas, si: respuestas.filter(r => r.ok).length, no: respuestas.filter(r => !r.ok).length
   });
+  lpBorradorReset(type);
   saveDB();
   renderLimpiezaProtocolo();
   showToast(t('msg.complianceRegistered'));
@@ -501,12 +586,13 @@ function deleteProtocoloComplianceEntry(type, id){
     renderLimpiezaProtocolo();
   });
 }
-function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push(t('label.newStep')); saveDB(); renderLimpiezaProtocolo(); }
+function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push(t('label.newStep')); lpBorradorReset(type); saveDB(); renderLimpiezaProtocolo(); }
 async function removeProtocoloPaso(type,i){
   const pasos = limpiezaProtocoloPasos(type);
   if(pasos.length<=1) return;
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   pasos.splice(i,1);
+  lpBorradorReset(type);
   saveDB();
   renderLimpiezaProtocolo();
 }
@@ -514,7 +600,7 @@ function resetProtocoloPasos(type){
   const area = currentArea();
   const isSala = area === 'sala';
   DB.limpieza[_protocoloKey(type)][area] = [...(type==='apertura' ? (isSala?getLimpiezaDefaultAperturaSala():getLimpiezaDefaultApertura()) : (isSala?getLimpiezaDefaultCierreSala():getLimpiezaDefaultCierre()))];
-  saveDB(); renderLimpiezaProtocolo(); showToast(t('msg.stepsReset'));
+  lpBorradorReset(type); saveDB(); renderLimpiezaProtocolo(); showToast(t('msg.stepsReset'));
 }
 function printProtocolo(type){
   const pasos = limpiezaProtocoloPasos(type);
@@ -874,8 +960,9 @@ function renderLimpiezaLog(key){
     else if(f === 'proxima' && key === 'plagas') input = `<input type="date" id="lp-${key}-${f}">`;
     else if(f === 'hora') input = `<input type="time" id="lp-${key}-${f}">`;
     else if(f === 'temp' && key === 'temperaturas') input = `<input type="number" step="0.1" min="-60" max="300" inputmode="decimal" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
+    else if(['hallazgos','accion','area'].includes(f)) input = `<textarea class="lp-auto-alto" rows="1" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}" oninput="lpAuto(this)"></textarea>`;
     else input = `<input type="text" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
-    return `<div class="field" style="margin-bottom:0"><label for="lp-${key}-${f}">${cfg.labels[i]}</label>${input}</div>`;
+    return `<div class="field${['hallazgos','accion'].includes(f) ? ' lp-ancho' : ''}" style="margin-bottom:0"><label for="lp-${key}-${f}">${cfg.labels[i]}</label>${input}</div>`;
   }).join('');
 
   /* Un registro de temperaturas se escribe varias veces al día: en un mes
@@ -1014,28 +1101,62 @@ function limpiezaMantenimientoDueStatus(e){
   if(diffDays <= 7) return 'soon';
   return null;
 }
+let lpEqEditando = null;   // equipo que se está editando (solo uno a la vez)
+function lpEqEditar(id){ lpEqEditando = id; renderLimpiezaMantenimiento(); }
+function lpEqCancelar(){ lpEqEditando = null; renderLimpiezaMantenimiento(); }
+function lpEqGuardar(id){
+  if(!editUnlocked) return;
+  const e = DB.limpieza.mantenimiento.find(x => x.id === id);
+  if(!e) return;
+  const v = k => { const el = document.getElementById(`mt-${k}-${id}`); return el ? el.value : ''; };
+  Object.assign(e, {ultimo: v('u'), proximo: v('p'), responsable: v('r').trim(), estado: v('e') || e.estado, notas: v('n').trim()});
+  lpEqEditando = null;
+  saveDB();
+  renderLimpiezaTab();
+  showToast(gl({es:'Equipo guardado', ca:'Equip desat', en:'Equipment saved'}));
+}
 function renderLimpiezaMantenimiento(){
   const box = document.getElementById('limpieza-tab-content');
   const equipos = DB.limpieza.mantenimiento.filter(e => (e.zona||'cocina')===currentArea());
-  const dis = editUnlocked ? '' : 'disabled';
+  if(lpEqEditando != null && !equipos.some(e => e.id === lpEqEditando)) lpEqEditando = null;
+  const estadoTxt = {OK: t('status.ok'), Pendiente: t('status.pendingM'), Urgente: t('status.urgent')};
+  const fecha = f => f ? escapeHtml(new Date(f + 'T12:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'})) : '—';
   const tarjeta = e => {
     const due = limpiezaMantenimientoDueStatus(e);
-    return `
-    <article class="lp-eq${due === 'overdue' ? ' is-vencido' : ''}${e.estado === 'Urgente' ? ' is-urgente' : ''}">
+    const edit = lpEqEditando === e.id && editUnlocked;
+    const cab = `
       <div class="lp-eq-cab">
         <b class="lp-eq-nom">${escapeHtml(e.nombre)}</b>
         ${due==='overdue' ? `<span class="pr-chip msg"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : due==='soon' ? `<span class="pr-chip dp-amb"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
-        ${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`deleteMantenimientoEquipo(${e.id})`, peligro:true, estricto:true}], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}
-      </div>
-      <div class="lp-eq-campos">
-        <div class="field"><label for="mt-u-${e.id}">${t('label.lastMaintenance')}</label><input type="date" id="mt-u-${e.id}" value="${escapeHtml(e.ultimo||'')}" onchange="updateMantenimientoEquipo(${e.id},'ultimo',this.value)" ${dis}></div>
-        <div class="field"><label for="mt-p-${e.id}">${t('label.next')}</label><input type="date" id="mt-p-${e.id}" value="${escapeHtml(e.proximo||'')}" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)" ${dis}></div>
-        <div class="field"><label for="mt-r-${e.id}">${t('label.responsible')}</label><input type="text" id="mt-r-${e.id}" value="${escapeHtml(e.responsable||'')}" placeholder="—" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${dis}></div>
-        <div class="field"><label for="mt-e-${e.id}">${t('label.status')}</label><select id="mt-e-${e.id}" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)" ${dis}>
-          ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,k])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(k)}</option>`).join('')}
-        </select></div>
-        <div class="field lp-eq-notas"><label for="mt-n-${e.id}">${t('th.notes')}</label><input type="text" id="mt-n-${e.id}" value="${escapeHtml(e.notas||'')}" placeholder="—" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${dis}></div>
-      </div>
+        ${edit ? '' : `${editUnlocked ? `<button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('common.edit'))}" aria-label="${escapeHtml(t('common.edit') + ': ' + e.nombre)}" onclick="lpEqEditar(${e.id})"><i class="ti ti-pencil"></i></button>` : ''}
+        ${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`deleteMantenimientoEquipo(${e.id})`, peligro:true, estricto:true}], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}`}
+      </div>`;
+    if(edit){
+      return `
+      <article class="lp-eq is-editando">
+        ${cab}
+        <div class="lp-eq-campos">
+          <div class="field"><label for="mt-u-${e.id}">${t('label.lastMaintenance')}</label><input type="date" id="mt-u-${e.id}" value="${escapeHtml(e.ultimo||'')}"></div>
+          <div class="field"><label for="mt-p-${e.id}">${t('label.next')}</label><input type="date" id="mt-p-${e.id}" value="${escapeHtml(e.proximo||'')}"></div>
+          <div class="field"><label for="mt-r-${e.id}">${t('label.responsible')}</label><textarea class="lp-auto-alto" rows="1" id="mt-r-${e.id}" placeholder="—" oninput="lpAuto(this)">${escapeHtml(e.responsable||'')}</textarea></div>
+          <div class="field"><label for="mt-e-${e.id}">${t('label.status')}</label><select id="mt-e-${e.id}">
+            ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,k])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(k)}</option>`).join('')}
+          </select></div>
+          <div class="field lp-eq-notas"><label for="mt-n-${e.id}">${t('th.notes')}</label><textarea class="lp-auto-alto" rows="2" id="mt-n-${e.id}" placeholder="—" oninput="lpAuto(this)">${escapeHtml(e.notas||'')}</textarea></div>
+        </div>
+        <div class="lp-eq-bt"><button type="button" class="btn btn-fino" onclick="lpEqCancelar()">${t('common.cancel')}</button><button type="button" class="btn btn-fino is-on" onclick="lpEqGuardar(${e.id})"><i class="ti ti-check"></i> ${t('common.save')}</button></div>
+      </article>`;
+    }
+    return `
+    <article class="lp-eq${due === 'overdue' ? ' is-vencido' : ''}${e.estado === 'Urgente' ? ' is-urgente' : ''}">
+      ${cab}
+      <dl class="lp-eq-datos">
+        <div><dt>${t('label.lastMaintenance')}</dt><dd>${fecha(e.ultimo)}</dd></div>
+        <div><dt>${t('label.next')}</dt><dd>${fecha(e.proximo)}</dd></div>
+        <div><dt>${t('label.responsible')}</dt><dd>${e.responsable ? escapeHtml(e.responsable) : '—'}</dd></div>
+        <div><dt>${t('label.status')}</dt><dd><span class="lp-estado-eq ${e.estado === 'Urgente' ? 'nok' : e.estado === 'Pendiente' ? 'pend' : 'ok'}">${escapeHtml(estadoTxt[e.estado] || e.estado || '—')}</span></dd></div>
+        <div class="lp-eq-notas"><dt>${t('th.notes')}</dt><dd>${e.notas ? escapeHtml(e.notas) : '—'}</dd></div>
+      </dl>
     </article>`;
   };
   box.innerHTML = `
@@ -1045,6 +1166,7 @@ function renderLimpiezaMantenimiento(){
     </div>
     ${equipos.length ? `<div class="lp-eqs">${equipos.map(tarjeta).join('')}</div>` : `<div class="empty es-vacio"><i class="ti ti-settings"></i>${t('empty.noEquipmentRegistered')}</div>`}
   `;
+  lpRefrescarResumen();
 }
 function addMantenimientoEquipo(){
   openModal(`
@@ -2035,6 +2157,7 @@ function dpCargoDetalleHtml(tipo, nombre){
   const lineas = f ? getFichaIngredientLines(f) : (rec.ingredients||[]).map(line => { const info = renderEscandalloLineLabel(line); return info ? {qty: line.qty, unit: info.unit, name: info.name} : null; }).filter(Boolean);
   const fx = f ? fiFactor(f) : {factor: 1, produccion: (rec && rec.comensales) || 1};
   const pasos = f ? (f.pasos||[]).map((p, i) => ({p, d: (f.pasosDet||[])[i] || {}})).filter(x => x.p && String(x.p).trim()) : [];
+  const tiempo = pasos.reduce((n, x) => n + (parseFloat(x.d.min) || 0), 0);
   return `
     <div class="dp-det-cab">
       ${f && f.photo ? `<img class="dp-det-foto" src="${f.photo}" alt="" onclick="openFichaPhotoLightbox(this.src)">` : ''}
@@ -2044,9 +2167,15 @@ function dpCargoDetalleHtml(tipo, nombre){
         ${alerg.length ? `<div class="dp-det-alerg">${alerg.map(a => `<span class="ml-al">${escapeHtml(allergenLabel(a))}</span>`).join('')}</div>` : `<div class="pr-ayuda">${gl({es:'Sin alérgenos declarados', ca:'Sense al·lèrgens declarats', en:'No allergens declared'})}</div>`}
       </div>
     </div>
+    <div class="dp-det-stats">
+      <div><span>${t('label.ingredients')}</span><b>${lineas.length}</b></div>
+      <div><span>${gl({es:'Pasos', ca:'Passos', en:'Steps'})}</span><b>${pasos.length}</b></div>
+      <div><span>${gl({es:'Tiempo', ca:'Temps', en:'Time'})}</span><b>${tiempo ? tiempo + ' min' : '—'}</b></div>
+      <div><span>${gl({es:'Raciones', ca:'Racions', en:'Servings'})}</span><b>${fmtNum(fx.produccion)}</b></div>
+    </div>
     <div class="dp-det-cols">
       <section>
-        <div class="es-tit">${t('label.ingredients')} <span class="dp-man-ay">${gl({es:'para', ca:'per a', en:'for'})} ${fmtNum(fx.produccion)}</span></div>
+        <div class="es-tit">${t('label.ingredients')}</div>
         ${lineas.length ? `<ul class="dp-ings">${lineas.map(l => `<li><span class="dp-ing-q">${l.qty != null ? `${fmtNum(l.qty * fx.factor)} <small>${escapeHtml(l.unit)}</small>` : '—'}</span><span>${escapeHtml(l.name)}</span></li>`).join('')}</ul>` : `<p class="pr-ayuda">${t('empty.noIngredients')}</p>`}
       </section>
       <section>
@@ -2071,37 +2200,41 @@ function openDistCargo(empId){
   const isSala = currentArea() === 'sala';
   const ownerSess = isOwnerSession();
   distCurrentEmployeeId = empId;
-  let cuerpo = '';
+  let cuerpo = '', asignar = '';
   if(isSala){
     cuerpo = d.rangos.length
       ? `<div class="dp-chips">${d.rangos.map((rg, i) => `<span class="dp-chip es-zona"><i class="ti ti-map-pin"></i> ${escapeHtml(rg)}${ownerSess ? ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`removeDistRango(${i})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : ''}</span>`).join('')}</div>`
       : `<div class="empty es-vacio"><i class="ti ti-map-pin"></i>${t('dist.noZonesAssigned')}</div>`;
-    if(ownerSess) cuerpo += `<div class="dp-asignar"><input type="text" id="dist-rango-input" placeholder="${t('dist.zonePlaceholder')}" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistRango();}"><button type="button" class="btn btn-fino is-on" onclick="addDistRango()">${t('btn.assign')}</button></div>`;
+    if(ownerSess) asignar = `<div class="dp-asignar-cab"><input type="text" id="dist-rango-input" placeholder="${t('dist.zonePlaceholder')}" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistRango();}"><button type="button" class="btn btn-fino is-on" onclick="addDistRango()"><i class="ti ti-plus"></i> ${t('btn.assign')}</button></div>`;
   } else {
     const todos = [...d.platos.map((n, i) => ({tipo:'plato', nombre:n, idx:i})), ...d.elabs.map((n, i) => ({tipo:'elab', nombre:n, idx:i}))];
     if(!dpCargoSel || !todos.some(x => x.tipo === dpCargoSel.tipo && x.nombre === dpCargoSel.nombre)) dpCargoSel = todos[0] ? {tipo: todos[0].tipo, nombre: todos[0].nombre} : null;
-    const roto = x => x.tipo === 'plato' ? !getDishNamesWithFicha().includes(x.nombre) && !DB.recipes.some(r => r.name === x.nombre) : !dpElaboracionesDisponibles().includes(x.nombre);
+    const conFicha = getDishNamesWithFicha();
+    const roto = x => x.tipo === 'plato' ? !conFicha.includes(x.nombre) && !DB.recipes.some(r => r.name === x.nombre) : !dpElaboracionesDisponibles().includes(x.nombre);
+    const esSel = x => !!(dpCargoSel && dpCargoSel.tipo === x.tipo && dpCargoSel.nombre === x.nombre);
     const grupo = (tipo, titulo, ico) => {
       const items = todos.filter(x => x.tipo === tipo);
       if(!items.length) return '';
-      return `<div class="dp-grupo"><div class="es-tit">${titulo} <span class="dp-cuenta">${items.length}</span></div><div class="dp-chips">${items.map(x => `<button type="button" class="dp-chip${dpCargoSel && dpCargoSel.tipo === x.tipo && dpCargoSel.nombre === x.nombre ? ' is-sel' : ''}${roto(x) ? ' is-roto' : ''}" aria-pressed="${!!(dpCargoSel && dpCargoSel.tipo === x.tipo && dpCargoSel.nombre === x.nombre)}" onclick="dpCargoElegir('${x.tipo}','${escapeJsAttr(x.nombre)}')"><i class="ti ${roto(x) ? 'ti-link-off' : ico}"></i> ${escapeHtml(x.nombre)}</button>`).join('')}</div></div>`;
+      return `<div class="dp-grupo"><div class="es-tit">${titulo} <span class="dp-cuenta">${items.length}</span></div><div class="dp-chips">${items.map(x => `<button type="button" class="dp-chip${esSel(x) ? ' is-sel' : ''}${roto(x) ? ' is-roto' : ''}" aria-pressed="${esSel(x)}" onclick="dpCargoElegir('${x.tipo}','${escapeJsAttr(x.nombre)}')"><i class="ti ${roto(x) ? 'ti-link-off' : ico}"></i><span>${escapeHtml(x.nombre)}</span></button>`).join('')}</div></div>`;
     };
-    const quitar = dpCargoSel && ownerSess ? (() => { const x = todos.find(y => y.tipo === dpCargoSel.tipo && y.nombre === dpCargoSel.nombre); return x ? ggMenuAcciones([{icono:'ti-trash', texto:gl({es:'Quitar de su cargo', ca:'Treure del seu càrrec', en:'Remove from their charge'}), fn: x.tipo === 'elab' ? `removeDistElab(${x.idx})` : `removeDistPlato(${x.idx})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : ''; })() : '';
-    const opcP = getDishNamesWithFicha().filter(n => !d.platos.includes(n)).map(n => `<option value="plato:${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    const quitar = dpCargoSel && ownerSess ? (() => { const x = todos.find(esSel); return x ? ggMenuAcciones([{icono:'ti-trash', texto:gl({es:'Quitar de su cargo', ca:'Treure del seu càrrec', en:'Remove from their charge'}), fn: x.tipo === 'elab' ? `removeDistElab(${x.idx})` : `removeDistPlato(${x.idx})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : ''; })() : '';
+    const opcP = conFicha.filter(n => !d.platos.includes(n)).map(n => `<option value="plato:${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
     const opcE = dpElaboracionesDisponibles().filter(n => !d.elabs.includes(n)).map(n => `<option value="elab:${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
-    cuerpo = `
-      ${todos.length ? grupo('plato', gl({es:'Platos', ca:'Plats', en:'Dishes'}), 'ti-tools-kitchen-2') + grupo('elab', gl({es:'Elaboraciones', ca:'Elaboracions', en:'Preparations'}), 'ti-soup') : `<div class="empty es-vacio"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}</div>`}
-      ${dpCargoSel ? `<section class="dp-detalle"><div class="dp-detalle-bt">${quitar}</div>${dpCargoDetalleHtml(dpCargoSel.tipo, dpCargoSel.nombre)}</section>` : ''}
-      ${ownerSess ? `<div class="dp-asignar">
-        <select id="dist-plato-sel" aria-label="${escapeHtml(t('dist.selectDish'))}"><option value="">${t('dist.selectDish')}</option>${opcP ? `<optgroup label="${escapeHtml(gl({es:'Platos', ca:'Plats', en:'Dishes'}))}">${opcP}</optgroup>` : ''}${opcE ? `<optgroup label="${escapeHtml(gl({es:'Elaboraciones', ca:'Elaboracions', en:'Preparations'}))}">${opcE}</optgroup>` : ''}</select>
-        <button type="button" class="btn btn-fino is-on" onclick="addDistPlato()">${t('btn.assign')}</button>
-      </div>${!opcP && !opcE && !todos.length ? `<p class="pr-ayuda">${t('dist.noFichasYet')}</p>` : ''}` : ''}`;
+    cuerpo = todos.length
+      ? `<div class="dp-cargo-grid">
+           <nav class="dp-cargo-lista" aria-label="${escapeHtml(gl({es:'Platos y elaboraciones', ca:'Plats i elaboracions', en:'Dishes and preparations'}))}">${grupo('plato', gl({es:'Platos', ca:'Plats', en:'Dishes'}), 'ti-tools-kitchen-2')}${grupo('elab', gl({es:'Elaboraciones', ca:'Elaboracions', en:'Preparations'}), 'ti-soup')}</nav>
+           <section class="dp-detalle">${quitar ? `<div class="dp-detalle-bt">${quitar}</div>` : ''}${dpCargoSel ? dpCargoDetalleHtml(dpCargoSel.tipo, dpCargoSel.nombre) : ''}</section>
+         </div>`
+      : `<div class="empty es-vacio"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}${!opcP && !opcE ? `<br><small>${t('dist.noFichasYet')}</small>` : ''}</div>`;
+    // El botón de asignar va ARRIBA, junto al título: con muchos platos la lista crece y abajo del todo no se encontraba.
+    if(ownerSess) asignar = `<div class="dp-asignar-cab"><select id="dist-plato-sel" aria-label="${escapeHtml(t('dist.selectDish'))}"><option value="">${t('dist.selectDish')}</option>${opcP ? `<optgroup label="${escapeHtml(gl({es:'Platos', ca:'Plats', en:'Dishes'}))}">${opcP}</optgroup>` : ''}${opcE ? `<optgroup label="${escapeHtml(gl({es:'Elaboraciones', ca:'Elaboracions', en:'Preparations'}))}">${opcE}</optgroup>` : ''}</select><button type="button" class="btn btn-fino is-on" onclick="addDistPlato()"><i class="ti ti-plus"></i> ${t('btn.assign')}</button></div>`;
   }
   openModal(`
     <div class="idr-modal"></div>
     <div id="dp-cargo-modal">
-      <div class="modal-header">
+      <div class="modal-header dp-cargo-cab">
         <h3><i class="ti ${isSala ? 'ti-map-pin' : 'ti-tools-kitchen-2'}"></i> ${isSala ? t('dist.zonesTitle') : gl({es:'A su cargo', ca:'Al seu càrrec', en:'In their charge'})} · ${escapeHtml(emp.name)}</h3>
+        ${asignar}
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       ${cuerpo}

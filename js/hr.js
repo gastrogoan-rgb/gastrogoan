@@ -4553,6 +4553,7 @@ function renderHorariosDia(){
       <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}))}" aria-label="${escapeHtml(gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}))}" onclick="calDiaMas(1)"><i class="ti ti-chevron-right"></i></button>
       ${date !== todayStr() ? `<button type="button" class="btn btn-sm btn-fino" onclick="calDiaFecha(todayStr())">${t('common.today')}</button>` : ''}
     </div>
+    ${calLeyendaHtml()}
     <div class="st-resumen cal-resumen">
       <div class="st-cel"><span class="st-cel-et">${gl({es:'Trabajan', ca:'Treballen', en:'Working'})}</span><span class="st-cel-v">${trabajan.length}</span><span class="st-cel-s">${gl({es:'de', ca:'de', en:'of'})} ${emps.length}</span></div>
       <div class="st-cel"><span class="st-cel-et">${gl({es:'Horas planificadas', ca:'Hores planificades', en:'Planned hours'})}</span><span class="st-cel-v">${horas.toFixed(1)}h</span></div>
@@ -4561,7 +4562,6 @@ function renderHorariosDia(){
     </div>
     ${trabajan.length ? `<div class="cal-linea"><div class="cal-linea-cab"><span></span><div class="cal-linea-eje">${ejeHtml}</div></div>${cobHtml ? `<div class="cal-linea-cob"><span></span>${cobHtml}</div>` : ''}</div>` : ''}
     <div class="cal-filas">${rows}</div>
-    ${calLeyendaHtml()}
   `;
 }
 
@@ -4681,8 +4681,8 @@ function renderHorariosSemana(){
       ${horariosWeekOffset !== 0 ? `<button type="button" class="btn btn-sm btn-fino" onclick="calSemanaMas(0)">${t('common.today')}</button>` : ''}
       <span class="cal-nav-der"><button type="button" class="btn btn-fino" onclick="printWeeklySchedule()"><i class="ti ti-printer"></i> ${t('btn.printSchedule')}</button></span>
     </div>
-    ${tabla}${tarjetas}
     ${calLeyendaHtml()}
+    ${tabla}${tarjetas}
   `;
 }
 

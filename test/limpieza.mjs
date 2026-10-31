@@ -74,19 +74,37 @@ for(const ancho of [1280, 360]){
     assert.equal(r[4].v, '2'); assert.ok(r[4].mal, 'campana vencida y horno a punto: ' + JSON.stringify(r[4]));
   });
 
-  await caso(`Registrar la apertura de hoy cambia el estado de arriba al momento (${ancho}px)`, async () => {
-    await q(() => registerProtocoloCompliance('apertura')); await esperar(250);
-    const r = await q(() => ({celda: document.querySelector('.lp-resumen .st-cel').classList.contains('is-ok'), ok: document.querySelectorAll('.lp-cumple-ok').length, puntos: document.querySelectorAll('.lp-dia.ok').length}));
-    assert.ok(r.celda && r.ok === 2 && r.puntos >= 2, JSON.stringify(r));
+  await caso(`Apertura como lista de comprobación: hasta contestar Sí o No en cada paso no se puede guardar (${ancho}px)`, async () => {
+    const antes = await q(() => ({pasos: document.querySelectorAll('#limpieza-tab-content .lp-card')[0].querySelectorAll('.lp-chk').length, botones: document.querySelectorAll('#limpieza-tab-content .lp-card')[0].querySelectorAll('.lp-sn').length,
+      guardar: document.querySelector('#limpieza-tab-content .lp-card .lp-guardar .btn').disabled, progreso: document.querySelector('.lp-progreso').textContent.replace(/\s+/g, ' ').trim()}));
+    assert.ok(antes.pasos >= 4 && antes.botones === antes.pasos * 2 && antes.guardar, JSON.stringify(antes));
+    // Aunque se fuerce desde la consola, a medias no guarda
+    await q(() => { registerProtocoloCompliance('apertura'); });
+    assert.equal(await q(() => DB.limpieza.aperturaLog.length), 0, 'no se guarda a medias');
+    // Contesta todo: el último con «No» y su nota
+    const n = await q(() => limpiezaProtocoloPasos('apertura').length);
+    for(let i = 0; i < n - 1; i++) await q((i) => lpCheckResp('apertura', i, true), i);
+    assert.ok(await q(() => document.querySelector('#limpieza-tab-content .lp-card .lp-guardar .btn').disabled), 'con un paso sin contestar sigue deshabilitado');
+    await q((i) => lpCheckResp('apertura', i, false), n - 1); await esperar(150);
+    await q(() => { const t = document.querySelector('.lp-chk-nota-in'); t.value = 'Faltaba jabón'; t.dispatchEvent(new Event('input', {bubbles:true})); });
+    assert.ok(await q(() => !document.querySelector('#limpieza-tab-content .lp-card .lp-guardar .btn').disabled), 'todo contestado: ya se puede guardar');
+    await q(() => document.querySelector('#limpieza-tab-content .lp-card .lp-guardar .btn').click()); await esperar(250);
+    const r = await q(() => ({e: DB.limpieza.aperturaLog.at(-1), celda: document.querySelector('.lp-resumen .st-cel').classList.contains('is-ok'), ok: document.querySelectorAll('.lp-cumple-ok').length, puntos: document.querySelectorAll('.lp-dia.ok').length, cerrado: document.querySelectorAll('.lp-chk.is-cerrado').length}));
+    assert.equal(r.e.no, 1); assert.equal(r.e.si, n - 1); assert.equal(r.e.respuestas.at(-1).nota, 'Faltaba jabón'); assert.equal(r.e.respuestas.length, n);
+    assert.ok(r.celda && r.ok === 2 && r.puntos >= 2 && r.cerrado >= n, JSON.stringify(r));
   });
 
-  await caso(`Los pasos del protocolo se editan en su sitio y subir, bajar y quitar están en el ⋯ (${ancho}px)`, async () => {
-    const r = await q(() => { const p = document.querySelector('.lp-paso'); const acc = JSON.parse(p.querySelector('.mn-btn').dataset.acc).map(a => a.texto);
-      const i = p.querySelector('.lp-paso-txt'); i.value = 'Paso cambiado'; i.dispatchEvent(new Event('change', {bubbles:true}));
-      return {acc, guardado: limpiezaProtocoloPasos('apertura')[0], botonesSueltos: document.querySelectorAll('.lp-paso .btn-icon').length}; });
-    assert.equal(r.guardado, 'Paso cambiado'); assert.equal(r.botonesSueltos, 0); assert.ok(r.acc.length >= 1, JSON.stringify(r.acc));
-    const n = await q(() => { const antes = limpiezaProtocoloPasos('apertura').length; addProtocoloPaso('apertura'); return [antes, limpiezaProtocoloPasos('apertura').length]; });
+  await caso(`Los pasos se editan con el lápiz, en cajas que crecen hacia abajo, y subir, bajar y quitar están en el ⋯ (${ancho}px)`, async () => {
+    await q(() => setLimpiezaTab('protocolo')); await esperar(200);
+    assert.ok(await q(() => !!document.querySelector('#limpieza-tab-content .lp-card .pr-ico[data-tip] .ti-pencil')), 'hay lápiz para editar los pasos');
+    await q(() => lpEditarPasos('cierre', true)); await esperar(200);
+    const r = await q(() => { const p = document.querySelectorAll('#limpieza-tab-content .lp-card')[1].querySelector('.lp-paso'); const acc = JSON.parse(p.querySelector('.mn-btn').dataset.acc).map(a => a.texto);
+      const i = p.querySelector('textarea'); i.value = 'Un paso larguísimo '.repeat(20); i.dispatchEvent(new Event('input', {bubbles:true}));
+      return {acc, guardado: limpiezaProtocoloPasos('cierre')[0].length, alto: i.getBoundingClientRect().height, ancho: i.getBoundingClientRect().width, desbordaX: i.scrollWidth > i.clientWidth + 1, sueltos: document.querySelectorAll('.lp-paso .btn-icon').length}; });
+    assert.ok(r.guardado > 200 && r.alto > 80 && !r.desbordaX && r.sueltos === 0 && r.acc.length >= 1, JSON.stringify(r));
+    const n = await q(() => { const antes = limpiezaProtocoloPasos('cierre').length; addProtocoloPaso('cierre'); return [antes, limpiezaProtocoloPasos('cierre').length]; });
     assert.equal(n[1], n[0] + 1);
+    await q(() => lpEditarPasos('cierre', false));
   });
 
   await caso(`Lavado de manos: pasos largos en cajas de texto, con «cuándo» y los 20 segundos (${ancho}px)`, async () => {
@@ -143,23 +161,41 @@ for(const ancho of [1280, 360]){
     assert.ok(r.filas === 1 && r.soon && r.acc, JSON.stringify(r));
   });
 
-  await caso(`Alérgenos: buscar un plato y ver qué platos NO llevan un alérgeno (${ancho}px)`, async () => {
-    await q(() => setLimpiezaTab('alergenos')); await esperar(200);
-    assert.deepEqual(await q(() => [...document.querySelectorAll('.lp-card tbody tr td:first-child')].map(x => x.textContent.trim())), ['Natillas', 'Pan']);
-    await q(() => lpAlergFiltro('sin', 'Gluten')); await esperar(150);
-    assert.deepEqual(await q(() => [...document.querySelectorAll('.lp-card tbody tr td:first-child')].map(x => x.textContent.trim())), ['Natillas'], 'sin gluten: solo las natillas');
-    await q(() => { lpAlergFiltro('sin', ''); lpAlergFiltro('q', 'pan'); }); await esperar(150);
-    assert.deepEqual(await q(() => [...document.querySelectorAll('.lp-card tbody tr td:first-child')].map(x => x.textContent.trim())), ['Pan']);
-    assert.ok(await q(() => !!document.querySelector('.lp-barra button[onclick="printAlergenos()"]')));
-    await q(() => lpAlergFiltro('q', ''));
+  await caso(`Alérgenos: se eligen los alérgenos y solo salen los platos que los llevan (${ancho}px)`, async () => {
+    await q(() => { lpAlergLimpiar(); setLimpiezaTab('alergenos'); }); await esperar(200);
+    const nombres = () => q(() => [...document.querySelectorAll('.lp-card tbody tr td:first-child')].map(x => x.textContent.trim()));
+    assert.deepEqual(await nombres(), ['Natillas', 'Pan']);
+    const chips = await q(() => [...document.querySelectorAll('.lp-alerg')].map(c => c.textContent.replace(/\s+/g, ' ').trim()));
+    assert.ok(chips.length === 2 && chips.some(c => /Gluten/.test(c)) && chips.some(c => /Lácteos/.test(c)), JSON.stringify(chips));
+    await q(() => lpAlergToggle('Gluten')); await esperar(150);
+    assert.deepEqual(await nombres(), ['Pan'], 'con gluten marcado, solo el pan');
+    assert.ok(await q(() => document.querySelector('.lp-alerg.on')?.getAttribute('aria-pressed') === 'true'));
+    await q(() => lpAlergToggle('Lácteos')); await esperar(150);
+    assert.deepEqual(await nombres(), ['Natillas', 'Pan'], 'los dos marcados: los platos que llevan alguno');
+    await q(() => { lpAlergLimpiar(); lpAlergBuscar('nati'); }); await esperar(150);
+    assert.deepEqual(await nombres(), ['Natillas']);
+    assert.ok(await q(() => !!document.querySelector('.lp-card button[onclick="printAlergenos()"]')));
+    await q(() => lpAlergLimpiar());
   });
 
-  await caso(`Mantenimiento: una tarjeta por equipo, con vencido y próximo a vencer, editable en su sitio (${ancho}px)`, async () => {
+  await caso(`Mantenimiento: cada equipo se VE; el lápiz abre la edición, con Guardar y Cancelar (${ancho}px)`, async () => {
     await q(() => setLimpiezaTab('mantenimiento')); await esperar(200);
-    const r = await q(() => ({n: document.querySelectorAll('.lp-eq').length, vencido: document.querySelectorAll('.lp-eq.is-vencido').length, chips: [...document.querySelectorAll('.lp-eq .pr-chip')].map(c => c.textContent.trim().toLowerCase())}));
+    const r = await q(() => ({n: document.querySelectorAll('.lp-eq').length, vencido: document.querySelectorAll('.lp-eq.is-vencido').length, chips: [...document.querySelectorAll('.lp-eq .pr-chip')].map(c => c.textContent.trim().toLowerCase()),
+      campos: document.querySelectorAll('.lp-eq input, .lp-eq textarea, .lp-eq select').length, lapices: document.querySelectorAll('.lp-eq .pr-ico .ti-pencil').length}));
     assert.equal(r.n, 3); assert.equal(r.vencido, 1); assert.equal(r.chips.length, 2, JSON.stringify(r.chips));
-    await q(() => { const i = document.getElementById('mt-r-2'); i.value = 'Técnico Paco'; i.dispatchEvent(new Event('change', {bubbles:true})); });
-    assert.equal(await q(() => DB.limpieza.mantenimiento.find(e => e.id === 2).responsable), 'Técnico Paco');
+    assert.equal(r.campos, 0, 'en reposo solo se ve, sin casillas'); assert.equal(r.lapices, 3);
+    await q(() => document.querySelector('.lp-eq .pr-ico .ti-pencil').closest('button').click()); await esperar(200);
+    assert.equal(await q(() => document.querySelectorAll('.lp-eq.is-editando').length), 1, 'solo uno se edita a la vez');
+    await q(() => { const id = lpEqEditando; const i = document.getElementById('mt-r-' + id); i.value = 'Técnico Paco, que viene los martes y revisa también la campana extractora y los filtros'; i.dispatchEvent(new Event('input', {bubbles:true})); });
+    const caja = await q(() => { const e = document.querySelector('.lp-eq.is-editando textarea'); return {alto: e.getBoundingClientRect().height, cortado: e.scrollHeight > e.clientHeight + 2}; });
+    assert.ok(caja.alto >= 48 && !caja.cortado, 'el texto largo se estira hacia abajo y se ve entero: ' + JSON.stringify(caja));
+    // Cancelar no guarda
+    await q(() => lpEqCancelar()); await esperar(150);
+    assert.ok(!(await q(() => DB.limpieza.mantenimiento.find(e => e.id === 1).responsable.includes('Paco'))), 'cancelar no guarda nada');
+    await q(() => { lpEqEditar(2); }); await esperar(150);
+    await q(() => { document.getElementById('mt-r-2').value = 'Técnico Paco'; document.getElementById('mt-n-2').value = 'Revisar filtros'; document.getElementById('mt-e-2').value = 'Pendiente'; lpEqGuardar(2); }); await esperar(250);
+    const g = await q(() => ({e: DB.limpieza.mantenimiento.find(e => e.id === 2), editando: document.querySelectorAll('.lp-eq.is-editando').length, texto: [...document.querySelectorAll('.lp-eq')].find(c => /Horno/.test(c.textContent)).textContent}));
+    assert.equal(g.e.responsable, 'Técnico Paco'); assert.equal(g.e.estado, 'Pendiente'); assert.equal(g.editando, 0); assert.ok(/Técnico Paco/.test(g.texto) && /Revisar filtros/.test(g.texto));
     await q(() => addMantenimientoEquipo()); await esperar(250);
     assert.ok(await q(() => document.getElementById('modal-box').classList.contains('ds-nuevo')));
     await q(() => { document.getElementById('new-mantenimiento-equipo').value = 'Freidora'; confirmAddMantenimientoEquipo(); }); await esperar(250);
@@ -172,9 +208,11 @@ for(const ancho of [1280, 360]){
     const r = await q(() => { const vis = e => !!e && e.getBoundingClientRect().width > 0;
       return {form: vis(document.querySelector('.lp-form-campos')), borrar: vis(document.querySelector('.lp-tabla .mn-btn')), anadirMant: vis(document.querySelector('.lp-barra .btn'))}; });
     assert.ok(r.form && !r.borrar, JSON.stringify(r));
-    await q(() => setLimpiezaTab('protocolo')); await esperar(200);
-    const p = await q(() => { const vis = e => !!e && e.getBoundingClientRect().width > 0; return {readonly: document.querySelector('.lp-paso-txt').readOnly, menu: vis(document.querySelector('.lp-paso .mn-btn')), anadir: vis(document.querySelector('.lp-anadir'))}; });
-    assert.ok(p.readonly && !p.menu && !p.anadir, JSON.stringify(p));
+    await q(() => { DB.limpieza.aperturaLog = []; DB.limpieza.cierreLog = []; setLimpiezaTab('protocolo'); }); await esperar(200);
+    const p = await q(() => { const vis = e => !!e && e.getBoundingClientRect().width > 0; return {lapiz: vis(document.querySelector('#limpieza-tab-content .lp-card .ti-pencil')), sino: vis(document.querySelector('.lp-sn')), editar: vis(document.querySelector('.lp-paso'))}; });
+    assert.ok(!p.lapiz && p.sino && !p.editar, 'puede contestar la lista pero no editar los pasos: ' + JSON.stringify(p));
+    await q(() => setLimpiezaTab('mantenimiento')); await esperar(200);
+    assert.equal(await q(() => document.querySelectorAll('.lp-eq .pr-ico .ti-pencil').length), 0, 'ni lápiz en mantenimiento');
   });
 
   await caso(`Ningún error de JavaScript (${ancho}px)`, async () => assert.deepEqual(page.erroresJs, []));

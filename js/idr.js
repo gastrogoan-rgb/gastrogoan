@@ -525,11 +525,60 @@ const IDR_ADN_CAMPOS = [
           en:'Which language you want the dish names written in for the menu.'}},
 ];
 
+/* El I+D es de Cocina y de Sala, cada uno con lo SUYO (31/10): su ADN, sus ingredientes, su carta, sus creaciones y sus carpetas.
+   «El área» es la carpeta en la que estás mirando; todo lo que se lee o se crea desde aquí se filtra y se marca con ella, para que
+   un cóctel no acabe en el escandallo de la cocina ni el asistente proponga una bebida con el género de la otra. */
+const idrArea = () => currentArea();
+const idrEsSala = () => idrArea() === 'sala';
+
+// ADN de Sala: el de un bar o de una sala no se describe con «cocina y tradición» ni con el equipo de partida.
+const IDR_ADN_CAMPOS_SALA = [
+  {k:'concepto', tipo:'text', l:{es:'Tipo de local y estilo',ca:'Tipus de local i estil',en:'Venue type and style'},
+   ph:{es:'Ej. Coctelería de autor con producto local',ca:'Ex. Coctelleria d\'autor amb producte local',en:'e.g. Signature cocktail bar with local produce'},
+   ayuda:{es:'La línea maestra de tu barra y tu sala: es lo que más pesa en todo lo que se proponga. Cuanto más concreto, mejor.',
+          ca:'La línia mestra de la teva barra i la teva sala: és el que més pesa en tot el que es proposi. Com més concret, millor.',
+          en:'The guiding line of your bar and floor: it weighs most on everything proposed. The more specific the better.'}},
+  {k:'nivel', tipo:'area', l:{es:'Nivel',ca:'Nivell',en:'Level'},
+   ph:{es:'Ej. Copa de diario, precio ajustado, buen producto y sin pretensiones',ca:'Ex. Copa de diari, preu ajustat, bon producte i sense pretensions',en:'e.g. Everyday drinks, keen prices, good produce and unpretentious'},
+   ayuda:{es:'Con tus palabras: si se viene a tomar algo rápido o a quedarse, y a qué precio trabajas la copa.',ca:'Amb les teves paraules: si es ve a prendre alguna cosa ràpid o a quedar-se, i a quin preu treballes la copa.',en:'In your words: a quick drink or a long evening, and the price you work at.'}},
+  {k:'insignia', tipo:'area', l:{es:'Bebida insignia',ca:'Beguda insígnia',en:'Signature drink'},
+   ph:{es:'Ej. El vermut de la casa y el gin-tonic de pomelo: si no están, la gente pregunta',ca:'Ex. El vermut de la casa i el gin-tònic de aranja: si no hi són, la gent pregunta',en:'e.g. The house vermouth and the grapefruit gin-and-tonic'},
+   ayuda:{es:'Las bebidas por las que te conocen. El asistente las respetará y construirá alrededor.',ca:'Les begudes pe les quals et coneixen. L\'assistent les respectarà i construirà al voltant.',en:'The drinks you are known for. The assistant will respect them and build around them.'}},
+  {k:'lineasRojas', tipo:'area', l:{es:'Líneas rojas',ca:'Línies vermelles',en:'Red lines'},
+   ph:{es:'Ej. Nada de cócteles de colores, ni de sabores artificiales, ni de cremas',ca:'Ex. Res de còctels de colors, ni de sabors artificials, ni de cremes',en:'e.g. No neon cocktails, no artificial flavours, no cream drinks'},
+   ayuda:{es:'Lo que el asistente NO te va a proponer nunca. Escribe lo que te haría decir «eso no es mi local».',ca:'El que l\'assistent NO et proposarà mai. Escriu el que et faria dir «això no és el meu local».',en:'What the assistant will never propose. Write what would make you say "that is not my venue".'}},
+  {k:'publico', tipo:'text', l:{es:'Público',ca:'Públic',en:'Clientele'},
+   ph:{es:'Ej. Parejas y grupos de 25 a 40 años; cenas en terraza en verano',ca:'Ex. Parelles i grups de 25 a 40 anys; sopars a la terrassa a l\'estiu',en:'e.g. Couples and groups aged 25-40; terrace dinners in summer'},
+   ayuda:{es:'Quién se sienta en tu barra y tus mesas y cuándo. Cambia el tipo de copa, el precio y el ritmo de servicio.',ca:'Qui seu a la teva barra i a les teves taules i quan. Canvia el tipus de copa, el preu i el ritme de servei.',en:'Who sits at your bar and tables, and when. It changes the drink style, price and service pace.'}},
+  {k:'foodCostObjetivo', tipo:'num', unidad:'%', min:0, max:100, l:{es:'Coste de bebida objetivo',ca:'Cost de beguda objectiu',en:'Target pour cost'},
+   ph:{es:'Ej. 22',ca:'Ex. 22',en:'e.g. 22'},
+   ayuda:{es:'Qué parte del precio de venta quieres que sea coste de género (en una copa suele ser bastante menos que en un plato). Con esto la app te propone el precio y te avisa si se pasa.',
+          ca:'Quina part del preu de venda vols que sigui cost de gènere (en una copa sol ser bastant menys que en un plat). Amb això l\'app et proposa el preu i t\'avisa si es passa.',
+          en:'What share of the selling price should be ingredient cost (for a drink usually well under a dish). The app suggests the price and warns you if it goes over.'}},
+  {k:'equipamiento', tipo:'area', l:{es:'Barra y equipamiento',ca:'Barra i equipament',en:'Bar and equipment'},
+   ph:{es:'Ej. Coctelera Boston, mezclador, sifón y cortador de hielo. Sin máquina de hielo claro',ca:'Ex. Coctelera Boston, mesclador, sifó i tallador de gel. Sense màquina de gel clar',en:'e.g. Boston shaker, mixing glass, soda siphon. No clear-ice machine'},
+   ayuda:{es:'Lo que tienes y —importante— lo que NO tienes. Escribe «sin» delante de lo que te falte: la app lo entiende y no te propondrá esa técnica.',ca:'El que tens i —important— el que NO tens. Escriu «sense» davant del que et falti.',en:'What you have and — importantly — what you do NOT. Write "no" before what you lack.'}},
+  {k:'equipo', tipo:'text', l:{es:'Equipo en barra y sala',ca:'Equip a barra i sala',en:'Bar and floor team'},
+   ph:{es:'Ej. 2 en barra y 3 en sala',ca:'Ex. 2 a barra i 3 a sala',en:'e.g. 2 behind the bar and 3 on the floor'},
+   ayuda:{es:'Cuántos sois durante el servicio. Con esto la app avisa si una carta pide más preparación al momento de la que podéis sacar.',ca:'Quants sou durant el servei.',en:'How many of you during service.'}},
+  {k:'producto', tipo:'area', l:{es:'Destilados, vinos y producto',ca:'Destil·lats, vins i producte',en:'Spirits, wines and produce'},
+   ph:{es:'Ej. Ginebras y vermuts de la zona, vino por copa de bodegas pequeñas, fruta de temporada',ca:'Ex. Ginebres i vermuts de la zona, vi per copa de cellers petits, fruita de temporada',en:'e.g. Local gins and vermouths, wine by the glass from small cellars, seasonal fruit'},
+   ayuda:{es:'De dónde sale lo que sirves y cada cuánto cambia: si sigues la temporada, si trabajas marcas fijas o si la carta es la misma todo el año.',ca:'D\'on surt el que serveixes i cada quant canvia.',en:'Where what you pour comes from and how often it changes.'}},
+  {k:'dietas', tipo:'text', l:{es:'Opciones obligatorias',ca:'Opcions obligatòries',en:'Required options'},
+   ph:{es:'Ej. Siempre un cóctel sin alcohol y un vino por copa sin sulfitos añadidos',ca:'Ex. Sempre un còctel sense alcohol i un vi per copa',en:'e.g. Always an alcohol-free cocktail and a wine by the glass'},
+   ayuda:{es:'Lo que nunca puede faltar en tu carta de bebidas. La app comprueba que se cumpla.',ca:'El que mai pot faltar a la teva carta de begudes.',en:'What your drinks menu must always include.'}},
+  {k:'idiomaPlatos', tipo:'text', l:{es:'Idioma de la carta',ca:'Idioma de la carta',en:'Menu language'},
+   ph:{es:'Ej. Castellano',ca:'Ex. Castellà',en:'e.g. English'},
+   ayuda:{es:'En qué idioma quieres que salgan los nombres de las bebidas.',ca:'En quin idioma vols que surtin els noms de les begudes.',en:'Which language you want drink names written in.'}},
+];
+function idrAdnCampos(){ return idrEsSala() ? IDR_ADN_CAMPOS_SALA : IDR_ADN_CAMPOS; }
 function idrAdn(){
   if(!DB.idr || typeof DB.idr !== 'object') DB.idr = {};
   // Firebase no guarda objetos vacíos: puede volver sin adn.
-  if(!DB.idr.adn || typeof DB.idr.adn !== 'object') DB.idr.adn = {};
-  return DB.idr.adn;
+  // El de Cocina sigue en `adn` (así no se toca lo ya guardado); el de Sala vive aparte.
+  const clave = idrEsSala() ? 'adnSala' : 'adn';
+  if(!DB.idr[clave] || typeof DB.idr[clave] !== 'object') DB.idr[clave] = {};
+  return DB.idr[clave];
 }
 /* Antes bastaba con UN campo cualquiera para dar el ADN por hecho. Ahora que
    el ADN es requisito para usar el asistente, "relleno" tiene que significar
@@ -537,21 +586,23 @@ function idrAdn(){
    es, a qué nivel juega y para quién cocina. Sin esos tres, cualquier
    propuesta vale igual, que es lo mismo que decir que ninguna sirve. */
 const IDR_ADN_MINIMO = ['cocina', 'nivel', 'publico'];
+const IDR_ADN_MINIMO_SALA = ['concepto', 'nivel', 'publico'];
+function idrAdnMinimo(){ return idrEsSala() ? IDR_ADN_MINIMO_SALA : IDR_ADN_MINIMO; }
 function idrAdnRelleno(){
   const a = idrAdn();
-  return IDR_ADN_MINIMO.every(k => a[k] !== undefined && String(a[k]).trim() !== '');
+  return idrAdnMinimo().every(k => a[k] !== undefined && String(a[k]).trim() !== '');
 }
 function idrAdnQueFalta(){
   const a = idrAdn();
-  return IDR_ADN_MINIMO
+  return idrAdnMinimo()
     .filter(k => a[k] === undefined || String(a[k]).trim() === '')
-    .map(k => { const c = IDR_ADN_CAMPOS.find(x => x.k === k); return c ? gl(c.l) : k; });
+    .map(k => { const c = idrAdnCampos().find(x => x.k === k); return c ? gl(c.l) : k; });
 }
 // El bloque que se le pasa al modelo en CADA generación. Corto a propósito:
 // es lo que más cambia el resultado y lo que menos cuesta enviar.
 function idrAdnTexto(){
   const a = idrAdn();
-  const lineas = IDR_ADN_CAMPOS.map(c => {
+  const lineas = idrAdnCampos().map(c => {
     const v = a[c.k];
     if(v === undefined || String(v).trim() === '') return null;
     const etiqueta = (c.l.es || c.k);
@@ -575,7 +626,7 @@ const IDR_MAX_PLATOS = 60;
 
 // Los ingredientes de cocina con su precio real por unidad.
 function idrIngredientesTexto(){
-  const ings = (DB.ingredients||[]).filter(i => (i.area||'cocina') === 'cocina');
+  const ings = (DB.ingredients||[]).filter(i => (i.area||'cocina') === idrArea());
   if(!ings.length) return '';
   const lineas = ings.slice(0, IDR_MAX_INGREDIENTES).map(i =>
     `${i.name} (${fmtNum(i.price)} €/${i.unit}${i.supplier ? ', ' + i.supplier : ''})`
@@ -586,7 +637,7 @@ function idrIngredientesTexto(){
 
 // Los platos que ya están en carta, para no proponer lo que ya tiene.
 function idrCartaTexto(){
-  const cartas = (DB.cartas||[]).filter(c => typeof isBebidaCarta === 'function' ? !isBebidaCarta(c) : true);
+  const cartas = (DB.cartas||[]).filter(c => typeof isBebidaCarta === 'function' ? isBebidaCarta(c) === idrEsSala() : true);
   const nombres = [];
   cartas.forEach(c => (c.secciones||[]).forEach(s => (s.platos||[]).forEach(p => {
     const n = (p && (p.nombre || p.name)) || '';
@@ -604,7 +655,7 @@ function idrVentasTexto(){
   if(ventas.length < IDR_MIN_VENTAS) return '';
   const cuenta = {};
   ventas.forEach(v => (v.items||[]).forEach(it => {
-    if(!it || it.isShipping || it.bebida) return;
+    if(!it || it.isShipping || (!!it.bebida) !== idrEsSala()) return;
     const n = it.name || '';
     if(!n) return;
     cuenta[n] = (cuenta[n]||0) + (parseFloat(it.qty)||0);
@@ -625,7 +676,7 @@ function idrVentasTexto(){
    "base"), así que esto no es solo contexto: es coste real encadenado. */
 const IDR_MAX_ELABORACIONES = 40;
 function idrElaboracionesTexto(){
-  const bases = (DB.recipes||[]).filter(r => r.isBase && (r.area||'cocina') === 'cocina');
+  const bases = (DB.recipes||[]).filter(r => r.isBase && (r.area||'cocina') === idrArea());
   if(!bases.length) return '';
   const lineas = bases.slice(0, IDR_MAX_ELABORACIONES).map(r => {
     const porUnidad = (typeof recipeBaseCostPerUnit === 'function') ? recipeBaseCostPerUnit(r) : 0;
@@ -637,7 +688,7 @@ function idrElaboracionesTexto(){
 // pueda decir "esto es una variante de tu X".
 const IDR_MAX_FICHAS = 40;
 function idrRecetasTexto(){
-  const platos = (DB.recipes||[]).filter(r => !r.isBase && (r.area||'cocina') === 'cocina');
+  const platos = (DB.recipes||[]).filter(r => !r.isBase && (r.area||'cocina') === idrArea());
   if(!platos.length) return '';
   return platos.slice(0, IDR_MAX_FICHAS).map(r => r.name).join(' · ');
 }
@@ -651,14 +702,14 @@ function idrStockTexto(){
   const stock = DB.stock || {};
   const lineas = [];
   (DB.ingredients||[]).forEach(i => {
-    if((i.area||'cocina') !== 'cocina') return;
+    if((i.area||'cocina') !== idrArea()) return;
     const s2 = stock[i.id];
     const qty = s2 ? parseFloat(s2.qty) : 0;
     if(!isFinite(qty) || qty <= 0) return;
     lineas.push(`${i.name}: ${fmtNum(qty)} ${i.unit}`);
   });
   (DB.elaboraciones||[]).forEach(e => {
-    if((e.area||'cocina') !== 'cocina') return;
+    if((e.area||'cocina') !== idrArea()) return;
     const qty = parseFloat(e.qty);
     if(!isFinite(qty) || qty <= 0) return;
     lineas.push(`${e.name}: ${fmtNum(qty)} ${e.unit||'L'}`);
@@ -670,8 +721,8 @@ function idrStockTexto(){
 function idrContextoNegocio(){
   const partes = [];
   const adn = idrAdnTexto();
-  if(adn) partes.push('ADN GASTRONÓMICO DE LA CASA (manda sobre todo lo demás):\n' + adn);
-  else partes.push('ADN GASTRONÓMICO: sin definir. Avisa de que las propuestas serán genéricas y ofrece rellenarlo.');
+  if(adn) partes.push((idrEsSala() ? 'ADN DE LA BARRA Y LA SALA (manda sobre todo lo demás):\n' : 'ADN GASTRONÓMICO DE LA CASA (manda sobre todo lo demás):\n') + adn);
+  else partes.push('ADN ' + (idrEsSala() ? 'DEL LOCAL' : 'GASTRONÓMICO') + ': sin definir. Avisa de que las propuestas serán genéricas y ofrece rellenarlo.');
   const ings = idrIngredientesTexto();
   if(ings) partes.push('INGREDIENTES QUE YA COMPRA, con su precio real:\n' + ings);
   const carta = idrCartaTexto();
@@ -689,7 +740,7 @@ function idrContextoNegocio(){
   if(ing) partes.push(ing);
   // Datos que viven en la app para que no salgan de la memoria del modelo.
   partes.push(idrTemporadaTexto());
-  partes.push(IDR_PROPORCIONES);
+  partes.push(idrEsSala() ? IDR_PROPORCIONES_SALA : IDR_PROPORCIONES);
   return partes.filter(Boolean).join('\n\n');
 }
 
@@ -777,14 +828,84 @@ NO TE QUEDES EN LA IDEA. Cuando propongas algo, BAJA AL DETALLE: qué producto h
 
 CÓMO HABLAS: como un jefe de partida. Claro, corto, sin florituras y sin darle lecciones a alguien que lleva años en esto. Nada de listas interminables ni de recitar este marco de trabajo.`;
 
+/* ============================================================
+   LAS REGLAS DE SALA — el asistente de barra y sala
+   ============================================================
+   Mismo método que el de cocina (honestidad primero, los números los pone la app, el ADN manda) con el oficio de otra casa: el
+   equilibrio de un cóctel, la técnica de barra, la preparación previa (jarabes, cordiales, infusiones) y el maridaje. */
+const IDR_REGLAS_SALA = `Eres el asistente de I+D de una barra y una sala profesionales. Ayudas a crear cócteles y bebidas, preparaciones de barra (jarabes, cordiales, infusiones, mezclas) y maridajes PARA ESTE LOCAL CONCRETO.
+
+REGLAS QUE NO SE ROMPEN NUNCA:
+
+1. NO INVENTES. Si no conoces bien un cóctel clásico, una marca, una denominación de origen, una añada o un productor, DILO y pide ayuda: "no conozco bien ese vino, ¿me das la etiqueta o me cuentas cómo es?". Es mejor preguntar que rellenar el hueco con algo verosímil. No puedes buscar en internet: si necesitas una fuente, pide que te peguen el texto.
+
+2. LOS NÚMEROS NO LOS PONES TÚ. El coste de la copa, el coste de bebida y el margen los calcula la aplicación con los precios reales del local. Puedes decir si algo te parece caro o barato, pero nunca des una cifra de coste como si fuera un dato.
+
+3. PRODUCTO: PROPÓN CON LIBERTAD. Aprovecha las botellas y los jarabes que ya tiene siempre que encajen, porque abarata y simplifica. Pero NO te limites a su lista: si un producto que no tiene mejora la bebida, propónlo igual y di que habría que darlo de alta.
+
+4. RESPETA SU ADN. El estilo del local, el nivel y sobre todo sus LÍNEAS ROJAS mandan sobre cualquier idea tuya. Si te piden algo que choca con su ADN, dilo antes de proponerlo.
+
+5. RESPETA SU BARRA REAL. No propongas técnicas que su equipamiento no permite (hielo claro, sifón, ahumador...) ni bebidas que su equipo no pueda sacar en un servicio lleno.
+
+6. DISTINGUE CLÁSICO DE INVENCIÓN. Di cuándo una bebida es un clásico con su receta de siempre y cuándo es una adaptación o creación tuya.
+
+7. SIN DATOS, NO OPINAS. Si no hay ventas suficientes, no hables de lo que se vende.
+
+8. CONSERVACIÓN Y SEGURIDAD FUERA. No des tiempos ni temperaturas de conservación de jarabes, infusiones, macerados, fermentados ni premezclas: es seguridad alimentaria y no es tu terreno. Si sale el tema, dilo y remite al APPCC del local. No des graduaciones exactas de una mezcla, y si piden algo SIN alcohol comprueba que ningún ingrediente lleve (amargos, vermús, extractos y esencias también cuentan).
+
+9. CON SENTIDO COMÚN. No propongas nada pensado para beber de más ni dirigido a menores. Las recetas son para servir con responsabilidad.
+
+EL MARCO DE OFICIO (úsalo para pensar; NO lo recites ni lo cites):
+
+1. EL EQUILIBRIO DE UNA BEBIDA. Todo cóctel se ajusta con un destilado o base, dulce, ácido, amargo, dilución y textura, más el aroma. Si no funciona, no añadas cosas: mira qué eje falta. Casi siempre es acidez, dilución o un amargo que dé contorno.
+
+2. LAS FAMILIAS. Piensa en familias antes que en recetas: sour (destilado + cítrico + dulce), old fashioned (destilado + dulce + amargo, removido), highball (destilado + refresco largo), spritz (burbuja + aperitivo amargo), martini y negroni (destilado y vermut o amaro, removidos), tiki y cremosos. Cada familia tiene su técnica y su copa; salirse de ella es una decisión, no un despiste.
+
+3. LAS TÉCNICAS Y LO QUE APORTAN. Directo en vaso, para lo sencillo y lo largo. Removido, para bebidas de solo destilados y vinos aromatizados: brillo y peso sedoso. Agitado, para lo que lleva cítrico, huevo, nata o fruta: aire y frescor. Doble colado, para quitar hielo y fibra. Machacado, para hierbas y fruta fresca: poco, o amarga. Clarificado, ahumado o con sifón, solo si su barra lo permite y el servicio lo aguanta.
+
+4. EL HIELO Y LA COPA. El hielo es un ingrediente: cubo grande diluye despacio, picado enfría rápido, y la copa fría mantiene el punto. La copa se elige por el aroma y la temperatura que debe conservar.
+
+5. LA GUARNICIÓN. Aromática, no decorativa: una piel de cítrico, una hierba, algo que se huela al acercar la copa y que tenga que ver con la bebida. Si no aporta, se quita.
+
+6. PREPARACIONES DE BARRA. Jarabes, cordiales, infusiones y premezclas son lo que hace viable una carta en un servicio real: se hacen antes y se sirve rápido. Di siempre cuánto sale (rendimiento con su unidad) y qué se hace con antelación y qué al momento.
+
+7. SIN ALCOHOL. Una bebida sin alcohol no es un cóctel al que se le quita la botella: necesita cuerpo, acidez, amargor y algo que sustituya al calor del destilado (té, vinagres de fruta, verjuice, especias, sodas). Pensada desde cero, sale mejor.
+
+8. MARIDAJE. Hay tres caminos y conviene decir cuál usas. Por semejanza, de peso e intensidad (plato ligero, bebida ligera). Por contraste: acidez contra grasa, burbuja contra fritura, dulce contra picante, amargo contra untuoso. Y por tradición o región: lo que se bebe junto desde hace siglos. Explica SIEMPRE el porqué, ofrece una alternativa sin alcohol, y no lo conviertas en reglas rígidas ("tinto con carne"): un buen maridaje depende de la salsa, no del producto.
+
+9. QUE SE PUEDA SERVIR MAÑANA. Una idea sin medidas ni orden de trabajo no vale. Cuando la bebida esté decidida: medidas por copa en cl o ml, hielo, copa, guarnición y cuánto se tarda en sacarla. Si algo pide más de un minuto largo al pase, avísalo: en una barra llena es lo que la revienta.
+
+10. ESCALAR NO ES MULTIPLICAR. Una premezcla en tanda cambia con la dilución y la temperatura: dilo, y di qué se puede dejar hecho y qué hay que terminar al momento.
+
+CÓMO PIENSAS UNA CARTA DE BEBIDAS:
+- Equilibra por familias y por intensidad: aperitivos, largos, cortos, de autor, clásicos, sin alcohol, vinos por copa. Una carta de ocho sours es una carta pobre.
+- Que no se repitan el destilado base ni la técnica principal entre bebidas.
+- Aprovecha jarabes y preparaciones entre bebidas: es lo que hace viable la carta.
+- Cuenta cuántas bebidas exigen trabajo largo al pase y compáralo con la gente que hay en barra.
+- Siempre algo sin alcohol que no sea un refresco.
+
+NO TE QUEDES EN LA IDEA. Cuando propongas algo, BAJA AL DETALLE: qué botellas, qué medidas aproximadas, qué copa y qué hielo. Estás creando CON él, no dándole un listado.
+
+CÓMO HABLAS: como un jefe de barra. Claro, corto, sin florituras y sin darle lecciones a alguien que lleva años detrás de la barra. Nada de listas interminables ni de recitar este marco de trabajo.`;
+
+// Medidas que no deberían salir de la memoria de nadie (referencia; no incluye conservación ni graduaciones).
+const IDR_PROPORCIONES_SALA = `PROPORCIONES CLÁSICAS DE BARRA (úsalas como referencia, no las cambies):
+- Sour (daiquiri, whisky sour, margarita...): 60 ml de destilado, 22 a 30 ml de zumo cítrico y 15 a 22 ml de jarabe simple; la regla de cabeza es 2 : 1 : 1 y se afina a 2 : ¾ : ¾ si el cítrico es muy ácido. Agitado.
+- Old fashioned: 60 ml de destilado, 5 a 7 ml de jarabe (o un terrón) y 2 o 3 golpes de amargo. Removido con hielo.
+- Negroni y boulevardier: partes iguales (30 ml de cada una). Removido.
+- Manhattan: 2 partes de whisky por 1 de vermut rojo y amargo. Martini seco: de 5 a 6 partes de ginebra por 1 de vermut seco.
+- Spritz: 3 partes de espumoso, 2 de aperitivo amargo y 1 de soda, sobre hielo.
+- Highball (gin-tonic, ron con cola...): 40 a 50 ml de destilado por 120 a 150 ml de refresco, con hielo abundante.
+- Jarabe simple: partes iguales de azúcar y agua en peso (1:1); jarabe rico: 2 de azúcar por 1 de agua.
+- Medida de destilado: 40 a 50 ml en copa larga, 25 a 30 ml en chupito. Copa de vino: de 100 a 150 ml; una botella de 75 cl da entre 5 y 6 copas.`;
+
 function idrSistema(extra){
   // El encargo del negocio (precio, food cost, estructura) manda sobre
   // cualquier idea del asistente, así que va en TODAS las consultas.
   const c = idrCreacion(idrCreacionActiva);
   const enc = c ? idrEncargoTexto(c) : '';
-  return IDR_REGLAS + '\n\n' + idrContextoNegocio() + (enc ? '\n\n' + enc : '') + (extra ? '\n\n' + extra : '');
+  return (idrEsSala() ? IDR_REGLAS_SALA : IDR_REGLAS) + '\n\n' + idrContextoNegocio() + (enc ? '\n\n' + enc : '') + (extra ? '\n\n' + extra : '');
 }
-
 /* ============================================================
    ESTADO: las creaciones
    ============================================================
@@ -844,11 +965,13 @@ const IDR_PASOS = {
   ],
 };
 // Solo se pueden EMPEZAR estos dos. Los otros siguen abriéndose si ya existen.
-const IDR_TIPOS_NUEVOS = ['base', 'plato', 'menu', 'carta'];
+const IDR_TIPOS_NUEVOS = ['base', 'plato', 'menu', 'carta', 'maridaje'];
+// En Sala no hay menús de platos; en Cocina no hay maridajes (se piden desde Sala, con la carta de la cocina delante).
+const idrTiposDelArea = () => idrEsSala() ? ['plato', 'base', 'maridaje', 'carta'] : ['base', 'plato', 'menu', 'carta'];
 
 function idrNuevaCreacion(tipo){
   const c = {
-    id: genId(), tipo, titulo: '', pasoActual: 0,
+    id: genId(), tipo, titulo: '', pasoActual: 0, area: idrArea(),
     pasos: [], mensajes: [], propuesta: null,
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   };
@@ -910,13 +1033,18 @@ function renderIdr(){
 function renderIdrInterno(){
   const box = document.getElementById('view-idr');
   if(!box) return;
+  // Si se llega desde la otra área (Cocina ↔ Sala), ni una creación abierta ni una carpeta elegida se arrastran de una a otra.
+  const abierta = idrCreacion(idrCreacionActiva);
+  if(abierta && (abierta.area||'cocina') !== idrArea()){ idrCreacionActiva = null; idrVista = 'inicio'; }
+  if(idrCarpetaActiva && idrCarpetaActiva !== '__sin' && !idrCarpetas().some(f => f.id === idrCarpetaActiva)) idrCarpetaActiva = null;
+  if(idrFiltroTipo && !idrTiposDelArea().includes(idrFiltroTipo)) idrFiltroTipo = '';
   if(idrVista === 'creacion' && idrCreacion(idrCreacionActiva)){ renderIdrCreacion(box); return; }
   idrVista = 'inicio';
 
   const adnOk = idrAdnRelleno();
   const iaOk = idrHayIA();
   const cfg = idrConfig();
-  const todas = idrCreaciones();
+  const todas = idrCreaciones().filter(x => (x.area||'cocina') === idrArea());
   const sinClasificar = todas.filter(x => !x.carpetaId).length;
   const creaciones = todas
     .filter(x => idrCarpetaActiva === null ? true : (idrCarpetaActiva === '__sin' ? !x.carpetaId : x.carpetaId === idrCarpetaActiva))
@@ -950,10 +1078,17 @@ function renderIdrInterno(){
     </aside>
 
     <div class="idr-nuevos">
+      ${idrEsSala() ? `
+      ${nuevo('plato','ti-glass-cocktail', idrTipoNombre('plato'), gl({es:'Un cóctel, una bebida larga, un aperitivo o un sin alcohol, con medidas y escandallo.', ca:'Un còctel, una beguda llarga, un aperitiu o un sense alcohol, amb mesures i escandall.', en:'A cocktail, a long drink, an aperitif or an alcohol-free one, with measures and costing.'}))}
+      ${nuevo('base','ti-bottle', idrTipoNombre('base'), gl({es:'Jarabes, cordiales, infusiones o premezclas que luego usan varias bebidas.', ca:'Xarops, cordials, infusions o premescles que després fan servir diverses begudes.', en:'Syrups, cordials, infusions or premixes that several drinks then use.'}))}
+      ${nuevo('maridaje','ti-glass-champagne', idrTipoNombre('maridaje'), gl({es:'Qué beber con cada plato de tu cocina: vino, cóctel o sin alcohol, con su porqué.', ca:'Què beure amb cada plat de la teva cuina: vi, còctel o sense alcohol, amb el seu perquè.', en:'What to drink with each dish from your kitchen: wine, cocktail or alcohol-free, with the reasoning.'}))}
+      ${nuevo('carta','ti-glass-full', idrTipoNombre('carta'), gl({es:'Una carta de bebidas equilibrada por familias, con sus escandallos.', ca:'Una carta de begudes equilibrada per famílies, amb els seus escandalls.', en:'A drinks menu balanced by family, with costing.'}))}
+      ` : `
       ${nuevo('base','ti-soup', t('idr.newBase'), t('idr.newBaseDesc'))}
       ${nuevo('plato','ti-tools-kitchen-2', t('idr.newDish'), t('idr.newDishDesc'))}
       ${nuevo('menu','ti-list-numbers', t('idr.newMenu'), t('idr.newMenuDesc'))}
       ${nuevo('carta','ti-book', t('idr.newCarta'), t('idr.newCartaDesc'))}
+      `}
     </div>
 
     <h3 class="idr-titulo">${t('idr.myWork')}</h3>
@@ -970,7 +1105,7 @@ function renderIdrInterno(){
         ])}` : ''}
     </div>
     <div class="idr-filtros">
-      ${[['', t('idr.allTypes')], ['plato', t('idr.newDish')], ['base', t('idr.newBase')], ['menu', t('idr.newMenu')], ['carta', t('idr.newCarta')]]
+      ${[['', t('idr.allTypes')], ...(idrEsSala() ? ['plato', 'base', 'maridaje', 'carta'] : ['plato', 'base', 'menu', 'carta']).map(k => [k, idrTipoNombre(k)])]
         .map(([v, l]) => chip(idrFiltroTipo===v, `idrFiltrar('${v}')`, escapeHtml(l))).join('')}
     </div>
 
@@ -993,9 +1128,10 @@ function renderIdrInterno(){
 
 function idrAdnResumen(){
   const a = idrAdn();
-  return [a.cocina, a.nivel, a.publico].filter(Boolean).join(' · ');
+  return idrAdnMinimo().map(k => a[k]).filter(Boolean).join(' · ');
 }
 function idrProgresoTexto(c){
+  if(c.tipo === 'maridaje') return (c.maridajes||[]).length ? gl({es:(c.maridajes.length) + ' platos maridados', ca:(c.maridajes.length) + ' plats maridats', en:(c.maridajes.length) + ' dishes paired'}) : t('idr.stateNew');
   if(c.recipeId || (c.recipeIds||[]).length) return t('idr.stateCreated');
   // Menú y carta son de antes de R18 y siguen midiéndose por pasos.
   if(c.tipo === 'menu' || c.tipo === 'carta'){
@@ -1010,7 +1146,22 @@ function idrProgresoTexto(c){
 
 // Sin IA se puede empezar igual: los pasos se rellenan a mano. La IA es el
 // ayudante, no el soporte.
+// Cómo se llama cada tipo de creación en cada área (Sala: bebidas, preparaciones de barra y maridajes).
+function idrTipoNombre(tipo){
+  if(idrEsSala()){
+    return tipo === 'plato' ? gl({es:'Cóctel o bebida', ca:'Còctel o beguda', en:'Cocktail or drink'})
+      : tipo === 'base' ? gl({es:'Preparación de barra', ca:'Preparació de barra', en:'Bar preparation'})
+      : tipo === 'maridaje' ? gl({es:'Maridajes', ca:'Maridatges', en:'Pairings'})
+      : tipo === 'carta' ? gl({es:'Carta de bebidas', ca:'Carta de begudes', en:'Drinks menu'})
+      : t('idr.newMenu');
+  }
+  return tipo === 'plato' ? t('idr.newDish') : tipo === 'base' ? t('idr.newBase') : tipo === 'menu' ? t('idr.newMenu') : t('idr.newCarta');
+}
 function idrIconoTipo(tipo){
+  if(tipo === 'maridaje') return 'ti-glass-champagne';
+  if(idrEsSala() && tipo === 'plato') return 'ti-glass-cocktail';
+  if(idrEsSala() && tipo === 'base') return 'ti-bottle';
+  if(idrEsSala() && tipo === 'carta') return 'ti-glass-full';
   return tipo === 'plato' ? 'ti-tools-kitchen-2'
        : tipo === 'base'  ? 'ti-soup'
        : tipo === 'menu'  ? 'ti-list-numbers' : 'ti-book';
@@ -1021,13 +1172,15 @@ function idrIconoTipo(tipo){
    no solo no sirve — hace perder el tiempo y quema la confianza en la
    herramienta. Así que sin ADN no se empieza nada. */
 function idrEmpezar(tipo){
-  if(!IDR_TIPOS_NUEVOS.includes(tipo)) return;
+  if(!IDR_TIPOS_NUEVOS.includes(tipo) || !idrTiposDelArea().includes(tipo)) return;
   if(!idrAdnRelleno()){
     showToast(t('idr.dnaRequired') + ' (' + idrAdnQueFalta().join(', ') + ')', 5000);
     idrAdnModal();
     return;
   }
   const c = idrNuevaCreacion(tipo);
+  // El maridaje no lleva encargo de precio ni de estructura: se elige qué platos se maridan en su propia pantalla.
+  if(tipo === 'maridaje') c.encargo = {hecho: true};
   // Nace donde estás mirando: si abres "Carta otoño 2026" y creas un plato,
   // lo lógico es que caiga ahí y no en el montón general.
   if(idrCarpetaActiva && idrCarpetaActiva !== '__sin') c.carpetaId = idrCarpetaActiva;
@@ -1077,8 +1230,15 @@ function idrBloquesVacios(tipo, cuantos){
   for(let i = 0; i < cuantos; i++) out.push({nombre: '', n: ''});
   return out;
 }
+const IDR_BLOQUES_BEBIDAS = [
+  {es:'Aperitivos', ca:'Aperitius', en:'Aperitifs'},
+  {es:'Cócteles de autor', ca:'Còctels d\'autor', en:'Signature cocktails'},
+  {es:'Clásicos', ca:'Clàssics', en:'Classics'},
+  {es:'Largos y refrescantes', ca:'Llargs i refrescants', en:'Long and refreshing'},
+  {es:'Sin alcohol', ca:'Sense alcohol', en:'Alcohol-free'},
+];
 function idrSugerenciaBloque(tipo, i){
-  const base = tipo === 'menu' ? IDR_BLOQUES_MENU : IDR_BLOQUES_CARTA;
+  const base = idrEsSala() ? IDR_BLOQUES_BEBIDAS : (tipo === 'menu' ? IDR_BLOQUES_MENU : IDR_BLOQUES_CARTA);
   return base[i] ? gl(base[i]) : (tipo === 'menu' ? t('idr.briefPass') : t('idr.briefBlock'));
 }
 
@@ -1131,15 +1291,15 @@ function renderIdrEncargo(box, c){
     <div class="card">
       <div class="grid grid-2">
         <div class="field">
-          <label>${c.tipo === 'menu' ? t('idr.briefPriceMenu') : c.tipo === 'carta' ? t('idr.briefPriceCarta') : t('idr.briefPriceDish')}</label>
+          <label>${idrEsSala() ? (c.tipo === 'carta' ? gl({es:'Precio medio de la copa (sin IVA)', ca:'Preu mitjà de la copa (sense IVA)', en:'Average price per drink (excl. VAT)'}) : gl({es:'Precio de la copa (sin IVA)', ca:'Preu de la copa (sense IVA)', en:'Price per drink (excl. VAT)'})) : c.tipo === 'menu' ? t('idr.briefPriceMenu') : c.tipo === 'carta' ? t('idr.briefPriceCarta') : t('idr.briefPriceDish')}</label>
           <input type="number" id="enc-pvp" step="0.01" min="0" value="${e.pvp || ''}" placeholder="0,00">
         </div>
         <div class="field">
-          <label>${t('idr.briefFoodCost')}</label>
+          <label>${idrEsSala() ? gl({es:'Coste de bebida objetivo (%)', ca:'Cost de beguda objectiu (%)', en:'Target pour cost (%)'}) : t('idr.briefFoodCost')}</label>
           <input type="number" id="enc-fc" step="1" min="1" max="90" value="${e.foodCost || idrAdn().foodCostObjetivo || ''}" placeholder="30">
         </div>
       </div>
-      <p style="font-size:12.5px;color:var(--muted);margin:0">${t('idr.briefPerPerson')}</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0">${idrEsSala() ? gl({es:'Las bebidas se escriben SIEMPRE para UNA copa: así el coste por copa es el coste, sin dividir.', ca:'Les begudes s\'escriuen SEMPRE per a UNA copa.', en:'Drinks are always written for ONE serve, so the cost per drink is the cost, no dividing.'}) : t('idr.briefPerPerson')}</p>
     </div>
 
     ${esConjunto ? `
@@ -1277,6 +1437,11 @@ function idrMensajes(c){
 // Lo primero que se ve al abrir. Se escribe en la app y no se le pide al
 // modelo: abrir una prueba tiene que ser instantáneo y gratis.
 function idrSaludo(tipo){
+  if(idrEsSala()){
+    return tipo === 'base' ? gl({es:'Cuéntame qué preparación quieres montar para la barra (un jarabe, una infusión, un cordial…) y para qué bebidas la quieres. Te propongo caminos y tú eliges.', ca:'Explica\'m quina preparació vols muntar per a la barra (un xarop, una infusió, un cordial…) i per a quines begudes la vols. Et proposo camins i tu tries.', en:'Tell me which bar preparation you want to build (a syrup, an infusion, a cordial…) and which drinks it is for. I will suggest routes and you choose.'})
+      : tipo === 'maridaje' ? gl({es:'Dime qué platos quieres maridar y con qué ánimo: copa de vino, cóctel, sin alcohol o todo. Parto de lo que ya tienes en barra.', ca:'Digues quins plats vols maridar i amb quin ànim: copa de vi, còctel, sense alcohol o tot. Parteixo del que ja tens a la barra.', en:'Tell me which dishes you want to pair and the mood: wine, cocktail, alcohol-free or all of it. I start from what you already have behind the bar.'})
+      : gl({es:'Cuéntame qué bebida buscas: un cóctel de otoño, un sin alcohol, un aperitivo de la casa… Te propongo dos o tres caminos con medidas y tú eliges.', ca:'Explica\'m quina beguda busques: un còctel de tardor, un sense alcohol, un aperitiu de la casa… Et proposo dos o tres camins amb mesures i tu tries.', en:'Tell me which drink you are after: an autumn cocktail, an alcohol-free one, a house aperitif… I will suggest two or three routes with measures and you choose.'});
+  }
   return tipo === 'base' ? t('idr.chatHelloBase') : t('idr.chatHelloDish');
 }
 // El hilo en texto plano. Es lo que se le pasa al modelo para escribir la
@@ -1290,7 +1455,7 @@ function idrConversacionTexto(c){
     if(p && p.elegido && pasos[i]) partes.push(`${gl(pasos[i].l)}: ${p.elegido}`);
   });
   idrMensajes(c).forEach(m => {
-    partes.push(`${m.r === 'yo' ? 'COCINERO' : 'ASISTENTE'}: ${m.t}`);
+    partes.push(`${m.r === 'yo' ? (idrEsSala() ? 'BARMAN' : 'COCINERO') : 'ASISTENTE'}: ${m.t}`);
   });
   return partes.join('\n');
 }
@@ -1298,6 +1463,7 @@ function idrConversacionTexto(c){
 function renderIdrCreacion(box){
   const c = idrCreacion(idrCreacionActiva);
   if(!c){ navIdr('inicio'); return; }
+  if(c.tipo === 'maridaje'){ renderIdrMaridaje(box, c); return; }
   // Primero el encargo: precio, food cost y estructura. Sin eso no hay
   // conversación que valga, porque la IA no sabría qué está llenando.
   if(!idrEncargoHecho(c) && !(c.pasos||[]).length){ renderIdrEncargo(box, c); return; }
@@ -1316,7 +1482,7 @@ function renderIdrCreacion(box){
   const burbuja = (m) => `<div class="idr-msg ${m.r === 'yo' ? 'yo' : 'ia'}"><div>${escapeHtml(m.t)}</div></div>`;
 
   box.innerHTML = `
-    ${idrCabecera(escapeHtml(c.titulo || (c.tipo === 'base' ? t('idr.newBase') : t('idr.newDish'))), idrProgresoTexto(c), 'inicio')}
+    ${idrCabecera(escapeHtml(c.titulo || idrTipoNombre(c.tipo)), idrProgresoTexto(c), 'inicio')}
 
     ${hechos ? `<div class="card"><h3><i class="ti ti-checks"></i> ${t('idr.decided')}</h3>${hechos}</div>` : ''}
 
@@ -1373,9 +1539,9 @@ function renderIdrCreacion(box){
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <button class="btn btn-fino is-on" id="idr-enviar" onclick="idrEnviar()"${idrPensando?' disabled':''}><i class="ti ti-send"></i> ${t('idr.send')}</button>
             ${c.tipo === 'plato'
-              ? `<button class="owner-only btn ${c.listo?'btn-primary':''}" onclick="idrCrearPlatoReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createDish')}</button>`
+              ? `<button class="owner-only btn ${c.listo?'btn-primary':''}" onclick="idrCrearPlatoReal(${c.id})"><i class="ti ti-plus"></i> ${idrEsSala() ? gl({es:'Crear la bebida', ca:'Crear la beguda', en:'Create the drink'}) : t('idr.createDish')}</button>`
               : c.tipo === 'base'
-              ? `<button class="owner-only btn ${c.listo?'btn-primary':''}" onclick="idrCrearBaseReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createBase')}</button>`
+              ? `<button class="owner-only btn ${c.listo?'btn-primary':''}" onclick="idrCrearBaseReal(${c.id})"><i class="ti ti-plus"></i> ${idrEsSala() ? gl({es:'Crear la preparación', ca:'Crear la preparació', en:'Create the preparation'}) : t('idr.createBase')}</button>`
               : c.propuesta
               ? `<button class="owner-only btn btn-primary" onclick="idrCrearLosPlatosPropuestos(${c.id})"><i class="ti ti-check"></i> ${t('idr.approveProposal')}</button>
                  <button class="owner-only btn" onclick="idrProponerPlatos(${c.id})"><i class="ti ti-refresh"></i> ${t('idr.proposeAgain')}</button>`
@@ -1487,7 +1653,43 @@ async function idrEnviarInterno(){
    preguntar poco y bien, no dar por supuesto lo que no le han dicho, y no
    arrastrar a un plato partes que no le tocan — el guion de pasos obligaba a
    ponerle salsa a una ensalada. */
+function idrGuionConversacionSala(tipo){
+  const queEs = tipo === 'base'
+    ? `Estás creando una PREPARACIÓN DE BARRA: algo que se hace de antemano y se usa después en varias bebidas (un jarabe, un cordial, una infusión, una premezcla, un shrub).
+Antes de darla por cerrada tienes que saber SIEMPRE cuánto sale (rendimiento con su unidad, por ejemplo "1,5 L"): sin eso no se puede costear por litro, y todas las bebidas que la lleven saldrán mal costeadas.`
+    : tipo === 'maridaje'
+    ? `Estás ayudando con MARIDAJES: qué beber con cada plato. Das criterio y razones, no una lista. Usa primero lo que ya tienen en barra y en carta, y di cuándo haría falta una bebida nueva.`
+    : `Estás creando UNA BEBIDA ENTERA para la carta (un cóctel, una bebida larga, un sin alcohol, un aperitivo): base, equilibrio, técnica, hielo, copa y guarnición. Si te preguntan solo por una parte (la guarnición, el jarabe), respóndele a eso.`;
+  return `${queEs}
+
+TU TRABAJO ES AYUDARLE A CREAR, NO INTERROGARLE.
+
+Si te pide algo concreto — "un cóctel de otoño con ginebra", "algo sin alcohol para acompañar un arroz", "un spritz de la casa" — CONTESTA CON PROPUESTAS DE VERDAD, ahí mismo, sin pedirle antes una lista de datos. Dale DOS O TRES caminos distintos, cada uno con:
+- qué es, en una línea,
+- POR QUÉ funciona (qué aporta la acidez, qué corta el dulce, qué da el amargo),
+- y qué lleva, con medidas aproximadas por copa en cl o ml, para que se pueda preparar mañana.
+
+Caminos DISTINTOS de verdad, no tres versiones de lo mismo: una bebida corta removida, otra larga y fresca, otra ácida y agitada. Y di cuál es un clásico y cuál es una vuelta tuya.
+
+APORTA CRITERIO, NO SOLO OPCIONES. En cada respuesta, además de proponer, MÓJATE:
+- di cuál elegirías tú y por qué, aunque le dejes decidir a él;
+- avisa de lo que puede salir mal (una bebida que se diluye antes de llegar a la mesa, una guarnición que tapa el aroma, un dulce que empalaga a la segunda copa);
+- señala lo que se puede dejar hecho (jarabes, premezclas) y lo que hay que hacer al momento;
+- si algo choca con su ADN, con su equipamiento o con lo que ya tiene en carta, dilo ANTES de que se enamore de la idea.
+
+NO DEJES LA CONVERSACIÓN MUERTA. Termina SIEMPRE con un paso concreto: una pregunta que haga avanzar, o lo que harías a continuación.
+
+Pregunta SOLO cuando la respuesta cambie de verdad lo que vas a proponer (con o sin alcohol, corta o larga, para qué plato o momento). Una o dos preguntas como mucho, y NUNCA antes de haber dado propuestas.
+
+No hay guion fijo: un vino por copa no lleva técnica, un sin alcohol no es un cóctel sin botella y un jarabe no lleva copa. Habla de lo que esa bebida pida y calla lo que no. No des por sabido lo que no te han dicho: si no conoces bien algo, dilo y pide una referencia.
+
+CUANDO YA ESTÉ DECIDIDO: en cuanto sepas qué lleva, cómo se prepara y para cuántas copas, pon "listo": true y DILE EXPRESAMENTE que le dé al botón "${tipo === 'base' ? 'Crear la preparación' : tipo === 'maridaje' ? 'Guardar los maridajes' : 'Crear la bebida'}" para que la app la escandalle con sus precios.
+
+Responde SIEMPRE con este JSON, sin nada alrededor:
+{"respuesta":"lo que le dices al barman","listo":false,"falta":["lo que todavía necesitas saber"]}`;
+}
 function idrGuionConversacion(tipo){
+  if(idrEsSala()) return idrGuionConversacionSala(tipo);
   const queEs = tipo === 'base'
     ? `Estás creando una ELABORACIÓN BASE: algo que se produce de antemano y se usa después en varios platos (un fondo, una salsa madre, una crema, un escabeche, una picada).
 Antes de darla por cerrada tienes que saber SIEMPRE cuánto sale (rendimiento con su unidad, por ejemplo "3 L"): sin eso no se puede costear por litro, y todos los platos que la lleven saldrán mal costeados.`
@@ -1592,7 +1794,7 @@ function idrConvertirCantidad(cantidad, unidadModelo, unidadIngrediente){
 function idrBuscarIngrediente(nombre, avisos){
   const n = (nombre||'').trim().toLowerCase();
   if(!n) return null;
-  const ings = (DB.ingredients||[]).filter(i => (i.area||'cocina') === 'cocina');
+  const ings = (DB.ingredients||[]).filter(i => (i.area||'cocina') === idrArea());
   const exacto = ings.find(i => (i.name||'').trim().toLowerCase() === n);
   if(exacto) return exacto;
   const avisarSiAmbiguo = (candidatos) => {
@@ -1710,7 +1912,7 @@ function idrCrearElaboracionDelPlato(elab){
     ivaPct: (DB.business && DB.business.ivaPct) || 10,
     comensales: 1, consumiblesPct: 0,
     category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
-    ingredients: lineas, allergens: [], area: 'cocina',
+    ingredients: lineas, allergens: [], area: idrArea(),
     isBase: true, baseYield: rendimiento, baseUnit: unidad,
     steps: Array.isArray(elab.pasos) ? elab.pasos.join('\n') : '',
     presentation: String(elab.descripcion || ''),
@@ -1758,7 +1960,7 @@ function idrUnidadDeElaboracion(u){
 function idrBuscarElaboracion(nombre){
   const n = (nombre||'').trim().toLowerCase();
   if(!n) return null;
-  const bases = (DB.recipes||[]).filter(r => r.isBase && (r.area||'cocina') === 'cocina');
+  const bases = (DB.recipes||[]).filter(r => r.isBase && (r.area||'cocina') === idrArea());
   return bases.find(r => (r.name||'').trim().toLowerCase() === n)
       || bases.find(r => n.includes((r.name||'').trim().toLowerCase()) && (r.name||'').trim().length > 4)
       || null;
@@ -1822,7 +2024,7 @@ async function idrCrearPlatoRealInterno(id){
   if(!resumen.trim()){ showToast(t('idr.nothingToBuild')); return; }
 
   showToast(t('idr.buildingDish'));
-  const instruccion = `Esta es la conversación en la que hemos diseñado el plato:
+  const instruccionCocina = `Esta es la conversación en la que hemos diseñado el plato:
 
 ${resumen}
 
@@ -1842,6 +2044,19 @@ Si el plato usa una de SUS elaboraciones base, ponla como un ingrediente más co
 
 Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") — nunca en kilos ni litros. La aplicación ya las convierte a la unidad en que el negocio compra cada cosa.
 Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Y si el plato pide alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
+  // La bebida se escribe para UNA copa, con la técnica, el hielo, la copa y la guarnición en los pasos.
+  const instruccionSala = `Esta es la conversación en la que hemos diseñado la bebida:
+
+${resumen}
+
+Escribe la receta de UNA COPA. Responde SOLO con este JSON:
+{"nombre":"...","descripcion":"descripción corta de carta","comensales":1,"pasos":["técnica, hielo, copa y guarnición, paso a paso"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":50,"unidad":"ml"}],"elaboraciones":[{"nombre":"Jarabe de romero","rinde":{"cantidad":500,"unidad":"ml"},"porRacion":{"cantidad":15,"unidad":"ml"},"stock":true,"porque":"se hace en tanda","pasos":["..."],"ingredientes":[{"nombre":"...","cantidad":250,"unidad":"g"}]}]}
+
+PREPARACIONES DE BARRA. Si la bebida lleva algo que se hace APARTE (un jarabe, un cordial, una infusión, una premezcla), va en "elaboraciones", con su rendimiento de tanda, sus pasos y sus ingredientes; la aplicación le crea su ficha y encadena el coste. "porRacion" es lo que lleva UNA copa de esa preparación, en la unidad del rendimiento. "stock" va a TRUE si se hace en tanda y se guarda para varios servicios. En "ingredientes" deja solo lo que va directo a la copa en el pase (el destilado, el zumo del día, la soda, el hielo si se cuenta). Si no hay preparaciones, deja la lista vacía.
+En "pasos" van la técnica (agitado, removido, directo), el hielo, la copa y la guarnición; no repitas ahí cómo se hace cada preparación.
+Pon 1 en "comensales": una copa. Las cantidades, SIEMPRE en mililitros ("ml"), gramos ("g") o unidades ("ud"): 50 ml, no 5 cl. La aplicación las convierte a la unidad en que el local compra cada cosa.
+Aprovecha las botellas y los productos que YA TIENE cuando encajen, con el mismo nombre con el que los tiene. Y si la bebida pide alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
+  const instruccion = idrEsSala() ? instruccionSala : instruccionCocina;
 
   const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 3000});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
@@ -1863,7 +2078,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     comensales: idrLeerComensales(j.comensales),
     consumiblesPct: 5,
     category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
-    ingredients: lineas, allergens: [], area: 'cocina',
+    ingredients: lineas, allergens: [], area: idrArea(),
     isBase: false, baseYield: 1, baseUnit: 'L',
     steps: Array.isArray(j.pasos) ? j.pasos.join('\n') : '',
     presentation: String(j.descripcion || ''),
@@ -2037,7 +2252,7 @@ async function idrCrearBaseRealInterno(id){
   const rend = idrRendimientoDeLaConversacion(c);
 
   showToast(t('idr.buildingBase'));
-  const instruccion = `Esta es la conversación en la que hemos diseñado la elaboración base:
+  const instruccionCocinaBase = `Esta es la conversación en la que hemos diseñado la elaboración base:
 
 ${resumen}
 
@@ -2047,6 +2262,17 @@ Escribe la receta para que salgan EXACTAMENTE ${rend.qty} ${rend.unit}. Responde
 Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") — nunca en kilos ni litros. La aplicación ya las convierte a la unidad en que el negocio compra cada cosa.
 Las cantidades tienen que dar ese rendimiento de verdad, contando lo que se reduce o se pierde al colar.
 Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Si hace falta alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
+  const instruccionSalaBase = `Esta es la conversación en la que hemos diseñado la preparación de barra:
+
+${resumen}
+
+Escribe la receta para que salgan EXACTAMENTE ${rend.qty} ${rend.unit}. Responde SOLO con este JSON:
+{"nombre":"...","descripcion":"para qué bebidas sirve y cómo se usa en servicio, en una línea","pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":250,"unidad":"g"}]}
+
+Las cantidades, SIEMPRE en mililitros ("ml"), gramos ("g") o unidades ("ud"). La aplicación las convierte a la unidad en que el local compra cada cosa.
+Las cantidades tienen que dar ese rendimiento de verdad, contando lo que se pierde al colar o al reducir.
+Aprovecha lo que YA TIENE cuando encaje, con el mismo nombre con el que lo tiene. Si hace falta algo que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes ni tiempos de conservación.`;
+  const instruccion = idrEsSala() ? instruccionSalaBase : instruccionCocinaBase;
 
   const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 3000});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
@@ -2068,7 +2294,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     ivaPct: (DB.business && DB.business.ivaPct) || 10,
     comensales: 1, consumiblesPct: 0,
     category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
-    ingredients: lineas, allergens: [], area: 'cocina',
+    ingredients: lineas, allergens: [], area: idrArea(),
     isBase: true, baseYield: rend.qty, baseUnit: rend.unit,
     steps: Array.isArray(j.pasos) ? j.pasos.join('\n') : '',
     presentation: String(j.descripcion || ''),
@@ -2219,7 +2445,7 @@ let idrSeleccionPlatos = {};   // {indiceDeBloque: [recipeId, ...]}
 
 function idrPlatosEscandallados(){
   return (DB.recipes||[])
-    .filter(r => !r.isBase && (r.area||'cocina') === 'cocina')
+    .filter(r => !r.isBase && (r.area||'cocina') === idrArea())
     .slice()
     .sort((a,b) => (a.name||'').localeCompare(b.name||''));
 }
@@ -2318,7 +2544,7 @@ function idrGuardarConjunto(c, secciones, recipeIds, logica){
   if(c.tipo === 'carta'){
     if(!Array.isArray(DB.cartas)) DB.cartas = [];
     const carta = {id: genId(), nombre: (c.titulo || t('idr.newCarta')).toUpperCase(), tipo:'GENERAL',
-      desde:'', hasta:'', dias:[0,1,2,3,4,5,6], secciones};
+      desde:'', hasta:'', dias:[0,1,2,3,4,5,6], secciones, area: idrArea()};
     DB.cartas.push(carta);
     c.cartaId = carta.id;
   } else {
@@ -2413,7 +2639,7 @@ Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud"). Si
         ivaPct: (DB.business && DB.business.ivaPct) || 10,
         comensales: 1, consumiblesPct: 5,
         category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
-        ingredients: lineas, allergens: [], area: 'cocina',
+        ingredients: lineas, allergens: [], area: idrArea(),
         isBase: false, baseYield: 1, baseUnit: 'L',
         steps: Array.isArray(pl.pasos) ? pl.pasos.join('\n') : '',
         presentation: String(pl.descripcion || ''),
@@ -2601,7 +2827,7 @@ function idrAdnModal(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p class="idr-modal-intro">${t('idr.dnaExplain')}</p>
-    ${IDR_ADN_CAMPOS.map(campo).join('')}
+    ${idrAdnCampos().map(campo).join('')}
     <div class="modal-footer">
       <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-fino is-on" onclick="idrGuardarAdn()">${t('common.save')}</button>
@@ -2610,7 +2836,7 @@ function idrAdnModal(){
 }
 function idrGuardarAdn(){
   const a = idrAdn();
-  IDR_ADN_CAMPOS.forEach(c => {
+  idrAdnCampos().forEach(c => {
     const el = document.getElementById('adn-' + c.k);
     if(!el) return;
     const v = (el.value||'').trim();
@@ -2688,7 +2914,7 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
         ivaPct: (DB.business && DB.business.ivaPct) || 10,
         comensales: 2, consumiblesPct: 5,
         category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
-        ingredients: lineas, allergens: [], area: 'cocina',
+        ingredients: lineas, allergens: [], area: idrArea(),
         isBase: false, baseYield: 1, baseUnit: 'L',
         steps: '', presentation: String(pl.descripcion || ''),
       };
@@ -2736,6 +2962,203 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
 }
 
 /* ============================================================
+   MARIDAJES (solo Sala)
+   ============================================================
+   Qué beber con cada plato de la cocina. Es lo único del I+D de Sala que LEE la otra área, y solo para eso y sin escribir nada:
+   la carta de la cocina (nombres, ingredientes principales y alérgenos) se le pasa al asistente como contexto, y lo que sale es una
+   TABLA — plato, bebida, por qué y una alternativa sin alcohol —, no recetas. Cada bebida se casa con lo que el local ya tiene
+   (receta de Sala o producto de Mega Lista): si la tiene lo dice, y si no, ofrece crearla con el I+D de bebidas. */
+// Los platos de la carta de la cocina, agrupados por sección. Solo lectura.
+function idrPlatosDeCocina(){
+  const vistos = new Set();
+  const secciones = [];
+  (DB.cartas||[]).filter(c => !isBebidaCarta(c)).forEach(carta => (carta.secciones||[]).forEach(sec => {
+    const platos = [];
+    (sec.platos||[]).forEach(p => {
+      const nombre = String((p && (p.nombre || p.name)) || '').trim();
+      if(!nombre || vistos.has(idrNormalizar(nombre))) return;
+      vistos.add(idrNormalizar(nombre));
+      const r = p.recipeId ? getRecipe(p.recipeId) : null;
+      const ings = r ? (r.ingredients||[]).map(l => { const i = (typeof renderEscandalloLineLabel === 'function') ? renderEscandalloLineLabel(l) : null; return i ? i.name : null; }).filter(Boolean).slice(0, 8) : [];
+      const alerg = r && typeof recipeAllergens === 'function' ? [...recipeAllergens(r)] : [];
+      platos.push({nombre, ings, alerg});
+    });
+    if(platos.length) secciones.push({nombre: sec.nombre || '', platos});
+  }));
+  return secciones;
+}
+function idrBebidaExistente(nombre){
+  const n = idrNormalizar(nombre).trim();
+  if(!n) return null;
+  const receta = (DB.recipes||[]).find(r => !r.isBase && (r.area||'cocina') === 'sala' && idrNormalizar(r.name).trim() === n);
+  if(receta) return {tipo:'receta', id: receta.id, nombre: receta.name};
+  const ing = (DB.ingredients||[]).find(i => (i.area||'cocina') === 'sala' && idrNormalizar(i.name).trim() === n);
+  if(ing) return {tipo:'producto', id: ing.id, nombre: ing.name};
+  return null;
+}
+const IDR_MARIDAJE_ENFOQUES = {
+  todo: {es:'Vino, cóctel y sin alcohol', ca:'Vi, còctel i sense alcohol', en:'Wine, cocktail and alcohol-free', pide:'vino, cóctel y una alternativa sin alcohol'},
+  vino: {es:'Solo vino', ca:'Només vi', en:'Wine only', pide:'solo vino (y una alternativa sin alcohol)'},
+  coctel: {es:'Solo cócteles', ca:'Només còctels', en:'Cocktails only', pide:'solo cócteles (y una alternativa sin alcohol)'},
+  sin: {es:'Solo sin alcohol', ca:'Només sense alcohol', en:'Alcohol-free only', pide:'solo bebidas sin alcohol'},
+};
+function idrMaridajeToggle(id, nombre, marcado){
+  const c = idrCreacion(id); if(!c) return;
+  const sel = Array.isArray(c.platosSel) ? c.platosSel : [];
+  c.platosSel = marcado ? [...new Set([...sel, nombre])] : sel.filter(n => n !== nombre);
+  saveDB();
+  withScrollPreserved(() => renderIdr());
+}
+function idrMaridajeTodos(id, marcar){
+  const c = idrCreacion(id); if(!c) return;
+  c.platosSel = marcar ? idrPlatosDeCocina().flatMap(s2 => s2.platos.map(p => p.nombre)) : [];
+  saveDB();
+  withScrollPreserved(() => renderIdr());
+}
+function idrMaridajeCampo(id, campo, valor){
+  const c = idrCreacion(id); if(!c) return;
+  c[campo] = valor;
+  if(campo === 'enfoque') { saveDB(); }
+}
+function renderIdrMaridaje(box, c){
+  const iaOk = idrHayIA();
+  const secciones = idrPlatosDeCocina();
+  const sel = new Set(Array.isArray(c.platosSel) ? c.platosSel : []);
+  const enfoque = IDR_MARIDAJE_ENFOQUES[c.enfoque] ? c.enfoque : 'todo';
+  const lista = Array.isArray(c.maridajes) ? c.maridajes : [];
+  const nSel = secciones.reduce((n, s2) => n + s2.platos.filter(p => sel.has(p.nombre)).length, 0);
+  const filaOpcion = (m, o, j, i) => {
+    const ex = idrBebidaExistente(o.bebida);
+    return `
+      <li class="idr-mar-op">
+        <div class="idr-mar-bebida"><strong>${escapeHtml(o.bebida)}</strong>
+          ${o.tipo ? `<span class="pr-chip">${escapeHtml(o.tipo)}</span>` : ''}
+          ${ex ? `<span class="pr-chip ok"><i class="ti ti-check"></i> ${ex.tipo === 'receta' ? gl({es:'En tu carta', ca:'A la teva carta', en:'On your menu'}) : gl({es:'La tienes', ca:'La tens', en:'You stock it'})}</span>` : (o.tipo && /sin|alcohol-free|0/i.test(o.tipo) ? '' : `<span class="pr-chip dp-amb"><i class="ti ti-plus"></i> ${gl({es:'No la tienes', ca:'No la tens', en:'Not in stock'})}</span>`)}
+        </div>
+        <p>${escapeHtml(o.motivo || '')}</p>
+        ${!ex && /c[oó]ctel|cocktail|còctel/i.test(o.tipo||'') ? `<button type="button" class="owner-only btn btn-sm btn-fino" onclick="idrMaridajeCrearBebida(${c.id}, ${i}, ${j})"><i class="ti ti-flask"></i> ${gl({es:'Crearla con I+D', ca:'Crear-la amb R+D', en:'Create it with R&D'})}</button>` : ''}
+      </li>`;
+  };
+  box.innerHTML = `
+    ${idrCabecera(escapeHtml(c.titulo || idrTipoNombre('maridaje')), idrProgresoTexto(c), 'inicio')}
+    ${!iaOk ? `<aside class="idr-aviso"><i class="ti ti-sparkles"></i><div><strong>${t('idr.noAssistantTitle')}</strong><p>${t('idr.noAssistantBody')}</p></div><button class="btn btn-sm btn-fino is-on" onclick="irAConfigIA()"><i class="ti ti-key"></i> ${t('idr.setUpAssistant')}</button></aside>` : ''}
+    <section class="card idr-mar">
+      <h3><i class="ti ti-tools-kitchen-2"></i> ${gl({es:'¿Qué platos quieres maridar?', ca:'Quins plats vols maridar?', en:'Which dishes do you want to pair?'})} <span class="dp-cuenta">${nSel}</span></h3>
+      <p class="pr-ayuda">${gl({es:'Son los platos de la carta de la cocina. Aquí solo se leen: no se toca nada de Cocina.', ca:'Són els plats de la carta de la cuina. Aquí només es llegeixen: no es toca res de Cuina.', en:'These are the dishes on the kitchen menu. They are only read here: nothing in Kitchen is changed.'})}</p>
+      ${secciones.length ? `
+        <div class="idr-mar-acc"><button type="button" class="btn btn-sm btn-fino" onclick="idrMaridajeTodos(${c.id}, true)">${gl({es:'Marcar todos', ca:'Marcar-los tots', en:'Select all'})}</button><button type="button" class="btn btn-sm btn-fino" onclick="idrMaridajeTodos(${c.id}, false)">${gl({es:'Ninguno', ca:'Cap', en:'None'})}</button></div>
+        ${secciones.map(s2 => `
+          <div class="idr-mar-sec"><div class="es-tit">${escapeHtml(s2.nombre || '—')}</div>
+            <div class="idr-mar-platos">${s2.platos.map(p => `<label class="idr-mar-plato${sel.has(p.nombre) ? ' on' : ''}"><input type="checkbox" ${sel.has(p.nombre) ? 'checked' : ''} onchange="idrMaridajeToggle(${c.id}, '${escapeJsAttr(p.nombre)}', this.checked)"><span>${escapeHtml(p.nombre)}</span></label>`).join('')}</div>
+          </div>`).join('')}
+      ` : `<div class="empty es-vacio"><i class="ti ti-tools-kitchen-2"></i>${gl({es:'La cocina aún no tiene platos en su carta.', ca:'La cuina encara no té plats a la carta.', en:'The kitchen has no dishes on its menu yet.'})}</div>`}
+      <div class="grid grid-2 idr-mar-ajustes">
+        <div class="field"><label for="idr-mar-enfoque">${gl({es:'Qué quieres que proponga', ca:'Què vols que proposi', en:'What should it suggest'})}</label>
+          <select id="idr-mar-enfoque" onchange="idrMaridajeCampo(${c.id}, 'enfoque', this.value)">${Object.entries(IDR_MARIDAJE_ENFOQUES).map(([k, v]) => `<option value="${k}"${k === enfoque ? ' selected' : ''}>${escapeHtml(gl(v))}</option>`).join('')}</select></div>
+        <div class="field"><label for="idr-mar-nota">${gl({es:'Algo que deba saber (opcional)', ca:'Alguna cosa que hagi de saber (opcional)', en:'Anything it should know (optional)'})}</label>
+          <textarea id="idr-mar-nota" rows="2" placeholder="${escapeHtml(gl({es:'Ej. Menú de grupo, mucha gente mayor, sin picante', ca:'Ex. Menú de grup, molta gent gran, sense picant', en:'e.g. Group menu, many older guests, nothing spicy'}))}" oninput="idrMaridajeCampo(${c.id}, 'notaMaridaje', this.value)">${escapeHtml(c.notaMaridaje || '')}</textarea></div>
+      </div>
+      <div class="idr-mar-bt">
+        <button type="button" class="btn btn-fino is-on" id="idr-mar-pedir" ${nSel && iaOk && !idrPensando ? '' : 'disabled'} onclick="idrProponerMaridajes(${c.id})"><i class="ti ti-sparkles"></i> ${lista.length ? gl({es:'Pedir otra vuelta', ca:'Demanar una altra volta', en:'Ask again'}) : gl({es:'Pedir los maridajes', ca:'Demanar els maridatges', en:'Ask for the pairings'})}</button>
+        <span class="pr-ayuda">${t('idr.callsLeft').replace('${n}', idrQuedanLlamadas())}${nSel ? '' : ' · ' + gl({es:'Marca al menos un plato.', ca:'Marca almenys un plat.', en:'Select at least one dish.'})}</span>
+      </div>
+      ${idrPensando ? `<div class="idr-msg ia pensando"><div><i class="ti ti-loader"></i> ${t('idr.thinking')}</div></div>` : ''}
+    </section>
+    ${idrUltimoFallo ? `<div class="idr-nota is-aviso"><h4><i class="ti ti-alert-triangle"></i> ${escapeHtml(t(IDR_MOTIVO_KEYS[idrUltimoFallo.motivo] || 'idr.err.provider'))}</h4></div>` : ''}
+    ${lista.length ? `
+    <section class="card idr-mar-res">
+      <div class="lp-card-cab"><h3 class="dp-h"><i class="ti ti-glass-champagne"></i> ${gl({es:'Los maridajes', ca:'Els maridatges', en:'The pairings'})}</h3>
+        <button type="button" class="btn btn-fino" onclick="idrImprimirMaridaje(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button></div>
+      ${c.notaGeneral ? `<p class="idr-nota-gen">${escapeHtml(c.notaGeneral)}</p>` : ''}
+      ${lista.map((m, i) => `
+        <article class="idr-mar-fila">
+          <h4>${escapeHtml(m.plato)}</h4>
+          <ul class="idr-mar-ops">${(m.opciones||[]).map((o, j) => filaOpcion(m, o, j, i)).join('')}</ul>
+          ${m.sinAlcohol ? `<p class="idr-mar-sin"><i class="ti ti-leaf"></i> <b>${gl({es:'Sin alcohol', ca:'Sense alcohol', en:'Alcohol-free'})}:</b> ${escapeHtml(m.sinAlcohol)}</p>` : ''}
+        </article>`).join('')}
+      <div class="field idr-mar-retoque"><label for="idr-mar-cambio">${gl({es:'¿Quieres cambiar algo?', ca:'Vols canviar alguna cosa?', en:'Want to change something?'})}</label>
+        <textarea id="idr-mar-cambio" rows="2" placeholder="${escapeHtml(gl({es:'Ej. Menos vino y más cócteles; algo más ligero con el arroz', ca:'Ex. Menys vi i més còctels', en:'e.g. Less wine and more cocktails'}))}"></textarea>
+        <button type="button" class="btn btn-sm btn-fino" onclick="idrProponerMaridajes(${c.id}, document.getElementById('idr-mar-cambio').value)"${idrPensando ? ' disabled' : ''}><i class="ti ti-refresh"></i> ${gl({es:'Retocar', ca:'Retocar', en:'Adjust'})}</button></div>
+    </section>` : ''}
+  `;
+}
+async function idrProponerMaridajes(id, cambio){
+  const c = idrCreacion(id);
+  if(!c || idrPensando) return;
+  if(!idrHayIA()){ showToast(t('idr.err.noKey')); return; }
+  const secciones = idrPlatosDeCocina();
+  const elegidos = secciones.flatMap(s2 => s2.platos).filter(p => (c.platosSel||[]).includes(p.nombre));
+  if(!elegidos.length){ showToast(gl({es:'Marca al menos un plato.', ca:'Marca almenys un plat.', en:'Select at least one dish.'})); return; }
+  const enfoque = IDR_MARIDAJE_ENFOQUES[c.enfoque] ? c.enfoque : 'todo';
+  const lista = elegidos.map(p => `- ${p.nombre}${p.ings.length ? ` (lleva: ${p.ings.join(', ')})` : ''}${p.alerg.length ? ` [alérgenos: ${p.alerg.join(', ')}]` : ''}`).join('\n');
+  const previo = (Array.isArray(c.maridajes) && c.maridajes.length && cambio) ? `\nLO QUE PROPUSISTE ANTES:\n${JSON.stringify(c.maridajes)}\n` : '';
+  const instruccion = `Propón el maridaje de estos platos de la cocina. Quiero: ${IDR_MARIDAJE_ENFOQUES[enfoque].pide}.
+
+PLATOS (nombres exactos):
+${lista}
+${c.notaMaridaje ? `\nLO QUE DEBES SABER: ${c.notaMaridaje}\n` : ''}${previo}${cambio ? `\nCAMBIO QUE PIDE: ${String(cambio).slice(0, 600)}\n` : ''}
+Para cada plato da DOS opciones como mucho y explica el porqué en una frase (peso, acidez, burbuja, contraste o tradición). Usa primero lo que ya tiene en barra y en carta, y si propones algo que no tiene, que sea una buena razón. Una alternativa sin alcohol por plato.
+
+Responde SOLO con este JSON, sin nada alrededor:
+{"maridajes":[{"plato":"nombre exacto del plato","opciones":[{"bebida":"nombre de la bebida","tipo":"vino | cóctel | cerveza | sin alcohol | otro","motivo":"por qué funciona"}],"sinAlcohol":"una sugerencia sin alcohol"}],"nota":"una o dos frases sobre el conjunto, o vacío"}`;
+  idrPensando = true;
+  renderIdr();
+  const r = await llmChat(idrSistema(idrGuionConversacion('maridaje')), [{role:'user', content: instruccion}], {maxTokens: 4000});
+  idrPensando = false;
+  const cVivo = idrCreacion(id) || c;
+  if(!r || !r.ok){
+    showToast(idrMensajeError(r || {}));
+    renderIdr();
+    return;
+  }
+  idrUltimoFallo = null;
+  const j = idrExtraerJson(r.texto);
+  if(!j || !Array.isArray(j.maridajes)){ showToast(t('idr.err.unreadable')); renderIdr(); return; }
+  // Solo se guardan maridajes de platos que se pidieron (el modelo no puede colar otros) y con su bebida escrita.
+  const pedidos = new Map(elegidos.map(p => [idrNormalizar(p.nombre).trim(), p.nombre]));
+  const limpios = [];
+  j.maridajes.forEach(m => {
+    const nombre = m && pedidos.get(idrNormalizar(m.plato).trim());
+    if(!nombre) return;
+    const opciones = (Array.isArray(m.opciones) ? m.opciones : []).filter(o => o && o.bebida).slice(0, 3)
+      .map(o => ({bebida: String(o.bebida).slice(0, 80), tipo: String(o.tipo||'').slice(0, 30), motivo: String(o.motivo||'').slice(0, 400)}));
+    if(opciones.length) limpios.push({plato: nombre, opciones, sinAlcohol: String(m.sinAlcohol||'').slice(0, 300)});
+  });
+  if(!limpios.length){ showToast(t('idr.err.unreadable')); renderIdr(); return; }
+  cVivo.maridajes = limpios;
+  cVivo.notaGeneral = String(j.nota||'').slice(0, 400);
+  if(!cVivo.titulo) cVivo.titulo = gl({es:'Maridajes', ca:'Maridatges', en:'Pairings'}) + ' · ' + new Date().toLocaleDateString(localeActual(), {day:'numeric', month:'short'});
+  cVivo.listo = true;
+  cVivo.updatedAt = new Date().toISOString();
+  saveDB();
+  renderIdr();
+}
+// Una bebida que no tienes y es un cóctel: se abre una creación de bebida con la idea ya escrita, para que solo falte darle forma.
+function idrMaridajeCrearBebida(id, i, j){
+  const c = idrCreacion(id);
+  const m = c && (c.maridajes||[])[i];
+  const o = m && (m.opciones||[])[j];
+  if(!o) return;
+  if(!idrAdnRelleno()){ idrAdnModal(); return; }
+  const nueva = idrNuevaCreacion('plato');
+  nueva.titulo = o.bebida.slice(0, 60);
+  nueva.borrador = `Quiero crear «${o.bebida}» para maridar con «${m.plato}». La idea: ${o.motivo || ''}`.slice(0, 600);
+  if(c.carpetaId) nueva.carpetaId = c.carpetaId;
+  saveDB();
+  navIdr('creacion', nueva.id);
+}
+function idrImprimirMaridaje(id){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const titulo = c.titulo || idrTipoNombre('maridaje');
+  const filas = (c.maridajes||[]).map(m => `
+    <h2>${escapeHtml(m.plato)}</h2>
+    <ul class="pr-steps">${(m.opciones||[]).map(o => `<li><strong>${escapeHtml(o.bebida)}</strong>${o.tipo ? ` (${escapeHtml(o.tipo)})` : ''} — ${escapeHtml(o.motivo||'')}</li>`).join('')}</ul>
+    ${m.sinAlcohol ? `<p><em>${gl({es:'Sin alcohol', ca:'Sense alcohol', en:'Alcohol-free'})}:</em> ${escapeHtml(m.sinAlcohol)}</p>` : ''}`).join('');
+  printReportWindow(titulo, `${printReportHeaderHtml(titulo)}${c.notaGeneral ? `<p>${escapeHtml(c.notaGeneral)}</p>` : ''}${filas}`, {winSize:'width=800,height=1000'});
+}
+
+/* ============================================================
    CARPETAS DEL CUADERNO
    ============================================================
    I+D es un laboratorio: se lanzan hipótesis, muchas no llegan a nada, y
@@ -2747,11 +3170,13 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
    donde caen todas las que nacen. Clasificar es opcional, como debe ser en
    un cuaderno de pruebas. */
 
-function idrCarpetas(){
+function idrCarpetasTodas(){
   if(!DB.idr || typeof DB.idr !== 'object') DB.idr = {};
   if(!Array.isArray(DB.idr.carpetas)) DB.idr.carpetas = [];
   return DB.idr.carpetas;
 }
+// Las carpetas son de cada área: las de Cocina no se ven desde Sala, ni al revés.
+function idrCarpetas(){ return idrCarpetasTodas().filter(f => (f.area||'cocina') === idrArea()); }
 function idrCarpeta(id){ return idrCarpetas().find(c => c.id === id) || null; }
 
 async function idrNuevaCarpeta(){
@@ -2760,7 +3185,7 @@ async function idrNuevaCarpeta(){
   const n = (nombre||'').trim().slice(0, 40);
   if(!n) return;
   if(idrCarpetas().some(c => c.nombre.toLowerCase() === n.toLowerCase())){ showToast(t('idr.folderExists')); return; }
-  idrCarpetas().push({id: genId(), nombre: n});
+  idrCarpetasTodas().push({id: genId(), nombre: n, area: idrArea()});
   saveDB();
   renderIdr();
 }
@@ -2783,7 +3208,7 @@ async function idrBorrarCarpeta(id){
   const dentro = idrCreaciones().filter(x => x.carpetaId === id).length;
   if(!(await confirmModal(t('idr.confirmDeleteFolder').replace('${n}', dentro).replace('${nombre}', c.nombre)))) return;
   idrCreaciones().forEach(x => { if(x.carpetaId === id) delete x.carpetaId; });
-  DB.idr.carpetas = idrCarpetas().filter(x => x.id !== id);
+  DB.idr.carpetas = idrCarpetasTodas().filter(x => x.id !== id);
   if(idrCarpetaActiva === id) idrCarpetaActiva = null;
   saveDB();
   renderIdr();
@@ -2824,6 +3249,7 @@ function idrTemporadaTexto(mes){
   const d = IDR_TEMPORADA[m];
   if(!d) return '';
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  if(idrEsSala()) return `FRUTA DE TEMPORADA en ${meses[m-1]} (dato, no lo cambies de memoria; sirve para zumos, jarabes, infusiones y guarniciones):\n- Frutas: ${d.frutas}`;
   return `PRODUCTO DE TEMPORADA en ${meses[m-1]} (dato, no lo cambies de memoria):\n- Verduras: ${d.verduras}\n- Frutas: ${d.frutas}\n- Pescados: ${d.pescados}`;
 }
 
@@ -2855,7 +3281,7 @@ function idrIngenieriaMenu(){
   if(ventas.length < IDR_MIN_VENTAS) return null;
   const datos = {};
   ventas.forEach(v => (v.items||[]).forEach(it => {
-    if(!it || it.isShipping || it.bebida || !it.name) return;
+    if(!it || it.isShipping || (!!it.bebida) !== idrEsSala() || !it.name) return;
     const d = datos[it.name] || (datos[it.name] = {uds:0, ingreso:0, coste:0});
     const q = parseFloat(it.qty) || 0;
     d.uds += q;
