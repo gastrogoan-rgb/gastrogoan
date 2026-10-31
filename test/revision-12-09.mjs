@@ -67,8 +67,9 @@ await caso('Mantenimiento: responsable y notas muestran el texto entero, sin cor
       notas:'Limpieza semestral obligatoria por normativa', zona:'cocina'}];
     navigate('limpieza'); setLimpiezaTab('mantenimiento');
     await new Promise(r=>setTimeout(r,700));
-    return [...document.querySelectorAll('#limpieza-tab-content .lp-eq input[type=text]')]
-      .map(i => ({valor: i.value, cabe: i.scrollWidth <= i.clientWidth + 2, ancho: Math.round(i.getBoundingClientRect().width)}));
+    // Ahora cada equipo se VE (el lápiz abre la edición): el texto va entero, repartido en renglones, sin cortarse por la derecha.
+    return [...document.querySelectorAll('#limpieza-tab-content .lp-eq-datos dd')].filter(d => /Empresa externa|Limpieza semestral/.test(d.textContent))
+      .map(i => ({valor: i.textContent, cabe: i.scrollWidth <= i.clientWidth + 2, ancho: Math.round(i.getBoundingClientRect().width)}));
   });
   assert.equal(r.length, 2, 'deben estar los dos campos (responsable y notas)');
   r.forEach(c => assert.ok(c.cabe, `"${c.valor}" no cabe en su casilla (${c.ancho}px)`));
