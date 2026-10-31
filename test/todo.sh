@@ -143,6 +143,7 @@ lanzar; node test/personal.mjs > "$SALIDA/personal.txt" 2>&1 & P135=$!
 lanzar; node test/mi-puesto.mjs > "$SALIDA/mipuesto.txt" 2>&1 & P136=$!
 lanzar; node test/calendario.mjs > "$SALIDA/calendario.txt" 2>&1 & P137=$!
 lanzar; node test/limpieza.mjs > "$SALIDA/limpieza-nueva.txt" 2>&1 & P138=$!
+lanzar; node test/idr-sala.mjs > "$SALIDA/idr-sala.txt" 2>&1 & P139=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -316,5 +317,6 @@ espera $P135 "Personal: resumen, avisos de decisión, tarjetas con rótulo en ca
 espera $P136 "Mi puesto: el panel del empleado (hoy, semana, a su cargo, manual del puesto) y que un empleado solo ve y toca el suyo" "$SALIDA/mipuesto.txt" "casos pasaron"
 espera $P137 "Calendario de Horarios: Día con línea de horas y personal por hora, Semana (tabla o tarjetas), Mes con selector de periodo y las ventanas de turno" "$SALIDA/calendario.txt" "casos pasaron"
 espera $P138 "Plan de Limpieza: estado de hoy, protocolos, tareas, registros APPCC con tarjetas por equipo, alérgenos con filtro y mantenimiento" "$SALIDA/limpieza-nueva.txt" "casos pasaron"
+espera $P139 "I+D de Sala: cócteles, preparaciones, maridajes y carta de bebidas con lo suyo, y nada de Cocina entra en Sala ni al revés" "$SALIDA/idr-sala.txt" "casos pasaron"
 
 exit $FALLOS

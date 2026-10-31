@@ -640,7 +640,7 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
 
 ## Rediseño pantalla a pantalla (29-30/10): cómo se hace y qué hay hecho
 
-El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos, Stock, Personal (con su Calendario), Distribución del Trabajo («Mi puesto») y Plan de Limpieza** — con eso, **la carpeta Cocina está entera con el diseño nuevo**.
+El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos, Stock, Personal (con su Calendario), Distribución del Trabajo («Mi puesto»), Plan de Limpieza e I+D de Sala** — con eso, **la carpeta Cocina está entera con el diseño nuevo**.
 La orden de fondo, dicha tras ver que se tocaba solo la pantalla principal: **cuando se rediseña una pantalla se
 abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueba `test/subpantallas.mjs` lo exige).
 
@@ -741,6 +741,13 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   lleva a su pestaña y se repinta sola con `lpRefrescarResumen`). Protocolos con pasos editables en su sitio (subir/bajar/quitar en el ⋯) y el cumplimiento de los últimos tres días
   (es lo que se conserva); tareas en día/semana/mes; **temperaturas con una tarjeta por equipo** (última lectura, fuera de rango, «sin lectura hoy»; pulsarla prepara el formulario);
   alérgenos con buscador y «platos SIN un alérgeno»; mantenimiento en tarjetas. Un empleado sin edición sigue pudiendo anotar temperaturas pero no borrar. Prueba: `test/limpieza.mjs`.
+- **I+D de Sala** (31/10, js/idr.js): el asistente vive también en la carpeta Sala, con LO SUYO. `idrArea()` = la carpeta en la que estás, y todo se filtra y se marca con ella:
+  **ADN propio** (`DB.idr.adnSala`, campos de barra: tipo de local, bebida insignia, coste de bebida objetivo…; el de Cocina sigue en `DB.idr.adn`), **reglamento propio**
+  (`IDR_REGLAS_SALA`: equilibrio, técnicas, hielo y copa, sin alcohol, maridaje; y `IDR_PROPORCIONES_SALA`), ingredientes, carta de bebidas, elaboraciones, ventas de bebida,
+  **creaciones y carpetas marcadas con `area`**. Tipos de Sala: cóctel o bebida (el flujo de plato, escrito para UNA copa), preparación de barra (el de elaboración base),
+  **maridajes** (nuevo, `renderIdrMaridaje`) y carta de bebidas; sin menús. Cocina no cambia. El maridaje es lo único que LEE la otra área (la carta de la cocina, con sus
+  ingredientes y alérgenos) y no escribe nada en ella; cada bebida se casa con lo que el local ya tiene y, si es un cóctel que falta, se puede crear desde ahí.
+  ⚠️ Hay 14 sitios donde el módulo decía `'cocina'` a mano: se cambiaron por `idrArea()`; al añadir uno nuevo, no escribir el área en literal. Prueba: `test/idr-sala.mjs`.
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,
