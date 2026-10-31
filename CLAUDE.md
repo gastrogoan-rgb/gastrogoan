@@ -640,7 +640,7 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
 
 ## Rediseño pantalla a pantalla (29-30/10): cómo se hace y qué hay hecho
 
-El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos, Stock y Personal**.
+El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos, Stock, Personal y Distribución del Trabajo («Mi puesto»)**.
 La orden de fondo, dicha tras ver que se tocaba solo la pantalla principal: **cuando se rediseña una pantalla se
 abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueba `test/subpantallas.mjs` lo exige).
 
@@ -714,6 +714,18 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   eliminar van en el ⋯ (`ggMenuAcciones` con `estricto:true` = `.owner-strict`, no `.owner-only`: un jefe de cocina con edición no gestiona a
   un compañero). La ficha, el formulario (secciones, colores seleccionables, permisos como opciones) y el selector de horario siguen el diseño nuevo.
   Prueba: `test/personal.mjs` (⚠️ para probar `:hover` en headless hay que lanzar Chromium con `--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4`).
+- **Distribución del Trabajo = «Mi puesto»** (31/10, js/app.js, sección «MI PUESTO»): el panel de cada empleado. Arriba **Hoy** (su turno, si está
+  fichado, «3 de 7 hechas» con barra), la **tira de la semana** (siete días con su turno y lo hecho; pulsar uno cambia la lista de abajo) y el aviso
+  de atrasadas. Abajo, la lista del día (casillas de 44 px; plantilla semanal, tarea puntual, limpieza y promos juntas, salen de `distTareasDelDia`,
+  la MISMA función que cuenta el «1/3» de la tira y el resumen del equipo) y, al lado, **a su cargo** (platos → su ficha, con alérgenos; zonas en Sala),
+  **manual del puesto**, próximos turnos, nota para el siguiente turno y accesos rápidos. El propietario ve primero el equipo (hoy hecho, atrasadas,
+  manual sin leer) y entra en cada panel con los mandos de repartir.
+  ⚠️ **Un empleado SOLO ve su panel**: `distPuedeVer(id)` es la puerta única (`openDistEmployee`, `openDistEmployeeAuthed`, `renderDistribucion`, y todas las
+  escrituras pasan por `distDatosActuales()`, que devuelve null si no toca). Antes solo se filtraba la lista: un id guardado de otra sesión o un
+  `openDistEmployee(otro)` enseñaba el trabajo ajeno. A un compañero no se entra ni con su PIN. Imprimir también se limita a lo suyo.
+  **Manual del puesto** (`d.manual = {items:[{id,tipo,titulo,texto}], version}` y `d.manualLeido = {version, ts}`): lo escribe SOLO el propietario (obligaciones,
+  responsabilidades, normas, consejos; plantilla por área); cada cambio sube la versión y el empleado vuelve a ver «por leer» hasta confirmar. Se
+  imprime con casilla de firma. Firebase no guarda `[]`: `getDistEmpData` repone `manual.items`. Prueba: `test/mi-puesto.mjs`.
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,

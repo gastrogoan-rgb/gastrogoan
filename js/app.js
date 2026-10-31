@@ -1017,6 +1017,10 @@ function getDistEmpData(empId){
   // Antes a sala simplemente se le quitaba la columna de platos y no se le
   // ponía nada en su lugar, así que la pantalla se quedaba coja.
   if(!Array.isArray(d.rangos)) d.rangos = [];
+  // Manual del puesto (31/10). Firebase no guarda [] ni {}: sin items, el manual vuelve de la nube sin la lista.
+  if(!d.manual || typeof d.manual !== 'object') d.manual = {items: [], version: 0};
+  if(!Array.isArray(d.manual.items)) d.manual.items = [];
+  if(typeof d.manual.version !== 'number') d.manual.version = 0;
   return d;
 }
 
@@ -1176,14 +1180,6 @@ function isDistTareaDone(empId, dateStr, taskId){
   const d = getDistEmpData(empId);
   return !!(d.doneDates[dateStr] && d.doneDates[dateStr][taskId]);
 }
-function toggleDistTareaDone(dateStr, taskId, checked){
-  const d = getDistEmpData(distCurrentEmployeeId);
-  if(!d.doneDates[dateStr]) d.doneDates[dateStr] = {};
-  d.doneDates[dateStr][taskId] = checked;
-  saveDB();
-  renderDistDetail();
-}
-
 function goToFichaForDish(name){
   const r = DB.recipes.find(rec => rec.name === name && (rec.area||'cocina') === currentArea());
   if(!r){ showToast(t('msg.techSheetNotFound')); return; }
@@ -1244,29 +1240,72 @@ function getDishNamesWithFicha(){
   return [...names].sort((a,b)=>a.localeCompare(b));
 }
 
+/* ============================================================
+   «MI PUESTO» — el mundo de cada empleado (31/10)
+   Un empleado entra y ve SU día: su turno, lo que tiene que hacer hoy (con
+   lo atrasado), su semana de un vistazo, los platos o zonas que lleva, su
+   manual del puesto y los accesos que de verdad usa. El propietario ve el
+   equipo entero y, dentro de cada uno, lo mismo más los mandos para repartir.
+
+   ⚠️ Un empleado SOLO ve su panel. Antes era la lista la que se filtraba,
+   pero `openDistEmployee(id)` y `distCurrentEmployeeId` aceptaban cualquier
+   id: quien llegara por otro camino (la ficha de un compañero, un id que se
+   quedó de otra sesión) veía el trabajo ajeno. Ahora lo decide una sola
+   función (`distPuedeVer`) y todas las puertas de entrada y de escritura
+   pasan por ella.
+   ============================================================ */
+let distDiaSel = null;      // fecha elegida en la tira de la semana (null = hoy, o el lunes si se mira otra semana)
+let dpManualEdit = null;    // {tipo, id} del apartado del manual que se está editando
+
+// Quién puede ver el panel de `id`: el propietario y un dispositivo sin sesión de empleado, cualquiera; un empleado, solo el suyo.
+function distPuedeVer(id){
+  const yo = loggedInEmployeeId();
+  return yo == null || yo === id;
+}
+// Datos del empleado abierto, o null si esa sesión no puede verlo. TODAS las escrituras de abajo parten de aquí.
+function distDatosActuales(){
+  if(distCurrentEmployeeId == null || !distPuedeVer(distCurrentEmployeeId)) return null;
+  return getDistEmpData(distCurrentEmployeeId);
+}
+
+// Para el empleado esta pantalla es SU puesto, no un reparto de trabajo: el título lo dice (y vuelve al de siempre para el propietario).
+function dpTitulos(esEmpleado){
+  const tit = document.querySelector('#view-distribucion .view-title'), sub = document.querySelector('#view-distribucion .view-subtitle');
+  if(!tit || !sub) return;
+  if(esEmpleado){
+    tit.removeAttribute('data-i18n'); sub.removeAttribute('data-i18n');
+    tit.textContent = gl({es:'Mi puesto', ca:'El meu lloc', en:'My workspace'});
+    sub.textContent = gl({es:'Tu día, tu semana y lo que se espera de ti', ca:'El teu dia, la teva setmana i el que s\'espera de tu', en:'Your day, your week and what is expected of you'});
+  } else {
+    tit.setAttribute('data-i18n', 'view.distribucion.title'); sub.setAttribute('data-i18n', 'view.distribucion.subtitle');
+    tit.textContent = t('view.distribucion.title'); sub.textContent = t('view.distribucion.subtitle');
+  }
+}
 function renderDistribucion(){
   migrateWorkDistribution();
   const box = document.getElementById('distribucion-content');
+  dpTitulos(loggedInEmployeeId() != null);
 
   if(!areaEmployees().length){
     box.innerHTML = `
-      <div class="toolbar"><div class="left"></div><button class="owner-strict btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button></div>
-      <div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>
+      <div class="toolbar"><div class="left"></div><button class="owner-strict btn btn-fino is-on" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button></div>
+      <div class="empty es-vacio"><i class="ti ti-users"></i>${t("empty.employees")}</div>
     `;
     return;
   }
 
   // Un empleado que entra por Acceso Empleados no tiene equipo que mirar:
-  // ir a "Distribución del Trabajo" es siempre para ver SU PROPIA ficha, así
-  // que se abre directa, sin pasar antes por una lista de una sola tarjeta.
-  // El propietario, en cambio, sí ve primero el equipo entero.
-  const myEmployeeId = loggedInEmployeeId();
-  if(myEmployeeId != null && !distCurrentEmployeeId){
-    const mine = DB.employees.find(e=>e.id===myEmployeeId);
-    if(mine && (mine.area||'cocina')===currentArea()) distCurrentEmployeeId = myEmployeeId;
+  // se abre SIEMPRE su propio panel, y da igual qué id hubiera quedado
+  // guardado de antes (otra sesión, otra persona en el mismo aparato).
+  const yo = loggedInEmployeeId();
+  if(yo != null){
+    const mine = DB.employees.find(e => e.id === yo);
+    if(mine && (mine.area||'cocina') === currentArea()) distCurrentEmployeeId = yo;
+    else distCurrentEmployeeId = null;
   }
 
-  if(distCurrentEmployeeId && DB.employees.find(e=>e.id===distCurrentEmployeeId) && (DB.employees.find(e=>e.id===distCurrentEmployeeId).area||'cocina')===currentArea()){
+  const emp = distCurrentEmployeeId != null ? DB.employees.find(e => e.id === distCurrentEmployeeId) : null;
+  if(emp && (emp.area||'cocina') === currentArea() && distPuedeVer(emp.id)){
     renderDistDetail();
   } else {
     distCurrentEmployeeId = null;
@@ -1278,92 +1317,146 @@ let distSearch = '';
 function setDistSearch(val){
   distSearch = val.toLowerCase();
   renderDistList();
+  const campo = document.querySelector('#distribucion-content .dp-busca .search-input');
+  if(campo){ campo.focus(); const n = campo.value.length; try{ campo.setSelectionRange(n, n); }catch(e){} }
 }
 
+/* ---------- Qué toca cada día ---------- */
+// Todo lo que tiene un empleado en una fecha, venga de donde venga (plantilla semanal, tarea puntual, limpieza, promo), con su
+// estado. El resumen, la tira de la semana y la lista del día salen de AQUÍ: así el «3 de 7» de arriba y las filas de abajo
+// no pueden contarse distinto.
+function distTareasDelDia(emp, ds, idx, date){
+  const d = getDistEmpData(emp.id);
+  const out = [];
+  (d.produccion[idx]||[]).forEach(task => out.push({k:'prod', id:task.id, text:task.text, bySelf:!!task.bySelf, done:isDistTareaDone(emp.id, ds, task.id), idx}));
+  ((d.tareasUnicas||{})[ds]||[]).forEach(task => out.push({k:'unica', id:task.id, text:task.text, bySelf:!!task.bySelf, done:isDistTareaDone(emp.id, ds, task.id)}));
+  ensureLimpiezaData();
+  const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+  const checksMes = DB.limpieza.checksMes[monthKey] || {};
+  DB.limpieza.tareas.filter(lt => lt.responsableId === emp.id && (lt.zona||'cocina') === (emp.area||'cocina') && (
+    (lt.tipo === 'mensual' && lt.diaMes === date.getDate()) || (lt.tipo === 'puntual' && lt.fecha === ds)
+  )).forEach(lt => out.push({k:'limp', id:lt.id, text: lt.area + (lt.producto ? ` (${lt.producto})` : ''), done:!!limpiezaCheckInfo(checksMes, lt.id), canToggle:canToggleLimpiezaTarea(lt), monthKey}));
+  getPromosForEmployeeDate(emp.id, ds).forEach(p => out.push({k:'promo', id:p.id, text:p.titulo, done:!!(promoDoneInfo(p, ds) || {}).done}));
+  return out;
+}
+// Cifras de una semana (offset 0 = la actual): total, hechas, atrasadas y el primer día con algo atrasado.
+function distResumenSemana(emp, offset){
+  const hoy = todayStr();
+  const dias = getWeekDates(offset).map((date, idx) => {
+    const ds = dateStr(date);
+    const tareas = distTareasDelDia(emp, ds, idx, date);
+    const hechas = tareas.filter(x => x.done).length;
+    return {date, idx, ds, tareas, total: tareas.length, hechas, atrasadas: ds < hoy ? tareas.length - hechas : 0};
+  });
+  const total = dias.reduce((s, x) => s + x.total, 0), hechas = dias.reduce((s, x) => s + x.hechas, 0), atrasadas = dias.reduce((s, x) => s + x.atrasadas, 0);
+  return {dias, total, hechas, atrasadas, primerAtrasado: dias.find(x => x.atrasadas)};
+}
+function distTurnoDe(empId, ds){
+  return (DB.turnos||[]).find(x => x.employeeId === empId && x.fecha === ds) || null;
+}
+function distTurnoTexto(tr){
+  if(!tr) return null;
+  const tipo = SHIFT_TYPES[tr.tipo] || SHIFT_TYPES.C;
+  const horas = tr.entrada && tr.salida ? `${tr.entrada}–${tr.salida}${tr.entrada2 && tr.salida2 ? ` · ${tr.entrada2}–${tr.salida2}` : ''}` : '';
+  return {etiqueta: tipo.label, horas, bg: tipo.bg, tx: tipo.tx, trabaja: ['M','T','P','C'].includes(tr.tipo)};
+}
+
+/* ---------- Lista del equipo (propietario) ---------- */
 function renderDistList(){
   const box = document.getElementById('distribucion-content');
   const isSala = currentArea() === 'sala';
   const allEmps = areaEmployees();
-  // Igual que en Personal: en sesión de empleado (Acceso Empleados) solo se
-  // ve la propia tarjeta, no la de los compañeros.
-  const myEmployeeId = loggedInEmployeeId();
-  const visibleEmps = myEmployeeId != null ? allEmps.filter(e => e.id === myEmployeeId) : allEmps;
+  // En sesión de empleado solo se ve la propia (aunque normalmente ni se llega aquí: se abre directo su panel).
+  const yo = loggedInEmployeeId();
+  const visibleEmps = yo != null ? allEmps.filter(e => e.id === yo) : allEmps;
   const emps = distSearch ? visibleEmps.filter(e => e.name.toLowerCase().includes(distSearch) || (e.rol||'').toLowerCase().includes(distSearch)) : visibleEmps;
-  const cards = emps.map(emp => {
+  const hoy = todayStr();
+  const filas = emps.map(emp => {
     const d = getDistEmpData(emp.id);
-    const nPlatos = d.platos.length;
-    const nRangos = d.rangos.length;
-    // Antes solo contaba producción semanal recurrente (d.produccion) — un
-    // empleado con solo tareas puntuales (tareasUnicas), de limpieza
-    // (responsableId) o de promos asignadas podía aparecer con "0 tareas"
-    // en gris, como si no tuviera nada, aunque sí tuviera trabajo real
-    // pendiente (visible solo si se entraba a su ficha de detalle).
-    const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0)
-      + Object.values(d.tareasUnicas||{}).reduce((s,arr)=>s+arr.length, 0)
-      + (DB.limpieza?.tareas||[]).filter(x => x.responsableId === emp.id).length
-      + (DB.promos||[]).filter(x => x.responsableId === emp.id).length;
-    // Un empleado dado de baja seguía apareciendo igual que uno activo,
-    // pudiendo asignársele trabajo sin darse cuenta hasta entrar en su
-    // ficha de Personal — mismo aviso visual que ya usa esa pestaña.
+    const sem = distResumenSemana(emp, 0);
+    const diaHoy = sem.dias.find(x => x.ds === hoy);
+    const hoyTotal = diaHoy ? diaHoy.total : 0, hoyHechas = diaHoy ? diaHoy.hechas : 0;
+    const turno = distTurnoTexto(distTurnoDe(emp.id, hoy));
+    const nCargo = isSala ? d.rangos.length : d.platos.length;
+    const m = d.manual || {items:[], version:0};
+    const manual = !(m.items||[]).length ? 'sin' : (d.manualLeido && d.manualLeido.version === m.version ? 'leido' : 'pendiente');
+    return {emp, d, sem, hoyTotal, hoyHechas, turno, nCargo, manual};
+  });
+  const sumHoyT = filas.reduce((s, f) => s + f.hoyTotal, 0), sumHoyH = filas.reduce((s, f) => s + f.hoyHechas, 0);
+  const sumAtr = filas.reduce((s, f) => s + f.sem.atrasadas, 0);
+  const sumPend = filas.filter(f => f.manual === 'pendiente').length, sumSin = filas.filter(f => f.manual === 'sin').length;
+  const resumen = yo != null ? '' : `
+    <div class="st-resumen dp-resumen">
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Hoy hecho', ca:'Avui fet', en:'Done today'})}</span><span class="st-cel-v">${sumHoyH} / ${sumHoyT}</span><span class="st-cel-s">${gl({es:'tareas de todo el equipo', ca:'tasques de tot l\'equip', en:'tasks across the team'})}</span></div>
+      <div class="st-cel${sumAtr ? ' is-bajo' : ''}"><span class="st-cel-et">${gl({es:'Atrasadas', ca:'Endarrerides', en:'Overdue'})}</span><span class="st-cel-v">${sumAtr}</span><span class="st-cel-s">${gl({es:'de días anteriores de esta semana', ca:'de dies anteriors d\'aquesta setmana', en:'from earlier days this week'})}</span></div>
+      <div class="st-cel${sumPend ? ' is-bajo' : ''}"><span class="st-cel-et">${gl({es:'Manual sin leer', ca:'Manual sense llegir', en:'Manual unread'})}</span><span class="st-cel-v">${sumPend}</span><span class="st-cel-s">${sumSin ? sumSin + ' ' + gl({es:'aún sin manual', ca:'encara sense manual', en:'have no manual yet'}) : gl({es:'todos tienen el suyo', ca:'tots tenen el seu', en:'everyone has one'})}</span></div>
+    </div>`;
+  const tarjetas = filas.map(({emp, sem, hoyTotal, hoyHechas, turno, nCargo, manual}) => {
     const isInactive = emp.active === false;
+    const pct = hoyTotal ? Math.round(hoyHechas / hoyTotal * 100) : 0;
+    const chipManual = manual === 'leido' ? `<span class="pr-chip ok"><i class="ti ti-book-2"></i> ${gl({es:'Manual leído', ca:'Manual llegit', en:'Manual read'})}</span>`
+      : manual === 'pendiente' ? `<span class="pr-chip msg"><i class="ti ti-book-2"></i> ${gl({es:'Manual por leer', ca:'Manual per llegir', en:'Manual unread'})}</span>`
+      : `<span class="pr-chip"><i class="ti ti-book-2"></i> ${gl({es:'Sin manual', ca:'Sense manual', en:'No manual'})}</span>`;
     return `
-      <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openDistEmployee(${emp.id})">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-          <strong style="flex:1">${escapeHtml(emp.name)}</strong>
-          ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : ''}
-          <button class="btn btn-sm btn-icon" title="${t('label.viewEmployeeFile')}" onclick="event.stopPropagation();openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i></button>
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||t('label.noRole'))}</div>
-        <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--ink)':'var(--muted)'}">
-          ${isSala
-            ? `<span><i class="ti ti-map-pin"></i> ${nRangos===1?t('dist.oneZone'):t('dist.nZones').replace('${n}', nRangos)}</span>`
-            : `<span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos===1?t('dist.oneDish'):t('dist.nDishes').replace('${n}', nPlatos)}</span>`}
-          <span><i class="ti ti-clipboard-list"></i> ${nTareas===1?t('dist.oneTask'):t('dist.nTasks').replace('${n}', nTareas)}</span>
-        </div>
+    <article class="pr-card dp-emp${isInactive ? ' is-baja' : ''}" tabindex="0" role="button" aria-label="${escapeHtml(emp.name)}" onclick="openDistEmployee(${emp.id})" onkeydown="if((event.key==='Enter'||event.key===' ') && event.target===this){event.preventDefault();openDistEmployee(${emp.id})}">
+      <div class="pr-cab">
+        <span class="pr-av" style="--c:${escapeHtml(emp.color||'#DF7039')}" aria-hidden="true">${escapeHtml(prIniciales(emp.name))}</span>
+        <div class="pr-id"><b class="pr-nom">${escapeHtml(emp.name)}</b><span class="pr-sub">${escapeHtml(emp.rol||t('label.noRole'))}</span></div>
+        <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('label.viewEmployeeFile'))}" aria-label="${escapeHtml(t('label.viewEmployeeFile'))}" onclick="event.stopPropagation();openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i></button>
       </div>
-    `;
+      <div class="dp-hoy-mini">
+        <div class="dp-hoy-mini-t"><span>${gl({es:'Hoy', ca:'Avui', en:'Today'})}</span><b>${hoyTotal ? `${hoyHechas} / ${hoyTotal}` : gl({es:'sin tareas', ca:'sense tasques', en:'no tasks'})}</b></div>
+        <div class="dp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></div>
+      </div>
+      <div class="pr-estados">
+        ${isInactive ? `<span class="pr-chip">${t('label.inactive')}</span>` : turno ? `<span class="pr-chip dp-turno-chip" style="background:${turno.bg};color:${turno.tx}">${escapeHtml(turno.etiqueta)}${turno.horas ? ' · ' + escapeHtml(turno.horas) : ''}</span>` : `<span class="pr-chip">${gl({es:'Sin turno hoy', ca:'Sense torn avui', en:'No shift today'})}</span>`}
+        ${sem.atrasadas ? `<span class="pr-chip msg"><i class="ti ti-alert-triangle"></i> ${sem.atrasadas} ${gl({es:'atrasadas', ca:'endarrerides', en:'overdue'})}</span>` : ''}
+        ${chipManual}
+      </div>
+      <div class="pr-pie">
+        <span class="dp-cargo-n"><i class="ti ${isSala ? 'ti-map-pin' : 'ti-tools-kitchen-2'}"></i> ${isSala ? (nCargo === 1 ? t('dist.oneZone') : t('dist.nZones').replace('${n}', nCargo)) : (nCargo === 1 ? t('dist.oneDish') : t('dist.nDishes').replace('${n}', nCargo))}</span>
+        <span class="pr-ver">${gl({es:'Abrir su puesto', ca:'Obrir el seu lloc', en:'Open workspace'})} →</span>
+      </div>
+    </article>`;
   }).join('');
 
   box.innerHTML = `
-    ${myEmployeeId == null ? `
-    <div class="toolbar">
-      <div class="left"><input type="text" class="search-input" value="${escapeHtml(distSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setDistSearch(this.value)"></div>
-      <button class="btn btn-default" onclick="printDistribucion()"><i class="ti ti-printer"></i> ${t('btn.printAll')}</button>
-    </div>
-    ` : ''}
-    ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t('empty.employees')}</div>`}
+    ${resumen}
+    ${yo == null ? `
+    <div class="toolbar dp-barra-t pr-barra">
+      <div class="left"><input type="text" class="search-input st-buscar" value="${escapeHtml(distSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setDistSearch(this.value)"></div>
+      <div class="pr-barra-bt"><button type="button" class="btn btn-fino" onclick="printDistribucion()"><i class="ti ti-printer"></i> ${t('btn.printAll')}</button></div>
+    </div>` : ''}
+    ${emps.length ? `<div class="pr-grid">${tarjetas}</div>` : `<div class="empty es-vacio"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t('empty.employees')}</div>`}
   `;
+  // La búsqueda vive en la propia barra: la clase de abajo es el gancho de setDistSearch.
+  const barra = box.querySelector('.dp-barra-t'); if(barra) barra.classList.add('dp-busca');
 }
 
-// Igual que en la pestaña Personal: para ver la distribución de tareas de un
-// empleado hay que introducir su PIN primero, así cada uno solo ve lo suyo.
+// Para ver el trabajo de un empleado: el propietario entra directo; un empleado, solo al SUYO (su sesión ya demostró quién es).
+// A un compañero NO se entra, ni con su PIN: lo que se ve ahí es de él.
 let distPendingPinEmployeeId = null;
 function openDistEmployee(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
-  // El dueño ya se identificó a nivel de sesión al entrar: no tiene sentido
-  // volver a pedirle el PIN del empleado solo para ver o repartir su
-  // trabajo (igual que en Personal — openEmployeePersonalCard). Y un
-  // empleado que abre SU PROPIA ficha tampoco: para tener la sesión ya
-  // tecleó su PIN al entrar por Acceso Empleados — pedírselo otra vez aquí
-  // solo era un paso de más. Sigue pidiéndoselo si abre la de un
-  // compañero: loggedInEmployeeId() es SU id, no el que se está abriendo.
+  if(!distPuedeVer(id)){ showToast(gl({es:'Solo puedes ver tu propio puesto de trabajo.', ca:'Només pots veure el teu propi lloc de treball.', en:'You can only see your own workspace.'}), 4000); return; }
+  // Sin sesión de empleado (propietario, o un aparato compartido): el dueño entra directo y, en un aparato sin sesión, se pide el PIN de ese empleado.
   if(isOwnerSession() || loggedInEmployeeId() === id){ openDistEmployeeAuthed(id); return; }
   distPendingPinEmployeeId = id;
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
       <h3><i class="ti ti-lock"></i> ${escapeHtml(e.name)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted)">${t('msg.distPinDesc')}</p>
+    <p class="ml-intro">${t('msg.distPinDesc')}</p>
     <div class="field">
-      <label>${t('label.accessPin')}</label>
+      <label for="dist-pin-input">${t('label.accessPin')}</label>
       <input type="password" id="dist-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmDistEmployeePin()">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmDistEmployeePin()">${t('common.unlock')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="confirmDistEmployeePin()">${t('common.unlock')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('dist-pin-input')?.focus(), 50);
@@ -1377,232 +1470,279 @@ function confirmDistEmployeePin(){
   openDistEmployeeAuthed(e.id);
 }
 function openDistEmployeeAuthed(id){
+  if(!distPuedeVer(id)) return;
   distCurrentEmployeeId = id;
   distWeekOffset = 0;
+  distDiaSel = null;
   renderDistribucion();
 }
-
 function backToDistList(){
+  // Un empleado no tiene equipo al que volver: su panel es el único que existe para él.
+  if(loggedInEmployeeId() != null) return;
   distCurrentEmployeeId = null;
   renderDistribucion();
 }
-
 function distWeekShift(delta){
   distWeekOffset += delta;
+  distDiaSel = null;
   renderDistDetail();
+}
+function distElegirDia(ds){
+  distDiaSel = ds;
+  renderDistDetail();
+}
+function distHoy(){
+  distWeekOffset = 0;
+  distDiaSel = null;
+  renderDistDetail();
+}
+
+/* ---------- El panel del empleado ---------- */
+function dpFilaHtml(emp, ds, tk, puedeGestionar){
+  const k = escapeJsAttr(String(tk.id));
+  const onchange = tk.k === 'limp' ? `toggleLimpiezaCheckMesFromDist('${tk.monthKey}',${tk.id},this.checked)`
+    : tk.k === 'promo' ? `togglePromoDone(${tk.id},this.checked,'${ds}')`
+    : `toggleDistTareaDone('${ds}','${k}',this.checked)`;
+  // Solo la etiqueta que toca: la de «Cada lunes» necesita el día, y las demás tareas no lo tienen.
+  const etiqueta = tk.k === 'prod' ? `<span class="dp-et"><i class="ti ti-repeat"></i> ${gl({es:'Cada ' + weekDayFull(tk.idx).toLowerCase(), ca:'Cada ' + weekDayFull(tk.idx).toLowerCase(), en:'Every ' + weekDayFull(tk.idx)})}</span>`
+    : tk.k === 'unica' ? `<span class="dp-et"><i class="ti ti-calendar-event"></i> ${gl({es:'Solo este día', ca:'Només aquest dia', en:'This day only'})}</span>`
+    : tk.k === 'limp' ? `<span class="dp-et"><i class="ti ti-spray"></i> ${gl({es:'Limpieza', ca:'Neteja', en:'Cleaning'})}</span>`
+    : `<span class="dp-et"><i class="ti ti-speakerphone"></i> Promo</span>`;
+  const puedeTocar = (tk.k === 'prod' || tk.k === 'unica') && (puedeGestionar || tk.bySelf);
+  const menu = puedeTocar ? ggMenuAcciones([
+    {icono:'ti-pencil', texto:t('common.edit'), fn:`dpEditarTarea('${tk.k}','${ds}','${k}'${tk.k === 'prod' ? `,${tk.idx}` : ''})`},
+    {icono:'ti-trash', texto:t('common.delete'), fn:tk.k === 'prod' ? `removeDistTarea(${tk.idx},'${k}')` : `removeDistTareaUnica('${ds}','${k}')`, peligro:true}
+  ], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : '';
+  const deshab = tk.k === 'limp' && !tk.canToggle;
+  return `
+    <div class="dp-tarea${tk.done ? ' is-hecha' : ''}">
+      <label class="dp-check${deshab ? ' is-off' : ''}" title="${deshab ? escapeHtml(t('limpieza.notYourTaskToast')) : escapeHtml(t('title.markAsDone'))}">
+        <input type="checkbox" ${tk.done ? 'checked' : ''} ${deshab ? 'disabled' : ''} onchange="${onchange}" aria-label="${escapeHtml(t('title.markAsDone') + ': ' + tk.text)}">
+        <span class="dp-check-caja"><i class="ti ti-check"></i></span>
+      </label>
+      <div class="dp-tarea-txt">
+        ${tk.k === 'promo' ? `<a class="dp-txt" href="#" onclick="event.preventDefault();openPromoModal(${tk.id})">${escapeHtml(tk.text)}</a>` : `<span class="dp-txt">${escapeHtml(tk.text)}</span>`}
+        <span class="dp-et-fila">${etiqueta}${tk.bySelf ? `<span class="dp-et dp-et-yo"><i class="ti ti-user"></i> ${gl({es:'La añadí yo', ca:'L\'he afegit jo', en:'Added by me'})}</span>` : ''}</span>
+      </div>
+      ${menu}
+    </div>`;
 }
 
 function renderDistDetail(){
   const box = document.getElementById('distribucion-content');
   const emp = DB.employees.find(e=>e.id===distCurrentEmployeeId);
-  if(!emp){ backToDistList(); return; }
+  if(!emp || !distPuedeVer(emp.id)){ distCurrentEmployeeId = null; renderDistList(); return; }
   const d = getDistEmpData(emp.id);
   const allDishes = getDishNamesWithFicha();
-  // En Sala no tiene sentido el concepto de "plan de producción semanal de
-  // platos" (eso es propio de cocina); ahí este módulo es solo el calendario
-  // de tareas (Sala + Limpieza + Promos) de cada persona.
   const isSala = currentArea() === 'sala';
-  // Distinto de editUnlocked: asignar/quitar el trabajo de OTRO compañero es
-  // cosa del propietario real, no de cualquier empleado con "puede editar"
-  // (antes se usaba editUnlocked/.owner-only aquí y un compañero con ese
-  // permiso podía tocar el trabajo asignado a cualquier otro).
+  // Distinto de editUnlocked: asignar/quitar el trabajo de OTRO compañero es cosa del propietario real, no de cualquier
+  // empleado con «puede editar».
   const ownerSess = isOwnerSession();
+  const yo = loggedInEmployeeId();
+  const esMio = yo === emp.id;
+  const hoy = todayStr();
 
-  // Un plato asignado se guarda por nombre (texto suelto), no por id de
-  // receta: si luego se renombra o se borra en el Escandallo/Carta, la
-  // asignación se quedaba con el nombre viejo para siempre, sin ningún
-  // aviso — se veía igual que un plato válido hasta que se pulsaba y salía
-  // el aviso de "ficha no encontrada". Ahora se marca en rojo de antemano.
-  // Tarjetas grandes y táctiles: en la práctica se usan para tocar el plato
-  // en una tablet en mitad de cocina e ir directo a producir, no para
-  // gestionarlas con precisión de ratón — la fila estrecha de antes era
-  // fácil de fallar con el dedo.
-  const platosHtml = d.platos.length
-    ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">` + d.platos.map((pl,i)=>{
-        const broken = !allDishes.includes(pl);
-        return `
-        <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 8px;min-height:76px;border:2px solid ${broken?'var(--red)':'var(--border)'};border-radius:12px;cursor:pointer;text-align:center;background:${broken?'var(--red-l)':'var(--surface)'}" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${broken?t('dist.dishNoLongerExists'):t('title.viewTechSpec')}">
-          <button class="owner-strict btn-danger" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;min-width:0;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:2px solid var(--surface);cursor:pointer" onclick="event.stopPropagation();removeDistPlato(${i})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>
-          <i class="ti ${broken?'ti-link-off':'ti-tools-kitchen-2'}" style="font-size:20px;color:${broken?'var(--red)':'var(--ink)'}"></i>
-          <span style="font-size:12.5px;font-weight:600;line-height:1.2;${broken?'color:var(--red)':''}">${escapeHtml(pl)}</span>
-        </div>
-      `;}).join('') + `</div>`
-    : `<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}</div>`;
-
-  // Mismo formato de tarjeta que los platos de cocina: en un turno de sala
-  // el reparto se mira de un vistazo, no se lee.
-  const rangosHtml = d.rangos.length
-    ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">` + d.rangos.map((rg,i)=>`
-        <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 8px;min-height:76px;border:2px solid var(--border);border-radius:12px;text-align:center;background:var(--surface)">
-          <button class="owner-strict btn-danger" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;min-width:0;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:2px solid var(--surface);cursor:pointer" onclick="removeDistRango(${i})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>
-          <i class="ti ti-map-pin" style="font-size:20px;color:var(--ink)"></i>
-          <span style="font-size:12.5px;font-weight:600;line-height:1.2">${escapeHtml(rg)}</span>
-        </div>
-      `).join('') + `</div>`
-    : `<div class="empty" style="padding:10px"><i class="ti ti-map-pin"></i>${t('dist.noZonesAssigned')}</div>`;
-
-  const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl))
-    .map(pl=>`<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`).join('');
-
-  ensureLimpiezaData();
-  const weekDates = getWeekDates(distWeekOffset);
+  const sem = distResumenSemana(emp, distWeekOffset);
+  const semHoy = distWeekOffset === 0 ? sem : distResumenSemana(emp, 0);
+  const diaHoy = semHoy.dias.find(x => x.ds === hoy);
+  const semDs = sem.dias.map(x => x.ds);
+  const selDs = distDiaSel && semDs.includes(distDiaSel) ? distDiaSel : (semDs.includes(hoy) ? hoy : semDs[0]);
+  const sel = sem.dias.find(x => x.ds === selDs);
+  const weekDates = sem.dias.map(x => x.date);
   const weekRangeLabel = `${weekDates[0].getDate()} ${monthFull(weekDates[0].getMonth()).slice(0,3)} – ${weekDates[6].getDate()} ${monthFull(weekDates[6].getMonth()).slice(0,3)}`;
 
-  let nTareasTotal = 0, nTareasHechas = 0, nTareasAtrasadas = 0;
-  const todayDs = todayStr();
-
-  const diasHtml = weekDates.map((date, idx) => {
-    const label = weekDayFull(idx);
-    const ds = dateStr(date);
-    const isToday = ds === todayStr();
-    const isPast = ds < todayDs;
-    let dayHasPending = false;
-
-    // Producción: plantilla recurrente por día de la semana, "hecha" se
-    // guarda por fecha concreta (con el id propio de cada tarea).
-    const tareas = d.produccion[idx] || [];
-    const tareasHtml = tareas.map(task => {
-      const done = isDistTareaDone(emp.id, ds, task.id);
-      nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
-      const canEditThis = ownerSess || task.bySelf;
-      return `
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
-        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--ink)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--ink);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
-        <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
-      </div>
-    `;}).join('');
-
-    // Tareas únicas: puntuales para esta fecha exacta, no se repiten cada semana.
-    const tareasUnicas = d.tareasUnicas[ds] || [];
-    const tareasUnicasHtml = tareasUnicas.map(task => {
-      const done = isDistTareaDone(emp.id, ds, task.id);
-      nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
-      const canEditThis = ownerSess || task.bySelf;
-      return `
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
-        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--ink)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        <span class="badge badge-purple txt-xs"  title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
-        ${task.bySelf ? `<span class="badge txt-xs" style="color:var(--ink);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
-        <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
-      </div>
-    `;}).join('');
-
-    // Limpieza mensual: la tarea "toca" ese día si el día del mes coincide
-    // con la fecha real de esta semana.
-    const tareasLimpiezaDia = DB.limpieza.tareas.filter(lt => lt.responsableId===emp.id && (lt.zona||'cocina')===(emp.area||'cocina') && (
-      (lt.tipo==='mensual' && lt.diaMes===date.getDate()) || (lt.tipo==='puntual' && lt.fecha===dateStr(date))
-    ));
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
-    const checksMes = DB.limpieza.checksMes[monthKey] || {};
-    const limpiezaHtml = tareasLimpiezaDia.map(lt => {
-      const done = !!limpiezaCheckInfo(checksMes, lt.id);
-      const canToggle = canToggleLimpiezaTarea(lt);
-      nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
-      return `
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:${canToggle?'pointer':'not-allowed'}">
-        <input type="checkbox" ${done?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${lt.id},this.checked)">
-        <span class="badge badge-blue txt-xs" ><i class="ti ti-spray"></i> Limpieza</span>
-        <span style="flex:1;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(lt.area)}${lt.producto?` <span style="color:var(--muted);font-size:12px">(${escapeHtml(lt.producto)})</span>`:''}</span>
-      </label>
-    `;}).join('');
-
-    // Promociones: asignadas a esta fecha, incluidas las recurrentes que caen ese día.
-    const promos = getPromosForEmployeeDate(emp.id, ds);
-    const promosHtml = promos.map(p => {
-      const done = !!(promoDoneInfo(p, ds) || {}).done;
-      nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
-      return `
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-        <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked,'${ds}')" title="${t('title.markAsDone')}">
-        <span class="badge badge-amber txt-xs" ><i class="ti ti-speakerphone"></i> Promo</span>
-        <span style="flex:1;font-size:13px;cursor:pointer;${done?'text-decoration:line-through;color:var(--muted)':''}" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</span>
-      </div>
-    `;}).join('');
-
-    return `
-      <div style="padding:10px 0;border-bottom:1px solid var(--border);${isToday?'background:var(--brand-cream)':(dayHasPending?'background:var(--red-l)':'')}">
-        <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green txt-xs" >${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red txt-xs" ><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
-        ${promosHtml}
-        ${limpiezaHtml}
-        ${tareasHtml}
-        ${tareasUnicasHtml}
-        ${!tareasHtml && !tareasUnicasHtml && !limpiezaHtml && !promosHtml ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${t('empty.noTasksThisDay')}</div>` : ''}
-        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
-          <input type="text" id="dist-tarea-${idx}" placeholder="${t('ph.newTask')}" style="flex:1;min-width:120px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer"><input type="checkbox" id="dist-once-${idx}" style="width:auto">${t('dist.onlyThisWeek')}</label>
-          <button class="btn btn-sm btn-default" onclick="addDistTarea(${idx})"><i class="ti ti-plus"></i></button>
+  // ---- Hero: HOY ----
+  const turnoHoy = distTurnoTexto(distTurnoDe(emp.id, hoy));
+  const hoyTotal = diaHoy ? diaHoy.total : 0, hoyHechas = diaHoy ? diaHoy.hechas : 0;
+  const hoyPct = hoyTotal ? Math.round(hoyHechas / hoyTotal * 100) : 0;
+  const open = getOpenFichaje(emp.id);
+  const fechaLarga = new Date().toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'});
+  const hero = `
+    <section class="dp-hoy">
+      <div class="dp-hoy-izq">
+        <div class="es-tit">${gl({es:'Hoy', ca:'Avui', en:'Today'})} · ${escapeHtml(fechaLarga)}</div>
+        <div class="dp-turno-fila">
+          ${turnoHoy ? `<span class="pr-chip dp-turno-chip" style="background:${turnoHoy.bg};color:${turnoHoy.tx}">${escapeHtml(turnoHoy.etiqueta)}</span>${turnoHoy.horas ? `<b class="dp-horas">${escapeHtml(turnoHoy.horas)}</b>` : ''}` : `<span class="pr-chip">${gl({es:'Sin turno asignado hoy', ca:'Sense torn assignat avui', en:'No shift assigned today'})}</span>`}
+          ${open ? `<span class="pr-chip ok"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="pr-chip off">${t('hr2.offDuty')}</span>`}
         </div>
+        <div class="dp-prog">
+          <div class="dp-prog-t"><b>${hoyHechas}</b> ${gl({es:'de', ca:'de', en:'of'})} <b>${hoyTotal}</b> ${gl({es:'tareas de hoy hechas', ca:'tasques d\'avui fetes', en:'of today\'s tasks done'})}</div>
+          <div class="dp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${hoyPct}"><span style="width:${hoyPct}%"></span></div>
+        </div>
+        ${hoyTotal && hoyHechas === hoyTotal ? `<div class="dp-ok"><i class="ti ti-circle-check"></i> ${gl({es:'Todo hecho por hoy. Buen trabajo.', ca:'Tot fet per avui. Bona feina.', en:'All done for today. Nice work.'})}</div>` : ''}
       </div>
-    `;
+      <div class="dp-hoy-der">
+        ${esMio || ownerSess ? `<button type="button" class="btn btn-fino is-on dp-principal" onclick="openEmployeePersonalCard(${emp.id})"><i class="ti ti-clock-play"></i> ${esMio ? gl({es:'Mi ficha y fichaje', ca:'La meva fitxa i fitxatge', en:'My profile & clock-in'}) : gl({es:'Ver ficha', ca:'Veure fitxa', en:'Open profile'})}</button>` : ''}
+        <button type="button" class="btn btn-fino" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+      </div>
+    </section>`;
+
+  // ---- Atrasadas ----
+  const atrasadas = sem.atrasadas && sem.primerAtrasado ? `
+    <div class="dp-aviso"><i class="ti ti-alert-triangle"></i>
+      <span>${sem.atrasadas === 1 ? t('dist.oneOverdueTask') : t('dist.nOverdueTasks').replace('${n}', sem.atrasadas)}</span>
+      <button type="button" class="btn btn-sm btn-fino" onclick="distElegirDia('${sem.primerAtrasado.ds}')">${gl({es:'Verlas', ca:'Veure-les', en:'Show me'})}</button>
+    </div>` : '';
+
+  // ---- Tira de la semana ----
+  const tira = sem.dias.map(x => {
+    const tr = distTurnoTexto(distTurnoDe(emp.id, x.ds));
+    const cod = (distTurnoDe(emp.id, x.ds) || {}).tipo || '';
+    return `
+      <button type="button" class="dp-dia${x.ds === selDs ? ' is-sel' : ''}${x.ds === hoy ? ' is-hoy' : ''}${x.atrasadas ? ' is-atr' : ''}" onclick="distElegirDia('${x.ds}')" aria-pressed="${x.ds === selDs}" aria-label="${escapeHtml(weekDayFull(x.idx) + ' ' + x.date.getDate())}">
+        <span class="dp-dia-n">${escapeHtml(t('days.short')[x.idx])}</span>
+        <span class="dp-dia-f">${x.date.getDate()}</span>
+        <span class="dp-dia-t"${tr ? ` style="background:${tr.bg};color:${tr.tx}" title="${escapeHtml(tr.etiqueta)}"` : ''}>${cod || '·'}</span>
+        <span class="dp-dia-c">${x.total ? `${x.hechas}/${x.total}` : '—'}</span>
+      </button>`;
   }).join('');
 
-  // El empleado que entra por Acceso Empleados ve SOLO su propia ficha (la
-  // lista ya viene filtrada a él en renderDistList): no tiene ningún equipo
-  // al que volver, así que aquí no lleva botón de volver. El propietario, en
-  // cambio, entra desde la lista de todo el equipo y tiene que poder
-  // volver a ella para mirar la ficha de otro compañero sin recargar nada.
-  const myEmployeeId = loggedInEmployeeId();
+  // ---- Lista del día elegido ----
+  const puedeGestionar = ownerSess;
+  const filasDia = sel.tareas.map(tk => dpFilaHtml(emp, selDs, tk, puedeGestionar)).join('');
+  const diaTitulo = `${weekDayFull(sel.idx)} ${sel.date.getDate()} ${monthFull(sel.date.getMonth())}`;
+  const formAnadir = `
+    <div class="dp-anadir">
+      <input type="text" id="dist-tarea-${sel.idx}" placeholder="${escapeHtml(esMio ? gl({es:'Añadir algo a mi día…', ca:'Afegir alguna cosa al meu dia…', en:'Add something to my day…'}) : t('ph.newTask'))}" maxlength="140" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistTarea(${sel.idx})}">
+      <div class="dp-rep" role="radiogroup" aria-label="${escapeHtml(gl({es:'Cuándo', ca:'Quan', en:'When'}))}">
+        <label><input type="radio" name="dp-rep" value="semanal" ${ownerSess ? 'checked' : ''}> <span>${gl({es:'Cada ' + weekDayFull(sel.idx).toLowerCase(), ca:'Cada ' + weekDayFull(sel.idx).toLowerCase(), en:'Every ' + weekDayFull(sel.idx)})}</span></label>
+        <label><input type="radio" name="dp-rep" value="dia" id="dist-once-${sel.idx}" ${ownerSess ? '' : 'checked'}> <span>${gl({es:'Solo este día', ca:'Només aquest dia', en:'This day only'})}</span></label>
+      </div>
+      <button type="button" class="btn btn-fino is-on" onclick="addDistTarea(${sel.idx})"><i class="ti ti-plus"></i> ${gl({es:'Añadir', ca:'Afegir', en:'Add'})}</button>
+    </div>`;
+  const dia = `
+    <section class="dp-dia-panel" id="dp-dia-panel">
+      <div class="dp-dia-cab">
+        <h3 class="dp-h">${escapeHtml(diaTitulo)}${selDs === hoy ? ` <span class="pr-chip ok">${t('common.today')}</span>` : ''}</h3>
+        <span class="dp-dia-cuenta">${sel.hechas} / ${sel.total}</span>
+      </div>
+      ${filasDia || `<div class="empty es-vacio dp-vacio"><i class="ti ti-mood-smile"></i>${t('empty.noTasksThisDay')}</div>`}
+      ${formAnadir}
+    </section>`;
+
+  // ---- A mi cargo ----
+  const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl)).map(pl=>`<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`).join('');
+  const cargoItems = isSala
+    ? d.rangos.map((rg, i) => `
+      <div class="dp-cargo">
+        <i class="ti ti-map-pin dp-cargo-ico"></i>
+        <span class="dp-cargo-nom">${escapeHtml(rg)}</span>
+        ${ownerSess ? ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`removeDistRango(${i})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : ''}
+      </div>`).join('')
+    : d.platos.map((pl, i) => {
+        const broken = !allDishes.includes(pl);
+        const rec = DB.recipes.find(r => r.name === pl && (r.area||'cocina') === currentArea());
+        const alerg = rec ? [...recipeAllergens(rec)] : [];
+        return `
+      <div class="dp-cargo${broken ? ' is-roto' : ''}" ${broken ? '' : `role="button" tabindex="0" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToFichaForDish('${escapeJsAttr(pl)}')}"`}>
+        <i class="ti ${broken ? 'ti-link-off' : 'ti-tools-kitchen-2'} dp-cargo-ico"></i>
+        <span class="dp-cargo-txt"><span class="dp-cargo-nom">${escapeHtml(pl)}</span>
+          ${broken ? `<small>${gl({es:'Ya no existe su ficha', ca:'Ja no existeix la seva fitxa', en:'Its recipe sheet no longer exists'})}</small>`
+            : `<small>${alerg.length ? escapeHtml(alerg.map(a => allergenLabel(a)).join(' · ')) : gl({es:'Ver ficha técnica', ca:'Veure fitxa tècnica', en:'Open recipe sheet'})}</small>`}</span>
+        ${ownerSess ? `<span onclick="event.stopPropagation()">${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`removeDistPlato(${i})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true})}</span>` : ''}
+      </div>`;
+      }).join('');
+  const nCargo = isSala ? d.rangos.length : d.platos.length;
+  const cargo = `
+    <section class="dp-card">
+      <h3 class="dp-h"><i class="ti ${isSala ? 'ti-map-pin' : 'ti-tools-kitchen-2'}"></i> ${isSala ? t('dist.zonesTitle') : t('dist.dishesInChargeTitle')} <span class="dp-cuenta">${nCargo}</span></h3>
+      ${cargoItems ? `<div class="dp-cargos">${cargoItems}</div>` : `<div class="empty es-vacio dp-vacio"><i class="ti ${isSala ? 'ti-map-pin' : 'ti-tools-kitchen-2'}"></i>${isSala ? t('dist.noZonesAssigned') : t('dist.noDishesAssigned')}</div>`}
+      ${ownerSess ? (isSala ? `
+      <div class="dp-asignar">
+        <input type="text" id="dist-rango-input" placeholder="${t('dist.zonePlaceholder')}" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistRango();}">
+        <button type="button" class="btn btn-fino is-on" onclick="addDistRango()">${t('btn.assign')}</button>
+      </div>` : `
+      <div class="dp-asignar">
+        <select id="dist-plato-sel" aria-label="${escapeHtml(t('dist.selectDish'))}"><option value="">${t('dist.selectDish')}</option>${platosOptions}</select>
+        <button type="button" class="btn btn-fino is-on" onclick="addDistPlato()">${t('btn.assign')}</button>
+      </div>
+      ${!allDishes.length ? `<p class="pr-ayuda">${t('dist.noFichasYet')}</p>` : ''}`) : ''}
+    </section>`;
+
+  // ---- Mi manual ----
+  const man = d.manual;
+  const nMan = man.items.length;
+  const leido = d.manualLeido && d.manualLeido.version === man.version;
+  const conteo = tipo => man.items.filter(x => x.tipo === tipo).length;
+  const manualCard = `
+    <section class="dp-card dp-manual">
+      <h3 class="dp-h"><i class="ti ti-book-2"></i> ${gl({es:'Mi manual del puesto', ca:'El meu manual del lloc', en:'My job manual'})}</h3>
+      ${nMan ? `
+      <div class="dp-man-cifras">
+        ${DP_MANUAL_TIPOS.map(tp => `<span><b>${conteo(tp.k)}</b> ${escapeHtml(tp.corto())}</span>`).join('')}
+      </div>
+      <div class="dp-man-estado">
+        ${leido ? `<span class="pr-chip ok"><i class="ti ti-circle-check"></i> ${gl({es:'Leído el ', ca:'Llegit el ', en:'Read on '})}${escapeHtml(new Date(d.manualLeido.ts).toLocaleDateString(localeActual(), {day:'numeric', month:'short'}))}</span>`
+          : `<span class="pr-chip msg"><i class="ti ti-eye-off"></i> ${d.manualLeido ? gl({es:'Ha cambiado desde que lo leíste', ca:'Ha canviat des que el vas llegir', en:'Changed since you read it'}) : gl({es:'Aún sin leer', ca:'Encara sense llegir', en:'Not read yet'})}</span>`}
+      </div>` : `<p class="pr-ayuda">${ownerSess ? gl({es:'Todavía no hay manual para este puesto. Escribe sus obligaciones y responsabilidades para que {n} las tenga siempre a mano.'.replace('{n}', escapeHtml(emp.name.split(' ')[0])), ca:'Encara no hi ha manual per a aquest lloc. Escriu-ne les obligacions i responsabilitats.', en:'No manual for this role yet. Write its duties and responsibilities so they always have them at hand.'}) : gl({es:'Tu encargado aún no ha escrito el manual de tu puesto.', ca:'El teu encarregat encara no ha escrit el manual del teu lloc.', en:'Your manager has not written your job manual yet.'})}</p>`}
+      <div class="dp-man-bt">
+        ${nMan ? `<button type="button" class="btn btn-fino ${leido ? '' : 'is-on'}" onclick="openDistManual(${emp.id})"><i class="ti ti-book"></i> ${gl({es:'Abrir el manual', ca:'Obrir el manual', en:'Open the manual'})}</button>` : ''}
+        ${ownerSess ? `<button type="button" class="btn btn-fino ${nMan ? '' : 'is-on'}" onclick="openDistManualEditor(${emp.id})"><i class="ti ti-pencil"></i> ${nMan ? gl({es:'Editar', ca:'Editar', en:'Edit'}) : gl({es:'Escribir el manual', ca:'Escriure el manual', en:'Write the manual'})}</button>` : ''}
+      </div>
+    </section>`;
+
+  // ---- Próximos turnos + semana en cifras ----
+  const proximos = (DB.turnos||[]).filter(x => x.employeeId === emp.id && x.fecha > hoy && ['M','T','P','C'].includes(x.tipo)).sort((a,b) => a.fecha.localeCompare(b.fecha)).slice(0, 4);
+  const horasSem = employeeHoursInRange(emp.id, getWeekDates(0).map(dateStr));
+  const ventas = isSala ? camareroSalesInRange(emp.id, getWeekDates(0).map(dateStr)) : null;
+  const turnosCard = `
+    <section class="dp-card">
+      <h3 class="dp-h"><i class="ti ti-calendar-time"></i> ${gl({es:'Mis próximos turnos', ca:'Els meus propers torns', en:'My next shifts'})}</h3>
+      ${proximos.length ? `<div class="dp-proximos">${proximos.map(tr => {
+        const tx = distTurnoTexto(tr);
+        const f = new Date(tr.fecha + 'T12:00:00');
+        return `<div class="dp-prox"><span class="dp-prox-f">${escapeHtml(f.toLocaleDateString(localeActual(), {weekday:'short', day:'numeric', month:'short'}))}</span><span class="pr-chip dp-turno-chip" style="background:${tx.bg};color:${tx.tx}">${escapeHtml(tx.etiqueta)}</span>${tx.horas ? `<span class="dp-prox-h">${escapeHtml(tx.horas)}</span>` : ''}</div>`;
+      }).join('')}</div>` : `<p class="pr-ayuda">${gl({es:'No hay turnos asignados en los próximos días.', ca:'No hi ha torns assignats els propers dies.', en:'No shifts assigned in the coming days.'})}</p>`}
+      <div class="dp-cifras">
+        <div><span class="st-cel-et">${t('hr2.hoursThisWeek')}</span><b>${fmtDuracion(horasSem)}</b></div>
+        <div><span class="st-cel-et">${gl({es:'Tareas de la semana', ca:'Tasques de la setmana', en:'Tasks this week'})}</span><b>${semHoy.hechas} / ${semHoy.total}</b></div>
+        ${ventas ? `<div><span class="st-cel-et">${t('hr2.salesServedWeek')}</span><b>${ventas.count} · ${fmtMoney(ventas.total)}</b></div>` : ''}
+      </div>
+    </section>`;
+
+  // ---- Nota para el siguiente turno (la de siempre: se escribe aquí y la lee quien entra después) ----
+  const areaEmp = emp.area || 'cocina';
+  const nota = `
+    <section class="dp-card">
+      <h3 class="dp-h"><i class="ti ti-notes"></i> ${t('handoff.label')}</h3>
+      <textarea id="dp-nota-turno" rows="3" maxlength="500" placeholder="${escapeHtml(t('handoff.placeholder'))}" aria-label="${escapeHtml(t('handoff.label'))}" onchange="saveShiftHandoffNote('${escapeJsAttr(areaEmp)}', this.value)">${escapeHtml(getShiftHandoffNote(areaEmp))}</textarea>
+    </section>`;
+
+  // ---- Accesos rápidos ----
+  const rapidos = [
+    esMio ? {ico:'ti-replace', txt:t('swap.requestBtn'), fn:`openTurnoSwapRequestModal(${emp.id})`} : null,
+    esMio ? {ico:'ti-beach', txt:t('vacation.requestBtn'), fn:`openVacationRequestModal(${emp.id})`} : null,
+    {ico:'ti-message', txt:t('btn.messages'), fn:`openEmployeeDirectChat(${emp.id}, ${ownerSess})`},
+    {ico:'ti-notebook', txt:t('view.fichas.title'), fn:`navigate('fichas')`},
+    {ico:'ti-spray', txt:t('view.limpieza.title'), fn:`navigate('limpieza')`},
+    {ico:'ti-alert-triangle', txt:t('label.allergens'), fn:`navigate('limpieza');setLimpiezaTab('alergenos')`}
+  ].filter(Boolean);
+  const accesos = `
+    <section class="dp-card">
+      <h3 class="dp-h"><i class="ti ti-bolt"></i> ${gl({es:'Accesos rápidos', ca:'Accessos ràpids', en:'Quick links'})}</h3>
+      <div class="dp-rapidos">${rapidos.map(r => `<button type="button" class="btn btn-fino dp-rapido" onclick="${r.fn}"><i class="ti ${r.ico}"></i> <span>${escapeHtml(r.txt)}</span></button>`).join('')}</div>
+    </section>`;
+
   box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        ${myEmployeeId == null ? `<button class="btn btn-sm btn-icon" onclick="backToDistList()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>` : ''}
-        <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block"></span>
-        <strong>${escapeHtml(emp.name)}</strong>
-        <span style="font-size:12px;color:var(--muted)">${escapeHtml(emp.rol||'')}</span>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-default" onclick="openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i> ${t('label.viewEmployeeFile')}</button>
-        <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-      </div>
+    <div class="dp-cab">
+      ${yo == null ? `<button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Volver al equipo', ca:'Tornar a l\'equip', en:'Back to the team'}))}" aria-label="${escapeHtml(t('common.back'))}" onclick="backToDistList()"><i class="ti ti-arrow-left"></i></button>` : ''}
+      <span class="pr-av" style="--c:${escapeHtml(emp.color||'#DF7039')}" aria-hidden="true">${escapeHtml(prIniciales(emp.name))}</span>
+      <div class="pr-id"><b class="dp-nombre">${escapeHtml(emp.name)}</b><span class="pr-sub">${escapeHtml(emp.rol||'')}</span></div>
     </div>
-
-    <div class="grid grid-2">
-      <div class="kpi"><div class="label">${isSala ? t('dist.zonesInCharge') : t('dist.dishesInCharge')}</div><div class="value">${isSala ? d.rangos.length : d.platos.length}</div></div>
-      <div class="kpi"><div class="label">${t('dist.tasksThisWeek')}</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
-    </div>
-    ${nTareasAtrasadas ? `<div class="badge badge-red" style="font-size:12px;margin:8px 0;padding:6px 10px;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-alert-triangle"></i> ${nTareasAtrasadas===1?t('dist.oneOverdueTask'):t('dist.nOverdueTasks').replace('${n}', nTareasAtrasadas)}</div>` : ''}
-
-    ${!isSala ? '' : `
-    <div class="card">
-      <h3><i class="ti ti-map-pin"></i> ${t('dist.zonesTitle')}</h3>
-      ${rangosHtml}
-      <div class="owner-strict" style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
-        <input type="text" id="dist-rango-input" style="flex:1;min-width:140px" placeholder="${t('dist.zonePlaceholder')}" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistRango();}">
-        <button class="btn btn-default" style="flex:none" onclick="addDistRango()">${t('btn.assign')}</button>
+    ${hero}
+    ${atrasadas}
+    <div class="dp-semana-cab">
+      <div class="es-tit">${gl({es:'Mi semana', ca:'La meva setmana', en:'My week'})} · ${weekRangeLabel}</div>
+      <div class="dp-semana-nav">
+        <button type="button" class="btn btn-sm btn-fino pr-ico" data-tip="${escapeHtml(t('title.prevWeek'))}" aria-label="${escapeHtml(t('title.prevWeek'))}" onclick="distWeekShift(-1)"><i class="ti ti-chevron-left"></i></button>
+        <button type="button" class="btn btn-sm btn-fino pr-ico" data-tip="${escapeHtml(t('title.nextWeek'))}" aria-label="${escapeHtml(t('title.nextWeek'))}" onclick="distWeekShift(1)"><i class="ti ti-chevron-right"></i></button>
+        ${distWeekOffset !== 0 || selDs !== hoy ? `<button type="button" class="btn btn-sm btn-fino" onclick="distHoy()">${t('common.today')}</button>` : ''}
       </div>
     </div>
-    `}
-
-    ${isSala ? '' : `
-    <div class="card">
-      <h3><i class="ti ti-tools-kitchen-2"></i> ${t('dist.dishesInChargeTitle')}</h3>
-      ${platosHtml}
-      <div class="owner-strict" style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
-        <select id="dist-plato-sel" style="flex:1;min-width:140px">
-          <option value="">${t('dist.selectDish')}</option>
-          ${platosOptions}
-        </select>
-        <button class="btn btn-default" style="flex:none" onclick="addDistPlato()">${t('btn.assign')}</button>
-      </div>
-      ${!allDishes.length ? `<p class="owner-strict" style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('dist.noFichasYet')}</p>` : ''}
-    </div>
-    `}
-
-    <div class="card">
-      <h3 style="justify-content:space-between">
-        <span><i class="ti ti-clipboard-list"></i> ${t('dist.weekTasksTitle')}</span>
-        <span style="display:flex;align-items:center;gap:8px">
-          <button class="btn btn-sm btn-icon" onclick="distWeekShift(-1)" title="${t('title.prevWeek')}"><i class="ti ti-chevron-left"></i></button>
-          <span style="font-size:13px;font-weight:600">${weekRangeLabel}</span>
-          <button class="btn btn-sm btn-icon" onclick="distWeekShift(1)" title="${t('title.nextWeek')}"><i class="ti ti-chevron-right"></i></button>
-          ${distWeekOffset!==0 ? `<button class="btn btn-sm" onclick="distWeekOffset=0;renderDistDetail()">${t('common.today')}</button>` : ''}
-        </span>
-      </h3>
-      <p style="font-size:12px;color:var(--muted);margin:-4px 0 8px">${t('msg.unifiedTasksDesc')}</p>
-      ${diasHtml}
+    <div class="dp-tira">${tira}</div>
+    <div class="dp-cols">
+      <div class="dp-col-main">${dia}</div>
+      <div class="dp-col-lado">${cargo}${manualCard}${turnosCard}${nota}${accesos}</div>
     </div>
   `;
 }
@@ -1611,26 +1751,25 @@ function addEmployeeFromDistribucion(){
   openEmployeeModal();
 }
 
+/* ---------- Escrituras (todas pasan por distDatosActuales) ---------- */
 function addDistPlato(){
   if(!isOwnerSession()) return;
   const sel = document.getElementById('dist-plato-sel');
-  const nombre = sel.value;
+  const nombre = sel && sel.value;
   if(!nombre) return;
-  const d = getDistEmpData(distCurrentEmployeeId);
+  const d = distDatosActuales(); if(!d) return;
   if(!d.platos.includes(nombre)) d.platos.push(nombre);
   saveDB();
   renderDistDetail();
 }
-
 function addDistRango(){
   if(!isOwnerSession()) return;
   const input = document.getElementById('dist-rango-input');
   if(!input) return;
   const nombre = (input.value||'').trim().slice(0, 60);
   if(!nombre) return;
-  const d = getDistEmpData(distCurrentEmployeeId);
-  // Sin distinguir mayúsculas: "Terraza" y "terraza" son el mismo sitio, y
-  // duplicarlas dejaría a dos camareros creyendo que llevan zonas distintas.
+  const d = distDatosActuales(); if(!d) return;
+  // Sin distinguir mayúsculas: «Terraza» y «terraza» son el mismo sitio, y duplicarlas dejaría a dos camareros creyendo que llevan zonas distintas.
   if(d.rangos.some(r => r.toLowerCase() === nombre.toLowerCase())){
     showToast(t('dist.zoneAlreadyAssigned'));
     input.value = '';
@@ -1640,43 +1779,44 @@ function addDistRango(){
   saveDB();
   renderDistDetail();
 }
-
 async function removeDistRango(idx){
   if(!isOwnerSession()) return;
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
-  const d = getDistEmpData(distCurrentEmployeeId);
+  const d = distDatosActuales(); if(!d) return;
   d.rangos.splice(idx, 1);
   saveDB();
   renderDistDetail();
 }
-
 async function removeDistPlato(idx){
   if(!isOwnerSession()) return;
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
-  const d = getDistEmpData(distCurrentEmployeeId);
+  const d = distDatosActuales(); if(!d) return;
   d.platos.splice(idx,1);
   saveDB();
   renderDistDetail();
 }
-
+function toggleDistTareaDone(dateStr, taskId, checked){
+  const d = distDatosActuales(); if(!d) return;
+  if(!d.doneDates[dateStr]) d.doneDates[dateStr] = {};
+  d.doneDates[dateStr][taskId] = checked;
+  saveDB();
+  renderDistDetail();
+}
 function addDistTarea(dayIdx){
   const inp = document.getElementById('dist-tarea-'+dayIdx);
+  if(!inp) return;
   const val = inp.value.trim();
   if(!val) return;
-  const onlyThisWeek = document.getElementById('dist-once-'+dayIdx)?.checked;
-  const d = getDistEmpData(distCurrentEmployeeId);
-  // Si quien añade la tarea no es el propietario real, es el propio
-  // empleado auto-organizándose su trabajo (no el jefe asignándoselo), así
-  // que se marca como "suya" para poder editarla/borrarla libremente y
-  // distinguirla visualmente de las tareas que le asigna el jefe. Antes se
-  // comprobaba editUnlocked, así que un compañero con permiso de editar
-  // veía sus propias tareas marcadas como "del jefe" sin serlo.
+  const d = distDatosActuales(); if(!d) return;
+  const rep = document.querySelector('input[name="dp-rep"]:checked');
+  const onlyThisDay = rep ? rep.value === 'dia' : false;
+  // Si quien añade la tarea no es el propietario real, es el propio empleado auto-organizándose el trabajo (no el jefe
+  // asignándoselo), así que se marca como «suya» para poder editarla/borrarla libremente y distinguirla de las que le asigna el jefe.
   const bySelf = !isOwnerSession();
-  if(onlyThisWeek){
+  if(onlyThisDay){
     const ds = dateStr(getWeekDates(distWeekOffset)[dayIdx]);
     if(!d.tareasUnicas[ds]) d.tareasUnicas[ds] = [];
-    // Evita duplicar la misma tarea el mismo día por doble Enter/doble
-    // clic, igual que ya se comprueba para los platos asignados.
+    // Evita duplicar la misma tarea el mismo día por doble Enter/doble clic.
     if(d.tareasUnicas[ds].some(t => t.text.trim().toLowerCase() === val.toLowerCase())){ showToast(t('msg.taskAlreadyExists')); return; }
     d.tareasUnicas[ds].push({id: genId(), text: val, bySelf});
   } else {
@@ -1686,24 +1826,29 @@ function addDistTarea(dayIdx){
   }
   saveDB();
   renderDistDetail();
+  // Para seguir añadiendo: el cursor vuelve al campo.
+  const nuevo = document.getElementById('dist-tarea-'+dayIdx);
+  if(nuevo) nuevo.focus();
 }
-
-// El id de cada tarea lo genera genId() como NÚMERO, pero al llegar aquí
-// desde un onclick/onchange del HTML siempre es TEXTO (viene interpolado
-// entre comillas en la plantilla) — comparar con === los dejaba sin
-// coincidir nunca, así que editar el texto no guardaba nada y el botón de
-// borrar (la X roja) no borraba nunca, en silencio. String() a ambos lados
-// para que la comparación no dependa del tipo.
+// El id de cada tarea lo genera genId() como NÚMERO, pero al llegar aquí desde un onclick/onchange del HTML siempre es TEXTO
+// (viene interpolado entre comillas en la plantilla) — comparar con === los dejaba sin coincidir nunca, así que editar no
+// guardaba nada y la X no borraba nunca, en silencio. String() a ambos lados.
 function updateDistTarea(dayIdx, taskId, val){
-  const d = getDistEmpData(distCurrentEmployeeId);
+  const d = distDatosActuales(); if(!d) return;
   const task = (d.produccion[dayIdx]||[]).find(t=>String(t.id)===String(taskId));
   if(!task || !(isOwnerSession() || task.bySelf)) return;
   task.text = val;
   saveDB();
 }
-
+function updateDistTareaUnica(ds, taskId, val){
+  const d = distDatosActuales(); if(!d) return;
+  const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
+  if(!task || !(isOwnerSession() || task.bySelf)) return;
+  task.text = val;
+  saveDB();
+}
 async function removeDistTarea(dayIdx, taskId){
-  const d = getDistEmpData(distCurrentEmployeeId);
+  const d = distDatosActuales(); if(!d) return;
   const task = (d.produccion[dayIdx]||[]).find(t=>String(t.id)===String(taskId));
   if(task && !(isOwnerSession() || task.bySelf)) return;
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
@@ -1713,19 +1858,8 @@ async function removeDistTarea(dayIdx, taskId){
     renderDistDetail();
   }
 }
-
-// Tareas únicas: puntuales para una fecha concreta, no forman parte de la
-// plantilla recurrente por día de la semana.
-function updateDistTareaUnica(ds, taskId, val){
-  const d = getDistEmpData(distCurrentEmployeeId);
-  const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
-  if(!task || !(isOwnerSession() || task.bySelf)) return;
-  task.text = val;
-  saveDB();
-}
-
 async function removeDistTareaUnica(ds, taskId){
-  const d = getDistEmpData(distCurrentEmployeeId);
+  const d = distDatosActuales(); if(!d) return;
   const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
   if(task && !(isOwnerSession() || task.bySelf)) return;
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
@@ -1735,10 +1869,242 @@ async function removeDistTareaUnica(ds, taskId){
     renderDistDetail();
   }
 }
+// Editar el texto de una tarea (la plantilla semanal o la puntual): una ventana pequeña, en vez de un campo suelto en cada fila.
+function dpEditarTarea(k, ds, taskId, idx){
+  const d = distDatosActuales(); if(!d) return;
+  const lista = k === 'prod' ? (d.produccion[idx]||[]) : (d.tareasUnicas[ds]||[]);
+  const task = lista.find(x => String(x.id) === String(taskId));
+  if(!task || !(isOwnerSession() || task.bySelf)) return;
+  openModal(`
+    <div class="idr-modal"></div>
+    <div class="modal-header"><h3><i class="ti ti-pencil"></i> ${t('common.edit')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="field"><label for="dp-edit-txt">${gl({es:'Tarea', ca:'Tasca', en:'Task'})}</label><input type="text" id="dp-edit-txt" maxlength="140" value="${escapeHtml(task.text)}" onkeydown="if(event.key==='Enter'){event.preventDefault();dpGuardarTarea('${k}','${escapeJsAttr(ds)}','${escapeJsAttr(String(taskId))}',${idx == null ? 'null' : idx})}"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="dpGuardarTarea('${k}','${escapeJsAttr(ds)}','${escapeJsAttr(String(taskId))}',${idx == null ? 'null' : idx})"><i class="ti ti-check"></i> ${t('common.save')}</button>
+    </div>`);
+  setTimeout(() => { const i = document.getElementById('dp-edit-txt'); if(i){ i.focus(); i.select(); } }, 50);
+}
+function dpGuardarTarea(k, ds, taskId, idx){
+  const inp = document.getElementById('dp-edit-txt');
+  const val = inp ? inp.value.trim() : '';
+  if(!val){ showToast(t('msg.nameRequired')); return; }
+  if(k === 'prod') updateDistTarea(idx, taskId, val); else updateDistTareaUnica(ds, taskId, val);
+  closeModal();
+  renderDistDetail();
+}
+
+/* ---------- Manual del puesto ----------
+   El propietario escribe, por cada empleado, lo que se espera de su puesto: qué hace, de qué responde y qué normas sigue.
+   Cada cambio sube la versión; el empleado confirma «lo he leído» y se guarda de QUÉ versión. Si el dueño lo cambia después,
+   vuelve a salir «por leer»: así hay constancia de que la persona conoce lo vigente, sin depender de la memoria de nadie. */
+const DP_MANUAL_TIPOS = [
+  {k:'obligacion', ico:'ti-checklist', titulo: () => gl({es:'Obligaciones', ca:'Obligacions', en:'Duties'}), corto: () => gl({es:'obligaciones', ca:'obligacions', en:'duties'}), ayuda: () => gl({es:'Lo que haces en cada turno.', ca:'El que fas a cada torn.', en:'What you do on every shift.'})},
+  {k:'responsabilidad', ico:'ti-shield-check', titulo: () => gl({es:'Responsabilidades', ca:'Responsabilitats', en:'Responsibilities'}), corto: () => gl({es:'responsab.', ca:'responsab.', en:'responsib.'}), ayuda: () => gl({es:'De lo que respondes tú.', ca:'Del que respons tu.', en:'What you answer for.'})},
+  {k:'norma', ico:'ti-alert-triangle', titulo: () => gl({es:'Normas y límites', ca:'Normes i límits', en:'Rules and limits'}), corto: () => gl({es:'normas', ca:'normes', en:'rules'}), ayuda: () => gl({es:'Lo que se hace siempre y lo que no se hace nunca.', ca:'El que es fa sempre i el que no es fa mai.', en:'What is always done and what is never done.'})},
+  {k:'nota', ico:'ti-bulb', titulo: () => gl({es:'Consejos y contactos', ca:'Consells i contactes', en:'Tips and contacts'}), corto: () => gl({es:'consejos', ca:'consells', en:'tips'}), ayuda: () => gl({es:'A quién llamar, trucos, dónde está cada cosa.', ca:'A qui trucar, trucs, on és cada cosa.', en:'Who to call, tricks, where things are.'})}
+];
+function dpManualTocar(d){
+  d.manual.version = (d.manual.version || 0) + 1;
+  d.manual.actualizado = new Date().toISOString();
+  saveDB();
+}
+function dpManualPlantilla(area){
+  const sala = area === 'sala';
+  const o = (es, ca, en, tipo) => ({id: genId(), tipo, titulo: gl({es, ca, en}), texto: ''});
+  return sala ? [
+    o('Llegar con tiempo y de uniforme limpio', 'Arribar amb temps i amb l\'uniforme net', 'Arrive on time in a clean uniform', 'obligacion'),
+    o('Montar y revisar mis mesas antes de abrir', 'Muntar i revisar les meves taules abans d\'obrir', 'Set up and check my tables before opening', 'obligacion'),
+    o('Tomar nota con claridad, avisando siempre de alérgenos', 'Prendre nota amb claredat, avisant sempre d\'al·lèrgens', 'Take orders clearly, always flagging allergens', 'obligacion'),
+    o('Dejar mi zona recogida y limpia al cerrar', 'Deixar la meva zona recollida i neta en tancar', 'Leave my area tidy and clean when closing', 'obligacion'),
+    o('El estado y la limpieza de mi zona', 'L\'estat i la neteja de la meva zona', 'The condition and cleanliness of my area', 'responsabilidad'),
+    o('Cobrar bien y avisar de cualquier incidencia de caja', 'Cobrar bé i avisar de qualsevol incidència de caixa', 'Charge correctly and report any till issue', 'responsabilidad'),
+    o('Nunca prometer a un cliente algo sin consultarlo con cocina', 'Mai prometre a un client res sense consultar-ho amb cuina', 'Never promise a guest anything without checking with the kitchen', 'norma'),
+    o('El móvil, fuera del salón durante el servicio', 'El mòbil, fora de la sala durant el servei', 'No phone on the floor during service', 'norma')
+  ] : [
+    o('Llegar con tiempo, uniforme limpio y manos lavadas', 'Arribar amb temps, uniforme net i mans rentades', 'Arrive on time, in a clean uniform with washed hands', 'obligacion'),
+    o('Revisar mi mise en place y las fichas técnicas del día', 'Revisar la meva mise en place i les fitxes tècniques del dia', 'Check my mise en place and the day\'s recipe sheets', 'obligacion'),
+    o('Etiquetar y fechar todo lo que preparo', 'Etiquetar i datar tot el que preparo', 'Label and date everything I prepare', 'obligacion'),
+    o('Dejar mi puesto limpio y recogido al terminar', 'Deixar el meu lloc net i recollit en acabar', 'Leave my station clean and tidy when finished', 'obligacion'),
+    o('Los platos y elaboraciones que tengo a mi cargo', 'Els plats i elaboracions que tinc al meu càrrec', 'The dishes and preparations I am in charge of', 'responsabilidad'),
+    o('Avisar de lo que falta antes de que se acabe', 'Avisar del que falta abans que s\'acabi', 'Flag what is running low before it runs out', 'responsabilidad'),
+    o('Respetar siempre la cadena de frío y las temperaturas', 'Respectar sempre la cadena de fred i les temperatures', 'Always respect the cold chain and temperatures', 'norma'),
+    o('Nunca tirar ni sustituir un ingrediente sin avisar', 'Mai llençar ni substituir un ingredient sense avisar', 'Never discard or swap an ingredient without telling anyone', 'norma')
+  ];
+}
+function dpManualLector(d, emp, ownerSess){
+  const man = d.manual;
+  const leido = d.manualLeido && d.manualLeido.version === man.version;
+  const esMio = loggedInEmployeeId() === emp.id;
+  return DP_MANUAL_TIPOS.map(tp => {
+    const items = man.items.filter(x => x.tipo === tp.k);
+    if(!items.length) return '';
+    return `
+      <section class="dp-man-sec">
+        <div class="es-tit"><i class="ti ${tp.ico}"></i> ${escapeHtml(tp.titulo())}</div>
+        <ol class="dp-man-lista">${items.map(it => `<li><b>${escapeHtml(it.titulo)}</b>${it.texto ? `<span>${escapeHtml(it.texto)}</span>` : ''}</li>`).join('')}</ol>
+      </section>`;
+  }).join('');
+}
+function openDistManual(empId){
+  if(!distPuedeVer(empId)) return;
+  const emp = DB.employees.find(e => e.id === empId);
+  if(!emp) return;
+  const d = getDistEmpData(empId);
+  const man = d.manual;
+  const ownerSess = isOwnerSession();
+  const esMio = loggedInEmployeeId() === empId;
+  const leido = d.manualLeido && d.manualLeido.version === man.version;
+  openModal(`
+    <div class="idr-modal"></div>
+    <div class="modal-header">
+      <h3><i class="ti ti-book-2"></i> ${gl({es:'Manual del puesto', ca:'Manual del lloc', en:'Job manual'})} · ${escapeHtml(emp.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="ml-intro">${esMio ? gl({es:'Esto es lo que se espera de ti en tu puesto. Léelo con calma y, cuando lo tengas claro, confírmalo abajo.', ca:'Això és el que s\'espera de tu al teu lloc. Llegeix-lo amb calma i, quan ho tinguis clar, confirma-ho a baix.', en:'This is what is expected of you in your role. Read it carefully and confirm below once it is clear.'}) : gl({es:'Obligaciones y responsabilidades de este puesto.', ca:'Obligacions i responsabilitats d\'aquest lloc.', en:'Duties and responsibilities of this role.'})}</p>
+    ${dpManualLector(d, emp, ownerSess) || `<div class="empty es-vacio"><i class="ti ti-book-off"></i>${gl({es:'Aún no hay nada escrito.', ca:'Encara no hi ha res escrit.', en:'Nothing written yet.'})}</div>`}
+    <div class="modal-footer">
+      ${ownerSess ? `<button type="button" class="btn btn-fino" style="margin-right:auto" onclick="printManualEmpleado(${empId})"><i class="ti ti-printer"></i> ${t('common.print')}</button>` : ''}
+      ${leido ? `<span class="pr-chip ok" style="margin-right:auto"><i class="ti ti-circle-check"></i> ${gl({es:'Leído el ', ca:'Llegit el ', en:'Read on '})}${escapeHtml(new Date(d.manualLeido.ts).toLocaleDateString(localeActual(), {day:'numeric', month:'long'}))}</span>` : ''}
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
+      ${esMio && !leido && man.items.length ? `<button type="button" class="btn btn-fino is-on" onclick="dpManualConfirmar(${empId})"><i class="ti ti-check"></i> ${gl({es:'He leído mi manual', ca:'He llegit el meu manual', en:'I have read my manual'})}</button>` : ''}
+    </div>`, {xl: true});
+}
+function dpManualConfirmar(empId){
+  if(loggedInEmployeeId() !== empId) return;
+  const d = getDistEmpData(empId);
+  d.manualLeido = {version: d.manual.version, ts: new Date().toISOString()};
+  logAudit('manual_read', gl({es:'Ha confirmado la lectura de su manual del puesto', ca:'Ha confirmat la lectura del seu manual del lloc', en:'Confirmed reading their job manual'}));
+  saveDB();
+  closeModal();
+  showToast(gl({es:'Anotado. Gracias.', ca:'Anotat. Gràcies.', en:'Noted. Thank you.'}));
+  renderDistDetail();
+}
+
+function openDistManualEditor(empId){
+  if(!isOwnerSession()) return;
+  const emp = DB.employees.find(e => e.id === empId);
+  if(!emp) return;
+  const d = getDistEmpData(empId);
+  const man = d.manual;
+  const sec = tp => {
+    const items = man.items.filter(x => x.tipo === tp.k);
+    const editando = dpManualEdit && dpManualEdit.tipo === tp.k ? man.items.find(x => x.id === dpManualEdit.id) : null;
+    return `
+      <section class="dp-man-sec">
+        <div class="es-tit"><i class="ti ${tp.ico}"></i> ${escapeHtml(tp.titulo())} <span class="dp-man-ay">${escapeHtml(tp.ayuda())}</span></div>
+        ${items.length ? `<ol class="dp-man-lista dp-man-ed">${items.map((it, i) => `<li><div class="dp-man-ed-txt"><b>${escapeHtml(it.titulo)}</b>${it.texto ? `<span>${escapeHtml(it.texto)}</span>` : ''}</div>${ggMenuAcciones([
+          {icono:'ti-pencil', texto:t('common.edit'), fn:`dpManualEditar('${tp.k}','${escapeJsAttr(String(it.id))}')`},
+          i > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:`dpManualMover('${escapeJsAttr(String(it.id))}',-1)`} : null,
+          i < items.length - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:`dpManualMover('${escapeJsAttr(String(it.id))}',1)`} : null,
+          {icono:'ti-trash', texto:t('common.delete'), fn:`dpManualBorrar('${escapeJsAttr(String(it.id))}')`, peligro:true}
+        ], {clase:'btn btn-fino mn-btn dp-mas', tip:true})}</li>`).join('')}</ol>` : ''}
+        <div class="dp-man-form">
+          <input type="text" id="dpm-t-${tp.k}" maxlength="120" placeholder="${escapeHtml(gl({es:'Escribe una frase corta…', ca:'Escriu una frase curta…', en:'Write a short sentence…'}))}" value="${escapeHtml(editando ? editando.titulo : '')}" onkeydown="if(event.key==='Enter'){event.preventDefault();dpManualGuardar('${tp.k}')}">
+          <textarea id="dpm-x-${tp.k}" rows="2" maxlength="600" placeholder="${escapeHtml(gl({es:'Detalle (opcional)', ca:'Detall (opcional)', en:'Detail (optional)'}))}">${escapeHtml(editando ? editando.texto : '')}</textarea>
+          <div class="dp-man-form-bt">
+            ${editando ? `<button type="button" class="btn btn-sm btn-fino" onclick="dpManualEdit=null;openDistManualEditor(${empId})">${t('common.cancel')}</button>` : ''}
+            <button type="button" class="btn btn-sm btn-fino is-on" onclick="dpManualGuardar('${tp.k}')"><i class="ti ${editando ? 'ti-check' : 'ti-plus'}"></i> ${editando ? t('common.save') : gl({es:'Añadir', ca:'Afegir', en:'Add'})}</button>
+          </div>
+        </div>
+      </section>`;
+  };
+  const estado = !man.items.length ? '' : (d.manualLeido && d.manualLeido.version === man.version
+    ? `<span class="pr-chip ok"><i class="ti ti-circle-check"></i> ${escapeHtml(emp.name.split(' ')[0])} ${gl({es:'lo leyó el ', ca:'el va llegir el ', en:'read it on '})}${escapeHtml(new Date(d.manualLeido.ts).toLocaleDateString(localeActual(), {day:'numeric', month:'short'}))}</span>`
+    : `<span class="pr-chip msg"><i class="ti ti-eye-off"></i> ${d.manualLeido ? gl({es:'Cambiado desde su última lectura', ca:'Canviat des de la seva última lectura', en:'Changed since last read'}) : gl({es:'Aún sin leer', ca:'Encara sense llegir', en:'Not read yet'})}</span>`);
+  openModal(`
+    <div class="idr-modal"></div>
+    <div class="modal-header">
+      <h3><i class="ti ti-book-2"></i> ${gl({es:'Manual de', ca:'Manual de', en:'Manual for'})} ${escapeHtml(emp.name)}</h3>
+      <button class="modal-close" onclick="dpManualEdit=null;closeModal();renderDistDetail()">&times;</button>
+    </div>
+    <div class="dp-man-estado">${estado}
+      ${!man.items.length ? `<button type="button" class="btn btn-sm btn-fino" onclick="dpManualAplicarPlantilla(${empId})"><i class="ti ti-wand"></i> ${gl({es:'Empezar con una plantilla', ca:'Començar amb una plantilla', en:'Start from a template'})}</button>` : `<button type="button" class="btn btn-sm btn-fino" onclick="printManualEmpleado(${empId})"><i class="ti ti-printer"></i> ${t('common.print')}</button>`}
+    </div>
+    <p class="ml-intro">${gl({es:'Cada cambio que hagas hará que el empleado tenga que volver a confirmar que lo ha leído.', ca:'Cada canvi que facis farà que l\'empleat hagi de tornar a confirmar que l\'ha llegit.', en:'Every change you make asks the employee to confirm they have read it again.'})}</p>
+    ${DP_MANUAL_TIPOS.map(sec).join('')}
+    <div class="modal-footer">
+      <button type="button" class="btn btn-fino is-on" onclick="dpManualEdit=null;closeModal();renderDistDetail()"><i class="ti ti-check"></i> ${gl({es:'Listo', ca:'Llest', en:'Done'})}</button>
+    </div>`, {xl: true});
+}
+function dpManualGuardar(tipo){
+  if(!isOwnerSession()) return;
+  const d = distDatosActuales(); if(!d) return;
+  const ti = document.getElementById('dpm-t-' + tipo), tx = document.getElementById('dpm-x-' + tipo);
+  const titulo = ti ? ti.value.trim() : '', texto = tx ? tx.value.trim() : '';
+  if(!titulo){ showToast(gl({es:'Escribe al menos una frase.', ca:'Escriu almenys una frase.', en:'Write at least one sentence.'})); if(ti) ti.focus(); return; }
+  if(dpManualEdit && dpManualEdit.tipo === tipo){
+    const it = d.manual.items.find(x => x.id === dpManualEdit.id);
+    if(it){ it.titulo = titulo; it.texto = texto; }
+    dpManualEdit = null;
+  } else {
+    d.manual.items.push({id: genId(), tipo, titulo, texto});
+  }
+  dpManualTocar(d);
+  openDistManualEditor(distCurrentEmployeeId);
+  const nuevo = document.getElementById('dpm-t-' + tipo); if(nuevo) nuevo.focus();
+}
+function dpManualEditar(tipo, id){
+  const d = distDatosActuales(); if(!d) return;
+  const it = d.manual.items.find(x => String(x.id) === String(id));
+  if(!it) return;
+  dpManualEdit = {tipo, id: it.id};
+  openDistManualEditor(distCurrentEmployeeId);
+  const ti = document.getElementById('dpm-t-' + tipo); if(ti){ ti.focus(); ti.scrollIntoView({block:'center'}); }
+}
+function dpManualMover(id, dir){
+  if(!isOwnerSession()) return;
+  const d = distDatosActuales(); if(!d) return;
+  const lista = d.manual.items;
+  const i = lista.findIndex(x => String(x.id) === String(id));
+  if(i < 0) return;
+  // Se mueve dentro de su mismo apartado: se busca el vecino anterior/siguiente del MISMO tipo.
+  const tipo = lista[i].tipo;
+  let j = i + dir;
+  while(j >= 0 && j < lista.length && lista[j].tipo !== tipo) j += dir;
+  if(j < 0 || j >= lista.length) return;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  dpManualTocar(d);
+  openDistManualEditor(distCurrentEmployeeId);
+}
+async function dpManualBorrar(id){
+  if(!isOwnerSession()) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
+  const d = distDatosActuales(); if(!d) return;
+  d.manual.items = d.manual.items.filter(x => String(x.id) !== String(id));
+  if(dpManualEdit && String(dpManualEdit.id) === String(id)) dpManualEdit = null;
+  dpManualTocar(d);
+  openDistManualEditor(distCurrentEmployeeId);
+}
+function dpManualAplicarPlantilla(empId){
+  if(!isOwnerSession()) return;
+  const emp = DB.employees.find(e => e.id === empId);
+  const d = distDatosActuales(); if(!d || !emp || d.manual.items.length) return;
+  d.manual.items = dpManualPlantilla(emp.area || currentArea());
+  dpManualTocar(d);
+  openDistManualEditor(empId);
+}
+function printManualEmpleado(empId){
+  if(!distPuedeVer(empId)) return;
+  const emp = DB.employees.find(e => e.id === empId);
+  if(!emp) return;
+  const d = getDistEmpData(empId);
+  const title = gl({es:'Manual del puesto', ca:'Manual del lloc', en:'Job manual'});
+  let body = printReportHeaderHtml(title, emp.name + (emp.rol ? ' — ' + emp.rol : ''));
+  body += DP_MANUAL_TIPOS.map(tp => {
+    const items = d.manual.items.filter(x => x.tipo === tp.k);
+    if(!items.length) return '';
+    return `<h2>${escapeHtml(tp.titulo())}</h2><ol>${items.map(it => `<li><strong>${escapeHtml(it.titulo)}</strong>${it.texto ? `<br><span>${escapeHtml(it.texto)}</span>` : ''}</li>`).join('')}</ol>`;
+  }).join('') || `<div class="pr-empty">${t('common.noResults')}</div>`;
+  body += `<table style="margin-top:36px"><tr><td style="width:50%;height:70px;vertical-align:bottom">${gl({es:'Recibí y entiendo este manual. Firma:', ca:'He rebut i entenc aquest manual. Signatura:', en:'I have received and understand this manual. Signature:'})}</td><td style="vertical-align:bottom">${gl({es:'Fecha:', ca:'Data:', en:'Date:'})}</td></tr></table>`;
+  printReportWindow(title, body);
+}
 
 function printDistribucion(empId){
   migrateWorkDistribution();
-  const targets = empId ? DB.employees.filter(e=>e.id===empId) : areaEmployees();
+  // Un empleado imprime solo lo suyo, aunque pidiera «todo el equipo».
+  const yo = loggedInEmployeeId();
+  const targets = yo != null ? DB.employees.filter(e => e.id === yo) : (empId ? DB.employees.filter(e=>e.id===empId) : areaEmployees());
   const isSala = currentArea() === 'sala';
   const title = t('view.distribucion.title');
   let body = printReportHeaderHtml(title);

@@ -42,7 +42,7 @@ await caso('Propietario: al entrar ve la lista del equipo (dos tarjetas), no una
     setAccessSession({type:'owner', ts:Date.now()});
     navigate('distribucion');
     const box = document.getElementById('distribucion-content');
-    return {tarjetas: box.querySelectorAll('.grid .card').length, tieneAna: box.textContent.includes('Ana'), tieneLuis: box.textContent.includes('Luis')};
+    return {tarjetas: box.querySelectorAll('.pr-grid .pr-card').length, tieneAna: box.textContent.includes('Ana'), tieneLuis: box.textContent.includes('Luis')};
   });
   assert.equal(r.tarjetas, 2, 'debe ver las tarjetas de los dos empleados: ' + JSON.stringify(r));
   assert.ok(r.tieneAna && r.tieneLuis, 'ambos nombres deben verse en la lista: ' + JSON.stringify(r));
@@ -56,7 +56,7 @@ await caso('Propietario: al abrir la ficha de Ana, puede volver a la lista del e
     const veAna = box.textContent.includes('Ana');
     backToDistList();
     const box2 = document.getElementById('distribucion-content');
-    const vuelveALista = box2.querySelectorAll('.grid .card').length === 2;
+    const vuelveALista = box2.querySelectorAll('.pr-grid .pr-card').length === 2;
     openDistEmployeeAuthed(2);
     const box3 = document.getElementById('distribucion-content');
     const veLuis = box3.textContent.includes('Luis');
@@ -74,7 +74,7 @@ await caso('Empleado: entra directo a SU PROPIA ficha, sin lista ni botón de vo
     setAccessSession({type:'employee', employeeId:1, area:'cocina'});
     navigate('distribucion');
     const box = document.getElementById('distribucion-content');
-    const tarjetasLista = box.querySelectorAll('.grid.grid-3 .card').length;
+    const tarjetasLista = box.querySelectorAll('.pr-grid .pr-card').length;
     const veSuNombre = box.textContent.includes('Ana');
     const tieneBoton = !!box.querySelector('[onclick="backToDistList()"]');
     return {tarjetasLista, veSuNombre, tieneBoton};

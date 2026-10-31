@@ -140,14 +140,13 @@ await caso('La página del empleado en Distribución ya no tiene el botón "Equi
   assert.ok(!tieneEquipo, 'no debe quedar ningún botón "Equipo" en la página de detalle');
 });
 
-await caso('"Rango/platos a su cargo" y "Tareas de esta semana" quedan uno al lado del otro, no apilados', async () => {
+await caso('El panel del empleado enseña «Hoy» y la semana arriba, y lo que lleva a cargo al lado de la lista del día', async () => {
   const r = await page.evaluate(()=>{
-    const kpis = [...document.querySelectorAll('.kpi')];
-    const tops = kpis.map(k => k.getBoundingClientRect().top);
-    return {n: kpis.length, mismaFila: tops.length===2 && Math.abs(tops[0]-tops[1]) < 2};
+    const main = document.querySelector('.dp-col-main'), lado = document.querySelector('.dp-col-lado');
+    return {hoy: !!document.querySelector('.dp-hoy'), dias: document.querySelectorAll('.dp-tira .dp-dia').length,
+      alLado: window.innerWidth <= 900 || (!!main && !!lado && Math.abs(main.getBoundingClientRect().top - lado.getBoundingClientRect().top) < 2 && lado.getBoundingClientRect().left > main.getBoundingClientRect().left)};
   });
-  assert.equal(r.n, 2, 'deben ser las 2 tarjetas KPI esperadas: ' + JSON.stringify(r));
-  assert.ok(r.mismaFila, 'deben estar en la misma fila, no una debajo de la otra: ' + JSON.stringify(r));
+  assert.ok(r.hoy && r.dias === 7 && r.alLado, 'deben verse Hoy, los 7 días y la columna lateral: ' + JSON.stringify(r));
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {
