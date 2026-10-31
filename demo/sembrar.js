@@ -138,7 +138,7 @@
   // Doce meses de compras, los mismos que de ventas: si no, los meses con
   // facturación y sin materia prima saldrían con un margen imposible.
   for(let m = 0; m < 12; m++){
-    const f = new Date(hoyD); f.setMonth(f.getMonth() - m);
+    const f = new Date(hoyD.getFullYear(), hoyD.getMonth() - m, 1);   // día 1: con setMonth, el 31 caía en un mes que no tiene 31 y saltaba al siguiente
     /* ⚠️ La app guarda el mes en BASE 0 (enero = 0), igual que
        Date.getMonth() — ver operations.js, donde se crean los gastos
        variables de un pedido. Poniéndolo en base 1, las compras de agosto se
