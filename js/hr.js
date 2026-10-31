@@ -4412,11 +4412,10 @@ function setHorariosCalView(v){ horariosCalView = v; renderHorariosCalendario();
 function renderHorariosCalendario(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
+  const modo = (k, txt, ico) => `<button type="button" class="btn btn-sm btn-fino${horariosCalView===k ? ' is-on active' : ''}" aria-pressed="${horariosCalView===k}" onclick="setHorariosCalView('${k}')"><i class="ti ${ico}"></i> ${txt}</button>`;
   box.innerHTML = `
-    <div class="view-toggle" style="margin-bottom:12px">
-      <button class="btn ${horariosCalView==='dia'?'active':''}" onclick="setHorariosCalView('dia')">${t('common.day')}</button>
-      <button class="btn ${horariosCalView==='semana'?'active':''}" onclick="setHorariosCalView('semana')">${t('common.week')}</button>
-      <button class="btn ${horariosCalView==='mes'?'active':''}" onclick="setHorariosCalView('mes')">${t('common.month')}</button>
+    <div class="cal-modos" role="group" aria-label="${escapeHtml(t('label.calendar'))}">
+      ${modo('dia', t('common.day'), 'ti-calendar-event')}${modo('semana', t('common.week'), 'ti-calendar-week')}${modo('mes', t('common.month'), 'ti-calendar-month')}
     </div>
     <div id="horarios-cal-body"></div>
   `;
@@ -4425,191 +4424,260 @@ function renderHorariosCalendario(){
   else renderHorariosSemana();
 }
 
+/* ============== Calendario de Horarios (31/10): Día, Semana y Mes ==============
+   El calendario es VISTA: un turno nuevo se asigna desde la ficha del empleado (horario fijo o por periodo), nunca desde una
+   casilla vacía; solo se toca uno que ya existe. Los tres modos salen de los mismos datos y de las mismas funciones de cuenta
+   (turnoHours, turnoHorarioLabel), así que las horas del día, de la semana y del mes no pueden contarse distinto. */
+const CAL_TRABAJA = ['M','T','P','C'];
+// «08:00» → «8», «08:30» → «8:30»: en una casilla de semana no cabe más.
+function calHoraCorta(hhmm){
+  if(!hhmm) return '';
+  const [h, m] = hhmm.split(':');
+  return String(parseInt(h, 10)) + (m && m !== '00' ? ':' + m : '');
+}
+function calTurnoCorto(tr){
+  if(!tr || !CAL_TRABAJA.includes(tr.tipo)) return '';
+  let s = `${calHoraCorta(tr.entrada)}–${calHoraCorta(tr.salida)}`;
+  if(tr.tipo === 'P' && tr.entrada2 && tr.salida2) s += ` · ${calHoraCorta(tr.entrada2)}–${calHoraCorta(tr.salida2)}`;
+  return s;
+}
+function calEmpHtml(emp){
+  return `<span class="cal-emp"><span class="pr-av pr-av-s" style="--c:${escapeHtml(emp.color||'#DF7039')}" aria-hidden="true">${escapeHtml(prIniciales(emp.name))}</span><span class="cal-emp-txt"><b>${escapeHtml(emp.name)}</b>${emp.rol ? `<span>${escapeHtml(emp.rol)}</span>` : ''}</span></span>`;
+}
+function calLeyendaHtml(){
+  return `<div class="cal-leyenda" aria-label="${escapeHtml(t('th.shift'))}">${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="cal-ley" style="background:${v.bg};color:${v.tx}"><b>${k}</b> ${escapeHtml(v.label)}</span>`).join('')}</div>`;
+}
+const calMinutos = hhmm => { const [h, m] = (hhmm||'0:0').split(':').map(Number); return (h||0)*60 + (m||0); };
+// Los tramos de trabajo de un turno, en minutos desde las 00:00 (uno si es seguido, dos si es partido; si cruza la medianoche, acaba pasadas las 24 h).
+function calTramos(tr){
+  if(!tr || !CAL_TRABAJA.includes(tr.tipo) || !tr.entrada || !tr.salida) return [];
+  const tramo = (e, sa) => { const a = calMinutos(e); let b = calMinutos(sa); if(b <= a) b += 24*60; return [a, b]; };
+  const out = [tramo(tr.entrada, tr.salida)];
+  if(tr.tipo === 'P' && tr.entrada2 && tr.salida2) out.push(tramo(tr.entrada2, tr.salida2));
+  return out;
+}
+
 function goToHorariosDia(date){
   horariosDate = date;
   horariosTab = 'calendario';
   horariosCalView = 'dia';
   renderHorarios();
 }
-
+function calDiaMas(delta){
+  horariosDate = addDaysStr(horariosDate || todayStr(), delta);
+  renderHorariosDia();
+}
+function calDiaFecha(v){
+  if(!v) return;
+  horariosDate = v;
+  renderHorariosDia();
+}
 function renderHorariosDia(){
   const box = document.getElementById('horarios-cal-body');
   if(!box) return;
-
   const emps = areaEmployees();
   if(!emps.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`;
+    box.innerHTML = `<div class="empty es-vacio"><i class="ti ti-users"></i>${t("empty.employees")}</div>`;
     return;
   }
+  const date = horariosDate || todayStr();
+  const fecha = new Date(date + 'T12:00:00');
+  const turnos = (DB.turnos||[]).filter(x => x.fecha === date);
+  const filas = emps.map(emp => ({emp, turno: turnos.find(x => x.employeeId === emp.id) || null}));
+  const trabajan = filas.filter(f => f.turno && CAL_TRABAJA.includes(f.turno.tipo));
+  const horas = filas.reduce((s, f) => s + (f.turno ? turnoHours(f.turno) : 0), 0);
+  const descansan = filas.filter(f => f.turno && f.turno.tipo === 'D').length;
+  const ausentes = filas.filter(f => f.turno && ['V','B'].includes(f.turno.tipo)).length;
+  const sinTurno = filas.filter(f => !f.turno).length;
 
-  const date = horariosDate;
-  const turnos = (DB.turnos||[]).filter(t => t.fecha === date);
+  // Eje de horas: de la primera entrada a la última salida, redondeado, con un mínimo para que la línea no quede enana.
+  let ini = 24*60, fin = 0;
+  trabajan.forEach(f => calTramos(f.turno).forEach(([a, b]) => { ini = Math.min(ini, a); fin = Math.max(fin, b); }));
+  if(!trabajan.length || fin <= ini){ ini = 8*60; fin = 24*60; }
+  let h0 = Math.floor(ini / 60), h1 = Math.ceil(fin / 60);
+  if(h1 - h0 < 8){ h1 = Math.min(30, h0 + 8); }
+  const span = (h1 - h0) * 60;
+  const pos = m => ((m - h0*60) / span * 100).toFixed(2);
+  const ticks = [];
+  for(let h = h0; h <= h1; h += (h1 - h0 > 12 ? 2 : 1)) ticks.push(h);
+  const ejeHtml = `<div class="cal-eje" aria-hidden="true">${ticks.map(h => `<span style="left:${pos(h*60)}%">${String(h % 24).padStart(2,'0')}</span>`).join('')}</div>`;
+  // Cuántos hay trabajando en cada hora: lo que se mira para saber si el turno de comidas va corto de gente.
+  const cobertura = [];
+  for(let h = h0; h < h1; h++){
+    let n = 0;
+    trabajan.forEach(f => { if(calTramos(f.turno).some(([a, b]) => a < (h+1)*60 && b > h*60)) n++; });
+    cobertura.push(n);
+  }
+  const maxCob = Math.max(1, ...cobertura);
+  const cobHtml = trabajan.length ? `
+    <div class="cal-cob">
+      <span class="cal-cob-et">${gl({es:'Personal por hora', ca:'Personal per hora', en:'Staff per hour'})}</span>
+      <div class="cal-cob-barras" role="img" aria-label="${escapeHtml(cobertura.map((n, i) => `${String((h0+i) % 24).padStart(2,'0')}h: ${n}`).join(', '))}">
+        ${cobertura.map((n, i) => `<span class="cal-cob-b${n === maxCob && n > 0 ? ' is-max' : ''}${n === 0 ? ' is-cero' : ''}" style="height:${Math.max(6, n / maxCob * 100)}%" title="${String((h0+i) % 24).padStart(2,'0')}:00 · ${n}"><i>${n}</i></span>`).join('')}
+      </div>
+    </div>` : '';
 
-  const rows = emps.map(emp => {
-    const turno = turnos.find(x => x.employeeId===emp.id);
-    if(turno){
-      const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
-      const hh = turnoHours(turno);
-      return `
-        <tr>
-          <td>
-            <span style="display:inline-flex;align-items:center;gap:6px">
-              <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-              <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
-            </span>
-          </td>
-          <td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px">${turno.tipo} - ${tipo.label}</span></td>
-          <td>${escapeHtml(turnoHorarioLabel(turno))}</td>
-          <td>${hh>0?hh.toFixed(1)+'h':'—'}</td>
-          <td class="wrap">${escapeHtml(turno.notas||'—')}</td>
-          <td class="actions-cell">
-            <button class="owner-only btn btn-sm btn-icon" onclick="openTurnoModal(${turno.id})"><i class="ti ti-edit"></i></button>
-            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteTurno(${turno.id})"><i class="ti ti-trash"></i></button>
-          </td>
-        </tr>
-      `;
+  const rows = filas.map(({emp, turno}) => {
+    if(!turno){
+      return `<div class="cal-fila is-vacia"><div class="cal-fila-nom">${calEmpHtml(emp)}</div><div class="cal-fila-bar"><span class="cal-nada">${t('label.noShiftAssigned')}</span></div></div>`;
     }
+    const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
+    const hh = turnoHours(turno);
+    const tramos = calTramos(turno);
+    const barra = tramos.length
+      ? `<div class="cal-pista">${ticks.map(h => `<i style="left:${pos(h*60)}%"></i>`).join('')}${tramos.map(([a, b]) => `<span class="cal-seg" style="left:${pos(a)}%;width:${((b - a) / span * 100).toFixed(2)}%;background:${tipo.bg};color:${tipo.tx};border-color:${tipo.tx}" title="${escapeHtml(calHoraCorta(String(Math.floor(a/60)%24).padStart(2,'0') + ':' + String(a%60).padStart(2,'0')))}">${(b - a) >= 150 ? `<b>${String(Math.floor(a/60)%24).padStart(2,'0')}:${String(a%60).padStart(2,'0')}–${String(Math.floor(b/60)%24).padStart(2,'0')}:${String(b%60).padStart(2,'0')}</b>` : ''}</span>`).join('')}</div>`
+      : `<span class="cal-chip-tipo" style="background:${tipo.bg};color:${tipo.tx}"><b>${turno.tipo}</b> ${escapeHtml(tipo.label)}</span>`;
+    const menu = ggMenuAcciones([
+      {icono:'ti-pencil', texto:t('common.edit'), fn:`openTurnoModal(${turno.id})`, owner:true},
+      {icono:'ti-trash', texto:t('common.delete'), fn:`deleteTurno(${turno.id})`, peligro:true, owner:true}
+    ], {clase:'btn btn-fino mn-btn', tip:true});
     return `
-      <tr>
-        <td>
-          <span style="display:inline-flex;align-items:center;gap:6px">
-            <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-            <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
-          </span>
-        </td>
-        <td colspan="5"><span style="color:var(--muted)">${t('label.noShiftAssigned')}</span></td>
-      </tr>
-    `;
+      <div class="cal-fila">
+        <div class="cal-fila-nom">${calEmpHtml(emp)}</div>
+        <div class="cal-fila-bar">${barra}
+          <div class="cal-fila-meta">${tramos.length ? `<span class="cal-chip-tipo" style="background:${tipo.bg};color:${tipo.tx}"><b>${turno.tipo}</b> ${escapeHtml(tipo.label)}</span><span class="cal-horario">${escapeHtml(turnoHorarioLabel(turno))}</span><span class="cal-horas">${hh.toFixed(1)}h</span>` : ''}${turno.notas ? `<span class="cal-nota"><i class="ti ti-note"></i> ${escapeHtml(turno.notas)}</span>` : ''}</div>
+        </div>
+        <div class="cal-fila-acc">${menu}</div>
+      </div>`;
   }).join('');
 
   box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        <input type="date" id="horarios-filter-date" value="${date}" onchange="horariosDate=this.value;renderHorarios()">
-      </div>
+    <div class="cal-nav">
+      <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Día anterior', ca:'Dia anterior', en:'Previous day'}))}" aria-label="${escapeHtml(gl({es:'Día anterior', ca:'Dia anterior', en:'Previous day'}))}" onclick="calDiaMas(-1)"><i class="ti ti-chevron-left"></i></button>
+      <label class="cal-fecha" onclick="const i=this.querySelector('input'); if(i && i.showPicker){ try{ i.showPicker(); }catch(e){} }"><span>${escapeHtml(fecha.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long', year:'numeric'}))}</span><input type="date" id="horarios-filter-date" value="${date}" onchange="calDiaFecha(this.value)" aria-label="${escapeHtml(t('common.date'))}"></label>
+      <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}))}" aria-label="${escapeHtml(gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}))}" onclick="calDiaMas(1)"><i class="ti ti-chevron-right"></i></button>
+      ${date !== todayStr() ? `<button type="button" class="btn btn-sm btn-fino" onclick="calDiaFecha(todayStr())">${t('common.today')}</button>` : ''}
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
+    <div class="st-resumen cal-resumen">
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Trabajan', ca:'Treballen', en:'Working'})}</span><span class="st-cel-v">${trabajan.length}</span><span class="st-cel-s">${gl({es:'de', ca:'de', en:'of'})} ${emps.length}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Horas planificadas', ca:'Hores planificades', en:'Planned hours'})}</span><span class="st-cel-v">${horas.toFixed(1)}h</span></div>
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Descansan o ausentes', ca:'Descansen o absents', en:'Off or away'})}</span><span class="st-cel-v">${descansan + ausentes}</span></div>
+      <div class="st-cel${sinTurno ? ' is-bajo' : ''}"><span class="st-cel-et">${t('label.noShiftAssigned')}</span><span class="st-cel-v">${sinTurno}</span></div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('th.employee')}</th><th>${t('th.shift')}</th><th>${t('label.schedule')}</th><th>${t('th.hours')}</th><th>${t('th.notes')}</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
+    ${trabajan.length ? `<div class="cal-linea"><div class="cal-linea-cab"><span></span><div class="cal-linea-eje">${ejeHtml}</div></div>${cobHtml ? `<div class="cal-linea-cob"><span></span>${cobHtml}</div>` : ''}</div>` : ''}
+    <div class="cal-filas">${rows}</div>
+    ${calLeyendaHtml()}
   `;
 }
 
+let calMesDatos = {};
+function horariosMesCb(anio, mes){
+  const hoy = new Date();
+  horariosMonthOffset = (anio - hoy.getFullYear()) * 12 + (mes - hoy.getMonth());
+  renderHorariosMes();
+}
 function renderHorariosMes(){
   const box = document.getElementById('horarios-cal-body');
   if(!box) return;
-
   const today = new Date();
   const base = new Date(today.getFullYear(), today.getMonth() + horariosMonthOffset, 1);
-  const year = base.getFullYear();
-  const month = base.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const year = base.getFullYear(), month = base.getMonth();
+  const startOffset = (new Date(year, month, 1).getDay() + 6) % 7; // lunes = 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
   const empIds = new Set(areaEmployees().map(e => e.id));
-  const counts = {};
-  (DB.turnos||[]).forEach(t => { if(t.tipo !== 'D' && empIds.has(t.employeeId)) counts[t.fecha] = (counts[t.fecha]||0) + 1; });
-
+  const counts = {}, porMes = {};
+  let turnosMes = 0, horasMes = 0;
+  (DB.turnos||[]).forEach(x => {
+    if(!empIds.has(x.employeeId)) return;
+    const k = (x.fecha||'').slice(0, 7);
+    porMes[k] = (porMes[k]||0) + 1;
+    if(k === `${year}-${String(month+1).padStart(2,'0')}`){
+      turnosMes++; horasMes += turnoHours(x);
+      if(CAL_TRABAJA.includes(x.tipo)) counts[x.fecha] = (counts[x.fecha]||0) + 1;
+    }
+  });
+  const hoyDs = todayStr();
+  let sinNadie = 0;
   let cells = '';
-  for(let i=0; i<startOffset; i++) cells += `<div></div>`;
-  for(let day=1; day<=daysInMonth; day++){
+  for(let i = 0; i < startOffset; i++) cells += `<div class="cal-mes-vacia"></div>`;
+  for(let day = 1; day <= daysInMonth; day++){
     const ds = dateStr(new Date(year, month, day));
     const count = counts[ds] || 0;
-    const isToday = ds === todayStr();
+    const dow = (startOffset + day - 1) % 7;
+    if(ds >= hoyDs && !count) sinNadie++;
     cells += `
-      <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--ink)':''}" onclick="goToHorariosDia('${ds}')">
-        <div style="font-weight:700">${day}</div>
-        ${count ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(count===1?t('hr2.oneShift'):t('hr2.nShifts').replace('${n}', count))}">${count}</span>` : ''}
-      </div>
-    `;
+      <button type="button" class="cal-mes-dia${ds === hoyDs ? ' is-hoy' : ''}${dow >= 5 ? ' es-finde' : ''}${count ? ' tiene' : ''}" onclick="goToHorariosDia('${ds}')" aria-label="${escapeHtml(`${day} ${monthFull(month)}: ${count === 1 ? t('hr2.oneShift') : t('hr2.nShifts').replace('${n}', count)}`)}">
+        <span class="cal-mes-n">${day}</span>
+        ${count ? `<span class="cal-mes-c"><i class="ti ti-users"></i> ${count}</span>` : ''}
+      </button>`;
   }
-
   box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        <button class="btn btn-sm" onclick="horariosMonthOffset--;renderHorarios()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="horariosMonthOffset=0;renderHorarios()">${t('common.today')}</button>
-        <button class="btn btn-sm" onclick="horariosMonthOffset++;renderHorarios()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
-      </div>
+    <div class="cal-nav">${ggPeriodoHtml({anio: year, mes: month, cb: 'horariosMesCb', datos: porMes, anual: false})}${horariosMonthOffset !== 0 ? `<button type="button" class="btn btn-sm btn-fino" onclick="horariosMonthOffset=0;renderHorariosMes()">${t('common.today')}</button>` : ''}</div>
+    <div class="st-resumen cal-resumen">
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Turnos del mes', ca:'Torns del mes', en:'Shifts this month'})}</span><span class="st-cel-v">${turnosMes}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Horas planificadas', ca:'Hores planificades', en:'Planned hours'})}</span><span class="st-cel-v">${horasMes.toFixed(0)}h</span></div>
+      <div class="st-cel${sinNadie ? ' is-bajo' : ''}"><span class="st-cel-et">${gl({es:'Días sin nadie', ca:'Dies sense ningú', en:'Days with nobody'})}</span><span class="st-cel-v">${sinNadie}</span><span class="st-cel-s">${gl({es:'de hoy en adelante', ca:'d\'avui endavant', en:'from today on'})}</span></div>
     </div>
-    <div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
-      ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
+    <div class="cal-mes">
+      ${t('days.short').map((d, i) => `<div class="cal-mes-cab${i >= 5 ? ' es-finde' : ''}">${d}</div>`).join('')}
       ${cells}
     </div>
   `;
 }
 
+function calSemanaMas(delta){
+  horariosWeekOffset = delta === 0 ? 0 : horariosWeekOffset + delta;
+  renderHorariosSemana();
+}
 function renderHorariosSemana(){
   const box = document.getElementById('horarios-cal-body');
   if(!box) return;
-
   const emps = areaEmployees();
   if(!emps.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`;
+    box.innerHTML = `<div class="empty es-vacio"><i class="ti ti-users"></i>${t("empty.employees")}</div>`;
     return;
   }
-
   const dates = getWeekDates(horariosWeekOffset);
   const dateStrs = dates.map(dateStr);
+  const hoyDs = todayStr();
   const label = `${dates[0].toLocaleDateString(localeActual(),{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString(localeActual(),{day:'numeric',month:'short',year:'numeric'})}`;
-  const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)}<br><span class="txt-xs" style="font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
-
-  const rows = emps.map(emp => {
+  const turnoDe = (empId, ds) => (DB.turnos||[]).find(x => x.employeeId === empId && x.fecha === ds);
+  const porDia = dateStrs.map(() => 0);
+  let totalGeneral = 0;
+  const chip = (turno, ds) => {
+    const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
+    const corto = calTurnoCorto(turno);
+    const editable = editUnlocked;
+    return `<${editable ? 'button type="button"' : 'span'} class="cal-turno${editable ? ' es-editable' : ''}" style="background:${tipo.bg};color:${tipo.tx}" ${editable ? `onclick="openTurnoModal(${turno.id})" aria-label="${escapeHtml(tipo.label + ' ' + corto)}"` : ''} title="${escapeHtml(tipo.label + (turnoHorarioLabel(turno) !== '—' ? ' · ' + turnoHorarioLabel(turno) : '') + (turno.notas ? ' — ' + turno.notas : ''))}"><b>${turno.tipo}</b>${corto ? `<span>${escapeHtml(corto)}</span>` : ''}</${editable ? 'button' : 'span'}>`;
+  };
+  const filas = emps.map(emp => {
     let totalH = 0;
-    const cells = dateStrs.map(ds => {
-      const turno = (DB.turnos||[]).find(x => x.employeeId===emp.id && x.fecha===ds);
-      if(turno){
-        const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
-        const hh = turnoHours(turno);
-        if(hh > 0) totalH += hh;
-        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px;text-align:center;${editUnlocked?'cursor:pointer':''}" ${editUnlocked?`onclick="openTurnoModal(${turno.id})"`:''}>${turno.tipo}${turno.tipo!=='D'?`<br><span class="txt-xs" style="font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
-      }
-      // El calendario es solo VISTA: asignar un turno nuevo se hace desde el
-      // botón de calendario de la ficha del empleado (horario fijo o por
-      // periodo), nunca desde una casilla vacía aquí — solo se puede tocar
-      // un turno que ya existe.
-      return `<td style="text-align:center;padding:2px;color:var(--muted)">—</td>`;
-    }).join('');
-    return `<tr>
-      <td>
-        <span style="display:inline-flex;align-items:center;gap:6px">
-          <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-          <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
-        </span>
-      </td>
-      ${cells}
-      <td style="text-align:center;font-weight:700">${totalH>0?totalH.toFixed(1)+'h':'—'}</td>
-    </tr>`;
-  }).join('');
-
-  box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        <button class="btn btn-sm" onclick="horariosWeekOffset--; renderHorariosSemana()"><i class="ti ti-chevron-left"></i></button>
-        <strong style="margin:0 8px">${label}</strong>
-        <button class="btn btn-sm" onclick="horariosWeekOffset++; renderHorariosSemana()"><i class="ti ti-chevron-right"></i></button>
-        <button class="btn btn-sm" onclick="horariosWeekOffset=0; renderHorariosSemana()">${t('common.today')}</button>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn" onclick="printWeeklySchedule()"><i class="ti ti-printer"></i> ${t('btn.printSchedule')}</button>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('th.employee')}</th>${headerCells}<th>${t('label.totalHoursAbbrev')}</th></tr></thead>
-        <tbody>${rows}</tbody>
+    const celdas = dateStrs.map((ds, i) => {
+      const turno = turnoDe(emp.id, ds);
+      if(turno){ totalH += turnoHours(turno); if(CAL_TRABAJA.includes(turno.tipo)) porDia[i]++; }
+      return {ds, turno};
+    });
+    totalGeneral += totalH;
+    return {emp, celdas, totalH};
+  });
+  const tabla = `
+    <div class="cal-sem-tabla table-wrap">
+      <table class="cal-sem">
+        <thead><tr><th>${t('th.employee')}</th>${dates.map((d, i) => `<th class="${dateStrs[i] === hoyDs ? 'is-hoy' : ''}${i >= 5 ? ' es-finde' : ''}"><button type="button" class="cal-sem-dia" onclick="goToHorariosDia('${dateStrs[i]}')" aria-label="${escapeHtml(weekDayFull(i) + ' ' + d.getDate())}">${weekDayShort(i)}<span>${d.getDate()}/${d.getMonth()+1}</span></button></th>`).join('')}<th class="cal-sem-tot">${t('label.totalHoursAbbrev')}</th></tr></thead>
+        <tbody>
+          ${filas.map(f => `<tr><td>${calEmpHtml(f.emp)}</td>${f.celdas.map(c => `<td class="${c.ds === hoyDs ? 'is-hoy' : ''}">${c.turno ? chip(c.turno, c.ds) : '<span class="cal-nada">—</span>'}</td>`).join('')}<td class="cal-sem-tot"><b>${f.totalH > 0 ? f.totalH.toFixed(1) + 'h' : '—'}</b></td></tr>`).join('')}
+        </tbody>
+        <tfoot><tr><td>${gl({es:'Trabajan', ca:'Treballen', en:'Working'})}</td>${porDia.map((n, i) => `<td class="${dateStrs[i] === hoyDs ? 'is-hoy' : ''}"><b>${n}</b></td>`).join('')}<td class="cal-sem-tot"><b>${totalGeneral.toFixed(1)}h</b></td></tr></tfoot>
       </table>
+    </div>`;
+  const tarjetas = `
+    <div class="cal-sem-tarjetas">
+      ${filas.map(f => `
+        <section class="cal-sem-card">
+          <div class="cal-sem-card-cab">${calEmpHtml(f.emp)}<b class="cal-sem-card-h">${f.totalH > 0 ? f.totalH.toFixed(1) + 'h' : '—'}</b></div>
+          ${f.celdas.map((c, i) => `<div class="cal-sem-linea${c.ds === hoyDs ? ' is-hoy' : ''}"><span class="cal-sem-linea-d">${weekDayShort(i)} ${dates[i].getDate()}</span>${c.turno ? chip(c.turno, c.ds) : '<span class="cal-nada">—</span>'}</div>`).join('')}
+        </section>`).join('')}
+    </div>`;
+  box.innerHTML = `
+    <div class="cal-nav">
+      <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('title.prevWeek'))}" aria-label="${escapeHtml(t('title.prevWeek'))}" onclick="calSemanaMas(-1)"><i class="ti ti-chevron-left"></i></button>
+      <strong class="cal-nav-txt">${escapeHtml(label)}</strong>
+      <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('title.nextWeek'))}" aria-label="${escapeHtml(t('title.nextWeek'))}" onclick="calSemanaMas(1)"><i class="ti ti-chevron-right"></i></button>
+      ${horariosWeekOffset !== 0 ? `<button type="button" class="btn btn-sm btn-fino" onclick="calSemanaMas(0)">${t('common.today')}</button>` : ''}
+      <span class="cal-nav-der"><button type="button" class="btn btn-fino" onclick="printWeeklySchedule()"><i class="ti ti-printer"></i> ${t('btn.printSchedule')}</button></span>
     </div>
+    ${tabla}${tarjetas}
+    ${calLeyendaHtml()}
   `;
 }
 
@@ -4657,11 +4725,12 @@ function openTurnoModal(id, employeeId, fecha){
   const puedeElegirAlcance = turno && turno.origen === 'fijo' && !!horarioFijoDe(turno.employeeId);
 
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
-      <h3>${state.id ? t('common.edit') : t('common.new')} ${t('hr2.shift')}</h3>
+      <h3><i class="ti ti-calendar-time"></i> ${state.id ? t('common.edit') : t('common.new')} ${t('hr2.shift')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    ${puedeElegirAlcance ? `<div class="manual-warning" style="margin-bottom:10px"><i class="ti ti-repeat"></i> ${t('hr2.followsFixedSchedule')}</div>` : ''}
+    ${puedeElegirAlcance ? `<div class="pr-aviso cal-aviso"><i class="ti ti-repeat"></i><div class="pr-aviso-txt">${t('hr2.followsFixedSchedule')}</div></div>` : ''}
     <div class="field-row">
       <div class="field">
         <label>${t('hr2.employee')}</label>
@@ -4700,7 +4769,7 @@ function openTurnoModal(id, employeeId, fecha){
         </div>
       </div>
     </div>
-    <div id="turno-descanso-msg" style="display:${noHorario?'block':'none'};background:#F3F4F6;border-radius:8px;padding:12px;font-size:13px;color:var(--muted);text-align:center;margin-bottom:10px">
+    <div id="turno-descanso-msg" class="cal-descanso" style="display:${noHorario?'block':'none'}">
       ${t('hr2.noScheduleThisDay')}
     </div>
     <div class="field">
@@ -4708,12 +4777,12 @@ function openTurnoModal(id, employeeId, fecha){
       <input type="text" id="turno-notas" value="${escapeHtml(state.notas||'')}" placeholder="${t('hr2.shiftNotesPh')}">
     </div>
     <div class="modal-footer">
-      ${state.id ? `<button class="owner-only btn btn-danger" onclick="deleteTurno(${state.id})">${t("common.delete")}</button>` : ''}
-      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+      ${state.id ? `<button type="button" class="owner-only btn btn-fino is-off" style="margin-right:auto" onclick="deleteTurno(${state.id})"><i class="ti ti-trash"></i> ${t("common.delete")}</button>` : ''}
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t("common.cancel")}</button>
       ${puedeElegirAlcance ? `
-        <button class="btn" onclick="saveTurno(${state.id}, 'dia')">${t('btn.onlyThisDay')}</button>
-        <button class="btn btn-primary" onclick="saveTurno(${state.id}, 'siempre')">${t('btn.forever')}</button>
-      ` : `<button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">${t("common.save")}</button>`}
+        <button type="button" class="btn btn-fino" onclick="saveTurno(${state.id}, 'dia')">${t('btn.onlyThisDay')}</button>
+        <button type="button" class="btn btn-fino is-on" onclick="saveTurno(${state.id}, 'siempre')">${t('btn.forever')}</button>
+      ` : `<button type="button" class="btn btn-fino is-on" onclick="saveTurno(${state.id||'null'})"><i class="ti ti-check"></i> ${t("common.save")}</button>`}
     </div>
   `);
 }
@@ -5130,33 +5199,18 @@ function horarioFijoDiaRowHtml(i, dia){
   const noHorario = dia.tipo === 'D';
   const isPartido = dia.tipo === 'P';
   return `
-    <div class="field-row" style="align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px">
-      <div class="field" style="flex:0 0 90px">
-        <label>${t('common.day')}</label>
-        <div style="font-weight:700;padding:11px 0">${WEEK_DAYS[i]}</div>
-      </div>
-      <div class="field" style="flex:1;min-width:140px">
-        <label>${t('hr2.shiftType')}</label>
+    <div class="cal-fijo-dia">
+      <div class="cal-fijo-nom">${WEEK_DAYS[i]}</div>
+      <div class="field cal-fijo-tipo">
+        <label for="hf-tipo-${i}">${t('hr2.shiftType')}</label>
         <select id="hf-tipo-${i}" onchange="horarioFijoTipoChanged(${i})">${tipoOptions}</select>
       </div>
-      <div class="field" id="hf-horas-${i}" style="display:${noHorario?'none':'flex'};gap:8px;flex:2;min-width:220px">
-        <div style="flex:1">
-          <label>${t('hr2.clockIn')}</label>
-          <input type="time" id="hf-entrada-${i}" value="${dia.entrada||'09:00'}">
-        </div>
-        <div style="flex:1">
-          <label>${t('hr2.clockOut')}</label>
-          <input type="time" id="hf-salida-${i}" value="${dia.salida||'17:00'}">
-        </div>
-        <div id="hf-partido-${i}" style="display:${isPartido?'flex':'none'};gap:8px;flex:2">
-          <div style="flex:1">
-            <label>${t('hr2.entryAfternoon')}</label>
-            <input type="time" id="hf-entrada2-${i}" value="${dia.entrada2||'16:00'}">
-          </div>
-          <div style="flex:1">
-            <label>${t('hr2.exitAfternoon')}</label>
-            <input type="time" id="hf-salida2-${i}" value="${dia.salida2||'23:00'}">
-          </div>
+      <div class="cal-fijo-horas" id="hf-horas-${i}" style="display:${noHorario?'none':'flex'}">
+        <div class="field"><label for="hf-entrada-${i}">${t('hr2.clockIn')}</label><input type="time" id="hf-entrada-${i}" value="${dia.entrada||'09:00'}"></div>
+        <div class="field"><label for="hf-salida-${i}">${t('hr2.clockOut')}</label><input type="time" id="hf-salida-${i}" value="${dia.salida||'17:00'}"></div>
+        <div class="cal-fijo-partido" id="hf-partido-${i}" style="display:${isPartido?'flex':'none'}">
+          <div class="field"><label for="hf-entrada2-${i}">${t('hr2.entryAfternoon')}</label><input type="time" id="hf-entrada2-${i}" value="${dia.entrada2||'16:00'}"></div>
+          <div class="field"><label for="hf-salida2-${i}">${t('hr2.exitAfternoon')}</label><input type="time" id="hf-salida2-${i}" value="${dia.salida2||'23:00'}"></div>
         </div>
       </div>
     </div>`;
@@ -5216,22 +5270,23 @@ function openHorarioFijoModal(employeeId){
   const patron = hf ? hf.patron : horarioFijoPatronVacio();
 
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
       <h3><i class="ti ti-repeat"></i> ${t('title.fixedSchedule')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p class="muted" style="margin-bottom:12px">${t('hr2.fixedScheduleExplain')}</p>
+    <p class="ml-intro">${t('hr2.fixedScheduleExplain')}</p>
     <div class="field">
       <label>${t('th.employee')}</label>
       <select id="hf-employee" onchange="openHorarioFijoModal(parseInt(this.value))">${empOptions}</select>
     </div>
-    <div id="hf-dias" style="margin-top:12px">
+    <div id="hf-dias" class="cal-fijo">
       ${patron.map((dia,i) => horarioFijoDiaRowHtml(i, dia)).join('')}
     </div>
     <div class="modal-footer">
-      ${hf ? `<button class="btn btn-danger" onclick="quitarHorarioFijo(${empId})">${t('btn.removeFixedSchedule')}</button>` : ''}
-      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="saveHorarioFijo(${empId})">${t("common.save")}</button>
+      ${hf ? `<button type="button" class="btn btn-fino is-off" style="margin-right:auto" onclick="quitarHorarioFijo(${empId})"><i class="ti ti-trash"></i> ${t('btn.removeFixedSchedule')}</button>` : ''}
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t("common.cancel")}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="saveHorarioFijo(${empId})"><i class="ti ti-check"></i> ${t("common.save")}</button>
     </div>
   `);
 }
@@ -5298,8 +5353,9 @@ function openBulkTurnoModal(employeeId){
   const end = new Date(today); end.setDate(today.getDate()+6);
 
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
-      <h3>${t('title.assignShiftsByPeriod')}</h3>
+      <h3><i class="ti ti-calendar-plus"></i> ${t('title.assignShiftsByPeriod')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
@@ -5324,10 +5380,10 @@ function openBulkTurnoModal(employeeId){
       <label>${t('label.notesAppliedToAllDays')}</label>
       <input type="text" id="bulk-notas" placeholder="${t('ph.notesForAllShifts')}">
     </div>
-    <p style="font-size:12px;color:var(--muted)">${t('msg.existingShiftReplaced')}</p>
+    <p class="pr-ayuda">${t('msg.existingShiftReplaced')}</p>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="applyBulkTurno()">${t('common.apply')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t("common.cancel")}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="applyBulkTurno()"><i class="ti ti-check"></i> ${t('common.apply')}</button>
     </div>
   `);
   renderBulkCalendar();
@@ -5365,13 +5421,13 @@ function renderBulkCalendar(){
     const salida2 = existing?.salida2 || '21:00';
 
     html += `
-      <div class="card bulk-day-card" data-date="${ds}" style="margin-bottom:8px;padding:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+      <div class="bulk-day-card cal-bulk-dia" data-date="${ds}">
+        <div class="cal-bulk-cab">
           <strong>${weekDayFull(dow)} ${cursor.getDate()}/${cursor.getMonth()+1}</strong>
-          <label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="bulk-day-festivo" ${isFestivo?'checked':''} onchange="toggleBulkDayFields(this)"> ${t('label.holiday')}</label>
+          <label class="cal-bulk-chk"><input type="checkbox" class="bulk-day-festivo" ${isFestivo?'checked':''} onchange="toggleBulkDayFields(this)"> ${t('label.holiday')}</label>
         </div>
         <div class="bulk-day-fields" style="${isFestivo?'display:none':''}">
-          <label style="display:flex;align-items:center;gap:4px;font-size:13px;margin-bottom:6px"><input type="checkbox" class="bulk-day-partido" ${isPartido?'checked':''} onchange="toggleBulkDayFields(this)"> ${t('label.splitShift2Legs')}</label>
+          <label class="cal-bulk-chk"><input type="checkbox" class="bulk-day-partido" ${isPartido?'checked':''} onchange="toggleBulkDayFields(this)"> ${t('label.splitShift2Legs')}</label>
           <div class="field-row bulk-day-seguido" style="${isPartido?'display:none':''}">
             <select class="bulk-day-tipo">${bulkTipoOptions(tipo)}</select>
             <input type="time" class="bulk-day-entrada" value="${entrada}">

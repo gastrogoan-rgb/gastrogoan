@@ -299,6 +299,7 @@ await caso('Sala reparte rangos donde cocina reparte platos', async ()=>{
     document.body.classList.add('owner-session');
     navigate('distribucion');
     renderDistDetail();
+    openDistCargo(501);   // «a su cargo» vive en una ventana: ahí están los mandos de repartir
     const input = document.getElementById('dist-rango-input');
     const haySelectorPlatos = !!document.getElementById('dist-plato-sel');
     if(input){ input.value = 'Mesas 1-8'; addDistRango(); }
@@ -322,6 +323,7 @@ await caso('Cocina sigue repartiendo platos, no rangos', async ()=>{
     distCurrentEmployeeId = 502;
     navigate('distribucion');
     renderDistDetail();
+    openDistCargo(502);
     return {hayRango: !!document.getElementById('dist-rango-input'), hayPlato: !!document.getElementById('dist-plato-sel')};
   });
   assert.ok(!r.hayRango, 'cocina no debería ver los rangos de sala');

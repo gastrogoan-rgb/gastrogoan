@@ -82,10 +82,10 @@ for(const ancho of [1280, 360]){
     const r = await q(() => ({turno: document.querySelector('.dp-hoy .dp-horas')?.textContent.trim(), dias: document.querySelectorAll('.dp-tira .dp-dia').length,
       sel: document.querySelectorAll('.dp-tira .dp-dia.is-sel').length, hoy: document.querySelectorAll('.dp-tira .dp-dia.is-hoy').length,
       tareas: [...document.querySelectorAll('#dp-dia-panel .dp-txt')].map(x => x.textContent.trim()), prog: document.querySelector('.dp-prog-t').textContent.replace(/\s+/g, ' ').trim(),
-      cargo: [...document.querySelectorAll('.dp-cargo-nom')].map(x => x.textContent.trim())}));
+      tiles: [...document.querySelectorAll('.dp-tile')].map(x => x.querySelector('.dp-tile-txt small').textContent.trim())}));
     assert.equal(r.turno, '08:00–16:00'); assert.equal(r.dias, 7); assert.equal(r.sel, 1); assert.equal(r.hoy, 1);
     assert.deepEqual(r.tareas.sort(), ['Pedir harina', 'Preparar la bechamel', 'Rebozar y freír']);
-    assert.ok(/0.*3/.test(r.prog), r.prog); assert.deepEqual(r.cargo, ['Croquetas de jamón']);
+    assert.ok(/0.*3/.test(r.prog), r.prog); assert.equal(r.tiles.length, 2, JSON.stringify(r.tiles)); assert.ok(/1 plato/.test(r.tiles[0]), 'el botón de «a su cargo» resume lo que hay: ' + r.tiles[0]);
   });
 
   await caso(`Marcar una tarea sube el avance de hoy, y lo marcado en la lista cuenta en la tira de la semana (${ancho}px)`, async () => {
@@ -130,11 +130,80 @@ for(const ancho of [1280, 360]){
     assert.ok(await q(() => getDistEmpData(1).produccion[(new Date().getDay() + 6) % 7].some(x => x.text === 'Preparar la bechamel espesa')));
   });
 
-  await caso(`Lo que lleva a cargo es un acceso directo a la ficha, y avisa si ya no existe (${ancho}px)`, async () => {
-    await q(() => { getDistEmpData(1).platos.push('Plato borrado'); renderDistDetail(); });
-    const r = await q(() => ({roto: document.querySelectorAll('.dp-cargo.is-roto').length, enlaces: document.querySelectorAll('.dp-cargo[role="button"]').length}));
-    assert.equal(r.roto, 1); assert.equal(r.enlaces, 1);
-    await q(() => { getDistEmpData(1).platos = ['Croquetas de jamón']; renderDistDetail(); });
+  await caso(`«A su cargo» es un botón: abre la lista entera y cada plato se lee ahí mismo, sin ir a la ficha (${ancho}px)`, async () => {
+    await q(() => {
+      DB.ingredients = [{id:1, name:'Harina', unit:'kg', allergens:['Gluten'], area:'cocina'}, {id:2, name:'Jamón', unit:'kg', allergens:[], area:'cocina'}];
+      DB.recipes = [{id:900, name:'Croquetas de jamón', area:'cocina', comensales:4, ingredients:[{type:'ing', ingredientId:1, qty:0.2}, {type:'ing', ingredientId:2, qty:0.15}], steps:[]},
+        {id:901, name:'Bechamel', isBase:true, area:'cocina', comensales:10, ingredients:[{type:'ing', ingredientId:1, qty:0.5}], steps:[]}];
+      DB.fichas = [{id:910, recipeId:900, area:'cocina', pasos:['Hacer la bechamel', 'Rebozar y freír'], pasosDet:[{min:20}, {temp:'180 °C', aviso:'Aceite muy caliente'}]}];
+      getDistEmpData(1).platos = ['Croquetas de jamón']; getDistEmpData(1).platos.push('Plato borrado'); renderDistDetail();
+    });
+    const antes = await q(() => ({vista: document.querySelector('.view.active').id, lista: document.querySelectorAll('.dp-col-lado .dp-cargo').length}));
+    assert.equal(antes.lista, 0, 'ya no hay una lista larga en la columna');
+    await q(() => document.querySelector('.dp-tile').click()); await esperar(250);
+    const r = await q(() => ({chips: [...document.querySelectorAll('#dp-cargo-modal .dp-chip')].map(c => c.textContent.trim()), roto: document.querySelectorAll('#dp-cargo-modal .dp-chip.is-roto').length,
+      sel: document.querySelector('#dp-cargo-modal .dp-chip.is-sel')?.textContent.trim(), ings: [...document.querySelectorAll('#dp-cargo-modal .dp-ings li')].map(l => l.textContent.replace(/\s+/g, ' ').trim()),
+      pasos: document.querySelectorAll('#dp-cargo-modal .dp-pasos li').length, aviso: document.querySelector('#dp-cargo-modal .fi-ojo')?.textContent.includes('Aceite muy caliente'), alerg: document.querySelector('#dp-cargo-modal .dp-det-alerg')?.textContent.trim(),
+      nuevo: document.getElementById('modal-box').classList.contains('ds-nuevo'), vista: document.querySelector('.view.active').id}));
+    assert.ok(r.chips.length === 2 && r.roto === 1, JSON.stringify(r)); assert.ok(/Croquetas/.test(r.sel), r.sel);
+    assert.equal(r.ings.length, 2, JSON.stringify(r.ings)); assert.equal(r.pasos, 2); assert.ok(r.aviso); assert.ok(/Gluten/.test(r.alerg), r.alerg);
+    assert.ok(r.nuevo && r.vista === 'view-distribucion', 'sigue en la misma pantalla: ' + r.vista);
+    // Pulsar el plato borrado avisa de que ya no existe, sin salir de la ventana
+    await q(() => [...document.querySelectorAll('#dp-cargo-modal .dp-chip')].find(c => /borrado/.test(c.textContent)).click()); await esperar(150);
+    assert.ok(/Ya no existe/.test(await q(() => document.querySelector('#dp-cargo-modal .dp-detalle').textContent)));
+    await q(() => closeModal());
+  });
+
+  await caso(`Las elaboraciones también se asignan, se leen en la misma ventana y se quitan (${ancho}px)`, async () => {
+    await q(() => openDistCargo(1)); await esperar(250);
+    const opc = await q(() => [...document.querySelectorAll('#dist-plato-sel optgroup')].map(g => g.label + ':' + g.querySelectorAll('option').length));
+    assert.ok(opc.some(o => /Elaboraciones:1/.test(o)), JSON.stringify(opc));
+    await q(() => { document.getElementById('dist-plato-sel').value = 'elab:Bechamel'; addDistPlato(); }); await esperar(300);
+    const r = await q(() => ({elabs: getDistEmpData(1).elabs, sel: document.querySelector('#dp-cargo-modal .dp-chip.is-sel')?.textContent.trim(), grupos: document.querySelectorAll('#dp-cargo-modal .dp-grupo').length,
+      ing: document.querySelector('#dp-cargo-modal .dp-ings li')?.textContent.replace(/\s+/g, ' ').trim(), tile: document.querySelector('.dp-tile-txt small').textContent.trim()}));
+    assert.deepEqual(r.elabs, ['Bechamel']); assert.ok(/Bechamel/.test(r.sel)); assert.equal(r.grupos, 2); assert.ok(/Harina/.test(r.ing), r.ing); assert.ok(/1 elaboración/.test(r.tile), r.tile);
+    await q(() => closeModal());
+    await q(() => { getDistEmpData(1).platos = ['Croquetas de jamón']; getDistEmpData(1).elabs = []; renderDistDetail(); });
+  });
+
+  await caso(`Cada tarea dice quién la puso: el jefe, o el propio empleado (${ancho}px)`, async () => {
+    const r = await q(() => { const idx = (new Date().getDay() + 6) % 7; getDistEmpData(1).tareasUnicas[todayStr()].push({id:'t77', text:'La que me puse yo', bySelf:true}); renderDistDetail();
+      const fila = txt => [...document.querySelectorAll('#dp-dia-panel .dp-tarea')].find(f => f.textContent.includes(txt));
+      return {mia: fila('La que me puse yo').querySelector('.dp-origen')?.className, miaFila: fila('La que me puse yo').classList.contains('es-mia'), jefe: fila('Pedir harina').querySelector('.dp-origen')?.className, jefeTxt: fila('Pedir harina').querySelector('.dp-origen')?.textContent.trim(), miaTxt: fila('La que me puse yo').querySelector('.dp-origen')?.textContent.trim()}; });
+    assert.ok(/mia/.test(r.mia) && r.miaFila && /jefe/.test(r.jefe), JSON.stringify(r)); assert.ok(/por ti/i.test(r.jefeTxt) && /Ana/.test(r.miaTxt), 'el propietario ve «por ti» y «por Ana»: ' + JSON.stringify(r));
+    await q(() => { getDistEmpData(1).tareasUnicas[todayStr()] = getDistEmpData(1).tareasUnicas[todayStr()].filter(x => x.id !== 't77'); });
+  });
+
+  await caso(`Marcar una tarea es directo; desmarcarla pregunta antes (${ancho}px)`, async () => {
+    // Marcar: sin preguntas.
+    await q(() => { const c = [...document.querySelectorAll('#dp-dia-panel .dp-tarea')].find(f => f.textContent.includes('Pedir harina')).querySelector('input'); c.click(); });
+    await esperar(200);
+    assert.equal(await q(() => !!getDistEmpData(1).doneDates[todayStr()]?.t3), true);
+    // Desmarcar: sale la pregunta; si se dice que no, sigue hecha.
+    await q(() => { const c = [...document.querySelectorAll('#dp-dia-panel .dp-tarea')].find(f => f.textContent.includes('Pedir harina')).querySelector('input'); c.click(); });
+    await esperar(250);
+    const pregunta = await q(() => ({abierta: !!document.getElementById('modal-box') && /desmarcar|untick/i.test(document.getElementById('modal-box').textContent), aun: !!getDistEmpData(1).doneDates[todayStr()]?.t3}));
+    assert.ok(pregunta.abierta && pregunta.aun, JSON.stringify(pregunta));
+    await q(() => { const b = [...document.querySelectorAll('#modal-box button')].find(x => /cancel|no/i.test(x.textContent) && !/^s[ií]/i.test(x.textContent.trim())); if(b) b.click(); }); await esperar(250);
+    assert.equal(await q(() => !!getDistEmpData(1).doneDates[todayStr()]?.t3), true, 'al decir que no, sigue hecha');
+    assert.equal(await q(() => document.querySelector('#dp-dia-panel .dp-tarea:has(input:checked)') !== null), true, 'y la casilla vuelve a verse marcada');
+    await q(() => { const c = [...document.querySelectorAll('#dp-dia-panel .dp-tarea')].find(f => f.textContent.includes('Pedir harina')).querySelector('input'); c.click(); });
+    await esperar(250);
+    await q(() => { const b = [...document.querySelectorAll('#modal-box button')].find(x => /^(s[ií]|aceptar|confirm|ok|yes)/i.test(x.textContent.trim()) || /btn-primary|is-on/.test(x.className)); if(b) b.click(); }); await esperar(250);
+    assert.equal(await q(() => !!getDistEmpData(1).doneDates[todayStr()]?.t3), false, 'al confirmar, queda pendiente');
+  });
+
+  await caso(`Las cuentas de tareas se ven en verde si está todo hecho y en rojo si queda algo atrasado (${ancho}px)`, async () => {
+    const r = await q(() => { const d = getDistEmpData(1); const hoy = todayStr(); const idx = (new Date().getDay() + 6) % 7;
+      const ids = [...(d.produccion[idx]||[]).map(x => x.id), ...(d.tareasUnicas[hoy]||[]).map(x => x.id)];
+      d.doneDates[hoy] = Object.fromEntries(ids.map(i => [i, true])); renderDistDetail();
+      const verde = {cuenta: document.querySelector('.dp-dia-cuenta').className, tira: document.querySelector('.dp-dia.is-sel .dp-dia-c').className, prog: document.querySelector('.dp-prog-t').className};
+      const ayer = addDaysStr(hoy, -1); const iAyer = (new Date(ayer + 'T12:00:00').getDay() + 6) % 7;
+      d.tareasUnicas[ayer] = [{id:'ayer1', text:'Se quedó sin hacer', bySelf:false}]; renderDistDetail();
+      const rojo = document.querySelector('.dp-tira .dp-dia-c.mal') ? true : false;
+      d.tareasUnicas[ayer] = []; d.doneDates[hoy] = {}; renderDistDetail();
+      return {verde, rojo}; });
+    assert.ok(/ok/.test(r.verde.cuenta) && /ok/.test(r.verde.tira) && /ok/.test(r.verde.prog), JSON.stringify(r.verde)); assert.ok(r.rojo, 'el día pasado con algo sin hacer, en rojo');
   });
 
   await caso(`El propietario escribe el manual (plantilla, frase propia, orden) y cada cambio sube la versión (${ancho}px)`, async () => {
@@ -157,8 +226,8 @@ for(const ancho of [1280, 360]){
 
   await caso(`El manual aparece «sin leer» al propietario hasta que el empleado lo confirma (${ancho}px)`, async () => {
     await q(() => { dpManualEdit = null; renderDistDetail(); });
-    const r = await q(() => document.querySelector('.dp-manual .dp-man-estado').textContent.trim().toLowerCase());
-    assert.ok(/sin leer|not read|sense llegir/.test(r), r);
+    const r = await q(() => document.querySelectorAll('.dp-tile')[1].querySelector('small').textContent.trim().toLowerCase());
+    assert.ok(/por leer|sin leer|unread|per llegir/.test(r), r);
   });
 
   await caso(`Ventanas de Mi puesto con el diseño nuevo y sin desbordes (${ancho}px)`, async () => {
@@ -251,12 +320,12 @@ for(const ancho of [1280, 360]){
     const antes = await q(() => ({boton: [...document.querySelectorAll('#modal-box .btn')].some(b => /He leído|I have read|He llegit/.test(b.textContent)), secciones: document.querySelectorAll('#modal-box .dp-man-sec').length}));
     assert.ok(antes.boton && antes.secciones >= 3, JSON.stringify(antes));
     await q(() => dpManualConfirmar(1)); await esperar(200);
-    const leido = await q(() => ({v: getDistEmpData(1).manualLeido?.version, man: getDistEmpData(1).manual.version, chip: document.querySelector('.dp-manual .dp-man-estado').textContent.toLowerCase()}));
-    assert.equal(leido.v, leido.man); assert.ok(/leído|read on|llegit/.test(leido.chip), leido.chip);
+    const leido = await q(() => ({v: getDistEmpData(1).manualLeido?.version, man: getDistEmpData(1).manual.version, chip: document.querySelectorAll('.dp-tile')[1].querySelector('small').textContent.toLowerCase()}));
+    assert.equal(leido.v, leido.man); assert.ok(/^(leído|read|llegit)/.test(leido.chip), leido.chip);
     await q(() => { document.body.classList.add('owner-session'); localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()})); getDistEmpData(1).manual.items.push({id:777, tipo:'norma', titulo:'Norma nueva', texto:''}); dpManualTocar(getDistEmpData(1)); });
     await comoEmpleado(page, 1);
     await q(() => renderDistDetail());
-    const cambiado = await q(() => document.querySelector('.dp-manual .dp-man-estado').textContent.toLowerCase());
+    const cambiado = await q(() => document.querySelectorAll('.dp-tile')[1].querySelector('small').textContent.toLowerCase());
     assert.ok(/cambiado|changed|canviat/.test(cambiado), cambiado);
   });
 
