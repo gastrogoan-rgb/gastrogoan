@@ -640,7 +640,7 @@ Elegidas entre cinco propuestas (https://claude.ai/artifact/N1GNS33J75CtqnTZ4WKB
 
 ## Rediseño pantalla a pantalla (29-30/10): cómo se hace y qué hay hecho
 
-El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos, Stock, Personal y Distribución del Trabajo («Mi puesto»)**.
+El dueño guía una pantalla cada vez. Hechas: **Comandas Cocina, Oferta Gastronómica, I+D, Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos, Stock, Personal (con su Calendario), Distribución del Trabajo («Mi puesto») y Plan de Limpieza** — con eso, **la carpeta Cocina está entera con el diseño nuevo**.
 La orden de fondo, dicha tras ver que se tocaba solo la pantalla principal: **cuando se rediseña una pantalla se
 abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueba `test/subpantallas.mjs` lo exige).
 
@@ -726,6 +726,21 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   **Manual del puesto** (`d.manual = {items:[{id,tipo,titulo,texto}], version}` y `d.manualLeido = {version, ts}`): lo escribe SOLO el propietario (obligaciones,
   responsabilidades, normas, consejos; plantilla por área); cada cambio sube la versión y el empleado vuelve a ver «por leer» hasta confirmar. Se
   imprime con casilla de firma. Firebase no guarda `[]`: `getDistEmpData` repone `manual.items`. Prueba: `test/mi-puesto.mjs`.
+  **2.ª pasada (31/10, tras usarlo el dueño)**: «a su cargo» y «manual» son **botones** (`.dp-tile`), no listas que crecen: «a su cargo» abre UNA ventana
+  (`openDistCargo`) con todos los platos y **elaboraciones** (`d.elabs`) como botones y, al elegir uno, **su receta se lee ahí mismo** (alérgenos, ingredientes a la
+  producción de la ficha, paso a paso con minutos/temperatura/«ojo») sin ir a la ficha técnica y volver; el propietario asigna y quita desde esa ventana
+  (`#dist-plato-sel` mezcla `plato:`/`elab:`). La columna derecha se quedó en botones + próximos turnos + nota para que no se alargue más que la lista del día;
+  **Accesos rápidos se quitó a propósito**. **Cada tarea dice quién la puso** (`.dp-origen`: «Puesta por el jefe» en tinta, «Puesta por mí» en verde con la fila clara;
+  el propietario ve «por ti» / «por Ana»). **Marcar es directo; DESMARCAR pregunta** (`dpConfirmarDesmarcar`, también en limpieza y promos). Las cuentas «hechas / total»
+  van **en verde si está todo hecho y en rojo si queda algo de un día pasado** (`dpEstadoCuenta`).
+- **Calendario de Horarios** (31/10, js/hr.js, `renderHorariosDia/Semana/Mes`): **Día** = resumen (trabajan, horas, descansan, sin turno), **línea de horas** con una barra por empleado (el
+  partido, en dos tramos) y «personal por hora» para ver si el turno de comidas va corto; **Semana** = tabla con totales y «trabajan» por día en PC y **una tarjeta por empleado** en móvil;
+  **Mes** = rejilla con el selector de periodo común (`ggPeriodoHtml`, cuenta los turnos de cada mes) y «días sin nadie». Sigue siendo VISTA: un turno nuevo se asigna desde la ficha del
+  empleado, nunca desde una casilla vacía. Prueba: `test/calendario.mjs`.
+- **Plan de Limpieza** (31/10, js/app.js): **arriba, siempre, el estado de hoy** (`limpiezaEstadoHoy`: apertura, cierre, tareas hechas, temperaturas fuera de rango, mantenimiento vencido; cada cifra
+  lleva a su pestaña y se repinta sola con `lpRefrescarResumen`). Protocolos con pasos editables en su sitio (subir/bajar/quitar en el ⋯) y el cumplimiento de los últimos tres días
+  (es lo que se conserva); tareas en día/semana/mes; **temperaturas con una tarjeta por equipo** (última lectura, fuera de rango, «sin lectura hoy»; pulsarla prepara el formulario);
+  alérgenos con buscador y «platos SIN un alérgeno»; mantenimiento en tarjetas. Un empleado sin edición sigue pudiendo anotar temperaturas pero no borrar. Prueba: `test/limpieza.mjs`.
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,

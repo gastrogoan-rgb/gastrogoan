@@ -152,7 +152,7 @@ await caso('Solo 2 pestañas en Horarios (Personal y Calendario), con Día/Seman
     setHorariosTab('personal');
     const tabsPersonal = [...document.querySelectorAll('#horarios-content .hr-tabs .left button')].map(b => b.textContent.trim());
     setHorariosTab('calendario');
-    const toggle = [...document.querySelectorAll('#horarios-content .view-toggle button')].map(b => b.textContent.trim());
+    const toggle = [...document.querySelectorAll('#horarios-content .cal-modos button')].map(b => b.textContent.trim());
     return {tabsPersonal, toggle};
   });
   assert.equal(r.tabsPersonal.length, 2, 'deben ser solo 2 pestañas arriba: ' + JSON.stringify(r.tabsPersonal));

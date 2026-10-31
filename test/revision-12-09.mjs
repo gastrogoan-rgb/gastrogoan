@@ -67,7 +67,7 @@ await caso('Mantenimiento: responsable y notas muestran el texto entero, sin cor
       notas:'Limpieza semestral obligatoria por normativa', zona:'cocina'}];
     navigate('limpieza'); setLimpiezaTab('mantenimiento');
     await new Promise(r=>setTimeout(r,700));
-    return [...document.querySelectorAll('#limpieza-tab-content tbody input[type=text]')]
+    return [...document.querySelectorAll('#limpieza-tab-content .lp-eq input[type=text]')]
       .map(i => ({valor: i.value, cabe: i.scrollWidth <= i.clientWidth + 2, ancho: Math.round(i.getBoundingClientRect().width)}));
   });
   assert.equal(r.length, 2, 'deben estar los dos campos (responsable y notas)');

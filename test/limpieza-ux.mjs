@@ -23,7 +23,10 @@ function caso(nombre, fn){
 caso('Cada paso del lavado de manos es un textarea (envuelve el texto largo)', () => {
   const m = app.match(/function renderLimpiezaManos\(\)\{[\s\S]*?\n\}/);
   assert.ok(m, 'no se encontró renderLimpiezaManos');
-  assert.ok(m[0].includes('<textarea') , 'sigue usando <input> de una sola línea para cada paso');
+  // Cada paso lo pinta lpPasoHtml: con «largo» es un textarea, y el lavado de manos lo pide.
+  const paso = app.match(/function lpPasoHtml\([^)]*\)\{[\s\S]*?\n\}/);
+  assert.ok(paso && paso[0].includes('<textarea'), 'lpPasoHtml ya no tiene la variante textarea');
+  assert.ok(/lpPasoHtml\([^\n]*true\)/.test(m[0]), 'el lavado de manos debe pedir el paso largo (textarea), no el de una línea');
 });
 
 caso('Ya no se compara el lavado de manos con cantar Cumpleaños feliz', () => {

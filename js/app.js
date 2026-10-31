@@ -120,18 +120,45 @@ function getAllDishAllergens(){
   });
   return [...porNombre.values()].sort((a,b) => a.name.localeCompare(b.name));
 }
+let lpAlergBusca = '', lpAlergSin = '';
+function lpAlergFiltro(campo, v){
+  if(campo === 'q') lpAlergBusca = v.toLowerCase(); else lpAlergSin = v;
+  renderLimpiezaAlergenos();
+  if(campo === 'q'){ const c = document.getElementById('lp-alerg-q'); if(c){ c.focus(); const n = c.value.length; try{ c.setSelectionRange(n, n); }catch(e){} } }
+}
+function printAlergenos(){
+  const dishes = getAllDishAllergens();
+  const title = t('title.dishAllergensOverview');
+  const body = `${printReportHeaderHtml(title)}<table><thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead><tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td>${d.allergens.map(a => escapeHtml(a)).join(' · ')}</td></tr>`).join('')}</tbody></table>`;
+  printReportWindow(title, body);
+}
 function renderLimpiezaAlergenos(){
   const box = document.getElementById('limpieza-tab-content');
-  const dishes = getAllDishAllergens();
+  const todos = getAllDishAllergens();
+  const lista = [...new Set(todos.flatMap(d => d.allergens))].sort((a,b) => a.localeCompare(b));
+  if(lpAlergSin && !lista.includes(lpAlergSin)) lpAlergSin = '';
+  let dishes = todos;
+  if(lpAlergBusca) dishes = dishes.filter(d => d.name.toLowerCase().includes(lpAlergBusca));
+  if(lpAlergSin) dishes = dishes.filter(d => !d.allergens.includes(lpAlergSin));
   box.innerHTML = `
-    <div class="card">
-      <h3><i class="ti ti-alert-triangle"></i> ${t('title.dishAllergensOverview')}</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('msg.dishAllergensOverviewDesc')}</p>
-      ${dishes.length ? `<div class="table-wrap"><table>
-        <thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
-        <tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td class="wrap">${d.allergens.map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
-      </table></div>` : `<div class="empty" style="padding:14px">${t('empty.noDishesForAllergens')}</div>`}
+    <div class="lp-barra">
+      <div class="lp-filtros">
+        <input type="text" class="search-input st-buscar" id="lp-alerg-q" value="${escapeHtml(lpAlergBusca)}" placeholder="${escapeHtml(gl({es:'Buscar plato…', ca:'Cercar plat…', en:'Search dish…'}))}" oninput="lpAlergFiltro('q', this.value)" aria-label="${escapeHtml(t('label.dishElaboration'))}">
+        <select id="lp-alerg-sin" onchange="lpAlergFiltro('sin', this.value)" aria-label="${escapeHtml(gl({es:'Platos sin un alérgeno', ca:'Plats sense un al·lergen', en:'Dishes without an allergen'}))}">
+          <option value="">${gl({es:'Todos los platos', ca:'Tots els plats', en:'All dishes'})}</option>
+          ${lista.map(a => `<option value="${escapeHtml(a)}"${lpAlergSin === a ? ' selected' : ''}>${gl({es:'Sin ', ca:'Sense ', en:'Without '})}${escapeHtml(allergenLabel(a))}</option>`).join('')}
+        </select>
+      </div>
+      <button type="button" class="btn btn-fino" onclick="printAlergenos()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
     </div>
+    <section class="lp-card">
+      <h3 class="dp-h"><i class="ti ti-alert-triangle"></i> ${t('title.dishAllergensOverview')} <span class="dp-cuenta">${dishes.length}</span></h3>
+      <p class="pr-ayuda">${t('msg.dishAllergensOverviewDesc')}</p>
+      ${dishes.length ? `<div class="table-wrap"><table class="table-cards">
+        <thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
+        <tbody>${dishes.map(d => `<tr><td data-label="${escapeHtml(t('label.dishElaboration'))}">${escapeHtml(d.name)}</td><td class="wrap" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
+      </table></div>` : `<div class="empty es-vacio">${lpAlergSin || lpAlergBusca ? t('common.noResults') : t('empty.noDishesForAllergens')}</div>`}
+    </section>
   `;
 }
 // Pasos de lavado de manos, separados por área igual que el protocolo de
@@ -251,6 +278,36 @@ function pruneLimpiezaLogs(){
   if(changed) saveDB();
 }
 
+/* ============== Plan de Limpieza, diseño nuevo (31/10) ==============
+   Arriba, SIEMPRE, el estado de hoy: lo que una inspección pregunta primero (¿se abrió y se cerró con el protocolo?, ¿se tomaron
+   las temperaturas?, ¿está la limpieza del día hecha?, ¿hay algo de mantenimiento vencido?). Cada cifra lleva a su pestaña. */
+function limpiezaEstadoHoy(){
+  const area = currentArea();
+  const hoy = todayStr();
+  const reg = key => (DB.limpieza[key]||[]).find(e => e.fecha === hoy && (e.area||'cocina') === area) || null;
+  const tareasHoy = limpiezaTareasParaDia(new Date());
+  const checks = limpiezaChecksFor(limpiezaMonthKeyFor(new Date()));
+  const hechas = tareasHoy.filter(tk => limpiezaCheckInfo(checks, tk.id)).length;
+  const temps = (DB.limpieza.temperaturas||[]).filter(e => (e.zona||'cocina') === area && e.fecha === hoy);
+  const tempNok = temps.filter(e => e.estado === 'NOK').length;
+  const equipos = (DB.limpieza.mantenimiento||[]).filter(e => (e.zona||'cocina') === area);
+  const vencidos = equipos.filter(e => limpiezaMantenimientoDueStatus(e) === 'overdue').length;
+  const proximos = equipos.filter(e => limpiezaMantenimientoDueStatus(e) === 'soon').length;
+  return {apertura: reg('aperturaLog'), cierre: reg('cierreLog'), tareas: tareasHoy.length, hechas, temps: temps.length, tempNok, vencidos, proximos};
+}
+function lpResumenHtml(){
+  const h = limpiezaEstadoHoy();
+  const celda = (tab, et, v, sub, clase) => `<button type="button" class="st-cel st-cel-btn${clase ? ' ' + clase : ''}" onclick="setLimpiezaTab('${tab}')"><span class="st-cel-et">${et}</span><span class="st-cel-v">${v}</span>${sub ? `<span class="st-cel-s">${sub}</span>` : ''}</button>`;
+  const reg = e => e ? `${gl({es:'Registrado', ca:'Registrat', en:'Logged'})} ${escapeHtml(e.hora||'')}` : gl({es:'Pendiente', ca:'Pendent', en:'Pending'});
+  return `
+    <div class="st-resumen lp-resumen">
+      ${celda('protocolo', t('title.openingProtocol'), h.apertura ? '<i class="ti ti-circle-check"></i>' : '—', reg(h.apertura), h.apertura ? 'is-ok' : '')}
+      ${celda('protocolo', t('title.closingProtocol'), h.cierre ? '<i class="ti ti-circle-check"></i>' : '—', reg(h.cierre), h.cierre ? 'is-ok' : '')}
+      ${celda('mes', t('tab.monthlyCleaning'), h.tareas ? `${h.hechas}/${h.tareas}` : '—', h.tareas ? gl({es:'tareas de hoy', ca:'tasques d\'avui', en:'today\'s tasks'}) : gl({es:'nada para hoy', ca:'res per avui', en:'nothing today'}), h.tareas && h.hechas === h.tareas ? 'is-ok' : '')}
+      ${celda('temperaturas', t('tab.temperatures'), h.temps, h.tempNok ? `${h.tempNok} ${gl({es:'fuera de rango', ca:'fora de rang', en:'out of range'})}` : gl({es:'lecturas hoy', ca:'lectures avui', en:'readings today'}), h.tempNok ? 'is-bajo' : '')}
+      ${celda('mantenimiento', t('tab.maintenance'), h.vencidos + h.proximos, h.vencidos ? `${h.vencidos} ${gl({es:'vencidos', ca:'vençuts', en:'overdue'})}` : h.proximos ? gl({es:'vencen pronto', ca:'vencen aviat', en:'due soon'}) : gl({es:'al día', ca:'al dia', en:'up to date'}), h.vencidos ? 'is-bajo' : '')}
+    </div>`;
+}
 function renderLimpieza(){
   ensureLimpiezaData();
   const isSala = currentArea()==='sala';
@@ -260,13 +317,13 @@ function renderLimpieza(){
   if(subtitleEl) subtitleEl.textContent = isSala ? t('view.limpieza.subtitle.sala') : t('view.limpieza.subtitle');
   const box = document.getElementById('limpieza-content');
   box.innerHTML = `
-    <nav class="ge-tab-row" id="limpieza-tabs-row">
-      ${LIMPIEZA_TABS.map(tb => `<button class="ge-tab ${limpiezaTab===tb?'active':''}" onclick="setLimpiezaTab('${tb}')">${limpiezaTabLabel(tb)}</button>`).join('')}
-    </nav>
+    ${lpResumenHtml()}
+    <div class="toolbar es-tabs lp-tabs" id="limpieza-tabs-row"><div class="left">
+      ${LIMPIEZA_TABS.map(tb => `<button type="button" class="btn btn-sm btn-fino ge-tab${limpiezaTab===tb?' is-on active':''}" aria-pressed="${limpiezaTab===tb}" onclick="setLimpiezaTab('${tb}')">${limpiezaTabLabel(tb)}</button>`).join('')}
+    </div></div>
     <div id="limpieza-tab-content"></div>
   `;
   renderLimpiezaTab();
-  scrollActiveTabIntoView(document.getElementById('limpieza-tabs-row'));
 }
 function setLimpiezaTab(tab){ limpiezaTab = tab; renderLimpieza(); scrollContentToTop(); }
 function renderLimpiezaTab(){
@@ -279,32 +336,50 @@ function renderLimpiezaTab(){
     case 'plagas': renderLimpiezaLog('plagas'); break;
     case 'mantenimiento': renderLimpiezaMantenimiento(); break;
   }
+  lpRefrescarResumen();
+}
+// Las cifras de arriba cambian con lo que se registra en cualquier pestaña: cada una de ellas lo llama al terminar de pintarse.
+function lpRefrescarResumen(){
+  const r = document.querySelector('#limpieza-content .lp-resumen');
+  if(r) r.outerHTML = lpResumenHtml();
 }
 
+// Un paso numerado de un protocolo: el texto se edita en su sitio (si hay permiso) y subir / bajar / quitar viven en el ⋯.
+function lpPasoHtml(i, total, texto, fnCambiar, fnMover, fnQuitar, largo){
+  const campo = largo
+    ? `<textarea class="lp-paso-txt" rows="2" oninput="${fnCambiar}" ${editUnlocked?'':'readonly'} aria-label="${escapeHtml(t('label.newStep') + ' ' + (i+1))}">${escapeHtml(texto)}</textarea>`
+    : `<input type="text" class="lp-paso-txt" value="${escapeHtml(texto)}" onchange="${fnCambiar}" ${editUnlocked?'':'readonly'} aria-label="${escapeHtml(t('label.newStep') + ' ' + (i+1))}">`;
+  return `
+    <div class="lp-paso">
+      <span class="lp-num">${i+1}</span>
+      ${campo}
+      ${ggMenuAcciones([
+        i > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:fnMover(-1), estricto:true} : null,
+        i < total - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:fnMover(1), estricto:true} : null,
+        total > 1 ? {icono:'ti-trash', texto:t('common.delete'), fn:fnQuitar, peligro:true, estricto:true} : null
+      ], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}
+    </div>`;
+}
 function renderLimpiezaManos(){
   const box = document.getElementById('limpieza-tab-content');
   const pasos = limpiezaManosPasos();
   box.innerHTML = `
-    <div class="grid grid-2">
-      <div class="card">
-        <h3 style="justify-content:space-between"><span><i class="ti ti-droplet"></i> ${t('title.handWashingProtocol')}</span><button class="btn btn-sm" onclick="printManosProtocolo()"><i class="ti ti-printer"></i></button></h3>
-        ${pasos.map((p,i) => `
-          <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap">
-            <div class="step-num">${i+1}</div>
-            <textarea style="flex:1;min-width:140px;resize:vertical" oninput="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>${escapeHtml(p)}</textarea>
-            <div class="owner-strict" style="display:flex;gap:2px;margin-left:auto">
-              ${reorderButtons(`moveManosPaso(${i},-1)`, `moveManosPaso(${i},1)`, i===0, i===pasos.length-1)}
-              <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
-            </div>
+    <div class="lp-dos">
+      <section class="lp-card">
+        <div class="lp-card-cab">
+          <h3 class="dp-h"><i class="ti ti-droplet"></i> ${t('title.handWashingProtocol')}</h3>
+          <div class="lp-card-bt">
+            <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('common.print'))}" aria-label="${escapeHtml(t('common.print'))}" onclick="printManosProtocolo()"><i class="ti ti-printer"></i></button>
+            ${ggMenuAcciones([{icono:'ti-restore', texto:t('btn.resetToDefault'), fn:'resetManosPasos()', estricto:true}], {clase:'btn btn-fino mn-btn pr-ico', tip:true, etiqueta:gl({es:'Más opciones', ca:'Més opcions', en:'More options'})})}
           </div>
-        `).join('')}
-        <button class="owner-strict btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
-        <button class="owner-strict btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetManosPasos()"><i class="ti ti-restore"></i> ${t('btn.resetToDefault')}</button>
-      </div>
-      <div>
-        <div class="card">
-          <h3><i class="ti ti-clock"></i> ${t('title.whenToWashHands')}</h3>
-          <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:2">
+        </div>
+        ${pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateManosPaso(${i}, this.value)`, d => `moveManosPaso(${i},${d})`, `removeManosPaso(${i})`, true)).join('')}
+        <button type="button" class="owner-strict btn btn-fino lp-anadir" onclick="addManosPaso()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
+      </section>
+      <div class="lp-lado">
+        <section class="lp-card">
+          <h3 class="dp-h"><i class="ti ti-clock"></i> ${t('title.whenToWashHands')}</h3>
+          <ul class="lp-lista-puntos">
             <li>${t('li.startingWork')}</li>
             <li>${t('li.afterHandlingWaste')}</li>
             <li>${t('li.afterTouchingFaceHair')}</li>
@@ -312,11 +387,11 @@ function renderLimpiezaManos(){
             <li>${t('li.rawToCookedProduct')}</li>
             <li>${t('li.afterEatingSmoking')}</li>
           </ul>
-        </div>
-        <div class="card">
-          <h3><i class="ti ti-check"></i> ${t('title.minimumDuration')}</h3>
-          <p style="font-size:28px;font-weight:800;color:var(--ink);margin:0">${t('label.20seconds')}</p>
-        </div>
+        </section>
+        <section class="lp-card lp-duracion">
+          <div class="es-tit">${t('title.minimumDuration')}</div>
+          <p class="lp-grande">${t('label.20seconds')}</p>
+        </section>
       </div>
     </div>
   `;
@@ -342,49 +417,41 @@ async function removeManosPaso(i){
 }
 function renderLimpiezaProtocolo(){
   const box = document.getElementById('limpieza-tab-content');
-  const ap = limpiezaProtocoloPasos('apertura');
-  const ci = limpiezaProtocoloPasos('cierre');
-  const renderBlock = (title, icon, pasos, type) => {
+  const hoy = todayStr();
+  const renderBlock = (title, icon, type) => {
+    const pasos = limpiezaProtocoloPasos(type);
     const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
     const log = (DB.limpieza[logKey] || []).filter(e => (e.area||'cocina')===currentArea());
-    const logEntries = [...log].reverse().slice(0, 5);
+    const deHoy = log.find(e => e.fecha === hoy);
+    const nombreDe = entry => entry.responsableNombre || (entry.responsableId ? (DB.employees.find(e=>e.id===entry.responsableId)||{}).name : null);
+    // Los últimos tres días (es lo que se conserva): un punto verde por cada día que se registró.
+    const dias = [2, 1, 0].map(n => { const ds = addDaysStr(hoy, -n); return {ds, hecho: log.some(e => e.fecha === ds)}; });
+    const historial = [...log].reverse().slice(0, 5);
     return `
-    <div class="card">
-      <h3 style="justify-content:space-between"><span><i class="ti ti-${icon}"></i> ${title}</span><button class="btn btn-sm btn-icon" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button></h3>
-      ${pasos.map((p,i) => `
-        <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-          <div class="step-num">${i+1}</div>
-          <input type="text" value="${escapeHtml(p)}" style="flex:1;min-width:140px" onchange="updateProtocoloPaso('${type}',${i},this.value)" ${editUnlocked?'':'disabled'}>
-          <div class="owner-strict" style="display:flex;gap:2px;margin-left:auto">
-            ${reorderButtons(`moveProtocoloPaso('${type}',${i},-1)`, `moveProtocoloPaso('${type}',${i},1)`, i===0, i===pasos.length-1)}
-            <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeProtocoloPaso('${type}',${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
-          </div>
+    <section class="lp-card">
+      <div class="lp-card-cab">
+        <h3 class="dp-h"><i class="ti ti-${icon}"></i> ${title}</h3>
+        <div class="lp-card-bt">
+          <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('common.print'))}" aria-label="${escapeHtml(t('common.print'))}" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button>
+          ${ggMenuAcciones([{icono:'ti-restore', texto:t('common.reset'), fn:`resetProtocoloPasos('${type}')`, estricto:true}], {clase:'btn btn-fino mn-btn pr-ico', tip:true, etiqueta:gl({es:'Más opciones', ca:'Més opcions', en:'More options'})})}
         </div>
-      `).join('')}
-      <button class="owner-strict btn btn-sm" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
-      <button class="owner-strict btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetProtocoloPasos('${type}')"><i class="ti ti-restore"></i> ${t('common.reset')}</button>
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase">${t('title.dailyCompliance')}</div>
-        <div style="margin-bottom:10px">
-          <button class="btn btn-sm btn-primary" onclick="registerProtocoloCompliance('${type}')"><i class="ti ti-check"></i> ${t('btn.registerToday')}</button>
-          <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0">${t('msg.complianceRegistersYou')}</p>
-        </div>
-        ${logEntries.length ? `<div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto">${logEntries.map(entry => {
-          // responsableNombre es una foto fija de quién lo registró en ese
-          // momento (por sesión, no elegido a mano); se conserva aunque esa
-          // persona se renombre o se borre luego. Entradas antiguas (antes
-          // de este cambio) solo tenían responsableId, así que se resuelve
-          // el nombre por si acaso para no perder el dato ya guardado.
-          const respName = entry.responsableNombre || (entry.responsableId ? (DB.employees.find(e=>e.id===entry.responsableId)||{}).name : null);
-          return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px">
-            <span><i class="ti ti-check" style="color:var(--green)"></i> ${escapeHtml(entry.fecha)} · ${escapeHtml(entry.hora)}${respName?` · ${escapeHtml(respName)}`:''}</span>
-            <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteProtocoloComplianceEntry('${type}',${entry.id})"><i class="ti ti-trash"></i></button>
-          </div>`;
-        }).join('')}</div>` : `<div style="font-size:12px;color:var(--muted)">${t('empty.noComplianceLog')}</div>`}
       </div>
-    </div>`;
+      ${pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateProtocoloPaso('${type}',${i},this.value)`, d => `moveProtocoloPaso('${type}',${i},${d})`, `removeProtocoloPaso('${type}',${i})`, false)).join('')}
+      <button type="button" class="owner-strict btn btn-fino lp-anadir" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
+      <div class="lp-cumple">
+        <div class="es-tit">${t('title.dailyCompliance')}</div>
+        ${deHoy
+          ? `<div class="lp-cumple-ok"><i class="ti ti-circle-check"></i> <span>${escapeHtml(deHoy.fecha)} · ${escapeHtml(deHoy.hora||'')}${nombreDe(deHoy) ? ` · ${escapeHtml(nombreDe(deHoy))}` : ''}</span></div>`
+          : `<button type="button" class="btn btn-fino is-on" onclick="registerProtocoloCompliance('${type}')"><i class="ti ti-check"></i> ${t('btn.registerToday')}</button><p class="pr-ayuda">${t('msg.complianceRegistersYou')}</p>`}
+        <div class="lp-dias" aria-label="${escapeHtml(gl({es:'Últimos tres días', ca:'Darrers tres dies', en:'Last three days'}))}">
+          ${dias.map(d => `<span class="lp-dia${d.hecho ? ' ok' : ''}" title="${escapeHtml(d.ds)}"><i class="ti ${d.hecho ? 'ti-check' : 'ti-minus'}"></i>${escapeHtml(new Date(d.ds + 'T12:00:00').toLocaleDateString(localeActual(), {weekday:'short', day:'numeric'}))}</span>`).join('')}
+        </div>
+        ${historial.length ? `<ul class="lp-historial">${historial.map(entry => `<li><span>${escapeHtml(entry.fecha)} · ${escapeHtml(entry.hora||'')}${nombreDe(entry) ? ` · ${escapeHtml(nombreDe(entry))}` : ''}</span>${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`deleteProtocoloComplianceEntry('${type}',${entry.id})`, peligro:true, estricto:true}], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}</li>`).join('')}</ul>` : `<p class="pr-ayuda">${t('empty.noComplianceLog')}</p>`}
+      </div>
+    </section>`;
   };
-  box.innerHTML = `<div class="grid grid-2">${renderBlock(t('title.openingProtocol'),'sunrise',ap,'apertura')}${renderBlock(t('title.closingProtocol'),'sunset',ci,'cierre')}</div>`;
+  box.innerHTML = `<div class="lp-dos">${renderBlock(t('title.openingProtocol'),'sunrise','apertura')}${renderBlock(t('title.closingProtocol'),'sunset','cierre')}</div>`;
+  lpRefrescarResumen();
 }
 function _protocoloKey(type){ return type==='apertura' ? 'aperturaPasos' : 'cierrePasos'; }
 function updateProtocoloPaso(type,i,val){ if(!editUnlocked) return; limpiezaProtocoloPasos(type)[i] = val; saveDB(); }
@@ -502,26 +569,33 @@ function limpiezaChecksFor(monthKey){
 // compartida por la vista de semana y la de día, donde sí hay sitio de
 // sobra para verla entera (a diferencia de la casilla del mes, que ahora
 // solo muestra un contador).
-function limpiezaTareaRowHtml(tarea, checks, monthKey){
+function limpiezaTareaRowHtml(tarea, checks, monthKey, compacta){
   // OJO: el parámetro NUNCA debe llamarse "t" — tapa a la función global de
-  // traducción t() (usada un par de líneas más abajo) y provoca "t is not a
-  // function" en cuanto se pinta cualquier tarea ya marcada como hecha o
-  // asignada a otra persona (los dos casos que necesitan t() aquí dentro),
-  // rompiendo el render entero de las vistas semana/día.
+  // traducción t() y provoca "t is not a function" en cuanto se pinta una
+  // tarea ya hecha o asignada a otra persona, rompiendo el render entero.
   const resp = tarea.responsableId ? DB.employees.find(e=>e.id===tarea.responsableId) : null;
   const info = limpiezaCheckInfo(checks, tarea.id);
   const canToggle = canToggleLimpiezaTarea(tarea);
-  const doneTitle = info ? `${t('limpieza.doneOn').replace('${date}', escapeHtml(info.fecha||''))} ${escapeHtml(info.hora||'')}${info.checkedByNombre?` · ${escapeHtml(info.checkedByNombre)}`:''}` : (canToggle ? '' : t('limpieza.notYourTask'));
+  const quien = info ? `${t('limpieza.doneOn').replace('${date}', escapeHtml(info.fecha||''))} ${escapeHtml(info.hora||'')}${info.checkedByNombre ? ` · ${escapeHtml(info.checkedByNombre)}` : ''}` : '';
   return `
-    <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openLimpiezaTareaMesModal(${tarea.id})">
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:${canToggle?'pointer':'not-allowed'}" onclick="event.stopPropagation()" title="${doneTitle}">
-        <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${tarea.id},this.checked)">
-        <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(tarea.area)}</span>
-        ${tarea.tipo==='puntual' ? `<span class="badge txt-xs" style="padding:1px 5px" title="${t('limpieza.recurrenceOnce')}"><i class="ti ti-calendar-event"></i></span>` : ''}
+    <div class="lp-tarea${info ? ' is-hecha' : ''}${compacta ? ' es-compacta' : ''}">
+      <label class="dp-check${canToggle ? '' : ' is-off'}" title="${escapeHtml(canToggle ? t('title.markAsDone') : t('limpieza.notYourTaskToast'))}">
+        <input type="checkbox" ${info ? 'checked' : ''} ${canToggle ? '' : 'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${tarea.id},this.checked)" aria-label="${escapeHtml(t('title.markAsDone') + ': ' + tarea.area)}">
+        <span class="dp-check-caja"><i class="ti ti-check"></i></span>
       </label>
-      ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:22px;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
-    </div>
-  `;
+      <div class="lp-tarea-txt">
+        <span class="dp-txt">${escapeHtml(tarea.area)}${tarea.tipo==='puntual' ? ` <i class="ti ti-calendar-event lp-puntual" title="${escapeHtml(t('limpieza.recurrenceOnce'))}"></i>` : ''}</span>
+        <span class="lp-tarea-sub">
+          ${tarea.producto ? `<span><i class="ti ti-spray"></i> ${escapeHtml(tarea.producto)}</span>` : ''}
+          ${resp ? `<span class="lp-resp"><i style="background:${escapeHtml(resp.color||'#DF7039')}"></i>${escapeHtml(resp.name)}</span>` : ''}
+          ${quien ? `<span class="lp-hecha-por"><i class="ti ti-check"></i> ${quien}</span>` : ''}
+        </span>
+      </div>
+      ${ggMenuAcciones([
+        {icono:'ti-pencil', texto:t('common.edit'), fn:`openLimpiezaTareaMesModal(${tarea.id})`, estricto:true},
+        {icono:'ti-trash', texto:t('common.delete'), fn:`deleteLimpiezaTarea(${tarea.id})`, peligro:true, estricto:true}
+      ], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}
+    </div>`;
 }
 function setLimpiezaCalMode(mode){ limpiezaCalMode = mode; renderLimpiezaMes(); }
 function shiftLimpiezaCal(delta){
@@ -547,78 +621,82 @@ function goToLimpiezaDia(dateStrVal){
   limpiezaCalMode = 'dia';
   renderLimpiezaMes();
 }
+function limpiezaMesCb(anio, mes){
+  limpiezaCalDate = new Date(anio, mes, Math.min((limpiezaCalDate || new Date()).getDate(), 28));
+  renderLimpiezaMes();
+}
+function limpiezaHoy(){ limpiezaCalDate = new Date(); renderLimpiezaMes(); }
 function renderLimpiezaMes(){
   const box = document.getElementById('limpieza-tab-content');
   if(!limpiezaCalDate) limpiezaCalDate = new Date();
-  const modeBtns = ['dia','semana','mes'].map(m => `<button class="btn btn-sm ${limpiezaCalMode===m?'btn-primary':''}" onclick="setLimpiezaCalMode('${m}')">${t('togocal.'+m)}</button>`).join('');
-
-  let label = '', bodyHtml = '';
+  const modo = (m, txt, ico) => `<button type="button" class="btn btn-sm btn-fino${limpiezaCalMode===m ? ' is-on active' : ''}" aria-pressed="${limpiezaCalMode===m}" onclick="setLimpiezaCalMode('${m}')"><i class="ti ${ico}"></i> ${txt}</button>`;
+  const hoyDs = todayStr();
+  const tareasZona = DB.limpieza.tareas.filter(x => (x.zona||'cocina')===currentArea() && (x.tipo === 'mensual' || x.tipo === 'puntual'));
+  let nav = '', cuerpo = '';
+  const flecha = (d, txt, ico) => `<button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(txt)}" aria-label="${escapeHtml(txt)}" onclick="shiftLimpiezaCal(${d})"><i class="ti ${ico}"></i></button>`;
   if(limpiezaCalMode === 'mes'){
     const year = limpiezaCalDate.getFullYear(), month = limpiezaCalDate.getMonth();
-    label = `${monthFull(month)} ${year}`;
-    const firstDay = new Date(year, month, 1);
-    const startOffset = (firstDay.getDay()+6)%7;
-    const daysInMonth = new Date(year, month+1, 0).getDate();
-    const today = new Date();
-    let cells = '';
-    for(let i=0; i<startOffset; i++) cells += `<div></div>`;
-    for(let day=1; day<=daysInMonth; day++){
-      const count = limpiezaTareasParaDia(new Date(year, month, day)).length;
-      const isToday = day===today.getDate() && month===today.getMonth() && year===today.getFullYear();
-      const ds = dateStr(new Date(year, month, day));
-      cells += `
-        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--ink)':''}" onclick="goToLimpiezaDia('${ds}')">
-          <div style="font-weight:700">${day}</div>
-          ${count ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(count===1?t('limpieza.oneTask'):t('limpieza.nTasks').replace('${n}', count))}">${count}</span>` : ''}
-        </div>
-      `;
+    // Cuántas tareas hay en cada mes, para el selector de periodo (solo las puntuales cambian de mes a mes; las mensuales están en todos).
+    const porMes = {};
+    for(let i = -6; i <= 6; i++){
+      const f = new Date(year, month + i, 1);
+      const k = `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}`;
+      porMes[k] = tareasZona.filter(x => x.tipo === 'mensual' || (x.fecha||'').slice(0,7) === k).length;
     }
-    bodyHtml = `
-      <div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
-        ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
-        ${cells}
-      </div>
-    `;
+    nav = `<div class="cal-nav">${ggPeriodoHtml({anio: year, mes: month, cb: 'limpiezaMesCb', datos: porMes, anual: false})}</div>`;
+    const startOffset = (new Date(year, month, 1).getDay()+6)%7;
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    let cells = '';
+    for(let i=0; i<startOffset; i++) cells += `<div class="cal-mes-vacia"></div>`;
+    for(let day=1; day<=daysInMonth; day++){
+      const fecha = new Date(year, month, day);
+      const tareasDia = limpiezaTareasParaDia(fecha);
+      const checks = limpiezaChecksFor(limpiezaMonthKeyFor(fecha));
+      const hechas = tareasDia.filter(tk => limpiezaCheckInfo(checks, tk.id)).length;
+      const ds = dateStr(fecha);
+      const dow = (startOffset + day - 1) % 7;
+      const pend = ds < hoyDs && tareasDia.length > hechas;
+      cells += `
+        <button type="button" class="cal-mes-dia${ds === hoyDs ? ' is-hoy' : ''}${dow >= 5 ? ' es-finde' : ''}${tareasDia.length ? ' tiene' : ''}${pend ? ' is-pend' : ''}" onclick="goToLimpiezaDia('${ds}')" aria-label="${escapeHtml(`${day} ${monthFull(month)}: ${tareasDia.length === 1 ? t('limpieza.oneTask') : t('limpieza.nTasks').replace('${n}', tareasDia.length)}`)}">
+          <span class="cal-mes-n">${day}</span>
+          ${tareasDia.length ? `<span class="cal-mes-c"><i class="ti ti-spray"></i> ${hechas}/${tareasDia.length}</span>` : ''}
+        </button>`;
+    }
+    cuerpo = `<div class="cal-mes">${t('days.short').map((d, i) => `<div class="cal-mes-cab${i >= 5 ? ' es-finde' : ''}">${d}</div>`).join('')}${cells}</div>`;
   } else if(limpiezaCalMode === 'semana'){
     const dow = (limpiezaCalDate.getDay()+6)%7;
     const monday = new Date(limpiezaCalDate); monday.setDate(limpiezaCalDate.getDate()-dow);
     const days = Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d; });
-    label = `${dateStr(days[0])} — ${dateStr(days[6])}`;
-    bodyHtml = `<div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">${days.map(d => {
+    nav = `<div class="cal-nav">${flecha(-1, t('title.prevWeek'), 'ti-chevron-left')}<strong class="cal-nav-txt">${days[0].toLocaleDateString(localeActual(), {day:'numeric', month:'short'})} – ${days[6].toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'})}</strong>${flecha(1, t('title.nextWeek'), 'ti-chevron-right')}<button type="button" class="btn btn-sm btn-fino" onclick="limpiezaHoy()">${t('common.today')}</button></div>`;
+    cuerpo = `<div class="lp-semana">${days.map(d => {
       const tareasDelDia = limpiezaTareasParaDia(d);
       const monthKey = limpiezaMonthKeyFor(d);
       const checks = limpiezaChecksFor(monthKey);
-      const isToday = dateStr(d) === todayStr();
+      const ds = dateStr(d);
       return `
-        <div class="card" style="padding:8px;min-width:0;${isToday?'border-color:var(--ink)':''}">
-          <div style="font-weight:700;margin-bottom:6px;text-align:center;font-size:12px">${t('days.short')[(d.getDay()+6)%7]} ${d.getDate()}</div>
-          ${tareasDelDia.length ? tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey)).join('') : `<div style="font-size:11px;color:var(--muted);text-align:center">—</div>`}
-        </div>
-      `;
+        <section class="lp-semana-dia${ds === hoyDs ? ' is-hoy' : ''}">
+          <button type="button" class="lp-semana-cab" onclick="goToLimpiezaDia('${ds}')"><span>${t('days.short')[(d.getDay()+6)%7]}</span><b>${d.getDate()}</b></button>
+          ${tareasDelDia.length ? tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey, true)).join('') : `<div class="cal-nada lp-nada">—</div>`}
+        </section>`;
     }).join('')}</div>`;
   } else {
     const monthKey = limpiezaMonthKeyFor(limpiezaCalDate);
     const checks = limpiezaChecksFor(monthKey);
     const tareasDelDia = limpiezaTareasParaDia(limpiezaCalDate);
-    label = dateStr(limpiezaCalDate);
-    bodyHtml = tareasDelDia.length
-      ? `<div class="card" style="max-width:480px;margin:0 auto">${tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey)).join('')}</div>`
-      : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`;
+    const hechas = tareasDelDia.filter(tk => limpiezaCheckInfo(checks, tk.id)).length;
+    nav = `<div class="cal-nav">${flecha(-1, gl({es:'Día anterior', ca:'Dia anterior', en:'Previous day'}), 'ti-chevron-left')}<strong class="cal-nav-txt lp-fecha">${escapeHtml(limpiezaCalDate.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long', year:'numeric'}))}</strong>${flecha(1, gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}), 'ti-chevron-right')}${dateStr(limpiezaCalDate) !== hoyDs ? `<button type="button" class="btn btn-sm btn-fino" onclick="limpiezaHoy()">${t('common.today')}</button>` : ''}</div>`;
+    cuerpo = tareasDelDia.length
+      ? `<section class="lp-card"><div class="dp-dia-cab"><h3 class="dp-h">${t('tab.monthlyCleaning')}</h3><span class="dp-dia-cuenta">${hechas} / ${tareasDelDia.length}</span></div>${tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey)).join('')}</section>`
+      : `<div class="empty es-vacio"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`;
   }
-
-  const tareasMesTotal = DB.limpieza.tareas.filter(t => (t.zona||'cocina')===currentArea() && (t.tipo === 'mensual' || t.tipo === 'puntual')).length;
   box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">${modeBtns}</div>
-      <button class="owner-strict btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> ${t('btn.addTask')}</button>
+    <div class="lp-barra">
+      <div class="cal-modos" role="group">${modo('dia', t('togocal.dia'), 'ti-calendar-event')}${modo('semana', t('togocal.semana'), 'ti-calendar-week')}${modo('mes', t('togocal.mes'), 'ti-calendar-month')}</div>
+      <button type="button" class="owner-strict btn btn-fino is-on" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> ${t('btn.addTask')}</button>
     </div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin:10px 0">
-      <button class="btn btn-sm btn-icon" onclick="shiftLimpiezaCal(-1)"><i class="ti ti-chevron-left"></i></button>
-      <strong>${label}</strong>
-      <button class="btn btn-sm btn-icon" onclick="shiftLimpiezaCal(1)"><i class="ti ti-chevron-right"></i></button>
-    </div>
-    ${tareasMesTotal ? bodyHtml : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`}
+    ${tareasZona.length ? nav + cuerpo : `<div class="empty es-vacio"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`}
   `;
+  lpRefrescarResumen();
 }
 // Una tarea marcada como hecha guarda quién y cuándo (no solo un booleano
 // reversible), para dejar traza APPCC de verdad; los valores antiguos (un
@@ -637,9 +715,10 @@ function canToggleLimpiezaTarea(tarea){
   const empId = loggedInEmployeeId();
   return empId != null && empId === tarea.responsableId;
 }
-function toggleLimpiezaCheckMes(monthKey, tareaId, val){
+async function toggleLimpiezaCheckMes(monthKey, tareaId, val){
   const tarea = DB.limpieza.tareas.find(x => x.id === tareaId);
   if(tarea && !canToggleLimpiezaTarea(tarea)){ showToast(t('limpieza.notYourTaskToast')); renderLimpiezaMes(); return; }
+  if(!val && !(await dpConfirmarDesmarcar())){ renderLimpiezaMes(); return; }
   if(!DB.limpieza.checksMes) DB.limpieza.checksMes = {};
   if(!DB.limpieza.checksMes[monthKey]) DB.limpieza.checksMes[monthKey] = {};
   const now = new Date();
@@ -651,9 +730,10 @@ function toggleLimpiezaCheckMes(monthKey, tareaId, val){
   saveDB();
   renderLimpiezaMes();
 }
-function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
+async function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
   const tarea = DB.limpieza.tareas.find(x => x.id === tareaId);
   if(tarea && !canToggleLimpiezaTarea(tarea)){ showToast(t('limpieza.notYourTaskToast')); renderDistDetail(); return; }
+  if(!val && !(await dpConfirmarDesmarcar())){ renderDistDetail(); return; }
   if(!DB.limpieza.checksMes) DB.limpieza.checksMes = {};
   if(!DB.limpieza.checksMes[monthKey]) DB.limpieza.checksMes[monthKey] = {};
   const now = new Date();
@@ -673,20 +753,21 @@ function openLimpiezaTareaMesModal(id){
   // o si no hoy — nunca en blanco.
   const fechaDefault = tarea && tarea.fecha ? tarea.fecha : (limpiezaCalDate ? dateStr(limpiezaCalDate) : todayStr());
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
-      <h3>${tarea?t('common.edit'):t('common.newF')} ${t('limpieza.monthlyTask')}</h3>
+      <h3><i class="ti ti-spray"></i> ${tarea?t('common.edit'):t('common.newF')} ${t('limpieza.monthlyTask')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>${t('limpieza.areaOrTask')}</label>
+      <label for="new-limpieza-area">${t('limpieza.areaOrTask')}</label>
       <input type="text" id="new-limpieza-area" value="${tarea?escapeHtml(tarea.area):''}" placeholder="${currentArea()==='sala' ? t('limpieza.areaPhSala') : t('limpieza.areaPhCocina')}">
     </div>
     <div class="field">
-      <label>${t('limpieza.cleaningProduct')}</label>
+      <label for="new-limpieza-producto">${t('limpieza.cleaningProduct')}</label>
       <input type="text" id="new-limpieza-producto" value="${tarea?escapeHtml(tarea.producto||''):''}" placeholder="${t('limpieza.productPh')}">
     </div>
     <div class="field">
-      <label>${t('limpieza.recurrence')}</label>
+      <label for="new-limpieza-tipo">${t('limpieza.recurrence')}</label>
       <select id="new-limpieza-tipo" onchange="toggleLimpiezaTareaTipoFields(this.value)">
         <option value="mensual" ${!esPuntual?'selected':''}>${t('limpieza.recurrenceMonthly')}</option>
         <option value="puntual" ${esPuntual?'selected':''}>${t('limpieza.recurrenceOnce')}</option>
@@ -694,15 +775,15 @@ function openLimpiezaTareaMesModal(id){
     </div>
     <div class="field-row">
       <div class="field" id="limpieza-diames-wrap" style="${esPuntual?'display:none':''}">
-        <label>${t('limpieza.dayOfMonth')}</label>
+        <label for="new-limpieza-diames">${t('limpieza.dayOfMonth')}</label>
         <input type="number" id="new-limpieza-diames" min="1" max="31" value="${tarea&&tarea.diaMes?tarea.diaMes:1}">
       </div>
       <div class="field" id="limpieza-fecha-wrap" style="${esPuntual?'':'display:none'}">
-        <label>${t('limpieza.oneOffDate')}</label>
+        <label for="new-limpieza-fecha">${t('limpieza.oneOffDate')}</label>
         <input type="date" id="new-limpieza-fecha" value="${escapeHtml(fechaDefault)}">
       </div>
       <div class="field">
-        <label>${t('label.responsible')}</label>
+        <label for="new-limpieza-responsable">${t('label.responsible')}</label>
         <select id="new-limpieza-responsable">
           <option value="">${t('common.unassigned')}</option>
           ${empOptions}
@@ -710,9 +791,9 @@ function openLimpiezaTareaMesModal(id){
       </div>
     </div>
     <div class="modal-footer">
-      ${tarea ? `<button class="owner-strict btn btn-danger" onclick="deleteLimpiezaTarea(${tarea.id});closeModal()">${t("common.delete")}</button>` : ''}
-      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmLimpiezaTareaMes(${tarea?tarea.id:'null'})">${tarea?t('common.save'):t('common.add')}</button>
+      ${tarea ? `<button type="button" class="owner-strict btn btn-fino is-off" style="margin-right:auto" onclick="deleteLimpiezaTarea(${tarea.id});closeModal()"><i class="ti ti-trash"></i> ${t("common.delete")}</button>` : ''}
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t("common.cancel")}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="confirmLimpiezaTareaMes(${tarea?tarea.id:'null'})"><i class="ti ti-check"></i> ${tarea?t('common.save'):t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-limpieza-area')?.focus(), 50);
@@ -753,10 +834,31 @@ function confirmLimpiezaTareaMes(id){
   renderLimpiezaTab();
 }
 
+// Qué hay en cada equipo: la última lectura, si está dentro de rango y si hoy ya se ha mirado. Pulsar la tarjeta deja el formulario
+// preparado para anotar la siguiente lectura de ESE equipo.
+function lpEquiposTemp(entries){
+  const porEquipo = new Map();
+  entries.forEach(e => {
+    const nombre = String(e.equipo||'').trim();
+    if(!nombre) return;
+    const k = nombre.toLowerCase();
+    const prev = porEquipo.get(k);
+    const sello = (e.fecha||'') + ' ' + (e.hora||'');
+    if(!prev || sello >= prev.sello) porEquipo.set(k, {nombre, e, sello});
+  });
+  return [...porEquipo.values()].sort((a,b) => a.nombre.localeCompare(b.nombre));
+}
+function lpPrefillEquipo(nombre, tipo){
+  const eq = document.getElementById('lp-temperaturas-equipo'), ti = document.getElementById('lp-temperaturas-tipo'), te = document.getElementById('lp-temperaturas-temp');
+  if(eq) eq.value = nombre;
+  if(ti && tipo) ti.value = tipo;
+  if(te){ te.focus(); te.scrollIntoView({block:'center', behavior:'smooth'}); }
+}
 function renderLimpiezaLog(key){
   const box = document.getElementById('limpieza-tab-content');
   const cfg = limpiezaLogConfig(key);
   const entries = DB.limpieza[key].filter(e => (e.zona||'cocina')===currentArea());
+  const hoy = todayStr();
 
   // "Responsable" ya no se escribe/elige a mano: lo dice la sesión con la
   // que se ha entrado (igual que el cumplimiento de apertura/cierre), así
@@ -765,15 +867,15 @@ function renderLimpiezaLog(key){
   const formFields = cfg.fields.filter(f => f !== 'responsable').map((f) => {
     const i = cfg.fields.indexOf(f);
     let input;
-    if(f === 'estado' && key === 'temperaturas') input = `<div style="font-size:12px;color:var(--muted);padding-top:8px">${t('label.autoCalculated')}</div>`;
+    if(f === 'estado' && key === 'temperaturas') input = `<div class="pr-ayuda lp-auto">${t('label.autoCalculated')}</div>`;
     else if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">OK</option><option value="NOK">No OK</option></select>`;
     else if(f === 'tipo' && key === 'temperaturas') input = `<select id="lp-${key}-${f}">${limpiezaTempTipoOptions().map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
-    else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${todayStr()}" max="${todayStr()}">`;
+    else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${hoy}" max="${hoy}">`;
     else if(f === 'proxima' && key === 'plagas') input = `<input type="date" id="lp-${key}-${f}">`;
     else if(f === 'hora') input = `<input type="time" id="lp-${key}-${f}">`;
-    else if(f === 'temp' && key === 'temperaturas') input = `<input type="number" step="0.1" min="-60" max="300" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
+    else if(f === 'temp' && key === 'temperaturas') input = `<input type="number" step="0.1" min="-60" max="300" inputmode="decimal" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
     else input = `<input type="text" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
-    return `<div class="field" style="margin-bottom:0"><label>${cfg.labels[i]}</label>${input}</div>`;
+    return `<div class="field" style="margin-bottom:0"><label for="lp-${key}-${f}">${cfg.labels[i]}</label>${input}</div>`;
   }).join('');
 
   /* Un registro de temperaturas se escribe varias veces al día: en un mes
@@ -788,21 +890,23 @@ function renderLimpiezaLog(key){
   const ocultos = todos.length - visibles.length;
 
   const rows = visibles.length ? visibles.map(e => `
-    <tr>${cfg.fields.map(f => {
+    <tr>${cfg.fields.map((f, i) => {
+      const et = `data-label="${escapeHtml(cfg.labels[i])}"`;
       if(f === 'estado'){
-        if(e[f]==='OK') return `<td style="font-weight:700;color:var(--green)"><i class="ti ti-check"></i> OK</td>`;
-        if(e[f]==='NOK') return `<td style="font-weight:700;color:var(--red)"><i class="ti ti-x"></i> No OK</td>`;
-        return `<td style="color:var(--muted)"><i class="ti ti-info-circle"></i> ${t('status.notEvaluated')}</td>`;
+        if(e[f]==='OK') return `<td ${et}><span class="lp-estado ok"><i class="ti ti-check"></i> OK</span></td>`;
+        if(e[f]==='NOK') return `<td ${et}><span class="lp-estado nok"><i class="ti ti-x"></i> No OK</span></td>`;
+        return `<td ${et}><span class="lp-estado"><i class="ti ti-info-circle"></i> ${t('status.notEvaluated')}</span></td>`;
       }
-      if(f === 'tipo' && key === 'temperaturas') return `<td>${escapeHtml(limpiezaTempTipoLabel(e[f]))}</td>`;
+      if(f === 'tipo' && key === 'temperaturas') return `<td ${et}>${escapeHtml(limpiezaTempTipoLabel(e[f]))}</td>`;
+      if(f === 'temp' && key === 'temperaturas') return `<td ${et}><b class="lp-num-t">${escapeHtml(String(e[f] ?? '—'))}${e[f] !== '' && e[f] != null ? ' °C' : ''}</b></td>`;
       if(f === 'proxima' && key === 'plagas'){
-        if(!e.proxima) return `<td>—</td>`;
+        if(!e.proxima) return `<td ${et}>—</td>`;
         const due = limpiezaMantenimientoDueStatus({proximo: e.proxima});
-        return `<td>${escapeHtml(e.proxima)}${due==='overdue'?` <span class="badge badge-red" style="white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>`:''}${due==='soon'?` <span class="badge badge-amber" style="white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>`:''}</td>`;
+        return `<td ${et}>${escapeHtml(e.proxima)}${due==='overdue'?` <span class="badge badge-red"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>`:''}${due==='soon'?` <span class="badge badge-amber"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>`:''}</td>`;
       }
-      return `<td>${escapeHtml(String(e[f]||'—'))}</td>`;
-    }).join('')}<td><button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
-  `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">${t('empty.noLogEntries')}</div></td></tr>`;
+      return `<td ${et}>${escapeHtml(String(e[f]||'—'))}</td>`;
+    }).join('')}<td class="lp-fila-acc">${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`deleteLimpiezaLogEntry('${key}',${e.id})`, peligro:true, estricto:true}], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}</td></tr>
+  `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty es-vacio">${t('empty.noLogEntries')}</div></td></tr>`;
 
   // El control de temperaturas es una tarea operativa normal del día a día
   // (mirar la cámara, anotar el grado) que puede hacer cualquier empleado
@@ -810,26 +914,42 @@ function renderLimpiezaLog(key){
   // diferencia de borrar un registro ya hecho, que sí sigue exigiéndolo
   // (no se toca un registro de seguridad alimentaria ya escrito sin más).
   const canAddThisLog = editUnlocked || key === 'temperaturas';
+  const equipos = key === 'temperaturas' ? lpEquiposTemp(entries) : [];
+  const tarjetasEquipo = equipos.length ? `
+    <div class="lp-equipos">
+      ${equipos.map(({nombre, e}) => {
+        const hoyLeido = e.fecha === hoy;
+        const nok = e.estado === 'NOK';
+        return `<button type="button" class="lp-equipo${nok ? ' is-nok' : ''}${hoyLeido ? '' : ' es-viejo'}" ${canAddThisLog ? `onclick="lpPrefillEquipo('${escapeJsAttr(nombre)}','${escapeJsAttr(e.tipo||'')}')"` : 'disabled'}>
+          <span class="lp-equipo-nom">${escapeHtml(nombre)}</span>
+          <b class="lp-equipo-t">${escapeHtml(String(e.temp ?? '—'))}${e.temp !== '' && e.temp != null ? ' °C' : ''}</b>
+          <span class="lp-equipo-sub">${nok ? `<i class="ti ti-alert-triangle"></i> ${gl({es:'Fuera de rango', ca:'Fora de rang', en:'Out of range'})}` : e.estado === 'OK' ? `<i class="ti ti-check"></i> OK` : ''} · ${hoyLeido ? escapeHtml(e.hora||gl({es:'hoy', ca:'avui', en:'today'})) : escapeHtml(e.fecha||'')}</span>
+          ${hoyLeido ? '' : `<span class="lp-equipo-pend">${gl({es:'Sin lectura hoy', ca:'Sense lectura avui', en:'No reading today'})}</span>`}
+        </button>`;
+      }).join('')}
+    </div>` : '';
   box.innerHTML = `
-    <div class="card" style="margin-bottom:16px">
+    ${tarjetasEquipo}
+    <section class="lp-card lp-form">
       ${canAddThisLog ? `
-      <div class="grid grid-3" style="margin-bottom:10px">${formFields}</div>
-      <button class="btn btn-primary" onclick="addLimpiezaLogEntry('${key}')"><i class="ti ti-plus"></i> ${t('common.register')}</button>
-      ` : `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-lock"></i> ${t('msg.editModeRequiredForLog')}</div>`}
-    </div>
-    <div class="table-wrap">
-      <table>
+      <div class="es-tit">${gl({es:'Nuevo registro', ca:'Nou registre', en:'New entry'})}</div>
+      <div class="lp-form-campos">${formFields}</div>
+      <button type="button" class="btn btn-fino is-on" onclick="addLimpiezaLogEntry('${key}')"><i class="ti ti-plus"></i> ${t('common.register')}</button>
+      ` : `<div class="pr-ayuda"><i class="ti ti-lock"></i> ${t('msg.editModeRequiredForLog')}</div>`}
+    </section>
+    <div class="table-wrap lp-tabla">
+      <table class="table-cards">
         <thead><tr>${cfg.labels.map(l=>`<th>${l}</th>`).join('')}<th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
     ${(ocultos > 0 || limpiezaLogVerTodo[key]) ? `
-    <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="toggleLimpiezaLogVerTodo('${key}')">
+    <div class="lp-vermas">
+      <button type="button" class="btn btn-sm btn-fino" onclick="toggleLimpiezaLogVerTodo('${key}')">
         <i class="ti ti-${limpiezaLogVerTodo[key]?'chevron-up':'history'}"></i>
         ${limpiezaLogVerTodo[key] ? t('limpieza.log.showLast').replace('${n}', LOG_VISIBLES) : t('limpieza.log.showAll').replace('${n}', todos.length)}
       </button>
-      ${!limpiezaLogVerTodo[key] ? `<span style="font-size:12px;color:var(--muted)">${t('limpieza.log.hiddenCount').replace('${n}', ocultos)}</span>` : ''}
+      ${!limpiezaLogVerTodo[key] ? `<span class="pr-ayuda">${t('limpieza.log.hiddenCount').replace('${n}', ocultos)}</span>` : ''}
     </div>` : ''}
   `;
 }
@@ -870,7 +990,7 @@ async function addLimpiezaLogEntry(key){
   entry.responsable = getChatAuthorName(getChatAuthor());
   DB.limpieza[key].push(entry);
   saveDB();
-  renderLimpiezaLog(key);
+  renderLimpiezaTab();
 }
 // Registro APPCC (temperaturas/plagas): borrarlo exige el PIN de negocio y
 // queda auditado — es justo el tipo de dato que hay que poder demostrar
@@ -882,7 +1002,7 @@ function deleteLimpiezaLogEntry(key, id){
     if(entry) logAudit('delete', t('audit.deletedAppccEntry').replace('${type}', key==='temperaturas'?t('tab.temperatures'):t('tab.pests')).replace('${date}', entry.fecha||'?'));
     saveDB();
     closeModal();
-    renderLimpiezaLog(key);
+    renderLimpiezaTab();
   });
 }
 
@@ -897,50 +1017,49 @@ function limpiezaMantenimientoDueStatus(e){
 function renderLimpiezaMantenimiento(){
   const box = document.getElementById('limpieza-tab-content');
   const equipos = DB.limpieza.mantenimiento.filter(e => (e.zona||'cocina')===currentArea());
+  const dis = editUnlocked ? '' : 'disabled';
+  const tarjeta = e => {
+    const due = limpiezaMantenimientoDueStatus(e);
+    return `
+    <article class="lp-eq${due === 'overdue' ? ' is-vencido' : ''}${e.estado === 'Urgente' ? ' is-urgente' : ''}">
+      <div class="lp-eq-cab">
+        <b class="lp-eq-nom">${escapeHtml(e.nombre)}</b>
+        ${due==='overdue' ? `<span class="pr-chip msg"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : due==='soon' ? `<span class="pr-chip dp-amb"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
+        ${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`deleteMantenimientoEquipo(${e.id})`, peligro:true, estricto:true}], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}
+      </div>
+      <div class="lp-eq-campos">
+        <div class="field"><label for="mt-u-${e.id}">${t('label.lastMaintenance')}</label><input type="date" id="mt-u-${e.id}" value="${escapeHtml(e.ultimo||'')}" onchange="updateMantenimientoEquipo(${e.id},'ultimo',this.value)" ${dis}></div>
+        <div class="field"><label for="mt-p-${e.id}">${t('label.next')}</label><input type="date" id="mt-p-${e.id}" value="${escapeHtml(e.proximo||'')}" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)" ${dis}></div>
+        <div class="field"><label for="mt-r-${e.id}">${t('label.responsible')}</label><input type="text" id="mt-r-${e.id}" value="${escapeHtml(e.responsable||'')}" placeholder="—" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${dis}></div>
+        <div class="field"><label for="mt-e-${e.id}">${t('label.status')}</label><select id="mt-e-${e.id}" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)" ${dis}>
+          ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,k])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(k)}</option>`).join('')}
+        </select></div>
+        <div class="field lp-eq-notas"><label for="mt-n-${e.id}">${t('th.notes')}</label><input type="text" id="mt-n-${e.id}" value="${escapeHtml(e.notas||'')}" placeholder="—" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${dis}></div>
+      </div>
+    </article>`;
+  };
   box.innerHTML = `
-    <div class="toolbar">
-      <div class="left"></div>
-      <button class="owner-strict btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> ${t('btn.addEquipment')}</button>
+    <div class="lp-barra">
+      <span></span>
+      <button type="button" class="owner-strict btn btn-fino is-on" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> ${t('btn.addEquipment')}</button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('label.equipment')}</th><th style="width:1%;white-space:nowrap">${t('label.lastMaintenance')}</th><th style="width:1%;white-space:nowrap">${t('label.next')}</th><th style="min-width:235px">${t('label.responsible')}</th><th style="width:1%;white-space:nowrap">${t('label.status')}</th><th style="min-width:260px">${t('th.notes')}</th><th style="width:1%"></th></tr></thead>
-        <tbody>${equipos.length ? equipos.map(e => {
-          const due = limpiezaMantenimientoDueStatus(e);
-          return `
-          <tr>
-            <td><strong>${escapeHtml(e.nombre)}</strong></td>
-            <td><input type="date" value="${e.ultimo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'ultimo',this.value)" ${editUnlocked?'':'disabled'}></td>
-            <td>
-              <input type="date" value="${e.proximo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)" ${editUnlocked?'':'disabled'}>
-              ${due==='overdue' ? `<span class="badge badge-red" style="margin-left:4px;white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : ''}
-              ${due==='soon' ? `<span class="badge badge-amber" style="margin-left:4px;white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
-            </td>
-            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100%;min-width:150px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${editUnlocked?'':'disabled'}></td>
-            <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)" ${editUnlocked?'':'disabled'}>
-              ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,key])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(key)}</option>`).join('')}
-            </select></td>
-            <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100%;min-width:210px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${editUnlocked?'':'disabled'}></td>
-            <td><button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
-          </tr>
-        `;}).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noEquipmentRegistered')}</div></td></tr>`}</tbody>
-      </table>
-    </div>
+    ${equipos.length ? `<div class="lp-eqs">${equipos.map(tarjeta).join('')}</div>` : `<div class="empty es-vacio"><i class="ti ti-settings"></i>${t('empty.noEquipmentRegistered')}</div>`}
   `;
 }
 function addMantenimientoEquipo(){
   openModal(`
+    <div class="idr-modal"></div>
     <div class="modal-header">
-      <h3>${t('title.newEquipment')}</h3>
+      <h3><i class="ti ti-settings"></i> ${t('title.newEquipment')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>${t('label.equipmentName')}</label>
-      <input type="text" id="new-mantenimiento-equipo" placeholder="${currentArea()==='sala' ? t('ph.equipmentExampleSala') : t('ph.equipmentExample')}">
+      <label for="new-mantenimiento-equipo">${t('label.equipmentName')}</label>
+      <input type="text" id="new-mantenimiento-equipo" placeholder="${currentArea()==='sala' ? t('ph.equipmentExampleSala') : t('ph.equipmentExample')}" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAddMantenimientoEquipo()}">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmAddMantenimientoEquipo()">${t('common.add')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t("common.cancel")}</button>
+      <button type="button" class="btn btn-fino is-on" onclick="confirmAddMantenimientoEquipo()"><i class="ti ti-plus"></i> ${t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-mantenimiento-equipo')?.focus(), 50);
@@ -953,20 +1072,22 @@ function confirmAddMantenimientoEquipo(){
   DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsable:'', estado:'OK', notas:'', zona: currentArea()});
   saveDB();
   closeModal();
-  renderLimpiezaMantenimiento();
+  renderLimpiezaTab();
 }
 function updateMantenimientoEquipo(id, field, val){
   if(!editUnlocked) return;
   const e = DB.limpieza.mantenimiento.find(x => x.id===id);
   if(e) e[field] = val;
   saveDB();
+  // La fecha y el estado cambian los avisos de «vencido» y las cifras de arriba.
+  if(field === 'proximo' || field === 'estado') withScrollPreserved(() => renderLimpiezaTab());
 }
 async function deleteMantenimientoEquipo(id){
   if(!editUnlocked) return;
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   DB.limpieza.mantenimiento = DB.limpieza.mantenimiento.filter(x => x.id!==id);
   saveDB();
-  renderLimpiezaMantenimiento();
+  renderLimpiezaTab();
 }
 
 /* ============================================================
@@ -1017,6 +1138,8 @@ function getDistEmpData(empId){
   // Antes a sala simplemente se le quitaba la columna de platos y no se le
   // ponía nada en su lugar, así que la pantalla se quedaba coja.
   if(!Array.isArray(d.rangos)) d.rangos = [];
+  // Elaboraciones a su cargo (31/10): nombres de elaboraciones base, igual que d.platos guarda los de los platos.
+  if(!Array.isArray(d.elabs)) d.elabs = [];
   // Manual del puesto (31/10). Firebase no guarda [] ni {}: sin items, el manual vuelve de la nube sin la lista.
   if(!d.manual || typeof d.manual !== 'object') d.manual = {items: [], version: 0};
   if(!Array.isArray(d.manual.items)) d.manual.items = [];
@@ -1120,9 +1243,14 @@ function getPromosForEmployeeDate(empId, dateStr){
   return DB.promos.filter(p => p.responsableId === empId && promoOccursOn(p, dateStr))
     .sort((a,b)=>a.fecha.localeCompare(b.fecha));
 }
-function togglePromoDone(promoId, checked, ds){
+async function togglePromoDone(promoId, checked, ds){
   const p = DB.promos.find(x=>x.id===promoId);
   if(!p) return;
+  if(!checked && !(await dpConfirmarDesmarcar())){
+    if(document.getElementById('distribucion-content')) renderDistDetail();
+    if(document.getElementById('promo-tab-content')) renderPromocion();
+    return;
+  }
   setPromoDone(p, ds || p.fecha, checked);
   saveDB();
   if(document.getElementById('distribucion-content')) renderDistDetail();
@@ -1340,6 +1468,12 @@ function distTareasDelDia(emp, ds, idx, date){
   return out;
 }
 // Cifras de una semana (offset 0 = la actual): total, hechas, atrasadas y el primer día con algo atrasado.
+// Cómo se pinta una cuenta «hechas / total»: verde si está todo hecho, rojo si queda algo de un día que ya pasó, neutro si todavía hay tiempo.
+function dpEstadoCuenta(hechas, total, atrasadas){
+  if(total > 0 && hechas === total) return 'ok';
+  if(atrasadas > 0) return 'mal';
+  return '';
+}
 function distResumenSemana(emp, offset){
   const hoy = todayStr();
   const dias = getWeekDates(offset).map((date, idx) => {
@@ -1377,7 +1511,7 @@ function renderDistList(){
     const diaHoy = sem.dias.find(x => x.ds === hoy);
     const hoyTotal = diaHoy ? diaHoy.total : 0, hoyHechas = diaHoy ? diaHoy.hechas : 0;
     const turno = distTurnoTexto(distTurnoDe(emp.id, hoy));
-    const nCargo = isSala ? d.rangos.length : d.platos.length;
+    const nCargo = isSala ? d.rangos.length : d.platos.length + d.elabs.length;
     const m = d.manual || {items:[], version:0};
     const manual = !(m.items||[]).length ? 'sin' : (d.manualLeido && d.manualLeido.version === m.version ? 'leido' : 'pendiente');
     return {emp, d, sem, hoyTotal, hoyHechas, turno, nCargo, manual};
@@ -1387,7 +1521,7 @@ function renderDistList(){
   const sumPend = filas.filter(f => f.manual === 'pendiente').length, sumSin = filas.filter(f => f.manual === 'sin').length;
   const resumen = yo != null ? '' : `
     <div class="st-resumen dp-resumen">
-      <div class="st-cel"><span class="st-cel-et">${gl({es:'Hoy hecho', ca:'Avui fet', en:'Done today'})}</span><span class="st-cel-v">${sumHoyH} / ${sumHoyT}</span><span class="st-cel-s">${gl({es:'tareas de todo el equipo', ca:'tasques de tot l\'equip', en:'tasks across the team'})}</span></div>
+      <div class="st-cel${sumHoyT && sumHoyH === sumHoyT ? ' is-ok' : ''}"><span class="st-cel-et">${gl({es:'Hoy hecho', ca:'Avui fet', en:'Done today'})}</span><span class="st-cel-v">${sumHoyH} / ${sumHoyT}</span><span class="st-cel-s">${gl({es:'tareas de todo el equipo', ca:'tasques de tot l\'equip', en:'tasks across the team'})}</span></div>
       <div class="st-cel${sumAtr ? ' is-bajo' : ''}"><span class="st-cel-et">${gl({es:'Atrasadas', ca:'Endarrerides', en:'Overdue'})}</span><span class="st-cel-v">${sumAtr}</span><span class="st-cel-s">${gl({es:'de días anteriores de esta semana', ca:'de dies anteriors d\'aquesta setmana', en:'from earlier days this week'})}</span></div>
       <div class="st-cel${sumPend ? ' is-bajo' : ''}"><span class="st-cel-et">${gl({es:'Manual sin leer', ca:'Manual sense llegir', en:'Manual unread'})}</span><span class="st-cel-v">${sumPend}</span><span class="st-cel-s">${sumSin ? sumSin + ' ' + gl({es:'aún sin manual', ca:'encara sense manual', en:'have no manual yet'}) : gl({es:'todos tienen el suyo', ca:'tots tenen el seu', en:'everyone has one'})}</span></div>
     </div>`;
@@ -1405,7 +1539,7 @@ function renderDistList(){
         <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('label.viewEmployeeFile'))}" aria-label="${escapeHtml(t('label.viewEmployeeFile'))}" onclick="event.stopPropagation();openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i></button>
       </div>
       <div class="dp-hoy-mini">
-        <div class="dp-hoy-mini-t"><span>${gl({es:'Hoy', ca:'Avui', en:'Today'})}</span><b>${hoyTotal ? `${hoyHechas} / ${hoyTotal}` : gl({es:'sin tareas', ca:'sense tasques', en:'no tasks'})}</b></div>
+        <div class="dp-hoy-mini-t"><span>${gl({es:'Hoy', ca:'Avui', en:'Today'})}</span><b class="${dpEstadoCuenta(hoyHechas, hoyTotal, sem.atrasadas)}">${hoyTotal ? `${hoyHechas} / ${hoyTotal}` : gl({es:'sin tareas', ca:'sense tasques', en:'no tasks'})}</b></div>
         <div class="dp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></div>
       </div>
       <div class="pr-estados">
@@ -1514,15 +1648,23 @@ function dpFilaHtml(emp, ds, tk, puedeGestionar){
     {icono:'ti-trash', texto:t('common.delete'), fn:tk.k === 'prod' ? `removeDistTarea(${tk.idx},'${k}')` : `removeDistTareaUnica('${ds}','${k}')`, peligro:true}
   ], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : '';
   const deshab = tk.k === 'limp' && !tk.canToggle;
+  /* De quién es cada tarea se ve a primera vista: las que pone el jefe llevan su sello en tinta y las que se pone el propio
+     empleado, otro en verde y la fila más clara. Antes era una etiqueta gris que se perdía entre las demás. */
+  const verComoEmpleado = loggedInEmployeeId() === emp.id;
+  const origen = (tk.k === 'prod' || tk.k === 'unica')
+    ? (tk.bySelf
+      ? `<span class="dp-origen mia"><i class="ti ti-user"></i> ${verComoEmpleado ? gl({es:'Puesta por mí', ca:'Posada per mi', en:'Set by me'}) : gl({es:'Puesta por ' + emp.name.split(' ')[0], ca:'Posada per ' + emp.name.split(' ')[0], en:'Set by ' + emp.name.split(' ')[0]})}</span>`
+      : `<span class="dp-origen jefe"><i class="ti ti-briefcase"></i> ${verComoEmpleado ? gl({es:'Puesta por el jefe', ca:'Posada pel cap', en:'Set by the boss'}) : gl({es:'Puesta por ti', ca:'Posada per tu', en:'Set by you'})}</span>`)
+    : '';
   return `
-    <div class="dp-tarea${tk.done ? ' is-hecha' : ''}">
+    <div class="dp-tarea${tk.done ? ' is-hecha' : ''}${tk.bySelf ? ' es-mia' : ''}">
       <label class="dp-check${deshab ? ' is-off' : ''}" title="${deshab ? escapeHtml(t('limpieza.notYourTaskToast')) : escapeHtml(t('title.markAsDone'))}">
         <input type="checkbox" ${tk.done ? 'checked' : ''} ${deshab ? 'disabled' : ''} onchange="${onchange}" aria-label="${escapeHtml(t('title.markAsDone') + ': ' + tk.text)}">
         <span class="dp-check-caja"><i class="ti ti-check"></i></span>
       </label>
       <div class="dp-tarea-txt">
         ${tk.k === 'promo' ? `<a class="dp-txt" href="#" onclick="event.preventDefault();openPromoModal(${tk.id})">${escapeHtml(tk.text)}</a>` : `<span class="dp-txt">${escapeHtml(tk.text)}</span>`}
-        <span class="dp-et-fila">${etiqueta}${tk.bySelf ? `<span class="dp-et dp-et-yo"><i class="ti ti-user"></i> ${gl({es:'La añadí yo', ca:'L\'he afegit jo', en:'Added by me'})}</span>` : ''}</span>
+        <span class="dp-et-fila">${etiqueta}${origen}</span>
       </div>
       ${menu}
     </div>`;
@@ -1566,7 +1708,7 @@ function renderDistDetail(){
           ${open ? `<span class="pr-chip ok"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="pr-chip off">${t('hr2.offDuty')}</span>`}
         </div>
         <div class="dp-prog">
-          <div class="dp-prog-t"><b>${hoyHechas}</b> ${gl({es:'de', ca:'de', en:'of'})} <b>${hoyTotal}</b> ${gl({es:'tareas de hoy hechas', ca:'tasques d\'avui fetes', en:'of today\'s tasks done'})}</div>
+          <div class="dp-prog-t ${dpEstadoCuenta(hoyHechas, hoyTotal, 0)}"><b>${hoyHechas}</b> ${gl({es:'de', ca:'de', en:'of'})} <b>${hoyTotal}</b> ${gl({es:'tareas de hoy hechas', ca:'tasques d\'avui fetes', en:'of today\'s tasks done'})}</div>
           <div class="dp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${hoyPct}"><span style="width:${hoyPct}%"></span></div>
         </div>
         ${hoyTotal && hoyHechas === hoyTotal ? `<div class="dp-ok"><i class="ti ti-circle-check"></i> ${gl({es:'Todo hecho por hoy. Buen trabajo.', ca:'Tot fet per avui. Bona feina.', en:'All done for today. Nice work.'})}</div>` : ''}
@@ -1593,7 +1735,7 @@ function renderDistDetail(){
         <span class="dp-dia-n">${escapeHtml(t('days.short')[x.idx])}</span>
         <span class="dp-dia-f">${x.date.getDate()}</span>
         <span class="dp-dia-t"${tr ? ` style="background:${tr.bg};color:${tr.tx}" title="${escapeHtml(tr.etiqueta)}"` : ''}>${cod || '·'}</span>
-        <span class="dp-dia-c">${x.total ? `${x.hechas}/${x.total}` : '—'}</span>
+        <span class="dp-dia-c ${dpEstadoCuenta(x.hechas, x.total, x.atrasadas)}">${x.total ? `${x.hechas}/${x.total}` : '—'}</span>
       </button>`;
   }).join('');
 
@@ -1614,72 +1756,35 @@ function renderDistDetail(){
     <section class="dp-dia-panel" id="dp-dia-panel">
       <div class="dp-dia-cab">
         <h3 class="dp-h">${escapeHtml(diaTitulo)}${selDs === hoy ? ` <span class="pr-chip ok">${t('common.today')}</span>` : ''}</h3>
-        <span class="dp-dia-cuenta">${sel.hechas} / ${sel.total}</span>
+        <span class="dp-dia-cuenta ${dpEstadoCuenta(sel.hechas, sel.total, sel.atrasadas)}">${sel.hechas} / ${sel.total}</span>
       </div>
       ${filasDia || `<div class="empty es-vacio dp-vacio"><i class="ti ti-mood-smile"></i>${t('empty.noTasksThisDay')}</div>`}
       ${formAnadir}
     </section>`;
 
-  // ---- A mi cargo ----
-  const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl)).map(pl=>`<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`).join('');
-  const cargoItems = isSala
-    ? d.rangos.map((rg, i) => `
-      <div class="dp-cargo">
-        <i class="ti ti-map-pin dp-cargo-ico"></i>
-        <span class="dp-cargo-nom">${escapeHtml(rg)}</span>
-        ${ownerSess ? ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`removeDistRango(${i})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : ''}
-      </div>`).join('')
-    : d.platos.map((pl, i) => {
-        const broken = !allDishes.includes(pl);
-        const rec = DB.recipes.find(r => r.name === pl && (r.area||'cocina') === currentArea());
-        const alerg = rec ? [...recipeAllergens(rec)] : [];
-        return `
-      <div class="dp-cargo${broken ? ' is-roto' : ''}" ${broken ? '' : `role="button" tabindex="0" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToFichaForDish('${escapeJsAttr(pl)}')}"`}>
-        <i class="ti ${broken ? 'ti-link-off' : 'ti-tools-kitchen-2'} dp-cargo-ico"></i>
-        <span class="dp-cargo-txt"><span class="dp-cargo-nom">${escapeHtml(pl)}</span>
-          ${broken ? `<small>${gl({es:'Ya no existe su ficha', ca:'Ja no existeix la seva fitxa', en:'Its recipe sheet no longer exists'})}</small>`
-            : `<small>${alerg.length ? escapeHtml(alerg.map(a => allergenLabel(a)).join(' · ')) : gl({es:'Ver ficha técnica', ca:'Veure fitxa tècnica', en:'Open recipe sheet'})}</small>`}</span>
-        ${ownerSess ? `<span onclick="event.stopPropagation()">${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`removeDistPlato(${i})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true})}</span>` : ''}
-      </div>`;
-      }).join('');
-  const nCargo = isSala ? d.rangos.length : d.platos.length;
-  const cargo = `
-    <section class="dp-card">
-      <h3 class="dp-h"><i class="ti ${isSala ? 'ti-map-pin' : 'ti-tools-kitchen-2'}"></i> ${isSala ? t('dist.zonesTitle') : t('dist.dishesInChargeTitle')} <span class="dp-cuenta">${nCargo}</span></h3>
-      ${cargoItems ? `<div class="dp-cargos">${cargoItems}</div>` : `<div class="empty es-vacio dp-vacio"><i class="ti ${isSala ? 'ti-map-pin' : 'ti-tools-kitchen-2'}"></i>${isSala ? t('dist.noZonesAssigned') : t('dist.noDishesAssigned')}</div>`}
-      ${ownerSess ? (isSala ? `
-      <div class="dp-asignar">
-        <input type="text" id="dist-rango-input" placeholder="${t('dist.zonePlaceholder')}" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistRango();}">
-        <button type="button" class="btn btn-fino is-on" onclick="addDistRango()">${t('btn.assign')}</button>
-      </div>` : `
-      <div class="dp-asignar">
-        <select id="dist-plato-sel" aria-label="${escapeHtml(t('dist.selectDish'))}"><option value="">${t('dist.selectDish')}</option>${platosOptions}</select>
-        <button type="button" class="btn btn-fino is-on" onclick="addDistPlato()">${t('btn.assign')}</button>
-      </div>
-      ${!allDishes.length ? `<p class="pr-ayuda">${t('dist.noFichasYet')}</p>` : ''}`) : ''}
-    </section>`;
-
-  // ---- Mi manual ----
+  // ---- A su cargo y manual: dos botones; lo que hay dentro se abre sin salir de aquí ----
+  const nPlatos = d.platos.length, nElabs = d.elabs.length, nCargo = isSala ? d.rangos.length : nPlatos + nElabs;
+  const cargoResumen = isSala
+    ? (d.rangos.length ? d.rangos.slice(0, 3).join(' · ') + (d.rangos.length > 3 ? ' …' : '') : t('dist.noZonesAssigned'))
+    : (nCargo ? `${nPlatos} ${nPlatos === 1 ? gl({es:'plato', ca:'plat', en:'dish'}) : gl({es:'platos', ca:'plats', en:'dishes'})} · ${nElabs} ${nElabs === 1 ? gl({es:'elaboración', ca:'elaboració', en:'preparation'}) : gl({es:'elaboraciones', ca:'elaboracions', en:'preparations'})}` : t('dist.noDishesAssigned'));
   const man = d.manual;
   const nMan = man.items.length;
   const leido = d.manualLeido && d.manualLeido.version === man.version;
-  const conteo = tipo => man.items.filter(x => x.tipo === tipo).length;
-  const manualCard = `
-    <section class="dp-card dp-manual">
-      <h3 class="dp-h"><i class="ti ti-book-2"></i> ${gl({es:'Mi manual del puesto', ca:'El meu manual del lloc', en:'My job manual'})}</h3>
-      ${nMan ? `
-      <div class="dp-man-cifras">
-        ${DP_MANUAL_TIPOS.map(tp => `<span><b>${conteo(tp.k)}</b> ${escapeHtml(tp.corto())}</span>`).join('')}
-      </div>
-      <div class="dp-man-estado">
-        ${leido ? `<span class="pr-chip ok"><i class="ti ti-circle-check"></i> ${gl({es:'Leído el ', ca:'Llegit el ', en:'Read on '})}${escapeHtml(new Date(d.manualLeido.ts).toLocaleDateString(localeActual(), {day:'numeric', month:'short'}))}</span>`
-          : `<span class="pr-chip msg"><i class="ti ti-eye-off"></i> ${d.manualLeido ? gl({es:'Ha cambiado desde que lo leíste', ca:'Ha canviat des que el vas llegir', en:'Changed since you read it'}) : gl({es:'Aún sin leer', ca:'Encara sense llegir', en:'Not read yet'})}</span>`}
-      </div>` : `<p class="pr-ayuda">${ownerSess ? gl({es:'Todavía no hay manual para este puesto. Escribe sus obligaciones y responsabilidades para que {n} las tenga siempre a mano.'.replace('{n}', escapeHtml(emp.name.split(' ')[0])), ca:'Encara no hi ha manual per a aquest lloc. Escriu-ne les obligacions i responsabilitats.', en:'No manual for this role yet. Write its duties and responsibilities so they always have them at hand.'}) : gl({es:'Tu encargado aún no ha escrito el manual de tu puesto.', ca:'El teu encarregat encara no ha escrit el manual del teu lloc.', en:'Your manager has not written your job manual yet.'})}</p>`}
-      <div class="dp-man-bt">
-        ${nMan ? `<button type="button" class="btn btn-fino ${leido ? '' : 'is-on'}" onclick="openDistManual(${emp.id})"><i class="ti ti-book"></i> ${gl({es:'Abrir el manual', ca:'Obrir el manual', en:'Open the manual'})}</button>` : ''}
-        ${ownerSess ? `<button type="button" class="btn btn-fino ${nMan ? '' : 'is-on'}" onclick="openDistManualEditor(${emp.id})"><i class="ti ti-pencil"></i> ${nMan ? gl({es:'Editar', ca:'Editar', en:'Edit'}) : gl({es:'Escribir el manual', ca:'Escriure el manual', en:'Write the manual'})}</button>` : ''}
-      </div>
-    </section>`;
+  const manualEstado = !nMan ? (ownerSess ? gl({es:'Aún sin escribir', ca:'Encara sense escriure', en:'Not written yet'}) : gl({es:'Tu encargado aún no lo ha escrito', ca:'El teu encarregat encara no l\'ha escrit', en:'Your manager has not written it yet'}))
+    : leido ? gl({es:'Leído', ca:'Llegit', en:'Read'}) : (d.manualLeido ? gl({es:'Ha cambiado: por leer', ca:'Ha canviat: per llegir', en:'Changed: unread'}) : gl({es:'Por leer', ca:'Per llegir', en:'Unread'}));
+  const botones = `
+    <div class="dp-tiles">
+      <button type="button" class="dp-tile" onclick="openDistCargo(${emp.id})">
+        <span class="dp-tile-ico"><i class="ti ${isSala ? 'ti-map-pin' : 'ti-tools-kitchen-2'}"></i></span>
+        <span class="dp-tile-txt"><b>${isSala ? t('dist.zonesTitle') : gl({es:'Platos y elaboraciones a su cargo', ca:'Plats i elaboracions al seu càrrec', en:'Dishes and preparations in their charge'})}</b><small>${escapeHtml(cargoResumen)}</small></span>
+        <span class="dp-tile-n">${nCargo}</span>
+      </button>
+      <button type="button" class="dp-tile${nMan && !leido ? ' is-pend' : ''}" onclick="${nMan ? `openDistManual(${emp.id})` : (ownerSess ? `openDistManualEditor(${emp.id})` : `openDistManual(${emp.id})`)}">
+        <span class="dp-tile-ico"><i class="ti ti-book-2"></i></span>
+        <span class="dp-tile-txt"><b>${gl({es:'Manual del puesto', ca:'Manual del lloc', en:'Job manual'})}</b><small class="${nMan ? (leido ? 'ok' : 'mal') : ''}">${escapeHtml(manualEstado)}</small></span>
+        ${ownerSess ? `<span class="dp-tile-edit" role="button" tabindex="0" data-tip="${escapeHtml(nMan ? t('common.edit') : gl({es:'Escribir el manual', ca:'Escriure el manual', en:'Write the manual'}))}" aria-label="${escapeHtml(nMan ? t('common.edit') : gl({es:'Escribir el manual', ca:'Escriure el manual', en:'Write the manual'}))}" onclick="event.stopPropagation();openDistManualEditor(${emp.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openDistManualEditor(${emp.id})}"><i class="ti ti-pencil"></i></span>` : `<span class="dp-tile-n">${nMan}</span>`}
+      </button>
+    </div>`;
 
   // ---- Próximos turnos + semana en cifras ----
   const proximos = (DB.turnos||[]).filter(x => x.employeeId === emp.id && x.fecha > hoy && ['M','T','P','C'].includes(x.tipo)).sort((a,b) => a.fecha.localeCompare(b.fecha)).slice(0, 4);
@@ -1708,21 +1813,6 @@ function renderDistDetail(){
       <textarea id="dp-nota-turno" rows="3" maxlength="500" placeholder="${escapeHtml(t('handoff.placeholder'))}" aria-label="${escapeHtml(t('handoff.label'))}" onchange="saveShiftHandoffNote('${escapeJsAttr(areaEmp)}', this.value)">${escapeHtml(getShiftHandoffNote(areaEmp))}</textarea>
     </section>`;
 
-  // ---- Accesos rápidos ----
-  const rapidos = [
-    esMio ? {ico:'ti-replace', txt:t('swap.requestBtn'), fn:`openTurnoSwapRequestModal(${emp.id})`} : null,
-    esMio ? {ico:'ti-beach', txt:t('vacation.requestBtn'), fn:`openVacationRequestModal(${emp.id})`} : null,
-    {ico:'ti-message', txt:t('btn.messages'), fn:`openEmployeeDirectChat(${emp.id}, ${ownerSess})`},
-    {ico:'ti-notebook', txt:t('view.fichas.title'), fn:`navigate('fichas')`},
-    {ico:'ti-spray', txt:t('view.limpieza.title'), fn:`navigate('limpieza')`},
-    {ico:'ti-alert-triangle', txt:t('label.allergens'), fn:`navigate('limpieza');setLimpiezaTab('alergenos')`}
-  ].filter(Boolean);
-  const accesos = `
-    <section class="dp-card">
-      <h3 class="dp-h"><i class="ti ti-bolt"></i> ${gl({es:'Accesos rápidos', ca:'Accessos ràpids', en:'Quick links'})}</h3>
-      <div class="dp-rapidos">${rapidos.map(r => `<button type="button" class="btn btn-fino dp-rapido" onclick="${r.fn}"><i class="ti ${r.ico}"></i> <span>${escapeHtml(r.txt)}</span></button>`).join('')}</div>
-    </section>`;
-
   box.innerHTML = `
     <div class="dp-cab">
       ${yo == null ? `<button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Volver al equipo', ca:'Tornar a l\'equip', en:'Back to the team'}))}" aria-label="${escapeHtml(t('common.back'))}" onclick="backToDistList()"><i class="ti ti-arrow-left"></i></button>` : ''}
@@ -1730,19 +1820,21 @@ function renderDistDetail(){
       <div class="pr-id"><b class="dp-nombre">${escapeHtml(emp.name)}</b><span class="pr-sub">${escapeHtml(emp.rol||'')}</span></div>
     </div>
     ${hero}
-    ${atrasadas}
-    <div class="dp-semana-cab">
-      <div class="es-tit">${gl({es:'Mi semana', ca:'La meva setmana', en:'My week'})} · ${weekRangeLabel}</div>
-      <div class="dp-semana-nav">
-        <button type="button" class="btn btn-sm btn-fino pr-ico" data-tip="${escapeHtml(t('title.prevWeek'))}" aria-label="${escapeHtml(t('title.prevWeek'))}" onclick="distWeekShift(-1)"><i class="ti ti-chevron-left"></i></button>
-        <button type="button" class="btn btn-sm btn-fino pr-ico" data-tip="${escapeHtml(t('title.nextWeek'))}" aria-label="${escapeHtml(t('title.nextWeek'))}" onclick="distWeekShift(1)"><i class="ti ti-chevron-right"></i></button>
-        ${distWeekOffset !== 0 || selDs !== hoy ? `<button type="button" class="btn btn-sm btn-fino" onclick="distHoy()">${t('common.today')}</button>` : ''}
-      </div>
-    </div>
-    <div class="dp-tira">${tira}</div>
     <div class="dp-cols">
-      <div class="dp-col-main">${dia}</div>
-      <div class="dp-col-lado">${cargo}${manualCard}${turnosCard}${nota}${accesos}</div>
+      <div class="dp-col-main">
+        ${atrasadas}
+        <div class="dp-semana-cab">
+          <div class="es-tit">${gl({es:'Mi semana', ca:'La meva setmana', en:'My week'})} · ${weekRangeLabel}</div>
+          <div class="dp-semana-nav">
+            <button type="button" class="btn btn-sm btn-fino pr-ico" data-tip="${escapeHtml(t('title.prevWeek'))}" aria-label="${escapeHtml(t('title.prevWeek'))}" onclick="distWeekShift(-1)"><i class="ti ti-chevron-left"></i></button>
+            <button type="button" class="btn btn-sm btn-fino pr-ico" data-tip="${escapeHtml(t('title.nextWeek'))}" aria-label="${escapeHtml(t('title.nextWeek'))}" onclick="distWeekShift(1)"><i class="ti ti-chevron-right"></i></button>
+            ${distWeekOffset !== 0 || selDs !== hoy ? `<button type="button" class="btn btn-sm btn-fino" onclick="distHoy()">${t('common.today')}</button>` : ''}
+          </div>
+        </div>
+        <div class="dp-tira">${tira}</div>
+        ${dia}
+      </div>
+      <div class="dp-col-lado">${botones}${turnosCard}${nota}</div>
     </div>
   `;
 }
@@ -1755,12 +1847,18 @@ function addEmployeeFromDistribucion(){
 function addDistPlato(){
   if(!isOwnerSession()) return;
   const sel = document.getElementById('dist-plato-sel');
-  const nombre = sel && sel.value;
-  if(!nombre) return;
+  const val = sel && sel.value;
+  if(!val) return;
+  // El desplegable mezcla platos y elaboraciones: «plato:Nombre» / «elab:Nombre» (un nombre suelto se toma por plato, como siempre).
+  const m = /^(plato|elab):(.*)$/.exec(val);
+  const tipo = m ? m[1] : 'plato', nombre = m ? m[2] : val;
   const d = distDatosActuales(); if(!d) return;
-  if(!d.platos.includes(nombre)) d.platos.push(nombre);
+  const lista = tipo === 'elab' ? d.elabs : d.platos;
+  if(!lista.includes(nombre)) lista.push(nombre);
+  dpCargoSel = {tipo, nombre};
   saveDB();
   renderDistDetail();
+  dpRefrescarCargo();
 }
 function addDistRango(){
   if(!isOwnerSession()) return;
@@ -1778,6 +1876,7 @@ function addDistRango(){
   d.rangos.push(nombre);
   saveDB();
   renderDistDetail();
+  dpRefrescarCargo();
 }
 async function removeDistRango(idx){
   if(!isOwnerSession()) return;
@@ -1786,16 +1885,34 @@ async function removeDistRango(idx){
   d.rangos.splice(idx, 1);
   saveDB();
   renderDistDetail();
+  dpRefrescarCargo();
 }
 async function removeDistPlato(idx){
   if(!isOwnerSession()) return;
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const d = distDatosActuales(); if(!d) return;
   d.platos.splice(idx,1);
+  dpCargoSel = null;
   saveDB();
   renderDistDetail();
+  dpRefrescarCargo();
 }
-function toggleDistTareaDone(dateStr, taskId, checked){
+async function removeDistElab(idx){
+  if(!isOwnerSession()) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
+  const d = distDatosActuales(); if(!d) return;
+  d.elabs.splice(idx,1);
+  dpCargoSel = null;
+  saveDB();
+  renderDistDetail();
+  dpRefrescarCargo();
+}
+// Marcar una tarea como hecha es un toque; DESMARCARLA pregunta antes: un dedo de más en una tablet de cocina no debe borrar lo hecho.
+async function dpConfirmarDesmarcar(){
+  return await confirmModal(gl({es:'¿Seguro que quieres desmarcar esta tarea? Volverá a figurar como pendiente.', ca:'Segur que vols desmarcar aquesta tasca? Tornarà a figurar com a pendent.', en:'Are you sure you want to untick this task? It will go back to pending.'}));
+}
+async function toggleDistTareaDone(dateStr, taskId, checked){
+  if(!checked && !(await dpConfirmarDesmarcar())){ renderDistDetail(); return; }
   const d = distDatosActuales(); if(!d) return;
   if(!d.doneDates[dateStr]) d.doneDates[dateStr] = {};
   d.doneDates[dateStr][taskId] = checked;
@@ -1892,6 +2009,104 @@ function dpGuardarTarea(k, ds, taskId, idx){
   if(k === 'prod') updateDistTarea(idx, taskId, val); else updateDistTareaUnica(ds, taskId, val);
   closeModal();
   renderDistDetail();
+}
+
+/* ---------- A su cargo: todo en una ventana, y cada cosa se lee ahí mismo ----------
+   Antes eran tarjetas en una columna que crecía con cada plato, y pulsar una llevaba a la ficha técnica y había que volver.
+   Ahora un botón abre la lista entera (platos y elaboraciones) y, al elegir una, su receta se ve debajo sin salir. */
+let dpCargoSel = null;   // {tipo:'plato'|'elab', nombre}
+function dpFichaPorNombre(nombre){
+  return (DB.fichas||[]).find(f => {
+    const r = f.recipeId ? DB.recipes.find(x => x.id === f.recipeId) : null;
+    const fArea = f.area || (r && r.area) || 'cocina';
+    return fArea === currentArea() && (r ? r.name : f.name) === nombre;
+  }) || null;
+}
+function dpElaboracionesDisponibles(){
+  return DB.recipes.filter(r => r.isBase && (r.area||'cocina') === currentArea() && r.name).map(r => r.name).sort((a, b) => a.localeCompare(b));
+}
+function dpCargoDetalleHtml(tipo, nombre){
+  const rec = DB.recipes.find(r => r.name === nombre && (r.area||'cocina') === currentArea()) || null;
+  const f = dpFichaPorNombre(nombre);
+  if(!rec && !f){
+    return `<div class="empty es-vacio"><i class="ti ti-link-off"></i>${gl({es:'Ya no existe su ficha ni su escandallo. Quítalo de su cargo o vuelve a crearlo.', ca:'Ja no existeix la seva fitxa ni el seu escandall. Treu-lo del seu càrrec o torna a crear-lo.', en:'Its recipe sheet and costing no longer exist. Remove it from their charge or create it again.'})}</div>`;
+  }
+  const alerg = f ? getFichaAllergens(f) : [...recipeAllergens(rec)];
+  const lineas = f ? getFichaIngredientLines(f) : (rec.ingredients||[]).map(line => { const info = renderEscandalloLineLabel(line); return info ? {qty: line.qty, unit: info.unit, name: info.name} : null; }).filter(Boolean);
+  const fx = f ? fiFactor(f) : {factor: 1, produccion: (rec && rec.comensales) || 1};
+  const pasos = f ? (f.pasos||[]).map((p, i) => ({p, d: (f.pasosDet||[])[i] || {}})).filter(x => x.p && String(x.p).trim()) : [];
+  return `
+    <div class="dp-det-cab">
+      ${f && f.photo ? `<img class="dp-det-foto" src="${f.photo}" alt="" onclick="openFichaPhotoLightbox(this.src)">` : ''}
+      <div class="dp-det-tit">
+        <h4>${escapeHtml(nombre)}</h4>
+        <span class="pr-chip">${tipo === 'elab' ? gl({es:'Elaboración', ca:'Elaboració', en:'Preparation'}) : gl({es:'Plato', ca:'Plat', en:'Dish'})}</span>
+        ${alerg.length ? `<div class="dp-det-alerg">${alerg.map(a => `<span class="ml-al">${escapeHtml(allergenLabel(a))}</span>`).join('')}</div>` : `<div class="pr-ayuda">${gl({es:'Sin alérgenos declarados', ca:'Sense al·lèrgens declarats', en:'No allergens declared'})}</div>`}
+      </div>
+    </div>
+    <div class="dp-det-cols">
+      <section>
+        <div class="es-tit">${t('label.ingredients')} <span class="dp-man-ay">${gl({es:'para', ca:'per a', en:'for'})} ${fmtNum(fx.produccion)}</span></div>
+        ${lineas.length ? `<ul class="dp-ings">${lineas.map(l => `<li><span class="dp-ing-q">${l.qty != null ? `${fmtNum(l.qty * fx.factor)} <small>${escapeHtml(l.unit)}</small>` : '—'}</span><span>${escapeHtml(l.name)}</span></li>`).join('')}</ul>` : `<p class="pr-ayuda">${t('empty.noIngredients')}</p>`}
+      </section>
+      <section>
+        <div class="es-tit">${gl({es:'Paso a paso', ca:'Pas a pas', en:'Step by step'})}</div>
+        ${pasos.length ? `<ol class="dp-pasos">${pasos.map(x => `<li><p>${escapeHtml(x.p)}</p>${(x.d.min || x.d.temp) ? `<div class="dp-paso-chips">${x.d.min ? `<span class="fi-chip"><i class="ti ti-clock"></i> ${escapeHtml(String(x.d.min))} min</span>` : ''}${x.d.temp ? `<span class="fi-chip"><i class="ti ti-temperature"></i> ${escapeHtml(String(x.d.temp))}</span>` : ''}</div>` : ''}${x.d.aviso ? `<div class="fi-ojo"><b>${gl({es:'Ojo', ca:'Ull', en:'Watch out'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}</li>`).join('')}</ol>` : `<p class="pr-ayuda">${f ? t('label.notSpecified') : gl({es:'Todavía no tiene ficha técnica con el paso a paso.', ca:'Encara no té fitxa tècnica amb el pas a pas.', en:'It has no recipe sheet with steps yet.'})}</p>`}
+      </section>
+    </div>`;
+}
+function dpCargoElegir(tipo, nombre){
+  dpCargoSel = {tipo, nombre};
+  dpRefrescarCargo();
+}
+// Si la ventana de «a su cargo» está abierta, se vuelve a pintar (tras asignar, quitar o elegir otro).
+function dpRefrescarCargo(){
+  if(document.getElementById('dp-cargo-modal') && distCurrentEmployeeId != null) openDistCargo(distCurrentEmployeeId);
+}
+function openDistCargo(empId){
+  if(!distPuedeVer(empId)) return;
+  const emp = DB.employees.find(e => e.id === empId);
+  if(!emp) return;
+  const d = getDistEmpData(empId);
+  const isSala = currentArea() === 'sala';
+  const ownerSess = isOwnerSession();
+  distCurrentEmployeeId = empId;
+  let cuerpo = '';
+  if(isSala){
+    cuerpo = d.rangos.length
+      ? `<div class="dp-chips">${d.rangos.map((rg, i) => `<span class="dp-chip es-zona"><i class="ti ti-map-pin"></i> ${escapeHtml(rg)}${ownerSess ? ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`removeDistRango(${i})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : ''}</span>`).join('')}</div>`
+      : `<div class="empty es-vacio"><i class="ti ti-map-pin"></i>${t('dist.noZonesAssigned')}</div>`;
+    if(ownerSess) cuerpo += `<div class="dp-asignar"><input type="text" id="dist-rango-input" placeholder="${t('dist.zonePlaceholder')}" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistRango();}"><button type="button" class="btn btn-fino is-on" onclick="addDistRango()">${t('btn.assign')}</button></div>`;
+  } else {
+    const todos = [...d.platos.map((n, i) => ({tipo:'plato', nombre:n, idx:i})), ...d.elabs.map((n, i) => ({tipo:'elab', nombre:n, idx:i}))];
+    if(!dpCargoSel || !todos.some(x => x.tipo === dpCargoSel.tipo && x.nombre === dpCargoSel.nombre)) dpCargoSel = todos[0] ? {tipo: todos[0].tipo, nombre: todos[0].nombre} : null;
+    const roto = x => x.tipo === 'plato' ? !getDishNamesWithFicha().includes(x.nombre) && !DB.recipes.some(r => r.name === x.nombre) : !dpElaboracionesDisponibles().includes(x.nombre);
+    const grupo = (tipo, titulo, ico) => {
+      const items = todos.filter(x => x.tipo === tipo);
+      if(!items.length) return '';
+      return `<div class="dp-grupo"><div class="es-tit">${titulo} <span class="dp-cuenta">${items.length}</span></div><div class="dp-chips">${items.map(x => `<button type="button" class="dp-chip${dpCargoSel && dpCargoSel.tipo === x.tipo && dpCargoSel.nombre === x.nombre ? ' is-sel' : ''}${roto(x) ? ' is-roto' : ''}" aria-pressed="${!!(dpCargoSel && dpCargoSel.tipo === x.tipo && dpCargoSel.nombre === x.nombre)}" onclick="dpCargoElegir('${x.tipo}','${escapeJsAttr(x.nombre)}')"><i class="ti ${roto(x) ? 'ti-link-off' : ico}"></i> ${escapeHtml(x.nombre)}</button>`).join('')}</div></div>`;
+    };
+    const quitar = dpCargoSel && ownerSess ? (() => { const x = todos.find(y => y.tipo === dpCargoSel.tipo && y.nombre === dpCargoSel.nombre); return x ? ggMenuAcciones([{icono:'ti-trash', texto:gl({es:'Quitar de su cargo', ca:'Treure del seu càrrec', en:'Remove from their charge'}), fn: x.tipo === 'elab' ? `removeDistElab(${x.idx})` : `removeDistPlato(${x.idx})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : ''; })() : '';
+    const opcP = getDishNamesWithFicha().filter(n => !d.platos.includes(n)).map(n => `<option value="plato:${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    const opcE = dpElaboracionesDisponibles().filter(n => !d.elabs.includes(n)).map(n => `<option value="elab:${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    cuerpo = `
+      ${todos.length ? grupo('plato', gl({es:'Platos', ca:'Plats', en:'Dishes'}), 'ti-tools-kitchen-2') + grupo('elab', gl({es:'Elaboraciones', ca:'Elaboracions', en:'Preparations'}), 'ti-soup') : `<div class="empty es-vacio"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}</div>`}
+      ${dpCargoSel ? `<section class="dp-detalle"><div class="dp-detalle-bt">${quitar}</div>${dpCargoDetalleHtml(dpCargoSel.tipo, dpCargoSel.nombre)}</section>` : ''}
+      ${ownerSess ? `<div class="dp-asignar">
+        <select id="dist-plato-sel" aria-label="${escapeHtml(t('dist.selectDish'))}"><option value="">${t('dist.selectDish')}</option>${opcP ? `<optgroup label="${escapeHtml(gl({es:'Platos', ca:'Plats', en:'Dishes'}))}">${opcP}</optgroup>` : ''}${opcE ? `<optgroup label="${escapeHtml(gl({es:'Elaboraciones', ca:'Elaboracions', en:'Preparations'}))}">${opcE}</optgroup>` : ''}</select>
+        <button type="button" class="btn btn-fino is-on" onclick="addDistPlato()">${t('btn.assign')}</button>
+      </div>${!opcP && !opcE && !todos.length ? `<p class="pr-ayuda">${t('dist.noFichasYet')}</p>` : ''}` : ''}`;
+  }
+  openModal(`
+    <div class="idr-modal"></div>
+    <div id="dp-cargo-modal">
+      <div class="modal-header">
+        <h3><i class="ti ${isSala ? 'ti-map-pin' : 'ti-tools-kitchen-2'}"></i> ${isSala ? t('dist.zonesTitle') : gl({es:'A su cargo', ca:'Al seu càrrec', en:'In their charge'})} · ${escapeHtml(emp.name)}</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      ${cuerpo}
+      <div class="modal-footer"><button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button></div>
+    </div>`, {xl: true});
 }
 
 /* ---------- Manual del puesto ----------
@@ -2116,6 +2331,7 @@ function printDistribucion(empId){
     const rows = [];
     if(isSala && d.rangos.length) rows.push(`<tr><td style="width:110px"><strong>${t('common.zones')}</strong></td><td>${d.rangos.map(escapeHtml).join(' · ')}</td></tr>`);
     if(!isSala && d.platos.length) rows.push(`<tr><td style="width:110px"><strong>${t('common.dishes')}</strong></td><td>${d.platos.map(escapeHtml).join(' · ')}</td></tr>`);
+    if(!isSala && d.elabs.length) rows.push(`<tr><td style="width:110px"><strong>${gl({es:'Elaboraciones', ca:'Elaboracions', en:'Preparations'})}</strong></td><td>${d.elabs.map(escapeHtml).join(' · ')}</td></tr>`);
     WEEK_DAYS.forEach((_, idx) => {
       const label = weekDayFull(idx);
       const tasks = d.produccion[idx] || [];
