@@ -4043,6 +4043,27 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
   .lp-filtros select,.lp-filtros .st-buscar{min-width:0;flex:1 1 100%}
   .lp-barra > .btn{flex:1 1 100%;justify-content:center}
 }
+/* I+D de Sala: maridajes */
+.idr-mar-acc{display:flex;gap:6px;margin:6px 0 12px}
+.idr-mar-sec{margin-bottom:12px}
+.idr-mar-sec .es-tit{margin-bottom:6px}
+.idr-mar-platos{display:flex;flex-wrap:wrap;gap:6px}
+.idr-mar-plato{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid #D9D4C8;background:#fff;border-radius:3px;cursor:pointer;font-size:14px;font-weight:500;overflow-wrap:break-word;transition:background-color .15s,border-color .15s}
+.idr-mar-plato input{width:auto;margin:0}
+.idr-mar-plato:hover{border-color:var(--ink)}
+.idr-mar-plato.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.idr-mar-ajustes{margin-top:14px}
+.idr-mar-bt{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.idr-mar-bt .btn:disabled{opacity:.45;cursor:not-allowed}
+.idr-mar-fila{padding:14px 0;border-top:1px solid var(--hair)}
+.idr-mar-fila h4{margin:0 0 8px;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.idr-mar-ops{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.idr-mar-op p{margin:3px 0 4px;font-size:13.5px;color:var(--muted);line-height:1.45}
+.idr-mar-bebida{display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center}
+.idr-mar-sin{margin:8px 0 0;font-size:13.5px;color:#33523A}
+.idr-nota-gen{font-size:14px;margin:0 0 6px}
+.idr-mar-retoque{margin-top:14px}
+.idr-mar-retoque .btn{margin-top:8px}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}

@@ -844,7 +844,7 @@ await caso('Cada rol ve lo suyo en I+D y solo lo suyo', async ()=>{
   assert.ok(r.cocinero.libres > 0, 'pero sí debe poder mirar y usar el asistente');
   assert.ok(r.cocineroEdit.conEdicion > 0, 'con edición desbloqueada sí trabaja');
   assert.ok(r.duenyo.conEdicion >= r.cocineroEdit.conEdicion, 'el dueño ve al menos lo mismo');
-  assert.ok(!r.enSala, 'I+D es de cocina: un camarero no debería verlo');
+  assert.ok(r.enSala && r.enCocina, 'I+D vive en las dos carpetas (31/10): cada una con lo suyo');
   assert.ok(r.enCocina);
   return `cocinero ${r.cocinero.libres} botones, con edición ${r.cocineroEdit.conEdicion} más, y no aparece en sala`;
 });
@@ -1463,7 +1463,7 @@ await caso('Las cuatro burbujas, en el orden de trabajo de una cocina', async ()
     const c = idrCreacion(idrCreacionActiva);
     return {orden, seCrea: idrCreaciones().length === antes + 1, tipo: c && c.tipo,
             pideEncargo: !!document.getElementById('enc-nbloques'),
-            tipos: IDR_TIPOS_NUEVOS};
+            tipos: idrTiposDelArea()};
   });
   assert.deepEqual(r.orden, ['base','plato','menu','carta'], 'primero la elaboración, luego el plato, luego menú y carta');
   assert.deepEqual(r.tipos, ['base','plato','menu','carta']);

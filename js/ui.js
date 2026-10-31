@@ -1584,6 +1584,7 @@ const FOLDERS = {
       {id:'reservas', icon:'ti-calendar-event'},
       {id:'clientes', icon:'ti-address-book'},
       {id:'carta', icon:'ti-glass-cocktail'},
+      {id:'idr', icon:'ti-flask'},
       {id:'proveedores', icon:'ti-building-factory-2'},
       {id:'megalista', icon:'ti-list-details'},
       {id:'escandallo', icon:'ti-calculator'},
@@ -1615,7 +1616,7 @@ const FOLDERS = {
 // permiso de editar (canUnlockEdit) los siguen viendo todos.
 const HIDDEN_MODULES_WHEN_LOCKED = {
   cocina: ['carta', 'proveedores', 'megalista', 'escandallo', 'idr'],
-  sala: ['carta', 'proveedores', 'megalista', 'escandallo']
+  sala: ['carta', 'proveedores', 'megalista', 'escandallo', 'idr']
 };
 const MODULE_FOLDER = {};
 Object.entries(FOLDERS).forEach(([key, f]) => f.modules.forEach(m => { if(MODULE_FOLDER[m.id] === undefined) MODULE_FOLDER[m.id] = key; }));
