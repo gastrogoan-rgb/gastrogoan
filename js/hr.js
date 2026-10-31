@@ -4463,6 +4463,11 @@ function goToHorariosDia(date){
   horariosCalView = 'dia';
   renderHorarios();
 }
+// Pulsar la fecha abre el calendario del navegador (el campo de fecha va invisible por debajo).
+function calAbrirSelectorFecha(etiqueta){
+  const i = etiqueta.querySelector('input');
+  if(i && i.showPicker){ try{ i.showPicker(); }catch(e){} }
+}
 function calDiaMas(delta){
   horariosDate = addDaysStr(horariosDate || todayStr(), delta);
   renderHorariosDia();
@@ -4512,7 +4517,7 @@ function renderHorariosDia(){
   const cobHtml = trabajan.length ? `
     <div class="cal-cob">
       <span class="cal-cob-et">${gl({es:'Personal por hora', ca:'Personal per hora', en:'Staff per hour'})}</span>
-      <div class="cal-cob-barras" role="img" aria-label="${escapeHtml(cobertura.map((n, i) => `${String((h0+i) % 24).padStart(2,'0')}h: ${n}`).join(', '))}">
+      <div class="cal-cob-barras" role="img" aria-label="${escapeHtml(gl({es:'Personal por hora', ca:'Personal per hora', en:'Staff per hour'}) + ': ' + cobertura.map((n, i) => `${String((h0+i) % 24).padStart(2,'0')}h: ${n}`).join(', '))}">
         ${cobertura.map((n, i) => `<span class="cal-cob-b${n === maxCob && n > 0 ? ' is-max' : ''}${n === 0 ? ' is-cero' : ''}" style="height:${Math.max(6, n / maxCob * 100)}%" title="${String((h0+i) % 24).padStart(2,'0')}:00 · ${n}"><i>${n}</i></span>`).join('')}
       </div>
     </div>` : '';
@@ -4544,7 +4549,7 @@ function renderHorariosDia(){
   box.innerHTML = `
     <div class="cal-nav">
       <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Día anterior', ca:'Dia anterior', en:'Previous day'}))}" aria-label="${escapeHtml(gl({es:'Día anterior', ca:'Dia anterior', en:'Previous day'}))}" onclick="calDiaMas(-1)"><i class="ti ti-chevron-left"></i></button>
-      <label class="cal-fecha" onclick="const i=this.querySelector('input'); if(i && i.showPicker){ try{ i.showPicker(); }catch(e){} }"><span>${escapeHtml(fecha.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long', year:'numeric'}))}</span><input type="date" id="horarios-filter-date" value="${date}" onchange="calDiaFecha(this.value)" aria-label="${escapeHtml(t('common.date'))}"></label>
+      <label class="cal-fecha" onclick="calAbrirSelectorFecha(this)"><span>${escapeHtml(fecha.toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long', year:'numeric'}))}</span><input type="date" id="horarios-filter-date" value="${date}" onchange="calDiaFecha(this.value)" aria-label="${escapeHtml(t('common.date'))}"></label>
       <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}))}" aria-label="${escapeHtml(gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}))}" onclick="calDiaMas(1)"><i class="ti ti-chevron-right"></i></button>
       ${date !== todayStr() ? `<button type="button" class="btn btn-sm btn-fino" onclick="calDiaFecha(todayStr())">${t('common.today')}</button>` : ''}
     </div>
