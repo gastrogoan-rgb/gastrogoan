@@ -701,8 +701,10 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   pendiente. Arriba, un resumen de cuatro cifras (productos, elaboraciones, **bajo mínimo** —pulsarlo filtra— y valor del stock, solo
   propietario) y el número de alertas en cada pestaña. Las carpetas dicen cuántos están bajo mínimo y dentro lo que pide atención va
   primero. «Pedir lo que falta» solo sale con alertas y lleva a Pedidos. Mermas (informe) e Historial viven en el ⋯ de la cabecera,
-  «Anotar merma» sigue a la vista. ⚠️ El orden de los `<input>` de cada fila es mínimo, cantidad (lo usa `stock-empleados.mjs`); la
-  posición visual la ponen las áreas de la rejilla. Un empleado sin edición cuenta existencias (− / +) pero no toca el mínimo. Prueba: `test/stock.mjs`.
+  «Anotar merma» sigue a la vista. En PC y tablet (>760 px) las filas son tarjetas **de dos en dos**; en móvil, una. Cada casilla lleva su rótulo («ACTUAL · kg», «MÍNIMO · kg»)
+  y **el mínimo va BLOQUEADO (gris, `readonly`) hasta pulsar el lápiz** (`stMinEditar`; Enter o salir lo guarda y vuelve a bloquear, Esc cancela);
+  sin permiso de edición no hay lápiz sino un candado y el campo es `disabled`. ⚠️ El orden de los `<input>` de cada fila es mínimo, cantidad (lo usa `stock-empleados.mjs`); la
+  posición visual la ponen `order` y las áreas de la rejilla. Un empleado sin edición cuenta existencias (− / +) pero no toca el mínimo. Prueba: `test/stock.mjs`.
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,

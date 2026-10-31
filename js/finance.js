@@ -2391,6 +2391,25 @@ function stEscribir(tipo, id, valor){
   if(stPend[k]){ clearTimeout(stPend[k].timer); delete stPend[k]; }
   if(tipo === 'elab') updateElaboracionQty(id, valor); else updateStockQty(id, valor);
 }
+// El mínimo es una decisión de gestión: la casilla está BLOQUEADA y se abre con el lápiz, para que no se confunda con la cantidad
+// actual (antes eran dos cajas iguales una al lado de otra). Al guardar, el repintado la vuelve a bloquear.
+function stMinEditar(btn){
+  const inp = btn.closest('.st-ctl').querySelector('input');
+  if(!inp || inp.disabled) return;
+  inp.readOnly = false;
+  inp.closest('.st-fila').classList.add('is-editando');
+  inp.focus(); inp.select();
+}
+function stMinBloquear(inp){
+  if(inp.disabled) return;
+  inp.readOnly = true;
+  const f = inp.closest('.st-fila');
+  if(f) f.classList.remove('is-editando');
+}
+function stMinTecla(ev, inp){
+  if(ev.key === 'Enter'){ ev.preventDefault(); inp.blur(); }
+  else if(ev.key === 'Escape'){ inp.value = inp.defaultValue; inp.blur(); }
+}
 function stPedirLoQueFalta(){
   navigate('pedidos');
   setPedidosTab(editUnlocked ? 'crear' : 'solicitar');
@@ -2437,17 +2456,25 @@ function stFilaHtml(row){
     <div class="st-fila stock-row plegable${low ? ' is-bajo' : ok ? ' is-ok' : ''}${abierta ? ' is-abierta' : ''}" data-st="${k}" data-pl="st-${k}" onclick="ggTogglePlegable(event, this)">
       <div class="st-nom"><b title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</b>${tags ? `<span class="st-sub">${tags}</span>` : ''}</div>
       <button type="button" class="pl-chev" aria-expanded="${abierta}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
-      <div class="st-min pl-extra" data-et="${escapeHtml(t('label.minStock'))}">
-        <span class="st-lab">${t('label.minAbbrev')}</span>
-        <input type="number" value="${row.min}" step="0.01" min="0" ${editUnlocked ? '' : 'disabled'} aria-label="${escapeHtml(t('label.minStock') + ': ' + row.name)}"
-          onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
-        <span class="st-u">${u}</span>
-      </div>
-      <div class="st-qty">
-        <button type="button" class="btn btn-fino" aria-label="−" onclick="stPaso('${row.type}',${row.id},-1)"><i class="ti ti-minus"></i></button>
-        <input type="number" value="${qty}" step="0.01" min="0" aria-label="${escapeHtml(t('label.currentAbbrev') + ': ' + row.name)}" onchange="stEscribir('${row.type}',${row.id}, this.value)">
-        <button type="button" class="btn btn-fino" aria-label="+" onclick="stPaso('${row.type}',${row.id},1)"><i class="ti ti-plus"></i></button>
-        <span class="st-u">${u}</span>
+      <div class="st-datos">
+        <div class="st-campo st-min pl-extra" data-et="${escapeHtml(t('label.minStock'))}">
+          <span class="st-lab">${gl({es:'Mínimo', ca:'Mínim', en:'Minimum'})} · ${u}</span>
+          <span class="st-ctl">
+            <input type="number" class="st-min-in" value="${row.min}" step="0.01" min="0" ${editUnlocked ? 'readonly' : 'disabled'} aria-label="${escapeHtml(t('label.minStock') + ': ' + row.name)}"
+              onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}" onblur="stMinBloquear(this)" onkeydown="stMinTecla(event, this)">
+            ${editUnlocked
+              ? `<button type="button" class="btn btn-fino st-lapiz" title="${escapeHtml(gl({es:'Cambiar el mínimo', ca:'Canviar el mínim', en:'Change the minimum'}))}" aria-label="${escapeHtml(gl({es:'Cambiar el mínimo', ca:'Canviar el mínim', en:'Change the minimum'}) + ': ' + row.name)}" onclick="event.stopPropagation();stMinEditar(this)"><i class="ti ti-pencil"></i></button>`
+              : `<span class="st-cand" title="${escapeHtml(gl({es:'Solo el encargado cambia el mínimo', ca:'Només l\'encarregat canvia el mínim', en:'Only a manager changes the minimum'}))}"><i class="ti ti-lock"></i></span>`}
+          </span>
+        </div>
+        <div class="st-campo st-qty">
+          <span class="st-lab">${gl({es:'Actual', ca:'Actual', en:'Current'})} · ${u}</span>
+          <span class="st-ctl">
+            <button type="button" class="btn btn-fino" aria-label="−" onclick="stPaso('${row.type}',${row.id},-1)"><i class="ti ti-minus"></i></button>
+            <input type="number" value="${qty}" step="0.01" min="0" aria-label="${escapeHtml(t('label.currentAbbrev') + ': ' + row.name)}" onchange="stEscribir('${row.type}',${row.id}, this.value)">
+            <button type="button" class="btn btn-fino" aria-label="+" onclick="stPaso('${row.type}',${row.id},1)"><i class="ti ti-plus"></i></button>
+          </span>
+        </div>
       </div>
       <div class="st-acc pl-extra">${ggMenuAcciones(acciones)}</div>
     </div>`;

@@ -3430,25 +3430,32 @@ input,select,textarea{border-radius:var(--r-s)}
 .st-tabs{margin-bottom:12px}
 .st-n{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:#8A3B2E;color:#fff;font-family:var(--mono);font-size:11px;font-weight:600;line-height:18px;text-align:center;margin-left:4px}
 .st-n[hidden]{display:none}
-.st-lista{border-top:1px solid var(--hair);background:#fff}
-.st-fila{display:grid;grid-template-columns:minmax(0,1fr) auto auto 44px;grid-template-areas:"nom qty min acc";gap:6px 18px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--hair);box-shadow:inset 3px 0 0 transparent}
+.st-lista{display:grid;gap:8px}
+@media (min-width:761px){.st-lista{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.st-fila{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-areas:"nom acc" "datos datos";gap:8px 10px;align-items:start;padding:10px 12px 12px 14px;background:#fff;border:1px solid var(--hair);border-radius:3px;box-shadow:inset 3px 0 0 transparent}
 .st-fila:hover{background:var(--brand-cream)}
-.st-fila.is-bajo{background:#FBF3F1;box-shadow:inset 3px 0 0 #B5483A}
+.st-fila.is-bajo{background:#FBF3F1;border-color:#E3C4BD;box-shadow:inset 3px 0 0 #B5483A}
 .st-fila.is-ok{box-shadow:inset 3px 0 0 var(--olive)}
-.st-nom{grid-area:nom;min-width:0}
+.st-nom{grid-area:nom;min-width:0;padding-top:2px}
 .st-nom b{display:block;font-weight:600;font-size:15px;letter-spacing:-.01em;overflow-wrap:break-word}
 .st-sub{display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px;margin-top:3px}
 .st-tag{font-style:normal;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--hair);border-radius:3px;padding:0 5px;color:var(--muted)}
 .st-tag.bajo{border-color:#D9A79C;background:#F7E9E6;color:#8A3B2E;font-weight:600}
 .st-tag.cam{border-color:#E8CF9A;background:#FBF1DC;color:#8A5A0F}
 .st-nada{font-family:var(--mono);font-size:11px;color:var(--muted)}
-.st-qty{grid-area:qty;display:inline-flex;align-items:center;gap:4px}
-.st-qty .btn.btn-fino{min-width:40px;padding:0}
-.st-qty input{width:84px;min-height:40px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:600;padding:2px 6px}
-.st-min{grid-area:min;display:inline-flex;align-items:center;gap:6px}
-.st-min input{width:76px;min-height:40px;text-align:center;font-family:var(--mono);font-size:13px;padding:2px 6px}
+.st-datos{grid-area:datos;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 14px}
+.st-campo{display:flex;flex-direction:column;gap:3px;min-width:0}
+.st-qty{order:1}
+.st-min{order:2}
 .st-lab{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.st-u{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:22px}
+.st-ctl{display:inline-flex;align-items:center;gap:4px}
+.st-ctl .btn.btn-fino{min-width:40px;padding:0}
+.st-qty input{width:76px;min-height:40px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:600;padding:2px 6px}
+.st-min input{width:68px;min-height:40px;text-align:center;font-family:var(--mono);font-size:13px;padding:2px 6px}
+/* El mínimo va bloqueado (sin caja, sobre gris) hasta que se pulsa el lápiz: así no se confunde con la cantidad actual. */
+.st-min-in[readonly],.st-min-in:disabled{background:#F1EFE9;border-color:transparent;color:var(--ink);cursor:default;opacity:1}
+.st-fila.is-editando .st-min-in{background:#fff;border-color:var(--olive)}
+.st-cand{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:40px;color:var(--muted)}
 .st-acc{grid-area:acc;display:flex;justify-content:flex-end}
 .st-grupo{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:18px 0 6px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .st-grupo span{color:var(--ink);font-weight:600}
@@ -3469,11 +3476,12 @@ input,select,textarea{border-radius:var(--r-s)}
   #stock-menu{order:3;margin-left:auto}
   .st-acciones > .btn.is-on{order:2}
   #stock-pedir{order:4;flex:1 1 100%;justify-content:center}
-  .st-fila{grid-template-columns:minmax(0,1fr) 44px;grid-template-areas:"nom chev" "qty qty" "min min" "acc acc";gap:0 8px;padding:8px 6px 8px 14px;cursor:pointer}
+  .st-fila{grid-template-columns:minmax(0,1fr) 44px;grid-template-areas:"nom chev" "datos datos" "acc acc";gap:0 8px;padding:8px 6px 8px 14px;cursor:pointer}
   .st-fila .pl-chev{grid-area:chev}
-  .st-qty{justify-self:start;padding:4px 0 2px}
+  .st-datos{display:flex;flex-direction:column;align-items:flex-start;gap:0}
+  .st-qty{padding:4px 0 2px}
   .st-fila:not(.is-abierta) .pl-extra{display:none}
-  .st-fila.is-abierta .st-min{padding-top:8px;margin-top:6px;border-top:1px solid var(--hair)}
+  .st-fila.is-abierta .st-min{padding-top:8px;margin-top:6px;border-top:1px solid var(--hair);width:100%}
   .st-fila.is-abierta .st-acc{justify-content:flex-start;padding-top:6px}
 }
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */

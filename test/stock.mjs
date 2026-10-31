@@ -47,6 +47,7 @@ async function abrir(ancho){
       {id:502, name:'Sofrito de la casa', unit:'kg', qty:4, min:2, category:'Salsas', area:'cocina'}
     ];
     DB.mermas = []; DB.purchaseOrders = []; DB.categoryIcons = {recipe:{}, ingredient:{}};
+    applyOwnerSessionEditRights(); document.body.classList.add('owner-session'); areaUnlocked.cocina = areaUnlocked.sala = areaUnlocked.gestion = true;
     saveDB(); currentFolder = 'cocina'; navigate('stock');
   });
   await esperar(500);
@@ -176,6 +177,21 @@ for(const ancho of [1280, 360]){
     await q(() => closeModal());
   });
 
+  await caso(`El mínimo está BLOQUEADO hasta pulsar el lápiz; con él se cambia y vuelve a bloquearse (${ancho}px)`, async () => {
+    await q(() => { stockTab('ing'); openStockFolder('Carnes'); });
+    await esperar(200);
+    const antes = await q(() => { const f = document.querySelector('[data-st="ing-101"]'); if(window.innerWidth < 600) f.classList.add('is-abierta'); const i = f.querySelector('.st-min-in'); return {ro: i.readOnly, lapiz: !!f.querySelector('.st-lapiz'), etiquetas: [...f.querySelectorAll('.st-lab')].map(l => l.textContent.trim())}; });
+    assert.ok(antes.ro && antes.lapiz, JSON.stringify(antes));
+    assert.ok(antes.etiquetas.some(l => /^Actual/.test(l)) && antes.etiquetas.some(l => /^Mínimo/.test(l)), 'cada casilla dice qué es: ' + JSON.stringify(antes.etiquetas));
+    const abierto = await q(() => { const f = document.querySelector('[data-st="ing-101"]'); f.querySelector('.st-lapiz').click(); const i = f.querySelector('.st-min-in'); return {ro: i.readOnly, foco: document.activeElement === i}; });
+    assert.ok(!abierto.ro && abierto.foco, JSON.stringify(abierto));
+    await q(() => { const i = document.querySelector('[data-st="ing-101"] .st-min-in'); i.value = '12'; i.dispatchEvent(new Event('change', {bubbles:true})); });
+    await esperar(150);
+    const despues = await q(() => ({min: getStockEntry(101).min, ro: document.querySelector('[data-st="ing-101"] .st-min-in').readOnly}));
+    assert.equal(despues.min, 12); assert.ok(despues.ro, 'tras guardar vuelve a quedar bloqueado');
+    await q(() => { getStockEntry(101).min = 10; saveDB(); });
+  });
+
   await caso(`Un empleado sin edición cuenta existencias, pero no ve el valor, ni mermas, ni historial, ni toca el mínimo (${ancho}px)`, async () => {
     await q(() => {
       localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'employee', employeeId:1, area:'cocina', ts:Date.now()}));
@@ -194,7 +210,30 @@ for(const ancho of [1280, 360]){
     assert.ok(r.minDeshab, JSON.stringify(r)); assert.ok(r.steppers, JSON.stringify(r));
   });
 
+  await caso(`${ancho >= 761 ? 'Dos productos por fila' : 'Un producto por fila'} en ${ancho}px`, async () => {
+    await q(() => { stockTab('ing'); backToStockFolders(); openStockFolder('Verduras'); });
+    await esperar(200);
+    const r = await q(() => [...document.querySelectorAll('.st-fila')].map(f => Math.round(f.getBoundingClientRect().top)));
+    const porFila = r.filter(t => t === r[0]).length;
+    assert.equal(porFila, ancho >= 761 ? 2 : 1, JSON.stringify(r));
+  });
+
   await caso(`Ningún error de JavaScript (${ancho}px)`, async () => assert.deepEqual(page.erroresJs, []));
+  await page.close();
+}
+
+// Tablet: también dos por fila, sin que nada se desborde dentro de cada tarjeta.
+for(const ancho of [768, 820, 1024]){
+  const page = await abrir(ancho);
+  await caso(`Tablet ${ancho}px: dos productos por fila y las casillas caben en su tarjeta`, async () => {
+    const r = await page.evaluate(() => {
+      openStockFolder('Verduras');
+      const filas = [...document.querySelectorAll('.st-fila')];
+      const tops = filas.map(f => Math.round(f.getBoundingClientRect().top));
+      return {porFila: tops.filter(t => t === tops[0]).length, malos: filas.filter(f => f.scrollWidth > f.clientWidth + 1 || f.querySelector('.st-datos').scrollWidth > f.querySelector('.st-datos').clientWidth + 1).length};
+    });
+    assert.equal(r.porFila, 2, JSON.stringify(r)); assert.equal(r.malos, 0, JSON.stringify(r));
+  });
   await page.close();
 }
 
