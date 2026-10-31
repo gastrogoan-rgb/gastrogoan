@@ -133,8 +133,8 @@ function lpAlergBuscar(v){
 }
 function printAlergenos(){
   const dishes = lpAlergFiltrados();
-  const title = t('title.dishAllergensOverview');
-  const body = `${printReportHeaderHtml(title, lpAlergSel.length ? lpAlergSel.map(a => allergenLabel(a)).join(' · ') : '')}<table><thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead><tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td>${d.allergens.map(a => escapeHtml(allergenLabel(a))).join(' · ')}</td></tr>`).join('')}</tbody></table>`;
+  const title = tA('title.dishAllergensOverview');
+  const body = `${printReportHeaderHtml(title, lpAlergSel.length ? lpAlergSel.map(a => allergenLabel(a)).join(' · ') : '')}<table><thead><tr><th>${tA('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead><tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td>${d.allergens.map(a => escapeHtml(allergenLabel(a))).join(' · ')}</td></tr>`).join('')}</tbody></table>`;
   printReportWindow(title, body);
 }
 // Platos que llevan ALGUNO de los alérgenos marcados (sin ninguno marcado, todos los de la lista).
@@ -156,23 +156,23 @@ function renderLimpiezaAlergenos(){
   box.innerHTML = `
     <section class="lp-card lp-alerg-filtro">
       <div class="lp-barra">
-        <div class="es-tit" style="margin:0">${gl({es:'Ver los platos que llevan…', ca:'Veure els plats que porten…', en:'Show the dishes that contain…'})}</div>
+        <div class="es-tit" style="margin:0">${(currentArea()==='sala' ? gl({es:'Ver las bebidas que llevan…', ca:'Veure les begudes que porten…', en:'Show the drinks that contain…'}) : gl({es:'Ver los platos que llevan…', ca:'Veure els plats que porten…', en:'Show the dishes that contain…'}))}</div>
         <div class="lp-filtros">
-          <input type="text" class="search-input st-buscar" id="lp-alerg-q" value="${escapeHtml(lpAlergBusca)}" placeholder="${escapeHtml(gl({es:'Buscar plato…', ca:'Cercar plat…', en:'Search dish…'}))}" oninput="lpAlergBuscar(this.value)" aria-label="${escapeHtml(t('label.dishElaboration'))}">
+          <input type="text" class="search-input st-buscar" id="lp-alerg-q" value="${escapeHtml(lpAlergBusca)}" placeholder="${escapeHtml((currentArea()==='sala' ? gl({es:'Buscar bebida…', ca:'Cercar beguda…', en:'Search drink…'}) : gl({es:'Buscar plato…', ca:'Cercar plat…', en:'Search dish…'})))}" oninput="lpAlergBuscar(this.value)" aria-label="${escapeHtml(tA('label.dishElaboration'))}">
           ${filtrando ? `<button type="button" class="btn btn-sm btn-fino" onclick="lpAlergLimpiar()"><i class="ti ti-x"></i> ${gl({es:'Quitar filtros', ca:'Treure filtres', en:'Clear filters'})}</button>` : ''}
           <button type="button" class="btn btn-fino" onclick="printAlergenos()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         </div>
       </div>
       ${lista.length ? `<div class="lp-alerg-chips" role="group" aria-label="${escapeHtml(t('label.allergens'))}">${lista.map(a => `<button type="button" class="lp-alerg${lpAlergSel.includes(a) ? ' on' : ''}" aria-pressed="${lpAlergSel.includes(a)}" onclick="lpAlergToggle('${escapeJsAttr(a)}')">${escapeHtml(allergenLabel(a))}<span>${cuenta[a]}</span></button>`).join('')}</div>
-      ${lpAlergSel.length ? `<p class="pr-ayuda">${gl({es:'Se muestran los platos que llevan alguno de los alérgenos marcados.', ca:'Es mostren els plats que porten algun dels al·lèrgens marcats.', en:'Showing dishes that contain any of the selected allergens.'})}</p>` : ''}` : ''}
+      ${lpAlergSel.length ? `<p class="pr-ayuda">${(currentArea()==='sala' ? gl({es:'Se muestran las bebidas que llevan alguno de los alérgenos marcados.', ca:'Es mostren les begudes que porten algun dels al·lèrgens marcats.', en:'Showing drinks that contain any of the selected allergens.'}) : gl({es:'Se muestran los platos que llevan alguno de los alérgenos marcados.', ca:'Es mostren els plats que porten algun dels al·lèrgens marcats.', en:'Showing dishes that contain any of the selected allergens.'}))}</p>` : ''}` : ''}
     </section>
     <section class="lp-card">
-      <h3 class="dp-h"><i class="ti ti-alert-triangle"></i> ${t('title.dishAllergensOverview')} <span class="dp-cuenta">${dishes.length}</span></h3>
-      <p class="pr-ayuda">${t('msg.dishAllergensOverviewDesc')}</p>
+      <h3 class="dp-h"><i class="ti ti-alert-triangle"></i> ${tA('title.dishAllergensOverview')} <span class="dp-cuenta">${dishes.length}</span></h3>
+      <p class="pr-ayuda">${tA('msg.dishAllergensOverviewDesc')}</p>
       ${dishes.length ? `<div class="table-wrap"><table class="table-cards">
-        <thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
-        <tbody>${dishes.map(d => `<tr><td data-label="${escapeHtml(t('label.dishElaboration'))}">${escapeHtml(d.name)}</td><td class="wrap" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.map(a=>`<span class="badge badge-amber${lpAlergSel.includes(a) ? ' lp-marcado' : ''}">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
-      </table></div>` : `<div class="empty es-vacio">${filtrando ? t('common.noResults') : t('empty.noDishesForAllergens')}</div>`}
+        <thead><tr><th>${tA('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
+        <tbody>${dishes.map(d => `<tr><td data-label="${escapeHtml(tA('label.dishElaboration'))}">${escapeHtml(d.name)}</td><td class="wrap" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.map(a=>`<span class="badge badge-amber${lpAlergSel.includes(a) ? ' lp-marcado' : ''}">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
+      </table></div>` : `<div class="empty es-vacio">${filtrando ? t('common.noResults') : tA('empty.noDishesForAllergens')}</div>`}
     </section>
   `;
 }
@@ -401,7 +401,7 @@ function renderLimpiezaManos(){
             <li>${t('li.afterHandlingWaste')}</li>
             <li>${t('li.afterTouchingFaceHair')}</li>
             <li>${t('li.afterUsingRestroom')}</li>
-            <li>${t('li.rawToCookedProduct')}</li>
+            <li>${tA('li.rawToCookedProduct')}</li>
             <li>${t('li.afterEatingSmoking')}</li>
           </ul>
         </section>
@@ -956,6 +956,8 @@ function renderLimpiezaLog(key){
     if(f === 'estado' && key === 'temperaturas') input = `<div class="pr-ayuda lp-auto">${t('label.autoCalculated')}</div>`;
     else if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">OK</option><option value="NOK">No OK</option></select>`;
     else if(f === 'tipo' && key === 'temperaturas') input = `<select id="lp-${key}-${f}">${limpiezaTempTipoOptions().map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
+    // En una barra los equipos son otros: se sugieren los de siempre (se puede escribir cualquiera).
+    else if(f === 'equipo' && key === 'temperaturas' && currentArea() === 'sala') input = `<input type="text" id="lp-${key}-${f}" list="lp-equipos-sala" placeholder="${escapeHtml(cfg.labels[i])}"><datalist id="lp-equipos-sala">${[gl({es:'Cámara de cerveza', ca:'Cambra de cervesa', en:'Beer cooler'}), gl({es:'Botellero', ca:'Ampollero', en:'Bottle fridge'}), gl({es:'Máquina de hielo', ca:'Màquina de gel', en:'Ice machine'}), gl({es:'Nevera de barra', ca:'Nevera de barra', en:'Bar fridge'}), gl({es:'Vitrina de postres', ca:'Vitrina de postres', en:'Dessert display'})].map(n => `<option value="${escapeHtml(n)}"></option>`).join('')}</datalist>`;
     else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${hoy}" max="${hoy}">`;
     else if(f === 'proxima' && key === 'plagas') input = `<input type="date" id="lp-${key}-${f}">`;
     else if(f === 'hora') input = `<input type="time" id="lp-${key}-${f}">`;
@@ -3233,7 +3235,7 @@ function openClientHistoryModal(id){
     </div>
     ${timeline.length ? `<div class="table-wrap">
       <table>
-        <thead><tr><th>${t('common.date')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.total')}</th></tr></thead>
+        <thead><tr><th>${t('common.date')}</th><th>${tA('label.dishElaboration')}</th><th>${t('label.total')}</th></tr></thead>
         <tbody>${timeline.map(entry => {
           if(entry.type === 'sale'){
             const s = entry.data;

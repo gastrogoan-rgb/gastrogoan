@@ -748,6 +748,17 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   **maridajes** (nuevo, `renderIdrMaridaje`) y carta de bebidas; sin menús. Cocina no cambia. El maridaje es lo único que LEE la otra área (la carta de la cocina, con sus
   ingredientes y alérgenos) y no escribe nada en ella; cada bebida se casa con lo que el local ya tiene y, si es un cóctel que falta, se puede crear desde ahí.
   ⚠️ Hay 14 sitios donde el módulo decía `'cocina'` a mano: se cambiaron por `idrArea()`; al añadir uno nuevo, no escribir el área en literal. Prueba: `test/idr-sala.mjs`.
+- **Sala adaptada a Sala** (1/11, `test/sala-adaptada.mjs`): Sala nació como copia de Cocina y hablaba de platos, raciones, ingredientes y «food cost»
+  donde una barra habla de bebidas, copas, productos y coste de bebida. Mecanismo: `tA(clave)` (js/i18n.js) devuelve `clave.sala` si existe y
+  estás en Sala, y `aplicarPalabrasDeArea` (la llama `renderView`) hace lo mismo con los `data-i18n` fijos del HTML — **solo toca los que tienen
+  variante** y los restaura al volver a Cocina. Para adaptar un texto: añadir `clave.sala` en los tres idiomas y, si se pinta desde JS, usar `tA`.
+  Hecho: Mega Lista («productos»), Escandallo (aviso «1 copa o bebida», «Coste de bebida», «Preparaciones»), Fichas, Stock («Productos» /
+  «Preparaciones», singular/plural), alérgenos («por bebida»), higiene de manos, equipos de temperatura sugeridos (cámara de cerveza, botellero,
+  máquina de hielo…). **Mermas por área** (`mermaMotivos()`): Sala ofrece «rotura de botella o cristalería» e «invitación» y no «sobreproducción»;
+  las claves son estables, el historial de las dos sigue legible. ⚠️ **Fuga corregida: `DB.ingredientCategories` es UNA lista para las dos áreas**
+  (la siembra del catálogo la llena con nombres de ambas) y se veía entera en cada una; ahora `ingredientCategoriesPropias()` enseña solo las que
+  usa algún producto del área (una que nadie usa aún se ve en las dos). Al añadir una pantalla compartida nueva, añadirla a la prueba.
+  «Ingrediente» se queda en el escandallo: en un cóctel es la palabra correcta.
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,

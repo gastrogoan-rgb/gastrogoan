@@ -2219,6 +2219,9 @@ function renderView(view){
   // navigate() (p.ej. renderView('escandallo') a mano desde la consola de
   // un empleado sin permiso de edición).
   if(isReadonlyLockedModule(view)){ showToast(t('msg.needsEditPermission')); goHome(); return; }
+  // Palabras de cada área en los textos fijos de la vista (Sala: bebidas,
+  // productos, preparaciones…). Antes del pintado, que puede afinar alguno.
+  if(typeof aplicarPalabrasDeArea === 'function') aplicarPalabrasDeArea(document.getElementById('view-' + view));
   switch(view){
     case 'home': renderHome(); break;
     case 'folder': renderFolder(); break;
