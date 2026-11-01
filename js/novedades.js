@@ -1032,11 +1032,10 @@ function nvPrueba(canal){
 
 // ── Descargas ────────────────────────────────────────────────────────────
 function nvDescargar(nombre, contenido, mime){
-  const blob = new Blob([contenido], {type: mime});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = nombre;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  // Por guardarArchivo (js/app.js): en iOS el atributo `download` sobre un blob se ignora y
+  // se llevaría la app por delante; allí pasa por la hoja de compartir.
+  const r = guardarArchivo(new Blob([contenido], {type: mime}), nombre);
+  if(r && typeof r.catch === 'function') r.catch(() => {});
 }
 function nvNombreArchivo(c){
   const base = (c.asunto || c.titular || 'novedad').replace(/\{[^}]+\}/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'novedad';
