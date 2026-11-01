@@ -329,7 +329,7 @@ function tpvPlatoHtml(order, sec, p, conSeccion){
       </button>
       <span class="tp-plato-acc">
         ${n ? `<button type="button" class="tp-plato-menos" aria-label="${escapeHtml(gl({es:'Quitar uno', ca:'Treure\'n un', en:'Remove one'}))}" onclick="event.stopPropagation();tpvQuitarUno(${order.id}, ${p.id})"><i class="ti ti-minus"></i></button>` : ''}
-        <button type="button" class="tp-plato-info" aria-label="${escapeHtml(t('label.dishInfo'))}" title="${escapeHtml(t('label.dishInfo'))}" onclick="event.stopPropagation();openDishInfoModal(${p.recipeId ? p.recipeId : 'null'}, '${escapeJsAttr(tItem(p))}', '${escapeJsAttr(p.alergenos || '')}', 'renderTableOrderModal(${order.id})')"><i class="ti ti-info-circle"></i></button>
+        <button type="button" class="tp-plato-info" aria-label="${escapeHtml(t('label.dishInfo'))}" title="${escapeHtml(t('label.dishInfo'))}" onclick="event.stopPropagation();openDishInfoModal(${p.recipeId||'null'}, '${escapeJsAttr(tItem(p))}', '${escapeJsAttr(p.alergenos || '')}', 'renderTableOrderModal(${order.id})')"><i class="ti ti-info-circle"></i></button>
       </span>
     </div>`;
 }
@@ -422,7 +422,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
     // Aquí es donde SALA da el último toque: cocina ya lo ha dejado servido y es sala quien confirma que se lo han llevado.
     else if(listos.length) statusBadge = esPedidoSoloLectura(order)
       ? `<span class="badge badge-green txt-xs"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`
-      : bt('btn-primary', `marcarTandaRecogidaDesdeSala(${order.id}, '${esq}')`, escapeHtml(t('tpv.markPickedUp')), 'ti-truck-delivery');
+      : bt('btn-primary', `marcarTandaRecogidaDesdeSala(${order.id}, '${escapeJsAttr(g.tanda||'')}')`, escapeHtml(t('tpv.markPickedUp')), 'ti-truck-delivery');
     else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue txt-xs"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
     else if(allFired) statusBadge = `<span class="badge badge-amber txt-xs"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
