@@ -161,13 +161,11 @@ await caso('Las pantallas de datos salen LLENAS, no con guiones', async ()=>{
   const r = await page.evaluate(()=>{
     const out = {};
     navigate('clientes');
-    const filas = [...document.querySelectorAll('#clientes-tbody tr')];
+    renderClientes();
+    const filas = [...document.querySelectorAll('#clientes-content .cl-card')];
     out.clientes = filas.length;
-    out.conNombre = filas.filter(f => {
-      const t = (f.children[0]||{}).textContent || '';
-      return t.trim() && t.trim() !== '—';
-    }).length;
-    out.conVisitas = filas.filter(f => !/^0\s*$/.test(((f.children[2]||{}).textContent||'').trim())).length;
+    out.conNombre = filas.filter(f => { const t = ((f.querySelector('.cl-card-nom b') || {}).textContent || '').trim(); return t && t !== '—'; }).length;
+    out.conVisitas = filas.filter(f => !/Sin visitas/.test(f.innerText)).length;
     navigate('reservas');
     out.reservasEnDB = (DB.reservations||[]).length;
     out.reservasConNombre = (DB.reservations||[]).filter(x => x.clientName && x.date && x.time).length;

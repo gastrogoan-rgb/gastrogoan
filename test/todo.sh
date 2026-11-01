@@ -147,6 +147,8 @@ lanzar; node test/idr-sala.mjs > "$SALIDA/idr-sala.txt" 2>&1 & P139=$!
 lanzar; node test/sala-adaptada.mjs > "$SALIDA/sala-adaptada.txt" 2>&1 & P140=$!
 lanzar; node test/promocion.mjs > "$SALIDA/promocion.txt" 2>&1 & P141=$!
 lanzar; node test/novedades.mjs > "$SALIDA/novedades.txt" 2>&1 & P142=$!
+lanzar; node test/clientes.mjs > "$SALIDA/clientes.txt" 2>&1 & P143=$!
+lanzar; node test/reservas.mjs > "$SALIDA/reservas.txt" 2>&1 & P144=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -324,5 +326,7 @@ espera $P139 "I+D de Sala: cócteles, preparaciones, maridajes y carta de bebida
 espera $P140 "Sala adaptada a Sala: sin vocabulario de cocina en 14 pantallas × es/ca/en, categorías y mermas de cada área" "$SALIDA/sala-adaptada.txt" "Sala adaptada a Sala"
 espera $P141 "Promoción: seis pestañas con el diseño nuevo, ventanas, rebajar platos y bebidas, fin de promo semanal, WhatsApp con prefijo, móviles" "$SALIDA/promocion.txt" "casos de Promoción pasaron"
 espera $P142 "Novedades: audiencias, email HTML, guía de envío por correo y lista de difusión, .eml, .vcf, bajas, historial, tres idiomas y móviles" "$SALIDA/novedades.txt" "casos de Novedades pasaron"
+espera $P143 "Clientes: tarjetas sin mover de lado, ficha entera, notas amplias, historial en pantalla propia y vales regalo (caducidad, canje parcial, contabilidad, anulación)" "$SALIDA/clientes.txt" "casos de Clientes y vales pasaron"
+espera $P144 "Reservas: cifras del día, acción principal por reserva, Semana y Mes, búsqueda, hoja del día, solicitudes compactas y WhatsApp con prefijo" "$SALIDA/reservas.txt" "casos de Reservas pasaron"
 
 exit $FALLOS

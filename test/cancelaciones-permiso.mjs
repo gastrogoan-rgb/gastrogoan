@@ -120,11 +120,20 @@ await caso('Todo botón de cancelar lleva .owner-only y desaparece sin permiso',
     saveDB();
     const SEL = '[onclick*="cancelReservation"], [onclick*="rejectOnlineReservation"], [onclick*="rejectOnlineOrder"],'
       + ' [onclick*="cancelAcceptedOnlineOrder"], [onclick*="requestCancelSale"], [onclick*="cancelWaitlistEntry"], [onclick*="deleteOrder"]';
-    const recoger = () => [...document.querySelectorAll(SEL)].map(e => ({
-      quien: (e.getAttribute('onclick')||'').split('(')[0],
-      ownerOnly: e.classList.contains('owner-only'),
-      oculto: getComputedStyle(e).display === 'none',
-    }));
+    // Desde el 1/11 la cancelación de una reserva vive en el menú ⋯ de su fila: la acción lleva `owner:true`
+    // (ggAbrirMenuAcciones le pone .owner-only al abrir el menú, y esa clase la esconde sin permiso).
+    const RE = /cancelReservation|rejectOnlineReservation|rejectOnlineOrder|cancelAcceptedOnlineOrder|requestCancelSale|cancelWaitlistEntry|deleteOrder/;
+    const recoger = () => [
+      ...[...document.querySelectorAll(SEL)].map(e => ({
+        quien: (e.getAttribute('onclick')||'').split('(')[0],
+        ownerOnly: e.classList.contains('owner-only'),
+        oculto: getComputedStyle(e).display === 'none',
+      })),
+      ...[...document.querySelectorAll('[aria-haspopup="menu"][data-acc]')].flatMap(b => {
+        let acc = []; try{ acc = JSON.parse(b.dataset.acc); }catch(e){}
+        return acc.filter(a => RE.test(a.fn || '')).map(a => ({quien: (a.fn||'').split('(')[0], ownerOnly: !!(a.owner || a.estricto), oculto: !!(a.owner || a.estricto)}));   // .owner-only la esconde sin permiso (lo mide menu-acciones.mjs)
+      }),
+    ];
     currentFolder = 'sala';
     editUnlocked = true; document.body.classList.add('edit-unlocked');
     navigate('reservas'); await new Promise(r=>setTimeout(r,600));

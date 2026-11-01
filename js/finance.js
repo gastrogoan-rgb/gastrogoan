@@ -605,8 +605,11 @@ function geValesUnivalentesMes(mesStr){
   });
   return {base, iva};
 }
+// Un vale «vivo» es el que todavía se puede canjear: ni canjeado del todo ni caducado.
+// Lo caducado deja de ser dinero que se deba servir (el gestor decide cómo tratarlo).
+function geValeVivo(v){ return !v.canjeFecha && !(v.venceEn && v.venceEn < todayStr()); }
 function geValesPendientes(){
-  return (DB.ge.vales||[]).filter(v => !v.canjeFecha).reduce((s,v)=>s+(parseFloat(v.importe)||0), 0);
+  return (DB.ge.vales||[]).filter(geValeVivo).reduce((s,v)=>s+Math.max(0, (parseFloat(v.importe)||0) - (parseFloat(v.canjeParcial)||0)), 0);
 }
 function geOtrosIngresosMes(year, month){
   const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;

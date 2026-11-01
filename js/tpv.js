@@ -1410,7 +1410,8 @@ function openOrderNotifyModal(nombre, telefono, email, tipo){
 function sendOrderNotifyWhatsapp(){
   const telefono = orderNotifyState && orderNotifyState.telefono;
   if(!telefono){ showToast(t('msg.noPhone')); return; }
-  const tel = telefono.replace(/\D/g,'');
+  const tel = whatsappDeTelefono(telefono);
+  if(!tel){ showToast(gl({es:'Este teléfono no parece un móvil: WhatsApp no lo abre.', ca:'Aquest telèfon no sembla un mòbil: WhatsApp no l\'obre.', en:'This number does not look like a mobile: WhatsApp will not open it.'})); return; }
   const txt = encodeURIComponent(document.getElementById('order-notify-text').value);
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
   closeModal();

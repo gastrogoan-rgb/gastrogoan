@@ -107,7 +107,7 @@ await caso('Tres visitas de un fin de semana no bastan para decir nada', async (
 await caso('Y la lista de Clientes no enseña la etiqueta a quien no toca', async () => {
   const r = await page.evaluate(()=>{
     const texto = document.getElementById('view-clientes').innerText;
-    const filas = [...document.querySelectorAll('#view-clientes tr, #view-clientes .card')]
+    const filas = [...document.querySelectorAll('#view-clientes .cl-card')]
       .filter(f => /Habitual Diario/.test(f.innerText)).map(f => f.innerText);
     return {hayEtiquetaEnHabitual: filas.some(f => /riesgo/i.test(f)), tieneClientes: /Habitual Diario/.test(texto)};
   });
@@ -115,23 +115,18 @@ await caso('Y la lista de Clientes no enseña la etiqueta a quien no toca', asyn
   assert.ok(!r.hayEtiquetaEnHabitual, 'el cliente que vino ayer no lleva etiqueta de riesgo');
 });
 
-await caso('En el móvil, la tarjeta plegada enseña solo nombre y puntos', async () => {
+await caso('La tarjeta del cliente enseña nombre, puntos y la etiqueta SOLO a quien toca', async () => {
   const r = await page.evaluate(async ()=>{
-    // La vista de tarjetas es la de móvil; se pinta siempre, así que se
-    // puede mirar su contenido sin cambiar el tamaño de pantalla (que
-    // recargaría la página y borraría la semilla — ver CLAUDE.md).
-    const tarjeta = [...document.querySelectorAll('#clientes-cards .client-card')]
-      .find(x => /Quincenal Perdido/.test(x.innerText));
-    if(!tarjeta) return {sinTarjeta:true};
-    const resumen = tarjeta.querySelector('.client-card-summary').innerText;
-    const detalle = tarjeta.querySelector('.client-card-detail').innerText;
-    return {resumen, detalle};
+    const tarjeta = n => [...document.querySelectorAll('#clientes-content .cl-card')].find(x => x.innerText.includes(n));
+    const perdido = tarjeta('Quincenal Perdido'), habitual = tarjeta('Habitual Diario');
+    return {hayPerdido: !!perdido, hayHabitual: !!habitual,
+      perdido: perdido && perdido.innerText, etiquetaPerdido: !!(perdido && perdido.querySelector('.cl-et-riesgo')),
+      etiquetaHabitual: !!(habitual && habitual.querySelector('.cl-et-riesgo'))};
   });
-  assert.ok(!r.sinTarjeta, 'tiene que existir la tarjeta de móvil');
-  assert.ok(/\/10/.test(r.resumen), 'el resumen lleva el contador sobre diez: ' + JSON.stringify(r.resumen));
-  assert.ok(!/riesgo/i.test(r.resumen), 'y NADA más que estorbe: ' + JSON.stringify(r.resumen));
-  // Pero la etiqueta no se pierde: baja al detalle, junto a la última visita.
-  assert.ok(/riesgo/i.test(r.detalle), 'la etiqueta sigue estando al desplegar: ' + JSON.stringify(r.detalle.slice(0,200)));
+  assert.ok(r.hayPerdido && r.hayHabitual, 'las dos tarjetas tienen que existir');
+  assert.ok(/\/10/.test(r.perdido), 'la tarjeta lleva el contador sobre diez: ' + JSON.stringify(r.perdido));
+  assert.ok(r.etiquetaPerdido, 'el que dejó de venir lleva la etiqueta de riesgo');
+  assert.ok(!r.etiquetaHabitual, 'el que vino ayer NO la lleva');
 });
 
 await caso('Dar un premio no cambia si está en riesgo o no', async () => {

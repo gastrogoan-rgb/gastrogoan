@@ -86,7 +86,7 @@ await caso('Pulsar WhatsApp abre wa.me con el texto y cierra el modal', async ()
       modalCerrado: !document.getElementById('modal-overlay').classList.contains('active'),
     };
   });
-  assert.ok(r.urls.length === 1 && r.urls[0].startsWith('https://wa.me/622333444?text='), 'no abrió wa.me con el teléfono correcto: ' + JSON.stringify(r.urls));
+  assert.ok(r.urls.length === 1 && r.urls[0].startsWith('https://wa.me/34622333444?text='), 'no abrió wa.me con el teléfono correcto: ' + JSON.stringify(r.urls));
   assert.ok(decodeURIComponent(r.urls[0]).toLowerCase().includes('carlos test'), 'el texto del WhatsApp no menciona al cliente');
   assert.ok(r.modalCerrado, 'el modal debía cerrarse tras mandar el aviso');
 });

@@ -63,6 +63,7 @@ const IGUALES_DE_VERDAD = new Set([
   'bar','restaurant','extra','extras','normal','general','local','base','bases','test','gas',
   'internet','sms','tel','tel.','€','%','·','—','–','+','-','×','✓','⚠','€/kg','kg','g','l','ml',
   'ud','uds','h','min','pax','a','b','c','d','ok!','info','plus','premium','online','offline',
+  'vip','no-shows','no-show',
 ]);
 
 // Revisadas una a una y aceptadas: o son ejemplos dentro de un campo vacío
