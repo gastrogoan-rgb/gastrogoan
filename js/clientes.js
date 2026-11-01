@@ -147,8 +147,7 @@ function renderClientesLista(conservarFoco){
     <div class="toolbar pm-barra cl-barra">
       <div class="left">
         <input type="search" class="search-input st-buscar" id="clientes-search" value="${escapeHtml(clientesBusca)}" placeholder="${escapeHtml(t('ph.searchClient'))}" aria-label="${escapeHtml(t('ph.searchClient'))}" oninput="clSetBusca(this.value)">
-        <label class="cl-orden"><span class="visually-hidden">${escapeHtml(gl({es:'Ordenar por', ca:'Ordenar per', en:'Sort by'}))}</span>
-          <select id="clientes-orden" aria-label="${escapeHtml(gl({es:'Ordenar por', ca:'Ordenar per', en:'Sort by'}))}" onchange="clSetOrden(this.value)">${clOrdenDef().map(([v, et]) => `<option value="${v}" ${clientesOrden === v ? 'selected' : ''}>${escapeHtml(et)}</option>`).join('')}</select></label>
+        <span class="cl-orden"><select id="clientes-orden" aria-label="${escapeHtml(gl({es:'Ordenar por', ca:'Ordenar per', en:'Sort by'}))}" onchange="clSetOrden(this.value)">${clOrdenDef().map(([v, et]) => `<option value="${v}" ${clientesOrden === v ? 'selected' : ''}>${escapeHtml(et)}</option>`).join('')}</select></span>
       </div>
       <div class="pm-acciones">
         <button type="button" class="btn btn-fino" onclick="clIr('vales')"><i class="ti ti-history"></i> ${escapeHtml(gl({es:'Historial de vales', ca:'Historial de vals', en:'Voucher history'}))}</button>
