@@ -169,7 +169,7 @@ await caso('Tomar nota: tocar un plato lo añade, la ficha dice cuántos lleva (
     out.total = document.querySelector('.tp-com-total')?.textContent.trim();
     return out;
   });
-  assert.equal(r.sinPlatos, 1, JSON.stringify(r)); assert.equal(r.n, '×2', JSON.stringify(r)); assert.equal(r.cant, '2,2', 'dos líneas: 2 croquetas ya pedidas y 2 del plato nuevo: ' + JSON.stringify(r));
+  assert.equal(r.sinPlatos, 1, JSON.stringify(r)); assert.equal(r.n, '×2', JSON.stringify(r)); assert.equal(r.cant, '2,1,1', 'las 2 croquetas ya pedidas y el plato nuevo en dos líneas (la primera sale sola a cocina): ' + JSON.stringify(r));
   assert.ok(r.comandaVisible, 'carta y comanda lado a lado en PC: ' + JSON.stringify(r));
   assert.equal(r.tras, '×1', 'el − de la ficha quita uno: ' + JSON.stringify(r)); assert.match(r.total, /41,00/, '19 de croquetas + 22 del principal: ' + JSON.stringify(r));
   await page.close();
