@@ -1279,7 +1279,7 @@ function getDistEmpData(empId){
 function promoWeekday(p){ return new Date(p.fecha+'T00:00:00').getDay(); }
 function promoOccursOn(p, ds){
   if(p.fecha === ds) return true;
-  if(p.recurrence === 'weekly' && ds > p.fecha){
+  if(p.recurrence === 'weekly' && ds > p.fecha && (!p.hasta || ds <= p.hasta)){
     return new Date(ds+'T00:00:00').getDay() === promoWeekday(p);
   }
   return false;
@@ -1463,8 +1463,9 @@ function getAllDishNames(){
 // promo se queda con el nombre como único criterio (ver getActivePromoForDish).
 function getDishPlatoIdForName(name){
   if(!name) return null;
+  // En TODAS las cartas, de comida y de bebida: Promoción vive en Sala, pero
+  // el TPV vende las dos cosas y la promo se engancha por el id del plato.
   for(const c of DB.cartas){
-    if(isBebidaCarta(c) !== (currentArea()==='sala')) continue;
     for(const sec of (c.secciones||[])){
       const p = (sec.platos||[]).find(x => x.nombre === name);
       if(p) return p.id;
@@ -4522,10 +4523,9 @@ function renderReservasRemindersDue(){
 let promoTab = 'dia';
 let promoDate = todayStr();
 let promoWeekOffset = 0;
-let promoMonthOffset = 0;
 
-function setPromoTab(t){
-  promoTab = t;
+function setPromoTab(tab){
+  promoTab = tab;
   renderPromocion();
   scrollContentToTop();
 }
@@ -4560,24 +4560,37 @@ function renderPromoSocialLinks(){
     { url: (b.gmaps||'').trim(), icon: 'ti-brand-google', label: t('mn.business.gmapsLabel') },
   ].filter(l => l.url);
   if(!links.length){
-    box.innerHTML = `<p style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t('promo.social.emptyHint')}</p>`;
+    box.innerHTML = `<p class="pr-ayuda pm-redes"><i class="ti ti-info-circle"></i> ${t('promo.social.emptyHint')}</p>`;
     return;
   }
   box.innerHTML = `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      ${links.map(l => `<a class="btn btn-sm" style="text-decoration:none" href="${escapeHtml(l.url)}" target="_blank" rel="noopener"><i class="ti ${l.icon}"></i> ${escapeHtml(l.label)}</a>`).join('')}
+    <div class="pm-redes" role="group" aria-label="${escapeHtml(gl({es:'Tus redes', ca:'Les teves xarxes', en:'Your social accounts'}))}">
+      ${links.map(l => `<a class="btn btn-sm btn-fino" href="${escapeHtml(l.url)}" target="_blank" rel="noopener"><i class="ti ${l.icon}"></i> ${escapeHtml(l.label)}</a>`).join('')}
     </div>`;
+}
+
+/* Pestañas de Promoción: se pintan desde aquí (y no en el HTML) para que el
+   texto salga en el idioma activo sin una clave suelta por cada una. */
+function promoTabsHtml(){
+  const tabs = [
+    ['dia', 'ti-calendar-event', t('common.day')],
+    ['semana', 'ti-calendar-week', t('common.week')],
+    ['mes', 'ti-calendar-month', t('common.month')],
+    ['novedades', 'ti-send', gl({es:'Novedades', ca:'Novetats', en:'News'}), ' owner-only'],
+    ['clientes', 'ti-users', t('view.clientes.title')],
+    ['ideas', 'ti-bulb', t('tab.contentIdeas')],
+  ];
+  return `<div class="left">${tabs.map(([id, ic, txt, extra]) =>
+    `<button type="button" class="btn btn-sm btn-fino${extra || ''}${promoTab===id ? ' is-on active' : ''}" id="promo-tab-${id}" aria-pressed="${promoTab===id}" onclick="setPromoTab('${id}')"><i class="ti ${ic}"></i> ${escapeHtml(txt)}</button>`).join('')}</div>`;
 }
 
 function renderPromocion(){
   renderPromoSocialLinks();
-  document.querySelectorAll('#view-promocion .ge-tab').forEach(b => b.classList.remove('active'));
-  const tabBtn = document.getElementById('promo-tab-'+promoTab);
-  if(tabBtn) tabBtn.classList.add('active');
-  scrollActiveTabIntoView(document.getElementById('promo-tabs-row'));
-
+  const fila = document.getElementById('promo-tabs-row');
+  if(fila){ fila.innerHTML = promoTabsHtml(); scrollActiveTabIntoView(fila); }
   if(promoTab === 'semana') renderPromoSemana();
   else if(promoTab === 'mes') renderPromoMes();
+  else if(promoTab === 'novedades' && typeof renderNovedades === 'function') renderNovedades();
   else if(promoTab === 'clientes') renderPromoClientes();
   else if(promoTab === 'ideas') renderPromoIdeas();
   else renderPromoDia();
@@ -4587,6 +4600,30 @@ function goToPromoDia(date){
   promoDate = date;
   promoTab = 'dia';
   renderPromocion();
+}
+
+// Franja de cifras de arriba (misma pieza que Stock y Personal).
+function pmResumenHtml(celdas){
+  return `<div class="st-resumen pm-resumen">${celdas.map(c => `
+    <div class="st-cel${c.cls ? ' ' + c.cls : ''}"><span class="st-cel-et">${escapeHtml(c.et)}</span><span class="st-cel-v">${c.v}</span>${c.sub ? `<span class="st-cel-s">${c.sub}</span>` : ''}</div>`).join('')}</div>`;
+}
+function pmFechaLarga(ds, mayus){
+  const f = new Date(ds + 'T00:00:00').toLocaleDateString(localeActual(), {weekday:'long', day:'numeric', month:'long'});
+  return mayus ? f.charAt(0).toUpperCase() + f.slice(1) : f;
+}
+function pmSumaDias(ds, n){
+  const d = new Date(ds + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return dateStr(d);
+}
+// Etiquetas pequeñas de una acción (descuento, franja, usos, repetición).
+function pmEtiquetasHtml(p, ds){
+  const et = [];
+  if(p.menuItemName) et.push(`<span class="pm-et is-dto"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} −${p.discountPct}%</span>`);
+  if(p.menuItemName && p.horaInicio && p.horaFin) et.push(`<span class="pm-et"><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}–${escapeHtml(p.horaFin)}</span>`);
+  if(p.menuItemName && p.maxUses) et.push(`<span class="pm-et" title="${escapeHtml(t('promo.modal.maxUsesHint'))}"><i class="ti ti-ticket"></i> ${ds === todayStr() ? promoUsesToday(p) : ((p.usedDates && p.usedDates[ds]) || 0)}/${p.maxUses}</span>`);
+  if(p.recurrence === 'weekly') et.push(`<span class="pm-et" title="${escapeHtml(t('promo.modal.recurrenceHint'))}"><i class="ti ti-repeat"></i> ${escapeHtml(p.hasta ? gl({es:'Cada semana hasta el ', ca:'Cada setmana fins al ', en:'Weekly until '}) + new Date(p.hasta + 'T00:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short'}) : gl({es:'Cada semana', ca:'Cada setmana', en:'Every week'}))}</span>`);
+  return et.length ? `<div class="pm-ets">${et.join('')}</div>` : '';
 }
 
 let promoFilterResponsable = '';
@@ -4600,173 +4637,195 @@ function renderPromoDia(){
   pruneOldPromos();
   const box = document.getElementById('promo-tab-content');
   const date = promoDate;
+  const hoy = todayStr();
   const salaEmployees = DB.employees.filter(e=>(e.area||'cocina')==='sala');
   const allItems = getPromosForDate(date);
+  const hechas = allItems.filter(p => !!(promoDoneInfo(p, date) || {}).done).length;
   const items = allItems.filter(p => {
     const info = promoDoneInfo(p, date);
     return (!promoFilterResponsable || String(p.responsableId||'')===promoFilterResponsable) &&
       (!promoFilterStatus || (promoFilterStatus==='done' ? !!(info&&info.done) : !(info&&info.done)));
   });
+  let proximos = 0;
+  for(let i = 1; i <= 7; i++) proximos += getPromosForDate(pmSumaDias(date, i)).length;
+  const dto = promoDiscountTotalForDate(date);
 
-  const listHtml = !allItems.length
-    ? `<div class="empty"><i class="ti ti-speakerphone"></i>${t('promo.day.noActions')}</div>`
+  const tarjeta = p => {
+    const info = promoDoneInfo(p, date);
+    const done = !!(info && info.done);
+    const resp = p.responsableId ? DB.employees.find(e => e.id === p.responsableId) : null;
+    const menu = ggMenuAcciones([
+      {icono:'ti-edit', texto:t('common.edit'), fn:`openPromoModal(${p.id})`, owner:true},
+      {icono:'ti-copy', texto:gl({es:'Duplicar al día siguiente', ca:'Duplicar al dia següent', en:'Duplicate to the next day'}), fn:`duplicarPromo(${p.id})`, owner:true},
+      {icono:'ti-trash', texto:t('common.delete'), fn:`deletePromo(${p.id})`, peligro:true, owner:true},
+    ]);
+    return `
+    <article class="pm-card${done ? ' is-hecha' : ''}">
+      <div class="pm-card-cab">
+        <label class="dp-check" title="${escapeHtml(t('title.markAsDone'))}">
+          <input type="checkbox" ${done ? 'checked' : ''} aria-label="${escapeHtml(t('title.markAsDone'))}: ${escapeHtml(p.titulo)}" onchange="togglePromoDone(${p.id},this.checked,'${date}')">
+          <span class="dp-check-caja"><i class="ti ti-check"></i></span>
+        </label>
+        <button type="button" class="pm-card-tit" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</button>
+        ${menu}
+      </div>
+      ${p.descripcion ? `<p class="pm-desc">${escapeHtml(p.descripcion)}</p>` : ''}
+      ${pmEtiquetasHtml(p, date)}
+      <div class="pm-card-pie">
+        ${resp ? `<span class="pm-resp"><span class="pr-av pr-av-s" style="--c:${escapeHtml(resp.color || '#8A7440')}">${escapeHtml(prIniciales(resp.name))}</span>${escapeHtml(resp.name)}</span>` : `<span class="pm-resp is-vacio"><i class="ti ti-user-question"></i> ${escapeHtml(t('promo.modal.unassigned'))}</span>`}
+        ${done && info.doneAt ? `<span class="pm-hecho"><i class="ti ti-check"></i> ${escapeHtml(new Date(info.doneAt).toLocaleString(localeActual(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
+        ${p.menuItemName && typeof promoAnunciar === 'function' ? `<button type="button" class="btn btn-sm btn-fino owner-only" onclick="promoAnunciar(${p.id})"><i class="ti ti-send"></i> ${escapeHtml(gl({es:'Anunciar a clientes', ca:'Anunciar als clients', en:'Tell customers'}))}</button>` : ''}
+      </div>
+    </article>`;
+  };
+
+  const lista = !allItems.length
+    ? `<div class="empty es-vacio"><i class="ti ti-speakerphone"></i>${t('promo.day.noActions')}
+        <div class="owner-only"><button type="button" class="btn btn-fino is-on" onclick="openPromoModal(null,'${date}')"><i class="ti ti-plus"></i> ${t('promo.newAction')}</button> <button type="button" class="btn btn-fino" onclick="setPromoTab('ideas')"><i class="ti ti-bulb"></i> ${t('tab.contentIdeas')}</button></div></div>`
     : !items.length
-    ? `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`
-    : `<div class="grid grid-3">
-        ${items.map(p => {
-          const info = promoDoneInfo(p, date);
-          const done = !!(info && info.done);
-          return `
-          <div class="card">
-            <h3 style="justify-content:space-between;font-size:14px">
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700">
-                <input type="checkbox" ${done?'checked':''} onchange="togglePromoDone(${p.id},this.checked,'${date}')">
-                <span style="${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(p.titulo)}</span>
-              </label>
-              ${p.recurrence==='weekly' ? `<span class="badge badge-blue txt-xs"  title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
-            </h3>
-            ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
-            ${p.menuItemName ? `<div style="font-size:12px;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
-              <span class="badge badge-green"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} -${p.discountPct}%</span>
-              ${p.horaInicio && p.horaFin ? `<span class="badge txt-xs" ><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
-              ${p.maxUses ? `<span class="badge txt-xs"  title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
-            </div>` : ''}
-            ${p.responsableId ? `<div style="font-size:12px;color:var(--ink);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
-            ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString(localeActual())))}</div>` : ''}
-            <div class="actions-cell owner-strict" style="margin-top:10px">
-              <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
-              <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
-            </div>
-          </div>
-        `;}).join('')}
-      </div>`;
+    ? `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`
+    : `<div class="pr-grid pm-grid">${items.map(tarjeta).join('')}</div>`;
 
-  const discountStats = promoDiscountTotalForDate(date);
+  const etEstado = (v, txt) => `<button type="button" class="btn btn-sm btn-fino${promoFilterStatus===v ? ' is-on' : ''}" aria-pressed="${promoFilterStatus===v}" onclick="setPromoFilter('status','${v}')">${escapeHtml(txt)}</button>`;
   box.innerHTML = `
-    ${discountStats.count ? `<div class="card" style="margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:8px">
-      <i class="ti ti-discount-2" style="color:var(--ink)"></i>
-      <span style="font-size:13px">${t('promo.day.discountGranted').replace('${amount}', fmtMoney(discountStats.total)).replace('${count}', discountStats.count)}</span>
-    </div>` : ''}
-    <div class="toolbar">
+    ${pmResumenHtml([
+      {et: gl({es:'Acciones del día', ca:'Accions del dia', en:'Actions today'}), v: allItems.length},
+      {et: t('promo.kpi.completed'), v: `${hechas} / ${allItems.length}`, cls: allItems.length && hechas === allItems.length ? 'is-ok' : ''},
+      {et: gl({es:'Descuento concedido', ca:'Descompte concedit', en:'Discount given'}), v: fmtMoney(dto.total), sub: dto.count ? escapeHtml(gl({es:`${dto.count} uso(s) en caja`, ca:`${dto.count} ús(os) a caixa`, en:`${dto.count} use(s) at the till`})) : escapeHtml(gl({es:'ninguno en caja', ca:'cap a caixa', en:'none at the till'}))},
+      {et: gl({es:'Próximos 7 días', ca:'Propers 7 dies', en:'Next 7 days'}), v: proximos},
+    ])}
+    <div class="toolbar pm-barra">
+      <div class="left pm-nav">
+        <button type="button" class="btn btn-fino pm-flecha" aria-label="${escapeHtml(gl({es:'Día anterior', ca:'Dia anterior', en:'Previous day'}))}" onclick="promoDate=pmSumaDias(promoDate,-1);renderPromocion()"><i class="ti ti-chevron-left"></i></button>
+        <label class="pm-fecha"><span class="pm-fecha-txt">${escapeHtml(pmFechaLarga(date, true))}</span><input type="date" id="promo-filter-date" value="${date}" aria-label="${escapeHtml(t('promo.modal.date'))}" onchange="if(this.value){promoDate=this.value;renderPromocion()}"></label>
+        <button type="button" class="btn btn-fino pm-flecha" aria-label="${escapeHtml(gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}))}" onclick="promoDate=pmSumaDias(promoDate,1);renderPromocion()"><i class="ti ti-chevron-right"></i></button>
+        ${date !== hoy ? `<button type="button" class="btn btn-sm btn-fino" onclick="promoDate=todayStr();renderPromocion()">${t('common.today')}</button>` : ''}
+      </div>
+      <button type="button" class="owner-only btn btn-fino is-on" onclick="openPromoModal(null,'${date}')"><i class="ti ti-plus"></i> ${t("promo.newAction")}</button>
+    </div>
+    ${allItems.length ? `<div class="toolbar pm-filtros">
       <div class="left">
-        <input type="date" id="promo-filter-date" value="${date}" onchange="promoDate=this.value;renderPromocion()">
-        <select onchange="setPromoFilter('resp', this.value)" style="max-width:180px">
+        ${salaEmployees.length ? `<select aria-label="${escapeHtml(t('promo.modal.responsible'))}" onchange="setPromoFilter('resp', this.value)">
           <option value="">${t('promo.day.allResponsibles')}</option>
           ${salaEmployees.map(e=>`<option value="${e.id}" ${promoFilterResponsable===String(e.id)?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
-        </select>
-        <select onchange="setPromoFilter('status', this.value)" style="max-width:140px">
-          <option value="">${t('promo.day.allStatuses')}</option>
-          <option value="done" ${promoFilterStatus==='done'?'selected':''}>${t('promo.day.done')}</option>
-          <option value="pending" ${promoFilterStatus==='pending'?'selected':''}>${t('promo.day.pending')}</option>
-        </select>
+        </select>` : ''}
+        ${etEstado('', t('promo.day.allStatuses'))}${etEstado('pending', t('promo.day.pending'))}${etEstado('done', t('promo.day.done'))}
       </div>
-      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> ${t("promo.newAction")}</button>
-    </div>
-    ${listHtml}
+    </div>` : ''}
+    ${lista}
   `;
 }
 
 function renderPromoSemana(){
   const box = document.getElementById('promo-tab-content');
   const dates = getWeekDates(promoWeekOffset);
-
-  const headerCells = dates.map((d,i) => {
-    const ds = dateStr(d);
-    const isToday = ds === todayStr();
-    return `<th ${isToday?'style="color:var(--ink)"':''}>${weekDayShort(i)}<br><span class="txt-xs" style="font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
-  }).join('');
-
-  const bodyCells = dates.map(d => {
+  const hoy = todayStr();
+  let total = 0, hechas = 0;
+  const columnas = dates.map((d, i) => {
     const ds = dateStr(d);
     const items = getPromosForDate(ds);
+    total += items.length;
+    hechas += items.filter(p => !!(promoDoneInfo(p, ds) || {}).done).length;
     return `
-      <td style="vertical-align:top;min-width:140px">
-        ${items.map(p => `
-          <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--bg-2,#F5F0E3);color:var(--ink);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${p.recurrence==='weekly'?'<i class="ti ti-repeat" style="font-size:11px"></i>':''}${escapeHtml(p.titulo)}</div>
-        `).join('')}
-        <span class="owner-only" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openPromoModal(null, '${ds}')">+</span>
-      </td>
-    `;
+      <section class="pm-sem-dia${ds === hoy ? ' is-hoy' : ''}${ds < hoy ? ' es-pasado' : ''}" aria-label="${escapeHtml(pmFechaLarga(ds))}">
+        <header class="pm-sem-cab" onclick="goToPromoDia('${ds}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToPromoDia('${ds}')}">
+          <span class="pm-sem-dia-nom">${escapeHtml(weekDayShort(i))}</span><b class="pm-sem-dia-num">${d.getDate()}</b><span class="pm-sem-dia-mes">${escapeHtml(t('months.short')[d.getMonth()])}</span>
+        </header>
+        <div class="pm-sem-lista">
+          ${items.map(p => { const done = !!(promoDoneInfo(p, ds) || {}).done; return `
+            <button type="button" class="pm-chip${done ? ' is-hecha' : ''}${p.menuItemName ? ' es-dto' : ''}" onclick="openPromoModal(${p.id})">
+              ${done ? '<i class="ti ti-check"></i>' : p.menuItemName ? '<i class="ti ti-discount-2"></i>' : p.recurrence === 'weekly' ? '<i class="ti ti-repeat"></i>' : ''}
+              <span>${escapeHtml(p.titulo)}</span>
+            </button>`; }).join('')}
+          <button type="button" class="pm-mas owner-only" aria-label="${escapeHtml(t('promo.newAction'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="openPromoModal(null,'${ds}')"><i class="ti ti-plus"></i></button>
+        </div>
+      </section>`;
   }).join('');
 
   box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        <button class="btn btn-sm" onclick="promoWeekOffset--;renderPromocion()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="promoWeekOffset=0;renderPromocion()">${t('common.today')}</button>
-        <button class="btn btn-sm" onclick="promoWeekOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${dates[0].getDate()}/${dates[0].getMonth()+1} – ${dates[6].getDate()}/${dates[6].getMonth()+1}</strong>
+    <div class="toolbar pm-barra">
+      <div class="left pm-nav">
+        <button type="button" class="btn btn-fino pm-flecha" aria-label="${escapeHtml(gl({es:'Semana anterior', ca:'Setmana anterior', en:'Previous week'}))}" onclick="promoWeekOffset--;renderPromocion()"><i class="ti ti-chevron-left"></i></button>
+        <span class="pm-rango">${dates[0].getDate()} ${escapeHtml(t('months.short')[dates[0].getMonth()])} – ${dates[6].getDate()} ${escapeHtml(t('months.short')[dates[6].getMonth()])}</span>
+        <button type="button" class="btn btn-fino pm-flecha" aria-label="${escapeHtml(gl({es:'Semana siguiente', ca:'Setmana següent', en:'Next week'}))}" onclick="promoWeekOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
+        ${promoWeekOffset !== 0 ? `<button type="button" class="btn btn-sm btn-fino" onclick="promoWeekOffset=0;renderPromocion()">${t('common.today')}</button>` : ''}
       </div>
-      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> ${t('promo.newAction')}</button>
+      <button type="button" class="owner-only btn btn-fino is-on" onclick="openPromoModal()"><i class="ti ti-plus"></i> ${t('promo.newAction')}</button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>${headerCells}</tr></thead>
-        <tbody><tr>${bodyCells}</tr></tbody>
-      </table>
-    </div>
+    ${pmResumenHtml([
+      {et: gl({es:'Acciones de la semana', ca:'Accions de la setmana', en:'Actions this week'}), v: total},
+      {et: t('promo.kpi.completed'), v: `${hechas} / ${total}`, cls: total && hechas === total ? 'is-ok' : ''},
+    ])}
+    <div class="pm-sem">${columnas}</div>
   `;
+}
+
+let promoMes = null;   // {anio, mes} que se mira; null = el mes en curso
+function promoMesActual(){
+  if(!promoMes){ const h = new Date(); promoMes = {anio: h.getFullYear(), mes: h.getMonth()}; }
+  return promoMes;
+}
+function promoMesCb(anio, mes){
+  promoMes = {anio, mes: mes == null ? promoMesActual().mes : mes};
+  renderPromoMes();
 }
 
 function renderPromoMes(){
   const box = document.getElementById('promo-tab-content');
-  const today = new Date();
-  const base = new Date(today.getFullYear(), today.getMonth() + promoMonthOffset, 1);
-  const year = base.getFullYear();
-  const month = base.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const {anio: year, mes: month} = promoMesActual();
+  const startOffset = (new Date(year, month, 1).getDay() + 6) % 7; // lunes = 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const hoy = todayStr();
 
-  // Contadores por día calculados con getPromosForDate para incluir también
-  // las apariciones de promos recurrentes, no solo las creadas exactamente
-  // ese día.
+  // Contadores por día con getPromosForDate: así cuentan también las
+  // apariciones de las recurrentes, no solo las creadas ese día exacto.
   let monthTotal = 0, monthDone = 0;
   const dayPromos = {};
-  for(let day=1; day<=daysInMonth; day++){
+  for(let day = 1; day <= daysInMonth; day++){
     const ds = dateStr(new Date(year, month, day));
     const items = getPromosForDate(ds);
     dayPromos[ds] = items;
     monthTotal += items.length;
-    monthDone += items.filter(p => !!(promoDoneInfo(p, ds)||{}).done).length;
+    monthDone += items.filter(p => !!(promoDoneInfo(p, ds) || {}).done).length;
+  }
+  // Cuántas acciones hay en cada mes del año (para el selector de periodo).
+  const datos = {};
+  for(let m = 0; m < 12; m++){
+    let n = 0;
+    for(let d = 1; d <= new Date(year, m + 1, 0).getDate(); d++) n += getPromosForDate(dateStr(new Date(year, m, d))).length;
+    if(n) datos[`${year}-${String(m + 1).padStart(2, '0')}`] = n;
   }
   const usedCategories = CONTENT_IDEAS.filter((_, i) => categoryUsedCount(i) > 0).length;
 
-  let cells = '';
-  for(let i=0; i<startOffset; i++) cells += `<div></div>`;
-  for(let day=1; day<=daysInMonth; day++){
+  let celdas = '';
+  for(let i = 0; i < startOffset; i++) celdas += `<div class="pm-mes-vacio" aria-hidden="true"></div>`;
+  for(let day = 1; day <= daysInMonth; day++){
     const ds = dateStr(new Date(year, month, day));
-    const count = dayPromos[ds].length;
-    const isToday = ds === todayStr();
-    cells += `
-      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--ink)':''}" onclick="goToPromoDia('${ds}')">
-        <div style="font-weight:700">${day}</div>
-        ${count ? `<span class="badge badge-blue">${count}</span>` : ''}
-      </div>
-    `;
+    const items = dayPromos[ds];
+    celdas += `
+      <button type="button" class="pm-mes-dia${ds === hoy ? ' is-hoy' : ''}${items.length ? ' tiene' : ''}" onclick="goToPromoDia('${ds}')" aria-label="${escapeHtml(pmFechaLarga(ds))}${items.length ? ' · ' + items.length : ''}">
+        <b>${day}</b>
+        ${items.length ? `<span class="pm-mes-n">${items.length}</span>` : ''}
+        <span class="pm-mes-tits">${items.slice(0, 2).map(p => `<i class="${p.menuItemName ? 'es-dto' : ''}">${escapeHtml(p.titulo)}</i>`).join('')}${items.length > 2 ? `<i class="mas">+${items.length - 2}</i>` : ''}</span>
+      </button>`;
   }
 
   box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        <button class="btn btn-sm" onclick="promoMonthOffset--;renderPromocion()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="promoMonthOffset=0;renderPromocion()">${t('common.today')}</button>
-        <button class="btn btn-sm" onclick="promoMonthOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn" onclick="printPromoMes(${year},${month})"><i class="ti ti-printer"></i> ${t('promo.print')}</button>
-        <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> ${t('promo.newAction')}</button>
+    <div class="toolbar pm-barra">
+      <div class="left">${ggPeriodoHtml({anio: year, mes: month, cb: 'promoMesCb', datos, anual: false})}</div>
+      <div class="pm-acciones">
+        <button type="button" class="btn btn-fino" onclick="printPromoMes(${year},${month})"><i class="ti ti-printer"></i> ${t('promo.print')}</button>
+        <button type="button" class="owner-only btn btn-fino is-on" onclick="openPromoModal()"><i class="ti ti-plus"></i> ${t('promo.newAction')}</button>
       </div>
     </div>
-    <div class="grid grid-3" style="margin-bottom:12px">
-      <div class="kpi"><div class="label">${t('promo.kpi.actionsThisMonth')}</div><div class="value">${monthTotal}</div></div>
-      <div class="kpi ok"><div class="label">${t('promo.kpi.completed')}</div><div class="value">${monthDone} / ${monthTotal}</div></div>
-      <div class="kpi"><div class="label">${t('promo.kpi.categoriesUsed')}</div><div class="value">${usedCategories} / ${CONTENT_IDEAS.length}</div></div>
-    </div>
-    <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
-      ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
-      ${cells}
+    ${pmResumenHtml([
+      {et: t('promo.kpi.actionsThisMonth'), v: monthTotal},
+      {et: t('promo.kpi.completed'), v: `${monthDone} / ${monthTotal}`, cls: monthTotal && monthDone === monthTotal ? 'is-ok' : ''},
+      {et: t('promo.kpi.categoriesUsed'), v: `${usedCategories} / ${CONTENT_IDEAS.length}`},
+    ])}
+    <div class="pm-mes" role="grid">
+      ${t('days.short').map(d => `<div class="pm-mes-cab" role="columnheader">${escapeHtml(d)}</div>`).join('')}
+      ${celdas}
     </div>
   `;
 }
@@ -4781,7 +4840,7 @@ function printPromoMes(year, month){
     items.forEach(p => {
       const resp = p.responsableId ? DB.employees.find(e=>e.id===p.responsableId) : null;
       const done = !!(promoDoneInfo(p, ds)||{}).done;
-      rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${done?'<i class="ti ti-check"></i>':'—'}</td></tr>`);
+      rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${done?'✓':'—'}</td></tr>`);
     });
   }
   const printTitle = t('promo.print.title').replace('${month}', monthFull(month)).replace('${year}', year);
@@ -5169,46 +5228,77 @@ function surprisePromoIdea(){
 }
 
 let promoIdeasCategory = null;
+let promoIdeasQuery = '';
+
+function pmSinTildes(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 
 function renderPromoIdeas(){
   const box = document.getElementById('promo-tab-content');
-  if(promoIdeasCategory === null){
-    box.innerHTML = `
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">
-        <i class="ti ti-bulb"></i> ${t('promo.ideas.intro').replace('${count}', contentIdeasTotalCount())}
-      </p>
-      <button class="owner-only btn btn-primary" style="margin-bottom:14px" onclick="surprisePromoIdea()"><i class="ti ti-dice"></i> ${t('promo.ideas.surpriseMe')}</button>
-      <div class="grid grid-3">
+  const q = pmSinTildes(promoIdeasQuery.trim());
+  const buscador = `
+    <div class="toolbar pm-barra">
+      <div class="left">
+        <input type="search" class="search-input st-buscar" id="promo-ideas-q" value="${escapeHtml(promoIdeasQuery)}" placeholder="${escapeHtml(gl({es:'Buscar entre las ideas…', ca:'Cercar entre les idees…', en:'Search the ideas…'}))}" aria-label="${escapeHtml(gl({es:'Buscar ideas', ca:'Cercar idees', en:'Search ideas'}))}" oninput="promoIdeasBuscar(this.value)">
+        ${promoIdeasCategory !== null && !q ? `<button type="button" class="btn btn-sm btn-fino" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> ${t('promo.ideas.categories')}</button>` : ''}
+      </div>
+      <button type="button" class="owner-only btn btn-fino is-on" onclick="surprisePromoIdea()"><i class="ti ti-dice"></i> ${t('promo.ideas.surpriseMe')}</button>
+    </div>`;
+
+  const ideaCard = (catIdx, ideaIdx, conCategoria) => {
+    const idea = CONTENT_IDEAS[catIdx].ideas[ideaIdx];
+    const usage = promoIdeaUsage(catIdx, ideaIdx);
+    const extra = usage.length > 1 ? t('promo.ideas.usedMoreTimes').replace('${count}', usage.length-1).replace('${es}', usage.length-1!==1?'es':'') : '';
+    return `
+      <article class="pm-card pm-idea${usage.length ? ' is-usada' : ''}">
+        ${conCategoria ? `<span class="pm-idea-cat"><i class="ti ${CONTENT_IDEAS[catIdx].icon}"></i> ${escapeHtml(gl(CONTENT_IDEAS[catIdx].cat))}</span>` : ''}
+        <h3 class="pm-idea-tit">${escapeHtml(gl(idea.title))}</h3>
+        <p class="pm-desc">${escapeHtml(gl(idea.description))}</p>
+        ${usage.length ? `<div class="pm-hecho"><i class="ti ti-check"></i> ${t('promo.ideas.usedOn').replace('${date}', escapeHtml(usage[0].fecha)).replace('${extra}', extra)}</div>` : ''}
+        <div class="pm-card-pie"><button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="createPromoFromIdea(${catIdx},${ideaIdx})"><i class="ti ti-plus"></i> ${t('promo.ideas.createAction')}</button></div>
+      </article>`;
+  };
+
+  if(q){
+    const hallazgos = [];
+    CONTENT_IDEAS.forEach((c, ci) => c.ideas.forEach((idea, ii) => {
+      if(pmSinTildes(gl(idea.title) + ' ' + gl(idea.description) + ' ' + gl(c.cat)).includes(q)) hallazgos.push([ci, ii]);
+    }));
+    box.innerHTML = buscador + (hallazgos.length
+      ? `<p class="pr-ayuda">${hallazgos.length} ${escapeHtml(gl({es:'ideas encontradas', ca:'idees trobades', en:'ideas found'}))}</p><div class="pr-grid pm-grid">${hallazgos.map(([ci, ii]) => ideaCard(ci, ii, true)).join('')}</div>`
+      : `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`);
+  } else if(promoIdeasCategory === null){
+    const usadasTotal = CONTENT_IDEAS.reduce((s, _c, i) => s + categoryUsedCount(i), 0);
+    box.innerHTML = buscador + `
+      <p class="pr-ayuda"><i class="ti ti-bulb"></i> ${t('promo.ideas.intro').replace('${count}', contentIdeasTotalCount())}</p>
+      ${pmResumenHtml([
+        {et: gl({es:'Ideas en la biblioteca', ca:'Idees a la biblioteca', en:'Ideas in the library'}), v: contentIdeasTotalCount()},
+        {et: gl({es:'Ya usadas', ca:'Ja usades', en:'Already used'}), v: usadasTotal},
+      ])}
+      <div class="pr-grid pm-grid">
         ${CONTENT_IDEAS.map((c, i) => {
           const used = categoryUsedCount(i);
           return `
-          <div class="card" style="cursor:pointer" onclick="openPromoIdeasCategory(${i})">
-            <h3><i class="ti ${c.icon}"></i> ${escapeHtml(gl(c.cat))}</h3>
-            <div style="font-size:12px;color:var(--muted)">${t('promo.ideas.ideasCount').replace('${count}', c.ideas.length)}${used?` · <span style="color:var(--ink)">${t('promo.ideas.usedCount').replace('${count}', used).replace('${s}', used!==1?'s':'')}</span>`:''}</div>
-          </div>
-        `;}).join('')}
-      </div>
-    `;
+          <button type="button" class="pm-card pm-cat" onclick="openPromoIdeasCategory(${i})">
+            <span class="pm-cat-ico"><i class="ti ${c.icon}"></i></span>
+            <span class="pm-cat-txt"><b>${escapeHtml(gl(c.cat))}</b>
+            <small>${t('promo.ideas.ideasCount').replace('${count}', c.ideas.length)}${used ? ' · ' + t('promo.ideas.usedCount').replace('${count}', used).replace('${s}', used !== 1 ? 's' : '') : ''}</small></span>
+            <i class="ti ti-chevron-right pm-cat-flecha"></i>
+          </button>`;
+        }).join('')}
+      </div>`;
   } else {
     const c = CONTENT_IDEAS[promoIdeasCategory];
-    box.innerHTML = `
-      <button class="btn btn-sm" style="margin-bottom:10px" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> ${t('promo.ideas.categories')}</button>
-      <h3 style="margin-bottom:10px"><i class="ti ${c.icon}"></i> ${escapeHtml(gl(c.cat))}</h3>
-      <div class="grid grid-3">
-        ${c.ideas.map((idea, ideaIdx) => {
-          const usage = promoIdeaUsage(promoIdeasCategory, ideaIdx);
-          const extra = usage.length>1 ? t('promo.ideas.usedMoreTimes').replace('${count}', usage.length-1).replace('${es}', usage.length-1!==1?'es':'') : '';
-          return `
-          <div class="card">
-            <h3 style="font-size:14px">${escapeHtml(gl(idea.title))}</h3>
-            <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${escapeHtml(gl(idea.description))}</div>
-            ${usage.length ? `<div style="font-size:11px;color:var(--ink);margin-bottom:8px"><i class="ti ti-check"></i> ${t('promo.ideas.usedOn').replace('${date}', escapeHtml(usage[0].fecha)).replace('${extra}', extra)}</div>` : ''}
-            <button class="owner-only btn btn-sm btn-primary" style="width:100%" onclick="createPromoFromIdea(${promoIdeasCategory},${ideaIdx})"><i class="ti ti-plus"></i> ${t('promo.ideas.createAction')}</button>
-          </div>
-        `;}).join('')}
-      </div>
-    `;
+    box.innerHTML = buscador + `
+      <h3 class="es-tit"><i class="ti ${c.icon}"></i> ${escapeHtml(gl(c.cat))}</h3>
+      <div class="pr-grid pm-grid">${c.ideas.map((_idea, ideaIdx) => ideaCard(promoIdeasCategory, ideaIdx, false)).join('')}</div>`;
   }
+}
+// Buscar repinta toda la pestaña: se devuelve el foco al final del campo.
+function promoIdeasBuscar(v){
+  promoIdeasQuery = v;
+  renderPromoIdeas();
+  const c = document.getElementById('promo-ideas-q');
+  if(c){ c.focus(); try{ c.setSelectionRange(c.value.length, c.value.length); }catch(e){} }
 }
 function openPromoIdeasCategory(i){
   promoIdeasCategory = i;
@@ -5302,6 +5392,8 @@ function renderReferralSummaryHtml(){
   `;
 }
 
+let promoInactivosTodos = false;
+
 function renderPromoClientes(){
   const box = document.getElementById('promo-tab-content');
   const today = new Date(); today.setHours(0,0,0,0);
@@ -5317,63 +5409,71 @@ function renderPromoClientes(){
     .map(c => ({c, days: nextBirthdayDays(c.cumpleanos)}))
     .filter(x => x.days !== null && x.days <= 30)
     .sort((a,b) => a.days - b.days);
-
   const withContact = withConsent.filter(c => c.phone || c.email);
-  const recientes = withContact
-    .map(c => ({c, days: c.ultimoContacto ? Math.round((today - new Date(c.ultimoContacto+'T00:00:00')) / 86400000) : null}))
-    .filter(x => x.days !== null && x.days >= 0 && x.days <= 7)
-    .sort((a,b) => a.days - b.days);
-  const inactivos = withContact
-    .map(c => ({c, days: c.ultimoContacto ? Math.round((today - new Date(c.ultimoContacto+'T00:00:00')) / 86400000) : null}))
-    .filter(x => x.days === null || x.days >= 60)
-    .sort((a,b) => (b.days ?? 999999) - (a.days ?? 999999));
+  const conDias = withContact
+    .map(c => ({c, days: c.ultimoContacto ? Math.round((today - new Date(c.ultimoContacto+'T00:00:00')) / 86400000) : null}));
+  const recientes = conDias.filter(x => x.days !== null && x.days >= 0 && x.days <= 7).sort((a,b) => a.days - b.days);
+  const inactivos = conDias.filter(x => x.days === null || x.days >= 60).sort((a,b) => (b.days ?? 999999) - (a.days ?? 999999));
 
-  const clientCard = (c, templateKey, badge) => {
+  const scores = DB.npsScores || [];
+  const npsMedia = scores.length ? (scores.reduce((s,x)=>s+x.score,0) / scores.length).toFixed(1) : null;
+
+  const tarjeta = (c, templateKey, badge) => {
     const registered = DB.promos.some(p => p.clienteId===c.id && p.ideaRef && p.ideaRef.clientTemplate===templateKey && p.fecha===todayStr());
+    const movil = whatsappDeTelefono(c.phone);
+    const menu = registered
+      ? `<span class="pm-et is-ok"><i class="ti ti-check"></i> ${escapeHtml(t('promo.clients.alreadyRegisteredToday'))}</span>`
+      : ggMenuAcciones([{icono:'ti-calendar-plus', texto:t('promo.clients.registerAsAction'), fn:`registerClientOutreachAsPromo(${c.id},'${templateKey}')`, owner:true}]);
     return `
-    <div class="card">
-      <h3 style="font-size:14px;justify-content:space-between;gap:6px"><span>${escapeHtml(c.name)}</span>${badge}</h3>
-      <!-- flex-wrap + min-width:0: sin ellos los dos botones sumaban 195 px
-           dentro de una tarjeta de 180 px y el de Email se salía por la
-           derecha de la tarjeta (lo vio el dueño el 12/09). Un botón no se
-           encoge por debajo de su contenido si no se le dice. -->
-      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" style="flex:1 1 120px;min-width:0;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
-        <button class="btn btn-sm" style="flex:1 1 90px;min-width:0" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+    <article class="pm-card pm-cli">
+      <div class="pm-card-cab">
+        <span class="pr-av pr-av-s" style="--c:#8A7440">${escapeHtml(prIniciales(c.name))}</span>
+        <span class="pm-card-tit is-texto">${escapeHtml(c.name)}</span>
+        ${menu}
       </div>
-      <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?t('promo.clients.alreadyRegisteredToday'):t('promo.clients.registerAsAction')}</button>
-    </div>
-  `;};
+      <div class="pm-ets">${badge}</div>
+      <div class="pm-card-pie pm-cli-bt">
+        <button type="button" class="btn btn-sm btn-fino is-on" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!movil ? `disabled title="${escapeHtml(c.phone ? gl({es:'Este teléfono no parece un móvil: WhatsApp no lo abre', ca:'Aquest telèfon no sembla un mòbil: WhatsApp no l\'obre', en:'This number does not look like a mobile: WhatsApp will not open it'}) : t('promo.clients.noPhone'))}"` : ''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button type="button" class="btn btn-sm btn-fino" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email ? `disabled title="${escapeHtml(t('promo.clients.noEmail'))}"` : ''}><i class="ti ti-mail"></i> Email</button>
+      </div>
+    </article>`;
+  };
+  const dias = n => `<span class="pm-et">${n === 0 ? t('promo.clients.agoToday') : t('promo.clients.agoDaysSuffix').replace('${n}', n).replace('${s}', n!==1?'s':'')}</span>`;
+  const seccion = (icono, titulo, cuenta, cuerpo, extra) => `
+    <section class="pm-sec">
+      <div class="pm-sec-cab"><h3 class="es-tit"><i class="ti ${icono}"></i> ${escapeHtml(titulo)} <span class="dp-cuenta">${cuenta}</span></h3>${extra || ''}</div>
+      ${cuerpo}
+    </section>`;
+  const vacio = (icono, txt) => `<div class="empty es-vacio"><i class="ti ${icono}"></i>${txt}</div>`;
 
+  const inactivosVisibles = promoInactivosTodos ? inactivos : inactivos.slice(0, 12);
   box.innerHTML = `
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px"><i class="ti ti-info-circle"></i> ${t('promo.clients.intro')}</p>
-
+    <p class="pr-ayuda"><i class="ti ti-info-circle"></i> ${t('promo.clients.intro')}</p>
+    ${pmResumenHtml([
+      {et: t('promo.clients.upcomingBirthdays'), v: birthdays.length},
+      {et: t('promo.clients.recentVisits'), v: recientes.length},
+      {et: t('promo.clients.inactiveClients'), v: inactivos.length, cls: inactivos.length ? 'is-bajo' : ''},
+      {et: 'NPS', v: npsMedia !== null ? npsMedia + '<small>/10</small>' : '—', sub: npsMedia !== null ? escapeHtml(t('nps.responsesCount').replace('${n}', scores.length)) : ''},
+    ])}
     ${renderReferralSummaryHtml()}
 
-    <h3><i class="ti ti-cake"></i> ${t('promo.clients.upcomingBirthdays')}</h3>
-    <div class="grid grid-3" style="margin-bottom:18px">
-      ${birthdays.length ? birthdays.map(({c,days}) => clientCard(c, 'cumple', days===0 ? `<span class="badge badge-amber">${t('promo.clients.today')}</span>` : `<span class="badge badge-gray">${t('promo.clients.inDays').replace('${n}', days).replace('${s}', days!==1?'s':'')}</span>`)).join('')
-        : `<div class="empty"><i class="ti ti-cake"></i>${t('promo.clients.noBirthdays')}</div>`}
-    </div>
+    ${seccion('ti-cake', t('promo.clients.upcomingBirthdays'), birthdays.length, birthdays.length
+      ? `<div class="pr-grid pm-grid">${birthdays.map(({c,days}) => tarjeta(c, 'cumple', days===0 ? `<span class="pm-et is-dto">${t('promo.clients.today')}</span>` : `<span class="pm-et">${t('promo.clients.inDays').replace('${n}', days).replace('${s}', days!==1?'s':'')}</span>`)).join('')}</div>`
+      : vacio('ti-cake', t('promo.clients.noBirthdays')))}
 
-    <h3><i class="ti ti-star"></i> ${t('promo.clients.recentVisits')}</h3>
-    <div class="grid grid-3" style="margin-bottom:18px">
-      ${recientes.length ? recientes.map(({c,days}) => clientCard(c, 'resena', `<span class="badge badge-green">${days===0?t('promo.clients.agoToday'):t('promo.clients.agoDaysSuffix').replace('${n}', days).replace('${s}', days!==1?'s':'')}</span>`)).join('')
-        : `<div class="empty"><i class="ti ti-star"></i>${t('promo.clients.noRecentVisits')}</div>`}
-    </div>
+    ${seccion('ti-star', t('promo.clients.recentVisits'), recientes.length, recientes.length
+      ? `<div class="pr-grid pm-grid">${recientes.map(({c,days}) => tarjeta(c, 'resena', dias(days))).join('')}</div>`
+      : vacio('ti-star', t('promo.clients.noRecentVisits')))}
 
-    <h3><i class="ti ti-mood-empty"></i> ${t('promo.clients.inactiveClients')}</h3>
-    <div class="grid grid-3" style="margin-bottom:18px">
-      ${inactivos.length ? inactivos.slice(0,12).map(({c,days}) => clientCard(c, 'vuelve', days!=null ? `<span class="badge badge-gray">${t('promo.clients.daysAgo').replace('${n}', days)}</span>` : `<span class="badge badge-gray">${t('promo.clients.noVisits')}</span>`)).join('')
-        : `<div class="empty"><i class="ti ti-users"></i>${t('promo.clients.noInactiveClients')}</div>`}
-    </div>
+    ${seccion('ti-mood-empty', t('promo.clients.inactiveClients'), inactivos.length, inactivos.length
+      ? `<div class="pr-grid pm-grid">${inactivosVisibles.map(({c,days}) => tarjeta(c, 'vuelve', days != null ? `<span class="pm-et">${t('promo.clients.daysAgo').replace('${n}', days)}</span>` : `<span class="pm-et">${t('promo.clients.noVisits')}</span>`)).join('')}</div>
+         ${inactivos.length > 12 ? `<div class="pm-ver-mas"><button type="button" class="btn btn-sm btn-fino" onclick="promoInactivosTodos=!promoInactivosTodos;renderPromoClientes()">${escapeHtml(promoInactivosTodos ? gl({es:'Ver menos', ca:'Veure\'n menys', en:'Show fewer'}) : gl({es:`Ver los ${inactivos.length}`, ca:`Veure\'ls ${inactivos.length}`, en:`Show all ${inactivos.length}`}))}</button></div>` : ''}`
+      : vacio('ti-users', t('promo.clients.noInactiveClients')),
+      (inactivos.length && typeof novedadesConSegmento === 'function') ? `<button type="button" class="owner-only btn btn-sm btn-fino" onclick="novedadesConSegmento('inactivos')"><i class="ti ti-send"></i> ${escapeHtml(gl({es:'Escribirles a todos', ca:'Escriure\'ls a tots', en:'Write to all of them'}))}</button>` : '')}
 
-    <h3><i class="ti ti-mood-smile"></i> ${t('nps.sectionTitle')}</h3>
-    ${renderNpsSummaryHtml()}
-    <div class="grid grid-3" style="margin-top:10px">
-      ${recientes.length ? recientes.map(({c,days}) => clientCard(c, 'nps', `<span class="badge badge-green">${days===0?t('promo.clients.agoToday'):t('promo.clients.agoDaysSuffix').replace('${n}', days).replace('${s}', days!==1?'s':'')}</span>`)).join('')
-        : `<div class="empty"><i class="ti ti-mood-smile"></i>${t('promo.clients.noRecentVisits')}</div>`}
-    </div>
+    ${seccion('ti-mood-smile', t('nps.sectionTitle'), scores.length, `
+      ${renderNpsSummaryHtml()}
+      ${recientes.length ? `<div class="pr-grid pm-grid pm-nps-pedir">${recientes.map(({c,days}) => tarjeta(c, 'nps', dias(days))).join('')}</div>` : vacio('ti-mood-smile', t('promo.clients.noRecentVisits'))}`)}
   `;
 }
 
@@ -5383,19 +5483,19 @@ function renderPromoClientes(){
 function renderNpsSummaryHtml(){
   const scores = DB.npsScores || [];
   if(!scores.length){
-    return `<div class="empty" style="margin-top:10px"><i class="ti ti-chart-bar"></i>${t('nps.noResponsesYet')}</div>`;
+    return `<div class="empty es-vacio"><i class="ti ti-chart-bar"></i>${t('nps.noResponsesYet')}</div>`;
   }
   const avg = (scores.reduce((s,x)=>s+x.score,0) / scores.length).toFixed(1);
   const detractors = scores.filter(x=>x.score<=6).length;
   const withComments = [...scores].filter(x=>x.comment).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);
   return `
-    <div class="card" style="max-width:520px">
-      <div style="display:flex;gap:18px;align-items:center">
-        <div style="font-size:28px;font-weight:700">${avg}<span style="font-size:14px;color:var(--muted)">/10</span></div>
-        <div style="font-size:12.5px;color:var(--muted)">${t('nps.responsesCount').replace('${n}', scores.length)}${detractors ? `<br>${t('nps.detractorsCount').replace('${n}', detractors)}` : ''}</div>
+    <div class="lp-card pm-nps">
+      <div class="pm-nps-cab">
+        <div class="pm-nps-media">${avg}<small>/10</small></div>
+        <div class="pr-ayuda">${t('nps.responsesCount').replace('${n}', scores.length)}${detractors ? `<br>${t('nps.detractorsCount').replace('${n}', detractors)}` : ''}</div>
       </div>
-      ${withComments.length ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
-        ${withComments.map(x => `<div style="font-size:12.5px;border-top:1px solid var(--border);padding-top:6px"><strong>${escapeHtml(String(x.score))}/10</strong> — ${escapeHtml(x.comment)}</div>`).join('')}
+      ${withComments.length ? `<div class="pm-nps-coms">
+        ${withComments.map(x => `<div class="pm-nps-com"><b>${escapeHtml(String(x.score))}/10</b> — ${escapeHtml(x.comment)}</div>`).join('')}
       </div>` : ''}
     </div>
   `;
@@ -5408,28 +5508,52 @@ function openClientMessageModal(clientId, templateKey){
   if(!c) return;
   const biz = (DB.business && DB.business.name) || t('promo.clients.defaultBusinessName');
   const msg = PROMO_MESSAGE_TEMPLATES[templateKey](c, biz);
+  const movil = whatsappDeTelefono(c.phone);
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-message"></i> ${t('promo.clients.messageFor').replace('${name}', escapeHtml(c.name))}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <button class="modal-close" onclick="closeModal()" aria-label="${escapeHtml(t('promo.clients.close'))}">&times;</button>
     </div>
     <div class="field">
-      <textarea id="promo-msg-text" rows="4">${escapeHtml(msg)}</textarea>
+      <label for="promo-msg-text">${escapeHtml(gl({es:'Mensaje (puedes cambiarlo antes de enviar)', ca:'Missatge (el pots canviar abans d\'enviar)', en:'Message (you can edit it before sending)'}))}</label>
+      <textarea id="promo-msg-text" class="lp-auto-alto" rows="5" oninput="lpAuto(this)">${escapeHtml(msg)}</textarea>
     </div>
-    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
-      <button class="btn" style="flex:1" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr((PROMO_MESSAGE_SUBJECTS[templateKey]&&PROMO_MESSAGE_SUBJECTS[templateKey]())||'')}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
+    <div class="promo-share-actions pm-modal-bt">
+      <button type="button" class="btn btn-fino is-on" onclick="sendPromoClientWhatsapp(${clientId})" ${!movil ? `disabled title="${escapeHtml(c.phone ? gl({es:'Este teléfono no parece un móvil', ca:'Aquest telèfon no sembla un mòbil', en:'This number does not look like a mobile'}) : t('promo.clients.noPhone'))}"` : ''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+      <button type="button" class="btn btn-fino" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr((PROMO_MESSAGE_SUBJECTS[templateKey]&&PROMO_MESSAGE_SUBJECTS[templateKey]())||'')}')" ${!c.email ? `disabled title="${escapeHtml(t('promo.clients.noEmail'))}"` : ''}><i class="ti ti-mail"></i> Email</button>
+      <button type="button" class="btn btn-fino" onclick="pmCopiarMensaje()"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar', ca:'Copiar', en:'Copy'}))}</button>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('promo.clients.close')}</button>
     </div>
   `);
+  const ta = document.getElementById('promo-msg-text'); if(ta && typeof lpAuto === 'function') lpAuto(ta);
+}
+function pmCopiarMensaje(){
+  const v = (document.getElementById('promo-msg-text') || {}).value || '';
+  copiarTextoPlano(v).then(ok => showToast(ok ? gl({es:'Copiado', ca:'Copiat', en:'Copied'}) : gl({es:'No se pudo copiar', ca:'No s\'ha pogut copiar', en:'Could not copy'})));
+}
+// Copiar texto: la API moderna y, si el navegador la niega (http, iframe), el
+// truco del campo oculto.
+async function copiarTextoPlano(txt){
+  try{ await navigator.clipboard.writeText(txt); return true; }catch(e){}
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return !!ok;
+  }catch(e){ return false; }
 }
 
 function sendPromoClientWhatsapp(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c || !c.phone){ showToast(t('msg.noPhone')); return; }
-  const tel = c.phone.replace(/\D/g,'');
+  // wa.me quiere el número con prefijo de país: «612345678» a secas no abre
+  // ningún chat. whatsappDeTelefono lo completa y descarta los fijos.
+  const tel = whatsappDeTelefono(c.phone);
+  if(!tel){ showToast(gl({es:'Este teléfono no parece un móvil: WhatsApp no lo abre.', ca:'Aquest telèfon no sembla un mòbil: WhatsApp no l\'obre.', en:'This number does not look like a mobile: WhatsApp will not open it.'})); return; }
   const txt = encodeURIComponent(document.getElementById('promo-msg-text').value);
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
 }
@@ -5467,90 +5591,156 @@ function registerClientOutreachAsPromo(clientId, templateKey){
   showToast(t('promo.clients.outreachRegistered'));
 }
 
+/* Los platos y bebidas con los que se puede hacer una promoción con
+   descuento. Antes, desde Sala, el desplegable solo traía las BEBIDAS (el
+   filtro por área de getAllDishNames): un restaurante no podía rebajar una
+   hamburguesa desde Promoción, que es lo primero que se prueba. El TPV vende
+   las dos cosas, así que aquí se ofrecen todas, separadas por tipo. */
+function promoDishOptions(){
+  const platos = new Map(), bebidas = new Map();
+  (DB.cartas || []).forEach(c => {
+    const destino = isBebidaCarta(c) ? bebidas : platos;
+    (c.secciones || []).forEach(sec => (sec.platos || []).forEach(p => {
+      if(p.nombre && !destino.has(p.nombre)) destino.set(p.nombre, p);
+    }));
+  });
+  (DB.recipes || []).forEach(r => {
+    if(!r.name || r.isBase) return;
+    const destino = (r.area || 'cocina') === 'sala' ? bebidas : platos;
+    if(!destino.has(r.name) && !platos.has(r.name) && !bebidas.has(r.name)) destino.set(r.name, null);
+  });
+  const orden = m => [...m.keys()].sort((a, b) => a.localeCompare(b));
+  return {platos: orden(platos), bebidas: orden(bebidas)};
+}
+// Precio de carta de un plato/bebida por nombre (para enseñar el antes y el después).
+function promoPrecioDePlato(name){
+  for(const c of (DB.cartas || [])){
+    for(const sec of (c.secciones || [])){
+      const p = (sec.platos || []).find(x => x.nombre === name);
+      if(p && Number(p.precio) > 0) return Number(p.precio);
+    }
+  }
+  return null;
+}
+function promoPrecioPrev(){
+  const out = document.getElementById('promo-precio-prev');
+  if(!out) return;
+  const nombre = (document.getElementById('promo-dish') || {}).value;
+  const pct = parseInt((document.getElementById('promo-discount-pct') || {}).value);
+  const precio = nombre ? promoPrecioDePlato(nombre) : null;
+  if(!precio || !(pct > 0)){ out.textContent = ''; return; }
+  const nuevo = Math.round(precio * (1 - Math.min(100, pct) / 100) * 100) / 100;
+  out.innerHTML = `<i class="ti ti-tag"></i> ${escapeHtml(gl({es:'En carta', ca:'A la carta', en:'On the menu'}))}: <s>${fmtMoney(precio)}</s> → <b>${fmtMoney(nuevo)}</b>`;
+}
+
 // Guarda el ideaRef de la idea de contenido con la que se abrió el modal
 // (si viene de "Crear acción"/"Sorpréndeme"), para que savePromo lo adjunte
 // al crear la promo y así poder marcar esa idea como ya usada.
 let pendingPromoIdeaRef = null;
 function openPromoModal(id, fecha, prefill){
-  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:(prefill&&prefill.titulo)||'', descripcion:(prefill&&prefill.descripcion)||'', responsableId:null, recurrence:null, menuItemName:null, discountPct:null, horaInicio:null, horaFin:null, maxUses:null};
+  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:(prefill&&prefill.titulo)||'', descripcion:(prefill&&prefill.descripcion)||'', responsableId:null, recurrence:null, hasta:null, menuItemName:null, discountPct:null, horaInicio:null, horaFin:null, maxUses:null};
+  if(!p){ showToast(t('msg.promoNotFound')); return; }
   pendingPromoIdeaRef = (!id && prefill && prefill.ideaRef) ? prefill.ideaRef : null;
   const ro = !editUnlocked;
   const dis = ro ? 'disabled' : '';
-  const dishNames = getAllDishNames();
+  const dishes = promoDishOptions();
   const hasDiscount = !!p.menuItemName;
+  const opcion = n => `<option value="${escapeHtml(n)}" ${p.menuItemName===n?'selected':''}>${escapeHtml(n)}</option>`;
+  const conocido = p.menuItemName && (dishes.platos.includes(p.menuItemName) || dishes.bebidas.includes(p.menuItemName));
 
   openModal(`
     <div class="modal-header">
       <h3>${id?t('promo.modal.editTitle'):t('promo.modal.newTitle')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <button class="modal-close" onclick="closeModal()" aria-label="${escapeHtml(t('promo.modal.close'))}">&times;</button>
     </div>
-    <div class="field">
-      <label>${t('promo.modal.date')}</label>
-      <input type="date" id="promo-date" value="${p.fecha}" ${dis}>
-    </div>
-    <label class="owner-only" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
-      <input type="checkbox" id="promo-recurrence" ${p.recurrence==='weekly'?'checked':''} style="width:auto" ${dis}>
-      ${t('promo.modal.recurrenceLabel')}
-    </label>
-    <p class="owner-only" style="font-size:12px;color:var(--muted);margin:-10px 0 6px">${t('promo.modal.recurrenceHint')}</p>
-    <div class="field">
-      <label>${t('promo.modal.title')}</label>
-      <input type="text" id="promo-titulo" value="${escapeHtml(p.titulo||'')}" placeholder="${t('promo.modal.titlePlaceholder')}" ${dis}>
-    </div>
-    <div class="field">
-      <label>${t('promo.modal.description')}</label>
-      <textarea id="promo-descripcion" placeholder="${t('promo.modal.descriptionPlaceholder')}" ${dis}>${escapeHtml(p.descripcion||'')}</textarea>
-    </div>
-    <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:10px;cursor:pointer">
-      <input type="checkbox" id="promo-has-discount" ${hasDiscount?'checked':''} style="width:auto" onchange="togglePromoDiscountFields()" ${dis}>
-      ${t('promo.modal.hasDiscountLabel')}
-    </label>
-    <div id="promo-discount-fields" style="display:${hasDiscount?'':'none'}">
-      <div class="field-row">
-        <div class="field">
-          <label>${t('promo.modal.dish')}</label>
-          <select id="promo-dish" ${dis}>
-            <option value="">${t('label.selectDish')}</option>
-            ${dishNames.map(n => `<option value="${escapeHtml(n)}" ${p.menuItemName===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}
-          </select>
-          ${p.menuItemName && !p.menuItemPlatoId ? `<small style="color:var(--amber,#8A7440)">${t('promo.modal.dishLinkedByNameHint')}</small>` : ''}
-        </div>
-        <div class="field">
-          <label>${t('promo.modal.discountPct')}</label>
-          <input type="number" id="promo-discount-pct" min="1" max="100" step="1" value="${p.discountPct||10}" ${dis}>
-        </div>
-      </div>
-      <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('promo.modal.discountHint')}</p>
-      <div class="field-row">
-        <div class="field">
-          <label>${t('promo.modal.horaInicio')}</label>
-          <input type="time" id="promo-hora-inicio" value="${p.horaInicio||''}" ${dis}>
-        </div>
-        <div class="field">
-          <label>${t('promo.modal.horaFin')}</label>
-          <input type="time" id="promo-hora-fin" value="${p.horaFin||''}" ${dis}>
-        </div>
-      </div>
-      <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('promo.modal.horaHint')}</p>
+    <div class="pr-sec pm-sec-modal">
+      <div class="es-tit">${escapeHtml(gl({es:'Qué vas a hacer', ca:'Què faràs', en:'What you will do'}))}</div>
       <div class="field">
-        <label>${t('promo.modal.maxUses')}</label>
-        <input type="number" id="promo-max-uses" min="1" step="1" value="${p.maxUses||''}" placeholder="${t('promo.modal.maxUsesPlaceholder')}" ${dis}>
-        ${p.maxUses ? `<small style="color:var(--muted)">${t('promo.modal.usedTodayHint').replace('${used}', (p.usedDates&&p.usedDates[todayStr()])||0).replace('${max}', p.maxUses)}</small>` : ''}
+        <label for="promo-titulo">${t('promo.modal.title')}</label>
+        <input type="text" id="promo-titulo" value="${escapeHtml(p.titulo||'')}" placeholder="${t('promo.modal.titlePlaceholder')}" ${dis}>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('promo.modal.maxUsesHint')}</p>
+      <div class="field">
+        <label for="promo-descripcion">${t('promo.modal.description')}</label>
+        <textarea id="promo-descripcion" class="lp-auto-alto" rows="2" oninput="lpAuto(this)" placeholder="${t('promo.modal.descriptionPlaceholder')}" ${dis}>${escapeHtml(p.descripcion||'')}</textarea>
+      </div>
     </div>
-    <div class="field">
-      <label>${t('promo.modal.responsible')}</label>
-      <select id="promo-responsable" ${dis}>
-        <option value="">${t('promo.modal.unassigned')}</option>
-        ${DB.employees.filter(e=>(e.area||'cocina')==='sala').map(e=>`<option value="${e.id}" ${p.responsableId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
-      </select>
+    <div class="pr-sec pm-sec-modal">
+      <div class="es-tit">${escapeHtml(gl({es:'Cuándo y quién', ca:'Quan i qui', en:'When and who'}))}</div>
+      <div class="field-row">
+        <div class="field">
+          <label for="promo-date">${t('promo.modal.date')}</label>
+          <input type="date" id="promo-date" value="${p.fecha}" ${dis}>
+        </div>
+        <div class="field">
+          <label for="promo-responsable">${t('promo.modal.responsible')}</label>
+          <select id="promo-responsable" ${dis}>
+            <option value="">${t('promo.modal.unassigned')}</option>
+            ${DB.employees.filter(e=>(e.area||'cocina')==='sala').map(e=>`<option value="${e.id}" ${p.responsableId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <label class="pm-opcion owner-only">
+        <input type="checkbox" id="promo-recurrence" ${p.recurrence==='weekly'?'checked':''} ${dis} onchange="document.getElementById('promo-hasta-campo').hidden=!this.checked">
+        <span>${t('promo.modal.recurrenceLabel')}</span>
+      </label>
+      <p class="pr-ayuda owner-only">${t('promo.modal.recurrenceHint')}</p>
+      <div class="field" id="promo-hasta-campo" ${p.recurrence==='weekly' ? '' : 'hidden'}>
+        <label for="promo-hasta">${escapeHtml(gl({es:'Se repite hasta (opcional)', ca:'Es repeteix fins (opcional)', en:'Repeats until (optional)'}))}</label>
+        <input type="date" id="promo-hasta" value="${escapeHtml(p.hasta||'')}" ${dis}>
+        <small class="pr-ayuda">${escapeHtml(gl({es:'Vacío = sin fecha de fin. Pon una para una promo de temporada (verano, Navidad…).', ca:'Buit = sense data de fi. Posa\'n una per a una promo de temporada (estiu, Nadal…).', en:'Empty = no end date. Set one for a seasonal promo (summer, Christmas…).'}))}</small>
+      </div>
+    </div>
+    <div class="pr-sec pm-sec-modal">
+      <div class="es-tit">${escapeHtml(gl({es:'Descuento en caja', ca:'Descompte a caixa', en:'Discount at the till'}))}</div>
+      <label class="pm-opcion">
+        <input type="checkbox" id="promo-has-discount" ${hasDiscount?'checked':''} onchange="togglePromoDiscountFields()" ${dis}>
+        <span>${t('promo.modal.hasDiscountLabel')}</span>
+      </label>
+      <div id="promo-discount-fields" style="display:${hasDiscount?'':'none'}">
+        <div class="field-row">
+          <div class="field">
+            <label for="promo-dish">${t('promo.modal.dish')}</label>
+            <select id="promo-dish" ${dis} onchange="promoPrecioPrev()">
+              <option value="">${t('label.selectDish')}</option>
+              ${p.menuItemName && !conocido ? opcion(p.menuItemName) : ''}
+              ${dishes.platos.length ? `<optgroup label="${escapeHtml(gl({es:'Platos', ca:'Plats', en:'Dishes'}))}">${dishes.platos.map(opcion).join('')}</optgroup>` : ''}
+              ${dishes.bebidas.length ? `<optgroup label="${escapeHtml(gl({es:'Bebidas', ca:'Begudes', en:'Drinks'}))}">${dishes.bebidas.map(opcion).join('')}</optgroup>` : ''}
+            </select>
+            ${p.menuItemName && !p.menuItemPlatoId ? `<small style="color:var(--amber,#8A7440)">${t('promo.modal.dishLinkedByNameHint')}</small>` : ''}
+          </div>
+          <div class="field">
+            <label for="promo-discount-pct">${t('promo.modal.discountPct')}</label>
+            <input type="number" id="promo-discount-pct" min="1" max="100" step="1" value="${p.discountPct||10}" ${dis} oninput="promoPrecioPrev()">
+          </div>
+        </div>
+        <p class="pr-ayuda" id="promo-precio-prev"></p>
+        <p class="pr-ayuda">${t('promo.modal.discountHint')}</p>
+        <div class="field-row">
+          <div class="field">
+            <label for="promo-hora-inicio">${t('promo.modal.horaInicio')}</label>
+            <input type="time" id="promo-hora-inicio" value="${p.horaInicio||''}" ${dis}>
+          </div>
+          <div class="field">
+            <label for="promo-hora-fin">${t('promo.modal.horaFin')}</label>
+            <input type="time" id="promo-hora-fin" value="${p.horaFin||''}" ${dis}>
+          </div>
+        </div>
+        <p class="pr-ayuda">${t('promo.modal.horaHint')}</p>
+        <div class="field">
+          <label for="promo-max-uses">${t('promo.modal.maxUses')}</label>
+          <input type="number" id="promo-max-uses" min="1" step="1" value="${p.maxUses||''}" placeholder="${t('promo.modal.maxUsesPlaceholder')}" ${dis}>
+          ${p.maxUses ? `<small class="pr-ayuda">${t('promo.modal.usedTodayHint').replace('${used}', (p.usedDates&&p.usedDates[todayStr()])||0).replace('${max}', p.maxUses)}</small>` : ''}
+        </div>
+        <p class="pr-ayuda">${t('promo.modal.maxUsesHint')}</p>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${ro?t('promo.modal.close'):t('promo.modal.cancel')}</button>
       ${ro ? '' : `<button class="btn btn-primary" onclick="savePromo(${id||'null'})">${t("common.save")}</button>`}
     </div>
   `);
+  promoPrecioPrev();
+  const ta = document.getElementById('promo-descripcion'); if(ta && typeof lpAuto === 'function') lpAuto(ta);
 }
 function togglePromoDiscountFields(){
   const checked = document.getElementById('promo-has-discount').checked;
@@ -5564,6 +5754,8 @@ async function savePromo(id){
   const responsableIdRaw = document.getElementById('promo-responsable').value;
   const responsableId = responsableIdRaw ? parseInt(responsableIdRaw) : null;
   const recurrence = document.getElementById('promo-recurrence').checked ? 'weekly' : null;
+  const hastaRaw = (document.getElementById('promo-hasta') || {}).value || '';
+  const hasta = recurrence && hastaRaw ? hastaRaw : null;
   const hasDiscount = document.getElementById('promo-has-discount').checked;
   const menuItemName = hasDiscount ? (document.getElementById('promo-dish').value || null) : null;
   const menuItemPlatoId = hasDiscount ? getDishPlatoIdForName(menuItemName) : null;
@@ -5576,6 +5768,8 @@ async function savePromo(id){
   if(!titulo){ showToast(t('msg.indicateTitle')); return; }
   if(hasDiscount && !menuItemName){ showToast(t('msg.selectDish')); return; }
   if(hasDiscount && (!!horaInicio !== !!horaFin)){ showToast(t('msg.promoHorarioIncompleto')); return; }
+  // Una promo que termina antes de empezar no se vería nunca y nadie sabría por qué.
+  if(hasta && hasta < fecha){ showToast(gl({es:'La fecha de fin no puede ser anterior al día de inicio.', ca:'La data de fi no pot ser anterior al dia d\'inici.', en:'The end date cannot be before the start day.'})); return; }
 
   // Aviso de posible duplicado: en vez de guardarla igual con solo un toast
   // distinto, se ofrece abrir la que ya existe en su lugar.
@@ -5594,7 +5788,7 @@ async function savePromo(id){
     const sameDish = p2 => menuItemPlatoId != null ? p2.menuItemPlatoId === menuItemPlatoId : p2.menuItemName === menuItemName;
     const dayOverlaps = p2 => (recurrence==='weekly' && p2.recurrence==='weekly')
       ? new Date(fecha+'T00:00:00').getDay() === promoWeekday(p2)
-      : (promoOccursOn(p2, fecha) || promoOccursOn({fecha, recurrence}, p2.fecha));
+      : (promoOccursOn(p2, fecha) || promoOccursOn({fecha, recurrence, hasta}, p2.fecha));
     const conflict = DB.promos.find(p2 => p2.id!==id && p2.discountPct && sameDish(p2) && dayOverlaps(p2)
       && promoTimeRangesOverlap({horaInicio, horaFin}, p2));
     if(conflict && !(await confirmModal(t('promo.confirmDishDiscountConflict').replace('${dish}', menuItemName).replace('${title}', conflict.titulo)))){
@@ -5606,15 +5800,32 @@ async function savePromo(id){
   if(id){
     const promo = DB.promos.find(x=>x.id===id);
     if(!promo){ showToast(t('msg.promoNotFound')); return; }
-    Object.assign(promo, {fecha, titulo, descripcion, responsableId, recurrence, menuItemName, menuItemPlatoId, discountPct, horaInicio, horaFin, maxUses});
+    Object.assign(promo, {fecha, titulo, descripcion, responsableId, recurrence, hasta, menuItemName, menuItemPlatoId, discountPct, horaInicio, horaFin, maxUses});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, menuItemName, menuItemPlatoId, discountPct, horaInicio, horaFin, maxUses, usedDates:{}, done:false, doneAt:null, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, hasta, menuItemName, menuItemPlatoId, discountPct, horaInicio, horaFin, maxUses, usedDates:{}, done:false, doneAt:null, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
   }
   pendingPromoIdeaRef = null;
   saveDB();
   closeModal();
   renderPromocion();
   showToast(t('msg.actionSaved'));
+}
+
+// Copia una acción al día siguiente (sin lo hecho ni lo gastado): la forma
+// rápida de montar una semana de lo mismo sin rellenar el formulario siete veces.
+function duplicarPromo(id){
+  const p = DB.promos.find(x => x.id === id);
+  if(!p) return;
+  const copia = Object.assign({}, p, {
+    id: genId(), fecha: pmSumaDias(p.fecha, 1), done: false, doneAt: null, doneDates: {}, usedDates: {},
+    clienteId: undefined, ideaRef: p.ideaRef && !p.ideaRef.clientTemplate ? p.ideaRef : null
+  });
+  if(copia.hasta && copia.hasta < copia.fecha) copia.hasta = null;
+  DB.promos.push(copia);
+  saveDB();
+  promoDate = copia.fecha;
+  renderPromocion();
+  showToast(gl({es:'Duplicada para el día siguiente', ca:'Duplicada per al dia següent', en:'Duplicated for the next day'}));
 }
 
 async function deletePromo(id){

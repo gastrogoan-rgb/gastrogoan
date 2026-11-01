@@ -6111,7 +6111,7 @@ const ARRAYS_CON_LAPIDA = new Set([
      este comentario — y purchaseOrders se borra al eliminar un pedido a
      proveedor. Sin lápida, un dispositivo desincronizado que sincroniza tarde
      resucitaba la reserva/turno/promo/pedido ya borrado en los demás. */
-  'reservations', 'promos', 'turnos', 'purchaseOrders',
+  'reservations', 'promos', 'turnos', 'purchaseOrders', 'novedades',
   /* Mismo fallo, encontrado en la ronda 2 de la auditoría (mismo día):
      reallyDeleteEmployee (js/hr.js) borra de verdad fichajes,
      turnoSwapRequests y vacationRequests del empleado eliminado — sin
@@ -6279,7 +6279,7 @@ const MERGEABLE_ARRAYS = new Set([
   'cashClosures','employees','turnos','fichajes','promos','horariosFijos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations','pedidoSolicitudes',
+  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations','pedidoSolicitudes','novedades',
   // Arrays con id que se quedaban fuera: dos dispositivos que añaden cada uno
   // una entrada distinta (una anulación aquí, un check-in de ánimo allá, una
   // solicitud de cambio de turno acullá) casi a la vez y en ese hueco sin
@@ -10655,6 +10655,7 @@ function defaultData(){
     pushSubscriptions: [], // {deviceId, subscription, updatedAt} — dispositivos suscritos a avisos push reales
     waitlist: [], // {id, name, phone, people, notes, status:'esperando'|'sentado'|'cancelada', createdAt} — cola de espera para walk-ins sin mesa libre
     vacationRequests: [], // {id, employeeId, fromDate, toDate, notes, status:'pending'|'approved'|'rejected', createdAt}
+    novedades: [], // {id, tema, asunto, titular, cuerpo, oferta, cta, seg, enviados:{clienteId:{em,wa}}, estado} — novedades comerciales a clientes (Promoción → Novedades)
     npsScores: [], // {id, score:0-10, comment, createdAt} — respuestas privadas de la encuesta de satisfacción (NPS)
     bankReconciliations: [], // {id, fechaDesde, fechaHasta, expected, bankAmount, difference, notes, createdAt} — conciliación bancaria manual (tarjeta cobrada vs. extracto real)
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
