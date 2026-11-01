@@ -4245,9 +4245,9 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-cab{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px 14px;margin:0 0 14px}
 .tp-cab .tp-cifras{flex:1 1 520px;margin:0}
 .tp-cab .tp-acciones{margin:0;align-content:center}
-.tp-cab .tp-acciones:not(.tp-acciones-sec){flex:0 1 auto}
-.tp-cab .tp-acciones-sec{flex:1 1 100%;justify-content:flex-end}
-.tp-acciones-sec .btn{font-size:12px}
+.tp-acciones.tp-botonera{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex:0 0 auto;align-content:stretch}
+.tp-botonera .btn{justify-content:center;white-space:nowrap}
+.tp-botonera .btn.btn-fino::before{top:0;bottom:0;height:auto;margin-top:0}
 .tp-corto{display:none}
 .tp-sep{width:1px;align-self:stretch;background:var(--hair);margin:0 4px}
 .tp-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--hair);background:#fff;border-radius:3px;margin:0 0 12px}
@@ -5266,6 +5266,9 @@ small{font-size:max(.8333em, 11px)}
 }
 
 /* ── TPV en móvil y tablet (1/11): lo que se toca en pleno servicio, con el pulgar ── */
+@media (max-width: 1180px){
+  .tp-cab .tp-acciones.tp-botonera{flex:1 1 100%}
+}
 @media (max-width: 1023px){
   .tp-or-cuerpo{grid-template-columns:minmax(0,1.15fr) minmax(300px,1fr);gap:12px}
 }
@@ -5278,7 +5281,8 @@ small{font-size:max(.8333em, 11px)}
   .tp-cifra:nth-child(1){border-right:1px solid var(--hair)}
   .tp-cifra:nth-child(4){border-right:0}
   .tp-cifra-v{font-size:18px}
-  .tp-cab .tp-acciones,.tp-cab .tp-acciones-sec{flex-basis:100%;gap:6px;justify-content:stretch}
+  .tp-cab .tp-acciones.tp-botonera{flex-basis:100%;gap:6px}
+  .tp-botonera .btn{padding-left:4px !important;padding-right:4px !important;font-size:12px !important}
   .tp-acciones > .btn{flex:1 1 auto;justify-content:center}
   .tp-largo{display:none}
   .tp-corto{display:inline}

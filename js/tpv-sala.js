@@ -83,16 +83,14 @@ function tpvBarraHtml(){
   return `
     <div class="tp-cab">
     ${renderTpvKpis()}
-    <div class="tp-acciones">
+    <div class="tp-acciones tp-botonera">
       ${tpvCartasChipHtml()}
       <button type="button" class="btn btn-fino${esperando ? ' is-on' : ''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${larg(t('waitlist.btn'), gl({es:'Espera', ca:'Espera', en:'Waitlist'}))}${esperando ? ` <b>${esperando}</b>` : ''}</button>
       <button type="button" class="btn btn-fino tp-caja" id="tpv-close-cash-btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${larg(t('btn.cashClose'), gl({es:'Caja', ca:'Caixa', en:'Cash'}))}</button>
-    </div>
-    <div class="tp-acciones tp-acciones-sec">
-      <button type="button" class="btn btn-sm btn-fino" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${larg(t('title.voidLog'), gl({es:'Anulaciones', ca:'Anul·lacions', en:'Voids'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${larg(t('btn.markDishOut'), gl({es:'Agotado', ca:'Esgotat', en:'Sold out'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${larg(t('title.cashHistory'), gl({es:'Arqueos', ca:'Arqueigs', en:'Closures'}))}</button>
-      ${cajon ? `<button type="button" class="btn btn-sm btn-fino" onclick="openCashDrawerManually()"><i class="ti ti-cash"></i> ${larg(t('drawer.openBtn'), gl({es:'Cajón', ca:'Calaix', en:'Drawer'}))}</button>` : ''}
+      <button type="button" class="btn btn-fino" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${larg(t('title.voidLog'), gl({es:'Anulaciones', ca:'Anul·lacions', en:'Voids'}))}</button>
+      <button type="button" class="btn btn-fino" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${larg(t('btn.markDishOut'), gl({es:'Agotado', ca:'Esgotat', en:'Sold out'}))}</button>
+      <button type="button" class="btn btn-fino" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${larg(t('title.cashHistory'), gl({es:'Arqueos', ca:'Arqueigs', en:'Closures'}))}</button>
+      ${cajon ? `<button type="button" class="btn btn-fino" onclick="openCashDrawerManually()"><i class="ti ti-cash"></i> ${larg(t('drawer.openBtn'), gl({es:'Cajón', ca:'Calaix', en:'Drawer'}))}</button>` : ''}
     </div>
     </div>`;
 }
