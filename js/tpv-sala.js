@@ -79,12 +79,6 @@ function openCartasActivasModal(){
 function tpvBarraHtml(){
   const esperando = (DB.waitlist || []).filter(w => w.status === 'esperando').length;
   const cajon = (DB.business && DB.business.cashDrawerOnSale && typeof thermalPrintingSupported === 'function' && getPrintMode('ticket') === 'bluetooth');
-  const menu = ggMenuAcciones([
-    {icono:'ti-alert-triangle', texto: t('title.voidLog'), fn:'openVoidLogModal()'},
-    {icono:'ti-flame-off', texto: t('btn.markDishOut'), fn:'openMarkDishOutModal()'},
-    {icono:'ti-history', texto: t('title.cashHistory'), fn:'openCashClosureHistory()'},
-    cajon ? {icono:'ti-cash', texto: t('drawer.openBtn'), fn:'openCashDrawerManually()'} : null,
-  ].filter(Boolean), {etiqueta: gl({es:'Más acciones del TPV', ca:'Més accions del TPV', en:'More POS actions'}), clase: 'btn btn-fino tp-mas'});
   const larg = (largo, corto) => `<span class="tp-largo">${escapeHtml(largo)}</span><span class="tp-corto">${escapeHtml(corto)}</span>`;
   return `
     <div class="tp-cab">
@@ -93,7 +87,12 @@ function tpvBarraHtml(){
       ${tpvCartasChipHtml()}
       <button type="button" class="btn btn-fino${esperando ? ' is-on' : ''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${larg(t('waitlist.btn'), gl({es:'Espera', ca:'Espera', en:'Waitlist'}))}${esperando ? ` <b>${esperando}</b>` : ''}</button>
       <button type="button" class="btn btn-fino tp-caja" id="tpv-close-cash-btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${larg(t('btn.cashClose'), gl({es:'Caja', ca:'Caixa', en:'Cash'}))}</button>
-      ${menu}
+    </div>
+    <div class="tp-acciones tp-acciones-sec">
+      <button type="button" class="btn btn-sm btn-fino" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${larg(t('title.voidLog'), gl({es:'Anulaciones', ca:'Anul·lacions', en:'Voids'}))}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${larg(t('btn.markDishOut'), gl({es:'Agotado', ca:'Esgotat', en:'Sold out'}))}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${larg(t('title.cashHistory'), gl({es:'Arqueos', ca:'Arqueigs', en:'Closures'}))}</button>
+      ${cajon ? `<button type="button" class="btn btn-sm btn-fino" onclick="openCashDrawerManually()"><i class="ti ti-cash"></i> ${larg(t('drawer.openBtn'), gl({es:'Cajón', ca:'Calaix', en:'Drawer'}))}</button>` : ''}
     </div>
     </div>`;
 }

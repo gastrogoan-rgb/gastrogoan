@@ -60,17 +60,17 @@ async function abrir(w, h){
 
 const ANCHOS = [[1280,800],[820,1180],[430,932],[412,915],[390,844],[360,740],[320,700]];
 
-await caso('Arriba solo hay una franja corta: cifras + Cartas + Lista de espera + Cerrar caja + «más». Las dos cajas de cartas y menús ya no existen', async () => {
+await caso('Arriba solo hay una franja corta: cifras + Cartas + Lista de espera + Cerrar caja + botones pequeños. Las dos cajas de cartas y menús ya no existen', async () => {
   const {page} = await abrir(1280, 800);
   const r = await page.evaluate(() => ({
     cifras: document.querySelectorAll('.tp-cifra').length,
     chip: !!document.querySelector('.tp-chip-cartas'),
     cajonesViejos: document.querySelectorAll('#view-tpv .card h3 .ti-book-2').length,
     caja: !!document.getElementById('tpv-close-cash-btn'),
-    mas: !!document.querySelector('.tp-mas'),
+    sec: document.querySelectorAll('.tp-acciones-sec .btn').length,
     primeraMesa: Math.round(document.querySelector('.tp-mesa').getBoundingClientRect().top),
   }));
-  assert.equal(r.cifras, 4, JSON.stringify(r)); assert.ok(r.chip && r.caja && r.mas, JSON.stringify(r));
+  assert.equal(r.cifras, 4, JSON.stringify(r)); assert.ok(r.chip && r.caja && r.sec >= 3, 'Anulaciones, Agotado y Arqueos son botones pequeños, no un menú: ' + JSON.stringify(r));
   assert.equal(r.cajonesViejos, 0, 'no quedan los recuadros viejos de cartas activas: ' + JSON.stringify(r));
   assert.ok(r.primeraMesa < 420, 'en PC la primera mesa se ve sin bajar: ' + JSON.stringify(r));
   await page.close();

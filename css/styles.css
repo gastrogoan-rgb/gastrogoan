@@ -4244,7 +4244,10 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 /* ── Franja de arriba: cifras + botones ── */
 .tp-cab{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px 14px;margin:0 0 14px}
 .tp-cab .tp-cifras{flex:1 1 520px;margin:0}
-.tp-cab .tp-acciones{flex:0 1 auto;margin:0;align-content:center}
+.tp-cab .tp-acciones{margin:0;align-content:center}
+.tp-cab .tp-acciones:not(.tp-acciones-sec){flex:0 1 auto}
+.tp-cab .tp-acciones-sec{flex:1 1 100%;justify-content:flex-end}
+.tp-acciones-sec .btn{font-size:12px}
 .tp-corto{display:none}
 .tp-sep{width:1px;align-self:stretch;background:var(--hair);margin:0 4px}
 .tp-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--hair);background:#fff;border-radius:3px;margin:0 0 12px}
@@ -5275,7 +5278,7 @@ small{font-size:max(.8333em, 11px)}
   .tp-cifra:nth-child(1){border-right:1px solid var(--hair)}
   .tp-cifra:nth-child(4){border-right:0}
   .tp-cifra-v{font-size:18px}
-  .tp-cab .tp-acciones{flex-basis:100%;gap:6px}
+  .tp-cab .tp-acciones,.tp-cab .tp-acciones-sec{flex-basis:100%;gap:6px;justify-content:stretch}
   .tp-acciones > .btn{flex:1 1 auto;justify-content:center}
   .tp-largo{display:none}
   .tp-corto{display:inline}
