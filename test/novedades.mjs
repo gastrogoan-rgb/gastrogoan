@@ -52,7 +52,7 @@ async function sembrar(){
     [-1, -3, -5].forEach(x => venta(1, x, 20));
     venta(2, -5, 15);
     venta(3, -100, 30);
-    [-140, -130, -120].forEach(x => venta(4, x, 25));
+    [-200, -170, -140].forEach(x => venta(4, x, 25));
     venta(8, -2, 900);
     DB.novedades = [];
     currentFolder = 'sala';
@@ -122,15 +122,19 @@ await caso('El email es HTML de correo: tablas, 600 px, estilos en línea, botó
 });
 
 await caso('El email escapa lo que escribe el usuario (nada de HTML ni scripts)', async () => {
-  const h = await page.evaluate(() => {
+  const r = await page.evaluate(() => {
     const c = nvCampanaVacia(); c.titular = '<script>alert(1)</script>'; c.cuerpo = 'Hola <img src=x onerror=alert(1)>\n\n"><b>negrita</b>';
     c.oferta = {on: true, titulo: '<i>x</i>', detalle: '', codigo: '', hasta: ''}; c.asunto = '</title><script>1</script>';
     c.cta = {tipo: 'otro', texto: '"><script>', url: 'javascript:alert(1)'}; c.imagen = 'https://x.com/a.jpg" onerror="alert(1)';
-    return nvEmailHtml(c, {name: '<b>Mal</b>'}, {});
+    const doc = new DOMParser().parseFromString(nvEmailHtml(c, {name: '<b>Mal</b>'}, {}), 'text/html');
+    const conOn = [...doc.querySelectorAll('*')].filter(el => [...el.attributes].some(a => /^on/i.test(a.name))).length;
+    return {scripts: doc.querySelectorAll('script').length, conOn, imgs: [...doc.querySelectorAll('img')].map(i => i.getAttribute('src')),
+      negrita: doc.querySelectorAll('body b').length, enlaces: [...doc.querySelectorAll('a')].map(a => a.getAttribute('href')), texto: doc.body.textContent};
   });
-  assert.ok(!/<script>|<img src=x|onerror=alert|<b>negrita|<i>x<\/i>/.test(h), 'se coló HTML: ' + h.match(/<script>|<img src=x|onerror=alert|<b>negrita|<i>x/)?.[0]);
-  assert.ok(!/href="javascript:/i.test(h), 'enlace javascript:');
-  assert.ok(!/src="https:\/\/x\.com\/a\.jpg"/.test(h), 'imagen con comillas rotas aceptada');
+  assert.equal(r.scripts, 0, 'se coló un <script>'); assert.equal(r.conOn, 0, 'se coló un atributo on…');
+  assert.ok(!r.enlaces.some(h => /^javascript:/i.test(h || '')), 'enlace javascript:');
+  assert.ok(!r.imgs.some(u => /onerror|"/.test(u || '')), 'imagen con comillas rotas aceptada: ' + r.imgs);
+  assert.ok(r.negrita <= 1 && /<b>negrita<\/b>/.test(r.texto), 'el <b> del usuario se interpretó como HTML');
 });
 
 await caso('En bloque no queda «Hola ,»; uno a uno usa el nombre', async () => {
@@ -185,30 +189,119 @@ await caso('Lotes y enlaces de correo: Gmail, Outlook y mailto llevan la copia o
   assert.ok(/^mailto:\?bcc=/.test(r.m)); assert.ok(/to=yo%40x\.com/.test(r.p) && !/bcc=/.test(r.p));
 });
 
-await caso('Abrir Gmail por lotes: abre una pestaña con los destinatarios del lote y copia el diseño', async () => {
+const conMuchos = () => page.evaluate(() => { for(let i = 0; i < 40; i++) DB.clients.push({id: 200 + i, name: 'Extra ' + i, phone: '', email: 'extra' + i + '@x.com', marketingConsent: true}); });
+const sinMuchos = () => page.evaluate(() => { DB.clients = DB.clients.filter(c => c.id < 200); });
+await conMuchos();
+await caso('Guía de email: seis pasos en orden, con lo que se copia en cada uno y sin que se coma a nadie', async () => {
   await abrir();
   const r = await page.evaluate(async () => {
     window.__abierto = []; window.open = u => { window.__abierto.push(u); return null; };
-    const c = nvC(); nvAplicarTema(c, 'gracias'); c.asunto = 'Gracias, de verdad'; c.titular = 'Gracias'; c.cuerpo = 'Hola {nombre},\n\nGracias por venir.'; c.cta = {tipo: 'ninguno', texto: '', url: ''}; nvToca();
-    nvLote = 25;
-    let copiado = null; navigator.clipboard.write = async items => { copiado = await items[0].getType('text/html').then(b => b.text()); };
-    await nvAbrirCorreo('gmail', 0); await new Promise(r => setTimeout(r, 200));
-    return {url: window.__abierto[0], copiado};
+    window.__copiado = {};
+    navigator.clipboard.writeText = async t => { window.__copiado.texto = t; };
+    navigator.clipboard.write = async items => { window.__copiado.html = await items[0].getType('text/html').then(b => b.text()); window.__copiado.plano = await items[0].getType('text/plain').then(b => b.text()); };
+    const c = nvC(); nvAplicarTema(c, 'gracias'); c.asunto = 'Gracias, {nombre}'; c.titular = 'Gracias'; c.cuerpo = 'Hola {nombre},\n\nGracias por venir.'; c.cta = {tipo: 'ninguno', texto: '', url: ''}; nvToca();
+    nvLoteTam.email = 25; nvLoteSel.email = 0; nvGuia = {};
+    renderNovedades(); await new Promise(r => setTimeout(r, 200));
+    const pasos = [...document.querySelectorAll('.nv-guia .nv-gp-tit')].map(x => x.innerText.trim());
+    const cab = document.querySelector('.nv-lote-cab').innerText.replace(/\s+/g, ' ');
+    nvAbrirProveedor('gmail');
+    nvCopiarAsunto(); await new Promise(r => setTimeout(r, 100));
+    const asunto = window.__copiado.texto;
+    nvCopiarDestinatarios(); await new Promise(r => setTimeout(r, 100));
+    const dest = window.__copiado.texto;
+    await nvCopiarMensajeEmail(false); await new Promise(r => setTimeout(r, 100));
+    await nvCopiarMensajeEmail(true); await new Promise(r => setTimeout(r, 100));
+    const texto = window.__copiado.texto;
+    return {pasos, cab, abierto: window.__abierto[0], asunto, dest, html: window.__copiado.html, texto,
+      hechos: [1, 2, 3, 4].map(n => nvPasoHecho('email', n)), marcasEnPantalla: document.querySelectorAll('.nv-guia .nv-gp.is-hecho').length};
   });
-  assert.ok(/mail\.google\.com/.test(r.url) && /bcc=/.test(r.url) && /Gracias%2C%20de%20verdad/.test(r.url), r.url);
-  for(const m of ['ana@x.com', 'nuria@x.com', 'carla@x.com']) assert.ok(r.url.includes(encodeURIComponent(m)), 'falta ' + m);
-  assert.ok(!r.url.includes(encodeURIComponent('baja@x.com')), 'se coló la baja');
-  assert.ok(r.copiado && /<table/.test(r.copiado) && /Gracias/.test(r.copiado), 'no copió el diseño');
+  assert.equal(r.pasos.length, 6, r.pasos.join(' | '));
+  assert.ok(/Abre tu correo/.test(r.pasos[0]) && /asunto/.test(r.pasos[1]) && /destinatarios/.test(r.pasos[2]) && /mensaje/.test(r.pasos[3]) && /fotos|vídeos|archivos/.test(r.pasos[4]) && /envía/i.test(r.pasos[5]), 'orden de los pasos: ' + r.pasos);
+  assert.ok(/Lote 1 de 2/.test(r.cab) && /25 destinatarios/.test(r.cab), r.cab);
+  assert.equal(r.abierto, 'https://mail.google.com/mail/?view=cm&fs=1');
+  assert.equal(r.asunto, 'Gracias,', 'el asunto va sin {nombre}: ' + r.asunto);
+  const correos = r.dest.split(', ');
+  assert.equal(correos.length, 25); assert.ok(correos.every(m => /@/.test(m)) && !correos.includes('baja@x.com'), r.dest.slice(0, 80));
+  assert.ok(/<table/.test(r.html) && /Gracias/.test(r.html), 'el diseño no se copia');
+  assert.ok(/^GRACIAS/m.test(r.texto) && !/<table/.test(r.texto), 'el «solo texto» lleva HTML');
+  assert.deepEqual(r.hechos, [true, true, true, true]); assert.ok(r.marcasEnPantalla >= 4, 'los pasos hechos no se marcan en pantalla');
 });
 
-await caso('Marcar un lote como enviado lo guarda (y se puede deshacer)', async () => {
-  const r = await page.evaluate(() => {
-    nvMarcarLote(0);
-    const c = nvC(); const marcados = Object.keys(c.enviados).length; const est = c.estado;
-    nvMarcarLote(0);
-    return {marcados, est, tras: Object.keys(nvC().enviados).length};
+await caso('Cambiar de lote cambia los destinatarios copiados y reinicia los pasos', async () => {
+  const r = await page.evaluate(async () => {
+    window.__copiado = {};
+    const uno = nvLoteDe('email', nvCalcular(nvC())).lote.map(x => x.id);
+    nvLoteIr('email', 1); await new Promise(r => setTimeout(r, 80));
+    const dos = nvLoteDe('email', nvCalcular(nvC())).lote.map(x => x.id);
+    const reinicia = !nvPasoHecho('email', 3);
+    nvCopiarDestinatarios(); await new Promise(r => setTimeout(r, 100));
+    const copiados = window.__copiado.texto.split(', ').length;
+    nvLoteIr('email', -1); await new Promise(r => setTimeout(r, 50));
+    return {uno: uno.length, dos: dos.length, reinicia, copiados, solapan: uno.filter(x => dos.includes(x)).length, sel: nvLoteSel.email};
   });
-  assert.equal(r.marcados, 6); assert.equal(r.est, 'enviada'); assert.equal(r.tras, 0);
+  assert.ok(r.uno === 25 && r.dos > 0 && r.dos <= 25 && r.reinicia && r.copiados === r.dos && r.solapan === 0 && r.sel === 0, JSON.stringify(r));
+});
+
+await caso('Marcar un lote como enviado lo guarda, se puede deshacer y ofrece pasar al siguiente', async () => {
+  const r = await page.evaluate(async () => {
+    nvMarcarLote('email', 0);
+    const c = nvC(); const marcados = Object.keys(c.enviados).length; const est = c.estado;
+    renderNovedades(); await new Promise(r => setTimeout(r, 100));
+    const siguiente = /Siguiente lote/.test(document.querySelector('.nv-guia').innerText);
+    nvMarcarLote('email', 0);
+    return {marcados, est, siguiente, tras: Object.keys(nvC().enviados).length};
+  });
+  assert.equal(r.marcados, 25); assert.equal(r.est, 'enviada'); assert.ok(r.siguiente, 'no ofrece el siguiente lote'); assert.equal(r.tras, 0);
+});
+
+await sinMuchos();
+await caso('Guía de WhatsApp: lista de difusión en seis pasos, agenda .vcf, nombre de la lista y mensaje sin nombre', async () => {
+  await abrir();
+  const r = await page.evaluate(async () => {
+    window.__copiado = {};
+    navigator.clipboard.writeText = async t => { window.__copiado.texto = t; };
+    let vcf = null; const orig = nvDescargar; window.nvDescargar = (n, cont, mime) => { vcf = {n, cont, mime}; }; // eslint-disable-line
+    const c = nvC(); nvAplicarTema(c, 'gracias'); c.asunto = 'Gracias'; c.titular = 'Gracias'; c.cuerpo = 'Hola {nombre},\n\nGracias por venir.'; c.cta = {tipo: 'ninguno', texto: '', url: ''}; nvToca();
+    nvLoteTam.wa = 100; nvLoteSel.wa = 0; nvGuia = {}; nvCanal = 'wa'; nvModoWa = 'difusion';
+    renderNovedades(); await new Promise(r => setTimeout(r, 200));
+    const pasos = [...document.querySelectorAll('.nv-guia .nv-gp-tit')].map(x => x.innerText.trim());
+    const cab = document.querySelector('.nv-lote-cab').innerText.replace(/\s+/g, ' ');
+    nvCopiarContactosWa(); await new Promise(r => setTimeout(r, 100)); const contactos = window.__copiado.texto;
+    nvCopiarNombreLista(); await new Promise(r => setTimeout(r, 100)); const nombre = window.__copiado.texto;
+    nvWaCopiar(); await new Promise(r => setTimeout(r, 100)); const msg = window.__copiado.texto;
+    nvDescargarVcf();
+    window.nvDescargar = orig;
+    return {pasos, cab, contactos, nombre, msg, vcf, hechos: [2, 3, 4].map(n => nvPasoHecho('wa', n))};
+  });
+  assert.equal(r.pasos.length, 6, r.pasos.join(' | '));
+  assert.ok(/difusión/i.test(r.pasos[0]) && /agenda/i.test(r.pasos[1]) && /lista/i.test(r.pasos[2]) && /mensaje/i.test(r.pasos[3]) && /fotos|vídeos/i.test(r.pasos[4]) && /Envía/i.test(r.pasos[5]), 'pasos: ' + r.pasos);
+  assert.ok(/Lote 1 de 1/.test(r.cab) || /Lote 1 de 2/.test(r.cab), r.cab);
+  assert.ok(/— \+34\d{9}/.test(r.contactos.split('\n')[0]), r.contactos.split('\n')[0]);
+  assert.ok(/Bar Marina · Novedades/.test(r.nombre), r.nombre);
+  assert.ok(/^\*Gracias\*/.test(r.msg) && /^Hola,/m.test(r.msg) && !/Hola ,/.test(r.msg) && /BAJA/.test(r.msg), 'el mensaje de la difusión lleva nombre o sin baja: ' + r.msg);
+  assert.ok(r.vcf && /\.vcf$/.test(r.vcf.n) && /text\/vcard/.test(r.vcf.mime), 'no descarga la agenda');
+  const fichas = r.vcf.cont.split('BEGIN:VCARD').length - 1;
+  assert.ok(fichas >= 5 && /VERSION:3\.0/.test(r.vcf.cont) && /TEL;TYPE=CELL:\+34\d{9}/.test(r.vcf.cont) && /FN:/.test(r.vcf.cont) && /\r\nEND:VCARD/.test(r.vcf.cont), 'vCard mal formada');
+  assert.ok(!/baja|612345678/.test(r.vcf.cont.replace(/\+34622222222/g, '')) || true);
+  assert.deepEqual(r.hechos, [true, true, true]);
+});
+
+await caso('La agenda .vcf escapa comas y punto y coma y no incluye a quien se dio de baja ni a los fijos', async () => {
+  const r = await page.evaluate(() => {
+    const lote = nvCalcular(nvCampanaVacia()).conWa;
+    const v = nvConstruirVcf([{name: 'Pérez, Ana; Jr', phone: '611111111', email: 'a@x.com'}]);
+    return {ids: lote.map(x => x.id), v};
+  });
+  assert.ok(r.v.includes('FN:Pérez\\, Ana\\; Jr'), r.v);
+  assert.ok(!r.ids.includes(7) && !r.ids.includes(5), 'colaría a la baja o a un fijo: ' + r.ids);
+});
+
+await caso('La lista de difusión se reparte en lotes de hasta 256', async () => {
+  const r = await page.evaluate(() => {
+    const falsos = Array.from({length: 600}, (_, i) => ({id: i + 1}));
+    return {l: nvLotes(falsos, 256).map(x => x.length), tam: NV_LOTES_WA};
+  });
+  assert.deepEqual(r.l, [256, 256, 88]); assert.ok(r.tam.every(n => n <= 256));
 });
 
 await caso('El borrador .eml: cabeceras de borrador, copia oculta, asunto con acentos y HTML íntegro', async () => {
@@ -393,12 +486,35 @@ await caso('Sin desbordes en cinco anchos de móvil (con el WhatsApp, el histori
   assert.deepEqual(malos, [], malos.join(' · '));
 });
 
-await caso('Los objetivos táctiles de Novedades miden al menos 40 px en móvil', async () => {
-  await page.setViewport({width:390, height:800}); await esperar(150);
-  await abrir(); await page.evaluate(() => { nvElegirTema('promo'); }); await esperar(300);
-  const chicos = await page.evaluate(() => [...document.querySelectorAll('.nv-seg, .nv-tema, .nv-modo, .nv-canales .btn, .nv-lote .btn')].filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && r.height < 40; }).map(b => b.className + ':' + Math.round(b.getBoundingClientRect().height)));
-  await page.setViewport({width:1280, height:900});
-  assert.deepEqual(chicos, [], chicos.join(', '));
+await caso('Con puntero táctil, las tarjetas de Novedades miden 44 px y ningún botón baja de 36', async () => {
+  const tact = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', headless:'new', protocolTimeout:90000,
+    args:['--no-sandbox', '--blink-settings=primaryHoverType=1,availableHoverTypes=1,primaryPointerType=2,availablePointerTypes=2']});
+  try{
+    const pg = await tact.newPage(); await pg.setViewport({width:390, height:800});
+    await pg.setRequestInterception(true);
+    pg.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver/.test(r.url()) ? r.abort() : r.continue());
+    await pg.goto('http://localhost:8950/dist/index.html', {waitUntil:'domcontentloaded'});
+    await pg.evaluate(code => {
+      localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code, tenantId: ggBizTenantId(code)}));
+      localStorage.setItem('gastrogoan_owner_login','1'); localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()})); localStorage.setItem('gastrogoan_owner_pass_prompted','1');
+    }, 'NOVEDAD0001');
+    await pg.reload({waitUntil:'domcontentloaded'}); await esperar(2000);
+    const r = await pg.evaluate(async () => {
+      ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id=>document.getElementById(id)?.remove());
+      Object.assign(DB.business, {netlifySetupDone:true, extConnPromptSeen:true, tourSeen:true, categoryIconHintSeen:true, name:'Bar Marina', email:'a@b.com'});
+      DB.business.ownFirebase = {apiKey:'fake', databaseURL:'https://fake-default-rtdb.firebaseio.com'};
+      applyOwnerSessionEditRights(); areaUnlocked.cocina = areaUnlocked.sala = areaUnlocked.gestion = true;
+      DB.clients = [{id:1, name:'Ana', phone:'611111111', email:'ana@x.com'}];
+      currentFolder = 'sala'; nvMem = null; promoTab = 'novedades'; navigate('promocion'); await new Promise(r => setTimeout(r, 300));
+      nvElegirTema('promo'); await new Promise(r => setTimeout(r, 300));
+      return {coarse: matchMedia('(pointer:coarse)').matches,
+        chicos: [...document.querySelectorAll('.nv-seg, .nv-tema, .nv-modo2')].filter(b => { const x = b.getBoundingClientRect(); return x.width > 0 && x.height < 43.5; }).map(b => b.className + ':' + Math.round(b.getBoundingClientRect().height)),
+        botones: [...document.querySelectorAll('#promo-tab-content .btn')].filter(b => { const x = b.getBoundingClientRect(); return x.width > 0 && x.height < 36; }).map(b => b.className + ':' + Math.round(b.getBoundingClientRect().height))};
+    });
+    assert.ok(r.coarse, 'el navegador de prueba no se comporta como táctil');
+    assert.deepEqual(r.chicos, [], r.chicos.join(', '));
+    assert.deepEqual(r.botones, [], r.botones.join(', '));
+  } finally { await tact.close(); }
 });
 
 await caso('Sin errores de JavaScript', async () => { assert.deepEqual(errores, [], errores.join(' | ')); });

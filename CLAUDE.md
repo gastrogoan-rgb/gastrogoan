@@ -759,6 +759,28 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   (la siembra del catálogo la llena con nombres de ambas) y se veía entera en cada una; ahora `ingredientCategoriesPropias()` enseña solo las que
   usa algún producto del área (una que nadie usa aún se ve en las dos). Al añadir una pantalla compartida nueva, añadirla a la prueba.
   «Ingrediente» se queda en el escandallo: en un cóctel es la palabra correcta.
+- **Promoción** (1/11, js/app.js sección PROMOCIÓN, `test/promocion.mjs`): seis pestañas pintadas desde `promoTabsHtml` (Día, Semana, Mes, **Novedades**, Clientes, Ideas),
+  franja de cifras (`pmResumenHtml`), tarjeta común `.pm-card` con menú ⋯ (editar, duplicar al día siguiente, eliminar) y la ventana de la acción por secciones.
+  Mes con `ggPeriodoHtml` (`promoMesCb`), Ideas con buscador. Fallos que salieron al revisarla entera y conviene no repetir:
+  · **Desde Sala solo se podían rebajar BEBIDAS** (`getAllDishNames` filtraba por área y `getDishPlatoIdForName` solo miraba las cartas de bebida): un restaurante no podía
+    rebajar una hamburguesa. Ahora `promoDishOptions()` ofrece platos Y bebidas (separados) y el enlace al id del plato busca en todas las cartas.
+  · **WhatsApp abría `wa.me/612345678`** sin prefijo de país (no abre ningún chat): ahora `whatsappDeTelefono`, y un fijo no abre.
+  · **Una promo semanal no podía terminar**: campo `hasta` (opcional) respetado por `promoOccursOn`, que también usan el TPV y el espejo público.
+  Una acción con descuento tiene «Anunciar a clientes» (`promoAnunciar`), que la lleva a Novedades ya escrita.
+- **Novedades** (1/11, **js/novedades.js**, pestaña de Promoción, solo propietario/edición, `test/novedades.mjs`): enviar novedades comerciales por email y WhatsApp.
+  ⚠️ **Regla de la casa: no hay servidor de correo ni API de WhatsApp** (costaría por cliente): el mensaje sale del correo y del WhatsApp DEL NEGOCIO, y la app prepara todo.
+  · **Audiencia** (`nvCalcular`): todos, habituales, nuevos, inactivos, en riesgo, cumpleaños del mes, mejores clientes (20 % por gasto del año), código postal, elegir uno a uno;
+    siempre sin quien retiró el consentimiento, con exclusiones a mano y las cifras de email válido / móvil real (no fijos).
+  · **Temas** (`NV_TEMAS`, 11, es/ca/en): rellenan asunto, titular, texto, oferta y botón. Lo que va entre `[corchetes]` hay que rellenarlo y **se avisa antes de copiar/enviar**.
+  · **El email** (`nvEmailHtml`): tablas y estilos en línea, 600 px, botón a prueba de Outlook, texto de previsualización, pie con la **baja** (LSSI) y el responsable; todo escapado.
+    Texto plano (`nvEmailTexto`) para mailto y `.eml` (`nvConstruirEml`: borrador con logo por `cid:`, copia oculta, abre en Outlook de escritorio/Apple Mail/Thunderbird).
+  · **Enviar = una GUÍA paso a paso** (pedido por el dueño el 1/11): **Email** → abrir correo (Gmail/Outlook/mailto) · copiar asunto · copiar destinatarios (a **CCO**, por lotes de 25/50/100)
+    · copiar el mensaje con diseño · fotos/vídeos/archivos (opcional) · enviar y marcar el lote. **WhatsApp** → crear **lista de difusión** en el móvil · tener a los clientes en la agenda
+    (descarga `.vcf`, `nvConstruirVcf`) · añadirlos y copiar el nombre de la lista (lotes de hasta 256, el tope de WhatsApp) · copiar el mensaje (sin nombre) · adjuntos · enviar y marcar.
+    Cada paso copia lo suyo y se marca «hecho» (`nvGuia`, solo de la pantalla). Alternativa «Uno a uno» (mailto de texto / `wa.me` con el nombre de cada cliente).
+    ⚠️ La difusión solo llega a quien tiene el número del negocio guardado: la guía lo dice.
+  · **Historial** (`DB.novedades`, sincroniza y lleva lápida; `enviados:{clienteId:{em,wa}}`), «Usar como base» y **«Registrar una baja»** (quien responde BAJA pierde el consentimiento).
+  · Pendiente conocido: el email no lleva imagen subida desde la app (solo enlace https) porque Gmail bloquea las imágenes incrustadas; el logo sí va (en el `.eml` por `cid:`).
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,

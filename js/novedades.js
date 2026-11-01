@@ -16,7 +16,8 @@
      cada email lleva la baja (LSSI art. 21 y 22).
    ============================================================ */
 
-const NV_LOTES = [25, 50, 100];
+const NV_LOTES = [25, 50, 100];            // destinatarios por correo
+const NV_LOTES_WA = [100, 200, 256];       // una lista de difusión de WhatsApp admite hasta 256
 
 // ── Datos ────────────────────────────────────────────────────────────────
 function nvLista(){
@@ -26,7 +27,10 @@ function nvLista(){
 let nvVista = 'nueva';         // 'nueva' | 'historial'
 let nvCanal = 'email';         // canal abierto en «Enviar»
 let nvModoEmail = 'bloque';    // 'bloque' (CCO) | 'uno'
-let nvLote = 50;
+let nvLoteTam = {email: 50, wa: 256};   // tamaño de cada lote
+let nvLoteSel = {email: 0, wa: 0};      // lote que se está enviando
+let nvGuia = {};                        // pasos hechos: 'canal:lote:paso' → true (solo de la pantalla)
+let nvModoWa = 'difusion';              // 'difusion' (lista de difusión) | 'uno'
 let nvPrevModo = 'email';      // 'email' | 'movil' | 'whatsapp'
 let nvMem = null;              // campaña abierta (en DB o todavía solo en memoria)
 let nvGuardarTimer = null;
@@ -591,7 +595,9 @@ function nvInsertar(token){
 function nvSetCanal(c){ nvCanal = c; renderNovedades(); }
 function nvPrevSet(m){ nvPrevModo = m; renderNovedades(); }
 function nvSetModoEmail(m){ nvModoEmail = m; renderNovedades(); }
-function nvSetLote(n){ nvLote = parseInt(n) || 50; renderNovedades(); }
+function nvSetModoWa(m){ nvModoWa = m; renderNovedades(); }
+function nvSetLote(canal, n){ nvLoteTam[canal] = parseInt(n) || nvLoteTam[canal]; nvLoteSel[canal] = 0; nvRefrescarEnvio(); }
+function nvLoteIr(canal, delta){ nvLoteSel[canal] = Math.max(0, nvLoteSel[canal] + delta); nvRefrescarEnvio(); }
 
 // ── Vista previa ─────────────────────────────────────────────────────────
 function nvClienteMuestra(){
@@ -660,17 +666,86 @@ function nvEnvioWaHtml(c, calc){ return `<div id="nv-envio-cuerpo">${nvEnvioWaIn
 
 const nvEstadoCh = (ok, txt) => `<span class="pm-et${ok ? ' is-ok' : ''}">${ok ? '<i class="ti ti-check"></i> ' : ''}${escapeHtml(txt)}</span>`;
 
+/* ── La guía de envío ─────────────────────────────────────────────────────
+   Enviar no se hace con un botón mágico: sale del correo y del WhatsApp del
+   propio negocio. Así que la pantalla es una GUÍA de pasos en orden (de verdad
+   es una secuencia: no se puede pegar lo que aún no se ha copiado), con un
+   botón de copiar en cada paso, la marca de «hecho» y los avisos justos de
+   lo que suele salir mal (copia oculta, contactos guardados, adjuntos). */
+function nvLoteDe(canal, calc){
+  const lista = canal === 'email' ? calc.conEmail : calc.conWa;
+  const lotes = nvLotes(lista, nvLoteTam[canal]);
+  const idx = Math.min(nvLoteSel[canal], Math.max(0, lotes.length - 1));
+  nvLoteSel[canal] = idx;
+  return {lotes, idx, lote: lotes[idx] || []};
+}
+function nvPasoHecho(canal, paso){ return !!nvGuia[canal + ':' + nvLoteSel[canal] + ':' + paso]; }
+function nvPasoMarca(canal, paso, estado){
+  nvGuia[canal + ':' + nvLoteSel[canal] + ':' + paso] = estado !== false;
+  nvRefrescarEnvio();
+}
+// Termina un paso de copiar: marca «hecho» y dice qué hacer ahora con lo copiado.
+function nvCopiado(ok, canal, paso, aviso){
+  if(!ok){ showToast(gl({es:'No se pudo copiar. Selecciónalo y cópialo a mano.', ca:'No s\'ha pogut copiar. Selecciona\'l i copia\'l a mà.', en:'Could not copy. Select it and copy it by hand.'})); return; }
+  showToast(aviso);
+  nvPasoMarca(canal, paso);
+}
+function nvPasoHtml(canal, n, o){
+  const hecho = nvPasoHecho(canal, n);
+  return `<li class="nv-gp${hecho ? ' is-hecho' : ''}">
+    <span class="nv-gp-num" aria-hidden="true">${hecho ? '<i class="ti ti-check"></i>' : n}</span>
+    <div class="nv-gp-cuerpo">
+      <h4 class="nv-gp-tit">${escapeHtml(o.tit)}${o.opcional ? ` <span class="nv-gp-opc">${escapeHtml(gl({es:'opcional', ca:'opcional', en:'optional'}))}</span>` : ''}${hecho ? `<span class="visually-hidden"> — ${escapeHtml(gl({es:'hecho', ca:'fet', en:'done'}))}</span>` : ''}</h4>
+      ${o.txt ? `<p class="nv-gp-txt">${escapeHtml(o.txt)}</p>` : ''}
+      ${o.caja ? `<div class="nv-caja">${o.caja}</div>` : ''}
+      ${o.detalle || ''}
+      ${o.acc ? `<div class="nv-gp-acc">${o.acc}</div>` : ''}
+    </div></li>`;
+}
+const nvBt = (fn, ic, txt, extra) => `<button type="button" class="btn btn-sm btn-fino${extra || ''}" onclick="${fn}"><i class="ti ${ic}"></i> ${escapeHtml(txt)}</button>`;
+
+// Cabecera del lote: «Lote 2 de 5 · 50 destinatarios», con flechas y el tamaño.
+function nvLoteCabHtml(canal, info, opciones){
+  const {lotes, idx, lote} = info;
+  const flecha = (d, ic, et, off) => `<button type="button" class="btn btn-fino pm-flecha" aria-label="${escapeHtml(et)}" onclick="nvLoteIr('${canal}', ${d})" ${off ? 'disabled' : ''}><i class="ti ${ic}"></i></button>`;
+  const hechos = lote.filter(x => ((nvC().enviados || {})[x.id] || {})[canal === 'email' ? 'em' : 'wa']).length;
+  return `<div class="nv-lote-cab">
+    ${lotes.length > 1 ? flecha(-1, 'ti-chevron-left', gl({es:'Lote anterior', ca:'Lot anterior', en:'Previous batch'}), idx === 0) : ''}
+    <div class="nv-lote-tit"><b>${escapeHtml(gl({es:`Lote ${idx + 1} de ${lotes.length}`, ca:`Lot ${idx + 1} de ${lotes.length}`, en:`Batch ${idx + 1} of ${lotes.length}`}))}</b>
+      <span>${escapeHtml(gl({es:`${lote.length} destinatarios`, ca:`${lote.length} destinataris`, en:`${lote.length} recipients`}))}${hechos === lote.length && lote.length ? ' · ' + gl({es:'enviado', ca:'enviat', en:'sent'}) : ''}</span></div>
+    ${lotes.length > 1 ? flecha(1, 'ti-chevron-right', gl({es:'Lote siguiente', ca:'Lot següent', en:'Next batch'}), idx >= lotes.length - 1) : ''}
+    <label class="nv-lote-tam"><span>${escapeHtml(opciones.etiqueta)}</span>
+      <select onchange="nvSetLote('${canal}', this.value)" aria-label="${escapeHtml(opciones.etiqueta)}">${opciones.tamanos.map(n => `<option value="${n}" ${nvLoteTam[canal] === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+  </div>`;
+}
+function nvModosHtml(actual, fnBase, a, b){
+  return `<div class="nv-modos2" role="group">
+    <button type="button" class="nv-modo2${actual === a.id ? ' is-on' : ''}" aria-pressed="${actual === a.id}" onclick="${fnBase}('${a.id}')"><i class="ti ${a.ic}"></i><span><b>${escapeHtml(a.tit)}</b><small>${escapeHtml(a.sub)}</small></span></button>
+    <button type="button" class="nv-modo2${actual === b.id ? ' is-on' : ''}" aria-pressed="${actual === b.id}" onclick="${fnBase}('${b.id}')"><i class="ti ${b.ic}"></i><span><b>${escapeHtml(b.tit)}</b><small>${escapeHtml(b.sub)}</small></span></button>
+  </div>`;
+}
+// Lo que se está a punto de copiar, en pequeño y sin desbordar.
+function nvCajaTexto(txt){ return `<span class="nv-caja-txt">${escapeHtml(txt)}</span>`; }
+function nvResumenLista(items, n){
+  const ver = items.slice(0, n);
+  return ver.map(x => escapeHtml(x)).join(', ') + (items.length > n ? ` <em>${escapeHtml(gl({es:`y ${items.length - n} más`, ca:`i ${items.length - n} més`, en:`and ${items.length - n} more`}))}</em>` : '');
+}
+// Cierre del lote: marcar como enviado y, si queda alguno, pasar al siguiente.
+function nvCierreHtml(canal, info){
+  const {lotes, idx, lote} = info;
+  const clave = canal === 'email' ? 'em' : 'wa';
+  const todo = lote.length > 0 && lote.every(x => ((nvC().enviados || {})[x.id] || {})[clave]);
+  return nvBt(`nvMarcarLote('${canal}', ${idx})`, todo ? 'ti-circle-check' : 'ti-circle', todo ? gl({es:'Lote enviado', ca:'Lot enviat', en:'Batch sent'}) : gl({es:'Ya lo he enviado', ca:'Ja l\'he enviat', en:'I have sent it'}), todo ? ' is-on' : ' is-on')
+    + (todo && idx < lotes.length - 1 ? nvBt(`nvLoteIr('${canal}', 1)`, 'ti-arrow-right', gl({es:'Siguiente lote', ca:'Lot següent', en:'Next batch'})) : '');
+}
+
 function nvEnvioEmailInner(c, calc){
   if(!calc.conEmail.length){
     return `<div class="empty es-vacio"><i class="ti ti-mail-off"></i>${escapeHtml(gl({es:'Ninguno de estos clientes tiene un email válido. Se añade en su ficha, en Clientes.', ca:'Cap d\'aquests clients té un email vàlid. S\'afegeix a la seva fitxa, a Clients.', en:'None of these customers has a valid email. Add it on their card, in Customers.'}))}</div>`;
   }
-  const modo = (id, ic, tit, sub) => `
-    <button type="button" class="nv-modo${nvModoEmail === id ? ' is-on' : ''}" aria-pressed="${nvModoEmail === id}" onclick="nvSetModoEmail('${id}')">
-      <i class="ti ${ic}"></i><span><b>${escapeHtml(tit)}</b><small>${escapeHtml(sub)}</small></span></button>`;
-  const modos = `<div class="nv-modos">
-    ${modo('bloque', 'ti-mail-fast', gl({es:'Con diseño, en bloque', ca:'Amb disseny, en bloc', en:'Designed, in bulk'}), gl({es:'Un solo correo con todos en copia oculta. El mejor aspecto.', ca:'Un sol correu amb tots en còpia oculta. El millor aspecte.', en:'One email with everyone in hidden copy. Best look.'}))}
-    ${modo('uno', 'ti-user', gl({es:'Uno a uno, con su nombre', ca:'Un a un, amb el seu nom', en:'One by one, by name'}), gl({es:'Un correo por cliente, en texto sencillo y llamándole por su nombre.', ca:'Un correu per client, en text senzill i anomenant-lo pel seu nom.', en:'One email per customer, in plain text, using their name.'}))}
-  </div>`;
+  const modos = nvModosHtml(nvModoEmail, 'nvSetModoEmail',
+    {id:'bloque', ic:'ti-list-numbers', tit: gl({es:'Paso a paso', ca:'Pas a pas', en:'Step by step'}), sub: gl({es:'Un correo con todos en copia oculta, con el diseño.', ca:'Un correu amb tots en còpia oculta, amb el disseny.', en:'One email with everyone in hidden copy, with the design.'})},
+    {id:'uno', ic:'ti-user', tit: gl({es:'Uno a uno', ca:'Un a un', en:'One by one'}), sub: gl({es:'Un correo por cliente, con su nombre, en texto sencillo.', ca:'Un correu per client, amb el seu nom, en text senzill.', en:'One email per customer, with their name, in plain text.'})});
 
   if(nvModoEmail === 'uno'){
     return modos + `
@@ -683,50 +758,67 @@ function nvEnvioEmailInner(c, calc){
     <p class="pr-ayuda">${escapeHtml(gl({es:'Se abre tu programa de correo con el mensaje escrito para esa persona. Este modo no admite diseño: mailto solo lleva texto.', ca:'S\'obre el teu programa de correu amb el missatge escrit per a aquesta persona. Aquest mode no admet disseny: mailto només porta text.', en:'Your mail app opens with the message written for that person. This mode cannot carry the design: mailto is text only.'}))}</p>`;
   }
 
-  const lotes = nvLotes(calc.conEmail, nvLote);
-  const filas = lotes.map((lote, i) => {
-    const hechos = lote.filter(x => ((c.enviados || {})[x.id] || {}).em).length;
-    const todo = hechos === lote.length;
-    return `<li class="nv-lote${todo ? ' is-hecho' : ''}">
-      <div class="nv-fila-txt"><b>${escapeHtml(gl({es:`Lote ${i + 1} de ${lotes.length}`, ca:`Lot ${i + 1} de ${lotes.length}`, en:`Batch ${i + 1} of ${lotes.length}`}))}</b><small>${escapeHtml(gl({es:`${lote.length} destinatarios`, ca:`${lote.length} destinataris`, en:`${lote.length} recipients`}))}</small></div>
-      <div class="nv-lote-bt">
-        <button type="button" class="btn btn-sm btn-fino${todo ? '' : ' is-on'}" onclick="nvAbrirCorreo('gmail',${i})"><i class="ti ti-brand-gmail"></i> Gmail</button>
-        <button type="button" class="btn btn-sm btn-fino" onclick="nvAbrirCorreo('outlook',${i})"><i class="ti ti-brand-windows"></i> Outlook</button>
-        <button type="button" class="btn btn-sm btn-fino" onclick="nvDescargarEml(${i})" title="${escapeHtml(gl({es:'Borrador con diseño para Outlook de escritorio, Apple Mail o Thunderbird', ca:'Esborrany amb disseny per a Outlook d\'escriptori, Apple Mail o Thunderbird', en:'Designed draft for desktop Outlook, Apple Mail or Thunderbird'}))}"><i class="ti ti-download"></i> .eml</button>
-        <button type="button" class="btn btn-sm btn-fino${todo ? ' is-on' : ''}" onclick="nvMarcarLote(${i})" aria-pressed="${todo}"><i class="ti ti-${todo ? 'circle-check' : 'circle'}"></i> ${escapeHtml(todo ? gl({es:'Enviado', ca:'Enviat', en:'Sent'}) : gl({es:'Marcar enviado', ca:'Marcar enviat', en:'Mark as sent'}))}</button>
-      </div></li>`;
-  }).join('');
-  return modos + `
-    <ol class="nv-pasos">
-      <li>${escapeHtml(gl({es:'Pulsa el botón de tu correo: se abre un mensaje nuevo con los destinatarios en copia oculta y el diseño ya copiado.', ca:'Prem el botó del teu correu: s\'obre un missatge nou amb els destinataris en còpia oculta i el disseny ja copiat.', en:'Press your email button: a new message opens with the recipients in hidden copy and the design already copied.'}))}</li>
-      <li>${escapeHtml(gl({es:'Pega en el cuerpo del mensaje (Ctrl+V, o ⌘V en Mac) y envía desde tu cuenta.', ca:'Enganxa al cos del missatge (Ctrl+V, o ⌘V a Mac) i envia des del teu compte.', en:'Paste into the body of the message (Ctrl+V, or ⌘V on Mac) and send from your account.'}))}</li>
-      <li>${escapeHtml(gl({es:'Vuelve aquí y marca el lote como enviado.', ca:'Torna aquí i marca el lot com a enviat.', en:'Come back here and mark the batch as sent.'}))}</li>
-    </ol>
-    <div class="nv-lote-cfg"><label for="nv-lote">${escapeHtml(gl({es:'Destinatarios por correo', ca:'Destinataris per correu', en:'Recipients per email'}))}</label>
-      <select id="nv-lote" onchange="nvSetLote(this.value)">${NV_LOTES.map(n => `<option value="${n}" ${nvLote === n ? 'selected' : ''}>${n}</option>`).join('')}</select>
-      <span class="pr-ayuda">${escapeHtml(gl({es:'Gmail gratuito deja unos 500 envíos al día.', ca:'Gmail gratuït deixa uns 500 enviaments al dia.', en:'Free Gmail allows about 500 sends a day.'}))}</span></div>
-    <ul class="nv-lista">${filas}</ul>
-    <div class="nv-extras">
-      <button type="button" class="btn btn-sm btn-fino" onclick="nvPrueba('email')"><i class="ti ti-flask"></i> ${escapeHtml(gl({es:'Enviarme una prueba', ca:'Enviar-me una prova', en:'Send myself a test'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino" onclick="nvCopiarDiseno()"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar el diseño', ca:'Copiar el disseny', en:'Copy the design'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino" onclick="nvDescargarHtml()"><i class="ti ti-file-code"></i> ${escapeHtml(gl({es:'Descargar HTML', ca:'Descarregar HTML', en:'Download HTML'}))}</button>
-    </div>
-    <p class="pr-ayuda"><i class="ti ti-info-circle"></i> ${escapeHtml(gl({es:'El correo sale desde TU dirección (la de tu negocio): así llega mejor a la bandeja de entrada y no te cuesta nada. «.eml» abre un borrador ya maquetado en Outlook de escritorio, Apple Mail o Thunderbird; «HTML» sirve para Mailchimp, Brevo y similares.', ca:'El correu surt des de LA TEVA adreça (la del teu negoci): així arriba millor a la safata d\'entrada i no et costa res. «.eml» obre un esborrany ja maquetat a Outlook d\'escriptori, Apple Mail o Thunderbird; «HTML» serveix per a Mailchimp, Brevo i similars.', en:'The email leaves from YOUR address (your business\'s): it lands better in the inbox and costs nothing. “.eml” opens a ready-designed draft in desktop Outlook, Apple Mail or Thunderbird; “HTML” works for Mailchimp, Brevo and similar.'}))}</p>`;
+  const info = nvLoteDe('email', calc);
+  const {lote} = info;
+  const asunto = nvSustituir(c.asunto, null, true).trim();
+  const correos = lote.map(x => x.email.trim());
+  const pasos = [
+    nvPasoHtml('email', 1, {
+      tit: gl({es:'Abre tu correo y crea un mensaje nuevo', ca:'Obre el teu correu i crea un missatge nou', en:'Open your email and start a new message'}),
+      txt: gl({es:'Usa el correo con el que escribes a tus clientes: así llega mejor y no te cuesta nada.', ca:'Fes servir el correu amb què escrius als teus clients: així arriba millor i no et costa res.', en:'Use the email you normally write to your customers with: it lands better and costs nothing.'}),
+      acc: nvBt(`nvAbrirProveedor('gmail')`, 'ti-brand-gmail', 'Gmail') + nvBt(`nvAbrirProveedor('outlook')`, 'ti-brand-windows', 'Outlook') + nvBt(`nvAbrirProveedor('mailto')`, 'ti-mail', gl({es:'Mi programa de correo', ca:'El meu programa de correu', en:'My mail app'})) + nvBt(`nvPasoMarca('email', 1, ${!nvPasoHecho('email', 1)})`, 'ti-check', gl({es:'Ya lo tengo abierto', ca:'Ja el tinc obert', en:'It is already open'}))}),
+    nvPasoHtml('email', 2, {
+      tit: gl({es:'Copia el asunto', ca:'Copia l\'assumpte', en:'Copy the subject'}),
+      txt: gl({es:'Pégalo en la línea «Asunto».', ca:'Enganxa\'l a la línia «Assumpte».', en:'Paste it into the “Subject” line.'}),
+      caja: nvCajaTexto(asunto || gl({es:'(sin asunto: escríbelo en el paso 3 de arriba)', ca:'(sense assumpte: escriu-lo al pas 3 de dalt)', en:'(no subject: write it in step 3 above)'})),
+      acc: nvBt('nvCopiarAsunto()', 'ti-copy', gl({es:'Copiar asunto', ca:'Copiar assumpte', en:'Copy subject'}), nvPasoHecho('email', 2) ? '' : ' is-on')}),
+    nvPasoHtml('email', 3, {
+      tit: gl({es:`Copia los ${lote.length} destinatarios`, ca:`Copia els ${lote.length} destinataris`, en:`Copy the ${lote.length} recipients`}),
+      txt: gl({es:'Pégalos en «CCO» (copia oculta), nunca en «Para»: así nadie ve el correo de los demás. Si no ves el campo CCO, pulsa «CCO» junto a «Para».', ca:'Enganxa\'ls a «CCO» (còpia oculta), mai a «Per a»: així ningú veu el correu dels altres. Si no veus el camp CCO, prem «CCO» al costat de «Per a».', en:'Paste them into “BCC” (hidden copy), never into “To”: that way nobody sees the others\' emails. If you cannot see BCC, press “Bcc” next to “To”.'}),
+      caja: `<span class="nv-caja-txt">${nvResumenLista(correos, 3)}</span>`,
+      acc: nvBt('nvCopiarDestinatarios()', 'ti-copy', gl({es:`Copiar ${lote.length} destinatarios`, ca:`Copiar ${lote.length} destinataris`, en:`Copy ${lote.length} recipients`}), nvPasoHecho('email', 3) ? '' : ' is-on')}),
+    nvPasoHtml('email', 4, {
+      tit: gl({es:'Copia el mensaje', ca:'Copia el missatge', en:'Copy the message'}),
+      txt: gl({es:'Pégalo en el cuerpo del correo (Ctrl+V, o ⌘V en Mac). Conserva el diseño: logo, imagen, oferta y botón.', ca:'Enganxa\'l al cos del correu (Ctrl+V, o ⌘V a Mac). Conserva el disseny: logo, imatge, oferta i botó.', en:'Paste it into the body of the email (Ctrl+V, or ⌘V on Mac). It keeps the design: logo, image, offer and button.'}),
+      acc: nvBt('nvCopiarMensajeEmail(false)', 'ti-copy', gl({es:'Copiar el mensaje con diseño', ca:'Copiar el missatge amb disseny', en:'Copy the message with design'}), nvPasoHecho('email', 4) ? '' : ' is-on') + nvBt('nvCopiarMensajeEmail(true)', 'ti-file-text', gl({es:'Solo el texto', ca:'Només el text', en:'Text only'}))}),
+    nvPasoHtml('email', 5, {
+      tit: gl({es:'Añade fotos, vídeos o archivos', ca:'Afegeix fotos, vídeos o arxius', en:'Add photos, videos or files'}), opcional: true,
+      txt: gl({es:'Si quieres, adjúntalos con el clip (📎) de tu correo. Mejor fotos ligeras; un vídeo pesado va mejor como enlace (YouTube, Instagram…) dentro del texto.', ca:'Si vols, adjunta\'ls amb el clip (📎) del teu correu. Millor fotos lleugeres; un vídeo pesat va millor com a enllaç (YouTube, Instagram…) dins del text.', en:'If you like, attach them with your email\'s paperclip (📎). Light photos work best; a heavy video is better as a link (YouTube, Instagram…) inside the text.'}),
+      acc: nvBt(`nvPasoMarca('email', 5, ${!nvPasoHecho('email', 5)})`, 'ti-check', nvPasoHecho('email', 5) ? gl({es:'Hecho', ca:'Fet', en:'Done'}) : gl({es:'Listo / no hace falta', ca:'Llest / no cal', en:'Done / not needed'}))}),
+    nvPasoHtml('email', 6, {
+      tit: gl({es:'Revisa y envía', ca:'Revisa i envia', en:'Check and send'}),
+      txt: gl({es:'Mira la vista previa de la derecha, pulsa «Enviar» en tu correo y vuelve aquí a marcarlo.', ca:'Mira la vista prèvia de la dreta, prem «Envia» al teu correu i torna aquí a marcar-ho.', en:'Check the preview, press “Send” in your email and come back here to mark it.'}),
+      acc: nvCierreHtml('email', info)}),
+  ];
+  return modos + nvLoteCabHtml('email', info, {etiqueta: gl({es:'Por correo', ca:'Per correu', en:'Per email'}), tamanos: NV_LOTES}) + `
+    <ol class="nv-guia">${pasos.join('')}</ol>
+    <details class="nv-mas"><summary>${escapeHtml(gl({es:'Más opciones', ca:'Més opcions', en:'More options'}))}</summary>
+      <div class="nv-extras">
+        ${nvBt("nvPrueba('email')", 'ti-flask', gl({es:'Enviarme una prueba', ca:'Enviar-me una prova', en:'Send myself a test'}))}
+        ${nvBt(`nvDescargarEml(${info.idx})`, 'ti-download', gl({es:'Descargar borrador (.eml)', ca:'Descarregar esborrany (.eml)', en:'Download draft (.eml)'}))}
+        ${nvBt('nvDescargarHtml()', 'ti-file-code', gl({es:'Descargar HTML', ca:'Descarregar HTML', en:'Download HTML'}))}
+      </div>
+      <p class="pr-ayuda">${escapeHtml(gl({es:'El «.eml» se abre en Outlook de escritorio, Apple Mail o Thunderbird ya maquetado y con los destinatarios en copia oculta (sin pegar nada). El HTML sirve para Mailchimp, Brevo y similares. Gmail gratuito deja unos 500 envíos al día.', ca:'L\'«.eml» s\'obre a Outlook d\'escriptori, Apple Mail o Thunderbird ja maquetat i amb els destinataris en còpia oculta (sense enganxar res). L\'HTML serveix per a Mailchimp, Brevo i similars. Gmail gratuït deixa uns 500 enviaments al dia.', en:'The “.eml” opens in desktop Outlook, Apple Mail or Thunderbird already designed and with the recipients in hidden copy (nothing to paste). The HTML works for Mailchimp, Brevo and similar. Free Gmail allows about 500 sends a day.'}))}</p>
+    </details>`;
 }
 
 function nvEnvioWaInner(c, calc){
   if(!calc.conWa.length){
     return `<div class="empty es-vacio"><i class="ti ti-brand-whatsapp"></i>${escapeHtml(gl({es:'Ninguno de estos clientes tiene un móvil válido (WhatsApp no abre los fijos). Se añade en su ficha, en Clientes.', ca:'Cap d\'aquests clients té un mòbil vàlid (WhatsApp no obre els fixos). S\'afegeix a la seva fitxa, a Clients.', en:'None of these customers has a valid mobile (WhatsApp cannot open landlines). Add it on their card, in Customers.'}))}</div>`;
   }
-  const hechos = calc.conWa.filter(x => ((c.enviados || {})[x.id] || {}).wa).length;
-  const pct = Math.round(hechos / calc.conWa.length * 100);
-  return `
+  const modos = nvModosHtml(nvModoWa, 'nvSetModoWa',
+    {id:'difusion', ic:'ti-broadcast', tit: gl({es:'Lista de difusión', ca:'Llista de difusió', en:'Broadcast list'}), sub: gl({es:'Un mensaje a la vez a todos, como chat privado de cada uno.', ca:'Un missatge alhora a tots, com a xat privat de cadascú.', en:'One message to everyone at once, as each person\'s private chat.'})},
+    {id:'uno', ic:'ti-user', tit: gl({es:'Uno a uno', ca:'Un a un', en:'One by one'}), sub: gl({es:'Un enlace por cliente, con su nombre en el mensaje.', ca:'Un enllaç per client, amb el seu nom al missatge.', en:'One link per customer, with their name in the message.'})});
+
+  if(nvModoWa === 'uno'){
+    const hechos = calc.conWa.filter(x => ((c.enviados || {})[x.id] || {}).wa).length;
+    const pct = Math.round(hechos / calc.conWa.length * 100);
+    return modos + `
     <div class="nv-progreso"><div class="nv-progreso-txt"><b>${hechos}</b> ${escapeHtml(gl({es:`de ${calc.conWa.length} enviados`, ca:`de ${calc.conWa.length} enviats`, en:`of ${calc.conWa.length} sent`}))}</div><div class="nv-barra" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>
     <div class="nv-extras">
-      <button type="button" class="btn btn-sm btn-fino is-on" onclick="nvWaSiguiente()" ${hechos === calc.conWa.length ? 'disabled' : ''}><i class="ti ti-player-track-next"></i> ${escapeHtml(gl({es:'Siguiente pendiente', ca:'Següent pendent', en:'Next pending'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino" onclick="nvPrueba('wa')"><i class="ti ti-flask"></i> ${escapeHtml(gl({es:'Enviarme una prueba', ca:'Enviar-me una prova', en:'Send myself a test'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino" onclick="nvWaCopiar()"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar el mensaje', ca:'Copiar el missatge', en:'Copy the message'}))}</button>
-      ${hechos ? `<button type="button" class="btn btn-sm btn-fino" onclick="nvWaReiniciar()"><i class="ti ti-refresh"></i> ${escapeHtml(gl({es:'Empezar de nuevo', ca:'Començar de nou', en:'Start over'}))}</button>` : ''}
+      ${nvBt('nvWaSiguiente()', 'ti-player-track-next', gl({es:'Siguiente pendiente', ca:'Següent pendent', en:'Next pending'}), ' is-on').replace('<button', hechos === calc.conWa.length ? '<button disabled' : '<button')}
+      ${nvBt("nvPrueba('wa')", 'ti-flask', gl({es:'Enviarme una prueba', ca:'Enviar-me una prova', en:'Send myself a test'}))}
+      ${hechos ? nvBt('nvWaReiniciar()', 'ti-refresh', gl({es:'Empezar de nuevo', ca:'Començar de nou', en:'Start over'})) : ''}
     </div>
     <ul class="nv-lista">${calc.conWa.map(x => {
       const e = (c.enviados || {})[x.id] || {};
@@ -735,7 +827,112 @@ function nvEnvioWaInner(c, calc){
         <button type="button" class="btn btn-sm btn-fino${e.wa ? '' : ' is-on'}" onclick="nvAbrirWa(${x.id})"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(e.wa ? gl({es:'Otra vez', ca:'Un altre cop', en:'Again'}) : 'WhatsApp')}</button>
         ${e.wa ? `<button type="button" class="btn btn-sm btn-fino mn-btn" data-tip="${escapeHtml(gl({es:'Marcar como pendiente', ca:'Marcar com a pendent', en:'Mark as pending'}))}" aria-label="${escapeHtml(gl({es:'Marcar como pendiente', ca:'Marcar com a pendent', en:'Mark as pending'}))}" onclick="nvWaDesmarcar(${x.id})"><i class="ti ti-arrow-back-up"></i></button>` : ''}</li>`;
     }).join('')}</ul>
-    <p class="pr-ayuda"><i class="ti ti-info-circle"></i> ${escapeHtml(gl({es:'Cada botón abre WhatsApp con el mensaje escrito para ese cliente, con su nombre; tú solo pulsas enviar. Si prefieres mandarlo a muchos a la vez, copia el mensaje y pégalo en una lista de difusión de WhatsApp Business (solo lo recibe quien te tenga guardado).', ca:'Cada botó obre WhatsApp amb el missatge escrit per a aquest client, amb el seu nom; tu només prems enviar. Si prefereixes enviar-lo a molts alhora, copia el missatge i enganxa\'l en una llista de difusió de WhatsApp Business (només el rep qui et tingui desat).', en:'Each button opens WhatsApp with the message written for that customer, with their name; you only press send. To reach many at once, copy the message and paste it into a WhatsApp Business broadcast list (only people who saved your number receive it).'}))}</p>`;
+    <p class="pr-ayuda"><i class="ti ti-info-circle"></i> ${escapeHtml(gl({es:'Cada botón abre WhatsApp con el mensaje escrito para ese cliente, con su nombre; tú solo pulsas enviar.', ca:'Cada botó obre WhatsApp amb el missatge escrit per a aquest client, amb el seu nom; tu només prems enviar.', en:'Each button opens WhatsApp with the message written for that customer, with their name; you only press send.'}))}</p>`;
+  }
+
+  const info = nvLoteDe('wa', calc);
+  const {lotes, idx, lote} = info;
+  const nombreLista = (nvNegocio() || 'Novedades') + ' · ' + gl({es:'Novedades', ca:'Novetats', en:'News'}) + (lotes.length > 1 ? ' ' + (idx + 1) : '');
+  const pasos = [
+    nvPasoHtml('wa', 1, {
+      tit: gl({es:'Abre WhatsApp en tu móvil y crea una lista de difusión', ca:'Obre WhatsApp al teu mòbil i crea una llista de difusió', en:'Open WhatsApp on your phone and create a broadcast list'}),
+      txt: gl({es:'Mejor con WhatsApp Business. Ve a «Chats» → menú ⋮ → «Nueva difusión» (en iPhone: «Listas de difusión» → «Nueva lista»). Las listas se crean en el móvil, no en WhatsApp Web.', ca:'Millor amb WhatsApp Business. Ves a «Xats» → menú ⋮ → «Nova difusió» (a iPhone: «Llistes de difusió» → «Nova llista»). Les llistes es creen al mòbil, no a WhatsApp Web.', en:'Best with WhatsApp Business. Go to “Chats” → menu ⋮ → “New broadcast” (on iPhone: “Broadcast Lists” → “New List”). Lists are created on the phone, not on WhatsApp Web.'}),
+      acc: nvBt(`nvPasoMarca('wa', 1, ${!nvPasoHecho('wa', 1)})`, 'ti-check', nvPasoHecho('wa', 1) ? gl({es:'Hecho', ca:'Fet', en:'Done'}) : gl({es:'Ya estoy en «Nueva difusión»', ca:'Ja sóc a «Nova difusió»', en:'I am on “New broadcast”'}))}),
+    nvPasoHtml('wa', 2, {
+      tit: gl({es:'Ten guardados a tus clientes en la agenda', ca:'Tingues desats els teus clients a l\'agenda', en:'Have your customers saved in your contacts'}),
+      txt: gl({es:'Para añadirlos a la lista tienen que estar en tu agenda y, para que les llegue, ellos deben tener TU número guardado. Si aún no los tienes, descarga la agenda de este lote e impórtala en tu móvil (ábrela desde el móvil o mándatela por correo).', ca:'Per afegir-los a la llista han d\'estar a la teva agenda i, perquè els arribi, ells han de tenir EL TEU número desat. Si encara no els tens, descarrega l\'agenda d\'aquest lot i importa-la al teu mòbil (obre-la des del mòbil o envia-te-la per correu).', en:'To add them to the list they must be in your contacts and, for it to reach them, they must have YOUR number saved. If you do not have them yet, download this batch\'s contacts and import them on your phone (open it from the phone or email it to yourself).'}),
+      acc: nvBt('nvDescargarVcf()', 'ti-address-book', gl({es:'Descargar agenda (.vcf)', ca:'Descarregar agenda (.vcf)', en:'Download contacts (.vcf)'}), nvPasoHecho('wa', 2) ? '' : ' is-on') + nvBt('nvCopiarContactosWa()', 'ti-copy', gl({es:'Copiar nombres y teléfonos', ca:'Copiar noms i telèfons', en:'Copy names and phones'}))}),
+    nvPasoHtml('wa', 3, {
+      tit: gl({es:`Añade a los ${lote.length} clientes y ponle nombre a la lista`, ca:`Afegeix els ${lote.length} clients i posa nom a la llista`, en:`Add the ${lote.length} customers and name the list`}),
+      txt: gl({es:'Marca a estos clientes en tu lista de contactos (puedes buscarlos por nombre) y pulsa «Crear». Un nombre fácil de reconocer:', ca:'Marca aquests clients a la teva llista de contactes (els pots cercar pel nom) i prem «Crear». Un nom fàcil de reconèixer:', en:'Tick these customers in your contacts (you can search by name) and press “Create”. An easy name to recognise:'}),
+      caja: nvCajaTexto(nombreLista),
+      detalle: `<details class="nv-mas nv-mas-lista"><summary>${escapeHtml(gl({es:`Ver los ${lote.length} clientes`, ca:`Veure els ${lote.length} clients`, en:`See the ${lote.length} customers`}))}</summary><ul class="nv-compacta">${lote.map(x => `<li><b>${escapeHtml(x.name)}</b> <small>${escapeHtml(x.phone)}</small></li>`).join('')}</ul></details>`,
+      acc: nvBt('nvCopiarNombreLista()', 'ti-copy', gl({es:'Copiar nombre de la lista', ca:'Copiar nom de la llista', en:'Copy list name'}), nvPasoHecho('wa', 3) ? '' : ' is-on')}),
+    nvPasoHtml('wa', 4, {
+      tit: gl({es:'Copia el mensaje', ca:'Copia el missatge', en:'Copy the message'}),
+      txt: gl({es:'Pégalo en el chat de la lista y no lo envíes aún. Es el mismo para todos (sin nombre) e incluye cómo darse de baja.', ca:'Enganxa\'l al xat de la llista i no l\'enviïs encara. És el mateix per a tots (sense nom) i inclou com donar-se de baixa.', en:'Paste it into the list\'s chat and do not send yet. It is the same for everyone (no name) and includes how to opt out.'}),
+      acc: nvBt('nvWaCopiar()', 'ti-copy', gl({es:'Copiar el mensaje', ca:'Copiar el missatge', en:'Copy the message'}), nvPasoHecho('wa', 4) ? '' : ' is-on')}),
+    nvPasoHtml('wa', 5, {
+      tit: gl({es:'Añade fotos o vídeos', ca:'Afegeix fotos o vídeos', en:'Add photos or videos'}), opcional: true,
+      txt: gl({es:'Pulsa el clip (📎) o «+» y elige la foto o el vídeo; puedes mandarlos antes del texto o junto a él. Los vídeos largos, mejor como enlace.', ca:'Prem el clip (📎) o «+» i tria la foto o el vídeo; els pots enviar abans del text o amb ell. Els vídeos llargs, millor com a enllaç.', en:'Press the paperclip (📎) or “+” and pick the photo or video; you can send them before the text or with it. Long videos are better as a link.'}),
+      acc: nvBt(`nvPasoMarca('wa', 5, ${!nvPasoHecho('wa', 5)})`, 'ti-check', nvPasoHecho('wa', 5) ? gl({es:'Hecho', ca:'Fet', en:'Done'}) : gl({es:'Listo / no hace falta', ca:'Llest / no cal', en:'Done / not needed'}))}),
+    nvPasoHtml('wa', 6, {
+      tit: gl({es:'Envía', ca:'Envia', en:'Send'}),
+      txt: gl({es:'Pulsa enviar. Cada cliente lo recibe como un mensaje privado tuyo, no como un grupo, y si responde solo lo ves tú. Vuelve aquí a marcarlo.', ca:'Prem enviar. Cada client el rep com un missatge privat teu, no com un grup, i si respon només ho veus tu. Torna aquí a marcar-ho.', en:'Press send. Each customer gets it as a private message from you, not as a group, and replies reach only you. Come back here to mark it.'}),
+      acc: nvCierreHtml('wa', info)}),
+  ];
+  return modos + nvLoteCabHtml('wa', info, {etiqueta: gl({es:'Por lista', ca:'Per llista', en:'Per list'}), tamanos: NV_LOTES_WA}) + `
+    <ol class="nv-guia">${pasos.join('')}</ol>
+    <details class="nv-mas"><summary>${escapeHtml(gl({es:'Más opciones', ca:'Més opcions', en:'More options'}))}</summary>
+      <div class="nv-extras">${nvBt("nvPrueba('wa')", 'ti-flask', gl({es:'Enviarme una prueba', ca:'Enviar-me una prova', en:'Send myself a test'}))}</div>
+      <p class="pr-ayuda">${escapeHtml(gl({es:'WhatsApp limita cada lista de difusión a 256 contactos, por eso se reparte en lotes. Solo reciben el mensaje quienes te tienen guardado en su agenda.', ca:'WhatsApp limita cada llista de difusió a 256 contactes, per això es reparteix en lots. Només reben el missatge els qui et tenen desat a l\'agenda.', en:'WhatsApp limits each broadcast list to 256 contacts, which is why this is split into batches. Only people who have you saved in their contacts receive the message.'}))}</p>
+    </details>`;
+}
+
+// ── Acciones de la guía ──────────────────────────────────────────────────
+function nvAbrirProveedor(prov){
+  const url = prov === 'gmail' ? 'https://mail.google.com/mail/?view=cm&fs=1' : prov === 'outlook' ? 'https://outlook.office.com/mail/deeplink/compose' : 'mailto:';
+  if(prov === 'mailto') window.location.href = url; else window.open(url, '_blank', 'noopener');
+  nvPasoMarca('email', 1);
+}
+function nvCopiarAsunto(){
+  const c = nvC();
+  copiarTextoPlano(nvSustituir(c.asunto, null, true).trim()).then(ok => nvCopiado(ok, 'email', 2, gl({es:'Asunto copiado: pégalo en «Asunto»', ca:'Assumpte copiat: enganxa\'l a «Assumpte»', en:'Subject copied: paste it into “Subject”'})));
+}
+function nvCopiarDestinatarios(){
+  const {lote} = nvLoteDe('email', nvCalcular(nvC()));
+  copiarTextoPlano(lote.map(x => x.email.trim()).join(', ')).then(ok => nvCopiado(ok, 'email', 3, gl({es:'Destinatarios copiados: pégalos en «CCO» (copia oculta)', ca:'Destinataris copiats: enganxa\'ls a «CCO» (còpia oculta)', en:'Recipients copied: paste them into “BCC” (hidden copy)'})));
+}
+async function nvCopiarMensajeEmail(soloTexto){
+  const c = nvC();
+  if(!(await nvConfirmarAvisos())) return;
+  if(soloTexto){
+    copiarTextoPlano(nvEmailTexto(c, null, {anonimo: true})).then(ok => nvCopiado(ok, 'email', 4, gl({es:'Texto copiado: pégalo en el cuerpo del correo', ca:'Text copiat: enganxa\'l al cos del correu', en:'Text copied: paste it into the body of the email'})));
+    return;
+  }
+  nvCopiarHtmlAlPortapapeles(nvEmailHtml(c, null, {anonimo: true}), nvEmailTexto(c, null, {anonimo: true}))
+    .then(ok => nvCopiado(ok, 'email', 4, gl({es:'Mensaje copiado: pégalo en el cuerpo (Ctrl+V / ⌘V)', ca:'Missatge copiat: enganxa\'l al cos (Ctrl+V / ⌘V)', en:'Message copied: paste it into the body (Ctrl+V / ⌘V)'})));
+}
+function nvCopiarNombreLista(){
+  const c = nvC(), calc = nvCalcular(c);
+  const {lotes, idx} = nvLoteDe('wa', calc);
+  copiarTextoPlano((nvNegocio() || 'Novedades') + ' · ' + gl({es:'Novedades', ca:'Novetats', en:'News'}) + (lotes.length > 1 ? ' ' + (idx + 1) : ''))
+    .then(ok => nvCopiado(ok, 'wa', 3, gl({es:'Nombre copiado: ponlo a la lista', ca:'Nom copiat: posa\'l a la llista', en:'Name copied: use it for the list'})));
+}
+function nvCopiarContactosWa(){
+  const {lote} = nvLoteDe('wa', nvCalcular(nvC()));
+  copiarTextoPlano(lote.map(x => `${x.name} — +${whatsappDeTelefono(x.phone)}`).join('\n'))
+    .then(ok => nvCopiado(ok, 'wa', 2, gl({es:'Nombres y teléfonos copiados', ca:'Noms i telèfons copiats', en:'Names and phones copied'})));
+}
+// Agenda en formato vCard: el móvil la importa con un toque y los clientes
+// quedan guardados con su nombre, que es lo que pide una lista de difusión.
+function nvConstruirVcf(clientes){
+  const org = nvNegocio();
+  const esc = v => String(v || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, ' ');
+  return clientes.map(x => {
+    const partes = String(x.name || '').trim().split(/\s+/);
+    const nombre = partes.shift() || '', apellido = partes.join(' ');
+    return ['BEGIN:VCARD', 'VERSION:3.0', 'N:' + esc(apellido) + ';' + esc(nombre) + ';;;', 'FN:' + esc(x.name),
+      org ? 'ORG:' + esc(org + ' (' + gl({es:'cliente', ca:'client', en:'customer'}) + ')') : '',
+      'TEL;TYPE=CELL:+' + whatsappDeTelefono(x.phone), nvEmailValido(x.email) ? 'EMAIL:' + esc(x.email.trim()) : '', 'END:VCARD'].filter(Boolean).join('\r\n');
+  }).join('\r\n') + '\r\n';
+}
+function nvDescargarVcf(){
+  const {lote, idx, lotes} = nvLoteDe('wa', nvCalcular(nvC()));
+  nvDescargar('clientes' + (lotes.length > 1 ? '-lote' + (idx + 1) : '') + '.vcf', nvConstruirVcf(lote), 'text/vcard;charset=utf-8');
+  nvPasoMarca('wa', 2);
+  showToast(gl({es:'Agenda descargada: ábrela desde el móvil para importarla', ca:'Agenda descarregada: obre-la des del mòbil per importar-la', en:'Contacts downloaded: open it from your phone to import them'}));
+}
+// Marca (o desmarca) todo el lote como enviado.
+function nvMarcarLote(canal, idx){
+  const c = nvC(), calc = nvCalcular(c);
+  const {lotes} = nvLoteDe(canal, calc);
+  const lote = lotes[idx];
+  if(!lote) return;
+  const clave = canal === 'email' ? 'em' : 'wa';
+  const todo = lote.every(x => ((c.enviados || {})[x.id] || {})[clave]);
+  nvMarcar(lote.map(x => x.id), clave, todo);
+  nvRefrescarEnvio();
 }
 
 // ── Antes de enviar ──────────────────────────────────────────────────────
@@ -770,7 +967,7 @@ async function nvWaReiniciar(){
 }
 function nvWaCopiar(){
   const c = nvC();
-  copiarTextoPlano(nvWaTexto(c, null, true)).then(ok => showToast(ok ? gl({es:'Mensaje copiado', ca:'Missatge copiat', en:'Message copied'}) : gl({es:'No se pudo copiar', ca:'No s\'ha pogut copiar', en:'Could not copy'})));
+  copiarTextoPlano(nvWaTexto(c, null, true)).then(ok => nvCopiado(ok, 'wa', 4, gl({es:'Mensaje copiado: pégalo en el chat de la lista', ca:'Missatge copiat: enganxa\'l al xat de la llista', en:'Message copied: paste it into the list\'s chat'})));
 }
 
 // ── Email ────────────────────────────────────────────────────────────────
@@ -807,27 +1004,6 @@ function nvUrlCorreo(prov, emails, asunto, para){
   if(prov === 'gmail') return 'https://mail.google.com/mail/?view=cm&fs=1' + (para ? '&to=' + enc(para) : '') + (emails.length ? '&bcc=' + enc(emails.join(',')) : '') + '&su=' + enc(asunto);
   if(prov === 'outlook') return 'https://outlook.office.com/mail/deeplink/compose?' + (para ? 'to=' + enc(para) + '&' : '') + (emails.length ? 'bcc=' + enc(emails.join(';')) + '&' : '') + 'subject=' + enc(asunto);
   return 'mailto:' + (para ? enc(para) : '') + '?' + (emails.length ? 'bcc=' + enc(emails.join(',')) + '&' : '') + 'subject=' + enc(asunto);
-}
-async function nvAbrirCorreo(prov, idx){
-  const c = nvC();
-  const calc = nvCalcular(c);
-  const lote = nvLotes(calc.conEmail, nvLote)[idx];
-  if(!lote) return;
-  if(!(await nvConfirmarAvisos())) return;
-  const asunto = nvSustituir(c.asunto, null, true).trim();
-  // Se empieza a copiar y a abrir en el MISMO gesto: si se esperase a la copia,
-  // el navegador consideraría la ventana nueva como un anuncio y la bloquearía.
-  nvCopiarHtmlAlPortapapeles(nvEmailHtml(c, null, {anonimo: true}), nvEmailTexto(c, null, {anonimo: true}))
-    .then(ok => showToast(ok ? gl({es:'Diseño copiado: pégalo en el mensaje que se ha abierto (Ctrl+V / ⌘V)', ca:'Disseny copiat: enganxa\'l al missatge que s\'ha obert (Ctrl+V / ⌘V)', en:'Design copied: paste it into the message that opened (Ctrl+V / ⌘V)'}) : gl({es:'No se pudo copiar el diseño: usa «Descargar .eml» o «Descargar HTML».', ca:'No s\'ha pogut copiar el disseny: fes servir «Descarregar .eml» o «Descarregar HTML».', en:'Could not copy the design: use “.eml” or “Download HTML”.'})));
-  window.open(nvUrlCorreo(prov, lote.map(x => x.email.trim()), asunto), '_blank', 'noopener');
-}
-function nvMarcarLote(idx){
-  const c = nvC(), calc = nvCalcular(c);
-  const lote = nvLotes(calc.conEmail, nvLote)[idx];
-  if(!lote) return;
-  const todo = lote.every(x => ((c.enviados || {})[x.id] || {}).em);
-  nvMarcar(lote.map(x => x.id), 'em', todo);
-  nvRefrescarEnvio();
 }
 function nvCorreoUno(id){
   const cli = DB.clients.find(x => x.id === id);
@@ -904,11 +1080,11 @@ function nvConstruirEml(c, emails){
 }
 async function nvDescargarEml(idx){
   const c = nvC(), calc = nvCalcular(c);
-  const lotes = nvLotes(calc.conEmail, nvLote);
-  const lote = lotes[idx];
-  if(!lote) return;
+  const {lotes, lote} = nvLoteDe('email', calc);
+  const sel = typeof idx === 'number' ? lotes[idx] : lote;
+  if(!sel) return;
   if(!(await nvConfirmarAvisos())) return;
-  nvDescargar(nvNombreArchivo(c) + (lotes.length > 1 ? '-lote' + (idx + 1) : '') + '.eml', nvConstruirEml(c, lote.map(x => x.email.trim())), 'message/rfc822');
+  nvDescargar(nvNombreArchivo(c) + (lotes.length > 1 ? '-lote' + ((typeof idx === 'number' ? idx : nvLoteSel.email) + 1) : '') + '.eml', nvConstruirEml(c, sel.map(x => x.email.trim())), 'message/rfc822');
   showToast(gl({es:'Borrador descargado: ábrelo con tu programa de correo.', ca:'Esborrany descarregat: obre\'l amb el teu programa de correu.', en:'Draft downloaded: open it with your mail app.'}));
 }
 
