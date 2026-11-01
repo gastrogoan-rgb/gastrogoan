@@ -18,7 +18,7 @@ const SEMBRAR_PEDIDOS = () => {
   const hoy = new Date(); const otroMes = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 10);
   DB.purchaseOrders = [
     {id:1, supplier:'Pescados Martínez', date:f(3), estado:'ENVIADO', enviadoEn:f(-1), area:'cocina', items:[L(1,5), L(2,2)], notas:''},
-    {id:2, supplier:'Verduras Ca la Rosa', date:f(-3), estado:'RECIBIDO', enviadoEn:f(-5), area:'cocina', recibidoPor:'Marta', comprobacion:'ok', items:[L(6,10,{cantidadRecibida:10, recibidoCheck:true})], notas:''},
+    {id:2, supplier:'Verduras Ca la Rosa', date:dateStr(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), estado:'RECIBIDO', enviadoEn:f(-5), area:'cocina', recibidoPor:'Marta', comprobacion:'ok', items:[L(6,10,{cantidadRecibida:10, recibidoCheck:true})], notas:''},
     {id:3, supplier:'Pescados Martínez', date:f(5), estado:'BORRADOR', area:'cocina', items:[L(3,4)], notas:'Llamar antes de las 10'},
     {id:4, supplier:'Verduras Ca la Rosa', date:dateStr(otroMes), estado:'RECIBIDO', area:'cocina', items:[L(6,3,{cantidadRecibida:3, recibidoCheck:true})], notas:''},
   ];
@@ -57,7 +57,7 @@ async function abrir(ancho){
     const hoy = new Date(); const otroMes = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 10);
     DB.purchaseOrders = [
       {id:1, supplier:'Pescados Martínez', date:f(3), estado:'ENVIADO', enviadoEn:f(-1), area:'cocina', items:[L(1,5), L(2,2)], notas:''},
-      {id:2, supplier:'Verduras Ca la Rosa', date:f(-3), estado:'RECIBIDO', enviadoEn:f(-5), area:'cocina', recibidoPor:'Marta', comprobacion:'ok', items:[L(6,10,{cantidadRecibida:10, recibidoCheck:true})], notas:''},
+      {id:2, supplier:'Verduras Ca la Rosa', date:dateStr(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), estado:'RECIBIDO', enviadoEn:f(-5), area:'cocina', recibidoPor:'Marta', comprobacion:'ok', items:[L(6,10,{cantidadRecibida:10, recibidoCheck:true})], notas:''},
       {id:3, supplier:'Pescados Martínez', date:f(5), estado:'BORRADOR', area:'cocina', items:[L(3,4)], notas:'Llamar antes de las 10'},
       {id:4, supplier:'Verduras Ca la Rosa', date:dateStr(otroMes), estado:'RECIBIDO', area:'cocina', items:[L(6,3,{cantidadRecibida:3, recibidoCheck:true})], notas:''},
     ];
