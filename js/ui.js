@@ -2075,7 +2075,7 @@ function ggSiPlegada(ev, el){
 }
 function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
 
-const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion'];   // pantallas que ya tienen el diseño nuevo
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;
@@ -2188,6 +2188,8 @@ function navigate(view, forzado){
   // abierto — si no, parecía que "saltaba" a un pedido al azar en vez de
   // dejar elegir cuál mirar.
   if(view === 'pedidos' && !wasAlreadyInPedidos) pedidoDetailId = null;
+  // Clientes se abre siempre por su lista (no por el historial de vales de la última vez).
+  if(view === 'clientes' && !(prevActive && prevActive.id === 'view-clientes')) clientesPantalla = 'lista';
 
   const inCurrentFolder = currentFolder && FOLDERS[currentFolder] && FOLDERS[currentFolder].modules.some(m => m.id === view);
   if(!inCurrentFolder && MODULE_FOLDER[view]) currentFolder = MODULE_FOLDER[view];

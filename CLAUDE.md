@@ -781,6 +781,25 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
     ⚠️ La difusión solo llega a quien tiene el número del negocio guardado: la guía lo dice.
   · **Historial** (`DB.novedades`, sincroniza y lleva lápida; `enviados:{clienteId:{em,wa}}`), «Usar como base» y **«Registrar una baja»** (quien responde BAJA pierde el consentimiento).
   · Pendiente conocido: el email no lleva imagen subida desde la app (solo enlace https) porque Gmail bloquea las imágenes incrustadas; el logo sí va (en el `.eml` por `cid:`).
+- **Clientes** (1/11, **js/clientes.js**, `test/clientes.mjs`): la lista son **tarjetas** (`.cl-grid`, 2-3 por fila, nadie mueve nada de lado) con filtros en fichas con su cuenta, orden y
+  buscador que no pierde el foco. **Tocar una tarjeta abre la FICHA entera** (`openClientModal`, ventana ancha `xl`): a la izquierda lo que se edita (notas = campo grande que crece), a la derecha
+  lo que ya se sabe (visitas, gasto, puntos, reservas próximas, vales). **El historial es una PANTALLA propia** dentro de Clientes (`clientesPantalla` = lista · historial · vales, con su «Volver»,
+  `clIr`/`clVolver`), no una ventana encima de otra; `openClientHistoryModal` sigue existiendo y lleva allí. `renderClientes()` es el punto de entrada y reparte según la pantalla.
+  · **Vales regalo** (mismas funciones públicas de antes + `valeEstado`, `valeSaldo`…): **caducidad** (1 año por defecto, o sin ella), estados **pendiente · canje parcial · canjeado · caducado · anulado**
+    (calculados, no guardados salvo `redeemed`/`anulado`), **canje parcial** con su historial (`canjes:[{fecha,importe,nota}]`; los antiguos con solo `redeemed` se leen igual: `valeCanjes`),
+    «Emitir» (ventana) y «Historial de vales» (pantalla con cifras, filtros y buscador). **Pasan por la contabilidad**: cada vale crea su asiento en `DB.ge.vales` (`valeId`; importe → **polivalente**,
+    experiencia con precio e IVA → **univalente**, que ya entra en el libro y en el IVA del mes), el canje lo actualiza (`canjeParcial`, `canjeFecha`) y `geValeVivo()` deja fuera lo caducado de «dinero por
+    adelantado». **No se borra un vale emitido: se ANULA** (solo sin canjes y con el mes abierto; quita su asiento); borrar solo vale para un anulado. Los vales de antes (sin asiento) se anotan con un
+    botón (`valesRegistrarAntiguos`); los de experiencia antiguos no tenían importe y se dejan fuera a propósito. Fusionar clientes mueve sus vales; el olvido RGPD borra su nombre de los vales.
+    ⚠️ **El TPV todavía no acepta un vale como forma de pago**: se canjea a mano desde esta pantalla. Pendiente si el dueño lo quiere.
+- **Reservas** (1/11, **js/reservas.js**, `test/reservas.mjs`): cifras del día (reservas, comensales, han llegado, por confirmar), cada reserva con su **acción principal a la vista** (Confirmar / Ha llegado /
+  Deshacer no-show) y el resto en el ⋯; filtros con su cuenta; turnos con barra de aforo; **Semana y Mes con el diseño de Promoción** (`pm-sem`, `pm-mes`, `ggPeriodoHtml` → `reservasMesCb`);
+  «Imprimir el día» (hoja de sala con casilla de llegada); solicitudes de la web y recordatorios de mañana en **filas compactas** (antes empujaban la lista del día). Las reglas no cambian:
+  confirmar exige mesa asignada (si no, abre la reserva), aforo por turno, lista de espera, señal.
+- ⚠️ **WhatsApp siempre por `whatsappDeTelefono`**: `wa.me/612345678` (sin prefijo de país) no abre ningún chat y estaba en media docena de sitios (recordatorios y avisos de reserva, premio de
+  fidelidad, aviso de pedido del TPV, Promoción, lista de Clientes). Un fijo avisa y no abre nada. Al escribir un `wa.me` nuevo, usar el helper.
+- ⚠️ **Un fichero JS nuevo se da de alta en CUATRO sitios**: `build.sh`, las etiquetas `<script>` de `index.html` (las usan las pruebas que cargan el HTML de desarrollo, p. ej. `apple.mjs`),
+  y la lista de `test/estatico.mjs` y de `test/apple.mjs`. Olvidar `index.html` no rompe `dist/` pero sí esas pruebas.
 - **Cambios de precio** (30/10, `openSubidasPrecioModal` / `abrirCambiosPrecio('suben'|'bajan')`): el precio de un producto
   cambia por tres vías —Mega Lista, «precio albarán» al recibir, o factura leída por la IA— y cada cambio queda en
   `DB.preciosHistorial`. La ventana tiene dos pestañas (suben / bajan, con su impacto o ahorro al mes) y, por cada subida,

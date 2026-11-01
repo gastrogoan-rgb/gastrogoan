@@ -1767,7 +1767,7 @@ const GE = (function(){
     const box = document.getElementById('ventas-vales');
     if(!box) return;
     const lista = (ge().vales||[]).slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
-    const pend = lista.filter(v=>!v.canjeFecha);
+    const pend = lista.filter(geValeVivo);
     box.innerHTML = `<div class="vis-section" style="margin-top:14px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
         <h4 style="margin:0;flex:1">${t('hr.vale.title')}</h4>
@@ -1777,7 +1777,7 @@ const GE = (function(){
       ${pend.length ? `<div class="table-wrap"><table><tbody>${pend.map(v => `<tr>
         <td>${escapeHtml(v.fecha)}</td><td>${escapeHtml(v.codigo||'')}</td><td>${escapeHtml(t('hr.vale.tipo.'+v.tipo))}${v.tipo==='univalente'?' · '+(parseFloat(v.iva)||0)+'%':''}</td>
         <td>${fmtMoney(parseFloat(v.importe)||0)}</td>
-        <td><button class="btn btn-sm" onclick="GE.canjearVale(${v.id})">${t('hr.vale.canjear')}</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+        <td>${v.valeId ? `<button class="btn btn-sm" onclick="navigate('clientes');clIr('vales','${escapeHtml(String(v.codigo||'').replace(/'/g,''))}')"><i class="ti ti-gift-card"></i> ${escapeHtml(gl({es:'En Clientes', ca:'A Clients', en:'In Customers'}))}</button>` : `<button class="btn btn-sm" onclick="GE.canjearVale(${v.id})">${t('hr.vale.canjear')}</button>`}</td></tr>`).join('')}</tbody></table></div>` : ''}
     </div>`;
   }
   function nuevoVale(){

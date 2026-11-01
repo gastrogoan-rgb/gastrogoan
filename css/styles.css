@@ -4280,6 +4280,112 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .nv-compacta{list-style:none;margin:0;padding:0;max-height:200px;overflow:auto;font-size:13px}
 .nv-compacta li{padding:5px 2px;border-bottom:1px solid var(--hair);overflow-wrap:anywhere}
 .nv-compacta small{color:var(--muted)}
+/* Clientes (1/11): tarjetas de cliente, ficha entera, historial y vales regalo. */
+.cl-barra{margin-bottom:10px}
+.cl-orden select{min-width:170px}
+.cl-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.cl-chips .btn b{font-family:var(--mono);font-weight:600;margin-left:4px;color:var(--muted)}
+.cl-chips .btn.is-on b{color:inherit}
+.cl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px;align-items:start}
+.cl-card{display:flex;flex-direction:column;gap:10px;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:14px;cursor:pointer;min-width:0;transition:border-color .18s,background-color .18s}
+.cl-card:hover{border-color:var(--olive);background:var(--brand-cream)}
+.cl-card:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.cl-card-cab{display:flex;align-items:center;gap:12px;min-width:0}
+.cl-card-nom{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cl-card-nom b{font-size:15.5px;line-height:1.25;font-weight:600;overflow-wrap:break-word}
+.cl-card-nom small{font-size:12.5px;color:var(--muted);line-height:1.35;overflow-wrap:break-word}
+.cl-puntos{display:flex;align-items:center;gap:10px}
+.cl-puntos .nv-barra{flex:1}
+.cl-puntos b{font-family:var(--mono);font-size:12px;flex:none}
+.cl-card-pie{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-height:44px}
+.cl-acc{display:inline-flex;align-items:center;gap:2px;margin-left:auto}
+.cl-et-riesgo{border-color:#D9B8AF;background:#F8EEEB;color:#8A3B2E}
+.cl-et-alergia{border-color:#D9C58A;background:#FAF4E1;color:#6B5A1E}
+.cl-tit-pantalla{display:flex;align-items:center;gap:12px;margin:4px 0 14px;font-size:22px;font-weight:600;letter-spacing:-.01em;overflow-wrap:break-word}
+.cl-mono{font-family:var(--mono);letter-spacing:.04em}
+/* Ficha: dos columnas en PC (lo que se edita · lo que ya se sabe), una en móvil */
+.cl-ficha{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:22px;align-items:start}
+.cl-ficha-der{background:var(--brand-cream);border:1px solid var(--hair);border-radius:3px;padding:14px}
+.cl-ficha .es-tit{margin-bottom:8px}
+.cl-ficha-der .es-tit-2{margin-top:16px}
+.cl-notas{min-height:170px}
+.cl-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cl-stat{display:flex;flex-direction:column;gap:2px;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:8px 10px;min-width:0}
+.cl-stat span{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);overflow-wrap:break-word}
+.cl-stat b{font-family:var(--mono);font-size:17px;font-weight:600;overflow-wrap:anywhere}
+.cl-fich-ets{margin-top:10px}
+.cl-mini{list-style:none;margin:8px 0 0;padding:0;font-size:13px}
+.cl-mini li{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0;border-bottom:1px solid var(--hair);overflow-wrap:anywhere}
+.cl-mini li > .ti{color:var(--muted);flex:none}
+.cl-enlace{background:none;border:0;padding:6px 0;min-height:36px;font:inherit;color:#33523A;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
+.cl-enlace:hover{color:var(--ink)}
+.cl-enlace:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.cl-ficha-bt{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--hair)}
+/* Historial del cliente */
+.cl-lista-ev{list-style:none;margin:0;padding:0;background:#fff;border:1px solid var(--hair);border-radius:3px}
+.cl-ev{display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;align-items:center;gap:4px 12px;padding:10px 14px;border-bottom:1px solid var(--hair)}
+.cl-ev:last-child{border-bottom:0}
+.cl-ev-ico{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--hair);border-radius:3px;background:var(--brand-cream);color:var(--olive);font-size:18px}
+.cl-ev-txt{display:flex;flex-direction:column;min-width:0;gap:2px}
+.cl-ev-txt b{font-weight:600;overflow-wrap:break-word}
+.cl-ev-txt small{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.cl-ev-txt[role="button"]{cursor:pointer}
+.cl-ev-txt[role="button"]:hover b{text-decoration:underline}
+.cl-ev-fecha{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.cl-ev-der{font-family:var(--mono);font-size:14px;text-align:right;min-width:64px}
+/* Vales */
+.cl-grid-vales{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.cl-vale{display:flex;flex-direction:column;gap:10px;background:#fff;border:1px solid var(--hair);border-left:4px solid var(--olive);border-radius:3px;padding:12px 14px;min-width:0}
+.cl-vale.is-ok{border-left-color:#9CB09C;background:#F6F8F4}
+.cl-vale.is-cad{border-left-color:#B58B2E;background:#FBF6EA}
+.cl-vale.is-anul{border-left-color:#B7B7AE;background:#F4F4F4;color:var(--muted)}
+.cl-vale-cab{display:flex;align-items:center;gap:8px;min-width:0}
+.cl-vale-code{font-size:16px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere}
+.cl-vale-que{display:flex;flex-direction:column;gap:2px}
+.cl-vale-que b{font-family:var(--mono);font-size:22px;letter-spacing:-.02em;overflow-wrap:break-word}
+.cl-vale-que small{font-size:12.5px;color:var(--muted)}
+.cl-vale-que small b{font-size:inherit;letter-spacing:0}
+.cl-vale-datos{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.cl-vale-datos .ti{margin-right:4px}
+.cl-aviso-vence{color:#8A3B2E;font-weight:600}
+.cl-vale-grande{display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 12px;margin-bottom:14px;background:var(--brand-cream);border:1px dashed var(--olive);border-radius:3px;text-align:center}
+.cl-vale-grande .cl-mono{font-size:22px;font-weight:600}
+.cl-vale-grande b{font-size:18px;overflow-wrap:break-word}
+.cl-vale-grande small{color:var(--muted)}
+/* Reservas (1/11): cifras del día, filas con su acción principal y turnos con su barra de aforo. */
+.rv-barra{margin-bottom:10px}
+.rv-aforo{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;margin:0 0 14px}
+.rv-turno{background:#fff;border:1px solid var(--hair);border-radius:3px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.rv-turno-cab{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.rv-turno-cab span{font-family:var(--mono);color:var(--muted)}
+.rv-turno-n{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.rv-turno.is-casi .nv-barra span{background:#B58B2E}
+.rv-turno.is-lleno{border-color:#D9B8AF;background:#FBF3F0}
+.rv-turno.is-lleno .nv-barra span{background:#8A3B2E}
+.rv-turno.is-lleno .rv-turno-n{color:#8A3B2E;font-weight:600}
+.rv-lista{display:flex;flex-direction:column;gap:8px}
+.rv-fila{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:6px 14px;align-items:center;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:10px 14px}
+.rv-fila.es-inactiva{background:#F7F5F1;opacity:.8}
+.rv-fila.es-inactiva .rv-nombre b{text-decoration:line-through;color:var(--muted)}
+.rv-fila.es-llegada{background:#F6F8F4;border-color:#B9CBB6}
+.rv-hora{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.rv-main{min-width:0;display:flex;flex-direction:column;gap:6px}
+.rv-nombre{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15.5px}
+.rv-nombre b{font-weight:600;overflow-wrap:break-word;min-width:0}
+.rv-nota{margin:0;font-size:13px;color:var(--muted);overflow-wrap:break-word}
+.rv-acc{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.rv-sem-n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.rv-sem-n .ti{margin-left:3px}
+.rv-chip{align-items:baseline}
+.rv-chip-hora{font-family:var(--mono);font-size:12px;flex:none}
+.rv-chip em{font-style:normal;font-family:var(--mono);color:var(--muted);margin-left:4px}
+.rv-bandeja{margin:0 0 16px;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
+.rv-bandeja.is-solicitudes{border-color:var(--ink)}
+.rv-bandeja .es-tit{margin:0 0 6px}
+.rv-solic-lista{list-style:none;margin:0;padding:0}
+.rv-solic{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--hair)}
+.rv-solic:first-child{border-top:0}
+.rv-solic-info{min-width:0;display:flex;flex-direction:column;gap:6px}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5068,4 +5174,26 @@ small{font-size:max(.8333em, 11px)}
   .nv-gp-num{width:30px;height:30px;font-size:13px}
   .nv-gp:not(:last-child)::before{left:14px;top:32px}
   .nv-gp-acc .btn{flex:1 1 100%}
+}
+
+/* Clientes en pantallas estrechas */
+@media (max-width:760px){
+  .cl-ficha{grid-template-columns:minmax(0,1fr);gap:14px}
+  .cl-ev{grid-template-columns:34px minmax(0,1fr) auto}
+  .cl-ev-fecha{grid-column:2;grid-row:2}
+  .cl-ev-der{grid-column:3;grid-row:1 / span 2}
+  .cl-orden select{min-width:0;width:100%}
+  .cl-barra .left{width:100%}
+}
+@media (max-width:640px){
+  .cl-chips .btn{flex:0 1 auto}
+  .cl-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media (max-width:640px){
+  .rv-fila{grid-template-columns:minmax(0,1fr);gap:8px}
+  .rv-hora{font-size:18px}
+  .rv-acc{justify-content:flex-start}
+  .rv-solic{grid-template-columns:minmax(0,1fr)}
+  .rv-barra .left,.rv-barra .search-input{width:100%;max-width:none}
 }

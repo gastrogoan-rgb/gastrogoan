@@ -2581,163 +2581,6 @@ function computeClientStatsIndexed(){
   };
 }
 
-// Estado de ordenación de la tabla de clientes (se mantiene mientras dure la sesión).
-let clientesSortField = null;
-let clientesSortDir = 'desc';
-function setClientesSort(field){
-  if(clientesSortField === field){
-    clientesSortDir = clientesSortDir === 'desc' ? 'asc' : 'desc';
-  } else {
-    clientesSortField = field;
-    clientesSortDir = 'desc';
-  }
-  renderClientes();
-}
-
-// Qué clientes están desplegados en la vista móvil (tarjetas plegables,
-// mismo patrón que Reservas — en tablet/PC se sigue usando la tabla).
-let clientExpandedIds = new Set();
-function toggleClientExpand(id){
-  if(clientExpandedIds.has(id)) clientExpandedIds.delete(id);
-  else clientExpandedIds.add(id);
-  renderClientes();
-}
-
-function renderClientes(){
-  const getStats = computeClientStatsIndexed();
-  const search = document.getElementById('clientes-search').value.toLowerCase();
-  const filter = document.getElementById('clientes-filter')?.value || '';
-  let items = DB.clients.filter(c => !search || c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
-  if(filter === 'inactive') items = items.filter(c => { const r = getStats(c).recency; return r === null || r > 60; });
-  else if(filter === 'allergies') items = items.filter(c => (c.allergies||'').trim());
-  else if(filter === 'vip') items = items.filter(c => (c.points||0) >= 7);
-  else if(filter === 'noshows') items = items.filter(c => (c.noShows||0) > 0);
-  else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
-  else if(filter === 'new') items = items.filter(c => getStats(c).isNew);
-  else if(filter === 'atrisk') items = items.filter(c => getStats(c).atRisk);
-
-  if(clientesSortField){
-    const dir = clientesSortDir === 'asc' ? 1 : -1;
-    items = items.map(c => ({c, stats: getStats(c)}))
-      .sort((a,b) => {
-        let va, vb;
-        if(clientesSortField === 'visitas30d'){ va = a.stats.visitas30d; vb = b.stats.visitas30d; }
-        else if(clientesSortField === 'visitasYear'){ va = a.stats.visitasYear; vb = b.stats.visitasYear; }
-        else if(clientesSortField === 'ticket'){ va = a.stats.ticketMedio; vb = b.stats.ticketMedio; }
-        else if(clientesSortField === 'total30d'){ va = a.stats.total30d; vb = b.stats.total30d; }
-        else if(clientesSortField === 'totalYear'){ va = a.stats.totalYear; vb = b.stats.totalYear; }
-        else if(clientesSortField === 'lastDate'){ va = a.stats.lastDate || ''; vb = b.stats.lastDate || ''; }
-        /* Los no-shows no salen de las estadísticas calculadas: es un contador
-           que vive en la ficha del cliente y se sube a mano al marcar la
-           reserva. Ordenar por aquí es lo que hace útil la columna — de un
-           vistazo, quién te está dejando mesas vacías. */
-        else if(clientesSortField === 'noShows'){ va = a.c.noShows || 0; vb = b.c.noShows || 0; }
-        return va < vb ? -1*dir : va > vb ? 1*dir : 0;
-      })
-      .map(x => x.c);
-  }
-  document.querySelectorAll('#view-clientes .th-sort i').forEach(i => { i.className = 'ti ti-arrows-sort'; i.style.opacity = '.5'; });
-  if(clientesSortField){
-    const icon = document.getElementById(`clientes-sort-${clientesSortField}`);
-    if(icon){ icon.className = clientesSortDir === 'asc' ? 'ti ti-sort-ascending' : 'ti ti-sort-descending'; icon.style.opacity = '1'; }
-  }
-
-  const tbody = document.getElementById('clientes-tbody');
-  const cardsBox = document.getElementById('clientes-cards');
-
-  if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="12"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
-    if(cardsBox) cardsBox.innerHTML = `<div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div>`;
-    return;
-  }
-
-  const rows = items.map(c => {
-    const stats = getStats(c);
-    const segmentBadge = stats.isNew ? `<span class="badge badge-blue txt-xs" title="${t('label.newClientHint')}">${t('badge.new')}</span>`
-      : stats.atRisk ? `<span class="badge badge-amber txt-xs" title="${t('label.atRiskClientHint')}">${t('badge.atRisk')}</span>` : '';
-    const points = c.points||0;
-    let loyaltyCls, loyaltyBtn;
-    if(points >= 10){
-      loyaltyCls = 'badge-green';
-      loyaltyBtn = `<button class="btn btn-sm" onclick="openRewardModal(${c.id})" title="${t('title.giveRewardReset')}"><i class="ti ti-gift"></i> ${t('btn.giveReward')}</button>`;
-    } else {
-      loyaltyCls = points >= 7 ? 'badge-amber' : 'badge-gray';
-      loyaltyBtn = '';
-    }
-    return {c, stats, segmentBadge, points, loyaltyCls, loyaltyBtn};
-  });
-
-  tbody.innerHTML = rows.map(({c, stats, segmentBadge, points, loyaltyCls, loyaltyBtn}) => `
-    <tr>
-      <td data-label="${t('common.name')}"><strong>${escapeHtml(c.name)}</strong> ${segmentBadge}${c.noShows ? ` <span class="badge badge-red txt-xs" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray txt-xs" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
-      <td data-label="${t('label.contact')}">
-        ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
-        ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
-        ${!c.phone && !c.email ? '—' : ''}
-      </td>
-      <td data-label="${t('label.visits30d')}"><button class="btn btn-sm" style="background:none;border:none;padding:0;min-width:44px;min-height:44px" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas30d}</span></button></td>
-      <td data-label="${t('label.visitsYear')}"><button class="btn btn-sm" style="background:none;border:none;padding:0;min-width:44px;min-height:44px" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitasYear}</span></button></td>
-      <td data-label="${t('label.lastVisit')}">${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
-      <td data-label="${t('label.avgTicket')}">${fmtMoney(stats.ticketMedio)}</td>
-      <td data-label="${t('label.total30d')}">${fmtMoney(stats.total30d)}</td>
-      <td data-label="${t('label.totalYear')}">${fmtMoney(stats.totalYear)}</td>
-      <td data-label="${t('label.noShowCount')}">${c.noShows ? `<span class="badge badge-red"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
-      <td data-label="${t('label.loyaltyPoints')}"><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
-      <td class="wrap" data-label="${t('common.notes')}">${escapeHtml(c.notes||'—')}</td>
-      <td class="actions-cell" data-label="">
-        <button class="btn btn-sm btn-icon" onclick="openClientModal(${c.id})"><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
-      </td>
-    </tr>
-  `).join('');
-
-  // Vista móvil: mismo patrón de tarjeta plegable que Reservas — colapsada
-  // por defecto (nombre + puntos), se despliega al tocarla para ver
-  // contacto, visitas, ticket medio, última visita y notas.
-  if(cardsBox){
-    cardsBox.innerHTML = rows.map(({c, stats, segmentBadge, points, loyaltyCls, loyaltyBtn}) => {
-      const expanded = clientExpandedIds.has(c.id);
-      return `
-      <div class="card client-card ${expanded?'expanded':''}">
-        <!-- El resumen plegado es lo que se ve de un vistazo con la lista
-             entera delante: nombre y puntos, nada más. La etiqueta de
-             segmento ("Nuevo"/"En riesgo") se fue al detalle: pegada al
-             contador competía con él y, justo cuando tocaba dar un premio,
-             lo que hay que leer es 10/10, no una etiqueta (13/09). -->
-        <div class="client-card-summary" onclick="toggleClientExpand(${c.id})">
-          <span class="client-card-name">${escapeHtml(c.name)}</span>
-          <span class="badge ${loyaltyCls}">${points}/10</span>
-          <i class="ti ti-chevron-down client-card-chevron"></i>
-        </div>
-        <div class="client-card-detail">
-          <div class="client-card-detail-row"><span>${t('label.contact')}</span>
-            <div>
-              ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
-              ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}" onclick="event.stopPropagation()"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
-              ${!c.phone && !c.email ? '—' : ''}
-            </div>
-          </div>
-          <div class="client-card-detail-row"><span>${t('label.visits30d')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitas30d}</span></button></div>
-          <div class="client-card-detail-row"><span>${t('label.visitsYear')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitasYear}</span></button></div>
-          <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong>${segmentBadge ? ` ${segmentBadge}` : ''}</div>
-          <div class="client-card-detail-row"><span>${t('label.avgTicket')}</span><strong>${fmtMoney(stats.ticketMedio)}</strong></div>
-          <div class="client-card-detail-row"><span>${t('label.total30d')}</span><strong>${fmtMoney(stats.total30d)}</strong></div>
-          <div class="client-card-detail-row"><span>${t('label.totalYear')}</span><strong>${fmtMoney(stats.totalYear)}</strong></div>
-          ${c.noShows ? `<div class="client-card-detail-row"><span>${t('label.noShowCount')}</span><strong><i class="ti ti-user-x"></i> ${c.noShows}</strong></div>` : ''}
-          ${c.cumpleanos ? `<div class="client-card-detail-row"><span><i class="ti ti-cake"></i> ${t('label.birthday')}</span><strong>${escapeHtml(c.cumpleanos)}</strong></div>` : ''}
-          <div class="client-card-detail-row"><span>${t('common.notes')}</span><strong>${escapeHtml(c.notes||'—')}</strong></div>
-          <div class="client-card-actions">
-            ${loyaltyBtn}
-            <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();openClientModal(${c.id})"><i class="ti ti-edit"></i></button>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
-          </div>
-        </div>
-      </div>
-    `;
-    }).join('');
-  }
-}
-
 function showLoyaltyInfo(){
   openModal(`
     <div class="modal-header">
@@ -2807,100 +2650,6 @@ function giftVoucherCode(){
   let code = '';
   for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
   return 'VR-' + code;
-}
-
-function openGiftVouchersModal(){
-  if(!Array.isArray(DB.giftVouchers)) DB.giftVouchers = [];
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-gift-card"></i> ${t('title.giftVouchers')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>${t('label.voucherType')}</label>
-      <select id="voucher-tipo" onchange="renderGiftVoucherFormFields()">
-        <option value="importe">${t('voucherType.amount')}</option>
-        <option value="experiencia">${t('voucherType.experience')}</option>
-      </select>
-    </div>
-    <div id="voucher-form-fields"></div>
-    <div class="field">
-      <label>${t('label.voucherClient')} *</label>
-      <select id="voucher-cliente">
-        <option value="">${t('ph.voucherSelectClient')}</option>
-        ${[...DB.clients].sort((a,b)=>a.name.localeCompare(b.name,'es')).map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
-      </select>
-      ${!DB.clients.length ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${t('msg.noClientsForVoucher')}</p>` : ''}
-    </div>
-    <div class="modal-footer" style="justify-content:flex-start">
-      <button class="btn btn-primary" onclick="issueGiftVoucher()"><i class="ti ti-plus"></i> ${t('btn.issueVoucher')}</button>
-    </div>
-    <div class="field" style="margin-top:10px">
-      <label>${t('label.voucherHistory')}</label>
-      <div id="gift-vouchers-history">${renderGiftVouchersHistory()}</div>
-    </div>
-  `);
-  renderGiftVoucherFormFields();
-}
-
-function renderGiftVoucherFormFields(){
-  const box = document.getElementById('voucher-form-fields');
-  if(!box) return;
-  const tipo = document.getElementById('voucher-tipo').value;
-  box.innerHTML = tipo === 'experiencia'
-    ? `<div class="field"><label>${t('label.voucherDescription')}</label><input type="text" id="voucher-descripcion" placeholder="${t('ph.voucherExperienceExample')}"></div>`
-    : `<div class="field"><label>${t('label.voucherAmount')}</label><input type="number" id="voucher-importe" min="0" step="0.01" placeholder="50"></div>`;
-}
-
-function issueGiftVoucher(){
-  const tipo = document.getElementById('voucher-tipo').value;
-  const clienteId = parseInt(document.getElementById('voucher-cliente').value, 10);
-  if(!clienteId){ showToast(t('msg.voucherClientRequired')); return; }
-  const cliente = DB.clients.find(c => c.id === clienteId);
-  if(!cliente){ showToast(t('msg.voucherClientRequired')); return; }
-  let descripcion = '', importe = 0;
-  if(tipo === 'experiencia'){
-    descripcion = document.getElementById('voucher-descripcion').value.trim();
-    if(!descripcion){ showToast(t('msg.voucherDescRequired')); return; }
-  } else {
-    importe = parseFloat(document.getElementById('voucher-importe').value);
-    if(!importe || importe <= 0){ showToast(t('msg.voucherAmountRequired')); return; }
-  }
-  DB.giftVouchers.push({
-    id: genId(), tipo, descripcion, importe, clienteId, clienteNombre: cliente.name,
-    code: giftVoucherCode(), createdAt: new Date().toISOString(), redeemed: false, redeemedAt: null
-  });
-  saveDB();
-  const newId = DB.giftVouchers[DB.giftVouchers.length-1].id;
-  document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
-  document.getElementById('voucher-cliente').value = '';
-  if(tipo==='experiencia') document.getElementById('voucher-descripcion').value = '';
-  else document.getElementById('voucher-importe').value = '';
-  showToast(t('msg.voucherIssued'));
-  printGiftVoucher(newId);
-}
-
-function renderGiftVouchersHistory(){
-  const vouchers = [...(DB.giftVouchers||[])].reverse();
-  if(!vouchers.length) return `<p style="font-size:12px;color:var(--muted)">${t('empty.noVouchers')}</p>`;
-  return vouchers.map(v => {
-    const label = v.tipo === 'experiencia' ? escapeHtml(v.descripcion) : fmtMoney(v.importe);
-    return `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-      <div style="font-size:12.5px">
-        <strong>${escapeHtml(v.code)}</strong> — ${label}
-        ${v.clienteNombre ? ` · ${escapeHtml(v.clienteNombre)}` : ''}
-        <div style="color:var(--muted);font-size:11px">${escapeHtml((v.createdAt||'').slice(0,10))}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span class="badge ${v.redeemed?'badge-green':'badge-amber'}">${v.redeemed?t('label.voucherStatusRedeemed'):t('label.voucherStatusPending')}</span>
-        <button class="btn btn-sm btn-icon" onclick="printGiftVoucher(${v.id})" title="${t('btn.printVoucher')}"><i class="ti ti-printer"></i></button>
-        <button class="btn btn-sm" onclick="toggleGiftVoucherRedeemed(${v.id})">${v.redeemed?t('btn.markPending'):t('btn.markRedeemed')}</button>
-        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteGiftVoucher(${v.id})"><i class="ti ti-trash"></i></button>
-      </div>
-    </div>
-  `;
-  }).join('');
 }
 
 // Vale regalo imprimible: pensado para entregarse en mano o enviarse en PDF,
@@ -2980,101 +2729,13 @@ function printGiftVoucher(id){
             <div class="v-code">${escapeHtml(v.code)}</div>
           </div>
           <div class="v-barcode">${Array.from({length:26}).map((_,i)=>`<i style="height:${14+((i*37)%20)}px"></i>`).join('')}</div>
-          <div class="v-date">${t('label.voucherIssuedOn')}<br>${escapeHtml(dateStr)}</div>
+          <div class="v-date">${t('label.voucherIssuedOn')}<br>${escapeHtml(dateStr)}${v.venceEn ? '<br><strong>' + escapeHtml(gl({es:'Válido hasta', ca:'Vàlid fins', en:'Valid until'})) + ' ' + escapeHtml(new Date(v.venceEn + 'T00:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'long', year:'numeric'})) + '</strong>' : ''}</div>
           <div class="v-note">${t('msg.voucherPrintNote')}</div>
         </div>
       </div>
       <script>window.onload=function(){window.print();}<\/script>
     </body></html>`);
   win.document.close();
-}
-
-function toggleGiftVoucherRedeemed(id){
-  const v = (DB.giftVouchers||[]).find(x=>x.id===id);
-  if(!v) return;
-  v.redeemed = !v.redeemed;
-  v.redeemedAt = v.redeemed ? new Date().toISOString() : null;
-  saveDB();
-  document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
-}
-
-async function deleteGiftVoucher(id){
-  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
-  DB.giftVouchers = (DB.giftVouchers||[]).filter(x=>x.id!==id);
-  saveDB();
-  document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
-}
-
-function openClientModal(id){
-  const c = id ? DB.clients.find(x=>x.id===id) : {name:'',phone:'',email:'',notes:'',allergies:'',points:0,cp:'',cumpleanos:'',ultimoContacto:''};
-  openModal(`
-    <div class="modal-header">
-      <h3>${id?t('title.editClient'):t('title.newClient')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>${t('common.name')} *</label>
-      <input type="text" id="client-name" value="${escapeHtml(c.name)}" placeholder="${t('ph.clientName')}">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${t('common.phone')} *</label>
-        <input type="text" id="client-phone" value="${escapeHtml(c.phone)}" placeholder="${t('ph.phoneExample')}">
-      </div>
-      <div class="field">
-        <label>${t('common.email')}</label>
-        <input type="email" id="client-email" value="${escapeHtml(c.email)}" placeholder="cliente@email.com">
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${t('label.postalCode')}</label>
-        <input type="text" id="client-cp" value="${escapeHtml(c.cp||'')}" placeholder="${t('ph.postalCodeExample')}">
-      </div>
-      <div class="field">
-        <label>${t('label.birthday')}</label>
-        <input type="date" id="client-cumpleanos" value="${escapeHtml(c.cumpleanos||'')}">
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${t('label.lastContact')}</label>
-        <input type="date" id="client-ultimo-contacto" value="${escapeHtml(c.ultimoContacto||'')}">
-      </div>
-      <div class="field">
-        <label>${t('label.loyaltyPoints')}</label>
-        <div style="padding:10px 0;font-size:14px"><span class="badge ${(c.points||0)>=10?'badge-green':(c.points||0)>=7?'badge-amber':'badge-gray'}">${c.points||0}/10</span> <span style="font-size:12px;color:var(--muted)">${t('msg.pointsAutoAdded')}</span></div>
-      </div>
-    </div>
-    <div class="field">
-      <label>${t('label.allergiesPrefs')}</label>
-      <input type="text" id="client-allergies" value="${escapeHtml(c.allergies||'')}" placeholder="${t('ph.allergiesExample')}">
-    </div>
-    <div class="field">
-      <label>${t('th.notes')}</label>
-      <textarea id="client-notes" placeholder="${t('ph.additionalNotes')}">${escapeHtml(c.notes||'')}</textarea>
-    </div>
-    <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
-      <input type="checkbox" id="client-marketing-consent" ${c.marketingConsent!==false?'checked':''} style="width:auto">
-      ${t('label.marketingConsent')}
-    </label>
-    ${id ? `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="openClientHistoryModal(${id})"><i class="ti ti-receipt"></i> ${t('btn.viewOrderHistory')}</button>
-      <button class="btn btn-sm" onclick="openMergeClientModal(${id})"><i class="ti ti-git-merge"></i> ${t('btn.mergeClient')}</button>
-      <button class="btn btn-sm btn-danger" onclick="eraseClientDataRGPD(${id})" title="${t('rgpd.eraseHint')}"><i class="ti ti-shield-off"></i> ${t('title.eraseClientRGPD')}</button>
-    </div>` : ''}
-    ${(c.rewardsHistory&&c.rewardsHistory.length) ? `
-    <div class="field">
-      <label>${t('label.rewardHistory')}</label>
-      <div style="font-size:12px;color:var(--muted);line-height:1.6">
-        ${[...c.rewardsHistory].reverse().map(r=>`${escapeHtml(r.fecha)} — ${escapeHtml(r.premio)}`).join('<br>')}
-      </div>
-    </div>` : ''}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="saveClient(${id||'null'})">${t("common.save")}</button>
-    </div>
-  `);
 }
 
 // Fusionar dos fichas de cliente duplicadas: saveClient() ya avisa si el
@@ -3141,6 +2802,7 @@ function mergeClients(sourceId, targetId){
   (DB.sales||[]).forEach(s => { if(s.clientId===sourceId) s.clientId = targetId; });
   (DB.reservations||[]).forEach(r => { if(r.clientId===sourceId) r.clientId = targetId; });
   (DB.tpvOrders||[]).forEach(o => { if(o.clientId===sourceId) o.clientId = targetId; });
+  (DB.giftVouchers||[]).forEach(v => { if(v.clienteId===sourceId){ v.clienteId = targetId; if(!v.paraNombre || v.paraNombre === source.name) v.paraNombre = target.name; v.clienteNombre = v.paraNombre; } });
   DB.clients = DB.clients.filter(x=>x.id!==sourceId);
   moveToTrash('client', source);
   logAudit('merge', t('audit.mergedClients').replace('${source}', source.name).replace('${target}', target.name), 'critical');
@@ -3218,39 +2880,6 @@ function clientFavoriteItem(c){
   let best = null, bestQty = 0;
   Object.entries(counts).forEach(([name,qty]) => { if(qty > bestQty){ best = name; bestQty = qty; } });
   return best;
-}
-
-// Historial de pedidos de un cliente: cada venta con su fecha, platos y total.
-function openClientHistoryModal(id){
-  const c = DB.clients.find(x=>x.id===id);
-  if(!c) return;
-  const sales = clientSales(c).map(s => ({type:'sale', date:s.date, sortKey: s.createdAt||s.date, data:s}));
-  const reservations = DB.reservations.filter(r =>
-    r.clientId === c.id || (r.clientName && r.clientName.trim().toLowerCase() === c.name.trim().toLowerCase())
-  ).map(r => ({type:'reservation', date:r.date, sortKey: r.date+' '+(r.time||''), data:r}));
-  const timeline = [...sales, ...reservations].sort((a,b) => b.sortKey.localeCompare(a.sortKey));
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-receipt"></i> ${t('title.orderHistoryOf')} ${escapeHtml(c.name)}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    ${timeline.length ? `<div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('common.date')}</th><th>${tA('label.dishElaboration')}</th><th>${t('label.total')}</th></tr></thead>
-        <tbody>${timeline.map(entry => {
-          if(entry.type === 'sale'){
-            const s = entry.data;
-            return `<tr><td>${escapeHtml(s.date)} <span class="badge badge-blue txt-xs">${t('label.orderTag')}</span></td><td class="wrap">${(s.items||[]).map(it=>`${it.qty}× ${escapeHtml(it.name)}`).join(', ')}</td><td>${fmtMoney(s.total)}</td></tr>`;
-          }
-          const r = entry.data;
-          return `<tr style="cursor:pointer" onclick="closeModal();navigate('reservas');goToReservasDia('${r.date}')"><td>${escapeHtml(r.date)} <span class="badge badge-gray txt-xs">${t('label.reservationTag')}</span></td><td class="wrap">${escapeHtml(r.time||'')} · ${r.people} ${t('common.persAbbr')} · ${reservationStatusBadge(r.status, r.llegada)}</td><td>—</td></tr>`;
-        }).join('')}</tbody>
-      </table>
-    </div>` : `<div class="empty"><i class="ti ti-receipt"></i>${t('empty.noOrderHistory')}</div>`}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
-    </div>
-  `);
 }
 
 function openRewardModal(id){
@@ -3338,7 +2967,8 @@ function openRewardNotifyModal(id, reward){
 function sendRewardWhatsapp(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c || !c.phone){ showToast(t('msg.noPhone')); return; }
-  const tel = c.phone.replace(/\D/g,'');
+  const tel = whatsappDeTelefono(c.phone);
+  if(!tel){ showToast(gl({es:'Este teléfono no parece un móvil.', ca:'Aquest telèfon no sembla un mòbil.', en:'This number does not look like a mobile.'})); return; }
   const txt = encodeURIComponent(document.getElementById('reward-notify-text').value);
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
 }
@@ -3395,6 +3025,7 @@ function eraseClientDataRGPD(id){
     c.phone = ''; c.email = ''; c.allergies = ''; c.notes = ''; c.cp = ''; c.cumpleanos = '';
     c.marketingConsent = false;
     c.erasedAt = new Date().toISOString();
+    (DB.giftVouchers||[]).forEach(v => { if(v.clienteId===id){ v.paraNombre = ''; v.clienteNombre = ''; } });
     saveDB();
     closeModal();
     renderClientes();
@@ -3408,17 +3039,10 @@ function eraseClientDataRGPD(id){
 let reservasTab = 'dia';
 let reservasDate = todayStr();
 let reservasWeekOffset = 0;
-let reservasMonthOffset = 0;
 // Qué reservas del día están desplegadas (mostrando mesa/notas/acciones).
 // Colapsadas por defecto: con muchas reservas en un mismo día, verlas todas
 // desplegadas a la vez obligaba a un scroll larguísimo para encontrar una.
 let reservaExpandedIds = new Set();
-function toggleReservaExpand(id){
-  if(reservaExpandedIds.has(id)) reservaExpandedIds.delete(id);
-  else reservaExpandedIds.add(id);
-  renderReservasDia();
-}
-
 // "Ha llegado" es un dato aparte de `status` (la reserva sigue
 // 'confirmada' tras marcar la llegada, ver toggleReservaLlegada) — antes
 // no se distinguía aquí, así que una reserva ya llegada seguía mostrando
@@ -3482,136 +3106,6 @@ function undoReservationNoShow(id){
   saveDB();
   renderReservas();
   showToast(t('msg.noShowUndone'));
-}
-
-function setReservasTab(t){
-  reservasTab = t;
-  renderReservas();
-  scrollContentToTop();
-}
-
-function renderReservas(){
-  markReservasSeen();
-  const searchInput = document.getElementById('reservas-search-input');
-  if(searchInput && searchInput.value.trim()){ renderReservasSearch(); return; }
-
-  document.querySelectorAll('#view-reservas .ge-tab').forEach(b => b.classList.remove('active'));
-  const tabBtn = document.getElementById('reservas-tab-'+reservasTab);
-  if(tabBtn) tabBtn.classList.add('active');
-  scrollActiveTabIntoView(document.getElementById('reservas-tabs-row'));
-
-  renderReservasPendingOnline();
-  renderReservasRemindersDue();
-  if(reservasTab === 'semana') renderReservasSemana();
-  else if(reservasTab === 'mes') renderReservasMes();
-  else renderReservasDia();
-}
-
-// Búsqueda de reservas por nombre de cliente o teléfono, a través de TODAS
-// las fechas (no solo el día/semana/mes que se esté viendo), para encontrar
-// reservas pasadas o futuras sin tener que navegar el calendario.
-function renderReservasSearch(){
-  const input = document.getElementById('reservas-search-input');
-  const query = (input ? input.value : '').trim().toLowerCase();
-  const resultsBox = document.getElementById('reservas-search-results');
-  const tabsRow = document.getElementById('reservas-tabs-row');
-  const tabContent = document.getElementById('reservas-tab-content');
-  const pendingBox = document.getElementById('reservas-pending-online');
-  const remindersBox = document.getElementById('reservas-reminders-due');
-  if(!query){
-    resultsBox.style.display = 'none';
-    resultsBox.innerHTML = '';
-    if(tabsRow) tabsRow.style.display = '';
-    if(tabContent) tabContent.style.display = '';
-    if(pendingBox) pendingBox.style.display = '';
-    if(remindersBox) remindersBox.style.display = '';
-    renderReservas();
-    return;
-  }
-  if(tabsRow) tabsRow.style.display = 'none';
-  if(tabContent) tabContent.style.display = 'none';
-  if(pendingBox) pendingBox.style.display = 'none';
-  if(remindersBox) remindersBox.style.display = 'none';
-  const normQuery = stripAccents(query);
-  const matches = DB.reservations.filter(r => {
-    const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
-    const name = stripAccents(((client?client.name:'') || r.clientName || '').toLowerCase());
-    const phone = ((client && client.phone) || r.clientPhone || '').replace(/\D/g,'');
-    // También por el número que ve el cliente («PCERVK»): es lo que dice al llamar.
-    const codigo = r.publicToken ? codigoCortoPublico(r.publicToken).toLowerCase() : '';
-    return (name && name.includes(normQuery)) || (phone && query.replace(/\D/g,'') && phone.includes(query.replace(/\D/g,''))) || (codigo && normQuery.replace(/^n[º°o]?\s*/,'').trim() === codigo);
-  }).sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
-
-  resultsBox.style.display = '';
-  if(!matches.length){
-    resultsBox.innerHTML = `<div class="empty"><i class="ti ti-search"></i>${t('empty.noReservationsMatch')}</div>`;
-    return;
-  }
-  resultsBox.innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('th.client')}</th><th>${t('label.numberOfPeople')}</th><th>${t('th.status')}</th></tr></thead>
-        <tbody>
-          ${matches.map(r => {
-            const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
-            const name = client ? client.name : (r.clientName || '—');
-            return `<tr style="cursor:pointer" onclick="openReservationModal(${r.id})">
-              <td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.time||'')}</td><td>${escapeHtml(name)}</td><td>${r.people}</td><td>${reservationStatusBadge(r.status, r.llegada)}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderReservasPendingOnline(){
-  const box = document.getElementById('reservas-pending-online');
-  if(!box) return;
-  // Una solicitud "pendiente" de una fecha ya pasada que nadie confirmó ni
-  // rechazó ya no tiene sentido gestionarla — antes se quedaba aquí para
-  // siempre, ensuciando la bandeja de "por hacer" indefinidamente. Se sigue
-  // viendo en el histórico normal de reservas, solo desaparece de este aviso.
-  const pending = DB.reservations.filter(r => r.status === 'pendiente' && r.date >= todayStr());
-  if(!pending.length){ box.innerHTML = ''; return; }
-  box.innerHTML = `
-    <h3 style="margin-top:0"><i class="ti ti-bell-ringing"></i> ${t('title.pendingOnlineRequests')}</h3>
-    <div class="grid grid-3" style="margin-bottom:16px">
-      ${pending.map(r => `
-        <div class="card" style="border:2px solid var(--ink)">
-          <h3 style="justify-content:space-between;font-size:14px">
-            <span>${escapeHtml(r.clientName||'—')}</span>
-            <span class="badge badge-amber">${t('badge.newF')}</span>
-          </h3>
-          ${(() => {
-            const waitMin = r.createdAt ? minutesSince(r.createdAt) : 0;
-            if(waitMin < 30) return '';
-            return `<div style="font-size:12px;color:var(--red);margin-bottom:2px"><i class="ti ti-clock-exclamation"></i> ${t('label.waitingSince').replace('${min}', waitMin)}</div>`;
-          })()}
-          <div style="font-size:13px"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)} · <i class="ti ti-clock"></i> ${escapeHtml(r.time)} · <i class="ti ti-users"></i> ${r.people}</div>
-          ${r.clientPhone ? `<div style="font-size:12px;color:${r.phoneOdd?'var(--red)':'var(--muted)'}"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}${r.phoneOdd ? ` <i class="ti ti-alert-triangle" title="${t('msg.phoneLooksOdd')}"></i>` : ''}</div>` : ''}
-          ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</div>` : ''}
-          ${r.depositRequired ? `<div style="margin-top:4px">${r.depositConfirmed
-            ? `<span class="badge badge-green"><i class="ti ti-cash"></i> ${t('deposit.received')} (${r.depositAmount}€)</span>`
-            : `<span class="badge badge-amber" style="cursor:pointer" onclick="confirmReservationDeposit(${r.id})" title="${t('deposit.confirmHint')}"><i class="ti ti-cash-banknote"></i> ${t('deposit.pending')} (${r.depositAmount}€)</span>`}</div>` : ''}
-          ${(() => {
-            const turnoIdx = getTurnoIndexForTime(r.date, r.time);
-            if(turnoIdx === null) return '';
-            const info = getAforoInfoForDate(r.date);
-            const turno = info && info[turnoIdx];
-            if(!turno || !turno.aforo) return '';
-            const wouldBe = turno.reservados + (r.people||0);
-            const full = wouldBe > turno.aforo;
-            return `<div style="font-size:12px;margin-top:4px;color:${full?'var(--red)':'var(--muted)'}"><i class="ti ti-users"></i> ${t('label.turnoOccupancy').replace('${used}', turno.reservados).replace('${cap}', turno.aforo).replace('${range}', turno.abre+'–'+turno.cierra)}</div>`;
-          })()}
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button class="btn btn-sm btn-primary" style="flex:1" onclick="setReservationStatus(${r.id}, 'confirmada')"><i class="ti ti-check"></i> ${t('common.confirm')}</button>
-            <button class="owner-only btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineReservation(${r.id})"><i class="ti ti-x"></i> ${t('common.reject')}</button>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
 }
 
 // Rechazar una reserva PENDIENTE que llegó desde la web pública exige el PIN
@@ -3719,173 +3213,6 @@ function goToReservasDia(date){
   reservasDate = date;
   reservasTab = 'dia';
   renderReservas();
-}
-
-function renderReservasDia(){
-  const box = document.getElementById('reservas-tab-content');
-  const date = reservasDate;
-  const items = DB.reservations.filter(r => r.date === date).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
-
-  // Cada reserva se pinta colapsada (hora, cliente, personas, estado) y se
-  // expande al tocarla — con muchas reservas en el día, una tabla con todos
-  // los detalles siempre visibles obligaba a un scroll horizontal largo y
-  // costaba encontrar la que se buscaba de un vistazo.
-  const tableHtml = !items.length
-    ? `<div class="empty"><i class="ti ti-calendar-event"></i>${t('empty.noReservationsDay')}</div>`
-    : `<div class="reserva-list">
-        ${items.map(r => {
-          const client = DB.clients.find(c=>c.id===r.clientId);
-          const table = DB.tables.find(t=>t.id===r.tableId);
-          const expanded = reservaExpandedIds.has(r.id);
-          return `
-            <div class="card reserva-card ${expanded?'expanded':''}">
-              <div class="reserva-card-summary" onclick="toggleReservaExpand(${r.id})">
-                <strong class="reserva-card-time">${escapeHtml(r.time)}</strong>
-                <span class="reserva-card-name">${escapeHtml(client ? client.name : (r.clientName||'—'))}</span>
-                <span class="badge badge-gray"><i class="ti ti-users"></i> ${r.people}</span>
-                ${reservationStatusBadge(r.status, r.llegada)}
-                <i class="ti ti-chevron-down reserva-card-chevron"></i>
-              </div>
-              <div class="reserva-card-detail">
-                ${r.publicToken ? `<div class="reserva-card-detail-row"><span>${t('label.publicCode')}</span><strong style="font-family:'IBM Plex Mono',monospace">${escapeHtml(codigoCortoPublico(r.publicToken))}</strong></div>` : ''}
-                <div class="reserva-card-detail-row"><span>${t('th.table')}</span><strong>${table ? escapeHtml(table.name) : `<span class="badge badge-gray">${t('label.notAssigned')}</span>`}</strong></div>
-                <div class="reserva-card-detail-row"><span>${t('th.notes')}</span><strong>${escapeHtml(r.notes||'—')}</strong></div>
-                <div class="reserva-card-detail-row"><span>${t('th.arrival')}</span>
-                  ${(r.status==='confirmada' || r.status==='completada') ? `
-                    <div style="display:flex;gap:4px;flex-wrap:wrap">
-                      <!-- El botón dice siempre "Ha llegado": es la acción que
-                           hace al pulsarlo, no el estado. Poner "Aún no"
-                           confundía — parecía una etiqueta y nadie lo tocaba.
-                           Cuando ya está marcado se ve relleno (btn-primary);
-                           mientras no lo está, con el tick en verde invitando
-                           a pulsarlo. -->
-                      <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})"><i class="ti ti-check"${r.llegada?'':' style="color:var(--green)"'}></i> ${t('btn.arrived')}</button>
-                      ${!r.llegada ? `<button class="btn btn-sm btn-danger" onclick="markReservationNoShow(${r.id})">${t('status.noShow')}</button>` : ''}
-                    </div>
-                  ` : r.status==='no_show' ? `<button class="btn btn-sm" onclick="undoReservationNoShow(${r.id})" title="${t('btn.undoNoShow')}"><i class="ti ti-arrow-back-up"></i> ${t('btn.undoNoShow')}</button>` : '<strong>—</strong>'}
-                </div>
-                <div class="reserva-card-actions">
-                  ${r.status==='lista_espera' ? `<button class="btn btn-sm btn-primary" onclick="setReservationStatus(${r.id}, 'confirmada')" title="${t('btn.confirmAnyway')}"><i class="ti ti-check"></i> ${t('common.confirm')}</button>` : ''}
-                  ${r.status==='confirmada' && (client?.phone || client?.email || r.clientPhone) ? `<button class="btn btn-sm btn-icon" onclick="openReservationReminderModal(${r.id})" title="${t('btn.sendReminder')}"><i class="ti ti-bell"></i></button>` : ''}
-                  ${(r.status==='confirmada' || r.status==='pendiente' || r.status==='lista_espera') ? `<button class="owner-only btn btn-sm btn-icon btn-danger" onclick="cancelReservation(${r.id})" title="${t('btn.cancelReservation')}"><i class="ti ti-calendar-x"></i></button>` : ''}
-                  <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>`;
-
-  const aforoInfo = getAforoInfoForDate(date);
-  const aforoHtml = (aforoInfo && aforoInfo.length) ? `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      ${aforoInfo.map((tr,i) => {
-        const lleno = tr.aforo>0 && tr.reservados >= tr.aforo;
-        const cerca = tr.aforo>0 && tr.reservados >= tr.aforo*0.8 && !lleno;
-        const cls = lleno ? 'badge-red' : cerca ? 'badge-amber' : 'badge-green';
-        return `<span class="badge ${cls}"><i class="ti ti-users"></i> ${t('mn.schedule.slotN').replace('${n}', i+1)} (${tr.abre}-${tr.cierra}): ${tr.reservados}${tr.aforo?'/'+tr.aforo:''} ${t('common.people')}${lleno?' · '+t('label.fullCapacity'):''}</span>`;
-      }).join('')}
-    </div>
-  ` : '';
-
-  box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        <input type="date" id="reservas-filter-date" value="${date}" onchange="reservasDate=this.value;renderReservas()">
-      </div>
-      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> ${t('btn.newReservation')}</button>
-    </div>
-    ${aforoHtml}
-    ${tableHtml}
-  `;
-}
-
-function renderReservasSemana(){
-  const box = document.getElementById('reservas-tab-content');
-  const dates = getWeekDates(reservasWeekOffset);
-
-  const cardsHtml = dates.map((d, i) => {
-    const ds = dateStr(d);
-    // Las canceladas/no-show no cuentan como ocupación real del día: se
-    // muestran igual (tachadas) para que quede constancia, pero no inflan
-    // el número ni dan una idea equivocada de cuán lleno está el día.
-    const items = DB.reservations.filter(r => r.date === ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-    const activeCount = items.filter(r => r.status !== 'cancelada' && r.status !== 'no_show').length;
-    const isToday = ds === todayStr();
-    return `
-      <div class="card" style="cursor:pointer;${isToday?'border-color:var(--ink)':''}" onclick="goToReservasDia('${ds}')">
-        <h3 style="justify-content:space-between;font-size:14px">
-          <span>${weekDayFull(i)} ${d.getDate()}/${d.getMonth()+1}</span>
-          ${activeCount ? `<span class="badge badge-blue">${activeCount}</span>` : ''}
-        </h3>
-        ${items.length ? items.map(r => {
-          const client = DB.clients.find(c=>c.id===r.clientId);
-          const cancelled = r.status === 'cancelada' || r.status === 'no_show';
-          return `<div style="font-size:12px;padding:2px 0;${cancelled?'color:var(--muted);text-decoration:line-through':''}">${escapeHtml(r.time)} · ${escapeHtml(client ? client.name : (r.clientName||'—'))} (${r.people}p)</div>`;
-        }).join('') : `<div style="font-size:12px;color:var(--muted)">${t('empty.noReservations')}</div>`}
-      </div>
-    `;
-  }).join('');
-
-  box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        <button class="btn btn-sm" onclick="reservasWeekOffset--;renderReservas()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="reservasWeekOffset=0;renderReservas()">${t('common.today')}</button>
-        <button class="btn btn-sm" onclick="reservasWeekOffset++;renderReservas()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${dates[0].getDate()}/${dates[0].getMonth()+1} – ${dates[6].getDate()}/${dates[6].getMonth()+1}</strong>
-      </div>
-      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> ${t('btn.newReservation')}</button>
-    </div>
-    <div class="grid grid-3">${cardsHtml}</div>
-  `;
-}
-
-function renderReservasMes(){
-  const box = document.getElementById('reservas-tab-content');
-  const today = new Date();
-  const base = new Date(today.getFullYear(), today.getMonth() + reservasMonthOffset, 1);
-  const year = base.getFullYear();
-  const month = base.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const counts = {};
-  DB.reservations.forEach(r => {
-    if(r.status === 'cancelada' || r.status === 'no_show') return;
-    counts[r.date] = (counts[r.date]||0) + 1;
-  });
-
-  let cells = '';
-  for(let i=0; i<startOffset; i++) cells += `<div></div>`;
-  for(let day=1; day<=daysInMonth; day++){
-    const ds = dateStr(new Date(year, month, day));
-    const count = counts[ds] || 0;
-    const isToday = ds === todayStr();
-    cells += `
-      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--ink)':''}" onclick="goToReservasDia('${ds}')">
-        <div style="font-weight:700">${day}</div>
-        ${count ? `<span class="badge badge-blue">${count}</span>` : ''}
-      </div>
-    `;
-  }
-
-  box.innerHTML = `
-    <div class="toolbar">
-      <div class="left">
-        <button class="btn btn-sm" onclick="reservasMonthOffset--;renderReservas()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="reservasMonthOffset=0;renderReservas()">${t('common.today')}</button>
-        <button class="btn btn-sm" onclick="reservasMonthOffset++;renderReservas()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
-      </div>
-      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> ${t('btn.newReservation')}</button>
-    </div>
-    <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
-      ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
-      ${cells}
-    </div>
-  `;
 }
 
 // Franjas horarias de 30 min en las que se puede reservar ese día, según el
@@ -4405,7 +3732,8 @@ function sendReservationReminderWhatsapp(id){
   const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
   const phone = (client && client.phone) || r.clientPhone;
   if(!phone){ showToast(t('msg.noPhone')); return; }
-  const tel = phone.replace(/\D/g,'');
+  const tel = whatsappDeTelefono(phone);   // con prefijo de país: «612345678» a secas no abre ningún chat
+  if(!tel){ showToast(gl({es:'Este teléfono no parece un móvil: WhatsApp no lo abre.', ca:'Aquest telèfon no sembla un mòbil: WhatsApp no l\'obre.', en:'This number does not look like a mobile: WhatsApp will not open it.'})); return; }
   const txt = encodeURIComponent(document.getElementById('reservation-reminder-text').value);
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
   r.reminderSentAt = new Date().toISOString();
@@ -4467,7 +3795,8 @@ function sendReservationNotifyWhatsapp(id){
   const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
   const phone = (client && client.phone) || r.clientPhone;
   if(!phone){ showToast(t('msg.noPhone')); return; }
-  const tel = phone.replace(/\D/g,'');
+  const tel = whatsappDeTelefono(phone);   // con prefijo de país: «612345678» a secas no abre ningún chat
+  if(!tel){ showToast(gl({es:'Este teléfono no parece un móvil: WhatsApp no lo abre.', ca:'Aquest telèfon no sembla un mòbil: WhatsApp no l\'obre.', en:'This number does not look like a mobile: WhatsApp will not open it.'})); return; }
   const txt = encodeURIComponent(document.getElementById('reservation-notify-text').value);
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
   closeModal();
@@ -4490,33 +3819,6 @@ function sendReservationNotifyEmail(id){
 // que la app hace el trabajo de detectarlos y prepararlos: cada vez que se
 // abre Reservas, se muestran las reservas de mañana que aún no tienen
 // recordatorio enviado, listas para mandar con un solo click por cliente.
-function renderReservasRemindersDue(){
-  const box = document.getElementById('reservas-reminders-due');
-  if(!box) return;
-  const tomorrowDate = dateStr(new Date(Date.now() + 86400000));
-  const due = DB.reservations.filter(r =>
-    r.date === tomorrowDate && !r.reminderSentAt && !r.llegada &&
-    (r.status==='confirmada' || r.status==='pendiente') &&
-    ((r.clientId && DB.clients.find(c=>c.id===r.clientId)?.phone) || r.clientPhone)
-  );
-  if(!due.length){ box.innerHTML = ''; return; }
-  box.innerHTML = `
-    <h3 style="margin-top:0"><i class="ti ti-bell-ringing"></i> ${t('title.remindersDueTomorrow')}</h3>
-    <div class="grid grid-3" style="margin-bottom:16px">
-      ${due.map(r => {
-        const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
-        const name = client ? client.name : (r.clientName || '—');
-        return `
-        <div class="card">
-          <h3 style="justify-content:space-between;font-size:14px"><span>${escapeHtml(name)}</span></h3>
-          <div style="font-size:13px"><i class="ti ti-clock"></i> ${escapeHtml(r.time||'')} · <i class="ti ti-users"></i> ${r.people}</div>
-          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-}
-
 /* ============================================================
    PROMOCIÓN — Calendario de marketing del negocio
    ============================================================ */
