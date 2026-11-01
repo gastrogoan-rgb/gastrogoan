@@ -130,11 +130,11 @@ const TOUR_STEPS = [
   // ---- Sala ----
   {icon:'ti-device-desktop', titleKey:'tour.s46.title', descKey:'tour.s46.desc', folder:'sala', target:'#folder-modules', phase:'sala'},
   {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv', target:'#tpv-mesas-section', phase:'sala'},
-  {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv', target:'.mesa-card', phase:'sala'},
-  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', target:'.mesa-card', phase:'sala'},
-  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', target:'.mesa-card', phase:'sala'},
-  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', target:'.mesa-card', phase:'sala'},
-  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', target:'.mesa-card', phase:'sala'},
+  {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
+  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
+  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
+  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
+  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
   {icon:'ti-shopping-bag', titleKey:'tour.s10.title', descKey:'tour.s10.desc', folder:'sala', view:'tpv', target:'#tpv-togo-section', phase:'sala'},
   {icon:'ti-world', titleKey:'tour.s11.title', descKey:'tour.s11.desc', folder:'sala', view:'tpv', target:'#tpv-online-toggle-btn', phase:'sala'},
   {icon:'ti-cash-register', titleKey:'tour.s12.title', descKey:'tour.s12.desc', folder:'sala', view:'tpv', target:'#tpv-close-cash-btn', phase:'sala'},
@@ -2075,7 +2075,7 @@ function ggSiPlegada(ev, el){
 }
 function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
 
-const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas'];   // pantallas que ya tienen el diseño nuevo
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas', 'view-tpv'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;

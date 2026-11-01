@@ -207,21 +207,24 @@ await caso('Una mesa abierta se distingue de una libre de un vistazo', async () 
     saveDB();
     currentFolder = 'sala'; navigate('tpv');
     await new Promise(r=>setTimeout(r,700));
-    const ocup = document.querySelector('.mesa-card.mesa-occupied');
-    const libre = document.querySelector('.mesa-card.mesa-free');
+    const ocup = document.querySelector('.tp-mesa:not(.is-libre)');
+    const libre = document.querySelector('.tp-mesa.is-libre');
     if(!ocup || !libre) return {falta:true};
     const co = getComputedStyle(ocup), cl = getComputedStyle(libre);
+    const bo = getComputedStyle(ocup, '::before'), bl = getComputedStyle(libre, '::before');
     return {
-      ocupada: parseFloat(co.borderLeftWidth), colorOcupada: co.borderLeftColor,
-      libre: parseFloat(cl.borderLeftWidth),
-      // El canto de arriba sigue siendo el color de la fase del servicio.
-      cantoArriba: parseFloat(co.borderTopWidth),
+      // Rediseño 1/11: la ocupada lleva una barra de color a la izquierda y fondo propio; la libre, borde discontinuo y sin barra.
+      barraOcupada: parseFloat(bo.width), colorBarra: bo.backgroundColor,
+      barraLibre: bl.backgroundColor,
+      bordeLibre: cl.borderLeftStyle, bordeOcupada: co.borderLeftStyle,
+      fondoOcupada: co.backgroundColor, fondoLibre: cl.backgroundColor,
     };
   });
   assert.ok(!r.falta, 'hacen falta una mesa abierta y otra libre: ' + JSON.stringify(r));
-  assert.ok(r.ocupada >= 2, 'la mesa abierta lleva borde marcado: ' + JSON.stringify(r));
-  assert.ok(r.ocupada > r.libre, 'y más marcado que una libre: ' + JSON.stringify(r));
-  assert.equal(r.cantoArriba, 4, 'el canto de arriba sigue dando la fase del servicio: ' + JSON.stringify(r));
+  assert.ok(r.barraOcupada >= 6 && r.colorBarra !== 'rgba(0, 0, 0, 0)', 'la mesa abierta lleva una barra de color marcada: ' + JSON.stringify(r));
+  assert.equal(r.barraLibre, 'rgba(0, 0, 0, 0)', 'la libre no lleva barra: ' + JSON.stringify(r));
+  assert.equal(r.bordeLibre, 'dashed', 'la libre va con borde discontinuo: ' + JSON.stringify(r));
+  assert.equal(r.bordeOcupada, 'solid', 'la abierta con borde continuo: ' + JSON.stringify(r));
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {
