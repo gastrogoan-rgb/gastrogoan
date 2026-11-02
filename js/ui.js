@@ -156,7 +156,7 @@ const TOUR_STEPS = [
   {icon:'ti-logout', titleKey:'tour.s41.title', descKey:'tour.s41.desc', target:'#logout-btn', phase:'ayuda'},
   {icon:'ti-messages', titleKey:'tour.s29.title', descKey:'tour.s29.desc', target:'#chat-fab', phase:'ayuda'},
   {icon:'ti-help-hexagon', titleKey:'tour.s30.title', descKey:'tour.s30.desc', target:'#help-fab', phase:'ayuda'},
-  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.mn-indice', phase:'ayuda'},
+  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.mnl-indice', phase:'ayuda'},
 
   // ---- Cierre ----
   {icon:'ti-rocket', titleKey:'tour.s33.title', descKey:'tour.s33.desc', phase:'ayuda', finale:true},
@@ -2075,7 +2075,7 @@ function ggSiPlegada(ev, el){
 }
 function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
 
-const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas', 'view-tpv'];   // pantallas que ya tienen el diseño nuevo
+const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas', 'view-tpv', 'view-manual'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;
