@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = fs.readFileSync(path.join(raiz, 'js/core.js'), 'utf8');
 const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
-const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
+const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8') + fs.readFileSync(path.join(raiz, 'js/tpv-sala.js'), 'utf8');
 const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
 const menu = fs.readFileSync(path.join(raiz, 'js/menu.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');

@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = fs.readFileSync(path.join(raiz, 'js/core.js'), 'utf8');
 const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
-const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8');
+const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8') + fs.readFileSync(path.join(raiz, 'js/tpv-sala.js'), 'utf8');
 const menu = fs.readFileSync(path.join(raiz, 'js/menu.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
 const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8');
@@ -491,7 +491,7 @@ caso('Cocina ya no puede marcar "recogido" — ese paso es de SALA (1/10)', () =
   assert.ok(!/else if\(line\.estado === 'entregado' && !line\.recogidoAt\) markLineRecogida/.test(tpv), 'cycleLineEstado (cocina) todavía puede marcar recogido');
   assert.ok(!/else if\(line\.estado === 'entregado' && !line\.recogidoAt\)\{ line\.recogidoAt/.test(tpv), 'cycleGroupEstado todavía marca recogido dentro del bucle compartido con cocina');
   assert.ok(tpv.includes('function marcarTandaRecogidaDesdeSala'), 'falta la función con la que SALA marca recogida una tanda entera');
-  assert.ok(tpv.includes("onclick=\"marcarTandaRecogidaDesdeSala(${order.id}, '${escapeJsAttr(g.tanda||'')}')\""), 'en Sala no hay ningún botón que llame a marcarTandaRecogidaDesdeSala');
+  assert.ok(tpv.includes("marcarTandaRecogidaDesdeSala(${order.id}, '${escapeJsAttr(g.tanda||'')}')"), 'en Sala no hay ningún botón que llame a marcarTandaRecogidaDesdeSala');
 });
 
 caso('Las plazas de una mesa son obligatorias (sin ellas la web no puede ofrecerla)', () => {

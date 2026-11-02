@@ -54,15 +54,15 @@ a{color:var(--text)}a:hover{color:var(--olive)}
    ratón la barra por defecto del sistema desentonaba con el resto del
    diseño, gruesa y gris genérica). Sin esto en Firefox: no pasa nada, se
    queda con la del sistema, no rompe nada. */
-.content::-webkit-scrollbar,.modal::-webkit-scrollbar,.tpv-order-col::-webkit-scrollbar,
+.content::-webkit-scrollbar,.modal::-webkit-scrollbar,.tp-or-col::-webkit-scrollbar,
 .ge-grid::-webkit-scrollbar,.table-wrap::-webkit-scrollbar{
   width:8px;height:8px;
 }
-.content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track,.tpv-order-col::-webkit-scrollbar-track,
+.content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track,.tp-or-col::-webkit-scrollbar-track,
 .ge-grid::-webkit-scrollbar-track,.table-wrap::-webkit-scrollbar-track{
   background:transparent;
 }
-.content::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb,.tpv-order-col::-webkit-scrollbar-thumb,
+.content::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb,.tp-or-col::-webkit-scrollbar-thumb,
 .ge-grid::-webkit-scrollbar-thumb,.table-wrap::-webkit-scrollbar-thumb{
   background:var(--border);border-radius:4px;
 }
@@ -233,7 +233,6 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .kds-ticket>.kds-body{padding:12px 14px}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
-.grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
 /* 320px se quedaba corto: con mensaje/distribución/whatsapp/email/editar/
    calendario/borrar (7 iconos de 44px, el mínimo táctil) la papelera se
    salía sola a una segunda línea, descolocada. 370px es lo mínimo que los
@@ -303,62 +302,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .togo-order-client{font-size:15px;color:var(--text);font-weight:800}
 .togo-order-price{font-size:14px;color:var(--ink);font-weight:800}
 .togo-order-address{display:flex;align-items:flex-start;gap:4px;font-size:12px;color:var(--muted)}
-
-/* min-height fijo para que TODAS las mesas midan igual, estén en la zona que
-   estén y tengan o no comanda abierta — antes cada zona era una rejilla CSS
-   independiente, así que una zona con mesas mayormente libres (contenido
-   corto: nombre + "Libre") salía visiblemente más baja/pequeña que otra con
-   mesas ocupadas (más líneas de contenido: fase, total, camarero...). Con
-   una altura mínima común, todas ocupan el mismo sitio siempre. */
-.mesa-card{padding:16px 10px 12px;margin-bottom:0;font-size:11px;border-radius:14px;border-top-width:4px;border-top-style:solid;display:flex;flex-direction:column;align-items:center;min-height:150px;justify-content:center}
-.mesa-card.mesa-free{background:var(--surface);border:1px dashed var(--border);border-top:4px dashed var(--border)}
-.mesa-card.mesa-free:hover{border-color:var(--ink)}
-/* Una mesa abierta se leía casi igual que una libre: mismo borde fino y del
-   mismo gris. Con el plano lleno cuesta ver de un vistazo cuáles están
-   ocupadas (lo pidió el dueño el 12/09, señalando el recuadro marcado que ya
-   tenía la mesa fría). Borde de 2 px en el negro de la app; el canto de
-   arriba se queda en 4 px con el color de la fase del servicio. */
-.mesa-card.mesa-occupied{background:var(--surface);border:2px solid var(--text);border-top-width:4px}
-/* Acento de color según la fase de servicio: recién sentados (naranja de
-   marca), en cocina (ámbar), preparando (teal), listos para cobrar (verde) —
-   así se distingue de un vistazo una mesa recién abierta de una atascada,
-   en vez del mismo verde plano para cualquier mesa ocupada. */
-.mesa-card.mesa-phase-taking{border-top-color:var(--muted)}
-.mesa-card.mesa-phase-kitchen{border-top-color:var(--amber)}
-.mesa-card.mesa-phase-preparing{border-top-color:var(--purple)}
-.mesa-card.mesa-phase-served{border-top-color:var(--green)}
-.mesa-card.mesa-phase-occupied{border-top-color:var(--muted)}
-.mesa-card .mesa-name{font-size:16px;font-weight:800;margin-bottom:1px;white-space:normal;overflow:visible;text-overflow:clip;max-width:100%;line-height:1.15}
-.mesa-card .badge{font-size:10.5px;padding:2px 6px;gap:2px}
-.mesa-card .mesa-status-free{font-size:12px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:4px}
-.mesa-card .mesa-status-free .ti{font-size:15px}
-.mesa-card.mesa-reserved-soon{border-color:var(--ink);border-style:dashed}
-.mesa-card .mesa-pax-free{margin-top:4px;justify-content:center;width:100%}
-.mesa-card .mesa-reservation-hint{margin-top:6px;font-size:10.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:3px;flex-wrap:wrap;text-align:center}
-.mesa-card .mesa-phase-row{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;color:var(--muted);margin-top:6px}
-.mesa-card .mesa-total{margin-top:6px;padding-top:6px;border-top:1px solid var(--border);width:100%;font-weight:800;font-size:20px;color:var(--ink)}
-.mesa-card .mesa-meta-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:7px;flex-wrap:wrap;width:100%}
-.mesa-card .mesa-pax{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
-.mesa-card .mesa-pax .ti{font-size:12px}
-.mesa-card .mesa-waiter-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);font-weight:600;max-width:100%;overflow:visible;text-overflow:clip;white-space:normal}
-/* Era 9px: por debajo del mínimo de 11 (test/movil.mjs, "letra") — se veía
-   solo con un camarero de verdad asignado a la mesa, que la carga de datos
-   de prueba anterior nunca llegaba a mostrar. El círculo crece 2px para que
-   la inicial quepa sin sentirse apretada. */
-.mesa-card .mesa-waiter-avatar{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;flex-shrink:0}
-.mesa-card .mesa-icons-row{position:absolute;top:6px;left:6px;display:flex;gap:3px}
-.mesa-card .mesa-mini-badge{font-size:12px;line-height:1}
-.mesa-card .mesa-mini-badge .ti{font-size:13px;color:var(--ink)}
-.mesa-card .mesa-elapsed-row{position:absolute;top:6px;right:6px}
-.mesa-card .mesa-elapsed{display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:700}
-.mesa-card .mesa-elapsed .ti{font-size:11px}
-.mesa-card .mesa-elapsed-normal{color:var(--muted)}
-.mesa-card .mesa-elapsed-warn{color:var(--amber-dark, #8A7440)}
-.mesa-card .mesa-elapsed-urgent{color:var(--red)}
-.mesa-card.mesa-fria{border:2px solid var(--blue,#4E5A63)}
-.mesa-card.mesa-blink-urgent{animation:mesa-blink 1s ease-in-out infinite}
 @keyframes mesa-blink{0%,100%{box-shadow:0 0 0 0 rgba(220,53,69,.55)}50%{box-shadow:0 0 0 6px rgba(220,53,69,0)}}
-@media (prefers-reduced-motion: reduce){.mesa-card.mesa-blink-urgent{animation:none;border:2px solid var(--red)}}
 
 .view-toggle{display:flex;gap:4px}
 .view-toggle .btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -411,16 +355,6 @@ body:not(.owner-session) .owner-strict{display:none !important}
    significa borrar lo que no era. */
 .btn-icon{padding:7px 9px;min-height:38px;min-width:38px}
 .btn-icon i{font-size:16px;line-height:1}
-/* Botones de +/-/notas/marchar/borrar de cada línea de comanda: 36px base
-   (por encima del mínimo táctil cómodo de ~36px) en cualquier tamaño de
-   pantalla, no solo en el breakpoint móvil más estrecho — antes se
-   quedaban en 32px en tablets y móviles en horizontal. */
-/* Tamaño FIJO, con min y max: la regla general de .btn-icon (44 px) los
-   estiraba por encima del alto de su fila y se salían por abajo, llegando
-   a solaparse con el botón de Cobrar del pie — pulsar "+" en el último
-   plato podía acabar cobrando la mesa. Van en pareja dentro de cada línea
-   de la comanda, así que su alto lo manda la fila, no la regla general. */
-.btn.btn-sm.btn-icon.comanda-qty-btn,.comanda-qty-btn{width:40px;height:40px;min-width:40px;min-height:40px;max-height:40px;padding:0;font-size:14px;flex:none}
 /* Checkboxes y radios: no tenían NINGUNA regla de tamaño en toda la app, así
    que se quedaban en el ~13px diminuto por defecto del navegador — muy por
    debajo de cualquier objetivo táctil, en cada alérgeno, cada "solo
@@ -683,36 +617,6 @@ td.wrap{white-space:normal}
 .modal-body{overflow-y:auto;min-height:0;flex:1}
 .modal.modal-xl{max-width:920px;max-height:95vh;max-height:95dvh}
 .modal.modal-order{max-width:1200px;max-height:96vh;max-height:96dvh;width:98%}
-/* Mesa/comanda: carta a un lado y el pedido en curso al otro. En pantalla
-   ancha van lado a lado, cada uno con su propio scroll interno acotado a
-   casi toda la altura del modal — con una mesa grande y muchos platos
-   pedidos, se ve de golpe en vez de un cuadro diminuto con scroll propio. */
-.tpv-order-cols{display:flex;gap:12px;flex-wrap:wrap;min-height:400px;max-height:calc(96vh - 170px);max-height:calc(96dvh - 170px)}
-.tpv-order-col{flex:1 1 280px;min-width:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px}
-/* La comanda suele llevar más contenido que el selector de carta/menú (que
-   con pocas secciones deja mucho blanco al lado) — le damos más ancho en
-   vez de repartir 50/50. */
-.tpv-order-col-selector{flex:1 1 280px}
-.tpv-order-col-comanda{flex:1.6 1 340px}
-/* Antes llevaba fondo crema propio: junto con las cajas con borde de cada
-   tanda (ya quitadas, ver renderTandaGroupCard) hacía que la comanda de
-   Sala se viera muy distinta a la de Cocina. Sin tinte propio, hereda el
-   fondo neutro de .tpv-order-col y se parece al diseño de Cocina. */
-/* En tablet/PC, carta y comanda van lado a lado (ver arriba). En móvil no
-   caben las dos a la vez sin quedar diminutas — antes se apilaban en dos
-   cajas con scroll propio cada una (38vh/52vh), y aun así costaba ver algo
-   entero sin estar haciendo scroll todo el rato dentro de una caja tan
-   pequeña. Ahora se ve SOLO una de las dos, a casi toda la altura
-   disponible, con el interruptor Carta/Comanda (.tpv-mobile-pane-toggle,
-   ver el HTML en renderTableOrderModal) para cambiar entre ellas. */
-.tpv-mobile-pane-toggle{display:none}
-@media (max-width: 720px){
-  .tpv-order-cols{max-height:none;min-height:0}
-  .tpv-order-col{flex-basis:100%;display:none}
-  .tpv-order-col.tpv-pane-active{display:block;max-height:calc(100vh - 300px);max-height:calc(100dvh - 300px)}
-  .tpv-mobile-pane-toggle{display:flex;gap:8px;margin-bottom:10px}
-  .tpv-mobile-pane-toggle .btn{flex:1}
-}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0}
 .modal-header h3{font-size:19px}
 .modal-close{background:none;border:none;font-size:26px;cursor:pointer;color:var(--muted);min-height:44px;min-width:44px}
@@ -1296,7 +1200,6 @@ td.wrap{white-space:normal}
   /* Grids */
   .grid-2{grid-template-columns:repeat(2,1fr)}
   .grid-4{grid-template-columns:repeat(3,1fr)}
-  .grid-mesas{grid-template-columns:repeat(4,1fr);gap:8px}
   .grid-compact{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
 
   /* KPIs — max 4 columnas */
@@ -1589,26 +1492,6 @@ td.wrap{white-space:normal}
   .grid{gap:8px}
   .grid-2{grid-template-columns:1fr}
   .grid-4{grid-template-columns:repeat(2,1fr)}
-  .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px}
-  /* Tarjeta de mesa más rectangular (baja) en móvil: antes cada mesa
-     ocupaba casi media pantalla de alto y había que hacer mucho scroll
-     para ver el resto del salón — se aprietan márgenes y tamaños de letra
-     para que quepan más filas sin scroll, sin perder ningún dato. */
-  .mesa-card{min-height:64px;padding:9px 7px 7px;font-size:10.5px}
-  .mesa-card .mesa-name{margin-top:9px;font-size:13.5px}
-  .mesa-card .mesa-icons-row{top:4px;left:4px}
-  .mesa-card .mesa-elapsed-row{top:4px;right:4px}
-  .mesa-card .mesa-elapsed{font-size:9px}
-  .mesa-card .mesa-total{margin-top:3px;padding-top:3px;font-size:15px}
-  .mesa-card .mesa-meta-row{margin-top:3px;gap:6px}
-  .mesa-card .mesa-phase-row{margin-top:3px;font-size:10.5px}
-  .mesa-card .mesa-status-free{margin-top:5px;font-size:11px}
-  .mesa-card .mesa-pax-free{margin-top:2px}
-  /* "Reservada a las 21:30 para Familia Rodríguez": es el aviso que
-     evita sentar a alguien en una mesa ya reservada. A 9,5 px no se lee
-     de un vistazo, que es justo cuando hace falta. */
-  .mesa-card .mesa-reservation-hint{margin-top:3px;font-size:10.5px}
-  .mesa-card .badge{font-size:8.5px;padding:1px 5px}
 
   /* Buttons & toolbars */
   .btn{padding:7px 10px;font-size:12px;border-radius:8px}
@@ -1709,33 +1592,6 @@ td.wrap{white-space:normal}
   .btn-icon{min-width:44px;min-height:44px;padding:5px}
   .btn-icon i{font-size:15px}
 
-  /* Comanda item rows (TPV): en móvil todo pantalla es más pequeña, así que
-     hay menos sitio de sobra para cada línea de la comanda. Cuanto más
-     grande sea cada fila, antes hace falta scroll para ver el resumen del
-     pedido completo mientras se está tomando nota — más denso a propósito. */
-  .comanda-item-row{gap:6px !important;padding:5px 0 !important;flex-wrap:wrap;font-size:12px !important}
-  /* El nombre del plato competía por espacio con 4-5 botones de icono de
-     ancho fijo en la misma línea y se partía en 2-3 líneas verticales
-     (p.ej. "Tortilla" / "de" / "patatas") en vez de que la fila entera
-     bajara de línea — se le da su propia fila completa, precio y botones
-     debajo. */
-  .comanda-item-row > span:first-child{flex-basis:100%}
-  /* 30 px era demasiado poco para el dedo justo donde más prisa hay
-     (sumar y restar unidades en mitad del servicio). 38 sin descolocar la
-     fila. */
-  .comanda-qty-btn{width:38px !important;height:38px !important;min-width:38px !important;min-height:38px !important;max-height:38px !important;padding:0 !important}
-  .comanda-qty-btn i{font-size:13px !important}
-
-  /* Tarjetas de sección de la carta (ENTRANTES/PRINCIPALES...): más
-     compactas y más por fila, para ver varias secciones sin bajar tanto. */
-  .tpv-sec-card{padding:8px 6px !important;gap:2px !important;min-width:88px !important}
-  .tpv-sec-card .tpv-sec-icon{font-size:17px !important}
-  .tpv-sec-card .tpv-sec-name{font-size:11.5px !important}
-  /* Era 10.5px !important, y encima ANULABA el 11px correcto que ya
-     llevaba en línea (js/tpv.js) — alguien lo apretó al hacer más
-     compactas estas tarjetas sin fijarse en el mínimo. Sube a 11.5, como
-     su hermana .tpv-sec-name dos líneas arriba. */
-  .tpv-sec-card .tpv-sec-count{font-size:11.5px !important}
 
   /* Carta — evitar que el precio se aplaste entre nombre y botones */
   .ge-item{flex-wrap:wrap !important;row-gap:6px}
@@ -2068,16 +1924,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .content .view.active{animation:view-fade-in .28s ease}
 @keyframes view-fade-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
-/* Mesas del TPV: elevación sutil al pasar el ratón, sin sombra (queda plano).
-   No se toca border-color en :hover (afectaría también al acento de color de
-   la fase en border-top): solo se anima el borde lateral en mesas libres. */
-.mesa-card{transition:transform .15s ease, border-color .15s ease}
-.mesa-card:hover{transform:translateY(-2px)}
-.mesa-card.mesa-free:hover{border-color:#1C1A17}
-.mesa-card:active{transform:translateY(0)}
 
-/* Aviso de comanda nueva: parpadeo suave para que llame la atención */
-.mesa-card .badge-amber .ti-bell-ringing{display:inline-block; animation:bell-pulse 1.6s ease-in-out infinite}
 @keyframes bell-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 /* KPIs (dashboard y Gestión Económica): elevación sutil, coherente con las mesas */
@@ -2095,9 +1942,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 @media (prefers-reduced-motion: reduce){
   .content .view.active{animation:none}
   .ge-tab-panel.active{animation:none}
-  .mesa-card,.kpi,.ge-kpi,.kpi-mini,.module-card,.folder-card{transition:none}
-  .mesa-card:hover,.kpi:hover,.ge-kpi:hover,.kpi-mini:hover,.module-card:hover,.folder-card:hover{transform:none}
-  .mesa-card .badge-amber .ti-bell-ringing{animation:none}
+  .kpi,.ge-kpi,.kpi-mini,.module-card,.folder-card{transition:none}
+  .kpi:hover,.ge-kpi:hover,.kpi-mini:hover,.module-card:hover,.folder-card:hover{transform:none}
 }
 
 /* ── Objetivo táctil: 44 px de verdad ──
@@ -2122,7 +1968,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .toolbar .btn, .actions-cell .btn, .app-header .btn{min-height:44px}
   .app-header .btn{min-width:44px}
   .btn-icon, .btn-sm.btn-icon{min-width:44px;min-height:44px}
-  .btn.btn-sm.btn-icon.comanda-qty-btn, .comanda-qty-btn{min-width:40px;min-height:40px}
 
   /* iPhone y iPad: Safari hace ZOOM solo al tocar un campo cuya letra mida
      menos de 16 px, y después deja la pantalla desencuadrada — el hostelero
@@ -4386,6 +4231,238 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .rv-solic{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--hair)}
 .rv-solic:first-child{border-top:0}
 .rv-solic-info{min-width:0;display:flex;flex-direction:column;gap:6px}
+/* TPV (1/11): mesas rehechas, tomar nota y aire por los cuatro lados.
+   Norma nueva: un bloque con borde nunca toca el borde de su contenedor ni el pie de una ventana. */
+/* ── Aire en las ventanas: el cuerpo que hace scroll lleva margen por los cuatro lados (antes las cajas pegaban con el pie
+      y sus bordes y aros de foco se recortaban en los lados), y el pie se separa con un filete. ── */
+.modal-body{padding:4px 6px 18px;margin:0 -6px;scroll-padding-bottom:18px;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent)}
+.modal-footer{margin-top:0;padding-top:12px;border-top:1px solid var(--hair)}
+.modal-header{margin-bottom:12px}
+/* Las zonas con scroll propio llevan un colchón por dentro: lo último no queda cortado contra el borde. */
+.tpv-order-col,.tp-or-col{scroll-padding-bottom:16px}
+
+/* ── Franja de arriba: cifras + botones ── */
+.tp-cab{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px 14px;margin:0 0 14px}
+.tp-cab .tp-cifras{flex:1 1 520px;margin:0}
+.tp-cab .tp-acciones{margin:0;align-content:center}
+.tp-acciones.tp-botonera{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex:0 0 auto;align-content:stretch}
+.tp-botonera .btn{justify-content:center;white-space:nowrap}
+.tp-botonera .btn.btn-fino::before{top:0;bottom:0;height:auto;margin-top:0}
+.tp-corto{display:none}
+.tp-sep{width:1px;align-self:stretch;background:var(--hair);margin:0 4px}
+.tp-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--hair);background:#fff;border-radius:3px;margin:0 0 12px}
+.tp-cifra{display:flex;flex-direction:column;gap:2px;padding:10px 14px;min-width:0;border:0;border-right:1px solid var(--hair);background:none;text-align:left;font:inherit;color:var(--ink)}
+.tp-cifra:last-child{border-right:0}
+.tp-cifra-et{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);overflow-wrap:break-word}
+.tp-cifra-v{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em;overflow-wrap:anywhere}
+.tp-cifra.is-ventas{cursor:pointer}
+.tp-cifra.is-ventas:hover{background:var(--brand-cream)}
+.tp-cifra.is-ventas:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
+.tp-cifra.is-cocina .tp-cifra-v{color:#8A6A1F}
+.tp-acciones{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px}
+.tp-acciones .btn b{font-family:var(--mono);margin-left:2px}
+.tp-chip-cartas.is-off{border-color:#D9B8AF}
+.tp-caja{margin-left:0}
+.tp-aviso-sec{margin:0 0 16px}
+.tp-sec-tit{margin:18px 0 10px}
+.tp-mini{list-style:none;margin:0;padding:0;font-size:13.5px}
+.tp-mini li{padding:2px 0}
+.tp-total-grande{font-family:var(--mono);font-size:20px;font-weight:600}
+.tp-ca-lista{list-style:none;margin:0 0 12px;padding:0}
+.tp-ca-fila{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--hair)}
+.tp-ca-fila > .ti{flex:none;font-size:20px;color:var(--olive)}
+.tp-ca-nom{flex:1;min-width:0;overflow-wrap:break-word}
+.tp-ca-nom small{color:var(--muted);margin-left:4px}
+
+/* ── Las mesas ── */
+.tp-mesas-barra{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;margin:0 0 10px}
+.tp-filtros{margin:0}
+.tp-mesas-herr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tp-buscar{width:150px;max-width:100%;height:44px !important;min-height:44px !important}
+.tp-zonas{margin:0 0 12px}
+.tp-zona{margin:0 0 20px}
+.tp-zona-tit{display:flex;align-items:center;gap:8px;margin:6px 0 10px;font-size:15px;font-weight:600}
+.tp-zona-tit .ti{color:var(--olive);font-size:18px}
+.tp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tp-mesa{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;min-height:118px;padding:11px 12px 10px 16px;background:#fff;border:1px solid var(--hair);border-radius:4px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;overflow:hidden;min-width:0;transition:border-color .15s,background-color .15s,transform .12s}
+.tp-mesa::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--hair)}
+.tp-mesa:hover{border-color:var(--olive);transform:translateY(-1px)}
+.tp-mesa:active{transform:none}
+.tp-mesa:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.tp-mesa-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.tp-mesa-nombre{font-size:19px;font-weight:700;line-height:1.1;letter-spacing:-.01em;overflow-wrap:break-word;min-width:0}
+.tp-mesa-tiempo{flex:none;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.tp-mesa-tiempo.is-aviso{color:#8A6A1F}
+.tp-mesa-tiempo.is-urgente{color:#A8392B}
+.tp-mesa-estado{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.tp-mesa-total{font-family:var(--mono);font-size:23px;font-weight:600;letter-spacing:-.02em;margin-top:2px;white-space:nowrap}
+.tp-mesa-pie{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-top:auto;font-size:12px}
+.tp-mesa-pax{display:inline-flex;align-items:center;gap:3px;color:var(--muted)}
+.mesa-waiter-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink);font-weight:600;min-width:0}
+.mesa-waiter-avatar{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex:none}
+.tp-avisos{display:inline-flex;gap:4px;margin-left:auto}
+.tp-av{display:inline-flex;align-items:center;gap:2px;min-width:22px;height:22px;padding:0 5px;justify-content:center;border-radius:11px;background:var(--brand-cream);border:1px solid var(--hair);font-size:12px}
+.tp-av.is-nuevo{background:#FBF3DF;border-color:#D9B35A}
+.tp-av.is-nuevo .ti{animation:bell-pulse 1.6s ease-in-out infinite}
+.tp-av.is-inc{background:#B4432F;border-color:#B4432F;color:#fff}
+.tp-av.is-inc.nuevo{animation:acc-latido 1.6s ease-in-out infinite}
+.tp-av.is-qr{background:var(--ink);border-color:var(--ink);color:#fff}
+.tp-av.is-fria{background:#E8EEF2;border-color:#9FB3C2}
+.tp-av.is-pago{background:#EAF1E6;border-color:#9CB09C}
+/* Estados: lo que se ve de lejos es el COLOR de la barra de la izquierda y el fondo. */
+.tp-mesa.is-libre{background:#fff;border-style:dashed;color:var(--muted)}
+.tp-mesa.is-libre::before{background:transparent}
+.tp-mesa.is-libre .tp-mesa-nombre{color:var(--ink)}
+.tp-mesa-libre{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted)}
+.tp-mesa-reserva{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--ink);background:var(--brand-cream);border:1px dashed var(--ink);border-radius:3px;padding:3px 7px;margin-top:auto;overflow-wrap:anywhere}
+.tp-mesa.es-reservada{border-color:var(--ink)}
+.tp-mesa.is-tomando{background:#F7F6F2}
+.tp-mesa.is-tomando::before{background:#7A7468}
+.tp-mesa.is-ocupada{background:#F7F6F2}
+.tp-mesa.is-ocupada::before{background:#7A7468}
+.tp-mesa.is-cocina{background:#FBF5E4;border-color:#E3CC8E}
+.tp-mesa.is-cocina::before{background:#C79A2E}
+.tp-mesa.is-cocina .tp-mesa-estado{color:#8A6A1F}
+.tp-mesa.is-servida{background:#EAF1E6;border-color:#A9C0A6}
+.tp-mesa.is-servida::before{background:var(--olive)}
+.tp-mesa.is-servida .tp-mesa-estado{color:#33523A;font-weight:600}
+.tp-mesa.es-fria{box-shadow:inset 0 0 0 2px #9FB3C2}
+.tp-mesa.mesa-blink-urgent{animation:mesa-blink 1s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.tp-mesa.mesa-blink-urgent{animation:none;border-color:var(--red)}.tp-av.is-nuevo .ti,.tp-av.is-inc.nuevo{animation:none}}
+
+/* ── Tomar nota ── */
+.modal.modal-order{padding:0;overflow:hidden}
+.modal.modal-order > .modal-header,.modal.modal-order > .modal-footer{padding-left:18px;padding-right:18px}
+.modal.modal-order > .modal-header{padding-top:14px;margin-bottom:0}
+.modal.modal-order > .modal-body{padding:10px 18px 12px;margin:0;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.modal.modal-order > .modal-footer{padding-top:12px;padding-bottom:14px;background:#fff}
+.tp-or-cab{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.tp-or-cambiar{flex:none}
+.tp-or-mesa{flex:1;min-width:140px;margin:0;font-size:24px;font-weight:700;letter-spacing:-.015em;overflow-wrap:break-word;display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap}
+.tp-or-sub{font-family:var(--mono);font-size:13px;font-weight:400;color:var(--muted)}
+.tp-or-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px;flex:none}
+.tp-or-chips:empty{display:none}
+.tp-or-cab .modal-close{margin-left:auto}
+.tp-or-cuerpo{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(330px,1fr);gap:16px;flex:1;min-height:0}
+.tp-or-col{min-width:0;min-height:0;overflow-y:auto;padding:2px 4px 14px}
+.tp-or-comanda{background:var(--brand-cream);border:1px solid var(--hair);border-radius:4px;padding:12px 14px 16px}
+.tp-or-volver{display:none;margin-bottom:10px}
+.tp-or-barra{display:none}
+.modal.modal-order{height:min(94vh,880px);height:min(94dvh,880px)}
+.tp-or-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.tp-or-tab{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border:1px solid var(--hair);border-radius:3px;background:#fff;font:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+.tp-or-tab:hover{border-color:var(--olive)}
+.tp-or-tab:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.tp-or-tab.is-on{background:var(--ink);border-color:var(--ink);color:#fff}
+.tp-buscar-caja{position:relative;margin:0 0 12px}
+.tp-buscar-caja > .ti{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.tp-buscar-caja .tp-plato-busca{width:100%;max-width:none;height:46px !important;min-height:46px !important;padding:6px 10px 6px 40px !important}
+.tp-secciones{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.tp-seccion{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:104px;padding:12px 8px;background:#fff;border:1px solid var(--hair);border-radius:4px;font:inherit;color:var(--ink);cursor:pointer;text-align:center}
+.tp-seccion:hover{border-color:var(--olive);background:var(--brand-cream)}
+.tp-seccion:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.tp-seccion.tiene{border-color:var(--olive)}
+.tp-seccion-ico{font-size:28px;color:var(--olive);line-height:1}
+.tp-seccion-nom{font-size:15px;font-weight:700;overflow-wrap:break-word;max-width:100%}
+.tp-seccion-cuenta{font-size:12px;color:var(--muted)}
+.tp-seccion-n{position:absolute;top:6px;right:6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--olive);color:#fff;font-family:var(--mono);font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+.tp-sec-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.tp-sec-nombre{margin:0;font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.tp-platos{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px}
+.tp-plato{position:relative;display:flex;align-items:stretch;background:#fff;border:1px solid var(--hair);border-radius:4px;min-width:0;overflow:hidden}
+.tp-plato.tiene{border-color:var(--olive);background:#F3F7F0}
+.tp-plato-main{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:6px;min-height:76px;padding:10px 12px;border:0;background:none;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.tp-plato-main:hover{background:rgba(74,93,78,.07)}
+.tp-plato-main:active{background:rgba(74,93,78,.16)}
+.tp-plato-main:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
+.tp-plato-sec{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.tp-plato-nom{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:break-word;max-width:100%}
+.tp-plato-pre{font-family:var(--mono);font-size:14px;font-weight:600;color:#33523A}
+.tp-plato-n{position:absolute;top:8px;right:8px;min-width:30px;height:24px;padding:0 7px;border-radius:12px;background:var(--olive);color:#fff;font-family:var(--mono);font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+.tp-plato-acc{display:flex;flex-direction:column;border-left:1px solid var(--hair)}
+.tp-plato-acc button{flex:1;min-width:44px;min-height:38px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px}
+.tp-plato-acc button + button{border-top:1px solid var(--hair)}
+.tp-plato-acc button:hover{background:var(--brand-cream);color:var(--ink)}
+.tp-plato-acc button:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
+.tp-plato-menos{color:#8A3B2E !important}
+.tp-menu-ficha{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;background:#fff;border:1px solid var(--hair);border-radius:4px}
+.tp-menu-nom{font-size:17px}
+.tp-menu-pre{font-family:var(--mono);font-size:22px;font-weight:600;color:#33523A}
+/* La comanda */
+.tp-com-cab{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-bottom:10px;margin-bottom:6px;border-bottom:2px solid var(--ink)}
+.tp-com-tit{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700}
+.tp-com-uds{font-family:var(--mono);font-size:12px;background:var(--ink);color:#fff;border-radius:10px;padding:1px 8px}
+.tp-com-total{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.02em}
+.tp-com-seccion{margin:12px 0 4px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:6px}
+.tp-com-vacia{padding:28px 10px}
+.tp-com-vacia small{display:block;margin-top:4px}
+.tp-tanda{margin:10px 0 4px}
+.tp-tanda-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+.tp-tanda-nom{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
+.tp-tanda-bts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tp-tanda-bt{min-height:36px;padding:0 12px;font-size:12.5px}
+.tp-linea{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 0;border-top:1px solid var(--hair)}
+.tp-linea-cant{display:inline-flex;align-items:center;gap:2px}
+.tp-q{width:38px;height:38px;border:1px solid var(--hair);border-radius:3px;background:#fff;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:16px;padding:0}
+.tp-q:hover{border-color:var(--olive);background:var(--brand-cream)}
+.tp-q:focus-visible{outline:2px solid var(--olive);outline-offset:1px}
+.tp-q-n{min-width:30px;text-align:center;font-family:var(--mono);font-size:18px;font-weight:600}
+.tp-linea-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.tp-linea-nom{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:break-word}
+.tp-linea.marchada .tp-linea-nom{color:var(--muted)}
+.tp-linea-nota{align-self:flex-start;font-size:13px;color:#6B4E10;background:#FBF3DF;border-left:3px solid #C79A2E;padding:2px 8px;border-radius:2px;overflow-wrap:anywhere}
+.tp-linea-pre{font-family:var(--mono);font-size:14px;font-weight:600;white-space:nowrap}
+.tp-linea-acc{grid-column:2 / -1;display:flex;gap:6px;justify-content:flex-start}
+.tp-ac{width:38px;height:34px;border:1px solid var(--hair);border-radius:3px;background:#fff;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:16px;padding:0}
+.tp-ac:hover{border-color:var(--olive);color:var(--ink)}
+.tp-ac.is-marchar{color:var(--ink)}
+.tp-ac.is-quitar{color:#8A3B2E}
+.tp-ac:focus-visible{outline:2px solid var(--olive);outline-offset:1px}
+.tp-notas-rapidas{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tp-or-acciones{display:flex;gap:10px;flex-wrap:wrap;width:100%}
+.tp-or-acciones .btn{flex:1 1 180px;min-height:50px;font-size:16px;justify-content:center;white-space:nowrap}
+.tp-or-acciones .btn.btn-fino::before{top:0;bottom:0;height:auto;margin-top:0}
+.tp-or-cobrar{font-weight:600}
+.tp-or-cobrar b{white-space:nowrap}
+.tp-or-cobrar b{font-family:var(--mono);margin-left:2px}
+
+/* ── Para llevar y delivery: una ficha por pedido, con el mismo lenguaje que las mesas ── */
+.tp-togo-cab{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;margin:26px 0 6px}
+.tp-togo-tit{margin:0;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.tp-togo-tit .ti{color:var(--olive);font-size:18px}
+.tp-togo-acc{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tp-togo-aviso{margin:8px 0}
+.tp-togo-tabs{margin:8px 0 12px}
+.tp-grid-ped{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.tp-ped{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:12px 14px 12px 18px;background:#fff;border:1px solid var(--hair);border-radius:4px;font:inherit;color:var(--ink);text-align:left;min-width:0;overflow:hidden}
+button.tp-ped{cursor:pointer;transition:border-color .15s,transform .12s}
+button.tp-ped:hover{border-color:var(--olive);transform:translateY(-1px)}
+button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.tp-ped::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:#C79A2E}
+.tp-ped.es-delivery::before{background:#4E6A86}
+.tp-ped.es-urgente{background:#FBF1EE;border-color:#D9A79C}
+.tp-ped.es-urgente::before{background:#B4432F}
+.tp-ped.is-nuevo{border-color:var(--ink);background:#fff}
+.tp-ped.is-nuevo::before{background:var(--ink)}
+.tp-ped-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tp-ped-tipo{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tp-ped-hora{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:13px;font-weight:600;white-space:nowrap}
+.tp-ped-hora.is-urgente{color:#A8392B}
+.tp-ped-nom{font-size:17px;font-weight:700;line-height:1.2;overflow-wrap:break-word}
+.tp-ped-ref{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.tp-ped-dir{display:flex;align-items:flex-start;gap:5px;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.tp-ped-dir.is-alerta{color:#A8392B}
+.tp-ped-alerta{display:flex;align-items:center;gap:5px;font-size:13px;color:#A8392B}
+.tp-ped-lineas{font-size:13px;color:var(--ink);line-height:1.45}
+.tp-ped-total{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.02em}
+.tp-ped-pie{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.tp-ped-pie:empty{display:none}
+.tp-ped-botones{display:flex;gap:8px;margin-top:4px}
+.tp-ped-botones .btn{flex:1;min-height:48px;justify-content:center}
+.tp-ped-botones .btn.btn-fino::before{top:0;bottom:0;height:auto;margin-top:0}
+.tp-lastcall{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 14px;background:#FBF1EE;border:1px solid #D9A79C;border-left:6px solid #B4432F;border-radius:3px;font-size:14px}
+.tp-lastcall .ti{font-size:20px;color:#B4432F;flex:none}
+
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -4588,8 +4665,6 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
   .kt{max-height:calc(100dvh - 300px);min-height:300px;overflow-y:auto}
   .kt-mesa{font-size:24px}
 }
-.mesa-inc-badge{background:#B4432F !important;color:#fff !important}
-.mesa-inc-badge.nuevo{animation:acc-latido 1.6s ease-in-out infinite}
 
 /* --- Títulos de sección dentro de una pantalla --- */
 .view .card:not(.card-compact) > h3:first-child{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:14px}
@@ -4615,11 +4690,6 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .grid-4 > .kpi + .kpi,.grid-3 > .kpi + .kpi,.grid-2 > .kpi + .kpi,.kpi-grid > .kpi + .kpi{border-left:1px solid var(--hair)}
 .grid-4 > .kpi:first-child,.grid-3 > .kpi:first-child,.grid-2 > .kpi:first-child,.kpi-grid > .kpi:first-child{padding-left:0}
 
-/* --- Mesas: nombre y cuenta legibles en una línea --- */
-.grid-mesas{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
-.mesa-card{border-radius:var(--r-m)}
-.mesa-card .mesa-name{font-size:15px;font-weight:700;letter-spacing:-.01em}
-.mesa-card .mesa-total{font-family:var(--mono);font-size:17px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
 
 /* --- Radio único en TODA la app, también el escrito a mano en el JS ---
    Había 6, 8, 9, 10, 12, 14, 16 y 18 px mezclados en cientos de style="…". Se
@@ -4697,14 +4767,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 @media (prefers-reduced-motion:no-preference){
   .content .view.active .view-title,.content .view.active .view-header h2{animation:gg-rise .35s cubic-bezier(.2,.7,.2,1) backwards}
   .content .view.active .view-subtitle,.content .view.active .view-header .view-sub{animation:gg-rise .35s .05s cubic-bezier(.2,.7,.2,1) backwards}
-  .content .view.active :is(.card,.kpi,.mesa-card,.table-wrap,.dash-hero,.module-card,.home-pulse,.folder-card){animation:gg-rise .4s .08s cubic-bezier(.2,.7,.2,1) backwards}
+  .content .view.active :is(.card,.kpi,.table-wrap,.dash-hero,.module-card,.home-pulse,.folder-card){animation:gg-rise .4s .08s cubic-bezier(.2,.7,.2,1) backwards}
   .content .view.active :is(.module-card,.folder-card):nth-child(2){animation-delay:.12s}
   .content .view.active :is(.module-card,.folder-card):nth-child(3){animation-delay:.16s}
   .content .view.active :is(.module-card,.folder-card):nth-child(n+4){animation-delay:.2s}
   .home-title,.home-eyebrow{animation:gg-rise .4s cubic-bezier(.2,.7,.2,1) backwards}
-  .btn,.hdr-icon-btn,.tab,.ge-tab,.access-choice-btn,.folder-card,.module-card,.mesa-card{transition:transform .14s cubic-bezier(.2,.7,.2,1),background-color .15s,color .15s,border-color .15s}
+  .btn,.hdr-icon-btn,.tab,.ge-tab,.access-choice-btn,.folder-card,.module-card{transition:transform .14s cubic-bezier(.2,.7,.2,1),background-color .15s,color .15s,border-color .15s}
   .btn:active,.hdr-icon-btn:active,.tab:active,.ge-tab:active,.access-choice-btn:active{transform:scale(.97)}
-  .folder-card:active,.mesa-card:active{transform:scale(.99)}
+  .folder-card:active{transform:scale(.99)}
   .modal{animation:gg-pop .22s cubic-bezier(.2,.7,.2,1) backwards}
   #toast,.toast{animation:gg-slide-r .28s cubic-bezier(.2,.7,.2,1) backwards}
   .lang-panel{animation:gg-pop .14s ease backwards}
@@ -4975,7 +5045,6 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
      para ganar sitio en su pantalla y el resultado junto era una app con
      letra de prospecto médico. */
   .badge,.card-compact .badge,.togo-order-row .badge{font-size:11.5px;letter-spacing:.03em;padding:3px 8px}
-  .mesa-card .mesa-elapsed{font-size:11px}
   /* .txt-xs es el tamaño pequeño de toda la app (fechas de apoyo, "/mes",
      "← equilibrio", contadores dentro de un badge). Existe porque estaba
      escrito A MANO 36 veces en el JS como style="font-size:10.5px", donde
@@ -4983,9 +5052,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
      Ahora es una clase, y aquí sube de golpe para todas. */
   .txt-xs{font-size:11.5px}
   .ge-kpi .lbl,.kpi-mini .l{font-size:11.5px;letter-spacing:.2px}
-  .bar-lbl,.mesa-card .mesa-phase-row,.mesa-card .mesa-pax,
-  .mesa-card .mesa-waiter-chip,.mesa-card .mesa-elapsed{font-size:11.5px}
-  .mesa-card .badge{font-size:10.5px}   /* dentro de la mesa sí manda el sitio */
+  .bar-lbl{font-size:11.5px}
 
   /* ── 2. Una palabra no se parte nunca ──────────────────────────────
      El nombre de una carpeta de categoría se quedaba con 40 px de ancho y
@@ -5196,4 +5263,70 @@ small{font-size:max(.8333em, 11px)}
   .rv-acc{justify-content:flex-start}
   .rv-solic{grid-template-columns:minmax(0,1fr)}
   .rv-barra .left,.rv-barra .search-input{width:100%;max-width:none}
+}
+
+/* ── TPV en móvil y tablet (1/11): lo que se toca en pleno servicio, con el pulgar ── */
+@media (max-width: 1180px){
+  .tp-cab .tp-acciones.tp-botonera{flex:1 1 100%}
+}
+@media (max-width: 1023px){
+  .tp-or-cuerpo{grid-template-columns:minmax(0,1.15fr) minmax(300px,1fr);gap:12px}
+}
+@media (max-width: 720px){
+  .tp-cab{gap:8px;margin-bottom:12px}
+  .tp-cab .tp-cifras{flex-basis:100%}
+  .tp-cifras{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tp-cifra.is-sec{display:none}
+  .tp-cifra{padding:8px 12px;border-right:0}
+  .tp-cifra:nth-child(1){border-right:1px solid var(--hair)}
+  .tp-cifra:nth-child(4){border-right:0}
+  .tp-cifra-v{font-size:18px}
+  .tp-cab .tp-acciones.tp-botonera{flex-basis:100%;gap:6px}
+  .tp-botonera .btn{padding-left:4px !important;padding-right:4px !important;font-size:12px !important}
+  .tp-acciones > .btn{flex:1 1 auto;justify-content:center}
+  .tp-largo{display:none}
+  .tp-corto{display:inline}
+  .tp-sep,.tp-zona-todas{display:none}
+  .tp-mesas-barra{gap:8px}
+  .tp-mesas-herr{width:100%}
+  .tp-buscar{flex:1;width:auto;min-width:0}
+  .tp-grid{grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:8px}
+  .tp-mesa{min-height:110px;padding:10px 10px 9px 14px}
+  .tp-mesa-nombre{font-size:18px}
+  .tp-mesa-total{font-size:21px}
+  /* Tomar nota a pantalla completa: se ve UNA cosa a la vez (carta o comanda) a casi toda la altura. */
+  .modal.modal-order{width:100%;max-width:100%;height:100vh;height:100dvh;max-height:100dvh;border-radius:0;margin:0}
+  .modal.modal-order > .modal-header{padding:10px 14px 8px}
+  .modal.modal-order > .modal-body{padding:8px 14px 8px}
+  .modal.modal-order > .modal-footer{padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));flex-direction:column;align-items:stretch;gap:8px}
+  .tp-or-cab > *{order:3}
+  .tp-or-mesa{font-size:20px;min-width:0;flex:1 1 calc(100% - 60px);order:1}
+  .tp-or-cab .modal-close{order:2}
+  .tp-or-cuerpo{display:block;position:relative}
+  .tp-or-col{display:none;height:100%;padding-bottom:16px}
+  .tp-or-col.tpv-pane-active{display:block}
+  .tp-or-comanda{padding:10px 12px 16px}
+  .tp-or-volver{display:inline-flex}
+  .tp-or-barra{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:52px;padding:0 14px;flex:none;border:0;border-radius:4px;background:var(--ink);color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+  .tp-or-barra.is-oculta{display:none}
+  .tp-or-barra-izq,.tp-or-barra-total{display:inline-flex;align-items:center;gap:8px}
+  .tp-or-barra-total{font-family:var(--mono);font-size:18px}
+  .tp-or-barra-n{font-family:var(--mono);background:#fff;color:var(--ink);border-radius:11px;padding:0 8px;font-size:13px}
+  .tp-or-acciones{flex-wrap:nowrap;gap:8px}
+  .tp-pto{display:none}
+  .tp-or-acciones .btn{flex:1 1 0;min-width:0;min-height:52px;font-size:14.5px;padding-left:8px;padding-right:8px;white-space:normal;line-height:1.15}
+  .tp-or-acciones .tp-or-cobrar{flex-grow:1.35}
+  /* La regla de móvil de toda la app aprieta cualquier .btn a 36,5 px con !important: aquí se pulsa con prisa y con el pulgar. */
+  .tp-acciones .btn,.tp-filtros .btn,.tp-mesas-herr .btn,.tp-togo-acc .btn,.tp-togo-tabs .btn,.tp-tanda-bt{min-height:44px !important}
+  .tp-or-acciones .btn,.tp-ped-botones .btn{min-height:52px !important;font-size:14.5px !important;padding-left:8px !important;padding-right:8px !important}
+  .tp-grid.tp-grid-ped{grid-template-columns:minmax(0,1fr)}
+  .tp-togo-acc{width:100%}
+  .tp-togo-acc .btn{flex:1 1 auto;justify-content:center}
+  .tp-secciones{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tp-platos{grid-template-columns:minmax(0,1fr)}
+  .tp-plato-main{min-height:68px}
+  .tp-plato-acc button{min-width:48px}
+}
+@media (max-width: 400px){
+  .tp-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
