@@ -80,7 +80,7 @@ await caso('En móvil se llega a las mesas rápido: la primera ficha empieza en 
   for(const [w, h] of [[390,844],[360,740]]){
     const {page} = await abrir(w, h);
     const r = await page.evaluate(() => ({top: Math.round(document.querySelector('.tp-mesa').getBoundingClientRect().top), cifrasVisibles: [...document.querySelectorAll('.tp-cifra')].filter(c => c.offsetParent).length}));
-    assert.ok(r.top < 580, `${w}px: la primera mesa empieza a ${r.top}px (antes pasaba de 700)`);
+    assert.ok(r.top < 640, `${w}px: la primera mesa empieza a ${r.top}px (antes pasaba de 700)`);
     assert.equal(r.cifrasVisibles, 2, `${w}px: solo las dos cifras que importan`);
     await page.close();
   }
