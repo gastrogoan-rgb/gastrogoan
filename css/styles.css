@@ -4463,7 +4463,7 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .manual-warning{background:#FBF3DF;border-left:4px solid #C79A2E;color:#5C4510}
 .manual-tip>i:first-child,.manual-warning>i:first-child{float:left;margin:2px 10px 0 0;font-size:17px}
 .manual-detail table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:14px;display:table}
-.manual-detail table td{overflow-wrap:anywhere}
+.manual-detail table td,.manual-detail table th{white-space:normal;overflow-wrap:break-word}
 .manual-detail table th,.manual-detail table td{border:1px solid var(--hair);padding:8px 12px;text-align:left;vertical-align:top}
 .manual-detail table th{background:var(--brand-cream);font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
 .mnl-toc{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:0 0 6px;padding:12px 14px;background:var(--brand-cream);border:1px solid var(--hair);border-radius:3px}
