@@ -102,7 +102,6 @@ lanzar; node test/menu-carta-header-cocina.mjs > "$SALIDA/menucartacocina.txt" 2
 lanzar; node test/sala-cabecera-mesa.mjs > "$SALIDA/salacabecera.txt" 2>&1 & P61=$!
 lanzar; node test/codigo-negocio-recordado.mjs > "$SALIDA/codigorecordado.txt" 2>&1 & P62=$!
 lanzar; node test/distribucion-volver-equipo.mjs > "$SALIDA/distvolver.txt" 2>&1 & P63=$!
-lanzar; node test/manual-indice-fijo.mjs > "$SALIDA/manualindice.txt" 2>&1 & P64=$!
 lanzar; node test/ge-ventas-propinas-tipo.mjs > "$SALIDA/geventastipo.txt" 2>&1 & P65=$!
 lanzar; node test/ge-fijos-irpf.mjs > "$SALIDA/gefijosirpf.txt" 2>&1 & P66=$!
 lanzar; node test/ge-tesoreria-irpf.mjs > "$SALIDA/geteirpf.txt" 2>&1 & P67=$!
@@ -150,6 +149,7 @@ lanzar; node test/novedades.mjs > "$SALIDA/novedades.txt" 2>&1 & P142=$!
 lanzar; node test/clientes.mjs > "$SALIDA/clientes.txt" 2>&1 & P143=$!
 lanzar; node test/reservas.mjs > "$SALIDA/reservas.txt" 2>&1 & P144=$!
 lanzar; node test/tpv.mjs > "$SALIDA/tpv.txt" 2>&1 & P145=$!
+lanzar; node test/manual.mjs > "$SALIDA/manual.txt" 2>&1 & P146=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -259,7 +259,6 @@ espera $P60 "en Comandas Cocina, menú/carta se dice una vez por tanda, no por p
 espera $P61 "Sala: Cambiar de mesa sube al principio de la cabecera"  "$SALIDA/salacabecera.txt" "casos pasaron"
 espera $P62 "código de negocio recordado en el desplegable, sin autoseleccionar" "$SALIDA/codigorecordado.txt" "casos pasaron"
 espera $P63 "Distribución del Trabajo: empleado directo a su ficha, dueño puede volver al equipo" "$SALIDA/distvolver.txt" "casos pasaron"
-espera $P64 "Manual: solo el índice de arriba queda fijo al hacer scroll" "$SALIDA/manualindice.txt" "casos pasaron"
 espera $P65 "GE Ventas: sin propina en el total, desglose real por tipo de servicio" "$SALIDA/geventastipo.txt" "casos pasaron"
 espera $P66 "GE Gastos Fijos: IRPF separado y visible, Personal sin mención a IVA" "$SALIDA/gefijosirpf.txt" "casos pasaron"
 espera $P67 "GE Tesorería: IRPF retenido trimestral y previsión con resultado neto" "$SALIDA/geteirpf.txt" "casos pasaron"
@@ -330,5 +329,6 @@ espera $P142 "Novedades: audiencias, email HTML, guía de envío por correo y li
 espera $P143 "Clientes: tarjetas sin mover de lado, ficha entera, notas amplias, historial en pantalla propia y vales regalo (caducidad, canje parcial, contabilidad, anulación)" "$SALIDA/clientes.txt" "casos de Clientes y vales pasaron"
 espera $P144 "Reservas: cifras del día, acción principal por reserva, Semana y Mes, búsqueda, hoja del día, solicitudes compactas y WhatsApp con prefijo" "$SALIDA/reservas.txt" "casos de Reservas pasaron"
 espera $P145 "TPV rehecho: franja corta, cartas en un botón, mesas como fichas con filtros, tomar nota con la comanda a la vista, notas rápidas, para llevar y aire por los cuatro lados (7 anchos)" "$SALIDA/tpv.txt" "todos los casos pasaron"
+espera $P146 "Manual: índice por áreas, capítulos en tres idiomas, buscador que marca, saltos, anterior/siguiente, móvil plegado y tour guiado de punta a punta" "$SALIDA/manual.txt" "todos los casos pasaron"
 
 exit $FALLOS

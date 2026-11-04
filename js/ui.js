@@ -117,8 +117,10 @@ const TOUR_STEPS = [
   {icon:'ti-download', titleKey:'tour.s14.title', descKey:'tour.s14.desc', folder:'cocina', view:'carta', phase:'cocina'},
   {icon:'ti-list-details', titleKey:'tour.s15.title', descKey:'tour.s15.desc', folder:'cocina', view:'carta', phase:'cocina'},
   {icon:'ti-building-factory-2', titleKey:'tour.s19.title', descKey:'tour.s19.desc', folder:'cocina', view:'megalista', phase:'cocina'},
+  {icon:'ti-truck', titleKey:'tour.s47.title', descKey:'tour.s47.desc', folder:'cocina', view:'proveedores', phase:'cocina'},
   {icon:'ti-calculator', titleKey:'tour.s20.title', descKey:'tour.s20.desc', folder:'cocina', view:'escandallo', phase:'cocina'},
   {icon:'ti-clipboard-text', titleKey:'tour.s42.title', descKey:'tour.s42.desc', folder:'cocina', view:'fichas', phase:'cocina'},
+  {icon:'ti-sparkles', titleKey:'tour.s48.title', descKey:'tour.s48.desc', folder:'cocina', view:'idr', phase:'cocina'},
   {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc', folder:'cocina', view:'stock', phase:'cocina'},
   {icon:'ti-truck-delivery', titleKey:'tour.s43.title', descKey:'tour.s43.desc', folder:'cocina', view:'pedidos', phase:'cocina'},
   {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc', folder:'cocina', view:'horarios', phase:'cocina'},
@@ -129,12 +131,12 @@ const TOUR_STEPS = [
 
   // ---- Sala ----
   {icon:'ti-device-desktop', titleKey:'tour.s46.title', descKey:'tour.s46.desc', folder:'sala', target:'#folder-modules', phase:'sala'},
-  {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv', target:'#tpv-mesas-section', phase:'sala'},
-  {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
-  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
-  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
-  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
-  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', target:'.tp-mesa', phase:'sala'},
+  {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv', target:['.tp-cab', '#tpv-mesas-section'], phase:'sala'},
+  {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
+  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
+  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
+  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
+  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
   {icon:'ti-shopping-bag', titleKey:'tour.s10.title', descKey:'tour.s10.desc', folder:'sala', view:'tpv', target:'#tpv-togo-section', phase:'sala'},
   {icon:'ti-world', titleKey:'tour.s11.title', descKey:'tour.s11.desc', folder:'sala', view:'tpv', target:'#tpv-online-toggle-btn', phase:'sala'},
   {icon:'ti-cash-register', titleKey:'tour.s12.title', descKey:'tour.s12.desc', folder:'sala', view:'tpv', target:'#tpv-close-cash-btn', phase:'sala'},
@@ -142,6 +144,8 @@ const TOUR_STEPS = [
   {icon:'ti-users', titleKey:'tour.s17.title', descKey:'tour.s17.desc', folder:'sala', view:'reservas', phase:'sala'},
   {icon:'ti-address-book', titleKey:'tour.s18.title', descKey:'tour.s18.desc', folder:'sala', view:'clientes', phase:'sala'},
   {icon:'ti-speakerphone', titleKey:'tour.s23.title', descKey:'tour.s23.desc', folder:'sala', view:'promocion', phase:'sala'},
+
+  {icon:'ti-mail-forward', titleKey:'tour.s49.title', descKey:'tour.s49.desc', folder:'sala', view:'promocion', phase:'sala'},
 
   // ---- Gestión ----
   {icon:'ti-layout-dashboard', titleKey:'tour.s24.title', descKey:'tour.s24.desc', folder:'gestion', view:'dashboard', gestion:true, phase:'gestion'},
@@ -164,6 +168,7 @@ const TOUR_STEPS = [
 let tourStepIndex = 0;
 let tourCurrentTargetEl = null;
 let tourReflowHandler = null;
+let tourKeyHandler = null;
 
 function promptAppTour(){
   // El recorrido señala elementos concretos de la pantalla con una burbuja
@@ -236,6 +241,18 @@ function tourBuildChrome(){
     document.body.appendChild(b);
   }
   requestAnimationFrame(() => document.getElementById('tour-overlay').classList.add('active'));
+  const burbuja = document.getElementById('tour-bubble');
+  if(burbuja){ burbuja.setAttribute('role', 'dialog'); burbuja.setAttribute('aria-live', 'polite'); burbuja.setAttribute('aria-label', t('tour.prompt.title')); }
+  if(!tourKeyHandler){
+    // Flechas para avanzar y retroceder, Escape para salir: se puede seguir el tour sin ratón.
+    tourKeyHandler = e => {
+      if(!document.getElementById('tour-bubble')) return;
+      if(e.key === 'ArrowRight'){ e.preventDefault(); tourNext(); }
+      else if(e.key === 'ArrowLeft'){ e.preventDefault(); tourPrev(); }
+      else if(e.key === 'Escape'){ e.preventDefault(); finishTour(); }
+    };
+    document.addEventListener('keydown', tourKeyHandler);
+  }
   if(!tourReflowHandler){
     tourReflowHandler = () => tourPositionUI();
     window.addEventListener('resize', tourReflowHandler);
@@ -252,6 +269,7 @@ function tourDestroyChrome(){
     const el = document.getElementById(id);
     if(el) el.remove();
   });
+  if(tourKeyHandler){ document.removeEventListener('keydown', tourKeyHandler); tourKeyHandler = null; }
   if(tourReflowHandler){
     window.removeEventListener('resize', tourReflowHandler);
     window.removeEventListener('scroll', tourReflowHandler, true);
@@ -316,11 +334,19 @@ function tourApplyStep(step){
   // y como el contenedor A aparece ANTES que sus propios hijos, siempre
   // "ganaba" la vista entera y el foco acababa siendo gigante (tapando la
   // pantalla casi entera, sin recorte real que se notara).
+  // `target` puede ser un selector o una lista de selectores probados en orden (el primero que exista y se vea).
+  // Sin objetivo, se resalta el primer BLOQUE de contenido de la pantalla (lo que hay justo debajo del título),
+  // que es lo que de verdad se está explicando — no la pantalla entera ni un recuadro de otro diseño.
+  const visible = n => { if(!n) return false; const r = n.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   let el = null;
   if(step.target){
-    el = document.querySelector(step.target);
+    const lista = Array.isArray(step.target) ? step.target : [step.target];
+    for(const sel of lista){ const n = document.querySelector(sel); if(visible(n)){ el = n; break; } }
+    if(!el) el = document.querySelector(lista[0]);
   }else if(step.view){
-    el = document.querySelector('#view-' + step.view + ' .card') || document.querySelector('#view-' + step.view);
+    const vista = document.getElementById('view-' + step.view);
+    const bloque = vista && [...vista.children].find(n => !n.matches('.btn-back,.view-title,.view-subtitle,script,style') && visible(n));
+    el = bloque || (vista && (vista.querySelector('.card') || vista));
   }else if(step.folder){
     el = document.querySelector('#folder-modules .module-card') || document.querySelector('.folder-card.folder-' + step.folder);
   }

@@ -32,7 +32,7 @@ const APARATOS = [
 
 // ── 1. Estático: lo que Safari no traga, buscado en el código ──────────────
 const FUENTES = ['js/core.js','js/i18n.js','js/ui.js','js/finance.js','js/recipes.js',
-  'js/menu.js','js/tpv.js','js/tpv-sala.js','js/operations.js','js/hr.js','js/idr.js','js/novedades.js','js/clientes.js','js/reservas.js','js/polish.js',
+  'js/menu.js','js/tpv.js','js/tpv-sala.js','js/operations.js','js/hr.js','js/idr.js','js/novedades.js','js/clientes.js','js/reservas.js','js/manual.js','js/polish.js',
   'js/app.js','reservagastrogoan.html'];
 const codigo = FUENTES.map(f => ({f, s: readFileSync(f,'utf8')}));
 
