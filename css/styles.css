@@ -4509,6 +4509,18 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .cp-fila.is-ok{border-left-color:var(--olive)}
 .cp-fila.is-aviso{border-left-color:#C79A2E;background:#FBF3DF}
 .cp-fila em{font-style:normal;color:#6B4E10}
+/* ── MI NEGOCIO con el diseño nuevo (2/11): tarjetas de filete, sin los marcos gruesos de tinta puestos a mano en el JS ── */
+#minegocio-content .card{border:1px solid var(--hair) !important;border-radius:4px !important;background:#fff !important;box-shadow:none;padding:20px 22px 22px}
+#minegocio-content .card[style*="2px solid var(--ink)"]{border-left:6px solid var(--olive) !important}
+#minegocio-content .card > h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--hair);font-size:18px;font-weight:700;letter-spacing:-.015em;color:var(--ink) !important}
+#minegocio-content .card > h3 .ti{color:var(--olive);font-size:22px}
+#minegocio-content .card h4{display:flex;align-items:center;gap:8px;margin:26px 0 10px !important;padding-top:16px;border-top:1px solid var(--hair);font-size:12px}
+#minegocio-content .card h4:first-of-type{border-top:0;padding-top:0}
+#minegocio-content .card h4 .ti{color:var(--olive);font-size:16px}
+#minegocio-content .card hr{border:0 !important;border-top:1px solid var(--hair) !important;margin:22px 0 !important}
+#minegocio-content .field label{font-size:12px}
+#minegocio-content .manual-warning{margin:10px 0}
+@media (max-width:720px){#minegocio-content .card{padding:16px 14px 18px}}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}

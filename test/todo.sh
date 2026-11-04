@@ -150,6 +150,7 @@ lanzar; node test/clientes.mjs > "$SALIDA/clientes.txt" 2>&1 & P143=$!
 lanzar; node test/reservas.mjs > "$SALIDA/reservas.txt" 2>&1 & P144=$!
 lanzar; node test/tpv.mjs > "$SALIDA/tpv.txt" 2>&1 & P145=$!
 lanzar; node test/manual.mjs > "$SALIDA/manual.txt" 2>&1 & P146=$!
+lanzar; node test/mi-negocio-2.mjs > "$SALIDA/minegocio2.txt" 2>&1 & P147=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -330,5 +331,6 @@ espera $P143 "Clientes: tarjetas sin mover de lado, ficha entera, notas amplias,
 espera $P144 "Reservas: cifras del día, acción principal por reserva, Semana y Mes, búsqueda, hoja del día, solicitudes compactas y WhatsApp con prefijo" "$SALIDA/reservas.txt" "casos de Reservas pasaron"
 espera $P145 "TPV rehecho: franja corta, cartas en un botón, mesas como fichas con filtros, tomar nota con la comanda a la vista, notas rápidas, para llevar y aire por los cuatro lados (7 anchos)" "$SALIDA/tpv.txt" "todos los casos pasaron"
 espera $P146 "Manual: índice por áreas, capítulos en tres idiomas, buscador que marca, saltos, anterior/siguiente, móvil plegado y tour guiado de punta a punta" "$SALIDA/manual.txt" "todos los casos pasaron"
+espera $P147 "Mi Negocio (2/11): sesión de 8 h, zonas sin plazas, días cerrados, códigos postales, colores de marca, enlace fijado, € en la térmica y cajón" "$SALIDA/minegocio2.txt" "todos los casos pasaron"
 
 exit $FALLOS

@@ -6015,6 +6015,7 @@ function renderManual(){
   const q = pmSinTildes(manualSearch.trim().toLowerCase());
   const matches = manualMatches();
   if(manualChapter >= MANUAL_CHAPTERS.length) manualChapter = 0;
+  indice.setAttribute('aria-label', gl({es:'Capítulos del manual', ca:'Capítols del manual', en:'Manual chapters'}));
 
   // ── índice agrupado por áreas ──
   const actual = MANUAL_CHAPTERS[manualChapter];
