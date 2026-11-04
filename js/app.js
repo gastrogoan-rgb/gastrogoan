@@ -5169,6 +5169,49 @@ function renderTramoFields(prefix, tramo, label){
   `;
 }
 
+/* Días cerrados fuera del horario habitual (2/11): vacaciones, obras, un puente, una boda… Se apuntan con fechas y, mientras duran,
+   la web de reservas y pedidos no ofrece esos días y la app los trata como cerrados. Los que ya pasaron se pliegan. */
+function renderDiasCerradosHtml(){
+  const lista = [...((DB.business && DB.business.diasCerrados) || [])].sort((a, b) => (a.desde || '').localeCompare(b.desde || ''));
+  const hoy = todayStr();
+  const vigentes = lista.filter(c => (c.hasta || c.desde) >= hoy), pasados = lista.filter(c => (c.hasta || c.desde) < hoy);
+  const fmt = d => { try{ return new Date(d + 'T00:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'}); }catch(e){ return d; } };
+  const fila = c => `<li class="dc-fila"><span class="dc-fechas"><i class="ti ti-calendar-off"></i> ${escapeHtml(c.hasta && c.hasta !== c.desde ? fmt(c.desde) + ' → ' + fmt(c.hasta) : fmt(c.desde))}</span>${c.motivo ? `<span class="dc-motivo">${escapeHtml(c.motivo)}</span>` : ''}<button type="button" class="btn btn-sm btn-fino is-off" onclick="quitarDiaCerrado('${escapeJsAttr(c.id)}')" aria-label="${escapeHtml(t('common.delete'))}"><i class="ti ti-trash"></i></button></li>`;
+  return `
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0 16px">
+    <h4 style="margin-top:0"><i class="ti ti-calendar-off"></i> ${escapeHtml(gl({es:'Días cerrados y vacaciones', ca:'Dies tancats i vacances', en:'Closed days and holidays'}))}</h4>
+    <p style="font-size:13px;color:var(--muted)">${escapeHtml(gl({es:'Días en los que NO abres aunque tu horario diga que sí: vacaciones, obras, un puente… Mientras duran, la web de reservas y pedidos no ofrece esos días.', ca:'Dies en què NO obres encara que el teu horari digui que sí: vacances, obres, un pont… Mentre duren, la web de reserves i comandes no ofereix aquests dies.', en:'Days you will NOT open even though your hours say so: holidays, works, a long weekend… While they last, the booking and ordering site does not offer those days.'}))}</p>
+    ${vigentes.length ? `<ul class="dc-lista">${vigentes.map(fila).join('')}</ul>` : `<p class="txt-xs" style="color:var(--muted)">${escapeHtml(gl({es:'No hay ningún cierre programado.', ca:'No hi ha cap tancament programat.', en:'No closures scheduled.'}))}</p>`}
+    <div class="field-row dc-form">
+      <div class="field"><label for="dc-desde">${escapeHtml(gl({es:'Desde', ca:'Des de', en:'From'}))}</label><input type="date" id="dc-desde" min="${hoy}"></div>
+      <div class="field"><label for="dc-hasta">${escapeHtml(gl({es:'Hasta (incluido)', ca:'Fins (inclòs)', en:'Until (included)'}))}</label><input type="date" id="dc-hasta" min="${hoy}"></div>
+      <div class="field"><label for="dc-motivo">${escapeHtml(gl({es:'Motivo (opcional)', ca:'Motiu (opcional)', en:'Reason (optional)'}))}</label><input type="text" id="dc-motivo" maxlength="60" placeholder="${escapeHtml(gl({es:'Vacaciones de verano', ca:'Vacances d\'estiu', en:'Summer holiday'}))}"></div>
+    </div>
+    <button type="button" class="btn btn-sm btn-primary" onclick="anadirDiaCerrado()"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Añadir cierre', ca:'Afegir tancament', en:'Add closure'}))}</button>
+    ${pasados.length ? `<details class="dc-pasados"><summary>${escapeHtml(gl({es:'Cierres pasados', ca:'Tancaments passats', en:'Past closures'}))} (${pasados.length})</summary><ul class="dc-lista">${pasados.map(fila).join('')}</ul></details>` : ''}`;
+}
+function anadirDiaCerrado(){
+  const desde = (document.getElementById('dc-desde') || {}).value || '';
+  let hasta = (document.getElementById('dc-hasta') || {}).value || '';
+  const motivo = ((document.getElementById('dc-motivo') || {}).value || '').trim().slice(0, 60);
+  if(!desde){ showToast(gl({es:'Pon la fecha de inicio del cierre.', ca:'Posa la data d\'inici del tancament.', en:'Enter the closure start date.'})); return; }
+  if(!hasta) hasta = desde;
+  if(hasta < desde){ showToast(gl({es:'La fecha final no puede ser anterior a la inicial.', ca:'La data final no pot ser anterior a la inicial.', en:'The end date cannot be earlier than the start date.'})); return; }
+  if(!Array.isArray(DB.business.diasCerrados)) DB.business.diasCerrados = [];
+  // Reservas ya hechas dentro del cierre: se avisa (no se cancelan solas, eso lo decide el negocio).
+  const afectadas = (DB.reservations || []).filter(r => r.date >= desde && r.date <= hasta && r.status !== 'cancelada' && r.status !== 'cancelled').length;
+  DB.business.diasCerrados.push({id: genId(), desde, hasta, motivo});
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  renderMiNegocio();
+  showToast(afectadas ? gl({es:'Cierre guardado. Ojo: hay ' + afectadas + ' reserva(s) en esas fechas; avisa a esos clientes.', ca:'Tancament desat. Compte: hi ha ' + afectadas + ' reserva(es) en aquestes dates; avisa aquests clients.', en:'Closure saved. Note: there are ' + afectadas + ' booking(s) on those dates; let those customers know.'}) : gl({es:'Cierre guardado.', ca:'Tancament desat.', en:'Closure saved.'}));
+}
+function quitarDiaCerrado(id){
+  DB.business.diasCerrados = (DB.business.diasCerrados || []).filter(c => String(c.id) !== String(id));
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  renderMiNegocio();
+}
 function renderHorarioRows(horario){
   horario = horario && horario.length===7 ? horario.map(migrateHorarioDia) : defaultHorario();
   const cards = horario.map((d,i) => {
@@ -7164,13 +7207,18 @@ function renderMiNegocio(){
           <label>${t('mn.business.yearOpened')}</label>
           <input type="number" id="mn-anyo" value="${escapeHtml(b.anyo||'')}" placeholder="2020" onchange="saveBusiness(true)">
         </div>
-        <div class="field">
-          <label>${t('mn.business.brandColor')}</label>
-          <div style="display:flex;align-items:center;gap:10px">
-            <input type="color" id="mn-brand-color" value="${escapeHtml(b.brandColor||'#4A5D4E')}" style="width:48px;height:36px;padding:2px;cursor:pointer" onchange="saveBusiness(true)">
-            <span style="font-size:12px;color:var(--muted)">${t('mn.business.brandColorHint')}</span>
-          </div>
+      </div>
+      <div class="field bc-bloque">
+        <label>${escapeHtml(gl({es:'Colores de marca', ca:'Colors de marca', en:'Brand colours'}))}</label>
+        <p class="txt-xs" style="color:var(--muted);margin:0 0 8px">${t('mn.business.brandColorHint')} ${escapeHtml(gl({es:'El principal es para botones y acentos; el secundario, para títulos y pestañas.', ca:'El principal és per a botons i accents; el secundari, per a títols i pestanyes.', en:'Primary is for buttons and accents; secondary for headings and tabs.'}))}</p>
+        <div class="bc-fila">
+          <label class="bc-color"><input type="color" id="mn-brand-color" value="${escapeHtml(b.brandColor||'#4A5D4E')}" onchange="saveBusiness(true);renderMiNegocio()"><span>${escapeHtml(gl({es:'Principal', ca:'Principal', en:'Primary'}))} <code>${escapeHtml((b.brandColor||'#4A5D4E').toUpperCase())}</code></span></label>
+          <label class="bc-color"><input type="color" id="mn-brand-color2" value="${escapeHtml(b.brandColor2||'#1C1A17')}" onchange="saveBusiness(true);renderMiNegocio()"><span>${escapeHtml(gl({es:'Secundario', ca:'Secundari', en:'Secondary'}))} <code>${escapeHtml((b.brandColor2||'#1C1A17').toUpperCase())}</code></span></label>
+          <button type="button" class="btn btn-sm btn-fino" onclick="restablecerColoresMarca()"><i class="ti ti-refresh"></i> ${escapeHtml(gl({es:'Restablecer', ca:'Restablir', en:'Reset'}))}</button>
         </div>
+        ${ggContrasteHex(b.brandColor||'#4A5D4E', '#FFFFFF') < 4.5 ? `<p class="manual-warning" style="margin-top:8px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'Con ese color principal el texto blanco de los botones se lee mal; en la web de reservas se usará una versión más oscura (' + ggOscurecerHasta(b.brandColor||'#4A5D4E', 4.5).toUpperCase() + ') para que se lea bien.', ca:'Amb aquest color principal el text blanc dels botons es llegeix malament; a la web de reserves es farà servir una versió més fosca (' + ggOscurecerHasta(b.brandColor||'#4A5D4E', 4.5).toUpperCase() + ') perquè es llegeixi bé.', en:'With this primary colour the white button text is hard to read; the booking site will use a darker version (' + ggOscurecerHasta(b.brandColor||'#4A5D4E', 4.5).toUpperCase() + ') so it stays legible.'}))}</p>` : ''}
+        <div id="mn-logo-colores"></div>
+        <div class="bc-vista" style="--bc1:${escapeHtml(ggOscurecerHasta(b.brandColor||'#4A5D4E', 4.5))};--bc2:${escapeHtml(ggContrasteHex(b.brandColor2||'#1C1A17', '#FFFFFF') >= 3 ? (b.brandColor2||'#1C1A17') : ggOscurecerHasta(b.brandColor2||'#1C1A17', 3))}" aria-hidden="true"><span class="bc-v-tit">${escapeHtml(b.name || 'Tu restaurante')}</span><span class="bc-v-btn">${escapeHtml(gl({es:'Reservar mesa', ca:'Reservar taula', en:'Book a table'}))}</span></div>
       </div>
 
       <h4><i class="ti ti-building-bank"></i> ${t('mn.fiscal.title')}</h4>
@@ -7311,6 +7359,7 @@ function renderMiNegocio(){
       <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc1')}</p>
       <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc2')}</p>
       <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
+      ${renderDiasCerradosHtml()}
     </div>
 
     <div class="card mn-grid-full">
@@ -7392,11 +7441,8 @@ function renderMiNegocio(){
           <label>${t('mn.ops.tableCount')}</label>
           <input type="number" id="mn-zona-cantidad" min="1" max="50" value="4">
         </div>
-        <div class="field">
-          <label>${t('mn.ops.seatsPerZone')} *</label>
-          <input type="number" id="mn-zona-plazas" min="1" max="50" placeholder="4" required>
-        </div>
       </div>
+      <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${escapeHtml(gl({es:'Cada mesa nace con ' + MESA_PLAZAS_DEFECTO + ' plazas; ajusta las de cada una en la lista de abajo (la web de reservas las usa para saber qué mesa le va a cada grupo).', ca:'Cada taula neix amb ' + MESA_PLAZAS_DEFECTO + ' places; ajusta les de cadascuna a la llista de sota (la web de reserves les fa servir per saber quina taula va a cada grup).', en:'Each table starts with ' + MESA_PLAZAS_DEFECTO + ' seats; adjust each one in the list below (the booking site uses them to know which table fits each party).'}))}</p>
       <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> ${t('mn.ops.createZone')}</button>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
@@ -7434,6 +7480,7 @@ function renderMiNegocio(){
   renderMiNegocioIndice();
   loadPagoOnlineStatus();
   renderMesasConfigList();
+  ggPintarColoresDelLogo();
 }
 
 // Lista editable de mesas en Mi Negocio: nombre/número editable, zona y borrar.
@@ -7548,15 +7595,15 @@ function clearDanglingTableRefs(tableIds){
 // Crea de golpe N mesas nuevas en una zona/rango con el nombre que indique el
 // negocio (por ejemplo "Rango 1" con 4 mesas), tal como se pidió: que el plano
 // de sala se organice como cada restaurante quiera, no en 3 zonas fijas.
+const MESA_PLAZAS_DEFECTO = 4;
 async function addZonaConMesas(){
   const nombre = (document.getElementById('mn-zona-nombre').value||'').trim();
   const cantidad = Math.max(1, Math.min(50, parseInt(document.getElementById('mn-zona-cantidad').value)||0));
   if(!nombre){ showToast(t('msg.enterZoneName')); return; }
-  // Plazas OBLIGATORIAS (decisión del dueño, 1/10): sin ellas la web de
-  // reservas no puede saber qué mesa le va a un grupo y la reserva llegaría
-  // pendiente. Se ponen para toda la zona; luego se cambian mesa a mesa.
-  const plazasZona = parseInt(document.getElementById('mn-zona-plazas').value);
-  if(!(plazasZona >= 1 && plazasZona <= 50)){ showToast(t('msg.enterSeats')); document.getElementById('mn-zona-plazas').focus(); return; }
+  // Las plazas son OBLIGATORIAS en cada mesa (1/10): sin ellas la web de reservas no puede saber qué mesa le va a
+  // un grupo. Pero al crear la zona ya NO se piden (2/11, el dueño: «nombre de la zona y número de mesas, y las
+  // personas se ponen después en cada mesa»): la mesa nace con un valor corriente y se ajusta en su casilla.
+  const plazasZona = MESA_PLAZAS_DEFECTO;
   if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
   if(!DB.business.zonaOrder.includes(nombre)) DB.business.zonaOrder.push(nombre);
   const existingInZone = DB.tables.filter(t => t.zona === nombre).length;
@@ -7569,7 +7616,6 @@ async function addZonaConMesas(){
   saveDB();
   document.getElementById('mn-zona-nombre').value = '';
   document.getElementById('mn-zona-cantidad').value = '4';
-  document.getElementById('mn-zona-plazas').value = '';
   renderMesasConfigList();
   showToast(t('msg.zoneCreated').replace('${name}', nombre).replace('${count}', cantidad));
 }
@@ -8033,6 +8079,10 @@ async function archiveOldData(){
   showToast(t('msg.dataArchived'));
 }
 
+function restablecerColoresMarca(){
+  delete DB.business.brandColor; delete DB.business.brandColor2;
+  saveDB(); renderMiNegocio();
+}
 function handleLogoUpload(input){
   const file = input.files[0];
   if(!file) return;
@@ -8181,6 +8231,7 @@ async function saveBusiness(silent){
   }
   if(el('mn-prop')) DB.business.prop = el('mn-prop').value.trim();
   if(el('mn-brand-color')) DB.business.brandColor = el('mn-brand-color').value;
+  if(el('mn-brand-color2')) DB.business.brandColor2 = el('mn-brand-color2').value;
   if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';
   if(el('mn-reserva-duracion')) DB.business.reservaDuracionMin = Math.max(0, parseInt(el('mn-reserva-duracion').value) || 0) || '';
   const leadTimeReservas = readLeadTimeDHM('mn-leadtime-reservas');
@@ -8842,6 +8893,11 @@ function renderPrintModeConfig(printerId, opts){
         </select>
       </label>
       ${anchoSel}
+      ${(bt && modo === 'bluetooth' && !o.compacto) ? `<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;min-width:200px">${escapeHtml(gl({es:'Juego de caracteres', ca:'Joc de caràcters', en:'Character set'}))}
+        <select id="print-codepage-${idJs}" onchange="setPrintCodepage(this.value);showToast(t('common.save') + ' ✓')" style="max-width:300px">
+          <option value="cp858" ${getPrintCodepage()==='cp858'?'selected':''}>${escapeHtml(gl({es:'Moderno (€ y acentos)', ca:'Modern (€ i accents)', en:'Modern (€ and accents)'}))}</option>
+          <option value="cp437" ${getPrintCodepage()==='cp437'?'selected':''}>${escapeHtml(gl({es:'Clásico (si el € o los acentos salen mal)', ca:'Clàssic (si l\'€ o els accents surten malament)', en:'Classic (if the € or accents print wrong)'}))}</option>
+        </select></label>` : ''}
     </div>
     ${o.compacto ? '' : `<p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">${modo==='browser' ? t('print.browserDesc') + ' ' : ''}${t('print.perDeviceHint')}</p>`}`;
 }
@@ -8916,7 +8972,7 @@ function buildComandaText(destino, titulo, lineas, alergenos, anchoTicket){
 // Si esta impresora tiene una impresora térmica Bluetooth emparejada
 // (getThermalPrinterName), se envía directamente ahí sin pasar por el
 // diálogo de impresión del navegador; si no, se abre la ventana de siempre.
-function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos, printerId){
+function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos, printerId, opts){
   if(!lineas || !lineas.length) return;
   const ancho = anchoTicket == 58 ? 58 : 80;
   const hora = new Date().toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
@@ -8937,7 +8993,10 @@ function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos, pri
   const id = printerId || 'comanda';
   const usarBt = printerId && getPrintMode(printerId) === 'bluetooth' && getThermalPrinterName(printerId);
   if(usarBt){
-    printToThermalPrinter(buildComandaText(destino, titulo, lineas, alergenos, ancho), id, {ancho, html: cuerpo, titulo});
+    // noPrompt (salvo en la prueba, que es un botón): las comandas salen solas al marchar y, tras recargar la app, la conexión Bluetooth
+    // se pierde; abrir el selector de dispositivos en mitad del servicio (sin gesto, falla y además interrumpe) era el comportamiento
+    // que `noPrompt` debía evitar y que nadie pasaba (2/11).
+    printToThermalPrinter(buildComandaText(destino, titulo, lineas, alergenos, ancho), id, {ancho, html: cuerpo, titulo, noPrompt: !(opts && opts.interactivo)});
     return;
   }
   printViaBrowser(cuerpo, ancho, titulo, {html: true});
@@ -8948,7 +9007,7 @@ function testComandaPrint(printerId){
   if(!printer) printer = {nombre:'COCINA', anchoTicket:80, contenido:'todo'};
   const lineas = printer.contenido==='todo' ? sample : sample.filter(l => printer.contenido==='comida' ? !l.bebida : l.bebida);
   if(!lineas.length){ showToast(t('mn.comandas.testNoLines')); return; }
-  printComandaTicket(printer.nombre, 'Mesa de prueba', lineas, printer.anchoTicket, null, printer.id);
+  printComandaTicket(printer.nombre, 'Mesa de prueba', lineas, printer.anchoTicket, null, printer.id, {interactivo: true});
 }
 
 // Se guarda al instante al marcar/desmarcar (no espera a "Guardar todo"),
@@ -9022,11 +9081,14 @@ function changeOwnerPin(){
    ============================================================ */
 window.addEventListener('DOMContentLoaded', async () => {
   await dbReadyPromise;
-  if(isAccessSessionExpiredByInactivity()) clearAccessSession();
+  if(isAccessSessionExpiredByInactivity()) clearAccessSession('inactividad');
   // Cualquier interacción cuenta como actividad, para que la sesión no
   // caduque mientras el dispositivo se está usando de verdad.
   ['pointerdown','keydown'].forEach(evt => document.addEventListener(evt, recordAccessActivity, {passive:true}));
-  document.addEventListener('visibilitychange', () => { if(!document.hidden && isAccessSessionExpiredByInactivity()){ clearAccessSession(); location.reload(); } });
+  document.addEventListener('visibilitychange', () => { if(!document.hidden && isAccessSessionExpiredByInactivity()){ clearAccessSession('inactividad'); location.reload(); } });
+  // Pide al navegador que NO borre los datos del aparato si le falta sitio o pasan días sin abrirla (Safari los purga a los 7 días):
+  // un borrado así deja sin sesión, sin licencia y sin datos locales, y se ve como un login «que no toca».
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
   renderHeader();
   initCloud();
   syncPublicMirror();
@@ -9037,7 +9099,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
   applyI18n();
-  if(getLicense()) checkLicenseRevocation();
+  if(getLicense()){ checkLicenseRevocation(); aplicarEnlaceFijado(); }
 
   setInterval(() => {
     const active = document.querySelector('.view.active');

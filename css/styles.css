@@ -4480,6 +4480,35 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .mnl-nav.btn-fino::before{top:0;bottom:0;height:auto;margin-top:0}
 .mnl-imprimir{align-self:center}
 
+/* Aviso en la pantalla de acceso: por qué se cerró la sesión (2/11) */
+.access-aviso{display:flex;gap:10px;align-items:flex-start;max-width:460px;margin:0 auto 14px;padding:12px 14px;background:#FBF3DF;border:1px solid #E3CC8E;border-left:5px solid #C79A2E;border-radius:3px;font-size:14px;line-height:1.5;color:#5C4510;text-align:left}
+.access-aviso .ti{font-size:20px;flex:none;margin-top:1px}
+/* Días cerrados y vacaciones (Mi Negocio, 2/11) */
+.dc-lista{list-style:none;margin:0 0 12px;padding:0}
+.dc-fila{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--hair)}
+.dc-fechas{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:13px;font-weight:600}
+.dc-motivo{flex:1;min-width:0;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.dc-form{margin:10px 0}
+.dc-pasados{margin-top:12px;color:var(--muted);font-size:13px}
+.dc-pasados summary{cursor:pointer;min-height:36px;display:flex;align-items:center}
+/* Colores de marca (Mi Negocio, 2/11) */
+.bc-fila{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.bc-color{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px}
+.bc-color input[type=color]{width:52px;height:44px;padding:2px;border:1px solid var(--hair);border-radius:3px;cursor:pointer;background:#fff}
+.bc-color code,.bc-sug code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.bc-sugeridos{display:flex;flex-wrap:wrap;gap:8px}
+.bc-sug{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--hair);border-radius:3px;background:#fff}
+.bc-muestra{width:28px;height:28px;border-radius:3px;border:1px solid rgba(0,0,0,.15);flex:none}
+.bc-vista{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--hair);border-radius:3px;background:#fff}
+.bc-v-tit{font-weight:700;font-size:16px;color:var(--bc2);overflow-wrap:anywhere;min-width:0}
+.bc-v-btn{flex:none;padding:8px 14px;border-radius:3px;background:var(--bc1);color:#fff;font-size:13px;font-weight:600}
+/* Comprobación de códigos postales (Mi Negocio → Pedidos, 2/11) */
+.cp-lista{list-style:none;margin:8px 0 0;padding:0}
+.cp-fila{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;padding:6px 8px;border-bottom:1px solid var(--hair);font-size:13px;border-left:4px solid var(--hair)}
+.cp-fila b{font-family:var(--mono)}
+.cp-fila.is-ok{border-left-color:var(--olive)}
+.cp-fila.is-aviso{border-left-color:#C79A2E;background:#FBF3DF}
+.cp-fila em{font-style:normal;color:#6B4E10}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}

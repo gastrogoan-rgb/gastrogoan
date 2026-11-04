@@ -731,6 +731,10 @@ function openNuevaLicencia(user){
       <h3>＋ Nueva licencia para ${esc(user)}</h3>
       <label>Nombre del restaurante (solo para tu registro)</label>
       <input id="nl-name" placeholder="Ej: Casa Paco - Sucursal 2" onkeydown="if(event.key==='Enter')crearNuevaLicencia('${esc(user)}')">
+      <label style="margin-top:10px">Enlace de reservas (cómo quieres que se llame)</label>
+      <input id="nl-slug" placeholder="Ej: casa-paco" autocapitalize="off" autocomplete="off" spellcheck="false" oninput="this.value=nlSlugify(this.value);document.getElementById('nl-slug-vista').textContent=this.value?('reservas.gastrogoan.com/'+this.value):'Si lo dejas vacío, el cliente lo elige él (y podrá cambiarlo).'">
+      <small id="nl-slug-vista" style="display:block;color:var(--muted);margin-top:4px">Si lo dejas vacío, el cliente lo elige él (y podrá cambiarlo).</small>
+      <small style="display:block;color:var(--muted);margin-top:2px">Si lo rellenas, queda FIJADO: en Mi Negocio el cliente lo verá bloqueado y no podrá cambiarlo.</small>
       <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer"><input type="checkbox" id="nl-plan360" style="width:auto"> Plan 360° (verá su pestaña en la app)</label>
       <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer"><input type="checkbox" id="nl-planmensual" style="width:auto"> Plan mensual (solo para tu control)</label>
       <button class="btn btn-primary" id="nl-btn" onclick="crearNuevaLicencia('${esc(user)}')" style="margin-top:8px">Generar código</button>
@@ -745,10 +749,31 @@ function openNuevaLicencia(user){
     </div>
   </div>`;
 }
+// Mismo criterio que slugify() de la app: minúsculas, sin acentos, guiones. 40 como máximo.
+function nlSlugify(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').slice(0, 40);
+}
+// ¿Está libre ese enlace? Ni cogido por un negocio (publicSlugs) ni reservado para otra licencia (issuedCodes/*/slug).
+async function enlaceDeReservasLibre(slug){
+  const db = getApp().database();
+  const ocupado = await db.ref('gastrogoan/publicSlugs/' + slug).once('value');
+  if(ocupado.exists()) return false;
+  const emitidos = await db.ref('gastrogoan/issuedCodes').once('value');
+  let repetido = false;
+  emitidos.forEach(c => { const v = c.val(); if(v && v.slug === slug) repetido = true; });
+  return !repetido;
+}
 async function crearNuevaLicencia(user){
   const btn = document.getElementById('nl-btn');
   btn.disabled = true;
   const raw = document.getElementById('nl-name').value.trim();
+  const slug = nlSlugify(document.getElementById('nl-slug').value).replace(/-+$/, '');
+  if(slug && slug.length < 3){ alert('El enlace de reservas tiene que tener al menos 3 caracteres.'); btn.disabled = false; return; }
+  if(slug){
+    try{
+      if(!(await enlaceDeReservasLibre(slug))){ alert('El enlace «' + slug + '» ya lo tiene otro negocio (o está reservado para otra licencia). Prueba con otro.'); btn.disabled = false; return; }
+    }catch(e){ alert('No se pudo comprobar el enlace: ' + (e.message || e.code || 'error')); btn.disabled = false; return; }
+  }
   const plan360 = document.getElementById('nl-plan360').checked;
   const planMensual = document.getElementById('nl-planmensual').checked;
   let code;
@@ -758,14 +783,19 @@ async function crearNuevaLicencia(user){
     try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({plan360: true}); }
     catch(e){ console.error('No se pudo marcar el Plan 360° en issuedCodes', e); }
   }
+  if(slug){
+    // El enlace queda guardado junto al código: la app lo lee al canjear y lo deja BLOQUEADO en Mi Negocio.
+    try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({slug}); }
+    catch(e){ alert('El código se creó, pero no se pudo guardar el enlace «' + slug + '»: ' + (e.message || e.code || 'error') + '. Ponlo a mano más tarde.'); }
+  }
   const fecha = todayStr();
-  document.getElementById('nl-key').innerHTML = `Código de negocio: ${esc(code)}`;
+  document.getElementById('nl-key').innerHTML = `Código de negocio: ${esc(code)}` + (slug ? `<br><small>Enlace de reservas: reservas.gastrogoan.com/${esc(slug)}</small>` : '');
   document.getElementById('nl-out').classList.remove('hidden');
   const msg = 'Tu código de negocio de GastroGoan 🍽\n\nCódigo: ' + code + '\n\nEntra en la app con tu usuario y PIN, y en la pantalla de negocios pulsa "Canjear negocio" para introducirlo.';
   const cuenta = sales.find(s => s.kind==='cuenta' && s.value===user);
   document.getElementById('nl-wa').href = 'https://wa.me/' + (cuenta && cuenta.phone ? cuenta.phone.replace(/[^0-9]/g,'') : '') + '?text=' + encodeURIComponent(msg);
   document.getElementById('nl-mail').href = 'mailto:' + (cuenta && cuenta.email || '') + '?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  await pushSaleEntry({ id: genUuid(), date: fecha, name: raw || '(sin nombre)', kind: 'negocio', value: code, owner: user, proximoPago: addYearsStr(fecha, 1), plan360, planMensual });
+  await pushSaleEntry({ id: genUuid(), date: fecha, name: raw || '(sin nombre)', kind: 'negocio', value: code, owner: user, proximoPago: addYearsStr(fecha, 1), plan360, planMensual, slug: slug || '' });
   openFolders.add(user);
   renderFolders(); renderCalendario();
   btn.disabled = false;

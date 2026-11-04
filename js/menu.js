@@ -197,7 +197,15 @@ function timeStrToMinutes(str){
   if(isNaN(h) || isNaN(m)) return null;
   return h*60+m;
 }
+// Días CERRADOS que no son el cierre habitual de cada semana (vacaciones, obras, un puente…): Mi Negocio → Horario.
+// {id, desde:'AAAA-MM-DD', hasta:'AAAA-MM-DD', motivo}. La web pública usa la misma regla (reservagastrogoan.html).
+function cierreExcepcionalDe(dateStr){
+  const lista = (DB.business || {}).diasCerrados;
+  if(!Array.isArray(lista) || !dateStr) return null;
+  return lista.find(c => c && c.desde && dateStr >= c.desde && dateStr <= (c.hasta || c.desde)) || null;
+}
 function getTurnosForDate(dateStr){
+  if(cierreExcepcionalDe(dateStr)) return [];
   const horario = (DB.business || {}).horario;
   if(!horario || horario.length !== 7) return null;
   const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
