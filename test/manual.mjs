@@ -155,7 +155,7 @@ await caso('Tour: 48 pasos con título y texto en los tres idiomas, ningún text
   const r = await page.evaluate(() => {
     const mal = [];
     TOUR_STEPS.forEach((s, i) => ['es','ca','en'].forEach(l => {
-      [s.titleKey, s.descKey].forEach(k => { const v = I18N[l][k]; if(!v || v === k) mal.push(`${l}:${k}`); else if(l !== 'es' && v === I18N.es[k] && !/^(TPV|Stock)/.test(v)) mal.push(`${l}:${k} igual que el castellano`); });
+      [s.titleKey, s.descKey].forEach(k => { const v = I18N[l][k]; if(!v || v === k) mal.push(`${l}:${k}`); else if(l !== 'es' && v === I18N.es[k] && !/^(TPV|Stock|Menús)/.test(v)) mal.push(`${l}:${k} igual que el castellano`); });
     }));
     return {mal, n: TOUR_STEPS.length};
   });

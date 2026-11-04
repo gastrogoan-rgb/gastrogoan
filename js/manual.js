@@ -3506,6 +3506,1005 @@ const MANUAL_CHAPTERS = [
   <li><strong>A delivery order asks to verify the zone:</strong> check the address and accept or reject it by hand.</li>
 </ul>`}
   },
+  {id:'clientes', area:'sala',
+    title:{es:`<i class="ti ti-address-book"></i> Clientes`, ca:`<i class="ti ti-address-book"></i> Clients`, en:`<i class="ti ti-address-book"></i> Customers`},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
+<p>Aquí viven las fichas de tus clientes. Conocer a quien ya te visita es lo más barato que hay para vender más: volver a traer a un cliente cuesta mucho menos que conseguir uno nuevo. La pantalla guarda sus datos, apunta sola lo que gasta y cada cuánto viene, y te avisa de quién se está yendo, quién cumple años y quién tiene un premio esperando. También gestiona los <strong>vales regalo</strong>.</p>
+<p>Está en la carpeta <strong>Sala</strong> (Sala → <strong>Clientes</strong>).</p>
+
+<h4>Lo primero que ves</h4>
+<ul>
+<li><strong>Cuatro cifras arriba</strong>: <strong>Clientes</strong> (con cuántos aceptan novedades), <strong>Activos este mes</strong>, <strong>En riesgo</strong> y <strong>Premios por dar</strong>.</li>
+<li><strong>Una tarjeta por cliente</strong>, de dos o tres por fila según la pantalla. Cada una muestra su nombre, hace cuántos días vino, sus etiquetas (Nuevo, En riesgo, VIP, Alergias, no-shows, sin permiso de marketing, vales pendientes) y su barra de puntos de fidelidad.</li>
+<li><strong>Buscador</strong> (por nombre, teléfono o email) y un desplegable <strong>Ordenar por</strong>: Nombre, Última visita, Más visitas (30 d), Mayor gasto (año) o Más puntos.</li>
+<li><strong>Filtros en fichas, cada uno con su cuenta</strong>: Todos, VIP, Nuevos, En riesgo, Inactivos, Con alergias, No-shows y Sin permiso de marketing.</li>
+</ul>
+<p>Si hay muchos clientes se pintan de 60 en 60: pulsa <strong>Ver más</strong> al final de la lista.</p>
+
+<h4>Dar de alta a un cliente, paso a paso</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>Nuevo Cliente</strong> (arriba a la derecha). Se abre la ficha.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Escribe el <strong>Nombre</strong> con nombre y apellidos (la app no deja guardar con una sola palabra, para que dos «Juan» no se confundan) y el <strong>Teléfono</strong>. Los dos son obligatorios. El email es opcional.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Si quieres, rellena <strong>Código postal</strong>, <strong>Cumpleaños</strong>, <strong>Último contacto</strong>, <strong>Alergias / preferencias</strong> y <strong>Notas</strong>. El campo de notas es grande y crece según escribes: apunta lo que quieras («le gusta la mesa del fondo», «viene con perro»).</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Deja marcada la casilla <strong>Acepta recibir promociones y premios por WhatsApp/email</strong> solo si el cliente te lo ha dicho. Desmárcala si no quiere (más abajo se explica qué cambia).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">Pulsa <strong>Guardar</strong>.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Dos clientes no pueden tener exactamente el mismo nombre: añade el segundo apellido o una inicial. Si el teléfono o el email ya existen en otra ficha, la app te avisa y puedes seguir (puede ser alguien de la misma casa). Si el teléfono tiene menos de 9 cifras o el email parece mal escrito, también te pregunta antes de guardar.</div>
+<p>Cuando alguien reserva o pide desde la web pública con un teléfono que ya tienes, la reserva o el pedido se enlazan solos a su ficha.</p>
+
+<h4>La ficha: todo del cliente en una sola ventana</h4>
+<p>Tocar una tarjeta abre la <strong>ficha entera</strong>. A la izquierda está lo que editas (datos, alergias, notas, permiso de marketing). A la derecha, lo que la app ya sabe de él:</p>
+<ul>
+<li><strong>De un vistazo</strong>: Visitas 30 días, Visitas año en curso, Ticket medio, Total 30 días, Total año en curso y Última visita; y etiquetas como su plato favorito, si cumple años en menos de 30 días o cuántos no-shows lleva.</li>
+<li><strong>Puntos de fidelidad</strong> y sus últimos premios.</li>
+<li><strong>Reservas próximas</strong> (pulsa una para ir a ella) y sus <strong>vales regalo</strong>.</li>
+</ul>
+<p>Abajo de la ficha tienes tres botones: <strong>Historial</strong>, <strong>Fusionar con otro cliente</strong> y <strong>Borrar datos (RGPD)</strong>. En una ficha nueva todavía no se ve nada a la derecha: aparece al guardarla y al registrar su primera venta.</p>
+<p>En cada tarjeta también hay un icono de <strong>WhatsApp</strong> y otro de <strong>email</strong> para escribirle directamente (el de WhatsApp solo sale si el número es un móvil; un fijo no abre ningún chat) y un menú <strong>⋯</strong> con <strong>Abrir ficha</strong>, <strong>Historial</strong>, <strong>Fusionar con otro cliente</strong> y <strong>Eliminar</strong>.</p>
+
+<h4>Qué significan las etiquetas</h4>
+<table>
+<thead><tr><th>Etiqueta</th><th>Cuándo sale</th></tr></thead>
+<tbody>
+<tr><td><strong>Nuevo</strong></td><td>Su primera visita fue hace 30 días o menos.</td></tr>
+<tr><td><strong>VIP</strong></td><td>Tiene 7 o más puntos de fidelidad.</td></tr>
+<tr><td><strong>En riesgo</strong></td><td>Venía con ritmo y ha dejado de venir. Exige tres cosas a la vez: al menos 3 visitas, más de 30 días desde la primera y una ausencia mayor que el doble de su intervalo habitual (y nunca menos de 14 días).</td></tr>
+<tr><td><strong>Inactivos</strong> (filtro)</td><td>Más de 60 días sin venir, o ninguna visita todavía.</td></tr>
+<tr><td><strong>No-shows</strong></td><td>Ha dejado alguna mesa vacía sin avisar.</td></tr>
+</tbody>
+</table>
+<p>Así, alguien que viene cada día y falta uno no se marca como «perdido». Lo que sí sale en «En riesgo» merece una llamada o un mensaje.</p>
+
+<h4>Puntos de fidelidad y premios</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Cada vez que cobras en el TPV una venta asignada a un cliente, suma <strong>1 punto</strong> (hasta 10). Si anulas esa venta, el punto se resta.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Al llegar a 10 aparece el botón <strong>Dar premio</strong> en su tarjeta y en su ficha, y cuenta en «Premios por dar».</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Elige el premio. La app te sugiere regalarle su producto favorito; también puedes escoger de tu catálogo o escribir otro. Pulsa <strong>Entregar premio y reiniciar</strong>: el contador vuelve a 0 y el premio queda apuntado.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Te ofrece avisarle con el mensaje ya escrito, por WhatsApp / SMS o email.</div></div>
+<p>El botón <strong>i</strong> junto a los puntos explica el sistema y, si eres propietario o tienes permiso de edición, te deja mantener tu <strong>catálogo de premios sugeridos</strong>.</p>
+
+<h4>El historial de un cliente</h4>
+<p>Es una pantalla propia, no una ventana encima de otra: entras con <strong>Historial</strong> y vuelves con <strong>Clientes</strong>. Arriba ves sus cifras y debajo una línea de tiempo con todo lo suyo, que puedes filtrar: <strong>Todo</strong>, <strong>Pedidos</strong>, <strong>Reservas</strong>, <strong>Vale regalo</strong> y <strong>Premios</strong>. El botón <strong>Ficha</strong> te lleva de vuelta a sus datos.</p>
+
+<h4>Fusionar duplicados</h4>
+<p>Si un mismo cliente tiene dos fichas, abre una y pulsa <strong>Fusionar con otro cliente</strong>. Escribe el nombre de la ficha duplicada y confirma. La que elijas desaparece y todo pasa a la ficha que conservas: se suman los puntos (máximo 10), el historial, las ventas, las reservas y los vales; las alergias, el email, el código postal y el cumpleaños se rellenan solo si faltaban, y las notas se juntan. La ficha eliminada se queda 30 días en la papelera. Fusionar es cosa del propietario o de un empleado con permiso de edición.</p>
+
+<h4>Eliminar un cliente y el derecho al olvido</h4>
+<ul>
+<li><strong>Eliminar</strong> (menú ⋯) pide el PIN del negocio. Sus ventas y reservas no se pierden: solo se desvinculan. Se puede recuperar desde la papelera durante 30 días y, al restaurarlo, se enlaza de nuevo todo su historial.</li>
+<li><strong>Borrar datos (RGPD)</strong> (en la ficha) es para cuando un cliente pide que olvides sus datos. Pide el PIN del negocio, <strong>borra al instante y para siempre</strong> su nombre, teléfono, email, alergias, notas, código postal y cumpleaños, y retira su permiso de marketing. Solo queda un registro anónimo («Cliente (datos eliminados)») para que las ventas y reservas pasadas sigan cuadrando. No se puede deshacer ni pasa por la papelera.</li>
+</ul>
+
+<h4>Permiso de marketing</h4>
+<p>La casilla de la ficha manda: quien no la tenga marcada <strong>no aparece</strong> en la pestaña Clientes de Promoción ni recibe Novedades. Lo ves con el filtro <strong>Sin permiso de marketing</strong> y con un pequeño icono de correo tachado en su tarjeta. Si alguien responde «BAJA» a una novedad, se le quita el permiso (Promoción → Novedades → <strong>Registrar una baja</strong>).</p>
+
+<h4>Vales regalo</h4>
+<p>Un vale regalo es dinero (o una experiencia concreta) que alguien paga ahora y otra persona gasta después. Se gestiona desde esta misma pantalla con dos botones de la barra superior: <strong>Vale regalo</strong> (para emitir) y <strong>Historial de vales</strong>.</p>
+<h4>Emitir un vale</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>Vale regalo</strong>. Elige el <strong>Tipo de vale</strong>: <strong>Cantidad económica</strong> (dinero para gastar en lo que quieran) o <strong>Experiencia concreta</strong> (por ejemplo «cena para dos»).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Pon el importe. En una experiencia, escribe qué es, el <strong>precio cobrado (con IVA)</strong> y el IVA (4, 10 o 21 %).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Si quieres, elige el <strong>Cliente</strong> que lo compra y escribe el nombre que irá en el vale (<strong>Para</strong>). Por defecto vale <strong>un año</strong>: cambia <strong>Válido hasta</strong> o marca <strong>Sin fecha de caducidad</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Pulsa <strong>Emitir vale</strong>. Sale una ventana con su código (del tipo VR-ABC123) y tres botones: <strong>Imprimir vale</strong>, <strong>WhatsApp</strong> y <strong>Email</strong> (se activan si el cliente tiene móvil o correo).</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>El código es corto a propósito: se puede leer por teléfono o escribir a mano en un vale de papel. Cobra el vale en tu forma de pago habitual (caja, datáfono, transferencia): la app lo anota como dinero cobrado por adelantado.</div>
+
+<h4>Estados de un vale</h4>
+<table>
+<thead><tr><th>Estado</th><th>Qué significa</th></tr></thead>
+<tbody>
+<tr><td><strong>Pendiente</strong></td><td>Emitido y sin usar.</td></tr>
+<tr><td><strong>Canje parcial</strong></td><td>Se ha gastado una parte; en la tarjeta ves cuánto <strong>Quedan</strong>.</td></tr>
+<tr><td><strong>Canjeado</strong></td><td>Gastado entero.</td></tr>
+<tr><td><strong>Caducado</strong></td><td>Pasó su fecha sin gastarse.</td></tr>
+<tr><td><strong>Anulado</strong></td><td>Dejó de valer.</td></tr>
+</tbody>
+</table>
+
+<h4>El Historial de vales</h4>
+<p>Pulsa <strong>Historial de vales</strong> para abrir su pantalla (con <strong>Clientes</strong> para volver). Arriba, cuatro cifras: <strong>Por canjear</strong> (dinero que aún te pueden reclamar), <strong>Emitido este año</strong>, <strong>Canjeado este año</strong> y <strong>Caducan en 30 días</strong>. Debajo, un buscador por código o nombre y filtros por estado: Todos, Pendientes, Canje parcial, Canjeados, Caducados y Anulados.</p>
+<p>Cada vale es una tarjeta con su código, estado, importe, fecha de emisión y caducidad (en rojo si caduca pronto). Si hay vales de antes de esta versión sin anotar en la contabilidad, un aviso rojo te deja anotarlos de una vez.</p>
+<h4>Canjear, ampliar, deshacer y anular</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Canjear</strong>: pulsa el botón en la tarjeta. En un vale de dinero eliges <strong>Importe que se canjea</strong> (puede ser menos que el saldo: queda un canje parcial) y una <strong>Nota</strong> opcional («Mesa 4»). Un vale de experiencia se canjea entero. Si el vale está caducado, la ventana te lo avisa.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">En el menú <strong>⋯</strong> de la tarjeta tienes además <strong>Imprimir vale</strong>, <strong>Enviar por WhatsApp</strong>, <strong>Enviar por email</strong>, <strong>Copiar el código</strong>, <strong>Ampliar la caducidad</strong>, <strong>Deshacer el último canje</strong> y <strong>Anular el vale</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Anular</strong> solo se puede si el vale no tiene ningún canje y su mes no está cerrado en Gestión Económica. Al anularlo se quita de la contabilidad. Un vale emitido <strong>nunca se borra</strong>: solo uno ya anulado puede eliminarse del todo (para corregir un error de tecleo).</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>El TPV todavía no acepta un vale como forma de pago. Cuando alguien lo traiga, cobra la cuenta como siempre y pulsa <strong>Canjear</strong> aquí para descontarlo del saldo.</div>
+
+<h4>Qué pasa en la contabilidad</h4>
+<p>Cada vale emitido deja su apunte automático en Gestión Económica (pestaña Ventas, bloque <strong>Vales regalo</strong>):</p>
+<ul>
+<li>Un vale de <strong>Cantidad económica</strong> es un <em>polivalente</em>: es dinero cobrado por adelantado y el IVA se paga cuando lo gastan, en la venta del TPV.</li>
+<li>Una <strong>Experiencia concreta</strong> es un <em>univalente</em>: su IVA se declara el día que lo vendes, no cuando lo canjean.</li>
+<li>Los vales caducados dejan de contar como dinero pendiente.</li>
+</ul>
+<p>Tu gestor ve todo esto en el paquete que le envías desde Gestión Económica; la app no presenta nada por ti.</p>
+
+<h4>Lo que conviene saber</h4>
+<ul>
+<li>Cualquier persona del equipo de Sala puede abrir y editar fichas. <strong>Fusionar</strong>, <strong>Eliminar</strong> y las acciones sobre vales (canjear, ampliar, deshacer, anular) son del propietario o de un empleado con permiso de edición; borrar datos por RGPD y eliminar piden además el PIN del negocio.</li>
+<li>Todo se sincroniza con tu nube y también funciona sin conexión.</li>
+<li>En el móvil, las tarjetas pasan a una por fila y las ventanas ocupan toda la pantalla.</li>
+</ul>
+
+<h4>Si algo no funciona</h4>
+<ul>
+<li><strong>«Escribe nombre y apellidos»</strong>: la ficha necesita al menos dos palabras en el nombre.</li>
+<li><strong>No puedo guardar, ya existe ese nombre</strong>: añade el segundo apellido o una inicial.</li>
+<li><strong>No sale el icono de WhatsApp</strong>: el teléfono no parece un móvil (los fijos no abren WhatsApp) o está vacío.</li>
+<li><strong>Un cliente habitual sale «En riesgo» y vino ayer</strong>: no debería. Esa etiqueta pide 14 días de ausencia como mínimo; revisa que no tenga ventas asignadas a otra ficha duplicada y fusiónalas.</li>
+<li><strong>Un cliente no suma puntos</strong>: los puntos se suman al cobrar una venta que tiene un cliente asignado en el TPV. Si se cobró sin elegir cliente, no cuenta.</li>
+<li><strong>No puedo anular un vale</strong>: ya tiene algún canje, o el mes en que se emitió está cerrado. Habla con tu gestor.</li>
+</ul>
+`,
+    ca:`<h3>Què és i per a què serveix</h3>
+<p>Aquí viuen les fitxes dels teus clients. Conèixer qui ja et visita és el més barat que hi ha per vendre més: tornar a portar un client costa molt menys que aconseguir-ne un de nou. La pantalla desa les seves dades, apunta sola el que gasta i cada quant ve, i t'avisa de qui se'n va, qui fa anys i qui té un premi esperant. També gestiona els <strong>vals regal</strong>.</p>
+<p>És a la carpeta <strong>Sala</strong> (Sala → <strong>Clients</strong>).</p>
+
+<h4>El primer que veus</h4>
+<ul>
+<li><strong>Quatre xifres a dalt</strong>: <strong>Clients</strong> (amb quants accepten novetats), <strong>Actius aquest mes</strong>, <strong>En risc</strong> i <strong>Premis per donar</strong>.</li>
+<li><strong>Una targeta per client</strong>, de dues o tres per fila segons la pantalla. Cadascuna mostra el nom, fa quants dies va venir, les etiquetes (Nou, En risc, VIP, Al·lèrgies, no-shows, sense permís de màrqueting, vals pendents) i la barra de punts de fidelitat.</li>
+<li><strong>Cercador</strong> (per nom, telèfon o email) i un desplegable <strong>Ordenar per</strong>: Nom, Última visita, Més visites (30 d), Major despesa (any) o Més punts.</li>
+<li><strong>Filtres en fitxes, cadascun amb el seu compte</strong>: Tots, VIP, Nous, En risc, Inactius, Amb al·lèrgies, No-shows i Sense permís de màrqueting.</li>
+</ul>
+<p>Si hi ha molts clients es pinten de 60 en 60: prem <strong>Veure'n més</strong> al final de la llista.</p>
+
+<h4>Donar d'alta un client, pas a pas</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>Nou Client</strong> (a dalt a la dreta). S'obre la fitxa.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Escriu el <strong>Nom</strong> amb nom i cognoms (l'app no deixa desar amb una sola paraula, perquè dos «Joan» no es confonguin) i el <strong>Telèfon</strong>. Tots dos són obligatoris. L'email és opcional.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Si vols, emplena <strong>Codi postal</strong>, <strong>Aniversari</strong>, <strong>Últim contacte</strong>, <strong>Al·lèrgies / preferències</strong> i <strong>Notes</strong>. El camp de notes és gran i creix a mesura que escrius: apunta el que vulguis («li agrada la taula del fons», «ve amb gos»).</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Deixa marcada la casella <strong>Accepta rebre promocions i premis per WhatsApp/email</strong> només si el client t'ho ha dit. Desmarca-la si no vol (més avall s'explica què canvia).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">Prem <strong>Desar</strong>.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Dos clients no poden tenir exactament el mateix nom: afegeix el segon cognom o una inicial. Si el telèfon o l'email ja existeixen en una altra fitxa, l'app t'avisa i pots continuar (pot ser algú de la mateixa casa). Si el telèfon té menys de 9 xifres o l'email sembla mal escrit, també et pregunta abans de desar.</div>
+<p>Quan algú reserva o demana des de la web pública amb un telèfon que ja tens, la reserva o la comanda s'enllacen soles a la seva fitxa.</p>
+
+<h4>La fitxa: tot del client en una sola finestra</h4>
+<p>Tocar una targeta obre la <strong>fitxa sencera</strong>. A l'esquerra hi ha el que edites (dades, al·lèrgies, notes, permís de màrqueting). A la dreta, el que l'app ja sap d'ell:</p>
+<ul>
+<li><strong>D'un cop d'ull</strong>: Visites 30 dies, Visites any en curs, Tiquet mitjà, Total 30 dies, Total any en curs i Última visita; i etiquetes com el seu plat preferit, si fa anys d'aquí a menys de 30 dies o quants no-shows porta.</li>
+<li><strong>Punts de fidelitat</strong> i els seus últims premis.</li>
+<li><strong>Reserves properes</strong> (prem una per anar-hi) i els seus <strong>vals regal</strong>.</li>
+</ul>
+<p>A sota de la fitxa tens tres botons: <strong>Historial</strong>, <strong>Fusionar amb un altre client</strong> i <strong>Esborrar dades (RGPD)</strong>. En una fitxa nova encara no es veu res a la dreta: apareix en desar-la i en registrar la primera venda.</p>
+<p>A cada targeta també hi ha una icona de <strong>WhatsApp</strong> i una altra d'<strong>email</strong> per escriure-li directament (la de WhatsApp només surt si el número és un mòbil; un fix no obre cap xat) i un menú <strong>⋯</strong> amb <strong>Obrir fitxa</strong>, <strong>Historial</strong>, <strong>Fusionar amb un altre client</strong> i <strong>Eliminar</strong>.</p>
+
+<h4>Què signifiquen les etiquetes</h4>
+<table>
+<thead><tr><th>Etiqueta</th><th>Quan surt</th></tr></thead>
+<tbody>
+<tr><td><strong>Nou</strong></td><td>La primera visita va ser fa 30 dies o menys.</td></tr>
+<tr><td><strong>VIP</strong></td><td>Té 7 o més punts de fidelitat.</td></tr>
+<tr><td><strong>En risc</strong></td><td>Venia amb ritme i ha deixat de venir. Exigeix tres coses alhora: almenys 3 visites, més de 30 dies des de la primera i una absència més gran que el doble del seu interval habitual (i mai menys de 14 dies).</td></tr>
+<tr><td><strong>Inactius</strong> (filtre)</td><td>Més de 60 dies sense venir, o cap visita encara.</td></tr>
+<tr><td><strong>No-shows</strong></td><td>Ha deixat alguna taula buida sense avisar.</td></tr>
+</tbody>
+</table>
+<p>Així, algú que ve cada dia i falta un no es marca com a «perdut». El que sí surt a «En risc» mereix una trucada o un missatge.</p>
+
+<h4>Punts de fidelitat i premis</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Cada vegada que cobres al TPV una venda assignada a un client, suma <strong>1 punt</strong> (fins a 10). Si anul·les aquesta venda, el punt es resta.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">En arribar a 10 apareix el botó <strong>Donar premi</strong> a la targeta i a la fitxa, i compta a «Premis per donar».</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Tria el premi. L'app et suggereix regalar-li el seu producte preferit; també pots triar del teu catàleg o escriure'n un altre. Prem <strong>Lliurar premi i reiniciar</strong>: el comptador torna a 0 i el premi queda apuntat.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">T'ofereix avisar-lo amb el missatge ja escrit, per WhatsApp / SMS o email.</div></div>
+<p>El botó <strong>i</strong> al costat dels punts explica el sistema i, si ets propietari o tens permís d'edició, et deixa mantenir el teu <strong>catàleg de premis suggerits</strong>.</p>
+
+<h4>L'historial d'un client</h4>
+<p>És una pantalla pròpia, no una finestra damunt d'una altra: hi entres amb <strong>Historial</strong> i tornes amb <strong>Clients</strong>. A dalt veus les seves xifres i a sota una línia de temps amb tot el que és seu, que pots filtrar: <strong>Tot</strong>, <strong>Comandes</strong>, <strong>Reserves</strong>, <strong>Val regal</strong> i <strong>Premis</strong>. El botó <strong>Fitxa</strong> et porta de tornada a les seves dades.</p>
+
+<h4>Fusionar duplicats</h4>
+<p>Si un mateix client té dues fitxes, obre'n una i prem <strong>Fusionar amb un altre client</strong>. Escriu el nom de la fitxa duplicada i confirma. La que triïs desapareix i tot passa a la fitxa que conserves: se sumen els punts (màxim 10), l'historial, les vendes, les reserves i els vals; les al·lèrgies, l'email, el codi postal i l'aniversari s'omplen només si faltaven, i les notes s'ajunten. La fitxa eliminada es queda 30 dies a la paperera. Fusionar és cosa del propietari o d'un empleat amb permís d'edició.</p>
+
+<h4>Eliminar un client i el dret a l'oblit</h4>
+<ul>
+<li><strong>Eliminar</strong> (menú ⋯) demana el PIN del negoci. Les seves vendes i reserves no es perden: només es desvinculen. Es pot recuperar des de la paperera durant 30 dies i, en restaurar-lo, s'enllaça de nou tot el seu historial.</li>
+<li><strong>Esborrar dades (RGPD)</strong> (a la fitxa) és per quan un client demana que oblidis les seves dades. Demana el PIN del negoci, <strong>esborra a l'instant i per sempre</strong> el seu nom, telèfon, email, al·lèrgies, notes, codi postal i aniversari, i retira el seu permís de màrqueting. Només queda un registre anònim («Client (dades eliminades)») perquè les vendes i reserves passades segueixin quadrant. No es pot desfer ni passa per la paperera.</li>
+</ul>
+
+<h4>Permís de màrqueting</h4>
+<p>La casella de la fitxa mana: qui no la tingui marcada <strong>no apareix</strong> a la pestanya Clients de Promoció ni rep Novetats. Ho veus amb el filtre <strong>Sense permís de màrqueting</strong> i amb una petita icona de correu ratllat a la targeta. Si algú respon «BAIXA» a una novetat, se li treu el permís (Promoció → Novetats → <strong>Registrar una baixa</strong>).</p>
+
+<h4>Vals regal</h4>
+<p>Un val regal és diners (o una experiència concreta) que algú paga ara i una altra persona gasta després. Es gestiona des d'aquesta mateixa pantalla amb dos botons de la barra superior: <strong>Val regal</strong> (per emetre) i <strong>Historial de vals</strong>.</p>
+<h4>Emetre un val</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>Val regal</strong>. Tria el <strong>Tipus de val</strong>: <strong>Quantitat econòmica</strong> (diners per gastar en el que vulguin) o <strong>Experiència concreta</strong> (per exemple «sopar per a dos»).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Posa l'import. En una experiència, escriu què és, el <strong>preu cobrat (amb IVA)</strong> i l'IVA (4, 10 o 21 %).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Si vols, tria el <strong>Client</strong> que el compra i escriu el nom que anirà al val (<strong>Per a</strong>). Per defecte val <strong>un any</strong>: canvia <strong>Vàlid fins</strong> o marca <strong>Sense data de caducitat</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Prem <strong>Emetre val</strong>. Surt una finestra amb el seu codi (del tipus VR-ABC123) i tres botons: <strong>Imprimir val</strong>, <strong>WhatsApp</strong> i <strong>Email</strong> (s'activen si el client té mòbil o correu).</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>El codi és curt a propòsit: es pot llegir per telèfon o escriure a mà en un val de paper. Cobra el val amb la teva forma de pagament habitual (caixa, datàfon, transferència): l'app l'anota com a diners cobrats per avançat.</div>
+
+<h4>Estats d'un val</h4>
+<table>
+<thead><tr><th>Estat</th><th>Què significa</th></tr></thead>
+<tbody>
+<tr><td><strong>Pendent</strong></td><td>Emès i sense usar.</td></tr>
+<tr><td><strong>Bescanvi parcial</strong></td><td>S'ha gastat una part; a la targeta veus quant <strong>Queden</strong>.</td></tr>
+<tr><td><strong>Bescanviat</strong></td><td>Gastat sencer.</td></tr>
+<tr><td><strong>Caducat</strong></td><td>Va passar la data sense gastar-se.</td></tr>
+<tr><td><strong>Anul·lat</strong></td><td>Va deixar de valer.</td></tr>
+</tbody>
+</table>
+
+<h4>L'Historial de vals</h4>
+<p>Prem <strong>Historial de vals</strong> per obrir-ne la pantalla (amb <strong>Clients</strong> per tornar). A dalt, quatre xifres: <strong>Per bescanviar</strong> (diners que encara et poden reclamar), <strong>Emès aquest any</strong>, <strong>Bescanviat aquest any</strong> i <strong>Caduquen en 30 dies</strong>. A sota, un cercador per codi o nom i filtres per estat: Tots, Pendents, Bescanvi parcial, Bescanviats, Caducats i Anul·lats.</p>
+<p>Cada val és una targeta amb el codi, l'estat, l'import, la data d'emissió i de caducitat (en vermell si caduca aviat). Si hi ha vals d'abans d'aquesta versió sense anotar a la comptabilitat, un avís vermell et deixa anotar-los d'un cop.</p>
+<h4>Bescanviar, ampliar, desfer i anul·lar</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Bescanviar</strong>: prem el botó a la targeta. En un val de diners tries l'<strong>Import que es bescanvia</strong> (pot ser menys que el saldo: queda un bescanvi parcial) i una <strong>Nota</strong> opcional («Taula 4»). Un val d'experiència es bescanvia sencer. Si el val està caducat, la finestra t'ho avisa.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Al menú <strong>⋯</strong> de la targeta tens a més <strong>Imprimir val</strong>, <strong>Enviar per WhatsApp</strong>, <strong>Enviar per email</strong>, <strong>Copiar el codi</strong>, <strong>Ampliar la caducitat</strong>, <strong>Desfer l'últim bescanvi</strong> i <strong>Anul·lar el val</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Anul·lar</strong> només es pot si el val no té cap bescanvi i el seu mes no està tancat a Gestió Econòmica. En anul·lar-lo se'n treu de la comptabilitat. Un val emès <strong>mai s'esborra</strong>: només un d'anul·lat es pot eliminar del tot (per corregir un error de teclat).</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>El TPV encara no accepta un val com a forma de pagament. Quan algú el porti, cobra el compte com sempre i prem <strong>Bescanviar</strong> aquí per descomptar-lo del saldo.</div>
+
+<h4>Què passa a la comptabilitat</h4>
+<p>Cada val emès deixa el seu apunt automàtic a Gestió Econòmica (pestanya Vendes, bloc <strong>Vals regal</strong>):</p>
+<ul>
+<li>Un val de <strong>Quantitat econòmica</strong> és un <em>polivalent</em>: són diners cobrats per avançat i l'IVA es paga quan els gasten, a la venda del TPV.</li>
+<li>Una <strong>Experiència concreta</strong> és un <em>univalent</em>: el seu IVA es declara el dia que el vens, no quan el bescanvien.</li>
+<li>Els vals caducats deixen de comptar com a diners pendents.</li>
+</ul>
+<p>El teu gestor ho veu tot al paquet que li envies des de Gestió Econòmica; l'app no presenta res per tu.</p>
+
+<h4>El que convé saber</h4>
+<ul>
+<li>Qualsevol persona de l'equip de Sala pot obrir i editar fitxes. <strong>Fusionar</strong>, <strong>Eliminar</strong> i les accions sobre vals (bescanviar, ampliar, desfer, anul·lar) són del propietari o d'un empleat amb permís d'edició; esborrar dades per RGPD i eliminar demanen a més el PIN del negoci.</li>
+<li>Tot se sincronitza amb el teu núvol i també funciona sense connexió.</li>
+<li>Al mòbil, les targetes passen a una per fila i les finestres ocupen tota la pantalla.</li>
+</ul>
+
+<h4>Si alguna cosa no funciona</h4>
+<ul>
+<li><strong>«Escriu nom i cognoms»</strong>: la fitxa necessita almenys dues paraules al nom.</li>
+<li><strong>No puc desar, ja existeix aquest nom</strong>: afegeix el segon cognom o una inicial.</li>
+<li><strong>No surt la icona de WhatsApp</strong>: el telèfon no sembla un mòbil (els fixos no obren WhatsApp) o és buit.</li>
+<li><strong>Un client habitual surt «En risc» i va venir ahir</strong>: no hauria de ser. Aquesta etiqueta demana 14 dies d'absència com a mínim; revisa que no tingui vendes assignades a una altra fitxa duplicada i fusiona-les.</li>
+<li><strong>Un client no suma punts</strong>: els punts se sumen en cobrar una venda que té un client assignat al TPV. Si es va cobrar sense triar client, no compta.</li>
+<li><strong>No puc anul·lar un val</strong>: ja té algun bescanvi, o el mes en què es va emetre està tancat. Parla amb el teu gestor.</li>
+</ul>
+`,
+    en:`<h3>What it is and what it's for</h3>
+<p>This is where your customer records live. Knowing the people who already visit you is the cheapest way to sell more: bringing a customer back costs far less than winning a new one. The screen stores their details, records on its own what they spend and how often they come, and tells you who is drifting away, whose birthday is coming and who has a reward waiting. It also manages <strong>gift vouchers</strong>.</p>
+<p>It lives in the <strong>Dining Room</strong> folder (Dining Room → <strong>Customers</strong>).</p>
+
+<h4>What you see first</h4>
+<ul>
+<li><strong>Four figures at the top</strong>: <strong>Customers</strong> (with how many accept news), <strong>Active this month</strong>, <strong>At risk</strong> and <strong>Rewards to give</strong>.</li>
+<li><strong>One card per customer</strong>, two or three per row depending on the screen. Each shows their name, how many days ago they came, their tags (New, At risk, VIP, Allergies, no-shows, no marketing consent, pending vouchers) and their loyalty points bar.</li>
+<li><strong>Search</strong> (by name, phone or email) and a <strong>Sort by</strong> drop-down: Name, Last visit, Most visits (30 d), Highest spend (year) or Most points.</li>
+<li><strong>Filter chips, each with its count</strong>: All, VIP, New, At risk, Inactive, With allergies, No-shows and No marketing consent.</li>
+</ul>
+<p>With many customers the list loads 60 at a time: press <strong>Show more</strong> at the end.</p>
+
+<h4>Adding a customer, step by step</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>New Client</strong> (top right). The customer card opens.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Type the <strong>Name</strong> with first and last name (the app won't save a single word, so two "Johns" don't get mixed up) and the <strong>Phone</strong>. Both are required. Email is optional.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">If you like, fill in <strong>Postal code</strong>, <strong>Birthday</strong>, <strong>Last contact</strong>, <strong>Allergies / preferences</strong> and <strong>Notes</strong>. The notes box is large and grows as you type: write whatever helps ("likes the back table", "comes with a dog").</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Leave <strong>Accepts promotions and rewards by WhatsApp/email</strong> ticked only if the customer told you so. Untick it if they don't want them (more on what changes below).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">Press <strong>Save</strong>.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Two customers can't have exactly the same name: add a second surname or an initial. If the phone or email already exists on another card, the app warns you and you can carry on (it may be someone in the same household). If the phone has fewer than 9 digits or the email looks mistyped, it also asks before saving.</div>
+<p>When someone books or orders from the public website with a phone number you already have, the booking or order links itself to their card.</p>
+
+<h4>The card: everything about the customer in one window</h4>
+<p>Tapping a card opens the <strong>full customer card</strong>. On the left is what you edit (details, allergies, notes, marketing consent). On the right, what the app already knows about them:</p>
+<ul>
+<li><strong>At a glance</strong>: Visits last 30 days, Visits this year, Avg. ticket, Total last 30 days, Total this year and Last visit; plus tags such as their favourite dish, whether their birthday is within 30 days, or how many no-shows they have.</li>
+<li><strong>Loyalty points</strong> and their latest rewards.</li>
+<li><strong>Upcoming bookings</strong> (tap one to jump to it) and their <strong>gift vouchers</strong>.</li>
+</ul>
+<p>At the bottom of the card are three buttons: <strong>History</strong>, <strong>Merge with another customer</strong> and <strong>Erase data (GDPR)</strong>. A brand-new card shows nothing on the right yet: it fills in once you save it and log their first sale.</p>
+<p>Each tile also has a <strong>WhatsApp</strong> icon and an <strong>email</strong> icon to write to them directly (WhatsApp only appears if the number is a mobile; a landline won't open a chat) and a <strong>⋯</strong> menu with <strong>Open card</strong>, <strong>History</strong>, <strong>Merge with another customer</strong> and <strong>Delete</strong>.</p>
+
+<h4>What the tags mean</h4>
+<table>
+<thead><tr><th>Tag</th><th>When it appears</th></tr></thead>
+<tbody>
+<tr><td><strong>New</strong></td><td>Their first visit was 30 days ago or less.</td></tr>
+<tr><td><strong>VIP</strong></td><td>They have 7 or more loyalty points.</td></tr>
+<tr><td><strong>At risk</strong></td><td>They used to come regularly and have stopped. It needs three things at once: at least 3 visits, more than 30 days since the first one, and an absence longer than double their usual interval (and never under 14 days).</td></tr>
+<tr><td><strong>Inactive</strong> (filter)</td><td>More than 60 days without coming, or no visit yet.</td></tr>
+<tr><td><strong>No-shows</strong></td><td>They have left a table empty without warning.</td></tr>
+</tbody>
+</table>
+<p>So someone who comes every day and misses one isn't marked as "lost". Whoever does appear under "At risk" deserves a call or a message.</p>
+
+<h4>Loyalty points and rewards</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Every time you take payment at the POS for a sale assigned to a customer, they get <strong>1 point</strong> (up to 10). If you cancel that sale, the point is taken back.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">At 10, the <strong>Give reward</strong> button appears on their tile and card, and they count under "Rewards to give".</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Choose the reward. The app suggests giving their favourite product; you can also pick from your catalogue or write another. Press <strong>Give reward and reset</strong>: the counter goes back to 0 and the reward is logged.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">It then offers to tell them with a ready-written message, by WhatsApp / SMS or email.</div></div>
+<p>The <strong>i</strong> button next to the points explains the system and, if you are the owner or have edit permission, lets you maintain your <strong>suggested rewards catalogue</strong>.</p>
+
+<h4>A customer's history</h4>
+<p>It's a screen of its own, not a window on top of another: open it with <strong>History</strong> and come back with <strong>Customers</strong>. At the top you see their figures and below it a timeline of everything about them, which you can filter: <strong>All</strong>, <strong>Orders</strong>, <strong>Bookings</strong>, <strong>Gift voucher</strong> and <strong>Rewards</strong>. The <strong>Card</strong> button takes you back to their details.</p>
+
+<h4>Merging duplicates</h4>
+<p>If one customer has two cards, open one and press <strong>Merge with another customer</strong>. Type the name of the duplicate card and confirm. The one you pick disappears and everything moves to the card you keep: points are added (maximum 10), history, sales, bookings and vouchers; allergies, email, postal code and birthday are filled in only if they were missing, and the notes are joined together. The removed card stays 30 days in the recycle bin. Merging is for the owner or an employee with edit permission.</p>
+
+<h4>Deleting a customer and the right to be forgotten</h4>
+<ul>
+<li><strong>Delete</strong> (⋯ menu) asks for the business PIN. Their sales and bookings are not lost: they are only unlinked. You can recover them from the recycle bin for 30 days and, when restored, their whole history is linked back.</li>
+<li><strong>Erase data (GDPR)</strong> (on the card) is for when a customer asks you to forget their data. It asks for the business PIN and <strong>erases immediately and permanently</strong> their name, phone, email, allergies, notes, postal code and birthday, and withdraws their marketing consent. Only an anonymous record ("Customer (data erased)") stays so past sales and bookings still add up. It can't be undone and doesn't go through the recycle bin.</li>
+</ul>
+
+<h4>Marketing consent</h4>
+<p>The tick box on the card rules: anyone without it ticked <strong>doesn't appear</strong> in the Customers tab of Promotion and doesn't receive News. You can see them with the <strong>No marketing consent</strong> filter and a small crossed-out mail icon on their tile. If someone replies "UNSUBSCRIBE" to a message, their consent is removed (Promotion → News → <strong>Record an opt-out</strong>).</p>
+
+<h4>Gift vouchers</h4>
+<p>A gift voucher is money (or a specific experience) that someone pays for now and another person spends later. It's managed from this same screen with two buttons in the top bar: <strong>Gift voucher</strong> (to issue one) and <strong>Voucher history</strong>.</p>
+<h4>Issuing a voucher</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>Gift voucher</strong>. Pick the <strong>Voucher type</strong>: <strong>Monetary amount</strong> (money to spend on anything) or <strong>Specific experience</strong> (for example "dinner for two").</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Enter the amount. For an experience, write what it is, the <strong>price charged (incl. VAT)</strong> and the VAT (4, 10 or 21 %).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">If you like, choose the <strong>Client</strong> who is buying it and type the name that goes on the voucher (<strong>For</strong>). By default it's valid for <strong>one year</strong>: change <strong>Valid until</strong> or tick <strong>No expiry date</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Press <strong>Issue voucher</strong>. A window shows its code (like VR-ABC123) and three buttons: <strong>Print voucher</strong>, <strong>WhatsApp</strong> and <strong>Email</strong> (enabled if the customer has a mobile or email).</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>The code is short on purpose: it can be read over the phone or written by hand on a paper voucher. Take the payment for the voucher the way you usually do (till, card machine, transfer): the app records it as money collected in advance.</div>
+
+<h4>Voucher states</h4>
+<table>
+<thead><tr><th>State</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td><strong>Pending</strong></td><td>Issued and unused.</td></tr>
+<tr><td><strong>Partly redeemed</strong></td><td>Part has been spent; the tile shows how much is <strong>Left</strong>.</td></tr>
+<tr><td><strong>Redeemed</strong></td><td>Spent in full.</td></tr>
+<tr><td><strong>Expired</strong></td><td>Its date passed without being spent.</td></tr>
+<tr><td><strong>Voided</strong></td><td>No longer valid.</td></tr>
+</tbody>
+</table>
+
+<h4>Voucher history</h4>
+<p>Press <strong>Voucher history</strong> to open its screen (with <strong>Customers</strong> to go back). At the top, four figures: <strong>To redeem</strong> (money they can still claim from you), <strong>Issued this year</strong>, <strong>Redeemed this year</strong> and <strong>Expire in 30 days</strong>. Below, a search by code or name and filters by state: All, Pending, Partly redeemed, Redeemed, Expired and Voided.</p>
+<p>Each voucher is a tile with its code, state, amount, issue date and expiry (in red if it expires soon). If there are vouchers from before this version not yet recorded in the accounts, a red notice lets you record them all at once.</p>
+<h4>Redeeming, extending, undoing and voiding</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Redeem</strong>: press the button on the tile. For a money voucher you choose the <strong>Amount redeemed</strong> (it can be less than the balance: that leaves a partial redemption) and an optional <strong>Note</strong> ("Table 4"). An experience voucher is redeemed in full. If the voucher has expired, the window warns you.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">In the tile's <strong>⋯</strong> menu you also have <strong>Print voucher</strong>, <strong>Send by WhatsApp</strong>, <strong>Send by email</strong>, <strong>Copy the code</strong>, <strong>Extend expiry</strong>, <strong>Undo the last redemption</strong> and <strong>Void the voucher</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Void</strong> only works if the voucher has no redemptions and its month isn't closed in Financial Management. Voiding removes it from the accounts. An issued voucher is <strong>never deleted</strong>: only one that is already voided can be removed entirely (to fix a typing mistake).</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>The POS doesn't accept a voucher as a payment method yet. When someone brings one, take payment as usual and press <strong>Redeem</strong> here to deduct it from the balance.</div>
+
+<h4>What happens in the accounts</h4>
+<p>Every voucher you issue leaves an automatic entry in Financial Management (Sales tab, <strong>Gift vouchers</strong> block):</p>
+<ul>
+<li>A <strong>Monetary amount</strong> voucher is a <em>multi-purpose</em> voucher: it's money collected in advance and the VAT is paid when it is spent, on the POS sale.</li>
+<li>A <strong>Specific experience</strong> is a <em>single-purpose</em> voucher: its VAT is declared the day you sell it, not when it is redeemed.</li>
+<li>Expired vouchers stop counting as pending money.</li>
+</ul>
+<p>Your accountant sees all this in the package you send from Financial Management; the app files nothing for you.</p>
+
+<h4>Good to know</h4>
+<ul>
+<li>Anyone on the Dining Room team can open and edit cards. <strong>Merge</strong>, <strong>Delete</strong> and the voucher actions (redeem, extend, undo, void) are for the owner or an employee with edit permission; erasing data under GDPR and deleting also ask for the business PIN.</li>
+<li>Everything syncs with your cloud and also works offline.</li>
+<li>On mobile, tiles go to one per row and windows take the whole screen.</li>
+</ul>
+
+<h4>If something doesn't work</h4>
+<ul>
+<li><strong>"Enter first and last name"</strong>: the card needs at least two words in the name.</li>
+<li><strong>I can't save, that name already exists</strong>: add a second surname or an initial.</li>
+<li><strong>The WhatsApp icon is missing</strong>: the phone doesn't look like a mobile (landlines don't open WhatsApp) or is empty.</li>
+<li><strong>A regular shows "At risk" and came yesterday</strong>: it shouldn't. That tag needs at least 14 days' absence; check they don't have sales assigned to another duplicate card and merge them.</li>
+<li><strong>A customer isn't earning points</strong>: points are added when you take payment for a sale that has a customer assigned in the POS. If it was paid without choosing a customer, it doesn't count.</li>
+<li><strong>I can't void a voucher</strong>: it already has a redemption, or the month it was issued in is closed. Talk to your accountant.</li>
+</ul>
+`}
+  },
+  {id:'promocion', area:'sala',
+    title:{es:`<i class="ti ti-speakerphone"></i> Promoción`, ca:`<i class="ti ti-speakerphone"></i> Promoció`, en:`<i class="ti ti-speakerphone"></i> Promotion`},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
+<p>Promoción es el calendario de marketing de tu negocio: qué acción hacer, qué día y quién es responsable. Además, una acción puede <strong>rebajar el precio de verdad en el TPV</strong>, y desde aquí puedes escribir a tus clientes por email y WhatsApp. Está en la carpeta <strong>Sala</strong> (Sala → <strong>Promoción</strong>).</p>
+<p>Tiene seis pestañas: <strong>Día</strong>, <strong>Semana</strong>, <strong>Mes</strong>, <strong>Novedades</strong>, <strong>Clientes</strong> e <strong>Ideas de contenido</strong>. Arriba también tienes accesos directos a tus redes (Instagram, Facebook, TikTok, Google Maps) si las rellenaste en Mi Negocio → Redes sociales.</p>
+
+<h4>Crear una acción, paso a paso</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">En Día, Semana o Mes pulsa <strong>Nueva Acción</strong> (en la vista Semana, también el «+» de cada día).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">En <strong>Qué vas a hacer</strong> pon un <strong>Título</strong> («Responder reseñas», «Happy hour de cañas») y, si quieres, una <strong>Descripción</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">En <strong>Cuándo y quién</strong> elige la <strong>Fecha</strong> y el <strong>Responsable</strong> (personal de Sala). Marca <strong>Se repite cada semana</strong> para un 2x1 de todos los martes; puedes poner <strong>Se repite hasta</strong> para una promo de temporada.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Si quieres que rebaje el precio, marca <strong>Aplica un descuento real en el TPV</strong> (siguiente apartado). Pulsa <strong>Guardar</strong>.</div></div>
+<p>Si ya existe otra igual ese día con el mismo responsable, la app te avisa antes de duplicarla.</p>
+
+<h4>Descuento real en el TPV</h4>
+<ul>
+<li>Elige el <strong>Plato o bebida</strong> (la lista separa Platos y Bebidas) y el <strong>Descuento (%)</strong>. Debajo ves el antes y el después: «En carta: 12,00 € → 9,60 €».</li>
+<li>Opcional: <strong>Desde</strong> y <strong>Hasta</strong> (hora) para limitarlo a una franja, como un happy hour de 18:00 a 20:00 (rellena las dos o ninguna), y <strong>Límite de usos por día</strong>: al llegar a ese número, el plato vuelve a su precio normal.</li>
+<li>Ese día (y esa franja), al añadir el artículo en una comanda, el TPV aplica el precio rebajado solo. La carta online de tu web de reservas y pedidos también lo muestra rebajado.</li>
+<li>Si dos descuentos se pisan sobre el mismo plato y horario, la app te avisa para que decidas cuál conservar.</li>
+</ul>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Una acción con descuento tiene el botón <strong>Anunciar a clientes</strong>: te lleva a Novedades con el mensaje ya escrito.</div>
+
+<h4>Día, Semana y Mes</h4>
+<ul>
+<li><strong>Día</strong>: cifras (acciones del día, completadas, descuento concedido en caja, próximos 7 días), flechas para cambiar de día, y una tarjeta por acción con su casilla de <strong>hecha</strong> (queda la hora). Filtra por responsable y por estado (Todos, Pendientes, Hechas). El menú <strong>⋯</strong> de cada tarjeta: <strong>Editar</strong>, <strong>Duplicar al día siguiente</strong> y <strong>Eliminar</strong>.</li>
+<li><strong>Semana</strong>: siete columnas con las acciones de cada día; tocar la cabecera de un día abre esa jornada.</li>
+<li><strong>Mes</strong>: calendario con el selector de periodo «‹ mes año ▾ ›» (al abrirlo ves cuántas acciones tiene cada mes) y el botón <strong>Imprimir</strong> para repasar el plan en una reunión.</li>
+</ul>
+
+<h4>Novedades: escribir a tus clientes</h4>
+<p>Solo la ven el propietario y quien tenga permiso de edición, porque usa los datos de contacto de los clientes. <strong>No hay servidor de correo ni WhatsApp de por medio</strong>: el mensaje sale de TU correo y de TU WhatsApp, y la app lo prepara todo. Arriba, <strong>Nueva novedad</strong>, <strong>Enviadas y borradores</strong> y <strong>Registrar una baja</strong>.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>A quién se la envías</strong>: Todos, Habituales, Nuevos, Hace tiempo que no vienen, En riesgo, Cumpleaños este mes, Mejores clientes (el 20 % que más gastó este año), Por código postal o Elegir uno a uno. Cada botón dice cuántos son, y debajo ves cuántos tienen email válido y cuántos móvil. <strong>Ver destinatarios</strong> te deja desmarcar a quien no quieras. Nunca llega a quien retiró su permiso de marketing.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Sobre qué es</strong>: elige un tema (Plato o bebida nuevo, Promoción u oferta, Evento, Menú, Cambio de horario, Vacaciones, Volvemos a abrir, Fecha señalada, Grupos, Gracias…) y te deja el texto escrito, o elige <strong>Escribir el mío</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>El mensaje</strong>: Asunto, Titular y Texto (usa <strong>{nombre}</strong> y <strong>{negocio}</strong>), un recuadro de oferta opcional (título, condiciones, código, fecha), un botón (Reservar mesa, Hacer un pedido, Ver la carta, Llamar, Cómo llegar u otro enlace), una imagen por enlace https y tu logo. A la derecha, la <strong>vista previa</strong> en Email, Móvil o WhatsApp.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Lo que va entre [corchetes] hay que rellenarlo. La app te avisa antes de copiar o enviar si queda alguno sin cambiar.</div>
+<div class="manual-step"><div class="sn">4</div><div class="st"><strong>Enviar</strong>: elige <strong>Email</strong> o <strong>WhatsApp</strong>. Es una guía con pasos que se marcan como hechos.</div></div>
+<h4>Guía de email (modo «Paso a paso»)</h4>
+<ol>
+<li>Abre tu correo (<strong>Gmail</strong>, <strong>Outlook</strong> o <strong>Mi programa de correo</strong>) y crea un mensaje nuevo.</li>
+<li><strong>Copiar asunto</strong> y pégalo en «Asunto».</li>
+<li><strong>Copiar destinatarios</strong> y pégalos en <strong>CCO</strong> (copia oculta), nunca en «Para»: así nadie ve el correo de los demás. Se reparte en <strong>lotes</strong> de 25, 50 o 100 (Gmail gratuito admite unos 500 envíos al día).</li>
+<li><strong>Copiar el mensaje con diseño</strong> y pégalo en el cuerpo (o «Solo el texto»).</li>
+<li>Opcional: adjunta fotos o vídeos (un vídeo pesado, mejor como enlace).</li>
+<li>Envía desde tu correo y pulsa <strong>Ya lo he enviado</strong>; si hay más lotes, <strong>Siguiente lote</strong>.</li>
+</ol>
+<p>En <strong>Más opciones</strong>: <strong>Enviarme una prueba</strong>, <strong>Descargar borrador (.eml)</strong> (se abre ya maquetado en Outlook de escritorio, Apple Mail o Thunderbird) y <strong>Descargar HTML</strong>. El modo <strong>Uno a uno</strong> abre un correo de texto por cliente, con su nombre.</p>
+<h4>Guía de WhatsApp (modo «Lista de difusión»)</h4>
+<ol>
+<li>En el móvil, mejor con WhatsApp Business: Chats → menú ⋮ → «Nueva difusión» (iPhone: «Listas de difusión» → «Nueva lista»). Las listas se crean en el móvil, no en WhatsApp Web.</li>
+<li>Tus clientes tienen que estar en tu agenda: <strong>Descargar agenda (.vcf)</strong> y ábrela desde el móvil, o <strong>Copiar nombres y teléfonos</strong>.</li>
+<li>Añádelos a la lista (hasta 256 por lista: se reparte en lotes) y <strong>Copiar nombre de la lista</strong>.</li>
+<li><strong>Copiar el mensaje</strong> (sin nombre) y pégalo en el chat de la lista; opcionalmente fotos o vídeos.</li>
+<li>Envía y marca el lote.</li>
+</ol>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Una lista de difusión solo llega a quien tiene tu número guardado en su agenda. En modo <strong>Uno a uno</strong>, cada botón abre WhatsApp con el mensaje y el nombre de ese cliente; tú solo pulsas enviar. Los fijos no cuentan: WhatsApp no los abre.</div>
+<h4>Bajas, historial y base legal</h4>
+<ul>
+<li>Cada email lleva el aviso de baja y tus datos como responsable. Si alguien responde BAJA, pulsa <strong>Registrar una baja</strong>, búscalo y pulsa <strong>Dar de baja</strong>: pierde el permiso y desaparece de todas las listas.</li>
+<li>En <strong>Enviadas y borradores</strong> ves cada novedad con su tema, su público y cuántos email/WhatsApp se marcaron como enviados. Desde su menú ⋯ puedes <strong>Usar como base de una nueva</strong> o eliminarla.</li>
+</ul>
+
+<h4>Clientes: acciones rápidas de fidelización</h4>
+<p>Mensajes ya escritos (los puedes editar antes de enviar) para cuatro momentos: <strong>Próximos cumpleaños (30 días)</strong>, <strong>Visitas recientes — pedir reseña</strong> (con el enlace de Google si lo pusiste en Mi Negocio), <strong>Clientes que hace tiempo no vienen</strong> y la <strong>Encuesta de satisfacción (privada)</strong>. Cada tarjeta tiene <strong>WhatsApp</strong> y <strong>Email</strong>; la ventana del mensaje deja además <strong>Copiar</strong>. El menú ⋯ ofrece <strong>Registrar como acción</strong>, que lo apunta en el calendario ya hecho. En los inactivos, <strong>Escribirles a todos</strong> te lleva a Novedades con ese público. Solo salen clientes con permiso de marketing.</p>
+<p>Arriba hay cuatro cifras (cumpleaños, visitas recientes, inactivos y NPS), el resumen de la encuesta con los últimos comentarios y «¿Cómo te conocieron?» de los últimos 90 días.</p>
+
+<h4>Ideas de contenido</h4>
+<p>Una biblioteca de ideas para redes y gestión online, por categorías (incluidas «Google Business y reseñas» y gestión de redes, que son tareas de mantenimiento reales). Usa el buscador, entra en una categoría y pulsa <strong>Crear acción</strong>; la idea queda marcada como usada. <strong>Sorpréndeme (idea rápida para hoy)</strong> te propone una al azar.</p>
+
+<h4>Lo que conviene saber</h4>
+<ul>
+<li>Crear, editar, duplicar y eliminar acciones, Novedades y las ideas son del propietario o de un empleado con permiso de edición. Cualquier empleado de Sala puede ver el calendario y marcar acciones como hechas.</li>
+<li>Una acción semanal se marca hecha día a día, no para siempre.</li>
+</ul>
+<h4>Si algo no funciona</h4>
+<ul>
+<li><strong>El descuento no se aplica en el TPV</strong>: revisa fecha (o que sea semanal y no haya terminado), franja horaria y que no haya llegado al límite de usos.</li>
+<li><strong>No puedo escribir a un cliente por WhatsApp</strong>: el teléfono no parece un móvil.</li>
+<li><strong>No veo la pestaña Novedades</strong>: es solo para el propietario o con permiso de edición.</li>
+</ul>
+`,
+    ca:`<h3>Què és i per a què serveix</h3>
+<p>Promoció és el calendari de màrqueting del teu negoci: quina acció fer, quin dia i qui n'és responsable. A més, una acció pot <strong>rebaixar el preu de veritat al TPV</strong>, i des d'aquí pots escriure als teus clients per email i WhatsApp. És a la carpeta <strong>Sala</strong> (Sala → <strong>Promoció</strong>).</p>
+<p>Té sis pestanyes: <strong>Dia</strong>, <strong>Setmana</strong>, <strong>Mes</strong>, <strong>Novetats</strong>, <strong>Clients</strong> i <strong>Idees de contingut</strong>. A dalt també tens accessos directes a les teves xarxes (Instagram, Facebook, TikTok, Google Maps) si les vas emplenar a El Meu Negoci → Xarxes socials.</p>
+
+<h4>Crear una acció, pas a pas</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">A Dia, Setmana o Mes prem <strong>Nova Acció</strong> (a la vista Setmana, també el «+» de cada dia).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">A <strong>Què faràs</strong> posa un <strong>Títol</strong> («Respondre ressenyes», «Happy hour de canyes») i, si vols, una <strong>Descripció</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">A <strong>Quan i qui</strong> tria la <strong>Data</strong> i el <strong>Responsable</strong> (personal de Sala). Marca <strong>Es repeteix cada setmana</strong> per a un 2x1 de tots els dimarts; pots posar <strong>Es repeteix fins</strong> per a una promo de temporada.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Si vols que rebaixi el preu, marca <strong>Aplica un descompte real al TPV</strong> (apartat següent). Prem <strong>Desar</strong>.</div></div>
+<p>Si ja n'hi ha una d'igual aquell dia amb el mateix responsable, l'app t'avisa abans de duplicar-la.</p>
+
+<h4>Descompte real al TPV</h4>
+<ul>
+<li>Tria el <strong>Plat o beguda</strong> (la llista separa Plats i Begudes) i el <strong>Descompte (%)</strong>. A sota veus l'abans i el després: «A la carta: 12,00 € → 9,60 €».</li>
+<li>Opcional: <strong>Des de</strong> i <strong>Fins a</strong> (hora) per limitar-ho a una franja, com un happy hour de 18:00 a 20:00 (omple les dues o cap), i <strong>Límit d'usos per dia</strong>: en arribar a aquest nombre, el plat torna al seu preu normal.</li>
+<li>Aquell dia (i aquella franja), en afegir l'article a una comanda, el TPV aplica el preu rebaixat sol. La carta en línia de la teva web de reserves i comandes també ho mostra rebaixat.</li>
+<li>Si dos descomptes es trepitgen sobre el mateix plat i horari, l'app t'avisa perquè decideixis quin conservar.</li>
+</ul>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Una acció amb descompte té el botó <strong>Anunciar als clients</strong>: et porta a Novetats amb el missatge ja escrit.</div>
+
+<h4>Dia, Setmana i Mes</h4>
+<ul>
+<li><strong>Dia</strong>: xifres (accions del dia, completades, descompte concedit a caixa, propers 7 dies), fletxes per canviar de dia, i una targeta per acció amb la seva casella de <strong>feta</strong> (queda l'hora). Filtra per responsable i per estat (Tots, Pendents, Fetes). El menú <strong>⋯</strong> de cada targeta: <strong>Editar</strong>, <strong>Duplicar al dia següent</strong> i <strong>Eliminar</strong>.</li>
+<li><strong>Setmana</strong>: set columnes amb les accions de cada dia; tocar la capçalera d'un dia obre aquella jornada.</li>
+<li><strong>Mes</strong>: calendari amb el selector de període «‹ mes any ▾ ›» (en obrir-lo veus quantes accions té cada mes) i el botó <strong>Imprimir</strong> per repassar el pla en una reunió.</li>
+</ul>
+
+<h4>Novetats: escriure als teus clients</h4>
+<p>Només la veuen el propietari i qui tingui permís d'edició, perquè fa servir les dades de contacte dels clients. <strong>No hi ha servidor de correu ni WhatsApp pel mig</strong>: el missatge surt del TEU correu i del TEU WhatsApp, i l'app ho prepara tot. A dalt, <strong>Nova novetat</strong>, <strong>Enviades i esborranys</strong> i <strong>Registrar una baixa</strong>.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>A qui l'envies</strong>: Tots, Habituals, Nous, Fa temps que no vénen, En risc, Aniversari aquest mes, Millors clients (el 20 % que més ha gastat aquest any), Per codi postal o Triar un a un. Cada botó diu quants són, i a sota veus quants tenen email vàlid i quants mòbil. <strong>Veure destinataris</strong> et deixa desmarcar qui no vulguis. Mai arriba a qui va retirar el permís de màrqueting.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>De què va</strong>: tria un tema (Plat o beguda nova, Promoció o oferta, Esdeveniment, Menú, Canvi d'horari, Vacances, Tornem a obrir, Data assenyalada, Grups, Gràcies…) i et deixa el text escrit, o tria <strong>Escriure el meu</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>El missatge</strong>: Assumpte, Titular i Text (usa <strong>{nombre}</strong> i <strong>{negocio}</strong>), un requadre d'oferta opcional (títol, condicions, codi, data), un botó (Reservar taula, Fer una comanda, Veure la carta, Trucar, Com arribar o un altre enllaç), una imatge per enllaç https i el teu logo. A la dreta, la <strong>vista prèvia</strong> en Email, Mòbil o WhatsApp.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>El que va entre [claudàtors] cal emplenar-ho. L'app t'avisa abans de copiar o enviar si en queda algun sense canviar.</div>
+<div class="manual-step"><div class="sn">4</div><div class="st"><strong>Enviar</strong>: tria <strong>Email</strong> o <strong>WhatsApp</strong>. És una guia amb passos que es marquen com a fets.</div></div>
+<h4>Guia d'email (mode «Pas a pas»)</h4>
+<ol>
+<li>Obre el teu correu (<strong>Gmail</strong>, <strong>Outlook</strong> o <strong>El meu programa de correu</strong>) i crea un missatge nou.</li>
+<li><strong>Copiar assumpte</strong> i enganxa'l a «Assumpte».</li>
+<li><strong>Copiar destinataris</strong> i enganxa'ls a <strong>CCO</strong> (còpia oculta), mai a «Per a»: així ningú veu el correu dels altres. Es reparteix en <strong>lots</strong> de 25, 50 o 100 (Gmail gratuït admet uns 500 enviaments al dia).</li>
+<li><strong>Copiar el missatge amb disseny</strong> i enganxa'l al cos (o «Només el text»).</li>
+<li>Opcional: adjunta fotos o vídeos (un vídeo pesat, millor com a enllaç).</li>
+<li>Envia des del teu correu i prem <strong>Ja l'he enviat</strong>; si hi ha més lots, <strong>Lot següent</strong>.</li>
+</ol>
+<p>A <strong>Més opcions</strong>: <strong>Enviar-me una prova</strong>, <strong>Descarregar esborrany (.eml)</strong> (s'obre ja maquetat a Outlook d'escriptori, Apple Mail o Thunderbird) i <strong>Descarregar HTML</strong>. El mode <strong>Un a un</strong> obre un correu de text per client, amb el seu nom.</p>
+<h4>Guia de WhatsApp (mode «Llista de difusió»)</h4>
+<ol>
+<li>Al mòbil, millor amb WhatsApp Business: Xats → menú ⋮ → «Nova difusió» (iPhone: «Llistes de difusió» → «Nova llista»). Les llistes es creen al mòbil, no a WhatsApp Web.</li>
+<li>Els teus clients han d'estar a la teva agenda: <strong>Descarregar agenda (.vcf)</strong> i obre-la des del mòbil, o <strong>Copiar noms i telèfons</strong>.</li>
+<li>Afegeix-los a la llista (fins a 256 per llista: es reparteix en lots) i <strong>Copiar nom de la llista</strong>.</li>
+<li><strong>Copiar el missatge</strong> (sense nom) i enganxa'l al xat de la llista; opcionalment fotos o vídeos.</li>
+<li>Envia i marca el lot.</li>
+</ol>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Una llista de difusió només arriba a qui té el teu número desat a l'agenda. En mode <strong>Un a un</strong>, cada botó obre WhatsApp amb el missatge i el nom d'aquell client; tu només prems enviar. Els fixos no compten: WhatsApp no els obre.</div>
+<h4>Baixes, historial i base legal</h4>
+<ul>
+<li>Cada email porta l'avís de baixa i les teves dades com a responsable. Si algú respon BAIXA, prem <strong>Registrar una baixa</strong>, cerca'l i prem <strong>Donar de baixa</strong>: perd el permís i desapareix de totes les llistes.</li>
+<li>A <strong>Enviades i esborranys</strong> veus cada novetat amb el tema, el públic i quants email/WhatsApp es van marcar com a enviats. Des del seu menú ⋯ pots <strong>Usar com a base d'una nova</strong> o eliminar-la.</li>
+</ul>
+
+<h4>Clients: accions ràpides de fidelització</h4>
+<p>Missatges ja escrits (els pots editar abans d'enviar) per a quatre moments: <strong>Propers aniversaris (30 dies)</strong>, <strong>Visites recents — demanar ressenya</strong> (amb l'enllaç de Google si el vas posar a El Meu Negoci), <strong>Clients que fa temps que no vénen</strong> i l'<strong>Enquesta de satisfacció (privada)</strong>. Cada targeta té <strong>WhatsApp</strong> i <strong>Email</strong>; la finestra del missatge deixa a més <strong>Copiar</strong>. El menú ⋯ ofereix <strong>Registrar com a acció</strong>, que ho apunta al calendari ja fet. Als inactius, <strong>Escriure'ls a tots</strong> et porta a Novetats amb aquest públic. Només surten clients amb permís de màrqueting.</p>
+<p>A dalt hi ha quatre xifres (aniversaris, visites recents, inactius i NPS), el resum de l'enquesta amb els últims comentaris i «Com et van conèixer?» dels últims 90 dies.</p>
+
+<h4>Idees de contingut</h4>
+<p>Una biblioteca d'idees per a xarxes i gestió en línia, per categories (incloses «Google Business i ressenyes» i gestió de xarxes, que són tasques de manteniment reals). Fes servir el cercador, entra en una categoria i prem <strong>Crear acció</strong>; la idea queda marcada com a usada. <strong>Sorprèn-me (idea ràpida per avui)</strong> te'n proposa una a l'atzar.</p>
+
+<h4>El que convé saber</h4>
+<ul>
+<li>Crear, editar, duplicar i eliminar accions, Novetats i les idees són del propietari o d'un empleat amb permís d'edició. Qualsevol empleat de Sala pot veure el calendari i marcar accions com a fetes.</li>
+<li>Una acció setmanal es marca feta dia a dia, no per sempre.</li>
+</ul>
+<h4>Si alguna cosa no funciona</h4>
+<ul>
+<li><strong>El descompte no s'aplica al TPV</strong>: revisa data (o que sigui setmanal i no hagi acabat), franja horària i que no hagi arribat al límit d'usos.</li>
+<li><strong>No puc escriure a un client per WhatsApp</strong>: el telèfon no sembla un mòbil.</li>
+<li><strong>No veig la pestanya Novetats</strong>: és només per al propietari o amb permís d'edició.</li>
+</ul>
+`,
+    en:`<h3>What it is and what it's for</h3>
+<p>Promotion is your business's marketing calendar: which action to take, on which day and who is responsible. An action can also <strong>really lower the price at the POS</strong>, and from here you can write to your customers by email and WhatsApp. It's in the <strong>Dining Room</strong> folder (Dining Room → <strong>Promotion</strong>).</p>
+<p>It has six tabs: <strong>Day</strong>, <strong>Week</strong>, <strong>Month</strong>, <strong>News</strong>, <strong>Customers</strong> and <strong>Content ideas</strong>. At the top you also have shortcuts to your social accounts (Instagram, Facebook, TikTok, Google Maps) if you filled them in under My Business → Social media.</p>
+
+<h4>Creating an action, step by step</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">In Day, Week or Month press <strong>New Action</strong> (in the Week view, also the "+" on each day).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Under <strong>What you will do</strong> enter a <strong>Title</strong> ("Reply to reviews", "Beer happy hour") and, if you like, a <strong>Description</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Under <strong>When and who</strong> choose the <strong>Date</strong> and the <strong>Responsible</strong> person (Dining Room staff). Tick <strong>Repeats every week</strong> for a 2-for-1 every Tuesday; you can set <strong>Repeats until</strong> for a seasonal promo.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">If you want it to lower the price, tick <strong>Applies a real discount at the till</strong> (next section). Press <strong>Save</strong>.</div></div>
+<p>If an identical one already exists that day with the same person responsible, the app warns you before duplicating.</p>
+
+<h4>A real discount at the till</h4>
+<ul>
+<li>Pick the <strong>Dish or drink</strong> (the list separates Dishes and Drinks) and the <strong>Discount (%)</strong>. Below you see before and after: "On the menu: 12.00 € → 9.60 €".</li>
+<li>Optional: <strong>From</strong> and <strong>To</strong> (time) to limit it to a slot, like a happy hour 6-8 pm (fill both or neither), and a <strong>Daily usage limit</strong>: once reached, the dish goes back to its normal price.</li>
+<li>On that day (and slot), adding the item to an order makes the POS apply the lower price on its own. The online menu on your booking and ordering website shows it reduced too.</li>
+<li>If two discounts overlap on the same dish and time, the app warns you so you can decide which to keep.</li>
+</ul>
+<div class="manual-tip"><i class="ti ti-bulb"></i>An action with a discount has a <strong>Tell customers</strong> button: it takes you to News with the message already written.</div>
+
+<h4>Day, Week and Month</h4>
+<ul>
+<li><strong>Day</strong>: figures (actions today, completed, discount given at the till, next 7 days), arrows to change day, and a tile per action with its <strong>done</strong> tick box (the time is kept). Filter by person responsible and by status (All, Pending, Done). Each tile's <strong>⋯</strong> menu: <strong>Edit</strong>, <strong>Duplicate to the next day</strong> and <strong>Delete</strong>.</li>
+<li><strong>Week</strong>: seven columns with each day's actions; tapping a day's header opens that day.</li>
+<li><strong>Month</strong>: a calendar with the "‹ month year ▾ ›" period picker (open it to see how many actions each month has) and a <strong>Print</strong> button to go over the plan in a meeting.</li>
+</ul>
+
+<h4>News: writing to your customers</h4>
+<p>Only the owner and anyone with edit permission can see it, because it uses customers' contact details. <strong>There is no mail server or WhatsApp service in between</strong>: the message goes out from YOUR email and YOUR WhatsApp, and the app prepares everything. At the top: <strong>New message</strong>, <strong>Sent and drafts</strong> and <strong>Record an opt-out</strong>.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Who you send it to</strong>: Everyone, Regulars, New, Haven't visited in a while, At risk, Birthday this month, Best customers (the top 20% by spend this year), By postcode or Pick one by one. Each button shows how many there are, and below you see how many have a valid email and how many a mobile. <strong>See recipients</strong> lets you untick anyone you don't want. It never reaches anyone who withdrew their marketing consent.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>What it is about</strong>: choose a topic (New dish or drink, Promotion or offer, Event, Menu, Opening hours change, Holidays, We are reopening, Special date, Groups, Thank you…) and it writes the text for you, or choose <strong>Write my own</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>The message</strong>: Email subject, Headline and Text (use <strong>{nombre}</strong> and <strong>{negocio}</strong>), an optional offer box (title, conditions, code, date), a button (Book a table, Order now, See the menu, Call us, Get directions or another link), an image by https link and your logo. On the right, the <strong>preview</strong> as Email, Mobile or WhatsApp.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Anything in [square brackets] must be filled in. The app warns you before copying or sending if any is left unchanged.</div>
+<div class="manual-step"><div class="sn">4</div><div class="st"><strong>Send</strong>: choose <strong>Email</strong> or <strong>WhatsApp</strong>. It's a guide with steps you tick off as done.</div></div>
+<h4>Email guide ("Step by step" mode)</h4>
+<ol>
+<li>Open your email (<strong>Gmail</strong>, <strong>Outlook</strong> or <strong>My mail app</strong>) and start a new message.</li>
+<li><strong>Copy subject</strong> and paste it into "Subject".</li>
+<li><strong>Copy recipients</strong> and paste them into <strong>BCC</strong> (hidden copy), never "To": that way nobody sees the others' emails. They are split into <strong>batches</strong> of 25, 50 or 100 (free Gmail allows about 500 sends a day).</li>
+<li><strong>Copy the message with design</strong> and paste it into the body (or "Text only").</li>
+<li>Optional: attach photos or videos (a heavy video is better as a link).</li>
+<li>Send from your email and press <strong>I have sent it</strong>; if there are more batches, <strong>Next batch</strong>.</li>
+</ol>
+<p>Under <strong>More options</strong>: <strong>Send myself a test</strong>, <strong>Download draft (.eml)</strong> (opens already laid out in desktop Outlook, Apple Mail or Thunderbird) and <strong>Download HTML</strong>. <strong>One by one</strong> mode opens a plain-text email per customer, with their name.</p>
+<h4>WhatsApp guide ("Broadcast list" mode)</h4>
+<ol>
+<li>On your phone, ideally WhatsApp Business: Chats → menu ⋮ → "New broadcast" (iPhone: "Broadcast lists" → "New list"). Lists are created on the phone, not on WhatsApp Web.</li>
+<li>Your customers must be in your contacts: <strong>Download contacts (.vcf)</strong> and open it from your phone, or <strong>Copy names and phones</strong>.</li>
+<li>Add them to the list (up to 256 per list: it is split into batches) and <strong>Copy list name</strong>.</li>
+<li><strong>Copy the message</strong> (no name) and paste it into the list's chat; optionally photos or videos.</li>
+<li>Send and mark the batch.</li>
+</ol>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>A broadcast list only reaches people who have YOUR number saved in their contacts. In <strong>One by one</strong> mode, each button opens WhatsApp with the message and that customer's name; you only press send. Landlines don't count: WhatsApp can't open them.</div>
+<h4>Opt-outs, history and legal basis</h4>
+<ul>
+<li>Every email carries the opt-out notice and your details as the controller. If someone replies UNSUBSCRIBE, press <strong>Record an opt-out</strong>, find them and press <strong>Opt out</strong>: they lose consent and vanish from every list.</li>
+<li>In <strong>Sent and drafts</strong> you see each message with its topic, audience and how many emails/WhatsApps were marked as sent. From its ⋯ menu you can <strong>Use as the base of a new one</strong> or delete it.</li>
+</ul>
+
+<h4>Customers: quick loyalty actions</h4>
+<p>Ready-written messages (editable before sending) for four moments: <strong>Upcoming birthdays (30 days)</strong>, <strong>Recent visits — ask for a review</strong> (with your Google link if you set it in My Business), <strong>Clients who haven't come in a while</strong> and the <strong>Satisfaction survey (private)</strong>. Each tile has <strong>WhatsApp</strong> and <strong>Email</strong>; the message window also offers <strong>Copy</strong>. The ⋯ menu offers <strong>Register as action</strong>, which logs it in the calendar already done. For inactive customers, <strong>Write to all of them</strong> takes you to News with that audience. Only customers with marketing consent appear.</p>
+<p>At the top are four figures (birthdays, recent visits, inactive and NPS), the survey summary with the latest comments and "How did they hear about you?" for the last 90 days.</p>
+
+<h4>Content ideas</h4>
+<p>A library of ideas for social media and online management, by category (including "Google Business and reviews" and social account upkeep, which are real maintenance tasks). Use the search, open a category and press <strong>Create action</strong>; the idea is marked as used. <strong>Surprise me (quick idea for today)</strong> suggests one at random.</p>
+
+<h4>Good to know</h4>
+<ul>
+<li>Creating, editing, duplicating and deleting actions, News and ideas are for the owner or an employee with edit permission. Any Dining Room employee can see the calendar and tick actions as done.</li>
+<li>A weekly action is ticked done day by day, not forever.</li>
+</ul>
+<h4>If something doesn't work</h4>
+<ul>
+<li><strong>The discount doesn't apply at the POS</strong>: check the date (or that it's weekly and hasn't ended), the time slot and that it hasn't reached its usage limit.</li>
+<li><strong>I can't message a customer on WhatsApp</strong>: the phone doesn't look like a mobile.</li>
+<li><strong>I can't see the News tab</strong>: it's only for the owner or with edit permission.</li>
+</ul>
+`}
+  },
+  {id:'economia', area:'gestion',
+    title:{es:`<i class="ti ti-coin"></i> Gestión Económica`, ca:`<i class="ti ti-coin"></i> Gestió Econòmica`, en:`<i class="ti ti-coin"></i> Financial Management`},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
+<p>Gestión Económica junta lo que vendes (el TPV) con lo que gastas (lo que registras aquí y lo que llega de Pedidos) y te dice, sin esperar al fin de año, si ganas dinero, cuánto, cuánto debes apartar para Hacienda y cuántos cubiertos necesitas para no perder. Y lo ordena como lo pide tu gestor para que se lo mandes en un clic. Está en <strong>Gestión → Gestión Económica</strong> y es <strong>solo del propietario</strong>.</p>
+<p><strong>La app no es una gestoría</strong>: ordena tus datos de forma objetiva y calcula provisiones para que sepas qué apartar; presentar los impuestos lo hace tu gestor.</p>
+
+<h4>Antes de empezar: «Para que tus números salgan bien»</h4>
+<p>Arriba puede aparecer un aviso rojo o una lista con lo que falta. Hazla antes que nada, porque cambia todas las cuentas:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Elige tu forma jurídica</strong> en <strong>Gestión → Mi Negocio → Forma jurídica y régimen fiscal</strong>: autónomo, comunidad de bienes, sociedad o cooperativa; si eres autónomo, estimación directa (simplificada o normal) o módulos. Sin esto, la app calcula como si fueras una sociedad y tu impuesto y tu sueldo salen mal.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Pon el <strong>NIF del negocio</strong> (sale en cada ticket y en lo que recibe tu gestor).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Da de alta tus <strong>gastos fijos</strong> (alquiler, luz, seguros, gestoría…).</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Si eres autónomo o comunidad de bienes, apunta <strong>Mi sueldo (titular)</strong> (o <strong>No me pago un fijo</strong>).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">Pon el <strong>mes de factura</strong> a los gastos que no son mensuales y el <strong>IVA</strong> a los platos de la carta que no lo tengan.</div></div>
+<p>Cada punto tiene un botón <strong>Ir</strong>. La lista se puede ocultar un mes con <strong>Ocultar un mes</strong>.</p>
+
+<h4>Las pestañas</h4>
+<p>Ventas, Gastos fijos, Gastos Variables, Cuenta de Resultados, Tesorería, Punto de equilibrio e Inversiones. Si eres autónomo en módulos, aparece además <strong>Módulos</strong>. En las pestañas por mes eliges el año con las flechas y el mes en la tira de abajo.</p>
+
+<h4>Ventas</h4>
+<p>El histórico de lo que has vendido, mes a mes: totales por <strong>tipo de servicio</strong> (Mesa, Take Away, Delivery), con su filtro, y <strong>Ventas por día</strong> con tickets y ticket medio. Las propinas se enseñan aparte (informativo, no suman). Las <strong>señales de reservas</strong> cobradas se avisan aparte, porque su IVA cuenta en el mes en que las cobras.</p>
+<p>Dos bloques más: <strong>Otros ingresos</strong> (subvenciones, comisión de máquinas, alquiler del local para un evento; botón <strong>Añadir ingreso</strong>, con su IVA según el tipo) y <strong>Vales regalo</strong> (los de Clientes aparecen solos; el botón <strong>Vender un vale</strong> anota a mano uno solo en la contabilidad).</p>
+
+<h4>Gastos fijos</h4>
+<p>Lo que pagas todos los meses aunque vendas poco. Tres cifras arriba y dos bloques: <strong>Personal (nómina/SS)</strong> y <strong>Gastos Fijos Generales</strong>, cada uno con su botón <strong>Añadir</strong> (en Personal, también <strong>Mi sueldo (titular)</strong>). Al final, el <strong>total de gastos fijos mensuales</strong>.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>Añadir</strong>. Pon el <strong>Concepto</strong>, el <strong>importe sin IVA</strong>, el <strong>día de pago</strong> y la <strong>Periodicidad del pago</strong> (mensual, trimestral, anual…).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Si no es mensual, elige el <strong>Mes de la factura</strong>: el gasto se reparte a lo largo del año, pero el IVA se deduce entero el mes de la factura.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">En gastos generales indica <strong>Proveedor</strong> y <strong>NIF</strong> (se recuerda para la próxima vez y alimenta el modelo 347), el <strong>tipo de IVA</strong> y, si procede, la <strong>Retención IRPF de la factura</strong>: alquiler del local 19 % (modelo 115) o profesional 15 % o 7 % (modelo 111). Puedes adjuntar la foto de la factura.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">En una <strong>nómina</strong>, marca <strong>Calcular el coste total a partir del sueldo neto</strong> y rellena bruto anual (si lo sabes), hijos, IRPF, contrato (indefinido, temporal, fijo discontinuo), grupo de cotización, pagas y jornada. La app calcula bruto, Seguridad Social de la empresa (con las bases de 2026) y coste total, y avisa si queda por debajo del salario mínimo.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Lo que cobra el titular (autónomo o comunidad de bienes) <strong>no es un gasto</strong>: márcalo con «Es lo que cobra el titular o un socio, no un empleado» o usa <strong>Mi sueldo (titular)</strong>. Sale debajo del resultado. Tu cuota de autónomos sí es un gasto: ponla aparte. En una sociedad, la nómina del administrador sí es gasto.</div>
+
+<h4>Gastos Variables</h4>
+<p>Las compras del mes. Los pedidos a proveedor marcados como <strong>Recibido</strong> en Pedidos entran solos; lo demás lo añades tú.</p>
+<ul>
+<li><strong>Añadir compra extra</strong>: material, limpieza, gastos puntuales.</li>
+<li><strong>Leer factura con foto</strong>: haz una foto o sube un PDF y la IA de tu negocio la lee; la app cuadra sumas e IVA y <strong>nada se guarda sin que lo revises</strong>. Necesita tu clave de IA (ver capítulo Herramientas); solo el propietario.</li>
+<li><strong>Facturas sin asignar</strong> y <strong>Foto de factura</strong>: guarda ahora la foto de una factura que aún no sabes dónde apuntar y úsala luego.</li>
+<li>Arriba: cifras del mes, <strong>Gasto por categoría</strong> y, si procede, <strong>Gasto hormiga detectado</strong> (proveedores con muchos cargos pequeños que suman). En <strong>Existencias</strong>, la foto automática de tu stock a fin de mes o un <strong>Recuento</strong> a mano: la variación entra en la Cuenta de Resultados.</li>
+</ul>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si tu food cost real está muy por encima del objetivo, revisa escandallos sin actualizar, mermas, descontrol de stock o precios de carta que ya no cubren el coste.</div>
+
+<h4>Cuenta de Resultados</h4>
+<p>Es la del gestor: sigue el orden del Plan General Contable. Eliges el año y <strong>Mensual</strong> o <strong>Trimestral</strong>, y la tira de periodos. De arriba abajo: <strong>Facturación (TPV, IVA incl.)</strong> → IVA repercutido → <strong>Facturación neta</strong> → otros ingresos → Gastos Variables (sin IVA) y variación de existencias → <strong>Margen Bruto</strong> → <strong>Gastos de personal</strong> → <strong>Otros gastos de explotación</strong> → comisiones de apps de delivery → <strong>Beneficio antes de amortizar (EBITDA)</strong> → <strong>Amortización de inversiones</strong> → <strong>Resultado de explotación</strong> → <strong>Intereses de préstamos</strong> → <strong>Resultado Antes de Impuestos</strong> → impuesto → <strong>Resultado Neto</strong>.</p>
+<p>Debajo del resultado, según el caso: lo que se paga el titular y «Queda en el negocio», el <strong>IVA a liquidar (modelo 303)</strong> y el IRPF y retenciones a ingresar (modelos 111 y 115). Cada trimestre y el año se desglosan al pasar el cursor.</p>
+<ul>
+<li><strong>El impuesto se calcula por año</strong>, no mes a mes: tipo efectivo del año por el beneficio acumulado, descontando pérdidas de años anteriores. Un mes puede salir con impuesto negativo: es lo que ya habías provisionado de más.</li>
+<li><strong>Autónomo y comunidad de bienes</strong>: el IRPF sale de la escala por tramos con mínimo personal y gastos de difícil justificación; cada comunero tributa por su parte (se pone en Mi Negocio).</li>
+<li><strong>Sociedad</strong>: un campo <strong>Impuesto de Sociedades</strong> con una sugerencia de tipo; los dividendos no son gasto y llevan retención. <strong>Cooperativa</strong>: pon tú el tipo que te dé tu gestoría. <strong>Módulos</strong>: tu impuesto real lo fija la pestaña Módulos, no este porcentaje.</li>
+<li>Una venta anulada resta en el mes de su rectificativa; no se reescribe un trimestre ya presentado.</li>
+<li>El impuesto que ves es una <strong>provisión</strong> para saber cuánto apartar, no la cuota de la declaración.</li>
+</ul>
+
+<h4>Tesorería: dónde va cada euro</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">Arriba: <strong>Facturación bruta</strong>, IVA repercutido y facturación neta del mes. Configura tu <strong>distribución objetivo</strong> (Personal, Gastos fijos, Gastos Variables, Otros y Beneficio, que suman 100 %).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">En <strong>Distribución de tesorería</strong> ves, por partida, objetivo y real con una ✓ o ✗: en un gasto es bueno quedarse por debajo del objetivo; en el beneficio, por encima. Aquí cuenta la <strong>caja</strong>: la cuota entera del préstamo y lo pagado al contado por una inversión.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Debajo, lo que debes <strong>apartar</strong>: <strong>Reserva IVA (modelo 303)</strong> del trimestre, IRPF retenido, retención del alquiler y los pagos a cuenta (130, 131 o 202).</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">El <strong>calendario de pagos a Hacienda</strong> del trimestre lista cada modelo con importe y fecha límite (del 1 al 20 del mes siguiente; el 4.º trimestre, hasta enero, con los resúmenes anuales).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st"><strong>Previsión de tesorería</strong> a 30, 60 y 90 días, a partir del resultado medio de los 3 últimos meses (una estimación, no una promesa), y «Próximos pagos grandes» de gastos no mensuales.</div></div>
+<div class="manual-step"><div class="sn">6</div><div class="st"><strong>Cerrar mes</strong> bloquea los gastos variables y las inversiones de ese mes para protegerlos tras mandárselos al gestor; <strong>Reabrir mes</strong> lo deshace. También está <strong>Conciliación bancaria</strong>.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Muchos negocios «ganan sobre el papel» pero van justos porque se gastan el IVA cobrado como si fuera suyo. Aparta lo que indica la reserva.</div>
+
+<h4>Punto de equilibrio</h4>
+<p>Cuántos cubiertos al mes necesitas para cubrir tus gastos fijos.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Los <strong>Costes fijos totales</strong> vienen solos de Gastos fijos.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Pon el <strong>Ticket medio (€/cubierto)</strong> <strong>sin IVA</strong>, los <strong>Cubiertos al mes</strong>, los <strong>Días de apertura/mes</strong> y el <strong>Food cost objetivo (%)</strong>. O pulsa <strong>Usar datos del último mes</strong> (últimos 30 días de ventas reales).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Resultado: coste variable por cubierto, contribución, <strong>cubiertos para cubrir gastos</strong>, cubiertos por día y ventas mínimas mensuales, con un indicador de si estás por encima o por debajo. Con <strong>Guardar como escenario</strong> guardas variantes («Verano/Terraza», «Invierno»).</div></div>
+<p><strong>Ejemplo:</strong> gastos fijos 6.000 €, ticket sin IVA 18 € y food cost 30 %: cada cubierto deja 12,60 €; 6.000 / 12,60 ≈ 477 cubiertos al mes; abriendo 26 días, unos 19 al día.</p>
+
+<h4>Inversiones</h4>
+<p>Horno, cámara, obra, mobiliario, vehículo… pulsa <strong>Nueva inversión</strong> con importe, IVA, fecha y <strong>Qué es (para la amortización)</strong>. En la Cuenta de Resultados no entra lo que pagas, sino lo que se <strong>amortiza</strong> cada año (porcentaje oficial) más los intereses; hasta 300 € va entero a gasto. Si la pagas a plazos, marca <strong>Inversión pagada a plazos</strong> con cuotas y cuota mensual: la cuota es caja y va en Tesorería. El estado es PAGADO, PARCIAL o PENDIENTE y arriba ves la <strong>Deuda pendiente</strong>. En obras de un local alquilado, indica los años que quedan de contrato; en un turismo de uso mixto, el IVA se deduce al 50 %.</p>
+
+<h4>Módulos</h4>
+<p>Solo para autónomos en estimación objetiva: eliges epígrafe y los datos del módulo (mesas, potencia, personal, máquinas…) y la app estima tu IVA e IRPF y los pagos a cuenta (131). Es una previsión: el cálculo definitivo lo hace tu gestor.</p>
+
+<h4>Enviar al gestor</h4>
+<p>El botón <strong>Enviar al gestor</strong> (arriba) prepara un único <strong>ZIP</strong>:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Elige el <strong>Periodo</strong>: Mes, Trimestre, Año entero o Fechas exactas.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Marca <strong>Qué incluye</strong>: Facturas emitidas, Facturas recibidas, fotos y PDF de las facturas, Impuestos del periodo, Cuenta de resultados, Bienes de inversión, Nóminas y SS y Registro de jornada. Opcionalmente, el email de tu gestor.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Descargar</strong> guarda el ZIP; <strong>Enviar / compartir</strong> lo adjunta desde tu móvil o tablet (en un ordenador lo descarga y abre tu correo).</div></div>
+<p>Dentro: un Excel con una hoja por libro, los mismos libros en CSV (para A3, Sage, ContaSol…), las fotos de las facturas con cada línea citando su archivo y un LÉEME. Las emitidas van como libro registro: tickets agrupados por día, facturas completas con cliente y rectificativas en su fecha.</p>
+
+<h4>Lo que conviene saber</h4>
+<ul>
+<li>Todo es solo del propietario. Un empleado ve un aviso y no entra.</li>
+<li>Usa el mismo food cost objetivo en Punto de equilibrio, Panel de Control y avisos de subida de precios.</li>
+<li>Los datos de nóminas y cotización se actualizan cada año; tu gestor debe revisar lo que presente.</li>
+</ul>
+<h4>Si algo no funciona</h4>
+<ul>
+<li><strong>Mi impuesto sale raro</strong>: revisa la forma jurídica y el régimen en Mi Negocio y que el sueldo del titular esté marcado como tal.</li>
+<li><strong>Las cifras del Panel no coinciden con las de aquí</strong>: ambos usan el mes natural; si no coinciden, revisa que no haya un mes cerrado distinto o gastos fijos sin el mes de factura.</li>
+<li><strong>No puedo editar una compra o inversión</strong>: ese mes está cerrado en Tesorería; reábrelo.</li>
+<li><strong>No funciona «Leer factura con foto»</strong>: falta la clave de IA en Mi Negocio → Asistente de IA.</li>
+</ul>
+`,
+    ca:`<h3>Què és i per a què serveix</h3>
+<p>Gestió Econòmica ajunta el que vens (el TPV) amb el que gastes (el que registres aquí i el que arriba de Comandes) i et diu, sense esperar a final d'any, si guanyes diners, quant, quant has d'apartar per a Hisenda i quants comensals necessites per no perdre. I ho ordena com ho demana el teu gestor perquè li ho enviïs d'un clic. És a <strong>Gestió → Gestió Econòmica</strong> i és <strong>només del propietari</strong>.</p>
+<p><strong>L'app no és una gestoria</strong>: ordena les teves dades de manera objectiva i calcula provisions perquè sàpigues què apartar; presentar els impostos ho fa el teu gestor.</p>
+
+<h4>Abans de començar: «Perquè els teus números surtin bé»</h4>
+<p>A dalt pot aparèixer un avís vermell o una llista amb el que falta. Fes-la abans de res, perquè canvia tots els comptes:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Tria la teva forma jurídica</strong> a <strong>Gestió → El Meu Negoci → Forma jurídica i règim fiscal</strong>: autònom, comunitat de béns, societat o cooperativa; si ets autònom, estimació directa (simplificada o normal) o mòduls. Sense això, l'app calcula com si fossis una societat i el teu impost i el teu sou surten malament.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Posa el <strong>NIF del negoci</strong> (surt a cada tiquet i en el que rep el teu gestor).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Dona d'alta les teves <strong>despeses fixes</strong> (lloguer, llum, assegurances, gestoria…).</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Si ets autònom o comunitat de béns, apunta <strong>El meu sou (titular)</strong> (o <strong>No em pago un fix</strong>).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">Posa el <strong>mes de factura</strong> a les despeses que no són mensuals i l'<strong>IVA</strong> als plats de la carta que no en tinguin.</div></div>
+<p>Cada punt té un botó <strong>Anar</strong>. La llista es pot amagar un mes amb <strong>Amagar un mes</strong>.</p>
+
+<h4>Les pestanyes</h4>
+<p>Vendes, Despeses fixes, Despeses Variables, Compte de Resultats, Tresoreria, Punt d'equilibri i Inversions. Si ets autònom en mòduls, apareix a més <strong>Mòduls</strong>. A les pestanyes per mes tries l'any amb les fletxes i el mes a la tira de sota.</p>
+
+<h4>Vendes</h4>
+<p>L'historial del que has venut, mes a mes: totals per <strong>tipus de servei</strong> (Taula, Take Away, Delivery), amb el seu filtre, i <strong>Vendes per dia</strong> amb tiquets i tiquet mitjà. Les propines es mostren a part (informatiu, no sumen). Les <strong>senyals de reserves</strong> cobrades s'avisen a part, perquè el seu IVA compta al mes en què les cobres.</p>
+<p>Dos blocs més: <strong>Altres ingressos</strong> (subvencions, comissió de màquines, lloguer del local per a un esdeveniment; botó <strong>Afegir ingrés</strong>, amb el seu IVA segons el tipus) i <strong>Vals regal</strong> (els de Clients apareixen sols; el botó <strong>Vendre un val</strong> n'anota a mà un de sol a la comptabilitat).</p>
+
+<h4>Despeses fixes</h4>
+<p>El que pagues tots els mesos encara que vengui poc. Tres xifres a dalt i dos blocs: <strong>Personal (nòmina/SS)</strong> i <strong>Despeses Fixes Generals</strong>, cadascun amb el seu botó <strong>Afegir</strong> (a Personal, també <strong>El meu sou (titular)</strong>). Al final, el <strong>total de despeses fixes mensuals</strong>.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>Afegir</strong>. Posa el <strong>Concepte</strong>, l'<strong>import sense IVA</strong>, el <strong>dia de pagament</strong> i la <strong>Periodicitat del pagament</strong> (mensual, trimestral, anual…).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Si no és mensual, tria el <strong>Mes de la factura</strong>: la despesa es reparteix al llarg de l'any, però l'IVA es dedueix sencer el mes de la factura.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">A despeses generals indica <strong>Proveïdor</strong> i <strong>NIF</strong> (es recorda per a la propera vegada i alimenta el model 347), el <strong>tipus d'IVA</strong> i, si cal, la <strong>Retenció IRPF de la factura</strong>: lloguer del local 19 % (model 115) o professional 15 % o 7 % (model 111). Pots adjuntar la foto de la factura.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">En una <strong>nòmina</strong>, marca <strong>Calcular el cost total a partir del sou net</strong> i omple brut anual (si el saps), fills, IRPF, contracte (indefinit, temporal, fix discontinu), grup de cotització, pagues i jornada. L'app calcula brut, Seguretat Social de l'empresa (amb les bases de 2026) i cost total, i avisa si queda per sota del salari mínim.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>El que cobra el titular (autònom o comunitat de béns) <strong>no és una despesa</strong>: marca-ho amb «És el que cobra el titular o un soci, no un empleat» o fes servir <strong>El meu sou (titular)</strong>. Surt sota el resultat. La teva quota d'autònoms sí que és una despesa: posa-la a part. En una societat, la nòmina de l'administrador sí que és despesa.</div>
+
+<h4>Despeses Variables</h4>
+<p>Les compres del mes. Les comandes a proveïdor marcades com a <strong>Rebut</strong> a Comandes entren soles; la resta l'afegeixes tu.</p>
+<ul>
+<li><strong>Afegir compra extra</strong>: material, neteja, despeses puntuals.</li>
+<li><strong>Llegir factura amb foto</strong>: fes una foto o puja un PDF i la IA del teu negoci la llegeix; l'app quadra sumes i IVA i <strong>res es desa sense que ho revisis</strong>. Necessita la teva clau d'IA (vegeu el capítol Eines); només el propietari.</li>
+<li><strong>Factures sense assignar</strong> i <strong>Foto de factura</strong>: desa ara la foto d'una factura que encara no saps on apuntar i fes-la servir després.</li>
+<li>A dalt: xifres del mes, <strong>Despesa per categoria</strong> i, si cal, <strong>Despesa formiga detectada</strong> (proveïdors amb molts càrrecs petits que sumen). A <strong>Existències</strong>, la foto automàtica del teu estoc a final de mes o un <strong>Recompte</strong> a mà: la variació entra al Compte de Resultats.</li>
+</ul>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>Si el teu food cost real està molt per sobre de l'objectiu, revisa escandalls sense actualitzar, mermes, descontrol d'estoc o preus de carta que ja no cobreixen el cost.</div>
+
+<h4>Compte de Resultats</h4>
+<p>És la del gestor: segueix l'ordre del Pla General Comptable. Tries l'any i <strong>Mensual</strong> o <strong>Trimestral</strong>, i la tira de períodes. De dalt a baix: <strong>Facturació (TPV, IVA inclòs)</strong> → IVA repercutit → <strong>Facturació neta</strong> → altres ingressos → Despeses Variables (sense IVA) i variació d'existències → <strong>Marge Brut</strong> → <strong>Despeses de personal</strong> → <strong>Altres despeses d'explotació</strong> → comissions d'apps de delivery → <strong>Benefici abans d'amortitzar (EBITDA)</strong> → <strong>Amortització d'inversions</strong> → <strong>Resultat d'explotació</strong> → <strong>Interessos de préstecs</strong> → <strong>Resultat Abans d'Impostos</strong> → impost → <strong>Resultat Net</strong>.</p>
+<p>Sota el resultat, segons el cas: el que es paga el titular i «Queda al negoci», l'<strong>IVA a liquidar amb Hisenda (model 303)</strong> i l'IRPF i retencions a ingressar (models 111 i 115). Cada trimestre i l'any es desglossen en passar el cursor.</p>
+<ul>
+<li><strong>L'impost es calcula per any</strong>, no mes a mes: tipus efectiu de l'any pel benefici acumulat, descomptant pèrdues d'anys anteriors. Un mes pot sortir amb impost negatiu: és el que ja havies provisionat de més.</li>
+<li><strong>Autònom i comunitat de béns</strong>: l'IRPF surt de l'escala per trams amb mínim personal i despeses de difícil justificació; cada comuner tributa per la seva part (es posa a El Meu Negoci).</li>
+<li><strong>Societat</strong>: un camp <strong>Impost de Societats</strong> amb un suggeriment de tipus; els dividends no són despesa i porten retenció. <strong>Cooperativa</strong>: posa tu el tipus que et doni la teva gestoria. <strong>Mòduls</strong>: el teu impost real el fixa la pestanya Mòduls, no aquest percentatge.</li>
+<li>Una venda anul·lada resta al mes de la seva rectificativa; no es reescriu un trimestre ja presentat.</li>
+<li>L'impost que veus és una <strong>provisió</strong> per saber quant apartar, no la quota de la declaració.</li>
+</ul>
+
+<h4>Tresoreria: on va cada euro</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">A dalt: <strong>Facturació bruta</strong>, IVA repercutit i facturació neta del mes. Configura la teva <strong>distribució objectiu</strong> (Personal, Despeses fixes, Despeses Variables, Altres i Benefici, que sumen 100 %).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">A <strong>Distribució de tresoreria</strong> veus, per partida, objectiu i real amb una ✓ o ✗: en una despesa és bo quedar-se per sota de l'objectiu; en el benefici, per sobre. Aquí compta la <strong>caixa</strong>: la quota sencera del préstec i el pagat al comptat per una inversió.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">A sota, el que has d'<strong>apartar</strong>: <strong>Reserva IVA (model 303)</strong> del trimestre, IRPF retingut, retenció del lloguer i els pagaments a compte (130, 131 o 202).</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">El <strong>calendari de pagaments a Hisenda</strong> del trimestre llista cada model amb import i data límit (de l'1 al 20 del mes següent; el 4t trimestre, fins al gener, amb els resums anuals).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st"><strong>Previsió de tresoreria</strong> a 30, 60 i 90 dies, a partir del resultat mitjà dels 3 últims mesos (una estimació, no una promesa), i «Propers pagaments grans» de despeses no mensuals.</div></div>
+<div class="manual-step"><div class="sn">6</div><div class="st"><strong>Tancar mes</strong> bloqueja les despeses variables i les inversions d'aquell mes per protegir-les després d'enviar-les al gestor; <strong>Reobrir mes</strong> ho desfà. També hi ha <strong>Conciliació bancària</strong>.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Molts negocis «guanyen sobre el paper» però van justos perquè es gasten l'IVA cobrat com si fos seu. Aparta el que indica la reserva.</div>
+
+<h4>Punt d'equilibri</h4>
+<p>Quants comensals al mes necessites per cobrir les teves despeses fixes.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Els <strong>Costos fixos totals</strong> vénen sols de Despeses fixes.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Posa el <strong>Tiquet mitjà (€/comensal)</strong> <strong>sense IVA</strong>, els <strong>Comensals al mes</strong>, els <strong>Dies d'obertura/mes</strong> i el <strong>Food cost objectiu (%)</strong>. O prem <strong>Usar dades de l'últim mes</strong> (últims 30 dies de vendes reals).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Resultat: cost variable per comensal, contribució, <strong>comensals per cobrir despeses</strong>, comensals per dia i vendes mínimes mensuals, amb un indicador de si estàs per sobre o per sota. Amb <strong>Desar com a escenari</strong> deses variants («Estiu/Terrassa», «Hivern»).</div></div>
+<p><strong>Exemple:</strong> despeses fixes 6.000 €, tiquet sense IVA 18 € i food cost 30 %: cada comensal deixa 12,60 €; 6.000 / 12,60 ≈ 477 comensals al mes; obrint 26 dies, uns 19 al dia.</p>
+
+<h4>Inversions</h4>
+<p>Forn, cambra, obra, mobiliari, vehicle… prem <strong>Nova inversió</strong> amb import, IVA, data i <strong>Què és (per a l'amortització)</strong>. Al Compte de Resultats no entra el que pagues, sinó el que s'<strong>amortitza</strong> cada any (percentatge oficial) més els interessos; fins a 300 € va sencer a despesa. Si la pagues a terminis, marca <strong>Inversió pagada a terminis</strong> amb quotes i quota mensual: la quota és caixa i va a Tresoreria. L'estat és PAGAT, PARCIAL o PENDENT i a dalt veus el <strong>Deute pendent</strong>. En obres d'un local llogat, indica els anys que queden de contracte; en un turisme d'ús mixt, l'IVA es dedueix al 50 %.</p>
+
+<h4>Mòduls</h4>
+<p>Només per a autònoms en estimació objectiva: tries epígraf i les dades del mòdul (taules, potència, personal, màquines…) i l'app estima el teu IVA i IRPF i els pagaments a compte (131). És una previsió: el càlcul definitiu el fa el teu gestor.</p>
+
+<h4>Enviar al gestor</h4>
+<p>El botó <strong>Enviar al gestor</strong> (a dalt) prepara un únic <strong>ZIP</strong>:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Tria el <strong>Període</strong>: Mes, Trimestre, Any sencer o Dates exactes.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Marca <strong>Què inclou</strong>: Factures emeses, Factures rebudes, fotos i PDF de les factures, Impostos del període, Compte de resultats, Béns d'inversió, Nòmines i SS i Registre de jornada. Opcionalment, l'email del teu gestor.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Descarregar</strong> desa el ZIP; <strong>Enviar / compartir</strong> l'adjunta des del mòbil o tauleta (en un ordinador el descarrega i obre el correu).</div></div>
+<p>A dins: un Excel amb un full per llibre, els mateixos llibres en CSV (per a A3, Sage, ContaSol…), les fotos de les factures amb cada línia citant el seu arxiu i un LLEGEIX-ME. Les emeses van com a llibre registre: tiquets agrupats per dia, factures completes amb client i rectificatives a la seva data.</p>
+
+<h4>El que convé saber</h4>
+<ul>
+<li>Tot és només del propietari. Un empleat veu un avís i no hi entra.</li>
+<li>Fa servir el mateix food cost objectiu a Punt d'equilibri, Tauler de Control i avisos de pujada de preus.</li>
+<li>Les dades de nòmines i cotització s'actualitzen cada any; el teu gestor ha de revisar el que presenti.</li>
+</ul>
+<h4>Si alguna cosa no funciona</h4>
+<ul>
+<li><strong>El meu impost surt estrany</strong>: revisa la forma jurídica i el règim a El Meu Negoci i que el sou del titular estigui marcat com a tal.</li>
+<li><strong>Les xifres del Tauler no coincideixen amb les d'aquí</strong>: tots dos fan servir el mes natural; si no coincideixen, revisa que no hi hagi un mes tancat diferent o despeses fixes sense el mes de factura.</li>
+<li><strong>No puc editar una compra o inversió</strong>: aquell mes està tancat a Tresoreria; reobre'l.</li>
+<li><strong>No funciona «Llegir factura amb foto»</strong>: falta la clau d'IA a El Meu Negoci → Assistent d'IA.</li>
+</ul>
+`,
+    en:`<h3>What it is and what it's for</h3>
+<p>Financial Management brings together what you sell (the POS) and what you spend (what you record here and what arrives from Orders) and tells you, without waiting for year end, whether you make money, how much, how much to set aside for the tax office and how many covers you need not to lose. It also arranges it the way your accountant wants it so you can send it in one click. It's under <strong>Management → Financial Management</strong> and is <strong>for the owner only</strong>.</p>
+<p><strong>The app is not an accountancy firm</strong>: it organises your data objectively and calculates provisions so you know what to set aside; filing the taxes is done by your accountant.</p>
+
+<h4>Before you start: "So your numbers come out right"</h4>
+<p>At the top a red notice or a list of what is missing may appear. Do it first, because it changes every calculation:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Choose your legal form</strong> in <strong>Management → My Business → Legal form and tax regime</strong>: self-employed, joint ownership, company or cooperative; if self-employed, actual-expense taxation (simplified or normal) or modules. Without it the app calculates as if you were a company and your tax and pay come out wrong.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Enter the <strong>business tax ID</strong> (it appears on every ticket and in what your accountant receives).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Add your <strong>fixed expenses</strong> (rent, electricity, insurance, accountant…).</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">If you're self-employed or a joint ownership, enter <strong>My pay (owner)</strong> (or <strong>I don't pay myself a fixed amount</strong>).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">Set the <strong>invoice month</strong> on expenses that aren't monthly and the <strong>VAT</strong> on menu dishes that don't have one.</div></div>
+<p>Each item has a <strong>Go</strong> button. You can hide the list for a month with <strong>Hide for a month</strong>.</p>
+
+<h4>The tabs</h4>
+<p>Sales, Fixed expenses, Variable Expenses, Income Statement, Treasury, Break-even point and Investments. If you're self-employed under modules, <strong>Modules</strong> also appears. On the monthly tabs you pick the year with the arrows and the month in the strip below.</p>
+
+<h4>Sales</h4>
+<p>The history of what you've sold, month by month: totals by <strong>service type</strong> (Table, Take Away, Delivery), with its filter, and <strong>Sales by day</strong> with tickets and average ticket. Tips are shown separately (informative, not added). Booking <strong>deposits</strong> collected are noted apart, because their VAT counts in the month you collect them.</p>
+<p>Two more blocks: <strong>Other income</strong> (grants, machine commission, renting the premises for an event; <strong>Add income</strong> button, with VAT by type) and <strong>Gift vouchers</strong> (those from Customers appear by themselves; the <strong>Sell a voucher</strong> button logs a stand-alone one by hand in the accounts).</p>
+
+<h4>Fixed expenses</h4>
+<p>What you pay every month even if you sell little. Three figures at the top and two blocks: <strong>Staff (payroll/SS)</strong> and <strong>General Fixed Expenses</strong>, each with its <strong>Add</strong> button (under Staff, also <strong>My pay (owner)</strong>). At the bottom, the <strong>total monthly fixed expenses</strong>.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>Add</strong>. Enter the <strong>Concept</strong>, the <strong>amount excl. VAT</strong>, the <strong>payment day</strong> and the <strong>Payment frequency</strong> (monthly, quarterly, yearly…).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">If it isn't monthly, choose the <strong>Invoice month (if not monthly)</strong>: the expense is spread over the year, but the VAT is deducted in full in the invoice month.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">For general expenses give the <strong>Supplier</strong> and <strong>tax ID</strong> (remembered for next time and feeding form 347), the <strong>VAT type</strong> and, where relevant, the <strong>Income tax withholding on the invoice</strong>: premises rent 19% (form 115) or professional 15% or 7% (form 111). You can attach the invoice photo.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">For a <strong>payroll</strong> entry, tick <strong>Calculate total cost from the net salary</strong> and fill in annual gross (if known), children, income tax, contract (permanent, temporary, seasonal), contribution group, pay periods and working hours. The app calculates gross, employer Social Security (with 2026 bases) and total cost, and warns if it's under the minimum wage.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>What the owner takes (self-employed or joint ownership) is <strong>not an expense</strong>: mark it with "This is what the owner or a partner takes, not an employee" or use <strong>My pay (owner)</strong>. It appears below the result. Your self-employed contribution is an expense: enter it separately. In a company, the director's payroll is an expense.</div>
+
+<h4>Variable Expenses</h4>
+<p>The month's purchases. Supplier orders marked <strong>Received</strong> in Orders come in by themselves; you add the rest.</p>
+<ul>
+<li><strong>Add extra purchase</strong>: supplies, cleaning, one-off costs.</li>
+<li><strong>Read invoice from photo</strong>: take a photo or upload a PDF and your business's AI reads it; the app checks sums and VAT and <strong>nothing is saved until you review it</strong>. It needs your AI key (see the Tools chapter); owner only.</li>
+<li><strong>Unassigned invoices</strong> and <strong>Invoice photo</strong>: save the photo of an invoice now when you don't yet know where to record it, and use it later.</li>
+<li>At the top: the month's figures, <strong>Spend by category</strong> and, if relevant, <strong>Small recurring expenses detected</strong> (suppliers with many small charges that add up). Under <strong>Inventory</strong>, the automatic snapshot of your stock at month end or a manual <strong>Count</strong>: the change goes into the Income Statement.</li>
+</ul>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>If your real food cost is well above target, check outdated costings, waste, stock control or menu prices that no longer cover cost.</div>
+
+<h4>Income Statement</h4>
+<p>This is your accountant's own format: it follows the General Accounting Plan order. You choose the year and <strong>Monthly</strong> or <strong>Quarterly</strong>, and the period strip. From top to bottom: <strong>Revenue (POS, VAT incl.)</strong> → VAT on sales → <strong>Net revenue</strong> → other income → Variable Expenses (excl. VAT) and change in inventory → <strong>Gross Margin</strong> → <strong>Staff costs</strong> → <strong>Other operating expenses</strong> → delivery-app commissions → <strong>Profit before depreciation (EBITDA)</strong> → <strong>Depreciation</strong> → <strong>Operating result</strong> → <strong>Loan interest</strong> → <strong>Result Before Tax</strong> → tax → <strong>Net Result</strong>.</p>
+<p>Below the result, as applicable: what the owner takes and "Left in the business", the <strong>VAT to settle with the tax office (form 303)</strong> and income tax and withholdings to deposit (forms 111 and 115). Each quarter and the year break down when you hover.</p>
+<ul>
+<li><strong>Tax is calculated per year</strong>, not month by month: the year's effective rate times accumulated profit, minus losses from earlier years. A month can show negative tax: it's what you had provisioned too much.</li>
+<li><strong>Self-employed and joint ownership</strong>: income tax comes from the bracket scale with personal allowance and hard-to-document costs; each co-owner is taxed on their share (set in My Business).</li>
+<li><strong>Company</strong>: a <strong>Corporate tax</strong> field with a suggested rate; dividends are not an expense and carry withholding. <strong>Cooperative</strong>: enter the rate your accountant gives you. <strong>Modules</strong>: your real tax is set by the Modules tab, not this percentage.</li>
+<li>A cancelled sale subtracts in the month of its corrective invoice; an already-filed quarter is never rewritten.</li>
+<li>The tax you see is a <strong>provision</strong> to know how much to set aside, not the return's amount.</li>
+</ul>
+
+<h4>Treasury: where every euro goes</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">At the top: <strong>Gross revenue</strong>, VAT passed on and net revenue for the month. Set your <strong>target distribution</strong> (Staff, Fixed, Variable Expenses, Other and Profit, adding up to 100%).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">In <strong>Treasury distribution</strong> you see, per line, target and actual with a ✓ or ✗: for an expense, staying under target is good; for profit, above it. Here it's <strong>cash</strong> that counts: the whole loan instalment and what was paid up front for an investment.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Below, what to <strong>set aside</strong>: the quarter's <strong>VAT reserve (form 303)</strong>, income tax withheld, rent withholding and payments on account (130, 131 or 202).</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">The quarter's <strong>tax payments calendar</strong> lists each form with amount and deadline (1st to 20th of the following month; Q4 until January, with the annual summaries).</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st"><strong>Cash flow forecast</strong> at 30, 60 and 90 days, from the average result of the last 3 months (an estimate, not a promise), and "Upcoming large payments" for non-monthly expenses.</div></div>
+<div class="manual-step"><div class="sn">6</div><div class="st"><strong>Close month</strong> locks that month's variable expenses and investments to protect them after sending them to your accountant; <strong>Reopen month</strong> undoes it. <strong>Bank reconciliation</strong> is also here.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Many businesses "make money on paper" but run tight because they spend the VAT they collected as if it were theirs. Set aside what the reserve shows.</div>
+
+<h4>Break-even point</h4>
+<p>How many covers a month you need to cover your fixed expenses.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">The <strong>Total fixed costs</strong> come in by themselves from Fixed expenses.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Enter the <strong>Average ticket (€/cover)</strong> <strong>excluding VAT</strong>, the <strong>Covers per month</strong>, the <strong>Open days/month</strong> and the <strong>Target food cost (%)</strong>. Or press <strong>Use last month's data</strong> (the last 30 days of real sales).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Result: variable cost per cover, contribution, <strong>covers needed to cover expenses</strong>, covers per day and minimum monthly sales, with an indicator of whether you're above or below. With <strong>Save as scenario</strong> you keep variants ("Summer/Terrace", "Winter").</div></div>
+<p><strong>Example:</strong> fixed expenses 6,000 €, ticket excl. VAT 18 € and food cost 30%: each cover leaves 12.60 €; 6,000 / 12.60 ≈ 477 covers a month; opening 26 days, about 19 a day.</p>
+
+<h4>Investments</h4>
+<p>Oven, cold room, building work, furniture, vehicle… press <strong>New investment</strong> with amount, VAT, date and <strong>What it is (for depreciation)</strong>. The Income Statement doesn't take what you pay but what is <strong>depreciated</strong> each year (official percentage) plus interest; up to 300 € goes straight to expense. If you pay in instalments, tick <strong>Investment paid in installments (financed)</strong> with the number and monthly amount: the instalment is cash and goes in Treasury. Status is PAID, PARTIAL or PENDING and at the top you see the <strong>Outstanding debt</strong>. For works on a rented premises, give the years left on the lease; for a mixed-use car, VAT is deducted at 50%.</p>
+
+<h4>Modules</h4>
+<p>Only for self-employed people under objective estimation: you choose a heading and the module's data (tables, power, staff, machines…) and the app estimates your VAT and income tax and payments on account (131). It's a forecast: the final calculation is done by your accountant.</p>
+
+<h4>Send to accountant</h4>
+<p>The <strong>Send to accountant</strong> button (top) prepares a single <strong>ZIP</strong>:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Choose the <strong>Period</strong>: Month, Quarter, Whole year or Exact dates.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Tick <strong>Includes</strong>: Issued invoices, Received invoices, photos and PDFs of the invoices, Period taxes, Profit and loss, Capital assets, Payroll and social security and Working-time record. Optionally, your accountant's email.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Download</strong> saves the ZIP; <strong>Send / share</strong> attaches it from your phone or tablet (on a computer it downloads and opens your email).</div></div>
+<p>Inside: an Excel file with one sheet per book, the same books as CSV (for A3, Sage, ContaSol…), the invoice photos with each line naming its file and a README. Issued invoices come as a register book: tickets grouped by day, full invoices with the customer and corrective invoices on their date.</p>
+
+<h4>Good to know</h4>
+<ul>
+<li>Everything is for the owner only. An employee sees a notice and can't enter.</li>
+<li>It uses the same target food cost in Break-even point, Dashboard and price-rise alerts.</li>
+<li>Payroll and contribution data are updated every year; your accountant should review whatever they file.</li>
+</ul>
+<h4>If something doesn't work</h4>
+<ul>
+<li><strong>My tax looks odd</strong>: check the legal form and regime in My Business and that the owner's pay is marked as such.</li>
+<li><strong>Dashboard figures don't match these</strong>: both use the calendar month; if they differ, check for a different closed month or fixed expenses without an invoice month.</li>
+<li><strong>I can't edit a purchase or investment</strong>: that month is closed in Treasury; reopen it.</li>
+<li><strong>"Read invoice from photo" doesn't work</strong>: the AI key is missing in My Business → AI assistant.</li>
+</ul>
+`}
+  },
+  {id:'dashboard', area:'gestion',
+    title:{es:`<i class="ti ti-layout-dashboard"></i> Panel de Control`, ca:`<i class="ti ti-layout-dashboard"></i> Tauler de Control`, en:`<i class="ti ti-layout-dashboard"></i> Dashboard`},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
+<p>El Panel de Control es la pantalla que conviene mirar cada mañana. No introduces nada: reúne lo que pasa en el TPV, las reservas, el stock y la Gestión Económica para decirte en un minuto cómo está tu negocio y qué pide tu atención hoy. Está en <strong>Gestión → Panel de Control</strong> y es <strong>solo del propietario</strong>.</p>
+<p>Arriba tienes el botón <strong>Pregúntale a tus números</strong> (ver el capítulo Herramientas).</p>
+
+<h4>De arriba abajo</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Hoy — Atención</strong>. Botones con una cifra por cada cosa que requiere acción, los rojos primero: pagos con tarjeta sin aplicar, ingredientes bajo mínimo, subidas de precio de los últimos 14 días, tareas de tu coach de esta semana, mantenimiento o control de plagas vencidos, facturas vencidas, cierre de caja pendiente. Después, lo que pasa ahora: mesas abiertas, repartos en curso, personal fichado y reservas de hoy y de mañana. Pulsa uno y vas directo a resolverlo. Lo que está a cero baja a una línea tranquila de accesos; si todo está a cero ves «Todo tranquilo por ahora».</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Ventas de hoy</strong>. La cifra grande, con cuánto sube o baja frente a ayer y frente al mismo día de la semana pasada, más los tickets de hoy y el ticket medio.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Últimos 7 días y mes en curso</strong>: ventas y gastos. Los gastos incluyen las compras con fecha más una parte proporcional de tus gastos fijos repartida día a día, para ver el coste al mismo ritmo que las ventas.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st"><strong>Reservas de los próximos 7 días</strong>, con acceso a cada día.</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st"><strong>Resultado del mes (P&amp;L)</strong>: facturación, gastos y resultado antes de impuestos, con cuatro indicadores: margen sobre ventas, % Food Cost medio frente a tu objetivo, % coste de personal y Prime cost (food cost + personal). Se pintan en rojo si pasan de los umbrales (personal más del 30 %, prime cost más del 65 %).</div></div>
+<div class="manual-step"><div class="sn">6</div><div class="st"><strong>Tres comparaciones de los últimos 12 meses</strong>: ventas, gastos y resultado (en rojo los meses con pérdidas). El mes en curso va a medias: no lo compares con meses completos.</div></div>
+<div class="manual-step"><div class="sn">7</div><div class="st"><strong>Análisis de ventas (este mes)</strong>: ticket medio, número de ventas, total, platos más vendidos, mayor margen bruto y ventas por hora. Es el mes natural, igual que en Gestión Económica, para que las cifras coincidan en todas las pantallas.</div></div>
+<div class="manual-step"><div class="sn">8</div><div class="st"><strong>Picos de venta</strong>: un mapa de calor por día y hora de las últimas 8 semanas. Cuanto más oscura la celda, más se vende: útil para planificar personal y compras.</div></div>
+<div class="manual-step"><div class="sn">9</div><div class="st"><strong>Punto de equilibrio</strong>: cubiertos necesarios al mes, cubiertos actuales y la diferencia. Si no lo has configurado te lleva a Gestión Económica → Punto de equilibrio.</div></div>
+<div class="manual-step"><div class="sn">10</div><div class="st"><strong>Análisis de Platos</strong> (plegable): ranking de más y menos vendidos y más y menos rentables, platos sin ventas, y la <strong>matriz de rentabilidad</strong> que cruza margen y popularidad: <strong>Estrella</strong> (se vende mucho y deja margen: cuídalo), <strong>Promocionar</strong> (buen margen, poco éxito), <strong>Revisar precio/receta</strong> (se vende mucho pero deja poco) y <strong>Candidato a quitar</strong>. Necesita al menos 4 platos con escandallo y ventas en el periodo.</div></div>
+
+<h4>Rutina de 2 minutos</h4>
+<ol>
+<li>Mira <strong>Hoy — Atención</strong> y resuelve lo rojo.</li>
+<li>Compara las ventas de ayer y del mes con los gráficos.</li>
+<li>Revisa el resultado del mes y el punto de equilibrio. Una vez a la semana, echa un ojo al Análisis de Platos.</li>
+</ol>
+
+<h4>Lo que conviene saber</h4>
+<ul>
+<li>Las cifras salen de los demás módulos: si faltan gastos fijos o precios en la carta, el panel lo refleja (por ejemplo, el food cost sale «—» si ningún plato tiene precio).</li>
+<li>Las cifras se animan un instante al cargar; espera un segundo antes de leerlas.</li>
+<li>Si trabajas en Cocina o en Sala, los avisos de stock cuentan los productos de la carpeta en la que estás.</li>
+</ul>
+<h4>Si algo no funciona</h4>
+<ul>
+<li><strong>«Todavía no hay ventas registradas»</strong>: aparece hasta que cobres el primer ticket en el TPV.</li>
+<li><strong>El resultado sale muy negativo a principios de mes</strong>: los gastos fijos corren desde el día 1 y las ventas aún no; no es un fallo.</li>
+<li><strong>Un empleado no ve el panel</strong>: Gestión es exclusiva del propietario.</li>
+</ul>
+`,
+    ca:`<h3>Què és i per a què serveix</h3>
+<p>El Tauler de Control és la pantalla que convé mirar cada matí. No hi introdueixes res: reuneix el que passa al TPV, les reserves, l'estoc i la Gestió Econòmica per dir-te en un minut com està el teu negoci i què demana la teva atenció avui. És a <strong>Gestió → Tauler de Control</strong> i és <strong>només del propietari</strong>.</p>
+<p>A dalt tens el botó <strong>Pregunta als teus números</strong> (vegeu el capítol Eines).</p>
+
+<h4>De dalt a baix</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Avui — Atenció</strong>. Botons amb una xifra per cada cosa que requereix acció, els vermells primer: pagaments amb targeta sense aplicar, ingredients per sota del mínim, pujades de preu dels últims 14 dies, tasques del teu coach d'aquesta setmana, manteniment o control de plagues vençuts, factures vençudes, tancament de caixa pendent. Després, el que passa ara: taules obertes, repartiments en curs, personal fitxat i reserves d'avui i de demà. Prem-ne un i vas directe a resoldre-ho. El que és a zero baixa a una línia tranquil·la d'accessos; si tot és a zero veus «Tot tranquil per ara».</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Vendes d'avui</strong>. La xifra gran, amb quant puja o baixa respecte a ahir i respecte al mateix dia de la setmana passada, més els tiquets d'avui i el tiquet mitjà.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Últims 7 dies i mes en curs</strong>: vendes i despeses. Les despeses inclouen les compres amb data més una part proporcional de les teves despeses fixes repartida dia a dia, per veure el cost al mateix ritme que les vendes.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st"><strong>Reserves dels propers 7 dies</strong>, amb accés a cada dia.</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st"><strong>Resultat del mes (P&amp;L)</strong>: facturació, despeses i resultat abans d'impostos, amb quatre indicadors: marge sobre vendes, % Food Cost mitjà respecte al teu objectiu, % cost de personal i Prime cost (food cost + personal). Es pinten en vermell si passen dels llindars (personal més del 30 %, prime cost més del 65 %).</div></div>
+<div class="manual-step"><div class="sn">6</div><div class="st"><strong>Tres comparacions dels últims 12 mesos</strong>: vendes, despeses i resultat (en vermell els mesos amb pèrdues). El mes en curs va a mitges: no el comparis amb mesos complets.</div></div>
+<div class="manual-step"><div class="sn">7</div><div class="st"><strong>Anàlisi de vendes (aquest mes)</strong>: tiquet mitjà, nombre de vendes, total, plats més venuts, major marge brut i vendes per hora. És el mes natural, igual que a Gestió Econòmica, perquè les xifres coincideixin a totes les pantalles.</div></div>
+<div class="manual-step"><div class="sn">8</div><div class="st"><strong>Pics de venda</strong>: un mapa de calor per dia i hora de les últimes 8 setmanes. Com més fosca la cel·la, més es ven: útil per planificar personal i compres.</div></div>
+<div class="manual-step"><div class="sn">9</div><div class="st"><strong>Punt d'equilibri</strong>: coberts necessaris al mes, coberts actuals i la diferència. Si no l'has configurat et porta a Gestió Econòmica → Punt d'equilibri.</div></div>
+<div class="manual-step"><div class="sn">10</div><div class="st"><strong>Anàlisi de Plats</strong> (plegable): rànquing de més i menys venuts i més i menys rendibles, plats sense vendes, i la <strong>matriu de rendibilitat</strong> que creua marge i popularitat: <strong>Estrella</strong> (es ven molt i deixa marge: cuida'l), <strong>Promocionar</strong> (bon marge, poc èxit), <strong>Revisar preu/recepta</strong> (es ven molt però deixa poc) i <strong>Candidat a treure</strong>. Necessita almenys 4 plats amb escandall i vendes al període.</div></div>
+
+<h4>Rutina de 2 minuts</h4>
+<ol>
+<li>Mira <strong>Avui — Atenció</strong> i resol el vermell.</li>
+<li>Compara les vendes d'ahir i del mes amb els gràfics.</li>
+<li>Revisa el resultat del mes i el punt d'equilibri. Un cop per setmana, fes un cop d'ull a l'Anàlisi de Plats.</li>
+</ol>
+
+<h4>El que convé saber</h4>
+<ul>
+<li>Les xifres surten dels altres mòduls: si falten despeses fixes o preus a la carta, el tauler ho reflecteix (per exemple, el food cost surt «—» si cap plat té preu).</li>
+<li>Les xifres s'animen un instant en carregar; espera un segon abans de llegir-les.</li>
+<li>Si treballes a Cuina o a Sala, els avisos d'estoc compten els productes de la carpeta on ets.</li>
+</ul>
+<h4>Si alguna cosa no funciona</h4>
+<ul>
+<li><strong>«Encara no hi ha vendes registrades»</strong>: apareix fins que cobris el primer tiquet al TPV.</li>
+<li><strong>El resultat surt molt negatiu a principis de mes</strong>: les despeses fixes corren des del dia 1 i les vendes encara no; no és un error.</li>
+<li><strong>Un empleat no veu el tauler</strong>: Gestió és exclusiva del propietari.</li>
+</ul>
+`,
+    en:`<h3>What it is and what it's for</h3>
+<p>The Dashboard is the screen worth checking every morning. You enter nothing: it gathers what is happening in the POS, bookings, stock and Financial Management to tell you in a minute how your business is doing and what needs your attention today. It's under <strong>Management → Dashboard</strong> and it's <strong>for the owner only</strong>.</p>
+<p>At the top is the <strong>Ask your numbers</strong> button (see the Tools chapter).</p>
+
+<h4>From top to bottom</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Today — Attention</strong>. Buttons with a number for everything that needs action, red ones first: card payments not applied, ingredients below minimum, price rises in the last 14 days, your coach's tasks this week, overdue maintenance or pest control, overdue invoices, cash closing pending. Then what is happening now: open tables, deliveries in progress, staff clocked in and today's and tomorrow's bookings. Press one to go straight to fixing it. Anything at zero drops to a quiet line of shortcuts; if everything is zero you see "All quiet for now".</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Today's sales</strong>. The big figure, with how much it is up or down against yesterday and against the same weekday last week, plus today's tickets and average ticket.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Last 7 days and current month</strong>: sales and expenses. Expenses include dated purchases plus a proportional share of your fixed expenses spread day by day, so you see costs at the same pace as sales.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st"><strong>Bookings for the next 7 days</strong>, with access to each day.</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st"><strong>Monthly result (P&amp;L)</strong>: revenue, expenses and result before tax, with four indicators: margin on sales, average Food Cost % against your target, staff cost % and Prime cost (food cost + staff). They turn red above the thresholds (staff over 30%, prime cost over 65%).</div></div>
+<div class="manual-step"><div class="sn">6</div><div class="st"><strong>Three comparisons of the last 12 months</strong>: sales, expenses and result (months with losses in red). The current month is partial: don't compare it with full months.</div></div>
+<div class="manual-step"><div class="sn">7</div><div class="st"><strong>Sales analysis (this month)</strong>: average ticket, number of sales, total, best-selling dishes, highest gross margin and sales by hour. It's the calendar month, like Financial Management, so figures match on every screen.</div></div>
+<div class="manual-step"><div class="sn">8</div><div class="st"><strong>Sales peaks</strong>: a heat map by day and hour for the last 8 weeks. The darker the cell, the more is sold: useful for planning staff and purchases.</div></div>
+<div class="manual-step"><div class="sn">9</div><div class="st"><strong>Break-even point</strong>: covers needed per month, current covers and the difference. If you haven't set it up, it points you to Financial Management → Break-even point.</div></div>
+<div class="manual-step"><div class="sn">10</div><div class="st"><strong>Dish Analysis</strong> (collapsible): ranking of most and least sold and most and least profitable, dishes with no sales, and the <strong>profitability matrix</strong> crossing margin and popularity: <strong>Star</strong> (sells a lot and leaves margin: look after it), <strong>Promote</strong> (good margin, low sales), <strong>Review price/recipe</strong> (sells a lot but leaves little) and <strong>Consider dropping</strong>. It needs at least 4 dishes with costing and sales in the period.</div></div>
+
+<h4>A 2-minute routine</h4>
+<ol>
+<li>Look at <strong>Today — Attention</strong> and deal with the red.</li>
+<li>Compare yesterday's and the month's sales with the charts.</li>
+<li>Check the month result and break-even point. Once a week, glance at the Dish Analysis.</li>
+</ol>
+
+<h4>Good to know</h4>
+<ul>
+<li>The figures come from the other modules: if fixed expenses or menu prices are missing, the dashboard reflects it (for example, food cost shows "—" if no dish has a price).</li>
+<li>Figures animate for a moment on loading; wait a second before reading them.</li>
+<li>If you work in Kitchen or the Dining Room, stock alerts count the products of the folder you're in.</li>
+</ul>
+<h4>If something doesn't work</h4>
+<ul>
+<li><strong>"No sales recorded yet"</strong>: it shows until you take payment for the first ticket at the POS.</li>
+<li><strong>The result looks very negative early in the month</strong>: fixed expenses run from day 1 and sales haven't yet; it's not a fault.</li>
+<li><strong>An employee can't see the dashboard</strong>: Management is exclusive to the owner.</li>
+</ul>
+`}
+  },
   {id:'minegocio', area:'gestion',
     title:{es:`<i class="ti ti-building-store"></i> Mi Negocio`, ca:`<i class="ti ti-building-store"></i> El Meu Negoci`, en:`<i class="ti ti-building-store"></i> My Business`},
     content:{es:`<h3>Qué es Mi Negocio y cómo moverte por ella</h3>
@@ -3994,6 +4993,507 @@ const MANUAL_CHAPTERS = [
 <li><strong>Online booking doesn't offer a table:</strong> it is missing its seats.</li>
 <li>For cloud, printing, Stripe and numbers, see the <strong>Frequently asked questions and problems</strong> chapter.</li>
 </ul>`}
+  },
+  {id:'plan360', area:'gestion',
+    title:{es:`<i class="ti ti-compass"></i> Plan 360° y Mantenimiento`, ca:`<i class="ti ti-compass"></i> Pla 360° i Manteniment`, en:`<i class="ti ti-compass"></i> Plan 360° and Maintenance`},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
+<p><strong>Plan 360°</strong> es tu acompañamiento con un coach de GastroGoan: un programa de 28 días (cuatro semanas) con visitas presenciales, tareas para tu negocio y objetivos pactados. Después puede continuar con el <strong>Mantenimiento</strong>: un mes tipo con entregas de tu coach y tareas para ti. Aquí ves todo lo que te toca, marcas lo que haces y le contestas a tu coach, que lo ve al momento.</p>
+<p>Está en <strong>Gestión → Plan 360°</strong> y <strong>solo aparece si tu coach lo ha activado</strong> para tu negocio. Es del propietario: un empleado no entra.</p>
+
+<h4>La pantalla principal</h4>
+<ul>
+<li>Arriba, el resumen del <strong>Programa de 28 días</strong>: <strong>Día del programa</strong>, <strong>Tareas completadas</strong> y <strong>Objetivos cumplidos</strong>, con una barra de avance.</li>
+<li><strong>Hoy</strong>: las tareas de hoy con sus botones <strong>Pendiente</strong>, <strong>Hecha</strong> y <strong>No hecha</strong>. Si hoy toca sesión presencial, te lo dice. Las tareas de días pasados que no están hechas salen en rojo en <strong>Atrasado</strong>, con los días de retraso: lo que no haces no desaparece, se acumula.</li>
+<li>Tres tarjetas: <strong>Documentación inicial</strong>, <strong>Recursos</strong> y <strong>Mantenimiento</strong> (esta última, cuando tu coach ya ha preparado algún mes).</li>
+<li>La barra <strong>Programa de 28 días</strong> abre el <strong>resumen visual</strong> de todo.</li>
+<li>El calendario, <strong>semana a semana</strong>: cada casilla es un día. Los días <strong>Presencial</strong> tienen su propia pantalla; los de trabajo muestran el progreso (por ejemplo 2/3) y una marca si hay reunión online o presencial. Pulsa un día para abrirlo.</li>
+</ul>
+
+<h4>Tu primer paso: Documentación inicial</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">La primera vez se abre la <strong>carta de bienvenida</strong>. Pulsa <strong>Entendido, continuar</strong>: es tu confirmación de recepción y avisa a tu coach. La puedes releer luego en Documentación inicial.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Contrato y RGPD</strong>: lo lees y lo firmas en la propia pantalla (nombre completo y DNI; firma electrónica simple que guarda el texto exacto aceptado y la fecha). Solo puede firmar el propietario, y no se puede hasta que tu coach haya fijado las condiciones. Puedes <strong>Descargar / imprimir</strong> el contrato.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Cuestionario inicial</strong> (con un contador de respuestas): cuéntale a tu coach cómo es tu negocio antes de la primera visita. Pulsa <strong>Guardar</strong>.</div></div>
+
+<h4>Los días del programa</h4>
+<ul>
+<li><strong>Día de trabajo</strong>: ves cada tarea con su descripción, el objetivo al que sirve, y puedes marcar <strong>Pendiente</strong>, <strong>Hecha</strong> o <strong>No hecha</strong> y dejar <strong>Tu nota</strong>.</li>
+<li><strong>Día 1</strong>: tu coach te entrega tres cosas cuando están listas: el informe del <strong>Cliente misterioso</strong>, el resumen de la <strong>Reunión presencial</strong> y la <strong>Voz del equipo</strong> (lo que opina tu plantilla). Hasta entonces aparecen apagadas, en preparación.</li>
+<li><strong>Día 2</strong>: el <strong>Plan de acción — 4 semanas</strong>, los <strong>Objetivos</strong> (los pacta el propietario con el coach y solo él puede editarlos; cada uno con su prioridad Prioritario, Esencial o Complementario y sus mediciones), el <strong>Plan de inversiones</strong> y el <strong>Team building</strong> (resultados y un check de a quién ya le has entregado el premio).</li>
+</ul>
+
+<h4>Recursos y Libro de marca</h4>
+<p>En <strong>Recursos</strong> tienes los documentos de tu programa por categorías (playbooks, guías…), que puedes leer o <strong>Descargar en PDF</strong>. El <strong>Libro de marca</strong> aparece como «Tu coach lo está preparando» hasta que te lo envía; entonces pone «Listo para ver»: lo ves incrustado y lo descargas en PDF. Recoge la identidad de tu negocio a partir de tu cuestionario.</p>
+
+<h4>El cierre del programa</h4>
+<p>Debajo de la última semana, <strong>Cierre y próximos pasos</strong> aparece el día 28 o cuando tu coach inicia la revisión final. Incluye: <strong>El balance de tu mes</strong> (lo conseguido y lo que falta), <strong>Los números: antes → hoy</strong> (nota del local, ticket medio, food cost, personal, ventas, reseñas, horas del dueño), las acciones completadas por nivel, cada objetivo marcado como <strong>Cumplido</strong>, <strong>Parcial</strong> o <strong>No cumplido</strong> con sus mediciones, las <strong>3 mejoras más visibles</strong>, <strong>Qué hay que vigilar para no retroceder</strong> y <strong>El siguiente nivel</strong>.</p>
+<p>Al final, tu coach te propone continuar con el <strong>Plan de mantenimiento</strong>. Solo el propietario responde: escribe tu nombre y pulsa <strong>Sí, quiero activarlo</strong>, o elige una fecha y pulsa <strong>Me lo pienso</strong> (tu coach volverá a hablar contigo ese día).</p>
+
+<h4>Mantenimiento: tu mes con el coach</h4>
+<p>Abre la tarjeta <strong>Mantenimiento</strong> (o el aviso del Panel de Control). Cambia de mes con las flechas.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Arriba, <strong>Lo que llevamos juntos</strong>: tareas hechas, reportes, llamadas, entregas y subidas de precio detectadas, y <strong>En números</strong>: el Día 1 frente al último mes completo y lo que supone al mes en euros (ventas, ticket medio, food cost, personal sobre ventas, resultado). Los calcula la app con las mismas cuentas que tu Cuenta de Resultados.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">El <strong>Objetivo del mes</strong> y, por cada lunes, una tarjeta que dice cómo trabajáis esa semana (<strong>WhatsApp</strong> o <strong>Videollamada</strong>), lo que tu coach te entrega (<strong>Te entrego</strong>, marcado <strong>Entregado</strong>) y <strong>Tu tarea</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Marca tus tareas con la casilla cuando las hagas: tu coach lo ve al momento. Las que se pasan del día salen en rojo.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">En cada tarea, <strong>Contestar a tu coach</strong> te deja escribir cómo ha ido, qué has visto o si no has podido; pulsa <strong>Enviar</strong>. Así la llamada empieza sabiendo qué ha pasado.</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">A fin de mes, el <strong>Cierre del mes</strong>: lo que ha ido bien, lo que hay que mejorar, si se cumplió el objetivo y el <strong>Objetivo del mes que viene</strong>.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Las tareas de tu coach de esta semana salen también en el Panel de Control, en «Hoy — Atención» (<strong>Tareas de tu coach esta semana</strong>), donde entras cada día.</div>
+
+<h4>Lo que conviene saber</h4>
+<ul>
+<li>Solo el propietario firma, marca tareas, responde y edita objetivos. Un empleado recibe un aviso.</li>
+<li>Todo se sincroniza con tu coach: lo que marcas o escribes aparece en su panel, y lo que él prepara aparece en el tuyo.</li>
+<li>Los números que ve tu coach los calcula la app sola con tus datos; no tienes que rellenar nada.</li>
+</ul>
+<h4>Si algo no funciona</h4>
+<ul>
+<li><strong>No veo Plan 360° en Gestión</strong>: tu coach aún no lo ha activado.</li>
+<li><strong>No puedo firmar el contrato</strong>: tu coach todavía no ha fijado las condiciones, o no estás como propietario.</li>
+<li><strong>El Libro de marca sale «Tu coach lo está preparando»</strong>: aún no te lo ha enviado.</li>
+<li><strong>No puedo marcar una tarea</strong>: solo lo hace el propietario; entra con tu cuenta de propietario.</li>
+</ul>
+`,
+    ca:`<h3>Què és i per a què serveix</h3>
+<p><strong>Pla 360°</strong> és el teu acompanyament amb un coach de GastroGoan: un programa de 28 dies (quatre setmanes) amb visites presencials, tasques per al teu negoci i objectius pactats. Després pot continuar amb el <strong>Manteniment</strong>: un mes tipus amb lliuraments del teu coach i tasques per a tu. Aquí veus tot el que et toca, marques el que fas i contestes al teu coach, que ho veu a l'instant.</p>
+<p>És a <strong>Gestió → Pla 360°</strong> i <strong>només apareix si el teu coach l'ha activat</strong> per al teu negoci. És del propietari: un empleat no hi entra.</p>
+
+<h4>La pantalla principal</h4>
+<ul>
+<li>A dalt, el resum del <strong>Programa de 28 dies</strong>: <strong>Dia del programa</strong>, <strong>Tasques completades</strong> i <strong>Objectius complerts</strong>, amb una barra d'avanç.</li>
+<li><strong>Avui</strong>: les tasques d'avui amb els botons <strong>Pendent</strong>, <strong>Feta</strong> i <strong>No feta</strong>. Si avui toca sessió presencial, t'ho diu. Les tasques de dies passats que no estan fetes surten en vermell a <strong>Endarrerit</strong>, amb els dies de retard: el que no fas no desapareix, s'acumula.</li>
+<li>Tres targetes: <strong>Documentació inicial</strong>, <strong>Recursos</strong> i <strong>Manteniment</strong> (aquesta última, quan el teu coach ja ha preparat algun mes).</li>
+<li>La barra <strong>Programa de 28 dies</strong> obre el <strong>resum visual</strong> de tot.</li>
+<li>El calendari, <strong>setmana a setmana</strong>: cada casella és un dia. Els dies <strong>Presencial</strong> tenen la seva pròpia pantalla; els de treball mostren el progrés (per exemple 2/3) i una marca si hi ha reunió en línia o presencial. Prem un dia per obrir-lo.</li>
+</ul>
+
+<h4>El teu primer pas: Documentació inicial</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">La primera vegada s'obre la <strong>carta de benvinguda</strong>. Prem <strong>Entès, continuar</strong>: és la teva confirmació de recepció i avisa el teu coach. La pots rellegir després a Documentació inicial.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Contracte i RGPD</strong>: el llegeixes i el signes a la mateixa pantalla (nom complet i DNI; signatura electrònica simple que desa el text exacte acceptat i la data). Només pot signar el propietari, i no es pot fins que el teu coach hagi fixat les condicions. Pots <strong>Descarregar / imprimir</strong> el contracte.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Qüestionari inicial</strong> (amb un comptador de respostes): explica al teu coach com és el teu negoci abans de la primera visita. Prem <strong>Desar</strong>.</div></div>
+
+<h4>Els dies del programa</h4>
+<ul>
+<li><strong>Dia de treball</strong>: veus cada tasca amb la seva descripció, l'objectiu al qual serveix, i pots marcar <strong>Pendent</strong>, <strong>Feta</strong> o <strong>No feta</strong> i deixar <strong>La teva nota</strong>.</li>
+<li><strong>Dia 1</strong>: el teu coach et lliura tres coses quan són a punt: l'informe del <strong>Client misteriós</strong>, el resum de la <strong>Reunió presencial</strong> i la <strong>Veu de l'equip</strong> (el que opina la teva plantilla). Fins llavors apareixen apagades, en preparació.</li>
+<li><strong>Dia 2</strong>: el <strong>Pla d'acció — 4 setmanes</strong>, els <strong>Objectius</strong> (els pacta el propietari amb el coach i només ell els pot editar; cadascun amb la seva prioritat Prioritari, Essencial o Complementari i les seves mesures), el <strong>Pla d'inversions</strong> i el <strong>Team building</strong> (resultats i un check d'a qui ja has lliurat el premi).</li>
+</ul>
+
+<h4>Recursos i Llibre de marca</h4>
+<p>A <strong>Recursos</strong> tens els documents del teu programa per categories (playbooks, guies…), que pots llegir o <strong>Descarregar en PDF</strong>. El <strong>Llibre de marca</strong> apareix com «El teu coach l'està preparant» fins que te l'envia; llavors posa «Llest per veure»: el veus incrustat i el descarregues en PDF. Recull la identitat del teu negoci a partir del teu qüestionari.</p>
+
+<h4>El tancament del programa</h4>
+<p>Sota l'última setmana, <strong>Tancament i pròxims passos</strong> apareix el dia 28 o quan el teu coach inicia la revisió final. Inclou: <strong>El balanç del teu mes</strong> (el aconseguit i el que falta), <strong>Els números: abans → avui</strong> (nota del local, tiquet mitjà, food cost, personal, vendes, ressenyes, hores del propietari), les accions completades per nivell, cada objectiu marcat com a <strong>Complert</strong>, <strong>Parcial</strong> o <strong>No complert</strong> amb les seves mesures, les <strong>3 millores més visibles</strong>, <strong>Què cal vigilar per no retrocedir</strong> i <strong>El següent nivell</strong>.</p>
+<p>Al final, el teu coach et proposa continuar amb el <strong>Pla de manteniment</strong>. Només el propietari respon: escriu el teu nom i prem <strong>Sí, vull activar-lo</strong>, o tria una data i prem <strong>M'ho penso</strong> (el teu coach tornarà a parlar amb tu aquell dia).</p>
+
+<h4>Manteniment: el teu mes amb el coach</h4>
+<p>Obre la targeta <strong>Manteniment</strong> (o l'avís del Tauler de Control). Canvia de mes amb les fletxes.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">A dalt, <strong>El que portem junts</strong>: tasques fetes, reports, trucades, lliuraments i pujades de preu detectades, i <strong>En nombres</strong>: el Dia 1 davant de l'últim mes complet i el que suposa al mes en euros (vendes, tiquet mitjà, food cost, personal sobre vendes, resultat). Els calcula l'app amb els mateixos comptes que el teu Compte de Resultats.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">L'<strong>Objectiu del mes</strong> i, per cada dilluns, una targeta que diu com treballeu aquella setmana (<strong>WhatsApp</strong> o <strong>Videotrucada</strong>), el que el teu coach et lliura (<strong>T'entrego</strong>, marcat <strong>Entregat</strong>) i <strong>La teva tasca</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Marca les teves tasques amb la casella quan les facis: el teu coach ho veu a l'instant. Les que passen del dia surten en vermell.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">A cada tasca, <strong>Contestar al teu coach</strong> et deixa escriure com ha anat, què has vist o si no has pogut; prem <strong>Enviar</strong>. Així la trucada comença sabent què ha passat.</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">A final de mes, el <strong>Tancament del mes</strong>: el que ha anat bé, el que cal millorar, si es va complir l'objectiu i l'<strong>Objectiu del mes que ve</strong>.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Les tasques del teu coach d'aquesta setmana surten també al Tauler de Control, a «Avui — Atenció» (<strong>Tasques del teu coach aquesta setmana</strong>), on entres cada dia.</div>
+
+<h4>El que convé saber</h4>
+<ul>
+<li>Només el propietari signa, marca tasques, respon i edita objectius. Un empleat rep un avís.</li>
+<li>Tot se sincronitza amb el teu coach: el que marques o escrius apareix al seu tauler, i el que ell prepara apareix al teu.</li>
+<li>Els números que veu el teu coach els calcula l'app sola amb les teves dades; no has d'emplenar res.</li>
+</ul>
+<h4>Si alguna cosa no funciona</h4>
+<ul>
+<li><strong>No veig Pla 360° a Gestió</strong>: el teu coach encara no l'ha activat.</li>
+<li><strong>No puc signar el contracte</strong>: el teu coach encara no ha fixat les condicions, o no ets com a propietari.</li>
+<li><strong>El Llibre de marca surt «El teu coach l'està preparant»</strong>: encara no te l'ha enviat.</li>
+<li><strong>No puc marcar una tasca</strong>: només ho fa el propietari; entra amb el teu compte de propietari.</li>
+</ul>
+`,
+    en:`<h3>What it is and what it's for</h3>
+<p><strong>Plan 360°</strong> is your coaching with a GastroGoan coach: a 28-day (four-week) program with in-person visits, tasks for your business and agreed goals. It can then continue as <strong>Maintenance</strong>: a typical month with deliveries from your coach and tasks for you. Here you see everything that's yours to do, tick what you've done and reply to your coach, who sees it straight away.</p>
+<p>It's under <strong>Management → Plan 360°</strong> and <strong>only appears if your coach has activated it</strong> for your business. It's for the owner: an employee can't enter.</p>
+
+<h4>The main screen</h4>
+<ul>
+<li>At the top, the <strong>28-day program</strong> summary: <strong>Program day</strong>, <strong>Tasks completed</strong> and <strong>Objectives achieved</strong>, with a progress bar.</li>
+<li><strong>Today</strong>: today's tasks with the buttons <strong>Pending</strong>, <strong>Done</strong> and <strong>Not done</strong>. If today is an in-person session, it says so. Tasks from past days that aren't done show in red under <strong>Overdue</strong>, with the days late: what you don't do doesn't vanish, it piles up.</li>
+<li>Three cards: <strong>Initial documentation</strong>, <strong>Resources</strong> and <strong>Maintenance</strong> (the last once your coach has prepared a month).</li>
+<li>The <strong>28-day program</strong> bar opens the <strong>visual summary</strong> of everything.</li>
+<li>The calendar, <strong>week by week</strong>: each box is a day. <strong>In-person</strong> days have their own screen; work days show progress (e.g. 2/3) and a mark if there is an online or in-person meeting. Press a day to open it.</li>
+</ul>
+
+<h4>Your first step: Initial documentation</h4>
+<div class="manual-step"><div class="sn">1</div><div class="st">The first time, the <strong>welcome letter</strong> opens. Press <strong>Got it, continue</strong>: it's your confirmation of receipt and notifies your coach. You can reread it later under Initial documentation.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Contract and GDPR</strong>: you read and sign it on the screen itself (full name and ID number; a simple electronic signature that records the exact text accepted and the date). Only the owner can sign, and not until your coach has set the terms. You can <strong>Download / print</strong> the contract.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Initial questionnaire</strong> (with an answer counter): tell your coach about your business before the first visit. Press <strong>Save</strong>.</div></div>
+
+<h4>The program days</h4>
+<ul>
+<li><strong>Work day</strong>: you see each task with its description and the goal it serves, and you can mark <strong>Pending</strong>, <strong>Done</strong> or <strong>Not done</strong> and leave <strong>Your note</strong>.</li>
+<li><strong>Day 1</strong>: your coach delivers three things when they're ready: the <strong>Mystery shopper</strong> report, the summary of the <strong>In-person meeting</strong> and the <strong>Team voice</strong> (what your staff think). Until then they appear greyed out, in preparation.</li>
+<li><strong>Day 2</strong>: the <strong>Action plan — 4 weeks</strong>, the <strong>Objectives</strong> (agreed by the owner with the coach and only the owner can edit them; each with its priority Priority, Essential or Complementary and its measurements), the <strong>Investment plan</strong> and the <strong>Team building</strong> (results and a check for who has already received the prize).</li>
+</ul>
+
+<h4>Resources and Brand book</h4>
+<p>Under <strong>Resources</strong> you have your program's documents by category (playbooks, guides…), which you can read or <strong>Download as PDF</strong>. The <strong>Brand book</strong> shows as "Your coach is preparing it" until it is sent to you; then it says "Ready to view": you see it embedded and download it as a PDF. It captures your business's identity from your questionnaire.</p>
+
+<h4>Program close</h4>
+<p>Below the last week, <strong>Closing and next steps</strong> appears on day 28 or when your coach starts the final review. It includes: <strong>Your month in review</strong> (what's achieved and what's missing), <strong>The numbers: before → today</strong> (venue score, average ticket, food cost, staff, sales, reviews, owner's hours), actions completed by level, each objective marked <strong>Achieved</strong>, <strong>Partial</strong> or <strong>Not achieved</strong> with its measurements, the <strong>3 most visible improvements</strong>, <strong>What to watch to avoid slipping back</strong> and <strong>The next level</strong>.</p>
+<p>At the end, your coach proposes continuing with the <strong>Maintenance plan</strong>. Only the owner answers: type your name and press <strong>Yes, activate it</strong>, or pick a date and press <strong>I'll think about it</strong> (your coach will talk to you again that day).</p>
+
+<h4>Maintenance: your month with the coach</h4>
+<p>Open the <strong>Maintenance</strong> card (or the Dashboard notice). Change month with the arrows.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">At the top, <strong>What we've done together</strong>: tasks done, reports, calls, deliveries and price rises detected, and <strong>In numbers</strong>: Day 1 against the last full month and what it means per month in euros (sales, average ticket, food cost, staff over sales, result). The app calculates them with the same sums as your Income Statement.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">The <strong>Goal of the month</strong> and, for each Monday, a card saying how you work that week (<strong>WhatsApp</strong> or <strong>Video call</strong>), what your coach delivers (<strong>From your coach</strong>, marked <strong>Delivered</strong>) and <strong>Your task</strong>.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Tick your tasks with the box when you've done them: your coach sees it straight away. Those past their day show in red.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">On each task, <strong>Reply to your coach</strong> lets you write how it went, what you saw or if you couldn't; press <strong>Send</strong>. That way the call starts knowing what happened.</div></div>
+<div class="manual-step"><div class="sn">5</div><div class="st">At month end, the <strong>Month review</strong>: what went well, what to improve, whether the goal was met and the <strong>Goal for next month</strong>.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Your coach's tasks for this week also appear on the Dashboard, under "Today — Attention" (<strong>Your coach's tasks this week</strong>), where you go in every day.</div>
+
+<h4>Good to know</h4>
+<ul>
+<li>Only the owner signs, ticks tasks, replies and edits objectives. An employee gets a notice.</li>
+<li>Everything syncs with your coach: what you tick or write appears on their panel, and what they prepare appears on yours.</li>
+<li>The numbers your coach sees are calculated by the app from your data; you fill in nothing.</li>
+</ul>
+<h4>If something doesn't work</h4>
+<ul>
+<li><strong>I don't see Plan 360° in Management</strong>: your coach hasn't activated it yet.</li>
+<li><strong>I can't sign the contract</strong>: your coach hasn't set the terms yet, or you aren't signed in as owner.</li>
+<li><strong>The Brand book says "Your coach is preparing it"</strong>: it hasn't been sent yet.</li>
+<li><strong>I can't tick a task</strong>: only the owner can; sign in with your owner account.</li>
+</ul>
+`}
+  },
+  {id:'herramientas', area:'gestion',
+    title:{es:`<i class="ti ti-sparkles"></i> Herramientas: visión global e IA`, ca:`<i class="ti ti-sparkles"></i> Eines: visió global i IA`, en:`<i class="ti ti-sparkles"></i> Tools: overview and AI`},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
+<p>Tres herramientas pensadas para el propietario: <strong>Visión global de mis negocios</strong> (comparar todos tus locales de un vistazo), el <strong>Asistente de IA</strong> (la clave que activa las funciones con inteligencia artificial) y <strong>Pregúntale a tus números</strong> (preguntar en lenguaje normal cómo va el negocio).</p>
+
+<h4>Visión global de mis negocios</h4>
+<p>Si tienes dos o más negocios en el mismo aparato, aquí ves cómo va cada uno sin entrar y salir de ellos.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Entra como propietario y pulsa <strong>Negocios</strong> en la barra superior. Se abre «Selecciona tu negocio».</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Pulsa <strong>Visión global de mis negocios</strong> (solo aparece con 2 o más negocios).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Elige el periodo: <strong>Hoy</strong>, <strong>Esta semana</strong>, <strong>Este mes</strong> o <strong>Mes anterior</strong>.</div></div>
+<p>Arriba, el cuadro <strong>Todos mis negocios</strong> con los totales (Ventas sin IVA, Tickets, Ticket medio, Food cost, Personal, Resultado, reservas de hoy y stock bajo). Debajo, una tarjeta por negocio ordenadas de mejor a peor resultado, con su peso en las ventas. El de <strong>menor margen sobre ventas</strong> sale marcado en rojo. Pulsa una tarjeta para abrir ese negocio.</p>
+<ul>
+<li><strong>Es solo lectura</strong>: no cambia el negocio activo ni guarda nada.</li>
+<li>Lee los datos <strong>guardados en este aparato</strong>. Un negocio que nunca has abierto aquí sale como «Sin datos en este aparato: ábrelo una vez aquí para verlo».</li>
+<li>Hoy y Esta semana son estimaciones, porque los gastos fijos del mes se reparten por días.</li>
+</ul>
+
+<h4>Asistente de IA: poner la clave</h4>
+<p>Las funciones de IA (Pregúntale a tus números, Leer factura con foto, I+D) usan la clave de <strong>tu propio proveedor</strong>. El consumo va a tu cuenta, no a GastroGoan. Sin clave, el resto de la app funciona igual.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Ve a <strong>Gestión → Mi Negocio → Asistente de IA</strong> (también se ofrece, opcional, al dar de alta el negocio).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Elige el <strong>Proveedor</strong>: <strong>Google (Gemini)</strong> (tiene clave gratuita), <strong>Anthropic (Claude)</strong> u <strong>OpenAI (ChatGPT)</strong>. El <strong>Modelo</strong> viene puesto; solo cámbialo si el proveedor retira ese.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Pega la <strong>Clave</strong>. La de Google se saca gratis en dos minutos en aistudio.google.com/apikey con tu cuenta de Google: <strong>Create API key</strong>, copiar y pegar. La tarjeta explica el paso a paso de cada proveedor.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Pulsa <strong>Guardar</strong> y después <strong>Probar la conexión</strong>. Si falla el modelo, <strong>Ver modelos disponibles</strong> te dice los que admite tu clave.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>La clave se guarda <strong>solo en este aparato</strong>, nunca en la nube del negocio, para que ningún empleado pueda leerla. Si usas la app en la tablet y en el móvil, tendrás que ponerla en cada uno. <strong>Eliminar</strong> la quita de este aparato.</div>
+<p><strong>Límite</strong>: hay un tope de <strong>500 consultas al día por aparato</strong> para que un fallo no gaste tu cuota sin que te des cuenta. En la misma tarjeta ves cuántas llevas hoy.</p>
+
+<h4>Pregúntale a tus números</h4>
+<p>Una conversación para preguntar cosas como «¿Cómo va este mes?», «¿Qué platos han perdido margen?» o «¿Dónde han subido mis gastos?». Se abre con el botón <strong>Pregúntale a tus números</strong> del Panel de Control y de Gestión Económica.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Pulsa una de las tres preguntas sugeridas o escribe la tuya y pulsa Enter (o el botón de enviar).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Espera a «Mirando tus números…» y lee la respuesta. Puedes seguir preguntando sobre lo que te conteste.</div></div>
+<p><strong>Cómo funciona y sus límites</strong>:</p>
+<ul>
+<li>Los números los calcula la app, con las mismas cuentas que tu Cuenta de Resultados. La IA solo los <strong>lee y los explica</strong>; no los inventa. Si un dato no está (por ejemplo, un mes sin ventas), te lo dice.</li>
+<li>Responde solo con lo que la app sabe: ventas, escandallos, gastos, mermas, reservas y stock. No te da consejo fiscal ni sabe nada de fuera de tu negocio.</li>
+<li>La conversación <strong>no se guarda</strong>: se borra al recargar la app.</li>
+<li>Es solo para el propietario. Sin clave de IA, el botón te lleva a Mi Negocio para ponerla.</li>
+</ul>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Pregunta cosas concretas («¿cuánto food cost llevo este mes frente al anterior?») y contrasta las cifras importantes con la pantalla correspondiente antes de decidir.</div>
+
+<h4>Si algo no funciona</h4>
+<ul>
+<li><strong>No veo «Visión global»</strong>: necesitas ser propietario y tener 2 o más negocios en este aparato.</li>
+<li><strong>«Falta la clave»</strong>: pégala en Mi Negocio → Asistente de IA y pulsa Guardar.</li>
+<li><strong>El asistente no responde</strong>: pulsa Probar la conexión. Si el modelo ya no existe, pulsa Ver modelos disponibles y elige uno.</li>
+<li><strong>Dice «sin datos»</strong>: aún no hay ventas o gastos en ese periodo.</li>
+</ul>
+`,
+    ca:`<h3>Què és i per a què serveix</h3>
+<p>Tres eines pensades per al propietari: <strong>Visió global dels meus negocis</strong> (comparar tots els teus locals d'un cop d'ull), l'<strong>Assistent d'IA</strong> (la clau que activa les funcions amb intel·ligència artificial) i <strong>Pregunta als teus números</strong> (preguntar en llenguatge normal com va el negoci).</p>
+
+<h4>Visió global dels meus negocis</h4>
+<p>Si tens dos o més negocis al mateix aparell, aquí veus com va cadascun sense entrar-hi i sortir-ne.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Entra com a propietari i prem <strong>Negocis</strong> a la barra superior. S'obre «Selecciona el teu negoci».</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Prem <strong>Visió global dels meus negocis</strong> (només apareix amb 2 o més negocis).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Tria el període: <strong>Avui</strong>, <strong>Aquesta setmana</strong>, <strong>Aquest mes</strong> o <strong>Mes anterior</strong>.</div></div>
+<p>A dalt, el quadre <strong>Tots els meus negocis</strong> amb els totals (Vendes sense IVA, Tiquets, Tiquet mitjà, Food cost, Personal, Resultat, reserves d'avui i estoc baix). A sota, una targeta per negoci ordenades de millor a pitjor resultat, amb el seu pes a les vendes. El de <strong>menor marge sobre vendes</strong> surt marcat en vermell. Prem una targeta per obrir aquell negoci.</p>
+<ul>
+<li><strong>És només de lectura</strong>: no canvia el negoci actiu ni desa res.</li>
+<li>Llegeix les dades <strong>desades en aquest aparell</strong>. Un negoci que mai has obert aquí surt com «Sense dades en aquest aparell: obre'l una vegada aquí per veure'l».</li>
+<li>Avui i Aquesta setmana són estimacions, perquè les despeses fixes del mes es reparteixen per dies.</li>
+</ul>
+
+<h4>Assistent d'IA: posar la clau</h4>
+<p>Les funcions d'IA (Pregunta als teus números, Llegir factura amb foto, R+D) fan servir la clau del <strong>teu propi proveïdor</strong>. El consum va al teu compte, no a GastroGoan. Sense clau, la resta de l'app funciona igual.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Ves a <strong>Gestió → El Meu Negoci → Assistent d'IA</strong> (també s'ofereix, opcional, en donar d'alta el negoci).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Tria el <strong>Proveïdor</strong>: <strong>Google (Gemini)</strong> (té clau gratuïta), <strong>Anthropic (Claude)</strong> o <strong>OpenAI (ChatGPT)</strong>. El <strong>Model</strong> ve posat; només canvia'l si el proveïdor retira aquest.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Enganxa la <strong>Clau</strong>. La de Google es treu gratis en dos minuts a aistudio.google.com/apikey amb el teu compte de Google: <strong>Create API key</strong>, copiar i enganxar. La targeta explica el pas a pas de cada proveïdor.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Prem <strong>Desar</strong> i després <strong>Provar la connexió</strong>. Si falla el model, <strong>Veure models disponibles</strong> et diu els que admet la teva clau.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>La clau es desa <strong>només en aquest aparell</strong>, mai al núvol del negoci, perquè cap empleat pugui llegir-la. Si fas servir l'app a la tauleta i al mòbil, l'hauràs de posar a cadascun. <strong>Eliminar</strong> la treu d'aquest aparell.</div>
+<p><strong>Límit</strong>: hi ha un màxim de <strong>500 consultes al dia per aparell</strong> perquè un error no gasti la teva quota sense que te n'adonis. A la mateixa targeta veus quantes en portes avui.</p>
+
+<h4>Pregunta als teus números</h4>
+<p>Una conversa per preguntar coses com «Com va aquest mes?», «Quins plats han perdut marge?» o «On han pujat les meves despeses?». S'obre amb el botó <strong>Pregunta als teus números</strong> del Tauler de Control i de Gestió Econòmica.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Prem una de les tres preguntes suggerides o escriu la teva i prem Enter (o el botó d'enviar).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Espera a «Mirant els teus números…» i llegeix la resposta. Pots continuar preguntant sobre el que et contesti.</div></div>
+<p><strong>Com funciona i els seus límits</strong>:</p>
+<ul>
+<li>Els números els calcula l'app, amb els mateixos comptes que el teu Compte de Resultats. La IA només els <strong>llegeix i els explica</strong>; no se'ls inventa. Si una dada no hi és (per exemple, un mes sense vendes), t'ho diu.</li>
+<li>Respon només amb el que l'app sap: vendes, escandalls, despeses, mermes, reserves i estoc. No et dona consell fiscal ni sap res de fora del teu negoci.</li>
+<li>La conversa <strong>no es desa</strong>: s'esborra en recarregar l'app.</li>
+<li>És només per al propietari. Sense clau d'IA, el botó et porta a El Meu Negoci per posar-la.</li>
+</ul>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Pregunta coses concretes («quant food cost porto aquest mes respecte a l'anterior?») i contrasta les xifres importants amb la pantalla corresponent abans de decidir.</div>
+
+<h4>Si alguna cosa no funciona</h4>
+<ul>
+<li><strong>No veig «Visió global»</strong>: has de ser propietari i tenir 2 o més negocis en aquest aparell.</li>
+<li><strong>«Falta la clau»</strong>: enganxa-la a El Meu Negoci → Assistent d'IA i prem Desar.</li>
+<li><strong>L'assistent no respon</strong>: prem Provar la connexió. Si el model ja no existeix, prem Veure models disponibles i tria'n un.</li>
+<li><strong>Diu «sense dades»</strong>: encara no hi ha vendes o despeses en aquest període.</li>
+</ul>
+`,
+    en:`<h3>What it is and what it's for</h3>
+<p>Three tools designed for the owner: <strong>Overview of my businesses</strong> (compare all your venues at a glance), the <strong>AI assistant</strong> (the key that switches on the artificial-intelligence features) and <strong>Ask your numbers</strong> (ask in plain language how the business is doing).</p>
+
+<h4>Overview of my businesses</h4>
+<p>If you have two or more businesses on the same device, here you see how each is doing without going in and out of them.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Sign in as owner and press <strong>Businesses</strong> in the top bar. "Select your business" opens.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Press <strong>Overview of my businesses</strong> (it only appears with 2 or more businesses).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Choose the period: <strong>Today</strong>, <strong>This week</strong>, <strong>This month</strong> or <strong>Last month</strong>.</div></div>
+<p>At the top, the <strong>All my businesses</strong> box with the totals (Sales excl. VAT, Tickets, Average ticket, Food cost, Staff, Result, today's bookings and low stock). Below, one card per business, ordered from best to worst result, with its share of sales. The one with the <strong>lowest margin on sales</strong> is flagged in red. Press a card to open that business.</p>
+<ul>
+<li><strong>It is read-only</strong>: it doesn't change the active business or save anything.</li>
+<li>It reads the data <strong>saved on this device</strong>. A business you've never opened here shows as "No data on this device: open it once here to see it".</li>
+<li>Today and This week are estimates, because the month's fixed expenses are spread by day.</li>
+</ul>
+
+<h4>AI assistant: adding the key</h4>
+<p>The AI features (Ask your numbers, Read invoice from photo, R&amp;D) use the key from <strong>your own provider</strong>. Usage is billed to your account, not to GastroGoan. Without a key, the rest of the app works the same.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>Management → My Business → AI assistant</strong> (it's also offered, optionally, when you set the business up).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Choose the <strong>Provider</strong>: <strong>Google (Gemini)</strong> (has a free key), <strong>Anthropic (Claude)</strong> or <strong>OpenAI (ChatGPT)</strong>. The <strong>Model</strong> comes pre-filled; change it only if the provider retires that one.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Paste the <strong>Key</strong>. Google's is free and takes two minutes at aistudio.google.com/apikey with your Google account: <strong>Create API key</strong>, copy and paste. The card explains the steps for each provider.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Press <strong>Save</strong> and then <strong>Test the connection</strong>. If the model fails, <strong>See available models</strong> tells you which ones your key supports.</div></div>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i>The key is saved <strong>only on this device</strong>, never in the business cloud, so no employee can read it. If you use the app on a tablet and a phone, you'll need to enter it on each. <strong>Delete</strong> removes it from this device.</div>
+<p><strong>Limit</strong>: there is a cap of <strong>500 queries a day per device</strong> so a glitch can't burn through your quota unnoticed. On the same card you see how many you've used today.</p>
+
+<h4>Ask your numbers</h4>
+<p>A conversation to ask things like "How is this month going?", "Which dishes have lost margin?" or "Where have my expenses gone up?". It opens with the <strong>Ask your numbers</strong> button on the Dashboard and in Financial Management.</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Press one of the three suggested questions or type your own and press Enter (or the send button).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Wait for "Looking at your numbers…" and read the answer. You can keep asking about what it replies.</div></div>
+<p><strong>How it works and its limits</strong>:</p>
+<ul>
+<li>The numbers are calculated by the app, with the same sums as your Income Statement. The AI only <strong>reads and explains</strong> them; it doesn't invent them. If a figure isn't there (for example, a month with no sales), it tells you.</li>
+<li>It answers only with what the app knows: sales, costings, expenses, waste, bookings and stock. It gives no tax advice and knows nothing outside your business.</li>
+<li>The conversation is <strong>not saved</strong>: it's wiped when you reload the app.</li>
+<li>It's for the owner only. Without an AI key, the button takes you to My Business to add one.</li>
+</ul>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Ask specific things ("how much food cost am I running this month compared with last?") and check the important figures against the relevant screen before deciding.</div>
+
+<h4>If something doesn't work</h4>
+<ul>
+<li><strong>I can't see "Overview"</strong>: you need to be the owner and have 2 or more businesses on this device.</li>
+<li><strong>"Key missing"</strong>: paste it in My Business → AI assistant and press Save.</li>
+<li><strong>The assistant doesn't answer</strong>: press Test the connection. If the model no longer exists, press See available models and pick one.</li>
+<li><strong>It says "no data"</strong>: there are no sales or expenses in that period yet.</li>
+</ul>
+`}
+  },
+  {id:'legal', area:'gestion',
+    title:{es:`<i class="ti ti-file-certificate"></i> Facturas, VeriFactu y registros legales`, ca:`<i class="ti ti-file-certificate"></i> Factures, VeriFactu i registres legals`, en:`<i class="ti ti-file-certificate"></i> Invoices, VeriFactu and legal records`},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
+<p>Qué hace la app por ti con lo que la ley te exige —tickets numerados, facturas, registro de jornada, aviso de privacidad, copias de seguridad— y qué sigue siendo cosa de tu gestor.</p>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i><strong>La app no es una gestoría.</strong> Ordena tus datos de forma objetiva y los prepara para tu gestor, pero <strong>presentar los impuestos lo hace él</strong>. Y <strong>VeriFactu está en desarrollo: todavía no emite facturas verificables ni sirve para cumplir la normativa</strong>.</div>
+
+<h4>Tickets y facturas: la numeración</h4>
+<p>Todo ticket que cobras es una <strong>factura simplificada</strong> y lleva un número correlativo que nunca se repite ni se salta. Cada aparato (tablet, móvil, ordenador) tiene <strong>su propia serie</strong>, así que dos tablets trabajando a la vez, incluso sin conexión, jamás dan el mismo número. El número tiene este aspecto:</p>
+<table>
+<thead><tr><th>Empieza por</th><th>Qué es</th><th>Ejemplo</th></tr></thead>
+<tbody>
+<tr><td><strong>T</strong></td><td>Ticket (factura simplificada)</td><td>T26K4P-000123</td></tr>
+<tr><td><strong>F</strong></td><td>Factura completa, con los datos del cliente</td><td>F26K4P-000007</td></tr>
+<tr><td><strong>R</strong></td><td>Factura rectificativa (al anular una venta)</td><td>R26K4P-000002</td></tr>
+</tbody>
+</table>
+<p>Las dos cifras tras la letra son el año; las tres siguientes, el código de ese aparato. El <strong>NIF del negocio</strong> sale siempre en el ticket: ponlo en Mi Negocio (si falta, la lista «Para que tus números salgan bien» de Gestión Económica te lo recuerda).</p>
+
+<h4>Dar una factura completa a un cliente</h4>
+<p>Cuando un cliente empresa o autónomo necesita factura para deducirse el gasto:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Al cobrar, en la ventana <strong>Cobro registrado</strong> pulsa <strong>Factura</strong>.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Rellena <strong>Nombre o razón social del cliente</strong>, <strong>NIF</strong> y <strong>Domicilio del cliente</strong> (los tres son obligatorios; si el cliente ya tiene ficha se rellenan solos).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Pulsa <strong>Emitir e imprimir</strong>. La factura lleva su número F y dice a qué ticket sustituye. Sus datos se guardan en la ficha del cliente para la próxima vez.</div></div>
+<p>Si vuelves a pedirla para esa misma venta, sale una <strong>copia marcada como duplicado</strong>, con el mismo número: una venta solo tiene una factura completa.</p>
+
+<h4>Anular una venta ya cobrada</h4>
+<p>Con <strong>Anular venta</strong> (propietario o empleado con permiso de edición) no se borra nada: se emite una <strong>factura rectificativa</strong> (R) que la deja a cero y apunta el motivo. La venta sigue en el mes en que se hizo y la rectificativa resta en el suyo, así que nunca se reescribe un trimestre que ya presentaste. Puedes imprimirla.</p>
+
+<h4>VeriFactu</h4>
+<p>En <strong>Mi Negocio → VeriFactu (facturación certificada)</strong> verás la tarjeta marcada <strong>Próximamente</strong>. Explica que la idea es conectar tu propia cuenta con un proveedor certificado, pero hoy <strong>la función está en desarrollo</strong>: no envía nada ni sirve para cumplir. Mientras tanto, la numeración de arriba es la base sobre la que se montará. Si tu negocio debe usar un sistema de facturación certificado, <strong>consúltalo con tu gestor</strong> y no te apoyes en esta tarjeta.</p>
+
+<h4>Registro de jornada de tu personal</h4>
+<p>La ley obliga a registrar la jornada de cada empleado y guardarla cuatro años. En la app es el fichaje:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Cada empleado ficha en <strong>Horario del Personal</strong>, en su ficha, con <strong>Entrada</strong> al llegar y <strong>Salida</strong> al irse (con su PIN).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">En <strong>Últimos fichajes</strong> se ve cada jornada y si coincide con el turno previsto. Corregir un fichaje (<strong>Corregir fichaje</strong>) <strong>requiere el PIN del negocio</strong> y la app conserva la hora original: el registro marca «Corregido a mano» con lo que se fichó en realidad.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Cuando lo necesites, sale en el paquete de <strong>Enviar al gestor</strong> (Gestión Económica) marcando <strong>Registro de jornada</strong>: una hoja por mes, con empleado, entrada, salida y horas.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Borrar a un empleado <strong>no borra sus fichajes</strong>: se conservan los cuatro años que exige la ley.</div>
+
+<h4>Aviso de privacidad de tu web de reservas</h4>
+<p>La web pública donde tus clientes reservan y piden recoge sus datos, así que lleva una casilla obligatoria (<strong>Acepto que mis datos se usen para gestionar mi reserva/pedido</strong>) y un aviso de privacidad (<strong>Ver más</strong>) con el responsable, la base legal, cuánto se guardan los datos y cómo reclamar ante la Agencia Española de Protección de Datos. La casilla de avisarles de novedades es aparte y opcional.</p>
+<p>Para que el aviso lleve tu identidad, rellena en <strong>Mi Negocio</strong> el <strong>Titular o razón social (aviso legal de tu web)</strong> y marca <strong>Mostrar mi NIF en el aviso legal y de privacidad de la web de reservas</strong>: la ley lo exige a quien recoge datos por internet.</p>
+<p>Y para atender a un cliente que pide sus derechos: <strong>Clientes → ficha → Borrar datos (RGPD)</strong> los elimina para siempre, y <strong>Promoción → Novedades → Registrar una baja</strong> le quita el permiso de marketing. Cada email de novedades lleva su aviso de baja.</p>
+
+<h4>Copias de seguridad y archivo</h4>
+<p>Tus datos están en tu aparato y en tu nube, pero una copia tuya es la mejor tranquilidad. En <strong>Mi Negocio → Mantenimiento de datos</strong>:</p>
+<ul>
+<li><strong>Descargar copia de seguridad</strong>: un archivo con todo el negocio. Si pasa tiempo sin hacerla, la app te lo recuerda al entrar (cuando eres propietario) con el botón para descargarla en el momento.</li>
+<li><strong>Restaurar copia de seguridad</strong>: vuelve a cargar un archivo; te dice de qué negocio es y cuántas ventas contiene antes de aplicarlo.</li>
+<li><strong>Archivar datos antiguos</strong> (<strong>Archivar anterior a</strong> una fecha → <strong>Archivar y descargar</strong>): descarga primero un archivo con ventas, reservas, cierres y pedidos recibidos antiguos y, solo si se ha guardado bien y lo confirmas, los quita de la app para aligerarla. Esos datos <strong>salen de la app</strong>: guarda el archivo y pregunta a tu gestor cuánto tiempo debes conservarlo.</li>
+</ul>
+<p>Además, <strong>Cerrar mes</strong> en Tesorería bloquea las compras y las inversiones de ese mes para que no se cambien tras enviárselas al gestor, y los pedidos a proveedor recibidos no se borran (solo se deshace la recepción).</p>
+
+<h4>Lo que conviene saber</h4>
+<ul>
+<li>Anular, cerrar mes, borrar datos por RGPD y corregir fichajes están protegidos por permisos o por el PIN del negocio, porque tocan datos que podría revisar Hacienda o Inspección.</li>
+<li>La numeración depende de cada aparato: si reinstalas, la app toma como base las ventas ya guardadas y nunca baja el número.</li>
+<li>Lo que cobras por adelantado (señales de reserva, vales regalo) se trata en la contabilidad según su tipo; tu gestor lo ve en el paquete.</li>
+</ul>
+<h4>Si algo no funciona</h4>
+<ul>
+<li><strong>«Para una factura completa hacen falta el nombre, el NIF y el domicilio»</strong>: rellena los tres campos.</li>
+<li><strong>No encuentro el botón Factura</strong>: sale en la ventana Cobro registrado justo tras cobrar; también se puede pedir desde la venta.</li>
+<li><strong>No puedo corregir un fichaje</strong>: necesitas el PIN del negocio.</li>
+<li><strong>No tengo copia reciente</strong>: Mi Negocio → Mantenimiento de datos → Descargar copia de seguridad.</li>
+</ul>
+`,
+    ca:`<h3>Què és i per a què serveix</h3>
+<p>Què fa l'app per tu amb el que la llei t'exigeix —tiquets numerats, factures, registre de jornada, avís de privacitat, còpies de seguretat— i què continua sent cosa del teu gestor.</p>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i><strong>L'app no és una gestoria.</strong> Ordena les teves dades de manera objectiva i les prepara per al teu gestor, però <strong>presentar els impostos ho fa ell</strong>. I <strong>VeriFactu està en desenvolupament: encara no emet factures verificables ni serveix per complir la normativa</strong>.</div>
+
+<h4>Tiquets i factures: la numeració</h4>
+<p>Tot tiquet que cobres és una <strong>factura simplificada</strong> i porta un número correlatiu que mai es repeteix ni se salta. Cada aparell (tauleta, mòbil, ordinador) té <strong>la seva pròpia sèrie</strong>, així que dues tauletes treballant alhora, fins i tot sense connexió, mai donen el mateix número. El número té aquest aspecte:</p>
+<table>
+<thead><tr><th>Comença per</th><th>Què és</th><th>Exemple</th></tr></thead>
+<tbody>
+<tr><td><strong>T</strong></td><td>Tiquet (factura simplificada)</td><td>T26K4P-000123</td></tr>
+<tr><td><strong>F</strong></td><td>Factura completa, amb les dades del client</td><td>F26K4P-000007</td></tr>
+<tr><td><strong>R</strong></td><td>Factura rectificativa (en anul·lar una venda)</td><td>R26K4P-000002</td></tr>
+</tbody>
+</table>
+<p>Les dues xifres després de la lletra són l'any; les tres següents, el codi d'aquell aparell. El <strong>NIF del negoci</strong> surt sempre al tiquet: posa'l a El Meu Negoci (si falta, la llista «Perquè els teus números surtin bé» de Gestió Econòmica t'ho recorda).</p>
+
+<h4>Donar una factura completa a un client</h4>
+<p>Quan un client empresa o autònom necessita factura per deduir-se la despesa:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">En cobrar, a la finestra <strong>Cobrament registrat</strong> prem <strong>Factura</strong>.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Omple <strong>Nom o raó social del client</strong>, <strong>NIF</strong> i <strong>Domicili del client</strong> (els tres són obligatoris; si el client ja té fitxa s'omplen sols).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Prem <strong>Emetre i imprimir</strong>. La factura porta el seu número F i diu a quin tiquet substitueix. Les seves dades es desen a la fitxa del client per a la propera vegada.</div></div>
+<p>Si la tornes a demanar per a aquella mateixa venda, surt una <strong>còpia marcada com a duplicat</strong>, amb el mateix número: una venda només té una factura completa.</p>
+
+<h4>Anul·lar una venda ja cobrada</h4>
+<p>Amb <strong>Anul·lar venda</strong> (propietari o empleat amb permís d'edició) no s'esborra res: s'emet una <strong>factura rectificativa</strong> (R) que la deixa a zero i n'apunta el motiu. La venda continua al mes en què es va fer i la rectificativa resta al seu, així que mai es reescriu un trimestre que ja vas presentar. Pots imprimir-la.</p>
+
+<h4>VeriFactu</h4>
+<p>A <strong>El Meu Negoci → VeriFactu (facturació certificada)</strong> veuràs la targeta marcada <strong>Properament</strong>. Explica que la idea és connectar el teu propi compte amb un proveïdor certificat, però avui <strong>la funció està en desenvolupament</strong>: no envia res ni serveix per complir. Mentrestant, la numeració de dalt és la base sobre la qual es muntarà. Si el teu negoci ha de fer servir un sistema de facturació certificat, <strong>consulta-ho amb el teu gestor</strong> i no et recolzis en aquesta targeta.</p>
+
+<h4>Registre de jornada del teu personal</h4>
+<p>La llei obliga a registrar la jornada de cada empleat i guardar-la quatre anys. A l'app és el fitxatge:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Cada empleat fitxa a <strong>Horari del Personal</strong>, a la seva fitxa, amb <strong>Entrada</strong> en arribar i <strong>Sortida</strong> en marxar (amb el seu PIN).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">A <strong>Últims fitxatges</strong> es veu cada jornada i si coincideix amb el torn previst. Corregir un fitxatge (<strong>Corregir fitxatge</strong>) <strong>requereix el PIN del negoci</strong> i l'app conserva l'hora original: el registre marca «Corregit a mà» amb el que es va fitxar realment.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Quan ho necessitis, surt al paquet d'<strong>Enviar al gestor</strong> (Gestió Econòmica) marcant <strong>Registre de jornada</strong>: un full per mes, amb empleat, entrada, sortida i hores.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Esborrar un empleat <strong>no esborra els seus fitxatges</strong>: es conserven els quatre anys que exigeix la llei.</div>
+
+<h4>Avís de privacitat de la teva web de reserves</h4>
+<p>La web pública on els teus clients reserven i demanen recull les seves dades, així que porta una casella obligatòria (<strong>Accepto que les meves dades es facin servir per gestionar la meva reserva/comanda</strong>) i un avís de privacitat (<strong>Veure més</strong>) amb el responsable, la base legal, quant de temps es guarden les dades i com reclamar davant l'Agència Espanyola de Protecció de Dades. La casella d'avisar-los de novetats és a part i opcional.</p>
+<p>Perquè l'avís porti la teva identitat, omple a <strong>El Meu Negoci</strong> el <strong>Titular o raó social (avís legal del teu web)</strong> i marca <strong>Mostrar el meu NIF a l'avís legal i de privacitat del web de reserves</strong>: la llei ho exigeix a qui recull dades per internet.</p>
+<p>I per atendre un client que demana els seus drets: <strong>Clients → fitxa → Esborrar dades (RGPD)</strong> les elimina per sempre, i <strong>Promoció → Novetats → Registrar una baixa</strong> li treu el permís de màrqueting. Cada email de novetats porta el seu avís de baixa.</p>
+
+<h4>Còpies de seguretat i arxiu</h4>
+<p>Les teves dades són al teu aparell i al teu núvol, però una còpia teva és la millor tranquil·litat. A <strong>El Meu Negoci → Manteniment de dades</strong>:</p>
+<ul>
+<li><strong>Descarregar còpia de seguretat</strong>: un arxiu amb tot el negoci. Si passa temps sense fer-la, l'app t'ho recorda en entrar (quan ets propietari) amb el botó per descarregar-la al moment.</li>
+<li><strong>Restaurar còpia de seguretat</strong>: torna a carregar un arxiu; et diu de quin negoci és i quantes vendes conté abans d'aplicar-lo.</li>
+<li><strong>Arxivar dades antigues</strong> (<strong>Arxivar anterior a</strong> una data → <strong>Arxivar i descarregar</strong>): descarrega primer un arxiu amb vendes, reserves, tancaments i comandes rebudes antigues i, només si s'ha desat bé i ho confirmes, les treu de l'app per alleugerir-la. Aquestes dades <strong>surten de l'app</strong>: guarda l'arxiu i pregunta al teu gestor quant de temps l'has de conservar.</li>
+</ul>
+<p>A més, <strong>Tancar mes</strong> a Tresoreria bloqueja les compres i les inversions d'aquell mes perquè no es canviïn després d'enviar-les al gestor, i les comandes a proveïdor rebudes no s'esborren (només es desfà la recepció).</p>
+
+<h4>El que convé saber</h4>
+<ul>
+<li>Anul·lar, tancar mes, esborrar dades per RGPD i corregir fitxatges estan protegits per permisos o pel PIN del negoci, perquè toquen dades que podria revisar Hisenda o Inspecció.</li>
+<li>La numeració depèn de cada aparell: si reinstal·les, l'app pren com a base les vendes ja desades i mai baixa el número.</li>
+<li>El que cobres per avançat (senyals de reserva, vals regal) es tracta a la comptabilitat segons el seu tipus; el teu gestor ho veu al paquet.</li>
+</ul>
+<h4>Si alguna cosa no funciona</h4>
+<ul>
+<li><strong>«Per a una factura completa calen el nom, el NIF i el domicili»</strong>: omple els tres camps.</li>
+<li><strong>No trobo el botó Factura</strong>: surt a la finestra Cobrament registrat just després de cobrar; també es pot demanar des de la venda.</li>
+<li><strong>No puc corregir un fitxatge</strong>: necessites el PIN del negoci.</li>
+<li><strong>No tinc còpia recent</strong>: El Meu Negoci → Manteniment de dades → Descarregar còpia de seguretat.</li>
+</ul>
+`,
+    en:`<h3>What it is and what it's for</h3>
+<p>What the app does for you with what the law requires —numbered tickets, invoices, working-time records, privacy notice, backups— and what remains your accountant's job.</p>
+<div class="manual-warning"><i class="ti ti-alert-triangle"></i><strong>The app is not an accountancy firm.</strong> It organises your data objectively and prepares it for your accountant, but <strong>filing the taxes is done by them</strong>. And <strong>VeriFactu is under development: it does not yet issue verifiable invoices or serve to comply with the regulation</strong>.</div>
+
+<h4>Tickets and invoices: the numbering</h4>
+<p>Every ticket you charge is a <strong>simplified invoice</strong> and carries a sequential number that is never repeated or skipped. Each device (tablet, phone, computer) has <strong>its own series</strong>, so two tablets working at once, even offline, never give the same number. The number looks like this:</p>
+<table>
+<thead><tr><th>Starts with</th><th>What it is</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td><strong>T</strong></td><td>Ticket (simplified invoice)</td><td>T26K4P-000123</td></tr>
+<tr><td><strong>F</strong></td><td>Full invoice, with the customer's details</td><td>F26K4P-000007</td></tr>
+<tr><td><strong>R</strong></td><td>Corrective invoice (when cancelling a sale)</td><td>R26K4P-000002</td></tr>
+</tbody>
+</table>
+<p>The two digits after the letter are the year; the next three, that device's code. The <strong>business tax ID</strong> always appears on the ticket: enter it in My Business (if missing, the "So your numbers come out right" list in Financial Management reminds you).</p>
+
+<h4>Giving a customer a full invoice</h4>
+<p>When a company or self-employed customer needs an invoice to deduct the expense:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">After taking payment, in the <strong>Charge registered</strong> window press <strong>Invoice</strong>.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Fill in the <strong>Customer name or company name</strong>, <strong>tax ID</strong> and <strong>Customer address</strong> (all three are required; if the customer already has a card they fill in on their own).</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Press <strong>Issue and print</strong>. The invoice carries its F number and says which ticket it replaces. Its details are saved on the customer's card for next time.</div></div>
+<p>If you ask for it again for that same sale, a <strong>copy marked as duplicate</strong> comes out with the same number: a sale has only one full invoice.</p>
+
+<h4>Cancelling a sale already paid</h4>
+<p>With <strong>Void sale</strong> (owner or employee with edit permission) nothing is deleted: a <strong>corrective invoice</strong> (R) is issued that brings it to zero and records the reason. The sale stays in the month it was made and the corrective invoice subtracts in its own, so a quarter you already filed is never rewritten. You can print it.</p>
+
+<h4>VeriFactu</h4>
+<p>In <strong>My Business → VeriFactu (certified invoicing)</strong> you'll see the card marked <strong>Coming soon</strong>. It explains that the idea is to connect your own account with a certified provider, but today <strong>the feature is under development</strong>: it sends nothing and doesn't serve to comply. Meanwhile, the numbering above is the foundation it will be built on. If your business must use a certified invoicing system, <strong>check with your accountant</strong> and don't rely on this card.</p>
+
+<h4>Your staff's working-time record</h4>
+<p>The law requires recording each employee's working hours and keeping them for four years. In the app that's clocking in:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st">Each employee clocks in under <strong>Staff Schedule</strong>, on their card, with <strong>Clock in</strong> on arrival and <strong>Clock out</strong> on leaving (with their PIN).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Under <strong>Last clock-ins</strong> you see each day and whether it matches the planned shift. Fixing a clock-in (<strong>Fix clock-in</strong>) <strong>requires the business PIN</strong> and the app keeps the original time: the record marks "Edited by hand" with what was actually clocked.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">When you need it, it comes in the <strong>Send to accountant</strong> package (Financial Management) by ticking <strong>Working-time record</strong>: one sheet per month, with employee, in, out and hours.</div></div>
+<div class="manual-tip"><i class="ti ti-bulb"></i>Deleting an employee <strong>does not delete their clock-ins</strong>: they are kept for the four years the law requires.</div>
+
+<h4>Privacy notice on your booking website</h4>
+<p>The public website where your customers book and order collects their data, so it carries a required tick box (<strong>I agree that my data will be used to manage my reservation/order</strong>) and a privacy notice (<strong>Read more</strong>) with the controller, the legal basis, how long data is kept and how to complain to the Spanish Data Protection Agency. The box for sending them news is separate and optional.</p>
+<p>For the notice to carry your identity, fill in <strong>Legal owner or company name (your website's legal notice)</strong> in <strong>My Business</strong> and tick <strong>Show my tax ID in the booking website's legal and privacy notice</strong>: the law requires it from anyone collecting data online.</p>
+<p>And to handle a customer exercising their rights: <strong>Customers → card → Erase data (GDPR)</strong> deletes it for good, and <strong>Promotion → News → Record an opt-out</strong> removes their marketing consent. Every news email carries its opt-out notice.</p>
+
+<h4>Backups and archiving</h4>
+<p>Your data is on your device and in your cloud, but a copy of your own is the best peace of mind. In <strong>My Business → Data maintenance</strong>:</p>
+<ul>
+<li><strong>Download backup</strong>: a file with the whole business. If time passes without one, the app reminds you on entry (when you're the owner) with a button to download it right away.</li>
+<li><strong>Restore backup</strong>: loads a file again; it tells you which business it belongs to and how many sales it contains before applying it.</li>
+<li><strong>Archive old data</strong> (<strong>Archive before</strong> a date → <strong>Archive and download</strong>): first downloads a file with old sales, bookings, cash closings and received orders and, only if it saved properly and you confirm, removes them from the app to lighten it. That data <strong>leaves the app</strong>: keep the file and ask your accountant how long you must keep it.</li>
+</ul>
+<p>In addition, <strong>Close month</strong> in Treasury locks that month's purchases and investments so they can't change after being sent to your accountant, and received supplier orders are never deleted (you can only undo the receipt).</p>
+
+<h4>Good to know</h4>
+<ul>
+<li>Cancelling, closing a month, erasing data under GDPR and fixing clock-ins are protected by permissions or the business PIN, because they touch data that the tax office or labour inspectors could review.</li>
+<li>Numbering depends on each device: if you reinstall, the app takes the already-saved sales as its base and the number never goes down.</li>
+<li>What you collect in advance (booking deposits, gift vouchers) is treated in the accounts according to its type; your accountant sees it in the package.</li>
+</ul>
+<h4>If something doesn't work</h4>
+<ul>
+<li><strong>"A full invoice needs the customer's name, tax ID and address."</strong>: fill in all three fields.</li>
+<li><strong>I can't find the Invoice button</strong>: it appears in the Charge registered window right after taking payment; it can also be requested from the sale.</li>
+<li><strong>I can't fix a clock-in</strong>: you need the business PIN.</li>
+<li><strong>I have no recent backup</strong>: My Business → Data maintenance → Download backup.</li>
+</ul>
+`}
   },
   {id:'faq', area:'ayuda',
     title:{es:`<i class="ti ti-help-circle"></i> Preguntas frecuentes y problemas`, ca:`<i class="ti ti-help-circle"></i> Preguntes freqüents i problemes`, en:`<i class="ti ti-help-circle"></i> Frequently asked questions and problems`},
