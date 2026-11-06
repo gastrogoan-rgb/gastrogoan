@@ -491,6 +491,7 @@
         <button class="ge-tab" onclick="GE.tab('variables')"><i class="ti ti-shopping-cart"></i> <span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span></button>
         <button class="ge-tab" onclick="GE.tab('cdr')"><i class="ti ti-report-analytics"></i> <span data-i18n="tab.incomeStatement">Cuenta de Resultados</span></button>
         <button class="ge-tab" onclick="GE.tab('tesoreria')"><i class="ti ti-building-bank"></i> <span data-i18n="tab.treasury">Tesorería</span></button>
+        <button class="ge-tab" onclick="GE.tab('bc')"><i class="ti ti-wallet"></i> <span data-i18n="tab.profitCash">Beneficio y caja</span></button>
         <button class="ge-tab" onclick="GE.tab('pe')"><i class="ti ti-scale"></i> <span data-i18n="title.breakEven">Punto de Equilibrio</span></button>
         <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> <span data-i18n="tab.capex">CAPEX</span></button>
         <button class="ge-tab" id="ge-tab-modulos" onclick="GE.tab('modulos')" style="display:none"><i class="ti ti-calculator"></i> <span data-i18n="tab.modulos">Módulos</span></button>
@@ -612,6 +613,16 @@
         <div id="te-calendario"></div>
         <div class="ge-section" id="te-upcoming" style="display:none"></div>
         <div id="te-forecast"></div>
+      </div>
+
+      <!-- BENEFICIO Y CAJA -->
+      <div id="ge-bc" class="ge-tab-panel">
+        <div class="ve-barra-sup"><div id="bc-periodo"></div></div>
+        <div class="ge-kpi-grid" id="bc-kpis"></div>
+        <div class="gf-duo bc-duo"><div class="ge-section" id="bc-puente"></div><div class="ge-section" id="bc-disponible"></div></div>
+        <div id="bc-porque"></div>
+        <div class="ge-section" id="bc-evolucion"></div>
+        <div class="ge-section" id="bc-liquidez"></div>
       </div>
 
       <!-- PUNTO DE EQUILIBRIO -->
@@ -898,6 +909,7 @@
 <script src="js/iconos-comida-uso.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/finance.js"></script>
+<script src="js/motor-fiscal.js"></script>
 <script src="js/recipes.js"></script>
 <script src="js/menu.js"></script>
 <script src="js/tpv.js"></script>

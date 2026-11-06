@@ -154,17 +154,38 @@ function geIvaSoportadoFijosForMonth(year, month){
   if(!items) return geTotalFijosGrossForMonth(year, month) - geTotalFijosNetoForMonth(year, month);
   return items.reduce((s,it) => {
     if(it.c === 'PERSONAL' || !gfPagaEnMes(it, year, month)) return s;
-    return s + (parseFloat(it.importe)||0) * (parseFloat(it.iva)||0) / 100;
+    return s + (parseFloat(it.importe)||0) * (parseFloat(it.iva)||0) / 100 * deducPct(it) / 100;
   }, 0);
 }
 // Foto compacta de los gastos fijos, para el histórico: así el libro de
 // gastos de enero dice el alquiler de ENERO aunque en junio subiera.
+// DEDUCIBILIDAD de un gasto (encargo maestro, F-6): el resultado CONTABLE cuenta todo el gasto; para el impuesto
+// (IRPF / Sociedades) y para el IVA solo cuenta la parte deducible. `deducPct` = 100 por defecto (totalmente
+// deducible); 0 = no deducible; entre medias, parcial. `deducRevisar` marca «pendiente de revisar con mi gestor»
+// (cuenta como deducible por ahora, y la previsión lo avisa). ⚠️ La app NO decide qué es deducible: lo decide el
+// usuario con su gestoría; un % parcial único se aplica al impuesto sobre el beneficio Y al IVA.
+function deducPct(x){ const p = parseFloat(x && x.deducPct); return (p >= 0 && p <= 100) ? p : 100; }
+// Parte NO deducible de los gastos de un mes (se SUMA al resultado contable para obtener la base fiscal).
+function geAjusteFiscalMes(year, month){
+  if(!geMesConActividad(year, month)) return 0;
+  let aj = gastosVariablesActivos().filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s + (parseFloat(v.importe)||0) * (100 - deducPct(v)) / 100, 0);
+  const items = geFijosItemsForMonth(year, month);
+  if(items) aj += items.reduce((s,it) => (it.c === 'PERSONAL' || !(deducPct(it) < 100)) ? s : s + gfMonthlyImporte(it) * (100 - deducPct(it)) / 100, 0);
+  return aj;
+}
+// Cuántos gastos del año están marcados «pendiente de revisar» (la previsión fiscal lo dice).
+function geGastosPorRevisar(year){
+  const v = gastosVariablesActivos().filter(x => x.deducRevisar && parseInt(x.año) === year).length;
+  const f = (DB.ge.fijos||[]).filter(x => x.deducRevisar && x.categoria !== 'PERSONAL').length;
+  return v + f;
+}
 function gfItemsActuales(){
   return (DB.ge.fijos||[]).map(g => ({
     id: g.id, nombre: g.nombre, importe: parseFloat(g.importe)||0, iva: g.categoria==='PERSONAL' ? 0 : (parseFloat(g.iva)||0),
     periodicidadMeses: parseInt(g.periodicidadMeses)||1, mesPago: g.mesPago || null, c: g.categoria,
     retencion: g.retencion || null, titular: gfEsRetribucionTitular(g) ? 1 : 0,
     proveedor: g.proveedor || '', nifProveedor: g.nifProveedor || '',
+    deducPct: deducPct(g),
   }));
 }
 // null = hay histórico pero ese punto es anterior a las fotos (usar lo viejo).
@@ -438,6 +459,7 @@ function aplicarFiscalDeLicencia(){
   poner('formaJuridica', f.formaJuridica);
   if(f.formaJuridica === 'autonomo'){ poner('regimenFiscal', f.regimenFiscal || 'directa'); poner('modalidadDirecta', f.modalidadDirecta || 'simplificada'); }
   else poner('regimenFiscal', 'directa');
+  if(f.territorio) poner('territorio', f.territorio);
   poner('fiscalFijado', true);
   return cambio;
 }
@@ -697,17 +719,9 @@ function geResultadoAntesImpMes(year, month){
 // comunidad autónoma ajusta su mitad: Madrid paga algo menos, Cataluña o
 // Valencia algo más. Es la que usa la gestoría para provisionar si no se
 // sabe nada más.
-const IRPF_ESCALA = [[12450,19],[20200,24],[35200,30],[60000,37],[300000,45],[Infinity,47]];
+// La escala (estatal + autonómica, según el territorio fijado) vive en js/motor-fiscal.js: aquí solo se pide la cuota.
 const IRPF_MINIMO_PERSONAL = 5550;
-function cuotaIrpfEscala(base){
-  let cuota = 0, desde = 0;
-  for(const [hasta, pct] of IRPF_ESCALA){
-    if(base <= desde) break;
-    cuota += (Math.min(base, hasta) - desde) * pct/100;
-    desde = hasta;
-  }
-  return cuota;
-}
+function cuotaIrpfEscala(base){ return motorIrpfCuotaEscala(base, territorioFiscal()); }
 // IRPF de una persona por el rendimiento de la actividad. Estimación
 // directa simplificada: 5% de gastos de difícil justificación, como mucho
 // 2.000 € al año (art. 30.2.4ª LIRPF). El mínimo personal se descuenta
@@ -730,35 +744,47 @@ function reduccionActividadesEconomicas(rn){
   if(!(rn > 0) || rn >= 19747.5) return 0;
   return Math.min(rn, rn <= 14047.5 ? 6498 : Math.max(0, 6498 - 1.14 * (rn - 14047.5)));
 }
-function irpfActividad(rendimiento, opts={}){
-  if(!(rendimiento > 0)) return 0;
+function irpfActividad(rendimiento, opts={}){ return irpfActividadDetalle(rendimiento, opts).cuota; }
+// Lo mismo, pero explicando cada paso (trazabilidad: js/motor-fiscal.js → fiscalTrazaAnual). Una sola implementación:
+// irpfActividad() solo se queda con la cuota.
+function irpfActividadDetalle(rendimiento, opts={}){
+  const d = {rendimiento, cuota:0, pasos:[], reglas:[], territorio: territorioFiscal()};
+  if(!(rendimiento > 0)) return d;
+  const paso = (et, v, regla) => { d.pasos.push({et, v, regla: regla || null}); if(regla && !d.reglas.includes(regla)) d.reglas.push(regla); };
   const simplificada = !opts.sinDificilJustificacion && (DB.business||{}).modalidadDirecta !== 'normal';
-  let neto = simplificada ? rendimiento - Math.min(2000, rendimiento*0.05) : rendimiento;
-  // Las reducciones exigen estimación DIRECTA: en módulos no.
-  const bzR = DB.business || {};
-  const otrasR = Math.max(0, parseFloat(opts.otrasRentas != null ? opts.otrasRentas : bzR.otrasRentasTitular) || 0);
-  // ⚠️ SON ALTERNATIVAS, no se suman (AEAT, Manual práctico de Renta 2025, «Reducción para contribuyentes con rentas no
-  // exentas inferiores a 12.000 euros»: solo se aplica si NO se cumplen los requisitos de la de 6.498 €). Hasta el 6/11 la app
-  // aplicaba las dos una detrás de otra y regalaba hasta 1.620 € de reducción de más a todo autónomo pequeño.
+  let neto = rendimiento;
+  paso(gl({es:'Rendimiento neto previo de la actividad', ca:'Rendiment net previ de l\'activitat', en:'Net activity income before reductions'}), rendimiento);
+  if(simplificada){
+    const dif = Math.min(2000, rendimiento*0.05); neto = rendimiento - dif;
+    paso(gl({es:'Gastos de difícil justificación (5 %, máx. 2.000 €)', ca:'Despeses de difícil justificació (5 %, màx. 2.000 €)', en:'Hard-to-document expenses (5 %, max 2,000 €)'}), -dif, 'IRPF-DIFICIL-5');
+  }
+  // ⚠️ Las reducciones de 6.498 € y de 1.620 € son ALTERNATIVAS (AEAT, Manual práctico de Renta 2025, «Reducción para
+  // contribuyentes con rentas no exentas inferiores a 12.000 euros»: solo se aplica si NO se cumplen los requisitos de la de
+  // 6.498 €). Hasta el 6/11 la app aplicaba las dos una detrás de otra y regalaba hasta 1.620 € de reducción de más.
   //   · 6.498 € (art. 32.2 LIRPF, Ley 31/2022): rendimiento neto ≤ 19.747,50 € y otras rentas ≤ 6.500 €.
   //   · 1.620 € (art. 32.2.3.º): si no se cumple lo anterior, y las rentas no exentas TOTALES (actividad + otras) son < 12.000 €.
+  const bzR = DB.business || {};
+  const otrasR = Math.max(0, parseFloat(opts.otrasRentas != null ? opts.otrasRentas : bzR.otrasRentasTitular) || 0);
   if(!opts.sinDificilJustificacion){
-    if(otrasR <= 6500 && neto < 19747.5) neto = Math.max(0, neto - reduccionActividadesEconomicas(neto));
-    else neto = Math.max(0, neto - Math.min(neto, reduccionRendimientosBajos(neto + otrasR)));
+    if(otrasR <= 6500 && neto < 19747.5){ const r = Math.min(neto, reduccionActividadesEconomicas(neto)); neto = Math.max(0, neto - r); if(r > 0) paso(gl({es:'Reducción por rendimientos de actividades económicas (6.498 €)', ca:'Reducció per rendiments d\'activitats econòmiques (6.498 €)', en:'Reduction for business income (6,498 €)'}), -r, 'IRPF-RED-6498'); }
+    else { const r = Math.min(neto, reduccionRendimientosBajos(neto + otrasR)); neto = Math.max(0, neto - r); if(r > 0) paso(gl({es:'Reducción por rentas bajas (1.620 €)', ca:'Reducció per rendes baixes (1.620 €)', en:'Reduction for low income (1,620 €)'}), -r, 'IRPF-RED-1620'); }
   }
-  // Inicio de actividad (art. 32.3 LIRPF): -20 % del rendimiento neto positivo
-  // (hasta 100.000 €) el primer año con beneficio y el siguiente. Solo si el
-  // dueño lo marca: la app no sabe si antes ya ejerció otra actividad.
-  if(!opts.sinDificilJustificacion && (DB.business||{}).inicioActividad20) neto -= Math.min(neto, 100000) * 0.20;
-  // Otras rentas del titular (p. ej. un sueldo en otra empresa) suben el tramo
-  // al que tributa la actividad; los hijos aumentan el mínimo familiar (art. 58
-  // LIRPF: 2.400, 2.700, 4.000 y 4.500 el cuarto y siguientes).
+  // Inicio de actividad (art. 32.3 LIRPF): -20 % del rendimiento neto positivo (hasta 100.000 €) el primer año con beneficio y el
+  // siguiente. Solo si el dueño lo marca: la app no sabe si antes ya ejerció otra actividad.
+  if(!opts.sinDificilJustificacion && (DB.business||{}).inicioActividad20){ const r = Math.min(neto, 100000) * 0.20; neto -= r; paso(gl({es:'Reducción por inicio de actividad (20 %)', ca:'Reducció per inici d\'activitat (20 %)', en:'Start-up reduction (20 %)'}), -r, 'IRPF-INICIO-20'); }
+  // Otras rentas del titular (p. ej. un sueldo en otra empresa) suben el tramo al que tributa la actividad; los hijos
+  // aumentan el mínimo familiar (art. 58 LIRPF: 2.400, 2.700, 4.000 y 4.500 el cuarto y siguientes).
   const bz = DB.business || {};
   const otras = Math.max(0, parseFloat(opts.otrasRentas != null ? opts.otrasRentas : bz.otrasRentasTitular) || 0);
   const hijos = Math.max(0, parseInt(opts.hijos != null ? opts.hijos : bz.hijosTitular) || 0);
   const minimo = IRPF_MINIMO_PERSONAL + [2400, 2700, 4000].slice(0, hijos).reduce((s,v)=>s+v, 0) + Math.max(0, hijos - 3) * 4500;
   const cuotaMin = cuotaIrpfEscala(minimo);
-  return Math.max(0, cuotaIrpfEscala(otras + neto) - cuotaMin) - Math.max(0, cuotaIrpfEscala(otras) - cuotaMin);
+  d.baseGravada = otras + neto; d.minimo = minimo; d.cuotaMinimo = cuotaMin; d.neto = neto; d.otras = otras;
+  paso(gl({es:'Rendimiento neto reducido (base sobre la que se aplica la escala)', ca:'Rendiment net reduït (base sobre la qual s\'aplica l\'escala)', en:'Reduced net income (base the scale is applied to)'}), neto);
+  paso(gl({es:'Cuota por la escala del IRPF', ca:'Quota per l\'escala de l\'IRPF', en:'Tax by the income-tax scale'}), cuotaIrpfEscala(otras + neto) - cuotaIrpfEscala(otras), fiscalReglaEscalaId());
+  paso(gl({es:'Menos la cuota del mínimo personal y familiar', ca:'Menys la quota del mínim personal i familiar', en:'Less the tax on the personal and family allowance'}), -(Math.min(cuotaMin, cuotaIrpfEscala(otras + neto)) - Math.min(cuotaMin, cuotaIrpfEscala(otras))), 'IRPF-MIN-PERSONAL');
+  d.cuota = Math.max(0, cuotaIrpfEscala(otras + neto) - cuotaMin) - Math.max(0, cuotaIrpfEscala(otras) - cuotaMin);
+  return d;
 }
 // Impuesto ANUAL según la forma del negocio, sobre una base anual.
 // `resultadoFn(m)` da el resultado antes de impuestos de cada mes; se pasa

@@ -4887,6 +4887,54 @@ span.dt-punto{position:absolute;border-radius:50%}
 .mn-bloqueo > .ti{font-size:18px;color:var(--olive)}
 .mn-bloqueo span{flex:1;min-width:220px}
 select:disabled{background:#F1EFE9;color:var(--ink);opacity:1;cursor:not-allowed}
+/* Motor fiscal / previsión de impuestos (6/11) */
+.mf-prev .te-cal-f{grid-template-columns:64px minmax(0,1fr) auto auto;align-items:start}
+.mf-prev .te-cal-t{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mf-datos{display:block;font-size:12px;font-weight:400;color:var(--muted);line-height:1.45}
+.mf-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mf-real{font-size:12.5px;color:var(--ink)}
+.mf-real b{font-family:var(--mono)}
+.mf-avisos{margin:0;padding:0 18px 12px 36px;font-size:12.5px;line-height:1.55;color:var(--body)}
+.mf-avisos-top{padding-top:0;border-bottom:1px solid var(--hair);margin-bottom:2px}
+.mf-mas{background:none;border:0;padding:0;font:inherit;color:var(--olive);text-decoration:underline;cursor:pointer;min-height:44px}
+.mf-prev .te-cal-v{flex-wrap:wrap;justify-content:flex-end}
+.mf-anual{background:#FAF8F4}
+.te-info .te-cal-i{display:none}
+.mf-pasos{width:100%;min-width:0 !important;table-layout:fixed;border-collapse:collapse;margin:0 0 6px}
+.mf-pasos td:first-child{overflow-wrap:break-word}
+.mf-pasos td:last-child{width:112px}
+.mf-pasos td{padding:7px 0;border-top:1px solid var(--hair);font-size:13.5px;vertical-align:top}
+.mf-pasos td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;padding-left:12px}
+.mf-pasos .mf-total td{font-weight:700;border-top:2px solid var(--ink)}
+.mf-regla{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:4px}
+.mf-reglas{list-style:none;margin:0;padding:0}
+.mf-reglas li{padding:10px 0;border-top:1px solid var(--hair);font-size:13px;line-height:1.5}
+.mf-sim-aviso{margin:0 0 14px;padding:10px 12px;font-size:12.5px;line-height:1.5;background:var(--amber-l);border:1px solid #E6D3A3;border-radius:3px}
+.mf-sim-k{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+/* Beneficio y caja (6/11) */
+.bc-duo{margin:0 0 18px}
+.bc-duo > .ge-section{margin:0}
+.bc-lin{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:11px 18px;border-top:1px solid var(--hair);font-size:13.5px}
+.bc-lin span{flex:1;min-width:0;overflow-wrap:break-word}
+.bc-lin small{display:block;margin-top:2px;font-size:12px;color:var(--muted);line-height:1.45}
+.bc-lin b{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.bc-lin.is-base{background:#FAF8F4;font-weight:600}
+.bc-lin.is-total{background:#FAF8F4;border-top:2px solid var(--ink);font-weight:700;font-size:14.5px}
+.bc-lin b.is-ok,.bc-tr .is-ok{color:var(--green)}
+.bc-lin b.is-ko,.bc-tr .is-ko{color:var(--red)}
+.bc-saldo{padding:14px 18px}
+.bc-saldo label{display:block;font-size:13px;margin:0 0 8px}
+.bc-saldo-f{display:flex;gap:8px;align-items:center}
+.bc-saldo-f input{flex:1;max-width:220px;min-height:44px;text-align:right;font-family:var(--mono);font-size:15px;padding:0 10px;border:1px solid var(--hair);border-radius:3px}
+.bc-saldo small{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+.bc-razones{margin:0;padding:12px 18px 14px 38px;font-size:13.5px;line-height:1.6}
+.bc-razones li + li{margin-top:6px}
+.bc-tabla{padding:0 18px 14px}
+.bc-tr{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:10px;padding:9px 0;border-top:1px solid var(--hair);font-size:13.5px}
+.bc-tr span + span{text-align:right;font-family:var(--mono)}
+.bc-th{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-top:0}
+#bc-evolucion .dt-cab{padding:0 18px}
+#bc-evolucion .dt-wrap{padding:0 8px}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5845,3 +5893,23 @@ small{font-size:max(.8333em, 11px)}
   .cdr-graf .dt-cab{padding:0 12px}
   .dt-punto[data-v]:hover::before{font-size:11.5px}
 }
+/* Previsión de impuestos en móvil */
+@media (max-width:760px){
+  .mf-prev .te-cal-f{grid-template-columns:52px minmax(0,1fr) auto}
+  .mf-prev .te-cal-v{grid-column:1 / -1;justify-content:flex-start}
+  .mf-avisos{padding:0 14px 12px 30px}
+}
+/* Beneficio y caja en móvil */
+@media (max-width:760px){
+  .bc-lin{padding:11px 14px}
+  .bc-saldo{padding:14px}
+  .bc-tabla{padding:0 14px 12px}
+  .bc-tr{grid-template-columns:1fr 1fr;row-gap:2px}
+  .bc-tr.bc-th{display:none}
+  .bc-tr span:first-child{grid-column:1 / -1;font-weight:600}
+  .bc-tr span + span{text-align:left}
+  .bc-razones{padding:12px 14px 14px 32px}
+}
+/* Beneficio y caja: cifras que pueden saltar de línea y saldo de 44 px en móvil */
+#bc-kpis .te-valor{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;white-space:normal}
+@media (max-width:760px){ #bc-saldo-in{min-height:44px !important;height:44px !important} .bc-saldo-f .btn{min-height:44px !important} }

@@ -735,6 +735,8 @@ function fiscalFormHtml(pre, cur){
     <select id="${pre}-forma" onchange="document.getElementById('${pre}-reg-box').classList.toggle('hidden', this.value !== 'autonomo')">
       ${op('', '— Sin fijar (la elige el cliente) —', !cur.formaJuridica)}${op('autonomo', 'Autónomo', cur.formaJuridica === 'autonomo')}${op('cb', 'Comunidad de bienes', cur.formaJuridica === 'cb')}${op('sociedad', 'Sociedad (SL, SA…)', cur.formaJuridica === 'sociedad')}${op('cooperativa', 'Cooperativa', cur.formaJuridica === 'cooperativa')}
     </select>
+    <label style="margin-top:8px">Comunidad autónoma <small class="muted">(escala del IRPF; solo Cataluña está verificada)</small></label>
+    <select id="${pre}-terr">${op('general', 'Resto de España (escala general de referencia)', (cur.territorio || 'general') === 'general')}${op('cataluna', 'Cataluña', cur.territorio === 'cataluna')}</select>
     <div id="${pre}-reg-box" class="${cur.formaJuridica === 'autonomo' ? '' : 'hidden'}">
       <label style="margin-top:8px">Régimen del autónomo</label>
       <select id="${pre}-regimen">${op('simplificada', 'Estimación directa simplificada', modo === 'simplificada')}${op('normal', 'Estimación directa normal', modo === 'normal')}${op('modulos', 'Estimación objetiva (módulos)', modo === 'modulos')}</select>
@@ -743,15 +745,17 @@ function fiscalFormHtml(pre, cur){
 function leerFiscal(pre){
   const forma = document.getElementById(pre + '-forma').value;
   if(!forma) return null;
-  if(forma !== 'autonomo') return {formaJuridica: forma, regimenFiscal: 'directa', modalidadDirecta: null};
+  const territorio = document.getElementById(pre + '-terr') ? document.getElementById(pre + '-terr').value : 'general';
+  if(forma !== 'autonomo') return {formaJuridica: forma, regimenFiscal: 'directa', modalidadDirecta: null, territorio};
   const reg = document.getElementById(pre + '-regimen').value;
-  return {formaJuridica: 'autonomo', regimenFiscal: reg === 'modulos' ? 'modulos' : 'directa', modalidadDirecta: reg === 'modulos' ? null : reg};
+  return {formaJuridica: 'autonomo', regimenFiscal: reg === 'modulos' ? 'modulos' : 'directa', modalidadDirecta: reg === 'modulos' ? null : reg, territorio};
 }
 function fiscalTexto(f){
   if(!f || !f.formaJuridica) return '';
   const n = {autonomo:'Autónomo', cb:'Comunidad de bienes', sociedad:'Sociedad', cooperativa:'Cooperativa'}[f.formaJuridica] || f.formaJuridica;
-  if(f.formaJuridica !== 'autonomo') return n;
-  return n + ' · ' + (f.regimenFiscal === 'modulos' ? 'módulos' : (f.modalidadDirecta === 'normal' ? 'directa normal' : 'directa simplificada'));
+  if(f.formaJuridica !== 'autonomo') return n + (f.territorio === 'cataluna' ? ' · Cataluña' : '');
+  const terr = f.territorio === 'cataluna' ? ' · Cataluña' : '';
+  return n + terr + ' · ' + (f.regimenFiscal === 'modulos' ? 'módulos' : (f.modalidadDirecta === 'normal' ? 'directa normal' : 'directa simplificada'));
 }
 function abrirFiscal(licId){
   const l = findSale(licId); if(!l) return;
@@ -766,7 +770,7 @@ async function guardarFiscal(licId){
   const l = findSale(licId); if(!l) return;
   const f = leerFiscal('fx');
   try{
-    await getApp().database().ref('gastrogoan/issuedCodes/' + l.value).update(f ? {formaJuridica: f.formaJuridica, regimenFiscal: f.regimenFiscal || null, modalidadDirecta: f.modalidadDirecta || null} : {formaJuridica: null, regimenFiscal: null, modalidadDirecta: null});
+    await getApp().database().ref('gastrogoan/issuedCodes/' + l.value).update(f ? {formaJuridica: f.formaJuridica, regimenFiscal: f.regimenFiscal || null, modalidadDirecta: f.modalidadDirecta || null, territorio: f.territorio || null} : {formaJuridica: null, regimenFiscal: null, modalidadDirecta: null, territorio: null});
   }catch(e){ alert('No se pudo guardar en la plataforma: ' + (e.message || e.code || 'error')); return; }
   await updateSaleEntry(l, {fiscal: f || null});
   cerrarModal(); renderFolders();
@@ -836,7 +840,7 @@ async function crearNuevaLicencia(user){
   }
   if(fiscal){
     // Forma jurídica y régimen: la app los lee al canjear y los deja BLOQUEADOS en Mi Negocio.
-    try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({formaJuridica: fiscal.formaJuridica, regimenFiscal: fiscal.regimenFiscal || null, modalidadDirecta: fiscal.modalidadDirecta || null}); }
+    try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({formaJuridica: fiscal.formaJuridica, regimenFiscal: fiscal.regimenFiscal || null, modalidadDirecta: fiscal.modalidadDirecta || null, territorio: fiscal.territorio || null}); }
     catch(e){ alert('El código se creó, pero no se pudo guardar la forma jurídica: ' + (e.message || e.code || 'error') + '. Fíjala después con «Fiscal» en la licencia.'); }
   }
   if(slug){

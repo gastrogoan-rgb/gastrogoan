@@ -61,6 +61,7 @@ const VISTAS = [
   ['ge-tesoreria', "navigate('economia'); GE.tab('tesoreria')"],
   ['ge-pe', "navigate('economia'); GE.tab('pe')"],
   ['ge-capex', "navigate('economia'); GE.tab('capex')"],
+  ['ge-bc', "navigate('economia'); GE.tab('bc')"],
   ['minegocio', "navigate('minegocio')"],
   ['manual', "navigate('manual')"],
 ];

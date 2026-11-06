@@ -7257,6 +7257,13 @@ function renderMiNegocio(){
           <span>${t('mn.fiscal.inicioActividad')}</span>
         </label>` : ''}` : ''}
       </div>
+      ${(b.formaJuridica==='autonomo' || b.formaJuridica==='cb') ? `<div class="field-row"><div class="field">
+          <label>${gl({es:'Comunidad autónoma (escala del IRPF)', ca:'Comunitat autònoma (escala de l\'IRPF)', en:'Region (income-tax scale)'})}</label>
+          <select id="mn-territorio" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
+            ${Object.keys(FISCAL_TERRITORIOS).map(k => `<option value="${k}" ${(b.territorio||'general')===k?'selected':''}>${FISCAL_TERRITORIOS[k]()}</option>`).join('')}
+          </select>
+          <div class="txt-xs" style="color:var(--muted);margin-top:4px">${gl({es:'Cada comunidad tiene su escala. Solo Cataluña está cargada y verificada; para el resto se usa una escala general de referencia (la previsión lo avisa).', ca:'Cada comunitat té la seva escala. Només Catalunya està carregada i verificada; per a la resta s\'usa una escala general de referència (la previsió ho avisa).', en:'Each region has its own scale. Only Catalonia is loaded and verified; the rest use a reference general scale (the forecast warns you).'})}</div>
+        </div></div>` : ''}
       ${b.formaJuridica==='sociedad' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.sociedadHint')}</p>` : ''}
       ${b.formaJuridica==='cooperativa' ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('mn.fiscal.cooperativaHint')}</p>` : ''}
       ${b.formaJuridica==='cb' ? renderComunerosHtml(b) : ''}
@@ -8213,6 +8220,7 @@ async function saveBusiness(silent){
   if(el('mn-forma-juridica')) DB.business.formaJuridica = el('mn-forma-juridica').value;
   if(el('mn-regimen-fiscal')) DB.business.regimenFiscal = el('mn-regimen-fiscal').value;
   if(el('mn-modalidad-directa')) DB.business.modalidadDirecta = el('mn-modalidad-directa').value;
+  if(el('mn-territorio')) DB.business.territorio = el('mn-territorio').value;
   if(el('mn-inicio-actividad')) DB.business.inicioActividad20 = el('mn-inicio-actividad').checked;
   const num = id => { const v = el(id) && el(id).value.trim(); return v === '' || v == null ? null : Math.max(0, parseFloat(v)); };
   if(el('mn-otras-rentas')) DB.business.otrasRentasTitular = num('mn-otras-rentas');

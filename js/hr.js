@@ -4,7 +4,7 @@
    ============================================================ */
 const GE = (function(){
   function getMeses(){ return t('months.short'); }
-  const TABS = ['ventas','fijos','variables','cdr','tesoreria','pe','capex','modulos'];
+  const TABS = ['ventas','fijos','variables','cdr','tesoreria','bc','pe','capex','modulos'];
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','CUOTA AUTÓNOMOS (RETA)','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
@@ -200,6 +200,7 @@ const GE = (function(){
     if(name==='pe') renderPE();
     if(name==='capex') renderCapex();
     if(name==='tesoreria') renderTesoreria();
+    if(name==='bc') renderBC();
     if(name==='modulos') renderModulos();
     if(typeof scrollContentToTop==='function') scrollContentToTop();
     requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
@@ -290,7 +291,8 @@ const GE = (function(){
     }, 0);
   }
   function ivaSoportadoComprasMes(mes, año=currentYear()){
-    return totalVariablesMes(mes,año) - totalVariablesNetoMes(mes,año);
+    // Solo el IVA DEDUCIBLE: una compra marcada como parcial o no deducible deja fuera su parte (ver deducPct, js/finance.js).
+    return variablesMes(mes,año).reduce((s,v) => s + (parseFloat(v.importe)||0) * ivaDeGastoVariable(v) / 100 * deducPct(v) / 100, 0);
   }
   // Usa el histórico (DB.ge.fijosLog) en vez de recalcular siempre con la
   // configuración ACTUAL de gastos fijos, para que un mes/trimestre pasado
@@ -387,7 +389,8 @@ const GE = (function(){
     return impMemo.get(key);
   }
   function baseMesesAño(año){
-    return memo('b'+año, () => getMeses().map((_,m)=>resultadoAntesImpMes(m,año)));
+    // BASE FISCAL: el resultado contable + la parte no deducible de los gastos (ver geAjusteFiscalMes).
+    return memo('b'+año, () => getMeses().map((_,m)=>resultadoAntesImpMes(m,año) + geAjusteFiscalMes(año,m)));
   }
   function baseAnualEstimada(año){
     const hoy = new Date();
@@ -853,6 +856,8 @@ const GE = (function(){
       if(g.categoria==='PERSONAL' && gfEsRetribucionTitular(g)) chips.push(`<span class="gf-chip">${gl({es:'Titular', ca:'Titular', en:'Owner'})}</span>`);
       if(gIva > 0) chips.push(`<span class="gf-chip">${t('common.vat')} ${gIva}%</span>`);
       if(g.retencion) chips.push(`<span class="gf-chip">${gl({es:'Retención', ca:'Retenció', en:'Withholding'})}</span>`);
+      if(g.categoria!=='PERSONAL' && deducChip(g)) chips.push(deducChip(g));
+      if(g.categoria!=='PERSONAL' && gfEsPrestamo(g.nombre)) chips.push(`<span class="gf-chip is-aviso">${gl({es:'Préstamo: mejor en Inversiones', ca:'Préstec: millor a Inversions', en:'Loan: better in Investments'})}</span>`);
       if(g.categoria!=='PERSONAL' && g.iva==null) chips.push(`<span class="gf-chip is-aviso">${gl({es:'Falta el IVA', ca:'Falta l\'IVA', en:'VAT missing'})}</span>`);
       if(periodoMeses>1 && !g.autoCalc && !g.mesPago) chips.push(`<span class="gf-chip is-aviso">${gl({es:'Sin mes de factura', ca:'Sense mes de factura', en:'No invoice month'})}</span>`);
       const detalles = [];
@@ -933,6 +938,40 @@ const GE = (function(){
     const box = document.getElementById('gf-factura-box');
     if(box) box.innerHTML = `<input type="file" id="gf-factura-input" accept="image/*,application/pdf" onchange="GE.gfAttachFactura(this)">`;
   }
+  // Selector de deducibilidad, compartido por Gastos fijos y variables (prefijo 'gf' / 'gv').
+  function deducSelectHtml(pre, x){
+    x = x || {};
+    const p = deducPct(x);
+    const modo = x.deducRevisar ? 'rev' : p >= 100 ? 'total' : p <= 0 ? 'no' : 'parcial';
+    const op = (v, tx) => `<option value="${v}"${modo === v ? ' selected' : ''}>${tx}</option>`;
+    return `<div class="field"><label>${gl({es:'¿Es deducible?', ca:'És deduïble?', en:'Is it deductible?'})}</label>
+      <select id="${pre}-f-deduc" onchange="document.getElementById('${pre}-f-deduc-box').style.display = this.value === 'parcial' ? 'block' : 'none'">
+        ${op('total', gl({es:'Sí, del todo', ca:'Sí, del tot', en:'Yes, fully'}))}
+        ${op('parcial', gl({es:'Solo en parte', ca:'Només en part', en:'Only partly'}))}
+        ${op('no', gl({es:'No deducible (atenciones a clientes, multas, gastos personales…)', ca:'No deduïble (atencions a clients, multes, despeses personals…)', en:'Not deductible (client entertainment, fines, personal costs…)'}))}
+        ${op('rev', gl({es:'No lo sé: pendiente de revisar con mi gestor', ca:'No ho sé: pendent de revisar amb el meu gestor', en:'Not sure: to be checked with my accountant'}))}
+      </select>
+      <div id="${pre}-f-deduc-box" style="display:${modo === 'parcial' ? 'block' : 'none'};margin-top:8px"><label>${gl({es:'% deducible', ca:'% deduïble', en:'% deductible'})}</label><input type="number" id="${pre}-f-deduc-pct" min="1" max="99" step="1" value="${modo === 'parcial' ? Math.round(p) : ''}" placeholder="50"></div>
+      <div class="txt-xs" style="color:var(--muted);margin-top:4px">${gl({es:'Afecta al impuesto sobre el beneficio y al IVA que te puedes deducir. La app no decide qué es deducible: pregúntaselo a tu gestoría (el % de un gasto mixto, p. ej. un vehículo o los suministros de un local que también es vivienda, depende de tu caso). Mientras dudes, márcalo «pendiente»: cuenta como deducible y la previsión de impuestos te lo avisa.', ca:'Afecta l\'impost sobre el benefici i l\'IVA que et pots deduir. L\'app no decideix què és deduïble: pregunta-ho a la teva gestoria (el % d\'una despesa mixta, p. ex. un vehicle o els subministraments d\'un local que també és habitatge, depèn del teu cas). Mentre dubtis, marca-ho «pendent»: compta com a deduïble i la previsió d\'impostos t\'ho avisa.', en:'It affects profit tax and the VAT you can deduct. The app does not decide what is deductible: ask your accountant (the % for a mixed expense, e.g. a vehicle or utilities of a premises that is also a home, depends on your case). While unsure, mark it «pending»: it counts as deductible and the tax forecast warns you.'})}</div></div>`;
+  }
+  function deducLeer(pre){
+    const el = document.getElementById(pre + '-f-deduc'); if(!el) return {};
+    if(el.value === 'no') return {deducPct:0, deducRevisar:false};
+    if(el.value === 'parcial'){ const p = parseFloat(document.getElementById(pre + '-f-deduc-pct').value); return {deducPct: (p > 0 && p < 100) ? p : 50, deducRevisar:false}; }
+    if(el.value === 'rev') return {deducPct:100, deducRevisar:true};
+    return {deducPct:100, deducRevisar:false};
+  }
+  function deducChip(x){
+    if(x.deducRevisar) return `<span class="gf-chip is-amber">${gl({es:'Deducible: revisar', ca:'Deduïble: revisar', en:'Deductible: review'})}</span>`;
+    const p = deducPct(x);
+    if(p >= 100) return '';
+    return `<span class="gf-chip is-aviso">${p <= 0 ? gl({es:'No deducible', ca:'No deduïble', en:'Not deductible'}) : gl({es:p + ' % deducible', ca:p + ' % deduïble', en:p + ' % deductible'})}</span>`;
+  }
+  // Un préstamo metido como gasto fijo se cuenta ENTERO como gasto (devolución incluida) y el resultado sale más bajo que el real.
+  function gfEsPrestamo(nombre){ return /pr[eé]stamo|hipoteca|leasing|renting?|financiaci[oó]n|cuota del banco/i.test(nombre || ''); }
+  function gfAvisoPrestamo(valor){
+    const el = document.getElementById('gf-prestamo-aviso'); if(el) el.style.display = gfEsPrestamo(valor) ? 'block' : 'none';
+  }
   function openGFModal(title, g){
     gfPendingFacturaId = g.facturaId || null;
     const sugerencias = (g.categoria==='PERSONAL'?GF_PERSONAL:GF_FIJOS).map(s=>`<option value="${escapeHtml(gfConceptLabel(s))}">`).join('');
@@ -950,9 +989,10 @@ const GE = (function(){
       <div class="gf-mh">${gl({es:'Qué gasto es', ca:'Quina despesa és', en:'What it is'})}</div>
       <div class="field">
         <label>${t('hr.lbl.concept')}</label>
-        <input type="text" id="gf-f-nombre" list="gf-sugerencias" value="${escapeHtml(g.nombre)}">
+        <input type="text" id="gf-f-nombre" list="gf-sugerencias" value="${escapeHtml(g.nombre)}" oninput="GE.gfAvisoPrestamo(this.value)">
         <datalist id="gf-sugerencias">${sugerencias}</datalist>
       </div>
+      <div id="gf-prestamo-aviso" class="te-avisos" style="display:${g.categoria !== 'PERSONAL' && gfEsPrestamo(g.nombre) ? 'block' : 'none'}"><p><i class="ti ti-alert-triangle"></i> ${gl({es:'Esto parece un préstamo. No lo metas como gasto fijo: la parte que devuelve el préstamo NO es gasto y tu resultado saldría más bajo que el real. Regístralo como inversión «financiada» en la pestaña Inversiones: allí se separa solo en intereses (gasto) y devolución (caja).', ca:'Això sembla un préstec. No ho posis com a despesa fixa: la part que retorna el préstec NO és despesa i el teu resultat sortiria més baix que el real. Registra\'l com a inversió «finançada» a la pestanya Inversions: allà se separa sol en interessos (despesa) i devolució (caixa).', en:'This looks like a loan. Do not enter it as a fixed cost: the part that repays the loan is NOT an expense and your result would look lower than it is. Record it as a «financed» investment in the Investments tab: it splits itself into interest (expense) and repayment (cash).'})}</p></div>
       ${g.categoria==='PERSONAL' ? `
       <div class="gf-mh">${gl({es:'Nómina', ca:'Nòmina', en:'Payroll'})}</div>
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
@@ -1033,7 +1073,8 @@ const GE = (function(){
         <option value="115_19" ${g.retencion==='115_19'?'selected':''}>${t('hr.gf.ret115')}</option>
         <option value="111_15" ${g.retencion==='111_15'?'selected':''}>${t('hr.gf.ret111_15')}</option>
         <option value="111_7" ${g.retencion==='111_7'?'selected':''}>${t('hr.gf.ret111_7')}</option>
-      </select><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.gf.retHint')}</div></div>` : ''}
+      </select><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.gf.retHint')}</div></div>
+      ${deducSelectHtml('gf', g)}` : ''}
       <div class="gf-mh">${gl({es:'Notas y factura', ca:'Notes i factura', en:'Notes and invoice'})}</div>
       <div class="field">
         <label>${t('hr.lbl.commentOptional')}</label>
@@ -1243,6 +1284,7 @@ const GE = (function(){
       nifProveedor: document.getElementById('gf-f-nif') ? document.getElementById('gf-f-nif').value.trim().toUpperCase() : '',
       esTitular: (catVal==='PERSONAL' && document.getElementById('gf-f-titular')) ? document.getElementById('gf-f-titular').checked : null,
       retencion: (catVal!=='PERSONAL' && document.getElementById('gf-f-ret')) ? (document.getElementById('gf-f-ret').value || null) : null,
+      ...(catVal!=='PERSONAL' ? deducLeer('gf') : {}),
     };
     const empIdVal = document.getElementById('gf-f-empid').value;
     if(empIdVal !== '') data.employeeId = parseInt(empIdVal);
@@ -1532,6 +1574,7 @@ const GE = (function(){
           const chips = [];
           if(v.fecha) chips.push(`<span class="gf-chip">${escapeHtml(new Date(v.fecha + 'T12:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short'}))}</span>`);
           if(pct > 0) chips.push(`<span class="gf-chip">${t('common.vat')} ${pct}%</span>`);
+          if(deducChip(v)) chips.push(deducChip(v));
           if(f) chips.push(`<span class="gf-chip"><i class="ti ti-paperclip"></i> ${gl({es:'Factura', ca:'Factura', en:'Invoice'})}</span>`);
           const det = [`${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})`];
           if(v.numFactura) det.push(`${t('hr.gv.numFactura')}: ${escapeHtml(v.numFactura)}`);
@@ -1756,6 +1799,7 @@ const GE = (function(){
       <div class="field">
         <label>${t('common.date')}</label><input type="date" id="gv-f-fecha" value="${v.fecha||''}">
       </div>
+      ${deducSelectHtml('gv', v)}
       ${!editingGV ? `<div class="field">
         <label>${t('factura.attachLabel')}</label>
         <div id="gv-factura-box"><input type="file" id="gv-factura-input" accept="image/*,application/pdf" onchange="GE.gvAttachFactura(this)"></div>
@@ -2036,6 +2080,7 @@ const GE = (function(){
       // recuerda por proveedor para no tener que escribirlo cada vez.
       numFactura: (document.getElementById('gv-f-numfra').value||'').trim(),
       nifProveedor: (document.getElementById('gv-f-nif').value||'').trim().toUpperCase(),
+      ...deducLeer('gv'),
     };
     if(editingGV){
       const existing = variables().find(x=>x.id===editingGV);
@@ -2234,6 +2279,9 @@ const GE = (function(){
     } else if(k === 'rai'){
       titulo = L({es:'Resultado antes de impuestos', ca:'Resultat abans d\'impostos', en:'Result before tax'});
       cuerpo = L({es:'<p>Es el resultado de la actividad <b>después de todos los gastos</b> (también amortización e intereses) y <b>antes</b> del impuesto sobre el beneficio. Es la base sobre la que se calcula el impuesto de abajo.</p><p>Fórmula: ventas netas + otros ingresos − compras (± variación de existencias) − personal − otros gastos − comisiones − amortización − intereses. El IVA no entra: no es ni ingreso ni gasto, es dinero que se cobra y se paga por cuenta de Hacienda.</p>', ca:'<p>És el resultat de l\'activitat <b>després de totes les despeses</b> (també amortització i interessos) i <b>abans</b> de l\'impost sobre el benefici. És la base sobre la qual es calcula l\'impost de sota.</p><p>Fórmula: vendes netes + altres ingressos − compres (± variació d\'existències) − personal − altres despeses − comissions − amortització − interessos. L\'IVA no hi entra: ni és ingrés ni despesa, són diners que es cobren i es paguen per compte d\'Hisenda.</p>', en:'<p>The result of the activity <b>after all expenses</b> (including depreciation and interest) and <b>before</b> profit tax. It is the base the tax below is computed on.</p><p>Formula: net sales + other income − purchases (± stock change) − staff − other expenses − commissions − depreciation − interest. VAT is not included: it is neither income nor expense, it is money collected and paid on behalf of the tax office.</p>'});
+    } else if(k === 'ajustes'){
+      titulo = L({es:'Resultado contable y base fiscal', ca:'Resultat comptable i base fiscal', en:'Accounting result and tax base'});
+      cuerpo = L({es:'<p>El <b>resultado contable</b> cuenta todos tus gastos. Pero Hacienda no admite como gasto deducible algunos (atenciones a clientes, multas, gastos personales…) y otros solo en parte. Esa parte NO deducible se suma al resultado y da la <b>base fiscal</b>: la cifra sobre la que se calcula el impuesto.</p><p>La marcas tú en cada gasto («¿Es deducible?»), con tu gestoría: la app no decide qué es deducible. Si hay gastos «pendientes de revisar», cuentan como deducibles por ahora y la previsión de impuestos te lo avisa.</p>', ca:'<p>El <b>resultat comptable</b> compta totes les teves despeses. Però Hisenda no admet com a deduïbles algunes (atencions a clients, multes, despeses personals…) i d\'altres només en part. Aquesta part NO deduïble se suma al resultat i dóna la <b>base fiscal</b>: la xifra sobre la qual es calcula l\'impost.</p><p>La marques tu a cada despesa («És deduïble?»), amb la teva gestoria: l\'app no decideix què és deduïble. Si hi ha despeses «pendents de revisar», compten com a deduïbles per ara i la previsió d\'impostos t\'ho avisa.</p>', en:'<p>The <b>accounting result</b> counts all your expenses. But the tax office does not accept some as deductible (client entertainment, fines, personal costs…) and others only partly. That NON-deductible part is added back to the result to give the <b>tax base</b>: the figure tax is computed on.</p><p>You mark it on each expense («Is it deductible?»), with your accountant: the app does not decide what is deductible. Expenses «pending review» count as deductible for now and the tax forecast warns you.</p>'});
     } else if(k === 'neto' || k === 'impuesto'){
       return cdrComoSeCalcula();
     } else if(k === 'iva'){
@@ -2367,6 +2415,7 @@ const GE = (function(){
     const amort = M(i=>geAmortizacionMes(cdrYear,i));
     const inter = M(i=>geInteresesMes(cdrYear,i));
     const otrosIng = M(i=>geOtrosIngresosNetoMes(cdrYear,i));
+    const ajusteF = M(i=>geAjusteFiscalMes(cdrYear,i));
     const ebitda = M(i=>fac[i]+otrosIng[i]-aprov[i]-pers[i]-otros[i]-comis[i]);
     const explot = M(i=>ebitda[i]-amort[i]);
     const retirada = perfil.personaFisica ? M(i=>geRetribTitularForMonth(cdrYear,i)) : null;
@@ -2393,6 +2442,10 @@ const GE = (function(){
       {lbl:t('hr.cdr.operatingResult'), vals:explot, highlight:true, bold:true},
       {lbl:t('hr.cdr.financialExpenses'), vals:inter.map(v=>-v), auto:true, help:'intereses'},
       {lbl:t('hr.cdr.resultBeforeTax'), vals:M(i=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true, help:'rai'},
+      ...(ajusteF.some(v=>Math.abs(v)>0.005) ? [
+        {lbl:gl({es:'Ajustes fiscales: gastos no deducibles', ca:'Ajustos fiscals: despeses no deduïbles', en:'Tax adjustments: non-deductible expenses'}), vals:ajusteF, auto:true, help:'ajustes'},
+        {lbl:gl({es:'Base fiscal (sobre la que se calcula el impuesto)', ca:'Base fiscal (sobre la qual es calcula l\'impost)', en:'Tax base (what tax is computed on)'}), vals:M(i=>resultadoAntesImpMes(i,cdrYear)+ajusteF[i]), highlight:true, bold:true},
+      ] : []),
       {lbl:`${impLbl} (${pct1((tipoImpuestoAño(cdrYear)*100))}%)`, vals:M(i=>-impuestoMes(i,cdrYear)), auto:true, help:'impuesto'},
       {lbl:t('hr.cdr.netResult'), vals:M(i=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true, help:'neto', yoyFn:i=>resultadoMes(i,cdrYear-1)},
       // Autónomo/CB: lo que el titular se lleva no es gasto (ya ha tributado
@@ -2716,6 +2769,155 @@ const GE = (function(){
     ge().config.scenarios = peScenarios().filter(s=>s.name!==name);
     saveDB();
     renderPEEscenarios();
+  }
+
+  /* ============================================================
+     BENEFICIO Y CAJA (encargo maestro, fase 8)
+     ============================================================
+     «¿Cuánto gano de verdad y cuánto dinero tengo disponible?» son dos preguntas distintas. Aquí se construye el PUENTE
+     entre ellas con las cifras ya auditadas de la Cuenta de Resultados (no se recalcula nada aparte): del resultado neto
+     al dinero que, según tus registros, ha entrado y salido. Es una ESTIMACIÓN: la app no ve tu banco (solo el saldo que
+     tú le escribas) ni sabe qué facturas están aún sin pagar; el extracto manda, y la Conciliación bancaria lo compara.
+     Lo que NO incluye (y lo dice en pantalla): vales regalo y señales de reservas, nóminas o facturas de proveedor aún sin
+     pagar, y los pagos de la Seguridad Social del trabajador. */
+  let bcYear = new Date().getFullYear(), bcMes = null, bcTab = 'beneficio';
+  function bcMesDatos(m, y){
+    const neto = resultadoMes(m, y), imp = impuestoMes(m, y), rai = resultadoAntesImpMes(m, y);
+    const amort = geAmortizacionMes(y, m), varExist = geVariacionExistenciasMes(y, m);
+    const iva = ivaLiquidarMes(m, y);
+    const ret = geModelo111ForMonth(y, m) + geRetencionForMonth(y, m, '115') + retDividendosMes(m, y);
+    const principal = geDevolucionPrestamosMes(y, m);
+    const mesStr = `${y}-${String(m+1).padStart(2,'0')}`;
+    let invPagada = 0, invPendiente = 0, prestamos = 0;
+    capex().filter(c => (c.fecha||'').startsWith(mesStr)).forEach(c => {
+      const base = parseFloat(c.importe)||0;
+      // Una inversión FINANCIADA se paga al proveedor con el dinero del préstamo en el momento de comprarla (su «estado de pago» habla
+      // de si el préstamo está liquidado); una al contado sin pagar aún no ha sacado dinero de caja.
+      if(c.financiado || c.estadoPago === 'PAGADO') invPagada += base; else invPendiente += base;
+      if(c.financiado) prestamos += capexImporteFinanciado(c);
+    });
+    // Lo que el usuario ha marcado como PAGADO a Hacienda ese mes (fecha de pago), con el importe real si lo puso.
+    let pagosHacienda = 0;
+    Object.entries(fiscalObligaciones()).forEach(([k, o]) => { if(o.pagado && o.pagado.startsWith(mesStr)) pagosHacienda += (o.real != null ? o.real : (o.estimado||0)); });
+    const caja = neto + imp + amort + varExist + iva + ret - principal - invPagada + prestamos - pagosHacienda;
+    return {m, y, neto, imp, rai, amort, varExist, iva, ret, principal, invPagada, invPendiente, prestamos, pagosHacienda, caja, hayDatos: geMesConActividad(y, m)};
+  }
+  function bcAgregar(meses){
+    const z = {neto:0, imp:0, rai:0, amort:0, varExist:0, iva:0, ret:0, principal:0, invPagada:0, invPendiente:0, prestamos:0, pagosHacienda:0, caja:0};
+    meses.forEach(d => Object.keys(z).forEach(k => z[k] += d[k]));
+    return z;
+  }
+  function bcPeriodo(a, m){ bcYear = a; bcMes = m; renderBC(); }
+  function setBcTab(k){ bcTab = k; renderBC(); }
+  function bcGuardarSaldo(){
+    const raw = document.getElementById('bc-saldo-in').value;
+    if(raw === ''){ delete ge().saldoBanco; }
+    else ge().saldoBanco = {importe: parseFloat(raw) || 0, fecha: todayStr()};
+    saveDB(); renderBC();
+  }
+  function renderBC(){
+    const L = o => gl(o), hoy = new Date();
+    const ultimo = bcYear === hoy.getFullYear() ? hoy.getMonth() : (bcYear > hoy.getFullYear() ? -1 : 11);
+    const datosMeses = {}; for(let m = 0; m <= 11; m++) if(geMesConActividad(bcYear, m)) datosMeses[`${bcYear}-${String(m+1).padStart(2,'0')}`] = 1;
+    document.getElementById('bc-periodo').innerHTML = ggPeriodoHtml({anio: bcYear, mes: bcMes, cb: 'geBcCb', datos: datosMeses, anual: true});
+    const todos = []; for(let m = 0; m <= ultimo; m++) todos.push(bcMesDatos(m, bcYear));
+    const sel = bcMes == null ? todos : todos.filter(d => d.m === bcMes);
+    const P = bcAgregar(sel), fm = v => (v < 0 ? '−' : '') + fmtMoney(Math.abs(v)), sg = v => (v >= 0 ? '+' : '−') + fmtMoney(Math.abs(v));
+    const periodoTxt = bcMes == null ? String(bcYear) : `${getMeses()[bcMes]} ${bcYear}`;
+    const bien = v => v >= -0.005;
+    // 1) Las tres cifras que importan
+    const est = (v, sinDatos) => sinDatos ? '' : (bien(v) ? 'is-ok' : 'is-ko');
+    const sinDatos = !sel.length || sel.every(d => !d.hayDatos);
+    document.getElementById('bc-kpis').innerHTML = `
+      <div class="ge-kpi"><div class="lbl">${L({es:'Lo que has ganado', ca:'El que has guanyat', en:'What you earned'})}</div><div class="te-valor ${est(P.neto, sinDatos)}">${sinDatos ? '—' : fm(P.neto)} ${sinDatos ? '' : `<i class="ti ${bien(P.neto) ? 'ti-check' : 'ti-x'}"></i>`}</div><div class="sub">${L({es:'Resultado neto (después de impuestos)', ca:'Resultat net (després d\'impostos)', en:'Net result (after tax)'})} · ${periodoTxt}</div></div>
+      <div class="ge-kpi"><div class="lbl">${L({es:'Lo que ha entrado en caja (estim.)', ca:'El que ha entrat a caixa (estim.)', en:'Cash in the till (est.)'})}</div><div class="te-valor ${est(P.caja, sinDatos)}">${sinDatos ? '—' : fm(P.caja)} ${sinDatos ? '' : `<i class="ti ${bien(P.caja) ? 'ti-check' : 'ti-x'}"></i>`}</div><div class="sub">${L({es:'Dinero que se ha movido de verdad', ca:'Diners que s\'han mogut de debò', en:'Money that really moved'})}</div></div>
+      <div class="ge-kpi"><div class="lbl">${L({es:'Diferencia', ca:'Diferència', en:'Difference'})}</div><div class="te-valor">${sinDatos ? '—' : sg(P.caja - P.neto)}</div><div class="sub">${L({es:'Por qué no coinciden: abajo', ca:'Per què no coincideixen: a sota', en:'Why they differ: below'})}</div></div>`;
+    // 2) El puente: del beneficio a la caja
+    const linea = (txt, v, ayuda, tipo) => v === 0 && tipo !== 'base' ? '' : `<div class="bc-lin${tipo === 'base' ? ' is-base' : ''}${tipo === 'total' ? ' is-total' : ''}"><span>${txt}${ayuda ? `<small>${ayuda}</small>` : ''}</span><b class="${tipo === 'total' ? (bien(v) ? 'is-ok' : 'is-ko') : ''}">${tipo === 'base' || tipo === 'total' ? fm(v) : sg(v)}</b></div>`;
+    document.getElementById('bc-puente').innerHTML = `<div class="ge-sec-head"><h4><i class="ti ti-arrows-exchange"></i> ${L({es:'Del beneficio al dinero', ca:'Del benefici als diners', en:'From profit to cash'})}</h4></div>
+      ${sinDatos ? `<div class="empty gf-vacio"><i class="ti ti-chart-line"></i><span>${L({es:'Todavía no hay datos en este periodo.', ca:'Encara no hi ha dades en aquest període.', en:'No data in this period yet.'})}</span></div>` : `
+      ${linea(L({es:'Lo que has ganado (resultado neto)', ca:'El que has guanyat (resultat net)', en:'What you earned (net result)'}), P.neto, '', 'base')}
+      ${linea(L({es:'Impuesto sobre beneficios provisionado', ca:'Impost sobre beneficis provisionat', en:'Profit tax provisioned'}), P.imp, L({es:'Se ha restado como gasto, pero aún no ha salido del banco: sale con los pagos a cuenta y la declaración.', ca:'S\'ha restat com a despesa, però encara no ha sortit del banc: surt amb els pagaments a compte i la declaració.', en:'Deducted as an expense but not yet paid out: it leaves with instalments and the annual return.'}))}
+      ${linea(L({es:'Amortización', ca:'Amortització', en:'Depreciation'}), P.amort, L({es:'Es gasto contable de lo que compraste para durar, pero no sale dinero este mes.', ca:'És despesa comptable del que vas comprar per durar, però no surt diners aquest mes.', en:'An accounting cost of what you bought to last; no money leaves this month.'}))}
+      ${linea(L({es:'Variación del almacén', ca:'Variació del magatzem', en:'Stock change'}), P.varExist, L({es:'Si el almacén ha crecido, has pagado más de lo que has gastado.', ca:'Si el magatzem ha crescut, has pagat més del que has gastat.', en:'If stock grew, you paid more than you consumed.'}))}
+      ${linea(L({es:'IVA cobrado menos IVA pagado', ca:'IVA cobrat menys IVA pagat', en:'VAT collected minus VAT paid'}), P.iva, L({es:'Lo has cobrado a tus clientes, pero es de Hacienda: no es ganancia (se paga con el 303).', ca:'L\'has cobrat als teus clients, però és d\'Hisenda: no és guany (es paga amb el 303).', en:'Collected from customers but owed to the tax office: not profit (paid with form 303).'}))}
+      ${linea(L({es:'Retenciones practicadas', ca:'Retencions practicades', en:'Withholdings made'}), P.ret, L({es:'IRPF que has retenido a empleados y alquiler: está en tu caja pero hay que ingresarlo (111, 115).', ca:'IRPF que has retingut a empleats i lloguer: és a la teva caixa però cal ingressar-lo (111, 115).', en:'Income tax withheld from staff and rent: it sits in your cash but must be paid in (111, 115).'}))}
+      ${linea(L({es:'Devolución de préstamos', ca:'Devolució de préstecs', en:'Loan repayments'}), -P.principal, L({es:'La parte de cada cuota que devuelve el préstamo: sale dinero, pero no es gasto.', ca:'La part de cada quota que retorna el préstec: surt diners, però no és despesa.', en:'The part of each payment that repays the loan: money leaves but it is not an expense.'}))}
+      ${linea(L({es:'Inversiones pagadas', ca:'Inversions pagades', en:'Investments paid'}), -P.invPagada, L({es:'Lo que has pagado por cosas duraderas: sale entero ahora, pero se carga a gasto poco a poco.', ca:'El que has pagat per coses duradores: surt sencer ara, però es carrega a despesa a poc a poc.', en:'What you paid for durable items: leaves in full now but is expensed gradually.'}))}
+      ${linea(L({es:'Préstamos recibidos', ca:'Préstecs rebuts', en:'Loans received'}), P.prestamos, L({es:'Entra dinero del banco, pero NO es un ingreso: hay que devolverlo.', ca:'Entra diners del banc, però NO és un ingrés: cal tornar-lo.', en:'Money from the bank comes in, but it is NOT income: it must be repaid.'}))}
+      ${linea(L({es:'Pagos a Hacienda que has registrado', ca:'Pagaments a Hisenda que has registrat', en:'Tax payments you recorded'}), -P.pagosHacienda, L({es:'Los modelos que has marcado como pagados en Tesorería.', ca:'Els models que has marcat com a pagats a Tresoreria.', en:'Forms you marked as paid in Cash.'}))}
+      ${linea(L({es:'Dinero que ha entrado en caja (estimación)', ca:'Diners que han entrat a caixa (estimació)', en:'Cash in (estimate)'}), P.caja, '', 'total')}
+      ${P.invPendiente > 0.005 ? `<p class="te-nota"><i class="ti ti-clock"></i> ${L({es:`Tienes ${fmtMoney(P.invPendiente)} de inversiones de este periodo sin pagar todavía: saldrán de caja cuando las pagues.`, ca:`Tens ${fmtMoney(P.invPendiente)} d'inversions d'aquest període sense pagar encara: sortiran de caixa quan les paguis.`, en:`${fmtMoney(P.invPendiente)} of this period's investments are still unpaid: they will leave cash when paid.`})}</p>` : ''}
+      <p class="te-nota">${L({es:'Estimación a partir de tus registros. No incluye vales regalo ni señales de reservas, ni nóminas o facturas de proveedor aún sin pagar. El extracto del banco manda: compáralo con la Conciliación bancaria.', ca:'Estimació a partir dels teus registres. No inclou vals regal ni senyals de reserves, ni nòmines o factures de proveïdor encara sense pagar. L\'extracte del banc mana: compara\'l amb la Conciliació bancària.', en:'Estimate from your records. Excludes gift vouchers and booking deposits, and unpaid payroll or supplier invoices. The bank statement rules: compare it with Bank reconciliation.'})}</p>`}`;
+    // 3) Dinero disponible de verdad
+    const saldo = ge().saldoBanco || null;
+    const hoyQ = Math.floor(hoy.getMonth() / 3);
+    const prev = fiscalPrevision(hoy.getFullYear(), hoyQ);
+    const debeHacienda = prev.filas.filter(f => f.estado !== 'pagado' && f.importe > 0).reduce((a, f) => a + f.importe, 0);
+    const lumps = fijos().filter(g => (parseInt(g.periodicidadMeses)||1) > 1).map(g => ({g, d: gfNextDueDate(g, hoy.getFullYear(), hoy.getMonth())})).filter(x => x.d && ((new Date(x.d.date + 'T12:00:00') - hoy) / 864e5) <= 30 && ((new Date(x.d.date + 'T12:00:00') - hoy) / 864e5) >= -1);
+    const lumpsTot = lumps.reduce((a, x) => a + (parseFloat(x.g.importe)||0) * (1 + (parseFloat(x.g.iva)||0)/100), 0);
+    const cuotasMes = capexCuotaMes(hoy.getMonth(), hoy.getFullYear());
+    const disponible = saldo ? saldo.importe - debeHacienda - lumpsTot : null;
+    const colchon = (geTotalPersonalNetoForMonth(hoy.getFullYear(), hoy.getMonth()) + geTotalGFNetoForMonth(hoy.getFullYear(), hoy.getMonth())) * 2;
+    document.getElementById('bc-disponible').innerHTML = `<div class="ge-sec-head"><h4><i class="ti ti-wallet"></i> ${L({es:'Dinero disponible de verdad', ca:'Diners disponibles de debò', en:'Money really available'})}</h4></div>
+      <div class="bc-saldo"><label for="bc-saldo-in">${L({es:'Saldo de tu banco hoy (lo escribes tú, mirando tu banco)', ca:'Saldo del teu banc avui (l\'escrius tu, mirant el teu banc)', en:'Your bank balance today (you type it, from your bank)'})}</label>
+        <div class="bc-saldo-f"><input type="number" id="bc-saldo-in" step="0.01" value="${saldo ? saldo.importe : ''}" placeholder="0,00"><button type="button" class="btn btn-sm btn-primary" onclick="GE.bcGuardarSaldo()">${L({es:'Guardar', ca:'Desar', en:'Save'})}</button></div>
+        ${saldo ? `<small>${L({es:'Anotado el ', ca:'Anotat el ', en:'Recorded on '})}${new Date(saldo.fecha + 'T12:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'long'})}</small>` : ''}</div>
+      ${saldo ? `
+      ${linea(L({es:'Saldo del banco', ca:'Saldo del banc', en:'Bank balance'}), saldo.importe, '', 'base')}
+      ${linea(L({es:'Menos: lo que es de Hacienda este trimestre', ca:'Menys: el que és d\'Hisenda aquest trimestre', en:'Less: what belongs to the tax office this quarter'}), -debeHacienda, L({es:'IVA, retenciones y pagos a cuenta aún sin pagar (estimados: ver Tesorería).', ca:'IVA, retencions i pagaments a compte encara sense pagar (estimats: vegeu Tresoreria).', en:'VAT, withholdings and instalments not yet paid (estimated: see Cash).'}))}
+      ${linea(L({es:'Menos: pagos periódicos de los próximos 30 días', ca:'Menys: pagaments periòdics dels propers 30 dies', en:'Less: recurring payments in the next 30 days'}), -lumpsTot, lumps.map(x => escapeHtml(gfConceptLabel(x.g.nombre))).join(', '))}
+      ${linea(L({es:'Dinero disponible de verdad', ca:'Diners disponibles de debò', en:'Money really available'}), disponible, '', 'total')}
+      <p class="te-nota">${bien(disponible) ? '<i class="ti ti-check" style="color:var(--green)"></i> ' + L({es:'Después de apartar lo de Hacienda y lo que vence, te queda dinero.', ca:'Després d\'apartar el d\'Hisenda i el que venç, et queda diners.', en:'After setting aside tax money and what is due, you still have cash.'}) : '<i class="ti ti-x" style="color:var(--red)"></i> ' + L({es:'Ojo: el saldo del banco NO te alcanza para lo que debes. Parte de ese dinero no es tuyo.', ca:'Compte: el saldo del banc NO t\'arriba per al que deus. Part d\'aquests diners no és teu.', en:'Careful: your bank balance does NOT cover what you owe. Part of that money is not yours.'})}
+        ${colchon > 0 ? ` ${L({es:`Colchón recomendado: ${fmtMoney(colchon)} (2 meses de personal y fijos).`, ca:`Coixí recomanat: ${fmtMoney(colchon)} (2 mesos de personal i fixos).`, en:`Recommended cushion: ${fmtMoney(colchon)} (2 months of staff and fixed costs).`})} ${disponible >= colchon ? '<i class="ti ti-check" style="color:var(--green)"></i>' : '<i class="ti ti-x" style="color:var(--red)"></i>'}` : ''}</p>` : `<p class="te-nota">${L({es:'Escribe tu saldo y verás cuánto dinero tienes de verdad, una vez apartado lo que no es tuyo.', ca:'Escriu el teu saldo i veuràs quants diners tens de debò, un cop apartat el que no és teu.', en:'Enter your balance to see how much money you really have once what is not yours is set aside.'})}</p>`}`;
+    // 4) Por qué no coinciden: solo lo que de verdad pesa en ESTE periodo
+    const razones = [];
+    const umbral = Math.max(100, Math.abs(P.neto) * 0.05);
+    if(!sinDatos){
+      if(P.neto > 0.005 && P.caja < P.neto - umbral) razones.push(L({es:`Has ganado ${fmtMoney(P.neto)} pero en caja solo se han movido ${fm(P.caja)}: no todo lo que ganas se queda en tu cuenta.`, ca:`Has guanyat ${fmtMoney(P.neto)} però a caixa només s'han mogut ${fm(P.caja)}: no tot el que guanyes es queda al teu compte.`, en:`You earned ${fmtMoney(P.neto)} but only ${fm(P.caja)} moved in cash: not everything you earn stays in your account.`}));
+      if(P.neto < -0.005 && P.caja > P.neto + umbral) razones.push(L({es:`Tienes pérdidas (${fm(P.neto)}) pero la caja se ha movido menos (${fm(P.caja)}): hay gastos contables que no han sacado dinero o dinero que no es tuyo.`, ca:`Tens pèrdues (${fm(P.neto)}) però la caixa s'ha mogut menys (${fm(P.caja)}): hi ha despeses comptables que no han tret diners o diners que no són teus.`, en:`You have a loss (${fm(P.neto)}) but cash moved less (${fm(P.caja)}): some accounting costs took no money, or some money is not yours.`}));
+      if(P.neto > 0.005 && P.caja < 0) razones.push(L({es:'Tienes beneficio pero la caja sale en negativo: es el caso típico de un negocio que gana dinero y aun así se queda sin liquidez. Mira inversiones y préstamos.', ca:'Tens benefici però la caixa surt negativa: és el cas típic d\'un negoci que guanya diners i tot i així es queda sense liquiditat. Mira inversions i préstecs.', en:'You have a profit but cash is negative: the classic case of a business that earns money yet runs out of liquidity. Check investments and loans.'}));
+      if(P.neto < -0.005 && P.caja > 0) razones.push(L({es:'Pierdes dinero según tus cuentas, pero la caja sube: ojo, puede ser dinero ajeno (IVA, retenciones, préstamos) que tendrás que devolver.', ca:'Perds diners segons els teus comptes, però la caixa puja: compte, pot ser diners aliens (IVA, retencions, préstecs) que hauràs de tornar.', en:'You lose money on paper but cash rises: careful, it may be other people\'s money (VAT, withholdings, loans) you will have to return.'}));
+      if(Math.abs(P.invPagada) > umbral) razones.push(L({es:`Has pagado ${fmtMoney(P.invPagada)} en inversiones: sale de caja entero, pero solo ${fmtMoney(P.amort)} se cuenta como gasto (amortización).`, ca:`Has pagat ${fmtMoney(P.invPagada)} en inversions: surt de caixa sencer, però només ${fmtMoney(P.amort)} es compta com a despesa (amortització).`, en:`You paid ${fmtMoney(P.invPagada)} on investments: it leaves cash in full, but only ${fmtMoney(P.amort)} counts as an expense (depreciation).`}));
+      if(P.iva + P.ret > umbral) razones.push(L({es:`${fmtMoney(P.iva + P.ret)} de lo que tienes en caja es de Hacienda (IVA y retenciones): hay que pagarlo, no es ganancia.`, ca:`${fmtMoney(P.iva + P.ret)} del que tens a caixa és d'Hisenda (IVA i retencions): cal pagar-ho, no és guany.`, en:`${fmtMoney(P.iva + P.ret)} of your cash belongs to the tax office (VAT and withholdings): it must be paid, it is not profit.`}));
+      if(P.prestamos > umbral) razones.push(L({es:`Has recibido ${fmtMoney(P.prestamos)} de préstamos: aumentan la caja pero NO son un ingreso.`, ca:`Has rebut ${fmtMoney(P.prestamos)} de préstecs: augmenten la caixa però NO són un ingrés.`, en:`You received ${fmtMoney(P.prestamos)} in loans: they raise cash but are NOT income.`}));
+      if(P.principal > umbral) razones.push(L({es:`Has devuelto ${fmtMoney(P.principal)} de préstamos: te quita caja sin ser un gasto.`, ca:`Has retornat ${fmtMoney(P.principal)} de préstecs: et treu caixa sense ser una despesa.`, en:`You repaid ${fmtMoney(P.principal)} of loans: it takes cash without being an expense.`}));
+      if(P.imp > umbral) razones.push(L({es:`Has provisionado ${fmtMoney(P.imp)} de impuesto sobre beneficios que aún no has pagado: el dinero sigue en tu cuenta pero ya está comprometido.`, ca:`Has provisionat ${fmtMoney(P.imp)} d'impost sobre beneficis que encara no has pagat: els diners continuen al teu compte però ja estan compromesos.`, en:`You provisioned ${fmtMoney(P.imp)} of profit tax you have not paid yet: the money is still in your account but already committed.`}));
+    }
+    document.getElementById('bc-porque').innerHTML = razones.length ? `<div class="ge-section"><div class="ge-sec-head"><h4><i class="ti ti-bulb"></i> ${L({es:'Por qué no coinciden', ca:'Per què no coincideixen', en:'Why they differ'})}</h4></div><ul class="bc-razones">${razones.map(r => `<li>${r}</li>`).join('')}</ul></div>` : '';
+    // 5) Evolución del año: beneficio y caja, mes a mes
+    const serie = k => todos.map(d => ({label: getMeses()[d.m].slice(0,3), nombre: (n => n.charAt(0).toUpperCase() + n.slice(1))(new Date(bcYear, d.m, 1).toLocaleDateString(localeActual(), {month:'long'})) + ' ' + bcYear, value: Math.round((k === 'caja' ? d.caja : d.neto) * 100) / 100, parcial: bcYear === hoy.getFullYear() && d.m === hoy.getMonth()}));
+    const tabs = [['beneficio', L({es:'Beneficio', ca:'Benefici', en:'Profit'})], ['caja', L({es:'Caja (estim.)', ca:'Caixa (estim.)', en:'Cash (est.)'})]];
+    const haySerie = todos.some(d => d.hayDatos && (Math.abs(d.neto) > 0.004 || Math.abs(d.caja) > 0.004));
+    if(haySerie){
+      const sr = serie(bcTab === 'caja' ? 'caja' : 'beneficio'); dashSerieRegistrar('bc-serie', sr);
+      const tot = sr.reduce((a, p) => a + p.value, 0);
+      document.getElementById('bc-evolucion').innerHTML = `<div class="ge-sec-head"><h4><i class="ti ti-chart-line"></i> ${L({es:'Mes a mes: beneficio frente a caja', ca:'Mes a mes: benefici davant de caixa', en:'Month by month: profit vs cash'})}</h4><div class="dt-tabs">${tabs.map(([k, et]) => `<button type="button" class="btn btn-sm btn-fino${bcTab === k ? ' is-on' : ''}" aria-pressed="${bcTab === k}" onclick="GE.setBcTab('${k}')">${et}</button>`).join('')}</div></div>
+        <div class="dt-cab"><div class="dt-titular" data-dt-titular="bc-serie"><b>${escapeHtml(fm(tot))}</b> <span>${L({es:'en ' + bcYear + ' · pasa el ratón por un mes', ca:'el ' + bcYear + ' · passa el ratolí per un mes', en:'in ' + bcYear + ' · hover a month'})}</span></div></div>
+        ${dashSerieHtml(sr, {id:'bc-serie', cadaEtiqueta:1, tooltip:true})}
+        <div class="bc-tabla"><div class="bc-tr bc-th"><span>${L({es:'Mes', ca:'Mes', en:'Month'})}</span><span>${L({es:'Beneficio', ca:'Benefici', en:'Profit'})}</span><span>${L({es:'Caja (estim.)', ca:'Caixa (estim.)', en:'Cash (est.)'})}</span><span>${L({es:'Diferencia', ca:'Diferència', en:'Difference'})}</span></div>
+        ${todos.filter(d => d.hayDatos).map(d => `<div class="bc-tr"><span>${getMeses()[d.m]}</span><span class="${d.neto >= 0 ? 'is-ok' : 'is-ko'}">${fm(d.neto)}</span><span class="${d.caja >= 0 ? 'is-ok' : 'is-ko'}">${fm(d.caja)}</span><span>${sg(d.caja - d.neto)}</span></div>`).join('')}</div>`;
+    } else document.getElementById('bc-evolucion').innerHTML = '';
+    // 6) Liquidez a 30 / 60 / 90 días: lo CONFIRMADO (obligaciones y pagos programados) aparte de lo ESTIMADO (ritmo medio)
+    const hist = []; for(let i = 1; i <= 3; i++){ const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1); if(geMesConActividad(d.getFullYear(), d.getMonth())) hist.push(bcMesDatos(d.getMonth(), d.getFullYear())); }
+    const ritmo = hist.length ? hist.reduce((a, d) => a + d.caja, 0) / hist.length : null;
+    if(saldo && ritmo != null){
+      const filas = [30, 60, 90].map(n => {
+        const lim = new Date(hoy.getTime() + n * 864e5);
+        // Confirmado: lo que ya sabemos que hay que pagar antes de esa fecha (modelos del trimestre y periódicos)
+        let conf = 0;
+        prev.filas.filter(f => f.estado !== 'pagado' && f.importe > 0).forEach(f => { const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(f.vence); if(m && new Date(+m[3], +m[2]-1, +m[1]) <= lim) conf += f.importe; });
+        fijos().filter(g => (parseInt(g.periodicidadMeses)||1) > 1).forEach(g => { const nx = gfNextDueDate(g, hoy.getFullYear(), hoy.getMonth()); if(nx && new Date(nx.date + 'T12:00:00') <= lim && new Date(nx.date + 'T12:00:00') >= hoy) conf += (parseFloat(g.importe)||0) * (1 + (parseFloat(g.iva)||0)/100); });
+        const estim = ritmo * n / 30;
+        return {n, conf, estim, total: saldo.importe - conf + estim};
+      });
+      const riesgo = filas.find(f => f.total < 0);
+      document.getElementById('bc-liquidez').innerHTML = `<div class="ge-sec-head"><h4><i class="ti ti-crystal-ball"></i> ${L({es:'Previsión de liquidez', ca:'Previsió de liquiditat', en:'Liquidity forecast'})}</h4></div>
+        <p class="te-nota">${L({es:'Parte de tu saldo, resta lo CONFIRMADO (modelos del trimestre y pagos periódicos con fecha) y suma lo ESTIMADO (el ritmo medio de caja de tus últimos meses). Son cosas distintas: lo confirmado es seguro; lo estimado no.', ca:'Part del teu saldo, resta el CONFIRMAT (models del trimestre i pagaments periòdics amb data) i suma l\'ESTIMAT (el ritme mitjà de caixa dels teus últims mesos). Són coses diferents: el confirmat és segur; l\'estimat no.', en:'Starts from your balance, subtracts what is CONFIRMED (this quarter\'s forms and dated recurring payments) and adds what is ESTIMATED (your recent average cash pace). They are different: confirmed is certain; estimated is not.'})}</p>
+        <div class="bc-tabla"><div class="bc-tr bc-th bc-liq"><span>${L({es:'Dentro de', ca:'D\'aquí a', en:'In'})}</span><span>${L({es:'Confirmado (−)', ca:'Confirmat (−)', en:'Confirmed (−)'})}</span><span>${L({es:'Estimado (±)', ca:'Estimat (±)', en:'Estimated (±)'})}</span><span>${L({es:'Saldo previsto', ca:'Saldo previst', en:'Projected balance'})}</span></div>
+        ${filas.map(f => `<div class="bc-tr bc-liq"><span>${f.n} ${L({es:'días', ca:'dies', en:'days'})}</span><span>${fm(-f.conf)}</span><span>${sg(f.estim)}</span><span class="${f.total >= 0 ? 'is-ok' : 'is-ko'}"><b>${fm(f.total)}</b> <i class="ti ${f.total >= 0 ? 'ti-check' : 'ti-x'}"></i></span></div>`).join('')}</div>
+        ${riesgo ? `<p class="te-avisos" style="margin:12px 18px"><i class="ti ti-alert-triangle"></i> ${L({es:`Riesgo de falta de liquidez: a ${riesgo.n} días el saldo previsto sale negativo. Habla con tu gestoría o recorta pagos antes.`, ca:`Risc de manca de liquiditat: a ${riesgo.n} dies el saldo previst surt negatiu. Parla amb la teva gestoria o retalla pagaments abans.`, en:`Liquidity risk: at ${riesgo.n} days the projected balance is negative. Talk to your accountant or cut payments earlier.`})}</p>` : ''}`;
+    } else document.getElementById('bc-liquidez').innerHTML = `<div class="ge-sec-head"><h4><i class="ti ti-crystal-ball"></i> ${L({es:'Previsión de liquidez', ca:'Previsió de liquiditat', en:'Liquidity forecast'})}</h4></div><p class="te-nota">${saldo ? L({es:'Necesito al menos un mes anterior con datos para estimar el ritmo de caja.', ca:'Necessito almenys un mes anterior amb dades per estimar el ritme de caixa.', en:'I need at least one earlier month with data to estimate the cash pace.'}) : L({es:'Anota tu saldo del banco (arriba) y verás cuánto te durará el dinero. No se inventan fechas ni importes: solo se usan los que ya conoce la app.', ca:'Anota el teu saldo del banc (a dalt) i veuràs quant et durarà el diner. No s\'inventen dates ni imports: només s\'usen els que ja coneix l\'app.', en:'Enter your bank balance (above) to see how long the money lasts. No dates or amounts are invented: only those the app already knows.'})}</p>`;
   }
 
   /* -- CAPEX -- */
@@ -3394,20 +3596,9 @@ const GE = (function(){
       if(!p.personaFisica && !p.modulos) filas.push({mod:'200', txt:t('cal.200'), imp:null, vence:`25/07/${y+1}`});
       if(p.personaFisica || p.modulos) filas.push({mod:'100', txt:t('cal.renta'), imp:null, vence:`30/06/${y+1}`});
     }
-    box.innerHTML = `<div class="ge-section te-cal">
-      <div class="ge-sec-head"><h4><i class="ti ti-calendar-event"></i> ${t('cal.titulo').replace('${q}', (q+1)+'T '+y)}</h4></div>
-      <p class="te-nota">${t('cal.desc')}</p>
-      ${filas.map(f => {
-        const venceSolo = String(f.vence).split(' · ')[0];
-        const d = f.imp != null && f.imp > 0.005 ? teDiasHasta(venceSolo) : null;
-        const chip = d == null ? '' : d < 0 ? `<span class="gf-chip is-aviso">${gl({es:'vencido', ca:'vençut', en:'overdue'})}</span>` : d <= 10 ? `<span class="gf-chip is-aviso">${gl({es:'en ' + d + ' d', ca:'en ' + d + ' d', en:'in ' + d + ' d'})}</span>` : `<span class="gf-chip">${gl({es:'en ' + d + ' d', ca:'en ' + d + ' d', en:'in ' + d + ' d'})}</span>`;
-        return `<div class="te-cal-f">
-        <span class="te-cal-m">${escapeHtml(f.mod)}</span>
-        <span class="te-cal-t">${f.txt}</span>
-        <b class="te-cal-i"${f.imp!=null && f.imp<0?' style="color:var(--green)"':''}>${f.imp==null ? '' : (f.imp<0 ? fmtMoney(-f.imp)+' '+t('hr.lbl.inYourFavor') : fmtMoney(f.imp))}</b>
-        <span class="te-cal-v">${t('cal.hasta')} ${f.vence} ${chip}</span>
-      </div>`; }).join('')}
-    </div>`;
+    // La tarjeta la pinta el motor fiscal (js/motor-fiscal.js): importes estimados con su estado, fiabilidad, fecha de
+    // actualización y avisos. Aquí solo quedan las declaraciones ANUALES, que no llevan importe.
+    box.innerHTML = fiscalPrevisionHtml(y, q, filas.filter(f => f.imp == null));
   }
   function renderTreasuryForecast(){
     const box = document.getElementById('te-forecast');
@@ -4675,7 +4866,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
@@ -7019,3 +7210,5 @@ function doFichaje(employeeId, action){
 function gePeriodoVentas(anio, mes){ GE.setVentasPeriodo(anio, mes); }
 function gePeriodoVariables(anio, mes){ GE.setGVPeriodo(anio, mes); }
 function gePeriodoTes(anio, mes){ GE.setTePeriodo(anio, mes); }
+
+function geBcCb(a, m){ GE.bcPeriodo(a, m); }

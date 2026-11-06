@@ -96,6 +96,53 @@ await caso('Autónomo en directa simplificada: IRPF del año = 29.447,00 € sob
 await caso('Comunidad de bienes 50/50: cada comunero tributa por 45.000 € → 10.557,00 € cada uno, 21.114,00 € en total', async () => {
   const r = await escenario('cb', {comuneros:[{nombre:'A', pct:50}, {nombre:'B', pct:50}]}); cerca(r.imp, 21114, 'IRPF de la CB'); cerca(r.neto, 68886, 'neto');
 });
+await caso('Retenciones a mano: alquiler 500 € con retención del 19 % → modelo 115 = 95 €/mes (1.140 € al año); gestoría de 100 € con retención del 15 % → 111 profesional = 15 €/mes, que se suma a las nóminas (3.600 + 180 = 3.780)', async () => {
+  await escenario('sociedad', {incnAnterior:'500000'});
+  const r = await page.evaluate(async () => {
+    const y = new Date().getFullYear() - 1;
+    DB.ge.fijos[0].retencion = '115_19';
+    DB.ge.fijos.push({id:3, nombre:'GESTORÍA', importe:100, periodicidadMeses:1, categoria:'FIJOS', iva:21, retencion:'111_15'});
+    DB.ge.fijosLog = []; snapshotGeFijosNeto(); saveDB(); await new Promise(r => setTimeout(r, 20));
+    const suma = f => { let t = 0; for(let m = 0; m < 12; m++) t += f(m); return Math.round(t * 100) / 100; };
+    return {r115: suma(m => geRetencionForMonth(y, m, '115')), r111: suma(m => geModelo111ForMonth(y, m))};
+  });
+  cerca(r.r115, 1140, 'modelo 115'); cerca(r.r111, 3780, 'modelo 111 con profesionales');
+});
+await caso('IVA con varios tipos: 104 € al 4 % + 110 € al 10 % + 121 € al 21 % + 50 € exentos → base 350 €, IVA repercutido 35 €', async () => {
+  const r = await page.evaluate(async () => {
+    const y = new Date().getFullYear() - 1; DB.sales = [{id:'m', date:`${y}-03-10`, createdAt:`${y}-03-10T12:00:00`, total:385, tipo:'mesa', metodoPago:'Tarjeta', items:[
+      {name:'a', qty:1, price:104, ivaPct:4}, {name:'b', qty:1, price:110, ivaPct:10}, {name:'c', qty:1, price:121, ivaPct:21}, {name:'d', qty:1, price:50, ivaPct:0}]}];
+    DB.ge.fijos = []; DB.ge.fijosLog = []; saveDB(); await new Promise(r => setTimeout(r, 20));
+    return {base: GE.facturacionNetaMes ? GE.facturacionNetaMes(2, y) : null, iva: Math.round((GE.ivaLiquidarMes(2, y)) * 100) / 100};
+  });
+  cerca(r.iva, 35, 'IVA repercutido (sin soportado)'); if(r.base != null) cerca(r.base, 350, 'base');
+});
+await caso('Una venta ANULADA no cuenta nada: ni ingreso ni IVA', async () => {
+  const r = await page.evaluate(async () => {
+    const y = new Date().getFullYear() - 1; const antes = Math.round(GE.ivaLiquidarMes(2, y) * 100) / 100;
+    DB.sales.push({id:'z', date:`${y}-03-11`, createdAt:`${y}-03-11T12:00:00`, total:1100, tipo:'mesa', metodoPago:'Tarjeta', status:'anulada', items:[{name:'x', qty:1, price:1100, ivaPct:10}]}); saveDB(); await new Promise(r => setTimeout(r, 20));
+    return {antes, despues: Math.round(GE.ivaLiquidarMes(2, y) * 100) / 100};
+  });
+  cerca(r.despues, r.antes, 'IVA con una venta anulada');
+});
+await caso('Deducibilidad: un gasto de 10.000 € NO deducible baja el resultado CONTABLE (80.000) pero la base fiscal sigue en 90.000 → IS 19.300; neto 60.700; y su IVA (1.000 €) no se deduce → 10.740', async () => {
+  await escenario('sociedad', {incnAnterior:'500000'});
+  const r = await page.evaluate(async () => {
+    const y = new Date().getFullYear() - 1; DB.ge.variables = [{id:50, categoria:'OTROS', proveedor:'MULTA', importe:10000, iva:10, fecha:`${y}-05-05`, mes:4, 'año':y, deducPct:0}]; saveDB(); await new Promise(r => setTimeout(r, 20));
+    const suma = f => { let t = 0; for(let m = 0; m < 12; m++) t += f(m, y); return Math.round(t * 100) / 100; };
+    return {rai: suma((m, y) => GE.resultadoAntesImpMes(m, y)), ajuste: suma((m, y) => geAjusteFiscalMes(y, m)), imp: suma((m, y) => GE.impuestoMes(m, y)), neto: suma((m, y) => GE.resultadoMes(m, y)), iva: suma((m, y) => GE.ivaLiquidarMes(m, y))};
+  });
+  cerca(r.rai, 80000, 'resultado contable'); cerca(r.ajuste, 10000, 'ajuste fiscal'); cerca(r.imp, 19300, 'IS sobre la base fiscal'); cerca(r.neto, 60700, 'neto'); cerca(r.iva, 10740, 'IVA sin deducir el de un gasto no deducible');
+});
+await caso('Deducibilidad PARCIAL: 1.000 € de gasto deducible al 40 % → base fiscal +600 €, y de su IVA del 21 % (210 €) solo se deducen 84 €', async () => {
+  await escenario('sociedad', {incnAnterior:'500000'});
+  const r = await page.evaluate(async () => {
+    const y = new Date().getFullYear() - 1; const iva0 = Math.round(GE.ivaLiquidarMes(5, y) * 100) / 100;
+    DB.ge.variables = [{id:51, categoria:'OTROS', proveedor:'MIXTO', importe:1000, iva:21, fecha:`${y}-06-05`, mes:5, 'año':y, deducPct:40}]; saveDB(); await new Promise(r => setTimeout(r, 20));
+    return {ajuste: geAjusteFiscalMes(y, 5), dIva: Math.round((GE.ivaLiquidarMes(5, y) - iva0) * 100) / 100, revisar: geGastosPorRevisar(y)};
+  });
+  cerca(r.ajuste, 600, 'parte no deducible'); cerca(r.dIva, -84, 'IVA deducible'); assert.equal(r.revisar, 0);
+});
 await caso('Cero ventas y cero gastos: todo a cero, sin NaN ni impuesto; y un año con pérdidas no genera impuesto', async () => {
   const r = await page.evaluate(async () => {
     DB.business.formaJuridica = 'sociedad'; DB.sales = []; DB.ge.fijos = []; DB.ge.variables = []; DB.ge.capex = []; saveDB(); navigate('economia'); GE.tab('cdr'); await new Promise(r => setTimeout(r, 200));
