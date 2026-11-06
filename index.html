@@ -568,9 +568,9 @@
       <div id="ge-cdr" class="ge-tab-panel">
         <div class="ve-barra-sup cdr-barra">
           <div class="cdr-anio">
-            <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(-1)" aria-label="Año anterior"><i class="ti ti-chevron-left"></i></button>
+            <button class="btn btn-sm btn-icon" id="cdr-prev" onclick="GE.setCDRYear(-1)"><i class="ti ti-chevron-left"></i></button>
             <span id="cdr-year"></span>
-            <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(1)" aria-label="Año siguiente"><i class="ti ti-chevron-right"></i></button>
+            <button class="btn btn-sm btn-icon" id="cdr-next" onclick="GE.setCDRYear(1)"><i class="ti ti-chevron-right"></i></button>
           </div>
           <div class="cdr-gran">
             <button class="btn btn-sm" id="cdr-gran-mes" onclick="GE.setCDRGranularidad('mes')"><span data-i18n="ge.granularity.monthly">Mensual</span></button>

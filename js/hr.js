@@ -2189,8 +2189,7 @@ const GE = (function(){
     const hayDatos = serie.some(p => Math.abs(p.value) > 0.004);
     const tit = document.getElementById('cdr-graf-titular');
     if(!hayDatos){ box.innerHTML = `<div class="empty gf-vacio"><i class="ti ti-chart-line"></i><span>${gl({es:'Todavía no hay ventas ni gastos en ' + cdrYear + '.', ca:'Encara no hi ha vendes ni despeses el ' + cdrYear + '.', en:'No sales or expenses in ' + cdrYear + ' yet.'})}</span></div>`; tit.innerHTML = ''; return; }
-    window.dashSeriesPorId = window.dashSeriesPorId || {};
-    window.dashSeriesPorId['cdr-serie'] = serie;
+    dashSerieRegistrar('cdr-serie', serie);
     const total = serie.reduce((s, p) => s + p.value, 0);
     tit.innerHTML = `<b>${escapeHtml(fmtMoney(total))}</b> <span>${escapeHtml(gl({es:'en ' + cdrYear + ' · pasa el ratón por un mes', ca:'el ' + cdrYear + ' · passa el ratolí per un mes', en:'in ' + cdrYear + ' · hover a month'}))}</span>`;
     box.innerHTML = dashSerieHtml(serie, {id:'cdr-serie', cadaEtiqueta:1, tooltip:true});
@@ -2463,6 +2462,9 @@ const GE = (function(){
     document.getElementById('cdr-table').innerHTML = html;
     renderCdrGrafica();
     const comoT = document.getElementById('cdr-como-t'); if(comoT) comoT.textContent = gl({es:'¿Cómo se calcula?', ca:'Com es calcula?', en:'How is it calculated?'});
+    const prev = document.getElementById('cdr-prev'), next = document.getElementById('cdr-next');
+    if(prev) prev.setAttribute('aria-label', gl({es:'Año anterior', ca:'Any anterior', en:'Previous year'}));
+    if(next) next.setAttribute('aria-label', gl({es:'Año siguiente', ca:'Any següent', en:'Next year'}));
     renderDividendos();
     renderMonthComparison();
   }

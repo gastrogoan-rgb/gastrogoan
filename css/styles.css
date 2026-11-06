@@ -4875,7 +4875,7 @@ span.dt-punto{position:absolute;border-radius:50%}
 .cdr-sug .ti{color:var(--olive);font-size:18px}
 .cdr-sug.is-ko{background:var(--red-l);border-color:#E3C8BF;color:var(--red)}
 .cdr-sug.is-ko .ti{color:var(--red)}
-.cdr-ayuda{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-left:4px;padding:0;background:none;border:0;border-radius:50%;color:var(--muted);cursor:pointer;vertical-align:middle}
+.cdr-ayuda{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-10px -8px -10px 0;padding:0;background:none;border:0;border-radius:50%;color:var(--muted);cursor:pointer;vertical-align:middle}
 .cdr-ayuda:hover,.cdr-ayuda:focus-visible{color:var(--ink);background:#F1EFE9}
 .cdr-ayuda .ti{font-size:18px}
 .cdr-expl h4{margin:18px 0 6px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}

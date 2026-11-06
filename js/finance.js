@@ -1026,6 +1026,8 @@ function dashSerieHtml(serie, o){
       <div class="dt-ejes">${serie.map((p, i) => `<span class="${i % cada ? 'oculto' : ''}${p.parcial ? ' parcial' : ''}">${escapeHtml(p.label)}</span>`).join('')}</div>
     </div>`;
 }
+// Guarda los datos de una serie para que dashSerieVer pueda poner su cifra en el titular.
+function dashSerieRegistrar(id, serie){ if(!window.dashSeriesPorId) window.dashSeriesPorId = {}; window.dashSeriesPorId[id] = serie; }
 // Pone la cifra del punto tocado en el titular de su gráfico (data-dt-titular="<id>").
 function dashSerieVer(id, i){
   const wrap = document.getElementById(id);

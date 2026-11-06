@@ -51,7 +51,7 @@ await caso('Gráfica: una curva con los 12 meses, el resultado del mes al pasar 
     out.ventasMes0 = window.dashSeriesPorId['cdr-serie'][0].value; out.esperadoVentas = 3000;
     return out;
   });
-  assert.equal(r.puntos, 12); assert.equal(r.barras, 0, 'ya no hay barras'); assert.ok(r.curva);
+  assert.equal(r.puntos, mes + 1, 'solo los meses que ya han llegado'); assert.equal(r.barras, 0, 'ya no hay barras'); assert.ok(r.curva);
   assert.equal(r.vals[0], r.esperadoMes0, 'el punto de enero es el resultado neto de enero'); assert.match(r.titular, /febrero/i); assert.ok(r.titular.includes('€'));
   assert.match(r.globo, /febrero.*€/i); assert.notEqual(r.globoVisible, 'none'); assert.equal(r.tabs.length, 3); assert.equal(r.ventasMes0, r.esperadoVentas);
   assert.deepEqual(errs, []); await page.close();
