@@ -327,7 +327,7 @@ function tpvPlatoHtml(order, sec, p, conSeccion){
       </button>
       <span class="tp-plato-acc">
         ${n ? `<button type="button" class="tp-plato-menos" aria-label="${escapeHtml(gl({es:'Quitar uno', ca:'Treure\'n un', en:'Remove one'}))}" onclick="event.stopPropagation();tpvQuitarUno(${order.id}, ${p.id})"><i class="ti ti-minus"></i></button>` : ''}
-        <button type="button" class="tp-plato-info" aria-label="${escapeHtml(t('label.dishInfo'))}" title="${escapeHtml(t('label.dishInfo'))}" onclick="event.stopPropagation();openDishInfoModal(${p.recipeId||'null'}, '${escapeJsAttr(tItem(p))}', '${escapeJsAttr(p.alergenos || '')}', 'renderTableOrderModal(${order.id})')"><i class="ti ti-info-circle"></i></button>
+        <button type="button" class="tp-plato-info" aria-label="${escapeHtml(t('label.dishInfo'))}" title="${escapeHtml(t('label.dishInfo'))}" onclick="event.stopPropagation();openDishInfoModal(${p.recipeId||'null'}, '${escapeJsAttr(tItem(p))}', '${escapeJsAttr(p.alergenos || '')}', 'renderTableOrderModal(${order.id})', '${escapeJsAttr(platoDescripcion(p))}')"><i class="ti ti-info-circle"></i></button>
       </span>
     </div>`;
 }

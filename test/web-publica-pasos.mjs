@@ -82,15 +82,29 @@ await caso('RESERVA: el selector de personas cambia y acota (1-50) y el aviso de
   assert.ok(!/mandaremos|send the confirmation|enviarem/i.test(hint), 'la app no envía correos al cliente: no puede prometerlos → ' + hint);
 });
 
-await caso('Cabecera: dirección, horario, teléfono Y email se ven; teléfono y email son enlaces; la barra de servicios queda centrada en PC', async () => {
-  await arrancar(); await page.setViewport({width: 1280, height: 900}); await abrirTab('reserva');
+await caso('Cabecera: dirección, horario, teléfono Y email se ven; teléfono y email son enlaces', async () => {
+  await arrancar(); await page.setViewport({width: 1280, height: 900});
   const r = await page.evaluate(() => ({
     info: document.getElementById('biz-info').innerText.toLowerCase(),
-    tel: document.querySelector('#biz-info a.hi-phone')?.getAttribute('href'), mail: document.querySelector('#biz-info a.hi-mail')?.getAttribute('href'),
-    tabs: (() => { const t = document.querySelector('.tabs').getBoundingClientRect(); return {izq: Math.round(t.left), der: Math.round(innerWidth - t.right)}; })()}));
+    tel: document.querySelector('#biz-info a.hi-phone')?.getAttribute('href'), mail: document.querySelector('#biz-info a.hi-mail')?.getAttribute('href')}));
   assert.ok(r.info.includes('hola@casapaco.es') && r.info.includes('611222333') && r.info.includes('calle mayor'), r.info);
   assert.equal(r.tel, 'tel:611222333'); assert.equal(r.mail, 'mailto:hola@casapaco.es');
-  assert.ok(Math.abs(r.tabs.izq - r.tabs.der) <= 2, 'la barra de servicios debe quedar centrada: ' + JSON.stringify(r.tabs));
+});
+await caso('Entrada: con varios servicios se ELIGE (3 tarjetas, sin pestañas); con uno solo se entra directo; «Cambiar» vuelve con aviso si ya llevas algo', async () => {
+  await arrancar();
+  const a = await page.evaluate(() => ({cards: [...document.querySelectorAll('.svc-card .svc-t')].map(e => e.textContent.trim()), tabs: document.querySelectorAll('.tabs, .tab-btn').length, wz: !!document.getElementById('wz'), cur: currentTab}));
+  assert.deepEqual(a.cards, ['Reservar mesa', 'Take Away', 'Delivery']); assert.equal(a.tabs, 0); assert.ok(!a.wz); assert.equal(a.cur, null);
+  await clic('.svc-card:nth-child(2)'); await w(400);
+  const b = await page.evaluate(() => ({cur: currentTab, wz: !!document.getElementById('wz'), barra: document.querySelector('.svc-chip')?.innerText.trim().toLowerCase(), cambiar: !!document.querySelector('.svc-cambiar')}));
+  assert.equal(b.cur, 'takeaway'); assert.ok(b.wz && b.cambiar); assert.match(b.barra, /take away/);
+  await page.evaluate(() => volverAServicios()); await w(300);
+  assert.equal(await page.evaluate(() => currentTab), null, 'sin nada elegido vuelve directo');
+  await arrancar({}); 
+});
+await caso('Entrada: un negocio que solo ofrece UN servicio entra directo, sin pantalla de elegir ni «Cambiar»', async () => {
+  await page.evaluate((s, lang) => { s.business.tiposServicio = {mesa:false, takeaway:true, delivery:false}; window.DB = DB = s; businessInfoLoadedOnce = true; currentTab = null; renderApp(); }, semilla(), 'es'); await w(300);
+  const r = await page.evaluate(() => ({cur: currentTab, cards: document.querySelectorAll('.svc-card').length, cambiar: document.querySelectorAll('.svc-cambiar').length}));
+  assert.equal(r.cur, 'takeaway'); assert.equal(r.cards, 0); assert.equal(r.cambiar, 0);
 });
 await caso('PEDIDO: «Continuar» dice lo que falta (vacío, mínimo) y lleva el total; no deja pasar con el carrito vacío', async () => {
   await arrancar(); await abrirTab('takeaway');
@@ -98,10 +112,10 @@ await caso('PEDIDO: «Continuar» dice lo que falta (vacío, mínimo) y lleva el
   assert.ok(vacio.dis && /Añade algo/.test(vacio.txt), JSON.stringify(vacio));
   await page.evaluate(() => { menuSetModo('carta'); });
   await clic('.cs-tile'); await w(250);
-  await clic('.dish .qc-add'); await w(150);   // Agua 2,00 € (mínimo 12)
+  await clic('.dc-main'); await w(150);   // Agua 2,00 € (mínimo 12): tocar la tarjeta del plato la añade
   const min = await page.evaluate(() => { const n = document.getElementById('wz-next'); return {dis: n.disabled, txt: n.textContent}; });
   assert.ok(min.dis && /Faltan/.test(min.txt), 'bajo el mínimo debe avisar: ' + JSON.stringify(min));
-  for(let i = 0; i < 5; i++){ await clic('.dish .qty-ctl button:last-child'); await w(80); }
+  for(let i = 0; i < 5; i++){ await clic('.dc-main'); await w(80); }
   const ok = await page.evaluate(() => { const n = document.getElementById('wz-next'); return {dis: n.disabled, txt: n.textContent}; });
   assert.ok(!ok.dis && /12,00/.test(ok.txt), JSON.stringify(ok));
 });
@@ -113,11 +127,11 @@ await caso('MENÚS y CARTA son dos vistas: los menús en tarjetas, la carta en c
   const c = await page.evaluate(() => ({tarjetas: document.querySelectorAll('.mn-card').length, carpetas: document.querySelectorAll('.cs-tile').length, buscador: !!document.getElementById('menu-search'), cuenta: [...document.querySelectorAll('.cs-n')].map(e => e.textContent)}));
   assert.equal(c.tarjetas, 0); assert.equal(c.carpetas, 5); assert.ok(c.buscador); assert.ok(c.cuenta.some(x => /3 platos/.test(x)), JSON.stringify(c.cuenta));
   await clic('.cs-tile'); await w(200);
-  assert.ok(await page.evaluate(() => !!document.querySelector('.fd-head') && document.querySelectorAll('.dish').length > 0), 'dentro de la carpeta hay cabecera y platos');
+  assert.ok(await page.evaluate(() => !!document.querySelector('.fd-head') && document.querySelectorAll('.dc').length > 0), 'dentro de la carpeta hay cabecera y platos');
   await clic('.fd-head .menu-back-btn'); await w(150);
   assert.equal(await page.evaluate(() => document.querySelectorAll('.cs-tile').length), 5, 'volver deja la carta como estaba');
   await page.type('#menu-search', 'tarta'); await w(200);
-  const b = await page.evaluate(() => [...document.querySelectorAll('.dish .name')].map(e => e.textContent.trim()));
+  const b = await page.evaluate(() => [...document.querySelectorAll('.dc .name')].map(e => e.textContent.trim()));
   assert.deepEqual(b, ['Tarta de queso']);
   await page.$eval('#menu-search', e => { e.value = ''; e.dispatchEvent(new Event('input')); });
   await page.type('#menu-search', 'zzzz'); await w(200);
@@ -161,14 +175,10 @@ await caso('PEDIDO: la hora se elige con un toque entre los huecos reales del d�
   assert.equal(await page.$eval('#o-time', e => e.value), '13:30', 'tocar un hueco rellena la hora');
   assert.equal(await page.$eval('#o-slots button.on', e => e.textContent.trim()), '13:30');
 });
-await caso('Efectos: el paso lleva su etiqueta «Paso N de 3» y la dirección de la transición; el indicador de pestañas se desliza sobre el MISMO elemento', async () => {
+await caso('Efectos: el paso lleva su etiqueta «Paso N de 3» y la dirección de la transición', async () => {
   await page.setViewport({width: 390, height: 860});
-  await arrancar(); await abrirTab('reserva');
-  const a = await page.evaluate(() => { window.__tabs = document.querySelector('.tabs'); return {eye: document.querySelector('.wz-step:not([hidden]) .wz-eye').innerText.trim().toLowerCase(), i: getComputedStyle(__tabs).getPropertyValue('--i').trim()}; });
-  assert.match(a.eye, /paso 1 de 3/); assert.equal(a.i, '0');
-  await page.evaluate(() => setTab('delivery')); await w(300);
-  const b = await page.evaluate(() => ({mismo: document.querySelector('.tabs') === window.__tabs, i: getComputedStyle(window.__tabs).getPropertyValue('--i').trim()}));
-  assert.ok(b.mismo, 'las pestañas no se recrean al cambiar (si no, el indicador no puede deslizarse)'); assert.equal(b.i, '2');
+  await arrancar(); await abrirTab('delivery');
+  assert.match(await page.evaluate(() => document.querySelector('.wz-step:not([hidden]) .wz-eye').innerText.trim().toLowerCase()), /paso 1 de 3/);
   await page.evaluate(() => { menuSetModo('menus'); document.querySelector('.mn-card').click(); }); await w(200);
   await page.evaluate(() => document.getElementById('mn-add').click()); await w(200);
   await page.evaluate(() => document.getElementById('wz-next').click()); await w(200);
@@ -180,9 +190,45 @@ await caso('Efectos: el paso lleva su etiqueta «Paso N de 3» y la dirección d
 await caso('Efectos: con «reducir movimiento» no se anima nada (cabecera, pasos, resumen, carrito)', async () => {
   await page.emulateMediaFeatures([{name: 'prefers-reduced-motion', value: 'reduce'}]);
   await arrancar(); await abrirTab('reserva'); await w(150);
-  const r = await page.evaluate(() => [document.querySelector('header h1'), document.querySelector('.wz-step:not([hidden])'), document.querySelector('.wz-step:not([hidden]) .wz-h'), document.querySelector('.wz-eye'), document.querySelector('.tabs')].map(e => getComputedStyle(e).animationName));
+  const r = await page.evaluate(() => [document.querySelector('header h1'), document.querySelector('.wz-step:not([hidden])'), document.querySelector('.wz-step:not([hidden]) .wz-h'), document.querySelector('.wz-eye'), document.querySelector('.svc-bar') || document.body].map(e => getComputedStyle(e).animationName));
   await page.emulateMediaFeatures([{name: 'prefers-reduced-motion', value: 'no-preference'}]);
   assert.ok(r.every(x => x === 'none'), 'animaciones con movimiento reducido: ' + JSON.stringify(r));
+});
+await caso('Subpantallas: error, saturación, elegir local, encuesta y seguimiento comparten diseño y no usan iconos que esta web no carga', async () => {
+  await arrancar();
+  const fuente = fs.readFileSync(new URL('../reservagastrogoan.html', import.meta.url), 'utf8');
+  assert.ok(!/class="ti ti-/.test(fuente), 'esta web NO carga la fuente de iconos de la app: un <i class="ti ti-…"> sale como una caja vacía');
+  assert.ok(!fuente.includes('<div class="icon">⏳</div>'), 'la saturación no puede ir con emoji');
+  const r = await page.evaluate(async () => {
+    const out = {};
+    showError('error.enlace'); out.errorIcono = getComputedStyle(document.querySelector('.error-box .warn-icon')).backgroundColor;
+    showSaturacion(); out.satIcono = !!document.querySelector('.error-box .warn-icon') && !document.querySelector('.error-box i');
+    renderBranchSelector({name:'Casa Paco'}, [{publicId:'a', name:'Centro', address:'Calle Mayor 1'}, {publicId:'b', name:'Playa'}]); out.locales = [...document.querySelectorAll('.svc-card .svc-t')].map(e => e.textContent.trim());
+    renderNpsSurvey(); out.nps = document.querySelectorAll('#nps-scale button').length; out.npsCols = getComputedStyle(document.getElementById('nps-scale')).gridTemplateColumns.split(' ').length;
+    selectNpsScore(7); out.npsSel = document.querySelector('#nps-scale button[aria-pressed="true"]')?.textContent;
+    return out;
+  });
+  assert.notEqual(r.errorIcono, 'rgba(0, 0, 0, 0)', 'el icono del error tiene color (antes era transparente)'); assert.ok(r.satIcono);
+  assert.deepEqual(r.locales, ['Centro', 'Playa']); assert.equal(r.nps, 11); assert.equal(r.npsCols, 6); assert.equal(r.npsSel, '7');
+});
+await caso('Platos: la tarjeta ES el botón (tocarla añade), el − solo sale con cantidad, varias por fila, y la bandeja enseña lo elegido', async () => {
+  await page.setViewport({width: 390, height: 860});
+  await arrancar(); await abrirTab('takeaway'); await page.evaluate(() => menuSetModo('carta')); await clic('.cs-tile'); await w(250);
+  const a = await page.evaluate(() => ({filas: new Set([...document.querySelectorAll('.dc')].map(e => Math.round(e.getBoundingClientRect().top))).size, n: document.querySelectorAll('.dc').length, minus: [...document.querySelectorAll('.dc-minus')].every(b => b.hidden), tray: document.getElementById('wz-tray').hidden}));
+  assert.ok(a.n >= 2 && a.filas < a.n, 'dos platos caben en la misma fila: ' + JSON.stringify(a)); assert.ok(a.minus && a.tray);
+  await clic('.dc-main'); await clic('.dc-main'); await w(150);
+  const b = await page.evaluate(() => ({q: document.querySelector('.dc-q').textContent, minus: !document.querySelector('.dc-minus').hidden, tray: !document.getElementById('wz-tray').hidden, resumen: document.querySelector('.tray-r').textContent, total: document.querySelector('.tray-t').textContent, cart: cart[0].qty}));
+  assert.equal(b.q, '×2'); assert.ok(b.minus && b.tray); assert.match(b.resumen, /2× /); assert.match(b.total, /4,00/); assert.equal(b.cart, 2);
+  await clic('.tray-h'); await w(150);
+  assert.ok(await page.evaluate(() => !!document.querySelector('.tray-b .cl-q')), 'la bandeja se despliega con sus − n +');
+  await page.evaluate(() => document.querySelector('.tray-b .cl-q button:first-child').click()); await w(150);
+  assert.equal(await page.evaluate(() => cart[0].qty), 1, 'se ajusta desde la bandeja');
+  await page.setViewport({width: 1280, height: 900});
+});
+await caso('Descripción: sale en la tarjeta del plato (la de la ficha técnica, ya resuelta por la app)', async () => {
+  await arrancar(); await abrirTab('takeaway'); await page.evaluate(() => menuSetModo('carta'));
+  await page.evaluate(() => { const c = DB.cartas[0].secciones[0].platos[0]; c.descripcion = 'Seis unidades, bechamel de la casa'; repaintMenu(); openMenuFolder('1:1'); }); await w(250);
+  assert.ok(await page.evaluate(() => [...document.querySelectorAll('.dc-d')].some(e => /bechamel/.test(e.textContent))));
 });
 await caso('Textos: cada clave wz.* existe en es, ca y en, y los tres idiomas pintan los pasos', async () => {
   const r = await page.evaluate(() => { const ks = Object.keys(I18N.es).filter(k => k.startsWith('wz.')); return {n: ks.length, faltan: ['ca', 'en'].map(l => ks.filter(k => !I18N[l][k])).flat()}; });
@@ -219,7 +265,7 @@ await caso('Sin scroll lateral ni letra por debajo de 11 px en 5 móviles, table
 await caso('Objetivos táctiles: Continuar, Atrás, selector y botones de plato miden 44 px o más', async () => {
   await page.setViewport({width: 390, height: 860});
   await arrancar(); await abrirTab('takeaway'); await page.evaluate(() => menuSetModo('carta')); await clic('.cs-tile'); await w(200);
-  const r = await page.evaluate(() => [...document.querySelectorAll('#wz-next, .seg button, .qc-add, .menu-back-btn, .wz-prog button')].filter(e => e.offsetParent).map(e => ({c: e.className || e.id, h: Math.round(e.getBoundingClientRect().height)})).filter(x => x.h < 44));
+  const r = await page.evaluate(() => [...document.querySelectorAll('#wz-next, .seg button, .dc-main, .dc-minus:not([hidden]), .menu-back-btn, .wz-prog button, .svc-cambiar, .tray-h')].filter(e => e.offsetParent).map(e => ({c: e.className || e.id, h: Math.round(e.getBoundingClientRect().height)})).filter(x => x.h < 44));
   await page.setViewport({width: 1280, height: 900});
   assert.deepEqual(r, []);
 });

@@ -603,8 +603,6 @@
     /* Añadir al pedido: el control «salta», la línea se ilumina, el total late */
     .qty-ctl{animation:wzPop .28s cubic-bezier(.3,1.6,.5,1) both}
     @keyframes wzPop{from{opacity:.4;transform:scale(.88)}to{opacity:1;transform:none}}
-    .menu-item.dish.en{animation:wzResalta .9s ease-out}
-    @keyframes wzResalta{from{background:#D8E3DA}to{background:var(--green-l)}}
     #wz-next.pulso{animation:wzLate .42s ease-out}
     @keyframes wzLate{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(74,93,78,.5)}45%{transform:scale(1.02);box-shadow:0 0 0 8px rgba(74,93,78,0)}100%{transform:none;box-shadow:0 0 0 0 rgba(74,93,78,0)}}
     .mn-badge,.cs-in{animation:wzPop .3s cubic-bezier(.3,1.6,.5,1) both}
@@ -618,6 +616,144 @@
     @keyframes wzSube{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
     .opt:has(input:checked){transition:background-color .2s,box-shadow .2s}
   }
+
+  /* ═══ SELECTOR DE SERVICIO, PLATOS EN TARJETA, BANDEJA Y CARPETAS PEQUEÑAS (6/11) ═══ */
+  .svc-ic{display:inline-block;width:26px;height:26px;flex:none;background:currentColor;-webkit-mask:var(--ti) center/contain no-repeat;mask:var(--ti) center/contain no-repeat}
+  .svc-list{display:grid;gap:10px}
+  .svc-card{display:flex;align-items:center;gap:16px;width:100%;text-align:left;padding:20px 18px;border:1px solid var(--border);border-top:2px solid var(--ink);background:var(--surface);cursor:pointer;font-family:inherit;color:var(--ink);transition:border-color .15s,transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+  .svc-card:hover{border-color:var(--ink);box-shadow:0 8px 20px rgba(28,26,23,.09)}
+  .svc-card:active{transform:translateY(1px)}
+  .svc-card:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  .svc-card .svc-ic{width:34px;height:34px;color:var(--olive)}
+  .svc-tx{flex:1;min-width:0;display:block}
+  .svc-t{display:block;font-size:19px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+  .svc-d{display:block;margin-top:3px;font-size:13.5px;line-height:1.4;color:var(--muted)}
+  .svc-go{flex:none;font-size:24px;line-height:1;color:var(--muted);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+  .svc-card:hover .svc-go{transform:translateX(4px);color:var(--ink)}
+  .svc-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid var(--border)}
+  .svc-chip{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+  .svc-chip .svc-ic{width:20px;height:20px;color:var(--olive)}
+  .svc-cambiar{min-height:44px;padding:0 4px;border:0;background:none;font:600 13px/1 inherit;font-family:inherit;color:var(--olive);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  .svc-cambiar:hover{color:var(--ink)}
+  .svc-cambiar:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+  /* Platos: tarjetas con varios por fila; la tarjeta ES el botón */
+  .dg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 6px}
+  @media (min-width:600px){ .dg{grid-template-columns:repeat(3,minmax(0,1fr))} }
+  .menu-item.dc{position:relative;display:block;padding:0;border:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface);margin:0;transition:border-color .15s,box-shadow .25s,transform .25s cubic-bezier(.2,.8,.2,1)}
+  .menu-item.dc:last-child{border-bottom:1px solid var(--border)}
+  .dc-main{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;min-height:96px;padding:12px 12px 10px;border:0;background:transparent;text-align:left;font-family:inherit;color:var(--ink);cursor:pointer}
+  .dc-main:focus-visible{outline:2px solid var(--olive);outline-offset:-3px}
+  .dc-n{font-size:14.5px;font-weight:700;line-height:1.2;letter-spacing:-.01em;overflow-wrap:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding-right:30px}
+  .dc-d{font-size:12.5px;line-height:1.35;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .dc-main>div{margin-top:0 !important}
+  .dc-p{margin-top:auto;padding-top:6px;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--ink)}
+  .dc-p s{color:var(--muted);font-weight:400;font-size:12px}
+  .dc-m{font-size:11px;font-weight:400;color:var(--muted)}
+  .dc-q{position:absolute;top:8px;right:8px;min-width:24px;height:24px;padding:0 6px;display:none;align-items:center;justify-content:center;background:var(--olive);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600}
+  .menu-item.dc.en{border-color:var(--ink);background:var(--green-l);box-shadow:inset 3px 0 0 var(--olive);margin:0;padding:0}
+  .menu-item.dc.en .dc-q{display:inline-flex}
+  .dc-minus{position:absolute;right:0;bottom:0;width:44px;height:44px;border:0;border-left:1px solid var(--ink);border-top:1px solid var(--ink);background:var(--surface);font-size:20px;line-height:1;cursor:pointer;color:var(--ink);font-family:inherit}
+  .dc-minus:hover{background:var(--ink);color:#fff}
+  .dc-minus[hidden]{display:none}
+  .dc-minus:focus-visible{outline:2px solid var(--olive);outline-offset:-4px}
+  @media (hover:hover){ .menu-item.dc:hover{border-color:var(--ink);box-shadow:0 6px 16px rgba(28,26,23,.08)} .menu-item.dc.en:hover{box-shadow:inset 3px 0 0 var(--olive),0 6px 16px rgba(28,26,23,.08)} }
+  .menu-item.dc.dish .name{font-size:14.5px}
+
+  /* Carpetas de la carta: pequeñas, tres por fila */
+  .menu-folder-grid.cs{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  @media (min-width:600px){ .menu-folder-grid.cs{grid-template-columns:repeat(4,minmax(0,1fr))} }
+  @media (max-width:339px){ .menu-folder-grid.cs{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .menu-folder-card.cs-tile{min-height:78px;gap:8px;padding:10px !important;border-top-width:1px;border-radius:0}
+  .cs-tile .icon{font-size:20px !important}
+  .cs-tile .icon svg{width:22px;height:22px}
+  .cs-tile .name{font-size:13px !important;line-height:1.2}
+  .cs-tile .cs-n{font-size:11px;margin-top:2px}
+  .cs-tile .cs-in{top:6px;right:6px;min-width:20px;height:20px;font-size:11px}
+
+  /* Bandeja «Tu selección» */
+  .wz-nav{flex-wrap:wrap}
+  .tray{flex:1 1 100%;border:1px solid var(--ink);background:var(--surface);margin:0}
+  .tray[hidden]{display:none}
+  .tray-h{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:6px 12px;border:0;background:transparent;font-family:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+  .tray-h:focus-visible{outline:2px solid var(--olive);outline-offset:-4px}
+  .tray-k{flex:none;display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+  .tray-n{min-width:22px;height:22px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;background:var(--olive);color:#fff;font-size:12px}
+  .tray-r{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;color:var(--muted)}
+  .tray-t{flex:none;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px}
+  .tray-c{flex:none;width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-135deg) translate(-1px,-1px);transition:transform .25s}
+  .tray-h.on .tray-c{transform:rotate(45deg) translate(-2px,-2px)}
+  .tray-b{max-height:38vh;overflow-y:auto;padding:0 12px 4px;border-top:1px solid var(--border)}
+  .tray-b .cl-l:last-child{border-bottom:0}
+  @media (max-width:360px){ .tray-k{font-size:11px} .tray-r{display:none} .tray-t{margin-left:auto} }
+  @media (prefers-reduced-motion:no-preference){
+    .svc-card{animation:wzRise .5s cubic-bezier(.2,.8,.2,1) both}
+    .svc-card:nth-child(2){animation-delay:.07s} .svc-card:nth-child(3){animation-delay:.14s} .svc-card:nth-child(4){animation-delay:.21s}
+    .svc .wz-eye,.svc .wz-h,.svc .wz-sub{animation:wzRise .45s cubic-bezier(.2,.8,.2,1) both}
+    .dc-q.pop{animation:wzPop .3s cubic-bezier(.3,1.6,.5,1)}
+    #menu-folders .dg>.dc{animation:wzRise .35s cubic-bezier(.2,.8,.2,1) both}
+    #menu-folders .dg>.dc:nth-child(2){animation-delay:.04s} #menu-folders .dg>.dc:nth-child(3){animation-delay:.08s} #menu-folders .dg>.dc:nth-child(4){animation-delay:.12s} #menu-folders .dg>.dc:nth-child(n+5){animation-delay:.16s}
+    .tray-b{animation:wzRise .25s ease-out both}
+  }
+
+  /* Pantallas de aviso (error, saturación, elegir local, encuesta): mismo lenguaje que el resto */
+  .error-box{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--ink);padding:34px 22px;margin-top:6px;color:var(--ink)}
+  .error-box h2{color:var(--ink);font-size:22px;letter-spacing:-.02em;text-wrap:balance}
+  .error-box .icon.warn-icon{width:52px;height:52px;background:var(--red);margin-bottom:14px}
+  .warn-icon{background:var(--red)}
+  .tab-local{--ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10z'/%3E%3Ccircle cx='12' cy='11' r='2.2'/%3E%3C/svg%3E")}
+  .nps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:18px 0 8px}
+  .nps .btn{min-height:52px;padding:0;font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600}
+  .nps .btn.btn-primary{background:var(--ink);color:#fff}
+  .nps-ext{display:flex;justify-content:space-between;gap:12px;margin:0 0 18px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+  /* ═══ MISMO LENGUAJE QUE LA APP (6/11, tarde) ═══
+     Lo que hacía que la web «sonara a IA»: raya negra gruesa sobre cada tarjeta, eyebrows con su filete, «01 · 02 · 03»,
+     barras de acento a un lado de las tarjetas, sombras de brillo al pasar y controles negros que se invierten.
+     Nada de eso existe en las pantallas rediseñadas de la app: allí hay línea fina, botón verde oliva con letra mono,
+     selectores sueltos con borde, fondo crema al pasar y verde (no negro) para lo elegido. Esto lo iguala. */
+  :root{--line:#D6D0C4;--olive-d:#3C4D40}
+  .card,.mn-card,.svc-card,.error-box,.menu-folder-card.cs-tile,#modal-overlay.is-sheet #modal-box{border-top:1px solid var(--border) !important}
+  #modal-overlay.is-sheet #modal-box{border-top-color:var(--line) !important}
+  .wz-eye{color:var(--muted)}
+  .wz-eye::after{display:none}
+  .wz-prog .n{font-size:11px;letter-spacing:.04em}
+  .wz-prog li.done button::after{background:var(--olive)}
+  /* Botones: los de la app (verde oliva, letra mono, esquina de 3 px) */
+  .btn{border-radius:3px;border-color:var(--line);font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:13.5px;letter-spacing:.01em}
+  .btn:hover:not(:disabled){background:var(--brand-cream,#F1EFE9);border-color:var(--olive)}
+  .btn-primary,.nps .btn.btn-primary{background:var(--olive);border-color:var(--olive);color:#fff}
+  .btn-primary:hover:not(:disabled){background:var(--olive-d);border-color:var(--olive-d)}
+  .wz-nav .btn:disabled{background:var(--border);border-color:var(--border);color:var(--muted)}
+  /* Lo elegido va en verde, no en negro */
+  .seg{border:0;background:none;gap:8px}
+  .seg button{border:1px solid var(--line);border-radius:3px;min-height:44px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:13px}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button:hover:not(.on){background:var(--brand-cream,#F1EFE9);border-color:var(--olive)}
+  .seg button.on,.slots button.on{background:var(--olive);border-color:var(--olive);color:#fff}
+  .slots button{border-color:var(--line);background:var(--surface);border-radius:3px}
+  .slots button:hover:not(.on){background:var(--brand-cream,#F1EFE9);border-color:var(--olive)}
+  /* Controles − n + : borde fino y, al pasar, crema con borde verde (nunca se invierten a negro) */
+  .pp,.qty-ctl,.cl-q,.tray{border-color:var(--line)}
+  .pp button:hover,.qty-ctl button:hover,.cl-q button:hover,.dc-minus:hover,.qc-add:hover{background:var(--brand-cream,#F1EFE9);color:var(--olive)}
+  .qc-add{border-color:var(--line);border-radius:3px}
+  .dc-minus{border-color:var(--line)}
+  /* Tarjetas: sin sombra de brillo ni barra de acento; lo elegido = borde y fondo verdes */
+  .svc-card:hover,.menu-item.dc:hover,.menu-item.dc.en:hover{box-shadow:none !important}
+  .svc-card:hover,.mn-card:hover,.menu-item.dc:hover{border-color:var(--olive) !important;background:var(--brand-cream,#F1EFE9)}
+  .menu-item.dc.en,.menu-item.dish.en,.opt:has(input:checked){box-shadow:none !important;border-color:var(--olive);background:var(--green-l)}
+  .menu-item.dish.en{margin:0 calc(-1 * var(--cp,18px))}
+  .opt:hover{border-color:var(--olive)}
+  .svc-card:hover .svc-go{color:var(--olive)}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--olive)}
+  /* Las reglas del servicio, como la franja de cifras de la app (una sola caja con celdas), no una pila de etiquetas sueltas */
+  .chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin:0 0 16px}
+  .chip{text-wrap:balance;background:var(--surface);border:0;min-height:40px;padding:8px 10px;display:flex;align-items:center;line-height:1.35;overflow-wrap:break-word}
+  .chip:last-child:nth-child(odd){grid-column:1/-1}
+  @media (max-width:340px){ .chips{grid-template-columns:1fr} }
+  /* «Cambiar» y «Volver»: el botón fino de la app */
+  .svc-cambiar{border:1px solid var(--line);border-radius:3px;padding:0 12px;background:var(--surface);color:var(--ink);text-decoration:none;font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:12.5px}
+  .svc-cambiar:hover{background:var(--brand-cream,#F1EFE9);border-color:var(--olive);color:var(--olive)}
 </style>
 </head>
 <body>
@@ -1024,6 +1160,7 @@ const I18N_WZ = {
     'wz.o.addr.hint':'Calle, número, piso y puerta.',
     'wz.m.eyebrow':'Menú','wz.m.step':'Paso %d de %d','wz.m.add':'Añadir al pedido','wz.m.pick':'Elige una opción de cada apartado.',
     'wz.m.groups':'%d apartados','wz.x.extras':'Extras',
+    'svc.eye':'Reservas y pedidos','svc.title':'¿Qué quieres hacer?','svc.sub':'Elige una opción y te guiamos paso a paso.','svc.reserva':'Elige día y hora para tu mesa.','svc.takeaway':'Pídelo y recógelo en el local.','svc.delivery':'Te lo llevamos a casa.','svc.mesa':'Pide desde tu mesa.','svc.change':'Cambiar','svc.leave':'¿Volver a elegir servicio? Perderás lo que llevas hasta ahora.','wz.tray':'Tu selección','wz.tray.open':'Ver tu selección','wz.o.nodishes':'Nada por aquí todavía.',
     'wz.o.slots':'Elige una hora','wz.o.asap':'Cuanto antes',
     'email.reserva.hint':'Lo usamos para encontrar tu reserva y para que el restaurante pueda escribirte si hace falta.',
     'email.pedido.hint':'Opcional. El restaurante puede escribirte si hay algún problema con tu pedido.'
@@ -1050,6 +1187,7 @@ const I18N_WZ = {
     'wz.o.addr.hint':'Street, number, floor and door.',
     'wz.m.eyebrow':'Menu','wz.m.step':'Step %d of %d','wz.m.add':'Add to order','wz.m.pick':'Choose one option from each part.',
     'wz.m.groups':'%d parts','wz.x.extras':'Extras',
+    'svc.eye':'Bookings and orders','svc.title':'What would you like to do?','svc.sub':'Pick an option and we will guide you step by step.','svc.reserva':'Pick a day and time for your table.','svc.takeaway':'Order it and collect it at the restaurant.','svc.delivery':'We bring it to your door.','svc.mesa':'Order from your table.','svc.change':'Change','svc.leave':'Go back to choose a service? You will lose what you have so far.','wz.tray':'Your selection','wz.tray.open':'See your selection','wz.o.nodishes':'Nothing here yet.',
     'wz.o.slots':'Choose a time','wz.o.asap':'As soon as possible',
     'email.reserva.hint':'We use it to find your booking and so the restaurant can write to you if needed.',
     'email.pedido.hint':'Optional. The restaurant may write to you if there is any problem with your order.'
@@ -1076,6 +1214,7 @@ const I18N_WZ = {
     'wz.o.addr.hint':'Carrer, número, pis i porta.',
     'wz.m.eyebrow':'Menú','wz.m.step':'Pas %d de %d','wz.m.add':'Afegeix a la comanda','wz.m.pick':'Tria una opció de cada apartat.',
     'wz.m.groups':'%d apartats','wz.x.extras':'Extres',
+    'svc.eye':'Reserves i comandes','svc.title':'Què vols fer?','svc.sub':'Tria una opció i et guiem pas a pas.','svc.reserva':'Tria dia i hora per a la teva taula.','svc.takeaway':'Demana-ho i recull-ho al local.','svc.delivery':'T\'ho portem a casa.','svc.mesa':'Demana des de la teva taula.','svc.change':'Canvia','svc.leave':'Tornar a triar servei? Perdràs el que portes fins ara.','wz.tray':'La teva selecció','wz.tray.open':'Veure la teva selecció','wz.o.nodishes':'Encara no hi ha res.',
     'wz.o.slots':'Tria una hora','wz.o.asap':'Com abans millor',
     'email.reserva.hint':'La fem servir per trobar la teva reserva i perquè el restaurant et pugui escriure si cal.',
     'email.pedido.hint':'Opcional. El restaurant et pot escriure si hi ha algun problema amb la teva comanda.'
@@ -1103,6 +1242,7 @@ function setLang(lang){
   if(trackToken) renderTrackStatus(lastTrackStatusData);
   else if(resToken) renderReservationStatus(lastResStatusData);
   else if(currentTab){ renderTabBar(); renderTabContentPreservingForm(); }   // sin vaciar lo que el cliente ya había escrito
+  else if(businessInfoLoadedOnce && !lastErrorKey){ renderApp(); }   // pantalla de elegir servicio
   else if(lastErrorKey) showError(lastErrorKey);
 }
 
@@ -1369,10 +1509,10 @@ function apuntarDetalle(txt){
 function showSaturacion(){
   document.getElementById('app').innerHTML = `
     <div class="error-box">
-      <div class="icon">⏳</div>
+      <div class="icon warn-icon" aria-hidden="true"></div>
       <h2>${escapeHtml(t('error.saturacion.title'))}</h2>
-      <p style="font-size:13px;color:var(--muted)">${t('error.saturacion.body')}</p>
-      <button class="btn" style="margin-top:14px" onclick="location.reload()"><i class="ti ti-refresh"></i> ${t('common.retry')}</button>
+      <p style="font-size:14px;color:var(--muted);line-height:1.55">${t('error.saturacion.body')}</p>
+      <button class="btn btn-primary" style="margin-top:18px" onclick="location.reload()">${t('common.retry')}</button>
     </div>
   `;
 }
@@ -1731,17 +1871,19 @@ function renderBranchSelector(business, sucursales){
   if(business.name){ document.getElementById('biz-name').textContent = business.name; bizNameLoaded = true; }
   const base = location.href.split('?')[0];
   document.getElementById('app').innerHTML = `
-    <div class="card" style="text-align:center">
-      <h2>${t('branch.title')}</h2>
-      <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">${t('branch.subtitle')}</p>
-      <div style="display:flex;flex-direction:column;gap:10px">
+    <section class="svc">
+      <div class="wz-eye"><span>${escapeHtml(t('svc.eye'))}</span></div>
+      <h2 class="wz-h" tabindex="-1">${t('branch.title')}</h2>
+      <p class="wz-sub">${t('branch.subtitle')}</p>
+      <div class="svc-list">
         ${sucursales.map(s => `
-          <a href="${escapeHtml(base)}?neg=${escapeHtml(s.publicId)}&local=1" class="btn btn-primary" style="text-decoration:none">
-            ${escapeHtml(s.name)}
-          </a>
-        `).join('')}
+          <a href="${escapeHtml(base)}?neg=${escapeHtml(s.publicId)}&local=1" class="svc-card" style="text-decoration:none">
+            <span class="svc-ic tab-local" aria-hidden="true"></span>
+            <span class="svc-tx"><span class="svc-t">${escapeHtml(s.name)}</span>${s.address ? `<span class="svc-d">${escapeHtml(s.address)}</span>` : ''}</span>
+            <span class="svc-go" aria-hidden="true">›</span>
+          </a>`).join('')}
       </div>
-    </div>
+    </section>
   `;
 }
 
@@ -1849,25 +1991,18 @@ function renderApp(){
     return;
   }
 
-  if(!currentTab || !tabs.some(t=>t.id===currentTab)){
-    currentTab = (tableIdFromUrl && tabs.some(t=>t.id==='mesa')) ? 'mesa' : tabs[0].id;
+  if(currentTab && !tabs.some(x => x.id === currentTab)) currentTab = null;
+  if(!currentTab){
+    // Con varios servicios, el cliente ELIGE al entrar (antes veía las tres pestañas aunque solo fuera a usar una).
+    if(tableIdFromUrl && tabs.some(x => x.id === 'mesa')) currentTab = 'mesa';
+    else if(tabs.length === 1) currentTab = tabs[0].id;
   }
   cart = [];
   cartTipPct = 0; cartTipCustom = 0;
   wzReset(); menuMode = null; menuQuery = ''; menuOpenSection = null;
-  const tabIdx = Math.max(0, tabs.findIndex(x => x.id === currentTab));
-  const tabsPrevias = document.querySelector('#app > .tabs');
-  if(tabsPrevias && document.getElementById('tab-content')){
-    tabsPrevias.style.setProperty('--n', tabs.length); tabsPrevias.style.setProperty('--i', tabIdx);
-    tabsPrevias.innerHTML = renderTabButtonsHtml(tabs);
-    renderTabContent();
-    return;
-  }
-
+  if(!currentTab){ renderServicios(tabs); return; }
   document.getElementById('app').innerHTML = `
-    <div class="tabs" role="tablist" style="--n:${tabs.length};--i:${tabIdx}">
-      ${renderTabButtonsHtml(tabs)}
-    </div>
+    ${serviceBarHtml(tabs)}
     <div id="tab-content" role="tabpanel"></div>
   `;
   renderTabContent();
@@ -1887,16 +2022,39 @@ function computeTabs(){
   if(tiposServicio.delivery !== false) tabs.push({id:'delivery', label: t('tab.delivery')});
   return tabs;
 }
-function renderTabButtonsHtml(tabs){
-  return tabs.map(t2 => `<button class="tab-btn tab-${String(t2.id).replace(/[^a-z]/gi,'-')} ${currentTab===t2.id?'active':''}" role="tab" aria-selected="${currentTab===t2.id}" onclick="setTab('${t2.id}')">${String(t2.label).replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u,'')}</button>`).join('');
+function tabLabel(x){ return String(x.label).replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u, ''); }
+const tabIcono = id => 'tab-' + String(id).replace(/[^a-z]/gi, '-');
+// Pantalla de entrada: una tarjeta grande por servicio que ofrece el negocio.
+function renderServicios(tabs){
+  document.getElementById('app').innerHTML = `
+    <section class="svc">
+      <div class="wz-eye"><span>${escapeHtml(t('svc.eye'))}</span></div>
+      <h2 class="wz-h" tabindex="-1">${escapeHtml(t('svc.title'))}</h2>
+      <p class="wz-sub">${escapeHtml(t('svc.sub'))}</p>
+      <div class="svc-list">
+        ${tabs.map(x => `<button type="button" class="svc-card" onclick="setTab('${x.id}')">
+          <span class="svc-ic ${tabIcono(x.id)}" aria-hidden="true"></span>
+          <span class="svc-tx"><span class="svc-t">${escapeHtml(tabLabel(x))}</span><span class="svc-d">${escapeHtml(t('svc.' + x.id))}</span></span>
+          <span class="svc-go" aria-hidden="true">›</span>
+        </button>`).join('')}
+      </div>
+    </section>`;
 }
-// Cambiar de idioma repintaba el contenido de la pestaña activa pero no los
-// propios títulos de las pestañas — se quedaban congelados en el idioma
-// con el que se cargó la página la primera vez.
+// Con el servicio ya elegido: una barra pequeña con el nombre y «Cambiar» (solo si hay más de uno que elegir).
+function serviceBarHtml(tabs){
+  if(tabs.length < 2) return '';
+  const x = tabs.find(y => y.id === currentTab); if(!x) return '';
+  return `<div class="svc-bar" id="svc-bar"><span class="svc-chip"><span class="svc-ic ${tabIcono(x.id)}" aria-hidden="true"></span>${escapeHtml(tabLabel(x))}</span><button type="button" class="svc-cambiar" onclick="volverAServicios()">${escapeHtml(t('svc.change'))}</button></div>`;
+}
+async function volverAServicios(){
+  if((cart.length || wzState.step > 1 || wzState.reached > 1) && !(await confirmModal(t('svc.leave')))) return;
+  currentTab = null;
+  renderApp();
+}
+// Cambiar de idioma: la barra del servicio se repinta con el texto nuevo.
 function renderTabBar(){
-  const box = document.querySelector('.tabs');
-  if(!box) return;
-  box.innerHTML = renderTabButtonsHtml(computeTabs());
+  const b = document.getElementById('svc-bar');
+  if(b) b.outerHTML = serviceBarHtml(computeTabs());
 }
 
 async function setTab(tab){
@@ -1942,11 +2100,11 @@ function telefonoValido(v){ return String(v || '').replace(/\D/g, '').length >= 
 function wzProgHtml(kind){
   return `<ol class="wz-prog" aria-label="${escapeHtml(t('wz.progress'))}">${WZ_PASOS[kind].map((k, i) => {
     const n = i + 1;
-    return `<li data-wz-li="${n}"><button type="button" onclick="wzIr(${n})"><span class="n">0${n}</span><span class="l">${escapeHtml(t(k))}</span></button></li>`;
+    return `<li data-wz-li="${n}"><button type="button" onclick="wzIr(${n})"><span class="n">${n}</span><span class="l">${escapeHtml(t(k))}</span></button></li>`;
   }).join('')}</ol>`;
 }
 function wzNavHtml(submitHtml){
-  return `<div class="wz-nav" id="wz-nav"><button type="button" class="btn" id="wz-back" onclick="wzAtras()">${escapeHtml(t('wz.back'))}</button><button type="button" class="btn btn-primary" id="wz-next" onclick="wzSiguiente()">${escapeHtml(t('wz.next'))}</button>${submitHtml}</div>`;
+  return `<div class="wz-nav" id="wz-nav"><div class="tray" id="wz-tray" hidden></div><button type="button" class="btn" id="wz-back" onclick="wzAtras()">${escapeHtml(t('wz.back'))}</button><button type="button" class="btn btn-primary" id="wz-next" onclick="wzSiguiente()">${escapeHtml(t('wz.next'))}</button>${submitHtml}</div>`;
 }
 function wzAplicar(){
   const k = wzState.kind; if(!k || !wzEl('wz')) return;
@@ -1998,8 +2156,42 @@ function wzPeople(d){
   i.value = Math.min(50, Math.max(1, (parseInt(i.value) || 1) + d));
   updateDepositNoticeUi(); renderReservaCalendar();
 }
+/* Bandeja «Tu selección» (pedidos, paso 1): lo elegido hasta ahora SIEMPRE a la vista, abajo; al tocarla se despliega
+   con sus − n + para ajustarlo sin salir de la carta. */
+let trayOpen = false;
+function trayToggle(){ trayOpen = !trayOpen; trayActualizar(); }
+function cartLineHtml(l){
+  const mods = (l.modificadores || []).length ? `<small>${l.modificadores.map(m => escapeHtml(trItem(m))).join(', ')}</small>` : '';
+  return `
+  <div class="cl-l">
+    <div class="cl-n">${escapeHtml(l.name)}${mods}</div>
+    <div class="cl-q" role="group" aria-label="${escapeHtml(l.name)}">
+      <button type="button" data-k="${escapeHtml(l.key)}|-1" onclick="changeCartLineQty('${escapeJsAttr(l.key)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', l.name))}">−</button>
+      <span>${l.qty}</span>
+      <button type="button" data-k="${escapeHtml(l.key)}|1" onclick="changeCartLineQty('${escapeJsAttr(l.key)}', 1)" aria-label="${escapeHtml(t('aria.addItem').replace('%s', l.name))}">+</button>
+    </div>
+    <div class="cl-p">${fmtMoney(l.price * l.qty)}</div>
+  </div>`;
+}
+function trayActualizar(){
+  const box = wzEl('wz-tray'); if(!box) return;
+  const visible = wzState.kind === 'pedido' && wzState.step === 1 && cart.length > 0;
+  box.hidden = !visible;
+  if(!visible){ trayOpen = false; box.innerHTML = ''; return; }
+  const foco = document.activeElement && box.contains(document.activeElement) ? document.activeElement.dataset.k : null;
+  const n = cart.reduce((s, l) => s + l.qty, 0), sub = cart.reduce((s, l) => s + l.price * l.qty, 0);
+  const resumen = cart.map(l => (l.qty > 1 ? l.qty + '× ' : '') + l.name).join(' · ');
+  box.innerHTML = `<button type="button" class="tray-h${trayOpen ? ' on' : ''}" aria-expanded="${trayOpen}" aria-label="${escapeHtml(t('wz.tray.open'))}" onclick="trayToggle()">
+      <span class="tray-k"><span class="tray-n">${n}</span>${escapeHtml(t('wz.tray'))}</span>
+      <span class="tray-r">${escapeHtml(resumen)}</span>
+      <span class="tray-t">${fmtMoney(sub)}</span>
+      <span class="tray-c" aria-hidden="true"></span>
+    </button>${trayOpen ? `<div class="tray-b">${cart.map(cartLineHtml).join('')}</div>` : ''}`;
+  if(foco){ const b = [...box.querySelectorAll('[data-k]')].find(x => x.dataset.k === foco); if(b) b.focus({preventScroll:true}); }
+}
 /* Texto del botón «Continuar»: en el pedido lleva el total y avisa de lo que falta. */
 function wzNavActualizar(){
+  trayActualizar();
   const next = wzEl('wz-next'); if(!next) return;
   next.disabled = false; next.textContent = t('wz.next');
   if(wzState.kind !== 'pedido' || wzState.step !== 1) return;
@@ -2620,12 +2812,10 @@ function renderNpsSurvey(){
     <div class="card">
       <h2>${t('nps.title').replace('${business}', escapeHtml(bizName))}</h2>
       <p style="font-size:13px;color:var(--muted)">${t('nps.subtitle')}</p>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:16px 0" id="nps-scale">
-        ${Array.from({length:11},(_, n) => `<button type="button" class="btn" style="min-width:38px;padding:8px 0" data-score="${n}" onclick="selectNpsScore(${n})">${n}</button>`).join('')}
+      <div class="nps" id="nps-scale" role="group" aria-label="${escapeHtml(t('nps.title').replace('${business}', bizName))}">
+        ${Array.from({length:11},(_, n) => `<button type="button" class="btn" data-score="${n}" aria-pressed="false" onclick="selectNpsScore(${n})">${n}</button>`).join('')}
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-10px;margin-bottom:14px">
-        <span>${t('nps.low')}</span><span>${t('nps.high')}</span>
-      </div>
+      <div class="nps-ext"><span>${t('nps.low')}</span><span>${t('nps.high')}</span></div>
       <div class="field">
         <label>${t('nps.commentLabel')}</label>
         <textarea id="nps-comment" placeholder="${t('nps.commentPlaceholder')}"></textarea>
@@ -2639,6 +2829,7 @@ function selectNpsScore(n){
   npsSelectedScore = n;
   document.querySelectorAll('#nps-scale button').forEach(b => {
     b.classList.toggle('btn-primary', parseInt(b.dataset.score) === n);
+    b.setAttribute('aria-pressed', parseInt(b.dataset.score) === n);
   });
 }
 function submitNps(){
@@ -3857,55 +4048,48 @@ function dishPriceInfo(p){
   const base = publicPlatoPrice(p);
   return {promo, base, final: promo ? promoDiscountedPrice(base, promo) : base};
 }
-// El control de cada plato: «Añadir» si no hay ninguno, − n + si ya hay, «Añadir (n)» si tiene extras.
-function dishCtlHtml(p, sectionId){
-  const {final} = dishPriceInfo(p);
-  const hasMods = (p.modificadores || []).length > 0;
-  const nombre = trPlato(p);
-  if(hasMods){
-    const total = cart.filter(l => l.recipeId === p.id).reduce((s, l) => s + l.qty, 0);
-    return `<button type="button" class="qc-add" onclick="openModifierModal(${p.id})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre))}">${t('modifiers.addBtn')}${total ? ` <span class="n">(${total})</span>` : ''}</button>`;
-  }
-  const q = getCartQty(p.id);
-  const alta = `changeCartQty(${p.id}, '${escapeJsAttr(sectionId)}', 1, '${escapeJsAttr(p.nombre)}', ${final})`;
-  if(!q) return `<button type="button" class="qc-add" onclick="${alta}" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre))}">+ ${t('modifiers.addBtn')}</button>`;
-  return `<div class="qty-ctl" role="group" aria-label="${escapeHtml(nombre)}">
-    <button type="button" onclick="changeCartQty(${p.id}, '${escapeJsAttr(sectionId)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', nombre))}">−</button>
-    <span id="qty-${p.id}" aria-live="polite">${q}</span>
-    <button type="button" onclick="${alta}" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre))}">+</button>
-  </div>`;
+// Cada plato es UNA tarjeta que es en sí el botón: tocarla lo añade (o abre sus extras). Varias por fila; la cantidad va en la
+// esquina y el «−» aparece solo cuando ya hay alguno. Se actualizan en su sitio (nunca se recrea el botón: no se pierde el foco).
+function dishQty(p){ return cart.filter(l => l.recipeId === p.id).reduce((s, l) => s + l.qty, 0); }
+function dishTap(id, secId){
+  const f = findPlatoById(id); if(!f) return;
+  const p = f.plato;
+  if((p.modificadores || []).length){ openModifierModal(id); return; }
+  changeCartQty(id, secId, 1, p.nombre, dishPriceInfo(p).final);
 }
 function dishCtlRefreshAll(){
-  document.querySelectorAll('.dish-ctl[data-dish]').forEach(el => {
+  document.querySelectorAll('.dc[data-dish]').forEach(el => {
     const f = findPlatoById(parseInt(el.dataset.dish));
     if(!f) return;
-    const tenia = el.contains(document.activeElement);
-    el.innerHTML = dishCtlHtml(f.plato, f.sectionId);
-    const row = el.closest('.dish'); if(row) row.classList.toggle('en', cart.some(l => l.recipeId === f.plato.id));
-    if(tenia){ const b = el.querySelector('button:last-child'); if(b) b.focus({preventScroll:true}); }
-    if(dishBump === f.plato.id){ const s = el.querySelector('span[id^="qty-"]'); if(s){ s.classList.add('bump'); setTimeout(() => s.classList.remove('bump'), 220); } }
+    const p = f.plato, q = dishQty(p), hasMods = (p.modificadores || []).length > 0;
+    el.classList.toggle('en', q > 0);
+    const b = el.querySelector('.dc-q'), prev = +b.dataset.q || 0;
+    b.textContent = q ? '×' + q : ''; b.dataset.q = q;
+    if(q !== prev && q > 0){ b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+    const m = el.querySelector('.dc-minus'); if(m) m.hidden = !(q > 0 && !hasMods);
   });
   dishBump = null;
 }
 function renderMenuDishesHtml(sec){
-  return (sec.platos || []).filter(p => p.disponible !== false).map(p => {
+  const platos = (sec.platos || []).filter(p => p.disponible !== false);
+  return `<div class="dg">${platos.map(p => {
     const {promo, base, final} = dishPriceInfo(p);
     const hasMods = (p.modificadores || []).length > 0;
     const desc = p.descripcion || p.description || '';
-    const enCarrito = cart.some(l => l.recipeId === p.id);
+    const q = dishQty(p), nombre = trPlato(p);
     return `
-    <div class="menu-item dish${enCarrito ? ' en' : ''}">
-      <div class="dish-info">
-        <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
-        ${desc ? `<div class="dish-d">${escapeHtml(desc)}</div>` : ''}
-        <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(base)}</span>${fmtMoney(final)}` : fmtMoney(base)}${hasMods ? ` <span style="font-weight:400;color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
+    <div class="menu-item dish dc${q ? ' en' : ''}" data-dish="${p.id}">
+      <button type="button" class="dc-main" onclick="dishTap(${p.id}, '${escapeJsAttr(sec.id)}')" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre) + ' · ' + fmtMoney(final))}">
+        <span class="dc-n name">${escapeHtml(nombre)}${promo ? ` <span class="promo-badge">-${promo.discountPct}%</span>` : ''}</span>
+        ${desc ? `<span class="dc-d">${escapeHtml(desc)}</span>` : ''}
         ${dishAllergensHtml(p.id)}
-      </div>
-      <div class="dish-ctl" data-dish="${p.id}">${dishCtlHtml(p, sec.id)}</div>
+        <span class="dc-p price">${promo ? `<s>${fmtMoney(base)}</s> ` : ''}${fmtMoney(final)}${hasMods ? ` <span class="dc-m">${escapeHtml(t('modifiers.fromPrice'))}</span>` : ''}</span>
+      </button>
+      <span class="dc-q" data-q="${q}" aria-live="polite">${q ? '×' + q : ''}</span>
+      <button type="button" class="dc-minus" ${q > 0 && !hasMods ? '' : 'hidden'} onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', nombre))}">−</button>
     </div>`;
-  }).join('');
+  }).join('')}</div>`;
 }
-
 // Una tarjeta por menú: nombre, de qué apartados consta y precio. Al tocarla se abre el menú entero.
 function buildMenusHtml(){
   const menus = getActiveMenusPublic();
@@ -4195,20 +4379,7 @@ function renderCartSummary(){
   if(submitBtn) submitBtn.disabled = bajoMinimo;
   box.innerHTML = `
     <h3 class="cs-tit" style="margin-top:0">${t('cart.title')}</h3>
-    ${cart.map(l => {
-      const modsText = (l.modificadores || []).length ? `<small>${l.modificadores.map(m => escapeHtml(trItem(m))).join(', ')}</small>` : '';
-      // Todas las líneas llevan su − n +: así se ajusta aquí mismo, también «pizza con extra queso» sin tocar «pizza sin nada».
-      return `
-      <div class="cl-l">
-        <div class="cl-n">${escapeHtml(l.name)}${modsText}</div>
-        <div class="cl-q" role="group" aria-label="${escapeHtml(l.name)}">
-          <button type="button" onclick="changeCartLineQty('${escapeJsAttr(l.key)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', l.name))}">−</button>
-          <span>${l.qty}</span>
-          <button type="button" onclick="changeCartLineQty('${escapeJsAttr(l.key)}', 1)" aria-label="${escapeHtml(t('aria.addItem').replace('%s', l.name))}">+</button>
-        </div>
-        <div class="cl-p">${fmtMoney(l.price * l.qty)}</div>
-      </div>`;
-    }).join('')}
+    ${cart.map(cartLineHtml).join('')}
     ${currentTab === 'delivery' && freeFrom > 0 && deliveryFee === 0 && subtotal > 0 ? `<div class="cl-x"><span>${t('cart.shipping')}</span><span style="color:var(--olive);font-weight:600">${t('cart.shipping.free')}</span></div>` : (deliveryFee > 0 ? `<div class="cl-x"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : '')}
     ${tip > 0 ? `<div class="cl-x"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
     ${missingForFreeDelivery > 0 ? `<p class="cl-hint">${t('cart.shipping.freeHint').replace('%s', fmtMoney(missingForFreeDelivery))}</p>` : ''}
