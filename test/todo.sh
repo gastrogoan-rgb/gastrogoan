@@ -157,6 +157,10 @@ lanzar; node test/economia-fijos.mjs > "$SALIDA/economiafijos.txt" 2>&1 & P150=$
 lanzar; node test/economia-variables.mjs > "$SALIDA/economiavariables.txt" 2>&1 & P151=$!
 lanzar; node test/economia-tesoreria.mjs > "$SALIDA/economiatesoreria.txt" 2>&1 & P152=$!
 lanzar; node test/economia-equilibrio.mjs > "$SALIDA/economiaequilibrio.txt" 2>&1 & P153=$!
+lanzar; node test/economia-inversiones.mjs > "$SALIDA/economiainversiones.txt" 2>&1 & P154=$!
+lanzar; node test/economia-resultados.mjs > "$SALIDA/economiaresultados.txt" 2>&1 & P155=$!
+lanzar; node test/fiscal-independiente.mjs > "$SALIDA/fiscalindependiente.txt" 2>&1 & P156=$!
+lanzar; node test/fiscal-fijado.mjs > "$SALIDA/fiscalfijado.txt" 2>&1 & P157=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -344,5 +348,9 @@ espera $P150 "Gestión Económica → Gastos Fijos: filas con chips y menú ⋯,
 espera $P151 "Gestión Económica → Gastos Variables: compras en filas con menú ⋯, reparto por categoría y proveedor, hormiga y anulados" "$SALIDA/economiavariables.txt" "todos los casos pasaron"
 espera $P152 "Gestión Económica → Tesorería: reparto redondo, verde/rojo con tick/cruz, reservas IVA/IRPF a mano, plantillas y conciliación" "$SALIDA/economiatesoreria.txt" "todos los casos pasaron"
 espera $P153 "Gestión Económica → Punto de equilibrio: cuentas a mano, gráfico, palancas, food cost sincronizado, escenarios y cubiertos reales" "$SALIDA/economiaequilibrio.txt" "todos los casos pasaron"
+espera $P154 "Gestión Económica → Inversiones: cartera a mano, tarjetas con ⋯, filtros, progreso de cuotas, duplicar y vacío" "$SALIDA/economiainversiones.txt" "todos los casos pasaron"
+espera $P155 "Gestión Económica → Cuenta de Resultados: gráfica con hover, ayudas detrás de botones, intereses con el caso real y móvil" "$SALIDA/economiaresultados.txt" "todos los casos pasaron"
+espera $P156 "Fiscalidad INDEPENDIENTE: IRPF, IS por tramos, IVA, 111 y CB con cifras hechas a mano" "$SALIDA/fiscalindependiente.txt" "todos los casos pasaron"
+espera $P157 "Forma jurídica y régimen fijados desde el alta: bloqueados en Mi Negocio, motor fiscal con lo de la licencia y comprobar cambios" "$SALIDA/fiscalfijado.txt" "todos los casos pasaron"
 
 exit $FALLOS

@@ -2309,6 +2309,20 @@ async function verifyCodeIssuedOnPlatform(code){
     return null;
   }
 }
+// «Comprobar cambios» de Mi Negocio: vuelve a leer lo que GastroGoan tiene fijado para este negocio (una sola lectura).
+async function refrescarFiscalDeLicencia(){
+  const code = DB.license && DB.license.code;
+  if(!code){ showToast(gl({es:'Este negocio no tiene licencia activa.', ca:'Aquest negoci no té llicència activa.', en:'This business has no active license.'})); return; }
+  const issued = await verifyCodeIssuedOnPlatform(code);
+  if(issued === null){ showToast(gl({es:'Sin conexión: inténtalo cuando tengas internet.', ca:'Sense connexió: torna-ho a provar quan tinguis internet.', en:'Offline: try again when you have internet.'})); return; }
+  const f = issued && issued.formaJuridica ? {formaJuridica: issued.formaJuridica, regimenFiscal: issued.regimenFiscal || null, modalidadDirecta: issued.modalidadDirecta || null} : null;
+  if(!f){ showToast(gl({es:'GastroGoan todavía no ha fijado la forma jurídica de tu negocio.', ca:'GastroGoan encara no ha fixat la forma jurídica del teu negoci.', en:'GastroGoan has not set your legal form yet.'})); return; }
+  DB.license = {...DB.license, fiscal: f};
+  localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
+  aplicarFiscalDeLicencia(); saveDB();
+  if(typeof renderMiNegocio === 'function') renderMiNegocio();
+  showToast(gl({es:'Datos fiscales al día.', ca:'Dades fiscals al dia.', en:'Tax details up to date.'}));
+}
 /* Canjea un código de negocio contra la cuenta del propietario que está
    dentro ahora mismo. Sustituye a la antigua activación con código+
    contraseña: la contraseña se calculaba a partir del propio código con un
@@ -2332,6 +2346,8 @@ async function redeemBusinessCode(code){
   if(issued === false) return {lic: null, reason: 'unknown'};
 
   const lic = {code, tenantId: ggBizTenantId(code), plan360: !!(issued && issued.plan360)};
+  // Forma jurídica y régimen fiscal: los pone quien da de alta al cliente y quedan bloqueados en Mi Negocio.
+  if(issued && issued.formaJuridica) lic.fiscal = {formaJuridica: issued.formaJuridica, regimenFiscal: issued.regimenFiscal || null, modalidadDirecta: issued.modalidadDirecta || null};
   const login = getOwnerLogin();
   // Sin cuenta (dispositivo a medio configurar) se canjea igual: la lista
   // de negocios se vinculará en cuanto entre con su cuenta.

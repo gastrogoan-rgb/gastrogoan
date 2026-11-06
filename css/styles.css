@@ -4852,6 +4852,41 @@ span.dt-punto{position:absolute;border-radius:50%}
 .cx-check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;cursor:pointer;margin:0 0 8px}
 .cx-check input{width:20px;height:20px;margin:0}
 #capex-total-bar small{font-size:11.5px;font-weight:400;color:#C9C4B8}
+/* Cuenta de Resultados (6/11): barra de periodo, gráfica con el resultado al pasar el ratón, ayudas detrás de botones */
+.cdr-barra{justify-content:space-between;gap:12px 18px}
+.cdr-anio{display:flex;align-items:center;gap:10px}
+#cdr-year{font-family:var(--mono);font-size:18px;font-weight:700;min-width:56px;text-align:center}
+.cdr-gran{display:flex;gap:6px}
+.cdr-como{margin-left:auto}
+.cdr-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;margin:0 0 18px}
+.cdr-chips .month-pill{min-height:40px;min-width:48px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--hair);border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);cursor:pointer}
+.cdr-chips .month-pill:hover{border-color:var(--olive)}
+.cdr-chips .month-pill.active{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.cdr-graf{margin-bottom:18px}
+.cdr-graf .dt-cab{padding:0 18px}
+.cdr-graf #cdr-chart{padding:0 8px 8px}
+.cdr-graf .ge-sec-head{align-items:center}
+.dt-punto[data-v]:hover::before,.dt-punto[data-v]:focus-visible::before,.dt-punto[data-v].sel::before{content:attr(data-v);position:absolute;left:50%;bottom:calc(50% + 14px);transform:translateX(-50%);z-index:5;white-space:nowrap;padding:5px 9px;border-radius:3px;background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;font-weight:600;pointer-events:none}
+.dt-punto[data-v].neg:hover::before,.dt-punto[data-v].neg:focus-visible::before{background:#B4432F}
+.dt-punto[data-v]:first-of-type:hover::before{left:0;transform:none}
+.dt-punto[data-v]:last-of-type:hover::before{left:auto;right:0;transform:none}
+.cdr-imp{margin:0 0 14px}
+.cdr-sug{margin:0 0 14px;padding:10px 14px;font-size:13px;line-height:1.5;color:var(--body);background:#FAF8F4;border:1px solid var(--hair);border-radius:3px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.cdr-sug .ti{color:var(--olive);font-size:18px}
+.cdr-sug.is-ko{background:var(--red-l);border-color:#E3C8BF;color:var(--red)}
+.cdr-sug.is-ko .ti{color:var(--red)}
+.cdr-ayuda{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-10px -8px -10px 0;padding:0;background:none;border:0;border-radius:50%;color:var(--muted);cursor:pointer;vertical-align:middle}
+.cdr-ayuda:hover,.cdr-ayuda:focus-visible{color:var(--ink);background:#F1EFE9}
+.cdr-ayuda .ti{font-size:18px}
+.cdr-expl h4{margin:18px 0 6px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cdr-expl h4:first-child{margin-top:0}
+.cdr-expl p{margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--ink)}
+.cdr-expl .cdr-nota{padding:10px 12px;background:var(--amber-l);border:1px solid #E6D3A3;border-radius:3px;font-size:13px}
+.cdr-tabla{margin-top:6px}
+.mn-bloqueo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px;padding:12px 14px;font-size:12.5px;line-height:1.5;color:var(--body);background:#FAF8F4;border:1px solid var(--hair);border-radius:3px}
+.mn-bloqueo > .ti{font-size:18px;color:var(--olive)}
+.mn-bloqueo span{flex:1;min-width:220px}
+select:disabled{background:#F1EFE9;color:var(--ink);opacity:1;cursor:not-allowed}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5802,4 +5837,11 @@ small{font-size:max(.8333em, 11px)}
   .cx-filtros .btn{flex:1 1 auto;justify-content:center;min-height:44px !important}
   .cx-prog small{white-space:normal}
   #capex-total-bar{flex-wrap:wrap;gap:6px}
+}
+/* Cuenta de Resultados en móvil */
+@media (max-width:760px){
+  .cdr-como{margin-left:0;width:100%;justify-content:center;min-height:44px !important}
+  .cdr-chips .month-pill{min-height:44px;flex:1 1 56px}
+  .cdr-graf .dt-cab{padding:0 12px}
+  .dt-punto[data-v]:hover::before{font-size:11.5px}
 }

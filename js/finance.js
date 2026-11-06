@@ -426,7 +426,23 @@ function geCapexCuotaMes(year, month){
      Sociedad: su tipo sobre la base del año (menos las pérdidas de años
      anteriores). Autónomo/CB: la escala del IRPF por tramos, con el mínimo
      personal y el 5% de gastos de difícil justificación. */
+// La forma jurídica y el régimen los fija quien da de alta al cliente (generador de licencias → issuedCodes → lic.fiscal) y
+// en Mi Negocio salen BLOQUEADOS. Esta función los vuelca a DB.business (idempotente, sin guardar): se llama desde fiscalPerfil(),
+// que usan todas las cuentas, así ningún cálculo ve nunca un dato distinto del de la licencia. Un negocio antiguo (sin lic.fiscal)
+// sigue editando los suyos como siempre.
+function aplicarFiscalDeLicencia(){
+  const f = DB && DB.license && DB.license.fiscal;
+  if(!f || !f.formaJuridica || !DB.business) return false;
+  const b = DB.business; let cambio = false;
+  const poner = (k, v) => { if(v != null && b[k] !== v){ b[k] = v; cambio = true; } };
+  poner('formaJuridica', f.formaJuridica);
+  if(f.formaJuridica === 'autonomo'){ poner('regimenFiscal', f.regimenFiscal || 'directa'); poner('modalidadDirecta', f.modalidadDirecta || 'simplificada'); }
+  else poner('regimenFiscal', 'directa');
+  poner('fiscalFijado', true);
+  return cambio;
+}
 function fiscalPerfil(){
+  aplicarFiscalDeLicencia();
   const b = DB.business || {};
   const forma = b.formaJuridica || '';
   return {
@@ -721,8 +737,15 @@ function irpfActividad(rendimiento, opts={}){
   // Las reducciones exigen estimación DIRECTA: en módulos no.
   const bzR = DB.business || {};
   const otrasR = Math.max(0, parseFloat(opts.otrasRentas != null ? opts.otrasRentas : bzR.otrasRentasTitular) || 0);
-  if(!opts.sinDificilJustificacion && otrasR <= 6500) neto = Math.max(0, neto - reduccionActividadesEconomicas(neto));
-  if(!opts.sinDificilJustificacion) neto = Math.max(0, neto - reduccionRendimientosBajos(neto));
+  // ⚠️ SON ALTERNATIVAS, no se suman (AEAT, Manual práctico de Renta 2025, «Reducción para contribuyentes con rentas no
+  // exentas inferiores a 12.000 euros»: solo se aplica si NO se cumplen los requisitos de la de 6.498 €). Hasta el 6/11 la app
+  // aplicaba las dos una detrás de otra y regalaba hasta 1.620 € de reducción de más a todo autónomo pequeño.
+  //   · 6.498 € (art. 32.2 LIRPF, Ley 31/2022): rendimiento neto ≤ 19.747,50 € y otras rentas ≤ 6.500 €.
+  //   · 1.620 € (art. 32.2.3.º): si no se cumple lo anterior, y las rentas no exentas TOTALES (actividad + otras) son < 12.000 €.
+  if(!opts.sinDificilJustificacion){
+    if(otrasR <= 6500 && neto < 19747.5) neto = Math.max(0, neto - reduccionActividadesEconomicas(neto));
+    else neto = Math.max(0, neto - Math.min(neto, reduccionRendimientosBajos(neto + otrasR)));
+  }
   // Inicio de actividad (art. 32.3 LIRPF): -20 % del rendimiento neto positivo
   // (hasta 100.000 €) el primer año con beneficio y el siguiente. Solo si el
   // dueño lo marca: la app no sabe si antes ya ejerció otra actividad.
@@ -743,11 +766,19 @@ function irpfActividad(rendimiento, opts={}){
 // Tipos del Impuesto de Sociedades por año (Ley 7/2024, calendario 2025-2029):
 // los de 2026 no valen para 2027. Fuente: Manual práctico de Sociedades, AEAT.
 // 2028 en adelante se trata como 2027 hasta verificarlo. ⚠️ Revisar cada año.
+// Verificado con la AEAT (Manual práctico de Sociedades 2025, «Tipos de gravamen»; disp. trans. 44.ª LIS y art. 29 LIS tras la Ley 7/2024):
+//   microempresas (INCN < 1 M€): 2025 21 %/22 %, 2026 19 %/21 %, 2027 y siguientes 17 %/20 % (hasta 50.000 € y resto);
+//   reducida dimensión: 2025 24 %, 2026 23 %, 2027 22 %, 2028 21 %, 2029 y siguientes 20 %.
+// ⚠️ Los tipos de COOPERATIVA (coopMicro/coopErd/coopNueva) NO están verificados contra fuente oficial: eran los que ya llevaba la app y
+//   2025 y 2028+ se copian de los años vecinos. Hasta contrastarlos, la app avisa de que la cooperativa necesita revisión de la gestoría.
 const TIPOS_IS = {
+  2025: {micro:[21,22], erd:24, coopMicro:[16,18], coopErd:20, nueva:15, coopNueva:12},
   2026: {micro:[19,21], erd:23, coopMicro:[16,18], coopErd:20, nueva:15, coopNueva:12},
   2027: {micro:[17,20], erd:22, coopMicro:[14,17], coopErd:19, nueva:15, coopNueva:12},
+  2028: {micro:[17,20], erd:21, coopMicro:[14,17], coopErd:19, nueva:15, coopNueva:12},
+  2029: {micro:[17,20], erd:20, coopMicro:[14,17], coopErd:19, nueva:15, coopNueva:12},
 };
-function tiposIsAño(a){ return TIPOS_IS[a] || (a >= 2027 ? TIPOS_IS[2027] : TIPOS_IS[2026]); }
+function tiposIsAño(a){ return TIPOS_IS[a] || (a >= 2029 ? TIPOS_IS[2029] : TIPOS_IS[2025]); }
 // Cooperativa (Ley 20/1990): el excedente se minora con la dotación al FEP y el
 // 50 % de la del FRO; sobre esa base, tipo micro (INCN anterior < 1 M€), de
 // reducida dimensión o de nueva creación; y si es ESPECIALMENTE protegida,
@@ -765,6 +796,21 @@ function impuestoCooperativa(excedente, opts={}){
   else if(opts.incnAnterior != null && opts.incnAnterior >= 1000000) cuota = base * T.coopErd / 100;
   else cuota = Math.min(base, 50000) * T.coopMicro[0] / 100 + Math.max(0, base - 50000) * T.coopMicro[1] / 100;
   return b.coopTipo === 'especial' ? cuota / 2 : cuota;
+}
+// Impuesto sobre Sociedades de una base positiva (Ley 7/2024, calendario por año en TIPOS_IS):
+//  · nueva creación (primer ejercicio con base positiva y el siguiente): 15 %;
+//  · microempresa (INCN del año anterior < 1 M€): dos tramos, hasta 50.000 € y resto;
+//  · empresa de reducida dimensión (INCN < 10 M€): tipo único reducido;
+//  · resto: 25 % general.
+// ⚠️ «Nueva creación» se aproxima con el año de alta del negocio en la app (ver optsImpuesto); la sociedad puede ser más antigua.
+function impuestoSociedades(base, opts={}){
+  if(!(base > 0)) return 0;
+  const T = tiposIsAño(opts.año || new Date().getFullYear());
+  if(opts.nuevaCreacion) return base * T.nueva / 100;
+  const incn = opts.incnAnterior;
+  if(incn != null && incn < 1000000) return Math.min(base, 50000) * T.micro[0] / 100 + Math.max(0, base - 50000) * T.micro[1] / 100;
+  if(incn != null && incn <= 10000000) return base * T.erd / 100;
+  return base * 25 / 100;
 }
 function impuestoAnual(baseAnual, opts={}){
   const p = fiscalPerfil();
@@ -788,6 +834,9 @@ function impuestoAnual(baseAnual, opts={}){
   // dimensión; cooperativa fiscalmente protegida, 20%).
   const cfg = (DB.ge.config || {}).pctImpuestoBeneficio;
   if(p.forma === 'cooperativa' && cfg == null) return impuestoCooperativa(baseAnual, opts);
+  // Sociedad sin tipo puesto a mano: la cuota EXACTA del año que se calcula (tramos incluidos), no un % sacado del año en curso.
+  // Antes se aplicaba a cualquier año el tipo «sugerido» con los números de HOY: un año pasado con otra facturación salía con un tipo equivocado.
+  if(cfg == null && p.forma === 'sociedad') return impuestoSociedades(baseAnual, opts);
   const pct = cfg != null ? parseFloat(cfg) : (opts.pctDefecto != null ? opts.pctDefecto : (p.forma === 'cooperativa' ? 20 : 25));
   return Math.max(0, baseAnual) * pct/100;
 }
@@ -971,12 +1020,14 @@ function dashSerieHtml(serie, o){
         </svg>
         ${serie.map((p, i) => o.estatico
           ? `<span class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" aria-hidden="true"></span>`
-          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}" aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
+          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}"${o.tooltip ? ` data-v="${escapeHtml((p.nombre || p.label) + ': ' + fmtMoney(p.value))}"` : ''} aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
         ${[...conTag].map(i => `<span class="dt-tag${vals[i] < 0 ? ' neg' : ''}${pts[i][1] < 22 ? ' abajo' : ''}${i === 0 ? ' izq' : ''}${i === n - 1 ? ' der' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%">${escapeHtml(o.fmtTag ? o.fmtTag(vals[i]) : dashCompacto(vals[i]))}</span>`).join('')}
       </div>
       <div class="dt-ejes">${serie.map((p, i) => `<span class="${i % cada ? 'oculto' : ''}${p.parcial ? ' parcial' : ''}">${escapeHtml(p.label)}</span>`).join('')}</div>
     </div>`;
 }
+// Guarda los datos de una serie para que dashSerieVer pueda poner su cifra en el titular.
+function dashSerieRegistrar(id, serie){ if(!window.dashSeriesPorId) window.dashSeriesPorId = {}; window.dashSeriesPorId[id] = serie; }
 // Pone la cifra del punto tocado en el titular de su gráfico (data-dt-titular="<id>").
 function dashSerieVer(id, i){
   const wrap = document.getElementById(id);

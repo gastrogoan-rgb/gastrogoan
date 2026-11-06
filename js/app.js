@@ -7120,6 +7120,7 @@ function removeComunero(i){
   saveDB(); renderMiNegocio();
 }
 function renderMiNegocio(){
+  aplicarFiscalDeLicencia();   // forma jurídica y régimen fijados por GastroGoan: siempre al día antes de pintar
   if(isGestionLocked('minegocio')){ denyGestionAccess(); return; }
   const b = DB.business || {};
   // Si el formulario ya estaba pintado y el usuario había cambiado los
@@ -7223,10 +7224,11 @@ function renderMiNegocio(){
 
       <h4><i class="ti ti-building-bank"></i> ${t('mn.fiscal.title')}</h4>
       <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">${t('mn.fiscal.desc')}</p>
+      ${b.fiscalFijado ? `<p class="mn-bloqueo"><i class="ti ti-lock"></i> <span>${gl({es:'La forma jurídica y el régimen los fija GastroGoan al darte de alta, según lo que declara tu gestoría: de ellos depende cómo se calcula tu impuesto. Si ha cambiado (por ejemplo, pasas de autónomo a sociedad), pídenoslo y pulsa «Comprobar cambios».', ca:'La forma jurídica i el règim els fixa GastroGoan en donar-te d\'alta, segons el que declara la teva gestoria: d\'ells depèn com es calcula el teu impost. Si ha canviat (per exemple, passes d\'autònom a societat), demana-ho\'ns i prem «Comprovar canvis».', en:'The legal form and tax regime are set by GastroGoan when you sign up, based on what your accountant files: your tax calculation depends on them. If it changed (for example, from self-employed to company), ask us and press «Check for changes».'})}</span> <button type="button" class="btn btn-sm" onclick="refrescarFiscalDeLicencia()"><i class="ti ti-refresh"></i> ${gl({es:'Comprobar cambios', ca:'Comprovar canvis', en:'Check for changes'})}</button></p>` : ''}
       <div class="field-row">
         <div class="field">
           <label>${t('mn.fiscal.forma')}</label>
-          <select id="mn-forma-juridica" onchange="saveBusiness(true);renderMiNegocio()">
+          <select id="mn-forma-juridica" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
             <option value="" ${b.formaJuridica?'':'selected'} disabled>${t('mn.fiscal.chooseForma')}</option>
             <option value="autonomo" ${b.formaJuridica==='autonomo'?'selected':''}>${t('mn.fiscal.autonomo')}</option>
             <option value="cb" ${b.formaJuridica==='cb'?'selected':''}>${t('mn.fiscal.cb')}</option>
@@ -7237,7 +7239,7 @@ function renderMiNegocio(){
         ${b.formaJuridica==='autonomo' ? `
         <div class="field">
           <label>${t('mn.fiscal.regimen')}</label>
-          <select id="mn-regimen-fiscal" onchange="saveBusiness(true);renderMiNegocio()">
+          <select id="mn-regimen-fiscal" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
             <option value="" ${b.regimenFiscal?'':'selected'} disabled>${t('mn.fiscal.chooseRegimen')}</option>
             <option value="directa" ${b.regimenFiscal==='directa'?'selected':''}>${t('mn.fiscal.directa')}</option>
             <option value="modulos" ${b.regimenFiscal==='modulos'?'selected':''}>${t('mn.fiscal.modulos')}</option>
@@ -7245,7 +7247,7 @@ function renderMiNegocio(){
         </div>
         ${b.regimenFiscal==='directa' ? `<div class="field">
           <label>${t('mn.fiscal.modalidad')}</label>
-          <select id="mn-modalidad-directa" onchange="saveBusiness(true)">
+          <select id="mn-modalidad-directa" onchange="saveBusiness(true)"${b.fiscalFijado ? ' disabled' : ''}>
             <option value="simplificada" ${b.modalidadDirecta!=='normal'?'selected':''}>${t('mn.fiscal.simplificada')}</option>
             <option value="normal" ${b.modalidadDirecta==='normal'?'selected':''}>${t('mn.fiscal.normal')}</option>
           </select>
