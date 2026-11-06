@@ -7000,7 +7000,7 @@ function plan360TaskRow(day, tk, i){
     ${tk.description ? `<p style="font-size:13.5px;margin:4px 0 0;color:var(--body)">${escapeHtml(tk.description)}</p>` : ''}
     ${tk.fileName ? `<div style="margin-top:6px;font-size:12px"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-      ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? 'btn-primary' : ''}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
+      ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? ({pendiente:'is-lim', hecha:'is-on', no_hecha:'is-off'}[e]) : ''}" aria-pressed="${estado === e}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
     </div>
     <div class="field" style="margin:10px 0 0">
       <label>${escapeHtml(t('plan360.taskNote'))}</label>

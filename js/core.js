@@ -1871,18 +1871,21 @@ function renderVisionGlobal(){
     conDatos.forEach(f => { if(f.k.netas > 0 && (!peor || f.k.resultadoPct < peor.k.resultadoPct)) peor = f; });
   }
   const periodos = ['hoy','semana','mes','mesAnterior'];
-  const pestanas = periodos.map(p => `<button class="btn btn-sm ${p===vgPeriodo?'btn-primary':''}" style="min-height:44px" onclick="vgSetPeriodo('${p}')">${t('bs.globalPeriod.'+p)}</button>`).join('');
-  const celda = (lab, val, st) => `<div style="min-width:0"><div class="txt-xs" style="color:var(--muted)">${lab}</div><div style="font-weight:700;${st||''}">${val}</div></div>`;
+  const pestanas = periodos.map(p => `<button class="btn btn-fino ${p===vgPeriodo?'is-on':''}" aria-pressed="${p===vgPeriodo}" onclick="vgSetPeriodo('${p}')">${t('bs.globalPeriod.'+p)}</button>`).join('');
+  // Una cifra = rótulo en mono mayúsculas + valor en mono (mismo lenguaje que las tarjetas de Gestión Económica).
+  const celda = (lab, val, st) => `<div class="vg-cifra"><div class="l">${lab}</div><div class="v" style="${st||''}">${val}</div></div>`;
+  const pie = k => `<i class="ti ti-calendar-event"></i> ${t('bs.globalBookingsToday')}: <b>${k.reservasHoy}</b>${k.paxHoy ? ` (${k.paxHoy} pax)` : ''} <span class="vg-sep">·</span> <span style="${k.stockBajo ? 'color:var(--red)' : ''}"><i class="ti ti-package"></i> ${t('bs.globalLowStock')}: <b>${k.stockBajo}</b></span>`;
   const tarjeta = (f, i) => {
     const k = f.k;
     const parte = tot.netas > 0 ? Math.max(0, k.netas/tot.netas*100) : 0;
-    return `<div class="card vg-negocio" data-slot="${escapeHtml(f.slot.id)}" style="padding:12px;margin-bottom:10px;cursor:pointer;${f===peor?'border:1px solid var(--red)':''}" onclick="closeModal();enterBusiness('${escapeHtml(f.slot.id)}')">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px">
-        <strong style="overflow-wrap:anywhere">${i+1}. ${escapeHtml(f.nombre)}</strong>
-        <i class="ti ti-chevron-right" style="color:var(--muted)"></i>
+    return `<div class="card vg-negocio${f===peor ? ' is-peor' : ''}" data-slot="${escapeHtml(f.slot.id)}" role="button" tabindex="0" onclick="closeModal();enterBusiness('${escapeHtml(f.slot.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();closeModal();enterBusiness('${escapeHtml(f.slot.id)}')}">
+      <div class="vg-cab">
+        <span class="vg-rank">${String(i+1).padStart(2, '0')}</span>
+        <strong class="vg-nombre">${escapeHtml(f.nombre)}</strong>
+        ${f===peor ? `<span class="gf-chip vg-chip-peor"><i class="ti ti-alert-triangle"></i> ${t('bs.globalWorst')}</span>` : ''}
+        <i class="ti ti-chevron-right vg-ir" aria-hidden="true"></i>
       </div>
-      ${f===peor ? `<div class="txt-xs" style="color:var(--red);margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${t('bs.globalWorst')}</div>` : ''}
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px">
+      <div class="vg-cifras">
         ${celda(t('bs.globalSales'), `<span class="vg-netas">${fmtMoney(k.netas)}</span>`)}
         ${celda(t('bs.globalTickets'), k.tickets)}
         ${celda(t('bs.globalAvgTicket'), k.ticketMedio == null ? '—' : fmtMoney(k.ticketMedio))}
@@ -1890,13 +1893,13 @@ function renderVisionGlobal(){
         ${celda(t('bs.globalStaff'), fmtPct(k.personalPct))}
         ${celda(t('bs.globalResult'), fmtMoney(k.resultado), color(k.resultado))}
       </div>
-      <div style="height:6px;background:var(--border);border-radius:3px;margin:10px 0 4px;overflow:hidden"><div style="height:100%;width:${parte.toFixed(1)}%;background:var(--olive)"></div></div>
-      <div class="txt-xs" style="color:var(--muted)">${t('bs.globalShare')}: ${fmtNum(r1(parte))}% · <i class="ti ti-calendar-event"></i> ${t('bs.globalBookingsToday')}: ${k.reservasHoy}${k.paxHoy?` (${k.paxHoy} pax)`:''} · <span style="${k.stockBajo?'color:var(--red)':''}"><i class="ti ti-package"></i> ${t('bs.globalLowStock')}: ${k.stockBajo}</span></div>
+      <div class="vg-barra" aria-hidden="true"><i style="width:${parte.toFixed(1)}%"></i></div>
+      <div class="vg-pie">${t('bs.globalShare')}: <b>${fmtNum(r1(parte))}%</b> <span class="vg-sep">·</span> ${pie(k)}</div>
     </div>`;
   };
-  const totalHtml = `<div class="card" id="vg-total" style="padding:12px;margin-bottom:12px;background:var(--bg)">
-      <strong>${t('bs.globalTotal')}</strong>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px">
+  const totalHtml = `<div class="card vg-total" id="vg-total">
+      <div class="vg-tit">${t('bs.globalTotal')}</div>
+      <div class="vg-cifras">
         ${celda(t('bs.globalSales'), `<span id="vg-total-netas">${fmtMoney(r2(tot.netas))}</span>`)}
         ${celda(t('bs.globalTickets'), tot.tickets)}
         ${celda(t('bs.globalAvgTicket'), tot.tickets ? fmtMoney(r2(tot.brutas/tot.tickets)) : '—')}
@@ -1904,20 +1907,20 @@ function renderVisionGlobal(){
         ${celda(t('bs.globalStaff'), fmtPct(pct(tot.personal, tot.netas)))}
         ${celda(t('bs.globalResult'), fmtMoney(r2(tot.resultado)), color(tot.resultado))}
       </div>
-      <div class="txt-xs" style="color:var(--muted);margin-top:6px"><i class="ti ti-calendar-event"></i> ${t('bs.globalBookingsToday')}: ${tot.reservasHoy} · <i class="ti ti-package"></i> ${t('bs.globalLowStock')}: ${tot.stockBajo}</div>
+      <div class="vg-pie"><i class="ti ti-calendar-event"></i> ${t('bs.globalBookingsToday')}: <b>${tot.reservasHoy}</b> <span class="vg-sep">·</span> <i class="ti ti-package"></i> ${t('bs.globalLowStock')}: <b>${tot.stockBajo}</b></div>
     </div>`;
-  const sinHtml = sinDatos.map(f => `<div class="card vg-sin-datos" style="padding:12px;margin-bottom:10px;cursor:pointer" onclick="closeModal();enterBusiness('${escapeHtml(f.slot.id)}')">
-      <strong style="overflow-wrap:anywhere">${escapeHtml(f.nombre)}</strong>
-      <div class="txt-xs" style="color:var(--muted);margin-top:4px"><i class="ti ti-device-tablet"></i> ${t('bs.globalNoLocal')}</div>
+  const sinHtml = sinDatos.map(f => `<div class="card vg-sin-datos" role="button" tabindex="0" onclick="closeModal();enterBusiness('${escapeHtml(f.slot.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();closeModal();enterBusiness('${escapeHtml(f.slot.id)}')}">
+      <div class="vg-cab"><strong class="vg-nombre">${escapeHtml(f.nombre)}</strong><i class="ti ti-chevron-right vg-ir" aria-hidden="true"></i></div>
+      <div class="vg-pie"><i class="ti ti-device-tablet"></i> ${t('bs.globalNoLocal')}</div>
     </div>`).join('');
   const estimado = conDatos.some(f => f.k.estimado);
   openModal(`
     <div class="modal-header"><h3><i class="ti ti-chart-bar"></i> ${t('bs.globalTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${pestanas}</div>
+    <div class="vg-per">${pestanas}</div>
     ${totalHtml}
     ${conDatos.map(tarjeta).join('')}
     ${sinHtml}
-    <p class="txt-xs" style="color:var(--muted)">${t('bs.globalNote')}${estimado ? ' ' + t('bs.globalEstimated') : ''}</p>
+    <p class="vg-nota">${t('bs.globalNote')}${estimado ? ' ' + t('bs.globalEstimated') : ''}</p>
   `, {xl:true});
 }
 
