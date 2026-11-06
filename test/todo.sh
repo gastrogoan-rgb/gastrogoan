@@ -154,6 +154,7 @@ lanzar; node test/mi-negocio-2.mjs > "$SALIDA/minegocio2.txt" 2>&1 & P147=$!
 lanzar; node test/panel.mjs > "$SALIDA/panel.txt" 2>&1 & P148=$!
 lanzar; node test/economia-ventas.mjs > "$SALIDA/economiaventas.txt" 2>&1 & P149=$!
 lanzar; node test/economia-fijos.mjs > "$SALIDA/economiafijos.txt" 2>&1 & P150=$!
+lanzar; node test/economia-variables.mjs > "$SALIDA/economiavariables.txt" 2>&1 & P151=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -338,5 +339,6 @@ espera $P147 "Mi Negocio (2/11): sesión de 8 h, zonas sin plazas, días cerrado
 espera $P148 "Panel de Control (2/11): gráfico de curva con pestañas, puntos que se tocan, hora punta y sin desbordes en 5 anchos" "$SALIDA/panel.txt" "todos los casos pasaron"
 espera $P149 "Gestión Económica → Ventas: el canal elegido manda, sin vales, selector de periodo, curva diaria y el aviso del mes de factura lleva al gasto" "$SALIDA/economiaventas.txt" "todos los casos pasaron"
 espera $P150 "Gestión Económica → Gastos Fijos: filas con chips y menú ⋯, composición, próximos pagos y ficha por secciones" "$SALIDA/economiafijos.txt" "todos los casos pasaron"
+espera $P151 "Gestión Económica → Gastos Variables: compras en filas con menú ⋯, reparto por categoría y proveedor, hormiga y anulados" "$SALIDA/economiavariables.txt" "todos los casos pasaron"
 
 exit $FALLOS
