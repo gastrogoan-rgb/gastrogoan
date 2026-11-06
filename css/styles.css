@@ -4521,6 +4521,48 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 #minegocio-content .field label{font-size:12px}
 #minegocio-content .manual-warning{margin:10px 0}
 @media (max-width:720px){#minegocio-content .card{padding:16px 14px 18px}}
+/* ── PANEL DE CONTROL con el diseño nuevo (2/11) ── */
+#view-dashboard > .card,#view-dashboard > details.card{border:1px solid var(--hair) !important;border-radius:4px !important;background:#fff !important;box-shadow:none;padding:20px 22px 22px}
+#view-dashboard > .card > h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--hair);font-size:17px;font-weight:700;letter-spacing:-.015em}
+#view-dashboard > .card > h3 .ti{color:var(--olive);font-size:21px}
+#view-dashboard .ge-sec-head{border-left:0 !important;background:transparent !important;border-bottom:1px solid var(--hair);padding-left:0}
+#view-dashboard .vis-section h4{border-top:0}
+@media (max-width:720px){#view-dashboard > .card,#view-dashboard > details.card{padding:16px 14px 18px}}
+/* Gráfico de curva con área (dashSerieHtml) */
+.dt-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.dt-cab{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin:0 0 6px}
+.dt-titular b{font-family:var(--mono);font-size:30px;font-weight:600;letter-spacing:-.03em}
+.dt-titular span{color:var(--muted);font-size:13px;margin-left:6px}
+.dt-delta{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:13px;font-weight:600;padding:3px 8px;border-radius:3px}
+.dt-delta small{font-family:inherit;font-weight:400;color:var(--muted);margin-left:4px}
+.dt-delta.igual{background:var(--brand-cream);color:var(--ink)}.dt-delta.bien{background:#EAF1E6;color:#33523A}.dt-delta.mal{background:#F7E9E6;color:#8A3B2E}
+.dt-wrap{margin-top:6px}
+.dt-plot{position:relative;height:230px;margin:0 16px}
+.dt-corto .dt-plot{height:130px}
+.dt-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.dt-grid{stroke:var(--hair);stroke-width:1;stroke-dasharray:3 4}
+.dt-cero{stroke:var(--muted);stroke-width:1;opacity:.5}
+.dt-area{fill:var(--olive);opacity:.14}
+.dt-linea{fill:none;stroke:var(--olive);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.dt-punto{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:0;background:none;cursor:pointer;border-radius:50%}
+.dt-punto::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#fff;border:2.5px solid var(--olive);transition:transform .12s}
+.dt-punto.neg::after{border-color:#B4432F}
+.dt-punto.parcial::after{border-style:dashed;background:#F3F7F0}
+.dt-punto:hover::after,.dt-punto.sel::after,.dt-punto:focus-visible::after{transform:scale(1.5);background:var(--olive)}
+.dt-punto:focus-visible{outline:2px solid var(--olive);outline-offset:-8px}
+.dt-corto .dt-punto{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;pointer-events:none}
+.dt-corto .dt-punto::after{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-width:2px}
+span.dt-punto{position:absolute;border-radius:50%}
+.dt-tag{position:absolute;transform:translate(-50%,calc(-100% - 12px));padding:2px 7px;background:var(--ink);color:#fff;border-radius:3px;font-family:var(--mono);font-size:11.5px;font-weight:600;white-space:nowrap;pointer-events:none}
+.dt-tag.neg{background:#B4432F}.dt-tag.abajo{transform:translate(-50%,12px)}
+.dt-tag.izq{transform:translate(-20%,calc(-100% - 12px))}.dt-tag.der{transform:translate(-80%,calc(-100% - 12px))}
+.dt-tag.abajo.izq{transform:translate(-20%,12px)}.dt-tag.abajo.der{transform:translate(-80%,12px)}
+.dt-ejes{display:flex;justify-content:space-between;margin:6px 0 0}
+.dt-ejes span{flex:1 1 0;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);min-width:0}
+.dt-ejes span.oculto{visibility:hidden}.dt-ejes span.parcial{color:var(--ink);font-weight:600}
+.dt-pico{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px}
+.dt-pico .ti{color:#C79A2E}
+@media (max-width:720px){.dt-plot{height:190px;margin:0 12px}.dt-titular b{font-size:24px}.dt-corto .dt-plot{height:110px}}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5407,3 +5449,9 @@ small{font-size:max(.8333em, 11px)}
   .mnl-pie .mnl-nav:not(.mnl-sig){order:2}
   .mnl-nav{min-height:56px !important}
 }
+/* Panel en móvil: las tiras de cifras apiladas llevan filete arriba, no a la izquierda */
+@media (max-width:720px){
+  #view-dashboard .grid > .kpi{padding-left:0 !important;padding-right:0}
+  #view-dashboard .grid > .kpi + .kpi{border-left:0 !important;border-top:1px solid var(--hair)}
+}
+#view-dashboard .empty{padding:20px 14px}
