@@ -112,6 +112,19 @@ await caso('Impresora térmica: el € sale como byte de CP858 (o «EUR» en el 
   assert.deepEqual(r.kick, [0x1B,0x70,0x00,0x19,0xFA,0x1B,0x70,0x01,0x19,0xFA]);
 });
 
+await caso('IRPF del autónomo en estimación directa: la reducción de 6.498 € (art. 32.1, desde 2023) se aplica hasta 19.747,50 € y solo con otras rentas ≤ 6.500 €', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'directa'; DB.business.modalidadDirecta = 'simplificada'; DB.business.otrasRentasTitular = 0; DB.business.hijosTitular = 0; DB.business.inicioActividad20 = false;
+    const bajo = irpfActividad(10000), medio = irpfActividad(18000), alto = irpfActividad(25000);
+    DB.business.otrasRentasTitular = 10000; const conOtras = irpfActividad(10000);
+    return {bajo, medio, alto, conOtras, red: [reduccionActividadesEconomicas(14047.5), reduccionActividadesEconomicas(19747.5), Math.round(reduccionActividadesEconomicas(17000))]};
+  });
+  assert.equal(r.bajo, 0, 'con 10.000 € de rendimiento y las dos reducciones, no hay cuota: ' + JSON.stringify(r));
+  assert.ok(Math.abs(r.medio - 1702.7) < 2, 'con 18.000 € la cuota ronda 1.703 €: ' + JSON.stringify(r));
+  assert.ok(r.alto > 3000, JSON.stringify(r)); assert.ok(r.conOtras > 0, 'con otras rentas de 10.000 € ya no se aplica: ' + JSON.stringify(r));
+  assert.deepEqual(r.red, [6498, 0, 3132]);
+});
+
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, [], errs.join(' | ')); });
 console.log(fallos ? `\n❌ ${fallos} caso(s) fallaron` : '\n✅ todos los casos pasaron');
 if(fallos) process.exitCode = 1;
