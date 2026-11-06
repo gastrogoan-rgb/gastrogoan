@@ -44,7 +44,7 @@ await caso('Cartera a mano: 25.250 € invertidos, 5.302,50 € de IVA, 4.800 �
   assert.equal(numero(k[3].v), 200);
   assert.ok(Math.abs(numero(k[4].v) - 216.67) < 0.02, 'amortización del mes = 50 + 0 + 166,67: ' + k[4].v);
   const barra = await page.evaluate(() => document.getElementById('capex-total').textContent + '|' + document.getElementById('capex-base').textContent);
-  assert.match(barra, /30552,50.*25250,00/); assert.deepEqual(errs, []); await page.close();
+  assert.match(barra, /30\.552,50.*25\.250,00/); assert.deepEqual(errs, []); await page.close();
 });
 await caso('Tarjetas: nombre, chips (tipo, estado, financiación), menú ⋯ de tres acciones, progreso de cuotas y detalle; sin tabla vieja', async () => {
   const {page} = await abrir(1280, 900);
@@ -75,7 +75,7 @@ await caso('Menú ⋯: Editar abre la ficha por secciones; Duplicar abre una cop
     const menu = async (id, i) => { document.querySelector(`#capex-list .gf-fila[data-pl="cx-${id}"] .mn-btn`).click(); await esp(200); [...document.querySelectorAll('.mn-menu .mn-item')][i].click(); await esp(300); };
     await menu(1, 0); out.secciones = [...document.querySelectorAll('#modal-box .gf-mh')].map(x => x.textContent.trim().toLowerCase()); out.nombre = document.getElementById('cx-f-desc').value; closeModal(); await esp(200);
     await menu(1, 1); out.copia = document.getElementById('cx-f-desc').value; out.estado = document.getElementById('cx-f-estado').value; out.financiado = document.getElementById('cx-f-financiado').checked;
-    saveCapex(); await esp(300); out.tras = DB.ge.capex.length; closeModal(); await esp(150);
+    GE.saveCapex(); await esp(300); out.tras = DB.ge.capex.length; closeModal(); await esp(150);
     const idCopia = DB.ge.capex[DB.ge.capex.length - 1].id; await menu(idCopia, 2);
     out.confirma = !!document.querySelector('#modal-box .btn-danger, #modal-box .btn-primary[onclick*="acceptConfirm"]'); acceptConfirmModal(); await esp(300); out.final = DB.ge.capex.length;
     return out;

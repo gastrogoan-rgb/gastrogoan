@@ -119,7 +119,7 @@ await caso('Se decide en Mi Negocio: oculta por defecto, visible solo para autó
     navigate('economia');
     out.visibleAutonomoModulos = document.getElementById('ge-tab-modulos').style.display !== 'none';
     GE.tab('cdr');
-    out.notaModulos = document.getElementById('res-pct-impuesto-nota').innerText;
+    out.notaModulos = (document.getElementById('res-pct-impuesto-nota').innerText + ' ' + (()=>{GE.cdrComoSeCalcula(); const x=document.getElementById('modal-box').innerText; closeModal(); return x;})());
     return out;
   });
   assert.ok(r.ocultaSinElegir, 'sin elegir nada en Mi Negocio, la pestaña Módulos no debería verse');
@@ -139,7 +139,7 @@ await caso('Comunidad de Bienes: tributa cada comunero por SU IRPF, no un % úni
     return {
       filaOculta: document.getElementById('res-pct-impuesto-row').style.display === 'none',
       pctEfectivo: Math.round(GE.pctEfectivo()*1000)/10,
-      nota: document.getElementById('res-pct-impuesto-nota').innerText,
+      nota: (document.getElementById('res-pct-impuesto-nota').innerText + ' ' + (()=>{GE.cdrComoSeCalcula(); const x=document.getElementById('modal-box').innerText; closeModal(); return x;})()),
     };
   });
   assert.ok(r.filaOculta, 'el campo de impuesto único sigue visible con una Comunidad de Bienes');
@@ -176,7 +176,7 @@ await caso('Cooperativa: avisa de que no se calcula, no inventa un tipo', async 
   const r = await page.evaluate(() => {
     DB.business.formaJuridica = 'cooperativa';
     currentFolder='gestion'; navigate('economia'); GE.tab('cdr');
-    return document.getElementById('res-pct-impuesto-nota').innerText;
+    return (document.getElementById('res-pct-impuesto-nota').innerText + ' ' + (()=>{GE.cdrComoSeCalcula(); const x=document.getElementById('modal-box').innerText; closeModal(); return x;})());
   });
   assert.ok(r.includes('gestoría') || r.includes('gestoria'), 'la cooperativa debería remitir a la gestoría, no calcular un tipo inventado: '+r);
 });

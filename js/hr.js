@@ -2172,11 +2172,128 @@ const GE = (function(){
   function syncYearLabels(){
     const el = document.getElementById('cdr-year'); if(el) el.textContent = cdrYear;
   }
+  /* ---- Gráfica del resultado (curva con el resultado de cada mes al pasar el ratón) ---- */
+  let cdrGrafTab = 'neto';
+  function setCdrGrafTab(k){ cdrGrafTab = k; renderCdrGrafica(); }
+  function renderCdrGrafica(){
+    const box = document.getElementById('cdr-chart'); if(!box) return;
+    const hoy = new Date();
+    const tabs = [['neto', gl({es:'Resultado neto', ca:'Resultat net', en:'Net result'})], ['rai', gl({es:'Antes de impuestos', ca:'Abans d\'impostos', en:'Before tax'})], ['ventas', gl({es:'Ventas netas', ca:'Vendes netes', en:'Net sales'})]];
+    document.getElementById('cdr-graf-tabs').innerHTML = tabs.map(([k, et]) => `<button type="button" class="btn btn-sm btn-fino${cdrGrafTab===k ? ' is-on' : ''}" aria-pressed="${cdrGrafTab===k}" onclick="GE.setCdrGrafTab('${k}')">${et}</button>`).join('');
+    const f = {neto: i => resultadoMes(i, cdrYear), rai: i => resultadoAntesImpMes(i, cdrYear), ventas: i => facturacionNetaMes(i, cdrYear)}[cdrGrafTab];
+    // Solo los meses que ya han llegado: un diciembre futuro dibujado como «0 €» hundía la curva al final.
+    const ultimo = cdrYear === hoy.getFullYear() ? hoy.getMonth() : (cdrYear > hoy.getFullYear() ? -1 : 11);
+    const meses = getMeses().slice(0, ultimo + 1);
+    const serie = meses.map((m, i) => ({label: m.slice(0, 3), nombre: (n => n.charAt(0).toUpperCase() + n.slice(1))(new Date(cdrYear, i, 1).toLocaleDateString(localeActual(), {month:'long'})) + ' ' + cdrYear, value: Math.round(f(i) * 100) / 100,
+      parcial: cdrYear === hoy.getFullYear() && i === hoy.getMonth()}));
+    const hayDatos = serie.some(p => Math.abs(p.value) > 0.004);
+    const tit = document.getElementById('cdr-graf-titular');
+    if(!hayDatos){ box.innerHTML = `<div class="empty gf-vacio"><i class="ti ti-chart-line"></i><span>${gl({es:'Todavía no hay ventas ni gastos en ' + cdrYear + '.', ca:'Encara no hi ha vendes ni despeses el ' + cdrYear + '.', en:'No sales or expenses in ' + cdrYear + ' yet.'})}</span></div>`; tit.innerHTML = ''; return; }
+    window.dashSeriesPorId = window.dashSeriesPorId || {};
+    window.dashSeriesPorId['cdr-serie'] = serie;
+    const total = serie.reduce((s, p) => s + p.value, 0);
+    tit.innerHTML = `<b>${escapeHtml(fmtMoney(total))}</b> <span>${escapeHtml(gl({es:'en ' + cdrYear + ' · pasa el ratón por un mes', ca:'el ' + cdrYear + ' · passa el ratolí per un mes', en:'in ' + cdrYear + ' · hover a month'}))}</span>`;
+    box.innerHTML = dashSerieHtml(serie, {id:'cdr-serie', cadaEtiqueta:1, tooltip:true});
+  }
+  /* ---- Explicaciones (detrás de botones, no a la vista) ---- */
+  function cdrModal(titulo, cuerpo){
+    openModal(`<div class="modal-header"><h3><i class="ti ti-help-circle"></i> ${titulo}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="cdr-expl">${cuerpo}</div>
+      <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">${gl({es:'Entendido', ca:'Entès', en:'Got it'})}</button></div>`);
+  }
+  function cdrAyuda(k){
+    const L = o => gl(o);
+    const hoy = new Date();
+    let titulo, cuerpo;
+    if(k === 'intereses'){
+      // El ejemplo sale de TUS inversiones financiadas, no de números inventados.
+      const fin = capex().filter(c => c.financiado && capexRestantes(c) > 0)[0];
+      let ej;
+      if(fin){
+        const d = capexCuotaDesglose(fin, hoy.getFullYear(), hoy.getMonth());
+        ej = L({es:`<b>Tu caso:</b> «${escapeHtml(fin.descripcion)}». Pagas ${fmtMoney(fin.cuotaMensual)} al mes: este mes <b>${fmtMoney(d.interes)}</b> son intereses (gasto) y <b>${fmtMoney(d.principal)}</b> son devolución del préstamo (no es gasto).`, ca:`<b>El teu cas:</b> «${escapeHtml(fin.descripcion)}». Pagues ${fmtMoney(fin.cuotaMensual)} al mes: aquest mes <b>${fmtMoney(d.interes)}</b> són interessos (despesa) i <b>${fmtMoney(d.principal)}</b> són devolució del préstec (no és despesa).`, en:`<b>Your case:</b> «${escapeHtml(fin.descripcion)}». You pay ${fmtMoney(fin.cuotaMensual)} a month: this month <b>${fmtMoney(d.interes)}</b> is interest (an expense) and <b>${fmtMoney(d.principal)}</b> repays the loan (not an expense).`});
+      } else ej = L({es:'Ahora mismo no tienes ninguna inversión financiada con cuotas pendientes, por eso esta fila sale a cero.', ca:'Ara mateix no tens cap inversió finançada amb quotes pendents, per això aquesta fila surt a zero.', en:'You have no financed investment with payments left, so this row is zero.'});
+      titulo = L({es:'Intereses de préstamos', ca:'Interessos de préstecs', en:'Loan interest'});
+      cuerpo = L({es:`<p><b>Qué son.</b> Cuando compras algo grande a plazos o con un préstamo (una cocina, una reforma), cada cuota que pagas al banco lleva dos cosas mezcladas: <b>devolver el dinero prestado</b> y <b>el precio de que te lo hayan prestado</b> (los intereses). Solo los intereses son un gasto del negocio.</p>
+        <p><b>Por qué la devolución no es gasto.</b> El gasto de lo que compraste ya entra en tu cuenta poco a poco como <i>amortización</i>. Si además contaras la cuota entera, lo gastarías dos veces. La devolución sí sale de tu cuenta del banco: la verás en <b>Tesorería</b>, no aquí.</p>
+        <p><b>De dónde sale el número.</b> De la pestaña <b>Inversiones</b>: las que marcas como «financiadas». Con el importe financiado, la cuota mensual y el número de cuotas, la app deduce el tipo de interés (cuota constante, el sistema habitual de los bancos) y calcula, mes a mes, qué parte de cada cuota es interés. Al principio pesa más; al final, casi nada.</p>
+        <p>${ej}</p>
+        <p class="cdr-nota"><i class="ti ti-alert-triangle"></i> Solo cuentan los préstamos dados de alta como inversión financiada. Si metes la cuota de un préstamo como gasto fijo, se contaría entera como gasto (devolución incluida) y el resultado saldría más bajo de lo real.</p>`,
+        ca:`<p><b>Què són.</b> Quan compres alguna cosa gran a terminis o amb un préstec (una cuina, una reforma), cada quota que pagues al banc porta dues coses barrejades: <b>tornar els diners prestats</b> i <b>el preu que te'ls hagin prestat</b> (els interessos). Només els interessos són una despesa del negoci.</p>
+        <p><b>Per què la devolució no és despesa.</b> La despesa del que vas comprar ja entra al teu compte a poc a poc com a <i>amortització</i>. Si a més comptessis la quota sencera, ho gastaries dues vegades. La devolució sí surt del teu compte del banc: la veuràs a <b>Tresoreria</b>, no aquí.</p>
+        <p><b>D'on surt el número.</b> De la pestanya <b>Inversions</b>: les que marques com a «finançades». Amb l'import finançat, la quota mensual i el nombre de quotes, l'app dedueix el tipus d'interès (quota constant, el sistema habitual dels bancs) i calcula, mes a mes, quina part de cada quota és interès. Al principi pesa més; al final, quasi res.</p>
+        <p>${ej}</p>
+        <p class="cdr-nota"><i class="ti ti-alert-triangle"></i> Només compten els préstecs donats d'alta com a inversió finançada. Si poses la quota d'un préstec com a despesa fixa, es comptaria sencera com a despesa (devolució inclosa) i el resultat sortiria més baix del real.</p>`,
+        en:`<p><b>What it is.</b> When you buy something big on credit or with a loan (a kitchen, a refit), every payment to the bank mixes two things: <b>paying back the money lent</b> and <b>the price of having borrowed it</b> (interest). Only interest is a business expense.</p>
+        <p><b>Why the repayment is not an expense.</b> The cost of what you bought already enters your account gradually as <i>depreciation</i>. Counting the whole payment too would expense it twice. The repayment does leave your bank account: you will see it in <b>Cash</b>, not here.</p>
+        <p><b>Where the number comes from.</b> From the <b>Investments</b> tab: the ones you mark as «financed». With the amount financed, the monthly payment and the number of payments, the app infers the interest rate (constant payment, the usual bank method) and works out, month by month, how much of each payment is interest. It weighs more at the start and almost nothing at the end.</p>
+        <p>${ej}</p>
+        <p class="cdr-nota"><i class="ti ti-alert-triangle"></i> Only loans entered as a financed investment count. If you enter a loan payment as a fixed expense, it would be counted in full as an expense (repayment included) and the result would look lower than it is.</p>`});
+    } else if(k === 'ebitda'){
+      titulo = L({es:'Beneficio antes de amortizar (EBITDA)', ca:'Benefici abans d\'amortitzar (EBITDA)', en:'Earnings before depreciation (EBITDA)'});
+      cuerpo = L({es:'<p>Es lo que gana el negocio <b>solo por funcionar</b>: ventas netas menos compras, personal, gastos de explotación y comisiones. Todavía no resta ni la amortización de lo que has comprado para durar, ni los intereses, ni los impuestos.</p><p>Sirve para comparar tu negocio con otros sin que le afecten cómo lo has financiado o cuándo compraste la maquinaria.</p>', ca:'<p>És el que guanya el negoci <b>només per funcionar</b>: vendes netes menys compres, personal, despeses d\'explotació i comissions. Encara no resta ni l\'amortització del que has comprat per durar, ni els interessos, ni els impostos.</p><p>Serveix per comparar el teu negoci amb altres sense que li afecti com l\'has finançat o quan vas comprar la maquinària.</p>', en:'<p>What the business earns <b>just by operating</b>: net sales minus purchases, staff, operating expenses and commissions. It does not yet deduct depreciation, interest or taxes.</p><p>It lets you compare your business with others regardless of how it was financed or when the equipment was bought.</p>'});
+    } else if(k === 'rai'){
+      titulo = L({es:'Resultado antes de impuestos', ca:'Resultat abans d\'impostos', en:'Result before tax'});
+      cuerpo = L({es:'<p>Es el resultado de la actividad <b>después de todos los gastos</b> (también amortización e intereses) y <b>antes</b> del impuesto sobre el beneficio. Es la base sobre la que se calcula el impuesto de abajo.</p><p>Fórmula: ventas netas + otros ingresos − compras (± variación de existencias) − personal − otros gastos − comisiones − amortización − intereses. El IVA no entra: no es ni ingreso ni gasto, es dinero que se cobra y se paga por cuenta de Hacienda.</p>', ca:'<p>És el resultat de l\'activitat <b>després de totes les despeses</b> (també amortització i interessos) i <b>abans</b> de l\'impost sobre el benefici. És la base sobre la qual es calcula l\'impost de sota.</p><p>Fórmula: vendes netes + altres ingressos − compres (± variació d\'existències) − personal − altres despeses − comissions − amortització − interessos. L\'IVA no hi entra: ni és ingrés ni despesa, són diners que es cobren i es paguen per compte d\'Hisenda.</p>', en:'<p>The result of the activity <b>after all expenses</b> (including depreciation and interest) and <b>before</b> profit tax. It is the base the tax below is computed on.</p><p>Formula: net sales + other income − purchases (± stock change) − staff − other expenses − commissions − depreciation − interest. VAT is not included: it is neither income nor expense, it is money collected and paid on behalf of the tax office.</p>'});
+    } else if(k === 'neto' || k === 'impuesto'){
+      return cdrComoSeCalcula();
+    } else if(k === 'iva'){
+      titulo = L({es:'IVA a liquidar (modelo 303)', ca:'IVA a liquidar (model 303)', en:'VAT to settle (form 303)'});
+      cuerpo = L({es:'<p>No es un gasto tuyo: es la diferencia entre el IVA que <b>cobras</b> a tus clientes y el IVA que <b>pagas</b> a tus proveedores (compras, gastos fijos, inversiones). Si cobras más de lo que pagas, ingresas la diferencia a Hacienda; si pagas más, sale «a tu favor» y se compensa en los siguientes trimestres.</p><p>Se presenta cada trimestre (hasta el día 20 del mes siguiente; el cuarto trimestre, hasta el 30 de enero). Por eso aparece aquí mes a mes pero se paga sumado por trimestre. Si estás en módulos, se calcula con la cuota del régimen simplificado, no con lo vendido.</p>', ca:'<p>No és una despesa teva: és la diferència entre l\'IVA que <b>cobres</b> als teus clients i l\'IVA que <b>pagues</b> als teus proveïdors (compres, despeses fixes, inversions). Si cobres més del que pagues, ingresses la diferència a Hisenda; si pagues més, surt «a favor teu» i es compensa en els trimestres següents.</p><p>Es presenta cada trimestre (fins al dia 20 del mes següent; el quart trimestre, fins al 30 de gener). Per això apareix aquí mes a mes però es paga sumat per trimestre. Si estàs en mòduls, es calcula amb la quota del règim simplificat, no amb el que s\'ha venut.</p>', en:'<p>It is not your expense: it is the difference between the VAT you <b>charge</b> customers and the VAT you <b>pay</b> suppliers (purchases, fixed costs, investments). If you charge more than you pay you hand the difference to the tax office; if you pay more it is «in your favour» and is offset in later quarters.</p><p>It is filed quarterly (by the 20th of the following month; Q4 by 30 January). That is why it shows here month by month but is paid added up by quarter. Under the modules regime it uses the simplified regime fee, not what was sold.</p>'});
+    } else {
+      titulo = L({es:'Retenciones a ingresar (modelos 111 y 115)', ca:'Retencions a ingressar (models 111 i 115)', en:'Withholdings to pay in (forms 111 and 115)'});
+      cuerpo = L({es:'<p>Tampoco son gasto del negocio. Cuando pagas una nómina, retienes una parte del sueldo del empleado como IRPF: ese dinero <b>no es tuyo ni del empleado, es de Hacienda</b>, y tú solo lo ingresas por él (modelo <b>111</b>). Lo mismo con profesionales que te facturan con retención y, con el alquiler del local, el modelo <b>115</b> (normalmente el 19 % de la renta).</p><p>No «a favor»: siempre es dinero ya retenido pendiente de ingresar. Se declara cada trimestre.</p>', ca:'<p>Tampoc són despesa del negoci. Quan pagues una nòmina, retens una part del sou de l\'empleat com a IRPF: aquests diners <b>no són teus ni de l\'empleat, són d\'Hisenda</b>, i tu només els ingresses per ell (model <b>111</b>). El mateix amb professionals que et facturen amb retenció i, amb el lloguer del local, el model <b>115</b> (normalment el 19 % de la renda).</p><p>No «a favor»: sempre són diners ja retinguts pendents d\'ingressar. Es declara cada trimestre.</p>', en:'<p>Not a business expense either. When you pay a salary you withhold part of it as income tax: that money <b>is neither yours nor the employee\'s, it belongs to the tax office</b>, and you only pay it in on their behalf (form <b>111</b>). The same applies to professionals who invoice with withholding and, for the premises rent, form <b>115</b> (usually 19 % of the rent).</p><p>Never «in your favour»: it is always money already withheld, pending to be paid in. Filed quarterly.</p>'});
+    }
+    cdrModal(titulo, cuerpo);
+  }
+  // El botón «¿Cómo se calcula?»: cadena completa + cómo tributa ESTE negocio + qué es cada dinero que no es suyo.
+  function cdrComoSeCalcula(){
+    const L = o => gl(o);
+    const p = fiscalPerfil(), b = DB.business || {};
+    const forma = modulosAplica() ? 'modulos' : (b.formaJuridica || '');
+    const tribut = {
+      modulos: L({es:'<b>Autónomo en módulos (estimación objetiva).</b> Tu IRPF no sale de lo que ganas de verdad, sino de los módulos de tu actividad (personal, superficie, consumo de energía…). Por eso aquí el impuesto es una cifra repartida por meses, y el IVA sale de la cuota del régimen simplificado, no de lo vendido. El cálculo está en la pestaña Módulos.', ca:'<b>Autònom en mòduls (estimació objectiva).</b> El teu IRPF no surt del que guanyes de debò, sinó dels mòduls de la teva activitat (personal, superfície, consum d\'energia…). Per això aquí l\'impost és una xifra repartida per mesos, i l\'IVA surt de la quota del règim simplificat, no del que s\'ha venut.', en:'<b>Self-employed under modules (objective estimation).</b> Your income tax does not come from what you really earn but from your activity modules (staff, floor area, energy use…). So the tax here is a figure spread over months, and VAT comes from the simplified-regime fee, not from sales.'}),
+      autonomo: L({es:'<b>Autónomo en estimación directa.</b> Tributas por el IRPF con la escala por tramos (del 19 % al 47 %) sobre el beneficio del año, con el mínimo personal y el 5 % de gastos de difícil justificación (máx. 2.000 €) ya descontados, y las reducciones que te correspondan. Lo que te pagas a ti no es gasto: sale debajo del resultado. Si tienes otros ingresos (una nómina, alquileres), tu tipo real será algo mayor.', ca:'<b>Autònom en estimació directa.</b> Tributes per l\'IRPF amb l\'escala per trams (del 19 % al 47 %) sobre el benefici de l\'any, amb el mínim personal i el 5 % de despeses de difícil justificació (màx. 2.000 €) ja descomptats, i les reduccions que et corresponguin. El que et pagues a tu no és despesa: surt sota del resultat. Si tens altres ingressos (una nòmina, lloguers), el teu tipus real serà una mica més alt.', en:'<b>Self-employed, direct estimation.</b> You pay income tax on the stepped scale (19 % to 47 %) on the year\'s profit, with the personal allowance and the 5 % hard-to-document expenses (max 2,000 €) already deducted, plus any reductions you qualify for. What you pay yourself is not an expense: it comes below the result. With other income (a salary, rents) your real rate will be somewhat higher.'}),
+      cb: L({es:'<b>Comunidad de bienes.</b> La comunidad no paga impuesto sobre el beneficio: se reparte entre los comuneros según su porcentaje y cada uno tributa por su parte en su IRPF, con su propia escala. Hay que anotar los comuneros en Mi Negocio.', ca:'<b>Comunitat de béns.</b> La comunitat no paga impost sobre el benefici: es reparteix entre els comuners segons el seu percentatge i cadascú tributa per la seva part en el seu IRPF, amb la seva pròpia escala. Cal anotar els comuners a Mi Negocio.', en:'<b>Community of property (CB).</b> The community itself pays no profit tax: profit is split among the members by percentage and each is taxed on their share in their own income tax, with their own scale. Members must be entered in My Business.'}),
+      sociedad: L({es:'<b>Sociedad (SL, SA…).</b> Pagas el Impuesto sobre Sociedades sobre el beneficio del año: un tipo reducido si eres nueva o de poca facturación (15 %, o 19–21 % en 2026 si facturas menos de 1 millón) y el general (25 %) en otro caso. El sueldo del administrador sí es gasto. Las pérdidas de años anteriores se compensan sin límite de tiempo.', ca:'<b>Societat (SL, SA…).</b> Pagues l\'Impost sobre Societats sobre el benefici de l\'any: un tipus reduït si ets nova o de poca facturació (15 %, o 19–21 % el 2026 si factures menys d\'1 milió) i el general (25 %) en cas contrari. El sou de l\'administrador sí és despesa. Les pèrdues d\'anys anteriors es compensen sense límit de temps.', en:'<b>Company (SL, SA…).</b> You pay Corporate Income Tax on the year\'s profit: a reduced rate if you are new or small (15 %, or 19–21 % in 2026 under 1 million turnover) and the general 25 % otherwise. The director\'s salary is an expense. Past losses can be offset with no time limit.'}),
+      cooperativa: L({es:'<b>Cooperativa.</b> Tributa por el Impuesto sobre Sociedades con su régimen propio (Ley 20/1990): el excedente se reduce con las dotaciones obligatorias a los fondos y se aplica un tipo reducido; si es especialmente protegida, además una bonificación del 50 %. La app solo trata el resultado cooperativo: lo extracooperativo lo ajusta tu gestoría.', ca:'<b>Cooperativa.</b> Tributa per l\'Impost sobre Societats amb el seu règim propi (Llei 20/1990): l\'excedent es redueix amb les dotacions obligatòries als fons i s\'aplica un tipus reduït; si és especialment protegida, a més una bonificació del 50 %. L\'app només tracta el resultat cooperatiu: l\'extracooperatiu l\'ajusta el teu gestor.', en:'<b>Cooperative.</b> Taxed under Corporate Income Tax with its own regime (Law 20/1990): the surplus is reduced by the compulsory fund allocations and a reduced rate applies; if specially protected, a further 50 % allowance. The app only handles the cooperative result: the non-cooperative part is adjusted by your accountant.'}),
+      '': L({es:'<b>Todavía no se ha indicado la forma jurídica del negocio.</b> Sin ella no se puede calcular el impuesto con fiabilidad: la fija quien te da de alta.', ca:'<b>Encara no s\'ha indicat la forma jurídica del negoci.</b> Sense ella no es pot calcular l\'impost amb fiabilitat: la fixa qui et dona d\'alta.', en:'<b>The legal form of the business has not been set yet.</b> Without it the tax cannot be computed reliably: whoever signs you up sets it.'})
+    }[forma] || '';
+    const cuerpo = L({es:`<h4>1 · De lo que cobras a lo que te llevas</h4>
+      <p>Cada línea resta lo anterior: <b>ventas con IVA</b> → quitas el IVA (no es tuyo) → <b>facturación neta</b> → quitas lo que has comprado para vender (± lo que ha subido o bajado el almacén) → <b>margen bruto</b> → quitas personal, gastos de explotación y comisiones → <b>EBITDA</b> → quitas la amortización de lo que compraste para durar → <b>resultado de explotación</b> → quitas los intereses de préstamos → <b>resultado antes de impuestos</b> → quitas el impuesto → <b>resultado neto</b>: lo que de verdad te queda.</p>
+      <h4>2 · Cómo tributa tu negocio</h4><p>${tribut}</p>
+      <h4>3 · Una provisión, no una declaración</h4>
+      <p>El impuesto que ves es una <b>provisión</b>: una estimación para que sepas cuánto apartar y no te lo gastes. No es la cuota de tu declaración: esa la calcula tu gestor con todos tus datos (otros ingresos, deducciones, tu situación familiar…).</p>
+      <h4>4 · Dinero que no es del negocio</h4>
+      <p>Debajo del resultado verás el <b>IVA a liquidar</b> (modelo 303) y las <b>retenciones</b> (111, 115): no son gasto, son dinero cobrado o retenido por cuenta de Hacienda que hay que declarar cada trimestre. Pulsa el <i class="ti ti-help-circle"></i> de cada fila para ver su explicación.</p>
+      <h4>5 · De dónde salen los números</h4>
+      <p>Las ventas vienen del TPV; las compras, de Gastos variables; el personal y los gastos de explotación, de Gastos fijos; la amortización y los intereses, de Inversiones. Si algo no cuadra, corrige el dato en su pantalla y esta cuenta se recalcula sola.</p>`,
+      ca:`<h4>1 · Del que cobres al que et quedes</h4>
+      <p>Cada línia resta l'anterior: <b>vendes amb IVA</b> → treus l'IVA (no és teu) → <b>facturació neta</b> → treus el que has comprat per vendre (± el que ha pujat o baixat el magatzem) → <b>marge brut</b> → treus personal, despeses d'explotació i comissions → <b>EBITDA</b> → treus l'amortització del que vas comprar per durar → <b>resultat d'explotació</b> → treus els interessos de préstecs → <b>resultat abans d'impostos</b> → treus l'impost → <b>resultat net</b>: el que de debò et queda.</p>
+      <h4>2 · Com tributa el teu negoci</h4><p>${tribut}</p>
+      <h4>3 · Una provisió, no una declaració</h4>
+      <p>L'impost que veus és una <b>provisió</b>: una estimació perquè sàpigues quant apartar i no te'l gastis. No és la quota de la teva declaració: aquesta la calcula el teu gestor amb totes les teves dades (altres ingressos, deduccions, la teva situació familiar…).</p>
+      <h4>4 · Diners que no són del negoci</h4>
+      <p>Sota el resultat veuràs l'<b>IVA a liquidar</b> (model 303) i les <b>retencions</b> (111, 115): no són despesa, són diners cobrats o retinguts per compte d'Hisenda que cal declarar cada trimestre. Prem el <i class="ti ti-help-circle"></i> de cada fila per veure'n l'explicació.</p>
+      <h4>5 · D'on surten els números</h4>
+      <p>Les vendes vénen del TPV; les compres, de Despeses variables; el personal i les despeses d'explotació, de Despeses fixes; l'amortització i els interessos, d'Inversions. Si alguna cosa no quadra, corregeix la dada a la seva pantalla i aquest compte es recalcula sol.</p>`,
+      en:`<h4>1 · From what you charge to what you keep</h4>
+      <p>Each line subtracts the previous: <b>sales incl. VAT</b> → remove VAT (not yours) → <b>net revenue</b> → remove what you bought to sell (± stock change) → <b>gross margin</b> → remove staff, operating expenses and commissions → <b>EBITDA</b> → remove depreciation of what you bought to last → <b>operating result</b> → remove loan interest → <b>result before tax</b> → remove tax → <b>net result</b>: what you really keep.</p>
+      <h4>2 · How your business is taxed</h4><p>${tribut}</p>
+      <h4>3 · A provision, not a tax return</h4>
+      <p>The tax you see is a <b>provision</b>: an estimate so you know how much to set aside. It is not your return's bill: your accountant works that out with all your data (other income, deductions, family situation…).</p>
+      <h4>4 · Money that is not the business's</h4>
+      <p>Below the result you will see <b>VAT to settle</b> (form 303) and <b>withholdings</b> (111, 115): not expenses, but money collected or withheld on behalf of the tax office, to be filed every quarter. Press the <i class="ti ti-help-circle"></i> on each row for its explanation.</p>
+      <h4>5 · Where the numbers come from</h4>
+      <p>Sales come from the POS; purchases from Variable costs; staff and operating expenses from Fixed costs; depreciation and interest from Investments. If something looks off, fix the data on its screen and this account recalculates itself.</p>`});
+    cdrModal(L({es:'¿Cómo se calcula tu resultado?', ca:'Com es calcula el teu resultat?', en:'How is your result calculated?'}), cuerpo);
+  }
+
   function renderCDR(){
     syncYearLabels();
     ['cdr-gran-mes','cdr-gran-trimestre'].forEach(id=>{
       const el = document.getElementById(id);
-      if(el) el.classList.toggle('btn-primary', id==='cdr-gran-'+cdrGranularidad);
+      if(el){ el.classList.toggle('btn-primary', id==='cdr-gran-'+cdrGranularidad); el.classList.toggle('is-on', id==='cdr-gran-'+cdrGranularidad); }
     });
     // La tira de periodos, con la misma pinta que la de Ventas o Tesorería:
     // doce meses o cuatro trimestres, según la resolución elegida.
@@ -2205,28 +2322,19 @@ const GE = (function(){
     const notaEl = document.getElementById('res-pct-impuesto-nota');
     if(labelEl) labelEl.textContent = bNeg.formaJuridica==='sociedad' ? t('label.profitTaxSociedad') : t('label.profitTax');
     if(notaEl){
-      if(modulosAplica()){
-        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-info-circle"></i> ${t('hr.res.modulosNota')}</p>`;
-      } else if(bNeg.formaJuridica==='sociedad'){
+      // Lo explicativo (cómo tributa cada forma, qué es una provisión, qué es el IVA a liquidar…) vive ahora detrás del botón
+      // «¿Cómo se calcula?» (cdrComoSeCalcula). Aquí solo queda lo que pide una ACCIÓN.
+      notaEl.innerHTML = '';
+      if(!modulosAplica() && bNeg.formaJuridica==='sociedad'){
         const sug = sugerenciaImpuestoSociedad();
-        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-bulb"></i> ${t('hr.res.sugerenciaSociedad').replace('${pct}', sug.pct).replace('${motivo}', sug.motivo)} <button class="btn btn-sm" onclick="document.getElementById('res-pct-impuesto').value=${sug.pct};GE.setPctImpuesto()">${t('hr.res.usarSugerencia')}</button></p>`;
-      } else if(bNeg.formaJuridica==='cb'){
+        notaEl.innerHTML = `<p class="cdr-sug"><i class="ti ti-bulb"></i> ${t('hr.res.sugerenciaSociedad').replace('${pct}', sug.pct).replace('${motivo}', sug.motivo)} <button class="btn btn-sm" onclick="document.getElementById('res-pct-impuesto').value=${sug.pct};GE.setPctImpuesto()">${t('hr.res.usarSugerencia')}</button></p>`;
+      } else if(!modulosAplica() && bNeg.formaJuridica==='cb'){
         const comuneros = Array.isArray(bNeg.comuneros) ? bNeg.comuneros : [];
         const sumaPct = comuneros.reduce((s,c)=>s+(parseFloat(c.pct)||0), 0);
-        notaEl.innerHTML = sumaPct > 0
-          ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-users"></i> ${t('hr.res.cbNota')}</p>`
-          : `<p style="font-size:12px;color:var(--red);margin:-4px 0 10px"><i class="ti ti-alert-triangle"></i> ${t('hr.res.cbSinComuneros')}</p>`;
-      } else if(bNeg.formaJuridica==='autonomo'){
-        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-info-circle"></i> ${t('hr.res.autonomoNota')}</p>`;
-      } else if(bNeg.formaJuridica==='cooperativa'){
-        notaEl.innerHTML = `<p style="font-size:12px;color:var(--muted);margin:-4px 0 10px"><i class="ti ti-alert-triangle"></i> ${t('hr.res.cooperativaNota')}</p>`;
-      } else {
-        notaEl.innerHTML = '';
+        if(!(sumaPct > 0)) notaEl.innerHTML = `<p class="cdr-sug is-ko"><i class="ti ti-alert-triangle"></i> ${t('hr.res.cbSinComuneros')}</p>`;
+      } else if(!bNeg.formaJuridica){
+        notaEl.innerHTML = `<p class="cdr-sug is-ko"><i class="ti ti-alert-triangle"></i> ${gl({es:'Falta la forma jurídica de tu negocio: sin ella el impuesto no es fiable. Pídesela a quien te dio de alta.', ca:'Falta la forma jurídica del teu negoci: sense ella l\'impost no és fiable. Demana-la a qui et va donar d\'alta.', en:'Your business legal form is missing: without it the tax figure is not reliable. Ask whoever signed you up.'})}</p>`;
       }
-      // El impuesto que se ve es una PROVISIÓN para no gastarse lo que hay
-      // que pagar, no la cuota de la declaración (que hace el gestor con
-      // todos los datos del titular o de la sociedad).
-      notaEl.innerHTML += `<p class="txt-xs" style="color:var(--muted);margin:-4px 0 10px"><i class="ti ti-info-circle"></i> ${t('hr.res.provisionNota')}</p>`;
     }
     const ivaPct = ivaVentasPct();
     // El aviso solo tiene sentido si TODO el año consultado es anterior al
@@ -2281,13 +2389,13 @@ const GE = (function(){
       {lbl:t('hr.cdr.personal'), vals:pers.map(v=>-v), auto:true},
       {lbl:t('hr.cdr.otherOperating'), vals:otros.map(v=>-v), auto:true},
       {lbl:t('hr.lbl.deliveryCommissions'), vals:comis.map(v=>-v), auto:true},
-      {lbl:t('hr.res.operatingEbitda'), vals:ebitda, highlight:true, bold:true},
+      {lbl:t('hr.res.operatingEbitda'), vals:ebitda, highlight:true, bold:true, help:'ebitda'},
       {lbl:t('hr.cdr.depreciation'), vals:amort.map(v=>-v), auto:true},
       {lbl:t('hr.cdr.operatingResult'), vals:explot, highlight:true, bold:true},
-      {lbl:t('hr.cdr.financialExpenses'), vals:inter.map(v=>-v), auto:true},
-      {lbl:t('hr.cdr.resultBeforeTax'), vals:M(i=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true},
-      {lbl:`${impLbl} (${pct1((tipoImpuestoAño(cdrYear)*100))}%)`, vals:M(i=>-impuestoMes(i,cdrYear)), auto:true},
-      {lbl:t('hr.cdr.netResult'), vals:M(i=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true, yoyFn:i=>resultadoMes(i,cdrYear-1)},
+      {lbl:t('hr.cdr.financialExpenses'), vals:inter.map(v=>-v), auto:true, help:'intereses'},
+      {lbl:t('hr.cdr.resultBeforeTax'), vals:M(i=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true, help:'rai'},
+      {lbl:`${impLbl} (${pct1((tipoImpuestoAño(cdrYear)*100))}%)`, vals:M(i=>-impuestoMes(i,cdrYear)), auto:true, help:'impuesto'},
+      {lbl:t('hr.cdr.netResult'), vals:M(i=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true, help:'neto', yoyFn:i=>resultadoMes(i,cdrYear-1)},
       // Autónomo/CB: lo que el titular se lleva no es gasto (ya ha tributado
       // por todo el beneficio de arriba). Se enseña DEBAJO del resultado,
       // para que vea lo que queda en el negocio después de pagarse.
@@ -2295,11 +2403,11 @@ const GE = (function(){
         {lbl:t('hr.cdr.ownerDrawings'), vals:retirada.map(v=>-v), auto:true},
         {lbl:t('hr.cdr.leftInBusiness'), vals:M(i=>resultadoMes(i,cdrYear)-retirada[i]), auto:true, bold:true},
       ] : []),
-      {lbl:t('hr.cdr.vatToSettle'), vals:M(i=>ivaLiquidarMes(i,cdrYear)), auto:true, ivaRow:true},
+      {lbl:t('hr.cdr.vatToSettle'), vals:M(i=>ivaLiquidarMes(i,cdrYear)), auto:true, ivaRow:true, help:'iva'},
       // El IRPF retenido a los empleados, a diferencia del IVA, no tiene
       // "a favor": siempre es dinero ya retenido pendiente de ingresar, así
       // que no lleva el mismo pos/neg que la fila de IVA.
-      {lbl:t('hr.cdr.irpfToDeposit'), vals:M(i=>geModelo111ForMonth(cdrYear,i)), auto:true, irpfRow:true},
+      {lbl:t('hr.cdr.irpfToDeposit'), vals:M(i=>geModelo111ForMonth(cdrYear,i)), auto:true, irpfRow:true, help:'irpf'},
       {lbl:t('hr.cdr.ret115ToDeposit'), vals:M(i=>geRetencionForMonth(cdrYear,i,'115')), auto:true, irpfRow:true},
     ];
     const quarters = ['T1','T2','T3','T4'];
@@ -2324,7 +2432,7 @@ const GE = (function(){
       // los meses sueltos sin cambiar a Mensual.
       const qTitle = qi => [0,1,2].map(mi => `${getMeses()[qi*3+mi]}: ${fmtMoney(r.vals[qi*3+mi])}`).join(' · ');
       const yearTitle = quarters.map((ql,qi) => `${ql}: ${fmtMoney(q[qi])}`).join(' · ');
-      html += `<tr class="${cls}"><td>${r.lbl}${r.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
+      html += `<tr class="${cls}"><td>${r.lbl}${r.auto?'<span class="ge-auto">AUTO</span>':''}${r.help ? `<button type="button" class="cdr-ayuda" onclick="GE.cdrAyuda('${r.help}')" aria-label="${escapeHtml(gl({es:'Qué es esto', ca:'Què és això', en:'What is this'}))}"><i class="ti ti-help-circle"></i></button>` : ''}</td>`;
       if(r.ivaRow){
         if(isMes) r.vals.forEach(v=>{
           const c = v>0?'neg':(v<0?'pos':'');
@@ -2353,10 +2461,8 @@ const GE = (function(){
     });
     html += '</tbody>';
     document.getElementById('cdr-table').innerHTML = html;
-    const cdrChart = document.getElementById('cdr-chart');
-    const datosChart = getMeses().map((m,i)=>({lbl:m, v:resultadoMes(i,cdrYear)}));
-    cdrChart.innerHTML = barChartHTML(datosChart);
-    cdrChart.style.height = datosChart.some(d => d.v < 0) ? 'auto' : '';
+    renderCdrGrafica();
+    const comoT = document.getElementById('cdr-como-t'); if(comoT) comoT.textContent = gl({es:'¿Cómo se calcula?', ca:'Com es calcula?', en:'How is it calculated?'});
     renderDividendos();
     renderMonthComparison();
   }
@@ -4567,7 +4673,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
