@@ -1,6 +1,7 @@
 // Panel de Control (2/11): gráfico de curva con área (Ventas / Gastos / Resultado), puntos que se tocan, hora punta y sin desbordes.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', headless:'new', args:['--no-sandbox']});
 let fallos = 0;
 async function caso(n, fn){ try{ await fn(); console.log('✅ ' + n); }catch(e){ fallos++; console.log('❌ ' + n + '\n   ⤷ ' + e.message); } }
@@ -59,6 +60,13 @@ await caso('Sin desbordes ni letra pequeña en 5 anchos, y los puntos se pueden 
     });
     assert.deepEqual(r, [], `${w}px: ` + r.join(' | ')); await page.close();
   }
+});
+await caso('Ninguna cifra de dinero se abrevia con «k» (11,3 k€): siempre entera, 11.340 €, en toda la app', async () => {
+  const mal = [];
+  for(const f of fs.readdirSync('js').filter(x => x.endsWith('.js')).map(x => 'js/' + x).concat(['reservagastrogoan.html'])){
+    fs.readFileSync(f, 'utf8').split('\n').forEach((l, i) => { if(/\bk\s?€/.test(l) && !/^\s*\/\//.test(l)) mal.push(f + ':' + (i + 1)); });
+  }
+  assert.deepEqual(mal, [], 'cifras abreviadas con k: ' + mal.join(', '));
 });
 console.log(fallos ? `\n❌ ${fallos} caso(s) fallaron` : '\n✅ todos los casos pasaron'); if(fallos) process.exitCode = 1;
 await browser.close();
