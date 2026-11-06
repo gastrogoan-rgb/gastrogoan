@@ -1445,59 +1445,56 @@ const GE = (function(){
     const facNeta = facturacionNetaMes(mes,gvYear), fac = facturacionMes(mes,gvYear);
     const fcPct = facNeta>0 ? (tvNeto/facNeta*100) : 0;
     document.getElementById('gv-sec-title').textContent = `${t('hr.lbl.purchases')} — ${getMeses()[mes]} ${gvYear}`;
+    const fcObj = foodCostObjPct();
+    const fcColor = fcPct>fcObj ? 'var(--red)' : fcPct>0 ? 'var(--green)' : 'var(--muted)';
     document.getElementById('gv-kpis').innerHTML = `
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realCostNoVat')}</div><div class="val">${fmtMoney(tvNeto)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupported')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.netRevenue')} <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>foodCostObjPct()?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?pct1(fcPct)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${pct1(foodCostObjPct())}% <button class="btn btn-sm btn-icon" style="vertical-align:middle" onclick="GE.editFoodCostObj()" title="${t('common.edit')}"><i class="ti ti-edit"></i></button></div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcColor}">${facNeta>0?pct1(fcPct)+'%':'—'}</div><div class="sub gv-fc-sub">${t('hr.lbl.target')}: ${pct1(fcObj)}% <button type="button" class="btn btn-sm" onclick="GE.editFoodCostObj()"><i class="ti ti-edit"></i> ${gl({es:'Cambiar', ca:'Canviar', en:'Change'})}</button></div></div>`;
     const exBox = document.getElementById('gv-existencias');
     if(exBox){
       const e = (ge().existencias||{})[existenciasClave(gvYear, mes)];
-      exBox.innerHTML = `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;margin:4px 0 12px">
-        <i class="ti ti-building-warehouse"></i> <strong>${t('hr.ex.title').replace('${mes}', getMeses()[mes])}</strong>
-        <span>${e ? fmtMoney(e.v) : '—'}</span>
-        <span class="txt-xs" style="color:var(--muted)">${e ? (e.manual ? t('hr.ex.manual') : t('hr.ex.auto')) : t('hr.ex.none')}</span>
-        <button class="btn btn-sm" onclick="GE.editarExistencias(${gvYear},${mes})"><i class="ti ti-edit"></i> ${t('hr.ex.contar')}</button>
+      exBox.innerHTML = `<div class="gv-nota">
+        <i class="ti ti-building-warehouse"></i>
+        <span class="gv-nota-t"><b>${t('hr.ex.title').replace('${mes}', getMeses()[mes])}</b> <span class="gv-nota-v">${e ? fmtMoney(e.v) : '—'}</span> <small>${e ? (e.manual ? t('hr.ex.manual') : t('hr.ex.auto')) : t('hr.ex.none')}</small></span>
+        <button type="button" class="btn btn-sm" onclick="GE.editarExistencias(${gvYear},${mes})"><i class="ti ti-edit"></i> ${t('hr.ex.contar')}</button>
       </div>`;
     }
     const allItems = variablesMes(mes,gvYear);
-    const chartEl = document.getElementById('gv-cat-chart');
-    if(chartEl){
-      const catTotals = {};
-      allItems.forEach(v=>{ catTotals[v.categoria] = (catTotals[v.categoria]||0) + parseFloat(v.importe||0); });
-      const chartData = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,v])=>({lbl:truncateSafeText(variableCategoryLabel(cat),18), v}));
-      chartEl.innerHTML = chartData.length ? barChartHTML(chartData) : `<div class="empty">${t('hr.gf.emptyList')}</div>`;
-    }
+    gvRenderResumen(allItems);
     const searchLower = gvSearch.trim().toLowerCase();
     const items = searchLower ? allItems.filter(v=>(v.proveedor||'').toLowerCase().includes(searchLower) || variableCategoryLabel(v.categoria).toLowerCase().includes(searchLower)) : allItems;
     const list = document.getElementById('gv-list');
     const empty = document.getElementById('gv-empty');
-    if(!items.length){ list.innerHTML=''; empty.style.display='block'; empty.textContent = searchLower ? t('hr.gv.noSearchResults') : t('empty.noPurchasesMonth'); }
+    if(!items.length){ list.innerHTML=''; empty.style.display='flex'; empty.innerHTML = `<i class="ti ti-receipt-2"></i><span>${searchLower ? t('hr.gv.noSearchResults') : t('empty.noPurchasesMonth')}</span>`; }
     else{
       empty.style.display='none';
       const bycat = {};
       items.forEach(v=>{ (bycat[v.categoria] = bycat[v.categoria]||[]).push(v); });
       // Los anulados del mes se cuelan en su categoría para verse tachados:
       // items viene ya filtrado de anulados (son los que suman).
-      variables().filter(v => v.anulado && parseInt(v.mes)===mes && parseInt(v.año)===gvYear)
+      // También se buscan: con «makro» escrito no tiene sentido ver un anulado de otro proveedor.
+      variables().filter(v => v.anulado && parseInt(v.mes)===mes && parseInt(v.año)===gvYear && (!searchLower || (v.proveedor||'').toLowerCase().includes(searchLower) || variableCategoryLabel(v.categoria).toLowerCase().includes(searchLower)))
         .forEach(v=>{ (bycat[v.categoria] = bycat[v.categoria]||[]).push(v); });
-      list.innerHTML = Object.entries(bycat).map(([cat,its])=>{
-        const autoItems = its.filter(v=>v.auto);
-        const manualItems = its.filter(v=>!v.auto);
+      const conIva = v => { const b = parseFloat(v.importe||0); return b + b*ivaDeGastoVariable(v)/100; };
+      list.innerHTML = Object.entries(bycat).sort((a,b)=>b[1].filter(v=>!v.anulado).reduce((x,v)=>x+conIva(v),0)-a[1].filter(v=>!v.anulado).reduce((x,v)=>x+conIva(v),0)).map(([cat,its])=>{
+        const autoItems = its.filter(v=>v.auto && !v.anulado);
+        const manualItems = its.filter(v=>!v.auto || v.anulado);
+        const subtotal = its.filter(v=>!v.anulado).reduce((x,v)=>x+conIva(v),0);
         const byProv = {};
         autoItems.forEach(v=>{ (byProv[v.proveedor||'—'] = byProv[v.proveedor||'—']||[]).push(v); });
         const autoHtml = Object.entries(byProv).map(([prov,vs])=>{
           const totalBase = vs.reduce((s,v)=>s+parseFloat(v.importe||0),0);
           const totalIva = vs.reduce((s,v)=>s+parseFloat(v.importe||0)*ivaDeGastoVariable(v)/100,0);
-          const total = totalBase + totalIva;
           const ids = vs.map(v=>v.id).join(',');
-          return `<div class="ge-item" style="flex-wrap:wrap">
-            <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray txt-xs" style="font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
-            <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
-            <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
-            <span title="${t('hr.gv.receivedLocked')}" style="color:var(--muted);font-size:15px;padding:0 4px"><i class="ti ti-lock"></i></span>
-            <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGVGroup('${ids}')"><i class="ti ti-ban"></i></button>
-          </div>`;
+          return gvFila({
+            clave: 'p-' + cat + '-' + prov, nombre: prov, total: totalBase + totalIva,
+            chips: [`<span class="gf-chip is-auto"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span>`,
+                    `<span class="gf-chip" data-tip="${escapeHtml(t('hr.gv.receivedLocked'))}" tabindex="0"><i class="ti ti-lock"></i> ${gl({es:'Bloqueado', ca:'Bloquejat', en:'Locked'})}</span>`],
+            detalle: `${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}`,
+            acciones: [{icono:'ti-ban', texto:t('hr.gv.voidTitle'), fn:`GE.anularGVGroup('${ids}')`, peligro:true}]
+          });
         }).join('');
         const manualHtml = manualItems.map(v=>{
           const base = parseFloat(v.importe||0);
@@ -1508,28 +1505,79 @@ const GE = (function(){
           // motivo, para que en los libros se vea que hubo una corrección
           // y por qué. Lo que no hace es contar en ningún total.
           if(v.anulado){
-            return `<div class="ge-item" style="flex-wrap:wrap;opacity:.6">
-            <span style="flex:1;font-size:14px;min-width:140px;text-decoration:line-through">${escapeHtml(v.proveedor||'—')}</span>
-            <span class="badge badge-red txt-xs" ><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>
-            <span style="font-size:11.5px;color:var(--muted);flex:1;min-width:120px">${escapeHtml(v.anuladoMotivo||'')}</span>
-            <span style="font-family:monospace;text-decoration:line-through;color:var(--muted)">${fmtMoney(total)}</span>
-          </div>`;
+            return gvFila({clave: 'a-' + v.id, nombre: v.proveedor||'—', total, anulado: true,
+              chips: [`<span class="gf-chip is-aviso"><i class="ti ti-ban"></i> ${t('hr.gv.voidedBadge')}</span>`],
+              detalle: escapeHtml(v.anuladoMotivo||''), acciones: []});
           }
-          return `<div class="ge-item" style="flex-wrap:wrap">
-          <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(v.proveedor||'—')}</span>
-          <span style="font-size:12px;color:var(--muted);margin-right:4px">${escapeHtml(v.fecha||'')}</span>
-          <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})</span>
-          <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
-          ${v.facturaId && facturaAdjunta(v.facturaId) ? `<button class="btn btn-sm btn-icon" title="${t('factura.viewTitle')}" onclick="window.open('${facturaAdjunta(v.facturaId).dataUrl}','_blank')"><i class="ti ti-paperclip"></i></button>` : ''}
-          <button class="btn btn-sm btn-icon btn-danger" title="${t('hr.gv.voidTitle')}" onclick="GE.anularGV(${v.id})"><i class="ti ti-ban"></i></button>
-        </div>`; }).join('');
-        return `<div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(variableCategoryLabel(cat))}</div>${autoHtml}${manualHtml}`;
+          const f = v.facturaId ? facturaAdjunta(v.facturaId) : null;
+          const chips = [];
+          if(v.fecha) chips.push(`<span class="gf-chip">${escapeHtml(new Date(v.fecha + 'T12:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short'}))}</span>`);
+          if(pct > 0) chips.push(`<span class="gf-chip">${t('common.vat')} ${pct}%</span>`);
+          if(f) chips.push(`<span class="gf-chip"><i class="ti ti-paperclip"></i> ${gl({es:'Factura', ca:'Factura', en:'Invoice'})}</span>`);
+          const det = [`${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})`];
+          if(v.numFactura) det.push(`${t('hr.gv.numFactura')}: ${escapeHtml(v.numFactura)}`);
+          if(v.nifProveedor) det.push(escapeHtml(v.nifProveedor));
+          if(v.concepto) det.push(escapeHtml(v.concepto));
+          return gvFila({clave: 'm-' + v.id, nombre: v.proveedor||'—', total, chips, detalle: det.join(' · '),
+            acciones: [f ? {icono:'ti-paperclip', texto:t('factura.viewTitle'), fn:`GE.verFacturaGV(${v.id})`} : null,
+                       {icono:'ti-ban', texto:t('hr.gv.voidTitle'), fn:`GE.anularGV(${v.id})`, peligro:true}].filter(Boolean)});
+        }).join('');
+        return `<div class="gv-cat"><span>${escapeHtml(variableCategoryLabel(cat))} <small>${its.filter(v=>!v.anulado).length}</small></span><b>${fmtMoney(subtotal)}</b></div>${autoHtml}${manualHtml}`;
       }).join('');
     }
     document.getElementById('gv-total-lbl').textContent = `${t('hr.lbl.totalVariables')} ${getMeses()[mes].toUpperCase()}`;
-    document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ ${t('common.vat')} ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</span>`;
+    document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <small>+ ${t('common.vat')} ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</small>`;
     renderGastoHormiga();
     renderSueltaList();
+  }
+  // Una compra = una fila, igual que en Gastos Fijos: nombre y total a la vista, el resto
+  // (base + IVA, nº de factura, NIF) cuelga de un toque en móvil y la anulación va en el ⋯.
+  function gvFila(o){
+    const clave = 'gv-' + String(o.clave).replace(/[^\w-]/g, '_');
+    const abierta = ggPlegableAbierta(clave);
+    const hay = !!o.detalle;
+    return `<div class="gf-fila gv-fila plegable${abierta ? ' is-abierta' : ''}${o.anulado ? ' is-anulado' : ''}" data-pl="${clave}" onclick="ggTogglePlegable(event, this)">
+      <div class="gf-nom"><b${o.anulado ? ' style="text-decoration:line-through"' : ''}>${escapeHtml(o.nombre)}</b>${o.chips && o.chips.length ? `<span class="gf-chips">${o.chips.join('')}</span>` : ''}</div>
+      <div class="gf-imp"${o.anulado ? ' style="text-decoration:line-through;color:var(--muted)"' : ''}>${fmtMoney(o.total)}</div>
+      ${o.acciones && o.acciones.length ? ggMenuAcciones(o.acciones) : '<span class="gv-sin-menu"></span>'}
+      ${hay ? `<button type="button" class="pl-chev" aria-expanded="${abierta}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>` : ''}
+      ${hay ? `<div class="gf-det pl-extra">${o.detalle}</div>` : ''}
+    </div>`;
+  }
+  // Arriba del mes: por categoría (barra apilada) y por proveedor (los que más pesan).
+  function gvRenderResumen(items){
+    const box = document.getElementById('gv-resumen');
+    if(!box) return;
+    if(!items.length){ box.innerHTML = ''; return; }
+    const cat = {}, prov = {};
+    items.forEach(v => {
+      const b = parseFloat(v.importe||0);
+      cat[v.categoria] = (cat[v.categoria]||0) + b;
+      const k = v.proveedor || '—'; (prov[k] = prov[k] || {v:0, n:0}); prov[k].v += b; prov[k].n++;
+    });
+    const total = Object.values(cat).reduce((a,b)=>a+b,0);
+    if(total <= 0){ box.innerHTML = ''; return; }
+    const cats = Object.entries(cat).sort((a,b)=>b[1]-a[1]);
+    const partes = cats.slice(0,6).map(([c,v],i)=>({n:variableCategoryLabel(c), v, c:GF_COLORES[i]}));
+    const resto = cats.slice(6).reduce((a,[,v])=>a+v,0);
+    if(resto > 0.004) partes.push({n:gl({es:'Otros', ca:'Altres', en:'Other'}), v:resto, c:'#B9B3A6'});
+    const top = Object.entries(prov).sort((a,b)=>b[1].v-a[1].v).slice(0,5);
+    const max = top[0][1].v || 1;
+    box.innerHTML = `<div class="gf-duo">
+      <div class="gf-card">
+        <h4>${t('ge.gvCategoryChart')}</h4>
+        <div class="ve-barra" role="img" aria-label="${escapeHtml(t('ge.gvCategoryChart'))}">${partes.map(x=>`<span style="width:${(x.v/total*100).toFixed(2)}%;background:${x.c}"></span>`).join('')}</div>
+        <ul class="gf-leyenda">${partes.map(x=>`<li><i style="background:${x.c}"></i><span>${escapeHtml(x.n)}</span><b>${fmtMoney(x.v)}</b><small>${(x.v/total*100).toFixed(0)} %</small></li>`).join('')}</ul>
+      </div>
+      <div class="gf-card">
+        <h4>${gl({es:'Dónde más compras', ca:'On més compres', en:'Where you buy most'})}</h4>
+        <ul class="gv-rank">${top.map(([n,x])=>`<li><i style="width:${(x.v/max*100).toFixed(1)}%"></i><span class="gv-rank-n">${escapeHtml(n)}<small>${x.n} ${x.n===1 ? gl({es:'compra', ca:'compra', en:'purchase'}) : gl({es:'compras', ca:'compres', en:'purchases'})}</small></span><b>${fmtMoney(x.v)}</b></li>`).join('')}</ul>
+      </div>
+    </div>`;
+  }
+  function verFacturaGV(id){
+    const v = variables().find(x=>x.id===id); const f = v && v.facturaId ? facturaAdjunta(v.facturaId) : null;
+    if(f) window.open(f.dataUrl, '_blank');
   }
   // El objetivo de food cost también se edita desde Punto de Equilibrio, y
   // el mismo número alimenta el "% Gastos Variables" de Tesorería — antes se
@@ -1568,12 +1616,10 @@ const GE = (function(){
       .slice(0, 5);
     if(!candidates.length){ box.innerHTML = ''; return; }
     box.innerHTML = `
-      <div class="card" style="margin-bottom:14px;border:1px solid var(--amber);background:var(--amber-l)">
-        <h4 style="margin-bottom:4px"><i class="ti ti-ant"></i> ${t('hr.hormiga.title')}</h4>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">${t('hr.hormiga.desc').replace('${year}', currentYear())}</p>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          ${candidates.map(c => `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escapeHtml(c.prov)} <span style="color:var(--muted)">(${c.n}${t('hr.hormiga.timesSuffix')}, ${fmtMoney(c.avg)}${t('hr.hormiga.avgSuffix')})</span></span><strong>${fmtMoney(c.total)}</strong></div>`).join('')}
-        </div>
+      <div class="gv-hormiga">
+        <h4><i class="ti ti-bug"></i> ${t('hr.hormiga.title')}</h4>
+        <p>${t('hr.hormiga.desc').replace('${year}', currentYear())}</p>
+        <ul>${candidates.map(c => `<li><span>${escapeHtml(c.prov)} <small>(${c.n}${t('hr.hormiga.timesSuffix')}, ${fmtMoney(c.avg)}${t('hr.hormiga.avgSuffix')})</small></span><b>${fmtMoney(c.total)}</b></li>`).join('')}</ul>
       </div>`;
   }
   function setMonth(m){ activeMonth = m; renderVariables(); }
@@ -1621,16 +1667,18 @@ const GE = (function(){
     const box = document.getElementById('gv-suelta-list');
     if(!box) return;
     const ids = (DB.facturasSueltas||[]).filter(id => facturaAdjunta(id));
-    box.innerHTML = ids.length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;padding:0 16px 10px">${ids.map(id => {
+    box.innerHTML = ids.length ? `<div class="gv-sueltas">${ids.map(id => {
       const f = facturaAdjunta(id);
       const esImagen = f.dataUrl.startsWith('data:image');
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:92px">
-        ${esImagen ? `<img src="${f.dataUrl}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${f.dataUrl}','_blank')">`
-          : `<a href="${f.dataUrl}" download="${escapeHtml(f.name)}" class="btn btn-sm btn-icon" style="width:80px;height:80px"><i class="ti ti-file-text" style="font-size:28px"></i></a>`}
-        <button class="btn btn-sm" style="width:100%;padding:4px;font-size:11px" onclick="GE.sueltaUsar('${id}')">${t('factura.suelta.usar')}</button>
-        <button class="btn btn-sm btn-icon btn-danger" style="width:100%" onclick="GE.sueltaDelete('${id}')"><i class="ti ti-trash"></i></button>
+      return `<div class="gv-suelta">
+        ${esImagen ? `<img src="${f.dataUrl}" alt="${escapeHtml(f.name || '')}" onclick="window.open('${f.dataUrl}','_blank')">`
+          : `<a href="${f.dataUrl}" download="${escapeHtml(f.name)}" class="gv-suelta-doc" aria-label="${escapeHtml(f.name || '')}"><i class="ti ti-file-text"></i></a>`}
+        <div class="gv-suelta-b">
+          <button type="button" class="btn btn-sm" onclick="GE.sueltaUsar('${id}')">${t('factura.suelta.usar')}</button>
+          ${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`GE.sueltaDelete('${id}')`, peligro:true}])}
+        </div>
       </div>`;
-    }).join('')}</div>` : `<p style="font-size:13px;color:var(--muted);padding:0 16px 10px">${t('factura.suelta.empty')}</p>`;
+    }).join('')}</div>` : `<p class="gv-suelta-vacia">${t('factura.suelta.empty')}</p>`;
   }
   // Factura adjunta pendiente para la compra que se está dando de alta. Un
   // gasto variable ya registrado no se modifica nunca (ver editGV), así que
@@ -4301,7 +4349,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

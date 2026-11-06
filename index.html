@@ -541,28 +541,25 @@
         <div class="ve-barra-sup"><div id="gv-periodo"></div></div>
         <div class="ge-kpi-grid" id="gv-kpis"></div>
         <div id="gv-existencias"></div>
-        <div class="vis-section" style="margin-bottom:14px">
-          <h4><span data-i18n="ge.gvCategoryChart">Gasto por categoría (mes)</span></h4>
-          <div id="gv-cat-chart" class="bar-chart"></div>
-        </div>
+        <div id="gv-resumen"></div>
         <div id="gv-hormiga"></div>
-        <div class="ge-section" style="margin-bottom:14px">
+        <div class="ge-section">
           <div class="ge-sec-head"><h4 data-i18n="factura.suelta.title">Facturas sin asignar</h4>
             <button class="btn btn-sm" onclick="GE.sueltaAttach()"><i class="ti ti-camera"></i> <span data-i18n="factura.suelta.add">Foto de factura</span></button></div>
           <input type="file" id="gv-suelta-input" accept="image/*,application/pdf" style="display:none" onchange="GE.sueltaUpload(this)">
-          <p style="font-size:12px;color:var(--muted);margin:0 0 8px;padding:0 16px" data-i18n="factura.suelta.desc">Para una factura que aún no sabes dónde apuntar: haz la foto ahora y, cuando des de alta la compra, pulsa "Usar esta foto" en vez de subirla otra vez.</p>
+          <p class="gv-suelta-desc" data-i18n="factura.suelta.desc">Para una factura que aún no sabes dónde apuntar: haz la foto ahora y, cuando des de alta la compra, pulsa "Usar esta foto" en vez de subirla otra vez.</p>
           <div id="gv-suelta-list"></div>
         </div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 id="gv-sec-title">Compras del mes</h4>
-            <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" id="lf-abrir" onclick="leerFacturaAbrir()"><i class="ti ti-scan"></i> <span data-i18n="lf.btn">Leer factura con foto</span></button>
-            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> <span data-i18n="btn.addExtraPurchase">Añadir compra extra</span></button></div></div>
-          <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
+            <span class="gf-acciones"><button class="btn btn-sm btn-primary" id="lf-abrir" onclick="leerFacturaAbrir()"><i class="ti ti-scan"></i> <span data-i18n="lf.btn">Leer factura con foto</span></button>
+            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> <span data-i18n="btn.addExtraPurchase">Añadir compra extra</span></button></span></div>
+          <div class="gv-buscar">
             <input type="text" class="search-input" id="gv-search" data-i18n-ph="hr.gv.searchPlaceholder" placeholder="Buscar por proveedor o categoría..." oninput="GE.setGVSearch(this.value)">
+            <p class="txt-xs"><i class="ti ti-info-circle"></i> <span data-i18n="ge.autoPurchaseNote">Los pedidos a proveedores marcados como "Recibido" en Cocina/Sala se añaden aquí automáticamente. Usa "Añadir compra extra" para otras compras (material, limpieza, gastos puntuales...).</span></p>
           </div>
-          <div style="padding:8px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)"><i class="ti ti-info-circle"></i> <span data-i18n="ge.autoPurchaseNote">Los pedidos a proveedores marcados como "Recibido" en Cocina/Sala se añaden aquí automáticamente. Usa "Añadir compra extra" para otras compras (material, limpieza, gastos puntuales...).</span></div>
           <div id="gv-list"></div>
-          <div id="gv-empty" class="empty" style="display:none" data-i18n="empty.noPurchasesMonth">Sin compras registradas este mes.</div>
+          <div id="gv-empty" class="empty gf-vacio" style="display:none"></div>
         </div>
         <div class="ge-total-bar"><span id="gv-total-lbl">TOTAL VARIABLES MES</span><span id="gv-total-val">0 €</span></div>
       </div>
