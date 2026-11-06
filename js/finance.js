@@ -932,28 +932,92 @@ function plan360MarcadorEuros(){
   if(k.dia1.resultado != null) f.push({k:'resultado', antes: k.dia1.resultado, hoy: ult.resultado, mejora: r2(ult.resultado - k.dia1.resultado), euros: r2(ult.resultado - k.dia1.resultado)});
   return {desde: k.dia1.mes, mes: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, filas: f};
 }
-function renderDashboardBarTrend(elId, trend, allowNegative){
-  const maxVal = Math.max(...trend.map(t=>Math.abs(t.value)), 1);
-  // Con 12 meses en un móvil cada barra queda en unos 29 px y la cifra de
-   // encima necesita 55: se salía de la tarjeta y quedaba recortada, así que
-   // los últimos meses no se podían leer. Se le da un ancho mínimo por mes
-   // y desplazamiento lateral, como ya hacen las tablas de la app.
-  const anchoMin = trend.length > 8 ? 54 : 0;
-  document.getElementById(elId).innerHTML = `
-    <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;max-width:100%">
-    <div style="display:flex;align-items:flex-end;gap:6px;height:140px;${anchoMin?`min-width:${trend.length*(anchoMin+6)}px`:''}">
-      ${trend.map(t => {
-        const color = (allowNegative && t.value < 0) ? 'var(--red)' : 'var(--ink)';
-        return `
-        <div style="flex:1;${anchoMin?`min-width:${anchoMin}px`:''};display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;white-space:nowrap">${t.value!==0?fmtMoney(t.value):''}</div>
-          <div style="width:100%;background:${color};border-radius:4px 4px 0 0;height:${Math.max(2,(Math.abs(t.value)/maxVal*100))}%"></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">${t.label}</div>
-        </div>
-      `}).join('')}
+/* ── Gráficos del Panel (2/11): curva con área en vez de barras ─────────────────────────────────────────────
+   Una sola función pinta cualquier serie (12 meses, 24 horas…): el trazo y el área son un SVG que se estira (sin
+   deformar el grosor: vector-effect), y los puntos, las etiquetas y los meses son HTML encima, así que el texto se ve
+   nítido en 320 px y en 1440 px sin scroll lateral. Cada punto es un botón: pulsarlo (o pasar por encima) pone su cifra
+   en el titular. */
+function dashCompacto(v){
+  const a = Math.abs(v), s = v < 0 ? '−' : '', loc = localeActual();
+  if(a >= 1e6) return s + (a / 1e6).toLocaleString(loc, {maximumFractionDigits:1}) + ' M€';
+  if(a >= 1000) return s + (a / 1000).toLocaleString(loc, {maximumFractionDigits:1}) + ' k€';
+  return s + Math.round(a).toLocaleString(loc) + ' €';
+}
+function dashSerieHtml(serie, o){
+  o = o || {};
+  const n = serie.length;
+  if(!n) return '';
+  const vals = serie.map(p => p.value);
+  const min = Math.min(0, ...vals), max = Math.max(0, ...vals), rango = (max - min) || 1;
+  const X = i => n > 1 ? i * 100 / (n - 1) : 50;
+  const Y = v => 10 + (1 - (v - min) / rango) * 76;
+  const y0 = Y(0);
+  const pts = serie.map((p, i) => [X(i), Y(p.value)]);
+  let d = 'M' + pts[0][0].toFixed(2) + ',' + pts[0][1].toFixed(2);
+  for(let i = 1; i < n; i++){ const cx = (pts[i - 1][0] + pts[i][0]) / 2; d += ' C' + cx.toFixed(2) + ',' + pts[i - 1][1].toFixed(2) + ' ' + cx.toFixed(2) + ',' + pts[i][1].toFixed(2) + ' ' + pts[i][0].toFixed(2) + ',' + pts[i][1].toFixed(2); }
+  const area = d + ' L' + pts[n - 1][0].toFixed(2) + ',' + y0.toFixed(2) + ' L' + pts[0][0].toFixed(2) + ',' + y0.toFixed(2) + ' Z';
+  const iMax = vals.indexOf(Math.max(...vals)), iMin = vals.indexOf(Math.min(...vals)), iUlt = n - 1;
+  const conTag = new Set([iMax, iUlt]); if(min < 0) conTag.add(iMin);
+  if(o.sinTags) conTag.clear();
+  const id = o.id || 'ds';
+  const grid = [0.25, 0.5, 0.75].map(f => `<line x1="0" x2="100" y1="${(10 + f * 76).toFixed(2)}" y2="${(10 + f * 76).toFixed(2)}" class="dt-grid" vector-effect="non-scaling-stroke"/>`).join('');
+  const cada = o.cadaEtiqueta || 1;
+  return `
+    <div class="dt-wrap${o.clase ? ' ' + o.clase : ''}" id="${id}">
+      <div class="dt-plot">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          ${grid}
+          <line x1="0" x2="100" y1="${y0.toFixed(2)}" y2="${y0.toFixed(2)}" class="dt-cero" vector-effect="non-scaling-stroke"/>
+          <path d="${area}" class="dt-area"/>
+          <path d="${d}" class="dt-linea" vector-effect="non-scaling-stroke"/>
+        </svg>
+        ${serie.map((p, i) => `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}" aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
+        ${[...conTag].map(i => `<span class="dt-tag${vals[i] < 0 ? ' neg' : ''}${pts[i][1] < 22 ? ' abajo' : ''}${i === 0 ? ' izq' : ''}${i === n - 1 ? ' der' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%">${escapeHtml(o.fmtTag ? o.fmtTag(vals[i]) : dashCompacto(vals[i]))}</span>`).join('')}
+      </div>
+      <div class="dt-ejes">${serie.map((p, i) => `<span class="${i % cada ? 'oculto' : ''}${p.parcial ? ' parcial' : ''}">${escapeHtml(p.label)}</span>`).join('')}</div>
+    </div>`;
+}
+// Pone la cifra del punto tocado en el titular de su gráfico (data-dt-titular="<id>").
+function dashSerieVer(id, i){
+  const wrap = document.getElementById(id);
+  if(!wrap) return;
+  wrap.querySelectorAll('.dt-punto.sel').forEach(b => b.classList.remove('sel'));
+  const b = wrap.querySelector('.dt-punto[data-i="' + i + '"]');
+  if(b) b.classList.add('sel');
+  const tit = document.querySelector('[data-dt-titular="' + id + '"]');
+  const datos = (window.dashSeriesPorId || {})[id];
+  if(tit && datos && datos[i]) tit.innerHTML = '<b>' + escapeHtml(fmtMoney(datos[i].value)) + '</b> <span>' + escapeHtml(datos[i].nombre || datos[i].label) + (datos[i].parcial ? ' · ' + escapeHtml(gl({es:'mes en curso', ca:'mes en curs', en:'current month'})) : '') + '</span>';
+}
+let dashTrendTab = 'ventas';
+let dashTrendDatos = null;
+function setDashTrendTab(k){ dashTrendTab = k; dashTrendPintar(); }
+function dashTrendPintar(){
+  const caja = document.getElementById('dashboard-trend');
+  if(!caja || !dashTrendDatos) return;
+  const tit = document.getElementById('dash-trend-tit');
+  if(tit) tit.innerHTML = '<i class="ti ti-chart-line"></i> ' + escapeHtml(gl({es:'Evolución del año', ca:'Evolució de l\'any', en:'Year trend'}));
+  const D = dashTrendDatos;
+  const tabs = [['ventas', gl({es:'Ventas', ca:'Vendes', en:'Sales'}), 'ti-trending-up'], ['gastos', gl({es:'Gastos', ca:'Despeses', en:'Expenses'}), 'ti-receipt-2'], ['resultado', gl({es:'Resultado', ca:'Resultat', en:'Result'}), 'ti-scale']];
+  if(!D.hayVentas){ caja.innerHTML = `<div class="empty es-vacio"><i class="ti ti-chart-line"></i>${escapeHtml(t('dash.noSalesYet'))}</div>`; return; }
+  const serie = D[dashTrendTab];
+  const completos = serie.filter(p => !p.parcial);
+  const total = completos.reduce((s, p) => s + p.value, 0);
+  const ult = completos[completos.length - 1], prev = completos[completos.length - 2];
+  const delta = (ult && prev && prev.value !== 0) ? (ult.value - prev.value) / Math.abs(prev.value) * 100 : null;
+  // En gastos, subir es malo; en ventas y resultado, bueno.
+  const igual = delta != null && Math.abs(delta) < 0.5;
+  const bueno = delta == null ? null : (dashTrendTab === 'gastos' ? delta <= 0 : delta >= 0);
+  window.dashSeriesPorId = window.dashSeriesPorId || {};
+  window.dashSeriesPorId['dt-anual'] = serie;
+  caja.innerHTML = `
+    <div class="dt-tabs" role="group" aria-label="${escapeHtml(gl({es:'Qué mostrar', ca:'Què mostrar', en:'What to show'}))}">
+      ${tabs.map(([k, et, ic]) => `<button type="button" class="btn btn-sm btn-fino${dashTrendTab === k ? ' is-on' : ''}" aria-pressed="${dashTrendTab === k}" onclick="setDashTrendTab('${k}')"><i class="ti ${ic}"></i> ${escapeHtml(et)}</button>`).join('')}
     </div>
+    <div class="dt-cab">
+      <div class="dt-titular" data-dt-titular="dt-anual"><b>${escapeHtml(fmtMoney(total))}</b> <span>${escapeHtml(gl({es:'últimos 11 meses completos', ca:'darrers 11 mesos complets', en:'last 11 full months'}))}</span></div>
+      ${delta != null ? `<span class="dt-delta ${igual ? 'igual' : (bueno ? 'bien' : 'mal')}"><i class="ti ${igual ? 'ti-minus' : (delta >= 0 ? 'ti-arrow-up-right' : 'ti-arrow-down-right')}"></i> ${igual ? '≈ 0' : Math.abs(delta).toFixed(0)} % <small>${escapeHtml(gl({es:'último mes completo frente al anterior', ca:'darrer mes complet respecte a l\'anterior', en:'last full month vs the one before'}))}</small></span>` : ''}
     </div>
-  `;
+    ${dashSerieHtml(serie, {id:'dt-anual', cadaEtiqueta: 1})}`;
 }
 
 function renderDashboard(){
@@ -1230,16 +1294,10 @@ function renderDashboard(){
     // antes aquí se restaban gastos netos de la facturación CON IVA.
     resultadoTrend.push({label, value: geResultadoAntesImpMes(y, m)});
   }
-  if(hasAnySales){
-    renderDashboardBarTrend('dashboard-trend-ventas', ventasTrend);
-    renderDashboardBarTrend('dashboard-trend-gastos', gastosTrend);
-    renderDashboardBarTrend('dashboard-trend-resultado', resultadoTrend, true);
-  } else {
-    const emptyMsg = `<div class="empty">${t('dash.noSalesYet')}</div>`;
-    document.getElementById('dashboard-trend-ventas').innerHTML = emptyMsg;
-    document.getElementById('dashboard-trend-gastos').innerHTML = emptyMsg;
-    document.getElementById('dashboard-trend-resultado').innerHTML = emptyMsg;
-  }
+  // El mes en curso va marcado como parcial; el nombre completo (mes y año) sale al tocar un punto.
+  const conNombre = (arr) => arr.map((p, i) => { const d = new Date(year, month - (11 - i), 1); return Object.assign({}, p, {label: p.label.replace('*', ''), parcial: i === arr.length - 1, nombre: monthFull(d.getMonth()) + ' ' + d.getFullYear()}); });
+  dashTrendDatos = {hayVentas: hasAnySales, ventas: conNombre(ventasTrend), gastos: conNombre(gastosTrend), resultado: conNombre(resultadoTrend)};
+  dashTrendPintar();
 
   // ⚠️ "Más vendidos" tiene que ordenar por UNIDADES, no por dinero
   // facturado: antes sumaba price*qty y ordenaba por ese importe, así que
@@ -1325,14 +1383,8 @@ function renderDashboard(){
       </div>
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.salesByHour')}</h4>
-        <div style="display:flex;align-items:flex-end;gap:2px;height:120px">
-          ${hourTotals.map((v,h) => `
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${h}:00 - ${fmtMoney(v)}">
-              <div style="width:100%;background:var(--ink);border-radius:2px 2px 0 0;height:${Math.max(2,(v/maxHour*100))}%"></div>
-              ${h%3===0?`<div class="txt-xs" style="color:var(--muted);margin-top:2px">${h}h</div>`:''}
-            </div>
-          `).join('')}
-        </div>
+        ${(() => { const iPico = hourTotals.indexOf(Math.max(...hourTotals)); return hourTotals.some(v => v > 0) ? `<div class="dt-pico"><i class="ti ti-flame"></i> ${escapeHtml(gl({es:'Hora punta', ca:'Hora punta', en:'Peak hour'}))}: <b>${iPico}:00</b> · ${escapeHtml(fmtMoney(hourTotals[iPico]))}</div>` : ''; })()}
+        ${dashSerieHtml(hourTotals.map((v, h) => ({label: h + 'h', nombre: h + ':00', value: v})), {id:'dt-horas', cadaEtiqueta: 3, sinTags: true, clase: 'dt-corto'})}
       </div>
     </div>
   `;
