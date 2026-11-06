@@ -47,14 +47,14 @@
 | F-4 | La cuota de un préstamo metida como **gasto fijo** se cuenta ENTERA como gasto, devolución incluida. | **Corregido**: aviso en el propio formulario de Gastos fijos y chip «Préstamo: mejor en Inversiones» en la lista (`gfEsPrestamo`) |
 | F-5 | **Territorio**: la escala del IRPF era la general (19–47 %) para todos. | **Corregido** para las 15 comunidades de régimen común y Ceuta/Melilla (escala estatal + autonómica 2025 verificada con la AEAT, fijada desde el generador y mostrada en Mi Negocio). **Foral** (Navarra, País Vasco): escala de webs de terceros, regla «pendiente», fiabilidad media; mínimo y reducciones estatales como aproximación. **Límite**: mínimo personal estatal. |
 | F-6 | **Sin deducibilidad por gasto**: todo gasto cuenta al 100 % en la base fiscal y su IVA se deduce entero. No hay gastos no deducibles / parcialmente deducibles (atenciones a clientes, vehículo al 50 %, multas…) ni prorrata. El resultado contable y el fiscal son el mismo número. | **Pendiente** (diseño en motor fiscal) |
-| F-7 | Tipos de **cooperativa** (`coopMicro`, `coopErd`, `coopNueva`) no contrastados con fuente oficial. | **Pendiente de verificar** (la app ya avisa de que la cooperativa necesita revisión de la gestoría) |
+| F-7 | Tipos de **cooperativa** (`coopMicro`, `coopErd`, `coopNueva`) no contrastados con fuente oficial. | **Verificado el 6/11** con la AEAT (2025-2028; error corregido: 2025 eran 18/19 %, no 16/18 %). Quedan fuera los extracooperativos. (antes: pendiente; la app avisaba de que la cooperativa necesita revisión de la gestoría) |
 | F-8 | Años anteriores a 2025: `tiposIsAño` usa los de 2025. | **Documentado**: el motor lo declara (`ANTES-2025`) y la previsión baja a fiabilidad BAJA. Cargar reglas históricas queda pendiente. |
 
 ## Pendiente de verificar con fuente oficial (no se presenta como certeza)
 - Modelo 130: tratamiento del 5 % de difícil justificación en los pagos fraccionados (hoy no se aplica en el 130; se aplica en el IRPF anual).
 - Retención 115 (19 %) y su aplicación sobre alquiler con IVA / comunidades.
 - Módulos: índices y límites de la Orden HAC/1425/2025 (ya hay prueba `fiscal-rapido` con casos de la AEAT; falta la pasada completa).
-- Cooperativas (F-7). Régimen simplificado de IVA, recargo de equivalencia y criterio de caja: no implementados, y no se ofrecen.
+- Régimen simplificado de IVA, recargo de equivalencia y criterio de caja: no implementados, y no se ofrecen.
 
 ## Fase 1 — Reconocimiento
 (pendiente)
@@ -73,5 +73,5 @@
 
 ## Qué queda
 - Manual de uso y tour: sin actualizar para Gestión Económica (capítulos en 3 idiomas; la prueba exige los mismos `<h4>`).
-- Resto de comunidades autónomas; prorrata de IVA; cooperativas (F-7); régimen simplificado de IVA, recargo de equivalencia y criterio de caja (no implementados, no se ofrecen); 5 % de difícil justificación en el 130; reglas de ejercicios < 2025.
+- Foral (escala pendiente de fuente oficial) y mínimos autonómicos; prorrata de IVA; régimen simplificado de IVA, recargo de equivalencia y criterio de caja (no implementados, no se ofrecen); 5 % de difícil justificación en el 130; reglas de ejercicios < 2025.
 - Módulos (pestaña) sin diseño nuevo.

@@ -67,9 +67,9 @@ await caso('Traza de una sociedad micro (INCN 500.000 €): resultado contable 9
   cerca(T.baseCont, 90000, 'base contable'); cerca(T.baseFiscal, 90000, 'base fiscal'); cerca(T.impuestoAnual, 19300, 'impuesto'); assert.ok(T.reglas.includes('IS-TIPOS')); assert.ok(T.pasos.length >= 4);
   assert.equal(T.nivel, 'alta', JSON.stringify(T.motivos)); assert.equal(T.enCurso, false);
 });
-await caso('Fiabilidad honesta: sin forma → baja; cooperativa → baja; autónomo con escala general → media; gastos «pendientes de revisar» → media y lo dice; año anterior a 2025 → baja', async () => {
+await caso('Fiabilidad honesta: sin forma → baja (un negocio sin forma jurídica no es viable: el generador ya no la deja vacía); cooperativa → media; autónomo con escala general → media; gastos «pendientes de revisar» → media y lo dice; año anterior a 2025 → baja', async () => {
   const niv = async (forma, extra, lic) => { await escenario(forma, extra, lic); return page.evaluate(() => { const T = fiscalTrazaAnual(new Date().getFullYear() - 1); return {n: T.nivel, a: T.avisos.join(' | ')}; }); };
-  assert.equal((await niv('', {})).n, 'baja'); assert.equal((await niv('cooperativa', {})).n, 'baja');
+  assert.equal((await niv('', {})).n, 'baja'); assert.equal((await niv('cooperativa', {})).n, 'media');
   const a = await niv('autonomo', {}, {formaJuridica:'autonomo', regimenFiscal:'directa', modalidadDirecta:'simplificada', territorio:'general'}); assert.equal(a.n, 'media'); assert.match(a.a, /escala general de referencia/i);
   await escenario('sociedad', {incnAnterior:'500000'}, {formaJuridica:'sociedad', regimenFiscal:'directa', modalidadDirecta:null, territorio:'general'});
   const rev = await page.evaluate(async () => { const y = new Date().getFullYear() - 1; DB.ge.variables = [{id:7, categoria:'OTROS', proveedor:'DUDA', importe:100, iva:21, fecha:`${y}-05-05`, mes:4, 'año':y, deducPct:100, deducRevisar:true}]; saveDB(); await new Promise(r => setTimeout(r, 30)); const T = fiscalTrazaAnual(y); return {n: T.nivel, a: T.avisos.join(' | '), rev: T.porRevisar}; });
@@ -151,6 +151,18 @@ await caso('Cada comunidad tiene su regla verificada y la traza la cita; Ceuta/M
   await escenario('autonomo', {}, {formaJuridica:'autonomo', regimenFiscal:'directa', modalidadDirecta:'simplificada', territorio:'navarra'});
   const f = await page.evaluate(() => { const T = fiscalTrazaAnual(new Date().getFullYear() - 1); return {n: T.nivel, a: T.avisos.join(' | ')}; }); assert.equal(f.n, 'media'); assert.match(f.a, /Régimen foral/);
   assert.ok((await page.evaluate(() => fiscalRegla('IRPF-ESC-NAVARRA').estado)) === 'pendiente');
+});
+await caso('Cooperativa fiscalmente protegida (tabla de la AEAT 2025-2028), cuentas a mano: excedente 100.000 − FEP 5 % − 50 % del FRO al 20 % = base 85.000', async () => {
+  const r = await page.evaluate(() => { const b = DB.business, g = {...b}; Object.assign(b, {formaJuridica:'cooperativa', coopTipo:'protegida', coopFep:5, coopFro:20});
+    const f = (año, o) => impuestoCooperativa(100000, Object.assign({año}, o)); const out = {
+      m25: f(2025, {incnAnterior:500000}), m26: f(2026, {incnAnterior:500000}), m27: f(2027, {incnAnterior:500000}),
+      e25: f(2025, {incnAnterior:2000000}), e27: f(2027, {incnAnterior:2000000}), e28: f(2028, {incnAnterior:2000000}), n25: f(2025, {nuevaCreacion:true})};
+    b.coopTipo = 'especial'; out.esp25 = f(2025, {incnAnterior:500000});
+    Object.keys(b).forEach(k => delete b[k]); Object.assign(b, g); return out; });
+  cerca(r.m25, 15650, 'micro 2025 (50.000×18 % + 35.000×19 %)'); cerca(r.m26, 14300, 'micro 2026 (50.000×16 % + 35.000×18 %)'); cerca(r.m27, 12950, 'micro 2027 (50.000×14 % + 35.000×17 %)');
+  cerca(r.e25, 17000, 'reducida dimensión 2025 (20 %)'); cerca(r.e27, 16150, 'reducida dimensión 2027 (19 %)'); cerca(r.e28, 15300, 'reducida dimensión 2028 (18 %)');
+  cerca(r.n25, 10200, 'nueva creación (12 %)'); cerca(r.esp25, 7825, 'especialmente protegida: la mitad (art. 34.2)');
+  assert.equal(await page.evaluate(() => fiscalRegla('IS-COOP').estado), 'verificada');
 });
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 await browser.close();

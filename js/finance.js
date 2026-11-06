@@ -795,21 +795,23 @@ function irpfActividadDetalle(rendimiento, opts={}){
 // Verificado con la AEAT (Manual práctico de Sociedades 2025, «Tipos de gravamen»; disp. trans. 44.ª LIS y art. 29 LIS tras la Ley 7/2024):
 //   microempresas (INCN < 1 M€): 2025 21 %/22 %, 2026 19 %/21 %, 2027 y siguientes 17 %/20 % (hasta 50.000 € y resto);
 //   reducida dimensión: 2025 24 %, 2026 23 %, 2027 22 %, 2028 21 %, 2029 y siguientes 20 %.
-// ⚠️ Los tipos de COOPERATIVA (coopMicro/coopErd/coopNueva) NO están verificados contra fuente oficial: eran los que ya llevaba la app y
-//   2025 y 2028+ se copian de los años vecinos. Hasta contrastarlos, la app avisa de que la cooperativa necesita revisión de la gestoría.
+// COOPERATIVA fiscalmente protegida, resultados cooperativos (6/11): verificados con la tabla de la AEAT (Manual de Sociedades 2025,
+//   «Cuota íntegra previa») para 2025-2028: es el tipo del art. 29.1 LIS menos 3 puntos, con tope del 20 %. 2029 se DERIVA de esa misma
+//   regla (ERD 20 − 3 = 17; micro igual que 2027); la AEAT aún no publica el cuadro de ese año. Antes la app llevaba 16/18 en 2025, que era erróneo.
 const TIPOS_IS = {
-  2025: {micro:[21,22], erd:24, coopMicro:[16,18], coopErd:20, nueva:15, coopNueva:12},
+  2025: {micro:[21,22], erd:24, coopMicro:[18,19], coopErd:20, nueva:15, coopNueva:12},
   2026: {micro:[19,21], erd:23, coopMicro:[16,18], coopErd:20, nueva:15, coopNueva:12},
   2027: {micro:[17,20], erd:22, coopMicro:[14,17], coopErd:19, nueva:15, coopNueva:12},
-  2028: {micro:[17,20], erd:21, coopMicro:[14,17], coopErd:19, nueva:15, coopNueva:12},
-  2029: {micro:[17,20], erd:20, coopMicro:[14,17], coopErd:19, nueva:15, coopNueva:12},
+  2028: {micro:[17,20], erd:21, coopMicro:[14,17], coopErd:18, nueva:15, coopNueva:12},
+  2029: {micro:[17,20], erd:20, coopMicro:[14,17], coopErd:17, nueva:15, coopNueva:12},
 };
 function tiposIsAño(a){ return TIPOS_IS[a] || (a >= 2029 ? TIPOS_IS[2029] : TIPOS_IS[2025]); }
 // Cooperativa (Ley 20/1990): el excedente se minora con la dotación al FEP y el
 // 50 % de la del FRO; sobre esa base, tipo micro (INCN anterior < 1 M€), de
 // reducida dimensión o de nueva creación; y si es ESPECIALMENTE protegida,
-// bonificación del 50 % de la cuota. Solo resultados cooperativos: lo
-// extracooperativo lo ajusta el gestor.
+// bonificación del 50 % de la cuota (art. 34.2 Ley 20/1990). Se supone cooperativa
+// FISCALMENTE PROTEGIDA y todo el excedente como cooperativo: los resultados
+// extracooperativos (al tipo del art. 29.1, p. ej. 25 %) los separa el gestor.
 function impuestoCooperativa(excedente, opts={}){
   const b = DB.business || {};
   if(!(excedente > 0)) return 0;

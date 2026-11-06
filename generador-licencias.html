@@ -733,7 +733,7 @@ function fiscalFormHtml(pre, cur){
   const modo = cur.formaJuridica === 'autonomo' ? (cur.regimenFiscal === 'modulos' ? 'modulos' : (cur.modalidadDirecta === 'normal' ? 'normal' : 'simplificada')) : 'simplificada';
   return `<label style="margin-top:10px">Forma jurídica <small class="muted">(la fijas tú; el cliente la verá bloqueada)</small></label>
     <select id="${pre}-forma" onchange="document.getElementById('${pre}-reg-box').classList.toggle('hidden', this.value !== 'autonomo')">
-      ${op('', '— Sin fijar (la elige el cliente) —', !cur.formaJuridica)}${op('autonomo', 'Autónomo', cur.formaJuridica === 'autonomo')}${op('cb', 'Comunidad de bienes', cur.formaJuridica === 'cb')}${op('sociedad', 'Sociedad (SL, SA…)', cur.formaJuridica === 'sociedad')}${op('cooperativa', 'Cooperativa', cur.formaJuridica === 'cooperativa')}
+      ${op('', '— Elige la forma jurídica (obligatoria) —', !cur.formaJuridica)}${op('autonomo', 'Autónomo', cur.formaJuridica === 'autonomo')}${op('cb', 'Comunidad de bienes', cur.formaJuridica === 'cb')}${op('sociedad', 'Sociedad (SL, SA…)', cur.formaJuridica === 'sociedad')}${op('cooperativa', 'Cooperativa', cur.formaJuridica === 'cooperativa')}
     </select>
     <label style="margin-top:8px">Comunidad autónoma <small class="muted">(escala del IRPF de la comunidad; las 15 de régimen común están verificadas; Navarra y País Vasco, pendientes de contrastar con la fuente oficial)</small></label>
     <select id="${pre}-terr">${TERRITORIOS_FISCALES.map(([k, n]) => op(k, n, (cur.territorio || 'general') === k)).join('')}</select>
@@ -772,6 +772,7 @@ function abrirFiscal(licId){
 async function guardarFiscal(licId){
   const l = findSale(licId); if(!l) return;
   const f = leerFiscal('fx');
+  if(!f){ alert('Elige la forma jurídica: un negocio no se da de alta sin ella (de ella depende cómo se calcula su impuesto).'); return; }
   try{
     await getApp().database().ref('gastrogoan/issuedCodes/' + l.value).update(f ? {formaJuridica: f.formaJuridica, regimenFiscal: f.regimenFiscal || null, modalidadDirecta: f.modalidadDirecta || null, territorio: f.territorio || null} : {formaJuridica: null, regimenFiscal: null, modalidadDirecta: null, territorio: null});
   }catch(e){ alert('No se pudo guardar en la plataforma: ' + (e.message || e.code || 'error')); return; }
@@ -832,6 +833,7 @@ async function crearNuevaLicencia(user){
     }catch(e){ alert('No se pudo comprobar el enlace: ' + (e.message || e.code || 'error')); btn.disabled = false; return; }
   }
   const fiscal = leerFiscal('nl');
+  if(!fiscal){ alert('Elige la forma jurídica del negocio: no se emite la licencia sin ella (de ella depende cómo se calcula su impuesto).'); btn.disabled = false; return; }
   const plan360 = document.getElementById('nl-plan360').checked;
   const planMensual = document.getElementById('nl-planmensual').checked;
   let code;
