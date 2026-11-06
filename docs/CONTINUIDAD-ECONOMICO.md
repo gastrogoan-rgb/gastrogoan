@@ -75,3 +75,13 @@
 - Manual de uso y tour: sin actualizar para Gestión Económica (capítulos en 3 idiomas; la prueba exige los mismos `<h4>`).
 - Foral (escala pendiente de fuente oficial) y mínimos autonómicos; prorrata de IVA; régimen simplificado de IVA, recargo de equivalencia y criterio de caja (no implementados, no se ofrecen); 5 % de difícil justificación en el 130; reglas de ejercicios < 2025.
 - Módulos (pestaña) sin diseño nuevo.
+
+
+## Pendientes confirmados como NO imprescindibles (6/11, decisión del dueño)
+
+Se dejan sin tocar a propósito; la app avisa de lo que no cubre. Orden sugerido si algún día se retoman: mínimos autonómicos → 130 con difícil justificación → foral.
+
+- **5 % de difícil justificación en el 130**: al intentar verificarlo las fuentes se contradicen (unas lo meten en la casilla 02, otras en la 12; una cita el 7 % en vez del 5 %). **No se implementa** hasta leer las instrucciones oficiales del modelo 130 en la sede de la AEAT. ⚠️ Esto también pone en duda la regla `IRPF-DIFICIL-5`, que solo está «revisada» por una gestoría (5 % máx. 2.000 €): contrastar el porcentaje vigente en 2025-2026 con la AEAT.
+- **Mínimos personales autonómicos**: la página del cuadro comparativo de la AEAT no se pudo abrir (404 con la URL probada); localizarla en el Manual de Renta 2025.
+- **Foral**: contrastar con Hacienda de Navarra y las diputaciones vascas, y cargar sus mínimos, reducciones y deducciones propios.
+- **No hacer salvo petición de un cliente**: prorrata de IVA, criterio de caja, ejercicios anteriores a 2025. Recargo de equivalencia e IVA simplificado no aplican (el segundo ya es «módulos»).
