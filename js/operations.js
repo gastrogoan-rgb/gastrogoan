@@ -527,86 +527,150 @@ function openCashClosureHistory(){
    requeriría una integración bancaria (PSD2/Open Banking) que no
    existe hoy.
    ============================================================ */
-function cardTotalInRange(fechaDesde, fechaHasta){
-  return DB.cashClosures
-    .filter(c => c.fecha >= fechaDesde && c.fecha <= fechaHasta)
-    .reduce((sum, c) => sum + ((c.totales && c.totales['Tarjeta']) || 0), 0);
+// Tarjeta cobrada en un rango = lo que ya está en arqueos cerrados + lo cobrado desde el último
+// cierre de cada día (los turnos que aún no se han cerrado). Sin lo segundo, conciliar a mitad
+// de mes daba siempre una diferencia falsa. Una venta antigua (de antes de la marca cierreId) que
+// cae en un día con cierre se da por contada en ese cierre, para no sumarla dos veces.
+function cardBreakdownInRange(fechaDesde, fechaHasta){
+  const cierres = DB.cashClosures.filter(c => c.fecha >= fechaDesde && c.fecha <= fechaHasta);
+  const cerrado = cierres.reduce((sum, c) => sum + ((c.totales && c.totales['Tarjeta']) || 0), 0);
+  const ultimoCierre = {};
+  DB.cashClosures.forEach(c => { if(c.hasta && (!ultimoCierre[c.fecha] || c.hasta > ultimoCierre[c.fecha])) ultimoCierre[c.fecha] = c.hasta; });
+  const abiertas = DB.sales.filter(s => {
+    if(s.status === 'anulada' || s.cierreId) return false;
+    if(!s.date || s.date < fechaDesde || s.date > fechaHasta) return false;
+    const u = ultimoCierre[s.date];
+    return !u || (s.createdAt && s.createdAt > u);
+  });
+  const sinCerrar = computeClosureTotals(abiertas).totales['Tarjeta'] || 0;
+  return {cerrado: roundMoney(cerrado), sinCerrar: roundMoney(sinCerrar), nCierres: cierres.length, nAbiertas: abiertas.length, total: roundMoney(cerrado + sinCerrar)};
+}
+function cardTotalInRange(fechaDesde, fechaHasta){ return cardBreakdownInRange(fechaDesde, fechaHasta).total; }
+function bankRecUltima(){
+  return [...(DB.bankReconciliations||[])].sort((a,b) => String(b.fechaHasta).localeCompare(String(a.fechaHasta)))[0] || null;
 }
 function openBankReconciliationModal(){
+  // Empieza donde terminó la última conciliación y acaba AYER: el abono de hoy aún no está en el banco.
   const today = todayStr();
-  const monthStart = today.slice(0,7) + '-01';
-  renderBankReconciliationForm(monthStart, today);
+  const ult = bankRecUltima();
+  let desde = today.slice(0,7) + '-01';
+  if(ult && ult.fechaHasta && ult.fechaHasta < today){
+    const d = new Date(ult.fechaHasta + 'T12:00:00'); d.setDate(d.getDate() + 1);
+    desde = d.toISOString().slice(0,10);
+  }
+  const ay = new Date(); ay.setDate(ay.getDate() - 1);
+  let hasta = ay.toISOString().slice(0,10);
+  if(hasta < desde) hasta = today;
+  renderBankReconciliationForm(desde, hasta);
 }
 function renderBankReconciliationForm(fechaDesde, fechaHasta){
-  const expected = cardTotalInRange(fechaDesde, fechaHasta);
   const history = [...(DB.bankReconciliations||[])].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  const fmtD = f => new Date(f + 'T12:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'});
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-building-bank"></i> ${t('reconcile.title')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted)">${t('reconcile.desc')}</p>
+    <p class="rc-intro">${t('reconcile.desc')}</p>
     <div class="field-row">
       <div class="field"><label>${t('reconcile.fromLabel')}</label><input type="date" id="rec-bank-desde" value="${fechaDesde}" onchange="refreshBankReconciliationRange()"></div>
       <div class="field"><label>${t('reconcile.toLabel')}</label><input type="date" id="rec-bank-hasta" value="${fechaHasta}" onchange="refreshBankReconciliationRange()"></div>
     </div>
-    <div class="kpi" style="margin-bottom:12px">
-      <div class="label">${t('reconcile.expectedLabel')}</div>
-      <div class="value" id="rec-bank-expected" data-raw="${expected}">${fmtMoney(expected)}</div>
+    <div id="rec-bank-aviso"></div>
+    <div class="rc-tpv">
+      <div class="rc-tpv-l">${t('reconcile.expectedLabel')}</div>
+      <div class="rc-tpv-v" id="rec-bank-expected" data-raw="0">0,00 €</div>
+      <div class="rc-tpv-s" id="rec-bank-detalle"></div>
     </div>
-    <div class="field">
-      <label>${t('reconcile.bankAmountLabel')}</label>
-      <input type="number" id="rec-bank-amount" step="0.01" placeholder="0.00" oninput="updateBankReconciliationDiff()">
+    <div class="field-row">
+      <div class="field"><label>${gl({es:'Comisiones que te ha descontado el banco (€)', ca:'Comissions que t\'ha descomptat el banc (€)', en:'Fees the bank deducted (€)'})}</label><input type="number" id="rec-bank-fee" step="0.01" min="0" placeholder="0.00" oninput="updateBankReconciliationDiff()"></div>
+      <div class="field"><label>${t('reconcile.bankAmountLabel')}</label><input type="number" id="rec-bank-amount" step="0.01" placeholder="0.00" oninput="updateBankReconciliationDiff()"></div>
     </div>
-    <div id="rec-bank-diff" style="font-size:13px;font-weight:600;margin:6px 0"></div>
-    <div class="field"><label>${t('common.notes')}</label><textarea id="rec-bank-notes" rows="2"></textarea></div>
-    <button class="btn btn-primary" onclick="saveBankReconciliation()"><i class="ti ti-device-floppy"></i> ${t('reconcile.saveBtn')}</button>
+    <div id="rec-bank-diff" class="rc-res" role="status" aria-live="polite"></div>
+    <div class="field"><label>${t('common.notes')}</label><textarea id="rec-bank-notes" rows="2" placeholder="${escapeHtml(gl({es:'Por ejemplo: el sábado llega el lunes', ca:'Per exemple: el dissabte arriba el dilluns', en:'For example: Saturday arrives on Monday'}))}"></textarea></div>
+    <button class="btn btn-primary rc-guardar" onclick="saveBankReconciliation()"><i class="ti ti-device-floppy"></i> ${t('reconcile.saveBtn')}</button>
     ${history.length ? `
-    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-    <h4 style="margin:0 0 8px">${t('reconcile.historyTitle')}</h4>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('label.period')}</th><th>${t('reconcile.expectedLabel')}</th><th>${t('reconcile.bankAmountLabel')}</th><th>${t('label.difference')}</th></tr></thead>
-        <tbody>
-          ${history.map(r => `<tr><td>${escapeHtml(r.fechaDesde)} — ${escapeHtml(r.fechaHasta)}</td><td>${fmtMoney(r.expected)}</td><td>${fmtMoney(r.bankAmount)}</td><td style="color:${Math.abs(r.difference)>0.01?'var(--red)':'var(--green)'}">${r.difference>0?'+':''}${fmtMoney(r.difference)}</td></tr>`).join('')}
-        </tbody>
-      </table>
+    <h4 class="rc-h">${t('reconcile.historyTitle')}</h4>
+    <div class="rc-hist">
+      ${history.map(r => {
+        const ok = Math.abs(r.difference || 0) <= 1;
+        return `<div class="rc-hist-f">
+          <span class="rc-hist-p">${escapeHtml(fmtD(r.fechaDesde))} — ${escapeHtml(fmtD(r.fechaHasta))}</span>
+          <span class="rc-hist-n"><small>TPV</small> ${fmtMoney(r.expected)}${r.fee ? ' · <small>' + gl({es:'comisión', ca:'comissió', en:'fees'}) + '</small> ' + fmtMoney(r.fee) : ''}</span>
+          <span class="rc-hist-n"><small>${gl({es:'Banco', ca:'Banc', en:'Bank'})}</small> ${fmtMoney(r.bankAmount)}</span>
+          <b class="rc-hist-d ${ok ? 'is-ok' : 'is-ko'}"><i class="ti ${ok ? 'ti-check' : 'ti-x'}"></i> ${r.difference>0?'+':''}${fmtMoney(r.difference)}</b>
+          ${r.notes ? `<span class="rc-hist-t">${escapeHtml(r.notes)}</span>` : ''}
+        </div>`; }).join('')}
     </div>` : ''}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
     </div>
   `);
+  refreshBankReconciliationRange();
 }
+// Cambiar de fechas NO vuelve a pintar la ventana (antes borraba el importe y las notas que ya
+// se habían escrito): solo recalcula lo que dice el TPV y el resultado.
 function refreshBankReconciliationRange(){
-  const desde = document.getElementById('rec-bank-desde').value;
-  const hasta = document.getElementById('rec-bank-hasta').value;
-  if(!desde || !hasta || desde > hasta) return;
-  renderBankReconciliationForm(desde, hasta);
+  const desdeEl = document.getElementById('rec-bank-desde'), hastaEl = document.getElementById('rec-bank-hasta');
+  if(!desdeEl || !hastaEl) return;
+  const desde = desdeEl.value, hasta = hastaEl.value;
+  const exp = document.getElementById('rec-bank-expected');
+  const det = document.getElementById('rec-bank-detalle');
+  const aviso = document.getElementById('rec-bank-aviso');
+  if(!desde || !hasta || desde > hasta){ exp.dataset.raw = '0'; exp.textContent = fmtMoney(0); det.textContent = ''; aviso.innerHTML = `<p class="rc-aviso is-ko"><i class="ti ti-alert-circle"></i> ${gl({es:'La fecha «Desde» tiene que ser anterior o igual a «Hasta».', ca:'La data «Des de» ha de ser anterior o igual a «Fins a».', en:'«From» must be on or before «To».'})}</p>`; updateBankReconciliationDiff(); return; }
+  const b = cardBreakdownInRange(desde, hasta);
+  exp.dataset.raw = String(b.total);
+  exp.textContent = fmtMoney(b.total);
+  det.innerHTML = `${gl({es:'En cierres de caja', ca:'En tancaments de caixa', en:'In cash closings'})}: <b>${fmtMoney(b.cerrado)}</b> (${b.nCierres}) · ${gl({es:'Cobrado y aún sin cerrar', ca:'Cobrat i encara sense tancar', en:'Taken and not yet closed'})}: <b>${fmtMoney(b.sinCerrar)}</b>`;
+  const solapa = (DB.bankReconciliations||[]).find(r => r.fechaDesde <= hasta && r.fechaHasta >= desde);
+  aviso.innerHTML = solapa ? `<p class="rc-aviso"><i class="ti ti-info-circle"></i> ${gl({es:'Estas fechas se pisan con una conciliación ya guardada (', ca:'Aquestes dates es trepitgen amb una conciliació ja desada (', en:'These dates overlap a saved reconciliation ('})}${escapeHtml(solapa.fechaDesde)} — ${escapeHtml(solapa.fechaHasta)}).</p>` : '';
+  updateBankReconciliationDiff();
+}
+// Tolerancia de 1 €: el redondeo de céntimos de cada operación no es una diferencia de verdad.
+const BANK_REC_TOLERANCIA = 1;
+function bankRecCalc(){
+  const expected = parseFloat(document.getElementById('rec-bank-expected').dataset.raw) || 0;
+  const fee = Math.max(0, parseFloat(document.getElementById('rec-bank-fee').value) || 0);
+  const raw = document.getElementById('rec-bank-amount').value;
+  if(raw === '') return null;
+  const bank = parseFloat(raw) || 0;
+  const esperadoNeto = roundMoney(expected - fee);
+  return {expected, fee, bank, esperadoNeto, diff: roundMoney(bank - esperadoNeto)};
 }
 function updateBankReconciliationDiff(){
-  const expected = parseFloat(document.getElementById('rec-bank-expected').dataset.raw) || 0;
-  const bankRaw = document.getElementById('rec-bank-amount').value;
   const box = document.getElementById('rec-bank-diff');
-  if(bankRaw === ''){ box.textContent = ''; return; }
-  const bank = parseFloat(bankRaw) || 0;
-  const diff = roundMoney(bank - expected);
-  box.textContent = `${t('label.difference')}: ${diff>0?'+':''}${fmtMoney(diff)}`;
-  box.style.color = Math.abs(diff) < 0.01 ? 'var(--ok, #2e7d32)' : 'var(--danger, #c0392b)';
+  const c = bankRecCalc();
+  if(!c){ box.className = 'rc-res'; box.innerHTML = `<span class="rc-res-t">${gl({es:'Escribe lo que ha entrado en tu cuenta (mira el extracto) y verás si cuadra.', ca:'Escriu el que ha entrat al teu compte (mira l\'extracte) i veuràs si quadra.', en:'Enter what landed in your account (check the statement) to see whether it matches.'})}</span>`; return; }
+  const ok = Math.abs(c.diff) <= BANK_REC_TOLERANCIA;
+  let msg;
+  if(ok) msg = gl({es:'Cuadra: el banco ha recibido lo que dice el TPV.', ca:'Quadra: el banc ha rebut el que diu el TPV.', en:'It matches: the bank received what the POS says.'});
+  else if(c.diff < 0){
+    const pc = c.expected > 0 ? (-c.diff / c.expected * 100) : 0;
+    // Solo tiene sentido hablar de comisión si la diferencia es del tamaño de una comisión (hasta un 5 %).
+    if(pc > 5) msg = gl({es:`Faltan ${fmtMoney(-c.diff)} (un ${pct1Rec(pc)} % de lo cobrado): es demasiado para una comisión. Mira si el banco aún no ha abonado los últimos días, si has puesto bien las fechas o si hay devoluciones.`, ca:`Falten ${fmtMoney(-c.diff)} (un ${pct1Rec(pc)} % del cobrat): és massa per a una comissió. Mira si el banc encara no ha abonat els últims dies, si has posat bé les dates o si hi ha devolucions.`, en:`${fmtMoney(-c.diff)} missing (${pct1Rec(pc)} % of takings): too much for a fee. Check whether the bank has not paid the last days yet, the dates, or refunds.`});
+    else msg = gl({es:`Faltan ${fmtMoney(-c.diff)} por llegar. Si es la comisión del datáfono equivale a un ${pct1Rec(pc)} % (lo habitual es entre el 0,3 y el 1,5 %): apúntala arriba. Si no, puede ser un abono que el banco paga en los próximos días o una devolución.`, ca:`Falten ${fmtMoney(-c.diff)} per arribar. Si és la comissió del datàfon equival a un ${pct1Rec(pc)} % (el normal és entre el 0,3 i l'1,5 %): apunta-la a dalt. Si no, pot ser un abonament que el banc paga els propers dies o una devolució.`, en:`${fmtMoney(-c.diff)} still missing. If it is the card-terminal fee it equals ${pct1Rec(pc)} % (usually 0.3–1.5 %): enter it above. Otherwise it may be a payout the bank makes in the next days, or a refund.`});
+  }else msg = gl({es:`Han entrado ${fmtMoney(c.diff)} más de lo que dice el TPV. Mira si hay un abono de otro periodo, una propina por datáfono o una venta cobrada con tarjeta que no se registró.`, ca:`Han entrat ${fmtMoney(c.diff)} més del que diu el TPV. Mira si hi ha un abonament d'un altre període, una propina pel datàfon o una venda cobrada amb targeta que no es va registrar.`, en:`${fmtMoney(c.diff)} more arrived than the POS says. Check for a payout from another period, a card tip, or a card sale that was not recorded.`});
+  box.className = 'rc-res ' + (ok ? 'is-ok' : 'is-ko');
+  box.innerHTML = `<span class="rc-res-i"><i class="ti ${ok ? 'ti-check' : 'ti-x'}"></i></span>
+    <span class="rc-res-t"><b>${c.diff > 0 ? '+' : ''}${fmtMoney(c.diff)}</b> · ${gl({es:'Esperado en banco', ca:'Esperat al banc', en:'Expected in bank'})} ${fmtMoney(c.esperadoNeto)}<br>${msg}</span>`;
 }
+function pct1Rec(v){ return (Math.round(v * 10) / 10).toLocaleString(localeActual(), {minimumFractionDigits: 0, maximumFractionDigits: 1}); }
 function saveBankReconciliation(){
   const fechaDesde = document.getElementById('rec-bank-desde').value;
   const fechaHasta = document.getElementById('rec-bank-hasta').value;
-  const bankRaw = document.getElementById('rec-bank-amount').value;
-  if(bankRaw === ''){ showToast(t('reconcile.needAmount')); return; }
-  const bankAmount = parseFloat(bankRaw) || 0;
+  if(!fechaDesde || !fechaHasta || fechaDesde > fechaHasta){ showToast(gl({es:'Revisa las fechas del periodo', ca:'Revisa les dates del període', en:'Check the period dates'})); return; }
+  const c = bankRecCalc();
+  if(!c){ showToast(t('reconcile.needAmount')); return; }
   const expected = cardTotalInRange(fechaDesde, fechaHasta);
-  const difference = roundMoney(bankAmount - expected);
+  const fee = c.fee;
+  const difference = roundMoney(c.bank - (expected - fee));
   const notes = document.getElementById('rec-bank-notes').value.trim();
   if(!DB.bankReconciliations) DB.bankReconciliations = [];
-  DB.bankReconciliations.push({id: genId(), fechaDesde, fechaHasta, expected, bankAmount, difference, notes, createdAt: new Date().toISOString()});
+  DB.bankReconciliations.push({id: genId(), fechaDesde, fechaHasta, expected, fee, bankAmount: c.bank, difference, status: Math.abs(difference) <= BANK_REC_TOLERANCIA ? 'cuadra' : 'diferencia', notes, createdAt: new Date().toISOString()});
   logAudit('bank_reconciliation', t('audit.bankReconciliation').replace('${from}', fechaDesde).replace('${to}', fechaHasta));
   saveDB();
   renderBankReconciliationForm(fechaDesde, fechaHasta);
+  if(typeof GE !== 'undefined' && GE.renderTesoreria) { try{ GE.renderTesoreria(); }catch(e){} }
   showToast(t('reconcile.savedOk'));
 }
 

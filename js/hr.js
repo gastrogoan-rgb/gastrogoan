@@ -73,31 +73,50 @@ const GE = (function(){
   // un reparto en Tesorería, manda ese "mp"; si no, el de food cost (o 35%
   // por defecto), y editarlo desde cualquiera de los dos sitios actualiza
   // ambos a la vez.
+  // El reparto de Tesorería va SIEMPRE en enteros y suma 100 exacto: «30,7 %» o «4,3 %»
+  // no le dicen nada a un hostelero y un 99,9 % total parecía un fallo. Método del mayor
+  // resto: cada parte se redondea hacia abajo y los puntos que sobran van a quien más
+  // decimales perdió, así la suma nunca se desvía.
+  const DIST_CLAVES = ['per','gf','mp','og','ben'];
+  const DIST_DEF = {per:30, gf:20, mp:35, og:5, ben:10};
+  function distEnteros(vals, total){
+    const claves = Object.keys(vals);
+    const suma = claves.reduce((x,k)=>x+Math.max(0, parseFloat(vals[k])||0), 0);
+    const out = {}; let usado = 0; const resto = [];
+    claves.forEach((k,i) => {
+      const exacto = suma > 0 ? Math.max(0, parseFloat(vals[k])||0) * total / suma : total / claves.length;
+      out[k] = Math.floor(exacto + 1e-9); usado += out[k]; resto.push({k, f: exacto - out[k], i});
+    });
+    resto.sort((x,y) => (y.f - x.f) || (x.i - y.i));
+    for(let n = 0; n < total - usado; n++) out[resto[n % resto.length].k]++;
+    return out;
+  }
+  // El reparto guardado, ya normalizado (una configuración antigua con decimales se lee redonda).
+  function distPctActual(){
+    const dp = config().distPct || DIST_DEF;
+    const base = {}; DIST_CLAVES.forEach(k => base[k] = Math.max(0, parseFloat(dp[k]) || 0));
+    const ya = DIST_CLAVES.every(k => Number.isInteger(base[k])) && DIST_CLAVES.reduce((x,k)=>x+base[k],0) === 100;
+    return ya ? base : distEnteros(base, 100);
+  }
+  // Fija UNA parte y reparte el resto (también en enteros) entre las demás.
+  function distFijar(clave, valor, actual){
+    const v = Math.max(0, Math.min(100, Math.round(parseFloat(valor) || 0)));
+    const otros = {}; DIST_CLAVES.filter(k => k !== clave).forEach(k => otros[k] = (actual || distPctActual())[k]);
+    const rep = distEnteros(otros, 100 - v);
+    const out = {}; DIST_CLAVES.forEach(k => out[k] = k === clave ? v : rep[k]);
+    return out;
+  }
   function foodCostObjPct(){
     const dp = config().distPct;
-    if(dp && dp.mp != null) return dp.mp;
-    return config().foodCostObj != null ? config().foodCostObj : 35;
+    if(dp && dp.mp != null) return Math.round(parseFloat(dp.mp) || 0);
+    return config().foodCostObj != null ? Math.round(config().foodCostObj) : 35;
   }
   // Fija el objetivo desde CUALQUIER pantalla (Gastos Variables, Punto de
-  // Equilibrio) manteniendo sincronizado el reparto de Tesorería: si ya
-  // existía un reparto (Personal/Fijos/Variables/Otros/Beneficio sumando
-  // 100%), reajusta los otros cuatro proporcionalmente para que la suma
-  // siga siendo 100 — mismo criterio que adjustDistPct(), pero operando
-  // sobre la configuración directamente, no sobre inputs de un formulario
-  // que puede no estar en pantalla.
+  // Equilibrio) manteniendo sincronizado el reparto de Tesorería: reajusta
+  // los otros cuatro para que la suma siga siendo 100, todo en enteros.
   function setFoodCostObjPct(n){
-    const val = Math.max(0, Math.min(100, n));
-    config().foodCostObj = val;
-    // Mismos valores por defecto que ya llevan los campos de Tesorería en el
-    // HTML (30/20/35/5/10) — si el negocio nunca tocó ese reparto, se crea
-    // aquí con esa base para que quede sincronizado desde la primera vez.
-    const dp = config().distPct || {per:30, gf:20, mp:35, og:5, ben:10};
-    const otherKeys = ['per','gf','og','ben'];
-    const othersSum = otherKeys.reduce((s,k)=>s+(parseFloat(dp[k])||0),0);
-    const remaining = 100 - val;
-    if(othersSum<=0){ otherKeys.forEach(k=>dp[k]=remaining/otherKeys.length); }
-    else{ otherKeys.forEach(k=>dp[k]=Math.max(0, remaining*(parseFloat(dp[k])||0)/othersSum)); }
-    dp.mp = val;
+    const dp = distFijar('mp', n);
+    config().foodCostObj = dp.mp;
     config().distPct = dp;
   }
   function cierres(){ if(!ge().cierres) ge().cierres = []; return ge().cierres; }
@@ -2860,6 +2879,42 @@ const GE = (function(){
   }
 
   /* -- TESORERÍA -- */
+  // Estado de cada cifra: verde con tick si cumple, rojo con cruz si no. Sin datos, neutro.
+  function teEstado(bueno, sinDatos){
+    if(sinDatos) return {cls:'', icono:'', txt:'—'};
+    return bueno ? {cls:'is-ok', icono:'<i class="ti ti-check" aria-hidden="true"></i>', txt:gl({es:'Dentro del objetivo', ca:'Dins de l\'objectiu', en:'On target'})}
+                 : {cls:'is-ko', icono:'<i class="ti ti-x" aria-hidden="true"></i>', txt:gl({es:'Fuera del objetivo', ca:'Fora de l\'objectiu', en:'Off target'})};
+  }
+  // Plantillas orientativas del sector (porcentaje de la facturación NETA, sin IVA). Suman 100.
+  const DIST_PLANTILLAS = {
+    carta:   {per:32, gf:18, mp:30, og:5, ben:15},
+    bar:     {per:28, gf:20, mp:27, og:5, ben:20},
+    rapida:  {per:25, gf:17, mp:33, og:8, ben:17},
+    alta:    {per:38, gf:20, mp:28, og:4, ben:10}
+  };
+  function aplicarPlantillaDist(k){
+    const pl = DIST_PLANTILLAS[k]; if(!pl) return;
+    config().distPct = Object.assign({}, pl); config().foodCostObj = pl.mp;
+    saveDB(); renderTesoreria();
+    showToast(gl({es:'Reparto aplicado. Ajústalo a tu negocio: son valores orientativos del sector.', ca:'Repartiment aplicat. Ajusta\'l al teu negoci: són valors orientatius del sector.', en:'Split applied. Adjust it to your business: these are typical sector values.'}), 5000);
+  }
+  function teDiasHasta(fechaDMY){
+    const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(fechaDMY || ''); if(!m) return null;
+    const d = new Date(+m[3], +m[2]-1, +m[1], 23, 59), hoy = new Date();
+    return Math.ceil((d - hoy) / 864e5);
+  }
+  // Última conciliación bancaria y si hace falta otra: se ve junto al botón.
+  function teConcEstado(){
+    const el = document.getElementById('te-conc-estado'); if(!el) return;
+    const lista = (DB.bankReconciliations || []).slice().sort((a,b) => String(b.fechaHasta).localeCompare(String(a.fechaHasta)));
+    const ult = lista[0];
+    const fmtD = f => new Date(f + 'T12:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short'});
+    if(!ult){ el.innerHTML = `<span class="gf-chip is-aviso"><i class="ti ti-alert-circle"></i> ${gl({es:'Sin conciliar todavía', ca:'Sense conciliar encara', en:'Not reconciled yet'})}</span>`; return; }
+    const dias = Math.floor((Date.now() - new Date(ult.fechaHasta + 'T12:00:00')) / 864e5);
+    const ok = Math.abs(ult.difference || 0) <= 1;
+    const viejo = dias > 35;
+    el.innerHTML = `<span class="gf-chip ${ok && !viejo ? 'is-ok' : 'is-aviso'}"><i class="ti ${ok ? 'ti-check' : 'ti-x'}"></i> ${gl({es:'Conciliado hasta el ', ca:'Conciliat fins al ', en:'Reconciled up to '})}${escapeHtml(fmtD(ult.fechaHasta))}${viejo ? ' · ' + gl({es:'hace ' + dias + ' días', ca:'fa ' + dias + ' dies', en: dias + ' days ago'}) : ''}</span>`;
+  }
   function renderTesoreria(){
     document.getElementById('te-periodo').innerHTML = ggPeriodoHtml({anio: teYear, mes: activeMonth, cb: 'gePeriodoTes', datos: {}, anual: false})
       + (isMonthClosed(teYear, activeMonth) ? `<span class="badge"><i class="ti ti-lock"></i> ${escapeHtml(gl({es:'Mes cerrado', ca:'Mes tancat', en:'Month closed'}))}</span>` : '');
@@ -2871,38 +2926,28 @@ const GE = (function(){
         : `<i class="ti ti-lock"></i> ${t('hr.te.closeMonth')}`;
       closeBtn.className = closed ? 'btn btn-sm' : 'btn btn-sm btn-primary';
     }
-
-    const dp = config().distPct;
-    if(dp && !distPctLoaded){
-      document.getElementById('te-pct-per').value = dp.per;
-      document.getElementById('te-pct-gf').value = dp.gf;
-      document.getElementById('te-pct-mp').value = dp.mp;
-      document.getElementById('te-pct-og').value = dp.og;
-      document.getElementById('te-pct-ben').value = dp.ben;
-      distPctLoaded = true;
+    teConcEstado();
+    const plSel = document.getElementById('te-plantilla');
+    if(plSel){
+      plSel.setAttribute('aria-label', gl({es:'Plantilla orientativa del sector', ca:'Plantilla orientativa del sector', en:'Typical sector template'}));
+      plSel.innerHTML = `<option value="">${gl({es:'Plantilla orientativa…', ca:'Plantilla orientativa…', en:'Typical template…'})}</option>
+        <option value="carta">${gl({es:'Restaurante de carta', ca:'Restaurant de carta', en:'À la carte restaurant'})}</option>
+        <option value="bar">${gl({es:'Bar / cafetería', ca:'Bar / cafeteria', en:'Bar / café'})}</option>
+        <option value="rapida">${gl({es:'Comida rápida y para llevar', ca:'Menjar ràpid i per emportar', en:'Fast food and takeaway'})}</option>
+        <option value="alta">${gl({es:'Alta cocina', ca:'Alta cuina', en:'Fine dining'})}</option>`;
     }
 
-    const pctPer = (parseFloat(document.getElementById('te-pct-per')?.value)||0)/100;
-    const pctGF = (parseFloat(document.getElementById('te-pct-gf')?.value)||0)/100;
-    const pctMP = (parseFloat(document.getElementById('te-pct-mp')?.value)||0)/100;
-    const pctOG = (parseFloat(document.getElementById('te-pct-og')?.value)||0)/100;
-    const pctBen = (parseFloat(document.getElementById('te-pct-ben')?.value)||0)/100;
+    const dp = distPctActual();
+    const pct = {}; DIST_CLAVES.forEach(k => pct[k] = dp[k] / 100);
 
     const facBruta = facturacionMes(activeMonth, teYear);
     const facNeta = facturacionNetaMes(activeMonth, teYear);
-    const ivaLiquidar = ivaLiquidarMes(activeMonth, teYear);
-
     // NO "facBruta - facNeta": facBruta suma sale.total (incluye propina y
     // gastos de envío, que no son IVA), mientras que facNeta se calcula
     // línea a línea sin ninguno de los dos — restarlos habría metido la
     // propina de cada mesa dentro del "IVA a reservar", inflándolo. Mismo
     // criterio ya usado en CDR/Resultado (ivaVentasMes, línea a línea).
     const ivaVentas = ivaVentasMes(activeMonth, teYear);
-
-    document.getElementById('te-kpis').innerHTML = `
-      <div class="kpi-mini"><div class="l">${t('hr.te.grossRevenue')}</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.salesWithVat')}</div></div>
-      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">${t('hr.te.vatPassedOn')}</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.vatIncludedInSales')}</div></div>
-      <div class="kpi-mini" style="border-color:var(--ink)"><div class="l">${t('hr.lbl.netRevenue')}</div><div class="v" style="color:var(--ink)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.baseToDistribute')}</div></div>`;
 
     const realPer = geTotalPersonalNetoForMonth(teYear, activeMonth);
     const realGF = geTotalGFNetoForMonth(teYear, activeMonth);
@@ -2914,93 +2959,118 @@ const GE = (function(){
     const mesStrTe = `${teYear}-${String(activeMonth+1).padStart(2,'0')}`;
     const capexContado = capex().filter(c => !c.financiado && (c.fecha||'').startsWith(mesStrTe)).reduce((s,c)=>s+(parseFloat(c.importe)||0),0);
     const realOG = capexCuotaMes(activeMonth, teYear) + capexContado + realComisiones;
+    const impMes = impuestoMes(activeMonth, teYear);
     const realBenPreTax = facNeta - realPer - realGF - realMP - realOG;
-    // Igual que resultadoMes(): tras IVA, el "Beneficio/Ahorro" también debe descontar
-    // el impuesto sobre beneficios para que coincida con el "Resultado Neto" post-impuestos
-    // que se muestra en CDR/Resultado — si no, aquí se sobreestimaba el beneficio real.
-    const realBen = realBenPreTax - impuestoMes(activeMonth, teYear);
-    // IVA: Modelo 303 se liquida trimestralmente, no cada mes — mostramos el acumulado
+    // Igual que resultadoMes(): el "Beneficio/Ahorro" descuenta también el impuesto sobre
+    // beneficios para que coincida con el "Resultado Neto" de la Cuenta de Resultados.
+    const realBen = realBenPreTax - impMes;
+
+    // IVA: Modelo 303 se liquida trimestralmente, no cada mes — se muestra el acumulado
     // del trimestre en curso hasta el mes visto, no solo la porción de este mes.
     const ivaLiquidarAcum = ivaLiquidarQTD(activeMonth, teYear);
     const ivaReserva = ivaLiquidarAcum >= 0 ? ivaLiquidarAcum : 0;
     const qIdx = Math.floor(activeMonth/3);
     const qMesesLbls = getMeses().slice(qIdx*3, qIdx*3+3);
     const qLabel = `T${qIdx+1} (${qMesesLbls[0]}-${qMesesLbls[2]})`;
-    // Igual que el IVA (Modelo 303), el IRPF retenido a los empleados se
-    // declara e ingresa trimestralmente (Modelo 111) — se acumulan los
-    // meses del trimestre en curso hasta el visto, con el histórico de
-    // gastos fijos (no la nómina de HOY para un mes pasado).
-    let irpfReserva = 0;
-    let ret115Reserva = 0;
-    let ret123Reserva = 0;
+    // Igual que el IVA, el IRPF retenido a los empleados (modelo 111), el de alquileres (115)
+    // y el de dividendos (123) se declaran por trimestre: se acumulan los meses del trimestre
+    // hasta el visto, con el histórico de gastos fijos (no la nómina de HOY para un mes pasado).
+    let irpfReserva = 0, ret115Reserva = 0, ret123Reserva = 0;
     for(let m=qIdx*3; m<=activeMonth; m++){ irpfReserva += geModelo111ForMonth(teYear, m); ret115Reserva += geRetencionForMonth(teYear, m, '115'); ret123Reserva += retDividendosMes(m, teYear); }
-
     const pagoCuenta = pagoACuentaTrimestre(activeMonth, teYear);
-    const rows = [
-      {lbl:t('hr.lbl.personalNoVat'), pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
-      {lbl:t('hr.lbl.fixedNoVat'), pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
-      {lbl:t('hr.lbl.variableExpenses'), pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
-      {lbl:t('hr.te.otherExpenses'), pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
-      {lbl:t('hr.te.profitSavings'), pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--ink)', isBen:true},
-      {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, obj:null, real:ivaReserva, color:'var(--amber-dark)', isReserve:true, icon:'ti-pig-money'},
-      /* La reserva de IRPF solo aparecía si había importe, así que un negocio
-         con nóminas pero sin el cálculo automático activado no la veía por
-         ningún lado y no tenía forma de saber que existe. Ahora se muestra
-         siempre que haya gasto de personal, y cuando está a cero dice dónde
-         se activa en vez de desaparecer en silencio. */
-      ...(realPer > 0 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, obj:null, real:irpfReserva,
-        color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax',
-        hint: irpfReserva>0.001 ? null : t('hr.te.irpfNotConfigured')}] : []),
-      ...(ret115Reserva > 0.001 ? [{lbl:`${t('hr.te.ret115Reserve')} · ${qLabel}`, obj:null, real:ret115Reserva,
-        color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
-      ...(ret123Reserva > 0.001 ? [{lbl:`${t('hr.libro.res123')} · ${qLabel}`, obj:null, real:ret123Reserva,
-        color:'var(--purple)', isReserve:true, icon:'ti-receipt-tax'}] : []),
-      ...(pagoCuenta && pagoCuenta.importe > 0.001 ? [{lbl:`${t('hr.te.pagoCuenta.'+pagoCuenta.modelo)} · ${qLabel}`, obj:null, real:pagoCuenta.importe,
-        color:'var(--ink)', isReserve:true, icon:'ti-building-bank', hint:t('hr.te.pagoCuentaHint.'+pagoCuenta.modelo)}] : []),
-    ];
+    // Lo que el negocio lleva generado de impuesto sobre beneficios en el año (informativo: los pagos a cuenta de arriba son parte de esto).
+    let provImpuesto = 0; for(let m=0; m<=activeMonth; m++) provImpuesto += impuestoMes(m, teYear);
+    provImpuesto = Math.max(0, provImpuesto);
+    const paraHacienda = ivaReserva + irpfReserva + ret115Reserva + ret123Reserva + ((pagoCuenta && pagoCuenta.importe > 0.001) ? pagoCuenta.importe : 0);
 
-    document.getElementById('te-rows').innerHTML = rows.map(r=>{
-      if(r.isReserve){
-        return `<div class="te-row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:6px">
-          <span style="font-size:14px;font-weight:600">${r.lbl}</span>
-          <span></span>
-          <span></span>
-          <span style="text-align:right;font-family:monospace;font-weight:700;color:${r.color}">${fmtMoney(r.real)}</span>
-          <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${r.hint || t('hr.te.setAsideQuarterly')}</span>
-          <span style="text-align:center;font-size:16px"><i class="ti ${r.icon}"></i></span>
-        </div>`;
-      }
+    // Coste primo = personal + variables: LA cifra que decide si un restaurante gana dinero.
+    const primoReal = facNeta > 0 ? (realPer + realMP) / facNeta * 100 : null;
+    const primoObj = dp.per + dp.mp;
+    const estPrimo = teEstado(primoReal != null && primoReal <= primoObj + 0.05, primoReal == null);
+
+    document.getElementById('te-kpis').innerHTML = `
+      <div class="ge-kpi"><div class="lbl">${t('hr.te.grossRevenue')}</div><div class="val">${fmtMoney(facBruta)}</div><div class="sub">${t('hr.te.salesWithVat')}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.te.vatPassedOn')}</div><div class="val" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div class="sub">${t('hr.te.vatIncludedInSales')}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.netRevenue')}</div><div class="val">${fmtMoney(facNeta)}</div><div class="sub">${t('hr.te.baseToDistribute')}</div></div>
+      <div class="ge-kpi"><div class="lbl">${gl({es:'Coste primo', ca:'Cost primer', en:'Prime cost'})}</div><div class="te-valor te-val ${estPrimo.cls}">${primoReal == null ? '—' : pct1(primoReal) + ' %'} ${estPrimo.icono}</div><div class="sub">${gl({es:'Personal + variables · objetivo ≤ ', ca:'Personal + variables · objectiu ≤ ', en:'Staff + variable · target ≤ '})}${primoObj} %</div></div>
+      <div class="ge-kpi"><div class="lbl">${gl({es:'Para Hacienda', ca:'Per a Hisenda', en:'For the tax office'})}</div><div class="val" style="color:var(--purple)">${fmtMoney(paraHacienda)}</div><div class="sub">${gl({es:'IVA y retenciones · ', ca:'IVA i retencions · ', en:'VAT and withholdings · '})}${qLabel}</div></div>`;
+
+    // Avisos sobre el propio reparto: lo que un gestor miraría antes de fiarse de él.
+    const avisos = [];
+    if(primoObj > 65) avisos.push(gl({es:`Personal + variables (el coste primo) suman un ${primoObj} % de tus objetivos. En hostelería lo sano es 65 % o menos: con más, casi no queda margen para el local y el beneficio.`, ca:`Personal + variables (el cost primer) sumen un ${primoObj} % dels teus objectius. En restauració el sa és 65 % o menys: amb més, gairebé no queda marge per al local i el benefici.`, en:`Staff + variable costs (prime cost) add up to ${primoObj} % of your targets. In hospitality 65 % or less is healthy: more leaves almost no room for rent and profit.`}));
+    if(dp.ben < 5) avisos.push(gl({es:`Tu objetivo de beneficio es del ${dp.ben} %. Por debajo del 5 % cualquier mes flojo se convierte en pérdida.`, ca:`El teu objectiu de benefici és del ${dp.ben} %. Per sota del 5 % qualsevol mes fluix es converteix en pèrdua.`, en:`Your profit target is ${dp.ben} %. Below 5 % any weak month turns into a loss.`}));
+    document.getElementById('te-avisos').innerHTML = avisos.length ? `<div class="te-avisos">${avisos.map(x => `<p><i class="ti ti-info-circle"></i> ${x}</p>`).join('')}</div>` : '';
+
+    const filas = [
+      {k:'per', lbl:t('hr.lbl.personalNoVat'), id:'te-pct-per', obj:facNeta*pct.per, real:realPer},
+      {k:'gf', lbl:t('hr.lbl.fixedNoVat'), id:'te-pct-gf', obj:facNeta*pct.gf, real:realGF},
+      {k:'mp', lbl:t('hr.lbl.variableExpenses'), id:'te-pct-mp', obj:facNeta*pct.mp, real:realMP},
+      {k:'og', lbl:t('hr.te.otherExpenses'), id:'te-pct-og', obj:facNeta*pct.og, real:realOG},
+      {k:'ben', lbl:t('hr.te.profitSavings'), id:'te-pct-ben', obj:facNeta*pct.ben, real:realBen, isBen:true}
+    ];
+    const hayDatos = facNeta > 0.005;
+    const colorDe = {per:GF_COLORES[0], gf:GF_COLORES[3], mp:GF_COLORES[2], og:GF_COLORES[4], ben:GF_COLORES[1]};
+    const hdr = `<div class="te-head" aria-hidden="true"><span class="te-c-con">${t('hr.lbl.concept')}</span><span class="te-c-pct">%</span><span class="te-c-obj">${t('hr.lbl.target')}</span><span class="te-c-real">${t('label.real')}</span><span class="te-c-dif">${t('label.diff')}</span></div>`;
+    const html = filas.map(r => {
       const diff = r.real - r.obj;
-      const absDiff = Math.abs(diff);
-      /* El semáforo va por el SENTIDO de cada fila, no por si se alcanza el
-         objetivo a secas: en una fila de GASTO, pasarse del objetivo es
-         malo (si el food cost objetivo es el 30% y el real sale al 40%, eso
-         es cruz roja por mucho que "supere" la cifra), y quedarse por
-         debajo es bueno. En Beneficio es justo al revés. Sin franja ámbar
-         intermedia: o está dentro del objetivo o no, que es lo que el
-         hostelero necesita ver de un vistazo. */
-      const isGood = r.isBen ? diff >= 0 : diff <= 0;
-      const estado = !r.real ? '—'
-        : isGood ? '<i class="ti ti-check" style="color:var(--green)"></i>'
-                 : '<i class="ti ti-x" style="color:var(--red)"></i>';
-      const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
-      const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
-      const diffText = r.real ? `${diffSign}${fmtMoney(absDiff)}` : '—';
-      const barPct = r.obj>0 ? Math.min(r.real/r.obj*100, 150) : 0;
-      // La barra sigue el mismo criterio que el tick: en gastos, pasar del
-      // 100% del objetivo la pone en rojo; en beneficio, lo que la pone en
-      // rojo es quedarse corto.
-      const barColor = isGood ? 'var(--green)' : 'var(--red)';
-      return `<div class="te-row">
-        <span style="font-size:14px;font-weight:600">${r.lbl}</span>
-        <span style="text-align:right;font-weight:600;color:${r.color}">${(r.pct*100).toFixed(0)}%</span>
-        <span style="text-align:right;font-family:monospace">${fmtMoney(r.obj)}</span>
-        <span style="text-align:right;font-family:monospace;font-weight:700">${r.real?fmtMoney(r.real):'—'}</span>
-        <span style="text-align:right;font-family:monospace;font-weight:700;color:${diffColor}">${diffText}</span>
-        <span style="text-align:center;font-size:16px">${estado}</span>
-      </div>
-      <div class="te-bar-wrap"><div class="te-bar-fill" style="width:${Math.min(barPct,100)}%;background:${barColor}"></div></div>`;
+      /* El semáforo va por el SENTIDO de cada fila: en una fila de GASTO, pasarse del objetivo es
+         malo (si el food cost objetivo es el 30% y el real sale al 40%, eso es cruz roja por mucho
+         que "supere" la cifra) y quedarse por debajo es bueno. En Beneficio es justo al revés.
+         Sin franja ámbar: o está dentro del objetivo o no, que es lo que el hostelero necesita
+         ver de un vistazo. Sin ventas ni gastos en el mes no hay nada que juzgar. */
+      const bueno = r.isBen ? diff >= -0.005 : diff <= 0.005;
+      const est = teEstado(bueno, !hayDatos && !r.real);
+      const realPct = hayDatos ? pct1(r.real / facNeta * 100) + ' %' : '';
+      const difTxt = (!hayDatos && !r.real) ? '—' : `${diff > 0.004 ? '+' : diff < -0.004 ? '−' : ''}${fmtMoney(Math.abs(diff))}`;
+      const barPct = r.obj > 0 ? Math.min(Math.max(r.real, 0) / r.obj * 100, 100) : 0;
+      return `<div class="te-row te-dist" data-k="${r.k}">
+        <i class="te-prog" style="--w:${barPct.toFixed(1)}%"></i>
+        <span class="te-c-con"><i class="te-dot" style="background:${colorDe[r.k]}"></i><b>${r.lbl}</b></span>
+        <span class="te-c-pct"><input type="number" inputmode="numeric" id="${r.id}" value="${dp[r.k]}" min="0" max="100" step="1" onchange="GE.adjustDistPct('${r.id}')" aria-label="${escapeHtml(r.lbl + ' %')}"><em>%</em></span>
+        <span class="te-c-obj" data-l="${escapeHtml(t('hr.lbl.target'))}">${fmtMoney(r.obj)}</span>
+        <span class="te-c-dif ${est.cls}" data-l="${escapeHtml(t('label.diff'))}">${difTxt}</span>
+        <span class="te-c-real ${est.cls}" data-l="${escapeHtml(t('label.real'))}"><b>${(!hayDatos && !r.real) ? '—' : fmtMoney(r.real)}</b>${realPct ? `<small>${realPct}</small>` : ''}${est.icono}</span>
+      </div>`;
     }).join('');
+
+    // Las reservas: dinero que está en la caja pero NO es del negocio (o todavía no).
+    const reservas = [
+      {lbl:`${t('hr.te.vatReserve')} · ${qLabel}`, real:ivaReserva, icon:'ti-pig-money', hint: ivaLiquidarAcum < -0.005 ? gl({es:'IVA a tu favor este trimestre: se compensa en los siguientes', ca:'IVA a favor teu aquest trimestre: es compensa en els següents', en:'VAT in your favour this quarter: offset against the next ones'}) : t('hr.te.setAsideQuarterly')},
+      /* La reserva de IRPF solo aparecía si había importe, así que un negocio con nóminas pero sin
+         el cálculo automático activado no la veía por ningún lado y no tenía forma de saber que
+         existe. Ahora se muestra siempre que haya gasto de personal, y cuando está a cero dice
+         dónde se activa en vez de desaparecer en silencio. */
+      ...(realPer > 0 ? [{lbl:`${t('hr.gf.irpfWithheld')} · ${qLabel}`, real:irpfReserva, icon:'ti-receipt-tax', hint: irpfReserva>0.001 ? t('hr.te.setAsideQuarterly') : t('hr.te.irpfNotConfigured')}] : []),
+      ...(ret115Reserva > 0.001 ? [{lbl:`${t('hr.te.ret115Reserve')} · ${qLabel}`, real:ret115Reserva, icon:'ti-receipt-tax', hint:t('hr.te.setAsideQuarterly')}] : []),
+      ...(ret123Reserva > 0.001 ? [{lbl:`${t('hr.libro.res123')} · ${qLabel}`, real:ret123Reserva, icon:'ti-receipt-tax', hint:t('hr.te.setAsideQuarterly')}] : []),
+      ...(pagoCuenta && pagoCuenta.importe > 0.001 ? [{lbl:`${t('hr.te.pagoCuenta.'+pagoCuenta.modelo)} · ${qLabel}`, real:pagoCuenta.importe, icon:'ti-building-bank', hint:t('hr.te.pagoCuentaHint.'+pagoCuenta.modelo)}] : []),
+      ...(provImpuesto > 0.005 ? [{lbl:gl({es:'Impuesto sobre beneficios · acumulado del año', ca:'Impost sobre beneficis · acumulat de l\'any', en:'Profit tax · year to date'}), real:provImpuesto, icon:'ti-scale', hint:gl({es:'Lo que llevas generado. Los pagos a cuenta de arriba son parte de esto; el resto va con la declaración (Renta o Sociedades).', ca:'El que portes generat. Els pagaments a compte de dalt en són part; la resta va amb la declaració.', en:'What you have accrued. The prepayments above are part of this; the rest is paid with the annual return.'}), aparte:true}] : [])
+    ];
+    const resHtml = reservas.map(r => `<div class="te-row te-res${r.aparte ? ' is-aparte' : ''}">
+        <span class="te-c-con"><i class="ti ${r.icon}" aria-hidden="true"></i><b>${r.lbl}</b></span>
+        <span class="te-res-hint">${r.hint}</span>
+        <span class="te-res-imp">${fmtMoney(r.real)}</span>
+      </div>`).join('');
+    // Colchón: lo mínimo que debería quedar en cuenta tras apartar lo de Hacienda (2 meses de personal + fijos).
+    const colchon = (realPer + realGF) * 2;
+    document.getElementById('te-rows').innerHTML = hdr + html
+      + `<div class="te-grupo"><span><i class="ti ti-shield-check"></i> ${gl({es:'Dinero que no es tuyo', ca:'Diners que no són teus', en:'Money that is not yours'})}</span><b>${fmtMoney(paraHacienda)}</b></div>`
+      + resHtml
+      + (colchon > 0.5 ? `<div class="te-colchon"><i class="ti ti-lifebuoy"></i> ${gl({es:'Colchón recomendado en cuenta, después de apartar lo de Hacienda: ', ca:'Coixí recomanat al compte, després d\'apartar el de Hisenda: ', en:'Recommended cushion in the account after setting tax money aside: '})}<b>${fmtMoney(colchon)}</b> <small>${gl({es:'(2 meses de personal y fijos)', ca:'(2 mesos de personal i fixos)', en:'(2 months of staff and fixed costs)'})}</small></div>` : '');
+
+    // Dos barras de 100 €: cómo debería repartirse lo que vendes y cómo se ha repartido.
+    const barra = (partes, total) => `<div class="ve-barra">${partes.filter(x => x.v > 0.0001).map(x => `<span style="width:${(x.v/total*100).toFixed(2)}%;background:${x.c}" data-tip="${escapeHtml(x.n)}"></span>`).join('')}</div>`;
+    const objPartes = filas.map(r => ({n:r.lbl, v:dp[r.k], c:colorDe[r.k]}));
+    const realPartes = hayDatos ? [
+      {n:filas[0].lbl, v:realPer, c:colorDe.per}, {n:filas[1].lbl, v:realGF, c:colorDe.gf}, {n:filas[2].lbl, v:realMP, c:colorDe.mp}, {n:filas[3].lbl, v:realOG, c:colorDe.og},
+      {n:t('hr.te.profitSavings'), v:Math.max(0, realBen), c:colorDe.ben}, {n:gl({es:'Impuesto', ca:'Impost', en:'Tax'}), v:Math.max(0, impMes), c:'#B9B3A6'}
+    ] : [];
+    const totReal = realPartes.reduce((x,p)=>x+Math.max(0,p.v),0);
+    document.getElementById('te-barras').innerHTML = `
+      <div class="te-barra-b"><small>${gl({es:'Objetivo · por cada 100 € que vendes', ca:'Objectiu · per cada 100 € que vens', en:'Target · per 100 € you sell'})}</small>${barra(objPartes, 100)}</div>
+      <div class="te-barra-b"><small>${gl({es:'Real · así se ha repartido este mes', ca:'Real · així s\'ha repartit aquest mes', en:'Actual · how this month split'})}</small>${hayDatos && totReal > 0 ? barra(realPartes, Math.max(totReal, facNeta)) : `<div class="ve-barra"></div>`}</div>
+      <ul class="te-leyenda">${filas.map(r => `<li><i style="background:${colorDe[r.k]}"></i>${r.lbl}</li>`).join('')}</ul>`;
+    document.getElementById('te-suma').innerHTML = `<i class="ti ti-check"></i> ${gl({es:'Los objetivos suman 100 %. Cambia uno y los demás se ajustan solos, siempre en números redondos.', ca:'Els objectius sumen 100 %. Canvia\'n un i els altres s\'ajusten sols, sempre en nombres rodons.', en:'Targets add up to 100 %. Change one and the others adjust themselves, always in whole numbers.'})}`;
 
     renderTesoreriaUpcoming();
     renderTreasuryForecast();
@@ -3060,15 +3130,19 @@ const GE = (function(){
       if(!p.personaFisica && !p.modulos) filas.push({mod:'200', txt:t('cal.200'), imp:null, vence:`25/07/${y+1}`});
       if(p.personaFisica || p.modulos) filas.push({mod:'100', txt:t('cal.renta'), imp:null, vence:`30/06/${y+1}`});
     }
-    box.innerHTML = `<div class="card" style="margin:12px 0">
-      <h4 style="margin:0 0 4px"><i class="ti ti-calendar-event"></i> ${t('cal.titulo').replace('${q}', (q+1)+'T '+y)}</h4>
-      <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${t('cal.desc')}</p>
-      ${filas.map(f => `<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0;border-top:1px solid var(--border);flex-wrap:wrap">
-        <span style="font-family:'IBM Plex Mono',monospace;font-weight:500;min-width:52px">${escapeHtml(f.mod)}</span>
-        <span style="flex:1;min-width:160px">${f.txt}</span>
-        <span style="font-weight:700;${f.imp!=null && f.imp<0?'color:var(--green)':''}">${f.imp==null ? '' : (f.imp<0 ? fmtMoney(-f.imp)+' '+t('hr.lbl.inYourFavor') : fmtMoney(f.imp))}</span>
-        <span class="txt-xs" style="color:var(--muted);white-space:nowrap">${t('cal.hasta')} ${f.vence}</span>
-      </div>`).join('')}
+    box.innerHTML = `<div class="ge-section te-cal">
+      <div class="ge-sec-head"><h4><i class="ti ti-calendar-event"></i> ${t('cal.titulo').replace('${q}', (q+1)+'T '+y)}</h4></div>
+      <p class="te-nota">${t('cal.desc')}</p>
+      ${filas.map(f => {
+        const venceSolo = String(f.vence).split(' · ')[0];
+        const d = f.imp != null && f.imp > 0.005 ? teDiasHasta(venceSolo) : null;
+        const chip = d == null ? '' : d < 0 ? `<span class="gf-chip is-aviso">${gl({es:'vencido', ca:'vençut', en:'overdue'})}</span>` : d <= 10 ? `<span class="gf-chip is-aviso">${gl({es:'en ' + d + ' d', ca:'en ' + d + ' d', en:'in ' + d + ' d'})}</span>` : `<span class="gf-chip">${gl({es:'en ' + d + ' d', ca:'en ' + d + ' d', en:'in ' + d + ' d'})}</span>`;
+        return `<div class="te-cal-f">
+        <span class="te-cal-m">${escapeHtml(f.mod)}</span>
+        <span class="te-cal-t">${f.txt}</span>
+        <b class="te-cal-i"${f.imp!=null && f.imp<0?' style="color:var(--green)"':''}>${f.imp==null ? '' : (f.imp<0 ? fmtMoney(-f.imp)+' '+t('hr.lbl.inYourFavor') : fmtMoney(f.imp))}</b>
+        <span class="te-cal-v">${t('cal.hasta')} ${f.vence} ${chip}</span>
+      </div>`; }).join('')}
     </div>`;
   }
   function renderTreasuryForecast(){
@@ -3088,15 +3162,12 @@ const GE = (function(){
     const avgMonthly = results.reduce((a,b)=>a+b,0) / results.length;
     const dailyRate = avgMonthly / 30.4;
     const proj = n => dailyRate * n;
+    const kp = n => `<div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',n)}</div><div class="val te-val ${proj(n)>=0?'is-ok':'is-ko'}">${proj(n)>=0?'+':''}${fmtMoney(proj(n))}</div></div>`;
     box.innerHTML = `
-      <div class="card" style="margin:12px 0">
-        <h4 style="margin-bottom:4px"><i class="ti ti-crystal-ball"></i> ${t('hr.forecast.title')}</h4>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('hr.forecast.desc')}</p>
-        <div class="grid grid-3">
-          <div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',30)}</div><div class="val" style="color:${proj(30)>=0?'var(--green)':'var(--red)'}">${proj(30)>=0?'+':''}${fmtMoney(proj(30))}</div></div>
-          <div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',60)}</div><div class="val" style="color:${proj(60)>=0?'var(--green)':'var(--red)'}">${proj(60)>=0?'+':''}${fmtMoney(proj(60))}</div></div>
-          <div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',90)}</div><div class="val" style="color:${proj(90)>=0?'var(--green)':'var(--red)'}">${proj(90)>=0?'+':''}${fmtMoney(proj(90))}</div></div>
-        </div>
+      <div class="ge-section te-prev">
+        <div class="ge-sec-head"><h4><i class="ti ti-crystal-ball"></i> ${t('hr.forecast.title')}</h4></div>
+        <p class="te-nota">${t('hr.forecast.desc')}</p>
+        <div class="ge-kpi-grid te-prev-k">${kp(30)}${kp(60)}${kp(90)}</div>
       </div>`;
   }
   // Gastos Fijos periódicos (periodicidadMeses>1) cuyo pago cae en el mes visto: son un
@@ -3106,20 +3177,20 @@ const GE = (function(){
     if(!el) return;
     const dueItems = fijos()
       .filter(g=>(parseInt(g.periodicidadMeses)||1)>1)
-      .map(g=>({g, date:gfDueInMonth(g, currentYear(), activeMonth)}))
+      .map(g=>({g, date:gfDueInMonth(g, teYear, activeMonth)}))
       .filter(x=>x.date);
     if(!dueItems.length){ el.innerHTML=''; el.style.display='none'; return; }
     el.style.display='block';
     el.innerHTML = `
-      <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> ${t('hr.te.upcomingLumpTitle')}</h4></div>
-      <div style="font-size:12px;color:var(--muted);padding:0 16px 8px">${t('hr.te.upcomingLumpNote')}</div>
+      <div class="ge-sec-head"><h4><i class="ti ti-calendar-dollar"></i> ${t('hr.te.upcomingLumpTitle')}</h4></div>
+      <p class="te-nota">${t('hr.te.upcomingLumpNote')}</p>
       ${dueItems.map(x=>{
         const base = parseFloat(x.g.importe||0);
         const pct = x.g.iva!=null ? parseFloat(x.g.iva) : 0;
         return `
-        <div class="ge-item">
-          <span style="flex:1;font-size:14px;font-weight:500">${escapeHtml(x.g.nombre)}</span>
-          <span style="font-family:monospace;font-weight:700">${fmtMoney(base*(1+pct/100))}</span>
+        <div class="te-cal-f te-lump">
+          <span class="te-cal-t"><b>${escapeHtml(gfConceptLabel(x.g.nombre))}</b></span>
+          <b class="te-cal-i">${fmtMoney(base*(1+pct/100))}</b>
         </div>`;
       }).join('')}
     `;
@@ -3138,23 +3209,14 @@ const GE = (function(){
   // teclado), y ya NUNCA reescribe el valor del campo que se acaba de
   // tocar, solo reparte lo que sobra entre los otros cuatro.
   function adjustDistPct(changedId){
-    const ids = ['te-pct-per','te-pct-gf','te-pct-mp','te-pct-og','te-pct-ben'];
-    const els = {}; ids.forEach(id=>els[id]=document.getElementById(id));
-    const vals = {}; ids.forEach(id=>vals[id]=Math.max(0,Math.min(100,parseFloat(els[id].value)||0)));
-    const changedVal = vals[changedId];
-    els[changedId].value = Math.round(changedVal*10)/10;
-    const otherIds = ids.filter(id=>id!==changedId);
-    const othersSum = otherIds.reduce((s,id)=>s+vals[id],0);
-    const remaining = 100 - changedVal;
-    if(othersSum<=0){
-      otherIds.forEach(id=>vals[id]=remaining/otherIds.length);
-    }else{
-      otherIds.forEach(id=>vals[id]=Math.max(0, remaining*vals[id]/othersSum));
-    }
-    vals[changedId]=changedVal;
-    otherIds.forEach(id=>els[id].value = Math.round(vals[id]*10)/10);
-    config().distPct = {per:vals['te-pct-per'], gf:vals['te-pct-gf'], mp:vals['te-pct-mp'], og:vals['te-pct-og'], ben:vals['te-pct-ben']};
-    distPctLoaded = true;
+    const clave = {'te-pct-per':'per','te-pct-gf':'gf','te-pct-mp':'mp','te-pct-og':'og','te-pct-ben':'ben'}[changedId];
+    const el = document.getElementById(changedId);
+    if(!clave || !el) return;
+    const crudo = parseFloat(el.value);
+    if(isNaN(crudo)){ renderTesoreria(); return; }
+    const dp = distFijar(clave, crudo);
+    config().distPct = dp;
+    config().foodCostObj = dp.mp;
     saveDB();
     renderTesoreria();
   }
@@ -4349,7 +4411,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

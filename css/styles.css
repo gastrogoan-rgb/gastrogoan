@@ -4686,6 +4686,99 @@ span.dt-punto{position:absolute;border-radius:50%}
 .gv-fila.is-anulado{opacity:.7}
 .gv-sin-menu{width:1px}
 #gv-total-val small{font-size:11px;font-weight:400;color:#C9C4B8;margin-left:6px}
+/* Tesorería (6/11): reparto redondo, objetivo cumplido en verde con tick y fuera en rojo con cruz */
+#ge-tesoreria .ve-barra-sup{align-items:center}
+#te-conc-estado .gf-chip.is-ok{background:#E6F0E4;border-color:#BCD3B8;color:var(--green)}
+.te-val{display:flex;align-items:center;gap:8px}
+/* Un .val se reescribe al animar las cifras (polish.js) y se llevaría el icono: el coste primo usa su propio contenedor */
+.ge-kpi .te-valor{font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.te-valor .ti{font-size:22px}
+#ge-tesoreria .te-row.te-res > *{grid-area:auto}
+.te-val.is-ok,.te-c-real.is-ok,.te-c-dif.is-ok{color:var(--green)}
+.te-val.is-ko,.te-c-real.is-ko,.te-c-dif.is-ko{color:var(--red)}
+.te-avisos{margin:0 0 16px;padding:12px 16px;background:var(--amber-l);border:1px solid #E6D3A3;border-radius:4px}
+.te-avisos p{margin:0;font-size:13px;line-height:1.5;color:var(--body)}
+.te-avisos p + p{margin-top:8px}
+.te-avisos .ti{color:var(--amber-dark)}
+.te-plantilla select{min-height:36px;padding:0 10px;font-size:13px;border:1px solid var(--hair);border-radius:3px;background:#fff;font-family:var(--mono)}
+.te-barras{padding:16px 18px 6px}
+.te-barra-b{margin:0 0 14px}
+.te-barra-b small{display:block;margin:0 0 6px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.te-barra-b .ve-barra{margin:0;height:16px}
+.te-leyenda{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--body)}
+.te-leyenda li{display:flex;align-items:center;gap:6px}
+.te-leyenda i{width:10px;height:10px;border-radius:2px}
+#ge-tesoreria #te-rows{padding:8px 0 4px}
+#ge-tesoreria .te-head,#ge-tesoreria .te-row.te-dist{display:grid;grid-template-columns:minmax(0,1.6fr) 96px minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"con pct obj real dif";align-items:center;column-gap:12px;padding:12px 18px;position:relative}
+#ge-tesoreria .te-head{padding-top:6px;padding-bottom:8px;border-bottom:1px solid var(--hair);font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+#ge-tesoreria .te-row{border-bottom:1px solid var(--hair);gap:0}
+#ge-tesoreria .te-row > span{white-space:normal}
+#ge-tesoreria .te-c-con{grid-area:con;display:flex;align-items:center;gap:10px;min-width:0}
+#ge-tesoreria .te-c-con b{font-size:14.5px;font-weight:600;overflow-wrap:break-word;min-width:0}
+#ge-tesoreria .te-c-pct{grid-area:pct;display:flex;align-items:center;gap:4px}
+#ge-tesoreria .te-c-obj{grid-area:obj}
+#ge-tesoreria .te-c-real{grid-area:real}
+#ge-tesoreria .te-c-dif{grid-area:dif}
+#ge-tesoreria .te-head .te-c-pct,#ge-tesoreria .te-head .te-c-obj,#ge-tesoreria .te-head .te-c-real,#ge-tesoreria .te-head .te-c-dif{display:block}
+.te-dot{width:10px;height:10px;border-radius:2px;flex:none}
+.te-c-pct input{width:68px;min-height:40px;text-align:right;font-family:var(--mono);font-size:15px;font-weight:600;padding:0 8px;border:1px solid var(--hair);border-radius:3px;background:#fff}
+.te-c-pct em{font-style:normal;font-family:var(--mono);color:var(--muted)}
+#ge-tesoreria .te-row.te-dist .te-c-obj,#ge-tesoreria .te-row.te-dist .te-c-dif{font-family:var(--mono);font-size:14px}
+#ge-tesoreria .te-row.te-dist .te-c-real{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;font-family:var(--mono)}
+#ge-tesoreria .te-row.te-dist .te-c-real b{font-size:15.5px;font-weight:700}
+#ge-tesoreria .te-row.te-dist .te-c-real small{font-size:12px;color:var(--muted)}
+#ge-tesoreria .te-row.te-dist .te-c-real .ti{font-size:18px;font-weight:700}
+.te-prog{position:absolute;left:18px;right:18px;bottom:0;height:3px;background:var(--hair);border-radius:2px;overflow:hidden}
+.te-prog::after{content:"";display:block;height:100%;width:var(--w);background:var(--olive)}
+.te-row.te-dist:has(.is-ko) .te-prog::after{background:var(--red)}
+.te-row.te-dist:has(.is-ok) .te-prog::after{background:var(--green)}
+.te-grupo{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 0;padding:12px 18px;background:#FAF8F4;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.te-grupo b{color:var(--ink);font-size:14px}
+#ge-tesoreria .te-row.te-res{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1.6fr) auto;column-gap:14px;align-items:center;padding:12px 18px}
+.te-res .te-c-con .ti{font-size:18px;color:var(--purple)}
+.te-res-hint{font-size:12.5px;color:var(--muted);line-height:1.45}
+.te-res-imp{font-family:var(--mono);font-weight:700;font-size:15px;text-align:right}
+.te-row.te-res.is-aparte{background:#FAF8F4}
+.te-colchon{margin:12px 18px 6px;padding:12px 14px;border:1px dashed var(--hair);border-radius:4px;font-size:13px;color:var(--body);line-height:1.5}
+.te-colchon .ti{color:var(--olive)}
+.te-colchon b{font-family:var(--mono)}
+.te-nota{margin:0;padding:12px 18px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.te-suma{border-top:1px solid var(--hair)}
+.te-suma .ti{color:var(--green)}
+.te-cal-f{display:grid;grid-template-columns:64px minmax(0,1fr) auto auto;align-items:center;gap:6px 14px;padding:11px 18px;border-top:1px solid var(--hair)}
+.te-cal-m{font-family:var(--mono);font-weight:600}
+.te-cal-i{font-family:var(--mono);text-align:right}
+.te-cal-v{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.te-lump{grid-template-columns:minmax(0,1fr) auto}
+.te-prev-k{margin:0 18px 18px;grid-template-columns:repeat(3,minmax(0,1fr))}
+/* Conciliación bancaria (6/11) */
+.rc-intro{margin:0 0 14px;font-size:13px;color:var(--muted);line-height:1.55}
+.rc-tpv{margin:0 0 14px;padding:14px 16px;border:1px solid var(--hair);border-top:2px solid var(--ink);border-radius:0;background:#fff}
+.rc-tpv-l{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rc-tpv-v{margin:4px 0 6px;font-family:var(--mono);font-size:26px;font-weight:700}
+.rc-tpv-s{font-size:12.5px;color:var(--muted);line-height:1.5}
+.rc-aviso{margin:0 0 12px;padding:10px 12px;font-size:12.5px;line-height:1.5;background:var(--amber-l);border:1px solid #E6D3A3;border-radius:3px}
+.rc-aviso.is-ko{background:var(--red-l);border-color:#E3C8BF;color:var(--red)}
+.rc-res{display:flex;gap:12px;align-items:flex-start;margin:4px 0 16px;padding:12px 14px;border:1px solid var(--hair);border-radius:3px;background:#FAF8F4;font-size:13px;line-height:1.55}
+.rc-res.is-ok{background:#E6F0E4;border-color:#BCD3B8;color:var(--green)}
+.rc-res.is-ko{background:var(--red-l);border-color:#E3C8BF;color:var(--red)}
+.rc-res-i .ti{font-size:22px;font-weight:700}
+.rc-res-t{flex:1;min-width:0;color:var(--ink)}
+.rc-res.is-ok .rc-res-t b,.rc-res.is-ko .rc-res-t b{font-family:var(--mono);font-size:15px}
+.rc-res.is-ok .rc-res-t b{color:var(--green)}
+.rc-res.is-ko .rc-res-t b{color:var(--red)}
+.rc-guardar{margin:0 0 4px}
+.rc-h{margin:20px 0 8px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rc-hist{border:1px solid var(--hair);border-radius:3px}
+.rc-hist-f{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,.9fr) auto;gap:4px 12px;align-items:center;padding:10px 12px;border-top:1px solid var(--hair);font-size:13px}
+.rc-hist-f:first-child{border-top:0}
+.rc-hist-n{font-family:var(--mono)}
+.rc-hist-n small{font-family:var(--sans,inherit);color:var(--muted)}
+.rc-hist-d{font-family:var(--mono);text-align:right}
+.rc-hist-d.is-ok{color:var(--green)}
+.rc-hist-d.is-ko{color:var(--red)}
+.rc-hist-t{grid-column:1 / -1;color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+@media (max-width:760px){ .rc-hist-f{grid-template-columns:minmax(0,1fr) auto} .rc-hist-p{grid-column:1 / -1;font-weight:600} }
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5593,4 +5686,23 @@ small{font-size:max(.8333em, 11px)}
   .gf-fila.is-abierta .gf-det{padding-top:8px;border-top:1px solid var(--hair)}
   .gf-fila:not(:has(.pl-chev)){grid-template-columns:minmax(0,1fr) auto auto}
   .gf-card{padding:14px}
+}
+/* Tesorería en móvil: cada fila del reparto es una tarjeta (concepto, % editable, objetivo, real, diferencia) */
+@media (max-width:760px){
+  #ge-tesoreria .te-head{display:none}
+  #ge-tesoreria .te-row.te-dist{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);grid-template-areas:"con con pct" "obj real dif";row-gap:10px;padding:14px 14px 16px}
+  #ge-tesoreria .te-c-pct{justify-content:flex-end}
+  #ge-tesoreria .te-c-pct input{min-height:44px !important;height:44px !important;width:76px !important}
+  #ge-tesoreria .te-row.te-dist .te-c-obj::before,#ge-tesoreria .te-row.te-dist .te-c-real::before,#ge-tesoreria .te-row.te-dist .te-c-dif::before{content:attr(data-l);display:block;width:100%;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  #ge-tesoreria .te-row.te-dist .te-c-real{display:block}
+  #ge-tesoreria .te-row.te-dist .te-c-real small{margin-left:6px}
+  .te-prog{left:14px;right:14px}
+  #ge-tesoreria .te-row.te-res{grid-template-columns:minmax(0,1fr) auto;row-gap:4px;padding:12px 14px}
+  .te-res-hint{grid-column:1 / -1;order:3}
+  .te-cal-f{grid-template-columns:52px minmax(0,1fr) auto;padding:11px 14px}
+  .te-cal-v{grid-column:1 / -1;white-space:normal;flex-wrap:wrap}
+  .te-prev-k{margin:0 12px 14px;grid-template-columns:minmax(0,1fr)}
+  .te-barras{padding:14px 14px 4px}
+  .te-colchon{margin:12px 14px 6px}
+  .te-grupo{padding:12px 14px}
 }

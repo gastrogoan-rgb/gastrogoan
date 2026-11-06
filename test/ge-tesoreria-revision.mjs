@@ -58,13 +58,14 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('"Configurar distribución objetivo" cabe en una sola línea (los 5 campos alineados)', async () => {
+await caso('Cada porcentaje del reparto se edita en la fila de su concepto (5 campos, enteros, suman 100)', async () => {
   const r = await page.evaluate(()=>{
-    const tops = ['te-pct-per','te-pct-gf','te-pct-mp','te-pct-og','te-pct-ben'].map(id => document.getElementById(id).getBoundingClientRect().top);
-    return tops;
+    const ids = ['te-pct-per','te-pct-gf','te-pct-mp','te-pct-og','te-pct-ben'];
+    return ids.map(id => { const el = document.getElementById(id); return {fila: !!el.closest('#te-rows .te-row'), v: parseFloat(el.value), paso: el.step}; });
   });
-  const [t0,...resto] = r;
-  assert.ok(resto.every(t => Math.abs(t-t0) < 2), 'los 5 campos deben estar en la misma línea (mismo top): ' + JSON.stringify(r));
+  assert.ok(r.every(x => x.fila), 'cada campo va dentro de su fila: ' + JSON.stringify(r));
+  assert.ok(r.every(x => Number.isInteger(x.v) && x.paso === '1'), 'enteros y de uno en uno: ' + JSON.stringify(r));
+  assert.equal(r.reduce((a, x) => a + x.v, 0), 100);
 });
 
 await caso('Ya no existe el gráfico "Resultado mensual anual" (duplicaba el de Cuenta de Resultados)', async () => {
