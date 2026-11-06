@@ -698,19 +698,30 @@ function cuotaIrpfEscala(base){
 // como cuota, que es como lo hace la ley (art. 63 y 74 LIRPF).
 // · El 5% de difícil justificación es SOLO de la estimación directa
 //   SIMPLIFICADA (la de casi todo autónomo de hostelería). En la normal no.
-// · Reducción por rendimientos bajos (art. 32.2.3º LIRPF): 1.620 € si el
-//   rendimiento neto no pasa de 8.000 €, y baja en línea recta hasta 0 a
-//   los 12.000 €. Exige no tener otras rentas de más de 6.500 €: se da por
-//   hecho (la app no conoce las demás rentas del titular).
+// · Reducción por rentas no exentas bajas (art. 32.2.3º LIRPF): 1.620 € si
+//   la renta no pasa de 8.000 €, y baja en línea recta hasta 0 a los 12.000 €.
+// · Además, la de actividades económicas (art. 32.1, ver arriba), que exige
+//   que las otras rentas del titular no pasen de 6.500 €.
 function reduccionRendimientosBajos(rn){
   if(!(rn > 0) || rn > 12000) return 0;
   return rn <= 8000 ? 1620 : Math.max(0, 1620 - 0.405 * (rn - 8000));
+}
+// Reducción por rendimientos de actividades económicas (art. 32.1 LIRPF, desde 2023, Ley 31/2022): 6.498 € si el rendimiento neto
+// es ≤ 14.047,50 €, y baja 1,14 € por cada euro de más hasta 0 en 19.747,50 €. Solo en estimación DIRECTA y si las demás rentas
+// (no de actividades) no pasan de 6.500 €. Fuente: AEAT, «Principales novedades de la Ley de Presupuestos 2023».
+// ⚠️ Faltaba (2/11): la app solo conocía la de 1.620 € de abajo y sobreestimaba el IRPF de todo autónomo pequeño.
+function reduccionActividadesEconomicas(rn){
+  if(!(rn > 0) || rn >= 19747.5) return 0;
+  return Math.min(rn, rn <= 14047.5 ? 6498 : Math.max(0, 6498 - 1.14 * (rn - 14047.5)));
 }
 function irpfActividad(rendimiento, opts={}){
   if(!(rendimiento > 0)) return 0;
   const simplificada = !opts.sinDificilJustificacion && (DB.business||{}).modalidadDirecta !== 'normal';
   let neto = simplificada ? rendimiento - Math.min(2000, rendimiento*0.05) : rendimiento;
-  // La reducción exige estimación DIRECTA (art. 32.2.3º.b): en módulos no.
+  // Las reducciones exigen estimación DIRECTA: en módulos no.
+  const bzR = DB.business || {};
+  const otrasR = Math.max(0, parseFloat(opts.otrasRentas != null ? opts.otrasRentas : bzR.otrasRentasTitular) || 0);
+  if(!opts.sinDificilJustificacion && otrasR <= 6500) neto = Math.max(0, neto - reduccionActividadesEconomicas(neto));
   if(!opts.sinDificilJustificacion) neto = Math.max(0, neto - reduccionRendimientosBajos(neto));
   // Inicio de actividad (art. 32.3 LIRPF): -20 % del rendimiento neto positivo
   // (hasta 100.000 €) el primer año con beneficio y el siguiente. Solo si el
