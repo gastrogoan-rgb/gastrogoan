@@ -524,22 +524,8 @@
     .cl-p{text-align:right;padding-top:0}
   }
 
-  /* PC y tablet ancho: dos columnas — los pasos a la izquierda y lo elegido hasta ahora, siempre a la vista, a la derecha. */
-  .wz-side{display:none}
-  .sd-l{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--ink)}
-  .sd-l span:last-child{font-family:'IBM Plex Mono',monospace;text-align:right}
-  .sd-l span:first-child{min-width:0;overflow-wrap:break-word}
-  .sd-m{color:var(--muted)}
-  .sd-t{display:flex;justify-content:space-between;padding-top:12px;font-weight:700;font-size:17px;color:var(--ink);font-family:'IBM Plex Mono',monospace}
-  @media (min-width:960px){
-    .wrap{max-width:1000px}
-    .tabs{max-width:620px}
-    .wz{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:0 28px;align-items:start}
-    .wz>.wz-prog{grid-column:1/-1;max-width:620px}
-    .wz-main{min-width:0}
-    .wz-side{display:block;position:sticky;top:16px;border:1px solid var(--border);border-top:2px solid var(--ink);background:var(--surface);padding:18px}
-    .wz-nav{margin:18px 0 0;padding:12px 0 0;background:transparent;border-top:0;position:static}
-  }
+  /* PC y tablet: una sola columna, centrada y algo más ancha (el resumen ya está al final de la hoja). */
+  @media (min-width:768px){ .wrap{max-width:640px} }
 
   /* Horas con un toque (pedidos) */
   .slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:-4px 0 14px}
@@ -549,6 +535,89 @@
   .slots button.asap{grid-column:1/-1;font-family:inherit;font-weight:600;font-size:14px}
   .slots button:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
   @media (max-width:360px){ .slots{grid-template-columns:repeat(3,minmax(0,1fr))} }
+
+  /* Cabecera: email y teléfono pulsables; barra de servicios centrada */
+  .hi-mail{--hi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='1.5'/%3E%3Cpath d='m3.5 6.5 8.5 7 8.5-7'/%3E%3C/svg%3E")}
+  header .sub a.hi{color:inherit;text-decoration:none;padding:6px 2px;min-height:32px}
+  header .sub a.hi:hover{text-decoration:underline}
+  header .sub a.hi:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  .tabs{margin-left:auto;margin-right:auto;justify-content:center}
+
+  /* ═══ EFECTOS (6/11) — todo con movimiento va dentro de prefers-reduced-motion: no-preference ═══ */
+  .wz-eye{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--olive)}
+  .wz-eye::after{content:"";flex:0 0 36px;height:2px;background:var(--olive);transform-origin:left}
+  /* Progreso: cada tramo se rellena; el paso hecho lleva su ✓ */
+  .wz-prog button{position:relative;border-top:0;padding-top:11px}
+  .wz-prog button::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--border)}
+  .wz-prog button::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--ink);transform:scaleX(0);transform-origin:left}
+  .wz-prog li.done button::after{transform:scaleX(1)}
+  .wz-prog li.on button::after{transform:scaleX(1);background:var(--olive)}
+  .wz-prog li.done .n::before{content:"";display:inline-block;width:11px;height:11px;margin-right:5px;vertical-align:-1px;background:var(--olive);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7'/%3E%3C/svg%3E") center/contain no-repeat}
+  /* Botones de pasos: flecha que acompaña */
+  #wz-next:not(:disabled)::after{content:"";width:16px;height:16px;flex:none;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14m-6-6 6 6-6 6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14m-6-6 6 6-6 6'/%3E%3C/svg%3E") center/contain no-repeat}
+  #wz-back::before{content:"";width:16px;height:16px;flex:none;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5m6-6-6 6 6 6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5m6-6-6 6 6 6'/%3E%3C/svg%3E") center/contain no-repeat}
+  /* Indicador deslizante de Reservar · Take Away · Delivery */
+  .tabs{position:relative}
+  .tabs::after{content:"";position:absolute;left:0;bottom:-1px;height:3px;width:calc(100% / var(--n,3));background:var(--brand2);transform:translateX(calc(var(--i,0) * 100%))}
+  .tab-btn.active{border-bottom-color:transparent !important}
+  /* La transición de pasos entra desde el lado: se recorta en el contenedor para que nunca asome scroll lateral. */
+  .wrap{overflow-x:clip}
+  /* Elevación al pasar (solo con ratón: en táctil no hay «pasar por encima») */
+  @media (hover:hover){
+    .mn-card:hover,.menu-folder-card.cs-tile:hover{box-shadow:0 8px 20px rgba(28,26,23,.09)}
+    .mn-card:hover .mn-go{transform:translateX(4px)}
+    .menu-folder-card.cs-tile:hover .icon{transform:scale(1.08)}
+    .slots button:hover{transform:translateY(-1px)}
+  }
+
+  @media (prefers-reduced-motion:no-preference){
+    /* Cabecera: entra en cascada */
+    header #biz-logo img,header h1,header .sub{animation:wzRise .55s cubic-bezier(.2,.8,.2,1) both}
+    header h1{animation-delay:.07s} header .sub{animation-delay:.14s}
+    /* Transición entre pasos: entra desde el lado al que se va, y su contenido en cascada */
+    .wz-step{animation:none}
+    .wz-step[data-dir="fw"]{animation:wzFw .38s cubic-bezier(.2,.8,.2,1) both}
+    .wz-step[data-dir="bk"]{animation:wzBk .38s cubic-bezier(.2,.8,.2,1) both}
+    .wz-step:not([hidden])>*{animation:wzRise .45s cubic-bezier(.2,.8,.2,1) both}
+    .wz-step:not([hidden])>*:nth-child(1){animation-delay:.02s} .wz-step:not([hidden])>*:nth-child(2){animation-delay:.06s}
+    .wz-step:not([hidden])>*:nth-child(3){animation-delay:.10s} .wz-step:not([hidden])>*:nth-child(4){animation-delay:.14s}
+    .wz-step:not([hidden])>*:nth-child(5){animation-delay:.18s} .wz-step:not([hidden])>*:nth-child(6){animation-delay:.22s}
+    .wz-step:not([hidden])>*:nth-child(n+7){animation-delay:.26s}
+    .wz-eye::after{animation:wzLinea .6s .15s cubic-bezier(.2,.8,.2,1) both}
+    @keyframes wzFw{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+    @keyframes wzBk{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+    @keyframes wzRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    @keyframes wzLinea{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+    /* Progreso */
+    .wz-prog button::after{transition:transform .5s cubic-bezier(.2,.8,.2,1),background-color .3s}
+    .wz-prog li.on .l{animation:wzRise .4s both}
+    .tabs::after{transition:transform .42s cubic-bezier(.2,.8,.2,1)}
+    /* Resumen final: cada fila entra tras la anterior */
+    .sm-row{animation:wzRise .45s cubic-bezier(.2,.8,.2,1) both}
+    .sm-row:nth-child(2){animation-delay:.07s} .sm-row:nth-child(3){animation-delay:.14s} .sm-row:nth-child(4){animation-delay:.21s} .sm-row:nth-child(5){animation-delay:.28s} .sm-row:nth-child(6){animation-delay:.35s}
+    /* Carta y menús: entran al cambiar de vista o de carpeta */
+    #menu-folders>.mn-list>*,#menu-folders>.menu-folder-grid>*,#menu-folders>.fd-head,#menu-folders>.dish{animation:wzRise .4s cubic-bezier(.2,.8,.2,1) both}
+    #menu-folders>.mn-list>*:nth-child(2),#menu-folders>.menu-folder-grid>*:nth-child(2){animation-delay:.05s}
+    #menu-folders>.mn-list>*:nth-child(3),#menu-folders>.menu-folder-grid>*:nth-child(3){animation-delay:.1s}
+    #menu-folders>.menu-folder-grid>*:nth-child(4){animation-delay:.15s} #menu-folders>.menu-folder-grid>*:nth-child(n+5){animation-delay:.2s}
+    /* Añadir al pedido: el control «salta», la línea se ilumina, el total late */
+    .qty-ctl{animation:wzPop .28s cubic-bezier(.3,1.6,.5,1) both}
+    @keyframes wzPop{from{opacity:.4;transform:scale(.88)}to{opacity:1;transform:none}}
+    .menu-item.dish.en{animation:wzResalta .9s ease-out}
+    @keyframes wzResalta{from{background:#D8E3DA}to{background:var(--green-l)}}
+    #wz-next.pulso{animation:wzLate .42s ease-out}
+    @keyframes wzLate{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(74,93,78,.5)}45%{transform:scale(1.02);box-shadow:0 0 0 8px rgba(74,93,78,0)}100%{transform:none;box-shadow:0 0 0 0 rgba(74,93,78,0)}}
+    .mn-badge,.cs-in{animation:wzPop .3s cubic-bezier(.3,1.6,.5,1) both}
+    .mn-go,.cs-tile .icon,.slots button,.mn-card,.menu-folder-card.cs-tile{transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s,border-color .15s}
+    .slots button.on{animation:wzPop .25s cubic-bezier(.3,1.6,.5,1)}
+    #wz-next:not(:disabled):hover::after{transform:translateX(4px)}
+    #wz-next::after,#wz-back::before{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+    #wz-back:hover::before{transform:translateX(-4px)}
+    /* Hoja de menú / extras: sube desde abajo */
+    #modal-overlay.is-sheet.active #modal-box{animation:wzSube .36s cubic-bezier(.2,.8,.2,1) both}
+    @keyframes wzSube{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+    .opt:has(input:checked){transition:background-color .2s,box-shadow .2s}
+  }
 </style>
 </head>
 <body>
@@ -1709,7 +1778,12 @@ function renderHeader(){
   if(b.address) parts.push(['pin', b.address]);
   if(b.schedule) parts.push(['clock', b.schedule]);
   if(b.phone) parts.push(['phone', b.phone]);
-  document.getElementById('biz-info').innerHTML = parts.map(([k, v]) => `<span class="hi hi-${k}">${escapeHtml(v)}</span>`).join('');
+  if(b.email) parts.push(['mail', b.email]);
+  // Teléfono y email son enlaces (llamar / escribir) con el mismo aspecto que el resto de la información.
+  const enlace = {phone: v => 'tel:' + String(v).replace(/[^\d+]/g, ''), mail: v => 'mailto:' + v};
+  document.getElementById('biz-info').innerHTML = parts.map(([k, v]) => enlace[k]
+    ? `<a class="hi hi-${k}" href="${escapeHtml(enlace[k](v))}">${escapeHtml(v)}</a>`
+    : `<span class="hi hi-${k}">${escapeHtml(v)}</span>`).join('');
   renderLangSwitcher();
 }
 
@@ -1781,9 +1855,17 @@ function renderApp(){
   cart = [];
   cartTipPct = 0; cartTipCustom = 0;
   wzReset(); menuMode = null; menuQuery = ''; menuOpenSection = null;
+  const tabIdx = Math.max(0, tabs.findIndex(x => x.id === currentTab));
+  const tabsPrevias = document.querySelector('#app > .tabs');
+  if(tabsPrevias && document.getElementById('tab-content')){
+    tabsPrevias.style.setProperty('--n', tabs.length); tabsPrevias.style.setProperty('--i', tabIdx);
+    tabsPrevias.innerHTML = renderTabButtonsHtml(tabs);
+    renderTabContent();
+    return;
+  }
 
   document.getElementById('app').innerHTML = `
-    <div class="tabs" role="tablist">
+    <div class="tabs" role="tablist" style="--n:${tabs.length};--i:${tabIdx}">
       ${renderTabButtonsHtml(tabs)}
     </div>
     <div id="tab-content" role="tabpanel"></div>
@@ -1869,7 +1951,7 @@ function wzNavHtml(submitHtml){
 function wzAplicar(){
   const k = wzState.kind; if(!k || !wzEl('wz')) return;
   const total = WZ_PASOS[k].length;
-  document.querySelectorAll('.wz-step').forEach(s => { s.hidden = (+s.dataset.wz !== wzState.step); });
+  document.querySelectorAll('.wz-step').forEach(s => { const activo = (+s.dataset.wz === wzState.step); if(activo && s.hidden) s.dataset.dir = wzState.dir || 'fw'; s.hidden = !activo; });
   document.querySelectorAll('[data-wz-li]').forEach(li => {
     const n = +li.dataset.wzLi, b = li.querySelector('button');
     li.classList.toggle('on', n === wzState.step); li.classList.toggle('done', n < wzState.step);
@@ -1883,7 +1965,6 @@ function wzAplicar(){
   if(sub) sub.style.display = ultimo ? '' : 'none';
   if(ultimo) wzResumen();
   wzNavActualizar();
-  wzSideActualizar();
 }
 function wzScroll(){
   const w = wzEl('wz'); if(!w) return;
@@ -1893,6 +1974,7 @@ function wzScroll(){
 }
 function wzIr(n){
   if(n < 1 || n > wzState.reached) return;
+  wzState.dir = n >= wzState.step ? 'fw' : 'bk';
   wzState.step = n; wzAplicar(); wzScroll();
 }
 function wzAtras(){ if(wzState.step > 1) wzIr(wzState.step - 1); }
@@ -1900,6 +1982,7 @@ function wzSiguiente(){
   if(!wzValidar(wzState.step)) return;
   const total = WZ_PASOS[wzState.kind].length;
   if(wzState.step >= total) return;
+  wzState.dir = 'fw';
   wzState.step++; wzState.reached = Math.max(wzState.reached, wzState.step);
   wzAplicar(); wzScroll();
 }
@@ -1908,7 +1991,7 @@ function wzSiguiente(){
 function wzMostrarCampo(input){
   if(!wzState.kind || !wzEl('wz')) return;
   const sec = input.closest && input.closest('.wz-step');
-  if(sec && +sec.dataset.wz !== wzState.step){ wzState.step = +sec.dataset.wz; wzAplicar(); }
+  if(sec && +sec.dataset.wz !== wzState.step){ wzState.dir = 'bk'; wzState.step = +sec.dataset.wz; wzAplicar(); }
 }
 function wzPeople(d){
   const i = wzEl('r-people'); if(!i) return;
@@ -1924,7 +2007,12 @@ function wzNavActualizar(){
   const n = cart.reduce((s, l) => s + l.qty, 0), sub = cart.reduce((s, l) => s + l.price * l.qty, 0), min = p.pedidoMinimo || 0;
   if(!n){ next.disabled = true; next.textContent = t('wz.o.empty'); }
   else if(min > 0 && sub < min){ next.disabled = true; next.textContent = t('wz.o.faltan').replace('%s', fmtMoney(min - sub)); }
-  else next.innerHTML = `${escapeHtml(t('wz.next'))} · <span class="mono">${n} · ${fmtMoney(sub)}</span>`;
+  else {
+    next.innerHTML = `${escapeHtml(t('wz.next'))} · <span class="mono">${n} · ${fmtMoney(sub)}</span>`;
+    const firma = n + '|' + sub;
+    if(next.dataset.firma && next.dataset.firma !== firma){ next.classList.remove('pulso'); void next.offsetWidth; next.classList.add('pulso'); }
+    next.dataset.firma = firma;
+  }
 }
 function wzValidar(step){
   const k = wzState.kind;
@@ -2032,26 +2120,6 @@ function wzResumen(){
     if(wzVal('o-notes')) h += fila(t('wz.sum.notes'), wzVal('o-notes'), '', 2);
   }
   box.innerHTML = h;
-}
-
-/* Resumen vivo al lado (solo pantallas anchas): lo elegido hasta ahora, siempre a la vista. */
-function renderReservaCalendar(){ renderReservaCalendarBase(); wzSideActualizar(); }
-function wzSideActualizar(){
-  const el = wzEl('wz-side'); if(!el) return;
-  if(wzState.kind === 'pedido'){
-    const p = (DB.business || {}).pedidos || {};
-    const sub = cart.reduce((s, l) => s + l.price * l.qty, 0), fee = getDeliveryFee(p, sub, currentTab === 'delivery');
-    el.innerHTML = `<h3 class="cs-tit" style="margin-top:0">${escapeHtml(t('cart.title'))}</h3>` + (cart.length
-      ? cart.map(l => `<div class="sd-l"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price * l.qty)}</span></div>`).join('')
-        + (fee > 0 ? `<div class="sd-l sd-m"><span>${escapeHtml(t('cart.shipping'))}</span><span>${fmtMoney(fee)}</span></div>` : '')
-        + `<div class="sd-t"><span>${escapeHtml(t('cart.total'))}</span><span>${fmtMoney(sub + fee)}</span></div>`
-      : `<div class="empty" style="padding:14px 0">${escapeHtml(t('cart.empty'))}</div>`);
-  } else if(wzState.kind === 'reserva'){
-    const d = wzVal('r-date'), tm = wzVal('r-time'), people = Math.min(50, Math.max(1, parseInt(wzVal('r-people')) || 1));
-    el.innerHTML = `<h3 class="cs-tit" style="margin-top:0">${escapeHtml(t('wz.r.confirm.title'))}</h3>
-      <div class="sd-l"><span>${escapeHtml(t('wz.sum.people'))}</span><span>${escapeHtml(people === 1 ? t('wz.n.person') : t('wz.n.people').replace('%d', people))}</span></div>
-      <div class="sd-l"><span>${escapeHtml(t('wz.sum.when'))}</span><span>${d ? escapeHtml(fechaLegibleCorta(d) + ' · ' + tm) : '—'}</span></div>`;
-  }
 }
 
 /* Horas con un toque: los huecos REALES del día (horario, antelación y cierre de cocina), en vez de adivinar con el selector nativo.
@@ -2801,7 +2869,7 @@ function selectorMesasHtml(people){
     </div>
   </div>`;
 }
-function renderReservaCalendarBase(){
+function renderReservaCalendar(){
   const box = document.getElementById('r-cal');
   if(!box) return;
   const people = currentPeopleValue();
@@ -2945,6 +3013,7 @@ function renderReservaForm(){
       <div class="wz-main">
 
       <section class="wz-step card" data-wz="1">
+        <div class="wz-eye"><span>${t('wz.m.step').replace('%d', 1).replace('%d', 3)}</span></div>
         <h2 class="wz-h" tabindex="-1">${t('wz.r.when.title')}</h2>
         <p class="wz-sub">${t('wz.r.when.sub')}</p>
         <div class="field">
@@ -2968,6 +3037,7 @@ function renderReservaForm(){
       </section>
 
       <section class="wz-step card" data-wz="2" hidden>
+        <div class="wz-eye"><span>${t('wz.m.step').replace('%d', 2).replace('%d', 3)}</span></div>
         <h2 class="wz-h" tabindex="-1">${t('wz.r.data.title')}</h2>
         <p class="wz-sub">${t('wz.r.data.sub')}</p>
         <div class="field">
@@ -3005,6 +3075,7 @@ function renderReservaForm(){
       </section>
 
       <section class="wz-step card" data-wz="3" hidden>
+        <div class="wz-eye"><span>${t('wz.m.step').replace('%d', 3).replace('%d', 3)}</span></div>
         <h2 class="wz-h" tabindex="-1">${t('wz.r.confirm.title')}</h2>
         <p class="wz-sub">${t('wz.r.confirm.sub')}</p>
         <div class="sm" id="wz-resumen"></div>
@@ -3018,7 +3089,6 @@ function renderReservaForm(){
 
       ${wzNavHtml('<button type="button" class="btn btn-primary" id="r-submit" onclick="submitReserva()" style="display:none"></button>')}
       </div>
-      <aside class="wz-side" id="wz-side" aria-hidden="true"></aside>
     </div>
   `;
   if(!repintado){ calView = 'dia'; calDate = todayStr(); calSelectedTime = null; calSelectedTable = null; }
@@ -3992,6 +4062,7 @@ function renderOrderForm(){
       <div class="wz-main">
 
       <section class="wz-step card" data-wz="1">
+        <div class="wz-eye"><span>${t('wz.m.step').replace('%d', 1).replace('%d', 3)}</span></div>
         <h2 class="wz-h" tabindex="-1">${t('wz.o.pick.title')}</h2>
         <p class="wz-sub">${t(isDelivery ? 'wz.o.pick.sub.delivery' : 'wz.o.pick.sub.takeaway')}</p>
         ${servicioChipsHtml(p, isDelivery)}
@@ -3999,6 +4070,7 @@ function renderOrderForm(){
       </section>
 
       <section class="wz-step card" data-wz="2" hidden>
+        <div class="wz-eye"><span>${t('wz.m.step').replace('%d', 2).replace('%d', 3)}</span></div>
         <h2 class="wz-h" tabindex="-1">${t(isDelivery ? 'wz.o.data.title.delivery' : 'wz.o.data.title.takeaway')}</h2>
         <p class="wz-sub">${t('wz.o.data.sub')}</p>
         <div class="field-row">
@@ -4045,6 +4117,7 @@ function renderOrderForm(){
       </section>
 
       <section class="wz-step card" data-wz="3" hidden>
+        <div class="wz-eye"><span>${t('wz.m.step').replace('%d', 3).replace('%d', 3)}</span></div>
         <h2 class="wz-h" tabindex="-1">${t('wz.o.rev.title')}</h2>
         <p class="wz-sub">${t('wz.o.rev.sub')}</p>
         <div class="sm" id="wz-resumen"></div>
@@ -4066,7 +4139,6 @@ function renderOrderForm(){
 
       ${wzNavHtml(`<button type="button" class="btn btn-primary" id="o-submit" onclick="submitOrder()" style="display:none">${t('order.submit')}</button>`)}
       </div>
-      <aside class="wz-side" id="wz-side" aria-hidden="true"></aside>
     </div>
   `;
   renderCartSummary();
@@ -4103,7 +4175,6 @@ function renderCartSummary(){
   // Lo que cambia con el carrito, esté donde esté el cliente: los controles de cada plato y el botón «Continuar».
   dishCtlRefreshAll();
   wzNavActualizar();
-  wzSideActualizar();
   const box = document.getElementById('cart-summary');
   if(!box) return;
   const submitBtn = document.getElementById('o-submit');
