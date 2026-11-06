@@ -102,9 +102,9 @@ await caso('Si el negocio no hace delivery, "Delivery" no aparece ni en el filtr
   assert.ok(r.filtro.includes('Mesa') && r.filtro.includes('Take Away'), 'los tipos que sí ofrece deben seguir saliendo: ' + JSON.stringify(r));
 });
 
-await caso('El selector de meses queda centrado (month-sel-centered)', async () => {
-  const r = await page.evaluate(()=>getComputedStyle(document.getElementById('ventas-months')).justifyContent);
-  assert.equal(r, 'center', 'la fila de meses debe estar centrada: ' + r);
+await caso('Ventas usa el selector de periodo común (el de las doce píldoras se retiró el 6/11)', async () => {
+  const r = await page.evaluate(() => ({selector: !!document.querySelector('#ventas-periodo .pp-btn, #ventas-periodo button'), viejo: !!document.getElementById('ventas-months')}));
+  assert.ok(r.selector && !r.viejo, JSON.stringify(r));
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {
