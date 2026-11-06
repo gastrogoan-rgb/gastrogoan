@@ -858,8 +858,23 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
 - **Mega Lista**: el precio de compra es **sin IVA** y el IVA va justo al lado (lista y formulario); «por revisar»
   (sin precio / IVA / proveedor), IVA en línea y por carpeta, cálculo en vivo (coste por unidad y con IVA).
 - Pruebas que siguen el diseño nuevo: `oferta`, `vales-cocina`, `iconos-comida`, `ia-proveedores`, `subpantallas`,
-  `proveedores`, `megalista`, `plegables`, `menu-acciones`, `escandallo`, `fichas`, `pedidos`. ⚠️ `acceso-alta.mjs` falla desde antes de estos cambios: el selector de idioma
-  «ES» de la entrada mide 44×26 px en móvil (diseño del 28/10, pendiente de decidir).
+  `proveedores`, `megalista`, `plegables`, `menu-acciones`, `escandallo`, `fichas`, `pedidos`. ✅ `acceso-alta.mjs` ya pasa (7/11): el selector de idioma de la entrada vuelve a 44 px en móvil y tablet.
+
+## Barrido de toda la app y `CONTROL_CALIDAD/` (7/11, noche)
+
+El dueño pidió revisar **toda** la app, no solo las pantallas elegidas, con el prompt maestro. Se hizo SIN cambiar la identidad
+(el rediseño total sigue revertido): se capturó cada pantalla con el negocio de prueba lleno, a 390 y 1280 px, y se corrigió lo que
+estaba mal. `CONTROL_CALIDAD/` guarda inventario, seguimiento por página (con la cobertura REAL de cada métrica), incidencias,
+pruebas, sistema de diseño, continuidad e informe. **Léelo antes de volver a auditar: dice qué NO se ha mirado.**
+- ⚠️ **Lo marcado o elegido va en verde oliva, nunca en negro** (pestañas, selectores, horas). Había negro en Gestión Económica y en
+  controles de la web pública. Al pasar el ratón: fondo crema + borde verde. Sin raya negra gruesa sobre cada tarjeta ni barras de acento.
+- ⚠️ **Un módulo nuevo en una carpeta necesita sus textos `module.<carpeta>.<id>.name/.desc` en es, ca y en**: el de I+D de Sala salía
+  como `module.sala.idr.name`. Lo vigila `test/claves-sin-traducir.mjs` (todas las vistas × 3 idiomas).
+- Franjas de cifras en móvil: con celdas impares la última ocupa la fila entera (`.st-resumen`, `.grid-N:has(> .kpi)`).
+- En Gestión Económica las pestañas van ANTES del aviso y la lista de pendientes (`.ck-det`, plegada en móvil).
+- ⚠️ Para capturar `home` hay que quitar `#app-splash`; si no, sale la pantalla de carga.
+- `movil.mjs` ahora incluye `idr`, `idr-sala` y `plan360`.
+- Decisiones del dueño abiertas: `landing.html` y `catalogo.html` (identidad antigua, no se publican) y los emojis de los paneles privados.
 
 ## Entrada, selector y frase del día (28-29/10)
 
