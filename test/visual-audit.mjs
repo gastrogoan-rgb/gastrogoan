@@ -50,6 +50,7 @@ const VIEWS = [
   { name: 'economia_tesoreria', fn: "GE.tab('tesoreria')" },
   { name: 'economia_pe', fn: "GE.tab('pe')" },
   { name: 'economia_capex', fn: "GE.tab('capex')" },
+  { name: 'economia_bc', fn: "GE.tab('bc')" },
 ];
 
 const SEED = async () => {

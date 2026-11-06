@@ -161,6 +161,8 @@ lanzar; node test/economia-inversiones.mjs > "$SALIDA/economiainversiones.txt" 2
 lanzar; node test/economia-resultados.mjs > "$SALIDA/economiaresultados.txt" 2>&1 & P155=$!
 lanzar; node test/fiscal-independiente.mjs > "$SALIDA/fiscalindependiente.txt" 2>&1 & P156=$!
 lanzar; node test/fiscal-fijado.mjs > "$SALIDA/fiscalfijado.txt" 2>&1 & P157=$!
+lanzar; node test/fiscal-motor.mjs > "$SALIDA/fiscalmotor.txt" 2>&1 & P158=$!
+lanzar; node test/beneficio-caja.mjs > "$SALIDA/beneficiocaja.txt" 2>&1 & P159=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -352,5 +354,7 @@ espera $P154 "Gestión Económica → Inversiones: cartera a mano, tarjetas con 
 espera $P155 "Gestión Económica → Cuenta de Resultados: gráfica con hover, ayudas detrás de botones, intereses con el caso real y móvil" "$SALIDA/economiaresultados.txt" "todos los casos pasaron"
 espera $P156 "Fiscalidad INDEPENDIENTE: IRPF, IS por tramos, IVA, 111 y CB con cifras hechas a mano" "$SALIDA/fiscalindependiente.txt" "todos los casos pasaron"
 espera $P157 "Forma jurídica y régimen fijados desde el alta: bloqueados en Mi Negocio, motor fiscal con lo de la licencia y comprobar cambios" "$SALIDA/fiscalfijado.txt" "todos los casos pasaron"
+espera $P158 "Motor fiscal: reglas con fuente, escala de Cataluña a mano, traza, fiabilidad, obligaciones presentadas/pagadas y simulador" "$SALIDA/fiscalmotor.txt" "todos los casos pasaron"
+espera $P159 "Beneficio y caja: puente del beneficio al dinero con cuentas a mano, disponible de verdad, razones y liquidez" "$SALIDA/beneficiocaja.txt" "todos los casos pasaron"
 
 exit $FALLOS
