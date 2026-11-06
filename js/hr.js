@@ -2454,12 +2454,12 @@ const GE = (function(){
     set('pe-r7', r.margenSeg == null ? '—' : pct1(r.margenSeg) + ' %');
     set('pe-r8', (r.resultado >= 0 ? '+' : '−') + fmtMoney(Math.abs(r.resultado)));
     set('pe-r9', r.cubBen == null ? gl({es:'No alcanzable con este ticket', ca:'No assolible amb aquest tiquet', en:'Not reachable at this ticket'}) : t('hr.pe.coversPerMonth').replace('${n}', r.cubBen));
-    document.getElementById('pe-r8').className = 'te-valor ' + (r.resultado >= 0 ? 'is-ok' : 'is-ko');
-    document.getElementById('pe-r7').className = 'te-valor ' + (r.margenSeg != null && r.margenSeg >= 0 ? 'is-ok' : 'is-ko');
+    document.getElementById('pe-r8').className = 'pe-val te-valor ' + (r.resultado >= 0 ? 'is-ok' : 'is-ko');
+    document.getElementById('pe-r7').className = 'pe-val te-valor ' + (r.margenSeg != null && r.margenSeg >= 0 ? 'is-ok' : 'is-ko');
     const estadoEl = document.getElementById('pe-estado');
     const arriba = diff >= 0;
     estadoEl.className = 'pe-estado ' + (arriba ? 'is-ok' : 'is-ko');
-    estadoEl.innerHTML = `<i class="ti ${arriba ? 'ti-check' : 'ti-x'}"></i> ${arriba ? t('hr.pe.aboveBreakevenLong') : t('hr.pe.belowBreakevenLong')}`;
+    estadoEl.innerHTML = `<i class="ti ${arriba ? 'ti-check' : 'ti-x'}"></i> ${(arriba ? t('hr.pe.aboveBreakevenLong') : t('hr.pe.belowBreakevenLong')).replace(/^[^\p{L}]+/u, '')}`;
     peGauge(p.cub, r.cubNec);
     peChart(p, r);
     peLevers(p, r);
@@ -2756,70 +2756,120 @@ const GE = (function(){
     `;
   }
 
+  // Lo que lleva amortizado una inversión hasta este mes (la suma de las cuotas mensuales de amortización).
+  function capexAmortizado(c){
+    const hoy = new Date();
+    const k = capexMesesDesdeCompra(c, hoy.getFullYear(), hoy.getMonth());
+    if(k == null || k < 0) return 0;
+    const [fy, fm] = c.fecha.split('-').map(Number);
+    let sum = 0;
+    for(let i = 0; i <= k; i++){ const tot = fy*12 + (fm-1) + i; sum += capexAmortizacionMes(c, Math.floor(tot/12), tot % 12); }
+    return sum;
+  }
+  // Mes en que se paga la última cuota de una inversión financiada («dic 2027»).
+  function capexUltimaCuota(c){
+    const n = parseInt(c.cuotas) || 0; if(!c.fecha || n < 1) return null;
+    const [fy, fm] = c.fecha.split('-').map(Number); const tot = fy*12 + (fm-1) + (n-1);
+    return new Date(Math.floor(tot/12), tot % 12, 1);
+  }
+  let cxFiltro = 'todas';
+  function setCxFiltro(f){ cxFiltro = f; renderCapex(); }
   function renderCapex(){
-    const tbody = document.getElementById('capex-tbody');
+    const lista = document.getElementById('capex-list');
     const empty = document.getElementById('capex-empty');
-    const deudaEl = document.getElementById('capex-deuda-val');
     const overdueAlert = document.getElementById('capex-overdue-alert');
+    const todas = capex().slice().sort((a,b) => String(b.fecha||'').localeCompare(String(a.fecha||'')));
+    const mesTxt = d => d ? d.toLocaleDateString(localeActual(), {month:'short', year:'numeric'}) : '—';
+    const hoy = new Date();
     if(overdueAlert){
       const overdue = capex().filter(c=>c.financiado && capexRestantes(c)===0 && c.estadoPago!=='PAGADO');
-      if(overdue.length){
-        overdueAlert.style.display='block';
-        overdueAlert.innerHTML = `<div class="ge-section" style="background:var(--amber-l);border:1px solid var(--amber)">
-          <div style="font-weight:600;color:var(--amber-dark);margin-bottom:4px"><i class="ti ti-alert-triangle"></i> ${t('hr.capex.overdueTitle')}</div>
-          <div style="font-size:12px;color:var(--amber-dark)">${overdue.map(c=>escapeHtml(c.descripcion)).join(', ')} — ${t('hr.capex.overdueDesc')}</div>
-        </div>`;
-      } else {
-        overdueAlert.style.display='none';
-        overdueAlert.innerHTML='';
-      }
+      overdueAlert.style.display = overdue.length ? 'block' : 'none';
+      overdueAlert.innerHTML = overdue.length ? `<div class="te-avisos"><p><i class="ti ti-alert-triangle"></i> <b>${t('hr.capex.overdueTitle')}</b> ${overdue.map(c=>escapeHtml(c.descripcion)).join(', ')} — ${t('hr.capex.overdueDesc')}</p></div>` : '';
     }
-    if(deudaEl){
-      const {totalDeuda, totalCuotas} = capexDeudaPendiente();
-      deudaEl.innerHTML = `${fmtMoney(totalDeuda)} <span style="font-size:11px;font-weight:400;color:var(--muted)">${t('hr.capex.debtPendingSub').replace('${n}', totalCuotas)}</span>`;
-    }
-    if(!capex().length){
-      tbody.innerHTML='';
-      empty.style.display='block';
-      ['capex-base','capex-iva','capex-total'].forEach(id=>document.getElementById(id).textContent='—');
+    // Resumen de TODA la cartera (no del filtro): lo invertido, lo que vale hoy, lo que se debe y lo que cuesta cada mes.
+    const {totalDeuda, totalCuotas} = capexDeudaPendiente();
+    let totBase = 0, totIva = 0, vnc = 0, amortMes = 0, cuotaMes = 0, fin = null;
+    todas.forEach(c => {
+      const imp = parseFloat(c.importe||0), iv = imp*parseFloat(c.iva||0)/100; totBase += imp; totIva += iv;
+      const base = capexBaseAmortizable(c);
+      vnc += (c.turismoMixto && fiscalPerfil().personaFisica) ? base : Math.max(0, base - capexAmortizado(c));
+      amortMes += capexAmortizacionMes(c, hoy.getFullYear(), hoy.getMonth());
+      if(c.financiado && (capexRestantes(c) || 0) > 0){ cuotaMes += parseFloat(c.cuotaMensual||0); const u = capexUltimaCuota(c); if(u && (!fin || u > fin)) fin = u; }
+    });
+    document.getElementById('capex-kpis').innerHTML = `
+      <div class="ge-kpi"><div class="lbl">${gl({es:'Total invertido', ca:'Total invertit', en:'Total invested'})}</div><div class="val">${fmtMoney(totBase)}</div><div class="sub">${t('hr.lbl.vatSupported')} ${fmtMoney(totIva)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${gl({es:'Valor hoy', ca:'Valor avui', en:'Value today'})}</div><div class="val">${fmtMoney(vnc)}</div><div class="sub">${gl({es:'Lo invertido menos lo ya amortizado', ca:'Invertit menys l\'ja amortitzat', en:'Invested minus depreciation'})}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.capex.debtPending')}</div><div class="val" style="color:${totalDeuda > 0 ? 'var(--red)' : 'var(--ink)'}">${fmtMoney(totalDeuda)}</div><div class="sub">${t('hr.capex.debtPendingSub').replace('${n}', totalCuotas)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${gl({es:'Cuotas de cada mes', ca:'Quotes de cada mes', en:'Monthly payments'})}</div><div class="val">${fmtMoney(cuotaMes)}</div><div class="sub">${fin ? gl({es:'Hasta ' + mesTxt(fin), ca:'Fins a ' + mesTxt(fin), en:'Until ' + mesTxt(fin)}) : gl({es:'Sin cuotas pendientes', ca:'Sense quotes pendents', en:'No payments left'})}</div></div>
+      <div class="ge-kpi"><div class="lbl">${gl({es:'Amortización del mes', ca:'Amortització del mes', en:'Depreciation this month'})}</div><div class="val">${fmtMoney(amortMes)}</div><div class="sub">${gl({es:'Gasto contable, no sale de caja', ca:'Despesa comptable, no surt de caixa', en:'Accounting cost, not cash'})}</div></div>`;
+    // Filtros con su cuenta.
+    const cuenta = {todas: todas.length, financiadas: todas.filter(c=>c.financiado).length, pendientes: todas.filter(c=>c.estadoPago!=='PAGADO').length, pagadas: todas.filter(c=>c.estadoPago==='PAGADO').length};
+    const etq = {todas: gl({es:'Todas', ca:'Totes', en:'All'}), financiadas: gl({es:'Financiadas', ca:'Finançades', en:'Financed'}), pendientes: gl({es:'Por pagar', ca:'Per pagar', en:'To pay'}), pagadas: gl({es:'Pagadas', ca:'Pagades', en:'Paid'})};
+    document.getElementById('capex-filtros').innerHTML = Object.keys(etq).map(k => `<button type="button" class="btn btn-sm${cxFiltro===k ? ' is-on' : ''}" aria-pressed="${cxFiltro===k}" onclick="GE.setCxFiltro('${k}')">${etq[k]} <b>${cuenta[k]}</b></button>`).join('');
+    const items = todas.filter(c => cxFiltro==='financiadas' ? c.financiado : cxFiltro==='pendientes' ? c.estadoPago!=='PAGADO' : cxFiltro==='pagadas' ? c.estadoPago==='PAGADO' : true);
+    document.getElementById('capex-total-bar').style.display = todas.length ? '' : 'none';
+    if(!todas.length){
+      lista.innerHTML = '';
+      empty.style.display = 'flex';
+      empty.innerHTML = `<i class="ti ti-building-factory"></i><span>${t('empty.noInvestments')}</span><small>${gl({es:'Obras, cocina, mobiliario, TPV, vehículo… Lo que compras para durar y se amortiza con los años.', ca:'Obres, cuina, mobiliari, TPV, vehicle… El que compres per durar i s\'amortitza amb els anys.', en:'Works, kitchen, furniture, POS, vehicle… What you buy to last and depreciate over the years.'})}</small><button class="btn btn-primary" onclick="GE.newCapex()"><i class="ti ti-plus"></i> ${t('hr.capex.newInvestment')}</button>`;
       return;
     }
-    empty.style.display='none';
+    empty.style.display = 'none';
     let base=0, ivaT=0;
-    tbody.innerHTML = capex().map(c=>{
+    lista.innerHTML = items.length ? items.map(c=>{
       const imp=parseFloat(c.importe||0), ivaPct=parseFloat(c.iva||0);
       const ivaAmt=imp*ivaPct/100, tot=imp+ivaAmt;
       base+=imp; ivaT+=ivaAmt;
-      const cs = c.estadoPago==='PAGADO' ? {bg:'var(--green-l)',tx:'var(--green)'}
-        : c.estadoPago==='PARCIAL' ? {bg:'var(--amber-l)',tx:'var(--amber-dark)'}
-        : {bg:'var(--red-l)',tx:'var(--red)'};
-      let financInfo = '—';
-      if(c.financiado){
-        const restantes = capexRestantes(c);
-        if(restantes==null){
-          financInfo = `<span style="color:var(--red)">${t('hr.capex.notConfigured')}</span>`;
-        } else {
-          const overdueTag = (restantes===0 && c.estadoPago!=='PAGADO') ? ` <span style="color:var(--amber-dark)" title="${t('hr.capex.overdueDesc')}"><i class="ti ti-alert-triangle"></i></span>` : '';
-          financInfo = `${fmtMoney(c.cuotaMensual||0)}${t('hr.capex.perMonth')} · ${restantes>0?t('hr.capex.installmentsRemaining').replace('${n}', restantes):t('hr.capex.paidOff')}${overdueTag}`;
-        }
+      const restantes = c.financiado ? capexRestantes(c) : null;
+      const chips = [`<span class="gf-chip">${escapeHtml(t('hr.capex.tipo.'+(c.tipoAmort||'mobiliario')))}</span>`];
+      chips.push(`<span class="gf-chip ${c.estadoPago==='PAGADO' ? 'is-ok' : c.estadoPago==='PARCIAL' ? 'is-amber' : 'is-aviso'}">${estadoPagoLabel(c.estadoPago)}</span>`);
+      if(c.financiado) chips.push(restantes==null ? `<span class="gf-chip is-aviso">${t('hr.capex.notConfigured')}</span>` : `<span class="gf-chip is-auto"><i class="ti ti-building-bank"></i> ${restantes>0 ? t('hr.capex.installmentsRemaining').replace('${n}', restantes) : t('hr.capex.paidOff')}</span>`);
+      if(c.financiado && restantes===0 && c.estadoPago!=='PAGADO') chips.push(`<span class="gf-chip is-aviso">${gl({es:'Cuotas acabadas: marca «Pagado»', ca:'Quotes acabades: marca «Pagat»', en:'Payments finished: mark «Paid»'})}</span>`);
+      const baseAm = capexBaseAmortizable(c), amort = capexAmortizado(c);
+      const noAmortiza = c.turismoMixto && fiscalPerfil().personaFisica;
+      const aGasto = capexEsEscasoValor(c);
+      const vn = noAmortiza ? baseAm : Math.max(0, baseAm - amort);
+      const det = [];
+      const par = (l, v) => det.push(`<div><small>${l}</small><b>${v}</b></div>`);
+      par(t('common.date'), escapeHtml(c.fecha ? new Date(c.fecha + 'T12:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'}) : '—'));
+      par(t('hr.lbl.amountNoVat'), fmtMoney(imp));
+      par(`${t('label.vat')} ${ivaPct}%`, fmtMoney(ivaAmt));
+      par(gl({es:'Amortización', ca:'Amortització', en:'Depreciation'}), noAmortiza ? gl({es:'No amortizable (uso mixto)', ca:'No amortitzable (ús mixt)', en:'Not depreciable (mixed use)'}) : aGasto ? gl({es:'Todo a gasto (≤ 300 €)', ca:'Tot a despesa (≤ 300 €)', en:'Fully expensed (≤ 300 €)'}) : `${pct1(capexCoefAmort(c))} %/${gl({es:'año', ca:'any', en:'yr'})} · ${fmtMoney(capexAmortizacionMes(c, hoy.getFullYear(), hoy.getMonth()))}/${gl({es:'mes', ca:'mes', en:'mo'})}`);
+      par(gl({es:'Valor hoy', ca:'Valor avui', en:'Value today'}), fmtMoney(vn));
+      if(c.financiado && restantes != null){
+        const n = parseInt(c.cuotas)||0, q = parseFloat(c.cuotaMensual)||0;
+        par(gl({es:'Financiación', ca:'Finançament', en:'Financing'}), `${fmtMoney(q)}${t('hr.capex.perMonth')} × ${n}`);
+        par(gl({es:'Última cuota', ca:'Última quota', en:'Last payment'}), mesTxt(capexUltimaCuota(c)));
+        par(t('hr.capex.debtPending'), fmtMoney(restantes*q));
+        const interes = q*n - capexImporteFinanciado(c);
+        if(interes > 0.005) par(gl({es:'Intereses totales', ca:'Interessos totals', en:'Total interest'}), fmtMoney(interes));
       }
-      return `<tr>
-        <td style="text-align:left;font-weight:600">${escapeHtml(c.descripcion)}</td>
-        <td>${escapeHtml(c.fecha||'—')}</td>
-        <td>${fmtMoney(imp)}</td>
-        <td>${fmtMoney(ivaAmt)}</td>
-        <td>${fmtMoney(tot)}</td>
-        <td><span class="badge" style="background:${cs.bg};color:${cs.tx}">${estadoPagoLabel(c.estadoPago)}</span></td>
-        <td style="font-size:12px">${financInfo}</td>
-        <td style="text-align:left">
-          <button class="btn btn-sm btn-icon" onclick="GE.editCapex(${c.id})"><i class="ti ti-edit"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteCapex(${c.id})"><i class="ti ti-trash"></i></button>
-        </td>
-      </tr>`;
-    }).join('');
+      const prog = (c.financiado && restantes != null && (parseInt(c.cuotas)||0) > 0) ? (() => { const n = parseInt(c.cuotas), pag = n - restantes; return `<div class="cx-prog" role="img" aria-label="${pag}/${n}"><i style="width:${(pag/n*100).toFixed(1)}%"></i><small>${pag} / ${n} ${gl({es:'cuotas pagadas', ca:'quotes pagades', en:'payments made'})}</small></div>`; })() : '';
+      const clave = 'cx-' + c.id; const abierta = ggPlegableAbierta(clave);
+      return `<div class="gf-fila cx-fila plegable${abierta ? ' is-abierta' : ''}" data-pl="${clave}" onclick="ggTogglePlegable(event, this)">
+        <div class="gf-nom"><b>${escapeHtml(c.descripcion)}</b><span class="gf-chips">${chips.join('')}</span></div>
+        <div class="gf-imp">${fmtMoney(tot)}</div>
+        ${ggMenuAcciones([
+          {icono:'ti-edit', texto:t('common.edit'), fn:`GE.editCapex(${c.id})`},
+          {icono:'ti-copy', texto:gl({es:'Duplicar', ca:'Duplicar', en:'Duplicate'}), fn:`GE.dupCapex(${c.id})`},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`GE.deleteCapex(${c.id})`, peligro:true}
+        ])}
+        <button type="button" class="pl-chev" aria-expanded="${abierta}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
+        ${prog}
+        <div class="gf-det pl-extra cx-det">${det.join('')}</div>
+      </div>`;
+    }).join('') : `<div class="empty gf-vacio"><i class="ti ti-filter-off"></i><span>${gl({es:'Ninguna inversión con este filtro.', ca:'Cap inversió amb aquest filtre.', en:'No investments match this filter.'})}</span></div>`;
     document.getElementById('capex-base').textContent = fmtMoney(base);
     document.getElementById('capex-iva').textContent = fmtMoney(ivaT);
     document.getElementById('capex-total').textContent = fmtMoney(base+ivaT);
+  }
+  function dupCapex(id){
+    const c = capex().find(x=>x.id===id); if(!c) return;
+    editingCX = null;
+    const k = JSON.parse(JSON.stringify(c)); delete k.id;
+    k.descripcion = (k.descripcion || '') + ' ' + gl({es:'(COPIA)', ca:'(CÒPIA)', en:'(COPY)'});
+    k.fecha = todayStr(); k.estadoPago = 'PENDIENTE';
+    openCapexModal(t('hr.capex.newInvestment'), k);
   }
   const ESTADO_PAGO_KEYS = {PAGADO:'hr.capex.paid', PENDIENTE:'hr.capex.pending', PARCIAL:'hr.capex.partial'};
   // Una inversión guardada antes de que existiera el estado de pago no tiene
@@ -2842,7 +2892,9 @@ const GE = (function(){
   function openCapexModal(title, c){
     openModal(`
       <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="gf-mh">${gl({es:'Qué has comprado', ca:'Què has comprat', en:'What you bought'})}</div>
       <div class="field"><label>${t('hr.lbl.description')}</label><input type="text" id="cx-f-desc" value="${escapeHtml(c.descripcion)}"></div>
+      <div class="gf-mh">${gl({es:'Importe y pago', ca:'Import i pagament', en:'Amount and payment'})}</div>
       <div class="field-row">
         <div class="field"><label>${t('hr.lbl.amountNoVat')}</label><input type="number" id="cx-f-imp" min="0" step="0.01" value="${c.importe}"></div>
         <div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('cx-f-iva', c.iva)}</div>
@@ -2855,15 +2907,14 @@ const GE = (function(){
           </select>
         </div>
       </div>
+      <div class="gf-mh">${gl({es:'Cómo se amortiza', ca:'Com s\'amortitza', en:'How it depreciates'})}</div>
       <div class="field"><label>${t('hr.capex.tipoAmort')}</label><select id="cx-f-tipo">
         ${Object.keys(AMORT_TIPOS).map(k=>`<option value="${k}" ${(c.tipoAmort||'mobiliario')===k?'selected':''}>${t('hr.capex.tipo.'+k)} · ${fiscalPerfil().personaFisica?AMORT_TIPOS[k].ed:AMORT_TIPOS[k].is}%</option>`).join('')}
       </select><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.capex.tipoAmortHint')}</div></div>
       ${fiscalPerfil().personaFisica ? `<label style="display:flex;align-items:flex-start;gap:8px;min-height:44px;font-size:13px;cursor:pointer;margin-bottom:8px"><input type="checkbox" id="cx-f-turismo" ${c.turismoMixto?'checked':''} style="width:auto;margin-top:3px"><span>${t('hr.capex.turismoMixto')}</span></label>` : ''}
       <div class="field"><label>${t('hr.capex.añosContrato')}</label><input type="number" id="cx-f-anos" min="0" step="0.5" value="${c.añosContrato||''}"><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.capex.añosContratoHint')}</div></div>
-      <div class="field" style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="cx-f-financiado" style="width:auto" ${c.financiado?'checked':''} onchange="GE.toggleCapexFinanciado()">
-        <label style="margin:0">${t('hr.capex.financedCheckbox')}</label>
-      </div>
+      <div class="gf-mh">${gl({es:'Financiación', ca:'Finançament', en:'Financing'})}</div>
+      <label class="cx-check"><input type="checkbox" id="cx-f-financiado" style="width:auto" ${c.financiado?'checked':''} onchange="GE.toggleCapexFinanciado()"> <span>${t('hr.capex.financedCheckbox')}</span></label>
       <div class="field-row" id="cx-f-cuotas-row" style="display:${c.financiado?'flex':'none'}">
         <div class="field"><label>${t('hr.capex.monthlyInstallment')}</label><input type="number" id="cx-f-cuota" min="0" step="0.01" value="${c.cuotaMensual||''}"></div>
         <div class="field"><label>${t('hr.capex.numInstallments')}</label><input type="number" id="cx-f-numcuotas" min="1" step="1" value="${c.cuotas||''}"></div>
@@ -4516,7 +4567,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

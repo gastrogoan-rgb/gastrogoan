@@ -4797,6 +4797,7 @@ span.dt-punto{position:absolute;border-radius:50%}
 .pe-desg b{font-family:var(--mono);color:var(--ink)}
 #ge-pe .ge-pe-result{padding:12px 18px;border-bottom:1px solid var(--hair);background:#fff}
 #ge-pe .ge-pe-result .pe-val{font-size:16px;text-align:right}
+#ge-pe .ge-pe-result .te-valor{font-family:var(--mono);font-weight:700;font-size:16px}
 .pe-gauge{padding:14px 18px 16px}
 .pe-cob{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--body)}
 .pe-cob b{font-family:var(--mono);font-size:15px}
@@ -4835,6 +4836,22 @@ span.dt-punto{position:absolute;border-radius:50%}
 .pe-esc-n b{display:block;font-size:14.5px;overflow-wrap:break-word}
 .pe-esc-n small,.pe-esc-v small{display:block;color:var(--muted);font-size:12px}
 .pe-esc-v b{font-family:var(--mono);font-size:14px}
+/* Inversiones (6/11): tarjetas con su detalle, filtros con cuenta y progreso de cuotas */
+.cx-filtros{display:flex;flex-wrap:wrap;gap:8px;flex:1}
+.cx-filtros .btn b{margin-left:4px;font-family:var(--mono)}
+.cx-kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+#capex-seccion{margin-bottom:16px}
+.gf-chip.is-amber{background:var(--amber-l);border-color:#E6D3A3;color:var(--amber-dark)}
+.cx-fila .cx-prog{grid-column:1 / -1;margin-top:10px;display:flex;align-items:center;gap:12px}
+.cx-prog i{display:block;height:6px;border-radius:3px;background:var(--olive);flex:none;max-width:60%;min-width:2px}
+.cx-prog::before{content:"";order:2}
+.cx-prog small{font-size:12px;color:var(--muted);white-space:nowrap}
+.cx-det{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 18px;margin-top:12px;padding-top:12px;border-top:1px solid var(--hair)}
+.cx-det small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.cx-det b{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--ink);overflow-wrap:break-word}
+.cx-check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;cursor:pointer;margin:0 0 8px}
+.cx-check input{width:20px;height:20px;margin:0}
+#capex-total-bar small{font-size:11.5px;font-weight:400;color:#C9C4B8}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5771,4 +5788,18 @@ small{font-size:max(.8333em, 11px)}
   .pe-esc-n{grid-column:1 / -1}
   #ge-pe .ge-input-row{padding:12px 14px}
   .pe-leyenda{padding:0 14px 14px}
+}
+/* Tesorería / Punto de equilibrio en móvil: la plantilla ocupa su ancho y los campos llegan a 44 px */
+@media (max-width:760px){
+  .te-plantilla{display:block;width:100%}
+  .te-plantilla select{width:100%;max-width:100%;min-height:44px;text-overflow:ellipsis}
+  #ge-pe .ge-input-row input:not([readonly]){min-height:44px !important;height:44px !important}
+}
+/* Inversiones en móvil */
+@media (max-width:760px){
+  .cx-det{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cx-fila:not(.is-abierta) .cx-det{display:none}
+  .cx-filtros .btn{flex:1 1 auto;justify-content:center;min-height:44px !important}
+  .cx-prog small{white-space:normal}
+  #capex-total-bar{flex-wrap:wrap;gap:6px}
 }

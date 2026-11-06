@@ -687,24 +687,14 @@
 
       <!-- CAPEX -->
       <div id="ge-capex" class="ge-tab-panel">
-        <div class="ge-kpi-grid" style="margin-bottom:14px">
-          <div class="ge-kpi"><div class="lbl"><span data-i18n="hr.capex.debtPending">Deuda pendiente</span></div><div class="val" id="capex-deuda-val" style="color:var(--red)">—</div></div>
-        </div>
-        <div id="capex-overdue-alert" style="display:none;margin-bottom:14px"></div>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+        <div class="ve-barra-sup"><div id="capex-filtros" class="cx-filtros"></div>
           <button class="btn btn-primary" onclick="GE.newCapex()"><i class="ti ti-plus"></i> <span data-i18n="hr.capex.newInvestment">Nueva inversión</span></button>
         </div>
-        <div class="ge-grid"><table id="capex-table">
-          <thead><tr>
-            <th style="text-align:left" data-i18n="hr.lbl.description">Descripción</th>
-            <th data-i18n="common.date">Fecha</th><th data-i18n="hr.lbl.amountEur">Importe</th><th data-i18n="label.vat">IVA</th><th data-i18n="common.total">Total</th><th data-i18n="hr.lbl.status">Estado</th><th data-i18n="label.financing">Financiación</th><th style="width:60px"></th>
-          </tr></thead>
-          <tbody id="capex-tbody"></tbody>
-          <tfoot><tr class="total">
-            <td data-i18n="ge.totalCapex">TOTAL CAPEX</td><td></td><td id="capex-base">—</td><td id="capex-iva">—</td><td id="capex-total">—</td><td></td><td></td><td></td>
-          </tr></tfoot>
-        </table></div>
-        <div id="capex-empty" class="empty" style="display:none"><i class="ti ti-building-factory"></i><p data-i18n="empty.noInvestments">Sin inversiones registradas</p></div>
+        <div class="ge-kpi-grid cx-kpis" id="capex-kpis"></div>
+        <div id="capex-overdue-alert" style="display:none"></div>
+        <div class="ge-section" id="capex-seccion"><div id="capex-list"></div>
+          <div id="capex-empty" class="empty gf-vacio" style="display:none"></div></div>
+        <div class="ge-total-bar" id="capex-total-bar"><span data-i18n="ge.totalCapex">TOTAL INVERSIONES</span><span><span id="capex-total">—</span> <small>· <span data-i18n="hr.lbl.base">Base</span> <span id="capex-base">—</span> + <span data-i18n="common.vat">IVA</span> <span id="capex-iva">—</span></small></span></div>
       </div>
 
       <!-- MÓDULOS (estimación objetiva) -->
