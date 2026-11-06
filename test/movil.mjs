@@ -39,6 +39,9 @@ const VISTAS = [
   ['inicio', "navigate('home')"],
   ['cocina', "currentFolder='cocina'; navigate('folder')"],
   ['megalista', "navigate('megalista')"],
+  ['idr', "currentFolder='cocina'; navigate('idr')"],      // faltaban (7/11): I+D y Plan 360 nunca se medían en móvil
+  ['idr-sala', "currentFolder='sala'; navigate('idr')"],
+  ['plan360', "currentFolder='gestion'; navigate('plan360')"],
   ['escandallo', "navigate('escandallo')"],
   ['fichas', "navigate('fichas')"],
   ['carta', "navigate('carta')"],

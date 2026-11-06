@@ -13,7 +13,7 @@
 | I-07 | Entrada, selector de idioma | 44×26 px en móvil y tablet (pendiente desde el 28/10; 27 hallazgos) | `min-height:44px` hasta 1100 px | `test/acceso-alta.mjs`: 27 → **0** |
 | I-08 | Web pública, seguimiento | Estados «hecho» en tinta | En verde, con halo en el paso actual | Recaptura |
 | I-09 | Web pública, editar reserva | «Cerrar» ocupaba casi todo el ancho y «Guardar cambios» salía partido | Ambos `flex:1 1 0` | `web-publica-pasos` (24 casos) |
-| I-10 | `test/movil.mjs` | Su lista de vistas **no incluye `idr` ni `plan360`** | **Sin corregir** (solo anotado): ver abierta A-05 | — |
+| I-10 | `test/movil.mjs` | Su lista de vistas no incluía `idr` ni `plan360` | Añadidas (`idr`, `idr-sala`, `plan360`) | `movil.mjs` en los 5 anchos: **0 hallazgos** con las tres |
 
 ## Abiertas (no tocadas, con motivo)
 
@@ -23,7 +23,6 @@
 | A-02 | `generador-licencias.html`, `admin-panel/*.html` | ~90 emojis como marcadores y botón primario negro | Herramientas privadas del dueño, sin cobertura de pruebas; un cambio masivo a ciegas arriesga el generador (emite licencias) |
 | A-03 | Mi Negocio (móvil) | El índice «Ir a:» son 13 botones en ≈400 px antes del primer bloque | Cambiar su comportamiento (p. ej. a un desplegable) afecta a `movil.mjs` y a la navegación; requiere decisión |
 | A-04 | Pantalla de entrada | La tarjeta de accesos se ve atenuada en la captura a los 2 s | No se ha podido confirmar si es animación en curso o defecto |
-| A-05 | `test/movil.mjs` | Sin `idr` ni `plan360` en `VISTAS` | Añadirlas puede destapar hallazgos que no he medido |
 | A-06 | Web comercial (`deploy/web/public`) | Lista numerada 01/02/03 sin que el orden signifique nada; faltan ~10 páginas por inspeccionar | CLAUDE.md la deja como pendiente conocida |
 | A-07 | Ventanas | ≈79 de 86 sin inspección visual | Tiempo |
 | A-08 | Documentos descargables (PDF, Excel, tickets, ficha) | Sin revisión visual esta noche | Tiempo |
