@@ -83,8 +83,8 @@ await caso('Explica por qué no coinciden SOLO lo que pesa: con inversión y pr�
   const {page} = await abrir(1280, 900);
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms)); const y = new Date().getFullYear() - 1; const out = {};
-    bcYear = y; GE.geBcCb(y, 5); await esp(300); out.junio = document.getElementById('bc-porque').textContent;
-    DB.ge.capex = [{id:1, descripcion:'HORNO', importe:20000, iva:21, fecha:`${y}-06-10`, estadoPago:'PARCIAL', tipoAmort:'maquinaria', financiado:true, cuotaMensual:500, cuotas:48, importeFinanciado:24200}]; saveDB(); await esp(30); GE.geBcCb(y, 5); await esp(300); out.conPrestamo = document.getElementById('bc-porque').textContent;
+    bcYear = y; GE.bcPeriodo(y, 5); await esp(300); out.junio = document.getElementById('bc-porque').textContent;
+    DB.ge.capex = [{id:1, descripcion:'HORNO', importe:20000, iva:21, fecha:`${y}-06-10`, estadoPago:'PARCIAL', tipoAmort:'maquinaria', financiado:true, cuotaMensual:500, cuotas:48, importeFinanciado:24200}]; saveDB(); await esp(30); GE.bcPeriodo(y, 5); await esp(300); out.conPrestamo = document.getElementById('bc-porque').textContent;
     return out;
   });
   assert.match(r.junio, /de Hacienda/); assert.ok(!/préstamos/.test(r.junio) && !/inversiones/.test(r.junio), r.junio);
@@ -94,7 +94,7 @@ for(const ancho of [320, 360, 390, 412, 430]){
   await caso(`Móvil ${ancho}: Beneficio y caja sin desborde y con el saldo editable de 44 px`, async () => {
     const {page} = await abrir(ancho, 800);
     const r = await page.evaluate(async () => {
-      const esp = ms => new Promise(r => setTimeout(r, ms)); const y = new Date().getFullYear() - 1; DB.ge.saldoBanco = {importe:3000, fecha:todayStr()}; saveDB(); bcYear = y; GE.geBcCb(y, null); await esp(400);
+      const esp = ms => new Promise(r => setTimeout(r, ms)); const y = new Date().getFullYear() - 1; DB.ge.saldoBanco = {importe:3000, fecha:todayStr()}; saveDB(); bcYear = y; GE.bcPeriodo(y, null); await esp(400);
       const raiz = document.getElementById('ge-bc');
       return {desborde: document.documentElement.scrollWidth - innerWidth, fuera: [...raiz.querySelectorAll('*')].filter(e => { const q = e.getBoundingClientRect(); return q.width && (q.right > innerWidth + 1 || q.left < -1); }).map(e => e.className || e.tagName).slice(0, 4),
         alto: document.getElementById('bc-saldo-in').getBoundingClientRect().height, letra: Math.min(...[...raiz.querySelectorAll('*')].filter(e => e.children.length === 0 && e.textContent.trim() && e.getBoundingClientRect().width).map(e => parseFloat(getComputedStyle(e).fontSize)))};
