@@ -123,13 +123,16 @@ const OWNER_LOGIN_LS = 'gastrogoan_owner_login';
 const OWNER_PASS_PROMPTED_LS = 'gastrogoan_owner_pass_prompted';
 const ACCESS_SESSION_LS = 'gastrogoan_access_session';
 const ACCESS_LAST_ACTIVITY_LS = 'gastrogoan_access_last_activity';
-// Si el dispositivo pasa más de esto sin actividad (ni un clic, ni un
-// toque), la sesión de acceso (empleado o propietario) caduca sola: hay
-// que volver a identificarse. Así, si el móvil o la tablet se pierde o lo
-// roban, quien lo encuentre no puede simplemente reabrirlo horas después
-// y seguir dentro — pero mientras se está usando con normalidad, nunca
-// interrumpe pidiendo login de nuevo.
-const ACCESS_INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutos
+// Si el dispositivo pasa más de esto sin actividad (ni un clic, ni un toque), la sesión de acceso caduca sola y
+// hay que volver a identificarse: si el móvil o la tablet se pierde o lo roban, quien lo encuentre no puede
+// reabrirlo horas después y seguir dentro.
+// ⚠️ Eran 60 minutos para todos (2/11) y salía un login «que no toca»: una tablet de cocina o un móvil que se
+// apagan la pantalla un rato volvían (visibilitychange) a una pantalla de acceso sin que nadie hubiera cerrado nada.
+// Ahora dura lo que un turno (el propietario, su jornada; el empleado, la suya) y, cuando caduca, la pantalla de
+// acceso DICE por qué (accesoAvisoCierreHtml): lo raro no era que pidiera el PIN sino que no lo explicara.
+const ACCESS_INACTIVITY_OWNER_MS = 8 * 60 * 60 * 1000;      // 8 horas
+const ACCESS_INACTIVITY_EMPLOYEE_MS = 12 * 60 * 60 * 1000;  // 12 horas
+const ACCESS_SESSION_END_LS = 'gastrogoan_session_end';     // {reason, ts}: por qué se cerró la última sesión
 
 // La cuenta de propietario guardada en ESTE dispositivo:
 //   user    — nombre de usuario ya normalizado (ggOwnerUser)
@@ -163,7 +166,7 @@ function verifyOwnerLogin(user, pinPlain){
   return login.user === ggOwnerUser(user) && pinMatchesHash(pinPlain, login.pinHash, login.user);
 }
 
-// Si ha pasado más de ACCESS_INACTIVITY_TIMEOUT_MS desde el último toque
+// Si ha pasado más de ACCESS_INACTIVITY_OWNER_MS (o _EMPLOYEE_MS) desde el último toque
 ///clic registrado, la sesión guardada se considera caducada por
 // inactividad (ver recordAccessActivity, llamada desde un listener global
 // en app.js). No borra nada del negocio, solo obliga a volver a
@@ -171,7 +174,9 @@ function verifyOwnerLogin(user, pinPlain){
 function isAccessSessionExpiredByInactivity(){
   const last = Number(localStorage.getItem(ACCESS_LAST_ACTIVITY_LS));
   if(!last) return false;
-  return (Date.now() - last) > ACCESS_INACTIVITY_TIMEOUT_MS;
+  const s = getAccessSession();
+  const limite = s && s.type === 'employee' ? ACCESS_INACTIVITY_EMPLOYEE_MS : ACCESS_INACTIVITY_OWNER_MS;
+  return (Date.now() - last) > limite;
 }
 function recordAccessActivity(){
   if(getAccessSession()) localStorage.setItem(ACCESS_LAST_ACTIVITY_LS, String(Date.now()));
@@ -189,6 +194,7 @@ function loggedInEmployeeId(){
   return (session && session.type === 'employee') ? session.employeeId : null;
 }
 function setAccessSession(session){
+  try{ localStorage.removeItem(ACCESS_SESSION_END_LS); }catch(e){}
   localStorage.setItem(ACCESS_SESSION_LS, JSON.stringify(session));
   localStorage.setItem(ACCESS_LAST_ACTIVITY_LS, String(Date.now()));
   if(typeof updateLogoutBtn === 'function') updateLogoutBtn();
@@ -204,7 +210,9 @@ function setAccessSession(session){
     }
   }
 }
-function clearAccessSession(){
+function clearAccessSession(reason){
+  // Se anota por qué se cerró (inactividad, empleado dado de baja…) para decírselo a quien vea la pantalla de acceso.
+  try{ if(reason && getAccessSession()) localStorage.setItem(ACCESS_SESSION_END_LS, JSON.stringify({reason, ts: Date.now()})); }catch(e){}
   if(typeof logAudit === 'function' && typeof DB !== 'undefined' && DB){
     const prev = getAccessSession();
     if(prev) logAudit('logout', t('audit.loggedOut').replace('${name}', currentActorName()));
@@ -244,10 +252,23 @@ function renderAccessScreen(){
           </div>
         </div>
       </div>
+      ${accesoAvisoCierreHtml()}
       ${renderAccessSelectScreenHtml()}
       ${accessScreenMode === 'choice' ? accesoFraseYFechaHtml() : ''}
     </div>`;
   screen.classList.remove('hide');
+}
+// «Tu sesión se cerró por…»: sin esto, un acceso que aparece solo se lee como un fallo de la app.
+function accesoAvisoCierreHtml(){
+  let fin = null;
+  try{ fin = JSON.parse(localStorage.getItem(ACCESS_SESSION_END_LS)); }catch(e){}
+  if(!fin || !fin.reason || Date.now() - (fin.ts || 0) > 36 * 3600 * 1000) return '';
+  const textos = {
+    inactividad: gl({es:'Tu sesión se cerró porque llevaba muchas horas sin usarse (es una medida de seguridad por si el aparato se pierde). Entra de nuevo: no se ha perdido nada.', ca:'La teva sessió es va tancar perquè portava moltes hores sense utilitzar-se (és una mesura de seguretat per si l\'aparell es perd). Torna a entrar: no s\'ha perdut res.', en:'Your session was closed because it had been unused for many hours (a safety measure in case the device is lost). Sign in again: nothing has been lost.'}),
+    empleado: gl({es:'Tu sesión se cerró porque tu ficha de empleado ya no está activa. Si crees que es un error, avisa a quien gestiona el negocio.', ca:'La teva sessió es va tancar perquè la teva fitxa d\'empleat ja no està activa. Si creus que és un error, avisa a qui gestiona el negoci.', en:'Your session was closed because your employee profile is no longer active. If you think this is a mistake, tell whoever runs the business.'}),
+  };
+  const txt = textos[fin.reason];
+  return txt ? `<div class="access-aviso" role="status"><i class="ti ti-info-circle"></i><span>${escapeHtml(txt)}</span></div>` : '';
 }
 // La frase del día (js/frases.js) y la fecha, bajo la tarjeta de acceso. Todas llevan autor:
 // la frase arriba y quién la dijo debajo, como una cita de libro.
@@ -647,7 +668,7 @@ function resumeEmployeeSession(){
   if(!session || session.type !== 'employee') return false;
   const emp = (DB.employees||[]).find(e => e.id === session.employeeId);
   if(!emp || emp.active === false){
-    clearAccessSession();
+    clearAccessSession('empleado');
     return false;
   }
   const area = emp.area || 'cocina';
@@ -8179,10 +8200,94 @@ function mesaEncajaGrupo(tb, people){
   const n = parseInt(people) || 1;
   return plazas >= n && plazas <= n + MESA_MARGEN_PLAZAS;
 }
+/* ── Colores de marca (2/11) ─────────────────────────────────────────────────────────────────────
+   Principal (brandColor: botones y acentos de la web de reservas, tickets y correos) y secundario (brandColor2: títulos,
+   pestañas y foco). Se pueden sugerir a partir del logo. ⚠️ Un color elegido a ojo puede dejar el texto blanco de un
+   botón ilegible (amarillo sobre blanco): se comprueba el contraste y se oscurece hasta que se lea (4,5:1). */
+function ggHexARgb(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if(!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function ggRgbAHex(r, g, b){ return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join(''); }
+function ggLuminancia(rgb){
+  const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
+}
+function ggContrasteHex(a, b){
+  const A = ggHexARgb(a), B = ggHexARgb(b);
+  if(!A || !B) return 21;
+  const la = ggLuminancia(A), lb = ggLuminancia(B);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+// Oscurece un color (mezcla con negro) hasta que contraste `min` con `contraCon` (por defecto blanco).
+function ggOscurecerHasta(hex, min, contraCon){
+  const rgb = ggHexARgb(hex);
+  if(!rgb) return hex;
+  const fondo = contraCon || '#FFFFFF';
+  let k = 0, out = hex;
+  while(ggContrasteHex(out, fondo) < min && k < 20){ k++; out = ggRgbAHex(rgb[0] * (1 - k * 0.05), rgb[1] * (1 - k * 0.05), rgb[2] * (1 - k * 0.05)); }
+  return out;
+}
+// Colores dominantes de una imagen (el logo): cuantiza en cubos de 32 niveles, descarta blancos y casi blancos y agrupa.
+// Primero los vivos (con saturación); si el logo es casi gris o negro, se ofrecen también los oscuros.
+function ggColoresDeImagen(src, max){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try{
+        const w = 64, h = Math.max(1, Math.round(64 * (img.naturalHeight || 1) / (img.naturalWidth || 1)));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const cx = cv.getContext('2d', {willReadFrequently: true}); cx.drawImage(img, 0, 0, w, h);
+        const px = cx.getImageData(0, 0, w, h).data;
+        const cubos = {};
+        for(let i = 0; i < px.length; i += 4){
+          if(px[i + 3] < 200) continue;                                  // transparente
+          const r = px[i], g = px[i + 1], b = px[i + 2];
+          if(r > 238 && g > 238 && b > 238) continue;                    // fondo blanco
+          const k = (r >> 5) + ',' + (g >> 5) + ',' + (b >> 5);
+          const c = cubos[k] || (cubos[k] = {n: 0, r: 0, g: 0, b: 0});
+          c.n++; c.r += r; c.g += g; c.b += b;
+        }
+        const lista = Object.values(cubos).map(c => {
+          const r = c.r / c.n, g = c.g / c.n, b = c.b / c.n;
+          const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+          return {hex: ggRgbAHex(r, g, b), n: c.n, sat: mx ? (mx - mn) / mx : 0, lum: mx / 255};
+        }).sort((a, b) => b.n - a.n);
+        const out = [];
+        const lejos = hex => out.every(o => { const A = ggHexARgb(o), B = ggHexARgb(hex); return Math.abs(A[0] - B[0]) + Math.abs(A[1] - B[1]) + Math.abs(A[2] - B[2]) > 90; });
+        lista.filter(c => c.sat > 0.25 && c.n > 3).forEach(c => { if(out.length < (max || 5) && lejos(c.hex)) out.push(c.hex); });
+        lista.filter(c => c.sat <= 0.25 && c.lum < 0.45 && c.n > 3).forEach(c => { if(out.length < (max || 5) && lejos(c.hex)) out.push(c.hex); });
+        resolve(out);
+      }catch(e){ resolve([]); }
+    };
+    img.onerror = () => resolve([]);
+    img.src = src;
+  });
+}
+function ggElegirColorMarca(hex, cual){
+  const el = document.getElementById(cual === 2 ? 'mn-brand-color2' : 'mn-brand-color');
+  if(!el) return;
+  el.value = hex;
+  if(typeof saveBusiness === 'function') saveBusiness(true);
+  if(typeof renderMiNegocio === 'function') renderMiNegocio();
+}
+async function ggPintarColoresDelLogo(){
+  const caja = document.getElementById('mn-logo-colores');
+  const b = DB.business || {};
+  if(!caja || !b.logo) return;
+  const cols = await ggColoresDeImagen(b.logo, 6);
+  if(!cols.length){ caja.innerHTML = ''; return; }
+  caja.innerHTML = `<div class="txt-xs" style="color:var(--muted);margin:6px 0 4px">${escapeHtml(gl({es:'Colores de tu logo — elige cuál es el principal y cuál el secundario:', ca:'Colors del teu logo — tria quin és el principal i quin el secundari:', en:'Colours in your logo — choose which is primary and which is secondary:'}))}</div>
+    <div class="bc-sugeridos">${cols.map(c => `<div class="bc-sug"><span class="bc-muestra" style="background:${c}" aria-hidden="true"></span><code>${c.toUpperCase()}</code>
+      <button type="button" class="btn btn-sm btn-fino" onclick="ggElegirColorMarca('${c}',1)">${escapeHtml(gl({es:'Principal', ca:'Principal', en:'Primary'}))}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="ggElegirColorMarca('${c}',2)">${escapeHtml(gl({es:'Secundario', ca:'Secundari', en:'Secondary'}))}</button></div>`).join('')}</div>`;
+}
 const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
-  'name', 'address', 'phone', 'email', 'description', 'logo', 'brandColor',
+  'name', 'address', 'phone', 'email', 'description', 'logo', 'brandColor', 'brandColor2',
   'tipo', 'anyo', 'web', 'ig', 'fb', 'gmaps', 'tiktok',
-  'horario', 'aforo', 'mesasInterior', 'mesasTerraza',
+  'horario', 'diasCerrados', 'aforo', 'mesasInterior', 'mesasTerraza',
   'cartaAuto', 'tiposServicio',
   'requireDeposit', 'depositAmount', 'depositType', 'depositMinPeople', 'depositInstructions',
   // Grupos: a partir de X personas la web no deja reservar y pide llamar.
@@ -9111,7 +9216,7 @@ function applyRemoteBlock(key, remoteValue){
     if(myId != null){
       const meAfter = merged.find(e => e.id === myId);
       if(!meAfter || meAfter.active === false){
-        if(typeof clearAccessSession === 'function') clearAccessSession();
+        if(typeof clearAccessSession === 'function') clearAccessSession('empleado');
         location.reload();
         return;
       }
@@ -9575,6 +9680,43 @@ function slugify(str){
     .slice(0, 40);
 }
 
+// El enlace de reservas que GastroGoan fijó al emitir la licencia (issuedCodes/{código}/slug): al canjear o al
+// arrancar con internet, se reclama en la plataforma con el id público de ESTE negocio y queda BLOQUEADO en Mi Negocio.
+// Si alguien lo cogió entre medias (no debería), se avisa en Mi Negocio en vez de pisarlo.
+let enlaceFijadoEnCurso = false;
+async function aplicarEnlaceFijado(){
+  if(enlaceFijadoEnCurso) return;
+  const lic = getLicense();
+  if(!lic || !lic.code || !DB || !DB.business) return;
+  enlaceFijadoEnCurso = true;
+  try{
+    const issued = await verifyCodeIssuedOnPlatform(lic.code);
+    const slug = issued && issued.slug ? slugify(issued.slug) : '';
+    if(!slug) return;
+    const b = DB.business;
+    if(b.publicSlug === slug && b.publicSlugFijado && !b.publicSlugConflicto) return;
+    const publicId = getPublicId();
+    if(!publicId) return;
+    const app = await getPlatformFirebaseApp();
+    if(!app) return;
+    const ref = app.database().ref('gastrogoan/publicSlugs/' + slug);
+    const snap = await ref.once('value');
+    const dueno = snap.val();
+    if(dueno && dueno !== publicId){
+      b.publicSlugConflicto = slug; saveDB();
+      return;
+    }
+    if(!dueno) await ref.set(publicId);
+    const viejo = b.publicSlug;
+    if(viejo && viejo !== slug){ app.database().ref('gastrogoan/publicSlugs/' + viejo).remove().catch(() => {}); }
+    b.publicSlug = slug; b.publicSlugFijado = true; delete b.publicSlugConflicto;
+    saveDB();
+    if(typeof syncPublicMirror === 'function') syncPublicMirror();
+    if(document.getElementById('minegocio-content') && document.querySelector('#view-minegocio.active')) renderMiNegocio();
+  }catch(e){ console.warn('No se pudo aplicar el enlace de reservas fijado', e); }
+  finally{ enlaceFijadoEnCurso = false; }
+}
+
 // Elige (o cambia) el nombre corto del enlace público del negocio
 // (reservagastrogoan.html?n=nombre-elegido en vez del código automático).
 // Se guarda en la plataforma compartida (gastrogoan/publicSlugs/{slug}) para
@@ -9583,6 +9725,8 @@ function slugify(str){
 async function savePublicSlug(){
   const input = document.getElementById('mn-public-slug');
   if(!input) return;
+  // El enlace lo FIJA GastroGoan al dar de alta la licencia (generador): no se cambia desde aquí.
+  if(DB.business && DB.business.publicSlugFijado){ showToast(gl({es:'Este enlace lo fijó GastroGoan al dar de alta tu licencia y no se puede cambiar. Si necesitas otro, escríbenos.', ca:'Aquest enllaç el va fixar GastroGoan en donar d\'alta la teva llicència i no es pot canviar. Si en necessites un altre, escriu-nos.', en:'This link was set by GastroGoan when your licence was created and cannot be changed. If you need another one, contact us.'})); return; }
   const raw = input.value;
   const slug = slugify(raw);
   if(!slug){ showToast(t('mn.online.slugEmpty')); return; }
@@ -9691,9 +9835,11 @@ function renderOnlineCard(){
         <label>${t('mn.online.slugLabel')}</label>
         <p style="font-size:12px;color:var(--muted);margin:-2px 0 8px">${t('mn.online.slugDesc')}</p>
         <div style="display:flex;gap:8px">
-          <input type="text" id="mn-public-slug" placeholder="mi-restaurante" value="${escapeHtml(b.publicSlug||'')}" style="flex:1;font-family:monospace" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
-          <button class="btn btn-sm btn-primary" onclick="savePublicSlug()">${t('common.save')}</button>
+          <input type="text" id="mn-public-slug" ${b.publicSlugFijado ? 'readonly aria-readonly="true"' : ''} placeholder="mi-restaurante" value="${escapeHtml(b.publicSlug||'')}" style="flex:1;font-family:monospace" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+          ${b.publicSlugFijado ? `<span class="btn btn-sm" aria-hidden="true" style="pointer-events:none;opacity:.7"><i class="ti ti-lock"></i></span>` : `<button class="btn btn-sm btn-primary" onclick="savePublicSlug()">${t('common.save')}</button>`}
         </div>
+        ${b.publicSlugFijado ? `<p class="txt-xs" style="color:var(--muted);margin:8px 0 0"><i class="ti ti-lock"></i> ${escapeHtml(gl({es:'Este enlace lo fijó GastroGoan al dar de alta tu licencia: está bloqueado y no se puede cambiar. Si necesitas otro, escríbenos.', ca:'Aquest enllaç el va fixar GastroGoan en donar d\'alta la teva llicència: està bloquejat i no es pot canviar. Si en necessites un altre, escriu-nos.', en:'GastroGoan set this link when your licence was created: it is locked and cannot be changed. If you need another one, contact us.'}))}</p>` : ''}
+        ${b.publicSlugConflicto ? `<p class="manual-warning" style="margin-top:8px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'El enlace que te reservamos («' + b.publicSlugConflicto + '») ya está en uso por otro negocio. Escríbenos y te damos otro.', ca:'L\'enllaç que et vam reservar («' + b.publicSlugConflicto + '») ja és en ús per un altre negoci. Escriu-nos i et n\'assignem un altre.', en:'The link we reserved for you ("' + b.publicSlugConflicto + '") is already used by another business. Contact us and we\'ll give you another.'}))}</p>` : ''}
       </div>
     </div>
   `;
@@ -9744,30 +9890,41 @@ function renderTableQrCard(){
         ${ajustes}
       </div>`;
   }
-  // Un QR por cada mesa configurada, agrupados por zona (mismas zonas y
-  // orden que el TPV).
+  // Un QR por cada mesa configurada, agrupados por zona (mismas zonas y orden que el TPV).
+  // ⚠️ La lista de mesas YA NO va dentro de la tarjeta (2/11): con 20 mesas la tarjeta se hacía altísima y, como Mi Negocio
+  // reparte las tarjetas en dos columnas, dejaba un hueco enorme al otro lado. La tarjeta lleva los ajustes y un botón;
+  // los QR de cada mesa se ven en una ventana (openQrMesasModal).
+  const nMesas = (DB.tables || []).length;
+  return `
+    <div class="card" id="mn-card-qr-mesa">
+      <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('qrMesa.mn.desc')}</p>
+      ${ajustes}
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+        <button class="btn btn-primary" style="min-height:44px" onclick="openQrMesasModal()"><i class="ti ti-qrcode"></i> ${escapeHtml(gl({es:'Ver el QR de cada mesa', ca:'Veure el QR de cada taula', en:'See each table\'s QR'}))} (${nMesas})</button>
+        <button class="btn" style="min-height:44px" onclick="imprimirQrMesas()"><i class="ti ti-printer"></i> ${t('qrMesa.mn.imprimirTodos')}</button>
+      </div>
+    </div>
+  `;
+}
+function openQrMesasModal(){
   const zonaKeys = [...getZonaOrder(), null];
   const zonasHtml = [...new Set(zonaKeys)].map(z => {
     const tables = DB.tables.filter(tb => (tb.zona||null) === z);
     if(!tables.length) return '';
     const label = z===null ? t('label.otherTables') : `<i class="ti ${zonaIconClass(z)}"></i> ${escapeHtml(zonaLabel(z))}`;
     return `
-      <div style="margin-bottom:10px">
-        <div class="txt-xs" style="font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${label} (${tables.length})</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${tables.map(tb => `<button class="btn btn-sm" style="min-height:44px" onclick="showTableQr(${JSON.stringify(tb.id)})"><i class="ti ti-qrcode"></i> ${escapeHtml(tb.name)}</button>`).join('')}
+      <div style="margin-bottom:12px">
+        <div class="txt-xs" style="font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">${label} (${tables.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${tables.map(tb => `<button class="btn" style="min-height:44px" onclick="showTableQr(${JSON.stringify(tb.id)})"><i class="ti ti-qrcode"></i> ${escapeHtml(tb.name)}</button>`).join('')}
         </div>
       </div>`;
   }).join('');
-  return `
-    <div class="card" id="mn-card-qr-mesa">
-      <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('qrMesa.mn.desc')}</p>
-      ${ajustes}
-      ${zonasHtml}
-      <button class="btn btn-primary" style="min-height:44px" onclick="imprimirQrMesas()"><i class="ti ti-printer"></i> ${t('qrMesa.mn.imprimirTodos')}</button>
-    </div>
-  `;
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3><button class="modal-close" onclick="closeModal()" aria-label="${escapeHtml(t('common.close'))}">&times;</button></div>
+    ${zonasHtml}
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">${escapeHtml(t('common.close'))}</button><button class="btn btn-primary" onclick="imprimirQrMesas()"><i class="ti ti-printer"></i> ${t('qrMesa.mn.imprimirTodos')}</button></div>`);
 }
 function saveQrMesaConfig(){
   const chk = document.getElementById('mn-qrmesa-activo');
@@ -9933,13 +10090,15 @@ function renderPedidosConfigCard(){
         <label>${t('mn.pedidos.cpList')}</label>
         <textarea id="mn-cplist" placeholder="28001, 28002, 28003">${escapeHtml((p.cpList||[]).join(', '))}</textarea>
         <small style="color:var(--muted)">${t('mn.pedidos.cpListDesc')}</small>
+        <div style="margin-top:8px"><button type="button" class="btn btn-sm" onclick="comprobarCodigosPostales()"><i class="ti ti-map-search"></i> ${escapeHtml(gl({es:'Comprobar códigos postales', ca:'Comprovar codis postals', en:'Check postcodes'}))}</button></div>
+        <div id="mn-cp-resultado" aria-live="polite"></div>
       </div>
       <div class="field">
         <label>${t('mn.pedidos.radius')}</label>
         <input type="number" id="mn-radiuskm" min="0" step="0.5" value="${escapeHtml(p.radiusKm||0)}" placeholder="5">
         <small style="color:var(--muted)">${t('mn.pedidos.radiusDesc')}</small>
       </div>
-      ${p.lat!=null ? `<p style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${t('mn.pedidos.locationCalculated')}: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</p>` : ''}
+      ${p.lat!=null ? `<p style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${t('mn.pedidos.locationCalculated')}: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}${p.ubicacionTexto ? ' — ' + escapeHtml(p.ubicacionTexto) : ''} · <a href="https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=14/${p.lat}/${p.lng}" target="_blank" rel="noopener">${escapeHtml(gl({es:'ver en el mapa', ca:'veure al mapa', en:'see on map'}))}</a></p>` : ''}
       <p style="font-size:12px;color:var(--muted)">${t('mn.pedidos.matchExplain')}</p>
       ` : ''}
       <button class="btn btn-primary" onclick="savePedidosConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
@@ -9947,6 +10106,76 @@ function renderPedidosConfigCard(){
   `;
 }
 
+// «28001, 28002  28003\n28004» → {validos:['28001',…], invalidos:['2800']}. Provincias 01-52 (51 Ceuta, 52 Melilla).
+function parseCpList(texto){
+  const trozos = String(texto || '').split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+  const validos = [], invalidos = [];
+  trozos.forEach(c => {
+    const prov = parseInt(c.slice(0, 2), 10);
+    if(/^\d{5}$/.test(c) && prov >= 1 && prov <= 52){ if(!validos.includes(c)) validos.push(c); }
+    else if(!invalidos.includes(c)) invalidos.push(c);
+  });
+  validos.sort();
+  return {validos, invalidos};
+}
+const _kmEntre = (a, b, c, d) => { const R = 6371, r = x => x * Math.PI / 180, dl = r(c - a), dn = r(d - b), h = Math.sin(dl / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+// Consulta de un código postal: primero zippopotam.us (sin límite), y si no lo conoce, Nominatim (1 consulta por segundo).
+async function consultarCodigoPostal(cp){
+  try{
+    const r = await fetch('https://api.zippopotam.us/es/' + cp);
+    if(r.ok){
+      const d = await r.json(); const pl = d.places && d.places[0];
+      if(pl) return {lugar: pl['place name'] + (pl.state ? ', ' + pl.state : ''), lat: parseFloat(pl.latitude), lng: parseFloat(pl.longitude)};
+    }
+  }catch(e){}
+  try{
+    await new Promise(res => setTimeout(res, 1100));
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&postalcode=' + cp);
+    const d = await r.json();
+    if(d && d[0]) return {lugar: String(d[0].display_name || '').split(',').slice(0, 3).join(',').trim(), lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon)};
+  }catch(e){ return {error: true}; }
+  return null;
+}
+// «Comprobar códigos postales»: para cada uno, qué lugar es, a cuántos km queda del local y si es de otra provincia.
+async function comprobarCodigosPostales(){
+  const caja = document.getElementById('mn-cp-resultado');
+  if(!caja) return;
+  const b = DB.business || {}, p = b.pedidos || {};
+  const cps = parseCpList(document.getElementById('mn-cplist').value);
+  if(cps.invalidos.length){ caja.innerHTML = `<p class="manual-warning"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'No son códigos postales válidos (5 cifras, provincia 01-52): ', ca:'No són codis postals vàlids (5 xifres, província 01-52): ', en:'Not valid postcodes (5 digits, province 01-52): '}))}<strong>${escapeHtml(cps.invalidos.join(', '))}</strong></p>`; return; }
+  if(!cps.validos.length){ caja.innerHTML = `<p class="txt-xs" style="color:var(--muted)">${escapeHtml(gl({es:'Escribe antes algún código postal.', ca:'Escriu abans algun codi postal.', en:'Enter a postcode first.'}))}</p>`; return; }
+  // Punto del local: el ya calculado, o se calcula ahora con la dirección.
+  let base = (p.lat != null && p.lng != null) ? {lat: p.lat, lng: p.lng} : null;
+  if(!base && b.address){
+    try{
+      const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q=' + encodeURIComponent(b.address));
+      const d = await r.json(); if(d && d[0]) base = {lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon)};
+    }catch(e){}
+  }
+  const provLocal = (String(b.address || '').match(/\b(\d{5})\b/) || [])[1];
+  const lim = parseFloat(document.getElementById('mn-radiuskm').value) > 0 ? parseFloat(document.getElementById('mn-radiuskm').value) : 25;
+  caja.innerHTML = `<ul class="cp-lista">${cps.validos.map(c => `<li id="cp-${c}" class="cp-fila"><b>${c}</b> <span class="cp-est"><i class="ti ti-loader-2"></i> ${escapeHtml(gl({es:'Comprobando…', ca:'Comprovant…', en:'Checking…'}))}</span></li>`).join('')}</ul>`;
+  for(const c of cps.validos){
+    const fila = document.getElementById('cp-' + c); if(!fila) continue;
+    const info = await consultarCodigoPostal(c);
+    const est = fila.querySelector('.cp-est');
+    if(!info || info.error){
+      fila.className = 'cp-fila is-aviso';
+      est.innerHTML = info && info.error ? escapeHtml(gl({es:'No se pudo comprobar (sin conexión).', ca:'No s\'ha pogut comprovar (sense connexió).', en:'Could not check (offline).'})) : '<i class="ti ti-help-circle"></i> ' + escapeHtml(gl({es:'No lo reconozco: revisa que esté bien escrito.', ca:'No el reconec: revisa que estigui ben escrit.', en:'Not recognised: check it is typed correctly.'}));
+      continue;
+    }
+    const avisos = [];
+    if(base && !isNaN(info.lat)){
+      const km = _kmEntre(base.lat, base.lng, info.lat, info.lng);
+      est.dataset.km = km.toFixed(1);
+      if(km > lim) avisos.push(gl({es:'a ' + km.toFixed(0) + ' km de tu local (más de ' + lim + ' km)', ca:'a ' + km.toFixed(0) + ' km del teu local (més de ' + lim + ' km)', en:km.toFixed(0) + ' km from your venue (over ' + lim + ' km)'}));
+      else avisos.push(gl({es:'a ' + km.toFixed(1) + ' km de tu local', ca:'a ' + km.toFixed(1) + ' km del teu local', en:km.toFixed(1) + ' km from your venue'}));
+      if(km > lim) fila.className = 'cp-fila is-aviso'; else fila.className = 'cp-fila is-ok';
+    }else fila.className = 'cp-fila is-ok';
+    if(provLocal && provLocal.slice(0, 2) !== c.slice(0, 2)){ avisos.push(gl({es:'otra provincia que tu local', ca:'una altra província que el teu local', en:'a different province from your venue'})); fila.className = 'cp-fila is-aviso'; }
+    est.innerHTML = '<i class="ti ti-map-pin"></i> ' + escapeHtml(info.lugar) + (avisos.length ? ' · <em>' + escapeHtml(avisos.join(' · ')) + '</em>' : '');
+  }
+}
 async function savePedidosConfig(){
   const b = DB.business;
   const p = b.pedidos || {};
@@ -9985,17 +10214,27 @@ async function savePedidosConfig(){
     // 0 o vacío = sin umbral de envío gratis, se cobra siempre el envío fijo.
     const freeDeliveryFromEl = document.getElementById('mn-freedeliveryfrom');
     p.freeDeliveryFrom = freeDeliveryFromEl ? (Math.max(0, parseFloat(freeDeliveryFromEl.value) || 0) || null) : null;
-    p.cpList = document.getElementById('mn-cplist').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const radiusKm = Math.max(0, parseFloat(document.getElementById('mn-radiuskm').value) || 0);
+    // Códigos postales: se leen separados por comas, espacios o saltos de línea y se validan (5 cifras, provincia 01-52):
+    // antes un «28 001» o un «2800» se guardaba tal cual y NUNCA coincidía con el del cliente, sin ningún aviso.
+    const cps = parseCpList(document.getElementById('mn-cplist').value);
+    if(cps.invalidos.length){
+      showToast(gl({es:'Códigos postales no válidos: ' + cps.invalidos.join(', ') + '. Deben tener 5 cifras y empezar por 01-52.', ca:'Codis postals no vàlids: ' + cps.invalidos.join(', ') + '. Han de tenir 5 xifres i començar per 01-52.', en:'Invalid postcodes: ' + cps.invalidos.join(', ') + '. They must have 5 digits and start with 01-52.'}));
+      return;
+    }
+    p.cpList = cps.validos;
+    let radiusKm = Math.max(0, parseFloat(document.getElementById('mn-radiuskm').value) || 0);
+    if(radiusKm > 100){ radiusKm = 100; showToast(gl({es:'El radio máximo es 100 km.', ca:'El radi màxim és 100 km.', en:'The maximum radius is 100 km.'})); }
     p.radiusKm = radiusKm;
+    if(radiusKm > 0 && !b.address){ showToast(gl({es:'Para usar un radio hace falta la dirección del local (Mi Negocio → Datos).', ca:'Per fer servir un radi cal l\'adreça del local (El Meu Negoci → Dades).', en:'To use a radius we need the venue address (My Business → Details).'})); }
     if(radiusKm > 0 && b.address){
       showToast(t('msg.calculatingLocation'));
       try{
-        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(b.address));
+        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q=' + encodeURIComponent(b.address));
         const data = await res.json();
         if(data && data[0]){
           p.lat = parseFloat(data[0].lat);
           p.lng = parseFloat(data[0].lon);
+          p.ubicacionTexto = String(data[0].display_name || '').split(',').slice(0, 3).join(',').trim();
         }else{
           showToast(t('msg.locationError'));
         }
@@ -11498,20 +11737,42 @@ async function connectThermalPrinter(printerId){
 // que esa página no tiene (mayúsculas acentuadas: Á, É, Í, Ó, Ú) se
 // degradan a su vocal sin acento en vez de un símbolo erróneo — sigue
 // siendo legible, que es lo que importa.
+// ⚠️ 2/11: el ticket llevaba SIEMPRE «12,50 €» y en CP437 no existe el € — salía «12,50 ?» en todos los tickets por Bluetooth.
+// Ahora se usa CP858 (ESC t 19): es CP850 con el € en 0xD5, la tienen casi todas las impresoras ESC/POS y trae también las
+// mayúsculas acentuadas y las vocales con acento grave del catalán. Quien tenga una impresora antigua que la desconozca puede
+// volver al juego clásico (CP437, el € sale como «EUR») en Mi Negocio → impresión (`getPrintCodepage`).
+const CP858_MAP = {
+  'á':0xA0, 'é':0x82, 'í':0xA1, 'ó':0xA2, 'ú':0xA3, 'ñ':0xA4, 'Ñ':0xA5,
+  'à':0x85, 'è':0x8A, 'ì':0x8D, 'ò':0x95, 'ù':0x97, 'ï':0x8B, 'ö':0x94, 'ä':0x84, 'ë':0x89,
+  'Á':0xB5, 'É':0x90, 'Í':0xD6, 'Ó':0xE0, 'Ú':0xE9, 'À':0xB7, 'È':0xD4, 'Ì':0xDE, 'Ò':0xE3, 'Ù':0xEB, 'Ï':0xD8,
+  'ü':0x81, 'Ü':0x9A, 'ç':0x87, 'Ç':0x80, '¿':0xA8, '¡':0xAD, 'ª':0xA6, 'º':0xA7, '«':0xAE, '»':0xAF,
+  '€':0xD5, '·':0xFA, '×':0x9E, '°':0xF8,
+  '–':'-', '—':'-', '‘':"'", '’':"'", '“':'"', '”':'"', '…':'.',
+};
 const CP437_MAP = {
   'á':0xA0, 'é':0x82, 'í':0xA1, 'ó':0xA2, 'ú':0xA3, 'ñ':0xA4, 'Ñ':0xA5,
   'ü':0x81, 'Ü':0x9A, 'ç':0x87, 'Ç':0x80, '¿':0xA8, '¡':0xAD,
   'ª':0xA6, 'º':0xA7, '«':0xAE, '»':0xAF,
   // No existen en CP437: se degradan a la letra sin acento (legible, no corrupto)
-  'Á':'A', 'É':'E', 'Í':'I', 'Ó':'O', 'Ú':'U',
+  'Á':'A', 'É':'E', 'Í':'I', 'Ó':'O', 'Ú':'U', 'à':'a', 'è':'e', 'ì':'i', 'ò':'o', 'ù':'u', 'À':'A', 'È':'E', 'Ì':'I', 'Ò':'O', 'Ù':'U',
+  '€':'E', '·':'.', '×':'x', '–':'-', '—':'-', '‘':"'", '’':"'", '“':'"', '”':'"',
 };
+function getPrintCodepage(){
+  try{ return localStorage.getItem('gg_print_codepage') === 'cp437' ? 'cp437' : 'cp858'; }catch(e){ return 'cp858'; }
+}
+function setPrintCodepage(v){
+  try{ localStorage.setItem('gg_print_codepage', v === 'cp437' ? 'cp437' : 'cp858'); }catch(e){}
+}
 function textToEscPos(text){
   const ESC = 0x1B, GS = 0x1D;
-  // ESC @ (inicializar) + ESC t 0 (seleccionar página de códigos CP437,
-  // explícita en vez de confiar en el valor por defecto de la impresora).
-  const bytes = [ESC, 0x40, ESC, 0x74, 0x00];
-  for(const ch of text){
-    const mapped = CP437_MAP[ch];
+  const antiguo = getPrintCodepage() === 'cp437';
+  const mapa = antiguo ? CP437_MAP : CP858_MAP;
+  // ESC @ (inicializar) + ESC t n (página de códigos explícita en vez de confiar en la de fábrica): 0 = CP437, 19 = CP858.
+  const bytes = [ESC, 0x40, ESC, 0x74, antiguo ? 0x00 : 0x13];
+  // Con el juego antiguo, el € se escribe «EUR» (no cabe un símbolo) para que el importe no salga como «?».
+  const texto = antiguo ? String(text).replace(/€/g, 'EUR') : String(text);
+  for(const ch of texto){
+    const mapped = mapa[ch];
     if(typeof mapped === 'number'){ bytes.push(mapped); continue; }
     if(typeof mapped === 'string'){ bytes.push(mapped.codePointAt(0)); continue; }
     const code = ch.codePointAt(0);
@@ -11553,7 +11814,9 @@ async function writeThermalChunks(characteristic, bytes){
 // inmensa mayoría de cajones (algunos modelos raros van por el pin 5, m=1).
 // t1/t2 son la duración del pulso en unidades de 2 ms: 25 y 250 son los
 // valores que recomienda Epson y que aceptan también los clones.
-const CASH_DRAWER_KICK = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
+// Se mandan los dos pulsos (pin 2 y pin 5): con un cajón de cada tipo solo responde uno y el otro se ignora, así que
+// no hay que preguntarle al hostelero en qué pin está su cable (2/11).
+const CASH_DRAWER_KICK = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA, 0x1B, 0x70, 0x01, 0x19, 0xFA]);
 
 /* Abre el cajón. opts.silent = true para el cobro automático: en ese caso,
    si no hay impresora ya conectada NO se hace nada y no se avisa de nada —

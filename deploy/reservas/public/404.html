@@ -10,7 +10,7 @@
 <style>
 @font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/schibsted-grotesk-400-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/schibsted-grotesk-500-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/schibsted-grotesk-600-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/schibsted-grotesk-700-normal.woff2") format("woff2");}@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/ibm-plex-mono-400-normal.woff2") format("woff2");}@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/ibm-plex-mono-500-normal.woff2") format("woff2");}
   :root{
-    --ink:#1C1A17; --olive:#4A5D4E; --olive-l:#7E9B84;
+    --ink:#1C1A17; --brand2:#1C1A17; --olive:#4A5D4E; --olive-l:#7E9B84;
     --paper:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
     /* Mismo cambio que en la app: #8A857C se quedaba en 3,67:1 sobre
        blanco, por debajo del 4,5:1 legible, y aquí lo llevan las etiquetas
@@ -279,18 +279,18 @@
      rotulación en mono, iconos de trazo fino en las pestañas (sin emoji) y selector ES · CA · EN. ═══ */
   :root{--r-s:3px;--r-m:4px}
   header{box-shadow:inset 0 -3px 0 var(--olive);padding-top:26px;padding-bottom:24px}
-  header h1{font-size:clamp(24px,5vw,32px);letter-spacing:-.03em;line-height:1.1}
+  header h1{font-size:clamp(24px,5vw,32px);letter-spacing:-.03em;line-height:1.1;color:var(--brand2)}
   header .sub{text-transform:uppercase;letter-spacing:.1em}
   .card{border-radius:var(--r-m);border-color:var(--border)}
   .btn{border-radius:var(--r-s);font-weight:600}
   input,select,textarea,.field input,.field select,.field textarea{border-radius:var(--r-s)}
-  input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-offset:0;border-color:var(--ink)}
-  a{color:var(--olive)} a:hover{color:var(--ink)}
-  input[type=checkbox],input[type=radio]{accent-color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-offset:0;border-color:var(--brand2)}
+  a{color:var(--olive)} a:hover{color:var(--brand2)}
+  input[type=checkbox],input[type=radio]{accent-color:var(--brand2)}
   .tabs{gap:0;border-bottom:1px solid var(--border);margin-bottom:18px}
   .tab-btn{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--muted);flex:1 1 0;min-height:48px;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:-1px}
-  .tab-btn:hover{color:var(--ink);border-color:transparent;background:transparent}
-  .tab-btn.active{background:transparent;color:var(--ink);border-bottom-color:var(--ink)}
+  .tab-btn:hover{color:var(--brand2);border-color:transparent;background:transparent}
+  .tab-btn.active{background:transparent;color:var(--brand2);border-bottom-color:var(--brand2)}
   .tab-btn::before{content:"";width:18px;height:18px;flex:none;background:currentColor;-webkit-mask:var(--ti) center/contain no-repeat;mask:var(--ti) center/contain no-repeat}
   .tab-mesa{--ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 10h16M6 10v9M18 10v9M8 6h8'/%3E%3C/svg%3E")}
   .tab-reserva{--ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h3v3H8z'/%3E%3C/svg%3E")}
@@ -1333,12 +1333,26 @@ setInterval(() => {
   infoListenerRef.off('value', infoListenerCallback);
 }, 60 * 1000);
 
+// Colores de marca del negocio: principal (botones) y secundario (títulos, pestañas, foco). Un color elegido a ojo puede dejar
+// ilegible el texto blanco de un botón: se oscurece hasta contrastar 4,5:1 con el blanco (3:1 el secundario, que es texto grande y bordes).
+function _hexARgb(h){ const m = /^#?([0-9a-f]{6})$/i.exec(String(h || '').trim()); if(!m) return null; const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function _lum(rgb){ const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]); }
+function _contrasteBlanco(hex){ const r = _hexARgb(hex); return r ? 1.05 / (_lum(r) + 0.05) : 21; }
+function _oscurecerHasta(hex, min){
+  const rgb = _hexARgb(hex); if(!rgb) return hex;
+  let out = hex, k = 0;
+  while(_contrasteBlanco(out) < min && k < 20){ k++; out = '#' + rgb.map(v => Math.max(0, Math.round(v * (1 - k * 0.05))).toString(16).padStart(2, '0')).join(''); }
+  return out;
+}
+function aplicarColoresMarca(b){
+  if(!b) return;
+  const root = document.documentElement.style;
+  if(b.brandColor){ const c = _oscurecerHasta(b.brandColor, 4.5); root.setProperty('--olive', c); root.setProperty('--olive-l', c); }
+  if(b.brandColor2){ root.setProperty('--brand2', _oscurecerHasta(b.brandColor2, 3)); }
+}
 function renderBranchSelector(business, sucursales){
   if(business.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(business.logo)}" alt="${escapeHtml(business.name||'Logo')}">`;
-  if(business.brandColor){
-    document.documentElement.style.setProperty('--olive', business.brandColor);
-    document.documentElement.style.setProperty('--olive-l', business.brandColor);
-  }
+  aplicarColoresMarca(business);
   if(business.name){ document.getElementById('biz-name').textContent = business.name; bizNameLoaded = true; }
   const base = location.href.split('?')[0];
   document.getElementById('app').innerHTML = `
@@ -1378,10 +1392,7 @@ function renderHeader(){
   const b = DB.business || {};
   if(b.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(b.logo)}" alt="${escapeHtml(b.name||'Logo')}">`;
   if(b.name){ document.getElementById('biz-name').textContent = b.name; bizNameLoaded = true; }
-  if(b.brandColor){
-    document.documentElement.style.setProperty('--olive', b.brandColor);
-    document.documentElement.style.setProperty('--olive-l', b.brandColor);
-  }
+  aplicarColoresMarca(b);
   const parts = [];
   if(b.address) parts.push(['pin', b.address]);
   if(b.schedule) parts.push(['clock', b.schedule]);
@@ -1529,7 +1540,14 @@ function getDiasSemana(){ return DIAS_SEMANA_I18N[currentLang] || DIAS_SEMANA_I1
 
 // Devuelve los turnos (franjas horarias) del día de la semana correspondiente
 // a dateStr, o null si el negocio no ha configurado horario (sin restricción).
+// Días cerrados fuera del cierre habitual (vacaciones, obras…): los pone el negocio en Mi Negocio → Horario.
+function cierreExcepcionalDe(dateStr){
+  const lista = (DB.business || {}).diasCerrados;
+  if(!Array.isArray(lista) || !dateStr) return null;
+  return lista.find(c => c && c.desde && dateStr >= c.desde && dateStr <= (c.hasta || c.desde)) || null;
+}
 function getTurnosForDate(dateStr){
+  if(cierreExcepcionalDe(dateStr)) return [];
   const horario = (DB.business || {}).horario;
   if(!horario || horario.length !== 7) return null;
   const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
@@ -1807,7 +1825,11 @@ function nombreDia(dateStr){
 function horarioHintHtml(dateStr){
   const turnos = getTurnosForDate(dateStr);
   if(turnos === null) return '';
-  if(!turnos.length) return `<p style="font-size:13px;color:var(--red);margin-top:-8px">${t('hint.cerrado').replace('%s', nombreDia(dateStr).toLowerCase())}</p>`;
+  if(!turnos.length){
+    const ce = cierreExcepcionalDe(dateStr);
+    const motivo = ce && ce.motivo ? ' (' + escapeHtml(ce.motivo) + ')' : '';
+    return `<p style="font-size:13px;color:var(--red);margin-top:-8px">${t('hint.cerrado').replace('%s', nombreDia(dateStr).toLowerCase())}${motivo}</p>`;
+  }
   return `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.horario').replace('%s', nombreDia(dateStr).toLowerCase()).replace('%s', formatTurnos(turnos))}</p>`;
 }
 
@@ -1904,7 +1926,7 @@ function checkCpLive(){
   const el = document.getElementById('o-cp');
   const hint = document.getElementById('o-cp-hint');
   if(!el || !hint) return;
-  const cp = el.value.trim();
+  const cp = el.value.replace(/\s+/g, '');
   const p = (DB.business||{}).pedidos || {};
   const cpList = p.cpList || [];
   if(!cpList.length || !cp){ hint.textContent = ''; return; }
@@ -1924,13 +1946,14 @@ function checkCpLive(){
 // válido; lo dejamos pasar marcado para que el negocio revise la dirección
 // manualmente antes de aceptarlo.
 async function checkDeliveryZone(p, codigoPostal, direccion){
+  codigoPostal = String(codigoPostal || '').replace(/\s+/g, '');
   const cpList = p.cpList || [];
   if(cpList.length && cpList.includes(codigoPostal)) return {ok:true};
 
   if(p.radiusKm > 0 && p.lat != null && p.lng != null){
     const geocode = async () => {
       const q = encodeURIComponent(direccion + ', ' + codigoPostal);
-      const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + q);
+      const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q=' + q);
       const data = await res.json();
       return (data && data[0]) ? data[0] : null;
     };
@@ -3648,7 +3671,7 @@ async function submitOrder(){
   // configurada: una sola línea de "dirección" a mano es demasiado ambigua
   // para un repartidor (o para geocodificar bien contra el radio, si lo
   // hay) — con el CP aparte no hay duda de a qué zona pertenece.
-  const codigoPostal = isDelivery ? document.getElementById('o-cp').value.trim() : '';
+  const codigoPostal = isDelivery ? document.getElementById('o-cp').value.replace(/\s+/g, '') : '';
 
   clearFieldInvalid(['o-name','o-phone','o-date','o-time','o-address','o-cp','o-email']);
   if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion) || (isDelivery && !codigoPostal)){

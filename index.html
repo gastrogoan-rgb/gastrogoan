@@ -820,19 +820,20 @@
       <div class="view-title" data-i18n="view.manual.title">Manual de Uso</div>
       <div class="view-subtitle" data-i18n="view.manual.subtitle">Guía rápida de cada módulo</div>
 
-      <div class="card" style="margin-bottom:14px;border:2px solid var(--ink);background:var(--brand-cream)">
-        <h3 style="color:var(--ink)"><i class="ti ti-map-2"></i> <span data-i18n="manual.tourTitle">Tour guiado interactivo</span></h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:10px" data-i18n="manual.tourDesc">El tour te lleva en vivo por cada pantalla de la app y te explica, paso a paso, qué hace y cómo se usa. Es el punto de partida ideal si acabas de empezar, y puedes repetirlo siempre que quieras. Combínalo con los capítulos de este manual (explicaciones detalladas con ejemplos) y con el <strong>Centro de ayuda</strong> (botón inferior derecho) para preguntas concretas del día a día.</p>
-        <button class="btn btn-sm btn-primary" onclick="startAppTour()"><i class="ti ti-player-play"></i> <span data-i18n="btn.startTour">Iniciar tour guiado</span></button>
+      <div class="mnl-tour">
+        <span class="mnl-tour-ico"><i class="ti ti-map-2"></i></span>
+        <div class="mnl-tour-txt"><strong data-i18n="manual.tourTitle">Tour guiado interactivo</strong>
+          <span data-i18n="manual.tourDesc">El tour te lleva en vivo por cada pantalla de la app y te explica, paso a paso, qué hace y cómo se usa.</span></div>
+        <button class="btn btn-primary" onclick="startAppTour()"><i class="ti ti-player-play"></i> <span data-i18n="btn.startTour">Iniciar tour guiado</span></button>
       </div>
 
-      <div class="field" style="max-width:340px;margin-bottom:10px">
-        <input type="text" id="manual-search-input" data-i18n-ph="ph.searchManual" placeholder="Buscar en el manual..." oninput="setManualSearch(this.value)">
+      <div class="mnl-busca">
+        <i class="ti ti-search"></i>
+        <input type="search" id="manual-search-input" inputmode="search" autocomplete="off" data-i18n-ph="ph.searchManual" placeholder="Buscar en el manual..." oninput="setManualSearch(this.value)">
       </div>
-      <div class="manual-wrap">
-        <div style="text-align:right;margin-bottom:6px"><button class="btn btn-sm" onclick="printManualChapter()"><i class="ti ti-printer"></i> <span data-i18n="btn.printChapter">Imprimir capítulo</span></button></div>
-        <div class="manual-detail" id="manual-detail"></div>
-      </div>
+      <nav class="mnl-indice" id="manual-indice"></nav>
+      <article class="manual-detail" id="manual-detail"></article>
+      <div id="manual-pie"></div>
     </section>
 
   </main>
@@ -947,6 +948,7 @@
 <script src="js/novedades.js"></script>
 <script src="js/clientes.js"></script>
 <script src="js/reservas.js"></script>
+<script src="js/manual.js"></script>
 <script src="js/polish.js"></script>
 <script src="js/app.js"></script>
 

@@ -470,18 +470,18 @@ await caso('Al dueño se le pide confirmación, no el PIN', async ()=>{
 });
 
 /* ─── El índice del manual ─── */
-await caso('El manual tiene índice arriba y marca dónde estás', async ()=>{
+await caso('El manual tiene índice por áreas y marca dónde estás', async ()=>{
   const r = await page.evaluate(()=>{
+    manualIndiceAbierto = true; manualSearch = '';
     navigate('manual'); renderManual();
-    const idx = document.querySelector('#view-manual .mn-indice');
+    const idx = document.querySelector('#view-manual .mnl-indice');
     if(!idx) return {hay:false};
-    const chips = [...idx.querySelectorAll('.mn-indice-chip')];
-    // Pulsar uno debe cambiar de capítulo y mover la marca
+    const chips = [...idx.querySelectorAll('.mnl-chip')];
     chips[2] && chips[2].click();
-    const idx2 = document.querySelector('#view-manual .mn-indice');
-    const activo = idx2 ? idx2.querySelector('.mn-indice-chip.activo') : null;
+    const idx2 = document.querySelector('#view-manual .mnl-indice');
+    const activo = idx2 ? idx2.querySelector('.mnl-chip.activo') : null;
     return {hay:true, n: chips.length, capitulo: manualChapter,
-            marcado: activo ? [...idx2.querySelectorAll('.mn-indice-chip')].indexOf(activo) : -1};
+            marcado: activo ? [...idx2.querySelectorAll('.mnl-chip')].indexOf(activo) : -1};
   });
   assert.ok(r.hay, 'faltaba el índice');
   assert.ok(r.n >= 5, `pocos capítulos: ${r.n}`);

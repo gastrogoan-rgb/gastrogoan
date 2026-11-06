@@ -675,19 +675,7 @@ td.wrap{white-space:normal}
    Negocio no hace falta porque allí son saltos dentro de la misma página. */
 .mn-indice-chip.activo{background:var(--ink);color:#fff;border-color:var(--ink)}
 @media (max-width:1024px){ .mn-indice-chip{min-height:44px} }
-/* Único índice del Manual (9/09: se quitó la columna lateral duplicada,
-   .manual-nav) — fijo arriba para no perderlo al leer un capítulo largo. */
-/* El índice del manual se queda fijo arriba mientras se lee un capítulo.
-   El ::before no es adorno: .content tiene 22 px de padding por encima del
-   punto donde el sticky se pega, y por esa franja se veía PASAR el texto
-   del capítulo entre la cabecera de la app y la barra — daba la sensación
-   de que la barra se movía con el texto en vez de estar fija. La banda tapa
-   ese hueco con el fondo de la página. */
-#view-manual .mn-indice{position:sticky;top:0;z-index:10}
-#view-manual .mn-indice::before{
-  content:'';position:absolute;left:0;right:0;bottom:100%;height:24px;
-  background:var(--bg);pointer-events:none;
-}
+
 /* Destello al aterrizar: en una pantalla tan larga, saltar sin más deja
    dudando si se ha movido algo. */
 .mn-ap-resaltado{animation:mn-destello 1.4s ease}
@@ -958,36 +946,7 @@ td.wrap{white-space:normal}
 .mn-grid .card{max-width:none;margin:0 0 16px;min-width:0;break-inside:avoid;-webkit-column-break-inside:avoid}
 .mn-grid .mn-grid-full{column-span:all}
 
-/* Antes había dos listas de capítulos (esta columna lateral y la fila de
-   arriba, .mn-indice) — el dueño pidió (9/09) dejar solo una. .manual-wrap
-   ya no es una rejilla de dos columnas, solo el marco de la página. */
-.manual-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
-.manual-detail{padding:20px}
-.manual-detail h3{font-size:16px;font-weight:700;margin:0 0 12px;color:var(--text)}
-.manual-detail h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px}
-.manual-detail p{font-size:14px;line-height:1.6;color:var(--text);margin-bottom:10px}
-.manual-detail ul{margin:0 0 12px 18px;font-size:14px;line-height:1.8;color:var(--text)}
-.manual-step{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--bg);border-radius:8px;margin-bottom:8px}
-.manual-step .sn{min-width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-/* Sin min-width:0, un elemento flex no encoge nunca por debajo del ancho
-   de su contenido — con textos largos (o una palabra/URL sin espacios) el
-   texto del manual se salía por el margen derecho en vez de partirse en
-   más líneas. overflow-wrap:anywhere para el caso extremo de una palabra
-   suelta más ancha que la columna entera. */
-.manual-step .st{font-size:13px;line-height:1.5;min-width:0;flex:1;overflow-wrap:anywhere}
-/* ⚠️ display:block, NO flex. Con flex, cada hijo del aviso es un item
-   propio: el <strong>GGGG</strong> del manual se quedaba con 10 px de ancho
-   y salía partido en CUATRO renglones, una letra por línea. El icono va
-   flotado, que es lo que hace falta de verdad aquí. */
-.manual-tip{background:var(--brand-cream);border-left:3px solid var(--ink);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--ink);display:block;overflow-wrap:break-word}
-.manual-tip>i:first-child{float:left;margin-right:8px}
-/* Mismo caso que .manual-tip: block + icono flotado, no flex. */
-.manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#6B5A2E;display:block;overflow-wrap:break-word}
-.manual-warning>i:first-child{float:left;margin-right:8px}
-.manual-tip i,.manual-warning i{flex-shrink:0;margin-top:2px;font-size:15px}
-.manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px;display:block;overflow-x:auto}
-.manual-detail table th,.manual-detail table td{border:1px solid var(--border);padding:6px 10px;text-align:left}
-.manual-detail table th{background:var(--bg);font-weight:700}
+/* Manual: ver el bloque «MANUAL (1/11)» más abajo. */
 
 .ge-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
 .ge-sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--brand-cream);border-bottom:1px solid var(--border);border-left:4px solid var(--ink)}
@@ -1545,8 +1504,7 @@ td.wrap{white-space:normal}
   .modal-footer{flex-wrap:wrap;gap:6px}
   .modal-footer .btn{flex:1;justify-content:center;min-width:90px}
 
-  /* Manual */
-  .manual-detail{padding:12px}
+  /* Manual: reglas de móvil al final del archivo. */
   /* Las tablas del manual (auto-layout, sin ancho fijo) se dimensionaban a
      su contenido SIN envolver texto — con una sola celda algo larga
      ("Margen ajustado o negativo — revisa precio...") la tabla pedía más
@@ -4463,6 +4421,106 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .tp-lastcall{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 14px;background:#FBF1EE;border:1px solid #D9A79C;border-left:6px solid #B4432F;border-radius:3px;font-size:14px}
 .tp-lastcall .ti{font-size:20px;color:#B4432F;flex:none}
 
+/* ============ MANUAL (1/11): un índice por áreas, una columna de lectura y apartados que se saltan ============ */
+.mnl-tour{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;margin:0 0 16px;background:#F3F7F0;border:1px solid #C9D8C5;border-left:6px solid var(--olive);border-radius:4px}
+.mnl-tour-ico{flex:none;font-size:26px;color:var(--olive);line-height:1}
+.mnl-tour-txt{flex:1 1 280px;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13.5px;color:var(--muted);line-height:1.45}
+.mnl-tour-txt strong{font-size:15px;color:var(--ink)}
+.mnl-busca{position:relative;max-width:460px;margin:0 0 14px}
+.mnl-busca > .ti{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.mnl-busca input{width:100%;max-width:none;height:46px !important;min-height:46px !important;padding:6px 12px 6px 40px !important}
+.mnl-indice{margin:0 0 22px;background:#fff;border:1px solid var(--hair);border-radius:4px}
+.mnl-toggle{display:none;width:100%;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:0 14px;background:none;border:0;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;text-align:left}
+.mnl-toggle-izq{min-width:0;overflow-wrap:break-word}
+.mnl-toggle:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
+.mnl-grupos{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.mnl-grupos.cerrado{display:none}
+.mnl-grupo{padding:14px 16px 12px;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);min-width:0}
+.mnl-grupo-et{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--olive);font-weight:600}
+.mnl-chips{display:flex;flex-direction:column;gap:2px}
+.mnl-chip{display:block;width:100%;min-height:36px;padding:6px 10px;border:0;border-left:3px solid transparent;background:none;font:inherit;font-size:13.5px;color:var(--ink);text-align:left;cursor:pointer;overflow-wrap:break-word}
+.mnl-chip:hover{background:var(--brand-cream)}
+.mnl-chip:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
+.mnl-chip.activo{border-left-color:var(--olive);background:#F3F7F0;font-weight:600}
+.mnl-chip .ti{display:none}
+.manual-detail{max-width:780px;padding:0 0 8px;margin:0}
+.mnl-cab{margin:0 0 18px;padding:0 0 14px;border-bottom:2px solid var(--ink)}
+.mnl-cab-area{display:block;margin:0 0 6px;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--olive);font-weight:600}
+.mnl-cab-tit{margin:0;font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.15;display:flex;align-items:center;gap:12px;overflow-wrap:break-word}
+.mnl-cab-tit .ti{font-size:28px;color:var(--olive);flex:none}
+.manual-detail h3{font-size:19px;font-weight:700;margin:0 0 10px;color:var(--text)}
+.manual-detail h4{font-size:12px;font-weight:600;color:var(--muted);margin:30px 0 12px;padding-top:14px;border-top:1px solid var(--hair);scroll-margin-top:16px}
+.manual-detail p{font-size:15px;line-height:1.65;color:var(--text);margin:0 0 12px}
+.manual-detail ul{margin:0 0 14px 20px;font-size:15px;line-height:1.65;color:var(--text)}
+.manual-detail li{margin:0 0 5px}
+.manual-detail strong{font-weight:600}
+.manual-step{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--hair);margin:0}
+.manual-step:last-of-type{border-bottom:0}
+.manual-step .sn{min-width:28px;height:28px;border-radius:50%;background:var(--ink);color:#FAF8F4;font-family:var(--mono);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.manual-step .st{font-size:15px;line-height:1.6;min-width:0;flex:1;overflow-wrap:anywhere}
+.manual-tip,.manual-warning{display:block;padding:12px 16px;margin:14px 0;border-radius:0 3px 3px 0;font-size:14px;line-height:1.55;overflow-wrap:break-word}
+.manual-tip{background:#F3F7F0;border-left:4px solid var(--olive);color:var(--ink)}
+.manual-warning{background:#FBF3DF;border-left:4px solid #C79A2E;color:#5C4510}
+.manual-tip>i:first-child,.manual-warning>i:first-child{float:left;margin:2px 10px 0 0;font-size:17px}
+.manual-detail table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:14px;display:table}
+.manual-detail table td,.manual-detail table th{white-space:normal;overflow-wrap:break-word}
+.manual-detail table th,.manual-detail table td{border:1px solid var(--hair);padding:8px 12px;text-align:left;vertical-align:top}
+.manual-detail table th{background:var(--brand-cream);font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.mnl-toc{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:0 0 6px;padding:12px 14px;background:var(--brand-cream);border:1px solid var(--hair);border-radius:3px}
+.mnl-toc-et{width:100%;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mnl-toc-it{min-height:36px;padding:4px 12px;background:#fff;border:1px solid var(--hair);border-radius:3px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer;text-align:left}
+.mnl-toc-it:hover{border-color:var(--olive);color:var(--olive)}
+.mnl-toc-it:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.mnl-hl{background:#FBE9A8;color:inherit;padding:0 1px;border-radius:2px}
+.mnl-pie{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:stretch;max-width:780px;margin:30px 0 8px;padding-top:18px;border-top:1px solid var(--hair)}
+.mnl-nav{justify-content:flex-start;text-align:left;min-height:56px;gap:10px}
+.mnl-nav span{display:flex;flex-direction:column;min-width:0;overflow-wrap:break-word;line-height:1.25}
+.mnl-nav small{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.mnl-sig{justify-content:flex-end;text-align:right}
+.mnl-nav.btn-fino::before{top:0;bottom:0;height:auto;margin-top:0}
+.mnl-imprimir{align-self:center}
+
+/* Aviso en la pantalla de acceso: por qué se cerró la sesión (2/11) */
+.access-aviso{display:flex;gap:10px;align-items:flex-start;max-width:460px;margin:0 auto 14px;padding:12px 14px;background:#FBF3DF;border:1px solid #E3CC8E;border-left:5px solid #C79A2E;border-radius:3px;font-size:14px;line-height:1.5;color:#5C4510;text-align:left}
+.access-aviso .ti{font-size:20px;flex:none;margin-top:1px}
+/* Días cerrados y vacaciones (Mi Negocio, 2/11) */
+.dc-lista{list-style:none;margin:0 0 12px;padding:0}
+.dc-fila{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--hair)}
+.dc-fechas{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:13px;font-weight:600}
+.dc-motivo{flex:1;min-width:0;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.dc-form{margin:10px 0}
+.dc-pasados{margin-top:12px;color:var(--muted);font-size:13px}
+.dc-pasados summary{cursor:pointer;min-height:36px;display:flex;align-items:center}
+/* Colores de marca (Mi Negocio, 2/11) */
+.bc-fila{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.bc-color{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px}
+.bc-color input[type=color]{width:52px;height:44px;padding:2px;border:1px solid var(--hair);border-radius:3px;cursor:pointer;background:#fff}
+.bc-color code,.bc-sug code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.bc-sugeridos{display:flex;flex-wrap:wrap;gap:8px}
+.bc-sug{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--hair);border-radius:3px;background:#fff}
+.bc-muestra{width:28px;height:28px;border-radius:3px;border:1px solid rgba(0,0,0,.15);flex:none}
+.bc-vista{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--hair);border-radius:3px;background:#fff}
+.bc-v-tit{font-weight:700;font-size:16px;color:var(--bc2);overflow-wrap:anywhere;min-width:0}
+.bc-v-btn{flex:none;padding:8px 14px;border-radius:3px;background:var(--bc1);color:#fff;font-size:13px;font-weight:600}
+/* Comprobación de códigos postales (Mi Negocio → Pedidos, 2/11) */
+.cp-lista{list-style:none;margin:8px 0 0;padding:0}
+.cp-fila{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;padding:6px 8px;border-bottom:1px solid var(--hair);font-size:13px;border-left:4px solid var(--hair)}
+.cp-fila b{font-family:var(--mono)}
+.cp-fila.is-ok{border-left-color:var(--olive)}
+.cp-fila.is-aviso{border-left-color:#C79A2E;background:#FBF3DF}
+.cp-fila em{font-style:normal;color:#6B4E10}
+/* ── MI NEGOCIO con el diseño nuevo (2/11): tarjetas de filete, sin los marcos gruesos de tinta puestos a mano en el JS ── */
+#minegocio-content .card{border:1px solid var(--hair) !important;border-radius:4px !important;background:#fff !important;box-shadow:none;padding:20px 22px 22px}
+#minegocio-content .card[style*="2px solid var(--ink)"]{border-left:6px solid var(--olive) !important}
+#minegocio-content .card > h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--hair);font-size:18px;font-weight:700;letter-spacing:-.015em;color:var(--ink) !important}
+#minegocio-content .card > h3 .ti{color:var(--olive);font-size:22px}
+#minegocio-content .card h4{display:flex;align-items:center;gap:8px;margin:26px 0 10px !important;padding-top:16px;border-top:1px solid var(--hair);font-size:12px}
+#minegocio-content .card h4:first-of-type{border-top:0;padding-top:0}
+#minegocio-content .card h4 .ti{color:var(--olive);font-size:16px}
+#minegocio-content .card hr{border:0 !important;border-top:1px solid var(--hair) !important;margin:22px 0 !important}
+#minegocio-content .field label{font-size:12px}
+#minegocio-content .manual-warning{margin:10px 0}
+@media (max-width:720px){#minegocio-content .card{padding:16px 14px 18px}}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5106,13 +5164,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
   .ge-tab-row::after,.ge-tab-row::before,
   .mn-indice::after,.mn-indice::before{display:none}   /* ya no hay que avisar de scroll */
   .ge-tab{flex:1 1 auto;justify-content:center}
-  /* El índice "IR A:" del Manual se quedaba fijo (position:sticky) al
-     desplazarse — pensado para cuando era una sola fila, pero en móvil ya
-     envuelve en varias (regla de arriba) y un índice de varias líneas
-     pegado arriba tapa media pantalla de texto sin dejar ver por dónde va
-     el desplazamiento. En móvil se desfija: se queda donde está en el
-     documento y se desplaza con el resto. */
-  #view-manual .mn-indice{position:static}
+
 
   /* ── 4c. Los gráficos de barras caben enteros ──────────────────────
      Doce meses en 360 px salen a 26 px por barra: entran. Se quedaban
@@ -5329,4 +5381,29 @@ small{font-size:max(.8333em, 11px)}
 }
 @media (max-width: 400px){
   .tp-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* ── Manual en móvil y tablet (1/11): el índice se pliega en un botón, el capítulo ocupa el ancho ── */
+@media (max-width: 899px){
+  .mnl-toggle{display:flex}
+  .mnl-grupos{border-top:1px solid var(--hair);grid-template-columns:minmax(0,1fr)}
+  .mnl-grupo{border-right:0;padding:12px 14px 8px}
+  .mnl-chip{min-height:44px;display:flex;align-items:center}
+}
+@media (max-width: 720px){
+  .mnl-tour{padding:12px 14px;gap:10px}
+  .mnl-tour .btn{width:100%;justify-content:center;min-height:48px !important}
+  .mnl-busca{max-width:none}
+  .mnl-cab-tit{font-size:24px;gap:10px}
+  .mnl-cab-tit .ti{font-size:24px}
+  .manual-detail p,.manual-detail ul,.manual-step .st{font-size:15px}
+  .manual-step{gap:10px}
+  .manual-detail table{table-layout:fixed;width:100%;display:table}
+  .manual-detail table th,.manual-detail table td{white-space:normal;overflow-wrap:break-word;font-size:12.5px;padding:6px 8px}
+  .mnl-toc-it{min-height:44px;display:flex;align-items:center}
+  .mnl-pie{grid-template-columns:minmax(0,1fr);gap:8px}
+  .mnl-imprimir{order:3;justify-content:center;min-height:48px !important}
+  .mnl-sig{order:1;justify-content:space-between}
+  .mnl-pie .mnl-nav:not(.mnl-sig){order:2}
+  .mnl-nav{min-height:56px !important}
 }

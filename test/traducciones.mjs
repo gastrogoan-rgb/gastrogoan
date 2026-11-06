@@ -58,6 +58,7 @@ const DATOS_SEMBRADOS = [
 // Palabras que se escriben igual en los tres idiomas. No son un fallo:
 // señalarlas ahogaría los hallazgos de verdad entre ruido.
 const IGUALES_DE_VERDAD = new Set([
+  '#4a5d4e', '#1c1a17', 'android (chrome):', 'es / ca / en',   // códigos de color y nombres de navegador/idioma del manual
   'total','iva','pin','tpv','qr','ok','no','email','e-mail','menu','menú','stock','web','id',
   'gastrogoan','firebase','pdf','csv','sms','whatsapp','app','nps','food cost','ticket','tickets',
   'bar','restaurant','extra','extras','normal','general','local','base','bases','test','gas',

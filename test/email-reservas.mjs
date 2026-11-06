@@ -495,8 +495,9 @@ caso('Cocina ya no puede marcar "recogido" — ese paso es de SALA (1/10)', () =
 });
 
 caso('Las plazas de una mesa son obligatorias (sin ellas la web no puede ofrecerla)', () => {
-  assert.ok(app.includes('id="mn-zona-plazas"'), 'crear una zona no pide las plazas por mesa');
-  assert.ok(/plazasZona >= 1 && plazasZona <= 50/.test(app), 'se puede crear una zona sin plazas');
+  // 2/11: al crear la zona ya NO se piden plazas (solo nombre y nº de mesas); cada mesa nace con un valor y se ajusta en su casilla.
+  assert.ok(!app.includes('id="mn-zona-plazas"'), 'crear una zona vuelve a pedir las plazas por mesa');
+  assert.ok(/const MESA_PLAZAS_DEFECTO = \d+;/.test(app) && /plazas: plazasZona\}\);/.test(app), 'las mesas de una zona nueva deben nacer con plazas');
   assert.ok(!/plazas: null\}\);/.test(app), 'alguna mesa nueva nace sin plazas');
   assert.ok(/if\(!\(n >= 1 && n <= 50\)\)\{ showToast\(t\('msg.enterSeats'\)\)/.test(app), 'se pueden borrar las plazas de una mesa');
 });
