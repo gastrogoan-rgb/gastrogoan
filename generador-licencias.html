@@ -735,13 +735,16 @@ function fiscalFormHtml(pre, cur){
     <select id="${pre}-forma" onchange="document.getElementById('${pre}-reg-box').classList.toggle('hidden', this.value !== 'autonomo')">
       ${op('', '— Sin fijar (la elige el cliente) —', !cur.formaJuridica)}${op('autonomo', 'Autónomo', cur.formaJuridica === 'autonomo')}${op('cb', 'Comunidad de bienes', cur.formaJuridica === 'cb')}${op('sociedad', 'Sociedad (SL, SA…)', cur.formaJuridica === 'sociedad')}${op('cooperativa', 'Cooperativa', cur.formaJuridica === 'cooperativa')}
     </select>
-    <label style="margin-top:8px">Comunidad autónoma <small class="muted">(escala del IRPF; solo Cataluña está verificada)</small></label>
-    <select id="${pre}-terr">${op('general', 'Resto de España (escala general de referencia)', (cur.territorio || 'general') === 'general')}${op('cataluna', 'Cataluña', cur.territorio === 'cataluna')}</select>
+    <label style="margin-top:8px">Comunidad autónoma <small class="muted">(escala del IRPF de la comunidad; las 15 de régimen común están verificadas; Navarra y País Vasco, pendientes de contrastar con la fuente oficial)</small></label>
+    <select id="${pre}-terr">${TERRITORIOS_FISCALES.map(([k, n]) => op(k, n, (cur.territorio || 'general') === k)).join('')}</select>
     <div id="${pre}-reg-box" class="${cur.formaJuridica === 'autonomo' ? '' : 'hidden'}">
       <label style="margin-top:8px">Régimen del autónomo</label>
       <select id="${pre}-regimen">${op('simplificada', 'Estimación directa simplificada', modo === 'simplificada')}${op('normal', 'Estimación directa normal', modo === 'normal')}${op('modulos', 'Estimación objetiva (módulos)', modo === 'modulos')}</select>
     </div>`;
 }
+// Mismas claves que FISCAL_TERRITORIOS en js/motor-fiscal.js (la app y el generador no comparten fichero).
+const TERRITORIOS_FISCALES = [['general','Sin comunidad elegida (escala general de referencia)'],['andalucia','Andalucía'],['aragon','Aragón'],['asturias','Principado de Asturias'],['baleares','Illes Balears'],['canarias','Canarias'],['cantabria','Cantabria'],['clm','Castilla-La Mancha'],['cyl','Castilla y León'],['cataluna','Cataluña'],['ceuta_melilla','Ceuta y Melilla'],['extremadura','Extremadura'],['galicia','Galicia'],['madrid','Comunidad de Madrid'],['murcia','Región de Murcia'],['rioja','La Rioja'],['valencia','Comunitat Valenciana'],['navarra','Navarra (régimen foral)'],['pais_vasco','País Vasco (régimen foral)']];
+const TERRITORIO_NOMBRE = Object.fromEntries(TERRITORIOS_FISCALES);
 function leerFiscal(pre){
   const forma = document.getElementById(pre + '-forma').value;
   if(!forma) return null;
@@ -753,8 +756,8 @@ function leerFiscal(pre){
 function fiscalTexto(f){
   if(!f || !f.formaJuridica) return '';
   const n = {autonomo:'Autónomo', cb:'Comunidad de bienes', sociedad:'Sociedad', cooperativa:'Cooperativa'}[f.formaJuridica] || f.formaJuridica;
-  if(f.formaJuridica !== 'autonomo') return n + (f.territorio === 'cataluna' ? ' · Cataluña' : '');
-  const terr = f.territorio === 'cataluna' ? ' · Cataluña' : '';
+  const terr = f.territorio && f.territorio !== 'general' && TERRITORIO_NOMBRE[f.territorio] ? ' · ' + TERRITORIO_NOMBRE[f.territorio] : '';
+  if(f.formaJuridica !== 'autonomo') return n + terr;
   return n + terr + ' · ' + (f.regimenFiscal === 'modulos' ? 'módulos' : (f.modalidadDirecta === 'normal' ? 'directa normal' : 'directa simplificada'));
 }
 function abrirFiscal(licId){

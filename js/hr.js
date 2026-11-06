@@ -2976,94 +2976,103 @@ const GE = (function(){
     const box = document.getElementById('ge-modulos-body');
     if(!box) return;
     if(!modulosAplica()){
-      box.innerHTML = `<p style="font-size:13px;color:var(--muted)"><i class="ti ti-info-circle"></i> ${t('hr.modulos.noAplica')}</p>`;
+      box.innerHTML = `<div class="mod-nota"><i class="ti ti-info-circle"></i> ${t('hr.modulos.noAplica')}</div>`;
       return;
     }
     const mc = modulosConfig();
     const r = calcularModulos();
-    box.innerHTML = `
-      <p style="font-size:12.5px;color:var(--muted);margin:0 0 14px"><i class="ti ti-info-circle"></i> ${t('hr.modulos.disclaimer').replace('${anio}', MODULOS_ANIO)}</p>
-      <div class="ge-section" style="margin-bottom:14px">
-        <h4 style="margin:0 0 10px">${t('hr.modulos.configTitle')}</h4>
-        <div class="field">
-          <label>${t('hr.modulos.epigrafe')}</label>
-          <select id="mod-epigrafe" onchange="GE.saveModulosField('epigrafe', this.value)">${modulosEpigrafeOptionsHtml(mc.epigrafe)}</select>
-        </div>
-        ${mc.epigrafe ? `
+    const L = o => gl(o);
+    const num = (id, campo, extra, val) => `<input type="number" id="${id}" ${extra} value="${val != null && val !== '' ? val : ''}" onchange="GE.saveModulosField('${campo}', this.value)">`;
+    const epi = MODULOS_EPIGRAFES[mc.epigrafe];
+    const formulario = mc.epigrafe ? `
+        <div class="gf-mh">${L({es:'Tu local', ca:'El teu local', en:'Your premises'})}</div>
         <div class="field-row">
-          <div class="field"><label>${t('hr.modulos.mesas')}</label><input type="number" id="mod-mesas" min="0" step="1" value="${mc.mesas||''}" onchange="GE.saveModulosField('mesas', this.value)"></div>
-          <div class="field"><label>${t('hr.modulos.kw')}</label><input type="number" id="mod-kw" min="0" step="0.1" value="${mc.kw||''}" onchange="GE.saveModulosField('kw', this.value)"></div>
+          <div class="field"><label for="mod-mesas">${t('hr.modulos.mesas')}</label>${num('mod-mesas', 'mesas', 'min="0" step="1"', mc.mesas)}</div>
+          <div class="field"><label for="mod-kw">${t('hr.modulos.kw')}</label>${num('mod-kw', 'kw', 'min="0" step="0.1"', mc.kw)}</div>
+          ${epi && epi.irpf.barra ? `<div class="field"><label for="mod-barra">${t('hr.modulos.barra')}</label>${num('mod-barra', 'barra', 'min="0" step="0.1"', mc.barra)}</div>` : ''}
         </div>
-        ${MODULOS_EPIGRAFES[mc.epigrafe] && MODULOS_EPIGRAFES[mc.epigrafe].irpf.barra ? `
-        <div class="field"><label>${t('hr.modulos.barra')}</label><input type="number" id="mod-barra" min="0" step="0.1" value="${mc.barra||''}" onchange="GE.saveModulosField('barra', this.value)"></div>` : ''}
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:10px 0;cursor:pointer">
+        <div class="field-row">
+          <div class="field"><label for="mod-maqa">${t('hr.modulos.maqA')}</label>${num('mod-maqa', 'maqA', 'min="0" step="1"', mc.maqA)}</div>
+          <div class="field"><label for="mod-maqb">${t('hr.modulos.maqB')}</label>${num('mod-maqb', 'maqB', 'min="0" step="1"', mc.maqB)}</div>
+        </div>
+        <div class="gf-mh">${L({es:'Personal', ca:'Personal', en:'Staff'})}</div>
+        <label class="mod-check" for="mod-titular">
           <input type="checkbox" id="mod-titular" ${mc.titularTrabaja?'checked':''} onchange="GE.saveModulosField('titularTrabaja', this.checked, true)">
-          ${t('hr.modulos.titularTrabaja')}
+          <span>${t('hr.modulos.titularTrabaja')}</span>
         </label>
-        <div class="field">
-          <label>${t('hr.modulos.personalAsalariado')}</label>
-          <input type="number" id="mod-personal" min="0" step="1" placeholder="${(DB.employees||[]).filter(e=>e.active!==false).length}" value="${mc.personalOverride!=null?mc.personalOverride:''}" onchange="GE.saveModulosField('personalOverride', this.value)">
-          <small style="color:var(--muted)">${t('hr.modulos.personalHint')}</small>
+        <div class="field-row">
+          <div class="field">
+            <label for="mod-personal">${t('hr.modulos.personalAsalariado')}</label>
+            <input type="number" id="mod-personal" min="0" step="1" placeholder="${(DB.employees||[]).filter(e=>e.active!==false).length}" value="${mc.personalOverride!=null?mc.personalOverride:''}" onchange="GE.saveModulosField('personalOverride', this.value)">
+            <small class="mod-hint">${t('hr.modulos.personalHint')}</small>
+          </div>
+          <div class="field">
+            <label for="mod-personal-ant">${t('hr.modulos.asalariadosAnterior')}</label>
+            ${num('mod-personal-ant', 'asalariadosAnterior', 'min="0" step="0.5"', mc.asalariadosAnterior)}
+            <small class="mod-hint">${t('hr.modulos.asalariadosAnteriorHint')}</small>
+          </div>
         </div>
-        <div class="field">
-          <label>${t('hr.modulos.asalariadosAnterior')}</label>
-          <input type="number" id="mod-personal-ant" min="0" step="0.5" value="${mc.asalariadosAnterior!=null?mc.asalariadosAnterior:''}" onchange="GE.saveModulosField('asalariadosAnterior', this.value)">
-          <small style="color:var(--muted)">${t('hr.modulos.asalariadosAnteriorHint')}</small>
-        </div>
-        <div class="field">
-          <label>${t('hr.modulos.amortizacion')}</label>
-          <input type="number" id="mod-amort" min="0" step="0.01" value="${mc.amortizacionAnual||''}" onchange="GE.saveModulosField('amortizacionAnual', this.value)">
+        <div class="gf-mh">${L({es:'Temporada, horario e inversiones', ca:'Temporada, horari i inversions', en:'Season, hours and investments'})}</div>
+        <div class="field-row">
+          <div class="field"><label for="mod-tmes">${t('hr.modulos.temporadaMes')}</label>${num('mod-tmes', 'temporadaMesInicio', 'min="1" max="12" step="1"', mc.temporadaMesInicio)}</div>
+          <div class="field"><label for="mod-temporada">${t('hr.modulos.temporadaDias')}</label>${num('mod-temporada', 'temporadaDias', 'min="0" max="180" step="1"', mc.temporadaDias)}</div>
+          <div class="field"><label for="mod-horas">${t('hr.modulos.horasTitular')}</label>${num('mod-horas', 'horasTitular', 'min="1" max="16" step="0.5"', mc.horasTitular)}</div>
         </div>
         <div class="field-row">
-          <div class="field"><label>${t('hr.modulos.maqA')}</label><input type="number" id="mod-maqa" min="0" step="1" value="${mc.maqA||''}" onchange="GE.saveModulosField('maqA', this.value)"></div>
-          <div class="field"><label>${t('hr.modulos.maqB')}</label><input type="number" id="mod-maqb" min="0" step="1" value="${mc.maqB||''}" onchange="GE.saveModulosField('maqB', this.value)"></div>
-          <div class="field"><label>${t('hr.modulos.indicePequena')}</label><input type="number" id="mod-pequena" min="0.5" max="1" step="0.01" value="${mc.indicePequena||''}" onchange="GE.saveModulosField('indicePequena', this.value)"></div>
+          <div class="field"><label for="mod-inicio">${t('hr.modulos.anioInicio')}</label>${num('mod-inicio', 'anioInicio', 'min="2000" max="2100" step="1"', mc.anioInicio)}</div>
+          <div class="field"><label for="mod-pequena">${t('hr.modulos.indicePequena')}</label>${num('mod-pequena', 'indicePequena', 'min="0.5" max="1" step="0.01"', mc.indicePequena)}</div>
+          <div class="field"><label for="mod-amort">${t('hr.modulos.amortizacion')}</label>${num('mod-amort', 'amortizacionAnual', 'min="0" step="0.01"', mc.amortizacionAnual)}</div>
+        </div>` : '';
+    let resultados = `<div class="mod-nota">${t('hr.modulos.chooseEpigrafeHint')}</div>`;
+    if(r){
+      let directaAnual = 0;
+      for(let m = 0; m < 12; m++) directaAnual += resultadoAntesImpMes(m);
+      // En directa tributaría por la escala del IRPF sobre el beneficio real, no por un % plano.
+      const impuestoDirecta = irpfActividad(directaAnual);
+      const totalModulos = r.rendimientoAnual * r.pctPago * 4 + r.ivaAnual;
+      const modulosGana = totalModulos <= impuestoDirecta;
+      const kpi = (lbl, v, extra) => `<div class="ge-kpi"><div class="lbl">${lbl}</div><div class="val te-valor">${extra || ''}${fmtMoney(v)}</div></div>`;
+      resultados = `
+      <div class="ge-section">
+        <div class="ge-sec-head"><h4><i class="ti ti-receipt-tax"></i> ${t('hr.modulos.irpfTitle')}</h4></div>
+        <div class="mod-cuerpo">
+          <div class="ge-kpi-grid">${kpi(t('hr.modulos.rendimientoAnual'), r.rendimientoAnual)}${kpi(t('hr.modulos.pagoTrimestral'), r.pagoTrimestralIrpf)}</div>
+          <p class="mod-nota">${t('hr.modulos.pagoPct').replace('${pct}', Math.round(r.pctPago*100))}${r.indiceAplicado ? ' · ' + t('hr.modulos.indice.'+r.indiceAplicado.tipo).replace('${valor}', r.indiceAplicado.valor) : ''}</p>
         </div>
-        <div class="field-row">
-          <div class="field"><label>${t('hr.modulos.temporadaMes')}</label><input type="number" id="mod-tmes" min="1" max="12" step="1" value="${mc.temporadaMesInicio||''}" onchange="GE.saveModulosField('temporadaMesInicio', this.value)"></div>
-          <div class="field"><label>${t('hr.modulos.horasTitular')}</label><input type="number" id="mod-horas" min="1" max="16" step="0.5" value="${mc.horasTitular||''}" onchange="GE.saveModulosField('horasTitular', this.value)"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>${t('hr.modulos.temporadaDias')}</label><input type="number" id="mod-temporada" min="0" max="180" step="1" value="${mc.temporadaDias||''}" onchange="GE.saveModulosField('temporadaDias', this.value)"></div>
-          <div class="field"><label>${t('hr.modulos.anioInicio')}</label><input type="number" id="mod-inicio" min="2000" max="2100" step="1" value="${mc.anioInicio||''}" onchange="GE.saveModulosField('anioInicio', this.value)"></div>
-        </div>
-        ` : ''}
-      </div>
-      ${r ? `
-      <div class="ge-section" style="margin-bottom:14px">
-        <h4 style="margin:0 0 10px"><i class="ti ti-receipt-tax"></i> ${t('hr.modulos.irpfTitle')}</h4>
-        <div class="ge-kpi-grid">
-          <div class="ge-kpi"><div class="lbl">${t('hr.modulos.rendimientoAnual')}</div><div class="val">${fmtMoney(r.rendimientoAnual)}</div></div>
-          <div class="ge-kpi"><div class="lbl">${t('hr.modulos.pagoTrimestral')}</div><div class="val" style="color:var(--ink)">${fmtMoney(r.pagoTrimestralIrpf)}</div></div>
-        </div>
-        <p style="font-size:12px;color:var(--muted);margin:10px 0 0">${t('hr.modulos.pagoPct').replace('${pct}', Math.round(r.pctPago*100))}${r.indiceAplicado ? ' · ' + t('hr.modulos.indice.'+r.indiceAplicado.tipo).replace('${valor}', r.indiceAplicado.valor) : ''}</p>
-      </div>
-      <div class="ge-section" style="margin-bottom:14px">
-        <h4 style="margin:0 0 10px"><i class="ti ti-receipt"></i> ${t('hr.modulos.ivaTitle')}</h4>
-        <div class="ge-kpi-grid">
-          <div class="ge-kpi"><div class="lbl">${t('hr.modulos.ivaAnual')}</div><div class="val">${fmtMoney(r.ivaAnual)}</div></div>
-          <div class="ge-kpi"><div class="lbl">${t('hr.modulos.ivaTrimestral')}</div><div class="val" style="color:var(--ink)">${fmtMoney(r.ivaTrimestral)}</div></div>
-        </div>
-        <p style="font-size:12px;color:var(--muted);margin:10px 0 0">${t('hr.modulos.ivaExplain').replace('${soportado}', fmtMoney(r.ivaSoportadoAnual)).replace('${minima}', fmtMoney(r.cuotaMinima))}</p>
       </div>
       <div class="ge-section">
-        <h4 style="margin:0 0 10px"><i class="ti ti-scale"></i> ${t('hr.modulos.compareTitle')}</h4>
-        ${(() => {
-          let directaAnual = 0;
-          for(let m=0;m<12;m++) directaAnual += resultadoAntesImpMes(m);
-          // En directa tributaría por la escala del IRPF sobre el beneficio
-          // real, no por un % plano.
-          const impuestoDirecta = irpfActividad(directaAnual);
-          const totalModulos = r.rendimientoAnual*r.pctPago*4 + r.ivaAnual;
-          return `
+        <div class="ge-sec-head"><h4><i class="ti ti-receipt"></i> ${t('hr.modulos.ivaTitle')}</h4></div>
+        <div class="mod-cuerpo">
+          <div class="ge-kpi-grid">${kpi(t('hr.modulos.ivaAnual'), r.ivaAnual)}${kpi(t('hr.modulos.ivaTrimestral'), r.ivaTrimestral)}</div>
+          <p class="mod-nota">${t('hr.modulos.ivaExplain').replace('${soportado}', fmtMoney(r.ivaSoportadoAnual)).replace('${minima}', fmtMoney(r.cuotaMinima))}</p>
+        </div>
+      </div>
+      <div class="ge-section">
+        <div class="ge-sec-head"><h4><i class="ti ti-scale"></i> ${t('hr.modulos.compareTitle')}</h4></div>
+        <div class="mod-cuerpo">
           <div class="ge-kpi-grid">
-            <div class="ge-kpi"><div class="lbl">${t('hr.modulos.cmpModulos')}</div><div class="val">${fmtMoney(totalModulos)}</div></div>
-            <div class="ge-kpi"><div class="lbl">${t('hr.modulos.cmpDirecta')}</div><div class="val">${fmtMoney(impuestoDirecta)}</div></div>
+            ${kpi(t('hr.modulos.cmpModulos'), totalModulos, modulosGana ? '<i class="ti ti-check" style="color:var(--green)"></i> ' : '')}
+            ${kpi(t('hr.modulos.cmpDirecta'), impuestoDirecta, modulosGana ? '' : '<i class="ti ti-check" style="color:var(--green)"></i> ')}
           </div>
-          <p style="font-size:12px;color:var(--muted);margin:10px 0 0">${t('hr.modulos.cmpExplain')}</p>`;
-        })()}
-      </div>` : `<p style="font-size:13px;color:var(--muted)">${t('hr.modulos.chooseEpigrafeHint')}</p>`}
-    `;
+          <p class="mod-nota">${modulosGana
+            ? L({es:'Con tus datos de este año, módulos te cuesta menos o igual.', ca:'Amb les teves dades d\'aquest any, mòduls et costa menys o igual.', en:'With this year\'s figures, modules costs you the same or less.'})
+            : L({es:'Con tus datos de este año, la estimación directa te cuesta menos.', ca:'Amb les teves dades d\'aquest any, l\'estimació directa et costa menys.', en:'With this year\'s figures, direct estimation costs you less.'})} ${t('hr.modulos.cmpExplain')}</p>
+        </div>
+      </div>`;
+    }
+    box.innerHTML = `
+      <p class="mod-nota"><i class="ti ti-info-circle"></i> ${t('hr.modulos.disclaimer').replace('${anio}', MODULOS_ANIO)}</p>
+      <div class="ge-section">
+        <div class="ge-sec-head"><h4><i class="ti ti-adjustments"></i> ${t('hr.modulos.configTitle')}</h4></div>
+        <div class="mod-cuerpo">
+          <div class="field">
+            <label for="mod-epigrafe">${t('hr.modulos.epigrafe')}</label>
+            <select id="mod-epigrafe" onchange="GE.saveModulosField('epigrafe', this.value)">${modulosEpigrafeOptionsHtml(mc.epigrafe)}</select>
+          </div>
+          ${formulario}
+        </div>
+      </div>
+      ${resultados}`;
   }
 
   // Lo que lleva amortizado una inversión hasta este mes (la suma de las cuotas mensuales de amortización).

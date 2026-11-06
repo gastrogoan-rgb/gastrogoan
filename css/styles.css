@@ -4693,6 +4693,15 @@ span.dt-punto{position:absolute;border-radius:50%}
 /* Un .val se reescribe al animar las cifras (polish.js) y se llevaría el icono: el coste primo usa su propio contenedor */
 .ge-kpi .te-valor{font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .te-valor .ti{font-size:22px}
+/* Módulos (6/11): cada bloque es una tarjeta con su cabecera; los campos van agrupados con rótulo y nunca pegados al borde. */
+.mod-cuerpo{padding:16px 18px 18px}
+.mod-nota{margin:0 0 16px;font-size:13px;line-height:1.55;color:var(--muted)}
+.mod-cuerpo .mod-nota:last-child{margin-bottom:0}
+.mod-hint{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--muted)}
+.mod-check{display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 12px;font-weight:400;cursor:pointer}
+.mod-check input{width:20px;height:20px;flex:none}
+.mod-cuerpo .ge-kpi-grid{margin-bottom:14px}
+
 #ge-tesoreria .te-row.te-res > *{grid-area:auto}
 .te-val.is-ok,.te-c-real.is-ok,.te-c-dif.is-ok{color:var(--green)}
 .te-val.is-ko,.te-c-real.is-ko,.te-c-dif.is-ko{color:var(--red)}

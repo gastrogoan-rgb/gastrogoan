@@ -4123,7 +4123,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Antes de empezar: «Para que tus números salgan bien»</h4>
 <p>Arriba puede aparecer un aviso rojo o una lista con lo que falta. Hazla antes que nada, porque cambia todas las cuentas:</p>
-<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Elige tu forma jurídica</strong> en <strong>Gestión → Mi Negocio → Forma jurídica y régimen fiscal</strong>: autónomo, comunidad de bienes, sociedad o cooperativa; si eres autónomo, estimación directa (simplificada o normal) o módulos. Sin esto, la app calcula como si fueras una sociedad y tu impuesto y tu sueldo salen mal.</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Elige tu forma jurídica</strong> en <strong>Gestión → Mi Negocio → Forma jurídica y régimen fiscal</strong>: autónomo, comunidad de bienes, sociedad o cooperativa; si eres autónomo, estimación directa (simplificada o normal) o módulos. Sin esto, la app calcula como si fueras una sociedad y tu impuesto y tu sueldo salen mal. Si GastroGoan ya fijó tu forma jurídica, tu régimen y tu <strong>comunidad autónoma</strong> al darte de alta, aparecen bloqueados: si algo no es correcto, pulsa <strong>Comprobar cambios</strong> o díselo a GastroGoan.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Pon el <strong>NIF del negocio</strong> (sale en cada ticket y en lo que recibe tu gestor).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Da de alta tus <strong>gastos fijos</strong> (alquiler, luz, seguros, gestoría…).</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Si eres autónomo o comunidad de bienes, apunta <strong>Mi sueldo (titular)</strong> (o <strong>No me pago un fijo</strong>).</div></div>
@@ -4131,7 +4131,7 @@ const MANUAL_CHAPTERS = [
 <p>Cada punto tiene un botón <strong>Ir</strong>. La lista se puede ocultar un mes con <strong>Ocultar un mes</strong>.</p>
 
 <h4>Las pestañas</h4>
-<p>Ventas, Gastos fijos, Gastos Variables, Cuenta de Resultados, Tesorería, Punto de equilibrio e Inversiones. Si eres autónomo en módulos, aparece además <strong>Módulos</strong>. En las pestañas por mes eliges el año con las flechas y el mes en la tira de abajo.</p>
+<p>Ventas, Gastos fijos, Gastos Variables, Cuenta de Resultados, Tesorería, <strong>Beneficio y caja</strong>, Punto de equilibrio e Inversiones. Si eres autónomo en módulos, aparece además <strong>Módulos</strong>. En las pestañas por mes eliges el año con las flechas y el mes en la tira de abajo.</p>
 
 <h4>Ventas</h4>
 <p>El histórico de lo que has vendido, mes a mes: totales por <strong>tipo de servicio</strong> (Mesa, Take Away, Delivery), con su filtro, y <strong>Ventas por día</strong> con tickets y ticket medio. Las propinas se enseñan aparte (informativo, no suman). Las <strong>señales de reservas</strong> cobradas se avisan aparte, porque su IVA cuenta en el mes en que las cobras.</p>
@@ -4185,6 +4185,16 @@ const MANUAL_CHAPTERS = [
 <h4>Inversiones</h4>
 <p>Horno, cámara, obra, mobiliario, vehículo… pulsa <strong>Nueva inversión</strong> con importe, IVA, fecha y <strong>Qué es (para la amortización)</strong>. En la Cuenta de Resultados no entra lo que pagas, sino lo que se <strong>amortiza</strong> cada año (porcentaje oficial) más los intereses; hasta 300 € va entero a gasto. Si la pagas a plazos, marca <strong>Inversión pagada a plazos</strong> con cuotas y cuota mensual: la cuota es caja y va en Tesorería. El estado es PAGADO, PARCIAL o PENDIENTE y arriba ves la <strong>Deuda pendiente</strong>. En obras de un local alquilado, indica los años que quedan de contrato; en un turismo de uso mixto, el IVA se deduce al 50 %.</p>
 
+<h4>Beneficio y caja</h4>
+<p>Un negocio puede «ganar» en la Cuenta de Resultados y estar justo de dinero (o al revés). Esta pestaña te lleva del <strong>resultado neto</strong> a la <strong>caja estimada</strong> paso a paso: suma lo que no es gasto pero sí sale de tu cuenta (cuotas de préstamos, inversiones pagadas, IVA e IRPF por pagar…) y resta lo que es gasto pero no sale (amortización). Escribe en <strong>Saldo del banco</strong> lo que tienes hoy y verás el <strong>dinero disponible de verdad</strong> y la <strong>liquidez a 30, 60 y 90 días</strong>, con lo confirmado separado de lo estimado. Es una estimación: la app no ve tu banco.</p>
+
+<h4>Tus impuestos: previsión, cálculo y simulador</h4>
+<p>En <strong>Tesorería</strong>, la tarjeta de impuestos prevé cada modelo del trimestre (303, 111, 115, 130/131, 202…) con su importe, su fecha límite y un estado: <em>estimado</em>, <em>devengado</em>, <em>plazo pasado</em>, <em>presentado</em> o <em>pagado</em>. Además:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Ver cálculo</strong> enseña el impuesto paso a paso, qué reglas se han usado (con su fuente y si están verificadas) y una <strong>fiabilidad</strong> alta, media o baja con los motivos.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Marcar</strong> te deja anotar que un modelo ya está presentado o pagado, con el <strong>importe real</strong>, y compara lo previsto con lo real.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Simular</strong> te deja probar «¿y si vendo un 10 % más?» o «¿y si contrato a alguien?». Es solo una simulación: no toca ningún dato.</div></div>
+<p>Cada gasto fijo o variable lleva <strong>¿Es deducible?</strong> (sí, parcial con porcentaje, no o pendiente). La app no decide qué es deducible: lo decides tú con tu gestor, y lo «pendiente» cuenta como deducible hasta que lo revises. Para el IRPF se usa la escala de <strong>tu comunidad autónoma</strong> (las 15 de régimen común, y Ceuta y Melilla); Navarra y el País Vasco tienen su propio impuesto (régimen foral): se calcula con su escala, pero con fiabilidad media y sin verificar con la fuente oficial; confírmalo con tu gestoría.</p>
+
 <h4>Módulos</h4>
 <p>Solo para autónomos en estimación objetiva: eliges epígrafe y los datos del módulo (mesas, potencia, personal, máquinas…) y la app estima tu IVA e IRPF y los pagos a cuenta (131). Es una previsión: el cálculo definitivo lo hace tu gestor.</p>
 
@@ -4215,7 +4225,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Abans de començar: «Perquè els teus números surtin bé»</h4>
 <p>A dalt pot aparèixer un avís vermell o una llista amb el que falta. Fes-la abans de res, perquè canvia tots els comptes:</p>
-<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Tria la teva forma jurídica</strong> a <strong>Gestió → El Meu Negoci → Forma jurídica i règim fiscal</strong>: autònom, comunitat de béns, societat o cooperativa; si ets autònom, estimació directa (simplificada o normal) o mòduls. Sense això, l'app calcula com si fossis una societat i el teu impost i el teu sou surten malament.</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Tria la teva forma jurídica</strong> a <strong>Gestió → El Meu Negoci → Forma jurídica i règim fiscal</strong>: autònom, comunitat de béns, societat o cooperativa; si ets autònom, estimació directa (simplificada o normal) o mòduls. Sense això, l'app calcula com si fossis una societat i el teu impost i el teu sou surten malament. Si GastroGoan ja ha fixat la teva forma jurídica, el teu règim i la teva <strong>comunitat autònoma</strong> en donar-te d'alta, apareixen bloquejats: si alguna cosa no és correcta, prem <strong>Comprovar canvis</strong> o digues-ho a GastroGoan.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Posa el <strong>NIF del negoci</strong> (surt a cada tiquet i en el que rep el teu gestor).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Dona d'alta les teves <strong>despeses fixes</strong> (lloguer, llum, assegurances, gestoria…).</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Si ets autònom o comunitat de béns, apunta <strong>El meu sou (titular)</strong> (o <strong>No em pago un fix</strong>).</div></div>
@@ -4223,7 +4233,7 @@ const MANUAL_CHAPTERS = [
 <p>Cada punt té un botó <strong>Anar</strong>. La llista es pot amagar un mes amb <strong>Amagar un mes</strong>.</p>
 
 <h4>Les pestanyes</h4>
-<p>Vendes, Despeses fixes, Despeses Variables, Compte de Resultats, Tresoreria, Punt d'equilibri i Inversions. Si ets autònom en mòduls, apareix a més <strong>Mòduls</strong>. A les pestanyes per mes tries l'any amb les fletxes i el mes a la tira de sota.</p>
+<p>Vendes, Despeses fixes, Despeses Variables, Compte de Resultats, Tresoreria, <strong>Benefici i caixa</strong>, Punt d'equilibri i Inversions. Si ets autònom en mòduls, apareix a més <strong>Mòduls</strong>. A les pestanyes per mes tries l'any amb les fletxes i el mes a la tira de sota.</p>
 
 <h4>Vendes</h4>
 <p>L'historial del que has venut, mes a mes: totals per <strong>tipus de servei</strong> (Taula, Take Away, Delivery), amb el seu filtre, i <strong>Vendes per dia</strong> amb tiquets i tiquet mitjà. Les propines es mostren a part (informatiu, no sumen). Les <strong>senyals de reserves</strong> cobrades s'avisen a part, perquè el seu IVA compta al mes en què les cobres.</p>
@@ -4277,6 +4287,16 @@ const MANUAL_CHAPTERS = [
 <h4>Inversions</h4>
 <p>Forn, cambra, obra, mobiliari, vehicle… prem <strong>Nova inversió</strong> amb import, IVA, data i <strong>Què és (per a l'amortització)</strong>. Al Compte de Resultats no entra el que pagues, sinó el que s'<strong>amortitza</strong> cada any (percentatge oficial) més els interessos; fins a 300 € va sencer a despesa. Si la pagues a terminis, marca <strong>Inversió pagada a terminis</strong> amb quotes i quota mensual: la quota és caixa i va a Tresoreria. L'estat és PAGAT, PARCIAL o PENDENT i a dalt veus el <strong>Deute pendent</strong>. En obres d'un local llogat, indica els anys que queden de contracte; en un turisme d'ús mixt, l'IVA es dedueix al 50 %.</p>
 
+<h4>Benefici i caixa</h4>
+<p>Un negoci pot «guanyar» al Compte de Resultats i anar just de diners (o al revés). Aquesta pestanya et porta del <strong>resultat net</strong> a la <strong>caixa estimada</strong> pas a pas: suma el que no és despesa però sí que surt del teu compte (quotes de préstecs, inversions pagades, IVA i IRPF per pagar…) i resta el que és despesa però no surt (amortització). Escriu a <strong>Saldo del banc</strong> el que tens avui i veuràs els <strong>diners disponibles de veritat</strong> i la <strong>liquiditat a 30, 60 i 90 dies</strong>, amb el confirmat separat de l'estimat. És una estimació: l'app no veu el teu banc.</p>
+
+<h4>Els teus impostos: previsió, càlcul i simulador</h4>
+<p>A <strong>Tresoreria</strong>, la targeta d'impostos preveu cada model del trimestre (303, 111, 115, 130/131, 202…) amb el seu import, la data límit i un estat: <em>estimat</em>, <em>meritat</em>, <em>termini passat</em>, <em>presentat</em> o <em>pagat</em>. A més:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Veure càlcul</strong> mostra l'impost pas a pas, quines regles s'han fet servir (amb la font i si estan verificades) i una <strong>fiabilitat</strong> alta, mitjana o baixa amb els motius.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Marcar</strong> et deixa anotar que un model ja està presentat o pagat, amb l'<strong>import real</strong>, i compara el previst amb el real.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Simular</strong> et deixa provar «i si venc un 10 % més?» o «i si contracto algú?». És només una simulació: no toca cap dada.</div></div>
+<p>Cada despesa fixa o variable porta <strong>És deduïble?</strong> (sí, parcial amb percentatge, no o pendent). L'app no decideix què és deduïble: ho decideixes tu amb el teu gestor, i el «pendent» compta com a deduïble fins que el revisis. Per a l'IRPF es fa servir l'escala de <strong>la teva comunitat autònoma</strong> (les 15 de règim comú, i Ceuta i Melilla); Navarra i el País Basc tenen el seu propi impost (règim foral): es calcula amb la seva escala, però amb fiabilitat mitjana i sense verificar amb la font oficial; confirma-ho amb la teva gestoria.</p>
+
 <h4>Mòduls</h4>
 <p>Només per a autònoms en estimació objectiva: tries epígraf i les dades del mòdul (taules, potència, personal, màquines…) i l'app estima el teu IVA i IRPF i els pagaments a compte (131). És una previsió: el càlcul definitiu el fa el teu gestor.</p>
 
@@ -4307,7 +4327,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Before you start: "So your numbers come out right"</h4>
 <p>At the top a red notice or a list of what is missing may appear. Do it first, because it changes every calculation:</p>
-<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Choose your legal form</strong> in <strong>Management → My Business → Legal form and tax regime</strong>: self-employed, joint ownership, company or cooperative; if self-employed, actual-expense taxation (simplified or normal) or modules. Without it the app calculates as if you were a company and your tax and pay come out wrong.</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Choose your legal form</strong> in <strong>Management → My Business → Legal form and tax regime</strong>: self-employed, joint ownership, company or cooperative; if self-employed, actual-expense taxation (simplified or normal) or modules. Without it the app calculates as if you were a company and your tax and pay come out wrong. If GastroGoan already set your legal form, your regime and your <strong>autonomous community</strong> when you signed up, they appear locked: if something is wrong, press <strong>Check for changes</strong> or tell GastroGoan.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Enter the <strong>business tax ID</strong> (it appears on every ticket and in what your accountant receives).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Add your <strong>fixed expenses</strong> (rent, electricity, insurance, accountant…).</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">If you're self-employed or a joint ownership, enter <strong>My pay (owner)</strong> (or <strong>I don't pay myself a fixed amount</strong>).</div></div>
@@ -4315,7 +4335,7 @@ const MANUAL_CHAPTERS = [
 <p>Each item has a <strong>Go</strong> button. You can hide the list for a month with <strong>Hide for a month</strong>.</p>
 
 <h4>The tabs</h4>
-<p>Sales, Fixed expenses, Variable Expenses, Income Statement, Treasury, Break-even point and Investments. If you're self-employed under modules, <strong>Modules</strong> also appears. On the monthly tabs you pick the year with the arrows and the month in the strip below.</p>
+<p>Sales, Fixed expenses, Variable Expenses, Income Statement, Treasury, <strong>Profit and cash</strong>, Break-even point and Investments. If you're self-employed under modules, <strong>Modules</strong> also appears. On the monthly tabs you pick the year with the arrows and the month in the strip below.</p>
 
 <h4>Sales</h4>
 <p>The history of what you've sold, month by month: totals by <strong>service type</strong> (Table, Take Away, Delivery), with its filter, and <strong>Sales by day</strong> with tickets and average ticket. Tips are shown separately (informative, not added). Booking <strong>deposits</strong> collected are noted apart, because their VAT counts in the month you collect them.</p>
@@ -4368,6 +4388,16 @@ const MANUAL_CHAPTERS = [
 
 <h4>Investments</h4>
 <p>Oven, cold room, building work, furniture, vehicle… press <strong>New investment</strong> with amount, VAT, date and <strong>What it is (for depreciation)</strong>. The Income Statement doesn't take what you pay but what is <strong>depreciated</strong> each year (official percentage) plus interest; up to 300 € goes straight to expense. If you pay in instalments, tick <strong>Investment paid in installments (financed)</strong> with the number and monthly amount: the instalment is cash and goes in Treasury. Status is PAID, PARTIAL or PENDING and at the top you see the <strong>Outstanding debt</strong>. For works on a rented premises, give the years left on the lease; for a mixed-use car, VAT is deducted at 50%.</p>
+
+<h4>Profit and cash</h4>
+<p>A business can "make money" on the Income Statement and still be short of cash (or the other way round). This tab takes you from the <strong>net result</strong> to the <strong>estimated cash</strong> step by step: it adds what is not an expense but does leave your account (loan instalments, paid investments, VAT and income tax owed…) and removes what is an expense but doesn't leave (depreciation). Type what you have today in <strong>Bank balance</strong> and you'll see the <strong>money really available</strong> and <strong>liquidity at 30, 60 and 90 days</strong>, with what is confirmed kept apart from what is estimated. It is an estimate: the app cannot see your bank.</p>
+
+<h4>Your taxes: forecast, calculation and simulator</h4>
+<p>In <strong>Treasury</strong>, the tax card forecasts each return of the quarter (303, 111, 115, 130/131, 202…) with its amount, its deadline and a status: <em>estimated</em>, <em>accrued</em>, <em>deadline passed</em>, <em>filed</em> or <em>paid</em>. Also:</p>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>See calculation</strong> shows the tax step by step, which rules were used (with their source and whether they are verified) and a high, medium or low <strong>reliability</strong> with the reasons.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st"><strong>Mark</strong> lets you note that a return is already filed or paid, with the <strong>real amount</strong>, and compares forecast with real.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st"><strong>Simulate</strong> lets you try "what if I sell 10 % more?" or "what if I hire someone?". It is only a simulation: it changes no data.</div></div>
+<p>Every fixed or variable expense carries <strong>Is it deductible?</strong> (yes, partly with a percentage, no, or pending). The app does not decide what is deductible: you decide with your accountant, and "pending" counts as deductible until you review it. Income tax uses the scale of <strong>your autonomous community</strong> (the 15 common-regime ones, plus Ceuta and Melilla); Navarre and the Basque Country have their own tax (foral regime): it is calculated with their scale, but with medium reliability and not checked against the official source; confirm it with your accountant.</p>
 
 <h4>Modules</h4>
 <p>Only for self-employed people under objective estimation: you choose a heading and the module's data (tables, power, staff, machines…) and the app estimates your VAT and income tax and payments on account (131). It's a forecast: the final calculation is done by your accountant.</p>

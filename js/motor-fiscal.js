@@ -29,9 +29,9 @@ const FISCAL_REGLAS = [
   {id:'IRPF-ESC-CAT', concepto:'IRPF', descripcion:'Escala autonómica de Cataluña (2025): 9,5 / 12,5 / 16 / 19 / 21,5 / 23,5 / 24,5 / 25,5 % hasta 12.500 / 22.000 / 33.000 / 53.000 / 90.000 / 120.000 / 175.000 € y resto.',
     fuente:'AEAT · Manual práctico de Renta 2025, «Comunidad Autónoma de Cataluña»', referencia:'Decreto legislativo 1/2024 (Cataluña) art. 611-1; Decreto-ley 5/2025', desde:'2025-01-01', hasta:null, territorio:'cataluna', aplicaA:['autonomo','cb'], estado:'verificada',
     nota:'Verificada para el ejercicio 2025. Para 2026 se aplica la misma hasta confirmar que no cambia.'},
-  {id:'IRPF-ESC-GENERAL', concepto:'IRPF', descripcion:'Escala general combinada de referencia (estatal + autonómica supletoria): 19 / 24 / 30 / 37 / 45 / 47 %. La usa quien no tiene territorio fijado.',
+  {id:'IRPF-ESC-GENERAL', concepto:'IRPF', descripcion:'Escala general combinada de referencia (estatal + autonómica supletoria): 19 / 24 / 30 / 37 / 45 / 47 %. La usa quien no tiene comunidad fijada.',
     fuente:'Suma de la escala estatal (verificada) y una escala autonómica supletoria', referencia:'Ley 35/2006 art. 63 y 74', desde:'2025-01-01', hasta:null, territorio:'general', aplicaA:['autonomo','cb'], estado:'pendiente',
-    nota:'La parte estatal está verificada; la parte autonómica supletoria no se ha contrastado con el texto oficial. Cada comunidad tiene la suya: solo Cataluña está cargada y verificada.'},
+    nota:'La parte estatal está verificada; la parte autonómica supletoria no se ha contrastado con el texto oficial. Cada comunidad tiene la suya: las 15 de régimen común están cargadas y verificadas; elige la tuya.'},
   {id:'IRPF-MIN-PERSONAL', concepto:'IRPF', descripcion:'Mínimo personal del contribuyente: 5.550 €; por descendientes: 2.400 / 2.700 / 4.000 / 4.500 €.',
     fuente:'AEAT · «Mínimo del contribuyente»', referencia:'LIRPF art. 57 y 58', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb'], estado:'verificada',
     nota:'5.550 € verificado con la AEAT; algunas comunidades fijan otros importes (no cargados). Los de descendientes los dio por buenos la gestoría.'},
@@ -80,12 +80,67 @@ const FISCAL_ESTADO_TXT = {
 };
 
 /* ---------- Territorio y escalas del IRPF ---------- */
-const FISCAL_TERRITORIOS = {
-  general:  () => gl({es:'Resto de España (escala general de referencia)', ca:'Resta d\'Espanya (escala general de referència)', en:'Rest of Spain (reference general scale)'}),
-  cataluna: () => gl({es:'Cataluña', ca:'Catalunya', en:'Catalonia'})
+/* Escalas AUTONÓMICAS de 2025 (régimen común), copiadas del Manual práctico de Renta 2025 de la AEAT
+   («Gravamen autonómico», una página por comunidad, consultadas el 6/11/2026). Cada fila es [desde, tipo %]:
+   el tipo vale desde esa base hasta el «desde» de la fila siguiente. Se contrastaron con la columna de cuota
+   íntegra de la propia tabla (p. ej. 12.450 × 9 % = 1.120,50 en Asturias), porque el texto de la página no dice
+   por sí solo si la base es el principio o el final del tramo. Navarra y País Vasco (régimen foral) tienen su
+   propia hacienda: sus escalas van aparte (`IRPF_ESCALAS_FORALES`) y NO están contrastadas con fuente oficial. */
+const IRPF_ESCALAS_AUTONOMICAS = {
+  andalucia:   {nombre:() => gl({es:'Andalucía', ca:'Andalusia', en:'Andalusia'}), ref:'Normativa de Andalucía (escala 2025)',
+    filas:[[0,9.5],[13000,12],[21100,15],[35200,18.5],[60000,22.5]]},
+  aragon:      {nombre:() => gl({es:'Aragón', ca:'Aragó', en:'Aragon'}), ref:'Normativa de Aragón (escala 2025)',
+    filas:[[0,9.5],[13072.5,12],[21210,15],[36960,18.5],[52500,20.5],[60000,23],[80000,24],[90000,25],[130000,25.5]]},
+  asturias:    {nombre:() => gl({es:'Principado de Asturias', ca:'Principat d\'Astúries', en:'Asturias'}), ref:'Ley 3/2025 (Asturias)',
+    filas:[[0,9],[12450,12],[17707.2,14],[33007.2,19.2],[53407.2,21.5],[70000,22.5],[90000,25],[175000,26]]},
+  baleares:    {nombre:() => gl({es:'Illes Balears', ca:'Illes Balears', en:'Balearic Islands'}), ref:'Normativa de las Illes Balears (escala 2025)',
+    filas:[[0,9],[10000,11.25],[18000,14.25],[30000,17.5],[48000,19],[70000,21.75],[90000,22.75],[120000,23.75],[175000,24.75]]},
+  canarias:    {nombre:() => gl({es:'Canarias', ca:'Canàries', en:'Canary Islands'}), ref:'D. Leg. 1/2009 art. 18 bis; Ley 9/2025 (Canarias)',
+    filas:[[0,9],[13748,11.5],[19422,14],[35924,18.5],[57566,23.5],[93268,25],[123745,26]]},
+  cantabria:   {nombre:() => gl({es:'Cantabria', ca:'Cantàbria', en:'Cantabria'}), ref:'Normativa de Cantabria (escala 2025)',
+    filas:[[0,8.5],[13000,11],[21000,14.5],[35200,18],[60000,22.5],[90000,24.5]]},
+  clm:         {nombre:() => gl({es:'Castilla-La Mancha', ca:'Castella-la Manxa', en:'Castilla-La Mancha'}), ref:'Normativa de Castilla-La Mancha (escala 2025)',
+    filas:[[0,9.5],[12450,12],[20200,15],[35200,18.5],[60000,22.5]]},
+  cyl:         {nombre:() => gl({es:'Castilla y León', ca:'Castella i Lleó', en:'Castile and León'}), ref:'Normativa de Castilla y León (escala 2025)',
+    filas:[[0,9],[12450,12],[20200,14],[35200,18.5],[53407.2,21.5]]},
+  extremadura: {nombre:() => gl({es:'Extremadura', ca:'Extremadura', en:'Extremadura'}), ref:'Normativa de Extremadura (escala 2025)',
+    filas:[[0,8],[12450,10],[20200,16],[24200,17.5],[35200,21],[60000,23.5],[80200,24],[99200,24.5],[120200,25]]},
+  galicia:     {nombre:() => gl({es:'Galicia', ca:'Galícia', en:'Galicia'}), ref:'D. Leg. 1/2011 art. 4 (Galicia)',
+    filas:[[0,9],[12985.35,11.65],[21068.6,14.9],[35200,18.4],[60000,22.5]]},
+  madrid:      {nombre:() => gl({es:'Comunidad de Madrid', ca:'Comunitat de Madrid', en:'Community of Madrid'}), ref:'D. Leg. 1/2010 art. 1 (Madrid)',
+    filas:[[0,8.5],[13362.22,10.7],[19004.63,12.8],[35425.68,17.4],[57320.4,20.5]]},
+  murcia:      {nombre:() => gl({es:'Región de Murcia', ca:'Regió de Múrcia', en:'Region of Murcia'}), ref:'Normativa de la Región de Murcia (escala 2025)',
+    filas:[[0,9.5],[12450,11.2],[20200,13.3],[34000,17.9],[60000,22.5]]},
+  rioja:       {nombre:() => gl({es:'La Rioja', ca:'La Rioja', en:'La Rioja'}), ref:'Ley 10/2017 art. 31 (La Rioja); Ley 13/2023',
+    filas:[[0,8],[12450,10.6],[20200,13.6],[35200,17.8],[40000,18.3],[50000,19],[60000,24.5],[120000,27]]},
+  valencia:    {nombre:() => gl({es:'Comunitat Valenciana', ca:'Comunitat Valenciana', en:'Valencian Community'}), ref:'Normativa de la Comunitat Valenciana (escala 2025)',
+    filas:[[0,9],[12000,12],[22000,15],[32000,17.5],[42000,20],[52000,22.5],[62000,25],[72000,26.5],[100000,27.5],[150000,28.5],[200000,29.5]]}
 };
+// De «desde, tipo» a «hasta, tipo», que es lo que recorre irpfCuotaTramos.
+function irpfTramosDesdeInicios(filas){ return filas.map((f, i) => [i + 1 < filas.length ? filas[i + 1][0] : Infinity, f[1]]); }
+const IRPF_ESCALAS_AUTONOMICAS_TRAMOS = {};
+Object.keys(IRPF_ESCALAS_AUTONOMICAS).forEach(k => { IRPF_ESCALAS_AUTONOMICAS_TRAMOS[k] = irpfTramosDesdeInicios(IRPF_ESCALAS_AUTONOMICAS[k].filas); });
+
+const FISCAL_TERRITORIOS = {
+  general:  () => gl({es:'Sin comunidad elegida (escala general de referencia)', ca:'Sense comunitat triada (escala general de referència)', en:'No region chosen (reference general scale)'}),
+  cataluna: () => gl({es:'Cataluña', ca:'Catalunya', en:'Catalonia'}),
+  ceuta_melilla: () => gl({es:'Ceuta y Melilla', ca:'Ceuta i Melilla', en:'Ceuta and Melilla'}),
+  navarra:  () => gl({es:'Navarra (régimen foral)', ca:'Navarra (règim foral)', en:'Navarre (foral regime)'}),
+  pais_vasco: () => gl({es:'País Vasco (régimen foral)', ca:'País Basc (règim foral)', en:'Basque Country (foral regime)'})
+};
+Object.keys(IRPF_ESCALAS_AUTONOMICAS).forEach(k => { FISCAL_TERRITORIOS[k] = IRPF_ESCALAS_AUTONOMICAS[k].nombre; });
+
 const IRPF_ESCALA_ESTATAL = [[12450,9.5],[20200,12],[35200,15],[60000,18.5],[300000,22.5],[Infinity,24.5]];
 const IRPF_ESCALA_CATALUNA = [[12500,9.5],[22000,12.5],[33000,16],[53000,19],[90000,21.5],[120000,23.5],[175000,24.5],[Infinity,25.5]];
+// Ceuta y Melilla: sin escala propia, rige la supletoria del art. 65 LIRPF (AEAT, «Especialidad de la escala autonómica»).
+const IRPF_ESCALA_SUPLETORIA = [[12450,9.5],[20200,12],[35200,15],[60000,18.5],[Infinity,22.5]];
+// Régimen FORAL: la hacienda foral aplica UNA sola escala (no hay estatal + autonómica). Escalas de 2025 copiadas de webs de
+// terceros (Taxdown para Navarra, Billeo para Gipuzkoa); NO se pudo abrir la fuente oficial (Hacienda de Navarra, BOG, BOB, BOTHA),
+// así que las reglas van como «pendiente de verificar». País Vasco usa la de Gipuzkoa: Bizkaia y Álava pueden diferir en pocos euros.
+const IRPF_ESCALAS_FORALES = {
+  navarra:    [[4458,13],[10030,22],[21175,25],[35663,28],[51266,36.5],[66869,41.5],[89159,44],[139310,47],[195034,49],[334344,50.5],[Infinity,52]],
+  pais_vasco: [[17720,23],[35440,28],[53160,35],[75910,40],[105130,45],[140130,46],[204270,47],[Infinity,49]]
+};
 // Escala general COMBINADA (estatal + autonómica supletoria): la que usaba la app antes de tener territorio.
 const IRPF_ESCALA_GENERAL = [[12450,19],[20200,24],[35200,30],[60000,37],[300000,45],[Infinity,47]];
 function irpfCuotaTramos(base, tramos){
@@ -97,14 +152,50 @@ function irpfCuotaTramos(base, tramos){
   }
   return cuota;
 }
-// Cuota íntegra por la escala del territorio: en Cataluña, la estatal MÁS la autonómica (cada una con sus propios tramos).
+// Cuota íntegra por la escala del territorio: la estatal MÁS la autonómica de la comunidad (cada una con sus propios tramos).
 function motorIrpfCuotaEscala(base, territorio){
   if(!(base > 0)) return 0;
   if(territorio === 'cataluna') return irpfCuotaTramos(base, IRPF_ESCALA_ESTATAL) + irpfCuotaTramos(base, IRPF_ESCALA_CATALUNA);
+  if(territorio === 'ceuta_melilla') return irpfCuotaTramos(base, IRPF_ESCALA_ESTATAL) + irpfCuotaTramos(base, IRPF_ESCALA_SUPLETORIA);
+  if(IRPF_ESCALAS_FORALES[territorio]) return irpfCuotaTramos(base, IRPF_ESCALAS_FORALES[territorio]);
+  if(IRPF_ESCALAS_AUTONOMICAS_TRAMOS[territorio]) return irpfCuotaTramos(base, IRPF_ESCALA_ESTATAL) + irpfCuotaTramos(base, IRPF_ESCALAS_AUTONOMICAS_TRAMOS[territorio]);
   return irpfCuotaTramos(base, IRPF_ESCALA_GENERAL);
 }
+// Orden para los desplegables: «sin comunidad» primero y el resto por nombre.
+function fiscalTerritoriosLista(){
+  const ks = Object.keys(FISCAL_TERRITORIOS).filter(k => k !== 'general');
+  ks.sort((a, b) => FISCAL_TERRITORIOS[a]().localeCompare(FISCAL_TERRITORIOS[b](), localeActual()));
+  return ['general', ...ks];
+}
 function territorioFiscal(){ const t = (DB && DB.business && DB.business.territorio) || 'general'; return FISCAL_TERRITORIOS[t] ? t : 'general'; }
-function fiscalReglaEscalaId(){ return territorioFiscal() === 'cataluna' ? 'IRPF-ESC-CAT' : 'IRPF-ESC-GENERAL'; }
+function fiscalReglaEscalaId(){
+  const t = territorioFiscal();
+  if(t === 'cataluna') return 'IRPF-ESC-CAT';
+  if(t === 'ceuta_melilla') return 'IRPF-ESC-CEUTA-MELILLA';
+  if(IRPF_ESCALAS_AUTONOMICAS[t]) return 'IRPF-ESC-' + t.toUpperCase();
+  if(IRPF_ESCALAS_FORALES[t]) return 'IRPF-ESC-' + t.toUpperCase();
+  return 'IRPF-ESC-GENERAL';
+}
+// Una regla por comunidad, generada de la tabla de arriba para que descripción y cálculo no se separen nunca.
+(function(){
+  const num = v => v.toLocaleString('es-ES', {maximumFractionDigits: 2});
+  Object.keys(IRPF_ESCALAS_AUTONOMICAS).forEach(k => {
+    const e = IRPF_ESCALAS_AUTONOMICAS[k];
+    FISCAL_REGLAS.push({id:'IRPF-ESC-' + k.toUpperCase(), concepto:'IRPF',
+      descripcion:'Escala autonómica 2025 (' + e.nombre() + '): ' + e.filas.map(f => num(f[1])).join(' / ') + ' % desde ' + e.filas.map(f => num(f[0])).join(' / ') + ' € de base liquidable.',
+      fuente:'AEAT · Manual práctico de Renta 2025, «Gravamen autonómico» (' + e.nombre() + ')', referencia:e.ref, desde:'2025-01-01', hasta:null, territorio:k, aplicaA:['autonomo','cb'], estado:'verificada',
+      nota:'Verificada para el ejercicio 2025 contra la cuota íntegra de la propia tabla de la AEAT. Para 2026 se aplica la misma hasta confirmar que no cambia. Usa el mínimo personal estatal.'});
+  });
+  FISCAL_REGLAS.push({id:'IRPF-ESC-CEUTA-MELILLA', concepto:'IRPF', descripcion:'Ceuta y Melilla: sin escala autonómica propia, rige la supletoria del art. 65 LIRPF (9,5 / 12 / 15 / 18,5 / 22,5 %) sumada a la estatal.',
+    fuente:'AEAT · Manual práctico de Renta 2025, «Especialidad de la escala autonómica»', referencia:'LIRPF disp. adic. 32.ª y art. 65', desde:'2025-01-01', hasta:null, territorio:'ceuta_melilla', aplicaA:['autonomo','cb'], estado:'verificada',
+    nota:'La escala está verificada, pero NO se aplica la deducción por rentas obtenidas en Ceuta y Melilla (LIRPF art. 68.4), que puede reducir mucho la cuota: consúltala con tu gestoría.'});
+  [['navarra', 'Navarra', 'Ley Foral 22/1998 (Texto Refundido de la LFIRPF), art. 59', 'Taxdown (resumen de Navarra, escala 2025-2026)', '13 / 22 / 25 / 28 / 36,5 / 41,5 / 44 / 47 / 49 / 50,5 / 52 % hasta 4.458 / 10.030 / 21.175 / 35.663 / 51.266 / 66.869 / 89.159 / 139.310 / 195.034 / 334.344 € y resto.'],
+   ['pais_vasco', 'País Vasco', 'Normas Forales del IRPF de Álava, Bizkaia (NF 13/2013 art. 75) y Gipuzkoa (NF 3/2014)', 'Billeo (escala 2025 de Gipuzkoa); Guiafiscal para Bizkaia', '23 / 28 / 35 / 40 / 45 / 46 / 47 / 49 % hasta 17.720 / 35.440 / 53.160 / 75.910 / 105.130 / 140.130 / 204.270 € y resto (la de Gipuzkoa; Bizkaia y Álava pueden diferir en pocos euros).']].forEach(([k, nom, ref, fuente, desc]) => {
+    FISCAL_REGLAS.push({id:'IRPF-ESC-' + k.toUpperCase(), concepto:'IRPF', descripcion:'Escala foral 2025 (' + nom + '): ' + desc,
+      fuente:fuente + ' · NO se pudo abrir la fuente oficial', referencia:ref, desde:'2025-01-01', hasta:null, territorio:k, aplicaA:['autonomo','cb'], estado:'pendiente',
+      nota:'Escala copiada de páginas de terceros: pendiente de contrastar con el texto oficial. En régimen foral las reducciones, el mínimo y las deducciones son las forales; aquí se usan las estatales como aproximación.'});
+  });
+})();
 
 /* ---------- Obligaciones: presentadas / pagadas (lo marca el usuario) ---------- */
 function fiscalObligaciones(){ if(!DB.ge) DB.ge = {}; if(!DB.ge.obligaciones) DB.ge.obligaciones = {}; return DB.ge.obligaciones; }
@@ -183,7 +274,12 @@ function fiscalTrazaAnual(año){
   else if(enCurso && mesesConDatos < 3) M('media', L({es:`Solo hay ${mesesConDatos} mes(es) con datos: la proyección a 12 meses es muy poco precisa.`, ca:`Només hi ha ${mesesConDatos} mes(os) amb dades: la projecció a 12 mesos és molt poc precisa.`, en:`Only ${mesesConDatos} month(s) of data: the 12-month projection is very rough.`}));
   if(enCurso && mesesConDatos > 0) M('media', L({es:'El ejercicio sigue abierto: es una estimación y el mes en curso está incompleto.', ca:'L\'exercici continua obert: és una estimació i el mes en curs està incomplet.', en:'The year is still open: this is an estimate and the current month is incomplete.'}));
   if(T.porRevisar > 0) M('media', L({es:`Hay ${T.porRevisar} gasto(s) «pendiente(s) de revisar»: cuentan como deducibles. Si alguno no lo es, el impuesto subirá.`, ca:`Hi ha ${T.porRevisar} despesa(es) «pendent(s) de revisar»: compten com a deduïbles. Si alguna no ho és, l'impost pujarà.`, en:`${T.porRevisar} expense(s) are «pending review»: they count as deductible. If any is not, tax will rise.`}));
-  if((p.forma === 'autonomo' || p.forma === 'cb') && !p.modulos && T.territorio !== 'cataluna') M('media', L({es:'Escala general de referencia: tu comunidad autónoma puede tener otra distinta (solo Cataluña está cargada y verificada).', ca:'Escala general de referència: la teva comunitat autònoma pot tenir una altra de diferent (només Catalunya està carregada i verificada).', en:'Reference general scale: your region may have a different one (only Catalonia is loaded and verified).'}));
+  if((p.forma === 'autonomo' || p.forma === 'cb') && !p.modulos){
+    if(T.territorio === 'general') M('media', L({es:'No hay comunidad autónoma elegida: se usa una escala general de referencia. Pídele a GastroGoan que fije tu comunidad en el alta.', ca:'No hi ha comunitat autònoma triada: es fa servir una escala general de referència. Demana a GastroGoan que fixi la teva comunitat a l\'alta.', en:'No region is set: a reference general scale is used. Ask GastroGoan to set your region at sign-up.'}));
+    else if(IRPF_ESCALAS_FORALES[T.territorio]) M('media', L({es:'Régimen foral: la escala foral no está contrastada con el texto oficial y el mínimo, las reducciones y las deducciones son las forales; aquí se usan las estatales como aproximación. Confírmalo con tu gestoría.', ca:'Règim foral: l\'escala foral no està contrastada amb el text oficial i el mínim, les reduccions i les deduccions són les forals; aquí es fan servir les estatals com a aproximació. Confirma-ho amb la teva gestoria.', en:'Foral regime: the foral scale is not checked against the official text and the allowance, reductions and deductions are the foral ones; the state ones are used here as an approximation. Confirm with your accountant.'}));
+    else M('media', L({es:'Se usa el mínimo personal estatal (5.550 €): algunas comunidades fijan otro importe, lo que mueve la cuota unos pocos euros.', ca:'Es fa servir el mínim personal estatal (5.550 €): algunes comunitats en fixen un altre, cosa que mou la quota uns pocs euros.', en:'The state personal allowance (€5,550) is used: some regions set another amount, which moves the tax by a few euros.'}));
+    if(T.territorio === 'ceuta_melilla') M('media', L({es:'No se aplica la deducción por rentas obtenidas en Ceuta y Melilla (art. 68.4 LIRPF): puede bajar mucho la cuota.', ca:'No s\'aplica la deducció per rendes obtingudes a Ceuta i Melilla (art. 68.4 LIRPF): pot baixar molt la quota.', en:'The deduction for income earned in Ceuta and Melilla (art. 68.4 LIRPF) is not applied: it can lower the tax a lot.'}));
+  }
   if((p.forma === 'autonomo' || p.forma === 'cb') && !p.modulos) M('media', L({es:'El IRPF real depende de TODAS tus rentas y circunstancias personales: esta cifra solo mira la actividad (más las otras rentas e hijos que hayas indicado).', ca:'L\'IRPF real depèn de TOTES les teves rendes i circumstàncies personals: aquesta xifra només mira l\'activitat (més les altres rendes i fills que hagis indicat).', en:'Real income tax depends on ALL your income and circumstances: this figure only covers the activity (plus other income and children you entered).'}));
   if(p.forma && !b.fiscalFijado) M('media', L({es:'La forma jurídica no la ha fijado GastroGoan: confirma que es la que declara tu gestoría.', ca:'La forma jurídica no l\'ha fixat GastroGoan: confirma que és la que declara la teva gestoria.', en:'The legal form was not set by GastroGoan: confirm it is the one your accountant files.'}));
   T.reglas.forEach(id => { const r = fiscalRegla(id); if(r && r.estado === 'pendiente') M('media', L({es:`Regla sin verificar: ${r.id}.`, ca:`Regla sense verificar: ${r.id}.`, en:`Unverified rule: ${r.id}.`})); });

@@ -32,7 +32,7 @@
 | Punto de equilibrio | Publicada (06/11 13:46) |
 | Inversiones | Publicada (06/11 13:46) |
 | Cuenta de Resultados | Hecha y probada; publicando |
-| Módulos | Pendiente (diseño) |
+| Módulos | Diseño nuevo (6/11) |
 
 ## Registro de decisiones
 - 6/11: el dueño pidió ser frugal con la sesión («no gastes tantísimo uso»). Se trabaja sin subagentes, con lecturas dirigidas y pruebas selectivas.
@@ -45,7 +45,7 @@
 | F-2 | **IS de una sociedad sin tipo fijado**: se aplicaba a cualquier año el tipo «sugerido» calculado con los números del año EN CURSO (un año pasado salía con un tipo equivocado) y como % plano, sin los dos tramos de la microempresa. | **Corregido y probado** (`impuestoSociedades`: cuota exacta por tramos del año calculado) |
 | F-3 | `TIPOS_IS` solo tenía 2026 y 2027 (2025 se calculaba con los de 2026; 2028 con erd 22 % cuando es 21 %; 2029+ con 22 % cuando es 20 %). | **Corregido** y verificado con la AEAT (Manual de Sociedades 2025, disp. trans. 44.ª LIS) |
 | F-4 | La cuota de un préstamo metida como **gasto fijo** se cuenta ENTERA como gasto, devolución incluida. | **Corregido**: aviso en el propio formulario de Gastos fijos y chip «Préstamo: mejor en Inversiones» en la lista (`gfEsPrestamo`) |
-| F-5 | **Territorio**: la escala del IRPF era la general (19–47 %) para todos. | **Corregido para Cataluña** (escala estatal + autonómica 2025 verificada con la AEAT, fijada desde el generador y mostrada en Mi Negocio). **Pendiente**: el resto de comunidades (hoy escala general de referencia y la previsión lo avisa). |
+| F-5 | **Territorio**: la escala del IRPF era la general (19–47 %) para todos. | **Corregido** para las 15 comunidades de régimen común y Ceuta/Melilla (escala estatal + autonómica 2025 verificada con la AEAT, fijada desde el generador y mostrada en Mi Negocio). **Foral** (Navarra, País Vasco): escala de webs de terceros, regla «pendiente», fiabilidad media; mínimo y reducciones estatales como aproximación. **Límite**: mínimo personal estatal. |
 | F-6 | **Sin deducibilidad por gasto**: todo gasto cuenta al 100 % en la base fiscal y su IVA se deduce entero. No hay gastos no deducibles / parcialmente deducibles (atenciones a clientes, vehículo al 50 %, multas…) ni prorrata. El resultado contable y el fiscal son el mismo número. | **Pendiente** (diseño en motor fiscal) |
 | F-7 | Tipos de **cooperativa** (`coopMicro`, `coopErd`, `coopNueva`) no contrastados con fuente oficial. | **Pendiente de verificar** (la app ya avisa de que la cooperativa necesita revisión de la gestoría) |
 | F-8 | Años anteriores a 2025: `tiposIsAño` usa los de 2025. | **Documentado**: el motor lo declara (`ANTES-2025`) y la previsión baja a fiabilidad BAJA. Cargar reglas históricas queda pendiente. |
