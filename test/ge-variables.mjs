@@ -39,9 +39,17 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('El selector de meses queda centrado', async () => {
-  const r = await page.evaluate(()=>getComputedStyle(document.getElementById('gv-months')).justifyContent);
-  assert.equal(r, 'center', 'la fila de meses debe estar centrada: ' + r);
+await caso('El selector de periodo (Gastos Variables) es el común (‹ mes año ▾ ›) y cambia de mes con las flechas', async () => {
+  const r = await page.evaluate(async ()=>{
+    const sel = document.querySelector('#gv-periodo .pe-sel'); if(!sel) return {sinSelector:true};
+    const antes = sel.querySelector('.pe-actual').textContent.trim();
+    sel.querySelectorAll('.pe-flecha')[1].click(); await new Promise(r=>setTimeout(r,250));
+    const despues = document.querySelector('#gv-periodo .pe-actual').textContent.trim();
+    document.querySelector('#gv-periodo .pe-flecha').click(); await new Promise(r=>setTimeout(r,250));   // vuelve al mes de partida
+    return {antes, despues};
+  });
+  assert.ok(!r.sinSelector, 'falta el selector de periodo');
+  assert.notEqual(r.antes, r.despues, 'la flecha debe cambiar de mes: ' + JSON.stringify(r));
 });
 
 await caso('El objetivo de food cost se puede editar desde aquí, y queda guardado en config().foodCostObj', async () => {

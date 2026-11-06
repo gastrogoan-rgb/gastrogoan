@@ -4563,6 +4563,41 @@ span.dt-punto{position:absolute;border-radius:50%}
 .dt-pico{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px}
 .dt-pico .ti{color:#C79A2E}
 @media (max-width:720px){.dt-plot{height:190px;margin:0 12px}.dt-titular b{font-size:24px}.dt-corto .dt-plot{height:110px}}
+/* ── GESTIÓN ECONÓMICA con el diseño nuevo (2/11) ── */
+#view-economia .ge-tab-row{display:flex;flex-wrap:wrap;gap:6px;border:0;margin:0 0 20px;padding:0;overflow:visible}
+#view-economia .ge-tab{flex:0 0 auto;min-height:44px;padding:0 14px;margin:0;background:#fff;border:1px solid var(--hair);border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);display:inline-flex;align-items:center;gap:7px}
+#view-economia .ge-tab:hover{border-color:var(--olive)}
+#view-economia .ge-tab.active{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+#view-economia .ge-tab .ti{font-size:16px}
+#view-economia .ge-section{background:#fff;border:1px solid var(--hair);border-radius:4px;margin:0 0 18px;overflow:hidden}
+#view-economia .ge-sec-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;padding:14px 18px;background:#fff;border-bottom:1px solid var(--hair);border-left:0}
+#view-economia .ge-sec-head h4{margin:0;font-size:12px}
+#view-economia .ge-section > .table-wrap,#view-economia .ge-section > .ge-grid{padding:0 6px 6px}
+#view-economia .ge-kpi{border:0;border-radius:0;background:transparent;border-right:1px solid var(--hair);padding:14px 18px}
+#view-economia .ge-kpi-grid{display:grid;gap:0;border:1px solid var(--hair);border-top:2px solid var(--ink);border-radius:0;background:#fff;margin-bottom:18px}
+#view-economia .ge-kpi:last-child{border-right:0}
+#view-economia .ge-total-bar{border-radius:3px}
+/* Ventas */
+.ve-barra-sup{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:0 0 16px}
+.ve-kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.ve-canales{margin:0 0 18px;background:#fff;border:1px solid var(--hair);border-radius:4px;padding:16px 18px}
+.ve-barra{display:flex;height:14px;border-radius:2px;overflow:hidden;background:var(--hair);margin:0 0 12px}
+.ve-barra span{display:block;height:100%}
+.ve-leyenda{display:flex;flex-wrap:wrap;gap:8px 12px}
+.ve-leg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px;padding:6px 12px;border:1px solid var(--hair);border-radius:3px;background:#fff;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer;text-align:left}
+.ve-leg:hover{border-color:var(--olive)}
+.ve-leg i{width:12px;height:12px;border-radius:2px;flex:none}
+.ve-leg b{font-family:var(--mono)}
+.ve-leg small{color:var(--muted);font-family:var(--mono)}
+.ve-curva{padding-bottom:10px}
+.ve-curva .dt-wrap{padding:6px 18px 0}
+@media (max-width:720px){
+  #ge-checklist > .card > div{flex-wrap:wrap}
+  #view-economia .ge-tab{flex:1 1 auto;justify-content:center}
+  #view-economia .ge-kpi{border-right:0;border-bottom:1px solid var(--hair)}
+  #view-economia .ge-kpi:last-child{border-bottom:0}
+  .ve-curva .dt-wrap{padding:6px 8px 0}
+}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5455,3 +5490,9 @@ small{font-size:max(.8333em, 11px)}
   #view-dashboard .grid > .kpi + .kpi{border-left:0 !important;border-top:1px solid var(--hair)}
 }
 #view-dashboard .empty{padding:20px 14px}
+/* Panel: los accesos tranquilos (a cero) también llegan a 44 px en móvil. */
+@media (max-width:760px){ .att-link{min-height:44px} }
+/* Ventas por tipo: la fila de total cierra el desglose. */
+.ve-total{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 2px 0;font-size:13.5px;border-top:1px solid var(--hair);margin-top:8px}
+.ve-total b{font-family:var(--mono)}
+.ve-total small{color:var(--muted);font-family:var(--mono)}

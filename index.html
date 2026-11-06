@@ -498,17 +498,12 @@
 
       <!-- VENTAS (histórico por día y por mes) -->
       <div id="ge-ventas" class="ge-tab-panel active">
-        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
-          <button class="btn btn-sm btn-icon" onclick="GE.setVentasYear(-1)"><i class="ti ti-chevron-left"></i></button>
-          <span style="font-size:16px;font-weight:700" id="ventas-year"></span>
-          <button class="btn btn-sm btn-icon" onclick="GE.setVentasYear(1)"><i class="ti ti-chevron-right"></i></button>
-        </div>
-        <div class="month-sel month-sel-centered" id="ventas-months"></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0" id="ventas-tipo-filter"></div>
+        <div class="ve-barra-sup"><div id="ventas-periodo"></div><div class="cl-chips" id="ventas-tipo-filter"></div></div>
+        <div id="ventas-kpis"></div>
         <div id="ventas-por-tipo"></div>
         <div id="ventas-depositos-note"></div>
         <div id="ventas-otros-ingresos"></div>
-        <div id="ventas-vales"></div>
+        <div id="ventas-curva"></div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 id="ventas-dia-title" data-i18n="ge.ventas.byDay">Ventas por día</h4></div>
           <div class="table-wrap"><table id="ventas-dia-table"></table></div>
@@ -540,12 +535,7 @@
 
       <!-- GASTOS VARIABLES -->
       <div id="ge-variables" class="ge-tab-panel">
-        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
-          <button class="btn btn-sm btn-icon" onclick="GE.setGVYear(-1)"><i class="ti ti-chevron-left"></i></button>
-          <span style="font-size:16px;font-weight:700" id="gv-year"></span>
-          <button class="btn btn-sm btn-icon" onclick="GE.setGVYear(1)"><i class="ti ti-chevron-right"></i></button>
-        </div>
-        <div class="month-sel month-sel-centered" id="gv-months"></div>
+        <div class="ve-barra-sup"><div id="gv-periodo"></div></div>
         <div class="ge-kpi-grid" id="gv-kpis"></div>
         <div id="gv-existencias"></div>
         <div class="vis-section" style="margin-bottom:14px">
@@ -607,14 +597,10 @@
 
       <!-- TESORERÍA -->
       <div id="ge-tesoreria" class="ge-tab-panel">
-        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;flex-wrap:wrap">
-          <button class="btn btn-sm btn-icon" onclick="GE.setTeYear(-1)"><i class="ti ti-chevron-left"></i></button>
-          <span style="font-size:16px;font-weight:700" id="te-year"></span>
-          <button class="btn btn-sm btn-icon" onclick="GE.setTeYear(1)"><i class="ti ti-chevron-right"></i></button>
-          <button class="btn btn-sm" id="te-close-month-btn" style="margin-left:10px" onclick="GE.toggleCierreTe()"></button>
-          <button class="btn btn-sm" style="margin-left:4px" onclick="openBankReconciliationModal()"><i class="ti ti-building-bank"></i> <span data-i18n="reconcile.btn">Conciliación bancaria</span></button>
+        <div class="ve-barra-sup"><div id="te-periodo"></div>
+          <button class="btn btn-sm" id="te-close-month-btn" onclick="GE.toggleCierreTe()"></button>
+          <button class="btn btn-sm" onclick="openBankReconciliationModal()"><i class="ti ti-building-bank"></i> <span data-i18n="reconcile.btn">Conciliación bancaria</span></button>
         </div>
-        <div class="month-sel month-sel-centered" id="te-months"></div>
         <div class="te-kpis" id="te-kpis"></div>
         <div id="te-forecast"></div>
         <div id="te-calendario"></div>
