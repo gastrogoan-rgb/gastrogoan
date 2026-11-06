@@ -165,6 +165,7 @@ lanzar; node test/fiscal-motor.mjs > "$SALIDA/fiscalmotor.txt" 2>&1 & P158=$!
 lanzar; node test/beneficio-caja.mjs > "$SALIDA/beneficiocaja.txt" 2>&1 & P159=$!
 lanzar; node test/web-publica-pasos.mjs > "$SALIDA/webpublicapasos.txt" 2>&1 & P160=$!
 lanzar; node test/descripcion-plato.mjs > "$SALIDA/descripcionplato.txt" 2>&1 & P161=$!
+lanzar; node test/claves-sin-traducir.mjs > "$SALIDA/clavessintraducir.txt" 2>&1 & P162=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -360,5 +361,6 @@ espera $P158 "Motor fiscal: reglas con fuente, escala de Cataluña a mano, traza
 espera $P159 "Beneficio y caja: puente del beneficio al dinero con cuentas a mano, disponible de verdad, razones y liquidez" "$SALIDA/beneficiocaja.txt" "todos los casos pasaron"
 espera $P160 "Web pública 2.0: cabecera que se adapta al logo, reservas y pedidos por pasos, menús y carta navegables, delivery controlado y tres idiomas sin scroll lateral" "$SALIDA/webpublicapasos.txt" "todos los casos pasaron"
 espera $P161 "Descripción en carta: la escribe la ficha técnica, la ven el cliente (web) y el camarero (ⓘ del TPV), y la carta guardada no se toca" "$SALIDA/descripcionplato.txt" "todos los casos pasaron"
+espera $P162 "Claves sin traducir: ninguna pantalla (30 vistas, 3 carpetas) enseña una clave interna en es, ca ni en" "$SALIDA/clavessintraducir.txt" "ninguna clave interna a la vista"
 
 exit $FALLOS

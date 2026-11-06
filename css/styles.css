@@ -4567,7 +4567,7 @@ span.dt-punto{position:absolute;border-radius:50%}
 #view-economia .ge-tab-row{display:flex;flex-wrap:wrap;gap:6px;border:0;margin:0 0 20px;padding:0;overflow:visible}
 #view-economia .ge-tab{flex:0 0 auto;min-height:44px;padding:0 14px;margin:0;background:#fff;border:1px solid var(--hair);border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);display:inline-flex;align-items:center;gap:7px}
 #view-economia .ge-tab:hover{border-color:var(--olive)}
-#view-economia .ge-tab.active{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+#view-economia .ge-tab.active{background:var(--olive);border-color:var(--olive);color:#fff;font-weight:600}   /* verde de la marca = lo marcado, como en el resto de la app (era tinta) */
 #view-economia .ge-tab .ti{font-size:16px}
 #view-economia .ge-section{background:#fff;border:1px solid var(--hair);border-radius:4px;margin:0 0 18px;overflow:hidden}
 #view-economia .ge-sec-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;padding:14px 18px;background:#fff;border-bottom:1px solid var(--hair);border-left:0}
@@ -5945,3 +5945,31 @@ small{font-size:max(.8333em, 11px)}
 /* Beneficio y caja: cifras que pueden saltar de línea y saldo de 44 px en móvil */
 #bc-kpis .te-valor{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;white-space:normal}
 @media (max-width:760px){ #bc-saldo-in{min-height:44px !important;height:44px !important} .bc-saldo-f .btn{min-height:44px !important} }
+
+/* ═══ Barrido nocturno 7/11 ═══ */
+/* «Enviar al gestor»: tres botones en 390 px recortaban el texto del último («nviar / compar»). Reparten el ancho y saltan de línea. */
+.pg-footer{flex-wrap:wrap}
+.pg-footer .btn{flex:1 1 130px;min-width:0;white-space:normal;line-height:1.25}
+
+/* Franjas de cifras en móvil: una celda huérfana (3.ª o 5.ª) ya no deja un hueco con borde a su lado, y las dos cifras de Oferta
+   (grid-2) van lado a lado como las demás en vez de apiladas con la segunda sangrada. */
+@media (max-width:900px){
+  .grid-2:has(> .kpi){grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid-2 > .kpi:nth-child(odd){padding-left:0}
+  .grid-4:has(> .kpi) > .kpi:last-child:nth-child(odd):not(:first-child),
+  .grid-3:has(> .kpi) > .kpi:last-child:nth-child(odd):not(:first-child),
+  .kpi-grid:has(> .kpi) > .kpi:last-child:nth-child(odd):not(:first-child){grid-column:1/-1;border-left:0;padding-left:0;border-top:1px solid var(--hair)}
+}
+
+/* Lista «Para que tus números salgan bien»: cabecera plegable (en móvil empieza cerrada) */
+.ck-sum{display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer;min-height:44px;list-style:none}
+.ck-sum::-webkit-details-marker{display:none}
+.ck-sum::after{content:"";flex:none;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+.ck-det[open] > .ck-sum::after{transform:rotate(-135deg) translate(-1px,-1px)}
+.ck-sum:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+/* Franja `.st-resumen` (Stock, Promoción, Limpieza, Distribución, Calendario, Personal): con un número impar de celdas en 2 columnas,
+   la última ocupa la fila entera en lugar de dejar una celda vacía con borde. */
+@media (max-width:760px){
+  .st-resumen > :last-child:nth-child(odd):not(:first-child){grid-column:1/-1}
+}

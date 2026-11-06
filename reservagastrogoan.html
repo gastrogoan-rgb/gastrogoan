@@ -754,6 +754,10 @@
   /* «Cambiar» y «Volver»: el botón fino de la app */
   .svc-cambiar{border:1px solid var(--line);border-radius:3px;padding:0 12px;background:var(--surface);color:var(--ink);text-decoration:none;font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;font-size:12.5px}
   .svc-cambiar:hover{background:var(--brand-cream,#F1EFE9);border-color:var(--olive);color:var(--olive)}
+  /* Seguimiento del pedido/reserva: lo hecho en verde (era tinta), el paso actual con su halo */
+  .trk-bar span.hecho,.trk-step.hecho .trk-dot{background:var(--olive);border-color:var(--olive)}
+  .trk-step.hecho:not(:last-child)::after{background:var(--olive)}
+  .wz-nav .btn{min-width:0;white-space:normal;line-height:1.2}
 </style>
 </head>
 <body>

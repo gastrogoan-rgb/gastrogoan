@@ -1913,18 +1913,22 @@ const GE = (function(){
     const items = checklistItems();
     const pendientes = items.filter(i => !i.ok);
     const oculta = (config().checklistOcultaHasta || '') > todayStr();
-    const lista = (pendientes.length && !oculta) ? `<div class="card" style="margin-bottom:12px;padding:12px 14px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+    // En móvil la lista empieza plegada (el contador sigue a la vista): desplegada, empujaba las pestañas y el contenido fuera de la
+    // primera pantalla. Si el usuario la abre o la cierra, el repintado respeta lo que eligió.
+    const previa = box.querySelector('.ck-det');
+    const abierta = previa ? previa.open : !(window.matchMedia && window.matchMedia('(max-width:900px)').matches);
+    const lista = (pendientes.length && !oculta) ? `<details class="card ck-det" ${abierta ? 'open' : ''} style="margin-bottom:12px;padding:12px 14px">
+      <summary class="ck-sum">
         <strong style="flex:1">${t('ck.titulo')}</strong>
         <span class="txt-xs" style="color:var(--muted)">${t('ck.progreso').replace('${n}', items.length - pendientes.length).replace('${t}', items.length)}</span>
-        <button class="btn btn-sm" onclick="GE.ocultarChecklist()">${t('ck.ocultar')}</button>
-      </div>
+      </summary>
+      <div style="display:flex;justify-content:flex-end;margin:6px 0 4px"><button class="btn btn-sm" onclick="GE.ocultarChecklist()">${t('ck.ocultar')}</button></div>
       ${items.map(i => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;min-height:36px">
         <i class="ti ${i.ok?'ti-circle-check':'ti-circle'}" style="color:${i.ok?'var(--green)':'var(--muted)'};font-size:18px;flex:none"></i>
         <span style="flex:1;${i.ok?'color:var(--muted)':''}">${i.txt}</span>
         ${i.ok ? '' : `${i.alt ? `<button class="btn btn-sm" style="min-height:44px" onclick="${i.alt.ir}">${i.alt.txt}</button>` : ''}<button class="btn btn-sm" style="min-width:44px;min-height:44px" onclick="${i.ir}">${t('ck.ir')}</button>`}
       </div>`).join('')}
-    </div>` : '';
+    </details>` : '';
     box.innerHTML = aviso + lista;
   }
   // «Gastos que no son mensuales sin su mes de factura: 1» → el botón Ir abre ya el primero (antes solo cambiaba de pestaña y
@@ -4496,7 +4500,7 @@ const GE = (function(){
         <label>${t('hr.export.accountantEmail')}</label>
         <input type="email" id="pg-email" value="${escapeHtml((DB.business||{}).gestorEmail||'')}" placeholder="gestoria@ejemplo.com">
       </div>
-      <div class="modal-footer" style="flex-wrap:wrap">
+      <div class="modal-footer pg-footer">
         <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
         <button class="btn" onclick="GE.descargarPaqueteGestor()"><i class="ti ti-download"></i> ${t('pg.descargar')}</button>
         <button class="btn btn-primary" onclick="GE.compartirPaqueteGestor()"><i class="ti ti-send"></i> ${t('pg.enviar')}</button>

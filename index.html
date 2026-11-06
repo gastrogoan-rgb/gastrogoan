@@ -483,8 +483,6 @@
         <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-send"></i> <span data-i18n="pg.title">Enviar al gestor</span></button>
         <button class="btn btn-sm" id="ge-preguntale" onclick="abrirPreguntaNumeros()"><i class="ti ti-message-chatbot"></i> <span data-i18n="ia.num.title">Pregúntale a tus números</span></button>
       </div>
-      <div id="ge-checklist"></div>
-
       <nav class="ge-tab-row" id="ge-tabs-row">
         <button class="ge-tab active" onclick="GE.tab('ventas')"><i class="ti ti-chart-line"></i> <span data-i18n="tab.sales">Ventas</span></button>
         <button class="ge-tab" onclick="GE.tab('fijos')"><i class="ti ti-receipt"></i> <span data-i18n="hr.lbl.fixedExpenses">Gastos Fijos</span></button>
@@ -496,6 +494,8 @@
         <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> <span data-i18n="tab.capex">CAPEX</span></button>
         <button class="ge-tab" id="ge-tab-modulos" onclick="GE.tab('modulos')" style="display:none"><i class="ti ti-calculator"></i> <span data-i18n="tab.modulos">Módulos</span></button>
       </nav>
+
+      <div id="ge-checklist"></div>
 
       <!-- VENTAS (histórico por día y por mes) -->
       <div id="ge-ventas" class="ge-tab-panel active">
