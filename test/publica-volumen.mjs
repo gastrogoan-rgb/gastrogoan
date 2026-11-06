@@ -45,6 +45,7 @@ for(const T of TAMANOS){
       DB.activeMenuIds=[99];
       DB.allergens={1:['Gluten','Lactosa'],2:['Frutos secos']};
       currentTab=pestana; renderApp();
+      if(typeof menuSetModo === 'function') menuSetModo('carta');   // con menús y carta, la carta es la segunda vista (6/11)
 
       const out={cortados:[],chicos:[],scrollH:0,platos:document.querySelectorAll('.menu-folder-card').length};
       out.scrollH=document.documentElement.scrollWidth-document.documentElement.clientWidth;

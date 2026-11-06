@@ -328,6 +328,227 @@
   .ok-icon{width:44px;height:44px;margin:0 auto 10px;background:var(--olive);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 12.5l2.5 2.5 4.5-5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 12.5l2.5 2.5 4.5-5'/%3E%3C/svg%3E") center/contain no-repeat;font-size:0}
   .hi-warn{--hi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 4 21 20H3z'/%3E%3Cpath d='M12 10v4M12 17v.5'/%3E%3C/svg%3E")}
   .warn-icon{width:44px;height:44px;margin:0 auto 10px;background:var(--amber);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 4 21 20H3z'/%3E%3Cpath d='M12 10v4M12 17v.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 4 21 20H3z'/%3E%3Cpath d='M12 10v4M12 17v.5'/%3E%3C/svg%3E") center/contain no-repeat;font-size:0}
+
+  /* ═══ WEB PÚBLICA 2.0 (6/11) — cabecera que se adapta al logo, reservas y pedidos por pasos, carta y menús navegables ═══ */
+  /* Cabecera: el logo manda. Oscuro → franja clara; claro → franja de tinta; no medible → franja de tinta con placa blanca. */
+  :root{--hd-bg:var(--paper);--hd-fg:var(--ink);--hd-mut:var(--muted);--hd-line:var(--border)}
+  header{background:var(--hd-bg);color:var(--hd-fg);border-bottom:1px solid var(--hd-line);padding:24px 16px 20px}
+  header.hd-oscuro{--hd-bg:var(--ink);--hd-fg:#fff;--hd-mut:#C9C2B6;--hd-line:var(--ink)}
+  header h1{color:var(--hd-fg);font-size:clamp(24px,5.6vw,34px)}
+  header .sub{color:var(--hd-mut)}
+  #biz-logo{display:flex;justify-content:center}
+  #biz-logo img{display:block;width:auto;height:auto;max-height:68px;max-width:min(260px,72vw);object-fit:contain;margin:0 auto 10px}
+  header.hd-placa #biz-logo img{background:#fff;padding:8px 14px}
+  header:not(.hd-oscuro) .lang-dd .lang-trigger{border-color:var(--border);color:var(--ink);background:var(--surface)}
+  header:not(.hd-oscuro) .lang-dd .lang-trigger:hover{border-color:var(--ink)}
+  .card{border-top:2px solid var(--ink)}
+
+  /* Pasos */
+  .wz-prog{display:flex;gap:6px;list-style:none;margin:0 0 16px;padding:0}
+  .wz-prog li{flex:1 1 0;min-width:0}
+  .wz-prog button{display:block;width:100%;min-height:48px;text-align:left;background:none;border:0;border-top:3px solid var(--border);padding:8px 0 0;cursor:pointer;font-family:inherit;color:var(--muted)}
+  .wz-prog button:disabled{cursor:default}
+  .wz-prog button:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  .wz-prog .n{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em}
+  .wz-prog .l{display:block;font-weight:600;font-size:13px;overflow-wrap:break-word;line-height:1.25}
+  .wz-prog li.done button{border-top-color:var(--ink);color:var(--ink)}
+  .wz-prog li.on button{border-top-color:var(--olive);color:var(--ink)}
+  .wz-prog li.on .l{font-weight:700}
+  .wz-step[hidden]{display:none}
+  .wz-step{animation:wzIn .28s ease-out}
+  @keyframes wzIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .wz-h{margin:0 0 4px;font-size:clamp(21px,5.4vw,27px);line-height:1.15;letter-spacing:-.02em;color:var(--ink);text-wrap:balance}
+  .wz-h:focus{outline:none}
+  .wz-sub{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.5}
+  .wz-nav{position:sticky;bottom:0;z-index:30;display:flex;gap:10px;margin:18px -16px 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--paper);border-top:1px solid var(--border)}
+  .wz-nav .btn{width:auto;flex:1 1 0;min-width:0}
+  .wz-nav #wz-back{flex:0 0 auto;min-width:104px}
+  .wz-nav .btn:disabled{opacity:1;background:var(--border);border-color:var(--border);color:var(--muted)}
+  .wz-nav .mono{font-weight:500}
+  .wz-link{margin:-8px 0 16px}
+  .wz-link a{display:inline-flex;align-items:center;min-height:44px;font-size:13.5px;font-weight:600}
+  .wz-ok{border:1px solid var(--border);background:var(--green-l);padding:14px 16px;font-size:13.5px;line-height:1.55;color:var(--body);margin:0 0 14px}
+  .wz-more{margin:0 0 14px;border:1px solid var(--border)}
+  .wz-more summary{display:flex;align-items:center;min-height:48px;padding:0 14px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .wz-more .field{padding:0 14px}
+
+  /* Comensales: un gran selector, no un campo numérico */
+  .pp{display:flex;align-items:stretch;border:1px solid var(--ink);background:var(--surface)}
+  .pp button{flex:0 0 60px;min-height:60px;border:0;background:var(--surface);font-size:26px;line-height:1;cursor:pointer;color:var(--ink);font-family:inherit}
+  .pp button:hover{background:var(--ink);color:#fff}
+  .pp button:focus-visible{outline:2px solid var(--olive);outline-offset:-4px}
+  .pp .pp-mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+  .pp input{width:100%;min-height:36px !important;border:0 !important;padding:0 !important;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:28px !important;font-weight:600;background:transparent !important;-moz-appearance:textfield;appearance:textfield}
+  .pp input::-webkit-outer-spin-button,.pp input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .pp .pp-u{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:-2px;padding-bottom:6px}
+
+  /* Resumen final */
+  .sm{border:1px solid var(--border);background:var(--surface);margin:0 0 14px}
+  .sm-row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-top:1px solid var(--border)}
+  .sm-row:first-child{border-top:0}
+  .sm-k{flex:0 0 96px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-top:4px}
+  .sm-v{flex:1;min-width:0;color:var(--ink);font-weight:600;overflow-wrap:break-word}
+  .sm-v small{display:block;font-weight:400;color:var(--muted);font-size:13px;margin-top:1px}
+  .sm-ed{flex:none;background:none;border:0;color:var(--olive);font:600 13px/1 inherit;font-family:inherit;min-height:44px;padding:0 2px;cursor:pointer}
+  .sm-ed:hover{color:var(--ink);text-decoration:underline}
+
+  /* Pedidos: reglas del servicio, selector Menús · Carta, buscador */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+  .chip{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border:1px solid var(--border);background:var(--surface);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+  .seg{display:flex;border:1px solid var(--ink);margin:0 0 14px;background:var(--surface)}
+  .seg button{flex:1 1 0;min-height:48px;border:0;background:var(--surface);color:var(--ink);font:600 14px/1.2 inherit;font-family:inherit;cursor:pointer;padding:0 8px}
+  .seg button+button{border-left:1px solid var(--ink)}
+  .seg button.on{background:var(--ink);color:#fff}
+  .seg button:focus-visible{outline:2px solid var(--olive);outline-offset:-4px}
+  .seg .cnt{font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.7;margin-left:6px}
+  .srch{position:relative;margin:0 0 14px}
+  .srch input{width:100%;min-height:48px;padding:0 14px 0 42px;border:1px solid var(--border);font-size:16px;font-family:inherit;background:var(--surface);color:var(--ink)}
+  .srch::before{content:"";position:absolute;left:14px;top:50%;width:18px;height:18px;margin-top:-9px;background:var(--muted);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") center/contain no-repeat;pointer-events:none}
+
+  /* Menús: una tarjeta por menú; al tocarla se ve entero y se elige */
+  .mn-list{display:grid;gap:10px;margin:0 0 6px}
+  .mn-card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:1px solid var(--border) !important;border-top:2px solid var(--ink) !important;background:var(--surface);padding:16px !important;cursor:pointer;font-family:inherit;transition:border-color .15s,transform .1s}
+  .mn-card:hover{border-color:var(--ink) !important}
+  .mn-card:active{transform:translateY(1px)}
+  .mn-card:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  .mn-body{flex:1;min-width:0;display:block}
+  .mn-n{display:block;font-size:17px;font-weight:700;color:var(--ink);letter-spacing:-.01em;overflow-wrap:break-word}
+  .mn-c{display:block;margin-top:3px;font-size:13px;line-height:1.4;color:var(--muted)}
+  .mn-side{flex:none;display:flex;align-items:center;gap:10px}
+  .mn-p{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;color:var(--ink)}
+  .mn-badge{min-width:24px;height:24px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;background:var(--olive);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600}
+  .mn-go{color:var(--muted);font-size:20px;line-height:1}
+
+  /* Carta: carpetas grandes con su número de platos; dentro, cabecera fija para volver */
+  .cs-tit{margin:20px 0 10px !important;font-family:'IBM Plex Mono',monospace;font-size:11.5px !important;font-weight:600 !important;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .cs-tit:first-child{margin-top:0 !important}
+  .menu-folder-grid.cs{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .menu-folder-card.cs-tile{flex-direction:column;align-items:flex-start;justify-content:space-between;gap:12px;min-height:104px;padding:14px !important;border-top:2px solid var(--ink)}
+  .cs-tile .icon{font-size:28px !important;filter:none !important}
+  .cs-tile .icon svg{width:30px;height:30px}
+  .cs-tile .name{font-size:15px !important;line-height:1.2}
+  .cs-tile .cs-n{display:block;margin-top:3px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  .cs-tile .cs-in{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;background:var(--olive);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;position:absolute;top:10px;right:10px}
+  .menu-folder-card.cs-tile{position:relative}
+  .fd-head{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:12px;margin:-18px -18px 6px;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border)}
+  .fd-head .menu-back-btn{margin:0;padding:0 8px 0 0;flex:none}
+  .fd-head h2{margin:0;flex:1;min-width:0;font-size:18px;overflow-wrap:break-word}
+  .fd-head .fd-c{flex:none;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+  /* Platos */
+  .menu-item.dish{align-items:flex-start;gap:14px;padding:16px 0}
+  .dish-info{flex:1;min-width:0}
+  .dish .name{font-size:16px;line-height:1.25;overflow-wrap:break-word}
+  .dish-d{margin-top:3px;font-size:13.5px;line-height:1.45;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .dish .price{margin-top:5px;font-size:14px}
+  .dish-ctl{flex:none;display:flex;align-items:center}
+  .qc-add{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:104px;min-height:44px;padding:0 14px;border:1px solid var(--ink);background:var(--surface);color:var(--ink);font:600 13.5px/1 inherit;font-family:inherit;cursor:pointer;transition:background-color .15s,color .15s,transform .1s}
+  .qc-add:hover{background:var(--ink);color:#fff}
+  .qc-add:active{transform:translateY(1px)}
+  .qc-add:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  .qc-add .n{font-family:'IBM Plex Mono',monospace;font-weight:600}
+  .qty-ctl{border:1px solid var(--ink);gap:0}
+  .qty-ctl button{border:0 !important;width:44px;height:44px}
+  .qty-ctl button:hover{background:var(--ink);color:#fff}
+  .qty-ctl span{min-width:30px;font-size:16px}
+  .menu-item.dish.en{background:var(--green-l);margin:0 calc(-1 * var(--cp,18px));padding-left:var(--cp,18px);padding-right:var(--cp,18px);box-shadow:inset 3px 0 0 var(--olive)}
+
+  /* Carrito y total */
+  .cl-l{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+  .cl-n{flex:1;min-width:0;color:var(--ink);font-weight:600;overflow-wrap:break-word}
+  .cl-n small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:2px}
+  .cl-p{flex:none;font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);padding-top:2px;white-space:nowrap}
+  .cl-q{flex:none;display:flex;align-items:center;border:1px solid var(--ink)}
+  .cl-q button{width:40px;height:40px;border:0;background:var(--surface);font-size:18px;cursor:pointer;color:var(--ink);font-family:inherit}
+  .cl-q button:hover{background:var(--ink);color:#fff}
+  .cl-q span{min-width:28px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:600}
+  .cl-x{display:flex;justify-content:space-between;gap:10px;padding:8px 0;font-size:14px;color:var(--body)}
+  .cl-x span:last-child{font-family:'IBM Plex Mono',monospace}
+  .cl-hint{margin:6px 0 0;font-size:13px;color:var(--muted);line-height:1.45}
+  .cl-warn{margin:10px 0 0;padding:10px 12px;border:1px solid var(--red);background:var(--red-l);color:var(--red);font-size:13.5px;font-weight:600}
+
+  /* Hoja inferior: menús y extras */
+  #modal-overlay.is-sheet{align-items:flex-end;padding:0}
+  #modal-overlay.is-sheet #modal-box{max-width:560px;max-height:92vh;padding:0;border-bottom:0;border-top:2px solid var(--ink);display:flex;flex-direction:column}
+  @media (min-width:700px){ #modal-overlay.is-sheet{align-items:center;padding:16px} #modal-overlay.is-sheet #modal-box{border-bottom:1px solid var(--border)} }
+  .sh-h{padding:22px 22px 10px;flex:none}
+  .sh-eye{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .sh-h h2{margin:4px 0 0;padding-right:36px;font-size:24px;line-height:1.15;letter-spacing:-.02em}
+  .sh-b{padding:4px 22px 8px;overflow-y:auto;flex:1 1 auto;-webkit-overflow-scrolling:touch}
+  .sh-f{flex:none;padding:12px 22px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--border);background:var(--surface)}
+  .sh-g{margin:14px 0 18px;border:0;padding:0}
+  .sh-g legend{display:flex;align-items:baseline;gap:10px;padding:0;margin:0 0 8px;font-weight:700;color:var(--ink);font-size:15px}
+  .sh-g legend .k{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--muted);font-weight:500}
+  .opt{display:flex;align-items:center;gap:12px;min-height:52px;padding:10px 14px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin:0 0 6px}
+  .opt:hover{border-color:var(--ink)}
+  .opt:has(input:checked){border-color:var(--ink);background:var(--green-l);box-shadow:inset 3px 0 0 var(--olive)}
+  .opt input{flex:none;width:20px;height:20px}
+  .opt .o-n{flex:1;min-width:0;font-size:14.5px;color:var(--ink);overflow-wrap:break-word}
+  .opt .o-p{flex:none;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--muted)}
+  .opt.off{opacity:.5;cursor:not-allowed}
+  .sh-f .btn{width:100%}
+
+  @media (max-width:380px){ .menu-folder-grid.cs{grid-template-columns:1fr} .sm-k{flex-basis:78px} .wz-prog .l{font-size:12px} }
+  @media (prefers-reduced-motion:reduce){ .wz-step{animation:none} .qc-add,.mn-card{transition:none} }
+
+  /* Pulido (6/11): cabecera compacta — el idioma a la esquina y el nombre en pequeño si ya hay logo —, y resumen con la etiqueta encima. */
+  header{position:relative;padding:14px 16px 14px}
+  header #lang-switcher{position:absolute;top:8px;right:10px;margin:0}
+  header .lang-dd .lang-trigger{min-height:44px;padding:0 10px}
+  header .lang-dd .lang-panel{left:auto;right:0;transform:none}
+  #biz-logo img{max-height:56px;margin-bottom:6px}
+  header.hd-conlogo h1{font-size:15px;font-weight:600;letter-spacing:.01em;margin-top:2px}
+  header .sub{margin-top:6px;gap:2px 14px;font-size:11px}
+  header h1{padding:0 56px}
+  .sm-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:start}
+  .sm-k{grid-column:1/-1;flex:none;padding-top:0}
+  .sm-ed{grid-column:2;grid-row:2;align-self:center}
+  .sm-v{grid-column:1;grid-row:2}
+
+  /* Pantallas pequeñas: los márgenes negativos de la barra de pasos y de la cabecera de carpeta usan el MISMO relleno que la tarjeta y el .wrap. */
+  :root{--cp:18px}
+  .card{padding:var(--cp)}
+  .fd-head{margin:calc(-1 * var(--cp)) calc(-1 * var(--cp)) 6px;padding:10px var(--cp)}
+  @media (max-width:380px){ :root{--cp:14px} .wrap{padding-left:16px;padding-right:16px} }
+  @media (max-width:480px){
+    .fd-head{flex-wrap:wrap;gap:0 10px}
+    .fd-head .menu-back-btn{order:1}
+    .fd-head .fd-c{order:2;margin-left:auto}
+    .fd-head h2{order:3;flex:1 1 100%;margin:-6px 0 6px}
+  }
+
+  /* Línea del carrito en pantallas estrechas: el nombre ocupa su fila entera y debajo van el − n + y el importe (un nombre largo no se aprieta). */
+  @media (max-width:480px){
+    .cl-l{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center}
+    .cl-n{grid-column:1/-1}
+    .cl-p{text-align:right;padding-top:0}
+  }
+
+  /* PC y tablet ancho: dos columnas — los pasos a la izquierda y lo elegido hasta ahora, siempre a la vista, a la derecha. */
+  .wz-side{display:none}
+  .sd-l{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--ink)}
+  .sd-l span:last-child{font-family:'IBM Plex Mono',monospace;text-align:right}
+  .sd-l span:first-child{min-width:0;overflow-wrap:break-word}
+  .sd-m{color:var(--muted)}
+  .sd-t{display:flex;justify-content:space-between;padding-top:12px;font-weight:700;font-size:17px;color:var(--ink);font-family:'IBM Plex Mono',monospace}
+  @media (min-width:960px){
+    .wrap{max-width:1000px}
+    .tabs{max-width:620px}
+    .wz{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:0 28px;align-items:start}
+    .wz>.wz-prog{grid-column:1/-1;max-width:620px}
+    .wz-main{min-width:0}
+    .wz-side{display:block;position:sticky;top:16px;border:1px solid var(--border);border-top:2px solid var(--ink);background:var(--surface);padding:18px}
+    .wz-nav{margin:18px 0 0;padding:12px 0 0;background:transparent;border-top:0;position:static}
+  }
+
+  /* Horas con un toque (pedidos) */
+  .slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:-4px 0 14px}
+  .slots button{min-height:44px;border:1px solid var(--green);background:var(--green-l);color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:500;cursor:pointer;padding:0 4px}
+  .slots button:hover{border-color:var(--ink)}
+  .slots button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .slots button.asap{grid-column:1/-1;font-family:inherit;font-weight:600;font-size:14px}
+  .slots button:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  @media (max-width:360px){ .slots{grid-template-columns:repeat(3,minmax(0,1fr))} }
 </style>
 </head>
 <body>
@@ -710,6 +931,88 @@ const I18N = {
     'app.title':'Reserves i Comandes','app.loading':'Carregant…','common.back':'Enrere','label.dishes':'Plats','label.oneDish':'1 plat','label.nDishes':'${n} plats'
   }
 };
+/* ============ Textos nuevos de los pasos (6/11) ============ */
+const I18N_WZ = {
+  es:{
+    'wz.progress':'Pasos','wz.s.when':'Cuándo','wz.s.data':'Tus datos','wz.s.confirm':'Confirmar','wz.s.pick':'Elige',
+    'wz.next':'Continuar','wz.back':'Atrás','wz.edit':'Cambiar','wz.less':'Una persona menos','wz.more':'Una persona más','wz.guests':'personas',
+    'wz.r.when.title':'¿Cuándo venís?','wz.r.when.sub':'Elige cuántos sois, el día y la hora. Solo ves las horas con sitio.',
+    'wz.r.data.title':'¿A nombre de quién?','wz.r.data.sub':'Solo lo que el restaurante necesita para tenerte la mesa lista.',
+    'wz.r.confirm.title':'Revisa y confirma','wz.r.confirm.sub':'Comprueba que todo está bien antes de enviar.',
+    'wz.r.next':'Al confirmar verás tu reserva al momento, con un enlace para cambiarla o cancelarla. Guárdalo: lo necesitarás.',
+    'wz.err.when':'Elige un día y una hora para continuar.','wz.err.phone':'Escribe un teléfono válido para que el restaurante pueda avisarte.',
+    'wz.sum.when':'Cuándo','wz.sum.people':'Comensales','wz.sum.table':'Mesa','wz.sum.name':'A nombre de','wz.sum.contact':'Contacto','wz.sum.notes':'Notas',
+    'wz.sum.type':'Tipo','wz.sum.where':'Dirección','wz.sum.pay':'Pago','wz.n.person':'1 persona','wz.n.people':'%d personas',
+    'wz.sum.pickup':'Recoges en el local','wz.sum.delivery':'Entrega a domicilio',
+    'wz.o.pick.title':'Elige qué quieres','wz.o.pick.sub.takeaway':'Añade lo que te apetezca. Lo recoges en el local.','wz.o.pick.sub.delivery':'Añade lo que te apetezca. Te lo llevamos a casa.',
+    'wz.o.menus':'Menús','wz.o.carta':'Carta','wz.o.search':'Buscar un plato…','wz.o.noresults':'Ningún plato coincide con «%s».','wz.o.view':'Ver y elegir',
+    'wz.o.empty':'Añade algo para continuar','wz.o.faltan':'Faltan %s para el mínimo',
+    'wz.o.data.title.takeaway':'¿Cuándo lo recoges?','wz.o.data.title.delivery':'¿Dónde y cuándo te lo llevamos?',
+    'wz.o.data.sub':'Con esto el restaurante prepara tu pedido sin tener que llamarte.',
+    'wz.o.rev.title':'Revisa tu pedido','wz.o.rev.sub':'Ajusta cantidades, elige cómo pagar y confirma.',
+    'wz.o.next':'Al enviar verás el seguimiento de tu pedido en directo, con un enlace para volver a verlo. Guárdalo.',
+    'wz.o.chip.min':'%s mínimo','wz.o.chip.fee':'Envío %s','wz.o.chip.free':'gratis desde %s','wz.o.chip.zone':'Reparto en CP %s','wz.o.chip.radius':'Reparto hasta %s km','wz.o.chip.eta':'Listo en ~%d min',
+    'wz.o.addr.hint':'Calle, número, piso y puerta.',
+    'wz.m.eyebrow':'Menú','wz.m.step':'Paso %d de %d','wz.m.add':'Añadir al pedido','wz.m.pick':'Elige una opción de cada apartado.',
+    'wz.m.groups':'%d apartados','wz.x.extras':'Extras',
+    'wz.o.slots':'Elige una hora','wz.o.asap':'Cuanto antes',
+    'email.reserva.hint':'Lo usamos para encontrar tu reserva y para que el restaurante pueda escribirte si hace falta.',
+    'email.pedido.hint':'Opcional. El restaurante puede escribirte si hay algún problema con tu pedido.'
+  },
+  en:{
+    'wz.progress':'Steps','wz.s.when':'When','wz.s.data':'Your details','wz.s.confirm':'Confirm','wz.s.pick':'Choose',
+    'wz.next':'Continue','wz.back':'Back','wz.edit':'Change','wz.less':'One fewer guest','wz.more':'One more guest','wz.guests':'guests',
+    'wz.r.when.title':'When are you coming?','wz.r.when.sub':'Choose how many you are, the day and the time. You only see times with room.',
+    'wz.r.data.title':'Whose name is it under?','wz.r.data.sub':'Only what the restaurant needs to have your table ready.',
+    'wz.r.confirm.title':'Review and confirm','wz.r.confirm.sub':'Check everything is right before sending.',
+    'wz.r.next':'Once you confirm you will see your booking right away, with a link to change or cancel it. Keep it: you will need it.',
+    'wz.err.when':'Pick a day and a time to continue.','wz.err.phone':'Enter a valid phone number so the restaurant can reach you.',
+    'wz.sum.when':'When','wz.sum.people':'Guests','wz.sum.table':'Table','wz.sum.name':'Name','wz.sum.contact':'Contact','wz.sum.notes':'Notes',
+    'wz.sum.type':'Type','wz.sum.where':'Address','wz.sum.pay':'Payment','wz.n.person':'1 guest','wz.n.people':'%d guests',
+    'wz.sum.pickup':'You collect at the restaurant','wz.sum.delivery':'Home delivery',
+    'wz.o.pick.title':'Choose what you want','wz.o.pick.sub.takeaway':'Add whatever you fancy. You collect it at the restaurant.','wz.o.pick.sub.delivery':'Add whatever you fancy. We bring it to your door.',
+    'wz.o.menus':'Menus','wz.o.carta':'À la carte','wz.o.search':'Search a dish…','wz.o.noresults':'No dish matches “%s”.','wz.o.view':'View and choose',
+    'wz.o.empty':'Add something to continue','wz.o.faltan':'%s to reach the minimum',
+    'wz.o.data.title.takeaway':'When do you collect it?','wz.o.data.title.delivery':'Where and when do we bring it?',
+    'wz.o.data.sub':'So the restaurant can prepare your order without having to call you.',
+    'wz.o.rev.title':'Review your order','wz.o.rev.sub':'Adjust quantities, choose how to pay and confirm.',
+    'wz.o.next':'Once sent you will see your order tracking live, with a link to come back to it. Keep it.',
+    'wz.o.chip.min':'%s minimum','wz.o.chip.fee':'Delivery %s','wz.o.chip.free':'free from %s','wz.o.chip.zone':'Delivers to postcodes %s','wz.o.chip.radius':'Delivers within %s km','wz.o.chip.eta':'Ready in ~%d min',
+    'wz.o.addr.hint':'Street, number, floor and door.',
+    'wz.m.eyebrow':'Menu','wz.m.step':'Step %d of %d','wz.m.add':'Add to order','wz.m.pick':'Choose one option from each part.',
+    'wz.m.groups':'%d parts','wz.x.extras':'Extras',
+    'wz.o.slots':'Choose a time','wz.o.asap':'As soon as possible',
+    'email.reserva.hint':'We use it to find your booking and so the restaurant can write to you if needed.',
+    'email.pedido.hint':'Optional. The restaurant may write to you if there is any problem with your order.'
+  },
+  ca:{
+    'wz.progress':'Passos','wz.s.when':'Quan','wz.s.data':'Les teves dades','wz.s.confirm':'Confirmar','wz.s.pick':'Tria',
+    'wz.next':'Continua','wz.back':'Enrere','wz.edit':'Canvia','wz.less':'Una persona menys','wz.more':'Una persona més','wz.guests':'persones',
+    'wz.r.when.title':'Quan veniu?','wz.r.when.sub':'Tria quants sou, el dia i l\'hora. Només veus les hores amb lloc.',
+    'wz.r.data.title':'A nom de qui?','wz.r.data.sub':'Només el que el restaurant necessita per tenir-te la taula a punt.',
+    'wz.r.confirm.title':'Revisa i confirma','wz.r.confirm.sub':'Comprova que tot és correcte abans d\'enviar.',
+    'wz.r.next':'En confirmar veuràs la teva reserva a l\'instant, amb un enllaç per canviar-la o cancel·lar-la. Guarda\'l: el necessitaràs.',
+    'wz.err.when':'Tria un dia i una hora per continuar.','wz.err.phone':'Escriu un telèfon vàlid perquè el restaurant et pugui avisar.',
+    'wz.sum.when':'Quan','wz.sum.people':'Comensals','wz.sum.table':'Taula','wz.sum.name':'A nom de','wz.sum.contact':'Contacte','wz.sum.notes':'Notes',
+    'wz.sum.type':'Tipus','wz.sum.where':'Adreça','wz.sum.pay':'Pagament','wz.n.person':'1 persona','wz.n.people':'%d persones',
+    'wz.sum.pickup':'Ho recolls al local','wz.sum.delivery':'Lliurament a domicili',
+    'wz.o.pick.title':'Tria què vols','wz.o.pick.sub.takeaway':'Afegeix el que et vingui de gust. Ho recolles al local.','wz.o.pick.sub.delivery':'Afegeix el que et vingui de gust. T\'ho portem a casa.',
+    'wz.o.menus':'Menús','wz.o.carta':'Carta','wz.o.search':'Cerca un plat…','wz.o.noresults':'Cap plat coincideix amb «%s».','wz.o.view':'Veure i triar',
+    'wz.o.empty':'Afegeix alguna cosa per continuar','wz.o.faltan':'Falten %s per al mínim',
+    'wz.o.data.title.takeaway':'Quan ho recolliràs?','wz.o.data.title.delivery':'On i quan t\'ho portem?',
+    'wz.o.data.sub':'Amb això el restaurant prepara la teva comanda sense haver de trucar-te.',
+    'wz.o.rev.title':'Revisa la teva comanda','wz.o.rev.sub':'Ajusta quantitats, tria com pagar i confirma.',
+    'wz.o.next':'En enviar veuràs el seguiment de la teva comanda en directe, amb un enllaç per tornar-hi. Guarda\'l.',
+    'wz.o.chip.min':'%s mínim','wz.o.chip.fee':'Enviament %s','wz.o.chip.free':'gratis a partir de %s','wz.o.chip.zone':'Repartiment a CP %s','wz.o.chip.radius':'Repartiment fins a %s km','wz.o.chip.eta':'A punt en ~%d min',
+    'wz.o.addr.hint':'Carrer, número, pis i porta.',
+    'wz.m.eyebrow':'Menú','wz.m.step':'Pas %d de %d','wz.m.add':'Afegeix a la comanda','wz.m.pick':'Tria una opció de cada apartat.',
+    'wz.m.groups':'%d apartats','wz.x.extras':'Extres',
+    'wz.o.slots':'Tria una hora','wz.o.asap':'Com abans millor',
+    'email.reserva.hint':'La fem servir per trobar la teva reserva i perquè el restaurant et pugui escriure si cal.',
+    'email.pedido.hint':'Opcional. El restaurant et pot escriure si hi ha algun problema amb la teva comanda.'
+  }
+};
+Object.keys(I18N_WZ).forEach(l => Object.assign(I18N[l], I18N_WZ[l]));
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.es[key] || key; }
 
 function setLang(lang){
@@ -730,7 +1033,7 @@ function setLang(lang){
   // compartido, sin haber pasado antes por el selector.
   if(trackToken) renderTrackStatus(lastTrackStatusData);
   else if(resToken) renderReservationStatus(lastResStatusData);
-  else if(currentTab){ renderTabBar(); renderTabContent(); }
+  else if(currentTab){ renderTabBar(); renderTabContentPreservingForm(); }   // sin vaciar lo que el cliente ya había escrito
   else if(lastErrorKey) showError(lastErrorKey);
 }
 
@@ -803,7 +1106,7 @@ function openInfoModal(title, bodyText){
 }
 function closeInfoModal(){
   const overlay = document.getElementById('modal-overlay');
-  if(overlay) overlay.classList.remove('active');
+  if(overlay) overlay.classList.remove('active', 'is-sheet');
 }
 
 // Sustituto de confirm() con el mismo diseño que el resto de la app (antes
@@ -867,6 +1170,7 @@ function markFieldInvalid(fieldId){
   if(!input) return;
   const field = input.closest('.field') || input;
   field.classList.add('invalid');
+  if(typeof wzMostrarCampo === 'function') wzMostrarCampo(input);   // si vive en otro paso, se vuelve a él
   if(!markFieldInvalid._scrolled){
     field.scrollIntoView({behavior:'smooth', block:'center'});
     input.focus({preventScroll:true});
@@ -1199,6 +1503,8 @@ function renderTabContentPreservingForm(){
     if(s.checked !== undefined){ if(el.checked !== s.checked) el.checked = s.checked; }
     else if(el.value !== s.value) el.value = s.value;
   });
+  if(typeof updateOrderSlots === 'function' && wzState.kind === 'pedido') updateOrderSlots();
+  if(typeof wzAplicar === 'function' && wzState.kind) wzAplicar();
 }
 function loadBusinessInfo(){
   // Antes esto era un once('value') de una sola vez: si el dueño cambiaba un
@@ -1390,7 +1696,13 @@ function comprobarPagoOnline(){
 
 function renderHeader(){
   const b = DB.business || {};
-  if(b.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(b.logo)}" alt="${escapeHtml(b.name||'Logo')}">`;
+  if(b.logo){
+    document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(b.logo)}" alt="${escapeHtml(b.name||'Logo')}" onload="ggTonoLogo(this)">`;
+    const hd0 = document.querySelector('header'); if(hd0) hd0.classList.add('hd-conlogo');
+  } else {
+    document.getElementById('biz-logo').innerHTML = '';
+    const hd = document.querySelector('header'); if(hd) hd.classList.remove('hd-oscuro', 'hd-placa', 'hd-conlogo');
+  }
   if(b.name){ document.getElementById('biz-name').textContent = b.name; bizNameLoaded = true; }
   aplicarColoresMarca(b);
   const parts = [];
@@ -1468,6 +1780,7 @@ function renderApp(){
   }
   cart = [];
   cartTipPct = 0; cartTipCustom = 0;
+  wzReset(); menuMode = null; menuQuery = ''; menuOpenSection = null;
 
   document.getElementById('app').innerHTML = `
     <div class="tabs" role="tablist">
@@ -1528,6 +1841,262 @@ function renderTabContent(){
   else renderOrderForm();
   const box = document.getElementById('tab-content');
   if(box){ box.classList.remove('fade-in-play'); void box.offsetWidth; box.classList.add('fade-in-play'); }
+}
+
+/* ============ PASOS (6/11): reservar y pedir en tres pantallas ============
+   Antes todo era UN formulario larguísimo (carta, carrito, datos, pago y
+   consentimiento en la misma página). Ahora el cliente avanza por pasos —elegir,
+   sus datos, revisar y confirmar— y cada paso valida lo suyo antes de dejarle
+   seguir. Los campos, sus ids y submitReserva()/submitOrder() son los de siempre:
+   solo cambia qué se ve y cuándo. Si un envío falla por un campo de un paso
+   anterior, markFieldInvalid() lleva al cliente a ese paso (ver wzMostrarCampo). */
+let wzState = {kind:null, step:1, reached:1, rendered:null};
+const WZ_PASOS = {reserva:['wz.s.when','wz.s.data','wz.s.confirm'], pedido:['wz.s.pick','wz.s.data','wz.s.confirm']};
+const wzEl = id => document.getElementById(id);
+const wzVal = id => { const e = wzEl(id); return e ? String(e.value || '').trim() : ''; };
+function wzIniciar(kind){ if(wzState.kind !== kind) wzState = {kind, step:1, reached:1, rendered:null}; }
+function wzReset(){ wzState = {kind:null, step:1, reached:1, rendered:null}; }
+function telefonoValido(v){ return String(v || '').replace(/\D/g, '').length >= 7; }
+function wzProgHtml(kind){
+  return `<ol class="wz-prog" aria-label="${escapeHtml(t('wz.progress'))}">${WZ_PASOS[kind].map((k, i) => {
+    const n = i + 1;
+    return `<li data-wz-li="${n}"><button type="button" onclick="wzIr(${n})"><span class="n">0${n}</span><span class="l">${escapeHtml(t(k))}</span></button></li>`;
+  }).join('')}</ol>`;
+}
+function wzNavHtml(submitHtml){
+  return `<div class="wz-nav" id="wz-nav"><button type="button" class="btn" id="wz-back" onclick="wzAtras()">${escapeHtml(t('wz.back'))}</button><button type="button" class="btn btn-primary" id="wz-next" onclick="wzSiguiente()">${escapeHtml(t('wz.next'))}</button>${submitHtml}</div>`;
+}
+function wzAplicar(){
+  const k = wzState.kind; if(!k || !wzEl('wz')) return;
+  const total = WZ_PASOS[k].length;
+  document.querySelectorAll('.wz-step').forEach(s => { s.hidden = (+s.dataset.wz !== wzState.step); });
+  document.querySelectorAll('[data-wz-li]').forEach(li => {
+    const n = +li.dataset.wzLi, b = li.querySelector('button');
+    li.classList.toggle('on', n === wzState.step); li.classList.toggle('done', n < wzState.step);
+    b.disabled = n > wzState.reached;
+    if(n === wzState.step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+  });
+  const ultimo = wzState.step === total;
+  const back = wzEl('wz-back'), next = wzEl('wz-next'), sub = wzEl(k === 'reserva' ? 'r-submit' : 'o-submit');
+  if(back) back.style.display = wzState.step > 1 ? '' : 'none';
+  if(next) next.style.display = ultimo ? 'none' : '';
+  if(sub) sub.style.display = ultimo ? '' : 'none';
+  if(ultimo) wzResumen();
+  wzNavActualizar();
+  wzSideActualizar();
+}
+function wzScroll(){
+  const w = wzEl('wz'); if(!w) return;
+  const top = w.getBoundingClientRect().top + window.scrollY - 8;
+  window.scrollTo({top: Math.max(0, top), behavior: 'smooth'});
+  const h = w.querySelector('.wz-step:not([hidden]) .wz-h'); if(h) h.focus({preventScroll:true});
+}
+function wzIr(n){
+  if(n < 1 || n > wzState.reached) return;
+  wzState.step = n; wzAplicar(); wzScroll();
+}
+function wzAtras(){ if(wzState.step > 1) wzIr(wzState.step - 1); }
+function wzSiguiente(){
+  if(!wzValidar(wzState.step)) return;
+  const total = WZ_PASOS[wzState.kind].length;
+  if(wzState.step >= total) return;
+  wzState.step++; wzState.reached = Math.max(wzState.reached, wzState.step);
+  wzAplicar(); wzScroll();
+}
+// Un campo con error que vive en OTRO paso (p. ej. el envío rechaza la hora
+// estando ya en «Confirmar»): se vuelve a ese paso antes de señalarlo.
+function wzMostrarCampo(input){
+  if(!wzState.kind || !wzEl('wz')) return;
+  const sec = input.closest && input.closest('.wz-step');
+  if(sec && +sec.dataset.wz !== wzState.step){ wzState.step = +sec.dataset.wz; wzAplicar(); }
+}
+function wzPeople(d){
+  const i = wzEl('r-people'); if(!i) return;
+  i.value = Math.min(50, Math.max(1, (parseInt(i.value) || 1) + d));
+  updateDepositNoticeUi(); renderReservaCalendar();
+}
+/* Texto del botón «Continuar»: en el pedido lleva el total y avisa de lo que falta. */
+function wzNavActualizar(){
+  const next = wzEl('wz-next'); if(!next) return;
+  next.disabled = false; next.textContent = t('wz.next');
+  if(wzState.kind !== 'pedido' || wzState.step !== 1) return;
+  const p = (DB.business || {}).pedidos || {};
+  const n = cart.reduce((s, l) => s + l.qty, 0), sub = cart.reduce((s, l) => s + l.price * l.qty, 0), min = p.pedidoMinimo || 0;
+  if(!n){ next.disabled = true; next.textContent = t('wz.o.empty'); }
+  else if(min > 0 && sub < min){ next.disabled = true; next.textContent = t('wz.o.faltan').replace('%s', fmtMoney(min - sub)); }
+  else next.innerHTML = `${escapeHtml(t('wz.next'))} · <span class="mono">${n} · ${fmtMoney(sub)}</span>`;
+}
+function wzValidar(step){
+  const k = wzState.kind;
+  if(k === 'reserva'){
+    if(step === 1){
+      if(!wzVal('r-date') || !wzVal('r-time')){
+        showInlineError(t('wz.err.when'));
+        const c = wzEl('r-cal'); if(c) c.scrollIntoView({behavior:'smooth', block:'center'});
+        return false;
+      }
+      return true;
+    }
+    if(step === 2){
+      clearFieldInvalid(['r-name', 'r-phone', 'r-email']);
+      const n = wzVal('r-name'), ph = wzVal('r-phone'), em = wzVal('r-email');
+      let ok = true;
+      if(!n){ markFieldInvalid('r-name'); ok = false; }
+      if(!ph || !telefonoValido(ph)){ markFieldInvalid('r-phone'); ok = false; }
+      if(!em){ markFieldInvalid('r-email'); ok = false; }
+      if(!ok){ showInlineError(ph && !telefonoValido(ph) && n && em ? t('wz.err.phone') : t('error.campos.reserva')); return false; }
+      if(!isValidEmail(em)){ markFieldInvalid('r-email'); showInlineError(t('error.email.invalido')); return false; }
+      return true;
+    }
+    return true;
+  }
+  if(k === 'pedido'){
+    const p = (DB.business || {}).pedidos || {};
+    if(step === 1){
+      if(!cart.length){ showInlineError(t('error.carrito.vacio')); return false; }
+      const min = p.pedidoMinimo || 0, sub = cart.reduce((s, l) => s + l.price * l.qty, 0);
+      if(min > 0 && sub < min){ showInlineError(t('error.pedido.min').replace('%s', fmtMoney(min))); return false; }
+      return true;
+    }
+    if(step === 2) return wzValidarDatosPedido(p);
+  }
+  return true;
+}
+function wzValidarDatosPedido(p){
+  const isDelivery = currentTab === 'delivery';
+  const ids = ['o-name', 'o-phone', 'o-date', 'o-time', 'o-email'].concat(isDelivery ? ['o-address', 'o-cp'] : []);
+  clearFieldInvalid(ids);
+  let ok = true;
+  const need = id => { if(!wzVal(id)){ markFieldInvalid(id); ok = false; } };
+  need('o-name'); need('o-date'); need('o-time');
+  if(isDelivery){ need('o-address'); need('o-cp'); }
+  const ph = wzVal('o-phone');
+  if(!ph || !telefonoValido(ph)){ markFieldInvalid('o-phone'); ok = false; }
+  if(!ok){ showInlineError(ph && !telefonoValido(ph) && wzVal('o-name') ? t('wz.err.phone') : t('error.campos')); return false; }
+  const em = wzVal('o-email');
+  if(em && !isValidEmail(em)){ markFieldInvalid('o-email'); showInlineError(t('error.email.invalido')); return false; }
+  const date = wzVal('o-date'), time = wzVal('o-time');
+  if(date < todayStr()){ markFieldInvalid('o-date'); showInlineError(t('error.campos')); return false; }
+  const turnos = getTurnosForDate(date);
+  if(turnos !== null && !turnos.length){ markFieldInvalid('o-date'); showInlineError(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase())); return false; }
+  if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
+    markFieldInvalid('o-time');
+    showInlineError(t('error.horario').replace('%s', t('error.horario.pedidos')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
+    return false;
+  }
+  if(turnos !== null && turnos.length){
+    const cutoff = pedidosCutoffTimeForTurno(date, time, p);
+    if(cutoff && time > cutoff.limite){ markFieldInvalid('o-time'); showInlineError(t('error.cierrePedidos').replace('%s', cutoff.limite)); return false; }
+  }
+  const lead = getLeadTimeMin('pedido');
+  if(lead && date === todayStr()){
+    const d = new Date(Date.now() + lead * 60000);
+    const minTime = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    if(time < minTime){ markFieldInvalid('o-time'); showInlineError(t('error.antelacion').replace('%d', lead).replace('%s', minTime)); return false; }
+  }
+  if(isDelivery){
+    const cp = wzVal('o-cp').replace(/\s+/g, '');
+    const cpList = p.cpList || [];
+    // Con radio configurado la comprobación real (geocodificar) la hace el envío; solo con lista de códigos se corta aquí.
+    if(cpList.length && !(p.radiusKm > 0) && !cpList.includes(cp)){
+      markFieldInvalid('o-cp'); checkCpLive(); showInlineError(t('cp.fueraDeZona').replace('${lista}', cpList.join(', '))); return false;
+    }
+  }
+  return true;
+}
+/* Resumen de la última pantalla: lo que el cliente va a enviar, con «Cambiar» en cada bloque. */
+function wzResumen(){
+  const box = wzEl('wz-resumen'); if(!box) return;
+  const fila = (k, v, sub, paso) => `<div class="sm-row"><div class="sm-k">${escapeHtml(k)}</div><div class="sm-v">${escapeHtml(v)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</div><button type="button" class="sm-ed" onclick="wzIr(${paso})">${escapeHtml(t('wz.edit'))}</button></div>`;
+  const nPers = n => n === 1 ? t('wz.n.person') : t('wz.n.people').replace('%d', n);
+  let h = '';
+  if(wzState.kind === 'reserva'){
+    const d = wzVal('r-date'), tm = wzVal('r-time'), people = Math.min(50, Math.max(1, parseInt(wzVal('r-people')) || 1));
+    let mesa = '';
+    if(typeof calSelectedTable !== 'undefined' && calSelectedTable != null){
+      const tb = (DB.tables || []).find(x => x.id === calSelectedTable);
+      if(tb) mesa = tb.name ? (/^\d+$/.test(String(tb.name)) ? t('mesa.nombre').replace('%s', tb.name) : tb.name) : t('mesa.nombre').replace('%s', tb.id);
+    }
+    h += fila(t('wz.sum.when'), d ? fechaLegible(d) + ' · ' + tm : '—', '', 1);
+    h += fila(t('wz.sum.people'), nPers(people), mesa ? t('wz.sum.table') + ': ' + mesa : '', 1);
+    h += fila(t('wz.sum.name'), wzVal('r-name') || '—', '', 2);
+    h += fila(t('wz.sum.contact'), wzVal('r-phone') || '—', wzVal('r-email'), 2);
+    if(wzVal('r-notes')) h += fila(t('wz.sum.notes'), wzVal('r-notes'), '', 2);
+  } else if(wzState.kind === 'pedido'){
+    const isDelivery = currentTab === 'delivery';
+    const d = wzVal('o-date');
+    h += fila(t('wz.sum.type'), isDelivery ? t('wz.sum.delivery') : t('wz.sum.pickup'), '', 2);
+    h += fila(t('wz.sum.when'), d ? fechaLegible(d) + ' · ' + wzVal('o-time') : '—', '', 2);
+    if(isDelivery) h += fila(t('wz.sum.where'), wzVal('o-address') || '—', wzVal('o-cp'), 2);
+    h += fila(t('wz.sum.contact'), wzVal('o-name') || '—', [wzVal('o-phone'), wzVal('o-email')].filter(Boolean).join(' · '), 2);
+    if(wzVal('o-notes')) h += fila(t('wz.sum.notes'), wzVal('o-notes'), '', 2);
+  }
+  box.innerHTML = h;
+}
+
+/* Resumen vivo al lado (solo pantallas anchas): lo elegido hasta ahora, siempre a la vista. */
+function renderReservaCalendar(){ renderReservaCalendarBase(); wzSideActualizar(); }
+function wzSideActualizar(){
+  const el = wzEl('wz-side'); if(!el) return;
+  if(wzState.kind === 'pedido'){
+    const p = (DB.business || {}).pedidos || {};
+    const sub = cart.reduce((s, l) => s + l.price * l.qty, 0), fee = getDeliveryFee(p, sub, currentTab === 'delivery');
+    el.innerHTML = `<h3 class="cs-tit" style="margin-top:0">${escapeHtml(t('cart.title'))}</h3>` + (cart.length
+      ? cart.map(l => `<div class="sd-l"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price * l.qty)}</span></div>`).join('')
+        + (fee > 0 ? `<div class="sd-l sd-m"><span>${escapeHtml(t('cart.shipping'))}</span><span>${fmtMoney(fee)}</span></div>` : '')
+        + `<div class="sd-t"><span>${escapeHtml(t('cart.total'))}</span><span>${fmtMoney(sub + fee)}</span></div>`
+      : `<div class="empty" style="padding:14px 0">${escapeHtml(t('cart.empty'))}</div>`);
+  } else if(wzState.kind === 'reserva'){
+    const d = wzVal('r-date'), tm = wzVal('r-time'), people = Math.min(50, Math.max(1, parseInt(wzVal('r-people')) || 1));
+    el.innerHTML = `<h3 class="cs-tit" style="margin-top:0">${escapeHtml(t('wz.r.confirm.title'))}</h3>
+      <div class="sd-l"><span>${escapeHtml(t('wz.sum.people'))}</span><span>${escapeHtml(people === 1 ? t('wz.n.person') : t('wz.n.people').replace('%d', people))}</span></div>
+      <div class="sd-l"><span>${escapeHtml(t('wz.sum.when'))}</span><span>${d ? escapeHtml(fechaLegibleCorta(d) + ' · ' + tm) : '—'}</span></div>`;
+  }
+}
+
+/* Horas con un toque: los huecos REALES del día (horario, antelación y cierre de cocina), en vez de adivinar con el selector nativo.
+   El primero es «Cuanto antes». El selector de hora sigue ahí por si el cliente quiere otra, y el envío revalida igual. */
+function updateOrderSlots(preseleccionar){
+  const box = wzEl('o-slots'); if(!box) return;
+  const date = wzVal('o-date') || todayStr();
+  const p = (DB.business || {}).pedidos || {};
+  const lead = getLeadTimeMin('pedido');
+  let min = '00:00';
+  if(date === todayStr()){ const d = new Date(Date.now() + lead * 60000); min = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  const todos = slotsDelDia(date).filter(sl => sl >= min).filter(sl => { const c = pedidosCutoffTimeForTurno(date, sl, p); return !c || sl <= c.limite; });
+  if(!todos.length){ box.innerHTML = ''; return; }
+  const inp = wzEl('o-time');
+  if(preseleccionar === true && inp && !todos.includes(inp.value)) inp.value = todos[0];
+  const cur = inp ? inp.value : '';
+  const lista = todos.slice(0, 8);
+  box.innerHTML = lista.map((sl, i) => `<button type="button" class="${sl === cur ? 'on' : ''}${i === 0 ? ' asap' : ''}" aria-pressed="${sl === cur}" onclick="pedidoHora('${sl}')">${i === 0 ? `<span class="a">${escapeHtml(t('wz.o.asap'))}</span> ` : ''}${sl}</button>`).join('');
+}
+function pedidoHora(sl){
+  const inp = wzEl('o-time'); if(!inp) return;
+  inp.value = sl; clearFieldInvalid(['o-time']);
+  updateCierreHint(); updateOrderSlots();
+}
+
+/* ============ CABECERA: el logo manda (6/11) ============
+   La franja era siempre negra: un logo oscuro (lo más habitual) y hasta el
+   nombre del negocio —tinta sobre tinta— desaparecían. Se mide el logo: oscuro
+   → franja clara; claro → franja de tinta; si el navegador no deja medirlo
+   (imagen de otro dominio) → franja de tinta con el logo sobre una placa blanca. */
+function ggTonoLogo(img){
+  const h = document.querySelector('header'); if(!h) return;
+  h.classList.remove('hd-oscuro', 'hd-placa');
+  try{
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0, 32, 32);
+    const d = x.getImageData(0, 0, 32, 32).data;
+    let n = 0, l = 0;
+    for(let i = 0; i < d.length; i += 4){
+      const a = d[i + 3] / 255; if(a < .2) continue;
+      n += a; l += a * (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
+    }
+    if(n < 8) return;               // casi transparente: no se puede medir, franja clara
+    if(l / n > 0.62) h.classList.add('hd-oscuro');
+  }catch(e){ h.classList.add('hd-oscuro', 'hd-placa'); }
 }
 
 /* ============ HORARIOS ============ */
@@ -2232,7 +2801,7 @@ function selectorMesasHtml(people){
     </div>
   </div>`;
 }
-function renderReservaCalendar(){
+function renderReservaCalendarBase(){
   const box = document.getElementById('r-cal');
   if(!box) return;
   const people = currentPeopleValue();
@@ -2366,63 +2935,96 @@ function nombreMes(dateStr){
 
 function renderReservaForm(){
   const box = document.getElementById('tab-content');
+  wzIniciar('reserva');
+  // Un repintado (cambio de idioma, carta que cambia en vivo) conserva el día y la hora que el cliente ya había elegido.
+  const repintado = wzState.rendered === 'reserva';
+  wzState.rendered = 'reserva';
   box.innerHTML = `
-    <div class="card">
-      <h2>${t('reserva.title')}</h2>
-      <p style="margin:-4px 0 0"><a href="javascript:void(0)" onclick="showReservaLookup()" style="display:inline-flex;align-items:center;min-height:44px;font-size:13px;color:var(--olive);font-weight:600">${t('lookup.link')}</a></p>
-      <div class="field">
-        <label>${t('nombre')}</label>
-        <input type="text" id="r-name">
+    <div class="wz" id="wz">
+      ${wzProgHtml('reserva')}
+      <div class="wz-main">
+
+      <section class="wz-step card" data-wz="1">
+        <h2 class="wz-h" tabindex="-1">${t('wz.r.when.title')}</h2>
+        <p class="wz-sub">${t('wz.r.when.sub')}</p>
+        <div class="field">
+          <label for="r-people">${t('personas')}</label>
+          <div class="pp">
+            <button type="button" onclick="wzPeople(-1)" aria-label="${escapeHtml(t('wz.less'))}">−</button>
+            <div class="pp-mid">
+              <input type="number" id="r-people" value="2" min="1" max="50" inputmode="numeric" oninput="updateDepositNoticeUi();renderReservaCalendar()">
+              <span class="pp-u">${t('wz.guests')}</span>
+            </div>
+            <button type="button" onclick="wzPeople(1)" aria-label="${escapeHtml(t('wz.more'))}">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>${t('fecha')} / ${t('hora')}</label>
+          <div id="r-cal"></div>
+          <input type="hidden" id="r-date" value="">
+          <input type="hidden" id="r-time" value="">
+        </div>
+        <p class="wz-link"><a href="javascript:void(0)" onclick="showReservaLookup()">${t('lookup.link')}</a></p>
+      </section>
+
+      <section class="wz-step card" data-wz="2" hidden>
+        <h2 class="wz-h" tabindex="-1">${t('wz.r.data.title')}</h2>
+        <p class="wz-sub">${t('wz.r.data.sub')}</p>
+        <div class="field">
+          <label for="r-name">${t('nombre')}</label>
+          <input type="text" id="r-name" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="r-phone">${t('telefono')}</label>
+          <input type="tel" id="r-phone" placeholder="600 000 000" autocomplete="tel" inputmode="tel">
+        </div>
+        <div class="field">
+          <label for="r-email">${t('email.reserva.label')}</label>
+          <input type="email" id="r-email" placeholder="${t('email.reserva.placeholder')}" autocomplete="email" required>
+          <small style="color:var(--muted)">${t('email.reserva.hint')}</small>
+        </div>
+        <div class="field">
+          <label for="r-notes">${t('notas')}</label>
+          <textarea id="r-notes" placeholder="${t('notas.placeholder')}"></textarea>
+        </div>
+        <details class="wz-more">
+          <summary>${t('referral.label')}</summary>
+          <div class="field">
+            <select id="r-referral" aria-label="${escapeHtml(t('referral.label'))}">
+              <option value="">${t('referral.placeholder')}</option>
+              <option value="instagram">${t('referral.instagram')}</option>
+              <option value="facebook">${t('referral.facebook')}</option>
+              <option value="tiktok">${t('referral.tiktok')}</option>
+              <option value="google">${t('referral.google')}</option>
+              <option value="friend">${t('referral.friend')}</option>
+              <option value="returning">${t('referral.returning')}</option>
+              <option value="other">${t('referral.other')}</option>
+            </select>
+          </div>
+        </details>
+      </section>
+
+      <section class="wz-step card" data-wz="3" hidden>
+        <h2 class="wz-h" tabindex="-1">${t('wz.r.confirm.title')}</h2>
+        <p class="wz-sub">${t('wz.r.confirm.sub')}</p>
+        <div class="sm" id="wz-resumen"></div>
+        <div id="r-deposit-notice"></div>
+        <p class="wz-ok">${t('wz.r.next')}</p>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0 0;cursor:pointer">
+          <input type="checkbox" id="r-privacy-consent" class="consent-check">
+          <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
+        </label>
+      </section>
+
+      ${wzNavHtml('<button type="button" class="btn btn-primary" id="r-submit" onclick="submitReserva()" style="display:none"></button>')}
       </div>
-      <div class="field">
-        <label>${t('telefono')}</label>
-        <input type="tel" id="r-phone" placeholder="600 000 000">
-      </div>
-      <div class="field">
-        <label>${t('email.reserva.label')}</label>
-        <input type="email" id="r-email" placeholder="${t('email.reserva.placeholder')}" required>
-        <small style="color:var(--muted)">${t('email.reserva.hint')}</small>
-      </div>
-      <div class="field">
-        <label>${t('personas')}</label>
-        <input type="number" id="r-people" value="2" min="1" max="50" oninput="updateDepositNoticeUi();renderReservaCalendar()">
-      </div>
-      <div class="field">
-        <label>${t('fecha')} / ${t('hora')}</label>
-        <div id="r-cal"></div>
-        <input type="hidden" id="r-date" value="">
-        <input type="hidden" id="r-time" value="">
-      </div>
-      <div class="field">
-        <label>${t('notas')}</label>
-        <textarea id="r-notes" placeholder="${t('notas.placeholder')}"></textarea>
-      </div>
-      <div class="field">
-        <label>${t('referral.label')}</label>
-        <select id="r-referral">
-          <option value="">${t('referral.placeholder')}</option>
-          <option value="instagram">${t('referral.instagram')}</option>
-          <option value="facebook">${t('referral.facebook')}</option>
-          <option value="tiktok">${t('referral.tiktok')}</option>
-          <option value="google">${t('referral.google')}</option>
-          <option value="friend">${t('referral.friend')}</option>
-          <option value="returning">${t('referral.returning')}</option>
-          <option value="other">${t('referral.other')}</option>
-        </select>
-      </div>
-      <div id="r-deposit-notice"></div>
-      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
-        <input type="checkbox" id="r-privacy-consent" class="consent-check">
-        <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
-      </label>
-      <button class="btn btn-primary" id="r-submit" onclick="submitReserva()"></button>
-      <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">${t('reserva.editLaterHint')}<br><a href="javascript:void(0)" onclick="showReservaLookup()" style="display:inline-flex;align-items:center;min-height:44px;color:var(--olive);font-weight:600">${t('lookup.link')}</a></p>
+      <aside class="wz-side" id="wz-side" aria-hidden="true"></aside>
     </div>
   `;
-  calView = 'dia';
-  calDate = todayStr();
+  if(!repintado){ calView = 'dia'; calDate = todayStr(); calSelectedTime = null; calSelectedTable = null; }
   renderReservaCalendar();
   updateDepositNoticeUi();
+  wzAplicar();
 }
 
 // La señal puede pedirse SIEMPRE (depositMinPeople en 0 o sin poner) o solo
@@ -2447,7 +3049,7 @@ function updateDepositNoticeUi(){
   const people = document.getElementById('r-people')?.value;
   const applies = depositAppliesForPeople(people);
   box.innerHTML = applies ? `<div class="card" style="background:var(--bg-soft, #fff7ed);margin:10px 0;padding:10px 12px">
-    <div style="font-size:13px;font-weight:600">💳 ${t('deposit.notice.title')}</div>
+    <div style="font-size:13px;font-weight:600">${t('deposit.notice.title')}</div>
     <div style="font-size:12.5px;margin-top:4px">${t('deposit.notice.body').replace('${amount}', reservaDepositAmount())}</div>
     ${(DB.business.depositInstructions||'').trim() ? `<div style="font-size:12.5px;margin-top:6px;color:var(--muted)">${escapeHtml(DB.business.depositInstructions)}</div>` : ''}
   </div>` : '';
@@ -3053,10 +3655,41 @@ function menuFolderIcon(sec, name){
 // carta — y entrar en una carpeta es ahora la única forma de verla.
 // Dentro de una carpeta sí se ocultan a propósito: ahí se está mirando una
 // familia concreta, y el menú del día sería ruido.
+/* ============ CARTA Y MENÚS NAVEGABLES (6/11) ============
+   Menús y Carta son dos vistas con su selector. Menús: una tarjeta por menú; al
+   tocarla se abre entero (todos sus apartados y opciones) y se elige ahí. Carta:
+   carpetas con su número de platos; se entra, se elige y se sale. Un buscador
+   cruza toda la carta. Los platos con extras abren su hoja de extras. */
+let menuMode = null;          // 'menus' | 'carta' (null = el primero que haya)
+let menuQuery = '';
+let dishBump = null;
+function menuNorm(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function menuSeccionesVisibles(cartas){
+  const out = [];
+  (cartas || []).forEach(carta => (carta.secciones || []).forEach(sec => {
+    const n = (sec.platos || []).filter(p => p.disponible !== false).length;
+    if(n) out.push({carta, sec, key: String(carta.id) + ':' + String(sec.id), n});
+  }));
+  return out;
+}
+function menuModoActual(cartas){
+  const hayC = menuSeccionesVisibles(cartas).length > 0, hayM = getActiveMenusPublic().length > 0;
+  if(!hayM) return 'carta';
+  if(!hayC) return 'menus';
+  return menuMode || 'menus';
+}
+function menuSetModo(m){ menuMode = m; menuQuery = ''; menuOpenSection = null; repaintMenu(); }
+function menuBuscar(v){
+  menuQuery = v;
+  const r = document.getElementById('menu-results');
+  if(r) r.innerHTML = menuResultadosHtml(lastMenuCartas);
+}
+function nPlatosTxt(n){ return n === 1 ? t('label.oneDish') : t('label.nDishes').replace('${n}', n); }
+
 function repaintMenu(){
   const box = document.getElementById('menu-folders');
   if(!box || !lastMenuCartas) return;
-  box.innerHTML = (menuOpenSection ? '' : buildMenusHtml()) + buildMenuHtmlInner(lastMenuCartas);
+  box.innerHTML = menuInnerHtml(lastMenuCartas);
 }
 function openMenuFolder(key){
   menuOpenSection = key;
@@ -3070,114 +3703,262 @@ function closeMenuFolder(){
 }
 function buildMenuHtml(cartas){
   lastMenuCartas = cartas;
-  return `<div id="menu-folders">${menuOpenSection ? '' : buildMenusHtml()}${buildMenuHtmlInner(cartas)}</div>`;
+  return `<div id="menu-folders">${menuInnerHtml(cartas)}</div>`;
 }
-// Suplemento delivery (Escandallo): importe fijo que se suma al precio de
-// sala para pedidos a domicilio con el reparto del propio negocio, para
-// compensar no cobrar el servicio de mesa. Solo aplica a la pestaña
-// "Delivery" — "Para llevar" sigue con el precio de sala, y sin suplemento
-// configurado también se usa el de sala, igual que siempre.
+function menuInnerHtml(cartas){
+  const modo = menuModoActual(cartas);
+  const secciones = menuSeccionesVisibles(cartas);
+  const hayC = secciones.length > 0, menus = getActiveMenusPublic(), hayM = menus.length > 0;
+  if(menuOpenSection && modo === 'carta'){
+    const f = secciones.find(x => x.key === menuOpenSection);
+    if(f) return `
+      <div class="fd-head">
+        <button type="button" class="menu-back-btn" onclick="closeMenuFolder()">← ${t('common.back')}</button>
+        <h2>${escapeHtml(trSection(f.sec) || t('label.dishes'))}</h2>
+        <span class="fd-c">${escapeHtml(nPlatosTxt(f.n))}</span>
+      </div>
+      ${renderMenuDishesHtml(f.sec)}`;
+    menuOpenSection = null;
+  }
+  let h = '';
+  if(hayM && hayC){
+    h += `<div class="seg" role="tablist">
+      <button type="button" role="tab" aria-selected="${modo === 'menus'}" class="${modo === 'menus' ? 'on' : ''}" onclick="menuSetModo('menus')">${t('wz.o.menus')}<span class="cnt">${menus.length}</span></button>
+      <button type="button" role="tab" aria-selected="${modo === 'carta'}" class="${modo === 'carta' ? 'on' : ''}" onclick="menuSetModo('carta')">${t('wz.o.carta')}<span class="cnt">${secciones.reduce((s, x) => s + x.n, 0)}</span></button>
+    </div>`;
+  }
+  if(modo === 'menus'){
+    if(!hayC) h += `<h3 class="cs-tit">${escapeHtml(t('menus.title'))}</h3>`;
+    h += buildMenusHtml();
+  } else {
+    h += `<div class="srch"><input type="search" id="menu-search" value="${escapeHtml(menuQuery)}" placeholder="${escapeHtml(t('wz.o.search'))}" aria-label="${escapeHtml(t('wz.o.search'))}" oninput="menuBuscar(this.value)" autocomplete="off"></div>
+      <div id="menu-results">${menuResultadosHtml(cartas)}</div>`;
+  }
+  return h;
+}
+// Resultados de la carta: búsqueda cruzada si hay texto; si no, las carpetas (o los platos directos si solo hay una).
+function menuResultadosHtml(cartas){
+  const secciones = menuSeccionesVisibles(cartas);
+  const q = menuNorm(menuQuery.trim());
+  if(q){
+    let any = false;
+    const h = secciones.map(({sec}) => {
+      const hits = (sec.platos || []).filter(p => p.disponible !== false && (menuNorm(trPlato(p)).includes(q) || menuNorm(p.descripcion || p.description).includes(q)));
+      if(!hits.length) return '';
+      any = true;
+      return `<h3 class="cs-tit">${escapeHtml(trSection(sec) || t('label.dishes'))}</h3>${renderMenuDishesHtml({id: sec.id, platos: hits})}`;
+    }).join('');
+    return any ? h : `<div class="empty">${escapeHtml(t('wz.o.noresults').replace('%s', menuQuery.trim()))}</div>`;
+  }
+  // Solo una carpeta en total: no tiene sentido un índice de una sola carpeta.
+  if(secciones.length <= 1){
+    return secciones.map(({sec}) => `
+      ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3 class="cs-tit">${escapeHtml(trSection(sec))}</h3>` : ''}
+      ${renderMenuDishesHtml(sec)}`).join('');
+  }
+  // Una carta detrás de otra (comida, bebidas, vinos…), cada una con su título y sus carpetas.
+  return cartas.map(carta => {
+    const propias = secciones.filter(x => x.carta === carta);
+    if(!propias.length) return '';
+    return `
+      <h3 class="cs-tit">${escapeHtml(trItem(carta) || t('carta.sectionTitle'))}</h3>
+      <div class="menu-folder-grid cs">
+        ${propias.map(({sec, key, n}) => {
+          const secName = trSection(sec) || t('label.dishes');
+          const enCarrito = cart.filter(l => String(l.sectionId) === String(sec.id)).reduce((s, l) => s + l.qty, 0);
+          return `
+          <button type="button" class="menu-folder-card cs-tile" onclick="openMenuFolder('${key}')">
+            ${enCarrito ? `<span class="cs-in" aria-label="${enCarrito}">${enCarrito}</span>` : ''}
+            <span class="icon">${menuFolderIcon(sec, secName)}</span>
+            <span><span class="name">${escapeHtml(secName)}</span><span class="cs-n">${escapeHtml(nPlatosTxt(n))}</span></span>
+          </button>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+}
+
+// Suplemento delivery (Escandallo): importe fijo que se suma al precio de sala en pedidos a domicilio.
 function publicPlatoPrice(p){
   if(currentTab === 'delivery' && p.deliverySupplement) return Math.round((p.precio + p.deliverySupplement) * 100) / 100;
   return p.precio;
 }
+function dishPriceInfo(p){
+  const promo = getActivePromoForPlatoPublic(p.id);
+  const base = publicPlatoPrice(p);
+  return {promo, base, final: promo ? promoDiscountedPrice(base, promo) : base};
+}
+// El control de cada plato: «Añadir» si no hay ninguno, − n + si ya hay, «Añadir (n)» si tiene extras.
+function dishCtlHtml(p, sectionId){
+  const {final} = dishPriceInfo(p);
+  const hasMods = (p.modificadores || []).length > 0;
+  const nombre = trPlato(p);
+  if(hasMods){
+    const total = cart.filter(l => l.recipeId === p.id).reduce((s, l) => s + l.qty, 0);
+    return `<button type="button" class="qc-add" onclick="openModifierModal(${p.id})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre))}">${t('modifiers.addBtn')}${total ? ` <span class="n">(${total})</span>` : ''}</button>`;
+  }
+  const q = getCartQty(p.id);
+  const alta = `changeCartQty(${p.id}, '${escapeJsAttr(sectionId)}', 1, '${escapeJsAttr(p.nombre)}', ${final})`;
+  if(!q) return `<button type="button" class="qc-add" onclick="${alta}" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre))}">+ ${t('modifiers.addBtn')}</button>`;
+  return `<div class="qty-ctl" role="group" aria-label="${escapeHtml(nombre)}">
+    <button type="button" onclick="changeCartQty(${p.id}, '${escapeJsAttr(sectionId)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', nombre))}">−</button>
+    <span id="qty-${p.id}" aria-live="polite">${q}</span>
+    <button type="button" onclick="${alta}" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre))}">+</button>
+  </div>`;
+}
+function dishCtlRefreshAll(){
+  document.querySelectorAll('.dish-ctl[data-dish]').forEach(el => {
+    const f = findPlatoById(parseInt(el.dataset.dish));
+    if(!f) return;
+    const tenia = el.contains(document.activeElement);
+    el.innerHTML = dishCtlHtml(f.plato, f.sectionId);
+    const row = el.closest('.dish'); if(row) row.classList.toggle('en', cart.some(l => l.recipeId === f.plato.id));
+    if(tenia){ const b = el.querySelector('button:last-child'); if(b) b.focus({preventScroll:true}); }
+    if(dishBump === f.plato.id){ const s = el.querySelector('span[id^="qty-"]'); if(s){ s.classList.add('bump'); setTimeout(() => s.classList.remove('bump'), 220); } }
+  });
+  dishBump = null;
+}
 function renderMenuDishesHtml(sec){
-  return sec.platos.filter(p=>p.disponible!==false).map(p => {
-    const promo = getActivePromoForPlatoPublic(p.id);
-    const basePrice = publicPlatoPrice(p);
-    const finalPrice = promo ? promoDiscountedPrice(basePrice, promo) : basePrice;
-    const hasMods = (p.modificadores||[]).length > 0;
-    // Cuántas unidades de este plato hay YA en el carrito, sumando TODAS
-    // sus variantes de extras (la línea sin extras + cada combinación
-    // elegida) — para que el cliente vea de un vistazo que ya tiene algo
-    // añadido aunque esté repartido en varias líneas.
-    const totalInCart = cart.filter(l => l.recipeId === p.id).reduce((s,l)=>s+l.qty, 0);
+  return (sec.platos || []).filter(p => p.disponible !== false).map(p => {
+    const {promo, base, final} = dishPriceInfo(p);
+    const hasMods = (p.modificadores || []).length > 0;
+    const desc = p.descripcion || p.description || '';
+    const enCarrito = cart.some(l => l.recipeId === p.id);
     return `
-    <div class="menu-item">
-      <div>
-        <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);border-radius:0;padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
-        <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(basePrice)}</span>${fmtMoney(finalPrice)}` : fmtMoney(basePrice)}${hasMods ? ` <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
+    <div class="menu-item dish${enCarrito ? ' en' : ''}">
+      <div class="dish-info">
+        <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
+        ${desc ? `<div class="dish-d">${escapeHtml(desc)}</div>` : ''}
+        <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(base)}</span>${fmtMoney(final)}` : fmtMoney(base)}${hasMods ? ` <span style="font-weight:400;color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
         ${dishAllergensHtml(p.id)}
       </div>
-      ${hasMods ? `
-      <button class="btn btn-sm" style="width:auto;min-height:38px;padding:8px 14px;white-space:nowrap;position:relative" onclick="openModifierModal(${p.id})">
-        ${t('modifiers.addBtn')}${totalInCart ? ` <span class="mono" style="margin-left:4px">(${totalInCart})</span>` : ''}
-      </button>
-      ` : `
-      <div class="qty-ctl" role="group" aria-label="${escapeHtml(trPlato(p))}">
-        <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
-        <span id="qty-${p.id}" aria-live="polite">${getCartQty(p.id)}</span>
-        <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', 1, '${escapeJsAttr(p.nombre)}', ${finalPrice})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', trPlato(p)))}">+</button>
-      </div>
-      `}
-    </div>
-  `;}).join('');
-}
-function buildMenuHtmlInner(cartas){
-  // Todas las secciones visibles de todas las cartas activas, en una sola
-  // lista de carpetas — si hay más de una carta (comida + bebidas, p.ej.)
-  // el nombre de la carta se antepone al de la sección para distinguirlas.
-  const allSections = [];
-  cartas.forEach(carta => {
-    (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).forEach(sec => {
-      allSections.push({carta, sec, key: String(carta.id)+':'+String(sec.id)});
-    });
-  });
-
-  if(menuOpenSection){
-    const found = allSections.find(x => x.key === menuOpenSection);
-    if(!found){ menuOpenSection = null; }
-    else{
-      const {sec} = found;
-      return `
-        <button type="button" class="menu-back-btn" onclick="closeMenuFolder()">← ${t('common.back')}</button>
-        <h2 style="margin-top:0">${escapeHtml(trSection(sec) || t('label.dishes'))}</h2>
-        ${renderMenuDishesHtml(sec)}
-      `;
-    }
-  }
-
-  // Solo una sección en total (o platos sueltos sin nombre de familia):
-  // no tiene sentido un índice de carpetas de una sola carpeta — se
-  // muestra directamente, como antes.
-  if(allSections.length <= 1){
-    return allSections.map(({sec}) => `
-      ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(trSection(sec))}</h3>` : ''}
-      ${renderMenuDishesHtml(sec)}
-    `).join('');
-  }
-
-  // Una carta detrás de otra, cada una con su propio título y sus propias
-  // carpetas debajo. Antes iban todas las secciones de todas las cartas
-  // revueltas en una sola rejilla, distinguidas solo por un prefijo
-  // "Carta · Sección" dentro de cada botón: con dos o tres cartas activas
-  // (comida, bebidas, vinos) el cliente veía doce carpetas seguidas sin
-  // saber dónde acababa una carta y empezaba la siguiente.
-  return cartas.map(carta => {
-    const secciones = allSections.filter(x => x.carta === carta);
-    if(!secciones.length) return '';
-    // El nombre de la carta puede venir vacío; entonces se usa el título
-    // genérico ("Carta"), que es lo que hace falta para separarla de los
-    // menús de arriba.
-    const titulo = trItem(carta) || t('carta.sectionTitle');
-    return `
-      <h2 style="margin-top:22px">${escapeHtml(titulo)}</h2>
-      <div class="menu-folder-grid">
-        ${secciones.map(({sec, key}) => {
-          // El nombre de sección puede venir vacío (o ser "OTROS PLATOS").
-          const secName = trSection(sec) || t('label.dishes');
-          return `
-          <button type="button" class="menu-folder-card" onclick="openMenuFolder('${key}')">
-            <span class="icon">${menuFolderIcon(sec, secName)}</span>
-            <span class="name">${escapeHtml(secName)}</span>
-          </button>
-        `;}).join('')}
-      </div>
-    `;
+      <div class="dish-ctl" data-dish="${p.id}">${dishCtlHtml(p, sec.id)}</div>
+    </div>`;
   }).join('');
 }
 
+// Una tarjeta por menú: nombre, de qué apartados consta y precio. Al tocarla se abre el menú entero.
+function buildMenusHtml(){
+  const menus = getActiveMenusPublic();
+  if(!menus.length) return '';
+  return `<div class="mn-list">${menus.map(m => {
+    const total = cart.filter(l => l.key.startsWith('menu:' + m.id + ':')).reduce((s, l) => s + l.qty, 0);
+    const comp = (m.grupos || []).map(g => trItem(g)).filter(Boolean).join(' · ');
+    return `
+    <button type="button" class="menu-item mn-card" onclick="openMenuModal(${m.id})" aria-label="${escapeHtml(trItem(m) + ' · ' + fmtMoney(m.precio) + ' · ' + t('wz.o.view'))}">
+      <span class="mn-body"><span class="mn-n">${escapeHtml(trItem(m))}</span>${comp ? `<span class="mn-c">${escapeHtml(comp)}</span>` : ''}</span>
+      <span class="mn-side">${total ? `<span class="mn-badge">${total}</span>` : ''}<span class="mn-p">${fmtMoney(m.precio)}</span><span class="mn-go" aria-hidden="true">›</span></span>
+    </button>`;
+  }).join('')}</div>`;
+}
+let menuModalContext = null;
+function abrirHoja(html){
+  ensureModalChrome();
+  document.getElementById('modal-box').innerHTML = html;
+  const ov = document.getElementById('modal-overlay');
+  ov.classList.add('is-sheet', 'active');
+}
+function openMenuModal(menuId){
+  const m = (DB.menus || []).find(x => x.id === menuId);
+  if(!m) return;
+  menuModalContext = {menuId};
+  const grupos = m.grupos || [];
+  abrirHoja(`
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close') || 'Cerrar')}">&times;</button>
+    <div class="sh-h">
+      <div class="sh-eye">${t('wz.m.eyebrow')} · ${escapeHtml(t('wz.m.groups').replace('%d', grupos.length))}</div>
+      <h2>${escapeHtml(trItem(m))}</h2>
+      <p class="wz-sub" style="margin:6px 0 0">${t('wz.m.pick')}</p>
+    </div>
+    <div class="sh-b">
+      ${grupos.map((g, gi) => {
+        const primeraLibre = (g.opciones || []).findIndex(o => o.disponible !== false);
+        return `
+        <fieldset class="sh-g">
+          <legend><span class="k">${escapeHtml(t('wz.m.step').replace('%d', gi + 1).replace('%d', grupos.length))}</span>${escapeHtml(trItem(g))}</legend>
+          ${(g.opciones || []).map((o, i) => `
+            <label class="opt${o.disponible === false ? ' off' : ''}">
+              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i === primeraLibre ? 'checked' : ''} ${o.disponible === false ? 'disabled' : ''} onchange="menuSheetTotal()">
+              <span class="o-n">${escapeHtml(trItem(o))}${dishAllergensHtml(o.id)}</span>
+              ${o.suplemento ? `<span class="o-p">+${fmtMoney(o.suplemento)}</span>` : ''}
+              ${o.disponible === false ? `<span class="o-p" style="color:var(--red)">${t('common.unavailable')}</span>` : ''}
+            </label>`).join('')}
+        </fieldset>`;
+      }).join('')}
+    </div>
+    <div class="sh-f"><button type="button" class="btn btn-primary" id="mn-add" onclick="confirmAddMenuFromModal()"></button></div>
+  `);
+  menuSheetTotal();
+}
+// El botón del menú dice siempre cuánto cuesta lo que se ha elegido (con suplementos).
+function menuSheetTotal(){
+  if(!menuModalContext) return;
+  const m = (DB.menus || []).find(x => x.id === menuModalContext.menuId); const b = document.getElementById('mn-add');
+  if(!m || !b) return;
+  let extra = 0;
+  (m.grupos || []).forEach(g => {
+    const id = parseInt(document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`)?.value);
+    const o = (g.opciones || []).find(x => x.id === id);
+    if(o) extra += o.suplemento || 0;
+  });
+  b.innerHTML = `${escapeHtml(t('wz.m.add'))} · <span class="mono">${fmtMoney((m.precio || 0) + extra)}</span>`;
+}
+
+/* ============ EXTRAS / MODIFICADORES por plato ============
+   Un plato con extras no usa el contador directo: se abre su hoja para elegir
+   cuáles quiere y SOLO entonces se añade, con el precio final ya calculado. */
+let modModalContext = null;
+function openModifierModal(platoId){
+  const found = findPlatoById(platoId);
+  if(!found) return;
+  const {plato} = found;
+  const promo = getActivePromoForPlatoPublic(platoId);
+  const basePrice = promo ? promoDiscountedPrice(publicPlatoPrice(plato), promo) : publicPlatoPrice(plato);
+  modModalContext = {platoId, basePrice};
+  abrirHoja(`
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close') || 'Cerrar')}">&times;</button>
+    <div class="sh-h">
+      <div class="sh-eye">${t('wz.x.extras')} · ${fmtMoney(basePrice)}</div>
+      <h2>${escapeHtml(trPlato(plato))}</h2>
+      <p class="wz-sub" style="margin:6px 0 0">${t('modifiers.hint')}</p>
+    </div>
+    <div class="sh-b">
+      ${(plato.modificadores || []).map(m => `
+        <label class="opt">
+          <input type="checkbox" class="mod-check" value="${m.id}" onchange="modSheetTotal()">
+          <span class="o-n">${escapeHtml(trItem(m))}</span>
+          ${m.precio ? `<span class="o-p">+${fmtMoney(m.precio)}</span>` : ''}
+        </label>`).join('')}
+    </div>
+    <div class="sh-f"><button type="button" class="btn btn-primary" id="mod-add" onclick="confirmAddWithModifiers()"></button></div>
+  `);
+  modSheetTotal();
+}
+function modSheetTotal(){
+  if(!modModalContext) return;
+  const found = findPlatoById(modModalContext.platoId); const b = document.getElementById('mod-add');
+  if(!found || !b) return;
+  const ids = [...document.querySelectorAll('.mod-check:checked')].map(el => parseInt(el.value));
+  const extra = (found.plato.modificadores || []).filter(m => ids.includes(m.id)).reduce((s, m) => s + (m.precio || 0), 0);
+  b.innerHTML = `${escapeHtml(t('modifiers.add'))} · <span class="mono">${fmtMoney(modModalContext.basePrice + extra)}</span>`;
+}
+
 /* ============ PEDIDOS (TAKEAWAY / DELIVERY) ============ */
+function servicioChipsHtml(p, isDelivery){
+  const chips = [];
+  if((p.pedidoMinimo || 0) > 0) chips.push(t('wz.o.chip.min').replace('%s', fmtMoney(p.pedidoMinimo)));
+  if(isDelivery){
+    const fee = p.deliveryFee || 0, free = p.freeDeliveryFrom || 0;
+    chips.push(t('wz.o.chip.fee').replace('%s', fee ? fmtMoney(fee) : fmtMoney(0)) + (free > 0 && fee > 0 ? ' · ' + t('wz.o.chip.free').replace('%s', fmtMoney(free)) : ''));
+    if((p.cpList || []).length) chips.push(t('wz.o.chip.zone').replace('%s', p.cpList.join(', ')));
+    else if(p.radiusKm > 0) chips.push(t('wz.o.chip.radius').replace('%s', p.radiusKm));
+  }
+  const base = p.tiempoBasePrep != null ? p.tiempoBasePrep : 15;
+  const extra = p.extraPorPedidoEnCola != null ? p.extraPorPedidoEnCola : 3;
+  const max = p.tiempoMaxEstimado != null ? p.tiempoMaxEstimado : 60;
+  const eta = Math.min(base + (DB.cocinaCargaActiva || 0) * extra, max || (base + (DB.cocinaCargaActiva || 0) * extra));
+  chips.push(t('wz.o.chip.eta').replace('%d', eta));
+  return `<div class="chips">${chips.map(c => `<span class="chip">${escapeHtml(c)}</span>`).join('')}</div>`;
+}
 function renderOrderForm(){
   const box = document.getElementById('tab-content');
   const cartas = getActiveCartasConPlatos();
@@ -3201,68 +3982,91 @@ function renderOrderForm(){
 
   const isDelivery = currentTab === 'delivery';
   const p = (DB.business||{}).pedidos || {};
-
+  wzIniciar('pedido');
+  wzState.rendered = 'pedido';
   const menuHtml = buildMenuHtml(cartas);
 
   box.innerHTML = `
-    <div class="card">
-      <h2>${isDelivery ? t('order.delivery.title') : t('order.takeaway.title')}</h2>
-      ${menuHtml}
-    </div>
-    <div class="card" id="cart-summary"></div>
-    <div class="card">
-      <div class="field">
-        <label>${t('nombre')}</label>
-        <input type="text" id="o-name">
-      </div>
-      <div class="field">
-        <label>${t('telefono')}</label>
-        <input type="tel" id="o-phone" placeholder="600 000 000">
-      </div>
-      <div class="field">
-        <label>${t('email.pedido.label')}</label>
-        <input type="email" id="o-email" placeholder="${t('email.reserva.placeholder')}">
-        <small style="color:var(--muted)">${t('email.pedido.hint')}</small>
-      </div>
-      <div class="field-row">
+    <div class="wz" id="wz">
+      ${wzProgHtml('pedido')}
+      <div class="wz-main">
+
+      <section class="wz-step card" data-wz="1">
+        <h2 class="wz-h" tabindex="-1">${t('wz.o.pick.title')}</h2>
+        <p class="wz-sub">${t(isDelivery ? 'wz.o.pick.sub.delivery' : 'wz.o.pick.sub.takeaway')}</p>
+        ${servicioChipsHtml(p, isDelivery)}
+        ${menuHtml}
+      </section>
+
+      <section class="wz-step card" data-wz="2" hidden>
+        <h2 class="wz-h" tabindex="-1">${t(isDelivery ? 'wz.o.data.title.delivery' : 'wz.o.data.title.takeaway')}</h2>
+        <p class="wz-sub">${t('wz.o.data.sub')}</p>
+        <div class="field-row">
+          <div class="field">
+            <label for="o-date">${t('fecha')}</label>
+            <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint','pedido'); updateCierreHint(); updateOrderSlots(); renderCartSummary()">
+          </div>
+          <div class="field">
+            <label for="o-time">${t('hora')}</label>
+            <input type="time" id="o-time" value="20:00" onchange="updateCierreHint(); updateOrderSlots()">
+          </div>
+        </div>
+        <div class="slots" id="o-slots" role="group" aria-label="${escapeHtml(t('wz.o.slots'))}"></div>
+        <div id="o-hour-hint"></div>
+        <div id="o-cierre-hint"></div>
+        ${isDelivery ? `
         <div class="field">
-          <label>${t('fecha')}</label>
-          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint','pedido'); updateCierreHint(); renderCartSummary()">
+          <label for="o-address">${t('direccion')}</label>
+          <input type="text" id="o-address" placeholder="${t('direccion.placeholder')}" autocomplete="street-address">
+          <small style="color:var(--muted)">${t('wz.o.addr.hint')}</small>
         </div>
         <div class="field">
-          <label>${t('hora')}</label>
-          <input type="time" id="o-time" value="20:00" onchange="updateCierreHint()">
+          <label for="o-cp">${t('cp')}</label>
+          <input type="text" id="o-cp" placeholder="28001" inputmode="numeric" autocomplete="postal-code" oninput="checkCpLive()">
+          <small id="o-cp-hint"></small>
+        </div>` : ''}
+        <div class="field">
+          <label for="o-name">${t('nombre')}</label>
+          <input type="text" id="o-name" autocomplete="name">
         </div>
-      </div>
-      <div id="o-hour-hint"></div>
-      <div id="o-cierre-hint"></div>
-      ${isDelivery ? `
-      <div class="field">
-        <label>${t('direccion')}</label>
-        <input type="text" id="o-address" placeholder="${t('direccion.placeholder')}">
-      </div>
-      <div class="field">
-        <label>${t('cp')}</label>
-        <input type="text" id="o-cp" placeholder="28001" oninput="checkCpLive()">
-        <small id="o-cp-hint"></small>
-      </div>` : ''}
-      <div class="field">
-        <label>${t('order.notas')}</label>
-        <textarea id="o-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
-      </div>
-      <div class="field">
-        ${renderPaymentMethodRadiosHtml(p)}
-        <div class="field" id="o-cash-amount-wrap" style="margin-top:8px">
-          <label>${t('pago.pagaConLabel')}</label>
-          <input type="number" id="o-paga-con" min="0" step="1" placeholder="${t('pago.pagaConPlaceholder')}">
-          <small style="color:var(--muted)">${t('pago.pagaConHint')}</small>
+        <div class="field">
+          <label for="o-phone">${t('telefono')}</label>
+          <input type="tel" id="o-phone" placeholder="600 000 000" autocomplete="tel" inputmode="tel">
         </div>
+        <div class="field">
+          <label for="o-email">${t('email.pedido.label')}</label>
+          <input type="email" id="o-email" placeholder="${t('email.reserva.placeholder')}" autocomplete="email">
+          <small style="color:var(--muted)">${t('email.pedido.hint')}</small>
+        </div>
+        <div class="field">
+          <label for="o-notes">${t('order.notas')}</label>
+          <textarea id="o-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
+        </div>
+      </section>
+
+      <section class="wz-step card" data-wz="3" hidden>
+        <h2 class="wz-h" tabindex="-1">${t('wz.o.rev.title')}</h2>
+        <p class="wz-sub">${t('wz.o.rev.sub')}</p>
+        <div class="sm" id="wz-resumen"></div>
+        <div id="cart-summary"></div>
+        <div class="field" style="margin-top:18px">
+          ${renderPaymentMethodRadiosHtml(p)}
+          <div class="field" id="o-cash-amount-wrap" style="margin-top:8px">
+            <label for="o-paga-con">${t('pago.pagaConLabel')}</label>
+            <input type="number" id="o-paga-con" min="0" step="1" placeholder="${t('pago.pagaConPlaceholder')}">
+            <small style="color:var(--muted)">${t('pago.pagaConHint')}</small>
+          </div>
+        </div>
+        <p class="wz-ok">${t('wz.o.next')}</p>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0 0;cursor:pointer">
+          <input type="checkbox" id="o-privacy-consent" class="consent-check">
+          <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
+        </label>
+      </section>
+
+      ${wzNavHtml(`<button type="button" class="btn btn-primary" id="o-submit" onclick="submitOrder()" style="display:none">${t('order.submit')}</button>`)}
       </div>
-      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
-        <input type="checkbox" id="o-privacy-consent" class="consent-check">
-        <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
-      </label>
-      <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
+      <aside class="wz-side" id="wz-side" aria-hidden="true"></aside>
     </div>
   `;
   renderCartSummary();
@@ -3270,6 +4074,78 @@ function renderOrderForm(){
   applyLeadTime('o-date','o-time','o-hour-hint','pedido');
   updateCierreHint();
   updateCashAmountVisibility();
+  updateOrderSlots(wzState.reached === 1 && wzState.step === 1);
+  wzAplicar();
+}
+
+function setTipCustom(val){
+  cartTipPct = 'custom';
+  cartTipCustom = Math.max(0, parseFloat(val) || 0);
+  renderCartSummary();
+  // El resumen se repinta entero en cada tecla: sin devolver el foco, solo se podía escribir UN dígito.
+  const el = document.getElementById('tip-custom-input');
+  if(el){ el.focus(); try{ const l = el.value.length; el.setSelectionRange(l, l); }catch(e){} }
+}
+function tipSelectorHtml(){
+  const opts = [0, 5, 10, 15];
+  return `
+    <div class="field" style="margin-top:16px;margin-bottom:0">
+      <label>${t('cart.tip.label')}</label>
+      <div class="seg" style="margin:0">
+        ${opts.map(pct => `<button type="button" class="${cartTipPct === pct ? 'on' : ''}" aria-pressed="${cartTipPct === pct}" onclick="setTip(${pct})">${pct === 0 ? t('cart.tip.none') : pct + '%'}</button>`).join('')}
+        <button type="button" class="${cartTipPct === 'custom' ? 'on' : ''}" aria-pressed="${cartTipPct === 'custom'}" onclick="activarPropinaOtra()">${t('cart.tip.other')}</button>
+      </div>
+      ${cartTipPct === 'custom' ? `<input type="number" id="tip-custom-input" min="0" step="0.5" value="${cartTipCustom || ''}" placeholder="${t('cart.tip.otherPlaceholder')}" style="margin-top:8px" oninput="setTipCustom(this.value)">` : ''}
+    </div>
+  `;
+}
+function renderCartSummary(){
+  // Lo que cambia con el carrito, esté donde esté el cliente: los controles de cada plato y el botón «Continuar».
+  dishCtlRefreshAll();
+  wzNavActualizar();
+  wzSideActualizar();
+  const box = document.getElementById('cart-summary');
+  if(!box) return;
+  const submitBtn = document.getElementById('o-submit');
+  if(!cart.length){
+    box.innerHTML = `<div class="empty">${t('cart.empty')}</div>`;
+    if(submitBtn) submitBtn.disabled = true;
+    return;
+  }
+  const p = (DB.business||{}).pedidos || {};
+  const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const deliveryFee = getDeliveryFee(p, subtotal, currentTab === 'delivery');
+  const freeFrom = p.freeDeliveryFrom || 0;
+  const missingForFreeDelivery = currentTab === 'delivery' && freeFrom > 0 && subtotal < freeFrom ? freeFrom - subtotal : 0;
+  const tip = computeTipAmount(subtotal);
+  const total = subtotal + deliveryFee + tip;
+  const pedidoMinimo = currentTab !== 'mesa' ? (p.pedidoMinimo || 0) : 0;
+  const bajoMinimo = pedidoMinimo > 0 && subtotal < pedidoMinimo;
+  if(submitBtn) submitBtn.disabled = bajoMinimo;
+  box.innerHTML = `
+    <h3 class="cs-tit" style="margin-top:0">${t('cart.title')}</h3>
+    ${cart.map(l => {
+      const modsText = (l.modificadores || []).length ? `<small>${l.modificadores.map(m => escapeHtml(trItem(m))).join(', ')}</small>` : '';
+      // Todas las líneas llevan su − n +: así se ajusta aquí mismo, también «pizza con extra queso» sin tocar «pizza sin nada».
+      return `
+      <div class="cl-l">
+        <div class="cl-n">${escapeHtml(l.name)}${modsText}</div>
+        <div class="cl-q" role="group" aria-label="${escapeHtml(l.name)}">
+          <button type="button" onclick="changeCartLineQty('${escapeJsAttr(l.key)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', l.name))}">−</button>
+          <span>${l.qty}</span>
+          <button type="button" onclick="changeCartLineQty('${escapeJsAttr(l.key)}', 1)" aria-label="${escapeHtml(t('aria.addItem').replace('%s', l.name))}">+</button>
+        </div>
+        <div class="cl-p">${fmtMoney(l.price * l.qty)}</div>
+      </div>`;
+    }).join('')}
+    ${currentTab === 'delivery' && freeFrom > 0 && deliveryFee === 0 && subtotal > 0 ? `<div class="cl-x"><span>${t('cart.shipping')}</span><span style="color:var(--olive);font-weight:600">${t('cart.shipping.free')}</span></div>` : (deliveryFee > 0 ? `<div class="cl-x"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : '')}
+    ${tip > 0 ? `<div class="cl-x"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
+    ${missingForFreeDelivery > 0 ? `<p class="cl-hint">${t('cart.shipping.freeHint').replace('%s', fmtMoney(missingForFreeDelivery))}</p>` : ''}
+    <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
+    ${bajoMinimo ? `<p class="cl-warn">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
+    ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
+    ${qrMesaToken && currentTab === 'mesa' ? '' : tipSelectorHtml()}
+  `;
 }
 
 // Aviso de la hora límite real para pedir (cierre del turno menos el
@@ -3363,11 +4239,7 @@ function changeCartQty(recipeId, sectionId, delta, name, price){
   line.qty += delta;
   if(line.qty <= 0) cart = cart.filter(l => l !== line);
 
-  const span = document.getElementById('qty-'+recipeId);
-  if(span){
-    span.textContent = getCartQty(recipeId);
-    span.classList.remove('bump'); void span.offsetWidth; span.classList.add('bump');
-  }
+  dishBump = recipeId;
   renderCartSummary();
 }
 
@@ -3389,32 +4261,6 @@ function changeCartLineQty(key, delta){
    cuáles quiere (checkboxes, sin restricción de cardinalidad — así está
    modelado en la app principal, ver js/menu.js) y SOLO entonces se añade
    al carrito, con el precio final ya calculado. */
-let modModalContext = null;
-function openModifierModal(platoId){
-  const found = findPlatoById(platoId);
-  if(!found) return;
-  const { plato } = found;
-  const promo = getActivePromoForPlatoPublic(platoId);
-  const basePrice = promo ? promoDiscountedPrice(publicPlatoPrice(plato), promo) : publicPlatoPrice(plato);
-  modModalContext = { platoId, basePrice };
-  ensureModalChrome();
-  document.getElementById('modal-box').innerHTML = `
-    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
-    <h2>${escapeHtml(trPlato(plato))}</h2>
-    <p style="font-size:13px;color:var(--muted);margin-top:-4px">${t('modifiers.hint')}</p>
-    <div style="margin:14px 0">
-      ${(plato.modificadores||[]).map(m => `
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">
-          <input type="checkbox" class="mod-check" value="${m.id}" style="width:20px;height:20px;flex:none">
-          <span style="flex:1;font-size:14px">${escapeHtml(trItem(m))}</span>
-          ${m.precio ? `<span class="mono" style="font-size:12.5px;color:var(--muted)">+${fmtMoney(m.precio)}</span>` : ''}
-        </label>
-      `).join('')}
-    </div>
-    <button class="btn btn-primary" style="width:100%" onclick="confirmAddWithModifiers()">${t('modifiers.add')}</button>
-  `;
-  document.getElementById('modal-overlay').classList.add('active');
-}
 function confirmAddWithModifiers(){
   if(!modModalContext) return;
   const found = findPlatoById(modModalContext.platoId);
@@ -3441,38 +4287,6 @@ function confirmAddWithModifiers(){
 function getActiveMenusPublic(){
   const ids = DB.activeMenuIds || [];
   return (DB.menus||[]).filter(m => ids.includes(m.id) && m.disponible !== false && (m.grupos||[]).length);
-}
-let menuModalContext = null;
-function openMenuModal(menuId){
-  const m = (DB.menus||[]).find(x=>x.id===menuId);
-  if(!m) return;
-  menuModalContext = { menuId };
-  ensureModalChrome();
-  document.getElementById('modal-box').innerHTML = `
-    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
-    <h2>${escapeHtml(trItem(m))} · ${fmtMoney(m.precio)}</h2>
-    ${(m.grupos||[]).map(g => `
-      <div class="field">
-        <label>${escapeHtml(trItem(g))}</label>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          ${(()=>{
-            const opcionesDisponibles = (g.opciones||[]);
-            const primeraLibre = opcionesDisponibles.findIndex(o => o.disponible !== false);
-            return opcionesDisponibles.map((o,i) => `
-              <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);${o.disponible===false?'opacity:.5;cursor:not-allowed':'cursor:pointer'}">
-                <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===primeraLibre?'checked':''} ${o.disponible===false?'disabled':''} style="width:20px;height:20px;flex:none">
-                <span style="flex:1;font-size:14px">${escapeHtml(trItem(o))}${dishAllergensHtml(o.id)}</span>
-                ${o.suplemento ? `<span class="mono" style="font-size:12.5px;color:var(--muted)">+${fmtMoney(o.suplemento)}</span>` : ''}
-                ${o.disponible===false ? `<span style="font-size:11px;color:var(--red)">${t('common.unavailable')}</span>` : ''}
-              </label>
-            `).join('');
-          })()}
-        </div>
-      </div>
-    `).join('')}
-    <button class="btn btn-primary" style="width:100%" onclick="confirmAddMenuFromModal()">${t('modifiers.add')}</button>
-  `;
-  document.getElementById('modal-overlay').classList.add('active');
 }
 function confirmAddMenuFromModal(){
   if(!menuModalContext) return;
@@ -3502,27 +4316,6 @@ function confirmAddMenuFromModal(){
   closeInfoModal();
   renderCartSummary();
 }
-function buildMenusHtml(){
-  const menus = getActiveMenusPublic();
-  if(!menus.length) return '';
-  return `
-    <h2>${escapeHtml(t('menus.title'))}</h2>
-    ${menus.map(m => {
-      const totalInCart = cart.filter(l => l.key.startsWith('menu:'+m.id+':')).reduce((s,l)=>s+l.qty,0);
-      return `
-      <div class="menu-item">
-        <div>
-          <div class="name">${escapeHtml(trItem(m))}</div>
-          <div class="price">${fmtMoney(m.precio)} <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span></div>
-        </div>
-        <button class="btn btn-sm" style="width:auto;min-height:38px;padding:8px 14px;white-space:nowrap;position:relative" onclick="openMenuModal(${m.id})">
-          ${t('modifiers.addBtn')}${totalInCart ? ` <span class="mono" style="margin-left:4px">(${totalInCart})</span>` : ''}
-        </button>
-      </div>
-    `;}).join('')}
-  `;
-}
-
 // Coste de envío a domicilio, con posibilidad de que el negocio lo haga
 // gratis a partir de un importe mínimo de pedido (p.freeDeliveryFrom, 0 o
 // sin definir = no hay umbral, siempre se cobra el envío fijo).
@@ -3558,82 +4351,6 @@ function activarPropinaOtra(){
   const el = document.getElementById('tip-custom-input');
   if(el) el.focus();
 }
-function setTipCustom(val){
-  cartTipPct = 'custom';
-  cartTipCustom = Math.max(0, parseFloat(val) || 0);
-  renderCartSummary();
-}
-function tipSelectorHtml(){
-  const opts = [0, 5, 10, 15];
-  return `
-    <div class="field" style="margin-top:14px;margin-bottom:0">
-      <label>${t('cart.tip.label')}</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${opts.map(pct => `<button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct===pct?'background:var(--ink);color:#fff':''}" onclick="setTip(${pct})">${pct===0?t('cart.tip.none'):pct+'%'}</button>`).join('')}
-        <button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct==='custom'?'background:var(--ink);color:#fff':''}" onclick="activarPropinaOtra()">${t('cart.tip.other')}</button>
-      </div>
-      ${cartTipPct==='custom' ? `<input type="number" id="tip-custom-input" min="0" step="0.5" value="${cartTipCustom||''}" placeholder="${t('cart.tip.otherPlaceholder')}" style="margin-top:8px" oninput="setTipCustom(this.value)">` : ''}
-    </div>
-  `;
-}
-function renderCartSummary(){
-  const box = document.getElementById('cart-summary');
-  if(!box) return;
-  const submitBtn = document.getElementById('o-submit');
-  if(!cart.length){
-    box.innerHTML = `<div class="empty">${t('cart.empty')}</div>`;
-    if(submitBtn) submitBtn.disabled = true;
-    return;
-  }
-  const p = (DB.business||{}).pedidos || {};
-  const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
-  const deliveryFee = getDeliveryFee(p, subtotal, currentTab === 'delivery');
-  const freeFrom = p.freeDeliveryFrom || 0;
-  const missingForFreeDelivery = currentTab === 'delivery' && freeFrom > 0 && subtotal < freeFrom ? freeFrom - subtotal : 0;
-  const tip = computeTipAmount(subtotal);
-  const total = subtotal + deliveryFee + tip;
-  const pedidoMinimo = currentTab !== 'mesa' ? (p.pedidoMinimo || 0) : 0;
-  const bajoMinimo = pedidoMinimo > 0 && subtotal < pedidoMinimo;
-  if(submitBtn) submitBtn.disabled = bajoMinimo;
-  box.innerHTML = `
-    <h2>${t('cart.title')}</h2>
-    ${cart.map(l => {
-      const modsText = (l.modificadores||[]).length ? `<div style="font-size:11.5px;color:var(--muted);margin-top:1px">${l.modificadores.map(m=>escapeHtml(trItem(m))).join(', ')}</div>` : '';
-      // Las líneas con extras llevan su propio +/- aquí (en el listado de la
-      // carta solo tienen el botón "Añadir", ver buildMenuHtml) — así se
-      // puede ajustar la cantidad de "pizza con extra queso" sin afectar a
-      // "pizza sin nada", que es una línea distinta del carrito.
-      // También los menús combo (recipeId null): no se pueden ajustar desde
-      // el listado de la carta, así que sin sus propios +/- aquí una línea
-      // de menú cuyos grupos se quedaran sin opciones disponibles (y por
-      // tanto sin extras) no había forma humana de quitarla del carrito.
-      const hasMods = (l.modificadores||[]).length > 0 || l.recipeId == null;
-      return `
-      <div class="cart-line" style="align-items:flex-start;padding:8px 0">
-        <div style="flex:1">
-          <div>${hasMods ? '' : (l.qty+'× ')}${escapeHtml(l.name)}</div>
-          ${modsText}
-        </div>
-        ${hasMods
-          ? `<div class="qty-ctl" style="gap:6px">
-               <button onclick="changeCartLineQty('${escapeJsAttr(l.key)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">−</button>
-               <span class="mono" style="min-width:14px;text-align:center">${l.qty}</span>
-               <button onclick="changeCartLineQty('${escapeJsAttr(l.key)}', 1)" aria-label="${escapeHtml(t('aria.addItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">+</button>
-             </div>`
-          : ''}
-        <span style="white-space:nowrap;margin-left:8px">${fmtMoney(l.price*l.qty)}</span>
-      </div>`;
-    }).join('')}
-    ${currentTab === 'delivery' && freeFrom > 0 && deliveryFee === 0 && subtotal > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span style="color:var(--olive);font-weight:600">${t('cart.shipping.free')}</span></div>` : (deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : '')}
-    ${tip > 0 ? `<div class="cart-line"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
-    ${missingForFreeDelivery > 0 ? `<p style="font-size:12.5px;color:var(--muted);margin:4px 0 0">🚚 ${t('cart.shipping.freeHint').replace('%s', fmtMoney(missingForFreeDelivery))}</p>` : ''}
-    <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
-    ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
-    ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
-    ${qrMesaToken && currentTab === 'mesa' ? '' : tipSelectorHtml()}
-  `;
-}
-
 // Estimación de "tu pedido debería estar listo en X min" a partir de la
 // carga real de cocina ahora mismo (cocinaCargaActiva, sincronizado en
 // vivo) — no un tiempo fijo que sea mentira en hora punta o exagerado en
