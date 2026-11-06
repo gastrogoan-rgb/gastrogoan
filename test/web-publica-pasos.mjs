@@ -82,6 +82,16 @@ await caso('RESERVA: el selector de personas cambia y acota (1-50) y el aviso de
   assert.ok(!/mandaremos|send the confirmation|enviarem/i.test(hint), 'la app no envía correos al cliente: no puede prometerlos → ' + hint);
 });
 
+await caso('Cabecera: dirección, horario, teléfono Y email se ven; teléfono y email son enlaces; la barra de servicios queda centrada en PC', async () => {
+  await arrancar(); await page.setViewport({width: 1280, height: 900}); await abrirTab('reserva');
+  const r = await page.evaluate(() => ({
+    info: document.getElementById('biz-info').innerText.toLowerCase(),
+    tel: document.querySelector('#biz-info a.hi-phone')?.getAttribute('href'), mail: document.querySelector('#biz-info a.hi-mail')?.getAttribute('href'),
+    tabs: (() => { const t = document.querySelector('.tabs').getBoundingClientRect(); return {izq: Math.round(t.left), der: Math.round(innerWidth - t.right)}; })()}));
+  assert.ok(r.info.includes('hola@casapaco.es') && r.info.includes('611222333') && r.info.includes('calle mayor'), r.info);
+  assert.equal(r.tel, 'tel:611222333'); assert.equal(r.mail, 'mailto:hola@casapaco.es');
+  assert.ok(Math.abs(r.tabs.izq - r.tabs.der) <= 2, 'la barra de servicios debe quedar centrada: ' + JSON.stringify(r.tabs));
+});
 await caso('PEDIDO: «Continuar» dice lo que falta (vacío, mínimo) y lleva el total; no deja pasar con el carrito vacío', async () => {
   await arrancar(); await abrirTab('takeaway');
   const vacio = await page.evaluate(() => { const n = document.getElementById('wz-next'); return {dis: n.disabled, txt: n.textContent}; });
@@ -150,6 +160,29 @@ await caso('PEDIDO: la hora se elige con un toque entre los huecos reales del d�
   await page.evaluate(() => document.querySelectorAll('#o-slots button')[2].click());
   assert.equal(await page.$eval('#o-time', e => e.value), '13:30', 'tocar un hueco rellena la hora');
   assert.equal(await page.$eval('#o-slots button.on', e => e.textContent.trim()), '13:30');
+});
+await caso('Efectos: el paso lleva su etiqueta «Paso N de 3» y la dirección de la transición; el indicador de pestañas se desliza sobre el MISMO elemento', async () => {
+  await page.setViewport({width: 390, height: 860});
+  await arrancar(); await abrirTab('reserva');
+  const a = await page.evaluate(() => { window.__tabs = document.querySelector('.tabs'); return {eye: document.querySelector('.wz-step:not([hidden]) .wz-eye').innerText.trim().toLowerCase(), i: getComputedStyle(__tabs).getPropertyValue('--i').trim()}; });
+  assert.match(a.eye, /paso 1 de 3/); assert.equal(a.i, '0');
+  await page.evaluate(() => setTab('delivery')); await w(300);
+  const b = await page.evaluate(() => ({mismo: document.querySelector('.tabs') === window.__tabs, i: getComputedStyle(window.__tabs).getPropertyValue('--i').trim()}));
+  assert.ok(b.mismo, 'las pestañas no se recrean al cambiar (si no, el indicador no puede deslizarse)'); assert.equal(b.i, '2');
+  await page.evaluate(() => { menuSetModo('menus'); document.querySelector('.mn-card').click(); }); await w(200);
+  await page.evaluate(() => document.getElementById('mn-add').click()); await w(200);
+  await page.evaluate(() => document.getElementById('wz-next').click()); await w(200);
+  assert.equal(await page.evaluate(() => document.querySelector('.wz-step:not([hidden])').dataset.dir), 'fw', 'ir adelante entra por la derecha');
+  await page.evaluate(() => document.getElementById('wz-back').click()); await w(200);
+  assert.equal(await page.evaluate(() => document.querySelector('.wz-step:not([hidden])').dataset.dir), 'bk', 'volver entra por la izquierda');
+  await page.setViewport({width: 1280, height: 900});
+});
+await caso('Efectos: con «reducir movimiento» no se anima nada (cabecera, pasos, resumen, carrito)', async () => {
+  await page.emulateMediaFeatures([{name: 'prefers-reduced-motion', value: 'reduce'}]);
+  await arrancar(); await abrirTab('reserva'); await w(150);
+  const r = await page.evaluate(() => [document.querySelector('header h1'), document.querySelector('.wz-step:not([hidden])'), document.querySelector('.wz-step:not([hidden]) .wz-h'), document.querySelector('.wz-eye'), document.querySelector('.tabs')].map(e => getComputedStyle(e).animationName));
+  await page.emulateMediaFeatures([{name: 'prefers-reduced-motion', value: 'no-preference'}]);
+  assert.ok(r.every(x => x === 'none'), 'animaciones con movimiento reducido: ' + JSON.stringify(r));
 });
 await caso('Textos: cada clave wz.* existe en es, ca y en, y los tres idiomas pintan los pasos', async () => {
   const r = await page.evaluate(() => { const ks = Object.keys(I18N.es).filter(k => k.startsWith('wz.')); return {n: ks.length, faltan: ['ca', 'en'].map(l => ks.filter(k => !I18N[l][k])).flat()}; });
