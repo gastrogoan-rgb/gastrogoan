@@ -4883,6 +4883,10 @@ span.dt-punto{position:absolute;border-radius:50%}
 .cdr-expl p{margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--ink)}
 .cdr-expl .cdr-nota{padding:10px 12px;background:var(--amber-l);border:1px solid #E6D3A3;border-radius:3px;font-size:13px}
 .cdr-tabla{margin-top:6px}
+.mn-bloqueo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px;padding:12px 14px;font-size:12.5px;line-height:1.5;color:var(--body);background:#FAF8F4;border:1px solid var(--hair);border-radius:3px}
+.mn-bloqueo > .ti{font-size:18px;color:var(--olive)}
+.mn-bloqueo span{flex:1;min-width:220px}
+select:disabled{background:#F1EFE9;color:var(--ink);opacity:1;cursor:not-allowed}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}

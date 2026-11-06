@@ -426,7 +426,23 @@ function geCapexCuotaMes(year, month){
      Sociedad: su tipo sobre la base del año (menos las pérdidas de años
      anteriores). Autónomo/CB: la escala del IRPF por tramos, con el mínimo
      personal y el 5% de gastos de difícil justificación. */
+// La forma jurídica y el régimen los fija quien da de alta al cliente (generador de licencias → issuedCodes → lic.fiscal) y
+// en Mi Negocio salen BLOQUEADOS. Esta función los vuelca a DB.business (idempotente, sin guardar): se llama desde fiscalPerfil(),
+// que usan todas las cuentas, así ningún cálculo ve nunca un dato distinto del de la licencia. Un negocio antiguo (sin lic.fiscal)
+// sigue editando los suyos como siempre.
+function aplicarFiscalDeLicencia(){
+  const f = DB && DB.license && DB.license.fiscal;
+  if(!f || !f.formaJuridica || !DB.business) return false;
+  const b = DB.business; let cambio = false;
+  const poner = (k, v) => { if(v != null && b[k] !== v){ b[k] = v; cambio = true; } };
+  poner('formaJuridica', f.formaJuridica);
+  if(f.formaJuridica === 'autonomo'){ poner('regimenFiscal', f.regimenFiscal || 'directa'); poner('modalidadDirecta', f.modalidadDirecta || 'simplificada'); }
+  else poner('regimenFiscal', 'directa');
+  poner('fiscalFijado', true);
+  return cambio;
+}
 function fiscalPerfil(){
+  aplicarFiscalDeLicencia();
   const b = DB.business || {};
   const forma = b.formaJuridica || '';
   return {

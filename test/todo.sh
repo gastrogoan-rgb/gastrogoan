@@ -160,6 +160,7 @@ lanzar; node test/economia-equilibrio.mjs > "$SALIDA/economiaequilibrio.txt" 2>&
 lanzar; node test/economia-inversiones.mjs > "$SALIDA/economiainversiones.txt" 2>&1 & P154=$!
 lanzar; node test/economia-resultados.mjs > "$SALIDA/economiaresultados.txt" 2>&1 & P155=$!
 lanzar; node test/fiscal-independiente.mjs > "$SALIDA/fiscalindependiente.txt" 2>&1 & P156=$!
+lanzar; node test/fiscal-fijado.mjs > "$SALIDA/fiscalfijado.txt" 2>&1 & P157=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -350,5 +351,6 @@ espera $P153 "Gestión Económica → Punto de equilibrio: cuentas a mano, gráf
 espera $P154 "Gestión Económica → Inversiones: cartera a mano, tarjetas con ⋯, filtros, progreso de cuotas, duplicar y vacío" "$SALIDA/economiainversiones.txt" "todos los casos pasaron"
 espera $P155 "Gestión Económica → Cuenta de Resultados: gráfica con hover, ayudas detrás de botones, intereses con el caso real y móvil" "$SALIDA/economiaresultados.txt" "todos los casos pasaron"
 espera $P156 "Fiscalidad INDEPENDIENTE: IRPF, IS por tramos, IVA, 111 y CB con cifras hechas a mano" "$SALIDA/fiscalindependiente.txt" "todos los casos pasaron"
+espera $P157 "Forma jurídica y régimen fijados desde el alta: bloqueados en Mi Negocio, motor fiscal con lo de la licencia y comprobar cambios" "$SALIDA/fiscalfijado.txt" "todos los casos pasaron"
 
 exit $FALLOS
