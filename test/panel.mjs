@@ -37,7 +37,7 @@ await caso('El año es UNA tarjeta con pestañas y una curva de 12 puntos; la ú
     document.querySelectorAll('.dt-tabs .btn')[2].click(); await esp(200); out.sel = document.querySelectorAll('.dt-tabs .is-on').length;
     document.querySelectorAll('.dt-tabs .btn')[0].click(); await esp(200);
     document.querySelectorAll('#dt-anual .dt-punto')[3].click(); await esp(100); out.alTocar = document.querySelector('.dt-titular').textContent.replace(/\s+/g, ' ').trim();
-    out.hora = !!document.querySelector('.dt-pico b') && document.querySelectorAll('#dt-horas .dt-punto').length === 24;
+    out.hora = !!document.querySelector('.dt-pico b') && document.querySelectorAll('#dt-horas .dt-punto').length === 24 && document.querySelectorAll('#dt-horas button').length === 0;
     return out;
   });
   assert.equal(r.viejas, 0); assert.equal(r.puntos, 12); assert.equal(r.parcial, 1); assert.equal(r.tabs, 3); assert.ok(r.tags >= 2, JSON.stringify(r));

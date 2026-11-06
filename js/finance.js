@@ -937,11 +937,9 @@ function plan360MarcadorEuros(){
    deformar el grosor: vector-effect), y los puntos, las etiquetas y los meses son HTML encima, así que el texto se ve
    nítido en 320 px y en 1440 px sin scroll lateral. Cada punto es un botón: pulsarlo (o pasar por encima) pone su cifra
    en el titular. */
+// Cifra entera con su separador de miles y el €, sin abreviar: «11.340 €», nunca «11,3 k€» (una «k» delante del € se lee mal en español).
 function dashCompacto(v){
-  const a = Math.abs(v), s = v < 0 ? '−' : '', loc = localeActual();
-  if(a >= 1e6) return s + (a / 1e6).toLocaleString(loc, {maximumFractionDigits:1}) + ' M€';
-  if(a >= 1000) return s + (a / 1000).toLocaleString(loc, {maximumFractionDigits:1}) + ' k€';
-  return s + Math.round(a).toLocaleString(loc) + ' €';
+  return (v < 0 ? '−' : '') + Math.round(Math.abs(v)).toLocaleString(localeActual()) + ' €';
 }
 function dashSerieHtml(serie, o){
   o = o || {};
@@ -971,7 +969,9 @@ function dashSerieHtml(serie, o){
           <path d="${area}" class="dt-area"/>
           <path d="${d}" class="dt-linea" vector-effect="non-scaling-stroke"/>
         </svg>
-        ${serie.map((p, i) => `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}" aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
+        ${serie.map((p, i) => o.estatico
+          ? `<span class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" aria-hidden="true"></span>`
+          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}" aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
         ${[...conTag].map(i => `<span class="dt-tag${vals[i] < 0 ? ' neg' : ''}${pts[i][1] < 22 ? ' abajo' : ''}${i === 0 ? ' izq' : ''}${i === n - 1 ? ' der' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%">${escapeHtml(o.fmtTag ? o.fmtTag(vals[i]) : dashCompacto(vals[i]))}</span>`).join('')}
       </div>
       <div class="dt-ejes">${serie.map((p, i) => `<span class="${i % cada ? 'oculto' : ''}${p.parcial ? ' parcial' : ''}">${escapeHtml(p.label)}</span>`).join('')}</div>
@@ -1384,7 +1384,7 @@ function renderDashboard(){
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.salesByHour')}</h4>
         ${(() => { const iPico = hourTotals.indexOf(Math.max(...hourTotals)); return hourTotals.some(v => v > 0) ? `<div class="dt-pico"><i class="ti ti-flame"></i> ${escapeHtml(gl({es:'Hora punta', ca:'Hora punta', en:'Peak hour'}))}: <b>${iPico}:00</b> · ${escapeHtml(fmtMoney(hourTotals[iPico]))}</div>` : ''; })()}
-        ${dashSerieHtml(hourTotals.map((v, h) => ({label: h + 'h', nombre: h + ':00', value: v})), {id:'dt-horas', cadaEtiqueta: 3, sinTags: true, clase: 'dt-corto'})}
+        ${dashSerieHtml(hourTotals.map((v, h) => ({label: h + 'h', nombre: h + ':00', value: v})), {id:'dt-horas', cadaEtiqueta: 3, sinTags: true, clase: 'dt-corto', estatico: true})}
       </div>
     </div>
   `;
