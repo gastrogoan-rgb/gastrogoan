@@ -5524,8 +5524,8 @@ function renderReservationStatus(data){
         </div>
         <div id="res-edit-grupo"></div>
         <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn" id="res-edit-cancel-btn" onclick="toggleResEdit(false)">${t('common.close')}</button>
-          <button class="btn btn-primary" id="res-edit-save-btn" onclick="submitReservationChange()" style="flex:1">${t('resManage.saveBtn')}</button>
+          <button class="btn" id="res-edit-cancel-btn" onclick="toggleResEdit(false)" style="flex:1 1 0">${t('common.close')}</button>
+          <button class="btn btn-primary" id="res-edit-save-btn" onclick="submitReservationChange()" style="flex:1 1 0">${t('resManage.saveBtn')}</button>
         </div>
       ` : `
         ${phoneLink ? `<p style="font-size:13px;color:var(--muted);margin:14px 0 0">${t('success.callToChange').replace('%s', phoneLink)}</p>` : ''}

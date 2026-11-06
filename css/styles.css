@@ -5973,3 +5973,9 @@ small{font-size:max(.8333em, 11px)}
 @media (max-width:760px){
   .st-resumen > :last-child:nth-child(odd):not(:first-child){grid-column:1/-1}
 }
+
+/* Selector de idioma de la entrada en móvil: la caja visible medía 44×26 (el diseño del 28/10 lo encogió y la zona de toque
+   extra de ::after no cuenta para quien lo mide ni para un dedo grueso). En móvil vuelve al mínimo táctil de 44 px. */
+@media (max-width:1100px){
+  .access-lang-switch .lang-trigger{min-height:44px;padding:4px 12px}
+}
