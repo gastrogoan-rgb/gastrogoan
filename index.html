@@ -618,63 +618,70 @@
 
       <!-- PUNTO DE EQUILIBRIO -->
       <div id="ge-pe" class="ge-tab-panel">
-        <div style="margin-bottom:14px">
+        <div class="ve-barra-sup">
           <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.fixedCostsLinkedNote">Costes fijos vinculados a Gastos Fijos</span></span>
+          <span class="gf-acciones">
+            <button class="btn btn-sm btn-primary" onclick="GE.peUseRealData()"><i class="ti ti-report-money"></i> <span data-i18n="hr.pe.useRealDataBtn">Usar datos del último mes</span></button>
+            <button class="btn btn-sm" onclick="GE.peSaveScenario()"><i class="ti ti-device-floppy"></i> <span data-i18n="hr.pe.saveScenarioBtn">Guardar como escenario</span></button>
+          </span>
         </div>
-        <div class="dist-config" style="margin-bottom:14px;align-items:center">
-          <span style="font-weight:600;font-size:13px;margin-right:4px"><i class="ti ti-folder"></i> <span data-i18n="hr.pe.scenarioLabel">Escenario</span></span>
-          <select id="pe-scenario-sel" onchange="GE.peLoadScenario(this.value)" style="min-width:160px"></select>
-          <button class="btn btn-sm" onclick="GE.peSaveScenario()"><i class="ti ti-device-floppy"></i> <span data-i18n="hr.pe.saveScenarioBtn">Guardar como escenario</span></button>
-          <button class="btn btn-sm btn-danger" onclick="GE.peDeleteScenario()"><i class="ti ti-trash"></i> <span data-i18n="hr.pe.deleteScenarioBtn">Eliminar escenario</span></button>
+        <div id="pe-vacio"></div>
+        <div class="ge-kpi-grid pe-kpis">
+          <div class="ge-kpi pe-hero"><div class="lbl" data-i18n="label.coversToBreakEven">Cubiertos para cubrir gastos</div><div class="te-valor" id="pe-r3">—</div><div id="pe-estado" class="pe-estado"></div></div>
+          <div class="ge-kpi"><div class="lbl" data-i18n="label.coversPerDayNeeded">Cubiertos por día necesarios</div><div class="te-valor" id="pe-r4">—</div></div>
+          <div class="ge-kpi"><div class="lbl" data-i18n="label.minMonthlySales">Ventas mínimas mensuales</div><div class="te-valor" id="pe-r5">—</div></div>
+          <div class="ge-kpi"><div class="lbl" data-i18n="label.currentVsNeededCovers">Cubiertos actuales vs necesarios</div><div class="te-valor" id="pe-r6">—</div></div>
         </div>
-        <div class="grid grid-2">
-          <div>
-            <div class="ge-section">
-              <div class="ge-sec-head">
-                <h4 data-i18n="ge.inputData">Datos de entrada</h4>
-                <button class="btn btn-sm" onclick="GE.peUseRealData()"><i class="ti ti-report-money"></i> <span data-i18n="hr.pe.useRealDataBtn">Usar datos del último mes</span></button>
-              </div>
-              <div class="ge-input-row">
-                <label><span data-i18n="label.fixedCosts">Costes fijos totales</span> <span class="ge-auto">AUTO</span></label>
-                <input type="number" id="pe-fijos" readonly style="background:var(--brand-cream);color:var(--ink);border-color:var(--ink)">
-              </div>
-              <div class="ge-input-row">
-                <label data-i18n="label.avgTicketPerCover">Ticket medio (€/cubierto)</label>
-                <input type="number" id="pe-ticket" min="0" step="0.5" oninput="GE.calcPE()">
-              </div>
-              <div class="ge-input-row">
-                <label data-i18n="label.coversMonth">Cubiertos al mes</label>
-                <input type="number" id="pe-cubiertos" min="0" step="1" oninput="GE.calcPE()">
-              </div>
-              <div class="ge-input-row">
-                <label data-i18n="label.openDaysMonth">Días de apertura/mes</label>
-                <input type="number" id="pe-dias" min="0" max="31" step="1" oninput="GE.calcPE()">
-              </div>
-              <div class="ge-input-row">
-                <label data-i18n="label.targetFoodCost">Food cost objetivo (%)</label>
-                <input type="number" id="pe-fc" min="0" max="100" step="0.5" value="35" oninput="GE.calcPE()">
-              </div>
+        <div class="gf-duo pe-duo">
+          <div class="ge-section">
+            <div class="ge-sec-head"><h4 data-i18n="ge.inputData">Datos de entrada</h4></div>
+            <div class="ge-input-row">
+              <label><span data-i18n="label.fixedCosts">Costes fijos totales</span> <span class="ge-auto">AUTO</span><small id="pe-fijos-desglose" class="pe-desg"></small></label>
+              <input type="number" id="pe-fijos" readonly>
+            </div>
+            <div class="ge-input-row">
+              <label><span data-i18n="label.avgTicketPerCover">Ticket medio (€/cubierto)</span><small class="pe-desg" id="pe-ticket-hint"></small></label>
+              <input type="number" id="pe-ticket" min="0" step="0.5" inputmode="decimal" oninput="GE.calcPE()">
+            </div>
+            <div class="ge-input-row">
+              <label data-i18n="label.coversMonth">Cubiertos al mes</label>
+              <input type="number" id="pe-cubiertos" min="0" step="1" inputmode="numeric" oninput="GE.calcPE()">
+            </div>
+            <div class="ge-input-row">
+              <label data-i18n="label.openDaysMonth">Días de apertura/mes</label>
+              <input type="number" id="pe-dias" min="0" max="31" step="1" inputmode="numeric" oninput="GE.calcPE()">
+            </div>
+            <div class="ge-input-row">
+              <label><span data-i18n="label.targetFoodCost">Food cost objetivo (%)</span><small id="pe-fc-real" class="pe-desg"></small></label>
+              <input type="number" id="pe-fc" min="0" max="100" step="1" value="35" inputmode="numeric" onchange="GE.peFoodCostCambia()">
+            </div>
+            <div class="ge-input-row">
+              <label><span id="pe-otros-lbl">Otros costes variables (%)</span><small class="pe-desg" id="pe-otros-hint">Comisión del datáfono, plataformas, envases…</small></label>
+              <input type="number" id="pe-otros" min="0" max="100" step="0.5" inputmode="decimal" placeholder="0" oninput="GE.calcPE()">
             </div>
           </div>
-          <div>
-            <div class="ge-section">
-              <div class="ge-sec-head"><h4><span data-i18n="ge.results">Resultados</span> <span class="ge-auto">AUTO</span></h4></div>
-              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.variableCostPerCover">Coste variable por cubierto</span><span class="pe-val" id="pe-r1">—</span></div>
-              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.contributionPerCover">Contribución por cubierto</span><span class="pe-val" id="pe-r2">—</span></div>
-              <div class="ge-pe-result" style="background:var(--amber-l)"><span class="pe-lbl" style="font-weight:700" data-i18n="label.coversToBreakEven">Cubiertos para cubrir gastos</span><span class="pe-val" id="pe-r3" style="color:var(--amber-dark)">—</span></div>
-              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.coversPerDayNeeded">Cubiertos por día necesarios</span><span class="pe-val" id="pe-r4">—</span></div>
-              <div class="ge-pe-result" style="background:var(--green-l)"><span class="pe-lbl" style="font-weight:700" data-i18n="label.minMonthlySales">Ventas mínimas mensuales</span><span class="pe-val" id="pe-r5" style="color:var(--green)">—</span></div>
-            </div>
-            <div class="ge-section" style="margin-top:12px">
-              <div class="ge-sec-head"><h4 data-i18n="common.comparison">Comparativa</h4></div>
-              <div class="vis-section" style="margin-bottom:0">
-                <h4 data-i18n="ge.coverageVsBreakEven">Cobertura actual vs equilibrio</h4>
-                <div id="pe-gauge" style="margin-top:4px"></div>
-              </div>
-              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.currentVsNeededCovers">Cubiertos actuales vs necesarios</span><span class="pe-val" id="pe-r6">—</span></div>
-              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.businessStatus">Estado del negocio</span><span id="pe-estado" style="font-size:14px;font-weight:700">—</span></div>
-            </div>
+          <div class="ge-section">
+            <div class="ge-sec-head"><h4><span data-i18n="ge.results">Resultados</span> <span class="ge-auto">AUTO</span></h4></div>
+            <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.variableCostPerCover">Coste variable por cubierto</span><span class="pe-val" id="pe-r1">—</span></div>
+            <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.contributionPerCover">Contribución por cubierto</span><span class="pe-val" id="pe-r2">—</span></div>
+            <div class="ge-pe-result"><span class="pe-lbl" id="pe-l7">Margen de seguridad</span><span class="pe-val te-valor" id="pe-r7">—</span></div>
+            <div class="ge-pe-result"><span class="pe-lbl" id="pe-l8">Resultado estimado del mes</span><span class="pe-val te-valor" id="pe-r8">—</span></div>
+            <div class="ge-pe-result"><span class="pe-lbl" id="pe-l9">Cubiertos para tu beneficio objetivo</span><span class="pe-val" id="pe-r9">—</span></div>
+            <div id="pe-gauge" class="pe-gauge"></div>
           </div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4 id="pe-t-graf">Ingresos y costes según los cubiertos</h4></div>
+          <div id="pe-chart"></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4 id="pe-t-pal">¿Y si…?</h4></div>
+          <p class="te-nota" id="pe-n-pal"></p>
+          <div id="pe-levers" class="pe-levers"></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4 id="pe-t-esc">Tus escenarios</h4></div>
+          <div id="pe-escenarios"></div>
         </div>
       </div>
 

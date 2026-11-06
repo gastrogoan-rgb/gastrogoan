@@ -2363,79 +2363,181 @@ const GE = (function(){
 
   /* -- PUNTO DE EQUILIBRIO -- */
   function peScenarios(){ if(!config().scenarios) config().scenarios = []; return config().scenarios; }
+  // Costes fijos del mes: personal + gastos fijos + las cuotas de préstamos e inversiones financiadas
+  // (que son caja y hay que cubrir cada mes aunque no sean «gasto» en la Cuenta de Resultados).
+  function peFijosDesglose(){
+    const hoy = new Date();
+    const personal = totalPersonalNeto(), gastos = totalGFNeto(), cuotas = capexCuotaMes(hoy.getMonth(), hoy.getFullYear());
+    return {personal, gastos, cuotas, total: personal + gastos + cuotas};
+  }
+  function peLeer(){
+    const n = id => parseFloat(document.getElementById(id).value) || 0;
+    return {fij:n('pe-fijos'), tick:n('pe-ticket'), cub:n('pe-cubiertos'), dias:n('pe-dias'), fc:n('pe-fc'), otros:n('pe-otros')};
+  }
+  // Todas las cuentas del punto de equilibrio en una sola función pura: la usan el resultado, el gráfico,
+  // las palancas («¿y si subo el ticket?») y la lista de escenarios, así nunca se contradicen.
+  function peCalcular(p){
+    const cvCub = p.tick * (p.fc + p.otros) / 100;
+    const contrib = p.tick - cvCub;
+    if(!(p.tick > 0) || !(p.dias > 0) || contrib <= 0) return {ok:false, contrib, cvCub};
+    const cubNec = Math.ceil(p.fij / contrib - 1e-9);
+    const benPct = distPctActual().ben / 100;
+    const denom = contrib - benPct * p.tick;
+    return {ok:true, cvCub, contrib, cubNec, cubDia: Math.ceil(cubNec / p.dias), ventasMin: cubNec * p.tick,
+      resultado: p.cub * contrib - p.fij,
+      margenSeg: p.cub > 0 ? (p.cub - cubNec) / p.cub * 100 : null,
+      cubBen: denom > 0 ? Math.ceil(p.fij / denom - 1e-9) : null, benPct};
+  }
   function renderPE(){
-    const tf = totalFijosNeto();
-    document.getElementById('pe-fijos').value = tf.toFixed(2);
+    const fd = peFijosDesglose();
+    document.getElementById('pe-fijos').value = fd.total.toFixed(2);
+    document.getElementById('pe-fijos-desglose').innerHTML = `${t('hr.lbl.personalNoVat')} <b>${fmtMoney(fd.personal)}</b> + ${t('hr.lbl.fixedNoVat')} <b>${fmtMoney(fd.gastos)}</b>${fd.cuotas > 0.004 ? ` + ${gl({es:'Cuotas de préstamos e inversiones', ca:'Quotes de préstecs i inversions', en:'Loan and investment payments'})} <b>${fmtMoney(fd.cuotas)}</b>` : ''}`;
+    const tx = (id, o) => { const e = document.getElementById(id); if(e) e.textContent = gl(o); };
+    tx('pe-otros-lbl', {es:'Otros costes variables (%)', ca:'Altres costos variables (%)', en:'Other variable costs (%)'});
+    tx('pe-otros-hint', {es:'Comisión del datáfono, plataformas, envases…', ca:'Comissió del datàfon, plataformes, envasos…', en:'Card fees, delivery platforms, packaging…'});
+    tx('pe-ticket-hint', {es:'sin IVA', ca:'sense IVA', en:'excl. VAT'});
+    tx('pe-l7', {es:'Margen de seguridad', ca:'Marge de seguretat', en:'Safety margin'});
+    tx('pe-l8', {es:'Resultado estimado del mes', ca:'Resultat estimat del mes', en:'Estimated result this month'});
+    tx('pe-l9', {es:`Cubiertos para tu beneficio objetivo (${distPctActual().ben} %)`, ca:`Coberts per al teu benefici objectiu (${distPctActual().ben} %)`, en:`Covers for your profit target (${distPctActual().ben} %)`});
+    tx('pe-t-graf', {es:'Ingresos y costes según los cubiertos', ca:'Ingressos i costos segons els coberts', en:'Revenue and costs by covers'});
+    tx('pe-t-pal', {es:'¿Y si…?', ca:'I si…?', en:'What if…?'});
+    tx('pe-n-pal', {es:'Lo que cambia moviendo UNA sola cosa, con tus números de hoy. Es donde más merece la pena empujar.', ca:'El que canvia movent UNA sola cosa, amb els teus números d\'avui. És on més val la pena empentar.', en:'What changes by moving ONE thing, with today\'s numbers. That is where pushing pays most.'});
+    tx('pe-t-esc', {es:'Tus escenarios', ca:'Els teus escenaris', en:'Your scenarios'});
     document.getElementById('pe-ticket').value = config().ticketMedio || '';
     document.getElementById('pe-cubiertos').value = config().cubiertosActuales || '';
     document.getElementById('pe-dias').value = config().diasApertura || '';
     document.getElementById('pe-fc').value = foodCostObjPct();
-    const sel = document.getElementById('pe-scenario-sel');
-    if(sel){
-      const scenarios = peScenarios();
-      sel.innerHTML = `<option value="">${t('hr.pe.scenarioDefaultOption')}</option>` + scenarios.map(s=>`<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('');
-    }
+    document.getElementById('pe-otros').value = config().peOtrosPct || '';
+    // Food cost REAL del mes en curso, para compararlo con el objetivo sin ir a otra pantalla.
+    const hoy = new Date(), fn = facturacionNetaMes(hoy.getMonth(), hoy.getFullYear());
+    const real = fn > 0 ? totalVariablesNetoMes(hoy.getMonth(), hoy.getFullYear()) / fn * 100 : null;
+    document.getElementById('pe-fc-real').innerHTML = real == null ? '' : `${gl({es:'Tu food cost real este mes: ', ca:'El teu food cost real aquest mes: ', en:'Your actual food cost this month: '})}<b>${pct1(real)} %</b> <button type="button" class="btn btn-sm" onclick="GE.peUsarFoodCostReal(${Math.round(real)})">${gl({es:'Usarlo', ca:'Fer-lo servir', en:'Use it'})}</button>`;
     calcPE();
   }
+  function peFoodCostCambia(){
+    // El food cost es EL MISMO número que el reparto de Tesorería: se sincroniza al terminar de editar (no a cada tecla,
+    // que reajustaba el resto del reparto con cada cifra a medio escribir).
+    const v = parseFloat(document.getElementById('pe-fc').value);
+    if(!isNaN(v)) setFoodCostObjPct(v);
+    document.getElementById('pe-fc').value = foodCostObjPct();
+    saveDB(); calcPE();
+  }
+  function peUsarFoodCostReal(v){ document.getElementById('pe-fc').value = v; peFoodCostCambia(); }
   function resetPEOutputs(msg){
-    ['pe-r1','pe-r2','pe-r4','pe-r5','pe-r6'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='—'; });
+    ['pe-r1','pe-r2','pe-r4','pe-r5','pe-r6','pe-r7','pe-r8','pe-r9'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='—'; });
     const r3 = document.getElementById('pe-r3'); if(r3) r3.textContent = msg || '—';
     const estadoEl = document.getElementById('pe-estado');
-    if(estadoEl){ estadoEl.textContent = '—'; estadoEl.style.color = ''; }
-    const gaugeEl = document.getElementById('pe-gauge');
-    if(gaugeEl) gaugeEl.innerHTML = '';
+    if(estadoEl){ estadoEl.innerHTML = ''; estadoEl.className = 'pe-estado'; }
+    ['pe-gauge','pe-chart','pe-levers'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ''; });
+    const aviso = document.getElementById('pe-vacio');
+    if(aviso) aviso.innerHTML = msg ? '' : `<p class="te-nota"><i class="ti ti-info-circle"></i> ${gl({es:'Pon tu ticket medio y los días que abres, o pulsa «Usar datos del último mes»: con eso se calcula todo.', ca:'Posa el teu tiquet mitjà i els dies que obres, o prem «Fer servir dades de l\'últim mes»: amb això es calcula tot.', en:'Enter your average ticket and the days you open, or press «Use last month\'s data»: everything is calculated from that.'})}</p>`;
+    renderPEEscenarios();
   }
   function calcPE(){
-    const fij = parseFloat(document.getElementById('pe-fijos').value) || 0;
-    const tick = parseFloat(document.getElementById('pe-ticket').value) || 0;
-    const cub = parseFloat(document.getElementById('pe-cubiertos').value) || 0;
-    const dias = parseFloat(document.getElementById('pe-dias').value) || 0;
-    const fc = parseFloat(document.getElementById('pe-fc').value) || 35;
-    Object.assign(config(), {ticketMedio:tick, cubiertosActuales:cub, diasApertura:dias});
-    setFoodCostObjPct(fc);
+    const p = peLeer();
+    if(!p.fc) p.fc = 35;
+    Object.assign(config(), {ticketMedio:p.tick, cubiertosActuales:p.cub, diasApertura:p.dias, peOtrosPct:p.otros});
     saveDB();
-    if(!tick || !dias){
-      resetPEOutputs();
-      return;
-    }
-    const cvCub = tick*(fc/100);
-    const contribCub = tick - cvCub;
-    if(contribCub<=0){ resetPEOutputs(t('hr.pe.notCalculable')); return; }
-    const cubNec = Math.ceil(fij/contribCub);
-    const cubDia = Math.ceil(cubNec/dias);
-    const ventasMin = cubNec*tick;
-    document.getElementById('pe-r1').textContent = fmtMoney(cvCub)+t('hr.pe.perCover');
-    document.getElementById('pe-r2').textContent = fmtMoney(contribCub)+t('hr.pe.perCover');
-    document.getElementById('pe-r3').textContent = t('hr.pe.coversPerMonth').replace('${n}', cubNec);
-    document.getElementById('pe-r4').textContent = t('hr.pe.coversPerDay').replace('${n}', cubDia);
-    document.getElementById('pe-r5').textContent = fmtMoney(ventasMin);
-    const diff = cub - cubNec;
-    document.getElementById('pe-r6').textContent = (diff>=0?'+':'')+diff+t('hr.pe.coversSuffix');
+    const aviso = document.getElementById('pe-vacio'); if(aviso) aviso.innerHTML = '';
+    if(!p.tick || !p.dias){ resetPEOutputs(); return; }
+    const r = peCalcular(p);
+    if(!r.ok){ resetPEOutputs(t('hr.pe.notCalculable')); return; }
+    const set = (id, txt) => { document.getElementById(id).textContent = txt; };
+    set('pe-r1', fmtMoney(r.cvCub) + t('hr.pe.perCover'));
+    set('pe-r2', fmtMoney(r.contrib) + t('hr.pe.perCover'));
+    set('pe-r3', t('hr.pe.coversPerMonth').replace('${n}', r.cubNec));
+    set('pe-r4', t('hr.pe.coversPerDay').replace('${n}', r.cubDia));
+    set('pe-r5', fmtMoney(r.ventasMin));
+    const diff = p.cub - r.cubNec;
+    set('pe-r6', (diff>=0?'+':'') + diff + t('hr.pe.coversSuffix'));
+    // Margen de seguridad: cuánto pueden bajar las ventas antes de entrar en pérdidas.
+    set('pe-r7', r.margenSeg == null ? '—' : pct1(r.margenSeg) + ' %');
+    set('pe-r8', (r.resultado >= 0 ? '+' : '−') + fmtMoney(Math.abs(r.resultado)));
+    set('pe-r9', r.cubBen == null ? gl({es:'No alcanzable con este ticket', ca:'No assolible amb aquest tiquet', en:'Not reachable at this ticket'}) : t('hr.pe.coversPerMonth').replace('${n}', r.cubBen));
+    document.getElementById('pe-r8').className = 'te-valor ' + (r.resultado >= 0 ? 'is-ok' : 'is-ko');
+    document.getElementById('pe-r7').className = 'te-valor ' + (r.margenSeg != null && r.margenSeg >= 0 ? 'is-ok' : 'is-ko');
     const estadoEl = document.getElementById('pe-estado');
-    estadoEl.textContent = diff>=0 ? t('hr.pe.aboveBreakeven') : t('hr.pe.belowBreakeven');
-    estadoEl.style.color = diff>=0 ? 'var(--green)' : 'var(--red)';
-    peGauge(cub, cubNec);
+    const arriba = diff >= 0;
+    estadoEl.className = 'pe-estado ' + (arriba ? 'is-ok' : 'is-ko');
+    estadoEl.innerHTML = `<i class="ti ${arriba ? 'ti-check' : 'ti-x'}"></i> ${arriba ? t('hr.pe.aboveBreakevenLong') : t('hr.pe.belowBreakevenLong')}`;
+    peGauge(p.cub, r.cubNec);
+    peChart(p, r);
+    peLevers(p, r);
+    renderPEEscenarios();
   }
+  // Cobertura: la barra llega al 100 % justo en el punto de equilibrio.
   function peGauge(cub, cubNec){
     const el = document.getElementById('pe-gauge'); if(!el) return;
-    const max = Math.max(cub, cubNec, 1)*1.2;
-    const pctAct = Math.min(cub/max*100, 100);
-    const pctNec = Math.min(cubNec/max*100, 100);
+    const cob = cubNec > 0 ? cub / cubNec * 100 : (cub > 0 ? 100 : 0);
     const ok = cub >= cubNec;
     el.innerHTML = `
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between">
-        <span>0</span><span style="color:var(--amber-dark);font-weight:600">${t('hr.pe.breakevenGauge').replace('${n}', cubNec)}</span><span>${Math.ceil(max)}</span>
-      </div>
-      <div style="position:relative;height:28px;background:var(--border);border-radius:6px;overflow:visible">
-        <div style="position:absolute;left:0;top:0;height:100%;width:${pctAct}%;background:${ok?'var(--ink)':'var(--red)'};border-radius:6px;transition:width .4s"></div>
-        <div style="position:absolute;left:${pctNec}%;top:-4px;height:36px;width:3px;background:var(--amber-dark);border-radius:2px"></div>
-        <div class="txt-xs" style="position:absolute;left:clamp(28px,${pctNec}%,calc(100% - 28px));top:34px;transform:translateX(-50%);color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
-      </div>
-      <div style="margin-top:24px;font-size:13px;font-weight:600;color:${ok?'var(--green)':'var(--red)'}">
-        ${ok?t('hr.pe.aboveBreakevenLong'):t('hr.pe.belowBreakevenLong')} · ${t('hr.pe.currentCovers').replace('${n}', cub)}
-      </div>`;
+      <div class="pe-cob"><span>${gl({es:'Cobertura del equilibrio', ca:'Cobertura de l\'equilibri', en:'Break-even coverage'})}</span><b class="${ok ? 'is-ok' : 'is-ko'}">${Math.round(cob)} %</b></div>
+      <div class="pe-cob-bar"><i class="${ok ? 'is-ok' : 'is-ko'}" style="width:${(cob / Math.max(cob, 100) * 100).toFixed(1)}%"></i><em style="left:${(100 / Math.max(cob, 100) * 100).toFixed(1)}%" aria-hidden="true"></em></div>
+      <p class="pe-cob-t">${t('hr.pe.currentCovers').replace('${n}', cub)} · ${t('hr.pe.breakevenGauge').replace('${n}', cubNec)}</p>`;
   }
-  // Autorrelleno de ticket medio y cubiertos/mes a partir de las ventas reales de los
+  // Gráfico clásico del equilibrio: ingresos frente a costes según los cubiertos; donde se cruzan, el punto.
+  // El dibujo se estira (SVG); los textos van en HTML encima para que no se deformen.
+  function peChart(p, r){
+    const el = document.getElementById('pe-chart'); if(!el) return;
+    const xmax = Math.max(r.cubNec * 1.6, p.cub * 1.15, (r.cubBen || 0) * 1.1, 10);
+    const ymax = p.tick * xmax;
+    const X = v => v / xmax * 100, Y = v => 100 - Math.min(v, ymax) / ymax * 100;
+    const ing = v => v * p.tick, cos = v => p.fij + v * r.cvCub;
+    const perdida = `0,${Y(0)} 0,${Y(p.fij)} ${X(r.cubNec)},${Y(ing(r.cubNec))}`;
+    const ganancia = `${X(r.cubNec)},${Y(ing(r.cubNec))} 100,${Y(ing(xmax))} 100,${Y(cos(xmax))}`;
+    const xe = X(r.cubNec), ye = Y(ing(r.cubNec)), xh = p.cub > 0 ? X(p.cub) : null;
+    el.innerHTML = `<div class="pe-graf" role="img" aria-label="${escapeHtml(gl({es:'Ingresos y costes según los cubiertos', ca:'Ingressos i costos segons els coberts', en:'Revenue and costs by covers'}))}">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points="${perdida}" class="pe-perd"/><polygon points="${ganancia}" class="pe-gan"/>
+        <line x1="0" y1="${Y(p.fij)}" x2="100" y2="${Y(p.fij)}" class="pe-fijos-l" vector-effect="non-scaling-stroke"/>
+        <line x1="0" y1="${Y(0)}" x2="100" y2="${Y(ing(xmax))}" class="pe-ing-l" vector-effect="non-scaling-stroke"/>
+        <line x1="0" y1="${Y(p.fij)}" x2="100" y2="${Y(cos(xmax))}" class="pe-cos-l" vector-effect="non-scaling-stroke"/>
+        ${xh != null ? `<line x1="${xh}" y1="0" x2="${xh}" y2="100" class="pe-hoy-l" vector-effect="non-scaling-stroke"/>` : ''}
+      </svg>
+      <span class="pe-pto" style="left:${xe}%;top:${ye}%"></span>
+      <span class="pe-etq pe-e-eq" style="left:clamp(8%,${xe}%,86%);top:calc(${ye}% - 34px)">${gl({es:'Equilibrio', ca:'Equilibri', en:'Break-even'})} · ${r.cubNec}</span>
+      ${xh != null ? `<span class="pe-etq pe-e-hoy" style="left:clamp(6%,${xh}%,92%)">${gl({es:'Hoy', ca:'Avui', en:'Now'})} · ${p.cub}</span>` : ''}
+      <span class="pe-etq pe-e-fij" style="top:calc(${Y(p.fij)}% - 22px)">${t('label.fixedCosts')} · ${fmtMoney(p.fij)}</span>
+      <span class="pe-etq pe-e-y0">0 €</span><span class="pe-etq pe-e-ymax">${Math.round(ymax).toLocaleString(localeActual())} €</span>
+      <span class="pe-etq pe-e-x0">0</span><span class="pe-etq pe-e-xmax">${Math.ceil(xmax)} ${gl({es:'cubiertos', ca:'coberts', en:'covers'})}</span>
+    </div>
+    <ul class="te-leyenda pe-leyenda"><li><i style="background:var(--olive)"></i>${gl({es:'Ingresos', ca:'Ingressos', en:'Revenue'})}</li><li><i style="background:var(--ink)"></i>${gl({es:'Costes (fijos + variables)', ca:'Costos (fixos + variables)', en:'Costs (fixed + variable)'})}</li><li><i style="background:#E9C9C0"></i>${gl({es:'Pérdidas', ca:'Pèrdues', en:'Losses'})}</li><li><i style="background:#CFE0CC"></i>${gl({es:'Beneficio', ca:'Benefici', en:'Profit'})}</li></ul>`;
+  }
+  // «¿Y si…?»: lo que cambia si se mueve UNA palanca. Es la parte accionable: dónde merece la pena empujar.
+  function peLevers(p, r){
+    const el = document.getElementById('pe-levers'); if(!el) return;
+    const palancas = [
+      {ic:'ti-receipt', txt:gl({es:'Subir el ticket 1 €', ca:'Pujar el tiquet 1 €', en:'Raise the ticket by 1 €'}), p2:{...p, tick:p.tick + 1}},
+      ...(p.fc >= 2 ? [{ic:'ti-chef-hat', txt:gl({es:'Bajar el food cost 2 puntos', ca:'Baixar el food cost 2 punts', en:'Cut food cost by 2 points'}), p2:{...p, fc:p.fc - 2}}] : []),
+      {ic:'ti-building-store', txt:gl({es:'Recortar gastos fijos un 10 %', ca:'Retallar despeses fixes un 10 %', en:'Cut fixed costs by 10 %'}), p2:{...p, fij:p.fij * 0.9}},
+      {ic:'ti-users', txt:gl({es:'Un 10 % más de cubiertos', ca:'Un 10 % més de coberts', en:'10 % more covers'}), p2:{...p, cub:p.cub * 1.1}}
+    ];
+    el.innerHTML = palancas.map(x => {
+      const r2 = peCalcular(x.p2); if(!r2.ok) return '';
+      const dCub = r2.cubNec - r.cubNec, dRes = r2.resultado - r.resultado;
+      const mejora = dRes > 0.005 || dCub < 0;
+      return `<div class="pe-pal"><i class="ti ${x.ic}" aria-hidden="true"></i><b>${x.txt}</b>
+        <span>${dCub === 0 ? gl({es:'Mismo equilibrio', ca:'Mateix equilibri', en:'Same break-even'}) : `${dCub > 0 ? '+' : '−'}${Math.abs(dCub)} ${gl({es:'cubiertos para cubrir gastos', ca:'coberts per cobrir despeses', en:'covers to break even'})}`}</span>
+        <em class="${mejora ? 'is-ok' : ''}">${dRes >= 0 ? '+' : '−'}${fmtMoney(Math.abs(dRes))} ${gl({es:'al mes', ca:'al mes', en:'a month'})}</em></div>`;
+    }).join('');
+  }
+  // Los escenarios guardados, comparados entre sí con los costes fijos de hoy.
+  function renderPEEscenarios(){
+    const box = document.getElementById('pe-escenarios'); if(!box) return;
+    const lista = peScenarios();
+    const fij = parseFloat(document.getElementById('pe-fijos').value) || 0;
+    box.innerHTML = lista.length ? lista.map(sc => {
+      const r = peCalcular({fij, tick:sc.ticketMedio, cub:sc.cubiertosActuales, dias:sc.diasApertura, fc:sc.foodCostObj, otros:sc.otrosPct || 0});
+      return `<div class="pe-esc">
+        <div class="pe-esc-n"><b>${escapeHtml(sc.name)}</b><small>${t('label.avgTicketPerCover')}: ${fmtMoney(sc.ticketMedio)} · ${sc.diasApertura} ${gl({es:'días', ca:'dies', en:'days'})} · ${t('label.targetFoodCost').replace(/\s*\(.*$/, '')} ${sc.foodCostObj} %</small></div>
+        <div class="pe-esc-v">${r.ok ? `<b>${r.cubNec}</b><small>${gl({es:'cubiertos/mes', ca:'coberts/mes', en:'covers/mo'})}</small>` : '—'}</div>
+        <div class="pe-esc-v">${r.ok ? `<b>${fmtMoney(r.ventasMin)}</b><small>${gl({es:'ventas mínimas', ca:'vendes mínimes', en:'minimum sales'})}</small>` : ''}</div>
+        <button type="button" class="btn btn-sm" onclick="GE.peLoadScenario('${escapeHtml(sc.name).replace(/'/g, '&#39;')}')">${gl({es:'Cargar', ca:'Carregar', en:'Load'})}</button>
+        ${ggMenuAcciones([{icono:'ti-trash', texto:t('hr.pe.deleteScenarioBtn'), fn:`GE.peDeleteScenario(${JSON.stringify(sc.name).replace(/"/g, "'")})`, peligro:true}])}
+      </div>`;
+    }).join('') : `<p class="te-nota">${gl({es:'Guarda un escenario («¿y si abro 6 días?», «¿y si subo precios?») y aquí los verás comparados.', ca:'Desa un escenari («i si obro 6 dies?», «i si pujo preus?») i aquí els veuràs comparats.', en:'Save a scenario («what if I open 6 days?», «what if I raise prices?») and you will see them compared here.'})}</p>`;
+  }
+  // Autorrelleno de ticket medio, cubiertos/mes y días abiertos a partir de las ventas reales de los
   // últimos 30 días (mismo criterio que el Panel principal). Un solo click, no forzado:
   // el usuario puede seguir ajustando los valores a mano después.
   function peUseRealData(){
@@ -2460,9 +2562,14 @@ const GE = (function(){
       }, 0);
       return s + netoVenta;
     }, 0);
-    const avgTicket = totalNeto/sales.length;
+    // «Cubierto» = una persona sentada a la mesa: se cuentan los comensales de cada venta (pax) y, si no
+    // se anotaron (barra, para llevar), una venta es un cubierto. Con 30 días: cubiertos y días abiertos
+    // son los de ese periodo, no los de un mes tipo.
+    const cubiertos = sales.reduce((s,x) => s + ((parseInt(x.pax) > 0) ? parseInt(x.pax) : 1), 0);
+    const avgTicket = totalNeto/cubiertos;
     document.getElementById('pe-ticket').value = avgTicket.toFixed(2);
-    document.getElementById('pe-cubiertos').value = sales.length;
+    document.getElementById('pe-cubiertos').value = cubiertos;
+    document.getElementById('pe-dias').value = new Set(sales.map(x => x.date)).size;
     calcPE();
     showToast(t('hr.pe.realDataApplied'));
   }
@@ -2474,15 +2581,14 @@ const GE = (function(){
       ticketMedio: parseFloat(document.getElementById('pe-ticket').value)||0,
       cubiertosActuales: parseFloat(document.getElementById('pe-cubiertos').value)||0,
       diasApertura: parseFloat(document.getElementById('pe-dias').value)||0,
-      foodCostObj: parseFloat(document.getElementById('pe-fc').value)||35
+      foodCostObj: parseFloat(document.getElementById('pe-fc').value)||35,
+      otrosPct: parseFloat(document.getElementById('pe-otros').value)||0
     };
     const scenarios = peScenarios();
     const existing = scenarios.find(s=>s.name===name);
     if(existing) Object.assign(existing, data); else scenarios.push(data);
     saveDB();
-    renderPE();
-    const sel = document.getElementById('pe-scenario-sel');
-    if(sel) sel.value = name;
+    renderPEEscenarios();
     showToast(t('msg.scenarioSaved'));
   }
   function peLoadScenario(name){
@@ -2493,16 +2599,15 @@ const GE = (function(){
     document.getElementById('pe-cubiertos').value = sc.cubiertosActuales;
     document.getElementById('pe-dias').value = sc.diasApertura;
     document.getElementById('pe-fc').value = sc.foodCostObj;
-    calcPE();
+    document.getElementById('pe-otros').value = sc.otrosPct || '';
+    peFoodCostCambia();
   }
-  async function peDeleteScenario(){
-    const sel = document.getElementById('pe-scenario-sel');
-    const name = sel ? sel.value : '';
+  async function peDeleteScenario(name){
     if(!name) return;
     if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
     ge().config.scenarios = peScenarios().filter(s=>s.name!==name);
     saveDB();
-    renderPE();
+    renderPEEscenarios();
   }
 
   /* -- CAPEX -- */
@@ -4411,7 +4516,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

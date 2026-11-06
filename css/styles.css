@@ -4779,6 +4779,62 @@ span.dt-punto{position:absolute;border-radius:50%}
 .rc-hist-d.is-ko{color:var(--red)}
 .rc-hist-t{grid-column:1 / -1;color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
 @media (max-width:760px){ .rc-hist-f{grid-template-columns:minmax(0,1fr) auto} .rc-hist-p{grid-column:1 / -1;font-weight:600} }
+/* Punto de equilibrio (6/11) */
+.te-valor.is-ok{color:var(--green)}
+.te-valor.is-ko{color:var(--red)}
+.pe-kpis{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.pe-estado{margin-top:8px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;line-height:1.35}
+.pe-estado.is-ok{color:var(--green)}
+.pe-estado.is-ko{color:var(--red)}
+.pe-estado .ti{font-size:18px;flex:none}
+.pe-duo{margin-top:0}
+.pe-duo > .ge-section{margin:0}
+#ge-pe .ge-input-row{padding:12px 18px;border-bottom:1px solid var(--hair);background:#fff}
+#ge-pe .ge-input-row label{font-size:14px;font-weight:500}
+#ge-pe .ge-input-row input{width:124px;min-height:44px;text-align:right;font-family:var(--mono);font-size:15px;padding:0 10px;border:1px solid var(--hair);border-radius:3px;background:#fff}
+#ge-pe #pe-fijos{background:#FAF8F4;font-weight:700}
+.pe-desg{display:block;margin-top:3px;font-size:12px;font-weight:400;color:var(--muted);line-height:1.45}
+.pe-desg b{font-family:var(--mono);color:var(--ink)}
+#ge-pe .ge-pe-result{padding:12px 18px;border-bottom:1px solid var(--hair);background:#fff}
+#ge-pe .ge-pe-result .pe-val{font-size:16px;text-align:right}
+.pe-gauge{padding:14px 18px 16px}
+.pe-cob{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--body)}
+.pe-cob b{font-family:var(--mono);font-size:15px}
+.pe-cob b.is-ok,.pe-cob-bar i.is-ok{color:var(--green)}
+.pe-cob b.is-ko{color:var(--red)}
+.pe-cob-bar{position:relative;height:10px;margin:8px 0;background:var(--hair);border-radius:3px}
+.pe-cob-bar i{display:block;height:100%;border-radius:3px;background:var(--green)}
+.pe-cob-bar i.is-ko{background:var(--red)}
+.pe-cob-bar em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink)}
+.pe-cob-t{margin:0;font-size:12.5px;color:var(--muted)}
+.pe-graf{position:relative;height:290px;margin:26px 18px 34px 74px;border-left:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.pe-graf svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pe-perd{fill:#E9C9C0}
+.pe-gan{fill:#CFE0CC}
+.pe-ing-l{stroke:var(--olive);stroke-width:2.5;fill:none}
+.pe-cos-l{stroke:var(--ink);stroke-width:2.5;fill:none}
+.pe-fijos-l{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 4;fill:none}
+.pe-hoy-l{stroke:var(--amber-dark);stroke-width:1.6;stroke-dasharray:3 3;fill:none}
+.pe-pto{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--amber-dark);border:2px solid #fff;box-shadow:0 0 0 1px var(--amber-dark)}
+.pe-etq{position:absolute;padding:1px 6px;font-family:var(--mono);font-size:11.5px;color:var(--ink);background:rgba(255,255,255,.88);border-radius:2px;white-space:nowrap;transform:translateX(-50%)}
+.pe-e-fij{left:8px;transform:none;color:var(--muted)}
+.pe-e-hoy{top:4px;color:var(--amber-dark)}
+.pe-e-y0{left:-8px;bottom:0;transform:translate(-100%,50%)}
+.pe-e-ymax{left:-8px;top:0;transform:translate(-100%,-50%)}
+.pe-e-x0{left:0;top:calc(100% + 8px)}
+.pe-e-xmax{left:100%;top:calc(100% + 8px);transform:translateX(-100%)}
+.pe-leyenda{padding:0 18px 16px}
+.pe-levers{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;padding:0 18px 18px}
+.pe-pal{display:flex;flex-direction:column;gap:5px;padding:14px;border:1px solid var(--hair);border-radius:4px;background:#fff}
+.pe-pal .ti{font-size:20px;color:var(--olive)}
+.pe-pal b{font-size:14px;font-weight:600}
+.pe-pal span{font-size:13px;color:var(--body);line-height:1.4}
+.pe-pal em{font-style:normal;font-family:var(--mono);font-weight:600;font-size:13.5px;color:var(--muted)}
+.pe-pal em.is-ok{color:var(--green)}
+.pe-esc{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.8fr) minmax(0,1fr) auto auto;gap:6px 14px;align-items:center;padding:12px 18px;border-top:1px solid var(--hair)}
+.pe-esc-n b{display:block;font-size:14.5px;overflow-wrap:break-word}
+.pe-esc-n small,.pe-esc-v small{display:block;color:var(--muted);font-size:12px}
+.pe-esc-v b{font-family:var(--mono);font-size:14px}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5705,4 +5761,14 @@ small{font-size:max(.8333em, 11px)}
   .te-barras{padding:14px 14px 4px}
   .te-colchon{margin:12px 14px 6px}
   .te-grupo{padding:12px 14px}
+}
+/* Punto de equilibrio en móvil */
+@media (max-width:760px){
+  .pe-graf{height:240px;margin:24px 12px 34px 62px}
+  .pe-e-fij{display:none}
+  .pe-levers{padding:0 12px 14px}
+  .pe-esc{grid-template-columns:minmax(0,1fr) auto auto;padding:12px 14px}
+  .pe-esc-n{grid-column:1 / -1}
+  #ge-pe .ge-input-row{padding:12px 14px}
+  .pe-leyenda{padding:0 14px 14px}
 }
