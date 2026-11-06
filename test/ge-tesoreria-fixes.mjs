@@ -39,9 +39,17 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('El selector de meses de Tesorería queda centrado', async () => {
-  const r = await page.evaluate(()=>getComputedStyle(document.getElementById('te-months')).justifyContent);
-  assert.equal(r, 'center', 'la fila de meses debe estar centrada: ' + r);
+await caso('El selector de periodo (Tesorería) es el común (‹ mes año ▾ ›) y cambia de mes con las flechas', async () => {
+  const r = await page.evaluate(async ()=>{
+    const sel = document.querySelector('#te-periodo .pe-sel'); if(!sel) return {sinSelector:true};
+    const antes = sel.querySelector('.pe-actual').textContent.trim();
+    sel.querySelectorAll('.pe-flecha')[1].click(); await new Promise(r=>setTimeout(r,250));
+    const despues = document.querySelector('#te-periodo .pe-actual').textContent.trim();
+    document.querySelector('#te-periodo .pe-flecha').click(); await new Promise(r=>setTimeout(r,250));   // vuelve al mes de partida
+    return {antes, despues};
+  });
+  assert.ok(!r.sinSelector, 'falta el selector de periodo');
+  assert.notEqual(r.antes, r.despues, 'la flecha debe cambiar de mes: ' + JSON.stringify(r));
 });
 
 await caso('El reparto (Personal/G.Fijos/Variables/Otros/Beneficio) ya NO se recalcula en cada pulsación (oninput), solo al terminar de editar (onchange)', async () => {

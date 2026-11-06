@@ -1284,74 +1284,84 @@ const GE = (function(){
     // indefinidamente mientras esté pendiente de devolver.
     return (DB.reservations||[]).filter(r => r.depositConfirmed && !r.depositNeedsRefund && (r.depositPagoFecha||'').startsWith(mesStr)).reduce((s,r)=>s+parseFloat(r.depositPagoImporte||0),0);
   }
+  /* Ventas (2/11, rehecha): el canal elegido manda. En «Todos» se ve todo (desglose por canal, señales, otros ingresos);
+     en Mesa, Take away o Delivery SOLO lo de ese canal — antes, dentro de «Mesa» seguían saliendo el desglose con los tres
+     canales y los otros ingresos, y parecía que el filtro no filtraba. Ya no hay «Vales regalo» aquí: se emiten y se cobran
+     desde Clientes y TPV, y su asiento contable sigue creándose solo (DB.ge.vales). */
+  function setVentasPeriodo(anio, mes){ ventasYear = anio; ventasMonth = mes == null ? ventasMonth : mes; renderVentas(); }
   function renderVentas(){
-    document.getElementById('ventas-year').textContent = ventasYear;
-    document.getElementById('ventas-months').innerHTML = getMeses().map((m,i)=>`
-      <div class="month-pill${i===ventasMonth?' active':''}" onclick="GE.setVentasMonth(${i})">${m}</div>`).join('');
-    // Solo se ofrece filtrar por los tipos de servicio que el negocio tiene
-    // activados de verdad (Mi Negocio → Tipos de servicio) — antes salían
-    // los tres fijos aunque el negocio no hiciera, por ejemplo, delivery.
-    // Con un solo tipo activo no hace falta ni el filtro: no hay nada entre
-    // lo que elegir.
     const tiposActivos = tiposServicioActivos();
-    const tipoFilterBox = document.getElementById('ventas-tipo-filter');
-    if(tiposActivos.length < 2){
-      tipoFilterBox.innerHTML = '';
-      ventasTipoFiltro = '';
-    } else {
-      const tipos = [{v:'', lbl:t('common.all')}, ...tiposActivos.map(v => ({v, lbl:t('ge.ventas.tipo.'+v)}))];
-      tipoFilterBox.innerHTML = tipos.map(x=>`
-        <button class="btn btn-sm ${ventasTipoFiltro===x.v?'btn-primary':''}" onclick="GE.setVentasTipoFiltro('${x.v}')">${x.lbl}</button>`).join('');
-    }
+    // Con un solo tipo activo no hay nada entre lo que elegir; y un filtro guardado de un tipo ya desactivado se descarta.
+    if(tiposActivos.length < 2 || (ventasTipoFiltro && !tiposActivos.includes(ventasTipoFiltro))) ventasTipoFiltro = '';
+    const mesStr = `${ventasYear}-${String(ventasMonth+1).padStart(2,'0')}`;
+    // Selector de periodo común: cuántas ventas hay en cada mes (del canal elegido) y flechas de mes a mes.
+    const datos = {};
+    activeSales().forEach(v => { const tipo = v.tipo || 'mesa'; if(ventasTipoFiltro && tipo !== ventasTipoFiltro) return; const k = (v.date||'').slice(0,7); if(k) datos[k] = (datos[k]||0) + 1; });
+    document.getElementById('ventas-periodo').innerHTML = ggPeriodoHtml({anio: ventasYear, mes: ventasMonth, cb: 'gePeriodoVentas', datos, anual: false});
+    // Canales, con su cuenta del mes.
+    const delMes = activeSales().filter(v => (v.date||'').startsWith(mesStr));
+    const cuenta = tipo => delMes.filter(v => !tipo || (v.tipo||'mesa') === tipo).length;
+    const chips = tiposActivos.length < 2 ? '' : [{v:'', lbl:t('common.all')}, ...tiposActivos.map(v => ({v, lbl:t('ge.ventas.tipo.'+v)}))].map(x => `
+      <button type="button" class="btn btn-sm btn-fino${ventasTipoFiltro===x.v?' is-on':''}" aria-pressed="${ventasTipoFiltro===x.v}" onclick="GE.setVentasTipoFiltro('${x.v}')">${escapeHtml(x.lbl)} <b>${cuenta(x.v)}</b></button>`).join('');
+    document.getElementById('ventas-tipo-filter').innerHTML = chips;
 
-    renderOtrosIngresos();
-    renderVales();
-    const depositosMes = ventasDepositosForMonth(ventasMonth, ventasYear);
-    document.getElementById('ventas-depositos-note').innerHTML = depositosMes > 0.001 ? `
-      <p style="font-size:12px;color:var(--muted);margin:8px 0 0"><i class="ti ti-cash-banknote"></i> ${t('ge.ventas.depositsNote').replace('${amount}', fmtMoney(depositosMes))}</p>
-    ` : '';
-
-    // -- Desglose REAL por tipo de servicio (mes entero, ignora el filtro
-    // de la tabla de abajo) — solo se pinta si el negocio tiene más de un
-    // tipo activado; con uno solo, el desglose sería igual al total. --
-    const tipoBox = document.getElementById('ventas-por-tipo');
-    if(tipoBox){
-      if(tiposActivos.length < 2){
-        tipoBox.innerHTML = '';
-      } else {
-        const porTipo = ventasPorTipoMes(ventasMonth, ventasYear);
-        // Con el total al final: sin él había que sumar mesa + take away +
-        // delivery a mano para saber cuánto se ha facturado en el mes, que
-        // es justo la cifra que se busca al mirar este desglose.
-        const totalTipos = tiposActivos.reduce((acc,k)=>acc+(porTipo[k]||0), 0);
-        tipoBox.innerHTML = `
-          <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('ge.ventas.byType')}</h4>
-          <div class="ge-kpi-grid" style="margin-bottom:14px">
-            ${tiposActivos.map(k => `<div class="ge-kpi"><div class="lbl">${t('ge.ventas.tipo.'+k)}</div><div class="val">${fmtMoney(porTipo[k])}</div></div>`).join('')}
-            <div class="ge-kpi" style="border-color:var(--ink)"><div class="lbl" style="color:var(--ink)">${t('common.total')}</div><div class="val" style="color:var(--ink)">${fmtMoney(totalTipos)}</div></div>
-          </div>`;
-      }
-    }
-
-    // -- Histórico por día del mes seleccionado, con total al final --
-    // La propina viaja sumada en sale.total (así se cobra en caja) pero NO
-    // es facturación del negocio — normalmente es para el personal. Se
-    // resta del total de esta pestaña y se muestra aparte, solo a título
-    // informativo, para no inflar las ventas reales del negocio.
-    document.getElementById('ventas-dia-title').textContent = `${t('ge.ventas.byDay')} — ${getMeses()[ventasMonth]} ${ventasYear}`;
+    // ── cifras del canal y mes elegidos + serie diaria ──
     const nDias = daysInMonth(ventasYear, ventasMonth);
-    let diaRows = '';
-    let totalMes = 0, ticketsMes = 0, propinaMes = 0;
+    let totalMes = 0, ticketsMes = 0, propinaMes = 0, diaRows = '';
+    const serie = [];
     for(let d=1; d<=nDias; d++){
       const dateStr = `${ventasYear}-${String(ventasMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const salesDia = ventasSalesForDay(dateStr);
-      if(!salesDia.length) continue;
       const totalDia = salesDia.reduce((s,v)=>s+ventaSinPropina(v),0);
       const propinaDia = salesDia.reduce((s,v)=>s+(parseFloat(v.propina)||0),0);
+      serie.push({label: String(d), nombre: d + ' ' + getMeses()[ventasMonth], value: totalDia});
+      if(!salesDia.length) continue;
       const ticketsDia = salesDia.length;
       totalMes += totalDia; ticketsMes += ticketsDia; propinaMes += propinaDia;
       diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}${propinaDia>0.001?`<div class="txt-xs" style="font-weight:400;color:var(--muted)">↳ ${t('ge.ventas.tips')}: ${fmtMoney(propinaDia)}</div>`:''}</td></tr>`;
     }
+    const etCanal = ventasTipoFiltro ? t('ge.ventas.tipo.'+ventasTipoFiltro) : t('common.all');
+    document.getElementById('ventas-kpis').innerHTML = `
+      <div class="ge-kpi-grid ve-kpis">
+        <div class="ge-kpi"><div class="lbl">${escapeHtml(t('common.total'))} · ${escapeHtml(etCanal)}</div><div class="val">${fmtMoney(totalMes)}</div></div>
+        <div class="ge-kpi"><div class="lbl">${t('ge.ventas.tickets')}</div><div class="val">${ticketsMes}</div></div>
+        <div class="ge-kpi"><div class="lbl">${t('ge.ventas.avgTicket')}</div><div class="val">${fmtMoney(ticketsMes ? totalMes/ticketsMes : 0)}</div></div>
+      </div>`;
+
+    // ── desglose por canal, señales y otros ingresos: solo en «Todos» ──
+    const soloTodos = !ventasTipoFiltro;
+    const tipoBox = document.getElementById('ventas-por-tipo');
+    if(soloTodos && tiposActivos.length >= 2 && totalMes > 0){
+      const porTipo = ventasPorTipoMes(ventasMonth, ventasYear);
+      const tot = tiposActivos.reduce((acc,k)=>acc+(porTipo[k]||0), 0) || 1;
+      const color = {mesa:'var(--olive)', takeaway:'#C79A2E', delivery:'#4E6A86'};
+      tipoBox.innerHTML = `
+        <div class="ve-canales">
+          <div class="ve-barra" role="img" aria-label="${escapeHtml(t('ge.ventas.byType'))}">${tiposActivos.map(k => `<span style="width:${((porTipo[k]||0)/tot*100).toFixed(2)}%;background:${color[k]}"></span>`).join('')}</div>
+          <div class="ve-leyenda">${tiposActivos.map(k => `<button type="button" class="ve-leg" onclick="GE.setVentasTipoFiltro('${k}')"><i style="background:${color[k]}"></i><span>${escapeHtml(t('ge.ventas.tipo.'+k))}</span><b>${fmtMoney(porTipo[k]||0)}</b><small>${((porTipo[k]||0)/tot*100).toFixed(0)} %</small></button>`).join('')}</div>
+          <div class="ve-total"><span>${escapeHtml(t('ge.ventas.total'))}</span><span><b>${fmtMoney(tiposActivos.reduce((a,k)=>a+(porTipo[k]||0),0))}</b> <small>100 %</small></span></div>
+        </div>`;
+    } else tipoBox.innerHTML = '';
+    const depositosMes = ventasDepositosForMonth(ventasMonth, ventasYear);
+    document.getElementById('ventas-depositos-note').innerHTML = (soloTodos && depositosMes > 0.001) ? `
+      <p class="txt-xs" style="color:var(--muted);margin:8px 0 0"><i class="ti ti-cash-banknote"></i> ${t('ge.ventas.depositsNote').replace('${amount}', fmtMoney(depositosMes))}</p>` : '';
+    const otros = document.getElementById('ventas-otros-ingresos');
+    if(soloTodos) renderOtrosIngresos(); else if(otros) otros.innerHTML = '';
+
+    // ── curva de ventas día a día ──
+    const curva = document.getElementById('ventas-curva');
+    if(curva){
+      const hayVentas = serie.some(p => p.value > 0);
+      const iPico = serie.reduce((m, p, i) => p.value > serie[m].value ? i : m, 0);
+      curva.innerHTML = hayVentas ? `
+        <div class="ge-section ve-curva">
+          <div class="ge-sec-head"><h4>${escapeHtml(gl({es:'Día a día', ca:'Dia a dia', en:'Day by day'}))}</h4><span class="dt-pico"><i class="ti ti-flame"></i> ${escapeHtml(gl({es:'Mejor día', ca:'Millor dia', en:'Best day'}))}: <b>${serie[iPico].nombre}</b> · ${escapeHtml(fmtMoney(serie[iPico].value))}</span></div>
+          ${dashSerieHtml(serie, {id:'ve-curva', cadaEtiqueta: 5, estatico: true})}
+        </div>` : '';
+    }
+
+    // ── tabla por día ──
+    document.getElementById('ventas-dia-title').textContent = `${t('ge.ventas.byDay')} — ${etCanal} — ${getMeses()[ventasMonth]} ${ventasYear}`;
     document.getElementById('ventas-dia-table').innerHTML = diaRows ? `
       <thead><tr><th>${t('hr.lbl.day')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
       <tbody>${diaRows}</tbody>
@@ -1368,10 +1378,10 @@ const GE = (function(){
   /* -- GASTOS VARIABLES -- */
   function setGVYear(delta){ gvYear += delta; renderVariables(); }
   function renderVariables(){
-    const gvYearEl = document.getElementById('gv-year');
-    if(gvYearEl) gvYearEl.textContent = gvYear;
-    document.getElementById('gv-months').innerHTML = getMeses().map((m,i)=>`
-      <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonth(${i})">${m}</div>`).join('');
+    // Selector de periodo común (flechas de mes en mes y año/mes con cuántos gastos hay en cada uno).
+    const datosGv = {};
+    gastosVariablesActivos().forEach(v => { const k = String(v.fecha || v.date || '').slice(0, 7); if(k) datosGv[k] = (datosGv[k] || 0) + 1; });
+    document.getElementById('gv-periodo').innerHTML = ggPeriodoHtml({anio: gvYear, mes: activeMonth, cb: 'gePeriodoVariables', datos: datosGv, anual: false});
     const mes = activeMonth, tvMes = totalVariablesMes(mes,gvYear), tvNeto = totalVariablesNetoMes(mes,gvYear), ivaSop = tvMes - tvNeto;
     const facNeta = facturacionNetaMes(mes,gvYear), fac = facturacionMes(mes,gvYear);
     const fcPct = facNeta>0 ? (tvNeto/facNeta*100) : 0;
@@ -1715,7 +1725,7 @@ const GE = (function(){
       {ok: !!b.cif, txt: t('ck.nif'), ir: "currentFolder='gestion'; navigate('minegocio')"},
       {ok: gfFijos > 0, txt: t('ck.fijos'), ir: "GE.tab('fijos')"},
       ...(pf ? [{ok: fijos().some(gfEsRetribucionTitular) || config().sinSueldoTitular, txt: t('ck.titular'), ir: "GE.tab('fijos');GE.nuevoSueldoTitular()", alt: {txt: t('ck.sinSueldo'), ir: "GE.sinSueldoTitular()"}}] : []),
-      {ok: periodicosSinMes === 0, txt: t('ck.mesPago').replace('${n}', periodicosSinMes), ir: "GE.tab('fijos')"},
+      {ok: periodicosSinMes === 0, txt: t('ck.mesPago').replace('${n}', periodicosSinMes), ir: "GE.irPrimeroSinMesPago()"},
       {ok: platosSinIva === 0, txt: t('ck.ivaPlatos').replace('${n}', platosSinIva), ir: "currentFolder='cocina'; navigate('carta')"},
     ];
   }
@@ -1746,6 +1756,13 @@ const GE = (function(){
       </div>`).join('')}
     </div>` : '';
     box.innerHTML = aviso + lista;
+  }
+  // «Gastos que no son mensuales sin su mes de factura: 1» → el botón Ir abre ya el primero (antes solo cambiaba de pestaña y
+  // no llevaba a ningún sitio: había que buscar a ojo cuál era).
+  function irPrimeroSinMesPago(){
+    tab('fijos');
+    const g = fijos().find(x => (parseInt(x.periodicidadMeses)||1) > 1 && !x.autoCalc && !x.mesPago);
+    if(g) setTimeout(() => editGF(g.id), 120);
   }
   function ocultarChecklist(){
     const d = new Date(); d.setDate(d.getDate() + 30);
@@ -2737,10 +2754,8 @@ const GE = (function(){
 
   /* -- TESORERÍA -- */
   function renderTesoreria(){
-    const teYearEl = document.getElementById('te-year');
-    if(teYearEl) teYearEl.textContent = teYear;
-    document.getElementById('te-months').innerHTML = getMeses().map((m,i)=>`
-      <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonthTe(${i})">${m}${isMonthClosed(teYear,i)?' <i class="ti ti-lock"></i>':''}</div>`).join('');
+    document.getElementById('te-periodo').innerHTML = ggPeriodoHtml({anio: teYear, mes: activeMonth, cb: 'gePeriodoTes', datos: {}, anual: false})
+      + (isMonthClosed(teYear, activeMonth) ? `<span class="badge"><i class="ti ti-lock"></i> ${escapeHtml(gl({es:'Mes cerrado', ca:'Mes tancat', en:'Month closed'}))}</span>` : '');
     const closeBtn = document.getElementById('te-close-month-btn');
     if(closeBtn){
       const closed = isMonthClosed(teYear, activeMonth);
@@ -3003,6 +3018,8 @@ const GE = (function(){
     `;
   }
   function setMonthTe(m){ activeMonth=m; renderTesoreria(); }
+  function setGVPeriodo(a, m){ gvYear = a; if(m != null) activeMonth = m; renderVariables(); }
+  function setTePeriodo(a, m){ teYear = a; if(m != null) activeMonth = m; renderTesoreria(); }
   function setTeYear(delta){ teYear += delta; renderTesoreria(); }
   // Bug real encontrado (10/09, reportado desde móvil): esto colgaba de
   // oninput (cada pulsación) y RE-ESCRIBÍA el valor del propio campo que se
@@ -4225,7 +4242,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
@@ -6566,4 +6583,6 @@ function doFichaje(employeeId, action){
   showToast(action === 'entrada' ? (descansoWarning || t('msg.clockInRegistered')) : t('msg.clockOutRegistered'));
   if(action === 'entrada') showShiftBriefing(employeeId);
 }
-
+function gePeriodoVentas(anio, mes){ GE.setVentasPeriodo(anio, mes); }
+function gePeriodoVariables(anio, mes){ GE.setGVPeriodo(anio, mes); }
+function gePeriodoTes(anio, mes){ GE.setTePeriodo(anio, mes); }
