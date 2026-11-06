@@ -36,7 +36,7 @@ const PESTANAS = {
 // Que "Solomillo al PX" no se traduzca es lo correcto.
 const DATOS_SEMBRADOS = [
   'Restaurante de Prueba','Ana Fernández','Luis Martín','Mesa 1','Salón','Solomillo de ternera',
-  'Carnes','Distribuciones del Norte','Solomillo al PX','Principales','CARTA','Familia Rodríguez',
+  'Carnes','Distribuciones del Norte','Solomillo al PX','Principales','CARTA','Familia Rodríguez','Familia','21:30',
   'Campana','Desengrasante','Cámara 1','Horno','Técnicos S.L.','Alquiler','Cuota autónomos',
   'Seguros sociales','Compra semanal','Horno nuevo','Jefa de cocina','Camarero','Efectivo',
   'ALQUILER','SS AUTÓNOMOS','SS EMPRESA','MATERIA PRIMA','Prov','Solomillo','ENVIADO','600111222',
