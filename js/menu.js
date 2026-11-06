@@ -60,7 +60,7 @@ function ocBtnDescripcion(tiene, onclick){
   return `<button type="button" class="btn btn-sm btn-fino${tiene ? ' is-on' : ''}" onclick="${onclick}"><i class="ti ti-align-left"></i> ${t('carta.desc.btn')}</button>`;
 }
 function openPlatoDescModal(secId, platoId){
-  const sec = cartaEdit.secciones.find(s => s.id === secId);
+  const sec = cartaEdit && cartaEdit.secciones.find(s => s.id === secId);
   const p = sec && sec.platos.find(x => x.id === platoId);
   if(!p) return;
   openModal(`
@@ -80,7 +80,7 @@ function openPlatoDescModal(secId, platoId){
   setTimeout(() => document.getElementById('plato-desc-txt')?.focus(), 50);
 }
 function savePlatoDesc(secId, platoId){
-  const sec = cartaEdit.secciones.find(s => s.id === secId);
+  const sec = cartaEdit && cartaEdit.secciones.find(s => s.id === secId);
   const p = sec && sec.platos.find(x => x.id === platoId);
   if(!p) return;
   const v = (document.getElementById('plato-desc-txt').value || '').trim().slice(0, PLATO_DESC_MAX);
