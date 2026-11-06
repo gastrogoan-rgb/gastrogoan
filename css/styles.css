@@ -4701,6 +4701,29 @@ span.dt-punto{position:absolute;border-radius:50%}
 .mod-check{display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 12px;font-weight:400;cursor:pointer}
 .mod-check input{width:20px;height:20px;flex:none}
 .mod-cuerpo .ge-kpi-grid{margin-bottom:14px}
+/* Visión global de mis negocios (6/11): tarjetas con el lenguaje de Gestión Económica; ningún estilo suelto en el JS. */
+.vg-per{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.vg-total,.vg-negocio,.vg-sin-datos{padding:14px 16px;margin-bottom:12px}
+.vg-negocio,.vg-sin-datos{cursor:pointer}
+.vg-negocio:hover,.vg-sin-datos:hover,.vg-negocio:focus-visible,.vg-sin-datos:focus-visible{background:#FAF8F4;outline:2px solid var(--ink);outline-offset:-2px}
+.vg-negocio.is-peor{border-color:var(--red)}
+.vg-tit{margin:0 0 12px;font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.vg-cab{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:0 0 12px;min-width:0}
+.vg-rank{font-family:var(--mono);font-size:12px;color:var(--muted);flex:none}
+.vg-nombre{flex:1 1 120px;min-width:0;overflow-wrap:break-word;font-size:15px}
+.vg-chip-peor{order:5;flex:1 1 100%;height:auto;padding:4px 8px;white-space:normal;line-height:1.35;color:var(--red);border-color:var(--red);background:#fff}
+.vg-ir{flex:none;color:var(--muted);font-size:18px}
+.vg-cifras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px}
+.vg-cifra{min-width:0}
+.vg-cifra .l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);overflow-wrap:break-word}
+.vg-cifra .v{margin-top:3px;font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:break-word}
+.vg-barra{height:6px;margin:14px 0 8px;background:var(--border);overflow:hidden}
+.vg-barra i{display:block;height:100%;background:var(--olive)}
+.vg-pie{font-size:12.5px;line-height:1.6;color:var(--muted)}
+.vg-pie b{color:var(--ink);font-family:var(--mono);font-weight:600}
+.vg-sep{margin:0 4px}
+.vg-nota{margin:4px 0 0;font-size:12.5px;line-height:1.55;color:var(--muted)}
+@media (max-width:480px){ .vg-cifras{grid-template-columns:repeat(2,minmax(0,1fr))} }
 
 #ge-tesoreria .te-row.te-res > *{grid-area:auto}
 .te-val.is-ok,.te-c-real.is-ok,.te-c-dif.is-ok{color:var(--green)}
