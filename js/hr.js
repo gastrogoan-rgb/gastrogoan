@@ -750,16 +750,14 @@ const GE = (function(){
     const gfEmployeeIds = new Set(personal.filter(g => g.employeeId != null).map(g => g.employeeId));
     const gfNames = new Set(personal.filter(g => g.employeeId == null).map(g => g.nombre.trim().toLowerCase()));
     const empSuggestions = DB.employees.filter(e => !gfEmployeeIds.has(e.id) && !gfNames.has(e.name.trim().toLowerCase()));
-    const sugBox = document.getElementById('gf-personal');
-    if(empSuggestions.length){
-      sugBox.insertAdjacentHTML('beforeend', `
-        <div style="padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <span style="font-size:12px;color:var(--muted)"><i class="ti ti-users"></i> ${t('hr.gf.employeesNoCost')}</span>
-          ${empSuggestions.map(e => `<button class="btn btn-sm" onclick="GE.newGFFromEmployee(${e.id})" style="font-weight:600"><i class="ti ti-plus"></i> ${escapeHtml(e.name)}</button>`).join('')}
-        </div>`);
-    }
+    document.getElementById('gf-sugeridos').innerHTML = empSuggestions.length ? `
+        <div class="gf-sug">
+          <span class="gf-sug-t"><i class="ti ti-users"></i> ${t('hr.gf.employeesNoCost')}</span>
+          <span class="gf-sug-b">${empSuggestions.map(e => `<button type="button" class="btn btn-sm" onclick="GE.newGFFromEmployee(${e.id})"><i class="ti ti-plus"></i> ${escapeHtml(e.name)}</button>`).join('')}</span>
+        </div>` : '';
     renderGFList('gf-fijos', generales);
-    document.getElementById('gf-total-val').innerHTML = `${fmtMoney(totN)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ ${t('common.vat')} ${fmtMoney(ivFijos)} = ${fmtMoney(totalFijos())}</span>`;
+    document.getElementById('gf-total-val').innerHTML = `${fmtMoney(totN)} <small>+ ${t('common.vat')} ${fmtMoney(ivFijos)} = ${fmtMoney(totalFijos())}</small>`;
+    gfRenderResumen(personal.concat(generales), totN);
 
     const facNeta12 = getMeses().map((_,i)=>facturacionNetaMes(i)).reduce((s,v)=>s+v,0)/12;
     const visEl = document.getElementById('gf-dist-visual');
@@ -767,22 +765,56 @@ const GE = (function(){
     if(facNeta12 > 0){
       visEl.style.display = 'block';
       const items = [
-        {lbl:t('hr.lbl.personalNoVat'), v:tpN, pct:tpN/facNeta12*100, color:'var(--blue)'},
-        {lbl:t('hr.lbl.fixedNoVat'), v:tgN, pct:tgN/facNeta12*100, color:'var(--purple)'},
+        {lbl:t('hr.lbl.personalNoVat'), v:tpN, pct:tpN/facNeta12*100, color:'var(--olive)'},
+        {lbl:t('hr.lbl.fixedNoVat'), v:tgN, pct:tgN/facNeta12*100, color:'#4E6A86'},
       ];
       visContent.innerHTML = items.map(it=>`
-        <div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
-            <span style="font-weight:600">${it.lbl}</span>
-            <span style="font-family:monospace">${fmtMoney(it.v)} · <span style="color:${it.pct>35?'var(--red)':'var(--ink)'}">${it.pct>999?'&gt;999':pct1(it.pct)}% ${t('hr.lbl.ofSales')}</span></span>
+        <div class="gf-dist">
+          <div class="gf-dist-h">
+            <span>${it.lbl}</span>
+            <span class="gf-dist-v">${fmtMoney(it.v)} · <b${it.pct>35?' class="is-alto"':''}>${it.pct>999?'&gt;999':pct1(it.pct)}% ${t('hr.lbl.ofSales')}</b></span>
           </div>
-          <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
-            <div style="height:100%;width:${Math.min(it.pct/50*100,100)}%;background:${it.color};border-radius:4px;transition:width .4s"></div>
-          </div>
+          <div class="gf-dist-bar"><i style="width:${Math.min(it.pct/50*100,100)}%;background:${it.color}"></i></div>
         </div>`).join('');
     }else{
       visEl.style.display = 'none';
     }
+  }
+  // Dos tarjetas arriba: a dónde va cada euro de gasto fijo (barra apilada) y
+  // los pagos que NO son mensuales y están al caer — el susto del seguro
+  // anual o de la tasa trimestral es lo que más descuadra la caja.
+  const GF_COLORES = ['var(--olive)', '#1C1A17', '#C79A2E', '#4E6A86', '#8C5A44', '#7A8F6A', '#B7A98C'];
+  function gfRenderResumen(todos, totN){
+    const box = document.getElementById('gf-resumen');
+    if(!box) return;
+    const filas = todos.map(g => ({g, v: gfMonthlyImporte(g)})).filter(x => x.v > 0.004).sort((a,b) => b.v - a.v);
+    const suma = filas.reduce((a,x)=>a+x.v,0);
+    let comp = '';
+    if(filas.length && suma > 0){
+      const top = filas.slice(0, 6);
+      const resto = filas.slice(6).reduce((a,x)=>a+x.v,0);
+      const partes = top.map((x,i)=>({n:gfConceptLabel(x.g.nombre), v:x.v, c:GF_COLORES[i]}));
+      if(resto > 0.004) partes.push({n:gl({es:'Otros', ca:'Altres', en:'Other'}), v:resto, c:'#B9B3A6'});
+      comp = `<div class="gf-card">
+        <h4>${gl({es:'A dónde va cada euro', ca:'On va cada euro', en:'Where each euro goes'})}</h4>
+        <div class="ve-barra" role="img" aria-label="${escapeHtml(gl({es:'Reparto del gasto fijo mensual', ca:'Repartiment de la despesa fixa mensual', en:'Monthly fixed cost split'}))}">${partes.map(x=>`<span style="width:${(x.v/suma*100).toFixed(2)}%;background:${x.c}"></span>`).join('')}</div>
+        <ul class="gf-leyenda">${partes.map(x=>`<li><i style="background:${x.c}"></i><span>${escapeHtml(x.n)}</span><b>${fmtMoney(x.v)}</b><small>${(x.v/suma*100).toFixed(0)} %</small></li>`).join('')}</ul>
+      </div>`;
+    }
+    const hoy = new Date();
+    const prox = todos.filter(g => !g.autoCalc && (parseInt(g.periodicidadMeses)||1) > 1)
+      .map(g => ({g, n: gfNextDueDate(g, hoy.getFullYear(), hoy.getMonth())})).filter(x => x.n)
+      .sort((a,b) => a.n.date < b.n.date ? -1 : 1).slice(0, 6);
+    const pagos = prox.length ? `<div class="gf-card">
+        <h4>${gl({es:'Próximos pagos que no son mensuales', ca:'Propers pagaments que no són mensuals', en:'Upcoming non-monthly payments'})}</h4>
+        <ul class="gf-prox">${prox.map(x => {
+          const d = new Date(x.n.date + 'T12:00:00');
+          const dias = Math.round((d - hoy) / 864e5);
+          const cuando = dias <= 0 ? gl({es:'hoy', ca:'avui', en:'today'}) : gl({es:'en ' + dias + ' d', ca:'en ' + dias + ' d', en:'in ' + dias + ' d'});
+          return `<li><span class="gf-prox-f">${d.toLocaleDateString(localeActual(), {day:'numeric', month:'short'})}</span><span class="gf-prox-n">${escapeHtml(gfConceptLabel(x.g.nombre))}<small>${cuando}</small></span><b>${fmtMoney(parseFloat(x.g.importe)||0)}</b></li>`;
+        }).join('')}</ul>
+      </div>` : '';
+    box.innerHTML = (comp || pagos) ? `<div class="gf-duo${comp && pagos ? '' : ' es-uno'}">${comp}${pagos}</div>` : '';
   }
   const GF_PERIODOS = [
     {v:1, lbl:t('hr.periodo.monthly')}, {v:2, lbl:t('hr.periodo.bimonthly')}, {v:3, lbl:t('hr.periodo.quarterly')},
@@ -792,34 +824,57 @@ const GE = (function(){
     document.getElementById(elId).innerHTML = items.length ? items.map(g=>{
       const periodoMeses = parseInt(g.periodicidadMeses)||1;
       const mensual = gfMonthlyImporte(g);
-      const detalles = [];
-      if(g.diaPago) detalles.push(t('hr.gf.payDay').replace('${d}', g.diaPago));
       const gIva = g.iva!=null ? parseFloat(g.iva) : 0;
-      // "mensual" YA es la base sin IVA (gfMonthlyImporte) — el IVA se AÑADE
-      // encima para mostrar el total con IVA, nunca se extrae de "mensual"
-      // como si ya lo llevara incluido (antes dividía mensual/(1+iva%), lo
-      // que daba una base y un IVA por debajo de los reales — p.ej. con
-      // 1.200€ de base al 21%, mostraba "Base 991,74€ + IVA 208,26€" en vez
-      // de "Base 1.200€ + IVA 252€", aunque los KPI de arriba sí eran
-      // correctos porque usan gfMonthlyGross, no este cálculo).
-      if(gIva > 0){ const ivaImporte = mensual*gIva/100; detalles.push(`${t('hr.lbl.base')} ${fmtMoney(mensual)} + ${t('common.vat')} ${gIva}% (${fmtMoney(ivaImporte)})`); }
+      const chips = [];
+      if(periodoMeses>1){
+        const pl = GF_PERIODOS.find(p => p.v === periodoMeses);
+        chips.push(`<span class="gf-chip">${escapeHtml(pl ? pl.lbl : t('hr.gf.everyMonths').replace('${n}', periodoMeses))}</span>`);
+      }
+      if(g.autoCalc) chips.push(`<span class="gf-chip is-auto">${gl({es:'Nómina automática', ca:'Nòmina automàtica', en:'Automatic payroll'})}</span>`);
+      if(g.categoria==='PERSONAL' && gfEsRetribucionTitular(g)) chips.push(`<span class="gf-chip">${gl({es:'Titular', ca:'Titular', en:'Owner'})}</span>`);
+      if(gIva > 0) chips.push(`<span class="gf-chip">${t('common.vat')} ${gIva}%</span>`);
+      if(g.retencion) chips.push(`<span class="gf-chip">${gl({es:'Retención', ca:'Retenció', en:'Withholding'})}</span>`);
+      if(g.categoria!=='PERSONAL' && g.iva==null) chips.push(`<span class="gf-chip is-aviso">${gl({es:'Falta el IVA', ca:'Falta l\'IVA', en:'VAT missing'})}</span>`);
+      if(periodoMeses>1 && !g.autoCalc && !g.mesPago) chips.push(`<span class="gf-chip is-aviso">${gl({es:'Sin mes de factura', ca:'Sense mes de factura', en:'No invoice month'})}</span>`);
+      const detalles = [];
+      if(g.proveedor) detalles.push(`<i class="ti ti-building-store"></i> ${escapeHtml(g.proveedor)}${g.nifProveedor?' · '+escapeHtml(g.nifProveedor):''}`);
+      if(g.diaPago) detalles.push(t('hr.gf.payDay').replace('${d}', g.diaPago));
+      // "mensual" YA es la base sin IVA (gfMonthlyImporte): el IVA se AÑADE
+      // encima, nunca se extrae de "mensual" como si ya lo llevara dentro.
+      if(gIva > 0) detalles.push(`${t('hr.lbl.base')} ${fmtMoney(mensual)} + ${t('common.vat')} ${gIva}% (${fmtMoney(mensual*gIva/100)})`);
       if(periodoMeses>1){
         detalles.push(`${t('hr.gf.everyMonths').replace('${n}', periodoMeses)} · ${fmtMoney(parseFloat(g.importe||0))}${t('hr.gf.perPayment')}`);
         const today = new Date();
         const next = gfNextDueDate(g, today.getFullYear(), today.getMonth());
-        if(next) detalles.push(`<span class="badge badge-blue txt-xs" >${t('hr.gf.nextDue').replace('${date}', next.date)}</span>`);
+        if(next) detalles.push(`<span class="gf-prox-tag">${t('hr.gf.nextDue').replace('${date}', new Date(next.date + 'T12:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'}))}</span>`);
       }
       if(g.autoCalc) detalles.push(t('hr.gf.autoCalcSummary').replace('${neto}', fmtMoney(parseFloat(g.sueldoNeto||0))).replace('${bruto}', fmtMoney(g.sueldoBruto||0)).replace('${ss}', fmtMoney(g.ssEmpresa||0)).replace('${irpf}', fmtMoney(g.irpfMensual||0)));
+      if(g.facturaId) detalles.push(`<i class="ti ti-paperclip"></i> ${t('factura.attachLabel')}`);
+      const clave = 'gf-' + g.id;
+      const abierta = ggPlegableAbierta(clave);
+      const hayExtra = detalles.length || g.notas;
       return `
-      <div class="ge-item" style="flex-wrap:wrap">
-        <span style="flex:1;font-size:14px;font-weight:500;min-width:140px">${escapeHtml(g.nombre)}</span>
-        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(mensual)}${periodoMeses>1?'<span class="txt-xs" style="color:var(--muted);font-weight:400">/mes</span>':''}</span>
-        <button class="btn btn-sm btn-icon" onclick="GE.editGF(${g.id})"><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGF(${g.id})"><i class="ti ti-trash"></i></button>
-        ${detalles.length || g.notas ? `<div style="flex-basis:100%;font-size:11.5px;color:var(--muted)">${detalles.join(' · ')}${g.notas?`${detalles.length?' · ':''}<i class="ti ti-note"></i> ${escapeHtml(g.notas)}`:''}</div>` : ''}
+      <div class="gf-fila plegable${abierta ? ' is-abierta' : ''}" data-pl="${clave}" onclick="ggTogglePlegable(event, this)">
+        <div class="gf-nom"><b>${escapeHtml(gfConceptLabel(g.nombre))}</b>${chips.length ? `<span class="gf-chips">${chips.join('')}</span>` : ''}</div>
+        <div class="gf-imp">${fmtMoney(mensual)}${periodoMeses>1?'<small>/'+gl({es:'mes', ca:'mes', en:'mo'})+'</small>':''}</div>
+        ${ggMenuAcciones([
+          {icono:'ti-edit', texto:t('common.edit'), fn:`GE.editGF(${g.id})`},
+          {icono:'ti-copy', texto:gl({es:'Duplicar', ca:'Duplicar', en:'Duplicate'}), fn:`GE.dupGF(${g.id})`},
+          {icono:'ti-trash', texto:t('common.delete'), fn:`GE.deleteGF(${g.id})`, peligro:true}
+        ])}
+        ${hayExtra ? `<button type="button" class="pl-chev" aria-expanded="${abierta}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>` : ''}
+        ${hayExtra ? `<div class="gf-det pl-extra">${detalles.join(' · ')}${g.notas?`${detalles.length?' · ':''}<i class="ti ti-note"></i> ${escapeHtml(g.notas)}`:''}</div>` : ''}
       </div>`;
     }).join('')
-    : `<div class="empty" style="padding:12px 16px">${t('hr.gf.emptyList')}</div>`;
+    : `<div class="empty gf-vacio"><i class="ti ti-receipt-2"></i><span>${t('hr.gf.emptyList')}</span></div>`;
+  }
+  function dupGF(id){
+    const g = fijos().find(x=>x.id===id); if(!g) return;
+    editingGF = null;
+    const c = JSON.parse(JSON.stringify(g));
+    delete c.id; delete c.facturaId; delete c.employeeId;
+    c.nombre = (c.nombre || '') + ' ' + gl({es:'(copia)', ca:'(còpia)', en:'(copy)'});
+    openGFModal(c.categoria==='PERSONAL' ? t('hr.gf.titlePersonal') : t('hr.gf.titleFixed'), c);
   }
   function newGF(cat){
     editingGF = null;
@@ -873,12 +928,14 @@ const GE = (function(){
     const ssTrabPctVal = g.ssTrabPct != null ? g.ssTrabPct : (g.retPct != null ? Math.max(0, g.retPct - 15) : SS_2026.indefinido.trabajador);
     openModal(`
       <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="gf-mh">${gl({es:'Qué gasto es', ca:'Quina despesa és', en:'What it is'})}</div>
       <div class="field">
         <label>${t('hr.lbl.concept')}</label>
         <input type="text" id="gf-f-nombre" list="gf-sugerencias" value="${escapeHtml(g.nombre)}">
         <datalist id="gf-sugerencias">${sugerencias}</datalist>
       </div>
       ${g.categoria==='PERSONAL' ? `
+      <div class="gf-mh">${gl({es:'Nómina', ca:'Nòmina', en:'Payroll'})}</div>
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
         <input type="checkbox" id="gf-f-titular" ${gfEsRetribucionTitular(g)?'checked':''} style="width:auto;margin-top:3px">
         <span>${t('hr.gf.esTitular')}</span>
@@ -931,6 +988,7 @@ const GE = (function(){
         <p id="gf-auto-smi" class="txt-xs" style="display:none;color:var(--red);margin:-4px 0 10px"><i class="ti ti-alert-triangle"></i> ${t('hr.gf.bajoSmi').replace('${smi}', fmtMoney(SMI_ANUAL))}</p>
       </div>
       ` : ''}
+      <div class="gf-mh">${gl({es:'Importe y pago', ca:'Import i pagament', en:'Amount and payment'})}</div>
       <div class="field-row">
         <div class="field"><label>${g.categoria==='PERSONAL'?t('hr.lbl.amountEur'):t('hr.lbl.amountNoVat')} ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
         <div class="field"><label>${t('hr.gf.payDayLabel')}</label><input type="number" id="gf-f-dia" min="1" max="31" placeholder="25" value="${g.diaPago||''}"></div>
@@ -946,7 +1004,7 @@ const GE = (function(){
         <option value="">—</option>
         ${getMeses().map((m,i)=>`<option value="${i+1}" ${parseInt(g.mesPago)===i+1?'selected':''}>${m}</option>`).join('')}
       </select><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.gf.mesPagoHint')}</div></div>` : ''}
-      ${g.categoria!=='PERSONAL' ? `<div class="field-row">
+      ${g.categoria!=='PERSONAL' ? `<div class="gf-mh">${gl({es:'Proveedor e impuestos', ca:'Proveïdor i impostos', en:'Supplier and taxes'})}</div><div class="field-row">
         <div class="field"><label>${t('common.supplier')}</label><input type="text" id="gf-f-prov" value="${escapeHtml(g.proveedor||'')}"></div>
         <div class="field"><label>${t('hr.gv.nifProveedor')}</label><input type="text" id="gf-f-nif" value="${escapeHtml(g.nifProveedor||'')}" placeholder="B12345678"></div>
       </div>` : ''}
@@ -957,6 +1015,7 @@ const GE = (function(){
         <option value="111_15" ${g.retencion==='111_15'?'selected':''}>${t('hr.gf.ret111_15')}</option>
         <option value="111_7" ${g.retencion==='111_7'?'selected':''}>${t('hr.gf.ret111_7')}</option>
       </select><div class="txt-xs" style="color:var(--muted);margin-top:4px">${t('hr.gf.retHint')}</div></div>` : ''}
+      <div class="gf-mh">${gl({es:'Notas y factura', ca:'Notes i factura', en:'Notes and invoice'})}</div>
       <div class="field">
         <label>${t('hr.lbl.commentOptional')}</label>
         <textarea id="gf-f-notas" rows="2" placeholder="${t('hr.gf.internalNotesPh')}">${escapeHtml(g.notas||'')}</textarea>
@@ -4242,7 +4301,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

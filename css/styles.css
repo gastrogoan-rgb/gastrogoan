@@ -4598,6 +4598,55 @@ span.dt-punto{position:absolute;border-radius:50%}
   #view-economia .ge-kpi:last-child{border-bottom:0}
   .ve-curva .dt-wrap{padding:6px 8px 0}
 }
+/* Gastos Fijos (6/11): filas con chips, menú ⋯ y detalle plegable; composición y próximos pagos */
+.gf-hint{color:var(--muted);margin:-6px 0 16px;line-height:1.5}
+.gf-acciones{display:flex;flex-wrap:wrap;gap:8px}
+.gf-duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 18px}
+.gf-duo.es-uno{grid-template-columns:minmax(0,1fr)}
+.gf-card{background:#fff;border:1px solid var(--hair);border-radius:4px;padding:16px 18px;margin:0}
+.vis-section.gf-card{margin:0 0 18px}
+.gf-card h4{margin:0 0 12px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.gf-leyenda,.gf-prox{list-style:none;margin:0;padding:0}
+.gf-leyenda li{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--hair);font-size:13.5px}
+.gf-leyenda li:first-child{border-top:0}
+.gf-leyenda i{width:12px;height:12px;border-radius:2px;flex:none}
+.gf-leyenda span{flex:1;min-width:0;overflow-wrap:break-word}
+.gf-leyenda b{font-family:var(--mono);font-weight:600}
+.gf-leyenda small{width:46px;text-align:right;color:var(--muted);font-family:var(--mono);font-size:12px}
+.gf-prox li{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--hair)}
+.gf-prox li:first-child{border-top:0}
+.gf-prox-f{flex:none;min-width:58px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);padding:5px 8px;border:1px solid var(--hair);border-radius:3px;text-align:center;background:var(--bg-alt,#F1EFE9)}
+.gf-prox-n{flex:1;min-width:0;font-size:13.5px;overflow-wrap:break-word;display:flex;flex-direction:column}
+.gf-prox-n small{color:var(--muted);font-size:12px}
+.gf-prox b{font-family:var(--mono);font-weight:600}
+.gf-fila{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;column-gap:12px;padding:12px 18px;border-bottom:1px solid var(--hair)}
+.gf-fila:last-child{border-bottom:0}
+.gf-nom{min-width:0;display:flex;flex-direction:column;gap:6px}
+.gf-nom b{font-size:14.5px;font-weight:600;overflow-wrap:break-word}
+.gf-chips{display:flex;flex-wrap:wrap;gap:6px}
+.gf-chip{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border:1px solid var(--hair);border-radius:3px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);background:#FAF8F4}
+.gf-chip.is-auto{background:#EEF1EA;border-color:#CBD3C5}
+.gf-chip.is-aviso{background:var(--red-l);border-color:#E3C8BF;color:var(--red)}
+.gf-imp{font-family:var(--mono);font-weight:600;font-size:15px;text-align:right;white-space:nowrap}
+.gf-imp small{font-weight:400;color:var(--muted);font-size:11px;margin-left:2px}
+.gf-det{grid-column:1 / -1;margin-top:8px;font-size:12.5px;color:var(--muted);line-height:1.55}
+.gf-prox-tag{font-family:var(--mono);font-size:11.5px;color:var(--olive)}
+.gf-vacio{display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 16px;color:var(--muted)}
+.gf-vacio .ti{font-size:26px}
+.gf-sug{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:14px 18px;border-top:1px solid var(--hair);background:#FAF8F4}
+.gf-sug-t{font-size:12.5px;color:var(--muted)}
+.gf-sug-b{display:flex;flex-wrap:wrap;gap:8px}
+.gf-dist{margin:0 0 14px}
+.gf-dist:last-child{margin:0}
+.gf-dist-h{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;font-size:13.5px;margin-bottom:6px;font-weight:600}
+.gf-dist-v{font-family:var(--mono);font-weight:400}
+.gf-dist-v b{font-weight:600}
+.gf-dist-v b.is-alto{color:var(--red)}
+.gf-dist-bar{height:8px;background:var(--hair);border-radius:2px;overflow:hidden}
+.gf-dist-bar i{display:block;height:100%}
+#gf-total-val small{font-size:11px;font-weight:400;color:#C9C4B8;margin-left:6px}
+.gf-mh{margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.gf-mh:first-of-type{margin-top:4px;padding-top:0;border-top:0}
 /* Mega Lista (30/10): carpetas, lista de ingredientes y formulario. El precio va SIN IVA y el IVA, justo al lado. */
 .idr-modal-intro,.ml-intro{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5}
 .ml-barra{align-items:center;gap:12px;margin-bottom:12px}
@@ -5496,3 +5545,13 @@ small{font-size:max(.8333em, 11px)}
 .ve-total{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 2px 0;font-size:13.5px;border-top:1px solid var(--hair);margin-top:8px}
 .ve-total b{font-family:var(--mono)}
 .ve-total small{color:var(--muted);font-family:var(--mono)}
+/* Gastos Fijos en móvil: una columna, nombre e importe a la vista y el resto cuelga de un toque */
+@media (max-width:760px){
+  .gf-duo{grid-template-columns:minmax(0,1fr)}
+  .gf-fila{grid-template-columns:minmax(0,1fr) auto auto auto;padding:12px 12px 12px 14px;column-gap:6px}
+  .gf-fila .pl-chev{grid-column:4;grid-row:1}
+  .gf-fila:not(.is-abierta) .pl-extra{display:none}
+  .gf-fila.is-abierta .gf-det{padding-top:8px;border-top:1px solid var(--hair)}
+  .gf-fila:not(:has(.pl-chev)){grid-template-columns:minmax(0,1fr) auto auto}
+  .gf-card{padding:14px}
+}

@@ -514,19 +514,22 @@
       <!-- GASTOS FIJOS -->
       <div id="ge-fijos" class="ge-tab-panel">
         <div class="ge-kpi-grid" id="gf-kpis"></div>
-        <p id="gf-cost-hint" style="font-size:11.5px;color:var(--muted);margin:6px 0 14px"></p>
+        <p id="gf-cost-hint" class="txt-xs gf-hint"></p>
+        <div id="gf-resumen"></div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 data-i18n="hr.gf.titlePersonal">Personal (nóminas + SS)</h4>
+            <span class="gf-acciones">
             <button class="btn btn-sm" onclick="GE.nuevoSueldoTitular()"><i class="ti ti-user-dollar"></i> <span data-i18n="ck.sueldoBtn">Mi sueldo (titular)</span></button>
-            <button class="btn btn-sm" onclick="GE.newGF('PERSONAL')"><i class="ti ti-plus"></i> <span data-i18n="common.add">Añadir</span></button></div>
+            <button class="btn btn-sm" onclick="GE.newGF('PERSONAL')"><i class="ti ti-plus"></i> <span data-i18n="common.add">Añadir</span></button></span></div>
           <div id="gf-personal"></div>
+          <div id="gf-sugeridos"></div>
         </div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 data-i18n="ge.generalFixedExpenses">Gastos Fijos Generales</h4>
             <button class="btn btn-sm" onclick="GE.newGF('FIJOS')"><i class="ti ti-plus"></i> <span data-i18n="common.add">Añadir</span></button></div>
           <div id="gf-fijos"></div>
         </div>
-        <div class="vis-section" id="gf-dist-visual" style="display:none">
+        <div class="vis-section gf-card" id="gf-dist-visual" style="display:none">
           <h4><span data-i18n="ge.salesDistribution">Distribución sobre ventas</span> <span class="ge-auto">AUTO</span></h4>
           <div id="gf-visual-content"></div>
         </div>
