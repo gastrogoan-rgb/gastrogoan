@@ -1738,8 +1738,8 @@ function esPedidoSoloLectura(order){
 // mismo sin salir de la comanda: sus ingredientes (bajando a las
 // elaboraciones base que use) con los que llevan alérgeno en negrita y
 // destacados, más el resumen de alérgenos arriba del todo.
-function openDishInfoModal(recipeId, nombre, allergensManualStr, volverJs){
-  openModal(renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs));
+function openDishInfoModal(recipeId, nombre, allergensManualStr, volverJs, desc){
+  openModal(renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs, desc));
 }
 function dishInfoIngredientLinesHtml(recipe, visited){
   visited = visited || new Set();
@@ -1762,7 +1762,7 @@ function dishInfoIngredientLinesHtml(recipe, visited){
     </div>`;
   }).join('');
 }
-function renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs){
+function renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs, desc){
   const recipe = recipeId ? getRecipe(recipeId) : null;
   // El nombre que se pasó ya es el que se ve en la comanda (el del plato de
   // Carta, con su propia traducción vía tItem) — recipe.name es el nombre
@@ -1777,6 +1777,7 @@ function renderDishInfoModalHtml(recipeId, nombre, allergensManualStr, volverJs)
       <h3><i class="ti ti-info-circle"></i> ${escapeHtml(titulo)}</h3>
       <button class="modal-close" onclick="${escapeHtml(cerrar)}">&times;</button>
     </div>
+    ${desc ? `<p class="tp-desc-plato" style="margin:0 0 12px;font-size:14px;line-height:1.5;color:var(--ink)">${escapeHtml(desc)}</p>` : ''}
     ${allergens.length ? `<div style="border:2px solid var(--red,#8A4A3B);border-radius:8px;padding:8px 10px;margin-bottom:12px">
       <div style="font-weight:700;color:var(--red,#8A4A3B);font-size:13px"><i class="ti ti-alert-triangle"></i> ${t('label.allergensPresent')}</div>
       <div style="font-size:13px;margin-top:2px">${allergens.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>

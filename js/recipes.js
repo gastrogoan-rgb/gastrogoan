@@ -1753,7 +1753,7 @@ function fiFoto(){
   syncFichaModalFields();
   const f = fichaModalState;
   // La producción NO cuenta: se guarda al instante (es una escala de trabajo, no contenido de la ficha).
-  return JSON.stringify({n:f.name, c:f.comensales, t:f.tiempo, tp:f.temp, i:f.ingredients, p:f.pasos, d:f.pasosDet, a:f.allergens, pr:f.presentation, ph:f.photo ? f.photo.length : 0, bt:f.bebidaTipo, b:f.bebida});
+  return JSON.stringify({n:f.name, c:f.comensales, t:f.tiempo, tp:f.temp, i:f.ingredients, p:f.pasos, d:f.pasosDet, a:f.allergens, pr:f.presentation, dc:f.descripcionCarta||'', ph:f.photo ? f.photo.length : 0, bt:f.bebidaTipo, b:f.bebida});
 }
 function fiSucia(){ return !!(fichaHoja && fichaModalState) && fiFoto() !== fichaHojaBase; }
 function fiMarcarCambio(){ const el = document.getElementById('fi-sucio'); if(el) el.hidden = !fiSucia(); }
@@ -2013,6 +2013,12 @@ function renderFichaModal(){
 
     ${isBaseElaboration ? '' : `
     <section class="es-card fi-ancho">
+      <h3 class="es-tit">${t('ficha.descCarta.title')}</h3>
+      <p class="es-pista" style="margin:0 0 8px">${t('ficha.descCarta.hint')}</p>
+      ${ro ? `<p class="fi-leer">${escapeHtml(f.descripcionCarta || '') || `<span class="es-pista">${t('label.notSpecified')}</span>`}</p>`
+           : `<textarea id="ficha-desc-carta" rows="2" maxlength="140" placeholder="${escapeHtml(t('carta.desc.ph'))}" oninput="fiMarcarCambio()">${escapeHtml(f.descripcionCarta||'')}</textarea>`}
+    </section>
+    <section class="es-card fi-ancho">
       <h3 class="es-tit">${isSala ? t('label.serviceNotes') : t('label.plating')}</h3>
       ${ro ? `<p class="fi-leer">${escapeHtml(f.presentation || '') || `<span class="es-pista">${t('label.notSpecified')}</span>`}</p>`
            : `<textarea id="ficha-presentation" rows="3" placeholder="${isSala ? t('ph.serviceNotes') : t('ph.presentationNotes')}">${escapeHtml(f.presentation||'')}</textarea>`}
@@ -2057,6 +2063,8 @@ function syncFichaModalFields(){
   if(tiempoEl) f.tiempo = tiempoEl.value;
   if(tempEl) f.temp = tempEl.value;
   if(presEl) f.presentation = presEl.value;
+  const descCartaEl = document.getElementById('ficha-desc-carta');
+  if(descCartaEl) f.descripcionCarta = descCartaEl.value;
   // Campos de la ficha de bebida: se leen por su tipo, no todos como texto,
   // para que un número guardado siga siendo un número.
   const tipoEl = document.getElementById('ficha-bebida-tipo');
@@ -2210,6 +2218,8 @@ async function saveFicha(){
     })(),
     allergens: f.allergens || [],
     presentation: (f.presentation||'').trim(),
+    // «Descripción en carta» (6/11): la frase para el cliente (web de pedidos) y para el camarero (ⓘ del TPV).
+    descripcionCarta: (f.descripcionCarta||'').trim().slice(0, 140),
     photo: f.photo || '',
     bebidaTipo: f.bebidaTipo || '',
     // Solo los campos del tipo elegido: si alguien cambió de tipo, lo que

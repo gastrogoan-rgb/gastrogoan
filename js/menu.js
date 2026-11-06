@@ -39,6 +39,55 @@ function ocEstadoPlegado(agotado, stock){
 function ocChevHtml(){
   return `<button type="button" class="pl-chev" aria-expanded="false" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>`;
 }
+// «Descripción para el cliente» (6/11): la frase que sale bajo el plato en la web de reservas y pedidos. Se guarda en el
+// plato de la carta (`p.descripcion`) y viaja al espejo público con el resto de la carta; no hace falta ninguna otra pieza.
+const PLATO_DESC_MAX = 140;
+// La descripción de un plato sale de su FICHA TÉCNICA («Descripción en carta») si tiene receta vinculada; los platos
+// manuales de la carta (sin receta) la llevan en el propio plato. La usan la web de pedidos y el ⓘ del TPV.
+function platoDescripcion(p){
+  if(!p) return '';
+  const f = p.recipeId ? (DB.fichas || []).find(x => String(x.recipeId) === String(p.recipeId)) : null;
+  return String((f && f.descripcionCarta) || p.descripcion || '').trim();
+}
+// Las cartas tal como las ve la web pública: cada plato con su descripción ya resuelta (no se toca DB.cartas).
+function cartasParaElEspejo(){
+  return (DB.cartas || []).map(c => Object.assign({}, c, {secciones: (c.secciones || []).map(s => Object.assign({}, s, {platos: (s.platos || []).map(p => {
+    const d = platoDescripcion(p);
+    return d ? Object.assign({}, p, {descripcion: d}) : p;
+  })}))}));
+}
+function ocBtnDescripcion(tiene, onclick){
+  return `<button type="button" class="btn btn-sm btn-fino${tiene ? ' is-on' : ''}" onclick="${onclick}"><i class="ti ti-align-left"></i> ${t('carta.desc.btn')}</button>`;
+}
+function openPlatoDescModal(secId, platoId){
+  const sec = cartaEdit.secciones.find(s => s.id === secId);
+  const p = sec && sec.platos.find(x => x.id === platoId);
+  if(!p) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-align-left"></i> ${t('carta.desc.title')} "${escapeHtml(tItem(p))}"</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('carta.desc.hint')}</p>
+    <div class="field">
+      <textarea id="plato-desc-txt" rows="3" maxlength="${PLATO_DESC_MAX}" placeholder="${escapeHtml(t('carta.desc.ph'))}" oninput="document.getElementById('plato-desc-n').textContent = this.value.length">${escapeHtml(p.descripcion || '')}</textarea>
+      <small class="txt-xs" style="color:var(--muted)"><span id="plato-desc-n">${(p.descripcion || '').length}</span>/${PLATO_DESC_MAX}</small>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-fino is-on" onclick="savePlatoDesc(${secId},${platoId})">${t('common.save')}</button>
+    </div>`);
+  setTimeout(() => document.getElementById('plato-desc-txt')?.focus(), 50);
+}
+function savePlatoDesc(secId, platoId){
+  const sec = cartaEdit.secciones.find(s => s.id === secId);
+  const p = sec && sec.platos.find(x => x.id === platoId);
+  if(!p) return;
+  const v = (document.getElementById('plato-desc-txt').value || '').trim().slice(0, PLATO_DESC_MAX);
+  if(v) p.descripcion = v; else delete p.descripcion;
+  closeModal();
+  renderCartaSecciones();
+}
 function ocBtnExtras(n, onclick){
   return `<button type="button" class="btn btn-sm btn-fino" onclick="${onclick}"><i class="ti ti-adjustments"></i> ${t('title.extras')}${n ? ` (${n})` : ''}</button>`;
 }
@@ -721,6 +770,7 @@ function renderCartaSecciones(){
             ${ocBtnDisponible(agotado, `toggleCartaPlato(${sec.id},${p.id})`)}
             ${ocBtnRaciones(p.stock, `setCartaPlatoStock(${sec.id},${p.id})`)}
             ${ocBtnExtras((p.modificadores||[]).length, `openPlatoModsModal(${sec.id},${p.id})`)}
+            ${!p.recipeId ? ocBtnDescripcion(!!p.descripcion, `openPlatoDescModal(${sec.id},${p.id})`) : ''}
             ${!p.recipeId ? `<button type="button" class="btn btn-sm btn-fino${nAler ? ' is-off' : ''}" onclick="openPlatoAllergensModal(${sec.id},${p.id})" title="${t('label.allergens')}" aria-label="${t('label.allergens')}"><i class="ti ti-alert-triangle"></i>${nAler ? ` ${nAler}` : ''}</button>` : ''}
             ${ggMenuAcciones([
               {icono:'ti-pencil', texto:t('common.edit'), fn: p.recipeId ? `renameCartaPlato(${sec.id},${p.id})` : `addCartaPlato(${sec.id},${p.id})`, owner:true},

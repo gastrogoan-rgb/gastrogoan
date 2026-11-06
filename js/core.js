@@ -8366,7 +8366,7 @@ function syncPublicMirror(){
       if(!app) return;
       const data = {
         business: negocioParaElEspejoPublico(),
-        cartas: DB.cartas,
+        cartas: cartasParaElEspejo(),
         activeCartaIds: DB.activeCartaIds,
         // Los menús combo (Menú del día, etc.) nunca se publicaban al espejo
         // público — la web de reservas/pedidos solo mostraba la carta suelta,
