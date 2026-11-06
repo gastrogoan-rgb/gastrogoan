@@ -152,7 +152,7 @@ caso('Punto de Equilibrio: "Usar datos reales" siembra el ticket medio SIN IVA, 
   assert.ok(m, 'no se encontró peUseRealData');
   assert.ok(!/const total = sales\.reduce\(\(s,x\)=>s\+parseFloat\(x\.total\|\|0\)\)/.test(m[0]),
     'sigue sumando x.total (bruto) directamente para el ticket medio');
-  assert.ok(m[0].includes('rate/100') && m[0].includes('avgTicket = totalNeto/sales.length'),
+  assert.ok(m[0].includes('rate/100') && m[0].includes('avgTicket = totalNeto/cubiertos'),
     'peUseRealData no calcula el ticket medio quitando el IVA de cada línea');
 });
 
