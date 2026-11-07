@@ -4344,12 +4344,35 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-or-cambiar{flex:none}
 .tp-or-mesa{flex:1;min-width:140px;margin:0;font-size:24px;font-weight:700;letter-spacing:-.015em;overflow-wrap:break-word;display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap}
 .tp-or-sub{font-family:var(--mono);font-size:13px;font-weight:400;color:var(--muted)}
-.tp-or-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px;flex:none}
+.tp-or-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0;flex:0 1 auto}
 .tp-or-chips:empty{display:none}
 .tp-or-cab .modal-close{margin-left:auto}
-.tp-or-cuerpo{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(330px,1fr);gap:16px;flex:1;min-height:0}
+.tp-or-cuerpo{display:block;position:relative;flex:1;min-height:0}
+/* Dos pestañas en TODOS los tamaños (7/11, pedido del dueño): «Tomar nota» y «Pedido». Se ve una cosa a la vez, a todo el ancho. */
+.tp-or-col{display:none;height:100%}
+.tp-or-col.tpv-pane-active{display:block}
+.tp-or-vista{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 8px;flex:none}
+.tp-or-pest{display:flex;gap:6px;flex:1 1 320px}
+.tp-or-pestana{flex:1 1 0;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 14px;border:1px solid var(--hair);border-radius:3px;background:#fff;font:inherit;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap}
+.tp-or-pestana:hover{border-color:var(--olive)}
+@media (max-width:420px){.tp-or-pestana{padding:0 6px;gap:5px;font-size:14px;min-width:0}.tp-or-pestana > i{display:none}.tp-or-pest-tot{font-size:13px}}
+.tp-or-pestana.is-on{background:var(--olive);border-color:var(--olive);color:#fff}
+.tp-or-pestana:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.tp-or-pestana .tp-or-barra-n{font-family:var(--mono);background:#fff;color:var(--ink);border-radius:11px;padding:0 8px;font-size:13px}
+.tp-or-pest-tot{font-family:var(--mono);font-weight:600}
+.tp-chip-fijo{background:var(--brand-cream);cursor:default}
+.tp-alg{min-height:44px;padding:0 14px;font-size:13px}
+.tp-chip-fijo.badge-pulsable{cursor:pointer}
+/* Rondas de la comanda: lo que se pide cuando la mesa ya pidió sale en un bloque aparte */
+.tp-ronda{margin:12px 0 4px;padding:0 0 4px;border-top:2px solid var(--ink)}
+.tp-ronda.es-nueva{border-top-color:var(--olive)}
+.tp-ronda-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0 0}
+.tp-ronda-tit{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;display:inline-flex;align-items:center;gap:6px}
+.tp-ronda.es-nueva .tp-ronda-tit{color:var(--olive)}
+.tp-ronda-cuenta{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .tp-or-col{min-width:0;min-height:0;overflow-y:auto;padding:2px 4px 14px}
 .tp-or-comanda{background:var(--brand-cream);border:1px solid var(--hair);border-radius:4px;padding:12px 14px 16px}
+.tp-or-comanda{max-width:860px;margin:0 auto;width:100%}
 .tp-or-volver{display:none;margin-bottom:10px}
 .tp-or-barra{display:none}
 .modal.modal-order{height:min(94vh,880px);height:min(94dvh,880px)}
@@ -4405,18 +4428,21 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-tanda-nom{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
 .tp-tanda-bts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .tp-tanda-bt{min-height:36px;padding:0 12px;font-size:12.5px}
-.tp-linea{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 0;border-top:1px solid var(--hair)}
+.tp-linea{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px 8px;align-items:center;padding:6px 0;border-top:1px solid var(--hair)}
 .tp-linea-cant{display:inline-flex;align-items:center;gap:2px}
 .tp-q{width:38px;height:38px;border:1px solid var(--hair);border-radius:3px;background:#fff;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:16px;padding:0}
 .tp-q:hover{border-color:var(--olive);background:var(--brand-cream)}
 .tp-q:focus-visible{outline:2px solid var(--olive);outline-offset:1px}
 .tp-q-n{min-width:30px;text-align:center;font-family:var(--mono);font-size:18px;font-weight:600}
-.tp-linea-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.tp-linea-txt{display:block;min-width:0;line-height:1.3}
+.tp-linea-txt .badge{vertical-align:middle;margin-left:4px}
+.tp-linea-txt .tp-linea-nota{display:block;width:fit-content;max-width:100%;margin-top:3px}
 .tp-linea-nom{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:break-word}
 .tp-linea.marchada .tp-linea-nom{color:var(--muted)}
 .tp-linea-nota{align-self:flex-start;font-size:13px;color:#6B4E10;background:#FBF3DF;border-left:3px solid #C79A2E;padding:2px 8px;border-radius:2px;overflow-wrap:anywhere}
 .tp-linea-pre{font-family:var(--mono);font-size:14px;font-weight:600;white-space:nowrap}
-.tp-linea-acc{grid-column:2 / -1;display:flex;gap:6px;justify-content:flex-start}
+.tp-linea-acc{display:flex;gap:6px;justify-content:flex-end}
+.tp-ac-mas{width:40px !important;height:40px !important;min-width:40px;padding:0 !important;border:1px solid var(--hair);background:#fff}
 .tp-ac{width:38px;height:34px;border:1px solid var(--hair);border-radius:3px;background:#fff;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:16px;padding:0}
 .tp-ac:hover{border-color:var(--olive);color:var(--ink)}
 .tp-ac.is-marchar{color:var(--ink)}
@@ -5841,9 +5867,12 @@ small{font-size:max(.8333em, 11px)}
   .modal.modal-order > .modal-header{padding:10px 14px 8px}
   .modal.modal-order > .modal-body{padding:8px 14px 8px}
   .modal.modal-order > .modal-footer{padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));flex-direction:column;align-items:stretch;gap:8px}
+  /* Una sola fila: «Cambiar de mesa» · nombre · cerrar (antes eran tres filas y se perdía media pantalla) */
+  .tp-or-cab{flex-wrap:nowrap;gap:8px}
   .tp-or-cab > *{order:3}
-  .tp-or-mesa{font-size:20px;min-width:0;flex:1 1 calc(100% - 60px);order:1}
-  .tp-or-cab .modal-close{order:2}
+  .tp-or-cambiar{order:1 !important;padding:0 8px !important;font-size:12px !important}
+  .tp-or-mesa{font-size:18px;min-width:0;flex:1 1 0;order:2 !important;flex-wrap:wrap}
+  .tp-or-cab .modal-close{order:4 !important}
   .tp-or-cuerpo{display:block;position:relative}
   .tp-or-col{display:none;height:100%;padding-bottom:16px}
   .tp-or-col.tpv-pane-active{display:block}

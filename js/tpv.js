@@ -1216,12 +1216,16 @@ function togoOrderLabel(order){
 }
 
 function openTableOrder(tableId, orderId){
+  // Una mesa con pedido ya empezado se abre en «Pedido» (lo que hay y el cobro); una vacía, en «Tomar nota» (7/11).
+  const abrirPedido = o => { tpvOrderMobilePane = (o && (o.items||[]).length) ? 'comanda' : 'carta'; };
   if(orderId){
+    abrirPedido(DB.tpvOrders.find(o => o.id === orderId));
     renderTableOrderModal(orderId);
     return;
   }
   const order = getOpenOrderForTable(tableId);
-  if(order){ renderTableOrderModal(order.id); return; }
+  if(order){ abrirPedido(order); renderTableOrderModal(order.id); return; }
+  tpvOrderMobilePane = 'carta';
   openNewOrderPaxModal(tableId);
 }
 
@@ -1685,7 +1689,7 @@ function renderOrderClientNotesHtml(order){
   // Alérgenos anotados a mano para esta mesa (independiente de si hay algún
   // cliente vinculado) — para comensales sueltos que no están dados de alta
   // como cliente pero sí han avisado de una alergia al sentarse.
-  if(order.tableAllergens) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${order.tableAllergens}`});
+  if(tableAllergensTexto(order)) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${tableAllergensTexto(order)}`});
   if(!parts.length) return '';
   return `<div class="card" style="border:2px solid var(--ink);background:var(--amber-l);margin-bottom:10px;padding:8px 12px">
     ${parts.map(p => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin-bottom:2px"><i class="ti ${p.icon}" style="margin-top:2px;color:var(--ink);flex-shrink:0"></i><span>${escapeHtml(p.text)}</span></div>`).join('')}
@@ -1703,7 +1707,7 @@ function orderAllergyWarningHtml(order){
     const c = DB.clients.find(x => x.id === order.clientId);
     if(c && c.allergies) texts.push(c.allergies);
   }
-  if(order.tableAllergens) texts.push(order.tableAllergens);
+  if(tableAllergensTexto(order)) texts.push(tableAllergensTexto(order));
   // Lo que ya se sabe del propio plato (escandallo/ficha, o marcado a mano
   // en un plato sin receta) — antes esta pantalla solo repetía lo que el
   // camarero hubiera escrito a mano sobre la mesa, ignorando por completo
@@ -1925,12 +1929,62 @@ function cancelWaitlistEntry(id){
   openWaitlistModal();
 }
 
-async function promptTableAllergens(orderId){
+/* ALÉRGENOS DE LA MESA (7/11, pedido del dueño): los 14 de declaración obligatoria como botones, un toque y queda marcado
+   (antes era una caja de texto). Se guardan como lista (`tableAllergenList`, con los nombres estables en castellano) y, además,
+   `tableAllergens` como texto, que es lo que leen el vale impreso y las pantallas de cocina; `tableAllergenNote` es lo libre. */
+function tableAllergensTexto(order){
+  if(!order) return '';
+  const lista = Array.isArray(order.tableAllergenList) ? order.tableAllergenList : null;
+  if(!lista) return (order.tableAllergens || '').trim();
+  return [...lista.map(a => allergenLabel(a)), (order.tableAllergenNote || '').trim()].filter(Boolean).join(', ');
+}
+let tpvAlgSel = null;
+function promptTableAllergens(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  const val = await promptText(t('tpv.tableAllergens.prompt'), order.tableAllergens || '', {allowEmpty:true});
-  if(val === null) return;
-  order.tableAllergens = val.trim();
+  // Una mesa con texto de antes (sin lista) conserva ese texto como nota: no se pierde nada.
+  tpvAlgSel = new Set(Array.isArray(order.tableAllergenList) ? order.tableAllergenList : []);
+  const nota = Array.isArray(order.tableAllergenList) ? (order.tableAllergenNote || '') : (order.tableAllergens || '');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('tpv.tableAllergens.add'))}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    <p class="es-pista" style="margin:0 0 10px">${escapeHtml(t('tpv.tableAllergens.hint'))}</p>
+    <div class="alg-grid tp-alg-grid" role="group">
+      ${ALLERGEN_LIST.map(a => `<button type="button" class="alg-pill tp-alg${tpvAlgSel.has(a) ? ' on' : ''}" aria-pressed="${tpvAlgSel.has(a)}" data-a="${escapeHtml(a)}" onclick="tpvAlgToggle(this)">${escapeHtml(allergenLabel(a))}</button>`).join('')}
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label for="tpv-alg-nota">${escapeHtml(gl({es:'Otras indicaciones (opcional)', ca:'Altres indicacions (opcional)', en:'Other notes (optional)'}))}</label>
+      <input type="text" id="tpv-alg-nota" value="${escapeHtml(nota)}" placeholder="${escapeHtml(gl({es:'Celíaco, intolerancia a…', ca:'Celíac, intolerància a…', en:'Coeliac, intolerant to…'}))}">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-fino" onclick="tpvAlgLimpiar(${orderId})">${escapeHtml(gl({es:'Quitar todos', ca:'Treure\'ls tots', en:'Clear all'}))}</button>
+      <button class="btn btn-fino" onclick="renderTableOrderModal(${orderId})">${escapeHtml(t('common.cancel'))}</button>
+      <button class="btn btn-fino is-on" onclick="tpvAlgGuardar(${orderId})"><i class="ti ti-check"></i> ${escapeHtml(t('common.save'))}</button>
+    </div>
+  `);
+}
+function tpvAlgToggle(btn){
+  const a = btn.getAttribute('data-a');
+  if(tpvAlgSel.has(a)) tpvAlgSel.delete(a); else tpvAlgSel.add(a);
+  const on = tpvAlgSel.has(a);
+  btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+function tpvAlgGuardar(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.tableAllergenList = ALLERGEN_LIST.filter(a => tpvAlgSel.has(a));
+  order.tableAllergenNote = (document.getElementById('tpv-alg-nota')?.value || '').trim();
+  order.tableAllergens = tableAllergensTexto(order);
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  renderTableOrderModal(orderId);
+}
+function tpvAlgLimpiar(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.tableAllergenList = []; order.tableAllergenNote = ''; order.tableAllergens = '';
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -2027,7 +2081,7 @@ function comandaAllergensText(order, lineas){
   (lineas||[]).forEach(l => lineAllergens(l).forEach(a => set.add(allergenLabel(a))));
   const partes = [];
   if(set.size) partes.push(Array.from(set).join(', '));
-  if(order && order.tableAllergens) partes.push(order.tableAllergens);
+  if(order && tableAllergensTexto(order)) partes.push(tableAllergensTexto(order));
   return partes.join(' · ') || null;
 }
 
@@ -2852,7 +2906,7 @@ function ticketAlergiaTextos(order){
     const c = (DB.clients||[]).find(x => x.id === order.clientId);
     if(c && c.allergies) texts.push(c.allergies);
   }
-  if(order.tableAllergens) texts.push(order.tableAllergens);
+  if(tableAllergensTexto(order)) texts.push(tableAllergensTexto(order));
   const set = new Set();
   (order.items||[]).forEach(l => { if(!esLineaDeBebida(l)) lineAllergens(l).forEach(a => set.add(allergenLabel(a))); });
   if(set.size) texts.push(Array.from(set).join(', '));
