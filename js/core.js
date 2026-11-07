@@ -264,7 +264,7 @@ function accesoAvisoCierreHtml(){
   try{ fin = JSON.parse(localStorage.getItem(ACCESS_SESSION_END_LS)); }catch(e){}
   if(!fin || !fin.reason || Date.now() - (fin.ts || 0) > 36 * 3600 * 1000) return '';
   const textos = {
-    inactividad: gl({es:'Tu sesión se cerró porque llevaba muchas horas sin usarse (es una medida de seguridad por si el aparato se pierde). Entra de nuevo: no se ha perdido nada.', ca:'La teva sessió es va tancar perquè portava moltes hores sense utilitzar-se (és una mesura de seguretat per si l\'aparell es perd). Torna a entrar: no s\'ha perdut res.', en:'Your session was closed because it had been unused for many hours (a safety measure in case the device is lost). Sign in again: nothing has been lost.'}),
+    // (7/11) El aviso de «sesión cerrada por inactividad» se quitó a petición del dueño: la sesión sigue caducando a las 8 h, pero sin cartel.
     empleado: gl({es:'Tu sesión se cerró porque tu ficha de empleado ya no está activa. Si crees que es un error, avisa a quien gestiona el negocio.', ca:'La teva sessió es va tancar perquè la teva fitxa d\'empleat ja no està activa. Si creus que és un error, avisa a qui gestiona el negoci.', en:'Your session was closed because your employee profile is no longer active. If you think this is a mistake, tell whoever runs the business.'}),
   };
   const txt = textos[fin.reason];
