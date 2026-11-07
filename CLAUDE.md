@@ -901,6 +901,17 @@ El dueño dijo que la vista móvil era «lo peor de la app». Se capturó cada p
 - ⚠️ **Mi hoja de contacto reducía las capturas y me hizo creer que un ticket de Comandas era estrecho (era el 88 %).** Medir con números
   antes de afirmar un defecto de tamaño.
 
+## El «login raro» que sale solo: PIN de área SOBRE la entrada (7/11)
+
+El dueño abrió `app.gastrogoan.com/#promocion` tras muchas horas sin usarla y salió, a la vez, la entrada con «Tu sesión se cerró porque llevaba
+muchas horas sin usarse» **y encima el PIN de «Sala»**. Causa (`js/app.js`, arranque): `navigate(hash)` corría ANTES que la pantalla de entrada
+(que sale 1,8 s después). Sin sesión, `isOperationalAreaLocked` → `requestFichaGate` abría su ventana, y la entrada se pintaba debajo.
+- ⚠️ **Sin sesión válida, el arranque NO navega a la dirección guardada** (`initial = 'home'`) y `showAccessSelectScreen` cierra cualquier ventana
+  abierta y borra `areaGatePendingView`. Tras identificarse se llega a Inicio. Con sesión viva, la dirección guardada sigue funcionando.
+- La sesión del propietario caduca a las **8 h** sin tocar la app (`ACCESS_INACTIVITY_OWNER_MS`); es a propósito (aparato perdido).
+- Prueba: `test/acceso-caducado.mjs` (P164): 4 arranques (caducada/sin sesión × Sala/Cocina) + el caso de sesión viva. Falla sin el arreglo.
+- ⚠️ En pruebas, ir a la MISMA URL con otro `#hash` NO recarga la página: pasar por `about:blank` para forzar un arranque real.
+
 ## Entrada, selector y frase del día (28-29/10)
 
 Cambios guiados pantalla a pantalla por el dueño, partiendo SIEMPRE de la base que ya tenía aprobada
