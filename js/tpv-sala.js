@@ -648,21 +648,22 @@ function renderTableOrderModal(orderId){
     <div class="tp-or-vista" role="tablist" aria-label="${escapeHtml(gl({es:'Vista de la mesa', ca:'Vista de la taula', en:'Table view'}))}">
       <div class="tp-or-pest">
         ${soloConsulta ? '' : `<button type="button" role="tab" class="tp-or-pestana${panel === 'carta' ? ' is-on' : ''}" aria-selected="${panel === 'carta'}" onclick="setTpvOrderMobilePane('carta', ${order.id})"><i class="ti ti-pencil-plus"></i> ${escapeHtml(gl({es:'Tomar nota', ca:'Prendre nota', en:'Take order'}))}</button>`}
-        <button type="button" role="tab" class="tp-or-pestana${panel === 'comanda' || soloConsulta ? ' is-on' : ''}" aria-selected="${panel === 'comanda' || soloConsulta}" onclick="setTpvOrderMobilePane('comanda', ${order.id})"><i class="ti ti-clipboard-list"></i> ${escapeHtml(gl({es:'Pedido', ca:'Comanda', en:'Order'}))}${unidades ? ` <b class="tp-or-barra-n">${unidades}</b>` : ''} <span class="tp-or-pest-tot">${fmtMoney(total)}</span></button>
+        <button type="button" role="tab" class="tp-or-pestana${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? ' is-on' : ''}" aria-selected="${panel === 'comanda' || (soloConsulta && panel !== 'reparto')}" onclick="setTpvOrderMobilePane('comanda', ${order.id})"><i class="ti ti-clipboard-list"></i> ${escapeHtml(gl({es:'Pedido', ca:'Comanda', en:'Order'}))}${unidades ? ` <b class="tp-or-barra-n">${unidades}</b>` : ''} <span class="tp-or-pest-tot">${fmtMoney(total)}</span></button>
+        ${esRepartoPropio(order) ? `<button type="button" role="tab" class="tp-or-pestana tp-or-pest-reparto${panel === 'reparto' ? ' is-on' : ''}" aria-selected="${panel === 'reparto'}" onclick="setTpvOrderMobilePane('reparto', ${order.id})"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}${repartoStatusBadgeHtml(order)}</button>` : ''}
       </div>
       <div class="tp-or-chips">${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</div>
     </div>
     ${renderOrderClientNotesHtml(order)}
     ${incidenciaFranjaHtml(order, 'sala')}
-    ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
     <div class="tp-or-cuerpo">
       <section class="tp-or-col tp-or-carta ${panel === 'carta' && !soloConsulta ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('tpv.section.carta'))}">
         ${soloConsulta || (!cartaTabs && !menuTabs) ? '' : `<div class="tp-or-tabs" role="group">${cartaTabs}${menuTabs}</div>`}
         ${selectorHtml}
       </section>
-      <section class="tp-or-col tp-or-comanda ${panel === 'comanda' || soloConsulta ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('label.order'))}">
+      <section class="tp-or-col tp-or-comanda ${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('label.order'))}">
         ${comandaHtml}
       </section>
+      ${esRepartoPropio(order) ? `<section class="tp-or-col tp-or-repartocol ${panel === 'reparto' ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}">${renderRepartoControlCardHtml(order)}</section>` : ''}
     </div>
     <div class="modal-footer tp-or-pie">${actionButtons}</div>
   `, {order: true});
@@ -710,6 +711,14 @@ function renderTpvToGo(tiposServicio){
     ${cuerpo}`;
 }
 
+// Lo que se pidió, a la vista en la propia ficha (hasta 5 líneas; el resto, «+N más») y las notas del cliente (8/11).
+function tpvPedidoLineasHtml(o){
+  const items = (o.items || []).filter(l => !l.isShipping);
+  if(!items.length) return '';
+  const ver = items.slice(0, 5);
+  const resto = items.length - ver.length;
+  return `<span class="tp-ped-lineas">${ver.map(l => `<b>${l.qty}×</b> ${escapeHtml(l.name)}${l.notas && !/^Menú: /.test(l.notas) ? ` <i class="tp-ped-nota">(${escapeHtml(l.notas)})</i>` : ''}`).join('<br>')}${resto > 0 ? `<br><em class="tp-ped-mas">+${resto} ${escapeHtml(gl({es:'más', ca:'més', en:'more'}))}</em>` : ''}</span>${o.notas ? `<span class="tp-ped-dir"><i class="ti ti-note"></i> ${escapeHtml(o.notas)}</span>` : ''}`;
+}
 function tpvPedidoFichaHtml(o){
   const plat = o.tipo === 'delivery' && o.plataformaId ? (DB.business.deliveryPlatforms || []).find(p => p.id === o.plataformaId) : null;
   const dueMins = o.time ? minutesUntilScheduled(o.time) : null;
@@ -729,6 +738,7 @@ function tpvPedidoFichaHtml(o){
     <b class="tp-ped-nom">${escapeHtml(nom)}</b>
     ${o.clientRef && o.origenOnline ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
     ${dir ? `<span class="tp-ped-dir"><i class="ti ti-map-pin"></i> ${escapeHtml(dir)}</span>` : ''}
+    ${tpvPedidoLineasHtml(o)}
     <span class="tp-ped-total">${fmtMoney(orderTotal(o))}</span>
     <span class="tp-ped-pie">
       ${o.pagado ? `<span class="tp-av is-pago"><i class="ti ti-credit-card"></i> ${escapeHtml(t('label.paidOnline'))}</span>` : `<span class="tp-av"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.paymentPending'))}</span>`}

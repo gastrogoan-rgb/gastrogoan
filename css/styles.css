@@ -4488,6 +4488,10 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .tp-ped-dir.is-alerta{color:#A8392B}
 .tp-ped-alerta{display:flex;align-items:center;gap:5px;font-size:13px;color:#A8392B}
 .tp-ped-lineas{font-size:13px;color:var(--ink);line-height:1.45}
+.tp-ped-nota{color:#6B4E10;font-style:normal}
+.tp-ped-mas{font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.tp-or-pest-reparto{flex:0 1 auto;white-space:nowrap}
+.tp-or-repartocol{max-width:860px;margin:0 auto;width:100%}
 .tp-ped-total{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.02em}
 .tp-ped-pie{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .tp-ped-pie:empty{display:none}
