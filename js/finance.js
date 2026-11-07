@@ -2580,6 +2580,7 @@ function stFilaHtml(row){
   const k = stClave(row.type, row.id);
   const qty = stPend[k] ? stPend[k].val : row.qty;
   const falta = low ? Math.round((row.min - row.qty) * 100) / 100 : 0;
+  const sobra = ok ? Math.round((row.qty - row.min) * 100) / 100 : 0;
   const camino = !isElab && typeof pcEnCamino === 'function' ? pcEnCamino(row.id) : 0;
   const abierta = ggPlegableAbierta('st-' + k);
   const u = escapeHtml(row.unit);
@@ -2593,6 +2594,8 @@ function stFilaHtml(row){
   ];
   const tags = [
     low ? `<em class="st-tag bajo">${gl({es:'Falta', ca:'Falten', en:'Short by'})} ${fmtNum(falta)} ${u}</em>` : '',
+    // Con el mínimo cubierto, la tarjeta se pone verde y dice cuánto hay DE MÁS (7/11, pedido del dueño).
+    ok ? `<em class="st-tag ok">${sobra > 0 ? `+${fmtNum(sobra)} ${u} ${gl({es:'sobre el mínimo', ca:'sobre el mínim', en:'above minimum'})}` : gl({es:'En el mínimo', ca:'Al mínim', en:'At minimum'})}</em>` : '',
     camino > 0 ? `<em class="st-tag cam"><i class="ti ti-truck-delivery"></i> +${fmtNum(camino)} ${u} ${gl({es:'en camino', ca:'en camí', en:'on the way'})}</em>` : '',
     fromEscandallo ? `<em class="st-tag">${t('label.costingSheet')}</em>` : '',
     !low && !(row.min > 0) ? `<span class="st-nada">${gl({es:'sin mínimo', ca:'sense mínim', en:'no minimum'})}</span>` : ''

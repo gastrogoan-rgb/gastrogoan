@@ -218,6 +218,17 @@ for(const ancho of [1280, 360]){
     assert.equal(porFila, ancho >= 761 ? 2 : 1, JSON.stringify(r));
   });
 
+  await caso(`Con el mínimo cubierto la tarjeta es verde y dice cuánto hay de más (${ancho}px)`, async () => {
+    const r = await page.evaluate(() => {
+      const fila = (qty, min) => { const d = document.createElement('div'); d.innerHTML = stFilaHtml({type:'ing', id:999001, name:'Prueba', unit:'kg', qty, min}); return {cls: d.firstElementChild.className, tag: (d.querySelector('.st-tag.ok')||{}).textContent || ''}; };
+      return {mas: fila(8, 5), justo: fila(5, 5), falta: fila(2, 5), sinMin: fila(3, 0)};
+    });
+    assert.ok(/is-ok/.test(r.mas.cls) && /\+3\s*kg/i.test(r.mas.tag) && /sobre el mínimo/i.test(r.mas.tag), JSON.stringify(r.mas));
+    assert.ok(/is-ok/.test(r.justo.cls) && /En el mínimo/i.test(r.justo.tag), JSON.stringify(r.justo));
+    assert.ok(/is-bajo/.test(r.falta.cls) && !r.falta.tag, JSON.stringify(r.falta));
+    assert.ok(!/is-ok|is-bajo/.test(r.sinMin.cls) && !r.sinMin.tag, 'sin mínimo no se pinta nada: ' + JSON.stringify(r.sinMin));
+  });
+
   await caso(`Ningún error de JavaScript (${ancho}px)`, async () => assert.deepEqual(page.erroresJs, []));
   await page.close();
 }
