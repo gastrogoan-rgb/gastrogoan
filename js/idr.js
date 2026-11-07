@@ -1103,8 +1103,7 @@ function renderIdrInterno(){
           {icono:'ti-pencil', texto:t('idr.renameFolder'), fn:`idrRenombrarCarpeta(${idrCarpetaActiva})`, owner:true},
           {icono:'ti-trash', texto:t('common.delete'), fn:`idrBorrarCarpeta(${idrCarpetaActiva})`, peligro:true, owner:true}
         ])}` : ''}
-    </div>
-    <div class="idr-filtros">
+      <span class="idr-sep" aria-hidden="true"></span>
       ${[['', t('idr.allTypes')], ...(idrEsSala() ? ['plato', 'base', 'maridaje', 'carta'] : ['plato', 'base', 'menu', 'carta']).map(k => [k, idrTipoNombre(k)])]
         .map(([v, l]) => chip(idrFiltroTipo===v, `idrFiltrar('${v}')`, escapeHtml(l))).join('')}
     </div>
