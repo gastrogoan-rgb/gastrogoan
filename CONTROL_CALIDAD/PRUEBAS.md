@@ -10,7 +10,11 @@
 
 Después de la 3.ª solo se tocaron `test/movil.mjs` (más vistas) y documentos; `movil.mjs` se ejecutó aparte: 0 hallazgos.
 
+| 4.ª, tras la revisión móvil | 07/11 | **151 ✅, 0 ❌**, 1 🟡 aceptado (Comandas) |
+
 ## Pruebas nuevas o ampliadas esta noche
+
+| `test/movil-lectura.mjs` (nueva, P163) | 47 estados con pestañas + 7 ventanas × 320/360/390/412/430: campos ≥16 px, sin texto aplastado, nada cortado por el borde | **Falla sin los arreglos** (Tesorería, Mega Lista, APPCC comprobados) |
 
 | Prueba | Qué fija | Verificación de que sirve |
 |---|---|---|
