@@ -168,6 +168,9 @@ lanzar; node test/descripcion-plato.mjs > "$SALIDA/descripcionplato.txt" 2>&1 & 
 lanzar; node test/claves-sin-traducir.mjs > "$SALIDA/clavessintraducir.txt" 2>&1 & P162=$!
 lanzar; node test/movil-lectura.mjs > "$SALIDA/movillectura.txt" 2>&1 & P163=$!
 lanzar; node test/acceso-caducado.mjs > "$SALIDA/accesocaducado.txt" 2>&1 & P164=$!
+lanzar; node test/comandas-cocina.mjs > "$SALIDA/comandascocina.txt" 2>&1 & P165=$!
+lanzar; node test/envio-gastos.mjs > "$SALIDA/enviogastos.txt" 2>&1 & P166=$!
+lanzar; node test/oferta-importar.mjs > "$SALIDA/ofertaimportar.txt" 2>&1 & P167=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -332,7 +335,7 @@ espera $P127 "Mega Lista: carpetas con icono de trazo, precio sin IVA con el IVA
 espera $P128 "Norma de móvil: las filas densas de la carta y del menú se pliegan a nombre y precio, y en PC se ve todo" "$SALIDA/plegables.txt" "casos pasaron"
 espera $P129 "Menú de tres puntos: editar y eliminar dentro, con teclado, sin salirse de la pantalla y solo para quien puede" "$SALIDA/menu-acciones.txt" "casos pasaron"
 espera $P130 "Escandallo: carpetas, platos en tarjetas y la hoja única para crear, ver y editar (cálculo en vivo, guardar, descartar, elaboraciones, móvil)" "$SALIDA/escandallo.txt" "casos pasaron"
-espera $P131 "Fichas técnicas: la ficha como documento (paso a paso con tiempo, temperatura y ojo), una sola pantalla para crear y editar, producción que escala, solo lectura e impreso" "$SALIDA/fichas.txt" "casos pasaron"
+espera $P131 "Fichas técnicas: la ficha como documento (paso a paso con tiempo y ojo, lápiz para editar cada paso), una sola pantalla para crear y editar, producción que escala, solo lectura e impreso" "$SALIDA/fichas.txt" "casos pasaron"
 espera $P132 "Pedidos: realizar pedido como lista de la compra, déficit que descuenta lo que viene de camino, enviar e imprimir, historial con selector de periodo y la hoja de recepción" "$SALIDA/pedidos.txt" "casos pasaron"
 espera $P133 "Cambios de precio: subidas y bajadas, efecto en cada plato (también por elaboraciones base) y precio de venta sugerido para mantener el food cost" "$SALIDA/cambios-precio.txt" "casos pasaron"
 espera $P134 "Stock: resumen, carpetas con alertas, filas con − / + que guardan una vez, mínimo y menú ⋯ plegados en móvil, merma e historial por producto y permisos" "$SALIDA/stock.txt" "casos pasaron"
@@ -366,5 +369,8 @@ espera $P161 "Descripción en carta: la escribe la ficha técnica, la ven el cli
 espera $P162 "Claves sin traducir: ninguna pantalla (30 vistas, 3 carpetas) enseña una clave interna en es, ca ni en" "$SALIDA/clavessintraducir.txt" "ninguna clave interna a la vista"
 espera $P163 "Lectura en móvil: 47 pantallas × 5 anchos, campos a 16 px (sin zoom de iPhone) y ningún texto aplastado en columna de letras" "$SALIDA/movillectura.txt" "todos los campos a 16 px"
 espera $P164 "Sesión caducada + dirección guardada: la entrada manda y no sale ningún PIN de área encima (el «login raro»)" "$SALIDA/accesocaducado.txt" "todos los casos pasaron"
+espera $P165 "Comandas Cocina: solo cocina, el nombre del bloque avanza el bloque, sin botón de pase, borde por comanda" "$SALIDA/comandascocina.txt" "casos pasaron"
+espera $P166 "Envío de proveedor: entra en Gastos con su IVA y suma al total del pedido" "$SALIDA/enviogastos.txt" "casos pasaron"
+espera $P167 "Oferta: importar del Escandallo por carpetas y después platos (marcas que se recuerdan, buscador global, opciones de menú agrupadas)" "$SALIDA/ofertaimportar.txt" "casos pasaron"
 
 exit $FALLOS

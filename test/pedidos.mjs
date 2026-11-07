@@ -88,7 +88,7 @@ for(const ancho of [1280, 360]){
     await q(() => { const i = document.getElementById('oq-2'); i.value = '2'; i.dispatchEvent(new Event('input', {bubbles:true})); }); await esperar(150);
     const r = await q(() => ({res: document.getElementById('order-summary').innerText.replace(/\s+/g,' '), con: document.querySelectorAll('.pc-art.con').length, chip: [...document.querySelectorAll('.pc-chips .btn')].map(b => b.textContent.replace(/\s+/g,' ').trim())}));
     // 3 kg merluza (42) + 2 kg gambas (76) = 118 + 10 % IVA = 129,80; no llega a 150 → +12 de envío
-    assert.ok(/118,00/.test(r.res) && /11,80/.test(r.res) && /12,00/.test(r.res) && /141,80/.test(r.res), r.res);
+    assert.ok(/118,00/.test(r.res) && /11,80/.test(r.res) && /12,00/.test(r.res) && /2,52/.test(r.res) && /144,32/.test(r.res), r.res);   // envío 12 + su IVA (21 %) = 2,52
     assert.ok(/Te faltan 32,00/.test(r.res) && !/\$\{/.test(r.res), 'avisa de lo que falta para el envío gratis, sin dejar marcadores: ' + r.res);
     assert.equal(r.con, 2); assert.equal(r.chip[2], 'Con cantidad 2');
   });

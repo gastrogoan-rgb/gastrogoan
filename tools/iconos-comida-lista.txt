@@ -226,3 +226,241 @@ utensilios | impresora | t:printer | Imprimir | Imprimir | Print
 utensilios | seguridad | t:shield-check | Seguridad alimentaria | Seguretat alimentària | Food safety
 utensilios | alergenos | t:hand-stop | Alérgenos, atención | Al·lèrgens, atenció | Allergens, caution
 utensilios | calidad | t:eye-check | Revisión, calidad | Revisió, qualitat | Check, quality
+pan | bagel | f:bagel | Bagel | Bagel | Bagel
+pan | pan-molde | f:bread | Pan de molde | Pa de motlle | Sliced bread
+pan | torta-plana | f:flatbread | Pan plano, torta | Pa pla, coca | Flatbread
+pan | pretzel | f:pretzel | Pretzel | Pretzel | Pretzel
+pan | tortitas | f:pancakes | Tortitas, creps | Creps, tortitas | Pancakes
+pan | gofre | f:waffle | Gofre | Gofra | Waffle
+pan | kebab | f:stuffed-flatbread | Kebab, pita relleno | Kebab, pita farcit | Kebab, stuffed pita
+pan | taco | f:taco | Taco | Taco | Taco
+pan | burrito | f:burrito | Burrito | Burrito | Burrito
+pan | tamal | f:tamale | Tamal | Tamal | Tamale
+pan | sandwich-emoji | f:sandwich | Sándwich (otro) | Sandvitx (altre) | Sandwich (alt)
+pan | perrito | f:hot-dog | Perrito caliente | Hot dog | Hot dog
+pan | patatas-fritas | f:french-fries | Patatas fritas | Patates fregides | French fries
+pan | queso-cuna | f:cheese-wedge | Cuña de queso | Tall de formatge | Cheese wedge
+pan | mantequilla | f:butter | Mantequilla | Mantega | Butter
+pan | panaderia | m:bakery-dining-outline | Panadería, bollería | Fleca, brioixeria | Bakery
+pan | pan-rebanada | c:bread-line | Pan, rebanada | Pa, llesca | Bread, slice
+pan | croissant-2 | c:croissant-line | Croissant (otro) | Croissant (altre) | Croissant (alt)
+pan | desayuno | m:breakfast-dining-outline | Desayuno | Esmorzar | Breakfast
+pan | brunch | m:brunch-dining-outline | Brunch | Brunch | Brunch
+pan | comida-rapida | m:fastfood-outline | Comida rápida | Menjar ràpid | Fast food
+pan | tapas-2 | m:tapas-outline | Tapas (otro) | Tapes (altre) | Tapas (alt)
+pan | para-llevar | m:takeout-dining-outline | Para llevar | Per emportar | Takeaway
+pan | caja-llevar | f:takeout-box | Caja para llevar | Caixa per emportar | Takeout box
+verdura | aguacate-2-n | f:avocado | Aguacate (otro) | Alvocat (altre) | Avocado (alt)
+verdura | brocoli-n | f:broccoli | Brócoli | Bròquil | Broccoli
+verdura | pimiento-2-n | f:bell-pepper | Pimiento morrón | Pebrot | Bell pepper
+verdura | guindilla | f:hot-pepper | Guindilla, picante | Bitxo, picant | Chili, spicy
+verdura | pepino | f:cucumber | Pepino | Cogombre | Cucumber
+verdura | berenjena | f:eggplant | Berenjena | Albergínia | Aubergine
+verdura | maiz | f:ear-of-corn | Maíz | Blat de moro | Corn
+verdura | ajo | f:garlic | Ajo | All | Garlic
+verdura | cebolla | f:onion | Cebolla | Ceba | Onion
+verdura | patata | f:potato | Patata | Patata | Potato
+verdura | boniato | f:roasted-sweet-potato | Boniato | Moniato | Sweet potato
+verdura | tomate | f:tomato | Tomate | Tomàquet | Tomato
+verdura | hoja-verde | f:leafy-green | Hoja verde | Fulla verda | Leafy green
+verdura | champinon | f:brown-mushroom | Champiñón, seta | Xampinyó, bolet | Mushroom
+verdura | guisantes | f:pea-pod | Guisantes, vainas | Pèsols, tavelles | Peas, pods
+verdura | legumbres | f:beans | Legumbres | Llegums | Beans, pulses
+verdura | legumbre-2 | c:bean-line | Legumbre (otra) | Llegum (altre) | Bean (alt)
+verdura | cacahuetes | f:peanuts | Cacahuetes | Cacauets | Peanuts
+verdura | castanas | f:chestnut | Castañas | Castanyes | Chestnuts
+verdura | aceituna | f:olive | Aceituna | Oliva | Olive
+verdura | jengibre | f:ginger-root | Jengibre | Gingebre | Ginger
+verdura | coco | f:coconut | Coco | Coco | Coconut
+verdura | calabaza | c:pumpkin-line | Calabaza | Carbassa | Pumpkin
+verdura | champinon-2 | c:mushroom-line | Seta (otra) | Bolet (altre) | Mushroom (alt)
+verdura | zanahoria-2-n | c:carrot-line | Zanahoria (otra) | Pastanaga (altra) | Carrot (alt)
+verdura | aguacate-3 | m:avocado-bean-outline | Aguacate y hueso | Alvocat i pinyol | Avocado and pit
+verdura | cereal | m:grain-outline | Cereal, grano | Cereal, gra | Grain
+verdura | trigo-3 | m:wheat-outline | Trigo (otro) | Blat (altre) | Wheat (alt)
+fruta | platano-2-n | f:banana | Plátano (otro) | Plàtan (altre) | Banana (alt)
+fruta | arandanos | f:blueberries | Arándanos | Nabius | Blueberries
+fruta | cerezas-3-n | f:cherries | Cerezas (otras) | Cireres (altres) | Cherries (alt)
+fruta | uvas-2-n | f:grapes | Uvas (otras) | Raïm (altre) | Grapes (alt)
+fruta | manzana-verde | f:green-apple | Manzana verde | Poma verda | Green apple
+fruta | manzana-roja | f:red-apple | Manzana roja | Poma vermella | Red apple
+fruta | kiwi | f:kiwi-fruit | Kiwi | Kiwi | Kiwi
+fruta | limon-2-n | f:lemon | Limón (otro) | Llimona (altra) | Lemon (alt)
+fruta | mango | f:mango | Mango | Mango | Mango
+fruta | melon-2 | f:melon | Melón (otro) | Meló (altre) | Melon (alt)
+fruta | melocoton | f:peach | Melocotón | Préssec | Peach
+fruta | pera | f:pear | Pera | Pera | Pear
+fruta | pina | f:pineapple | Piña | Pinya | Pineapple
+fruta | fresa | f:strawberry | Fresa | Maduixa | Strawberry
+fruta | mandarina | f:tangerine | Mandarina | Mandarina | Tangerine
+fruta | sandia | f:watermelon | Sandía | Síndria | Watermelon
+fruta | manzana-3 | c:apple-fruit-line | Manzana (otra) | Poma (altra) | Apple (alt)
+fruta | naranja-2 | c:orange-line | Naranja | Taronja | Orange
+fruta | cerezas-4 | c:cherry-line | Cerezas (línea) | Cireres (línia) | Cherries (line)
+fruta | uvas-3 | c:grape-line | Uvas (línea) | Raïm (línia) | Grapes (line)
+fruta | limon-exprimido | c:lemon-squeezy-line | Limón exprimido | Llimona esprémer | Squeezed lemon
+carne | corte-carne | f:cut-of-meat | Corte de carne, chuletón | Tall de carn, xuletó | Cut of meat, steak
+carne | carne-hueso | f:meat-on-bone | Carne con hueso | Carn amb os | Meat on the bone
+carne | pollo-muslo | f:poultry-leg | Muslo de pollo | Cuixa de pollastre | Chicken leg
+carne | bacon | f:bacon | Beicon | Cansalada | Bacon
+carne | ternera-2 | c:beef-line | Ternera (otra) | Vedella (altra) | Beef (alt)
+carne | pollo | c:chicken-line | Pollo | Pollastre | Chicken
+carne | jamon-2 | c:ham-line | Jamón (otro) | Pernil (altre) | Ham (alt)
+carne | hamburguesa-3 | c:hamburger-line | Hamburguesa (línea) | Hamburguesa (línia) | Burger (line)
+carne | hamburguesa-4 | f:hamburger | Hamburguesa (emoji) | Hamburguesa (emoji) | Burger (emoji)
+carne | brocheta | m:kebab-dining-outline | Brocheta, pincho | Broqueta, pinxo | Skewer
+carne | brasa | m:outdoor-grill-outline | Barbacoa, brasa | Barbacoa, brasa | Barbecue, grill
+pescado | cangrejo | f:crab | Cangrejo | Cranc | Crab
+pescado | bogavante | f:lobster | Bogavante | Escamarlà | Lobster
+pescado | ostra | f:oyster | Ostra | Ostra | Oyster
+pescado | gamba-2 | f:shrimp | Gamba (otra) | Gamba (altra) | Shrimp (alt)
+pescado | calamar | f:squid | Calamar, pulpo | Calamar, pop | Squid, octopus
+pescado | pez-tropical | f:tropical-fish | Pescado de roca | Peix de roca | Reef fish
+pescado | gamba-frita | f:fried-shrimp | Gamba rebozada, tempura | Gamba arrebossada, tempura | Fried shrimp, tempura
+pescado | surimi | f:fish-cake-with-swirl | Surimi, kamaboko | Surimi, kamaboko | Fish cake
+pescado | sushi | f:sushi | Sushi | Sushi | Sushi
+pescado | onigiri | f:rice-ball | Onigiri, bola de arroz | Onigiri, bola d'arròs | Rice ball
+pescado | pescado-linea | c:fish-line | Pescado (línea) | Peix (línia) | Fish (line)
+pescado | pescado-simbolo | c:fish-symbol-line | Pescado (símbolo) | Peix (símbol) | Fish (symbol)
+arroz | arroz-cocido | f:cooked-rice | Arroz blanco | Arròs blanc | Steamed rice
+arroz | arroz-curry | f:curry-rice | Arroz al curry | Arròs al curri | Curry rice
+arroz | ramen | f:steaming-bowl | Ramen, sopa humeante | Ramen, sopa fumejant | Ramen, steaming bowl
+arroz | espaguetis | f:spaghetti | Espaguetis, pasta | Espaguetis, pasta | Spaghetti, pasta
+arroz | guiso | f:pot-of-food | Guiso, cazuela | Guisat, cassola | Stew, casserole
+arroz | paella | f:shallow-pan-of-food | Paella, arroz en paellera | Paella, arròs a la paella | Paella
+arroz | fondue | f:fondue | Fondue | Fondue | Fondue
+arroz | bento | f:bento-box | Bento | Bento | Bento box
+arroz | oden | f:oden | Oden, brochetas en caldo | Oden, broquetes en brou | Oden
+arroz | dango | f:dango | Dango, dulce en brocheta | Dango, dolç en broqueta | Dango
+arroz | cuenco-cuchara-2 | f:bowl-with-spoon | Cuenco con cuchara | Bol amb cullera | Bowl with spoon
+arroz | conservas | f:canned-food | Conservas | Conserves | Canned food
+arroz | torta-arroz | f:rice-cracker | Torta de arroz | Coca d'arròs | Rice cracker
+arroz | curry-japones | m:japanese-curry-outline | Curry japonés | Curri japonès | Japanese curry
+arroz | ramen-linea | m:ramen-dining-outline | Ramen (línea) | Ramen (línia) | Ramen (line)
+arroz | bol-arroz | m:rice-bowl-outline | Bol de arroz | Bol d'arròs | Rice bowl
+arroz | sopa-cocina | m:soup-kitchen-outline | Sopa, comedor | Sopa, menjador | Soup kitchen
+arroz | olla-grande | m:stockpot-outline | Olla grande | Olla gran | Stockpot
+arroz | olla-sopa | c:soup-pot-2-line | Olla de sopa | Olla de sopa | Soup pot
+arroz | manopla | c:pot-line | Manopla de horno | Manyopla de forn | Oven mitt
+arroz | bol | c:bowl-2-line | Bol | Bol | Bowl
+arroz | arrocera | c:electric-cooker-line | Arrocera, olla eléctrica | Arrossera, olla elèctrica | Rice cooker
+arroz | plato-cena | m:meal-dinner-outline | Cena | Sopar | Dinner
+arroz | plato-comida | m:meal-lunch-outline | Comida, mediodía | Dinar, migdia | Lunch, midday
+huevo | huevo-emoji | f:egg | Huevo (otro) | Ou (altre) | Egg (alt)
+huevo | nido-huevos | f:nest-with-eggs | Nido de huevos | Niu d'ous | Nest of eggs
+huevo | huevo-roto-n | c:egg-crack-line | Huevo cascado | Ou trencat | Cracked egg
+huevo | huevo-frito-2-n | c:fried-egg-line | Huevo frito (otro) | Ou ferrat (altre) | Fried egg (alt)
+huevo | leche-vaso | f:glass-of-milk | Vaso de leche | Got de llet | Glass of milk
+huevo | leche-3 | c:milk-line | Leche (otra) | Llet (altra) | Milk (alt)
+huevo | miel | f:honey-pot | Miel | Mel | Honey
+huevo | tarro-n | f:jar | Tarro, conserva | Pot, conserva | Jar
+huevo | mermelada | m:open-jam-outline | Mermelada | Melmelada | Jam
+huevo | aceite | c:oil-line | Aceite | Oli | Oil
+huevo | huevo-alt | m:egg-alt-outline | Huevo (otra vista) | Ou (altra vista) | Egg (alt view)
+postre | pastel-cumple | f:birthday-cake | Tarta de cumpleaños | Pastís d'aniversari | Birthday cake
+postre | cupcake-2 | f:cupcake | Cupcake (otro) | Cupcake (altre) | Cupcake (alt)
+postre | galleta-2-n | f:cookie | Galleta (otra) | Galeta (altra) | Cookie (alt)
+postre | rosquilla | f:doughnut | Rosquilla, donut | Rosquilla, donut | Doughnut
+postre | helado-emoji | f:ice-cream | Helado (otro) | Gelat (altre) | Ice cream (alt)
+postre | helado-blando | f:soft-ice-cream | Helado de cucurucho | Gelat de con | Soft serve
+postre | granizado | f:shaved-ice | Granizado, hielo | Granissat, gel | Shaved ice
+postre | pastel-fresas | f:shortcake | Pastel de fresas | Pastís de maduixes | Shortcake
+postre | flan | f:custard | Flan, natillas | Flam, natilles | Custard, flan
+postre | tarta-emoji | f:pie | Tarta (otra) | Pastís (altre) | Pie (alt)
+postre | tableta-chocolate | f:chocolate-bar | Tableta de chocolate | Rajola de xocolata | Chocolate bar
+postre | caramelo-3 | f:candy | Caramelo (otro) | Caramel (altre) | Candy (alt)
+postre | piruleta-2-n | f:lollipop | Piruleta (otra) | Xupa-xup (altre) | Lollipop (alt)
+postre | galleta-suerte | f:fortune-cookie | Galleta de la suerte | Galeta de la sort | Fortune cookie
+postre | pastel-luna | f:moon-cake | Pastel de luna | Pastís de lluna | Mooncake
+postre | tarta-porcion | c:cake-slice-line | Porción de tarta | Porció de pastís | Cake slice
+postre | tarta-linea | c:cake-line | Tarta (línea) | Pastís (línia) | Cake (line)
+postre | cupcake-3 | c:cupcake-line | Cupcake (línea) | Cupcake (línia) | Cupcake (line)
+postre | galleta-muneco-2 | c:cookie-man-line | Galleta de jengibre | Galeta de pa de pessic | Gingerbread man
+postre | galleta-3 | c:cookie-line | Galleta (línea) | Galeta (línia) | Cookie (line)
+postre | donut-linea | c:donut-line | Donut (línea) | Donut (línia) | Donut (line)
+postre | donut-grande | m:donut-large | Donut grande | Donut gran | Large donut
+postre | caramelo-linea | c:candy-2-line | Caramelo envuelto | Caramel embolicat | Wrapped candy
+postre | helado-linea | c:ice-cream-line | Helado (línea) | Gelat (línia) | Ice cream (line)
+postre | helado-bol | c:ice-cream-bowl-line | Copa de helado | Copa de gelat | Ice cream bowl
+postre | helado-2-n | c:ice-cream-2-line | Helado de bola | Gelat de bola | Scoop of ice cream
+postre | helado-hecho | m:icecream-outline | Helado de palo | Gelat de pal | Ice lolly
+postre | tarta-material | m:cake-outline | Tarta (otra vista) | Pastís (altra vista) | Cake (alt view)
+postre | galleta-material | m:cookie-outline | Galleta (otra vista) | Galeta (altra vista) | Cookie (alt view)
+cafe | cafe-caliente | f:hot-beverage | Café caliente | Cafè calent | Hot coffee
+cafe | tetera-2 | f:teapot | Tetera (otra) | Tetera (altra) | Teapot (alt)
+cafe | te-taza | f:teacup-without-handle | Té en taza | Te en tassa | Tea cup
+cafe | mate | f:mate | Mate, infusión | Mate, infusió | Mate
+cafe | cafe-paja | f:cup-with-straw | Vaso con pajita | Got amb palleta | Cup with straw
+cafe | bubble-tea-3 | f:bubble-tea | Té de burbujas | Te de bombolles | Bubble tea
+cafe | taza-te | c:teacup-line | Taza de té | Tassa de te | Teacup
+cafe | cafetera | m:coffee-maker-outline | Cafetera | Cafetera | Coffee maker
+cafe | taza-comida | m:emoji-food-beverage-outline | Taza con infusión | Tassa amb infusió | Cup with tea
+cafe | hervidor | m:kettle-outline | Hervidor | Bullidor | Kettle
+cafe | taza-cafe | m:coffee-outline | Taza de café | Tassa de cafè | Coffee cup
+refresco | brik | f:beverage-box | Brik, zumo | Brik, suc | Juice box
+refresco | vaso | f:tumbler-glass | Vaso, whisky | Got, whisky | Tumbler, whisky
+refresco | hielo | f:ice | Hielo | Gel | Ice
+refresco | bebida-linea | c:drink-line | Bebida con pajita | Beguda amb palleta | Drink with straw
+refresco | bebida-2 | c:drink-2-line | Bebida (otra) | Beguda (altra) | Drink (alt)
+refresco | vaso-cristal | c:glass-cup-line | Vaso de cristal | Got de vidre | Glass cup
+refresco | agua-botella | m:water-bottle-large-outline | Botella de agua | Ampolla d'aigua | Water bottle
+refresco | bebida-material | m:local-drink-outline | Bebida (vaso) | Beguda (got) | Drink (glass)
+refresco | sin-bebidas | m:no-drinks-outline | Sin bebidas | Sense begudes | No drinks
+vino | copa-emoji | f:wine-glass | Copa de vino (otra) | Copa de vi (altra) | Wine glass (alt)
+vino | cava-corcho | f:bottle-with-popping-cork | Botella de cava | Ampolla de cava | Sparkling bottle
+vino | brindis | f:clinking-glasses | Brindis | Brindis | Cheers
+vino | cocktail-emoji | f:cocktail-glass | Cóctel (otro) | Còctel (altre) | Cocktail (alt)
+vino | bebida-tropical | f:tropical-drink | Bebida tropical | Beguda tropical | Tropical drink
+vino | sake | f:sake | Sake, licor de arroz | Sake, licor d'arròs | Sake
+vino | vino-linea | c:wine-line | Vino (línea) | Vi (línia) | Wine (line)
+vino | copa-linea | c:wineglass-line | Copa de vino (línea) | Copa de vi (línia) | Wine glass (line)
+vino | copa-2 | c:wineglass-2-line | Copa de vino (grande) | Copa de vi (gran) | Wine glass (large)
+vino | champan-linea | c:champagne-line | Champán (línea) | Xampany (línia) | Champagne (line)
+vino | botella-copa | c:bottle-glass-line | Botella y copa | Ampolla i copa | Bottle and glass
+vino | vinoteca | m:wine-bar-outline | Vinoteca | Vinoteca | Wine bar
+vino | licores | m:liquor-outline | Licores | Licors | Liquor
+cerveza | jarra-n | f:beer-mug | Jarra de cerveza | Gerra de cervesa | Beer mug
+cerveza | brindis-cerveza | f:clinking-beer-mugs | Brindis con cerveza | Brindis amb cervesa | Beer cheers
+cerveza | cerveza-linea | c:beer-line | Cerveza (línea) | Cervesa (línia) | Beer (line)
+cerveza | lupulo-n | c:hop-line | Lúpulo (línea) | Llúpol (línia) | Hops (line)
+cerveza | lupulo-2 | c:hop-2-line | Lúpulo (otro) | Llúpol (altre) | Hops (alt)
+cerveza | barril-linea | c:barrel-2-line | Barril (línea) | Barril (línia) | Barrel (line)
+cerveza | bar-deportivo | m:sports-bar-outline | Bar, cerveza | Bar, cervesa | Sports bar
+cerveza | bar-copa | m:local-bar-outline | Bar, copa | Bar, copa | Bar, glass
+cerveza | cerveza-menu | m:beer-meal-outline | Cerveza y comida | Cervesa i menjar | Beer and food
+servicio | cubiertos-emoji | f:fork-and-knife | Tenedor y cuchillo | Forquilla i ganivet | Fork and knife
+servicio | plato-cubiertos | f:fork-and-knife-with-plate | Plato con cubiertos | Plat amb coberts | Plate with cutlery
+servicio | palillos | f:chopsticks | Palillos | Escuradents xinesos | Chopsticks
+servicio | cloche | c:dish-cover-line | Campana de servicio | Campana de servei | Cloche
+servicio | plato-mano | c:hand-platter-line | Camarero con bandeja | Cambrer amb safata | Waiter with tray
+servicio | restaurante | m:restaurant | Restaurante | Restaurant | Restaurant
+servicio | mesa-restaurante | m:table-restaurant-outline | Mesa de restaurante | Taula de restaurant | Restaurant table
+servicio | mesa-alta | m:table-bar-outline | Mesa alta, barra | Taula alta, barra | Bar table
+servicio | cocinar | m:cooking-outline | Cocinando | Cuinant | Cooking
+servicio | cuchara-tenedor-2 | m:fork-spoon | Cuchara y tenedor | Cullera i forquilla | Spoon and fork
+servicio | tenedor-cuchara | c:fork-spoon-line | Tenedor y cuchara | Forquilla i cullera | Fork and spoon
+servicio | tenedor-cuchillo-2 | c:fork-knife-line | Tenedor y cuchillo (línea) | Forquilla i ganivet (línia) | Fork and knife (line)
+servicio | cena-linea | c:dinner-line | Cena (línea) | Sopar (línia) | Dinner (line)
+servicio | banco-comida | m:food-bank-outline | Despensa, banco de alimentos | Rebost, banc d'aliments | Pantry, food bank
+servicio | ficha-menu | m:menu-book | Carta, menú | Carta, menú | Menu book
+utensilios | cuchillo-cocina | f:kitchen-knife | Cuchillo de cocina | Ganivet de cuina | Kitchen knife
+utensilios | cuchara | f:spoon | Cuchara | Cullera | Spoon
+utensilios | cuchillo-linea | c:knife-line | Cuchillo (línea) | Ganivet (línia) | Knife (line)
+utensilios | cuchara-linea | c:spoon-line | Cuchara (línea) | Cullera (línia) | Spoon (line)
+utensilios | espatula-2 | c:spatula-line | Espátula | Espàtula | Spatula
+utensilios | batidora-n | m:blender-outline | Batidora de vaso | Batedora de got | Blender
+utensilios | batidora-linea | c:blender-line | Batidora (línea) | Batedora (línia) | Blender (line)
+utensilios | sarten | m:skillet-cooktop-outline | Sartén en la placa | Paella a la placa | Skillet on cooktop
+utensilios | horno-material | m:oven-outline | Horno (otra vista) | Forn (altra vista) | Oven (alt view)
+utensilios | horno-gen | m:oven-gen-outline | Horno de convección | Forn de convecció | Convection oven
+utensilios | microondas-2 | m:microwave-outline | Microondas (otra vista) | Microones (altra vista) | Microwave (alt view)
+utensilios | robot-cocina | m:multicooker-outline | Robot de cocina | Robot de cuina | Multicooker
+utensilios | cocina-nevera | m:kitchen-outline | Cocina y nevera | Cuina i nevera | Kitchen and fridge
+utensilios | nevera-linea | c:fridge-line | Nevera (línea) | Nevera (línia) | Fridge (line)
+utensilios | lavavajillas | m:dishwasher-outline | Lavavajillas | Rentaplats | Dishwasher
+utensilios | barril-aceite | m:oil-barrel-outline | Barril de aceite | Barril d'oli | Oil barrel
+utensilios | gorro-chef-2 | c:chef-hat-line | Gorro de chef (línea) | Gorra de xef (línia) | Chef hat (line)
+utensilios | gorro-chef-3 | m:chef-hat-outline | Gorro de chef (otro) | Gorra de xef (altra) | Chef hat (alt)
+utensilios | anfora-2 | f:amphora | Ánfora (otra) | Àmfora (altra) | Amphora (alt)
+utensilios | sal-2 | f:salt | Salero | Saler | Salt shaker
+utensilios | cocina-dorada | f:cooking | Huevo en sartén | Ou a la paella | Pan with egg

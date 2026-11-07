@@ -394,7 +394,8 @@ function esTarjetaHtml(r){
   const sala = (r.area||'cocina') === 'sala';
   const pct = recipeFoodCostPct(r);
   const icono = r.isBase ? (sala ? 'ti-flask' : 'ti-soup') : (sala ? 'ti-glass-cocktail' : 'ti-chef-hat');
-  const color = r.isBase || !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
+  const objFc = (typeof geFoodCostObjPct === 'function') ? geFoodCostObjPct() : 35;   // el objetivo del negocio, no un 28/35 fijo
+  const color = r.isBase || !isFinite(pct) ? 'gray' : pct > objFc + 5 ? 'red' : pct > objFc ? 'amber' : 'green';
   const insignia = r.isBase
     ? `<span class="badge badge-gray">${fmtMoney(recipeBaseCostPerUnit(r))}/${escapeHtml(r.baseUnit||'L')}</span>`
     : `<span class="badge badge-${color}">${isFinite(pct) ? fmtPct1(pct) + '% FC' : t('label.noSalePrice')}</span>`;
@@ -574,15 +575,16 @@ function esPintarHoja(estado){
       <aside class="es-lateral">
         <section class="es-card es-resumen">
           <h3 class="es-tit">${gl({es:'Números', ca:'Números', en:'Numbers'})}</h3>
-          <div class="es-kpis">
-            ${k('es-k-coste', t('label.totalCost'), '—')}
+          <div class="es-kpis${isBase ? '' : ' es-kpis-venta'}">
             ${isBase ? `
+              ${k('es-k-coste', t('label.totalCost'), '—')}
               ${k('es-k-rinde', t('label.yieldShort'), '—')}
               ${k('es-k-ud', t('label.costPer') + ' ' + escapeHtml(r.baseUnit||'L'), '—')}
             ` : `
               ${k('es-k-pvp', t('label.salePriceShort'), '—')}
+              <div class="es-kpi"><span class="es-kpi-et">${tA('label.foodCost')}</span><b id="es-k-fc">—</b><small class="es-kpi-sub" id="es-k-fc-obj"></small></div>
+              ${k('es-k-coste', t('label.totalCost'), '—')}
               ${k('es-k-margen', t('label.margin'), '—')}
-              ${k('es-k-fc', tA('label.foodCost'), '—')}
             `}
           </div>
           <div class="es-desglose">
@@ -714,7 +716,12 @@ function esRecalcular(){
     const fc = document.getElementById('es-k-fc');
     if(fc){
       fc.textContent = isFinite(pct) ? fmtPct1(pct) + '%' : '—';
-      fc.style.color = !isFinite(pct) ? '' : pct > 35 ? 'var(--red)' : pct > 28 ? '#8A5A0F' : 'var(--green)';
+      // El semáforo se mide contra el objetivo del propio negocio (Tesorería), no contra un 28/35 % fijo:
+      // un bar de copas y un restaurante de menú no tienen el mismo food cost sano.
+      const obj = (typeof geFoodCostObjPct === 'function') ? geFoodCostObjPct() : 35;
+      fc.style.color = !isFinite(pct) ? '' : pct > obj + 5 ? 'var(--red)' : pct > obj ? '#8A5A0F' : 'var(--green)';
+      const sub = document.getElementById('es-k-fc-obj');
+      if(sub) sub.textContent = `${gl({es:'objetivo', ca:'objectiu', en:'target'})} ${fmtNum(obj)} %`;
     }
     updateRecipeFinalPriceDisplay();
     const ivaEl = document.getElementById('recipe-iva');
@@ -1720,6 +1727,7 @@ function openFichaModal(id, recipeId){
     fichaModalState = {id:null, name:'', recipeId:'', comensales:2, baseComensales:1, produccion:1, tiempo:'', temp: currentArea()==='sala' ? 'FRÍO' : 'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:'', bebidaTipo:'', bebida:{}};
   }
   if(!Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet = [];
+  fichaPasosEdit = new Set();
   fichaHoja = true;
   renderFichaModal();
   fichaHojaBase = fiFoto();
@@ -1743,7 +1751,7 @@ function updateFichaProduccion(value){
    LA FICHA (30/10) — un documento para cocinar el plato, y la misma pantalla donde se crea y se edita.
    Mismo planteamiento que la hoja de Escandallo: antes se abría en un modal. Ahora es una página con dos columnas
    —los ingredientes (la mise en place, a la cantidad de lo que se va a producir) y el paso a paso— y el resto debajo.
-   Cada paso lleva, si hace falta, su tiempo, su temperatura y un «ojo» para el punto crítico: lo que separa una
+   Cada paso lleva, si hace falta, su tiempo y un «ojo» para el punto crítico: lo que separa una
    receta que sale siempre igual de una que depende de quién la haga. Quien no puede editar la ve como un documento.
    ============================================================ */
 let fichaHoja = false;           // hay una ficha abierta en la pantalla (id null = ficha nueva)
@@ -1810,44 +1818,88 @@ function fiIngredientesHtml(f){
     <button type="button" class="owner-only btn btn-sm btn-fino" onclick="addFichaIngredientText()"><i class="ti ti-plus"></i> ${t('btn.addIngredient')}</button></div>`;
 }
 
+/* PASOS: de lectura por defecto, con un lápiz para editar cada uno (7/11, pedido del dueño: «está todo abierto y es
+   fácil cambiar cosas a lo tonto»). `fichaPasosEdit` guarda qué pasos están en edición: solo vive en la pantalla
+   (no se guarda con la ficha). Un paso vacío —o recién añadido— se abre solo, y los índices se corrigen al subir,
+   bajar o quitar pasos. Ya no hay temperatura por paso: la de servicio de la ficha es la única. */
+let fichaPasosEdit = new Set();
+function fiPasoChipsHtml(d){
+  return d.min ? `<div class="fi-paso-chips"><span class="fi-chip"><i class="ti ti-clock"></i> ${escapeHtml(String(d.min))} min</span></div>` : '';
+}
 function fiPasosHtml(f){
   const ro = !editUnlocked;
   const pasos = (f.pasos && f.pasos.length) ? f.pasos : [''];
   const det = f.pasosDet || [];
+  const leer = (p, d, n, acc) => `
+      <li class="fi-paso">
+        <div class="fi-paso-n">${n}</div>
+        <div class="fi-paso-c">
+          <p class="fi-paso-leer">${escapeHtml(p)}</p>
+          ${fiPasoChipsHtml(d)}
+          ${d.aviso ? `<div class="fi-ojo"><b>${gl({es:'Ojo', ca:'Ull', en:'Watch out'})}</b> ${escapeHtml(d.aviso)}</div>` : ''}
+        </div>
+        ${acc || ''}
+      </li>`;
   if(ro){
     const llenos = pasos.map((p, i) => ({p, d: det[i] || {}, i})).filter(x => x.p && String(x.p).trim());
     if(!llenos.length) return `<p class="es-pista">${t('label.notSpecified')}</p>`;
-    return `<ol class="fi-pasos">${llenos.map((x, n) => `
-      <li class="fi-paso">
-        <div class="fi-paso-n">${n + 1}</div>
-        <div class="fi-paso-c">
-          <p class="fi-paso-leer">${escapeHtml(x.p)}</p>
-          ${(x.d.min || x.d.temp) ? `<div class="fi-paso-chips">${x.d.min ? `<span class="fi-chip"><i class="ti ti-clock"></i> ${escapeHtml(String(x.d.min))} min</span>` : ''}${x.d.temp ? `<span class="fi-chip"><i class="ti ti-temperature"></i> ${escapeHtml(String(x.d.temp))}</span>` : ''}</div>` : ''}
-          ${x.d.aviso ? `<div class="fi-ojo"><b>${gl({es:'Ojo', ca:'Ull', en:'Watch out'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}
-        </div>
-      </li>`).join('')}</ol>`;
+    return `<ol class="fi-pasos">${llenos.map((x, n) => leer(x.p, x.d, n + 1)).join('')}</ol>`;
   }
   return `<ol class="fi-pasos">${pasos.map((p, idx) => {
     const d = det[idx] || {};
+    const editando = fichaPasosEdit.has(idx) || !String(p || '').trim();
+    const menu = ggMenuAcciones([
+      idx > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:`moveFichaStep(${idx},-1)`, owner:true} : null,
+      idx < pasos.length - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:`moveFichaStep(${idx},1)`, owner:true} : null,
+      pasos.length > 1 ? {icono:'ti-trash', texto:gl({es:'Quitar paso', ca:'Treure pas', en:'Remove step'}), fn:`removeFichaStep(${idx})`, peligro:true, owner:true} : null
+    ].filter(Boolean));
+    if(!editando){
+      const lapiz = `<button type="button" class="fi-lapiz" data-tip="${escapeHtml(gl({es:'Editar este paso', ca:'Editar aquest pas', en:'Edit this step'}))}" aria-label="${escapeHtml(gl({es:'Editar este paso', ca:'Editar aquest pas', en:'Edit this step'}))}" onclick="fiPasoEditar(${idx})"><i class="ti ti-pencil"></i></button>`;
+      return leer(p, d, idx + 1, `<div class="fi-paso-acc">${lapiz}${menu}</div>`);
+    }
+    const hecho = `<button type="button" class="fi-lapiz is-on" data-tip="${escapeHtml(gl({es:'Terminar de editar', ca:'Acabar d\'editar', en:'Done editing'}))}" aria-label="${escapeHtml(gl({es:'Terminar de editar', ca:'Acabar d\'editar', en:'Done editing'}))}" onclick="fiPasoListo(${idx})"><i class="ti ti-check"></i></button>`;
     return `
-    <li class="fi-paso">
+    <li class="fi-paso editando">
       <div class="fi-paso-n">${idx + 1}</div>
       <div class="fi-paso-c">
         <textarea class="fi-paso-txt" rows="2" placeholder="${t('ficha.stepPlaceholder')}" aria-label="${gl({es:'Paso', ca:'Pas', en:'Step'})} ${idx + 1}" oninput="updateFichaStep(${idx}, this.value);fiAutoAlto(this)">${escapeHtml(p)}</textarea>
         <div class="fi-paso-det">
           <label class="fi-det"><i class="ti ti-clock"></i><input type="number" min="0" step="1" value="${d.min || ''}" placeholder="min" aria-label="${gl({es:'Minutos', ca:'Minuts', en:'Minutes'})}" oninput="updateFichaPasoDet(${idx}, 'min', this.value)"></label>
-          <label class="fi-det"><i class="ti ti-temperature"></i><input type="text" value="${escapeHtml(d.temp || '')}" placeholder="180 °C" aria-label="${gl({es:'Temperatura', ca:'Temperatura', en:'Temperature'})}" oninput="updateFichaPasoDet(${idx}, 'temp', this.value)"></label>
           <label class="fi-det fi-det-ojo"><i class="ti ti-alert-triangle"></i><input type="text" value="${escapeHtml(d.aviso || '')}" placeholder="${gl({es:'Ojo: punto crítico', ca:'Ull: punt crític', en:'Watch out: critical point'})}" aria-label="${gl({es:'Punto crítico', ca:'Punt crític', en:'Critical point'})}" oninput="updateFichaPasoDet(${idx}, 'aviso', this.value)"></label>
         </div>
       </div>
-      <div class="fi-paso-acc">${ggMenuAcciones([
-        idx > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:`moveFichaStep(${idx},-1)`, owner:true} : null,
-        idx < pasos.length - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:`moveFichaStep(${idx},1)`, owner:true} : null,
-        pasos.length > 1 ? {icono:'ti-trash', texto:gl({es:'Quitar paso', ca:'Treure pas', en:'Remove step'}), fn:`removeFichaStep(${idx})`, peligro:true, owner:true} : null
-      ].filter(Boolean))}</div>
+      <div class="fi-paso-acc">${hecho}${menu}</div>
     </li>`;
   }).join('')}</ol>
   <button type="button" class="owner-only btn btn-fino" onclick="addFichaStep()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>`;
+}
+function fiRepintarPasos(enfocar){
+  const box = document.getElementById('ficha-steps');
+  if(!box || !fichaModalState) return;
+  box.innerHTML = fiPasosHtml(fichaModalState);
+  box.querySelectorAll('.fi-paso-txt').forEach(fiAutoAlto);
+  if(enfocar != null){
+    const t0 = box.querySelectorAll('.fi-paso')[enfocar];
+    const ta = t0 && t0.querySelector('.fi-paso-txt');
+    if(ta){ ta.focus(); const n = ta.value.length; try{ ta.setSelectionRange(n, n); }catch(e){} }
+  }
+}
+function fiPasoEditar(idx){ fichaPasosEdit.add(idx); fiRepintarPasos(idx); }
+function fiPasoListo(idx){
+  const f = fichaModalState;
+  // Un paso que se deja vacío no se «cierra»: se vuelve a abrir solo. Mejor quitarlo con el menú ⋯.
+  if(f && !String(f.pasos[idx] || '').trim()){ showToast(gl({es:'Escribe el paso o quítalo desde ⋯', ca:'Escriu el pas o treu-lo des de ⋯', en:'Write the step or remove it from ⋯'})); return; }
+  fichaPasosEdit.delete(idx); fiRepintarPasos();
+}
+// Al mover o quitar pasos, lo que estaba en edición tiene que seguir siendo EL MISMO paso.
+function fiPasosEditMover(desde, hasta){
+  const a = fichaPasosEdit.has(desde), b = fichaPasosEdit.has(hasta);
+  fichaPasosEdit.delete(desde); fichaPasosEdit.delete(hasta);
+  if(a) fichaPasosEdit.add(hasta);
+  if(b) fichaPasosEdit.add(desde);
+}
+function fiPasosEditQuitar(idx){
+  fichaPasosEdit = new Set([...fichaPasosEdit].filter(i => i !== idx).map(i => i > idx ? i - 1 : i));
 }
 function fiAutoAlto(el){ el.style.height = 'auto'; el.style.height = Math.max(el.scrollHeight, 56) + 'px'; }
 function updateFichaPasoDet(idx, campo, valor){
@@ -1864,6 +1916,7 @@ function moveFichaStep(idx, dir){
   while(f.pasosDet.length < f.pasos.length) f.pasosDet.push({});
   [f.pasos[idx], f.pasos[j]] = [f.pasos[j], f.pasos[idx]];
   [f.pasosDet[idx], f.pasosDet[j]] = [f.pasosDet[j], f.pasosDet[idx]];
+  fiPasosEditMover(idx, j);
   renderFichaModal();
   fiMarcarCambio();
 }
@@ -1998,6 +2051,12 @@ function renderFichaModal(){
       </div>
     </section>
 
+    <!-- Los alérgenos van ARRIBA (7/11): con muchos pasos, al final del todo nadie los llegaba a ver. -->
+    <section class="es-card fi-ancho fi-alergenos">
+      <h3 class="es-tit">${t('label.allergens')}</h3>
+      <div class="alg-grid">${allergenHtml || `<span class="es-pista">${t('label.none')}</span>`}</div>
+    </section>
+
     <div class="fi-cuerpo">
       <section class="es-card fi-ingredientes">
         <h3 class="es-tit" id="fi-ing-tit">${fiTituloIngredientes(f)}</h3>
@@ -2024,10 +2083,6 @@ function renderFichaModal(){
            : `<textarea id="ficha-presentation" rows="3" placeholder="${isSala ? t('ph.serviceNotes') : t('ph.presentationNotes')}">${escapeHtml(f.presentation||'')}</textarea>`}
     </section>`}
 
-    <section class="es-card fi-ancho">
-      <h3 class="es-tit">${t('label.allergens')}</h3>
-      <div class="alg-grid">${allergenHtml || `<span class="es-pista">${t('label.none')}</span>`}</div>
-    </section>
   `;
   document.querySelectorAll('#ficha-steps .fi-paso-txt').forEach(fiAutoAlto);
 }
@@ -2123,6 +2178,7 @@ function addFichaStep(){
   fichaModalState.pasos.push('');
   if(!Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet = [];
   while(fichaModalState.pasosDet.length < fichaModalState.pasos.length) fichaModalState.pasosDet.push({});
+  fichaPasosEdit.add(fichaModalState.pasos.length - 1);
   renderFichaModal();
   fiMarcarCambio();
   const t0 = document.querySelectorAll('#ficha-steps .fi-paso-txt'); if(t0.length) t0[t0.length - 1].focus();
@@ -2132,6 +2188,7 @@ function removeFichaStep(idx){
   syncFichaModalFields();
   fichaModalState.pasos.splice(idx,1);
   if(Array.isArray(fichaModalState.pasosDet)) fichaModalState.pasosDet.splice(idx,1);
+  fiPasosEditQuitar(idx);
   renderFichaModal();
   fiMarcarCambio();
 }
@@ -2200,7 +2257,7 @@ async function saveFicha(){
     tiempo: f.tiempo ? Math.max(0, parseInt(f.tiempo)||0) : '',
     temp: f.temp || 'CALIENTE',
     ingredients: f.ingredients.filter(i => i && i.trim()),
-    // Los pasos vacíos se tiran con sus detalles (tiempo, temperatura, ojo) para que sigan alineados.
+    // Los pasos vacíos se tiran con sus detalles (tiempo, ojo) para que sigan alineados.
     ...(() => {
       const det = Array.isArray(f.pasosDet) ? f.pasosDet : [];
       const pasos = [], pasosDet = [];
@@ -2210,7 +2267,6 @@ async function saveFicha(){
         const d = det[i] || {};
         const limpio = {};
         const min = parseInt(d.min); if(isFinite(min) && min > 0) limpio.min = min;
-        if(d.temp && String(d.temp).trim()) limpio.temp = String(d.temp).trim();
         if(d.aviso && String(d.aviso).trim()) limpio.aviso = String(d.aviso).trim();
         pasosDet.push(limpio);
       });
@@ -2352,7 +2408,7 @@ function printFicha(id){
       <div class="fp-n-paso">${n + 1}</div>
       <div class="fp-paso-c">
         <div class="fp-paso-t">${escapeHtml(x.p)}</div>
-        ${(x.d.min || x.d.temp) ? `<div class="fp-chips">${x.d.min ? `<span>${escapeHtml(String(x.d.min))} MIN</span>` : ''}${x.d.temp ? `<span>${escapeHtml(String(x.d.temp))}</span>` : ''}</div>` : ''}
+        ${x.d.min ? `<div class="fp-chips"><span>${escapeHtml(String(x.d.min))} MIN</span></div>` : ''}
         ${x.d.aviso ? `<div class="fp-ojo"><b>${gl({es:'OJO', ca:'ULL', en:'WATCH OUT'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}
       </div>
     </div>`).join('');

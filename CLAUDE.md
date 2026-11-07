@@ -280,6 +280,19 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
   elemento entre su `line-height` cuenta el PADDING: un botón de 44 px
   "tenía" tres líneas siempre, y la primera versión de la prueba dio
   doscientos falsos positivos.
+- **NORMA DE ESPACIOS MUERTOS (dicha por el dueño el 7/11)**: en toda la app
+  sobraban huecos. Antes de dar una pantalla por buena, mirar si hay una fila
+  que lleva SOLA un botón (o un título, o una cifra) con todo el ancho vacío
+  al lado, columnas que dejan un vacío entre dos controles, o tarjetas
+  estiradas hasta la altura de la vecina. Se arregla así, por este orden:
+  1) **subir la acción a una fila que ya existe** (el «Nueva carta» a la fila
+  de las pestañas; el «Nueva sección» a la del buscador), 2) dejar que el
+  campo importante crezca y ocupe el hueco (el nombre de la carta), 3) agrupar
+  en rejilla lo que es del mismo tipo. No vale arreglarlo achicando el
+  contenido ni quitando aire por los cuatro lados (la norma de aire del TPV
+  sigue mandando): se quita el HUECO, no el respiro. Hecho en Oferta
+  (cartas y menús, lista y editor). Al rediseñar otra pantalla, pasar esta
+  revisión antes de capturarla.
 - **Contraste mínimo del texto**: 4,5:1 (3:1 si es grande). `--muted` es el
   gris de TODO el texto secundario y aparece 150+ veces por pantalla: si se
   toca, comprobar contra los cuatro fondos de la app (blanco, `#FAF8F4`,
@@ -843,11 +856,18 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   base) y **el PVP que mantiene el food cost objetivo** (`geFoodCostObjPct`; coste ÷ objetivo, con IVA, a 10 céntimos).
   «Aplicar» (`aplicarPvpSugerido`) lo propone y pide confirmación; nunca se cambia solo. También cambia el precio en las
   cartas donde está el plato, para que el TPV no se quede con el viejo. Prueba: `test/cambios-precio.mjs`.
-- **Catálogo de iconos de comida** (224, trazo; 181 de comida y 43 de utensilios y equipo de cocina): `tools/iconos-comida-lista.txt` → `node tools/generar-iconos-comida.mjs <tabler> <lucide> <phosphor>` (hacen falta los tres paquetes npm descomprimidos)
-  → `js/iconos-comida.js`; el uso (`iconoSeccionHtml`, `iconoSelectorHtml`) va en `js/iconos-comida-uso.js` y `menu.js`, y se
-  copia a `reservagastrogoan.html`. Lo guardado: `ic:<clave>`, `ic:none` o un emoji antiguo (se sigue viendo).
-  `getCategoryIcon` devuelve el dibujo si es `ic:`; las carpetas de Mega Lista traen su icono de fábrica
-  (`MEGALISTA_ICONOS_BASE`). Un selector único para carta y carpetas.
+- **Catálogo de iconos de comida** (462 desde el 7/11, antes 224; entran a Oferta, Mega Lista y Escandallo por el mismo selector):
+  `tools/iconos-comida-lista.txt` → `generar-iconos-comida.mjs`. Orígenes: `t:` Tabler, `l:` Lucide, `p:` Phosphor (de trazo, los de
+  siempre) y **`f:` Fluent Emoji High Contrast (MIT), `m:` Material Symbols y `c:` Mingcute (Apache-2.0)**, que son glifos RELLENOS
+  (se envuelven en `<g fill=currentColor stroke=none>`). El generador necesita los paquetes npm descomprimidos (`@tabler/icons`,
+  `lucide-static`, `@phosphor-icons/core`, `@iconify-json/{fluent-emoji-high-contrast,material-symbols,mingcute}`) y, para que pese la
+  mitad, `SVGO=<node_modules/svgo>` (`npm i svgo@3` aparte). ⚠️ Con las versiones de hoy de Lucide/Tabler faltaban nombres: se usó
+  la última de cada una (y una mezcla de versiones de Lucide). ⚠️ **No recortar decimales de un path con una expresión regular**: los
+  paths minificados pegan números sin separador («5.04.5» son dos) y redondear el primero los fundía y estropeaba 100 iconos; de eso
+  se encarga SVGO. Peso: el catálogo pasó de 83 a 269 KB (28 → 95 KB comprimido), también dentro de `reservagastrogoan.html`.
+  `ICONOS_PALABRAS` (js/iconos-comida-uso.js) lleva primero lo específico (sushi, ramen, taco, paella, fondue…).
+  El uso (`iconoSeccionHtml`, `iconoSelectorHtml`) va en `js/iconos-comida-uso.js` y `menu.js`, y se copia a `reservagastrogoan.html`.
+  Lo guardado: `ic:<clave>`, `ic:none` o un emoji antiguo (se sigue viendo).
 - **Oferta**: lo vivo (agotado, raciones) es estado de servicio y manda sobre el borrador al guardar (`ocCopiarVivo`).
 - **Comandas**: un vale nuevo cuando la mesa pide otra vez a los 8 min de que el actual tenga comida disparada; modo
   caos por mesas; pase; incidencias; todo el camino de avanzar platos pasa por `avanzarLineasCocina`.
@@ -900,6 +920,26 @@ El dueño dijo que la vista móvil era «lo peor de la app». Se capturó cada p
 - Los `td` de una tabla convertida en tarjetas (`.table-cards`) heredan anchos de escritorio (`width:1%`): hay que poner `width:auto`.
 - ⚠️ **Mi hoja de contacto reducía las capturas y me hizo creer que un ticket de Comandas era estrecho (era el 88 %).** Medir con números
   antes de afirmar un defecto de tamaño.
+
+## Tanda del 7/11 (tarde): Comandas Cocina, Fichas, Escandallo, Proveedores, Oferta
+
+- **Comandas Cocina** (js/tpv.js, `test/comandas-cocina.mjs`): **el nombre del bloque ES el botón** (`button.kt-cn.avanza`
+  → `cycleGroupEstado`): un toque avanza todo el bloque y cada plato sigue avanzando solo. **Ya no existe el botón grande de pase
+  (`.kt-big`)**, ni en los tickets ni en el modo caos (ahí el nombre de la ronda es el botón). Cocina = solo cocina:
+  `esLineaDeBebida(line)` (marca `bebida` o plato de una carta de SALA) filtra TODO lo que pinta esta pantalla, también las
+  alergias (las de un mojito se colaban en el aviso). Diseño calmado: sin tintes de curso, sin animaciones (anillos, latidos,
+  franja corriendo) y **borde de 2 px por comanda**; el estado se lee en la etiqueta y en una raya fina a la izquierda.
+- **Fichas técnicas**: los pasos se LEEN por defecto y cada uno tiene su lápiz (`fichaPasosEdit`, `fiPasoEditar/Listo`; un paso
+  nuevo o vacío se abre solo, y mover/quitar pasos corrige los índices); **ya no hay temperatura por paso** (ni al editar, ni al
+  guardar, ni en el impreso ni en «Mi puesto»); los **alérgenos van arriba**, bajo la cabecera.
+- **Escandallo**: food cost junto al PVP (rejilla de 2 columnas) con el objetivo del negocio debajo (`geFoodCostObjPct`); el
+  semáforo (hoja y tarjetas) se mide contra ese objetivo, ya no contra un 28/35 fijo.
+- **Proveedores**: chip «Todos (N)» primero en los filtros. ⚠️ **El envío de un pedido llegaba a Gastos SIN IVA** (y el total del
+  pedido no lo llevaba): ahora el importe se entiende sin IVA, hay «IVA del envío» en la ficha (`envioIva`, 21 % por defecto,
+  `providerShippingIvaPct`), el gasto lleva `iva` y `envio:true`, y el total suma el IVA. Prueba: `test/envio-gastos.mjs`.
+- **Oferta**: importar del Escandallo = **primero carpetas, luego platos** (`importEscAbrirCarpeta`; lo marcado vive en
+  `importEscChecked`; el buscador cruza todo); las opciones de menú salen agrupadas por carpeta (`<optgroup>`). Prueba:
+  `test/oferta-importar.mjs`. Y la **norma de espacios muertos** (arriba, en Convenciones).
 
 ## El «login raro» que sale solo: PIN de área SOBRE la entrada (7/11)
 

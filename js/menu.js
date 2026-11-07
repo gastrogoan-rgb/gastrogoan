@@ -367,10 +367,11 @@ function renderCarta(){
   const subtitleEl = document.querySelector('#view-carta .view-subtitle');
   if(titleEl) titleEl.textContent = isBebidas ? t('view.carta.title.sala') : t('view.carta.title');
   if(subtitleEl) subtitleEl.textContent = isBebidas ? t('view.carta.subtitle.sala') : t('view.carta.subtitle');
-  const newCartaBtn = document.querySelector('#carta-list-view .toolbar button[onclick="newCarta()"]');
+  const newCartaBtn = document.getElementById('of-nueva-carta');
+  if(newCartaBtn) newCartaBtn.style.display = cartaEdit ? 'none' : '';
+  const newMenuBtn0 = document.getElementById('of-nuevo-menu');
+  if(newMenuBtn0) newMenuBtn0.style.display = 'none';
   if(newCartaBtn) newCartaBtn.innerHTML = isBebidas ? `<i class="ti ti-plus"></i> ${t('btn.newBeverageCarta')}` : `<i class="ti ti-plus"></i> ${t('btn.newCarta')}`;
-  const newSecBtn = document.querySelector('#carta-editor-view button[onclick="newCartaSection()"]');
-  if(newSecBtn) newSecBtn.innerHTML = `<i class="ti ti-plus"></i> ${t('btn.newSection')}`;
   document.getElementById('carta-list-view').style.display = cartaEdit ? 'none' : '';
   document.getElementById('carta-editor-view').style.display = cartaEdit ? '' : 'none';
   if(cartaEdit) renderCartaEditor();
@@ -700,7 +701,10 @@ function renderCartaSecciones(){
   const q = cartaSearchQuery.trim().toLowerCase();
   const bebidas = currentArea()==='sala';
   const searchBox = `
-    <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="carta-search-input" placeholder="${bebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)"></div>`;
+    <div class="oc-barra">
+      <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="carta-search-input" placeholder="${bebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)"></div>
+      <button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="newCartaSection()"><i class="ti ti-plus"></i> ${t('btn.newSection')}</button>
+    </div>`;
   if(!cartaEdit.secciones.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
     return;
@@ -1233,15 +1237,19 @@ function togglePlatoAllergen(secId, platoId, a){
   openModal(renderPlatoAllergensModalHtml(secId, platoId));
 }
 
-// Antes se listaban TODOS los platos/bebidas del escandallo de golpe, sin
-// forma de buscar — con una carta grande, encontrar uno concreto significaba
-// desplazarse a mano por decenas de líneas. Con un buscador que filtra por
-// nombre, escribiendo 2-3 letras basta para encontrarlo.
+// IMPORTAR DEL ESCANDALLO (7/11, pedido del dueño): antes salían TODOS los platos de golpe en una lista larguísima.
+// Ahora se entra por CARPETAS (las del propio Escandallo, con cuántos platos hay, cuántos has marcado y cuántos ya
+// están en la carta) y, al abrir una, salen solo sus platos. El buscador sigue cruzando todo el Escandallo.
+// Lo marcado vive en importEscChecked (no en las casillas): sobrevive a cambiar de carpeta o de búsqueda.
 let importEscSecId = null;
+let importEscFolder = null;      // null = lista de carpetas
+let importEscChecked = new Set();
 function importFromEscandallo(secId){
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && !r.isBase);
   if(!areaRecipes.length){ showToast(currentArea()==='sala' ? t('msg.noDrinksInCosting') : t('msg.noDishesInCosting')); return; }
   importEscSecId = secId;
+  importEscFolder = null;
+  importEscChecked = new Set();
   openModal(`
     <div class="modal-header">
       <h3>${t('title.importFromCosting')}</h3>
@@ -1250,56 +1258,86 @@ function importFromEscandallo(secId){
     <div class="field" style="margin-bottom:8px">
       <input type="text" id="import-esc-search" placeholder="${t('common.search')}" oninput="renderImportEscList()" autofocus>
     </div>
-    <div class="field" style="margin-bottom:8px">
-      <label style="display:flex;align-items:center;gap:6px">
-        <input type="checkbox" id="import-esc-all" onchange="toggleImportEscAll(this.checked)" style="width:auto"> ${t('common.selectAll')}
-      </label>
-    </div>
-    <div id="import-esc-list" style="max-height:320px;overflow:auto"></div>
+    <div id="import-esc-list" class="ie-lista"></div>
     <div class="modal-footer">
       <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-fino is-on" onclick="confirmImportEsc(${secId})">${t('common.import')}</button>
+      <button class="btn btn-fino is-on" id="import-esc-ok" onclick="confirmImportEsc(${secId})">${t('common.import')}</button>
     </div>
   `);
   renderImportEscList();
 }
-// Al filtrar, las casillas ya marcadas se conservan aunque el plato deje de
-// verse (se guarda su estado en importEscChecked) — si no, buscar otra cosa
-// después de marcar algunos platos los desmarcaba sin que nadie lo pidiera.
-let importEscChecked = new Set();
-function renderImportEscList(){
+function importEscYaEnCarta(){
+  return new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
+}
+function importEscAbrirCarpeta(key){ importEscFolder = key; const q = document.getElementById('import-esc-search'); if(q) q.value = ''; renderImportEscList(); }
+function importEscVolver(){ importEscFolder = null; renderImportEscList(); }
+function importEscToggle(id, on){
+  if(on) importEscChecked.add(id); else importEscChecked.delete(id);
+  renderImportEscList(true);
+}
+function renderImportEscList(conservarScroll){
   const box = document.getElementById('import-esc-list');
   if(!box) return;
-  // Conserva lo ya marcado en el DOM actual antes de volver a pintar.
-  document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)').forEach(c => importEscChecked.add(parseInt(c.value)));
-  document.querySelectorAll('#import-esc-list input[type=checkbox]:not(:checked):not(:disabled)').forEach(c => importEscChecked.delete(parseInt(c.value)));
+  const scroll = conservarScroll ? box.scrollTop : 0;
   const query = (document.getElementById('import-esc-search')?.value || '').trim().toLowerCase();
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && !r.isBase);
-  const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
-  const filtered = query ? areaRecipes.filter(r => (r.name||'').toLowerCase().includes(query)) : areaRecipes;
-  box.innerHTML = filtered.length ? filtered.map(r => {
+  const existingIds = importEscYaEnCarta();
+  const unidades = n => currentArea()==='sala' ? (n===1 ? t('noun.drink') : t('noun.drinks')) : (n===1 ? t('noun.dish') : t('noun.dishes'));
+  const fila = r => {
     const done = existingIds.has(r.id);
-    return `<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);${done?'opacity:.5':''}">
-      <input type="checkbox" value="${r.id}" ${done?'disabled checked':(importEscChecked.has(r.id)?'checked':'')} style="width:auto">
-      <span style="flex:1">${escapeHtml(r.name)}</span>
-      <span style="font-family:monospace;color:var(--ink);font-weight:600">${fmtMoney(r.price)}</span>
+    const on = done || importEscChecked.has(r.id);
+    return `<label class="ie-fila${done ? ' is-hecho' : ''}">
+      <input type="checkbox" ${on ? 'checked' : ''} ${done ? 'disabled' : ''} onchange="importEscToggle(${r.id}, this.checked)">
+      <span class="ie-nom">${escapeHtml(r.name)}${query && r.category ? ` <small>${escapeHtml(r.category)}</small>` : ''}${done ? ` <small>${gl({es:'ya está en la carta', ca:'ja és a la carta', en:'already on the menu'})}</small>` : ''}</span>
+      <span class="ie-precio">${fmtMoney(r.price)}</span>
     </label>`;
-  }).join('') : `<div class="empty" style="padding:16px 4px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
-  const allBox = document.getElementById('import-esc-all');
-  if(allBox) allBox.checked = filtered.length > 0 && filtered.every(r => existingIds.has(r.id) || importEscChecked.has(r.id));
+  };
+  const filas = lista => lista.length
+    ? lista.map(fila).join('')
+    : `<div class="empty" style="padding:16px 4px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
+  const todosCab = lista => {
+    const libres = lista.filter(r => !existingIds.has(r.id));
+    if(!libres.length) return '';
+    const todos = libres.every(r => importEscChecked.has(r.id));
+    return `<label class="ie-todos"><input type="checkbox" ${todos ? 'checked' : ''} onchange="toggleImportEscAll(this.checked, ${JSON.stringify(libres.map(r => r.id)).replace(/"/g, '&quot;')})"> ${t('common.selectAll')}</label>`;
+  };
+
+  if(query){
+    const lista = areaRecipes.filter(r => (r.name||'').toLowerCase().includes(query));
+    box.innerHTML = todosCab(lista) + filas(lista);
+  }else if(importEscFolder === null){
+    const carpetas = getEscandalloFolders(areaRecipes);
+    box.innerHTML = `<div class="ie-carpetas">${carpetas.map(([key, label, group]) => {
+      const marcados = group.filter(r => importEscChecked.has(r.id)).length;
+      const yaEstan = group.filter(r => existingIds.has(r.id)).length;
+      const k = escapeJsAttr(key);
+      const guardado = (DB.categoryIcons && DB.categoryIcons.recipe && DB.categoryIcons.recipe[key]) || '';
+      const icono = (key !== '__none__' && typeof iconoSeccionHtml === 'function' && iconoSeccionHtml(guardado, label, 24)) || '<i class="ti ti-folder"></i>';
+      return `<button type="button" class="ie-carpeta${marcados ? ' tiene-marcados' : ''}" onclick="importEscAbrirCarpeta('${k}')">
+        <span class="ie-ico">${icono}</span>
+        <span class="ie-txt"><b>${escapeHtml(label)}</b><small>${group.length} ${unidades(group.length)}${yaEstan ? ` · ${yaEstan} ${gl({es:'ya en la carta', ca:'ja a la carta', en:'already on the menu'})}` : ''}</small></span>
+        ${marcados ? `<span class="ie-marca">${marcados}</span>` : ''}
+        <i class="ti ti-chevron-right" aria-hidden="true"></i>
+      </button>`;
+    }).join('')}</div>`;
+  }else{
+    const carpetas = getEscandalloFolders(areaRecipes);
+    const c = carpetas.find(x => x[0] === importEscFolder);
+    const lista = c ? c[2] : [];
+    box.innerHTML = `<div class="ie-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="importEscVolver()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button><b>${escapeHtml(c ? c[1] : '')}</b></div>` + todosCab(lista) + filas(lista);
+  }
+  box.scrollTop = scroll;
+  const ok = document.getElementById('import-esc-ok');
+  if(ok){
+    const n = [...importEscChecked].filter(id => !existingIds.has(id)).length;
+    ok.textContent = n ? `${t('common.import')} (${n})` : t('common.import');
+  }
 }
-function toggleImportEscAll(checked){
-  document.querySelectorAll('#import-esc-list input[type=checkbox]:not(:disabled)').forEach(c=>{
-    c.checked = checked;
-    if(checked) importEscChecked.add(parseInt(c.value)); else importEscChecked.delete(parseInt(c.value));
-  });
+function toggleImportEscAll(checked, ids){
+  (ids || []).forEach(id => { if(checked) importEscChecked.add(id); else importEscChecked.delete(id); });
+  renderImportEscList(true);
 }
 function confirmImportEsc(secId){
-  // No basta con leer las casillas visibles ahora mismo: si se marcó algo,
-  // se buscó otra cosa distinta y esa selección quedó fuera del filtro
-  // actual, seguiría contando (ver importEscChecked en renderImportEscList).
-  document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)').forEach(c => importEscChecked.add(parseInt(c.value)));
-  document.querySelectorAll('#import-esc-list input[type=checkbox]:not(:checked):not(:disabled)').forEach(c => importEscChecked.delete(parseInt(c.value)));
   const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
   const checked = [...importEscChecked].filter(id => !existingIds.has(id));
   if(!checked.length){ showToast(currentArea()==='sala' ? t('msg.selectAtLeastOneDrink') : t('msg.selectAtLeastOneDish')); return; }
@@ -1361,6 +1399,9 @@ function updateAutoActiveMenu(force){
 function renderMenu(){
   document.getElementById('menu-list-view').style.display = menuEdit ? 'none' : '';
   document.getElementById('menu-editor-view').style.display = menuEdit ? '' : 'none';
+  const botonMenu = document.getElementById('of-nuevo-menu'), botonCarta = document.getElementById('of-nueva-carta');
+  if(botonMenu) botonMenu.style.display = menuEdit ? 'none' : '';
+  if(botonCarta) botonCarta.style.display = 'none';
   if(menuEdit) renderMenuEditor();
   else renderMenuList();
 }
@@ -1372,8 +1413,12 @@ function renderMenuList(){
   const isSala = currentArea()==='sala';
   const menus = areaMenus();
   const totalGrupos = menus.reduce((s,m)=>s+(m.grupos||[]).length,0);
-  const newBtn = document.querySelector('#menu-list-view button[onclick="newMenu()"] span');
+  const newBtn = document.querySelector('#of-nuevo-menu span');
   if(newBtn) newBtn.textContent = isSala ? t('label.newMaridaje') : t('btn.newMenu');
+  const botonMenu = document.getElementById('of-nuevo-menu');
+  if(botonMenu) botonMenu.style.display = menuEdit ? 'none' : '';
+  const botonCarta = document.getElementById('of-nueva-carta');
+  if(botonCarta) botonCarta.style.display = 'none';
   document.getElementById('menu-stats').innerHTML = `
     <div class="kpi"><div class="label">${isSala ? t('tab.maridajes') : t('common.menus')}</div><div class="value">${menus.length}</div></div>
     <div class="kpi"><div class="label">${t('label.totalGroups')}</div><div class="value">${totalGrupos}</div></div>
@@ -1541,7 +1586,10 @@ function renderMenuGrupos(){
   // sentido en una carta de vinos.
   const isBebidas = currentArea()==='sala';
   const searchBox = `
-    <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)"></div>`;
+    <div class="oc-barra">
+      <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)"></div>
+      <button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> ${t('title.newGroup')}</button>
+    </div>`;
   if(!menuEdit.grupos.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${isBebidas ? t('empty.groups.sala') : t('empty.groups')}</div>`;
     return;
@@ -1710,7 +1758,11 @@ function addMenuOpcion(grupoId){
     <div class="field" id="new-menu-opcion-recipe-field" style="display:${areaRecipes.length?'':'none'}">
       <label>${currentArea()==='sala' ? t('label.drinkEscandallo') : t('label.dishEscandallo')}</label>
       <select id="new-menu-opcion-recipe">
-        ${areaRecipes.map(r=>`<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
+        ${(() => {
+          // Agrupadas por las carpetas del Escandallo (7/11): una lista plana de decenas de platos no se maneja.
+          const grupos = getEscandalloFolders(areaRecipes);
+          return grupos.map(([key, label, group]) => `<optgroup label="${escapeHtml(label)}">${group.map(r=>`<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}</optgroup>`).join('');
+        })()}
       </select>
     </div>
     <div class="field" id="new-menu-opcion-manual-field" style="display:${areaRecipes.length?'none':''}">

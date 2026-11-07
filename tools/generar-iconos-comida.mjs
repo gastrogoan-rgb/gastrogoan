@@ -3,13 +3,18 @@
 // <carpeta-tabler> = donde esté tabler-nodes-outline.json (paquete @tabler/icons)
 // <carpeta-lucide> = donde esté icons/*.svg (paquete lucide-static)
 // <carpeta-phosphor> = donde esté assets/regular/*.svg (paquete @phosphor-icons/core)
+// Opcionales (7/11, para pasar de 224 a 460 iconos), JSON de Iconify con su `icons.json`:
+//   [fluent] = @iconify-json/fluent-emoji-high-contrast (MIT, origen «f:»)
+//   [material] = @iconify-json/material-symbols (Apache-2.0, origen «m:»)
+//   [mingcute] = @iconify-json/mingcute (Apache-2.0, origen «c:»)
+// Son glifos RELLENOS (no de trazo): se envuelven en un <g fill=currentColor stroke=none> como los de Phosphor.
 // La lista de iconos vive en tools/iconos-comida-lista.txt. Los dos juegos son de trazo de 24 px y el mismo
 // grosor y los de Phosphor (peso «regular», trazo convertido en relleno de 256 px) se reducen a 24 px con el mismo
 // peso visual: conviven sin que se note de dónde viene cada uno. Licencias: Tabler (MIT), Lucide (ISC), Phosphor (MIT).
 import fs from 'node:fs';
 import path from 'node:path';
 
-const [tablerDir, lucideDir, phosphorDir] = process.argv.slice(2);
+const [tablerDir, lucideDir, phosphorDir, fluentDir, materialDir, mingcuteDir] = process.argv.slice(2);
 if(!tablerDir || !lucideDir || !phosphorDir){ console.error('Uso: node tools/generar-iconos-comida.mjs <tabler> <lucide> <phosphor>'); process.exit(1); }
 const tabler = JSON.parse(fs.readFileSync(path.join(tablerDir, 'tabler-nodes-outline.json'), 'utf8'));
 const num = n => String(Math.round(parseFloat(n) * 100) / 100);
@@ -41,6 +46,41 @@ const delPhosphor = n => {
   return `<g transform="scale(.09375)" fill="currentColor" stroke="none">${formas}</g>`;
 };
 
+// Iconify: cada paquete trae icons.json con {icons:{nombre:{body}}, width, height}. Se cargan solo si se pasa la carpeta.
+const iconify = {};
+for(const [k, dir] of [['f', fluentDir], ['m', materialDir], ['c', mingcuteDir]]){
+  if(dir) iconify[k] = JSON.parse(fs.readFileSync(path.join(dir, 'icons.json'), 'utf8'));
+}
+// SVGO (opcional): variable de entorno SVGO=<carpeta de node_modules/svgo>. Reduce a la mitad el peso de los glifos de
+// Fluent y Mingcute (el catálogo viaja dentro de los dos HTML). Sin ella se genera igual, solo que más pesado.
+import { createRequire } from 'node:module';
+let svgoOptimizar = null;
+if(process.env.SVGO){
+  const { optimize } = createRequire(path.join(process.env.SVGO, 'package.json'))('svgo');
+  svgoOptimizar = (body, ancho, src) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ancho} ${ancho}">${body}</svg>`;
+    const r = optimize(svg, {floatPrecision: src === 'f' ? 1 : 2, plugins: ['preset-default', 'convertPathData']});
+    return r.data.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  };
+}
+const delIconify = (src, n) => {
+  const set = iconify[src];
+  if(!set) throw new Error('Falta la carpeta del origen «' + src + '» (ver la cabecera de este fichero)');
+  let ic = set.icons[n];
+  if(!ic && set.aliases && set.aliases[n]) ic = set.icons[set.aliases[n].parent];
+  if(!ic) throw new Error('El origen «' + src + '» no tiene «' + n + '»');
+  const ancho = ic.width || set.width || 24;
+  let body = ic.body
+    // el recuadro invisible de cada glifo (Mingcute / Material) no pinta nada: fuera, pesa
+    .replace(/<path d="M24 0v24H0V0z"\/?>/g, '').replace(/<path fill="none" d="M0 0h24v24H0z"\/?>/g, '')
+    ;
+  // Los decimales sobran, pero NO se recortan con una expresión regular: los paths minificados pegan números
+  // sin separador («5.04.5» son DOS) y redondear el primero los fundía en uno. De eso se ocupa SVGO.
+  if(svgoOptimizar) body = svgoOptimizar(body, ancho, src);
+  const esc = ancho === 24 ? '' : ` transform="scale(${(24 / ancho).toFixed(4).replace(/0+$/, '')})"`;
+  return `<g${esc} fill="currentColor" stroke="none">${body}</g>`;
+};
+
 const filas = fs.readFileSync('tools/iconos-comida-lista.txt', 'utf8').split('\n').filter(l => l.trim() && !l.startsWith('#'));
 const iconos = {};
 const grupos = [];
@@ -49,7 +89,7 @@ for(const fila of filas){
   if(!grupos.includes(grupo)) grupos.push(grupo);
   const [src, nombre] = origen.split(':');
   if(iconos[clave]) throw new Error('Clave repetida: ' + clave);
-  iconos[clave] = [src === 't' ? delTabler(nombre) : src === 'l' ? delLucide(nombre) : delPhosphor(nombre), es, ca, en, grupo];
+  iconos[clave] = [src === 't' ? delTabler(nombre) : src === 'l' ? delLucide(nombre) : src === 'p' ? delPhosphor(nombre) : delIconify(src, nombre), es, ca, en, grupo];
 }
 const NOMBRES_GRUPO = {
   pan: ['Pan y para empezar', 'Pa i per començar', 'Bread and starters'],
@@ -69,8 +109,8 @@ const NOMBRES_GRUPO = {
 };
 const q = s => JSON.stringify(s);
 let out = `/* ═══ CATÁLOGO DE ICONOS DE COMIDA (GENERADO — no editar a mano) ═══
-   Lo escribe tools/generar-iconos-comida.mjs a partir de tools/iconos-comida-lista.txt. ${filas.length} iconos de trazo
-   (Tabler Icons, MIT · Lucide, ISC). Los usan la carta de la app (secciones) y la web de reservas: es el mismo
+   Lo escribe tools/generar-iconos-comida.mjs a partir de tools/iconos-comida-lista.txt. ${filas.length} iconos
+   (Tabler Icons, MIT · Lucide, ISC · Phosphor, MIT · Fluent Emoji High Contrast, MIT · Material Symbols y Mingcute, Apache-2.0). Los usan la carta de la app (secciones) y la web de reservas: es el mismo
    fichero en los dos sitios, así que lo que el dueño elige es exactamente lo que ve su cliente.
    El valor que se guarda en una sección es «ic:<clave>»; «ic:none» es «sin icono». */
 const ICONOS_COMIDA = {

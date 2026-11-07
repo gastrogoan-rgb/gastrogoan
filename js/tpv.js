@@ -2464,11 +2464,27 @@ function toggleChaosCocina(){
 // Todo lo que cocina tiene pendiente, de todos los pedidos, en una sola
 // lista y por orden de espera. Se excluyen las bebidas (no son de cocina) y
 // lo que ya está entregado o recogido.
+/* COCINA = SOLO COCINA (7/11). Una línea es de bebida si lleva la marca, o si su plato vive en una carta de
+   SALA (líneas antiguas o creadas por otra vía podían no llevarla). Todo lo que pinta Comandas Cocina pasa por
+   aquí: antes las alergias de una bebida se colaban en el aviso de un ticket de cocina. */
+function esLineaDeBebida(line){
+  if(!line) return false;
+  if(line.bebida) return true;
+  if(line.platoId != null && !line.menuId){
+    for(const c of (DB.cartas||[])){
+      if((c.area||'cocina') !== 'sala') continue;
+      for(const sec of (c.secciones||[])){
+        if((sec.platos||[]).some(p => p.id === line.platoId)) return true;
+      }
+    }
+  }
+  return false;
+}
 function lineasPendientesCocina(allOrders){
   const fuera = [];
   allOrders.forEach(order => {
     (order.items||[]).forEach((line, idx) => {
-      if(line.bebida) return;
+      if(esLineaDeBebida(line)) return;
       if(!line.estado) return;                         // sin marchar: no es de cocina todavía
       if(line.estado === 'entregado' || line.recogidoAt) return;
       const enviado = line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now();
@@ -2517,7 +2533,7 @@ function nivelEspera(mins){ return mins >= 15 ? 'r' : mins >= 5 ? 'a' : ''; }
 function lineasEnPase(allOrders){
   const porPedido = new Map();
   allOrders.forEach(order => (order.items||[]).forEach(line => {
-    if(line.bebida || line.estado !== 'entregado' || line.recogidoAt) return;
+    if(esLineaDeBebida(line) || line.estado !== 'entregado' || line.recogidoAt) return;
     const desde = line.entregadoAt ? new Date(line.entregadoAt).getTime() : Date.now();
     if(!porPedido.has(order.id)) porPedido.set(order.id, {order, lineas: [], desde});
     const g = porPedido.get(order.id);
@@ -2625,7 +2641,7 @@ function renderChaosCocinaHtml(allOrders){
     }
     const alergias = ticketAlergiaTextos(order);
     const rondas = rondasDePedido(lineas);
-    const sinMarchar = (order.items||[]).filter(l => !l.bebida && !l.estado);
+    const sinMarchar = (order.items||[]).filter(l => !esLineaDeBebida(l) && !l.estado);
     const rondasHtml = rondas.map(r => {
       const rMins = Math.max(0, Math.round((Date.now() - r.inicio) / 60000));
       const hay = r.lineas.some(x => x.line.estado === 'cocina');
@@ -2637,15 +2653,13 @@ function renderChaosCocinaHtml(allOrders){
         <div class="kt-cu ${cls} cz-ronda">
           <div class="kt-rail"><span class="kt-dot p"></span></div>
           <div>
-            <div class="kt-cn"><b>${escapeHtml(nom)}</b><span class="cz-hora ${nivelEspera(rMins)}">${rMins}'</span></div>
+            <button type="button" class="kt-cn avanza" onclick="cycleRondaEstado(${order.id}, '${idxs}')" title="${escapeHtml(gl({es:'Tocar para avanzar todo el bloque', ca:'Toca per avançar tot el bloc', en:'Tap to advance the whole block'}))}"><b>${escapeHtml(nom)}</b><i class="ti ti-chevrons-right kt-go" aria-hidden="true"></i><span class="cz-hora ${nivelEspera(rMins)}">${rMins}'</span></button>
             ${r.lineas.map(({line}) => {
               const fam = familiaDeLinea(line, r.tanda);
               return `<div class="kt-pl"><span class="q">${fmtNum(line.qty)}×</span><span class="n">${escapeHtml(line.name)}${line.estado === 'preparando' ? ' <i class="ti ti-flame kt-fuego"></i>' : ''}</span>${fam ? `<span class="fam">${escapeHtml(fam)}</span>` : ''}</div>
                 ${line.notas && !/^Menú: /.test(line.notas) ? `<div class="kt-nt">${escapeHtml(line.notas)}</div>` : ''}`;
             }).join('')}
-            <button type="button" class="kt-big cz-btn${hay ? ' k' : ''}" onclick="cycleRondaEstado(${order.id}, '${idxs}')">${hay
-              ? gl({es:'Empezar', ca:'Començar', en:'Start'})
-              : gl({es:'Listo ▸ pase', ca:'Llest ▸ pas', en:'Ready ▸ pass'})}</button>
+
           </div>
         </div>`;
     }).join('');
@@ -2713,7 +2727,7 @@ function renderComandasCocina(){
     const closed = allOrders
       .filter(o => o.cerrada)
       .map(order => {
-        const lines = (order.items||[]).filter(l => l.estado && !l.bebida);
+        const lines = (order.items||[]).filter(l => l.estado && !esLineaDeBebida(l));
         const maxMs = Math.max(0, ...lines.map(l => l.entregadoAt ? new Date(l.entregadoAt).getTime() : 0));
         return {order, lines, maxMs};
       })
@@ -2764,7 +2778,7 @@ function renderComandasCocina(){
   // Un ticket por VALE (cada vez que la mesa pide, entra un vale nuevo), no por pedido entero.
   const tickets = [];
   allOrders.filter(o => !o.cerrada).forEach(order => {
-    const todas = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !line.bebida);
+    const todas = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !esLineaDeBebida(line));
     const porVale = new Map();
     todas.forEach(x => { const v = x.line.vale || 1; if(!porVale.has(v)) porVale.set(v, []); porVale.get(v).push(x); });
     const vales = [...porVale.keys()].sort((a, b) => a - b);
@@ -2813,7 +2827,10 @@ function familiaDeLinea(line, tandaNombre){
     // en un menú el grupo suele llamarse igual que el curso: repetirlo sobra
     return n && n.trim().toLowerCase() !== String(tandaNombre||'').trim().toLowerCase() ? n : '';
   }
-  return findCartaSeccionNombreForPlatoId(line.platoId);
+  // En la carta pasa lo mismo que en el menú: si la sección se llama igual que el bloque («Entrantes» dentro de
+  // «Entrantes»), repetirla en cada plato solo mete ruido (7/11).
+  const sec = findCartaSeccionNombreForPlatoId(line.platoId);
+  return sec && sec.trim().toLowerCase() !== String(tandaNombre||'').trim().toLowerCase() ? sec : '';
 }
 function estadoCursoCocina(lines){
   const fired = lines.filter(l => l.estado);
@@ -2837,7 +2854,7 @@ function ticketAlergiaTextos(order){
   }
   if(order.tableAllergens) texts.push(order.tableAllergens);
   const set = new Set();
-  (order.items||[]).forEach(l => lineAllergens(l).forEach(a => set.add(allergenLabel(a))));
+  (order.items||[]).forEach(l => { if(!esLineaDeBebida(l)) lineAllergens(l).forEach(a => set.add(allergenLabel(a))); });
   if(set.size) texts.push(Array.from(set).join(', '));
   return texts;
 }
@@ -2928,7 +2945,9 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
         <div class="kt-cu ${est.k}">
           <div class="kt-rail"><span class="kt-dot ${est.dot}${est.k==='rec' ? ' rec' : ''}"></span>${i < tt.length - 1 ? '<span class="kt-line"></span>' : ''}</div>
           <div>
-            <div class="kt-cn"><b>${escapeHtml(nombreCurso(tanda))}</b><span class="kt-st ${est.dot}">${est.texto}</span></div>
+            ${est.activo
+              ? `<button type="button" class="kt-cn avanza" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(tanda)}', ${vale||1})" title="${escapeHtml(gl({es:'Tocar para avanzar todo el bloque', ca:'Toca per avançar tot el bloc', en:'Tap to advance the whole block'}))}"><b>${escapeHtml(nombreCurso(tanda))}</b><i class="ti ti-chevrons-right kt-go" aria-hidden="true"></i><span class="kt-st ${est.dot}">${est.texto}</span></button>`
+              : `<div class="kt-cn"><b>${escapeHtml(nombreCurso(tanda))}</b><span class="kt-st ${est.dot}">${est.texto}</span></div>`}
             ${filas}
           </div>
         </div>`;
@@ -2941,20 +2960,10 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
       </div>`;
   };
 
-  // El botón grande: el curso que está en marcha. Si no hay ninguno, qué falta o que ya está todo.
-  const esLlevar = !order.tableId;
+  // Ya NO hay botón grande de pase (7/11, pedido del dueño): para avanzar se toca el nombre del bloque
+  // (todo el bloque a la vez) o cada plato (solo ese). Aquí solo queda el estado cuando nada está en marcha.
   let accion = '';
-  if(cursoActivo !== undefined){
-    const lineasCurso = allLines.filter(({line}) => (line.tanda||'') === cursoActivo).map(x => x.line);
-    const hayNuevas = lineasCurso.some(l => l.estado === 'cocina');
-    const nom = nombreCurso(cursoActivo);
-    const texto = hayNuevas
-      ? `${gl({es:'Empezar', ca:'Començar', en:'Start'})} ${nom.toLowerCase()}`
-      : (esLlevar && tandas.length === 1
-          ? gl({es:'Pedido listo ▸ avisar', ca:'Comanda llesta ▸ avisar', en:'Order ready ▸ notify'})
-          : `${gl({es:'Listo', ca:'Llest', en:'Ready'})} · ${nom.toLowerCase()} ▸ ${gl({es:'pase', ca:'pas', en:'pass'})}`);
-    accion = `<button type="button" class="kt-big${hayNuevas ? ' k' : ''}" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(cursoActivo)}', ${vale||1})">${texto}</button>`;
-  }else{
+  if(cursoActivo === undefined){
     const pendiente = tandas.find(tt => estadoCursoCocina(allLines.filter(({line}) => (line.tanda||'') === tt).map(x => x.line)).k === 'held');
     accion = pendiente !== undefined
       ? `<div class="kt-wait"><i class="ti ti-clock-pause"></i> ${gl({es:'Esperando que sala marche', ca:'Esperant que la sala marxi', en:'Waiting for the floor to fire'})} ${escapeHtml(nombreCurso(pendiente).toLowerCase())}</div>`
@@ -2972,8 +2981,8 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
       ${alergiaHtml}
       ${incidenciaFranjaHtml(order, 'cocina')}
       ${bloques.map(bloqueHtml).join('')}
-      <div class="kt-act">${accion}<button type="button" class="kt-undo" onclick="undoLastKitchenAction()" title="${escapeHtml(t('kitchen.undo'))}" aria-label="${escapeHtml(t('kitchen.undo'))}"><i class="ti ti-arrow-back-up"></i></button></div>
-      <div class="kt-ev"><button type="button" class="btn btn-sm btn-fino${inc ? ' is-off' : ''}" onclick="openIncidenciaModal(${order.id}, 'cocina')"><i class="ti ti-alert-triangle"></i> ${inc ? gl({es:'Ver incidencia', ca:'Veure incidència', en:'View incident'}) : gl({es:'Incidencia en esta comanda', ca:'Incidència en aquesta comanda', en:'Incident on this order'})}</button></div>
+      ${accion ? `<div class="kt-act">${accion}</div>` : ''}
+      <div class="kt-ev"><button type="button" class="btn btn-sm btn-fino${inc ? ' is-off' : ''}" onclick="openIncidenciaModal(${order.id}, 'cocina')"><i class="ti ti-alert-triangle"></i> ${inc ? gl({es:'Ver incidencia', ca:'Veure incidència', en:'View incident'}) : gl({es:'Incidencia', ca:'Incidència', en:'Incident'})}</button><button type="button" class="kt-undo" onclick="undoLastKitchenAction()" title="${escapeHtml(t('kitchen.undo'))}" aria-label="${escapeHtml(t('kitchen.undo'))}"><i class="ti ti-arrow-back-up"></i> ${escapeHtml(t('kitchen.undo'))}</button></div>
     </div>`;
 }
 
