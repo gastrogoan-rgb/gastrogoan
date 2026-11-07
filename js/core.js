@@ -284,6 +284,8 @@ function accesoFraseYFechaHtml(){
     </aside>`;
 }
 function showAccessSelectScreen(){
+  // Nada puede quedar abierto encima de la entrada (p. ej. el PIN de un área): un PIN suelto sobre el login se lee como un fallo.
+  try{ if(typeof closeModal === 'function') closeModal(); areaGatePendingView = null; }catch(e){}
   accessScreenMode = 'choice';
   renderAccessScreen();
 }

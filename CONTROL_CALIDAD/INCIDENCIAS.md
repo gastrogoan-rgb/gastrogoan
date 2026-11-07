@@ -30,6 +30,7 @@
 | I-23 | Lo «elegido» en negro | Categoría de «Tomar nota», trimestres T1-T4 de la Cuenta de Resultados, alérgenos de APPCC, conmutador de vista y maridajes | Verde (regla del sistema) | Recaptura |
 | I-24 | `movil-lectura.mjs` | Solo 5 anchos verticales y 7 ventanas | Añadidos **2 tamaños horizontales** (568×320, 667×375) y 8 ventanas más (merma, lista de espera, cartas activas, inversión, gasto fijo, compra, acción de promoción, cobro) | 47 pantallas × 7 tamaños + 15 ventanas: 0 hallazgos |
 
+| I-25 | Entrada de la app | **PIN de «Sala»/«Cocina» encima de la pantalla de entrada** al abrir con sesión caducada y una dirección guardada (`#promocion`): el «login raro» que salía solo | El arranque no navega a la dirección guardada sin sesión válida; la entrada cierra cualquier ventana abierta | `test/acceso-caducado.mjs`: **falla sin el arreglo (4 casos)**, pasa con él; `acceso-alta`, `sin-salida`, `permisos`, `cuentas` en verde |
 
 ## Abiertas (no tocadas, con motivo)
 

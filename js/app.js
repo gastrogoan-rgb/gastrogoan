@@ -9135,7 +9135,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   initPublicRequestsListener();
   applyHelpI18n();
   updateChatBadge();
-  const initial = (location.hash || '#home').replace('#','');
+  let initial = (location.hash || '#home').replace('#','');
+  // Sin sesión válida (caducada por inactividad, o borrada), la pantalla de ENTRADA manda: abrir aquí la pantalla de la dirección guardada
+  // (#promocion…) disparaba el candado de área y salía un PIN de «Sala»/«Cocina» ENCIMA de la entrada, que sale 1,8 s después. Se leía como un
+  // login doble que aparece solo. Tras identificarse se llega a Inicio, como siempre.
+  if(!getAccessSession()) initial = 'home';
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
   applyI18n();
