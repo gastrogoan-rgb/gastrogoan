@@ -941,6 +941,21 @@ El dueño dijo que la vista móvil era «lo peor de la app». Se capturó cada p
   `importEscChecked`; el buscador cruza todo); las opciones de menú salen agrupadas por carpeta (`<optgroup>`). Prueba:
   `test/oferta-importar.mjs`. Y la **norma de espacios muertos** (arriba, en Convenciones).
 
+## Tanda del 7/11 (noche): Pedidos, Stock, Personal, Distribución, APPCC y repaso de Cocina
+
+- **Pedidos** (`renderPedidoResultsList`): ⚠️ el historial parecía no moverse al cambiar de mes/año porque lo pendiente (borrador y enviado)
+  sale SIEMPRE y era lo único que había. Ahora son DOS bloques: «Pendientes de recibir» (sin periodo) y «Recibidos · <periodo>» con su
+  cuenta, su total y un vacío explícito. Sin proveedor elegido, «Realizar pedido» enseña una tarjeta por proveedor con cuántos artículos
+  están bajo mínimo (`pcProveedoresRapidosHtml`). Prueba: `test/pedidos.mjs`.
+- **Stock**: con el mínimo cubierto la tarjeta es VERDE y dice «+N sobre el mínimo» / «En el mínimo» (`.st-fila.is-ok`, `.st-tag.ok`); sin mínimo
+  no se pinta nada (decisión anterior). En ≥1180 px nombre y controles van en UNA fila; en tablet siguen apilados pero juntos.
+- **Rótulos de iconos** (`data-tip`): además del ratón, en táctil salen **manteniendo el dedo 450 ms** (js/ui.js, clase `tip-on`); esa pulsación
+  larga NO ejecuta la acción. Personal: el estado (fuera de servicio…) va junto al nombre (una fila menos por tarjeta).
+- **Distribución**: las tareas del jefe dicen SIEMPRE «Puesta por el jefe» (antes «por ti» al propietario); las del empleado, «por mí» / «por <nombre>».
+- **APPCC → Alérgenos** (`getAllDishAllergens`): una ficha con `bebidaTipo` o una carta «Bebidas…» sin campo `area` cuentan como Sala.
+- **Espacios muertos aplicados**: Limpieza › Mantenimiento (título junto a «Añadir equipo»), I+D (carpetas y tipos en una sola fila), Personal.
+- Manual de Stock, Pedidos y Personal al día en los tres idiomas.
+
 ## El «login raro» que sale solo: PIN de área SOBRE la entrada (7/11)
 
 El dueño abrió `app.gastrogoan.com/#promocion` tras muchas horas sin usarla y salió, a la vez, la entrada con «Tu sesión se cerró porque llevaba

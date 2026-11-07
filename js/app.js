@@ -1165,7 +1165,7 @@ function renderLimpiezaMantenimiento(){
   };
   box.innerHTML = `
     <div class="lp-barra">
-      <span></span>
+      <div class="es-tit" style="margin:0">${gl({es:'Equipos y mantenimiento', ca:'Equips i manteniment', en:'Equipment and maintenance'})} · ${equipos.length}</div>
       <button type="button" class="owner-strict btn btn-fino is-on" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> ${t('btn.addEquipment')}</button>
     </div>
     ${equipos.length ? `<div class="lp-eqs">${equipos.map(tarjeta).join('')}</div>` : `<div class="empty es-vacio"><i class="ti ti-settings"></i>${t('empty.noEquipmentRegistered')}</div>`}
