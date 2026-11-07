@@ -1,6 +1,6 @@
 # Informe de la noche — 6→7 de noviembre de 2026
 
-**Sello de versión publicado:** 07/11/2026 00:17 (hora de Madrid, abajo en la app).
+**Sello de versión publicado (tanda móvil):** 07/11/2026 10:48 (hora de Madrid).
 
 ## En una frase
 He recorrido **todas** las pantallas de la app con un navegador real, he corregido los fallos que había y he dejado escrito qué falta por mirar. **No he rehecho el diseño**: el rediseño total sigue revertido por tu decisión del 28/10, así que he igualado lo que ya está aprobado.

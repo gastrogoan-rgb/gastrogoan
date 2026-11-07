@@ -5389,18 +5389,48 @@ function renderMiNegocioIndice(){
       return titulo ? {id: el.id, titulo} : null;
     })
     .filter(Boolean);
+  mnAcordeonAplicar(grid);   // en móvil, cada apartado es un acordeón (ver más abajo)
   if(apartados.length < 5) return;   // con pocos apartados el índice sobra
 
   const nav = document.createElement('div');
   nav.className = 'mn-indice';
+  // En móvil los 14 accesos ocupaban unos 400 px antes del primer bloque: allí se ve UN desplegable («Ir a: …») y los botones se
+  // quedan para PC. Mismos apartados, mismo destino (irAApartadoMiNegocio).
   nav.innerHTML = `<span class="mn-indice-lbl">${escapeHtml(t('mn.indexLabel'))}</span>` +
-    apartados.map(a => `<button type="button" class="mn-indice-chip" onclick="irAApartadoMiNegocio('${a.id}')">${escapeHtml(a.titulo)}</button>`).join('');
+    apartados.map(a => `<button type="button" class="mn-indice-chip" onclick="irAApartadoMiNegocio('${a.id}')">${escapeHtml(a.titulo)}</button>`).join('') +
+    `<select class="mn-indice-sel" id="mn-indice-sel" aria-label="${escapeHtml(t('mn.indexLabel'))}" onchange="if(this.value){irAApartadoMiNegocio(this.value); this.selectedIndex=0;}">
+      <option value="">${escapeHtml(t('mn.indexLabel'))} …</option>` +
+    apartados.map(a => `<option value="${a.id}">${escapeHtml(a.titulo)}</option>`).join('') + `</select>`;
   cont.insertBefore(nav, cont.firstChild);
   updateTabRowFade(nav);
 }
+/* Mi Negocio en móvil (7/11): 24 apartados seguidos eran ~16.850 px (casi 20 pantallas). En móvil cada apartado es un ACORDEÓN: se ve
+   su título y se abre con un toque. Lo abierto se recuerda (MN_ABIERTOS) porque guardar repinta toda la pantalla y, si no, se
+   plegaría lo que acabas de editar. En PC no cambia nada (las reglas solo viven en el @media del CSS). */
+const MN_ABIERTOS = new Set();
+function mnAcordeonAplicar(grid){
+  [...grid.children].filter(el => el.classList && el.classList.contains('card') && el.querySelector(':scope > h3')).forEach(el => {
+    if(!el.id) return;
+    const h = el.querySelector(':scope > h3'), abierto = MN_ABIERTOS.has(el.id);
+    el.classList.add('mn-acc'); el.classList.toggle('mn-cerrado', !abierto);
+    h.setAttribute('role', 'button'); h.tabIndex = 0; h.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+    h.addEventListener('click', () => mnToggle(el.id));
+    h.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); mnToggle(el.id); } });
+  });
+}
+function mnToggle(id, abrir){
+  const el = document.getElementById(id); if(!el || !el.classList.contains('mn-acc')) return;
+  const ab = abrir === undefined ? el.classList.contains('mn-cerrado') : !!abrir;
+  el.classList.toggle('mn-cerrado', !ab);
+  ab ? MN_ABIERTOS.add(id) : MN_ABIERTOS.delete(id);
+  const h = el.querySelector(':scope > h3'); if(h) h.setAttribute('aria-expanded', ab ? 'true' : 'false');
+}
+// Abre el apartado que contiene un elemento (para saltar a un campo concreto desde otra pantalla).
+function mnAbrirDe(el){ const card = el && el.closest && el.closest('.mn-acc'); if(card) mnToggle(card.id, true); }
 function irAApartadoMiNegocio(id){
   const el = document.getElementById(id);
   if(!el) return;
+  mnToggle(id, true);   // en móvil el apartado puede estar plegado: se abre antes de saltar
   el.scrollIntoView({behavior:'smooth', block:'start'});
   // Un destello breve para que se vea a cuál se ha saltado: en una pantalla
   // tan larga, aterrizar sin más deja dudando si se ha movido algo.
@@ -7793,7 +7823,7 @@ function goToArchiveFromReminder(){
   navigate('minegocio');
   setTimeout(() => {
     const el = document.getElementById('mn-archive-before');
-    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+    if(el){ mnAbrirDe(el); el.scrollIntoView({behavior:'smooth', block:'center'}); }
   }, 200);
 }
 

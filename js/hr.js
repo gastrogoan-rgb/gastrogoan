@@ -1908,7 +1908,7 @@ const GE = (function(){
       <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
         <i class="ti ti-alert-triangle" style="color:var(--red);font-size:20px;flex:none"></i>
         <div style="flex:1;min-width:200px"><strong>${t('ck.formaTitulo')}</strong><div class="txt-xs" style="color:var(--body);margin-top:2px">${t('ck.formaDesc')}</div></div>
-        <button class="btn btn-sm btn-primary" onclick="currentFolder='gestion'; navigate('minegocio'); setTimeout(()=>{const e=document.getElementById('mn-forma-juridica'); if(e){e.scrollIntoView({block:'center'}); e.focus();}},300)">${t('ck.elegir')}</button>
+        <button class="btn btn-sm btn-primary" onclick="currentFolder='gestion'; navigate('minegocio'); setTimeout(()=>{const e=document.getElementById('mn-forma-juridica'); if(e){mnAbrirDe(e); e.scrollIntoView({block:'center'}); e.focus();}},300)">${t('ck.elegir')}</button>
       </div></div>` : '';
     const items = checklistItems();
     const pendientes = items.filter(i => !i.ok);

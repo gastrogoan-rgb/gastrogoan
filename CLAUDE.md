@@ -876,6 +876,25 @@ pruebas, sistema de diseño, continuidad e informe. **Léelo antes de volver a a
 - `movil.mjs` ahora incluye `idr`, `idr-sala` y `plan360`.
 - Decisiones del dueño abiertas: `landing.html` y `catalogo.html` (identidad antigua, no se publican) y los emojis de los paneles privados.
 
+## Vista móvil revisada de verdad, en cinco anchos (7/11)
+
+El dueño dijo que la vista móvil era «lo peor de la app». Se capturó cada pantalla y cada pestaña interna, **desplazándola entera**, a 320,
+360 y 390 px (y la prueba nueva mide 320, 360, 390, 412 y 430). Lo que salió y conviene no repetir:
+- ⚠️ **Todo campo (`input`, `select`, `textarea`) a 16 px o más en móvil.** Con 13 px, Safari de iPhone AMPLÍA toda la página al tocarlo y
+  no vuelve solo. Lo cumple la regla del final de `styles.css`; no escribir `font-size` menor en un campo.
+- ⚠️ **`movil.mjs` solo mira la PRIMERA pestaña de cada pantalla.** Lo que cuelga de una pestaña (Temperaturas, Calendario, Elaboraciones,
+  Novedades…) no se veía. `test/movil-lectura.mjs` recorre 47 estados (con sus pestañas) + 7 ventanas × 5 anchos y exige: campos ≥16 px,
+  ningún texto aplastado en una columna de letras y nada cortado por el borde (**por la izquierda nunca se perdona**, aunque esté dentro de
+  un scroll; por la derecha sí). Está en `todo.sh` (P163) y se comprobó que falla sin los arreglos.
+- **Mi Negocio es un acordeón en móvil** (`mnAcordeonAplicar`, `mnToggle`, `mnAbrirDe`): 16.854 px → 2.103 px plegado. Lo abierto se guarda en
+  `MN_ABIERTOS` porque guardar repinta todo. **Cualquier salto a un campo de Mi Negocio desde otra pantalla tiene que llamar a `mnAbrirDe(el)`
+  antes de `scrollIntoView`/`focus`** (si no, el campo está oculto). El índice «Ir a:» es un desplegable en móvil (`.mn-indice-sel`).
+- Una regla con MENOS especificidad pierde contra `… > *{grid-area:auto}`: en Tesorería dejó el texto en una columna de 13 px. Al mandar algo
+  a otra fila de una rejilla, comprobar que la regla gana.
+- Los `td` de una tabla convertida en tarjetas (`.table-cards`) heredan anchos de escritorio (`width:1%`): hay que poner `width:auto`.
+- ⚠️ **Mi hoja de contacto reducía las capturas y me hizo creer que un ticket de Comandas era estrecho (era el 88 %).** Medir con números
+  antes de afirmar un defecto de tamaño.
+
 ## Entrada, selector y frase del día (28-29/10)
 
 Cambios guiados pantalla a pantalla por el dueño, partiendo SIEMPRE de la base que ya tenía aprobada
