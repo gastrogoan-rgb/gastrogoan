@@ -29,7 +29,7 @@ await new Promise(r => setTimeout(r, 600));
 let fallos = 0;
 async function caso(n, fn){ try{ await fn(); console.log('✅ ' + n); }catch(e){ fallos++; console.log('❌ ' + n + '\n   ⤷ ' + e.message); } }
 
-await caso('La sesión caduca por inactividad a las 8 h (propietario) y 12 h (empleado), no a la hora; y la pantalla de acceso dice por qué', async () => {
+await caso('La sesión caduca por inactividad a las 8 h (propietario) y 12 h (empleado), no a la hora; y la pantalla de acceso NO enseña ningún aviso (se quitó a petición del dueño)', async () => {
   const r = await page.evaluate(() => {
     const h = 3600 * 1000, out = {};
     setAccessSession({type:'owner', ts:Date.now()});
@@ -38,11 +38,11 @@ await caso('La sesión caduca por inactividad a las 8 h (propietario) y 12 h (em
     setAccessSession({type:'employee', employeeId:1, area:'cocina', ts:Date.now()});
     poner(11); out.e11 = isAccessSessionExpiredByInactivity(); poner(13); out.e13 = isAccessSessionExpiredByInactivity();
     clearAccessSession('inactividad');
-    out.aviso = /muchas horas/.test(accesoAvisoCierreHtml());
+    out.aviso = accesoAvisoCierreHtml() !== '';   // sin cartel de «sesión cerrada por inactividad»
     setAccessSession({type:'owner', ts:Date.now()}); out.limpio = accesoAvisoCierreHtml() === '';
     return out;
   });
-  assert.deepEqual(r, {o2:false, o7:false, o9:true, e11:false, e13:true, aviso:true, limpio:true});
+  assert.deepEqual(r, {o2:false, o7:false, o9:true, e11:false, e13:true, aviso:false, limpio:true});
 });
 
 await caso('Crear una zona pide solo nombre y nº de mesas; cada mesa nace con plazas', async () => {

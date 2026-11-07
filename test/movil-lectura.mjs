@@ -77,8 +77,42 @@ MODALES.push(
   ['nueva compra', "navigate('economia'); GE.tab('variables'); GE.newGV()"],
   ['acción de promoción', "navigate('promocion'); openPromoModal()"],
   ['cobrar mesa', "currentFolder='sala'; navigate('tpv'); openTableOrder((DB.tables[0]||{}).id); openPaymentModal((DB.tables[0]||{}).id)"]);
+// Tercera tanda (7/11): 30 ventanas más, vistas a ojo a 390 y 320 px con el negocio de prueba. Cada una se abre desde SU pantalla
+// (el aspecto de los botones depende de la vista activa) y con ids reales del negocio.
+const E0 = "(DB.employees||[])[0]", C0 = "(DB.clients||[])[0]", R0 = "(DB.reservations||[])[0]";
+MODALES.push(
+  ['premio de fidelidad', `currentFolder='sala'; navigate('clientes'); openRewardModal((${C0}||{}).id)`],
+  ['fusionar cliente', `currentFolder='sala'; navigate('clientes'); openMergeClientModal((${C0}||{}).id)`],
+  ['vale regalo', "currentFolder='sala'; navigate('clientes'); openGiftVouchersModal()"],
+  ['puntos de fidelidad', "currentFolder='sala'; navigate('clientes'); showLoyaltyInfo()"],
+  ['recordatorio de reserva', `currentFolder='sala'; navigate('reservas'); openReservationReminderModal((${R0}||{}).id)`],
+  ['reserva: ha llegado', `currentFolder='sala'; navigate('reservas'); openReservaArrivalTableModal((${R0}||{}).id)`],
+  ['facturas pendientes', "navigate('proveedores'); openPendingInvoicesModal()"],
+  ['pagos sin aplicar', "navigate('proveedores'); openUnmatchedPaymentsModal()"],
+  ['nuevo proveedor', "navigate('proveedores'); openProviderModal()"],
+  ['cambios de precio', "navigate('proveedores'); openSubidasPrecioModal()"],
+  ['ventas de hoy', "currentFolder='sala'; navigate('tpv'); openTodaySalesModal()"],
+  ['calendario para llevar', "currentFolder='sala'; navigate('tpv'); openTogoCalendarModal()"],
+  ['abrir mesa: personas', "currentFolder='sala'; navigate('tpv'); openNewOrderPaxModal((DB.tables[0]||{}).id)"],
+  ['avisar a sala', "currentFolder='sala'; navigate('tpv'); openAvisoSalaModal()"],
+  ['cierre de caja', "currentFolder='sala'; navigate('tpv'); openCashClosureModal()"],
+  ['conciliación bancaria', "currentFolder='gestion'; navigate('economia'); GE.tab('tesoreria'); renderBankReconciliationForm()"],
+  ['simulador de impuestos', "currentFolder='gestion'; navigate('economia'); GE.tab('tesoreria'); fiscalSimuladorModal()"],
+  ['nuevo turno', "navigate('horarios'); openTurnoModal()"],
+  ['horario fijo', `navigate('horarios'); openHorarioFijoModal((${E0}||{}).id)`],
+  ['turnos por periodo', `navigate('horarios'); openBulkTurnoModal((${E0}||{}).id)`],
+  ['pedir vacaciones', `navigate('horarios'); openVacationRequestModal((${E0}||{}).id)`],
+  ['pedir cambio de turno', `navigate('horarios'); openTurnoSwapRequestModal((${E0}||{}).id)`],
+  ['fichar', `navigate('horarios'); openEmployeeFicharModal((${E0}||{}).id)`],
+  ['historial de personal', "navigate('horarios'); openPersonalLogModal()"],
+  ['manual del puesto (editor)', `navigate('distribucion'); openDistManualEditor((${E0}||{}).id)`],
+  ['nueva elaboración', "currentFolder='cocina'; navigate('stock'); openElaboracionModal()"],
+  ['valor del stock', "currentFolder='cocina'; navigate('stock'); openStockValueModal()"],
+  ['ADN gastronómico', "currentFolder='cocina'; navigate('idr'); idrAdnModal()"],
+  ['destinatarios de novedades', "navigate('promocion'); nvDestinatariosModal()"],
+  ['papelera', "currentFolder='gestion'; navigate('minegocio'); openTrashModal()"]);
 
-const ANCHOS = [[320,568],[360,800],[390,844],[412,915],[430,932],[568,320],[667,375]];   // los dos últimos: móvil en HORIZONTAL (iPhone SE e iPhone 8)
+const ANCHOS =[[320,568],[360,800],[390,844],[412,915],[430,932],[568,320],[667,375]];   // los dos últimos: móvil en HORIZONTAL (iPhone SE e iPhone 8)
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox']});
 const w = ms => new Promise(r => setTimeout(r, ms));
 const hall = [];

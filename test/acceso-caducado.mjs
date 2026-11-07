@@ -45,7 +45,7 @@ for(const [hash, sesion, nombre] of [['#promocion','caducada','sesión CADUCADA 
     const p = await arrancar(hash, sesion); const e = await estado(p); await p.close();
     assert.ok(e.entradaVisible, 'la pantalla de entrada tiene que verse: ' + JSON.stringify(e));
     assert.equal(e.modalAbierto, false, 'NO puede haber una ventana de PIN encima de la entrada: ' + JSON.stringify(e));
-    if(sesion === 'caducada') assert.ok(e.aviso, 'y debe explicar por qué se cerró la sesión');
+    assert.equal(e.aviso, false, 'el aviso de «sesión cerrada por inactividad» se quitó a petición del dueño');
   });
 }
 await caso('Con sesión de propietario VIVA, la dirección guardada sigue llevando a su pantalla', async () => {

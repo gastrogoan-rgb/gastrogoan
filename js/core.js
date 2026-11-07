@@ -264,7 +264,7 @@ function accesoAvisoCierreHtml(){
   try{ fin = JSON.parse(localStorage.getItem(ACCESS_SESSION_END_LS)); }catch(e){}
   if(!fin || !fin.reason || Date.now() - (fin.ts || 0) > 36 * 3600 * 1000) return '';
   const textos = {
-    inactividad: gl({es:'Tu sesión se cerró porque llevaba muchas horas sin usarse (es una medida de seguridad por si el aparato se pierde). Entra de nuevo: no se ha perdido nada.', ca:'La teva sessió es va tancar perquè portava moltes hores sense utilitzar-se (és una mesura de seguretat per si l\'aparell es perd). Torna a entrar: no s\'ha perdut res.', en:'Your session was closed because it had been unused for many hours (a safety measure in case the device is lost). Sign in again: nothing has been lost.'}),
+    // (7/11) El aviso de «sesión cerrada por inactividad» se quitó a petición del dueño: la sesión sigue caducando a las 8 h, pero sin cartel.
     empleado: gl({es:'Tu sesión se cerró porque tu ficha de empleado ya no está activa. Si crees que es un error, avisa a quien gestiona el negocio.', ca:'La teva sessió es va tancar perquè la teva fitxa d\'empleat ja no està activa. Si creus que és un error, avisa a qui gestiona el negoci.', en:'Your session was closed because your employee profile is no longer active. If you think this is a mistake, tell whoever runs the business.'}),
   };
   const txt = textos[fin.reason];
@@ -10664,15 +10664,15 @@ function copyPublicLinkFrom(elId){
    uno ya configurado. */
 function renderOwnFirebaseForm(){
   return `
-    <div class="field" style="margin-bottom:8px">
-      <label style="font-size:12px">${t('gate.apiKeyLabel')}</label>
-      <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" style="font-family:monospace;font-size:12px">
+    <div class="field">
+      <label>${t('gate.apiKeyLabel')}</label>
+      <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" class="nb-mono">
     </div>
-    <div class="field" style="margin-bottom:10px">
-      <label style="font-size:12px">${t('gate.dbUrlLabel')}</label>
-      <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" style="font-family:monospace;font-size:12px">
+    <div class="field">
+      <label>${t('gate.dbUrlLabel')}</label>
+      <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" class="nb-mono">
     </div>
-    <button class="btn" style="width:100%;justify-content:center" onclick="saveOwnFirebaseConfig()"><i class="ti ti-cloud-cog"></i> ${t('gate.saveAndConnect')}</button>
+    <button class="btn btn-primary nb-guardar" onclick="saveOwnFirebaseConfig()"><i class="ti ti-cloud-cog"></i> ${t('gate.saveAndConnect')}</button>
   `;
 }
 
@@ -10694,12 +10694,12 @@ function openCloudWizard(){
         <h3><i class="ti ti-cloud"></i> ${t('gate.setupCloud')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
-      <div style="background:#F5F0E3;border-left:4px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
+      <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
+      <div class="nb-aviso is-nota">
         ${t('gate.cloudIntro')}
       </div>
-      <p style="font-size:13px;margin-bottom:10px">${t('gate.tenMinutesIntro')}</p>
-      <ol style="font-size:12.5px;line-height:1.7;margin:0 0 14px 18px;color:#444">
+      <p class="nb-p">${t('gate.tenMinutesIntro')}</p>
+      <ol class="nb-pasos">
         <li>${t('gate.miniStep1')}</li>
         <li>${t('gate.miniStep2')}</li>
         <li>${t('gate.miniStep3')}</li>
@@ -10719,8 +10719,8 @@ function openCloudWizard(){
       <h3><i class="ti ti-cloud"></i> ${t('gate.cloudModalTitle')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
-    ${reglasAntiguas ? `<div style="background:var(--amber-l,#F5F0E3);border-left:3px solid var(--amber,#8A7440);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
+    <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
+    ${reglasAntiguas ? `<div class="nb-aviso is-amber">
       <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${
         /* Dos casos MUY distintos y no se pueden contar igual:
            · el espejo no funciona (reglas viejas de verdad): sus reservas
@@ -10728,55 +10728,55 @@ function openCloudWizard(){
            · el espejo funciona pero le faltan los cambios recientes: todo va
              bien salvo los pagos con tarjeta y el borrado del histórico. */
         espejoEnNubePropia === false ? t('gate.oldRulesBody') : t('gate.oldRulesBodyMenor')}
-      <div style="margin-top:10px"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
+      <div class="nb-acc"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
     </div>` : ''}
-    ${saturacionPublicaReciente ? `<div style="background:var(--amber-l,#F5F0E3);border-left:3px solid var(--amber,#8A7440);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
+    ${saturacionPublicaReciente ? `<div class="nb-aviso is-amber">
       <strong><i class="ti ti-users"></i> ${t('gate.saturationTitle')}</strong><br>${t('gate.saturationBody')}
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <div class="nb-acc">
         <a class="btn btn-sm" href="https://firebase.google.com/pricing" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('gate.saturationLink')}</a>
         <button class="btn btn-sm" onclick="descartarAvisoSaturacion()">${t('gate.saturationDismiss')}</button>
       </div>
     </div>` : ''}
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button class="btn" style="flex:1" onclick="probarNubeDesdeElModal()"><i class="ti ti-refresh"></i> ${t('gate.testCloudNow')}</button>
-      ${lastSyncErrorCode ? `<button class="btn" style="flex:0 0 auto" onclick="copiarErrorDeNube()"><i class="ti ti-copy"></i> ${t('gate.copyError')}</button>` : ''}
+    <div class="nb-fila">
+      <button class="btn" onclick="probarNubeDesdeElModal()"><i class="ti ti-refresh"></i> ${t('gate.testCloudNow')}</button>
+      ${lastSyncErrorCode ? `<button class="btn" onclick="copiarErrorDeNube()"><i class="ti ti-copy"></i> ${t('gate.copyError')}</button>` : ''}
     </div>
     ${/* Por el error REAL, no por el color de este instante: un corte de red
           dejaba el estado en 'offline' y este modal daba la nube por buena,
           escondiendo el motivo justo cuando hacía falta. */
       lastSyncErrorCode
-      ? `<div style="background:var(--red-l);color:var(--red);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-off"></i> ${t('gate.cloudErrorLong')}${
+      ? `<div class="nb-aviso is-error"><div class="nb-estado"><i class="ti ti-cloud-off"></i> ${t('gate.cloudErrorLong')}</div>${
           // Si Firebase dijo POR QUÉ falló, se enseña el paso concreto que
           // falta en vez de dejar al usuario adivinando entre seis pasos.
-          syncErrorHintKey() ? `<div style="font-weight:400;font-size:13px;margin-top:8px;line-height:1.5">${t(syncErrorHintKey())}</div>` : ''
+          syncErrorHintKey() ? `<div class="nb-detalle">${t(syncErrorHintKey())}</div>` : ''
         }${
           /* Y SIEMPRE el motivo tal cual lo dice Firebase. Cuando el código no
              se reconoce, antes no se enseñaba nada: el hostelero veía "Error
              de nube" a secas y no había forma de saber qué pasaba sin abrir la
              consola del navegador, sitio al que no entra nadie. Con esto puede
              copiarlo y mandarlo, que es lo que lo hace resoluble. */
-          lastSyncErrorCode ? `<div style="font-weight:400;font-size:11.5px;margin-top:8px;opacity:.85"><code>${escapeHtml(String(lastSyncErrorCode))}</code></div>` : ''
+          lastSyncErrorCode ? `<div class="nb-detalle nb-codigo"><code>${escapeHtml(String(lastSyncErrorCode))}</code></div>` : ''
         }</div>`
-      : `<div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>`}
-    <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
-    <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-    <p style="font-size:13.5px;margin-bottom:8px"><strong><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</strong></p>
-    <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${t('mn.online.shareDesc')}${otrosServicios}${t('mn.online.shareDescEnd')}</p>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:120px;height:120px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
-      <div class="field" style="flex:1;min-width:180px;margin-bottom:0">
-        <textarea id="cloud-public-link" rows="3" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
+      : `<div class="nb-aviso is-ok"><div class="nb-estado"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div></div>`}
+    <p class="nb-p"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
+    <hr class="nb-hr">
+    <p class="nb-sub"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</p>
+    <p class="nb-ayuda">${t('mn.online.shareDesc')}${otrosServicios}${t('mn.online.shareDescEnd')}</p>
+    <div class="nb-qrfila">
+      <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" class="nb-qr">
+      <div class="field nb-enlace">
+        <textarea id="cloud-public-link" rows="3" readonly class="nb-mono" onclick="this.select()">${link}</textarea>
       </div>
     </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" style="flex:1" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
-      <a class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+    <div class="nb-fila">
+      <button class="btn" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
+      <a class="btn btn-primary nb-wa" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
-    <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+    <hr class="nb-hr">
     <details${lastSyncErrorCode ? ' open' : ''}>
-      <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)"><i class="ti ti-settings"></i> ${t('gate.changeFirebaseConfig')}</summary>
-      <div style="margin-top:10px">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('gate.emptyToDisconnect')}</p>
+      <summary class="nb-resumen"><i class="ti ti-settings"></i> ${t('gate.changeFirebaseConfig')}</summary>
+      <div class="nb-config">
+        <p class="nb-ayuda">${t('gate.emptyToDisconnect')}</p>
         ${renderOwnFirebaseForm()}
       </div>
     </details>

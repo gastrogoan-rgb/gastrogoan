@@ -909,6 +909,9 @@ muchas horas sin usarse» **y encima el PIN de «Sala»**. Causa (`js/app.js`, a
 - ⚠️ **Sin sesión válida, el arranque NO navega a la dirección guardada** (`initial = 'home'`) y `showAccessSelectScreen` cierra cualquier ventana
   abierta y borra `areaGatePendingView`. Tras identificarse se llega a Inicio. Con sesión viva, la dirección guardada sigue funcionando.
 - La sesión del propietario caduca a las **8 h** sin tocar la app (`ACCESS_INACTIVITY_OWNER_MS`); es a propósito (aparato perdido).
+- **El cartel «Tu sesión se cerró porque llevaba muchas horas sin usarse…» se QUITÓ a petición del dueño (7/11)**: la sesión sigue caducando igual, pero la entrada sale sin aviso.
+  `accesoAvisoCierreHtml` solo conserva el del empleado desactivado. No volver a ponerlo sin que lo pida.
+- ⚠️ **Publicación por tandas: el dueño pidió (7/11) subir a `main` solo cada 4 o 5 cambios**, no cada uno. Entre medias se commitea y se sube la RAMA, sin `deploy/actualizar.sh` ni merge.
 - Prueba: `test/acceso-caducado.mjs` (P164): 4 arranques (caducada/sin sesión × Sala/Cocina) + el caso de sesión viva. Falla sin el arreglo.
 - ⚠️ En pruebas, ir a la MISMA URL con otro `#hash` NO recarga la página: pasar por `about:blank` para forzar un arranque real.
 

@@ -372,7 +372,7 @@ input[type="checkbox"],input[type="radio"]{
      "ya lo he contado" que se van marcando una a una haciendo inventario,
      decenas seguidas. 22 px en escritorio; en táctil manda la regla de más
      abajo, que las sube a 26. */
-  width:22px !important;height:22px !important;min-width:22px;min-height:22px;margin:2px;accent-color:var(--brand-orange,#1C1A17);cursor:pointer;flex-shrink:0;
+  width:22px !important;height:22px !important;min-width:22px;min-height:22px;margin:2px;accent-color:var(--olive);cursor:pointer;flex-shrink:0;
 }
 .btn i{flex-shrink:0}
 .ti{display:inline-flex;align-items:center;justify-content:center;min-width:1em;min-height:1em}
@@ -5940,6 +5940,8 @@ small{font-size:max(.8333em, 11px)}
   .bc-tr.bc-th{display:none}
   .bc-tr span:first-child{grid-column:1 / -1;font-weight:600}
   .bc-tr span + span{text-align:left}
+  /* Sin la cabecera de la tabla (oculta en móvil), cada cifra dice qué es: antes salían tres importes sueltos bajo el mes. */
+  .bc-tr [data-l]::before{content:attr(data-l);display:block;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:400}
   .bc-razones{padding:12px 14px 14px 32px}
 }
 /* Beneficio y caja: cifras que pueden saltar de línea y saldo de 44 px en móvil */
@@ -6030,7 +6032,6 @@ small{font-size:max(.8333em, 11px)}
 
 /* Acordeón cerrado de Mi Negocio: sin la raya ni el relleno que el título llevaba para separarse de su contenido. */
 @media (max-width:760px){
-  .mn-grid > .card.mn-acc.mn-cerrado > h3{border-bottom:0;padding-bottom:0;margin-bottom:0}
 }
 /* Botonera del TPV en pantallas de 320-340 px: tres columnas de ~93 px no dan para icono + «Anulaciones»; se quita el icono. */
 @media (max-width:340px){
@@ -6043,8 +6044,36 @@ small{font-size:max(.8333em, 11px)}
   .gg-plegable > .gg-acc-h::after{content:"";margin-left:auto;flex:none;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-135deg) translate(-1px,-1px);transition:transform .2s}
   .gg-plegable:not(.gg-abierto) > .gg-acc-h::after{transform:rotate(45deg) translate(-2px,-2px)}
   .gg-plegable:not(.gg-abierto) > :not(.gg-acc-h){display:none !important}
-  .gg-plegable:not(.gg-abierto) > .gg-acc-h{border-bottom:0;margin-bottom:0;padding-bottom:0}
+  /* !important: las reglas con id del Panel y de Mi Negocio (`#view-dashboard > .card > h3`) ganaban y dejaban, plegada, una raya y 26 px de hueco bajo el título. */
+  .gg-plegable:not(.gg-abierto) > .gg-acc-h{border-bottom:0 !important;margin-bottom:0 !important}
+  .gg-plegable:not(.gg-abierto) > .gg-acc-h:not(.ge-sec-head){padding-bottom:0 !important}
+  .card.gg-plegable:not(.gg-abierto){padding-top:6px !important;padding-bottom:6px !important}
   .gg-plegable > .gg-acc-h:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  /* Plegada, la cabecera enseña solo el título y la flecha: las pestañas de dentro (Beneficio / Caja) se ven al abrirla. */
+  .gg-plegable:not(.gg-abierto) > .gg-acc-h .dt-tabs{display:none}
+  /* La flecha va siempre al lado del título, no debajo (a 320 px «Dinero disponible de verdad» la mandaba a otra línea). */
+  #view-economia .gg-plegable > .gg-acc-h{flex-wrap:wrap}
+  .gg-plegable > .gg-acc-h > h3,.gg-plegable > .gg-acc-h > h4{flex:1 1 0;min-width:0;order:1}
+  .gg-plegable > .gg-acc-h::after{order:2}
+  .gg-plegable > .gg-acc-h > .dt-tabs{order:3;flex:1 1 100%}
+  /* Un aviso con icono + texto largo (+ botón) en una caja flex con wrap dejaba el icono SOLO en una línea y el texto debajo
+     (el texto es un elemento anónimo que no cabe junto al icono). En móvil el icono flota y el texto lo rodea. */
+  .cdr-sug,.pr-ayuda.pm-redes{display:block}
+  .cdr-sug > .ti,.pr-ayuda.pm-redes > .ti{float:left;margin:1px 8px 0 0}
+  .cdr-sug > .btn{margin:6px 0 0 8px}
+  /* Tesorería, columna «Real»: la cifra y su € no se separan (salía «1236,67» y el «€» en la línea de abajo). */
+  #ge-tesoreria .te-row.te-dist .te-c-real b,#ge-tesoreria .te-row.te-dist .te-c-real small{white-space:nowrap}
+  /* Inversiones: los filtros ocupan la fila entera y «Nueva inversión» baja debajo, en vez de apilar los filtros en una columna. */
+  .cx-filtros{flex:1 1 100%}
+  /* Pie de las ventanas: un botón largo («Entregar premio y reiniciar», «Fusionar con otro cliente») se cortaba por los dos lados
+     porque cada botón partía de ancho 0 (flex:1). Con base = su contenido, el largo baja a su propia fila y ocupa todo el ancho. */
+  .modal-footer .btn{flex:1 1 auto;max-width:100%}
+  /* Saldo del banco (Beneficio y caja): el campo se encogía menos que el botón y «Guardar» salía como «uardar» a 320 px. */
+  .bc-saldo-f input{min-width:0}
+  .bc-saldo-f .btn{flex:none}
+  /* Una cifra con su € nunca se parte; si no cabe a 22 px, baja de tamaño (Beneficio y caja: «−38.480,36» y el € en otra línea). */
+  .bc-num{white-space:nowrap}
+  #bc-kpis .te-valor{font-size:clamp(15px,5.2vw,22px)}
   /* Carpetas de Mega Lista, Stock, Escandallo y Fichas: dos por fila. Icono y menú ⋯ arriba, el nombre debajo con todo el ancho. */
   .ml-carpetas{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .ml-carpeta{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"ico . men" "txt txt txt";gap:6px 4px;align-items:start;padding:10px}
@@ -6053,3 +6082,77 @@ small{font-size:max(.8333em, 11px)}
   .ml-carpeta > :not(.ml-ico):not(.ml-carpeta-txt){grid-area:men;justify-self:end}
   .ml-carpeta-nom{font-size:15px}
 }
+
+/* Mi Negocio plegado: la raya, el relleno y el margen del título original ganaban a la regla de «cerrado» y dejaban una franja vacía. */
+@media (max-width:760px){
+  #view-minegocio .mn-grid > .card.mn-acc.mn-cerrado{padding-top:4px !important;padding-bottom:4px !important}
+  #view-minegocio .mn-grid > .card.mn-acc.mn-cerrado > h3{border-bottom:0 !important;padding-bottom:0 !important;margin-bottom:0 !important}
+}
+
+/* ═══ Inicio: Sala y Gestión reaccionan igual que Cocina; fecha centrada (7/11) ═══ */
+/* Cocina encendía el recuadro del icono al pasar; Sala y Gestión solo oscurecían el fondo, y parecía que no respondían. Ahora las tres
+   invierten el recuadro del icono: Cocina verde, Sala blanco con el icono verde, Gestión verde. */
+.folder-grid .folder-card.folder-sala:hover .area-icon,.folder-grid .folder-card.folder-sala:focus-visible .area-icon{background:#fff;border-color:#fff;color:var(--olive)}
+.folder-grid .folder-card.folder-gestion:hover .area-icon,.folder-grid .folder-card.folder-gestion:focus-visible .area-icon{background:var(--olive);border-color:var(--olive);color:#fff}
+.folder-grid .folder-card.folder-cocina:focus-visible .area-icon{background:var(--olive);border-color:var(--olive);color:#fff}
+/* La fecha, en el mismo sitio pero con todo centrado respecto a su propia columna. */
+.home-date{align-items:center;text-align:center}
+
+/* ═══ Ventana de Nube con el sistema actual (7/11): sin cajas con raya lateral, sin radios de 10 px, sin colores escritos a mano ═══ */
+.nb-lic{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted);margin:-4px 0 12px}
+.nb-aviso{border:1px solid var(--hair);border-radius:3px;background:#fff;padding:12px 14px;margin:0 0 14px;font-size:13px;line-height:1.55;color:var(--body)}
+.nb-aviso.is-nota{background:var(--brand-cream)}
+.nb-aviso.is-amber{background:var(--amber-l);border-color:#E3CC8E;color:var(--ink)}
+.nb-aviso.is-error{background:var(--red-l);border-color:#E3C9C0;color:var(--red)}
+.nb-aviso.is-ok{background:var(--green-l);border-color:#C9D6CB;color:var(--olive)}
+.nb-estado{display:flex;align-items:flex-start;gap:8px;font-weight:600;font-size:14px;line-height:1.4}
+.nb-estado .ti{font-size:18px;flex:none;margin-top:1px}
+.nb-detalle{font-size:13px;line-height:1.5;margin-top:8px;color:var(--body)}
+.nb-codigo{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.nb-acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.nb-fila{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.nb-fila > .btn{flex:1 1 150px}
+.nb-p{font-size:13.5px;line-height:1.55;margin:0 0 14px}
+.nb-sub{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin:0 0 6px;color:var(--ink)}
+.nb-ayuda{font-size:12.5px;line-height:1.5;color:var(--muted);margin:0 0 10px}
+.nb-hr{border:0;border-top:1px solid var(--hair);margin:16px 0}
+.nb-pasos{font-size:13px;line-height:1.7;margin:0 0 14px 18px;color:var(--body)}
+.nb-qrfila{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.nb-qr{width:120px;height:120px;border:1px solid var(--hair);border-radius:3px;background:#fff;padding:6px}
+.nb-enlace{flex:1;min-width:180px;margin:0}
+.nb-mono{font-family:var(--mono);font-size:12px}
+.nb-wa{text-decoration:none;justify-content:center}
+.nb-guardar{width:100%;justify-content:center}
+.nb-resumen{font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;cursor:pointer;color:var(--muted);min-height:44px;display:flex;align-items:center;gap:8px}
+.nb-config{margin-top:10px}
+
+/* ═══ Chat interno y Centro de ayuda con el sistema actual (7/11) ═══
+   Eran paneles de otra época: cabecera negra, pestañas con subrayado negro, burbujas redondas de 12 px, botón de enviar negro y redondo. */
+.help-panel{border:1px solid var(--hair);border-radius:4px;background:#fff;box-shadow:0 18px 40px -20px rgba(28,26,23,.35)}
+.help-panel-header{background:#fff;color:var(--ink);border-bottom:1px solid var(--hair);padding:10px 12px 10px 16px}
+.help-panel-header h4{font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.help-panel-header h4 .ti{color:var(--olive);font-size:18px}
+.help-panel-close{color:var(--ink);border:1px solid var(--hair);border-radius:3px;background:#fff;min-width:36px;min-height:36px}
+.help-panel-close:hover{background:var(--brand-cream);border-color:var(--olive);color:var(--olive)}
+.help-tabs{border-bottom:1px solid var(--hair);background:#fff}
+.help-tab{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--muted)}
+.help-tab:hover{color:var(--ink)}
+.help-tab.active{color:var(--ink);border-bottom-color:var(--olive);font-weight:600}
+.help-msg{border-radius:3px;font-size:13.5px}
+.help-msg.bot,.help-msg.other{background:var(--brand-cream);color:var(--ink);border:1px solid var(--hair)}
+.help-msg.user,.help-msg.own{background:var(--olive);color:#fff;border:1px solid var(--olive)}
+.help-msg .chat-meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+.help-suggestion{font-family:var(--mono);font-size:11.5px;letter-spacing:.02em;border-radius:3px;border-color:var(--hair);background:#fff}
+.help-suggestion:hover{border-color:var(--olive);color:var(--olive);background:var(--brand-cream)}
+.help-chat-input-row{border-top:1px solid var(--hair);background:#fff}
+.help-chat-input-row input{border-radius:3px;border-color:var(--hair);font-size:14px}
+.help-chat-input-row input:focus{outline:none;border-color:var(--olive)}
+.help-chat-input-row button{border-radius:3px;background:var(--olive);width:42px;height:42px}
+.help-chat-input-row button:hover{background:#3C4D40}
+.chat-author-row{background:#fff;border-bottom:1px solid var(--hair);font-family:var(--mono);font-size:12px;color:var(--muted)}
+.chat-author-row select{border-radius:3px;border-color:var(--hair)}
+.help-contact>i{color:var(--olive)}
+.help-contact-email-row code{border-radius:3px;border-color:var(--hair);font-family:var(--mono)}
+.help-topic-group-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em}
+.help-topic-item{border-bottom-color:var(--hair)}
+.help-topic-item:hover{color:var(--olive)}

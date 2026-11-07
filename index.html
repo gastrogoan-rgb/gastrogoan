@@ -619,10 +619,10 @@
       <div id="ge-bc" class="ge-tab-panel">
         <div class="ve-barra-sup"><div id="bc-periodo"></div></div>
         <div class="ge-kpi-grid" id="bc-kpis"></div>
-        <div class="gf-duo bc-duo"><div class="ge-section" id="bc-puente"></div><div class="ge-section" id="bc-disponible"></div></div>
+        <div class="gf-duo bc-duo"><div class="ge-section gg-plegable" id="bc-puente" data-acc-abierto="1"></div><div class="ge-section gg-plegable" id="bc-disponible"></div></div>
         <div id="bc-porque"></div>
-        <div class="ge-section" id="bc-evolucion"></div>
-        <div class="ge-section" id="bc-liquidez"></div>
+        <div class="ge-section gg-plegable" id="bc-evolucion"></div>
+        <div class="ge-section gg-plegable" id="bc-liquidez"></div>
       </div>
 
       <!-- PUNTO DE EQUILIBRIO -->
@@ -642,7 +642,7 @@
           <div class="ge-kpi"><div class="lbl" data-i18n="label.currentVsNeededCovers">Cubiertos actuales vs necesarios</div><div class="te-valor" id="pe-r6">—</div></div>
         </div>
         <div class="gf-duo pe-duo">
-          <div class="ge-section">
+          <div class="ge-section gg-plegable" data-acc-abierto="1">
             <div class="ge-sec-head"><h4 data-i18n="ge.inputData">Datos de entrada</h4></div>
             <div class="ge-input-row">
               <label><span data-i18n="label.fixedCosts">Costes fijos totales</span> <span class="ge-auto">AUTO</span><small id="pe-fijos-desglose" class="pe-desg"></small></label>
@@ -669,7 +669,7 @@
               <input type="number" id="pe-otros" min="0" max="100" step="0.5" inputmode="decimal" placeholder="0" oninput="GE.calcPE()">
             </div>
           </div>
-          <div class="ge-section">
+          <div class="ge-section gg-plegable">
             <div class="ge-sec-head"><h4><span data-i18n="ge.results">Resultados</span> <span class="ge-auto">AUTO</span></h4></div>
             <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.variableCostPerCover">Coste variable por cubierto</span><span class="pe-val" id="pe-r1">—</span></div>
             <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.contributionPerCover">Contribución por cubierto</span><span class="pe-val" id="pe-r2">—</span></div>
@@ -679,16 +679,16 @@
             <div id="pe-gauge" class="pe-gauge"></div>
           </div>
         </div>
-        <div class="ge-section">
+        <div class="ge-section gg-plegable">
           <div class="ge-sec-head"><h4 id="pe-t-graf">Ingresos y costes según los cubiertos</h4></div>
           <div id="pe-chart"></div>
         </div>
-        <div class="ge-section">
+        <div class="ge-section gg-plegable">
           <div class="ge-sec-head"><h4 id="pe-t-pal">¿Y si…?</h4></div>
           <p class="te-nota" id="pe-n-pal"></p>
           <div id="pe-levers" class="pe-levers"></div>
         </div>
-        <div class="ge-section">
+        <div class="ge-section gg-plegable">
           <div class="ge-sec-head"><h4 id="pe-t-esc">Tus escenarios</h4></div>
           <div id="pe-escenarios"></div>
         </div>
