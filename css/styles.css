@@ -305,7 +305,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 @keyframes mesa-blink{0%,100%{box-shadow:0 0 0 0 rgba(220,53,69,.55)}50%{box-shadow:0 0 0 6px rgba(220,53,69,0)}}
 
 .view-toggle{display:flex;gap:4px}
-.view-toggle .btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.view-toggle .btn.active{background:var(--olive);color:#fff;border-color:var(--olive)}
 
 .list-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--surface)}
 /* El nombre nunca se corta con "..." en ningún listado de la app (Fichas
@@ -1812,7 +1812,7 @@ td.wrap{white-space:normal}
 .btn-primary:hover{background:var(--olive);border-color:var(--olive);filter:none}
 .btn-danger{background:#8A4A3B;border-color:#8A4A3B;color:#FFFFFF}
 .btn-danger:hover{background:#743d31;border-color:#743d31;filter:none}
-.view-toggle .btn.active{background:#1C1A17;color:#FAF8F4;border-color:#1C1A17}
+.view-toggle .btn.active{background:var(--olive);color:#fff;border-color:var(--olive)}
 
 /* ===== Tablas ===== */
 th{background:transparent;color:var(--muted);border-bottom:1px solid #1C1A17;
@@ -3814,7 +3814,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .lp-alerg span{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--muted)}
 .lp-alerg:hover{border-color:var(--ink)}
 .lp-alerg:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
-.lp-alerg.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.lp-alerg.on{background:var(--olive);border-color:var(--olive);color:#fff}
 .lp-alerg.on span{color:#D9D5CC}
 .badge.lp-marcado{box-shadow:0 0 0 2px var(--ink)}
 .lp-eq-datos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:0}
@@ -3854,7 +3854,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .idr-mar-plato{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid #D9D4C8;background:#fff;border-radius:3px;cursor:pointer;font-size:14px;font-weight:500;overflow-wrap:break-word;transition:background-color .15s,border-color .15s}
 .idr-mar-plato input{width:auto;margin:0}
 .idr-mar-plato:hover{border-color:var(--ink)}
-.idr-mar-plato.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.idr-mar-plato.on{background:var(--olive);border-color:var(--olive);color:#fff}
 .idr-mar-ajustes{margin-top:14px}
 .idr-mar-bt{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
 .idr-mar-bt .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -4311,7 +4311,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-or-tab{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border:1px solid var(--hair);border-radius:3px;background:#fff;font:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
 .tp-or-tab:hover{border-color:var(--olive)}
 .tp-or-tab:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
-.tp-or-tab.is-on{background:var(--ink);border-color:var(--ink);color:#fff}
+.tp-or-tab.is-on{background:var(--olive);border-color:var(--olive);color:#fff}   /* lo elegido va en verde, no en negro */
 .tp-buscar-caja{position:relative;margin:0 0 12px}
 .tp-buscar-caja > .ti{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
 .tp-buscar-caja .tp-plato-busca{width:100%;max-width:none;height:46px !important;min-height:46px !important;padding:6px 10px 6px 40px !important}
@@ -4893,7 +4893,7 @@ span.dt-punto{position:absolute;border-radius:50%}
 .cdr-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;margin:0 0 18px}
 .cdr-chips .month-pill{min-height:40px;min-width:48px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--hair);border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);cursor:pointer}
 .cdr-chips .month-pill:hover{border-color:var(--olive)}
-.cdr-chips .month-pill.active{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.cdr-chips .month-pill.active{background:var(--olive);border-color:var(--olive);color:#fff;font-weight:600}
 .cdr-graf{margin-bottom:18px}
 .cdr-graf .dt-cab{padding:0 18px}
 .cdr-graf #cdr-chart{padding:0 8px 8px}
@@ -6035,4 +6035,21 @@ small{font-size:max(.8333em, 11px)}
 /* Botonera del TPV en pantallas de 320-340 px: tres columnas de ~93 px no dan para icono + «Anulaciones»; se quita el icono. */
 @media (max-width:340px){
   .tp-botonera .btn .ti{display:none}
+}
+
+/* ═══ Móvil: secciones plegables y carpetas a dos por fila (7/11) ═══ */
+@media (max-width:760px){
+  .gg-plegable > .gg-acc-h{cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;-webkit-tap-highlight-color:transparent}
+  .gg-plegable > .gg-acc-h::after{content:"";margin-left:auto;flex:none;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-135deg) translate(-1px,-1px);transition:transform .2s}
+  .gg-plegable:not(.gg-abierto) > .gg-acc-h::after{transform:rotate(45deg) translate(-2px,-2px)}
+  .gg-plegable:not(.gg-abierto) > :not(.gg-acc-h){display:none !important}
+  .gg-plegable:not(.gg-abierto) > .gg-acc-h{border-bottom:0;margin-bottom:0;padding-bottom:0}
+  .gg-plegable > .gg-acc-h:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  /* Carpetas de Mega Lista, Stock, Escandallo y Fichas: dos por fila. Icono y menú ⋯ arriba, el nombre debajo con todo el ancho. */
+  .ml-carpetas{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .ml-carpeta{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"ico . men" "txt txt txt";gap:6px 4px;align-items:start;padding:10px}
+  .ml-carpeta > .ml-ico{grid-area:ico;min-width:34px;min-height:34px;font-size:20px}
+  .ml-carpeta > .ml-carpeta-txt{grid-area:txt}
+  .ml-carpeta > :not(.ml-ico):not(.ml-carpeta-txt){grid-area:men;justify-self:end}
+  .ml-carpeta-nom{font-size:15px}
 }

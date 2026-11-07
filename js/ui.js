@@ -2101,6 +2101,38 @@ function ggSiPlegada(ev, el){
 }
 function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave)); }
 
+/* Secciones plegables SOLO en móvil (7/11). El Panel de Control medía 14.047 px y Tesorería 5.164: son largos por contenido, y en un
+   móvil nadie los recorre enteros. Una sección marcada `.gg-plegable` enseña su cabecera (h3/h4/.ge-sec-head) y se abre con un toque.
+   `data-acc-abierto="1"` = abierta de partida. Lo que el usuario abre o cierra se RECUERDA por clave porque estas pantallas se repintan
+   enteras al guardar o cambiar de pestaña. En PC no hace nada (las reglas viven en el @media del CSS). */
+const GG_ACC_ABIERTOS = new Set(), GG_ACC_CERRADOS = new Set();
+function ggAccMovil(){ return !!(window.matchMedia && window.matchMedia('(max-width:760px)').matches); }
+function ggAccPreparar(){
+  if(!ggAccMovil()) return;
+  const vista = document.querySelector('.view.active'); if(!vista) return;
+  vista.querySelectorAll('.gg-plegable').forEach(el => {
+    const h = el.querySelector(':scope > .ge-sec-head, :scope > h3, :scope > h4'); if(!h) return;
+    if(!h.classList.contains('gg-acc-h')){ h.classList.add('gg-acc-h'); h.setAttribute('role','button'); h.tabIndex = 0; }
+    const clave = el.dataset.accKey || (el.dataset.accKey = vista.id + ':' + h.textContent.trim().replace(/\s+/g,' ').slice(0,40));
+    const deSerie = el.dataset.accAbierto === '1';
+    const abierto = deSerie ? !GG_ACC_CERRADOS.has(clave) : GG_ACC_ABIERTOS.has(clave);
+    el.classList.toggle('gg-abierto', abierto); h.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+  });
+  // «Análisis de Platos» (un <details> con ~10 tablas) empieza cerrado en móvil la primera vez.
+  vista.querySelectorAll('details.card[open]').forEach(d => { if(!d.dataset.accVisto){ d.dataset.accVisto = '1'; d.removeAttribute('open'); } });
+}
+function ggAccAlternar(h){
+  const el = h.closest('.gg-plegable'); if(!el) return;
+  const clave = el.dataset.accKey, deSerie = el.dataset.accAbierto === '1', ab = !el.classList.contains('gg-abierto');
+  el.classList.toggle('gg-abierto', ab); h.setAttribute('aria-expanded', ab ? 'true' : 'false');
+  if(deSerie){ ab ? GG_ACC_CERRADOS.delete(clave) : GG_ACC_CERRADOS.add(clave); } else { ab ? GG_ACC_ABIERTOS.add(clave) : GG_ACC_ABIERTOS.delete(clave); }
+}
+document.addEventListener('click', e => { if(!ggAccMovil()) return; const h = e.target.closest && e.target.closest('.gg-plegable > .gg-acc-h'); if(!h || e.target.closest('button,a,input,select,textarea,label')) return; ggAccAlternar(h); });
+document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('gg-acc-h')){ e.preventDefault(); ggAccAlternar(e.target); } });
+// Estas pantallas se pintan por trozos (innerHTML de cada contenedor): se vuelve a preparar cuando aparece algo nuevo.
+(function(){ let t = null; const obs = new MutationObserver(() => { clearTimeout(t); t = setTimeout(ggAccPreparar, 60); });
+  const arrancar = () => { const c = document.getElementById('content') || document.body; obs.observe(c, {childList:true, subtree:true}); ggAccPreparar(); };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar(); })();
 const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas', 'view-tpv', 'view-manual', 'view-minegocio', 'view-dashboard', 'view-economia', 'view-plan360'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){

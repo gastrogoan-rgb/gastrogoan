@@ -67,7 +67,18 @@ const MODALES = [
   ['exportar contabilidad', "currentFolder='gestion'; navigate('economia'); GE.openExportModal()"],
   ['centro de ayuda', "toggleHelpPanel()"],
 ];
-const ANCHOS = [[320,568],[360,800],[390,844],[412,915],[430,932]];
+// Más ventanas (7/11): donde se teclea en móvil. Las que no abren con los datos de prueba se omiten sin fallar.
+MODALES.push(
+  ['anotar merma', "navigate('stock'); openMermaModal()"],
+  ['lista de espera', "currentFolder='sala'; navigate('tpv'); openWaitlistModal()"],
+  ['cartas activas', "currentFolder='sala'; navigate('tpv'); openCartasActivasModal()"],
+  ['nueva inversión', "currentFolder='gestion'; navigate('economia'); GE.tab('capex'); GE.newCapex()"],
+  ['nuevo gasto fijo', "navigate('economia'); GE.tab('fijos'); GE.newGF()"],
+  ['nueva compra', "navigate('economia'); GE.tab('variables'); GE.newGV()"],
+  ['acción de promoción', "navigate('promocion'); openPromoModal()"],
+  ['cobrar mesa', "currentFolder='sala'; navigate('tpv'); openTableOrder((DB.tables[0]||{}).id); openPaymentModal((DB.tables[0]||{}).id)"]);
+
+const ANCHOS = [[320,568],[360,800],[390,844],[412,915],[430,932],[568,320],[667,375]];   // los dos últimos: móvil en HORIZONTAL (iPhone SE e iPhone 8)
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox']});
 const w = ms => new Promise(r => setTimeout(r, ms));
 const hall = [];
@@ -135,4 +146,4 @@ if(hall.length){
   hall.slice(0, 40).forEach(h => { console.log('  ▸ ' + h.n + ' @ ' + h.W + 'px'); h.campos.slice(0, 3).forEach(x => console.log('      campo pequeño: ' + x)); h.aplastado.slice(0, 3).forEach(x => console.log('      texto aplastado: ' + x)); h.cortado.slice(0, 4).forEach(x => console.log('      cortado por el borde: ' + x)); });
   process.exit(1);
 }
-console.log('✅ ' + ESTADOS.length + ' pantallas × 5 anchos: todos los campos a 16 px o más, ningún texto aplastado en columna de letras y nada cortado por el borde');
+console.log('✅ ' + ESTADOS.length + ' pantallas × 7 tamaños (5 anchos + 2 horizontales): todos los campos a 16 px o más, ningún texto aplastado en columna de letras y nada cortado por el borde');

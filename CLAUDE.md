@@ -889,6 +889,12 @@ El dueño dijo que la vista móvil era «lo peor de la app». Se capturó cada p
 - **Mi Negocio es un acordeón en móvil** (`mnAcordeonAplicar`, `mnToggle`, `mnAbrirDe`): 16.854 px → 2.103 px plegado. Lo abierto se guarda en
   `MN_ABIERTOS` porque guardar repinta todo. **Cualquier salto a un campo de Mi Negocio desde otra pantalla tiene que llamar a `mnAbrirDe(el)`
   antes de `scrollIntoView`/`focus`** (si no, el campo está oculto). El índice «Ir a:» es un desplegable en móvil (`.mn-indice-sel`).
+- **Secciones plegables en móvil** (`.gg-plegable`, `ggAccPreparar`/`ggAccAlternar` en js/ui.js, 7/11): el Panel de Control y Tesorería medían
+  14.047 y 5.164 px. Una sección con `class="gg-plegable"` (y su h3/h4/`.ge-sec-head` como cabecera directa) enseña solo la cabecera en móvil;
+  `data-acc-abierto="1"` = abierta de partida. El estado se recuerda por clave porque estas pantallas se repintan enteras. Un `MutationObserver`
+  la prepara cuando aparece contenido nuevo. En PC no hace nada. Para plegar otra pantalla basta con añadir la clase.
+- **Carpetas (`.ml-carpetas`: Mega Lista, Stock, Escandallo, Fichas) van de dos en dos en móvil**, con icono y ⋯ arriba y el nombre debajo.
+- `movil-lectura.mjs` mide también **dos tamaños horizontales** (568×320 y 667×375) y 15 ventanas.
 - Una regla con MENOS especificidad pierde contra `… > *{grid-area:auto}`: en Tesorería dejó el texto en una columna de 13 px. Al mandar algo
   a otra fila de una rejilla, comprobar que la regla gana.
 - Los `td` de una tabla convertida en tarjetas (`.table-cards`) heredan anchos de escritorio (`width:1%`): hay que poner `width:auto`.

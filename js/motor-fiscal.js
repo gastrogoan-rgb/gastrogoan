@@ -436,7 +436,7 @@ function fiscalPrevisionHtml(año, q, filasInformativas){
       <span class="te-cal-v">${t('cal.hasta')} ${f.vence} ${chipDias}<button type="button" class="btn btn-sm" onclick="fiscalMarcarModal('${escapeHtml(f.key)}', '${escapeHtml(f.modelo)}', ${Number(f.importe) || 0})">${f.marca ? L({es:'Cambiar', ca:'Canviar', en:'Change'}) : L({es:'Marcar', ca:'Marcar', en:'Mark'})}</button></span></div>`;
   }).join('');
   const info = (filasInformativas || []).map(f => `<div class="te-cal-f te-info"><span class="te-cal-m">${escapeHtml(f.mod)}</span><span class="te-cal-t">${f.txt}</span><b class="te-cal-i"></b><span class="te-cal-v">${t('cal.hasta')} ${f.vence}</span></div>`).join('');
-  return `<div class="ge-section te-cal mf-prev">
+  return `<div class="ge-section te-cal mf-prev gg-plegable">
     <div class="ge-sec-head"><h4><i class="ti ti-calendar-event"></i> ${t('cal.titulo').replace('${q}', (q+1)+'T '+año)}</h4>
       <span class="gf-acciones"><span class="gf-chip ${nivCls(T.nivel)}" data-tip="${escapeHtml(T.avisos.join(' · '))}" tabindex="0">${nivelTxt[T.nivel]}</span>
       <button type="button" class="btn btn-sm" onclick="fiscalTrazaModal(${año})"><i class="ti ti-route"></i> ${L({es:'Ver cálculo', ca:'Veure càlcul', en:'See calculation'})}</button>
