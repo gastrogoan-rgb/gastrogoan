@@ -367,10 +367,11 @@ function renderCarta(){
   const subtitleEl = document.querySelector('#view-carta .view-subtitle');
   if(titleEl) titleEl.textContent = isBebidas ? t('view.carta.title.sala') : t('view.carta.title');
   if(subtitleEl) subtitleEl.textContent = isBebidas ? t('view.carta.subtitle.sala') : t('view.carta.subtitle');
-  const newCartaBtn = document.querySelector('#carta-list-view .toolbar button[onclick="newCarta()"]');
+  const newCartaBtn = document.getElementById('of-nueva-carta');
+  if(newCartaBtn) newCartaBtn.style.display = cartaEdit ? 'none' : '';
+  const newMenuBtn0 = document.getElementById('of-nuevo-menu');
+  if(newMenuBtn0) newMenuBtn0.style.display = 'none';
   if(newCartaBtn) newCartaBtn.innerHTML = isBebidas ? `<i class="ti ti-plus"></i> ${t('btn.newBeverageCarta')}` : `<i class="ti ti-plus"></i> ${t('btn.newCarta')}`;
-  const newSecBtn = document.querySelector('#carta-editor-view button[onclick="newCartaSection()"]');
-  if(newSecBtn) newSecBtn.innerHTML = `<i class="ti ti-plus"></i> ${t('btn.newSection')}`;
   document.getElementById('carta-list-view').style.display = cartaEdit ? 'none' : '';
   document.getElementById('carta-editor-view').style.display = cartaEdit ? '' : 'none';
   if(cartaEdit) renderCartaEditor();
@@ -700,7 +701,10 @@ function renderCartaSecciones(){
   const q = cartaSearchQuery.trim().toLowerCase();
   const bebidas = currentArea()==='sala';
   const searchBox = `
-    <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="carta-search-input" placeholder="${bebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)"></div>`;
+    <div class="oc-barra">
+      <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="carta-search-input" placeholder="${bebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)"></div>
+      <button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="newCartaSection()"><i class="ti ti-plus"></i> ${t('btn.newSection')}</button>
+    </div>`;
   if(!cartaEdit.secciones.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
     return;
@@ -1395,6 +1399,9 @@ function updateAutoActiveMenu(force){
 function renderMenu(){
   document.getElementById('menu-list-view').style.display = menuEdit ? 'none' : '';
   document.getElementById('menu-editor-view').style.display = menuEdit ? '' : 'none';
+  const botonMenu = document.getElementById('of-nuevo-menu'), botonCarta = document.getElementById('of-nueva-carta');
+  if(botonMenu) botonMenu.style.display = menuEdit ? 'none' : '';
+  if(botonCarta) botonCarta.style.display = 'none';
   if(menuEdit) renderMenuEditor();
   else renderMenuList();
 }
@@ -1406,8 +1413,12 @@ function renderMenuList(){
   const isSala = currentArea()==='sala';
   const menus = areaMenus();
   const totalGrupos = menus.reduce((s,m)=>s+(m.grupos||[]).length,0);
-  const newBtn = document.querySelector('#menu-list-view button[onclick="newMenu()"] span');
+  const newBtn = document.querySelector('#of-nuevo-menu span');
   if(newBtn) newBtn.textContent = isSala ? t('label.newMaridaje') : t('btn.newMenu');
+  const botonMenu = document.getElementById('of-nuevo-menu');
+  if(botonMenu) botonMenu.style.display = menuEdit ? 'none' : '';
+  const botonCarta = document.getElementById('of-nueva-carta');
+  if(botonCarta) botonCarta.style.display = 'none';
   document.getElementById('menu-stats').innerHTML = `
     <div class="kpi"><div class="label">${isSala ? t('tab.maridajes') : t('common.menus')}</div><div class="value">${menus.length}</div></div>
     <div class="kpi"><div class="label">${t('label.totalGroups')}</div><div class="value">${totalGrupos}</div></div>
@@ -1575,7 +1586,10 @@ function renderMenuGrupos(){
   // sentido en una carta de vinos.
   const isBebidas = currentArea()==='sala';
   const searchBox = `
-    <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)"></div>`;
+    <div class="oc-barra">
+      <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)"></div>
+      <button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> ${t('title.newGroup')}</button>
+    </div>`;
   if(!menuEdit.grupos.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${isBebidas ? t('empty.groups.sala') : t('empty.groups')}</div>`;
     return;

@@ -2636,8 +2636,13 @@ button.kt-cn .cz-hora{margin-left:auto}
 @media (max-width:600px){.oc-item{grid-template-columns:1fr}.oc-acc{grid-column:1;grid-row:auto;justify-content:flex-start;order:4}.oc-nombre{font-size:17px}.horsem{gap:3px}.horsem-d{padding:5px 1px}.horsem-d b{font-size:11px}.horsem-d span{font-size:11px}}
 /* editor: cabecera, aviso de cambios y buscador */
 .oc-nombre-in{font-size:16px;font-weight:600;min-width:240px;letter-spacing:-.01em}
+/* el nombre ocupa el hueco de la cabecera en vez de dejar un vacío entre él y «Guardar» (7/11) */
+#carta-editor-view>.toolbar>.left,#menu-editor-view>.toolbar>.left{flex:1 1 320px;min-width:0}
+#carta-editor-view .oc-nombre-in,#menu-editor-view .oc-nombre-in{flex:1 1 240px;max-width:560px}
 .oc-sucio{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8A5A0F;background:#FBF1DC;border:1px solid #E8CF9A;padding:5px 9px;border-radius:3px;margin-right:6px}
 .oc-sucio[hidden]{display:none}
+.oc-barra{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.oc-barra .oc-buscar{flex:1 1 240px;margin:0}
 .oc-buscar{position:relative;max-width:340px;margin:0 0 12px}
 .oc-buscar .ti{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px;pointer-events:none}
 .oc-buscar input{width:100%;padding-left:36px !important}

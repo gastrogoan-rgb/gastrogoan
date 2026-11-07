@@ -314,16 +314,15 @@
           <button class="btn btn-sm btn-fino" id="oferta-tab-carta" onclick="setOfertaTab('carta')"><i class="ti ti-tools-kitchen-2"></i> <span data-i18n="tab.carta">Carta</span></button>
           <button class="btn btn-sm btn-fino" id="oferta-tab-menus" onclick="setOfertaTab('menus')"><i class="ti ti-list-details"></i> <span data-i18n="tab.menus">Menús</span></button>
         </div>
+        <!-- «Nueva carta» / «Nuevo menú» comparten fila con las pestañas (7/11): antes ocupaban una fila entera solos -->
+        <button class="owner-only btn btn-fino is-on" id="of-nueva-carta" onclick="newCarta()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSection">Nueva Carta</span></button>
+        <button class="owner-only btn btn-fino is-on" id="of-nuevo-menu" onclick="newMenu()" style="display:none"><i class="ti ti-plus"></i> <span data-i18n="label.menuName">Nuevo Menú</span></button>
       </div>
 
       <!-- ===== CARTA TAB ===== -->
       <div id="oferta-carta-tab">
         <!-- LIST VIEW -->
         <div id="carta-list-view">
-          <div class="toolbar">
-            <div class="left"></div>
-            <button class="owner-only btn btn-fino is-on" onclick="newCarta()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSection">Nueva Carta</span></button>
-          </div>
           <div class="grid grid-2" id="carta-stats" style="margin-bottom:14px"></div>
           <div id="carta-list"></div>
         </div>
@@ -341,10 +340,6 @@
           <div class="field">
             <div id="carta-horario-section"></div>
           </div>
-          <div class="toolbar">
-            <div class="left"></div>
-            <button class="owner-only btn btn-sm btn-fino is-on" onclick="newCartaSection()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSection">Nueva Sección</span></button>
-          </div>
           <div id="carta-secciones"></div>
         </div>
       </div>
@@ -353,10 +348,6 @@
       <div id="oferta-menus-tab" style="display:none">
         <!-- LIST VIEW -->
         <div id="menu-list-view">
-          <div class="toolbar">
-            <div class="left"></div>
-            <button class="owner-only btn btn-fino is-on" onclick="newMenu()"><i class="ti ti-plus"></i> <span data-i18n="label.menuName">Nuevo Menú</span></button>
-          </div>
           <div class="grid grid-2" id="menu-stats" style="margin-bottom:14px"></div>
           <div id="menu-list"></div>
         </div>
@@ -392,10 +383,6 @@
           </div>
           <div class="field">
             <div id="menu-horario-section"></div>
-          </div>
-          <div class="toolbar">
-            <div class="left"></div>
-            <button class="owner-only btn btn-sm btn-fino is-on" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> <span data-i18n="title.newGroup">Nuevo Grupo</span></button>
           </div>
           <div id="menu-grupos"></div>
         </div>
