@@ -172,6 +172,7 @@ lanzar; node test/comandas-cocina.mjs > "$SALIDA/comandascocina.txt" 2>&1 & P165
 lanzar; node test/envio-gastos.mjs > "$SALIDA/enviogastos.txt" 2>&1 & P166=$!
 lanzar; node test/oferta-importar.mjs > "$SALIDA/ofertaimportar.txt" 2>&1 & P167=$!
 lanzar; node test/tpv-comanda.mjs > "$SALIDA/tpvcomanda.txt" 2>&1 & P168=$!
+lanzar; node test/tpv-mesas-cobros.mjs > "$SALIDA/tpvmesascobros.txt" 2>&1 & P169=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -374,5 +375,6 @@ espera $P165 "Comandas Cocina: solo cocina, el nombre del bloque avanza el bloqu
 espera $P166 "Envío de proveedor: entra en Gastos con su IVA y suma al total del pedido" "$SALIDA/enviogastos.txt" "casos pasaron"
 espera $P167 "Oferta: importar del Escandallo por carpetas y después platos (marcas que se recuerdan, buscador global, opciones de menú agrupadas)" "$SALIDA/ofertaimportar.txt" "casos pasaron"
 espera $P168 "TPV · comanda: rondas (segundo bloque), una fila por línea, camarero bloqueado y alérgenos de la mesa con un clic" "$SALIDA/tpvcomanda.txt" "casos pasaron"
+espera $P169 "TPV · cambio de mesa, fusión y formas de cobro (efectivo, tarjeta, mixto, descuento, propina y cuenta dividida)" "$SALIDA/tpvmesascobros.txt" "casos pasaron"
 
 exit $FALLOS

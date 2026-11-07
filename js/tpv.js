@@ -2949,6 +2949,10 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
     if(order.clienteNombre) meta.push(order.clienteNombre);
     if(order.time) meta.push(gl({es:'a las ', ca:'a les ', en:'at '}) + order.time);
   }
+  // «Antes: Mesa 4»: si la mesa se cambió hace menos de 45 min, cocina lo ve en el propio ticket (7/11).
+  if(order.mesaAnterior && order.mesaCambiadaAt && (Date.now() - new Date(order.mesaCambiadaAt).getTime()) < 45*60000){
+    meta.unshift(gl({es:'antes: ', ca:'abans: ', en:'was: '}) + order.mesaAnterior);
+  }
   const alergias = ticketAlergiaTextos(order);
   const alergiaHtml = alergias.length ? `
     <div class="kt-alergia"><i class="ti ti-alert-triangle"></i><div><small>${gl({es:'Alergias', ca:'Al·lèrgies', en:'Allergies'})}</small>${escapeHtml(alergias.join(' · '))}</div></div>` : '';
@@ -4792,8 +4796,13 @@ function confirmSplitPartPayment(orderId, partId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const part = order.splitPayments.find(p=>p.id===partId);
   if(!part) return;
+  const metodoParte = document.getElementById('split-part-method').value;
+  if(metodoParte === 'Efectivo'){
+    const dado = parseFloat(document.getElementById('split-part-cash').value) || 0;
+    if(dado + 0.01 < part.amount){ showToast(t('msg.cashGivenInsufficient')); return; }
+  }
   part.paid = true;
-  part.metodoPago = document.getElementById('split-part-method').value;
+  part.metodoPago = metodoParte;
   saveDB();
   // Cada parte de una cuenta dividida es un cobro real por sí mismo (el
   // comensal entrega su dinero ahí), así que el cajón se abre en cada una.
@@ -5026,7 +5035,21 @@ function confirmTransferTable(orderId){
   const newTableId = parseInt(sel.value);
   if(!newTableId){ showToast(t('msg.selectTable')); return; }
   if(getOpenOrderForTable(newTableId)){ showToast(t('msg.tableBusy')); return; }
+  const mesaAntes = DB.tables.find(t2 => t2.id === order.tableId);
+  const mesaAhora = DB.tables.find(t2 => t2.id === newTableId);
   order.tableId = newTableId;
+  // Cocina tiene el vale en marcha con el nombre de la mesa antigua: se lo dejamos escrito en el propio vale («antes: Mesa 4»)
+  // y se avisa por el chat de Sala, para que nadie lleve el plato a una mesa vacía (7/11).
+  if(mesaAntes && (order.items || []).some(l => l.estado)){
+    order.mesaAnterior = mesaAntes.name; order.mesaCambiadaAt = new Date().toISOString();
+    try{
+      if(Array.isArray(DB.chatMessages)){
+        const authorId = getChatAuthor();
+        DB.chatMessages.push({id: genId(), channel: 'sala', authorId, authorName: getChatAuthorName(authorId),
+          text: `🔁 ${mesaAntes.name} → ${mesaAhora ? mesaAhora.name : ''}`, ts: new Date().toISOString(), urgent: false});
+      }
+    }catch(e){}
+  }
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(orderId);
@@ -5052,7 +5075,29 @@ async function confirmMergeTable(orderId){
   // "Mesa 3 + Mesa 4" en vez de perder esa identidad tras la fusión.
   const fromTableForMerge = DB.tables.find(t2 => t2.id === order.tableId);
   targetOrder.mergedTableNames = [...(targetOrder.mergedTableNames||[]), ...(fromTableForMerge?[fromTableForMerge.name]:[]), ...(order.mergedTableNames||[])];
+  // Los vales de la mesa que desaparece se renumeran DETRÁS de los de la mesa destino: si los dos eran «vale 1», cocina los
+  // veía como UN solo ticket mezclando dos mesas (7/11).
+  const valeBase = targetOrder.valeActual || 1;
+  const valeMaxOrigen = Math.max(order.valeActual || 1, ...(order.items || []).map(l => l.vale || 1));
+  order.items.forEach(l => { l.vale = (l.vale || 1) + valeBase; });
+  targetOrder.valeActual = valeBase + valeMaxOrigen;
   targetOrder.items.push(...order.items);
+  // Alérgenos avisados en la mesa que desaparece: no se pierden, se suman a los de la destino.
+  if(order.tableAllergenList || targetOrder.tableAllergenList || order.tableAllergens || targetOrder.tableAllergens){
+    const lista = new Set([...(targetOrder.tableAllergenList || []), ...(order.tableAllergenList || [])]);
+    const notas = [targetOrder.tableAllergenNote || (!targetOrder.tableAllergenList ? targetOrder.tableAllergens : ''), order.tableAllergenNote || (!order.tableAllergenList ? order.tableAllergens : '')].filter(Boolean);
+    targetOrder.tableAllergenList = [...lista];
+    targetOrder.tableAllergenNote = [...new Set(notas)].join(', ');
+    targetOrder.tableAllergens = tableAllergensTexto(targetOrder);
+  }
+  if(!targetOrder.clientId && order.clientId){ targetOrder.clientId = order.clientId; targetOrder.clienteNombre = targetOrder.clienteNombre || order.clienteNombre; }
+  if(!targetOrder.reservationId && order.reservationId) targetOrder.reservationId = order.reservationId;
+  if(Array.isArray(order.incidencias) && order.incidencias.length) targetOrder.incidencias = [...(targetOrder.incidencias || []), ...order.incidencias];
+  if(!targetOrder.recibidoEnCocinaAt && order.recibidoEnCocinaAt) targetOrder.recibidoEnCocinaAt = order.recibidoEnCocinaAt;
+  targetOrder.propinaPagadaOnline = roundMoney((targetOrder.propinaPagadaOnline || 0) + (order.propinaPagadaOnline || 0));
+  // Un reparto de cuenta generado (sin ninguna parte cobrada) quedaría con importes de antes de la fusión: se descarta.
+  delete targetOrder.splitPayments; delete targetOrder.splitMode;
+  targetOrder.cerrada = false;
   targetOrder.tandas = [...new Set([...(targetOrder.tandas||[]), ...(order.tandas||[])])];
   targetOrder.pax = (targetOrder.pax||0) + (order.pax||0);
   if(!targetOrder.camareroId && order.camareroId) targetOrder.camareroId = order.camareroId;
