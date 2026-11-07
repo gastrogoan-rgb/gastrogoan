@@ -3363,6 +3363,9 @@ button.kt-cn .cz-hora{margin-left:auto}
 .pr-nom{display:block;font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.25;overflow-wrap:break-word}
 .pr-sub{display:block;font-size:12.5px;color:var(--muted);margin-top:1px;overflow-wrap:break-word}
 .pr-medalla{display:inline-flex;vertical-align:middle}
+/* el estado va en la cabecera, a la derecha del nombre: ahorra una fila entera por tarjeta (norma de espacios muertos, 7/11) */
+.pr-cab{flex-wrap:wrap}
+.pr-cab .pr-estados{margin-left:auto;align-self:flex-start;justify-content:flex-end}
 .pr-estados{display:flex;flex-wrap:wrap;gap:6px}
 .pr-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--hair);border-radius:3px;padding:3px 8px;color:var(--muted)}
 .pr-chip.ok{border-color:#B9CDBB;background:#EEF3EE;color:#33523A;font-weight:600}

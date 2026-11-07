@@ -5801,10 +5801,10 @@ function renderHorariosPersonal(){
           <b class="pr-nom">${escapeHtml(e.name)}${medal ? ` <span class="pr-medalla" title="${t('hr.podium.title')}">${medal}</span>` : ''}</b>
           <span class="pr-sub">${escapeHtml(e.rol||t('label.noRole'))}${tenureText ? ` · ${tenureText}` : ''}</span>
         </div>
-      </div>
-      <div class="pr-estados">
+        <div class="pr-estados">
         ${isInactive ? `<span class="pr-chip">${t('label.inactive')}</span>` : open ? `<span class="pr-chip ok"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="pr-chip off">${t('hr2.offDuty')}</span>`}
         ${unreadMsgs ? `<span class="pr-chip msg"><i class="ti ti-message"></i> ${unreadMsgs}</span>` : ''}
+        </div>
       </div>
       ${w ? `
       <div class="pr-ventas">
