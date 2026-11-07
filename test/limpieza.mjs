@@ -215,6 +215,22 @@ for(const ancho of [1280, 360]){
     assert.equal(await q(() => document.querySelectorAll('.lp-eq .pr-ico .ti-pencil').length), 0, 'ni lápiz en mantenimiento');
   });
 
+  await caso(`Alérgenos de Cocina: nada de Sala, ni siquiera lo antiguo sin área (${ancho}px)`, async () => {
+    const r = await page.evaluate(() => {
+      const antes = {fichas: DB.fichas, cartas: DB.cartas, recipes: DB.recipes, menus: DB.menus, f: currentFolder};
+      // datos de ANTES de las áreas: una ficha de bebida y una carta «Bebidas» sin campo area
+      DB.fichas = [{id:901, name:'Mojito de la casa', recipeId:'', bebidaTipo:'coctel', allergens:['Sulfitos'], pasos:[], ingredients:[]}, {id:902, name:'Croquetas', recipeId:'', allergens:['Gluten'], pasos:[], ingredients:[], area:'cocina'}];
+      DB.cartas = [{id:901, nombre:'Bebidas', secciones:[{id:1, nombre:'Cócteles', platos:[{id:1, nombre:'Gin tonic', allergensManual:['Sulfitos']}]}]}];
+      DB.recipes = []; DB.menus = [];
+      currentFolder = 'cocina'; const cocina = getAllDishAllergens().map(d => d.name);
+      currentFolder = 'sala'; const sala = getAllDishAllergens().map(d => d.name);
+      Object.assign(DB, {fichas: antes.fichas, cartas: antes.cartas, recipes: antes.recipes, menus: antes.menus}); currentFolder = antes.f;
+      return {cocina, sala};
+    });
+    assert.deepEqual(r.cocina, ['Croquetas'], 'en Cocina solo lo de cocina: ' + JSON.stringify(r));
+    assert.ok(r.sala.includes('Mojito de la casa') && r.sala.includes('Gin tonic') && !r.sala.includes('Croquetas'), 'y en Sala lo suyo: ' + JSON.stringify(r));
+  });
+
   await caso(`Ningún error de JavaScript (${ancho}px)`, async () => assert.deepEqual(page.erroresJs, []));
   await page.close();
 }

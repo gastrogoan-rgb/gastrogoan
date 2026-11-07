@@ -1921,6 +1921,29 @@ window.addEventListener('resize', () => {
    `owner` marca las que solo ve quien puede editar; si TODAS lo son, el propio botón desaparece para los demás.
    El menú es uno solo, flotante y fuera de la fila: así no lo recorta ningún contenedor con overflow. */
 let ggMenuAbierto = null;
+/* RÓTULOS EN TÁCTIL (7/11): el rótulo de un icono (data-tip) sale al pasar el ratón, y en una tablet o un móvil no hay
+   «pasar por encima». Ahora, manteniendo el dedo medio segundo sobre el icono, sale el rótulo y NO se ejecuta la acción
+   (un toque corto sigue ejecutándola, igual que siempre). Se quita solo a los dos segundos. */
+(function(){
+  let timer = null, activo = null, suprimirClic = false, quitar = null;
+  const limpiar = () => { clearTimeout(timer); timer = null; };
+  const quitarTip = () => { if(activo){ activo.classList.remove('tip-on'); activo = null; } clearTimeout(quitar); };
+  document.addEventListener('touchstart', e => {
+    const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+    quitarTip();
+    if(!el) return;
+    limpiar();
+    timer = setTimeout(() => { activo = el; el.classList.add('tip-on'); suprimirClic = true; quitar = setTimeout(quitarTip, 2000); }, 450);
+  }, {passive:true});
+  ['touchend','touchmove','touchcancel'].forEach(ev => document.addEventListener(ev, limpiar, {passive:true}));
+  // el clic que sigue a una pulsación larga no debe ejecutar la acción
+  document.addEventListener('click', e => {
+    if(!suprimirClic) return;
+    suprimirClic = false;
+    if(e.target.closest && e.target.closest('[data-tip]')){ e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  document.addEventListener('contextmenu', e => { if(e.target.closest && e.target.closest('[data-tip]') && 'ontouchstart' in window) e.preventDefault(); });
+})();
 function ggMenuAcciones(acciones, opts){
   opts = opts || {};
   const lista = (acciones || []).filter(Boolean);

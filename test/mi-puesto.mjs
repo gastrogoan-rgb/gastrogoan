@@ -170,7 +170,7 @@ for(const ancho of [1280, 360]){
     const r = await q(() => { const idx = (new Date().getDay() + 6) % 7; getDistEmpData(1).tareasUnicas[todayStr()].push({id:'t77', text:'La que me puse yo', bySelf:true}); renderDistDetail();
       const fila = txt => [...document.querySelectorAll('#dp-dia-panel .dp-tarea')].find(f => f.textContent.includes(txt));
       return {mia: fila('La que me puse yo').querySelector('.dp-origen')?.className, miaFila: fila('La que me puse yo').classList.contains('es-mia'), jefe: fila('Pedir harina').querySelector('.dp-origen')?.className, jefeTxt: fila('Pedir harina').querySelector('.dp-origen')?.textContent.trim(), miaTxt: fila('La que me puse yo').querySelector('.dp-origen')?.textContent.trim()}; });
-    assert.ok(/mia/.test(r.mia) && r.miaFila && /jefe/.test(r.jefe), JSON.stringify(r)); assert.ok(/por ti/i.test(r.jefeTxt) && /Ana/.test(r.miaTxt), 'el propietario ve «por ti» y «por Ana»: ' + JSON.stringify(r));
+    assert.ok(/mia/.test(r.mia) && r.miaFila && /jefe/.test(r.jefe), JSON.stringify(r)); assert.ok(/el jefe/i.test(r.jefeTxt) && /Ana/.test(r.miaTxt), 'el propietario ve «por el jefe» y «por Ana»: ' + JSON.stringify(r));
     await q(() => { getDistEmpData(1).tareasUnicas[todayStr()] = getDistEmpData(1).tareasUnicas[todayStr()].filter(x => x.id !== 't77'); });
   });
 

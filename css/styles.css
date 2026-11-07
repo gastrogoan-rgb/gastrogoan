@@ -2991,6 +2991,16 @@ button.kt-cn .cz-hora{margin-left:auto}
 .pe-aviso{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted);margin:0 0 10px}
 .pe-total{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:2px 0 10px}
 .pe-total b{color:var(--ink);font-weight:700}
+.pe-seccion{margin-top:14px;padding-bottom:6px;border-bottom:1px solid var(--hair)}
+.pe-vacio{padding:22px 12px}
+.pc-rapidos-tit{margin:4px 0 8px}
+.pc-rapidos{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.pc-rapido{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-height:64px;padding:10px 12px;background:#fff;border:1px solid var(--hair);border-radius:3px;text-align:left;font:inherit;color:var(--ink);cursor:pointer;transition:border-color .15s,background-color .15s}
+.pc-rapido:hover,.pc-rapido:focus-visible{border-color:var(--olive);background:var(--brand-cream)}
+.pc-rapido.hay-falta{box-shadow:inset 3px 0 0 #B5483A}
+.pc-rapido-nom{font-weight:600;overflow-wrap:break-word}
+.pc-rapido-meta{font-family:var(--mono);font-size:11px;letter-spacing:.03em;color:var(--muted)}
+.pc-rapido-falta{font-style:normal;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;color:#8A3B2E}
 .pe-ped .es-plato-ico{color:var(--muted)}
 .pe-ped.pe-enviado{border-left:3px solid #C48A1C}
 .pe-ped.pe-recibido{border-left:3px solid var(--olive)}
@@ -3253,11 +3263,12 @@ button.kt-cn .cz-hora{margin-left:auto}
 .st-n{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:#8A3B2E;color:#fff;font-family:var(--mono);font-size:11px;font-weight:600;line-height:18px;text-align:center;margin-left:4px}
 .st-n[hidden]{display:none}
 .st-lista{display:grid;gap:8px}
-@media (min-width:761px){.st-lista{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .st-fila{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-areas:"nom acc" "datos datos";gap:8px 10px;align-items:start;padding:10px 12px 12px 14px;background:#fff;border:1px solid var(--hair);border-radius:3px;box-shadow:inset 3px 0 0 transparent}
 .st-fila:hover{background:var(--brand-cream)}
 .st-fila.is-bajo{background:#FBF3F1;border-color:#E3C4BD;box-shadow:inset 3px 0 0 #B5483A}
-.st-fila.is-ok{box-shadow:inset 3px 0 0 var(--olive)}
+.st-fila.is-ok{background:#F0F5F1;border-color:#C3D3C7;box-shadow:inset 3px 0 0 var(--olive)}
+.st-fila.is-ok:hover{background:#E8F0EA}
+.st-tag.ok{border-color:#B3C7B8;background:#E3EDE6;color:#2F4434;font-weight:600}
 .st-nom{grid-area:nom;min-width:0;padding-top:2px}
 .st-nom b{display:block;font-weight:600;font-size:15px;letter-spacing:-.01em;overflow-wrap:break-word}
 .st-sub{display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px;margin-top:3px}
@@ -3279,6 +3290,14 @@ button.kt-cn .cz-hora{margin-left:auto}
 .st-fila.is-editando .st-min-in{background:#fff;border-color:var(--olive)}
 .st-cand{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:40px;color:var(--muted)}
 .st-acc{grid-area:acc;display:flex;justify-content:flex-end}
+/* Más compacta (7/11): con tarjetas anchas (PC) el nombre y los controles van en UNA fila; con tarjetas estrechas (tablet, de dos en dos)
+   se quedan apilados, pero con la cantidad y el mínimo JUNTOS a la izquierda en vez de separados por un hueco enorme. */
+@media (min-width:761px){.st-lista{grid-template-columns:repeat(2,minmax(0,1fr))}.st-datos{justify-content:flex-start;gap:8px 18px}}
+@media (min-width:1180px){
+  .st-fila{grid-template-columns:minmax(120px,1fr) auto 44px;grid-template-areas:"nom datos acc";align-items:center}
+  .st-datos{justify-content:flex-end;flex-wrap:nowrap}
+  .st-nom{padding-top:0}
+}
 .st-grupo{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:18px 0 6px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .st-grupo span{color:var(--ink);font-weight:600}
 .st-grupo em{font-style:normal}
@@ -3312,6 +3331,10 @@ button.kt-cn .cz-hora{margin-left:auto}
   [data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);z-index:50;white-space:nowrap;pointer-events:none;background:var(--ink);color:#fff;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em;line-height:1;padding:7px 9px;border-radius:3px;box-shadow:0 4px 14px rgba(28,26,23,.2)}
   .pr-acc > [data-tip]:last-child:hover::after,.pr-acc > [data-tip]:last-child:focus-visible::after{left:auto;right:0;transform:none}
 }
+/* El mismo rótulo en táctil, al mantener el dedo sobre el icono (js/ui.js) */
+[data-tip].tip-on::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);z-index:50;white-space:nowrap;pointer-events:none;background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.04em;line-height:1;padding:8px 10px;border-radius:3px;box-shadow:0 4px 14px rgba(28,26,23,.2)}
+.pr-acc > [data-tip]:last-child.tip-on::after{left:auto;right:0;transform:none}
+.pr-acc > [data-tip]:first-child.tip-on::after{left:0;transform:none}
 /* Personal (31/10): resumen, avisos, tarjetas de empleado y su ficha */
 .hr-tabs{margin-bottom:14px}
 .pr-resumen{margin-bottom:14px}

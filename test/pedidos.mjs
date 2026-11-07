@@ -73,7 +73,12 @@ for(const ancho of [1280, 360]){
   const q = (fn, ...a) => page.evaluate(fn, ...a);
 
   await caso(`Realizar pedido: elegir proveedor enseña sus días de reparto, el contacto y los artículos con stock y precio (${ancho}px)`, async () => {
-    assert.ok(await q(() => !!document.querySelector('.pc-vacio')), 'sin proveedor, un mensaje');
+    assert.ok(await q(() => !!document.querySelector('.pc-vacio, .pc-rapidos')), 'sin proveedor, un mensaje');
+    // Sin proveedor: una tarjeta por proveedor con cuántos artículos están bajo mínimo; un toque lo elige
+    const rap = await q(() => [...document.querySelectorAll('.pc-rapido')].map(c => c.innerText.replace(/\s+/g,' ')));
+    assert.ok(rap.length >= 1 && rap.every(x => /art[íi]culos?|items?/i.test(x)), JSON.stringify(rap));
+    assert.ok(rap.some(x => /bajo m[íi]nimo/i.test(x)), 'avisa de los que faltan: ' + JSON.stringify(rap));
+    assert.ok(/bajo m[íi]nimo/i.test(rap[0]), 'los que más faltan, primero: ' + rap[0]);
     await q(() => selectOrderSupplier('Pescados Martínez')); await esperar(400);
     const r = await q(() => ({dias: [...document.querySelectorAll('.pc-dia.on')].map(d => d.textContent), contacto: [...document.querySelectorAll('.pc-contacto')].map(c => c.className.split(' ').pop() + ':' + c.textContent.trim()),
       filas: [...document.querySelectorAll('.pc-art')].map(f => f.querySelector('b').textContent), primera: document.querySelector('.pc-art').innerText.replace(/\s+/g,' ')}));
@@ -182,6 +187,18 @@ for(const ancho of [1280, 360]){
     await q(() => setPedidoHistorialPeriodo(new Date().getFullYear(), null)); await esperar(250);
     assert.ok(/^\d{4}$/.test(await q(() => document.querySelector('.pe-actual span').textContent.trim())), 'el año entero se llama por su año');
     await q(() => setPedidoHistorialPeriodo(new Date().getFullYear(), new Date().getMonth()));
+  });
+
+  await caso(`Cambiar de mes o de año CAMBIA la lista: lo pendiente va en su bloque y lo recibido es el del periodo (${ancho}px)`, async () => {
+    const hoy2 = await q(() => ({a: new Date().getFullYear(), m: new Date().getMonth()}));
+    await q((a, m) => setPedidoHistorialPeriodo(a, m), hoy2.a, hoy2.m); await esperar(250);
+    const ahora = await q(() => ({sec: [...document.querySelectorAll('#pedido-results .pe-seccion')].map(x => x.innerText.replace(/\s+/g,' ')), rec: document.querySelectorAll('#pedido-results .pe-recibido').length}));
+    assert.ok(ahora.sec.length === 2 && /Pendientes/i.test(ahora.sec[0]) && /Recibidos/i.test(ahora.sec[1]), JSON.stringify(ahora));
+    // Un año sin ningún pedido: los recibidos desaparecen y se dice, lo pendiente sigue en su bloque aparte
+    await q(() => setPedidoHistorialPeriodo(2019, null)); await esperar(250);
+    const vacio = await q(() => ({rec: document.querySelectorAll('#pedido-results .pe-recibido').length, vacio: !!document.querySelector('#pedido-results .pe-vacio'), sec: [...document.querySelectorAll('#pedido-results .pe-seccion')].map(x => x.innerText.replace(/\s+/g,' ')), etiqueta: document.querySelector('.pe-actual span').textContent.trim()}));
+    assert.equal(vacio.rec, 0); assert.ok(vacio.vacio, 'dice que no hay recibidos'); assert.ok(/2019/.test(vacio.sec[vacio.sec.length - 1]) && /2019/.test(vacio.etiqueta), JSON.stringify(vacio));
+    await q((a, m) => setPedidoHistorialPeriodo(a, m), hoy2.a, hoy2.m);
   });
 
   await caso(`Historial: tarjetas por pedido con estado, entrega, artículos y total; lo pendiente se ve siempre (${ancho}px)`, async () => {

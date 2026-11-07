@@ -95,7 +95,7 @@ for(const ancho of [1280, 360]){
     const caja = await q(() => { const b = [...document.querySelectorAll('.pr-card')].find(x => /Marta/.test(x.textContent)).querySelector('.pr-acc > button'); b.scrollIntoView({block:'center'}); const r = b.getBoundingClientRect(); return {x: r.x + r.width/2, y: r.y + r.height/2}; });
     await page.mouse.move(caja.x, caja.y); await esperar(200);
     const tip = await q(() => { const b = [...document.querySelectorAll('.pr-card')].find(x => /Marta/.test(x.textContent)).querySelector('.pr-acc > button'); const cs = getComputedStyle(b, '::after'); return {texto: cs.content, visible: cs.display !== 'none'}; });
-    assert.ok(/Mensajes|Messages|Missatges/.test(tip.texto) && tip.visible, JSON.stringify(tip));
+    assert.ok(/mensaje|message|missatge/i.test(tip.texto) && tip.visible, JSON.stringify(tip));
     await page.mouse.move(5, 5);
   });
 
@@ -148,6 +148,23 @@ for(const ancho of [1280, 360]){
     const r = await q(() => ({foco: document.activeElement && document.activeElement.classList.contains('search-input'), val: document.activeElement.value, n: document.querySelectorAll('.pr-card').length}));
     assert.ok(r.foco && r.val === 'coc', JSON.stringify(r)); assert.equal(r.n, 2, 'Marta (jefa de cocina) y... Hamid (cocinero)');
     await q(() => setPersonalSearch(''));
+  });
+
+  await caso(`Cada icono de la tarjeta tiene su rótulo, y en táctil sale al mantener el dedo sin ejecutar la acción (${ancho}px)`, async () => {
+    const tips = await q(() => [...document.querySelectorAll('.pr-card .pr-acc > [data-tip]')].map(b => b.dataset.tip));
+    assert.ok(tips.length >= 3 && tips.every(x => x && x.length > 3), JSON.stringify(tips));
+    assert.ok(tips.some(x => /mensaje/i.test(x)), 'el del mensaje dice «Enviar mensaje»: ' + tips);
+    const r = await q(async () => {
+      const b = document.querySelector('.pr-card .pr-acc > button[data-tip]');
+      let abierto = false; const antes = window.openEmployeeDirectChat; window.openEmployeeDirectChat = () => { abierto = true; };
+      b.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, touches:[], cancelable:true}));
+      await new Promise(r => setTimeout(r, 600));
+      const sale = b.classList.contains('tip-on');
+      b.dispatchEvent(new TouchEvent('touchend', {bubbles:true})); b.click();
+      window.openEmployeeDirectChat = antes;
+      return {sale, abierto, tip: getComputedStyle(b, '::after').content};
+    });
+    assert.ok(r.sale, 'sale el rótulo: ' + JSON.stringify(r)); assert.ok(!r.abierto, 'y no se ejecuta la acción: ' + JSON.stringify(r)); assert.ok(/mensaje/i.test(r.tip), r.tip);
   });
 
   await caso(`Ningún error de JavaScript (${ancho}px)`, async () => assert.deepEqual(page.erroresJs, []));

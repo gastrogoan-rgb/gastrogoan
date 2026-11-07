@@ -1477,27 +1477,38 @@ function renderPedidoResultsList(){
     (!pedidoHistorialSupplierFilter || o.supplier === pedidoHistorialSupplierFilter) &&
     (!pedidoHistorialEstado || o.estado === pedidoHistorialEstado) &&
     pedidoMatchesSearch(o, pedidoHistorialSearch);
-  const orders = allOrders.filter(o => delMes(o) && coincide(o));
-  /* Buscar algo que está en otro mes no puede devolver "sin resultados" a
-     secas: se dice cuántos hay fuera del periodo que se está mirando. Solo
-     cuando se está buscando o filtrando de verdad — si no, el aviso saldría
-     siempre (hay pedidos de otros meses casi por definición) y se acabaría
-     leyendo como parte del decorado. */
+  /* DOS bloques (7/11): al cambiar de mes o de año la pantalla parecía no moverse, porque lo pendiente (borrador y
+     enviado) sale siempre y era lo único que había. Ahora lo pendiente tiene su bloque propio, arriba y con título,
+     y lo RECIBIDO es el del periodo elegido, con su cuenta y su total; si ese periodo no tiene nada, lo dice. */
+  const sorted = lista => lista.slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
+  const pendientes = sorted(allOrders.filter(o => o.estado !== 'RECIBIDO' && coincide(o)));
+  const recibidos = sorted(allOrders.filter(o => o.estado === 'RECIBIDO' && delMes(o) && coincide(o)));
   const buscando = !!pedidoHistorialSearch || !!pedidoHistorialSupplierFilter || !!pedidoHistorialEstado;
   const fuera = buscando ? allOrders.filter(o => !delMes(o) && coincide(o)).length : 0;
   const avisoFuera = fuera
     ? `<div class="pe-aviso"><i class="ti ti-info-circle"></i> ${t(fuera===1 ? 'pedido.matchesOtherMonthsOne' : 'pedido.matchesOtherMonths').replace('${n}', fuera)}</div>`
     : '';
-  if(!orders.length){
-    box.innerHTML = avisoFuera + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
-    return;
+  const unidad = n => gl({es:n === 1 ? 'pedido' : 'pedidos', ca:n === 1 ? 'comanda' : 'comandes', en:n === 1 ? 'order' : 'orders'});
+  const soloPendientes = pedidoHistorialEstado === 'BORRADOR' || pedidoHistorialEstado === 'ENVIADO';
+  const etiquetaPeriodo = (typeof ggPeriodoEtiqueta === 'function') ? ggPeriodoEtiqueta(pedidoHistorialYear, pedidoHistorialMonth) : periodo;
+  let html = avisoFuera;
+  if(pendientes.length){
+    html += `
+    <div class="pe-total pe-seccion"><span>${gl({es:'Pendientes de recibir', ca:'Pendents de rebre', en:'Waiting to be received'})} · ${pendientes.length} ${unidad(pendientes.length)}</span><span>${gl({es:'salen siempre, sea cual sea el mes', ca:'surten sempre, sigui quin sigui el mes', en:'always shown, whatever the month'})}</span></div>
+    <div class="es-platos pe-lista">${pendientes.map(pedidoTarjetaHtml).join('')}</div>`;
   }
-
-  const totalFiltrado = orders.reduce((sum,o) => sum + pedidoTotalConIva(o), 0);
-  const sorted = orders.slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
-  box.innerHTML = avisoFuera + `
-    <div class="pe-total"><span>${orders.length} ${gl({es:orders.length === 1 ? 'pedido' : 'pedidos', ca:orders.length === 1 ? 'comanda' : 'comandes', en:orders.length === 1 ? 'order' : 'orders'})}</span><span>${t('label.totalFiltered')}: <b>${fmtMoney(totalFiltrado)}</b></span></div>
-    <div class="es-platos pe-lista">${sorted.map(pedidoTarjetaHtml).join('')}</div>`;
+  if(!soloPendientes){
+    const totalFiltrado = recibidos.reduce((sum,o) => sum + pedidoTotalConIva(o), 0);
+    html += `
+    <div class="pe-total pe-seccion"><span>${gl({es:'Recibidos', ca:'Rebuts', en:'Received'})} · ${escapeHtml(etiquetaPeriodo)} · ${recibidos.length} ${unidad(recibidos.length)}</span><span>${t('label.totalFiltered')}: <b>${fmtMoney(totalFiltrado)}</b></span></div>
+    ${recibidos.length
+      ? `<div class="es-platos pe-lista">${recibidos.map(pedidoTarjetaHtml).join('')}</div>`
+      : `<div class="empty pe-vacio"><i class="ti ti-package-off"></i>${gl({es:'No hay pedidos recibidos en este periodo.', ca:'No hi ha comandes rebudes en aquest període.', en:'No orders received in this period.'})}</div>`}`;
+  }
+  if(!pendientes.length && !recibidos.length && buscando){
+    html = avisoFuera + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
+  }
+  box.innerHTML = html;
 }
 
 // Una tarjeta por pedido: a quién, para cuándo, en qué punto está y cuánto es. Pulsarla abre su hoja.
@@ -2451,6 +2462,27 @@ function orderFormBodyHtml(){
   return {dateVal: dateField ? dateField.value : tomorrowStr(), html: ''};
 }
 
+/* Sin proveedor elegido (7/11): en vez de un hueco con «selecciona un proveedor», una tarjeta por proveedor con lo que de
+   verdad decide a quién pedir hoy: cuántos artículos están bajo el mínimo de Stock y cuándo reparte. Los que más faltan,
+   primero. Un toque elige al proveedor, igual que el desplegable de arriba. */
+function pcProveedoresRapidosHtml(suppliers){
+  const lista = (suppliers || []).map(nombre => {
+    const ings = DB.ingredients.filter(i => i.supplier === nombre && (i.area||'cocina') === currentArea() && i.activo !== false);
+    const bajo = ings.filter(i => pcBajoMinimo(i.id)).length;
+    const prov = getProviderByName(nombre);
+    const dias = prov && typeof getProviderDiasEntrega === 'function' ? getProviderDiasEntrega(prov) : [];
+    return {nombre, n: ings.length, bajo, dias};
+  }).sort((a, b) => b.bajo - a.bajo || a.nombre.localeCompare(b.nombre));
+  if(!lista.length) return `<div class="empty pc-vacio"><i class="ti ti-truck-delivery"></i>${t('empty.selectSupplierToLoadArticles')}</div>`;
+  return `
+    <p class="es-pista pc-rapidos-tit">${t('empty.selectSupplierToLoadArticles')}</p>
+    <div class="pc-rapidos">${lista.map(p => `
+      <button type="button" class="pc-rapido${p.bajo ? ' hay-falta' : ''}" onclick="selectOrderSupplier('${escapeJsAttr(p.nombre)}')">
+        <span class="pc-rapido-nom">${escapeHtml(p.nombre)}</span>
+        <span class="pc-rapido-meta">${p.n} ${gl({es:p.n === 1 ? 'artículo' : 'artículos', ca:p.n === 1 ? 'article' : 'articles', en:p.n === 1 ? 'item' : 'items'})}${p.dias.length ? ' · ' + p.dias.map(d => escapeHtml(String(weekDayLabelFromStored(d)).slice(0, 3))).join(' ') : ''}</span>
+        ${p.bajo ? `<em class="pc-rapido-falta">${p.bajo} ${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below minimum'})}</em>` : ''}
+      </button>`).join('')}</div>`;
+}
 function renderPedidoCrear(){
   orderFormInline = true;
   const box = document.getElementById('pedidos-list');
@@ -2465,7 +2497,7 @@ function renderPedidoCrear(){
   const c = pcContadores();
   const chip = (clave, etiqueta, n) => `<button type="button" class="btn btn-sm btn-fino${orderFiltro === clave ? ' is-on' : ''}" aria-pressed="${orderFiltro === clave}" onclick="setOrderFiltro('${clave}')">${etiqueta} <span class="ml-n">${n}</span></button>`;
   const cuerpo = !orderModalSupplier
-    ? `<div class="empty pc-vacio"><i class="ti ti-truck-delivery"></i>${t('empty.selectSupplierToLoadArticles')}</div>`
+    ? pcProveedoresRapidosHtml(suppliers)
     : (!orderModalLines.length
       ? `<div class="empty pc-vacio"><i class="ti ti-basket-off"></i>${t('empty.supplierNoIngredients')}</div>`
       : `

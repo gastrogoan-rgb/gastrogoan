@@ -5814,7 +5814,7 @@ function renderHorariosPersonal(){
       <div class="pr-pie">
         <span class="pr-ver"><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession ? gl({es:'Ver ficha', ca:'Veure fitxa', en:'Open profile'}) : gl({es:'Fichar', ca:'Fitxar', en:'Clock in'})}</span>
         <div class="pr-acc actions-cell" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
-          <button type="button" ${ico('ti-message', t('btn.messages'))} onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
+          <button type="button" ${ico('ti-message', gl({es:'Enviar mensaje', ca:'Enviar missatge', en:'Send message'}))} onclick="openEmployeeDirectChat(${e.id}, ${isOwnerSession})"><i class="ti ti-message"></i></button>
           <button type="button" ${ico('ti-clipboard-list', t('title.workDistribution'))} onclick="navigate('distribucion');openDistEmployee(${e.id})"><i class="ti ti-clipboard-list"></i></button>
           ${wa ? `<a ${ico('ti-brand-whatsapp', wa)} href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${isOwnerSession && e.email ? `<a ${ico('ti-mail', t('title.sendEmail'))} href="mailto:${escapeJsAttr(e.email)}"><i class="ti ti-mail"></i></a>` : ''}
