@@ -333,7 +333,7 @@ espera $P127 "Mega Lista: carpetas con icono de trazo, precio sin IVA con el IVA
 espera $P128 "Norma de móvil: las filas densas de la carta y del menú se pliegan a nombre y precio, y en PC se ve todo" "$SALIDA/plegables.txt" "casos pasaron"
 espera $P129 "Menú de tres puntos: editar y eliminar dentro, con teclado, sin salirse de la pantalla y solo para quien puede" "$SALIDA/menu-acciones.txt" "casos pasaron"
 espera $P130 "Escandallo: carpetas, platos en tarjetas y la hoja única para crear, ver y editar (cálculo en vivo, guardar, descartar, elaboraciones, móvil)" "$SALIDA/escandallo.txt" "casos pasaron"
-espera $P131 "Fichas técnicas: la ficha como documento (paso a paso con tiempo, temperatura y ojo), una sola pantalla para crear y editar, producción que escala, solo lectura e impreso" "$SALIDA/fichas.txt" "casos pasaron"
+espera $P131 "Fichas técnicas: la ficha como documento (paso a paso con tiempo y ojo, lápiz para editar cada paso), una sola pantalla para crear y editar, producción que escala, solo lectura e impreso" "$SALIDA/fichas.txt" "casos pasaron"
 espera $P132 "Pedidos: realizar pedido como lista de la compra, déficit que descuenta lo que viene de camino, enviar e imprimir, historial con selector de periodo y la hoja de recepción" "$SALIDA/pedidos.txt" "casos pasaron"
 espera $P133 "Cambios de precio: subidas y bajadas, efecto en cada plato (también por elaboraciones base) y precio de venta sugerido para mantener el food cost" "$SALIDA/cambios-precio.txt" "casos pasaron"
 espera $P134 "Stock: resumen, carpetas con alertas, filas con − / + que guardan una vez, mínimo y menú ⋯ plegados en móvil, merma e historial por producto y permisos" "$SALIDA/stock.txt" "casos pasaron"

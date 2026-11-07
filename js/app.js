@@ -2183,7 +2183,7 @@ function dpCargoDetalleHtml(tipo, nombre){
       </section>
       <section>
         <div class="es-tit">${gl({es:'Paso a paso', ca:'Pas a pas', en:'Step by step'})}</div>
-        ${pasos.length ? `<ol class="dp-pasos">${pasos.map(x => `<li><p>${escapeHtml(x.p)}</p>${(x.d.min || x.d.temp) ? `<div class="dp-paso-chips">${x.d.min ? `<span class="fi-chip"><i class="ti ti-clock"></i> ${escapeHtml(String(x.d.min))} min</span>` : ''}${x.d.temp ? `<span class="fi-chip"><i class="ti ti-temperature"></i> ${escapeHtml(String(x.d.temp))}</span>` : ''}</div>` : ''}${x.d.aviso ? `<div class="fi-ojo"><b>${gl({es:'Ojo', ca:'Ull', en:'Watch out'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}</li>`).join('')}</ol>` : `<p class="pr-ayuda">${f ? t('label.notSpecified') : gl({es:'Todavía no tiene ficha técnica con el paso a paso.', ca:'Encara no té fitxa tècnica amb el pas a pas.', en:'It has no recipe sheet with steps yet.'})}</p>`}
+        ${pasos.length ? `<ol class="dp-pasos">${pasos.map(x => `<li><p>${escapeHtml(x.p)}</p>${x.d.min ? `<div class="dp-paso-chips"><span class="fi-chip"><i class="ti ti-clock"></i> ${escapeHtml(String(x.d.min))} min</span></div>` : ''}${x.d.aviso ? `<div class="fi-ojo"><b>${gl({es:'Ojo', ca:'Ull', en:'Watch out'})}</b> ${escapeHtml(x.d.aviso)}</div>` : ''}</li>`).join('')}</ol>` : `<p class="pr-ayuda">${f ? t('label.notSpecified') : gl({es:'Todavía no tiene ficha técnica con el paso a paso.', ca:'Encara no té fitxa tècnica amb el pas a pas.', en:'It has no recipe sheet with steps yet.'})}</p>`}
       </section>
     </div>`;
 }

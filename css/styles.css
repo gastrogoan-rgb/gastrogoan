@@ -2894,6 +2894,8 @@ button.kt-cn .cz-hora{margin-left:auto}
 .es-pista{font-size:12.5px;color:var(--muted)}
 .es-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px 14px;margin-bottom:12px}
 .es-kpi{display:flex;flex-direction:column;gap:2px;min-width:0}
+.es-kpis-venta{grid-template-columns:repeat(2,minmax(0,1fr))}
+.es-kpi-sub{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted)}
 .es-kpi-et{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .es-kpi b{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em}
 .es-desglose{border-top:1px solid var(--hair);padding-top:10px;display:flex;flex-direction:column;gap:6px;font-size:13px}
@@ -3177,6 +3179,12 @@ button.kt-cn .cz-hora{margin-left:auto}
 .fi-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:12px;font-weight:600;border:1px solid var(--ink);border-radius:3px;padding:2px 8px}
 .fi-ojo{margin-top:9px;background:#FBF1DC;border:1px solid #E8CF9A;border-left:4px solid #C48A1C;border-radius:3px;padding:8px 12px;font-size:14px;line-height:1.5}
 .fi-ojo b{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:#8A5A0F;margin-right:6px}
+/* Lápiz de cada paso: los pasos se leen por defecto y solo se editan al pulsarlo (7/11) */
+.fi-paso-acc{display:flex;align-items:flex-start;gap:4px}
+.fi-lapiz{width:44px;height:44px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--hair);border-radius:3px;color:var(--muted);font-size:18px;cursor:pointer;transition:border-color .15s,color .15s,background-color .15s}
+.fi-lapiz:hover,.fi-lapiz:focus-visible{border-color:var(--olive);color:var(--olive)}
+.fi-lapiz.is-on{background:var(--olive);border-color:var(--olive);color:#fff}
+.fi-paso.editando .fi-paso-c{padding-top:0}
 .fi-leer{margin:0;font-size:15px;line-height:1.6;white-space:pre-wrap;overflow-wrap:break-word}
 .fi-ancho textarea{width:100%}
 @media (max-width:1000px){

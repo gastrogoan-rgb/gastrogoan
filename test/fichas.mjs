@@ -81,8 +81,13 @@ for(const ancho of [1280, 360]){
     // producción 8 raciones sobre una base de 4 → ×2
     assert.deepEqual(r.ings, ['1,6 kg Merluza', '1,6 kg Patata', '0,2 L Aceite']); assert.ok(/para 8 raciones/i.test(r.titulo), r.titulo);
     assert.equal(r.nombre, 'Merluza con patata');
-    const det = await q(() => [...document.querySelectorAll('.fi-paso')].map(p => ({min: p.querySelector('input[type=number]').value, temp: p.querySelector('.fi-det input[type=text]').value, ojo: p.querySelector('.fi-det-ojo input').value})));
-    assert.deepEqual(det[1], {min:'8', temp:'100 °C', ojo:'Que no se deshagan'});
+    // Los pasos se LEEN por defecto (7/11): sin campos abiertos, con su lápiz, y ya sin temperatura por paso.
+    const lect = await q(() => ({campos: document.querySelectorAll('.fi-paso textarea, .fi-paso-det input').length, lapices: document.querySelectorAll('.fi-paso .fi-lapiz').length,
+      p2: document.querySelectorAll('.fi-paso')[1].innerText.replace(/\s+/g,' ')}));
+    assert.equal(lect.campos, 0, 'nada abierto a la edición por accidente'); assert.equal(lect.lapices, 3, 'un lápiz por paso');
+    assert.ok(/8 min/.test(lect.p2) && /Que no se deshagan/.test(lect.p2) && !/100/.test(lect.p2), lect.p2);
+    // los alérgenos van ARRIBA, antes del paso a paso
+    assert.ok(await q(() => { const a = document.querySelector('.fi-alergenos'), c = document.querySelector('.fi-cuerpo'); return !!a && !!(a.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING); }), 'alérgenos antes del cuerpo');
   });
 
   await caso(`Cambiar la producción reescala los ingredientes al momento, sin repintar la ficha (${ancho}px)`, async () => {
@@ -92,20 +97,28 @@ for(const ancho of [1280, 360]){
     assert.ok(await q(() => document.getElementById('fi-sucio').hidden), 'cambiar la escala no es «cambios sin guardar»');
   });
 
-  await caso(`Editar: añadir, mover y quitar pasos con su tiempo, temperatura y «ojo», y guardar (${ancho}px)`, async () => {
+  await caso(`Editar con el lápiz: añadir, mover y quitar pasos con su tiempo y «ojo», y guardar (${ancho}px)`, async () => {
+    // el lápiz abre SOLO ese paso, y el tic lo cierra
+    await q(() => document.querySelectorAll('.fi-paso')[0].querySelector('.fi-lapiz').click()); await esperar(150);
+    assert.equal(await q(() => document.querySelectorAll('.fi-paso textarea').length), 1, 'solo el paso con lápiz pulsado');
+    assert.ok(await q(() => !document.querySelector('.fi-paso-det input[placeholder*="°"]')), 'sin campo de temperatura');
+    await q(() => document.querySelector('.fi-paso.editando .fi-lapiz.is-on').click()); await esperar(150);
+    assert.equal(await q(() => document.querySelectorAll('.fi-paso textarea').length), 0, 'el tic vuelve a cerrarlo');
     await q(() => addFichaStep()); await esperar(250);
     assert.equal(await q(() => document.querySelectorAll('.fi-paso').length), 4);
+    assert.equal(await q(() => document.querySelectorAll('.fi-paso textarea').length), 1, 'el paso nuevo se abre solo');
     await q(() => { const ps = document.querySelectorAll('.fi-paso'); const u = ps[3]; const tx = u.querySelector('textarea'); tx.value = 'Servir enseguida.'; tx.dispatchEvent(new Event('input', {bubbles:true}));
       const m = u.querySelector('input[type=number]'); m.value = '2'; m.dispatchEvent(new Event('input', {bubbles:true}));
       const o = u.querySelector('.fi-det-ojo input'); o.value = 'Que no se enfríe'; o.dispatchEvent(new Event('input', {bubbles:true})); });
     assert.ok(await q(() => !document.getElementById('fi-sucio').hidden), 'aparece «cambios sin guardar»');
     await q(() => moveFichaStep(3, -1)); await esperar(250);
-    assert.deepEqual(await q(() => [...document.querySelectorAll('.fi-paso textarea')].map(t => t.value.slice(0,12))), ['Limpiar la m', 'Cocer la pat', 'Servir enseg', 'Freír los lo']);
+    assert.deepEqual(await q(() => fichaModalState.pasos.map(t => t.slice(0,12))), ['Limpiar la m', 'Cocer la pat', 'Servir enseg', 'Freír los lo']);
+    assert.ok(await q(() => document.querySelectorAll('.fi-paso')[2].classList.contains('editando')), 'el paso movido sigue siendo el que se estaba editando');
     await q(() => removeFichaStep(0)); await esperar(250);
     await q(() => saveFicha()); await esperar(500);
     const f = await q(() => DB.fichas.find(x => x.id === 1));
     assert.equal(f.pasos.length, 3); assert.equal(f.pasos[0], 'Cocer la patata en agua con sal.');
-    assert.deepEqual(f.pasosDet, [{min:8, temp:'100 °C', aviso:'Que no se deshagan'}, {min:2, aviso:'Que no se enfríe'}, {}], 'los detalles viajan con su paso: ' + JSON.stringify(f.pasosDet));
+    assert.deepEqual(f.pasosDet, [{min:8, aviso:'Que no se deshagan'}, {min:2, aviso:'Que no se enfríe'}, {}], 'los detalles (y la temperatura por paso ya no se guarda) viajan con su paso: ' + JSON.stringify(f.pasosDet));
     assert.ok(await q(() => document.getElementById('fi-sucio').hidden), 'guardada: sin cambios pendientes');
     assert.ok(await q(() => !!document.getElementById('ficha-name')), 'se queda en la ficha');
   });
@@ -146,7 +159,7 @@ for(const ancho of [1280, 360]){
   await caso(`El impreso: dos columnas, casillas, pasos numerados con sus «ojo» y alérgenos a la vista (${ancho}px)`, async () => {
     const html = await q(() => { window.__h = ''; const o = window.open; window.open = () => ({document:{write:h => { window.__h += h; }, close(){}}, print(){}}); printFicha(1); window.open = o; return window.__h; });
     assert.ok(html.includes('class="fp-cols"') && html.includes('fp-chk') && html.includes('fp-n-paso'), 'estructura del impreso');
-    assert.ok(/OJO[\s\S]*Que no se deshagan/.test(html) && /8 MIN/.test(html) && /100 °C/.test(html), 'tiempos, temperatura y ojo impresos');
+    assert.ok(/OJO[\s\S]*Que no se deshagan/.test(html) && /8 MIN/.test(html) && !/100 °C/.test(html), 'tiempo y ojo impresos, sin temperatura por paso');
     assert.ok(/fp-alergenos[\s\S]*Pescado[\s\S]*Gluten/.test(html), 'alérgenos (los del escandallo y los manuales)');
     assert.ok(!/class="ti /.test(html), 'sin iconos de fuente: la ventana de impresión no los carga');
   });
