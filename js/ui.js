@@ -2133,7 +2133,7 @@ document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === '
 (function(){ let t = null; const obs = new MutationObserver(() => { clearTimeout(t); t = setTimeout(ggAccPreparar, 60); });
   const arrancar = () => { const c = document.getElementById('content') || document.body; obs.observe(c, {childList:true, subtree:true}); ggAccPreparar(); };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar(); })();
-const GG_VISTAS_NUEVAS = ['view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas', 'view-tpv', 'view-manual', 'view-minegocio', 'view-dashboard', 'view-economia', 'view-plan360'];   // pantallas que ya tienen el diseño nuevo
+const GG_VISTAS_NUEVAS = ['view-home', 'view-folder', 'view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas', 'view-tpv', 'view-manual', 'view-minegocio', 'view-dashboard', 'view-economia', 'view-plan360'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
 function ggAfinarBotones(raiz){
   if(!raiz || !raiz.querySelectorAll) return;
