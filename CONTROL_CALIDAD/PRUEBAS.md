@@ -11,6 +11,7 @@
 Después de la 3.ª solo se tocaron `test/movil.mjs` (más vistas) y documentos; `movil.mjs` se ejecutó aparte: 0 hallazgos.
 
 | 4.ª, tras la revisión móvil | 07/11 | **151 ✅, 0 ❌**, 1 🟡 aceptado (Comandas) |
+| 5.ª, tras plegar Panel/Tesorería y carpetas a dos por fila | 07/11 | **154 ✅**; `factura-pedido` falló por carga de la máquina y pasa solo (8/8); 1 🟡 aceptado |
 
 ## Pruebas nuevas o ampliadas esta noche
 
