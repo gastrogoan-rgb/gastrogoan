@@ -6032,8 +6032,6 @@ small{font-size:max(.8333em, 11px)}
 
 /* Acordeón cerrado de Mi Negocio: sin la raya ni el relleno que el título llevaba para separarse de su contenido. */
 @media (max-width:760px){
-  .mn-grid > .card.mn-acc.mn-cerrado > h3{border-bottom:0 !important;padding-bottom:0 !important;margin-bottom:0 !important}
-  .mn-grid > .card.mn-acc.mn-cerrado{padding-top:6px !important;padding-bottom:6px !important}
 }
 /* Botonera del TPV en pantallas de 320-340 px: tres columnas de ~93 px no dan para icono + «Anulaciones»; se quita el icono. */
 @media (max-width:340px){
