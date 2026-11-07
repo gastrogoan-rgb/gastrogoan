@@ -2507,12 +2507,13 @@ input,select,textarea{border-radius:var(--r-s)}
 #view-comandascocina .card,#view-comandascocina .kds-ticket,#view-comandascocina .grid-kds > *{animation:none !important}
 
 /* ═══ TICKETS DE COCINA (29/10) ═══ */
-.grid-kds{columns:340px;column-gap:16px}
-.grid-kds>*{margin-bottom:16px}
-.kt{background:#fff;border:1px solid var(--hair);border-radius:3px;overflow:hidden;position:relative;break-inside:avoid}
-.kt-bar{height:5px;background:var(--olive-l)}.kt-bar.a{background:#B7791F}.kt-bar.r{background:#B4432F}
+.grid-kds{columns:340px;column-gap:22px}
+.grid-kds>*{margin-bottom:22px}
+/* Cada comanda con su borde bien marcado (7/11): antes costaba ver dónde acababa una y empezaba otra. */
+.kt{background:#fff;border:2px solid var(--ink);border-radius:4px;overflow:hidden;position:relative;break-inside:avoid}
+.kt-bar{height:4px;background:var(--olive-l)}.kt-bar.a{background:#B7791F}.kt-bar.r{background:#B4432F}
 .kt-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 16px 10px}
-.kt-mesa{font-size:30px;font-weight:600;letter-spacing:-.035em;line-height:1;overflow-wrap:anywhere}
+.kt-mesa{font-size:27px;font-weight:600;letter-spacing:-.03em;line-height:1;overflow-wrap:anywhere}
 .kt-meta{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
 .kt-tm{font-family:var(--mono);font-size:22px;font-weight:500;letter-spacing:-.03em;text-align:right;line-height:1;flex:0 0 auto}
 .kt-tm small{display:block;font-size:11px;font-weight:400;letter-spacing:.1em;color:var(--muted);margin-top:5px;text-transform:uppercase}
@@ -2527,23 +2528,30 @@ input,select,textarea{border-radius:var(--r-s)}
 .kt-inc em{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;font-style:normal;flex:0 0 auto;border:1px solid currentColor;padding:2px 7px;border-radius:2px}
 .kt-inc.nuevo{background:#FBEDE9;border-color:#E5B3A8;color:#8A2E1E}
 .kt-inc.nuevo em{background:#8A2E1E;border-color:#8A2E1E;color:#fff}
-.kt-bl{margin:0 12px 10px;border:1px solid var(--hair);border-radius:3px;overflow:hidden}
+.kt-bl{margin:0 12px 12px;border:1px solid var(--hair);border-radius:3px;overflow:hidden}
 .kt-bh{display:flex;align-items:center;gap:8px;padding:7px 12px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase}
-.kt-bh.c,.kt-bh.m{background:var(--olive);color:#fff}
+.kt-bh.c,.kt-bh.m{background:var(--brand-cream);color:var(--ink)}
 .kt-bh .ti{font-size:14px;opacity:.85}
 .kt-vale{display:inline-block;vertical-align:middle;margin-left:8px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--ink);padding:3px 8px;border-radius:2px}
 .kt-bh i{font-style:normal;opacity:.75;margin-left:auto}
-.kt-cu{display:grid;grid-template-columns:22px minmax(0,1fr);gap:0 10px;padding:10px 12px 8px;border-top:1px solid var(--hair)}
+.kt-cu{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 8px;padding:9px 12px 8px;border-top:1px solid var(--hair)}
 .kt-rail{display:flex;flex-direction:column;align-items:center;padding-top:3px}
 .kt-dot{width:13px;height:13px;border-radius:50% !important;border:2px solid #C9C3B7;background:#fff;flex:0 0 auto}
 .kt-dot.p{border-color:#B7791F;background:#B7791F}.kt-dot.l{border-color:var(--olive);background:var(--olive)}
 .kt-dot.rec{background:#fff}
 .kt-line{width:2px;flex:1;background:var(--hair);margin-top:3px}
 .kt-cn{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+/* El nombre del bloque ES el botón: un toque y avanza todo el bloque (los platos siguen avanzando uno a uno). */
+button.kt-cn{width:100%;min-height:44px;padding:6px 10px;margin-bottom:6px;background:var(--brand-cream);border:1px solid var(--hair);border-radius:3px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;transition:border-color .15s,background-color .15s}
+button.kt-cn:hover{border-color:var(--olive);background:#EEF3EF}
+button.kt-cn:active{transform:translateY(1px)}
+button.kt-cn:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+button.kt-cn .kt-go{font-size:16px;color:var(--olive);flex:0 0 auto;margin-right:auto}
+button.kt-cn .cz-hora{margin-left:auto}
 .kt-cn b{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
 .kt-st{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:2px;border:1px solid var(--hair);color:var(--muted);white-space:nowrap}
 .kt-st.p{background:#FBF1DC;border-color:#E8CF9A;color:#8A5A0F}.kt-st.l{background:#E7EEE8;border-color:#B9CABD;color:#2F4434}
-.kt-pl{display:flex;align-items:baseline;gap:8px;padding:4px 0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.kt-pl{display:flex;align-items:baseline;gap:8px;padding:4px 0;font-size:16px;font-weight:500;letter-spacing:-.005em}
 .kt-pl .q{font-family:var(--mono);font-size:15px;font-weight:500;min-width:26px;flex:0 0 auto}
 .kt-pl .n{min-width:0;overflow-wrap:anywhere}
 .kt-pl .fam{margin-left:auto;padding-left:8px;font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right}
@@ -2553,41 +2561,19 @@ input,select,textarea{border-radius:var(--r-s)}
 .kt-fuego{color:#B7791F;font-size:14px}
 .kt-nt{font-size:12.5px;color:#7A5A12;background:#FBF4E2;border-left:2px solid #B7791F;padding:3px 8px;margin:2px 0 4px 34px}
 .kt-cu.held .kt-cn b{color:#9B958A}
-.kt-cu.held{background:repeating-linear-gradient(135deg,transparent 0 7px,rgba(0,0,0,.018) 7px 14px)}
-.kt-act{display:flex;gap:8px;padding:2px 12px 10px}
-.kt-big{flex:1;min-height:52px;background:var(--olive);color:#fff;border:0;border-radius:3px;font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background-color .18s,transform .18s}
-.kt-big:hover{background:#3C4D40}.kt-big.k{background:var(--ink)}.kt-big.k:hover{background:#2A2824}.kt-big:active{transform:translateY(1px)}
-.kt-wait,.kt-ok{flex:1;display:flex;align-items:center;gap:8px;min-height:52px;padding:0 14px;border:1px dashed var(--hair);border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--muted)}
+.kt-act{display:flex;gap:8px;padding:2px 12px 8px}
+.kt-wait,.kt-ok{flex:1;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px dashed var(--hair);border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--muted)}
 .kt-ok{color:var(--olive);border-color:#B9CABD;background:#EEF3EF;border-style:solid}
-.kt-undo{flex:0 0 52px;min-height:52px;background:#fff;border:1px solid var(--hair);border-radius:3px;cursor:pointer;font-size:18px;color:var(--ink)}
+.kt-undo{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;margin-left:auto;background:#fff;border:1px solid var(--hair);border-radius:3px;cursor:pointer;font:500 12px var(--mono);letter-spacing:.04em;color:var(--muted)}
 .kt-undo:hover{border-color:var(--olive);color:var(--olive)}
-.kt-ev{padding:0 12px 12px;display:flex}
-/* Lo MARCHADO (nuevo) y lo que se está PREPARANDO se ven y se mueven distinto (pedido del dueño, 29/10):
-   · Nuevo: el curso se tiñe de ámbar claro, su punto lanza un anillo que se expande («¡esto acaba de entrar!») y
-     la etiqueta respira. Pide que alguien lo empiece.
-   · En preparación: tinte más cálido, una franja que corre bajo el nombre del curso (como un fuego a medio hacer),
-     el punto late y la llama del plato parpadea. Dice «está en marcha».
-   Los movimientos son suaves y de poco recorrido y se apagan con «reducir movimiento». */
-.kt-cu.nuevo{background:#FFF9EA;box-shadow:inset 3px 0 0 #D9A441}
-.kt-cu.prep{background:#FFF1DD;box-shadow:inset 3px 0 0 #B7791F}
-.kt-cu.nuevo .kt-cn b,.kt-cu.prep .kt-cn b{font-size:13px}
-.kt-cu.nuevo .kt-pl,.kt-cu.prep .kt-pl{font-size:17px}
+.kt-ev{padding:4px 12px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--hair);margin-top:4px;padding-top:10px}
+/* Lo MARCHADO (nuevo) y lo que se está PREPARANDO (rehecho el 7/11, pedido del dueño: «demasiado estilo, cuesta
+   seguir las comandas»). Antes cada curso se teñía, tenía anillos que se expandían, una franja corriendo y
+   latidos: con diez tickets abiertos la pantalla entera se movía. Ahora NADA se mueve ni se tiñe: el estado se lee
+   en la etiqueta y en una raya fina a la izquierda (ámbar claro = nuevo, ámbar fuerte = en preparación). */
+.kt-cu.nuevo{box-shadow:inset 3px 0 0 #E2B65E}
+.kt-cu.prep{box-shadow:inset 3px 0 0 #B7791F}
 .kt-dot{position:relative}
-.kt-cu.prep .kt-cn{position:relative;padding-bottom:7px;margin-bottom:3px}
-.kt-cu.prep .kt-cn::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;
-  background:linear-gradient(90deg,rgba(183,121,31,.18) 0%,rgba(183,121,31,.18) 100%)}
-@media (prefers-reduced-motion:no-preference){
-  .kt-cu.nuevo .kt-dot::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid #D9A441;animation:kt-anillo 1.8s ease-out infinite}
-  .kt-cu.nuevo .kt-st{animation:kt-respira 1.6s ease-in-out infinite}
-  .kt-cu.prep .kt-cn::after{background:linear-gradient(90deg,rgba(183,121,31,.18) 0%,#B7791F 45%,rgba(183,121,31,.18) 90%) 0 0/200% 100%;animation:kt-corre 2.2s linear infinite}
-  .kt-cu.prep .kt-dot{animation:kt-late 1.3s ease-in-out infinite}
-  .kt-fuego{display:inline-block;animation:kt-llama .9s ease-in-out infinite alternate;transform-origin:50% 100%}
-}
-@keyframes kt-anillo{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.4);opacity:0}}
-@keyframes kt-respira{0%,100%{opacity:1}50%{opacity:.55}}
-@keyframes kt-corre{from{background-position:200% 0}to{background-position:-200% 0}}
-@keyframes kt-late{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
-@keyframes kt-llama{from{transform:scale(1) rotate(-4deg);opacity:.85}to{transform:scale(1.18) rotate(4deg);opacity:1}}
 /* ═══ MODO CAOS POR MESAS (29/10) ═══ */
 .cz-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--ink);color:#FAF8F4;padding:10px 16px;border-radius:3px;font-weight:600;font-size:15px;margin-bottom:10px}
 .cz-cuenta{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.04em;color:#9DB3A1}
@@ -2597,7 +2583,6 @@ input,select,textarea{border-radius:var(--r-s)}
 .cz-rondas .kt-cu:first-child{border-top:1px solid var(--hair)}
 .cz-hora{font-family:var(--mono);font-size:16px;font-weight:600;letter-spacing:-.02em}
 .cz-hora.a{color:#B7791F}.cz-hora.r{color:#B4432F}
-.cz-btn{display:block;width:100%;margin:8px 0 6px;min-height:46px;font-size:12.5px}
 .cz-pendiente{margin:0 12px 10px;padding:8px 12px;border:1px dashed var(--hair);border-radius:3px;font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;color:var(--muted);display:flex;align-items:center;gap:8px}
 .cz-mesa{margin:0}
 .cz-lista{display:flex;flex-direction:column;gap:8px}
@@ -2625,6 +2610,7 @@ input,select,textarea{border-radius:var(--r-s)}
 .cz-pase-min{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.03em}
 .cz-pase-it.a .cz-pase-min{color:#B7791F}.cz-pase-it.r .cz-pase-min{color:#B4432F}
 .cz-pase-it.a{background:#FFF9EA}.cz-pase-it.r{background:#FBEDE9}
+@keyframes kt-respira{0%,100%{opacity:1}50%{opacity:.55}}
 @media (prefers-reduced-motion:no-preference){.cz-pase-it.r .cz-pase-min{animation:kt-respira 1.2s ease-in-out infinite}}
 .kt-cerrada .kt-bar{background:var(--olive-l)}
 .kt-cerrada .kt-tm{font-size:14px;color:var(--muted);font-weight:500}
@@ -5147,9 +5133,7 @@ select:disabled{background:#F1EFE9;color:var(--ink);opacity:1;cursor:not-allowed
 /* Comandas Cocina en tablet y móvil (29/10) */
 @media (max-width:1100px){
   .grid-kds{columns:310px;column-gap:12px}.grid-kds>*{margin-bottom:12px}
-  .kt-mesa{font-size:26px}.kt-h{padding:12px 14px 8px}.kt-pl{font-size:15px;padding:3px 0}
-  .kt-cu.nuevo .kt-pl,.kt-cu.prep .kt-pl{font-size:16px}
-  .kt-big,.kt-wait,.kt-ok{min-height:48px}.kt-undo{flex-basis:48px;min-height:48px}
+  .kt-mesa{font-size:24px}.kt-h{padding:12px 14px 8px}.kt-pl{font-size:15px;padding:3px 0}
 }
 @media (max-width:600px){
   /* Dos filas de tres botones, con el icono arriba y el texto debajo */

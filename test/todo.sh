@@ -168,6 +168,7 @@ lanzar; node test/descripcion-plato.mjs > "$SALIDA/descripcionplato.txt" 2>&1 & 
 lanzar; node test/claves-sin-traducir.mjs > "$SALIDA/clavessintraducir.txt" 2>&1 & P162=$!
 lanzar; node test/movil-lectura.mjs > "$SALIDA/movillectura.txt" 2>&1 & P163=$!
 lanzar; node test/acceso-caducado.mjs > "$SALIDA/accesocaducado.txt" 2>&1 & P164=$!
+lanzar; node test/comandas-cocina.mjs > "$SALIDA/comandascocina.txt" 2>&1 & P165=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -366,5 +367,6 @@ espera $P161 "Descripción en carta: la escribe la ficha técnica, la ven el cli
 espera $P162 "Claves sin traducir: ninguna pantalla (30 vistas, 3 carpetas) enseña una clave interna en es, ca ni en" "$SALIDA/clavessintraducir.txt" "ninguna clave interna a la vista"
 espera $P163 "Lectura en móvil: 47 pantallas × 5 anchos, campos a 16 px (sin zoom de iPhone) y ningún texto aplastado en columna de letras" "$SALIDA/movillectura.txt" "todos los campos a 16 px"
 espera $P164 "Sesión caducada + dirección guardada: la entrada manda y no sale ningún PIN de área encima (el «login raro»)" "$SALIDA/accesocaducado.txt" "todos los casos pasaron"
+espera $P165 "Comandas Cocina: solo cocina, el nombre del bloque avanza el bloque, sin botón de pase, borde por comanda" "$SALIDA/comandascocina.txt" "casos pasaron"
 
 exit $FALLOS

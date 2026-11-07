@@ -131,11 +131,11 @@ await caso('Lo pedido en momentos distintos queda en rondas separadas DENTRO de 
     await new Promise(r=>setTimeout(r,300));
     const c = [...document.querySelectorAll('.cz-mesa')].find(f => f.querySelector('.kt-mesa').innerText.trim() === 'Mesa 2');
     return {rondas: c.querySelectorAll('.cz-ronda').length, tarjetasMesa2: [...document.querySelectorAll('.cz-mesa')].filter(f => f.querySelector('.kt-mesa').innerText.trim() === 'Mesa 2').length,
-      botones: c.querySelectorAll('.cz-btn').length};
+      botones: c.querySelectorAll('.cz-ronda button.kt-cn.avanza').length};
   });
   assert.equal(r.tarjetasMesa2, 1, 'sigue siendo una sola tarjeta: ' + JSON.stringify(r));
   assert.equal(r.rondas, 2, 'pero con dos rondas, cada una con su hora: ' + JSON.stringify(r));
-  assert.equal(r.botones, 2, 'y cada ronda con su botón: ' + JSON.stringify(r));
+  assert.equal(r.botones, 2, 'y el nombre de cada ronda es su botón: ' + JSON.stringify(r));
 });
 
 await caso('«Por plato» suma las raciones de todas las mesas', async () => {
@@ -159,7 +159,7 @@ await caso('«Por plato» suma las raciones de todas las mesas', async () => {
 await caso('Marcar desde el modo caos vale para toda la app', async () => {
   const r = await page.evaluate(async ()=>{
     const c = [...document.querySelectorAll('.cz-mesa')].find(f => /Crispy Chicken/.test(f.innerText));
-    c.querySelector('.cz-btn').click();
+    c.querySelector('.cz-ronda button.kt-cn.avanza').click();
     await new Promise(r=>setTimeout(r,400));
     const pedido = DB.tpvOrders.find(o => o.id === 903);
     return {estado: pedido.items[0].estado};

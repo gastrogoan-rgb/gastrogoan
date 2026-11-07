@@ -2433,9 +2433,9 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>Cómo se trabaja un pedido</h4>
-<div class="manual-step"><div class="sn">1</div><div class="st">Pulsa el botón grande de abajo del ticket: <strong>Empezar entrantes</strong> (el nombre del curso). Todos los platos del curso pasan a <strong>En preparación</strong> y marcan una llama.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">Cuando salen, pulsa <strong>Listo · entrantes ▸ pase</strong>. El curso pasa a <strong>Listo en el pase</strong>. En un pedido para llevar el botón es <strong>Pedido listo ▸ avisar</strong>.</div></div>
-<div class="manual-step"><div class="sn">3</div><div class="st">Si quieres avanzar <strong>un solo plato</strong>, tócalo: pasa al siguiente estado él solo.</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st">Toca el <strong>nombre del bloque</strong> (por ejemplo <strong>Entrantes</strong>, con las dos flechas al lado). Todos los platos del bloque pasan a <strong>En preparación</strong> y marcan una llama.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Cuando salen, vuelve a tocar el nombre del bloque. El bloque pasa a <strong>Listo en el pase</strong>. Ya no hay un botón grande aparte.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Si quieres avanzar <strong>un solo plato</strong>, tócalo a él: pasa al siguiente estado sin mover el resto del bloque.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Sala pulsa <strong>Entregar</strong> cuando se lo lleva, y el curso queda <strong>Recogido</strong>. Cocina no puede dar este último paso, es de sala. Hasta que sala lo confirma, el ticket sigue en <strong>Activas</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Si no hay nada que cocinar todavía, el ticket dice «Esperando que sala marche…». Cuando todo está en el pase, «Todo listo en el pase».</div></div>
 <p><strong>Si te equivocas</strong>: pulsa <strong>Deshacer</strong> (arriba, o la flecha del propio ticket). Deshace la última acción —de un plato o de un curso entero—, hasta 10 veces seguidas. Solo funciona mientras no recargues la página.</p>
@@ -2446,7 +2446,7 @@ const MANUAL_CHAPTERS = [
 <h4>Modo caos</h4>
 <p>En hora punta ordenar por pedido deja de ayudar: lo que importa es <strong>qué sale ahora</strong>. <strong>Modo caos</strong> (vuelve a pulsarlo para salir) sustituye los tickets por una lista <strong>Por orden de espera</strong>, con dos formas de mirarla:</p>
 <ul>
-<li><strong>Por mesas</strong>: una tarjeta por mesa, ordenadas por la que más espera. Dentro, lo pendiente va en «rondas» (lo que se marchó junto), con su hora y un botón <strong>Empezar</strong> / <strong>Listo ▸ pase</strong>. Sale lo mismo que en la vista normal; solo cambia la forma de verlo.</li>
+<li><strong>Por mesas</strong>: una tarjeta por mesa, ordenadas por la que más espera. Dentro, lo pendiente va en «rondas» (lo que se marchó junto), con su hora; tocando su nombre avanza toda la ronda. Sale lo mismo que en la vista normal; solo cambia la forma de verlo.</li>
 <li><strong>Por plato</strong>: suma lo pendiente por plato (6 croquetas entre cuatro mesas), con las mesas y los minutos en etiquetas. Es solo para mirar y cocinar por tandas.</li>
 </ul>
 <p>Arriba aparece <strong>En el pase</strong>: los platos que cocina ya dejó listos y sala aún no ha recogido, por mesa, con los minutos (ámbar a los 3, rojo a los 6). El botón <strong>Avisar</strong> manda un mensaje urgente al chat de sala («listo en el pase, venid a recoger») y pasa a <strong>Avisado</strong> durante 3 minutos.</p>
@@ -2464,7 +2464,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Cualquiera con acceso a Cocina</strong> puede mover los tickets, avisar a sala y marcar agotado. No hace falta permiso de edición.</li>
 <li><strong>Imprimir en vez de mirar la pantalla</strong>: en <strong>Gestión → Mi Negocio → Comandas de cocina y sala</strong> eliges <strong>Mostrar en pantalla</strong> o <strong>Imprimir</strong>. Con Imprimir, cada vez que sala marcha se imprime un vale en las impresoras que configures (cocina, barra…), y esta pantalla sigue funcionando.</li>
-<li>Los botones de esta pantalla son compactos a propósito, para que no ocupen media pantalla en hora punta; el botón grande de cada ticket es el que más se usa.</li>
+<li>Los botones de esta pantalla son compactos a propósito, para que no ocupen media pantalla en hora punta; lo que más se usa es el nombre de cada bloque, dentro del ticket.</li>
 <li>Un pedido deja de estar en <strong>Activas</strong> cuando todos sus platos están entregados <strong>y recogidos por sala</strong>.</li>
 </ul>
 
@@ -2496,9 +2496,9 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>Com es treballa una comanda</h4>
-<div class="manual-step"><div class="sn">1</div><div class="st">Prem el botó gran de sota del tiquet: <strong>Començar entrants</strong> (el nom del curs). Tots els plats del curs passen a <strong>En preparació</strong> i marquen una flama.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">Quan surten, prem <strong>Llest · entrants ▸ pas</strong>. El curs passa a <strong>Llest al pas</strong>. En una comanda per emportar el botó és <strong>Comanda llesta ▸ avisar</strong>.</div></div>
-<div class="manual-step"><div class="sn">3</div><div class="st">Si vols avançar <strong>un sol plat</strong>, toca'l: passa al següent estat ell sol.</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st">Toca el <strong>nom del bloc</strong> (per exemple <strong>Entrants</strong>, amb les dues fletxes al costat). Tots els plats del bloc passen a <strong>En preparació</strong> i marquen una flama.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Quan surten, torna a tocar el nom del bloc. El bloc passa a <strong>Llest al pas</strong>. Ja no hi ha un botó gran a part.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Si vols avançar <strong>un sol plat</strong>, toca'l a ell: passa al següent estat sense moure la resta del bloc.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">La sala prem <strong>Lliurar</strong> quan se l'emporta, i el curs queda <strong>Recollit</strong>. Cuina no pot fer aquest últim pas, és de sala. Fins que la sala ho confirma, el tiquet continua a <strong>Actives</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Si encara no hi ha res per cuinar, el tiquet diu «Esperant que la sala marxi…». Quan tot és al pas, «Tot llest al pas».</div></div>
 <p><strong>Si t'equivoques</strong>: prem <strong>Desfer</strong> (a dalt, o la fletxa del mateix tiquet). Desfà l'última acció —d'un plat o d'un curs sencer—, fins a 10 vegades seguides. Només funciona mentre no recarreguis la pàgina.</p>
@@ -2509,7 +2509,7 @@ const MANUAL_CHAPTERS = [
 <h4>Mode caos</h4>
 <p>A l'hora punta ordenar per comanda deixa d'ajudar: el que importa és <strong>què surt ara</strong>. <strong>Mode caos</strong> (torna a prémer-lo per sortir) substitueix els tiquets per una llista <strong>Per ordre d'espera</strong>, amb dues maneres de mirar-la:</p>
 <ul>
-<li><strong>Per taules</strong>: una targeta per taula, ordenades per la que més espera. A dins, el pendent va en «rondes» (el que es va marxar junt), amb la seva hora i un botó <strong>Començar</strong> / <strong>Llest ▸ pas</strong>. Surt el mateix que a la vista normal; només canvia la manera de veure-ho.</li>
+<li><strong>Per taules</strong>: una targeta per taula, ordenades per la que més espera. A dins, el pendent va en «rondes» (el que es va marxar junt), amb la seva hora; tocant el seu nom avança tota la ronda. Surt el mateix que a la vista normal; només canvia la manera de veure-ho.</li>
 <li><strong>Per plat</strong>: suma el pendent per plat (6 croquetes entre quatre taules), amb les taules i els minuts en etiquetes. És només per mirar i cuinar per tandes.</li>
 </ul>
 <p>A dalt apareix <strong>Al pas</strong>: els plats que cuina ja ha deixat llestos i la sala encara no ha recollit, per taula, amb els minuts (ambre als 3, vermell als 6). El botó <strong>Avisar</strong> envia un missatge urgent al xat de sala («llest al pas, veniu a recollir-ho») i passa a <strong>Avisat</strong> durant 3 minuts.</p>
@@ -2527,7 +2527,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Qualsevol persona amb accés a Cuina</strong> pot moure els tiquets, avisar la sala i marcar esgotat. No cal permís d'edició.</li>
 <li><strong>Imprimir en lloc de mirar la pantalla</strong>: a <strong>Gestió → El Meu Negoci → Comandes de cuina i sala</strong> tries <strong>Mostrar en pantalla</strong> o <strong>Imprimir</strong>. Amb Imprimir, cada cop que la sala marxa s'imprimeix un val a les impressores que configuris (cuina, barra…), i aquesta pantalla continua funcionant.</li>
-<li>Els botons d'aquesta pantalla són compactes a propòsit, perquè no ocupin mitja pantalla a l'hora punta; el botó gran de cada tiquet és el que més es fa servir.</li>
+<li>Els botons d'aquesta pantalla són compactes a propòsit, perquè no ocupin mitja pantalla a l'hora punta; el que més es fa servir és el nom de cada bloc, dins del tiquet.</li>
 <li>Una comanda deixa de ser a <strong>Actives</strong> quan tots els seus plats estan lliurats <strong>i recollits per la sala</strong>.</li>
 </ul>
 
@@ -2559,9 +2559,9 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>How to work an order</h4>
-<div class="manual-step"><div class="sn">1</div><div class="st">Press the big button at the bottom of the ticket: <strong>Start starters</strong> (the course name). All the dishes in the course go to <strong>Preparing</strong> and show a flame.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">When they go out, press <strong>Ready · starters ▸ pass</strong>. The course becomes <strong>Ready at the pass</strong>. On a takeaway order the button is <strong>Order ready ▸ notify</strong>.</div></div>
-<div class="manual-step"><div class="sn">3</div><div class="st">If you want to advance <strong>a single dish</strong>, tap it: it moves to the next status on its own.</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st">Tap the <strong>block name</strong> (for example <strong>Starters</strong>, with the two arrows beside it). All the dishes in the block go to <strong>Preparing</strong> and show a flame.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">When they go out, tap the block name again. The block becomes <strong>Ready at the pass</strong>. There is no separate big button any more.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">If you want to advance <strong>a single dish</strong>, tap that dish: it moves to the next status without moving the rest of the block.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">The floor presses <strong>Hand over</strong> when they carry it away, and the course becomes <strong>Picked up</strong>. The kitchen can't take that last step, it belongs to the floor. Until the floor confirms it, the ticket stays in <strong>Active</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">If there's nothing to cook yet, the ticket says "Waiting for the floor to fire…". When everything is at the pass, "Everything ready at the pass".</div></div>
 <p><strong>If you make a mistake</strong>: press <strong>Undo</strong> (at the top, or the arrow on the ticket itself). It undoes the last action —of one dish or a whole course—, up to 10 times in a row. It only works as long as you haven't reloaded the page.</p>
@@ -2572,7 +2572,7 @@ const MANUAL_CHAPTERS = [
 <h4>Chaos mode</h4>
 <p>At peak time sorting by order stops helping: what matters is <strong>what goes out now</strong>. <strong>Chaos mode</strong> (press it again to leave) replaces the tickets with a list <strong>By waiting order</strong>, with two ways of looking at it:</p>
 <ul>
-<li><strong>By table</strong>: one card per table, ordered by the one waiting longest. Inside, what's pending goes in "rounds" (what was fired together), with its time and a <strong>Start</strong> / <strong>Ready ▸ pass</strong> button. It's the same as in the normal view; only the way of seeing it changes.</li>
+<li><strong>By table</strong>: one card per table, ordered by the one waiting longest. Inside, what's pending goes in "rounds" (what was fired together), with its time; tapping its name advances the whole round. It's the same as in the normal view; only the way of seeing it changes.</li>
 <li><strong>By dish</strong>: adds up what's pending per dish (6 croquettes across four tables), with the tables and minutes as tags. It is only for looking and cooking in batches.</li>
 </ul>
 <p>At the top you'll see <strong>At the pass</strong>: dishes the kitchen has finished and the floor hasn't collected yet, by table, with minutes (amber at 3, red at 6). The <strong>Alert</strong> button sends an urgent message to the floor chat ("ready at the pass, come and collect") and changes to <strong>Alerted</strong> for 3 minutes.</p>
@@ -2590,7 +2590,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Anyone with access to Kitchen</strong> can move tickets, alert the floor and mark items as out. No edit permission is needed.</li>
 <li><strong>Printing instead of watching the screen</strong>: in <strong>Management → My Business → Kitchen and floor tickets</strong> you choose <strong>Show on screen</strong> or <strong>Print</strong>. With Print, each time the floor fires, a slip is printed on the printers you set up (kitchen, bar…), and this screen keeps working.</li>
-<li>The buttons on this screen are compact on purpose, so they don't take up half the screen at peak time; the big button on each ticket is the one used most.</li>
+<li>The buttons on this screen are compact on purpose, so they don't take up half the screen at peak time; what's used most is the block name inside each ticket.</li>
 <li>An order leaves <strong>Active</strong> when all its dishes are delivered <strong>and picked up by the floor</strong>.</li>
 </ul>
 

@@ -90,10 +90,10 @@ await caso('Cocina pinta UN ticket por vale: la misma mesa sale dos veces, con s
   assert.ok(r.every(x => x.mesa === 'Mesa 1' && /vale/i.test(x.etiqueta)), 'con la etiqueta «Vale N»: ' + JSON.stringify(r));
 });
 
-await caso('El botón grande de un vale solo mueve SUS platos, no los del otro vale', async () => {
+await caso('El nombre del bloque de un vale solo mueve SUS platos, no los del otro vale', async () => {
   const r = await page.evaluate(async ()=>{
     const t2 = document.querySelector('.kt[data-vale="2"]');
-    t2.querySelector('.kt-big').click();
+    t2.querySelector('button.kt-cn.avanza').click();
     await new Promise(r=>setTimeout(r,300));
     return DB.tpvOrders[0].items.map(l => l.estado);
   });
