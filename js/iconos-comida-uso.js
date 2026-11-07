@@ -9,13 +9,27 @@
      un emoji      secciones antiguas: se ven con el icono equivalente, sin tocar el dato guardado */
 const EMOJI_A_ICONO = { '☕':'cafe', '⚗️':'botella', '❄️':'nevera', '🌶️':'pimiento', '🌽':'trigo-2', '🌾':'trigo', '🌿':'hoja', '🍄':'seta', '🍅':'ensalada', '🍆':'planta', '🍇':'uvas', '🍈':'melon', '🍊':'citricos', '🍋':'limon', '🍍':'carambola', '🍎':'manzana', '🍏':'manzana-2', '🍐':'manzana-2', '🍑':'cerezas', '🍓':'cerezas-2', '🍖':'carne', '🍗':'muslo', '🍚':'cuenco-palillos', '🍛':'cuenco-cuchara', '🍝':'cuenco-palillos', '🍞':'pan', '🍫':'chocolate', '🍮':'porcion', '🍯':'caramelo-2', '🍰':'porcion', '🍲':'cazuela', '🍳':'huevo-frito', '🍴':'cubiertos', '🍵':'tetera', '🍶':'botella', '🍷':'copa-vino', '🍸':'coctel', '🍹':'ginebra', '🍺':'cerveza', '🍻':'cerveza-2', '🍼':'leche', '🍽️':'cubiertos-cruz', '🍾':'botella-vino', '🏺':'anfora', '🐚':'concha', '🐟':'pescado', '📖':'cubiertos-cruz', '🛢️':'barrica', '🥂':'copa-champagne', '🥃':'botella', '🥄':'cazo', '🥑':'aguacate', '🥒':'hojas', '🥓':'carne', '🥔':'planta', '🥕':'zanahoria', '🥖':'baguette', '🥗':'ensalada', '🥘':'cazuela', '🥚':'huevo', '🥛':'leche-2', '🥤':'refresco', '🥥':'carambola', '🥧':'tarta', '🥩':'ternera', '🥬':'hojas', '🥭':'carambola', '🥯':'pan', '🦐':'gamba', '🦑':'pescado-3', '🦞':'gamba', '🦪':'concha', '🧀':'queso', '🧂':'sal', '🧃':'licuadora', '🧄':'brote', '🧅':'ensalada-2', '🧈':'queso', '🧉':'martini', '🧊':'agua', '🧋':'bubble-tea', '🫐':'cerezas', '🫑':'pimiento', '🫒':'tapas', '🫓':'pan', '🫕':'cazuela', '🫖':'tetera', '🫗':'copa-llena', '🫘':'trigo', '🫙':'botella', '🥣':'cuenco-cuchara', '🍕':'pizza', '🌭':'salchicha', '🍤':'gamba', '🍢':'espatula', '🥝':'citricos', '🍉':'melon', '🍌':'platano', '🍒':'cerezas', '🥦':'hojas', '🍠':'zanahoria', '🥜':'frutos-secos', '🌰':'frutos-secos', '🍣':'pescado-2', '🐠':'pescado-2', '🐡':'pescado-2', '🦀':'gamba', '🐙':'pescado-3', '🧁':'cupcake', '🍩':'donut', '🍪':'galleta', '🍦':'helado-cono', '🍨':'helado-copa', '🍧':'polo', '🍡':'caramelo', '🍬':'caramelo-2', '🍭':'piruleta', '🎂':'tarta', '🍔':'hamburguesa', '🥪':'bocadillo', '🌮':'bocadillo', '🌯':'bocadillo', '🥙':'bocadillo', '🥟':'empanadilla', '🍜':'cuenco-palillos', '🍙':'cuenco-palillos', '🍘':'galleta', '🧆':'empanadilla', '🥫':'botella', '🍿':'palomitas', '🥞':'brazo', '🧇':'brazo', '🥐':'croissant', '🥨':'pan' };
 const ICONOS_PALABRAS = [
+  // Con los iconos nuevos (7/11) lo específico va PRIMERO: «Sushi» ya no es un cuenco de palillos.
+  [['sushi','nigiri','maki','sashimi'],'sushi'],
+  [['ramen','udon','noodle'],'ramen'],
+  [['taco','burrito','mexican','tex-mex','nacho','quesadilla'],'taco'],
+  [['kebab','durum','shawarma','pita'],'kebab'],
+  [['gofre','waffle','gofra'],'gofre'],
+  [['tortita','creps','crepe','pancake'],'tortitas'],
+  [['fondue','raclette'],'fondue'],
+  [['bento'],'bento'],
+  [['conserva','conservas','canned'],'conservas'],
+  [['legumbre','llegum','pulses','lentej','garbanzo','cigro'],'legumbres'],
+  [['brunch'],'brunch'],
+  [['desayuno','esmorzar','breakfast'],'desayuno'],
+  [['sake'],'sake'],
   [['hamburguesa','burger','hamburger'],'hamburguesa'],
   [['pizza','pizzeria','pizzeria'],'pizza'],
   [['bocadillo','sandwich','montadito','bocata','entrepa','bocadill'],'bocadillo'],
   [['helado','gelat','ice cream','gelato'],'helado'],
   [['cafe','cafes','coffee','cafeteria','cortado','capuchino'],'cafe'],
   [['infantil','nino','ninos','kids','menu infantil'],'galleta-muneco'],
-  [['sushi','japones','oriental','wok','asiatic','noodle','ramen'],'cuenco-palillos'],
+  [['japones','oriental','wok','asiatic'],'cuenco-palillos'],
   [['jamon','ibérico','iberico','pernil','cecina'],'jamon'],
   [['tosta','tostada','bruschetta'],'pan'],
   [['croqueta','frito','fritura','empanad','rebozado'],'empanadilla'],
@@ -34,8 +48,8 @@ const ICONOS_PALABRAS = [
   [['entrante','entrant','starter','aperitivo','aperitiu','tapa','pica','appetizer'],'tapas'],
   [['ensalada','amanida','salad','verdura','vegetal','hortaliza','huerta','veggie'],'ensalada'],
   [['sopa','crema','caldo','soup','brou','potaje','guiso','cuchara','estofado'],'cazuela'],
-  [['arroz','arroces','arros','paella','risotto','rice','fideua'],'cuenco-palillos'],
-  [['pasta','macarron','espagueti','spaghetti','lasan'],'cuenco-palillos'],
+  [['arroz','arroces','arros','paella','risotto','rice','fideua'],'paella'],
+  [['pasta','macarron','espagueti','spaghetti','lasan'],'espaguetis'],
   [['carne','carn','meat','ternera','vedella','cordero','xai','cerdo','porc','pollo','pollastre','chicken','beef','pork','lamb','brasa','parrilla','graella','grill'],'ternera'],
   [['pescado','peix','fish','marisco','marisc','seafood','bacalao','bacalla','pulpo','gamba','calamar'],'pescado'],
   [['huevo','egg','tortilla','truita','revuelto','ou'],'huevo-frito'],
@@ -63,7 +77,7 @@ const ICONOS_PALABRAS = [
   [['cocktail','coctel','copa','combinado','licor','destilado','gin','whisky','vermut','vermouth','spirit'],'coctel'],
   [['cafe','cafeteria','coffee','infusion','infusio','tea','te'],'cafe'],
   [['refresco','refresc','zumo','suc','juice','agua','aigua','water','bebida','beguda','drink','batido','batut','smoothie'],'refresco'],
-  [['desayuno','esmorzar','breakfast','brunch'],'pan']
+  [['desayuno','esmorzar','breakfast','brunch'],'desayuno']
 ];
 function iconoNombreNormal(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 // Las palabras de tres letras o menos ('ou', 'pa', 'vi', 'te') solo valen si son la palabra entera: buscadas por

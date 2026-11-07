@@ -856,11 +856,18 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   base) y **el PVP que mantiene el food cost objetivo** (`geFoodCostObjPct`; coste ÷ objetivo, con IVA, a 10 céntimos).
   «Aplicar» (`aplicarPvpSugerido`) lo propone y pide confirmación; nunca se cambia solo. También cambia el precio en las
   cartas donde está el plato, para que el TPV no se quede con el viejo. Prueba: `test/cambios-precio.mjs`.
-- **Catálogo de iconos de comida** (224, trazo; 181 de comida y 43 de utensilios y equipo de cocina): `tools/iconos-comida-lista.txt` → `node tools/generar-iconos-comida.mjs <tabler> <lucide> <phosphor>` (hacen falta los tres paquetes npm descomprimidos)
-  → `js/iconos-comida.js`; el uso (`iconoSeccionHtml`, `iconoSelectorHtml`) va en `js/iconos-comida-uso.js` y `menu.js`, y se
-  copia a `reservagastrogoan.html`. Lo guardado: `ic:<clave>`, `ic:none` o un emoji antiguo (se sigue viendo).
-  `getCategoryIcon` devuelve el dibujo si es `ic:`; las carpetas de Mega Lista traen su icono de fábrica
-  (`MEGALISTA_ICONOS_BASE`). Un selector único para carta y carpetas.
+- **Catálogo de iconos de comida** (462 desde el 7/11, antes 224; entran a Oferta, Mega Lista y Escandallo por el mismo selector):
+  `tools/iconos-comida-lista.txt` → `generar-iconos-comida.mjs`. Orígenes: `t:` Tabler, `l:` Lucide, `p:` Phosphor (de trazo, los de
+  siempre) y **`f:` Fluent Emoji High Contrast (MIT), `m:` Material Symbols y `c:` Mingcute (Apache-2.0)**, que son glifos RELLENOS
+  (se envuelven en `<g fill=currentColor stroke=none>`). El generador necesita los paquetes npm descomprimidos (`@tabler/icons`,
+  `lucide-static`, `@phosphor-icons/core`, `@iconify-json/{fluent-emoji-high-contrast,material-symbols,mingcute}`) y, para que pese la
+  mitad, `SVGO=<node_modules/svgo>` (`npm i svgo@3` aparte). ⚠️ Con las versiones de hoy de Lucide/Tabler faltaban nombres: se usó
+  la última de cada una (y una mezcla de versiones de Lucide). ⚠️ **No recortar decimales de un path con una expresión regular**: los
+  paths minificados pegan números sin separador («5.04.5» son dos) y redondear el primero los fundía y estropeaba 100 iconos; de eso
+  se encarga SVGO. Peso: el catálogo pasó de 83 a 269 KB (28 → 95 KB comprimido), también dentro de `reservagastrogoan.html`.
+  `ICONOS_PALABRAS` (js/iconos-comida-uso.js) lleva primero lo específico (sushi, ramen, taco, paella, fondue…).
+  El uso (`iconoSeccionHtml`, `iconoSelectorHtml`) va en `js/iconos-comida-uso.js` y `menu.js`, y se copia a `reservagastrogoan.html`.
+  Lo guardado: `ic:<clave>`, `ic:none` o un emoji antiguo (se sigue viendo).
 - **Oferta**: lo vivo (agotado, raciones) es estado de servicio y manda sobre el borrador al guardar (`ocCopiarVivo`).
 - **Comandas**: un vale nuevo cuando la mesa pide otra vez a los 8 min de que el actual tenga comida disparada; modo
   caos por mesas; pase; incidencias; todo el camino de avanzar platos pasa por `avanzarLineasCocina`.
