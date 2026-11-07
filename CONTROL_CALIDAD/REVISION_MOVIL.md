@@ -16,8 +16,14 @@ Ver `INCIDENCIAS.md` I-11 a I-19. Lo más grave:
 ## Por qué las pruebas no lo veían
 `movil.mjs` mide la primera pestaña de cada pantalla y solo elementos «hoja». Los tres fallos graves estaban en pestañas internas, en un campo de formulario o en un texto que cuelga de un elemento con icono. `movil-lectura.mjs` cubre las tres cosas y **falla sin los arreglos** (comprobado).
 
+## Segunda tanda (7/11, tarde): lo que quedaba
+- **Panel de Control 14.047 → 2.440 px** y **Tesorería 5.164 → 3.073 px** (secciones plegables solo en móvil, con el estado recordado).
+- **Mega Lista 2.315 → 1.623 px** y **Stock 1.998 → 1.495 px** (carpetas a dos por fila, también a 320 px).
+- Lo «elegido» que seguía en negro, ahora en verde.
+- **Anchos revisados a ojo:** 320, 360 (capturado, revisado en parte), 390 y 430 (4 pantallas), y **móvil en horizontal** (667×375, 4 pantallas). 412 solo con la prueba automática.
+- **Ventanas:** 15 en la prueba automática (7 + 8 nuevas) y 11 vistas a ojo a 390 px. Siguen sin verse a ojo ≈70 de las 86.
+
 ## Pendiente
-- Revisión a ojo a 412/430 y en horizontal.
-- Pantallas largas por contenido real: Panel de Control (**14.047 px**), Gestión Económica pestañas Tesorería (5.164 px) y Punto de equilibrio (3.601 px). Son largas por contenido, no por un defecto, pero habría que decidir si se pliegan.
-- Mega Lista / Stock: una carpeta por fila (2.000-2.300 px); dos por fila exigiría quitar iconos en 320 px.
-- Botón «⋯» de Stock en una fila suelta tras «Anotar merma».
+- Ventanas restantes a ojo; 412 px a ojo; PDF/Excel/tickets.
+- Gestión Económica: Beneficio y caja (3.982 px) y Punto de equilibrio (3.601 px) siguen largas; no se han plegado.
+- iPhone/Android reales: no probado en aparato.

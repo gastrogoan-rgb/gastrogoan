@@ -3632,7 +3632,7 @@ const GE = (function(){
     const proj = n => dailyRate * n;
     const kp = n => `<div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',n)}</div><div class="val te-val ${proj(n)>=0?'is-ok':'is-ko'}">${proj(n)>=0?'+':''}${fmtMoney(proj(n))}</div></div>`;
     box.innerHTML = `
-      <div class="ge-section te-prev">
+      <div class="ge-section te-prev gg-plegable">
         <div class="ge-sec-head"><h4><i class="ti ti-crystal-ball"></i> ${t('hr.forecast.title')}</h4></div>
         <p class="te-nota">${t('hr.forecast.desc')}</p>
         <div class="ge-kpi-grid te-prev-k">${kp(30)}${kp(60)}${kp(90)}</div>

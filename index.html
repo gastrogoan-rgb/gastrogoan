@@ -117,7 +117,7 @@
         <button class="btn btn-sm btn-primary" id="dash-preguntale" onclick="abrirPreguntaNumeros()"><i class="ti ti-message-chatbot"></i> <span data-i18n="ia.num.title">Pregúntale a tus números</span></button>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="card gg-plegable" data-acc-abierto="1" style="margin-top:16px">
         <h3 data-i18n="title.todayAttention"><i class="ti ti-bell"></i> Hoy — Atención</h3>
         <div id="dashboard-attention"></div>
       </div>
@@ -126,34 +126,34 @@
 
       <div class="grid grid-2" id="dashboard-period-kpis" style="margin-top:16px"></div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="card gg-plegable" style="margin-top:16px">
         <h3 data-i18n="dash.upcomingReservations.title"><i class="ti ti-calendar-stats"></i> Reservas de los próximos 7 días</h3>
         <div id="dashboard-reservations-week"></div>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="card gg-plegable" style="margin-top:16px">
         <h3 data-i18n="title.monthlyPL"><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
         <div id="dashboard-resultado"></div>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="card gg-plegable" data-acc-abierto="1" style="margin-top:16px">
         <h3 id="dash-trend-tit"><i class="ti ti-chart-line"></i> Evolución del año</h3>
         <div id="dashboard-trend"></div>
         <p style="font-size:11.5px;color:var(--muted);margin-top:6px" data-i18n="dash.currentMonthPartialNote">* El mes en curso es parcial (solo lleva los días transcurridos).</p>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="card gg-plegable" style="margin-top:16px">
         <h3 data-i18n="title.salesAnalysis"><i class="ti ti-chart-pie"></i> Análisis de ventas (este mes)</h3>
         <div id="dashboard-sales-analysis"></div>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="card gg-plegable" style="margin-top:16px">
         <h3 data-i18n="title.salesHeatmap"><i class="ti ti-calendar-stats"></i> Picos de venta (día y hora, últimas 8 semanas)</h3>
         <p style="font-size:12px;color:var(--muted);margin:0 0 10px" data-i18n="dash.heatmapHint">Cuanto más oscura la celda, más se vende en ese día y esa franja horaria. Útil para planificar personal y compras.</p>
         <div id="dashboard-sales-heatmap"></div>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="card gg-plegable" style="margin-top:16px">
         <h3 data-i18n="title.breakEven"><i class="ti ti-scale"></i> Punto de equilibrio</h3>
         <div id="dashboard-breakeven"></div>
       </div>
@@ -167,33 +167,33 @@
         <div style="margin-top:14px">
           <div class="month-sel" id="platos-period-sel"></div>
           <div class="ge-kpi-grid" id="platos-kpis"></div>
-          <div class="vis-section" style="margin-bottom:14px">
+          <div class="vis-section gg-plegable" style="margin-bottom:14px">
             <h4><span data-i18n="dash.top5DishesByRevenue">Top 5 platos por ingresos</span> <span class="ge-auto">AUTO</span></h4>
             <div id="platos-chart" class="bar-chart"></div>
           </div>
-          <div class="ge-section">
+          <div class="ge-section gg-plegable">
             <div class="ge-sec-head"><h4><i class="ti ti-flame"></i> <span data-i18n="dash.mostSoldByUnits">Más vendidos (por unidades)</span></h4></div>
             <div class="ge-grid"><table id="platos-mas-vendidos" class="table-cards"></table></div>
           </div>
-          <div class="ge-section">
+          <div class="ge-section gg-plegable">
             <div class="ge-sec-head"><h4><i class="ti ti-snowflake"></i> <span data-i18n="dash.leastSold">Menos vendidos</span></h4></div>
             <div class="ge-grid"><table id="platos-menos-vendidos" class="table-cards"></table></div>
           </div>
-          <div class="ge-section">
+          <div class="ge-section gg-plegable">
             <div class="ge-sec-head"><h4><i class="ti ti-chart-dots"></i> <span data-i18n="dash.menuEngineeringTitle">Matriz de rentabilidad (margen × popularidad)</span> <span class="ge-auto">AUTO</span></h4></div>
             <p style="font-size:12px;color:var(--muted);margin:0 0 8px" data-i18n="dash.menuEngineeringHint">Cruza el margen de cada plato con cuánto se vende, para ver de un vistazo qué platos empujar, cuáles revisar de precio o receta, y cuáles plantearte quitar de la carta.</p>
             <div class="ge-kpi-grid" id="platos-matrix-kpis" style="margin-bottom:10px"></div>
             <div class="ge-grid"><table id="platos-matrix"></table></div>
           </div>
-          <div class="ge-section">
+          <div class="ge-section gg-plegable">
             <div class="ge-sec-head"><h4><i class="ti ti-diamond"></i> <span data-i18n="dash.mostProfitableMargin">Más rentables (margen)</span></h4></div>
             <div class="ge-grid"><table id="platos-mas-rentables" class="table-cards"></table></div>
           </div>
-          <div class="ge-section">
+          <div class="ge-section gg-plegable">
             <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> <span data-i18n="dash.leastProfitable">Menos rentables</span></h4></div>
             <div class="ge-grid"><table id="platos-menos-rentables" class="table-cards"></table></div>
           </div>
-          <div class="ge-section">
+          <div class="ge-section gg-plegable">
             <div class="ge-sec-head"><h4><i class="ti ti-mood-empty"></i> <span data-i18n="dash.noSalesInPeriod">Sin ventas en el periodo</span></h4></div>
             <div id="platos-sin-ventas"></div>
           </div>
@@ -603,7 +603,7 @@
         </div>
         <div class="ge-kpi-grid te-kpis" id="te-kpis"></div>
         <div id="te-avisos"></div>
-        <div class="ge-section te-dist-sec">
+        <div class="ge-section te-dist-sec gg-plegable" data-acc-abierto="1">
           <div class="ge-sec-head"><h4><span data-i18n="ge.treasuryDistribution">Distribución de tesorería</span> <span class="ge-auto">AUTO</span></h4>
             <label class="te-plantilla"><select id="te-plantilla" onchange="GE.aplicarPlantillaDist(this.value); this.value=''"></select></label></div>
           <div id="te-barras" class="te-barras"></div>

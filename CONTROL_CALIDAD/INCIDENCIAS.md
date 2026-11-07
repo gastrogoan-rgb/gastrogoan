@@ -24,6 +24,12 @@
 | I-18 | TPV a 320 px | «Anulaciones» no cabía con su icono | Sin icono a ≤ 340 px | Recaptura |
 | I-19 | `movil.mjs` | **Solo mide la primera pestaña de cada pantalla**: no veía Temperaturas, Calendario, Elaboraciones, Novedades… | `test/movil-lectura.mjs` recorre 47 estados (con pestañas) y 7 ventanas | — |
 
+| I-20 | Panel de Control (móvil) | **14.047 px** de alto: una tarjeta («Análisis de Platos», un `<details>` abierto) medía 9.809 px | Secciones plegables solo en móvil (`.gg-plegable`, `ggAccPreparar` en `js/ui.js`): «Hoy — Atención» y «Evolución del año» abiertas, el resto plegadas; el análisis de platos empieza cerrado y sus 8 secciones también. Estado recordado al repintar | Medido: **2.440 px** |
+| I-21 | Tesorería (móvil) | 5.164 px | Mismo mecanismo: «Distribución» abierta; «Pagos a Hacienda» y «Previsión» plegadas | Medido: **3.073 px**; `economia-tesoreria` en verde |
+| I-22 | Mega Lista, Stock, Escandallo, Fichas (móvil) | Una carpeta por fila (Mega Lista 2.315 px, Stock 1.998 px) | Dos por fila, con icono y menú ⋯ arriba y el nombre debajo; también a 320 px | Medido: **1.623 px** y **1.495 px**; `megalista`, `stock`, `plegables` en verde |
+| I-23 | Lo «elegido» en negro | Categoría de «Tomar nota», trimestres T1-T4 de la Cuenta de Resultados, alérgenos de APPCC, conmutador de vista y maridajes | Verde (regla del sistema) | Recaptura |
+| I-24 | `movil-lectura.mjs` | Solo 5 anchos verticales y 7 ventanas | Añadidos **2 tamaños horizontales** (568×320, 667×375) y 8 ventanas más (merma, lista de espera, cartas activas, inversión, gasto fijo, compra, acción de promoción, cobro) | 47 pantallas × 7 tamaños + 15 ventanas: 0 hallazgos |
+
 
 ## Abiertas (no tocadas, con motivo)
 
