@@ -2420,7 +2420,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Cómo llega un pedido</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">Sala toma nota en el TPV. Mientras los platos no están <strong>marchados</strong>, cocina no los ve.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">Sala pulsa <strong>Marchar vale</strong> (o marcha un plato suelto) y el ticket aparece aquí. En la mesa, sala ve <strong>En cocina</strong> en cuanto la pantalla de cocina lo ha recibido (antes pone «Enviando…»).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Sala marcha un grupo o un plato suelto y el ticket aparece aquí. En la mesa, sala ve <strong>En cocina</strong> en cuanto la pantalla de cocina lo ha recibido (antes pone «Enviando…»).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Los pedidos online y para llevar que el negocio acepta también llegan aquí. Un pedido programado para dentro de días no aparece hasta que toca.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Las <strong>bebidas nunca salen</strong> en esta pantalla: no son de cocina.</div></div>
 
@@ -2436,7 +2436,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">1</div><div class="st">Toca el <strong>nombre del bloque</strong> (por ejemplo <strong>Entrantes</strong>, con las dos flechas al lado). Todos los platos del bloque pasan a <strong>En preparación</strong> y marcan una llama.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Cuando salen, vuelve a tocar el nombre del bloque. El bloque pasa a <strong>Listo en el pase</strong>. Ya no hay un botón grande aparte.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Si quieres avanzar <strong>un solo plato</strong>, tócalo a él: pasa al siguiente estado sin mover el resto del bloque.</div></div>
-<div class="manual-step"><div class="sn">4</div><div class="st">Sala pulsa <strong>Entregar</strong> cuando se lo lleva, y el curso queda <strong>Recogido</strong>. Cocina no puede dar este último paso, es de sala. Hasta que sala lo confirma, el ticket sigue en <strong>Activas</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Cuando el bloque está <strong>Listo en el pase</strong>, sala lo ve en su pantalla. Cuando el camarero se lo lleva, <strong>cocina toca el nombre del bloque</strong> (o el plato) y queda <strong>Recogido</strong>. Hasta entonces el ticket sigue en <strong>Activas</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Si no hay nada que cocinar todavía, el ticket dice «Esperando que sala marche…». Cuando todo está en el pase, «Todo listo en el pase».</div></div>
 <p><strong>Si te equivocas</strong>: pulsa <strong>Deshacer</strong> (arriba, o la flecha del propio ticket). Deshace la última acción —de un plato o de un curso entero—, hasta 10 veces seguidas. Solo funciona mientras no recargues la página.</p>
 
@@ -2472,7 +2472,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Sala marchó un pedido y no aparece</strong>: en la mesa de sala mira si pone <strong>En cocina</strong> o «Enviando…». Si se queda en «Enviando…», revisa que el indicador de nube esté en verde en los dos aparatos.</li>
 <li><strong>No sale un plato</strong>: puede ser una bebida (no pasa por cocina), no estar marchado aún o ser un pedido programado para otro día.</li>
-<li><strong>El ticket no desaparece aunque ya salió</strong>: falta que sala pulse <strong>Entregar</strong>; hasta entonces sigue en Activas. Mira <strong>En el pase</strong> en Modo caos y usa <strong>Avisar</strong>.</li>
+<li><strong>El ticket no desaparece aunque ya salió</strong>: falta marcarlo como <strong>Recogido</strong> (toca el nombre del bloque cuando sala se lo lleva); hasta entonces sigue en Activas. Mira <strong>En el pase</strong> en Modo caos: ahí tienes <strong>Recogido</strong> y <strong>Avisar</strong>.</li>
 <li><strong>Pulsé un plato sin querer</strong>: <strong>Deshacer</strong>, antes de recargar la página.</li>
 <li><strong>«No hay comandas pendientes»</strong>: no hay nada marchado ahora mismo; aparecerán solas.</li>
 </ul>`,
@@ -2483,7 +2483,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Com arriba una comanda</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">La sala pren nota al TPV. Mentre els plats no estan <strong>marxats</strong>, cuina no els veu.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">La sala prem <strong>Marxar val complet</strong> (o marxa un plat solt) i el tiquet apareix aquí. A la taula, la sala veu <strong>A cuina</strong> així que la pantalla de cuina l'ha rebut (abans posa «Enviant…»).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">La sala marxa un grup o un plat solt i el tiquet apareix aquí. A la taula, la sala veu <strong>A cuina</strong> així que la pantalla de cuina l'ha rebut (abans posa «Enviant…»).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Les comandes en línia i per emportar que el negoci accepta també arriben aquí. Una comanda programada per d'aquí a dies no apareix fins que toca.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Les <strong>begudes mai surten</strong> en aquesta pantalla: no són de cuina.</div></div>
 
@@ -2499,7 +2499,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">1</div><div class="st">Toca el <strong>nom del bloc</strong> (per exemple <strong>Entrants</strong>, amb les dues fletxes al costat). Tots els plats del bloc passen a <strong>En preparació</strong> i marquen una flama.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Quan surten, torna a tocar el nom del bloc. El bloc passa a <strong>Llest al pas</strong>. Ja no hi ha un botó gran a part.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Si vols avançar <strong>un sol plat</strong>, toca'l a ell: passa al següent estat sense moure la resta del bloc.</div></div>
-<div class="manual-step"><div class="sn">4</div><div class="st">La sala prem <strong>Lliurar</strong> quan se l'emporta, i el curs queda <strong>Recollit</strong>. Cuina no pot fer aquest últim pas, és de sala. Fins que la sala ho confirma, el tiquet continua a <strong>Actives</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Quan el bloc és <strong>Llest al pas</strong>, la sala el veu a la seva pantalla. Quan el cambrer se l'emporta, <strong>cuina toca el nom del bloc</strong> (o el plat) i queda <strong>Recollit</strong>. Fins llavors el tiquet continua a <strong>Actives</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Si encara no hi ha res per cuinar, el tiquet diu «Esperant que la sala marxi…». Quan tot és al pas, «Tot llest al pas».</div></div>
 <p><strong>Si t'equivoques</strong>: prem <strong>Desfer</strong> (a dalt, o la fletxa del mateix tiquet). Desfà l'última acció —d'un plat o d'un curs sencer—, fins a 10 vegades seguides. Només funciona mentre no recarreguis la pàgina.</p>
 
@@ -2535,7 +2535,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>La sala ha marxat una comanda i no apareix</strong>: a la taula de sala mira si posa <strong>A cuina</strong> o «Enviant…». Si es queda a «Enviant…», revisa que l'indicador de núvol sigui verd als dos aparells.</li>
 <li><strong>No surt un plat</strong>: pot ser una beguda (no passa per cuina), no estar marxat encara o ser una comanda programada per a un altre dia.</li>
-<li><strong>El tiquet no desapareix tot i que ja ha sortit</strong>: falta que la sala premi <strong>Lliurar</strong>; fins llavors continua a Actives. Mira <strong>Al pas</strong> al Mode caos i fes servir <strong>Avisar</strong>.</li>
+<li><strong>El tiquet no desapareix tot i que ja ha sortit</strong>: falta marcar-lo com a <strong>Recollit</strong> (toca el nom del bloc quan la sala se l'emporta); fins llavors continua a Actives. Mira <strong>Al pas</strong> al Mode caos: allà tens <strong>Recollit</strong> i <strong>Avisar</strong>.</li>
 <li><strong>He premut un plat sense voler</strong>: <strong>Desfer</strong>, abans de recarregar la pàgina.</li>
 <li><strong>«No hi ha comandes pendents»</strong>: no hi ha res marxat ara mateix; apareixeran soles.</li>
 </ul>`,
@@ -2546,7 +2546,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>How an order arrives</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">The floor takes the order in the POS. While dishes are not <strong>fired</strong>, the kitchen can't see them.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">The floor presses <strong>Send full ticket</strong> (or fires a single dish) and the ticket appears here. On the table, the floor sees <strong>In kitchen</strong> as soon as the kitchen screen has received it (before that it says "Sending...").</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">The floor fires a group or a single dish and the ticket appears here. On the table, the floor sees <strong>In kitchen</strong> as soon as the kitchen screen has received it (before that it says "Sending...").</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Online and takeaway orders the business accepts also arrive here. An order scheduled for days ahead doesn't appear until it's time.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Drinks never show</strong> on this screen: they aren't kitchen items.</div></div>
 
@@ -2562,7 +2562,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">1</div><div class="st">Tap the <strong>block name</strong> (for example <strong>Starters</strong>, with the two arrows beside it). All the dishes in the block go to <strong>Preparing</strong> and show a flame.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">When they go out, tap the block name again. The block becomes <strong>Ready at the pass</strong>. There is no separate big button any more.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">If you want to advance <strong>a single dish</strong>, tap that dish: it moves to the next status without moving the rest of the block.</div></div>
-<div class="manual-step"><div class="sn">4</div><div class="st">The floor presses <strong>Hand over</strong> when they carry it away, and the course becomes <strong>Picked up</strong>. The kitchen can't take that last step, it belongs to the floor. Until the floor confirms it, the ticket stays in <strong>Active</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">When the block is <strong>Ready at the pass</strong>, the floor sees it on its screen. When the waiter takes it away, <strong>the kitchen taps the block name</strong> (or the dish) and it becomes <strong>Picked up</strong>. Until then the ticket stays in <strong>Active</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">If there's nothing to cook yet, the ticket says "Waiting for the floor to fire…". When everything is at the pass, "Everything ready at the pass".</div></div>
 <p><strong>If you make a mistake</strong>: press <strong>Undo</strong> (at the top, or the arrow on the ticket itself). It undoes the last action —of one dish or a whole course—, up to 10 times in a row. It only works as long as you haven't reloaded the page.</p>
 
@@ -2598,7 +2598,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>The floor fired an order and it doesn't show</strong>: on the floor's table check whether it says <strong>In kitchen</strong> or "Sending...". If it stays on "Sending...", check that the cloud indicator is green on both devices.</li>
 <li><strong>A dish doesn't show</strong>: it may be a drink (doesn't go through the kitchen), not fired yet, or an order scheduled for another day.</li>
-<li><strong>The ticket doesn't disappear although it went out</strong>: the floor still has to press <strong>Hand over</strong>; until then it stays in Active. Check <strong>At the pass</strong> in Chaos mode and use <strong>Alert</strong>.</li>
+<li><strong>The ticket doesn't disappear although it went out</strong>: it still has to be marked <strong>Picked up</strong> (tap the block name once the floor takes it); until then it stays in Active. Check <strong>At the pass</strong> in Chaos mode: it has <strong>Picked up</strong> and <strong>Alert</strong> there.</li>
 <li><strong>I pressed a dish by mistake</strong>: <strong>Undo</strong>, before reloading the page.</li>
 <li><strong>"No pending orders"</strong>: nothing is fired right now; they'll appear on their own.</li>
 </ul>`}
@@ -2657,8 +2657,8 @@ const MANUAL_CHAPTERS = [
 <ul>
   <li>Lo primero que apuntas en una mesa nueva (la primera sección) <strong>se marcha solo</strong>. Las <strong>bebidas</strong> no pasan por cocina: van directas a barra.</li>
   <li>Cada tanda (Entrantes, Segundos, Postres…) tiene su botón <strong>Marchar a cocina</strong> para lanzarla cuando el cliente esté listo.</li>
-  <li><strong>Marchar vale</strong> manda de una vez el siguiente grupo de comida pendiente. Desaparece cuando ya no queda nada por marchar.</li>
-  <li>El estado de cada tanda se actualiza solo con lo que hace Cocina: <strong>Marchado → En preparación → Listo para recoger → Recogido</strong>. Cuando algo está listo, tú pulsas <strong>Entregar</strong> al llevarlo a la mesa.</li>
+  <li>Se marcha <strong>por grupo</strong> (el botón de la cabecera de cada tanda) o <strong>plato a plato</strong> (con el ⋯ de la línea). Ya no hay un «Marchar vale» general: así cada cosa sale cuando toca.</li>
+  <li>El estado de cada tanda se actualiza solo con lo que hace Cocina: <strong>Marchado → En preparación → Listo para recoger → Recogido</strong>. Cuando algo está listo lo ves como <strong>Listo en el pase</strong>; el «Recogido» lo marca Cocina cuando te lo llevas.</li>
   <li>Si una mesa vuelve a pedir pasados unos 8 minutos de que cocina ya tuviera platos en marcha, entra como <strong>un vale nuevo</strong> en la pantalla de Cocina.</li>
 </ul>
 <div class="manual-tip"><i class="ti ti-bulb"></i>Puedes elegir si los vales se ven en la pantalla de Cocina o se imprimen, en <strong>Mi Negocio → Comandas de cocina y sala</strong>.</div>
@@ -2792,8 +2792,8 @@ const MANUAL_CHAPTERS = [
 <ul>
   <li>El primer que apuntes en una taula nova (la primera secció) <strong>marxa sol</strong>. Les <strong>begudes</strong> no passen per cuina: van directes a barra.</li>
   <li>Cada tanda (Entrants, Segons, Postres…) té el seu botó <strong>Enviar a cuina</strong> per llançar-la quan el client estigui llest.</li>
-  <li><strong>Marxar val complet</strong> envia de cop el següent grup de menjar pendent. Desapareix quan ja no queda res per marxar.</li>
-  <li>L'estat de cada tanda s'actualitza sol amb el que fa Cuina: <strong>Marxat → En preparació → Llest per recollir → Recollit</strong>. Quan alguna cosa és a punt, tu prems <strong>Lliurar</strong> en portar-la a la taula.</li>
+  <li>Es marxa <strong>per grup</strong> (el botó de la capçalera de cada tanda) o <strong>plat a plat</strong> (amb el ⋯ de la línia). Ja no hi ha un «Marxar val» general: així cada cosa surt quan toca.</li>
+  <li>L'estat de cada tanda s'actualitza sol amb el que fa Cuina: <strong>Marxat → En preparació → Llest per recollir → Recollit</strong>. Quan alguna cosa és a punt la veus com a <strong>Llest al pas</strong>; el «Recollit» el marca Cuina quan te l'emportes.</li>
   <li>Si una taula torna a demanar passats uns 8 minuts d'haver ja plats en marxa a cuina, entra com <strong>un val nou</strong> a la pantalla de Cuina.</li>
 </ul>
 <div class="manual-tip"><i class="ti ti-bulb"></i>Pots triar si els vals es veuen a la pantalla de Cuina o s'imprimeixen, a <strong>El Meu Negoci → Comandes de cuina i sala</strong>.</div>
@@ -2927,8 +2927,8 @@ const MANUAL_CHAPTERS = [
 <ul>
   <li>The first thing you add to a new table (the first section) <strong>is sent automatically</strong>. <strong>Drinks</strong> don't go through the kitchen: they go straight to the bar.</li>
   <li>Each course (Starters, Mains, Desserts…) has its own <strong>Send to kitchen</strong> button to fire it when the customer is ready.</li>
-  <li><strong>Send full ticket</strong> sends the next pending food group in one go. It disappears when nothing is left to send.</li>
-  <li>Each course's status updates by itself with what the Kitchen does: <strong>Fired → Preparing → Ready to pick up → Picked up</strong>. When something is ready, you press <strong>Hand over</strong> as you take it to the table.</li>
+  <li>You fire <strong>by group</strong> (the button in each course header) or <strong>dish by dish</strong> (the line's ⋯). There is no general «Send full ticket» any more: each thing goes out when it should.</li>
+  <li>Each course's status updates by itself with what the Kitchen does: <strong>Fired → Preparing → Ready to pick up → Picked up</strong>. When something is ready you see <strong>Ready at the pass</strong>; the Kitchen marks «Picked up» when you take it away.</li>
   <li>If a table orders again about 8 minutes after the kitchen already had dishes going, it comes in as <strong>a new ticket</strong> on the Kitchen screen.</li>
 </ul>
 <div class="manual-tip"><i class="ti ti-bulb"></i>You can choose whether tickets show on the Kitchen screen or get printed in <strong>My Business → Kitchen and floor tickets</strong>.</div>

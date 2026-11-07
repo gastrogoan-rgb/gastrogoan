@@ -2548,6 +2548,10 @@ button.kt-cn:active{transform:translateY(1px)}
 button.kt-cn:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 button.kt-cn .kt-go{font-size:16px;color:var(--olive);flex:0 0 auto;margin-right:auto}
 button.kt-cn .cz-hora{margin-left:auto}
+button.kt-cn.recoge{background:#EEF3EF;border-color:#B9CABD}
+button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
+.kt-pl.por-recoger{cursor:pointer}.kt-pl.por-recoger .n{text-decoration:none;color:var(--ink)}
+.kt-pl.por-recoger:hover .n{text-decoration:underline;text-decoration-color:var(--olive-l);text-underline-offset:3px}
 .kt-cn b{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
 .kt-st{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:2px;border:1px solid var(--hair);color:var(--muted);white-space:nowrap}
 .kt-st.p{background:#FBF1DC;border-color:#E8CF9A;color:#8A5A0F}.kt-st.l{background:#E7EEE8;border-color:#B9CABD;color:#2F4434}

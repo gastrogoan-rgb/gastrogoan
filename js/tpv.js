@@ -1581,7 +1581,10 @@ function groupOrderItemsByTanda(order, itemsWithIdx){
     if(!groups[key]) groups[key] = [];
     groups[key].push({line, idx});
   });
-  return [...(order.tandas||[]), ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
+  // Una línea cuya tanda no figura en order.tandas (datos de otro dispositivo o antiguos) NO puede desaparecer de la comanda:
+  // se añade al final en vez de esconderse (8/11).
+  const orden = [...new Set([...(order.tandas||[]), ...Object.keys(groups).filter(k => k !== ''), ''])];
+  return orden.filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
 }
 
 // Botón principal: marcha el primer grupo (tanda) con platos pendientes (p.ej. "Entrantes"
@@ -2116,7 +2119,7 @@ function setComandasCocinaTab(tab){
 
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
-  const food = (order.items||[]).filter(l => !l.bebida);
+  const food = (order.items||[]).filter(l => !esLineaDeBebida(l));
   // Cocina lleva el ciclo completo de cada plato: esperando -> preparación
   // -> listo para recoger -> recogido. Si la comanda se cerrara nada más
   // terminar de cocinar (como antes), desaparecería de "Activas" justo
@@ -2318,12 +2321,15 @@ function avanzarLineasCocina(orderId, idxs){
 // tanda de golpe — el paso final del ciclo, que ya NO puede dar cocina
 // (ver cycleLineEstado/cycleGroupEstado). Mismo patrón de "marcar grupo"
 // que ya usa cocina para sus propios pasos, pero solo para este último.
-function marcarTandaRecogidaDesdeSala(orderId, tanda){
+/* ⚠️ DECISIÓN DEL DUEÑO (8/11): el «recogido» ya NO lo marca Sala, lo marca COCINA. Sala solo marcha las comandas y ve
+   «Listo en el pase»; cuando el camarero se lleva el plato, quien pulsa es la cocina. (Revierte lo del 1/10.) */
+function marcarTandaRecogida(orderId, tanda, vale){ return marcarTandaRecogidaDesdeSala(orderId, tanda, vale); }
+function marcarTandaRecogidaDesdeSala(orderId, tanda, vale){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   const idxs = [];
   (order.items||[]).forEach((line, idx) => {
-    if((line.tanda||'') === tanda && line.estado === 'entregado' && !line.recogidoAt) idxs.push(idx);
+    if((line.tanda||'') === tanda && line.estado === 'entregado' && !line.recogidoAt && (vale == null || (line.vale||1) === Number(vale))) idxs.push(idx);
   });
   if(!idxs.length) return;
   pushKitchenUndo(orderId, idxs);
@@ -2331,9 +2337,11 @@ function marcarTandaRecogidaDesdeSala(orderId, tanda){
   checkComandaCierre(order);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
+  if((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
   withScrollPreserved(() => {
     const active = document.querySelector('.view.active');
     if(active && active.id === 'view-tpv') renderTPV();
+    else if(active && active.id === 'view-comandascocina') renderComandasCocina();
     const overlay = document.getElementById('modal-overlay');
     if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
   });
@@ -2608,6 +2616,7 @@ function paseHtml(allOrders){
       <div class="cz-pase-it ${nivel}">
         <div class="cz-pase-txt"><strong>${escapeHtml(titulo)}</strong><span>${lineas.map(l => `${fmtNum(l.qty)}× ${escapeHtml(l.name)}`).join(' · ')}</span></div>
         <b class="cz-pase-min">${mins}'</b>
+        <button type="button" class="btn btn-sm btn-fino is-on" onclick="marcarPaseRecogido(${order.id})" title="${escapeHtml(gl({es:'Sala se lo ha llevado', ca:'La sala s\'ho ha endut', en:'The floor took it'}))}"><i class="ti ti-check"></i> ${gl({es:'Recogido', ca:'Recollit', en:'Picked up'})}</button>
         <button type="button" class="btn btn-sm btn-fino${avisado ? ' is-on' : ''}" ${avisado ? 'disabled' : ''} onclick="avisarPase(${order.id})"><i class="ti ${avisado ? 'ti-check' : 'ti-bell-ringing'}"></i> ${avisado ? gl({es:'Avisado', ca:'Avisat', en:'Alerted'}) : gl({es:'Avisar', ca:'Avisar', en:'Alert'})}</button>
       </div>`;
   }).join('');
@@ -2616,6 +2625,12 @@ function paseHtml(allOrders){
       <div class="cz-pase-cab"><span><i class="ti ti-bell-ringing"></i> ${gl({es:'En el pase', ca:'Al pas', en:'At the pass'})}</span><small>${total} ${gl({es:total===1?'plato esperando a sala':'platos esperando a sala', ca:total===1?'plat esperant la sala':'plats esperant la sala', en:'waiting for the floor'})}</small></div>
       ${filas}
     </div>`;
+}
+function marcarPaseRecogido(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const tandas = [...new Set((order.items||[]).filter(l => !esLineaDeBebida(l) && l.estado === 'entregado' && !l.recogidoAt).map(l => l.tanda || ''))];
+  tandas.forEach(tn => marcarTandaRecogidaDesdeSala(orderId, tn));
 }
 function avisarPase(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
@@ -2993,8 +3008,9 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
         const fam = familiaDeLinea(line, tanda);
         const avanza = line.estado === 'cocina' || line.estado === 'preparando';
         const hecho = line.estado === 'entregado';
+        const porRecoger = hecho && !line.recogidoAt;
         return `
-          <div class="kt-pl${!line.estado ? ' held' : ''}${hecho ? ' hecho' : ''}${avanza ? ' avanza' : ''}"${avanza ? ` onclick="cycleLineEstado(${order.id}, ${idx})" title="${escapeHtml(gl({es:'Tocar para avanzar solo este plato', ca:'Toca per avançar només aquest plat', en:'Tap to advance just this dish'}))}"` : ''}>
+          <div class="kt-pl${!line.estado ? ' held' : ''}${hecho ? ' hecho' : ''}${avanza ? ' avanza' : ''}${porRecoger ? ' por-recoger' : ''}"${avanza ? ` onclick="cycleLineEstado(${order.id}, ${idx})" title="${escapeHtml(gl({es:'Tocar para avanzar solo este plato', ca:'Toca per avançar només aquest plat', en:'Tap to advance just this dish'}))}"` : porRecoger ? ` onclick="markLineRecogida(${order.id}, ${idx})" title="${escapeHtml(gl({es:'Tocar cuando sala haya recogido este plato', ca:'Toca quan la sala hagi recollit aquest plat', en:'Tap once the floor has picked up this dish'}))}"` : ''}>
             <span class="q">${fmtNum(line.qty)}×</span><span class="n">${escapeHtml(line.name)}${line.estado === 'preparando' ? ' <i class="ti ti-flame kt-fuego"></i>' : ''}</span>${fam ? `<span class="fam">${escapeHtml(fam)}</span>` : ''}
           </div>
           ${line.notas && !(bloque.tipo === 'menu' && bloque.nombre && line.notas === `Menú: ${bloque.nombre}`) ? `<div class="kt-nt">${escapeHtml(line.notas)}</div>` : ''}`;
@@ -3003,7 +3019,9 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
         <div class="kt-cu ${est.k}">
           <div class="kt-rail"><span class="kt-dot ${est.dot}${est.k==='rec' ? ' rec' : ''}"></span>${i < tt.length - 1 ? '<span class="kt-line"></span>' : ''}</div>
           <div>
-            ${est.activo
+            ${est.k === 'listo'
+              ? `<button type="button" class="kt-cn avanza recoge" onclick="marcarTandaRecogida(${order.id}, '${escapeJsAttr(tanda)}', ${vale||1})" title="${escapeHtml(gl({es:'Tocar cuando sala lo haya recogido', ca:'Toca quan la sala ho hagi recollit', en:'Tap once the floor has picked it up'}))}"><b>${escapeHtml(nombreCurso(tanda))}</b><i class="ti ti-check kt-go" aria-hidden="true"></i><span class="kt-st l">${gl({es:'Listo en el pase · recogido', ca:'Llest al pas · recollit', en:'At the pass · picked up'})}</span></button>`
+              : est.activo
               ? `<button type="button" class="kt-cn avanza" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(tanda)}', ${vale||1})" title="${escapeHtml(gl({es:'Tocar para avanzar todo el bloque', ca:'Toca per avançar tot el bloc', en:'Tap to advance the whole block'}))}"><b>${escapeHtml(nombreCurso(tanda))}</b><i class="ti ti-chevrons-right kt-go" aria-hidden="true"></i><span class="kt-st ${est.dot}">${est.texto}</span></button>`
               : `<div class="kt-cn"><b>${escapeHtml(nombreCurso(tanda))}</b><span class="kt-st ${est.dot}">${est.texto}</span></div>`}
             ${filas}

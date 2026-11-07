@@ -956,6 +956,23 @@ El dueño dijo que la vista móvil era «lo peor de la app». Se capturó cada p
 - **Espacios muertos aplicados**: Limpieza › Mantenimiento (título junto a «Añadir equipo»), I+D (carpetas y tipos en una sola fila), Personal.
 - Manual de Stock, Pedidos y Personal al día en los tres idiomas.
 
+## TPV · tanda del 8/11 (comanda, mesas, recogido)
+
+- **Comanda en DOS pestañas en todos los tamaños** (`.tp-or-pestana`: «Tomar nota» | «Pedido · N · total»). Una mesa con pedido ya empezado abre en
+  «Pedido»; una vacía, en «Tomar nota» (`openTableOrder`). Ya no hay barra inferior ni columna lateral. **Cada línea del pedido va en UNA fila**
+  (cantidad, nombre, precio y un «⋯» con nota / marchar / quitar: `.tp-ac-mas`). Lo pide el dueño: «ver la nota con el mínimo scroll».
+- **Rondas** (`comandaRondas`, `.tp-ronda`): lo marchado se agrupa por vale («Pedido 1 · hora»…) y lo de comida que se acaba de apuntar sin marchar va aparte,
+  «Añadido ahora · por marchar». Con una sola ronda no hay cabeceras. ⚠️ `groupOrderItemsByTanda` ya NO esconde una línea cuya tanda no esté en `order.tandas`.
+- **Camarero BLOQUEADO** (candado, `.tp-chip-fijo`): es quien inició sesión; solo el propietario puede reasignarlo.
+- **Alérgenos de la mesa**: los 14 como botones (`promptTableAllergens`, `order.tableAllergenList` + `tableAllergenNote`; `tableAllergensTexto(order)` es lo que
+  leen el vale impreso y las pantallas de cocina).
+- **Fusión de mesas**: ya no pierde los alérgenos, renumera los vales (cocina ve dos tickets, no uno mezclado), suma incidencias y cliente. Cambiar de mesa deja
+  `mesaAnterior` (cocina ve «antes: Mesa 4» 45 min) y avisa por el chat de Sala. Parte de cuenta en efectivo valida lo entregado.
+- ⚠️ **«RECOGIDO» LO MARCA COCINA** (8/11, revierte la decisión del 1/10): con un bloque «Listo en el pase», su nombre en el ticket pasa a ser el botón
+  (`marcarTandaRecogida`; cada plato también, `markLineRecogida`; el panel «En el pase» del modo caos tiene «Recogido»). Sala solo ve «Listo en el pase» y
+  **ya no hay «Marchar vale»**: se marcha por grupo o por plato. `checkComandaCierre` ignora también las bebidas sin marca.
+- Pruebas: `test/tpv-comanda.mjs`, `test/tpv-mesas-cobros.mjs`, `test/comandas-cocina.mjs`.
+
 ## El «login raro» que sale solo: PIN de área SOBRE la entrada (7/11)
 
 El dueño abrió `app.gastrogoan.com/#promocion` tras muchas horas sin usarla y salió, a la vez, la entrada con «Tu sesión se cerró porque llevaba

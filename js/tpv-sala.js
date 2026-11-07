@@ -417,10 +417,8 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
     else if(hasPreparando) statusBadge = bt('', `cycleGroupEstado(${order.id}, '${esq}')`, escapeHtml(t('kitchen.preparing')), 'ti-flame');
   }else{
     if(allPicked) statusBadge = `<span class="badge badge-green txt-xs"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-    // Aquí es donde SALA da el último toque: cocina ya lo ha dejado servido y es sala quien confirma que se lo han llevado.
-    else if(listos.length) statusBadge = esPedidoSoloLectura(order)
-      ? `<span class="badge badge-green txt-xs"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`
-      : bt('btn-primary', `marcarTandaRecogidaDesdeSala(${order.id}, '${escapeJsAttr(g.tanda||'')}')`, escapeHtml(t('tpv.markPickedUp')), 'ti-truck-delivery');
+    // Sala solo VE que está listo en el pase (8/11): el «recogido» lo marca Cocina cuando el camarero se lleva el plato.
+    else if(listos.length) statusBadge = `<span class="badge badge-green txt-xs"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</span>`;
     else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue txt-xs"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
     else if(allFired) statusBadge = `<span class="badge badge-amber txt-xs"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
@@ -634,7 +632,7 @@ function renderTableOrderModal(orderId){
   const botonCobrarOCerrar = yaPagadoDelTodo
     ? `<button type="button" class="btn btn-primary tp-or-cobrar" onclick="cerrarPedidoPagadoOnline(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
     : `<button type="button" class="btn ${allDelivered && order.items.length ? 'btn-primary ' : ''}tp-or-cobrar" onclick="openPaymentModal(${order.id})" ${!order.items.length ? 'disabled' : ''}><i class="ti ti-cash"></i> ${t('btn.charge')}<span class="tp-pto"> ·</span> <b>${fmtMoney(total)}</b></button>`;
-  const actionButtons = `<div class="tp-or-acciones">${allDelivered && order.items.length ? '' : renderOrderMarcharButtons(order)}${botonCobrarOCerrar}</div>`;
+  const actionButtons = `<div class="tp-or-acciones">${botonCobrarOCerrar}</div>`;
 
   const unidades = order.items.reduce((s, l) => s + l.qty, 0);
   const panel = tpvOrderMobilePane;

@@ -85,6 +85,27 @@ await caso('El nombre del bloque avanza TODO el bloque; las bebidas no se tocan'
   assert.equal(r[0], 'entregado'); assert.equal(r[1], 'preparando', JSON.stringify(r));
   assert.equal(r[2], 'cocina', 'la bebida sin marca no se mueve: ' + JSON.stringify(r));
 });
+await caso('«Recogido» lo marca COCINA: con el bloque listo en el pase, su nombre pasa a ser el botón; Sala solo lo ve («Listo en el pase»)', async () => {
+  const r = await page.evaluate(async () => {
+    const esp = ms => new Promise(r => setTimeout(r, ms));
+    const o = DB.tpvOrders[0];
+    o.items.forEach(l => { if(!esLineaDeBebida(l) && l.estado){ l.estado = 'entregado'; l.entregadoAt = new Date().toISOString(); delete l.recogidoAt; } });
+    saveDB(); renderComandasCocina(); await esp(300);
+    const boton = document.querySelector('button.kt-cn.recoge');
+    const out = {boton: !!boton, texto: boton ? boton.textContent.replace(/\s+/g,' ').trim() : ''};
+    // Sala: ningún botón de entregar/recogido, solo el aviso
+    currentFolder = 'sala'; navigate('tpv'); openTableOrder(1, o.id); await esp(350);
+    out.salaBotones = [...document.querySelectorAll('.tp-tanda-bt')].filter(b => /Entregar|Recoger|Hand over|Lliurar/i.test(b.textContent)).length;
+    out.salaAviso = /Listo en el pase/i.test(document.getElementById('modal-box')?.textContent || ''); out.salaTxt = (document.getElementById('modal-box')?.textContent || '').replace(/\s+/g,' ').slice(0,300);
+    closeModal(); currentFolder = 'cocina'; navigate('comandascocina'); await esp(400);
+    for(const b of [...document.querySelectorAll('button.kt-cn.recoge')]){ b.click(); await esp(250); }
+    out.recogidas = o.items.filter(l => !esLineaDeBebida(l) && l.estado === 'entregado').every(l => l.recogidoAt);
+    out.cerrada = !!o.cerrada;
+    return out;
+  });
+  assert.ok(r.boton && /recogido/i.test(r.texto), JSON.stringify(r)); assert.equal(r.salaBotones, 0, 'Sala ya no tiene botón de entregar: ' + JSON.stringify(r)); assert.ok(r.salaAviso, JSON.stringify(r));
+  assert.ok(r.recogidas && r.cerrada, 'Cocina lo marca y la comanda se cierra: ' + JSON.stringify(r));
+});
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(erroresJs, []); });
 
 console.log('\n' + '═'.repeat(70)); console.log(fallos ? `❌ ${fallos} casos fallaron` : '✅ casos pasaron');
