@@ -6053,3 +6053,9 @@ small{font-size:max(.8333em, 11px)}
   .ml-carpeta > :not(.ml-ico):not(.ml-carpeta-txt){grid-area:men;justify-self:end}
   .ml-carpeta-nom{font-size:15px}
 }
+
+/* Mi Negocio plegado: la raya, el relleno y el margen del título original ganaban a la regla de «cerrado» y dejaban una franja vacía. */
+@media (max-width:760px){
+  #view-minegocio .mn-grid > .card.mn-acc.mn-cerrado{padding-top:4px !important;padding-bottom:4px !important}
+  #view-minegocio .mn-grid > .card.mn-acc.mn-cerrado > h3{border-bottom:0 !important;padding-bottom:0 !important;margin-bottom:0 !important}
+}
