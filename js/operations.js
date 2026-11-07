@@ -724,7 +724,7 @@ function providerTiposDisponibles(){
   return [...new Set([...base, ...propios])];
 }
 function providerTipoLabel(tipo){ return tipo ? ingredientCategoryLabel(tipo) : ''; }
-function setProviderTipoFiltro(tipo){ providerTipoFiltro = (providerTipoFiltro === tipo ? null : tipo); renderProveedores(); }
+function setProviderTipoFiltro(tipo){ providerTipoFiltro = (tipo === null || providerTipoFiltro === tipo ? null : tipo); renderProveedores(); }
 function setProviderSearchQuery(val){
   providerSearchQuery = val;
   const el = document.getElementById('proveedores-search-input');
@@ -750,7 +750,10 @@ function renderProveedores(){
     const tipos = Object.keys(cuenta).sort((a,b) => providerTipoLabel(a).localeCompare(providerTipoLabel(b)));
     if(providerTipoFiltro !== null && !(providerTipoFiltro === '' ? sinTipo : cuenta[providerTipoFiltro])) providerTipoFiltro = null;
     const chip = (valor, texto, n) => `<button type="button" class="btn btn-sm btn-fino${providerTipoFiltro === valor ? ' is-on' : ''}" aria-pressed="${providerTipoFiltro === valor}" onclick="setProviderTipoFiltro('${escapeJsAttr(valor)}')">${escapeHtml(texto)} <span class="ml-n">${n}</span></button>`;
-    filtros.innerHTML = tipos.length ? tipos.map(x => chip(x, providerTipoLabel(x), cuenta[x])).join('') + (sinTipo ? chip('', gl({es:'Sin tipo', ca:'Sense tipus', en:'No type'}), sinTipo) : '') : '';
+    // «Todos» siempre primero (7/11): sin ningún filtro tienen que verse todos, y volver a ese estado no puede depender de
+    // acordarse de volver a pulsar el chip que se eligió.
+    const chipTodos = `<button type="button" class="btn btn-sm btn-fino${providerTipoFiltro === null ? ' is-on' : ''}" aria-pressed="${providerTipoFiltro === null}" onclick="setProviderTipoFiltro(null)">${gl({es:'Todos', ca:'Tots', en:'All'})} (${delArea.length})</button>`;
+    filtros.innerHTML = tipos.length ? chipTodos + tipos.map(x => chip(x, providerTipoLabel(x), cuenta[x])).join('') + (sinTipo ? chip('', gl({es:'Sin tipo', ca:'Sense tipus', en:'No type'}), sinTipo) : '') : '';
   }
   let providers = delArea;
   if(providerTipoFiltro !== null) providers = providers.filter(p => (p.tipo || '') === providerTipoFiltro);
@@ -984,6 +987,10 @@ function openProviderModal(id){
         <label>${t('label.shippingFeeAmount')}</label>
         <input type="number" id="prov-envio-coste" min="0" step="0.01" value="${p.envioCoste||''}">
       </div>
+      <div class="field">
+        <label for="prov-envio-iva">${gl({es:'IVA del envío', ca:'IVA de l\'enviament', en:'Shipping VAT'})}</label>
+        <select id="prov-envio-iva">${[21,10,4,0].map(pct => `<option value="${pct}"${providerShippingIvaPct(p) === pct ? ' selected' : ''}>${pct}%</option>`).join('')}</select>
+      </div>
     </div>
     <div class="field"><label>${t('common.address')}</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
@@ -1033,6 +1040,7 @@ async function saveProvider(id){
     envioTipo: document.getElementById('prov-envio-tipo').value,
     envioCoste: parseFloat(document.getElementById('prov-envio-coste').value) || 0,
     envioMinimo: parseFloat(document.getElementById('prov-envio-minimo').value) || 0,
+    envioIva: parseInt(document.getElementById('prov-envio-iva').value, 10),
     notas: document.getElementById('prov-notas').value.trim()
   };
   if(id){
@@ -1098,6 +1106,13 @@ function providerShippingCost(provider, baseSubtotal){
   if(provider.envioTipo === 'fijo') return provider.envioCoste || 0;
   if(provider.envioTipo === 'minimo') return baseSubtotal >= (provider.envioMinimo||0) ? 0 : (provider.envioCoste || 0);
   return 0;
+}
+// IVA del envío (7/11). El importe del envío del proveedor se entiende SIN IVA, como todo precio de la app; antes se
+// sumaba al total sin IVA y se anotaba en Gastos sin IVA, así que ese IVA soportado (el transporte lleva el 21 %)
+// nunca llegaba al 303. Por defecto 21 %; se cambia en la ficha del proveedor.
+function providerShippingIvaPct(provider){
+  const v = provider && provider.envioIva != null && provider.envioIva !== '' ? Number(provider.envioIva) : 21;
+  return isFinite(v) ? v : 21;
 }
 function pedidoOrderedBase(o){
   let base = 0;
@@ -1580,13 +1595,14 @@ function renderPedidoIvaBreakdownHtml(o, isRecibido){
   const totalBase = rates.reduce((s,r)=>s+groups[r], 0);
   const totalIva = rates.reduce((s,r)=>s+groups[r]*r/100, 0);
   const envio = providerShippingCost(getProviderByName(o.supplier), pedidoOrderedBase(o));
+  const envioIva = envio * providerShippingIvaPct(getProviderByName(o.supplier)) / 100;
   return `
   <div class="pd-totales">
     ${rates.map(r => `
       <div><span>${t('label.taxBase')} ${r}%</span><b>${fmtMoney(groups[r])}</b></div>
       <div><span>${t('label.vat')} ${r}%</span><b>${fmtMoney(groups[r]*r/100)}</b></div>`).join('')}
-    ${envio > 0 ? `<div><span>${t('label.shipping')}</span><b>${fmtMoney(envio)}</b></div>` : ''}
-    ${rates.length ? `<div class="pd-total"><span>${t('common.total')}</span><b>${fmtMoney(totalBase+totalIva+envio)}</b></div>` : ''}
+    ${envio > 0 ? `<div><span>${t('label.shipping')}</span><b>${fmtMoney(envio)}</b></div><div><span>${t('label.vat')} ${providerShippingIvaPct(getProviderByName(o.supplier))}% ${t('label.shipping').toLowerCase()}</span><b>${fmtMoney(envioIva)}</b></div>` : ''}
+    ${rates.length ? `<div class="pd-total"><span>${t('common.total')}</span><b>${fmtMoney(totalBase+totalIva+envio+envioIva)}</b></div>` : ''}
     ${missingIva ? `<p class="pd-falta"><i class="ti ti-alert-triangle"></i> ${t('msg.someIngredientsMissingIva')}</p>` : ''}
   </div>`;
 }
@@ -2157,6 +2173,7 @@ function registerPedidoComoGastoVariable(o){
     DB.ge.variables.push({
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: 'OTROS', proveedor: o.supplier, importe: Math.round(envio*100)/100,
+      iva: providerShippingIvaPct(getProviderByName(o.supplier)), envio: true,
       fecha, pedidoId: o.id, auto: true,
       fechaPago, pagada: false, ...pfDatosFactura(o)
     });
@@ -2572,8 +2589,8 @@ function orderSummaryHtml(){
     <div class="pd-totales pc-totales">
       <div><span>${t('label.subtotal')}</span><b>${fmtMoney(base)}</b></div>
       <div><span>${t('label.vat')}</span><b>${fmtMoney(iva)}</b></div>
-      ${envio > 0 ? `<div><span>${t('label.shipping')}</span><b>${fmtMoney(envio)}</b></div>` : ''}
-      <div class="pd-total"><span>${t('common.total')}</span><b>${fmtMoney(base + iva + envio)}</b></div>
+      ${envio > 0 ? `<div><span>${t('label.shipping')}</span><b>${fmtMoney(envio)}</b></div><div><span>${t('label.vat')} ${providerShippingIvaPct(provider)}% ${t('label.shipping').toLowerCase()}</span><b>${fmtMoney(envio * providerShippingIvaPct(provider) / 100)}</b></div>` : ''}
+      <div class="pd-total"><span>${t('common.total')}</span><b>${fmtMoney(base + iva + envio * (1 + providerShippingIvaPct(provider) / 100))}</b></div>
     </div>`;
 }
 function renderOrderSummary(){

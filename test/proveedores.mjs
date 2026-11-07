@@ -155,7 +155,12 @@ for(const ancho of [1280, 360]){
     assert.deepEqual(r.tipos, ['', 'Lácteos', 'Menaje']);
     assert.ok(r.tarjetas.includes('Verduras Ca la Rosa|') === false || true);
     assert.ok(r.tarjetas.some(x => /\|Lácteos$/.test(x)) && r.tarjetas.some(x => /\|Menaje$/.test(x)), 'el tipo sale al lado del nombre: ' + r.tarjetas);
-    assert.deepEqual(r.chips, ['Lácteos 1', 'Menaje 1', 'Sin tipo 1']);
+    assert.deepEqual(r.chips, ['Todos (3)', 'Lácteos 1', 'Menaje 1', 'Sin tipo 1']);
+    // «Todos» vuelve a verlos todos con un toque, esté el filtro que esté
+    await page.evaluate(() => setProviderTipoFiltro('Lácteos')); await esperar(150);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#proveedores-list .pv-card').length), 1);
+    await page.evaluate(() => [...document.querySelectorAll('#proveedores-tipos .btn')].find(b => /^Todos/.test(b.textContent.trim())).click()); await esperar(150);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#proveedores-list .pv-card').length), 3, '«Todos» quita el filtro');
     await page.evaluate(() => setProviderTipoFiltro('Menaje')); await esperar(200);
     assert.equal(await page.evaluate(() => document.querySelectorAll('#proveedores-list .pv-card').length), 1, 'el filtro deja solo ese tipo');
     await page.evaluate(() => setProviderTipoFiltro('Menaje')); await esperar(200);
