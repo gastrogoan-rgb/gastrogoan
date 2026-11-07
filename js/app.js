@@ -85,7 +85,8 @@ function getAllDishAllergens(){
   };
   (DB.fichas||[]).forEach(f => {
     const r = (typeof getFichaLiveRecipe === 'function') ? getFichaLiveRecipe(f) : null;
-    const fArea = f.area || (r && r.area) || 'cocina';
+    // Una ficha de bebida (lleva «tipo de bebida») es de Sala aunque se creara antes de que existieran las áreas (7/11).
+    const fArea = f.area || (r && r.area) || ((f.bebidaTipo || f.bebida) ? 'sala' : 'cocina');
     if(fArea !== area) return;
     // El nombre que vale es el del plato vinculado si existe (por si se
     // renombró en el escandallo después de crear la ficha).
@@ -112,7 +113,8 @@ function getAllDishAllergens(){
   // escandallo del que deducir nada: sus alérgenos, si los tiene, son
   // SIEMPRE los marcados a mano (p.allergensManual, ver openPlatoAllergensModal).
   (DB.cartas||[]).forEach(c => {
-    if((c.area||'cocina') !== area) return;
+    // Una carta antigua sin área y que se llama «Bebidas…» es de Sala (misma regla que isBebidaCarta).
+    if((c.area || (isBebidaCarta(c) ? 'sala' : 'cocina')) !== area) return;
     (c.secciones||[]).forEach(sec => (sec.platos||[]).forEach(p => {
       if(p.recipeId || !(p.allergensManual||[]).length) return;
       anotar(p.nombre, p.allergensManual);
@@ -1773,13 +1775,13 @@ function dpFilaHtml(emp, ds, tk, puedeGestionar){
     {icono:'ti-trash', texto:t('common.delete'), fn:tk.k === 'prod' ? `removeDistTarea(${tk.idx},'${k}')` : `removeDistTareaUnica('${ds}','${k}')`, peligro:true}
   ], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : '';
   const deshab = tk.k === 'limp' && !tk.canToggle;
-  /* De quién es cada tarea se ve a primera vista: las que pone el jefe llevan su sello en tinta y las que se pone el propio
+  /* De quién es cada tarea se ve a primera vista (7/11: las del jefe dicen SIEMPRE «el jefe», también si quien mira es él; «por ti» confundía): las que pone el jefe llevan su sello en tinta y las que se pone el propio
      empleado, otro en verde y la fila más clara. Antes era una etiqueta gris que se perdía entre las demás. */
   const verComoEmpleado = loggedInEmployeeId() === emp.id;
   const origen = (tk.k === 'prod' || tk.k === 'unica')
     ? (tk.bySelf
       ? `<span class="dp-origen mia"><i class="ti ti-user"></i> ${verComoEmpleado ? gl({es:'Puesta por mí', ca:'Posada per mi', en:'Set by me'}) : gl({es:'Puesta por ' + emp.name.split(' ')[0], ca:'Posada per ' + emp.name.split(' ')[0], en:'Set by ' + emp.name.split(' ')[0]})}</span>`
-      : `<span class="dp-origen jefe"><i class="ti ti-briefcase"></i> ${verComoEmpleado ? gl({es:'Puesta por el jefe', ca:'Posada pel cap', en:'Set by the boss'}) : gl({es:'Puesta por ti', ca:'Posada per tu', en:'Set by you'})}</span>`)
+      : `<span class="dp-origen jefe"><i class="ti ti-briefcase"></i> ${gl({es:'Puesta por el jefe', ca:'Posada pel cap', en:'Set by the boss'})}</span>`)
     : '';
   return `
     <div class="dp-tarea${tk.done ? ' is-hecha' : ''}${tk.bySelf ? ' es-mia' : ''}">
