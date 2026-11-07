@@ -646,7 +646,8 @@ function renderTogoCalendarBody(){
     label = `${t('months.short')[month]} ${year}`;
     const firstDow = (new Date(year, month, 1).getDay()+6)%7; // 0=lunes
     const nDias = daysInMonth(year, month);
-    let cells = '';
+    // Sin los nombres de los días no se sabía en qué columna cae cada fecha (el 1 de noviembre quedaba solo en la esquina).
+    let cells = (t('days.short') || []).slice(0, 7).map(n => `<div style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px">${escapeHtml(n)}</div>`).join('');
     for(let i=0;i<firstDow;i++) cells += `<div></div>`;
     for(let d=1; d<=nDias; d++){
       const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -5025,7 +5026,7 @@ function openTodaySalesModal(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="table-wrap">
-      <table>
+      <table class="table-cards">
         <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.total')}</th><th class="owner-strict">${t('tpv.margin.label')}</th><th>${t('label.paymentMethod')}</th><th></th></tr></thead>
         <tbody>${sales.length ? sales.map(s => {
           const table = s.tableId ? DB.tables.find(t=>t.id===s.tableId) : null;
@@ -5033,11 +5034,11 @@ function openTodaySalesModal(){
           const hora = s.createdAt ? new Date(s.createdAt).toTimeString().slice(0,5) : '';
           const margin = s.total - orderFoodCost(s);
           return `<tr>
-            <td>${escapeHtml(hora)}</td>
-            <td>${escapeHtml(label)}${s.clienteNombre?` — ${escapeHtml(s.clienteNombre)}`:''}</td>
-            <td>${fmtMoney(s.total)}</td>
-            <td class="owner-strict" style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</td>
-            <td>${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
+            <td data-label="${t('th.time')}">${escapeHtml(hora)}</td>
+            <td data-label="${t('label.tables')}">${escapeHtml(label)}${s.clienteNombre?` — ${escapeHtml(s.clienteNombre)}`:''}</td>
+            <td data-label="${t('label.total')}">${fmtMoney(s.total)}</td>
+            <td class="owner-strict" data-label="${t('tpv.margin.label')}" style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</td>
+            <td data-label="${t('label.paymentMethod')}">${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
             <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}),{duplicado:true})"><i class="ti ti-printer"></i></button>${s.status==='anulada' ? (s.rectificativa ? `<button class="btn btn-sm btn-icon" title="${t('factura.rect.btn')}" onclick="printRectificativa(${s.id})"><i class="ti ti-receipt-refund"></i></button>` : '') : `<button class="btn btn-sm btn-icon" title="${t('ticket.invoiceBtn')}" onclick="closeModal();printInvoice(${s.id})"><i class="ti ti-file-invoice"></i></button>`}<button class="btn btn-sm btn-icon" title="${t('print.ticketHint')}" onclick="printToThermalPrinter(buildTicketText(DB.sales.find(x=>x.id===${s.id}),{duplicado:true}))"><i class="ti ti-device-usb"></i></button></td>
           </tr>`;
         }).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noSalesToday')}</div></td></tr>`}</tbody>
