@@ -2875,13 +2875,13 @@ function openPendingInvoicesModal(){
     </div>
     ${pending.length ? `
     <div class="table-wrap">
-      <table>
+      <table class="table-cards">
         <thead><tr><th>${t('invoices.dueDate')}</th><th>${t('common.supplier')}</th><th>${t('label.total')}</th><th></th></tr></thead>
         <tbody>${pending.map(v => `
           <tr>
-            <td style="color:${v.fechaPago<today?'var(--red)':''}">${escapeHtml(v.fechaPago)}${v.fechaPago<today?` <span class="badge badge-red txt-xs">${t('invoices.overdue')}</span>`:''}</td>
-            <td>${escapeHtml(v.proveedor||'—')}</td>
-            <td>${fmtMoney((parseFloat(v.importe)||0) * (1 + (parseFloat(v.iva)||0)/100))}</td>
+            <td data-label="${t('invoices.dueDate')}" style="color:${v.fechaPago<today?'var(--red)':''}">${escapeHtml(v.fechaPago)}${v.fechaPago<today?` <span class="badge badge-red txt-xs">${t('invoices.overdue')}</span>`:''}</td>
+            <td data-label="${t('common.supplier')}">${escapeHtml(v.proveedor||'—')}</td>
+            <td data-label="${t('label.total')}">${fmtMoney((parseFloat(v.importe)||0) * (1 + (parseFloat(v.iva)||0)/100))}</td>
             <td><button class="btn btn-sm" onclick="markInvoicePaid(${v.id})">${t('invoices.markPaid')}</button></td>
           </tr>`).join('')}</tbody>
       </table>

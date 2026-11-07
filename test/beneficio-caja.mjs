@@ -95,6 +95,8 @@ for(const ancho of [320, 360, 390, 412, 430]){
     const {page} = await abrir(ancho, 800);
     const r = await page.evaluate(async () => {
       const esp = ms => new Promise(r => setTimeout(r, ms)); const y = new Date().getFullYear() - 1; DB.ge.saldoBanco = {importe:3000, fecha:todayStr()}; saveDB(); bcYear = y; GE.bcPeriodo(y, null); await esp(400);
+      // En móvil las secciones menos importantes van plegadas (7/11): se abren todas para medir también lo que cuelga de ellas.
+      document.querySelectorAll('#ge-bc .gg-plegable:not(.gg-abierto) > .gg-acc-h').forEach(h => h.click()); await esp(300);
       const raiz = document.getElementById('ge-bc');
       return {desborde: document.documentElement.scrollWidth - innerWidth, fuera: [...raiz.querySelectorAll('*')].filter(e => { const q = e.getBoundingClientRect(); return q.width && (q.right > innerWidth + 1 || q.left < -1); }).map(e => e.className || e.tagName).slice(0, 4),
         alto: document.getElementById('bc-saldo-in').getBoundingClientRect().height, letra: Math.min(...[...raiz.querySelectorAll('*')].filter(e => e.children.length === 0 && e.textContent.trim() && e.getBoundingClientRect().width).map(e => parseFloat(getComputedStyle(e).fontSize)))};
