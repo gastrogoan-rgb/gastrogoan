@@ -5979,3 +5979,60 @@ small{font-size:max(.8333em, 11px)}
 @media (max-width:1100px){
   .access-lang-switch .lang-trigger{min-height:44px;padding:4px 12px}
 }
+
+/* Índice de Mi Negocio en móvil (7/11): un desplegable en vez de 14 botones (ocupaban ~400 px antes del primer bloque). */
+.mn-indice-sel{display:none}
+@media (max-width:760px){
+  .mn-indice{display:block;padding:8px 10px;overflow:visible}
+  .mn-indice-lbl,.mn-indice-chip{display:none}
+  .mn-indice-sel{display:block;width:100%;min-height:44px;font-family:var(--mono);font-size:13px;padding:0 12px;background:#fff;border:1px solid var(--hair);border-radius:3px;color:var(--ink)}
+  .mn-indice-sel:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+}
+
+/* ═══ Vista móvil, revisión de verdad (7/11) ═══ */
+@media (max-width:760px){
+  /* 1) Campos a 16 px. Con menos, Safari de iPhone AMPLÍA toda la página al tocar el campo y ya no vuelve solo: la app "se
+     descuadraba" cada vez que se escribía en un buscador (13 px) o en Mi Negocio (98 de 123 campos). */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=hidden]),
+  select,textarea{font-size:16px !important}
+  /* 2) Un solo aspecto para los desplegables: el del sistema (flecha, alto y letra distintos en cada pantalla) desentonaba al lado de
+     los campos de texto. */
+  select:not([multiple]){-webkit-appearance:none;appearance:none;min-height:44px;padding-right:34px;border-radius:3px;
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23716C65' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center}
+  /* 3) Tesorería, «Dinero que no es tuyo»: la descripción quedaba en una columna de 13 px y salía UNA LETRA POR LÍNEA (33 líneas para
+     7 palabras). La regla de arriba (grid-area:auto) pisaba la que la mandaba a fila propia. */
+  #ge-tesoreria .te-row.te-res .te-res-hint{grid-column:1 / -1;order:3}
+  /* 4) Proveedores: el nombre y sus botones en UNA fila (la tarjeta medía el doble para dos iconos sueltos). */
+  .pv-card{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:10px 12px}
+  .pv-card .pv-nombre{flex:1 1 140px;min-width:0}
+  .pv-card .pv-acc{border-top:0;padding-top:0;margin-top:0;flex:none}
+}
+
+/* Mi Negocio en móvil: apartados en acordeón (el JS pone .mn-acc y .mn-cerrado; en PC estas reglas no se aplican). */
+@media (max-width:760px){
+  .mn-grid > .card.mn-acc > h3{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-height:44px;margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent;padding-right:2px}
+  .mn-grid > .card.mn-acc > h3 .badge{flex:none;white-space:normal}
+  .mn-grid > .card.mn-acc > h3::after{content:"";margin-left:auto;flex:none;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-135deg) translate(-1px,-1px);transition:transform .2s}
+  .mn-grid > .card.mn-acc.mn-cerrado > h3::after{transform:rotate(45deg) translate(-2px,-2px)}
+  .mn-grid > .card.mn-acc.mn-cerrado > :not(h3){display:none !important}
+  .mn-grid > .card.mn-acc.mn-cerrado{padding-top:6px;padding-bottom:6px}
+  .mn-grid > .card.mn-acc > h3:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+}
+
+/* APPCC: cada lectura (fecha, hora, equipo, tipo, Tª, estado, responsable) ocupaba ~210 px con 7 líneas «etiqueta | valor».
+   En móvil, dos columnas con la etiqueta encima del valor: la mitad de alto y se lee de un vistazo. */
+@media (max-width:760px){
+  .lp-tabla .table-cards tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;padding:6px 12px 8px}
+  .lp-tabla .table-cards td{flex-direction:column;align-items:flex-start;gap:1px;padding:7px 0;border-bottom:1px solid var(--hair);min-width:0;overflow-wrap:anywhere}
+  .lp-tabla .table-cards td[data-label]::before{flex:none;max-width:none;font-family:var(--mono);letter-spacing:.06em}
+  .lp-tabla .table-cards td.lp-fila-acc{grid-column:1 / -1;flex-direction:row;justify-content:flex-end;border-bottom:0;padding:4px 0 0;width:auto}
+}
+
+/* Acordeón cerrado de Mi Negocio: sin la raya ni el relleno que el título llevaba para separarse de su contenido. */
+@media (max-width:760px){
+  .mn-grid > .card.mn-acc.mn-cerrado > h3{border-bottom:0;padding-bottom:0;margin-bottom:0}
+}
+/* Botonera del TPV en pantallas de 320-340 px: tres columnas de ~93 px no dan para icono + «Anulaciones»; se quita el icono. */
+@media (max-width:340px){
+  .tp-botonera .btn .ti{display:none}
+}
