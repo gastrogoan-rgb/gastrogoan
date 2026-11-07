@@ -871,8 +871,11 @@ async function acceptOnlineOrder(orderId, auto){
         l.marchada = l.qty;
         if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
         decrementMenuStock(order, l, l.qty); decrementMenuOptionStock(l, l.qty);
+        (order.__aImprimir = order.__aImprimir || []).push({qty: l.qty, name: l.name, notas: l.notas, bebida: l.bebida, platoId: l.platoId, recipeId: l.recipeId});
       }
     });
+    // El pedido de la web que se acepta también sale por la impresora de comandas (antes solo se veía en pantalla).
+    if(order.__aImprimir && order.__aImprimir.length){ const lin = order.__aImprimir; delete order.__aImprimir; try{ printMarchadasIfEnabled(order, lin); }catch(e){ console.error(e); } }
     order.cerrada = false;
     if(esRepartoPropio(order) && !esParaMasAdelante) autoAssignRepartidor(order);
     saveDB();
@@ -1551,7 +1554,7 @@ function confirmAddMenuToOrder(orderId, menuId){
       order.items.push(line);
       autoSendTakeawayLine(order, line);
     }
-    syncBebidaLineEstado(line);
+    syncBebidaLineEstado(line, order);
   });
   saveDB();
   renderTableOrderModal(orderId);
@@ -2091,6 +2094,38 @@ function comandaAllergensText(order, lineas){
 // Si hay algún perfil de impresora de comandas activo, imprime un vale por cada
 // uno de ellos con las líneas recién marchadas que le correspondan según su
 // contenido configurado (comida / bebida / todo el pedido).
+/* LO QUE SALE SOLO TAMBIÉN SE IMPRIME (8/11, auditoría de impresión). La primera tanda de una mesa, un pedido para llevar y las
+   bebidas se marchan al añadirlas, sin pulsar «Marchar»: hasta hoy no pasaban por la impresora de comandas, así que con
+   «Imprimir» activado la cocina no recibía el primer plato y la barra no recibía NINGUNA bebida. Para no sacar un vale por cada
+   toque (seis entrantes = seis vales) se espera 2,5 s desde el último y sale UN vale con todo lo que entró junto. */
+const colaImpresionMarchadas = {};
+function encolarImpresionMarchada(order, linea){
+  if(!order || !linea || !(linea.qty > 0)) return;
+  const modo = (DB.business && DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
+  if(modo !== 'impresion') return;
+  const c = colaImpresionMarchadas[order.id] || (colaImpresionMarchadas[order.id] = {lineas: [], timer: null});
+  const previa = c.lineas.find(l => l.name === linea.name && (l.notas || '') === (linea.notas || '') && !!l.bebida === !!linea.bebida);
+  if(previa) previa.qty += linea.qty; else c.lineas.push(Object.assign({}, linea));
+  clearTimeout(c.timer);
+  c.timer = setTimeout(() => {
+    const lineas = c.lineas; delete colaImpresionMarchadas[order.id];
+    const vivo = DB.tpvOrders.find(o => o.id === order.id) || order;
+    try{ printMarchadasIfEnabled(vivo, lineas); }catch(e){ console.error(e); }
+  }, 2500);
+}
+// Un plato o bebida YA marchado que se anula: cocina/barra reciben un vale «ANULADO» para no preparar (o parar) lo que ya no se pide.
+function printAnulacionIfEnabled(order, line, qty){
+  if(!order || !line || !(qty > 0)) return;
+  const modo = (DB.business && DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
+  if(modo !== 'impresion') return;
+  const printers = (typeof ensureComandaPrinters === 'function' ? ensureComandaPrinters() : []).filter(p => p.activo);
+  const table = order.tableId ? DB.tables.find(t2 => t2.id === order.tableId) : null;
+  const titulo = '⛔ ' + gl({es:'ANULADO', ca:'ANUL·LAT', en:'CANCELLED'}) + ' · ' + (table ? table.name : togoOrderLabel(order));
+  printers.forEach(p => {
+    if(!(p.contenido === 'todo' || (p.contenido === 'comida' ? !line.bebida : line.bebida))) return;
+    printComandaTicket(p.nombre, titulo, [{qty, name: line.name, notas: line.notas || '', bebida: !!line.bebida}], p.anchoTicket, null, p.id);
+  });
+}
 function printMarchadasIfEnabled(order, firedLines){
   if(!firedLines || !firedLines.length) return;
   // El interruptor "Mostrar en pantalla" / "Imprimir" es el que manda: si el
@@ -3430,6 +3465,7 @@ function autoSendTakeawayLine(order, line){
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
   decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
   order.cerrada = false;
+  encolarImpresionMarchada(order, {qty: qtyFired, name: line.name, notas: line.notas, bebida: line.bebida, platoId: line.platoId, recipeId: line.recipeId});
 }
 
 // Las bebidas nunca pasan por Cocina (no hay nada que cocinar) ni por el
@@ -3438,9 +3474,11 @@ function autoSendTakeawayLine(order, line){
 // ciclo de estado (pedida → preparando → servida) sin ningún clic previo.
 // marchada siempre igual a qty para que nunca cuenten como "pendiente de
 // marchar" en ningún sitio (contador de la tanda, botón de "Marchar vale"...).
-function syncBebidaLineEstado(line){
+function syncBebidaLineEstado(line, order){
   if(!line || !line.bebida) return;
+  const nuevas = line.qty - (line.marchada || 0);
   line.marchada = line.qty;
+  if(order && nuevas > 0) encolarImpresionMarchada(order, {qty: nuevas, name: line.name, notas: line.notas, bebida: true, platoId: line.platoId, recipeId: line.recipeId});
   if(!line.estado){
     line.estado = 'cocina';
     delete line.recogidoAt;
@@ -3462,6 +3500,7 @@ function autoSendFirstCourse(order, line, tanda){
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
   decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
   order.cerrada = false;
+  encolarImpresionMarchada(order, {qty: qtyFired, name: line.name, notas: line.notas, bebida: line.bebida, platoId: line.platoId, recipeId: line.recipeId});
 }
 
 // Suplemento delivery (js/recipes.js, ficha del plato): importe fijo que se
@@ -3509,7 +3548,7 @@ function addOrderItem(orderId, secId, platoId){
   }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
-  syncBebidaLineEstado(line);
+  syncBebidaLineEstado(line, order);
   warnIfRecipeStockShort(p.recipeId);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -3591,7 +3630,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
-  syncBebidaLineEstado(line);
+  syncBebidaLineEstado(line, order);
   warnIfRecipeStockShort(p.recipeId);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -3615,7 +3654,7 @@ function changeOrderItemQty(orderId, idx, delta){
     reassignMenuBasePrice(order, line);
   } else {
     autoSendTakeawayLine(order, line);
-    syncBebidaLineEstado(line);
+    syncBebidaLineEstado(line, order);
     if(delta > 0) warnIfRecipeStockShort(line.recipeId);
   }
   saveDB();
@@ -3733,6 +3772,7 @@ function confirmVoidLine(){
   // el inventario en cada anulación previa al cobro. Solo se restituyen las
   // raciones directas del plato (p.stock), que sí se descontaron al marchar
   // (decrementDishStock).
+  if(firedQty > 0) printAnulacionIfEnabled(order, line, type === 'remove' ? line.qty : Math.min(Math.abs(delta), firedQty));
   if(type === 'remove'){
     if(firedQty > 0) restockForVoidedItems([{...line, qty: firedQty}], {includeIngredients: false});
     order.items.splice(idx,1);
@@ -5752,8 +5792,23 @@ function buildTicketHtml(sale, opts={}){
   `;
 }
 
+/* El TICKET de cliente respeta cómo está configurada la impresora de ESTE aparato (8/11, auditoría de impresión): antes «Imprimir
+   ticket» abría siempre una ventana emergente (la bloquean las tablets y en iPad deja una pestaña de la que no se vuelve) e ignoraba
+   el ancho del rollo y el Bluetooth. Ahora: impresora térmica ya emparejada → por ahí; si no, el iframe del navegador con el
+   papel del rollo (58/80 mm). La FACTURA completa sigue siendo una hoja A4 en ventana aparte. */
+function imprimirRollo(html, textoPlano, titulo){
+  const ancho = (typeof getTicketPaperWidth === 'function') ? getTicketPaperWidth() : 80;
+  const emparejada = typeof getThermalPrinterName === 'function' && getThermalPrinterName('ticket') && typeof getPrintMode === 'function' && getPrintMode('ticket') === 'bluetooth';
+  if(emparejada && textoPlano) return printToThermalPrinter(textoPlano, 'ticket', {ancho, html, titulo});
+  return printViaBrowser(html, ancho, titulo, {html: true});
+}
 function printTicket(sale, opts={}){
   const html = buildTicketHtml(sale, opts);
+  if(!opts.factura){
+    let texto = '';
+    try{ texto = buildTicketText(sale, opts); }catch(e){}
+    return imprimirRollo(html, texto, t('ticket.printTicket'));
+  }
   const win = window.open('', '_blank', 'width=360,height=600');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   // ⚠️ El QR de reseña de Google (y el de VeriFactu) se generan pidiendo la
@@ -5830,6 +5885,33 @@ function emitirRectificativa(sale, motivo){
     rectifica: (sale.facturaCompleta && sale.facturaCompleta.num) || sale.ticketNum || sale.facturaNum || String(sale.id),
     motivo: motivo || '',
   };
+}
+/* LA CUENTA ANTES DE COBRAR (8/11): el cliente pide «la cuenta» y hasta hoy no había forma de sacársela impresa sin cobrar.
+   No es una factura ni un ticket de venta (no lleva número ni IVA desglosado): dice «CUENTA», lo consumido, el descuento y el total. */
+function printCuenta(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !(order.items||[]).length){ showToast(t('empty.orderEmpty')); return; }
+  const b = DB.business || {};
+  const table = order.tableId ? DB.tables.find(x => x.id === order.tableId) : null;
+  const nombre = table ? orderTableDisplayName(order, table) : togoOrderLabel(order);
+  const total = orderTotal(order);
+  const dto = order.descuentoPct ? roundMoney(total * order.descuentoPct / 100) : 0;
+  const final = roundMoney(total - dto);
+  const filas = order.items.map(l => `<tr><td style="padding:3px 4px 3px 0;white-space:nowrap;vertical-align:top">${fmtNum(l.qty)}×</td><td style="padding:3px 4px;vertical-align:top">${escapeHtml(l.name)}</td><td style="padding:3px 0 3px 4px;text-align:right;white-space:nowrap;vertical-align:top">${fmtMoney(l.price*l.qty)}</td></tr>`).join('');
+  const html = `
+    <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:4px">${escapeHtml(b.name || '')}</div>
+    <div style="text-align:center;font-weight:700;letter-spacing:.12em;border:1px solid #000;padding:3px 0;margin:4px 0 6px">${escapeHtml(gl({es:'CUENTA', ca:'COMPTE', en:'BILL'}))}</div>
+    <div style="font-size:12px;margin-bottom:6px">${escapeHtml(nombre)}${order.pax ? ' · ' + order.pax + ' ' + escapeHtml(t('common.persAbbr')) : ''} · ${escapeHtml(new Date().toLocaleString(localeActual(), {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}))}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px"><tbody>${filas}</tbody></table>
+    <div style="border-top:1px dashed #000;margin:6px 0 4px"></div>
+    ${dto ? `<div style="display:flex;justify-content:space-between;font-size:12px"><span>${escapeHtml(t('label.discount'))} (${order.descuentoPct}%)</span><span>-${fmtMoney(dto)}</span></div>` : ''}
+    <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px"><span>${escapeHtml(t('common.total'))}</span><span>${fmtMoney(final)}</span></div>
+    <div style="text-align:center;font-size:11px;margin-top:8px">${escapeHtml(gl({es:'Esta cuenta no es una factura.', ca:'Aquest compte no és una factura.', en:'This bill is not an invoice.'}))}</div>`;
+  const ancho = 30;
+  const texto = [b.name || '', gl({es:'CUENTA', ca:'COMPTE', en:'BILL'}), nombre, '-'.repeat(ancho),
+    ...order.items.map(l => `${fmtNum(l.qty)}x ${l.name}`.slice(0, ancho - 9).padEnd(ancho - 8) + fmtMoney(l.price*l.qty).padStart(8)),
+    '-'.repeat(ancho), `${t('common.total')}: ${fmtMoney(final)}`, gl({es:'Esta cuenta no es una factura.', ca:'Aquest compte no és una factura.', en:'This bill is not an invoice.'})].join('\n');
+  imprimirRollo(html, texto, gl({es:'Cuenta', ca:'Compte', en:'Bill'}));
 }
 function printRectificativa(saleId){
   const sale = (DB.sales||[]).find(s => s.id === saleId);

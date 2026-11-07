@@ -2685,6 +2685,8 @@ const MANUAL_CHAPTERS = [
   <li><strong>Factura</strong> emite la <strong>factura completa</strong> para un cliente empresa o autónomo: pide nombre o razón social, NIF y domicilio, y sustituye al ticket entregado. Se recuerda en su ficha de cliente para la próxima vez.</li>
   <li>Para reimprimir o sacar una factura más tarde: <strong>Ventas hoy</strong> (ventana <strong>Ventas de hoy</strong>), con el icono de impresora, de factura o de la térmica en cada venta. El propietario ve también el <strong>Margen</strong> de cada venta.</li>
   <li>La impresión puede ser por Bluetooth (térmica emparejada) o por el navegador/AirPrint/impresora del sistema; se elige por aparato en Mi Negocio.</li>
+  <li><strong>La cuenta antes de cobrar</strong>: en la pestaña <strong>Pedido</strong>, el botón de la impresora (<strong>Cuenta</strong>) saca la cuenta para el cliente, con lo consumido y el total. Pone «Esta cuenta no es una factura»: no lleva número ni cierra la mesa. El ticket de venta sale por el rollo de la impresora de este aparato (58 u 80 mm), sin abrir ventanas.</li>
+  <li><strong>Con «Imprimir» activado en Mi Negocio</strong>, los vales salen también cuando no pulsas «Marchar»: el primer grupo de la mesa, lo de para llevar, las bebidas y los pedidos de la web que aceptas. Se espera unos segundos para sacar <strong>un solo vale</strong> con todo lo que entró junto. Si anulas algo que ya estaba marchado, cocina o barra reciben un vale <strong>ANULADO</strong>.</li>
 </ul>
 
 <h4>Anulaciones</h4>
@@ -2820,6 +2822,8 @@ const MANUAL_CHAPTERS = [
   <li><strong>Factura</strong> emet la <strong>factura completa</strong> per a un client empresa o autònom: demana nom o raó social, NIF i domicili, i substitueix el tiquet lliurat. Es recorda a la seva fitxa de client per a la propera vegada.</li>
   <li>Per reimprimir o treure una factura més tard: <strong>Vendes avui</strong> (finestra <strong>Vendes d'avui</strong>), amb la icona d'impressora, de factura o de la tèrmica a cada venda. El propietari veu també el <strong>Marge</strong> de cada venda.</li>
   <li>La impressió pot ser per Bluetooth (tèrmica emparellada) o pel navegador/AirPrint/impressora del sistema; es tria per aparell a El Meu Negoci.</li>
+  <li><strong>El compte abans de cobrar</strong>: a la pestanya <strong>Comanda</strong>, el botó de la impressora (<strong>Compte</strong>) treu el compte per al client, amb el consumit i el total. Diu «Aquest compte no és una factura»: no porta número ni tanca la taula. El tiquet de venda surt pel rotllo de la impressora d'aquest aparell (58 o 80 mm), sense obrir finestres.</li>
+  <li><strong>Amb «Imprimir» activat a El Meu Negoci</strong>, els vals surten també quan no prems «Marxar»: el primer grup de la taula, el de per emportar, les begudes i les comandes de la web que acceptes. S'espera uns segons per treure <strong>un sol val</strong> amb tot el que ha entrat junt. Si anul·les alguna cosa que ja estava marxada, cuina o barra reben un val <strong>ANUL·LAT</strong>.</li>
 </ul>
 
 <h4>Anul·lacions</h4>
@@ -2955,6 +2959,8 @@ const MANUAL_CHAPTERS = [
   <li><strong>Invoice</strong> issues the <strong>full invoice</strong> for a company or freelancer: it asks for the name or company name, tax ID and address, and replaces the receipt already handed over. It's remembered on their customer record for next time.</li>
   <li>To reprint or get an invoice later: <strong>Sales today</strong> (the <strong>Today's sales</strong> window), with the printer, invoice or thermal icon on each sale. The owner also sees each sale's <strong>Margin</strong>.</li>
   <li>Printing can go over Bluetooth (paired thermal printer) or through the browser/AirPrint/system printer; it's chosen per device in My Business.</li>
+  <li><strong>The bill before charging</strong>: in the <strong>Order</strong> tab, the printer button (<strong>Bill</strong>) prints the bill for the customer, with what they had and the total. It says “This bill is not an invoice”: it has no number and does not close the table. The sales ticket comes out on this device's roll printer (58 or 80 mm), without opening any window.</li>
+  <li><strong>With “Print” switched on in My Business</strong>, tickets also print when you don't press “Fire”: the table's first course, takeaway, drinks and web orders you accept. It waits a few seconds so that <strong>one single ticket</strong> comes out with everything that was added together. If you cancel something already fired, the kitchen or bar gets a <strong>CANCELLED</strong> ticket.</li>
 </ul>
 
 <h4>Voids</h4>

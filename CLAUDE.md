@@ -971,6 +971,11 @@ El dueño dijo que la vista móvil era «lo peor de la app». Se capturó cada p
 - ⚠️ **«RECOGIDO» LO MARCA COCINA** (8/11, revierte la decisión del 1/10): con un bloque «Listo en el pase», su nombre en el ticket pasa a ser el botón
   (`marcarTandaRecogida`; cada plato también, `markLineRecogida`; el panel «En el pase» del modo caos tiene «Recogido»). Sala solo ve «Listo en el pase» y
   **ya no hay «Marchar vale»**: se marcha por grupo o por plato. `checkComandaCierre` ignora también las bebidas sin marca.
+- **Impresión auditada (8/11, `test/tpv-impresion.mjs`)**: con «Imprimir» en Mi Negocio (`comandas.modo==='impresion'`) **todo lo que sale solo también se imprime**:
+  primer grupo de la mesa, para llevar, bebidas y pedido web aceptado (`encolarImpresionMarchada`: espera 2,5 s desde el último y saca UN vale; antes solo imprimía «Marchar» a mano, así que la barra no recibía NINGUNA bebida). Anular
+  algo ya marchado imprime «ANULADO · mesa» en la impresora que toca (`printAnulacionIfEnabled`). **El ticket de cliente** (`printTicket` sin factura) sale por el rollo del aparato
+  (`imprimirRollo`: térmica emparejada o `printViaBrowser` con el ancho 58/80 mm); antes abría `window.open`, que bloquean las tablets. La factura completa sigue en A4. **«Cuenta»**
+  (`printCuenta`, botón de la impresora en la cabecera del Pedido): la cuenta antes de cobrar, sin número ni IVA y con «no es una factura». Pendiente: el vale regalo como forma de pago.
 - Pruebas: `test/tpv-comanda.mjs`, `test/tpv-mesas-cobros.mjs`, `test/comandas-cocina.mjs`.
 
 ## El «login raro» que sale solo: PIN de área SOBRE la entrada (7/11)

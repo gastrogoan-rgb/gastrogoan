@@ -533,7 +533,7 @@ function comandaRondas(order){
 function renderOrderComandaPanel(order){
   const unidades = (order.items || []).reduce((s, l) => s + l.qty, 0);
   const total = orderTotal(order);
-  const cab = `<div class="tp-com-cab"><span class="tp-com-tit"><i class="ti ti-clipboard-list"></i> ${escapeHtml(t('label.order'))}${unidades ? ` <b class="tp-com-uds">${unidades}</b>` : ''}</span><span class="tp-com-total">${fmtMoney(total)}</span></div>`;
+  const cab = `<div class="tp-com-cab"><span class="tp-com-tit"><i class="ti ti-clipboard-list"></i> ${escapeHtml(t('label.order'))}${unidades ? ` <b class="tp-com-uds">${unidades}</b>` : ''}${unidades ? ` <button type="button" class="btn btn-sm btn-fino tp-com-cuenta" onclick="printCuenta(${order.id})" data-tip="${escapeHtml(gl({es:'Imprimir la cuenta (sin cobrar)', ca:'Imprimir el compte (sense cobrar)', en:'Print the bill (without charging)'}))}" aria-label="${escapeHtml(gl({es:'Imprimir la cuenta', ca:'Imprimir el compte', en:'Print the bill'}))}"><i class="ti ti-printer"></i><span class="tp-largo"> ${escapeHtml(gl({es:'Cuenta', ca:'Compte', en:'Bill'}))}</span></button>` : ''}</span><span class="tp-com-total">${fmtMoney(total)}</span></div>`;
   if(!(order.items || []).length){
     return `${cab}<div class="empty es-vacio tp-com-vacia"><i class="ti ti-clipboard-list"></i>${escapeHtml(t('empty.orderEmpty'))}<small>${escapeHtml(t('label.selectFromMenu'))}</small></div>`;
   }
