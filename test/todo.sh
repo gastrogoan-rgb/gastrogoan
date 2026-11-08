@@ -175,6 +175,7 @@ lanzar; node test/tpv-comanda.mjs > "$SALIDA/tpvcomanda.txt" 2>&1 & P168=$!
 lanzar; node test/tpv-mesas-cobros.mjs > "$SALIDA/tpvmesascobros.txt" 2>&1 & P169=$!
 lanzar; node test/tpv-delivery.mjs > "$SALIDA/tpvdelivery.txt" 2>&1 & P170=$!
 lanzar; node test/tpv-impresion.mjs > "$SALIDA/tpvimpresion.txt" 2>&1 & P171=$!
+lanzar; node test/tpv-vale.mjs > "$SALIDA/tpvvale.txt" 2>&1 & P172=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -380,5 +381,6 @@ espera $P168 "TPV · comanda: rondas (segundo bloque), una fila por línea, cama
 espera $P169 "TPV · cambio de mesa, fusión y formas de cobro (efectivo, tarjeta, mixto, descuento, propina y cuenta dividida)" "$SALIDA/tpvmesascobros.txt" "casos pasaron"
 espera $P170 "TPV · delivery: lo pedido a la vista en la ficha, reparto en su pestaña, Control de repartos, ruta agrupada y entregado" "$SALIDA/tpvdelivery.txt" "casos pasaron"
 espera $P171 "TPV · impresión: lo que sale solo se imprime (un vale), anulaciones, ticket por el rollo del aparato y cuenta antes de cobrar" "$SALIDA/tpvimpresion.txt" "casos pasaron"
+espera $P172 "TPV · vale regalo como forma de pago: parcial, total con saldo, rechazos, quitar, anular devuelve y cierre de caja" "$SALIDA/tpvvale.txt" "casos pasaron"
 
 exit $FALLOS

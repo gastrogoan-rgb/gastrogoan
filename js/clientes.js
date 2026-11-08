@@ -651,6 +651,25 @@ function confirmarCanjeVale(id){
   saveDB(); closeModal(); renderClientes();
   showToast(v.redeemed ? gl({es:'Vale canjeado del todo.', ca:'Val bescanviat del tot.', en:'Voucher fully redeemed.'}) : gl({es:`Canjeado. Quedan ${fmtMoney(resto)}.`, ca:`Bescanviat. Queden ${fmtMoney(resto)}.`, en:`Redeemed. ${fmtMoney(resto)} left.`}));
 }
+/* El vale como forma de pago en el TPV (8/11). El canje queda apuntado con la venta que lo gastó (`venta`), para poder devolverlo si esa
+   venta se anula (`devolverValeDeVenta`): un vale gastado en una cuenta que luego se anula no puede quedarse «canjeado». */
+function canjearValeEnCobro(valeId, importe, sale){
+  const v = valesLista().find(x => x.id === valeId); if(!v || !(importe > 0)) return false;
+  if(!Array.isArray(v.canjes)) v.canjes = valeCanjes(v).slice();
+  const saldo = valeSaldo(v);
+  v.canjes.push({fecha: todayStr(), importe, nota: gl({es:'Cobro en el TPV', ca:'Cobrament al TPV', en:'Paid at the POS'}), venta: sale && sale.id, por: typeof currentActorName === 'function' ? currentActorName() : ''});
+  v.redeemed = Math.round((saldo - importe) * 100) / 100 <= 0.005;
+  v.redeemedAt = v.redeemed ? new Date().toISOString() : null;
+  valeAsientoCanje(v);
+  return true;
+}
+function devolverValeDeVenta(sale){
+  const v = valesLista().find(x => x.id === sale.valeId); if(!v || !Array.isArray(v.canjes)) return;
+  const i = v.canjes.findIndex(k => k.venta === sale.id);
+  if(i < 0) return;
+  v.canjes.splice(i, 1); v.redeemed = false; v.redeemedAt = null;
+  valeAsientoCanje(v);
+}
 function valeDeshacerCanje(id){
   const v = valesLista().find(x => x.id === id); if(!v) return;
   if(!Array.isArray(v.canjes)) v.canjes = valeCanjes(v).slice();

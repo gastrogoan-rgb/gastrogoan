@@ -406,6 +406,7 @@ const SELECTABLE_PAYMENT_METHODS = ['Efectivo','Tarjeta'];
 // esto solo traduce la etiqueta que se le muestra al usuario.
 const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed','Online':'label.paidOnline'};
 function paymentMethodTpvLabel(value){
+  if(value === 'Vale') return gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'});
   return PAYMENT_METHOD_LABEL_KEYS[value] ? t(PAYMENT_METHOD_LABEL_KEYS[value]) : (value||'');
 }
 let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
@@ -3916,6 +3917,7 @@ function reallyCancelSale(saleId, pin){
   }
   sale.status = 'anulada';
   sale.anuladaAt = new Date().toISOString();
+  if(sale.valeId && typeof devolverValeDeVenta === 'function') devolverValeDeVenta(sale);
   emitirRectificativa(sale, t('msg.saleVoidedAfterCharge'));
   const loggedEmployeeId = loggedInEmployeeId();
   const responsable = loggedEmployeeId != null ? DB.employees.find(e => e.id === loggedEmployeeId) : null;
@@ -4140,8 +4142,45 @@ function computeFinalTotal(order){
   // por cobrar en caja — finalTotal sigue siendo el valor total real de la
   // cuenta (para contabilidad), amountDue es lo nuevo.
   const amountPaidOnline = orderAmountPaidOnline(order);
-  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline));
-  return {total, descuentoPct, descuentoImporte, propina, finalTotal, amountPaidOnline, amountDue};
+  // Vale regalo (8/11): parte de la cuenta que cubre un vale de importe elegido en el cobro. Se lee SIEMPRE del saldo vivo del vale y se
+  // recorta a lo que queda por pagar (cambiar el descuento o la propina no deja un vale «de más» aplicado).
+  const valeAplicado = valeAplicadoEnCobro(order, Math.max(0, roundMoney(finalTotal - amountPaidOnline)));
+  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline - valeAplicado));
+  return {total, descuentoPct, descuentoImporte, propina, finalTotal, amountPaidOnline, amountDue, valeAplicado};
+}
+function valeAplicadoEnCobro(order, tope){
+  if(!order || !order.valeRegalo || typeof valesLista !== 'function') return 0;
+  const v = valesLista().find(x => x.id === order.valeRegalo.valeId);
+  if(!v || v.tipo !== 'importe' || !['pendiente', 'parcial'].includes(valeEstado(v))) return 0;
+  return Math.max(0, roundMoney(Math.min(valeSaldo(v), tope)));
+}
+// Busca un vale por su código tal como lo escribe el camarero (sin guiones, sin mayúsculas, sin espacios).
+function valeBuscarPorCodigo(txt){
+  const norm = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const n = norm(txt);
+  if(!n) return null;
+  return valesLista().find(v => norm(v.code) === n) || null;
+}
+function aplicarValeEnCobro(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const el = document.getElementById('payment-vale-code');
+  if(!order || !el) return;
+  const v = valeBuscarPorCodigo(el.value);
+  const aviso = m => showToast(m);
+  if(!v) return aviso(gl({es:'No encuentro ese vale. Revisa el código.', ca:'No trobo aquest val. Revisa el codi.', en:'I cannot find that voucher. Check the code.'}));
+  const est = valeEstado(v);
+  if(est === 'caducado') return aviso(gl({es:'Ese vale está caducado.', ca:'Aquest val està caducat.', en:'That voucher has expired.'}));
+  if(est === 'anulado') return aviso(gl({es:'Ese vale está anulado.', ca:'Aquest val està anul·lat.', en:'That voucher was voided.'}));
+  if(est === 'canjeado') return aviso(gl({es:'Ese vale ya está canjeado del todo.', ca:'Aquest val ja està bescanviat del tot.', en:'That voucher is already fully redeemed.'}));
+  if(v.tipo !== 'importe') return aviso(gl({es:'Es un vale de experiencia: se canjea desde Clientes, no resta importe de la cuenta.', ca:'És un val d\'experiència: es bescanvia des de Clients, no resta import del compte.', en:'This is an experience voucher: redeem it from Customers, it does not take money off the bill.'}));
+  order.valeRegalo = {valeId: v.id};
+  saveDB();
+  renderPaymentModal(orderId);
+}
+function quitarValeEnCobro(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  delete order.valeRegalo; saveDB(); renderPaymentModal(orderId);
 }
 
 function renderFullPaymentTab(order, total){
@@ -4150,7 +4189,12 @@ function renderFullPaymentTab(order, total){
   const propinaOnline = order.propinaPagadaOnline || 0;
   const finalTotal = total - (total*descuentoPct/100) + propina + propinaOnline;
   const amountPaidOnline = orderAmountPaidOnline(order);
-  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline));
+  const valeAplicado = valeAplicadoEnCobro(order, Math.max(0, roundMoney(finalTotal - amountPaidOnline)));
+  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline - valeAplicado));
+  const valeAp = order.valeRegalo ? valesLista().find(x => x.id === order.valeRegalo.valeId) : null;
+  const valeHtml = valeAplicado > 0 && valeAp
+    ? `<div class="pm-vale-ap"><i class="ti ti-gift-card"></i><span><b>${escapeHtml(gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'}))} ${escapeHtml(valeAp.code)}</b> · −${fmtMoney(valeAplicado)}${valeSaldo(valeAp) > valeAplicado + 0.005 ? ` · ${escapeHtml(gl({es:'le quedarán ', ca:'li quedaran ', en:'it will keep '}))}${fmtMoney(roundMoney(valeSaldo(valeAp) - valeAplicado))}` : ''}</span><button type="button" class="btn btn-sm btn-fino" onclick="quitarValeEnCobro(${order.id})">${escapeHtml(t('common.remove') || 'Quitar')}</button></div>`
+    : `<div class="field"><label for="payment-vale-code">${escapeHtml(gl({es:'Vale regalo (código)', ca:'Val regal (codi)', en:'Gift voucher (code)'}))}</label><div style="display:flex;gap:6px"><input type="text" id="payment-vale-code" autocomplete="off" autocapitalize="characters" maxlength="24" placeholder="${escapeHtml(gl({es:'Escribe el código del vale', ca:'Escriu el codi del val', en:'Type the voucher code'}))}" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();aplicarValeEnCobro(${order.id})}"><button type="button" class="btn btn-sm" onclick="aplicarValeEnCobro(${order.id})">${escapeHtml(gl({es:'Aplicar', ca:'Aplicar', en:'Apply'}))}</button></div></div>`;
   // Nombres de quienes ya pagaron su parte por móvil (QR de mesa), para que
   // el camarero sepa de un vistazo quién falta por cobrar, no solo cuánto.
   const payerNames = [...new Set((order.items||[]).filter(l => l.pagadoOnline && l.pagadorNombre).map(l => l.pagadorNombre))];
@@ -4176,8 +4220,9 @@ function renderFullPaymentTab(order, total){
     <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12.5px;margin-bottom:10px">
       <i class="ti ti-credit-card" style="color:var(--ink)"></i> ${t('label.paidOnlinePartial').replace('${amount}', fmtMoney(amountPaidOnline))}${payerNames.length ? ` (${payerNames.map(escapeHtml).join(', ')})` : ''}
     </div>` : ''}
+    ${valeHtml}
     <div class="kpi" style="margin-bottom:12px">
-      <div class="label">${amountPaidOnline > 0 ? t('label.remainingToCharge') : t('label.totalToCharge')}</div>
+      <div class="label">${(amountPaidOnline > 0 || valeAplicado > 0) ? t('label.remainingToCharge') : t('label.totalToCharge')}</div>
       <div class="value" id="payment-final-total">${fmtMoney(amountDue)}</div>
     </div>
     <div class="field">
@@ -4426,7 +4471,7 @@ function finalizeCharge(orderId, opts){
   // es barato de comprobar y evita un doble cobro/doble descuento de stock
   // si en el futuro se añade algo asíncrono antes de marcar 'pagada'.
   if(order.status === 'pagada') return;
-  const {total: subtotal, descuentoPct, descuentoImporte, propina: propinaCaja, finalTotal: total, amountPaidOnline, amountDue} = computeFinalTotal(order);
+  const {total: subtotal, descuentoPct, descuentoImporte, propina: propinaCaja, finalTotal: total, amountPaidOnline, amountDue, valeAplicado} = computeFinalTotal(order);
   // La venta ya se apuntó al llegar el pago (apuntarVentaPagoOnline): cerrar
   // es solo cerrar. Si al recogerlo se añadió algo y queda dinero por cobrar,
   // se rehace la venta entera con lo nuevo (mismo id: no se duplica).
@@ -4456,8 +4501,9 @@ function finalizeCharge(orderId, opts){
   // y el arqueo esperaba en caja un dinero que nunca pasó por ella).
   const pmEl = document.getElementById('payment-method');
   const todoOnline = amountDue <= 0.001 && amountPaidOnline > 0;
+  const todoVale = amountDue <= 0.001 && valeAplicado > 0 && !todoOnline;
   if(!pmEl && !todoOnline) return;   // sin ventana de cobro solo se cierra lo ya pagado
-  const metodoPago = todoOnline ? 'Online' : pmEl.value;
+  const metodoPago = todoOnline ? 'Online' : todoVale ? 'Vale' : pmEl.value;
   // Si el camarero teclea por error un importe entregado menor que lo
   // debido, el cambio mostrado se queda en 0€ (Math.max(0,...) en
   // updatePaymentChange) y no avisa de nada raro — sin este control el
@@ -4480,8 +4526,11 @@ function finalizeCharge(orderId, opts){
   // del "Mixto" — así sale.total sigue siendo el valor real de toda la
   // cuenta (para contabilidad/VeriFactu), pero queda constancia exacta de
   // que una parte ya se cobró antes, no ahora mismo en caja.
-  if(amountPaidOnline > 0){
+  if(amountPaidOnline > 0 || valeAplicado > 0){
     if(!pagos) pagos = amountDue > 0.001 ? [{label: paymentMethodTpvLabel(metodoPago), amount: amountDue, metodoPago}] : [];
+    if(valeAplicado > 0) pagos.push({label: gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'}), amount: valeAplicado, metodoPago: 'Vale'});
+  }
+  if(amountPaidOnline > 0){
     // La señal de la reserva (si la hay) se desglosa aparte del resto de lo
     // ya pagado por móvil, para que quede claro en el ticket/informe de
     // dónde viene cada parte — orderAmountPaidOnline() ya la suma dentro
@@ -4517,6 +4566,10 @@ function finalizeCharge(orderId, opts){
   const saleDate = (order.pagado && order.pagoFecha && amountDue <= 0.001) ? diaLocalDe(order.pagoFecha) : todayStr();
   const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   estamparSenalEnVenta(order, sale);
+  if(valeAplicado > 0){
+    sale.valeId = order.valeRegalo.valeId; sale.valeImporte = valeAplicado;
+    if(typeof canjearValeEnCobro === 'function') canjearValeEnCobro(order.valeRegalo.valeId, valeAplicado, sale);
+  }
   numerarTicket(sale);
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
