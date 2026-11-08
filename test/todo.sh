@@ -180,6 +180,7 @@ lanzar; node test/reservas-ajustes.mjs > "$SALIDA/reservasajustes.txt" 2>&1 & P1
 lanzar; node test/clientes-filtros.mjs > "$SALIDA/clientesfiltros.txt" 2>&1 & P174=$!
 lanzar; node test/mi-negocio-ronda.mjs > "$SALIDA/minegociorona.txt" 2>&1 & P175=$!
 lanzar; node test/atras.mjs > "$SALIDA/atras.txt" 2>&1 & P176=$!
+lanzar; node test/panel-v2.mjs > "$SALIDA/panelv2.txt" 2>&1 & P177=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -390,5 +391,6 @@ espera $P173 "Reservas · un solo botón nuevo, cuartos de hora con margen de ci
 espera $P174 "Clientes · nueve filtros (Recurrentes y Ocasionales) y Promoción › Clientes con la última visita real" "$SALIDA/clientesfiltros.txt" "casos pasaron"
 espera $P175 "Mi Negocio · fiscal bloqueado, reservas por grupo desmarcable, plano de sala en rejilla, horario especial, IVA por producto e impresoras con estado" "$SALIDA/minegociorona.txt" "Todo en verde"
 espera $P176 "Atrás en toda la app: cada pantalla y cada página interior (pedido, historial de cliente, tema del manual) es una entrada del historial; vuelve con su pestaña y su scroll" "$SALIDA/atras.txt" "todos los casos pasaron"
+espera $P177 "Panel de Control v2: equilibrio destacado, reservas/ventas/gastos/resultado con gráfica de semana o mes, análisis con picos, clientela y atención ampliada" "$SALIDA/panelv2.txt" "todos los casos pasaron"
 
 exit $FALLOS

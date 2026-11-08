@@ -117,24 +117,16 @@
         <button class="btn btn-sm btn-primary" id="dash-preguntale" onclick="abrirPreguntaNumeros()"><i class="ti ti-message-chatbot"></i> <span data-i18n="ia.num.title">Pregúntale a tus números</span></button>
       </div>
 
+      <!-- Panel v2 (8/11, js/panel.js): equilibrio destacado → atención → reservas, ventas, gastos, resultado (hoy + gráfica de semana/mes)
+           → evolución del año → análisis de ventas con picos → clientela → análisis de platos. -->
+      <div id="dp-equilibrio" style="margin-top:16px"></div>
+
       <div class="card gg-plegable" data-acc-abierto="1" style="margin-top:16px">
         <h3 data-i18n="title.todayAttention"><i class="ti ti-bell"></i> Hoy — Atención</h3>
         <div id="dashboard-attention"></div>
       </div>
 
-      <div id="dashboard-hero" style="margin-top:16px"></div>
-
-      <div class="grid grid-2" id="dashboard-period-kpis" style="margin-top:16px"></div>
-
-      <div class="card gg-plegable" style="margin-top:16px">
-        <h3 data-i18n="dash.upcomingReservations.title"><i class="ti ti-calendar-stats"></i> Reservas de los próximos 7 días</h3>
-        <div id="dashboard-reservations-week"></div>
-      </div>
-
-      <div class="card gg-plegable" style="margin-top:16px">
-        <h3 data-i18n="title.monthlyPL"><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
-        <div id="dashboard-resultado"></div>
-      </div>
+      <div id="dp-root-a"></div>
 
       <div class="card gg-plegable" data-acc-abierto="1" style="margin-top:16px">
         <h3 id="dash-trend-tit"><i class="ti ti-chart-line"></i> Evolución del año</h3>
@@ -142,21 +134,7 @@
         <p style="font-size:11.5px;color:var(--muted);margin-top:6px" data-i18n="dash.currentMonthPartialNote">* El mes en curso es parcial (solo lleva los días transcurridos).</p>
       </div>
 
-      <div class="card gg-plegable" style="margin-top:16px">
-        <h3 data-i18n="title.salesAnalysis"><i class="ti ti-chart-pie"></i> Análisis de ventas (este mes)</h3>
-        <div id="dashboard-sales-analysis"></div>
-      </div>
-
-      <div class="card gg-plegable" style="margin-top:16px">
-        <h3 data-i18n="title.salesHeatmap"><i class="ti ti-calendar-stats"></i> Picos de venta (día y hora, últimas 8 semanas)</h3>
-        <p style="font-size:12px;color:var(--muted);margin:0 0 10px" data-i18n="dash.heatmapHint">Cuanto más oscura la celda, más se vende en ese día y esa franja horaria. Útil para planificar personal y compras.</p>
-        <div id="dashboard-sales-heatmap"></div>
-      </div>
-
-      <div class="card gg-plegable" style="margin-top:16px">
-        <h3 data-i18n="title.breakEven"><i class="ti ti-scale"></i> Punto de equilibrio</h3>
-        <div id="dashboard-breakeven"></div>
-      </div>
+      <div id="dp-root-b"></div>
 
       <details class="card" style="margin-top:16px" open>
         <summary style="cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px">
@@ -896,6 +874,7 @@
 <script src="js/iconos-comida-uso.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/finance.js"></script>
+<script src="js/panel.js"></script>
 <script src="js/motor-fiscal.js"></script>
 <script src="js/recipes.js"></script>
 <script src="js/menu.js"></script>

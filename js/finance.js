@@ -1048,7 +1048,7 @@ function dashSerieHtml(serie, o){
         </svg>
         ${serie.map((p, i) => o.estatico
           ? `<span class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" aria-hidden="true"></span>`
-          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}"${o.tooltip ? ` data-v="${escapeHtml((p.nombre || p.label) + ': ' + fmtMoney(p.value))}"` : ''} aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
+          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}"${o.tooltip ? ` data-v="${escapeHtml((p.nombre || p.label) + ': ' + (p.txt || fmtMoney(p.value)))}"` : ''} aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(p.txt || fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
         ${[...conTag].map(i => `<span class="dt-tag${vals[i] < 0 ? ' neg' : ''}${pts[i][1] < 22 ? ' abajo' : ''}${i === 0 ? ' izq' : ''}${i === n - 1 ? ' der' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%">${escapeHtml(o.fmtTag ? o.fmtTag(vals[i]) : dashCompacto(vals[i]))}</span>`).join('')}
       </div>
       <div class="dt-ejes">${serie.map((p, i) => `<span class="${i % cada ? 'oculto' : ''}${p.parcial ? ' parcial' : ''}">${escapeHtml(p.label)}</span>`).join('')}</div>
@@ -1065,7 +1065,7 @@ function dashSerieVer(id, i){
   if(b) b.classList.add('sel');
   const tit = document.querySelector('[data-dt-titular="' + id + '"]');
   const datos = (window.dashSeriesPorId || {})[id];
-  if(tit && datos && datos[i]) tit.innerHTML = '<b>' + escapeHtml(fmtMoney(datos[i].value)) + '</b> <span>' + escapeHtml(datos[i].nombre || datos[i].label) + (datos[i].parcial ? ' · ' + escapeHtml(gl({es:'mes en curso', ca:'mes en curs', en:'current month'})) : '') + '</span>';
+  if(tit && datos && datos[i]) tit.innerHTML = '<b>' + escapeHtml(datos[i].txt || fmtMoney(datos[i].value)) + '</b> <span>' + escapeHtml(datos[i].nombre || datos[i].label) + (datos[i].parcial ? ' · ' + escapeHtml(gl({es:'mes en curso', ca:'mes en curs', en:'current month'})) : '') + '</span>';
 }
 let dashTrendTab = 'ventas';
 let dashTrendDatos = null;
@@ -1103,51 +1103,9 @@ function renderDashboard(){
   plan360ActualizarKpis();
   const today = new Date();
   const todayDate = todayStr();
-  const yesterdayDate = dateStr(new Date(today.getTime() - 86400000));
-  const lastWeekSameDayDate = dateStr(new Date(today.getTime() - 7*86400000));
-  const weekAgo = dateStr(new Date(today.getTime() - 6*86400000));
-  const monthStart = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
-
   const hasAnySales = DB.sales.length > 0;
-
-  /* Análisis de ventas: MES NATURAL, no una ventana móvil de 30 días.
-     Con los últimos 30 días este panel daba cifras que no cuadraban con
-     ninguna otra pantalla de la app —Gestión Económica, Cuenta de
-     Resultados y el resto van todas por mes natural—, así que el mismo
-     negocio enseñaba dos facturaciones distintas según dónde mirara el
-     hostelero. */
-  const salesMes = activeSales().filter(s=>s.date>=monthStart && s.date<=todayDate);
-  const totalMes = salesMes.reduce((s,x)=>s+x.total,0);
-  const avgTicket = salesMes.length ? totalMes / salesMes.length : 0;
-
-  // % Food Cost medio ponderado por unidades vendidas en el mes,
-  // para que un plato sin ventas no distorsione el indicador frente al objetivo.
-  const recipeUnitsMes = {};
-  salesMes.forEach(s=>{
-    (s.items||[]).forEach(it=>{
-      if(it.recipeId) recipeUnitsMes[it.recipeId] = (recipeUnitsMes[it.recipeId]||0) + (it.qty||1);
-    });
-  });
-  let avgFoodCost = 0;
-  // recipeFoodCostPct() da Infinity si la receta no tiene precio de venta
-  // fijado todavía en Carta (caso típico al arrancar, o con un plato nuevo
-  // recién creado) — se filtra con isFinite. Si TODAS las recetas están en
-  // ese caso, ni el promedio ponderado ni el fallback pueden calcular nada
-  // real: antes avgFoodCost se quedaba en su valor inicial 0, y se mostraba
-  // como si el food cost fuera literalmente 0% (dato saludable falso) en vez
-  // de "—" (sin datos suficientes). foodCostCalculable distingue ambos casos.
-  const weightedFc = DB.recipes
-    .map(r => ({pct: recipeFoodCostPct(r), units: recipeUnitsMes[r.id]||0}))
-    .filter(e => isFinite(e.pct) && e.units>0);
-  const weightedFcUnits = weightedFc.reduce((s,e)=>s+e.units,0);
-  let foodCostCalculable = false;
-  if(weightedFcUnits > 0){
-    avgFoodCost = weightedFc.reduce((s,e)=>s+e.pct*e.units,0) / weightedFcUnits;
-    foodCostCalculable = true;
-  } else if(DB.recipes.length){
-    const pcts = DB.recipes.map(r => recipeFoodCostPct(r)).filter(p => isFinite(p));
-    if(pcts.length){ avgFoodCost = pcts.reduce((a,b)=>a+b,0) / pcts.length; foodCostCalculable = true; }
-  }
+  const year = today.getFullYear();
+  const month = today.getMonth();
 
   /* ---------- Hoy — Atención (acciones a un vistazo) ---------- */
   const openOrders = DB.tpvOrders.filter(o => o.status==='abierta').length;
@@ -1194,7 +1152,24 @@ function renderDashboard(){
   // rechazado/cancelado antes de que llegara la confirmación) — sin este
   // aviso, ese dinero cobrado no dejaría ningún rastro visible en la app.
   const unmatchedPaymentsCount = (DB.unmatchedOnlinePayments||[]).length;
+  // Lo que antes NO avisaba y se quedaba esperando sin que nadie lo viera: pedidos de la web por aceptar, solicitudes de reserva por
+  // confirmar, incidencias abiertas entre sala y cocina, cambios de turno y vacaciones por aprobar, temperaturas fuera de rango y
+  // pedidos a proveedor sin recibir. Y un detalle de hostelería: los cumpleaños de hoy.
+  const onlinePorAceptar = DB.tpvOrders.filter(o => o.status === 'pendiente-online').length;
+  const reservasPorConfirmar = DB.reservations.filter(r => r.status === 'pendiente' && r.date >= todayDate).length;
+  const incidenciasAbiertas = DB.tpvOrders.filter(o => o.status === 'abierta' && typeof incidenciaAbierta === 'function' && incidenciaAbierta(o)).length;
+  const turnosPorAprobar = (DB.turnoSwapRequests||[]).filter(r => r.status === 'pending_owner').length + (DB.vacationRequests||[]).filter(r => r.status === 'pending').length;
+  const tempsFuera = (DB.limpieza && DB.limpieza.temperaturas || []).filter(e => e.fecha === todayDate && e.estado === 'NOK').length;
+  const pedidosPorRecibir = (DB.purchaseOrders||[]).filter(o => o.estado === 'ENVIADO').length;
+  const cumplesHoy = (DB.clients||[]).filter(c => c.cumpleanos && typeof nextBirthdayDays === 'function' && nextBirthdayDays(c.cumpleanos) === 0).length;
   const attentionItems = [
+    {count: onlinePorAceptar, icon:'ti-world', label: gl({es:'Pedidos de la web por aceptar', ca:'Comandes de la web per acceptar', en:'Web orders to accept'}), onclick: `navigate('tpv')`, warn:true},
+    {count: reservasPorConfirmar, icon:'ti-calendar-question', label: gl({es:'Reservas por confirmar', ca:'Reserves per confirmar', en:'Bookings to confirm'}), onclick: `navigate('reservas')`, warn:true},
+    {count: incidenciasAbiertas, icon:'ti-message-exclamation', label: gl({es:'Incidencias abiertas en comandas', ca:'Incidències obertes a comandes', en:'Open order issues'}), onclick: `navigate('tpv')`, warn:true},
+    {count: tempsFuera, icon:'ti-temperature', label: gl({es:'Temperaturas fuera de rango hoy', ca:'Temperatures fora de rang avui', en:'Out-of-range temperatures today'}), onclick: `navigate('limpieza'); setLimpiezaTab('temperaturas')`, warn:true},
+    {count: turnosPorAprobar, icon:'ti-calendar-user', label: gl({es:'Cambios de turno y vacaciones por aprobar', ca:'Canvis de torn i vacances per aprovar', en:'Shift swaps and holidays to approve'}), onclick: `navigate('horarios')`, warn:true},
+    {count: pedidosPorRecibir, icon:'ti-truck-delivery', label: gl({es:'Pedidos a proveedor por recibir', ca:'Comandes a proveïdor per rebre', en:'Supplier orders to receive'}), onclick: `navigate('pedidos'); setPedidosTab('historial')`},
+    {count: cumplesHoy, icon:'ti-cake', label: gl({es:'Cumpleaños hoy', ca:'Aniversaris avui', en:'Birthdays today'}), onclick: `navigate('promocion'); setPromoTab('clientes')`},
     {count: unmatchedPaymentsCount, icon:'ti-credit-card-off', label: t('dash.att.unmatchedPayments'), onclick: `openUnmatchedPaymentsModal()`, warn:true},
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
     {count: subidasDePrecio(14).length, icon:'ti-trending-up', label: t('dash.att.priceRises'), onclick: `abrirCambiosPrecio('suben')`, warn:true},
@@ -1229,127 +1204,6 @@ function renderDashboard(){
     ${aCero.length ? `<div class="att-zero">${aCero.map(i => `<button type="button" class="att-link" onclick="${i.onclick}"><i class="ti ${i.icon}" aria-hidden="true"></i>${i.label}</button>`).join('')}</div>` : ''}
   `;
 
-  /* ---------- Hero: venta de hoy + comparativas ---------- */
-  const todaySales = salesTotalForDate(todayDate);
-  const salesToday = activeSales().filter(s=>s.date===todayDate);
-  const todayTicketCount = salesToday.length;
-  const todayAvgTicket = todayTicketCount ? todaySales / todayTicketCount : 0;
-
-  function heroDelta(compareDate){
-    const compareSales = salesTotalForDate(compareDate);
-    if(compareSales <= 0) return todaySales>0 ? null : 0; // null = sin referencia real para comparar
-    return ((todaySales - compareSales) / compareSales) * 100;
-  }
-  const deltaYesterday = heroDelta(yesterdayDate);
-  const deltaLastWeek = heroDelta(lastWeekSameDayDate);
-  function deltaBadge(delta, label){
-    if(delta===null) return `<span class="badge badge-gray">${label}: —</span>`;
-    const cls = delta>=0 ? 'badge-green' : 'badge-red';
-    const sign = delta>=0 ? '+' : '';
-    return `<span class="badge ${cls}"><i class="ti ${delta>=0?'ti-arrow-up':'ti-arrow-down'}"></i> ${sign}${delta.toFixed(1)}% ${label}</span>`;
-  }
-
-  document.getElementById('dashboard-hero').innerHTML = !hasAnySales ? `
-    <div class="card" style="text-align:center;padding:32px 20px">
-      <i class="ti ti-chart-line" style="font-size:32px;color:var(--border);display:block;margin-bottom:8px"></i>
-      <div style="font-size:15px;color:var(--muted)">${t('dash.noSalesYet')}</div>
-    </div>
-  ` : `
-    <div class="dash-hero">
-      <div class="dash-hero-main">
-        <div class="dash-hero-lbl">${t('dash.hero.salesToday')}</div>
-        <div class="dash-hero-num">${fmtMoney(todaySales)}</div>
-        <div class="dash-hero-deltas">
-          ${deltaBadge(deltaYesterday, t('dash.hero.vsYesterday'))}
-          ${deltaBadge(deltaLastWeek, t('dash.hero.vsLastWeek'))}
-        </div>
-      </div>
-      <dl class="dash-hero-side">
-        <div><dt>${t('dash.hero.ticketsToday')}</dt><dd>${todayTicketCount}</dd></div>
-        <div><dt>${t('dash.avgTicket')}</dt><dd>${fmtMoney(todayAvgTicket)}</dd></div>
-      </dl>
-    </div>
-  `;
-
-  // Esta semana (ventas y gastos): datos que no se muestran en ningún otro sitio del dashboard.
-  const weekSales = salesTotalForRange(weekAgo, todayDate);
-  const weekGastos = geGastosTotalForRange(weekAgo, todayDate);
-  document.getElementById('dashboard-period-kpis').innerHTML = `
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.salesLast7Days')}</div><div class="value">${fmtMoney(weekSales)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.expensesLast7Days')}</div><div class="value">${fmtMoney(weekGastos)}</div></div>
-  `;
-
-  // Carga de reservas de los próximos 7 días (comensales esperados por día),
-  // para planificar personal y compras con antelación en vez de reaccionar
-  // solo a hoy/mañana. Igual que en el resto de la app, las canceladas/
-  // no-show/lista de espera no cuentan como cobertura real esperada.
-  {
-    const weekResHtml = document.getElementById('dashboard-reservations-week');
-    const days = Array.from({length:7}, (_,i) => dateStr(new Date(today.getTime() + i*86400000)));
-    const dayCovers = days.map(ds => {
-      const covers = DB.reservations
-        .filter(r => r.date===ds && (r.status==='confirmada'||r.status==='pendiente'))
-        .reduce((s,r) => s+(r.people||0), 0);
-      return {ds, covers};
-    });
-    const maxCovers = Math.max(...dayCovers.map(d=>d.covers), 1);
-    const anyReservations = dayCovers.some(d=>d.covers>0);
-    weekResHtml.innerHTML = !anyReservations ? `<div class="empty">${t('dash.noUpcomingReservations')}</div>` : `
-      <div style="display:flex;align-items:flex-end;gap:6px;height:120px">
-        ${dayCovers.map(({ds,covers},i) => {
-          const d = new Date(ds+'T00:00:00');
-          const isToday = ds === todayDate;
-          return `
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer" onclick="navigate('reservas');goToReservasDia('${ds}')" title="${t('dash.viewReservationsDay')}">
-            <div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:2px">${covers||''}</div>
-            <div style="width:100%;background:${isToday?'var(--ink)':'var(--ink)'};border-radius:4px 4px 0 0;height:${Math.max(2,(covers/maxCovers*100))}%"></div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px">${weekDayShort(d.getDay()===0?6:d.getDay()-1)}<br>${d.getDate()}/${d.getMonth()+1}</div>
-          </div>
-        `;}).join('')}
-      </div>
-    `;
-  }
-
-  // Resultado del mes (P&L) — única fuente de verdad para las cifras del mes en curso.
-  // "Facturación" se muestra CON IVA (lo que de verdad ha entrado en caja,
-  // como en GE → CDR), pero el "Resultado" se calcula sobre la facturación
-  // NETA y todos los gastos netos, exactamente igual que GE → Resultado/CDR
-  // (geResultadoAntesImpMes) — antes mezclaba facturación bruta con gastos
-  // netos y no restaba comisiones de delivery ni cuotas CAPEX, ver comentario
-  // en geResultadoAntesImpMes.
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const facturacion = salesTotalForMonth(year, month);
-  const variables = geTotalVariablesNetoMes(year, month);
-  const fijos = geTotalFijosNetoForMonth(year, month);
-  const resultado = geResultadoAntesImpMes(year, month);
-
-  const facturacionNeta = geFacturacionNetaMes(year, month);
-  const fcPct = avgFoodCost;
-  // Los % se calculan sobre la facturación NETA (sin IVA), no la bruta: el
-  // IVA no es un ingreso real del negocio, así que dividir entre facturación
-  // con IVA infla artificialmente estos ratios (más cuanto más alto el tipo
-  // de IVA aplicado). Mismo criterio que food cost/prime cost, que ya se
-  // calculaban así.
-  const margenPct = facturacionNeta > 0 ? (resultado/facturacionNeta)*100 : 0;
-  const personalCost = geTotalPersonalNetoForMonth(year, month);
-  const staffCostPct = facturacionNeta > 0 ? (personalCost/facturacionNeta)*100 : 0;
-  const hasFoodCost = foodCostCalculable;
-  const primeCostPct = (hasFoodCost?fcPct:0) + staffCostPct;
-  document.getElementById('dashboard-resultado').innerHTML = `
-    <div class="grid grid-4">
-      <div class="kpi"><div class="label">${t('dash.revenueMonth')}</div><div class="value">${fmtMoney(facturacion)}</div></div>
-      <div class="kpi"><div class="label">${t('hr.lbl.variableExpensesNoVat')}</div><div class="value">${fmtMoney(variables)}</div></div>
-      <div class="kpi"><div class="label">${t('hr.lbl.fixedNoVat')}</div><div class="value">${fmtMoney(fijos)}</div></div>
-      <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">${t('dash.result')}</div><div class="value">${fmtMoney(resultado)}</div></div>
-    </div>
-    <div style="margin-top:8px;font-size:13px;color:var(--muted)">
-      ${t('dash.marginOnSales')} <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacionNeta>0?margenPct.toFixed(1)+'%':'—'}</strong>
-      &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>geFoodCostObjPct()?'var(--red)':'var(--green)'}">${hasFoodCost?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', geFoodCostObjPct().toFixed(1))}
-      &nbsp;·&nbsp; ${t('dash.staffCostPct')} <strong style="color:${staffCostPct>30?'var(--red)':'var(--green)'}">${facturacionNeta>0&&personalCost>0?staffCostPct.toFixed(1)+'%':'—'}</strong>
-      ${facturacionNeta>0 && personalCost>0 && hasFoodCost ? `&nbsp;·&nbsp; ${t('dash.primeCost')} <strong style="color:${primeCostPct>65?'var(--red)':'var(--green)'}">${primeCostPct.toFixed(1)}%</strong>` : ''}
-    </div>
-  `;
 
   // Comparación de ventas / gastos / resultado del año (12 meses)
   const ventasTrend = [];
@@ -1378,187 +1232,12 @@ function renderDashboard(){
   dashTrendDatos = {hayVentas: hasAnySales, ventas: conNombre(ventasTrend), gastos: conNombre(gastosTrend), resultado: conNombre(resultadoTrend)};
   dashTrendPintar();
 
-  // ⚠️ "Más vendidos" tiene que ordenar por UNIDADES, no por dinero
-  // facturado: antes sumaba price*qty y ordenaba por ese importe, así que
-  // un plato vendido UNA vez a 50€ salía por delante de uno vendido 100
-  // veces a 2€ — el segundo es, para cualquiera que lea "más vendido", el
-  // que de verdad lo es. Se guardan las dos cifras (unidades y dinero) para
-  // poder mostrar ambas sin tener que recalcular nada.
-  // ⚠️ Agrupar por el TEXTO del nombre (it.name) hacía que el mismo plato
-  // apareciera DOS VECES en el ranking — "Salmón" y "Salmon" — en cuanto
-  // alguna venta lo tenía escrito de forma distinta (con/sin acento, un
-  // renombrado del plato, una línea suelta sin receta vinculada...). El
-  // "Análisis de Platos" (Gestión Económica → Ventas, platosStats() en
-  // js/hr.js) ya agrupa por recipeId cuando existe, y solo cae al nombre si
-  // de verdad no hay receta detrás — con el mismo dato de partida, este
-  // panel podía dar un ranking distinto solo por este motivo. Mismo
-  // criterio aquí para que los dos coincidan.
-  const dishKey = it => it.recipeId ? ('r'+it.recipeId) : ('m'+(it.name||''));
-  const productTotals = {};
-  salesMes.forEach(s=>{
-    (s.items||[]).forEach(it=>{
-      const key = dishKey(it);
-      if(!productTotals[key]) productTotals[key] = {name: it.name || '—', units:0, revenue:0};
-      productTotals[key].units += (it.qty||1);
-      productTotals[key].revenue += (it.price||0) * (it.qty||1);
-    });
-  });
-  const topProducts = Object.values(productTotals).sort((a,b)=>b.units-a.units).slice(0,5);
 
-  // Margen bruto real por plato (mes en curso) — coste estampado en el
-  // momento de cada venta (costoUnitarioDeLinea), no el coste actual de la
-  // receta: si no, un cambio de precio de un ingrediente HOY movería el
-  // margen "real" de ventas de hace semanas cada vez que se abre el panel.
-  const marginTotals = {};
-  salesMes.forEach(s=>{
-    (s.items||[]).forEach(it=>{
-      const key = dishKey(it);
-      const qty = it.qty || 1;
-      const unitCost = it.recipeId ? costoUnitarioDeLinea(it) : 0;
-      // it.price es el precio de venta CON IVA (viene de r.price en Carta); el
-      // coste de la receta es siempre neto, así que hay que quitarle el IVA a
-      // la línea antes de restar — si no, el margen sale inflado y varía según
-      // el tipo de IVA del plato en vez de reflejar solo coste vs venta real.
-      const rate = it.ivaPct != null ? parseFloat(it.ivaPct) : parseFloat(ivaPorDefectoDe(it));
-      const unitPriceBase = (it.price||0) / (1 + rate/100);
-      const margin = (unitPriceBase - unitCost) * qty;
-      if(!marginTotals[key]) marginTotals[key] = {name: it.name || '—', margin:0, hasCost: !!it.recipeId};
-      marginTotals[key].margin += margin;
-      if(it.recipeId) marginTotals[key].hasCost = true;
-    });
-  });
-  const topMargins = Object.values(marginTotals)
-    .filter(v=>v.hasCost)
-    .sort((a,b)=>b.margin-a.margin)
-    .slice(0,5);
-
-  const hourTotals = new Array(24).fill(0);
-  salesMes.forEach(s=>{
-    if(s.createdAt){
-      const h = new Date(s.createdAt).getHours();
-      hourTotals[h] += s.total;
-    }
-  });
-  const maxHour = Math.max(...hourTotals, 1);
-
-  document.getElementById('dashboard-sales-analysis').innerHTML = `
-    <div class="grid grid-3" style="margin-bottom:14px">
-      <div class="kpi"><div class="label"><i class="ti ti-receipt"></i> ${t('dash.avgTicket')}</div><div class="value">${fmtMoney(avgTicket)}</div></div>
-      <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> ${t('dash.numSales')}</div><div class="value">${salesMes.length}</div></div>
-      <div class="kpi"><div class="label"><i class="ti ti-cash"></i> ${t('dash.periodTotal')}</div><div class="value">${fmtMoney(totalMes)}</div></div>
-    </div>
-    <div class="grid grid-3">
-      <div>
-        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topSellingDishes')}</h4>
-        ${topProducts.length ? `<div class="table-wrap"><table><tbody>
-          ${topProducts.map(v => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(v.name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(v.name)}</td><td style="text-align:right;font-weight:600;white-space:nowrap">${v.units} ${t('dash.unitsAbbr')}</td><td style="text-align:right;color:var(--muted);white-space:nowrap">${fmtMoney(v.revenue)}</td></tr>`).join('')}
-        </tbody></table></div>` : `<div class="empty">${t('dash.noSalesRegistered')}</div>`}
-      </div>
-      <div>
-        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topGrossMargin')}</h4>
-        ${topMargins.length ? `<div class="table-wrap"><table><tbody>
-          ${topMargins.map(v => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(v.name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(v.name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
-        </tbody></table></div>` : `<div class="empty">${t('dash.noCostDataEnough')}</div>`}
-      </div>
-      <div>
-        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.salesByHour')}</h4>
-        ${(() => { const iPico = hourTotals.indexOf(Math.max(...hourTotals)); return hourTotals.some(v => v > 0) ? `<div class="dt-pico"><i class="ti ti-flame"></i> ${escapeHtml(gl({es:'Hora punta', ca:'Hora punta', en:'Peak hour'}))}: <b>${iPico}:00</b> · ${escapeHtml(fmtMoney(hourTotals[iPico]))}</div>` : ''; })()}
-        ${dashSerieHtml(hourTotals.map((v, h) => ({label: h + 'h', nombre: h + ':00', value: v})), {id:'dt-horas', cadaEtiqueta: 3, sinTags: true, clase: 'dt-corto', estatico: true})}
-      </div>
-    </div>
-  `;
-
-  renderSalesHeatmap();
-
-  // Breakeven tracking
-  const cfg = DB.ge.config || {};
-  const tick = parseFloat(cfg.ticketMedio) || 0;
-  const cub = parseFloat(cfg.cubiertosActuales) || 0;
-  const dias = parseFloat(cfg.diasApertura) || 0;
-  const fc = geFoodCostObjPct();
-  let breakevenHtml;
-  if(!tick || !dias){
-    breakevenHtml = `<div class="empty">${t('dash.configureBreakeven')}</div>`;
-  }else{
-    const cvCub = tick * (fc/100);
-    const contribCub = tick - cvCub;
-    if(contribCub > 0){
-      const cubNec = Math.ceil(fijos / contribCub);
-      const diff = cub - cubNec;
-      breakevenHtml = `
-        <div class="grid grid-3">
-          <div class="kpi"><div class="label">${t('dash.coversNeededMonth')}</div><div class="value">${cubNec}</div></div>
-          <div class="kpi"><div class="label">${t('dash.coversCurrentMonth')}</div><div class="value">${cub}</div></div>
-          <div class="kpi ${diff>=0?'ok':'warn'}"><div class="label">${t('dash.difference')}</div><div class="value">${diff>=0?'+':''}${diff}</div></div>
-        </div>
-        <div style="margin-top:8px;font-weight:600;color:${diff>=0?'var(--green)':'var(--red)'}">
-          ${diff>=0?t('hr.pe.aboveBreakeven'):`${t('hr.pe.belowBreakeven')} <a href="javascript:void(0)" style="display:inline-flex;align-items:center;min-height:44px;color:inherit;text-decoration:underline;font-weight:600" onclick="navigate('economia');GE.tab('fijos')">${t('dash.reviewFixedExpenses')}</a>`}
-        </div>
-      `;
-    }else{
-      breakevenHtml = `<div class="empty">${t('dash.cantCalculateFoodCost')}</div>`;
-    }
-  }
-  document.getElementById('dashboard-breakeven').innerHTML = breakevenHtml;
-
+  // Punto de equilibrio, reservas, ventas, gastos, resultado, análisis de ventas y clientela: js/panel.js.
+  panelRender();
   GE.renderPlatos();
 }
 
-// Mapa de calor día de la semana × franja horaria (últimas 8 semanas), para
-// detectar visualmente los picos de venta y ayudar a planificar personal/compras.
-function renderSalesHeatmap(){
-  const el = document.getElementById('dashboard-sales-heatmap');
-  if(!el) return;
-  const today = new Date();
-  const start = dateStr(new Date(today.getTime() - 55*86400000)); // 8 semanas
-  const end = todayStr();
-  const sales = activeSales().filter(s => s.date >= start && s.date <= end && s.createdAt);
-  if(!sales.length){ el.innerHTML = `<div class="empty">${t('dash.noSalesYet')}</div>`; return; }
-
-  /* HORA A HORA, no en franjas de cuatro horas. Con las franjas se veía que
-     el negocio vende "de 20 a 24", que es justo lo que el hostelero ya sabe:
-     para decidir a qué hora entra un camarero más hace falta saber si el
-     golpe es a las 21 o a las 23. Solo se pintan las horas en las que ese
-     negocio vende de verdad (de la primera a la última con ventas), para no
-     arrastrar veinticuatro columnas de las cuales la mitad están siempre
-     vacías. */
-  const dayLabels = t('days.short');
-  const porHora = dayLabels.map(()=>new Array(24).fill(0));
-  sales.forEach(s => {
-    const d = new Date(s.createdAt);
-    const dow = (d.getDay()+6)%7; // 0=lunes ... 6=domingo
-    porHora[dow][d.getHours()] += s.total;
-  });
-  const horasConVenta = [];
-  for(let h = 0; h < 24; h++){ if(porHora.some(fila => fila[h] > 0)) horasConVenta.push(h); }
-  const horas = horasConVenta.length ? horasConVenta : [12,13,14,20,21,22];
-  /* La hora, en el formato del idioma activo (localeActual, js/i18n.js): un
-     "21h" escrito a mano se lee raro en inglés, donde toca "9 PM". Misma
-     norma que el resto de fechas y horas de la app. */
-  const etiquetaHora = h => new Date(2000, 0, 1, h).toLocaleTimeString(localeActual(), {hour:'numeric'});
-  const bands = horas.map(h => ({lbl: etiquetaHora(h), hora: h}));
-  const grid = porHora.map(fila => horas.map(h => fila[h]));
-  const maxVal = Math.max(...grid.flat(), 1);
-  el.innerHTML = `
-    <div style="overflow-x:auto">
-      <table style="border-collapse:collapse;width:100%;min-width:${Math.max(420, 90 + bands.length*54)}px">
-        <thead><tr><th></th>${bands.map(b=>`<th style="font-size:11px;color:var(--muted);font-weight:600;padding:4px">${b.lbl}</th>`).join('')}</tr></thead>
-        <tbody>
-          ${dayLabels.map((dl,di) => `
-            <tr>
-              <td style="font-size:11px;color:var(--muted);font-weight:600;padding:4px;white-space:nowrap">${dl}</td>
-              ${grid[di].map((v,hi) => {
-                const intensity = v/maxVal;
-                const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
-                return `<td style="padding:3px"><div title="${dayLabels[di]} ${bands[hi].lbl} · ${fmtMoney(v)}" class="txt-xs" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtNum(Math.round(v),0):''}</div></td>`;
-              }).join('')}
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
 // Fecha "hoy" en base local (misma convención que dateStr, usada en toda la
 // app), para evitar desajustes de un día cerca de medianoche por huso horario.
 function todayStr(){

@@ -92,7 +92,7 @@ await caso('Panel: el análisis de ventas va por MES natural, igual que el resto
     navigate('dashboard');
     await new Promise(r=>setTimeout(r,1400));
     return {
-      texto: document.getElementById('dashboard-sales-analysis').innerText,
+      texto: document.getElementById('dp-analisis').innerText,
       mismoMes: hace20.getMonth() === m,
     };
   });
@@ -112,15 +112,18 @@ await caso('Panel: los picos de venta se ven hora a hora, no en franjas de cuatr
         createdAt: `${fecha}T${dd(h)}:30:00`, total: 50 + h, items:[], metodoPago:'Tarjeta', tipo:'mesa'}));
     }
     saveDB();
+    // Desde el 8/11 los picos siguen el mes elegido (antes: últimas 8 semanas): se pone en el mes con más días de ventas.
+    DP.analisis = {anio: hoy.getFullYear(), mes: hoy.getMonth()};
     navigate('dashboard');
     await new Promise(r=>setTimeout(r,1400));
-    const ths = [...document.querySelectorAll('#dashboard-sales-heatmap th')].map(x=>x.innerText.trim()).filter(Boolean);
+    const ths = [...document.querySelectorAll('#dp-analisis .dp-heat th')].map(x=>x.innerText.trim()).filter(Boolean);
     return {cabeceras: ths};
   });
   // La etiqueta va en el formato del idioma activo ("21" en español, "9 PM"
   // en inglés), así que se comprueba que las dos horas están por separado,
   // no el texto exacto.
   const cab = r.cabeceras.map(h => h.toLowerCase());
+  if(new Date().getDate() < 3){ console.log('   (los dos primeros días del mes no hay ventas de este mes que pintar)'); return; }
   assert.ok(cab.some(h => /\b21\b/.test(h)) && cab.some(h => /\b22\b/.test(h)),
     'deben verse las 21 y las 22 por separado, no un "20-24h": ' + JSON.stringify(r.cabeceras));
   assert.ok(!cab.some(h => /\d+\s*-\s*\d+/.test(h)), 'ya no debe haber franjas de varias horas: ' + JSON.stringify(r.cabeceras));

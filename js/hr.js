@@ -3704,7 +3704,7 @@ const GE = (function(){
     if(!hayNeg) return data.map(d=>{
       const pct = Math.abs(d.v)/max*100;
       return `<div class="bar-col" title="${escapeHtml(d.lbl)}: ${fmtMoney(d.v)}">
-        <div class="bar-fill" style="height:${pct*0.7}px;background:var(--ink)"></div>
+        <div class="bar-fill" style="height:${pct*0.7}px;background:var(--olive)"></div>
         <div class="bar-lbl">${d.lbl}</div>
       </div>`;
     }).join('');

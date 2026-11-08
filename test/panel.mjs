@@ -33,11 +33,11 @@ await caso('El año es UNA tarjeta con pestañas y una curva de 12 puntos; la ú
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms));
     const out = {viejas: document.querySelectorAll('#dashboard-trend-ventas,#dashboard-trend-gastos,#dashboard-trend-resultado').length, puntos: document.querySelectorAll('#dt-anual .dt-punto').length, parcial: document.querySelectorAll('#dt-anual .dt-punto.parcial').length, tabs: document.querySelectorAll('.dt-tabs .btn').length, tags: document.querySelectorAll('#dt-anual .dt-tag').length};
-    out.titular1 = document.querySelector('.dt-titular b').textContent;
-    document.querySelectorAll('.dt-tabs .btn')[1].click(); await esp(200); out.titular2 = document.querySelector('.dt-titular b').textContent;
+    out.titular1 = document.querySelector('#dashboard-trend .dt-titular b').textContent;
+    document.querySelectorAll('.dt-tabs .btn')[1].click(); await esp(200); out.titular2 = document.querySelector('#dashboard-trend .dt-titular b').textContent;
     document.querySelectorAll('.dt-tabs .btn')[2].click(); await esp(200); out.sel = document.querySelectorAll('.dt-tabs .is-on').length;
     document.querySelectorAll('.dt-tabs .btn')[0].click(); await esp(200);
-    document.querySelectorAll('#dt-anual .dt-punto')[3].click(); await esp(100); out.alTocar = document.querySelector('.dt-titular').textContent.replace(/\s+/g, ' ').trim();
+    document.querySelectorAll('#dt-anual .dt-punto')[3].click(); await esp(100); out.alTocar = document.querySelector('#dashboard-trend .dt-titular').textContent.replace(/\s+/g, ' ').trim();
     out.hora = !!document.querySelector('.dt-pico b') && document.querySelectorAll('#dt-horas .dt-punto').length === 24 && document.querySelectorAll('#dt-horas button').length === 0;
     return out;
   });
