@@ -304,7 +304,7 @@ await caso('Reparto: un pedido a domicilio con código postal FUERA de la lista 
     await __empujar({...base, clientRef: 'REFzona0001', codigoPostal: '08001'});
     await __empujar({...base, clientRef: 'REFzona0002', codigoPostal: '28 002'});
     const fuera = DB.tpvOrders.find(x => x.clientRef === 'REFzona0001'), dentro = DB.tpvOrders.find(x => x.clientRef === 'REFzona0002');
-    // con radio, la app no puede medir: se fía de lo que dijo la web
+    // un radio antiguo ya no cuenta: manda la lista
     DB.business.pedidos.radiusKm = 5;
     const sinLista = zonaDeRepartoDePedido({tipo: 'delivery', codigoPostal: '08001'});
     DB.business.pedidos.radiusKm = 0; DB.business.pedidos.cpList = [];
@@ -313,7 +313,7 @@ await caso('Reparto: un pedido a domicilio con código postal FUERA de la lista 
   });
   assert.deepEqual(r.fuera, ['pendiente-online', true, true], JSON.stringify(r));
   assert.deepEqual(r.dentro, [true, false], JSON.stringify(r));
-  assert.deepEqual(r.sinLista, {}); assert.deepEqual(r.sinZona, {});
+  assert.deepEqual(r.sinLista, {fuera: true}); assert.deepEqual(r.sinZona, {});
 });
 
 await caso('Ningún error de JavaScript', async () => {

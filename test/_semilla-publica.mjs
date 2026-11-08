@@ -12,7 +12,7 @@ export function semilla(opts = {}){
       logo: opts.logo === undefined ? LOGO_OSCURO : opts.logo,
       tiposServicio:{mesa:true, takeaway:true, delivery:true},
       horario:[dia, dia, dia, dia, dia, dia, dia],
-      pedidos:{deliveryFee:2.5, freeDeliveryFrom:30, pedidoMinimo:12, radiusKm:0, cpList:['28001','28002','28003'], tiempoBasePrep:20, aceptaEfectivo:true, aceptaTarjetaLocal:true},
+      pedidos:{deliveryFee:2.5, freeDeliveryFrom:30, pedidoMinimo:12, cpList:['28001','28002','28003'], tiempoBasePrep:20, aceptaEfectivo:true, aceptaTarjetaLocal:true},
     },
     cartas: [
       {id:1, nombre:'Carta', area:'cocina', secciones:[

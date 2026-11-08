@@ -191,6 +191,22 @@ await caso('Las cadenas nuevas existen en los tres idiomas', async ()=>{
   return 'es/ca/en';
 });
 
+await caso('Contexto AMPLIADO (8/11): año mes a mes, días, equilibrio, impuestos, clientela, proveedores… sin datos personales y con tamaño razonable', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.clients.push({id: 7001, name: 'Zacarías Pérezvillanueva', phone: '699888777', email: 'zacarias@ejemplo.test', points: 3});
+    const c = iaNumContexto(), txt = JSON.stringify(c);
+    return {claves: Object.keys(c), meses12: (c.ultimos12Meses||[]).length, dias: Object.keys(c.ventasPorDia45||{}).length, eq: c.puntoDeEquilibrioMesEnCurso && Object.keys(c.puntoDeEquilibrioMesEnCurso), imp: c.impuestosYModelos && Object.keys(c.impuestosYModelos), fuga: /Zacarías|699888777|zacarias@/.test(txt), bytes: txt.length, sistema: iaNumSistema().includes('ESTIMACIONES')};
+  });
+  for(const k of ['ultimos12Meses','ventasPorDia45','puntoDeEquilibrioMesEnCurso','impuestosYModelos','inversiones','gastosFijosMensuales','proveedoresMasCompras90dias','clientela90dias','glosario']) assert.ok(r.claves.includes(k), 'falta ' + k);
+  assert.equal(r.meses12, 12); assert.ok(r.dias >= 1); assert.ok(r.eq.includes('ventasNetasNecesariasEnElMes')); assert.ok(r.imp.includes('modelosDeLosDosUltimosTrimestres'));
+  assert.equal(r.fuga, false, 'el contexto no puede llevar nombres, teléfonos ni correos de clientes'); assert.ok(r.bytes < 60000, 'contexto demasiado grande: ' + r.bytes); assert.ok(r.sistema);
+  return r.bytes + ' bytes';
+});
+await caso('Ocho preguntas sugeridas en los tres idiomas (impuestos, equilibrio, mejor día, proveedores, año)', async ()=>{
+  const r = await page.evaluate(()=> ['es','ca','en'].map(l => { const T = I18N[l] || {}; return [1,2,3,4,5,6,7,8].filter(n => !T['ia.num.q'+n]).length; }));
+  assert.deepEqual(r, [0,0,0]);
+});
+
 await caso('Ningún error de JavaScript', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError|firebase/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

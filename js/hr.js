@@ -186,8 +186,14 @@ const GE = (function(){
     const nombreActivo = activo ? activo.id.replace('ge-','') : null;
     const destino = (nombreActivo==='modulos' && !modulosAplica()) ? 'ventas' : nombreActivo;
     tab(TABS.includes(destino) ? destino : 'ventas');
+    // Entrar en Gestión Económica desde otra pantalla empieza arriba (tab() ya no sube si la pestaña es la misma).
+    if(typeof scrollContentToTop==='function') scrollContentToTop();
   }
   function tab(name){
+    // Solo se sube al principio al CAMBIAR de pestaña. Muchas acciones (guardar un gasto, marcar algo, cambiar un periodo) repintan la
+    // pestaña con tab(<la misma>) y antes devolvían al hostelero arriba del todo, perdiendo el sitio donde estaba trabajando.
+    const previa = document.querySelector('#view-economia .ge-tab-panel.active');
+    const cambiaDePestana = !previa || previa.id !== 'ge-' + name;
     document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===name));
     document.querySelectorAll('#view-economia .ge-tab-panel').forEach(el=>el.classList.remove('active'));
     document.getElementById('ge-'+name).classList.add('active');
@@ -202,7 +208,7 @@ const GE = (function(){
     if(name==='tesoreria') renderTesoreria();
     if(name==='bc') renderBC();
     if(name==='modulos') renderModulos();
-    if(typeof scrollContentToTop==='function') scrollContentToTop();
+    if(cambiaDePestana && typeof scrollContentToTop==='function') scrollContentToTop();
     requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
   }
 
@@ -2452,7 +2458,7 @@ const GE = (function(){
         {lbl:gl({es:'Base fiscal (sobre la que se calcula el impuesto)', ca:'Base fiscal (sobre la qual es calcula l\'impost)', en:'Tax base (what tax is computed on)'}), vals:M(i=>resultadoAntesImpMes(i,cdrYear)+ajusteF[i]), highlight:true, bold:true},
       ] : []),
       {lbl:`${impLbl} (${pct1((tipoImpuestoAño(cdrYear)*100))}%)`, vals:M(i=>-impuestoMes(i,cdrYear)), auto:true, help:'impuesto'},
-      {lbl:t('hr.cdr.netResult'), vals:M(i=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true, help:'neto', yoyFn:i=>resultadoMes(i,cdrYear-1)},
+      {lbl:t('hr.cdr.netResult'), vals:M(i=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true, neto:true, help:'neto', yoyFn:i=>resultadoMes(i,cdrYear-1)},
       // Autónomo/CB: lo que el titular se lleva no es gasto (ya ha tributado
       // por todo el beneficio de arriba). Se enseña DEBAJO del resultado,
       // para que vea lo que queda en el negocio después de pagarse.
@@ -2473,7 +2479,7 @@ const GE = (function(){
     rows.forEach(r=>{
       const total = r.vals.reduce((s,v)=>s+v,0);
       const q = [0,1,2,3].map(qi=>r.vals.slice(qi*3,qi*3+3).reduce((s,v)=>s+v,0));
-      const cls = r.highlight ? (r.isResult?'total':'highlight') : '';
+      const cls = r.highlight ? (r.isResult?'total':'highlight') + (r.neto ? ' neto' : '') : '';
       let yoyHtml = '';
       if(r.yoyFn){
         const prevTotal = getMeses().reduce((s,_,i)=>s+r.yoyFn(i),0);
@@ -2496,13 +2502,13 @@ const GE = (function(){
           const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):'');
           html += `<td class="${c}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`;
         });
-        q.forEach((v,qi)=>{ const c = v>0?'neg':(v<0?'pos':''); const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):''); html += `<td style="background:rgba(0,0,0,.05)" class="${c}" title="${escapeHtml(qTitle(qi))}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`; });
+        q.forEach((v,qi)=>{ const c = v>0?'neg':(v<0?'pos':''); const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):''); html += `<td class="col-q ${c}" title="${escapeHtml(qTitle(qi))}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`; });
         const c = total>0?'neg':(total<0?'pos':''); const suf = total>0?' '+t('hr.lbl.toPay'):(total<0?' '+t('hr.lbl.inYourFavor'):'');
-        html += `<td style="background:rgba(0,0,0,.1)" class="${c}" title="${escapeHtml(yearTitle)}">${total!==0?fmtMoney(Math.abs(total))+suf:'—'}</td></tr>`;
+        html += `<td class="col-y ${c}" title="${escapeHtml(yearTitle)}">${total!==0?fmtMoney(Math.abs(total))+suf:'—'}</td></tr>`;
       } else if(r.irpfRow){
         if(isMes) r.vals.forEach(v=>{ html += `<td class="${v>0?'neg':''}">${v!==0?fmtMoney(v):'—'}</td>`; });
-        q.forEach((v,qi)=>{ html += `<td style="background:rgba(0,0,0,.05)" class="${v>0?'neg':''}" title="${escapeHtml(qTitle(qi))}">${v!==0?fmtMoney(v):'—'}</td>`; });
-        html += `<td style="background:rgba(0,0,0,.1)" class="${total>0?'neg':''}" title="${escapeHtml(yearTitle)}">${total!==0?fmtMoney(total):'—'}</td></tr>`;
+        q.forEach((v,qi)=>{ html += `<td class="col-q ${v>0?'neg':''}" title="${escapeHtml(qTitle(qi))}">${v!==0?fmtMoney(v):'—'}</td>`; });
+        html += `<td class="col-y ${total>0?'neg':''}" title="${escapeHtml(yearTitle)}">${total!==0?fmtMoney(total):'—'}</td></tr>`;
       } else {
         // Todas las filas llevan su signo (los gastos en negativo), y los
         // SUBTOTALES (margen, EBITDA, explotación, resultados) además su color.
@@ -2512,8 +2518,8 @@ const GE = (function(){
         const celda = v => v!==0 ? (v<0?'-':'')+fmtMoney(Math.abs(v)) : '—';
         const clase = v => colorea ? (v>=0?'pos':'neg') : '';
         if(isMes) r.vals.forEach(v=>{ html += `<td class="${clase(v)}">${celda(v)}</td>`; });
-        q.forEach((v,qi)=>{ html += `<td style="background:rgba(0,0,0,.05)" class="${clase(v)}" title="${escapeHtml(qTitle(qi))}">${celda(v)}</td>`; });
-        html += `<td style="background:rgba(0,0,0,.1)" class="${clase(total)}" title="${escapeHtml(yearTitle)}">${celda(total)}${yoyHtml}</td></tr>`;
+        q.forEach((v,qi)=>{ html += `<td class="col-q ${clase(v)}" title="${escapeHtml(qTitle(qi))}">${celda(v)}</td>`; });
+        html += `<td class="col-y ${clase(total)}" title="${escapeHtml(yearTitle)}">${celda(total)}${yoyHtml}</td></tr>`;
       }
     });
     html += '</tbody>';
@@ -2812,6 +2818,40 @@ const GE = (function(){
     meses.forEach(d => Object.keys(z).forEach(k => z[k] += d[k]));
     return z;
   }
+  // Modelos pendientes de pagar que importan HOY: los del trimestre en curso y, mientras su plazo siga por delante, los del
+  // anterior (en enero el 4T vence el 20/30 y es lo primero que sale de la cuenta; mirar solo el trimestre en curso lo olvidaba).
+  function obligacionesPendientes(hoy){
+    hoy = hoy || new Date();
+    const q = Math.floor(hoy.getMonth() / 3), y = hoy.getFullYear();
+    const venceDe = f => { const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(f.vence || ''); return m ? new Date(+m[3], +m[2]-1, +m[1], 23, 59) : null; };
+    const actual = fiscalPrevision(y, q).filas.filter(f => f.estado !== 'pagado' && f.importe > 0);
+    const py = q === 0 ? y - 1 : y, pq = q === 0 ? 3 : q - 1;
+    const previo = fiscalPrevision(py, pq).filas.filter(f => { const d = venceDe(f); return f.estado !== 'pagado' && f.importe > 0 && d && d >= hoy; });
+    return previo.concat(actual).map(f => ({...f, fecha: venceDe(f)}));
+  }
+  // Previsión de caja a 30/60/90 días. Dos cosas por separado: lo CONFIRMADO (modelos y pagos periódicos con fecha) y lo ESTIMADO
+  // (ritmo medio de caja de los últimos 3 meses con actividad). ⚠️ Los gastos fijos NO mensuales se reparten mes a mes en el
+  // resultado (y por tanto en el ritmo) y además se restan enteros el día que vencen: sin devolver su parte al ritmo se descontaban
+  // dos veces (un seguro anual de 1.200 € restaba 100 € de más cada mes de la previsión).
+  function bcPrevisionCaja(saldoImp, hoy){
+    hoy = hoy || new Date();
+    const hist = []; for(let i = 1; i <= 3; i++){ const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1); if(geMesConActividad(d.getFullYear(), d.getMonth())) hist.push(bcMesDatos(d.getMonth(), d.getFullYear())); }
+    if(!hist.length) return null;
+    const periodicos = fijos().filter(g => (parseInt(g.periodicidadMeses)||1) > 1);
+    const devolver = periodicos.reduce((a, g) => a + gfMonthlyImporte(g), 0);
+    const ritmoBruto = hist.reduce((a, d) => a + d.caja, 0) / hist.length;
+    const ritmo = ritmoBruto + devolver;
+    const pend = obligacionesPendientes(hoy);
+    const filas = [30, 60, 90].map(n => {
+      const lim = new Date(hoy.getTime() + n * 864e5);
+      let conf = 0;
+      pend.forEach(f => { if(f.fecha && f.fecha <= lim) conf += f.importe; });
+      periodicos.forEach(g => { const nx = gfNextDueDate(g, hoy.getFullYear(), hoy.getMonth()); if(!nx) return; const d = new Date(nx.date + 'T12:00:00'); if(d <= lim && d >= hoy) conf += (parseFloat(g.importe)||0) * (1 + (parseFloat(g.iva)||0)/100); });
+      const estim = ritmo * n / 30;
+      return {n, conf, estim, variacion: estim - conf, total: saldoImp == null ? null : saldoImp - conf + estim};
+    });
+    return {filas, ritmo, ritmoBruto, devolver, meses: hist.length};
+  }
   function bcPeriodo(a, m){ bcYear = a; bcMes = m; renderBC(); }
   function setBcTab(k){ bcTab = k; renderBC(); }
   function bcGuardarSaldo(){
@@ -2857,8 +2897,7 @@ const GE = (function(){
     // 3) Dinero disponible de verdad
     const saldo = ge().saldoBanco || null;
     const hoyQ = Math.floor(hoy.getMonth() / 3);
-    const prev = fiscalPrevision(hoy.getFullYear(), hoyQ);
-    const debeHacienda = prev.filas.filter(f => f.estado !== 'pagado' && f.importe > 0).reduce((a, f) => a + f.importe, 0);
+    const debeHacienda = obligacionesPendientes(hoy).reduce((a, f) => a + f.importe, 0);
     const lumps = fijos().filter(g => (parseInt(g.periodicidadMeses)||1) > 1).map(g => ({g, d: gfNextDueDate(g, hoy.getFullYear(), hoy.getMonth())})).filter(x => x.d && ((new Date(x.d.date + 'T12:00:00') - hoy) / 864e5) <= 30 && ((new Date(x.d.date + 'T12:00:00') - hoy) / 864e5) >= -1);
     const lumpsTot = lumps.reduce((a, x) => a + (parseFloat(x.g.importe)||0) * (1 + (parseFloat(x.g.iva)||0)/100), 0);
     const cuotasMes = capexCuotaMes(hoy.getMonth(), hoy.getFullYear());
@@ -2904,18 +2943,10 @@ const GE = (function(){
         ${todos.filter(d => d.hayDatos).map(d => `<div class="bc-tr"><span>${getMeses()[d.m]}</span><span class="${d.neto >= 0 ? 'is-ok' : 'is-ko'}" data-l="${L({es:'Beneficio', ca:'Benefici', en:'Profit'})}">${fm(d.neto)}</span><span class="${d.caja >= 0 ? 'is-ok' : 'is-ko'}" data-l="${L({es:'Caja (estim.)', ca:'Caixa (estim.)', en:'Cash (est.)'})}">${fm(d.caja)}</span><span data-l="${L({es:'Diferencia', ca:'Diferència', en:'Difference'})}">${sg(d.caja - d.neto)}</span></div>`).join('')}</div>`;
     } else document.getElementById('bc-evolucion').innerHTML = '';
     // 6) Liquidez a 30 / 60 / 90 días: lo CONFIRMADO (obligaciones y pagos programados) aparte de lo ESTIMADO (ritmo medio)
-    const hist = []; for(let i = 1; i <= 3; i++){ const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1); if(geMesConActividad(d.getFullYear(), d.getMonth())) hist.push(bcMesDatos(d.getMonth(), d.getFullYear())); }
-    const ritmo = hist.length ? hist.reduce((a, d) => a + d.caja, 0) / hist.length : null;
-    if(saldo && ritmo != null){
-      const filas = [30, 60, 90].map(n => {
-        const lim = new Date(hoy.getTime() + n * 864e5);
-        // Confirmado: lo que ya sabemos que hay que pagar antes de esa fecha (modelos del trimestre y periódicos)
-        let conf = 0;
-        prev.filas.filter(f => f.estado !== 'pagado' && f.importe > 0).forEach(f => { const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(f.vence); if(m && new Date(+m[3], +m[2]-1, +m[1]) <= lim) conf += f.importe; });
-        fijos().filter(g => (parseInt(g.periodicidadMeses)||1) > 1).forEach(g => { const nx = gfNextDueDate(g, hoy.getFullYear(), hoy.getMonth()); if(nx && new Date(nx.date + 'T12:00:00') <= lim && new Date(nx.date + 'T12:00:00') >= hoy) conf += (parseFloat(g.importe)||0) * (1 + (parseFloat(g.iva)||0)/100); });
-        const estim = ritmo * n / 30;
-        return {n, conf, estim, total: saldo.importe - conf + estim};
-      });
+    const pc = saldo ? bcPrevisionCaja(saldo.importe) : null;
+    const ritmo = pc ? pc.ritmo : null;
+    if(saldo && pc){
+      const filas = pc.filas;
       const riesgo = filas.find(f => f.total < 0);
       document.getElementById('bc-liquidez').innerHTML = `<div class="ge-sec-head"><h4><i class="ti ti-crystal-ball"></i> ${L({es:'Previsión de liquidez', ca:'Previsió de liquiditat', en:'Liquidity forecast'})}</h4></div>
         <p class="te-nota">${L({es:'Parte de tu saldo, resta lo CONFIRMADO (modelos del trimestre y pagos periódicos con fecha) y suma lo ESTIMADO (el ritmo medio de caja de tus últimos meses). Son cosas distintas: lo confirmado es seguro; lo estimado no.', ca:'Part del teu saldo, resta el CONFIRMAT (models del trimestre i pagaments periòdics amb data) i suma l\'ESTIMAT (el ritme mitjà de caixa dels teus últims mesos). Són coses diferents: el confirmat és segur; l\'estimat no.', en:'Starts from your balance, subtracts what is CONFIRMED (this quarter\'s forms and dated recurring payments) and adds what is ESTIMATED (your recent average cash pace). They are different: confirmed is certain; estimated is not.'})}</p>
@@ -3365,19 +3396,6 @@ const GE = (function(){
     return bueno ? {cls:'is-ok', icono:'<i class="ti ti-check" aria-hidden="true"></i>', txt:gl({es:'Dentro del objetivo', ca:'Dins de l\'objectiu', en:'On target'})}
                  : {cls:'is-ko', icono:'<i class="ti ti-x" aria-hidden="true"></i>', txt:gl({es:'Fuera del objetivo', ca:'Fora de l\'objectiu', en:'Off target'})};
   }
-  // Plantillas orientativas del sector (porcentaje de la facturación NETA, sin IVA). Suman 100.
-  const DIST_PLANTILLAS = {
-    carta:   {per:32, gf:18, mp:30, og:5, ben:15},
-    bar:     {per:28, gf:20, mp:27, og:5, ben:20},
-    rapida:  {per:25, gf:17, mp:33, og:8, ben:17},
-    alta:    {per:38, gf:20, mp:28, og:4, ben:10}
-  };
-  function aplicarPlantillaDist(k){
-    const pl = DIST_PLANTILLAS[k]; if(!pl) return;
-    config().distPct = Object.assign({}, pl); config().foodCostObj = pl.mp;
-    saveDB(); renderTesoreria();
-    showToast(gl({es:'Reparto aplicado. Ajústalo a tu negocio: son valores orientativos del sector.', ca:'Repartiment aplicat. Ajusta\'l al teu negoci: són valors orientatius del sector.', en:'Split applied. Adjust it to your business: these are typical sector values.'}), 5000);
-  }
   function teDiasHasta(fechaDMY){
     const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(fechaDMY || ''); if(!m) return null;
     const d = new Date(+m[3], +m[2]-1, +m[1], 23, 59), hoy = new Date();
@@ -3407,16 +3425,6 @@ const GE = (function(){
       closeBtn.className = closed ? 'btn btn-sm' : 'btn btn-sm btn-primary';
     }
     teConcEstado();
-    const plSel = document.getElementById('te-plantilla');
-    if(plSel){
-      plSel.setAttribute('aria-label', gl({es:'Plantilla orientativa del sector', ca:'Plantilla orientativa del sector', en:'Typical sector template'}));
-      plSel.innerHTML = `<option value="">${gl({es:'Plantilla orientativa…', ca:'Plantilla orientativa…', en:'Typical template…'})}</option>
-        <option value="carta">${gl({es:'Restaurante de carta', ca:'Restaurant de carta', en:'À la carte restaurant'})}</option>
-        <option value="bar">${gl({es:'Bar / cafetería', ca:'Bar / cafeteria', en:'Bar / café'})}</option>
-        <option value="rapida">${gl({es:'Comida rápida y para llevar', ca:'Menjar ràpid i per emportar', en:'Fast food and takeaway'})}</option>
-        <option value="alta">${gl({es:'Alta cocina', ca:'Alta cuina', en:'Fine dining'})}</option>`;
-    }
-
     const dp = distPctActual();
     const pct = {}; DIST_CLAVES.forEach(k => pct[k] = dp[k] / 100);
 
@@ -3614,29 +3622,25 @@ const GE = (function(){
     // actualización y avisos. Aquí solo quedan las declaraciones ANUALES, que no llevan importe.
     box.innerHTML = fiscalPrevisionHtml(y, q, filas.filter(f => f.imp == null));
   }
+  // Previsión de tesorería: la MISMA cuenta que «Previsión de liquidez» de Beneficio y caja (bcPrevisionCaja). Antes era el resultado
+  // contable medio × días: no veía el IVA ni las retenciones que se cobran y hay que ingresar, ni los modelos del trimestre, ni los
+  // gastos de pago anual, ni la devolución de préstamos, y por eso podía dar un número muy distinto del dinero que de verdad iba a haber.
   function renderTreasuryForecast(){
     const box = document.getElementById('te-forecast');
     if(!box) return;
-    const now = new Date();
-    let m = now.getMonth(), y = now.getFullYear();
-    const lastMonths = [];
-    for(let i=0; i<3; i++){
-      m -= 1;
-      if(m < 0){ m = 11; y -= 1; }
-      lastMonths.push({m, y});
-    }
-    const results = lastMonths.map(({m,y}) => resultadoMes(m,y));
-    const hasHistory = results.some(r => r !== 0);
-    if(!hasHistory){ box.innerHTML = ''; return; }
-    const avgMonthly = results.reduce((a,b)=>a+b,0) / results.length;
-    const dailyRate = avgMonthly / 30.4;
-    const proj = n => dailyRate * n;
-    const kp = n => `<div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',n)}</div><div class="val te-val ${proj(n)>=0?'is-ok':'is-ko'}">${proj(n)>=0?'+':''}${fmtMoney(proj(n))}</div></div>`;
+    const L = o => gl(o), saldo = ge().saldoBanco || null;
+    const pc = bcPrevisionCaja(saldo ? saldo.importe : null);
+    if(!pc){ box.innerHTML = ''; return; }
+    const sg = v => (v >= 0 ? '+' : '−') + fmtMoney(Math.abs(v));
+    const kp = f => `<div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}', f.n)}</div><div class="val te-val ${(f.total != null ? f.total : f.variacion) >= 0 ? 'is-ok' : 'is-ko'}">${f.total != null ? (f.total < 0 ? '−' : '') + fmtMoney(Math.abs(f.total)) : sg(f.variacion)}</div>
+      <div class="sub">${L({es:'Entra (estim.)', ca:'Entra (estim.)', en:'In (est.)'})} ${sg(f.estim)} · ${L({es:'Sale (confirmado)', ca:'Surt (confirmat)', en:'Out (confirmed)'})} ${f.conf > 0.005 ? '−' + fmtMoney(f.conf) : fmtMoney(0)}</div></div>`;
     box.innerHTML = `
       <div class="ge-section te-prev gg-plegable">
         <div class="ge-sec-head"><h4><i class="ti ti-crystal-ball"></i> ${t('hr.forecast.title')}</h4></div>
-        <p class="te-nota">${t('hr.forecast.desc')}</p>
-        <div class="ge-kpi-grid te-prev-k">${kp(30)}${kp(60)}${kp(90)}</div>
+        <p class="te-nota">${saldo ? L({es:'Parte del saldo que anotaste en Beneficio y caja.', ca:'Parteix del saldo que vas anotar a Benefici i caixa.', en:'Starts from the balance you entered in Profit and cash.'}) : L({es:'Sin saldo anotado se ve cuánto SUBE o BAJA el dinero (anota tu saldo en Beneficio y caja para ver el saldo previsto).', ca:'Sense saldo anotat es veu quant PUJA o BAIXA el diner (anota el teu saldo a Benefici i caixa per veure el saldo previst).', en:'With no balance entered you see how much the money RISES or FALLS (enter your balance in Profit and cash to see the projected balance).'})}
+          ${t('hr.forecast.desc')}</p>
+        <div class="ge-kpi-grid te-prev-k">${pc.filas.map(kp).join('')}</div>
+        <p class="te-nota">${L({es:'No incluye el impuesto anual (Sociedades en julio, Renta en junio) salvo los pagos a cuenta: aparta lo que te dice «Dinero que no es tuyo».', ca:'No inclou l\'impost anual (Societats al juliol, Renda al juny) tret dels pagaments a compte: aparta el que et diu «Diners que no són teus».', en:'Excludes the annual tax (Corporate in July, Income in June) except the payments on account: set aside what “Money that is not yours” says.'})}</p>
       </div>`;
   }
   // Gastos Fijos periódicos (periodicidadMeses>1) cuyo pago cae en el mes visto: son un
@@ -3704,7 +3708,7 @@ const GE = (function(){
     if(!hayNeg) return data.map(d=>{
       const pct = Math.abs(d.v)/max*100;
       return `<div class="bar-col" title="${escapeHtml(d.lbl)}: ${fmtMoney(d.v)}">
-        <div class="bar-fill" style="height:${pct*0.7}px;background:var(--ink)"></div>
+        <div class="bar-fill" style="height:${pct*0.7}px;background:var(--olive)"></div>
         <div class="bar-lbl">${d.lbl}</div>
       </div>`;
     }).join('');
@@ -4295,9 +4299,12 @@ const GE = (function(){
       filas.push([parseInt(fecha.slice(0,4)), trimestreDe(fecha), fecha, num, nif, nombre, concepto, n2(base), pct+'%', n2(cuota), n2(deducible), n2(ret), n2(base+cuota-ret), inversion ? 'S' : 'N', isp ? 'S' : 'N', archivo]);
     variablesActivos().filter(v => enP(p, v.fecha)).forEach(v => {
       const base = parseFloat(v.importe)||0, pct = parseFloat(v.iva)||0;
-      push(v.fecha, v.numFactura||'', v.nifProveedor || nifDeProveedor(v.proveedor), v.proveedor||'', variableCategoryLabel(v.categoria), base, pct, base*pct/100, base*pct/100, 0, false, false, foto(v.facturaId, v.fecha, v.proveedor, v.numFactura, 'recibidas'));
+      push(v.fecha, v.numFactura||'', v.nifProveedor || nifDeProveedor(v.proveedor), v.proveedor||'', variableCategoryLabel(v.categoria), base, pct, base*pct/100, base*pct/100*deducPct(v)/100, 0, false, false, foto(v.facturaId, v.fecha, v.proveedor, v.numFactura, 'recibidas'));
     });
     mesesDelPeriodo(p).forEach(({y,m}) => {
+      // Un mes futuro (o anterior a la actividad del negocio) no tiene facturas: antes el libro listaba el alquiler y la luz de diciembre
+      // con fecha de diciembre en pleno noviembre, y el IVA soportado del libro no cuadraba con el de la hoja de impuestos.
+      if(!geMesConActividad(y, m)) return;
       const fin = `${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y, m+1, 0).getDate()).padStart(2,'0')}`;
       (geFijosItemsForMonth(y, m) || gfItemsActuales()).forEach(g => {
         if(g.c === 'PERSONAL' || !gfPagaEnMes(g, y, m)) return;
@@ -4306,7 +4313,7 @@ const GE = (function(){
         const r = GF_RETENCIONES[g.retencion];
         const actual = fijos().find(x => x.id === g.id);
         const fecha = g.periodicidadMeses > 1 ? `${y}-${String(m+1).padStart(2,'0')}-01` : fin;
-        push(fecha, '', g.nifProveedor||'', g.proveedor||'', gfConceptLabel(g.nombre), base, pct, base*pct/100, base*pct/100, r ? base*r.pct/100 : 0, false, false, actual ? foto(actual.facturaId, fecha, g.proveedor||g.nombre, '', 'recibidas') : '');
+        push(fecha, '', g.nifProveedor||'', g.proveedor||'', gfConceptLabel(g.nombre), base, pct, base*pct/100, base*pct/100*deducPct(g)/100, r ? base*r.pct/100 : 0, false, false, actual ? foto(actual.facturaId, fecha, g.proveedor||g.nombre, '', 'recibidas') : '');
       });
       // Comisiones de plataformas (estimadas venta a venta).
       const mesStr = `${y}-${String(m+1).padStart(2,'0')}`;
@@ -4336,6 +4343,7 @@ const GE = (function(){
     const pf = fiscalPerfil().personaFisica;
     const filas = [];
     mesesDelPeriodo(p).forEach(({y,m}) => {
+      if(!geMesConActividad(y, m)) return;   // ni nóminas de meses que aún no han llegado
       (geFijosItemsForMonth(y, m) || gfItemsActuales()).filter(g => g.c === 'PERSONAL').forEach(g => {
         const act = fijos().find(x => x.id === g.id) || {};
         const coste = gfMonthlyImporte(g);
@@ -4389,6 +4397,48 @@ const GE = (function(){
     });
     return {nombre: t('hr.libro.jornada'), cabecera: 2, filas: [[t('hr.libro.jornada')+' · '+p.nombre], [], [t('common.date'), t('hr.libro.empleado'), t('hr.libro.dni'), t('hr.libro.entrada'), t('hr.libro.salida'), t('hr.libro.horas'), t('hr.libro.editado')], ...filas]};
   }
+  // IVA POR TIPO y trimestre (lo que pide el modelo 303: base y cuota de cada tipo, repercutido y soportado deducible). Sale de las MISMAS
+  // filas que los dos libros de facturas, así que lo que el gestor suma aquí coincide con lo que ve en ellos.
+  function hojaIvaPorTipo(hE, hR){
+    const num = v => parseFloat(String(v).replace('%','').replace(',','.')) || 0;
+    const datos = h => { const i = h.filas.findIndex(f => f && f[0] === t('pg.c.ejercicio')); const fin = h.filas.findIndex((f, k) => k > i && (!f || f.length === 0)); return h.filas.slice(i + 1, fin < 0 ? undefined : fin); };
+    const rep = {}, sop = {}, add = (o, q, tipo, base, cuota) => { const k = q + '|' + tipo; (o[k] = o[k] || {q, tipo, base: 0, cuota: 0}); o[k].base += base; o[k].cuota += cuota; };
+    datos(hE).forEach(f => add(rep, f[1], num(f[11]), num(f[10]), num(f[12])));
+    datos(hR).forEach(f => { if(f[14] === 'S') return; add(sop, f[1], num(f[8]), num(f[7]), num(f[10])); });   // ISP (UE): ni se repercute ni se deduce aquí, va por su casilla
+    const periodos = [...new Set([...Object.values(rep), ...Object.values(sop)].map(x => x.q))].sort();
+    const orden = (a, b) => b.tipo - a.tipo;
+    const filas = [];
+    const L = {rep: gl({es:'IVA repercutido (ventas y otros ingresos)', ca:'IVA repercutit (vendes i altres ingressos)', en:'Output VAT (sales and other income)'}), sop: gl({es:'IVA soportado deducible (compras, fijos, inversiones)', ca:'IVA suportat deduïble (compres, fixos, inversions)', en:'Deductible input VAT (purchases, fixed costs, investments)'}), res: gl({es:'Resultado: repercutido − soportado deducible', ca:'Resultat: repercutit − suportat deduïble', en:'Result: output − deductible input'})};
+    let totRep = 0, totSop = 0;
+    periodos.forEach(q => {
+      const r = Object.values(rep).filter(x => x.q === q).sort(orden), so = Object.values(sop).filter(x => x.q === q).sort(orden);
+      r.forEach(x => filas.push([q, L.rep, x.tipo + '%', x.base, x.cuota])); so.forEach(x => filas.push([q, L.sop, x.tipo + '%', x.base, x.cuota]));
+      const cr = r.reduce((a, x) => a + x.cuota, 0), cs = so.reduce((a, x) => a + x.cuota, 0); totRep += cr; totSop += cs;
+      filas.push([q, L.res, '', '', cr - cs]);
+    });
+    filas.push([], [gl({es:'AÑO / PERIODO', ca:'ANY / PERÍODE', en:'YEAR / PERIOD'}), L.res, '', '', totRep - totSop]);
+    return {nombre: gl({es:'IVA por tipo (303)', ca:'IVA per tipus (303)', en:'VAT by rate (303)'}), cabecera: 2, filas: [[gl({es:'IVA por tipo y trimestre', ca:'IVA per tipus i trimestre', en:'VAT by rate and quarter'})], [], [t('pg.c.periodo'), t('hr.libro.concepto'), t('hr.libro.tipoIva'), t('hr.libro.base'), t('hr.libro.cuota')], ...filas]};
+  }
+  // AVISOS antes de enviar: lo que un gestor tendría que reclamar al cliente (NIF, números de factura, fotos, meses sin cerrar…).
+  function hojaAvisos(p, hE, hR){
+    const b = DB.business || {};
+    const datos = h => { const i = h.filas.findIndex(f => f && f[0] === t('pg.c.ejercicio')); const fin = h.filas.findIndex((f, k) => k > i && (!f || f.length === 0)); return h.filas.slice(i + 1, fin < 0 ? undefined : fin); };
+    const rec = datos(hR).filter(f => f[6] !== t('pg.concepto.comision')), emi = datos(hE);
+    const av = [];
+    const poner = (n, txtEs, txtCa, txtEn, queHacer) => { if(n > 0) av.push([gl({es:txtEs, ca:txtCa, en:txtEn}), n, gl(queHacer)]); };
+    poner(b.cif ? 0 : 1, 'El negocio no tiene NIF', 'El negoci no té NIF', 'The business has no tax ID', {es:'Mi Negocio → Contacto → CIF/NIF', ca:'El Meu Negoci → Contacte → CIF/NIF', en:'My Business → Contact → Tax ID'});
+    poner(!b.formaJuridica ? 1 : 0, 'Falta la forma jurídica', 'Falta la forma jurídica', 'Legal form missing', {es:'La fija quien da el alta en GastroGoan', ca:'La fixa qui dona l\'alta a GastroGoan', en:'Set by whoever signs you up in GastroGoan'});
+    poner(rec.filter(f => !f[4]).length, 'Facturas recibidas sin NIF del proveedor', 'Factures rebudes sense NIF del proveïdor', 'Received invoices without supplier tax ID', {es:'Ábrelas en Gastos y apunta el NIF (se recuerda por proveedor)', ca:'Obre-les a Despeses i apunta el NIF (es recorda per proveïdor)', en:'Open them in Expenses and enter the tax ID (remembered per supplier)'});
+    poner(rec.filter(f => !f[3]).length, 'Facturas recibidas sin número de factura', 'Factures rebudes sense número de factura', 'Received invoices without invoice number', {es:'Apunta el número que figura en la factura del proveedor', ca:'Apunta el número que figura a la factura del proveïdor', en:'Enter the number printed on the supplier invoice'});
+    poner(rec.filter(f => !f[15]).length, 'Facturas recibidas sin foto o PDF', 'Factures rebudes sense foto o PDF', 'Received invoices without photo or PDF', {es:'Adjunta la factura (Gastos o dentro del pedido)', ca:'Adjunta la factura (Despeses o dins de la comanda)', en:'Attach the invoice (Expenses or inside the order)'});
+    poner(emi.filter(f => f[3] === 'F1' && !f[8]).length, 'Facturas completas sin NIF del cliente', 'Factures completes sense NIF del client', 'Full invoices without customer tax ID', {es:'Una factura completa exige el NIF del cliente', ca:'Una factura completa exigeix el NIF del client', en:'A full invoice requires the customer tax ID'});
+    const sinCerrar = mesesDelPeriodo(p).filter(({y, m}) => new Date(y, m + 1, 0) < new Date() && !isMonthClosed(y, m)).length;
+    poner(sinCerrar, 'Meses ya terminados sin cerrar', 'Mesos ja acabats sense tancar', 'Finished months not closed', {es:'Tesorería → Cerrar mes, para que nada se modifique tras presentar', ca:'Tresoreria → Tancar mes, perquè res es modifiqui després de presentar', en:'Treasury → Close month, so nothing changes after filing'});
+    let sinIva = 0; activeSales().filter(v => enP(p, v.date)).forEach(v => (v.items || []).forEach(l => { if(l.ivaPct == null) sinIva++; }));
+    poner(sinIva, 'Líneas de venta sin IVA propio (se aplicó el IVA por defecto)', 'Línies de venda sense IVA propi (s\'ha aplicat l\'IVA per defecte)', 'Sales lines without their own VAT (default VAT applied)', {es:'Elige el IVA de esos platos en Oferta', ca:'Tria l\'IVA d\'aquests plats a Oferta', en:'Set the VAT of those dishes in Menu Offering'});
+    const cab = [gl({es:'Aviso', ca:'Avís', en:'Warning'}), gl({es:'Cuántos', ca:'Quants', en:'How many'}), gl({es:'Qué hacer', ca:'Què fer', en:'What to do'})];
+    return {nombre: gl({es:'Avisos', ca:'Avisos', en:'Warnings'}), cabecera: 2, filas: [[gl({es:'Avisos antes de presentar', ca:'Avisos abans de presentar', en:'Warnings before filing'})], [], cab, ...(av.length ? av : [[gl({es:'Sin avisos: los libros están completos.', ca:'Sense avisos: els llibres són complets.', en:'No warnings: the books are complete.'}), 0, '']])]};
+  }
   function csvDeFilas(filas){
     const cel = v => {
       if(typeof v === 'number') return (Math.round(v*100)/100).toFixed(2).replace('.', ',');
@@ -4404,11 +4454,14 @@ const GE = (function(){
     const b = DB.business || {};
     const fotos = new Map();
     const hojas = [];
-    if(incl('pg-i-emitidas')) hojas.push(hojaEmitidas(p));
-    if(incl('pg-i-recibidas')) hojas.push(hojaRecibidas(p, incl('pg-i-fotos') ? fotos : new Map()));
+    // Las dos hojas de facturas se construyen SIEMPRE (el IVA por tipo y los avisos salen de ellas), pero solo se incluyen las marcadas.
+    const hEmit = hojaEmitidas(p), hRec = hojaRecibidas(p, incl('pg-i-fotos') ? fotos : new Map());
+    if(incl('pg-i-emitidas')) hojas.push(hEmit);
+    if(incl('pg-i-recibidas')) hojas.push(hRec);
     if(incl('pg-i-resultados')) hojas.push(hojaResultados(p));
     if(incl('pg-i-impuestos')){
       hojas.push(hojaImpuestos(p));
+      hojas.push(hojaIvaPorTipo(hEmit, hRec));
       const y0 = parseInt(p.desde.slice(0,4));
       if(p.desde === `${y0}-01-01` && p.hasta === `${y0}-12-31`) hojas.push({nombre: t('hr.libro.resumen'), cabecera: 2, filas: resumenAño(y0)});
     }
@@ -4416,6 +4469,7 @@ const GE = (function(){
     if(incl('pg-i-personal')) hojas.push(hojaPersonal(p));
     if(incl('pg-i-jornada')) hojas.push(hojaJornada(p));
     if(!hojas.length){ showToast(t('pg.nada')); return null; }
+    hojas.push(hojaAvisos(p, hEmit, hRec));
     // Facturas sueltas sin asignar todavía: van aparte, para que no se pierdan.
     if(incl('pg-i-fotos')) (DB.facturasSueltas||[]).forEach((id, i) => {
       const f = facturaAdjunta(id);
@@ -4880,7 +4934,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
+  const api = {bcPrevisionCaja, obligacionesPendientes, isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaIvaPorTipo, hojaAvisos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

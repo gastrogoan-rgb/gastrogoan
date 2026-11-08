@@ -375,7 +375,7 @@ await caso('Cuenta de Resultados: un EBITDA negativo se ve con su signo menos y 
     const celda = fila.querySelectorAll('td')[fila.querySelectorAll('td').length-1];
     return {txt: celda.textContent, clase: celda.className};
   });
-  assert.ok(/^-/.test(r.txt.trim()), 'sin signo menos: '+r.txt); assert.equal(r.clase, 'neg');
+  assert.ok(/^-/.test(r.txt.trim()), 'sin signo menos: '+r.txt); assert.match(r.clase, /(^|\s)neg(\s|$)/);
 });
 
 await caso('Sin forma jurídica: aviso rojo arriba de Gestión Económica; y el calendario de pagos en Tesorería', async () => {

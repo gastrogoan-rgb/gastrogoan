@@ -111,5 +111,24 @@ for(const ancho of [320, 360, 390, 412, 430]){
     assert.equal(r.desborde, 0, JSON.stringify(r)); assert.deepEqual(r.fuera, [], JSON.stringify(r)); assert.equal(r.chicos, 0, JSON.stringify(r)); assert.ok(r.modal); await page.close();
   });
 }
+// La franja oscura de Total / Resultado neto tiene que ser oscura en TODAS sus celdas (mes, trimestre y año): las columnas de trimestre
+// y año llevaban el fondo en línea y quedaban claras, con el verde vivo / salmón (pensados para tinta) sobre gris claro.
+await caso('Franjas de Total y Resultado neto: todas las celdas oscuras con texto claro (mes y trimestre/año), y el neto más alto y con filete', async () => {
+  const {page} = await abrir(1280, 900);
+  const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  for(const vista of ['trimestres', 'meses']){
+    const r = await page.evaluate(async (vista) => {
+      const b = [...document.querySelectorAll('#view-economia button, #view-economia .month-pill, #view-economia .tab')].find(x => /trimestre|quarter/i.test(x.textContent)); 
+      if(vista === 'meses'){ const m = document.querySelector('#cdr-chips .month-pill'); if(m) m.click(); }
+      await new Promise(r => setTimeout(r, 400));
+      return [...document.querySelectorAll('#cdr-table tr.total')].map(tr => ({neto: tr.classList.contains('neto'), alto: tr.getBoundingClientRect().height, celdas: [...tr.children].map(td => { const c = getComputedStyle(td); return {bg: c.backgroundColor, fg: c.color, txt: td.textContent.trim().slice(0, 12)}; })}));
+    }, vista);
+    assert.ok(r.length >= 2, 'debe haber filas total y neto: ' + JSON.stringify(r).slice(0, 200));
+    r.forEach(f => f.celdas.forEach(c => { assert.ok(lum(c.bg) < 0.12, `${vista}: celda clara en franja oscura (${c.bg}) «${c.txt}»`); assert.ok(lum(c.fg) > 0.35, `${vista}: texto oscuro en franja oscura (${c.fg}) «${c.txt}»`); }));
+    const neto = r.find(f => f.neto), normal = r.find(f => !f.neto);
+    assert.ok(neto && normal && neto.alto > normal.alto + 8, `${vista}: el resultado neto debe ser más alto que el resto de franjas (${neto && neto.alto} vs ${normal && normal.alto})`);
+  }
+  await page.close();
+});
 await browser.close();
 console.log(fallos ? `\n❌ ${fallos} caso(s) fallaron` : '\n✅ todos los casos pasaron'); process.exit(fallos ? 1 : 0);

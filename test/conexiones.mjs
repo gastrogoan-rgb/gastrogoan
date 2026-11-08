@@ -39,10 +39,12 @@ caso('Los menús/combos entran en el sync de alérgenos a la web pública', () =
   assert.ok(m[0].includes('DB.menus'), 'getPublicAllergensForSync no recorre DB.menus');
 });
 
-caso('La web pública muestra el aviso de alérgenos al elegir opción de un menú', () => {
+caso('La web pública muestra los alérgenos de cada opción de un menú (en su «i», que despliega bajo la opción)', () => {
   const m = publica.match(/function openMenuModal\([\s\S]*?\n\}/);
   assert.ok(m, 'no se encontró openMenuModal');
-  assert.ok(m[0].includes('dishAllergensHtml'), 'openMenuModal no pinta dishAllergensHtml junto a cada opción');
+  assert.ok(m[0].includes('optInfo'), 'openMenuModal no pinta la «i» (optInfo) junto a cada opción');
+  const f = publica.match(/function infoPlatoHtml\([\s\S]*?\n\}/);
+  assert.ok(f && f[0].includes('DB.allergens') && f[0].includes('allergenLabel'), 'infoPlatoHtml no enseña los alérgenos del plato');
 });
 
 caso('El interruptor de emergencia "pedidos online" se publica al espejo público', () => {

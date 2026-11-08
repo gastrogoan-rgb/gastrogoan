@@ -601,30 +601,30 @@ const HELP_FAQS = [
       ca:['afegir plat','agregar plat','afegir un plat','posar un plat','demanar un plat'],
       en:['add dish','add a dish','add an item','order a dish','add item to order']},
     answers:{
-      es:'Dentro de la comanda, toca un plato de la carta (organizada por secciones) para añadirlo. Si lo tocas varias veces se suma la cantidad. Usa los botones <strong>+</strong> y <strong>−</strong> para ajustar unidades, y la papelera para eliminar una línea.',
-      ca:'Dins de la comanda, toca un plat de la carta (organitzada per seccions) per afegir-lo. Si el toques diverses vegades se suma la quantitat. Usa els botons <strong>+</strong> i <strong>−</strong> per ajustar unitats, i la paperera per eliminar una línia.',
-      en:'Inside the order, tap a dish from the menu (organized by sections) to add it. Tapping it again increases the quantity. Use the <strong>+</strong> and <strong>−</strong> buttons to adjust units, and the trash icon to remove a line.' } },
+      es:'Dentro de la comanda, toca un plato de la carta (organizada por secciones) para añadirlo. Si lo tocas varias veces se suma la cantidad. Usa los botones <strong>+</strong> y <strong>−</strong> para ajustar unidades, y el menú <strong>⋯</strong> de la línea para quitarla.',
+      ca:'Dins de la comanda, toca un plat de la carta (organitzada per seccions) per afegir-lo. Si el toques diverses vegades se suma la quantitat. Usa els botons <strong>+</strong> i <strong>−</strong> per ajustar unitats, i el menú <strong>⋯</strong> de la línia per treure-la.',
+      en:'Inside the order, tap a dish from the menu (organized by sections) to add it. Tapping it again increases the quantity. Use the <strong>+</strong> and <strong>−</strong> buttons to adjust units, and the <strong>⋯</strong> menu on the line to remove it.' } },
   { keywords:{es:['extra','extra queso','modificador','modificadores','añadir extra','extra al plato'],
       ca:['extra','extra formatge','modificador','modificadors','afegir extra','extra al plat'],
       en:['extra','extra cheese','modifier','modifiers','add extra','extra on a dish']},
     answers:{
-      es:'Si un plato tiene extras configurados (ej. "Extra queso"), al añadirlo se abre una ventana donde marcas los extras que quieras y se suman a su precio. Para configurar extras nuevos en un plato, entra en <strong>Carta</strong>, abre el plato y pulsa el botón <strong>"Extras"</strong> — desde ahí también puedes editar el nombre o el precio de uno ya creado, no solo añadir o borrar.',
-      ca:'Si un plat té extres configurats (ex. "Extra formatge"), en afegir-lo s\'obre una finestra on marques els extres que vulguis i se sumen al seu preu. Per configurar extres nous en un plat, entra a <strong>Carta</strong>, obre el plat i prem el botó <strong>"Extres"</strong> — des d\'allà també pots editar el nom o el preu d\'un ja creat, no només afegir-lo o esborrar-lo.',
-      en:'If a dish has extras configured (e.g. "Extra cheese"), adding it opens a window where you check the extras you want and they\'re added to its price. To configure new extras on a dish, go to <strong>Menu</strong>, open the dish and tap the <strong>"Extras"</strong> button — from there you can also edit the name or price of one you already created, not just add or delete it.' } },
+      es:'Si un plato tiene extras configurados (ej. "Extra queso"), al añadirlo se abre una ventana donde marcas los extras que quieras y se suman a su precio. Para configurar extras nuevos en un plato, entra en <strong>Oferta Gastronómica</strong>, abre el plato y pulsa el botón <strong>"Extras"</strong> — desde ahí también puedes editar el nombre o el precio de uno ya creado, no solo añadir o borrar.',
+      ca:'Si un plat té extres configurats (ex. "Extra formatge"), en afegir-lo s\'obre una finestra on marques els extres que vulguis i se sumen al seu preu. Per configurar extres nous en un plat, entra a <strong>Oferta Gastronòmica</strong>, obre el plat i prem el botó <strong>"Extres"</strong> — des d\'allà també pots editar el nom o el preu d\'un ja creat, no només afegir-lo o esborrar-lo.',
+      en:'If a dish has extras configured (e.g. "Extra cheese"), adding it opens a window where you check the extras you want and they\'re added to its price. To configure new extras on a dish, go to <strong>Menu Offering</strong>, open the dish and tap the <strong>"Extras"</strong> button — from there you can also edit the name or price of one you already created, not just add or delete it.' } },
   { keywords:{es:['nota','notas','sin cebolla','comentario del plato','comentarios'],
       ca:['nota','notes','sense ceba','comentari del plat','comentaris'],
       en:['note','notes','no onion','dish comment','comments']},
     answers:{
-      es:'Al añadir un plato con extras se abre una ventana donde puedes escribir una nota libre (ej. "sin cebolla"). Esa nota aparece debajo del plato en la comanda y también se ve en la pantalla de cocina.',
-      ca:'En afegir un plat amb extres s\'obre una finestra on pots escriure una nota lliure (ex. "sense ceba"). Aquesta nota apareix sota el plat a la comanda i també es veu a la pantalla de cuina.',
-      en:'When adding a dish with extras, a window opens where you can write a free note (e.g. "no onion"). That note appears below the dish in the order and is also shown on the kitchen screen.' } },
+      es:'Para dejar una nota en un plato (ej. "sin cebolla"), pulsa el menú <strong>⋯</strong> de su línea en la comanda y elige <strong>Notas</strong>: escribes una nota libre o tocas una de las frases rápidas. La nota aparece debajo del plato y también se ve en la pantalla de cocina.',
+      ca:'Per deixar una nota en un plat (ex. "sense ceba"), prem el menú <strong>⋯</strong> de la seva línia a la comanda i tria <strong>Notes</strong>: escrius una nota lliure o toques una de les frases ràpides. La nota apareix sota el plat i també es veu a la pantalla de cuina.',
+      en:'To leave a note on a dish (e.g. "no onion"), tap the <strong>⋯</strong> menu on its line in the order and choose <strong>Notes</strong>: write a free note or tap one of the quick phrases. The note appears under the dish and is also shown on the kitchen screen.' } },
   { keywords:{es:['editar nota','cambiar nota','modificar nota','corregir nota'],
       ca:['editar nota','canviar nota','modificar nota','corregir nota'],
       en:['edit note','change note','modify note','update note']},
     answers:{
-      es:'En la comanda, cada línea de plato tiene un icono de nota <i class="ti ti-note"></i>. Pulsa ese icono para abrir, editar o borrar la nota de ese plato en cualquier momento.',
-      ca:'A la comanda, cada línia de plat té una icona de nota <i class="ti ti-note"></i>. Prem aquesta icona per obrir, editar o esborrar la nota d\'aquest plat en qualsevol moment.',
-      en:'In the order, each dish line has a note icon <i class="ti ti-note"></i>. Tap that icon to open, edit or clear the note for that dish at any time.' } },
+      es:'En la comanda, cada línea de plato tiene un menú <strong>⋯</strong>. Pulsa <strong>Notas</strong> para abrir, editar o borrar la nota de ese plato en cualquier momento.',
+      ca:'A la comanda, cada línia de plat té un menú <strong>⋯</strong>. Prem <strong>Notes</strong> per obrir, editar o esborrar la nota d\'aquest plat en qualsevol moment.',
+      en:'In the order, each dish line has a <strong>⋯</strong> menu. Tap <strong>Notes</strong> to open, edit or clear the note for that dish at any time.' } },
   { keywords:{es:['tanda','tandas','marchar','marchar a cocina','enviar a cocina','primeros y segundos'],
       ca:['torn','torns','enviar a cuina','enviar la comanda','primers i segons'],
       en:['course','courses','send to kitchen','fire course','starters and mains']},
@@ -678,30 +678,30 @@ const HELP_FAQS = [
       ca:['carta','crear carta','seccio de la carta','afegir plat a la carta','diverses cartes'],
       en:['menu','create menu','menu section','add dish to menu','multiple menus']},
     answers:{
-      es:'En <strong>Carta</strong> puedes crear varias cartas (comida, bebida, brunch...) organizadas en secciones. Dentro de cada sección añade platos con su nombre y precio. La carta activa es la que se usa en el TPV y en pedidos online.',
-      ca:'A <strong>Carta</strong> pots crear diverses cartes (menjar, begudes, brunch...) organitzades en seccions. Dins de cada secció afegeix plats amb el seu nom i preu. La carta activa és la que s\'usa al TPV i en comandes en línia.',
-      en:'In <strong>Menu</strong> you can create several menus (food, drinks, brunch...) organized into sections. Inside each section, add dishes with their name and price. The active menu is the one used in the POS and online orders.' } },
+      es:'En <strong>Oferta Gastronómica</strong> puedes crear varias cartas (comida, bebida, brunch...) organizadas en secciones. Dentro de cada sección añade platos con su nombre y precio. La carta activa es la que se usa en el TPV y en pedidos online.',
+      ca:'A <strong>Oferta Gastronòmica</strong> pots crear diverses cartes (menjar, begudes, brunch...) organitzades en seccions. Dins de cada secció afegeix plats amb el seu nom i preu. La carta activa és la que s\'usa al TPV i en comandes en línia.',
+      en:'In <strong>Menu Offering</strong> you can create several menus (food, drinks, brunch...) organized into sections. Inside each section, add dishes with their name and price. The active menu is the one used in the POS and online orders.' } },
   { keywords:{es:['agotado','no disponible','marcar plato','plato sin stock'],
       ca:['esgotat','no disponible','marcar plat','plat sense estoc'],
       en:['sold out','not available','mark dish','out of stock dish']},
     answers:{
-      es:'En <strong>Carta</strong>, abre el plato y marca el interruptor de <strong>"Disponible"</strong>. Si lo desmarcas (agotado), ese plato no podrá pedirse desde el TPV ni desde los pedidos online hasta que vuelvas a activarlo.',
-      ca:'A <strong>Carta</strong>, obre el plat i marca l\'interruptor de <strong>"Disponible"</strong>. Si el desmarques (esgotat), aquest plat no es podrà demanar des del TPV ni des de les comandes en línia fins que el tornis a activar.',
+      es:'En <strong>Oferta Gastronómica</strong>, abre el plato y marca el interruptor de <strong>"Disponible"</strong>. Si lo desmarcas (agotado), ese plato no podrá pedirse desde el TPV ni desde los pedidos online hasta que vuelvas a activarlo.',
+      ca:'A <strong>Oferta Gastronòmica</strong>, obre el plat i marca l\'interruptor de <strong>"Disponible"</strong>. Si el desmarques (esgotat), aquest plat no es podrà demanar des del TPV ni des de les comandes en línia fins que el tornis a activar.',
       en:'In <strong>Menu</strong>, open the dish and toggle the <strong>"Available"</strong> switch. If you turn it off (sold out), that dish can\'t be ordered from the POS or online orders until you enable it again.' } },
   { keywords:{es:['configurar extra','extras en carta','precio extra','añadir extra al plato','doble carne'],
       ca:['configurar extra','extres a la carta','preu extra','afegir extra al plat','doble carn'],
       en:['configure extra','extras in menu','extra price','add extra to dish','double meat']},
     answers:{
-      es:'Para configurar extras de un plato, ve a <strong>Carta</strong>, abre ese plato y pulsa el botón <strong>"Extras"</strong>. Ahí puedes añadir opciones con nombre y precio (ej. "Extra queso" +1€, "Doble carne" +2€), y también editar o borrar las que ya tenías.',
-      ca:'Per configurar extres d\'un plat, vés a <strong>Carta</strong>, obre aquest plat i prem el botó <strong>"Extres"</strong>. Allà pots afegir opcions amb nom i preu (ex. "Extra formatge" +1€, "Doble carn" +2€), i també editar o esborrar les que ja tenies.',
+      es:'Para configurar extras de un plato, ve a <strong>Oferta Gastronómica</strong>, abre ese plato y pulsa el botón <strong>"Extras"</strong>. Ahí puedes añadir opciones con nombre y precio (ej. "Extra queso" +1€, "Doble carne" +2€), y también editar o borrar las que ya tenías.',
+      ca:'Per configurar extres d\'un plat, vés a <strong>Oferta Gastronòmica</strong>, obre aquest plat i prem el botó <strong>"Extres"</strong>. Allà pots afegir opcions amb nom i preu (ex. "Extra formatge" +1€, "Doble carn" +2€), i també editar o esborrar les que ja tenies.',
       en:'To configure extras for a dish, go to <strong>Menu</strong>, open that dish and tap the <strong>"Extras"</strong> button. There you can add options with a name and price (e.g. "Extra cheese" +1€, "Double meat" +2€), and also edit or delete the ones you already have.' } },
   { keywords:{es:['importar plato','importar del escandallo','escandallo a carta','traer plato del escandallo'],
       ca:['importar plat','importar de l\'escandall','escandall a carta','portar plat de l\'escandall'],
       en:['import dish','import from costing','costing to menu','bring dish from costing']},
     answers:{
-      es:'Para no escribir los platos dos veces, en <strong>Carta</strong> puedes importarlos directamente desde el <strong>Escandallo</strong> (ya con su coste calculado). Solo tienes que indicar el precio de venta.',
-      ca:'Per no escriure els plats dues vegades, a <strong>Carta</strong> els pots importar directament des de l\'<strong>Escandall</strong> (ja amb el seu cost calculat). Només has d\'indicar el preu de venda.',
-      en:'To avoid entering dishes twice, in <strong>Menu</strong> you can import them directly from <strong>Costing</strong> (already with their cost calculated). You just need to set the selling price.' } },
+      es:'Para no escribir los platos dos veces, en <strong>Oferta Gastronómica</strong> puedes importarlos directamente desde el <strong>Escandallo</strong> (ya con su coste calculado). Solo tienes que indicar el precio de venta.',
+      ca:'Per no escriure els plats dues vegades, a <strong>Oferta Gastronòmica</strong> els pots importar directament des de l\'<strong>Escandall</strong> (ja amb el seu cost calculat). Només has d\'indicar el preu de venda.',
+      en:'To avoid entering dishes twice, in <strong>Menu Offering</strong> you can import them directly from <strong>Costing</strong> (already with their cost calculated). You just need to set the selling price.' } },
   { keywords:{es:['menu','menus','menu del dia','combo','grupo de opciones','menu de precio fijo'],
       ca:['menu','menus','menu del dia','combo','grup d\'opcions','menu de preu fix'],
       en:['combo menu','combo menus','daily menu','set menu','option group','fixed price menu']},
@@ -755,9 +755,9 @@ const HELP_FAQS = [
       ca:['fitxa tecnica','escandall','cost del plat','marge','calcular cost'],
       en:['technical sheet','costing','dish cost','margin','calculate cost']},
     answers:{
-      es:'En <strong>Escandallo</strong> creas la ficha técnica de cada plato indicando los ingredientes y cantidades de la Mega Lista. La app calcula automáticamente el coste por ración y el margen.',
-      ca:'A <strong>Escandall</strong> crees la fitxa tècnica de cada plat indicant els ingredients i quantitats de la Mega Llista. L\'app calcula automàticament el cost per ració i el marge.',
-      en:'In <strong>Costing</strong> you create the technical sheet for each dish by specifying the ingredients and quantities from the Master List. The app automatically calculates the cost per portion and margin.' } },
+      es:'En <strong>Escandallo</strong> calculas el coste de cada plato indicando los ingredientes y cantidades de la Mega Lista: la app te da el coste por ración, el margen y el food cost. La ficha para cocinar (paso a paso, alérgenos y fotos) está en <strong>Fichas Técnicas</strong>.',
+      ca:'A <strong>Escandall</strong> calcules el cost de cada plat indicant els ingredients i quantitats de la Mega Llista: l\'app et dona el cost per ració, el marge i el food cost. La fitxa per cuinar (pas a pas, al·lèrgens i fotos) és a <strong>Fitxes Tècniques</strong>.',
+      en:'In <strong>Costing</strong> you work out the cost of each dish from the ingredients and quantities in the Master List: the app gives you cost per portion, margin and food cost. The sheet for cooking (step by step, allergens and photos) is in <strong>Technical Sheets</strong>.' } },
   { keywords:{es:['stock','inventario','pedido a proveedor','stock minimo','existencias'],
       ca:['estoc','inventari','comanda a proveidor','estoc minim','existencies'],
       en:['stock','inventory','purchase order','minimum stock','supplies']},
@@ -804,9 +804,9 @@ const HELP_FAQS = [
       ca:['pin','contrasenya','bloquejar','clau d\'acces','canviar pin','mode edicio','tipus de pin'],
       en:['pin','password','lock','access code','change pin','edit mode','types of pin']},
     answers:{
-      es:'GastroGoan usa <strong>tres PINs distintos</strong>, cada uno para una cosa: 1) el <strong>PIN de Gestión</strong> (Mi Negocio), el único que da acceso a la parte económica y de configuración; 2) el <strong>PIN de fichaje</strong> de cada empleado, para fichar entrada/salida en Personal; y 3) el <strong>PIN de "modo edición"</strong> de Cocina/Sala, que por defecto es el mismo PIN de Gestión pero que el dueño puede delegar a un empleado concreto marcando "Puede entrar en modo edición" en su ficha — así ese empleado desbloquea la edición de <strong>su propia área</strong> con su propio PIN, sin poder entrar nunca a Gestión.',
-      ca:'GastroGoan fa servir <strong>tres PINs diferents</strong>, cadascun per a una cosa: 1) el <strong>PIN de Gestió</strong> (El Meu Negoci), l\'únic que dona accés a la part econòmica i de configuració; 2) el <strong>PIN de fitxatge</strong> de cada empleat, per fitxar entrada/sortida a Personal; i 3) el <strong>PIN de "mode edició"</strong> de Cuina/Sala, que per defecte és el mateix PIN de Gestió però que el propietari pot delegar a un empleat concret marcant "Pot entrar en mode edició" a la seva fitxa — així aquest empleat desbloqueja l\'edició de <strong>la seva pròpia àrea</strong> amb el seu propi PIN, sense poder entrar mai a Gestió.',
-      en:'GastroGoan uses <strong>three different PINs</strong>, each for a different thing: 1) the <strong>Management PIN</strong> (My Business), the only one granting access to the economic/configuration area; 2) each employee\'s <strong>clock-in PIN</strong>, for clocking in/out in Staff; and 3) the Kitchen/Floor <strong>"edit mode" PIN</strong>, which defaults to the same Management PIN but which the owner can delegate to a specific employee by ticking "Can unlock edit mode" on their record — that employee then unlocks editing for <strong>their own area only</strong> with their own PIN, never able to access Management.' } },
+      es:'GastroGoan usa <strong>tres claves distintas</strong>, cada una para una cosa: 1) tu <strong>usuario y PIN de propietario</strong> (6-12 letras o números), con el que entras tú y que es lo único que da acceso a Gestión (Mi Negocio y Gestión Económica); 2) el <strong>PIN de cada empleado</strong> (4 dígitos), para entrar en su área y fichar; y 3) el <strong>modo edición</strong> de Cocina/Sala, que el propietario delega a un empleado concreto marcando «Puede entrar en modo edición» en su ficha — así ese empleado edita turnos y stock de su propia área con su propio PIN, sin entrar nunca a Gestión. Si pierdes el PIN, escribe el código maestro que te dio GastroGoan en el campo del PIN, en un dispositivo donde ya hayas entrado.',
+      ca:'GastroGoan fa servir <strong>tres claus diferents</strong>, cadascuna per a una cosa: 1) el teu <strong>usuari i PIN de propietari</strong> (6-12 lletres o números), amb què entres tu i que és l\'únic que dona accés a Gestió (El Meu Negoci i Gestió Econòmica); 2) el <strong>PIN de cada empleat</strong> (4 dígits), per entrar a la seva àrea i fitxar; i 3) el <strong>mode edició</strong> de Cuina/Sala, que el propietari delega a un empleat concret marcant «Pot entrar en mode edició» a la seva fitxa — així aquest empleat edita torns i estoc de la seva pròpia àrea amb el seu propi PIN, sense entrar mai a Gestió. Si perds el PIN, escriu el codi mestre que et va donar GastroGoan al camp del PIN, en un dispositiu on ja hagis entrat.',
+      en:'GastroGoan uses <strong>three different keys</strong>, each for one thing: 1) your <strong>owner username and PIN</strong> (6-12 letters or numbers), which you use to sign in and which is the only thing that opens Management (My Business and Financial Management); 2) each <strong>employee\'s PIN</strong> (4 digits), to enter their area and clock in; and 3) the Kitchen/Floor <strong>edit mode</strong>, which the owner delegates to a specific employee by ticking «Can unlock edit mode» on their record — that employee edits shifts and stock of their own area with their own PIN, never entering Management. If you lose the PIN, type the master code GastroGoan gave you in the PIN field, on a device where you have already signed in.' } },
   { keywords:{es:['nube','firebase','sincronizar','copia de seguridad','conectar la nube','base de datos propia'],
       ca:['nuvol','firebase','sincronitzar','copia de seguretat','connectar el nuvol','base de dades propia'],
       en:['cloud','firebase','sync','backup','connect cloud','own database']},
@@ -846,16 +846,16 @@ const HELP_FAQS = [
       ca:['aforament','places per torn','capacitat','limit de taules','llista d\'espera','torn ple','cancel·lar reserva'],
       en:['capacity','seats per shift','venue capacity','table limit','waitlist','full shift','cancel reservation']},
     answers:{
-      es:'En <strong>Mi Negocio</strong> indicas tu <strong>aforo</strong> (plazas por turno) — eso solo lo puede configurar el propietario, con el PIN de Gestión. En Reservas (accesible también al personal de Sala) verás cuántas personas hay reservadas frente al aforo de cada turno, y si al confirmar una reserva se supera el aforo, puedes elegir entre <strong>confirmarla igualmente</strong>, ponerla en <strong>lista de espera</strong> (no cuenta para el aforo, con su propio botón para confirmarla cuando haya sitio) o cancelarla. Una reserva confirmada se puede <strong>cancelar</strong> sin más (queda registrada, no se borra), y si eliges un cliente con no-shows anteriores, te avisará.',
-      ca:'A <strong>El Meu Negoci</strong> indiques el teu <strong>aforament</strong> (places per torn) — això només ho pot configurar el propietari, amb el PIN de Gestió. A Reserves (accessible també al personal de Sala) veuràs quantes persones hi ha reservades respecte a l\'aforament de cada torn, i si en confirmar una reserva se supera l\'aforament, pots triar entre <strong>confirmar-la igualment</strong>, posar-la en <strong>llista d\'espera</strong> (no compta per a l\'aforament, amb el seu propi botó per confirmar-la quan hi hagi lloc) o cancel·lar-la. Una reserva confirmada es pot <strong>cancel·lar</strong> sense més (queda registrada, no s\'esborra), i si tries un client amb no-shows anteriors, t\'avisarà.',
-      en:'In <strong>My Business</strong> you set your <strong>capacity</strong> (seats per shift) — only the owner can configure that, using the Management PIN. In Reservations (also accessible to Floor staff) you\'ll see how many people are booked versus the capacity of each shift, and if confirming a reservation would exceed capacity, you can choose to <strong>confirm it anyway</strong>, put it on the <strong>waitlist</strong> (doesn\'t count towards capacity, with its own button to confirm once there\'s room) or cancel it. A confirmed reservation can simply be <strong>cancelled</strong> (it stays on record, it\'s not deleted), and picking a client with previous no-shows will warn you.' } },
+      es:'En <strong>Mi Negocio</strong> indicas tu <strong>aforo</strong> (plazas por turno) — eso solo lo puede configurar el propietario. En Reservas (accesible también al personal de Sala) verás cuántas personas hay reservadas frente al aforo de cada turno, y si al confirmar una reserva se supera el aforo, puedes elegir entre <strong>confirmarla igualmente</strong>, ponerla en <strong>lista de espera</strong> (no cuenta para el aforo, con su propio botón para confirmarla cuando haya sitio) o cancelarla. Una reserva confirmada se puede <strong>cancelar</strong> sin más (queda registrada, no se borra), y si eliges un cliente con no-shows anteriores, te avisará.',
+      ca:'A <strong>El Meu Negoci</strong> indiques el teu <strong>aforament</strong> (places per torn) — això només ho pot configurar el propietari. A Reserves (accessible també al personal de Sala) veuràs quantes persones hi ha reservades respecte a l\'aforament de cada torn, i si en confirmar una reserva se supera l\'aforament, pots triar entre <strong>confirmar-la igualment</strong>, posar-la en <strong>llista d\'espera</strong> (no compta per a l\'aforament, amb el seu propi botó per confirmar-la quan hi hagi lloc) o cancel·lar-la. Una reserva confirmada es pot <strong>cancel·lar</strong> sense més (queda registrada, no s\'esborra), i si tries un client amb no-shows anteriors, t\'avisarà.',
+      en:'In <strong>My Business</strong> you set your <strong>capacity</strong> (seats per shift) — only the owner can configure that. In Reservations (also accessible to Floor staff) you\'ll see how many people are booked versus the capacity of each shift, and if confirming a reservation would exceed capacity, you can choose to <strong>confirm it anyway</strong>, put it on the <strong>waitlist</strong> (doesn\'t count towards capacity, with its own button to confirm once there\'s room) or cancel it. A confirmed reservation can simply be <strong>cancelled</strong> (it stays on record, it\'s not deleted), and picking a client with previous no-shows will warn you.' } },
   { keywords:{es:['verifactu','factura electronica','ticket bre','declaracion responsable','facturacion certificada'],
       ca:['verifactu','factura electronica','declaracio responsable','facturacio certificada'],
       en:['verifactu','electronic invoice','responsible declaration','certified invoicing']},
     answers:{
-      es:'VeriFactu es la nueva normativa española de facturación electrónica. En <strong>Mi Negocio</strong> aparece marcada como <strong>"Vista previa"</strong>: GastroGoan ya tiene el envío a un proveedor certificado implementado y probado, pero no lo activamos todavía porque no es obligatorio para todos los negocios ni tenemos aún nuestra Declaración Responsable como fabricantes lista (eso depende de un trámite legal, no técnico). Cuando actives el envío, ten en cuenta que <strong>no se puede desactivar después</strong> (el sistema queda "exclusivamente VeriFactu"), así que actívalo solo cuando estés seguro. (Mi Negocio solo lo puede abrir el propietario, con el PIN de Gestión.)',
-      ca:'VeriFactu és la nova normativa espanyola de facturació electrònica. A <strong>El Meu Negoci</strong> apareix marcada com a <strong>"Vista prèvia"</strong>: GastroGoan ja té l\'enviament a un proveïdor certificat implementat i provat, però no l\'activem encara perquè no és obligatori per a tots els negocis ni tenim encara la nostra Declaració Responsable com a fabricants a punt (això depèn d\'un tràmit legal, no tècnic). Quan activis l\'enviament, tingues en compte que <strong>no es pot desactivar després</strong> (el sistema queda "exclusivament VeriFactu"), així que activa\'l només quan n\'estiguis segur. (El Meu Negoci només el pot obrir el propietari, amb el PIN de Gestió.)',
-      en:'VeriFactu is the new Spanish electronic invoicing regulation. In <strong>My Business</strong> it\'s shown as <strong>"Preview"</strong>: GastroGoan already has the submission to a certified provider implemented and tested, but it\'s not turned on yet because it isn\'t mandatory for every business and our own manufacturer\'s Responsible Declaration isn\'t ready yet (that\'s a legal step, not a technical one). When you do enable submission, keep in mind it <strong>can\'t be turned off afterwards</strong> (the system becomes "exclusively VeriFactu"), so only enable it once you\'re sure. (Only the owner can open My Business, using the Management PIN.)' } },
+      es:'VeriFactu es la nueva normativa española de facturación electrónica. En Mi Negocio aparece como «Próximamente»: la función está <strong>en desarrollo</strong> y todavía no emite facturas verificables ni sirve para cumplir la normativa, así que de momento no la actives ni cuentes con ella. Cuando esté homologada y lista, se activará en esa misma tarjeta y te lo avisaremos. Mientras tanto, cada ticket ya lleva su número de factura simplificada propio de cada dispositivo. (Mi Negocio solo lo puede abrir el propietario.)',
+      ca:'VeriFactu és la nova normativa espanyola de facturació electrònica. A El Meu Negoci apareix com a «Pròximament»: la funció està <strong>en desenvolupament</strong> i encara no emet factures verificables ni serveix per complir la normativa, així que de moment no l\'activis ni hi comptis. Quan estigui homologada i a punt, s\'activarà en aquesta mateixa targeta i t\'ho avisarem. Mentrestant, cada tiquet ja porta el seu número de factura simplificada propi de cada dispositiu. (El Meu Negoci només el pot obrir el propietari.)',
+      en:'VeriFactu is the new Spanish electronic invoicing regulation. In My Business it shows as «Coming soon»: the feature is <strong>under development</strong> and does not yet issue verifiable invoices or satisfy the regulation, so don\'t turn it on or rely on it for now. When it is certified and ready it will be activated on that same card and we\'ll let you know. Meanwhile every receipt already carries its own simplified-invoice number per device. (Only the owner can open My Business.)' } },
   { keywords:{es:['dar de alta empleado','nuevo empleado','crear empleado','alta trabajador','añadir camarero','añadir cocinero'],
       ca:['donar d\'alta empleat','nou empleat','crear empleat','alta treballador','afegir cambrer','afegir cuiner'],
       en:['add employee','new employee','create employee','hire staff','add waiter','add cook']},
@@ -1493,6 +1493,7 @@ function sendChatMessage(){
   saveDB();
   input.value = '';
   renderChatMessages();
+  markChatRead(currentChatChannel); updateChatBadge();
 }
 
 // Mensaje fijado por canal: queda arriba del todo hasta que alguien lo
@@ -1550,9 +1551,14 @@ function updateChatBadge(){
   if(!badge) return;
   let unread = 0;
   // Solo cuenta los canales visibles en el área actual (no avisa del área contraria).
+  // Mis propios mensajes NO cuentan (antes, al escribir en el chat te salía un «1» por lo que acababas de mandar), y con el panel
+  // abierto en ese canal tampoco: lo que llega mientras lo estás mirando ya lo estás leyendo.
+  const yo = getChatAuthor();
+  const panelAbierto = !!(document.getElementById('chat-panel') && document.getElementById('chat-panel').classList.contains('active'));
   visibleChatChannels().forEach(c => {
+    if(panelAbierto && c === currentChatChannel){ markChatRead(c); return; }
     const lastRead = localStorage.getItem('chatLastRead_'+c);
-    const count = (DB.chatMessages||[]).filter(m => m.channel===c && (!lastRead || m.ts > lastRead)).length;
+    const count = (DB.chatMessages||[]).filter(m => m.channel===c && String(m.authorId) !== String(yo) && (!lastRead || m.ts > lastRead)).length;
     unread += count;
   });
   if(unread > 0){
@@ -1934,7 +1940,13 @@ function scrollContentToTop(){
 function scrollActiveTabIntoView(rowEl){
   if(!rowEl) return;
   const active = rowEl.querySelector('.ge-tab.active');
-  if(active) active.scrollIntoView({block:'nearest', inline:'nearest', behavior:'smooth'});
+  // Solo se mueve la FILA hacia los lados. Con scrollIntoView la página entera también subía hasta enseñar la fila de pestañas: ese era
+  // el «salto arriba del todo» de Gestión Económica cada vez que se repintaba una pestaña estando más abajo.
+  if(active){
+    const r = rowEl.getBoundingClientRect(), a = active.getBoundingClientRect();
+    if(a.left < r.left) rowEl.scrollTo({left: rowEl.scrollLeft - (r.left - a.left) - 8, behavior: 'smooth'});
+    else if(a.right > r.right) rowEl.scrollTo({left: rowEl.scrollLeft + (a.right - r.right) + 8, behavior: 'smooth'});
+  }
   updateTabRowFade(rowEl);
 }
 // Mismo problema, uno más sutil: hasta que no se toca sin querer, nada
@@ -2284,11 +2296,79 @@ if(typeof window !== 'undefined' && window.addEventListener){
   window.addEventListener('beforeunload', e => { if(ggEditorSucio()){ e.preventDefault(); e.returnValue = ''; } });
 }
 
-function navigate(view, forzado){
+/* «ATRÁS» EN TODA LA APP (8/11, dueño: «cuando haces click a algo que lleva a otra página, al volver atrás no vuelve a donde estabas»)
+   Causa: navigate() solo escribía location.hash. El navegador/móvil registraba el cambio, pero NADIE escuchaba el «atrás», así que
+   cambiaba la dirección y la pantalla se quedaba donde estaba. Ahora cada pantalla —y cada «página» dentro de una pantalla: detalle
+   de un pedido, historial de un cliente, un tema del manual— es una entrada del historial (pushState); al volver se reabre esa
+   pantalla, con su pestaña y por donde iba el scroll. Pestañas y filtros NO añaden entradas: se recuerdan al salir (ggRutaGuardarSalida).
+   Lo que se recuerda vive en memoria (por id de entrada), no en el estado del historial: tras recargar solo vuelve la pantalla. */
+let ggRutaId = null, ggRutaN = 0;
+const ggRutaSub = {}, ggRutaScroll = {};
+const GG_RUTA_PROV = {
+  clientes:   {guardar: () => ({p: clientesPantalla}), restaurar: s => { clientesPantalla = s.p || 'lista'; renderClientes(); }},
+  pedidos:    {guardar: () => ({d: pedidoDetailId, t: pedidosTab}), restaurar: s => {
+    if(s.d){ pedidosTab = 'historial'; pedidoDetailId = s.d; updatePedidosTabsUI(); renderPedidoDetail(); }
+    else { pedidoDetailId = null; if(s.t) pedidosTab = s.t; renderPedidos(); } }},
+  manual:     {guardar: () => ({a: manualArea, c: manualChapter}), restaurar: s => { manualArea = s.a || null; manualChapter = (s.c == null ? -1 : s.c); manualSearch = ''; renderManual(); }},
+  horarios:   {guardar: () => ({t: horariosTab}), restaurar: s => { if(s.t) horariosTab = s.t; renderHorarios(); }},
+  promocion:  {guardar: () => ({t: promoTab}), restaurar: s => { if(s.t) promoTab = s.t; renderPromocion(); }},
+  carta:      {guardar: () => ({t: ofertaTab}), restaurar: s => { if(s.t) ofertaTab = s.t; renderOferta(); }},
+  economia:   {guardar: () => { const a = document.querySelector('#view-economia .ge-tab-panel.active'); return {t: a ? a.id.replace('ge-', '') : null}; }, restaurar: s => { if(s.t) GE.tab(s.t); }},
+};
+function ggRutaVista(){ const a = document.querySelector('.view.active'); return a ? a.id.replace('view-', '') : null; }
+function ggRutaScrollLeer(){ const c = document.querySelector('.content'); return {c: c ? c.scrollTop : 0, w: window.scrollY || 0}; }
+function ggRutaScrollPoner(o){ if(!o) return; const c = document.querySelector('.content'); if(c) c.scrollTop = o.c || 0; if(o.w) window.scrollTo(0, o.w); }
+// Lo que hay AHORA en pantalla (pestaña, detalle abierto, scroll) se guarda bajo la entrada actual, justo antes de irse.
+function ggRutaGuardarSalida(){
+  if(ggRutaId == null) return;
+  const prov = GG_RUTA_PROV[ggRutaVista()];
+  try{ ggRutaSub[ggRutaId] = prov ? prov.guardar() : null; }catch(e){}
+  ggRutaScroll[ggRutaId] = ggRutaScrollLeer();
+}
+function ggRutaEstado(vista){ return {gg: 1, i: ggRutaId, v: vista || ggRutaVista(), f: (typeof currentFolder !== 'undefined' ? currentFolder : null)}; }
+// Nueva entrada del historial (o, la primera vez y al repintar la misma pantalla, se sustituye la actual).
+function ggRutaMarca(vista, forzarNueva){
+  try{
+    const mismo = history.state && history.state.gg && history.state.v === vista;
+    if(ggRutaId == null || (mismo && !forzarNueva)){
+      if(ggRutaId == null) ggRutaId = Date.now() * 1000 + (++ggRutaN);
+      history.replaceState(ggRutaEstado(vista), '', '#' + vista);
+    }else{
+      ggRutaId = Date.now() * 1000 + (++ggRutaN);
+      history.pushState(ggRutaEstado(vista), '', '#' + vista);
+    }
+  }catch(e){ try{ location.hash = vista; }catch(e2){} }
+}
+// Una «página» dentro de una pantalla (detalle de un pedido, historial de un cliente, un tema del manual): se guarda el estado de
+// ANTES, se cambia (fn) y se añade la entrada nueva. El «atrás» vuelve a lo de antes, no a la pantalla anterior.
+function ggRutaPagina(fn){
+  ggRutaGuardarSalida();
+  fn();
+  if(ggRutaId != null) ggRutaMarca(ggRutaVista(), true);
+}
+if(typeof window !== 'undefined' && window.addEventListener){
+  window.addEventListener('popstate', ev => {
+    const st = ev.state;
+    const v = (st && st.gg) ? st.v : (location.hash || '').replace('#', '');
+    if(!v || !document.getElementById('view-' + v)) return;
+    if(typeof getAccessSession === 'function' && !getAccessSession()) return;   // con la pantalla de entrada delante no se navega
+    ggRutaGuardarSalida();
+    const idDestino = (st && st.gg) ? st.i : null;
+    if(st && st.gg && st.f && typeof FOLDERS !== 'undefined' && FOLDERS[st.f]) currentFolder = st.f;
+    navigate(v, false, {historia: true, id: idDestino,
+      // Si el hostelero cancela porque tiene cambios sin guardar, el navegador ya retrocedió: se vuelve a poner la entrada de ESTA pantalla.
+      alCancelar: () => { try{ history.pushState(ggRutaEstado(), '', '#' + ggRutaVista()); }catch(e){} }});
+  });
+}
+
+function navigate(view, forzado, opts){
   // Salir de una pantalla con cambios sin guardar: se pregunta antes (ver ggGuardarSiHaceFalta).
   if(!forzado && ggEditorSucio()){
     const actual = document.querySelector('.view.active');
-    if(!actual || actual.id !== 'view-' + view){ ggGuardarSiHaceFalta(() => navigate(view, true)); return; }
+    if(!actual || actual.id !== 'view-' + view){
+      ggGuardarSiHaceFalta(() => navigate(view, true, opts)).then(() => { if(opts && opts.alCancelar && ggEditorSucio()) opts.alCancelar(); });
+      return;
+    }
   }
   // Una hoja de Escandallo abierta no sobrevive a salir de la pantalla: al volver se ve la lista, no un plato a medias.
   if(view !== 'escandallo' && typeof escandalloHoja !== 'undefined' && escandalloHoja){ escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; }
@@ -2311,6 +2391,7 @@ function navigate(view, forzado){
     return;
   }
 
+  if(!(opts && opts.historia)) ggRutaGuardarSalida();
   const prevActive = document.querySelector('.view.active');
   const wasAlreadyInPedidos = prevActive && prevActive.id === 'view-pedidos';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -2329,7 +2410,18 @@ function navigate(view, forzado){
   if(!inCurrentFolder && MODULE_FOLDER[view]) currentFolder = MODULE_FOLDER[view];
 
   renderView(view);
-  location.hash = view;
+  if(opts && opts.historia){
+    // Volver con «atrás»: se reabre lo que había (pestaña, detalle, scroll) y la entrada del historial se queda como está.
+    ggRutaId = opts.id != null ? opts.id : (ggRutaId == null ? Date.now() * 1000 + (++ggRutaN) : ggRutaId);
+    try{ history.replaceState(ggRutaEstado(view), '', '#' + view); }catch(e){}
+    const sub = ggRutaSub[ggRutaId], prov = GG_RUTA_PROV[view];
+    try{ if(sub && prov) prov.restaurar(sub); }catch(e){ console.error(e); }
+    const sc = ggRutaScroll[ggRutaId];
+    // Dos veces: algunas pantallas (Gestión Económica, Panel) acaban de pintar su contenido en el siguiente fotograma y el primer intento queda corto.
+    if(sc){ requestAnimationFrame(() => ggRutaScrollPoner(sc)); setTimeout(() => ggRutaScrollPoner(sc), 250); }
+  }else{
+    ggRutaMarca(view);
+  }
 }
 
 // Gestión (Gestión Económica, Mi Negocio) es exclusiva del propietario: una

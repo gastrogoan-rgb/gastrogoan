@@ -7728,6 +7728,15 @@ function initPublicRequestsListener(){
         // reservar por la web (se les pide llamar): si alguno llega igual
         // (web vieja en caché, consola), queda pendiente.
         void AUTO_CONFIRM_MARGIN;
+        // ⚠️ NORMA DEL DUEÑO (8/11): si hay sitio, la reserva se confirma SOLA. Un negocio que aún no ha configurado ninguna mesa no
+        // puede asignar mesa, pero tampoco hay nada que impida reservar: antes se quedaba «pendiente» para siempre y el cliente leía
+        // «te lo han de confirmar». Solo cuenta el aforo del turno, si lo hay.
+        let cabeSinMesas = false;
+        if(confirmedTableId == null && !(DB.tables || []).some(tb => tb.plazas)){
+          cabeSinMesas = true;
+          const turnoIdx0 = getTurnoIndexForTime(req.date, req.time), aforo0 = parseInt(DB.business.aforo) || 0;
+          if(turnoIdx0 !== null && aforo0 && getReservedPeopleForTurno(req.date, turnoIdx0, null) + (req.people || 0) > aforo0) cabeSinMesas = false;
+        }
         const confirmManualDesde = parseInt(DB.business.reservaConfirmManualDesde) || 0;
         // La señal la calcula el negocio, no el navegador (que podía mandar
         // 0,01 € o saltársela). Si el negocio la exige y cobra con tarjeta
@@ -7744,7 +7753,7 @@ function initPublicRequestsListener(){
           // se queda "pendiente" hasta que llegue el evento pago_confirmado real del
           // banco (más abajo en esta función). Si no, un cliente que abandona el pago
           // a mitad se quedaría con la mesa/aforo bloqueados como si hubiera pagado.
-          tableId: confirmedTableId, notes: req.notes || '', status: (confirmedTableId && !req.depositRequired && !exigeConfirmacionManual) ? 'confirmada' : 'pendiente',
+          tableId: confirmedTableId, notes: req.notes || '', status: ((confirmedTableId || cabeSinMesas) && !req.depositRequired && !exigeConfirmacionManual) ? 'confirmada' : 'pendiente',
           referral: req.referral || '',
           depositRequired: req.depositRequired || false, depositAmount: req.depositRequired ? (senalPropia ? senalPropia.toFixed(2) : (req.depositAmount || '')) : '', depositConfirmed: false,
           senalSaltada: senalSaltada || undefined,
@@ -10119,13 +10128,7 @@ function renderPedidosConfigCard(){
         <div style="margin-top:8px"><button type="button" class="btn btn-sm" onclick="comprobarCodigosPostales()"><i class="ti ti-map-search"></i> ${escapeHtml(gl({es:'Comprobar códigos postales', ca:'Comprovar codis postals', en:'Check postcodes'}))}</button></div>
         <div id="mn-cp-resultado" aria-live="polite"></div>
       </div>
-      <div class="field">
-        <label>${t('mn.pedidos.radius')}</label>
-        <input type="number" id="mn-radiuskm" min="0" step="0.5" value="${escapeHtml(p.radiusKm||0)}" placeholder="5">
-        <small style="color:var(--muted)">${t('mn.pedidos.radiusDesc')}</small>
-      </div>
-      ${p.lat!=null ? `<p style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${t('mn.pedidos.locationCalculated')}: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}${p.ubicacionTexto ? ' — ' + escapeHtml(p.ubicacionTexto) : ''} · <a href="https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=14/${p.lat}/${p.lng}" target="_blank" rel="noopener">${escapeHtml(gl({es:'ver en el mapa', ca:'veure al mapa', en:'see on map'}))}</a></p>` : ''}
-      ${(p.radiusKm > 0 && p.lat == null) ? `<p class="mn-bloqueo mn-bloqueo-aviso"><i class="ti ti-alert-triangle"></i> <span>${escapeHtml(gl({es:'El radio está puesto pero no se ha podido calcular la ubicación del local (¿falta la dirección o no hay internet?). Mientras tanto, los pedidos a domicilio llegan marcados «sin verificar» para que los revises tú. Vuelve a guardar con internet y la dirección completa.', ca:'El radi està posat però no s\'ha pogut calcular la ubicació del local (falta l\'adreça o no hi ha internet?). Mentrestant, les comandes a domicili arriben marcades «sense verificar» perquè les revisis tu. Torna a desar amb internet i l\'adreça completa.', en:'A radius is set but the location of your venue could not be worked out (missing address or no internet?). Meanwhile delivery orders arrive marked "unverified" so you can check them. Save again with internet and the full address.'}))}</span></p>` : ''}
+      ${(p.cpList || []).length ? '' : `<p class="mn-bloqueo mn-bloqueo-aviso"><i class="ti ti-alert-triangle"></i> <span>${escapeHtml(gl({es:'Sin códigos postales, la web acepta pedidos a domicilio a CUALQUIER dirección. Apunta aquí los códigos postales a los que repartes.', ca:'Sense codis postals, la web accepta comandes a domicili a QUALSEVOL adreça. Apunta aquí els codis postals als quals reparteixes.', en:'With no postcodes, the website accepts delivery orders to ANY address. List the postcodes you deliver to here.'}))}</span></p>`}
       <p style="font-size:12px;color:var(--muted)">${t('mn.pedidos.matchExplain')}</p>
       ` : ''}
       <button class="btn btn-primary" onclick="savePedidosConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
@@ -10172,7 +10175,7 @@ async function comprobarCodigosPostales(){
   if(cps.invalidos.length){ caja.innerHTML = `<p class="manual-warning"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'No son códigos postales válidos (5 cifras, provincia 01-52): ', ca:'No són codis postals vàlids (5 xifres, província 01-52): ', en:'Not valid postcodes (5 digits, province 01-52): '}))}<strong>${escapeHtml(cps.invalidos.join(', '))}</strong></p>`; return; }
   if(!cps.validos.length){ caja.innerHTML = `<p class="txt-xs" style="color:var(--muted)">${escapeHtml(gl({es:'Escribe antes algún código postal.', ca:'Escriu abans algun codi postal.', en:'Enter a postcode first.'}))}</p>`; return; }
   // Punto del local: el ya calculado, o se calcula ahora con la dirección.
-  let base = (p.lat != null && p.lng != null) ? {lat: p.lat, lng: p.lng} : null;
+  let base = null;
   if(!base && b.address){
     try{
       const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q=' + encodeURIComponent(b.address));
@@ -10180,7 +10183,7 @@ async function comprobarCodigosPostales(){
     }catch(e){}
   }
   const provLocal = (String(b.address || '').match(/\b(\d{5})\b/) || [])[1];
-  const lim = parseFloat(document.getElementById('mn-radiuskm').value) > 0 ? parseFloat(document.getElementById('mn-radiuskm').value) : 25;
+  const lim = 25;   // solo orienta: un código a más de 25 km del local suele ser un error de tecleo
   caja.innerHTML = `<ul class="cp-lista">${cps.validos.map(c => `<li id="cp-${c}" class="cp-fila"><b>${c}</b> <span class="cp-est"><i class="ti ti-loader-2"></i> ${escapeHtml(gl({es:'Comprobando…', ca:'Comprovant…', en:'Checking…'}))}</span></li>`).join('')}</ul>`;
   for(const c of cps.validos){
     const fila = document.getElementById('cp-' + c); if(!fila) continue;
@@ -10249,28 +10252,8 @@ async function savePedidosConfig(){
       return;
     }
     p.cpList = cps.validos;
-    let radiusKm = Math.max(0, parseFloat(document.getElementById('mn-radiuskm').value) || 0);
-    if(radiusKm > 100){ radiusKm = 100; showToast(gl({es:'El radio máximo es 100 km.', ca:'El radi màxim és 100 km.', en:'The maximum radius is 100 km.'})); }
-    p.radiusKm = radiusKm;
-    if(radiusKm > 0 && !b.address){ showToast(gl({es:'Para usar un radio hace falta la dirección del local (Mi Negocio → Datos).', ca:'Per fer servir un radi cal l\'adreça del local (El Meu Negoci → Dades).', en:'To use a radius we need the venue address (My Business → Details).'})); }
-    if(radiusKm > 0 && b.address){
-      showToast(t('msg.calculatingLocation'));
-      try{
-        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q=' + encodeURIComponent(b.address));
-        const data = await res.json();
-        if(data && data[0]){
-          p.lat = parseFloat(data[0].lat);
-          p.lng = parseFloat(data[0].lon);
-          p.ubicacionTexto = String(data[0].display_name || '').split(',').slice(0, 3).join(',').trim();
-        }else{
-          showToast(t('msg.locationError'));
-        }
-      }catch(e){
-        showToast(t('msg.locationNetError'));
-      }
-    }else if(radiusKm === 0){
-      p.lat = null; p.lng = null;
-    }
+    // Desde el 8/11 el reparto se define SOLO por códigos postales: el radio (y su geocodificación) se quitó.
+    p.radiusKm = 0; p.lat = null; p.lng = null; delete p.ubicacionTexto;
   }
 
   b.pedidos = p;
@@ -10279,13 +10262,13 @@ async function savePedidosConfig(){
   showToast(t('msg.orderConfigSaved'));
 }
 
-// ¿Un pedido a domicilio cae fuera de la zona de reparto del negocio? Solo se puede afirmar con la lista de códigos postales: el
-// radio lo mide la web geocodificando la dirección (aquí no hay red para eso) y se fía de su aviso (pendienteVerificarZona).
+// ¿Un pedido a domicilio cae fuera de la zona de reparto del negocio (lista de códigos postales)?
+// La web ya no deja enviar un pedido fuera de zona; esto cubre a quien se salte la web (consola, otra versión).
 function zonaDeRepartoDePedido(req){
   if(!req || req.tipo !== 'delivery') return {};
   const p = (DB.business || {}).pedidos || {};
   const cpList = p.cpList || [];
-  if(!cpList.length || p.radiusKm > 0) return {};
+  if(!cpList.length) return {};
   const cp = String(req.codigoPostal || '').replace(/\s+/g, '');
   return cpList.includes(cp) ? {} : {fuera: true};
 }

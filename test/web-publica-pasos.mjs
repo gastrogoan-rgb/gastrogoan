@@ -25,6 +25,15 @@ const arrancar = (opts = {}, lang = 'es') => page.evaluate((s, lang) => {
 const abrirTab = async tab => { await page.evaluate(tab => { currentTab = tab; renderApp(); }, tab); await w(250); };
 const clic = sel => page.evaluate(sel => { const e = document.querySelector(sel); if(!e) throw new Error('no existe ' + sel); e.click(); }, sel);
 const paso = () => page.evaluate(() => wzState.step);
+// El menú es PASO A PASO (8/11): elegir una opción avanza solo al apartado siguiente; en el último, «Añadir». elecciones = {idGrupo: idOpción}.
+const menuCompleto = async (elecciones = {}) => {
+  const n = await page.evaluate(() => (DB.menus.find(m => m.id === menuModalContext.menuId).grupos || []).length);
+  for(let i = 0; i < n; i++){
+    await page.evaluate((el, i) => { const m = DB.menus.find(m => m.id === menuModalContext.menuId), g = m.grupos[i]; const v = el[g.id] || g.opciones.find(o => o.disponible !== false).id; document.querySelector(`input[name="menu-grupo-${g.id}"][value="${v}"]`).click(); }, elecciones, i);
+    await w(380);
+  }
+  await page.evaluate(() => document.getElementById('mn-add').click()); await w(250);
+};
 
 await arrancar();
 
@@ -92,9 +101,9 @@ await caso('Cabecera: dirección, horario, teléfono Y email se ven; teléfono y
 });
 await caso('Entrada: con varios servicios se ELIGE (3 tarjetas, sin pestañas); con uno solo se entra directo; «Cambiar» vuelve con aviso si ya llevas algo', async () => {
   await arrancar();
-  const a = await page.evaluate(() => ({cards: [...document.querySelectorAll('.svc-card .svc-t')].map(e => e.textContent.trim()), tabs: document.querySelectorAll('.tabs, .tab-btn').length, wz: !!document.getElementById('wz'), cur: currentTab}));
+  const a = await page.evaluate(() => ({cards: [...document.querySelectorAll('.svc-tile .svc-t')].map(e => e.textContent.trim()), tabs: document.querySelectorAll('.tabs, .tab-btn').length, wz: !!document.getElementById('wz'), cur: currentTab}));
   assert.deepEqual(a.cards, ['Reservar mesa', 'Take Away', 'Delivery']); assert.equal(a.tabs, 0); assert.ok(!a.wz); assert.equal(a.cur, null);
-  await clic('.svc-card:nth-child(2)'); await w(400);
+  await clic('.svc-tile:nth-child(2)'); await w(400);
   const b = await page.evaluate(() => ({cur: currentTab, wz: !!document.getElementById('wz'), barra: document.querySelector('.svc-chip')?.innerText.trim().toLowerCase(), cambiar: !!document.querySelector('.svc-cambiar')}));
   assert.equal(b.cur, 'takeaway'); assert.ok(b.wz && b.cambiar); assert.match(b.barra, /take away/);
   await page.evaluate(() => volverAServicios()); await w(300);
@@ -103,7 +112,7 @@ await caso('Entrada: con varios servicios se ELIGE (3 tarjetas, sin pestañas); 
 });
 await caso('Entrada: un negocio que solo ofrece UN servicio entra directo, sin pantalla de elegir ni «Cambiar»', async () => {
   await page.evaluate((s, lang) => { s.business.tiposServicio = {mesa:false, takeaway:true, delivery:false}; window.DB = DB = s; businessInfoLoadedOnce = true; currentTab = null; renderApp(); }, semilla(), 'es'); await w(300);
-  const r = await page.evaluate(() => ({cur: currentTab, cards: document.querySelectorAll('.svc-card').length, cambiar: document.querySelectorAll('.svc-cambiar').length}));
+  const r = await page.evaluate(() => ({cur: currentTab, cards: document.querySelectorAll('.svc-tile').length, cambiar: document.querySelectorAll('.svc-cambiar').length}));
   assert.equal(r.cur, 'takeaway'); assert.equal(r.cards, 0); assert.equal(r.cambiar, 0);
 });
 await caso('PEDIDO: «Continuar» dice lo que falta (vacío, mínimo) y lleva el total; no deja pasar con el carrito vacío', async () => {
@@ -137,20 +146,82 @@ await caso('MENÚS y CARTA son dos vistas: los menús en tarjetas, la carta en c
   await page.type('#menu-search', 'zzzz'); await w(200);
   assert.ok(await page.evaluate(() => /Ningún plato coincide/.test(document.getElementById('menu-results').innerText)));
 });
-await caso('Un menú se abre entero en su hoja, con su total, y se añade al pedido con la opción elegida', async () => {
+await caso('Un menú se hace PASO A PASO en su hoja (primero → segundo → postre), con el total en el último botón, y se añade con la opción elegida', async () => {
   await arrancar(); await abrirTab('takeaway');
   await clic('.mn-card'); await w(250);
-  const h = await page.evaluate(() => ({hoja: document.getElementById('modal-overlay').classList.contains('is-sheet'), pasos: document.querySelectorAll('.sh-g').length, btn: document.getElementById('mn-add').textContent}));
-  assert.ok(h.hoja && h.pasos === 3 && /14,90/.test(h.btn), JSON.stringify(h));
-  await page.evaluate(() => document.querySelector('input[name="menu-grupo-2"][value="104"]').click()); await w(100);
-  assert.match(await page.$eval('#mn-add', e => e.textContent), /17,90/, 'el suplemento del entrecot se suma al botón');
+  const h = await page.evaluate(() => ({hoja: document.getElementById('modal-overlay').classList.contains('is-sheet'), grupos: document.querySelectorAll('.sh-g').length, visibles: [...document.querySelectorAll('.sh-g')].filter(f => !f.hidden).length, btn: document.getElementById('mn-add').textContent, apagado: document.getElementById('mn-add').disabled, atras: document.getElementById('mn-back').hidden}));
+  assert.ok(h.hoja && h.grupos === 3 && h.visibles === 1 && /Siguiente: Segundo/.test(h.btn) && h.apagado && h.atras, JSON.stringify(h));
+  await page.evaluate(() => document.querySelector('input[name="menu-grupo-1"][value="101"]').click()); await w(400);
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('.sh-g')].findIndex(f => !f.hidden)), 1, 'elegir el primero avanza solo al segundo');
+  await page.evaluate(() => document.querySelector('input[name="menu-grupo-2"][value="104"]').click()); await w(400);
+  await page.evaluate(() => document.querySelector('input[name="menu-grupo-3"][value="105"]').click()); await w(150);
+  assert.match(await page.$eval('#mn-add', e => e.textContent), /17,90/, 'en el último paso el botón lleva el total con el suplemento del entrecot');
   await clic('#mn-add'); await w(250);
   const c = await page.evaluate(() => ({lineas: cart.length, precio: cart[0].price, nombre: cart[0].modificadores.map(m => m.nombre).join('|'), cerrada: !document.getElementById('modal-overlay').classList.contains('active')}));
-  assert.equal(c.lineas, 1); assert.equal(c.precio, 17.9); assert.match(c.nombre, /Entrecot/); assert.ok(c.cerrada);
+  assert.equal(c.lineas, 1); assert.equal(c.precio, 17.9); assert.match(c.nombre, /Entrecot/); assert.match(c.nombre, /Flan/); assert.ok(c.cerrada);
+});
+await caso('Cada plato de la carta y cada opción de menú lleva su «i» con alérgenos (o dice que no hay), y la cantidad no pisa al plato de al lado', async () => {
+  await arrancar(); await abrirTab('takeaway');
+  await page.evaluate(() => { DB.allergens = {11: ['Gluten', 'Huevos', 'Lácteos'], 101: ['Sulfitos']}; menuSetModo('carta'); openMenuFolder('1:1'); }); await w(300);
+  const r = await page.evaluate(() => { const d = document.querySelectorAll('.dc'); return {n: d.length, conI: [...d].filter(x => x.querySelector('.dc-i')).length}; });
+  assert.ok(r.n >= 3 && r.n === r.conI, JSON.stringify(r));
+  await page.evaluate(() => document.querySelector('.dc[data-dish="11"] .dc-i').click()); await w(250);
+  let t = await page.evaluate(() => document.getElementById('modal-box').innerText);
+  assert.match(t, /Croquetas/); assert.match(t, /Gluten/); assert.match(t, /Huevos/); assert.match(t, /Lácteos/);
+  await page.evaluate(() => closeInfoModal()); await w(150);
+  await page.evaluate(() => document.querySelector('.dc[data-dish="12"] .dc-i').click()); await w(250);
+  t = await page.evaluate(() => document.getElementById('modal-box').innerText);
+  assert.match(t, /no tiene alérgenos declarados/i);
+  await page.evaluate(() => closeInfoModal()); await w(150);
+  // la cantidad (×N) y el «−» quedan DENTRO de su tarjeta, sin tocar el borde de la de al lado
+  await page.evaluate(() => { for(let i = 0; i < 12; i++) document.querySelector('.dc[data-dish="11"] .dc-main').click(); }); await w(300);
+  const g = await page.evaluate(() => { const c = document.querySelector('.dc[data-dish="11"]').getBoundingClientRect(), q = document.querySelector('.dc[data-dish="11"] .dc-q').getBoundingClientRect(); return {dentro: q.left >= c.left - 0.5 && q.right <= c.right + 0.5 && q.top >= c.top - 0.5 && q.bottom <= c.bottom + 0.5, q: document.querySelector('.dc[data-dish="11"] .dc-q').textContent}; });
+  assert.ok(g.dentro && g.q === '×12', JSON.stringify(g));
+  // opción de menú: «i» desplegable bajo la opción, sin cerrar la hoja ni perder lo elegido
+  await page.evaluate(() => { menuSetModo('menus'); }); await clic('.mn-card'); await w(250);
+  await page.evaluate(() => document.querySelector('.sh-g:not([hidden]) .o-i').click()); await w(150);
+  const o = await page.evaluate(() => ({hoja: document.getElementById('modal-overlay').classList.contains('active'), txt: document.querySelector('.o-inf:not([hidden])')?.innerText || ''}));
+  assert.ok(o.hoja && /Sulfitos|Alérgenos/i.test(o.txt), JSON.stringify(o));
+  await page.evaluate(() => { closeInfoModal(); wzReset(); });
+});
+await caso('Hora de recogida/entrega: SIN campo manual, solo huecos viables; si no queda ninguno, lo dice', async () => {
+  await arrancar(); await abrirTab('takeaway');
+  await page.evaluate(() => { menuSetModo('menus'); }); await clic('.mn-card'); await w(250); await menuCompleto();
+  await clic('#wz-next'); await w(300);
+  // Mañana: hoy ya no quedan huecos a ciertas horas del día y la prueba dependería del reloj.
+  await page.evaluate(() => { document.getElementById('o-date').value = addDaysStr(todayStr(), 1); updateOrderSlots(); });
+  const r = await page.evaluate(() => { const i = document.getElementById('o-time'); return {tipo: i.type, visible: i.offsetParent !== null, botones: document.querySelectorAll('#o-slots button').length, valor: i.value, enLista: [...document.querySelectorAll('#o-slots button')].some(b => b.textContent.includes(i.value))}; });
+  assert.ok(r.tipo === 'hidden' && !r.visible && r.botones >= 1 && r.valor && r.enLista, JSON.stringify(r));
+  await page.evaluate(() => { document.getElementById('o-date').value = '2000-01-01'; DB.business.diasCerrados = [{desde:'2000-01-01', hasta:'2000-01-01'}]; updateOrderSlots(); });
+  const v = await page.evaluate(() => ({vacio: document.querySelector('#o-slots .slots-vacio')?.textContent || '', valor: document.getElementById('o-time').value}));
+  assert.ok(/No quedan horas/.test(v.vacio) && v.valor === '', JSON.stringify(v));
+  await page.evaluate(() => { wzReset(); closeInfoModal && closeInfoModal(); });
+});
+await caso('NORMA: con sitio, la reserva sale «confirmada» al instante (no «te lo han de confirmar»); sin sitio o con señal pendiente, no', async () => {
+  const est = await page.evaluate(async () => {
+    db = {ref: () => ({push: () => Promise.resolve(), on(){}, off(){}, once: () => Promise.resolve({val: () => null}), set: () => Promise.resolve(), transaction: () => Promise.resolve({committed:true, snapshot:{val: () => 0}})})};
+    const out = {};
+    const mk = (opt, dep) => new Promise(res => { resRecienEnviada = null; resListenerAttached = true; reservaOptimista = opt; sendRequest({type:'reserva', resToken:'tokabcdef123456', date: todayStr(), time:'21:00', people:2, depositRequired: dep}, 'ok'); setTimeout(() => res(resRecienEnviada && resRecienEnviada.status), 30); });
+    out.conMesa = await mk(true, false); out.sinSitio = await mk(false, false); out.conSenal = await mk(true, true);
+    resToken = null; resRecienEnviada = null; resListenerAttached = false; reservaOptimista = false;
+    return out;
+  });
+  assert.equal(est.conMesa, 'confirmada', JSON.stringify(est)); assert.equal(est.sinSitio, 'pendiente', JSON.stringify(est)); assert.equal(est.conSenal, 'pendiente', JSON.stringify(est));
+  const ped = await page.evaluate(async () => {
+    const out = {};
+    const mk = (req) => { trackToken = null; trackRecienEnviadoHasta = 0; trackListenerAttached = true; sendRequest(Object.assign({type:'pedido', clientRef:'refabcdef123456'}, req), 'ok'); return new Promise(res => setTimeout(() => { renderTrackStatus(null); res(document.getElementById('app').innerText); }, 40)); };
+    out.efectivo = await mk({metodoPagoLocal:'efectivo'}); out.tarjetaOnline = await mk({});
+    trackToken = null; trackRecienEnviadoHasta = 0; trackListenerAttached = false; pedidoOptimista = false; lastTrackStatusData = null;
+    return out;
+  });
+  assert.match(ped.efectivo, /Pedido confirmado/i, 'un pedido en efectivo dentro de zona sale confirmado al instante: ' + ped.efectivo.slice(0, 120));
+  assert.match(ped.tarjetaOnline, /Hemos recibido/i, 'con el pago online por confirmar aún no: ' + ped.tarjetaOnline.slice(0, 120));
+  // estas pantallas de seguimiento cambian la página entera: se parte de cero para los casos siguientes
+  await page.goto('http://localhost:8950/reservagastrogoan.html', {waitUntil:'domcontentloaded'}); await w(600);
 });
 await caso('PEDIDO delivery: pide dirección y código postal, rechaza un CP fuera de zona y resume la entrega', async () => {
   await arrancar(); await abrirTab('delivery');
-  await page.evaluate(() => { menuSetModo('menus'); }); await clic('.mn-card'); await w(200); await clic('#mn-add'); await w(200);
+  await page.evaluate(() => { menuSetModo('menus'); }); await clic('.mn-card'); await w(200); await menuCompleto();
   await clic('#wz-next'); await w(300);
   assert.equal(await paso(), 2);
   await clic('#wz-next'); await w(150);
@@ -179,8 +250,7 @@ await caso('Efectos: el paso lleva su etiqueta «Paso N de 3» y la dirección d
   await page.setViewport({width: 390, height: 860});
   await arrancar(); await abrirTab('delivery');
   assert.match(await page.evaluate(() => document.querySelector('.wz-step:not([hidden]) .wz-eye').innerText.trim().toLowerCase()), /paso 1 de 3/);
-  await page.evaluate(() => { menuSetModo('menus'); document.querySelector('.mn-card').click(); }); await w(200);
-  await page.evaluate(() => document.getElementById('mn-add').click()); await w(200);
+  await page.evaluate(() => { menuSetModo('menus'); document.querySelector('.mn-card').click(); }); await w(200); await menuCompleto();
   await page.evaluate(() => document.getElementById('wz-next').click()); await w(200);
   assert.equal(await page.evaluate(() => document.querySelector('.wz-step:not([hidden])').dataset.dir), 'fw', 'ir adelante entra por la derecha');
   await page.evaluate(() => document.getElementById('wz-back').click()); await w(200);
@@ -282,19 +352,29 @@ await caso('Horario especial: la web usa las horas de ese día (no las de la sem
   });
   assert.equal(r.esp, '[{"abre":"21:00","cierra":"23:30"}]'); assert.equal(r.otro, 2); assert.equal(r.cierre, 0);
 });
-await caso('Zona de reparto: fuera de la lista no pide; con radio y sin ubicación del local no cierra el reparto a todos sino que queda «por verificar»', async () => {
+await caso('Zona de reparto SOLO por códigos postales (8/11): dentro pasa, fuera no deja pedir, con espacios vale, sin lista no restringe, y un radio antiguo se ignora', async () => {
   await arrancar();
   const r = await page.evaluate(async () => {
     const out = {};
-    out.dentro = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '28001', 'Calle X 1')).ok;
-    out.fuera = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '08001', 'Calle X 1')).ok;
-    out.espacios = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '28 001', 'x')).ok;
-    out.sinZona = (await checkDeliveryZone({cpList: [], radiusKm: 0}, '99999', 'x')).ok;
-    const sc = await checkDeliveryZone({cpList: [], radiusKm: 5}, '28001', 'Calle X 1');
-    out.sinCoord = [sc.ok, !!sc.pendienteVerificar];
+    out.dentro = (await checkDeliveryZone({cpList: ['28001']}, '28001')).ok;
+    out.fuera = (await checkDeliveryZone({cpList: ['28001']}, '08001')).ok;
+    out.espacios = (await checkDeliveryZone({cpList: ['28001']}, '28 001')).ok;
+    out.sinZona = (await checkDeliveryZone({cpList: []}, '99999')).ok;
+    out.radioViejo = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 50, lat: 40, lng: -3}, '08001')).ok;
+    out.sinHaversine = typeof haversineKm === 'undefined';
     return out;
   });
-  assert.deepEqual(r, {dentro: true, fuera: false, espacios: true, sinZona: true, sinCoord: [true, true]});
+  assert.deepEqual(r, {dentro: true, fuera: false, espacios: true, sinZona: true, radioViejo: false, sinHaversine: true});
+});
+await caso('Zona de reparto: el paso «Tus datos» avisa y NO deja avanzar con un código postal fuera de la lista', async () => {
+  await arrancar(); await abrirTab('delivery');
+  const r = await page.evaluate(() => {
+    const cp = document.getElementById('o-cp'); if(!cp) return {sinCampo: true};
+    cp.value = '08001'; checkCpLive();
+    const hint = document.getElementById('o-cp-hint').textContent;
+    return {hint};
+  });
+  assert.ok(!r.sinCampo, 'no hay campo de código postal en el pedido a domicilio'); assert.ok(/28001|fuera|zona/i.test(r.hint), JSON.stringify(r));
 });
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 await caso('Textos al día: ya no hay pestañas, así que ningún aviso manda al cliente a «la pestaña» (es/ca/en)', async () => {

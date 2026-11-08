@@ -21,7 +21,8 @@ const app = fs.readFileSync(path.join(raiz, 'js/app.js'), 'utf8');
 const tpv = fs.readFileSync(path.join(raiz, 'js/tpv.js'), 'utf8') + fs.readFileSync(path.join(raiz, 'js/tpv-sala.js'), 'utf8');
 const menu = fs.readFileSync(path.join(raiz, 'js/menu.js'), 'utf8');
 const publica = fs.readFileSync(path.join(raiz, 'reservagastrogoan.html'), 'utf8');
-const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8');
+// El análisis de platos del Panel vive desde el 8/11 en js/panel.js (antes en finance.js): se leen los dos.
+const finance = fs.readFileSync(path.join(raiz, 'js/finance.js'), 'utf8') + '\n' + fs.readFileSync(path.join(raiz, 'js/panel.js'), 'utf8');
 const hr = fs.readFileSync(path.join(raiz, 'js/hr.js'), 'utf8');
 const operations = fs.readFileSync(path.join(raiz, 'js/operations.js'), 'utf8');
 const idr = fs.readFileSync(path.join(raiz, 'js/idr.js'), 'utf8');
@@ -106,10 +107,11 @@ caso('"Platos más vendidos" del Panel de Control ordena por UNIDADES, no por di
   // 100 veces a 2€, que es justo el que cualquiera llamaría "más vendido".
   // Encima la tabla solo mostraba el importe, nunca las unidades, así que
   // no había forma de comprobarlo a simple vista.
-  const m = finance.match(/const productTotals = \{\};[\s\S]*?const topProducts = Object\.values\(productTotals\)[^;]*;/);
-  assert.ok(m, 'no se encontró el cálculo de productTotals/topProducts en finance.js');
-  assert.ok(m[0].includes('.units += (it.qty||1)') && m[0].includes('b.units-a.units'),
-    'topProducts sigue sin sumar/ordenar por unidades (it.qty) — puede seguir ordenando por dinero facturado');
+  // Desde el 8/11 el ranking vive en js/panel.js (dpAnalisisPintar): prod = unidades por plato, top = orden por unidades.
+  const m = finance.match(/const prod = \{\}, marg = \{\};[\s\S]*?const top = Object\.values\(prod\)[^;]*;/);
+  assert.ok(m, 'no se encontró el cálculo prod/top en js/panel.js');
+  assert.ok(m[0].includes('.units += q') && m[0].includes('b.units - a.units'),
+    'top sigue sin sumar/ordenar por unidades (it.qty) — puede seguir ordenando por dinero facturado');
 });
 
 caso('"Platos más vendidos" del Panel de Control agrupa por receta, no por el texto del nombre (evita el "Salmón"/"Salmon" duplicado)', () => {
@@ -120,12 +122,12 @@ caso('"Platos más vendidos" del Panel de Control agrupa por receta, no por el t
   // (platosStats, js/hr.js) ya agrupaba por recipeId con el nombre como
   // fallback — mismo criterio aquí para que los dos paneles coincidan sobre
   // los mismos datos.
-  const m = finance.match(/const dishKey = it => [^;]*;[\s\S]*?const topMargins = Object\.values\(marginTotals\)[\s\S]*?;/);
-  assert.ok(m, 'no se encontró dishKey/productTotals/marginTotals en finance.js');
-  assert.ok(m[0].includes("it.recipeId ? ('r'+it.recipeId) : ('m'+(it.name||''))"),
+  const m = finance.match(/const dishKey = it => [^;]*;[\s\S]*?const topM = Object\.values\(marg\)[\s\S]*?;/);
+  assert.ok(m, 'no se encontró dishKey/prod/marg en js/panel.js');
+  assert.ok(m[0].includes("it.recipeId ? ('r' + it.recipeId) : ('m' + (it.name || ''))"),
     'dishKey no agrupa por recipeId cuando existe — puede seguir separando el mismo plato por una diferencia de texto en el nombre');
-  assert.ok((m[0].match(/dishKey\(it\)/g)||[]).length >= 2,
-    'productTotals y/o marginTotals no usan dishKey — alguno de los dos sigue agrupando por el nombre a secas');
+  assert.ok((m[0].match(/dishKey\(it\)/g)||[]).length >= 1,
+    'prod/marg no usan dishKey — alguno de los dos sigue agrupando por el nombre a secas');
 });
 
 caso('"Análisis de Platos" arranca en "Últimos 30 días", la misma ventana que "Análisis de ventas" del Panel de Control', () => {
