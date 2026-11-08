@@ -186,8 +186,14 @@ const GE = (function(){
     const nombreActivo = activo ? activo.id.replace('ge-','') : null;
     const destino = (nombreActivo==='modulos' && !modulosAplica()) ? 'ventas' : nombreActivo;
     tab(TABS.includes(destino) ? destino : 'ventas');
+    // Entrar en Gestión Económica desde otra pantalla empieza arriba (tab() ya no sube si la pestaña es la misma).
+    if(typeof scrollContentToTop==='function') scrollContentToTop();
   }
   function tab(name){
+    // Solo se sube al principio al CAMBIAR de pestaña. Muchas acciones (guardar un gasto, marcar algo, cambiar un periodo) repintan la
+    // pestaña con tab(<la misma>) y antes devolvían al hostelero arriba del todo, perdiendo el sitio donde estaba trabajando.
+    const previa = document.querySelector('#view-economia .ge-tab-panel.active');
+    const cambiaDePestana = !previa || previa.id !== 'ge-' + name;
     document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===name));
     document.querySelectorAll('#view-economia .ge-tab-panel').forEach(el=>el.classList.remove('active'));
     document.getElementById('ge-'+name).classList.add('active');
@@ -202,7 +208,7 @@ const GE = (function(){
     if(name==='tesoreria') renderTesoreria();
     if(name==='bc') renderBC();
     if(name==='modulos') renderModulos();
-    if(typeof scrollContentToTop==='function') scrollContentToTop();
+    if(cambiaDePestana && typeof scrollContentToTop==='function') scrollContentToTop();
     requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
   }
 
@@ -2452,7 +2458,7 @@ const GE = (function(){
         {lbl:gl({es:'Base fiscal (sobre la que se calcula el impuesto)', ca:'Base fiscal (sobre la qual es calcula l\'impost)', en:'Tax base (what tax is computed on)'}), vals:M(i=>resultadoAntesImpMes(i,cdrYear)+ajusteF[i]), highlight:true, bold:true},
       ] : []),
       {lbl:`${impLbl} (${pct1((tipoImpuestoAño(cdrYear)*100))}%)`, vals:M(i=>-impuestoMes(i,cdrYear)), auto:true, help:'impuesto'},
-      {lbl:t('hr.cdr.netResult'), vals:M(i=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true, help:'neto', yoyFn:i=>resultadoMes(i,cdrYear-1)},
+      {lbl:t('hr.cdr.netResult'), vals:M(i=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true, neto:true, help:'neto', yoyFn:i=>resultadoMes(i,cdrYear-1)},
       // Autónomo/CB: lo que el titular se lleva no es gasto (ya ha tributado
       // por todo el beneficio de arriba). Se enseña DEBAJO del resultado,
       // para que vea lo que queda en el negocio después de pagarse.
@@ -2473,7 +2479,7 @@ const GE = (function(){
     rows.forEach(r=>{
       const total = r.vals.reduce((s,v)=>s+v,0);
       const q = [0,1,2,3].map(qi=>r.vals.slice(qi*3,qi*3+3).reduce((s,v)=>s+v,0));
-      const cls = r.highlight ? (r.isResult?'total':'highlight') : '';
+      const cls = r.highlight ? (r.isResult?'total':'highlight') + (r.neto ? ' neto' : '') : '';
       let yoyHtml = '';
       if(r.yoyFn){
         const prevTotal = getMeses().reduce((s,_,i)=>s+r.yoyFn(i),0);
@@ -3365,19 +3371,6 @@ const GE = (function(){
     return bueno ? {cls:'is-ok', icono:'<i class="ti ti-check" aria-hidden="true"></i>', txt:gl({es:'Dentro del objetivo', ca:'Dins de l\'objectiu', en:'On target'})}
                  : {cls:'is-ko', icono:'<i class="ti ti-x" aria-hidden="true"></i>', txt:gl({es:'Fuera del objetivo', ca:'Fora de l\'objectiu', en:'Off target'})};
   }
-  // Plantillas orientativas del sector (porcentaje de la facturación NETA, sin IVA). Suman 100.
-  const DIST_PLANTILLAS = {
-    carta:   {per:32, gf:18, mp:30, og:5, ben:15},
-    bar:     {per:28, gf:20, mp:27, og:5, ben:20},
-    rapida:  {per:25, gf:17, mp:33, og:8, ben:17},
-    alta:    {per:38, gf:20, mp:28, og:4, ben:10}
-  };
-  function aplicarPlantillaDist(k){
-    const pl = DIST_PLANTILLAS[k]; if(!pl) return;
-    config().distPct = Object.assign({}, pl); config().foodCostObj = pl.mp;
-    saveDB(); renderTesoreria();
-    showToast(gl({es:'Reparto aplicado. Ajústalo a tu negocio: son valores orientativos del sector.', ca:'Repartiment aplicat. Ajusta\'l al teu negoci: són valors orientatius del sector.', en:'Split applied. Adjust it to your business: these are typical sector values.'}), 5000);
-  }
   function teDiasHasta(fechaDMY){
     const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(fechaDMY || ''); if(!m) return null;
     const d = new Date(+m[3], +m[2]-1, +m[1], 23, 59), hoy = new Date();
@@ -3407,16 +3400,6 @@ const GE = (function(){
       closeBtn.className = closed ? 'btn btn-sm' : 'btn btn-sm btn-primary';
     }
     teConcEstado();
-    const plSel = document.getElementById('te-plantilla');
-    if(plSel){
-      plSel.setAttribute('aria-label', gl({es:'Plantilla orientativa del sector', ca:'Plantilla orientativa del sector', en:'Typical sector template'}));
-      plSel.innerHTML = `<option value="">${gl({es:'Plantilla orientativa…', ca:'Plantilla orientativa…', en:'Typical template…'})}</option>
-        <option value="carta">${gl({es:'Restaurante de carta', ca:'Restaurant de carta', en:'À la carte restaurant'})}</option>
-        <option value="bar">${gl({es:'Bar / cafetería', ca:'Bar / cafeteria', en:'Bar / café'})}</option>
-        <option value="rapida">${gl({es:'Comida rápida y para llevar', ca:'Menjar ràpid i per emportar', en:'Fast food and takeaway'})}</option>
-        <option value="alta">${gl({es:'Alta cocina', ca:'Alta cuina', en:'Fine dining'})}</option>`;
-    }
-
     const dp = distPctActual();
     const pct = {}; DIST_CLAVES.forEach(k => pct[k] = dp[k] / 100);
 
@@ -4880,7 +4863,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, aplicarPlantillaDist, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

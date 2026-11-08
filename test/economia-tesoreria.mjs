@@ -93,17 +93,16 @@ await caso('Reservas con las cuentas a mano: IVA = 1.000 − 500 − 105 = 395 �
   assert.ok(numero(r.grupo) >= 695, 'al menos IVA + IRPF'); assert.ok(r.kpi.some(k => /Para Hacienda/i.test(k) && k.includes(r.grupo.trim())), r.kpi.join(' | ')); assert.ok(r.colchon);
   assert.ok(r.kpi.some(k => /Coste primo/i.test(k) && /%/.test(k)), r.kpi.join(' | ')); await page.close();
 });
-await caso('Plantillas del sector: aplican un reparto redondo que suma 100 y sincronizan el food cost; avisos si el margen es corto', async () => {
+await caso('Reparto sin plantillas (8/11): ya no hay selector de «plantilla del sector»; cada negocio pone SUS porcentajes y siguen sumando 100 y avisando si el margen es corto', async () => {
   const {page} = await abrir(1280, 900);
   const r = await page.evaluate(async () => {
-    const esp = ms => new Promise(r => setTimeout(r, ms)); const out = {opciones: [...document.querySelectorAll('#te-plantilla option')].length};
-    const sel = document.getElementById('te-plantilla'); sel.value = 'bar'; sel.dispatchEvent(new Event('change', {bubbles: true})); await esp(300);
-    out.bar = ['per','gf','mp','og','ben'].map(k => DB.ge.config.distPct[k]); out.food = DB.ge.config.foodCostObj; out.selVuelve = document.getElementById('te-plantilla').value;
+    const esp = ms => new Promise(r => setTimeout(r, ms)); const out = {plantilla: !!document.getElementById('te-plantilla'), api: typeof GE.aplicarPlantillaDist};
     const el = document.getElementById('te-pct-per'); el.value = '60'; el.dispatchEvent(new Event('change', {bubbles: true})); await esp(300);
+    out.suma = ['per','gf','mp','og','ben'].map(k => DB.ge.config.distPct[k]).reduce((a, b) => a + b, 0);
     out.aviso = document.getElementById('te-avisos').textContent.trim();
     return out;
   });
-  assert.equal(r.opciones, 5); assert.deepEqual(r.bar, [28, 20, 27, 5, 20]); assert.equal(r.food, 27); assert.equal(r.selVuelve, ''); assert.match(r.aviso, /65/); await page.close();
+  assert.equal(r.plantilla, false); assert.equal(r.api, 'undefined'); assert.equal(r.suma, 100); assert.match(r.aviso, /65/); await page.close();
 });
 await caso('Conciliación: cuenta cierres + turnos sin cerrar, no pierde lo escrito al cambiar fechas, comisión y ✓/✗ con tolerancia de 1 €', async () => {
   const {page, errs} = await abrir(1280, 900);

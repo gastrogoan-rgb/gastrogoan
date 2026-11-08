@@ -1493,6 +1493,7 @@ function sendChatMessage(){
   saveDB();
   input.value = '';
   renderChatMessages();
+  markChatRead(currentChatChannel); updateChatBadge();
 }
 
 // Mensaje fijado por canal: queda arriba del todo hasta que alguien lo
@@ -1550,9 +1551,14 @@ function updateChatBadge(){
   if(!badge) return;
   let unread = 0;
   // Solo cuenta los canales visibles en el área actual (no avisa del área contraria).
+  // Mis propios mensajes NO cuentan (antes, al escribir en el chat te salía un «1» por lo que acababas de mandar), y con el panel
+  // abierto en ese canal tampoco: lo que llega mientras lo estás mirando ya lo estás leyendo.
+  const yo = getChatAuthor();
+  const panelAbierto = !!(document.getElementById('chat-panel') && document.getElementById('chat-panel').classList.contains('active'));
   visibleChatChannels().forEach(c => {
+    if(panelAbierto && c === currentChatChannel){ markChatRead(c); return; }
     const lastRead = localStorage.getItem('chatLastRead_'+c);
-    const count = (DB.chatMessages||[]).filter(m => m.channel===c && (!lastRead || m.ts > lastRead)).length;
+    const count = (DB.chatMessages||[]).filter(m => m.channel===c && String(m.authorId) !== String(yo) && (!lastRead || m.ts > lastRead)).length;
     unread += count;
   });
   if(unread > 0){
@@ -1934,7 +1940,13 @@ function scrollContentToTop(){
 function scrollActiveTabIntoView(rowEl){
   if(!rowEl) return;
   const active = rowEl.querySelector('.ge-tab.active');
-  if(active) active.scrollIntoView({block:'nearest', inline:'nearest', behavior:'smooth'});
+  // Solo se mueve la FILA hacia los lados. Con scrollIntoView la página entera también subía hasta enseñar la fila de pestañas: ese era
+  // el «salto arriba del todo» de Gestión Económica cada vez que se repintaba una pestaña estando más abajo.
+  if(active){
+    const r = rowEl.getBoundingClientRect(), a = active.getBoundingClientRect();
+    if(a.left < r.left) rowEl.scrollTo({left: rowEl.scrollLeft - (r.left - a.left) - 8, behavior: 'smooth'});
+    else if(a.right > r.right) rowEl.scrollTo({left: rowEl.scrollLeft + (a.right - r.right) + 8, behavior: 'smooth'});
+  }
   updateTabRowFade(rowEl);
 }
 // Mismo problema, uno más sutil: hasta que no se toca sin querer, nada

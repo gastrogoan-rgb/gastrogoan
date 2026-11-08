@@ -998,8 +998,13 @@ td.wrap{white-space:normal}
 .ge-grid tr.total td{background:var(--ink);color:#fff;font-weight:700}
 .ge-grid td.pos{color:var(--green)}
 .ge-grid td.neg{color:var(--red)}
-.ge-grid tr.total td.pos{color:var(--green)}
-.ge-grid tr.total td.neg{color:#ff8a8a}
+.ge-grid tr.total td.pos{color:#8FE3A0}   /* el verde oliva sobre tinta no se leía (2,2:1): sobre fondo oscuro, un verde vivo (≈ 11:1) */
+.ge-grid tr.total td.neg{color:#FF9A8A}
+.ge-grid tr.total td:first-child{background:var(--ink);color:#fff;border-left-color:#8FE3A0}
+/* La franja que de verdad importa: el RESULTADO NETO (lo que queda). Más alta, letra mayor y filetes de color. */
+.ge-grid tr.total.neto td{font-size:1.2em;padding-top:17px;padding-bottom:17px;border-top:3px solid #8FE3A0;border-bottom:3px solid #8FE3A0;letter-spacing:-.01em}
+.ge-grid tr.total.neto td.neg{border-top-color:#FF9A8A;border-bottom-color:#FF9A8A}
+.ge-grid tr.total.neto td:first-child{text-transform:uppercase;letter-spacing:.04em;font-size:1.05em}
 /* Cuenta de Resultados: con 12 meses + 4 trimestres + año, la tabla es
    ancha y hay que desplazarla — sin el concepto fijo, al llegar a las
    columnas de la derecha no se sabe ya qué fila se está mirando. Solo aquí
@@ -4845,7 +4850,6 @@ span.dt-punto{position:absolute;border-radius:50%}
 .te-avisos p{margin:0;font-size:13px;line-height:1.5;color:var(--body)}
 .te-avisos p + p{margin-top:8px}
 .te-avisos .ti{color:var(--amber-dark)}
-.te-plantilla select{min-height:36px;padding:0 10px;font-size:13px;border:1px solid var(--hair);border-radius:3px;background:#fff;font-family:var(--mono)}
 .te-barras{padding:16px 18px 6px}
 .te-barra-b{margin:0 0 14px}
 .te-barra-b small{display:block;margin:0 0 6px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
@@ -6199,8 +6203,6 @@ small{font-size:max(.8333em, 11px)}
 }
 /* Tesorería / Punto de equilibrio en móvil: la plantilla ocupa su ancho y los campos llegan a 44 px */
 @media (max-width:760px){
-  .te-plantilla{display:block;width:100%}
-  .te-plantilla select{width:100%;max-width:100%;min-height:44px;text-overflow:ellipsis}
   #ge-pe .ge-input-row input:not([readonly]){min-height:44px !important;height:44px !important}
 }
 /* Inversiones en móvil */
