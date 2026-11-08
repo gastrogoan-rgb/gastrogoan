@@ -78,6 +78,54 @@ await caso('Plano de sala: crear zona y mesas configuradas van juntas; las mesas
   await page.setViewport({width:1280, height:900});
 });
 
+await caso('Horario especial: un día con otras horas manda sobre la semana (reservas, aforo, TPV); un cierre gana; quitarlo vuelve al horario normal', async () => {
+  const r = await page.evaluate(async () => {
+    const out = {};
+    const fut = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const dia = fut(10);
+    DB.business.horario = defaultHorario().map(d => ({...d, abierto: true, modo: 'seguido', seguido: {ini: '13:00', fin: '16:00'}, turnos: [{ini: '', fin: ''}, {ini: '', fin: ''}]}));
+    DB.business.horariosEspeciales = []; DB.business.diasCerrados = [];
+    renderMiNegocio();
+    out.normal = JSON.stringify(getTurnosForDate(dia));
+    document.getElementById('he-desde').value = dia;
+    document.getElementById('he-motivo').value = 'Nochevieja';
+    document.getElementById('he-t1-ini').value = '20:00'; document.getElementById('he-t1-fin').value = '23:00';
+    anadirHorarioEspecial();
+    out.guardados = DB.business.horariosEspeciales.length;
+    out.especial = JSON.stringify(getTurnosForDate(dia));
+    out.otroDia = JSON.stringify(getTurnosForDate(fut(11)));
+    out.horarioDia = JSON.stringify(horarioDiaDe(dia).turnos);
+    out.enLista = document.body.innerText.includes('Nochevieja');
+    out.espejo = CAMPOS_PUBLICOS_DEL_NEGOCIO.includes('horariosEspeciales');
+    // aforo por turno usa el horario especial
+    out.aforoTurnos = (getAforoInfoForDate(dia) || []).map(t => t.abre + '-' + t.cierra).join(',');
+    // un cierre gana
+    DB.business.diasCerrados = [{id: 'c1', desde: dia, hasta: dia, motivo: 'x'}];
+    out.cierreGana = JSON.stringify(getTurnosForDate(dia));
+    DB.business.diasCerrados = [];
+    // validaciones: sin horas no guarda; solape no guarda
+    renderMiNegocio();
+    document.getElementById('he-desde').value = fut(20);
+    anadirHorarioEspecial(); out.sinHoras = DB.business.horariosEspeciales.length;
+    document.getElementById('he-desde').value = dia;
+    document.getElementById('he-t1-ini').value = '12:00'; document.getElementById('he-t1-fin').value = '14:00';
+    anadirHorarioEspecial(); out.mismoDia = DB.business.horariosEspeciales.length;
+    quitarHorarioEspecial(DB.business.horariosEspeciales[0].id);
+    out.vuelta = JSON.stringify(getTurnosForDate(dia));
+    return out;
+  });
+  assert.equal(r.normal, '[{"abre":"13:00","cierra":"16:00"}]');
+  assert.equal(r.guardados, 1);
+  assert.equal(r.especial, '[{"abre":"20:00","cierra":"23:00"}]');
+  assert.equal(r.otroDia, '[{"abre":"13:00","cierra":"16:00"}]');
+  assert.equal(r.horarioDia, '[{"ini":"20:00","fin":"23:00"}]');
+  assert.ok(r.enLista); assert.ok(r.espejo);
+  assert.equal(r.aforoTurnos, '20:00-23:00');
+  assert.equal(r.cierreGana, '[]');
+  assert.equal(r.sinHoras, 1); assert.equal(r.mismoDia, 1);
+  assert.equal(r.vuelta, '[{"abre":"13:00","cierra":"16:00"}]');
+});
+
 // (las demás secciones de la ronda se añaden debajo)
 
 assert.equal(errs.length, 0, 'errores de página: ' + errs.join(' | '));

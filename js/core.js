@@ -8308,7 +8308,7 @@ async function ggPintarColoresDelLogo(){
 const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   'name', 'address', 'phone', 'email', 'description', 'logo', 'brandColor', 'brandColor2',
   'tipo', 'anyo', 'web', 'ig', 'fb', 'gmaps', 'tiktok',
-  'horario', 'diasCerrados', 'aforo', 'mesasInterior', 'mesasTerraza',
+  'horario', 'diasCerrados', 'horariosEspeciales', 'aforo', 'mesasInterior', 'mesasTerraza',
   'cartaAuto', 'tiposServicio',
   'requireDeposit', 'depositAmount', 'depositType', 'depositMinPeople', 'depositInstructions',
   // Grupos: a partir de X personas la web no deja reservar y pide llamar.

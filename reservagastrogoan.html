@@ -2381,12 +2381,19 @@ function cierreExcepcionalDe(dateStr){
   if(!Array.isArray(lista) || !dateStr) return null;
   return lista.find(c => c && c.desde && dateStr >= c.desde && dateStr <= (c.hasta || c.desde)) || null;
 }
+// Horario ESPECIAL (8/11): un día con otras horas que las de su semana. Mismo formato que un día normal; un cierre siempre gana.
+function horarioEspecialDe(dateStr){
+  const lista = (DB.business || {}).horariosEspeciales;
+  if(!Array.isArray(lista) || !dateStr) return null;
+  return lista.find(h => h && h.desde && dateStr >= h.desde && dateStr <= (h.hasta || h.desde)) || null;
+}
 function getTurnosForDate(dateStr){
   if(cierreExcepcionalDe(dateStr)) return [];
+  const esp = horarioEspecialDe(dateStr);
   const horario = (DB.business || {}).horario;
-  if(!horario || horario.length !== 7) return null;
+  if(!esp && (!horario || horario.length !== 7)) return null;
   const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
-  const d = horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
+  const d = esp || horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
   if(!d || d.abierto === false) return [];
   const turnos = [];
   const add = (ini, fin) => { if(ini && fin && fin > ini) turnos.push({abre:ini, cierra:fin}); };

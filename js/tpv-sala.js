@@ -804,7 +804,7 @@ function renderTpvPendingOnline(){
 // Aviso de «última hora»: si el turno cierra en menos de 30 minutos, se ve arriba del todo.
 function renderLastCallBanner(){
   try{
-    const horarioHoy = (DB.business.horario || [])[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+    const horarioHoy = horarioDiaDe(todayStr());   // incluye cierres y horario especial de hoy
     if(!horarioHoy || horarioHoy.abierto === false) return '';
     const tramos = horarioHoy.modo === 'seguido' ? [horarioHoy.seguido] : (horarioHoy.turnos || []);
     const toMin = hhmm => { const [h, m] = (hhmm || '').split(':').map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };

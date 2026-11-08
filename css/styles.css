@@ -5628,6 +5628,19 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dash-hero-side dt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .dash-hero-side dd{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink);margin:0;font-variant-numeric:tabular-nums}
 
+/* Horario especial (8/11): formulario en rejilla, sin huecos; el botón sube a la fila de los servicios. */
+.he-horas{font-family:var(--mono);font-size:13px;color:var(--ink)}
+.he-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px;align-items:end;margin:10px 0}
+.he-form .field{margin:0}
+.he-motivo{grid-column:span 1}
+.he-par{display:flex;align-items:center;gap:6px}
+.he-par input{min-width:0;flex:1}
+.he-ok{display:flex;align-items:end}
+@media (max-width:640px){
+  .he-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .he-motivo,.he-ok{grid-column:1/-1}
+}
+
 /* Mi Negocio · plano de sala (8/11): crear zona y mesas configuradas son UNA sola cosa.
    Las mesas van en rejilla (3 por fila en PC) y «plazas» lleva su rótulo dentro de cada
    mesa, no suelto en una cabecera. Se parte en filas solo cuando no cabe. */

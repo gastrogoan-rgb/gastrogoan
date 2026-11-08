@@ -269,6 +269,19 @@ await caso('Objetivos táctiles: Continuar, Atrás, selector y botones de plato 
   await page.setViewport({width: 1280, height: 900});
   assert.deepEqual(r, []);
 });
+await caso('Horario especial: la web usa las horas de ese día (no las de la semana) y un cierre gana', async () => {
+  await arrancar();
+  const r = await page.evaluate(() => {
+    const f = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const dia = f(9);
+    DB.business.horariosEspeciales = [{id:'h1', desde:dia, hasta:dia, motivo:'Nochevieja', abierto:true, modo:'turnos', turnos:[{ini:'21:00', fin:'23:30'}]}];
+    const out = {esp: JSON.stringify(getTurnosForDate(dia)), otro: getTurnosForDate(f(10)).length};
+    DB.business.diasCerrados = [{id:'c', desde:dia, hasta:dia}];
+    out.cierre = getTurnosForDate(dia).length;
+    return out;
+  });
+  assert.equal(r.esp, '[{"abre":"21:00","cierra":"23:30"}]'); assert.equal(r.otro, 2); assert.equal(r.cierre, 0);
+});
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 await caso('Textos al día: ya no hay pestañas, así que ningún aviso manda al cliente a «la pestaña» (es/ca/en)', async () => {
   const r = await page.evaluate(() => ['es','ca','en'].map(l => { setLang(l); return [t('resManage.cancelled.msg'), t('confirm.loseCart')].join(' | '); }));

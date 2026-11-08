@@ -5225,6 +5225,74 @@ function quitarDiaCerrado(id){
   if(typeof syncPublicMirror === 'function') syncPublicMirror();
   renderMiNegocio();
 }
+/* Horario especial (8/11): un día —o unos días— en que abres con OTRAS horas que las de tu semana (una víspera, un evento,
+   un festivo con servicio reducido). Se guarda con el mismo formato que un día de la semana (ver horarioEspecialDe en menu.js),
+   así que reservas, pedidos, aforo por turno y los avisos del TPV lo usan sin más. Si un día también está en «cerrados», el cierre gana. */
+function renderHorarioEspecialHtml(){
+  const lista = [...((DB.business && DB.business.horariosEspeciales) || [])].sort((a, b) => (a.desde || '').localeCompare(b.desde || ''));
+  const hoy = todayStr();
+  const vigentes = lista.filter(c => (c.hasta || c.desde) >= hoy), pasados = lista.filter(c => (c.hasta || c.desde) < hoy);
+  const fmt = d => { try{ return new Date(d + 'T00:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'}); }catch(e){ return d; } };
+  const horas = c => (c.turnos || []).filter(x => x && x.ini && x.fin).map(x => escapeHtml(x.ini + ' – ' + x.fin)).join('  ·  ');
+  const fila = c => `<li class="dc-fila"><span class="dc-fechas"><i class="ti ti-clock-edit"></i> ${escapeHtml(c.hasta && c.hasta !== c.desde ? fmt(c.desde) + ' → ' + fmt(c.hasta) : fmt(c.desde))}</span><span class="he-horas">${horas(c)}</span>${c.motivo ? `<span class="dc-motivo">${escapeHtml(c.motivo)}</span>` : '<span class="dc-motivo"></span>'}<button type="button" class="btn btn-sm btn-icon" onclick="quitarHorarioEspecial('${escapeJsAttr(String(c.id))}')" data-tip="${escapeHtml(gl({es:'Quitar', ca:'Treure', en:'Remove'}))}" aria-label="${escapeHtml(gl({es:'Quitar este horario especial', ca:'Treure aquest horari especial', en:'Remove this special schedule'}))}"><i class="ti ti-trash"></i></button></li>`;
+  return `
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0 16px">
+    <h4 style="margin-top:0"><i class="ti ti-clock-edit"></i> ${escapeHtml(gl({es:'Horario especial', ca:'Horari especial', en:'Special hours'}))}</h4>
+    <p style="font-size:13px;color:var(--muted)">${escapeHtml(gl({es:'Un día en que abres con otras horas que las de siempre (una víspera, un evento, un festivo con servicio reducido). Ese día, la web de reservas, los pedidos online, el aforo y el TPV usan este horario en lugar del de tu semana.', ca:'Un dia en què obres amb altres hores que les de sempre (una vigília, un esdeveniment, un festiu amb servei reduït). Aquell dia, la web de reserves, les comandes en línia, l\'aforament i el TPV fan servir aquest horari en lloc del de la setmana.', en:'A day when you open at different hours than usual (an eve, an event, a holiday with reduced service). That day the booking site, online orders, capacity and the POS use these hours instead of your weekly ones.'}))}</p>
+    ${vigentes.length ? `<ul class="dc-lista">${vigentes.map(fila).join('')}</ul>` : `<p class="txt-xs" style="color:var(--muted)">${escapeHtml(gl({es:'No hay ningún horario especial programado.', ca:'No hi ha cap horari especial programat.', en:'No special hours scheduled.'}))}</p>`}
+    <div class="he-form">
+      <div class="field"><label for="he-desde">${escapeHtml(gl({es:'Día (o desde)', ca:'Dia (o des de)', en:'Day (or from)'}))}</label><input type="date" id="he-desde" min="${hoy}"></div>
+      <div class="field"><label for="he-hasta">${escapeHtml(gl({es:'Hasta (opcional)', ca:'Fins (opcional)', en:'Until (optional)'}))}</label><input type="date" id="he-hasta" min="${hoy}"></div>
+      <div class="field he-motivo"><label for="he-motivo">${escapeHtml(gl({es:'Motivo (opcional)', ca:'Motiu (opcional)', en:'Reason (optional)'}))}</label><input type="text" id="he-motivo" maxlength="60" placeholder="${escapeHtml(gl({es:'Nochevieja, evento privado…', ca:'Cap d\'any, esdeveniment privat…', en:'New Year\'s Eve, private event…'}))}"></div>
+      <div class="field"><label for="he-t1-ini">${escapeHtml(gl({es:'Servicio 1', ca:'Servei 1', en:'Service 1'}))}</label><div class="he-par"><input type="time" id="he-t1-ini" aria-label="${escapeHtml(gl({es:'Abre', ca:'Obre', en:'Opens'}))}"><span>–</span><input type="time" id="he-t1-fin" aria-label="${escapeHtml(gl({es:'Cierra', ca:'Tanca', en:'Closes'}))}"></div></div>
+      <div class="field"><label for="he-t2-ini">${escapeHtml(gl({es:'Servicio 2 (si partes el día)', ca:'Servei 2 (si parteixes el dia)', en:'Service 2 (if split)'}))}</label><div class="he-par"><input type="time" id="he-t2-ini" aria-label="${escapeHtml(gl({es:'Abre', ca:'Obre', en:'Opens'}))}"><span>–</span><input type="time" id="he-t2-fin" aria-label="${escapeHtml(gl({es:'Cierra', ca:'Tanca', en:'Closes'}))}"></div></div>
+      <div class="he-ok"><button type="button" class="btn btn-sm btn-primary" onclick="anadirHorarioEspecial()"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Añadir horario especial', ca:'Afegir horari especial', en:'Add special hours'}))}</button></div>
+    </div>
+    ${pasados.length ? `<details class="dc-pasados"><summary>${escapeHtml(gl({es:'Horarios especiales pasados', ca:'Horaris especials passats', en:'Past special hours'}))} (${pasados.length})</summary><ul class="dc-lista">${pasados.map(fila).join('')}</ul></details>` : ''}`;
+}
+function anadirHorarioEspecial(){
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  const desde = v('he-desde'); let hasta = v('he-hasta');
+  const motivo = v('he-motivo').slice(0, 60);
+  const msg = (es, ca, en) => showToast(gl({es, ca, en}));
+  if(!desde){ msg('Pon el día del horario especial.', 'Posa el dia de l\'horari especial.', 'Enter the day of the special hours.'); return; }
+  if(!hasta) hasta = desde;
+  if(hasta < desde){ msg('La fecha final no puede ser anterior a la inicial.', 'La data final no pot ser anterior a la inicial.', 'The end date cannot be earlier than the start date.'); return; }
+  const turnos = [];
+  for(const n of [1, 2]){
+    const ini = v('he-t' + n + '-ini'), fin = v('he-t' + n + '-fin');
+    if(!ini && !fin) continue;
+    if(!ini || !fin){ msg('Cada servicio necesita hora de apertura y de cierre.', 'Cada servei necessita hora d\'obertura i de tancament.', 'Each service needs an opening and a closing time.'); return; }
+    if(ini === fin){ msg('La hora de apertura y la de cierre no pueden ser la misma.', 'L\'hora d\'obertura i la de tancament no poden ser la mateixa.', 'Opening and closing times cannot be the same.'); return; }
+    turnos.push({ini, fin});
+  }
+  if(!turnos.length){ msg('Pon al menos un servicio con su hora de apertura y de cierre.', 'Posa almenys un servei amb la seva hora d\'obertura i de tancament.', 'Enter at least one service with opening and closing times.'); return; }
+  // Con dos servicios, el segundo no puede empezar antes de que acabe el primero (se pisarían en el aforo por turno).
+  if(turnos.length === 2){
+    const m = x => { const [h, mi] = x.split(':').map(Number); return h * 60 + mi; };
+    const [a, b] = turnos;
+    if(m(a.fin) > m(a.ini) && m(b.ini) < m(a.fin)){ msg('Los dos servicios se pisan: el segundo debe empezar cuando acaba el primero.', 'Els dos serveis es trepitgen: el segon ha de començar quan acaba el primer.', 'The two services overlap: the second must start after the first ends.'); return; }
+  }
+  if(!Array.isArray(DB.business.horariosEspeciales)) DB.business.horariosEspeciales = [];
+  // Dos horarios especiales en el mismo día serían ambiguos: se avisa en vez de elegir uno en silencio.
+  const choca = DB.business.horariosEspeciales.some(h => h && h.desde && desde <= (h.hasta || h.desde) && hasta >= h.desde);
+  if(choca){ msg('Ya hay un horario especial en esas fechas. Quítalo antes de poner otro.', 'Ja hi ha un horari especial en aquestes dates. Treu-lo abans de posar-ne un altre.', 'There is already special hours on those dates. Remove it before adding another.'); return; }
+  const afectadas = (DB.reservations || []).filter(r => r.date >= desde && r.date <= hasta && r.status !== 'cancelada' && r.status !== 'cancelled').length;
+  DB.business.horariosEspeciales.push({id: genId(), desde, hasta, motivo, abierto: true, modo: 'turnos', seguido: {ini: '', fin: ''}, turnos});
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  renderMiNegocio();
+  showToast(afectadas
+    ? gl({es:'Horario especial guardado. Ojo: hay ' + afectadas + ' reserva(s) en esas fechas; revisa que encajen.', ca:'Horari especial desat. Compte: hi ha ' + afectadas + ' reserva(es) en aquestes dates; revisa que hi encaixin.', en:'Special hours saved. Note: there are ' + afectadas + ' booking(s) on those dates; check they still fit.'})
+    : gl({es:'Horario especial guardado.', ca:'Horari especial desat.', en:'Special hours saved.'}));
+}
+function quitarHorarioEspecial(id){
+  DB.business.horariosEspeciales = (DB.business.horariosEspeciales || []).filter(c => String(c.id) !== String(id));
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  renderMiNegocio();
+}
+
 function renderHorarioRows(horario){
   horario = horario && horario.length===7 ? horario.map(migrateHorarioDia) : defaultHorario();
   const cards = horario.map((d,i) => {
@@ -7413,6 +7481,7 @@ function renderMiNegocio(){
       <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc2')}</p>
       <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
       ${renderDiasCerradosHtml()}
+      ${renderHorarioEspecialHtml()}
     </div>
 
     <div class="card mn-grid-full">
