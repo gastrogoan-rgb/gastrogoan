@@ -7268,10 +7268,11 @@ function renderMiNegocio(){
       <h4><i class="ti ti-building-bank"></i> ${t('mn.fiscal.title')}</h4>
       <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">${t('mn.fiscal.desc')}</p>
       ${b.fiscalFijado ? `<p class="mn-bloqueo"><i class="ti ti-lock"></i> <span>${gl({es:'La forma jurídica y el régimen los fija GastroGoan al darte de alta, según lo que declara tu gestoría: de ellos depende cómo se calcula tu impuesto. Si ha cambiado (por ejemplo, pasas de autónomo a sociedad), pídenoslo y pulsa «Comprobar cambios».', ca:'La forma jurídica i el règim els fixa GastroGoan en donar-te d\'alta, segons el que declara la teva gestoria: d\'ells depèn com es calcula el teu impost. Si ha canviat (per exemple, passes d\'autònom a societat), demana-ho\'ns i prem «Comprovar canvis».', en:'The legal form and tax regime are set by GastroGoan when you sign up, based on what your accountant files: your tax calculation depends on them. If it changed (for example, from self-employed to company), ask us and press «Check for changes».'})}</span> <button type="button" class="btn btn-sm" onclick="refrescarFiscalDeLicencia()"><i class="ti ti-refresh"></i> ${gl({es:'Comprobar cambios', ca:'Comprovar canvis', en:'Check for changes'})}</button></p>` : ''}
+      ${!b.fiscalFijado ? `<p class="mn-bloqueo mn-bloqueo-aviso"><i class="ti ti-lock"></i> <span>${gl({es:'Aún no los ha fijado GastroGoan. La forma jurídica y el régimen no se eligen aquí: los pone GastroGoan al darte de alta, según lo que declara tu gestoría (de ellos depende cómo se calcula tu impuesto). Escríbenos y, cuando los hayamos puesto, pulsa «Comprobar cambios».', ca:'Encara no els ha fixat GastroGoan. La forma jurídica i el règim no s\'trien aquí: els posa GastroGoan en donar-te d\'alta, segons el que declara la teva gestoria (d\'ells depèn com es calcula el teu impost). Escriu-nos i, quan els hàgim posat, prem «Comprovar canvis».', en:'GastroGoan has not set them yet. The legal form and tax regime are not chosen here: GastroGoan sets them when you sign up, based on what your accountant files (your tax calculation depends on them). Write to us and, once we have set them, press «Check for changes».'})}</span> <button type="button" class="btn btn-sm" onclick="refrescarFiscalDeLicencia()"><i class="ti ti-refresh"></i> ${gl({es:'Comprobar cambios', ca:'Comprovar canvis', en:'Check for changes'})}</button></p>` : ''}
       <div class="field-row">
         <div class="field">
           <label>${t('mn.fiscal.forma')}</label>
-          <select id="mn-forma-juridica" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
+          <select id="mn-forma-juridica" onchange="saveBusiness(true);renderMiNegocio()" disabled>
             <option value="" ${b.formaJuridica?'':'selected'} disabled>${t('mn.fiscal.chooseForma')}</option>
             <option value="autonomo" ${b.formaJuridica==='autonomo'?'selected':''}>${t('mn.fiscal.autonomo')}</option>
             <option value="cb" ${b.formaJuridica==='cb'?'selected':''}>${t('mn.fiscal.cb')}</option>
@@ -7282,7 +7283,7 @@ function renderMiNegocio(){
         ${b.formaJuridica==='autonomo' ? `
         <div class="field">
           <label>${t('mn.fiscal.regimen')}</label>
-          <select id="mn-regimen-fiscal" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
+          <select id="mn-regimen-fiscal" onchange="saveBusiness(true);renderMiNegocio()" disabled>
             <option value="" ${b.regimenFiscal?'':'selected'} disabled>${t('mn.fiscal.chooseRegimen')}</option>
             <option value="directa" ${b.regimenFiscal==='directa'?'selected':''}>${t('mn.fiscal.directa')}</option>
             <option value="modulos" ${b.regimenFiscal==='modulos'?'selected':''}>${t('mn.fiscal.modulos')}</option>
@@ -7290,7 +7291,7 @@ function renderMiNegocio(){
         </div>
         ${b.regimenFiscal==='directa' ? `<div class="field">
           <label>${t('mn.fiscal.modalidad')}</label>
-          <select id="mn-modalidad-directa" onchange="saveBusiness(true)"${b.fiscalFijado ? ' disabled' : ''}>
+          <select id="mn-modalidad-directa" onchange="saveBusiness(true)" disabled>
             <option value="simplificada" ${b.modalidadDirecta!=='normal'?'selected':''}>${t('mn.fiscal.simplificada')}</option>
             <option value="normal" ${b.modalidadDirecta==='normal'?'selected':''}>${t('mn.fiscal.normal')}</option>
           </select>
@@ -7302,7 +7303,7 @@ function renderMiNegocio(){
       </div>
       ${(b.formaJuridica==='autonomo' || b.formaJuridica==='cb') ? `<div class="field-row"><div class="field">
           <label>${gl({es:'Comunidad autónoma (escala del IRPF)', ca:'Comunitat autònoma (escala de l\'IRPF)', en:'Region (income-tax scale)'})}</label>
-          <select id="mn-territorio" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
+          <select id="mn-territorio" onchange="saveBusiness(true);renderMiNegocio()" disabled>
             ${fiscalTerritoriosLista().map(k => `<option value="${k}" ${(b.territorio||'general')===k?'selected':''}>${FISCAL_TERRITORIOS[k]()}</option>`).join('')}
           </select>
           <div class="txt-xs" style="color:var(--muted);margin-top:4px">${gl({es:'Cada comunidad tiene su escala. Solo Cataluña está cargada y verificada; para el resto se usa una escala general de referencia (la previsión lo avisa).', ca:'Cada comunitat té la seva escala. Només Catalunya està carregada i verificada; per a la resta s\'usa una escala general de referència (la previsió ho avisa).', en:'Each region has its own scale. Only Catalonia is loaded and verified; the rest use a reference general scale (the forecast warns you).'})}</div>
@@ -7489,26 +7490,19 @@ function renderMiNegocio(){
       </div>` : ''}
       <h4 style="margin:16px 0 4px"><i class="ti ti-layout-grid"></i> ${t('mn.ops.floorPlan')}</h4>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.floorPlanDesc')}</p>
-      <div class="field-row">
+      <div class="mn-zona-nueva">
         <div class="field">
-          <label>${t('mn.ops.zoneName')}</label>
+          <label for="mn-zona-nombre">${t('mn.ops.zoneName')}</label>
           <input type="text" id="mn-zona-nombre" placeholder="${t('mn.ops.zoneNamePh')}">
         </div>
         <div class="field">
-          <label>${t('mn.ops.tableCount')}</label>
+          <label for="mn-zona-cantidad">${t('mn.ops.tableCount')}</label>
           <input type="number" id="mn-zona-cantidad" min="1" max="50" value="4">
         </div>
+        <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> ${t('mn.ops.createZone')}</button>
       </div>
       <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${escapeHtml(gl({es:'Cada mesa nace con ' + MESA_PLAZAS_DEFECTO + ' plazas; ajusta las de cada una en la lista de abajo (la web de reservas las usa para saber qué mesa le va a cada grupo).', ca:'Cada taula neix amb ' + MESA_PLAZAS_DEFECTO + ' places; ajusta les de cadascuna a la llista de sota (la web de reserves les fa servir per saber quina taula va a cada grup).', en:'Each table starts with ' + MESA_PLAZAS_DEFECTO + ' seats; adjust each one in the list below (the booking site uses them to know which table fits each party).'}))}</p>
-      <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> ${t('mn.ops.createZone')}</button>
-
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <h4 style="margin:0 0 8px"><i class="ti ti-list-details"></i> ${t('mn.ops.configuredTables')}</h4>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.configuredTablesDesc')}</p>
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px;padding:0 78px 0 0">
-        <span style="flex:1"></span>
-        <span style="width:64px;font-size:11px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase">${t('mn.ops.seatsPerTable')}</span>
-      </div>
+      <div class="mn-mesas-cab"><i class="ti ti-list-details"></i> ${t('mn.ops.configuredTables')} <span>${t('mn.ops.configuredTablesDesc')}</span></div>
       <div id="mn-mesas-list"></div>
       <div id="mn-aforo-warning"></div>
     </div>
@@ -7561,14 +7555,14 @@ function renderMesasConfigList(){
       ${z ? `<button class="btn btn-sm btn-icon" style="flex-shrink:0" onclick="addTableToZona('${escapeJsAttr(z)}')" title="${t('mn.ops.addTableToZone')}"><i class="ti ti-plus"></i></button>` : ''}
       ${z ? `<button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="deleteZonaCompleta('${escapeJsAttr(z)}')" title="${t('mn.ops.deleteWholeZone')}"><i class="ti ti-trash"></i></button>` : ''}
     </div>`;
-    html += tables.map(t2 => {
+    html += '<div class="mn-mesas-grid">' + tables.map(t2 => {
       return `
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="text" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" style="flex:1;min-width:0;padding:6px 8px;font-size:13px" placeholder="${t('mn.ops.tableNamePh')}">
-        <input type="number" min="1" max="50" required value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" style="width:52px;flex-shrink:0;padding:6px 4px;font-size:13px;text-align:center;${t2.plazas?'':'border-color:var(--red);background:var(--red-l)'}" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}" aria-invalid="${!t2.plazas}">
-        <button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
+      <div class="mn-mesa">
+        <input type="text" class="mn-mesa-nombre" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" placeholder="${t('mn.ops.tableNamePh')}" aria-label="${t('mn.ops.tableNamePh')}">
+        <label class="mn-mesa-plazas${t2.plazas?'':' falta'}"><span>${t('mn.ops.seatsPerTable')}</span><input type="number" min="1" max="50" required value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}" aria-invalid="${!t2.plazas}"></label>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}" aria-label="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
       </div>`;
-    }).join('');
+    }).join('') + '</div>';
   });
   const sinPlazas = DB.tables.filter(tb => !tb.plazas).length;
   if(sinPlazas) html = `<div class="card" style="border-color:var(--red);background:var(--red-l);padding:10px 12px;margin:8px 0;font-size:13px"><strong>${t('mn.ops.tablesWithoutSeats').replace('${n}', sinPlazas)}</strong></div>` + html;
@@ -8306,7 +8300,14 @@ async function saveBusiness(silent){
     if(!DB.business.pedidos) DB.business.pedidos = {};
     DB.business.pedidos.leadTimeMin = DB.business.leadTimeMinPedidos;
   }
-  if(el('mn-require-manual-confirm-from')) DB.business.reservaConfirmManualDesde = Math.max(1, parseInt(el('mn-require-manual-confirm-from').value) || 1);
+  // La casilla manda: si está desmarcada el valor es 0 aunque el campo del número
+  // siga en pantalla (toggleReservaConfirmManual guarda ANTES de repintar, y leer
+  // el campo volvía a dejar el valor en ≥1: la casilla no se podía desmarcar).
+  if(el('mn-require-manual-confirm')){
+    DB.business.reservaConfirmManualDesde = el('mn-require-manual-confirm').checked
+      ? Math.max(1, parseInt((el('mn-require-manual-confirm-from')||{}).value) || DB.business.reservaConfirmManualDesde || 8)
+      : 0;
+  }
   if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked && pagoOnlineActivo;
   if(el('mn-deposit-amount')) DB.business.depositAmount = Math.max(0, parseFloat(el('mn-deposit-amount').value) || 0) || '';
   if(el('mn-deposit-type')) DB.business.depositType = el('mn-deposit-type').value;

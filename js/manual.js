@@ -6061,7 +6061,8 @@ function manualMatches(){
 // Con texto en el buscador la portada cede el sitio a la lista de temas que lo contienen (de cualquier grupo).
 function setManualSearch(val){
   manualSearch = val;
-  if(val.trim()){ manualChapter = -1; }
+  // Escribir (o borrar) en el buscador siempre parte de cero: ni grupo ni tema abiertos; al vaciarlo vuelve la portada.
+  manualChapter = -1; manualArea = null;
   renderManual();
   const el = document.getElementById('manual-search-input');
   if(el){ el.focus(); try{ el.setSelectionRange(val.length, val.length); }catch(e){} }
@@ -6115,7 +6116,7 @@ function renderManual(){
   const q = pmSinTildes(manualSearch.trim().toLowerCase());
   if(manualChapter >= MANUAL_CHAPTERS.length) manualChapter = -1;
   indice.setAttribute('aria-label', gl({es:'Manual de uso', ca:'Manual d\'ús', en:'User manual'}));
-  const leyendo = manualChapter >= 0 && !q;
+  const leyendo = manualChapter >= 0;
   // El tour solo se ofrece en la portada: es lo primero que se ve y no estorba cuando ya se está leyendo.
   if(tour) tour.hidden = !!(manualArea || manualChapter >= 0 || q);
   cont.innerHTML = ''; pie.innerHTML = '';

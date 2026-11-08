@@ -5628,6 +5628,25 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dash-hero-side dt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .dash-hero-side dd{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink);margin:0;font-variant-numeric:tabular-nums}
 
+/* Mi Negocio · plano de sala (8/11): crear zona y mesas configuradas son UNA sola cosa.
+   Las mesas van en rejilla (3 por fila en PC) y «plazas» lleva su rótulo dentro de cada
+   mesa, no suelto en una cabecera. Se parte en filas solo cuando no cabe. */
+.mn-zona-nueva{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:8px}
+.mn-zona-nueva .field{margin:0}
+.mn-mesas-cab{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:14px 0 2px;padding-top:12px;border-top:1px solid var(--border);font-weight:700;font-size:14px}
+.mn-mesas-cab span{font-weight:400;font-size:12px;color:var(--muted)}
+.mn-mesas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.mn-mesa{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--border);background:#fff}
+.mn-mesa .mn-mesa-nombre{min-width:0;padding:6px 8px;font-size:13px}
+.mn-mesa-plazas{display:flex;align-items:center;gap:6px;margin:0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.mn-mesa-plazas input{width:52px;padding:6px 4px;font-size:13px;text-align:center}
+.mn-mesa-plazas.falta input{border-color:var(--red);background:var(--red-l)}
+@media (max-width:640px){
+  .mn-zona-nueva{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .mn-zona-nueva > .btn{grid-column:1/-1}
+  .mn-mesas-grid{grid-template-columns:minmax(0,1fr)}
+}
+
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)
 
