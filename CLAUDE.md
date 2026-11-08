@@ -816,8 +816,9 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   (`pdPintarLinea`): si repintara, tabular de una casilla a la siguiente perdería el foco y lo escrito. «Marcar recibido» con líneas sin apuntar pregunta antes (`changePedidoEstado` es `async`).
   **Realizar pedido ya no vuelca todo el proveedor**: sin buscar ni elegir letra solo se ve lo que llevas y una pista; hay índice **A–Z** (`pcAlfabetoHtml`, `orderLetra`; las letras sin artículos,
   desactivadas; `#` para lo que no empieza por letra) y el chip «Todos» enseña la lista entera (`orderFiltro`: '' = índice · 'todos' · 'bajo' · 'con').
+  **El control APPCC de recepción ya verifica algo**: con líneas que no coinciden (`pdDiferencias`) avisa en vivo, propone «Coincide con el albarán: NO CONFORME» y `savePedidoRecepcion` (async) pregunta antes de guardarlo como conforme.
 - **Clientes · filtros y Promoción › Clientes (8/11, `test/clientes-filtros.mjs`)**: los nueve filtros en este orden: Nuevos · VIP · **Recurrentes** · **Ocasionales** · En riesgo · Inactivos · Con alergias ·
-  No-shows · Sin permiso. Recurrente = misma regla que «Habituales» de Novedades (`clEsRecurrente`: 2 visitas en 30 d, 6 en el año o ≥7 puntos); ocasional = tiene visitas y no es recurrente.
+  No-shows · Sin permiso (la tarjeta y la ficha enseñan la etiqueta Recurrente u Ocasional: `clSegmentoChip`). Recurrente = misma regla que «Habituales» de Novedades (`clEsRecurrente`: 2 visitas en 30 d, 6 en el año o ≥7 puntos); ocasional = tiene visitas y no es recurrente.
   ⚠️ **Promoción › Clientes miraba el campo «último contacto» de la ficha** (que se rellena a mano al escribir al cliente) para «Visitas recientes» e «Inactivos»: la primera salía siempre vacía y la
   segunda listaba a todo el mundo. Ahora usan la **última visita real** (`computeClientStatsIndexed().recency`): recientes = de ayer a hace 3 días (para pedir reseña), inactivos = más de 60 días o ninguna visita
   (igual que el filtro de Clientes).
@@ -997,7 +998,7 @@ El dueño dijo que la vista móvil era «lo peor de la app». Se capturó cada p
   normaliza: sin guiones ni mayúsculas). Solo vales **de importe** vivos (pendiente o parcial); caducado / anulado / canjeado / de experiencia se rechazan con su aviso. `order.valeRegalo={valeId}` y el importe se
   recalcula SIEMPRE del saldo vivo recortado a lo que queda por pagar (`valeAplicadoEnCobro`, dentro de `computeFinalTotal` → `valeAplicado`). Al cobrar: la venta lleva una pata `{metodoPago:'Vale'}` en `pagos`,
   `sale.valeId` y `sale.valeImporte`; el canje queda apuntado en el vale con `venta` (`canjearValeEnCobro`, js/clientes.js) y en su asiento de `DB.ge.vales`. Si cubre toda la cuenta, la venta es «Vale» y no pide
-  efectivo ni tarjeta. **Anular la venta devuelve el saldo** (`devolverValeDeVenta`). El cierre de caja lo cuenta en «Otro»: no entra en el efectivo ni en la tarjeta esperadas. No está en las pestañas de dividir la cuenta.
+  efectivo ni tarjeta. **Anular la venta devuelve el saldo** (`devolverValeDeVenta`). El cierre de caja lo cuenta en «Otro»: no entra en el efectivo ni en la tarjeta esperadas. **También al dividir la cuenta** (`aplicarValeEnParte`, `part.valeId/valeImporte`): cada parte tiene su campo de vale; un mismo vale reparte su saldo entre las partes (`valeReservadoEnSplit`) y **solo se gasta al cerrar la cuenta entera** (`finalizeSplitOrder`; cancelar el reparto no toca el vale). La venta lleva `valesUsados` y `devolverValeDeVenta` los devuelve todos.
 - Pruebas: `test/tpv-comanda.mjs`, `test/tpv-mesas-cobros.mjs`, `test/comandas-cocina.mjs`.
 
 ## El «login raro» que sale solo: PIN de área SOBRE la entrada (7/11)
