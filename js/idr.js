@@ -3756,7 +3756,49 @@ function iaNumContexto(){
   out.mermas90dias = (DB.mermas||[]).filter(m => (m.fecha||'') >= desde).reduce((acc, m) => {
     const k = m.name || '?'; acc[k] = r2((acc[k]||0) + (parseFloat(m.coste)||0)); return acc;
   }, {});
-  out.personal = {empleados: (DB.employees||[]).length};
+  // ── Ampliado el 8/11: para que el modelo pueda contestar casi cualquier pregunta del dueño SIN inventar, la app le pasa también el año
+  //    entero mes a mes, los últimos 45 días, el equilibrio del mes, lo que hay que pagar a Hacienda, la clientela, las inversiones, los
+  //    proveedores y el personal. Todo con las mismas funciones que las pantallas: el modelo solo lee. Sin nombres de clientes ni datos personales.
+  const intenta = (f, vacio) => { try{ const v = f(); return v == null ? vacio : v; }catch(e){ return vacio; } };
+  out.ultimos12Meses = intenta(() => {
+    const res = [];
+    for(let i = 11; i >= 0; i--){
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1), y = d.getFullYear(), m = d.getMonth();
+      res.push({mes: `${y}-${String(m+1).padStart(2,'0')}`, ventasNetasSinIva: r2(geFacturacionNetaMes(y, m)), comprasYvariables: r2(geTotalVariablesNetoMes(y, m)), personalYfijos: r2(geTotalFijosNetoForMonth(y, m)), resultadoAntesDeImpuestos: r2(geResultadoAntesImpMes(y, m))});
+    }
+    return res;
+  }, []);
+  out.ventasPorDia45 = intenta(() => {
+    const m = {}; const d45 = dateStr(new Date(hoy.getTime() - 44*86400000));
+    activeSales().filter(s => (s.date||'') >= d45).forEach(s => { m[s.date] = r2((m[s.date]||0) + (parseFloat(s.total)||0)); });
+    return m;
+  }, {});
+  out.puntoDeEquilibrioMesEnCurso = intenta(() => {
+    const D = dpEquilibrioDatos();
+    return {ventasNetasHastaHoy: r2(D.S), ventasNetasNecesariasEnElMes: r2(D.objetivo), costesFijosDelMes: r2(D.F), porcentajeVariableSobreVentas: r1(D.v*100), previsionVentasNetasFinDeMes: r2(D.proyeccion), faltanParaElEquilibrio: r2(D.falta), diasRestantes: D.diasRest};
+  }, null);
+  out.impuestosYModelos = intenta(() => {
+    const y = hoy.getFullYear(), q = Math.floor(hoy.getMonth()/3);
+    const trim = [[y, q]]; if(q > 0) trim.unshift([y, q-1]); else trim.unshift([y-1, 3]);
+    const modelos = trim.flatMap(([yy, qq]) => fiscalPrevision(yy, qq).filas.map(f => ({periodo: f.periodo, modelo: f.modelo, concepto: f.concepto, importe: r2(f.importe), estado: f.estado, vence: f.vence})));
+    const T = fiscalTrazaAnual(y);
+    return {modelosDeLosDosUltimosTrimestres: modelos, impuestoSobreElBeneficioDelAnoEstimado: r2(T.impuestoAnual), tipoEfectivo: r1((T.tipoEfectivo||0)*100), formaJuridica: (DB.business||{}).formaJuridica||null, fiabilidad: T.nivel};
+  }, null);
+  out.inversiones = intenta(() => (DB.ge.capex||[]).map(c => ({descripcion: c.descripcion, fecha: c.fecha, base: r2(c.importe), iva: c.iva, financiada: !!c.financiada})), []);
+  out.gastosFijosMensuales = intenta(() => (DB.ge.fijos||[]).filter(g => !g.titular).map(g => ({concepto: g.nombre, categoria: g.categoria, importeMensualEquivalenteSinIva: r2(gfMonthlyImporte(g))})), []);
+  out.proveedoresMasCompras90dias = intenta(() => {
+    const m = {}; gastosVariablesActivos().filter(v => (v.fecha||'') >= desde).forEach(v => { const k = v.proveedor || 'sin proveedor'; m[k] = r2((m[k]||0) + (parseFloat(v.importe)||0)); });
+    return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0, 12).map(([proveedor, comprasSinIva]) => ({proveedor, comprasSinIva}));
+  }, []);
+  out.clientela90dias = intenta(() => {
+    const conFicha = ventas.filter(s => s.clientId != null).length, sin = ventas.length - conFicha;
+    const stats = computeClientStatsIndexed(), cl = DB.clients || [];
+    let recurrentes = 0, enRiesgo = 0, nuevos = 0; cl.forEach(c => { const st = stats(c); if(!st.visitas) return; if(clEsRecurrente(c, st)) recurrentes++; if(st.atRisk) enRiesgo++; if(st.isNew) nuevos++; });
+    return {ticketsConFicha: conFicha, ticketsSinFicha: sin, clientesConFicha: cl.length, recurrentes, enRiesgo, nuevos, noShows90dias: (DB.reservations||[]).filter(r => r.date >= desde && r.status === 'no_show').length};
+  }, null);
+  out.ticketMedio90dias = ventas.length ? r2(ventas.reduce((a, s) => a + (parseFloat(s.total)||0), 0) / ventas.length) : 0;
+  out.personal = {empleados: (DB.employees||[]).length, costeMensualPersonalSinIva: intenta(() => r2(geTotalPersonalNetoForMonth(hoy.getFullYear(), hoy.getMonth())), null)};
+  out.glosario = {ventasNetasSinIva: 'facturación sin IVA', resultadoAntesDeImpuestos: 'ventas netas − compras − personal − fijos − comisiones − amortización − intereses', puntoDeEquilibrio: 'ventas netas del mes que cubren los costes fijos, dado el % que se va en compras y costes variables', modelos: '303 IVA, 111 retenciones de nóminas y profesionales, 115 alquiler, 130/131 pago a cuenta del IRPF, 202 pago a cuenta de Sociedades'};
   const en7 = dateStr(new Date(hoy.getTime()+7*86400000));
   const proximas = (DB.reservations||[]).filter(r => r.date >= todayStr() && r.date <= en7 && (r.status==='confirmada'||r.status==='pendiente'));
   out.reservasProximos7dias = {reservas: proximas.length, comensales: proximas.reduce((s,r)=>s+(parseInt(r.people)||0),0)};
@@ -3774,6 +3816,10 @@ REGLAS QUE NO SE SALTAN:
 - Responde en ${idioma}, breve: 3-6 frases o una lista corta. Sin introducciones.
 - El mes en curso está incompleto: no lo compares con un mes entero sin avisarlo.
 - "netas" = ventas sin IVA; foodCostPct = coste / ventas sin IVA.
+- Los impuestos y modelos (303, 111, 115, 130, 202…) son ESTIMACIONES de la app, no lo que presentará el gestor: dilo cuando hables de ellos.
+- Si la pregunta es sobre un periodo que no cubren los datos (por ejemplo un día de hace tres meses), dilo y di hasta cuándo llegan los datos.
+- Si la pregunta es ambigua, contesta lo más probable y di qué has entendido.
+- Nunca des consejos legales o fiscales como definitivos: para eso, su gestor.
 DATOS (calculados por la app):
 ${JSON.stringify(iaNumContexto())}`;
 }
@@ -3796,7 +3842,7 @@ function abrirPreguntaNumeros(){
     <p class="idr-modal-intro">${t('ia.num.desc')}</p>
     <div id="ia-num-hilo" class="ia-num-hilo"></div>
     <div id="ia-num-sugeridas" class="ia-num-sug">
-      ${['ia.num.q1','ia.num.q2','ia.num.q3'].map(k => `<button class="btn btn-sm btn-fino" onclick="iaNumEnviar(t('${k}'))">${t(k)}</button>`).join('')}
+      ${['ia.num.q1','ia.num.q2','ia.num.q3','ia.num.q4','ia.num.q5','ia.num.q6','ia.num.q7','ia.num.q8'].map(k => `<button class="btn btn-sm btn-fino" onclick="iaNumEnviar(t('${k}'))">${t(k)}</button>`).join('')}
     </div>
     <div class="ia-num-envio">
       <input type="text" id="ia-num-input" placeholder="${t('ia.num.ph')}" onkeydown="if(event.key==='Enter'){iaNumEnviar(this.value)}">
