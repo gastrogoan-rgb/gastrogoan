@@ -155,6 +155,32 @@ await caso('IVA del ticket: ya no es «uno solo»; cada producto lleva el suyo, 
   assert.equal(r.vacio, null); assert.equal(r.defBebida2, 10);
 });
 
+await caso('Impresoras y pantallas: el estado se lee de un vistazo, se añade cocina/barra con un toque y avisa si falta activar o emparejar', async () => {
+  const r = await page.evaluate(async () => {
+    const out = {};
+    DB.business.comandas = {modo: 'pantalla', anchoTicket: 80};
+    renderMiNegocio();
+    out.pantalla = /pantalla/i.test(document.querySelector('.cp-estado-global').innerText) && !document.getElementById('comanda-printers-list');
+    setComandaModo('impresion');
+    DB.business.comandas.printers.forEach(p => p.activo = false); renderMiNegocio();
+    out.sinActiva = document.querySelector('.cp-estado-global').classList.contains('warn');
+    addComandaPrinter('bebida');
+    const nueva = DB.business.comandas.printers[DB.business.comandas.printers.length - 1];
+    out.preset = [nueva.contenido, nueva.nombre, nueva.activo];
+    renderMiNegocio();
+    out.okTrasActivar = document.querySelector('.cp-estado-global').classList.contains('ok') && document.querySelector('.cp-estado-global').innerText.includes('Barra');
+    out.tarjetas = document.querySelectorAll('.cp-imp').length === DB.business.comandas.printers.length;
+    out.rotulos = [...document.querySelectorAll('.cp-imp')].every(c => /Qué imprime/.test(c.innerText) && /Ancho del rollo/.test(c.innerText) && /Activa/.test(c.innerText));
+    out.menu = !!document.querySelector('.cp-imp .cp-cab button[aria-haspopup="menu"]');
+    // Bluetooth elegido sin emparejar → aviso
+    const id = nueva.id; setPrintMode(id, 'bluetooth');
+    return out;
+  });
+  assert.ok(r.pantalla && r.sinActiva, JSON.stringify(r));
+  assert.deepEqual(r.preset, ['bebida', 'Barra', true]);
+  assert.ok(r.okTrasActivar && r.tarjetas && r.rotulos && r.menu, JSON.stringify(r));
+});
+
 // (las demás secciones de la ronda se añaden debajo)
 
 assert.equal(errs.length, 0, 'errores de página: ' + errs.join(' | '));

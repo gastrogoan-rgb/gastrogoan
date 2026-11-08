@@ -5244,8 +5244,8 @@ function renderHorarioEspecialHtml(){
       <div class="field"><label for="he-desde">${escapeHtml(gl({es:'Día (o desde)', ca:'Dia (o des de)', en:'Day (or from)'}))}</label><input type="date" id="he-desde" min="${hoy}"></div>
       <div class="field"><label for="he-hasta">${escapeHtml(gl({es:'Hasta (opcional)', ca:'Fins (opcional)', en:'Until (optional)'}))}</label><input type="date" id="he-hasta" min="${hoy}"></div>
       <div class="field he-motivo"><label for="he-motivo">${escapeHtml(gl({es:'Motivo (opcional)', ca:'Motiu (opcional)', en:'Reason (optional)'}))}</label><input type="text" id="he-motivo" maxlength="60" placeholder="${escapeHtml(gl({es:'Nochevieja, evento privado…', ca:'Cap d\'any, esdeveniment privat…', en:'New Year\'s Eve, private event…'}))}"></div>
-      <div class="field"><label for="he-t1-ini">${escapeHtml(gl({es:'Servicio 1', ca:'Servei 1', en:'Service 1'}))}</label><div class="he-par"><input type="time" id="he-t1-ini" aria-label="${escapeHtml(gl({es:'Abre', ca:'Obre', en:'Opens'}))}"><span>–</span><input type="time" id="he-t1-fin" aria-label="${escapeHtml(gl({es:'Cierra', ca:'Tanca', en:'Closes'}))}"></div></div>
-      <div class="field"><label for="he-t2-ini">${escapeHtml(gl({es:'Servicio 2 (si partes el día)', ca:'Servei 2 (si parteixes el dia)', en:'Service 2 (if split)'}))}</label><div class="he-par"><input type="time" id="he-t2-ini" aria-label="${escapeHtml(gl({es:'Abre', ca:'Obre', en:'Opens'}))}"><span>–</span><input type="time" id="he-t2-fin" aria-label="${escapeHtml(gl({es:'Cierra', ca:'Tanca', en:'Closes'}))}"></div></div>
+      <div class="field he-srv"><label for="he-t1-ini">${escapeHtml(gl({es:'Servicio 1', ca:'Servei 1', en:'Service 1'}))}</label><div class="he-par"><input type="time" id="he-t1-ini" aria-label="${escapeHtml(gl({es:'Abre', ca:'Obre', en:'Opens'}))}"><span>–</span><input type="time" id="he-t1-fin" aria-label="${escapeHtml(gl({es:'Cierra', ca:'Tanca', en:'Closes'}))}"></div></div>
+      <div class="field he-srv"><label for="he-t2-ini">${escapeHtml(gl({es:'Servicio 2 (si partes el día)', ca:'Servei 2 (si parteixes el dia)', en:'Service 2 (if split)'}))}</label><div class="he-par"><input type="time" id="he-t2-ini" aria-label="${escapeHtml(gl({es:'Abre', ca:'Obre', en:'Opens'}))}"><span>–</span><input type="time" id="he-t2-fin" aria-label="${escapeHtml(gl({es:'Cierra', ca:'Tanca', en:'Closes'}))}"></div></div>
       <div class="he-ok"><button type="button" class="btn btn-sm btn-primary" onclick="anadirHorarioEspecial()"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Añadir horario especial', ca:'Afegir horari especial', en:'Add special hours'}))}</button></div>
     </div>
     ${pasados.length ? `<details class="dc-pasados"><summary>${escapeHtml(gl({es:'Horarios especiales pasados', ca:'Horaris especials passats', en:'Past special hours'}))} (${pasados.length})</summary><ul class="dc-lista">${pasados.map(fila).join('')}</ul></details>` : ''}`;
@@ -7628,7 +7628,7 @@ function renderMesasConfigList(){
       return `
       <div class="mn-mesa">
         <input type="text" class="mn-mesa-nombre" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" placeholder="${t('mn.ops.tableNamePh')}" aria-label="${t('mn.ops.tableNamePh')}">
-        <label class="mn-mesa-plazas${t2.plazas?'':' falta'}"><span>${t('mn.ops.seatsPerTable')}</span><input type="number" min="1" max="50" required value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}" aria-invalid="${!t2.plazas}"></label>
+        <label class="mn-mesa-plazas${t2.plazas?'':' falta'}"><span>${escapeHtml(gl({es:'Plazas', ca:'Places', en:'Seats'}))}</span><input type="number" min="1" max="50" required value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}" aria-invalid="${!t2.plazas}"></label>
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}" aria-label="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('') + '</div>';
@@ -8935,6 +8935,23 @@ function ensureComandaPrinters(){
 function anyComandaPrinterActive(){
   return ensureComandaPrinters().some(p => p.activo);
 }
+// Resumen de una línea de lo que va a pasar AHORA con las comandas (antes había que deducirlo de los interruptores de abajo):
+// pantalla, impresoras activas y qué falta por hacer si alguna no está lista.
+function comandaEstadoHtml(modo, printers){
+  const activas = printers.filter(p => p.activo);
+  let tipo = 'ok', txt;
+  if(modo !== 'impresion'){
+    txt = gl({es:'Las comandas salen en la pantalla de Comandas (cocina y barra). No se imprime nada.', ca:'Les comandes surten a la pantalla de Comandes (cuina i barra). No s\'imprimeix res.', en:'Orders show on the Orders screen (kitchen and bar). Nothing is printed.'});
+  }else if(!activas.length){
+    tipo = 'warn';
+    txt = gl({es:'Está en «Imprimir» pero no hay ninguna impresora activa: de momento las comandas salen en pantalla. Activa una abajo.', ca:'Està en «Imprimir» però no hi ha cap impressora activa: de moment les comandes surten a pantalla. Activa\'n una a sota.', en:'Set to "Print" but no printer is on: for now orders show on screen. Turn one on below.'});
+  }else{
+    const sinParear = activas.filter(p => getPrintMode(p.id) === 'bluetooth' && !(thermalPrintingSupported() && getThermalPrinterName(p.id)));
+    txt = gl({es:'Se imprime en: ', ca:'S\'imprimeix a: ', en:'Printing on: '}) + activas.map(p => p.nombre).join(', ') + '.';
+    if(sinParear.length){ tipo = 'warn'; txt += ' ' + gl({es:'Falta emparejar por Bluetooth: ', ca:'Falta emparellar per Bluetooth: ', en:'Bluetooth pairing needed: '}) + sinParear.map(p => p.nombre).join(', ') + '. ' + gl({es:'Mientras, sale por el navegador.', ca:'Mentrestant, surt pel navegador.', en:'Meanwhile it prints via the browser.'}); }
+  }
+  return `<div class="cp-estado-global ${tipo}" role="status"><i class="ti ${tipo === 'ok' ? 'ti-circle-check' : 'ti-alert-triangle'}"></i><span>${escapeHtml(txt)}</span></div>`;
+}
 function renderComandaPrintCard(){
   const printers = ensureComandaPrinters();
   const modo = (DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
@@ -8957,43 +8974,57 @@ function renderComandaPrintCard(){
           <span><strong>${t('mn.comandas.modePrint')}</strong><br><small style="color:var(--muted)">${t('mn.comandas.modePrintDesc')}</small></span>
         </label>
       </div>
+      ${comandaEstadoHtml(modo, printers)}
       ${modo === 'impresion' ? `
-      <div id="comanda-printers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+      <div id="comanda-printers-list" class="cp-lista">
         ${printers.length ? printers.map(p=>{
+          const bt = getPrintMode(p.id) === 'bluetooth';
           const pairedName = thermalPrintingSupported() ? getThermalPrinterName(p.id) : '';
+          const estado = !p.activo ? {c:'off', x: gl({es:'Apagada', ca:'Apagada', en:'Off'})}
+            : (bt && !pairedName) ? {c:'warn', x: gl({es:'Sin emparejar', ca:'Sense emparellar', en:'Not paired'})}
+            : {c:'ok', x: bt ? gl({es:'Conectada por Bluetooth', ca:'Connectada per Bluetooth', en:'Connected by Bluetooth'}) : gl({es:'Lista (por el navegador)', ca:'Llesta (pel navegador)', en:'Ready (via browser)'})};
           return `
-          <div class="ge-item" style="flex-wrap:wrap">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-right:8px">
-              <input type="checkbox" ${p.activo?'checked':''} onchange="toggleComandaPrinter('${p.id}', this.checked)" style="width:18px;height:18px">
-            </label>
-            <input type="text" value="${escapeHtml(p.nombre)}" onchange="renameComandaPrinter('${p.id}', this.value)" placeholder="${t('ph.egPrinterName')}" style="flex:1;min-width:120px;font-weight:600">
-            <select onchange="setComandaPrinterAncho('${p.id}', this.value)" style="max-width:170px">
-              <option value="80" ${p.anchoTicket!=58?'selected':''}>80 mm (${t('mn.comandas.standard')})</option>
-              <option value="58" ${p.anchoTicket==58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
-            </select>
-            <select onchange="setComandaPrinterContenido('${p.id}', this.value)" style="max-width:170px">
-              <option value="comida" ${p.contenido==='comida'?'selected':''}>${t('mn.comandas.contentFood')}</option>
-              <option value="bebida" ${p.contenido==='bebida'?'selected':''}>${t('mn.comandas.contentDrinks')}</option>
-              <option value="todo" ${p.contenido==='todo'?'selected':''}>${t('mn.comandas.contentAll')}</option>
-            </select>
-            <button class="btn btn-sm" onclick="testComandaPrint('${p.id}')"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteComandaPrinter('${p.id}')"><i class="ti ti-trash"></i></button>
-            <div style="width:100%;margin-top:2px;padding-top:6px;border-top:1px dashed var(--border)">${renderPrintModeConfig(p.id, {compacto: true})}</div>
-            ${getPrintMode(p.id) === 'bluetooth' ? `
-            <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="cp-imp${p.activo ? '' : ' is-off'}">
+            <div class="cp-cab">
+              <label class="cp-activa"><input type="checkbox" ${p.activo?'checked':''} onchange="toggleComandaPrinter('${p.id}', this.checked)"><span>${escapeHtml(gl({es:'Activa', ca:'Activa', en:'On'}))}</span></label>
+              <input type="text" class="cp-nombre" value="${escapeHtml(p.nombre)}" onchange="renameComandaPrinter('${p.id}', this.value)" placeholder="${t('ph.egPrinterName')}" aria-label="${escapeHtml(gl({es:'Nombre de la impresora', ca:'Nom de la impressora', en:'Printer name'}))}">
+              <span class="cp-estado ${estado.c}">${escapeHtml(estado.x)}</span>
+              <button class="btn btn-sm btn-fino" onclick="testComandaPrint('${p.id}')"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
+              ${ggMenuAcciones([{icono:'ti-trash', texto: gl({es:'Eliminar impresora', ca:'Eliminar impressora', en:'Delete printer'}), fn: `deleteComandaPrinter('${p.id}')`, peligro:true}])}
+            </div>
+            <div class="cp-campos">
+              <label class="field"><span class="cp-rot">${escapeHtml(gl({es:'Qué imprime', ca:'Què imprimeix', en:'What it prints'}))}</span>
+                <select onchange="setComandaPrinterContenido('${p.id}', this.value)">
+                  <option value="comida" ${p.contenido==='comida'?'selected':''}>${t('mn.comandas.contentFood')}</option>
+                  <option value="bebida" ${p.contenido==='bebida'?'selected':''}>${t('mn.comandas.contentDrinks')}</option>
+                  <option value="todo" ${p.contenido==='todo'?'selected':''}>${t('mn.comandas.contentAll')}</option>
+                </select></label>
+              <label class="field"><span class="cp-rot">${escapeHtml(gl({es:'Ancho del rollo', ca:'Ample del rotllo', en:'Paper width'}))}</span>
+                <select onchange="setComandaPrinterAncho('${p.id}', this.value)">
+                  <option value="80" ${p.anchoTicket!=58?'selected':''}>80 mm (${t('mn.comandas.standard')})</option>
+                  <option value="58" ${p.anchoTicket==58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
+                </select></label>
+              <div class="cp-conexion">${renderPrintModeConfig(p.id, {compacto: true})}</div>
+            </div>
+            ${bt ? `
+            <div class="cp-bt">
               <i class="ti ti-bluetooth" style="color:${pairedName?'var(--ink)':'var(--muted)'}"></i>
               ${pairedName
-                ? `<span style="font-size:12px;color:var(--muted);flex:1"><strong>${escapeHtml(pairedName)}</strong> ${t('thermal.pairedHint')}</span>
-                   <button class="btn btn-sm" onclick="connectThermalPrinter('${p.id}')">${t('thermal.reconnectBtn')}</button>
-                   <button class="btn btn-sm btn-danger" onclick="forgetThermalPrinterUi('${p.id}')">${t('thermal.forgetBtn')}</button>`
-                : `<span style="font-size:12px;color:var(--muted);flex:1">${t('thermal.notPairedHint')}</span>
-                   <button class="btn btn-sm" onclick="connectThermalPrinter('${p.id}')"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>`}
+                ? `<span class="cp-bt-txt"><strong>${escapeHtml(pairedName)}</strong> ${t('thermal.pairedHint')}</span>
+                   <button class="btn btn-sm btn-fino" onclick="connectThermalPrinter('${p.id}')">${t('thermal.reconnectBtn')}</button>
+                   <button class="btn btn-sm btn-fino is-off" onclick="forgetThermalPrinterUi('${p.id}')">${t('thermal.forgetBtn')}</button>`
+                : `<span class="cp-bt-txt">${t('thermal.notPairedHint')}</span>
+                   <button class="btn btn-sm btn-fino is-on" onclick="connectThermalPrinter('${p.id}')"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>`}
             </div>` : ''}
           </div>`;
         }).join('')
         : `<div class="empty" style="padding:12px 16px">${t('mn.comandas.empty')}</div>`}
       </div>
-      <button class="btn btn-sm" onclick="addComandaPrinter()"><i class="ti ti-plus"></i> ${t('mn.comandas.addPrinter')}</button>
+      <div class="cp-anadir">
+        <button class="btn btn-sm btn-fino" onclick="addComandaPrinter('comida')"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Impresora de cocina', ca:'Impressora de cuina', en:'Kitchen printer'}))}</button>
+        <button class="btn btn-sm btn-fino" onclick="addComandaPrinter('bebida')"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Impresora de barra', ca:'Impressora de barra', en:'Bar printer'}))}</button>
+        <button class="btn btn-sm btn-fino" onclick="addComandaPrinter('todo')"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Otra (todo el pedido)', ca:'Una altra (tota la comanda)', en:'Other (whole order)'}))}</button>
+      </div>
       ${thermalPrintingSupported() ? '' : `<div style="margin-top:10px">${renderNoBluetoothWarning()}</div>`}
       ` : ''}
     </div>
@@ -9071,9 +9102,11 @@ function setComandaPrinterContenido(id, val){
   p.contenido = val;
   saveDB();
 }
-function addComandaPrinter(){
+function addComandaPrinter(contenido){
   const printers = ensureComandaPrinters();
-  printers.push({id: genId(), nombre: t('mn.comandas.newPrinterName'), activo:true, anchoTicket:80, contenido:'todo'});
+  const c = ['comida', 'bebida', 'todo'].includes(contenido) ? contenido : 'todo';
+  const nombre = c === 'comida' ? t('mn.comandas.defaultKitchen') : c === 'bebida' ? gl({es:'Barra', ca:'Barra', en:'Bar'}) : t('mn.comandas.newPrinterName');
+  printers.push({id: genId(), nombre, activo:true, anchoTicket:80, contenido:c});
   saveDB();
   renderMiNegocio();
 }

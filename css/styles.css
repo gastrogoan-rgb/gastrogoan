@@ -5638,7 +5638,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .he-ok{display:flex;align-items:end}
 @media (max-width:640px){
   .he-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .he-motivo,.he-ok{grid-column:1/-1}
+  .he-motivo,.he-ok,.he-srv{grid-column:1/-1}
 }
 
 /* Mi Negocio · IVA del ticket (8/11): resumen de tipos reales de los productos + dos valores por defecto en una fila. */
@@ -5648,6 +5648,27 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .tk-iva-chip{display:inline-flex;gap:4px;align-items:baseline;padding:3px 9px;border:1px solid var(--border);background:#fff;font-size:13px}
 .tk-iva-chip.falta{border-color:var(--red);background:var(--red-l);color:var(--ink)}
 .tk-iva-row .field{max-width:260px}
+/* Mi Negocio · Comandas e impresoras (8/11): estado de un vistazo, una tarjeta por impresora con campos rotulados. */
+.cp-estado-global{display:flex;gap:8px;align-items:flex-start;padding:8px 12px;margin:0 0 12px;border:1px solid var(--border);background:#fff;font-size:13px;line-height:1.45}
+.cp-estado-global.ok i{color:var(--olive,#6B7A3A)} .cp-estado-global.warn{border-color:var(--amber,#B7791F);background:#FFF8E6} .cp-estado-global.warn i{color:var(--amber,#B7791F)}
+.cp-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;margin-bottom:10px}
+.cp-imp{border:1px solid var(--border);background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cp-imp.is-off{background:var(--brand-cream,#FAF8F4)}
+.cp-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cp-activa{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;min-height:36px}
+.cp-activa input{width:18px;height:18px}
+.cp-nombre{flex:1;min-width:120px;font-weight:600}
+.cp-estado{font-size:11px;font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border:1px solid var(--border);white-space:nowrap}
+.cp-estado.ok{color:#2F5D2A;border-color:#2F5D2A} .cp-estado.warn{color:#8A5A00;border-color:#B7791F;background:#FFF8E6} .cp-estado.off{color:var(--muted)}
+.cp-campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px}
+.cp-campos .field{margin:0}
+.cp-rot{display:block;font-size:12px;font-weight:600;margin-bottom:2px}
+.cp-conexion{grid-column:1/-1}
+.cp-bt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px dashed var(--border);padding-top:8px}
+.cp-bt-txt{flex:1;min-width:160px;font-size:12px;color:var(--muted)}
+.cp-anadir{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:640px){.cp-lista{grid-template-columns:minmax(0,1fr)} .cp-campos{grid-template-columns:minmax(0,1fr)}}
+
 /* Mi Negocio · plano de sala (8/11): crear zona y mesas configuradas son UNA sola cosa.
    Las mesas van en rejilla (3 por fila en PC) y «plazas» lleva su rótulo dentro de cada
    mesa, no suelto en una cabecera. Se parte en filas solo cuando no cabe. */
@@ -5655,7 +5676,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .mn-zona-nueva .field{margin:0}
 .mn-mesas-cab{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:14px 0 2px;padding-top:12px;border-top:1px solid var(--border);font-weight:700;font-size:14px}
 .mn-mesas-cab span{font-weight:400;font-size:12px;color:var(--muted)}
-.mn-mesas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.mn-mesas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
 .mn-mesa{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--border);background:#fff}
 .mn-mesa .mn-mesa-nombre{min-width:0;padding:6px 8px;font-size:13px}
 .mn-mesa-plazas{display:flex;align-items:center;gap:6px;margin:0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;white-space:nowrap}
