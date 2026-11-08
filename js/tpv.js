@@ -5444,11 +5444,19 @@ function enqueueVerifactuSubmission(sale){
 function verifactuIvaPct(){
   return (DB.business.ticket && DB.business.ticket.ivaPct != null) ? DB.business.ticket.ivaPct : 10;
 }
+// IVA por DEFECTO de una línea que no trae el suyo (ventas anteriores a que cada plato lo estampara, o un plato sin tipo): el de
+// bebidas si el negocio lo ha puesto y la línea es una bebida; si no, el general de Mi Negocio → Ticket. Cada plato lleva el suyo
+// (Oferta, Escandallo): esto solo cubre lo que no lo tiene, nunca manda sobre un tipo propio.
+function ivaPorDefectoDe(line){
+  const tk = (DB.business && DB.business.ticket) || {};
+  if(line && line.bebida && tk.ivaBebidasPct != null && tk.ivaBebidasPct !== '' && isFinite(parseFloat(tk.ivaBebidasPct))) return parseFloat(tk.ivaBebidasPct);
+  return tk.ivaPct != null ? tk.ivaPct : 10;
+}
 // Tipo de IVA real de una línea de venta para la factura fiscal: el
 // estampado al cobrar (resolveLineIvaPct, aplicado en finalizeCharge), o el
 // general de reserva solo si la venta es de antes de ese cambio.
 function fiscalLineIvaPct(line){
-  return line.ivaPct != null ? line.ivaPct : verifactuIvaPct();
+  return line.ivaPct != null ? line.ivaPct : ivaPorDefectoDe(line);
 }
 // Agrupa una venta por tipo de IVA real de cada línea (con el descuento de
 // la venta prorrateado), para declarar un desglose correcto a Hacienda en

@@ -126,6 +126,35 @@ await caso('Horario especial: un día con otras horas manda sobre la semana (res
   assert.equal(r.vuelta, '[{"abre":"13:00","cierra":"16:00"}]');
 });
 
+await caso('IVA del ticket: ya no es «uno solo»; cada producto lleva el suyo, hay IVA por defecto de comida y de bebidas, y el ticket desglosa cada tipo', async () => {
+  const r = await page.evaluate(() => {
+    const out = {};
+    DB.cartas = [{id: 1, nombre: 'Carta', secciones: [{id: 1, nombre: 'X', platos: [{id: 1, nombre: 'Menú', precio: 11, ivaPct: 10}, {id: 2, nombre: 'Copa', precio: 6, ivaPct: 21}, {id: 3, nombre: 'Sin tipo', precio: 5}]}]}];
+    DB.menus = [];
+    DB.business.ticket = {ivaPct: 10};
+    renderMiNegocio();
+    const txt = document.querySelector('.tk-iva-resumen').innerText;
+    out.resumen = /10 %/.test(txt) && /21 %/.test(txt) && /1/.test(txt);
+    out.falta = !!document.querySelector('.tk-iva-chip.falta');
+    document.getElementById('tk-iva').value = '10'; document.getElementById('tk-iva-bebidas').value = '21';
+    saveTicketConfig();
+    out.guardado = JSON.stringify([DB.business.ticket.ivaPct, DB.business.ticket.ivaBebidasPct]);
+    out.defComida = ivaPorDefectoDe({name: 'Plato'});
+    out.defBebida = ivaPorDefectoDe({name: 'Copa', bebida: true});
+    out.propio = fiscalLineIvaPct({name: 'Agua', bebida: true, ivaPct: 10});
+    const venta = {descuentoPct: 0, items: [{name: 'A', price: 11, qty: 1, ivaPct: 10}, {name: 'B', price: 6, qty: 1, bebida: true}, {name: 'C', price: 5, qty: 1}]};
+    out.grupos = JSON.stringify(saleIvaGroupsForFiscal(venta).map(g => [g.ivaPct, g.base, g.cuota]));
+    document.getElementById('tk-iva-bebidas').value = '';
+    saveTicketConfig(); out.vacio = DB.business.ticket.ivaBebidasPct;
+    out.defBebida2 = ivaPorDefectoDe({bebida: true});
+    return out;
+  });
+  assert.ok(r.resumen && r.falta, JSON.stringify(r));
+  assert.equal(r.guardado, '[10,21]'); assert.equal(r.defComida, 10); assert.equal(r.defBebida, 21); assert.equal(r.propio, 10);
+  assert.equal(r.grupos, '[[21,4.96,1.04],[10,14.55,1.45]]');
+  assert.equal(r.vacio, null); assert.equal(r.defBebida2, 10);
+});
+
 // (las demás secciones de la ronda se añaden debajo)
 
 assert.equal(errs.length, 0, 'errores de página: ' + errs.join(' | '));

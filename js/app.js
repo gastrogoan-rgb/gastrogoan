@@ -8704,11 +8704,18 @@ function renderTicketConfigCard(){
         <label>${t('mn.ticket.footerMessage')}</label>
         <textarea id="tk-pie" placeholder="${t('ph.egTicketFooter')}">${escapeHtml(tc.pie||'')}</textarea>
       </div>
-      <div class="field">
-        <label>${t('mn.ticket.vatPct')}</label>
-        <input type="number" id="tk-iva" min="0" max="100" step="0.1" value="${tc.ivaPct!=null?tc.ivaPct:10}" style="max-width:120px">
-        <small style="color:var(--muted)">${t('mn.ticket.vatDescLong')}</small>
+      ${ivaResumenProductosHtml()}
+      <div class="field-row tk-iva-row">
+        <div class="field">
+          <label for="tk-iva">${t('mn.ticket.vatPct')}</label>
+          <input type="number" id="tk-iva" min="0" max="100" step="0.1" value="${tc.ivaPct!=null?tc.ivaPct:10}">
+        </div>
+        <div class="field">
+          <label for="tk-iva-bebidas">${escapeHtml(gl({es:'IVA por defecto — bebidas (%)', ca:'IVA per defecte — begudes (%)', en:'Default VAT — drinks (%)'}))}</label>
+          <input type="number" id="tk-iva-bebidas" min="0" max="100" step="0.1" value="${tc.ivaBebidasPct!=null && tc.ivaBebidasPct!=='' ? tc.ivaBebidasPct : ''}" placeholder="${escapeHtml(gl({es:'Igual que comida', ca:'Igual que menjar', en:'Same as food'}))}">
+        </div>
       </div>
+      <p class="txt-xs" style="color:var(--muted);margin:-4px 0 12px">${t('mn.ticket.vatDescLong')}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="previewTicketConfig()"><i class="ti ti-eye"></i> ${t('mn.ticket.preview')}</button>
@@ -9149,6 +9156,23 @@ function saveCashDrawerSetting(enabled){
   showToast(t(enabled ? 'drawer.enabled' : 'drawer.disabled'));
 }
 
+// Qué IVA lleva HOY cada producto de las cartas y menús (el tipo de cada plato se elige en Oferta / Escandallo). Sirve para ver de un
+// vistazo que hay comida al 10 %, alguna cosa al 21 %… y para avisar de lo que no tiene tipo y caería en el IVA por defecto de abajo.
+function ivaResumenProductosHtml(){
+  const cuenta = {}; let sin = 0;
+  const suma = p => { if(!p) return; if(p.ivaPct == null || p.ivaPct === '') sin++; else cuenta[p.ivaPct] = (cuenta[p.ivaPct] || 0) + 1; };
+  (DB.cartas || []).forEach(c => (c.secciones || []).forEach(sec => (sec.platos || []).forEach(suma)));
+  (DB.menus || []).forEach(suma);
+  const tipos = Object.keys(cuenta).map(Number).sort((a, b) => b - a);
+  if(!tipos.length && !sin) return '';
+  const chips = tipos.map(r => `<span class="tk-iva-chip"><b>${r} %</b> · ${cuenta[r]} ${escapeHtml(gl({es: cuenta[r] === 1 ? 'producto' : 'productos', ca: cuenta[r] === 1 ? 'producte' : 'productes', en: cuenta[r] === 1 ? 'product' : 'products'}))}</span>`).join('');
+  return `<div class="tk-iva-resumen">
+    <div class="tk-iva-tit">${escapeHtml(gl({es:'IVA de tus productos', ca:'IVA dels teus productes', en:'VAT on your products'}))}</div>
+    <div class="tk-iva-chips">${chips}${sin ? `<span class="tk-iva-chip falta"><b>${escapeHtml(gl({es:'Sin tipo', ca:'Sense tipus', en:'No rate'}))}</b> · ${sin}</span>` : ''}</div>
+    <p class="txt-xs" style="color:var(--muted);margin:6px 0 0">${escapeHtml(gl({es:'Cada producto lleva su IVA (se elige en Oferta); el ticket y la contabilidad separan cada tipo. Un cambio de IVA en un plato no toca las ventas ya cobradas.', ca:'Cada producte porta el seu IVA (es tria a Oferta); el tiquet i la comptabilitat separen cada tipus. Un canvi d\'IVA en un plat no toca les vendes ja cobrades.', en:'Every product carries its own VAT (set in Offer); the receipt and the books keep each rate apart. Changing a dish\'s VAT does not touch sales already charged.'}))}${sin ? ' ' + escapeHtml(gl({es:'Los que no tienen tipo usan el IVA por defecto de abajo.', ca:'Els que no tenen tipus fan servir l\'IVA per defecte d\'avall.', en:'Those without a rate use the default VAT below.'})) : ''}</p>
+  </div>`;
+}
+
 function saveTicketConfig(){
   // ⚠️ `parseFloat(...) || 0` solo descarta NaN, no un negativo ni uno por
   // encima de 100 — los atributos HTML min/max del campo no bloquean este
@@ -9162,6 +9186,14 @@ function saveTicketConfig(){
     document.getElementById('tk-iva').focus();
     return;
   }
+  // El IVA de bebidas es opcional: vacío = el mismo que el de comida.
+  const bebRaw = (document.getElementById('tk-iva-bebidas') || {}).value;
+  const ivaBebidasPct = (bebRaw === '' || bebRaw == null) ? null : parseFloat(bebRaw);
+  if(ivaBebidasPct != null && (!isFinite(ivaBebidasPct) || ivaBebidasPct < 0 || ivaBebidasPct > 100)){
+    showToast(t('msg.invalidTicketIva'));
+    document.getElementById('tk-iva-bebidas').focus();
+    return;
+  }
   DB.business.ticket = {
     pie: document.getElementById('tk-pie').value.trim(),
     mostrarDireccion: document.getElementById('tk-direccion').checked,
@@ -9169,7 +9201,8 @@ function saveTicketConfig(){
     mostrarWeb: document.getElementById('tk-web').checked,
     mostrarNif: document.getElementById('tk-nif').checked,
     mostrarResenaQr: document.getElementById('tk-review-qr').checked,
-    ivaPct
+    ivaPct,
+    ivaBebidasPct
   };
   saveDB();
   renderMiNegocio();

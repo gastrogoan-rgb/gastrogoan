@@ -5641,6 +5641,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
   .he-motivo,.he-ok{grid-column:1/-1}
 }
 
+/* Mi Negocio · IVA del ticket (8/11): resumen de tipos reales de los productos + dos valores por defecto en una fila. */
+.tk-iva-resumen{border:1px solid var(--border);background:var(--brand-cream,#FAF8F4);padding:10px 12px;margin:0 0 12px}
+.tk-iva-tit{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tk-iva-chips{display:flex;flex-wrap:wrap;gap:6px}
+.tk-iva-chip{display:inline-flex;gap:4px;align-items:baseline;padding:3px 9px;border:1px solid var(--border);background:#fff;font-size:13px}
+.tk-iva-chip.falta{border-color:var(--red);background:var(--red-l);color:var(--ink)}
+.tk-iva-row .field{max-width:260px}
 /* Mi Negocio · plano de sala (8/11): crear zona y mesas configuradas son UNA sola cosa.
    Las mesas van en rejilla (3 por fila en PC) y «plazas» lleva su rótulo dentro de cada
    mesa, no suelto en una cabecera. Se parte en filas solo cuando no cabe. */
