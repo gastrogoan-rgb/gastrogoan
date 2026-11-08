@@ -26,9 +26,9 @@ await page.evaluate(async () => {
 });
 const mn = () => page.evaluate(async () => { navigate('minegocio'); await new Promise(r => setTimeout(r, 500)); const s = id => { const e = document.getElementById(id); return e ? {dis: e.disabled, val: e.value} : null; };
   return {forma: s('mn-forma-juridica'), reg: s('mn-regimen-fiscal'), mod: s('mn-modalidad-directa'), aviso: !!document.querySelector('.mn-bloqueo'), btn: !!document.querySelector('.mn-bloqueo button')}; });
-await caso('Un negocio ANTIGUO (sin nada fijado) sigue editando su forma jurídica y régimen', async () => {
+await caso('Un negocio ANTIGUO (sin nada fijado) tampoco los edita (8/11): salen bloqueados y un aviso dice que los fija GastroGoan', async () => {
   await page.evaluate(() => { DB.license = {...DB.license}; delete DB.license.fiscal; delete DB.business.fiscalFijado; Object.assign(DB.business, {formaJuridica:'autonomo', regimenFiscal:'directa'}); saveDB(); });
-  const r = await mn(); assert.equal(r.forma.dis, false); assert.equal(r.aviso, false); assert.equal(r.forma.val, 'autonomo');
+  const r = await mn(); assert.equal(r.forma.dis, true); assert.equal(r.forma.val, 'autonomo'); assert.ok(await page.evaluate(() => !!document.querySelector('.mn-bloqueo-aviso')));
 });
 await caso('Con la forma fijada en la licencia (sociedad): Mi Negocio la muestra BLOQUEADA con su aviso, y el motor usa la de la licencia aunque el negocio tuviera otra', async () => {
   await page.evaluate(() => { DB.license = {...DB.license, fiscal:{formaJuridica:'sociedad', regimenFiscal:'directa', modalidadDirecta:null}}; Object.assign(DB.business, {formaJuridica:'autonomo', regimenFiscal:'modulos'}); saveDB(); });

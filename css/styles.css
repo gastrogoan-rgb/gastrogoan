@@ -6352,7 +6352,7 @@ small{font-size:max(.8333em, 11px)}
 /* 8/11 · comanda del TPV en móvil estrecho (≤ 420 px): el contador − n + ocupaba 110 px y dejaba al nombre del plato en una tira de
    80 px («Aros de / cebolla / crujientes» en tres renglones). Controles algo más compactos (siguen a 36 px de alto) para que el nombre respire. */
 @media (max-width:420px){
-  .tp-q{width:32px;height:36px}
+  .tp-q{width:36px;height:36px}
   .tp-q-n{min-width:22px;font-size:16px}
   .tp-linea{gap:4px 6px}
   .tp-linea-pre{font-size:13px}
