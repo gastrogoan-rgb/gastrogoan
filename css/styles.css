@@ -740,6 +740,9 @@ td.wrap{white-space:normal}
 }
 .tour-arrow-bottom{border-bottom:10px solid #fff}
 .tour-arrow-top{border-top:10px solid #fff}
+.tour-arrow-left,.tour-arrow-right{border-left:0;border-right:0;border-top:9px solid transparent;border-bottom:9px solid transparent}
+.tour-arrow-left{border-right:10px solid #fff}
+.tour-arrow-right{border-left:10px solid #fff}
 
 .tour-bubble{
   position:fixed;z-index:10004;
@@ -757,19 +760,26 @@ td.wrap{white-space:normal}
   transform:translate(-50%,-50%);
   width:min(440px, calc(100% - 32px));
 }
-/* Red de seguridad: en pantallas estrechas, la burbuja del tour puede
-   quedarse anclada a un elemento que aún no ha terminado de posicionarse
-   (scrollIntoView asíncrono) y salirse de la pantalla por la derecha. En
-   vez de depender de que el cálculo en JS (tourPositionUI, js/ui.js) acierte
-   siempre, fijar left/right aquí con !important garantiza que la burbuja
-   nunca pueda desbordar, pase lo que pase con ese cálculo — !important en
-   la hoja de estilos gana al estilo puesto por JS salvo que este también
-   use !important, que nunca es el caso aquí. */
-@media (max-width:640px){
-  .tour-bubble:not(.tour-bubble-centered){
-    left:16px!important; width:calc(100vw - 32px)!important; max-width:none!important;
-  }
+/* Hoja inferior del tour en móvil (8/11): ancho completo, esquinas redondeadas arriba, dos botones grandes. JS desplaza lo
+   explicado a la franja de arriba para que la hoja no lo tape (tourPositionUI). */
+.tour-bubble-sheet{
+  left:0!important;right:0!important;top:auto!important;bottom:0!important;width:100%!important;max-width:none!important;
+  border-radius:20px 20px 0 0;box-shadow:0 -12px 40px rgba(28,26,23,.34);
+  padding:10px 18px calc(14px + env(safe-area-inset-bottom));max-height:46vh;max-height:46dvh;
 }
+.tour-bubble-sheet.tour-bubble-sheet-top{top:0!important;bottom:auto!important;border-radius:0 0 20px 20px;box-shadow:0 12px 40px rgba(28,26,23,.34);padding-top:calc(10px + env(safe-area-inset-top))}
+.tour-bubble-sheet.tour-bubble-sheet-top::before{display:none}
+.tour-bubble-sheet::before{content:'';display:block;width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 10px}
+.tour-bubble-sheet .tour-phase-nav{display:none}
+.tour-bubble-sheet .tour-icon-badge{width:38px;height:38px;border-radius:10px;font-size:19px}
+.tour-bubble-sheet h3{font-size:16.5px}
+.tour-bubble-sheet .tour-bubble-desc{font-size:14.5px;line-height:1.5;margin:8px 0 2px}
+.tour-bubble-sheet .tour-progress{margin-top:10px}
+.tour-bubble-sheet .tour-bubble-footer{margin-top:10px;padding-top:0;border-top:0;gap:10px;display:flex}
+.tour-bubble-sheet .tour-bubble-footer .btn{flex:1 1 0;min-height:48px !important;justify-content:center;font-size:14.5px}
+.tour-bubble-sheet .modal-close{min-width:44px;min-height:44px}
+/* Acoplada a un lateral cuando lo explicado ocupa media pantalla y no hay sitio al lado */
+.tour-bubble-dock{box-shadow:0 18px 50px rgba(28,26,23,.38);border:1px solid var(--hair)}
 @keyframes tourBubbleIn{
   from{opacity:0;transform:scale(.96) translateY(6px)}
   to{opacity:1;transform:scale(1) translateY(0)}
@@ -1253,10 +1263,6 @@ td.wrap{white-space:normal}
   /* Badges */
   .badge{font-size:10px;padding:2px 6px}
 
-  /* Tour bubble — reposition for tablet (top/left ya los pone JS en cada paso) */
-  .tour-bubble{max-height:50vh;padding:14px 16px}
-  .tour-bubble h3{font-size:15px}
-  .tour-bubble-desc{font-size:13px}
 
   /* Toast — ensure visible */
   .toast{bottom:calc(24px + env(safe-area-inset-bottom));max-width:90%;font-size:13px}
@@ -1609,18 +1615,6 @@ td.wrap{white-space:normal}
   .kpi-row{flex-wrap:wrap}
   .grid-compact{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)) !important}
 
-  /* Tour bubble — mobile (top/left ya los pone JS en cada paso, en modo
-     "hoja inferior" fija por debajo de cierto ancho — ver tourPositionUI).
-     Antes ocupaba hasta el 48% alto de la pantalla — en un móvil eso tapa
-     buena parte de lo que se está señalando detrás. Más compacta a
-     propósito: mejor un poco de scroll dentro de la burbuja en un paso con
-     texto largo que taparlo todo. */
-  .tour-bubble{max-height:34vh;max-height:34dvh;padding:10px 12px;border-radius:14px}
-  .tour-bubble h3{font-size:13.5px}
-  .tour-bubble-desc{font-size:12px;margin:6px 0 4px;line-height:1.45}
-  .tour-bubble-footer .btn{font-size:11px}
-  .tour-phase-nav{margin-bottom:8px}
-  .tour-arrow{display:none!important}
 
   /* Toast — mobile */
   .toast{bottom:calc(20px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px);font-size:12.5px;padding:10px 16px}
@@ -4533,25 +4527,40 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .mnl-busca{position:relative;max-width:460px;margin:0 0 14px}
 .mnl-busca > .ti{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
 .mnl-busca input{width:100%;max-width:none;height:46px !important;min-height:46px !important;padding:6px 12px 6px 40px !important}
-.mnl-indice{margin:0 0 22px;background:#fff;border:1px solid var(--hair);border-radius:4px}
-.mnl-toggle{display:none;width:100%;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:0 14px;background:none;border:0;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;text-align:left}
-.mnl-toggle-izq{min-width:0;overflow-wrap:break-word}
-.mnl-toggle:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
-.mnl-grupos{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.mnl-grupos.cerrado{display:none}
-.mnl-grupo{padding:14px 16px 12px;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);min-width:0}
-.mnl-grupo-et{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--olive);font-weight:600}
-.mnl-chips{display:flex;flex-direction:column;gap:2px}
-.mnl-chip{display:block;width:100%;min-height:36px;padding:6px 10px;border:0;border-left:3px solid transparent;background:none;font:inherit;font-size:13.5px;color:var(--ink);text-align:left;cursor:pointer;overflow-wrap:break-word}
-.mnl-chip:hover{background:var(--brand-cream)}
-.mnl-chip:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
-.mnl-chip.activo{border-left-color:var(--olive);background:#F3F7F0;font-weight:600}
-.mnl-chip .ti{display:none}
+.mnl-indice{margin:0 0 22px}
+.mnl-indice[hidden]{display:none}
+/* Portada: cinco botones grandes y nada más (8/11). */
+.mnl-portada{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.mnl-area{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"ico txt chev" "ico n chev";align-items:center;gap:2px 16px;min-height:104px;padding:18px 20px;background:#fff;border:1px solid var(--hair);border-radius:4px;font:inherit;text-align:left;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s}
+.mnl-area:hover{border-color:var(--olive);background:var(--brand-cream)}
+.mnl-area:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.mnl-area-ico{grid-area:ico;display:grid;place-items:center;width:54px;height:54px;border:1px solid var(--hair);background:var(--brand-cream);font-size:28px;color:var(--olive)}
+.mnl-area-txt{grid-area:txt;display:flex;flex-direction:column;gap:3px;min-width:0}
+.mnl-area-txt b{font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:21px;font-weight:700;letter-spacing:-.01em}
+.mnl-area-txt small{font-size:13.5px;line-height:1.4;color:var(--muted);overflow-wrap:break-word}
+.mnl-area-n{grid-area:n;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--olive);font-weight:600}
+.mnl-area > .ti-chevron-right{grid-area:chev;font-size:20px;color:var(--muted)}
+/* Los temas de un grupo */
+.mnl-grupo-cab{margin:0 0 16px}
+.mnl-grupo-cab h2{display:flex;align-items:center;gap:10px;margin:12px 0 4px;font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:28px;font-weight:700;letter-spacing:-.01em}
+.mnl-grupo-cab h2 .ti{font-size:28px;color:var(--olive)}
+.mnl-grupo-cab p{margin:0;font-size:14px;color:var(--muted)}
+.mnl-atras{margin:0 0 4px}
+.mnl-temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.mnl-tema{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px;padding:14px 16px;background:#fff;border:1px solid var(--hair);border-radius:4px;font:inherit;text-align:left;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s}
+.mnl-tema:hover{border-color:var(--olive);background:var(--brand-cream)}
+.mnl-tema:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.mnl-tema-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mnl-tema-txt b{font-size:16px;font-weight:600;overflow-wrap:break-word}
+.mnl-tema-txt em{font-style:normal;font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--olive)}
+.mnl-tema-txt small{font-size:13px;line-height:1.4;color:var(--muted);overflow-wrap:break-word}
+.mnl-tema > .ti{flex:none;font-size:18px;color:var(--muted)}
 .manual-detail{max-width:780px;padding:0 0 8px;margin:0}
 .mnl-cab{margin:0 0 18px;padding:0 0 14px;border-bottom:2px solid var(--ink)}
 .mnl-cab-area{display:block;margin:0 0 6px;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--olive);font-weight:600}
 .mnl-cab-tit{margin:0;font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.15;display:flex;align-items:center;gap:12px;overflow-wrap:break-word}
 .mnl-cab-tit .ti{font-size:28px;color:var(--olive);flex:none}
+.mnl-cab-resumen{margin:8px 0 0;font-size:15px;line-height:1.5;color:var(--muted);max-width:640px}
 .manual-detail h3{font-size:19px;font-weight:700;margin:0 0 10px;color:var(--text)}
 .manual-detail h4{font-size:12px;font-weight:600;color:var(--muted);margin:30px 0 12px;padding-top:14px;border-top:1px solid var(--hair);scroll-margin-top:16px}
 .manual-detail p{font-size:15px;line-height:1.65;color:var(--text);margin:0 0 12px}
@@ -5621,6 +5630,66 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dash-hero-side dt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .dash-hero-side dd{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink);margin:0;font-variant-numeric:tabular-nums}
 
+/* Horario especial (8/11): formulario en rejilla, sin huecos; el botón sube a la fila de los servicios. */
+.he-horas{font-family:var(--mono);font-size:13px;color:var(--ink)}
+.he-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px;align-items:end;margin:10px 0}
+.he-form .field{margin:0}
+.he-motivo{grid-column:span 1}
+.he-par{display:flex;align-items:center;gap:6px}
+.he-par input{min-width:0;flex:1}
+.he-ok{display:flex;align-items:end}
+@media (max-width:640px){
+  .he-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .he-motivo,.he-ok,.he-srv{grid-column:1/-1}
+}
+
+/* Mi Negocio · IVA del ticket (8/11): resumen de tipos reales de los productos + dos valores por defecto en una fila. */
+.tk-iva-resumen{border:1px solid var(--border);background:var(--brand-cream,#FAF8F4);padding:10px 12px;margin:0 0 12px}
+.tk-iva-tit{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tk-iva-chips{display:flex;flex-wrap:wrap;gap:6px}
+.tk-iva-chip{display:inline-flex;gap:4px;align-items:baseline;padding:3px 9px;border:1px solid var(--border);background:#fff;font-size:13px}
+.tk-iva-chip.falta{border-color:var(--red);background:var(--red-l);color:var(--ink)}
+.tk-iva-row .field{max-width:260px}
+/* Mi Negocio · Comandas e impresoras (8/11): estado de un vistazo, una tarjeta por impresora con campos rotulados. */
+.cp-estado-global{display:flex;gap:8px;align-items:flex-start;padding:8px 12px;margin:0 0 12px;border:1px solid var(--border);background:#fff;font-size:13px;line-height:1.45}
+.cp-estado-global.ok i{color:var(--olive,#6B7A3A)} .cp-estado-global.warn{border-color:var(--amber,#B7791F);background:#FFF8E6} .cp-estado-global.warn i{color:var(--amber,#B7791F)}
+.cp-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;margin-bottom:10px}
+.cp-imp{border:1px solid var(--border);background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cp-imp.is-off{background:var(--brand-cream,#FAF8F4)}
+.cp-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cp-activa{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;min-height:36px}
+.cp-activa input{width:18px;height:18px}
+.cp-nombre{flex:1;min-width:120px;font-weight:600}
+.cp-estado{font-size:11px;font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border:1px solid var(--border);white-space:nowrap}
+.cp-estado.ok{color:#2F5D2A;border-color:#2F5D2A} .cp-estado.warn{color:#8A5A00;border-color:#B7791F;background:#FFF8E6} .cp-estado.off{color:var(--muted)}
+.cp-campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px}
+.cp-campos .field{margin:0}
+.cp-rot{display:block;font-size:12px;font-weight:600;margin-bottom:2px}
+.cp-conexion{grid-column:1/-1}
+.cp-bt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px dashed var(--border);padding-top:8px}
+.cp-bt-txt{flex:1;min-width:160px;font-size:12px;color:var(--muted)}
+.cp-anadir{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:640px){.cp-lista{grid-template-columns:minmax(0,1fr)} .cp-campos{grid-template-columns:minmax(0,1fr)}}
+
+/* Mi Negocio · plano de sala (8/11): crear zona y mesas configuradas son UNA sola cosa.
+   Las mesas van en rejilla (3 por fila en PC) y «plazas» lleva su rótulo dentro de cada
+   mesa, no suelto en una cabecera. Se parte en filas solo cuando no cabe. */
+.mn-zona-nueva{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:8px}
+.mn-zona-nueva .field{margin:0}
+.mn-mesas-cab{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:14px 0 2px;padding-top:12px;border-top:1px solid var(--border);font-weight:700;font-size:14px}
+.mn-mesas-cab span{font-weight:400;font-size:12px;color:var(--muted)}
+.mn-mesas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+.mn-mesa{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--border);background:#fff}
+.mn-mesa .mn-mesa-nombre{min-width:0;padding:6px 8px;font-size:13px}
+.mn-mesa-plazas{display:flex;align-items:center;gap:6px;margin:0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.mn-mesa-plazas input{width:52px;padding:6px 4px;font-size:13px;text-align:center}
+.mn-mesa-plazas.falta input{border-color:var(--red);background:var(--red-l)}
+@media (max-width:640px){
+  .mn-zona-nueva{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .mn-zona-nueva > .btn{grid-column:1/-1}
+  .mn-mesas-grid{grid-template-columns:minmax(0,1fr)}
+}
+
 /* ════════════════════════════════════════════════════════════════════
    LA APP EN UN MÓVIL (13/09)
 
@@ -5938,15 +6007,20 @@ small{font-size:max(.8333em, 11px)}
 
 /* ── Manual en móvil y tablet (1/11): el índice se pliega en un botón, el capítulo ocupa el ancho ── */
 @media (max-width: 899px){
-  .mnl-toggle{display:flex}
-  .mnl-grupos{border-top:1px solid var(--hair);grid-template-columns:minmax(0,1fr)}
-  .mnl-grupo{border-right:0;padding:12px 14px 8px}
-  .mnl-chip{min-height:44px;display:flex;align-items:center}
+  .mnl-temas{grid-template-columns:minmax(0,1fr)}
+}
 }
 @media (max-width: 720px){
   .mnl-tour{padding:12px 14px;gap:10px}
   .mnl-tour .btn{width:100%;justify-content:center;min-height:48px !important}
   .mnl-busca{max-width:none}
+  .mnl-portada{grid-template-columns:minmax(0,1fr)}
+  .mnl-area{min-height:92px;padding:14px 14px;gap:2px 12px}
+  .mnl-area-ico{width:46px;height:46px;font-size:24px}
+  .mnl-area-txt b{font-size:19px}
+  .mnl-grupo-cab h2{font-size:24px}
+  .mnl-tema{min-height:68px}
+  .mnl-atras{min-height:44px !important}
   .mnl-cab-tit{font-size:24px;gap:10px}
   .mnl-cab-tit .ti{font-size:24px}
   .manual-detail p,.manual-detail ul,.manual-step .st{font-size:15px}
@@ -6274,4 +6348,13 @@ small{font-size:max(.8333em, 11px)}
 }
 @media (max-width:420px){
   .kt-st{max-width:100%;white-space:normal}
+}
+/* 8/11 · comanda del TPV en móvil estrecho (≤ 420 px): el contador − n + ocupaba 110 px y dejaba al nombre del plato en una tira de
+   80 px («Aros de / cebolla / crujientes» en tres renglones). Controles algo más compactos (siguen a 36 px de alto) para que el nombre respire. */
+@media (max-width:420px){
+  .tp-q{width:36px;height:36px}
+  .tp-q-n{min-width:22px;font-size:16px}
+  .tp-linea{gap:4px 6px}
+  .tp-linea-pre{font-size:13px}
+  .tp-ac-mas{width:36px !important;height:36px !important;min-width:36px}
 }

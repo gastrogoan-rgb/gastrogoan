@@ -269,6 +269,42 @@ await caso('Objetivos táctiles: Continuar, Atrás, selector y botones de plato 
   await page.setViewport({width: 1280, height: 900});
   assert.deepEqual(r, []);
 });
+await caso('Horario especial: la web usa las horas de ese día (no las de la semana) y un cierre gana', async () => {
+  await arrancar();
+  const r = await page.evaluate(() => {
+    const f = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const dia = f(9);
+    DB.business.horariosEspeciales = [{id:'h1', desde:dia, hasta:dia, motivo:'Nochevieja', abierto:true, modo:'turnos', turnos:[{ini:'21:00', fin:'23:30'}]}];
+    const out = {esp: JSON.stringify(getTurnosForDate(dia)), otro: getTurnosForDate(f(10)).length};
+    DB.business.diasCerrados = [{id:'c', desde:dia, hasta:dia}];
+    out.cierre = getTurnosForDate(dia).length;
+    return out;
+  });
+  assert.equal(r.esp, '[{"abre":"21:00","cierra":"23:30"}]'); assert.equal(r.otro, 2); assert.equal(r.cierre, 0);
+});
+await caso('Zona de reparto: fuera de la lista no pide; con radio y sin ubicación del local no cierra el reparto a todos sino que queda «por verificar»', async () => {
+  await arrancar();
+  const r = await page.evaluate(async () => {
+    const out = {};
+    out.dentro = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '28001', 'Calle X 1')).ok;
+    out.fuera = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '08001', 'Calle X 1')).ok;
+    out.espacios = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '28 001', 'x')).ok;
+    out.sinZona = (await checkDeliveryZone({cpList: [], radiusKm: 0}, '99999', 'x')).ok;
+    const sc = await checkDeliveryZone({cpList: [], radiusKm: 5}, '28001', 'Calle X 1');
+    out.sinCoord = [sc.ok, !!sc.pendienteVerificar];
+    return out;
+  });
+  assert.deepEqual(r, {dentro: true, fuera: false, espacios: true, sinZona: true, sinCoord: [true, true]});
+});
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
+await caso('Textos al día: ya no hay pestañas, así que ningún aviso manda al cliente a «la pestaña» (es/ca/en)', async () => {
+  const r = await page.evaluate(() => ['es','ca','en'].map(l => { setLang(l); return [t('resManage.cancelled.msg'), t('confirm.loseCart')].join(' | '); }));
+  r.forEach(x => assert.ok(!/pesta[ñn]|\btabs?\b/i.test(x), 'queda «pestaña»: ' + x));
+});
+await caso('Zonas de toque: el cierre del aviso de privacidad y el teléfono dentro de una frase miden 44 px o más', async () => {
+  await arrancar(); await page.setViewport({width:360, height:800});
+  const r = await page.evaluate(() => { showPrivacyNotice(); const x = document.querySelector('#modal-box .modal-close').getBoundingClientRect(); closeInfoModal(); trackToken = 'ABCD1234EFGH'; renderTrackStatus({status:'rechazado'}); const a = document.querySelector('p a[href^="tel:"]').getBoundingClientRect(); return {x: Math.round(Math.min(x.width, x.height)), a: Math.round(a.height)}; });
+  assert.ok(r.x >= 44 && r.a >= 44, JSON.stringify(r));
+});
 await browser.close();
 console.log(fallos ? `\n❌ ${fallos} caso(s) fallaron` : '\n✅ todos los casos pasaron'); process.exit(fallos ? 1 : 0);

@@ -253,12 +253,32 @@ function cierreExcepcionalDe(dateStr){
   if(!Array.isArray(lista) || !dateStr) return null;
   return lista.find(c => c && c.desde && dateStr >= c.desde && dateStr <= (c.hasta || c.desde)) || null;
 }
-function getTurnosForDate(dateStr){
-  if(cierreExcepcionalDe(dateStr)) return [];
+// Horario ESPECIAL (8/11): un día —o varios— en que el local abre con otras horas que las de su semana (una víspera, un evento,
+// un festivo con servicio reducido). {id, desde, hasta, motivo, abierto:true, modo:'turnos', turnos:[{ini,fin}…]}: el mismo
+// formato que un día de la semana, así que TODO lo que ya lee el horario (reservas, pedidos, aforo por turno, avisos del TPV)
+// lo respeta sin tocarse. Un cierre (diasCerrados) siempre gana al horario especial.
+function horarioEspecialDe(dateStr){
+  const lista = (DB.business || {}).horariosEspeciales;
+  if(!Array.isArray(lista) || !dateStr) return null;
+  return lista.find(h => h && h.desde && dateStr >= h.desde && dateStr <= (h.hasta || h.desde)) || null;
+}
+// El «día» (abierto, modo, turnos) que manda en una fecha: el especial si lo hay, si no el de su día de la semana.
+function horarioDiaDe(dateStr){
+  if(cierreExcepcionalDe(dateStr)) return {abierto:false};
+  const esp = horarioEspecialDe(dateStr);
+  if(esp) return esp;
   const horario = (DB.business || {}).horario;
   if(!horario || horario.length !== 7) return null;
   const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
-  const d = migrateHorarioDia(horario[(jsDay + 6) % 7]); // 0=lunes..6=domingo
+  return horario[(jsDay + 6) % 7] || null;               // 0=lunes..6=domingo
+}
+function getTurnosForDate(dateStr){
+  if(cierreExcepcionalDe(dateStr)) return [];
+  const esp = horarioEspecialDe(dateStr);
+  const horario = (DB.business || {}).horario;
+  if(!esp && (!horario || horario.length !== 7)) return null;
+  const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
+  const d = esp ? migrateHorarioDia(esp) : migrateHorarioDia(horario[(jsDay + 6) % 7]); // 0=lunes..6=domingo
   if(!d || d.abierto === false) return [];
   const turnos = [];
   // Antes se exigía s.fin &gt; s.ini (comparación de texto): un turno de

@@ -7960,7 +7960,10 @@ function initPublicRequestsListener(){
              'pendiente-online' y se confundiría con uno tomado por teléfono. */
           origenOnline: true,
           clientRef: req.clientRef || null, clientId: matchedClientPedido ? matchedClientPedido.id : null,
-          pendienteVerificarZona: !!req.pendienteVerificarZona,
+          // La web ya comprueba la zona, pero eso es el navegador del cliente: aquí se vuelve a mirar el código postal con la
+          // lista del negocio (como los precios) para que un pedido a domicilio fuera de zona nunca entre solo.
+          pendienteVerificarZona: !!req.pendienteVerificarZona || !!zonaDeRepartoDePedido(req).fuera,
+          fueraDeZona: zonaDeRepartoDePedido(req).fuera || undefined,
           phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9),
           // El cliente ya indicó en la web pública con qué billete va a pagar
           // (o si va a pagar con tarjeta en persona) — así el reparto ya
@@ -7988,7 +7991,7 @@ function initPublicRequestsListener(){
           // confirmación del banco. Sin esto, el estado no se publicaba hasta
           // aceptarlo, y al volver del pago leía «No encontramos ese pedido».
           if(newOrder) syncOrderStatusForPublic(newOrder);
-        } else if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
+        } else if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && !zonaDeRepartoDePedido(req).fuera && typeof acceptOnlineOrder === 'function'){
           // Con el interruptor de "Pedidos online" en ON (por defecto), el
           // pedido se acepta solo, sin pasar por la bandeja de pendientes —
           // salvo que necesite verificación manual de zona de reparto, en
@@ -8308,7 +8311,7 @@ async function ggPintarColoresDelLogo(){
 const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   'name', 'address', 'phone', 'email', 'description', 'logo', 'brandColor', 'brandColor2',
   'tipo', 'anyo', 'web', 'ig', 'fb', 'gmaps', 'tiktok',
-  'horario', 'diasCerrados', 'aforo', 'mesasInterior', 'mesasTerraza',
+  'horario', 'diasCerrados', 'horariosEspeciales', 'aforo', 'mesasInterior', 'mesasTerraza',
   'cartaAuto', 'tiposServicio',
   'requireDeposit', 'depositAmount', 'depositType', 'depositMinPeople', 'depositInstructions',
   // Grupos: a partir de X personas la web no deja reservar y pide llamar.
@@ -9852,7 +9855,7 @@ function renderOnlineCard(){
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
-        <a class="btn btn-sm" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        <a class="btn btn-sm btn-fino is-on" style="flex:1;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
       </div>
       <div class="field" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
         <label>${t('mn.online.slugLabel')}</label>
@@ -10122,6 +10125,7 @@ function renderPedidosConfigCard(){
         <small style="color:var(--muted)">${t('mn.pedidos.radiusDesc')}</small>
       </div>
       ${p.lat!=null ? `<p style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${t('mn.pedidos.locationCalculated')}: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}${p.ubicacionTexto ? ' — ' + escapeHtml(p.ubicacionTexto) : ''} · <a href="https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=14/${p.lat}/${p.lng}" target="_blank" rel="noopener">${escapeHtml(gl({es:'ver en el mapa', ca:'veure al mapa', en:'see on map'}))}</a></p>` : ''}
+      ${(p.radiusKm > 0 && p.lat == null) ? `<p class="mn-bloqueo mn-bloqueo-aviso"><i class="ti ti-alert-triangle"></i> <span>${escapeHtml(gl({es:'El radio está puesto pero no se ha podido calcular la ubicación del local (¿falta la dirección o no hay internet?). Mientras tanto, los pedidos a domicilio llegan marcados «sin verificar» para que los revises tú. Vuelve a guardar con internet y la dirección completa.', ca:'El radi està posat però no s\'ha pogut calcular la ubicació del local (falta l\'adreça o no hi ha internet?). Mentrestant, les comandes a domicili arriben marcades «sense verificar» perquè les revisis tu. Torna a desar amb internet i l\'adreça completa.', en:'A radius is set but the location of your venue could not be worked out (missing address or no internet?). Meanwhile delivery orders arrive marked "unverified" so you can check them. Save again with internet and the full address.'}))}</span></p>` : ''}
       <p style="font-size:12px;color:var(--muted)">${t('mn.pedidos.matchExplain')}</p>
       ` : ''}
       <button class="btn btn-primary" onclick="savePedidosConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
@@ -10273,6 +10277,17 @@ async function savePedidosConfig(){
   saveDB();
   renderMiNegocio();
   showToast(t('msg.orderConfigSaved'));
+}
+
+// ¿Un pedido a domicilio cae fuera de la zona de reparto del negocio? Solo se puede afirmar con la lista de códigos postales: el
+// radio lo mide la web geocodificando la dirección (aquí no hay red para eso) y se fía de su aviso (pendienteVerificarZona).
+function zonaDeRepartoDePedido(req){
+  if(!req || req.tipo !== 'delivery') return {};
+  const p = (DB.business || {}).pedidos || {};
+  const cpList = p.cpList || [];
+  if(!cpList.length || p.radiusKm > 0) return {};
+  const cp = String(req.codigoPostal || '').replace(/\s+/g, '');
+  return cpList.includes(cp) ? {} : {fuera: true};
 }
 
 /* ============================================================

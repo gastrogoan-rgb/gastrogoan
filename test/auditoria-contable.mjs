@@ -388,7 +388,7 @@ await caso('Sin forma jurídica: aviso rojo arriba de Gestión Económica; y el 
     GE.tab('tesoreria');
     return {aviso, cal: document.getElementById('te-calendario').textContent};
   });
-  assert.ok(/autónomo, comunidad de bienes o sociedad/.test(r.aviso), 'falta el aviso: '+r.aviso.slice(0,120));
+  assert.ok(/la fija GastroGoan/.test(r.aviso), 'falta el aviso: '+r.aviso.slice(0,120));
   assert.ok(/303/.test(r.cal) && /hasta el/.test(r.cal), 'falta el calendario: '+r.cal.slice(0,160));
 });
 

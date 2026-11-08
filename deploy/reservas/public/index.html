@@ -154,8 +154,10 @@
   #modal-box h2{padding-right:28px}
   #modal-box .modal-close{
     position:absolute;top:14px;right:14px;background:none;border:none;font-size:20px;
-    font-weight:700;cursor:pointer;color:var(--muted);line-height:1;padding:6px;min-width:32px;min-height:32px;
+    font-weight:700;cursor:pointer;color:var(--muted);line-height:1;padding:6px;min-width:44px;min-height:44px;
   }
+  /* El teléfono dentro de una frase («llama al…») medía 19 px de alto: imposible de acertar con el dedo. La zona de toque crece hacia arriba y abajo sin mover el texto (8/11). */
+  p a[href^="tel:"]{display:inline-block;padding:13px 4px;margin:-13px -4px}
   #modal-box p{font-size:13.5px;line-height:1.65;color:var(--body)}
   /* Campo marcado como inválido tras un intento de envío fallido — antes el
      único indicio de qué campo fallaba era un alert() genérico sin decir
@@ -886,7 +888,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Recomendación de un amigo','referral.returning':'Ya había venido antes','referral.other':'Otro',
     'privacy.consentLabel':'Acepto que mis datos se usen para gestionar mi reserva/pedido.',
-    'privacy.linkText':'Ver más', 'common.close':'Cerrar', 'common.cancel':'Cancelar', 'common.confirm':'Confirmar', 'common.sending':'Enviando...', 'confirm.loseCart':'Si cambias de pestaña perderás lo que llevas añadido al pedido. ¿Continuar?', 'aria.removeItem':'Quitar %s', 'aria.addItem':'Añadir %s',
+    'privacy.linkText':'Ver más', 'common.close':'Cerrar', 'common.cancel':'Cancelar', 'common.confirm':'Confirmar', 'common.sending':'Enviando...', 'confirm.loseCart':'Si cambias de servicio perderás lo que llevas añadido al pedido. ¿Continuar?', 'aria.removeItem':'Quitar %s', 'aria.addItem':'Añadir %s',
     'privacy.mustAccept':'Tienes que aceptar el aviso de privacidad para continuar.',
     'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
     'privacy.responsable':"Responsable: ${datos}", 'privacy.extra':"Base legal: gestionar tu reserva o pedido (lo pides tú) y, solo si marcas la casilla, tu consentimiento para avisarte de novedades. Los datos se guardan mientras dure la relación y después solo el tiempo que obliga la ley. Si crees que no se respetan tus derechos, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).",
@@ -947,7 +949,7 @@ const I18N = {
     'resManage.cancelBtn':'Cancelar mi reserva','resManage.cancelSending':'Cancelando...','resManage.confirmCancel':'¿Seguro que quieres cancelar esta reserva?',
     'resManage.editBtn':'Cambiar fecha u hora','resManage.saveBtn':'Guardar cambios','resManage.savingChanges':'Guardando...',
     'resManage.notFound.title':'No encontramos esa reserva','resManage.notFound.msg':'El enlace puede haber caducado.',
-    'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la pestaña de reservas.',
+    'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la web del restaurante, en «Reservar mesa».',
     'resManage.completed.title':'Ya has llegado','resManage.completed.msg':'Esta reserva ya se ha registrado como atendida, así que no se puede editar ni cancelar desde aquí. Si necesitas algo, habla directamente con el restaurante.',
     'track.backToMenu':'Volver a la carta','track.backHome':'Volver al inicio','resManage.lookupAlso':'También puedes volver a ella desde la web del restaurante, en «¿Ya reservaste? Accede a tu reserva», con tu nombre, email y teléfono.',
     'track.head.pendiente':'Hemos recibido tu pedido','track.desc.pendiente':'El restaurante lo está revisando. Aquí verás cada paso, sin recargar.','track.head.aceptado':'Pedido confirmado','track.desc.aceptado':'El restaurante ya lo tiene y va a empezar a prepararlo.','track.head.preparando':'Lo estamos preparando','track.desc.preparando':'Tu pedido está en cocina.','track.head.listo.takeaway':'Listo para recoger','track.desc.listo.takeaway':'Ya puedes pasar a buscarlo. Al llegar, di tu número de pedido.','track.head.listo.delivery':'Va de camino','track.desc.listo.delivery':'El repartidor ya ha salido con tu pedido.','track.head.entregado.takeaway':'Pedido recogido','track.desc.entregado.takeaway':'Que aproveche. Gracias por tu pedido.','track.head.entregado.delivery':'Pedido entregado','track.desc.entregado.delivery':'Que aproveche. Gracias por tu pedido.','track.type.takeaway':'Para recoger','track.type.delivery':'A domicilio','track.call':'Llamar','track.write':'Escribir','track.saveLinkTitle':'Para volver a mirarlo','track.summaryTitle':'Lo que has pedido','track.tip':'Propina','track.total':'Total','track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
@@ -975,7 +977,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Friend\'s recommendation','referral.returning':'I\'ve been before','referral.other':'Other',
     'privacy.consentLabel':'I agree that my data will be used to manage my reservation/order.',
-    'privacy.linkText':'Read more', 'common.close':'Close', 'common.cancel':'Cancel', 'common.confirm':'Confirm', 'common.sending':'Sending...', 'confirm.loseCart':'Switching tabs will clear what you\'ve added to your order. Continue?', 'aria.removeItem':'Remove %s', 'aria.addItem':'Add %s',
+    'privacy.linkText':'Read more', 'common.close':'Close', 'common.cancel':'Cancel', 'common.confirm':'Confirm', 'common.sending':'Sending...', 'confirm.loseCart':'Switching service will clear what you\'ve added to your order. Continue?', 'aria.removeItem':'Remove %s', 'aria.addItem':'Add %s',
     'privacy.mustAccept':'You need to accept the privacy notice to continue.',
     'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
     'privacy.responsable':"Data controller: ${datos}", 'privacy.extra':"Legal basis: managing your reservation or order (at your request) and, only if you tick the box, your consent to updates. Data is kept while the relationship lasts and afterwards only as long as the law requires. If you think your rights are not respected, you can complain to the Spanish Data Protection Agency (www.aepd.es).",
@@ -1036,7 +1038,7 @@ const I18N = {
     'resManage.cancelBtn':'Cancel my reservation','resManage.cancelSending':'Cancelling...','resManage.confirmCancel':'Are you sure you want to cancel this reservation?',
     'resManage.editBtn':'Change date or time','resManage.saveBtn':'Save changes','resManage.savingChanges':'Saving...',
     'resManage.notFound.title':'We can\'t find that reservation','resManage.notFound.msg':'The link may have expired.',
-    'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use the reservation tab.',
+    'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use “Book a table” on the restaurant\'s page.',
     'resManage.completed.title':'You\'ve already arrived','resManage.completed.msg':'This reservation is already marked as seated, so it can\'t be edited or cancelled from here. If you need anything, please contact the restaurant directly.',
     'track.backToMenu':'Back to menu','track.backHome':'Back to home','resManage.lookupAlso':"You can also get back to it from the restaurant's page, in “Already booked? Access your reservation”, with your name, email and phone.",
     'track.head.pendiente':"We've got your order",'track.desc.pendiente':"The restaurant is reviewing it. You'll see every step here, no need to refresh.",'track.head.aceptado':'Order confirmed','track.desc.aceptado':'The restaurant has it and will start preparing it shortly.','track.head.preparando':"We're preparing it",'track.desc.preparando':'Your order is in the kitchen.','track.head.listo.takeaway':'Ready for pickup','track.desc.listo.takeaway':'You can come and collect it. Give your order number when you arrive.','track.head.listo.delivery':'On its way','track.desc.listo.delivery':'The rider has left with your order.','track.head.entregado.takeaway':'Order collected','track.desc.entregado.takeaway':'Enjoy your meal. Thanks for your order.','track.head.entregado.delivery':'Order delivered','track.desc.entregado.delivery':'Enjoy your meal. Thanks for your order.','track.type.takeaway':'Pickup','track.type.delivery':'Delivery','track.call':'Call','track.write':'Email','track.saveLinkTitle':'To check it later','track.summaryTitle':'Your order','track.tip':'Tip','track.total':'Total','track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
@@ -1064,7 +1066,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Recomanació d\'un amic','referral.returning':'Ja havia vingut abans','referral.other':'Altre',
     'privacy.consentLabel':'Accepto que les meves dades s\'usin per gestionar la meva reserva/comanda.',
-    'privacy.linkText':'Veure més', 'common.close':'Tancar', 'common.cancel':'Cancel·lar', 'common.confirm':'Confirmar', 'common.sending':'Enviant...', 'confirm.loseCart':'Si canvies de pestanya perdràs el que portes afegit a la comanda. Continuar?', 'aria.removeItem':'Treure %s', 'aria.addItem':'Afegir %s',
+    'privacy.linkText':'Veure més', 'common.close':'Tancar', 'common.cancel':'Cancel·lar', 'common.confirm':'Confirmar', 'common.sending':'Enviant...', 'confirm.loseCart':'Si canvies de servei perdràs el que portes afegit a la comanda. Continuar?', 'aria.removeItem':'Treure %s', 'aria.addItem':'Afegir %s',
     'privacy.mustAccept':'Has d\'acceptar l\'avís de privacitat per continuar.',
     'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
     'privacy.responsable':"Responsable: ${datos}", 'privacy.extra':"Base legal: gestionar la teva reserva o comanda (ho demanes tu) i, només si marques la casella, el teu consentiment per avisar-te de novetats. Les dades es guarden mentre duri la relació i després només el temps que obliga la llei. Si creus que no es respecten els teus drets, pots reclamar davant l'Agència Espanyola de Protecció de Dades (www.aepd.es).",
@@ -1125,7 +1127,7 @@ const I18N = {
     'resManage.cancelBtn':'Cancel·lar la meva reserva','resManage.cancelSending':'Cancel·lant...','resManage.confirmCancel':'Segur que vols cancel·lar aquesta reserva?',
     'resManage.editBtn':'Canviar data o hora','resManage.saveBtn':'Desar canvis','resManage.savingChanges':'Desant...',
     'resManage.notFound.title':'No trobem aquesta reserva','resManage.notFound.msg':'L\'enllaç pot haver caducat.',
-    'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la pestanya de reserves.',
+    'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la web del restaurant, a «Reservar taula».',
     'resManage.completed.title':'Ja has arribat','resManage.completed.msg':'Aquesta reserva ja s\'ha registrat com atesa, així que no es pot editar ni cancel·lar des d\'aquí. Si necessites res, parla directament amb el restaurant.',
     'track.backToMenu':'Tornar a la carta','track.backHome':"Tornar a l'inici",'resManage.lookupAlso':'També hi pots tornar des de la web del restaurant, a «Ja vas reservar? Accedeix a la teva reserva», amb el teu nom, email i telèfon.',
     'track.head.pendiente':'Hem rebut la teva comanda','track.desc.pendiente':"El restaurant l'està revisant. Aquí veuràs cada pas, sense recarregar.",'track.head.aceptado':'Comanda confirmada','track.desc.aceptado':'El restaurant ja la té i començarà a preparar-la aviat.','track.head.preparando':"L'estem preparant",'track.desc.preparando':'La teva comanda és a la cuina.','track.head.listo.takeaway':'A punt per recollir','track.desc.listo.takeaway':'Ja pots passar a buscar-la. En arribar, digues el teu número de comanda.','track.head.listo.delivery':'Ja és de camí','track.desc.listo.delivery':'El repartidor ja ha sortit amb la teva comanda.','track.head.entregado.takeaway':'Comanda recollida','track.desc.entregado.takeaway':'Bon profit. Gràcies per la teva comanda.','track.head.entregado.delivery':'Comanda lliurada','track.desc.entregado.delivery':'Bon profit. Gràcies per la teva comanda.','track.type.takeaway':'Per recollir','track.type.delivery':'A domicili','track.call':'Trucar','track.write':'Escriure','track.saveLinkTitle':'Per tornar-ho a mirar','track.summaryTitle':'El que has demanat','track.tip':'Propina','track.total':'Total','track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
@@ -2379,12 +2381,19 @@ function cierreExcepcionalDe(dateStr){
   if(!Array.isArray(lista) || !dateStr) return null;
   return lista.find(c => c && c.desde && dateStr >= c.desde && dateStr <= (c.hasta || c.desde)) || null;
 }
+// Horario ESPECIAL (8/11): un día con otras horas que las de su semana. Mismo formato que un día normal; un cierre siempre gana.
+function horarioEspecialDe(dateStr){
+  const lista = (DB.business || {}).horariosEspeciales;
+  if(!Array.isArray(lista) || !dateStr) return null;
+  return lista.find(h => h && h.desde && dateStr >= h.desde && dateStr <= (h.hasta || h.desde)) || null;
+}
 function getTurnosForDate(dateStr){
   if(cierreExcepcionalDe(dateStr)) return [];
+  const esp = horarioEspecialDe(dateStr);
   const horario = (DB.business || {}).horario;
-  if(!horario || horario.length !== 7) return null;
+  if(!esp && (!horario || horario.length !== 7)) return null;
   const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
-  const d = horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
+  const d = esp || horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
   if(!d || d.abierto === false) return [];
   const turnos = [];
   const add = (ini, fin) => { if(ini && fin && fin > ini) turnos.push({abre:ini, cierra:fin}); };
@@ -2802,6 +2811,10 @@ async function checkDeliveryZone(p, codigoPostal, direccion){
       return {ok: dist <= p.radiusKm};
     }
     if(!cpList.length) return {ok:true, pendienteVerificar:true};
+  }else if(p.radiusKm > 0){
+    // Radio puesto pero el local no tiene coordenadas (la ubicación no se pudo calcular al guardar): no se puede medir, y cerrar
+    // el reparto a TODOS por un fallo del negocio es peor que dejar el pedido para que lo revise a mano.
+    return {ok:true, pendienteVerificar:true};
   }
 
   // Si no hay ninguna zona configurada, no se restringe.

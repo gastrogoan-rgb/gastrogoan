@@ -230,8 +230,9 @@ const GE = (function(){
   // plato al que nunca se le eligió IVA en Carta/Escandallo).
   // Porcentajes con la coma del idioma ("977,8 %", no "977.8%").
   function pct1(v){ return (Math.round((parseFloat(v)||0)*10)/10).toLocaleString(localeActual(), {minimumFractionDigits:0, maximumFractionDigits:1}); }
-  function ivaVentasPct(){
-    return (DB.business.ticket && DB.business.ticket.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
+  // Con una línea, el de BEBIDAS si el negocio lo puso y la línea es una bebida (ivaPorDefectoDe, js/tpv.js); sin línea, el general.
+  function ivaVentasPct(line){
+    return parseFloat(ivaPorDefectoDe(line));
   }
   // Agrupa la facturación del mes por tipo de IVA REAL de cada línea vendida
   // (line.ivaPct, estampado al cobrar en finalizeCharge/finalizeSplitOrder),
@@ -251,7 +252,7 @@ const GE = (function(){
         const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
         if(grossLine <= 0) return;
         const usedFallback = line.ivaPct == null;
-        const rate = usedFallback ? fallbackRate : line.ivaPct;
+        const rate = usedFallback ? ivaVentasPct(line) : line.ivaPct;
         if(!groups[rate]) groups[rate] = {base:0, iva:0};
         const net = grossLine / (1 + rate/100);
         groups[rate].base += net;
@@ -2722,7 +2723,7 @@ const GE = (function(){
       const descPct = parseFloat(x.descuentoPct)||0;
       const netoVenta = (x.items||[]).reduce((sl,line)=>{
         const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
-        const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : fallbackRate;
+        const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : ivaVentasPct(line);
         return sl + grossLine/(1+rate/100);
       }, 0);
       return s + netoVenta;
@@ -3765,7 +3766,7 @@ const GE = (function(){
         // a cada línea, igual que en ventasIvaGroups — si no, un plato
         // vendido siempre con descuento aparecía facturando más de lo que
         // de verdad entró en caja.
-        const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : fallbackIvaPct;
+        const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : ivaVentasPct(line);
         const lineRevenue = (line.price||0) * (line.qty||0) * (1 - descPct/100);
         map[key].units += (line.qty||0);
         map[key].revenue += lineRevenue;
@@ -3958,7 +3959,7 @@ const GE = (function(){
       (v.items||[]).forEach(l => {
         const gross = (parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-desc/100);
         if(gross <= 0) return;
-        const rate = l.ivaPct == null ? fallback : l.ivaPct;
+        const rate = l.ivaPct == null ? ivaVentasPct(l) : l.ivaPct;
         add(v.date, rate, gross, vistos.has(rate) ? null : v);
         vistos.add(rate);
       });
@@ -3977,7 +3978,7 @@ const GE = (function(){
       (v.items||[]).forEach(l => {
         const gross = (parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-desc/100);
         if(gross <= 0) return;
-        const rate = l.ivaPct == null ? fallback : l.ivaPct;
+        const rate = l.ivaPct == null ? ivaVentasPct(l) : l.ivaPct;
         if((v.date||'').startsWith(año+'-')) add(v.date, rate, gross, null);
         if((v.rectificativa.fecha||'').startsWith(año+'-')) add(v.rectificativa.fecha, rate, -gross, null);
       });
@@ -4201,7 +4202,7 @@ const GE = (function(){
     (v.items||[]).forEach(l => {
       const gross = (parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-desc/100);
       if(!gross) return;
-      const r = l.ivaPct == null ? fb : parseFloat(l.ivaPct);
+      const r = l.ivaPct == null ? ivaVentasPct(l) : parseFloat(l.ivaPct);
       if(!out[r]) out[r] = {base:0, iva:0};
       out[r].base += gross/(1+r/100); out[r].iva += gross - gross/(1+r/100);
     });
@@ -4550,7 +4551,7 @@ const GE = (function(){
     (sale.items||[]).forEach(line => {
       const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
       if(grossLine <= 0) return;
-      const rate = line.ivaPct != null ? line.ivaPct : fallbackRate;
+      const rate = line.ivaPct != null ? line.ivaPct : ivaVentasPct(line);
       rates[rate] = (rates[rate]||0) + grossLine;
     });
     let base = 0, iva = 0;

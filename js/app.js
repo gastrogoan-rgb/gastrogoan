@@ -2957,7 +2957,7 @@ function openRewardNotifyModal(id, reward){
       <textarea id="reward-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn btn-fino is-on" style="flex:1" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3727,7 +3727,7 @@ function openReservationReminderModal(id){
       <textarea id="reservation-reminder-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn btn-fino is-on" style="flex:1" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3790,7 +3790,7 @@ function openReservationNotifyChangeModal(id, tipo){
       <textarea id="reservation-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendReservationNotifyWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn btn-fino is-on" style="flex:1" onclick="sendReservationNotifyWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationNotifyEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -5225,6 +5225,74 @@ function quitarDiaCerrado(id){
   if(typeof syncPublicMirror === 'function') syncPublicMirror();
   renderMiNegocio();
 }
+/* Horario especial (8/11): un día —o unos días— en que abres con OTRAS horas que las de tu semana (una víspera, un evento,
+   un festivo con servicio reducido). Se guarda con el mismo formato que un día de la semana (ver horarioEspecialDe en menu.js),
+   así que reservas, pedidos, aforo por turno y los avisos del TPV lo usan sin más. Si un día también está en «cerrados», el cierre gana. */
+function renderHorarioEspecialHtml(){
+  const lista = [...((DB.business && DB.business.horariosEspeciales) || [])].sort((a, b) => (a.desde || '').localeCompare(b.desde || ''));
+  const hoy = todayStr();
+  const vigentes = lista.filter(c => (c.hasta || c.desde) >= hoy), pasados = lista.filter(c => (c.hasta || c.desde) < hoy);
+  const fmt = d => { try{ return new Date(d + 'T00:00:00').toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'}); }catch(e){ return d; } };
+  const horas = c => (c.turnos || []).filter(x => x && x.ini && x.fin).map(x => escapeHtml(x.ini + ' – ' + x.fin)).join('  ·  ');
+  const fila = c => `<li class="dc-fila"><span class="dc-fechas"><i class="ti ti-clock-edit"></i> ${escapeHtml(c.hasta && c.hasta !== c.desde ? fmt(c.desde) + ' → ' + fmt(c.hasta) : fmt(c.desde))}</span><span class="he-horas">${horas(c)}</span>${c.motivo ? `<span class="dc-motivo">${escapeHtml(c.motivo)}</span>` : '<span class="dc-motivo"></span>'}<button type="button" class="btn btn-sm btn-icon" onclick="quitarHorarioEspecial('${escapeJsAttr(String(c.id))}')" data-tip="${escapeHtml(gl({es:'Quitar', ca:'Treure', en:'Remove'}))}" aria-label="${escapeHtml(gl({es:'Quitar este horario especial', ca:'Treure aquest horari especial', en:'Remove this special schedule'}))}"><i class="ti ti-trash"></i></button></li>`;
+  return `
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0 16px">
+    <h4 style="margin-top:0"><i class="ti ti-clock-edit"></i> ${escapeHtml(gl({es:'Horario especial', ca:'Horari especial', en:'Special hours'}))}</h4>
+    <p style="font-size:13px;color:var(--muted)">${escapeHtml(gl({es:'Un día en que abres con otras horas que las de siempre (una víspera, un evento, un festivo con servicio reducido). Ese día, la web de reservas, los pedidos online, el aforo y el TPV usan este horario en lugar del de tu semana.', ca:'Un dia en què obres amb altres hores que les de sempre (una vigília, un esdeveniment, un festiu amb servei reduït). Aquell dia, la web de reserves, les comandes en línia, l\'aforament i el TPV fan servir aquest horari en lloc del de la setmana.', en:'A day when you open at different hours than usual (an eve, an event, a holiday with reduced service). That day the booking site, online orders, capacity and the POS use these hours instead of your weekly ones.'}))}</p>
+    ${vigentes.length ? `<ul class="dc-lista">${vigentes.map(fila).join('')}</ul>` : `<p class="txt-xs" style="color:var(--muted)">${escapeHtml(gl({es:'No hay ningún horario especial programado.', ca:'No hi ha cap horari especial programat.', en:'No special hours scheduled.'}))}</p>`}
+    <div class="he-form">
+      <div class="field"><label for="he-desde">${escapeHtml(gl({es:'Día (o desde)', ca:'Dia (o des de)', en:'Day (or from)'}))}</label><input type="date" id="he-desde" min="${hoy}"></div>
+      <div class="field"><label for="he-hasta">${escapeHtml(gl({es:'Hasta (opcional)', ca:'Fins (opcional)', en:'Until (optional)'}))}</label><input type="date" id="he-hasta" min="${hoy}"></div>
+      <div class="field he-motivo"><label for="he-motivo">${escapeHtml(gl({es:'Motivo (opcional)', ca:'Motiu (opcional)', en:'Reason (optional)'}))}</label><input type="text" id="he-motivo" maxlength="60" placeholder="${escapeHtml(gl({es:'Nochevieja, evento privado…', ca:'Cap d\'any, esdeveniment privat…', en:'New Year\'s Eve, private event…'}))}"></div>
+      <div class="field he-srv"><label for="he-t1-ini">${escapeHtml(gl({es:'Servicio 1', ca:'Servei 1', en:'Service 1'}))}</label><div class="he-par"><input type="time" id="he-t1-ini" aria-label="${escapeHtml(gl({es:'Abre', ca:'Obre', en:'Opens'}))}"><span>–</span><input type="time" id="he-t1-fin" aria-label="${escapeHtml(gl({es:'Cierra', ca:'Tanca', en:'Closes'}))}"></div></div>
+      <div class="field he-srv"><label for="he-t2-ini">${escapeHtml(gl({es:'Servicio 2 (si partes el día)', ca:'Servei 2 (si parteixes el dia)', en:'Service 2 (if split)'}))}</label><div class="he-par"><input type="time" id="he-t2-ini" aria-label="${escapeHtml(gl({es:'Abre', ca:'Obre', en:'Opens'}))}"><span>–</span><input type="time" id="he-t2-fin" aria-label="${escapeHtml(gl({es:'Cierra', ca:'Tanca', en:'Closes'}))}"></div></div>
+      <div class="he-ok"><button type="button" class="btn btn-sm btn-primary" onclick="anadirHorarioEspecial()"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Añadir horario especial', ca:'Afegir horari especial', en:'Add special hours'}))}</button></div>
+    </div>
+    ${pasados.length ? `<details class="dc-pasados"><summary>${escapeHtml(gl({es:'Horarios especiales pasados', ca:'Horaris especials passats', en:'Past special hours'}))} (${pasados.length})</summary><ul class="dc-lista">${pasados.map(fila).join('')}</ul></details>` : ''}`;
+}
+function anadirHorarioEspecial(){
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  const desde = v('he-desde'); let hasta = v('he-hasta');
+  const motivo = v('he-motivo').slice(0, 60);
+  const msg = (es, ca, en) => showToast(gl({es, ca, en}));
+  if(!desde){ msg('Pon el día del horario especial.', 'Posa el dia de l\'horari especial.', 'Enter the day of the special hours.'); return; }
+  if(!hasta) hasta = desde;
+  if(hasta < desde){ msg('La fecha final no puede ser anterior a la inicial.', 'La data final no pot ser anterior a la inicial.', 'The end date cannot be earlier than the start date.'); return; }
+  const turnos = [];
+  for(const n of [1, 2]){
+    const ini = v('he-t' + n + '-ini'), fin = v('he-t' + n + '-fin');
+    if(!ini && !fin) continue;
+    if(!ini || !fin){ msg('Cada servicio necesita hora de apertura y de cierre.', 'Cada servei necessita hora d\'obertura i de tancament.', 'Each service needs an opening and a closing time.'); return; }
+    if(ini === fin){ msg('La hora de apertura y la de cierre no pueden ser la misma.', 'L\'hora d\'obertura i la de tancament no poden ser la mateixa.', 'Opening and closing times cannot be the same.'); return; }
+    turnos.push({ini, fin});
+  }
+  if(!turnos.length){ msg('Pon al menos un servicio con su hora de apertura y de cierre.', 'Posa almenys un servei amb la seva hora d\'obertura i de tancament.', 'Enter at least one service with opening and closing times.'); return; }
+  // Con dos servicios, el segundo no puede empezar antes de que acabe el primero (se pisarían en el aforo por turno).
+  if(turnos.length === 2){
+    const m = x => { const [h, mi] = x.split(':').map(Number); return h * 60 + mi; };
+    const [a, b] = turnos;
+    if(m(a.fin) > m(a.ini) && m(b.ini) < m(a.fin)){ msg('Los dos servicios se pisan: el segundo debe empezar cuando acaba el primero.', 'Els dos serveis es trepitgen: el segon ha de començar quan acaba el primer.', 'The two services overlap: the second must start after the first ends.'); return; }
+  }
+  if(!Array.isArray(DB.business.horariosEspeciales)) DB.business.horariosEspeciales = [];
+  // Dos horarios especiales en el mismo día serían ambiguos: se avisa en vez de elegir uno en silencio.
+  const choca = DB.business.horariosEspeciales.some(h => h && h.desde && desde <= (h.hasta || h.desde) && hasta >= h.desde);
+  if(choca){ msg('Ya hay un horario especial en esas fechas. Quítalo antes de poner otro.', 'Ja hi ha un horari especial en aquestes dates. Treu-lo abans de posar-ne un altre.', 'There is already special hours on those dates. Remove it before adding another.'); return; }
+  const afectadas = (DB.reservations || []).filter(r => r.date >= desde && r.date <= hasta && r.status !== 'cancelada' && r.status !== 'cancelled').length;
+  DB.business.horariosEspeciales.push({id: genId(), desde, hasta, motivo, abierto: true, modo: 'turnos', seguido: {ini: '', fin: ''}, turnos});
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  renderMiNegocio();
+  showToast(afectadas
+    ? gl({es:'Horario especial guardado. Ojo: hay ' + afectadas + ' reserva(s) en esas fechas; revisa que encajen.', ca:'Horari especial desat. Compte: hi ha ' + afectadas + ' reserva(es) en aquestes dates; revisa que hi encaixin.', en:'Special hours saved. Note: there are ' + afectadas + ' booking(s) on those dates; check they still fit.'})
+    : gl({es:'Horario especial guardado.', ca:'Horari especial desat.', en:'Special hours saved.'}));
+}
+function quitarHorarioEspecial(id){
+  DB.business.horariosEspeciales = (DB.business.horariosEspeciales || []).filter(c => String(c.id) !== String(id));
+  saveDB();
+  if(typeof syncPublicMirror === 'function') syncPublicMirror();
+  renderMiNegocio();
+}
+
 function renderHorarioRows(horario){
   horario = horario && horario.length===7 ? horario.map(migrateHorarioDia) : defaultHorario();
   const cards = horario.map((d,i) => {
@@ -7268,10 +7336,11 @@ function renderMiNegocio(){
       <h4><i class="ti ti-building-bank"></i> ${t('mn.fiscal.title')}</h4>
       <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">${t('mn.fiscal.desc')}</p>
       ${b.fiscalFijado ? `<p class="mn-bloqueo"><i class="ti ti-lock"></i> <span>${gl({es:'La forma jurídica y el régimen los fija GastroGoan al darte de alta, según lo que declara tu gestoría: de ellos depende cómo se calcula tu impuesto. Si ha cambiado (por ejemplo, pasas de autónomo a sociedad), pídenoslo y pulsa «Comprobar cambios».', ca:'La forma jurídica i el règim els fixa GastroGoan en donar-te d\'alta, segons el que declara la teva gestoria: d\'ells depèn com es calcula el teu impost. Si ha canviat (per exemple, passes d\'autònom a societat), demana-ho\'ns i prem «Comprovar canvis».', en:'The legal form and tax regime are set by GastroGoan when you sign up, based on what your accountant files: your tax calculation depends on them. If it changed (for example, from self-employed to company), ask us and press «Check for changes».'})}</span> <button type="button" class="btn btn-sm" onclick="refrescarFiscalDeLicencia()"><i class="ti ti-refresh"></i> ${gl({es:'Comprobar cambios', ca:'Comprovar canvis', en:'Check for changes'})}</button></p>` : ''}
+      ${!b.fiscalFijado ? `<p class="mn-bloqueo mn-bloqueo-aviso"><i class="ti ti-lock"></i> <span>${gl({es:'Aún no los ha fijado GastroGoan. La forma jurídica y el régimen no se eligen aquí: los pone GastroGoan al darte de alta, según lo que declara tu gestoría (de ellos depende cómo se calcula tu impuesto). Escríbenos y, cuando los hayamos puesto, pulsa «Comprobar cambios».', ca:'Encara no els ha fixat GastroGoan. La forma jurídica i el règim no s\'trien aquí: els posa GastroGoan en donar-te d\'alta, segons el que declara la teva gestoria (d\'ells depèn com es calcula el teu impost). Escriu-nos i, quan els hàgim posat, prem «Comprovar canvis».', en:'GastroGoan has not set them yet. The legal form and tax regime are not chosen here: GastroGoan sets them when you sign up, based on what your accountant files (your tax calculation depends on them). Write to us and, once we have set them, press «Check for changes».'})}</span> <button type="button" class="btn btn-sm" onclick="refrescarFiscalDeLicencia()"><i class="ti ti-refresh"></i> ${gl({es:'Comprobar cambios', ca:'Comprovar canvis', en:'Check for changes'})}</button></p>` : ''}
       <div class="field-row">
         <div class="field">
           <label>${t('mn.fiscal.forma')}</label>
-          <select id="mn-forma-juridica" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
+          <select id="mn-forma-juridica" onchange="saveBusiness(true);renderMiNegocio()" disabled>
             <option value="" ${b.formaJuridica?'':'selected'} disabled>${t('mn.fiscal.chooseForma')}</option>
             <option value="autonomo" ${b.formaJuridica==='autonomo'?'selected':''}>${t('mn.fiscal.autonomo')}</option>
             <option value="cb" ${b.formaJuridica==='cb'?'selected':''}>${t('mn.fiscal.cb')}</option>
@@ -7282,7 +7351,7 @@ function renderMiNegocio(){
         ${b.formaJuridica==='autonomo' ? `
         <div class="field">
           <label>${t('mn.fiscal.regimen')}</label>
-          <select id="mn-regimen-fiscal" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
+          <select id="mn-regimen-fiscal" onchange="saveBusiness(true);renderMiNegocio()" disabled>
             <option value="" ${b.regimenFiscal?'':'selected'} disabled>${t('mn.fiscal.chooseRegimen')}</option>
             <option value="directa" ${b.regimenFiscal==='directa'?'selected':''}>${t('mn.fiscal.directa')}</option>
             <option value="modulos" ${b.regimenFiscal==='modulos'?'selected':''}>${t('mn.fiscal.modulos')}</option>
@@ -7290,7 +7359,7 @@ function renderMiNegocio(){
         </div>
         ${b.regimenFiscal==='directa' ? `<div class="field">
           <label>${t('mn.fiscal.modalidad')}</label>
-          <select id="mn-modalidad-directa" onchange="saveBusiness(true)"${b.fiscalFijado ? ' disabled' : ''}>
+          <select id="mn-modalidad-directa" onchange="saveBusiness(true)" disabled>
             <option value="simplificada" ${b.modalidadDirecta!=='normal'?'selected':''}>${t('mn.fiscal.simplificada')}</option>
             <option value="normal" ${b.modalidadDirecta==='normal'?'selected':''}>${t('mn.fiscal.normal')}</option>
           </select>
@@ -7302,7 +7371,7 @@ function renderMiNegocio(){
       </div>
       ${(b.formaJuridica==='autonomo' || b.formaJuridica==='cb') ? `<div class="field-row"><div class="field">
           <label>${gl({es:'Comunidad autónoma (escala del IRPF)', ca:'Comunitat autònoma (escala de l\'IRPF)', en:'Region (income-tax scale)'})}</label>
-          <select id="mn-territorio" onchange="saveBusiness(true);renderMiNegocio()"${b.fiscalFijado ? ' disabled' : ''}>
+          <select id="mn-territorio" onchange="saveBusiness(true);renderMiNegocio()" disabled>
             ${fiscalTerritoriosLista().map(k => `<option value="${k}" ${(b.territorio||'general')===k?'selected':''}>${FISCAL_TERRITORIOS[k]()}</option>`).join('')}
           </select>
           <div class="txt-xs" style="color:var(--muted);margin-top:4px">${gl({es:'Cada comunidad tiene su escala. Solo Cataluña está cargada y verificada; para el resto se usa una escala general de referencia (la previsión lo avisa).', ca:'Cada comunitat té la seva escala. Només Catalunya està carregada i verificada; per a la resta s\'usa una escala general de referència (la previsió ho avisa).', en:'Each region has its own scale. Only Catalonia is loaded and verified; the rest use a reference general scale (the forecast warns you).'})}</div>
@@ -7412,6 +7481,7 @@ function renderMiNegocio(){
       <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc2')}</p>
       <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
       ${renderDiasCerradosHtml()}
+      ${renderHorarioEspecialHtml()}
     </div>
 
     <div class="card mn-grid-full">
@@ -7489,26 +7559,19 @@ function renderMiNegocio(){
       </div>` : ''}
       <h4 style="margin:16px 0 4px"><i class="ti ti-layout-grid"></i> ${t('mn.ops.floorPlan')}</h4>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.floorPlanDesc')}</p>
-      <div class="field-row">
+      <div class="mn-zona-nueva">
         <div class="field">
-          <label>${t('mn.ops.zoneName')}</label>
+          <label for="mn-zona-nombre">${t('mn.ops.zoneName')}</label>
           <input type="text" id="mn-zona-nombre" placeholder="${t('mn.ops.zoneNamePh')}">
         </div>
         <div class="field">
-          <label>${t('mn.ops.tableCount')}</label>
+          <label for="mn-zona-cantidad">${t('mn.ops.tableCount')}</label>
           <input type="number" id="mn-zona-cantidad" min="1" max="50" value="4">
         </div>
+        <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> ${t('mn.ops.createZone')}</button>
       </div>
       <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${escapeHtml(gl({es:'Cada mesa nace con ' + MESA_PLAZAS_DEFECTO + ' plazas; ajusta las de cada una en la lista de abajo (la web de reservas las usa para saber qué mesa le va a cada grupo).', ca:'Cada taula neix amb ' + MESA_PLAZAS_DEFECTO + ' places; ajusta les de cadascuna a la llista de sota (la web de reserves les fa servir per saber quina taula va a cada grup).', en:'Each table starts with ' + MESA_PLAZAS_DEFECTO + ' seats; adjust each one in the list below (the booking site uses them to know which table fits each party).'}))}</p>
-      <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> ${t('mn.ops.createZone')}</button>
-
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <h4 style="margin:0 0 8px"><i class="ti ti-list-details"></i> ${t('mn.ops.configuredTables')}</h4>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.configuredTablesDesc')}</p>
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px;padding:0 78px 0 0">
-        <span style="flex:1"></span>
-        <span style="width:64px;font-size:11px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase">${t('mn.ops.seatsPerTable')}</span>
-      </div>
+      <div class="mn-mesas-cab"><i class="ti ti-list-details"></i> ${t('mn.ops.configuredTables')} <span>${t('mn.ops.configuredTablesDesc')}</span></div>
       <div id="mn-mesas-list"></div>
       <div id="mn-aforo-warning"></div>
     </div>
@@ -7561,14 +7624,14 @@ function renderMesasConfigList(){
       ${z ? `<button class="btn btn-sm btn-icon" style="flex-shrink:0" onclick="addTableToZona('${escapeJsAttr(z)}')" title="${t('mn.ops.addTableToZone')}"><i class="ti ti-plus"></i></button>` : ''}
       ${z ? `<button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="deleteZonaCompleta('${escapeJsAttr(z)}')" title="${t('mn.ops.deleteWholeZone')}"><i class="ti ti-trash"></i></button>` : ''}
     </div>`;
-    html += tables.map(t2 => {
+    html += '<div class="mn-mesas-grid">' + tables.map(t2 => {
       return `
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="text" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" style="flex:1;min-width:0;padding:6px 8px;font-size:13px" placeholder="${t('mn.ops.tableNamePh')}">
-        <input type="number" min="1" max="50" required value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" style="width:52px;flex-shrink:0;padding:6px 4px;font-size:13px;text-align:center;${t2.plazas?'':'border-color:var(--red);background:var(--red-l)'}" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}" aria-invalid="${!t2.plazas}">
-        <button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
+      <div class="mn-mesa">
+        <input type="text" class="mn-mesa-nombre" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" placeholder="${t('mn.ops.tableNamePh')}" aria-label="${t('mn.ops.tableNamePh')}">
+        <label class="mn-mesa-plazas${t2.plazas?'':' falta'}"><span>${escapeHtml(gl({es:'Plazas', ca:'Places', en:'Seats'}))}</span><input type="number" min="1" max="50" required value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}" aria-invalid="${!t2.plazas}"></label>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}" aria-label="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
       </div>`;
-    }).join('');
+    }).join('') + '</div>';
   });
   const sinPlazas = DB.tables.filter(tb => !tb.plazas).length;
   if(sinPlazas) html = `<div class="card" style="border-color:var(--red);background:var(--red-l);padding:10px 12px;margin:8px 0;font-size:13px"><strong>${t('mn.ops.tablesWithoutSeats').replace('${n}', sinPlazas)}</strong></div>` + html;
@@ -8306,7 +8369,14 @@ async function saveBusiness(silent){
     if(!DB.business.pedidos) DB.business.pedidos = {};
     DB.business.pedidos.leadTimeMin = DB.business.leadTimeMinPedidos;
   }
-  if(el('mn-require-manual-confirm-from')) DB.business.reservaConfirmManualDesde = Math.max(1, parseInt(el('mn-require-manual-confirm-from').value) || 1);
+  // La casilla manda: si está desmarcada el valor es 0 aunque el campo del número
+  // siga en pantalla (toggleReservaConfirmManual guarda ANTES de repintar, y leer
+  // el campo volvía a dejar el valor en ≥1: la casilla no se podía desmarcar).
+  if(el('mn-require-manual-confirm')){
+    DB.business.reservaConfirmManualDesde = el('mn-require-manual-confirm').checked
+      ? Math.max(1, parseInt((el('mn-require-manual-confirm-from')||{}).value) || DB.business.reservaConfirmManualDesde || 8)
+      : 0;
+  }
   if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked && pagoOnlineActivo;
   if(el('mn-deposit-amount')) DB.business.depositAmount = Math.max(0, parseFloat(el('mn-deposit-amount').value) || 0) || '';
   if(el('mn-deposit-type')) DB.business.depositType = el('mn-deposit-type').value;
@@ -8634,11 +8704,18 @@ function renderTicketConfigCard(){
         <label>${t('mn.ticket.footerMessage')}</label>
         <textarea id="tk-pie" placeholder="${t('ph.egTicketFooter')}">${escapeHtml(tc.pie||'')}</textarea>
       </div>
-      <div class="field">
-        <label>${t('mn.ticket.vatPct')}</label>
-        <input type="number" id="tk-iva" min="0" max="100" step="0.1" value="${tc.ivaPct!=null?tc.ivaPct:10}" style="max-width:120px">
-        <small style="color:var(--muted)">${t('mn.ticket.vatDescLong')}</small>
+      ${ivaResumenProductosHtml()}
+      <div class="field-row tk-iva-row">
+        <div class="field">
+          <label for="tk-iva">${t('mn.ticket.vatPct')}</label>
+          <input type="number" id="tk-iva" min="0" max="100" step="0.1" value="${tc.ivaPct!=null?tc.ivaPct:10}">
+        </div>
+        <div class="field">
+          <label for="tk-iva-bebidas">${escapeHtml(gl({es:'IVA por defecto — bebidas (%)', ca:'IVA per defecte — begudes (%)', en:'Default VAT — drinks (%)'}))}</label>
+          <input type="number" id="tk-iva-bebidas" min="0" max="100" step="0.1" value="${tc.ivaBebidasPct!=null && tc.ivaBebidasPct!=='' ? tc.ivaBebidasPct : ''}" placeholder="${escapeHtml(gl({es:'Igual que comida', ca:'Igual que menjar', en:'Same as food'}))}">
+        </div>
       </div>
+      <p class="txt-xs" style="color:var(--muted);margin:-4px 0 12px">${t('mn.ticket.vatDescLong')}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="previewTicketConfig()"><i class="ti ti-eye"></i> ${t('mn.ticket.preview')}</button>
@@ -8858,6 +8935,23 @@ function ensureComandaPrinters(){
 function anyComandaPrinterActive(){
   return ensureComandaPrinters().some(p => p.activo);
 }
+// Resumen de una línea de lo que va a pasar AHORA con las comandas (antes había que deducirlo de los interruptores de abajo):
+// pantalla, impresoras activas y qué falta por hacer si alguna no está lista.
+function comandaEstadoHtml(modo, printers){
+  const activas = printers.filter(p => p.activo);
+  let tipo = 'ok', txt;
+  if(modo !== 'impresion'){
+    txt = gl({es:'Las comandas salen en la pantalla de Comandas (cocina y barra). No se imprime nada.', ca:'Les comandes surten a la pantalla de Comandes (cuina i barra). No s\'imprimeix res.', en:'Orders show on the Orders screen (kitchen and bar). Nothing is printed.'});
+  }else if(!activas.length){
+    tipo = 'warn';
+    txt = gl({es:'Está en «Imprimir» pero no hay ninguna impresora activa: de momento las comandas salen en pantalla. Activa una abajo.', ca:'Està en «Imprimir» però no hi ha cap impressora activa: de moment les comandes surten a pantalla. Activa\'n una a sota.', en:'Set to "Print" but no printer is on: for now orders show on screen. Turn one on below.'});
+  }else{
+    const sinParear = activas.filter(p => getPrintMode(p.id) === 'bluetooth' && !(thermalPrintingSupported() && getThermalPrinterName(p.id)));
+    txt = gl({es:'Se imprime en: ', ca:'S\'imprimeix a: ', en:'Printing on: '}) + activas.map(p => p.nombre).join(', ') + '.';
+    if(sinParear.length){ tipo = 'warn'; txt += ' ' + gl({es:'Falta emparejar por Bluetooth: ', ca:'Falta emparellar per Bluetooth: ', en:'Bluetooth pairing needed: '}) + sinParear.map(p => p.nombre).join(', ') + '. ' + gl({es:'Mientras, sale por el navegador.', ca:'Mentrestant, surt pel navegador.', en:'Meanwhile it prints via the browser.'}); }
+  }
+  return `<div class="cp-estado-global ${tipo}" role="status"><i class="ti ${tipo === 'ok' ? 'ti-circle-check' : 'ti-alert-triangle'}"></i><span>${escapeHtml(txt)}</span></div>`;
+}
 function renderComandaPrintCard(){
   const printers = ensureComandaPrinters();
   const modo = (DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
@@ -8880,43 +8974,57 @@ function renderComandaPrintCard(){
           <span><strong>${t('mn.comandas.modePrint')}</strong><br><small style="color:var(--muted)">${t('mn.comandas.modePrintDesc')}</small></span>
         </label>
       </div>
+      ${comandaEstadoHtml(modo, printers)}
       ${modo === 'impresion' ? `
-      <div id="comanda-printers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+      <div id="comanda-printers-list" class="cp-lista">
         ${printers.length ? printers.map(p=>{
+          const bt = getPrintMode(p.id) === 'bluetooth';
           const pairedName = thermalPrintingSupported() ? getThermalPrinterName(p.id) : '';
+          const estado = !p.activo ? {c:'off', x: gl({es:'Apagada', ca:'Apagada', en:'Off'})}
+            : (bt && !pairedName) ? {c:'warn', x: gl({es:'Sin emparejar', ca:'Sense emparellar', en:'Not paired'})}
+            : {c:'ok', x: bt ? gl({es:'Conectada por Bluetooth', ca:'Connectada per Bluetooth', en:'Connected by Bluetooth'}) : gl({es:'Lista (por el navegador)', ca:'Llesta (pel navegador)', en:'Ready (via browser)'})};
           return `
-          <div class="ge-item" style="flex-wrap:wrap">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-right:8px">
-              <input type="checkbox" ${p.activo?'checked':''} onchange="toggleComandaPrinter('${p.id}', this.checked)" style="width:18px;height:18px">
-            </label>
-            <input type="text" value="${escapeHtml(p.nombre)}" onchange="renameComandaPrinter('${p.id}', this.value)" placeholder="${t('ph.egPrinterName')}" style="flex:1;min-width:120px;font-weight:600">
-            <select onchange="setComandaPrinterAncho('${p.id}', this.value)" style="max-width:170px">
-              <option value="80" ${p.anchoTicket!=58?'selected':''}>80 mm (${t('mn.comandas.standard')})</option>
-              <option value="58" ${p.anchoTicket==58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
-            </select>
-            <select onchange="setComandaPrinterContenido('${p.id}', this.value)" style="max-width:170px">
-              <option value="comida" ${p.contenido==='comida'?'selected':''}>${t('mn.comandas.contentFood')}</option>
-              <option value="bebida" ${p.contenido==='bebida'?'selected':''}>${t('mn.comandas.contentDrinks')}</option>
-              <option value="todo" ${p.contenido==='todo'?'selected':''}>${t('mn.comandas.contentAll')}</option>
-            </select>
-            <button class="btn btn-sm" onclick="testComandaPrint('${p.id}')"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteComandaPrinter('${p.id}')"><i class="ti ti-trash"></i></button>
-            <div style="width:100%;margin-top:2px;padding-top:6px;border-top:1px dashed var(--border)">${renderPrintModeConfig(p.id, {compacto: true})}</div>
-            ${getPrintMode(p.id) === 'bluetooth' ? `
-            <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="cp-imp${p.activo ? '' : ' is-off'}">
+            <div class="cp-cab">
+              <label class="cp-activa"><input type="checkbox" ${p.activo?'checked':''} onchange="toggleComandaPrinter('${p.id}', this.checked)"><span>${escapeHtml(gl({es:'Activa', ca:'Activa', en:'On'}))}</span></label>
+              <input type="text" class="cp-nombre" value="${escapeHtml(p.nombre)}" onchange="renameComandaPrinter('${p.id}', this.value)" placeholder="${t('ph.egPrinterName')}" aria-label="${escapeHtml(gl({es:'Nombre de la impresora', ca:'Nom de la impressora', en:'Printer name'}))}">
+              <span class="cp-estado ${estado.c}">${escapeHtml(estado.x)}</span>
+              <button class="btn btn-sm btn-fino" onclick="testComandaPrint('${p.id}')"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
+              ${ggMenuAcciones([{icono:'ti-trash', texto: gl({es:'Eliminar impresora', ca:'Eliminar impressora', en:'Delete printer'}), fn: `deleteComandaPrinter('${p.id}')`, peligro:true}])}
+            </div>
+            <div class="cp-campos">
+              <label class="field"><span class="cp-rot">${escapeHtml(gl({es:'Qué imprime', ca:'Què imprimeix', en:'What it prints'}))}</span>
+                <select onchange="setComandaPrinterContenido('${p.id}', this.value)">
+                  <option value="comida" ${p.contenido==='comida'?'selected':''}>${t('mn.comandas.contentFood')}</option>
+                  <option value="bebida" ${p.contenido==='bebida'?'selected':''}>${t('mn.comandas.contentDrinks')}</option>
+                  <option value="todo" ${p.contenido==='todo'?'selected':''}>${t('mn.comandas.contentAll')}</option>
+                </select></label>
+              <label class="field"><span class="cp-rot">${escapeHtml(gl({es:'Ancho del rollo', ca:'Ample del rotllo', en:'Paper width'}))}</span>
+                <select onchange="setComandaPrinterAncho('${p.id}', this.value)">
+                  <option value="80" ${p.anchoTicket!=58?'selected':''}>80 mm (${t('mn.comandas.standard')})</option>
+                  <option value="58" ${p.anchoTicket==58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
+                </select></label>
+              <div class="cp-conexion">${renderPrintModeConfig(p.id, {compacto: true})}</div>
+            </div>
+            ${bt ? `
+            <div class="cp-bt">
               <i class="ti ti-bluetooth" style="color:${pairedName?'var(--ink)':'var(--muted)'}"></i>
               ${pairedName
-                ? `<span style="font-size:12px;color:var(--muted);flex:1"><strong>${escapeHtml(pairedName)}</strong> ${t('thermal.pairedHint')}</span>
-                   <button class="btn btn-sm" onclick="connectThermalPrinter('${p.id}')">${t('thermal.reconnectBtn')}</button>
-                   <button class="btn btn-sm btn-danger" onclick="forgetThermalPrinterUi('${p.id}')">${t('thermal.forgetBtn')}</button>`
-                : `<span style="font-size:12px;color:var(--muted);flex:1">${t('thermal.notPairedHint')}</span>
-                   <button class="btn btn-sm" onclick="connectThermalPrinter('${p.id}')"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>`}
+                ? `<span class="cp-bt-txt"><strong>${escapeHtml(pairedName)}</strong> ${t('thermal.pairedHint')}</span>
+                   <button class="btn btn-sm btn-fino" onclick="connectThermalPrinter('${p.id}')">${t('thermal.reconnectBtn')}</button>
+                   <button class="btn btn-sm btn-fino is-off" onclick="forgetThermalPrinterUi('${p.id}')">${t('thermal.forgetBtn')}</button>`
+                : `<span class="cp-bt-txt">${t('thermal.notPairedHint')}</span>
+                   <button class="btn btn-sm btn-fino is-on" onclick="connectThermalPrinter('${p.id}')"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>`}
             </div>` : ''}
           </div>`;
         }).join('')
         : `<div class="empty" style="padding:12px 16px">${t('mn.comandas.empty')}</div>`}
       </div>
-      <button class="btn btn-sm" onclick="addComandaPrinter()"><i class="ti ti-plus"></i> ${t('mn.comandas.addPrinter')}</button>
+      <div class="cp-anadir">
+        <button class="btn btn-sm btn-fino" onclick="addComandaPrinter('comida')"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Impresora de cocina', ca:'Impressora de cuina', en:'Kitchen printer'}))}</button>
+        <button class="btn btn-sm btn-fino" onclick="addComandaPrinter('bebida')"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Impresora de barra', ca:'Impressora de barra', en:'Bar printer'}))}</button>
+        <button class="btn btn-sm btn-fino" onclick="addComandaPrinter('todo')"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Otra (todo el pedido)', ca:'Una altra (tota la comanda)', en:'Other (whole order)'}))}</button>
+      </div>
       ${thermalPrintingSupported() ? '' : `<div style="margin-top:10px">${renderNoBluetoothWarning()}</div>`}
       ` : ''}
     </div>
@@ -8994,9 +9102,11 @@ function setComandaPrinterContenido(id, val){
   p.contenido = val;
   saveDB();
 }
-function addComandaPrinter(){
+function addComandaPrinter(contenido){
   const printers = ensureComandaPrinters();
-  printers.push({id: genId(), nombre: t('mn.comandas.newPrinterName'), activo:true, anchoTicket:80, contenido:'todo'});
+  const c = ['comida', 'bebida', 'todo'].includes(contenido) ? contenido : 'todo';
+  const nombre = c === 'comida' ? t('mn.comandas.defaultKitchen') : c === 'bebida' ? gl({es:'Barra', ca:'Barra', en:'Bar'}) : t('mn.comandas.newPrinterName');
+  printers.push({id: genId(), nombre, activo:true, anchoTicket:80, contenido:c});
   saveDB();
   renderMiNegocio();
 }
@@ -9079,6 +9189,23 @@ function saveCashDrawerSetting(enabled){
   showToast(t(enabled ? 'drawer.enabled' : 'drawer.disabled'));
 }
 
+// Qué IVA lleva HOY cada producto de las cartas y menús (el tipo de cada plato se elige en Oferta / Escandallo). Sirve para ver de un
+// vistazo que hay comida al 10 %, alguna cosa al 21 %… y para avisar de lo que no tiene tipo y caería en el IVA por defecto de abajo.
+function ivaResumenProductosHtml(){
+  const cuenta = {}; let sin = 0;
+  const suma = p => { if(!p) return; if(p.ivaPct == null || p.ivaPct === '') sin++; else cuenta[p.ivaPct] = (cuenta[p.ivaPct] || 0) + 1; };
+  (DB.cartas || []).forEach(c => (c.secciones || []).forEach(sec => (sec.platos || []).forEach(suma)));
+  (DB.menus || []).forEach(suma);
+  const tipos = Object.keys(cuenta).map(Number).sort((a, b) => b - a);
+  if(!tipos.length && !sin) return '';
+  const chips = tipos.map(r => `<span class="tk-iva-chip"><b>${r} %</b> · ${cuenta[r]} ${escapeHtml(gl({es: cuenta[r] === 1 ? 'producto' : 'productos', ca: cuenta[r] === 1 ? 'producte' : 'productes', en: cuenta[r] === 1 ? 'product' : 'products'}))}</span>`).join('');
+  return `<div class="tk-iva-resumen">
+    <div class="tk-iva-tit">${escapeHtml(gl({es:'IVA de tus productos', ca:'IVA dels teus productes', en:'VAT on your products'}))}</div>
+    <div class="tk-iva-chips">${chips}${sin ? `<span class="tk-iva-chip falta"><b>${escapeHtml(gl({es:'Sin tipo', ca:'Sense tipus', en:'No rate'}))}</b> · ${sin}</span>` : ''}</div>
+    <p class="txt-xs" style="color:var(--muted);margin:6px 0 0">${escapeHtml(gl({es:'Cada producto lleva su IVA (se elige en Oferta); el ticket y la contabilidad separan cada tipo. Un cambio de IVA en un plato no toca las ventas ya cobradas.', ca:'Cada producte porta el seu IVA (es tria a Oferta); el tiquet i la comptabilitat separen cada tipus. Un canvi d\'IVA en un plat no toca les vendes ja cobrades.', en:'Every product carries its own VAT (set in Offer); the receipt and the books keep each rate apart. Changing a dish\'s VAT does not touch sales already charged.'}))}${sin ? ' ' + escapeHtml(gl({es:'Los que no tienen tipo usan el IVA por defecto de abajo.', ca:'Els que no tenen tipus fan servir l\'IVA per defecte d\'avall.', en:'Those without a rate use the default VAT below.'})) : ''}</p>
+  </div>`;
+}
+
 function saveTicketConfig(){
   // ⚠️ `parseFloat(...) || 0` solo descarta NaN, no un negativo ni uno por
   // encima de 100 — los atributos HTML min/max del campo no bloquean este
@@ -9092,6 +9219,14 @@ function saveTicketConfig(){
     document.getElementById('tk-iva').focus();
     return;
   }
+  // El IVA de bebidas es opcional: vacío = el mismo que el de comida.
+  const bebRaw = (document.getElementById('tk-iva-bebidas') || {}).value;
+  const ivaBebidasPct = (bebRaw === '' || bebRaw == null) ? null : parseFloat(bebRaw);
+  if(ivaBebidasPct != null && (!isFinite(ivaBebidasPct) || ivaBebidasPct < 0 || ivaBebidasPct > 100)){
+    showToast(t('msg.invalidTicketIva'));
+    document.getElementById('tk-iva-bebidas').focus();
+    return;
+  }
   DB.business.ticket = {
     pie: document.getElementById('tk-pie').value.trim(),
     mostrarDireccion: document.getElementById('tk-direccion').checked,
@@ -9099,7 +9234,8 @@ function saveTicketConfig(){
     mostrarWeb: document.getElementById('tk-web').checked,
     mostrarNif: document.getElementById('tk-nif').checked,
     mostrarResenaQr: document.getElementById('tk-review-qr').checked,
-    ivaPct
+    ivaPct,
+    ivaBebidasPct
   };
   saveDB();
   renderMiNegocio();

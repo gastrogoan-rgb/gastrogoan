@@ -683,12 +683,12 @@ function renderTogoCalendarBody(){
     label = ds;
     const orders = togoOrdersForDate(ds).sort((a,b) => (a.time||'').localeCompare(b.time||''));
     dayListHtml = orders.length ? `
-      <div class="table-wrap"><table>
+      <div class="table-wrap"><table class="table-cards">
         <thead><tr><th>${t('common.time')}</th><th>${t('th.client')}</th><th>${t('common.type')}</th><th>${t('common.total')}</th><th>${t('label.paidOnline')}</th></tr></thead>
         <tbody>${orders.map(o => `<tr style="cursor:pointer" onclick="closeModal();openTableOrder(null, ${o.id})">
-          <td>${escapeHtml(o.time||'—')}</td><td>${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</td>
-          <td>${o.tipo==='delivery'?t('label.deliveryShort'):t('label.pickupOrder')}</td><td>${fmtMoney(orderTotal(o))}</td>
-          <td>${o.pagado ? `<span class="badge badge-green">${t('common.yes')}</span>` : `<span class="badge badge-amber">${t('common.no')}</span>`}</td>
+          <td data-label="${escapeHtml(t('common.time'))}">${escapeHtml(o.time||'—')}</td><td data-label="${escapeHtml(t('th.client'))}">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</td>
+          <td data-label="${escapeHtml(t('common.type'))}">${o.tipo==='delivery'?t('label.deliveryShort'):t('label.pickupOrder')}</td><td data-label="${escapeHtml(t('common.total'))}">${fmtMoney(orderTotal(o))}</td>
+          <td data-label="${escapeHtml(t('label.paidOnline'))}">${o.pagado ? `<span class="badge badge-green">${t('common.yes')}</span>` : `<span class="badge badge-amber">${t('common.no')}</span>`}</td>
         </tr>`).join('')}</tbody>
       </table></div>` : `<div class="empty"><i class="ti ti-calendar-off"></i>${t('togocal.emptyDay')}</div>`;
   }
@@ -995,7 +995,7 @@ function openOrderNotifyModal(nombre, telefono, email, tipo){
       <textarea id="order-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#4A5D4E;color:#fff;border-color:#4A5D4E" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn btn-fino is-on" style="flex:1" onclick="sendOrderNotifyWhatsapp()" ${!telefono?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendOrderNotifyEmail()" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -5444,11 +5444,19 @@ function enqueueVerifactuSubmission(sale){
 function verifactuIvaPct(){
   return (DB.business.ticket && DB.business.ticket.ivaPct != null) ? DB.business.ticket.ivaPct : 10;
 }
+// IVA por DEFECTO de una línea que no trae el suyo (ventas anteriores a que cada plato lo estampara, o un plato sin tipo): el de
+// bebidas si el negocio lo ha puesto y la línea es una bebida; si no, el general de Mi Negocio → Ticket. Cada plato lleva el suyo
+// (Oferta, Escandallo): esto solo cubre lo que no lo tiene, nunca manda sobre un tipo propio.
+function ivaPorDefectoDe(line){
+  const tk = (DB.business && DB.business.ticket) || {};
+  if(line && line.bebida && tk.ivaBebidasPct != null && tk.ivaBebidasPct !== '' && isFinite(parseFloat(tk.ivaBebidasPct))) return parseFloat(tk.ivaBebidasPct);
+  return tk.ivaPct != null ? tk.ivaPct : 10;
+}
 // Tipo de IVA real de una línea de venta para la factura fiscal: el
 // estampado al cobrar (resolveLineIvaPct, aplicado en finalizeCharge), o el
 // general de reserva solo si la venta es de antes de ese cambio.
 function fiscalLineIvaPct(line){
-  return line.ivaPct != null ? line.ivaPct : verifactuIvaPct();
+  return line.ivaPct != null ? line.ivaPct : ivaPorDefectoDe(line);
 }
 // Agrupa una venta por tipo de IVA real de cada línea (con el descuento de
 // la venta prorrateado), para declarar un desglose correcto a Hacienda en

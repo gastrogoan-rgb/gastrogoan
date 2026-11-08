@@ -295,6 +295,27 @@ await caso('Mi Negocio: la tarjeta de Stripe enseña cada estado y solo activa e
   return 'sin conectar · alta a medias · activo · desactivado · guía antes de ir';
 });
 
+await caso('Reparto: un pedido a domicilio con código postal FUERA de la lista nunca entra solo (aunque el navegador diga que sí); uno de la lista sí', async () => {
+  const r = await page.evaluate(async () => {
+    DB.business.pedidosOnlineActivos = true;
+    DB.business.pedidos = {...(DB.business.pedidos || {}), cpList: ['28001', '28002'], radiusKm: 0};
+    const base = {type: 'pedido', tipo: 'delivery', clienteNombre: 'Z', metodoPagoLocal: 'efectivo', costeEnvio: 0, propina: 0, createdAt: new Date().toISOString(),
+      items: [{platoId: 101, name: 'Ensalada', price: 8, qty: 1}]};
+    await __empujar({...base, clientRef: 'REFzona0001', codigoPostal: '08001'});
+    await __empujar({...base, clientRef: 'REFzona0002', codigoPostal: '28 002'});
+    const fuera = DB.tpvOrders.find(x => x.clientRef === 'REFzona0001'), dentro = DB.tpvOrders.find(x => x.clientRef === 'REFzona0002');
+    // con radio, la app no puede medir: se fía de lo que dijo la web
+    DB.business.pedidos.radiusKm = 5;
+    const sinLista = zonaDeRepartoDePedido({tipo: 'delivery', codigoPostal: '08001'});
+    DB.business.pedidos.radiusKm = 0; DB.business.pedidos.cpList = [];
+    const sinZona = zonaDeRepartoDePedido({tipo: 'delivery', codigoPostal: '08001'});
+    return {fuera: [fuera.status, !!fuera.pendienteVerificarZona, !!fuera.fueraDeZona], dentro: [dentro.status !== 'pendiente-online', !!dentro.fueraDeZona], sinLista, sinZona};
+  });
+  assert.deepEqual(r.fuera, ['pendiente-online', true, true], JSON.stringify(r));
+  assert.deepEqual(r.dentro, [true, false], JSON.stringify(r));
+  assert.deepEqual(r.sinLista, {}); assert.deepEqual(r.sinZona, {});
+});
+
 await caso('Ningún error de JavaScript', async () => {
   const reales = errs.filter(e => !/Failed to fetch|NetworkError|network-request-failed/i.test(e));
   assert.deepEqual(reales.slice(0, 5), []);

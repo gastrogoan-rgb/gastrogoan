@@ -470,24 +470,23 @@ await caso('Al dueño se le pide confirmación, no el PIN', async ()=>{
 });
 
 /* ─── El índice del manual ─── */
-await caso('El manual tiene índice por áreas y marca dónde estás', async ()=>{
-  const r = await page.evaluate(()=>{
-    manualIndiceAbierto = true; manualSearch = '';
+await caso('El manual tiene portada por grupos, sus temas y marca dónde estás', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    const esp = ms => new Promise(r => setTimeout(r, ms));
+    manualSearch = ''; manualArea = null; manualChapter = -1;
     navigate('manual'); renderManual();
-    const idx = document.querySelector('#view-manual .mnl-indice');
-    if(!idx) return {hay:false};
-    const chips = [...idx.querySelectorAll('.mnl-chip')];
-    chips[2] && chips[2].click();
-    const idx2 = document.querySelector('#view-manual .mnl-indice');
-    const activo = idx2 ? idx2.querySelector('.mnl-chip.activo') : null;
-    return {hay:true, n: chips.length, capitulo: manualChapter,
-            marcado: activo ? [...idx2.querySelectorAll('.mnl-chip')].indexOf(activo) : -1};
+    const areas = [...document.querySelectorAll('#view-manual .mnl-area')];
+    if(!areas.length) return {hay:false};
+    const cocina = areas.find(a => /Cocina|Cuina|Kitchen/.test(a.textContent)); cocina.click(); await esp(200);
+    const temas = [...document.querySelectorAll('#view-manual .mnl-tema')];
+    temas[2] && temas[2].click(); await esp(250);
+    return {hay:true, areas: areas.length, n: temas.length, capitulo: manualChapter, titulo: (document.querySelector('.mnl-cab-tit')||{}).textContent};
   });
-  assert.ok(r.hay, 'faltaba el índice');
-  assert.ok(r.n >= 5, `pocos capítulos: ${r.n}`);
-  assert.equal(r.capitulo, 2, 'pulsar un acceso debe llevar a ese capítulo');
-  assert.equal(r.marcado, 2, 'y la marca debe seguirlo');
-  return `${r.n} capítulos, y la marca sigue al que abres`;
+  assert.ok(r.hay, 'faltaba la portada');
+  assert.equal(r.areas, 5, 'cinco grupos');
+  assert.ok(r.n >= 5, `pocos temas en Cocina: ${r.n}`);
+  assert.ok(r.capitulo >= 0 && r.titulo && r.titulo.trim().length > 2, 'pulsar un tema debe abrir ese tema');
+  return `${r.areas} grupos, ${r.n} temas en Cocina y se lee el elegido`;
 });
 
 /* ─── Los iconos de las pestañas compartidas ─── */

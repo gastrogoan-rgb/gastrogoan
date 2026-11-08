@@ -1576,7 +1576,7 @@ const MANUAL_CHAPTERS = [
 <table><thead><tr><th>Pestaña</th><th>Quién la ve</th><th>Para qué</th></tr></thead><tbody><tr><td><strong>Realizar Pedido</strong></td><td>Propietario y empleados con permiso de edición</td><td>Preparar y enviar un pedido real.</td></tr><tr><td><strong>Pedir lo que falta</strong></td><td>Empleados sin permiso de edición</td><td>Avisar de lo que falta (no es un pedido real).</td></tr><tr><td><strong>Historial de Pedidos</strong></td><td>Todos</td><td>Ver, recibir y revisar los pedidos.</td></tr></tbody></table>
 <h4>Realizar un pedido, paso a paso</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">En <strong>Realizar Pedido</strong>, elige el <strong>Proveedor</strong> y la <strong>Fecha de entrega</strong>. No se puede pedir para hoy, y si el proveedor no reparte ese día la app pasa la fecha al siguiente día de reparto y te avisa. Verás sus días de reparto, la hora, el envío y si tiene WhatsApp (móvil) y email. Mientras no elijas ninguno, la pantalla te enseña una <strong>tarjeta por proveedor</strong> con cuántos artículos tiene y cuántos están bajo el mínimo (los que más faltan, primero): un toque y lo eliges.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">Aparece su lista de la compra: cada artículo con el stock actual, el mínimo, bajo mínimo o +N en camino si procede, el precio y la cantidad con − y +. Filtra con <strong>Todos</strong>, <strong>Bajo mínimo</strong> o <strong>Con cantidad</strong>, o busca por nombre.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Aparece su lista de la compra: cada artículo con el stock actual, el mínimo, bajo mínimo o +N en camino si procede, el precio y la cantidad con − y +. Para no ver cientos de artículos de golpe, al elegir el proveedor solo aparece lo que ya llevas en el pedido: <strong>busca por nombre</strong>, toca una <strong>letra del índice A–Z</strong> o pulsa <strong>Todos</strong> para ver la lista entera. También filtra con <strong>Bajo mínimo</strong> o <strong>Con cantidad</strong>.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Pulsa <strong>Sugerir por déficit de stock</strong>: pone lo que falta para llegar al mínimo, descuenta lo que ya viene de camino (pedidos enviados sin recibir) y redondea hacia arriba al envase. Te dice cuántos sugiere, cuántos ya vienen y cuántos no tienen mínimo en Stock. Si ya habías escrito cantidades, pregunta antes de pisarlas. <strong>Vaciar</strong> pone todo a cero.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">A la derecha ves el <strong>Resumen del pedido</strong> con cada línea, el subtotal, el IVA, el envío y el total, y avisos: artículos sin precio, cuánto te falta para el envío gratis, o que ya hay un pedido pendiente a ese proveedor. Añade una nota si quieres.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Envíalo: <strong>Enviar por WhatsApp</strong> (solo si el proveedor tiene móvil; con un fijo no funciona), <strong>Enviar por Email</strong>, <strong>Guardar borrador</strong> o <strong>Imprimir</strong>. Si al proveedor le falta móvil o correo, el botón se apaga y te dice que lo añadas en su ficha.</div></div>
@@ -1632,7 +1632,7 @@ const MANUAL_CHAPTERS = [
 <table><thead><tr><th>Pestanya</th><th>Qui la veu</th><th>Per a què</th></tr></thead><tbody><tr><td><strong>Fer Comanda</strong></td><td>Propietari i empleats amb permís d'edició</td><td>Preparar i enviar una comanda real.</td></tr><tr><td><strong>Demanar el que falta</strong></td><td>Empleats sense permís d'edició</td><td>Avisar del que falta (no és una comanda real).</td></tr><tr><td><strong>Historial de Comandes</strong></td><td>Tothom</td><td>Veure, rebre i revisar les comandes.</td></tr></tbody></table>
 <h4>Fer una comanda, pas a pas</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">A <strong>Fer Comanda</strong>, tria el <strong>Proveïdor</strong> i la <strong>Data de lliurament</strong>. No es pot demanar per avui, i si el proveïdor no reparteix aquell dia l'app passa la data al següent dia de repartiment i t'avisa. Veuràs els seus dies de repartiment, l'hora, l'enviament i si té WhatsApp (mòbil) i email. Mentre no en triïs cap, la pantalla t'ensenya una <strong>targeta per proveïdor</strong> amb quants articles té i quants són sota el mínim (els que més falten, primer): un toc i el tries.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">Apareix la seva llista de la compra: cada article amb l'estoc actual, el mínim, sota el mínim o +N en camí si escau, el preu i la quantitat amb − i +. Filtra amb <strong>Tots</strong>, <strong>Sota el mínim</strong> o <strong>Amb quantitat</strong>, o cerca per nom.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Apareix la seva llista de la compra: cada article amb l'estoc actual, el mínim, sota el mínim o +N en camí si escau, el preu i la quantitat amb − i +. Per no veure centenars d'articles de cop, en triar el proveïdor només apareix el que ja portes a la comanda: <strong>cerca per nom</strong>, toca una <strong>lletra de l'índex A–Z</strong> o prem <strong>Tots</strong> per veure la llista sencera. També filtra amb <strong>Sota el mínim</strong> o <strong>Amb quantitat</strong>.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Prem <strong>Suggerir per dèficit d'estoc</strong>: posa el que falta per arribar al mínim, descompta el que ja ve de camí (comandes enviades sense rebre) i arrodoneix cap amunt al envàs. Et diu quants suggereix, quants ja vénen i quants no tenen mínim a l'Estoc. Si ja havies escrit quantitats, pregunta abans de trepitjar-les. <strong>Buidar</strong> posa tot a zero.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">A la dreta veus el <strong>Resum de la comanda</strong> amb cada línia, el subtotal, l'IVA, l'enviament i el total, i avisos: articles sense preu, quant et falta per a l'enviament gratis, o que ja hi ha una comanda pendent a aquell proveïdor. Afegeix una nota si vols.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Envia-la: <strong>Enviar per WhatsApp</strong> (només si el proveïdor té mòbil; amb un fix no funciona), <strong>Enviar per Email</strong>, <strong>Desar esborrany</strong> o <strong>Imprimir</strong>. Si al proveïdor li falta mòbil o correu, el botó s'apaga i et diu que ho afegeixis a la seva fitxa.</div></div>
@@ -1688,7 +1688,7 @@ const MANUAL_CHAPTERS = [
 <table><thead><tr><th>Tab</th><th>Who sees it</th><th>What for</th></tr></thead><tbody><tr><td><strong>Place Order</strong></td><td>Owner and employees with edit permission</td><td>Prepare and send a real order.</td></tr><tr><td><strong>Request what's needed</strong></td><td>Employees without edit permission</td><td>Flag what is short (it is not a real order).</td></tr><tr><td><strong>Order History</strong></td><td>Everyone</td><td>View, receive and review orders.</td></tr></tbody></table>
 <h4>Placing an order, step by step</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">In <strong>Place Order</strong>, choose the <strong>Supplier</strong> and the <strong>Delivery date</strong>. You cannot order for today, and if the supplier does not deliver that day the app moves the date to the next delivery day and tells you. You will see their delivery days, time, shipping and whether they have WhatsApp (mobile) and email. Until you pick one, the screen shows a <strong>card per supplier</strong> with how many items it has and how many are below minimum (most short first): one tap picks it.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">Their shopping list appears: each item with current stock, minimum, below min or +N on the way where relevant, the price and the quantity with − and +. Filter with <strong>All</strong>, <strong>Below minimum</strong> or <strong>With quantity</strong>, or search by name.</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Their shopping list appears: each item with current stock, minimum, below min or +N on the way where relevant, the price and the quantity with − and +. So you don't see hundreds of items at once, after choosing the supplier only what is already in your order shows: <strong>search by name</strong>, tap a <strong>letter of the A–Z index</strong> or press <strong>All</strong> to see the whole list. You can also filter with <strong>Below minimum</strong> or <strong>With quantity</strong>.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Press <strong>Suggest by stock deficit</strong>: it fills in what is missing to reach the minimum, subtracts what is already on its way (sent orders not yet received) and rounds up to the pack size. It tells you how many it suggested, how many are already coming and how many have no minimum in Stock. If you had already typed quantities, it asks before overwriting them. <strong>Clear</strong> sets everything to zero.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">On the right you see the <strong>Order summary</strong> with each line, subtotal, VAT, shipping and total, plus warnings: items without a price, how much you need for free shipping, or that there is already a pending order to that supplier. Add a note if you like.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Send it: <strong>Send via WhatsApp</strong> (only if the supplier has a mobile; a landline will not work), <strong>Send via Email</strong>, <strong>Save draft</strong> or <strong>Print</strong>. If the supplier has no mobile or email, the button is greyed out and tells you to add it to their profile.</div></div>
@@ -2465,7 +2465,7 @@ const MANUAL_CHAPTERS = [
 <li><strong>Cualquiera con acceso a Cocina</strong> puede mover los tickets, avisar a sala y marcar agotado. No hace falta permiso de edición.</li>
 <li><strong>Imprimir en vez de mirar la pantalla</strong>: en <strong>Gestión → Mi Negocio → Comandas de cocina y sala</strong> eliges <strong>Mostrar en pantalla</strong> o <strong>Imprimir</strong>. Con Imprimir, cada vez que sala marcha se imprime un vale en las impresoras que configures (cocina, barra…), y esta pantalla sigue funcionando.</li>
 <li>Los botones de esta pantalla son compactos a propósito, para que no ocupen media pantalla en hora punta; lo que más se usa es el nombre de cada bloque, dentro del ticket.</li>
-<li>Un pedido deja de estar en <strong>Activas</strong> cuando todos sus platos están entregados <strong>y recogidos por sala</strong>.</li>
+<li>Un pedido deja de estar en <strong>Activas</strong> cuando todos sus platos están entregados <strong>y recogidos</strong>.</li>
 </ul>
 
 <h4>Si algo no funciona</h4>
@@ -2528,7 +2528,7 @@ const MANUAL_CHAPTERS = [
 <li><strong>Qualsevol persona amb accés a Cuina</strong> pot moure els tiquets, avisar la sala i marcar esgotat. No cal permís d'edició.</li>
 <li><strong>Imprimir en lloc de mirar la pantalla</strong>: a <strong>Gestió → El Meu Negoci → Comandes de cuina i sala</strong> tries <strong>Mostrar en pantalla</strong> o <strong>Imprimir</strong>. Amb Imprimir, cada cop que la sala marxa s'imprimeix un val a les impressores que configuris (cuina, barra…), i aquesta pantalla continua funcionant.</li>
 <li>Els botons d'aquesta pantalla són compactes a propòsit, perquè no ocupin mitja pantalla a l'hora punta; el que més es fa servir és el nom de cada bloc, dins del tiquet.</li>
-<li>Una comanda deixa de ser a <strong>Actives</strong> quan tots els seus plats estan lliurats <strong>i recollits per la sala</strong>.</li>
+<li>Una comanda deixa de ser a <strong>Actives</strong> quan tots els seus plats estan lliurats <strong>i recollits</strong>.</li>
 </ul>
 
 <h4>Si alguna cosa no funciona</h4>
@@ -2591,7 +2591,7 @@ const MANUAL_CHAPTERS = [
 <li><strong>Anyone with access to Kitchen</strong> can move tickets, alert the floor and mark items as out. No edit permission is needed.</li>
 <li><strong>Printing instead of watching the screen</strong>: in <strong>Management → My Business → Kitchen and floor tickets</strong> you choose <strong>Show on screen</strong> or <strong>Print</strong>. With Print, each time the floor fires, a slip is printed on the printers you set up (kitchen, bar…), and this screen keeps working.</li>
 <li>The buttons on this screen are compact on purpose, so they don't take up half the screen at peak time; what's used most is the block name inside each ticket.</li>
-<li>An order leaves <strong>Active</strong> when all its dishes are delivered <strong>and picked up by the floor</strong>.</li>
+<li>An order leaves <strong>Active</strong> when all its dishes are delivered <strong>and picked up</strong>.</li>
 </ul>
 
 <h4>If something doesn't work</h4>
@@ -2649,9 +2649,9 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">2</div><div class="st">Se abre la pantalla de la mesa. Arriba tienes <strong>Cambiar de mesa</strong>, el nombre de la mesa y, si todavía no has pedido nada, <strong>Liberar mesa</strong> (para deshacer una mesa abierta por error).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Elige la carta en las pestañas de arriba (las bebidas salen primero, para que no se olvide pedirlas). Abre una carpeta y toca los platos: cada toque suma una unidad. Cada plato te dice <strong>cuántos lleva ya la mesa (×2)</strong> y tiene un <strong>−</strong> para quitar uno. También puedes escribir en el buscador <strong>Buscar un plato o bebida…</strong> para no abrir carpeta por carpeta.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Si el plato tiene extras u opciones, se abre una ventana (<strong>Extras y opciones</strong>) para marcarlos y añadir una nota. Si es un menú, la pestaña del menú tiene un botón para añadirlo y elegir sus platos.</div></div>
-<div class="manual-step"><div class="sn">5</div><div class="st">La <strong>comanda</strong> se va formando al lado (en PC y tablet) con − / cantidad / + en cada línea. En el móvil, carta y comanda se alternan a pantalla completa: abajo hay una barra <strong>Comanda</strong> con el total, y arriba de la comanda un botón para volver a la carta.</div></div>
-<p>En cada línea de la comanda hay tres botones pequeños: <strong>Notas</strong> (cocina las verá destacadas), <strong>Marchar este plato a cocina</strong> y <strong>Eliminar</strong>. En <strong>Notas</strong> puedes también cambiar el <em>momento de servicio</em> (primeros, segundos, postres…) y pulsar una <strong>nota rápida</strong> (Sin cebolla, Sin gluten, Sin lactosa, Poco hecho, Al punto, Muy hecho, Sin sal, Sin picante, Para compartir, Con prisa): un toque la añade y otro la quita.</p>
-<p>Bajo el nombre de la mesa tienes dos etiquetas pulsables: el <strong>camarero</strong> (se asigna solo a quien abre la mesa; para cambiarlo después hay que ser el propietario) y <strong>Alérgenos</strong>, donde apuntas lo que el cliente te ha avisado y sale en el vale de cocina. Con la <strong>i</strong> de cada plato ves sus ingredientes y alérgenos.</p>
+<div class="manual-step"><div class="sn">5</div><div class="st">Arriba tienes dos pestañas, en todos los tamaños: <strong>Tomar nota</strong> (la carta) y <strong>Pedido</strong> (lo que lleva la mesa, con el número de unidades y el total). Una mesa vacía abre en <em>Tomar nota</em>; una que ya tiene pedido, en <em>Pedido</em>. Cada línea del pedido ocupa <strong>una sola fila</strong>: cantidad con − / +, nombre, precio y un ⋯. Si la mesa vuelve a pedir, lo nuevo sale como <strong>otra ronda</strong> («Pedido 1 · hora», «Pedido 2 · hora»…) y lo que acabas de apuntar y todavía no has marchado aparece aparte, en <strong>Añadido ahora · por marchar</strong>. Con el icono de la impresora (<strong>Cuenta</strong>) sacas la cuenta para el cliente.</div></div>
+<p>El <strong>⋯</strong> de cada línea tiene tres acciones: <strong>Notas</strong> (cocina las verá destacadas), <strong>Marchar este plato a cocina</strong> (solo si aún no está marchado) y <strong>Eliminar</strong>. En <strong>Notas</strong> puedes también cambiar el <em>momento de servicio</em> (primeros, segundos, postres…) y pulsar una <strong>nota rápida</strong> (Sin cebolla, Sin gluten, Sin lactosa, Poco hecho, Al punto, Muy hecho, Sin sal, Sin picante, Para compartir, Con prisa): un toque la añade y otro la quita.</p>
+<p>Bajo el nombre de la mesa tienes dos etiquetas pulsables: el <strong>camarero</strong> (es quien inició sesión y va con un candado: solo el propietario puede cambiarlo) y <strong>Alérgenos</strong>, donde marcas con un toque cada uno de los <strong>14 alérgenos</strong> que el cliente te ha avisado (y puedes añadir una nota). Salen destacados en el vale de cocina y en el impreso. Con la <strong>i</strong> de cada plato ves sus ingredientes y alérgenos.</p>
 
 <h4>Marchar a cocina y seguir el servicio</h4>
 <ul>
@@ -2676,7 +2676,7 @@ const MANUAL_CHAPTERS = [
 <p>En las dos divisiones, cuando están todas las partes cobradas aparece <strong>Finalizar cobro</strong>; <strong>Cancelar división</strong> solo funciona mientras no se haya cobrado ninguna parte.</p>
 <p><strong>Descuento:</strong> escribes el porcentaje y pulsas <strong>Aplicar</strong>; la app pide quién lo autoriza y el <strong>motivo</strong>, y queda registrado para el cierre de caja. Hasta que no pulsas Aplicar, el total no cambia. Si hay una promoción activa hoy para un plato (la creaste en Promoción), su descuento ya se aplica solo al añadirlo.</p>
 <p>Si el cliente ya pagó parte desde el móvil (carta por QR) o dejó una señal de reserva, se resta de lo que queda por cobrar y se ve claro en el desglose. Si no queda nada por cobrar, el botón dice <strong>Cerrar pedido (ya pagado)</strong>.</p>
-<div class="manual-warning"><i class="ti ti-alert-triangle"></i>El <strong>vale regalo todavía no se acepta como forma de pago</strong> en el cobro. Si un cliente trae uno, se canjea a mano desde <strong>Sala → Clientes</strong> y cobras el resto con efectivo o tarjeta.</div>
+
 
 <h4>Tras cobrar: ticket y factura</h4>
 <p>Al registrar el cobro aparece <strong>Cobro registrado</strong> con lo que puedes hacer con el ticket: <strong>No imprimir</strong>, <strong>Enviar por email</strong>, <strong>Factura</strong>, <strong>Imprimir ticket</strong>, <strong>Ticket</strong> (a la térmica de este aparato) y <strong>Anular venta</strong>.</p>
@@ -2787,9 +2787,9 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">2</div><div class="st">S'obre la pantalla de la taula. A dalt tens <strong>Canviar de taula</strong>, el nom de la taula i, si encara no has demanat res, <strong>Alliberar taula</strong> (per desfer una taula oberta per error).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Tria la carta a les pestanyes de dalt (les begudes surten primer, perquè no s'oblidi de demanar-les). Obre una carpeta i toca els plats: cada toc suma una unitat. Cada plat et diu <strong>quants en porta ja la taula (×2)</strong> i té un <strong>−</strong> per treure'n un. També pots escriure al cercador <strong>Cercar un plat o beguda…</strong> per no obrir carpeta per carpeta.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Si el plat té extres o opcions, s'obre una finestra (<strong>Extres i opcions</strong>) per marcar-los i afegir una nota. Si és un menú, la pestanya del menú té un botó per afegir-lo i triar-ne els plats.</div></div>
-<div class="manual-step"><div class="sn">5</div><div class="st">La <strong>comanda</strong> es va formant al costat (a PC i tauleta) amb − / quantitat / + a cada línia. Al mòbil, carta i comanda s'alternen a pantalla completa: a baix hi ha una barra <strong>Comanda</strong> amb el total, i a dalt de la comanda un botó per tornar a la carta.</div></div>
-<p>A cada línia de la comanda hi ha tres botons petits: <strong>Notes</strong> (cuina les veurà destacades), <strong>Marxar aquest plat a cuina</strong> i <strong>Eliminar</strong>. A <strong>Notes</strong> també pots canviar el <em>moment de servei</em> (primers, segons, postres…) i prémer una <strong>nota ràpida</strong> (Sense ceba, Sense gluten, Sense lactosa, Poc fet, Al punt, Molt fet, Sense sal, Sense picant, Per compartir, Amb pressa): un toc l'afegeix i un altre la treu.</p>
-<p>Sota el nom de la taula tens dues etiquetes que es poden prémer: el <strong>cambrer</strong> (s'assigna sol a qui obre la taula; per canviar-lo després cal ser el propietari) i <strong>Al·lèrgens</strong>, on apuntes el que el client t'ha avisat i surt al val de cuina. Amb la <strong>i</strong> de cada plat veus els seus ingredients i al·lèrgens.</p>
+<div class="manual-step"><div class="sn">5</div><div class="st">A dalt tens dues pestanyes, en totes les mides: <strong>Prendre nota</strong> (la carta) i <strong>Comanda</strong> (el que porta la taula, amb les unitats i el total). Una taula buida obre a <em>Prendre nota</em>; una que ja té comanda, a <em>Comanda</em>. Cada línia de la comanda ocupa <strong>una sola fila</strong>: quantitat amb − / +, nom, preu i un ⋯. Si la taula torna a demanar, el nou surt com a <strong>una altra ronda</strong> («Comanda 1 · hora», «Comanda 2 · hora»…) i el que acabes d'apuntar i encara no has marxat apareix a part, a <strong>Afegit ara · per marxar</strong>. Amb la icona de la impressora (<strong>Compte</strong>) treus el compte per al client.</div></div>
+<p>El <strong>⋯</strong> de cada línia té tres accions: <strong>Notes</strong> (cuina les veurà destacades), <strong>Marxar aquest plat a cuina</strong> (només si encara no està marxat) i <strong>Eliminar</strong>. A <strong>Notes</strong> també pots canviar el <em>moment de servei</em> (primers, segons, postres…) i prémer una <strong>nota ràpida</strong> (Sense ceba, Sense gluten, Sense lactosa, Poc fet, Al punt, Molt fet, Sense sal, Sense picant, Per compartir, Amb pressa): un toc l'afegeix i un altre la treu.</p>
+<p>Sota el nom de la taula tens dues etiquetes que es poden prémer: el <strong>cambrer</strong> (és qui ha iniciat sessió i va amb un cadenat: només el propietari el pot canviar) i <strong>Al·lèrgens</strong>, on marques amb un toc cadascun dels <strong>14 al·lèrgens</strong> que el client t'ha avisat (i pots afegir una nota). Surten destacats al val de cuina i a l'imprès. Amb la <strong>i</strong> de cada plat veus els seus ingredients i al·lèrgens.</p>
 
 <h4>Marxar a cuina i seguir el servei</h4>
 <ul>
@@ -2814,7 +2814,7 @@ const MANUAL_CHAPTERS = [
 <p>En les dues divisions, quan totes les parts són cobrades apareix <strong>Finalitzar cobrament</strong>; <strong>Cancel·lar divisió</strong> només funciona mentre no s'hagi cobrat cap part.</p>
 <p><strong>Descompte:</strong> escrius el percentatge i prems <strong>Aplicar</strong>; l'app demana qui l'autoritza i el <strong>motiu</strong>, i queda registrat per al tancament de caixa. Fins que no prems Aplicar, el total no canvia. Si avui hi ha una promoció activa per a un plat (la vas crear a Promoció), el seu descompte ja s'aplica sol en afegir-lo.</p>
 <p>Si el client ja ha pagat una part des del mòbil (carta per QR) o va deixar una senyal de reserva, es resta del que queda per cobrar i es veu clar al desglossament. Si no queda res per cobrar, el botó diu <strong>Tancar comanda (ja pagada)</strong>.</p>
-<div class="manual-warning"><i class="ti ti-alert-triangle"></i>El <strong>val regal encara no s'accepta com a forma de pagament</strong> al cobrament. Si un client en porta un, es canvia a mà des de <strong>Sala → Clients</strong> i cobres la resta amb efectiu o targeta.</div>
+
 
 <h4>Després de cobrar: tiquet i factura</h4>
 <p>En registrar el cobrament apareix <strong>Cobrament registrat</strong> amb el que pots fer amb el tiquet: <strong>No imprimir</strong>, <strong>Enviar per email</strong>, <strong>Factura</strong>, <strong>Imprimir tiquet</strong>, <strong>Tiquet</strong> (a la tèrmica d'aquest aparell) i <strong>Anul·lar venda</strong>.</p>
@@ -2925,9 +2925,9 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">2</div><div class="st">The table screen opens. At the top you have <strong>Change table</strong>, the table name and, if you haven't ordered anything yet, <strong>Release table</strong> (to undo a table opened by mistake).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Pick the menu in the tabs at the top (drinks come first, so nobody forgets to order them). Open a folder and tap dishes: each tap adds one unit. Each dish tells you <strong>how many the table already has (×2)</strong> and has a <strong>−</strong> to remove one. You can also type in the <strong>Find a dish or drink…</strong> search to avoid opening folder after folder.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">If the dish has extras or options, a window (<strong>Extras and options</strong>) opens to tick them and add a note. If it's a set menu, the menu's tab has a button to add it and pick its dishes.</div></div>
-<div class="manual-step"><div class="sn">5</div><div class="st">The <strong>order</strong> builds up alongside (on PC and tablet) with − / quantity / + on each line. On a phone, menu and order alternate full screen: there's an <strong>Order</strong> bar at the bottom with the total, and a button above the order to go back to the menu.</div></div>
-<p>Each order line has three small buttons: <strong>Notes</strong> (the kitchen sees them highlighted), <strong>Send this dish to the kitchen</strong> and <strong>Delete</strong>. In <strong>Notes</strong> you can also change the <em>service course</em> (starters, mains, desserts…) and tap a <strong>quick note</strong> (No onion, Gluten free, Lactose free, Rare, Medium, Well done, No salt, Not spicy, To share, In a hurry): one tap adds it and another removes it.</p>
-<p>Under the table name there are two tappable labels: the <strong>waiter</strong> (assigned automatically to whoever opens the table; changing it later takes the owner) and <strong>Allergens</strong>, where you note what the customer told you and it appears on the kitchen ticket. The <strong>i</strong> on each dish shows its ingredients and allergens.</p>
+<div class="manual-step"><div class="sn">5</div><div class="st">At the top there are two tabs, at every screen size: <strong>Take order</strong> (the menu) and <strong>Order</strong> (what the table has, with the number of items and the total). An empty table opens on <em>Take order</em>; one that already has an order opens on <em>Order</em>. Each order line takes <strong>a single row</strong>: quantity with − / +, name, price and a ⋯. If the table orders again, the new items appear as <strong>another round</strong> (“Order 1 · time”, “Order 2 · time”…) and whatever you have just added but not yet fired shows apart under <strong>Just added · not sent yet</strong>. The printer icon (<strong>Bill</strong>) prints the bill for the customer.</div></div>
+<p>The <strong>⋯</strong> on each line has three actions: <strong>Notes</strong> (the kitchen sees them highlighted), <strong>Send this dish to the kitchen</strong> (only if not fired yet) and <strong>Delete</strong>. In <strong>Notes</strong> you can also change the <em>service course</em> (starters, mains, desserts…) and tap a <strong>quick note</strong> (No onion, Gluten free, Lactose free, Rare, Medium, Well done, No salt, Not spicy, To share, In a hurry): one tap adds it and another removes it.</p>
+<p>Under the table name there are two tappable labels: the <strong>waiter</strong> (whoever signed in, shown with a padlock: only the owner can change it) and <strong>Allergens</strong>, where you tap each of the <strong>14 allergens</strong> the customer told you about (and can add a note). They are highlighted on the kitchen ticket and the printout. The <strong>i</strong> on each dish shows its ingredients and allergens.</p>
 
 <h4>Sending to the kitchen and following service</h4>
 <ul>
@@ -2952,7 +2952,7 @@ const MANUAL_CHAPTERS = [
 <p>In both splits, once every share is paid <strong>Finalize charge</strong> appears; <strong>Cancel split</strong> only works while no share has been paid.</p>
 <p><strong>Discount:</strong> type the percentage and press <strong>Apply</strong>; the app asks who authorises it and the <strong>reason</strong>, and it's recorded for the till closing. The total doesn't change until you press Apply. If there's an active promotion today on a dish (you created it in Promotion), its discount is already applied when you add it.</p>
 <p>If the customer already paid part from their phone (QR menu) or left a reservation deposit, it's subtracted from what's left to charge and shown clearly in the breakdown. If nothing is left to charge, the button reads <strong>Close order (already paid)</strong>.</p>
-<div class="manual-warning"><i class="ti ti-alert-triangle"></i>The <strong>gift voucher is not yet accepted as a payment method</strong> at checkout. If a customer brings one, redeem it by hand from <strong>Dining Room → Customers</strong> and charge the rest in cash or card.</div>
+
 
 <h4>After charging: receipt and invoice</h4>
 <p>When the charge is registered, <strong>Charge registered</strong> appears with what you can do with the receipt: <strong>Don't print</strong>, <strong>Send by email</strong>, <strong>Invoice</strong>, <strong>Print receipt</strong>, <strong>Receipt</strong> (to this device's thermal printer) and <strong>Void sale</strong>.</p>
@@ -3032,7 +3032,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Cada reserva, de un vistazo</h4>
 <p>Cada fila enseña la hora, el nombre, el estado y unas etiquetas: personas, mesa (o <em>Sin asignar</em> en ámbar), el número de la web, la señal (pagada o pendiente) y las <strong>alergias</strong> del cliente si las tiene guardadas. Si hay teléfono móvil, un botón de WhatsApp abre el chat.</p>
-<p>A la derecha está <strong>la acción que toca</strong>, a un toque, y el resto en el menú <strong>⋯</strong>:</p>
+<p>A la derecha está <strong>la acción que toca</strong>, a un toque. El resto de acciones van sueltas, cada una con su icono y su rótulo (al pasar el ratón o mantener el dedo), en PC y tablet; en el móvil se agrupan en el menú <strong>⋯</strong>:</p>
 <table>
   <thead><tr><th>Si la reserva está…</th><th>El botón principal es…</th></tr></thead>
   <tbody>
@@ -3042,12 +3042,12 @@ const MANUAL_CHAPTERS = [
     <tr><td>No presentado</td><td><strong>Deshacer no presentado</strong></td></tr>
   </tbody>
 </table>
-<p>El menú <strong>⋯</strong> tiene <strong>Editar</strong>, <strong>Enviar recordatorio</strong> (si es confirmada y hay teléfono), <strong>Marcar señal como recibida</strong> (si pide señal y aún no está), <strong>No presentado</strong> y <strong>Cancelar</strong>.</p>
+<p>Esas acciones son <strong>Editar</strong>, <strong>Enviar recordatorio</strong> (si es confirmada y hay teléfono), <strong>Marcar señal como recibida</strong> (si pide señal y aún no está), <strong>No presentado</strong> y <strong>Cancelar</strong>.</p>
 
 <h4>Crear una reserva a mano, paso a paso</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>Nueva Reserva</strong> (en el día, la semana o el mes; con el <strong>+</strong> de un día de la semana, ya con esa fecha).</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Escribe el cliente en el buscador para elegir uno de tu base de <strong>Clientes</strong> (si ha fallado antes, la app te avisa de cuántos no-shows lleva). Si no tiene ficha, escribe solo el nombre.</div></div>
-<div class="manual-step"><div class="sn">3</div><div class="st">Elige <strong>fecha</strong>, <strong>hora</strong> y <strong>personas</strong>. Las horas son tramos de media hora dentro de tu <strong>Horario de apertura</strong> y cada una indica cuánto aforo lleva ya ese turno. Si el día está cerrado, lo dice.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Elige <strong>fecha</strong>, <strong>hora</strong> y <strong>personas</strong>. Las horas van de cuarto en cuarto dentro de tu <strong>Horario de apertura</strong> y cada una indica cuánto aforo lleva ya ese turno. Si el día está cerrado, lo dice.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Elige la <strong>mesa</strong> (obligatoria si tienes mesas dadas de alta). Solo salen las libres a esa hora. Si la mesa tiene menos plazas que el grupo, te avisa y decides tú.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Añade <strong>notas</strong> (alergias, cumpleaños, trona…) y <strong>Guarda</strong>. Si ya hay una reserva casi igual para ese cliente, te pregunta antes de duplicarla.</div></div>
 <p>Una mesa <strong>no se puede reservar dos veces</strong> dentro de su duración de mesa (90 minutos por defecto). Se cambia en <strong>Mi Negocio → Operativa → Duración de mesa (min)</strong>.</p>
@@ -3070,7 +3070,7 @@ const MANUAL_CHAPTERS = [
 <h4>Llegada y no presentados</h4>
 <ul>
   <li><strong>Ha llegado</strong> abre una ventana donde confirmas la mesa en la que se sientan (por si cambiaste de sitio). También se marca sola cuando abres la mesa en el TPV con <strong>Tiene reserva</strong>; la señal pagada se descuenta de la cuenta.</li>
-  <li><strong>No presentado</strong> (en el ⋯) pide confirmación y le suma un aviso al cliente, que verás al reservar de nuevo. <strong>Deshacer no presentado</strong> lo revierte.</li>
+  <li><strong>No presentado</strong> pide confirmación y le suma un aviso al cliente, que verás al reservar de nuevo. <strong>Deshacer no presentado</strong> lo revierte.</li>
 </ul>
 
 <h4>Avisar al cliente</h4>
@@ -3111,7 +3111,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Cada reserva, d'un cop d'ull</h4>
 <p>Cada fila mostra l'hora, el nom, l'estat i unes etiquetes: persones, taula (o <em>Sense assignar</em> en ambre), el número de la web, la senyal (pagada o pendent) i les <strong>al·lèrgies</strong> del client si les té desades. Si hi ha telèfon mòbil, un botó de WhatsApp obre el xat.</p>
-<p>A la dreta hi ha <strong>l'acció que toca</strong>, a un toc, i la resta al menú <strong>⋯</strong>:</p>
+<p>A la dreta hi ha <strong>l'acció que toca</strong>, a un toc. La resta d'accions van soltes, cadascuna amb la seva icona i el seu rètol (en passar el ratolí o mantenir el dit), a PC i tauleta; al mòbil s'agrupen al menú <strong>⋯</strong>:</p>
 <table>
   <thead><tr><th>Si la reserva està…</th><th>El botó principal és…</th></tr></thead>
   <tbody>
@@ -3121,12 +3121,12 @@ const MANUAL_CHAPTERS = [
     <tr><td>No presentat</td><td><strong>Desfer no presentat</strong></td></tr>
   </tbody>
 </table>
-<p>El menú <strong>⋯</strong> té <strong>Editar</strong>, <strong>Enviar recordatori</strong> (si és confirmada i hi ha telèfon), <strong>Marcar senyal com a rebuda</strong> (si demana senyal i encara no hi és), <strong>No presentat</strong> i <strong>Cancel·lar</strong>.</p>
+<p>Aquestes accions són <strong>Editar</strong>, <strong>Enviar recordatori</strong> (si és confirmada i hi ha telèfon), <strong>Marcar senyal com a rebuda</strong> (si demana senyal i encara no hi és), <strong>No presentat</strong> i <strong>Cancel·lar</strong>.</p>
 
 <h4>Crear una reserva a mà, pas a pas</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>Nova Reserva</strong> (al dia, la setmana o el mes; amb el <strong>+</strong> d'un dia de la setmana, ja amb aquella data).</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Escriu el client al cercador per triar-ne un de la teva base de <strong>Clients</strong> (si ha fallat abans, l'app t'avisa de quants no-shows porta). Si no té fitxa, escriu només el nom.</div></div>
-<div class="manual-step"><div class="sn">3</div><div class="st">Tria <strong>data</strong>, <strong>hora</strong> i <strong>persones</strong>. Les hores són trams de mitja hora dins del teu <strong>Horari d'obertura</strong> i cadascuna indica quant d'aforament porta ja aquell torn. Si el dia és tancat, ho diu.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Tria <strong>data</strong>, <strong>hora</strong> i <strong>persones</strong>. Les hores van de quart en quart dins del teu <strong>Horari d'obertura</strong> i cadascuna indica quant d'aforament porta ja aquell torn. Si el dia és tancat, ho diu.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Tria la <strong>taula</strong> (obligatòria si tens taules donades d'alta). Només surten les lliures a aquella hora. Si la taula té menys places que el grup, t'avisa i decideixes tu.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Afegeix <strong>notes</strong> (al·lèrgies, aniversari, trona…) i <strong>Desa</strong>. Si ja hi ha una reserva gairebé igual per a aquell client, et pregunta abans de duplicar-la.</div></div>
 <p>Una taula <strong>no es pot reservar dues vegades</strong> dins de la seva durada de taula (90 minuts per defecte). Es canvia a <strong>El Meu Negoci → Operativa → Durada de taula (min)</strong>.</p>
@@ -3149,7 +3149,7 @@ const MANUAL_CHAPTERS = [
 <h4>Arribada i no presentats</h4>
 <ul>
   <li><strong>Ha arribat</strong> obre una finestra on confirmes la taula on s'asseuen (per si has canviat de lloc). També es marca sola quan obres la taula al TPV amb <strong>Té reserva</strong>; la senyal pagada es descompta del compte.</li>
-  <li><strong>No presentat</strong> (al ⋯) demana confirmació i suma un avís al client, que veuràs quan torni a reservar. <strong>Desfer no presentat</strong> ho reverteix.</li>
+  <li><strong>No presentat</strong> demana confirmació i suma un avís al client, que veuràs quan torni a reservar. <strong>Desfer no presentat</strong> ho reverteix.</li>
 </ul>
 
 <h4>Avisar el client</h4>
@@ -3190,7 +3190,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Each booking at a glance</h4>
 <p>Each row shows the time, name, status and some tags: people, table (or <em>Not assigned</em> in amber), the website number, the deposit (paid or pending) and the customer's <strong>allergies</strong> if saved. If there's a mobile number, a WhatsApp button opens the chat.</p>
-<p>On the right is <strong>the action that's due</strong>, one tap away, and the rest in the <strong>⋯</strong> menu:</p>
+<p>On the right is <strong>the action that's due</strong>, one tap away. The other actions sit loose, each with its icon and label (on hover or long-press), on PC and tablet; on a phone they are grouped in the <strong>⋯</strong> menu:</p>
 <table>
   <thead><tr><th>If the booking is…</th><th>The main button is…</th></tr></thead>
   <tbody>
@@ -3200,12 +3200,12 @@ const MANUAL_CHAPTERS = [
     <tr><td>No-show</td><td><strong>Undo no-show</strong></td></tr>
   </tbody>
 </table>
-<p>The <strong>⋯</strong> menu has <strong>Edit</strong>, <strong>Send reminder</strong> (if confirmed and there's a phone), <strong>Mark deposit as received</strong> (if a deposit is required and not yet in), <strong>No-show</strong> and <strong>Cancel</strong>.</p>
+<p>Those actions are <strong>Edit</strong>, <strong>Send reminder</strong> (if confirmed and there's a phone), <strong>Mark deposit as received</strong> (if a deposit is required and not yet in), <strong>No-show</strong> and <strong>Cancel</strong>.</p>
 
 <h4>Creating a booking by hand, step by step</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>New Reservation</strong> (in the day, week or month; with the <strong>+</strong> on a weekday, already set to that date).</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Type the customer in the search box to pick one from your <strong>Customers</strong> database (if they've failed before, the app tells you how many no-shows they have). If they have no record, just type the name.</div></div>
-<div class="manual-step"><div class="sn">3</div><div class="st">Choose <strong>date</strong>, <strong>time</strong> and <strong>people</strong>. Times are half-hour slots within your <strong>Opening hours</strong> and each shows how much capacity that shift already has. If the day is closed, it says so.</div></div>
+<div class="manual-step"><div class="sn">3</div><div class="st">Choose <strong>date</strong>, <strong>time</strong> and <strong>people</strong>. Times go in quarter-hour steps within your <strong>Opening hours</strong> and each shows how much capacity that shift already has. If the day is closed, it says so.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Choose the <strong>table</strong> (required if you have tables set up). Only tables free at that time are listed. If the table has fewer seats than the party, it warns you and you decide.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Add <strong>notes</strong> (allergies, birthday, high chair…) and <strong>Save</strong>. If there's already an almost identical booking for that customer, it asks before duplicating it.</div></div>
 <p>A table <strong>can't be booked twice</strong> within its table duration (90 minutes by default). Change it in <strong>My Business → Operations → Table duration (min)</strong>.</p>
@@ -3228,7 +3228,7 @@ const MANUAL_CHAPTERS = [
 <h4>Arrival and no-shows</h4>
 <ul>
   <li><strong>Arrived</strong> opens a window where you confirm the table they sit at (in case you moved them). It's also marked automatically when you open the table in the POS with <strong>Has a reservation</strong>; a paid deposit is taken off the bill.</li>
-  <li><strong>No-show</strong> (in the ⋯) asks for confirmation and adds a warning to the customer, which you'll see when they book again. <strong>Undo no-show</strong> reverses it.</li>
+  <li><strong>No-show</strong> asks for confirmation and adds a warning to the customer, which you'll see when they book again. <strong>Undo no-show</strong> reverses it.</li>
 </ul>
 
 <h4>Notifying the customer</h4>
@@ -3282,9 +3282,9 @@ const MANUAL_CHAPTERS = [
 
 <h4>Ajustes que mandan sobre la web</h4>
 <ul>
-  <li><strong>Tipos de servicio</strong> — qué pestañas existen.</li>
+  <li><strong>Tipos de servicio</strong> — qué servicios ofreces (en mesa, para llevar, a domicilio): son los que el cliente elige al entrar.</li>
   <li><strong>Horario de apertura</strong> (día a día, con turnos) — la web solo deja elegir fecha y hora dentro de él. Sin horario, no hay límite.</li>
-  <li><strong>Operativa</strong> — <strong>Aforo</strong> (máximo de comensales por servicio), <strong>Duración de mesa (min)</strong>, <strong>Antelación mínima</strong> para reservas y para pedidos, <strong>Reservas de grupo por teléfono o email</strong> (a partir de cuántos comensales la web no deja reservar y pide llamar o escribir) y <strong>Pedir señal para confirmar reservas</strong> (con el importe fijo o por persona, y desde cuántas personas).</li>
+  <li><strong>Operativa</strong> — <strong>Aforo</strong> (máximo de comensales por servicio), <strong>Duración de mesa (min)</strong>, <strong>Última reserva antes del cierre (min)</strong>, <strong>Antelación mínima</strong> para reservas y para pedidos, <strong>Reservas de grupo por teléfono o email</strong> (a partir de cuántos comensales la web no deja reservar y pide llamar o escribir) y <strong>Pedir señal para confirmar reservas</strong> (con el importe fijo o por persona, y desde cuántas personas).</li>
   <li><strong>Pedidos para llevar / domicilio</strong> — tiempo de preparación, <strong>Dejar de aceptar pedidos X min antes del cierre</strong>, <strong>Pedido mínimo</strong>, <strong>Máx. pedidos por franja de 30 min</strong> (0 = sin límite), <strong>Coste de envío</strong>, <strong>Envío gratis a partir de</strong>, <strong>Códigos postales donde repartes</strong> y <strong>Radio de reparto</strong> (basta cumplir uno de los dos), y las rutas de reparto.</li>
   <li><strong>Formas de pago al entregar/recoger</strong> — <strong>Efectivo</strong>, <strong>Tarjeta</strong> (datáfono) y <strong>TPV virtual</strong> (pagar ya online; solo con Stripe conectado). Al menos una debe quedar marcada. Si el pedido a domicilio es en efectivo, el cliente dice con qué billete paga y el reparto ya ve el cambio a preparar.</li>
 </ul>
@@ -3368,9 +3368,9 @@ const MANUAL_CHAPTERS = [
 
 <h4>Ajustos que manen sobre la web</h4>
 <ul>
-  <li><strong>Tipus de servei</strong> — quines pestanyes existeixen.</li>
+  <li><strong>Tipus de servei</strong> — quins serveis ofereixes (a taula, per emportar, a domicili): són els que el client tria en entrar.</li>
   <li><strong>Horari d'obertura</strong> (dia per dia, amb torns) — la web només deixa triar data i hora dins d'ell. Sense horari, no hi ha límit.</li>
-  <li><strong>Operativa</strong> — <strong>Aforament</strong> (màxim de comensals per servei), <strong>Durada de taula (min)</strong>, <strong>Antelació mínima</strong> per a reserves i per a comandes, <strong>Reserves de grup per telèfon o email</strong> (a partir de quants comensals la web no deixa reservar i demana trucar o escriure) i <strong>Demanar senyal per confirmar reserves</strong> (amb l'import fix o per persona, i des de quantes persones).</li>
+  <li><strong>Operativa</strong> — <strong>Aforament</strong> (màxim de comensals per servei), <strong>Durada de taula (min)</strong>, <strong>Última reserva abans del tancament (min)</strong>, <strong>Antelació mínima</strong> per a reserves i per a comandes, <strong>Reserves de grup per telèfon o email</strong> (a partir de quants comensals la web no deixa reservar i demana trucar o escriure) i <strong>Demanar senyal per confirmar reserves</strong> (amb l'import fix o per persona, i des de quantes persones).</li>
   <li><strong>Comandes per emportar / domicili</strong> — temps de preparació, <strong>Deixar d'acceptar comandes X min abans del tancament</strong>, <strong>Comanda mínima</strong>, <strong>Màx. comandes per franja de 30 min</strong> (0 = sense límit), <strong>Cost d'enviament</strong>, <strong>Enviament gratis a partir de</strong>, <strong>Codis postals on repartiu</strong> i <strong>Radi de repartiment</strong> (n'hi ha prou de complir-ne un), i les rutes de repartiment.</li>
   <li><strong>Formes de pagament en entregar/recollir</strong> — <strong>Efectiu</strong>, <strong>Targeta</strong> (datàfon) i <strong>TPV virtual</strong> (pagar ja en línia; només amb Stripe connectat). N'ha de quedar almenys una marcada. Si la comanda a domicili és en efectiu, el client diu amb quin bitllet paga i el repartiment ja veu el canvi a preparar.</li>
 </ul>
@@ -3454,9 +3454,9 @@ const MANUAL_CHAPTERS = [
 
 <h4>Settings that control the website</h4>
 <ul>
-  <li><strong>Service types</strong> — which tabs exist.</li>
+  <li><strong>Service types</strong> — which services you offer (dine-in, takeaway, delivery): these are what the customer picks on arrival.</li>
   <li><strong>Opening hours</strong> (day by day, with shifts) — the website only lets customers pick a date and time within them. With no hours set, there's no limit.</li>
-  <li><strong>Operations</strong> — <strong>Capacity</strong> (maximum guests per service), <strong>Table duration (min)</strong>, <strong>Minimum lead time</strong> for bookings and for orders, <strong>Group bookings by phone or email</strong> (from how many guests the website doesn't allow booking and asks them to call or write) and <strong>Require a deposit to confirm reservations</strong> (fixed amount or per person, and from how many people).</li>
+  <li><strong>Operations</strong> — <strong>Capacity</strong> (maximum guests per service), <strong>Table duration (min)</strong>, <strong>Last booking before closing (min)</strong>, <strong>Minimum lead time</strong> for bookings and for orders, <strong>Group bookings by phone or email</strong> (from how many guests the website doesn't allow booking and asks them to call or write) and <strong>Require a deposit to confirm reservations</strong> (fixed amount or per person, and from how many people).</li>
   <li><strong>Takeaway / delivery orders</strong> — prep time, <strong>Stop accepting orders X min before closing</strong>, <strong>Minimum order</strong>, <strong>Max. orders per 30-min slot</strong> (0 = no limit), <strong>Delivery fee</strong>, <strong>Free delivery from</strong>, <strong>Postal codes you deliver to</strong> and <strong>Delivery radius</strong> (meeting one of the two is enough), plus the delivery route settings.</li>
   <li><strong>Payment methods on delivery/pickup</strong> — <strong>Cash</strong>, <strong>Card</strong> (reader) and <strong>Virtual POS</strong> (pay now online; only with Stripe connected). At least one must stay ticked. If a delivery order is paid in cash, the customer says what bill they'll pay with and delivery already sees the change to prepare.</li>
 </ul>
@@ -4144,7 +4144,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Antes de empezar: «Para que tus números salgan bien»</h4>
 <p>Arriba puede aparecer un aviso rojo o una lista con lo que falta. Hazla antes que nada, porque cambia todas las cuentas:</p>
-<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Elige tu forma jurídica</strong> en <strong>Gestión → Mi Negocio → Forma jurídica y régimen fiscal</strong>: autónomo, comunidad de bienes, sociedad o cooperativa; si eres autónomo, estimación directa (simplificada o normal) o módulos. Sin esto, la app calcula como si fueras una sociedad y tu impuesto y tu sueldo salen mal. Si GastroGoan ya fijó tu forma jurídica, tu régimen y tu <strong>comunidad autónoma</strong> al darte de alta, aparecen bloqueados: si algo no es correcto, pulsa <strong>Comprobar cambios</strong> o díselo a GastroGoan.</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Comprueba tu forma jurídica</strong> en <strong>Gestión → Mi Negocio → Forma jurídica y régimen fiscal</strong>: la fija GastroGoan al darte de alta (autónomo, comunidad de bienes, sociedad o cooperativa y, si eres autónomo, estimación directa o módulos); tú no la eliges. Sin ella, la app calcula como si fueras una sociedad y tu impuesto y tu sueldo salen mal. Si GastroGoan ya fijó tu forma jurídica, tu régimen y tu <strong>comunidad autónoma</strong> al darte de alta, aparecen bloqueados: si algo no es correcto, pulsa <strong>Comprobar cambios</strong> o díselo a GastroGoan.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Pon el <strong>NIF del negocio</strong> (sale en cada ticket y en lo que recibe tu gestor).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Da de alta tus <strong>gastos fijos</strong> (alquiler, luz, seguros, gestoría…).</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Si eres autónomo o comunidad de bienes, apunta <strong>Mi sueldo (titular)</strong> (o <strong>No me pago un fijo</strong>).</div></div>
@@ -4587,7 +4587,7 @@ const MANUAL_CHAPTERS = [
 <p>La tarjeta grande, dividida en bloques. Se usa en tickets, web de reservas, pedidos a proveedores y selector de negocios.</p>
 <ul>
 <li><strong>Identidad</strong> — <strong>Logo</strong> (imagen de hasta 2 MB; <strong>Subir logo</strong> / <strong>Quitar</strong>), <strong>Nombre del negocio</strong>, <strong>Propietario/a</strong>, <strong>Tipo de negocio</strong>, <strong>Año de apertura</strong> y <strong>Color de marca</strong> (el de tu página pública de reservas y pedidos).</li>
-<li><strong>Forma jurídica y régimen fiscal</strong> — Decide cómo calcula la app los impuestos en Gestión Económica. Elige <strong>Eres</strong>: <em>Autónomo</em>, <em>Comunidad de Bienes</em>, <em>Sociedad</em> o <em>Cooperativa</em>.
+<li><strong>Forma jurídica y régimen fiscal</strong> — Decide cómo calcula la app los impuestos en Gestión Económica. <strong>No se elige aquí</strong>: la fija GastroGoan al darte de alta, según lo que declara tu gestoría, y los campos salen bloqueados (con un candado). Si cambia, pulsa <strong>Comprobar cambios</strong>. Lo que verás es una de estas formas: <em>Autónomo</em>, <em>Comunidad de Bienes</em>, <em>Sociedad</em> o <em>Cooperativa</em>.
   <ul>
   <li><strong>Autónomo</strong> → eliges <strong>Tributas por</strong> <em>Estimación directa</em> (simplificada o normal, y la casilla del primer año con beneficio) o <em>Módulos</em>. También puedes poner otras rentas del titular y los hijos a cargo, que afectan al IRPF.</li>
   <li><strong>Comunidad de Bienes</strong> → añades a cada <strong>comunero</strong> con su porcentaje (deben sumar 100 %) y su tipo de IRPF.</li>
@@ -4602,6 +4602,8 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Tipos de servicio</strong> — Casillas <strong>En mesa</strong>, <strong>Para llevar</strong> y <strong>A domicilio</strong>. Se guardan al marcar y condicionan los botones del TPV y las opciones de la web de pedidos. Debe quedar al menos uno activo; la app avisa si no encaja con tu tipo de negocio.</li>
 <li><strong>Horario de apertura</strong> — Cada día de lunes a domingo: casilla de abierto y modo <strong>Por turnos</strong> (hasta dos tramos, para el horario partido) o <strong>Seguido</strong>. Para cerrar a medianoche escribe 00:00 en la hora de cierre. Fija el aforo por turno en Reservas y las horas que ofrece la web; si un cierre es anterior a la apertura o dos turnos se solapan, la app te pregunta antes de guardar. La <strong>carta</strong> concreta de cada franja se decide en Oferta Gastronómica, no aquí.</li>
+<li><strong>Días cerrados y vacaciones</strong> — Fechas en que NO abres (vacaciones, obras, un puente): la web no las ofrece y la app las trata como cerradas.</li>
+<li><strong>Horario especial</strong> — Un día (o varios) en que abres con <strong>otras horas</strong> que las de tu semana (una víspera, un evento, un festivo con servicio reducido). Pon el día, hasta cuándo (opcional), un motivo y uno o dos servicios; al añadirlo, la web de reservas, los pedidos online, el aforo por turno y los avisos del TPV usan ese horario ese día. Si el mismo día está también en cerrados, gana el cierre. Si ya hay reservas en esas fechas, la app te avisa para que revises que encajan. Se quita con la papelera.</li>
 </ul>
 
 <h4>Operativa</h4>
@@ -4612,12 +4614,12 @@ const MANUAL_CHAPTERS = [
 <li><strong>Reservas de grupo por teléfono o email</strong> — Marca la casilla y pon <strong>a partir de cuántos comensales</strong>: la web no deja reservar y pide al cliente que te llame o escriba. Las demás se confirman solas si hay mesa.</li>
 <li><strong>Pedir señal para confirmar reservas</strong> — Cobra una señal con tarjeta al reservar. Necesita Stripe conectado (si no, te lo dice y hay un botón para ir a conectarlo). Eliges el <strong>importe</strong>, si es <strong>fijo por reserva</strong> o <strong>por persona</strong>, <strong>a partir de cuántas personas</strong> (0 = siempre) y una nota para el cliente.</li>
 <li><strong>Crea el plano de tu sala</strong> — Escribe el <strong>Nombre de la zona</strong> (Interior, Terraza, Barra, Planta 1...), el <strong>Número de mesas</strong> y las <strong>Plazas por mesa</strong> (obligatorias) y pulsa <strong>Crear zona</strong>: se crean todas de golpe. No hay zonas fijas: las que tú quieras.</li>
-<li><strong>Mesas configuradas</strong> — Renombra una zona escribiendo sobre su nombre, añade una mesa a la zona (<strong>+</strong>), elimina la zona entera (papelera), o cambia el nombre y las plazas de cada mesa. Las mesas sin plazas salen marcadas en rojo: la web de reservas no puede ofrecerlas. Una mesa o zona con una comanda abierta no se puede borrar hasta cobrarla en el TPV. Si la suma de plazas se aleja mucho del aforo, aparece un aviso.</li>
+<li><strong>Mesas configuradas</strong> — Va justo debajo, en la misma tarjeta, con las mesas en rejilla (tres por fila en PC y tablet) y su casilla de <strong>Plazas</strong> en cada una. Renombra una zona escribiendo sobre su nombre, añade una mesa a la zona (<strong>+</strong>), elimina la zona entera (papelera), o cambia el nombre y las plazas de cada mesa. Las mesas sin plazas salen marcadas en rojo: la web de reservas no puede ofrecerlas. Una mesa o zona con una comanda abierta no se puede borrar hasta cobrarla en el TPV. Si la suma de plazas se aleja mucho del aforo, aparece un aviso.</li>
 </ul>
 <p>Estas mesas son las que ves en el TPV, en Reservas y en los QR de mesa.</p>
 
 <h4>Configuración del ticket</h4>
-<p>Qué sale impreso en tus tickets: <strong>Mostrar dirección</strong>, <strong>Mostrar teléfono</strong>, <strong>Mostrar web</strong>, <strong>Mostrar CIF/NIF</strong> (siempre marcada y bloqueada, es obligatorio), <strong>Pedir reseña con QR al final del ticket</strong> (necesita el enlace de Google Maps), un <strong>Mensaje de pie de ticket</strong> y el <strong>IVA (%)</strong> general que se usa para el desglose cuando un artículo no trae el suyo. Pulsa <strong>Guardar</strong> y mira el resultado con <strong>Vista previa del ticket</strong>. Cada ticket lleva un número de factura simplificada propio de cada dispositivo.</p>
+<p>Qué sale impreso en tus tickets: <strong>Mostrar dirección</strong>, <strong>Mostrar teléfono</strong>, <strong>Mostrar web</strong>, <strong>Mostrar CIF/NIF</strong> (siempre marcada y bloqueada, es obligatorio), <strong>Pedir reseña con QR al final del ticket</strong> (necesita el enlace de Google Maps), un <strong>Mensaje de pie de ticket</strong> y el <strong>IVA por defecto</strong> (comida y, si quieres otro, bebidas), que solo se usa cuando un artículo no trae el suyo: cada plato, bebida y menú lleva su IVA (se elige en Oferta) y el ticket desglosa cada tipo por separado. Arriba ves un resumen de los tipos que llevan tus productos y cuántos no tienen ninguno. Pulsa <strong>Guardar</strong> y mira el resultado con <strong>Vista previa del ticket</strong>. Cada ticket lleva un número de factura simplificada propio de cada dispositivo.</p>
 
 <h4>Impresora de tickets (y cajón)</h4>
 <p>Cómo imprime <strong>este aparato</strong> (cada tablet o puesto elige la suya):</p>
@@ -4749,7 +4751,7 @@ const MANUAL_CHAPTERS = [
 <p>La targeta gran, dividida en blocs. S'usa en tiquets, web de reserves, comandes a proveïdors i selector de negocis.</p>
 <ul>
 <li><strong>Identitat</strong> — <strong>Logo</strong> (imatge de fins a 2 MB; <strong>Pujar logo</strong> / <strong>Treure</strong>), <strong>Nom del negoci</strong>, <strong>Propietari/ària</strong>, <strong>Tipus de negoci</strong>, <strong>Any d'obertura</strong> i <strong>Color de marca</strong> (el de la teva pàgina pública de reserves i comandes).</li>
-<li><strong>Forma jurídica i règim fiscal</strong> — Decideix com calcula l'app els impostos a Gestió Econòmica. Tria <strong>Ets</strong>: <em>Autònom</em>, <em>Comunitat de Béns</em>, <em>Societat</em> o <em>Cooperativa</em>.
+<li><strong>Forma jurídica i règim fiscal</strong> — Decideix com calcula l'app els impostos a Gestió Econòmica. <strong>No es tria aquí</strong>: la fixa GastroGoan en donar-te d'alta, segons el que declara la teva gestoria, i els camps surten bloquejats (amb un cadenat). Si canvia, prem <strong>Comprovar canvis</strong>. El que veuràs és una d'aquestes formes: <em>Autònom</em>, <em>Comunitat de Béns</em>, <em>Societat</em> o <em>Cooperativa</em>.
   <ul>
   <li><strong>Autònom</strong> → tries <strong>Tributes per</strong> <em>Estimació directa</em> (simplificada o normal, i la casella del primer any amb benefici) o <em>Mòduls</em>. També pots posar altres rendes del titular i els fills a càrrec, que afecten l'IRPF.</li>
   <li><strong>Comunitat de Béns</strong> → afegeixes cada <strong>comuner</strong> amb el seu percentatge (han de sumar 100 %) i el seu tipus d'IRPF.</li>
@@ -4764,6 +4766,8 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Tipus de servei</strong> — Caselles <strong>A taula</strong>, <strong>Per emportar</strong> i <strong>A domicili</strong>. Es desen en marcar-les i condicionen els botons del TPV i les opcions de la web de comandes. N'ha de quedar almenys un d'actiu; l'app avisa si no encaixa amb el teu tipus de negoci.</li>
 <li><strong>Horari d'obertura</strong> — Cada dia de dilluns a diumenge: casella d'obert i mode <strong>Per torns</strong> (fins a dos trams, per a l'horari partit) o <strong>Seguit</strong>. Per tancar a mitjanit escriu 00:00 a l'hora de tancament. Fixa l'aforament per torn a Reserves i les hores que ofereix la web; si un tancament és anterior a l'obertura o dos torns se solapen, l'app et pregunta abans de desar. La <strong>carta</strong> concreta de cada franja es decideix a Oferta Gastronòmica, no aquí.</li>
+<li><strong>Dies tancats i vacances</strong> — Dates en què NO obres (vacances, obres, un pont): la web no les ofereix i l'app les tracta com a tancades.</li>
+<li><strong>Horari especial</strong> — Un dia (o diversos) en què obres amb <strong>altres hores</strong> que les de la setmana (una vigília, un esdeveniment, un festiu amb servei reduït). Posa el dia, fins quan (opcional), un motiu i un o dos serveis; en afegir-lo, la web de reserves, les comandes en línia, l'aforament per torn i els avisos del TPV fan servir aquest horari aquell dia. Si el mateix dia és també a tancats, guanya el tancament. Si ja hi ha reserves en aquestes dates, l'app t'avisa perquè revisis que hi encaixen. Es treu amb la paperera.</li>
 </ul>
 
 <h4>Operativa</h4>
@@ -4779,7 +4783,7 @@ const MANUAL_CHAPTERS = [
 <p>Aquestes taules són les que veus al TPV, a Reserves i als QR de taula.</p>
 
 <h4>Configuració del tiquet</h4>
-<p>Què surt imprès als teus tiquets: <strong>Mostrar adreça</strong>, <strong>Mostrar telèfon</strong>, <strong>Mostrar web</strong>, <strong>Mostrar CIF/NIF</strong> (sempre marcada i bloquejada, és obligatori), <strong>Demanar ressenya amb QR al final del tiquet</strong> (necessita l'enllaç de Google Maps), un <strong>Missatge de peu de tiquet</strong> i l'<strong>IVA (%)</strong> general que s'usa per al desglossament quan un article no porta el seu. Prem <strong>Desar</strong> i mira el resultat amb <strong>Vista prèvia del tiquet</strong>. Cada tiquet porta un número de factura simplificada propi de cada dispositiu.</p>
+<p>Què surt imprès als teus tiquets: <strong>Mostrar adreça</strong>, <strong>Mostrar telèfon</strong>, <strong>Mostrar web</strong>, <strong>Mostrar CIF/NIF</strong> (sempre marcada i bloquejada, és obligatori), <strong>Demanar ressenya amb QR al final del tiquet</strong> (necessita l'enllaç de Google Maps), un <strong>Missatge de peu de tiquet</strong> i l'<strong>IVA per defecte</strong> (menjar i, si en vols un altre, begudes), que només s'usa quan un article no porta el seu: cada plat, beguda i menú porta el seu IVA (es tria a Oferta) i el tiquet desglossa cada tipus per separat. A dalt veus un resum dels tipus que porten els teus productes i quants no en tenen cap. Prem <strong>Desar</strong> i mira el resultat amb <strong>Vista prèvia del tiquet</strong>. Cada tiquet porta un número de factura simplificada propi de cada dispositiu.</p>
 
 <h4>Impressora de tiquets (i calaix)</h4>
 <p>Com imprimeix <strong>aquest aparell</strong> (cada tauleta o lloc tria la seva):</p>
@@ -4911,7 +4915,7 @@ const MANUAL_CHAPTERS = [
 <p>The big card, split into blocks. It is used on receipts, the booking website, supplier orders and the business selector.</p>
 <ul>
 <li><strong>Identity</strong> — <strong>Logo</strong> (an image up to 2 MB; <strong>Upload logo</strong> / <strong>Remove</strong>), <strong>Business name</strong>, <strong>Owner</strong>, <strong>Business type</strong>, <strong>Year opened</strong> and <strong>Brand color</strong> (the one on your public reservations and ordering page).</li>
-<li><strong>Legal form and tax regime</strong> — Decides how the app calculates taxes in Financial Management. Choose <strong>You are</strong>: <em>Self-employed</em>, <em>Community of Property (CB)</em>, <em>Company</em> or <em>Cooperative</em>.
+<li><strong>Legal form and tax regime</strong> — Decides how the app calculates taxes in Financial Management. <strong>It is not chosen here</strong>: GastroGoan sets it when you sign up, from what your accountant declares, and the fields appear locked (with a padlock). If it changes, press <strong>Check for changes</strong>. What you will see is one of: <em>Self-employed</em>, <em>Community of Property (CB)</em>, <em>Company</em> or <em>Cooperative</em>.
   <ul>
   <li><strong>Self-employed</strong> → you choose <strong>You are taxed under</strong> <em>Actual-expense taxation</em> (simplified or normal, plus the first-profitable-year box) or <em>Modules</em>. You can also enter the holder's other income and dependent children, which affect income tax.</li>
   <li><strong>Community of Property</strong> → add each <strong>co-owner</strong> with their share (must total 100 %) and their income-tax rate.</li>
@@ -4926,6 +4930,8 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Service types</strong> — Checkboxes <strong>Dine-in</strong>, <strong>Takeaway</strong> and <strong>Delivery</strong>. They save as you tick them and control the POS buttons and the ordering website's options. At least one must stay on; the app warns if it does not fit your business type.</li>
 <li><strong>Opening hours</strong> — Each day from Monday to Sunday: an open checkbox and mode <strong>By shift</strong> (up to two blocks, for split hours) or <strong>Continuous</strong>. To close at midnight, type 00:00 as closing time. It sets the capacity per slot in Reservations and the times the website offers; if a closing time is before the opening or two shifts overlap, the app asks before saving. Which <strong>menu</strong> applies to each time slot is decided in Menu Offering, not here.</li>
+<li><strong>Closed days and holidays</strong> — Dates when you are NOT open (holidays, works, a long weekend): the website does not offer them and the app treats them as closed.</li>
+<li><strong>Special hours</strong> — A day (or several) when you open at <strong>different hours</strong> than your usual week (an eve, an event, a holiday with reduced service). Enter the day, an optional end date, a reason and one or two services; once added, the booking site, online orders, capacity per slot and the POS warnings use those hours that day. If the same day is also in closed days, the closure wins. If there are already bookings on those dates the app warns you so you can check they fit. Remove it with the bin.</li>
 </ul>
 
 <h4>Operations</h4>
@@ -4941,7 +4947,7 @@ const MANUAL_CHAPTERS = [
 <p>These tables are the ones you see in the POS, in Reservations and on the table QR codes.</p>
 
 <h4>Receipt settings</h4>
-<p>What is printed on your receipts: <strong>Show address</strong>, <strong>Show phone</strong>, <strong>Show website</strong>, <strong>Show tax ID</strong> (always ticked and locked, it is mandatory), <strong>Ask for a review with a QR at the bottom of the receipt</strong> (needs the Google Maps link), a <strong>Receipt footer message</strong> and the general <strong>VAT (%)</strong> used for the breakdown when an item has no rate of its own. Tap <strong>Save</strong> and see the result with <strong>Receipt preview</strong>. Each receipt carries a simplified-invoice number of its own per device.</p>
+<p>What is printed on your receipts: <strong>Show address</strong>, <strong>Show phone</strong>, <strong>Show website</strong>, <strong>Show tax ID</strong> (always ticked and locked, it is mandatory), <strong>Ask for a review with a QR at the bottom of the receipt</strong> (needs the Google Maps link), a <strong>Receipt footer message</strong> and the <strong>default VAT</strong> (food and, if you want a different one, drinks), used only when an item has no rate of its own: every dish, drink and menu carries its own VAT (set in Menu Offering) and the receipt itemises each rate separately. At the top you see a summary of the rates your products carry and how many have none. Tap <strong>Save</strong> and see the result with <strong>Receipt preview</strong>. Each receipt carries a simplified-invoice number of its own per device.</p>
 
 <h4>Receipt printer (and cash drawer)</h4>
 <p>How <strong>this device</strong> prints (each tablet or station picks its own):</p>
@@ -5661,7 +5667,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>El escandallo sale a 0 €</strong>: faltan los precios de compra en la Mega Lista (ya viene el catálogo, pero a precio cero) o el formato/unidad está mal. Mira «por revisar» en la Mega Lista.</li>
 <li><strong>El food cost parece distinto del esperado</strong>: el precio de compra es <strong>sin IVA</strong>; el precio de la carta lleva IVA y la app lo quita para calcular el food cost. Comparas manzanas con manzanas solo si ambos van sin IVA.</li>
-<li><strong>El IVA de los tickets</strong> sale del tipo general de Mi Negocio → <strong>Configuración del ticket</strong>. Revísalo si vendes con otros tipos.</li>
+<li><strong>El IVA de los tickets</strong> sale del IVA de cada plato, bebida o menú (se elige en Oferta); Mi Negocio → <strong>Configuración del ticket</strong> solo guarda el IVA por defecto de lo que no lo tiene. Mira el resumen «IVA de tus productos» y revisa los que salen «Sin tipo».</li>
 <li><strong>La Cuenta de Resultados no se parece a la de tu gestor</strong>: primero comprueba la <strong>forma jurídica y el régimen fiscal</strong> de Mi Negocio (si falta, aparece un aviso rojo) y tus gastos fijos. El impuesto se calcula por años, no mes a mes, y un mes puede salir con impuesto negativo. En autónomos y CB el «sueldo del titular» no es gasto.</li>
 <li><strong>Una venta anulada</strong> sigue contando en su mes; la rectificativa resta en el mes en que se anula, para no tocar un trimestre ya presentado.</li>
 <li><strong>Pedidos por plataformas</strong>: la comisión se descuenta con el porcentaje que pusiste en Mi Negocio → Plataformas de delivery.</li>
@@ -5803,7 +5809,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>L'escandall surt a 0 €</strong>: falten els preus de compra a la Mega Llista (ja ve el catàleg, però a preu zero) o el format/unitat és incorrecte. Mira «per revisar» a la Mega Llista.</li>
 <li><strong>El food cost sembla diferent de l'esperat</strong>: el preu de compra és <strong>sense IVA</strong>; el preu de la carta porta IVA i l'app el treu per calcular el food cost. Compares peres amb peres només si tots dos van sense IVA.</li>
-<li><strong>L'IVA dels tiquets</strong> surt del tipus general d'El Meu Negoci → <strong>Configuració del tiquet</strong>. Revisa'l si vens amb altres tipus.</li>
+<li><strong>L'IVA dels tiquets</strong> surt de l'IVA de cada plat, beguda o menú (es tria a Oferta); El Meu Negoci → <strong>Configuració del tiquet</strong> només desa l'IVA per defecte del que no en té. Mira el resum «IVA dels teus productes» i revisa els que surten «Sense tipus».</li>
 <li><strong>El Compte de Resultats no s'assembla al del teu gestor</strong>: primer comprova la <strong>forma jurídica i el règim fiscal</strong> d'El Meu Negoci (si falta, apareix un avís vermell) i les teves despeses fixes. L'impost es calcula per anys, no mes a mes, i un mes pot sortir amb impost negatiu. En autònoms i CB el «sou del titular» no és despesa.</li>
 <li><strong>Una venda anul·lada</strong> continua comptant en el seu mes; la rectificativa resta al mes en què s'anul·la, per no tocar un trimestre ja presentat.</li>
 <li><strong>Comandes per plataformes</strong>: la comissió es descompta amb el percentatge que vas posar a El Meu Negoci → Plataformes de delivery.</li>
@@ -5945,7 +5951,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Costing shows €0</strong>: purchase prices are missing in the Master List (the catalogue is there, but at zero price) or the pack size/unit is wrong. Check "to review" in the Master List.</li>
 <li><strong>Food cost looks different from expected</strong>: the purchase price is <strong>excluding VAT</strong>; the menu price includes VAT and the app removes it to work out food cost. You are only comparing like with like if both exclude VAT.</li>
-<li><strong>VAT on receipts</strong> comes from the general rate in My Business → <strong>Receipt settings</strong>. Check it if you sell at other rates.</li>
+<li><strong>VAT on receipts</strong> comes from the VAT of each dish, drink or menu (set in Menu Offering); My Business → <strong>Receipt settings</strong> only stores the default VAT for anything that has none. Look at the «VAT on your products» summary and check any marked «No rate».</li>
 <li><strong>The Income Statement doesn't look like your accountant's</strong>: first check the <strong>legal form and tax regime</strong> in My Business (a red notice shows if it is missing) and your fixed costs. Tax is calculated per year, not month by month, and a month can show negative tax. For self-employed and CB the "owner's salary" is not an expense.</li>
 <li><strong>A voided sale</strong> still counts in its own month; the credit note subtracts in the month it is voided, so a quarter already filed is never touched.</li>
 <li><strong>Platform orders</strong>: the commission is deducted using the percentage you set in My Business → Delivery platforms.</li>
@@ -5985,17 +5991,53 @@ const MANUAL_CHAPTERS = [
    · el buscador filtra los capítulos y marca lo encontrado dentro del texto;
    · abajo, «anterior / siguiente» e imprimir.
    ============================================================ */
-let manualChapter = 0;
+let manualChapter = -1;           // índice en MANUAL_CHAPTERS del tema que se está leyendo (-1 = ninguno)
+let manualArea = null;            // grupo abierto (clave de MANUAL_AREAS) o null = la portada de cinco botones
 let manualSearch = '';
-let manualIndiceAbierto = null;   // null = según el ancho de pantalla
 
+/* Tres niveles (8/11, pedido por el dueño: «al entrar solo se ven los cinco botones»):
+   portada (Empezar · Cocina · Sala · Gestión · Ayuda) → los temas del grupo → el tema que se lee. */
 const MANUAL_AREAS = [
-  {key:'empezar', icon:'ti-rocket',           label:{es:'Empezar', ca:'Començar', en:'Start'}},
-  {key:'cocina',  icon:'ti-tools-kitchen-2',  label:{es:'Cocina', ca:'Cuina', en:'Kitchen'}},
-  {key:'sala',    icon:'ti-armchair',         label:{es:'Sala', ca:'Sala', en:'Floor'}},
-  {key:'gestion', icon:'ti-layout-dashboard', label:{es:'Gestión', ca:'Gestió', en:'Management'}},
-  {key:'ayuda',   icon:'ti-lifebuoy',         label:{es:'Ayuda', ca:'Ajuda', en:'Help'}},
+  {key:'empezar', icon:'ti-rocket',           label:{es:'Empezar', ca:'Començar', en:'Start'},
+    desc:{es:'Qué es GastroGoan y tus primeros pasos', ca:'Què és GastroGoan i els teus primers passos', en:'What GastroGoan is and your first steps'}},
+  {key:'cocina',  icon:'ti-tools-kitchen-2',  label:{es:'Cocina', ca:'Cuina', en:'Kitchen'},
+    desc:{es:'Productos, recetas, stock, pedidos, equipo y comandas', ca:'Productes, receptes, estoc, comandes, equip i comandes de cuina', en:'Products, recipes, stock, orders, staff and kitchen tickets'}},
+  {key:'sala',    icon:'ti-armchair',         label:{es:'Sala', ca:'Sala', en:'Floor'},
+    desc:{es:'TPV, reservas, web de pedidos, clientes y promoción', ca:'TPV, reserves, web de comandes, clients i promoció', en:'POS, bookings, online ordering, customers and promotion'}},
+  {key:'gestion', icon:'ti-layout-dashboard', label:{es:'Gestión', ca:'Gestió', en:'Management'},
+    desc:{es:'Cuentas, panel, tu negocio, impuestos y asesoría', ca:'Comptes, tauler, el teu negoci, impostos i assessoria', en:'Accounts, dashboard, your business, taxes and coaching'}},
+  {key:'ayuda',   icon:'ti-lifebuoy',         label:{es:'Ayuda', ca:'Ajuda', en:'Help'},
+    desc:{es:'Dudas habituales y qué hacer si algo no va', ca:'Dubtes habituals i què fer si alguna cosa no va', en:'Common questions and what to do when something is off'}},
 ];
+// Una frase por tema: lo que te cuenta y para qué te sirve (se enseña en la lista de temas de cada grupo).
+const MANUAL_RESUMEN = {
+  empezar:{es:'Cómo está organizada la app, quién ve qué y por dónde empezar.', ca:'Com està organitzada l\'app, qui veu què i per on començar.', en:'How the app is organised, who sees what and where to start.'},
+  megalista:{es:'Tus ingredientes y productos con su precio, IVA y proveedor.', ca:'Els teus ingredients i productes amb preu, IVA i proveïdor.', en:'Your ingredients and products with price, VAT and supplier.'},
+  proveedores:{es:'Fichas de proveedores: contacto, días de reparto y gastos de envío.', ca:'Fitxes de proveïdors: contacte, dies de repartiment i despeses d\'enviament.', en:'Supplier cards: contact, delivery days and shipping costs.'},
+  escandallo:{es:'El coste de cada plato y su margen, calculado con tus precios.', ca:'El cost de cada plat i el seu marge, calculat amb els teus preus.', en:'The cost of each dish and its margin, worked out with your prices.'},
+  fichas:{es:'La receta paso a paso, para cocinar y para imprimir.', ca:'La recepta pas a pas, per cuinar i per imprimir.', en:'The recipe step by step, to cook from and to print.'},
+  oferta:{es:'Cartas, menús y los precios que ve tu cliente.', ca:'Cartes, menús i els preus que veu el teu client.', en:'Menus, set menus and the prices your customer sees.'},
+  idr:{es:'El asistente que crea platos, menús y cartas con tus ingredientes y tus precios.', ca:'L\'assistent que crea plats, menús i cartes amb els teus ingredients i preus.', en:'The assistant that creates dishes, menus and carte with your own ingredients and prices.'},
+  stock:{es:'Existencias, mínimos, mermas y qué te falta pedir.', ca:'Existències, mínims, minves i què et falta demanar.', en:'Stock levels, minimums, waste and what you need to order.'},
+  pedidos:{es:'Pedir a tus proveedores, recibir la mercancía y comprobarla.', ca:'Demanar als teus proveïdors, rebre la mercaderia i comprovar-la.', en:'Ordering from suppliers, receiving the goods and checking them.'},
+  horarios:{es:'Turnos, personal, fichajes, vacaciones y calendario del equipo.', ca:'Torns, personal, fitxatges, vacances i calendari de l\'equip.', en:'Shifts, staff, clock-ins, holidays and the team calendar.'},
+  distribucion:{es:'El panel de cada empleado: sus tareas, lo que tiene a su cargo y su manual.', ca:'El tauler de cada empleat: les seves tasques, el que té a càrrec seu i el seu manual.', en:'Each employee\'s panel: their tasks, what they are in charge of and their handbook.'},
+  limpieza:{es:'Limpieza, temperaturas, alérgenos y los registros APPCC.', ca:'Neteja, temperatures, al·lèrgens i els registres APPCC.', en:'Cleaning, temperatures, allergens and HACCP records.'},
+  comandascocina:{es:'La pantalla que la cocina deja abierta durante el servicio.', ca:'La pantalla que la cuina deixa oberta durant el servei.', en:'The screen the kitchen keeps open during service.'},
+  tpv:{es:'Mesas, comandas, cobro, caja e impresión: el servicio de principio a fin.', ca:'Taules, comandes, cobrament, caixa i impressió: el servei de principi a fi.', en:'Tables, orders, payment, cash-up and printing: service from start to finish.'},
+  reservas:{es:'La agenda de reservas, el aforo y la lista de espera.', ca:'L\'agenda de reserves, l\'aforament i la llista d\'espera.', en:'The booking diary, capacity and the waiting list.'},
+  online:{es:'Lo que tus clientes hacen solos: reservar, pedir, pagar y seguir su pedido.', ca:'El que fan els teus clients sols: reservar, demanar, pagar i seguir la comanda.', en:'What your customers do on their own: book, order, pay and follow their order.'},
+  clientes:{es:'Fichas, fidelización, filtros y vales regalo.', ca:'Fitxes, fidelització, filtres i vals regal.', en:'Customer cards, loyalty, filters and gift vouchers.'},
+  promocion:{es:'Calendario de acciones, novedades por email y WhatsApp, e ideas.', ca:'Calendari d\'accions, novetats per email i WhatsApp, i idees.', en:'Action calendar, news by email and WhatsApp, and ideas.'},
+  economia:{es:'Ventas, gastos, tesorería, resultados e impuestos.', ca:'Vendes, despeses, tresoreria, resultats i impostos.', en:'Sales, expenses, cash flow, results and taxes.'},
+  dashboard:{es:'Las cifras del día y del año de un vistazo.', ca:'Les xifres del dia i de l\'any d\'un cop d\'ull.', en:'Today\'s and this year\'s numbers at a glance.'},
+  minegocio:{es:'Datos, horario, impuestos, impresoras, nube y conexiones.', ca:'Dades, horari, impostos, impressores, núvol i connexions.', en:'Details, opening hours, taxes, printers, cloud and connections.'},
+  plan360:{es:'El acompañamiento de un gestor y el mantenimiento mensual.', ca:'L\'acompanyament d\'un gestor i el manteniment mensual.', en:'Working with a coach and the monthly follow-up.'},
+  herramientas:{es:'La visión global de tus negocios y «Pregúntale a tus números».', ca:'La visió global dels teus negocis i «Pregunta-li als teus números».', en:'The overview of all your businesses and “Ask your numbers”.'},
+  legal:{es:'Facturas, VeriFactu y los registros que exige la ley.', ca:'Factures, VeriFactu i els registres que exigeix la llei.', en:'Invoices, VeriFactu and the records the law requires.'},
+  faq:{es:'Dudas habituales y qué hacer cuando algo no va como esperas.', ca:'Dubtes habituals i què fer quan alguna cosa no va com esperes.', en:'Common questions and what to do when something is not working.'},
+};
+function manualResumen(ch){ const r = MANUAL_RESUMEN[ch.id]; return r ? gl(r) : ''; }
 function manualAreaLabel(key){ const a = MANUAL_AREAS.find(x => x.key === key); return a ? gl(a.label) : ''; }
 
 // El título/contenido de cada capítulo es un {es,ca,en}; el valor de cada idioma puede ser el HTML o una
@@ -6022,18 +6064,25 @@ function manualMatches(){
   const q = pmSinTildes(manualSearch.trim().toLowerCase());
   return MANUAL_CHAPTERS.map((ch, i) => ({ch, i})).filter(({ch}) => manualChapterMatches(ch, q));
 }
+// Con texto en el buscador la portada cede el sitio a la lista de temas que lo contienen (de cualquier grupo).
 function setManualSearch(val){
   manualSearch = val;
-  const m = manualMatches();
-  if(m.length && !m.some(x => x.i === manualChapter)) manualChapter = m[0].i;
-  if(val.trim()) manualIndiceAbierto = true;
+  // Escribir (o borrar) en el buscador siempre parte de cero: ni grupo ni tema abiertos; al vaciarlo vuelve la portada.
+  manualChapter = -1; manualArea = null;
   renderManual();
   const el = document.getElementById('manual-search-input');
   if(el){ el.focus(); try{ el.setSelectionRange(val.length, val.length); }catch(e){} }
 }
-
-function manualIndiceVisible(){ return manualIndiceAbierto === null ? window.innerWidth >= 900 : manualIndiceAbierto; }
-function toggleManualIndice(){ manualIndiceAbierto = !manualIndiceVisible(); renderManual(); }
+function manualAbrirArea(key){
+  manualArea = key; manualChapter = -1; manualSearch = '';
+  const inp = document.getElementById('manual-search-input'); if(inp) inp.value = '';
+  renderManual(); manualArriba();
+}
+function manualVolver(){ manualArea = null; manualChapter = -1; renderManual(); manualArriba(); }
+function manualArriba(){
+  const v = document.getElementById('view-manual'); const t = v && v.querySelector('.view-title');
+  (t || v || document.body).scrollIntoView({block:'start'});
+}
 
 // Marca lo buscado dentro del texto del capítulo (solo en nodos de texto; nunca rompe el HTML).
 function manualResaltar(raiz, q){
@@ -6059,38 +6108,64 @@ function manualResaltar(raiz, q){
   });
 }
 
+function manualTemaHtml(ch, i, conArea){
+  return `<button type="button" class="mnl-tema" onclick="goManualChapter(${i})">
+      <span class="mnl-tema-txt"><b>${escapeHtml(manualChapterPlainTitle(ch))}</b>${conArea ? `<em>${escapeHtml(manualAreaLabel(ch.area))}</em>` : ''}<small>${escapeHtml(manualResumen(ch))}</small></span>
+      <i class="ti ti-chevron-right" aria-hidden="true"></i></button>`;
+}
 function renderManual(){
   const cont = document.getElementById('manual-detail');
   const indice = document.getElementById('manual-indice');
-  if(!cont || !indice) return;
+  const pie = document.getElementById('manual-pie');
+  const tour = document.getElementById('manual-tour');
+  if(!cont || !indice || !pie) return;
   const q = pmSinTildes(manualSearch.trim().toLowerCase());
-  const matches = manualMatches();
-  if(manualChapter >= MANUAL_CHAPTERS.length) manualChapter = 0;
-  indice.setAttribute('aria-label', gl({es:'Capítulos del manual', ca:'Capítols del manual', en:'Manual chapters'}));
+  if(manualChapter >= MANUAL_CHAPTERS.length) manualChapter = -1;
+  indice.setAttribute('aria-label', gl({es:'Manual de uso', ca:'Manual d\'ús', en:'User manual'}));
+  const leyendo = manualChapter >= 0;
+  // El tour solo se ofrece en la portada: es lo primero que se ve y no estorba cuando ya se está leyendo.
+  if(tour) tour.hidden = !!(manualArea || manualChapter >= 0 || q);
+  cont.innerHTML = ''; pie.innerHTML = '';
+  indice.hidden = leyendo;
+  if(leyendo){ renderManualTema(cont, pie, q); return; }
 
-  // ── índice agrupado por áreas ──
-  const actual = MANUAL_CHAPTERS[manualChapter];
-  const abierto = manualIndiceVisible();
-  const grupos = MANUAL_AREAS.map(a => {
-    const del = matches.filter(m => m.ch.area === a.key);
-    if(!del.length) return '';
-    return `<div class="mnl-grupo"><span class="mnl-grupo-et"><i class="ti ${a.icon}"></i> ${escapeHtml(gl(a.label))}</span>
-      <div class="mnl-chips">${del.map(({ch, i}) => `<button type="button" class="mnl-chip${i === manualChapter ? ' activo' : ''}" aria-current="${i === manualChapter}" onclick="goManualChapter(${i})">${escapeHtml(manualChapterPlainTitle(ch))}</button>`).join('')}</div></div>`;
-  }).join('');
-  indice.innerHTML = `
-    <button type="button" class="mnl-toggle" aria-expanded="${abierto}" onclick="toggleManualIndice()">
-      <span class="mnl-toggle-izq"><i class="ti ti-list-details"></i> ${escapeHtml(gl({es:'Capítulo', ca:'Capítol', en:'Chapter'}))}: <b>${escapeHtml(manualChapterPlainTitle(actual))}</b></span>
-      <i class="ti ti-chevron-${abierto ? 'up' : 'down'}"></i></button>
-    <div class="mnl-grupos${abierto ? '' : ' cerrado'}">${grupos || `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${escapeHtml(t('common.noResults'))}</div>`}</div>`;
-
-  // ── capítulo ──
-  if(!matches.length){
-    cont.innerHTML = `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${escapeHtml(t('common.noResults'))}</div>`;
-    document.getElementById('manual-pie').innerHTML = '';
+  if(q){
+    // ── resultados de la búsqueda ──
+    const m = manualMatches();
+    indice.innerHTML = m.length
+      ? `<div class="mnl-temas">${m.map(({ch, i}) => manualTemaHtml(ch, i, true)).join('')}</div>`
+      : `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${escapeHtml(t('common.noResults'))}</div>`;
     return;
   }
+  if(!manualArea){
+    // ── portada: solo los cinco botones ──
+    indice.innerHTML = `<div class="mnl-portada">${MANUAL_AREAS.map(a => {
+      const n = MANUAL_CHAPTERS.filter(c => c.area === a.key).length;
+      return `<button type="button" class="mnl-area" onclick="manualAbrirArea('${a.key}')">
+        <span class="mnl-area-ico"><i class="ti ${a.icon}"></i></span>
+        <span class="mnl-area-txt"><b>${escapeHtml(gl(a.label))}</b><small>${escapeHtml(gl(a.desc))}</small></span>
+        <span class="mnl-area-n">${n} ${escapeHtml(gl(n === 1 ? {es:'tema', ca:'tema', en:'topic'} : {es:'temas', ca:'temes', en:'topics'}))}</span>
+        <i class="ti ti-chevron-right" aria-hidden="true"></i></button>`;
+    }).join('')}</div>`;
+    return;
+  }
+  // ── los temas del grupo elegido ──
+  const a = MANUAL_AREAS.find(x => x.key === manualArea);
+  const temas = MANUAL_CHAPTERS.map((ch, i) => ({ch, i})).filter(x => x.ch.area === manualArea);
+  indice.innerHTML = `
+    <div class="mnl-grupo-cab">
+      <button type="button" class="btn btn-fino mnl-atras" onclick="manualVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(gl({es:'Manual', ca:'Manual', en:'Manual'}))}</button>
+      <h2><i class="ti ${a.icon}"></i> ${escapeHtml(gl(a.label))}</h2>
+      <p>${escapeHtml(gl(a.desc))}</p>
+    </div>
+    <div class="mnl-temas">${temas.map(({ch, i}) => manualTemaHtml(ch, i, false)).join('')}</div>`;
+}
+function renderManualTema(cont, pie, q){
+  const actual = MANUAL_CHAPTERS[manualChapter];
+  const a = MANUAL_AREAS.find(x => x.key === actual.area);
   cont.innerHTML = `
-    <header class="mnl-cab"><span class="mnl-cab-area">${escapeHtml(manualAreaLabel(actual.area))}</span><h2 class="mnl-cab-tit">${manualChapterTitle(actual)}</h2></header>
+    <button type="button" class="btn btn-fino mnl-atras" onclick="manualAbrirArea('${actual.area}')"><i class="ti ti-arrow-left"></i> ${escapeHtml(gl(a.label))}</button>
+    <header class="mnl-cab"><span class="mnl-cab-area">${escapeHtml(manualAreaLabel(actual.area))}</span><h2 class="mnl-cab-tit">${manualChapterTitle(actual)}</h2>${manualResumen(actual) ? `<p class="mnl-cab-resumen">${escapeHtml(manualResumen(actual))}</p>` : ''}</header>
     <div class="mnl-cuerpo">${manualChapterText(actual)}</div>`;
   const cuerpo = cont.querySelector('.mnl-cuerpo');
   // «En este capítulo»: un salto a cada apartado (h4), cuando hay varios.
@@ -6099,18 +6174,18 @@ function renderManual(){
     hs.forEach((h, k) => { h.id = 'mnl-h-' + k; });
     const toc = document.createElement('nav');
     toc.className = 'mnl-toc';
-    toc.setAttribute('aria-label', gl({es:'En este capítulo', ca:'En aquest capítol', en:'In this chapter'}));
-    toc.innerHTML = `<span class="mnl-toc-et">${escapeHtml(gl({es:'En este capítulo', ca:'En aquest capítol', en:'In this chapter'}))}</span>` +
+    toc.setAttribute('aria-label', gl({es:'En este tema', ca:'En aquest tema', en:'In this topic'}));
+    toc.innerHTML = `<span class="mnl-toc-et">${escapeHtml(gl({es:'En este tema', ca:'En aquest tema', en:'In this topic'}))}</span>` +
       hs.map((h, k) => `<button type="button" class="mnl-toc-it" onclick="manualIrA(${k})">${escapeHtml(h.textContent.trim())}</button>`).join('');
     const h3 = cuerpo.querySelector('h3');
     if(h3 && h3.parentNode === cuerpo) h3.after(toc); else cuerpo.prepend(toc);
   }
   manualResaltar(cuerpo, q);
-
-  // ── pie: anterior / siguiente / imprimir ──
-  const pos = matches.findIndex(m => m.i === manualChapter);
-  const ant = pos > 0 ? matches[pos - 1] : null, sig = pos < matches.length - 1 ? matches[pos + 1] : null;
-  document.getElementById('manual-pie').innerHTML = `
+  // ── pie: anterior / siguiente DENTRO del mismo grupo, e imprimir ──
+  const hermanos = MANUAL_CHAPTERS.map((ch, i) => ({ch, i})).filter(x => x.ch.area === actual.area);
+  const pos = hermanos.findIndex(m => m.i === manualChapter);
+  const ant = pos > 0 ? hermanos[pos - 1] : null, sig = pos < hermanos.length - 1 ? hermanos[pos + 1] : null;
+  pie.innerHTML = `
     <div class="mnl-pie">
       ${ant ? `<button type="button" class="btn btn-fino mnl-nav" onclick="goManualChapter(${ant.i})"><i class="ti ti-arrow-left"></i><span><small>${escapeHtml(gl({es:'Anterior', ca:'Anterior', en:'Previous'}))}</small>${escapeHtml(manualChapterPlainTitle(ant.ch))}</span></button>` : '<span></span>'}
       <button type="button" class="btn btn-fino mnl-imprimir" onclick="printManualChapter()"><i class="ti ti-printer"></i> ${escapeHtml(t('btn.printChapter'))}</button>
@@ -6123,16 +6198,22 @@ function manualIrA(k){
 }
 function goManualChapter(i){
   manualChapter = i;
-  if(window.innerWidth < 900) manualIndiceAbierto = false;
+  manualArea = MANUAL_CHAPTERS[i].area;
   renderManual();
-  const cab = document.querySelector('#manual-detail .mnl-cab');
-  if(cab) cab.scrollIntoView({block:'start'});
+  manualArriba();
 }
-// Abrir el manual en un capítulo concreto (id), p. ej. desde un enlace de ayuda.
+// Abrir el manual en un tema concreto (id), p. ej. desde un enlace de ayuda.
+let manualDirecto = false;   // true cuando se llega con un tema ya elegido (openManualAt): entonces no se vuelve a la portada
+function manualAlEntrar(){
+  if(manualDirecto){ manualDirecto = false; return; }
+  manualArea = null; manualChapter = -1; manualSearch = '';
+  const inp = document.getElementById('manual-search-input'); if(inp) inp.value = '';
+}
 function openManualAt(id){
+  manualDirecto = true;
   const i = MANUAL_CHAPTERS.findIndex(c => c.id === id);
-  if(i >= 0) manualChapter = i;
   manualSearch = '';
+  if(i >= 0){ manualChapter = i; manualArea = MANUAL_CHAPTERS[i].area; }
   navigate('manual');
 }
 function printManualChapter(){

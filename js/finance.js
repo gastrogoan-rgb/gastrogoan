@@ -342,7 +342,7 @@ function geVentasIvaGroupsMes(year, month){
     (sale.items||[]).forEach(line => {
       const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
       if(grossLine <= 0) return;
-      const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : fallbackRate;
+      const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : parseFloat(ivaPorDefectoDe(line));
       const base = grossLine / (1 + rate/100);
       if(!groups[rate]) groups[rate] = {base:0, iva:0};
       groups[rate].base += base;
@@ -369,7 +369,7 @@ function geAjustarAnulaciones(groups, mesStr, fallbackRate){
     (v.items||[]).forEach(l => {
       const gross = (parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-desc/100) * (enOrigen ? 1 : -1);
       if(!gross) return;
-      const rate = l.ivaPct != null ? parseFloat(l.ivaPct) : fallbackRate;
+      const rate = l.ivaPct != null ? parseFloat(l.ivaPct) : parseFloat(ivaPorDefectoDe(l));
       if(!groups[rate]) groups[rate] = {base:0, iva:0};
       const net = gross/(1+rate/100);
       groups[rate].base += net; groups[rate].iva += gross - net;
@@ -1419,7 +1419,7 @@ function renderDashboard(){
       // coste de la receta es siempre neto, así que hay que quitarle el IVA a
       // la línea antes de restar — si no, el margen sale inflado y varía según
       // el tipo de IVA del plato en vez de reflejar solo coste vs venta real.
-      const rate = it.ivaPct != null ? parseFloat(it.ivaPct) : ((DB.business.ticket && DB.business.ticket.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10);
+      const rate = it.ivaPct != null ? parseFloat(it.ivaPct) : parseFloat(ivaPorDefectoDe(it));
       const unitPriceBase = (it.price||0) / (1 + rate/100);
       const margin = (unitPriceBase - unitCost) * qty;
       if(!marginTotals[key]) marginTotals[key] = {name: it.name || '—', margin:0, hasCost: !!it.recipeId};
@@ -3001,15 +3001,15 @@ function openMermaModal(sel){
       <h3><i class="ti ti-trash-x"></i> ${t('merma.title')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div class="form-group">
+    <div class="field">
       <label for="merma-prod">${t('merma.product')}</label>
       <select id="merma-prod" onchange="mermaActualizar()"><option value="">${t('merma.choose')}</option>${opts}</select>
     </div>
-    <div class="form-group">
+    <div class="field">
       <label for="merma-qty" id="merma-qty-l">${t('merma.qty').replace('${u}', '—')}</label>
       <input type="number" id="merma-qty" min="0" step="0.01" inputmode="decimal" oninput="mermaActualizar()">
     </div>
-    <div class="form-group">
+    <div class="field">
       <label>${t('merma.reason')}</label>
       <div class="merma-motivos">${mermaMotivos().map(m => `<label class="merma-motivo"><input type="radio" name="merma-motivo" value="${m}" onchange="mermaActualizar()"> <span>${t('merma.r.' + m)}</span></label>`).join('')}</div>
       <input type="text" id="merma-otro" maxlength="80" placeholder="${escapeHtml(t('merma.otherPh'))}" style="display:none;margin-top:8px">

@@ -351,7 +351,6 @@ function tourApplyStep(step){
     el = document.querySelector('#folder-modules .module-card') || document.querySelector('.folder-card.folder-' + step.folder);
   }
   tourCurrentTargetEl = el || null;
-  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
   return el;
 }
 
@@ -365,7 +364,7 @@ function tourGoToStep(step){
     // dentro del TPV): no hace falta cortina ni reflow, solo reposicionar
     // sobre el nuevo target dentro de la misma pantalla ya visible.
     const el = tourApplyStep(step);
-    setTimeout(tourPositionUI, el ? 380 : 0);
+    setTimeout(() => tourPositionUI({ajustar: true}), el ? 120 : 0);
     return;
   }
   // Cambia de pantalla de verdad: cortina de transición — la mostramos
@@ -377,8 +376,8 @@ function tourGoToStep(step){
     const el = tourApplyStep(step);
     setTimeout(() => {
       if(curtain) curtain.classList.remove('active');
-      tourPositionUI();
-    }, el ? 380 : 120);
+      tourPositionUI({ajustar: true});
+    }, el ? 160 : 120);
   }, curtain ? 180 : 0);
 }
 // Identifica "a qué pantalla lleva este paso" (no el paso exacto) para
@@ -393,68 +392,122 @@ let tourLastStepSignature = null;
    MISMO tourCurrentTargetEl — se llama tanto al cambiar de paso como en
    cada resize/scroll mientras el tour está activo, para que el foco no se
    quede descolgado del elemento real si la pantalla se mueve. */
-function tourPositionUI(){
+/* Desplaza lo explicado (en la ventana o en el contenedor con scroll en el que esté) para que quede en la franja LIBRE de la
+   pantalla — la que la burbuja no ocupa. Antes se centraba en toda la pantalla y, en un móvil, la hoja inferior lo tapaba. */
+function tourScrollTarget(el, topMargin, bottomLimit){
+  const r = el.getBoundingClientRect();
+  const alto = Math.max(40, bottomLimit - topMargin);
+  const dy = r.height <= alto ? (r.top - topMargin) - (alto - r.height) / 2 : r.top - topMargin;
+  if(Math.abs(dy) < 2) return;
+  let sc = el.parentElement;
+  while(sc && sc !== document.body && sc !== document.documentElement){
+    const o = getComputedStyle(sc).overflowY;
+    if((o === 'auto' || o === 'scroll') && sc.scrollHeight > sc.clientHeight + 2) break;
+    sc = sc.parentElement;
+  }
+  if(!sc || sc === document.body || sc === document.documentElement) window.scrollBy(0, dy); else sc.scrollTop += dy;
+}
+
+/* La burbuja NUNCA tapa lo que explica (8/11, el dueño: «cuando explica las letras tapa lo que está mostrando»).
+   · Móvil (< 640 px): una hoja fija abajo del todo; antes de pintar el foco se desplaza el elemento a la franja libre de arriba
+     y el foco se recorta por donde empieza la hoja.
+   · PC y tablet: la burbuja va al lado (derecha, izquierda, debajo o encima) en el primer sitio donde cabe SIN solaparse con el
+     elemento. Si el elemento es enorme (una pantalla entera) y no hay sitio, la burbuja se ACOPLA a un lateral y el foco se recorta
+     para no pasar por debajo de ella.
+   Se llama al cambiar de paso (opts.ajustar = true: también desplaza) y en cada resize/scroll (solo recoloca). */
+function tourPositionUI(opts){
   const spot = document.getElementById('tour-spotlight');
   const arrow = document.getElementById('tour-arrow');
   const bubble = document.getElementById('tour-bubble');
   if(!spot || !bubble) return;
-  const rect = tourCurrentTargetEl ? tourCurrentTargetEl.getBoundingClientRect() : null;
-  const hasRect = rect && rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+  const ajustar = !!(opts && opts.ajustar);
   const vw = window.innerWidth, vh = window.innerHeight;
+  const vvh = window.visualViewport ? window.visualViewport.height : vh;
+  const movil = vw < 640;
+  const el = tourCurrentTargetEl;
+  const medir = () => el ? el.getBoundingClientRect() : null;
+  const valido = r => r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh;
+  let rect = medir();
 
-  if(!hasRect){
-    spot.classList.add('no-target');
-    spot.classList.add('active');
+  if(!valido(rect)){
+    spot.classList.add('no-target'); spot.classList.add('active');
     spot.style.top = '50%'; spot.style.left = '50%'; spot.style.width = '0px'; spot.style.height = '0px';
     if(arrow) arrow.style.display = 'none';
+    bubble.classList.remove('tour-bubble-sheet', 'tour-bubble-sheet-top', 'tour-bubble-dock');
     bubble.classList.add('tour-bubble-centered');
     return;
   }
   const pad = 10;
-  spot.classList.remove('no-target');
-  spot.classList.add('active');
-  spot.style.top = (rect.top - pad) + 'px';
-  spot.style.left = (rect.left - pad) + 'px';
-  spot.style.width = (rect.width + pad*2) + 'px';
-  spot.style.height = (rect.height + pad*2) + 'px';
-
   bubble.classList.remove('tour-bubble-centered');
   const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
 
-  // En pantallas estrechas, perseguir la posición exacta del elemento deja
-  // muy poco margen y la burbuja puede acabar recortada o tapando el propio
-  // foco — más fiable y "pro" es una hoja fija abajo del todo (con el foco
-  // igualmente animándose sobre el elemento real detrás), sin flecha.
-  if(vw < 640){
-    bubble.style.left = '16px';
-    bubble.style.top = (vh - bh - 16 - (window.visualViewport ? (vh - window.visualViewport.height) : 0)) + 'px';
+  // ── Móvil: hoja inferior ──
+  if(movil){
+    bubble.classList.add('tour-bubble-sheet'); bubble.classList.remove('tour-bubble-dock');
+    bubble.style.top = 'auto'; bubble.style.left = '0px';
     if(arrow) arrow.style.display = 'none';
+    const limite = vh - bh - 14;
+    bubble.classList.remove('tour-bubble-sheet-top');
+    if(ajustar && el){ tourScrollTarget(el, 72, limite); rect = medir(); }
+    // Si la página no deja subir lo explicado por encima de la hoja (ya está al final del scroll), la hoja pasa ARRIBA en vez de
+    // taparlo: queda enfrente, en el hueco libre de la mitad que no ocupa el elemento.
+    let arriba = rect.top - pad, abajo = Math.min(rect.bottom + pad, limite - 6);
+    if(rect.bottom + pad > limite - 6 && rect.top - pad > bh + 14){
+      bubble.classList.add('tour-bubble-sheet-top');
+      abajo = rect.bottom + pad;
+    }
+    spot.classList.remove('no-target'); spot.classList.add('active');
+    spot.style.top = Math.max(arriba, 4) + 'px'; spot.style.left = Math.max(rect.left - pad, 4) + 'px';
+    spot.style.width = Math.min(rect.width + pad * 2, vw - 8) + 'px';
+    spot.style.height = Math.max(40, abajo - Math.max(arriba, 4)) + 'px';
     return;
   }
+  bubble.classList.remove('tour-bubble-sheet', 'tour-bubble-sheet-top');
 
-  const spaceBelow = vh - (rect.bottom + pad);
-  const spaceAbove = rect.top - pad;
-  let top, placement;
-  if(spaceBelow >= bh + 26 || spaceBelow >= spaceAbove){
-    top = Math.min(rect.bottom + pad + 16, vh - bh - 12);
-    placement = 'bottom';
-  }else{
-    top = Math.max(rect.top - pad - 16 - bh, 12);
-    placement = 'top';
+  // ── PC y tablet ──
+  if(ajustar && el){ tourScrollTarget(el, 14, vh - 14); rect = medir(); }
+  const r = {l: rect.left - pad, t: rect.top - pad, r: rect.right + pad, b: rect.bottom + pad};
+  const hueco = 18, m = 14;
+  const clampY = y => Math.max(m, Math.min(y, vh - bh - m));
+  const clampX = x => Math.max(m, Math.min(x, vw - bw - m));
+  const cx = (r.l + r.r) / 2;
+  const candidatos = {
+    derecha:   {ok: r.r + hueco + bw + m <= vw,  x: r.r + hueco,        y: clampY((r.t + r.b) / 2 - bh / 2), flecha: 'left'},
+    izquierda: {ok: r.l - hueco - bw - m >= 0,   x: r.l - hueco - bw,   y: clampY((r.t + r.b) / 2 - bh / 2), flecha: 'right'},
+    debajo:    {ok: r.b + hueco + bh + m <= vh,  x: clampX(cx - bw / 2), y: r.b + hueco,                       flecha: 'bottom'},
+    encima:    {ok: r.t - hueco - bh - m >= 0,   x: clampX(cx - bw / 2), y: r.t - hueco - bh,                  flecha: 'top'},
+  };
+  const orden = cx < vw / 2 ? ['derecha', 'debajo', 'encima', 'izquierda'] : ['izquierda', 'debajo', 'encima', 'derecha'];
+  const elegido = orden.find(k => candidatos[k].ok);
+  spot.classList.remove('no-target'); spot.classList.add('active');
+  if(elegido){
+    const c = candidatos[elegido];
+    bubble.classList.remove('tour-bubble-dock');
+    bubble.style.left = c.x + 'px'; bubble.style.top = c.y + 'px';
+    spot.style.top = r.t + 'px'; spot.style.left = r.l + 'px'; spot.style.width = (r.r - r.l) + 'px'; spot.style.height = (r.b - r.t) + 'px';
+    if(arrow){
+      arrow.style.display = '';
+      arrow.className = 'tour-arrow tour-arrow-' + c.flecha;
+      if(c.flecha === 'left' || c.flecha === 'right'){
+        arrow.style.left = (c.flecha === 'left' ? c.x - 10 : c.x + bw) + 'px';
+        arrow.style.top = Math.max(c.y + 16, Math.min((r.t + r.b) / 2 - 9, c.y + bh - 34)) + 'px';
+      }else{
+        arrow.style.left = Math.max(c.x + 18, Math.min(cx - 9, c.x + bw - 28)) + 'px';
+        arrow.style.top = (c.flecha === 'bottom' ? c.y - 9 : c.y + bh + 1) + 'px';
+      }
+    }
+    return;
   }
-  let left = rect.left + rect.width/2 - bw/2;
-  left = Math.max(12, Math.min(left, vw - bw - 12));
-  bubble.style.top = top + 'px';
-  bubble.style.left = left + 'px';
-
-  if(arrow){
-    const showArrow = placement === 'top' ? (top + bh) < vh - 4 : top > 4;
-    arrow.style.display = showArrow ? '' : 'none';
-    arrow.className = 'tour-arrow tour-arrow-' + placement;
-    const arrowLeft = Math.max(18, Math.min(rect.left + rect.width/2 - 9, vw - 26));
-    arrow.style.left = arrowLeft + 'px';
-    arrow.style.top = placement === 'bottom' ? (top - 9) + 'px' : (top + bh + 1) + 'px';
-  }
+  // No cabe al lado de nada: se acopla a un lateral y el foco se recorta para no pasar por debajo.
+  const aLaIzq = r.l > vw * 0.5;
+  bubble.classList.add('tour-bubble-dock');
+  bubble.style.top = clampY(Math.max(m, (vh - bh) / 2)) + 'px';
+  bubble.style.left = (aLaIzq ? m : vw - bw - m) + 'px';
+  if(arrow) arrow.style.display = 'none';
+  const izq = aLaIzq ? Math.max(r.l, bw + m * 2) : r.l;
+  const der = aLaIzq ? r.r : Math.min(r.r, vw - bw - m * 2);
+  spot.style.top = Math.max(r.t, 4) + 'px'; spot.style.left = izq + 'px';
+  spot.style.width = Math.max(60, der - izq) + 'px'; spot.style.height = Math.max(40, Math.min(r.b, vh - 4) - Math.max(r.t, 4)) + 'px';
 }
 
 // Fase a la que pertenece el paso actual, y su índice dentro de TOUR_PHASES
@@ -2327,7 +2380,7 @@ function renderView(view){
     case 'promocion': renderPromocion(); break;
     case 'distribucion': renderDistribucion(); break;
     case 'minegocio': renderMiNegocio(); break;
-    case 'manual': renderManual(); break;
+    case 'manual': manualAlEntrar(); renderManual(); break;
     case 'plan360': renderPlan360(); break;
   }
   requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });

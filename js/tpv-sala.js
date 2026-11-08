@@ -781,7 +781,7 @@ function renderTpvPendingOnline(){
           <b class="tp-ped-nom">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</b>
           ${o.clientRef ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
           ${esperaMin >= 30 ? `<span class="tp-ped-alerta"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.waitingSince').replace('${min}', esperaMin))}</span>` : ''}
-          ${o.pendienteVerificarZona ? `<span class="tp-ped-alerta"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('label.zoneNotVerified'))}</span>` : ''}
+          ${o.pendienteVerificarZona ? `<span class="tp-ped-alerta"><i class="ti ti-alert-triangle"></i> ${escapeHtml(o.fueraDeZona ? t('label.zoneOutside') : t('label.zoneNotVerified'))}</span>` : ''}
           <span class="tp-ped-pie">${o.pagado ? `<span class="tp-av is-pago"><i class="ti ti-credit-card"></i> ${escapeHtml(t('label.paidOnline'))}</span>`
             : o.pagoInsuficiente ? `<span class="tp-av is-inc"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('label.paymentShort'))}</span>`
             : (o.origenOnline && !o.metodoPagoLocal) ? `<span class="tp-av"><i class="ti ti-clock"></i> ${escapeHtml(t('label.awaitingCardPayment'))}</span>` : ''}</span>
@@ -804,7 +804,7 @@ function renderTpvPendingOnline(){
 // Aviso de «última hora»: si el turno cierra en menos de 30 minutos, se ve arriba del todo.
 function renderLastCallBanner(){
   try{
-    const horarioHoy = (DB.business.horario || [])[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+    const horarioHoy = horarioDiaDe(todayStr());   // incluye cierres y horario especial de hoy
     if(!horarioHoy || horarioHoy.abierto === false) return '';
     const tramos = horarioHoy.modo === 'seguido' ? [horarioHoy.seguido] : (horarioHoy.turnos || []);
     const toMin = hhmm => { const [h, m] = (hhmm || '').split(':').map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };
