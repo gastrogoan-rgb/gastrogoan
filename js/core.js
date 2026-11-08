@@ -8314,6 +8314,8 @@ const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
   // Grupos: a partir de X personas la web no deja reservar y pide llamar.
   'reservaConfirmManualDesde',
   'leadTimeMin', 'leadTimeMinReservas', 'leadTimeMinPedidos',
+  // La web ya leía reservaDuracionMin pero nunca le llegaba (caía siempre en 90 min); y desde el 8/11 la última reserva antes del cierre es configurable.
+  'reservaDuracionMin', 'reservaMargenCierreMin',
   'pedidosOnlineActivos',
   // ⚠️ Sin esto, la web pública nunca veía la zona de reparto (cpList/
   // radiusKm) ni el coste de envío: `p = (DB.business||{}).pedidos || {}`

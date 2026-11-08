@@ -4230,11 +4230,16 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .rv-nombre b{font-weight:600;overflow-wrap:break-word;min-width:0}
 .rv-nota{margin:0;font-size:13px;color:var(--muted);overflow-wrap:break-word}
 .rv-acc{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.rv-acc-sueltas{display:inline-flex;align-items:center;gap:6px}
+.rv-acc-menu{display:none}
+@media (max-width:760px){.rv-acc-sueltas{display:none}.rv-acc-menu{display:inline-flex}}
 .rv-sem-n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
 .rv-sem-n .ti{margin-left:3px}
-.rv-chip{align-items:baseline}
 .rv-chip-hora{font-family:var(--mono);font-size:12px;flex:none}
-.rv-chip em{font-style:normal;font-family:var(--mono);color:var(--muted);margin-left:4px}
+.rv-chip{align-items:center}
+.rv-chip em{font-style:normal;font-family:var(--mono);color:var(--muted);margin-left:auto;flex:none}
+.rv-chip-nom{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rv-chip-mas{justify-content:center;color:var(--olive)}
 .rv-bandeja{margin:0 0 16px;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
 .rv-bandeja.is-solicitudes{border-color:var(--ink)}
 .rv-bandeja .es-tit{margin:0 0 6px}

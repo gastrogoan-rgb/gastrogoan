@@ -2950,6 +2950,13 @@ function currentPeopleValue(){
 // tiene sentido para ningún restaurante — antes se ofrecía hueco hasta el
 // propio minuto de cierre.
 const RESERVA_MARGEN_CIERRE_MIN = 30;
+// Configurable por el negocio (Mi Negocio → «Última reserva antes del cierre»); 30 si no lo ha tocado.
+function reservaMargenCierreMin(){
+  const v = (DB.business || {}).reservaMargenCierreMin;
+  if(v === '' || v == null) return RESERVA_MARGEN_CIERRE_MIN;
+  const n = parseInt(v, 10);
+  return isNaN(n) || n < 0 ? RESERVA_MARGEN_CIERRE_MIN : n;
+}
 function slotsDelDia(dateStr){
   const turnos = getTurnosForDate(dateStr);
   if(!turnos || !turnos.length) return [];
@@ -2958,7 +2965,7 @@ function slotsDelDia(dateStr){
     const [ih, im] = t.abre.split(':').map(Number);
     const [fh, fm] = t.cierra.split(':').map(Number);
     let cur = ih * 60 + im;
-    const fin = (fh * 60 + fm) - RESERVA_MARGEN_CIERRE_MIN;
+    const fin = (fh * 60 + fm) - reservaMargenCierreMin();
     while(cur <= fin){
       out.push(String(Math.floor(cur/60)).padStart(2,'0') + ':' + String(cur%60).padStart(2,'0'));
       cur += 15;

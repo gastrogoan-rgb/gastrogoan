@@ -3051,6 +3051,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">4</div><div class="st">Elige la <strong>mesa</strong> (obligatoria si tienes mesas dadas de alta). Solo salen las libres a esa hora. Si la mesa tiene menos plazas que el grupo, te avisa y decides tú.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Añade <strong>notas</strong> (alergias, cumpleaños, trona…) y <strong>Guarda</strong>. Si ya hay una reserva casi igual para ese cliente, te pregunta antes de duplicarla.</div></div>
 <p>Una mesa <strong>no se puede reservar dos veces</strong> dentro de su duración de mesa (90 minutos por defecto). Se cambia en <strong>Mi Negocio → Operativa → Duración de mesa (min)</strong>.</p>
+<p>Las horas se ofrecen <strong>de cuarto en cuarto</strong> (20:00, 20:15, 20:30…). La última reserva se admite <strong>30 minutos antes del cierre</strong>; si quieres otro margen (0 = hasta la hora exacta de cierre), cámbialo en <strong>Mi Negocio → Operativa → Última reserva antes del cierre (min)</strong>. Vale también para la web de reservas.
 
 <h4>Aforo por turno</h4>
 <p>Si pones el <strong>Aforo</strong> en <strong>Mi Negocio → Operativa</strong> (máximo de comensales por servicio), el día muestra una barra por turno (<strong>Turno 1</strong>, <strong>Turno 2</strong>…, según tu horario) con cuántas personas llevas frente al máximo. La barra cambia de color cuando el turno está casi lleno (80 %) y cuando se completa.</p>
@@ -3129,6 +3130,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">4</div><div class="st">Tria la <strong>taula</strong> (obligatòria si tens taules donades d'alta). Només surten les lliures a aquella hora. Si la taula té menys places que el grup, t'avisa i decideixes tu.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Afegeix <strong>notes</strong> (al·lèrgies, aniversari, trona…) i <strong>Desa</strong>. Si ja hi ha una reserva gairebé igual per a aquell client, et pregunta abans de duplicar-la.</div></div>
 <p>Una taula <strong>no es pot reservar dues vegades</strong> dins de la seva durada de taula (90 minuts per defecte). Es canvia a <strong>El Meu Negoci → Operativa → Durada de taula (min)</strong>.</p>
+<p>Les hores s'ofereixen <strong>de quart en quart</strong> (20:00, 20:15, 20:30…). L'última reserva s'admet <strong>30 minuts abans del tancament</strong>; si vols un altre marge (0 = fins a l'hora exacta de tancament), canvia'l a <strong>El Meu Negoci → Operativa → Última reserva abans del tancament (min)</strong>. Val també per a la web de reserves.
 
 <h4>Aforament per torn</h4>
 <p>Si poses l'<strong>Aforament</strong> a <strong>El Meu Negoci → Operativa</strong> (màxim de comensals per servei), el dia mostra una barra per torn (<strong>Torn 1</strong>, <strong>Torn 2</strong>…, segons el teu horari) amb quantes persones portes enfront del màxim. La barra canvia de color quan el torn és gairebé ple (80 %) i quan es completa.</p>
@@ -3207,6 +3209,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">4</div><div class="st">Choose the <strong>table</strong> (required if you have tables set up). Only tables free at that time are listed. If the table has fewer seats than the party, it warns you and you decide.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Add <strong>notes</strong> (allergies, birthday, high chair…) and <strong>Save</strong>. If there's already an almost identical booking for that customer, it asks before duplicating it.</div></div>
 <p>A table <strong>can't be booked twice</strong> within its table duration (90 minutes by default). Change it in <strong>My Business → Operations → Table duration (min)</strong>.</p>
+<p>Times are offered <strong>every quarter of an hour</strong> (20:00, 20:15, 20:30…). The last booking is accepted <strong>30 minutes before closing</strong>; for another margin (0 = up to the exact closing time), change <strong>My Business → Operations → Last booking before closing (min)</strong>. It also applies to the booking website.</p>
 
 <h4>Capacity per shift</h4>
 <p>If you set the <strong>Capacity</strong> in <strong>My Business → Operations</strong> (maximum guests per service), the day shows a bar per shift (<strong>Shift 1</strong>, <strong>Shift 2</strong>…, following your hours) with how many people you have against the maximum. The bar changes colour when the shift is nearly full (80%) and when it's complete.</p>

@@ -3217,9 +3217,16 @@ function goToReservasDia(date){
   renderReservas();
 }
 
-// Franjas horarias de 30 min en las que se puede reservar ese día, según el
-// horario de apertura del negocio. La última reserva posible es media hora
-// antes del cierre. Devuelve null si no hay horario configurado (sin restricción).
+// Cuántos minutos antes del cierre se admite la ÚLTIMA reserva (8/11): lo decide cada negocio en Mi Negocio (30 por defecto; 0 = hasta la hora
+// exacta de cierre). La web pública lee el mismo valor (está en CAMPOS_PUBLICOS_DEL_NEGOCIO).
+function reservaMargenCierreMin(){
+  const v = (DB.business || {}).reservaMargenCierreMin;
+  if(v === '' || v == null) return 30;
+  const n = parseInt(v, 10);
+  return isNaN(n) || n < 0 ? 30 : n;
+}
+// Franjas horarias de 15 min (cuartos de hora) en las que se puede reservar ese día, según el horario de apertura del negocio. La última
+// reserva posible es `reservaMargenCierreMin()` minutos antes del cierre. Devuelve null si no hay horario configurado (sin restricción).
 function getReservationTimeSlots(dateStr){
   const turnos = getTurnosForDate(dateStr);
   if(turnos === null) return null;
@@ -3228,10 +3235,10 @@ function getReservationTimeSlots(dateStr){
     const [ah,am] = t.abre.split(':').map(Number);
     const [ch,cm] = t.cierra.split(':').map(Number);
     let cur = ah*60+am;
-    const last = ch*60+cm - 30;
+    const last = ch*60+cm - reservaMargenCierreMin();
     while(cur <= last){
       slots.push(String(Math.floor(cur/60)).padStart(2,'0')+':'+String(cur%60).padStart(2,'0'));
-      cur += 30;
+      cur += 15;
     }
   });
   return slots;
@@ -7415,6 +7422,11 @@ function renderMiNegocio(){
         <input type="number" id="mn-reserva-duracion" min="15" step="15" value="${escapeHtml(b.reservaDuracionMin||'')}" placeholder="90" onchange="saveBusiness(true)">
         <small style="color:var(--muted)">${t('mn.ops.tableDurationDesc')}</small>
       </div>
+      <div class="field">
+        <label for="mn-reserva-margen-cierre">${t('mn.ops.lastBookingMargin')}</label>
+        <input type="number" id="mn-reserva-margen-cierre" min="0" step="5" value="${escapeHtml(b.reservaMargenCierreMin === undefined || b.reservaMargenCierreMin === '' ? '' : b.reservaMargenCierreMin)}" placeholder="30" onchange="saveBusiness(true)">
+        <small style="color:var(--muted)">${t('mn.ops.lastBookingMarginDesc')}</small>
+      </div>
       <div class="field-row">
         <div class="field">
           <label>${t('mn.ops.leadTimeReservas')}</label>
@@ -8276,6 +8288,7 @@ async function saveBusiness(silent){
   if(el('mn-brand-color2')) DB.business.brandColor2 = el('mn-brand-color2').value;
   if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';
   if(el('mn-reserva-duracion')) DB.business.reservaDuracionMin = Math.max(0, parseInt(el('mn-reserva-duracion').value) || 0) || '';
+  if(el('mn-reserva-margen-cierre')){ const m = parseInt(el('mn-reserva-margen-cierre').value); DB.business.reservaMargenCierreMin = isNaN(m) ? '' : Math.max(0, m); }
   const leadTimeReservas = readLeadTimeDHM('mn-leadtime-reservas');
   if(leadTimeReservas != null) DB.business.leadTimeMinReservas = leadTimeReservas;
   const leadTimePedidos = readLeadTimeDHM('mn-leadtime-pedidos');
