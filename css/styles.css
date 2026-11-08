@@ -6263,3 +6263,15 @@ small{font-size:max(.8333em, 11px)}
 .help-topic-group-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em}
 .help-topic-item{border-bottom-color:var(--hair)}
 .help-topic-item:hover{color:var(--olive)}
+/* 8/11 · comanda del TPV en pantallas muy estrechas (320 px): con cuatro columnas el nombre se quedaba en una tira de 70 px («Aros de cebolla
+   crujientes» en 7 renglones). El nombre pasa a ocupar el ancho entero y debajo van el precio y las acciones. */
+@media (max-width:340px){
+  .tp-linea{grid-template-columns:auto minmax(0,1fr) auto}
+  .tp-linea-cant{grid-row:1 / span 2}
+  .tp-linea-txt{grid-column:2 / 4}
+  .tp-linea-pre{grid-column:2;justify-self:start}
+  .tp-linea-acc{grid-column:3}
+}
+@media (max-width:420px){
+  .kt-st{max-width:100%;white-space:normal}
+}

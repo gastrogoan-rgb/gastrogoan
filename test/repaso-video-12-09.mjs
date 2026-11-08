@@ -49,6 +49,8 @@ await caso('Al pedir a proveedor, cada artículo dice su precio, no solo el stoc
     sel.value = 'Proveedor Prueba';
     sel.dispatchEvent(new Event('change'));
     await new Promise(r=>setTimeout(r,400));
+    setOrderFiltro('todos');   // 8/11: el proveedor ya no se vuelca entero; «Todos» enseña la lista
+    await new Promise(r=>setTimeout(r,200));
     const f = document.querySelector('.pc-art');
     return f ? f.innerText : '';
   });
