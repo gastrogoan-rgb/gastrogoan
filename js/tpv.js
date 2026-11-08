@@ -4161,18 +4161,23 @@ function valeBuscarPorCodigo(txt){
   if(!n) return null;
   return valesLista().find(v => norm(v.code) === n) || null;
 }
+// Por qué un vale NO se puede usar para pagar (texto para el camarero), o '' si sirve.
+function valeErrorCobro(v){
+  if(!v) return gl({es:'No encuentro ese vale. Revisa el código.', ca:'No trobo aquest val. Revisa el codi.', en:'I cannot find that voucher. Check the code.'});
+  const est = valeEstado(v);
+  if(est === 'caducado') return gl({es:'Ese vale está caducado.', ca:'Aquest val està caducat.', en:'That voucher has expired.'});
+  if(est === 'anulado') return gl({es:'Ese vale está anulado.', ca:'Aquest val està anul·lat.', en:'That voucher was voided.'});
+  if(est === 'canjeado') return gl({es:'Ese vale ya está canjeado del todo.', ca:'Aquest val ja està bescanviat del tot.', en:'That voucher is already fully redeemed.'});
+  if(v.tipo !== 'importe') return gl({es:'Es un vale de experiencia: se canjea desde Clientes, no resta importe de la cuenta.', ca:'És un val d\'experiència: es bescanvia des de Clients, no resta import del compte.', en:'This is an experience voucher: redeem it from Customers, it does not take money off the bill.'});
+  return '';
+}
 function aplicarValeEnCobro(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const el = document.getElementById('payment-vale-code');
   if(!order || !el) return;
   const v = valeBuscarPorCodigo(el.value);
-  const aviso = m => showToast(m);
-  if(!v) return aviso(gl({es:'No encuentro ese vale. Revisa el código.', ca:'No trobo aquest val. Revisa el codi.', en:'I cannot find that voucher. Check the code.'}));
-  const est = valeEstado(v);
-  if(est === 'caducado') return aviso(gl({es:'Ese vale está caducado.', ca:'Aquest val està caducat.', en:'That voucher has expired.'}));
-  if(est === 'anulado') return aviso(gl({es:'Ese vale está anulado.', ca:'Aquest val està anul·lat.', en:'That voucher was voided.'}));
-  if(est === 'canjeado') return aviso(gl({es:'Ese vale ya está canjeado del todo.', ca:'Aquest val ja està bescanviat del tot.', en:'That voucher is already fully redeemed.'}));
-  if(v.tipo !== 'importe') return aviso(gl({es:'Es un vale de experiencia: se canjea desde Clientes, no resta importe de la cuenta.', ca:'És un val d\'experiència: es bescanvia des de Clients, no resta import del compte.', en:'This is an experience voucher: redeem it from Customers, it does not take money off the bill.'}));
+  const error = valeErrorCobro(v);
+  if(error) return showToast(error);
   order.valeRegalo = {valeId: v.id};
   saveDB();
   renderPaymentModal(orderId);
@@ -4861,6 +4866,12 @@ function openSplitPartPayment(orderId, partId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const part = order.splitPayments.find(p=>p.id===partId);
   if(!part) return;
+  // Con un vale regalo aplicado a esta parte (8/11), lo que se cobra en caja es el RESTO.
+  const resto = splitParteRestante(part);
+  const valeAp = part.valeId ? valesLista().find(x => x.id === part.valeId) : null;
+  const valeHtml = (valeAp && part.valeImporte > 0)
+    ? `<div class="pm-vale-ap"><i class="ti ti-gift-card"></i><span><b>${escapeHtml(gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'}))} ${escapeHtml(valeAp.code)}</b> · −${fmtMoney(part.valeImporte)}</span><button type="button" class="btn btn-sm btn-fino" onclick="quitarValeEnParte(${order.id}, ${part.id})">${escapeHtml(t('common.remove'))}</button></div>`
+    : `<div class="field"><label for="split-part-vale">${escapeHtml(gl({es:'Vale regalo (código)', ca:'Val regal (codi)', en:'Gift voucher (code)'}))}</label><div style="display:flex;gap:6px"><input type="text" id="split-part-vale" autocomplete="off" autocapitalize="characters" maxlength="24" placeholder="${escapeHtml(gl({es:'Escribe el código del vale', ca:'Escriu el codi del val', en:'Type the voucher code'}))}" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();aplicarValeEnParte(${order.id}, ${part.id})}"><button type="button" class="btn btn-sm" onclick="aplicarValeEnParte(${order.id}, ${part.id})">${escapeHtml(gl({es:'Aplicar', ca:'Aplicar', en:'Apply'}))}</button></div></div>`;
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-cash"></i> ${t('btn.charge')} — ${escapeHtml(part.label)}</h3>
@@ -4868,17 +4879,18 @@ function openSplitPartPayment(orderId, partId){
     </div>
     <div class="kpi" style="margin-bottom:12px">
       <div class="label">${t('label.amount')}</div>
-      <div class="value">${fmtMoney(part.amount)}</div>
+      <div class="value" id="split-part-resto">${fmtMoney(resto)}</div>
     </div>
+    ${valeHtml}
     <div class="field">
       <label>${t('label.paymentMethod')}</label>
-      <select id="split-part-method" onchange="toggleSplitPartCash(${part.amount})">
+      <select id="split-part-method" onchange="toggleSplitPartCash(${resto})" ${resto <= 0.001 ? 'disabled' : ''}>
         ${SELECTABLE_PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
       </select>
     </div>
     <div class="field" id="split-part-cash-field">
       <label>${t('label.amountGiven')}</label>
-      <input type="number" id="split-part-cash" step="0.01" min="0" value="${part.amount.toFixed(2)}" oninput="updateSplitPartChange(${part.amount})">
+      <input type="number" id="split-part-cash" step="0.01" min="0" value="${resto.toFixed(2)}" oninput="updateSplitPartChange(${resto})">
     </div>
     <div class="kpi" id="split-part-change-kpi" style="margin-bottom:12px">
       <div class="label">${t('label.change')}</div>
@@ -4891,6 +4903,31 @@ function openSplitPartPayment(orderId, partId){
   `);
 }
 
+function splitParteRestante(part){ return Math.max(0, roundMoney(part.amount - (part.valeImporte || 0))); }
+// Lo que el resto de partes de ESTA cuenta ya tienen reservado de un mismo vale (no se gasta hasta cobrar la cuenta entera).
+function valeReservadoEnSplit(order, valeId, exceptPartId){
+  return (order.splitPayments || []).filter(p => p.id !== exceptPartId && p.valeId === valeId).reduce((s, p) => s + (p.valeImporte || 0), 0);
+}
+function aplicarValeEnParte(orderId, partId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const part = order && (order.splitPayments || []).find(p => p.id === partId);
+  const el = document.getElementById('split-part-vale');
+  if(!part || !el) return;
+  const v = valeBuscarPorCodigo(el.value);
+  const error = valeErrorCobro(v);
+  if(error) return showToast(error);
+  const libre = roundMoney(valeSaldo(v) - valeReservadoEnSplit(order, v.id, part.id));
+  const aplica = Math.min(libre, part.amount);
+  if(!(aplica > 0)) return showToast(gl({es:'Ese vale ya está repartido entre las otras partes.', ca:'Aquest val ja està repartit entre les altres parts.', en:'That voucher is already used up by the other parts.'}));
+  part.valeId = v.id; part.valeImporte = roundMoney(aplica);
+  saveDB(); openSplitPartPayment(orderId, partId);
+}
+function quitarValeEnParte(orderId, partId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const part = order && (order.splitPayments || []).find(p => p.id === partId);
+  if(!part) return;
+  delete part.valeId; delete part.valeImporte; saveDB(); openSplitPartPayment(orderId, partId);
+}
 function toggleSplitPartCash(amount){
   const method = document.getElementById('split-part-method').value;
   const isCash = method === 'Efectivo';
@@ -4907,10 +4944,11 @@ function confirmSplitPartPayment(orderId, partId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const part = order.splitPayments.find(p=>p.id===partId);
   if(!part) return;
-  const metodoParte = document.getElementById('split-part-method').value;
+  const resto = splitParteRestante(part);
+  const metodoParte = resto <= 0.001 ? 'Vale' : document.getElementById('split-part-method').value;
   if(metodoParte === 'Efectivo'){
     const dado = parseFloat(document.getElementById('split-part-cash').value) || 0;
-    if(dado + 0.01 < part.amount){ showToast(t('msg.cashGivenInsufficient')); return; }
+    if(dado + 0.01 < resto){ showToast(t('msg.cashGivenInsufficient')); return; }
   }
   part.paid = true;
   part.metodoPago = metodoParte;
@@ -4950,7 +4988,14 @@ function finalizeSplitOrder(orderId){
   const total = roundMoney(subtotal - descuentoImporte + propina);
   const collected = roundMoney(order.splitPayments.reduce((s,p)=>s+p.amount,0));
   discountStockForOrder(order);
-  const pagos = order.splitPayments.map(p => ({label: p.label, amount: p.amount, metodoPago: p.metodoPago}));
+  // Una parte pagada en parte con vale regalo se anota en DOS patas (lo de caja y lo del vale), igual que en la cuenta completa.
+  const pagos = [];
+  order.splitPayments.forEach(p => {
+    const vale = p.valeImporte > 0 ? p.valeImporte : 0;
+    const caja = roundMoney(p.amount - vale);
+    if(caja > 0.001 || !vale) pagos.push({label: p.label, amount: caja > 0.001 ? caja : p.amount, metodoPago: p.metodoPago});
+    if(vale) pagos.push({label: p.label + ' · ' + gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'}), amount: vale, metodoPago: 'Vale'});
+  });
   if(amountPaidOnline > 0){
     // Mismo desglose que finalizeCharge: separa la señal de reserva del
     // resto de lo ya pagado por móvil, para que quede constancia exacta de
@@ -4979,6 +5024,15 @@ function finalizeSplitOrder(orderId){
     pagos, items: buildSaleItemsForOrder(order)
   };
   estamparSenalEnVenta(order, sale);
+  // Los vales solo se gastan ahora, al cerrar la cuenta entera (si se cancela el reparto no se ha tocado ninguno).
+  const porVale = {};
+  order.splitPayments.forEach(p => { if(p.valeId && p.valeImporte > 0) porVale[p.valeId] = (porVale[p.valeId] || 0) + p.valeImporte; });
+  const ids = Object.keys(porVale);
+  if(ids.length && typeof canjearValeEnCobro === 'function'){
+    ids.forEach(id => canjearValeEnCobro(parseInt(id, 10), roundMoney(porVale[id]), sale));
+    sale.valeId = parseInt(ids[0], 10); sale.valeImporte = roundMoney(ids.reduce((s, id) => s + porVale[id], 0));
+    sale.valesUsados = ids.map(id => ({valeId: parseInt(id, 10), importe: roundMoney(porVale[id])}));
+  }
   numerarTicket(sale);
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);

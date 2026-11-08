@@ -267,6 +267,25 @@ for(const ancho of [1280, 360]){
     await q(() => { const e = DB.purchaseOrders.find(o => o.estado === 'ENVIADO' && o.id === 1); openPedido(e.id); }); await esperar(300);
   });
 
+  await caso(`Control APPCC de recepción: con mercancía que no coincide avisa, propone NO CONFORME y pregunta antes de guardarlo como conforme (${ancho}px)`, async () => {
+    await q(() => { DB.purchaseOrders.push({id:95, supplier:'Pescados Martínez', date:todayStr(), estado:'ENVIADO', enviadoEn:todayStr(), area:'cocina', items:[{ingredientId:1, cantidad:5, cantidadRecibida:null}], notas:''}); saveDB(); openPedido(95); }); await esperar(300);
+    assert.equal(await q(() => document.getElementById('rec-dif').innerText.trim()), '', 'sin diferencias no hay aviso');
+    assert.equal(await q(() => document.getElementById('rec-albaran').value), 'OK');
+    await q(() => setRecepcionQty(0, '4')); await esperar(150);
+    assert.ok(await q(() => /no coinciden/i.test(document.getElementById('rec-dif').innerText)), 'avisa en vivo, sin repintar la hoja');
+    // guardar como conforme con diferencias → pregunta
+    await q(() => { document.getElementById('rec-albaran').value = 'OK'; window.__g = savePedidoRecepcion(); }); await esperar(250);
+    assert.ok(await q(() => /no coinciden con lo pedido/i.test(document.querySelector('.modal-overlay.active')?.innerText || '')));
+    await q(() => cancelConfirmModal()); await esperar(150);
+    assert.ok(await q(() => !getPurchaseOrder(95).recepcion), 'no se guardó');
+    await q(() => { document.getElementById('rec-albaran').value = 'NO CONFORME'; savePedidoRecepcion(); }); await esperar(250);
+    assert.equal(await q(() => getPurchaseOrder(95).recepcion.albaran), 'NO CONFORME');
+    // al reabrir un pedido nuevo con diferencias, ya viene propuesto NO CONFORME
+    await q(() => { DB.purchaseOrders.push({id:94, supplier:'Pescados Martínez', date:todayStr(), estado:'ENVIADO', enviadoEn:todayStr(), area:'cocina', items:[{ingredientId:1, cantidad:5, cantidadRecibida:null, recibidoQty:0, recibidoCheck:false}], notas:''}); saveDB(); openPedido(94); }); await esperar(300);
+    assert.equal(await q(() => document.getElementById('rec-albaran').value), 'NO CONFORME');
+    await q(() => { const e = DB.purchaseOrders.find(o => o.estado === 'ENVIADO' && o.id === 1); openPedido(e.id); }); await esperar(300);
+  });
+
   await caso(`Recepción: marcar ✓ suma al stock al recibir, con su gasto; el recibido ofrece «deshacer» (${ancho}px)`, async () => {
     const id = await q(() => pedidoDetailId);
     await q(() => { const o = getPurchaseOrder(pedidoDetailId); o.items.forEach((l, i) => toggleRecepcionCheck(i, true)); }); await esperar(250);

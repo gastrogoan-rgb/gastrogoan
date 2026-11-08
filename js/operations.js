@@ -1726,6 +1726,7 @@ function renderPedidoDetail(){
         ${showRecepcion ? `
         <section class="es-card">
           <h3 class="es-tit"><i class="ti ti-clipboard-check"></i> ${t('title.receptionAppcc')}</h3>
+          <div id="rec-dif">${pdAvisoRecepcionHtml(o)}</div>
           <div class="field-row">
             <div class="field"><label for="rec-fecha">${t('common.date')}</label><input type="date" id="rec-fecha" value="${r.fecha||todayStr()}"></div>
             <div class="field"><label for="rec-hora">${t('common.time')}</label><input type="time" id="rec-hora" value="${r.hora||''}"></div>
@@ -1746,8 +1747,8 @@ function renderPedidoDetail(){
             </div>
             <div class="field"><label for="rec-albaran">${t('label.matchesDeliveryNote')}</label>
               <select id="rec-albaran">
-                <option value="OK" ${r.albaran==='OK'||!r.albaran?'selected':''}>${t('label.ok')}</option>
-                <option value="NO CONFORME" ${r.albaran==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
+                <option value="OK" ${r.albaran==='OK'||(!r.albaran && !pdDiferencias(o).length)?'selected':''}>${t('label.ok')}</option>
+                <option value="NO CONFORME" ${r.albaran==='NO CONFORME'||(!r.albaran && pdDiferencias(o).length)?'selected':''}>${t('label.nonConforming')}</option>
               </select>
             </div>
           </div>
@@ -1820,7 +1821,7 @@ function updatePedidoNotas(value){
   saveDB();
 }
 
-function savePedidoRecepcion(){
+async function savePedidoRecepcion(){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
   // La primera vez que se rellena el control de recepción es un paso normal
@@ -1830,6 +1831,11 @@ function savePedidoRecepcion(){
   if(o.recepcion && o.recepcion.fecha && !editUnlocked){
     showToast(t('msg.editModeRequiredForLog'));
     return;
+  }
+  // Un control «todo conforme» con mercancía que no coincide con lo pedido es un registro APPCC falso: se pregunta antes de guardarlo.
+  const nDif = pdDiferencias(o).length;
+  if(nDif && document.getElementById('rec-albaran').value === 'OK'){
+    if(!(await confirmModal(gl({es:`Hay ${nDif} artículo(s) que no coinciden con lo pedido y el control dice que el albarán coincide. ¿Guardarlo así?`, ca:`Hi ha ${nDif} article(s) que no coincideixen amb el demanat i el control diu que l'albarà coincideix. Guardar-ho així?`, en:`${nDif} item(s) do not match what was ordered and the check says the delivery note matches. Save it like that?`}), {confirmLabel: t('common.save')}))) return;
   }
   o.recepcion = {
     fecha: document.getElementById('rec-fecha').value,
@@ -1899,6 +1905,13 @@ function pedidoComprobacionAuto(o){
    se pone VERDE si coincide con lo pedido y ROJA si no (`pdRecibidoVivo` mientras se teclea; `setRecepcionQty` al terminar). Antes solo había un tick o
    una cruz y la app daba por llegada la cantidad pedida entera: nada comprobaba lo que de verdad entraba. Ahora lo que se apunta es lo que suma al stock y
    al gasto (3 de 5 kg = 3 kg). El tick sigue siendo el atajo «llegó todo» (rellena la casilla con lo pedido) y la cruz «no llegó» (un 0). */
+// Líneas cuya cantidad llegada NO coincide con lo pedido (incluye las que no llegaron). Es lo que el control APPCC tiene que reflejar.
+function pdDiferencias(o){ return (o.items || []).filter(l => l.recibidoCheck === false); }
+function pdAvisoRecepcionHtml(o){
+  const n = pdDiferencias(o).length;
+  if(!n) return '';
+  return `<div class="pr-aviso is-rojo" role="status"><i class="ti ti-alert-triangle"></i><div class="pr-aviso-txt">${escapeHtml(gl({es:`${n} artículo(s) no coinciden con lo pedido. El control debe constar como NO CONFORME en «Coincide con el albarán» y explicarlo en observaciones.`, ca:`${n} article(s) no coincideixen amb el demanat. El control ha de constar com a NO CONFORME a «Coincideix amb l'albarà» i explicar-ho a observacions.`, en:`${n} item(s) do not match what was ordered. The check should read NON-CONFORMING under “Matches the delivery note” and be explained in the observations.`}))}</div></div>`;
+}
 function pdIgual(a, b){ return Math.abs((parseFloat(a) || 0) - (parseFloat(b) || 0)) <= 0.0001; }
 // Lo apuntado como llegado: la casilla, o —en pedidos de antes— lo que decían el tick (todo) o la cruz (nada) / la cantidad ya recibida.
 function pdRecibidoDe(line){
@@ -1983,6 +1996,7 @@ function pdPintarLinea(idx, o){
   const n = items.filter(l => l.recibidoCheck === true).length;
   const prog = document.querySelector('.pd-prog b'); if(prog) prog.textContent = n + '/' + items.length;
   const barra = document.querySelector('.pd-barra i'); if(barra) barra.style.width = (items.length ? Math.round(n / items.length * 100) : 0) + '%';
+  const dif = document.getElementById('rec-dif'); if(dif) dif.innerHTML = pdAvisoRecepcionHtml(o);
   const comp = getPedidoComprobacionMap()[o.comprobacion || pedidoComprobacionAuto(o)];
   const prev = document.querySelector('.pd-barra') && document.querySelector('.pd-barra').nextElementSibling;
   if(prev && prev.classList.contains('badge') && comp){ prev.className = 'badge ' + comp.cls; prev.innerHTML = comp.label; }

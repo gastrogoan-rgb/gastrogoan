@@ -34,6 +34,12 @@ function clFiltrosDef(){
 }
 // Misma definición que «Habituales» en Novedades (`nvCalcular`): así el filtro y el envío no se contradicen.
 function clEsRecurrente(c, st){ return st.visitas30d >= 2 || st.visitasYear >= 6 || (c.points || 0) >= 7; }
+// La etiqueta que explica en qué filtro de frecuencia cae el cliente (la de VIP y «Nuevo» ya salen aparte): recurrente u ocasional.
+function clSegmentoChip(c, st){
+  if(!st.visitas) return '';
+  if(clEsRecurrente(c, st)) return (c.points || 0) >= 7 ? '' : `<span class="pm-et">${escapeHtml(gl({es:'Recurrente', ca:'Recurrent', en:'Regular'}))}</span>`;
+  return `<span class="pm-et">${escapeHtml(gl({es:'Ocasional', ca:'Ocasional', en:'Occasional'}))}</span>`;
+}
 function clPertenece(filtro, c, st){
   switch(filtro){
     case 'vip': return (c.points || 0) >= 7;
@@ -99,6 +105,7 @@ function clTarjetaHtml(c, st){
   const puntos = c.points || 0;
   const etiquetas = [
     st.isNew ? `<span class="pm-et is-dto">${escapeHtml(t('badge.new'))}</span>` : '',
+    clSegmentoChip(c, st),
     st.atRisk ? `<span class="pm-et cl-et-riesgo">${escapeHtml(t('badge.atRisk'))}</span>` : '',
     puntos >= 7 ? `<span class="pm-et is-ok"><i class="ti ti-star"></i> VIP</span>` : '',
     (c.allergies || '').trim() ? `<span class="pm-et cl-et-alergia" title="${escapeHtml(c.allergies)}"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'Alergias', ca:'Al·lèrgies', en:'Allergies'}))}</span>` : '',
@@ -241,7 +248,7 @@ function openClientModal(id){
           ${clStatCel(t('label.lastVisit'), st.lastDate ? `<small>${escapeHtml(st.lastDate)}</small>` : '—')}
         </div>
         <div class="pm-ets cl-fich-ets">
-          ${st.isNew ? `<span class="pm-et is-dto">${escapeHtml(t('badge.new'))}</span>` : ''}${st.atRisk ? `<span class="pm-et cl-et-riesgo">${escapeHtml(t('badge.atRisk'))}</span>` : ''}
+          ${st.isNew ? `<span class="pm-et is-dto">${escapeHtml(t('badge.new'))}</span>` : ''}${clSegmentoChip(c, st)}${st.atRisk ? `<span class="pm-et cl-et-riesgo">${escapeHtml(t('badge.atRisk'))}</span>` : ''}
           ${c.noShows ? `<span class="pm-et cl-et-riesgo"><i class="ti ti-user-x"></i> ${c.noShows} ${escapeHtml(gl({es:'no-show(s)', ca:'no-show(s)', en:'no-show(s)'}))}</span>` : ''}
           ${fav ? `<span class="pm-et"><i class="ti ti-heart"></i> ${escapeHtml(fav)}</span>` : ''}
           ${cumpleDias !== null && cumpleDias <= 30 ? `<span class="pm-et"><i class="ti ti-cake"></i> ${escapeHtml(cumpleDias === 0 ? t('promo.clients.today') : t('promo.clients.inDays').replace('${n}', cumpleDias).replace('${s}', cumpleDias !== 1 ? 's' : ''))}</span>` : ''}
@@ -670,11 +677,14 @@ function canjearValeEnCobro(valeId, importe, sale){
   return true;
 }
 function devolverValeDeVenta(sale){
-  const v = valesLista().find(x => x.id === sale.valeId); if(!v || !Array.isArray(v.canjes)) return;
-  const i = v.canjes.findIndex(k => k.venta === sale.id);
-  if(i < 0) return;
-  v.canjes.splice(i, 1); v.redeemed = false; v.redeemedAt = null;
-  valeAsientoCanje(v);
+  // Una cuenta dividida puede haber gastado más de un vale (`valesUsados`); una completa, uno (`valeId`).
+  const ids = (sale.valesUsados && sale.valesUsados.length) ? sale.valesUsados.map(x => x.valeId) : [sale.valeId];
+  ids.forEach(id => {
+    const v = valesLista().find(x => x.id === id); if(!v || !Array.isArray(v.canjes)) return;
+    v.canjes = v.canjes.filter(k => k.venta !== sale.id);
+    v.redeemed = false; v.redeemedAt = null;
+    valeAsientoCanje(v);
+  });
 }
 function valeDeshacerCanje(id){
   const v = valesLista().find(x => x.id === id); if(!v) return;

@@ -152,6 +152,51 @@ await caso('El modal de cobro con el vale cabe en móvil (360) sin scroll latera
   assert.deepEqual(errs, []); await page.close();
 });
 
+await caso('Cuenta dividida: un mismo vale reparte su saldo entre las partes; solo se gasta al cerrar y anular lo devuelve', async () => {
+  const {page, errs} = await abrir(1280, 800);
+  await sembrar(page);
+  await page.evaluate(() => {
+    const o = DB.tpvOrders.find(x => x.id === 901); o.splitMode = 'equal';
+    o.splitPayments = [{id:1, label:'Parte 1', amount:22, paid:false}, {id:2, label:'Parte 2', amount:22, paid:false}];
+    saveDB(); paymentTab = 'equal'; renderPaymentModal(901); openSplitPartPayment(901, 1);
+  });
+  await esperar(200);
+  await page.evaluate(() => { document.getElementById('split-part-vale').value = 'GGAB-1234'; aplicarValeEnParte(901, 1); });
+  await esperar(200);
+  assert.match(await page.evaluate(() => document.getElementById('split-part-resto').textContent), /^0[,.]00/, 'la parte 1 queda cubierta (22 de 30)');
+  assert.equal(await page.evaluate(() => valeSaldo(DB.giftVouchers[0])), 30, 'todavía no se ha gastado nada');
+  await page.evaluate(() => confirmSplitPartPayment(901, 1));
+  await page.evaluate(() => openSplitPartPayment(901, 2));
+  await page.evaluate(() => { document.getElementById('split-part-vale').value = 'ggab1234'; aplicarValeEnParte(901, 2); });
+  await esperar(200);
+  assert.match(await page.evaluate(() => document.getElementById('split-part-resto').textContent), /14[,.]00/, 'a la parte 2 solo le quedan 8 € de vale');
+  await page.evaluate(() => { document.getElementById('split-part-method').value = 'Tarjeta'; confirmSplitPartPayment(901, 2); });
+  await page.evaluate(() => finalizeSplitOrder(901));
+  const r = await page.evaluate(() => { const s = DB.sales.find(x => x.id === 901); const v = DB.giftVouchers[0]; return {pagos: s.pagos.map(p => [p.metodoPago, p.amount]), total: s.total, estado: valeEstado(v), saldo: valeSaldo(v)}; });
+  assert.deepEqual(r.pagos, [['Vale', 22], ['Tarjeta', 14], ['Vale', 8]]); assert.equal(r.total, 44);
+  assert.equal(r.estado, 'canjeado'); assert.equal(r.saldo, 0);
+  await page.evaluate(() => devolverValeDeVenta(DB.sales.find(x => x.id === 901)));
+  assert.equal(await page.evaluate(() => valeSaldo(DB.giftVouchers[0])), 30);
+  assert.deepEqual(errs, []); await page.close();
+});
+
+await caso('Cuenta dividida: un vale rechazado no cambia la parte y cancelar el reparto no gasta el vale', async () => {
+  const {page, errs} = await abrir(1280, 800);
+  await sembrar(page);
+  await page.evaluate(() => {
+    const o = DB.tpvOrders.find(x => x.id === 901); o.splitMode = 'equal';
+    o.splitPayments = [{id:1, label:'Parte 1', amount:22, paid:false}, {id:2, label:'Parte 2', amount:22, paid:false}];
+    saveDB(); openSplitPartPayment(901, 1);
+  });
+  await page.evaluate(() => { document.getElementById('split-part-vale').value = 'GGEX-0001'; aplicarValeEnParte(901, 1); });
+  assert.equal(await page.evaluate(() => DB.tpvOrders.find(x => x.id === 901).splitPayments[0].valeImporte || 0), 0, 'el caducado no se aplica');
+  await page.evaluate(() => { document.getElementById('split-part-vale').value = 'GGAB-1234'; aplicarValeEnParte(901, 1); });
+  await page.evaluate(() => cancelSplit(901));
+  await esperar(200);
+  assert.equal(await page.evaluate(() => valeSaldo(DB.giftVouchers[0])), 30, 'el vale sigue intacto');
+  assert.deepEqual(errs, []); await page.close();
+});
+
 await browser.close();
 console.log(fallos ? `\n❌ ${fallos} fallos` : '\n✅ casos pasaron');
 process.exit(fallos ? 1 : 0);
