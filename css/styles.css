@@ -1001,6 +1001,14 @@ td.wrap{white-space:normal}
 .ge-grid tr.total td.pos{color:#8FE3A0}   /* el verde oliva sobre tinta no se leía (2,2:1): sobre fondo oscuro, un verde vivo (≈ 11:1) */
 .ge-grid tr.total td.neg{color:#FF9A8A}
 .ge-grid tr.total td:first-child{background:var(--ink);color:#fff;border-left-color:#8FE3A0}
+/* Columnas de trimestre y de año: antes llevaban el fondo EN LÍNEA (style=…), que gana a cualquier regla y dejaba la franja oscura de Total /
+   Resultado neto con celdas claras: el verde vivo y el salmón, pensados para fondo de tinta, caían sobre gris claro y no se leían. */
+.ge-grid td.col-q{background:rgba(0,0,0,.05)}
+.ge-grid td.col-y{background:rgba(0,0,0,.1)}
+.ge-grid tr.total td.col-q{background:var(--ink)}
+.ge-grid tr.total td.col-y{background:#2C2925}
+.ge-grid tr.highlight td.col-q{background:var(--brand-cream)}
+.ge-grid tr.highlight td.col-y{background:#EFEBE3}
 /* La franja que de verdad importa: el RESULTADO NETO (lo que queda). Más alta, letra mayor y filetes de color. */
 .ge-grid tr.total.neto td{font-size:1.2em;padding-top:17px;padding-bottom:17px;border-top:3px solid #8FE3A0;border-bottom:3px solid #8FE3A0;letter-spacing:-.01em}
 .ge-grid tr.total.neto td.neg{border-top-color:#FF9A8A;border-bottom-color:#FF9A8A}

@@ -63,37 +63,28 @@ await caso('Sin ningún empleado con IRPF calculado, la fila de IRPF no aparece 
   assert.ok(!r.toLowerCase().includes('irpf retenido'), 'sin IRPF que reservar, la fila no debe pintarse: ' + r);
 });
 
-await caso('La previsión a 30/60/90 días usa el resultado NETO (después de impuestos), no el de antes de impuestos', async () => {
+// Previsión de tesorería = misma cuenta que «Previsión de liquidez» (Beneficio y caja): lo que ENTRA es el ritmo medio de CAJA, no el
+// resultado contable. Cuentas a mano: un único mes con actividad, 100 menús × 100 € (el precio YA lleva el IVA del 10 %) = 10.000 cobrados
+// → base 9.090,91 + IVA 909,09. Sin gastos: resultado antes de impuestos 9.090,91; el impuesto (25 %, 2.272,73) está provisionado pero no
+// pagado y el IVA cobrado (909,09) sigue en caja → caja del mes = 6.818,18 + 2.272,73 + 909,09 = 10.000,00 (justo lo cobrado).
+// Con un solo mes de histórico el ritmo es 10.000/mes: 30 días +10.000, 60 +20.000, 90 +30.000.
+await caso('La previsión de tesorería a 30/60/90 días parte de la CAJA (10.000/mes), no del resultado contable', async () => {
   const r = await page.evaluate(()=>{
     const hoy = new Date();
     let m = hoy.getMonth(), y = hoy.getFullYear();
-    // Mes anterior con ventas reales y sin gastos, para que el resultado
-    // antes/después de impuestos sean claramente distintos (25% de diferencia).
     m -= 1; if(m<0){ m=11; y-=1; }
     const fecha = `${y}-${String(m+1).padStart(2,'0')}-10`;
     DB.sales = [{id: genId(), date: fecha, total: 11000, propina:0, subtotal:11000, tipo:'mesa', items:[{name:'Menú', qty:100, price:100, ivaPct:10}], status:'pagada', metodoPago:'Tarjeta'}];
-    DB.ge.fijos = [];
-    DB.ge.variables = [];
-    DB.ge.capex = [];
+    DB.ge.fijos = []; DB.ge.variables = []; DB.ge.capex = []; DB.ge.obligaciones = {}; delete DB.ge.saldoBanco;
     DB.ge.config.pctImpuestoBeneficio = 25;
     saveDB();
     GE.tab('tesoreria');
-    const box = document.getElementById('te-forecast').textContent;
-    // Con solo ese mes de histórico (los otros dos meses previos en 0), el
-    // promedio de 3 meses = resultadoDelMesDePrueba / 3. Comprobamos que la
-    // proyección a 30 días coincide con el NETO (post-impuestos) y no con
-    // el bruto (antes de impuestos) — que sería un 33% más alto.
-    const bruto = geResultadoAntesImpMes(y, m);
-    const pctImp = 0.25;
-    const neto = bruto>0 ? bruto*(1-pctImp) : bruto;
-    const netoProj30 = (neto / 3 / 30.4) * 30;
-    const brutoProj30 = (bruto / 3 / 30.4) * 30;
-    return {box, netoProj30, brutoProj30};
+    const box = document.getElementById('te-forecast');
+    return {texto: box.textContent, estim: [...box.querySelectorAll('.ge-kpi .sub')].map(e => e.textContent)};
   });
-  const numsEnBox = (r.box.match(/-?[\d.,]+\s?€/g) || []).map(s => parseFloat(s.replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')));
-  const cerca = (a,b) => Math.abs(a-b) < 1;
-  assert.ok(numsEnBox.some(n => cerca(n, r.netoProj30)), 'la previsión a 30 días debe coincidir con el resultado NETO (post-impuestos): ' + JSON.stringify({numsEnBox, ...r}));
-  assert.ok(!numsEnBox.some(n => cerca(n, r.brutoProj30)), 'no debe coincidir con el resultado bruto (antes de impuestos), que sobreestimaría la caja: ' + JSON.stringify({numsEnBox, ...r}));
+  const num = s => parseFloat(s.replace(/[^\d,-]/g, '').replace(/\.(?=\d{3})/g,'').replace(',', '.'));
+  const entra = r.estim.map(x => { const m = /Entra \(estim\.\)\s*\+([\d.,]+)/.exec(x); return m ? num(m[1].replace(/\./g,'')) : NaN; });
+  assert.ok(Math.abs(entra[0] - 10000) < 1 && Math.abs(entra[1] - 20000) < 1 && Math.abs(entra[2] - 30000) < 1, 'lo que entra debe ser 10.000 / 20.000 / 30.000: ' + JSON.stringify(r));
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {
