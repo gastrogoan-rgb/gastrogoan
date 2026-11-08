@@ -73,6 +73,37 @@ await caso('Emitidas: tickets en asiento resumen (F2), factura completa (F1) con
   assert.ok(!f2.some(f => f[5] === '000003'), 'el ticket sustituido por la factura completa no puede contar dos veces');
 });
 
+await caso('IVA por tipo (303): base y cuota por tipo y trimestre, hechas a mano, y cuadran con la hoja de impuestos', async () => {
+  const r = await page.evaluate((y) => {
+    const p = {desde:`${y}-04-01`, hasta:`${y}-06-30`, nombre:'2T'};
+    const hE = GE.hojaEmitidas(p), hR = GE.hojaRecibidas(p, new Map()), h = GE.hojaIvaPorTipo(hE, hR), imp = GE.hojaImpuestos(p);
+    return {filas: h.filas.slice(3), imp: imp.filas.slice(3)};
+  }, y);
+  const fila = (conc, tipo) => r.filas.find(f => f[1] && f[1].toLowerCase().includes(conc) && f[2] === tipo);
+  // Repercutido 2T al 10 %: ticket de 110 (base 100) + factura completa de 550 (base 500) + el ticket de 55 que luego se anula (base 50, en SU mes)
+  // − 50 de la rectificativa (en el mes en que se emite) = 600; cuota 60. Al 21 %: el ticket de 121 (base 100, cuota 21).
+  const rep10 = fila('repercutido', '10%'), rep21 = fila('repercutido', '21%'), sop10 = fila('soportado', '10%'), sop21 = fila('soportado', '21%');
+  assert.ok(rep10 && Math.abs(rep10[3] - 600) < 0.01 && Math.abs(rep10[4] - 60) < 0.01, 'repercutido 10 %: ' + JSON.stringify(rep10));
+  assert.ok(rep21 && Math.abs(rep21[3] - 100) < 0.01 && Math.abs(rep21[4] - 21) < 0.01, 'repercutido 21 %: ' + JSON.stringify(rep21));
+  assert.ok(sop10 && Math.abs(sop10[3] - 800) < 0.01 && Math.abs(sop10[4] - 80) < 0.01, 'soportado 10 %: ' + JSON.stringify(sop10));
+  assert.ok(sop21 && Math.abs(sop21[3] - 1200) < 0.01 && Math.abs(sop21[4] - 252) < 0.01, 'soportado 21 %: ' + JSON.stringify(sop21));
+  const resultado = r.filas.find(f => f[1] && f[1].startsWith('Resultado') && f[0] === '2T');
+  assert.ok(Math.abs(resultado[4] - (60 + 21 - 80 - 252)) < 0.01, 'resultado 2T: ' + JSON.stringify(resultado));
+  const repImp = r.imp.find(f => /repercutido/i.test(f[0])), sopImp = r.imp.find(f => /soportado/i.test(f[0]));
+  assert.ok(Math.abs(repImp[repImp.length - 1] - 81) < 0.02 && Math.abs(sopImp[sopImp.length - 1] - 332) < 0.02, 'la hoja de impuestos debe dar lo mismo: ' + JSON.stringify([repImp, sopImp]));
+});
+await caso('Avisos para el gestor: lo que falta (foto, número de factura, meses sin cerrar) se cuenta, y con todo completo dice «sin avisos»', async () => {
+  const r = await page.evaluate((y) => {
+    const p = {desde:`${y}-04-01`, hasta:`${y}-06-30`, nombre:'2T'};
+    const hE = GE.hojaEmitidas(p), hR = GE.hojaRecibidas(p, new Map()), a = GE.hojaAvisos(p, hE, hR);
+    return a.filas.slice(3).map(f => f.slice(0, 2));
+  }, y);
+  const txt = JSON.stringify(r);
+  assert.ok(/sin número de factura/i.test(txt) && /sin cerrar/i.test(txt), txt);   // el seguro del seed no trae número; los meses de 2025 ya pasaron y siguen abiertos
+  assert.ok(!/sin foto/i.test(txt), 'las dos facturas del seed ya llevan foto: ' + txt);
+  assert.ok(!/Facturas recibidas sin NIF/i.test(txt), 'las dos facturas del seed ya llevan NIF: ' + txt);
+});
+
 let zipPath;
 await caso('Descargar el trimestre: un ZIP válido con Excel, CSV, fotos y LÉEME', async () => {
   const client = await page.createCDPSession();

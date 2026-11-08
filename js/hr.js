@@ -4278,9 +4278,12 @@ const GE = (function(){
       filas.push([parseInt(fecha.slice(0,4)), trimestreDe(fecha), fecha, num, nif, nombre, concepto, n2(base), pct+'%', n2(cuota), n2(deducible), n2(ret), n2(base+cuota-ret), inversion ? 'S' : 'N', isp ? 'S' : 'N', archivo]);
     variablesActivos().filter(v => enP(p, v.fecha)).forEach(v => {
       const base = parseFloat(v.importe)||0, pct = parseFloat(v.iva)||0;
-      push(v.fecha, v.numFactura||'', v.nifProveedor || nifDeProveedor(v.proveedor), v.proveedor||'', variableCategoryLabel(v.categoria), base, pct, base*pct/100, base*pct/100, 0, false, false, foto(v.facturaId, v.fecha, v.proveedor, v.numFactura, 'recibidas'));
+      push(v.fecha, v.numFactura||'', v.nifProveedor || nifDeProveedor(v.proveedor), v.proveedor||'', variableCategoryLabel(v.categoria), base, pct, base*pct/100, base*pct/100*deducPct(v)/100, 0, false, false, foto(v.facturaId, v.fecha, v.proveedor, v.numFactura, 'recibidas'));
     });
     mesesDelPeriodo(p).forEach(({y,m}) => {
+      // Un mes futuro (o anterior a la actividad del negocio) no tiene facturas: antes el libro listaba el alquiler y la luz de diciembre
+      // con fecha de diciembre en pleno noviembre, y el IVA soportado del libro no cuadraba con el de la hoja de impuestos.
+      if(!geMesConActividad(y, m)) return;
       const fin = `${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y, m+1, 0).getDate()).padStart(2,'0')}`;
       (geFijosItemsForMonth(y, m) || gfItemsActuales()).forEach(g => {
         if(g.c === 'PERSONAL' || !gfPagaEnMes(g, y, m)) return;
@@ -4289,7 +4292,7 @@ const GE = (function(){
         const r = GF_RETENCIONES[g.retencion];
         const actual = fijos().find(x => x.id === g.id);
         const fecha = g.periodicidadMeses > 1 ? `${y}-${String(m+1).padStart(2,'0')}-01` : fin;
-        push(fecha, '', g.nifProveedor||'', g.proveedor||'', gfConceptLabel(g.nombre), base, pct, base*pct/100, base*pct/100, r ? base*r.pct/100 : 0, false, false, actual ? foto(actual.facturaId, fecha, g.proveedor||g.nombre, '', 'recibidas') : '');
+        push(fecha, '', g.nifProveedor||'', g.proveedor||'', gfConceptLabel(g.nombre), base, pct, base*pct/100, base*pct/100*deducPct(g)/100, r ? base*r.pct/100 : 0, false, false, actual ? foto(actual.facturaId, fecha, g.proveedor||g.nombre, '', 'recibidas') : '');
       });
       // Comisiones de plataformas (estimadas venta a venta).
       const mesStr = `${y}-${String(m+1).padStart(2,'0')}`;
@@ -4319,6 +4322,7 @@ const GE = (function(){
     const pf = fiscalPerfil().personaFisica;
     const filas = [];
     mesesDelPeriodo(p).forEach(({y,m}) => {
+      if(!geMesConActividad(y, m)) return;   // ni nóminas de meses que aún no han llegado
       (geFijosItemsForMonth(y, m) || gfItemsActuales()).filter(g => g.c === 'PERSONAL').forEach(g => {
         const act = fijos().find(x => x.id === g.id) || {};
         const coste = gfMonthlyImporte(g);
@@ -4372,6 +4376,48 @@ const GE = (function(){
     });
     return {nombre: t('hr.libro.jornada'), cabecera: 2, filas: [[t('hr.libro.jornada')+' · '+p.nombre], [], [t('common.date'), t('hr.libro.empleado'), t('hr.libro.dni'), t('hr.libro.entrada'), t('hr.libro.salida'), t('hr.libro.horas'), t('hr.libro.editado')], ...filas]};
   }
+  // IVA POR TIPO y trimestre (lo que pide el modelo 303: base y cuota de cada tipo, repercutido y soportado deducible). Sale de las MISMAS
+  // filas que los dos libros de facturas, así que lo que el gestor suma aquí coincide con lo que ve en ellos.
+  function hojaIvaPorTipo(hE, hR){
+    const num = v => parseFloat(String(v).replace('%','').replace(',','.')) || 0;
+    const datos = h => { const i = h.filas.findIndex(f => f && f[0] === t('pg.c.ejercicio')); const fin = h.filas.findIndex((f, k) => k > i && (!f || f.length === 0)); return h.filas.slice(i + 1, fin < 0 ? undefined : fin); };
+    const rep = {}, sop = {}, add = (o, q, tipo, base, cuota) => { const k = q + '|' + tipo; (o[k] = o[k] || {q, tipo, base: 0, cuota: 0}); o[k].base += base; o[k].cuota += cuota; };
+    datos(hE).forEach(f => add(rep, f[1], num(f[11]), num(f[10]), num(f[12])));
+    datos(hR).forEach(f => { if(f[14] === 'S') return; add(sop, f[1], num(f[8]), num(f[7]), num(f[10])); });   // ISP (UE): ni se repercute ni se deduce aquí, va por su casilla
+    const periodos = [...new Set([...Object.values(rep), ...Object.values(sop)].map(x => x.q))].sort();
+    const orden = (a, b) => b.tipo - a.tipo;
+    const filas = [];
+    const L = {rep: gl({es:'IVA repercutido (ventas y otros ingresos)', ca:'IVA repercutit (vendes i altres ingressos)', en:'Output VAT (sales and other income)'}), sop: gl({es:'IVA soportado deducible (compras, fijos, inversiones)', ca:'IVA suportat deduïble (compres, fixos, inversions)', en:'Deductible input VAT (purchases, fixed costs, investments)'}), res: gl({es:'Resultado: repercutido − soportado deducible', ca:'Resultat: repercutit − suportat deduïble', en:'Result: output − deductible input'})};
+    let totRep = 0, totSop = 0;
+    periodos.forEach(q => {
+      const r = Object.values(rep).filter(x => x.q === q).sort(orden), so = Object.values(sop).filter(x => x.q === q).sort(orden);
+      r.forEach(x => filas.push([q, L.rep, x.tipo + '%', x.base, x.cuota])); so.forEach(x => filas.push([q, L.sop, x.tipo + '%', x.base, x.cuota]));
+      const cr = r.reduce((a, x) => a + x.cuota, 0), cs = so.reduce((a, x) => a + x.cuota, 0); totRep += cr; totSop += cs;
+      filas.push([q, L.res, '', '', cr - cs]);
+    });
+    filas.push([], [gl({es:'AÑO / PERIODO', ca:'ANY / PERÍODE', en:'YEAR / PERIOD'}), L.res, '', '', totRep - totSop]);
+    return {nombre: gl({es:'IVA por tipo (303)', ca:'IVA per tipus (303)', en:'VAT by rate (303)'}), cabecera: 2, filas: [[gl({es:'IVA por tipo y trimestre', ca:'IVA per tipus i trimestre', en:'VAT by rate and quarter'})], [], [t('pg.c.periodo'), t('hr.libro.concepto'), t('hr.libro.tipoIva'), t('hr.libro.base'), t('hr.libro.cuota')], ...filas]};
+  }
+  // AVISOS antes de enviar: lo que un gestor tendría que reclamar al cliente (NIF, números de factura, fotos, meses sin cerrar…).
+  function hojaAvisos(p, hE, hR){
+    const b = DB.business || {};
+    const datos = h => { const i = h.filas.findIndex(f => f && f[0] === t('pg.c.ejercicio')); const fin = h.filas.findIndex((f, k) => k > i && (!f || f.length === 0)); return h.filas.slice(i + 1, fin < 0 ? undefined : fin); };
+    const rec = datos(hR).filter(f => f[6] !== t('pg.concepto.comision')), emi = datos(hE);
+    const av = [];
+    const poner = (n, txtEs, txtCa, txtEn, queHacer) => { if(n > 0) av.push([gl({es:txtEs, ca:txtCa, en:txtEn}), n, gl(queHacer)]); };
+    poner(b.cif ? 0 : 1, 'El negocio no tiene NIF', 'El negoci no té NIF', 'The business has no tax ID', {es:'Mi Negocio → Contacto → CIF/NIF', ca:'El Meu Negoci → Contacte → CIF/NIF', en:'My Business → Contact → Tax ID'});
+    poner(!b.formaJuridica ? 1 : 0, 'Falta la forma jurídica', 'Falta la forma jurídica', 'Legal form missing', {es:'La fija quien da el alta en GastroGoan', ca:'La fixa qui dona l\'alta a GastroGoan', en:'Set by whoever signs you up in GastroGoan'});
+    poner(rec.filter(f => !f[4]).length, 'Facturas recibidas sin NIF del proveedor', 'Factures rebudes sense NIF del proveïdor', 'Received invoices without supplier tax ID', {es:'Ábrelas en Gastos y apunta el NIF (se recuerda por proveedor)', ca:'Obre-les a Despeses i apunta el NIF (es recorda per proveïdor)', en:'Open them in Expenses and enter the tax ID (remembered per supplier)'});
+    poner(rec.filter(f => !f[3]).length, 'Facturas recibidas sin número de factura', 'Factures rebudes sense número de factura', 'Received invoices without invoice number', {es:'Apunta el número que figura en la factura del proveedor', ca:'Apunta el número que figura a la factura del proveïdor', en:'Enter the number printed on the supplier invoice'});
+    poner(rec.filter(f => !f[15]).length, 'Facturas recibidas sin foto o PDF', 'Factures rebudes sense foto o PDF', 'Received invoices without photo or PDF', {es:'Adjunta la factura (Gastos o dentro del pedido)', ca:'Adjunta la factura (Despeses o dins de la comanda)', en:'Attach the invoice (Expenses or inside the order)'});
+    poner(emi.filter(f => f[3] === 'F1' && !f[8]).length, 'Facturas completas sin NIF del cliente', 'Factures completes sense NIF del client', 'Full invoices without customer tax ID', {es:'Una factura completa exige el NIF del cliente', ca:'Una factura completa exigeix el NIF del client', en:'A full invoice requires the customer tax ID'});
+    const sinCerrar = mesesDelPeriodo(p).filter(({y, m}) => new Date(y, m + 1, 0) < new Date() && !isMonthClosed(y, m)).length;
+    poner(sinCerrar, 'Meses ya terminados sin cerrar', 'Mesos ja acabats sense tancar', 'Finished months not closed', {es:'Tesorería → Cerrar mes, para que nada se modifique tras presentar', ca:'Tresoreria → Tancar mes, perquè res es modifiqui després de presentar', en:'Treasury → Close month, so nothing changes after filing'});
+    let sinIva = 0; activeSales().filter(v => enP(p, v.date)).forEach(v => (v.items || []).forEach(l => { if(l.ivaPct == null) sinIva++; }));
+    poner(sinIva, 'Líneas de venta sin IVA propio (se aplicó el IVA por defecto)', 'Línies de venda sense IVA propi (s\'ha aplicat l\'IVA per defecte)', 'Sales lines without their own VAT (default VAT applied)', {es:'Elige el IVA de esos platos en Oferta', ca:'Tria l\'IVA d\'aquests plats a Oferta', en:'Set the VAT of those dishes in Menu Offering'});
+    const cab = [gl({es:'Aviso', ca:'Avís', en:'Warning'}), gl({es:'Cuántos', ca:'Quants', en:'How many'}), gl({es:'Qué hacer', ca:'Què fer', en:'What to do'})];
+    return {nombre: gl({es:'Avisos', ca:'Avisos', en:'Warnings'}), cabecera: 2, filas: [[gl({es:'Avisos antes de presentar', ca:'Avisos abans de presentar', en:'Warnings before filing'})], [], cab, ...(av.length ? av : [[gl({es:'Sin avisos: los libros están completos.', ca:'Sense avisos: els llibres són complets.', en:'No warnings: the books are complete.'}), 0, '']])]};
+  }
   function csvDeFilas(filas){
     const cel = v => {
       if(typeof v === 'number') return (Math.round(v*100)/100).toFixed(2).replace('.', ',');
@@ -4387,11 +4433,14 @@ const GE = (function(){
     const b = DB.business || {};
     const fotos = new Map();
     const hojas = [];
-    if(incl('pg-i-emitidas')) hojas.push(hojaEmitidas(p));
-    if(incl('pg-i-recibidas')) hojas.push(hojaRecibidas(p, incl('pg-i-fotos') ? fotos : new Map()));
+    // Las dos hojas de facturas se construyen SIEMPRE (el IVA por tipo y los avisos salen de ellas), pero solo se incluyen las marcadas.
+    const hEmit = hojaEmitidas(p), hRec = hojaRecibidas(p, incl('pg-i-fotos') ? fotos : new Map());
+    if(incl('pg-i-emitidas')) hojas.push(hEmit);
+    if(incl('pg-i-recibidas')) hojas.push(hRec);
     if(incl('pg-i-resultados')) hojas.push(hojaResultados(p));
     if(incl('pg-i-impuestos')){
       hojas.push(hojaImpuestos(p));
+      hojas.push(hojaIvaPorTipo(hEmit, hRec));
       const y0 = parseInt(p.desde.slice(0,4));
       if(p.desde === `${y0}-01-01` && p.hasta === `${y0}-12-31`) hojas.push({nombre: t('hr.libro.resumen'), cabecera: 2, filas: resumenAño(y0)});
     }
@@ -4399,6 +4448,7 @@ const GE = (function(){
     if(incl('pg-i-personal')) hojas.push(hojaPersonal(p));
     if(incl('pg-i-jornada')) hojas.push(hojaJornada(p));
     if(!hojas.length){ showToast(t('pg.nada')); return null; }
+    hojas.push(hojaAvisos(p, hEmit, hRec));
     // Facturas sueltas sin asignar todavía: van aparte, para que no se pierdan.
     if(incl('pg-i-fotos')) (DB.facturasSueltas||[]).forEach((id, i) => {
       const f = facturaAdjunta(id);
@@ -4863,7 +4913,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
+  const api = {isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaIvaPorTipo, hojaAvisos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
