@@ -2284,11 +2284,79 @@ if(typeof window !== 'undefined' && window.addEventListener){
   window.addEventListener('beforeunload', e => { if(ggEditorSucio()){ e.preventDefault(); e.returnValue = ''; } });
 }
 
-function navigate(view, forzado){
+/* «ATRÁS» EN TODA LA APP (8/11, dueño: «cuando haces click a algo que lleva a otra página, al volver atrás no vuelve a donde estabas»)
+   Causa: navigate() solo escribía location.hash. El navegador/móvil registraba el cambio, pero NADIE escuchaba el «atrás», así que
+   cambiaba la dirección y la pantalla se quedaba donde estaba. Ahora cada pantalla —y cada «página» dentro de una pantalla: detalle
+   de un pedido, historial de un cliente, un tema del manual— es una entrada del historial (pushState); al volver se reabre esa
+   pantalla, con su pestaña y por donde iba el scroll. Pestañas y filtros NO añaden entradas: se recuerdan al salir (ggRutaGuardarSalida).
+   Lo que se recuerda vive en memoria (por id de entrada), no en el estado del historial: tras recargar solo vuelve la pantalla. */
+let ggRutaId = null, ggRutaN = 0;
+const ggRutaSub = {}, ggRutaScroll = {};
+const GG_RUTA_PROV = {
+  clientes:   {guardar: () => ({p: clientesPantalla}), restaurar: s => { clientesPantalla = s.p || 'lista'; renderClientes(); }},
+  pedidos:    {guardar: () => ({d: pedidoDetailId, t: pedidosTab}), restaurar: s => {
+    if(s.d){ pedidosTab = 'historial'; pedidoDetailId = s.d; updatePedidosTabsUI(); renderPedidoDetail(); }
+    else { pedidoDetailId = null; if(s.t) pedidosTab = s.t; renderPedidos(); } }},
+  manual:     {guardar: () => ({a: manualArea, c: manualChapter}), restaurar: s => { manualArea = s.a || null; manualChapter = (s.c == null ? -1 : s.c); manualSearch = ''; renderManual(); }},
+  horarios:   {guardar: () => ({t: horariosTab}), restaurar: s => { if(s.t) horariosTab = s.t; renderHorarios(); }},
+  promocion:  {guardar: () => ({t: promoTab}), restaurar: s => { if(s.t) promoTab = s.t; renderPromocion(); }},
+  carta:      {guardar: () => ({t: ofertaTab}), restaurar: s => { if(s.t) ofertaTab = s.t; renderOferta(); }},
+  economia:   {guardar: () => { const a = document.querySelector('#view-economia .ge-tab-panel.active'); return {t: a ? a.id.replace('ge-', '') : null}; }, restaurar: s => { if(s.t) GE.tab(s.t); }},
+};
+function ggRutaVista(){ const a = document.querySelector('.view.active'); return a ? a.id.replace('view-', '') : null; }
+function ggRutaScrollLeer(){ const c = document.querySelector('.content'); return {c: c ? c.scrollTop : 0, w: window.scrollY || 0}; }
+function ggRutaScrollPoner(o){ if(!o) return; const c = document.querySelector('.content'); if(c) c.scrollTop = o.c || 0; if(o.w) window.scrollTo(0, o.w); }
+// Lo que hay AHORA en pantalla (pestaña, detalle abierto, scroll) se guarda bajo la entrada actual, justo antes de irse.
+function ggRutaGuardarSalida(){
+  if(ggRutaId == null) return;
+  const prov = GG_RUTA_PROV[ggRutaVista()];
+  try{ ggRutaSub[ggRutaId] = prov ? prov.guardar() : null; }catch(e){}
+  ggRutaScroll[ggRutaId] = ggRutaScrollLeer();
+}
+function ggRutaEstado(vista){ return {gg: 1, i: ggRutaId, v: vista || ggRutaVista(), f: (typeof currentFolder !== 'undefined' ? currentFolder : null)}; }
+// Nueva entrada del historial (o, la primera vez y al repintar la misma pantalla, se sustituye la actual).
+function ggRutaMarca(vista, forzarNueva){
+  try{
+    const mismo = history.state && history.state.gg && history.state.v === vista;
+    if(ggRutaId == null || (mismo && !forzarNueva)){
+      if(ggRutaId == null) ggRutaId = Date.now() * 1000 + (++ggRutaN);
+      history.replaceState(ggRutaEstado(vista), '', '#' + vista);
+    }else{
+      ggRutaId = Date.now() * 1000 + (++ggRutaN);
+      history.pushState(ggRutaEstado(vista), '', '#' + vista);
+    }
+  }catch(e){ try{ location.hash = vista; }catch(e2){} }
+}
+// Una «página» dentro de una pantalla (detalle de un pedido, historial de un cliente, un tema del manual): se guarda el estado de
+// ANTES, se cambia (fn) y se añade la entrada nueva. El «atrás» vuelve a lo de antes, no a la pantalla anterior.
+function ggRutaPagina(fn){
+  ggRutaGuardarSalida();
+  fn();
+  if(ggRutaId != null) ggRutaMarca(ggRutaVista(), true);
+}
+if(typeof window !== 'undefined' && window.addEventListener){
+  window.addEventListener('popstate', ev => {
+    const st = ev.state;
+    const v = (st && st.gg) ? st.v : (location.hash || '').replace('#', '');
+    if(!v || !document.getElementById('view-' + v)) return;
+    if(typeof getAccessSession === 'function' && !getAccessSession()) return;   // con la pantalla de entrada delante no se navega
+    ggRutaGuardarSalida();
+    const idDestino = (st && st.gg) ? st.i : null;
+    if(st && st.gg && st.f && typeof FOLDERS !== 'undefined' && FOLDERS[st.f]) currentFolder = st.f;
+    navigate(v, false, {historia: true, id: idDestino,
+      // Si el hostelero cancela porque tiene cambios sin guardar, el navegador ya retrocedió: se vuelve a poner la entrada de ESTA pantalla.
+      alCancelar: () => { try{ history.pushState(ggRutaEstado(), '', '#' + ggRutaVista()); }catch(e){} }});
+  });
+}
+
+function navigate(view, forzado, opts){
   // Salir de una pantalla con cambios sin guardar: se pregunta antes (ver ggGuardarSiHaceFalta).
   if(!forzado && ggEditorSucio()){
     const actual = document.querySelector('.view.active');
-    if(!actual || actual.id !== 'view-' + view){ ggGuardarSiHaceFalta(() => navigate(view, true)); return; }
+    if(!actual || actual.id !== 'view-' + view){
+      ggGuardarSiHaceFalta(() => navigate(view, true, opts)).then(() => { if(opts && opts.alCancelar && ggEditorSucio()) opts.alCancelar(); });
+      return;
+    }
   }
   // Una hoja de Escandallo abierta no sobrevive a salir de la pantalla: al volver se ve la lista, no un plato a medias.
   if(view !== 'escandallo' && typeof escandalloHoja !== 'undefined' && escandalloHoja){ escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; }
@@ -2311,6 +2379,7 @@ function navigate(view, forzado){
     return;
   }
 
+  if(!(opts && opts.historia)) ggRutaGuardarSalida();
   const prevActive = document.querySelector('.view.active');
   const wasAlreadyInPedidos = prevActive && prevActive.id === 'view-pedidos';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -2329,7 +2398,18 @@ function navigate(view, forzado){
   if(!inCurrentFolder && MODULE_FOLDER[view]) currentFolder = MODULE_FOLDER[view];
 
   renderView(view);
-  location.hash = view;
+  if(opts && opts.historia){
+    // Volver con «atrás»: se reabre lo que había (pestaña, detalle, scroll) y la entrada del historial se queda como está.
+    ggRutaId = opts.id != null ? opts.id : (ggRutaId == null ? Date.now() * 1000 + (++ggRutaN) : ggRutaId);
+    try{ history.replaceState(ggRutaEstado(view), '', '#' + view); }catch(e){}
+    const sub = ggRutaSub[ggRutaId], prov = GG_RUTA_PROV[view];
+    try{ if(sub && prov) prov.restaurar(sub); }catch(e){ console.error(e); }
+    const sc = ggRutaScroll[ggRutaId];
+    // Dos veces: algunas pantallas (Gestión Económica, Panel) acaban de pintar su contenido en el siguiente fotograma y el primer intento queda corto.
+    if(sc){ requestAnimationFrame(() => ggRutaScrollPoner(sc)); setTimeout(() => ggRutaScrollPoner(sc), 250); }
+  }else{
+    ggRutaMarca(view);
+  }
 }
 
 // Gestión (Gestión Económica, Mi Negocio) es exclusiva del propietario: una

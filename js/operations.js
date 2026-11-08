@@ -1545,15 +1545,14 @@ function pedidoTarjetaHtml(o){
 }
 
 function openPedido(id){
-  pedidoDetailId = id;
-  pedidosTab = 'historial';
+  ggRutaPagina(() => { pedidoDetailId = id; pedidosTab = 'historial'; });
   updatePedidosTabsUI();
   renderPedidoDetail();
   scrollContentToTop();
 }
 
 function backToPedidoList(){
-  pedidoDetailId = null;
+  ggRutaPagina(() => { pedidoDetailId = null; });
   renderPedidoList();
 }
 

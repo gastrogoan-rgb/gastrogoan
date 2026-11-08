@@ -6074,11 +6074,11 @@ function setManualSearch(val){
   if(el){ el.focus(); try{ el.setSelectionRange(val.length, val.length); }catch(e){} }
 }
 function manualAbrirArea(key){
-  manualArea = key; manualChapter = -1; manualSearch = '';
+  ggRutaPagina(() => { manualArea = key; manualChapter = -1; manualSearch = ''; });
   const inp = document.getElementById('manual-search-input'); if(inp) inp.value = '';
   renderManual(); manualArriba();
 }
-function manualVolver(){ manualArea = null; manualChapter = -1; renderManual(); manualArriba(); }
+function manualVolver(){ ggRutaPagina(() => { manualArea = null; manualChapter = -1; }); renderManual(); manualArriba(); }
 function manualArriba(){
   const v = document.getElementById('view-manual'); const t = v && v.querySelector('.view-title');
   (t || v || document.body).scrollIntoView({block:'start'});
@@ -6197,8 +6197,7 @@ function manualIrA(k){
   if(h) h.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'});
 }
 function goManualChapter(i){
-  manualChapter = i;
-  manualArea = MANUAL_CHAPTERS[i].area;
+  ggRutaPagina(() => { manualChapter = i; manualArea = MANUAL_CHAPTERS[i].area; });
   renderManual();
   manualArriba();
 }

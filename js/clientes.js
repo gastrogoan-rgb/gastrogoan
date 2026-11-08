@@ -80,14 +80,14 @@ function renderClientes(){
   renderClientesLista();
 }
 function clIr(pantalla, extra){
-  clientesPantalla = pantalla;
+  ggRutaPagina(() => { clientesPantalla = pantalla; });   // «atrás» vuelve a la lista (o a donde estuvieras), no a la pantalla anterior de la app
   if(pantalla === 'historial'){ clienteHistId = extra; clienteHistTipo = 'todo'; clienteHistMax = 40; }
   if(pantalla === 'vales' && extra !== undefined){ valesBusca = extra || ''; valesFiltro = 'todos'; }
   closeModal();
   renderClientes();
   scrollContentToTop();
 }
-function clVolver(){ clientesPantalla = 'lista'; renderClientes(); scrollContentToTop(); }
+function clVolver(){ ggRutaPagina(() => { clientesPantalla = 'lista'; }); renderClientes(); scrollContentToTop(); }
 
 function clTarjetaAcciones(c, st){
   const tel = whatsappDeTelefono(c.phone);
