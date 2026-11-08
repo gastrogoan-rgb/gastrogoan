@@ -171,6 +171,13 @@ lanzar; node test/acceso-caducado.mjs > "$SALIDA/accesocaducado.txt" 2>&1 & P164
 lanzar; node test/comandas-cocina.mjs > "$SALIDA/comandascocina.txt" 2>&1 & P165=$!
 lanzar; node test/envio-gastos.mjs > "$SALIDA/enviogastos.txt" 2>&1 & P166=$!
 lanzar; node test/oferta-importar.mjs > "$SALIDA/ofertaimportar.txt" 2>&1 & P167=$!
+lanzar; node test/tpv-comanda.mjs > "$SALIDA/tpvcomanda.txt" 2>&1 & P168=$!
+lanzar; node test/tpv-mesas-cobros.mjs > "$SALIDA/tpvmesascobros.txt" 2>&1 & P169=$!
+lanzar; node test/tpv-delivery.mjs > "$SALIDA/tpvdelivery.txt" 2>&1 & P170=$!
+lanzar; node test/tpv-impresion.mjs > "$SALIDA/tpvimpresion.txt" 2>&1 & P171=$!
+lanzar; node test/tpv-vale.mjs > "$SALIDA/tpvvale.txt" 2>&1 & P172=$!
+lanzar; node test/reservas-ajustes.mjs > "$SALIDA/reservasajustes.txt" 2>&1 & P173=$!
+lanzar; node test/clientes-filtros.mjs > "$SALIDA/clientesfiltros.txt" 2>&1 & P174=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -372,5 +379,12 @@ espera $P164 "Sesión caducada + dirección guardada: la entrada manda y no sale
 espera $P165 "Comandas Cocina: solo cocina, el nombre del bloque avanza el bloque, sin botón de pase, borde por comanda" "$SALIDA/comandascocina.txt" "casos pasaron"
 espera $P166 "Envío de proveedor: entra en Gastos con su IVA y suma al total del pedido" "$SALIDA/enviogastos.txt" "casos pasaron"
 espera $P167 "Oferta: importar del Escandallo por carpetas y después platos (marcas que se recuerdan, buscador global, opciones de menú agrupadas)" "$SALIDA/ofertaimportar.txt" "casos pasaron"
+espera $P168 "TPV · comanda: rondas (segundo bloque), una fila por línea, camarero bloqueado y alérgenos de la mesa con un clic" "$SALIDA/tpvcomanda.txt" "casos pasaron"
+espera $P169 "TPV · cambio de mesa, fusión y formas de cobro (efectivo, tarjeta, mixto, descuento, propina y cuenta dividida)" "$SALIDA/tpvmesascobros.txt" "casos pasaron"
+espera $P170 "TPV · delivery: lo pedido a la vista en la ficha, reparto en su pestaña, Control de repartos, ruta agrupada y entregado" "$SALIDA/tpvdelivery.txt" "casos pasaron"
+espera $P171 "TPV · impresión: lo que sale solo se imprime (un vale), anulaciones, ticket por el rollo del aparato y cuenta antes de cobrar" "$SALIDA/tpvimpresion.txt" "casos pasaron"
+espera $P172 "TPV · vale regalo como forma de pago: parcial, total con saldo, rechazos, quitar, anular devuelve y cierre de caja" "$SALIDA/tpvvale.txt" "casos pasaron"
+espera $P173 "Reservas · un solo botón nuevo, cuartos de hora con margen de cierre, acciones sueltas en PC/tablet y semana compacta" "$SALIDA/reservasajustes.txt" "casos pasaron"
+espera $P174 "Clientes · nueve filtros (Recurrentes y Ocasionales) y Promoción › Clientes con la última visita real" "$SALIDA/clientesfiltros.txt" "casos pasaron"
 
 exit $FALLOS

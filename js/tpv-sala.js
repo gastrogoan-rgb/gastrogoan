@@ -417,10 +417,8 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
     else if(hasPreparando) statusBadge = bt('', `cycleGroupEstado(${order.id}, '${esq}')`, escapeHtml(t('kitchen.preparing')), 'ti-flame');
   }else{
     if(allPicked) statusBadge = `<span class="badge badge-green txt-xs"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-    // Aquí es donde SALA da el último toque: cocina ya lo ha dejado servido y es sala quien confirma que se lo han llevado.
-    else if(listos.length) statusBadge = esPedidoSoloLectura(order)
-      ? `<span class="badge badge-green txt-xs"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`
-      : bt('btn-primary', `marcarTandaRecogidaDesdeSala(${order.id}, '${escapeJsAttr(g.tanda||'')}')`, escapeHtml(t('tpv.markPickedUp')), 'ti-truck-delivery');
+    // Sala solo VE que está listo en el pase (8/11): el «recogido» lo marca Cocina cuando el camarero se lleva el plato.
+    else if(listos.length) statusBadge = `<span class="badge badge-green txt-xs"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</span>`;
     else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue txt-xs"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
     else if(allFired) statusBadge = `<span class="badge badge-amber txt-xs"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
@@ -456,18 +454,18 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
       </div>
       <div class="tp-linea-txt"><span class="tp-linea-nom">${escapeHtml(line.name)}</span>${lineStatus}${menuBadge}${tpvLineaInsigniasHtml(line)}${nota}</div>
       <div class="tp-linea-pre">${fmtMoney(line.price * line.qty)}</div>
-      ${soloLectura ? '' : `<div class="tp-linea-acc">
-        <button type="button" class="tp-ac" onclick="openLineNotesModal(${order.id}, ${idx})" aria-label="${escapeHtml(t('common.notes'))}" data-tip="${escapeHtml(t('common.notes'))}"><i class="ti ti-note"></i></button>
-        ${pendiente ? `<button type="button" class="tp-ac is-marchar" onclick="marcharLine(${order.id}, ${idx})" aria-label="${escapeHtml(t('title.sendDishToKitchen'))}" data-tip="${escapeHtml(t('title.sendDishToKitchen'))}"><i class="ti ti-chef-hat"></i></button>` : ''}
-        ${line.estado === 'entregado' ? '' : `<button type="button" class="tp-ac is-quitar" onclick="removeOrderItem(${order.id}, ${idx})" aria-label="${escapeHtml(t('common.delete'))}" data-tip="${escapeHtml(t('common.delete'))}"><i class="ti ti-x"></i></button>`}
-      </div>`}
+      ${soloLectura ? '' : `<div class="tp-linea-acc">${ggMenuAcciones([
+        {icono:'ti-note', texto:t('common.notes'), fn:`openLineNotesModal(${order.id}, ${idx})`},
+        pendiente ? {icono:'ti-chef-hat', texto:t('title.sendDishToKitchen'), fn:`marcharLine(${order.id}, ${idx})`} : null,
+        line.estado === 'entregado' ? null : {icono:'ti-x', texto:t('common.delete'), fn:`removeOrderItem(${order.id}, ${idx})`, peligro:true}
+      ].filter(Boolean), {clase:'tp-ac tp-ac-mas'})}</div>`}
     </div>`;
   }).join('');
 
   return `
   <section class="tp-tanda">
     <header class="tp-tanda-cab">
-      <div class="tp-tanda-nom"><i class="ti ti-chevrons-right"></i> ${g.tanda ? escapeHtml(g.tanda) : escapeHtml(t('label.noCategory'))}
+      <div class="tp-tanda-nom"><i class="ti ti-chevrons-right"></i> ${g.tanda ? escapeHtml(g.tanda) : (isPureBebidaGroup ? escapeHtml(gl({es:'Bebidas', ca:'Begudes', en:'Drinks'})) : escapeHtml(t('label.noCategory')))}
         ${(nombreMenuUnico && !ocultarNombreMenuEnCabecera) ? `<span class="badge badge-blue txt-xs"><i class="ti ti-list-details"></i> ${escapeHtml(nombreMenuUnico)}</span>` : ''}</div>
       <div class="tp-tanda-bts">
         ${statusBadge}
@@ -478,24 +476,18 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
   </section>`;
 }
 
-// Panel de comanda: arriba el total en grande y las unidades; debajo, la carta suelta y los menús por separado.
-function renderOrderComandaPanel(order){
+// Lo de la carta suelta y lo de cada menú, de un conjunto de líneas (una ronda entera, o todo el pedido si solo hay una).
+function renderComandaItemsHtml(order, items){
   const sortBebidaFirst = groups => groups.sort((a, b) => {
     const aB = a.items.some(({line}) => line.bebida) ? 0 : 1;
     const bB = b.items.some(({line}) => line.bebida) ? 0 : 1;
     return aB - bB;
   });
-  const cartaItems = (order.items || []).map((line, idx) => ({line, idx})).filter(({line}) => !line.menuId);
-  const menuItems = (order.items || []).map((line, idx) => ({line, idx})).filter(({line}) => !!line.menuId);
+  const cartaItems = items.filter(({line}) => !line.menuId);
+  const menuItems = items.filter(({line}) => !!line.menuId);
   const cartaGroups = sortBebidaFirst(groupOrderItemsByTanda(order, cartaItems));
   const menuGroups = sortBebidaFirst(groupOrderItemsByTanda(order, menuItems));
-  const unidades = (order.items || []).reduce((s, l) => s + l.qty, 0);
-  const total = orderTotal(order);
-  const cab = `<div class="tp-com-cab"><span class="tp-com-tit"><i class="ti ti-clipboard-list"></i> ${escapeHtml(t('label.order'))}${unidades ? ` <b class="tp-com-uds">${unidades}</b>` : ''}</span><span class="tp-com-total">${fmtMoney(total)}</span></div>`;
-  if(!cartaGroups.length && !menuGroups.length){
-    return `${cab}<div class="empty es-vacio tp-com-vacia"><i class="ti ti-clipboard-list"></i>${escapeHtml(t('empty.orderEmpty'))}<small>${escapeHtml(t('label.selectFromMenu'))}</small></div>`;
-  }
-  let html = cab;
+  let html = '';
   const showSectionTitles = cartaGroups.length > 0 && menuGroups.length > 0;
   if(cartaGroups.length){
     if(showSectionTitles) html += `<div class="tp-com-seccion"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t('tpv.section.carta'))}</div>`;
@@ -514,6 +506,53 @@ function renderOrderComandaPanel(order){
   return html;
 }
 
+/* RONDAS (7/11, pedido del dueño): cuando la mesa ya pidió y piden más, lo nuevo sale como un SEGUNDO BLOQUE, no mezclado.
+   · Lo ya marchado se agrupa por vale («Pedido 1», «Pedido 2»…, con la hora a la que se marchó).
+   · Lo de comida que se acaba de apuntar y aún no se ha marchado va aparte, al final: «Añadido ahora · por marchar».
+   Con una sola ronda no hay cabeceras: la comanda se ve como siempre. */
+function comandaRondas(order){
+  const todas = (order.items || []).map((line, idx) => ({line, idx}));
+  const hayComidaMarchada = todas.some(({line}) => !line.bebida && line.estado);
+  const porClave = new Map();
+  todas.forEach(x => {
+    const sinMarchar = !x.line.bebida && !x.line.estado && !(x.line.marchada > 0);
+    const clave = (sinMarchar && hayComidaMarchada) ? 'nuevo' : 'v' + (x.line.vale || 1);
+    if(!porClave.has(clave)) porClave.set(clave, []);
+    porClave.get(clave).push(x);
+  });
+  const claves = [...porClave.keys()].sort((a, b) => a === 'nuevo' ? 1 : b === 'nuevo' ? -1 : Number(a.slice(1)) - Number(b.slice(1)));
+  return claves.map((clave, i) => {
+    const items = porClave.get(clave);
+    const horas = items.map(({line}) => line.enviadoAt).filter(Boolean).map(h => new Date(h).getTime());
+    const hora = horas.length ? new Date(Math.min(...horas)).toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'}) : '';
+    return {clave, items, hora, n: i + 1, esNuevo: clave === 'nuevo'};
+  });
+}
+
+// Panel de comanda: arriba el total en grande y las unidades; debajo, las rondas (si las hay), cada una con su carta suelta y sus menús.
+function renderOrderComandaPanel(order){
+  const unidades = (order.items || []).reduce((s, l) => s + l.qty, 0);
+  const total = orderTotal(order);
+  const cab = `<div class="tp-com-cab"><span class="tp-com-tit"><i class="ti ti-clipboard-list"></i> ${escapeHtml(t('label.order'))}${unidades ? ` <b class="tp-com-uds">${unidades}</b>` : ''}${unidades ? ` <button type="button" class="btn btn-sm btn-fino tp-com-cuenta" onclick="printCuenta(${order.id})" data-tip="${escapeHtml(gl({es:'Imprimir la cuenta (sin cobrar)', ca:'Imprimir el compte (sense cobrar)', en:'Print the bill (without charging)'}))}" aria-label="${escapeHtml(gl({es:'Imprimir la cuenta', ca:'Imprimir el compte', en:'Print the bill'}))}"><i class="ti ti-printer"></i><span class="tp-largo"> ${escapeHtml(gl({es:'Cuenta', ca:'Compte', en:'Bill'}))}</span></button>` : ''}</span><span class="tp-com-total">${fmtMoney(total)}</span></div>`;
+  if(!(order.items || []).length){
+    return `${cab}<div class="empty es-vacio tp-com-vacia"><i class="ti ti-clipboard-list"></i>${escapeHtml(t('empty.orderEmpty'))}<small>${escapeHtml(t('label.selectFromMenu'))}</small></div>`;
+  }
+  const rondas = comandaRondas(order);
+  if(rondas.length === 1) return cab + renderComandaItemsHtml(order, rondas[0].items);
+  return cab + rondas.map(r => {
+    const uds = r.items.reduce((s, {line}) => s + line.qty, 0);
+    const sub = r.items.reduce((s, {line}) => s + line.price * line.qty, 0);
+    const titulo = r.esNuevo
+      ? gl({es:'Añadido ahora · por marchar', ca:'Afegit ara · per marxar', en:'Just added · not sent yet'})
+      : `${gl({es:'Pedido', ca:'Comanda', en:'Order'})} ${r.n}${r.hora ? ` · ${r.hora}` : ''}`;
+    return `
+    <section class="tp-ronda${r.esNuevo ? ' es-nueva' : ''}">
+      <header class="tp-ronda-cab"><span class="tp-ronda-tit"><i class="ti ${r.esNuevo ? 'ti-plus' : 'ti-receipt'}"></i> ${escapeHtml(titulo)}</span><span class="tp-ronda-cuenta">${uds} · ${fmtMoney(sub)}</span></header>
+      ${renderComandaItemsHtml(order, r.items)}
+    </section>`;
+  }).join('');
+}
+
 /* La pantalla de tomar nota: cabecera corta, carta a un lado y comanda al otro (en móvil, una barra con el total que abre la comanda). */
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
@@ -528,8 +567,16 @@ function renderTableOrderModal(orderId){
     (order.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte != null ? ' (' + fmtMoney(order.pagoImporte) + ')' : ''}</span>` : '');
   const camarero = order.camareroId ? DB.employees.find(e => e.id === order.camareroId) : null;
   const camareroLabel = camarero ? escapeHtml(camarero.name) : (order.openedByOwner ? escapeHtml(t('label.owner')) : t('label.assignWaiter'));
-  const camareroBadge = DB.employees.length ? `<span class="badge badge-pulsable" role="button" tabindex="0" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camareroLabel}</span>` : '';
-  const allergensBadge = `<span class="badge badge-pulsable ${order.tableAllergens ? 'badge-red' : ''}" role="button" tabindex="0" onclick="promptTableAllergens(${order.id})" title="${t('tpv.tableAllergens.hint')}"><i class="ti ti-alert-triangle"></i> ${order.tableAllergens ? escapeHtml(order.tableAllergens) : t('tpv.tableAllergens.add')}</span>`;
+  // El camarero es quien ha iniciado sesión: la app ya lo sabe, así que sale BLOQUEADO (candado). Solo el propietario puede
+  // reasignarlo (7/11); una mesa sin camarero sí se puede asignar.
+  const camareroFijo = order.camareroId != null || order.openedByOwner;
+  const camareroBadge = (DB.employees.length || camareroFijo)
+    ? (camareroFijo
+      ? `<span class="badge tp-chip-fijo${isOwnerSession() ? ' badge-pulsable' : ''}" ${isOwnerSession() ? `role="button" tabindex="0" onclick="openSetCamareroModal(${order.id})" title="${escapeHtml(t('title.changeWaiter'))}"` : `title="${escapeHtml(gl({es:'Quien toma la nota: es quien ha iniciado sesión', ca:'Qui pren la nota: és qui ha iniciat sessió', en:'Who takes the order: the signed-in user'}))}"`}><i class="ti ti-lock"></i> ${camareroLabel}</span>`
+      : `<span class="badge badge-pulsable" role="button" tabindex="0" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camareroLabel}</span>`)
+    : '';
+  const algTexto = tableAllergensTexto(order);
+  const allergensBadge = `<span class="badge badge-pulsable ${algTexto ? 'badge-red' : ''}" role="button" tabindex="0" onclick="promptTableAllergens(${order.id})" title="${t('tpv.tableAllergens.hint')}"><i class="ti ti-alert-triangle"></i> ${algTexto ? escapeHtml(algTexto) : t('tpv.tableAllergens.add')}</span>`;
   // Confirmación visible de que la comanda llegó de verdad a la pantalla de Cocina (recibidoEnCocinaAt).
   const hasFiredLines = (order.items || []).some(l => l.estado && !l.bebida);
   const kitchenAckBadge = hasFiredLines
@@ -585,7 +632,7 @@ function renderTableOrderModal(orderId){
   const botonCobrarOCerrar = yaPagadoDelTodo
     ? `<button type="button" class="btn btn-primary tp-or-cobrar" onclick="cerrarPedidoPagadoOnline(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
     : `<button type="button" class="btn ${allDelivered && order.items.length ? 'btn-primary ' : ''}tp-or-cobrar" onclick="openPaymentModal(${order.id})" ${!order.items.length ? 'disabled' : ''}><i class="ti ti-cash"></i> ${t('btn.charge')}<span class="tp-pto"> ·</span> <b>${fmtMoney(total)}</b></button>`;
-  const actionButtons = `<div class="tp-or-acciones">${allDelivered && order.items.length ? '' : renderOrderMarcharButtons(order)}${botonCobrarOCerrar}</div>`;
+  const actionButtons = `<div class="tp-or-acciones">${botonCobrarOCerrar}</div>`;
 
   const unidades = order.items.reduce((s, l) => s + l.qty, 0);
   const panel = tpvOrderMobilePane;
@@ -598,26 +645,27 @@ function renderTableOrderModal(orderId){
       ${(!order.tableId && (order.tipo === 'delivery' || order.tipo === 'takeaway') && order.status !== 'pagada') ? `<button type="button" class="owner-only btn btn-sm btn-fino is-off" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${escapeHtml(t('title.cancelOrder'))}"><i class="ti ti-x"></i> ${escapeHtml(t('btn.cancelOrder'))}</button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()" aria-label="${escapeHtml(t('common.close'))}">&times;</button>
     </div>
-    <div class="tp-or-chips">${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</div>
+    <div class="tp-or-vista" role="tablist" aria-label="${escapeHtml(gl({es:'Vista de la mesa', ca:'Vista de la taula', en:'Table view'}))}">
+      <div class="tp-or-pest">
+        ${soloConsulta ? '' : `<button type="button" role="tab" class="tp-or-pestana${panel === 'carta' ? ' is-on' : ''}" aria-selected="${panel === 'carta'}" onclick="setTpvOrderMobilePane('carta', ${order.id})"><i class="ti ti-pencil-plus"></i> ${escapeHtml(gl({es:'Tomar nota', ca:'Prendre nota', en:'Take order'}))}</button>`}
+        <button type="button" role="tab" class="tp-or-pestana${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? ' is-on' : ''}" aria-selected="${panel === 'comanda' || (soloConsulta && panel !== 'reparto')}" onclick="setTpvOrderMobilePane('comanda', ${order.id})"><i class="ti ti-clipboard-list"></i> ${escapeHtml(gl({es:'Pedido', ca:'Comanda', en:'Order'}))}${unidades ? ` <b class="tp-or-barra-n">${unidades}</b>` : ''} <span class="tp-or-pest-tot">${fmtMoney(total)}</span></button>
+        ${esRepartoPropio(order) ? `<button type="button" role="tab" class="tp-or-pestana tp-or-pest-reparto${panel === 'reparto' ? ' is-on' : ''}" aria-selected="${panel === 'reparto'}" onclick="setTpvOrderMobilePane('reparto', ${order.id})"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}${repartoStatusBadgeHtml(order)}</button>` : ''}
+      </div>
+      <div class="tp-or-chips">${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</div>
+    </div>
     ${renderOrderClientNotesHtml(order)}
     ${incidenciaFranjaHtml(order, 'sala')}
-    ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
     <div class="tp-or-cuerpo">
-      <section class="tp-or-col tp-or-carta ${panel === 'carta' ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('tpv.section.carta'))}">
+      <section class="tp-or-col tp-or-carta ${panel === 'carta' && !soloConsulta ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('tpv.section.carta'))}">
         ${soloConsulta || (!cartaTabs && !menuTabs) ? '' : `<div class="tp-or-tabs" role="group">${cartaTabs}${menuTabs}</div>`}
         ${selectorHtml}
       </section>
-      <aside class="tp-or-col tp-or-comanda ${panel === 'comanda' ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('label.order'))}">
-        <button type="button" class="btn btn-sm btn-fino tp-or-volver" onclick="setTpvOrderMobilePane('carta', ${order.id})"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('tpv.section.carta'))}</button>
+      <section class="tp-or-col tp-or-comanda ${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('label.order'))}">
         ${comandaHtml}
-      </aside>
+      </section>
+      ${esRepartoPropio(order) ? `<section class="tp-or-col tp-or-repartocol ${panel === 'reparto' ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}">${renderRepartoControlCardHtml(order)}</section>` : ''}
     </div>
-    <div class="modal-footer tp-or-pie">
-    <button type="button" class="tp-or-barra${panel === 'carta' ? '' : ' is-oculta'}" onclick="setTpvOrderMobilePane('comanda', ${order.id})" aria-label="${escapeHtml(t('label.order'))}">
-      <span class="tp-or-barra-izq"><i class="ti ti-clipboard-list"></i> ${escapeHtml(t('label.order'))}${unidades ? ` <b class="tp-or-barra-n">${unidades}</b>` : ''}</span>
-      <span class="tp-or-barra-total">${fmtMoney(total)} <i class="ti ti-chevron-up"></i></span>
-    </button>
-      ${actionButtons}</div>
+    <div class="modal-footer tp-or-pie">${actionButtons}</div>
   `, {order: true});
 }
 
@@ -663,6 +711,14 @@ function renderTpvToGo(tiposServicio){
     ${cuerpo}`;
 }
 
+// Lo que se pidió, a la vista en la propia ficha (hasta 5 líneas; el resto, «+N más») y las notas del cliente (8/11).
+function tpvPedidoLineasHtml(o){
+  const items = (o.items || []).filter(l => !l.isShipping);
+  if(!items.length) return '';
+  const ver = items.slice(0, 5);
+  const resto = items.length - ver.length;
+  return `<span class="tp-ped-lineas">${ver.map(l => `<b>${l.qty}×</b> ${escapeHtml(l.name)}${l.notas && !/^Menú: /.test(l.notas) ? ` <i class="tp-ped-nota">(${escapeHtml(l.notas)})</i>` : ''}`).join('<br>')}${resto > 0 ? `<br><em class="tp-ped-mas">+${resto} ${escapeHtml(gl({es:'más', ca:'més', en:'more'}))}</em>` : ''}</span>${o.notas ? `<span class="tp-ped-dir"><i class="ti ti-note"></i> ${escapeHtml(o.notas)}</span>` : ''}`;
+}
 function tpvPedidoFichaHtml(o){
   const plat = o.tipo === 'delivery' && o.plataformaId ? (DB.business.deliveryPlatforms || []).find(p => p.id === o.plataformaId) : null;
   const dueMins = o.time ? minutesUntilScheduled(o.time) : null;
@@ -682,6 +738,7 @@ function tpvPedidoFichaHtml(o){
     <b class="tp-ped-nom">${escapeHtml(nom)}</b>
     ${o.clientRef && o.origenOnline ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
     ${dir ? `<span class="tp-ped-dir"><i class="ti ti-map-pin"></i> ${escapeHtml(dir)}</span>` : ''}
+    ${tpvPedidoLineasHtml(o)}
     <span class="tp-ped-total">${fmtMoney(orderTotal(o))}</span>
     <span class="tp-ped-pie">
       ${o.pagado ? `<span class="tp-av is-pago"><i class="ti ti-credit-card"></i> ${escapeHtml(t('label.paidOnline'))}</span>` : `<span class="tp-av"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.paymentPending'))}</span>`}

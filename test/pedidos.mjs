@@ -80,6 +80,14 @@ for(const ancho of [1280, 360]){
     assert.ok(rap.some(x => /bajo m[íi]nimo/i.test(x)), 'avisa de los que faltan: ' + JSON.stringify(rap));
     assert.ok(/bajo m[íi]nimo/i.test(rap[0]), 'los que más faltan, primero: ' + rap[0]);
     await q(() => selectOrderSupplier('Pescados Martínez')); await esperar(400);
+    // 8/11: no se vuelca el proveedor entero. Sin buscar ni elegir letra solo sale lo que llevas (nada) y una pista; «Todos» lo enseña todo.
+    const ind = await q(() => ({filas: document.querySelectorAll('.pc-art').length, pista: !!document.querySelector('.pc-indice-hint'), letras: [...document.querySelectorAll('.pc-az-l:not(:disabled)')].map(b => b.textContent), todasLetras: document.querySelectorAll('.pc-az-l').length}));
+    assert.equal(ind.filas, 0, 'sin búsqueda ni letra no hay lista'); assert.ok(ind.pista); assert.ok(ind.todasLetras >= 26 && ind.letras.length >= 2, JSON.stringify(ind));
+    const porLetra = await q((L) => { setOrderLetra(L); return [...document.querySelectorAll('.pc-art b')].map(b => b.textContent); }, ind.letras[0]);
+    assert.ok(porLetra.length >= 1 && porLetra.every(n => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().startsWith(ind.letras[0])), 'la letra filtra: ' + porLetra.join(','));
+    await q(() => { setOrderLetra(orderLetra); updateOrderItemSearch('gamb'); });
+    assert.ok((await q(() => [...document.querySelectorAll('.pc-art b')].map(b => b.textContent))).every(n => /gamb/i.test(n)), 'el buscador filtra');
+    await q(() => { updateOrderItemSearch(''); setOrderFiltro('todos'); }); await esperar(200);
     const r = await q(() => ({dias: [...document.querySelectorAll('.pc-dia.on')].map(d => d.textContent), contacto: [...document.querySelectorAll('.pc-contacto')].map(c => c.className.split(' ').pop() + ':' + c.textContent.trim()),
       filas: [...document.querySelectorAll('.pc-art')].map(f => f.querySelector('b').textContent), primera: document.querySelector('.pc-art').innerText.replace(/\s+/g,' ')}));
     assert.deepEqual(r.dias.map(d => d.toLowerCase()), ['mar', 'jue', 'sáb']);
@@ -230,6 +238,33 @@ for(const ancho of [1280, 360]){
     assert.deepEqual(r.pasos, ['hecho', 'actual', '-']); assert.equal(r.lineas, 2); assert.equal(r.botones, 4);
     assert.ok(r.primario.some(b => /Marcar recibido/i.test(b)) && r.primario.some(b => /Email/.test(b)) && r.primario.some(b => /Imprimir/i.test(b)), r.primario.join('|'));
     assert.deepEqual(r.acc, ['duplicateOrder', 'deleteOrder']);
+  });
+
+  await caso(`Recepción que verifica: casilla «Pedido» fija y «Recibido» vacía; verde si coincide, roja si no, y suma lo que de verdad llegó (${ancho}px)`, async () => {
+    await q(() => { DB.purchaseOrders.push({id:97, supplier:'Pescados Martínez', date:todayStr(), estado:'ENVIADO', enviadoEn:todayStr(), area:'cocina', items:[{ingredientId:1, cantidad:5, cantidadRecibida:null}, {ingredientId:2, cantidad:2, cantidadRecibida:null}], notas:''}); saveDB(); openPedido(97); }); await esperar(400);
+    const ini = await q(() => ({fijas: [...document.querySelectorAll('.pd-l-fija')].map(b => b.textContent), vacias: [...document.querySelectorAll('.pd-rq')].map(i => i.value), editablePedido: !!document.querySelector('.pd-l-qty input')}));
+    assert.deepEqual(ini.fijas, ['5', '2']); assert.deepEqual(ini.vacias, ['', '']); assert.equal(ini.editablePedido, false, 'lo pedido no se edita');
+    // al teclear, el color cambia al momento (sin soltar el campo)
+    const vivo = await q(() => { const a = document.getElementById('rq-0'), b = document.getElementById('rq-1'); a.value = '5'; a.dispatchEvent(new Event('input', {bubbles:true})); b.value = '3'; b.dispatchEvent(new Event('input', {bubbles:true})); return {a: a.className, b: b.className, fa: a.closest('.pd-linea').className, fb: b.closest('.pd-linea').className}; });
+    assert.ok(/is-ok/.test(vivo.a) && /is-mal/.test(vivo.b) && /\bok\b/.test(vivo.fa) && /\bmal\b/.test(vivo.fb), JSON.stringify(vivo));
+    await q(() => { const b = document.getElementById('rq-1'); b.dispatchEvent(new Event('change', {bubbles:true})); }); await esperar(100);
+    await q(() => { const a = document.getElementById('rq-0'); a.dispatchEvent(new Event('change', {bubbles:true})); }); await esperar(250);
+    const tras = await q(() => ({v: [...document.querySelectorAll('.pd-rq')].map(i => i.value), c: [...document.querySelectorAll('.pd-rq')].map(i => /is-ok/.test(i.className) ? 'ok' : /is-mal/.test(i.className) ? 'mal' : '-'), prog: document.querySelector('.pd-prog b').textContent}));
+    assert.deepEqual(tras.v, ['5', '3']); assert.deepEqual(tras.c, ['ok', 'mal']); assert.equal(tras.prog, '1/2', 'solo una línea cuadra');
+    const antes = await q(() => [DB.stock[1].qty, DB.stock[2].qty]);
+    await q(() => { changePedidoEstado('RECIBIDO'); }); await esperar(500);
+    const d = await q(() => [DB.stock[1].qty, DB.stock[2].qty, getPurchaseOrder(97).items.map(l => l.cantidadRecibida)]);
+    assert.equal(d[0], antes[0] + 5); assert.equal(d[1], antes[1] + 3, 'entra lo que llegó (3 de 2... pedido 2, llegaron 3), no lo pedido'); assert.deepEqual(d[2], [5, 3]);
+    // sin apuntar: avisa antes de dar por no llegado
+    await q(() => { DB.purchaseOrders.push({id:96, supplier:'Pescados Martínez', date:todayStr(), estado:'ENVIADO', area:'cocina', items:[{ingredientId:1, cantidad:4, cantidadRecibida:null}], notas:''}); saveDB(); openPedido(96); }); await esperar(300);
+    await q(() => { window.__p = changePedidoEstado('RECIBIDO'); }); await esperar(300);
+    assert.ok(await q(() => /sin apuntar/i.test(document.querySelector('.modal-overlay.active')?.innerText || '')), 'avisa de lo que falta por apuntar');
+    await q(() => cancelConfirmModal()); await esperar(200);
+    assert.equal(await q(() => getPurchaseOrder(96).estado), 'ENVIADO');
+    // la cruz = no llegó (0, en rojo)
+    await q(() => toggleRecepcionCheck(0, false)); await esperar(200);
+    assert.deepEqual(await q(() => [document.getElementById('rq-0').value, /is-mal/.test(document.getElementById('rq-0').className)]), ['0', true]);
+    await q(() => { const e = DB.purchaseOrders.find(o => o.estado === 'ENVIADO' && o.id === 1); openPedido(e.id); }); await esperar(300);
   });
 
   await caso(`Recepción: marcar ✓ suma al stock al recibir, con su gasto; el recibido ofrece «deshacer» (${ancho}px)`, async () => {

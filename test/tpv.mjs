@@ -148,13 +148,15 @@ await caso('Modo caos: una sola lista con las ocupadas, la que más lleva espera
   await page.close();
 });
 
-await caso('Tomar nota: tocar un plato lo añade, la ficha dice cuántos lleva (×N) y la comanda del lado se ve a la vez', async () => {
+await caso('Tomar nota: tocar un plato lo añade, la ficha dice cuántos lleva (×N) y el Pedido está en su pestaña', async () => {
   const {page} = await abrir(1280, 800);
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms));
     openTableOrder(4, 903); await esp(400);
     const out = {sinPlatos: document.querySelectorAll('.tp-com-vacia').length};
     closeModal(); openTableOrder(1, 900); await esp(400);
+    out.abreEnPedido = document.querySelector('.tp-or-pestana.is-on')?.textContent.includes('Pedido');   // mesa con pedido ya empezado: abre en «Pedido»
+    document.querySelectorAll('.tp-or-pestana')[0].click(); await esp(200);        // «Tomar nota»
     document.querySelector('.tp-or-tab:not(.is-on)').click(); await esp(200);   // carta del día
     document.querySelectorAll('.tp-seccion')[1].click(); await esp(200);        // Principales: segunda tanda, no sale sola a cocina
     const p = document.querySelector('.tp-plato-main'); p.click(); await esp(200);
@@ -163,14 +165,16 @@ await caso('Tomar nota: tocar un plato lo añade, la ficha dice cuántos lleva (
     out.n = ficha?.querySelector('.tp-plato-n')?.textContent.trim();
     out.lineas = document.querySelectorAll('.tp-linea').length;
     out.cant = [...document.querySelectorAll('.tp-q-n')].map(e => e.textContent.trim()).join(',');
-    out.comandaVisible = !!document.querySelector('.tp-or-comanda')?.offsetParent && !!document.querySelector('.tp-or-carta')?.offsetParent;
     document.querySelector('.tp-plato-menos').click(); await esp(200);
     out.tras = document.querySelector('.tp-plato-n')?.textContent.trim();
     out.total = document.querySelector('.tp-com-total')?.textContent.trim();
+    out.cartaSola = !!document.querySelector('.tp-or-carta')?.offsetParent && !document.querySelector('.tp-or-comanda')?.offsetParent;
+    document.querySelectorAll('.tp-or-pestana')[1].click(); await esp(200);
+    out.comandaSola = !!document.querySelector('.tp-or-comanda')?.offsetParent && !document.querySelector('.tp-or-carta')?.offsetParent;
     return out;
   });
   assert.equal(r.sinPlatos, 1, JSON.stringify(r)); assert.equal(r.n, '×2', JSON.stringify(r)); assert.equal(r.cant, '2,1,1', 'las 2 croquetas ya pedidas y el plato nuevo en dos líneas (la primera sale sola a cocina): ' + JSON.stringify(r));
-  assert.ok(r.comandaVisible, 'carta y comanda lado a lado en PC: ' + JSON.stringify(r));
+  assert.ok(r.abreEnPedido && r.cartaSola && r.comandaSola, 'dos pestañas, una cosa a la vez, también en PC: ' + JSON.stringify(r));
   assert.equal(r.tras, '×1', 'el − de la ficha quita uno: ' + JSON.stringify(r)); assert.match(r.total, /41,00/, '19 de croquetas + 22 del principal: ' + JSON.stringify(r));
   await page.close();
 });
@@ -227,22 +231,23 @@ await caso('La cabecera de la comanda conserva «Cambiar de mesa» primero y a l
   await page.close();
 });
 
-await caso('Móvil: carta y comanda se alternan a pantalla completa, con la barra del total siempre a mano', async () => {
+await caso('Móvil: «Tomar nota» y «Pedido» se alternan a pantalla completa, y el cobro está siempre a mano', async () => {
   const {page} = await abrir(390, 844);
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms));
     openTableOrder(2, 901); await esp(400);
     const vis = s => { const e = document.querySelector(s); return !!e && e.offsetParent !== null && e.getBoundingClientRect().height > 0; };
-    const out = {carta: vis('.tp-or-carta'), comanda: vis('.tp-or-comanda'), barra: vis('.tp-or-barra'), barraTxt: document.querySelector('.tp-or-barra')?.textContent.replace(/\s+/g, ' ').trim()};
-    document.querySelector('.tp-or-barra').click(); await esp(300);
-    out.c2 = vis('.tp-or-carta'); out.m2 = vis('.tp-or-comanda'); out.b2 = vis('.tp-or-barra'); out.volver = vis('.tp-or-volver');
+    const out = {pest: document.querySelectorAll('.tp-or-pestana').length, carta: vis('.tp-or-carta'), comanda: vis('.tp-or-comanda'), pedidoTxt: document.querySelectorAll('.tp-or-pestana')[1]?.textContent.replace(/\s+/g, ' ').trim()};
+    document.querySelectorAll('.tp-or-pestana')[0].click(); await esp(300);
+    out.c2 = vis('.tp-or-carta'); out.m2 = vis('.tp-or-comanda');
+    document.querySelectorAll('.tp-or-pestana')[1].click(); await esp(300);
     const cob = document.querySelector('.tp-or-cobrar').getBoundingClientRect();
     out.cobrarDentro = cob.bottom <= innerHeight - 6 && cob.top >= 0 && cob.left >= 0 && cob.right <= innerWidth;
     out.cobrarAlto = Math.round(cob.height);
     return out;
   });
-  assert.ok(r.carta && !r.comanda && r.barra, JSON.stringify(r)); assert.match(r.barraTxt, /44,00/, JSON.stringify(r));
-  assert.ok(!r.c2 && r.m2 && !r.b2 && r.volver, JSON.stringify(r));
+  assert.equal(r.pest, 2, JSON.stringify(r)); assert.ok(!r.carta && r.comanda, 'una mesa con pedido abre en «Pedido»: ' + JSON.stringify(r)); assert.match(r.pedidoTxt, /44,00/, JSON.stringify(r));
+  assert.ok(r.c2 && !r.m2, JSON.stringify(r));
   assert.ok(r.cobrarDentro && r.cobrarAlto >= 44, 'el botón de cobrar entero dentro de la pantalla, con altura de dedo: ' + JSON.stringify(r));
   await page.close();
 });

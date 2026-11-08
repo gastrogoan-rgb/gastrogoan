@@ -1584,7 +1584,7 @@ const MANUAL_CHAPTERS = [
 <h4>Los tres estados de un pedido</h4>
 <table><thead><tr><th>Estado</th><th>Qué significa</th></tr></thead><tbody><tr><td><strong>Borrador</strong></td><td>Lo estás preparando. Aún no se ha comunicado.</td></tr><tr><td><strong>Enviado</strong></td><td>Ya se pidió al proveedor. Pulsa <strong>Marcar enviado</strong> si lo hiciste por teléfono. Si lleva días sin llegar, aparece un aviso ámbar y, desde los 3 días, rojo.</td></tr><tr><td><strong>Recibido</strong></td><td>La mercancía ha llegado y se ha comprobado.</td></tr></tbody></table>
 <h4>Recibir la mercancía</h4>
-<div class="manual-step"><div class="sn">1</div><div class="st">Abre el pedido desde el <strong>Historial de Pedidos</strong>. Revisa cada artículo: marca verde (<strong>Ha llegado</strong>) o cruz roja (<strong>No ha llegado</strong>). Lo que no marques cuenta como no llegado. Si algo no cuadra, explícalo en la nota de la línea (falta cantidad, caducado, mal estado…).</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st">Abre el pedido desde el <strong>Historial de Pedidos</strong>. Cada línea tiene la casilla <strong>Pedido</strong> (fija, no se edita) y la casilla <strong>Recibido</strong> (vacía): escribe lo que llega de verdad. Se pone <strong>verde</strong> si coincide con lo pedido y <strong>roja</strong> si no, y al recibir <strong>suma al stock lo que escribiste</strong> (3 de 5 kg = 3 kg). El tick rellena «llegó todo» y la cruz es «no llegó» (0). Lo que no apuntes cuenta como no llegado, y la app te avisa antes de recibir. Si algo no cuadra, explícalo en la nota de la línea (falta cantidad, caducado, mal estado…).</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Si el albarán trae otro precio, cámbialo en <strong>Precio albarán</strong>. Al recibir, y solo en las líneas con marca verde, el precio pasa a la Mega Lista y queda en el historial de precios (en el Panel de Control verás los avisos de subidas).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Rellena <strong>Recepción / APPCC</strong>: <strong>Fecha</strong>, <strong>Hora</strong>, <strong>Tª (°C)</strong>, <strong>Condición del producto</strong>, <strong>Caducidad / fecha consumo</strong>, <strong>Cuadre con albarán</strong> (OK o NO CONFORME), <strong>Responsable</strong> y <strong>Observaciones</strong>, y pulsa <strong>Guardar recepción</strong>. Corregirlo después exige permiso de edición.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Si quieres, adjunta una foto o PDF del albarán (máximo 1,5 MB).</div></div>
@@ -1640,7 +1640,7 @@ const MANUAL_CHAPTERS = [
 <h4>Els tres estats d'una comanda</h4>
 <table><thead><tr><th>Estat</th><th>Què significa</th></tr></thead><tbody><tr><td><strong>Esborrany</strong></td><td>La estàs preparant. Encara no s'ha comunicat.</td></tr><tr><td><strong>Enviat</strong></td><td>Ja s'ha demanat al proveïdor. Prem <strong>Marcar enviada</strong> si ho vas fer per telèfon. Si triga dies a arribar, apareix un avís ambre i, des dels 3 dies, vermell.</td></tr><tr><td><strong>Rebut</strong></td><td>La mercaderia ha arribat i s'ha comprovat.</td></tr></tbody></table>
 <h4>Rebre la mercaderia</h4>
-<div class="manual-step"><div class="sn">1</div><div class="st">Obre la comanda des de l'<strong>Historial de Comandes</strong>. Revisa cada article: marca verda (<strong>Ha arribat</strong>) o creu vermella (<strong>No ha arribat</strong>). El que no marquis compta com a no arribat. Si alguna cosa no quadra, explica-ho a la nota de la línia (falta quantitat, caducat, mal estat…).</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st">Obre la comanda des de l'<strong>Historial de Comandes</strong>. Cada línia té la casella <strong>Demanat</strong> (fixa, no s'edita) i la casella <strong>Rebut</strong> (buida): escriu el que arriba de debò. Es posa <strong>verda</strong> si coincideix amb el demanat i <strong>vermella</strong> si no, i en rebre <strong>suma a l'estoc el que has escrit</strong> (3 de 5 kg = 3 kg). El tick omple «ha arribat tot» i la creu és «no ha arribat» (0). El que no apuntis compta com a no arribat, i l'app t'avisa abans de rebre. Si alguna cosa no quadra, explica-ho a la nota de la línia (falta quantitat, caducat, mal estat…).</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Si l'albarà porta un altre preu, canvia'l a <strong>Preu albarà</strong>. En rebre, i només a les línies amb marca verda, el preu passa a la Mega Llista i queda a l'historial de preus (al Panell de Control veuràs els avisos de pujades).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Omple <strong>Recepció / APPCC</strong>: <strong>Data</strong>, <strong>Hora</strong>, <strong>Tª (°C)</strong>, <strong>Condició del producte</strong>, <strong>Caducitat / data de consum</strong>, <strong>Quadra amb l'albarà</strong> (OK o NO CONFORME), <strong>Responsable</strong> i <strong>Observacions</strong>, i prem <strong>Desar recepció</strong>. Corregir-ho després exigeix permís d'edició.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Si vols, adjunta una foto o PDF de l'albarà (màxim 1,5 MB).</div></div>
@@ -1696,7 +1696,7 @@ const MANUAL_CHAPTERS = [
 <h4>The three states of an order</h4>
 <table><thead><tr><th>State</th><th>What it means</th></tr></thead><tbody><tr><td><strong>Draft</strong></td><td>You are preparing it. Not yet communicated.</td></tr><tr><td><strong>Sent</strong></td><td>Already ordered from the supplier. Press <strong>Mark sent</strong> if you did it by phone. If it takes days to arrive, an amber notice appears and, from 3 days, a red one.</td></tr><tr><td><strong>Received</strong></td><td>The goods have arrived and been checked.</td></tr></tbody></table>
 <h4>Receiving the goods</h4>
-<div class="manual-step"><div class="sn">1</div><div class="st">Open the order from the <strong>Order History</strong>. Check each item: green tick (<strong>Arrived</strong>) or red cross (<strong>Not arrived</strong>). Anything you leave unmarked counts as not arrived. If something is off, explain it in the line note (short quantity, expired, bad condition…).</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st">Open the order from the <strong>Order History</strong>. Each line has the <strong>Ordered</strong> box (fixed, not editable) and the <strong>Received</strong> box (empty): type what really arrives. It turns <strong>green</strong> if it matches what was ordered and <strong>red</strong> if not, and on receipt <strong>what you typed is added to stock</strong> (3 of 5 kg = 3 kg). The tick fills in “all arrived” and the cross is “did not arrive” (0). Anything you do not enter counts as not arrived, and the app warns you before receiving. If something is off, explain it in the line note (short quantity, expired, bad condition…).</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">If the delivery note shows a different price, change it in <strong>Delivery note price</strong>. On receipt, and only on lines with a green tick, the price goes to the Mega List and is kept in the price history (the Dashboard shows price-rise alerts).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Fill in <strong>Reception / HACCP</strong>: <strong>Date</strong>, <strong>Time</strong>, <strong>Temp. (°C)</strong>, <strong>Product condition</strong>, <strong>Expiry / use-by date</strong>, <strong>Matches delivery note</strong> (OK or NON-CONFORMING), <strong>Responsible</strong> and <strong>Observations</strong>, and press <strong>Save reception</strong>. Correcting it afterwards needs edit permission.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">If you like, attach a photo or PDF of the delivery note (maximum 1.5 MB).</div></div>
@@ -2420,7 +2420,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Cómo llega un pedido</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">Sala toma nota en el TPV. Mientras los platos no están <strong>marchados</strong>, cocina no los ve.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">Sala pulsa <strong>Marchar vale</strong> (o marcha un plato suelto) y el ticket aparece aquí. En la mesa, sala ve <strong>En cocina</strong> en cuanto la pantalla de cocina lo ha recibido (antes pone «Enviando…»).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Sala marcha un grupo o un plato suelto y el ticket aparece aquí. En la mesa, sala ve <strong>En cocina</strong> en cuanto la pantalla de cocina lo ha recibido (antes pone «Enviando…»).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Los pedidos online y para llevar que el negocio acepta también llegan aquí. Un pedido programado para dentro de días no aparece hasta que toca.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Las <strong>bebidas nunca salen</strong> en esta pantalla: no son de cocina.</div></div>
 
@@ -2436,7 +2436,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">1</div><div class="st">Toca el <strong>nombre del bloque</strong> (por ejemplo <strong>Entrantes</strong>, con las dos flechas al lado). Todos los platos del bloque pasan a <strong>En preparación</strong> y marcan una llama.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Cuando salen, vuelve a tocar el nombre del bloque. El bloque pasa a <strong>Listo en el pase</strong>. Ya no hay un botón grande aparte.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Si quieres avanzar <strong>un solo plato</strong>, tócalo a él: pasa al siguiente estado sin mover el resto del bloque.</div></div>
-<div class="manual-step"><div class="sn">4</div><div class="st">Sala pulsa <strong>Entregar</strong> cuando se lo lleva, y el curso queda <strong>Recogido</strong>. Cocina no puede dar este último paso, es de sala. Hasta que sala lo confirma, el ticket sigue en <strong>Activas</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Cuando el bloque está <strong>Listo en el pase</strong>, sala lo ve en su pantalla. Cuando el camarero se lo lleva, <strong>cocina toca el nombre del bloque</strong> (o el plato) y queda <strong>Recogido</strong>. Hasta entonces el ticket sigue en <strong>Activas</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Si no hay nada que cocinar todavía, el ticket dice «Esperando que sala marche…». Cuando todo está en el pase, «Todo listo en el pase».</div></div>
 <p><strong>Si te equivocas</strong>: pulsa <strong>Deshacer</strong> (arriba, o la flecha del propio ticket). Deshace la última acción —de un plato o de un curso entero—, hasta 10 veces seguidas. Solo funciona mientras no recargues la página.</p>
 
@@ -2472,7 +2472,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Sala marchó un pedido y no aparece</strong>: en la mesa de sala mira si pone <strong>En cocina</strong> o «Enviando…». Si se queda en «Enviando…», revisa que el indicador de nube esté en verde en los dos aparatos.</li>
 <li><strong>No sale un plato</strong>: puede ser una bebida (no pasa por cocina), no estar marchado aún o ser un pedido programado para otro día.</li>
-<li><strong>El ticket no desaparece aunque ya salió</strong>: falta que sala pulse <strong>Entregar</strong>; hasta entonces sigue en Activas. Mira <strong>En el pase</strong> en Modo caos y usa <strong>Avisar</strong>.</li>
+<li><strong>El ticket no desaparece aunque ya salió</strong>: falta marcarlo como <strong>Recogido</strong> (toca el nombre del bloque cuando sala se lo lleva); hasta entonces sigue en Activas. Mira <strong>En el pase</strong> en Modo caos: ahí tienes <strong>Recogido</strong> y <strong>Avisar</strong>.</li>
 <li><strong>Pulsé un plato sin querer</strong>: <strong>Deshacer</strong>, antes de recargar la página.</li>
 <li><strong>«No hay comandas pendientes»</strong>: no hay nada marchado ahora mismo; aparecerán solas.</li>
 </ul>`,
@@ -2483,7 +2483,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Com arriba una comanda</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">La sala pren nota al TPV. Mentre els plats no estan <strong>marxats</strong>, cuina no els veu.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">La sala prem <strong>Marxar val complet</strong> (o marxa un plat solt) i el tiquet apareix aquí. A la taula, la sala veu <strong>A cuina</strong> així que la pantalla de cuina l'ha rebut (abans posa «Enviant…»).</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">La sala marxa un grup o un plat solt i el tiquet apareix aquí. A la taula, la sala veu <strong>A cuina</strong> així que la pantalla de cuina l'ha rebut (abans posa «Enviant…»).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Les comandes en línia i per emportar que el negoci accepta també arriben aquí. Una comanda programada per d'aquí a dies no apareix fins que toca.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Les <strong>begudes mai surten</strong> en aquesta pantalla: no són de cuina.</div></div>
 
@@ -2499,7 +2499,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">1</div><div class="st">Toca el <strong>nom del bloc</strong> (per exemple <strong>Entrants</strong>, amb les dues fletxes al costat). Tots els plats del bloc passen a <strong>En preparació</strong> i marquen una flama.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Quan surten, torna a tocar el nom del bloc. El bloc passa a <strong>Llest al pas</strong>. Ja no hi ha un botó gran a part.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Si vols avançar <strong>un sol plat</strong>, toca'l a ell: passa al següent estat sense moure la resta del bloc.</div></div>
-<div class="manual-step"><div class="sn">4</div><div class="st">La sala prem <strong>Lliurar</strong> quan se l'emporta, i el curs queda <strong>Recollit</strong>. Cuina no pot fer aquest últim pas, és de sala. Fins que la sala ho confirma, el tiquet continua a <strong>Actives</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">Quan el bloc és <strong>Llest al pas</strong>, la sala el veu a la seva pantalla. Quan el cambrer se l'emporta, <strong>cuina toca el nom del bloc</strong> (o el plat) i queda <strong>Recollit</strong>. Fins llavors el tiquet continua a <strong>Actives</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Si encara no hi ha res per cuinar, el tiquet diu «Esperant que la sala marxi…». Quan tot és al pas, «Tot llest al pas».</div></div>
 <p><strong>Si t'equivoques</strong>: prem <strong>Desfer</strong> (a dalt, o la fletxa del mateix tiquet). Desfà l'última acció —d'un plat o d'un curs sencer—, fins a 10 vegades seguides. Només funciona mentre no recarreguis la pàgina.</p>
 
@@ -2535,7 +2535,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>La sala ha marxat una comanda i no apareix</strong>: a la taula de sala mira si posa <strong>A cuina</strong> o «Enviant…». Si es queda a «Enviant…», revisa que l'indicador de núvol sigui verd als dos aparells.</li>
 <li><strong>No surt un plat</strong>: pot ser una beguda (no passa per cuina), no estar marxat encara o ser una comanda programada per a un altre dia.</li>
-<li><strong>El tiquet no desapareix tot i que ja ha sortit</strong>: falta que la sala premi <strong>Lliurar</strong>; fins llavors continua a Actives. Mira <strong>Al pas</strong> al Mode caos i fes servir <strong>Avisar</strong>.</li>
+<li><strong>El tiquet no desapareix tot i que ja ha sortit</strong>: falta marcar-lo com a <strong>Recollit</strong> (toca el nom del bloc quan la sala se l'emporta); fins llavors continua a Actives. Mira <strong>Al pas</strong> al Mode caos: allà tens <strong>Recollit</strong> i <strong>Avisar</strong>.</li>
 <li><strong>He premut un plat sense voler</strong>: <strong>Desfer</strong>, abans de recarregar la pàgina.</li>
 <li><strong>«No hi ha comandes pendents»</strong>: no hi ha res marxat ara mateix; apareixeran soles.</li>
 </ul>`,
@@ -2546,7 +2546,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>How an order arrives</h4>
 <div class="manual-step"><div class="sn">1</div><div class="st">The floor takes the order in the POS. While dishes are not <strong>fired</strong>, the kitchen can't see them.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">The floor presses <strong>Send full ticket</strong> (or fires a single dish) and the ticket appears here. On the table, the floor sees <strong>In kitchen</strong> as soon as the kitchen screen has received it (before that it says "Sending...").</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">The floor fires a group or a single dish and the ticket appears here. On the table, the floor sees <strong>In kitchen</strong> as soon as the kitchen screen has received it (before that it says "Sending...").</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Online and takeaway orders the business accepts also arrive here. An order scheduled for days ahead doesn't appear until it's time.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Drinks never show</strong> on this screen: they aren't kitchen items.</div></div>
 
@@ -2562,7 +2562,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">1</div><div class="st">Tap the <strong>block name</strong> (for example <strong>Starters</strong>, with the two arrows beside it). All the dishes in the block go to <strong>Preparing</strong> and show a flame.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">When they go out, tap the block name again. The block becomes <strong>Ready at the pass</strong>. There is no separate big button any more.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">If you want to advance <strong>a single dish</strong>, tap that dish: it moves to the next status without moving the rest of the block.</div></div>
-<div class="manual-step"><div class="sn">4</div><div class="st">The floor presses <strong>Hand over</strong> when they carry it away, and the course becomes <strong>Picked up</strong>. The kitchen can't take that last step, it belongs to the floor. Until the floor confirms it, the ticket stays in <strong>Active</strong>.</div></div>
+<div class="manual-step"><div class="sn">4</div><div class="st">When the block is <strong>Ready at the pass</strong>, the floor sees it on its screen. When the waiter takes it away, <strong>the kitchen taps the block name</strong> (or the dish) and it becomes <strong>Picked up</strong>. Until then the ticket stays in <strong>Active</strong>.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">If there's nothing to cook yet, the ticket says "Waiting for the floor to fire…". When everything is at the pass, "Everything ready at the pass".</div></div>
 <p><strong>If you make a mistake</strong>: press <strong>Undo</strong> (at the top, or the arrow on the ticket itself). It undoes the last action —of one dish or a whole course—, up to 10 times in a row. It only works as long as you haven't reloaded the page.</p>
 
@@ -2598,7 +2598,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>The floor fired an order and it doesn't show</strong>: on the floor's table check whether it says <strong>In kitchen</strong> or "Sending...". If it stays on "Sending...", check that the cloud indicator is green on both devices.</li>
 <li><strong>A dish doesn't show</strong>: it may be a drink (doesn't go through the kitchen), not fired yet, or an order scheduled for another day.</li>
-<li><strong>The ticket doesn't disappear although it went out</strong>: the floor still has to press <strong>Hand over</strong>; until then it stays in Active. Check <strong>At the pass</strong> in Chaos mode and use <strong>Alert</strong>.</li>
+<li><strong>The ticket doesn't disappear although it went out</strong>: it still has to be marked <strong>Picked up</strong> (tap the block name once the floor takes it); until then it stays in Active. Check <strong>At the pass</strong> in Chaos mode: it has <strong>Picked up</strong> and <strong>Alert</strong> there.</li>
 <li><strong>I pressed a dish by mistake</strong>: <strong>Undo</strong>, before reloading the page.</li>
 <li><strong>"No pending orders"</strong>: nothing is fired right now; they'll appear on their own.</li>
 </ul>`}
@@ -2657,8 +2657,8 @@ const MANUAL_CHAPTERS = [
 <ul>
   <li>Lo primero que apuntas en una mesa nueva (la primera sección) <strong>se marcha solo</strong>. Las <strong>bebidas</strong> no pasan por cocina: van directas a barra.</li>
   <li>Cada tanda (Entrantes, Segundos, Postres…) tiene su botón <strong>Marchar a cocina</strong> para lanzarla cuando el cliente esté listo.</li>
-  <li><strong>Marchar vale</strong> manda de una vez el siguiente grupo de comida pendiente. Desaparece cuando ya no queda nada por marchar.</li>
-  <li>El estado de cada tanda se actualiza solo con lo que hace Cocina: <strong>Marchado → En preparación → Listo para recoger → Recogido</strong>. Cuando algo está listo, tú pulsas <strong>Entregar</strong> al llevarlo a la mesa.</li>
+  <li>Se marcha <strong>por grupo</strong> (el botón de la cabecera de cada tanda) o <strong>plato a plato</strong> (con el ⋯ de la línea). Ya no hay un «Marchar vale» general: así cada cosa sale cuando toca.</li>
+  <li>El estado de cada tanda se actualiza solo con lo que hace Cocina: <strong>Marchado → En preparación → Listo para recoger → Recogido</strong>. Cuando algo está listo lo ves como <strong>Listo en el pase</strong>; el «Recogido» lo marca Cocina cuando te lo llevas.</li>
   <li>Si una mesa vuelve a pedir pasados unos 8 minutos de que cocina ya tuviera platos en marcha, entra como <strong>un vale nuevo</strong> en la pantalla de Cocina.</li>
 </ul>
 <div class="manual-tip"><i class="ti ti-bulb"></i>Puedes elegir si los vales se ven en la pantalla de Cocina o se imprimen, en <strong>Mi Negocio → Comandas de cocina y sala</strong>.</div>
@@ -2685,6 +2685,9 @@ const MANUAL_CHAPTERS = [
   <li><strong>Factura</strong> emite la <strong>factura completa</strong> para un cliente empresa o autónomo: pide nombre o razón social, NIF y domicilio, y sustituye al ticket entregado. Se recuerda en su ficha de cliente para la próxima vez.</li>
   <li>Para reimprimir o sacar una factura más tarde: <strong>Ventas hoy</strong> (ventana <strong>Ventas de hoy</strong>), con el icono de impresora, de factura o de la térmica en cada venta. El propietario ve también el <strong>Margen</strong> de cada venta.</li>
   <li>La impresión puede ser por Bluetooth (térmica emparejada) o por el navegador/AirPrint/impresora del sistema; se elige por aparato en Mi Negocio.</li>
+  <li><strong>Pagar con un vale regalo</strong>: en la ventana de cobro, pestaña <strong>Cuenta completa</strong>, escribe el código en <strong>Vale regalo (código)</strong> y pulsa <strong>Aplicar</strong>. El importe del vale se resta de la cuenta (hasta lo que quede por pagar) y el resto se cobra en efectivo o tarjeta. Si el vale es más grande que la cuenta, le queda saldo. Solo vale con los vales de importe vigentes; uno caducado, anulado o de experiencia se rechaza. Si anulas la venta, el vale recupera su saldo. En el cierre de caja el vale no cuenta como efectivo ni tarjeta.</li>
+  <li><strong>La cuenta antes de cobrar</strong>: en la pestaña <strong>Pedido</strong>, el botón de la impresora (<strong>Cuenta</strong>) saca la cuenta para el cliente, con lo consumido y el total. Pone «Esta cuenta no es una factura»: no lleva número ni cierra la mesa. El ticket de venta sale por el rollo de la impresora de este aparato (58 u 80 mm), sin abrir ventanas.</li>
+  <li><strong>Con «Imprimir» activado en Mi Negocio</strong>, los vales salen también cuando no pulsas «Marchar»: el primer grupo de la mesa, lo de para llevar, las bebidas y los pedidos de la web que aceptas. Se espera unos segundos para sacar <strong>un solo vale</strong> con todo lo que entró junto. Si anulas algo que ya estaba marchado, cocina o barra reciben un vale <strong>ANULADO</strong>.</li>
 </ul>
 
 <h4>Anulaciones</h4>
@@ -2792,8 +2795,8 @@ const MANUAL_CHAPTERS = [
 <ul>
   <li>El primer que apuntes en una taula nova (la primera secció) <strong>marxa sol</strong>. Les <strong>begudes</strong> no passen per cuina: van directes a barra.</li>
   <li>Cada tanda (Entrants, Segons, Postres…) té el seu botó <strong>Enviar a cuina</strong> per llançar-la quan el client estigui llest.</li>
-  <li><strong>Marxar val complet</strong> envia de cop el següent grup de menjar pendent. Desapareix quan ja no queda res per marxar.</li>
-  <li>L'estat de cada tanda s'actualitza sol amb el que fa Cuina: <strong>Marxat → En preparació → Llest per recollir → Recollit</strong>. Quan alguna cosa és a punt, tu prems <strong>Lliurar</strong> en portar-la a la taula.</li>
+  <li>Es marxa <strong>per grup</strong> (el botó de la capçalera de cada tanda) o <strong>plat a plat</strong> (amb el ⋯ de la línia). Ja no hi ha un «Marxar val» general: així cada cosa surt quan toca.</li>
+  <li>L'estat de cada tanda s'actualitza sol amb el que fa Cuina: <strong>Marxat → En preparació → Llest per recollir → Recollit</strong>. Quan alguna cosa és a punt la veus com a <strong>Llest al pas</strong>; el «Recollit» el marca Cuina quan te l'emportes.</li>
   <li>Si una taula torna a demanar passats uns 8 minuts d'haver ja plats en marxa a cuina, entra com <strong>un val nou</strong> a la pantalla de Cuina.</li>
 </ul>
 <div class="manual-tip"><i class="ti ti-bulb"></i>Pots triar si els vals es veuen a la pantalla de Cuina o s'imprimeixen, a <strong>El Meu Negoci → Comandes de cuina i sala</strong>.</div>
@@ -2820,6 +2823,9 @@ const MANUAL_CHAPTERS = [
   <li><strong>Factura</strong> emet la <strong>factura completa</strong> per a un client empresa o autònom: demana nom o raó social, NIF i domicili, i substitueix el tiquet lliurat. Es recorda a la seva fitxa de client per a la propera vegada.</li>
   <li>Per reimprimir o treure una factura més tard: <strong>Vendes avui</strong> (finestra <strong>Vendes d'avui</strong>), amb la icona d'impressora, de factura o de la tèrmica a cada venda. El propietari veu també el <strong>Marge</strong> de cada venda.</li>
   <li>La impressió pot ser per Bluetooth (tèrmica emparellada) o pel navegador/AirPrint/impressora del sistema; es tria per aparell a El Meu Negoci.</li>
+  <li><strong>Pagar amb un val regal</strong>: a la finestra de cobrament, pestanya <strong>Compte complet</strong>, escriu el codi a <strong>Val regal (codi)</strong> i prem <strong>Aplicar</strong>. L'import del val es resta del compte (fins al que quedi per pagar) i la resta es cobra en efectiu o targeta. Si el val és més gran que el compte, li queda saldo. Només val amb els vals d'import vigents; un de caducat, anul·lat o d'experiència es rebutja. Si anul·les la venda, el val recupera el saldo. Al tancament de caixa el val no compta com a efectiu ni targeta.</li>
+  <li><strong>El compte abans de cobrar</strong>: a la pestanya <strong>Comanda</strong>, el botó de la impressora (<strong>Compte</strong>) treu el compte per al client, amb el consumit i el total. Diu «Aquest compte no és una factura»: no porta número ni tanca la taula. El tiquet de venda surt pel rotllo de la impressora d'aquest aparell (58 o 80 mm), sense obrir finestres.</li>
+  <li><strong>Amb «Imprimir» activat a El Meu Negoci</strong>, els vals surten també quan no prems «Marxar»: el primer grup de la taula, el de per emportar, les begudes i les comandes de la web que acceptes. S'espera uns segons per treure <strong>un sol val</strong> amb tot el que ha entrat junt. Si anul·les alguna cosa que ja estava marxada, cuina o barra reben un val <strong>ANUL·LAT</strong>.</li>
 </ul>
 
 <h4>Anul·lacions</h4>
@@ -2927,8 +2933,8 @@ const MANUAL_CHAPTERS = [
 <ul>
   <li>The first thing you add to a new table (the first section) <strong>is sent automatically</strong>. <strong>Drinks</strong> don't go through the kitchen: they go straight to the bar.</li>
   <li>Each course (Starters, Mains, Desserts…) has its own <strong>Send to kitchen</strong> button to fire it when the customer is ready.</li>
-  <li><strong>Send full ticket</strong> sends the next pending food group in one go. It disappears when nothing is left to send.</li>
-  <li>Each course's status updates by itself with what the Kitchen does: <strong>Fired → Preparing → Ready to pick up → Picked up</strong>. When something is ready, you press <strong>Hand over</strong> as you take it to the table.</li>
+  <li>You fire <strong>by group</strong> (the button in each course header) or <strong>dish by dish</strong> (the line's ⋯). There is no general «Send full ticket» any more: each thing goes out when it should.</li>
+  <li>Each course's status updates by itself with what the Kitchen does: <strong>Fired → Preparing → Ready to pick up → Picked up</strong>. When something is ready you see <strong>Ready at the pass</strong>; the Kitchen marks «Picked up» when you take it away.</li>
   <li>If a table orders again about 8 minutes after the kitchen already had dishes going, it comes in as <strong>a new ticket</strong> on the Kitchen screen.</li>
 </ul>
 <div class="manual-tip"><i class="ti ti-bulb"></i>You can choose whether tickets show on the Kitchen screen or get printed in <strong>My Business → Kitchen and floor tickets</strong>.</div>
@@ -2955,6 +2961,9 @@ const MANUAL_CHAPTERS = [
   <li><strong>Invoice</strong> issues the <strong>full invoice</strong> for a company or freelancer: it asks for the name or company name, tax ID and address, and replaces the receipt already handed over. It's remembered on their customer record for next time.</li>
   <li>To reprint or get an invoice later: <strong>Sales today</strong> (the <strong>Today's sales</strong> window), with the printer, invoice or thermal icon on each sale. The owner also sees each sale's <strong>Margin</strong>.</li>
   <li>Printing can go over Bluetooth (paired thermal printer) or through the browser/AirPrint/system printer; it's chosen per device in My Business.</li>
+  <li><strong>Paying with a gift voucher</strong>: in the payment window, <strong>Full bill</strong> tab, type the code in <strong>Gift voucher (code)</strong> and press <strong>Apply</strong>. The voucher amount is taken off the bill (up to what is left to pay) and the rest is paid in cash or by card. If the voucher is larger than the bill, it keeps its balance. Only amount vouchers that are still valid work; an expired, voided or experience voucher is rejected. If you void the sale, the voucher gets its balance back. In the cash-up the voucher does not count as cash or card.</li>
+  <li><strong>The bill before charging</strong>: in the <strong>Order</strong> tab, the printer button (<strong>Bill</strong>) prints the bill for the customer, with what they had and the total. It says “This bill is not an invoice”: it has no number and does not close the table. The sales ticket comes out on this device's roll printer (58 or 80 mm), without opening any window.</li>
+  <li><strong>With “Print” switched on in My Business</strong>, tickets also print when you don't press “Fire”: the table's first course, takeaway, drinks and web orders you accept. It waits a few seconds so that <strong>one single ticket</strong> comes out with everything that was added together. If you cancel something already fired, the kitchen or bar gets a <strong>CANCELLED</strong> ticket.</li>
 </ul>
 
 <h4>Voids</h4>
@@ -3042,6 +3051,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">4</div><div class="st">Elige la <strong>mesa</strong> (obligatoria si tienes mesas dadas de alta). Solo salen las libres a esa hora. Si la mesa tiene menos plazas que el grupo, te avisa y decides tú.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Añade <strong>notas</strong> (alergias, cumpleaños, trona…) y <strong>Guarda</strong>. Si ya hay una reserva casi igual para ese cliente, te pregunta antes de duplicarla.</div></div>
 <p>Una mesa <strong>no se puede reservar dos veces</strong> dentro de su duración de mesa (90 minutos por defecto). Se cambia en <strong>Mi Negocio → Operativa → Duración de mesa (min)</strong>.</p>
+<p>Las horas se ofrecen <strong>de cuarto en cuarto</strong> (20:00, 20:15, 20:30…). La última reserva se admite <strong>30 minutos antes del cierre</strong>; si quieres otro margen (0 = hasta la hora exacta de cierre), cámbialo en <strong>Mi Negocio → Operativa → Última reserva antes del cierre (min)</strong>. Vale también para la web de reservas.
 
 <h4>Aforo por turno</h4>
 <p>Si pones el <strong>Aforo</strong> en <strong>Mi Negocio → Operativa</strong> (máximo de comensales por servicio), el día muestra una barra por turno (<strong>Turno 1</strong>, <strong>Turno 2</strong>…, según tu horario) con cuántas personas llevas frente al máximo. La barra cambia de color cuando el turno está casi lleno (80 %) y cuando se completa.</p>
@@ -3120,6 +3130,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">4</div><div class="st">Tria la <strong>taula</strong> (obligatòria si tens taules donades d'alta). Només surten les lliures a aquella hora. Si la taula té menys places que el grup, t'avisa i decideixes tu.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Afegeix <strong>notes</strong> (al·lèrgies, aniversari, trona…) i <strong>Desa</strong>. Si ja hi ha una reserva gairebé igual per a aquell client, et pregunta abans de duplicar-la.</div></div>
 <p>Una taula <strong>no es pot reservar dues vegades</strong> dins de la seva durada de taula (90 minuts per defecte). Es canvia a <strong>El Meu Negoci → Operativa → Durada de taula (min)</strong>.</p>
+<p>Les hores s'ofereixen <strong>de quart en quart</strong> (20:00, 20:15, 20:30…). L'última reserva s'admet <strong>30 minuts abans del tancament</strong>; si vols un altre marge (0 = fins a l'hora exacta de tancament), canvia'l a <strong>El Meu Negoci → Operativa → Última reserva abans del tancament (min)</strong>. Val també per a la web de reserves.
 
 <h4>Aforament per torn</h4>
 <p>Si poses l'<strong>Aforament</strong> a <strong>El Meu Negoci → Operativa</strong> (màxim de comensals per servei), el dia mostra una barra per torn (<strong>Torn 1</strong>, <strong>Torn 2</strong>…, segons el teu horari) amb quantes persones portes enfront del màxim. La barra canvia de color quan el torn és gairebé ple (80 %) i quan es completa.</p>
@@ -3198,6 +3209,7 @@ const MANUAL_CHAPTERS = [
 <div class="manual-step"><div class="sn">4</div><div class="st">Choose the <strong>table</strong> (required if you have tables set up). Only tables free at that time are listed. If the table has fewer seats than the party, it warns you and you decide.</div></div>
 <div class="manual-step"><div class="sn">5</div><div class="st">Add <strong>notes</strong> (allergies, birthday, high chair…) and <strong>Save</strong>. If there's already an almost identical booking for that customer, it asks before duplicating it.</div></div>
 <p>A table <strong>can't be booked twice</strong> within its table duration (90 minutes by default). Change it in <strong>My Business → Operations → Table duration (min)</strong>.</p>
+<p>Times are offered <strong>every quarter of an hour</strong> (20:00, 20:15, 20:30…). The last booking is accepted <strong>30 minutes before closing</strong>; for another margin (0 = up to the exact closing time), change <strong>My Business → Operations → Last booking before closing (min)</strong>. It also applies to the booking website.</p>
 
 <h4>Capacity per shift</h4>
 <p>If you set the <strong>Capacity</strong> in <strong>My Business → Operations</strong> (maximum guests per service), the day shows a bar per shift (<strong>Shift 1</strong>, <strong>Shift 2</strong>…, following your hours) with how many people you have against the maximum. The bar changes colour when the shift is nearly full (80%) and when it's complete.</p>
@@ -3549,6 +3561,8 @@ const MANUAL_CHAPTERS = [
 <tbody>
 <tr><td><strong>Nuevo</strong></td><td>Su primera visita fue hace 30 días o menos.</td></tr>
 <tr><td><strong>VIP</strong></td><td>Tiene 7 o más puntos de fidelidad.</td></tr>
+<tr><td><strong>Recurrentes</strong></td><td>Vienen a menudo: 2 visitas en los últimos 30 días, 6 en el año o ya son VIP (la misma regla que «Habituales» en Novedades).</td></tr>
+<tr><td><strong>Ocasionales</strong></td><td>Han venido alguna vez, pero no con esa frecuencia.</td></tr>
 <tr><td><strong>En riesgo</strong></td><td>Venía con ritmo y ha dejado de venir. Exige tres cosas a la vez: al menos 3 visitas, más de 30 días desde la primera y una ausencia mayor que el doble de su intervalo habitual (y nunca menos de 14 días).</td></tr>
 <tr><td><strong>Inactivos</strong> (filtro)</td><td>Más de 60 días sin venir, o ninguna visita todavía.</td></tr>
 <tr><td><strong>No-shows</strong></td><td>Ha dejado alguna mesa vacía sin avisar.</td></tr>
@@ -3672,6 +3686,8 @@ const MANUAL_CHAPTERS = [
 <tbody>
 <tr><td><strong>Nou</strong></td><td>La primera visita va ser fa 30 dies o menys.</td></tr>
 <tr><td><strong>VIP</strong></td><td>Té 7 o més punts de fidelitat.</td></tr>
+<tr><td><strong>Recurrents</strong></td><td>Vénen sovint: 2 visites en els últims 30 dies, 6 a l'any o ja són VIP (la mateixa regla que «Habituals» a Novetats).</td></tr>
+<tr><td><strong>Ocasionals</strong></td><td>Han vingut alguna vegada, però no amb aquesta freqüència.</td></tr>
 <tr><td><strong>En risc</strong></td><td>Venia amb ritme i ha deixat de venir. Exigeix tres coses alhora: almenys 3 visites, més de 30 dies des de la primera i una absència més gran que el doble del seu interval habitual (i mai menys de 14 dies).</td></tr>
 <tr><td><strong>Inactius</strong> (filtre)</td><td>Més de 60 dies sense venir, o cap visita encara.</td></tr>
 <tr><td><strong>No-shows</strong></td><td>Ha deixat alguna taula buida sense avisar.</td></tr>
@@ -3795,6 +3811,8 @@ const MANUAL_CHAPTERS = [
 <tbody>
 <tr><td><strong>New</strong></td><td>Their first visit was 30 days ago or less.</td></tr>
 <tr><td><strong>VIP</strong></td><td>They have 7 or more loyalty points.</td></tr>
+<tr><td><strong>Regulars</strong></td><td>They come often: 2 visits in the last 30 days, 6 in the year or already VIP (the same rule as “Regulars” in News).</td></tr>
+<tr><td><strong>Occasional</strong></td><td>They have come before, but not that often.</td></tr>
 <tr><td><strong>At risk</strong></td><td>They used to come regularly and have stopped. It needs three things at once: at least 3 visits, more than 30 days since the first one, and an absence longer than double their usual interval (and never under 14 days).</td></tr>
 <tr><td><strong>Inactive</strong> (filter)</td><td>More than 60 days without coming, or no visit yet.</td></tr>
 <tr><td><strong>No-shows</strong></td><td>They have left a table empty without warning.</td></tr>
@@ -3943,7 +3961,7 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>Clientes: acciones rápidas de fidelización</h4>
-<p>Mensajes ya escritos (los puedes editar antes de enviar) para cuatro momentos: <strong>Próximos cumpleaños (30 días)</strong>, <strong>Visitas recientes — pedir reseña</strong> (con el enlace de Google si lo pusiste en Mi Negocio), <strong>Clientes que hace tiempo no vienen</strong> y la <strong>Encuesta de satisfacción (privada)</strong>. Cada tarjeta tiene <strong>WhatsApp</strong> y <strong>Email</strong>; la ventana del mensaje deja además <strong>Copiar</strong>. El menú ⋯ ofrece <strong>Registrar como acción</strong>, que lo apunta en el calendario ya hecho. En los inactivos, <strong>Escribirles a todos</strong> te lleva a Novedades con ese público. Solo salen clientes con permiso de marketing.</p>
+<p>Mensajes ya escritos (los puedes editar antes de enviar) para cuatro momentos: <strong>Próximos cumpleaños (30 días)</strong>, <strong>Visitas recientes — pedir reseña</strong> (quien vino entre ayer y hace tres días, según sus ventas; con el enlace de Google si lo pusiste en Mi Negocio), <strong>Clientes que hace tiempo no vienen</strong> y la <strong>Encuesta de satisfacción (privada)</strong>. Cada tarjeta tiene <strong>WhatsApp</strong> y <strong>Email</strong>; la ventana del mensaje deja además <strong>Copiar</strong>. El menú ⋯ ofrece <strong>Registrar como acción</strong>, que lo apunta en el calendario ya hecho. En los inactivos, <strong>Escribirles a todos</strong> te lleva a Novedades con ese público. Solo salen clientes con permiso de marketing.</p>
 <p>Arriba hay cuatro cifras (cumpleaños, visitas recientes, inactivos y NPS), el resumen de la encuesta con los últimos comentarios y «¿Cómo te conocieron?» de los últimos 90 días.</p>
 
 <h4>Ideas de contenido</h4>
@@ -4021,7 +4039,7 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>Clients: accions ràpides de fidelització</h4>
-<p>Missatges ja escrits (els pots editar abans d'enviar) per a quatre moments: <strong>Propers aniversaris (30 dies)</strong>, <strong>Visites recents — demanar ressenya</strong> (amb l'enllaç de Google si el vas posar a El Meu Negoci), <strong>Clients que fa temps que no vénen</strong> i l'<strong>Enquesta de satisfacció (privada)</strong>. Cada targeta té <strong>WhatsApp</strong> i <strong>Email</strong>; la finestra del missatge deixa a més <strong>Copiar</strong>. El menú ⋯ ofereix <strong>Registrar com a acció</strong>, que ho apunta al calendari ja fet. Als inactius, <strong>Escriure'ls a tots</strong> et porta a Novetats amb aquest públic. Només surten clients amb permís de màrqueting.</p>
+<p>Missatges ja escrits (els pots editar abans d'enviar) per a quatre moments: <strong>Propers aniversaris (30 dies)</strong>, <strong>Visites recents — demanar ressenya</strong> (qui ha vingut entre ahir i fa tres dies, segons les seves vendes; amb l'enllaç de Google si el vas posar a El Meu Negoci), <strong>Clients que fa temps que no vénen</strong> i l'<strong>Enquesta de satisfacció (privada)</strong>. Cada targeta té <strong>WhatsApp</strong> i <strong>Email</strong>; la finestra del missatge deixa a més <strong>Copiar</strong>. El menú ⋯ ofereix <strong>Registrar com a acció</strong>, que ho apunta al calendari ja fet. Als inactius, <strong>Escriure'ls a tots</strong> et porta a Novetats amb aquest públic. Només surten clients amb permís de màrqueting.</p>
 <p>A dalt hi ha quatre xifres (aniversaris, visites recents, inactius i NPS), el resum de l'enquesta amb els últims comentaris i «Com et van conèixer?» dels últims 90 dies.</p>
 
 <h4>Idees de contingut</h4>
@@ -4099,7 +4117,7 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>Customers: quick loyalty actions</h4>
-<p>Ready-written messages (editable before sending) for four moments: <strong>Upcoming birthdays (30 days)</strong>, <strong>Recent visits — ask for a review</strong> (with your Google link if you set it in My Business), <strong>Clients who haven't come in a while</strong> and the <strong>Satisfaction survey (private)</strong>. Each tile has <strong>WhatsApp</strong> and <strong>Email</strong>; the message window also offers <strong>Copy</strong>. The ⋯ menu offers <strong>Register as action</strong>, which logs it in the calendar already done. For inactive customers, <strong>Write to all of them</strong> takes you to News with that audience. Only customers with marketing consent appear.</p>
+<p>Ready-written messages (editable before sending) for four moments: <strong>Upcoming birthdays (30 days)</strong>, <strong>Recent visits — ask for a review</strong> (whoever came between yesterday and three days ago, based on their sales; with your Google link if you set it in My Business), <strong>Clients who haven't come in a while</strong> and the <strong>Satisfaction survey (private)</strong>. Each tile has <strong>WhatsApp</strong> and <strong>Email</strong>; the message window also offers <strong>Copy</strong>. The ⋯ menu offers <strong>Register as action</strong>, which logs it in the calendar already done. For inactive customers, <strong>Write to all of them</strong> takes you to News with that audience. Only customers with marketing consent appear.</p>
 <p>At the top are four figures (birthdays, recent visits, inactive and NPS), the survey summary with the latest comments and "How did they hear about you?" for the last 90 days.</p>
 
 <h4>Content ideas</h4>

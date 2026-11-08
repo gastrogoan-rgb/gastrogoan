@@ -406,6 +406,7 @@ const SELECTABLE_PAYMENT_METHODS = ['Efectivo','Tarjeta'];
 // esto solo traduce la etiqueta que se le muestra al usuario.
 const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed','Online':'label.paidOnline'};
 function paymentMethodTpvLabel(value){
+  if(value === 'Vale') return gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'});
   return PAYMENT_METHOD_LABEL_KEYS[value] ? t(PAYMENT_METHOD_LABEL_KEYS[value]) : (value||'');
 }
 let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
@@ -871,8 +872,11 @@ async function acceptOnlineOrder(orderId, auto){
         l.marchada = l.qty;
         if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
         decrementMenuStock(order, l, l.qty); decrementMenuOptionStock(l, l.qty);
+        (order.__aImprimir = order.__aImprimir || []).push({qty: l.qty, name: l.name, notas: l.notas, bebida: l.bebida, platoId: l.platoId, recipeId: l.recipeId});
       }
     });
+    // El pedido de la web que se acepta también sale por la impresora de comandas (antes solo se veía en pantalla).
+    if(order.__aImprimir && order.__aImprimir.length){ const lin = order.__aImprimir; delete order.__aImprimir; try{ printMarchadasIfEnabled(order, lin); }catch(e){ console.error(e); } }
     order.cerrada = false;
     if(esRepartoPropio(order) && !esParaMasAdelante) autoAssignRepartidor(order);
     saveDB();
@@ -1216,12 +1220,16 @@ function togoOrderLabel(order){
 }
 
 function openTableOrder(tableId, orderId){
+  // Una mesa con pedido ya empezado se abre en «Pedido» (lo que hay y el cobro); una vacía, en «Tomar nota» (7/11).
+  const abrirPedido = o => { tpvOrderMobilePane = (o && (o.items||[]).length) ? 'comanda' : 'carta'; };
   if(orderId){
+    abrirPedido(DB.tpvOrders.find(o => o.id === orderId));
     renderTableOrderModal(orderId);
     return;
   }
   const order = getOpenOrderForTable(tableId);
-  if(order){ renderTableOrderModal(order.id); return; }
+  if(order){ abrirPedido(order); renderTableOrderModal(order.id); return; }
+  tpvOrderMobilePane = 'carta';
   openNewOrderPaxModal(tableId);
 }
 
@@ -1547,7 +1555,7 @@ function confirmAddMenuToOrder(orderId, menuId){
       order.items.push(line);
       autoSendTakeawayLine(order, line);
     }
-    syncBebidaLineEstado(line);
+    syncBebidaLineEstado(line, order);
   });
   saveDB();
   renderTableOrderModal(orderId);
@@ -1577,7 +1585,10 @@ function groupOrderItemsByTanda(order, itemsWithIdx){
     if(!groups[key]) groups[key] = [];
     groups[key].push({line, idx});
   });
-  return [...(order.tandas||[]), ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
+  // Una línea cuya tanda no figura en order.tandas (datos de otro dispositivo o antiguos) NO puede desaparecer de la comanda:
+  // se añade al final en vez de esconderse (8/11).
+  const orden = [...new Set([...(order.tandas||[]), ...Object.keys(groups).filter(k => k !== ''), ''])];
+  return orden.filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
 }
 
 // Botón principal: marcha el primer grupo (tanda) con platos pendientes (p.ej. "Entrantes"
@@ -1685,7 +1696,7 @@ function renderOrderClientNotesHtml(order){
   // Alérgenos anotados a mano para esta mesa (independiente de si hay algún
   // cliente vinculado) — para comensales sueltos que no están dados de alta
   // como cliente pero sí han avisado de una alergia al sentarse.
-  if(order.tableAllergens) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${order.tableAllergens}`});
+  if(tableAllergensTexto(order)) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${tableAllergensTexto(order)}`});
   if(!parts.length) return '';
   return `<div class="card" style="border:2px solid var(--ink);background:var(--amber-l);margin-bottom:10px;padding:8px 12px">
     ${parts.map(p => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin-bottom:2px"><i class="ti ${p.icon}" style="margin-top:2px;color:var(--ink);flex-shrink:0"></i><span>${escapeHtml(p.text)}</span></div>`).join('')}
@@ -1703,7 +1714,7 @@ function orderAllergyWarningHtml(order){
     const c = DB.clients.find(x => x.id === order.clientId);
     if(c && c.allergies) texts.push(c.allergies);
   }
-  if(order.tableAllergens) texts.push(order.tableAllergens);
+  if(tableAllergensTexto(order)) texts.push(tableAllergensTexto(order));
   // Lo que ya se sabe del propio plato (escandallo/ficha, o marcado a mano
   // en un plato sin receta) — antes esta pantalla solo repetía lo que el
   // camarero hubiera escrito a mano sobre la mesa, ignorando por completo
@@ -1925,12 +1936,62 @@ function cancelWaitlistEntry(id){
   openWaitlistModal();
 }
 
-async function promptTableAllergens(orderId){
+/* ALÉRGENOS DE LA MESA (7/11, pedido del dueño): los 14 de declaración obligatoria como botones, un toque y queda marcado
+   (antes era una caja de texto). Se guardan como lista (`tableAllergenList`, con los nombres estables en castellano) y, además,
+   `tableAllergens` como texto, que es lo que leen el vale impreso y las pantallas de cocina; `tableAllergenNote` es lo libre. */
+function tableAllergensTexto(order){
+  if(!order) return '';
+  const lista = Array.isArray(order.tableAllergenList) ? order.tableAllergenList : null;
+  if(!lista) return (order.tableAllergens || '').trim();
+  return [...lista.map(a => allergenLabel(a)), (order.tableAllergenNote || '').trim()].filter(Boolean).join(', ');
+}
+let tpvAlgSel = null;
+function promptTableAllergens(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  const val = await promptText(t('tpv.tableAllergens.prompt'), order.tableAllergens || '', {allowEmpty:true});
-  if(val === null) return;
-  order.tableAllergens = val.trim();
+  // Una mesa con texto de antes (sin lista) conserva ese texto como nota: no se pierde nada.
+  tpvAlgSel = new Set(Array.isArray(order.tableAllergenList) ? order.tableAllergenList : []);
+  const nota = Array.isArray(order.tableAllergenList) ? (order.tableAllergenNote || '') : (order.tableAllergens || '');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('tpv.tableAllergens.add'))}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    <p class="es-pista" style="margin:0 0 10px">${escapeHtml(t('tpv.tableAllergens.hint'))}</p>
+    <div class="alg-grid tp-alg-grid" role="group">
+      ${ALLERGEN_LIST.map(a => `<button type="button" class="alg-pill tp-alg${tpvAlgSel.has(a) ? ' on' : ''}" aria-pressed="${tpvAlgSel.has(a)}" data-a="${escapeHtml(a)}" onclick="tpvAlgToggle(this)">${escapeHtml(allergenLabel(a))}</button>`).join('')}
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label for="tpv-alg-nota">${escapeHtml(gl({es:'Otras indicaciones (opcional)', ca:'Altres indicacions (opcional)', en:'Other notes (optional)'}))}</label>
+      <input type="text" id="tpv-alg-nota" value="${escapeHtml(nota)}" placeholder="${escapeHtml(gl({es:'Celíaco, intolerancia a…', ca:'Celíac, intolerància a…', en:'Coeliac, intolerant to…'}))}">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-fino" onclick="tpvAlgLimpiar(${orderId})">${escapeHtml(gl({es:'Quitar todos', ca:'Treure\'ls tots', en:'Clear all'}))}</button>
+      <button class="btn btn-fino" onclick="renderTableOrderModal(${orderId})">${escapeHtml(t('common.cancel'))}</button>
+      <button class="btn btn-fino is-on" onclick="tpvAlgGuardar(${orderId})"><i class="ti ti-check"></i> ${escapeHtml(t('common.save'))}</button>
+    </div>
+  `);
+}
+function tpvAlgToggle(btn){
+  const a = btn.getAttribute('data-a');
+  if(tpvAlgSel.has(a)) tpvAlgSel.delete(a); else tpvAlgSel.add(a);
+  const on = tpvAlgSel.has(a);
+  btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+function tpvAlgGuardar(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.tableAllergenList = ALLERGEN_LIST.filter(a => tpvAlgSel.has(a));
+  order.tableAllergenNote = (document.getElementById('tpv-alg-nota')?.value || '').trim();
+  order.tableAllergens = tableAllergensTexto(order);
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  renderTableOrderModal(orderId);
+}
+function tpvAlgLimpiar(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.tableAllergenList = []; order.tableAllergenNote = ''; order.tableAllergens = '';
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -2027,13 +2088,45 @@ function comandaAllergensText(order, lineas){
   (lineas||[]).forEach(l => lineAllergens(l).forEach(a => set.add(allergenLabel(a))));
   const partes = [];
   if(set.size) partes.push(Array.from(set).join(', '));
-  if(order && order.tableAllergens) partes.push(order.tableAllergens);
+  if(order && tableAllergensTexto(order)) partes.push(tableAllergensTexto(order));
   return partes.join(' · ') || null;
 }
 
 // Si hay algún perfil de impresora de comandas activo, imprime un vale por cada
 // uno de ellos con las líneas recién marchadas que le correspondan según su
 // contenido configurado (comida / bebida / todo el pedido).
+/* LO QUE SALE SOLO TAMBIÉN SE IMPRIME (8/11, auditoría de impresión). La primera tanda de una mesa, un pedido para llevar y las
+   bebidas se marchan al añadirlas, sin pulsar «Marchar»: hasta hoy no pasaban por la impresora de comandas, así que con
+   «Imprimir» activado la cocina no recibía el primer plato y la barra no recibía NINGUNA bebida. Para no sacar un vale por cada
+   toque (seis entrantes = seis vales) se espera 2,5 s desde el último y sale UN vale con todo lo que entró junto. */
+const colaImpresionMarchadas = {};
+function encolarImpresionMarchada(order, linea){
+  if(!order || !linea || !(linea.qty > 0)) return;
+  const modo = (DB.business && DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
+  if(modo !== 'impresion') return;
+  const c = colaImpresionMarchadas[order.id] || (colaImpresionMarchadas[order.id] = {lineas: [], timer: null});
+  const previa = c.lineas.find(l => l.name === linea.name && (l.notas || '') === (linea.notas || '') && !!l.bebida === !!linea.bebida);
+  if(previa) previa.qty += linea.qty; else c.lineas.push(Object.assign({}, linea));
+  clearTimeout(c.timer);
+  c.timer = setTimeout(() => {
+    const lineas = c.lineas; delete colaImpresionMarchadas[order.id];
+    const vivo = DB.tpvOrders.find(o => o.id === order.id) || order;
+    try{ printMarchadasIfEnabled(vivo, lineas); }catch(e){ console.error(e); }
+  }, 2500);
+}
+// Un plato o bebida YA marchado que se anula: cocina/barra reciben un vale «ANULADO» para no preparar (o parar) lo que ya no se pide.
+function printAnulacionIfEnabled(order, line, qty){
+  if(!order || !line || !(qty > 0)) return;
+  const modo = (DB.business && DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
+  if(modo !== 'impresion') return;
+  const printers = (typeof ensureComandaPrinters === 'function' ? ensureComandaPrinters() : []).filter(p => p.activo);
+  const table = order.tableId ? DB.tables.find(t2 => t2.id === order.tableId) : null;
+  const titulo = '⛔ ' + gl({es:'ANULADO', ca:'ANUL·LAT', en:'CANCELLED'}) + ' · ' + (table ? table.name : togoOrderLabel(order));
+  printers.forEach(p => {
+    if(!(p.contenido === 'todo' || (p.contenido === 'comida' ? !line.bebida : line.bebida))) return;
+    printComandaTicket(p.nombre, titulo, [{qty, name: line.name, notas: line.notas || '', bebida: !!line.bebida}], p.anchoTicket, null, p.id);
+  });
+}
 function printMarchadasIfEnabled(order, firedLines){
   if(!firedLines || !firedLines.length) return;
   // El interruptor "Mostrar en pantalla" / "Imprimir" es el que manda: si el
@@ -2062,7 +2155,7 @@ function setComandasCocinaTab(tab){
 
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
-  const food = (order.items||[]).filter(l => !l.bebida);
+  const food = (order.items||[]).filter(l => !esLineaDeBebida(l));
   // Cocina lleva el ciclo completo de cada plato: esperando -> preparación
   // -> listo para recoger -> recogido. Si la comanda se cerrara nada más
   // terminar de cocinar (como antes), desaparecería de "Activas" justo
@@ -2264,12 +2357,15 @@ function avanzarLineasCocina(orderId, idxs){
 // tanda de golpe — el paso final del ciclo, que ya NO puede dar cocina
 // (ver cycleLineEstado/cycleGroupEstado). Mismo patrón de "marcar grupo"
 // que ya usa cocina para sus propios pasos, pero solo para este último.
-function marcarTandaRecogidaDesdeSala(orderId, tanda){
+/* ⚠️ DECISIÓN DEL DUEÑO (8/11): el «recogido» ya NO lo marca Sala, lo marca COCINA. Sala solo marcha las comandas y ve
+   «Listo en el pase»; cuando el camarero se lleva el plato, quien pulsa es la cocina. (Revierte lo del 1/10.) */
+function marcarTandaRecogida(orderId, tanda, vale){ return marcarTandaRecogidaDesdeSala(orderId, tanda, vale); }
+function marcarTandaRecogidaDesdeSala(orderId, tanda, vale){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   const idxs = [];
   (order.items||[]).forEach((line, idx) => {
-    if((line.tanda||'') === tanda && line.estado === 'entregado' && !line.recogidoAt) idxs.push(idx);
+    if((line.tanda||'') === tanda && line.estado === 'entregado' && !line.recogidoAt && (vale == null || (line.vale||1) === Number(vale))) idxs.push(idx);
   });
   if(!idxs.length) return;
   pushKitchenUndo(orderId, idxs);
@@ -2277,9 +2373,11 @@ function marcarTandaRecogidaDesdeSala(orderId, tanda){
   checkComandaCierre(order);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
+  if((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
   withScrollPreserved(() => {
     const active = document.querySelector('.view.active');
     if(active && active.id === 'view-tpv') renderTPV();
+    else if(active && active.id === 'view-comandascocina') renderComandasCocina();
     const overlay = document.getElementById('modal-overlay');
     if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
   });
@@ -2554,6 +2652,7 @@ function paseHtml(allOrders){
       <div class="cz-pase-it ${nivel}">
         <div class="cz-pase-txt"><strong>${escapeHtml(titulo)}</strong><span>${lineas.map(l => `${fmtNum(l.qty)}× ${escapeHtml(l.name)}`).join(' · ')}</span></div>
         <b class="cz-pase-min">${mins}'</b>
+        <button type="button" class="btn btn-sm btn-fino is-on" onclick="marcarPaseRecogido(${order.id})" title="${escapeHtml(gl({es:'Sala se lo ha llevado', ca:'La sala s\'ho ha endut', en:'The floor took it'}))}"><i class="ti ti-check"></i> ${gl({es:'Recogido', ca:'Recollit', en:'Picked up'})}</button>
         <button type="button" class="btn btn-sm btn-fino${avisado ? ' is-on' : ''}" ${avisado ? 'disabled' : ''} onclick="avisarPase(${order.id})"><i class="ti ${avisado ? 'ti-check' : 'ti-bell-ringing'}"></i> ${avisado ? gl({es:'Avisado', ca:'Avisat', en:'Alerted'}) : gl({es:'Avisar', ca:'Avisar', en:'Alert'})}</button>
       </div>`;
   }).join('');
@@ -2562,6 +2661,12 @@ function paseHtml(allOrders){
       <div class="cz-pase-cab"><span><i class="ti ti-bell-ringing"></i> ${gl({es:'En el pase', ca:'Al pas', en:'At the pass'})}</span><small>${total} ${gl({es:total===1?'plato esperando a sala':'platos esperando a sala', ca:total===1?'plat esperant la sala':'plats esperant la sala', en:'waiting for the floor'})}</small></div>
       ${filas}
     </div>`;
+}
+function marcarPaseRecogido(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const tandas = [...new Set((order.items||[]).filter(l => !esLineaDeBebida(l) && l.estado === 'entregado' && !l.recogidoAt).map(l => l.tanda || ''))];
+  tandas.forEach(tn => marcarTandaRecogidaDesdeSala(orderId, tn));
 }
 function avisarPase(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
@@ -2852,7 +2957,7 @@ function ticketAlergiaTextos(order){
     const c = (DB.clients||[]).find(x => x.id === order.clientId);
     if(c && c.allergies) texts.push(c.allergies);
   }
-  if(order.tableAllergens) texts.push(order.tableAllergens);
+  if(tableAllergensTexto(order)) texts.push(tableAllergensTexto(order));
   const set = new Set();
   (order.items||[]).forEach(l => { if(!esLineaDeBebida(l)) lineAllergens(l).forEach(a => set.add(allergenLabel(a))); });
   if(set.size) texts.push(Array.from(set).join(', '));
@@ -2895,6 +3000,10 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
     if(order.clienteNombre) meta.push(order.clienteNombre);
     if(order.time) meta.push(gl({es:'a las ', ca:'a les ', en:'at '}) + order.time);
   }
+  // «Antes: Mesa 4»: si la mesa se cambió hace menos de 45 min, cocina lo ve en el propio ticket (7/11).
+  if(order.mesaAnterior && order.mesaCambiadaAt && (Date.now() - new Date(order.mesaCambiadaAt).getTime()) < 45*60000){
+    meta.unshift(gl({es:'antes: ', ca:'abans: ', en:'was: '}) + order.mesaAnterior);
+  }
   const alergias = ticketAlergiaTextos(order);
   const alergiaHtml = alergias.length ? `
     <div class="kt-alergia"><i class="ti ti-alert-triangle"></i><div><small>${gl({es:'Alergias', ca:'Al·lèrgies', en:'Allergies'})}</small>${escapeHtml(alergias.join(' · '))}</div></div>` : '';
@@ -2935,8 +3044,9 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
         const fam = familiaDeLinea(line, tanda);
         const avanza = line.estado === 'cocina' || line.estado === 'preparando';
         const hecho = line.estado === 'entregado';
+        const porRecoger = hecho && !line.recogidoAt;
         return `
-          <div class="kt-pl${!line.estado ? ' held' : ''}${hecho ? ' hecho' : ''}${avanza ? ' avanza' : ''}"${avanza ? ` onclick="cycleLineEstado(${order.id}, ${idx})" title="${escapeHtml(gl({es:'Tocar para avanzar solo este plato', ca:'Toca per avançar només aquest plat', en:'Tap to advance just this dish'}))}"` : ''}>
+          <div class="kt-pl${!line.estado ? ' held' : ''}${hecho ? ' hecho' : ''}${avanza ? ' avanza' : ''}${porRecoger ? ' por-recoger' : ''}"${avanza ? ` onclick="cycleLineEstado(${order.id}, ${idx})" title="${escapeHtml(gl({es:'Tocar para avanzar solo este plato', ca:'Toca per avançar només aquest plat', en:'Tap to advance just this dish'}))}"` : porRecoger ? ` onclick="markLineRecogida(${order.id}, ${idx})" title="${escapeHtml(gl({es:'Tocar cuando sala haya recogido este plato', ca:'Toca quan la sala hagi recollit aquest plat', en:'Tap once the floor has picked up this dish'}))}"` : ''}>
             <span class="q">${fmtNum(line.qty)}×</span><span class="n">${escapeHtml(line.name)}${line.estado === 'preparando' ? ' <i class="ti ti-flame kt-fuego"></i>' : ''}</span>${fam ? `<span class="fam">${escapeHtml(fam)}</span>` : ''}
           </div>
           ${line.notas && !(bloque.tipo === 'menu' && bloque.nombre && line.notas === `Menú: ${bloque.nombre}`) ? `<div class="kt-nt">${escapeHtml(line.notas)}</div>` : ''}`;
@@ -2945,7 +3055,9 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
         <div class="kt-cu ${est.k}">
           <div class="kt-rail"><span class="kt-dot ${est.dot}${est.k==='rec' ? ' rec' : ''}"></span>${i < tt.length - 1 ? '<span class="kt-line"></span>' : ''}</div>
           <div>
-            ${est.activo
+            ${est.k === 'listo'
+              ? `<button type="button" class="kt-cn avanza recoge" onclick="marcarTandaRecogida(${order.id}, '${escapeJsAttr(tanda)}', ${vale||1})" title="${escapeHtml(gl({es:'Tocar cuando sala lo haya recogido', ca:'Toca quan la sala ho hagi recollit', en:'Tap once the floor has picked it up'}))}"><b>${escapeHtml(nombreCurso(tanda))}</b><i class="ti ti-check kt-go" aria-hidden="true"></i><span class="kt-st l">${gl({es:'Listo en el pase · recogido', ca:'Llest al pas · recollit', en:'At the pass · picked up'})}</span></button>`
+              : est.activo
               ? `<button type="button" class="kt-cn avanza" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(tanda)}', ${vale||1})" title="${escapeHtml(gl({es:'Tocar para avanzar todo el bloque', ca:'Toca per avançar tot el bloc', en:'Tap to advance the whole block'}))}"><b>${escapeHtml(nombreCurso(tanda))}</b><i class="ti ti-chevrons-right kt-go" aria-hidden="true"></i><span class="kt-st ${est.dot}">${est.texto}</span></button>`
               : `<div class="kt-cn"><b>${escapeHtml(nombreCurso(tanda))}</b><span class="kt-st ${est.dot}">${est.texto}</span></div>`}
             ${filas}
@@ -3354,6 +3466,7 @@ function autoSendTakeawayLine(order, line){
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
   decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
   order.cerrada = false;
+  encolarImpresionMarchada(order, {qty: qtyFired, name: line.name, notas: line.notas, bebida: line.bebida, platoId: line.platoId, recipeId: line.recipeId});
 }
 
 // Las bebidas nunca pasan por Cocina (no hay nada que cocinar) ni por el
@@ -3362,9 +3475,11 @@ function autoSendTakeawayLine(order, line){
 // ciclo de estado (pedida → preparando → servida) sin ningún clic previo.
 // marchada siempre igual a qty para que nunca cuenten como "pendiente de
 // marchar" en ningún sitio (contador de la tanda, botón de "Marchar vale"...).
-function syncBebidaLineEstado(line){
+function syncBebidaLineEstado(line, order){
   if(!line || !line.bebida) return;
+  const nuevas = line.qty - (line.marchada || 0);
   line.marchada = line.qty;
+  if(order && nuevas > 0) encolarImpresionMarchada(order, {qty: nuevas, name: line.name, notas: line.notas, bebida: true, platoId: line.platoId, recipeId: line.recipeId});
   if(!line.estado){
     line.estado = 'cocina';
     delete line.recogidoAt;
@@ -3386,6 +3501,7 @@ function autoSendFirstCourse(order, line, tanda){
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
   decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
   order.cerrada = false;
+  encolarImpresionMarchada(order, {qty: qtyFired, name: line.name, notas: line.notas, bebida: line.bebida, platoId: line.platoId, recipeId: line.recipeId});
 }
 
 // Suplemento delivery (js/recipes.js, ficha del plato): importe fijo que se
@@ -3433,7 +3549,7 @@ function addOrderItem(orderId, secId, platoId){
   }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
-  syncBebidaLineEstado(line);
+  syncBebidaLineEstado(line, order);
   warnIfRecipeStockShort(p.recipeId);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -3515,7 +3631,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
-  syncBebidaLineEstado(line);
+  syncBebidaLineEstado(line, order);
   warnIfRecipeStockShort(p.recipeId);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -3539,7 +3655,7 @@ function changeOrderItemQty(orderId, idx, delta){
     reassignMenuBasePrice(order, line);
   } else {
     autoSendTakeawayLine(order, line);
-    syncBebidaLineEstado(line);
+    syncBebidaLineEstado(line, order);
     if(delta > 0) warnIfRecipeStockShort(line.recipeId);
   }
   saveDB();
@@ -3657,6 +3773,7 @@ function confirmVoidLine(){
   // el inventario en cada anulación previa al cobro. Solo se restituyen las
   // raciones directas del plato (p.stock), que sí se descontaron al marchar
   // (decrementDishStock).
+  if(firedQty > 0) printAnulacionIfEnabled(order, line, type === 'remove' ? line.qty : Math.min(Math.abs(delta), firedQty));
   if(type === 'remove'){
     if(firedQty > 0) restockForVoidedItems([{...line, qty: firedQty}], {includeIngredients: false});
     order.items.splice(idx,1);
@@ -3800,6 +3917,7 @@ function reallyCancelSale(saleId, pin){
   }
   sale.status = 'anulada';
   sale.anuladaAt = new Date().toISOString();
+  if(sale.valeId && typeof devolverValeDeVenta === 'function') devolverValeDeVenta(sale);
   emitirRectificativa(sale, t('msg.saleVoidedAfterCharge'));
   const loggedEmployeeId = loggedInEmployeeId();
   const responsable = loggedEmployeeId != null ? DB.employees.find(e => e.id === loggedEmployeeId) : null;
@@ -4024,8 +4142,45 @@ function computeFinalTotal(order){
   // por cobrar en caja — finalTotal sigue siendo el valor total real de la
   // cuenta (para contabilidad), amountDue es lo nuevo.
   const amountPaidOnline = orderAmountPaidOnline(order);
-  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline));
-  return {total, descuentoPct, descuentoImporte, propina, finalTotal, amountPaidOnline, amountDue};
+  // Vale regalo (8/11): parte de la cuenta que cubre un vale de importe elegido en el cobro. Se lee SIEMPRE del saldo vivo del vale y se
+  // recorta a lo que queda por pagar (cambiar el descuento o la propina no deja un vale «de más» aplicado).
+  const valeAplicado = valeAplicadoEnCobro(order, Math.max(0, roundMoney(finalTotal - amountPaidOnline)));
+  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline - valeAplicado));
+  return {total, descuentoPct, descuentoImporte, propina, finalTotal, amountPaidOnline, amountDue, valeAplicado};
+}
+function valeAplicadoEnCobro(order, tope){
+  if(!order || !order.valeRegalo || typeof valesLista !== 'function') return 0;
+  const v = valesLista().find(x => x.id === order.valeRegalo.valeId);
+  if(!v || v.tipo !== 'importe' || !['pendiente', 'parcial'].includes(valeEstado(v))) return 0;
+  return Math.max(0, roundMoney(Math.min(valeSaldo(v), tope)));
+}
+// Busca un vale por su código tal como lo escribe el camarero (sin guiones, sin mayúsculas, sin espacios).
+function valeBuscarPorCodigo(txt){
+  const norm = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const n = norm(txt);
+  if(!n) return null;
+  return valesLista().find(v => norm(v.code) === n) || null;
+}
+function aplicarValeEnCobro(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const el = document.getElementById('payment-vale-code');
+  if(!order || !el) return;
+  const v = valeBuscarPorCodigo(el.value);
+  const aviso = m => showToast(m);
+  if(!v) return aviso(gl({es:'No encuentro ese vale. Revisa el código.', ca:'No trobo aquest val. Revisa el codi.', en:'I cannot find that voucher. Check the code.'}));
+  const est = valeEstado(v);
+  if(est === 'caducado') return aviso(gl({es:'Ese vale está caducado.', ca:'Aquest val està caducat.', en:'That voucher has expired.'}));
+  if(est === 'anulado') return aviso(gl({es:'Ese vale está anulado.', ca:'Aquest val està anul·lat.', en:'That voucher was voided.'}));
+  if(est === 'canjeado') return aviso(gl({es:'Ese vale ya está canjeado del todo.', ca:'Aquest val ja està bescanviat del tot.', en:'That voucher is already fully redeemed.'}));
+  if(v.tipo !== 'importe') return aviso(gl({es:'Es un vale de experiencia: se canjea desde Clientes, no resta importe de la cuenta.', ca:'És un val d\'experiència: es bescanvia des de Clients, no resta import del compte.', en:'This is an experience voucher: redeem it from Customers, it does not take money off the bill.'}));
+  order.valeRegalo = {valeId: v.id};
+  saveDB();
+  renderPaymentModal(orderId);
+}
+function quitarValeEnCobro(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  delete order.valeRegalo; saveDB(); renderPaymentModal(orderId);
 }
 
 function renderFullPaymentTab(order, total){
@@ -4034,7 +4189,12 @@ function renderFullPaymentTab(order, total){
   const propinaOnline = order.propinaPagadaOnline || 0;
   const finalTotal = total - (total*descuentoPct/100) + propina + propinaOnline;
   const amountPaidOnline = orderAmountPaidOnline(order);
-  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline));
+  const valeAplicado = valeAplicadoEnCobro(order, Math.max(0, roundMoney(finalTotal - amountPaidOnline)));
+  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline - valeAplicado));
+  const valeAp = order.valeRegalo ? valesLista().find(x => x.id === order.valeRegalo.valeId) : null;
+  const valeHtml = valeAplicado > 0 && valeAp
+    ? `<div class="pm-vale-ap"><i class="ti ti-gift-card"></i><span><b>${escapeHtml(gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'}))} ${escapeHtml(valeAp.code)}</b> · −${fmtMoney(valeAplicado)}${valeSaldo(valeAp) > valeAplicado + 0.005 ? ` · ${escapeHtml(gl({es:'le quedarán ', ca:'li quedaran ', en:'it will keep '}))}${fmtMoney(roundMoney(valeSaldo(valeAp) - valeAplicado))}` : ''}</span><button type="button" class="btn btn-sm btn-fino" onclick="quitarValeEnCobro(${order.id})">${escapeHtml(t('common.remove') || 'Quitar')}</button></div>`
+    : `<div class="field"><label for="payment-vale-code">${escapeHtml(gl({es:'Vale regalo (código)', ca:'Val regal (codi)', en:'Gift voucher (code)'}))}</label><div style="display:flex;gap:6px"><input type="text" id="payment-vale-code" autocomplete="off" autocapitalize="characters" maxlength="24" placeholder="${escapeHtml(gl({es:'Escribe el código del vale', ca:'Escriu el codi del val', en:'Type the voucher code'}))}" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();aplicarValeEnCobro(${order.id})}"><button type="button" class="btn btn-sm" onclick="aplicarValeEnCobro(${order.id})">${escapeHtml(gl({es:'Aplicar', ca:'Aplicar', en:'Apply'}))}</button></div></div>`;
   // Nombres de quienes ya pagaron su parte por móvil (QR de mesa), para que
   // el camarero sepa de un vistazo quién falta por cobrar, no solo cuánto.
   const payerNames = [...new Set((order.items||[]).filter(l => l.pagadoOnline && l.pagadorNombre).map(l => l.pagadorNombre))];
@@ -4060,8 +4220,9 @@ function renderFullPaymentTab(order, total){
     <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12.5px;margin-bottom:10px">
       <i class="ti ti-credit-card" style="color:var(--ink)"></i> ${t('label.paidOnlinePartial').replace('${amount}', fmtMoney(amountPaidOnline))}${payerNames.length ? ` (${payerNames.map(escapeHtml).join(', ')})` : ''}
     </div>` : ''}
+    ${valeHtml}
     <div class="kpi" style="margin-bottom:12px">
-      <div class="label">${amountPaidOnline > 0 ? t('label.remainingToCharge') : t('label.totalToCharge')}</div>
+      <div class="label">${(amountPaidOnline > 0 || valeAplicado > 0) ? t('label.remainingToCharge') : t('label.totalToCharge')}</div>
       <div class="value" id="payment-final-total">${fmtMoney(amountDue)}</div>
     </div>
     <div class="field">
@@ -4310,7 +4471,7 @@ function finalizeCharge(orderId, opts){
   // es barato de comprobar y evita un doble cobro/doble descuento de stock
   // si en el futuro se añade algo asíncrono antes de marcar 'pagada'.
   if(order.status === 'pagada') return;
-  const {total: subtotal, descuentoPct, descuentoImporte, propina: propinaCaja, finalTotal: total, amountPaidOnline, amountDue} = computeFinalTotal(order);
+  const {total: subtotal, descuentoPct, descuentoImporte, propina: propinaCaja, finalTotal: total, amountPaidOnline, amountDue, valeAplicado} = computeFinalTotal(order);
   // La venta ya se apuntó al llegar el pago (apuntarVentaPagoOnline): cerrar
   // es solo cerrar. Si al recogerlo se añadió algo y queda dinero por cobrar,
   // se rehace la venta entera con lo nuevo (mismo id: no se duplica).
@@ -4340,8 +4501,9 @@ function finalizeCharge(orderId, opts){
   // y el arqueo esperaba en caja un dinero que nunca pasó por ella).
   const pmEl = document.getElementById('payment-method');
   const todoOnline = amountDue <= 0.001 && amountPaidOnline > 0;
+  const todoVale = amountDue <= 0.001 && valeAplicado > 0 && !todoOnline;
   if(!pmEl && !todoOnline) return;   // sin ventana de cobro solo se cierra lo ya pagado
-  const metodoPago = todoOnline ? 'Online' : pmEl.value;
+  const metodoPago = todoOnline ? 'Online' : todoVale ? 'Vale' : pmEl.value;
   // Si el camarero teclea por error un importe entregado menor que lo
   // debido, el cambio mostrado se queda en 0€ (Math.max(0,...) en
   // updatePaymentChange) y no avisa de nada raro — sin este control el
@@ -4364,8 +4526,11 @@ function finalizeCharge(orderId, opts){
   // del "Mixto" — así sale.total sigue siendo el valor real de toda la
   // cuenta (para contabilidad/VeriFactu), pero queda constancia exacta de
   // que una parte ya se cobró antes, no ahora mismo en caja.
-  if(amountPaidOnline > 0){
+  if(amountPaidOnline > 0 || valeAplicado > 0){
     if(!pagos) pagos = amountDue > 0.001 ? [{label: paymentMethodTpvLabel(metodoPago), amount: amountDue, metodoPago}] : [];
+    if(valeAplicado > 0) pagos.push({label: gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'}), amount: valeAplicado, metodoPago: 'Vale'});
+  }
+  if(amountPaidOnline > 0){
     // La señal de la reserva (si la hay) se desglosa aparte del resto de lo
     // ya pagado por móvil, para que quede claro en el ticket/informe de
     // dónde viene cada parte — orderAmountPaidOnline() ya la suma dentro
@@ -4401,6 +4566,10 @@ function finalizeCharge(orderId, opts){
   const saleDate = (order.pagado && order.pagoFecha && amountDue <= 0.001) ? diaLocalDe(order.pagoFecha) : todayStr();
   const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   estamparSenalEnVenta(order, sale);
+  if(valeAplicado > 0){
+    sale.valeId = order.valeRegalo.valeId; sale.valeImporte = valeAplicado;
+    if(typeof canjearValeEnCobro === 'function') canjearValeEnCobro(order.valeRegalo.valeId, valeAplicado, sale);
+  }
   numerarTicket(sale);
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
@@ -4738,8 +4907,13 @@ function confirmSplitPartPayment(orderId, partId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const part = order.splitPayments.find(p=>p.id===partId);
   if(!part) return;
+  const metodoParte = document.getElementById('split-part-method').value;
+  if(metodoParte === 'Efectivo'){
+    const dado = parseFloat(document.getElementById('split-part-cash').value) || 0;
+    if(dado + 0.01 < part.amount){ showToast(t('msg.cashGivenInsufficient')); return; }
+  }
   part.paid = true;
-  part.metodoPago = document.getElementById('split-part-method').value;
+  part.metodoPago = metodoParte;
   saveDB();
   // Cada parte de una cuenta dividida es un cobro real por sí mismo (el
   // comensal entrega su dinero ahí), así que el cajón se abre en cada una.
@@ -4972,7 +5146,21 @@ function confirmTransferTable(orderId){
   const newTableId = parseInt(sel.value);
   if(!newTableId){ showToast(t('msg.selectTable')); return; }
   if(getOpenOrderForTable(newTableId)){ showToast(t('msg.tableBusy')); return; }
+  const mesaAntes = DB.tables.find(t2 => t2.id === order.tableId);
+  const mesaAhora = DB.tables.find(t2 => t2.id === newTableId);
   order.tableId = newTableId;
+  // Cocina tiene el vale en marcha con el nombre de la mesa antigua: se lo dejamos escrito en el propio vale («antes: Mesa 4»)
+  // y se avisa por el chat de Sala, para que nadie lleve el plato a una mesa vacía (7/11).
+  if(mesaAntes && (order.items || []).some(l => l.estado)){
+    order.mesaAnterior = mesaAntes.name; order.mesaCambiadaAt = new Date().toISOString();
+    try{
+      if(Array.isArray(DB.chatMessages)){
+        const authorId = getChatAuthor();
+        DB.chatMessages.push({id: genId(), channel: 'sala', authorId, authorName: getChatAuthorName(authorId),
+          text: `🔁 ${mesaAntes.name} → ${mesaAhora ? mesaAhora.name : ''}`, ts: new Date().toISOString(), urgent: false});
+      }
+    }catch(e){}
+  }
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(orderId);
@@ -4998,7 +5186,29 @@ async function confirmMergeTable(orderId){
   // "Mesa 3 + Mesa 4" en vez de perder esa identidad tras la fusión.
   const fromTableForMerge = DB.tables.find(t2 => t2.id === order.tableId);
   targetOrder.mergedTableNames = [...(targetOrder.mergedTableNames||[]), ...(fromTableForMerge?[fromTableForMerge.name]:[]), ...(order.mergedTableNames||[])];
+  // Los vales de la mesa que desaparece se renumeran DETRÁS de los de la mesa destino: si los dos eran «vale 1», cocina los
+  // veía como UN solo ticket mezclando dos mesas (7/11).
+  const valeBase = targetOrder.valeActual || 1;
+  const valeMaxOrigen = Math.max(order.valeActual || 1, ...(order.items || []).map(l => l.vale || 1));
+  order.items.forEach(l => { l.vale = (l.vale || 1) + valeBase; });
+  targetOrder.valeActual = valeBase + valeMaxOrigen;
   targetOrder.items.push(...order.items);
+  // Alérgenos avisados en la mesa que desaparece: no se pierden, se suman a los de la destino.
+  if(order.tableAllergenList || targetOrder.tableAllergenList || order.tableAllergens || targetOrder.tableAllergens){
+    const lista = new Set([...(targetOrder.tableAllergenList || []), ...(order.tableAllergenList || [])]);
+    const notas = [targetOrder.tableAllergenNote || (!targetOrder.tableAllergenList ? targetOrder.tableAllergens : ''), order.tableAllergenNote || (!order.tableAllergenList ? order.tableAllergens : '')].filter(Boolean);
+    targetOrder.tableAllergenList = [...lista];
+    targetOrder.tableAllergenNote = [...new Set(notas)].join(', ');
+    targetOrder.tableAllergens = tableAllergensTexto(targetOrder);
+  }
+  if(!targetOrder.clientId && order.clientId){ targetOrder.clientId = order.clientId; targetOrder.clienteNombre = targetOrder.clienteNombre || order.clienteNombre; }
+  if(!targetOrder.reservationId && order.reservationId) targetOrder.reservationId = order.reservationId;
+  if(Array.isArray(order.incidencias) && order.incidencias.length) targetOrder.incidencias = [...(targetOrder.incidencias || []), ...order.incidencias];
+  if(!targetOrder.recibidoEnCocinaAt && order.recibidoEnCocinaAt) targetOrder.recibidoEnCocinaAt = order.recibidoEnCocinaAt;
+  targetOrder.propinaPagadaOnline = roundMoney((targetOrder.propinaPagadaOnline || 0) + (order.propinaPagadaOnline || 0));
+  // Un reparto de cuenta generado (sin ninguna parte cobrada) quedaría con importes de antes de la fusión: se descarta.
+  delete targetOrder.splitPayments; delete targetOrder.splitMode;
+  targetOrder.cerrada = false;
   targetOrder.tandas = [...new Set([...(targetOrder.tandas||[]), ...(order.tandas||[])])];
   targetOrder.pax = (targetOrder.pax||0) + (order.pax||0);
   if(!targetOrder.camareroId && order.camareroId) targetOrder.camareroId = order.camareroId;
@@ -5635,8 +5845,23 @@ function buildTicketHtml(sale, opts={}){
   `;
 }
 
+/* El TICKET de cliente respeta cómo está configurada la impresora de ESTE aparato (8/11, auditoría de impresión): antes «Imprimir
+   ticket» abría siempre una ventana emergente (la bloquean las tablets y en iPad deja una pestaña de la que no se vuelve) e ignoraba
+   el ancho del rollo y el Bluetooth. Ahora: impresora térmica ya emparejada → por ahí; si no, el iframe del navegador con el
+   papel del rollo (58/80 mm). La FACTURA completa sigue siendo una hoja A4 en ventana aparte. */
+function imprimirRollo(html, textoPlano, titulo){
+  const ancho = (typeof getTicketPaperWidth === 'function') ? getTicketPaperWidth() : 80;
+  const emparejada = typeof getThermalPrinterName === 'function' && getThermalPrinterName('ticket') && typeof getPrintMode === 'function' && getPrintMode('ticket') === 'bluetooth';
+  if(emparejada && textoPlano) return printToThermalPrinter(textoPlano, 'ticket', {ancho, html, titulo});
+  return printViaBrowser(html, ancho, titulo, {html: true});
+}
 function printTicket(sale, opts={}){
   const html = buildTicketHtml(sale, opts);
+  if(!opts.factura){
+    let texto = '';
+    try{ texto = buildTicketText(sale, opts); }catch(e){}
+    return imprimirRollo(html, texto, t('ticket.printTicket'));
+  }
   const win = window.open('', '_blank', 'width=360,height=600');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   // ⚠️ El QR de reseña de Google (y el de VeriFactu) se generan pidiendo la
@@ -5713,6 +5938,33 @@ function emitirRectificativa(sale, motivo){
     rectifica: (sale.facturaCompleta && sale.facturaCompleta.num) || sale.ticketNum || sale.facturaNum || String(sale.id),
     motivo: motivo || '',
   };
+}
+/* LA CUENTA ANTES DE COBRAR (8/11): el cliente pide «la cuenta» y hasta hoy no había forma de sacársela impresa sin cobrar.
+   No es una factura ni un ticket de venta (no lleva número ni IVA desglosado): dice «CUENTA», lo consumido, el descuento y el total. */
+function printCuenta(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !(order.items||[]).length){ showToast(t('empty.orderEmpty')); return; }
+  const b = DB.business || {};
+  const table = order.tableId ? DB.tables.find(x => x.id === order.tableId) : null;
+  const nombre = table ? orderTableDisplayName(order, table) : togoOrderLabel(order);
+  const total = orderTotal(order);
+  const dto = order.descuentoPct ? roundMoney(total * order.descuentoPct / 100) : 0;
+  const final = roundMoney(total - dto);
+  const filas = order.items.map(l => `<tr><td style="padding:3px 4px 3px 0;white-space:nowrap;vertical-align:top">${fmtNum(l.qty)}×</td><td style="padding:3px 4px;vertical-align:top">${escapeHtml(l.name)}</td><td style="padding:3px 0 3px 4px;text-align:right;white-space:nowrap;vertical-align:top">${fmtMoney(l.price*l.qty)}</td></tr>`).join('');
+  const html = `
+    <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:4px">${escapeHtml(b.name || '')}</div>
+    <div style="text-align:center;font-weight:700;letter-spacing:.12em;border:1px solid #000;padding:3px 0;margin:4px 0 6px">${escapeHtml(gl({es:'CUENTA', ca:'COMPTE', en:'BILL'}))}</div>
+    <div style="font-size:12px;margin-bottom:6px">${escapeHtml(nombre)}${order.pax ? ' · ' + order.pax + ' ' + escapeHtml(t('common.persAbbr')) : ''} · ${escapeHtml(new Date().toLocaleString(localeActual(), {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}))}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px"><tbody>${filas}</tbody></table>
+    <div style="border-top:1px dashed #000;margin:6px 0 4px"></div>
+    ${dto ? `<div style="display:flex;justify-content:space-between;font-size:12px"><span>${escapeHtml(t('label.discount'))} (${order.descuentoPct}%)</span><span>-${fmtMoney(dto)}</span></div>` : ''}
+    <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px"><span>${escapeHtml(t('common.total'))}</span><span>${fmtMoney(final)}</span></div>
+    <div style="text-align:center;font-size:11px;margin-top:8px">${escapeHtml(gl({es:'Esta cuenta no es una factura.', ca:'Aquest compte no és una factura.', en:'This bill is not an invoice.'}))}</div>`;
+  const ancho = 30;
+  const texto = [b.name || '', gl({es:'CUENTA', ca:'COMPTE', en:'BILL'}), nombre, '-'.repeat(ancho),
+    ...order.items.map(l => `${fmtNum(l.qty)}x ${l.name}`.slice(0, ancho - 9).padEnd(ancho - 8) + fmtMoney(l.price*l.qty).padStart(8)),
+    '-'.repeat(ancho), `${t('common.total')}: ${fmtMoney(final)}`, gl({es:'Esta cuenta no es una factura.', ca:'Aquest compte no és una factura.', en:'This bill is not an invoice.'})].join('\n');
+  imprimirRollo(html, texto, gl({es:'Cuenta', ca:'Compte', en:'Bill'}));
 }
 function printRectificativa(saleId){
   const sale = (DB.sales||[]).find(s => s.id === saleId);

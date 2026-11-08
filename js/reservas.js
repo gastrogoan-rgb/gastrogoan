@@ -174,13 +174,17 @@ function rvFilaHtml(r){
   else if(r.status === 'lista_espera') principal = `<button type="button" class="btn btn-sm btn-fino is-on" onclick="setReservationStatus(${r.id}, 'confirmada')" title="${escapeHtml(t('btn.confirmAnyway'))}"><i class="ti ti-check"></i> ${escapeHtml(t('btn.confirmAnyway'))}</button>`;
   else if(r.status === 'confirmada' || r.status === 'completada') principal = `<button type="button" class="btn btn-sm btn-fino${llegada ? ' is-on' : ''}" aria-pressed="${llegada}" onclick="toggleReservaLlegada(${r.id})"><i class="ti ti-${llegada ? 'door-enter' : 'check'}"></i> ${escapeHtml(t('btn.arrived'))}</button>`;
   else if(r.status === 'no_show') principal = `<button type="button" class="btn btn-sm btn-fino" onclick="undoReservationNoShow(${r.id})"><i class="ti ti-arrow-back-up"></i> ${escapeHtml(t('btn.undoNoShow'))}</button>`;
-  const menu = ggMenuAcciones([
+  const acciones = [
     {icono:'ti-edit', texto: t('common.edit'), fn:`openReservationModal(${r.id})`},
     r.status === 'confirmada' && rvTelefono(r) ? {icono:'ti-bell', texto: t('btn.sendReminder'), fn:`openReservationReminderModal(${r.id})`} : null,
     (r.status === 'confirmada' || r.status === 'pendiente') && r.depositRequired && !r.depositConfirmed ? {icono:'ti-cash-banknote', texto: t('deposit.confirmHint'), fn:`confirmReservationDeposit(${r.id})`} : null,
     r.status === 'confirmada' && !llegada ? {icono:'ti-user-x', texto: t('status.noShow'), fn:`markReservationNoShow(${r.id})`, peligro:true} : null,
     (r.status === 'confirmada' || r.status === 'pendiente' || r.status === 'lista_espera') ? {icono:'ti-circle-x', texto: t('common.cancel'), fn:`cancelReservation(${r.id})`, peligro:true, owner:true} : null,
-  ].filter(Boolean));
+  ].filter(Boolean);
+  /* El «⋯» solo hace falta donde no cabe todo (móvil): en PC y tablet las acciones van sueltas, con su rótulo (8/11). Se pintan las dos
+     versiones y el CSS enseña una u otra, así un cambio de ventana o de giro de la tablet no obliga a repintar. */
+  const menu = `<span class="rv-acc-menu">${ggMenuAcciones(acciones)}</span>`;
+  const sueltas = `<span class="rv-acc-sueltas">${acciones.map(a => `<button type="button" class="btn btn-fino mn-btn${a.peligro ? ' is-off' : ''}${a.owner ? ' owner-only' : ''}" data-tip="${escapeHtml(a.texto)}" aria-label="${escapeHtml(a.texto)}" onclick="${a.fn}"><i class="ti ${a.icono}"></i></button>`).join('')}</span>`;
   const chips = [
     `<span class="pm-et"><i class="ti ti-users"></i> ${r.people}</span>`,
     table ? `<span class="pm-et"><i class="ti ti-armchair"></i> ${escapeHtml(table.name)}</span>` : (!inactiva ? `<span class="pm-et cl-et-alergia"><i class="ti ti-armchair-off"></i> ${escapeHtml(t('label.notAssigned'))}</span>` : ''),
@@ -196,7 +200,7 @@ function rvFilaHtml(r){
       <div class="pm-ets">${chips}</div>
       ${r.notes ? `<p class="rv-nota"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</p>` : ''}
     </div>
-    <div class="rv-acc">${tel ? `<a class="btn btn-fino mn-btn" data-tip="WhatsApp" aria-label="WhatsApp ${escapeHtml(rvNombre(r))}" href="https://wa.me/${tel}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i></a>` : ''}${principal}${menu}</div>
+    <div class="rv-acc">${tel ? `<a class="btn btn-fino mn-btn" data-tip="WhatsApp" aria-label="WhatsApp ${escapeHtml(rvNombre(r))}" href="https://wa.me/${tel}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i></a>` : ''}${principal}${sueltas}${menu}</div>
   </article>`;
 }
 function renderReservasDia(){
@@ -223,7 +227,7 @@ function renderReservasDia(){
   }).join('')}</div>` : '';
 
   const lista = !todas.length
-    ? `<div class="empty es-vacio"><i class="ti ti-calendar-event"></i>${escapeHtml(t('empty.noReservationsDay'))}<div><button type="button" class="btn btn-fino is-on" onclick="openReservationModal()"><i class="ti ti-plus"></i> ${escapeHtml(t('btn.newReservation'))}</button></div></div>`
+    ? `<div class="empty es-vacio"><i class="ti ti-calendar-event"></i>${escapeHtml(t('empty.noReservationsDay'))}</div>`
     : !items.length ? `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${escapeHtml(t('common.noResults'))}</div>`
     : `<div class="rv-lista">${items.map(rvFilaHtml).join('')}</div>`;
 
@@ -282,11 +286,11 @@ function renderReservasSemana(){
           ${ocupan.length ? `<span class="rv-sem-n" title="${escapeHtml(t('common.people'))}">${ocupan.length} · ${pax}<i class="ti ti-users"></i></span>` : ''}
         </header>
         <div class="pm-sem-lista">
-          ${todas.slice(0, 8).map(r => { const baja = !rvOcupa(r); return `
-            <button type="button" class="pm-chip rv-chip${baja ? ' is-hecha' : ''}${r.llegada ? ' es-dto' : ''}" onclick="openReservationModal(${r.id})">
-              <b class="rv-chip-hora">${escapeHtml(r.time || '')}</b><span>${escapeHtml(rvNombre(r))} <em>${r.people}</em></span>
+          ${todas.slice(0, 6).map(r => { const baja = !rvOcupa(r); return `
+            <button type="button" class="pm-chip rv-chip${baja ? ' is-hecha' : ''}${r.llegada ? ' es-dto' : ''}" title="${escapeHtml(rvNombre(r))} · ${r.people}" onclick="openReservationModal(${r.id})">
+              <b class="rv-chip-hora">${escapeHtml(r.time || '')}</b><span class="rv-chip-nom">${escapeHtml(rvNombre(r))}</span><em>${r.people}</em>
             </button>`; }).join('')}
-          ${todas.length > 8 ? `<button type="button" class="pm-chip rv-chip" onclick="goToReservasDia('${ds}')"><span>+${todas.length - 8}</span></button>` : ''}
+          ${todas.length > 6 ? `<button type="button" class="pm-chip rv-chip rv-chip-mas" onclick="goToReservasDia('${ds}')"><span>${escapeHtml(gl({es:`Ver las ${todas.length - 6} restantes`, ca:`Veure les ${todas.length - 6} restants`, en:`See the other ${todas.length - 6}`}))}</span></button>` : ''}
           <button type="button" class="pm-mas" aria-label="${escapeHtml(t('btn.newReservation'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="reservasDate='${ds}';openReservationModal()"><i class="ti ti-plus"></i></button>
         </div>
       </section>`;
