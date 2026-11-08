@@ -7728,6 +7728,15 @@ function initPublicRequestsListener(){
         // reservar por la web (se les pide llamar): si alguno llega igual
         // (web vieja en caché, consola), queda pendiente.
         void AUTO_CONFIRM_MARGIN;
+        // ⚠️ NORMA DEL DUEÑO (8/11): si hay sitio, la reserva se confirma SOLA. Un negocio que aún no ha configurado ninguna mesa no
+        // puede asignar mesa, pero tampoco hay nada que impida reservar: antes se quedaba «pendiente» para siempre y el cliente leía
+        // «te lo han de confirmar». Solo cuenta el aforo del turno, si lo hay.
+        let cabeSinMesas = false;
+        if(confirmedTableId == null && !(DB.tables || []).some(tb => tb.plazas)){
+          cabeSinMesas = true;
+          const turnoIdx0 = getTurnoIndexForTime(req.date, req.time), aforo0 = parseInt(DB.business.aforo) || 0;
+          if(turnoIdx0 !== null && aforo0 && getReservedPeopleForTurno(req.date, turnoIdx0, null) + (req.people || 0) > aforo0) cabeSinMesas = false;
+        }
         const confirmManualDesde = parseInt(DB.business.reservaConfirmManualDesde) || 0;
         // La señal la calcula el negocio, no el navegador (que podía mandar
         // 0,01 € o saltársela). Si el negocio la exige y cobra con tarjeta
@@ -7744,7 +7753,7 @@ function initPublicRequestsListener(){
           // se queda "pendiente" hasta que llegue el evento pago_confirmado real del
           // banco (más abajo en esta función). Si no, un cliente que abandona el pago
           // a mitad se quedaría con la mesa/aforo bloqueados como si hubiera pagado.
-          tableId: confirmedTableId, notes: req.notes || '', status: (confirmedTableId && !req.depositRequired && !exigeConfirmacionManual) ? 'confirmada' : 'pendiente',
+          tableId: confirmedTableId, notes: req.notes || '', status: ((confirmedTableId || cabeSinMesas) && !req.depositRequired && !exigeConfirmacionManual) ? 'confirmada' : 'pendiente',
           referral: req.referral || '',
           depositRequired: req.depositRequired || false, depositAmount: req.depositRequired ? (senalPropia ? senalPropia.toFixed(2) : (req.depositAmount || '')) : '', depositConfirmed: false,
           senalSaltada: senalSaltada || undefined,

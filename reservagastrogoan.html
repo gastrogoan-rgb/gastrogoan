@@ -760,6 +760,118 @@
   .trk-bar span.hecho,.trk-step.hecho .trk-dot{background:var(--olive);border-color:var(--olive)}
   .trk-step.hecho:not(:last-child)::after{background:var(--olive)}
   .wz-nav .btn{min-width:0;white-space:normal;line-height:1.2}
+
+  /* ═══ ENTRADA «GRAN CADENA» (8/11): lo primero que ve el cliente. Titular grande, estado de apertura, y tres mosaicos con presencia ═══ */
+  .wrap:has(.svc-hero){max-width:1040px}
+  .svc-hero{padding-top:4px}
+  .hero-top{margin:6px 0 22px}
+  .hero-open{display:inline-flex;align-items:center;gap:9px;min-height:36px;padding:0 14px;border:1px solid var(--border);background:var(--surface);font:600 12px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--ink)}
+  .hero-open i{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+  .hero-open.is-on i{background:#2E9E5B}
+  .hero-open.is-off i{background:var(--red)}
+  .hero-h{margin:16px 0 10px;font-size:clamp(34px,9vw,64px);line-height:1;font-weight:800;letter-spacing:-.035em;color:var(--ink);text-wrap:balance}
+  .hero-sub{margin:0;max-width:44ch;font-size:clamp(15px,2.3vw,18px);line-height:1.45;color:var(--muted)}
+  .svc-grid{display:grid;gap:12px;grid-template-columns:1fr}
+  .svc-tile{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"disc tx go" "meta meta meta";align-items:center;gap:10px 16px;width:100%;text-align:left;padding:20px 18px 16px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .svc-tile::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;background:var(--olive)}
+  .svc-tile.is-first{background:var(--olive);border-color:var(--olive);color:#fff}
+  .svc-tile.is-first::before{background:rgba(255,255,255,.35)}
+  .svc-disc{grid-area:disc;display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:var(--green-l);color:var(--olive)}
+  .svc-tile.is-first .svc-disc{background:rgba(255,255,255,.18);color:#fff}
+  .svc-tile .svc-ic{width:30px;height:30px}
+  .svc-tile .svc-tx{grid-area:tx}
+  .svc-tile .svc-t{font-size:clamp(21px,5.4vw,28px);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+  .svc-tile .svc-d{margin-top:4px;font-size:14px;line-height:1.4;color:var(--muted)}
+  .svc-tile.is-first .svc-d{color:rgba(255,255,255,.88)}
+  .svc-meta{grid-area:meta;display:flex;flex-wrap:wrap;gap:6px}
+  .svc-meta span{padding:7px 9px;border:1px solid var(--border);background:var(--paper);font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--body)}
+  .svc-tile.is-first .svc-meta span{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.32);color:#fff}
+  .svc-cta{grid-area:go;display:flex;align-items:center;gap:10px;font:700 12px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase}
+  .svc-cta span{display:none}
+  .svc-cta b{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--ink);color:#fff;font-size:18px;font-weight:700;transition:transform .25s cubic-bezier(.2,.8,.2,1),background-color .2s}
+  .svc-tile.is-first .svc-cta b{background:#fff;color:var(--olive)}
+  .svc-tile:hover{box-shadow:0 14px 30px rgba(28,26,23,.14);border-color:var(--olive)}
+  .svc-tile:hover .svc-cta b{transform:translateX(4px);background:var(--olive)}
+  .svc-tile.is-first:hover .svc-cta b{background:#fff;color:var(--ink)}
+  .svc-tile:active{transform:translateY(1px)}
+  .svc-tile:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+  @media (min-width:760px){
+    .svc-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+    .svc-tile{grid-template-columns:1fr;grid-template-areas:"disc" "tx" "meta" "go";grid-template-rows:auto auto 1fr auto;align-items:start;min-height:280px;padding:30px 26px 22px;gap:16px}
+    .svc-disc{width:76px;height:76px}
+    .svc-tile .svc-ic{width:38px;height:38px}
+    .svc-tile .svc-d{font-size:15px}
+    .svc-cta{align-self:end;justify-content:space-between;margin-top:auto;padding-top:16px;border-top:1px solid rgba(28,26,23,.14)}
+    .svc-tile.is-first .svc-cta{border-top-color:rgba(255,255,255,.3)}
+    .svc-cta span{display:inline}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .svc-tile{transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s,border-color .2s;animation:wzRise .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * .08s + .1s)}
+    .svc-tile:hover{transform:translateY(-4px)}
+    .svc-tile:hover .svc-disc{transform:scale(1.07) rotate(-4deg)}
+    .svc-disc{transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
+    .hero-open.is-on i{animation:heroPulso 2s ease-out infinite}
+    @keyframes heroPulso{0%{box-shadow:0 0 0 0 rgba(46,158,91,.55)}70%{box-shadow:0 0 0 9px rgba(46,158,91,0)}100%{box-shadow:0 0 0 0 rgba(46,158,91,0)}}
+    .hero-h,.hero-sub,.hero-open{animation:wzRise .5s cubic-bezier(.2,.8,.2,1) both}
+    .hero-h{animation-delay:.05s} .hero-sub{animation-delay:.1s}
+  }
+
+  /* ═══ PLATOS COMPACTOS CON «i», CONTROL SIN SOLAPES, MENÚ POR PASOS Y HORAS (8/11) ═══ */
+  .menu-item.dc,.menu-item.dc.en{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n i" "d d" "p c";align-items:start;column-gap:6px;row-gap:2px;padding:10px 8px 8px 11px;min-height:84px;margin:0}
+  .dc-main{position:absolute;inset:0;z-index:1;width:auto;min-height:0;padding:0;margin:0;background:transparent}
+  .dc-n{grid-area:n;padding-right:0;font-size:14px;pointer-events:none;-webkit-line-clamp:2}
+  .dc-d{grid-area:d;pointer-events:none;font-size:12px;-webkit-line-clamp:2}
+  .dc-p{grid-area:p;align-self:end;margin:0;padding:6px 0 0;pointer-events:none;font-size:13.5px}
+  .dc-i{grid-area:i;justify-self:end;position:relative;z-index:2;width:26px;height:26px;margin:-2px 0 0;padding:0;border:1.5px solid var(--olive);border-radius:50%;background:transparent;color:var(--olive);font:italic 700 13px/1 Georgia,'Times New Roman',serif;cursor:pointer}
+  .dc-i::after{content:'';position:absolute;inset:-9px}
+  .dc-i:hover,.dc-i:focus-visible{background:var(--olive);color:#fff;outline:none}
+  .dc-ctl{grid-area:c;align-self:end;position:relative;z-index:2;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .dc-minus,.dc-q{position:static}
+  .dc-minus{width:32px;height:32px;border:1px solid var(--ink);font-size:18px}
+  .dc-minus::after{content:'';position:absolute;inset:-6px}
+  .dc-minus{position:relative}
+  .dc-q{display:none;top:auto;right:auto;min-width:32px;height:32px;font-size:13px}
+  .menu-item.dc.en .dc-q{display:inline-flex}
+  /* opción de menú: «i» y su información desplegada */
+  .o-i{flex:none;position:relative;width:28px;height:28px;margin-left:auto;padding:0;border:1.5px solid var(--olive);border-radius:50%;background:transparent;color:var(--olive);font:italic 700 14px/1 Georgia,'Times New Roman',serif;cursor:pointer}
+  .o-i::after{content:'';position:absolute;inset:-8px}
+  .o-p+.o-i{margin-left:8px}
+  .o-inf{margin:-2px 0 8px;padding:10px 12px;border:1px solid var(--border);border-top:0;background:var(--paper)}
+  .inf-d{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--body)}
+  .inf-al{padding:12px 14px;border:1px solid var(--border);background:var(--paper)}
+  .inf-al.has{background:var(--red-l);border-color:#E3C8BF}
+  .inf-t{font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin-bottom:8px}
+  .inf-al ul{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px;padding:0;list-style:none}
+  .inf-al li{padding:6px 10px;background:var(--surface);border:1px solid var(--ink);font-size:13.5px;font-weight:600;color:var(--ink)}
+  .inf-al p{margin:0;font-size:13.5px;line-height:1.45;color:var(--body)}
+  .inf-al .inf-n{margin-top:8px;font-size:12.5px;color:var(--muted)}
+  /* menú por pasos */
+  .mn-prog{height:4px;margin-top:14px;background:var(--border)}
+  .mn-prog i{display:block;height:100%;width:0;background:var(--olive);transition:width .3s cubic-bezier(.2,.8,.2,1)}
+  .sh-f2{display:flex;gap:10px}
+  .sh-f2 .btn{width:auto;flex:1 1 0;min-width:0;margin:0}
+  .sh-f2 #mn-back{flex:0 0 96px}
+  .sh-f2 #mn-back[hidden]{display:none}
+  .sh-f2 #mn-add:disabled{opacity:.45;cursor:not-allowed}
+  .sh-g:not([hidden]){animation:wzRise .3s cubic-bezier(.2,.8,.2,1) both}
+  /* hora: solo las viables, en rejilla */
+  .slots-lbl{margin:2px 0 8px;font-weight:600;color:var(--ink);font-size:14px}
+  .slots{grid-template-columns:repeat(auto-fill,minmax(78px,1fr));max-height:300px;overflow-y:auto;padding:2px;margin-bottom:14px}
+  .slots-vacio{grid-column:1/-1;margin:0;padding:12px 14px;background:var(--red-l);border:1px solid #E3C8BF;color:var(--red);font-size:14px}
+
+  /* ═══ CABECERA CON PRESENCIA (8/11): filete de marca arriba y los datos del local como fichas pulsables ═══ */
+  header{position:relative}
+  header::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;background:var(--olive)}
+  /* En pantallas de pedido/reserva la cabecera sigue compacta en móvil: las fichas solo en la entrada o en pantallas anchas */
+  @media (min-width:760px){ header .sub{gap:8px 8px} }
+  body:has(.svc-hero) header .sub{gap:8px 8px}
+  @media (min-width:760px){
+    header .sub .hi, header .sub a.hi{padding:7px 11px;min-height:36px;border:1px solid var(--hd-line);background:color-mix(in srgb,var(--hd-bg) 70%,#fff);text-transform:uppercase;letter-spacing:.06em;font-size:11px;line-height:1.2;transition:border-color .2s,background-color .2s}
+    header.hd-oscuro .sub .hi{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22)}
+    header .sub a.hi:hover{text-decoration:none;border-color:var(--olive);background:var(--surface)}
+    header.hd-oscuro .sub a.hi:hover{background:rgba(255,255,255,.16);border-color:#fff}
+  }
+  header .sub a.hi-pin::after{content:'↗';font-size:12px;opacity:.7}
 </style>
 </head>
 <body>
@@ -1166,8 +1278,9 @@ const I18N_WZ = {
     'wz.o.addr.hint':'Calle, número, piso y puerta.',
     'wz.m.eyebrow':'Menú','wz.m.step':'Paso %d de %d','wz.m.add':'Añadir al pedido','wz.m.pick':'Elige una opción de cada apartado.',
     'wz.m.groups':'%d apartados','wz.x.extras':'Extras',
-    'svc.eye':'Reservas y pedidos','svc.title':'¿Qué quieres hacer?','svc.sub':'Elige una opción y te guiamos paso a paso.','svc.reserva':'Elige día y hora para tu mesa.','svc.takeaway':'Pídelo y recógelo en el local.','svc.delivery':'Te lo llevamos a casa.','svc.mesa':'Pide desde tu mesa.','svc.change':'Cambiar','svc.leave':'¿Volver a elegir servicio? Perderás lo que llevas hasta ahora.','wz.tray':'Tu selección','wz.tray.open':'Ver tu selección','wz.o.nodishes':'Nada por aquí todavía.',
-    'wz.o.slots':'Elige una hora','wz.o.asap':'Cuanto antes',
+    'hdr.comoLlegar':'Cómo llegar','svc.cerradoHoy':'Hoy cerrado','svc.abiertoHasta':'Abierto ahora · hasta las %s','svc.abreA':'Cerrado ahora · abre a las %s','svc.cta':'Empezar','svc.m.listoEn':'Listo en ~%d min','svc.m.minimo':'Mínimo %s','svc.m.envio':'Envío %s','svc.m.envioGratis':'Envío gratis','svc.m.gratisDesde':'Gratis desde %s','svc.m.alInstante':'Confirmación al instante',
+    'svc.eye':'Reservas y pedidos','svc.title':'¿Qué te apetece hoy?','svc.sub':'Elige una opción y te guiamos paso a paso.','svc.reserva':'Elige día y hora para tu mesa.','svc.takeaway':'Pídelo y recógelo en el local.','svc.delivery':'Te lo llevamos a casa.','svc.mesa':'Pide desde tu mesa.','svc.change':'Cambiar','svc.leave':'¿Volver a elegir servicio? Perderás lo que llevas hasta ahora.','wz.tray':'Tu selección','wz.tray.open':'Ver tu selección','wz.o.nodishes':'Nada por aquí todavía.',
+    'wz.o.hora.takeaway':'Hora de recogida','wz.o.hora.delivery':'Hora de entrega','wz.o.sinHoras':'No quedan horas disponibles para este día. Elige otro día.','info.eye':'Información del plato','info.de':'Información y alérgenos de %s','info.alergenos':'Alérgenos','info.sinAlergenos':'Este plato no tiene alérgenos declarados.','info.nota':'Si tienes una alergia o intolerancia grave, avisa al restaurante al hacer el pedido.','menu.siguiente':'Siguiente','wz.o.slots':'Elige una hora','wz.o.asap':'Cuanto antes',
     'email.reserva.hint':'Lo usamos para encontrar tu reserva y para que el restaurante pueda escribirte si hace falta.',
     'email.pedido.hint':'Opcional. El restaurante puede escribirte si hay algún problema con tu pedido.'
   },
@@ -1193,8 +1306,9 @@ const I18N_WZ = {
     'wz.o.addr.hint':'Street, number, floor and door.',
     'wz.m.eyebrow':'Menu','wz.m.step':'Step %d of %d','wz.m.add':'Add to order','wz.m.pick':'Choose one option from each part.',
     'wz.m.groups':'%d parts','wz.x.extras':'Extras',
-    'svc.eye':'Bookings and orders','svc.title':'What would you like to do?','svc.sub':'Pick an option and we will guide you step by step.','svc.reserva':'Pick a day and time for your table.','svc.takeaway':'Order it and collect it at the restaurant.','svc.delivery':'We bring it to your door.','svc.mesa':'Order from your table.','svc.change':'Change','svc.leave':'Go back to choose a service? You will lose what you have so far.','wz.tray':'Your selection','wz.tray.open':'See your selection','wz.o.nodishes':'Nothing here yet.',
-    'wz.o.slots':'Choose a time','wz.o.asap':'As soon as possible',
+    'hdr.comoLlegar':'Directions','svc.cerradoHoy':'Closed today','svc.abiertoHasta':'Open now · until %s','svc.abreA':'Closed now · opens at %s','svc.cta':'Start','svc.m.listoEn':'Ready in ~%d min','svc.m.minimo':'Minimum %s','svc.m.envio':'Delivery %s','svc.m.envioGratis':'Free delivery','svc.m.gratisDesde':'Free over %s','svc.m.alInstante':'Instant confirmation',
+    'svc.eye':'Bookings and orders','svc.title':'What are you craving?','svc.sub':'Pick an option and we will guide you step by step.','svc.reserva':'Pick a day and time for your table.','svc.takeaway':'Order it and collect it at the restaurant.','svc.delivery':'We bring it to your door.','svc.mesa':'Order from your table.','svc.change':'Change','svc.leave':'Go back to choose a service? You will lose what you have so far.','wz.tray':'Your selection','wz.tray.open':'See your selection','wz.o.nodishes':'Nothing here yet.',
+    'wz.o.hora.takeaway':'Pickup time','wz.o.hora.delivery':'Delivery time','wz.o.sinHoras':'No times left for this day. Pick another day.','info.eye':'Dish information','info.de':'Information and allergens for %s','info.alergenos':'Allergens','info.sinAlergenos':'No allergens declared for this dish.','info.nota':'If you have a severe allergy or intolerance, tell the restaurant when you order.','menu.siguiente':'Next','wz.o.slots':'Choose a time','wz.o.asap':'As soon as possible',
     'email.reserva.hint':'We use it to find your booking and so the restaurant can write to you if needed.',
     'email.pedido.hint':'Optional. The restaurant may write to you if there is any problem with your order.'
   },
@@ -1220,8 +1334,9 @@ const I18N_WZ = {
     'wz.o.addr.hint':'Carrer, número, pis i porta.',
     'wz.m.eyebrow':'Menú','wz.m.step':'Pas %d de %d','wz.m.add':'Afegeix a la comanda','wz.m.pick':'Tria una opció de cada apartat.',
     'wz.m.groups':'%d apartats','wz.x.extras':'Extres',
-    'svc.eye':'Reserves i comandes','svc.title':'Què vols fer?','svc.sub':'Tria una opció i et guiem pas a pas.','svc.reserva':'Tria dia i hora per a la teva taula.','svc.takeaway':'Demana-ho i recull-ho al local.','svc.delivery':'T\'ho portem a casa.','svc.mesa':'Demana des de la teva taula.','svc.change':'Canvia','svc.leave':'Tornar a triar servei? Perdràs el que portes fins ara.','wz.tray':'La teva selecció','wz.tray.open':'Veure la teva selecció','wz.o.nodishes':'Encara no hi ha res.',
-    'wz.o.slots':'Tria una hora','wz.o.asap':'Com abans millor',
+    'hdr.comoLlegar':'Com arribar','svc.cerradoHoy':'Avui tancat','svc.abiertoHasta':'Obert ara · fins a les %s','svc.abreA':'Tancat ara · obre a les %s','svc.cta':'Començar','svc.m.listoEn':'A punt en ~%d min','svc.m.minimo':'Mínim %s','svc.m.envio':'Enviament %s','svc.m.envioGratis':'Enviament gratuït','svc.m.gratisDesde':'Gratis des de %s','svc.m.alInstante':'Confirmació a l\'instant',
+    'svc.eye':'Reserves i comandes','svc.title':'Què et ve de gust avui?','svc.sub':'Tria una opció i et guiem pas a pas.','svc.reserva':'Tria dia i hora per a la teva taula.','svc.takeaway':'Demana-ho i recull-ho al local.','svc.delivery':'T\'ho portem a casa.','svc.mesa':'Demana des de la teva taula.','svc.change':'Canvia','svc.leave':'Tornar a triar servei? Perdràs el que portes fins ara.','wz.tray':'La teva selecció','wz.tray.open':'Veure la teva selecció','wz.o.nodishes':'Encara no hi ha res.',
+    'wz.o.hora.takeaway':'Hora de recollida','wz.o.hora.delivery':'Hora d\'entrega','wz.o.sinHoras':'No queden hores disponibles per a aquest dia. Tria un altre dia.','info.eye':'Informació del plat','info.de':'Informació i al·lèrgens de %s','info.alergenos':'Al·lèrgens','info.sinAlergenos':'Aquest plat no té al·lèrgens declarats.','info.nota':'Si tens una al·lèrgia o intolerància greu, avisa el restaurant en fer la comanda.','menu.siguiente':'Següent','wz.o.slots':'Tria una hora','wz.o.asap':'Com abans millor',
     'email.reserva.hint':'La fem servir per trobar la teva reserva i perquè el restaurant et pugui escriure si cal.',
     'email.pedido.hint':'Opcional. El restaurant et pot escriure si hi ha algun problema amb la teva comanda.'
   }
@@ -1929,7 +2044,12 @@ function renderHeader(){
   if(b.email) parts.push(['mail', b.email]);
   // Teléfono y email son enlaces (llamar / escribir) con el mismo aspecto que el resto de la información.
   const enlace = {phone: v => 'tel:' + String(v).replace(/[^\d+]/g, ''), mail: v => 'mailto:' + v};
-  document.getElementById('biz-info').innerHTML = parts.map(([k, v]) => enlace[k]
+  // La dirección abre Google Maps: el enlace que dejó el negocio (si es una URL) o una búsqueda con la dirección.
+  const urlMapas = /^https?:\/\//i.test(String(b.gmaps || '').trim()) ? String(b.gmaps).trim() : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.address || '');
+  const enlaceExt = {pin: urlMapas};
+  document.getElementById('biz-info').innerHTML = parts.map(([k, v]) => enlaceExt[k]
+    ? `<a class="hi hi-${k}" href="${escapeHtml(enlaceExt[k])}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(t('hdr.comoLlegar'))}: ${escapeHtml(v)}">${escapeHtml(v)}</a>`
+    : enlace[k]
     ? `<a class="hi hi-${k}" href="${escapeHtml(enlace[k](v))}">${escapeHtml(v)}</a>`
     : `<span class="hi hi-${k}">${escapeHtml(v)}</span>`).join('');
   renderLangSwitcher();
@@ -2031,17 +2151,52 @@ function computeTabs(){
 function tabLabel(x){ return String(x.label).replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u, ''); }
 const tabIcono = id => 'tab-' + String(id).replace(/[^a-z]/gi, '-');
 // Pantalla de entrada: una tarjeta grande por servicio que ofrece el negocio.
+// ¿Abierto ahora? Lo dice el horario del negocio (con sus turnos, cierres y horarios especiales): «Abierto · cierra a las 16:00»,
+// «Abre hoy a las 20:00» o «Hoy cerrado». Sin horario configurado no se afirma nada.
+function estadoAperturaHoy(){
+  try{
+    const turnos = getTurnosForDate(todayStr());
+    if(turnos === null) return null;
+    if(!turnos.length) return {abierto:false, txt:t('svc.cerradoHoy')};
+    const ahora = String(new Date().getHours()).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0');
+    const dentro = turnos.find(x => ahora >= x.abre && ahora < x.cierra);
+    if(dentro) return {abierto:true, txt:t('svc.abiertoHasta').replace('%s', dentro.cierra)};
+    const luego = turnos.find(x => x.abre > ahora);
+    return luego ? {abierto:false, txt:t('svc.abreA').replace('%s', luego.abre)} : {abierto:false, txt:t('svc.cerradoHoy')};
+  }catch(e){ return null; }
+}
+// Una línea de datos útiles por servicio (tiempo, mínimo, envío): lo que un cliente mira antes de elegir.
+function metaServicio(id){
+  const p = (DB.business || {}).pedidos || {};
+  const f = n => fmtMoney ? fmtMoney(n) : n.toFixed(2) + ' €';
+  const out = [];
+  if(id === 'takeaway'){
+    if(p.tiempoBasePrep) out.push(t('svc.m.listoEn').replace('%d', p.tiempoBasePrep));
+    if(parseFloat(p.pedidoMinimo) > 0) out.push(t('svc.m.minimo').replace('%s', f(parseFloat(p.pedidoMinimo))));
+  } else if(id === 'delivery'){
+    const fee = parseFloat(p.deliveryFee) || 0;
+    out.push(fee > 0 ? t('svc.m.envio').replace('%s', f(fee)) : t('svc.m.envioGratis'));
+    if(parseFloat(p.freeDeliveryFrom) > 0 && fee > 0) out.push(t('svc.m.gratisDesde').replace('%s', f(parseFloat(p.freeDeliveryFrom))));
+  } else if(id === 'reserva'){
+    out.push(t('svc.m.alInstante'));
+  }
+  return out;
+}
 function renderServicios(tabs){
+  const ap = estadoAperturaHoy();
   document.getElementById('app').innerHTML = `
-    <section class="svc">
-      <div class="wz-eye"><span>${escapeHtml(t('svc.eye'))}</span></div>
-      <h2 class="wz-h" tabindex="-1">${escapeHtml(t('svc.title'))}</h2>
-      <p class="wz-sub">${escapeHtml(t('svc.sub'))}</p>
-      <div class="svc-list">
-        ${tabs.map(x => `<button type="button" class="svc-card" onclick="setTab('${x.id}')">
-          <span class="svc-ic ${tabIcono(x.id)}" aria-hidden="true"></span>
+    <section class="svc svc-hero">
+      <div class="hero-top">
+        ${ap ? `<span class="hero-open ${ap.abierto ? 'is-on' : 'is-off'}"><i aria-hidden="true"></i>${escapeHtml(ap.txt)}</span>` : `<span class="wz-eye"><span>${escapeHtml(t('svc.eye'))}</span></span>`}
+        <h2 class="hero-h" tabindex="-1">${escapeHtml(t('svc.title'))}</h2>
+        <p class="hero-sub">${escapeHtml(t('svc.sub'))}</p>
+      </div>
+      <div class="svc-grid">
+        ${tabs.map((x, i) => `<button type="button" class="svc-tile${i === 0 ? ' is-first' : ''}" style="--i:${i}" onclick="setTab('${x.id}')">
+          <span class="svc-disc"><span class="svc-ic ${tabIcono(x.id)}" aria-hidden="true"></span></span>
           <span class="svc-tx"><span class="svc-t">${escapeHtml(tabLabel(x))}</span><span class="svc-d">${escapeHtml(t('svc.' + x.id))}</span></span>
-          <span class="svc-go" aria-hidden="true">›</span>
+          ${metaServicio(x.id).length ? `<span class="svc-meta">${metaServicio(x.id).map(m => `<span>${escapeHtml(m)}</span>`).join('')}</span>` : ''}
+          <span class="svc-cta" aria-hidden="true"><span>${escapeHtml(t('svc.cta'))}</span><b>→</b></span>
         </button>`).join('')}
       </div>
     </section>`;
@@ -2329,11 +2484,12 @@ function updateOrderSlots(preseleccionar){
   let min = '00:00';
   if(date === todayStr()){ const d = new Date(Date.now() + lead * 60000); min = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
   const todos = slotsDelDia(date).filter(sl => sl >= min).filter(sl => { const c = pedidosCutoffTimeForTurno(date, sl, p); return !c || sl <= c.limite; });
-  if(!todos.length){ box.innerHTML = ''; return; }
   const inp = wzEl('o-time');
-  if(preseleccionar === true && inp && !todos.includes(inp.value)) inp.value = todos[0];
+  if(!todos.length){ if(inp) inp.value = ''; box.innerHTML = `<p class="slots-vacio">${escapeHtml(t('wz.o.sinHoras'))}</p>`; return; }
+  // Sin campo manual: solo se puede elegir una hora que SEA viable. Si la que había ya no lo es (o no había ninguna), la primera.
+  if(inp && !todos.includes(inp.value)) inp.value = todos[0];
   const cur = inp ? inp.value : '';
-  const lista = todos.slice(0, 8);
+  const lista = todos;
   box.innerHTML = lista.map((sl, i) => `<button type="button" class="${sl === cur ? 'on' : ''}${i === 0 ? ' asap' : ''}" aria-pressed="${sl === cur}" onclick="pedidoHora('${sl}')">${i === 0 ? `<span class="a">${escapeHtml(t('wz.o.asap'))}</span> ` : ''}${sl}</button>`).join('');
 }
 function pedidoHora(sl){
@@ -3464,6 +3620,8 @@ function submitReserva(){
 
   const btn = document.getElementById('r-submit');
   if(btn) btn.disabled = true;
+  // Con mesa ya reservada de forma atómica, o sin mesas configuradas (nada que comprobar), no hay motivo para esperar a nadie.
+  reservaOptimista = !!matchedTable || !hasConfiguredTables;
 
   if(!matchedTable){
     // Sin mesas configuradas todavía, grupo que necesita juntar mesas, o sin
@@ -4310,18 +4468,53 @@ function renderMenuDishesHtml(sec){
     const hasMods = (p.modificadores || []).length > 0;
     const desc = p.descripcion || p.description || '';
     const q = dishQty(p), nombre = trPlato(p);
+    // El área que se toca para añadir es un botón que cubre la tarjeta (dc-main); lo demás se pinta ENCIMA con una rejilla propia:
+    // nombre + «i» arriba, precio + control abajo. Así la cantidad nunca cae encima del plato de al lado ni del texto.
     return `
     <div class="menu-item dish dc${q ? ' en' : ''}" data-dish="${p.id}">
-      <button type="button" class="dc-main" onclick="dishTap(${p.id}, '${escapeJsAttr(sec.id)}')" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre) + ' · ' + fmtMoney(final))}">
-        <span class="dc-n name">${escapeHtml(nombre)}${promo ? ` <span class="promo-badge">-${promo.discountPct}%</span>` : ''}</span>
-        ${desc ? `<span class="dc-d">${escapeHtml(desc)}</span>` : ''}
-        ${dishAllergensHtml(p.id)}
-        <span class="dc-p price">${promo ? `<s>${fmtMoney(base)}</s> ` : ''}${fmtMoney(final)}${hasMods ? ` <span class="dc-m">${escapeHtml(t('modifiers.fromPrice'))}</span>` : ''}</span>
-      </button>
-      <span class="dc-q" data-q="${q}" aria-live="polite">${q ? '×' + q : ''}</span>
-      <button type="button" class="dc-minus" ${q > 0 && !hasMods ? '' : 'hidden'} onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', nombre))}">−</button>
+      <button type="button" class="dc-main" onclick="dishTap(${p.id}, '${escapeJsAttr(sec.id)}')" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre) + ' · ' + fmtMoney(final))}"></button>
+      <span class="dc-n name">${escapeHtml(nombre)}${promo ? ` <span class="promo-badge">-${promo.discountPct}%</span>` : ''}</span>
+      <button type="button" class="dc-i" onclick="dishInfo(${p.id})" aria-label="${escapeHtml(t('info.de').replace('%s', nombre))}">i</button>
+      ${desc ? `<span class="dc-d">${escapeHtml(desc)}</span>` : ''}
+      <span class="dc-p price">${promo ? `<s>${fmtMoney(base)}</s> ` : ''}${fmtMoney(final)}${hasMods ? ` <span class="dc-m">${escapeHtml(t('modifiers.fromPrice'))}</span>` : ''}</span>
+      <span class="dc-ctl">
+        <button type="button" class="dc-minus" ${q > 0 && !hasMods ? '' : 'hidden'} onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', nombre))}">−</button>
+        <span class="dc-q" data-q="${q}" aria-live="polite">${q ? '×' + q : ''}</span>
+      </span>
     </div>`;
   }).join('')}</div>`;
+}
+// «i» de un plato: descripción y ALÉRGENOS, siempre (un cliente alérgico no puede tener que adivinar). Sin alérgenos declarados lo dice.
+function infoPlatoHtml(id){
+  let nombre = '', desc = '';
+  const f = findPlatoById(id);
+  if(f){ nombre = trPlato(f.plato); desc = f.plato.descripcion || f.plato.description || ''; }
+  else {
+    outer: for(const m of (DB.menus || [])) for(const g of (m.grupos || [])) for(const o of (g.opciones || [])) if(o.id === id){ nombre = trItem(o); desc = o.descripcion || o.description || ''; break outer; }
+  }
+  const al = (DB.allergens || {})[id] || [];
+  return {nombre, desc, al, html: `
+    ${desc ? `<p class="inf-d">${escapeHtml(desc)}</p>` : ''}
+    <div class="inf-al ${al.length ? 'has' : ''}">
+      <div class="inf-t">${escapeHtml(t('info.alergenos'))}</div>
+      ${al.length ? `<ul>${al.map(a => `<li>${escapeHtml(allergenLabel(a))}</li>`).join('')}</ul>` : `<p>${escapeHtml(t('info.sinAlergenos'))}</p>`}
+      <p class="inf-n">${escapeHtml(t('info.nota'))}</p>
+    </div>`};
+}
+function dishInfo(id){
+  const i = infoPlatoHtml(id);
+  abrirHoja(`
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close') || 'Cerrar')}">&times;</button>
+    <div class="sh-h"><div class="sh-eye">${escapeHtml(t('info.eye'))}</div><h2>${escapeHtml(i.nombre)}</h2></div>
+    <div class="sh-b">${i.html}</div>
+    <div class="sh-f"><button type="button" class="btn" onclick="closeInfoModal()">${escapeHtml(t('common.close') || 'Cerrar')}</button></div>`);
+}
+// Dentro de un menú no se puede abrir otra hoja encima (se perdería lo elegido): la información se despliega bajo la opción.
+function optInfo(btn, id){
+  const box = document.getElementById('oi-' + id); if(!box) return;
+  const abre = box.hidden;
+  box.hidden = !abre; btn.setAttribute('aria-expanded', String(abre));
+  if(abre && !box.innerHTML) box.innerHTML = infoPlatoHtml(id).html;
 }
 // Una tarjeta por menú: nombre, de qué apartados consta y precio. Al tocarla se abre el menú entero.
 function buildMenusHtml(){
@@ -4344,39 +4537,75 @@ function abrirHoja(html){
   const ov = document.getElementById('modal-overlay');
   ov.classList.add('is-sheet', 'active');
 }
+// Menú PASO A PASO (8/11): primero se elige el primero, luego el segundo, luego el postre… como en cualquier cadena. Se pintan todos
+// los apartados (confirmAddMenuFromModal lee los radios de todos) y solo se muestra uno cada vez. Elegir avanza solo; «Atrás» corrige.
+let menuStepIdx = 0;
 function openMenuModal(menuId){
   const m = (DB.menus || []).find(x => x.id === menuId);
   if(!m) return;
   menuModalContext = {menuId};
+  menuStepIdx = 0;
   const grupos = m.grupos || [];
   abrirHoja(`
     <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close') || 'Cerrar')}">&times;</button>
     <div class="sh-h">
-      <div class="sh-eye">${t('wz.m.eyebrow')} · ${escapeHtml(t('wz.m.groups').replace('%d', grupos.length))}</div>
+      <div class="sh-eye" id="mn-eye"></div>
       <h2>${escapeHtml(trItem(m))}</h2>
-      <p class="wz-sub" style="margin:6px 0 0">${t('wz.m.pick')}</p>
+      <div class="mn-prog" aria-hidden="true"><i id="mn-prog-i"></i></div>
     </div>
     <div class="sh-b">
       ${grupos.map((g, gi) => {
-        const primeraLibre = (g.opciones || []).findIndex(o => o.disponible !== false);
+        const libres = (g.opciones || []).filter(o => o.disponible !== false);
         return `
-        <fieldset class="sh-g">
+        <fieldset class="sh-g" data-step="${gi}" ${gi ? 'hidden' : ''}>
           <legend><span class="k">${escapeHtml(t('wz.m.step').replace('%d', gi + 1).replace('%d', grupos.length))}</span>${escapeHtml(trItem(g))}</legend>
-          ${(g.opciones || []).map((o, i) => `
+          ${(g.opciones || []).map(o => `
             <label class="opt${o.disponible === false ? ' off' : ''}">
-              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i === primeraLibre ? 'checked' : ''} ${o.disponible === false ? 'disabled' : ''} onchange="menuSheetTotal()">
-              <span class="o-n">${escapeHtml(trItem(o))}${dishAllergensHtml(o.id)}</span>
+              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${libres.length === 1 && o.disponible !== false ? 'checked' : ''} ${o.disponible === false ? 'disabled' : ''} onchange="menuOpcionElegida(${gi})">
+              <span class="o-n">${escapeHtml(trItem(o))}</span>
               ${o.suplemento ? `<span class="o-p">+${fmtMoney(o.suplemento)}</span>` : ''}
               ${o.disponible === false ? `<span class="o-p" style="color:var(--red)">${t('common.unavailable')}</span>` : ''}
-            </label>`).join('')}
+              <button type="button" class="o-i" aria-expanded="false" aria-label="${escapeHtml(t('info.de').replace('%s', trItem(o)))}" onclick="event.preventDefault();event.stopPropagation();optInfo(this, ${o.id})">i</button>
+            </label>
+            <div class="o-inf" id="oi-${o.id}" hidden></div>`).join('')}
         </fieldset>`;
       }).join('')}
     </div>
-    <div class="sh-f"><button type="button" class="btn btn-primary" id="mn-add" onclick="confirmAddMenuFromModal()"></button></div>
+    <div class="sh-f sh-f2"><button type="button" class="btn" id="mn-back" onclick="menuStepIr(menuStepIdx - 1)">${escapeHtml(t('wz.back') || 'Atrás')}</button><button type="button" class="btn btn-primary" id="mn-add" onclick="menuStepSiguiente()"></button></div>
   `);
+  menuStepIr(0);
+}
+function menuGrupoElegido(gi){
+  const m = menuModalContext && (DB.menus || []).find(x => x.id === menuModalContext.menuId);
+  const g = m && (m.grupos || [])[gi]; if(!g) return false;
+  return !!document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`);
+}
+function menuOpcionElegida(gi){
+  menuSheetTotal();
+  const m = menuModalContext && (DB.menus || []).find(x => x.id === menuModalContext.menuId);
+  if(!m || gi >= (m.grupos || []).length - 1) return;      // el último apartado no avanza solo: ahí está «Añadir»
+  clearTimeout(menuOpcionElegida._t);
+  menuOpcionElegida._t = setTimeout(() => { if(menuModalContext && menuStepIdx === gi) menuStepIr(gi + 1); }, 260);
+}
+function menuStepIr(i){
+  if(!menuModalContext) return;
+  const m = (DB.menus || []).find(x => x.id === menuModalContext.menuId); if(!m) return;
+  const n = (m.grupos || []).length;
+  menuStepIdx = Math.max(0, Math.min(n - 1, i));
+  document.querySelectorAll('.sh-g').forEach(f => { f.hidden = +f.dataset.step !== menuStepIdx; });
+  const g = m.grupos[menuStepIdx];
+  const eye = document.getElementById('mn-eye'); if(eye) eye.textContent = `${t('wz.m.eyebrow')} · ${t('wz.m.step').replace('%d', menuStepIdx + 1).replace('%d', n)} · ${trItem(g)}`;
+  const bar = document.getElementById('mn-prog-i'); if(bar) bar.style.width = ((menuStepIdx + 1) / n * 100) + '%';
+  const back = document.getElementById('mn-back'); if(back) back.hidden = menuStepIdx === 0;
+  const box = document.querySelector('#modal-box .sh-b'); if(box) box.scrollTop = 0;
   menuSheetTotal();
 }
-// El botón del menú dice siempre cuánto cuesta lo que se ha elegido (con suplementos).
+function menuStepSiguiente(){
+  const m = menuModalContext && (DB.menus || []).find(x => x.id === menuModalContext.menuId); if(!m) return;
+  if(!menuGrupoElegido(menuStepIdx)) return;
+  if(menuStepIdx >= (m.grupos || []).length - 1) confirmAddMenuFromModal(); else menuStepIr(menuStepIdx + 1);
+}
+// El botón dice qué viene: «Siguiente: Segundo» (apagado hasta elegir) y, en el último apartado, «Añadir · total» con suplementos.
 function menuSheetTotal(){
   if(!menuModalContext) return;
   const m = (DB.menus || []).find(x => x.id === menuModalContext.menuId); const b = document.getElementById('mn-add');
@@ -4387,7 +4616,11 @@ function menuSheetTotal(){
     const o = (g.opciones || []).find(x => x.id === id);
     if(o) extra += o.suplemento || 0;
   });
-  b.innerHTML = `${escapeHtml(t('wz.m.add'))} · <span class="mono">${fmtMoney((m.precio || 0) + extra)}</span>`;
+  const n = (m.grupos || []).length, ultimo = menuStepIdx >= n - 1;
+  b.disabled = !menuGrupoElegido(menuStepIdx);
+  b.innerHTML = ultimo
+    ? `${escapeHtml(t('wz.m.add'))} · <span class="mono">${fmtMoney((m.precio || 0) + extra)}</span>`
+    : `${escapeHtml(t('menu.siguiente'))}: ${escapeHtml(trItem(m.grupos[menuStepIdx + 1]))}`;
 }
 
 /* ============ EXTRAS / MODIFICADORES por plato ============
@@ -4494,12 +4727,10 @@ function renderOrderForm(){
             <label for="o-date">${t('fecha')}</label>
             <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint','pedido'); updateCierreHint(); updateOrderSlots(); renderCartSummary()">
           </div>
-          <div class="field">
-            <label for="o-time">${t('hora')}</label>
-            <input type="time" id="o-time" value="20:00" onchange="updateCierreHint(); updateOrderSlots()">
-          </div>
+          <input type="hidden" id="o-time" value="">
         </div>
-        <div class="slots" id="o-slots" role="group" aria-label="${escapeHtml(t('wz.o.slots'))}"></div>
+        <div class="field-label slots-lbl" id="o-slots-lbl">${t(isDelivery ? 'wz.o.hora.delivery' : 'wz.o.hora.takeaway')}</div>
+        <div class="slots" id="o-slots" role="group" aria-labelledby="o-slots-lbl"></div>
         <div id="o-hour-hint"></div>
         <div id="o-cierre-hint"></div>
         ${isDelivery ? `
@@ -5481,6 +5712,7 @@ function shareTrackUrl(url, isReserva, btnEl){
 }
 
 /* ============ ENVÍO ============ */
+let reservaOptimista = false;
 function sendRequest(req, successMsg){
   db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
     // En vez de una pantalla de éxito de un solo uso con un botón para IR a
@@ -5491,6 +5723,7 @@ function sendRequest(req, successMsg){
     // desaparece para siempre.
     if(req.type === 'pedido' && req.clientRef){
       trackToken = req.clientRef;
+      pedidoOptimista = !!req.metodoPagoLocal && (DB.business||{}).pedidosOnlineActivos !== false && !req.pendienteVerificarZona;
       trackRecienEnviadoHasta = Date.now() + 15 * 60 * 1000;
       trackListenerAttached = false;
       renderOrderTrackingView();
@@ -5498,7 +5731,9 @@ function sendRequest(req, successMsg){
     }
     if(req.type === 'reserva' && req.resToken){
       resToken = req.resToken;
-      resRecienEnviada = {status: 'pendiente', date: req.date, time: req.time, people: req.people, hasta: Date.now() + 15 * 60 * 1000};
+      // Norma: con sitio, se confirma sola. Ya se comprobaron mesa y aforo de forma atómica (o no hay mesas que comprobar), y lo mismo
+      // vuelve a decidir la app del negocio al recibirla: hasta entonces se enseña «confirmada», no «te lo han de confirmar».
+      resRecienEnviada = {status: reservaOptimista && !req.depositRequired ? 'confirmada' : 'pendiente', date: req.date, time: req.time, people: req.people, hasta: Date.now() + 15 * 60 * 1000};
       resListenerAttached = false;
       renderReservationManageView();
       return;
@@ -5592,9 +5827,11 @@ function guardaEnlaceHtml(token, esReserva){
 // estado puede no estar publicado todavía — la app del negocio tiene que
 // recibirlo primero. Eso no es «no encontramos tu pedido».
 let trackRecienEnviadoHasta = 0;
+// Norma: un pedido dentro de zona y de horario, con el pago ya resuelto (efectivo / tarjeta en persona), se acepta solo.
+let pedidoOptimista = false;
 function renderTrackStatus(data){
   const app = document.getElementById('app');
-  if(!data && Date.now() < trackRecienEnviadoHasta) data = {status: 'pendiente'};
+  if(!data && Date.now() < trackRecienEnviadoHasta) data = {status: pedidoOptimista ? 'aceptado' : 'pendiente'};
   lastTrackStatusData = data;
   const aparte = (titulo, texto) => `
     <div class="trk trk-alone">
