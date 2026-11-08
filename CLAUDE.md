@@ -809,6 +809,13 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   Deshacer no-show) y el resto en el ⋯; filtros con su cuenta; turnos con barra de aforo; **Semana y Mes con el diseño de Promoción** (`pm-sem`, `pm-mes`, `ggPeriodoHtml` → `reservasMesCb`);
   «Imprimir el día» (hoja de sala con casilla de llegada); solicitudes de la web y recordatorios de mañana en **filas compactas** (antes empujaban la lista del día). Las reglas no cambian:
   confirmar exige mesa asignada (si no, abre la reserva), aforo por turno, lista de espera, señal.
+- **Pedidos · recepción que verifica y lista por letra (8/11, `test/pedidos.mjs`)**: en la hoja de un pedido ENVIADO cada línea lleva la casilla **«Pedido» fija** (ya no se edita ni en modo
+  edición) y la casilla **«Recibido» vacía**: verde si coincide con lo pedido, roja si no (`pdRecibidoVivo` mientras se teclea, sin repintar; `setRecepcionQty` al terminar). **Lo que se apunta es lo
+  que suma al stock y al gasto** (3 de 5 kg = 3 kg; antes el tick daba por llegado el pedido entero y la cruz, nada). El tick = «llegó todo» (rellena la casilla), la cruz = «no llegó» (0).
+  `line.recibidoQty` es la casilla; `recibidoCheck` se deriva de ella (`pdRecibidoDe` lee también los pedidos de antes). ⚠️ `setRecepcionQty` NO repinta la hoja mientras llega la mercancía
+  (`pdPintarLinea`): si repintara, tabular de una casilla a la siguiente perdería el foco y lo escrito. «Marcar recibido» con líneas sin apuntar pregunta antes (`changePedidoEstado` es `async`).
+  **Realizar pedido ya no vuelca todo el proveedor**: sin buscar ni elegir letra solo se ve lo que llevas y una pista; hay índice **A–Z** (`pcAlfabetoHtml`, `orderLetra`; las letras sin artículos,
+  desactivadas; `#` para lo que no empieza por letra) y el chip «Todos» enseña la lista entera (`orderFiltro`: '' = índice · 'todos' · 'bajo' · 'con').
 - **Clientes · filtros y Promoción › Clientes (8/11, `test/clientes-filtros.mjs`)**: los nueve filtros en este orden: Nuevos · VIP · **Recurrentes** · **Ocasionales** · En riesgo · Inactivos · Con alergias ·
   No-shows · Sin permiso. Recurrente = misma regla que «Habituales» de Novedades (`clEsRecurrente`: 2 visitas en 30 d, 6 en el año o ≥7 puntos); ocasional = tiene visitas y no es recurrente.
   ⚠️ **Promoción › Clientes miraba el campo «último contacto» de la ficha** (que se rellena a mano al escribir al cliente) para «Visitas recientes» e «Inactivos»: la primera salía siempre vacía y la

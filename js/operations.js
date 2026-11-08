@@ -1167,7 +1167,7 @@ function viewSupplierOrderHistory(nombre){
 function setPedidosTab(tab){
   pedidosTab = tab;
   pedidoDetailId = null;
-  if(tab === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = ''; }
+  if(tab === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = ''; orderLetra = ''; }
   if(tab === 'solicitar'){ solicitudLines = []; solicitudSearch = ''; }
   renderPedidos();
 }
@@ -1642,21 +1642,23 @@ function renderPedidoDetail(){
   const itemsHtml = items.map((line, idx) => {
     const ing = getIngredient(line.ingredientId);
     const state = line.recibidoCheck; // true=OK, false=problema, undefined=sin revisar
+    const recQ = pdRecibidoDe(line);   // lo que se ha apuntado como llegado (null = sin apuntar)
     const pa = ing ? (line.precioAlbaran != null ? line.precioAlbaran : (ing.price || 0)) : 0;
     const distinto = ing && line.precioAlbaran != null && Math.abs(line.precioAlbaran - (ing.price || 0)) > 0.0001;
     return `
       <div class="pd-linea plegable${state === true ? ' ok' : state === false ? ' mal' : ''}${ggPlegableAbierta('pdl-' + idx) ? ' is-abierta' : ''}" data-pl="pdl-${idx}"${showRecepcion ? ' onclick="ggTogglePlegable(event, this)"' : ''}>
         <div class="pd-l-nom"><b>${ing ? escapeHtml(ing.name) : '—'}</b>${ing && ing.activo === false ? ` <span class="badge badge-gray txt-xs">${t('label.discontinued')}</span>` : ''}</div>
         <div class="pd-l-qty" data-et="${escapeHtml(t('label.ordered'))}">
-          ${editUnlocked
+          ${(editUnlocked && !showRecepcion)
             ? `<input type="number" class="es-in" value="${line.cantidad}" step="0.01" min="0" aria-label="${escapeHtml(t('label.ordered'))}" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)">`
-            : `<b class="pd-l-fija">${fmtNum(line.cantidad)}</b>`}
+            : `<b class="pd-l-fija" aria-label="${escapeHtml(t('label.ordered'))}">${fmtNum(line.cantidad)}</b>`}
           <span class="es-l-u">${ing ? escapeHtml(ing.unit) : ''}</span>
         </div>
         ${showRecepcion ? `
-        <div class="pd-l-rec">
-          <button type="button" class="btn btn-fino pd-ck${state === true ? ' is-ok' : ''}" title="${escapeHtml(t('label.arrived'))}" aria-label="${escapeHtml(t('label.arrived'))}" aria-pressed="${state === true}" ${canEditChecklist ? '' : 'disabled'} onclick="event.stopPropagation();toggleRecepcionCheck(${idx}, true)"><i class="ti ti-check"></i></button>
-          <button type="button" class="btn btn-fino pd-ck${state === false ? ' is-mal' : ''}" title="${escapeHtml(t('label.notArrived'))}" aria-label="${escapeHtml(t('label.notArrived'))}" aria-pressed="${state === false}" ${canEditChecklist ? '' : 'disabled'} onclick="event.stopPropagation();toggleRecepcionCheck(${idx}, false)"><i class="ti ti-x"></i></button>
+        <div class="pd-l-rec" data-et="${escapeHtml(t('label.receivedQty'))}">
+          <input type="number" inputmode="decimal" class="es-in pd-rq${state === true ? ' is-ok' : state === false ? ' is-mal' : ''}" id="rq-${idx}" step="any" min="0" placeholder="${escapeHtml(t('label.receivedQty'))}" value="${recQ == null ? '' : recQ}" aria-label="${escapeHtml(t('label.receivedQty'))}: ${ing ? escapeHtml(ing.name) : ''}" ${canEditChecklist ? '' : 'disabled'} onclick="event.stopPropagation()" oninput="pdRecibidoVivo(this, ${line.cantidad || 0})" onchange="setRecepcionQty(${idx}, this.value)">
+          <button type="button" class="btn btn-fino pd-ck${state === true ? ' is-ok' : ''}" data-tip="${escapeHtml(t('label.arrived'))}" aria-label="${escapeHtml(t('label.arrived'))}" aria-pressed="${state === true}" ${canEditChecklist ? '' : 'disabled'} onclick="event.stopPropagation();toggleRecepcionCheck(${idx}, true)"><i class="ti ti-check"></i></button>
+          <button type="button" class="btn btn-fino pd-ck${state === false && recQ === 0 ? ' is-mal' : ''}" data-tip="${escapeHtml(t('label.notArrived'))}" aria-label="${escapeHtml(t('label.notArrived'))}" aria-pressed="${state === false && recQ === 0}" ${canEditChecklist ? '' : 'disabled'} onclick="event.stopPropagation();toggleRecepcionCheck(${idx}, false)"><i class="ti ti-x"></i></button>
         </div>
         <button type="button" class="pl-chev" aria-expanded="${ggPlegableAbierta('pdl-' + idx)}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
         <div class="pd-l-precio pl-extra" data-et="${escapeHtml(t('precios.albaranLabel'))}" title="${escapeHtml(t('precios.albaranHint'))}">
@@ -1716,7 +1718,7 @@ function renderPedidoDetail(){
           <h3 class="es-tit">${gl({es:'Artículos', ca:'Articles', en:'Items'})} <span class="fi-para">${items.length}</span></h3>
           ${showRecepcion ? `<p class="es-nota"><i class="ti ti-info-circle"></i> ${t('label.orderCheckHelp')}</p>` : ''}
           <div class="pd-lineas${showRecepcion ? ' con-rec' : ''}">
-            ${showRecepcion ? `<div class="pd-lcab"><span>${t('label.ingredient')}</span><span>${t('label.ordered')}</span><span>${t('title.orderCheck')}</span><span>${t('precios.albaranLabel')}</span><span>${t('ph.receptionNote')}</span></div>` : ''}
+            ${showRecepcion ? `<div class="pd-lcab"><span>${t('label.ingredient')}</span><span>${t('label.ordered')}</span><span>${t('label.receivedQty')}</span><span>${t('precios.albaranLabel')}</span><span>${t('ph.receptionNote')}</span></div>` : ''}
             ${itemsHtml || `<div class="empty es-vacio"><i class="ti ti-basket"></i>${t('empty.noItems')}</div>`}
           </div>
         </section>
@@ -1893,7 +1895,28 @@ function pedidoComprobacionAuto(o){
   return anyNote ? 'mal' : 'ok';
 }
 
-function toggleRecepcionCheck(idx, checked){
+/* RECEPCIÓN QUE VERIFICA (8/11). Cada línea tiene la casilla «Pedido» (fija) y la casilla «Recibido» (vacía): al escribir la cantidad que llega,
+   se pone VERDE si coincide con lo pedido y ROJA si no (`pdRecibidoVivo` mientras se teclea; `setRecepcionQty` al terminar). Antes solo había un tick o
+   una cruz y la app daba por llegada la cantidad pedida entera: nada comprobaba lo que de verdad entraba. Ahora lo que se apunta es lo que suma al stock y
+   al gasto (3 de 5 kg = 3 kg). El tick sigue siendo el atajo «llegó todo» (rellena la casilla con lo pedido) y la cruz «no llegó» (un 0). */
+function pdIgual(a, b){ return Math.abs((parseFloat(a) || 0) - (parseFloat(b) || 0)) <= 0.0001; }
+// Lo apuntado como llegado: la casilla, o —en pedidos de antes— lo que decían el tick (todo) o la cruz (nada) / la cantidad ya recibida.
+function pdRecibidoDe(line){
+  if(line.recibidoQty != null) return line.recibidoQty;
+  if(line.recibidoCheck === true) return line.cantidad;
+  if(line.recibidoCheck === false) return 0;
+  return null;
+}
+function pdRecibidoVivo(inp, pedido){
+  const v = inp.value.trim();
+  inp.classList.remove('is-ok', 'is-mal');
+  const fila = inp.closest('.pd-linea'); if(fila) fila.classList.remove('ok', 'mal');
+  if(v === '') return;
+  const igual = pdIgual(v, pedido);
+  inp.classList.add(igual ? 'is-ok' : 'is-mal');
+  if(fila) fila.classList.add(igual ? 'ok' : 'mal');
+}
+function setRecepcionQty(idx, value){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o || idx < 0 || idx >= (o.items||[]).length) return;
   if(o.estado === 'RECIBIDO' && !editUnlocked){
@@ -1902,14 +1925,26 @@ function toggleRecepcionCheck(idx, checked){
     return;
   }
   const line = o.items[idx];
-  line.recibidoCheck = checked;
+  const raw = String(value == null ? '' : value).trim();
+  if(raw === ''){ delete line.recibidoQty; delete line.recibidoCheck; }
+  else{
+    const q = Math.max(0, Math.round((parseFloat(raw) || 0) * 1000) / 1000);
+    line.recibidoQty = q;
+    line.recibidoCheck = pdIgual(q, line.cantidad);
+  }
+  const checked = line.recibidoCheck === true;
+  if(o.estado !== 'RECIBIDO'){
+    // Mientras llega la mercancía NO se repinta la hoja entera: tabular de una casilla a la siguiente tiene que conservar el foco y lo escrito.
+    o.comprobacion = pedidoComprobacionAuto(o);
+    saveDB();
+    pdPintarLinea(idx, o);
+    return;
+  }
   if(o.estado === 'RECIBIDO'){
-    // El pedido ya sumó stock y registró un gasto con el checklist anterior:
-    // corregir el tick/cruz en modo edición resincroniza ambos con la nueva
-    // cantidad confirmada (toda la pedida si se marca OK, nada si no).
+    // El pedido ya sumó stock y registró un gasto con lo anterior: corregirlo en modo edición los resincroniza con la cantidad que ahora consta.
     const ing = getIngredient(line.ingredientId);
     const oldVal = line.cantidadRecibida||0;
-    const newVal = checked ? line.cantidad : 0;
+    const newVal = line.recibidoQty != null ? line.recibidoQty : 0;
     line.cantidadRecibida = newVal;
     if(ing){
       const s = getStockEntry(line.ingredientId);
@@ -1925,6 +1960,38 @@ function toggleRecepcionCheck(idx, checked){
   o.comprobacion = pedidoComprobacionAuto(o);
   saveDB();
   renderPedidoDetail();
+}
+// Pone al día, en su sitio, la línea tocada y el contador de la derecha (sin repintar la hoja).
+function pdPintarLinea(idx, o){
+  const inp = document.getElementById('rq-' + idx);
+  const line = o.items[idx];
+  if(inp){
+    const q = pdRecibidoDe(line);
+    if(document.activeElement !== inp) inp.value = q == null ? '' : q;
+    const st = line.recibidoCheck;
+    inp.classList.toggle('is-ok', st === true); inp.classList.toggle('is-mal', st === false);
+    const fila = inp.closest('.pd-linea');
+    if(fila){
+      fila.classList.toggle('ok', st === true); fila.classList.toggle('mal', st === false);
+      const [bOk, bMal] = fila.querySelectorAll('.pd-ck');
+      const cero = st === false && q === 0;
+      if(bOk){ bOk.classList.toggle('is-ok', st === true); bOk.setAttribute('aria-pressed', String(st === true)); }
+      if(bMal){ bMal.classList.toggle('is-mal', cero); bMal.setAttribute('aria-pressed', String(cero)); }
+    }
+  }
+  const items = o.items || [];
+  const n = items.filter(l => l.recibidoCheck === true).length;
+  const prog = document.querySelector('.pd-prog b'); if(prog) prog.textContent = n + '/' + items.length;
+  const barra = document.querySelector('.pd-barra i'); if(barra) barra.style.width = (items.length ? Math.round(n / items.length * 100) : 0) + '%';
+  const comp = getPedidoComprobacionMap()[o.comprobacion || pedidoComprobacionAuto(o)];
+  const prev = document.querySelector('.pd-barra') && document.querySelector('.pd-barra').nextElementSibling;
+  if(prev && prev.classList.contains('badge') && comp){ prev.className = 'badge ' + comp.cls; prev.innerHTML = comp.label; }
+}
+// Tick = «llegó todo» (lo pedido entero); cruz = «no llegó» (0).
+function toggleRecepcionCheck(idx, checked){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o || idx < 0 || idx >= (o.items||[]).length) return;
+  setRecepcionQty(idx, checked ? o.items[idx].cantidad : 0);
 }
 function updatePedidoLineNota(idx, value){
   const o = getPurchaseOrder(pedidoDetailId);
@@ -2192,10 +2259,15 @@ function registerPedidoComoGastoVariable(o){
   o.gvCreated = true;
 }
 
-function changePedidoEstado(estado){
+async function changePedidoEstado(estado){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
   if(o.estado === estado) return;
+  // Recibir con artículos sin apuntar los daría por NO llegados (no suman stock ni gasto): se avisa antes en vez de hacerlo en silencio.
+  if(estado === 'RECIBIDO'){
+    const sinApuntar = (o.items||[]).filter(l => pdRecibidoDe(l) == null).length;
+    if(sinApuntar && !(await confirmModal(gl({es:`Hay ${sinApuntar} artículo(s) sin apuntar en «Recibido». Se darán por NO llegados (no suman al stock ni al gasto). ¿Continuar?`, ca:`Hi ha ${sinApuntar} article(s) sense apuntar a «Rebut». Es donaran per NO arribats (no sumen a l'estoc ni a la despesa). Continuar?`, en:`${sinApuntar} item(s) have nothing entered under “Received”. They will count as NOT arrived (no stock, no expense). Continue?`})))) return;
+  }
   o.estado = estado;
   if(estado === 'ENVIADO' && !o.enviadoEn) o.enviadoEn = todayStr();
   let preciosCambiados = 0;
@@ -2206,8 +2278,8 @@ function changePedidoEstado(estado){
       // que se hubiera pedido. Uno marcado con el tick suma la cantidad
       // pedida entera — si algo no cuadra (falta cantidad, etc.) se marca
       // con la cruz y se explica en la nota, no con un número aparte.
-      const checked = line.recibidoCheck === true;
-      const recibida = checked ? line.cantidad : 0;
+      const recibida = pdRecibidoDe(line) || 0;
+      const checked = recibida > 0;
       line.cantidadRecibida = recibida;
       const ing = getIngredient(line.ingredientId);
       if(!ing) return; // ingrediente borrado de Mega Lista: no hay stock real que sumar
@@ -2340,7 +2412,8 @@ let orderModalSupplier = '';
 let orderModalLines = [];
 let orderModalSearch = '';
 let orderFormInline = true;   // el formulario ya no es un modal: vive siempre en la pestaña
-let orderFiltro = '';         // '' = todos · 'bajo' = por debajo del mínimo · 'con' = con cantidad
+let orderFiltro = '';         // '' = índice (solo lo que llevas) · 'todos' = toda la lista · 'bajo' = por debajo del mínimo · 'con' = con cantidad
+let orderLetra = '';          // letra elegida en el índice A–Z ('' = ninguna; '#' = nombres que no empiezan por letra)
 // Si se acaba de elegir/cambiar el proveedor, la comprobación de fecha del
 // siguiente render debe avisar con un aviso visible (antes se corregía la
 // fecha en silencio en este caso, y el único indicio era que el campo de
@@ -2392,12 +2465,36 @@ function pcProveedorHtml(prov){
     </div>`;
 }
 
+/* Un proveedor con 300 artículos no se vuelca entero en pantalla (8/11): se busca, se elige una letra del A–Z o se pulsa «Todos».
+   Mientras no se haga nada de eso, solo se ve lo que ya llevas en el pedido (`pcModoIndice`). */
+function pcLetraDe(nombre){
+  const c = (nombre || '').trim().charAt(0).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  return /[A-Z]/.test(c) ? c : '#';
+}
+function pcModoIndice(){ return !orderModalSearch.trim() && !orderLetra && orderFiltro === ''; }
+function pcAlfabetoHtml(){
+  const hay = {};
+  orderModalLines.forEach(l => { const ing = getIngredient(l.ingredientId); if(ing) hay[pcLetraDe(ing.name)] = (hay[pcLetraDe(ing.name)] || 0) + 1; });
+  const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').concat(hay['#'] ? ['#'] : []);
+  return `<div class="pc-az" role="group" aria-label="${escapeHtml(gl({es:'Índice por letra', ca:'Índex per lletra', en:'Index by letter'}))}">${letras.map(L => {
+    const n = hay[L] || 0;
+    return `<button type="button" class="pc-az-l${orderLetra === L ? ' is-on' : ''}" ${n ? '' : 'disabled'} aria-pressed="${orderLetra === L}" aria-label="${escapeHtml(L + (n ? ' · ' + n : ''))}" onclick="setOrderLetra('${L}')">${L}</button>`;
+  }).join('')}</div>`;
+}
+function setOrderLetra(L){
+  orderLetra = (orderLetra === L ? '' : L);
+  const az = document.getElementById('order-alfabeto'); if(az) az.innerHTML = pcAlfabetoHtml();
+  const box = document.getElementById('order-items-rows'); if(box) box.innerHTML = pcFilasHtml();
+}
 function pcFilasHtml(){
-  const search = orderModalSearch.toLowerCase();
+  const search = orderModalSearch.toLowerCase().trim();
+  const indice = pcModoIndice();
   const filas = orderModalLines.map(line => ({line, ing: getIngredient(line.ingredientId)})).filter(x => x.ing)
     .filter(x => !search || x.ing.name.toLowerCase().includes(search))
-    .filter(x => orderFiltro === 'bajo' ? pcBajoMinimo(x.ing.id) : orderFiltro === 'con' ? x.line.cantidad > 0 : true)
+    .filter(x => !orderLetra || pcLetraDe(x.ing.name) === orderLetra)
+    .filter(x => indice ? x.line.cantidad > 0 : orderFiltro === 'bajo' ? pcBajoMinimo(x.ing.id) : orderFiltro === 'con' ? x.line.cantidad > 0 : true)
     .sort((a, b) => a.ing.name.localeCompare(b.ing.name));
+  if(indice && !filas.length) return `<div class="empty es-vacio pc-indice-hint"><i class="ti ti-search"></i>${gl({es:'Busca un artículo o elige una letra para añadirlo al pedido. «Todos» enseña la lista entera.', ca:'Cerca un article o tria una lletra per afegir-lo a la comanda. «Tots» ensenya la llista sencera.', en:'Search for an item or pick a letter to add it to the order. “All” shows the whole list.'})}</div>`;
   if(!filas.length) return `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${orderFiltro === 'bajo' ? gl({es:'Nada por debajo del mínimo.', ca:'Res per sota del mínim.', en:'Nothing below the minimum.'}) : t('common.noResults')}</div>`;
   return filas.map(({line, ing}) => {
     const s = getStockEntry(ing.id);
@@ -2513,8 +2610,9 @@ function renderPedidoCrear(){
           </div>
           <div class="pc-filtros">
             <div class="es-anadir-buscar pc-buscar"><i class="ti ti-search"></i><input type="text" class="search-input" id="order-item-search" placeholder="${t('ph.searchArticle')}" value="${escapeHtml(orderModalSearch)}" oninput="updateOrderItemSearch(this.value)"></div>
-            <div class="pc-chips">${chip('', gl({es:'Todos', ca:'Tots', en:'All'}), c.todos)}${chip('bajo', gl({es:'Bajo mínimo', ca:'Sota el mínim', en:'Below minimum'}), c.bajo)}${chip('con', gl({es:'Con cantidad', ca:'Amb quantitat', en:'With quantity'}), c.con)}</div>
+            <div class="pc-chips">${chip('todos', gl({es:'Todos', ca:'Tots', en:'All'}), c.todos)}${chip('bajo', gl({es:'Bajo mínimo', ca:'Sota el mínim', en:'Below minimum'}), c.bajo)}${chip('con', gl({es:'Con cantidad', ca:'Amb quantitat', en:'With quantity'}), c.con)}</div>
           </div>
+          <div id="order-alfabeto">${pcAlfabetoHtml()}</div>
           <div id="order-items-rows" class="pc-lista">${pcFilasHtml()}</div>
         </section>
       </div>
@@ -2672,7 +2770,7 @@ function nextValidDeliveryDate(fechaStr, diasEntrega){
 
 function selectOrderSupplier(supplier){
   orderModalSupplier = supplier;
-  orderModalSearch = '';
+  orderModalSearch = ''; orderLetra = ''; orderFiltro = '';
   orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea() && i.activo !== false).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: null})) : [];
   orderSupplierJustChanged = true;
   refreshOrderForm();
@@ -2795,7 +2893,7 @@ function printPedidoBorrador(){
 async function guardarBorradorPedido(){
   const order = await buildNewPedido('BORRADOR');
   if(!order) return;
-  orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = '';
+  orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = ''; orderLetra = '';
   pedidosTab = 'historial';
   showToast(gl({es:'Borrador guardado en el historial', ca:'Esborrany desat a l\'historial', en:'Draft saved in the history'}));
   openPedido(order.id);
@@ -2811,7 +2909,7 @@ async function sendNewPedido(method){
   if(!order) return;
   if(orderFormInline){
     // Vacía el formulario inline y pasa al historial para ver el pedido creado.
-    orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = '';
+    orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = ''; orderLetra = '';
     pedidosTab = 'historial';
   }else{
     closeModal();
