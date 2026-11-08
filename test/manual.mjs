@@ -168,9 +168,9 @@ await caso('Navegar: grupo → sus temas → leer; «atrás» sube un nivel; al 
       vis('.mnl-tema').find(b => /TPV/.test(b.textContent)).click(); await esp(300);
       out.leyendo = vis('.mnl-cuerpo').length; out.titulo = (document.querySelector('.mnl-cab-tit') || {}).textContent;
       out.sinTemas = vis('.mnl-tema').length;
-      document.querySelector('.mnl-atras').click(); await esp(250);          // sube al grupo
+      vis('.mnl-atras')[0].click(); await esp(250);          // sube al grupo
       out.enGrupo = vis('.mnl-tema').length;
-      document.querySelector('.mnl-atras').click(); await esp(250);          // sube a la portada
+      vis('.mnl-atras')[0].click(); await esp(250);          // sube a la portada
       out.enPortada = vis('.mnl-area').length;
       // salir del manual y volver: portada otra vez
       document.querySelectorAll('.mnl-area')[1].click(); await esp(150);

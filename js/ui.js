@@ -433,7 +433,7 @@ function tourPositionUI(opts){
     spot.classList.add('no-target'); spot.classList.add('active');
     spot.style.top = '50%'; spot.style.left = '50%'; spot.style.width = '0px'; spot.style.height = '0px';
     if(arrow) arrow.style.display = 'none';
-    bubble.classList.remove('tour-bubble-sheet', 'tour-bubble-dock');
+    bubble.classList.remove('tour-bubble-sheet', 'tour-bubble-sheet-top', 'tour-bubble-dock');
     bubble.classList.add('tour-bubble-centered');
     return;
   }
@@ -447,15 +447,22 @@ function tourPositionUI(opts){
     bubble.style.top = 'auto'; bubble.style.left = '0px';
     if(arrow) arrow.style.display = 'none';
     const limite = vh - bh - 14;
+    bubble.classList.remove('tour-bubble-sheet-top');
     if(ajustar && el){ tourScrollTarget(el, 72, limite); rect = medir(); }
-    const arriba = rect.top - pad, abajo = Math.min(rect.bottom + pad, limite - 6);
+    // Si la página no deja subir lo explicado por encima de la hoja (ya está al final del scroll), la hoja pasa ARRIBA en vez de
+    // taparlo: queda enfrente, en el hueco libre de la mitad que no ocupa el elemento.
+    let arriba = rect.top - pad, abajo = Math.min(rect.bottom + pad, limite - 6);
+    if(rect.bottom + pad > limite - 6 && rect.top - pad > bh + 14){
+      bubble.classList.add('tour-bubble-sheet-top');
+      abajo = rect.bottom + pad;
+    }
     spot.classList.remove('no-target'); spot.classList.add('active');
     spot.style.top = Math.max(arriba, 4) + 'px'; spot.style.left = Math.max(rect.left - pad, 4) + 'px';
     spot.style.width = Math.min(rect.width + pad * 2, vw - 8) + 'px';
     spot.style.height = Math.max(40, abajo - Math.max(arriba, 4)) + 'px';
     return;
   }
-  bubble.classList.remove('tour-bubble-sheet');
+  bubble.classList.remove('tour-bubble-sheet', 'tour-bubble-sheet-top');
 
   // ── PC y tablet ──
   if(ajustar && el){ tourScrollTarget(el, 14, vh - 14); rect = medir(); }

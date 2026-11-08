@@ -4144,7 +4144,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Antes de empezar: «Para que tus números salgan bien»</h4>
 <p>Arriba puede aparecer un aviso rojo o una lista con lo que falta. Hazla antes que nada, porque cambia todas las cuentas:</p>
-<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Elige tu forma jurídica</strong> en <strong>Gestión → Mi Negocio → Forma jurídica y régimen fiscal</strong>: autónomo, comunidad de bienes, sociedad o cooperativa; si eres autónomo, estimación directa (simplificada o normal) o módulos. Sin esto, la app calcula como si fueras una sociedad y tu impuesto y tu sueldo salen mal. Si GastroGoan ya fijó tu forma jurídica, tu régimen y tu <strong>comunidad autónoma</strong> al darte de alta, aparecen bloqueados: si algo no es correcto, pulsa <strong>Comprobar cambios</strong> o díselo a GastroGoan.</div></div>
+<div class="manual-step"><div class="sn">1</div><div class="st"><strong>Comprueba tu forma jurídica</strong> en <strong>Gestión → Mi Negocio → Forma jurídica y régimen fiscal</strong>: la fija GastroGoan al darte de alta (autónomo, comunidad de bienes, sociedad o cooperativa y, si eres autónomo, estimación directa o módulos); tú no la eliges. Sin ella, la app calcula como si fueras una sociedad y tu impuesto y tu sueldo salen mal. Si GastroGoan ya fijó tu forma jurídica, tu régimen y tu <strong>comunidad autónoma</strong> al darte de alta, aparecen bloqueados: si algo no es correcto, pulsa <strong>Comprobar cambios</strong> o díselo a GastroGoan.</div></div>
 <div class="manual-step"><div class="sn">2</div><div class="st">Pon el <strong>NIF del negocio</strong> (sale en cada ticket y en lo que recibe tu gestor).</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Da de alta tus <strong>gastos fijos</strong> (alquiler, luz, seguros, gestoría…).</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Si eres autónomo o comunidad de bienes, apunta <strong>Mi sueldo (titular)</strong> (o <strong>No me pago un fijo</strong>).</div></div>
@@ -4587,7 +4587,7 @@ const MANUAL_CHAPTERS = [
 <p>La tarjeta grande, dividida en bloques. Se usa en tickets, web de reservas, pedidos a proveedores y selector de negocios.</p>
 <ul>
 <li><strong>Identidad</strong> — <strong>Logo</strong> (imagen de hasta 2 MB; <strong>Subir logo</strong> / <strong>Quitar</strong>), <strong>Nombre del negocio</strong>, <strong>Propietario/a</strong>, <strong>Tipo de negocio</strong>, <strong>Año de apertura</strong> y <strong>Color de marca</strong> (el de tu página pública de reservas y pedidos).</li>
-<li><strong>Forma jurídica y régimen fiscal</strong> — Decide cómo calcula la app los impuestos en Gestión Económica. Elige <strong>Eres</strong>: <em>Autónomo</em>, <em>Comunidad de Bienes</em>, <em>Sociedad</em> o <em>Cooperativa</em>.
+<li><strong>Forma jurídica y régimen fiscal</strong> — Decide cómo calcula la app los impuestos en Gestión Económica. <strong>No se elige aquí</strong>: la fija GastroGoan al darte de alta, según lo que declara tu gestoría, y los campos salen bloqueados (con un candado). Si cambia, pulsa <strong>Comprobar cambios</strong>. Lo que verás es una de estas formas: <em>Autónomo</em>, <em>Comunidad de Bienes</em>, <em>Sociedad</em> o <em>Cooperativa</em>.
   <ul>
   <li><strong>Autónomo</strong> → eliges <strong>Tributas por</strong> <em>Estimación directa</em> (simplificada o normal, y la casilla del primer año con beneficio) o <em>Módulos</em>. También puedes poner otras rentas del titular y los hijos a cargo, que afectan al IRPF.</li>
   <li><strong>Comunidad de Bienes</strong> → añades a cada <strong>comunero</strong> con su porcentaje (deben sumar 100 %) y su tipo de IRPF.</li>
@@ -4602,6 +4602,8 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Tipos de servicio</strong> — Casillas <strong>En mesa</strong>, <strong>Para llevar</strong> y <strong>A domicilio</strong>. Se guardan al marcar y condicionan los botones del TPV y las opciones de la web de pedidos. Debe quedar al menos uno activo; la app avisa si no encaja con tu tipo de negocio.</li>
 <li><strong>Horario de apertura</strong> — Cada día de lunes a domingo: casilla de abierto y modo <strong>Por turnos</strong> (hasta dos tramos, para el horario partido) o <strong>Seguido</strong>. Para cerrar a medianoche escribe 00:00 en la hora de cierre. Fija el aforo por turno en Reservas y las horas que ofrece la web; si un cierre es anterior a la apertura o dos turnos se solapan, la app te pregunta antes de guardar. La <strong>carta</strong> concreta de cada franja se decide en Oferta Gastronómica, no aquí.</li>
+<li><strong>Días cerrados y vacaciones</strong> — Fechas en que NO abres (vacaciones, obras, un puente): la web no las ofrece y la app las trata como cerradas.</li>
+<li><strong>Horario especial</strong> — Un día (o varios) en que abres con <strong>otras horas</strong> que las de tu semana (una víspera, un evento, un festivo con servicio reducido). Pon el día, hasta cuándo (opcional), un motivo y uno o dos servicios; al añadirlo, la web de reservas, los pedidos online, el aforo por turno y los avisos del TPV usan ese horario ese día. Si el mismo día está también en cerrados, gana el cierre. Si ya hay reservas en esas fechas, la app te avisa para que revises que encajan. Se quita con la papelera.</li>
 </ul>
 
 <h4>Operativa</h4>
@@ -4612,12 +4614,12 @@ const MANUAL_CHAPTERS = [
 <li><strong>Reservas de grupo por teléfono o email</strong> — Marca la casilla y pon <strong>a partir de cuántos comensales</strong>: la web no deja reservar y pide al cliente que te llame o escriba. Las demás se confirman solas si hay mesa.</li>
 <li><strong>Pedir señal para confirmar reservas</strong> — Cobra una señal con tarjeta al reservar. Necesita Stripe conectado (si no, te lo dice y hay un botón para ir a conectarlo). Eliges el <strong>importe</strong>, si es <strong>fijo por reserva</strong> o <strong>por persona</strong>, <strong>a partir de cuántas personas</strong> (0 = siempre) y una nota para el cliente.</li>
 <li><strong>Crea el plano de tu sala</strong> — Escribe el <strong>Nombre de la zona</strong> (Interior, Terraza, Barra, Planta 1...), el <strong>Número de mesas</strong> y las <strong>Plazas por mesa</strong> (obligatorias) y pulsa <strong>Crear zona</strong>: se crean todas de golpe. No hay zonas fijas: las que tú quieras.</li>
-<li><strong>Mesas configuradas</strong> — Renombra una zona escribiendo sobre su nombre, añade una mesa a la zona (<strong>+</strong>), elimina la zona entera (papelera), o cambia el nombre y las plazas de cada mesa. Las mesas sin plazas salen marcadas en rojo: la web de reservas no puede ofrecerlas. Una mesa o zona con una comanda abierta no se puede borrar hasta cobrarla en el TPV. Si la suma de plazas se aleja mucho del aforo, aparece un aviso.</li>
+<li><strong>Mesas configuradas</strong> — Va justo debajo, en la misma tarjeta, con las mesas en rejilla (tres por fila en PC y tablet) y su casilla de <strong>Plazas</strong> en cada una. Renombra una zona escribiendo sobre su nombre, añade una mesa a la zona (<strong>+</strong>), elimina la zona entera (papelera), o cambia el nombre y las plazas de cada mesa. Las mesas sin plazas salen marcadas en rojo: la web de reservas no puede ofrecerlas. Una mesa o zona con una comanda abierta no se puede borrar hasta cobrarla en el TPV. Si la suma de plazas se aleja mucho del aforo, aparece un aviso.</li>
 </ul>
 <p>Estas mesas son las que ves en el TPV, en Reservas y en los QR de mesa.</p>
 
 <h4>Configuración del ticket</h4>
-<p>Qué sale impreso en tus tickets: <strong>Mostrar dirección</strong>, <strong>Mostrar teléfono</strong>, <strong>Mostrar web</strong>, <strong>Mostrar CIF/NIF</strong> (siempre marcada y bloqueada, es obligatorio), <strong>Pedir reseña con QR al final del ticket</strong> (necesita el enlace de Google Maps), un <strong>Mensaje de pie de ticket</strong> y el <strong>IVA (%)</strong> general que se usa para el desglose cuando un artículo no trae el suyo. Pulsa <strong>Guardar</strong> y mira el resultado con <strong>Vista previa del ticket</strong>. Cada ticket lleva un número de factura simplificada propio de cada dispositivo.</p>
+<p>Qué sale impreso en tus tickets: <strong>Mostrar dirección</strong>, <strong>Mostrar teléfono</strong>, <strong>Mostrar web</strong>, <strong>Mostrar CIF/NIF</strong> (siempre marcada y bloqueada, es obligatorio), <strong>Pedir reseña con QR al final del ticket</strong> (necesita el enlace de Google Maps), un <strong>Mensaje de pie de ticket</strong> y el <strong>IVA por defecto</strong> (comida y, si quieres otro, bebidas), que solo se usa cuando un artículo no trae el suyo: cada plato, bebida y menú lleva su IVA (se elige en Oferta) y el ticket desglosa cada tipo por separado. Arriba ves un resumen de los tipos que llevan tus productos y cuántos no tienen ninguno. Pulsa <strong>Guardar</strong> y mira el resultado con <strong>Vista previa del ticket</strong>. Cada ticket lleva un número de factura simplificada propio de cada dispositivo.</p>
 
 <h4>Impresora de tickets (y cajón)</h4>
 <p>Cómo imprime <strong>este aparato</strong> (cada tablet o puesto elige la suya):</p>
@@ -4749,7 +4751,7 @@ const MANUAL_CHAPTERS = [
 <p>La targeta gran, dividida en blocs. S'usa en tiquets, web de reserves, comandes a proveïdors i selector de negocis.</p>
 <ul>
 <li><strong>Identitat</strong> — <strong>Logo</strong> (imatge de fins a 2 MB; <strong>Pujar logo</strong> / <strong>Treure</strong>), <strong>Nom del negoci</strong>, <strong>Propietari/ària</strong>, <strong>Tipus de negoci</strong>, <strong>Any d'obertura</strong> i <strong>Color de marca</strong> (el de la teva pàgina pública de reserves i comandes).</li>
-<li><strong>Forma jurídica i règim fiscal</strong> — Decideix com calcula l'app els impostos a Gestió Econòmica. Tria <strong>Ets</strong>: <em>Autònom</em>, <em>Comunitat de Béns</em>, <em>Societat</em> o <em>Cooperativa</em>.
+<li><strong>Forma jurídica i règim fiscal</strong> — Decideix com calcula l'app els impostos a Gestió Econòmica. <strong>No es tria aquí</strong>: la fixa GastroGoan en donar-te d'alta, segons el que declara la teva gestoria, i els camps surten bloquejats (amb un cadenat). Si canvia, prem <strong>Comprovar canvis</strong>. El que veuràs és una d'aquestes formes: <em>Autònom</em>, <em>Comunitat de Béns</em>, <em>Societat</em> o <em>Cooperativa</em>.
   <ul>
   <li><strong>Autònom</strong> → tries <strong>Tributes per</strong> <em>Estimació directa</em> (simplificada o normal, i la casella del primer any amb benefici) o <em>Mòduls</em>. També pots posar altres rendes del titular i els fills a càrrec, que afecten l'IRPF.</li>
   <li><strong>Comunitat de Béns</strong> → afegeixes cada <strong>comuner</strong> amb el seu percentatge (han de sumar 100 %) i el seu tipus d'IRPF.</li>
@@ -4764,6 +4766,8 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Tipus de servei</strong> — Caselles <strong>A taula</strong>, <strong>Per emportar</strong> i <strong>A domicili</strong>. Es desen en marcar-les i condicionen els botons del TPV i les opcions de la web de comandes. N'ha de quedar almenys un d'actiu; l'app avisa si no encaixa amb el teu tipus de negoci.</li>
 <li><strong>Horari d'obertura</strong> — Cada dia de dilluns a diumenge: casella d'obert i mode <strong>Per torns</strong> (fins a dos trams, per a l'horari partit) o <strong>Seguit</strong>. Per tancar a mitjanit escriu 00:00 a l'hora de tancament. Fixa l'aforament per torn a Reserves i les hores que ofereix la web; si un tancament és anterior a l'obertura o dos torns se solapen, l'app et pregunta abans de desar. La <strong>carta</strong> concreta de cada franja es decideix a Oferta Gastronòmica, no aquí.</li>
+<li><strong>Dies tancats i vacances</strong> — Dates en què NO obres (vacances, obres, un pont): la web no les ofereix i l'app les tracta com a tancades.</li>
+<li><strong>Horari especial</strong> — Un dia (o diversos) en què obres amb <strong>altres hores</strong> que les de la setmana (una vigília, un esdeveniment, un festiu amb servei reduït). Posa el dia, fins quan (opcional), un motiu i un o dos serveis; en afegir-lo, la web de reserves, les comandes en línia, l'aforament per torn i els avisos del TPV fan servir aquest horari aquell dia. Si el mateix dia és també a tancats, guanya el tancament. Si ja hi ha reserves en aquestes dates, l'app t'avisa perquè revisis que hi encaixen. Es treu amb la paperera.</li>
 </ul>
 
 <h4>Operativa</h4>
@@ -4779,7 +4783,7 @@ const MANUAL_CHAPTERS = [
 <p>Aquestes taules són les que veus al TPV, a Reserves i als QR de taula.</p>
 
 <h4>Configuració del tiquet</h4>
-<p>Què surt imprès als teus tiquets: <strong>Mostrar adreça</strong>, <strong>Mostrar telèfon</strong>, <strong>Mostrar web</strong>, <strong>Mostrar CIF/NIF</strong> (sempre marcada i bloquejada, és obligatori), <strong>Demanar ressenya amb QR al final del tiquet</strong> (necessita l'enllaç de Google Maps), un <strong>Missatge de peu de tiquet</strong> i l'<strong>IVA (%)</strong> general que s'usa per al desglossament quan un article no porta el seu. Prem <strong>Desar</strong> i mira el resultat amb <strong>Vista prèvia del tiquet</strong>. Cada tiquet porta un número de factura simplificada propi de cada dispositiu.</p>
+<p>Què surt imprès als teus tiquets: <strong>Mostrar adreça</strong>, <strong>Mostrar telèfon</strong>, <strong>Mostrar web</strong>, <strong>Mostrar CIF/NIF</strong> (sempre marcada i bloquejada, és obligatori), <strong>Demanar ressenya amb QR al final del tiquet</strong> (necessita l'enllaç de Google Maps), un <strong>Missatge de peu de tiquet</strong> i l'<strong>IVA per defecte</strong> (menjar i, si en vols un altre, begudes), que només s'usa quan un article no porta el seu: cada plat, beguda i menú porta el seu IVA (es tria a Oferta) i el tiquet desglossa cada tipus per separat. A dalt veus un resum dels tipus que porten els teus productes i quants no en tenen cap. Prem <strong>Desar</strong> i mira el resultat amb <strong>Vista prèvia del tiquet</strong>. Cada tiquet porta un número de factura simplificada propi de cada dispositiu.</p>
 
 <h4>Impressora de tiquets (i calaix)</h4>
 <p>Com imprimeix <strong>aquest aparell</strong> (cada tauleta o lloc tria la seva):</p>
@@ -4911,7 +4915,7 @@ const MANUAL_CHAPTERS = [
 <p>The big card, split into blocks. It is used on receipts, the booking website, supplier orders and the business selector.</p>
 <ul>
 <li><strong>Identity</strong> — <strong>Logo</strong> (an image up to 2 MB; <strong>Upload logo</strong> / <strong>Remove</strong>), <strong>Business name</strong>, <strong>Owner</strong>, <strong>Business type</strong>, <strong>Year opened</strong> and <strong>Brand color</strong> (the one on your public reservations and ordering page).</li>
-<li><strong>Legal form and tax regime</strong> — Decides how the app calculates taxes in Financial Management. Choose <strong>You are</strong>: <em>Self-employed</em>, <em>Community of Property (CB)</em>, <em>Company</em> or <em>Cooperative</em>.
+<li><strong>Legal form and tax regime</strong> — Decides how the app calculates taxes in Financial Management. <strong>It is not chosen here</strong>: GastroGoan sets it when you sign up, from what your accountant declares, and the fields appear locked (with a padlock). If it changes, press <strong>Check for changes</strong>. What you will see is one of: <em>Self-employed</em>, <em>Community of Property (CB)</em>, <em>Company</em> or <em>Cooperative</em>.
   <ul>
   <li><strong>Self-employed</strong> → you choose <strong>You are taxed under</strong> <em>Actual-expense taxation</em> (simplified or normal, plus the first-profitable-year box) or <em>Modules</em>. You can also enter the holder's other income and dependent children, which affect income tax.</li>
   <li><strong>Community of Property</strong> → add each <strong>co-owner</strong> with their share (must total 100 %) and their income-tax rate.</li>
@@ -4926,6 +4930,8 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Service types</strong> — Checkboxes <strong>Dine-in</strong>, <strong>Takeaway</strong> and <strong>Delivery</strong>. They save as you tick them and control the POS buttons and the ordering website's options. At least one must stay on; the app warns if it does not fit your business type.</li>
 <li><strong>Opening hours</strong> — Each day from Monday to Sunday: an open checkbox and mode <strong>By shift</strong> (up to two blocks, for split hours) or <strong>Continuous</strong>. To close at midnight, type 00:00 as closing time. It sets the capacity per slot in Reservations and the times the website offers; if a closing time is before the opening or two shifts overlap, the app asks before saving. Which <strong>menu</strong> applies to each time slot is decided in Menu Offering, not here.</li>
+<li><strong>Closed days and holidays</strong> — Dates when you are NOT open (holidays, works, a long weekend): the website does not offer them and the app treats them as closed.</li>
+<li><strong>Special hours</strong> — A day (or several) when you open at <strong>different hours</strong> than your usual week (an eve, an event, a holiday with reduced service). Enter the day, an optional end date, a reason and one or two services; once added, the booking site, online orders, capacity per slot and the POS warnings use those hours that day. If the same day is also in closed days, the closure wins. If there are already bookings on those dates the app warns you so you can check they fit. Remove it with the bin.</li>
 </ul>
 
 <h4>Operations</h4>
@@ -4941,7 +4947,7 @@ const MANUAL_CHAPTERS = [
 <p>These tables are the ones you see in the POS, in Reservations and on the table QR codes.</p>
 
 <h4>Receipt settings</h4>
-<p>What is printed on your receipts: <strong>Show address</strong>, <strong>Show phone</strong>, <strong>Show website</strong>, <strong>Show tax ID</strong> (always ticked and locked, it is mandatory), <strong>Ask for a review with a QR at the bottom of the receipt</strong> (needs the Google Maps link), a <strong>Receipt footer message</strong> and the general <strong>VAT (%)</strong> used for the breakdown when an item has no rate of its own. Tap <strong>Save</strong> and see the result with <strong>Receipt preview</strong>. Each receipt carries a simplified-invoice number of its own per device.</p>
+<p>What is printed on your receipts: <strong>Show address</strong>, <strong>Show phone</strong>, <strong>Show website</strong>, <strong>Show tax ID</strong> (always ticked and locked, it is mandatory), <strong>Ask for a review with a QR at the bottom of the receipt</strong> (needs the Google Maps link), a <strong>Receipt footer message</strong> and the <strong>default VAT</strong> (food and, if you want a different one, drinks), used only when an item has no rate of its own: every dish, drink and menu carries its own VAT (set in Menu Offering) and the receipt itemises each rate separately. At the top you see a summary of the rates your products carry and how many have none. Tap <strong>Save</strong> and see the result with <strong>Receipt preview</strong>. Each receipt carries a simplified-invoice number of its own per device.</p>
 
 <h4>Receipt printer (and cash drawer)</h4>
 <p>How <strong>this device</strong> prints (each tablet or station picks its own):</p>
@@ -5661,7 +5667,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>El escandallo sale a 0 €</strong>: faltan los precios de compra en la Mega Lista (ya viene el catálogo, pero a precio cero) o el formato/unidad está mal. Mira «por revisar» en la Mega Lista.</li>
 <li><strong>El food cost parece distinto del esperado</strong>: el precio de compra es <strong>sin IVA</strong>; el precio de la carta lleva IVA y la app lo quita para calcular el food cost. Comparas manzanas con manzanas solo si ambos van sin IVA.</li>
-<li><strong>El IVA de los tickets</strong> sale del tipo general de Mi Negocio → <strong>Configuración del ticket</strong>. Revísalo si vendes con otros tipos.</li>
+<li><strong>El IVA de los tickets</strong> sale del IVA de cada plato, bebida o menú (se elige en Oferta); Mi Negocio → <strong>Configuración del ticket</strong> solo guarda el IVA por defecto de lo que no lo tiene. Mira el resumen «IVA de tus productos» y revisa los que salen «Sin tipo».</li>
 <li><strong>La Cuenta de Resultados no se parece a la de tu gestor</strong>: primero comprueba la <strong>forma jurídica y el régimen fiscal</strong> de Mi Negocio (si falta, aparece un aviso rojo) y tus gastos fijos. El impuesto se calcula por años, no mes a mes, y un mes puede salir con impuesto negativo. En autónomos y CB el «sueldo del titular» no es gasto.</li>
 <li><strong>Una venta anulada</strong> sigue contando en su mes; la rectificativa resta en el mes en que se anula, para no tocar un trimestre ya presentado.</li>
 <li><strong>Pedidos por plataformas</strong>: la comisión se descuenta con el porcentaje que pusiste en Mi Negocio → Plataformas de delivery.</li>
@@ -5803,7 +5809,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>L'escandall surt a 0 €</strong>: falten els preus de compra a la Mega Llista (ja ve el catàleg, però a preu zero) o el format/unitat és incorrecte. Mira «per revisar» a la Mega Llista.</li>
 <li><strong>El food cost sembla diferent de l'esperat</strong>: el preu de compra és <strong>sense IVA</strong>; el preu de la carta porta IVA i l'app el treu per calcular el food cost. Compares peres amb peres només si tots dos van sense IVA.</li>
-<li><strong>L'IVA dels tiquets</strong> surt del tipus general d'El Meu Negoci → <strong>Configuració del tiquet</strong>. Revisa'l si vens amb altres tipus.</li>
+<li><strong>L'IVA dels tiquets</strong> surt de l'IVA de cada plat, beguda o menú (es tria a Oferta); El Meu Negoci → <strong>Configuració del tiquet</strong> només desa l'IVA per defecte del que no en té. Mira el resum «IVA dels teus productes» i revisa els que surten «Sense tipus».</li>
 <li><strong>El Compte de Resultats no s'assembla al del teu gestor</strong>: primer comprova la <strong>forma jurídica i el règim fiscal</strong> d'El Meu Negoci (si falta, apareix un avís vermell) i les teves despeses fixes. L'impost es calcula per anys, no mes a mes, i un mes pot sortir amb impost negatiu. En autònoms i CB el «sou del titular» no és despesa.</li>
 <li><strong>Una venda anul·lada</strong> continua comptant en el seu mes; la rectificativa resta al mes en què s'anul·la, per no tocar un trimestre ja presentat.</li>
 <li><strong>Comandes per plataformes</strong>: la comissió es descompta amb el percentatge que vas posar a El Meu Negoci → Plataformes de delivery.</li>
@@ -5945,7 +5951,7 @@ const MANUAL_CHAPTERS = [
 <ul>
 <li><strong>Costing shows €0</strong>: purchase prices are missing in the Master List (the catalogue is there, but at zero price) or the pack size/unit is wrong. Check "to review" in the Master List.</li>
 <li><strong>Food cost looks different from expected</strong>: the purchase price is <strong>excluding VAT</strong>; the menu price includes VAT and the app removes it to work out food cost. You are only comparing like with like if both exclude VAT.</li>
-<li><strong>VAT on receipts</strong> comes from the general rate in My Business → <strong>Receipt settings</strong>. Check it if you sell at other rates.</li>
+<li><strong>VAT on receipts</strong> comes from the VAT of each dish, drink or menu (set in Menu Offering); My Business → <strong>Receipt settings</strong> only stores the default VAT for anything that has none. Look at the «VAT on your products» summary and check any marked «No rate».</li>
 <li><strong>The Income Statement doesn't look like your accountant's</strong>: first check the <strong>legal form and tax regime</strong> in My Business (a red notice shows if it is missing) and your fixed costs. Tax is calculated per year, not month by month, and a month can show negative tax. For self-employed and CB the "owner's salary" is not an expense.</li>
 <li><strong>A voided sale</strong> still counts in its own month; the credit note subtracts in the month it is voided, so a quarter already filed is never touched.</li>
 <li><strong>Platform orders</strong>: the commission is deducted using the percentage you set in My Business → Delivery platforms.</li>
