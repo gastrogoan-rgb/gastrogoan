@@ -1,5 +1,5 @@
-// Manual de uso rehecho (1/11) + tour guiado: capítulos en tres idiomas, índice por áreas, buscador que marca lo encontrado,
-// saltos a cada apartado, anterior/siguiente, índice plegado en móvil y el tour de punta a punta con teclado.
+// Manual de uso + tour guiado: temas en tres idiomas, portada de cinco botones → temas del grupo → lectura (8/11), buscador que marca
+// lo encontrado, saltos a cada apartado, anterior/siguiente dentro del grupo y el tour de punta a punta con teclado SIN tapar lo que explica.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
@@ -31,7 +31,7 @@ async function abrir(w, h){
     ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id => document.getElementById(id)?.remove());
     Object.assign(DB.business, {netlifySetupDone:true, extConnPromptSeen:true, tourSeen:true, categoryIconHintSeen:true});
     DB.business.ownFirebase = {apiKey:'fake', databaseURL:'https://fake-default-rtdb.firebaseio.com'};
-    manualIndiceAbierto = null; manualSearch = ''; manualChapter = 0;
+    manualArea = null; manualSearch = ''; manualChapter = -1;
     currentFolder = 'gestion'; ownerUnlocked = true; navigate('manual');
   });
   await new Promise(r => setTimeout(r, 500));
@@ -94,23 +94,26 @@ await caso('Cada capítulo se pinta: título, cuerpo, «En este capítulo», ant
   }
 });
 
-await caso('Buscar filtra los capítulos y MARCA lo encontrado dentro del texto; sin resultados lo dice', async () => {
+await caso('Buscar lista los temas que lo contienen (de cualquier grupo) y MARCA lo encontrado dentro del texto; sin resultados lo dice', async () => {
   const {page} = await abrir(1280, 800);
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms));
-    const total = document.querySelectorAll('.mnl-chip').length;
+    const out = {};
     setManualSearch('stripe'); await esp(200);
-    const out = {total, filtrados: document.querySelectorAll('.mnl-chip').length, marcas: document.querySelectorAll('.mnl-cuerpo mark.mnl-hl').length, marcaTxt: (document.querySelector('mark.mnl-hl') || {}).textContent};
+    out.filtrados = document.querySelectorAll('.mnl-tema').length;
+    out.conArea = !!document.querySelector('.mnl-tema em');
+    document.querySelector('.mnl-tema').click(); await esp(250);
+    out.marcas = document.querySelectorAll('.mnl-cuerpo mark.mnl-hl').length; out.marcaTxt = (document.querySelector('mark.mnl-hl') || {}).textContent;
     setManualSearch('qwertyzzz'); await esp(200);
-    out.vacio = !!document.querySelector('#manual-detail .empty') && document.querySelectorAll('.mnl-chip').length === 0;
+    out.vacio = !!document.querySelector('#manual-indice .empty') && document.querySelectorAll('.mnl-tema').length === 0;
     setManualSearch('TPV'); await esp(100);   // sin distinguir mayúsculas
-    out.mayus = document.querySelectorAll('.mnl-chip').length;
+    out.mayus = document.querySelectorAll('.mnl-tema').length;
     setManualSearch(''); await esp(100);
-    out.vuelta = document.querySelectorAll('.mnl-chip').length;
+    out.vuelta = document.querySelectorAll('.mnl-area').length;
     return out;
   });
-  assert.ok(r.filtrados > 0 && r.filtrados < r.total, JSON.stringify(r)); assert.ok(r.marcas >= 1 && /stripe/i.test(r.marcaTxt), JSON.stringify(r));
-  assert.ok(r.vacio, JSON.stringify(r)); assert.ok(r.mayus >= 1, JSON.stringify(r)); assert.equal(r.vuelta, r.total, JSON.stringify(r));
+  assert.ok(r.filtrados > 0 && r.filtrados < 25 && r.conArea, JSON.stringify(r)); assert.ok(r.marcas >= 1 && /stripe/i.test(r.marcaTxt), JSON.stringify(r));
+  assert.ok(r.vacio, JSON.stringify(r)); assert.ok(r.mayus >= 1, JSON.stringify(r)); assert.equal(r.vuelta, 5, 'al borrar la búsqueda vuelve la portada: ' + JSON.stringify(r));
   await page.close();
 });
 
@@ -133,20 +136,78 @@ await caso('«En este capítulo» salta al apartado y anterior/siguiente cambian
   await page.close();
 });
 
-await caso('En móvil el índice empieza plegado en un botón con el capítulo actual, se abre, y al elegir se pliega', async () => {
-  const {page} = await abrir(390, 844);
+await caso('Portada: al entrar solo se ven los CINCO botones (Empezar, Cocina, Sala, Gestión, Ayuda); ningún tema ni texto, en PC y móvil', async () => {
+  for(const [w, h] of [[1280,800],[390,844],[320,640]]){
+    const {page} = await abrir(w, h);
+    const r = await page.evaluate(() => {
+      const vis = s => [...document.querySelectorAll(s)].filter(e => e.getBoundingClientRect().height > 0);
+      const botones = vis('.mnl-area');
+      return {n: botones.length, nombres: botones.map(b => b.querySelector('b').textContent.trim()), temas: vis('.mnl-tema').length, cuerpo: vis('.mnl-cuerpo').length,
+        altos: botones.map(b => Math.round(b.getBoundingClientRect().height)), sw: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        cuenta: botones.map(b => b.querySelector('.mnl-area-n').textContent.trim()), tour: vis('#manual-tour').length};
+    });
+    assert.equal(r.n, 5, w + ': ' + JSON.stringify(r)); assert.deepEqual(r.nombres, ['Empezar', 'Cocina', 'Sala', 'Gestión', 'Ayuda']);
+    assert.equal(r.temas, 0, 'sin temas a la vista'); assert.equal(r.cuerpo, 0, 'sin texto a la vista');
+    assert.ok(r.altos.every(a => a >= 64) && r.sw <= 1, JSON.stringify(r)); assert.ok(r.cuenta.every(c => /\d+ temas?/.test(c)), JSON.stringify(r.cuenta));
+    await page.close();
+  }
+});
+
+await caso('Navegar: grupo → sus temas → leer; «atrás» sube un nivel; al volver a entrar al manual sale la portada; openManualAt abre directo', async () => {
+  for(const [w, h] of [[1280,800],[390,844]]){
+    const {page, errs} = await abrir(w, h);
+    const r = await page.evaluate(async () => {
+      const esp = ms => new Promise(r => setTimeout(r, ms));
+      const vis = s => [...document.querySelectorAll(s)].filter(e => e.getBoundingClientRect().height > 0);
+      const out = {};
+      const areaSala = [...document.querySelectorAll('.mnl-area')].find(b => /Sala/.test(b.textContent));
+      areaSala.click(); await esp(250);
+      out.temas = vis('.mnl-tema').length; out.esperados = MANUAL_CHAPTERS.filter(c => c.area === 'sala').length;
+      out.titulosOk = vis('.mnl-tema b').every(b => b.textContent.trim().length > 2) && vis('.mnl-tema small').every(b => b.textContent.trim().length > 10);
+      out.sinPortada = vis('.mnl-area').length; out.sinTexto = vis('.mnl-cuerpo').length; out.cabecera = (document.querySelector('.mnl-grupo-cab h2') || {}).textContent;
+      vis('.mnl-tema').find(b => /TPV/.test(b.textContent)).click(); await esp(300);
+      out.leyendo = vis('.mnl-cuerpo').length; out.titulo = (document.querySelector('.mnl-cab-tit') || {}).textContent;
+      out.sinTemas = vis('.mnl-tema').length;
+      document.querySelector('.mnl-atras').click(); await esp(250);          // sube al grupo
+      out.enGrupo = vis('.mnl-tema').length;
+      document.querySelector('.mnl-atras').click(); await esp(250);          // sube a la portada
+      out.enPortada = vis('.mnl-area').length;
+      // salir del manual y volver: portada otra vez
+      document.querySelectorAll('.mnl-area')[1].click(); await esp(150);
+      navigate('home'); await esp(200); navigate('manual'); await esp(300);
+      out.reentrada = vis('.mnl-area').length + '/' + vis('.mnl-tema').length;
+      // enlace directo
+      openManualAt('reservas'); await esp(300);
+      out.directo = (document.querySelector('.mnl-cab-tit') || {}).textContent;
+      return out;
+    }).catch(e => ({error: e.message}));
+    assert.ok(!r.error, w + ': ' + r.error);
+    assert.equal(r.temas, r.esperados, JSON.stringify(r)); assert.ok(r.titulosOk && r.sinPortada === 0 && r.sinTexto === 0 && /Sala/.test(r.cabecera), JSON.stringify(r));
+    assert.ok(r.leyendo === 1 && /TPV/.test(r.titulo) && r.sinTemas === 0, JSON.stringify(r));
+    assert.equal(r.enGrupo, r.esperados, JSON.stringify(r)); assert.equal(r.enPortada, 5, JSON.stringify(r));
+    assert.equal(r.reentrada, '5/0', JSON.stringify(r)); assert.ok(/Reservas/.test(r.directo), JSON.stringify(r));
+    assert.deepEqual(errs, [], errs.join(' | '));
+    await page.close();
+  }
+});
+
+await caso('Anterior / siguiente se quedan dentro del grupo (el primero y el último no tienen hueco que no exista)', async () => {
+  const {page} = await abrir(1280, 800);
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms));
-    const vis = s => { const e = document.querySelector(s); return !!e && e.getBoundingClientRect().height > 0; };
-    const out = {toggle: vis('.mnl-toggle'), cerrado: !vis('.mnl-grupos'), txt: document.querySelector('.mnl-toggle').textContent.replace(/\s+/g, ' ').trim()};
-    document.querySelector('.mnl-toggle').click(); await esp(150);
-    out.abierto = vis('.mnl-grupos'); out.alto = Math.round(document.querySelector('.mnl-chip').getBoundingClientRect().height);
-    document.querySelectorAll('.mnl-chip')[3].click(); await esp(250);
-    out.plegado = !vis('.mnl-grupos'); out.cap = manualChapter;
+    const out = {};
+    for(const area of ['empezar', 'cocina', 'ayuda']){
+      const idx = MANUAL_CHAPTERS.map((c, i) => ({c, i})).filter(x => x.c.area === area);
+      goManualChapter(idx[0].i); await esp(120);
+      out[area + '_primero'] = [!!document.querySelector('.mnl-pie .mnl-nav:not(.mnl-sig)'), !!document.querySelector('.mnl-sig')];
+      goManualChapter(idx[idx.length - 1].i); await esp(120);
+      out[area + '_ultimo'] = [!!document.querySelector('.mnl-pie .mnl-nav:not(.mnl-sig)'), !!document.querySelector('.mnl-sig')];
+    }
     return out;
   });
-  assert.ok(r.toggle && r.cerrado && /Cómo empezar|empezar/i.test(r.txt), JSON.stringify(r)); assert.ok(r.abierto && r.alto >= 44, JSON.stringify(r));
-  assert.ok(r.plegado && r.cap === 3, JSON.stringify(r));
+  assert.deepEqual(r.empezar_primero, [false, false], JSON.stringify(r));   // un solo tema en «Empezar»
+  assert.deepEqual(r.cocina_primero, [false, true], JSON.stringify(r)); assert.deepEqual(r.cocina_ultimo, [true, false], JSON.stringify(r));
+  assert.deepEqual(r.ayuda_ultimo, [false, false], JSON.stringify(r));
   await page.close();
 });
 
@@ -173,9 +234,11 @@ await caso('Tour: de punta a punta con el teclado, con el foco sobre algo real e
       await new Promise(r => setTimeout(r, i === 0 ? 800 : 950));
       const s = await page.evaluate(() => {
         const b = document.getElementById('tour-bubble'); const q = b.getBoundingClientRect(); const sp = document.getElementById('tour-spotlight');
-        return {titulo: b.querySelector('h3').textContent.trim(), fuera: q.left < -1 || q.right > innerWidth + 1 || q.top < -1 || q.bottom > innerHeight + 1, conFoco: !sp.classList.contains('no-target'), paso: tourStepIndex, finale: !!TOUR_STEPS[tourStepIndex].finale, sinObjetivo: !TOUR_STEPS[tourStepIndex].target && !TOUR_STEPS[tourStepIndex].view && !TOUR_STEPS[tourStepIndex].folder && !TOUR_STEPS[tourStepIndex].screen};
+        const f = sp.getBoundingClientRect(); const ix = Math.max(0, Math.min(q.right, f.right) - Math.max(q.left, f.left)), iy = Math.max(0, Math.min(q.bottom, f.bottom) - Math.max(q.top, f.top)); const solape = sp.classList.contains('no-target') ? 0 : Math.round(ix * iy);
+        return {solape, foco: Math.round(f.width) + 'x' + Math.round(f.height), titulo: b.querySelector('h3').textContent.trim(), fuera: q.left < -1 || q.right > innerWidth + 1 || q.top < -1 || q.bottom > innerHeight + 1, conFoco: !sp.classList.contains('no-target'), paso: tourStepIndex, finale: !!TOUR_STEPS[tourStepIndex].finale, sinObjetivo: !TOUR_STEPS[tourStepIndex].target && !TOUR_STEPS[tourStepIndex].view && !TOUR_STEPS[tourStepIndex].folder && !TOUR_STEPS[tourStepIndex].screen};
       });
       if(s.fuera) mal.push(`paso ${i + 1} «${s.titulo}»: la burbuja se sale de la pantalla`);
+      if(s.solape > 40) mal.push(`paso ${i + 1} «${s.titulo}»: la burbuja TAPA lo que explica (${s.solape} px² de solape con el foco ${s.foco})`);
       if(!s.conFoco && !s.finale && !s.sinObjetivo && !(w < 500 && /logo/i.test(s.titulo))) mal.push(`paso ${i + 1} «${s.titulo}»: sin foco sobre nada`);
       if(s.paso !== i) mal.push(`paso ${i + 1}: el índice va por ${s.paso}`);
       if(i < total - 1) await page.keyboard.press('ArrowRight');

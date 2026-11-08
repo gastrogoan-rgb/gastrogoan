@@ -3001,15 +3001,15 @@ function openMermaModal(sel){
       <h3><i class="ti ti-trash-x"></i> ${t('merma.title')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div class="form-group">
+    <div class="field">
       <label for="merma-prod">${t('merma.product')}</label>
       <select id="merma-prod" onchange="mermaActualizar()"><option value="">${t('merma.choose')}</option>${opts}</select>
     </div>
-    <div class="form-group">
+    <div class="field">
       <label for="merma-qty" id="merma-qty-l">${t('merma.qty').replace('${u}', '—')}</label>
       <input type="number" id="merma-qty" min="0" step="0.01" inputmode="decimal" oninput="mermaActualizar()">
     </div>
-    <div class="form-group">
+    <div class="field">
       <label>${t('merma.reason')}</label>
       <div class="merma-motivos">${mermaMotivos().map(m => `<label class="merma-motivo"><input type="radio" name="merma-motivo" value="${m}" onchange="mermaActualizar()"> <span>${t('merma.r.' + m)}</span></label>`).join('')}</div>
       <input type="text" id="merma-otro" maxlength="80" placeholder="${escapeHtml(t('merma.otherPh'))}" style="display:none;margin-top:8px">
