@@ -5774,6 +5774,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 @media (max-width:640px){
   .dp-cab{justify-content:flex-start} .dp-ctl{width:100%} .dp-ctl .pe-sel{flex:1}
   .dp-k-v{font-size:24px} .dp-eq{padding:16px 14px} .dp-pista{margin-left:0}
+  .dp-eq-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px} .dp-eq-st{padding:9px 10px} .dp-eq-st-v{font-size:17px} .dp-k-fila{grid-template-columns:repeat(2,minmax(0,1fr))}
   .dp-matriz{grid-template-columns:64px 1fr 1fr} .dp-m-eje{font-size:10px}
   .dp-q{padding:10px} .dp-q-n{font-size:24px} .dp-eq-g-leyenda{position:static;margin-bottom:6px;flex-wrap:wrap}
   .dp-eq-graf{margin-top:8px}
