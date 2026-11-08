@@ -177,6 +177,7 @@ lanzar; node test/tpv-delivery.mjs > "$SALIDA/tpvdelivery.txt" 2>&1 & P170=$!
 lanzar; node test/tpv-impresion.mjs > "$SALIDA/tpvimpresion.txt" 2>&1 & P171=$!
 lanzar; node test/tpv-vale.mjs > "$SALIDA/tpvvale.txt" 2>&1 & P172=$!
 lanzar; node test/reservas-ajustes.mjs > "$SALIDA/reservasajustes.txt" 2>&1 & P173=$!
+lanzar; node test/clientes-filtros.mjs > "$SALIDA/clientesfiltros.txt" 2>&1 & P174=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -384,5 +385,6 @@ espera $P170 "TPV · delivery: lo pedido a la vista en la ficha, reparto en su p
 espera $P171 "TPV · impresión: lo que sale solo se imprime (un vale), anulaciones, ticket por el rollo del aparato y cuenta antes de cobrar" "$SALIDA/tpvimpresion.txt" "casos pasaron"
 espera $P172 "TPV · vale regalo como forma de pago: parcial, total con saldo, rechazos, quitar, anular devuelve y cierre de caja" "$SALIDA/tpvvale.txt" "casos pasaron"
 espera $P173 "Reservas · un solo botón nuevo, cuartos de hora con margen de cierre, acciones sueltas en PC/tablet y semana compacta" "$SALIDA/reservasajustes.txt" "casos pasaron"
+espera $P174 "Clientes · nueve filtros (Recurrentes y Ocasionales) y Promoción › Clientes con la última visita real" "$SALIDA/clientesfiltros.txt" "casos pasaron"
 
 exit $FALLOS

@@ -809,6 +809,11 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
   Deshacer no-show) y el resto en el ⋯; filtros con su cuenta; turnos con barra de aforo; **Semana y Mes con el diseño de Promoción** (`pm-sem`, `pm-mes`, `ggPeriodoHtml` → `reservasMesCb`);
   «Imprimir el día» (hoja de sala con casilla de llegada); solicitudes de la web y recordatorios de mañana en **filas compactas** (antes empujaban la lista del día). Las reglas no cambian:
   confirmar exige mesa asignada (si no, abre la reserva), aforo por turno, lista de espera, señal.
+- **Clientes · filtros y Promoción › Clientes (8/11, `test/clientes-filtros.mjs`)**: los nueve filtros en este orden: Nuevos · VIP · **Recurrentes** · **Ocasionales** · En riesgo · Inactivos · Con alergias ·
+  No-shows · Sin permiso. Recurrente = misma regla que «Habituales» de Novedades (`clEsRecurrente`: 2 visitas en 30 d, 6 en el año o ≥7 puntos); ocasional = tiene visitas y no es recurrente.
+  ⚠️ **Promoción › Clientes miraba el campo «último contacto» de la ficha** (que se rellena a mano al escribir al cliente) para «Visitas recientes» e «Inactivos»: la primera salía siempre vacía y la
+  segunda listaba a todo el mundo. Ahora usan la **última visita real** (`computeClientStatsIndexed().recency`): recientes = de ayer a hace 3 días (para pedir reseña), inactivos = más de 60 días o ninguna visita
+  (igual que el filtro de Clientes).
 - **Reservas · ajustes del 8/11** (`test/reservas-ajustes.mjs`): un solo «Nueva reserva» en el día vacío (el del hueco sobraba: ya está en la barra); **horas de 15 en 15**
   (`getReservationTimeSlots`, antes 30) y **margen de cierre configurable** (`DB.business.reservaMargenCierreMin`, 30 por defecto, 0 = hasta la hora de cierre; Mi Negocio → Operativa →
   «Última reserva antes del cierre»; la lee también la web pública: `slotsDelDia`). ⚠️ `reservaDuracionMin` NO estaba en `CAMPOS_PUBLICOS_DEL_NEGOCIO` y la web siempre usaba 90 min: ya sí.

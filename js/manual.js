@@ -3561,6 +3561,8 @@ const MANUAL_CHAPTERS = [
 <tbody>
 <tr><td><strong>Nuevo</strong></td><td>Su primera visita fue hace 30 días o menos.</td></tr>
 <tr><td><strong>VIP</strong></td><td>Tiene 7 o más puntos de fidelidad.</td></tr>
+<tr><td><strong>Recurrentes</strong></td><td>Vienen a menudo: 2 visitas en los últimos 30 días, 6 en el año o ya son VIP (la misma regla que «Habituales» en Novedades).</td></tr>
+<tr><td><strong>Ocasionales</strong></td><td>Han venido alguna vez, pero no con esa frecuencia.</td></tr>
 <tr><td><strong>En riesgo</strong></td><td>Venía con ritmo y ha dejado de venir. Exige tres cosas a la vez: al menos 3 visitas, más de 30 días desde la primera y una ausencia mayor que el doble de su intervalo habitual (y nunca menos de 14 días).</td></tr>
 <tr><td><strong>Inactivos</strong> (filtro)</td><td>Más de 60 días sin venir, o ninguna visita todavía.</td></tr>
 <tr><td><strong>No-shows</strong></td><td>Ha dejado alguna mesa vacía sin avisar.</td></tr>
@@ -3684,6 +3686,8 @@ const MANUAL_CHAPTERS = [
 <tbody>
 <tr><td><strong>Nou</strong></td><td>La primera visita va ser fa 30 dies o menys.</td></tr>
 <tr><td><strong>VIP</strong></td><td>Té 7 o més punts de fidelitat.</td></tr>
+<tr><td><strong>Recurrents</strong></td><td>Vénen sovint: 2 visites en els últims 30 dies, 6 a l'any o ja són VIP (la mateixa regla que «Habituals» a Novetats).</td></tr>
+<tr><td><strong>Ocasionals</strong></td><td>Han vingut alguna vegada, però no amb aquesta freqüència.</td></tr>
 <tr><td><strong>En risc</strong></td><td>Venia amb ritme i ha deixat de venir. Exigeix tres coses alhora: almenys 3 visites, més de 30 dies des de la primera i una absència més gran que el doble del seu interval habitual (i mai menys de 14 dies).</td></tr>
 <tr><td><strong>Inactius</strong> (filtre)</td><td>Més de 60 dies sense venir, o cap visita encara.</td></tr>
 <tr><td><strong>No-shows</strong></td><td>Ha deixat alguna taula buida sense avisar.</td></tr>
@@ -3807,6 +3811,8 @@ const MANUAL_CHAPTERS = [
 <tbody>
 <tr><td><strong>New</strong></td><td>Their first visit was 30 days ago or less.</td></tr>
 <tr><td><strong>VIP</strong></td><td>They have 7 or more loyalty points.</td></tr>
+<tr><td><strong>Regulars</strong></td><td>They come often: 2 visits in the last 30 days, 6 in the year or already VIP (the same rule as “Regulars” in News).</td></tr>
+<tr><td><strong>Occasional</strong></td><td>They have come before, but not that often.</td></tr>
 <tr><td><strong>At risk</strong></td><td>They used to come regularly and have stopped. It needs three things at once: at least 3 visits, more than 30 days since the first one, and an absence longer than double their usual interval (and never under 14 days).</td></tr>
 <tr><td><strong>Inactive</strong> (filter)</td><td>More than 60 days without coming, or no visit yet.</td></tr>
 <tr><td><strong>No-shows</strong></td><td>They have left a table empty without warning.</td></tr>
@@ -3955,7 +3961,7 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>Clientes: acciones rápidas de fidelización</h4>
-<p>Mensajes ya escritos (los puedes editar antes de enviar) para cuatro momentos: <strong>Próximos cumpleaños (30 días)</strong>, <strong>Visitas recientes — pedir reseña</strong> (con el enlace de Google si lo pusiste en Mi Negocio), <strong>Clientes que hace tiempo no vienen</strong> y la <strong>Encuesta de satisfacción (privada)</strong>. Cada tarjeta tiene <strong>WhatsApp</strong> y <strong>Email</strong>; la ventana del mensaje deja además <strong>Copiar</strong>. El menú ⋯ ofrece <strong>Registrar como acción</strong>, que lo apunta en el calendario ya hecho. En los inactivos, <strong>Escribirles a todos</strong> te lleva a Novedades con ese público. Solo salen clientes con permiso de marketing.</p>
+<p>Mensajes ya escritos (los puedes editar antes de enviar) para cuatro momentos: <strong>Próximos cumpleaños (30 días)</strong>, <strong>Visitas recientes — pedir reseña</strong> (quien vino entre ayer y hace tres días, según sus ventas; con el enlace de Google si lo pusiste en Mi Negocio), <strong>Clientes que hace tiempo no vienen</strong> y la <strong>Encuesta de satisfacción (privada)</strong>. Cada tarjeta tiene <strong>WhatsApp</strong> y <strong>Email</strong>; la ventana del mensaje deja además <strong>Copiar</strong>. El menú ⋯ ofrece <strong>Registrar como acción</strong>, que lo apunta en el calendario ya hecho. En los inactivos, <strong>Escribirles a todos</strong> te lleva a Novedades con ese público. Solo salen clientes con permiso de marketing.</p>
 <p>Arriba hay cuatro cifras (cumpleaños, visitas recientes, inactivos y NPS), el resumen de la encuesta con los últimos comentarios y «¿Cómo te conocieron?» de los últimos 90 días.</p>
 
 <h4>Ideas de contenido</h4>
@@ -4033,7 +4039,7 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>Clients: accions ràpides de fidelització</h4>
-<p>Missatges ja escrits (els pots editar abans d'enviar) per a quatre moments: <strong>Propers aniversaris (30 dies)</strong>, <strong>Visites recents — demanar ressenya</strong> (amb l'enllaç de Google si el vas posar a El Meu Negoci), <strong>Clients que fa temps que no vénen</strong> i l'<strong>Enquesta de satisfacció (privada)</strong>. Cada targeta té <strong>WhatsApp</strong> i <strong>Email</strong>; la finestra del missatge deixa a més <strong>Copiar</strong>. El menú ⋯ ofereix <strong>Registrar com a acció</strong>, que ho apunta al calendari ja fet. Als inactius, <strong>Escriure'ls a tots</strong> et porta a Novetats amb aquest públic. Només surten clients amb permís de màrqueting.</p>
+<p>Missatges ja escrits (els pots editar abans d'enviar) per a quatre moments: <strong>Propers aniversaris (30 dies)</strong>, <strong>Visites recents — demanar ressenya</strong> (qui ha vingut entre ahir i fa tres dies, segons les seves vendes; amb l'enllaç de Google si el vas posar a El Meu Negoci), <strong>Clients que fa temps que no vénen</strong> i l'<strong>Enquesta de satisfacció (privada)</strong>. Cada targeta té <strong>WhatsApp</strong> i <strong>Email</strong>; la finestra del missatge deixa a més <strong>Copiar</strong>. El menú ⋯ ofereix <strong>Registrar com a acció</strong>, que ho apunta al calendari ja fet. Als inactius, <strong>Escriure'ls a tots</strong> et porta a Novetats amb aquest públic. Només surten clients amb permís de màrqueting.</p>
 <p>A dalt hi ha quatre xifres (aniversaris, visites recents, inactius i NPS), el resum de l'enquesta amb els últims comentaris i «Com et van conèixer?» dels últims 90 dies.</p>
 
 <h4>Idees de contingut</h4>
@@ -4111,7 +4117,7 @@ const MANUAL_CHAPTERS = [
 </ul>
 
 <h4>Customers: quick loyalty actions</h4>
-<p>Ready-written messages (editable before sending) for four moments: <strong>Upcoming birthdays (30 days)</strong>, <strong>Recent visits — ask for a review</strong> (with your Google link if you set it in My Business), <strong>Clients who haven't come in a while</strong> and the <strong>Satisfaction survey (private)</strong>. Each tile has <strong>WhatsApp</strong> and <strong>Email</strong>; the message window also offers <strong>Copy</strong>. The ⋯ menu offers <strong>Register as action</strong>, which logs it in the calendar already done. For inactive customers, <strong>Write to all of them</strong> takes you to News with that audience. Only customers with marketing consent appear.</p>
+<p>Ready-written messages (editable before sending) for four moments: <strong>Upcoming birthdays (30 days)</strong>, <strong>Recent visits — ask for a review</strong> (whoever came between yesterday and three days ago, based on their sales; with your Google link if you set it in My Business), <strong>Clients who haven't come in a while</strong> and the <strong>Satisfaction survey (private)</strong>. Each tile has <strong>WhatsApp</strong> and <strong>Email</strong>; the message window also offers <strong>Copy</strong>. The ⋯ menu offers <strong>Register as action</strong>, which logs it in the calendar already done. For inactive customers, <strong>Write to all of them</strong> takes you to News with that audience. Only customers with marketing consent appear.</p>
 <p>At the top are four figures (birthdays, recent visits, inactive and NPS), the survey summary with the latest comments and "How did they hear about you?" for the last 90 days.</p>
 
 <h4>Content ideas</h4>

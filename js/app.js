@@ -4721,10 +4721,14 @@ function renderPromoClientes(){
     .filter(x => x.days !== null && x.days <= 30)
     .sort((a,b) => a.days - b.days);
   const withContact = withConsent.filter(c => c.phone || c.email);
-  const conDias = withContact
-    .map(c => ({c, days: c.ultimoContacto ? Math.round((today - new Date(c.ultimoContacto+'T00:00:00')) / 86400000) : null}));
-  const recientes = conDias.filter(x => x.days !== null && x.days >= 0 && x.days <= 7).sort((a,b) => a.days - b.days);
-  const inactivos = conDias.filter(x => x.days === null || x.days >= 60).sort((a,b) => (b.days ?? 999999) - (a.days ?? 999999));
+  /* «Visitas recientes» e «Inactivos» miran la ÚLTIMA VISITA REAL (las ventas del cliente), no el campo «último contacto» de la ficha (8/11).
+     Ese campo lo rellena a mano quien escribe al cliente: casi siempre estaba vacío, así que «Visitas recientes» salía siempre vacía y
+     «Inactivos» listaba a TODO el mundo. Misma cuenta que los filtros de Clientes (`computeClientStatsIndexed`). */
+  const getStats = computeClientStatsIndexed();
+  const conDias = withContact.map(c => ({c, days: getStats(c).recency}));
+  // Pedir reseña tiene sentido cuando aún lo recuerdan y ya han llegado a casa: de ayer a hace tres días.
+  const recientes = conDias.filter(x => x.days !== null && x.days >= 1 && x.days <= 3).sort((a,b) => a.days - b.days);
+  const inactivos = conDias.filter(x => x.days === null || x.days > 60).sort((a,b) => (b.days ?? -1) - (a.days ?? -1));
 
   const scores = DB.npsScores || [];
   const npsMedia = scores.length ? (scores.reduce((s,x)=>s+x.score,0) / scores.length).toFixed(1) : null;

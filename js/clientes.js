@@ -21,8 +21,10 @@ let clienteMasVisibles = 60;      // tarjetas que se pintan de golpe (el resto, 
 function clFiltrosDef(){
   return [
     {id:'', et: gl({es:'Todos', ca:'Tots', en:'All'})},
-    {id:'vip', et: 'VIP', ay: gl({es:'7 o más puntos de fidelidad', ca:'7 o més punts de fidelitat', en:'7 or more loyalty points'})},
     {id:'new', et: gl({es:'Nuevos', ca:'Nous', en:'New'}), ay: gl({es:'Primera visita hace menos de 30 días', ca:'Primera visita fa menys de 30 dies', en:'First visit under 30 days ago'})},
+    {id:'vip', et: 'VIP', ay: gl({es:'7 o más puntos de fidelidad', ca:'7 o més punts de fidelitat', en:'7 or more loyalty points'})},
+    {id:'recurrent', et: gl({es:'Recurrentes', ca:'Recurrents', en:'Regulars'}), ay: gl({es:'Vienen a menudo: 2 visitas en 30 días, 6 en el año o ya son VIP', ca:'Vénen sovint: 2 visites en 30 dies, 6 a l\'any o ja són VIP', en:'They come often: 2 visits in 30 days, 6 in the year or already VIP'})},
+    {id:'occasional', et: gl({es:'Ocasionales', ca:'Ocasionals', en:'Occasional'}), ay: gl({es:'Han venido alguna vez, pero no con frecuencia', ca:'Han vingut alguna vegada, però no amb freqüència', en:'They have come before, but not often'})},
     {id:'atrisk', et: gl({es:'En riesgo', ca:'En risc', en:'At risk'}), ay: gl({es:'Venían con ritmo y han dejado de venir', ca:'Venien amb ritme i han deixat de venir', en:'They used to come regularly and stopped'})},
     {id:'inactive', et: gl({es:'Inactivos', ca:'Inactius', en:'Inactive'}), ay: gl({es:'Más de 60 días sin venir', ca:'Més de 60 dies sense venir', en:'More than 60 days away'})},
     {id:'allergies', et: gl({es:'Con alergias', ca:'Amb al·lèrgies', en:'With allergies'})},
@@ -30,10 +32,14 @@ function clFiltrosDef(){
     {id:'noconsent', et: gl({es:'Sin permiso de marketing', ca:'Sense permís de màrqueting', en:'No marketing consent'})},
   ];
 }
+// Misma definición que «Habituales» en Novedades (`nvCalcular`): así el filtro y el envío no se contradicen.
+function clEsRecurrente(c, st){ return st.visitas30d >= 2 || st.visitasYear >= 6 || (c.points || 0) >= 7; }
 function clPertenece(filtro, c, st){
   switch(filtro){
     case 'vip': return (c.points || 0) >= 7;
     case 'new': return st.isNew;
+    case 'recurrent': return clEsRecurrente(c, st);
+    case 'occasional': return st.visitas > 0 && !clEsRecurrente(c, st);
     case 'atrisk': return st.atRisk;
     case 'inactive': return st.recency === null || st.recency > 60;
     case 'allergies': return !!(c.allergies || '').trim();
