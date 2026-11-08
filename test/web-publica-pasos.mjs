@@ -270,5 +270,14 @@ await caso('Objetivos táctiles: Continuar, Atrás, selector y botones de plato 
   assert.deepEqual(r, []);
 });
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
+await caso('Textos al día: ya no hay pestañas, así que ningún aviso manda al cliente a «la pestaña» (es/ca/en)', async () => {
+  const r = await page.evaluate(() => ['es','ca','en'].map(l => { setLang(l); return [t('resManage.cancelled.msg'), t('confirm.loseCart')].join(' | '); }));
+  r.forEach(x => assert.ok(!/pesta[ñn]|\btabs?\b/i.test(x), 'queda «pestaña»: ' + x));
+});
+await caso('Zonas de toque: el cierre del aviso de privacidad y el teléfono dentro de una frase miden 44 px o más', async () => {
+  await arrancar(); await page.setViewport({width:360, height:800});
+  const r = await page.evaluate(() => { showPrivacyNotice(); const x = document.querySelector('#modal-box .modal-close').getBoundingClientRect(); closeInfoModal(); trackToken = 'ABCD1234EFGH'; renderTrackStatus({status:'rechazado'}); const a = document.querySelector('p a[href^="tel:"]').getBoundingClientRect(); return {x: Math.round(Math.min(x.width, x.height)), a: Math.round(a.height)}; });
+  assert.ok(r.x >= 44 && r.a >= 44, JSON.stringify(r));
+});
 await browser.close();
 console.log(fallos ? `\n❌ ${fallos} caso(s) fallaron` : '\n✅ todos los casos pasaron'); process.exit(fallos ? 1 : 0);
