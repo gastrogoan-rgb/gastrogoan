@@ -2811,6 +2811,10 @@ async function checkDeliveryZone(p, codigoPostal, direccion){
       return {ok: dist <= p.radiusKm};
     }
     if(!cpList.length) return {ok:true, pendienteVerificar:true};
+  }else if(p.radiusKm > 0){
+    // Radio puesto pero el local no tiene coordenadas (la ubicación no se pudo calcular al guardar): no se puede medir, y cerrar
+    // el reparto a TODOS por un fallo del negocio es peor que dejar el pedido para que lo revise a mano.
+    return {ok:true, pendienteVerificar:true};
   }
 
   // Si no hay ninguna zona configurada, no se restringe.

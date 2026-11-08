@@ -282,6 +282,20 @@ await caso('Horario especial: la web usa las horas de ese día (no las de la sem
   });
   assert.equal(r.esp, '[{"abre":"21:00","cierra":"23:30"}]'); assert.equal(r.otro, 2); assert.equal(r.cierre, 0);
 });
+await caso('Zona de reparto: fuera de la lista no pide; con radio y sin ubicación del local no cierra el reparto a todos sino que queda «por verificar»', async () => {
+  await arrancar();
+  const r = await page.evaluate(async () => {
+    const out = {};
+    out.dentro = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '28001', 'Calle X 1')).ok;
+    out.fuera = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '08001', 'Calle X 1')).ok;
+    out.espacios = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '28 001', 'x')).ok;
+    out.sinZona = (await checkDeliveryZone({cpList: [], radiusKm: 0}, '99999', 'x')).ok;
+    const sc = await checkDeliveryZone({cpList: [], radiusKm: 5}, '28001', 'Calle X 1');
+    out.sinCoord = [sc.ok, !!sc.pendienteVerificar];
+    return out;
+  });
+  assert.deepEqual(r, {dentro: true, fuera: false, espacios: true, sinZona: true, sinCoord: [true, true]});
+});
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 await caso('Textos al día: ya no hay pestañas, así que ningún aviso manda al cliente a «la pestaña» (es/ca/en)', async () => {
   const r = await page.evaluate(() => ['es','ca','en'].map(l => { setLang(l); return [t('resManage.cancelled.msg'), t('confirm.loseCart')].join(' | '); }));

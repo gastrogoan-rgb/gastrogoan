@@ -781,7 +781,7 @@ function renderTpvPendingOnline(){
           <b class="tp-ped-nom">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</b>
           ${o.clientRef ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
           ${esperaMin >= 30 ? `<span class="tp-ped-alerta"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.waitingSince').replace('${min}', esperaMin))}</span>` : ''}
-          ${o.pendienteVerificarZona ? `<span class="tp-ped-alerta"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('label.zoneNotVerified'))}</span>` : ''}
+          ${o.pendienteVerificarZona ? `<span class="tp-ped-alerta"><i class="ti ti-alert-triangle"></i> ${escapeHtml(o.fueraDeZona ? t('label.zoneOutside') : t('label.zoneNotVerified'))}</span>` : ''}
           <span class="tp-ped-pie">${o.pagado ? `<span class="tp-av is-pago"><i class="ti ti-credit-card"></i> ${escapeHtml(t('label.paidOnline'))}</span>`
             : o.pagoInsuficiente ? `<span class="tp-av is-inc"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('label.paymentShort'))}</span>`
             : (o.origenOnline && !o.metodoPagoLocal) ? `<span class="tp-av"><i class="ti ti-clock"></i> ${escapeHtml(t('label.awaitingCardPayment'))}</span>` : ''}</span>
