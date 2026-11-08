@@ -36,6 +36,8 @@ await page.evaluate(() => {
 });
 
 await caso('El calendario pinta la vista de día con huecos de 15 en 15 minutos', async () => {
+  // Mañana: hoy ya no se ofrecen las horas que pasaron (8/11), así que con la hora del día el recuento de huecos cambiaría de una ejecución a otra.
+  await page.evaluate(() => { calDate = addDaysStr(todayStr(), 1); renderReservaCalendar(); });
   const len = await page.evaluate(() => document.getElementById('r-cal')?.innerHTML.length || 0);
   assert.ok(len > 500, 'la vista de día no pintó nada dentro de #r-cal');
   const numSlots = await page.evaluate(() => document.querySelectorAll('#r-cal button:not([disabled])').length);

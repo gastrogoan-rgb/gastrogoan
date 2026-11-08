@@ -184,9 +184,8 @@ function dpBloqueHtml(k){
   const periodoActual = r.dias.some(dpEsHoy);
   const unidad = def.unidad ? def.unidad() : '';
   const fmtV = v => def.fmt(v) + (unidad && k === 'reservas' ? '' : '');
-  window.dashSeriesPorId = window.dashSeriesPorId || {};
   const gid = 'dp-g-' + k;
-  window.dashSeriesPorId[gid] = serie;
+  dashSerieRegistrar(gid, serie);
   const etiPeriodo = st.modo === 'semana' ? gl({es: 'de la semana', ca: 'de la setmana', en: 'this week'}) : gl({es: 'del mes', ca: 'del mes', en: 'this month'});
   return `
     <div class="dp-cab">
@@ -514,7 +513,7 @@ function dpClientelaPintar(){
     </div>
     <div class="dp-3col">
       <div class="dp-sub"><h4>${escapeHtml(gl({es: 'Edades', ca: 'Edats', en: 'Ages'}))}</h4>
-        ${D.edades.length ? `<div class="dp-edades">${D.tramos.map(tr => `<div class="dp-ed"><span>${escapeHtml(tr.et)}</span><div><i style="width:${(tr.n / maxTr * 100).toFixed(1)}%"></i></div><b>${tr.n}</b></div>`).join('')}</div>` : `<div class="empty">${escapeHtml(gl({es: 'Añade la fecha de nacimiento en la ficha del cliente para ver las edades.', ca: 'Afegeix la data de naixement a la fitxa del client per veure les edats.', en: 'Add the birth date on the customer profile to see ages.'}))}</div>`}
+        ${D.edades.length ? `<div class="dp-edades">${D.tramos.map(tr => `<div class="dp-ed"><span>${escapeHtml(tr.et)}</span><div><i style="width:${(tr.n / maxTr * 100).toFixed(1)}%"></i></div><b>${tr.n}</b></div>`).join('')}</div>` : `<div class="dp-sin">${escapeHtml(gl({es: 'Añade la fecha de nacimiento en la ficha del cliente para ver las edades.', ca: 'Afegeix la data de naixement a la fitxa del client per veure les edats.', en: 'Add the birth date on the customer profile to see ages.'}))}</div>`}
       </div>
       <div class="dp-sub"><h4>${escapeHtml(gl({es: 'Frecuencia', ca: 'Freqüència', en: 'Frequency'}))}</h4>
         ${D.info.length ? barra([{et: gl({es: 'Recurrentes', ca: 'Recurrents', en: 'Regulars'}), v: recurrentes, c: 'c1', txt: String(recurrentes)}, {et: gl({es: 'Ocasionales', ca: 'Ocasionals', en: 'Occasional'}), v: ocasionales, c: 'c2', txt: String(ocasionales)}]) : `<div class="empty">${escapeHtml(gl({es: 'Sin clientes con ficha este mes.', ca: 'Sense clients amb fitxa aquest mes.', en: 'No customers with a profile this month.'}))}</div>`}

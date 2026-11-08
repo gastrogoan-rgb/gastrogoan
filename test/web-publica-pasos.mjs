@@ -188,6 +188,8 @@ await caso('Hora de recogida/entrega: SIN campo manual, solo huecos viables; si 
   await arrancar(); await abrirTab('takeaway');
   await page.evaluate(() => { menuSetModo('menus'); }); await clic('.mn-card'); await w(250); await menuCompleto();
   await clic('#wz-next'); await w(300);
+  // Mañana: hoy ya no quedan huecos a ciertas horas del día y la prueba dependería del reloj.
+  await page.evaluate(() => { document.getElementById('o-date').value = addDaysStr(todayStr(), 1); updateOrderSlots(); });
   const r = await page.evaluate(() => { const i = document.getElementById('o-time'); return {tipo: i.type, visible: i.offsetParent !== null, botones: document.querySelectorAll('#o-slots button').length, valor: i.value, enLista: [...document.querySelectorAll('#o-slots button')].some(b => b.textContent.includes(i.value))}; });
   assert.ok(r.tipo === 'hidden' && !r.visible && r.botones >= 1 && r.valor && r.enLista, JSON.stringify(r));
   await page.evaluate(() => { document.getElementById('o-date').value = '2000-01-01'; DB.business.diasCerrados = [{desde:'2000-01-01', hasta:'2000-01-01'}]; updateOrderSlots(); });

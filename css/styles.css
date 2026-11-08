@@ -1003,6 +1003,7 @@ td.wrap{white-space:normal}
 .ge-grid tr.total td:first-child{background:var(--ink);color:#fff;border-left-color:#8FE3A0}
 /* Columnas de trimestre y de año: antes llevaban el fondo EN LÍNEA (style=…), que gana a cualquier regla y dejaba la franja oscura de Total /
    Resultado neto con celdas claras: el verde vivo y el salmón, pensados para fondo de tinta, caían sobre gris claro y no se leían. */
+.dp-sin{padding:12px 0;font-size:13px;line-height:1.45;color:var(--muted)}
 .ge-grid td.col-q{background:rgba(0,0,0,.05)}
 .ge-grid td.col-y{background:rgba(0,0,0,.1)}
 .ge-grid tr.total td.col-q{background:var(--ink)}
@@ -5720,7 +5721,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-eq-rell{height:100%;background:var(--olive);transition:width .6s cubic-bezier(.22,1,.36,1)}
 .dp-eq-mal .dp-eq-rell{background:#B4432F} .dp-eq-aviso .dp-eq-rell{background:#B7791F}
 .dp-eq-marca{position:absolute;top:-6px;bottom:-6px;width:0;border-left:2px dashed var(--ink)}
-.dp-eq-marca span{position:absolute;top:100%;left:0;transform:translateX(-50%);margin-top:4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--muted);white-space:nowrap;text-transform:uppercase}
+.dp-eq-marca span{position:absolute;top:100%;left:0;transform:translateX(-50%);margin-top:4px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted);white-space:nowrap;text-transform:uppercase}
 .dp-eq-frase{display:flex;gap:8px;align-items:flex-start;font-size:14.5px;line-height:1.45;margin:0 0 14px}
 .dp-eq-frase i{font-size:18px;color:var(--olive);flex:none;margin-top:1px}
 .dp-eq-mal .dp-eq-frase i{color:#B4432F} .dp-eq-aviso .dp-eq-frase i{color:#B7791F}
@@ -5750,7 +5751,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-pista-fija{color:var(--muted);margin:0 0 8px}
 .dp-tabla{width:100%;border-collapse:collapse;font-size:13px}
 .dp-tabla td,.dp-tabla th{padding:7px 6px;border-bottom:1px solid var(--hair);text-align:left}
-.dp-tabla th{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.dp-tabla th{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
 .dp-tabla .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .dp-fila-click{cursor:pointer} .dp-fila-click:hover{background:var(--brand-cream,#FAF8F4)}
 .dp-tabla-w{overflow-x:auto}
@@ -5758,13 +5759,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-dow-c{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px;min-width:0}
 .dp-dow-c i{display:block;width:100%;background:var(--olive-l,#7E9B84);min-height:3px}
 .dp-dow-c.mejor i{background:var(--olive)}
-.dp-dow-v{font-size:10.5px;color:var(--muted);font-family:var(--mono)} .dp-dow-d{font-size:11px;color:var(--muted)}
+.dp-dow-v{font-size:11px;color:var(--muted);font-family:var(--mono)} .dp-dow-d{font-size:11px;color:var(--muted)}
 .dp-horas{margin-top:18px}
 .dp-heat-w{overflow-x:auto}
 .dp-heat{border-collapse:collapse;width:100%}
 .dp-heat th{font-size:11px;color:var(--muted);font-weight:600;padding:4px}
 .dp-heat td{padding:3px} .dp-heat td.d{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
-.dp-heat .c{height:34px;border-radius:4px;border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-family:var(--mono)}
+.dp-heat .c{height:34px;border-radius:4px;border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:var(--mono)}
 .dp-aviso{display:flex;gap:6px;color:#8A5A00;background:#FFF8E6;border:1px solid #E6D3A3;padding:8px 12px;margin:0 0 4px}
 .dp-matriz{display:grid;grid-template-columns:96px 1fr 1fr;grid-template-rows:auto auto 30px;gap:8px}
 .dp-q{border:1px solid var(--hair);background:#fff;padding:12px 14px;min-width:0}

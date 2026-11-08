@@ -158,16 +158,18 @@ await caso('El comensal ve la carta con alérgenos y envía el pedido A SU MESA 
     const txt = document.getElementById('app').innerText;
     menuOpenSection = '1:10'; renderTabContent();
     const conPlatos = document.getElementById('app').innerText;
+    // Los alérgenos ya no van sueltos en la tarjeta: viven en la «i» de cada plato (8/11).
+    dishInfo(100); const info = document.getElementById('modal-box').innerText; closeInfoModal();
     cart = [{key: 'a', recipeId: 100, sectionId: 10, name: 'Hamburguesa', price: 0.01, qty: 2}];
     renderCartSummary();
     document.getElementById('o-privacy-consent').checked = true;
     document.getElementById('m-name').value = 'Ana';
     submitMesaQrOrder();
-    return new Promise(ok => setTimeout(() => ok({txt, conPlatos, req: __empujados[__empujados.length - 1],
+    return new Promise(ok => setTimeout(() => ok({txt, conPlatos, info, req: __empujados[__empujados.length - 1],
       aviso: !!document.getElementById('mesaqr-aviso'), carrito: cart.length}), 200));
   });
   assert.ok(r.txt.includes('Mesa 1'), 'no sale el nombre de la mesa');
-  assert.ok(/Gluten/.test(r.conPlatos), 'la carta no enseña los alérgenos');
+  assert.ok(/Gluten/.test(r.info), 'la «i» del plato no enseña los alérgenos');
   assert.equal(r.req.type, 'pedido_mesa');
   assert.equal(r.req.mesaToken, TOKEN);
   assert.equal(r.req.tableId, undefined, 'el pedido manda el id de la mesa');

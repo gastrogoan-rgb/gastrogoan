@@ -817,24 +817,28 @@
   }
 
   /* ═══ PLATOS COMPACTOS CON «i», CONTROL SIN SOLAPES, MENÚ POR PASOS Y HORAS (8/11) ═══ */
-  .menu-item.dc,.menu-item.dc.en{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n i" "d d" "p c";align-items:start;column-gap:6px;row-gap:2px;padding:10px 8px 8px 11px;min-height:84px;margin:0}
+  .menu-item.dc,.menu-item.dc.en{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"n" "d" "f";align-content:start;row-gap:2px;padding:10px 10px 8px 11px;min-height:84px;margin:0}
   .dc-main{position:absolute;inset:0;z-index:1;width:auto;min-height:0;padding:0;margin:0;background:transparent}
-  .dc-n{grid-area:n;padding-right:0;font-size:14px;pointer-events:none;-webkit-line-clamp:2}
+  .dc-n{grid-area:n;padding-right:26px;font-size:14px;pointer-events:none;-webkit-line-clamp:3;overflow-wrap:normal;word-break:normal;hyphens:none}
   .dc-d{grid-area:d;pointer-events:none;font-size:12px;-webkit-line-clamp:2}
-  .dc-p{grid-area:p;align-self:end;margin:0;padding:6px 0 0;pointer-events:none;font-size:13.5px}
-  .dc-i{grid-area:i;justify-self:end;position:relative;z-index:2;width:26px;height:26px;margin:-2px 0 0;padding:0;border:1.5px solid var(--olive);border-radius:50%;background:transparent;color:var(--olive);font:italic 700 13px/1 Georgia,'Times New Roman',serif;cursor:pointer}
-  .dc-i::after{content:'';position:absolute;inset:-9px}
-  .dc-i:hover,.dc-i:focus-visible{background:var(--olive);color:#fff;outline:none}
-  .dc-ctl{grid-area:c;align-self:end;position:relative;z-index:2;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .dc-foot{grid-area:f;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:4px 8px;margin-top:auto;padding-top:6px;pointer-events:none}
+  .dc-p{margin:0;padding:0;font-size:13.5px}
+  /* «i»: zona de toque de 36 px, círculo de 22 px dibujado dentro (no estorba al nombre) */
+  .dc-i{position:absolute;z-index:2;top:0;right:0;width:36px;height:36px;margin:0;padding:0;border:0;background:transparent;color:var(--olive);cursor:pointer}
+  .dc-i::before{content:'';position:absolute;top:7px;right:7px;width:22px;height:22px;border:1.5px solid var(--olive);border-radius:50%;transition:background-color .15s}
+  .dc-i span{position:absolute;top:7px;right:7px;width:22px;height:22px;display:grid;place-items:center;font:italic 700 13px/1 Georgia,'Times New Roman',serif}
+  .dc-i:hover::before,.dc-i:focus-visible::before{background:var(--olive)}
+  .dc-i:hover span,.dc-i:focus-visible span{color:#fff}
+  .dc-i:focus-visible{outline:none}
+  .dc-ctl{margin-left:auto;position:relative;z-index:2;display:flex;align-items:center;gap:6px;pointer-events:auto}
   .dc-minus,.dc-q{position:static}
-  .dc-minus{width:32px;height:32px;border:1px solid var(--ink);font-size:18px}
-  .dc-minus::after{content:'';position:absolute;inset:-6px}
-  .dc-minus{position:relative}
-  .dc-q{display:none;top:auto;right:auto;min-width:32px;height:32px;font-size:13px}
+  .dc-minus{width:36px;height:36px;border:1px solid var(--ink);font-size:18px}
+  .dc-q{display:none;top:auto;right:auto;min-width:36px;height:36px;font-size:13px}
   .menu-item.dc.en .dc-q{display:inline-flex}
   /* opción de menú: «i» y su información desplegada */
-  .o-i{flex:none;position:relative;width:28px;height:28px;margin-left:auto;padding:0;border:1.5px solid var(--olive);border-radius:50%;background:transparent;color:var(--olive);font:italic 700 14px/1 Georgia,'Times New Roman',serif;cursor:pointer}
-  .o-i::after{content:'';position:absolute;inset:-8px}
+  .o-i{flex:none;position:relative;width:36px;height:36px;margin:-4px -6px -4px auto;padding:0;border:0;background:transparent;color:var(--olive);cursor:pointer}
+  .o-i::before{content:'';position:absolute;top:5px;left:5px;width:26px;height:26px;border:1.5px solid var(--olive);border-radius:50%}
+  .o-i span{position:absolute;top:5px;left:5px;width:26px;height:26px;display:grid;place-items:center;font:italic 700 14px/1 Georgia,'Times New Roman',serif}
   .o-p+.o-i{margin-left:8px}
   .o-inf{margin:-2px 0 8px;padding:10px 12px;border:1px solid var(--border);border-top:0;background:var(--paper)}
   .inf-d{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--body)}
@@ -3102,8 +3106,8 @@ function slotsDelDia(dateStr){
 // Hora mínima reservable HOY según la antelación configurada — mismo
 // cálculo que applyLeadTime, pero sin depender de un &lt;input&gt; del DOM.
 function reservaMinTimeHoy(){
-  const leadTimeMin = getLeadTimeMin('reserva');
-  if(!leadTimeMin) return null;
+  // Sin antelación configurada, HOY tampoco se puede reservar una hora que ya pasó (antes el calendario enseñaba «hay sitio» a las 13:00 estando a las 22:50).
+  const leadTimeMin = getLeadTimeMin('reserva') || 0;
   const now = new Date(Date.now() + leadTimeMin * 60000);
   return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 }
@@ -3550,8 +3554,8 @@ function submitReserva(){
     return;
   }
 
-  const leadTimeMin = getLeadTimeMin('reserva');
-  if(leadTimeMin && date === todayStr()){
+  const leadTimeMin = getLeadTimeMin('reserva') || 0;
+  if(date === todayStr()){
     const now = new Date(Date.now() + leadTimeMin * 60000);
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     if(time < minTime){
@@ -4474,12 +4478,14 @@ function renderMenuDishesHtml(sec){
     <div class="menu-item dish dc${q ? ' en' : ''}" data-dish="${p.id}">
       <button type="button" class="dc-main" onclick="dishTap(${p.id}, '${escapeJsAttr(sec.id)}')" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre) + ' · ' + fmtMoney(final))}"></button>
       <span class="dc-n name">${escapeHtml(nombre)}${promo ? ` <span class="promo-badge">-${promo.discountPct}%</span>` : ''}</span>
-      <button type="button" class="dc-i" onclick="dishInfo(${p.id})" aria-label="${escapeHtml(t('info.de').replace('%s', nombre))}">i</button>
+      <button type="button" class="dc-i" onclick="dishInfo(${p.id})" aria-label="${escapeHtml(t('info.de').replace('%s', nombre))}"><span aria-hidden="true">i</span></button>
       ${desc ? `<span class="dc-d">${escapeHtml(desc)}</span>` : ''}
-      <span class="dc-p price">${promo ? `<s>${fmtMoney(base)}</s> ` : ''}${fmtMoney(final)}${hasMods ? ` <span class="dc-m">${escapeHtml(t('modifiers.fromPrice'))}</span>` : ''}</span>
-      <span class="dc-ctl">
-        <button type="button" class="dc-minus" ${q > 0 && !hasMods ? '' : 'hidden'} onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', nombre))}">−</button>
-        <span class="dc-q" data-q="${q}" aria-live="polite">${q ? '×' + q : ''}</span>
+      <span class="dc-foot">
+        <span class="dc-p price">${promo ? `<s>${fmtMoney(base)}</s> ` : ''}${fmtMoney(final)}${hasMods ? ` <span class="dc-m">${escapeHtml(t('modifiers.fromPrice'))}</span>` : ''}</span>
+        <span class="dc-ctl">
+          <button type="button" class="dc-minus" ${q > 0 && !hasMods ? '' : 'hidden'} onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', nombre))}">−</button>
+          <span class="dc-q" data-q="${q}" aria-live="polite">${q ? '×' + q : ''}</span>
+        </span>
       </span>
     </div>`;
   }).join('')}</div>`;
@@ -4565,7 +4571,7 @@ function openMenuModal(menuId){
               <span class="o-n">${escapeHtml(trItem(o))}</span>
               ${o.suplemento ? `<span class="o-p">+${fmtMoney(o.suplemento)}</span>` : ''}
               ${o.disponible === false ? `<span class="o-p" style="color:var(--red)">${t('common.unavailable')}</span>` : ''}
-              <button type="button" class="o-i" aria-expanded="false" aria-label="${escapeHtml(t('info.de').replace('%s', trItem(o)))}" onclick="event.preventDefault();event.stopPropagation();optInfo(this, ${o.id})">i</button>
+              <button type="button" class="o-i" aria-expanded="false" aria-label="${escapeHtml(t('info.de').replace('%s', trItem(o)))}" onclick="event.preventDefault();event.stopPropagation();optInfo(this, ${o.id})"><span aria-hidden="true">i</span></button>
             </label>
             <div class="o-inf" id="oi-${o.id}" hidden></div>`).join('')}
         </fieldset>`;
