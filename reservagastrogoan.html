@@ -876,6 +876,20 @@
     header.hd-oscuro .sub a.hi:hover{background:rgba(255,255,255,.16);border-color:#fff}
   }
   header .sub a.hi-pin::after{content:'↗';font-size:12px;opacity:.7}
+
+  /* ═══ CONFIRMADO CON PRESENCIA (8/11): el cliente ve a la primera que su reserva / pedido está hecho ═══ */
+  .trk-check{width:56px;height:56px;margin:2px 0 14px;border-radius:50%;background:var(--olive);position:relative}
+  .trk-check::after{content:'';position:absolute;left:19px;top:13px;width:14px;height:25px;border:solid #fff;border-width:0 4px 4px 0;transform:rotate(42deg)}
+  .trk-head .trk-h{font-size:clamp(26px,6vw,34px);letter-spacing:-.025em}
+  @media (prefers-reduced-motion:no-preference){
+    .trk-check{animation:wzPop .5s cubic-bezier(.3,1.6,.5,1) both}
+    .trk-check::after{animation:trkTick .45s .2s cubic-bezier(.2,.8,.2,1) both}
+    @keyframes trkTick{from{opacity:0;clip-path:inset(0 100% 100% 0)}to{opacity:1;clip-path:inset(0 0 0 0)}}
+  }
+  /* botón principal: más cuerpo y una sombra de marca que se hunde al pulsar */
+  #wz-next:not(:disabled){box-shadow:0 6px 0 -2px color-mix(in srgb,var(--olive) 55%,#000);transition:transform .15s,box-shadow .15s}
+  #wz-next:not(:disabled):active{transform:translateY(3px);box-shadow:0 2px 0 -2px color-mix(in srgb,var(--olive) 55%,#000)}
+  .wz-prog li button{transition:color .2s}
 </style>
 </head>
 <body>
@@ -5879,6 +5893,7 @@ function renderTrackStatus(data){
           <span>${t('track.orderNumber')} <strong>${escapeHtml(codigo)}</strong></span>
           ${tipoTxt ? `<span>${tipoTxt}</span>` : ''}
         </div>
+        ${k !== 'pendiente' ? '<div class="trk-check" aria-hidden="true"></div>' : ''}
         <h2 class="trk-h">${t('track.head.' + k)}</h2>
         <p class="trk-desc">${t('track.desc.' + k)}</p>
         <div class="trk-bar" aria-hidden="true">${steps.map((_, i) => `<span class="${i < idx ? 'hecho' : (i === idx ? 'ahora' : '')}"></span>`).join('')}</div>
@@ -5967,6 +5982,7 @@ function renderReservationStatus(data){
           <span>${t('resManage.number')} <strong>${escapeHtml(shortCode(resToken))}</strong></span>
           <span style="color:${confirmada ? 'var(--olive)' : 'var(--muted)'}">${confirmada ? t('resManage.status.confirmada') : t('resManage.status.pendiente')}</span>
         </div>
+        ${confirmada ? '<div class="trk-check" aria-hidden="true"></div>' : ''}
         <h2 class="trk-h">${t(confirmada ? 'resManage.head.confirmada' : 'resManage.head.pendiente')}</h2>
         <p class="trk-desc">${t(confirmada ? 'resManage.desc.confirmada' : 'resManage.desc.pendiente')}</p>
       </div>
