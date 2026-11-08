@@ -501,6 +501,9 @@ td.wrap{white-space:normal}
   .table-cards td{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);white-space:normal;text-align:left}
   .table-cards td:last-child{border-bottom:none}
   .table-cards td[data-label]::before{content:attr(data-label);flex:0 0 40%;max-width:40%;font-weight:700;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.3px}
+  .table-cards tfoot{display:block;width:100%}
+  .table-cards tfoot tr{display:flex;justify-content:space-between;gap:12px;width:100%}
+  .table-cards tfoot td{display:block;padding:6px 0;font-weight:700}
   .table-cards td[data-label=""]::before{content:none}
   .table-cards td.actions-cell{justify-content:flex-end}
 }

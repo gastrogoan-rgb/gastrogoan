@@ -118,18 +118,18 @@ function openCashClosureModal(){
     ${discounts.length ? `
     <h3 style="font-size:14px;margin-top:14px"><i class="ti ti-discount-2"></i> ${t('title.discountsAppliedThisPeriod')}</h3>
     <div class="table-wrap" style="margin-bottom:14px">
-      <table>
+      <table class="table-cards">
         <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.responsible')}</th><th>%</th><th>${t('label.total')}</th><th>${t('label.voidReason')}</th></tr></thead>
-        <tbody>${discounts.map(d => `<tr><td>${escapeHtml(d.hora)}</td><td>${escapeHtml(d.mesa||'—')}</td><td>${escapeHtml(d.responsableNombre||'—')}</td><td>${d.porcentaje}%</td><td>${fmtMoney(d.importe)}</td><td>${escapeHtml(d.motivo)}</td></tr>`).join('')}</tbody>
+        <tbody>${discounts.map(d => `<tr><td data-label="${escapeHtml(t('th.time'))}">${escapeHtml(d.hora)}</td><td data-label="${escapeHtml(t('label.tables'))}">${escapeHtml(d.mesa||'—')}</td><td data-label="${escapeHtml(t('label.responsible'))}">${escapeHtml(d.responsableNombre||'—')}</td><td data-label="%">${d.porcentaje}%</td><td data-label="${escapeHtml(t('label.total'))}">${fmtMoney(d.importe)}</td><td data-label="${escapeHtml(t('label.voidReason'))}">${escapeHtml(d.motivo)}</td></tr>`).join('')}</tbody>
         <tfoot><tr style="font-weight:700"><td colspan="4">${t('label.totalDiscounts')}</td><td colspan="2">${fmtMoney(totalDiscounts)}</td></tr></tfoot>
       </table>
     </div>` : ''}
     ${voids.length ? `
     <h3 style="font-size:14px;margin-top:14px"><i class="ti ti-alert-triangle"></i> ${t('title.voidsThisPeriod')}</h3>
     <div class="table-wrap" style="margin-bottom:14px">
-      <table>
+      <table class="table-cards">
         <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.responsible')}</th><th>${t('label.voidReason')}</th></tr></thead>
-        <tbody>${voids.map(v => `<tr><td>${escapeHtml(v.hora)}</td><td>${escapeHtml(v.mesa||'—')}</td><td>${escapeHtml(v.plato)}</td><td>${v.cantidad}</td><td>${escapeHtml(v.responsableNombre||'—')}</td><td>${escapeHtml(v.motivo)}</td></tr>`).join('')}</tbody>
+        <tbody>${voids.map(v => `<tr><td data-label="${escapeHtml(t('th.time'))}">${escapeHtml(v.hora)}</td><td data-label="${escapeHtml(t('label.tables'))}">${escapeHtml(v.mesa||'—')}</td><td data-label="${escapeHtml(t('label.dishElaboration'))}">${escapeHtml(v.plato)}</td><td data-label="${escapeHtml(t('label.quantity'))}">${v.cantidad}</td><td data-label="${escapeHtml(t('label.responsible'))}">${escapeHtml(v.responsableNombre||'—')}</td><td data-label="${escapeHtml(t('label.voidReason'))}">${escapeHtml(v.motivo)}</td></tr>`).join('')}</tbody>
       </table>
     </div>` : ''}
     ${platforms.length ? `
