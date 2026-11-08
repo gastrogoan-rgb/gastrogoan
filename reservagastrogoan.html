@@ -2283,8 +2283,7 @@ function wzValidarDatosPedido(p){
   if(isDelivery){
     const cp = wzVal('o-cp').replace(/\s+/g, '');
     const cpList = p.cpList || [];
-    // Con radio configurado la comprobación real (geocodificar) la hace el envío; solo con lista de códigos se corta aquí.
-    if(cpList.length && !(p.radiusKm > 0) && !cpList.includes(cp)){
+    if(cpList.length && !cpList.includes(cp)){
       markFieldInvalid('o-cp'); checkCpLive(); showInlineError(t('cp.fueraDeZona').replace('${lista}', cpList.join(', '))); return false;
     }
   }
@@ -2749,21 +2748,10 @@ function applyLeadTime(dateInputId, timeInputId, hintBoxId, kind){
   hintBox.innerHTML = (hintBox.innerHTML || '') + hint;
 }
 
-// Distancia en km entre dos puntos (fórmula de Haversine).
-function haversineKm(lat1, lon1, lat2, lon2){
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
 // Aviso al momento, tecla a tecla, de si ese código postal entra en zona —
 // para no hacer esperar al cliente a rellenar toda la dirección y darle al
 // botón para enterarse. Solo cuando la zona se define por lista de códigos
-// postales: con radio (p.radiusKm) haría falta geocodificar en cada tecla,
-// que es lento y consume la cuota gratuita de Nominatim sin necesidad — ahí
-// se sigue comprobando solo al enviar (checkDeliveryZone).
+// postales (lo único que existe desde el 8/11).
 function checkCpLive(){
   const el = document.getElementById('o-cp');
   const hint = document.getElementById('o-cp-hint');
@@ -2781,45 +2769,14 @@ function checkCpLive(){
   }
 }
 
-// Comprueba si una dirección/código postal de entrega está dentro de la
-// zona de reparto configurada (código postal aceptado o dentro del radio).
-// Devuelve {ok, pendienteVerificar}: si el geocodificador falla dos veces
-// (red caída, timeout de Nominatim...) no bloqueamos un pedido potencialmente
-// válido; lo dejamos pasar marcado para que el negocio revise la dirección
-// manualmente antes de aceptarlo.
-async function checkDeliveryZone(p, codigoPostal, direccion){
+// Comprueba si el código postal de entrega está en la lista de zonas de reparto del negocio (desde el 8/11 el reparto se define
+// SOLO por códigos postales: se quitó el radio y su geocodificación, que era lento, gastaba cuota ajena y dejaba pedidos «por verificar»).
+// Sin lista = sin restricción. Devuelve {ok}.
+async function checkDeliveryZone(p, codigoPostal){
   codigoPostal = String(codigoPostal || '').replace(/\s+/g, '');
-  const cpList = p.cpList || [];
-  if(cpList.length && cpList.includes(codigoPostal)) return {ok:true};
-
-  if(p.radiusKm > 0 && p.lat != null && p.lng != null){
-    const geocode = async () => {
-      const q = encodeURIComponent(direccion + ', ' + codigoPostal);
-      const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q=' + q);
-      const data = await res.json();
-      return (data && data[0]) ? data[0] : null;
-    };
-    let point = null;
-    try{ point = await geocode(); }catch(e){ console.error(e); point = null; }
-    if(!point){
-      // Un único reintento tras una breve espera antes de darnos por vencidos.
-      await new Promise(r => setTimeout(r, 1200));
-      try{ point = await geocode(); }catch(e){ console.error(e); point = null; }
-    }
-    if(point){
-      const dist = haversineKm(p.lat, p.lng, parseFloat(point.lat), parseFloat(point.lon));
-      return {ok: dist <= p.radiusKm};
-    }
-    if(!cpList.length) return {ok:true, pendienteVerificar:true};
-  }else if(p.radiusKm > 0){
-    // Radio puesto pero el local no tiene coordenadas (la ubicación no se pudo calcular al guardar): no se puede medir, y cerrar
-    // el reparto a TODOS por un fallo del negocio es peor que dejar el pedido para que lo revise a mano.
-    return {ok:true, pendienteVerificar:true};
-  }
-
-  // Si no hay ninguna zona configurada, no se restringe.
-  if(!cpList.length && !(p.radiusKm > 0)) return {ok:true};
-  return {ok:false};
+  const cpList = (p && p.cpList) || [];
+  if(!cpList.length) return {ok:true};
+  return {ok: cpList.includes(codigoPostal)};
 }
 
 /* ============ RESERVA ============ */
@@ -4480,7 +4437,6 @@ function servicioChipsHtml(p, isDelivery){
     const fee = p.deliveryFee || 0, free = p.freeDeliveryFrom || 0;
     chips.push(t('wz.o.chip.fee').replace('%s', fee ? fmtMoney(fee) : fmtMoney(0)) + (free > 0 && fee > 0 ? ' · ' + t('wz.o.chip.free').replace('%s', fmtMoney(free)) : ''));
     if((p.cpList || []).length) chips.push(t('wz.o.chip.zone').replace('%s', p.cpList.join(', ')));
-    else if(p.radiusKm > 0) chips.push(t('wz.o.chip.radius').replace('%s', p.radiusKm));
   }
   const base = p.tiempoBasePrep != null ? p.tiempoBasePrep : 15;
   const extra = p.extraPorPedidoEnCola != null ? p.extraPorPedidoEnCola : 3;
@@ -4901,7 +4857,7 @@ async function submitOrder(){
   const clienteDireccion = isDelivery ? document.getElementById('o-address').value.trim() : '';
   const notas = document.getElementById('o-notes').value.trim();
   const p = (DB.business||{}).pedidos || {};
-  const zoneRestricted = isDelivery && ((p.cpList||[]).length || p.radiusKm > 0);
+  const zoneRestricted = isDelivery && (p.cpList||[]).length > 0;
   // El código postal se pide SIEMPRE en domicilio, no solo cuando hay zona
   // configurada: una sola línea de "dirección" a mano es demasiado ambigua
   // para un repartidor (o para geocodificar bien contra el radio, si lo
@@ -5025,9 +4981,8 @@ async function submitOrder(){
     pedidoSlotReservado = {date, slot};
   }
 
-  let pendienteVerificarZona = false;
   if(zoneRestricted){
-    const zoneCheck = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
+    const zoneCheck = await checkDeliveryZone(p, codigoPostal);
     if(!zoneCheck.ok){
       // Si ya se había reservado franja y el pedido no sigue adelante, hay
       // que liberarla: si no, ese hueco se queda ocupado sin ningún pedido
@@ -5038,7 +4993,6 @@ async function submitOrder(){
       setBtnLoading('o-submit', false);
       return;
     }
-    pendienteVerificarZona = !!zoneCheck.pendienteVerificar;
   }
 
   const deliveryFee = getDeliveryFee(p, subtotal, isDelivery);
@@ -5083,7 +5037,6 @@ async function submitOrder(){
     // no tenía ninguna forma de que el cliente comprobara su estado.
     clientRef: genClientRef()
   };
-  if(pendienteVerificarZona) req.pendienteVerificarZona = true;
   if(metodoPagoLocal) req.metodoPagoLocal = metodoPagoLocal;
   if(pagaCon != null) req.pagaCon = pagaCon;
 

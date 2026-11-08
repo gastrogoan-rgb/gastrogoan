@@ -282,19 +282,29 @@ await caso('Horario especial: la web usa las horas de ese día (no las de la sem
   });
   assert.equal(r.esp, '[{"abre":"21:00","cierra":"23:30"}]'); assert.equal(r.otro, 2); assert.equal(r.cierre, 0);
 });
-await caso('Zona de reparto: fuera de la lista no pide; con radio y sin ubicación del local no cierra el reparto a todos sino que queda «por verificar»', async () => {
+await caso('Zona de reparto SOLO por códigos postales (8/11): dentro pasa, fuera no deja pedir, con espacios vale, sin lista no restringe, y un radio antiguo se ignora', async () => {
   await arrancar();
   const r = await page.evaluate(async () => {
     const out = {};
-    out.dentro = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '28001', 'Calle X 1')).ok;
-    out.fuera = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '08001', 'Calle X 1')).ok;
-    out.espacios = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 0}, '28 001', 'x')).ok;
-    out.sinZona = (await checkDeliveryZone({cpList: [], radiusKm: 0}, '99999', 'x')).ok;
-    const sc = await checkDeliveryZone({cpList: [], radiusKm: 5}, '28001', 'Calle X 1');
-    out.sinCoord = [sc.ok, !!sc.pendienteVerificar];
+    out.dentro = (await checkDeliveryZone({cpList: ['28001']}, '28001')).ok;
+    out.fuera = (await checkDeliveryZone({cpList: ['28001']}, '08001')).ok;
+    out.espacios = (await checkDeliveryZone({cpList: ['28001']}, '28 001')).ok;
+    out.sinZona = (await checkDeliveryZone({cpList: []}, '99999')).ok;
+    out.radioViejo = (await checkDeliveryZone({cpList: ['28001'], radiusKm: 50, lat: 40, lng: -3}, '08001')).ok;
+    out.sinHaversine = typeof haversineKm === 'undefined';
     return out;
   });
-  assert.deepEqual(r, {dentro: true, fuera: false, espacios: true, sinZona: true, sinCoord: [true, true]});
+  assert.deepEqual(r, {dentro: true, fuera: false, espacios: true, sinZona: true, radioViejo: false, sinHaversine: true});
+});
+await caso('Zona de reparto: el paso «Tus datos» avisa y NO deja avanzar con un código postal fuera de la lista', async () => {
+  await arrancar(); await abrirTab('delivery');
+  const r = await page.evaluate(() => {
+    const cp = document.getElementById('o-cp'); if(!cp) return {sinCampo: true};
+    cp.value = '08001'; checkCpLive();
+    const hint = document.getElementById('o-cp-hint').textContent;
+    return {hint};
+  });
+  assert.ok(!r.sinCampo, 'no hay campo de código postal en el pedido a domicilio'); assert.ok(/28001|fuera|zona/i.test(r.hint), JSON.stringify(r));
 });
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 await caso('Textos al día: ya no hay pestañas, así que ningún aviso manda al cliente a «la pestaña» (es/ca/en)', async () => {

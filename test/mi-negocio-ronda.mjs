@@ -181,6 +181,21 @@ await caso('Impresoras y pantallas: el estado se lee de un vistazo, se añade co
   assert.ok(r.okTrasActivar && r.tarjetas && r.rotulos && r.menu, JSON.stringify(r));
 });
 
+await caso('Reparto solo por códigos postales: ya no existe el radio en Mi Negocio y guardar borra cualquier radio antiguo', async () => {
+  const r = await page.evaluate(async () => {
+    DB.business.tiposServicio = {mesa: true, takeaway: true, delivery: true};
+    DB.business.pedidos = {cpList: ['28001'], radiusKm: 5, lat: 40.4, lng: -3.7, ubicacionTexto: 'Madrid'};
+    renderMiNegocio();
+    const out = {campo: !!document.getElementById('mn-radiuskm'), lista: !!document.getElementById('mn-cplist')};
+    if(document.getElementById('mn-cplist')){ document.getElementById('mn-cplist').value = '28001, 28002'; await savePedidosConfig(); }
+    out.cp = JSON.stringify(DB.business.pedidos.cpList); out.radio = DB.business.pedidos.radiusKm; out.lat = DB.business.pedidos.lat;
+    DB.business.pedidos.cpList = []; renderMiNegocio(); out.avisoSinLista = !!document.querySelector('.mn-bloqueo-aviso');
+    return out;
+  });
+  assert.equal(r.campo, false, JSON.stringify(r)); assert.ok(r.lista, JSON.stringify(r));
+  assert.equal(r.cp, '["28001","28002"]'); assert.equal(r.radio, 0); assert.equal(r.lat, null); assert.ok(r.avisoSinLista);
+});
+
 // (las demás secciones de la ronda se añaden debajo)
 
 assert.equal(errs.length, 0, 'errores de página: ' + errs.join(' | '));
