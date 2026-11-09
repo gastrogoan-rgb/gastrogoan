@@ -122,7 +122,8 @@ async function adjuntar(id){
   const boton = await page.$('#pf-adjuntar');
   if(!boton) throw new Error('no hay botón «Adjuntar factura» en el pedido');
   await boton.click();
-  await page.waitForSelector('#pf-input', {timeout: 8000}).catch(() => {});
+  // Con toda la batería en paralelo el modal tarda más de 8 s en salir: se espera de verdad, no se sigue sin el campo.
+  await page.waitForSelector('#pf-input', {timeout: 30000});
   const input = await page.$('#pf-input');
   await input.uploadFile(fotoPath);
 }
@@ -253,6 +254,7 @@ await caso('Sin clave de IA: se adjunta igual (nº, fecha, NIF) y explica cómo 
   const aviso = await page.evaluate(() => ({texto: document.getElementById('pf-sin-clave')?.textContent || '', input: !!document.getElementById('pf-input')}));
   assert.ok(aviso.texto.includes('clave'), 'no explica cómo activar la lectura');
   assert.ok(aviso.input, 'sin clave no deja adjuntar');
+  await page.waitForSelector('#pf-input', {timeout: 30000});
   await (await page.$('#pf-input')).uploadFile(fotoPath);
   await page.waitForSelector('#pf-manual', {timeout: 5000});
   const r = await page.evaluate(id => {
