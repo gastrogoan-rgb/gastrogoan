@@ -941,6 +941,38 @@
     .svc-hero .hero-top{padding:24px 0 62px}
     .hg0{width:120px;height:120px;right:-4%} .hg1{width:90px;height:90px;right:30%} .hg2{display:none} .hg3{width:70px;height:70px} .hg4{display:none}
   }
+
+  /* ═══ PASOS CON CARÁCTER (9/11, 3.ª pasada): indicador con círculos, datos del servicio en fichas que fluyen, horas y menús con vida ═══ */
+  .wz-prog{gap:10px;margin-bottom:18px}
+  .wz-prog button{display:flex;align-items:center;gap:9px;min-height:52px;padding:0 0 10px;border:0}
+  .wz-prog button::before,.wz-prog button::after{top:auto;bottom:0;height:4px}
+  .wz-prog .n{flex:none;display:grid;place-items:center;width:28px;height:28px;border:2px solid var(--border);border-radius:50%;background:var(--surface);font-size:12px;font-weight:700;letter-spacing:0;color:var(--muted);transition:background-color .3s,border-color .3s,color .3s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+  .wz-prog li.on .n{background:var(--olive);border-color:var(--olive);color:#fff;transform:scale(1.12)}
+  .wz-prog li.done .n{background:var(--ink);border-color:var(--ink);color:transparent;position:relative}
+  .wz-prog li.done .n::before{position:absolute;left:50%;top:50%;margin:0;width:13px;height:13px;transform:translate(-50%,-50%);background:#fff;vertical-align:baseline}
+  .wz-prog .l{font-size:13px;line-height:1.2}
+  @media (max-width:420px){ .wz-prog{gap:6px} .wz-prog button{gap:6px;align-items:flex-start;flex-direction:column;padding-top:2px} .wz-prog .l{font-size:12px} }
+  .chips{display:flex;flex-wrap:wrap;gap:6px;background:none;border:0;margin:0 0 16px}
+  .chip{display:inline-flex;min-height:34px;padding:6px 11px;border:1px solid var(--border);background:var(--surface);text-wrap:pretty}
+  .chip:first-child{border-color:var(--olive);color:var(--olive);font-weight:600}
+  .wz-nav{position:sticky}
+  .wz-nav::before{content:'';position:absolute;left:0;right:0;top:-26px;height:26px;background:linear-gradient(to bottom,transparent,var(--paper));pointer-events:none}
+  .slots button{position:relative;transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background-color .15s,border-color .15s,color .15s}
+  @media (hover:hover){ .slots button:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(28,26,23,.12);border-color:var(--olive)} .slots button.on:hover{border-color:var(--ink)} }
+  .slots button.on{background:var(--olive);border-color:var(--olive);color:#fff;box-shadow:0 6px 14px color-mix(in srgb,var(--olive) 35%,transparent)}
+  .mn-card{transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s,border-color .15s}
+  @media (hover:hover){ .mn-card:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(28,26,23,.12);border-color:var(--olive)} .mn-card:hover .mn-go{transform:translateX(5px);color:var(--olive)} }
+  .wz-step .wz-h{font-size:clamp(26px,4.2vw,36px);letter-spacing:-.03em}
+  .wz-step.card{border-top:4px solid var(--olive)}
+  @media (prefers-reduced-motion:no-preference){
+    .wz-prog li.on .n{animation:wzPop .45s cubic-bezier(.3,1.6,.5,1)}
+    .wz-prog li.done .n{animation:wzPop .4s cubic-bezier(.3,1.6,.5,1)}
+    .chip{animation:wzRise .4s cubic-bezier(.2,.8,.2,1) both}
+    .chip:nth-child(2){animation-delay:.05s} .chip:nth-child(3){animation-delay:.1s} .chip:nth-child(4){animation-delay:.15s}
+    .slots button{animation:wzRise .3s cubic-bezier(.2,.8,.2,1) both}
+    .slots button:nth-child(n+2){animation-delay:.03s} .slots button:nth-child(n+5){animation-delay:.06s} .slots button:nth-child(n+9){animation-delay:.09s}
+    .mn-list>*{animation:wzRise .4s cubic-bezier(.2,.8,.2,1) both} .mn-list>*:nth-child(2){animation-delay:.07s} .mn-list>*:nth-child(3){animation-delay:.14s}
+  }
 </style>
 </head>
 <body>
