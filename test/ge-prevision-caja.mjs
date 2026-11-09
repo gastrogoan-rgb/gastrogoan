@@ -81,6 +81,34 @@ await caso('Los modelos del trimestre ANTERIOR cuyo plazo sigue por delante se c
   assert.equal(r.febrero.length, 0, 'el 10 de febrero el plazo (30/01) ya pasó: no se supone impagado: ' + JSON.stringify(r));
 });
 
+// LIQUIDACIÓN ANUAL. Negocio ficticio del año pasado (mismas cuentas que fiscal-independiente.mjs, hechas a mano): 12 meses de ventas 11.000 € con IVA
+// del 10 % (base 10.000), alquiler 500 y una nómina de 2.000 → antes de impuestos 90.000; sociedad micro (INCN anterior 500.000) → IS = 50.000×21 % + 40.000×22 % = 19.300.
+// Sin pagos a cuenta (el año anterior a ese no tiene ventas, el 202 sale 0) → a pagar el 25/07 del año siguiente: 19.300.
+await caso('Liquidación anual: el IS del año pasado (19.300 €) entra en la previsión mientras su plazo (25/07) siga por delante; ni antes de hora ni marcado como pagado', async () => {
+  const r = await page.evaluate(() => {
+    const ej = new Date().getFullYear() - 1, dd = n => String(n).padStart(2, '0');
+    Object.keys(DB.business).forEach(k => { if(['formaJuridica','regimenFiscal','comuneros','incnAnterior','anyo','modalidadDirecta'].includes(k)) delete DB.business[k]; });
+    Object.assign(DB.business, {formaJuridica:'sociedad', regimenFiscal:'directa', anyo:2010, incnAnterior:'500000'});
+    DB.sales = []; for(let m = 1; m <= 12; m++){ const f = `${ej}-${dd(m)}-10`; DB.sales.push({id:'v' + m, date:f, createdAt:f + 'T14:00:00', total:11000, tipo:'mesa', metodoPago:'Tarjeta', items:[{name:'P', qty:1, price:11000, ivaPct:10}]}); }
+    DB.ge = DB.ge || {}; DB.ge.config = {}; DB.ge.variables = []; DB.ge.capex = []; DB.ge.fijosLog = []; DB.ge.existencias = {}; DB.ge.otrosIngresos = []; DB.ge.vales = []; DB.ge.obligaciones = {};
+    DB.ge.fijos = [{id:1, nombre:'ALQUILER', importe:500, periodicidadMeses:1, categoria:'FIJOS', iva:21},
+      {id:2, nombre:'ANA', categoria:'PERSONAL', autoCalc:true, sueldoNeto:1300, irpfPct:15, ssTrabPct:6.5, ssPct:32.15, sueldoBruto:1500, ssEmpresa:500, irpfMensual:300, importe:2000, periodicidadMeses:1, iva:0}];
+    snapshotGeFijosNeto(); saveDB();
+    const anual = d => (GE.obligacionesPendientes(d).find(f => f.anual) || null);
+    const antes = anual(new Date(ej + 1, 5, 10)), despues = anual(new Date(ej + 1, 8, 10));
+    const P = GE.bcPrevisionCaja(100000, new Date(ej + 1, 5, 10));
+    DB.ge.obligaciones['x'] = {};
+    const clave = antes && antes.key; DB.ge.obligaciones[clave] = {pagado:'2026-06-20', presentado:'2026-06-20'};
+    const marcado = anual(new Date(ej + 1, 5, 10));
+    return {antes: antes && {importe: antes.importe, vence: antes.vence, modelo: antes.modelo}, despues, marcado, conf30: P.filas[0].conf, conf60: P.filas[1].conf};
+  });
+  assert.ok(r.antes && cerca(r.antes.importe, 19300, 0.5) && r.antes.vence.startsWith('25/07/') && r.antes.modelo === '200', JSON.stringify(r));
+  assert.equal(r.despues, null, 'pasado el 25/07 ya no se espera: ' + JSON.stringify(r));
+  assert.equal(r.marcado, null, 'marcado como pagado, no cuenta');
+  // el 10/06 el plazo (25/07) está a 45 días: no entra a 30 pero sí a 60 días
+  assert.ok(r.conf60 - r.conf30 >= 19300 - 0.5, 'a 60 días lo confirmado suma los 19.300: ' + JSON.stringify(r));
+});
+
 await caso('Tesorería y Beneficio y caja enseñan el mismo "entra (estim.)" a 30 días', async () => {
   await sembrar('');
   const r = await page.evaluate(()=>{
