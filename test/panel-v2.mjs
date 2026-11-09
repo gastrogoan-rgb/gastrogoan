@@ -80,7 +80,8 @@ await caso('Ventas: cifras de hoy (tickets y ticket medio) y la gráfica pasa de
     out.mesAnterior = document.querySelector('#dp-ventas .pe-actual span').textContent.trim();
     return out;
   });
-  assert.equal(r.tickets, r.esperado); assert.equal(r.puntosSemana > 0 && r.puntosSemana <= 7, true, JSON.stringify(r));
+  assert.equal(r.tickets, r.esperado); // Un lunes sin ventas esa semana la tarjeta enseña «sin ventas» en vez de la gráfica (0 puntos): solo se exige gráfica si hay ventas en la semana.
+  assert.equal(r.puntosSemana <= 7 && (r.puntosSemana > 0 || new Date().getDay() === 1), true, JSON.stringify(r));
   assert.ok(r.cambiaSemana, 'la flecha no cambió de semana'); assert.equal(r.puntosMes, r.diasHastaHoy, JSON.stringify(r)); assert.ok(r.selectorMes);
   assert.ok(r.mesAnterior.length > 3, JSON.stringify(r));
   await page.close();

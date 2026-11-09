@@ -184,6 +184,27 @@ await caso('Cada plato de la carta y cada opción de menú lleva su «i» con al
   assert.ok(o.hoja && /Sulfitos|Alérgenos/i.test(o.txt), JSON.stringify(o));
   await page.evaluate(() => { closeInfoModal(); wzReset(); });
 });
+await caso('Efectos «gran cadena»: banda de marca con iconos del propio negocio, el plato «vuela» al carrito, confeti al confirmar, y nada se mueve con «reducir movimiento»', async () => {
+  await arrancar(); await w(300);
+  const e = await page.evaluate(() => { const h = document.querySelector('.hero-top'); return {banda: !!h && getComputedStyle(h).backgroundColor !== 'rgba(0, 0, 0, 0)', iconos: document.querySelectorAll('.hero-ghosts .hg svg').length, tiles: document.querySelectorAll('.svc-tile').length}; });
+  assert.ok(e.banda && e.iconos >= 3 && e.tiles === 3, JSON.stringify(e));
+  await abrirTab('takeaway');
+  await page.evaluate(() => { menuSetModo('carta'); openMenuFolder('1:1'); }); await w(300);
+  const v = await page.evaluate(async () => {
+    document.querySelector('.dc-main').click(); await new Promise(r => setTimeout(r, 120));
+    const durante = document.querySelectorAll('.fly-dot').length;
+    await new Promise(r => setTimeout(r, 900));
+    return {durante, despues: document.querySelectorAll('.fly-dot').length, flash: !!document.querySelector('.dc.flash'), bump: !!document.querySelector('.tray-n.bump')};
+  });
+  assert.ok(v.durante === 1 && v.despues === 0 && v.flash, 'el punto vuela y se retira solo: ' + JSON.stringify(v));
+  const c = await page.evaluate(async () => { confetiCelebra('t1'); const a = document.querySelectorAll('.confeti i').length; confetiCelebra('t1'); return {a, repetido: document.querySelectorAll('.confeti').length}; });
+  assert.ok(c.a >= 20 && c.repetido === 1, 'el confeti sale una vez por referencia: ' + JSON.stringify(c));
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion', value:'reduce'}]);
+  const q = await page.evaluate(() => { document.querySelectorAll('.confeti').forEach(x => x.remove()); document.querySelectorAll('.fly-dot').forEach(x => x.remove()); confetiCelebra('t2'); volarAlCarrito(document.querySelector('.dc')); return {confeti: document.querySelectorAll('.confeti').length, vuelo: document.querySelectorAll('.fly-dot').length}; });
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion', value:'no-preference'}]);
+  assert.ok(q.confeti === 0 && q.vuelo === 0, 'con «reducir movimiento» no hay confeti ni vuelo: ' + JSON.stringify(q));
+  await page.evaluate(() => { wzReset(); });
+});
 await caso('Hora de recogida/entrega: SIN campo manual, solo huecos viables; si no queda ninguno, lo dice', async () => {
   await arrancar(); await abrirTab('takeaway');
   await page.evaluate(() => { menuSetModo('menus'); }); await clic('.mn-card'); await w(250); await menuCompleto();

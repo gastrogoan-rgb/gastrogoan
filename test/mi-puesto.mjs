@@ -203,7 +203,8 @@ for(const ancho of [1280, 360]){
       const rojo = document.querySelector('.dp-tira .dp-dia-c.mal') ? true : false;
       d.tareasUnicas[ayer] = []; d.doneDates[hoy] = {}; renderDistDetail();
       return {verde, rojo}; });
-    assert.ok(/ok/.test(r.verde.cuenta) && /ok/.test(r.verde.tira) && /ok/.test(r.verde.prog), JSON.stringify(r.verde)); assert.ok(r.rojo, 'el día pasado con algo sin hacer, en rojo');
+    assert.ok(/ok/.test(r.verde.cuenta) && /ok/.test(r.verde.tira) && /ok/.test(r.verde.prog), JSON.stringify(r.verde)); // Un lunes «ayer» (domingo) cae en la semana anterior, que la tira no enseña: ahí no hay día pasado que pintar.
+    if(new Date().getDay() !== 1) assert.ok(r.rojo, 'el día pasado con algo sin hacer, en rojo');
   });
 
   await caso(`El propietario escribe el manual (plantilla, frase propia, orden) y cada cambio sube la versión (${ancho}px)`, async () => {
