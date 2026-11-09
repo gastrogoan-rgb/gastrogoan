@@ -2827,7 +2827,32 @@ const GE = (function(){
     const actual = fiscalPrevision(y, q).filas.filter(f => f.estado !== 'pagado' && f.importe > 0);
     const py = q === 0 ? y - 1 : y, pq = q === 0 ? 3 : q - 1;
     const previo = fiscalPrevision(py, pq).filas.filter(f => { const d = venceDe(f); return f.estado !== 'pagado' && f.importe > 0 && d && d >= hoy; });
-    return previo.concat(actual).map(f => ({...f, fecha: venceDe(f)}));
+    const lista = previo.concat(actual).map(f => ({...f, fecha: venceDe(f)}));
+    const anual = liquidacionAnualPendiente(hoy);
+    if(anual) lista.push(anual);
+    return lista;
+  }
+  // La LIQUIDACIÓN ANUAL del ejercicio anterior: Impuesto de Sociedades (modelo 200, hasta el 25/07) o Renta (modelo 100, hasta el 30/06).
+  // Es el pago grande del año y el único que la previsión no veía: se estima como el impuesto del ejercicio cerrado menos lo ya pagado
+  // a cuenta (202 / 130 / 131) y solo cuenta mientras su plazo siga por delante. Es una ESTIMACIÓN: no descuenta retenciones soportadas
+  // ni deducciones que solo conoce el gestor; si sale a devolver, no resta nada. El motor fiscal da el impuesto; aquí solo se coloca en el tiempo.
+  function liquidacionAnualPendiente(hoy){
+    try{
+      const p = fiscalPerfil(); if(!p.forma && !p.modulos) return null;
+      const y = hoy.getFullYear(), ej = y - 1, sociedad = p.forma === 'sociedad' || p.forma === 'cooperativa';
+      const modelo = sociedad ? '200' : '100';
+      const fecha = sociedad ? new Date(y, 6, 25, 23, 59) : new Date(y, 5, 30, 23, 59);
+      if(fecha < hoy) return null;
+      const marca = fiscalObligaciones()[fiscalClave(ej, 3, modelo)]; if(marca && marca.pagado) return null;
+      const T = fiscalTrazaAnual(ej); if(!T || !T.mesesConDatos) return null;
+      let aCuenta = 0;
+      for(let q = 0; q < 4; q++) fiscalPrevision(ej, q).filas.forEach(f => { if(f.modelo === '202' || f.modelo === '130' || f.modelo === '131') aCuenta += f.importe || 0; });
+      const neto = T.impuestoAnual - aCuenta;
+      if(!(neto > 0.5)) return null;
+      const dd = n => String(n).padStart(2, '0');
+      return {key: fiscalClave(ej, 3, modelo), modelo, concepto: gl(sociedad ? {es:'Impuesto de Sociedades del año anterior (liquidación)', ca:'Impost de Societats de l\'any anterior (liquidació)', en:'Last year\'s corporate tax (settlement)'} : {es:'Renta del año anterior (liquidación)', ca:'Renda de l\'any anterior (liquidació)', en:'Last year\'s income tax (settlement)'}),
+        periodo: 'Anual ' + ej, importe: Math.round(neto * 100) / 100, estado: 'estimado', vence: dd(fecha.getDate()) + '/' + dd(fecha.getMonth() + 1) + '/' + fecha.getFullYear(), fecha, anual: true, impuestoAnual: T.impuestoAnual, aCuenta};
+    }catch(e){ return null; }
   }
   // Previsión de caja a 30/60/90 días. Dos cosas por separado: lo CONFIRMADO (modelos y pagos periódicos con fecha) y lo ESTIMADO
   // (ritmo medio de caja de los últimos 3 meses con actividad). ⚠️ Los gastos fijos NO mensuales se reparten mes a mes en el
@@ -2897,7 +2922,7 @@ const GE = (function(){
     // 3) Dinero disponible de verdad
     const saldo = ge().saldoBanco || null;
     const hoyQ = Math.floor(hoy.getMonth() / 3);
-    const debeHacienda = obligacionesPendientes(hoy).reduce((a, f) => a + f.importe, 0);
+    const debeHacienda = obligacionesPendientes(hoy).filter(f => !f.anual || f.fecha <= new Date(hoy.getTime() + 30 * 864e5)).reduce((a, f) => a + f.importe, 0);
     const lumps = fijos().filter(g => (parseInt(g.periodicidadMeses)||1) > 1).map(g => ({g, d: gfNextDueDate(g, hoy.getFullYear(), hoy.getMonth())})).filter(x => x.d && ((new Date(x.d.date + 'T12:00:00') - hoy) / 864e5) <= 30 && ((new Date(x.d.date + 'T12:00:00') - hoy) / 864e5) >= -1);
     const lumpsTot = lumps.reduce((a, x) => a + (parseFloat(x.g.importe)||0) * (1 + (parseFloat(x.g.iva)||0)/100), 0);
     const cuotasMes = capexCuotaMes(hoy.getMonth(), hoy.getFullYear());
@@ -3640,7 +3665,7 @@ const GE = (function(){
         <p class="te-nota">${saldo ? L({es:'Parte del saldo que anotaste en Beneficio y caja.', ca:'Parteix del saldo que vas anotar a Benefici i caixa.', en:'Starts from the balance you entered in Profit and cash.'}) : L({es:'Sin saldo anotado se ve cuánto SUBE o BAJA el dinero (anota tu saldo en Beneficio y caja para ver el saldo previsto).', ca:'Sense saldo anotat es veu quant PUJA o BAIXA el diner (anota el teu saldo a Benefici i caixa per veure el saldo previst).', en:'With no balance entered you see how much the money RISES or FALLS (enter your balance in Profit and cash to see the projected balance).'})}
           ${t('hr.forecast.desc')}</p>
         <div class="ge-kpi-grid te-prev-k">${pc.filas.map(kp).join('')}</div>
-        <p class="te-nota">${L({es:'No incluye el impuesto anual (Sociedades en julio, Renta en junio) salvo los pagos a cuenta: aparta lo que te dice «Dinero que no es tuyo».', ca:'No inclou l\'impost anual (Societats al juliol, Renda al juny) tret dels pagaments a compte: aparta el que et diu «Diners que no són teus».', en:'Excludes the annual tax (Corporate in July, Income in June) except the payments on account: set aside what “Money that is not yours” says.'})}</p>
+        <p class="te-nota">${L({es:'Incluye la liquidación anual (Sociedades hasta el 25/07, Renta hasta el 30/06) cuando cae dentro de esos días: es una estimación y tu gestor fija la cifra exacta.', ca:'Inclou la liquidació anual (Societats fins al 25/07, Renda fins al 30/06) quan cau dins d\'aquests dies: és una estimació i el teu gestor fixa la xifra exacta.', en:'Includes the annual settlement (Corporate tax by 25/07, Income tax by 30/06) when it falls inside those days: an estimate; your adviser sets the exact figure.'})}</p>
       </div>`;
   }
   // Gastos Fijos periódicos (periodicidadMeses>1) cuyo pago cae en el mes visto: son un

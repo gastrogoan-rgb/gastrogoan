@@ -973,6 +973,32 @@
     .slots button:nth-child(n+2){animation-delay:.03s} .slots button:nth-child(n+5){animation-delay:.06s} .slots button:nth-child(n+9){animation-delay:.09s}
     .mn-list>*{animation:wzRise .4s cubic-bezier(.2,.8,.2,1) both} .mn-list>*:nth-child(2){animation-delay:.07s} .mn-list>*:nth-child(3){animation-delay:.14s}
   }
+
+  /* ═══ SUBPANTALLAS CON CARÁCTER (9/11): cocina a tope, encuesta, confirmar, color de marca secundario ═══ */
+  .aviso-pausa{text-align:center;padding:34px 22px 28px;border-top:4px solid var(--olive)}
+  .aviso-pausa .ap-ic{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;background:var(--green-l);position:relative}
+  .aviso-pausa .ap-ic::before,.aviso-pausa .ap-ic::after{content:'';position:absolute;top:19px;width:7px;height:26px;border-radius:2px;background:var(--olive)}
+  .aviso-pausa .ap-ic::before{left:20px} .aviso-pausa .ap-ic::after{right:20px}
+  .aviso-pausa h2{margin:0 0 8px;font-size:clamp(24px,5vw,30px);letter-spacing:-.02em}
+  .aviso-pausa p{margin:0 auto;max-width:38ch;font-size:15px;line-height:1.5;color:var(--muted)}
+  .aviso-pausa .ap-tel{display:inline-flex;align-items:center;justify-content:center;margin-top:18px;text-decoration:none}
+  #nps-scale{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:18px 0 6px}
+  #nps-scale button{min-height:52px;font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;transition:transform .18s cubic-bezier(.3,1.5,.5,1),background-color .15s,border-color .15s,color .15s}
+  @media (hover:hover){ #nps-scale button:hover{transform:translateY(-3px);border-color:var(--olive)} }
+  #nps-scale button.btn-primary{background:var(--olive);border-color:var(--olive);color:#fff;transform:scale(1.1)}
+  #nps-scale button[data-score="0"].btn-primary,#nps-scale button[data-score="1"].btn-primary,#nps-scale button[data-score="2"].btn-primary,#nps-scale button[data-score="3"].btn-primary,#nps-scale button[data-score="4"].btn-primary,#nps-scale button[data-score="5"].btn-primary,#nps-scale button[data-score="6"].btn-primary{background:var(--red);border-color:var(--red)}
+  .nps-ext{margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;font:600 11px/1.2 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .card:has(#nps-scale){border-top:4px solid var(--olive)}
+  .card:has(#nps-scale) h2{font-size:clamp(24px,5vw,32px);letter-spacing:-.025em;line-height:1.1}
+  /* el color SECUNDARIO del negocio también se ve: pasos hechos y flechas de la entrada */
+  .wz-prog li.done .n{background:var(--brand2);border-color:var(--brand2)}
+  .svc-cta b{background:var(--brand2)}
+  @media (min-width:760px){ #nps-scale{grid-template-columns:repeat(11,minmax(0,1fr))} }
+  @media (prefers-reduced-motion:no-preference){
+    .aviso-pausa .ap-ic{animation:wzPop .5s cubic-bezier(.3,1.6,.5,1) both}
+    .card:has(#nps-scale) #nps-scale button{animation:wzRise .35s cubic-bezier(.2,.8,.2,1) both}
+    #nps-scale button:nth-child(n+4){animation-delay:.04s} #nps-scale button:nth-child(n+7){animation-delay:.08s} #nps-scale button:nth-child(n+10){animation-delay:.12s}
+  }
 </style>
 </head>
 <body>
@@ -1096,7 +1122,7 @@ const I18N = {
     'cal.leyendaLibre':'Hay sitio','cal.leyendaLleno':'Completo',
     'mesa.elige':'Elige tu mesa','mesa.plazas':'%d plazas','mesa.nombre':'Mesa %s',
     'grupo.titulo':'Para %d personas o más, reserva con nosotros','grupo.texto':'Un grupo así lo preparamos aparte para que todo salga bien. Llámanos o escríbenos y lo cerramos contigo.','grupo.sinMesa':'No tenemos una mesa para %d personas en la web. Llámanos o escríbenos y buscamos la forma.','grupo.llamar':'Llamar','grupo.escribir':'Escribir un email','grupo.asunto':'Reserva para %d personas',
-    'notas':'Notas (alergias, peticiones especiales...)','notas.placeholder':'Opcional','reserva.submit':'Enviar solicitud de reserva','reserva.submitWithDeposit':'Pagar señal y reservar',
+    'notas':'Notas (alergias, peticiones especiales...)','notas.placeholder':'Opcional','reserva.submit':'Confirmar mi reserva','reserva.submitWithDeposit':'Pagar señal y reservar',
     'referral.label':'¿Cómo nos conociste? (opcional)','referral.placeholder':'Elige una opción',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Recomendación de un amigo','referral.returning':'Ya había venido antes','referral.other':'Otro',
@@ -1121,7 +1147,7 @@ const I18N = {
     'order.mesa.unknown':'No se ha reconocido tu mesa. Indica el número a continuación.',
     'order.mesa.select':'¿En qué mesa estás? *','order.mesa.select.placeholder':'Selecciona tu mesa…',
     'order.nombre':'Nombre (opcional)','order.notas':'Notas (alergias, observaciones...)','order.notas.placeholder':'Opcional',
-    'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Enviar pedido',
+    'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Confirmar pedido',
     'order.mesa.payWhen':'¿Cuándo pagas?','order.mesa.payLater':'Añadir a la cuenta de la mesa','order.mesa.payLaterDesc':'Se paga al final, junto con el resto de la mesa','order.mesa.payNow':'Pagar ahora con tarjeta','order.mesa.payNowDesc':'Pagas solo lo tuyo ahora mismo, sin esperar al resto de la mesa',
     'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
     'mesaqr.titulo':'%s','mesaqr.intro':'Mira la carta, pide y paga desde aquí. Tu pedido llega a tu mesa.','mesaqr.inactivo':'Este restaurante no tiene activado el pedido desde la mesa. Llama al camarero.','mesaqr.invalido':'Este código QR ya no es válido. Pide al camarero el nuevo.','mesaqr.cargando':'Cargando tu mesa…','mesaqr.submit':'Enviar pedido a mi mesa','mesaqr.ok':'Pedido enviado. El camarero lo confirmará en un momento.','mesaqr.okDirecto':'Pedido enviado a cocina. ¡Gracias!','mesaqr.cuenta':'La cuenta de la mesa','mesaqr.cuentaVacia':'Todavía no hay nada en la cuenta de esta mesa.','mesaqr.total':'Total','mesaqr.pagado':'Ya pagado','mesaqr.pendiente':'Queda por pagar','mesaqr.enCurso':'Pago en curso: %s','mesaqr.pagarTodo':'Pagar todo (%s)','mesaqr.pagarParte':'Pagar una parte','mesaqr.parteImporte':'Importe a pagar (€)','mesaqr.pagarParteBtn':'Pagar esta parte','mesaqr.dividir':'Dividir entre','mesaqr.importeMal':'Escribe un importe entre 0,50 € y lo que queda por pagar.','mesaqr.sinPago':'Para pagar, pide la cuenta al camarero.','mesaqr.pagada':'Cuenta pagada. ¡Gracias!','mesaqr.pagoOk':'Pago recibido. La cuenta se actualizará en unos segundos.','mesaqr.descripcionPago':'Cuenta de %s',
@@ -1185,7 +1211,7 @@ const I18N = {
     'cal.leyendaLibre':'Available','cal.leyendaLleno':'Full',
     'mesa.elige':'Choose your table','mesa.plazas':'%d seats','mesa.nombre':'Table %s',
     'grupo.titulo':'For %d people or more, book with us directly','grupo.texto':'We set up groups like yours separately so everything goes smoothly. Call or email us and we will arrange it with you.','grupo.sinMesa':'We have no table for %d people on the website. Call or email us and we will find a way.','grupo.llamar':'Call','grupo.escribir':'Send an email','grupo.asunto':'Booking for %d people',
-    'notas':'Notes (allergies, special requests...)','notas.placeholder':'Optional','reserva.submit':'Send booking request','reserva.submitWithDeposit':'Pay deposit and book',
+    'notas':'Notes (allergies, special requests...)','notas.placeholder':'Optional','reserva.submit':'Confirm my booking','reserva.submitWithDeposit':'Pay deposit and book',
     'referral.label':'How did you hear about us? (optional)','referral.placeholder':'Choose an option',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Friend\'s recommendation','referral.returning':'I\'ve been before','referral.other':'Other',
@@ -1210,7 +1236,7 @@ const I18N = {
     'order.mesa.unknown':'Your table was not recognised. Please enter the number below.',
     'order.mesa.select':'Which table are you at? *','order.mesa.select.placeholder':'Select your table…',
     'order.nombre':'Name (optional)','order.notas':'Notes (allergies, comments...)','order.notas.placeholder':'Optional',
-    'order.submit.mesa':'Send order to kitchen','order.submit':'Send order',
+    'order.submit.mesa':'Send order to kitchen','order.submit':'Confirm order',
     'order.mesa.payWhen':'When do you pay?','order.mesa.payLater':'Add to the table bill','order.mesa.payLaterDesc':'Pay at the end, together with the rest of the table','order.mesa.payNow':'Pay now by card','order.mesa.payNowDesc':'Pay just your part right now, without waiting for the rest of the table',
     'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
     'mesaqr.titulo':'%s','mesaqr.intro':'See the menu, order and pay from here. Your order goes to your table.','mesaqr.inactivo':'This restaurant does not take orders from the table. Please call the waiter.','mesaqr.invalido':'This QR code is no longer valid. Ask the waiter for the new one.','mesaqr.cargando':'Loading your table…','mesaqr.submit':'Send order to my table','mesaqr.ok':'Order sent. The waiter will confirm it in a moment.','mesaqr.okDirecto':'Order sent to the kitchen. Thank you!','mesaqr.cuenta':'Table bill','mesaqr.cuentaVacia':'There is nothing on this table\'s bill yet.','mesaqr.total':'Total','mesaqr.pagado':'Already paid','mesaqr.pendiente':'Left to pay','mesaqr.enCurso':'Payment in progress: %s','mesaqr.pagarTodo':'Pay it all (%s)','mesaqr.pagarParte':'Pay a share','mesaqr.parteImporte':'Amount to pay (€)','mesaqr.pagarParteBtn':'Pay this share','mesaqr.dividir':'Split between','mesaqr.importeMal':'Enter an amount between €0.50 and what is left to pay.','mesaqr.sinPago':'To pay, ask the waiter for the bill.','mesaqr.pagada':'Bill paid. Thank you!','mesaqr.pagoOk':'Payment received. The bill will update in a few seconds.','mesaqr.descripcionPago':'Bill for %s',
@@ -1274,7 +1300,7 @@ const I18N = {
     'cal.leyendaLibre':'Hi ha lloc','cal.leyendaLleno':'Complet',
     'mesa.elige':'Tria la teva taula','mesa.plazas':'%d places','mesa.nombre':'Taula %s',
     'grupo.titulo':'Per a %d persones o més, reserva amb nosaltres','grupo.texto':'Un grup així el preparem a part perquè tot surti bé. Truca\'ns o escriu-nos i ho tanquem amb tu.','grupo.sinMesa':'No tenim una taula per a %d persones a la web. Truca\'ns o escriu-nos i trobarem la manera.','grupo.llamar':'Trucar','grupo.escribir':'Escriure un email','grupo.asunto':'Reserva per a %d persones',
-    'notas':'Notes (al·lèrgies, peticions especials...)','notas.placeholder':'Opcional','reserva.submit':'Enviar sol·licitud de reserva','reserva.submitWithDeposit':'Pagar senyal i reservar',
+    'notas':'Notes (al·lèrgies, peticions especials...)','notas.placeholder':'Opcional','reserva.submit':'Confirmar la meva reserva','reserva.submitWithDeposit':'Pagar senyal i reservar',
     'referral.label':'Com ens has conegut? (opcional)','referral.placeholder':'Tria una opció',
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Recomanació d\'un amic','referral.returning':'Ja havia vingut abans','referral.other':'Altre',
@@ -1299,7 +1325,7 @@ const I18N = {
     'order.mesa.unknown':'No s\'ha reconegut la teva taula. Indica el número a continuació.',
     'order.mesa.select':'A quina taula ets? *','order.mesa.select.placeholder':'Selecciona la teva taula…',
     'order.nombre':'Nom (opcional)','order.notas':'Notes (al·lèrgies, observacions...)','order.notas.placeholder':'Opcional',
-    'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Enviar comanda',
+    'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Confirmar comanda',
     'order.mesa.payWhen':'Quan pagues?','order.mesa.payLater':'Afegir al compte de la taula','order.mesa.payLaterDesc':'Es paga al final, junt amb la resta de la taula','order.mesa.payNow':'Pagar ara amb targeta','order.mesa.payNowDesc':'Pagues només el teu ara mateix, sense esperar la resta de la taula',
     'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
     'mesaqr.titulo':'%s','mesaqr.intro':'Mira la carta, demana i paga des d\'aquí. La comanda arriba a la teva taula.','mesaqr.inactivo':'Aquest restaurant no té activada la comanda des de la taula. Truca al cambrer.','mesaqr.invalido':'Aquest codi QR ja no és vàlid. Demana el nou al cambrer.','mesaqr.cargando':'Carregant la teva taula…','mesaqr.submit':'Enviar comanda a la meva taula','mesaqr.ok':'Comanda enviada. El cambrer la confirmarà en un moment.','mesaqr.okDirecto':'Comanda enviada a cuina. Gràcies!','mesaqr.cuenta':'El compte de la taula','mesaqr.cuentaVacia':'Encara no hi ha res al compte d\'aquesta taula.','mesaqr.total':'Total','mesaqr.pagado':'Ja pagat','mesaqr.pendiente':'Queda per pagar','mesaqr.enCurso':'Pagament en curs: %s','mesaqr.pagarTodo':'Pagar-ho tot (%s)','mesaqr.pagarParte':'Pagar una part','mesaqr.parteImporte':'Import a pagar (€)','mesaqr.pagarParteBtn':'Pagar aquesta part','mesaqr.dividir':'Dividir entre','mesaqr.importeMal':'Escriu un import entre 0,50 € i el que queda per pagar.','mesaqr.sinPago':'Per pagar, demana el compte al cambrer.','mesaqr.pagada':'Compte pagat. Gràcies!','mesaqr.pagoOk':'Pagament rebut. El compte s\'actualitzarà en uns segons.','mesaqr.descripcionPago':'Compte de %s',
@@ -4825,9 +4851,12 @@ function renderOrderForm(){
   // (que ya se sincroniza en vivo con el listener de loadBusinessInfo), si
   // el negocio lo apaga con la página ya abierta el cliente lo ve al momento.
   if((DB.business||{}).pedidosOnlineActivos === false){
-    box.innerHTML = `<div class="card" style="text-align:center">
+    const tel = String((DB.business || {}).phone || '').trim();
+    box.innerHTML = `<div class="card aviso-pausa">
+      <div class="ap-ic" aria-hidden="true"></div>
       <h2>${t('error.pedidosPausados.title')}</h2>
-      <p style="font-size:13.5px;color:var(--muted);margin-top:8px">${t('error.pedidosPausados.body')}</p>
+      <p>${t('error.pedidosPausados.body')}</p>
+      ${tel ? `<a class="btn btn-primary ap-tel" href="tel:${escapeHtml(tel.replace(/\s+/g, ''))}">${escapeHtml(t('grupo.llamar'))} · ${escapeHtml(tel)}</a>` : ''}
     </div>`;
     return;
   }

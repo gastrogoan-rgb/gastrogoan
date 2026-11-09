@@ -295,12 +295,12 @@ await caso('Subpantallas: error, saturación, elegir local, encuesta y seguimien
     showError('error.enlace'); out.errorIcono = getComputedStyle(document.querySelector('.error-box .warn-icon')).backgroundColor;
     showSaturacion(); out.satIcono = !!document.querySelector('.error-box .warn-icon') && !document.querySelector('.error-box i');
     renderBranchSelector({name:'Casa Paco'}, [{publicId:'a', name:'Centro', address:'Calle Mayor 1'}, {publicId:'b', name:'Playa'}]); out.locales = [...document.querySelectorAll('.svc-card .svc-t')].map(e => e.textContent.trim());
-    renderNpsSurvey(); out.nps = document.querySelectorAll('#nps-scale button').length; out.npsCols = getComputedStyle(document.getElementById('nps-scale')).gridTemplateColumns.split(' ').length;
+    renderNpsSurvey(); out.nps = document.querySelectorAll('#nps-scale button').length; out.npsCols = getComputedStyle(document.getElementById('nps-scale')).gridTemplateColumns.split(' ').length; out.npsEsperadas = innerWidth >= 760 ? 11 : 6;
     selectNpsScore(7); out.npsSel = document.querySelector('#nps-scale button[aria-pressed="true"]')?.textContent;
     return out;
   });
   assert.notEqual(r.errorIcono, 'rgba(0, 0, 0, 0)', 'el icono del error tiene color (antes era transparente)'); assert.ok(r.satIcono);
-  assert.deepEqual(r.locales, ['Centro', 'Playa']); assert.equal(r.nps, 11); assert.equal(r.npsCols, 6); assert.equal(r.npsSel, '7');
+  assert.deepEqual(r.locales, ['Centro', 'Playa']); assert.equal(r.nps, 11); assert.equal(r.npsCols, r.npsEsperadas, 'seis por fila en móvil, las once en una fila en pantalla ancha'); assert.equal(r.npsSel, '7');
 });
 await caso('Platos: la tarjeta ES el botón (tocarla añade), el − solo sale con cantidad, varias por fila, y la bandeja enseña lo elegido', async () => {
   await page.setViewport({width: 390, height: 860});

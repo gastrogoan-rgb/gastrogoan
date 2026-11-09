@@ -118,11 +118,15 @@ async function crearPedido(recibir){
 async function adjuntar(id){
   await page.evaluate(id => { openPedido(id); }, id);
   // Con la batería entera corriendo a la vez, 100 ms no siempre bastan: se espera a que estén de verdad.
-  await page.waitForSelector('#pf-adjuntar', {timeout: 8000}).catch(() => {});
-  const boton = await page.$('#pf-adjuntar');
-  if(!boton) throw new Error('no hay botón «Adjuntar factura» en el pedido');
-  await boton.click();
-  await page.waitForSelector('#pf-input', {timeout: 8000}).catch(() => {});
+  await page.waitForSelector('#pf-adjuntar', {timeout: 30000}).catch(() => {});
+  if(!(await page.$('#pf-adjuntar'))) throw new Error('no hay botón «Adjuntar factura» en el pedido');
+  // Clic de DOM, no por coordenadas: con la batería entera en paralelo la hoja aún se coloca (animación, cabecera) y un clic por
+  // coordenadas podía caer a un lado sin abrir nada (fallaba solo en la batería entera, nunca solo). Se reintenta si no abre.
+  for(let i = 0; i < 4 && !(await page.$('#pf-input')); i++){
+    await page.evaluate(() => { const b = document.getElementById('pf-adjuntar'); if(b) b.click(); });
+    await page.waitForSelector('#pf-input', {timeout: 15000}).catch(() => {});
+  }
+  await page.waitForSelector('#pf-input', {timeout: 40000});
   const input = await page.$('#pf-input');
   await input.uploadFile(fotoPath);
 }
@@ -141,7 +145,7 @@ await caso('Pedido recibido: tiene el botón «Adjuntar factura» y genera su ga
 
 await caso('El cuadre marca igual, subida, bajada, cantidad distinta, falta y sobra', async () => {
   await adjuntar(idA);
-  await page.waitForSelector('#pf-confirmar', {timeout: 8000});
+  await page.waitForSelector('#pf-confirmar', {timeout: 40000});
   const r = await page.evaluate(() => {
     const fila = id => { const el = document.querySelector(`.pf-fila[data-ing="${id}"]`); return el ? [...el.classList].find(c => c.startsWith('pf-') && c !== 'pf-fila') : null; };
     return {
@@ -210,7 +214,7 @@ await caso('Confirmar: sube y baja precios con historial, no duplica el gasto, n
 await caso('Ajuste de stock explícito: corrige el stock aparte sin tocar lo recibido', async () => {
   const idB = await crearPedido(true);
   await adjuntar(idB);
-  await page.waitForSelector('#pf-ajuste', {timeout: 8000});
+  await page.waitForSelector('#pf-ajuste', {timeout: 40000});
   const r = await page.evaluate(id => {
     const antes = DB.stock[990003].qty;
     const c = document.getElementById('pf-ajuste'); c.checked = true; c.dispatchEvent(new Event('change'));
@@ -228,7 +232,7 @@ await caso('Ajuste de stock explícito: corrige el stock aparte sin tocar lo rec
 await caso('Pedido sin recibir: la factura se guarda y el gasto nace UNA vez, al recibir, con sus importes', async () => {
   const idC = await crearPedido(false);
   await adjuntar(idC);
-  await page.waitForSelector('#pf-confirmar', {timeout: 8000});
+  await page.waitForSelector('#pf-confirmar', {timeout: 40000});
   const r = await page.evaluate(id => {
     pfConfirmar();
     const antes = DB.ge.variables.filter(v => v.pedidoId === id).length;
@@ -249,12 +253,13 @@ await caso('Sin clave de IA: se adjunta igual (nº, fecha, NIF) y explica cómo 
   const idD = await crearPedido(true);
   const llamadasAntes = llamadas;
   await page.evaluate(id => { openPedido(id); document.getElementById('pf-adjuntar').click(); }, idD);
-  await espera(150);
+  await page.waitForSelector('#pf-sin-clave', {timeout: 20000});   // con carga alta 150 ms no bastan
   const aviso = await page.evaluate(() => ({texto: document.getElementById('pf-sin-clave')?.textContent || '', input: !!document.getElementById('pf-input')}));
   assert.ok(aviso.texto.includes('clave'), 'no explica cómo activar la lectura');
   assert.ok(aviso.input, 'sin clave no deja adjuntar');
+  await page.waitForSelector('#pf-input', {timeout: 30000});
   await (await page.$('#pf-input')).uploadFile(fotoPath);
-  await page.waitForSelector('#pf-manual', {timeout: 5000});
+  await page.waitForSelector('#pf-manual', {timeout: 40000});
   const r = await page.evaluate(id => {
     const n = document.getElementById('pf-f-num'); n.value = 'MAN-7'; n.dispatchEvent(new Event('change'));
     pfConfirmar();
