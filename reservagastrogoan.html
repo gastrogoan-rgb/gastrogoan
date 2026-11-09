@@ -890,6 +890,57 @@
   #wz-next:not(:disabled){box-shadow:0 6px 0 -2px color-mix(in srgb,var(--olive) 55%,#000);transition:transform .15s,box-shadow .15s}
   #wz-next:not(:disabled):active{transform:translateY(3px);box-shadow:0 2px 0 -2px color-mix(in srgb,var(--olive) 55%,#000)}
   .wz-prog li button{transition:color .2s}
+
+  /* ═══ EFECTOS «GRAN CADENA» (8/11, 2.ª pasada): banda de marca, foco que sigue al puntero, vuelo al carrito, confeti ═══ */
+  /* La banda de marca sale del contenedor hasta los bordes de la pantalla: aquí no hay deslizamientos laterales, así que se levanta el recorte. */
+  .wrap:has(.svc-hero){overflow-x:visible}
+  html:has(.svc-hero),body:has(.svc-hero){overflow-x:hidden}
+  .svc-hero .hero-top{position:relative;isolation:isolate;margin:-4px 0 0;padding:30px 0 74px;color:#fff;background:var(--olive);box-shadow:0 0 0 100vmax var(--olive);clip-path:inset(0 -100vmax)}
+  .svc-hero .hero-top::before{content:'';position:absolute;top:0;bottom:0;left:-100vmax;right:-100vmax;z-index:-1;background:radial-gradient(120% 90% at 100% 0%,rgba(255,255,255,.16),transparent 55%),radial-gradient(80% 70% at 0% 100%,rgba(0,0,0,.22),transparent 60%)}
+  .svc-hero .hero-h{color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.12)}
+  .svc-hero .hero-sub{color:rgba(255,255,255,.88)}
+  .svc-hero .hero-open{background:#fff;border-color:#fff;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.16)}
+  .hero-ghosts{position:absolute;top:0;bottom:0;left:0;right:0;z-index:-1;pointer-events:none}
+  .hg{position:absolute;color:#fff;opacity:.11}
+  .hg svg{display:block;width:100%;height:100%}
+  .hg0{right:3%;top:-8%;width:170px;height:170px;transform:rotate(14deg)}
+  .hg1{right:22%;bottom:-18%;width:120px;height:120px;transform:rotate(-12deg)}
+  .hg2{left:46%;top:6%;width:84px;height:84px;transform:rotate(8deg)}
+  .hg3{right:-2%;bottom:-14%;width:96px;height:96px}
+  .hg4{left:62%;bottom:-20%;width:70px;height:70px;transform:rotate(-20deg)}
+  .svc-hero .svc-grid{position:relative;z-index:1;margin-top:-46px}
+  .svc-tile{--mx:50%;--my:0px}
+  .svc-tile:first-child::before{height:8px}
+  .svc-tile:first-child .svc-disc{background:var(--olive);color:#fff}
+  .svc-tile::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(220px circle at var(--mx) var(--my),rgba(255,255,255,.55),transparent 70%)}
+  .svc-tile.is-first::after{background:radial-gradient(220px circle at var(--mx) var(--my),rgba(255,255,255,.22),transparent 70%)}
+  @media (hover:hover){ .svc-tile:hover::after{opacity:1} }
+  .svc-tile:not(.is-first):hover{background:#FFFDF8}
+  .svc-tile>*{position:relative;z-index:1}
+  .fly-dot{position:fixed;left:0;top:0;z-index:70;width:22px;height:22px;border-radius:50%;background:var(--olive);box-shadow:0 0 0 4px rgba(255,255,255,.9),0 8px 20px rgba(0,0,0,.25);pointer-events:none}
+  .tray-n.bump{animation:trayBump .45s cubic-bezier(.3,1.7,.5,1)}
+  @keyframes trayBump{0%{transform:scale(1)}40%{transform:scale(1.55)}100%{transform:scale(1)}}
+  .menu-item.dc.flash{animation:dcFlash .6s ease-out}
+  @keyframes dcFlash{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--olive) 55%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+  .confeti{position:fixed;inset:0;z-index:80;pointer-events:none;overflow:hidden}
+  .confeti i{position:absolute;display:block;border-radius:2px}
+  /* botón principal: brillo que lo cruza al estar listo */
+  #wz-next{position:relative;overflow:hidden}
+  #wz-next::before{content:'';position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);pointer-events:none;opacity:0}
+  @media (prefers-reduced-motion:no-preference){
+    #wz-next:not(:disabled)::before{animation:wzBrillo 3.2s 1s ease-in-out infinite}
+    @keyframes wzBrillo{0%{left:-60%;opacity:0}8%{opacity:1}30%{left:130%;opacity:1}31%,100%{left:130%;opacity:0}}
+    .hg{animation:hgFlota 9s ease-in-out infinite}
+    .hg1{animation-duration:11s;animation-delay:-3s} .hg2{animation-duration:8s;animation-delay:-5s} .hg3{animation-duration:12s;animation-delay:-1s} .hg4{animation-duration:10s;animation-delay:-7s}
+    @keyframes hgFlota{0%,100%{translate:0 0}50%{translate:0 -14px}}
+    .hero-top{animation:wzRise .5s cubic-bezier(.2,.8,.2,1) both}
+    .svc-hero .hero-h{animation-name:heroTitulo;animation-duration:.7s}
+    @keyframes heroTitulo{from{opacity:0;transform:translateY(18px);letter-spacing:-.06em}to{opacity:1;transform:none;letter-spacing:-.035em}}
+  }
+  @media (max-width:759px){
+    .svc-hero .hero-top{padding:24px 0 62px}
+    .hg0{width:120px;height:120px;right:-4%} .hg1{width:90px;height:90px;right:30%} .hg2{display:none} .hg3{width:70px;height:70px} .hg4{display:none}
+  }
 </style>
 </head>
 <body>
@@ -2200,17 +2251,27 @@ function metaServicio(id){
   }
   return out;
 }
+// Iconos grandes y tenues del fondo de la entrada: los de las propias secciones de la carta del negocio (su comida, no una foto de stock).
+function heroIconosHtml(){
+  const claves = [];
+  try{
+    getActiveCartas().forEach(c => (c.secciones || []).forEach(s => { const k = iconoComidaClave(s.icono, s.nombre); if(k && ICONOS_COMIDA[k] && !claves.includes(k)) claves.push(k); }));
+  }catch(e){}
+  ['hamburguesa', 'pizza', 'copa-vino', 'tarta', 'cafe'].forEach(k => { if(claves.length < 5 && !claves.includes(k) && ICONOS_COMIDA[k]) claves.push(k); });
+  return claves.slice(0, 5).map((k, i) => `<span class="hg hg${i}">${iconoComidaSvg(k, 120)}</span>`).join('');
+}
 function renderServicios(tabs){
   const ap = estadoAperturaHoy();
   document.getElementById('app').innerHTML = `
     <section class="svc svc-hero">
       <div class="hero-top">
+        <div class="hero-ghosts" aria-hidden="true">${heroIconosHtml()}</div>
         ${ap ? `<span class="hero-open ${ap.abierto ? 'is-on' : 'is-off'}"><i aria-hidden="true"></i>${escapeHtml(ap.txt)}</span>` : `<span class="wz-eye"><span>${escapeHtml(t('svc.eye'))}</span></span>`}
         <h2 class="hero-h" tabindex="-1">${escapeHtml(t('svc.title'))}</h2>
         <p class="hero-sub">${escapeHtml(t('svc.sub'))}</p>
       </div>
       <div class="svc-grid">
-        ${tabs.map((x, i) => `<button type="button" class="svc-tile${i === 0 ? ' is-first' : ''}" style="--i:${i}" onclick="setTab('${x.id}')">
+        ${tabs.map((x, i) => `<button type="button" class="svc-tile" style="--i:${i}" onclick="setTab('${x.id}')">
           <span class="svc-disc"><span class="svc-ic ${tabIcono(x.id)}" aria-hidden="true"></span></span>
           <span class="svc-tx"><span class="svc-t">${escapeHtml(tabLabel(x))}</span><span class="svc-d">${escapeHtml(t('svc.' + x.id))}</span></span>
           ${metaServicio(x.id).length ? `<span class="svc-meta">${metaServicio(x.id).map(m => `<span>${escapeHtml(m)}</span>`).join('')}</span>` : ''}
@@ -2218,6 +2279,8 @@ function renderServicios(tabs){
         </button>`).join('')}
       </div>
     </section>`;
+  const grid = document.querySelector('.svc-grid');
+  if(grid) grid.addEventListener('pointermove', e => { const t = e.target.closest('.svc-tile'); if(!t) return; const r = t.getBoundingClientRect(); t.style.setProperty('--mx', (e.clientX - r.left) + 'px'); t.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
 }
 // Con el servicio ya elegido: una barra pequeña con el nombre y «Cambiar» (solo si hay más de uno que elegir).
 function serviceBarHtml(tabs){
@@ -2352,6 +2415,7 @@ function cartLineHtml(l){
     <div class="cl-p">${fmtMoney(l.price * l.qty)}</div>
   </div>`;
 }
+let trayPrevN = 0;
 function trayActualizar(){
   const box = wzEl('wz-tray'); if(!box) return;
   const visible = wzState.kind === 'pedido' && wzState.step === 1 && cart.length > 0;
@@ -2359,9 +2423,10 @@ function trayActualizar(){
   if(!visible){ trayOpen = false; box.innerHTML = ''; return; }
   const foco = document.activeElement && box.contains(document.activeElement) ? document.activeElement.dataset.k : null;
   const n = cart.reduce((s, l) => s + l.qty, 0), sub = cart.reduce((s, l) => s + l.price * l.qty, 0);
+  const subio = n > trayPrevN; trayPrevN = n;
   const resumen = cart.map(l => (l.qty > 1 ? l.qty + '× ' : '') + l.name).join(' · ');
   box.innerHTML = `<button type="button" class="tray-h${trayOpen ? ' on' : ''}" aria-expanded="${trayOpen}" aria-label="${escapeHtml(t('wz.tray.open'))}" onclick="trayToggle()">
-      <span class="tray-k"><span class="tray-n">${n}</span>${escapeHtml(t('wz.tray'))}</span>
+      <span class="tray-k"><span class="tray-n${subio ? ' bump' : ''}">${n}</span>${escapeHtml(t('wz.tray'))}</span>
       <span class="tray-r">${escapeHtml(resumen)}</span>
       <span class="tray-t">${fmtMoney(sub)}</span>
       <span class="tray-c" aria-hidden="true"></span>
@@ -4465,6 +4530,21 @@ function dishTap(id, secId){
   const p = f.plato;
   if((p.modificadores || []).length){ openModifierModal(id); return; }
   changeCartQty(id, secId, 1, p.nombre, dishPriceInfo(p).final);
+  volarAlCarrito(document.querySelector(`.dc[data-dish="${id}"]`));
+}
+// Lo que se añade «vuela» hasta la bandeja «Tu selección»: se ve a dónde ha ido. Sin movimiento si el sistema lo pide así.
+function volarAlCarrito(origen){
+  try{
+    if(!origen || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || !origen.animate) return;
+    const dest = document.querySelector('#wz-tray .tray-n') || document.querySelector('#wz-tray');
+    if(!dest) return;
+    const a = origen.getBoundingClientRect(), b = dest.getBoundingClientRect();
+    const dot = document.createElement('span'); dot.className = 'fly-dot'; dot.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(dot);
+    const x0 = a.left + a.width / 2 - 11, y0 = a.top + a.height / 2 - 11, x1 = b.left + b.width / 2 - 11, y1 = b.top + b.height / 2 - 11;
+    const an = dot.animate([{transform:`translate(${x0}px,${y0}px) scale(1)`, opacity:1}, {transform:`translate(${(x0 + x1) / 2}px,${Math.min(y0, y1) - 60}px) scale(1.15)`, opacity:1, offset:.45}, {transform:`translate(${x1}px,${y1}px) scale(.35)`, opacity:.2}], {duration:620, easing:'cubic-bezier(.4,.1,.3,1)'});
+    an.onfinish = () => dot.remove();
+  }catch(e){}
 }
 function dishCtlRefreshAll(){
   document.querySelectorAll('.dc[data-dish]').forEach(el => {
@@ -4475,6 +4555,7 @@ function dishCtlRefreshAll(){
     const b = el.querySelector('.dc-q'), prev = +b.dataset.q || 0;
     b.textContent = q ? '×' + q : ''; b.dataset.q = q;
     if(q !== prev && q > 0){ b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+    if(q > prev){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
     const m = el.querySelector('.dc-minus'); if(m) m.hidden = !(q > 0 && !hasMods);
   });
   dishBump = null;
@@ -5865,6 +5946,7 @@ function renderTrackStatus(data){
     return;
   }
   let status = data.status || 'pendiente';
+  if(status === 'aceptado') setTimeout(() => confetiCelebra('ped:' + trackToken), 250);
   const codigo = shortCode(trackToken);
   if(status === 'rechazado'){
     const phone = (DB.business||{}).phone;
@@ -5934,6 +6016,25 @@ function renderReservationManageView(){
   });
 }
 let resRecienEnviada = null;
+// Fiesta breve al ver confirmada la reserva o el pedido (una vez por referencia y sesión). Solo con movimiento permitido.
+const celebrados = new Set();
+function confetiCelebra(clave){
+  try{
+    if(celebrados.has(clave)) return; celebrados.add(clave);
+    if((window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    const cont = document.createElement('div'); cont.className = 'confeti'; cont.setAttribute('aria-hidden', 'true'); document.body.appendChild(cont);
+    const col = ['var(--olive)', 'var(--brand2)', '#E3B04B', '#F2EDE3', '#C96F4A'];
+    for(let i = 0; i < 34; i++){
+      const s = document.createElement('i'); s.style.background = col[i % col.length]; s.style.left = '50%'; s.style.top = '34%';
+      s.style.width = (6 + Math.random() * 6) + 'px'; s.style.height = (10 + Math.random() * 8) + 'px';
+      cont.appendChild(s);
+      const ang = (-Math.PI / 2) + (Math.random() - .5) * Math.PI * 1.1, v = 140 + Math.random() * 260;
+      const dx = Math.cos(ang) * v, dy = Math.sin(ang) * v;
+      s.animate([{transform:'translate(-50%,-50%) rotate(0deg)', opacity:1}, {transform:`translate(${dx}px,${dy}px) rotate(${(Math.random() - .5) * 540}deg)`, opacity:1, offset:.55}, {transform:`translate(${dx * 1.15}px,${dy + 320}px) rotate(${(Math.random() - .5) * 900}deg)`, opacity:0}], {duration:1500 + Math.random() * 500, easing:'cubic-bezier(.2,.7,.3,1)', fill:'forwards'});
+    }
+    setTimeout(() => cont.remove(), 2200);
+  }catch(e){}
+}
 function renderReservationStatus(data){
   // Recién enviada: hasta que la app del negocio la recibe (segundos, si
   // está abierta) no hay estado publicado. Eso no es «no encontramos tu reserva».
@@ -5965,6 +6066,7 @@ function renderReservationStatus(data){
     return;
   }
   const confirmada = data.status === 'confirmada';
+  if(confirmada) setTimeout(() => confetiCelebra('res:' + resToken), 250);
   // La fecha como la dice una persona («sábado, 4 de octubre»), no «2026-10-04».
   let fechaTxt = data.date || '';
   try{
