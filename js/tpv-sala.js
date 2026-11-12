@@ -139,6 +139,8 @@ function renderQrMesaPendientes(){
             <ul class="tp-mini">${(p.items || []).map(l => `<li><b>${l.qty}×</b> ${escapeHtml(l.name)}</li>`).join('')}</ul>
             ${p.notas ? `<p class="pm-desc"><i class="ti ti-note"></i> ${escapeHtml(p.notas)}</p>` : ''}
             ${p.preciosCorregidos ? `<p class="pm-desc"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('qrMesa.tpv.preciosCorregidos'))}</p>` : ''}
+            ${p.sinPago ? `<p class="pm-desc"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('qrMesa.tpv.sinPago'))}</p>` : ''}
+            ${p.pagoInsuficiente ? `<p class="pm-desc"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('qrMesa.tpv.pagoInsuficiente'))}</p>` : ''}
             <div class="tp-total-grande">${fmtMoney((p.items || []).reduce((s, l) => s + l.price * l.qty, 0))}</div>
             <div class="pm-card-pie">
               <button class="btn btn-sm btn-fino is-on" onclick="aceptarPedidoMesaQr(${JSON.stringify(p.id)})"><i class="ti ti-check"></i> ${escapeHtml(t('qrMesa.tpv.aceptar'))}</button>

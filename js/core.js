@@ -7713,6 +7713,8 @@ function aplicarPagoConfirmado(req){
   });
   // Cuenta de una mesa pagada desde el QR (entera o una parte).
   if(aplicarPagoMesaQr(req, importeConfirmado, registrarDescuadre)) pagoConfirmadoMatched = true;
+  // Pedido de la carta por QR cobrado al enviarlo.
+  if(aplicarPagoPedidoMesaQr(req, importeConfirmado, registrarDescuadre)) pagoConfirmadoMatched = true;
   // Nada a lo que aplicar el pago: lo más probable es que el pedido se
   // rechazara/cancelara antes de que llegara la confirmación. Queda aquí,
   // visible, para que el negocio gestione el reembolso a mano.
@@ -7767,7 +7769,14 @@ function nuevoTokenMesaQr(){
 }
 function qrMesaConfig(){
   const q = (DB && DB.business && DB.business.qrMesa) || {};
-  return {activo: q.activo === true, aceptaCamarero: q.aceptaCamarero !== false};
+  // cobro: 'mesa' (se paga al camarero, como siempre) o 'pedido' (se paga al enviar el pedido, con Stripe). Por defecto 'mesa':
+  // el pago desde el móvil ya no se ofrece solo por tener Stripe conectado, lo elige el negocio.
+  return {activo: q.activo === true, aceptaCamarero: q.aceptaCamarero !== false, cobro: q.cobro === 'pedido' ? 'pedido' : 'mesa'};
+}
+// ¿Se cobra al enviar el pedido? Hace falta que lo haya elegido el negocio Y que Stripe esté conectado: sin Stripe no hay
+// con qué cobrar, y dejar el pedido esperando un pago imposible dejaría la mesa sin servicio.
+function qrMesaCobraAlPedir(){
+  return qrMesaConfig().cobro === 'pedido' && pagoOnlineActivo === true;
 }
 function asegurarTokenMesa(tbl){
   if(!tbl) return null;
@@ -7852,7 +7861,9 @@ function seccionDelPlato(platoId){
 function purgarPedidosMesaQr(){
   if(!Array.isArray(DB.pedidosMesaQr)) return;
   const limite = Date.now() - 24 * 3600 * 1000;
-  DB.pedidosMesaQr = DB.pedidosMesaQr.filter(p => p && (p.estado === 'pendiente' || new Date(p.createdAt).getTime() > limite));
+  // Un pedido esperando el pago se conserva mientras se siga preguntando por él (48 h, como pagosTarjetaEsperados).
+  const limitePago = Date.now() - 50 * 3600 * 1000;
+  DB.pedidosMesaQr = DB.pedidosMesaQr.filter(p => p && (p.estado === 'pendiente' || (p.estado === 'esperando-pago' && new Date(p.createdAt).getTime() > limitePago) || new Date(p.createdAt).getTime() > limite));
 }
 function recibirPedidoMesaQr(req){
   const cfg = qrMesaConfig();
@@ -7881,9 +7892,64 @@ function recibirPedidoMesaQr(req){
     notas: String(req.notas || '').slice(0, 300), clienteNombre: String(req.clienteNombre || '').slice(0, 60),
     preciosCorregidos: revisado.correcciones.length ? revisado.correcciones : undefined,
     estado: 'pendiente', createdAt: new Date().toISOString()};
+  // COBRO AL PEDIR. El negocio quiere el dinero ANTES de cocina: el pedido no entra hasta que Stripe confirme el pago (se
+  // PREGUNTA, igual que el resto de cobros: comprobarPagosTarjeta → aplicarPagoPedidoMesaQr). El importe que vale es el
+  // recalculado aquí con la carta del negocio, no el que mandó el móvil.
+  if(qrMesaCobraAlPedir()){
+    const ref = typeof req.clientRef === 'string' ? req.clientRef.slice(0, 120) : '';
+    if(req.pagoAlPedir === true && ref.length >= 8){
+      p.estado = 'esperando-pago';
+      p.pagoRef = ref;
+      p.totalEsperado = redondeoQr(items.reduce((s, l) => s + (Number(l.price) || 0) * (Number(l.qty) || 0), 0));
+      DB.pedidosMesaQr.push(p);
+      esperarPagoTarjeta(ref, p.totalEsperado);
+      return null;   // todavía no es un pedido: no suena ni avisa hasta que el banco lo confirme
+    }
+    // Llegó SIN pagar (una página antigua guardada en el móvil, o alguien saltándose la web): nunca entra solo en cocina.
+    // Queda para que el camarero lo mire y, si lo acepta, cobre en la mesa.
+    p.sinPago = true;
+    DB.pedidosMesaQr.push(p);
+    return p;
+  }
   DB.pedidosMesaQr.push(p);
   if(!cfg.aceptaCamarero) aceptarPedidoMesaQr(p.id, true);
   return p;
+}
+// Llega la confirmación del banco de un pedido cobrado al pedir. Devuelve true si la referencia era de un pedido de mesa.
+function aplicarPagoPedidoMesaQr(req, importeConfirmado, registrarDescuadre){
+  const p = (DB.pedidosMesaQr || []).find(x => x && x.pagoRef && x.pagoRef === req.orderRef);
+  if(!p) return false;
+  if(p.estado !== 'esperando-pago') return true;   // ya aplicado (el aviso puede llegar dos veces)
+  const esperado = Number(p.totalEsperado) || 0;
+  const devolver = importe => {
+    if(!(importe > 0.01)) return;
+    if(!DB.unmatchedOnlinePayments) DB.unmatchedOnlinePayments = [];
+    DB.unmatchedOnlinePayments.push({id: genId(), orderRef: req.orderRef, amount: redondeoQr(importe), createdAt: req.createdAt || new Date().toISOString(), detectedAt: new Date().toISOString(), motivo: 'qrMesa'});
+    if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(importe)));
+  };
+  // Pagó MENOS de lo que cuesta: no confirma nada. El pedido queda para el camarero (que decide si lo acepta y cobra en la
+  // mesa) y lo pagado se anota en «Pagos sin pedido» para devolverlo.
+  if(importeConfirmado + 0.02 < esperado){
+    registrarDescuadre(p.id, esperado);
+    p.estado = 'pendiente';
+    p.pagoInsuficiente = true;
+    devolver(importeConfirmado);
+    return true;
+  }
+  p.pagado = true;
+  p.pagoImporte = importeConfirmado;
+  p.estado = 'pendiente';   // aceptarPedidoMesaQr solo mueve los pendientes
+  const order = aceptarPedidoMesaQr(p.id, true);
+  if(!order){
+    // La mesa ya no existe (se borró mientras pagaba): el dinero tiene que aparecer en algún sitio.
+    devolver(importeConfirmado);
+    return true;
+  }
+  devolver(importeConfirmado - esperado);   // si pagó de más, lo que sobra se devuelve; nunca es propina por su cuenta
+  if(typeof logAudit === 'function') logAudit('edit', t('qrMesa.audit.pagoAlPedir').replace('${importe}', fmtMoney(esperado)).replace('${mesa}', p.mesaNombre || ''));
+  if(typeof notifyDesktop === 'function') notifyDesktop(t('qrMesa.tpv.titulo'), (p.mesaNombre || '') + ' · ' + fmtMoney(esperado));
+  if(typeof playNewRequestAlert === 'function'){ try{ playNewRequestAlert(); }catch(e){} }
+  return true;
 }
 function pedidosMesaQrPendientes(tableId){
   return (DB.pedidosMesaQr || []).filter(p => p && p.estado === 'pendiente' && (tableId === undefined || p.tableId === tableId));
@@ -7904,6 +7970,8 @@ function aceptarPedidoMesaQr(id, auto){
   const fired = [];
   p.items.forEach(src => {
     const l = Object.assign({}, src, {estado: 'cocina', enviadoAt: ahora, marchada: src.qty});
+    // Cobrado al pedir: la línea nace pagada, y al cobrar la mesa se descuenta (mismo mecanismo del pago por móvil de siempre).
+    if(p.pagado && p.pagoRef){ l.pagadoOnline = true; l.pagoRef = p.pagoRef; if(p.clienteNombre) l.pagadorNombre = p.clienteNombre; }
     if(p.notas && !fired.length) l.notas = p.notas;
     order.items.push(l);
     fired.push({qty: l.qty, name: l.name, notas: l.notas, bebida: l.bebida, platoId: l.platoId, recipeId: l.recipeId});
@@ -10404,7 +10472,14 @@ function renderTableQrCard(){
         <option value="cocina" ${!cfg.aceptaCamarero ? 'selected' : ''}>${t('qrMesa.mn.directoCocina')}</option>
       </select>
     </div>
-    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px"><i class="ti ti-credit-card"></i> ${pagoOnlineActivo ? t('qrMesa.mn.conStripe') : t('qrMesa.mn.sinStripe')}</p>` : ''}`;
+    <div class="field" style="margin-top:6px">
+      <label for="mn-qrmesa-cobro">${t('qrMesa.mn.cobro')}</label>
+      <select id="mn-qrmesa-cobro" onchange="saveQrMesaConfig()">
+        <option value="mesa" ${cfg.cobro === 'mesa' ? 'selected' : ''}>${t('qrMesa.mn.cobroMesa')}</option>
+        <option value="pedido" ${cfg.cobro === 'pedido' ? 'selected' : ''} ${pagoOnlineActivo || cfg.cobro === 'pedido' ? '' : 'disabled'}>${t('qrMesa.mn.cobroPedido')}</option>
+      </select>
+    </div>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px"><i class="ti ti-credit-card"></i> ${cfg.cobro === 'pedido' ? (pagoOnlineActivo ? t('qrMesa.mn.cobroPedidoAyuda') : t('qrMesa.mn.cobroPedidoSinStripe')) : (pagoOnlineActivo ? t('qrMesa.mn.cobroMesaAyuda') : t('qrMesa.mn.sinStripe'))}</p>` : ''}`;
   if(!cfg.activo){
     return `
       <div class="card" id="mn-card-qr-mesa">
@@ -10455,7 +10530,8 @@ function saveQrMesaConfig(){
   const sel = document.getElementById('mn-qrmesa-acepta');
   const antes = qrMesaConfig();
   const activo = chk ? chk.checked : antes.activo;
-  DB.business.qrMesa = {activo, aceptaCamarero: sel ? sel.value !== 'cocina' : antes.aceptaCamarero};
+  const cobroSel = document.getElementById('mn-qrmesa-cobro');
+  DB.business.qrMesa = {activo, aceptaCamarero: sel ? sel.value !== 'cocina' : antes.aceptaCamarero, cobro: cobroSel ? (cobroSel.value === 'pedido' ? 'pedido' : 'mesa') : antes.cobro};
   // Al activarlo, cada mesa recibe su token (el QR impreso no cambia
   // mientras no se rote a mano).
   if(activo) (DB.tables || []).forEach(asegurarTokenMesa);

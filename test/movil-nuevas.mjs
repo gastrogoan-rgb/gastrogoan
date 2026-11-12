@@ -287,7 +287,7 @@ const pintarPublica = (fase) => pub.evaluate(({cuenta, fase}) => {
   })};
   publicId = 'pubmovil01';
   qrMesaListener = false; qrMesaCuenta = undefined;
-  DB = {business: {name: 'Casa Paco Centro', tiposServicio: {mesa: true, takeaway: true, delivery: true}, qrMesa: {activo: true}},
+  DB = {business: {name: 'Casa Paco Centro', tiposServicio: {mesa: true, takeaway: true, delivery: true}, qrMesa: {activo: true, cobro: 'pedido'}},
     cartas: [{id: 1, nombre: 'Carta', secciones: [
       {id: 10, nombre: 'Hamburguesas', platos: [
         {id: 100, nombre: 'Hamburguesa de ternera con queso de cabra', precio: 14.5, disponible: true, descripcion: 'Pan brioche, cebolla caramelizada y patatas'},
@@ -307,12 +307,14 @@ const pintarPublica = (fase) => pub.evaluate(({cuenta, fase}) => {
 }, {cuenta: CUENTA, fase});
 await medir(pub, 'Web de la mesa: carta con alérgenos', 'body', () => pintarPublica('carta'));
 await medir(pub, 'Web de la mesa: carrito', 'body', () => pintarPublica('carrito'));
-await medir(pub, 'Web de la mesa: cuenta y pago parcial', 'body', async () => {
+await medir(pub, 'Web de la mesa: cuenta (cobro al pedir)', 'body', async () => {
   await pintarPublica('cuenta');
-  await pub.evaluate(() => { document.getElementById('mesaqr-cuenta')?.scrollIntoView(); const i = document.getElementById('mq-importe'); if(i) i.value = '25'; });
+  await pub.evaluate(() => { document.getElementById('mesaqr-cuenta')?.scrollIntoView(); });
 });
-const hayPago = await pub.evaluate(() => !!document.getElementById('mq-importe') && !!document.getElementById('mq-pagar-todo'));
-if(!hayPago){ fallos++; console.log('❌ La web de la mesa no enseña el pago parcial (mq-importe / mq-pagar-todo)'); }
+// Con cobro al pedir el botón de enviar lleva el total («Pagar y enviar pedido · 37,50 €»): se mide en el carrito de arriba.
+await pintarPublica('carrito');
+const botonPago = await pub.evaluate(() => (document.getElementById('o-submit') || {}).textContent || '');
+if(!/37[.,]50/.test(botonPago)){ fallos++; console.log('❌ El botón de la mesa no enseña el total a pagar: «' + botonPago.trim() + '»'); }
 
 const ruido = e => /Failed to fetch|NetworkError|network-request-failed|ERR_FAILED|firebase is not defined/i.test(e);
 const reales = [...errs, ...errsPub].filter(e => !ruido(e));
