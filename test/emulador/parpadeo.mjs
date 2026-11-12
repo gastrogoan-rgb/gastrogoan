@@ -30,19 +30,20 @@ async function aparato(nombre){
   return page;
 }
 const A = await aparato('A'), B = await aparato('B');
-for(const vista of ['dashboard','tpv','comandascocina','stock']){
-  for(const p of [A,B]) await p.evaluate(v => { window.__r = []; window.__m = 0; navigate(v); }, vista);
-  await w(1500);
-  for(const p of [A,B]) await p.evaluate(() => { window.__r = []; window.__m = 0; });
-  await w(30000);
-  const rA = await A.evaluate(() => ({r: window.__r.length, m: window.__m, quien: [...new Set(window.__r.map(x=>x.split('@')[0]))].join(',')}));
-  const rB = await B.evaluate(() => ({r: window.__r.length, m: window.__m, quien: [...new Set(window.__r.map(x=>x.split('@')[0]))].join(',')}));
-  console.log(`vista ${vista}, 30 s quietos → A: ${rA.r} repintados (${rA.m} cambios DOM) ${rA.quien} · B: ${rB.r} repintados (${rB.m} cambios DOM) ${rB.quien}`);
+// Servicio con ACTIVIDAD: A guarda un cambio cada 700 ms durante 10 s (tres bloques distintos, como un camarero que toma notas) y B mira la pantalla.
+for(const vista of ['dashboard','tpv','stock']){
+  await B.evaluate(v => { navigate(v); }, vista); await w(2000);
+  await B.evaluate(() => { window.__r = []; window.__m = 0; });
+  await A.evaluate(async () => {
+    for(let i = 0; i < 14; i++){
+      DB.business.slogan = 'x' + i + Date.now();
+      DB.chatMessages = DB.chatMessages || []; DB.chatMessages.push({id: 'm' + Date.now() + i, authorId: 'z', authorName: 'Z', text: 'hola ' + i, ts: new Date().toISOString(), channel: 'general'});
+      DB.stockMovimientos = DB.stockMovimientos || [];
+      await saveDB(); await new Promise(r => setTimeout(r, 700));
+    }
+  });
+  await w(4000);
+  const r = await B.evaluate(() => ({n: window.__r.length, m: window.__m}));
+  console.log(`vista ${vista}: A hace 14 guardados en 10 s → B se repinta ${r.n} veces (${r.m} cambios de DOM)`);
 }
-// Un cambio pequeño en A: ¿cuántas veces se repinta B?
-await B.evaluate(() => { window.__r = []; navigate('dashboard'); window.__r = []; });
-await w(1500);
-await A.evaluate(async () => { DB.business.slogan = 'x' + Date.now(); await saveDB(); });
-await w(8000);
-console.log('Un cambio en A → B repinta', await B.evaluate(() => window.__r.length), 'veces:', await B.evaluate(() => window.__r.join(' ')));
 await browser.close();
