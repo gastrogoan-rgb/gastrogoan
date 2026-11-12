@@ -132,14 +132,18 @@ await caso('La nube es OBLIGATORIA: no se puede pasar sin configurarla', async (
     out.hayAspa = !!aspa;
     if(aspa){
       aspa.click();
+      // El aparato comprueba un instante en la nube si el negocio ya estaba configurado (hidratación) antes de enseñar su asistente: se le da ese instante.
+      await new Promise(r => setTimeout(r, 500));
       // Vale cualquiera de los asistentes del alta: lo que NO puede pasar es
       // aterrizar en la app con pasos sin terminar.
-      out.vuelveElAsistente = ['firebase-gate','netlify-gate','license-gate']
+      // «comprobando-negocio» también cuenta: el aparato mira en la nube si el negocio ya estaba configurado ANTES de enseñar su asistente y, si no
+      // puede comprobarlo, se queda ahí (nunca deja pasar a la app con el alta a medias).
+      out.vuelveElAsistente = ['firebase-gate','netlify-gate','license-gate','comprobando-negocio']
         .some(id => !!document.getElementById(id));
-      out.cualAsistente = ['firebase-gate','netlify-gate','license-gate']
+      out.cualAsistente = ['firebase-gate','netlify-gate','license-gate','comprobando-negocio']
         .find(id => !!document.getElementById(id)) || 'ninguno';
     }
-    ['firebase-gate','netlify-gate','license-gate'].forEach(id => document.getElementById(id)?.remove());
+    ['firebase-gate','netlify-gate','license-gate','comprobando-negocio'].forEach(id => document.getElementById(id)?.remove());
     return out;
   });
   assert.ok(r.avisaConVacios, 'con los campos vacíos tiene que decir algo, no callarse');

@@ -81,7 +81,9 @@ await caso('Ventas: cifras de hoy (tickets y ticket medio) y la gráfica pasa de
     return out;
   });
   assert.equal(r.tickets, r.esperado); // Un lunes sin ventas esa semana la tarjeta enseña «sin ventas» en vez de la gráfica (0 puntos): solo se exige gráfica si hay ventas en la semana.
-  assert.equal(r.puntosSemana <= 7 && (r.puntosSemana > 0 || new Date().getDay() === 1), true, JSON.stringify(r));
+  // La semana solo pinta puntos si alguno de los días sembrados (1-5 del mes) cae en la semana en curso; si no (p. ej. un jueves 12), sale vacía.
+  const hoyT = new Date(), lunes = hoyT.getDate() - ((hoyT.getDay() + 6) % 7), haySeriePropia = Math.min(5, hoyT.getDate()) >= lunes;
+  assert.equal(r.puntosSemana <= 7 && (r.puntosSemana > 0 || !haySeriePropia), true, JSON.stringify(r));
   assert.ok(r.cambiaSemana, 'la flecha no cambió de semana'); assert.equal(r.puntosMes, r.diasHastaHoy, JSON.stringify(r)); assert.ok(r.selectorMes);
   assert.ok(r.mesAnterior.length > 3, JSON.stringify(r));
   await page.close();

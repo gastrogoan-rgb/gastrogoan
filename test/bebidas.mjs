@@ -289,31 +289,33 @@ await caso('Los campos de bebida están en catalán e inglés, sin desbordar', a
 /* ─── Distribución del Trabajo en sala ─── */
 // Antes a sala solo se le quitaba la columna de platos y no se le ponía
 // nada en su lugar: la pantalla se quedaba coja.
-await caso('Sala reparte rangos donde cocina reparte platos', async ()=>{
+await caso('Sala reparte MESAS (zona entera o mesas sueltas, elegidas del plano) donde cocina reparte platos', async ()=>{
   const r = await page.evaluate(()=>{
     currentArea = () => 'sala';
     DB.employees = [{id:501,name:'Marta',rol:'Camarera',area:'sala',active:true,color:'#4A5D4E'}];
     DB.workDistribution = {};
+    DB.tables = [1,2,3].map(i => ({id: 600 + i, name: 'Mesa ' + i, zona: 'Salón', plazas: 4})).concat([4,5].map(i => ({id: 600 + i, name: 'Mesa ' + i, zona: 'Terraza', plazas: 2})));
     distCurrentEmployeeId = 501;
     const d = getDistEmpData(501);
     document.body.classList.add('owner-session');
     navigate('distribucion');
     renderDistDetail();
     openDistCargo(501);   // «a su cargo» vive en una ventana: ahí están los mandos de repartir
-    const input = document.getElementById('dist-rango-input');
     const haySelectorPlatos = !!document.getElementById('dist-plato-sel');
-    if(input){ input.value = 'Mesas 1-8'; addDistRango(); }
-    const i2 = document.getElementById('dist-rango-input');
-    if(i2){ i2.value = 'Terraza'; addDistRango(); }
-    // Duplicado con otras mayúsculas: no debería entrar dos veces
-    const i3 = document.getElementById('dist-rango-input');
-    if(i3){ i3.value = 'terraza'; addDistRango(); }
-    return {rangos: getDistEmpData(501).rangos, haySelectorPlatos, pintado: (document.body.innerHTML.match(/Mesas 1-8/g)||[]).length};
+    const hayTextoLibre = !!document.getElementById('dist-rango-input');
+    const zonas = document.querySelectorAll('#dp-cargo-modal .dp-mesas-zona').length;
+    distToggleZona(1);        // Terraza entera
+    distToggleMesa(601);      // una mesa suelta del Salón
+    distToggleMesa(601);      // la misma otra vez: se quita (no se duplica)
+    distToggleMesa(602);
+    return {mesas: getDistEmpData(501).mesas.map(Number).sort(), etiquetas: distRangoLabels(getDistEmpData(501)), haySelectorPlatos, hayTextoLibre, zonas};
   });
   assert.ok(!r.haySelectorPlatos, 'sala no debería ver el selector de platos');
-  assert.deepEqual(r.rangos, ['Mesas 1-8','Terraza'], 'los rangos deberían guardarse sin duplicar');
-  assert.ok(r.pintado > 0, 'el rango debería verse en pantalla');
-  return `${r.rangos.length} rangos, el duplicado rechazado`;
+  assert.ok(!r.hayTextoLibre, 'el rango ya no es texto libre: se elige del plano');
+  assert.equal(r.zonas, 2, 'debería haber una fila por zona del plano');
+  assert.deepEqual(r.mesas, [602, 604, 605], 'las mesas deberían guardarse sin duplicar');
+  assert.deepEqual(r.etiquetas, ['Salón: Mesa 2', 'Terraza (toda)']);
+  return `${r.mesas.length} mesas, sin duplicar`;
 });
 
 await caso('Cocina sigue repartiendo platos, no rangos', async ()=>{

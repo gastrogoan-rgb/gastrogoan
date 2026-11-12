@@ -68,6 +68,10 @@
        área; owner-strict lo oculta a cualquier sesión de empleado, tenga
        o no ese permiso. -->
   <button class="btn btn-sm owner-strict" id="help-fab" onclick="toggleHelpPanel()" data-i18n-title="title.help" title="Ayuda" style="margin-right:4px"><i class="ti ti-help-hexagon" id="help-fab-icon"></i><span class="hdr-text" data-i18n="title.help"> Ayuda</span></button>
+  <button class="btn btn-sm hdr-icon-btn" id="avisos-fab" onclick="toggleAvisosPanel()" title="Avisos" aria-label="Avisos" style="margin-right:4px;position:relative">
+    <i class="ti ti-bell"></i>
+    <span class="chat-badge" id="avisos-badge" style="display:none"></span>
+  </button>
   <button class="btn btn-sm hdr-icon-btn" id="chat-fab" onclick="toggleChatPanel()" data-i18n-title="title.internalChat" title="Chat interno" style="margin-right:4px;position:relative">
     <i class="ti ti-messages"></i>
     <span class="chat-badge" id="chat-badge" style="display:none"></span>
@@ -557,6 +561,7 @@
         </div>
         <div id="res-pct-impuesto-nota"></div>
         <div class="ge-grid cdr-tabla"><table id="cdr-table"></table></div>
+        <div id="cdr-real"></div>
       </div>
 
       <!-- TESORERÍA -->

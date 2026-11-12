@@ -548,3 +548,178 @@ function panelRender(){
   dpAnalisisPintar();
   dpClientelaPintar();
 }
+
+
+/* ═══ AVISOS: la campana de la cabecera (12/11, pedido del dueño) ═══
+   Todo lo que pide atención sale aquí SIN entrar al Panel: vacaciones y cambios de turno (con sus botones de Aceptar /
+   Rechazar), pedidos de la web y reservas por confirmar, subidas de precio, temperaturas fuera de rango, stock bajo,
+   mantenimiento vencido, facturas sin pagar… La lista sale de `avisosDeLaApp()` (js/finance.js), la MISMA que pinta el
+   Panel en «Hoy — Atención», así que nunca se contradicen.
+   Los avisos NO se guardan: se calculan de lo que hay, y desaparecen solos cuando se resuelven. Solo los informativos
+   (cumpleaños, bajadas de precio) se pueden «marcar como visto», y se recuerda en ESTE aparato hasta que cambie la cifra.
+   El propietario ve todo; el empleado, solo lo operativo (no las aprobaciones, el dinero ni los precios). */
+const AVISOS_VISTOS_LS = 'gastrogoan_avisos_vistos';
+function avisosVistosLeer(){ try{ return JSON.parse(localStorage.getItem(AVISOS_VISTOS_LS) || '{}') || {}; }catch(e){ return {}; } }
+/* Stock bajo de UN área. El Panel cuenta solo la del área en que estás (currentArea); la campana las cuenta las dos, porque un aviso
+   no puede depender de en qué carpeta estés: el dueño en Sala no se enteraba de que se acababa el fondo de Cocina. */
+function avisosStockBajo(area){
+  const ing = (DB.ingredients || []).filter(i => (i.area || 'cocina') === area && i.activo !== false && getStockEntry(i.id).qty < getStockEntry(i.id).min).length;
+  const elab = (DB.elaboraciones || []).filter(e => (e.area || 'cocina') === area && (e.qty || 0) < (e.min || 0)).length;
+  return ing + elab;
+}
+/* Qué ve un EMPLEADO: solo lo de su área. Sala trabaja con TPV y Reservas; el stock es el de su área; lo demás (pedidos a proveedor,
+   temperaturas, mantenimiento) existe en las dos carpetas. El propietario lo ve todo. */
+const AVISOS_SOLO_SALA = new Set(['web', 'reservas', 'incidencias']);
+function avisosAreaDeSesion(){ const s = typeof getAccessSession === 'function' ? getAccessSession() : null; return s && s.area ? s.area : null; }
+function avisosLista(){
+  const dueno = typeof isOwnerSession === 'function' && isOwnerSession();
+  const areaEmp = dueno ? null : avisosAreaDeSesion();
+  const vistos = avisosVistosLeer();
+  const filas = [];
+  /* Mensajes directos dueño ↔ empleado (chat `dm:<id>`): al dueño le sale quién le ha escrito; al empleado, que el jefe le ha escrito. */
+  if(dueno){
+    (DB.employees || []).filter(e => e.active !== false).forEach(e => {
+      const n = directChatUnreadCount(e.id, true);
+      if(n > 0) filas.push({id: 'dm' + e.id, icon: 'ti-message', warn: true, count: n, html: '<strong>' + escapeHtml(e.name) + '</strong> ' + gl({es: 'te ha escrito', ca: 't\'ha escrit', en: 'sent you a message'}) + (n > 1 ? ' (' + n + ')' : ''), ir: `openEmployeeDirectChat(${JSON.stringify(e.id)}, true)`});
+    });
+  } else {
+    const yoDm = typeof loggedInEmployeeId === 'function' ? loggedInEmployeeId() : null;
+    if(yoDm != null){
+      const n = directChatUnreadCount(yoDm, false);
+      if(n > 0) filas.push({id: 'dmJefe', icon: 'ti-message', warn: true, count: n, html: gl({es: 'El jefe te ha escrito', ca: 'El cap t\'ha escrit', en: 'The boss sent you a message'}) + (n > 1 ? ' (' + n + ')' : ''), ir: `openEmployeeDirectChat(${JSON.stringify(yoDm)}, false)`});
+    }
+  }
+  if(!dueno){
+    // La respuesta a lo que PEDÍ: vacaciones y cambios de turno decididos en los últimos 14 días (se quitan con «Visto»).
+    const yo0 = typeof loggedInEmployeeId === 'function' ? loggedInEmployeeId() : null;
+    const desde = Date.now() - 14 * 86400000;
+    const reciente = r => r.decidedAt && new Date(r.decidedAt).getTime() >= desde;
+    const decision = (id, icon, html, ok) => { if(vistos[id] !== 1) filas.push({id, icon, warn: !ok, count: 1, ocultable: true, html}); };
+    if(yo0 != null){
+      (DB.vacationRequests || []).filter(r => r.employeeId === yo0 && (r.status === 'approved' || r.status === 'rejected') && reciente(r)).forEach(r => {
+        const ok = r.status === 'approved';
+        decision('vacRes' + r.id, ok ? 'ti-beach' : 'ti-beach-off', gl({es: 'Tus vacaciones del ' + r.fromDate + ' al ' + r.toDate + ': <strong>' + (ok ? 'aprobadas' : 'rechazadas') + '</strong>', ca: 'Les teves vacances del ' + r.fromDate + ' al ' + r.toDate + ': <strong>' + (ok ? 'aprovades' : 'rebutjades') + '</strong>', en: 'Your holiday from ' + r.fromDate + ' to ' + r.toDate + ': <strong>' + (ok ? 'approved' : 'declined') + '</strong>'}), ok);
+      });
+      (DB.turnoSwapRequests || []).filter(r => r.fromEmployeeId === yo0 && (r.status === 'approved' || r.status === 'rejected') && reciente(r)).forEach(r => {
+        const ok = r.status === 'approved', turno = (DB.turnos || []).find(x => x.id === r.fromTurnoId), fecha = turno ? turno.fecha : '?';
+        decision('swapRes' + r.id, 'ti-replace', gl({es: 'Tu cambio de turno del ' + fecha + ': <strong>' + (ok ? 'aprobado' : 'rechazado') + '</strong>', ca: 'El teu canvi de torn del ' + fecha + ': <strong>' + (ok ? 'aprovat' : 'rebutjat') + '</strong>', en: 'Your shift swap on ' + fecha + ': <strong>' + (ok ? 'approved' : 'declined') + '</strong>'}), ok);
+      });
+    }
+  }
+  if(!dueno){
+    // Un compañero te pide cambiar un turno: se contesta aquí mismo.
+    const yo = typeof loggedInEmployeeId === 'function' ? loggedInEmployeeId() : null;
+    if(yo != null) (DB.turnoSwapRequests || []).filter(r => r.toEmployeeId === yo && r.status === 'pending_peer').forEach(r => {
+      const de = (DB.employees || []).find(e => e.id === r.fromEmployeeId), turno = (DB.turnos || []).find(x => x.id === r.fromTurnoId);
+      filas.push({id: 'swapPeer' + r.id, icon: 'ti-replace', warn: true,
+        html: t('swap.incomingLine').replace('${name}', escapeHtml(de ? de.name : '?')).replace('${date}', escapeHtml(turno ? turno.fecha : '?')),
+        acciones: [[t('common.accept'), `respondTurnoSwapRequest(${r.id}, true)`, true], [t('common.reject'), `respondTurnoSwapRequest(${r.id}, false)`]]});
+    });
+  }
+  if(dueno){
+    (DB.vacationRequests || []).filter(r => r.status === 'pending').forEach(r => {
+      const emp = (DB.employees || []).find(e => e.id === r.employeeId);
+      filas.push({id: 'vac' + r.id, icon: 'ti-beach', warn: true,
+        html: t('vacation.ownerPendingLine').replace('${name}', escapeHtml(emp ? emp.name : '?')).replace('${from}', escapeHtml(r.fromDate)).replace('${to}', escapeHtml(r.toDate)),
+        acciones: [[t('common.accept'), `ownerRespondVacationRequest(${r.id}, true)`, true], [t('common.reject'), `ownerRespondVacationRequest(${r.id}, false)`]]});
+    });
+    (DB.turnoSwapRequests || []).filter(r => r.status === 'pending_owner').forEach(r => {
+      const de = (DB.employees || []).find(e => e.id === r.fromEmployeeId), a = (DB.employees || []).find(e => e.id === r.toEmployeeId);
+      const turno = (DB.turnos || []).find(x => x.id === r.fromTurnoId);
+      filas.push({id: 'swap' + r.id, icon: 'ti-replace', warn: true,
+        html: t('swap.ownerPendingLine').replace('${from}', escapeHtml(de ? de.name : '?')).replace('${to}', escapeHtml(a ? a.name : '?')).replace('${date}', escapeHtml(turno ? turno.fecha : '?')),
+        acciones: [[t('common.accept'), `ownerApproveTurnoSwap(${r.id}, true)`, true], [t('common.reject'), `ownerApproveTurnoSwap(${r.id}, false)`]]});
+    });
+  }
+  ['cocina', 'sala'].forEach(area => {
+    if(!dueno && areaEmp !== area) return;
+    const n = avisosStockBajo(area);
+    if(n > 0) filas.push({id: 'stock' + area, icon: 'ti-alert-triangle', warn: true, count: n,
+      html: '<strong>' + n + '</strong> · ' + gl({es: 'Stock bajo mínimo', ca: 'Estoc sota mínim', en: 'Stock below minimum'}) + ' · ' + (area === 'sala' ? 'Sala' : gl({es: 'Cocina', ca: 'Cuina', en: 'Kitchen'})),
+      ir: `currentFolder='${area}'; dashboardGoToStockAlerts()`});
+  });
+  // Las reglas de seguridad de SU Firebase se han quedado viejas: se actualizan con el asistente paso a paso (solo el propietario).
+  if(dueno && typeof reglasAntiguas !== 'undefined' && reglasAntiguas) filas.push({id: 'reglas', icon: 'ti-shield-exclamation', warn: true,
+    html: gl({es: 'Las reglas de seguridad de tu Firebase están desactualizadas', ca: 'Les regles de seguretat del teu Firebase estan desactualitzades', en: 'Your Firebase security rules are out of date'}),
+    acciones: [[gl({es: 'Actualizar (2 min)', ca: 'Actualitzar (2 min)', en: 'Update (2 min)'}), 'cerrarAvisos(); abrirAsistenteReglas()', true]]});
+  avisosDeLaApp().filter(i => i.campana && i.count > 0 && (dueno || (!i.soloDueno && !(AVISOS_SOLO_SALA.has(i.id) && areaEmp !== 'sala')))).forEach(i => {
+    if(i.ocultable && vistos[i.id] === i.count) return;
+    filas.push({id: i.id, icon: i.icon, warn: !!i.warn, html: '<strong>' + i.count + '</strong> · ' + i.label, ir: i.onclick, ocultable: i.ocultable, count: i.count});
+  });
+  // Lo que pide una decisión, delante; lo informativo, detrás.
+  return filas.sort((a, b) => (b.warn ? 1 : 0) - (a.warn ? 1 : 0));
+}
+let avisosTimer = null, avisosUltimoN = 0, avisosVence = 0;
+function avisosProgramar(ms){
+  // Gana SIEMPRE el plazo más corto: un refresco «tranquilo» (1,2 s, al pintar una pantalla) no puede retrasar uno pendiente de 0,4 s (tras guardar).
+  const vence = Date.now() + (ms == null ? 400 : ms);
+  if(avisosTimer && avisosVence <= vence) return;
+  clearTimeout(avisosTimer);
+  avisosVence = vence;
+  avisosTimer = setTimeout(() => { avisosTimer = null; avisosPintar(); }, vence - Date.now());
+}
+function avisosPanelAbierto(){ const p = document.getElementById('avisos-panel'); return !!(p && p.classList.contains('active')); }
+function avisosPintar(){
+  const fab = document.getElementById('avisos-fab'), badge = document.getElementById('avisos-badge');
+  if(!fab || !badge || typeof DB === 'undefined' || !DB || !DB.business) return;
+  let filas = [];
+  try{ filas = avisosLista(); }catch(e){ console.error('Error calculando los avisos', e); }
+  const n = filas.length, urgentes = filas.filter(f => f.warn).length;
+  badge.style.display = n ? 'flex' : 'none';
+  badge.textContent = n > 9 ? '9+' : String(n);
+  fab.classList.toggle('avisos-con', urgentes > 0);
+  const tit = gl({es: 'Avisos', ca: 'Avisos', en: 'Notifications'});
+  fab.title = tit; fab.setAttribute('aria-label', n ? tit + ' (' + n + ')' : tit);
+  // Si hay MÁS que antes, la campana se sacude una vez (una novedad, no el estado de siempre).
+  if(n > avisosUltimoN && avisosUltimoN >= 0 && fab.dataset.listo){ fab.classList.remove('avisos-nuevo'); void fab.offsetWidth; fab.classList.add('avisos-nuevo'); }
+  fab.dataset.listo = '1'; avisosUltimoN = n;
+  if(avisosPanelAbierto()) avisosRenderPanel(filas);
+}
+function avisosRenderPanel(filas){
+  const cuerpo = document.getElementById('avisos-cuerpo'); if(!cuerpo) return;
+  filas = filas || avisosLista();
+  const fila = f => `
+    <div class="av-fila${f.warn ? ' av-warn' : ''}">
+      <i class="ti ${f.icon}" aria-hidden="true"></i>
+      <div class="av-txt">${f.html}</div>
+      <div class="av-bt">
+        ${(f.acciones || []).map(a => `<button type="button" class="btn btn-sm btn-fino${a[2] ? ' is-on' : ''}" onclick="${a[1]}">${a[0]}</button>`).join('')}
+        ${f.ir ? `<button type="button" class="btn btn-sm btn-fino" onclick="avisosIr(&quot;${f.ir.replace(/"/g, '&quot;')}&quot;)">${gl({es: 'Ver', ca: 'Veure', en: 'View'})}</button>` : ''}
+        ${f.ocultable ? `<button type="button" class="btn btn-sm btn-fino" onclick="avisosMarcarVisto('${f.id}', ${f.count})">${gl({es: 'Visto', ca: 'Vist', en: 'Seen'})}</button>` : ''}
+      </div>
+    </div>`;
+  cuerpo.innerHTML = filas.length
+    ? filas.map(fila).join('')
+    : `<div class="av-vacio"><i class="ti ti-circle-check" aria-hidden="true"></i><strong>${gl({es: 'Todo al día', ca: 'Tot al dia', en: 'All caught up'})}</strong><span>${gl({es: 'No hay nada que requiera tu atención.', ca: 'No hi ha res que requereixi la teva atenció.', en: 'Nothing needs your attention.'})}</span></div>`;
+}
+function avisosAsegurarPanel(){
+  let p = document.getElementById('avisos-panel');
+  if(p) return p;
+  p = document.createElement('div');
+  p.id = 'avisos-panel'; p.className = 'avisos-panel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', gl({es: 'Avisos', ca: 'Avisos', en: 'Notifications'}));
+  p.innerHTML = `<div class="av-cab"><h4><i class="ti ti-bell" aria-hidden="true"></i> ${gl({es: 'Avisos', ca: 'Avisos', en: 'Notifications'})}</h4><button type="button" class="btn btn-sm btn-icon" onclick="cerrarAvisos()" aria-label="${gl({es: 'Cerrar', ca: 'Tancar', en: 'Close'})}"><i class="ti ti-x"></i></button></div><div class="av-cuerpo" id="avisos-cuerpo"></div>`;
+  document.body.appendChild(p);
+  return p;
+}
+function toggleAvisosPanel(){
+  const p = avisosAsegurarPanel();
+  if(p.classList.contains('active')){ cerrarAvisos(); return; }
+  const chat = document.getElementById('chat-panel'); if(chat) chat.classList.remove('active');
+  p.classList.add('active');
+  avisosRenderPanel();
+}
+function cerrarAvisos(){ const p = document.getElementById('avisos-panel'); if(p) p.classList.remove('active'); }
+function avisosIr(accion){ cerrarAvisos(); try{ (new Function(accion))(); }catch(e){ console.error('No se pudo abrir el aviso', e); } }
+function avisosMarcarVisto(id, count){
+  const v = avisosVistosLeer(); v[id] = count;
+  try{ localStorage.setItem(AVISOS_VISTOS_LS, JSON.stringify(v)); }catch(e){}
+  avisosPintar();
+}
+if(typeof document !== 'undefined'){
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && avisosPanelAbierto()) cerrarAvisos(); });
+  document.addEventListener('click', e => {
+    if(!avisosPanelAbierto()) return;
+    if(e.target.closest && (e.target.closest('#avisos-panel') || e.target.closest('#avisos-fab'))) return;
+    cerrarAvisos();
+  });
+}

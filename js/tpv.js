@@ -1228,7 +1228,15 @@ function openTableOrder(tableId, orderId){
     return;
   }
   const order = getOpenOrderForTable(tableId);
-  if(order){ abrirPedido(order); renderTableOrderModal(order.id); return; }
+  if(order){
+    /* Se puede abrir y ayudar en la mesa de un compañero (María toma nota y Pedro trae las bebidas): NO se bloquea nada, solo se dice de quién es. */
+    const yo = typeof tpvEmpleadoSesion === 'function' ? tpvEmpleadoSesion() : null;
+    if(yo && order.camareroId && order.camareroId !== yo){
+      const otro = (DB.employees || []).find(e => e.id === order.camareroId);
+      if(otro) showToast(gl({es:'Esta mesa la lleva ' + otro.name + '. Puedes ayudar.', ca:'Aquesta taula la porta ' + otro.name + '. Pots ajudar.', en:'This table is ' + otro.name + '\'s. You can help out.'}));
+    }
+    abrirPedido(order); renderTableOrderModal(order.id); return;
+  }
   tpvOrderMobilePane = 'carta';
   openNewOrderPaxModal(tableId);
 }

@@ -152,7 +152,9 @@ await caso('No cambia el slot activo, ni DB, ni guarda, ni sincroniza', async ()
 
 await caso('No modifica ninguna IndexedDB ni crea la del negocio sin base', async () => {
   const despues = await fotoIdb();
-  assert.deepEqual(despues.lista, antes.lista);
+  // Las bases propias del SDK de Firebase (firebase-heartbeat-database, firebaseLocalStorageDb) no son del negocio: se ignoran.
+  const soloNegocio = l => l.filter(n => !/^firebase/i.test(n));
+  assert.deepEqual(soloNegocio(despues.lista), soloNegocio(antes.lista));
   assert.ok(!despues.lista.includes('gastrogoan_db_b4'), 'se ha creado la base de b4');
   for(const n of antes.lista) assert.equal(despues[n], antes[n], 'cambió ' + n);
 });

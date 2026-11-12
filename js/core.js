@@ -316,7 +316,22 @@ function renderAccessSelectScreenHtml(){
     </div>
   `;
 }
+/* El código se recuerda en ESTE aparato y sale como botones con el nombre del negocio (un toque lo elige). El campo NO se rellena solo: decisión del 9/09 (el empleado elige).
+   Antes solo había un <datalist> del navegador pegado al campo, que en móvil y tablet casi no se ve (y el campo arrancaba vacío):
+   parecía que la app no recordaba nada. */
+function accEmpElegirCodigo(code){
+  const inp = document.getElementById('acc-emp-code'); if(!inp) return;
+  inp.value = code || ''; accEmpCodigoCambia();
+  const name = document.getElementById('acc-emp-name'), pin = document.getElementById('acc-emp-pin');
+  const sig = !code ? inp : (name && !name.value.trim() ? name : pin);
+  if(sig) sig.focus();
+}
+function accEmpCodigoCambia(){
+  const v = ((document.getElementById('acc-emp-code') || {}).value || '').trim().toUpperCase();
+  document.querySelectorAll('#acc-biz-chips .acc-biz-chip[data-code]').forEach(b => { const on = b.dataset.code === v; b.classList.toggle('is-sel', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+}
 function renderEmployeeAccessFormHtml(){
+  const recientes = getRecentBusinessCodes(), nombres = getRecentBusinessNames();
   return `
     <div class="access-card">
       <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
@@ -332,8 +347,12 @@ function renderEmployeeAccessFormHtml(){
       </div>
       <div class="field">
         <label>${t('access.businessCode')}</label>
-        <input type="text" id="acc-emp-code" list="acc-emp-code-list" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
-        <datalist id="acc-emp-code-list">${getRecentBusinessCodes().map(c => `<option value="${escapeHtml(c)}">`).join('')}</datalist>
+        <input type="text" id="acc-emp-code" list="acc-emp-code-list" maxlength="8" value="" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" oninput="accEmpCodigoCambia()" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
+        <datalist id="acc-emp-code-list">${recientes.map(c => `<option value="${escapeHtml(c)}">`).join('')}</datalist>
+        ${recientes.length ? `<div class="acc-biz-chips" id="acc-biz-chips" role="group" aria-label="${escapeHtml(gl({es:'Negocios recordados en este aparato', ca:'Negocis recordats en aquest aparell', en:'Businesses remembered on this device'}))}">
+          ${recientes.map(c => `<button type="button" class="acc-biz-chip" aria-pressed="false" data-code="${escapeHtml(c)}" onclick="accEmpElegirCodigo(this.dataset.code)"><i class="ti ti-building-store" aria-hidden="true"></i><span class="acc-biz-n">${escapeHtml(nombres[c] || c)}</span>${nombres[c] ? `<small>${escapeHtml(c)}</small>` : ''}</button>`).join('')}
+          <button type="button" class="acc-biz-chip acc-biz-otro" onclick="accEmpElegirCodigo('')"><i class="ti ti-plus" aria-hidden="true"></i><span class="acc-biz-n">${escapeHtml(gl({es:'Otro negocio', ca:'Un altre negoci', en:'Another business'}))}</span></button>
+        </div>` : ''}
       </div>
       <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="confirmEmployeeAccess()">${t('common.unlock')}</button>
     </div>
@@ -393,7 +412,7 @@ function enterAsOwner(){
     });
     return;
   }
-  if(continuePendingOwnerSetup()) return;
+  if(continuePendingOwnerSetup(() => { if(!continuePendingOwnerSetupSync()) showBusinessSelectScreen(); })) return;
   showBusinessSelectScreen();
   // La lista de negocios de la cuenta puede tardar en llegar: la pantalla
   // se pinta ya con lo que este dispositivo conoce y se repinta al volver.
@@ -403,6 +422,16 @@ function enterAsOwner(){
   });
 }
 
+/* «Cambia el PIN que vino con tu licencia» se ofrecía en CADA aparato nuevo (la marca de «ya se le preguntó» vive en el aparato), aunque el dueño lo
+   hubiera cambiado hacía meses. La cuenta guarda si ya se cambió (`pinCambiado`, lo pone changeOwnerAccessPin) y un aparato nuevo lo respeta. */
+async function marcarPinYaCambiadoSiLaCuentaLoDice(authKey){
+  try{
+    const app = await withTimeout(getPlatformFirebaseApp(), 8000);
+    if(!app) return;
+    const snap = await withTimeout(app.database().ref('gastrogoan/ownerAuth/' + authKey + '/pinCambiado').once('value'), 8000);
+    if(snap && snap.val() === true) localStorage.setItem(OWNER_PASS_PROMPTED_LS, '1');
+  }catch(e){ /* sin conexión: se ofrecerá como siempre */ }
+}
 async function confirmOwnerAccess(){
   const user = (document.getElementById('acc-owner-user')?.value || '').trim();
   const pin = (document.getElementById('acc-owner-pin')?.value || '').trim();
@@ -439,6 +468,7 @@ async function confirmOwnerAccess(){
   if(ok === null){ showErr('access.licenseOffline'); return; }
   if(!ok){ showErr('access.badCredentials'); return; }
   setOwnerLogin(user, authKey, pin);
+  await marcarPinYaCambiadoSiLaCuentaLoDice(authKey);   // antes de decidir si se ofrece cambiar el PIN
   initCloud();
   initPublicRequestsListener();
   checkLicenseRevocation();
@@ -475,6 +505,7 @@ async function changeOwnerAccessPin(newPin){
     const snap = await withTimeout(oldRef.once('value'), 12000);
     const payload = (snap && snap.val()) || {createdAt: Date.now()};
     payload.user = login.user; // por si el nodo viniera sin él
+    payload.pinCambiado = true;   // la cuenta ya no tiene el PIN de la compra: en un aparato nuevo no se vuelve a ofrecer cambiarlo
     await app.database().ref('gastrogoan/ownerAuth/' + newAuthKey).set(payload);
     setOwnerLogin(login.user, newAuthKey, newPin);
     try{ await oldRef.remove(); }catch(e){ console.error('No se pudo borrar la ruta antigua de la cuenta', e); }
@@ -538,8 +569,18 @@ function getRecentBusinessCodes(){
   try{ return JSON.parse(localStorage.getItem(RECENT_BUSINESS_CODES_LS) || '[]'); }
   catch(e){ return []; }
 }
-function rememberBusinessCode(code){
+const RECENT_BUSINESS_NAMES_LS = 'gastrogoan_recent_emp_names';
+function getRecentBusinessNames(){
+  try{ return JSON.parse(localStorage.getItem(RECENT_BUSINESS_NAMES_LS) || '{}') || {}; }
+  catch(e){ return {}; }
+}
+function rememberBusinessCode(code, name){
   if(!code) return;
+  // El nombre del negocio (no solo el código) es lo que un empleado reconoce de un vistazo.
+  if(name && String(name).trim()){
+    const nombres = getRecentBusinessNames(); nombres[code] = String(name).trim().slice(0, 60);
+    try{ localStorage.setItem(RECENT_BUSINESS_NAMES_LS, JSON.stringify(nombres)); }catch(e){}
+  }
   let list = getRecentBusinessCodes().filter(c => c !== code);
   list.unshift(code);
   list = list.slice(0, 6);
@@ -629,7 +670,7 @@ async function confirmEmployeeAccess(){
     }
     const match = findEmployeeMatch(slotData.employees, name, pin, localSlot.code);
     if(!match){ showToast(t('access.badCredentials')); return; }
-    rememberBusinessCode(code);
+    rememberBusinessCode(code, (slotData.business && slotData.business.name) || localSlot.name);
     setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
     if(localSlot.id !== ACTIVE_SLOT){
       switchToBusiness(localSlot.id); // recarga la app ya con la sesión guardada
@@ -653,7 +694,7 @@ async function confirmEmployeeAccess(){
   if(!remoteData){ showToast(t('access.badCredentials')); return; }
   const match = findEmployeeMatch(remoteData.employees, name, pin, code);
   if(!match){ showToast(t('access.badCredentials')); return; }
-  rememberBusinessCode(code);
+  rememberBusinessCode(code, remoteData.business && remoteData.business.name);
   let newSlotId;
   try{ newSlotId = await registerRemoteBusinessLocally(tenantId, code, remoteData); }
   catch(e){ console.error('Error registrando el negocio en este dispositivo', e); showToast(t('access.connectFailed')); return; }
@@ -1301,7 +1342,7 @@ function reallyRemoveBusinessSlot(slotId){
   // daría la sensación de que "no se deja borrar".
   try{
     const lic = JSON.parse(localStorage.getItem(slotLicenseKey(slotId)));
-    if(lic && lic.tenantId) unlinkBusinessFromOwnerAccount(lic.tenantId);
+    if(lic && lic.tenantId) unlinkBusinessFromOwnerAccount(lic.tenantId, slot.code || lic.code, slot.name);
   }catch(e){}
   localStorage.removeItem(slotLicenseKey(slotId));
   const remaining = slots.filter(s => s.id !== slotId);
@@ -1336,6 +1377,8 @@ function showBusinessSelectScreen(){
   if(!screen) return;
   screen.innerHTML = renderBusinessSelectScreenHtml();
   screen.classList.remove('hide');
+  const ses = typeof getAccessSession === 'function' ? getAccessSession() : null;
+  if(ses && ses.type === 'owner') refrescarListaDeNegociosSiToca();
 }
 
 /* IDs de grupos actualmente expandidos en el selector */
@@ -1679,6 +1722,7 @@ function hideBusinessSelectScreen(){
 function enterBusiness(slotId){
   if(slotId === ACTIVE_SLOT){
     hideBusinessSelectScreen();
+    if(getLicense() && negocioNecesitaHidratar()){ hidratarNegocioYContinuar(() => enterBusiness(slotId)); return; }
     const done = getLicense() && getCloudConfig();
     if(!DB.business.netlifySetupDone && !done) showNetlifySetupGate();
     else if(!getLicense()) showActivationGate();
@@ -1976,6 +2020,42 @@ async function idbSet(key, value){
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+}
+
+/* ============================================================
+   GUARDADO LOCAL COALESCIDO
+   Cada guardado escribe el negocio ENTERO en IndexedDB, y para escribirlo el navegador lo
+   copia entero (structuredClone, en el hilo principal): con 20.000 ventas son 60-130 ms en un
+   PC y varios cientos en un móvil. Una ráfaga de toques (sumar 10 platos, + + + en Stock, los
+   bloques que llegan de la nube al arrancar) hacía diez copias seguidas, y esa es la sensación
+   de «se queda colgada unos segundos».
+   Ahora: la PRIMERA petición escribe al instante (igual que antes) y las que lleguen mientras
+   hay una escritura en marcha, o en los 250 ms siguientes, se juntan en UNA. Quien espera la
+   promesa la recibe cuando su cambio ya está escrito. Si la pestaña se oculta o se cierra, lo
+   pendiente se vuelca en el acto. */
+const IDB_JUNTAR_MS = 250;
+const idbLocal = {enCurso: false, timer: null, ultimo: 0, esperan: []};
+function volcarLocalDB(){
+  clearTimeout(idbLocal.timer); idbLocal.timer = null;
+  if(idbLocal.enCurso || !idbLocal.esperan.length) return;
+  const lote = idbLocal.esperan.splice(0);
+  idbLocal.enCurso = true;
+  idbSet(DB_KEY, DB).then(() => lote.forEach(w => w.resolve()), e => lote.forEach(w => w.reject(e))).then(() => {
+    idbLocal.enCurso = false; idbLocal.ultimo = Date.now();
+    if(idbLocal.esperan.length && !idbLocal.timer) idbLocal.timer = setTimeout(volcarLocalDB, IDB_JUNTAR_MS);
+  });
+}
+function guardarLocalDB(){
+  return new Promise((resolve, reject) => {
+    idbLocal.esperan.push({resolve, reject});
+    if(idbLocal.enCurso || idbLocal.timer) return;   // ya hay una escritura en marcha o programada: esta viaja en la siguiente
+    const espera = Math.max(0, idbLocal.ultimo + IDB_JUNTAR_MS - Date.now());
+    if(espera === 0) volcarLocalDB(); else idbLocal.timer = setTimeout(volcarLocalDB, espera);
+  });
+}
+if(typeof window !== 'undefined' && typeof document !== 'undefined'){
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') volcarLocalDB(); });
+  window.addEventListener('pagehide', () => volcarLocalDB());
 }
 
 /* ============================================================
@@ -5169,6 +5249,173 @@ function copyFirebaseRules(){
   });
 }
 
+/* ═══ ASISTENTE «ACTUALIZAR MIS REGLAS» (12/11, pedido del dueño) ═══
+   Cuando las reglas de seguridad del Firebase del negocio se quedan viejas (la sonda `comprobarEspejoEnNubePropia` lo detecta), antes salía un párrafo y un botón
+   «Copiar reglas». Ahora es un paso a paso de 6 pantallas, de dos minutos, que dice EXACTAMENTE qué se ve en Firebase y dónde pulsar: abrir Firebase, elegir la
+   cuenta y el proyecto, Realtime Database → Reglas, copiar, borrar todo, pegar, Publicar, y comprobar (la app lo vuelve a comprobar sola mientras se espera).
+   ⚠️ NO se enlaza al proyecto concreto sino a la portada de Firebase: se llega con la cuenta que toque y se ELIGE el proyecto, que es como el cliente lo reconoce. */
+const REGLAS_PASOS = 6;
+const FIREBASE_PORTADA_URL = 'https://console.firebase.google.com/';
+let reglasPaso = 1, reglasCopiado = false, reglasCopiaFallo = false, reglasVeredicto = null, reglasTimer = null;   // veredicto: null | 'buscando' | 'ok' | 'viejas' | 'error'
+// El nombre del proyecto de Firebase, sacado de la dirección de su base de datos (https://casapaco-default-rtdb.europe-west1.firebasedatabase.app → casapaco).
+function proyectoFirebaseDeLaNube(){
+  const cfg = typeof getCloudConfig === 'function' ? getCloudConfig() : null;
+  const m = cfg && /^https?:\/\/([^./:]+)/i.exec(cfg.databaseURL || '');
+  if(!m || !/[a-z]/i.test(m[1])) return '';
+  return m[1].replace(/-default-rtdb$/, '');
+}
+function reglasGuardarCuenta(v){
+  if(!DB.business) return;
+  DB.business.firebaseCuenta = String(v || '').trim().slice(0, 120);
+  saveDB();
+}
+function reglasCopiar(){
+  const fin = ok => { reglasCopiado = ok; reglasCopiaFallo = !ok; reglasRender(); };
+  try{ navigator.clipboard.writeText(FIREBASE_RULES_JSON).then(() => fin(true), () => fin(false)); }catch(e){ fin(false); }
+}
+function reglasIr(n){
+  reglasPaso = Math.max(1, Math.min(REGLAS_PASOS, n));
+  if(reglasPaso !== REGLAS_PASOS){ clearInterval(reglasTimer); reglasTimer = null; }
+  else if(reglasVeredicto !== 'ok'){ reglasArrancarComprobacionAuto(); }
+  reglasRender();
+}
+function reglasArrancarComprobacionAuto(){
+  clearInterval(reglasTimer);
+  // Mientras se está en el último paso, se vuelve a mirar sola cada 6 s: en cuanto el cliente pulsa «Publicar» en Firebase, aquí pasa a «Listo» sin tocar nada.
+  reglasTimer = setInterval(() => { if(!document.getElementById('reglas-wiz')){ clearInterval(reglasTimer); reglasTimer = null; return; } if(reglasPaso === REGLAS_PASOS && reglasVeredicto !== 'ok') reglasComprobar(true); }, 6000);
+}
+async function reglasComprobar(auto){
+  if(reglasVeredicto === 'buscando') return;
+  const previo = reglasVeredicto;
+  reglasVeredicto = 'buscando';
+  if(!auto || previo === null) reglasRender();
+  espejoEnNubePropia = null; esperandoVeredictoDelEspejo = false;
+  let resultado = 'error';
+  try{
+    await comprobarEspejoEnNubePropia();
+    if(!reglasAntiguas && espejoEnNubePropia === true) resultado = 'ok';
+    else if(espejoEnNubePropia === false || reglasAntiguas) resultado = lastSyncErrorCode && !/PERMISSION/i.test(String(lastSyncErrorCode)) ? 'error' : 'viejas';
+  }catch(e){ resultado = 'error'; }
+  reglasVeredicto = resultado;
+  if(resultado === 'ok'){ clearInterval(reglasTimer); reglasTimer = null; if(typeof avisosProgramar === 'function') avisosProgramar(); if(typeof renderHeader === 'function') renderHeader(); }
+  reglasRender();
+}
+function abrirAsistenteReglas(){
+  reglasPaso = 1; reglasCopiado = false; reglasCopiaFallo = false; reglasVeredicto = null; clearInterval(reglasTimer); reglasTimer = null;
+  openModal('<div id="reglas-wiz"></div>', {xl: false});
+  reglasRender();
+}
+function reglasCerrar(){ clearInterval(reglasTimer); reglasTimer = null; closeModal(); }
+// Dibujo aproximado de lo que se ve en Firebase (pestañas, cuadro de reglas, botón Publicar). Decorativo: la explicación va en el texto.
+function reglasMaqueta(resaltar){
+  const tab = (t, on) => `<span class="rw-fb-tab${on ? ' is-on' : ''}">${t}</span>`;
+  return `<div class="rw-fb" aria-hidden="true">
+    <div class="rw-fb-barra"><span class="rw-fb-pto"></span><span class="rw-fb-pto"></span><span class="rw-fb-pto"></span><span class="rw-fb-url">console.firebase.google.com</span></div>
+    <div class="rw-fb-cuerpo">
+      <div class="rw-fb-menu"><i></i><i class="${resaltar === 'menu' ? 'is-on' : ''}"></i><i></i></div>
+      <div class="rw-fb-main">
+        <div class="rw-fb-tabs">${tab(gl({es:'Datos', ca:'Dades', en:'Data'}), false)}${tab(gl({es:'Reglas', ca:'Regles', en:'Rules'}), resaltar === 'tab' || resaltar === 'editor' || resaltar === 'publicar')}${tab(gl({es:'Copias', ca:'Còpies', en:'Backups'}), false)}${tab(gl({es:'Uso', ca:'Ús', en:'Usage'}), false)}
+          <span class="rw-fb-pub${resaltar === 'publicar' ? ' is-on' : ''}">${gl({es:'Publicar', ca:'Publicar', en:'Publish'})}</span></div>
+        <div class="rw-fb-editor${resaltar === 'editor' ? ' is-on' : ''}"><code>{ "rules": {</code><code>&nbsp;&nbsp;"gastrogoan": { … }</code><code>} }</code></div>
+      </div></div></div>`;
+}
+function reglasRender(){
+  const el = document.getElementById('reglas-wiz'); if(!el) return;
+  const L = o => gl(o), N = REGLAS_PASOS;
+  const proyecto = proyectoFirebaseDeLaNube();
+  const cuenta = (DB.business && DB.business.firebaseCuenta) || '';
+  const nProy = proyecto ? `<strong class="rw-dato">${escapeHtml(proyecto)}</strong>` : `<strong>${L({es:'el que creaste al dar de alta tu negocio', ca:'el que vas crear en donar d\'alta el teu negoci', en:'the one you created when you set up your business'})}</strong>`;
+  const nCuenta = cuenta ? `<strong class="rw-dato">${escapeHtml(cuenta)}</strong>` : `<strong>${L({es:'la cuenta de Google con la que creaste tu proyecto', ca:'el compte de Google amb el qual vas crear el teu projecte', en:'the Google account you used to create your project'})}</strong>`;
+  const num = (n, txt) => `<li><span class="rw-n">${n}</span><span>${txt}</span></li>`;
+  const kbd = (a, b) => `<kbd>${a}</kbd> <span class="rw-o">${L({es:'(en Mac:', ca:'(a Mac:', en:'(on Mac:'})} <kbd>${b}</kbd>)</span>`;
+  let titulo = '', cuerpo = '', pie = '';
+  const atras = `<button type="button" class="btn" onclick="reglasIr(reglasPaso - 1)">${L({es:'Atrás', ca:'Enrere', en:'Back'})}</button>`;
+  const sig = (txt, off) => `<button type="button" class="btn btn-primary" ${off ? 'disabled' : ''} onclick="reglasIr(reglasPaso + 1)">${txt || L({es:'Siguiente', ca:'Següent', en:'Next'})}</button>`;
+  if(reglasPaso === 1){
+    titulo = L({es:'Actualiza tus reglas de seguridad', ca:'Actualitza les teves regles de seguretat', en:'Update your security rules'});
+    const gana = espejoEnNubePropia === false
+      ? L({es:'Ahora tus reservas y pedidos online pasan por el servidor compartido de GastroGoan. Con las reglas nuevas pasan por tu propia nube: más rápido y sin depender de nadie.', ca:'Ara les teves reserves i comandes en línia passen pel servidor compartit de GastroGoan. Amb les regles noves passen pel teu propi núvol: més ràpid i sense dependre de ningú.', en:'Right now your online bookings and orders go through GastroGoan\'s shared server. With the new rules they go through your own cloud: faster and independent.'})
+      : L({es:'Tu nube funciona y tus reservas llegan bien, pero te faltan dos cambios: los cobros con tarjeta se rechazarían al confirmarse, y el histórico de reservas (con nombres y teléfonos) crecería sin fin.', ca:'El teu núvol funciona i les reserves arriben bé, però et falten dos canvis: els cobraments amb targeta es rebutjarien en confirmar-se, i l\'històric de reserves (amb noms i telèfons) creixeria sense fi.', en:'Your cloud works and your bookings arrive fine, but two changes are missing: card payments would be rejected when confirmed, and the booking history (with names and phone numbers) would grow forever.'});
+    cuerpo = `<div class="rw-grande"><i class="ti ti-clock-hour-2" aria-hidden="true"></i><div><strong>${L({es:'Tarda 2 minutos', ca:'Triga 2 minuts', en:'Takes 2 minutes'})}</strong><span>${L({es:'No pierdes ningún dato. Son 6 pasos cortos y te voy diciendo qué ves y dónde pulsar.', ca:'No perds cap dada. Són 6 passos curts i et vaig dient què veus i on prémer.', en:'You lose no data. It is 6 short steps and I tell you what you see and where to click.'})}</span></div></div>
+      <p class="rw-p">${gana}</p>
+      <div class="rw-caja"><div class="rw-caja-t">${L({es:'Lo que necesitas tener a mano', ca:'El que necessites tenir a mà', en:'What you need at hand'})}</div>
+        <p>${L({es:'Entrarás en Firebase con ', ca:'Entraràs a Firebase amb ', en:'You will sign in to Firebase with '})}${nCuenta}.</p>
+        <p>${L({es:'Y abrirás el proyecto ', ca:'I obriràs el projecte ', en:'And open the project '})}${nProy}.</p>
+        <label class="rw-campo" for="rw-cuenta"><span>${L({es:'¿Con qué correo lo creaste? (opcional: así no se te olvida)', ca:'Amb quin correu el vas crear? (opcional: així no se t\'oblida)', en:'Which email did you use? (optional, so you do not forget)'})}</span>
+          <input type="email" id="rw-cuenta" value="${escapeHtml(cuenta)}" placeholder="tucorreo@gmail.com" autocomplete="off" onchange="reglasGuardarCuenta(this.value)"></label></div>`;
+    pie = `<span></span>${sig(L({es:'Empezar', ca:'Començar', en:'Start'}))}`;
+  } else if(reglasPaso === 2){
+    titulo = L({es:'Entra en Firebase', ca:'Entra a Firebase', en:'Open Firebase'});
+    cuerpo = `<button type="button" class="btn btn-primary rw-abrir" onclick="window.open('${FIREBASE_PORTADA_URL}', '_blank', 'noopener')"><i class="ti ti-external-link" aria-hidden="true"></i> ${L({es:'Abrir Firebase', ca:'Obrir Firebase', en:'Open Firebase'})}</button>
+      <p class="rw-p rw-peq">${L({es:'Se abre en otra pestaña. Esta se queda esperando: cuando acabes, vuelves aquí.', ca:'S\'obre en una altra pestanya. Aquesta es queda esperant: quan acabis, tornes aquí.', en:'It opens in another tab. This one waits: when you are done, come back here.'})}</p>
+      <ol class="rw-lista">
+        ${num(1, L({es:`Si Google te pide elegir cuenta, pulsa ${nCuenta}.`, ca:`Si Google et demana triar compte, prem ${nCuenta}.`, en:`If Google asks you to choose an account, click ${nCuenta}.`}))}
+        ${num(2, L({es:`Verás tus proyectos como tarjetas. Pulsa la que se llama ${nProy}.`, ca:`Veuràs els teus projectes com a targetes. Prem la que es diu ${nProy}.`, en:`You will see your projects as cards. Click the one called ${nProy}.`}))}
+        ${num(3, L({es:'Se abre el panel de tu proyecto. Ya estás dentro.', ca:'S\'obre el panell del teu projecte. Ja ets a dins.', en:'Your project dashboard opens. You are in.'}))}
+      </ol>
+      <p class="rw-aviso"><i class="ti ti-help-circle" aria-hidden="true"></i> ${L({es:'¿No ves tu proyecto? Casi seguro estás con otra cuenta de Google: pulsa tu foto (arriba a la derecha) y elige «Añadir cuenta» o «Cambiar de cuenta».', ca:'No veus el teu projecte? Gairebé segur que ets amb un altre compte de Google: prem la teva foto (a dalt a la dreta) i tria «Afegir compte» o «Canviar de compte».', en:'Cannot see your project? You are almost certainly on another Google account: click your photo (top right) and choose “Add account” or “Switch account”.'})}</p>`;
+    pie = `${atras}${sig(L({es:'Ya estoy dentro', ca:'Ja sóc a dins', en:'I am in'}))}`;
+  } else if(reglasPaso === 3){
+    titulo = L({es:'Ve a «Reglas»', ca:'Ves a «Regles»', en:'Go to “Rules”'});
+    cuerpo = `${reglasMaqueta('tab')}<ol class="rw-lista">
+        ${num(1, L({es:'En el menú de la <strong>izquierda</strong> busca <strong>«Base de datos y almacenamiento»</strong>. Si no ves el menú, pulsa <strong>☰</strong> arriba a la izquierda.', ca:'Al menú de l\'<strong>esquerra</strong> busca <strong>«Base de dades i emmagatzematge»</strong>. Si no veus el menú, prem <strong>☰</strong> a dalt a l\'esquerra.', en:'In the <strong>left</strong> menu find <strong>“Build”</strong>. If you cannot see the menu, click <strong>☰</strong> at the top left.'}))}
+        ${num(2, L({es:'Dentro, pulsa <strong>«Realtime Database»</strong>.', ca:'A dins, prem <strong>«Realtime Database»</strong>.', en:'Inside, click <strong>“Realtime Database”</strong>.'}))}
+        ${num(3, L({es:'Arriba del cuadro grande verás unas pestañas: Datos · Reglas · Copias de seguridad · Uso. Pulsa <strong>«Reglas»</strong>.', ca:'A dalt del quadre gran veuràs unes pestanyes: Dades · Regles · Còpies de seguretat · Ús. Prem <strong>«Regles»</strong>.', en:'Above the big box you will see tabs: Data · Rules · Backups · Usage. Click <strong>“Rules”</strong>.'}))}
+        ${num(4, L({es:'Verás un cuadro con texto parecido a código: ahí pegaremos las reglas nuevas.', ca:'Veuràs un quadre amb text semblant a codi: allà enganxarem les regles noves.', en:'You will see a box with code-like text: that is where we will paste the new rules.'}))}
+      </ol>
+      <p class="rw-aviso"><i class="ti ti-help-circle" aria-hidden="true"></i> ${L({es:'Si arriba ves varias bases de datos, elige la que termina en «-default-rtdb».', ca:'Si a dalt veus diverses bases de dades, tria la que acaba en «-default-rtdb».', en:'If you see several databases at the top, choose the one ending in “-default-rtdb”.'})}</p>`;
+    pie = `${atras}${sig(L({es:'Ya veo «Reglas»', ca:'Ja veig «Regles»', en:'I see “Rules”'}))}`;
+  } else if(reglasPaso === 4){
+    titulo = L({es:'Copia las reglas nuevas', ca:'Copia les regles noves', en:'Copy the new rules'});
+    cuerpo = `<button type="button" class="btn ${reglasCopiado ? 'is-on' : 'btn-primary'} rw-abrir" onclick="reglasCopiar()"><i class="ti ${reglasCopiado ? 'ti-check' : 'ti-copy'}" aria-hidden="true"></i> ${reglasCopiado ? L({es:'¡Copiadas!', ca:'Copiades!', en:'Copied!'}) : L({es:'Copiar las reglas nuevas', ca:'Copiar les regles noves', en:'Copy the new rules'})}</button>
+      <p class="rw-p rw-peq">${L({es:'Se copian como cuando copias un texto: no ves nada, pero quedan guardadas. No cierres esta ventana.', ca:'Es copien com quan copies un text: no veus res, però queden guardades. No tanquis aquesta finestra.', en:'They are copied like any text: you will not see anything, but they are saved. Do not close this window.'})}</p>
+      ${reglasCopiaFallo ? `<p class="rw-aviso is-ko"><i class="ti ti-alert-triangle" aria-hidden="true"></i> ${L({es:'Tu navegador no deja copiar solo. Selecciona todo el cuadro de abajo (clic dentro y Ctrl+A) y cópialo tú (Ctrl+C).', ca:'El teu navegador no deixa copiar sol. Selecciona tot el quadre de sota (clic a dins i Ctrl+A) i copia\'l tu (Ctrl+C).', en:'Your browser will not copy automatically. Select the whole box below (click inside and Ctrl+A) and copy it yourself (Ctrl+C).'})}</p>` : ''}
+      <textarea class="rw-reglas" readonly rows="6" onfocus="this.select()" aria-label="${L({es:'Reglas nuevas', ca:'Regles noves', en:'New rules'})}">${escapeHtml(FIREBASE_RULES_JSON)}</textarea>`;
+    pie = `${atras}${sig(L({es:'Ya las tengo copiadas', ca:'Ja les tinc copiades', en:'I have copied them'}), !reglasCopiado && !reglasCopiaFallo)}`;
+  } else if(reglasPaso === 5){
+    titulo = L({es:'Borra todo, pega y publica', ca:'Esborra-ho tot, enganxa i publica', en:'Delete all, paste and publish'});
+    cuerpo = `${reglasMaqueta('editor')}<ol class="rw-lista">
+        ${num(1, L({es:'Vuelve a la pestaña de Firebase, la de <strong>«Reglas»</strong>.', ca:'Torna a la pestanya de Firebase, la de <strong>«Regles»</strong>.', en:'Go back to the Firebase tab, the <strong>“Rules”</strong> one.'}))}
+        ${num(2, L({es:'Haz clic <strong>dentro del cuadro</strong> de texto, donde está el código.', ca:'Fes clic <strong>dins del quadre</strong> de text, on hi ha el codi.', en:'Click <strong>inside the text box</strong>, where the code is.'}))}
+        ${num(3, L({es:`<strong>Selecciona todo</strong>: ${kbd('Ctrl + A', '⌘ + A')}.`, ca:`<strong>Selecciona-ho tot</strong>: ${kbd('Ctrl + A', '⌘ + A')}.`, en:`<strong>Select all</strong>: ${kbd('Ctrl + A', '⌘ + A')}.`}))}
+        ${num(4, L({es:'<strong>Borra</strong> con la tecla <kbd>Suprimir</kbd> o <kbd>Borrar</kbd>. El cuadro tiene que quedar <strong>vacío</strong>.', ca:'<strong>Esborra</strong> amb la tecla <kbd>Supr</kbd> o <kbd>Esborrar</kbd>. El quadre ha de quedar <strong>buit</strong>.', en:'<strong>Delete</strong> with the <kbd>Delete</kbd> or <kbd>Backspace</kbd> key. The box must be <strong>empty</strong>.'}))}
+        ${num(5, L({es:`<strong>Pega</strong>: ${kbd('Ctrl + V', '⌘ + V')}. Aparecen las reglas nuevas.`, ca:`<strong>Enganxa</strong>: ${kbd('Ctrl + V', '⌘ + V')}. Apareixen les regles noves.`, en:`<strong>Paste</strong>: ${kbd('Ctrl + V', '⌘ + V')}. The new rules appear.`}))}
+        ${num(6, L({es:'Pulsa el botón azul <strong>«Publicar»</strong>, arriba a la derecha del cuadro. Si Firebase pregunta algo, acepta.', ca:'Prem el botó blau <strong>«Publicar»</strong>, a dalt a la dreta del quadre. Si Firebase pregunta alguna cosa, accepta.', en:'Click the blue <strong>“Publish”</strong> button, top right of the box. If Firebase asks anything, accept.'}))}
+        ${num(7, L({es:'Arriba saldrá un aviso como «Reglas publicadas». Ya está: vuelve aquí.', ca:'A dalt sortirà un avís com «Regles publicades». Ja està: torna aquí.', en:'A notice like “Rules published” appears at the top. Done: come back here.'}))}
+      </ol>`;
+    pie = `${atras}${sig(L({es:'Ya he publicado', ca:'Ja he publicat', en:'I have published'}))}`;
+  } else {
+    titulo = L({es:'Comprobando…', ca:'Comprovant…', en:'Checking…'});
+    if(reglasVeredicto === 'ok'){
+      titulo = L({es:'¡Listo!', ca:'Llest!', en:'Done!'});
+      cuerpo = `<div class="rw-ok"><i class="ti ti-circle-check" aria-hidden="true"></i><strong>${L({es:'Tus reglas están al día', ca:'Les teves regles estan al dia', en:'Your rules are up to date'})}</strong><span>${L({es:'Ya está todo: tus reservas y pedidos online, y los cobros con tarjeta, funcionan con tu propia nube. No tienes que volver a hacer nada.', ca:'Ja està tot: les teves reserves i comandes en línia, i els cobraments amb targeta, funcionen amb el teu propi núvol. No has de tornar a fer res.', en:'All set: your online bookings and orders, and card payments, work with your own cloud. You do not need to do anything again.'})}</span></div>`;
+      pie = `<span></span><button type="button" class="btn btn-primary" onclick="reglasCerrar()">${L({es:'Cerrar', ca:'Tancar', en:'Close'})}</button>`;
+    } else if(reglasVeredicto === 'viejas'){
+      titulo = L({es:'Todavía no están publicadas', ca:'Encara no estan publicades', en:'Not published yet'});
+      cuerpo = `<p class="rw-aviso"><i class="ti ti-alert-triangle" aria-hidden="true"></i> ${L({es:'Firebase todavía tiene las reglas antiguas. No pasa nada: suele ser uno de estos tres motivos. Revisa y vuelve a comprobar (esta ventana lo mira sola cada pocos segundos).', ca:'Firebase encara té les regles antigues. No passa res: sol ser un d\'aquests tres motius. Revisa i torna a comprovar (aquesta finestra ho mira sola cada pocs segons).', en:'Firebase still has the old rules. No problem: it is usually one of these three reasons. Check and try again (this window also checks on its own every few seconds).'})}</p>
+        <ol class="rw-lista">
+          ${num(1, L({es:'¿Pulsaste <strong>«Publicar»</strong>? Hasta que no lo pulsas, Firebase no guarda nada.', ca:'Vas prémer <strong>«Publicar»</strong>? Fins que no el prems, Firebase no desa res.', en:'Did you click <strong>“Publish”</strong>? Until you do, Firebase saves nothing.'}))}
+          ${num(2, L({es:'¿El cuadro tenía <strong>todo</strong> borrado antes de pegar? Si quedó texto antiguo, Firebase da error en rojo: vuelve a seleccionar todo, borra y pega.', ca:'El quadre tenia <strong>tot</strong> esborrat abans d\'enganxar? Si va quedar text antic, Firebase dóna error en vermell: torna a seleccionar-ho tot, esborra i enganxa.', en:'Was the box <strong>fully</strong> cleared before pasting? If old text remained, Firebase shows a red error: select all, delete and paste again.'}))}
+          ${num(3, L({es:'¿Estás en el <strong>proyecto correcto</strong> (' + (proyecto || 'el tuyo') + ') y en la base de datos que acaba en «-default-rtdb»?', ca:'Ets al <strong>projecte correcte</strong> (' + (proyecto || 'el teu') + ') i a la base de dades que acaba en «-default-rtdb»?', en:'Are you in the <strong>right project</strong> (' + (proyecto || 'yours') + ') and the database ending in “-default-rtdb”?'}))}
+        </ol>`;
+      pie = `<button type="button" class="btn" onclick="reglasIr(5)">${L({es:'Volver al paso 5', ca:'Tornar al pas 5', en:'Back to step 5'})}</button><button type="button" class="btn btn-primary" onclick="reglasComprobar(false)">${L({es:'Comprobar otra vez', ca:'Comprovar una altra vegada', en:'Check again'})}</button>`;
+    } else if(reglasVeredicto === 'error'){
+      titulo = L({es:'No se ha podido comprobar', ca:'No s\'ha pogut comprovar', en:'Could not check'});
+      cuerpo = `<p class="rw-aviso is-ko"><i class="ti ti-cloud-off" aria-hidden="true"></i> ${L({es:'Parece un problema de conexión (no de las reglas). Comprueba tu internet y vuelve a pulsar «Comprobar otra vez».', ca:'Sembla un problema de connexió (no de les regles). Comprova el teu internet i torna a prémer «Comprovar una altra vegada».', en:'It looks like a connection problem (not the rules). Check your internet and press “Check again”.'})}</p>`;
+      pie = `${atras}<button type="button" class="btn btn-primary" onclick="reglasComprobar(false)">${L({es:'Comprobar otra vez', ca:'Comprovar una altra vegada', en:'Check again'})}</button>`;
+    } else {
+      cuerpo = `<div class="rw-grande"><i class="ti ti-loader-2 rw-gira" aria-hidden="true"></i><div><strong>${L({es:'Comprobando tus reglas…', ca:'Comprovant les teves regles…', en:'Checking your rules…'})}</strong><span>${L({es:'Si acabas de pulsar «Publicar», puede tardar unos segundos.', ca:'Si acabes de prémer «Publicar», pot trigar uns segons.', en:'If you just clicked “Publish”, it may take a few seconds.'})}</span></div></div>`;
+      pie = `${atras}<button type="button" class="btn btn-primary" onclick="reglasComprobar(false)" ${reglasVeredicto === 'buscando' ? 'disabled' : ''}>${L({es:'Comprobar ahora', ca:'Comprovar ara', en:'Check now'})}</button>`;
+      if(reglasVeredicto === null) setTimeout(() => { if(reglasPaso === REGLAS_PASOS && reglasVeredicto === null) reglasComprobar(false); }, 400);
+    }
+  }
+  const puntos = Array.from({length: N}, (_, i) => `<i class="rw-pto${i + 1 === reglasPaso ? ' is-on' : (i + 1 < reglasPaso ? ' is-hecho' : '')}"></i>`).join('');
+  el.innerHTML = `<div class="modal-header rw-cab"><h3><i class="ti ti-shield-check" aria-hidden="true"></i> ${titulo}</h3><button class="modal-close" onclick="reglasCerrar()" aria-label="${L({es:'Cerrar', ca:'Tancar', en:'Close'})}">&times;</button></div>
+    <div class="rw-prog" role="progressbar" aria-valuemin="1" aria-valuemax="${N}" aria-valuenow="${reglasPaso}"><span>${L({es:'Paso', ca:'Pas', en:'Step'})} ${reglasPaso} ${L({es:'de', ca:'de', en:'of'})} ${N}</span><span class="rw-ptos">${puntos}</span></div>
+    <div class="rw-cuerpo">${cuerpo}</div>
+    <div class="modal-footer rw-pie">${pie}</div>`;
+}
+
 /* Paso obligatorio justo después de activar la licencia: cada negocio
    necesita su propio proyecto Firebase (gratuito) para sincronizar
    dispositivos y activar las reservas/pedidos online. Bloquea el acceso
@@ -5454,10 +5701,7 @@ function showNetlifySetupGate(){
         if(s && s.type === 'owner') showBusinessSelectScreen();
       });
     }
-    else if(!getLicense()) showActivationGate();
-    else if(!getCloudConfig()) showFirebaseSetupGate();
-    else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
-    else if(!DB.business.tourSeen) promptAppTour();
+    else seguirConfigurandoNegocio();
     return;
   }
   // A partir de aquí, hosted es siempre false (el caso hosted=true ya
@@ -5492,10 +5736,7 @@ function confirmNetlifyDone(){
   // vacío (de donde sale el canje), no el asistente de un negocio que aún
   // no existe.
   if(!ownerHasAnyBusiness()) showBusinessSelectScreen();
-  else if(!getLicense()) showActivationGate();
-  else if(!getCloudConfig()) showFirebaseSetupGate();
-  else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
-    else if(!DB.business.tourSeen) promptAppTour();
+  else seguirConfigurandoNegocio();
 }
 async function activateLicenseFromGate(){
   const code = (document.getElementById('license-code-input').value || '').trim();
@@ -5570,9 +5811,112 @@ async function activateLicenseFromGate(){
   // instrucciones para todos los negocios) — antes de esto no tenía mucho
   // sentido pedirla, ya que sin licencia no había negocio real que
   // configurar.
-  if(!getCloudConfig()) showFirebaseSetupGate();
+  seguirConfigurandoNegocio();   // comprueba antes en la nube que este negocio no estuviera ya configurado
+}
+
+/* ⚠️ UN NEGOCIO QUE YA EXISTE EN LA NUBE NO ES «NUEVO» (12/11, el caso más grave que ha contado el dueño).
+   Al entrar en el iPhone con la cuenta de siempre, el negocio —ya configurado en la tablet— pedía configurar la nube, el TPV virtual y el
+   asistente inicial. Causa: los asistentes se deciden mirando `DB.business` (netlifySetupDone, ownFirebase, extConnPromptSeen, tourSeen), y en un
+   aparato que nunca ha abierto ese negocio `DB` está VACÍO: lo real todavía está en la nube y no ha bajado cuando se decide. Peor: rellenar el asistente
+   en ese estado podía escribir encima de la configuración buena.
+   Ahora, antes de enseñar NINGÚN asistente de un negocio ya canjeado, el aparato pregunta a la nube (1) dónde vive ese negocio (tenantLookup) y
+   (2) qué banderas tiene. Si el negocio existe, se traen las banderas y no se pregunta nada. Si no se puede comprobar (sin conexión, la nube
+   tropieza), NO se enseña ningún asistente: se dice «comprobando» y se reintenta. Un negocio que de verdad es nuevo (sin referencia en la plataforma)
+   sigue su alta normal. */
+const NEGOCIO_BANDERAS = ['netlifySetupDone', 'extConnPromptSeen', 'tourSeen', 'categoryIconHintSeen'];
+const negocioHidratado = {};   // tenantId → ya se comprobó en esta sesión
+function negocioNecesitaHidratar(){
+  let lic = null;
+  try{ lic = getLicense(); }catch(e){}
+  if(!lic || !lic.tenantId || !DB || !DB.business) return false;
+  if(negocioHidratado[lic.tenantId]) return false;
+  /* ⚠️ SOLO un aparato que NUNCA ha configurado este negocio (sin la marca de alta hecha o sin saber a qué nube conectarse) necesita preguntar a la nube.
+     Un aparato que ya lo tiene configurado NO: abre siempre, con o sin internet. Si se exigiera también por el tour o el aviso de conexiones externas (banderas
+     menores que a veces se quedan sin marcar), un restaurante sin wifi se quedaría mirando «comprobando…» sin poder usar la app. */
+  const b = DB.business;
+  return !(b.netlifySetupDone && getCloudConfig());
+}
+// → {estado:'error'} no se pudo comprobar · {estado:'nuevo'} la plataforma no lo conoce · {estado:'vacio', cfg} conoce la nube pero no hay datos · {estado:'existe', cfg, data}
+async function consultarNubeDelNegocio(tenantId){
+  let app = null;
+  try{ app = await withTimeout(getPlatformFirebaseApp(), 12000); }catch(e){ return {estado: 'error'}; }
+  /* Sin el SDK de Firebase cargado (no hay forma de preguntar) no se bloquea nada: se sigue como siempre, con sus asistentes. Solo se bloquea cuando SÍ se
+     puede preguntar y la respuesta no llega (red caída, nube tropezando), que es cuando mostrar un asistente sería equivocarse. */
+  if(!app) return {estado: typeof firebase === 'undefined' ? 'nuevo' : 'error'};
+  let cfg = getCloudConfig();
+  if(!cfg){
+    let snap;
+    try{ snap = await withTimeout(app.database().ref('gastrogoan/tenantLookup/' + tenantId).once('value'), 12000); }catch(e){ return {estado: 'error'}; }
+    if(snap === null) return {estado: 'error'};   // no contestó a tiempo
+    cfg = snap.val();
+    if(!cfg || !cfg.apiKey || !cfg.databaseURL) return {estado: 'nuevo'};
+  }
+  let data;
+  try{
+    data = await Promise.race([fetchRemoteTenantDB(tenantId, cfg), new Promise(res => setTimeout(() => res(undefined), 20000))]);
+  }catch(e){ return {estado: 'error'}; }
+  if(data === undefined) return {estado: 'error'};
+  return data ? {estado: 'existe', cfg, data} : {estado: 'vacio', cfg};
+}
+function aplicarNegocioDeLaNube(r){
+  if(!r || (r.estado !== 'existe' && r.estado !== 'vacio')) return;
+  const b = DB.business;
+  if(!getCloudConfig() && r.cfg) b.ownFirebase = {apiKey: r.cfg.apiKey, databaseURL: r.cfg.databaseURL};
+  if(r.estado === 'existe'){
+    const rb = (r.data && r.data.business) || {};
+    NEGOCIO_BANDERAS.forEach(f => { if(rb[f] && !b[f]) b[f] = rb[f]; });
+    if(!b.name && rb.name) b.name = rb.name;
+  }
+  try{ saveDB(); }catch(e){}
+}
+function mostrarComprobandoNegocio(modo, reintentar){
+  let el = document.getElementById('comprobando-negocio');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'comprobando-negocio';
+    el.setAttribute('role', 'alert');
+    el.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg,#FAF8F4)';
+    document.body.appendChild(el);
+  }
+  const ok = modo !== 'error';
+  el.innerHTML = `<div style="max-width:380px;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center">
+    <i class="ti ${ok ? 'ti-cloud-search' : 'ti-cloud-off'}" style="font-size:40px;color:${ok ? 'var(--olive,#4A5D4E)' : '#8A4A3B'}" aria-hidden="true"></i>
+    <strong style="font-size:17px">${gl(ok ? {es: 'Comprobando tu negocio en la nube…', ca: 'Comprovant el teu negoci al núvol…', en: 'Checking your business in the cloud…'} : {es: 'No se ha podido comprobar tu negocio', ca: 'No s\'ha pogut comprovar el teu negoci', en: 'We could not check your business'})}</strong>
+    <span style="font-size:13.5px;color:var(--muted,#6b6b66);line-height:1.45">${gl(ok ? {es: 'Un momento: se trae la configuración que ya tienes para no pedirte nada otra vez.', ca: 'Un moment: es porta la configuració que ja tens per no demanar-te res una altra vegada.', en: 'One moment: your existing setup is being loaded so you are not asked again.'} : {es: 'Hace falta conexión para traer la configuración de tu negocio desde la nube. No se ha tocado nada.', ca: 'Cal connexió per portar la configuració del teu negoci des del núvol. No s\'ha tocat res.', en: 'A connection is needed to load your business setup from the cloud. Nothing has been changed.'})}</span>
+    ${ok ? '' : `<button type="button" class="btn btn-primary" id="comprobando-negocio-reintentar" style="min-height:44px;padding:0 22px">${gl({es: 'Reintentar', ca: 'Reintentar', en: 'Retry'})}</button><button type="button" class="btn" id="comprobando-negocio-salir" style="min-height:44px;padding:0 22px">${gl({es: 'Cerrar sesión', ca: 'Tancar sessió', en: 'Log out'})}</button>`}
+  </div>`;
+  if(!ok){
+    const b = document.getElementById('comprobando-negocio-reintentar'); if(b) b.onclick = () => { if(reintentar) reintentar(); };
+    const x = document.getElementById('comprobando-negocio-salir'); if(x) x.onclick = () => { ocultarComprobandoNegocio(); if(typeof logoutAccessSession === 'function') logoutAccessSession(); };
+  }
+}
+function ocultarComprobandoNegocio(){ const el = document.getElementById('comprobando-negocio'); if(el) el.remove(); }
+let hidratandoNegocio = false;
+async function hidratarNegocioYContinuar(alTerminar){
+  if(hidratandoNegocio) return;
+  let lic = null; try{ lic = getLicense(); }catch(e){}
+  if(!lic || !lic.tenantId){ if(alTerminar) alTerminar(); return; }
+  hidratandoNegocio = true;
+  mostrarComprobandoNegocio('buscando');
+  const r = await consultarNubeDelNegocio(lic.tenantId);
+  hidratandoNegocio = false;
+  if(r.estado === 'error'){ mostrarComprobandoNegocio('error', () => hidratarNegocioYContinuar(alTerminar)); return; }
+  aplicarNegocioDeLaNube(r);
+  negocioHidratado[lic.tenantId] = true;
+  ocultarComprobandoNegocio();
+  if(alTerminar) alTerminar(); else continuePendingOwnerSetupSync();
+}
+// El siguiente paso del alta de un negocio YA canjeado, comprobando antes en la nube que no estuviera ya configurado.
+function seguirConfigurandoNegocio(){
+  if(getLicense() && negocioNecesitaHidratar()){ hidratarNegocioYContinuar(); return; }
+  if(!getLicense()) showActivationGate();
+  else if(!getCloudConfig()) showFirebaseSetupGate();
   else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
-    else if(!DB.business.tourSeen) promptAppTour();
+  else if(!DB.business.tourSeen) promptAppTour();
+}
+function continuePendingOwnerSetup(alTerminar){
+  if(negocioNecesitaHidratar()){ hidratarNegocioYContinuar(alTerminar); return true; }
+  return continuePendingOwnerSetupSync();
 }
 
 // Retoma, en orden, cualquier paso de la configuración inicial de un
@@ -5582,7 +5926,7 @@ async function activateLicenseFromGate(){
 // guardada, por si la sesión anterior se cerró a media configuración.
 // Devuelve true si mostró algún paso pendiente (y por tanto no hay que
 // continuar con el arranque normal de la app).
-function continuePendingOwnerSetup(){
+function continuePendingOwnerSetupSync(){
   // Lo primero de todo, antes incluso del resto de la configuración
   // inicial: si acaba de entrar por primera vez, se le anima a cambiar el
   // PIN que venía con su cuenta justo al entrar, no al final del todo.
@@ -5622,7 +5966,7 @@ function continuePendingOwnerSetup(){
 
    El selector vacío, con su botón de canjear, es lo que toca ahí. */
 function reanudarAltaDelPropietario(){
-  if(continuePendingOwnerSetup()) return;
+  if(continuePendingOwnerSetup(() => { if(!continuePendingOwnerSetupSync()) showBusinessSelectScreen(); })) return;
   showBusinessSelectScreen();
 }
 
@@ -5873,20 +6217,56 @@ function mergeCartaStock(localCartas, mergedCartas, lastSyncedCartasJson){
 // "Cannot access before initialization" — un `const` no se iza como una
 // función, y esto no es un fallo que enseñe node -c, solo se ve al
 // ejecutar). Ver el comentario completo junto a su declaración real.
+/* Igualdad profunda SIN construir texto. Solo sirve para CONFIRMAR que dos valores
+   son iguales: si dice «sí», canonicalStringify daría el mismo texto; si dice «no»
+   (o duda: NaN, undefined frente a null…) quien llama sigue con la comparación de
+   siempre, así que nunca cambia un resultado, solo ahorra trabajo.
+   Por qué existe: preferLocalWhenRemoteStale convertía a texto CADA venta dos veces
+   (la de aquí y la de la nube) cada vez que llegaba un cambio de otro aparato. Con
+   20.000 ventas eran ~2 s de app congelada en un móvil, para descubrir que casi
+   todas eran idénticas. */
+function sonIgualesRapido(a, b){
+  if(a === b) return true;
+  if(a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  if(Array.isArray(a)){
+    if(!Array.isArray(b) || a.length !== b.length) return false;
+    for(let i = 0; i < a.length; i++) if(!sonIgualesRapido(a[i], b[i])) return false;
+    return true;
+  }
+  if(Array.isArray(b)) return false;
+  const ka = Object.keys(a);
+  if(ka.length !== Object.keys(b).length) return false;
+  for(let i = 0; i < ka.length; i++){
+    const k = ka[i];
+    if(!Object.prototype.hasOwnProperty.call(b, k) || !sonIgualesRapido(a[k], b[k])) return false;
+  }
+  return true;
+}
+
 function preferLocalWhenRemoteStale(local, merged, baselineJson){
   if(!Array.isArray(local) || !Array.isArray(merged)) return merged;
-  let baseline = [];
-  if(baselineJson){ try{ baseline = JSON.parse(baselineJson) || []; }catch(e){ baseline = []; } }
-  const baseMap = new Map(baseline.filter(x => x && x.id != null).map(x => [x.id, x]));
+  /* La foto de lo último enviado (varios MB en las ventas) solo se lee si alguna
+     fila difiere de verdad; casi nunca. Antes se leía siempre, y se montaba además
+     un Map con ella entera. */
+  let baseMap = null;
+  const baseDe = id => {
+    if(baseMap === null){
+      let baseline = [];
+      if(baselineJson){ try{ baseline = JSON.parse(baselineJson) || []; }catch(e){ baseline = []; } }
+      baseMap = new Map(baseline.filter(x => x && x.id != null).map(x => [x.id, x]));
+    }
+    return baseMap.get(id);
+  };
   const localMap = new Map(local.filter(x => x && x.id != null).map(x => [x.id, x]));
   return merged.map(item => {
     if(!item || item.id == null) return item;
     const loc = localMap.get(item.id);
     if(!loc) return item;
+    if(loc === item || sonIgualesRapido(loc, item)) return item; // ya coinciden, no hay nada que decidir
     const remoteStr = canonicalStringify(item);
     const localStr = canonicalStringify(loc);
-    if(localStr === remoteStr) return item; // ya coinciden, no hay nada que decidir
-    const base = baseMap.get(item.id);
+    if(localStr === remoteStr) return item;
+    const base = baseDe(item.id);
     const baseStr = base ? canonicalStringify(base) : null;
     if(baseStr !== null && remoteStr === baseStr && localStr !== baseStr) return loc;
     return item;
@@ -6493,6 +6873,7 @@ function updateSyncBadge(state){
 
 function refreshAfterRemoteChange(){
   renderHeader();
+  if(typeof chatAlLlegarDeLaNube === 'function') chatAlLlegarDeLaNube();
   renderModuleBadges();
   const overlay = document.getElementById('modal-overlay');
   if(overlay && overlay.classList.contains('active')){
@@ -8371,6 +8752,8 @@ function limpiarHolds(app, publicId, rama, fecha){
   }).catch(e => console.error('No se pudieron leer los holds', rama, fecha, e));
 }
 
+let espejoUltimoEnvio = {huella: '', ts: 0};
+const ESPEJO_REPASO_MS = 10 * 60 * 1000;
 function syncPublicMirror(){
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
@@ -8405,12 +8788,28 @@ function syncPublicMirror(){
       // Mismo motivo que en las subidas del negocio: un solo `undefined` en
       // cualquier rincón (la carta, un menú, una mesa) tumbaría el envío
       // entero y la web pública se quedaría con datos viejos.
-      app.database().ref('gastrogoan/public/' + publicId + '/info').set(sinIndefinidos(data)).catch(e => {
-        console.error('Error publicando el espejo público', e);
-        if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
-      });
-      // Cuenta de cada mesa con QR (carta por QR, ver publicarMesasQr).
+      /* ⚠️ Esto se ejecutaba tras CADA guardado de la app (sumar un plato, un «+» en Stock…):
+         reenviaba la carta entera y, además, leía DOS veces cada fecha en que ha habido alguna
+         reserva (todas las del historial) más los pedidos. Con un año de reservas eran cientos
+         de consultas a la nube por cada toque, y es de lo que la app se queda «pensando». Ahora
+         solo se reenvía si lo publicado ha cambiado (o cada 10 min por si alguien lo tocó desde
+         fuera), y los candados solo se repasan de ayer en adelante: nadie reserva el pasado. */
+      const datosPublicos = sinIndefinidos(data);
+      const huella = publicId + '|' + JSON.stringify(datosPublicos);
+      const ahoraMs = Date.now();
+      const sinNovedad = huella === espejoUltimoEnvio.huella && ahoraMs - espejoUltimoEnvio.ts < ESPEJO_REPASO_MS;
+      if(!sinNovedad){
+        espejoUltimoEnvio = {huella, ts: ahoraMs};
+        app.database().ref('gastrogoan/public/' + publicId + '/info').set(datosPublicos).catch(e => {
+          espejoUltimoEnvio = {huella: '', ts: 0};   // que el próximo guardado lo reintente
+          console.error('Error publicando el espejo público', e);
+          if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
+        });
+      }
+      // Cuenta de cada mesa con QR (carta por QR, ver publicarMesasQr; ya compara por su cuenta).
       try{ publicarMesasQr(app, publicId); }catch(e){ console.error('Error publicando las cuentas de mesa', e); }
+      if(sinNovedad) return;
+      const desdeFecha = dateStr(new Date(ahoraMs - 86400000));
       // aforoHold (js/reservagastrogoan.html) es un contador aparte que la
       // web pública usa para reservar de forma atómica sin pasarse del
       // aforo — pero nunca se decrementaba solo, así que cada reserva
@@ -8423,8 +8822,8 @@ function syncPublicMirror(){
       // ahí O que tenga alguna reserva (aunque esté cancelada/pasada, para
       // cubrir el caso de "se cancelaron todas") — así vuelve a arrancar
       // de cero en el próximo sync, sin arrastrar holds obsoletos.
-      const fechasATocar = new Set(Object.keys(data.reservasResumen));
-      DB.reservations.forEach(r => { if(r.date) fechasATocar.add(r.date); });
+      const fechasATocar = new Set(Object.keys(data.reservasResumen).filter(f => f >= desdeFecha));
+      DB.reservations.forEach(r => { if(r.date && r.date >= desdeFecha) fechasATocar.add(r.date); });
       fechasATocar.forEach(fecha => {
         limpiarHolds(app, publicId, 'aforoHold', fecha);
         // mesaHold (candado por mesa concreta que usa la web pública para
@@ -8434,8 +8833,8 @@ function syncPublicMirror(){
       // Mismo motivo y mismo mecanismo que aforoHold, aplicado a pedidosHold
       // (el contador atómico de pedidos por franja): se limpia en cada sync
       // para no arrastrar holds obsoletos de pedidos ya aceptados/rechazados.
-      const fechasPedidosATocar = new Set(Object.keys(data.pedidosResumen));
-      DB.tpvOrders.forEach(o => { if(o.date && (o.tipo === 'takeaway' || o.tipo === 'delivery')) fechasPedidosATocar.add(o.date); });
+      const fechasPedidosATocar = new Set(Object.keys(data.pedidosResumen).filter(f => f >= desdeFecha));
+      DB.tpvOrders.forEach(o => { if(o.date && o.date >= desdeFecha && (o.tipo === 'takeaway' || o.tipo === 'delivery')) fechasPedidosATocar.add(o.date); });
       fechasPedidosATocar.forEach(fecha => {
         limpiarHolds(app, publicId, 'pedidosHold', fecha);
       });
@@ -8586,43 +8985,99 @@ async function verifyOwnerAccountOnPlatform(authKey){
     return null;
   }
 }
+/* ⚠️ LA LISTA DE NEGOCIOS DE LA CUENTA TIENE QUE SER IGUAL EN TODOS LOS APARATOS (12/11, el caso más grave que ha contado el dueño).
+   Un negocio borrado en la tablet seguía saliendo en el iPhone. Causas:
+   · Quitar un negocio se hacía con un `remove()` lanzado y olvidado (`.catch(console.error)`): sin conexión, o con la nube
+     tropezando, el borrado no llegaba NUNCA y nadie se enteraba. Cualquier otro aparato lo volvía a traer.
+   · Y como solo se QUITABA de la nube, un aparato que aún lo tenía no tenía forma de saber que se había borrado.
+   Ahora:
+   · Cada altura/baja se APUNTA en una cola del aparato (`OWNER_LIST_OUTBOX_LS`) antes de intentarse, y solo sale de la cola cuando la nube la ha
+     confirmado. Se reintenta al arrancar, al volver la conexión y al sincronizar la lista.
+   · Un borrado deja una LÁPIDA (`deleted:true`) en lugar de quitar el nodo, y cada aparato que la lee quita ese negocio de su lista.
+   · Volver a canjear el mismo código lo reactiva (la última operación sobre un negocio manda). */
+const OWNER_LIST_OUTBOX_LS = 'gastrogoan_owner_list_outbox';
+function ownerListOutboxLeer(){
+  try{ const l = JSON.parse(localStorage.getItem(OWNER_LIST_OUTBOX_LS) || '[]'); return Array.isArray(l) ? l : []; }
+  catch(e){ return []; }
+}
+function ownerListOutboxEscribir(l){ try{ localStorage.setItem(OWNER_LIST_OUTBOX_LS, JSON.stringify(l)); }catch(e){} }
+function ownerListOutboxPoner(op){
+  // La última operación sobre un negocio es la que vale: borrar y volver a canjear = alta, y al revés.
+  const l = ownerListOutboxLeer().filter(x => !(x.authKey === op.authKey && x.tenantId === op.tenantId));
+  l.push(op);
+  ownerListOutboxEscribir(l);
+  vaciarOwnerListOutbox();
+}
+let ownerListVaciando = null;
+function vaciarOwnerListOutbox(){
+  if(ownerListVaciando) return ownerListVaciando;
+  // ⚠️ Con la cola vacía se sale AQUÍ, antes de crear nada: si la salida fuera dentro de la función asíncrona, su `finally` correría antes de que
+  // la promesa se asignara al cerrojo y este se quedaba puesto para siempre (así ocurrió en la primera versión: la cola no volvía a vaciarse jamás).
+  if(!ownerListOutboxLeer().length) return Promise.resolve();
+  const trabajo = (async () => {
+    try{
+      const app = await getPlatformFirebaseApp();
+      if(!app) return;
+      for(const op of ownerListOutboxLeer()){
+        const ref = app.database().ref('gastrogoan/ownerAuth/' + op.authKey + '/businesses/' + op.tenantId);
+        const valor = op.op === 'unlink'
+          ? {code: op.code || '', name: op.name || '', deleted: true, deletedAt: op.ts}
+          : {code: op.code, name: op.name || ''};
+        const hecho = await withTimeout(ref.set(valor).then(() => true), 12000);   // null = no contestó a tiempo
+        if(hecho === true) ownerListOutboxEscribir(ownerListOutboxLeer().filter(x => !(x.authKey === op.authKey && x.tenantId === op.tenantId && x.ts === op.ts)));
+      }
+    }catch(e){
+      console.error('No se pudo actualizar la lista de negocios de la cuenta (se reintentará)', e);
+    }
+  })();
+  ownerListVaciando = trabajo.then(() => { ownerListVaciando = null; });
+  return ownerListVaciando;
+}
+if(typeof window !== 'undefined') window.addEventListener('online', () => { vaciarOwnerListOutbox(); });
+
 // Añade (o actualiza el nombre de) un negocio en la lista de la cuenta.
 function linkBusinessToOwnerAccount(tenantId, code, name){
   const authKey = getOwnerAuthKey();
-  if(!authKey || !tenantId) return;
-  getPlatformFirebaseApp().then(app => {
-    if(!app) return;
-    app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses/' + tenantId).set({
-      code, name: name || ''
-    }).catch(e => console.error('Error vinculando el negocio a la cuenta', e));
-  }).catch(()=>{});
+  if(!authKey || !tenantId || !code) return;
+  ownerListOutboxPoner({op: 'link', authKey, tenantId, code, name: name || '', ts: Date.now()});
 }
-function unlinkBusinessFromOwnerAccount(tenantId){
+function unlinkBusinessFromOwnerAccount(tenantId, code, name){
   const authKey = getOwnerAuthKey();
   if(!authKey || !tenantId) return;
-  getPlatformFirebaseApp().then(app => {
-    if(!app) return;
-    app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses/' + tenantId).remove()
-      .catch(e => console.error('Error desvinculando el negocio de la cuenta', e));
-  }).catch(()=>{});
+  ownerListOutboxPoner({op: 'unlink', authKey, tenantId, code: code || '', name: name || '', ts: Date.now()});
 }
 // Tras entrar como propietario, trae los negocios de la cuenta que este
 // dispositivo todavía no conozca y los da de alta como "fichas" ligeras
 // (código + licencia), sin descargar sus datos: de eso ya se encarga la
 // sincronización normal en cuanto se entre de verdad en cada uno.
+// Y quita los que se borraron desde otro aparato (lápida). Devuelve true si la lista de ESTE aparato cambió.
 async function syncOwnerBusinessList(){
   const authKey = getOwnerAuthKey();
-  if(!authKey) return;
+  if(!authKey) return false;
   try{
+    // Primero lo propio que quedara pendiente (un borrado hecho sin conexión), para no leer una lista que ya está vieja.
+    await vaciarOwnerListOutbox();
     const app = await getPlatformFirebaseApp();
-    if(!app) return;
+    if(!app) return false;
     const bizSnap = await app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses').once('value');
     const businesses = bizSnap.val() || {};
-    const slots = getBusinessSlots();
+    let slots = getBusinessSlots();
     let changed = false;
     const me = currentOwnerId();
+    // Lo que he borrado/añadido aquí y aún no ha llegado a la nube manda sobre lo que se lea.
+    const pendientes = new Map(ownerListOutboxLeer().filter(x => x.authKey === authKey).map(x => [x.tenantId, x.op]));
+    const quitados = [];
     Object.entries(businesses).forEach(([tId, info]) => {
       if(!info || !info.code) return;
+      const op = pendientes.get(tId);
+      if(info.deleted === true){
+        if(op === 'link') return;   // lo acabo de volver a canjear aquí: la lápida es anterior
+        const local = slots.find(s => s.code === info.code && (!me || !s.ownerId || s.ownerId === me));
+        // El negocio abierto ahora mismo no se quita bajo los pies de nadie: se quita cuando deje de estar activo.
+        if(local && local.id !== ACTIVE_SLOT) quitados.push(local);
+        return;
+      }
+      if(op === 'unlink') return;   // lo borré aquí y la nube aún no lo sabe: no se vuelve a traer
       const existente = slots.find(s => s.code === info.code);
       if(existente){
         // Ya está en este aparato. Si figuraba a nombre de otro (marca mal
@@ -8635,10 +9090,33 @@ async function syncOwnerBusinessList(){
       localStorage.setItem(slotLicenseKey(newId), JSON.stringify({code: info.code, tenantId: tId}));
       changed = true;
     });
-    if(changed) saveBusinessSlots(slots);
+    if(quitados.length){
+      const ids = new Set(quitados.map(q => q.id));
+      quitados.forEach(q => {
+        try{ indexedDB.deleteDatabase(slotIdbName(q.id)); }catch(e){}
+        localStorage.removeItem(slotLicenseKey(q.id));
+      });
+      slots = slots.filter(x => !ids.has(x.id));
+      changed = true;
+      if(typeof showToast === 'function') showToast(gl({es: quitados.length === 1 ? 'Se quitó «' + quitados[0].name + '»: lo borraste desde otro dispositivo.' : 'Se quitaron ' + quitados.length + ' negocios que borraste desde otro dispositivo.', ca: quitados.length === 1 ? 'S\'ha tret «' + quitados[0].name + '»: el vas esborrar des d\'un altre dispositiu.' : 'S\'han tret ' + quitados.length + ' negocis que vas esborrar des d\'un altre dispositiu.', en: quitados.length === 1 ? '“' + quitados[0].name + '” was removed: you deleted it from another device.' : quitados.length + ' businesses you deleted from another device were removed.'}), 6000);
+    }
+    if(changed) saveBusinessSlots(slots.length ? slots : [{id:'default', name:'Mi negocio'}]);
+    return changed;
   }catch(e){
     console.error('Error sincronizando la lista de negocios del propietario', e);
+    return false;
   }
+}
+// Al abrir el selector se vuelve a mirar la lista de la cuenta (cada 30 s como mucho): un negocio añadido o borrado en otro aparato
+// aparece o desaparece sin tener que cerrar sesión.
+let listaNegociosUltimaConsulta = 0;
+function refrescarListaDeNegociosSiToca(){
+  if(Date.now() - listaNegociosUltimaConsulta < 30000) return;
+  listaNegociosUltimaConsulta = Date.now();
+  syncOwnerBusinessList().then(cambio => {
+    const s = getAccessSession();
+    if(cambio && s && s.type === 'owner' && !document.getElementById('business-select-screen').classList.contains('hide')) showBusinessSelectScreen();
+  });
 }
 
 // Un dispositivo puede tener el negocio dado de alta y aun así no saber a
@@ -8672,6 +9150,7 @@ function reintentarLookupDeNube(tenantId){
   }, espera);
 }
 function initCloud(){
+  vaciarOwnerListOutbox();   // lo que quedara por contar a la cuenta (un negocio borrado sin conexión…)
   cloudConfig = getCloudConfig();
   if(!cloudConfig){
     const tId = getTenantId();
@@ -9028,6 +9507,7 @@ function applyRemoteBlock(key, remoteValue){
   // local — se necesita para saber, después, si el resultado fusionado
   // lleva algo que la nube todavía no tiene (ver mergedFromLocal más abajo).
   const remoteOnlyJson = canonicalStringify(merged);
+  const remotaBase = merged;   // para reconocer, al final, que la fusión no cambió ni una fila de la nube (ver más abajo)
   if(LISTAS_DE_NOMBRES.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     merged = mergeListaDeNombres(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
@@ -9172,7 +9652,12 @@ function applyRemoteBlock(key, remoteValue){
   if(key === 'tpvOrders'){
     (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
   }
-  const json = canonicalStringify(merged);
+  /* Segunda pasada completa evitada. Si la fusión devolvió EXACTAMENTE las mismas filas
+     (mismos objetos, mismo orden, misma cantidad) que trajo la nube, su texto es el de
+     la nube y no hace falta volver a recorrer 20.000 ventas para saberlo. Solo en
+     `sales`: ahí nadie modifica filas en el sitio durante la fusión y es donde cuesta. */
+  const mismaQueLaNube = key === 'sales' && Array.isArray(merged) && Array.isArray(remotaBase) && merged.length === remotaBase.length && merged.every((x, i) => x === remotaBase[i]);
+  const json = mismaQueLaNube ? remoteOnlyJson : canonicalStringify(merged);
   if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return;
   // Si la fusión conservó algo local que la nube todavía no tiene (p.ej. un
   // pedido tomado offline en ESTE dispositivo que el otro no llegó a ver
@@ -9229,7 +9714,7 @@ function applyRemoteBlock(key, remoteValue){
   // DB[key] (el merge) todavía no coincide y lo suba de verdad.
   lastSyncedSnapshot[key] = mergedFromLocal ? remoteOnlyJson : json;
   DB[key] = merged;
-  idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
+  guardarLocalDB().catch(e => console.error('Error guardando datos', e));
   // Licencia compartida por la nube: los empleados se activan solos
   if(isStoredLicenseValid(DB.license)){
     localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
@@ -9424,7 +9909,7 @@ function mergeRemoteIntoLocal(val){
   });
   lastSyncedSnapshot = newSnapshot;
   if(changedLocally){
-    idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
+    guardarLocalDB().catch(e => console.error('Error guardando datos', e));
     if(isStoredLicenseValid(DB.license)){
       localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
       hideActivationGate();
@@ -10728,7 +11213,7 @@ function openCloudWizard(){
            · el espejo funciona pero le faltan los cambios recientes: todo va
              bien salvo los pagos con tarjeta y el borrado del histórico. */
         espejoEnNubePropia === false ? t('gate.oldRulesBody') : t('gate.oldRulesBodyMenor')}
-      <div class="nb-acc"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
+      <div class="nb-acc"><button class="btn btn-primary" onclick="abrirAsistenteReglas()"><i class="ti ti-shield-check"></i> ${gl({es:'Actualizar mis reglas (2 min, paso a paso)', ca:'Actualitzar les meves regles (2 min, pas a pas)', en:'Update my rules (2 min, step by step)'})}</button> <button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
     </div>` : ''}
     ${saturacionPublicaReciente ? `<div class="nb-aviso is-amber">
       <strong><i class="ti ti-users"></i> ${t('gate.saturationTitle')}</strong><br>${t('gate.saturationBody')}
@@ -11363,7 +11848,7 @@ function saveDB(){
   // negocio encima del activo. No debería pasar nunca; si alguna función
   // de cálculo lo hiciera, aquí se para.
   if(vgLeyendoOtroNegocio) return Promise.resolve();
-  const guardado = idbSet(DB_KEY, DB).catch(e => {
+  const guardado = guardarLocalDB().catch(e => {
     console.error('Error guardando datos', e);
     if(typeof showToast === 'function') showToast(t('msg.localSaveFailed'));
     // Reintento único: si el primer guardado falló por algo pasajero (p.ej.
@@ -11372,6 +11857,7 @@ function saveDB(){
     setTimeout(() => idbSet(DB_KEY, DB).catch(e2 => console.error('Reintento de guardado local también falló', e2)), 3000);
   });
   scheduleCloudSync();
+  if(typeof avisosProgramar === 'function') avisosProgramar();   // la campana de avisos se recalcula tras cada cambio
   return guardado;
 }
 
@@ -11403,8 +11889,13 @@ function pushAllToCloud(){
   });
 }
 
+/* Cuenta cuántas veces se ha pedido subir algo. flushCloudSync la mira antes y después de
+   la subida para saber si «mientras tanto hubo otro cambio» sin volver a convertir a texto
+   TODO el negocio (con 20.000 ventas era una pasada de ~1 s en un móvil, en cada subida). */
+let cambiosLocalesSeq = 0;
 function scheduleCloudSync(){
   if(vgLeyendoOtroNegocio) return;
+  cambiosLocalesSeq++;
   schedulePublicMirrorSync();
   if(!cloudRef) return;
   // Antes el badge solo decía "conectado/desconectado" del socket, sin
@@ -11502,6 +11993,7 @@ function flushCloudSync(){
   });
   const keys = Object.keys(updates);
   if(keys.length === 0){ marcarNubeAlDia(); return; }
+  const seqAlSubir = cambiosLocalesSeq;
   const onFail = (e) => {
     recordSyncError(e);
     scheduleCloudSyncRetry();
@@ -11515,7 +12007,7 @@ function flushCloudSync(){
       // del último sincronizado — si mientras tanto se hizo otro cambio
       // local (o el reintento de otro bloque sigue en curso), se queda en
       // "pending" hasta que de verdad no falte nada por confirmar.
-      const stillPending = Object.keys(DB).some(key => lastSyncedSnapshot[key] !== canonicalStringify(DB[key]));
+      const stillPending = cambiosLocalesSeq !== seqAlSubir;
       if(!stillPending) marcarNubeAlDia({trasSubirBien: true});
     }).catch(onFail);
   }catch(e){

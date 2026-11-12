@@ -896,7 +896,7 @@ td.wrap{white-space:normal}
 .help-topic-item{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--border);padding:9px 4px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit}
 .help-topic-item:hover{color:var(--ink)}
 .help-topic-item:last-child{border-bottom:none}
-#chat-fab .chat-badge{
+#chat-fab .chat-badge, #avisos-fab .chat-badge{
   position:absolute;top:-2px;right:-2px;background:#8A4A3B;color:#fff;font-size:10px;font-weight:700;
   border-radius:50%;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;
 }
@@ -906,6 +906,15 @@ td.wrap{white-space:normal}
 .help-msg.other{align-self:flex-start;background:var(--ink);color:#fff;border-bottom-left-radius:2px}
 .help-msg .chat-meta{display:block;font-size:10.5px;opacity:.7;margin-bottom:2px;font-weight:600}
 .chat-msg-urgent{border:2px solid var(--red)!important}
+/* Lo que llega al chat: el mensaje nuevo va con aro verde y etiqueta, y el botón del chat se marca mientras haya algo sin leer. */
+.help-msg.chat-msg-new{outline:2px solid var(--olive-l);outline-offset:2px}
+.chat-new-tag{display:inline-block;background:var(--olive-l);color:#1d2a20;border-radius:4px;padding:0 6px;margin-left:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:1}
+.app-header #chat-fab.chat-con-aviso{box-shadow:0 0 0 3px rgba(138,74,59,.38)}
+#chat-fab .chat-badge, #avisos-fab .chat-badge{min-width:18px;height:18px;font-size:11px}
+@media (prefers-reduced-motion:no-preference){
+  .app-header #chat-fab.chat-con-aviso{animation:chat-latido 1.8s ease-in-out infinite}
+}
+@keyframes chat-latido{0%,100%{box-shadow:0 0 0 2px rgba(138,74,59,.38)}50%{box-shadow:0 0 0 7px rgba(138,74,59,.08)}}
 .chat-pinned-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--amber-l);border-bottom:1px solid var(--border);font-size:12.5px}
 @media (max-width:480px){
   .help-panel{right:10px;width:calc(100vw - 20px)}
@@ -6481,3 +6490,124 @@ small{font-size:max(.8333em, 11px)}
   .tp-linea-pre{font-size:13px}
   .tp-ac-mas{width:36px !important;height:36px !important;min-width:36px}
 }
+
+
+/* ═══ AVISOS (campana) ═══ */
+.app-header #avisos-fab.avisos-con{box-shadow:0 0 0 3px rgba(138,74,59,.38)}
+.avisos-panel{display:none;position:fixed;top:calc(var(--header-h) + 10px);right:20px;width:400px;max-width:calc(100vw - 32px);max-height:calc(100dvh - var(--header-h) - 30px);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:250;flex-direction:column;overflow:hidden}
+.avisos-panel.active{display:flex}
+.av-cab{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--ink);color:#fff}
+.av-cab h4{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;margin:0}
+.av-cab .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+.av-cuerpo{overflow-y:auto;padding:4px 0}
+.av-fila{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border)}
+.av-fila:last-child{border-bottom:0}
+.av-fila>i{font-size:20px;color:var(--muted);flex-shrink:0}
+.av-fila.av-warn>i{color:#8A4A3B}
+.av-txt{flex:1;min-width:0;font-size:13px;line-height:1.35;overflow-wrap:break-word}
+.av-bt{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.av-vacio{display:flex;flex-direction:column;align-items:center;gap:4px;padding:30px 16px;text-align:center;color:var(--muted);font-size:13px}
+.av-vacio i{font-size:32px;color:var(--olive)}
+.av-vacio strong{color:var(--ink);font-size:14px}
+@media (prefers-reduced-motion:no-preference){
+  .app-header #avisos-fab.avisos-nuevo i{animation:av-campana .9s ease-in-out 1;transform-origin:50% 10%}
+}
+@keyframes av-campana{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}35%{transform:rotate(-14deg)}55%{transform:rotate(9deg)}75%{transform:rotate(-5deg)}}
+@media (max-width:560px){
+  .av-fila{flex-wrap:wrap}
+  .av-bt{width:100%;justify-content:flex-start;padding-left:30px}
+  .avisos-panel{right:10px;width:calc(100vw - 20px)}
+}
+
+/* Cabecera en 320 px: con la campana de avisos ya no cabían los ocho controles en una fila y «Cerrar sesión» bajaba a una segunda (58 → 68 px).
+   Se quita el filete que separa el chat del cierre de sesión y se aprietan los huecos; en 360 px o más no cambia nada. */
+@media (max-width:340px){
+  .app-header .hdr-divider{display:none}
+  .app-header{column-gap:2px}
+}
+
+
+/* Distribución › mesas a cargo de un camarero */
+.dp-ayuda-mesas{font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.4}
+.dp-mesas-zona .es-tit{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dp-chip .dp-otros{font-size:11px;opacity:.75;font-weight:400}
+
+
+/* Acceso de empleados: negocios recordados en este aparato (botones con el nombre; antes solo un datalist casi invisible en móvil) */
+.acc-biz-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.acc-biz-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;text-align:left;max-width:100%}
+.acc-biz-chip .acc-biz-n{overflow-wrap:anywhere;font-weight:600}
+.acc-biz-chip small{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em}
+.acc-biz-chip:hover{border-color:var(--olive);background:var(--brand-cream)}
+.acc-biz-chip.is-sel{border-color:var(--olive);background:var(--olive);color:#fff}
+.acc-biz-chip.is-sel small{color:rgba(255,255,255,.8)}
+.acc-biz-otro{border-style:dashed;color:var(--muted)}
+
+
+/* Cuenta de Resultados › «Lo que te queda de verdad» */
+.cdr-real{margin-top:18px}
+.cdr-real-bt{margin:10px 18px 4px}
+.cdr-real-expl{padding:4px 18px 14px;font-size:13px;color:var(--muted);line-height:1.5}
+.cdr-real-expl p{margin:8px 0 0}
+
+
+/* Asistente «Actualizar mis reglas» */
+.rw-cab h3{display:flex;align-items:center;gap:8px}
+.rw-prog{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin:0 0 14px;font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase}
+.rw-ptos{display:inline-flex;gap:6px}
+.rw-pto{width:9px;height:9px;border-radius:50%;background:var(--border)}
+.rw-pto.is-hecho{background:var(--olive-l)}
+.rw-pto.is-on{background:var(--olive);box-shadow:0 0 0 3px rgba(74,93,78,.22)}
+.rw-cuerpo{display:flex;flex-direction:column;gap:14px;font-size:14px;line-height:1.5}
+.rw-p{margin:0}
+.rw-peq{font-size:13px;color:var(--muted)}
+.rw-grande{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--brand-cream);border:1px solid var(--border);border-radius:var(--radius)}
+.rw-grande>i{font-size:32px;color:var(--olive);flex-shrink:0}
+.rw-grande strong{display:block;font-size:16px}
+.rw-grande span{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.rw-caja{border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;background:var(--surface)}
+.rw-caja p{margin:6px 0 0}
+.rw-caja-t{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rw-dato{background:var(--brand-cream);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.rw-campo{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:13px;color:var(--muted)}
+.rw-campo input{padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:16px;color:var(--ink);background:#fff}
+.rw-abrir{min-height:52px;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:10px}
+.rw-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rw-lista li{display:flex;gap:12px;align-items:flex-start}
+.rw-n{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--olive);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.rw-lista li>span:last-child{flex:1;min-width:0;overflow-wrap:break-word}
+.rw-lista kbd{font-family:var(--mono);font-size:12px;background:#fff;border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+.rw-o{color:var(--muted);font-size:13px}
+.rw-aviso{display:flex;gap:10px;align-items:flex-start;margin:0;padding:11px 13px;background:#FBF3E4;border:1px solid #E8D5A8;border-radius:var(--radius);font-size:13px}
+.rw-aviso>i{font-size:18px;color:#8A6A1F;flex-shrink:0;margin-top:1px}
+.rw-aviso.is-ko{background:#F6E7E3;border-color:#E3B9AE}.rw-aviso.is-ko>i{color:#8A4A3B}
+.rw-reglas{width:100%;font-family:var(--mono);font-size:11.5px;line-height:1.4;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--brand-cream);color:var(--ink);resize:vertical}
+.rw-ok{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:22px 10px}
+.rw-ok>i{font-size:52px;color:var(--olive)}
+.rw-ok strong{font-size:18px}
+.rw-ok span{font-size:13.5px;color:var(--muted);max-width:360px}
+.rw-gira{animation:rw-gira 1s linear infinite}
+@keyframes rw-gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.rw-gira{animation:none}}
+.rw-pie{display:flex;justify-content:space-between;gap:10px}
+.rw-pie .btn{min-height:44px;padding:0 20px}
+/* La regla de móvil de toda la app fija todo .btn a 36,5 px con !important: los botones del asistente la vencen con otro (objetivo táctil de 44 px) */
+.rw-pie .btn,.rw-abrir.btn,#reglas-wiz .btn{min-height:44px !important;height:auto !important}
+/* Dibujo aproximado de Firebase */
+.rw-fb{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;font-size:11px;user-select:none}
+.rw-fb-barra{display:flex;align-items:center;gap:5px;padding:6px 10px;background:#EEEAE2;border-bottom:1px solid var(--border)}
+.rw-fb-pto{width:8px;height:8px;border-radius:50%;background:#C9C3B7}
+.rw-fb-url{margin-left:8px;flex:1;background:#fff;border-radius:10px;padding:2px 10px;color:var(--muted);font-size:10.5px}
+.rw-fb-cuerpo{display:flex;min-height:118px}
+.rw-fb-menu{width:34px;background:#F4F2EC;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:8px;padding:10px 8px}
+.rw-fb-menu i{height:8px;border-radius:3px;background:#D8D3C7}
+.rw-fb-menu i.is-on{background:var(--olive);box-shadow:0 0 0 3px rgba(74,93,78,.25)}
+.rw-fb-main{flex:1;padding:8px 10px;min-width:0}
+.rw-fb-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px;white-space:nowrap;overflow:hidden}
+.rw-fb-tab{color:var(--muted);padding-bottom:5px;margin-bottom:-7px}
+.rw-fb-tab.is-on{color:var(--ink);font-weight:700;border-bottom:2px solid var(--olive)}
+.rw-fb-pub{margin-left:auto;background:#3367D6;color:#fff;border-radius:5px;padding:3px 9px;font-weight:600}
+.rw-fb-pub.is-on,.rw-fb-editor.is-on{box-shadow:0 0 0 3px rgba(74,93,78,.4)}
+.rw-fb-editor{background:#FAFAF7;border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
+.rw-fb-editor code{font-family:var(--mono);font-size:10.5px;color:#555}

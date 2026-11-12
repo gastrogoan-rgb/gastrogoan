@@ -1264,6 +1264,8 @@ function getDistEmpData(empId){
   // Antes a sala simplemente se le quitaba la columna de platos y no se le
   // ponía nada en su lugar, así que la pantalla se quedaba coja.
   if(!Array.isArray(d.rangos)) d.rangos = [];
+  // Mesas a su cargo (12/11): ids de las mesas del plano de sala. El texto libre de arriba (`rangos`) queda solo para lo que ya estaba escrito.
+  if(!Array.isArray(d.mesas)) d.mesas = [];
   // Elaboraciones a su cargo (31/10): nombres de elaboraciones base, igual que d.platos guarda los de los platos.
   if(!Array.isArray(d.elabs)) d.elabs = [];
   // Manual del puesto (31/10). Firebase no guarda [] ni {}: sin items, el manual vuelve de la nube sin la lista.
@@ -1638,7 +1640,7 @@ function renderDistList(){
     const diaHoy = sem.dias.find(x => x.ds === hoy);
     const hoyTotal = diaHoy ? diaHoy.total : 0, hoyHechas = diaHoy ? diaHoy.hechas : 0;
     const turno = distTurnoTexto(distTurnoDe(emp.id, hoy));
-    const nCargo = isSala ? d.rangos.length : d.platos.length + d.elabs.length;
+    const nCargo = isSala ? distRangoLabels(d).length : d.platos.length + d.elabs.length;
     const m = d.manual || {items:[], version:0};
     const manual = !(m.items||[]).length ? 'sin' : (d.manualLeido && d.manualLeido.version === m.version ? 'leido' : 'pendiente');
     return {emp, d, sem, hoyTotal, hoyHechas, turno, nCargo, manual};
@@ -1890,9 +1892,9 @@ function renderDistDetail(){
     </section>`;
 
   // ---- A su cargo y manual: dos botones; lo que hay dentro se abre sin salir de aquí ----
-  const nPlatos = d.platos.length, nElabs = d.elabs.length, nCargo = isSala ? d.rangos.length : nPlatos + nElabs;
+  const nPlatos = d.platos.length, nElabs = d.elabs.length, rangoEtiquetas = distRangoLabels(d), nCargo = isSala ? rangoEtiquetas.length : nPlatos + nElabs;
   const cargoResumen = isSala
-    ? (d.rangos.length ? d.rangos.slice(0, 3).join(' · ') + (d.rangos.length > 3 ? ' …' : '') : t('dist.noZonesAssigned'))
+    ? (rangoEtiquetas.length ? rangoEtiquetas.slice(0, 3).join(' · ') + (rangoEtiquetas.length > 3 ? ' …' : '') : t('dist.noZonesAssigned'))
     : (nCargo ? `${nPlatos} ${nPlatos === 1 ? gl({es:'plato', ca:'plat', en:'dish'}) : gl({es:'platos', ca:'plats', en:'dishes'})} · ${nElabs} ${nElabs === 1 ? gl({es:'elaboración', ca:'elaboració', en:'preparation'}) : gl({es:'elaboraciones', ca:'elaboracions', en:'preparations'})}` : t('dist.noDishesAssigned'));
   const man = d.manual;
   const nMan = man.items.length;
@@ -1986,6 +1988,54 @@ function addDistPlato(){
   saveDB();
   renderDistDetail();
   dpRefrescarCargo();
+}
+/* ---------- Mesas a cargo de un camarero (12/11) ----------
+   Antes el «rango» era un texto libre («Mesas 1-8, Terraza») que no se comparaba con nada. Ahora se ELIGE entre las mesas del plano de
+   sala: la zona entera (la «familia») o las mesas sueltas que se quieran. Se guardan los ids de las mesas, así que renombrar una zona
+   no rompe nada, y el TPV usa lo mismo para «Mis mesas». */
+function distZonasMesas(){
+  const mapa = new Map();
+  (DB.tables || []).forEach(tb => { const z = tb.zona || ''; if(!mapa.has(z)) mapa.set(z, []); mapa.get(z).push(tb); });
+  const orden = typeof getZonaOrder === 'function' ? getZonaOrder() : [];
+  const claves = [...mapa.keys()].sort((a, b) => { const ia = orden.indexOf(a), ib = orden.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+  return claves.map(z => ({zona: z, mesas: mapa.get(z)}));
+}
+function distEmpTieneMesa(empId, tableId){
+  const d = DB.workDistribution && DB.workDistribution[empId];
+  return !!(d && Array.isArray(d.mesas) && d.mesas.some(x => String(x) === String(tableId)));
+}
+// Quién más lleva esa mesa (para avisarlo en el selector; se puede repartir igualmente: un compañero cubre a otro).
+function distOtrosConMesa(tableId, exceptoId){
+  return (DB.employees || []).filter(e => e.id !== exceptoId && e.active !== false && distEmpTieneMesa(e.id, tableId)).map(e => e.name);
+}
+// Texto de lo que lleva: «Terraza (toda)», «Salón: Mesa 1, Mesa 2», más lo escrito a mano de antes.
+function distRangoLabels(d){
+  const ids = new Set((d.mesas || []).map(String)), out = [];
+  distZonasMesas().forEach(({zona, mesas}) => {
+    const sel = mesas.filter(tb => ids.has(String(tb.id)));
+    if(!sel.length) return;
+    if(sel.length === mesas.length && mesas.length > 1) out.push((zona || gl({es:'Sin zona', ca:'Sense zona', en:'No zone'})) + ' ' + gl({es:'(toda)', ca:'(tota)', en:'(all)'}));
+    else out.push((zona ? zona + ': ' : '') + sel.map(tb => (tb.name || '').replace(/\s*\([^)]*\)\s*$/, '')).join(', '));
+  });
+  return out.concat(d.rangos || []);
+}
+function distToggleMesa(id){
+  if(!isOwnerSession()) return;
+  const d = distDatosActuales(); if(!d) return;
+  const i = d.mesas.findIndex(x => String(x) === String(id));
+  if(i >= 0) d.mesas.splice(i, 1);
+  else { const tb = (DB.tables || []).find(x => String(x.id) === String(id)); if(!tb) return; d.mesas.push(tb.id); }
+  saveDB(); renderDistDetail(); dpRefrescarCargo();
+}
+function distToggleZona(idx){
+  if(!isOwnerSession()) return;
+  const d = distDatosActuales(); if(!d) return;
+  const z = distZonasMesas()[idx]; if(!z) return;
+  const ids = new Set(d.mesas.map(String));
+  const todas = z.mesas.every(tb => ids.has(String(tb.id)));
+  if(todas){ const quitar = new Set(z.mesas.map(tb => String(tb.id))); d.mesas = d.mesas.filter(x => !quitar.has(String(x))); }
+  else z.mesas.forEach(tb => { if(!ids.has(String(tb.id))) d.mesas.push(tb.id); });
+  saveDB(); renderDistDetail(); dpRefrescarCargo();
 }
 function addDistRango(){
   if(!isOwnerSession()) return;
@@ -2207,10 +2257,25 @@ function openDistCargo(empId){
   distCurrentEmployeeId = empId;
   let cuerpo = '', asignar = '';
   if(isSala){
-    cuerpo = d.rangos.length
-      ? `<div class="dp-chips">${d.rangos.map((rg, i) => `<span class="dp-chip es-zona"><i class="ti ti-map-pin"></i> ${escapeHtml(rg)}${ownerSess ? ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`removeDistRango(${i})`, peligro:true}], {clase:'btn btn-fino mn-btn dp-mas', tip:true}) : ''}</span>`).join('')}</div>`
-      : `<div class="empty es-vacio"><i class="ti ti-map-pin"></i>${t('dist.noZonesAssigned')}</div>`;
-    if(ownerSess) asignar = `<div class="dp-asignar-cab"><input type="text" id="dist-rango-input" placeholder="${t('dist.zonePlaceholder')}" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistRango();}"><button type="button" class="btn btn-fino is-on" onclick="addDistRango()"><i class="ti ti-plus"></i> ${t('btn.assign')}</button></div>`;
+    const ids = new Set(d.mesas.map(String));
+    const legado = d.rangos.length
+      ? `<div class="dp-grupo"><div class="es-tit">${gl({es:'Escrito a mano (de antes)', ca:'Escrit a mà (d\'abans)', en:'Typed by hand (from before)'})}</div><div class="dp-chips">${d.rangos.map((rg, i) => `<span class="dp-chip es-zona"><i class="ti ti-map-pin"></i> ${escapeHtml(rg)}${ownerSess ? ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`removeDistRango(${i})`, peligro:true}], {clase:'ggma-chip'}) : ''}</span>`).join('')}</div></div>`
+      : '';
+    const zonas = distZonasMesas();
+    if(!zonas.length){
+      cuerpo = `<div class="empty es-vacio"><i class="ti ti-map-pin"></i>${gl({es:'Aún no hay mesas. Créalas en Mi Negocio → Plano de sala y aquí las podrás asignar con un toque.', ca:'Encara no hi ha taules. Crea-les a El meu negoci → Plànol de sala i aquí les podràs assignar amb un toc.', en:'There are no tables yet. Create them in My Business → Floor plan and you can assign them here with one tap.'})}</div>${legado}`;
+    } else if(ownerSess){
+      cuerpo = `<p class="dp-ayuda-mesas">${gl({es:'Toca una zona para darle toda la zona, o toca las mesas que quieras. Verá estas mesas como «Mis mesas» en el TPV; el resto las sigue viendo y puede ayudar en ellas.', ca:'Toca una zona per donar-li tota la zona, o toca les taules que vulguis. Veurà aquestes taules com «Les meves taules» al TPV; la resta les continua veient i pot ajudar-hi.', en:'Tap a zone to give the whole zone, or tap the tables you want. They will see these as “My tables” in the POS; they still see the rest and can help out.'})}</p>
+        ${zonas.map((z, zi) => {
+          const todas = z.mesas.every(tb => ids.has(String(tb.id)));
+          const n = z.mesas.filter(tb => ids.has(String(tb.id))).length;
+          return `<div class="dp-grupo dp-mesas-zona"><div class="es-tit"><button type="button" class="btn btn-sm btn-fino${todas ? ' is-on' : ''}" aria-pressed="${todas}" onclick="distToggleZona(${zi})"><i class="ti ti-map-pin"></i> ${escapeHtml(z.zona || gl({es:'Sin zona', ca:'Sense zona', en:'No zone'}))} · ${gl({es:'toda la zona', ca:'tota la zona', en:'whole zone'})}</button> <span class="dp-cuenta">${n}/${z.mesas.length}</span></div>
+            <div class="dp-chips">${z.mesas.map(tb => { const sel = ids.has(String(tb.id)); const otros = distOtrosConMesa(tb.id, empId); return `<button type="button" class="dp-chip${sel ? ' is-sel' : ''}" aria-pressed="${sel}" data-mid="${escapeHtml(String(tb.id))}" onclick="distToggleMesa(this.dataset.mid)">${escapeHtml((tb.name || '').replace(/\s*\([^)]*\)\s*$/, ''))}${otros.length ? `<small class="dp-otros"> · ${gl({es:'también', ca:'també', en:'also'})} ${escapeHtml(otros.slice(0, 2).join(', '))}</small>` : ''}</button>`; }).join('')}</div></div>`;
+        }).join('')}${legado}`;
+    } else {
+      const etq = distRangoLabels(d);
+      cuerpo = etq.length ? `<div class="dp-chips">${etq.map(x => `<span class="dp-chip es-zona"><i class="ti ti-map-pin"></i> ${escapeHtml(x)}</span>`).join('')}</div>` : `<div class="empty es-vacio"><i class="ti ti-map-pin"></i>${t('dist.noZonesAssigned')}</div>`;
+    }
   } else {
     const todos = [...d.platos.map((n, i) => ({tipo:'plato', nombre:n, idx:i})), ...d.elabs.map((n, i) => ({tipo:'elab', nombre:n, idx:i}))];
     if(!dpCargoSel || !todos.some(x => x.tipo === dpCargoSel.tipo && x.nombre === dpCargoSel.nombre)) dpCargoSel = todos[0] ? {tipo: todos[0].tipo, nombre: todos[0].nombre} : null;
@@ -2467,7 +2532,7 @@ function printDistribucion(empId){
   targets.forEach(emp => {
     const d = getDistEmpData(emp.id);
     const rows = [];
-    if(isSala && d.rangos.length) rows.push(`<tr><td style="width:110px"><strong>${t('common.zones')}</strong></td><td>${d.rangos.map(escapeHtml).join(' · ')}</td></tr>`);
+    if(isSala && distRangoLabels(d).length) rows.push(`<tr><td style="width:110px"><strong>${t('common.zones')}</strong></td><td>${distRangoLabels(d).map(escapeHtml).join(' · ')}</td></tr>`);
     if(!isSala && d.platos.length) rows.push(`<tr><td style="width:110px"><strong>${t('common.dishes')}</strong></td><td>${d.platos.map(escapeHtml).join(' · ')}</td></tr>`);
     if(!isSala && d.elabs.length) rows.push(`<tr><td style="width:110px"><strong>${gl({es:'Elaboraciones', ca:'Elaboracions', en:'Preparations'})}</strong></td><td>${d.elabs.map(escapeHtml).join(' · ')}</td></tr>`);
     WEEK_DAYS.forEach((_, idx) => {
@@ -7814,12 +7879,26 @@ async function deleteTableFromConfig(id){
 /* ============================================================
    MANTENIMIENTO DE DATOS — copia de seguridad y archivado
    ============================================================ */
+/* Pesar el negocio es convertirlo ENTERO a texto: 100-400 ms en un móvil con un historial grande, cada vez
+   que se abre o se repinta Mi Negocio. Es un dato orientativo («tu negocio ocupa X MB»), así que vale el de
+   hace medio minuto. */
+let dbSizeCache = {ts: 0, db: null, kb: 0};
 function getDBSizeKB(){
-  return Math.round(JSON.stringify(DB).length / 1024 * 10) / 10;
+  const c = dbSizeCache;
+  if(c.db === DB && Date.now() - c.ts < 30000) return c.kb;
+  const kb = Math.round(JSON.stringify(DB).length / 1024 * 10) / 10;
+  dbSizeCache = {ts: Date.now(), db: DB, kb};
+  return kb;
 }
 
 function renderDataMaintenanceCard(){
-  const sizeKB = getDBSizeKB();
+  /* El peso se calcula DESPUÉS de pintar (convertir el negocio entero a texto tarda 100-400 ms en un móvil y
+     bloqueaba la apertura de Mi Negocio). Mientras llega, el hueco enseña «…». */
+  const sizeKB = dbSizeCache.db === DB && Date.now() - dbSizeCache.ts < 30000 ? dbSizeCache.kb : null;
+  if(sizeKB === null) setTimeout(() => {
+    const kb = getDBSizeKB();
+    document.querySelectorAll('.mn-data-size').forEach(el => { el.textContent = kb + ' KB'; });
+  }, 60);
   const ventasAntiguas = DB.sales.filter(s => s.date && s.date < dataMaintenanceCutoff()).length;
   const reservasAntiguas = DB.reservations.filter(r => r.date && r.date < dataMaintenanceCutoff() && (r.status==='completada'||r.status==='cancelada')).length;
   const cierresAntiguos = DB.cashClosures.filter(c => c.fecha && c.fecha < dataMaintenanceCutoff()).length;
@@ -7827,7 +7906,7 @@ function renderDataMaintenanceCard(){
   return `
     <div class="card">
       <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', sizeKB + ' KB')}</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', '<span class="mn-data-size">' + (sizeKB === null ? '…' : sizeKB + ' KB') + '</span>')}</p>
       <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
       <div style="font-size:12px;color:${daysSinceLastBackup()>=BACKUP_REMINDER_DAYS?'var(--red)':'var(--muted)'};margin-top:6px">
         ${daysSinceLastBackup()===Infinity ? t('mn.data.neverBackedUp') : t('mn.data.lastBackup').replace('${n}', daysSinceLastBackup())}
@@ -8227,6 +8306,7 @@ async function removeLogo(){
 }
 
 function renderHeader(){
+  if(typeof avisosProgramar === 'function') avisosProgramar();
   const b = DB.business || {};
   const icon = document.getElementById('app-logo-icon');
   icon.innerHTML = `<img src="${b.logo || GASTROGOAN_LOGO_URI}" alt="Logo">`;
@@ -9309,6 +9389,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   updateAutoActiveMenu();
   setInterval(() => {
     updateAutoActiveCarta(); updateAutoActiveMenu(); purgePaidOrders();
+    if(typeof avisosPintar === 'function') avisosPintar();   // cambia el día: cumpleaños, mantenimientos vencidos…
     if(typeof marcharPedidosProgramadosQueYaTocan === 'function') marcharPedidosProgramadosQueYaTocan();
   }, 60000);
 

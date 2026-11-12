@@ -184,6 +184,14 @@ lanzar; node test/panel-v2.mjs > "$SALIDA/panelv2.txt" 2>&1 & P177=$!
 lanzar; node test/chat-ayuda.mjs > "$SALIDA/chatayuda.txt" 2>&1 & P178=$!
 lanzar; node test/gestion-scroll.mjs > "$SALIDA/gestionscroll.txt" 2>&1 & P179=$!
 lanzar; node test/ge-prevision-caja.mjs > "$SALIDA/previsioncaja.txt" 2>&1 & P180=$!
+lanzar; node test/chat-avisos.mjs > "$SALIDA/chatavisos.txt" 2>&1 & P181=$!
+lanzar; node test/avisos-campana.mjs > "$SALIDA/avisoscampana.txt" 2>&1 & P182=$!
+lanzar; node test/avisos-empleado.mjs > "$SALIDA/avisosempleado.txt" 2>&1 & P183=$!
+lanzar; node test/acceso-empleado-codigo.mjs > "$SALIDA/accempcodigo.txt" 2>&1 & P184=$!
+lanzar; node test/sync-negocios.mjs > "$SALIDA/syncnegocios.txt" 2>&1 & P185=$!
+lanzar; node test/economia-real.mjs > "$SALIDA/economiareal.txt" 2>&1 & P186=$!
+lanzar; node test/reglas-asistente.mjs > "$SALIDA/reglasasistente.txt" 2>&1 & P187=$!
+lanzar; node test/alta-generador.mjs > "$SALIDA/altagenerador.txt" 2>&1 & P188=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -398,5 +406,13 @@ espera $P177 "Panel de Control v2: equilibrio destacado, reservas/ventas/gastos/
 espera $P178 "Chat interno (mis mensajes no avisan, áreas separadas, fijar, urgente, directo) y Ayuda (cada tema se encuentra en los tres idiomas)" "$SALIDA/chatayuda.txt" "todos los casos pasaron"
 espera $P179 "Gestión Económica: repintar una pestaña o cambiar un reparto/periodo no devuelve la página arriba del todo" "$SALIDA/gestionscroll.txt" "todos los casos pasaron"
 espera $P180 "Previsión de caja a 30/60/90 días: ritmo de caja, sin doble descuento de gastos periódicos y modelos del trimestre anterior (cuentas a mano)" "$SALIDA/previsioncaja.txt" "casos pasaron"
+espera $P181 "Chat: un mensaje de otro aparato enciende el aviso, se resalta como Nuevo (también con el panel abierto), se quita al entrar y aguanta relojes adelantados" "$SALIDA/chatavisos.txt" "todos los casos pasaron"
+espera $P182 "Campana de avisos: vacaciones y cambios de turno con Aceptar/Rechazar, reservas y pedidos web, informativos con «Visto», el empleado no ve lo del dueño, también desde la nube y en móvil" "$SALIDA/avisoscampana.txt" "todos los casos pasaron"
+espera $P183 "Avisos al empleado (respuesta a vacaciones y cambios de turno, mensajes directos) y mesas a cargo: selector por zona/mesa, Mis mesas del TPV y ayuda en mesas de compañeros sin bloqueo" "$SALIDA/avisosempleado.txt" "todos los casos pasaron"
+espera $P184 "Acceso de empleados: el código de negocio se recuerda y se ve (relleno + botones con el nombre, Otro negocio, móvil)" "$SALIDA/accempcodigo.txt" "todos los casos pasaron"
+espera $P185 "Sync de negocios entre aparatos: un negocio ya configurado no pide asistentes en un aparato nuevo, sin conexión no pregunta nada, los borrados llegan a todos (lápida + cola de reintentos) y el PIN ya cambiado no se vuelve a ofrecer" "$SALIDA/syncnegocios.txt" "todos los casos pasaron"
+espera $P186 "Cuenta de Resultados › «Lo que te queda de verdad» (cuentas a mano: préstamo 10.000 € a 24 × 450 €), sin tocar el resultado oficial, en móvil y sin inversiones" "$SALIDA/economiareal.txt" "todos los casos pasaron"
+espera $P187 "Asistente «Actualizar mis reglas»: 6 pasos exactos (portada de Firebase, cuenta y proyecto, Realtime Database → Reglas, copiar, borrar todo, pegar, Publicar), comprobación automática, campana solo del propietario, tres idiomas y móvil" "$SALIDA/reglasasistente.txt" "todos los casos pasaron"
+espera $P188 "Generador de licencias: alta de cliente paso a paso (automáticos, manuales, progreso, mensaje de bienvenida, móvil)" "$SALIDA/altagenerador.txt" "^OK alta paso a paso"
 
 exit $FALLOS

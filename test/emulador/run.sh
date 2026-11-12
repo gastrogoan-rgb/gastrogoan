@@ -60,6 +60,14 @@ cat >> "$RAIZ/__sdk/firebase-auth-compat.js" <<'PATCH'
     envolver(ns, 'auth');
     var origInit = ns.initializeApp;
     ns.initializeApp = function(){
+      /* La PLATAFORMA (cuentas de propietario, lista de negocios, referencias de nube) también al emulador, en su propio espacio y con SUS reglas
+         reales. Sin esto la prueba de «un aparato nuevo» no podía correr contra Firebase de verdad. */
+      var cfg0 = arguments[0];
+      if(cfg0 && typeof cfg0.databaseURL === 'string' && /plataforma-gastrogoan/.test(cfg0.databaseURL)){
+        var copia = {}; for(var kk in cfg0) copia[kk] = cfg0[kk];
+        copia.databaseURL = 'http://127.0.0.1:9000/?ns=demo-plataforma';
+        arguments[0] = copia;
+      }
       var app = origInit.apply(this, arguments);
       try{ if(app && typeof app.auth === 'function') envolver(app, 'auth'); }catch(e){}
       return app;
@@ -73,7 +81,10 @@ PATCH
 mkdir -p "$TRABAJO/emu"
 cat > "$TRABAJO/emu/firebase.json" <<'JSON'
 {
-  "database": { "rules": "database.rules.json" },
+  "database": [
+    { "instance": "demo-gastrogoan", "rules": "database.rules.json" },
+    { "instance": "demo-plataforma", "rules": "plataforma.rules.json" }
+  ],
   "emulators": {
     "database": { "port": 9000, "host": "127.0.0.1" },
     "auth":     { "port": 9099, "host": "127.0.0.1" },
@@ -94,6 +105,7 @@ JSON
 # Todos fallaban EN SILENCIO. Con las reglas reales cargadas aquí, cualquier
 # operación que la app haga y las reglas no permitan sale sola.
 cp "$RAIZ/reglas/reglas-de-cada-negocio.json" "$TRABAJO/emu/database.rules.json"
+cp "$RAIZ/reglas/reglas-de-la-plataforma.json" "$TRABAJO/emu/plataforma.rules.json"   # las reglas REALES de la plataforma (cuentas, lista de negocios…)
 
 # 4. Arrancar. Se quita el proxy: el CLI habla con su propio emulador por
 #    localhost y un proxy por medio le corta esa llamada.
@@ -118,6 +130,11 @@ if [ "${db:-}" != "200" ] || [ "${au:-}" != "200" ]; then
 fi
 echo "→ emuladores listos (database:9000, auth:9099)"
 
+# SOLO=aparato-nuevo.mjs bash test/emulador/run.sh  → corre solo ese (para ir rápido al depurar)
+if [ -n "${SOLO:-}" ]; then
+  node "$RAIZ/test/emulador/$SOLO"; SALIDA=$?
+  rm -rf "$RAIZ/__sdk"; exit $SALIDA
+fi
 node "$RAIZ/test/emulador/sync-real.mjs"
 SALIDA=$?
 echo
@@ -126,5 +143,9 @@ echo
 node "$RAIZ/test/emulador/reservas-publico.mjs" || SALIDA=1
 echo
 node "$RAIZ/test/emulador/bucle-sync.mjs" || SALIDA=1
+echo
+node "$RAIZ/test/emulador/aparato-nuevo.mjs" || SALIDA=1
+echo
+node "$RAIZ/test/emulador/reglas-asistente.mjs" || SALIDA=1
 rm -rf "$RAIZ/__sdk"
 exit $SALIDA

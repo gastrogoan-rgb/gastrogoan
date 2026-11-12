@@ -2347,6 +2347,46 @@ const GE = (function(){
     cdrModal(L({es:'¿Cómo se calcula tu resultado?', ca:'Com es calcula el teu resultat?', en:'How is your result calculated?'}), cuerpo);
   }
 
+  /* «Lo que te queda de verdad» (12/11, pedido del dueño). El resultado de arriba es el contable —el que ve el gestor— y NO se toca. Pero una
+     inversión financiada altera lo que de verdad te queda aunque no sea gasto: la cuota que devuelve el préstamo saca dinero y no pasa por la
+     cuenta, y el desgaste (amortización) pasa por la cuenta sin sacar dinero. Esta línea, APARTE y con su explicación, lo junta. Usa las mismas
+     funciones que «Beneficio y caja» (bcMesDatos), así que nunca se contradicen. Es una versión sencilla: el cálculo completo, con IVA, impuestos
+     y almacén, está allí. Las inversiones financiadas entran por sus cuotas; las pagadas al contado, enteras en el mes en que se compran. */
+  function renderCdrReal(){
+    const el = document.getElementById('cdr-real'); if(!el) return;
+    const meses = cdrMesesDelPeriodo(), L = o => gl(o);
+    const datos = meses.map(m => bcMesDatos(m, cdrYear));
+    if(!datos.some(d => d.hayDatos)){ el.innerHTML = ''; return; }
+    const P = bcAgregar(datos);
+    let contado = 0;
+    datos.forEach(d => {
+      const mesStr = `${d.y}-${String(d.m+1).padStart(2,'0')}`;
+      capex().filter(c => (c.fecha||'').startsWith(mesStr) && !c.financiado && c.estadoPago === 'PAGADO').forEach(c => { contado += parseFloat(c.importe)||0; });
+    });
+    // Cada línea se redondea a céntimos y el total es la suma de lo que SE VE: si no, sumar a mano las cifras de la pantalla daba un céntimo de diferencia.
+    const r2 = v => Math.round(v * 100) / 100;
+    P.neto = r2(P.neto); P.amort = r2(P.amort); P.principal = r2(P.principal); contado = r2(contado);
+    const real = r2(P.neto + P.amort - P.principal - contado);
+    const fm = v => (v < 0 ? '−' : '') + fmtMoney(Math.abs(v)), sg = v => (v >= 0 ? '+' : '−') + fmtMoney(Math.abs(v));
+    const fila = (txt, ayuda, v, tipo) => `<div class="bc-lin${tipo === 'base' ? ' is-base' : ''}${tipo === 'total' ? ' is-total' : ''}"><span>${txt}${ayuda ? `<small>${ayuda}</small>` : ''}</span><b class="bc-num${tipo === 'total' ? (real >= -0.005 ? ' is-ok' : ' is-ko') : ''}">${tipo ? fm(v) : sg(v)}</b></div>`;
+    const lineas = [
+      fila(L({es:'Resultado del periodo', ca:'Resultat del període', en:'Result for the period'}), L({es:'El de la tabla de arriba, el que ve tu gestor.', ca:'El de la taula de dalt, el que veu el teu gestor.', en:'The one in the table above, the one your accountant sees.'}), P.neto, 'base'),
+      Math.abs(P.amort) < 0.005 ? '' : fila(L({es:'Desgaste de lo que compraste', ca:'Desgast del que vas comprar', en:'Wear on what you bought'}), L({es:'Cuenta como gasto arriba, pero no te saca dinero este periodo: se suma.', ca:'Compta com a despesa a dalt, però no et treu diners aquest període: se suma.', en:'Counts as an expense above, but no cash leaves this period: added back.'}), P.amort),
+      Math.abs(P.principal) < 0.005 ? '' : fila(L({es:'Cuotas del préstamo que devuelven lo prestado', ca:'Quotes del préstec que tornen el prestat', en:'Loan instalments that repay the loan'}), L({es:'No es gasto arriba, pero sí te saca dinero: se resta. (Los intereses ya están como gasto.)', ca:'No és despesa a dalt, però sí que et treu diners: es resta. (Els interessos ja són despesa.)', en:'Not an expense above, but cash does leave: subtracted. (Interest is already an expense.)'}), -P.principal),
+      Math.abs(contado) < 0.005 ? '' : fila(L({es:'Inversiones pagadas al contado', ca:'Inversions pagades al comptat', en:'Investments paid in cash'}), L({es:'Salen enteras ahora, aunque arriba se vayan cargando poco a poco.', ca:'Surten senceres ara, encara que a dalt es vagin carregant a poc a poc.', en:'Paid in full now, even though they are charged little by little above.'}), -contado),
+      fila(L({es:'Lo que te queda de verdad', ca:'El que et queda de debò', en:'What you really keep'}), '', real, 'total')
+    ].filter(Boolean).join('');
+    el.innerHTML = `<div class="ge-section cdr-real">
+      <div class="ge-sec-head"><h4><i class="ti ti-wallet"></i> ${L({es:'Lo que te queda de verdad', ca:'El que et queda de debò', en:'What you really keep'})} · ${escapeHtml(cdrEtiquetaPeriodo())} ${cdrYear}</h4></div>
+      <p class="te-nota">${L({es:'Tu resultado de arriba no cambia. Aquí se cuenta también lo que sale del banco.', ca:'El teu resultat de dalt no canvia. Aquí es compta també el que surt del banc.', en:'Your result above does not change. Here we also count what leaves your bank.'})}</p>
+      ${lineas}
+      <button type="button" class="btn btn-sm btn-fino cdr-real-bt" aria-expanded="false" onclick="const d = this.nextElementSibling; d.hidden = !d.hidden; this.setAttribute('aria-expanded', String(!d.hidden))"><i class="ti ti-help-circle"></i> ${L({es:'¿Cómo se calcula?', ca:'Com es calcula?', en:'How is it calculated?'})}</button>
+        <div class="cdr-real-expl" hidden>
+          <p>${L({es:'El resultado de arriba es el contable, el que ve tu gestor. Pero lo que compras o financias altera lo que de verdad te queda: la cuota que devuelve el préstamo te saca dinero y no es gasto, y el desgaste es gasto pero no te saca dinero. Aquí se suma una cosa y se quita la otra.', ca:'El resultat de dalt és el comptable, el que veu el teu gestor. Però el que compres o finances altera el que de debò et queda: la quota que torna el préstec et treu diners i no és despesa, i el desgast és despesa però no et treu diners. Aquí se suma una cosa i es treu l\'altra.', en:'The result above is the accounting one, the one your accountant sees. But what you buy or finance changes what you really keep: the instalment that repays the loan takes cash out and is not an expense, and wear is an expense but takes no cash. Here one is added and the other removed.'})}</p>
+          <p>${L({es:'Es un cálculo sencillo: no incluye IVA, impuestos pendientes, almacén, retirada del titular ni dividendos. El dinero exacto con todo eso está en ', ca:'És un càlcul senzill: no inclou IVA, impostos pendents, magatzem, retirada del titular ni dividends. Els diners exactes amb tot això són a ', en:'It is a simple calculation: it excludes VAT, pending taxes, stock, owner withdrawals and dividends. The exact cash with all that is in '})}<a href="#" onclick="GE.tab('bc');return false">${L({es:'Beneficio y caja', ca:'Benefici i caixa', en:'Profit and cash'})}</a>.</p>
+        </div>
+    </div>`;
+  }
   function renderCDR(){
     syncYearLabels();
     ['cdr-gran-mes','cdr-gran-trimestre'].forEach(id=>{
@@ -2525,6 +2565,7 @@ const GE = (function(){
     html += '</tbody>';
     document.getElementById('cdr-table').innerHTML = html;
     renderCdrGrafica();
+    renderCdrReal();
     const comoT = document.getElementById('cdr-como-t'); if(comoT) comoT.textContent = gl({es:'¿Cómo se calcula?', ca:'Com es calcula?', en:'How is it calculated?'});
     const prev = document.getElementById('cdr-prev'), next = document.getElementById('cdr-next');
     if(prev) prev.setAttribute('aria-label', gl({es:'Año anterior', ca:'Any anterior', en:'Previous year'}));
@@ -6786,6 +6827,7 @@ function respondTurnoSwapRequest(requestId, accept){
   const r = (DB.turnoSwapRequests||[]).find(x=>x.id===requestId);
   if(!r) return;
   r.status = accept ? 'pending_owner' : 'rejected';
+  if(!accept) r.decidedAt = new Date().toISOString();
   saveDB();
   showToast(accept ? t('swap.acceptedWaitingOwner') : t('swap.rejected'));
   openEmployeeFicharModal(r.toEmployeeId);
@@ -6815,6 +6857,7 @@ function ownerApproveTurnoSwap(requestId, approve){
   }else{
     r.status = 'rejected';
   }
+  r.decidedAt = new Date().toISOString();   // para avisar al empleado de la respuesta (campana)
   saveDB();
   showToast(approve ? t('swap.approvedOk') : t('swap.rejected'));
   renderHorariosTab();
@@ -6944,6 +6987,7 @@ function ownerRespondVacationRequest(requestId, approve){
   }else{
     r.status = 'rejected';
   }
+  r.decidedAt = new Date().toISOString();   // para avisar al empleado de la respuesta (campana)
   logAudit(approve?'vacation_approved':'vacation_rejected', t(approve?'audit.vacationApproved':'audit.vacationRejected').replace('${name}', (DB.employees.find(e=>e.id===r.employeeId)||{}).name||'?'));
   saveDB();
   showToast(approve ? t('vacation.approvedOk') : t('swap.rejected'));
