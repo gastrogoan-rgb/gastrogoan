@@ -226,6 +226,7 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
 
 ## Convenciones de trabajo
 
+- **NORMA DEL PANEL DE ADMIN (dicha por el dueño el 12/11): todo lo que se trabaje del panel de admin va en `admin.gastrogoan.com`, que es donde está todo.** Nada de dejarlo en un fichero suelto que no se publica. Qué fichero edita cada parte: licencias, altas y cobros → `generador-licencias.html` (se publica como `app.html`); portada del panel y Plan 360° → `admin-panel/index.html` y `admin-panel/plan360.html`. Después de CUALQUIER cambio: `bash deploy/actualizar.sh`, commit y merge a `main`, y decirle al dueño qué ver y en qué sección. Un cambio de admin no está hecho hasta que se ve en el dominio.
 - **Idioma**: todo en español — mensajes de commit, comentarios de código, conversación.
 - **Comentarios**: explican **por qué**, no qué. Suelen documentar el bug que motivó el código.
 - **i18n**: 3 idiomas (`es`, `ca`, `en`) en `js/i18n.js`. Toda cadena nueva va en los tres. `t('clave')` para UI, `gl({es,ca,en})` para prosa larga.

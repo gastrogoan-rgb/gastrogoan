@@ -93,10 +93,11 @@ async function comprobarVersionPublicada(forzar){
     const j = await r.json();
     localStorage.setItem(GG_ULTIMA_COMPROBACION_LS, String(Date.now()));
     if(j && j.build && j.build !== GG_BUILD){
+      window.__ggVersionPublicada = j.build;
       /* Si es seguro, se actualiza SOLA y ya está: nadie tiene por qué
          pulsar nada para tener la última versión. Solo se pregunta cuando
          interrumpir sería peor que esperar (ver esSeguroActualizarSolo). */
-      if(esSeguroActualizarSolo()) aplicarVersionNueva(true);
+      if(esSeguroActualizarSolo() && !yaSeIntentoActualizarSola(j.build)) aplicarVersionNueva(true);
       else mostrarAvisoVersionNueva(j.build);
       return j.build;
     }
@@ -180,7 +181,23 @@ function mostrarAvisoVersionNueva(build){
 
 // Trae la versión nueva y recarga. Los datos no se tocan: viven en IndexedDB
 // y en la nube, no en la copia del programa.
+/* ⚠️ FRENO CONTRA EL BUCLE DE RECARGAS (12/11, el dueño: «a veces la app se pone a parpadear y parpadea todo»).
+   En la pantalla de entrada se pregunta SIEMPRE por versión nueva y, si es segura, se recarga sola. Si por lo que
+   sea la copia guardada NO se renueva (la red devuelve el HTML viejo unos minutos tras publicar, un service worker
+   atascado…), la recarga volvía a arrancar con la versión vieja, volvía a preguntar y volvía a recargar: la
+   pantalla parpadeaba una y otra vez. Ahora se apunta qué versión se intentó y cuándo: si ya se intentó la MISMA
+   en los últimos 10 minutos y seguimos en la vieja, no se recarga sola; sale la barra y decide el hostelero. */
+const GG_INTENTO_ACTUALIZAR_LS = 'gastrogoan_auto_actualizacion';
+function yaSeIntentoActualizarSola(build){
+  try{
+    const x = JSON.parse(localStorage.getItem(GG_INTENTO_ACTUALIZAR_LS) || 'null');
+    return !!(x && x.build === build && Date.now() - x.ts < 10 * 60 * 1000);
+  }catch(e){ return false; }
+}
 async function aplicarVersionNueva(silencioso){
+  if(silencioso){
+    try{ localStorage.setItem(GG_INTENTO_ACTUALIZAR_LS, JSON.stringify({build: (window.__ggVersionPublicada || ''), ts: Date.now()})); }catch(e){}
+  }
   const btn = document.querySelector('#gg-version-nueva button');
   if(btn){ btn.disabled = true; btn.textContent = t('app.newVersionWorking'); }
   if(silencioso) console.info('GastroGoan: actualizando a la versión nueva');

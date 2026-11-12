@@ -1233,9 +1233,17 @@ function setPedidoHistorialSupplierFilter(val){
 let pedidoHistorialYear = new Date().getFullYear();
 let pedidoHistorialMonth = new Date().getMonth();
 let pedidoHistorialEstado = '';          // '' = todos · 'BORRADOR' | 'ENVIADO' | 'RECIBIDO'
+/* «Ver todos» (12/11, pedido del dueño): sin periodo, todos los pedidos que ha habido nunca. Elegir cualquier mes o año lo apaga. */
+let pedidoHistorialTodos = false;
 function setPedidoHistorialPeriodo(anio, mes){
   pedidoHistorialYear = anio;
   pedidoHistorialMonth = mes;
+  pedidoHistorialTodos = false;
+  renderPedidoList();
+}
+function setPedidoHistorialTodos(on){
+  pedidoHistorialTodos = !!on;
+  if(on) pedidoHistorialEstado = '';
   renderPedidoList();
 }
 function setPedidoHistorialEstado(estado){
@@ -1287,7 +1295,9 @@ function renderPedidoList(){
   box.innerHTML = `
     <div class="pe-barra">
       ${ggPeriodoHtml({anio: pedidoHistorialYear, mes: pedidoHistorialMonth, cb:'setPedidoHistorialPeriodo', datos, anual:true})}
+      <button type="button" class="btn btn-sm btn-fino${pedidoHistorialTodos ? ' is-on' : ''}" aria-pressed="${pedidoHistorialTodos}" onclick="setPedidoHistorialTodos(${!pedidoHistorialTodos})"><i class="ti ti-list-details"></i> ${gl({es:'Ver todos', ca:'Veure tots', en:'View all'})} <span class="ml-n">${allOrders.length}</span></button>
       <div class="pe-estados">
+        <button type="button" class="btn btn-sm btn-fino${!pedidoHistorialEstado ? ' is-on' : ''}" aria-pressed="${!pedidoHistorialEstado}" onclick="setPedidoHistorialEstado('')">${gl({es:'Todos', ca:'Tots', en:'All'})} <span class="ml-n">${allOrders.length}</span></button>
         ${chip('BORRADOR', t('label.drafts'), counts.BORRADOR)}
         ${chip('ENVIADO', t('label.sentOrders'), counts.ENVIADO)}
         ${chip('RECIBIDO', t('label.receivedOrders'), counts.RECIBIDO)}
@@ -1472,7 +1482,7 @@ function renderPedidoResultsList(){
      el que se envió el 30 y llega el 2 no puede desaparecer de la pantalla
      al cambiar de mes. Por eso el periodo solo filtra los RECIBIDOS; lo que
      sigue pendiente se ve siempre, se pidiera cuando se pidiera. */
-  const delMes = o => o.estado !== 'RECIBIDO' || String(o.date||'').startsWith(periodo);
+  const delMes = o => pedidoHistorialTodos || String(o.date||'').startsWith(periodo);
   const coincide = o =>
     (!pedidoHistorialSupplierFilter || o.supplier === pedidoHistorialSupplierFilter) &&
     (!pedidoHistorialEstado || o.estado === pedidoHistorialEstado) &&
@@ -1481,7 +1491,7 @@ function renderPedidoResultsList(){
      enviado) sale siempre y era lo único que había. Ahora lo pendiente tiene su bloque propio, arriba y con título,
      y lo RECIBIDO es el del periodo elegido, con su cuenta y su total; si ese periodo no tiene nada, lo dice. */
   const sorted = lista => lista.slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
-  const pendientes = sorted(allOrders.filter(o => o.estado !== 'RECIBIDO' && coincide(o)));
+  const pendientes = sorted(allOrders.filter(o => o.estado !== 'RECIBIDO' && delMes(o) && coincide(o)));
   const recibidos = sorted(allOrders.filter(o => o.estado === 'RECIBIDO' && delMes(o) && coincide(o)));
   const buscando = !!pedidoHistorialSearch || !!pedidoHistorialSupplierFilter || !!pedidoHistorialEstado;
   const fuera = buscando ? allOrders.filter(o => !delMes(o) && coincide(o)).length : 0;
@@ -1490,8 +1500,16 @@ function renderPedidoResultsList(){
     : '';
   const unidad = n => gl({es:n === 1 ? 'pedido' : 'pedidos', ca:n === 1 ? 'comanda' : 'comandes', en:n === 1 ? 'order' : 'orders'});
   const soloPendientes = pedidoHistorialEstado === 'BORRADOR' || pedidoHistorialEstado === 'ENVIADO';
-  const etiquetaPeriodo = (typeof ggPeriodoEtiqueta === 'function') ? ggPeriodoEtiqueta(pedidoHistorialYear, pedidoHistorialMonth) : periodo;
-  let html = avisoFuera;
+  const etiquetaPeriodo = pedidoHistorialTodos
+    ? gl({es:'todos los periodos', ca:'tots els períodes', en:'all periods'})
+    : ((typeof ggPeriodoEtiqueta === 'function') ? ggPeriodoEtiqueta(pedidoHistorialYear, pedidoHistorialMonth) : periodo);
+  /* Lo pendiente de recibir YA obedece al periodo (si no, cambiar de mes «no cambiaba nada»). Para que un pedido enviado el 30 que llega el 2
+     no se pierda de vista al cambiar de mes, se avisa de cuántos quedan fuera, con el atajo «Ver todos». */
+  const pendientesFuera = (pedidoHistorialTodos || buscando) ? 0 : allOrders.filter(o => o.estado !== 'RECIBIDO' && !delMes(o)).length;
+  const avisoPend = pendientesFuera
+    ? `<div class="pe-aviso"><i class="ti ti-clock"></i> ${gl({es:`Tienes ${pendientesFuera} ${unidad(pendientesFuera)} pendiente${pendientesFuera===1?'':'s'} de recibir en otros periodos.`, ca:`Tens ${pendientesFuera} ${unidad(pendientesFuera)} pendent${pendientesFuera===1?'':'s'} de rebre en altres períodes.`, en:`You have ${pendientesFuera} order${pendientesFuera===1?'':'s'} waiting to be received in other periods.`})} <button type="button" class="btn btn-sm btn-fino" onclick="setPedidoHistorialTodos(true)">${gl({es:'Ver todos', ca:'Veure tots', en:'View all'})}</button></div>`
+    : '';
+  let html = avisoFuera + avisoPend;
   if(pendientes.length){
     html += `
     <div class="pe-total pe-seccion"><span>${gl({es:'Pendientes de recibir', ca:'Pendents de rebre', en:'Waiting to be received'})} · ${pendientes.length} ${unidad(pendientes.length)}</span><span>${gl({es:'salen siempre, sea cual sea el mes', ca:'surten sempre, sigui quin sigui el mes', en:'always shown, whatever the month'})}</span></div>

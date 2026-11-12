@@ -122,10 +122,11 @@ PID_WEB=$!
 for i in $(seq 1 30); do
   db=$(curl -s --noproxy '*' -o /dev/null -w '%{http_code}' "http://127.0.0.1:9000/.json?ns=demo-gastrogoan" 2>/dev/null)
   au=$(curl -s --noproxy '*' -o /dev/null -w '%{http_code}' "http://127.0.0.1:9099/" 2>/dev/null)
-  [ "$db" = "200" ] && [ "$au" = "200" ] && break
+  # 401 también vale: con las reglas reales cargadas la raíz está cerrada y contesta "permiso denegado", que prueba que el emulador está vivo.
+  { [ "$db" = "200" ] || [ "$db" = "401" ]; } && [ "$au" = "200" ] && break
   sleep 3
 done
-if [ "${db:-}" != "200" ] || [ "${au:-}" != "200" ]; then
+if { [ "${db:-}" != "200" ] && [ "${db:-}" != "401" ]; } || [ "${au:-}" != "200" ]; then
   echo "❌ los emuladores no arrancaron. Log en $TRABAJO/emu.log"; tail -20 "$TRABAJO/emu.log"; exit 1
 fi
 echo "→ emuladores listos (database:9000, auth:9099)"
