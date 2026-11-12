@@ -638,6 +638,10 @@ function avisosLista(){
       html: '<strong>' + n + '</strong> · ' + gl({es: 'Stock bajo mínimo', ca: 'Estoc sota mínim', en: 'Stock below minimum'}) + ' · ' + (area === 'sala' ? 'Sala' : gl({es: 'Cocina', ca: 'Cuina', en: 'Kitchen'})),
       ir: `currentFolder='${area}'; dashboardGoToStockAlerts()`});
   });
+  // Las reglas de seguridad de SU Firebase se han quedado viejas: se actualizan con el asistente paso a paso (solo el propietario).
+  if(dueno && typeof reglasAntiguas !== 'undefined' && reglasAntiguas) filas.push({id: 'reglas', icon: 'ti-shield-exclamation', warn: true,
+    html: gl({es: 'Las reglas de seguridad de tu Firebase están desactualizadas', ca: 'Les regles de seguretat del teu Firebase estan desactualitzades', en: 'Your Firebase security rules are out of date'}),
+    acciones: [[gl({es: 'Actualizar (2 min)', ca: 'Actualitzar (2 min)', en: 'Update (2 min)'}), 'cerrarAvisos(); abrirAsistenteReglas()', true]]});
   avisosDeLaApp().filter(i => i.campana && i.count > 0 && (dueno || (!i.soloDueno && !(AVISOS_SOLO_SALA.has(i.id) && areaEmp !== 'sala')))).forEach(i => {
     if(i.ocultable && vistos[i.id] === i.count) return;
     filas.push({id: i.id, icon: i.icon, warn: !!i.warn, html: '<strong>' + i.count + '</strong> · ' + i.label, ir: i.onclick, ocultable: i.ocultable, count: i.count});

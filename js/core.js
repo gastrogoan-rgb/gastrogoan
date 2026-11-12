@@ -316,7 +316,7 @@ function renderAccessSelectScreenHtml(){
     </div>
   `;
 }
-/* El código se recuerda en ESTE aparato: el último queda ya escrito y los demás salen como botones con el nombre del negocio.
+/* El código se recuerda en ESTE aparato y sale como botones con el nombre del negocio (un toque lo elige). El campo NO se rellena solo: decisión del 9/09 (el empleado elige).
    Antes solo había un <datalist> del navegador pegado al campo, que en móvil y tablet casi no se ve (y el campo arrancaba vacío):
    parecía que la app no recordaba nada. */
 function accEmpElegirCodigo(code){
@@ -347,10 +347,10 @@ function renderEmployeeAccessFormHtml(){
       </div>
       <div class="field">
         <label>${t('access.businessCode')}</label>
-        <input type="text" id="acc-emp-code" list="acc-emp-code-list" maxlength="8" value="${escapeHtml(recientes[0] || '')}" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" oninput="accEmpCodigoCambia()" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
+        <input type="text" id="acc-emp-code" list="acc-emp-code-list" maxlength="8" value="" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" oninput="accEmpCodigoCambia()" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
         <datalist id="acc-emp-code-list">${recientes.map(c => `<option value="${escapeHtml(c)}">`).join('')}</datalist>
         ${recientes.length ? `<div class="acc-biz-chips" id="acc-biz-chips" role="group" aria-label="${escapeHtml(gl({es:'Negocios recordados en este aparato', ca:'Negocis recordats en aquest aparell', en:'Businesses remembered on this device'}))}">
-          ${recientes.map(c => `<button type="button" class="acc-biz-chip${c === recientes[0] ? ' is-sel' : ''}" aria-pressed="${c === recientes[0]}" data-code="${escapeHtml(c)}" onclick="accEmpElegirCodigo(this.dataset.code)"><i class="ti ti-building-store" aria-hidden="true"></i><span class="acc-biz-n">${escapeHtml(nombres[c] || c)}</span>${nombres[c] ? `<small>${escapeHtml(c)}</small>` : ''}</button>`).join('')}
+          ${recientes.map(c => `<button type="button" class="acc-biz-chip" aria-pressed="false" data-code="${escapeHtml(c)}" onclick="accEmpElegirCodigo(this.dataset.code)"><i class="ti ti-building-store" aria-hidden="true"></i><span class="acc-biz-n">${escapeHtml(nombres[c] || c)}</span>${nombres[c] ? `<small>${escapeHtml(c)}</small>` : ''}</button>`).join('')}
           <button type="button" class="acc-biz-chip acc-biz-otro" onclick="accEmpElegirCodigo('')"><i class="ti ti-plus" aria-hidden="true"></i><span class="acc-biz-n">${escapeHtml(gl({es:'Otro negocio', ca:'Un altre negoci', en:'Another business'}))}</span></button>
         </div>` : ''}
       </div>
@@ -5247,6 +5247,173 @@ function copyFirebaseRules(){
   navigator.clipboard.writeText(FIREBASE_RULES_JSON).then(() => showToast(t('msg.rulesCopied'))).catch(() => {
     alertModal(t('msg.copyFailed'));
   });
+}
+
+/* ═══ ASISTENTE «ACTUALIZAR MIS REGLAS» (12/11, pedido del dueño) ═══
+   Cuando las reglas de seguridad del Firebase del negocio se quedan viejas (la sonda `comprobarEspejoEnNubePropia` lo detecta), antes salía un párrafo y un botón
+   «Copiar reglas». Ahora es un paso a paso de 6 pantallas, de dos minutos, que dice EXACTAMENTE qué se ve en Firebase y dónde pulsar: abrir Firebase, elegir la
+   cuenta y el proyecto, Realtime Database → Reglas, copiar, borrar todo, pegar, Publicar, y comprobar (la app lo vuelve a comprobar sola mientras se espera).
+   ⚠️ NO se enlaza al proyecto concreto sino a la portada de Firebase: se llega con la cuenta que toque y se ELIGE el proyecto, que es como el cliente lo reconoce. */
+const REGLAS_PASOS = 6;
+const FIREBASE_PORTADA_URL = 'https://console.firebase.google.com/';
+let reglasPaso = 1, reglasCopiado = false, reglasCopiaFallo = false, reglasVeredicto = null, reglasTimer = null;   // veredicto: null | 'buscando' | 'ok' | 'viejas' | 'error'
+// El nombre del proyecto de Firebase, sacado de la dirección de su base de datos (https://casapaco-default-rtdb.europe-west1.firebasedatabase.app → casapaco).
+function proyectoFirebaseDeLaNube(){
+  const cfg = typeof getCloudConfig === 'function' ? getCloudConfig() : null;
+  const m = cfg && /^https?:\/\/([^./:]+)/i.exec(cfg.databaseURL || '');
+  if(!m || !/[a-z]/i.test(m[1])) return '';
+  return m[1].replace(/-default-rtdb$/, '');
+}
+function reglasGuardarCuenta(v){
+  if(!DB.business) return;
+  DB.business.firebaseCuenta = String(v || '').trim().slice(0, 120);
+  saveDB();
+}
+function reglasCopiar(){
+  const fin = ok => { reglasCopiado = ok; reglasCopiaFallo = !ok; reglasRender(); };
+  try{ navigator.clipboard.writeText(FIREBASE_RULES_JSON).then(() => fin(true), () => fin(false)); }catch(e){ fin(false); }
+}
+function reglasIr(n){
+  reglasPaso = Math.max(1, Math.min(REGLAS_PASOS, n));
+  if(reglasPaso !== REGLAS_PASOS){ clearInterval(reglasTimer); reglasTimer = null; }
+  else if(reglasVeredicto !== 'ok'){ reglasArrancarComprobacionAuto(); }
+  reglasRender();
+}
+function reglasArrancarComprobacionAuto(){
+  clearInterval(reglasTimer);
+  // Mientras se está en el último paso, se vuelve a mirar sola cada 6 s: en cuanto el cliente pulsa «Publicar» en Firebase, aquí pasa a «Listo» sin tocar nada.
+  reglasTimer = setInterval(() => { if(!document.getElementById('reglas-wiz')){ clearInterval(reglasTimer); reglasTimer = null; return; } if(reglasPaso === REGLAS_PASOS && reglasVeredicto !== 'ok') reglasComprobar(true); }, 6000);
+}
+async function reglasComprobar(auto){
+  if(reglasVeredicto === 'buscando') return;
+  const previo = reglasVeredicto;
+  reglasVeredicto = 'buscando';
+  if(!auto || previo === null) reglasRender();
+  espejoEnNubePropia = null; esperandoVeredictoDelEspejo = false;
+  let resultado = 'error';
+  try{
+    await comprobarEspejoEnNubePropia();
+    if(!reglasAntiguas && espejoEnNubePropia === true) resultado = 'ok';
+    else if(espejoEnNubePropia === false || reglasAntiguas) resultado = lastSyncErrorCode && !/PERMISSION/i.test(String(lastSyncErrorCode)) ? 'error' : 'viejas';
+  }catch(e){ resultado = 'error'; }
+  reglasVeredicto = resultado;
+  if(resultado === 'ok'){ clearInterval(reglasTimer); reglasTimer = null; if(typeof avisosProgramar === 'function') avisosProgramar(); if(typeof renderHeader === 'function') renderHeader(); }
+  reglasRender();
+}
+function abrirAsistenteReglas(){
+  reglasPaso = 1; reglasCopiado = false; reglasCopiaFallo = false; reglasVeredicto = null; clearInterval(reglasTimer); reglasTimer = null;
+  openModal('<div id="reglas-wiz"></div>', {xl: false});
+  reglasRender();
+}
+function reglasCerrar(){ clearInterval(reglasTimer); reglasTimer = null; closeModal(); }
+// Dibujo aproximado de lo que se ve en Firebase (pestañas, cuadro de reglas, botón Publicar). Decorativo: la explicación va en el texto.
+function reglasMaqueta(resaltar){
+  const tab = (t, on) => `<span class="rw-fb-tab${on ? ' is-on' : ''}">${t}</span>`;
+  return `<div class="rw-fb" aria-hidden="true">
+    <div class="rw-fb-barra"><span class="rw-fb-pto"></span><span class="rw-fb-pto"></span><span class="rw-fb-pto"></span><span class="rw-fb-url">console.firebase.google.com</span></div>
+    <div class="rw-fb-cuerpo">
+      <div class="rw-fb-menu"><i></i><i class="${resaltar === 'menu' ? 'is-on' : ''}"></i><i></i></div>
+      <div class="rw-fb-main">
+        <div class="rw-fb-tabs">${tab(gl({es:'Datos', ca:'Dades', en:'Data'}), false)}${tab(gl({es:'Reglas', ca:'Regles', en:'Rules'}), resaltar === 'tab' || resaltar === 'editor' || resaltar === 'publicar')}${tab(gl({es:'Copias', ca:'Còpies', en:'Backups'}), false)}${tab(gl({es:'Uso', ca:'Ús', en:'Usage'}), false)}
+          <span class="rw-fb-pub${resaltar === 'publicar' ? ' is-on' : ''}">${gl({es:'Publicar', ca:'Publicar', en:'Publish'})}</span></div>
+        <div class="rw-fb-editor${resaltar === 'editor' ? ' is-on' : ''}"><code>{ "rules": {</code><code>&nbsp;&nbsp;"gastrogoan": { … }</code><code>} }</code></div>
+      </div></div></div>`;
+}
+function reglasRender(){
+  const el = document.getElementById('reglas-wiz'); if(!el) return;
+  const L = o => gl(o), N = REGLAS_PASOS;
+  const proyecto = proyectoFirebaseDeLaNube();
+  const cuenta = (DB.business && DB.business.firebaseCuenta) || '';
+  const nProy = proyecto ? `<strong class="rw-dato">${escapeHtml(proyecto)}</strong>` : `<strong>${L({es:'el que creaste al dar de alta tu negocio', ca:'el que vas crear en donar d\'alta el teu negoci', en:'the one you created when you set up your business'})}</strong>`;
+  const nCuenta = cuenta ? `<strong class="rw-dato">${escapeHtml(cuenta)}</strong>` : `<strong>${L({es:'la cuenta de Google con la que creaste tu proyecto', ca:'el compte de Google amb el qual vas crear el teu projecte', en:'the Google account you used to create your project'})}</strong>`;
+  const num = (n, txt) => `<li><span class="rw-n">${n}</span><span>${txt}</span></li>`;
+  const kbd = (a, b) => `<kbd>${a}</kbd> <span class="rw-o">${L({es:'(en Mac:', ca:'(a Mac:', en:'(on Mac:'})} <kbd>${b}</kbd>)</span>`;
+  let titulo = '', cuerpo = '', pie = '';
+  const atras = `<button type="button" class="btn" onclick="reglasIr(reglasPaso - 1)">${L({es:'Atrás', ca:'Enrere', en:'Back'})}</button>`;
+  const sig = (txt, off) => `<button type="button" class="btn btn-primary" ${off ? 'disabled' : ''} onclick="reglasIr(reglasPaso + 1)">${txt || L({es:'Siguiente', ca:'Següent', en:'Next'})}</button>`;
+  if(reglasPaso === 1){
+    titulo = L({es:'Actualiza tus reglas de seguridad', ca:'Actualitza les teves regles de seguretat', en:'Update your security rules'});
+    const gana = espejoEnNubePropia === false
+      ? L({es:'Ahora tus reservas y pedidos online pasan por el servidor compartido de GastroGoan. Con las reglas nuevas pasan por tu propia nube: más rápido y sin depender de nadie.', ca:'Ara les teves reserves i comandes en línia passen pel servidor compartit de GastroGoan. Amb les regles noves passen pel teu propi núvol: més ràpid i sense dependre de ningú.', en:'Right now your online bookings and orders go through GastroGoan\'s shared server. With the new rules they go through your own cloud: faster and independent.'})
+      : L({es:'Tu nube funciona y tus reservas llegan bien, pero te faltan dos cambios: los cobros con tarjeta se rechazarían al confirmarse, y el histórico de reservas (con nombres y teléfonos) crecería sin fin.', ca:'El teu núvol funciona i les reserves arriben bé, però et falten dos canvis: els cobraments amb targeta es rebutjarien en confirmar-se, i l\'històric de reserves (amb noms i telèfons) creixeria sense fi.', en:'Your cloud works and your bookings arrive fine, but two changes are missing: card payments would be rejected when confirmed, and the booking history (with names and phone numbers) would grow forever.'});
+    cuerpo = `<div class="rw-grande"><i class="ti ti-clock-hour-2" aria-hidden="true"></i><div><strong>${L({es:'Tarda 2 minutos', ca:'Triga 2 minuts', en:'Takes 2 minutes'})}</strong><span>${L({es:'No pierdes ningún dato. Son 6 pasos cortos y te voy diciendo qué ves y dónde pulsar.', ca:'No perds cap dada. Són 6 passos curts i et vaig dient què veus i on prémer.', en:'You lose no data. It is 6 short steps and I tell you what you see and where to click.'})}</span></div></div>
+      <p class="rw-p">${gana}</p>
+      <div class="rw-caja"><div class="rw-caja-t">${L({es:'Lo que necesitas tener a mano', ca:'El que necessites tenir a mà', en:'What you need at hand'})}</div>
+        <p>${L({es:'Entrarás en Firebase con ', ca:'Entraràs a Firebase amb ', en:'You will sign in to Firebase with '})}${nCuenta}.</p>
+        <p>${L({es:'Y abrirás el proyecto ', ca:'I obriràs el projecte ', en:'And open the project '})}${nProy}.</p>
+        <label class="rw-campo" for="rw-cuenta"><span>${L({es:'¿Con qué correo lo creaste? (opcional: así no se te olvida)', ca:'Amb quin correu el vas crear? (opcional: així no se t\'oblida)', en:'Which email did you use? (optional, so you do not forget)'})}</span>
+          <input type="email" id="rw-cuenta" value="${escapeHtml(cuenta)}" placeholder="tucorreo@gmail.com" autocomplete="off" onchange="reglasGuardarCuenta(this.value)"></label></div>`;
+    pie = `<span></span>${sig(L({es:'Empezar', ca:'Començar', en:'Start'}))}`;
+  } else if(reglasPaso === 2){
+    titulo = L({es:'Entra en Firebase', ca:'Entra a Firebase', en:'Open Firebase'});
+    cuerpo = `<button type="button" class="btn btn-primary rw-abrir" onclick="window.open('${FIREBASE_PORTADA_URL}', '_blank', 'noopener')"><i class="ti ti-external-link" aria-hidden="true"></i> ${L({es:'Abrir Firebase', ca:'Obrir Firebase', en:'Open Firebase'})}</button>
+      <p class="rw-p rw-peq">${L({es:'Se abre en otra pestaña. Esta se queda esperando: cuando acabes, vuelves aquí.', ca:'S\'obre en una altra pestanya. Aquesta es queda esperant: quan acabis, tornes aquí.', en:'It opens in another tab. This one waits: when you are done, come back here.'})}</p>
+      <ol class="rw-lista">
+        ${num(1, L({es:`Si Google te pide elegir cuenta, pulsa ${nCuenta}.`, ca:`Si Google et demana triar compte, prem ${nCuenta}.`, en:`If Google asks you to choose an account, click ${nCuenta}.`}))}
+        ${num(2, L({es:`Verás tus proyectos como tarjetas. Pulsa la que se llama ${nProy}.`, ca:`Veuràs els teus projectes com a targetes. Prem la que es diu ${nProy}.`, en:`You will see your projects as cards. Click the one called ${nProy}.`}))}
+        ${num(3, L({es:'Se abre el panel de tu proyecto. Ya estás dentro.', ca:'S\'obre el panell del teu projecte. Ja ets a dins.', en:'Your project dashboard opens. You are in.'}))}
+      </ol>
+      <p class="rw-aviso"><i class="ti ti-help-circle" aria-hidden="true"></i> ${L({es:'¿No ves tu proyecto? Casi seguro estás con otra cuenta de Google: pulsa tu foto (arriba a la derecha) y elige «Añadir cuenta» o «Cambiar de cuenta».', ca:'No veus el teu projecte? Gairebé segur que ets amb un altre compte de Google: prem la teva foto (a dalt a la dreta) i tria «Afegir compte» o «Canviar de compte».', en:'Cannot see your project? You are almost certainly on another Google account: click your photo (top right) and choose “Add account” or “Switch account”.'})}</p>`;
+    pie = `${atras}${sig(L({es:'Ya estoy dentro', ca:'Ja sóc a dins', en:'I am in'}))}`;
+  } else if(reglasPaso === 3){
+    titulo = L({es:'Ve a «Reglas»', ca:'Ves a «Regles»', en:'Go to “Rules”'});
+    cuerpo = `${reglasMaqueta('tab')}<ol class="rw-lista">
+        ${num(1, L({es:'En el menú de la <strong>izquierda</strong> busca <strong>«Base de datos y almacenamiento»</strong>. Si no ves el menú, pulsa <strong>☰</strong> arriba a la izquierda.', ca:'Al menú de l\'<strong>esquerra</strong> busca <strong>«Base de dades i emmagatzematge»</strong>. Si no veus el menú, prem <strong>☰</strong> a dalt a l\'esquerra.', en:'In the <strong>left</strong> menu find <strong>“Build”</strong>. If you cannot see the menu, click <strong>☰</strong> at the top left.'}))}
+        ${num(2, L({es:'Dentro, pulsa <strong>«Realtime Database»</strong>.', ca:'A dins, prem <strong>«Realtime Database»</strong>.', en:'Inside, click <strong>“Realtime Database”</strong>.'}))}
+        ${num(3, L({es:'Arriba del cuadro grande verás unas pestañas: Datos · Reglas · Copias de seguridad · Uso. Pulsa <strong>«Reglas»</strong>.', ca:'A dalt del quadre gran veuràs unes pestanyes: Dades · Regles · Còpies de seguretat · Ús. Prem <strong>«Regles»</strong>.', en:'Above the big box you will see tabs: Data · Rules · Backups · Usage. Click <strong>“Rules”</strong>.'}))}
+        ${num(4, L({es:'Verás un cuadro con texto parecido a código: ahí pegaremos las reglas nuevas.', ca:'Veuràs un quadre amb text semblant a codi: allà enganxarem les regles noves.', en:'You will see a box with code-like text: that is where we will paste the new rules.'}))}
+      </ol>
+      <p class="rw-aviso"><i class="ti ti-help-circle" aria-hidden="true"></i> ${L({es:'Si arriba ves varias bases de datos, elige la que termina en «-default-rtdb».', ca:'Si a dalt veus diverses bases de dades, tria la que acaba en «-default-rtdb».', en:'If you see several databases at the top, choose the one ending in “-default-rtdb”.'})}</p>`;
+    pie = `${atras}${sig(L({es:'Ya veo «Reglas»', ca:'Ja veig «Regles»', en:'I see “Rules”'}))}`;
+  } else if(reglasPaso === 4){
+    titulo = L({es:'Copia las reglas nuevas', ca:'Copia les regles noves', en:'Copy the new rules'});
+    cuerpo = `<button type="button" class="btn ${reglasCopiado ? 'is-on' : 'btn-primary'} rw-abrir" onclick="reglasCopiar()"><i class="ti ${reglasCopiado ? 'ti-check' : 'ti-copy'}" aria-hidden="true"></i> ${reglasCopiado ? L({es:'¡Copiadas!', ca:'Copiades!', en:'Copied!'}) : L({es:'Copiar las reglas nuevas', ca:'Copiar les regles noves', en:'Copy the new rules'})}</button>
+      <p class="rw-p rw-peq">${L({es:'Se copian como cuando copias un texto: no ves nada, pero quedan guardadas. No cierres esta ventana.', ca:'Es copien com quan copies un text: no veus res, però queden guardades. No tanquis aquesta finestra.', en:'They are copied like any text: you will not see anything, but they are saved. Do not close this window.'})}</p>
+      ${reglasCopiaFallo ? `<p class="rw-aviso is-ko"><i class="ti ti-alert-triangle" aria-hidden="true"></i> ${L({es:'Tu navegador no deja copiar solo. Selecciona todo el cuadro de abajo (clic dentro y Ctrl+A) y cópialo tú (Ctrl+C).', ca:'El teu navegador no deixa copiar sol. Selecciona tot el quadre de sota (clic a dins i Ctrl+A) i copia\'l tu (Ctrl+C).', en:'Your browser will not copy automatically. Select the whole box below (click inside and Ctrl+A) and copy it yourself (Ctrl+C).'})}</p>` : ''}
+      <textarea class="rw-reglas" readonly rows="6" onfocus="this.select()" aria-label="${L({es:'Reglas nuevas', ca:'Regles noves', en:'New rules'})}">${escapeHtml(FIREBASE_RULES_JSON)}</textarea>`;
+    pie = `${atras}${sig(L({es:'Ya las tengo copiadas', ca:'Ja les tinc copiades', en:'I have copied them'}), !reglasCopiado && !reglasCopiaFallo)}`;
+  } else if(reglasPaso === 5){
+    titulo = L({es:'Borra todo, pega y publica', ca:'Esborra-ho tot, enganxa i publica', en:'Delete all, paste and publish'});
+    cuerpo = `${reglasMaqueta('editor')}<ol class="rw-lista">
+        ${num(1, L({es:'Vuelve a la pestaña de Firebase, la de <strong>«Reglas»</strong>.', ca:'Torna a la pestanya de Firebase, la de <strong>«Regles»</strong>.', en:'Go back to the Firebase tab, the <strong>“Rules”</strong> one.'}))}
+        ${num(2, L({es:'Haz clic <strong>dentro del cuadro</strong> de texto, donde está el código.', ca:'Fes clic <strong>dins del quadre</strong> de text, on hi ha el codi.', en:'Click <strong>inside the text box</strong>, where the code is.'}))}
+        ${num(3, L({es:`<strong>Selecciona todo</strong>: ${kbd('Ctrl + A', '⌘ + A')}.`, ca:`<strong>Selecciona-ho tot</strong>: ${kbd('Ctrl + A', '⌘ + A')}.`, en:`<strong>Select all</strong>: ${kbd('Ctrl + A', '⌘ + A')}.`}))}
+        ${num(4, L({es:'<strong>Borra</strong> con la tecla <kbd>Suprimir</kbd> o <kbd>Borrar</kbd>. El cuadro tiene que quedar <strong>vacío</strong>.', ca:'<strong>Esborra</strong> amb la tecla <kbd>Supr</kbd> o <kbd>Esborrar</kbd>. El quadre ha de quedar <strong>buit</strong>.', en:'<strong>Delete</strong> with the <kbd>Delete</kbd> or <kbd>Backspace</kbd> key. The box must be <strong>empty</strong>.'}))}
+        ${num(5, L({es:`<strong>Pega</strong>: ${kbd('Ctrl + V', '⌘ + V')}. Aparecen las reglas nuevas.`, ca:`<strong>Enganxa</strong>: ${kbd('Ctrl + V', '⌘ + V')}. Apareixen les regles noves.`, en:`<strong>Paste</strong>: ${kbd('Ctrl + V', '⌘ + V')}. The new rules appear.`}))}
+        ${num(6, L({es:'Pulsa el botón azul <strong>«Publicar»</strong>, arriba a la derecha del cuadro. Si Firebase pregunta algo, acepta.', ca:'Prem el botó blau <strong>«Publicar»</strong>, a dalt a la dreta del quadre. Si Firebase pregunta alguna cosa, accepta.', en:'Click the blue <strong>“Publish”</strong> button, top right of the box. If Firebase asks anything, accept.'}))}
+        ${num(7, L({es:'Arriba saldrá un aviso como «Reglas publicadas». Ya está: vuelve aquí.', ca:'A dalt sortirà un avís com «Regles publicades». Ja està: torna aquí.', en:'A notice like “Rules published” appears at the top. Done: come back here.'}))}
+      </ol>`;
+    pie = `${atras}${sig(L({es:'Ya he publicado', ca:'Ja he publicat', en:'I have published'}))}`;
+  } else {
+    titulo = L({es:'Comprobando…', ca:'Comprovant…', en:'Checking…'});
+    if(reglasVeredicto === 'ok'){
+      titulo = L({es:'¡Listo!', ca:'Llest!', en:'Done!'});
+      cuerpo = `<div class="rw-ok"><i class="ti ti-circle-check" aria-hidden="true"></i><strong>${L({es:'Tus reglas están al día', ca:'Les teves regles estan al dia', en:'Your rules are up to date'})}</strong><span>${L({es:'Ya está todo: tus reservas y pedidos online, y los cobros con tarjeta, funcionan con tu propia nube. No tienes que volver a hacer nada.', ca:'Ja està tot: les teves reserves i comandes en línia, i els cobraments amb targeta, funcionen amb el teu propi núvol. No has de tornar a fer res.', en:'All set: your online bookings and orders, and card payments, work with your own cloud. You do not need to do anything again.'})}</span></div>`;
+      pie = `<span></span><button type="button" class="btn btn-primary" onclick="reglasCerrar()">${L({es:'Cerrar', ca:'Tancar', en:'Close'})}</button>`;
+    } else if(reglasVeredicto === 'viejas'){
+      titulo = L({es:'Todavía no están publicadas', ca:'Encara no estan publicades', en:'Not published yet'});
+      cuerpo = `<p class="rw-aviso"><i class="ti ti-alert-triangle" aria-hidden="true"></i> ${L({es:'Firebase todavía tiene las reglas antiguas. No pasa nada: suele ser uno de estos tres motivos. Revisa y vuelve a comprobar (esta ventana lo mira sola cada pocos segundos).', ca:'Firebase encara té les regles antigues. No passa res: sol ser un d\'aquests tres motius. Revisa i torna a comprovar (aquesta finestra ho mira sola cada pocs segons).', en:'Firebase still has the old rules. No problem: it is usually one of these three reasons. Check and try again (this window also checks on its own every few seconds).'})}</p>
+        <ol class="rw-lista">
+          ${num(1, L({es:'¿Pulsaste <strong>«Publicar»</strong>? Hasta que no lo pulsas, Firebase no guarda nada.', ca:'Vas prémer <strong>«Publicar»</strong>? Fins que no el prems, Firebase no desa res.', en:'Did you click <strong>“Publish”</strong>? Until you do, Firebase saves nothing.'}))}
+          ${num(2, L({es:'¿El cuadro tenía <strong>todo</strong> borrado antes de pegar? Si quedó texto antiguo, Firebase da error en rojo: vuelve a seleccionar todo, borra y pega.', ca:'El quadre tenia <strong>tot</strong> esborrat abans d\'enganxar? Si va quedar text antic, Firebase dóna error en vermell: torna a seleccionar-ho tot, esborra i enganxa.', en:'Was the box <strong>fully</strong> cleared before pasting? If old text remained, Firebase shows a red error: select all, delete and paste again.'}))}
+          ${num(3, L({es:'¿Estás en el <strong>proyecto correcto</strong> (' + (proyecto || 'el tuyo') + ') y en la base de datos que acaba en «-default-rtdb»?', ca:'Ets al <strong>projecte correcte</strong> (' + (proyecto || 'el teu') + ') i a la base de dades que acaba en «-default-rtdb»?', en:'Are you in the <strong>right project</strong> (' + (proyecto || 'yours') + ') and the database ending in “-default-rtdb”?'}))}
+        </ol>`;
+      pie = `<button type="button" class="btn" onclick="reglasIr(5)">${L({es:'Volver al paso 5', ca:'Tornar al pas 5', en:'Back to step 5'})}</button><button type="button" class="btn btn-primary" onclick="reglasComprobar(false)">${L({es:'Comprobar otra vez', ca:'Comprovar una altra vegada', en:'Check again'})}</button>`;
+    } else if(reglasVeredicto === 'error'){
+      titulo = L({es:'No se ha podido comprobar', ca:'No s\'ha pogut comprovar', en:'Could not check'});
+      cuerpo = `<p class="rw-aviso is-ko"><i class="ti ti-cloud-off" aria-hidden="true"></i> ${L({es:'Parece un problema de conexión (no de las reglas). Comprueba tu internet y vuelve a pulsar «Comprobar otra vez».', ca:'Sembla un problema de connexió (no de les regles). Comprova el teu internet i torna a prémer «Comprovar una altra vegada».', en:'It looks like a connection problem (not the rules). Check your internet and press “Check again”.'})}</p>`;
+      pie = `${atras}<button type="button" class="btn btn-primary" onclick="reglasComprobar(false)">${L({es:'Comprobar otra vez', ca:'Comprovar una altra vegada', en:'Check again'})}</button>`;
+    } else {
+      cuerpo = `<div class="rw-grande"><i class="ti ti-loader-2 rw-gira" aria-hidden="true"></i><div><strong>${L({es:'Comprobando tus reglas…', ca:'Comprovant les teves regles…', en:'Checking your rules…'})}</strong><span>${L({es:'Si acabas de pulsar «Publicar», puede tardar unos segundos.', ca:'Si acabes de prémer «Publicar», pot trigar uns segons.', en:'If you just clicked “Publish”, it may take a few seconds.'})}</span></div></div>`;
+      pie = `${atras}<button type="button" class="btn btn-primary" onclick="reglasComprobar(false)" ${reglasVeredicto === 'buscando' ? 'disabled' : ''}>${L({es:'Comprobar ahora', ca:'Comprovar ara', en:'Check now'})}</button>`;
+      if(reglasVeredicto === null) setTimeout(() => { if(reglasPaso === REGLAS_PASOS && reglasVeredicto === null) reglasComprobar(false); }, 400);
+    }
+  }
+  const puntos = Array.from({length: N}, (_, i) => `<i class="rw-pto${i + 1 === reglasPaso ? ' is-on' : (i + 1 < reglasPaso ? ' is-hecho' : '')}"></i>`).join('');
+  el.innerHTML = `<div class="modal-header rw-cab"><h3><i class="ti ti-shield-check" aria-hidden="true"></i> ${titulo}</h3><button class="modal-close" onclick="reglasCerrar()" aria-label="${L({es:'Cerrar', ca:'Tancar', en:'Close'})}">&times;</button></div>
+    <div class="rw-prog" role="progressbar" aria-valuemin="1" aria-valuemax="${N}" aria-valuenow="${reglasPaso}"><span>${L({es:'Paso', ca:'Pas', en:'Step'})} ${reglasPaso} ${L({es:'de', ca:'de', en:'of'})} ${N}</span><span class="rw-ptos">${puntos}</span></div>
+    <div class="rw-cuerpo">${cuerpo}</div>
+    <div class="modal-footer rw-pie">${pie}</div>`;
 }
 
 /* Paso obligatorio justo después de activar la licencia: cada negocio
@@ -11046,7 +11213,7 @@ function openCloudWizard(){
            · el espejo funciona pero le faltan los cambios recientes: todo va
              bien salvo los pagos con tarjeta y el borrado del histórico. */
         espejoEnNubePropia === false ? t('gate.oldRulesBody') : t('gate.oldRulesBodyMenor')}
-      <div class="nb-acc"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
+      <div class="nb-acc"><button class="btn btn-primary" onclick="abrirAsistenteReglas()"><i class="ti ti-shield-check"></i> ${gl({es:'Actualizar mis reglas (2 min, paso a paso)', ca:'Actualitzar les meves regles (2 min, pas a pas)', en:'Update my rules (2 min, step by step)'})}</button> <button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
     </div>` : ''}
     ${saturacionPublicaReciente ? `<div class="nb-aviso is-amber">
       <strong><i class="ti ti-users"></i> ${t('gate.saturationTitle')}</strong><br>${t('gate.saturationBody')}

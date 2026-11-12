@@ -6550,3 +6550,64 @@ small{font-size:max(.8333em, 11px)}
 .cdr-real-bt{margin:10px 18px 4px}
 .cdr-real-expl{padding:4px 18px 14px;font-size:13px;color:var(--muted);line-height:1.5}
 .cdr-real-expl p{margin:8px 0 0}
+
+
+/* Asistente «Actualizar mis reglas» */
+.rw-cab h3{display:flex;align-items:center;gap:8px}
+.rw-prog{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin:0 0 14px;font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase}
+.rw-ptos{display:inline-flex;gap:6px}
+.rw-pto{width:9px;height:9px;border-radius:50%;background:var(--border)}
+.rw-pto.is-hecho{background:var(--olive-l)}
+.rw-pto.is-on{background:var(--olive);box-shadow:0 0 0 3px rgba(74,93,78,.22)}
+.rw-cuerpo{display:flex;flex-direction:column;gap:14px;font-size:14px;line-height:1.5}
+.rw-p{margin:0}
+.rw-peq{font-size:13px;color:var(--muted)}
+.rw-grande{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--brand-cream);border:1px solid var(--border);border-radius:var(--radius)}
+.rw-grande>i{font-size:32px;color:var(--olive);flex-shrink:0}
+.rw-grande strong{display:block;font-size:16px}
+.rw-grande span{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.rw-caja{border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;background:var(--surface)}
+.rw-caja p{margin:6px 0 0}
+.rw-caja-t{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rw-dato{background:var(--brand-cream);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.rw-campo{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:13px;color:var(--muted)}
+.rw-campo input{padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:16px;color:var(--ink);background:#fff}
+.rw-abrir{min-height:52px;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:10px}
+.rw-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rw-lista li{display:flex;gap:12px;align-items:flex-start}
+.rw-n{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--olive);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.rw-lista li>span:last-child{flex:1;min-width:0;overflow-wrap:break-word}
+.rw-lista kbd{font-family:var(--mono);font-size:12px;background:#fff;border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+.rw-o{color:var(--muted);font-size:13px}
+.rw-aviso{display:flex;gap:10px;align-items:flex-start;margin:0;padding:11px 13px;background:#FBF3E4;border:1px solid #E8D5A8;border-radius:var(--radius);font-size:13px}
+.rw-aviso>i{font-size:18px;color:#8A6A1F;flex-shrink:0;margin-top:1px}
+.rw-aviso.is-ko{background:#F6E7E3;border-color:#E3B9AE}.rw-aviso.is-ko>i{color:#8A4A3B}
+.rw-reglas{width:100%;font-family:var(--mono);font-size:11.5px;line-height:1.4;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--brand-cream);color:var(--ink);resize:vertical}
+.rw-ok{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:22px 10px}
+.rw-ok>i{font-size:52px;color:var(--olive)}
+.rw-ok strong{font-size:18px}
+.rw-ok span{font-size:13.5px;color:var(--muted);max-width:360px}
+.rw-gira{animation:rw-gira 1s linear infinite}
+@keyframes rw-gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.rw-gira{animation:none}}
+.rw-pie{display:flex;justify-content:space-between;gap:10px}
+.rw-pie .btn{min-height:44px;padding:0 20px}
+/* La regla de móvil de toda la app fija todo .btn a 36,5 px con !important: los botones del asistente la vencen con otro (objetivo táctil de 44 px) */
+.rw-pie .btn,.rw-abrir.btn,#reglas-wiz .btn{min-height:44px !important;height:auto !important}
+/* Dibujo aproximado de Firebase */
+.rw-fb{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;font-size:11px;user-select:none}
+.rw-fb-barra{display:flex;align-items:center;gap:5px;padding:6px 10px;background:#EEEAE2;border-bottom:1px solid var(--border)}
+.rw-fb-pto{width:8px;height:8px;border-radius:50%;background:#C9C3B7}
+.rw-fb-url{margin-left:8px;flex:1;background:#fff;border-radius:10px;padding:2px 10px;color:var(--muted);font-size:10.5px}
+.rw-fb-cuerpo{display:flex;min-height:118px}
+.rw-fb-menu{width:34px;background:#F4F2EC;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:8px;padding:10px 8px}
+.rw-fb-menu i{height:8px;border-radius:3px;background:#D8D3C7}
+.rw-fb-menu i.is-on{background:var(--olive);box-shadow:0 0 0 3px rgba(74,93,78,.25)}
+.rw-fb-main{flex:1;padding:8px 10px;min-width:0}
+.rw-fb-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px;white-space:nowrap;overflow:hidden}
+.rw-fb-tab{color:var(--muted);padding-bottom:5px;margin-bottom:-7px}
+.rw-fb-tab.is-on{color:var(--ink);font-weight:700;border-bottom:2px solid var(--olive)}
+.rw-fb-pub{margin-left:auto;background:#3367D6;color:#fff;border-radius:5px;padding:3px 9px;font-weight:600}
+.rw-fb-pub.is-on,.rw-fb-editor.is-on{box-shadow:0 0 0 3px rgba(74,93,78,.4)}
+.rw-fb-editor{background:#FAFAF7;border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
+.rw-fb-editor code{font-family:var(--mono);font-size:10.5px;color:#555}

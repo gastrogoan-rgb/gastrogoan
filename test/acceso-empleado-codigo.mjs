@@ -1,5 +1,6 @@
 // ACCESO DE EMPLEADOS: el código de negocio se recuerda y SE VE (12/11, pedido del dueño: «una vez lo has puesto, después no sale nada para seleccionarlo»).
-// Antes solo había un <datalist> del navegador pegado al campo (casi invisible en móvil, y el campo arrancaba vacío).
+// Antes solo había un <datalist> del navegador pegado al campo (casi invisible en móvil). Ahora salen botones con el nombre del negocio (un toque lo elige).
+// ⚠️ El campo NO se rellena solo (decisión del 9/09: el empleado elige); lo vigila también codigo-negocio-recordado.mjs.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', headless:'new', args:['--no-sandbox']});
@@ -20,18 +21,19 @@ async function abrir(ancho, recientes, nombres){
 const estado = p => p.evaluate(() => ({codigo: document.getElementById('acc-emp-code').value, chips: [...document.querySelectorAll('#acc-biz-chips .acc-biz-chip')].map(b => b.innerText.replace(/\s+/g, ' ').trim()), sel: [...document.querySelectorAll('#acc-biz-chips .is-sel')].map(b => b.dataset.code)}));
 
 let p = await abrir(1280, ['CASAPAC1', 'BARLUIS2'], {CASAPAC1: 'Casa Paco', BARLUIS2: 'Bar Luis'});
-await caso('El último código ya sale escrito y los recordados salen como botones con el NOMBRE del negocio', async () => {
+await caso('Los negocios recordados salen como botones con su NOMBRE y el campo NO se rellena solo ni marca ninguno', async () => {
   const e = await estado(p);
-  assert.equal(e.codigo, 'CASAPAC1'); assert.deepEqual(e.sel, ['CASAPAC1']);
+  assert.equal(e.codigo, ''); assert.deepEqual(e.sel, []);
   assert.ok(e.chips[0].includes('Casa Paco') && e.chips[0].includes('CASAPAC1'), JSON.stringify(e.chips)); assert.ok(e.chips[1].includes('Bar Luis'));
   assert.ok(/Otro negocio/.test(e.chips[2]), JSON.stringify(e.chips));
 });
-await caso('Tocar otro negocio cambia el código, marca el botón y pasa al campo que falta', async () => {
+await caso('Tocar un negocio rellena el código, marca el botón y pasa al campo que falta', async () => {
   await p.evaluate(() => document.querySelector('#acc-biz-chips [data-code="BARLUIS2"]').click()); await w(150);
   const e = await estado(p); assert.equal(e.codigo, 'BARLUIS2'); assert.deepEqual(e.sel, ['BARLUIS2']);
   assert.equal(await p.evaluate(() => document.activeElement.id), 'acc-emp-name', 'el foco debe ir al nombre (vacío)');
 });
 await caso('«Otro negocio» vacía el código y deja escribir uno nuevo', async () => {
+  await p.evaluate(() => document.querySelector('#acc-biz-chips [data-code="CASAPAC1"]').click()); await w(100);
   await p.evaluate(() => document.querySelector('#acc-biz-chips .acc-biz-otro').click()); await w(150);
   const e = await estado(p); assert.equal(e.codigo, ''); assert.deepEqual(e.sel, []); assert.equal(await p.evaluate(() => document.activeElement.id), 'acc-emp-code');
 });
