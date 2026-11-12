@@ -3197,15 +3197,18 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .fi-meta{align-items:end;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px 14px}
 .fi-meta-c label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .fi-meta-c input,.fi-meta-c select{width:100%}
-.fi-cuerpo{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
+/* 12/11 (pedido del dueño): ingredientes A TODO ANCHO y, debajo, el paso a paso A TODO ANCHO. Dos columnas dejaban un hueco enorme
+   bajo la lista corta de ingredientes. Los ingredientes se reparten en columnas para no alargar la hoja. */
+.fi-cuerpo{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
 .fi-ancho{margin-bottom:16px}
 .fi-para{font-weight:400;color:var(--ink);letter-spacing:0;text-transform:none;font-family:inherit;margin-left:6px}
-.fi-ings{list-style:none;margin:0;padding:0;border-top:1px solid var(--hair)}
+.fi-ings{list-style:none;margin:0;padding:0;border-top:1px solid var(--hair);display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));column-gap:32px}
 .fi-ings li{display:flex;gap:12px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--hair)}
 .fi-ing-q{flex:none;min-width:84px;font-family:var(--mono);font-size:14px;font-weight:600}
 .fi-ing-q small{font-size:11px;color:var(--muted);font-weight:500}
 .fi-ing-n{flex:1;min-width:0;overflow-wrap:break-word;font-size:14px}
-.fi-ings-edit{display:flex;flex-direction:column;gap:8px}
+.fi-ings-edit{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px 16px}
+.fi-ings-edit>button{grid-column:1/-1;justify-self:start}
 .fi-ing-fila{display:flex;gap:6px;align-items:center}
 .fi-ing-fila input{flex:1;min-width:0}
 .fi-pasos{list-style:none;margin:0 0 14px;padding:0;counter-reset:paso}

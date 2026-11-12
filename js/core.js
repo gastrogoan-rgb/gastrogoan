@@ -10501,25 +10501,33 @@ async function rotarTokenMesa(tableId){
 function imprimirQrMesas(){
   const mesas = (DB.tables || []).filter(Boolean);
   if(!mesas.length) return;
-  let cambiado = false;
-  const tarjetas = mesas.map(tb => {
-    if(!tb.qrToken) cambiado = true;
-    const enlace = enlaceQrMesa(tb);
-    return `<div class="q"><img src="${escapeHtml(qrImagenUrl(enlace, 300))}" alt=""><div class="n">${escapeHtml(tb.name || '')}</div><div class="h">${escapeHtml(t('qrMesa.print.pie'))}</div></div>`;
-  }).join('');
-  if(cambiado) saveDB();
+  // enlaceQrMesa crea el token de la mesa si aún no lo tiene; si alguno era nuevo, se guarda.
+  const sinToken = mesas.some(tb => !tb.qrToken);
+  mesas.forEach(tb => enlaceQrMesa(tb));
+  if(sinToken) saveDB();
   const nombre = escapeHtml((DB.business && DB.business.name) || '');
+  const logo = DB.business && DB.business.logo;
+  const acento = (DB.business && DB.business.brandColor) || '#4A5D4E';
+  // Una tarjeta por mesa, a la medida de recortar y poner en la mesa: el nombre del local arriba, el QR bien grande, la mesa en grande y
+  // la instrucción debajo. 2 columnas × 3 filas por hoja A4 (más grande que antes: un QR pequeño cuesta de leer con el móvil).
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${nombre} · QR</title><style>
-    body{font-family:'IBM Plex Sans',Arial,sans-serif;margin:0;padding:12mm;color:#1C1A17}
-    .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8mm}
-    .q{border:1px dashed #999;padding:6mm;text-align:center;break-inside:avoid}
-    .q img{width:100%;max-width:55mm;aspect-ratio:1}
-    .n{font-size:18pt;font-weight:700;margin-top:3mm}.h{font-size:10pt;color:#555;margin-top:2mm}
-    h1{font-size:14pt;margin:0 0 6mm}
-  </style></head><body onload="setTimeout(function(){window.print()},600)"><h1>${nombre}</h1><div class="g">${tarjetas}</div></body></html>`;
+    ${ggFuentesImpresionCss()} ${GG_BARRA_IMPRESION_CSS}
+    @page{size:A4;margin:10mm}
+    *{box-sizing:border-box}
+    body{font-family:'Schibsted Grotesk',Arial,sans-serif;margin:0;color:#1C1A17;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .g{display:grid;grid-template-columns:repeat(2,1fr);gap:6mm;padding:8mm 10mm}
+    .q{border:1px dashed #9a948a;padding:6mm 6mm 5mm;text-align:center;break-inside:avoid;display:flex;flex-direction:column;align-items:center;height:81mm}
+    .loc{height:9mm;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12pt;letter-spacing:.02em;color:${acento}}
+    .loc img{max-height:9mm;max-width:46mm;object-fit:contain}
+    .q .qr{width:44mm;height:44mm;margin:2mm 0 2mm;display:block}
+    .n{font-size:20pt;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+    .h{font-size:9pt;color:#5d5850;margin-top:1.5mm;line-height:1.3}
+    @media print{.g{padding:0}}
+  </style></head><body>${ggBarraImpresionHtml()}<div class="g">${mesas.map(tb => `<div class="q"><div class="loc">${logo ? `<img src="${logo}" alt="">` : nombre}</div><img class="qr" src="${escapeHtml(qrImagenUrl(enlaceQrMesa(tb), 300))}" alt=""><div class="n">${escapeHtml(tb.name || '')}</div><div class="h">${escapeHtml(t('qrMesa.print.pie'))}</div></div>`).join('')}</div></body></html>`;
   const w = window.open('', '_blank');
   if(!w){ showToast(t('qrMesa.msg.popup')); return; }
   w.document.open(); w.document.write(html); w.document.close();
+  ggEsperarYImprimir(w);
 }
 
 /* ============================================================
@@ -12457,12 +12465,9 @@ function printViaBrowser(contenido, anchoMm, titulo, opts){
     document.body.appendChild(fr);
     const d = fr.contentWindow.document;
     d.open(); d.write(html); d.close();
-    // Un respiro para que el iframe pinte antes de pedir el diálogo: Safari
-    // imprimía una página en blanco si se llamaba a print() al instante.
-    setTimeout(() => {
-      try{ fr.contentWindow.focus(); fr.contentWindow.print(); }
-      catch(e){ console.error('Error imprimiendo con el navegador', e); showToast(t('thermal.printFailed')); }
-    }, 250);
+    // Se espera a las imágenes (logo, QR de reseña) y, además, un respiro para que el iframe pinte antes de pedir el diálogo:
+    // Safari imprimía una página en blanco si se llamaba a print() al instante.
+    ggEsperarYImprimir(fr.contentWindow, {retardo: 250, error: e => { console.error('Error imprimiendo con el navegador', e); showToast(t('thermal.printFailed')); }});
     return true;
   }catch(e){
     console.error('Error preparando la impresión del navegador', e);

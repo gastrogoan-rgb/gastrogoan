@@ -2429,11 +2429,11 @@ function printFicha(id){
       .fp-meta:last-child{border-right:0}
       .fp-meta span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65}
       .fp-meta b{font-size:16px;font-weight:700;letter-spacing:-.01em}
-      .fp-foto{width:100%;height:62mm;object-fit:cover;display:block;margin:0 0 18px}
-      .fp-cols{display:flex;gap:26px;align-items:flex-start}
-      .fp-izq{flex:0 0 38%}
-      .fp-der{flex:1;min-width:0}
-      .pr-page .fp-ings{list-style:none;margin:0;padding:0}
+      .fp-foto{width:100%;height:50mm;object-fit:cover;display:block;margin:0 0 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .fp-cols{display:block}
+      .fp-izq,.fp-der{display:block;width:100%}
+      .fp-der{margin-top:6px}
+      .pr-page .fp-ings{list-style:none;margin:0;padding:0;column-count:2;column-gap:30px}
       .fp-ings li{display:flex;gap:9px;align-items:baseline;padding:6px 0;border-bottom:1px solid #EFEBE3;break-inside:avoid}
       .fp-chk{flex:none;width:11px;height:11px;border:1.4px solid #1C1A17;transform:translateY(1px)}
       .fp-q{flex:none;min-width:62px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px}
@@ -2446,13 +2446,15 @@ function printFicha(id){
       .fp-chips span{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.05em;border:1px solid #1C1A17;padding:2px 7px}
       .fp-ojo{margin-top:7px;background:#FBF1DC;border-left:3px solid #C48A1C;padding:6px 10px;font-size:12px}
       .fp-ojo b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;color:#8A5A0F;margin-right:6px}
-      .fp-alergenos{margin-top:22px;border:1.5px solid #1C1A17;padding:10px 14px;break-inside:avoid}
-      .fp-alergenos h2{margin-top:0;border:0}
+      .fp-alergenos{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;margin:0 0 16px;border:1.5px solid #1C1A17;padding:8px 12px;break-inside:avoid}
+      .fp-alergenos h2{margin:0;border:0;padding:0;flex:none}
+      .fp-alergenos div{display:flex;flex-wrap:wrap;gap:2px 0}
       .fp-alg{display:inline-block;background:#F7E9E6;color:#8A3B2E;border:1px solid #D9A79C;font-weight:700;font-size:11.5px;padding:3px 9px;margin:2px 4px 2px 0}
       .fp-sin{color:#716C65}
     </style>
     ${printReportHeaderHtml(displayName, subtitulo)}
     <div class="fp-metas">${meta}</div>
+    <div class="fp-alergenos"><h2>${t('label.allergens')}</h2><div>${algs}</div></div>
     ${isBaseElaboration ? '' : (f.photo ? `<img class="fp-foto" src="${f.photo}" alt="${t('label.platingPhotoAlt')}">` : '')}
     <div class="fp-cols">
       <div class="fp-izq">
@@ -2466,7 +2468,6 @@ function printFicha(id){
     </div>
     ${isBaseElaboration ? '' : `<h2>${fArea==='sala' ? t('label.serviceNotes') : t('label.plating')}</h2><p style="white-space:pre-wrap">${escapeHtml(f.presentation) || t('label.notSpecified')}</p>`}
     ${bebidaImpresoHtml(f)}
-    <div class="fp-alergenos"><h2>${t('label.allergens')}</h2><div>${algs}</div></div>
   `;
   printReportWindow(displayName, body, {winSize:'width=860,height=1000'});
 }

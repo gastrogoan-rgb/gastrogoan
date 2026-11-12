@@ -5891,6 +5891,13 @@ function buildTicketText(sale, opts={}){
 // uno configurado, tabla de líneas con importes alineados, separadores
 // reales en vez de guiones, y el total destacado — antes era un volcado de
 // texto monoespaciado sin ninguna maquetación.
+// La fecha del ticket como se lee en un papel («13/11/2025 15:10»), no como la guarda la base («2025-11-13»). La hora sale de createdAt si la hay.
+function ticketFechaLegible(sale){
+  const d = sale && sale.createdAt ? new Date(sale.createdAt) : null;
+  if(d && !isNaN(d)) return d.toLocaleString(localeActual(), {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec((sale && sale.date) || '');
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : ((sale && sale.date) || '');
+}
 function buildTicketHtml(sale, opts={}){
   const b = DB.business || {};
   const tc = b.ticket || {};
@@ -5959,7 +5966,7 @@ function buildTicketHtml(sale, opts={}){
       ${(() => { const l = docFiscalLineas(sale, opts); return l.length ? `<div style="text-align:center;font-size:12px;margin-top:8px;line-height:1.5"><strong>${escapeHtml(l[0])}</strong>${l.slice(1).map(x=>'<br>'+escapeHtml(x)).join('')}</div>` : ''; })()}
       <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
       <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#555">
-        <span>${escapeHtml(sale.date||'')}</span>
+        <span>${escapeHtml(ticketFechaLegible(sale))}</span>
         <span>${escapeHtml(tipoLabel)}${sale.clienteNombre?' · '+escapeHtml(sale.clienteNombre):''}</span>
       </div>
       <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
@@ -6016,9 +6023,9 @@ function printTicket(sale, opts={}){
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title>
     <style>@page{margin:6mm} body{margin:0;padding:14px 0}</style>
     </head><body>${html}
-    <script>window.onload=function(){window.print();}<\/script>
     </body></html>`);
   win.document.close();
+  ggEsperarYImprimir(win);
 }
 
 /* ============================================================
