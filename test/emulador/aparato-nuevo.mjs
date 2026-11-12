@@ -104,7 +104,10 @@ for(const nombre of ['MÓVIL NUEVO', 'OTRO APARATO NUEVO']){
   const d = await entraUnAparatoNuevo(nombre);
   await caso(`${nombre}: entra con la cuenta y el selector muestra SOLO el negocio vivo (no el borrado)`, async () => {
     const lista = await d.page.evaluate(() => getBusinessSlots().filter(s => s.code).map(s => s.code));
-    assert.deepEqual(lista, [CODE1], 'lista del selector: ' + JSON.stringify(lista));
+    if(JSON.stringify(lista) !== JSON.stringify([CODE1])){
+      const diag = await d.page.evaluate(async () => ({login: !!getOwnerLogin(), sesion: (getAccessSession() || {}).type, error: (document.getElementById('acc-owner-error') || {}).textContent, pantalla: [...document.querySelectorAll('#access-select-screen, #business-select-screen')].map(e => e.id + ':' + (e.classList.contains('hide') ? 'oculta' : 'visible')).join(' '), slots: getBusinessSlots(), cola: ownerListOutboxLeer(), sync: await syncOwnerBusinessList().catch(e => 'ERR ' + e)}));
+      assert.fail('lista del selector: ' + JSON.stringify(lista) + ' · diagnóstico: ' + JSON.stringify(diag));
+    }
     assert.equal(await d.page.evaluate(() => !!document.querySelector('#business-select-screen:not(.hide)')), true, 'no está el selector a la vista');
   });
   await caso(`${nombre}: abre su negocio y NO pide nube, TPV virtual ni asistente inicial; ya tiene sus datos`, async () => {
