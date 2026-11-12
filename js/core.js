@@ -412,7 +412,7 @@ function enterAsOwner(){
     });
     return;
   }
-  if(continuePendingOwnerSetup()) return;
+  if(continuePendingOwnerSetup(() => { if(!continuePendingOwnerSetupSync()) showBusinessSelectScreen(); })) return;
   showBusinessSelectScreen();
   // La lista de negocios de la cuenta puede tardar en llegar: la pantalla
   // se pinta ya con lo que este dispositivo conoce y se repinta al volver.
@@ -422,6 +422,16 @@ function enterAsOwner(){
   });
 }
 
+/* «Cambia el PIN que vino con tu licencia» se ofrecía en CADA aparato nuevo (la marca de «ya se le preguntó» vive en el aparato), aunque el dueño lo
+   hubiera cambiado hacía meses. La cuenta guarda si ya se cambió (`pinCambiado`, lo pone changeOwnerAccessPin) y un aparato nuevo lo respeta. */
+async function marcarPinYaCambiadoSiLaCuentaLoDice(authKey){
+  try{
+    const app = await withTimeout(getPlatformFirebaseApp(), 8000);
+    if(!app) return;
+    const snap = await withTimeout(app.database().ref('gastrogoan/ownerAuth/' + authKey + '/pinCambiado').once('value'), 8000);
+    if(snap && snap.val() === true) localStorage.setItem(OWNER_PASS_PROMPTED_LS, '1');
+  }catch(e){ /* sin conexión: se ofrecerá como siempre */ }
+}
 async function confirmOwnerAccess(){
   const user = (document.getElementById('acc-owner-user')?.value || '').trim();
   const pin = (document.getElementById('acc-owner-pin')?.value || '').trim();
@@ -458,6 +468,7 @@ async function confirmOwnerAccess(){
   if(ok === null){ showErr('access.licenseOffline'); return; }
   if(!ok){ showErr('access.badCredentials'); return; }
   setOwnerLogin(user, authKey, pin);
+  await marcarPinYaCambiadoSiLaCuentaLoDice(authKey);   // antes de decidir si se ofrece cambiar el PIN
   initCloud();
   initPublicRequestsListener();
   checkLicenseRevocation();
@@ -494,6 +505,7 @@ async function changeOwnerAccessPin(newPin){
     const snap = await withTimeout(oldRef.once('value'), 12000);
     const payload = (snap && snap.val()) || {createdAt: Date.now()};
     payload.user = login.user; // por si el nodo viniera sin él
+    payload.pinCambiado = true;   // la cuenta ya no tiene el PIN de la compra: en un aparato nuevo no se vuelve a ofrecer cambiarlo
     await app.database().ref('gastrogoan/ownerAuth/' + newAuthKey).set(payload);
     setOwnerLogin(login.user, newAuthKey, newPin);
     try{ await oldRef.remove(); }catch(e){ console.error('No se pudo borrar la ruta antigua de la cuenta', e); }
@@ -1330,7 +1342,7 @@ function reallyRemoveBusinessSlot(slotId){
   // daría la sensación de que "no se deja borrar".
   try{
     const lic = JSON.parse(localStorage.getItem(slotLicenseKey(slotId)));
-    if(lic && lic.tenantId) unlinkBusinessFromOwnerAccount(lic.tenantId);
+    if(lic && lic.tenantId) unlinkBusinessFromOwnerAccount(lic.tenantId, slot.code || lic.code, slot.name);
   }catch(e){}
   localStorage.removeItem(slotLicenseKey(slotId));
   const remaining = slots.filter(s => s.id !== slotId);
@@ -1365,6 +1377,8 @@ function showBusinessSelectScreen(){
   if(!screen) return;
   screen.innerHTML = renderBusinessSelectScreenHtml();
   screen.classList.remove('hide');
+  const ses = typeof getAccessSession === 'function' ? getAccessSession() : null;
+  if(ses && ses.type === 'owner') refrescarListaDeNegociosSiToca();
 }
 
 /* IDs de grupos actualmente expandidos en el selector */
@@ -1708,6 +1722,7 @@ function hideBusinessSelectScreen(){
 function enterBusiness(slotId){
   if(slotId === ACTIVE_SLOT){
     hideBusinessSelectScreen();
+    if(getLicense() && negocioNecesitaHidratar()){ hidratarNegocioYContinuar(() => enterBusiness(slotId)); return; }
     const done = getLicense() && getCloudConfig();
     if(!DB.business.netlifySetupDone && !done) showNetlifySetupGate();
     else if(!getLicense()) showActivationGate();
@@ -5519,10 +5534,7 @@ function showNetlifySetupGate(){
         if(s && s.type === 'owner') showBusinessSelectScreen();
       });
     }
-    else if(!getLicense()) showActivationGate();
-    else if(!getCloudConfig()) showFirebaseSetupGate();
-    else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
-    else if(!DB.business.tourSeen) promptAppTour();
+    else seguirConfigurandoNegocio();
     return;
   }
   // A partir de aquí, hosted es siempre false (el caso hosted=true ya
@@ -5557,10 +5569,7 @@ function confirmNetlifyDone(){
   // vacío (de donde sale el canje), no el asistente de un negocio que aún
   // no existe.
   if(!ownerHasAnyBusiness()) showBusinessSelectScreen();
-  else if(!getLicense()) showActivationGate();
-  else if(!getCloudConfig()) showFirebaseSetupGate();
-  else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
-    else if(!DB.business.tourSeen) promptAppTour();
+  else seguirConfigurandoNegocio();
 }
 async function activateLicenseFromGate(){
   const code = (document.getElementById('license-code-input').value || '').trim();
@@ -5635,9 +5644,107 @@ async function activateLicenseFromGate(){
   // instrucciones para todos los negocios) — antes de esto no tenía mucho
   // sentido pedirla, ya que sin licencia no había negocio real que
   // configurar.
-  if(!getCloudConfig()) showFirebaseSetupGate();
+  seguirConfigurandoNegocio();   // comprueba antes en la nube que este negocio no estuviera ya configurado
+}
+
+/* ⚠️ UN NEGOCIO QUE YA EXISTE EN LA NUBE NO ES «NUEVO» (12/11, el caso más grave que ha contado el dueño).
+   Al entrar en el iPhone con la cuenta de siempre, el negocio —ya configurado en la tablet— pedía configurar la nube, el TPV virtual y el
+   asistente inicial. Causa: los asistentes se deciden mirando `DB.business` (netlifySetupDone, ownFirebase, extConnPromptSeen, tourSeen), y en un
+   aparato que nunca ha abierto ese negocio `DB` está VACÍO: lo real todavía está en la nube y no ha bajado cuando se decide. Peor: rellenar el asistente
+   en ese estado podía escribir encima de la configuración buena.
+   Ahora, antes de enseñar NINGÚN asistente de un negocio ya canjeado, el aparato pregunta a la nube (1) dónde vive ese negocio (tenantLookup) y
+   (2) qué banderas tiene. Si el negocio existe, se traen las banderas y no se pregunta nada. Si no se puede comprobar (sin conexión, la nube
+   tropieza), NO se enseña ningún asistente: se dice «comprobando» y se reintenta. Un negocio que de verdad es nuevo (sin referencia en la plataforma)
+   sigue su alta normal. */
+const NEGOCIO_BANDERAS = ['netlifySetupDone', 'extConnPromptSeen', 'tourSeen', 'categoryIconHintSeen'];
+const negocioHidratado = {};   // tenantId → ya se comprobó en esta sesión
+function negocioNecesitaHidratar(){
+  let lic = null;
+  try{ lic = getLicense(); }catch(e){}
+  if(!lic || !lic.tenantId || !DB || !DB.business) return false;
+  if(negocioHidratado[lic.tenantId]) return false;
+  const b = DB.business;
+  return !(b.netlifySetupDone && getCloudConfig() && b.extConnPromptSeen && b.tourSeen);
+}
+// → {estado:'error'} no se pudo comprobar · {estado:'nuevo'} la plataforma no lo conoce · {estado:'vacio', cfg} conoce la nube pero no hay datos · {estado:'existe', cfg, data}
+async function consultarNubeDelNegocio(tenantId){
+  let app = null;
+  try{ app = await withTimeout(getPlatformFirebaseApp(), 12000); }catch(e){ return {estado: 'error'}; }
+  if(!app) return {estado: 'error'};
+  let cfg = getCloudConfig();
+  if(!cfg){
+    let snap;
+    try{ snap = await withTimeout(app.database().ref('gastrogoan/tenantLookup/' + tenantId).once('value'), 12000); }catch(e){ return {estado: 'error'}; }
+    if(snap === null) return {estado: 'error'};   // no contestó a tiempo
+    cfg = snap.val();
+    if(!cfg || !cfg.apiKey || !cfg.databaseURL) return {estado: 'nuevo'};
+  }
+  let data;
+  try{
+    data = await Promise.race([fetchRemoteTenantDB(tenantId, cfg), new Promise(res => setTimeout(() => res(undefined), 20000))]);
+  }catch(e){ return {estado: 'error'}; }
+  if(data === undefined) return {estado: 'error'};
+  return data ? {estado: 'existe', cfg, data} : {estado: 'vacio', cfg};
+}
+function aplicarNegocioDeLaNube(r){
+  if(!r || (r.estado !== 'existe' && r.estado !== 'vacio')) return;
+  const b = DB.business;
+  if(!getCloudConfig() && r.cfg) b.ownFirebase = {apiKey: r.cfg.apiKey, databaseURL: r.cfg.databaseURL};
+  if(r.estado === 'existe'){
+    const rb = (r.data && r.data.business) || {};
+    NEGOCIO_BANDERAS.forEach(f => { if(rb[f] && !b[f]) b[f] = rb[f]; });
+    if(!b.name && rb.name) b.name = rb.name;
+  }
+  try{ saveDB(); }catch(e){}
+}
+function mostrarComprobandoNegocio(modo, reintentar){
+  let el = document.getElementById('comprobando-negocio');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'comprobando-negocio';
+    el.setAttribute('role', 'alert');
+    el.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg,#FAF8F4)';
+    document.body.appendChild(el);
+  }
+  const ok = modo !== 'error';
+  el.innerHTML = `<div style="max-width:380px;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center">
+    <i class="ti ${ok ? 'ti-cloud-search' : 'ti-cloud-off'}" style="font-size:40px;color:${ok ? 'var(--olive,#4A5D4E)' : '#8A4A3B'}" aria-hidden="true"></i>
+    <strong style="font-size:17px">${gl(ok ? {es: 'Comprobando tu negocio en la nube…', ca: 'Comprovant el teu negoci al núvol…', en: 'Checking your business in the cloud…'} : {es: 'No se ha podido comprobar tu negocio', ca: 'No s\'ha pogut comprovar el teu negoci', en: 'We could not check your business'})}</strong>
+    <span style="font-size:13.5px;color:var(--muted,#6b6b66);line-height:1.45">${gl(ok ? {es: 'Un momento: se trae la configuración que ya tienes para no pedirte nada otra vez.', ca: 'Un moment: es porta la configuració que ja tens per no demanar-te res una altra vegada.', en: 'One moment: your existing setup is being loaded so you are not asked again.'} : {es: 'Hace falta conexión para traer la configuración de tu negocio desde la nube. No se ha tocado nada.', ca: 'Cal connexió per portar la configuració del teu negoci des del núvol. No s\'ha tocat res.', en: 'A connection is needed to load your business setup from the cloud. Nothing has been changed.'})}</span>
+    ${ok ? '' : `<button type="button" class="btn btn-primary" id="comprobando-negocio-reintentar" style="min-height:44px;padding:0 22px">${gl({es: 'Reintentar', ca: 'Reintentar', en: 'Retry'})}</button><button type="button" class="btn" id="comprobando-negocio-salir" style="min-height:44px;padding:0 22px">${gl({es: 'Cerrar sesión', ca: 'Tancar sessió', en: 'Log out'})}</button>`}
+  </div>`;
+  if(!ok){
+    const b = document.getElementById('comprobando-negocio-reintentar'); if(b) b.onclick = () => { if(reintentar) reintentar(); };
+    const x = document.getElementById('comprobando-negocio-salir'); if(x) x.onclick = () => { ocultarComprobandoNegocio(); if(typeof logoutAccessSession === 'function') logoutAccessSession(); };
+  }
+}
+function ocultarComprobandoNegocio(){ const el = document.getElementById('comprobando-negocio'); if(el) el.remove(); }
+let hidratandoNegocio = false;
+async function hidratarNegocioYContinuar(alTerminar){
+  if(hidratandoNegocio) return;
+  let lic = null; try{ lic = getLicense(); }catch(e){}
+  if(!lic || !lic.tenantId){ if(alTerminar) alTerminar(); return; }
+  hidratandoNegocio = true;
+  mostrarComprobandoNegocio('buscando');
+  const r = await consultarNubeDelNegocio(lic.tenantId);
+  hidratandoNegocio = false;
+  if(r.estado === 'error'){ mostrarComprobandoNegocio('error', () => hidratarNegocioYContinuar(alTerminar)); return; }
+  aplicarNegocioDeLaNube(r);
+  negocioHidratado[lic.tenantId] = true;
+  ocultarComprobandoNegocio();
+  if(alTerminar) alTerminar(); else continuePendingOwnerSetupSync();
+}
+// El siguiente paso del alta de un negocio YA canjeado, comprobando antes en la nube que no estuviera ya configurado.
+function seguirConfigurandoNegocio(){
+  if(getLicense() && negocioNecesitaHidratar()){ hidratarNegocioYContinuar(); return; }
+  if(!getLicense()) showActivationGate();
+  else if(!getCloudConfig()) showFirebaseSetupGate();
   else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
-    else if(!DB.business.tourSeen) promptAppTour();
+  else if(!DB.business.tourSeen) promptAppTour();
+}
+function continuePendingOwnerSetup(alTerminar){
+  if(negocioNecesitaHidratar()){ hidratarNegocioYContinuar(alTerminar); return true; }
+  return continuePendingOwnerSetupSync();
 }
 
 // Retoma, en orden, cualquier paso de la configuración inicial de un
@@ -5647,7 +5754,7 @@ async function activateLicenseFromGate(){
 // guardada, por si la sesión anterior se cerró a media configuración.
 // Devuelve true si mostró algún paso pendiente (y por tanto no hay que
 // continuar con el arranque normal de la app).
-function continuePendingOwnerSetup(){
+function continuePendingOwnerSetupSync(){
   // Lo primero de todo, antes incluso del resto de la configuración
   // inicial: si acaba de entrar por primera vez, se le anima a cambiar el
   // PIN que venía con su cuenta justo al entrar, no al final del todo.
@@ -5687,7 +5794,7 @@ function continuePendingOwnerSetup(){
 
    El selector vacío, con su botón de canjear, es lo que toca ahí. */
 function reanudarAltaDelPropietario(){
-  if(continuePendingOwnerSetup()) return;
+  if(continuePendingOwnerSetup(() => { if(!continuePendingOwnerSetupSync()) showBusinessSelectScreen(); })) return;
   showBusinessSelectScreen();
 }
 
@@ -8706,43 +8813,99 @@ async function verifyOwnerAccountOnPlatform(authKey){
     return null;
   }
 }
+/* ⚠️ LA LISTA DE NEGOCIOS DE LA CUENTA TIENE QUE SER IGUAL EN TODOS LOS APARATOS (12/11, el caso más grave que ha contado el dueño).
+   Un negocio borrado en la tablet seguía saliendo en el iPhone. Causas:
+   · Quitar un negocio se hacía con un `remove()` lanzado y olvidado (`.catch(console.error)`): sin conexión, o con la nube
+     tropezando, el borrado no llegaba NUNCA y nadie se enteraba. Cualquier otro aparato lo volvía a traer.
+   · Y como solo se QUITABA de la nube, un aparato que aún lo tenía no tenía forma de saber que se había borrado.
+   Ahora:
+   · Cada altura/baja se APUNTA en una cola del aparato (`OWNER_LIST_OUTBOX_LS`) antes de intentarse, y solo sale de la cola cuando la nube la ha
+     confirmado. Se reintenta al arrancar, al volver la conexión y al sincronizar la lista.
+   · Un borrado deja una LÁPIDA (`deleted:true`) en lugar de quitar el nodo, y cada aparato que la lee quita ese negocio de su lista.
+   · Volver a canjear el mismo código lo reactiva (la última operación sobre un negocio manda). */
+const OWNER_LIST_OUTBOX_LS = 'gastrogoan_owner_list_outbox';
+function ownerListOutboxLeer(){
+  try{ const l = JSON.parse(localStorage.getItem(OWNER_LIST_OUTBOX_LS) || '[]'); return Array.isArray(l) ? l : []; }
+  catch(e){ return []; }
+}
+function ownerListOutboxEscribir(l){ try{ localStorage.setItem(OWNER_LIST_OUTBOX_LS, JSON.stringify(l)); }catch(e){} }
+function ownerListOutboxPoner(op){
+  // La última operación sobre un negocio es la que vale: borrar y volver a canjear = alta, y al revés.
+  const l = ownerListOutboxLeer().filter(x => !(x.authKey === op.authKey && x.tenantId === op.tenantId));
+  l.push(op);
+  ownerListOutboxEscribir(l);
+  vaciarOwnerListOutbox();
+}
+let ownerListVaciando = null;
+function vaciarOwnerListOutbox(){
+  if(ownerListVaciando) return ownerListVaciando;
+  // ⚠️ Con la cola vacía se sale AQUÍ, antes de crear nada: si la salida fuera dentro de la función asíncrona, su `finally` correría antes de que
+  // la promesa se asignara al cerrojo y este se quedaba puesto para siempre (así ocurrió en la primera versión: la cola no volvía a vaciarse jamás).
+  if(!ownerListOutboxLeer().length) return Promise.resolve();
+  const trabajo = (async () => {
+    try{
+      const app = await getPlatformFirebaseApp();
+      if(!app) return;
+      for(const op of ownerListOutboxLeer()){
+        const ref = app.database().ref('gastrogoan/ownerAuth/' + op.authKey + '/businesses/' + op.tenantId);
+        const valor = op.op === 'unlink'
+          ? {code: op.code || '', name: op.name || '', deleted: true, deletedAt: op.ts}
+          : {code: op.code, name: op.name || ''};
+        const hecho = await withTimeout(ref.set(valor).then(() => true), 12000);   // null = no contestó a tiempo
+        if(hecho === true) ownerListOutboxEscribir(ownerListOutboxLeer().filter(x => !(x.authKey === op.authKey && x.tenantId === op.tenantId && x.ts === op.ts)));
+      }
+    }catch(e){
+      console.error('No se pudo actualizar la lista de negocios de la cuenta (se reintentará)', e);
+    }
+  })();
+  ownerListVaciando = trabajo.then(() => { ownerListVaciando = null; });
+  return ownerListVaciando;
+}
+if(typeof window !== 'undefined') window.addEventListener('online', () => { vaciarOwnerListOutbox(); });
+
 // Añade (o actualiza el nombre de) un negocio en la lista de la cuenta.
 function linkBusinessToOwnerAccount(tenantId, code, name){
   const authKey = getOwnerAuthKey();
-  if(!authKey || !tenantId) return;
-  getPlatformFirebaseApp().then(app => {
-    if(!app) return;
-    app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses/' + tenantId).set({
-      code, name: name || ''
-    }).catch(e => console.error('Error vinculando el negocio a la cuenta', e));
-  }).catch(()=>{});
+  if(!authKey || !tenantId || !code) return;
+  ownerListOutboxPoner({op: 'link', authKey, tenantId, code, name: name || '', ts: Date.now()});
 }
-function unlinkBusinessFromOwnerAccount(tenantId){
+function unlinkBusinessFromOwnerAccount(tenantId, code, name){
   const authKey = getOwnerAuthKey();
   if(!authKey || !tenantId) return;
-  getPlatformFirebaseApp().then(app => {
-    if(!app) return;
-    app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses/' + tenantId).remove()
-      .catch(e => console.error('Error desvinculando el negocio de la cuenta', e));
-  }).catch(()=>{});
+  ownerListOutboxPoner({op: 'unlink', authKey, tenantId, code: code || '', name: name || '', ts: Date.now()});
 }
 // Tras entrar como propietario, trae los negocios de la cuenta que este
 // dispositivo todavía no conozca y los da de alta como "fichas" ligeras
 // (código + licencia), sin descargar sus datos: de eso ya se encarga la
 // sincronización normal en cuanto se entre de verdad en cada uno.
+// Y quita los que se borraron desde otro aparato (lápida). Devuelve true si la lista de ESTE aparato cambió.
 async function syncOwnerBusinessList(){
   const authKey = getOwnerAuthKey();
-  if(!authKey) return;
+  if(!authKey) return false;
   try{
+    // Primero lo propio que quedara pendiente (un borrado hecho sin conexión), para no leer una lista que ya está vieja.
+    await vaciarOwnerListOutbox();
     const app = await getPlatformFirebaseApp();
-    if(!app) return;
+    if(!app) return false;
     const bizSnap = await app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses').once('value');
     const businesses = bizSnap.val() || {};
-    const slots = getBusinessSlots();
+    let slots = getBusinessSlots();
     let changed = false;
     const me = currentOwnerId();
+    // Lo que he borrado/añadido aquí y aún no ha llegado a la nube manda sobre lo que se lea.
+    const pendientes = new Map(ownerListOutboxLeer().filter(x => x.authKey === authKey).map(x => [x.tenantId, x.op]));
+    const quitados = [];
     Object.entries(businesses).forEach(([tId, info]) => {
       if(!info || !info.code) return;
+      const op = pendientes.get(tId);
+      if(info.deleted === true){
+        if(op === 'link') return;   // lo acabo de volver a canjear aquí: la lápida es anterior
+        const local = slots.find(s => s.code === info.code && (!me || !s.ownerId || s.ownerId === me));
+        // El negocio abierto ahora mismo no se quita bajo los pies de nadie: se quita cuando deje de estar activo.
+        if(local && local.id !== ACTIVE_SLOT) quitados.push(local);
+        return;
+      }
+      if(op === 'unlink') return;   // lo borré aquí y la nube aún no lo sabe: no se vuelve a traer
       const existente = slots.find(s => s.code === info.code);
       if(existente){
         // Ya está en este aparato. Si figuraba a nombre de otro (marca mal
@@ -8755,10 +8918,33 @@ async function syncOwnerBusinessList(){
       localStorage.setItem(slotLicenseKey(newId), JSON.stringify({code: info.code, tenantId: tId}));
       changed = true;
     });
-    if(changed) saveBusinessSlots(slots);
+    if(quitados.length){
+      const ids = new Set(quitados.map(q => q.id));
+      quitados.forEach(q => {
+        try{ indexedDB.deleteDatabase(slotIdbName(q.id)); }catch(e){}
+        localStorage.removeItem(slotLicenseKey(q.id));
+      });
+      slots = slots.filter(x => !ids.has(x.id));
+      changed = true;
+      if(typeof showToast === 'function') showToast(gl({es: quitados.length === 1 ? 'Se quitó «' + quitados[0].name + '»: lo borraste desde otro dispositivo.' : 'Se quitaron ' + quitados.length + ' negocios que borraste desde otro dispositivo.', ca: quitados.length === 1 ? 'S\'ha tret «' + quitados[0].name + '»: el vas esborrar des d\'un altre dispositiu.' : 'S\'han tret ' + quitados.length + ' negocis que vas esborrar des d\'un altre dispositiu.', en: quitados.length === 1 ? '“' + quitados[0].name + '” was removed: you deleted it from another device.' : quitados.length + ' businesses you deleted from another device were removed.'}), 6000);
+    }
+    if(changed) saveBusinessSlots(slots.length ? slots : [{id:'default', name:'Mi negocio'}]);
+    return changed;
   }catch(e){
     console.error('Error sincronizando la lista de negocios del propietario', e);
+    return false;
   }
+}
+// Al abrir el selector se vuelve a mirar la lista de la cuenta (cada 30 s como mucho): un negocio añadido o borrado en otro aparato
+// aparece o desaparece sin tener que cerrar sesión.
+let listaNegociosUltimaConsulta = 0;
+function refrescarListaDeNegociosSiToca(){
+  if(Date.now() - listaNegociosUltimaConsulta < 30000) return;
+  listaNegociosUltimaConsulta = Date.now();
+  syncOwnerBusinessList().then(cambio => {
+    const s = getAccessSession();
+    if(cambio && s && s.type === 'owner' && !document.getElementById('business-select-screen').classList.contains('hide')) showBusinessSelectScreen();
+  });
 }
 
 // Un dispositivo puede tener el negocio dado de alta y aun así no saber a
@@ -8792,6 +8978,7 @@ function reintentarLookupDeNube(tenantId){
   }, espera);
 }
 function initCloud(){
+  vaciarOwnerListOutbox();   // lo que quedara por contar a la cuenta (un negocio borrado sin conexión…)
   cloudConfig = getCloudConfig();
   if(!cloudConfig){
     const tId = getTenantId();

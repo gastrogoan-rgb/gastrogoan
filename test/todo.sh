@@ -188,6 +188,7 @@ lanzar; node test/chat-avisos.mjs > "$SALIDA/chatavisos.txt" 2>&1 & P181=$!
 lanzar; node test/avisos-campana.mjs > "$SALIDA/avisoscampana.txt" 2>&1 & P182=$!
 lanzar; node test/avisos-empleado.mjs > "$SALIDA/avisosempleado.txt" 2>&1 & P183=$!
 lanzar; node test/acceso-empleado-codigo.mjs > "$SALIDA/accempcodigo.txt" 2>&1 & P184=$!
+lanzar; node test/sync-negocios.mjs > "$SALIDA/syncnegocios.txt" 2>&1 & P185=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -406,5 +407,6 @@ espera $P181 "Chat: un mensaje de otro aparato enciende el aviso, se resalta com
 espera $P182 "Campana de avisos: vacaciones y cambios de turno con Aceptar/Rechazar, reservas y pedidos web, informativos con «Visto», el empleado no ve lo del dueño, también desde la nube y en móvil" "$SALIDA/avisoscampana.txt" "todos los casos pasaron"
 espera $P183 "Avisos al empleado (respuesta a vacaciones y cambios de turno, mensajes directos) y mesas a cargo: selector por zona/mesa, Mis mesas del TPV y ayuda en mesas de compañeros sin bloqueo" "$SALIDA/avisosempleado.txt" "todos los casos pasaron"
 espera $P184 "Acceso de empleados: el código de negocio se recuerda y se ve (relleno + botones con el nombre, Otro negocio, móvil)" "$SALIDA/accempcodigo.txt" "todos los casos pasaron"
+espera $P185 "Sync de negocios entre aparatos: un negocio ya configurado no pide asistentes en un aparato nuevo, sin conexión no pregunta nada, los borrados llegan a todos (lápida + cola de reintentos) y el PIN ya cambiado no se vuelve a ofrecer" "$SALIDA/syncnegocios.txt" "todos los casos pasaron"
 
 exit $FALLOS
