@@ -560,10 +560,32 @@ function panelRender(){
    El propietario ve todo; el empleado, solo lo operativo (no las aprobaciones, el dinero ni los precios). */
 const AVISOS_VISTOS_LS = 'gastrogoan_avisos_vistos';
 function avisosVistosLeer(){ try{ return JSON.parse(localStorage.getItem(AVISOS_VISTOS_LS) || '{}') || {}; }catch(e){ return {}; } }
+/* Stock bajo de UN área. El Panel cuenta solo la del área en que estás (currentArea); la campana las cuenta las dos, porque un aviso
+   no puede depender de en qué carpeta estés: el dueño en Sala no se enteraba de que se acababa el fondo de Cocina. */
+function avisosStockBajo(area){
+  const ing = (DB.ingredients || []).filter(i => (i.area || 'cocina') === area && i.activo !== false && getStockEntry(i.id).qty < getStockEntry(i.id).min).length;
+  const elab = (DB.elaboraciones || []).filter(e => (e.area || 'cocina') === area && (e.qty || 0) < (e.min || 0)).length;
+  return ing + elab;
+}
+/* Qué ve un EMPLEADO: solo lo de su área. Sala trabaja con TPV y Reservas; el stock es el de su área; lo demás (pedidos a proveedor,
+   temperaturas, mantenimiento) existe en las dos carpetas. El propietario lo ve todo. */
+const AVISOS_SOLO_SALA = new Set(['web', 'reservas', 'incidencias']);
+function avisosAreaDeSesion(){ const s = typeof getAccessSession === 'function' ? getAccessSession() : null; return s && s.area ? s.area : null; }
 function avisosLista(){
   const dueno = typeof isOwnerSession === 'function' && isOwnerSession();
+  const areaEmp = dueno ? null : avisosAreaDeSesion();
   const vistos = avisosVistosLeer();
   const filas = [];
+  if(!dueno){
+    // Un compañero te pide cambiar un turno: se contesta aquí mismo.
+    const yo = typeof loggedInEmployeeId === 'function' ? loggedInEmployeeId() : null;
+    if(yo != null) (DB.turnoSwapRequests || []).filter(r => r.toEmployeeId === yo && r.status === 'pending_peer').forEach(r => {
+      const de = (DB.employees || []).find(e => e.id === r.fromEmployeeId), turno = (DB.turnos || []).find(x => x.id === r.fromTurnoId);
+      filas.push({id: 'swapPeer' + r.id, icon: 'ti-replace', warn: true,
+        html: t('swap.incomingLine').replace('${name}', escapeHtml(de ? de.name : '?')).replace('${date}', escapeHtml(turno ? turno.fecha : '?')),
+        acciones: [[t('common.accept'), `respondTurnoSwapRequest(${r.id}, true)`, true], [t('common.reject'), `respondTurnoSwapRequest(${r.id}, false)`]]});
+    });
+  }
   if(dueno){
     (DB.vacationRequests || []).filter(r => r.status === 'pending').forEach(r => {
       const emp = (DB.employees || []).find(e => e.id === r.employeeId);
@@ -579,7 +601,14 @@ function avisosLista(){
         acciones: [[t('common.accept'), `ownerApproveTurnoSwap(${r.id}, true)`, true], [t('common.reject'), `ownerApproveTurnoSwap(${r.id}, false)`]]});
     });
   }
-  avisosDeLaApp().filter(i => i.campana && i.count > 0 && (dueno || !i.soloDueno)).forEach(i => {
+  ['cocina', 'sala'].forEach(area => {
+    if(!dueno && areaEmp !== area) return;
+    const n = avisosStockBajo(area);
+    if(n > 0) filas.push({id: 'stock' + area, icon: 'ti-alert-triangle', warn: true, count: n,
+      html: '<strong>' + n + '</strong> · ' + gl({es: 'Stock bajo mínimo', ca: 'Estoc sota mínim', en: 'Stock below minimum'}) + ' · ' + (area === 'sala' ? 'Sala' : gl({es: 'Cocina', ca: 'Cuina', en: 'Kitchen'})),
+      ir: `currentFolder='${area}'; dashboardGoToStockAlerts()`});
+  });
+  avisosDeLaApp().filter(i => i.campana && i.count > 0 && (dueno || (!i.soloDueno && !(AVISOS_SOLO_SALA.has(i.id) && areaEmp !== 'sala')))).forEach(i => {
     if(i.ocultable && vistos[i.id] === i.count) return;
     filas.push({id: i.id, icon: i.icon, warn: !!i.warn, html: '<strong>' + i.count + '</strong> · ' + i.label, ir: i.onclick, ocultable: i.ocultable, count: i.count});
   });

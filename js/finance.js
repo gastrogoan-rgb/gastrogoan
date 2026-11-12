@@ -1202,13 +1202,13 @@ function avisosDeLaApp(){
   ];
 
   /* Qué pasa de cada aviso en la CAMPANA de la cabecera (js/panel.js, «AVISOS»): c = sale en la campana, d = solo el propietario,
-     o = informativo (se puede marcar como visto). Lo que no está aquí (mesas abiertas, repartos, fichados, reservas de hoy y de
+     o = se puede marcar como visto (informativo, o que dura días como las subidas de precio). Lo que no está aquí (mesas abiertas, repartos, fichados, reservas de hoy y de
      mañana, y los turnos/vacaciones, que la campana pinta uno a uno con sus botones) es ESTADO del Panel, no una novedad. */
   const META = {
     'ti-world': {id:'web', c:1}, 'ti-calendar-question': {id:'reservas', c:1}, 'ti-message-exclamation': {id:'incidencias', c:1},
-    'ti-temperature': {id:'temperaturas', c:1}, 'ti-truck-delivery': {id:'pedidosProv', c:1}, 'ti-alert-triangle': {id:'stock', c:1},
+    'ti-temperature': {id:'temperaturas', c:1}, 'ti-truck-delivery': {id:'pedidosProv', c:1}, 'ti-alert-triangle': {id:'stock'},   // el stock de la campana se cuenta por ÁREA (js/panel.js), no solo la del Panel
     'ti-tool': {id:'mantenimiento', c:1}, 'ti-bug': {id:'plagas', c:1},
-    'ti-cake': {id:'cumples', c:1, d:1, o:1}, 'ti-credit-card-off': {id:'pagosSinCasar', c:1, d:1}, 'ti-trending-up': {id:'subidas', c:1, d:1},
+    'ti-cake': {id:'cumples', c:1, d:1, o:1}, 'ti-credit-card-off': {id:'pagosSinCasar', c:1, d:1}, 'ti-trending-up': {id:'subidas', c:1, d:1, o:1},
     'ti-trending-down': {id:'bajadas', c:1, d:1, o:1}, 'ti-calendar-repeat': {id:'coach', c:1, d:1}, 'ti-file-invoice': {id:'facturas', c:1, d:1},
     'ti-cash-register': {id:'caja', c:1, d:1}
   };
