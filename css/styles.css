@@ -6526,3 +6526,9 @@ small{font-size:max(.8333em, 11px)}
   .app-header .hdr-divider{display:none}
   .app-header{column-gap:2px}
 }
+
+
+/* Distribución › mesas a cargo de un camarero */
+.dp-ayuda-mesas{font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.4}
+.dp-mesas-zona .es-tit{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dp-chip .dp-otros{font-size:11px;opacity:.75;font-weight:400}

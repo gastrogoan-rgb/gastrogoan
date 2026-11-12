@@ -576,6 +576,36 @@ function avisosLista(){
   const areaEmp = dueno ? null : avisosAreaDeSesion();
   const vistos = avisosVistosLeer();
   const filas = [];
+  /* Mensajes directos dueño ↔ empleado (chat `dm:<id>`): al dueño le sale quién le ha escrito; al empleado, que el jefe le ha escrito. */
+  if(dueno){
+    (DB.employees || []).filter(e => e.active !== false).forEach(e => {
+      const n = directChatUnreadCount(e.id, true);
+      if(n > 0) filas.push({id: 'dm' + e.id, icon: 'ti-message', warn: true, count: n, html: '<strong>' + escapeHtml(e.name) + '</strong> ' + gl({es: 'te ha escrito', ca: 't\'ha escrit', en: 'sent you a message'}) + (n > 1 ? ' (' + n + ')' : ''), ir: `openEmployeeDirectChat(${JSON.stringify(e.id)}, true)`});
+    });
+  } else {
+    const yoDm = typeof loggedInEmployeeId === 'function' ? loggedInEmployeeId() : null;
+    if(yoDm != null){
+      const n = directChatUnreadCount(yoDm, false);
+      if(n > 0) filas.push({id: 'dmJefe', icon: 'ti-message', warn: true, count: n, html: gl({es: 'El jefe te ha escrito', ca: 'El cap t\'ha escrit', en: 'The boss sent you a message'}) + (n > 1 ? ' (' + n + ')' : ''), ir: `openEmployeeDirectChat(${JSON.stringify(yoDm)}, false)`});
+    }
+  }
+  if(!dueno){
+    // La respuesta a lo que PEDÍ: vacaciones y cambios de turno decididos en los últimos 14 días (se quitan con «Visto»).
+    const yo0 = typeof loggedInEmployeeId === 'function' ? loggedInEmployeeId() : null;
+    const desde = Date.now() - 14 * 86400000;
+    const reciente = r => r.decidedAt && new Date(r.decidedAt).getTime() >= desde;
+    const decision = (id, icon, html, ok) => { if(vistos[id] !== 1) filas.push({id, icon, warn: !ok, count: 1, ocultable: true, html}); };
+    if(yo0 != null){
+      (DB.vacationRequests || []).filter(r => r.employeeId === yo0 && (r.status === 'approved' || r.status === 'rejected') && reciente(r)).forEach(r => {
+        const ok = r.status === 'approved';
+        decision('vacRes' + r.id, ok ? 'ti-beach' : 'ti-beach-off', gl({es: 'Tus vacaciones del ' + r.fromDate + ' al ' + r.toDate + ': <strong>' + (ok ? 'aprobadas' : 'rechazadas') + '</strong>', ca: 'Les teves vacances del ' + r.fromDate + ' al ' + r.toDate + ': <strong>' + (ok ? 'aprovades' : 'rebutjades') + '</strong>', en: 'Your holiday from ' + r.fromDate + ' to ' + r.toDate + ': <strong>' + (ok ? 'approved' : 'declined') + '</strong>'}), ok);
+      });
+      (DB.turnoSwapRequests || []).filter(r => r.fromEmployeeId === yo0 && (r.status === 'approved' || r.status === 'rejected') && reciente(r)).forEach(r => {
+        const ok = r.status === 'approved', turno = (DB.turnos || []).find(x => x.id === r.fromTurnoId), fecha = turno ? turno.fecha : '?';
+        decision('swapRes' + r.id, 'ti-replace', gl({es: 'Tu cambio de turno del ' + fecha + ': <strong>' + (ok ? 'aprobado' : 'rechazado') + '</strong>', ca: 'El teu canvi de torn del ' + fecha + ': <strong>' + (ok ? 'aprovat' : 'rebutjat') + '</strong>', en: 'Your shift swap on ' + fecha + ': <strong>' + (ok ? 'approved' : 'declined') + '</strong>'}), ok);
+      });
+    }
+  }
   if(!dueno){
     // Un compañero te pide cambiar un turno: se contesta aquí mismo.
     const yo = typeof loggedInEmployeeId === 'function' ? loggedInEmployeeId() : null;

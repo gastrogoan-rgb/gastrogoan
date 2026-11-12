@@ -10,12 +10,26 @@
    Lo que NO cambia: las comandas, el cobro, el reparto, las cuentas.
    ============================================================ */
 
+let tpvFiltroInicialAplicado = false;   // un camarero con mesas asignadas arranca en «Mis mesas» (una vez; luego manda lo que elija)
 let tpvMesaFiltro = 'todas';   // 'todas' | 'libres' | 'ocupadas' | 'servidas' | 'mias'
 let tpvMesaBusca = '';
 let tpvZonaSel = '';           // '' = todas las zonas
 
 function tpvEmpleadoSesion(){
   try{ const s = getAccessSession(); return s && s.type === 'employee' ? s.employeeId : null; }catch(e){ return null; }
+}
+/* «Mis mesas» = las que me han asignado en Distribución (haya o no pedido) o en las que soy el camarero. Quien no es un empleado (el propietario)
+   ve como suyas las que abrió él o no tienen camarero. Antes solo contaban las que ya tenían un pedido mío abierto. */
+function tpvEsMiaLaMesa(table, est){
+  const yo = tpvEmpleadoSesion();
+  if(!yo) return !!(est.order && (est.order.openedByOwner || !est.order.camareroId));
+  if(est.order && est.order.camareroId === yo) return true;
+  return typeof distEmpTieneMesa === 'function' && distEmpTieneMesa(yo, table.id);
+}
+function tpvTengoMesasAsignadas(){
+  const yo = tpvEmpleadoSesion(); if(!yo) return false;
+  const d = DB.workDistribution && DB.workDistribution[yo];
+  return !!(d && Array.isArray(d.mesas) && d.mesas.length);
 }
 function tpvNombreMesa(table, order){
   const baseName = table.zona ? (table.name || '').replace(/\s*\([^)]*\)\s*$/, '') : table.name;
@@ -156,7 +170,7 @@ function mesaPasaFiltro(table, est){
   if(f === 'libres' && est.key !== 'libre') return false;
   if(f === 'ocupadas' && est.key === 'libre') return false;
   if(f === 'servidas' && est.key !== 'servida') return false;
-  if(f === 'mias'){ const yo = tpvEmpleadoSesion(); if(!est.order || !(yo ? est.order.camareroId === yo : est.order.openedByOwner || !est.order.camareroId)) return false; }
+  if(f === 'mias' && !tpvEsMiaLaMesa(table, est)) return false;
   if(tpvZonaSel && table.zona !== tpvZonaSel) return false;
   const q = pmSinTildes(tpvMesaBusca.trim());
   if(q && !pmSinTildes(tpvNombreMesa(table, est.order)).includes(q)) return false;
@@ -215,7 +229,7 @@ function tpvMesasTilesHtml(){
   const sorted = [...DB.tables].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', {numeric: true}));
   const lista = sorted.map(table => ({table, est: tpvEstadoMesa(table)})).filter(x => mesaPasaFiltro(x.table, x.est));
   if(!lista.length){
-    return `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${escapeHtml(tpvMesaFiltro === 'mias' ? gl({es:'No tienes ninguna mesa abierta.', ca:'No tens cap taula oberta.', en:'You have no open tables.'}) : t('common.noResults'))}</div>`;
+    return `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${escapeHtml(tpvMesaFiltro === 'mias' ? gl({es:'No tienes ninguna mesa asignada ni abierta.', ca:'No tens cap taula assignada ni oberta.', en:'You have no assigned or open tables.'}) : t('common.noResults'))}</div>`;
   }
   // Modo caos: una sola lista con las ocupadas, la que más lleva esperando primero.
   if(chaosMode){
@@ -243,6 +257,7 @@ function tpvMesasTilesHtml(){
 }
 
 function renderTpvMesas(tiposServicio){
+  if(!tpvFiltroInicialAplicado){ tpvFiltroInicialAplicado = true; if(tpvTengoMesasAsignadas() && tpvMesaFiltro === 'todas') tpvMesaFiltro = 'mias'; }
   if(!tiposServicio.mesa) return '';
   if(!DB.tables.length){
     return `<h3 class="tp-sec-tit"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t('label.tables'))}</h3><div class="empty es-vacio"><i class="ti ti-armchair"></i>${escapeHtml(t('empty.tables'))}</div>`;
@@ -253,7 +268,7 @@ function renderTpvMesas(tiposServicio){
     if(f === 'libres') return e.key === 'libre';
     if(f === 'ocupadas') return e.key !== 'libre';
     if(f === 'servidas') return e.key === 'servida';
-    if(f === 'mias'){ const yo = tpvEmpleadoSesion(); return !!(e.order && (yo ? e.order.camareroId === yo : (e.order.openedByOwner || !e.order.camareroId))); }
+    if(f === 'mias') return tpvEsMiaLaMesa(DB.tables[i], e);
     return false;
   }).length;
   const filtros = [['todas', gl({es:'Todas', ca:'Totes', en:'All'}), ''], ['libres', gl({es:'Libres', ca:'Lliures', en:'Free'}), ''], ['ocupadas', gl({es:'Ocupadas', ca:'Ocupades', en:'Occupied'}), gl({es:'Ocup.', ca:'Ocup.', en:'Busy'})], ['servidas', gl({es:'Servidas', ca:'Servides', en:'Served'}), gl({es:'Serv.', ca:'Serv.', en:'Served'})], ['mias', gl({es:'Mis mesas', ca:'Les meves taules', en:'My tables'}), gl({es:'Mías', ca:'Meves', en:'Mine'})]];

@@ -1562,6 +1562,7 @@ function markChatRead(channel){
   let hasta = new Date().toISOString();
   (DB.chatMessages || []).forEach(m => { if(m.channel === channel && m.ts > hasta) hasta = m.ts; });
   localStorage.setItem('chatLastRead_'+channel, hasta);
+  if(typeof avisosProgramar === 'function') avisosProgramar();   // leer un chat apaga su aviso en la campana
 }
 /* Lo que ya estaba leído al ENTRAR en cada canal: lo posterior se pinta resaltado («Nuevo») mientras dure esta visita,
    también lo que llegue con el panel abierto. Al volver a entrar ya cuenta como leído. */

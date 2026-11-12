@@ -6786,6 +6786,7 @@ function respondTurnoSwapRequest(requestId, accept){
   const r = (DB.turnoSwapRequests||[]).find(x=>x.id===requestId);
   if(!r) return;
   r.status = accept ? 'pending_owner' : 'rejected';
+  if(!accept) r.decidedAt = new Date().toISOString();
   saveDB();
   showToast(accept ? t('swap.acceptedWaitingOwner') : t('swap.rejected'));
   openEmployeeFicharModal(r.toEmployeeId);
@@ -6815,6 +6816,7 @@ function ownerApproveTurnoSwap(requestId, approve){
   }else{
     r.status = 'rejected';
   }
+  r.decidedAt = new Date().toISOString();   // para avisar al empleado de la respuesta (campana)
   saveDB();
   showToast(approve ? t('swap.approvedOk') : t('swap.rejected'));
   renderHorariosTab();
@@ -6944,6 +6946,7 @@ function ownerRespondVacationRequest(requestId, approve){
   }else{
     r.status = 'rejected';
   }
+  r.decidedAt = new Date().toISOString();   // para avisar al empleado de la respuesta (campana)
   logAudit(approve?'vacation_approved':'vacation_rejected', t(approve?'audit.vacationApproved':'audit.vacationRejected').replace('${name}', (DB.employees.find(e=>e.id===r.employeeId)||{}).name||'?'));
   saveDB();
   showToast(approve ? t('vacation.approvedOk') : t('swap.rejected'));
