@@ -2416,7 +2416,7 @@ function buildPedidoPrintHtml(o){
   const contacto = [prov && prov.contacto ? escapeHtml(prov.contacto) : '', prov && prov.tel ? escapeHtml(prov.tel) : '', prov && prov.email ? escapeHtml(prov.email) : ''].filter(Boolean).join(' · ');
   const meta = [
     [t('common.supplier'), `<b>${escapeHtml(o.supplier || '—')}</b>${contacto ? `<small>${contacto}</small>` : ''}`],
-    [t('label.deliveryDate'), `<b>${escapeHtml(o.date || '—')}</b>${prov && prov.horaEntrega ? `<small>${escapeHtml(prov.horaEntrega)} ${t('label.hoursApprox')}</small>` : ''}`],
+    [t('label.deliveryDate'), `<b>${escapeHtml(fechaImpresaLegible(o.date) || '—')}</b>${prov && prov.horaEntrega ? `<small>${escapeHtml(prov.horaEntrega)} ${t('label.hoursApprox')}</small>` : ''}`],
     [gl({es:'Artículos', ca:'Articles', en:'Items'}), `<b>${lineas.length}</b>`],
   ].map(([et, v]) => `<div class="pp-meta"><span>${escapeHtml(et)}</span>${v}</div>`).join('');
   return `

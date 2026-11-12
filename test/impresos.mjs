@@ -81,8 +81,8 @@ async function capturar(nombre, accion, arg){
     }));
     const pdf = `${OUT}/${nombre}.pdf`;
     await p.pdf({path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true});
-    const paginas = parseInt((execSync(`pdfinfo ${pdf}`).toString().match(/Pages:\s+(\d+)/) || [0, 0])[1], 10);
-    try{ execSync(`pdftoppm -r 55 -png ${pdf} ${OUT}/${nombre}`); }catch(e){}
+    const paginas = (fs.readFileSync(pdf, 'latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+    try{ execSync(`pdftoppm -r 55 -png ${pdf} ${OUT}/${nombre}`, {stdio: 'ignore'}); }catch(e){}
     await p.close();
     return {nombre, paginas, ...info};
   } finally { browser.off('targetcreated', alAbrir); }
@@ -104,7 +104,7 @@ async function capturarRollo(nombre, accion, arg, anchoMm){
   const info = await p.evaluate(() => ({imagenes: [...document.images].map(i => ({ok: i.complete && i.naturalWidth > 0})), desborda: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2, alto: document.documentElement.scrollHeight}));
   const pdf = `${OUT}/${nombre}.pdf`;
   await p.pdf({path: pdf, width: `${anchoMm}mm`, printBackground: true, preferCSSPageSize: false, margin: {top: 0, bottom: 0, left: 0, right: 0}});
-  try{ execSync(`pdftoppm -r 80 -png ${pdf} ${OUT}/${nombre}`); }catch(e){}
+  try{ execSync(`pdftoppm -r 80 -png ${pdf} ${OUT}/${nombre}`, {stdio: 'ignore'}); }catch(e){}
   await p.close();
   return {nombre, paginas: 1, fuentes: 0, barra: false, ...info};
 }
@@ -168,6 +168,14 @@ caso('idr-maridaje', () => idrImprimirMaridaje('c2'), null, r => assert.ok(r.pag
 caso('contrato-plan360', () => plan360PrintContract(), null, r => assert.ok(r.paginas <= 2));
 caso('ticket', () => { const v = DB.sales.find(x => (x.items || []).length) || DB.sales[0]; printTicket(v); }, null, r => assert.ok(r.imagenes.every(i => i.ok)), 'rollo');
 caso('cuenta', () => printCuenta(DB.tpvOrders.find(o => (o.items || []).length).id), null, r => assert.ok(r.imagenes.every(i => i.ok)), 'rollo');
+
+
+await app.evaluate(() => {
+  const ids = Object.keys(PLAN360_DOC_PLANTILLAS || {});
+  DB.business.plan360Docs = ids.map(id => ({id, campos: {}}));
+  window.__docId = ids[0];
+});
+caso('plan360-documento', () => descargarPlan360DocRico(window.__docId), null, r => assert.ok(r.paginas <= 12));
 
 for(const c of casos){
   try{
