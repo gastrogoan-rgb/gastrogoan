@@ -52,7 +52,8 @@ const tenant2 = await tmp.page.evaluate(c => ggBizTenantId(c), CODE2);
 const tenant3 = await tmp.page.evaluate(c => ggBizTenantId(c), CODE3);
 await tmp.ctx.close();
 await rest(NS_PLAT, `gastrogoan/ownerNames/${USER}`, 'PUT', {ts: 1});
-await rest(NS_PLAT, `gastrogoan/ownerAuth/${authKey}`, 'PUT', {user: USER, createdAt: 1});
+// Una cuenta ESTABLECIDA (el dueño ya cambió el PIN de la compra): un aparato nuevo no se lo vuelve a ofrecer. changeOwnerAccessPin pone esta marca.
+await rest(NS_PLAT, `gastrogoan/ownerAuth/${authKey}`, 'PUT', {user: USER, createdAt: 1, pinCambiado: true});
 for(const c of [CODE1, CODE2, CODE3]) await rest(NS_PLAT, `gastrogoan/issuedCodes/${c}`, 'PUT', {issuedAt: 1});
 
 // ───────────── La TABLET configura su negocio, y crea y borra otro ─────────────
