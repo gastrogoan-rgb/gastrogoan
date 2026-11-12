@@ -5942,7 +5942,7 @@ function buildTicketHtml(sale, opts={}){
     : (DB.business && DB.business.verifactu && DB.business.verifactu.enabled
       ? `<div style="text-align:center;font-size:11px;color:#a15c00;margin-top:10px">${t('ticket.verifactuPending')}</div>` : '');
   const qrHtml = (sale.verifactu && sale.verifactu.status === 'sent' && sale.verifactu.qrData)
-    ? `<div style="text-align:center;margin-top:10px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(sale.verifactu.qrData)}" style="width:120px;height:120px"></div>`
+    ? `<div style="text-align:center;margin-top:10px"><img src="${qrImagenUrl(sale.verifactu.qrData, 360)}" style="width:120px;height:120px;image-rendering:pixelated"></div>`
     : '';
   // Pedir la reseña justo al final, cuando el cliente ya tiene el ticket en
   // la mano y acaba de vivir la experiencia — reutiliza el mismo enlace de
@@ -5953,7 +5953,7 @@ function buildTicketHtml(sale, opts={}){
     ? `<div style="text-align:center;margin-top:16px;padding-top:14px;border-top:1px dashed #bbb">
         <div style="font-size:13px;font-weight:700">${t('ticket.reviewTitle')}</div>
         <div style="font-size:11.5px;color:#555;margin:2px 0 8px">${t('ticket.reviewDesc')}</div>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(b.gmaps)}" style="width:110px;height:110px">
+        <img src="${qrImagenUrl(b.gmaps, 390)}" style="width:130px;height:130px;image-rendering:pixelated" alt="QR">
       </div>`
     : '';
 
@@ -6013,9 +6013,8 @@ function printTicket(sale, opts={}){
   }
   const win = window.open('', '_blank', 'width=360,height=600');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  // ⚠️ El QR de reseña de Google (y el de VeriFactu) se generan pidiendo la
-  // imagen a api.qrserver.com — una URL EXTERNA, no un data: URI como el
-  // logo. Llamar a win.print() justo aquí, nada más escribir el HTML,
+  // El QR de reseña de Google (y el de VeriFactu) se dibujan en la propia app (js/qr.js): son un data: URI, como el logo, y no dependen de ningún servicio externo.
+  // (Antes se pedían a api.qrserver.com — una URL EXTERNA —.) Llamar a win.print() justo aquí, nada más escribir el HTML,
   // disparaba la impresión antes de que esa imagen hubiera terminado de
   // descargarse — salía en blanco o rota. Igual que ya hace
   // printComandaTicket: se deja que sea la propia ventana la que imprima,

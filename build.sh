@@ -34,7 +34,7 @@ CSS_APP=$(cat css/styles.css)
 
 # Read all JS in order
 JS=""
-for f in js/core.js js/i18n.js js/frases.js js/iconos-comida.js js/iconos-comida-uso.js js/ui.js js/finance.js js/panel.js js/motor-fiscal.js js/recipes.js js/menu.js js/tpv.js js/tpv-sala.js js/operations.js js/hr.js js/idr.js js/novedades.js js/clientes.js js/reservas.js js/manual.js js/polish.js js/app.js; do
+for f in js/core.js js/qr.js js/i18n.js js/frases.js js/iconos-comida.js js/iconos-comida-uso.js js/ui.js js/finance.js js/panel.js js/motor-fiscal.js js/recipes.js js/menu.js js/tpv.js js/tpv-sala.js js/operations.js js/hr.js js/idr.js js/novedades.js js/clientes.js js/reservas.js js/manual.js js/polish.js js/app.js; do
   JS="$JS
 $(cat $f)"
 done

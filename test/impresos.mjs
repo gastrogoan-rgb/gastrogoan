@@ -8,6 +8,7 @@ import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
+import jsQR from 'jsqr';
 
 const OUT = process.env.IMPRESOS_OUT || '/tmp/claude-0/impresos';
 fs.mkdirSync(OUT, {recursive: true});
@@ -102,6 +103,9 @@ async function capturarRollo(nombre, accion, arg, anchoMm){
   await p.setContent(html, {waitUntil: 'load'});
   await w(800);
   const info = await p.evaluate(() => ({imagenes: [...document.images].map(i => ({ok: i.complete && i.naturalWidth > 0})), desborda: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2, alto: document.documentElement.scrollHeight}));
+  // Cada imagen que parezca un QR (cuadrada) se pasa por un lector real: lo que sale en el papel tiene que LEERSE.
+  const pix = await p.evaluate(async () => Promise.all([...document.images].filter(i => i.naturalWidth > 60 && i.naturalWidth === i.naturalHeight).map(async i => { const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const g = c.getContext('2d'); g.drawImage(i, 0, 0); return {w: c.width, h: c.height, d: Array.from(g.getImageData(0, 0, c.width, c.height).data)}; })));
+  info.qrs = pix.map(q => { const r = jsQR(new Uint8ClampedArray(q.d), q.w, q.h); return r ? r.data : null; });
   const pdf = `${OUT}/${nombre}.pdf`;
   await p.pdf({path: pdf, width: `${anchoMm}mm`, printBackground: true, preferCSSPageSize: false, margin: {top: 0, bottom: 0, left: 0, right: 0}});
   try{ execSync(`pdftoppm -r 80 -png ${pdf} ${OUT}/${nombre}`, {stdio: 'ignore'}); }catch(e){}
@@ -166,7 +170,10 @@ caso('manual-capitulo', () => { manualChapter = 0; printManualChapter(); }, null
 caso('idr-menu', () => idrImprimir('c1'), null, r => assert.ok(r.paginas <= 2));
 caso('idr-maridaje', () => idrImprimirMaridaje('c2'), null, r => assert.ok(r.paginas <= 2));
 caso('contrato-plan360', () => plan360PrintContract(), null, r => assert.ok(r.paginas <= 2));
-caso('ticket', () => { const v = DB.sales.find(x => (x.items || []).length) || DB.sales[0]; printTicket(v); }, null, r => assert.ok(r.imagenes.every(i => i.ok)), 'rollo');
+caso('ticket', () => { DB.business.gmaps = 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4'; DB.business.ticket = Object.assign({}, DB.business.ticket, {mostrarResenaQr: true}); const v = DB.sales.find(x => (x.items || []).length) || DB.sales[0]; printTicket(v); }, null, r => {
+  assert.ok(r.imagenes.every(i => i.ok), 'una imagen del ticket no carga');
+  assert.ok(r.qrs.includes('https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4'), 'el QR de reseña del ticket NO se lee con un lector real: ' + JSON.stringify(r.qrs));
+}, 'rollo');
 caso('cuenta', () => printCuenta(DB.tpvOrders.find(o => (o.items || []).length).id), null, r => assert.ok(r.imagenes.every(i => i.ok)), 'rollo');
 
 

@@ -10316,7 +10316,7 @@ function renderOnlineCard(){
     `;
   }
   const link = getPublicClientLinkPretty();
-  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(link);
+  const qrUrl = qrImagenUrl(link, 240);
   const activeCartas = (typeof getActiveCartas === 'function') ? getActiveCartas() : [];
   const activeCartaLine = activeCartas.length
     ? `<p style="font-size:12.5px;margin-bottom:12px"><i class="ti ti-book-2"></i> ${t('mn.online.activeCartaLabel')}<strong>${activeCartas.map(c=>escapeHtml(tItem(c))).join(', ')}</strong></p>`
@@ -10461,8 +10461,10 @@ function saveQrMesaConfig(){
   if(typeof renderMiNegocio === 'function') renderMiNegocio();
   showToast(activo ? t('qrMesa.msg.activado') : t('qrMesa.msg.desactivado'));
 }
+/* El QR se dibuja AQUÍ (js/qr.js), ya no se pide a un servicio externo: así sale igual con o sin internet y no depende de nadie (antes, si
+   api.qrserver.com fallaba, el QR del ticket salía roto sobre un papel ya impreso). Devuelve un data:image/png listo para <img src>. */
 function qrImagenUrl(texto, px){
-  return 'https://api.qrserver.com/v1/create-qr-code/?size=' + px + 'x' + px + '&data=' + encodeURIComponent(texto);
+  return (typeof GGQR !== 'undefined') ? GGQR.png(String(texto || ''), px || 240) : '';
 }
 function showTableQr(tableId){
   const tbl = DB.tables.find(x => x.id === tableId);
@@ -11249,7 +11251,7 @@ function openCloudWizard(){
     return;
   }
   const link = getPublicClientLinkPretty();
-  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(link);
+  const qrUrl = qrImagenUrl(link, 180);
   const otrosServicios = (DB.business?.tiposServicio?.takeaway !== false || DB.business?.tiposServicio?.delivery !== false) ? t('mn.online.andOrder') : '';
   openModal(`
     <div class="modal-header">
