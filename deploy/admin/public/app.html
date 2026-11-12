@@ -124,6 +124,23 @@ th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:up
 h1,h2{letter-spacing:-.02em}
 input:focus,select:focus,textarea:focus{outline:2px solid #4A5D4E;outline-offset:0}
 code,pre,kbd{font-family:var(--mono)}
+
+/* Alta paso a paso */
+.modal-alta{max-width:640px}
+.alta-barra{height:6px;background:var(--cream);border:1px solid var(--border)}
+.alta-barra>div{height:100%;background:var(--olive)}
+.alta-fase{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.alta-fase h4{font-family:var(--mono,'IBM Plex Mono',monospace);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);border-top:2px solid var(--ink);padding-top:10px;display:flex;justify-content:space-between;gap:8px}
+.alta-fase h4 span{color:var(--muted)}
+.alta-paso{border:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.alta-paso.hecho{background:var(--green-l);border-color:var(--olive)}
+.alta-chk{display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0;text-transform:none;letter-spacing:0;font-family:inherit;font-size:14px;font-weight:600;color:var(--text)}
+.alta-chk input{width:20px;min-height:20px;height:20px;margin-top:2px;flex:none}
+.alta-chk em{font-family:var(--mono,monospace);font-style:normal;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);padding:1px 6px;margin-left:4px;white-space:nowrap}
+.alta-paso summary{font-size:12px;color:var(--muted);cursor:pointer}
+.alta-d{font-size:13px;line-height:1.55;margin-top:6px}
+.alta-d code{background:var(--cream);padding:1px 5px}
+.alta-btns{display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -275,9 +292,11 @@ function ggBizTenantId(code){
   return out.join('');
 }
 
+
 // Nunca usar toISOString para aritmética de fechas de calendario (desfase de
 // un día en cualquier huso por delante de UTC). Aquí no hace ni falta un
 // objeto Date: son solo tres números en una cadena yyyy-mm-dd.
+function ggAdminHardReload(){ location.href = location.pathname + '?_r=' + Date.now(); }
 function pad2(n){ return String(n).padStart(2,'0'); }
 function todayStr(){ const d = new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
 function addYearsStr(dateStr, n){
@@ -303,11 +322,6 @@ function getApp(){
   catch(e){ return firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
 }
 let adminUser = null; // {email}, solo si hay sesión REAL de admin (no anónima)
-// Este panel no lleva service worker ni versión propia (a diferencia de la
-// app de los negocios): un refresco normal a veces sirve la copia en
-// caché del navegador. Una URL con parámetro nuevo nunca tiene caché
-// previa, así que fuerza una carga real.
-function ggAdminHardReload(){ location.href = location.pathname + '?_r=' + Date.now(); }
 
 /* Login OBLIGATORIO a la entrada: nada del panel se pinta sin sesión real de
    administrador. A diferencia del generador viejo, aquí no hay ningún modo
@@ -504,6 +518,7 @@ function renderFolders(){
           <div class="folder-user">${titulo} ${nombreExtra ? `<span class="folder-sub">(${nombreExtra})</span>` : ''}</div>
           <div class="folder-sub">${g.locales.length} licencia(s), ${nActivas} activa(s)</div>
         </div>
+        ${g.user ? (()=>{const a=altaCuenta(g.user);return `<span class="folder-pastilla" title="Alta paso a paso">Alta ${a.ok}/${a.tot}</span>`;})() : ''}
         <span class="folder-pastilla">PIN: ${g.ultima ? esc(g.ultima.pin || '—') : '—'}</span>
         <span class="folder-arrow">${abierta ? '▲' : '▼'}</span>
       </div>
@@ -535,6 +550,7 @@ function renderFolderBody(g){
       <input placeholder="Teléfono (WhatsApp)" id="phone-${esc(g.user)}" value="${phone}">
       <button class="btn btn-sm btn-light" onclick="guardarContacto('${esc(g.user)}')">Guardar</button>
     </div>
+    <button class="btn btn-primary" onclick="openAlta('${esc(g.user)}')">📋 Alta paso a paso</button>
     <button class="btn btn-light" onclick="openNuevaLicencia('${esc(g.user)}')">＋ Nueva licencia para este cliente</button>
     ` : ''}
     <div style="display:flex;flex-direction:column;gap:10px" id="lics-${esc(g.user||'huerfanos')}">${licsHtml}</div>
@@ -569,6 +585,8 @@ function renderLicRow(l){
         <button class="btn btn-sm btn-light" onclick="togglePlan360('${esc(l.id)}')">${l.plan360 ? '✓ Plan 360° activo' : 'Activar Plan 360°'}</button>
         <button class="btn btn-sm btn-light" onclick="togglePlanMensual('${esc(l.id)}')">${l.planMensual ? '✓ Plan mensual' : 'Marcar Plan mensual'}</button>
       ` : ''}
+      <button class="btn btn-sm btn-light" onclick="openAlta('${esc(l.owner)}')">📋 Alta</button>
+      <button class="btn btn-sm btn-light" onclick="abrirFiscal('${esc(l.id)}')">⚖ Fiscal${l.fiscal ? ': ' + esc(fiscalTexto(l.fiscal)) : ' (sin fijar)'}</button>
       <button class="btn btn-sm btn-light" onclick="delSale('${esc(l.id)}')">Quitar del registro</button>
     </div>
   </div>`;
@@ -770,6 +788,7 @@ function openAgregarUsuario(){
           <a class="btn btn-light" style="flex:1" id="nu-mail">✉️ Email</a>
         </div>
       </div>
+      <button class="btn btn-primary hidden" id="nu-alta">📋 Seguir con el alta paso a paso</button>
       <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
     </div>
   </div>`;
@@ -801,9 +820,66 @@ async function crearNuevoUsuario(){
   document.getElementById('nu-mail').href = 'mailto:' + (email||'') + '?subject=' + encodeURIComponent('Tu cuenta de GastroGoan') + '&body=' + encodeURIComponent(msg);
   await pushSaleEntry({ id: genUuid(), date: todayStr(), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin, owner: res.user, email, phone });
   renderFolders();
+  const ba = document.getElementById('nu-alta'); ba.classList.remove('hidden'); ba.onclick = () => openAlta(res.user);
   btn.disabled = false;
 }
 
+
+/* ============================================================
+   FORMA JURÍDICA Y RÉGIMEN FISCAL (los fijas tú; el cliente los ve bloqueados en Mi Negocio)
+   ============================================================ */
+function fiscalFormHtml(pre, cur){
+  cur = cur || {};
+  const op = (v, t, sel) => `<option value="${v}"${sel ? ' selected' : ''}>${t}</option>`;
+  const modo = cur.formaJuridica === 'autonomo' ? (cur.regimenFiscal === 'modulos' ? 'modulos' : (cur.modalidadDirecta === 'normal' ? 'normal' : 'simplificada')) : 'simplificada';
+  return `<label style="margin-top:10px">Forma jurídica <small class="muted">(la fijas tú; el cliente la verá bloqueada)</small></label>
+    <select id="${pre}-forma" onchange="document.getElementById('${pre}-reg-box').classList.toggle('hidden', this.value !== 'autonomo')">
+      ${op('', '— Elige la forma jurídica (obligatoria) —', !cur.formaJuridica)}${op('autonomo', 'Autónomo', cur.formaJuridica === 'autonomo')}${op('cb', 'Comunidad de bienes', cur.formaJuridica === 'cb')}${op('sociedad', 'Sociedad (SL, SA…)', cur.formaJuridica === 'sociedad')}${op('cooperativa', 'Cooperativa', cur.formaJuridica === 'cooperativa')}
+    </select>
+    <label style="margin-top:8px">Comunidad autónoma <small class="muted">(escala del IRPF de la comunidad; las 15 de régimen común están verificadas; Navarra y País Vasco, pendientes de contrastar con la fuente oficial)</small></label>
+    <select id="${pre}-terr">${TERRITORIOS_FISCALES.map(([k, n]) => op(k, n, (cur.territorio || 'general') === k)).join('')}</select>
+    <div id="${pre}-reg-box" class="${cur.formaJuridica === 'autonomo' ? '' : 'hidden'}">
+      <label style="margin-top:8px">Régimen del autónomo</label>
+      <select id="${pre}-regimen">${op('simplificada', 'Estimación directa simplificada', modo === 'simplificada')}${op('normal', 'Estimación directa normal', modo === 'normal')}${op('modulos', 'Estimación objetiva (módulos)', modo === 'modulos')}</select>
+    </div>`;
+}
+// Mismas claves que FISCAL_TERRITORIOS en js/motor-fiscal.js (la app y el generador no comparten fichero).
+const TERRITORIOS_FISCALES = [['general','Sin comunidad elegida (escala general de referencia)'],['andalucia','Andalucía'],['aragon','Aragón'],['asturias','Principado de Asturias'],['baleares','Illes Balears'],['canarias','Canarias'],['cantabria','Cantabria'],['clm','Castilla-La Mancha'],['cyl','Castilla y León'],['cataluna','Cataluña'],['ceuta_melilla','Ceuta y Melilla'],['extremadura','Extremadura'],['galicia','Galicia'],['madrid','Comunidad de Madrid'],['murcia','Región de Murcia'],['rioja','La Rioja'],['valencia','Comunitat Valenciana'],['navarra','Navarra (régimen foral)'],['pais_vasco','País Vasco (régimen foral)']];
+const TERRITORIO_NOMBRE = Object.fromEntries(TERRITORIOS_FISCALES);
+function leerFiscal(pre){
+  const forma = document.getElementById(pre + '-forma').value;
+  if(!forma) return null;
+  const territorio = document.getElementById(pre + '-terr') ? document.getElementById(pre + '-terr').value : 'general';
+  if(forma !== 'autonomo') return {formaJuridica: forma, regimenFiscal: 'directa', modalidadDirecta: null, territorio};
+  const reg = document.getElementById(pre + '-regimen').value;
+  return {formaJuridica: 'autonomo', regimenFiscal: reg === 'modulos' ? 'modulos' : 'directa', modalidadDirecta: reg === 'modulos' ? null : reg, territorio};
+}
+function fiscalTexto(f){
+  if(!f || !f.formaJuridica) return '';
+  const n = {autonomo:'Autónomo', cb:'Comunidad de bienes', sociedad:'Sociedad', cooperativa:'Cooperativa'}[f.formaJuridica] || f.formaJuridica;
+  const terr = f.territorio && f.territorio !== 'general' && TERRITORIO_NOMBRE[f.territorio] ? ' · ' + TERRITORIO_NOMBRE[f.territorio] : '';
+  if(f.formaJuridica !== 'autonomo') return n + terr;
+  return n + terr + ' · ' + (f.regimenFiscal === 'modulos' ? 'módulos' : (f.modalidadDirecta === 'normal' ? 'directa normal' : 'directa simplificada'));
+}
+function abrirFiscal(licId){
+  const l = findSale(licId); if(!l) return;
+  document.getElementById('modal-root').innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)cerrarModal()"><div class="modal">
+    <h3>Forma jurídica y régimen · ${esc(l.value)}</h3>
+    <p class="muted" style="margin:0 0 6px">Se guarda en la licencia: en Mi Negocio del cliente saldrá bloqueado. Si ya estaba abierto, él pulsa «Comprobar cambios».</p>
+    ${fiscalFormHtml('fx', l.fiscal)}
+    <button class="btn btn-primary" onclick="guardarFiscal('${esc(licId)}')" style="margin-top:12px">Guardar</button>
+    <button class="btn btn-light" onclick="cerrarModal()" style="margin-top:12px">Cancelar</button></div></div>`;
+}
+async function guardarFiscal(licId){
+  const l = findSale(licId); if(!l) return;
+  const f = leerFiscal('fx');
+  if(!f){ alert('Elige la forma jurídica: un negocio no se da de alta sin ella (de ella depende cómo se calcula su impuesto).'); return; }
+  try{
+    await getApp().database().ref('gastrogoan/issuedCodes/' + l.value).update(f ? {formaJuridica: f.formaJuridica, regimenFiscal: f.regimenFiscal || null, modalidadDirecta: f.modalidadDirecta || null, territorio: f.territorio || null} : {formaJuridica: null, regimenFiscal: null, modalidadDirecta: null, territorio: null});
+  }catch(e){ alert('No se pudo guardar en la plataforma: ' + (e.message || e.code || 'error')); return; }
+  await updateSaleEntry(l, {fiscal: f || null});
+  cerrarModal(); renderFolders();
+}
 /* ============================================================
    MODAL: NUEVA LICENCIA (solo desde dentro de la carpeta de un cliente)
    ============================================================ */
@@ -813,6 +889,11 @@ function openNuevaLicencia(user){
       <h3>＋ Nueva licencia para ${esc(user)}</h3>
       <label>Nombre del restaurante (solo para tu registro)</label>
       <input id="nl-name" placeholder="Ej: Casa Paco - Sucursal 2" onkeydown="if(event.key==='Enter')crearNuevaLicencia('${esc(user)}')">
+      <label style="margin-top:10px">Enlace de reservas (cómo quieres que se llame)</label>
+      <input id="nl-slug" placeholder="Ej: casa-paco" autocapitalize="off" autocomplete="off" spellcheck="false" oninput="this.value=nlSlugify(this.value);document.getElementById('nl-slug-vista').textContent=this.value?('reservas.gastrogoan.com/'+this.value):'Si lo dejas vacío, el cliente lo elige él (y podrá cambiarlo).'">
+      <small id="nl-slug-vista" style="display:block;color:var(--muted);margin-top:4px">Si lo dejas vacío, el cliente lo elige él (y podrá cambiarlo).</small>
+      <small style="display:block;color:var(--muted);margin-top:2px">Si lo rellenas, queda FIJADO: en Mi Negocio el cliente lo verá bloqueado y no podrá cambiarlo.</small>
+      ${fiscalFormHtml('nl')}
       <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer"><input type="checkbox" id="nl-plan360" style="width:auto"> Plan 360° (verá su pestaña en la app)</label>
       <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer"><input type="checkbox" id="nl-planmensual" style="width:auto"> Plan mensual (solo para tu control)</label>
       <button class="btn btn-primary" id="nl-btn" onclick="crearNuevaLicencia('${esc(user)}')" style="margin-top:8px">Generar código</button>
@@ -823,14 +904,38 @@ function openNuevaLicencia(user){
           <a class="btn btn-light" style="flex:1" id="nl-mail">✉️ Email</a>
         </div>
       </div>
+      <button class="btn btn-primary hidden" id="nl-alta" onclick="openAlta('${esc(user)}')">📋 Seguir con el alta paso a paso</button>
       <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
     </div>
   </div>`;
+}
+// Mismo criterio que slugify() de la app: minúsculas, sin acentos, guiones. 40 como máximo.
+function nlSlugify(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').slice(0, 40);
+}
+// ¿Está libre ese enlace? Ni cogido por un negocio (publicSlugs) ni reservado para otra licencia (issuedCodes/*/slug).
+async function enlaceDeReservasLibre(slug){
+  const db = getApp().database();
+  const ocupado = await db.ref('gastrogoan/publicSlugs/' + slug).once('value');
+  if(ocupado.exists()) return false;
+  const emitidos = await db.ref('gastrogoan/issuedCodes').once('value');
+  let repetido = false;
+  emitidos.forEach(c => { const v = c.val(); if(v && v.slug === slug) repetido = true; });
+  return !repetido;
 }
 async function crearNuevaLicencia(user){
   const btn = document.getElementById('nl-btn');
   btn.disabled = true;
   const raw = document.getElementById('nl-name').value.trim();
+  const slug = nlSlugify(document.getElementById('nl-slug').value).replace(/-+$/, '');
+  if(slug && slug.length < 3){ alert('El enlace de reservas tiene que tener al menos 3 caracteres.'); btn.disabled = false; return; }
+  if(slug){
+    try{
+      if(!(await enlaceDeReservasLibre(slug))){ alert('El enlace «' + slug + '» ya lo tiene otro negocio (o está reservado para otra licencia). Prueba con otro.'); btn.disabled = false; return; }
+    }catch(e){ alert('No se pudo comprobar el enlace: ' + (e.message || e.code || 'error')); btn.disabled = false; return; }
+  }
+  const fiscal = leerFiscal('nl');
+  if(!fiscal){ alert('Elige la forma jurídica del negocio: no se emite la licencia sin ella (de ella depende cómo se calcula su impuesto).'); btn.disabled = false; return; }
   const plan360 = document.getElementById('nl-plan360').checked;
   const planMensual = document.getElementById('nl-planmensual').checked;
   let code;
@@ -840,17 +945,171 @@ async function crearNuevaLicencia(user){
     try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({plan360: true}); }
     catch(e){ console.error('No se pudo marcar el Plan 360° en issuedCodes', e); }
   }
+  if(fiscal){
+    // Forma jurídica y régimen: la app los lee al canjear y los deja BLOQUEADOS en Mi Negocio.
+    try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({formaJuridica: fiscal.formaJuridica, regimenFiscal: fiscal.regimenFiscal || null, modalidadDirecta: fiscal.modalidadDirecta || null, territorio: fiscal.territorio || null}); }
+    catch(e){ alert('El código se creó, pero no se pudo guardar la forma jurídica: ' + (e.message || e.code || 'error') + '. Fíjala después con «Fiscal» en la licencia.'); }
+  }
+  if(slug){
+    // El enlace queda guardado junto al código: la app lo lee al canjear y lo deja BLOQUEADO en Mi Negocio.
+    try{ await getApp().database().ref('gastrogoan/issuedCodes/' + code).update({slug}); }
+    catch(e){ alert('El código se creó, pero no se pudo guardar el enlace «' + slug + '»: ' + (e.message || e.code || 'error') + '. Ponlo a mano más tarde.'); }
+  }
   const fecha = todayStr();
-  document.getElementById('nl-key').innerHTML = `Código de negocio: ${esc(code)}`;
+  document.getElementById('nl-key').innerHTML = `Código de negocio: ${esc(code)}` + (slug ? `<br><small>Enlace de reservas: reservas.gastrogoan.com/${esc(slug)}</small>` : '');
   document.getElementById('nl-out').classList.remove('hidden');
   const msg = 'Tu código de negocio de GastroGoan 🍽\n\nCódigo: ' + code + '\n\nEntra en la app con tu usuario y PIN, y en la pantalla de negocios pulsa "Canjear negocio" para introducirlo.';
   const cuenta = sales.find(s => s.kind==='cuenta' && s.value===user);
   document.getElementById('nl-wa').href = 'https://wa.me/' + (cuenta && cuenta.phone ? cuenta.phone.replace(/[^0-9]/g,'') : '') + '?text=' + encodeURIComponent(msg);
   document.getElementById('nl-mail').href = 'mailto:' + (cuenta && cuenta.email || '') + '?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  await pushSaleEntry({ id: genUuid(), date: fecha, name: raw || '(sin nombre)', kind: 'negocio', value: code, owner: user, proximoPago: addYearsStr(fecha, 1), plan360, planMensual });
+  await pushSaleEntry({ id: genUuid(), date: fecha, name: raw || '(sin nombre)', kind: 'negocio', value: code, owner: user, proximoPago: addYearsStr(fecha, 1), plan360, planMensual, slug: slug || '', fiscal: fiscal || null });
   openFolders.add(user);
   renderFolders(); renderCalendario();
+  document.getElementById('nl-alta').classList.remove('hidden');
   btn.disabled = false;
+}
+
+/* ============================================================
+   ALTA DE UN CLIENTE, PASO A PASO (12/11)
+   Una sola lista con TODO lo que hay que hacer para dar de alta a un cliente,
+   en orden, para no dejarse nada. Lo que el panel puede saber solo (cuenta
+   creada, código emitido, forma jurídica fijada, enlace) se marca solo; lo
+   que ocurre fuera (el cliente en Firebase, el cobro, la demo) lo marcas tú.
+   El progreso se guarda en la licencia (o en la cuenta, si aún no hay) y viaja
+   al registro de ventas de la nube: no cuesta nada por cliente.
+   ============================================================ */
+const ALTA_APP = 'https://app.gastrogoan.com';
+function altaNegocioDe(user){
+  const ls = sales.filter(s => s.kind === 'negocio' && s.owner === user && !s.anulada);
+  return ls.length ? ls[0] : null;   // `sales` va de más nuevo a más viejo: el último vendido
+}
+function altaPasos(user, local){
+  const cuenta = sales.find(s => s.kind === 'cuenta' && s.value === user && !s.anulada);
+  const f = local && local.fiscal;
+  const L = (t) => `<ul style="margin:6px 0 0 18px;line-height:1.6">${t.map(x => '<li>' + x + '</li>').join('')}</ul>`;
+  return [
+  {fase:'1 · En este panel', items:[
+    {id:'cuenta', auto: !!cuenta, t:'Cuenta creada (usuario + PIN)', d:'Se marca sola al crearla. Si el cliente ya tenía cuenta, no hace falta otra: salta al código.',
+     btn:[['＋ Agregar usuario','openAgregarUsuario()']]},
+    {id:'contacto', auto: !!(cuenta && (cuenta.email || cuenta.phone)), t:'Contacto guardado (email o WhatsApp)', d:'Sin esto los botones de cobro y de mensaje no saben a dónde ir. Se rellena en la ficha del cliente.'},
+    {id:'codigo', auto: !!local, t:'Código de negocio emitido', d:'Uno por local. Se marca solo al generarlo.',
+     btn: cuenta ? [['＋ Nueva licencia','openNuevaLicencia(\''+esc(user)+'\')']] : []},
+    {id:'fiscal', auto: !!(f && f.formaJuridica), t:'Forma jurídica, régimen y comunidad fijados', d:'Obligatorios: de ellos depende cómo se calculan sus impuestos y el cliente no puede cambiarlos. Pregúntaselo antes de emitir.',
+     btn: local ? [['⚖ Fijar ahora','abrirFiscal(\''+esc(local.id)+'\')']] : []},
+    {id:'enlace', auto: !!(local && local.slug), opc:true, t:'Enlace de reservas fijado', d:'Opcional: si lo dejas vacío lo elige él. Fijado, queda bloqueado en su Mi Negocio.'},
+    {id:'plan', opc:true, t:'Plan 360° / mantenimiento acordado', d:'Si lo contrata, marca la casilla de Plan 360° en la licencia y anota las fechas de las reuniones.'},
+    {id:'cobro', t:'Cobro recibido', d:'Envía el cobro (Stripe/WhatsApp) y, cuando entre, «Marcar cobrado» fija el próximo en 1 año.',
+     btn: local ? [['💬 Cobrar','cobrarLicencia(\''+esc(local.id)+'\')'],['✓ Marcar cobrado (+1 año)','marcarCobrado(\''+esc(local.id)+'\')']] : []},
+    {id:'bienvenida', t:'Mensaje de bienvenida enviado', d:'Lleva usuario, PIN, código y el enlace de la app. Cópialo o ábrelo en WhatsApp.',
+     btn: (cuenta && local) ? [['📋 Copiar mensaje','altaCopiarBienvenida(\''+esc(user)+'\')'],['📱 WhatsApp','altaWhatsApp(\''+esc(user)+'\')']] : []},
+  ]},
+  {fase:'2 · El cliente entra en la app', items:[
+    {id:'entra', t:'Ha entrado con su usuario y PIN', d: 'Abre <code>'+ALTA_APP+'</code> → «Acceso Propietarios». Es el único paso que exige internet en ese aparato.'+L(['Le pedirá cambiar el PIN: que lo cambie y lo apunte (6-12 letras o números).','El PIN no se guarda en ningún sitio: si lo pierde y no tiene otro aparato con la sesión, se reemite desde «Nuevo PIN».'])},
+    {id:'canjea', t:'Ha canjeado el código del negocio', d:'En la pantalla de negocios → «Canjear negocio» → el código de 8 caracteres. Comprueba que le salen la forma jurídica y el enlace ya bloqueados en Mi Negocio.'},
+    {id:'asistente', t:'Ha pasado el asistente de alta', d:'Nombre del negocio, tipo, idioma y el resto de pantallas iniciales. Que no lo salte: de ahí salen los horarios y las mesas.'},
+  ]},
+  {fase:'3 · Nube propia en Firebase (obligatoria, ~10 min)', items:[
+    {id:'fb_cuenta', t:'Cuenta de Google lista', d:'Sirve cualquiera, mejor una del negocio (no la personal). Apunta qué email es: lo necesitará cada vez que toque las reglas. <strong>Es gratis y paga el negocio, no GastroGoan.</strong>'},
+    {id:'fb_proyecto', t:'Proyecto creado', d:'<code>console.firebase.google.com</code> → «Crear un proyecto» → nombre del restaurante → Continuar → <strong>desactivar Google Analytics</strong> → «Crear proyecto» y esperar unos segundos.'},
+    {id:'fb_db', t:'Realtime Database creada', d:'Menú izquierdo → «Realtime Database» → «Crear base de datos» → ubicación <strong>Bélgica (europe-west1)</strong> → <strong>Modo bloqueado</strong> → Habilitar.'},
+    {id:'fb_anonimo', t:'Inicio de sesión «Anónimo» activado', d:'Menú izquierdo → «Authentication» → «Comenzar» → pestaña «Método de acceso» → «Anónimo» → activar → Guardar.'},
+    {id:'fb_dominios', t:'Dominios autorizados', d:'Authentication → pestaña «Configuración» → «Dominios autorizados» → «Añadir dominio»: <code>app.gastrogoan.com</code> y <code>reservas.gastrogoan.com</code> (los dos). <strong>Si falta, el alta termina bien y la nube falla al final.</strong>'},
+    {id:'fb_reglas', t:'Reglas de seguridad pegadas y publicadas', d:'Realtime Database → pestaña «Reglas» → borrar todo → pegar las reglas → «Publicar». La app las trae con un botón «Copiar» en el asistente de nube; no hace falta tenerlas aquí.'},
+    {id:'fb_datos', t:'apiKey y databaseURL pegados en la app', d:'Configuración del proyecto (rueda) → «Tus apps» → «</>» (web) → registrar app → copiar <code>apiKey</code> y <code>databaseURL</code> → pegarlos en el último paso del asistente de la app y guardar.'},
+    {id:'fb_verde', t:'Indicador de nube en verde', d:'Arriba aparece «Nube conectada · hace N s». Si no: comprueba dominios autorizados y reglas.'},
+    {id:'fb_otro', t:'Probado en un segundo aparato', d:'Entra con la misma cuenta en el móvil: el negocio y sus datos tienen que verse idénticos. Es la prueba de que todo quedó bien.'},
+  ]},
+  {fase:'4 · TPV virtual / pago online (solo si lo quiere)', items:[
+    {id:'tpv_si', opc:true, t:'Decidido si quiere cobrar online', d:'Cobro con tarjeta en la web de reservas y pedidos, y señal en reservas. Lo cobra el negocio con SU cuenta de Stripe: a GastroGoan no le cuesta nada. Stripe se queda ~1,5 % + 0,25 €. Si no lo quiere, salta este bloque.'},
+    {id:'tpv_antes', opc:true, t:'Tiene a mano lo necesario', d:'Mejor desde el móvil:'+L(['DNI o NIE físico (y CIF si es sociedad).','IBAN de la cuenta donde cobrar y dirección del negocio.','Google Authenticator instalado.'])},
+    {id:'tpv_conecta', opc:true, t:'Cuenta de Stripe conectada', d:'Mi Negocio → pagos → <strong>«Conectar con Stripe»</strong>. <strong>No debe crear la cuenta antes en stripe.com</strong> (acabaría con dos y los cobros solo entran en una).'+L(['Email y contraseña (mejor del negocio) y verificar el email.','Verificación en dos pasos con Authenticator: guardar el código de recuperación.','Tipo de negocio: autónomo → «Vendedor/Individual»; S.L./S.A. → «Empresa».','Datos, actividad (restauración), web (o su página de reservas) y nombre en el extracto (5-22 letras).','IBAN y verificación de identidad (DNI por las dos caras, a veces selfie).','Omitir Stripe Tax y antifraude de pago.'])},
+    {id:'tpv_activo', opc:true, t:'Aparece «Activo» en la app', d:'Si pone que Stripe revisa sus datos, esperar unos minutos y «Volver a comprobar».'},
+    {id:'tpv_prueba', opc:true, t:'Pago de prueba hecho', d:'Activar «TPV virtual» (y «Pedir señal» si quiere) en Mi Negocio, hacer un pedido pequeño desde su web pública y comprobar que llega como pagado.'},
+  ]},
+  {fase:'5 · Enseñarle la app por encima (~20 min)', items:[
+    {id:'demo_inicio', t:'Inicio y las tres áreas', d:'Cocina, Sala y Gestión. Que vea que es una sola app con tres puertas y que el tour guiado y el Manual están siempre a un toque (botón «Ayuda»).'},
+    {id:'demo_negocio', t:'Mi Negocio: lo mínimo configurado', d:'Datos, horario, mesas y zonas, IVA por defecto, impresoras si tiene. Es lo que más se nota después.'},
+    {id:'demo_carta', t:'Carta: Mega Lista → Escandallo → Oferta', d:'Cómo se carga un producto, se hace un plato con su coste y se publica en la carta. Enséñale el food cost.'},
+    {id:'demo_tpv', t:'TPV: una comanda de prueba entera', d:'Abrir mesa, tomar nota, marchar, ver el ticket en Comandas de cocina y cobrar. Anular la prueba al terminar.'},
+    {id:'demo_reservas', t:'Reservas y web pública', d:'Hacer una reserva desde su enlace público y verla entrar. Enséñale el QR y dónde copiar el enlace.'},
+    {id:'demo_personal', t:'Personal y accesos', d:'Crear un empleado con su PIN y explicar los permisos (cocina, sala, con edición).'},
+    {id:'demo_gestion', t:'Gestión Económica y el envío al gestor', d:'Panel de Control, Cuenta de Resultados y «Enviar al gestor». Lo que ve es solo suyo (exclusivo del propietario).'},
+    {id:'demo_backup', t:'Copia de seguridad y qué hacer si algo falla', d:'Dónde está la copia, que la nube sincroniza sola y a quién escribir (tu contacto) si se atasca.'},
+  ]},
+  {fase:'6 · Cierre', items:[
+    {id:'cierre_fecha', auto: !!(local && local.proximoPago), t:'Próximo cobro anotado', d:'Se rellena solo al emitir la licencia; se desplaza un año con «Marcar cobrado».'},
+    {id:'cierre_ok', t:'Cliente conforme y sin dudas pendientes', d:'Pregúntale si le ha quedado algo sin entender. Acuerda cuándo le llamas para ver cómo le va (una semana después).'},
+  ]},
+  ];
+}
+function altaDestino(user, local){
+  return local || sales.find(s => s.kind === 'cuenta' && s.value === user && !s.anulada);
+}
+function altaCuenta(user){
+  const local = altaNegocioDe(user);
+  const dest = altaDestino(user, local);
+  const hecho = (dest && dest.alta) || {};
+  let tot = 0, ok = 0;
+  altaPasos(user, local).forEach(fa => fa.items.forEach(i => {
+    if(i.opc) return;
+    tot++;
+    if(i.auto || hecho[i.id]) ok++;
+  }));
+  return {ok, tot, local, dest, hecho};
+}
+function openAlta(user, scroll){
+  const {ok, tot, local, dest, hecho} = altaCuenta(user);
+  const pct = tot ? Math.round(ok / tot * 100) : 0;
+  const pasos = altaPasos(user, local);
+  const items = pasos.map(fa => {
+    const n = fa.items.filter(i => !i.opc);
+    const nOk = n.filter(i => i.auto || hecho[i.id]).length;
+    return `<div class="alta-fase"><h4>${esc(fa.fase)}<span>${nOk}/${n.length}</span></h4>${fa.items.map(i => {
+      const marcado = i.auto || !!hecho[i.id];
+      const manual = !('auto' in i);
+      return `<div class="alta-paso${marcado ? ' hecho' : ''}">
+        <label class="alta-chk"><input type="checkbox" ${marcado ? 'checked' : ''} ${manual ? '' : 'disabled'} onchange="altaMarcar('${esc(user)}','${i.id}',this.checked)">
+          <span>${i.t}${i.opc ? ' <em>opcional</em>' : ''}${manual ? '' : ' <em>automático</em>'}</span></label>
+        <details${marcado ? '' : ' open'}><summary>Cómo</summary><div class="alta-d">${i.d}</div></details>
+        ${(i.btn && i.btn.length) ? `<div class="alta-btns">${i.btn.map(b => `<button class="btn btn-sm btn-light" onclick="${b[1]}">${b[0]}</button>`).join('')}</div>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+  }).join('');
+  document.getElementById('modal-root').innerHTML = `<div class="modal-fondo" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal modal-alta">
+      <h3>📋 Alta de ${esc(user)}${local && local.name ? ' · ' + esc(local.name) : ''}</h3>
+      <div class="alta-barra"><div style="width:${pct}%"></div></div>
+      <p class="muted"><strong>${ok} de ${tot}</strong> pasos obligatorios hechos (${pct} %). Lo marcado «automático» lo detecta el panel; el resto lo marcas tú. Puedes cerrar y seguir otro día: queda guardado.</p>
+      ${items}
+      <button class="btn btn-light" onclick="cerrarModal()">Cerrar</button>
+    </div></div>`;
+  if(scroll){ const m = document.querySelector('.modal-alta'); if(m) m.scrollTop = scroll; }
+}
+async function altaMarcar(user, id, on){
+  const m = document.querySelector('.modal-alta');
+  const y = m ? m.scrollTop : 0;
+  const local = altaNegocioDe(user);
+  const dest = altaDestino(user, local);
+  if(!dest) return;
+  const alta = Object.assign({}, dest.alta || {});
+  if(on) alta[id] = todayStr(); else delete alta[id];
+  await updateSaleEntry(dest, {alta});
+  openAlta(user, y); renderFolders();
+}
+function altaBienvenidaTexto(user){
+  const cuenta = sales.find(s => s.kind === 'cuenta' && s.value === user && !s.anulada);
+  const local = altaNegocioDe(user);
+  return 'Bienvenido a GastroGoan 🍽\n\n'
+    + 'Tu app: ' + ALTA_APP + '\n'
+    + 'Usuario: ' + user + '\nPIN: ' + (cuenta ? cuenta.pin : '') + '\n'
+    + (local ? 'Código de tu negocio: ' + local.value + '\n' : '')
+    + '\nCómo entrar: abre la app, pulsa «Acceso Propietarios», entra con usuario y PIN, y en la pantalla de negocios pulsa «Canjear negocio» e introduce el código. Después te guiará paso a paso para configurar tu nube (Firebase, gratis); tarda unos 10 minutos.\n\nCualquier duda, escríbeme por aquí.';
+}
+function altaCopiarBienvenida(user){ copiar(altaBienvenidaTexto(user)); }
+function altaWhatsApp(user){
+  const cuenta = sales.find(s => s.kind === 'cuenta' && s.value === user && !s.anulada);
+  const tel = cuenta && cuenta.phone ? cuenta.phone.replace(/[^0-9]/g, '') : '';
+  window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(altaBienvenidaTexto(user)), '_blank', 'noopener');
 }
 
 /* ============================================================
