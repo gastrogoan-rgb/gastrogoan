@@ -5663,14 +5663,19 @@ function negocioNecesitaHidratar(){
   try{ lic = getLicense(); }catch(e){}
   if(!lic || !lic.tenantId || !DB || !DB.business) return false;
   if(negocioHidratado[lic.tenantId]) return false;
+  /* ⚠️ SOLO un aparato que NUNCA ha configurado este negocio (sin la marca de alta hecha o sin saber a qué nube conectarse) necesita preguntar a la nube.
+     Un aparato que ya lo tiene configurado NO: abre siempre, con o sin internet. Si se exigiera también por el tour o el aviso de conexiones externas (banderas
+     menores que a veces se quedan sin marcar), un restaurante sin wifi se quedaría mirando «comprobando…» sin poder usar la app. */
   const b = DB.business;
-  return !(b.netlifySetupDone && getCloudConfig() && b.extConnPromptSeen && b.tourSeen);
+  return !(b.netlifySetupDone && getCloudConfig());
 }
 // → {estado:'error'} no se pudo comprobar · {estado:'nuevo'} la plataforma no lo conoce · {estado:'vacio', cfg} conoce la nube pero no hay datos · {estado:'existe', cfg, data}
 async function consultarNubeDelNegocio(tenantId){
   let app = null;
   try{ app = await withTimeout(getPlatformFirebaseApp(), 12000); }catch(e){ return {estado: 'error'}; }
-  if(!app) return {estado: 'error'};
+  /* Sin el SDK de Firebase cargado (no hay forma de preguntar) no se bloquea nada: se sigue como siempre, con sus asistentes. Solo se bloquea cuando SÍ se
+     puede preguntar y la respuesta no llega (red caída, nube tropezando), que es cuando mostrar un asistente sería equivocarse. */
+  if(!app) return {estado: typeof firebase === 'undefined' ? 'nuevo' : 'error'};
   let cfg = getCloudConfig();
   if(!cfg){
     let snap;

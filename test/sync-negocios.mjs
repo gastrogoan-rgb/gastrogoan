@@ -105,7 +105,7 @@ await iphone.close();
 // ───────────────────────── Sin conexión / la nube tropieza: no se pregunta NADA ─────────────────────────
 iphone = await aparato(nube, {conLicencia: CODE_A});
 await caso('Si no se puede comprobar (plataforma sin conexión): NO sale ningún asistente, sale «No se ha podido comprobar» con Reintentar', async () => {
-  await iphone.evaluate(() => { __nube.plataformaCaida = true; });
+  await iphone.evaluate(() => { window.firebase = window.firebase || {}; __nube.plataformaCaida = true; });   // el SDK está cargado, pero la plataforma no contesta
   await iphone.evaluate(() => continuePendingOwnerSetup()); await w(700);
   const g = await gates(iphone); assert.deepEqual(g, ['comprobando-negocio'], JSON.stringify(g));
   const txt = await iphone.evaluate(() => document.getElementById('comprobando-negocio').innerText);
@@ -120,6 +120,18 @@ await caso('Con la nube de ESE negocio caída (la plataforma contesta) tampoco s
 await caso('Al volver la conexión, «Reintentar» lo resuelve sin preguntar nada', async () => {
   await iphone.evaluate(() => { __nube.negocioCae = false; document.getElementById('comprobando-negocio-reintentar').click(); }); await w(900);
   assert.deepEqual(await gates(iphone), []); assert.equal(await iphone.evaluate(() => !!DB.business.extConnPromptSeen), true);
+});
+await iphone.close();
+
+// ───────────────────────── Un negocio YA configurado abre SIN internet, falte la bandera que falte ─────────────────────────
+iphone = await aparato(nube, {conLicencia: CODE_A});
+await caso('Aparato con el negocio ya configurado, SIN internet y sin haber hecho el tour: abre directo, no se queda «comprobando»', async () => {
+  await iphone.evaluate(() => { window.firebase = window.firebase || {}; __nube.plataformaCaida = true; __nube.negocioCae = true;
+    Object.assign(DB.business, {netlifySetupDone: true, extConnPromptSeen: false, tourSeen: false}); DB.business.ownFirebase = {apiKey: 'x', databaseURL: 'https://x-default-rtdb.firebaseio.com'}; });
+  const necesita = await iphone.evaluate(() => negocioNecesitaHidratar());
+  assert.equal(necesita, false, 'un aparato ya configurado no debe pedir comprobar nada a la nube');
+  await iphone.evaluate(() => continuePendingOwnerSetup()); await w(600);
+  assert.ok(!(await gates(iphone)).includes('comprobando-negocio'), 'se quedó «comprobando» sin internet');
 });
 await iphone.close();
 

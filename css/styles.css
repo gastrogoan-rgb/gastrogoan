@@ -6543,3 +6543,10 @@ small{font-size:max(.8333em, 11px)}
 .acc-biz-chip.is-sel{border-color:var(--olive);background:var(--olive);color:#fff}
 .acc-biz-chip.is-sel small{color:rgba(255,255,255,.8)}
 .acc-biz-otro{border-style:dashed;color:var(--muted)}
+
+
+/* Cuenta de Resultados › «Lo que te queda de verdad» */
+.cdr-real{margin-top:18px}
+.cdr-real-bt{margin:10px 18px 4px}
+.cdr-real-expl{padding:4px 18px 14px;font-size:13px;color:var(--muted);line-height:1.5}
+.cdr-real-expl p{margin:8px 0 0}
