@@ -2343,6 +2343,9 @@ function renderServicios(tabs){
 // Con el servicio ya elegido: una barra pequeña con el nombre y «Cambiar» (solo si hay más de uno que elegir).
 function serviceBarHtml(tabs){
   if(tabs.length < 2) return '';
+  // Quien entra por el QR de una mesa solo puede pedir EN ESA MESA: no hay otro servicio al que «Cambiar» (y el botón llevaba a
+  // reservar o pedir para llevar, que no es lo que escaneó).
+  if(qrMesaToken) return '';
   const x = tabs.find(y => y.id === currentTab); if(!x) return '';
   return `<div class="svc-bar" id="svc-bar"><span class="svc-chip"><span class="svc-ic ${tabIcono(x.id)}" aria-hidden="true"></span>${escapeHtml(tabLabel(x))}</span><button type="button" class="svc-cambiar" onclick="volverAServicios()">${escapeHtml(t('svc.change'))}</button></div>`;
 }
