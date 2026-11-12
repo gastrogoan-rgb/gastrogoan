@@ -6532,3 +6532,14 @@ small{font-size:max(.8333em, 11px)}
 .dp-ayuda-mesas{font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.4}
 .dp-mesas-zona .es-tit{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dp-chip .dp-otros{font-size:11px;opacity:.75;font-weight:400}
+
+
+/* Acceso de empleados: negocios recordados en este aparato (botones con el nombre; antes solo un datalist casi invisible en móvil) */
+.acc-biz-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.acc-biz-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;text-align:left;max-width:100%}
+.acc-biz-chip .acc-biz-n{overflow-wrap:anywhere;font-weight:600}
+.acc-biz-chip small{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em}
+.acc-biz-chip:hover{border-color:var(--olive);background:var(--brand-cream)}
+.acc-biz-chip.is-sel{border-color:var(--olive);background:var(--olive);color:#fff}
+.acc-biz-chip.is-sel small{color:rgba(255,255,255,.8)}
+.acc-biz-otro{border-style:dashed;color:var(--muted)}

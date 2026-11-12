@@ -316,7 +316,22 @@ function renderAccessSelectScreenHtml(){
     </div>
   `;
 }
+/* El código se recuerda en ESTE aparato: el último queda ya escrito y los demás salen como botones con el nombre del negocio.
+   Antes solo había un <datalist> del navegador pegado al campo, que en móvil y tablet casi no se ve (y el campo arrancaba vacío):
+   parecía que la app no recordaba nada. */
+function accEmpElegirCodigo(code){
+  const inp = document.getElementById('acc-emp-code'); if(!inp) return;
+  inp.value = code || ''; accEmpCodigoCambia();
+  const name = document.getElementById('acc-emp-name'), pin = document.getElementById('acc-emp-pin');
+  const sig = !code ? inp : (name && !name.value.trim() ? name : pin);
+  if(sig) sig.focus();
+}
+function accEmpCodigoCambia(){
+  const v = ((document.getElementById('acc-emp-code') || {}).value || '').trim().toUpperCase();
+  document.querySelectorAll('#acc-biz-chips .acc-biz-chip[data-code]').forEach(b => { const on = b.dataset.code === v; b.classList.toggle('is-sel', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+}
 function renderEmployeeAccessFormHtml(){
+  const recientes = getRecentBusinessCodes(), nombres = getRecentBusinessNames();
   return `
     <div class="access-card">
       <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
@@ -332,8 +347,12 @@ function renderEmployeeAccessFormHtml(){
       </div>
       <div class="field">
         <label>${t('access.businessCode')}</label>
-        <input type="text" id="acc-emp-code" list="acc-emp-code-list" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
-        <datalist id="acc-emp-code-list">${getRecentBusinessCodes().map(c => `<option value="${escapeHtml(c)}">`).join('')}</datalist>
+        <input type="text" id="acc-emp-code" list="acc-emp-code-list" maxlength="8" value="${escapeHtml(recientes[0] || '')}" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" oninput="accEmpCodigoCambia()" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
+        <datalist id="acc-emp-code-list">${recientes.map(c => `<option value="${escapeHtml(c)}">`).join('')}</datalist>
+        ${recientes.length ? `<div class="acc-biz-chips" id="acc-biz-chips" role="group" aria-label="${escapeHtml(gl({es:'Negocios recordados en este aparato', ca:'Negocis recordats en aquest aparell', en:'Businesses remembered on this device'}))}">
+          ${recientes.map(c => `<button type="button" class="acc-biz-chip${c === recientes[0] ? ' is-sel' : ''}" aria-pressed="${c === recientes[0]}" data-code="${escapeHtml(c)}" onclick="accEmpElegirCodigo(this.dataset.code)"><i class="ti ti-building-store" aria-hidden="true"></i><span class="acc-biz-n">${escapeHtml(nombres[c] || c)}</span>${nombres[c] ? `<small>${escapeHtml(c)}</small>` : ''}</button>`).join('')}
+          <button type="button" class="acc-biz-chip acc-biz-otro" onclick="accEmpElegirCodigo('')"><i class="ti ti-plus" aria-hidden="true"></i><span class="acc-biz-n">${escapeHtml(gl({es:'Otro negocio', ca:'Un altre negoci', en:'Another business'}))}</span></button>
+        </div>` : ''}
       </div>
       <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="confirmEmployeeAccess()">${t('common.unlock')}</button>
     </div>
@@ -538,8 +557,18 @@ function getRecentBusinessCodes(){
   try{ return JSON.parse(localStorage.getItem(RECENT_BUSINESS_CODES_LS) || '[]'); }
   catch(e){ return []; }
 }
-function rememberBusinessCode(code){
+const RECENT_BUSINESS_NAMES_LS = 'gastrogoan_recent_emp_names';
+function getRecentBusinessNames(){
+  try{ return JSON.parse(localStorage.getItem(RECENT_BUSINESS_NAMES_LS) || '{}') || {}; }
+  catch(e){ return {}; }
+}
+function rememberBusinessCode(code, name){
   if(!code) return;
+  // El nombre del negocio (no solo el código) es lo que un empleado reconoce de un vistazo.
+  if(name && String(name).trim()){
+    const nombres = getRecentBusinessNames(); nombres[code] = String(name).trim().slice(0, 60);
+    try{ localStorage.setItem(RECENT_BUSINESS_NAMES_LS, JSON.stringify(nombres)); }catch(e){}
+  }
   let list = getRecentBusinessCodes().filter(c => c !== code);
   list.unshift(code);
   list = list.slice(0, 6);
@@ -629,7 +658,7 @@ async function confirmEmployeeAccess(){
     }
     const match = findEmployeeMatch(slotData.employees, name, pin, localSlot.code);
     if(!match){ showToast(t('access.badCredentials')); return; }
-    rememberBusinessCode(code);
+    rememberBusinessCode(code, (slotData.business && slotData.business.name) || localSlot.name);
     setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
     if(localSlot.id !== ACTIVE_SLOT){
       switchToBusiness(localSlot.id); // recarga la app ya con la sesión guardada
@@ -653,7 +682,7 @@ async function confirmEmployeeAccess(){
   if(!remoteData){ showToast(t('access.badCredentials')); return; }
   const match = findEmployeeMatch(remoteData.employees, name, pin, code);
   if(!match){ showToast(t('access.badCredentials')); return; }
-  rememberBusinessCode(code);
+  rememberBusinessCode(code, remoteData.business && remoteData.business.name);
   let newSlotId;
   try{ newSlotId = await registerRemoteBusinessLocally(tenantId, code, remoteData); }
   catch(e){ console.error('Error registrando el negocio en este dispositivo', e); showToast(t('access.connectFailed')); return; }
